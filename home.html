@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rohin OS</title>
+    <meta name="description" content="Rohin OS home screen." />
+    <link rel="icon" href="assets/windowsxp.png" type="image/png" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      :root {
+        --bg-image: url("assets/background.jpg");
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg-image) center / cover no-repeat fixed;
+        display: grid;
+        place-items: center;
+        padding-bottom: 56px;
+      }
+
+      .desktop {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .desktop-icon {
+        width: 64px;
+        text-align: center;
+        color: #fff;
+        font-size: 11px;
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+        background: transparent;
+        border: none;
+        padding: 0;
+        box-shadow: none;
+        appearance: none;
+      }
+
+      .desktop-icon:hover {
+        background: rgba(0, 0, 128, 0.35);
+        outline: 1px dotted #fff;
+        outline-offset: 2px;
+      }
+
+      .desktop-icon:active {
+        background: rgba(0, 0, 128, 0.6);
+      }
+
+      .desktop-icon:focus {
+        outline: none;
+      }
+
+      .desktop-icon img {
+        width: 40px;
+        height: 40px;
+        display: block;
+        margin: 0 auto 6px;
+      }
+
+      .home-window {
+        width: min(92vw, 520px);
+      }
+
+      .home-window.is-hidden,
+      .app-window.is-hidden {
+        display: none;
+      }
+
+      .app-window {
+        position: fixed;
+        top: 90px;
+        left: 140px;
+        width: min(80vw, 420px);
+        z-index: 2;
+      }
+
+      .app-window--center {
+        top: 25%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .app-window .window-body {
+        min-height: 120px;
+      }
+
+      .window-stack {
+        position: relative;
+        z-index: 2;
+      }
+      .window-body p {
+        margin: 0 0 12px;
+      }
+
+      .taskbar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: rgb(192, 192, 192);
+        box-shadow: inset 0 1px var(--button-highlight),
+          inset 0 -1px var(--button-shadow);
+        color: #000;
+      }
+
+      .taskbar-apps {
+        display: flex;
+        gap: 2px;
+        flex: 1;
+        align-items: center;
+      }
+
+      .start-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 34px;
+        padding: 0 14px 0 6px;
+        border: none;
+        background: var(--surface);
+        font-weight: bold;
+        font-size: 14px;
+        box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+      }
+
+      .start-button:active {
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .start-button img {
+        width: 22px;
+        height: 22px;
+        margin-left: -2px;
+      }
+
+      .taskbar-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        aspect-ratio: 1 / 1;
+        box-sizing: border-box;
+        border-radius: 0;
+        border: none;
+        background: transparent;
+        padding: 0;
+        box-shadow: none;
+      }
+
+      .taskbar-icon img {
+        width: 30px;
+        height: 30px;
+      }
+
+      .taskbar-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .taskbar-divider {
+        width: 2px;
+        height: 28px;
+        background: var(--button-shadow);
+        box-shadow: inset 1px 0 var(--button-highlight);
+      }
+
+      .taskbar-clock {
+        font-size: 11px;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="desktop" aria-label="Desktop apps">
+      <button class="desktop-icon" id="about-app-desktop" data-app="about" aria-label="About Me">
+        <img src="assets/app-icons/ico/help_book_big.ico" alt="" />
+        About Me
+      </button>
+      <button class="desktop-icon" data-app="windows" aria-label="Windows">
+        <img src="assets/app-icons/ico/windows_three.ico" alt="" />
+        Windows
+      </button>
+      <button class="desktop-icon" data-app="paint" aria-label="Paint">
+        <img src="assets/app-icons/ico/paint_old.ico" alt="" />
+        Paint
+      </button>
+      <button class="desktop-icon" data-app="taskmgr" aria-label="Task Manager">
+        <img src="assets/app-icons/ico/computer_taskmgr.ico" alt="" />
+        Task Manager
+      </button>
+      <button class="desktop-icon" data-app="minesweeper" aria-label="Minesweeper">
+        <img src="assets/app-icons/ico/minesweeper.ico" alt="" />
+        Minesweeper
+      </button>
+    </div>
+    <div class="window-stack">
+      <div class="window home-window app-window app-window--center" data-app-window="about" id="about-window">
+        <div class="title-bar">
+          <div class="title-bar-text">About Me</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help"></button>
+            <button aria-label="Close" data-close="about"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <p>Welcome to your Rohin OS home screen.</p>
+          <p>Start adding sections, icons, and links here.</p>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden" data-app-window="windows">
+        <div class="title-bar">
+          <div class="title-bar-text">Windows</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help"></button>
+            <button aria-label="Close" data-close="windows"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <p>Window placeholder.</p>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden" data-app-window="paint">
+        <div class="title-bar">
+          <div class="title-bar-text">Paint</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help"></button>
+            <button aria-label="Close" data-close="paint"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <p>Window placeholder.</p>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden" data-app-window="taskmgr">
+        <div class="title-bar">
+          <div class="title-bar-text">Task Manager</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help"></button>
+            <button aria-label="Close" data-close="taskmgr"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <p>Window placeholder.</p>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden" data-app-window="minesweeper">
+        <div class="title-bar">
+          <div class="title-bar-text">Minesweeper</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help"></button>
+            <button aria-label="Close" data-close="minesweeper"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <p>Window placeholder.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="taskbar" role="toolbar" aria-label="Taskbar">
+      <button class="start-button">
+        <img src="assets/app-icons/ico/windows.ico" alt="" />
+        Start
+      </button>
+      <span class="taskbar-divider" aria-hidden="true"></span>
+      <div class="taskbar-apps" aria-label="Applications">
+        <button class="taskbar-icon" id="about-app-taskbar" data-app="about" aria-label="About Me">
+          <img src="assets/app-icons/ico/help_book_big.ico" alt="Help" />
+        </button>
+        <button class="taskbar-icon" data-app="windows" aria-label="Windows">
+          <img src="assets/app-icons/ico/windows_three.ico" alt="Windows" />
+        </button>
+        <button class="taskbar-icon" data-app="paint" aria-label="Paint">
+          <img src="assets/app-icons/ico/paint_old.ico" alt="Paint" />
+        </button>
+        <button class="taskbar-icon" data-app="taskmgr" aria-label="Task Manager">
+          <img src="assets/app-icons/ico/computer_taskmgr.ico" alt="Task Manager" />
+        </button>
+        <button class="taskbar-icon" data-app="minesweeper" aria-label="Minesweeper">
+          <img src="assets/app-icons/ico/minesweeper.ico" alt="Minesweeper" />
+        </button>
+      </div>
+      <span class="taskbar-divider" aria-hidden="true"></span>
+      <div class="taskbar-right">
+        <img src="assets/app-icons/ico/calendar.ico" alt="Calendar" width="16" height="16" />
+        <span class="taskbar-clock" id="taskbar-clock">--:--</span>
+      </div>
+    </div>
+
+    <script>
+      const clock = document.getElementById("taskbar-clock");
+      const appButtons = document.querySelectorAll("[data-app]");
+      const appWindows = document.querySelectorAll("[data-app-window]");
+      const closeButtons = document.querySelectorAll("[data-close]");
+
+      const updateClock = () => {
+        const now = new Date();
+        clock.textContent = now.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      };
+
+      const setWindowOpen = (appId, open) => {
+        const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
+        if (win) {
+          win.classList.toggle("is-hidden", !open);
+        }
+      };
+
+      const toggleWindow = (appId) => {
+        const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
+        if (win) {
+          setWindowOpen(appId, win.classList.contains("is-hidden"));
+        }
+      };
+
+      updateClock();
+      setInterval(updateClock, 1000 * 30);
+
+      appButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const appId = button.getAttribute("data-app");
+          toggleWindow(appId);
+        });
+      });
+
+      closeButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const appId = button.getAttribute("data-close");
+          setWindowOpen(appId, false);
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rohin OS</title>
+    <meta name="description" content="Windows 98 inspired loading screen." />
+    <link rel="icon" href="assets/windowsxp.png" type="image/png" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      :root {
+        --loader-image: url("assets/mountain-and-sky.png");
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--loader-image) center / cover no-repeat fixed;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+
+      .loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--loader-image) center / cover no-repeat;
+        z-index: 10;
+      }
+
+      .loader::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(0, 60, 90, 0.2));
+      }
+
+      .loader-window {
+        position: relative;
+        z-index: 1;
+        width: min(92vw, 460px);
+      }
+
+      .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .loader-copy {
+        margin: 0;
+      }
+
+      .progress-indicator {
+        height: 18px;
+      }
+
+      .progress-indicator-bar {
+        width: 0%;
+      }
+
+      .status-text {
+        margin: 0;
+      }
+
+      .action-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      @media (max-width: 600px) {
+        .loader-window {
+          width: min(94vw, 400px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loader" id="loader" aria-live="polite">
+      <div class="window loader-window">
+        <div class="title-bar">
+          <div class="title-bar-text">Downloading latest update of Rohin OS</div>
+          <div class="title-bar-controls">
+            <button aria-label="Minimize"></button>
+            <button aria-label="Maximize"></button>
+            <button aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <p class="loader-copy" id="loader-copy">Preparing the environment. Please wait...</p>
+          <div
+            class="progress-indicator segmented"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <span class="progress-indicator-bar" id="progress-bar"></span>
+          </div>
+          <p class="status-text" id="status-text">Starting...</p>
+          <div class="action-row">
+            <button id="cancel-button">Cancel</button>
+            <button id="proceed-button" class="default" disabled>Proceed</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const progressBar = document.getElementById("progress-bar");
+      const progressWrap = document.querySelector(".progress-indicator");
+      const statusText = document.getElementById("status-text");
+      const loaderCopy = document.getElementById("loader-copy");
+      const proceedButton = document.getElementById("proceed-button");
+      const cancelButton = document.getElementById("cancel-button");
+      let progress = 0;
+      let ticking = false;
+      let timerId = null;
+
+      const tick = () => {
+        ticking = true;
+        const slowDown = progress > 70 ? 4 : 0;
+        const delta = Math.max(0, Math.random() * 9 + 2 - slowDown);
+        progress = Math.min(progress + delta, 100);
+        progressBar.style.width = `${progress}%`;
+        progressWrap.setAttribute("aria-valuenow", Math.floor(progress));
+        statusText.textContent = `Loading... ${Math.floor(progress)}%`;
+
+        if (progress < 100) {
+          const jitter = 160 + Math.random() * 320;
+          timerId = setTimeout(tick, jitter);
+        } else {
+          ticking = false;
+          loaderCopy.textContent = "Welcome!";
+          statusText.textContent = "Ready. Click Proceed to continue.";
+          proceedButton.disabled = false;
+        }
+      };
+
+      const resetLoader = () => {
+        if (timerId) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+        document.body.classList.remove("loaded");
+        progress = 0;
+        progressBar.style.width = "0%";
+        progressWrap.setAttribute("aria-valuenow", "0");
+        loaderCopy.textContent = "Preparing the environment. Please wait...";
+        statusText.textContent = "Starting...";
+        proceedButton.disabled = true;
+        ticking = false;
+      };
+
+      const startLoader = () => {
+        if (ticking) {
+          return;
+        }
+        resetLoader();
+        timerId = setTimeout(tick, 300);
+      };
+
+      document.addEventListener("DOMContentLoaded", startLoader);
+
+      window.addEventListener("pageshow", (event) => {
+        if (event.persisted) {
+          startLoader();
+        }
+      });
+
+      proceedButton.addEventListener("click", () => {
+        statusText.textContent = "Proceeding...";
+        proceedButton.disabled = true;
+        cancelButton.disabled = true;
+        window.location.href = "home.html";
+      });
+
+      cancelButton.addEventListener("click", () => {
+        window.location.reload();
+      });
+    </script>
+  </body>
+</html>
