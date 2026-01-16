@@ -12,6 +12,14 @@
         --bg-image: url("assets/background.jpg");
       }
 
+      @font-face {
+        font-family: "Digital-7";
+        src: url("assets/fonts/src/digital-7/digital-7.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+
       * {
         box-sizing: border-box;
       }
@@ -19,10 +27,11 @@
       body {
         margin: 0;
         min-height: 100vh;
-        background: var(--bg-image) center / cover no-repeat fixed;
+        background: var(--bg-image) center / cover no-repeat;
         display: grid;
         place-items: center;
         padding-bottom: 56px;
+        overflow: hidden;
       }
 
       .desktop {
@@ -72,6 +81,10 @@
         width: min(92vw, 520px);
       }
 
+      .home-window.app-window--center {
+        top: 35%;
+      }
+
       .home-window.is-hidden,
       .app-window.is-hidden {
         display: none;
@@ -101,6 +114,24 @@
       }
       .window-body p {
         margin: 0 0 12px;
+      }
+
+      .about-title {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+
+      .about-photo {
+        width: 100%;
+        max-width: 320px;
+        height: auto;
+        display: block;
+        margin: 0 auto 12px;
+      }
+
+      .title-bar {
+        cursor: move;
+        touch-action: none;
       }
 
       .taskbar {
@@ -178,6 +209,8 @@
         padding: 4px 8px;
         background: var(--surface);
         box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        border: none;
+        cursor: pointer;
       }
 
       .taskbar-divider {
@@ -190,6 +223,186 @@
       .taskbar-clock {
         font-size: 11px;
         white-space: nowrap;
+      }
+
+      .calendar-popout {
+        position: fixed;
+        right: 12px;
+        bottom: 60px;
+        display: none;
+        z-index: 50;
+      }
+
+      .calendar-popout.is-open {
+        display: block;
+      }
+
+      .calendar-panel,
+      .clock-panel {
+        width: 300px;
+        color: #000;
+        display: flex;
+      }
+
+      .calendar-section,
+      .clock-section {
+        padding: 8px;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .calendar-section {
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+
+      .calendar-section,
+      .calendar-section .calendar-header,
+      .calendar-section .calendar-day,
+      .calendar-section .calendar-nav button {
+        color: #fff;
+        text-shadow: 1px 1px 0 #000;
+      }
+
+      .calendar-section .calendar-day.is-muted {
+        color: #cfcfcf;
+      }
+
+      .calendar-popout .window-body {
+        display: flex;
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+
+      #calendar-header {
+        cursor: pointer;
+      }
+
+      #calendar-header:hover {
+        text-decoration: underline;
+      }
+
+      .calendar-nav {
+        display: inline-flex;
+        gap: 4px;
+      }
+
+      .calendar-nav button {
+        width: 22px;
+        height: 22px;
+        border: none;
+        background: var(--surface);
+        box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+        font-weight: bold;
+        cursor: pointer;
+      }
+
+      .calendar-nav button:active {
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-template-rows: repeat(7, 24px);
+        gap: 4px;
+        font-size: 11px;
+        text-align: center;
+      }
+
+      .calendar-day {
+        padding: 4px 0;
+        border: 1px solid transparent;
+      }
+
+      .calendar-day.is-today {
+        border-color: #000;
+        background: #fff;
+        box-shadow: inset 0 0 0 1px #000;
+      }
+
+      .calendar-day.is-muted {
+        color: #666;
+      }
+
+      .calendar-day:hover {
+        background: #fff;
+        border-color: #000;
+      }
+
+      .clock-display {
+        background: #000;
+        color: #00ff66;
+        font-family: "Digital-7", "DS-Digital", "Share Tech Mono", "Courier New",
+          monospace;
+        font-size: 22px;
+        text-align: center;
+        box-sizing: border-box;
+        width: 190px;
+        height: 44px;
+        padding: 0 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 1px;
+        text-shadow: 0 0 6px rgba(0, 255, 102, 0.6);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .clock-colon.is-off {
+        opacity: 0.2;
+      }
+
+      .clock-frame {
+        padding: 6px;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .clock-slot-frame {
+        margin-bottom: 10px;
+      }
+
+      .clock-slot {
+        text-shadow: none;
+        padding: 0;
+      }
+
+      .clock-slot img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .clock-quote {
+        margin-top: 10px;
+        font-size: 11px;
+        text-align: center;
+      }
+
+      .clock-section {
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+
+      .calendar-divider {
+        width: 2px;
+        background: var(--button-shadow);
+        box-shadow: inset 1px 0 var(--button-highlight);
       }
     </style>
   </head>
@@ -226,6 +439,8 @@
           </div>
         </div>
         <div class="window-body">
+          <h2 class="about-title">Hi, my name is Rohin!</h2>
+          <img class="about-photo" src="assets/bio-pic.jpeg" alt="Rohin" />
           <p>Welcome to your Rohin OS home screen.</p>
           <p>Start adding sections, icons, and links here.</p>
         </div>
@@ -308,9 +523,43 @@
         </button>
       </div>
       <span class="taskbar-divider" aria-hidden="true"></span>
-      <div class="taskbar-right">
+      <button class="taskbar-right" id="taskbar-clock-button" aria-label="Date and time">
         <img src="assets/app-icons/ico/calendar.ico" alt="Calendar" width="16" height="16" />
         <span class="taskbar-clock" id="taskbar-clock">--:--</span>
+      </button>
+    </div>
+
+    <div class="window calendar-popout" id="calendar-popout" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Date &amp; Time</div>
+      </div>
+      <div class="window-body">
+        <div class="calendar-panel" id="calendar-panel">
+          <div class="calendar-section" id="calendar-section">
+            <div class="calendar-header">
+              <span id="calendar-header">Month YYYY</span>
+              <span class="calendar-nav">
+                <button type="button" id="calendar-prev" aria-label="Previous month">&#x2039;</button>
+                <button type="button" id="calendar-next" aria-label="Next month">&#x203A;</button>
+              </span>
+            </div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+          </div>
+        </div>
+        <span class="calendar-divider" aria-hidden="true"></span>
+        <div class="clock-panel" id="clock-panel">
+          <div class="clock-section">
+            <div class="clock-frame clock-slot-frame" aria-label="Clock image slot">
+              <div class="clock-display clock-slot">
+                <img id="clock-image" src="assets/day.png" alt="Day scene" />
+              </div>
+            </div>
+            <div class="clock-frame">
+              <div class="clock-display" id="calendar-clock">--:--:--</div>
+            </div>
+            <div class="clock-quote" id="clock-quote">"Time is the canvas; moments are the paint."</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -319,6 +568,21 @@
       const appButtons = document.querySelectorAll("[data-app]");
       const appWindows = document.querySelectorAll("[data-app-window]");
       const closeButtons = document.querySelectorAll("[data-close]");
+      const draggableWindows = document.querySelectorAll(".window");
+      const calendarButton = document.getElementById("taskbar-clock-button");
+      const calendarPopout = document.getElementById("calendar-popout");
+      const calendarPanel = document.getElementById("calendar-panel");
+      const calendarSection = document.getElementById("calendar-section");
+      const calendarHeader = document.getElementById("calendar-header");
+      const calendarGrid = document.getElementById("calendar-grid");
+      const calendarPrev = document.getElementById("calendar-prev");
+      const calendarNext = document.getElementById("calendar-next");
+      const calendarClock = document.getElementById("calendar-clock");
+      const clockImage = document.getElementById("clock-image");
+      const clockQuote = document.getElementById("clock-quote");
+
+      let topZ = 10;
+      let calendarDate = new Date();
 
       const updateClock = () => {
         const now = new Date();
@@ -326,6 +590,41 @@
           hour: "2-digit",
           minute: "2-digit",
         });
+      };
+
+      const updateCalendarClock = () => {
+        if (!calendarClock) return;
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const seconds = String(now.getSeconds()).padStart(2, "0");
+        const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+        const colonClass = blinkOn ? "clock-colon" : "clock-colon is-off";
+        calendarClock.innerHTML = `${hours}<span class="${colonClass}">:</span>${minutes}<span class="${colonClass}">:</span>${seconds}`;
+        updateClockImage(now);
+      };
+
+      const updateClockImage = (now) => {
+        if (!clockImage) return;
+        const hour = now.getHours();
+        let src = "assets/night.png";
+        let label = "Night scene";
+
+        if (hour >= 5 && hour < 7) {
+          src = "assets/sunrise.png";
+          label = "Sunrise scene";
+        } else if (hour >= 7 && hour < 18) {
+          src = "assets/day.png";
+          label = "Day scene";
+        } else if (hour >= 18 && hour < 20) {
+          src = "assets/sunset.png";
+          label = "Sunset scene";
+        }
+
+        if (clockImage.getAttribute("src") !== src) {
+          clockImage.setAttribute("src", src);
+          clockImage.setAttribute("alt", label);
+        }
       };
 
       const setWindowOpen = (appId, open) => {
@@ -344,6 +643,149 @@
 
       updateClock();
       setInterval(updateClock, 1000 * 30);
+      updateCalendarClock();
+      setInterval(updateCalendarClock, 500);
+
+      const calendarImages = {
+        0: "assets/calendar-pics/jan.jpg",
+        1: "assets/calendar-pics/feb.png",
+        2: "assets/calendar-pics/mar.jpeg",
+        3: "assets/calendar-pics/apr.JPG",
+        4: "assets/calendar-pics/may.jpeg",
+        5: "assets/calendar-pics/june.jpg",
+        6: "assets/calendar-pics/jul.JPG",
+        7: "assets/calendar-pics/aug.jpeg",
+        8: "assets/calendar-pics/sep.jpeg",
+        9: "assets/calendar-pics/oct.jpeg",
+        10: "assets/calendar-pics/nov.JPG",
+        11: "assets/calendar-pics/dec.JPEG",
+      };
+
+      const calendarQuotes = {
+        0: `"perhaps you were made for this moment, to walk through blazing fire and come forth as gold"<br>—Morgan Harper Nichols`,
+        1: `"The gentle yield of water will cut obstinate stone"<br>—Lao Tzu`,
+        2:
+          `"Man will not merely endure: he will prevail. He is immortal, not because he alone among creatures has an inexhaustible voice, but because he has a soul, a spirit capable of compassion and sacrifice and endurance."<br>` +
+          `—William Faulkner`,
+        3:
+          `"Happiness, like success, cannot be pursued; it must ensue, and it only does so as the unintended side-effect of dedication to a cause greater than oneself"<br>` +
+          `—Viktor E. Frankl`,
+        4: `"We don't dance to get to the end of the song."<br>—Sydney Rheeder`,
+      };
+
+      const updateCalendarQuote = (month) => {
+        if (!clockQuote) return;
+        const quote = calendarQuotes[month];
+        if (quote) {
+          clockQuote.innerHTML = quote;
+        }
+      };
+
+      const updateCalendarBackground = (month) => {
+        if (!calendarSection) return;
+        const src = calendarImages[month] || "";
+        calendarSection.style.backgroundImage = src ? `url("${src}")` : "none";
+      };
+
+      const clampCalendarDate = (date) => {
+        const now = new Date();
+        const minDate = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+        const maxDate = new Date(now.getFullYear() + 1, now.getMonth(), 1);
+        if (date < minDate) return minDate;
+        if (date > maxDate) return maxDate;
+        return date;
+      };
+
+      const buildCalendar = (date) => {
+        const clampedDate = clampCalendarDate(date);
+        calendarDate = clampedDate;
+        const year = clampedDate.getFullYear();
+        const month = clampedDate.getMonth();
+        const now = new Date();
+        const isCurrentMonth =
+          now.getFullYear() === year && now.getMonth() === month;
+        const today = now.getDate();
+        const monthLabel = clampedDate.toLocaleDateString([], {
+          month: "long",
+          year: "numeric",
+        });
+
+        const firstOfMonth = new Date(year, month, 1);
+        const startDay = firstOfMonth.getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        calendarHeader.textContent = monthLabel;
+        calendarGrid.innerHTML = "";
+        updateCalendarBackground(month);
+        updateCalendarQuote(month);
+
+        const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
+        dayLabels.forEach((label) => {
+          const cell = document.createElement("div");
+          cell.className = "calendar-day";
+          cell.textContent = label;
+          calendarGrid.appendChild(cell);
+        });
+
+        for (let i = startDay - 1; i >= 0; i -= 1) {
+          const cell = document.createElement("div");
+          cell.className = "calendar-day is-muted";
+          cell.textContent = String(daysInPrevMonth - i);
+          calendarGrid.appendChild(cell);
+        }
+
+        for (let day = 1; day <= daysInMonth; day += 1) {
+          const cell = document.createElement("div");
+          const isToday = isCurrentMonth && day === today;
+          cell.className = `calendar-day${isToday ? " is-today" : ""}`;
+          cell.textContent = String(day);
+          calendarGrid.appendChild(cell);
+        }
+
+        const totalCells = dayLabels.length + startDay + daysInMonth;
+        const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+        for (let i = 1; i <= remaining; i += 1) {
+          const cell = document.createElement("div");
+          cell.className = "calendar-day is-muted";
+          cell.textContent = String(i);
+          calendarGrid.appendChild(cell);
+        }
+      };
+
+      const toggleCalendar = () => {
+        const isOpen = calendarPopout.classList.toggle("is-open");
+        calendarPopout.setAttribute("aria-hidden", String(!isOpen));
+        if (isOpen) {
+          calendarDate = new Date();
+          buildCalendar(calendarDate);
+        }
+      };
+
+      calendarButton.addEventListener("click", toggleCalendar);
+      calendarPrev.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const nextDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1);
+        buildCalendar(nextDate);
+      });
+
+      calendarNext.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const nextDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1);
+        buildCalendar(nextDate);
+      });
+
+      calendarHeader.addEventListener("click", () => {
+        buildCalendar(new Date());
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!calendarPopout.classList.contains("is-open")) return;
+        if (calendarPopout.contains(event.target)) return;
+        if (calendarButton.contains(event.target)) return;
+        calendarPopout.classList.remove("is-open");
+        calendarPopout.setAttribute("aria-hidden", "true");
+      });
 
       appButtons.forEach((button) => {
         button.addEventListener("click", () => {
@@ -358,6 +800,54 @@
           setWindowOpen(appId, false);
         });
       });
+
+      draggableWindows.forEach((win) => {
+        const titleBar = win.querySelector(".title-bar");
+        if (!titleBar) return;
+
+        titleBar.addEventListener("pointerdown", (event) => {
+          if (event.target.closest(".title-bar-controls")) return;
+          const rect = win.getBoundingClientRect();
+          const offsetX = event.clientX - rect.left;
+          const offsetY = event.clientY - rect.top;
+
+          win.classList.remove("app-window--center");
+          win.style.transform = "none";
+          win.style.zIndex = String(topZ++);
+          titleBar.setPointerCapture(event.pointerId);
+
+          const moveHandler = (moveEvent) => {
+            const nextLeft = moveEvent.clientX - offsetX;
+            const nextTop = moveEvent.clientY - offsetY;
+            win.style.left = `${nextLeft}px`;
+            win.style.top = `${nextTop}px`;
+          };
+
+          const upHandler = (upEvent) => {
+            titleBar.releasePointerCapture(upEvent.pointerId);
+            titleBar.removeEventListener("pointermove", moveHandler);
+            titleBar.removeEventListener("pointerup", upHandler);
+          };
+
+          titleBar.addEventListener("pointermove", moveHandler);
+          titleBar.addEventListener("pointerup", upHandler);
+        });
+      });
+
+      const scheduleCalendarRefresh = () => {
+        const now = new Date();
+        const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const delay = nextDay.getTime() - now.getTime() + 1000;
+        setTimeout(() => {
+          if (calendarPopout.classList.contains("is-open")) {
+            calendarDate = new Date();
+            buildCalendar(calendarDate);
+          }
+          scheduleCalendarRefresh();
+        }, delay);
+      };
+
+      scheduleCalendarRefresh();
     </script>
   </body>
 </html>
