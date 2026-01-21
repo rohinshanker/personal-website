@@ -77,6 +77,41 @@
         margin-top: 6px;
       }
 
+      .alert-overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.25);
+        z-index: 20;
+      }
+
+      .alert-overlay.is-open {
+        display: flex;
+      }
+
+      .alert-window {
+        width: min(90vw, 320px);
+      }
+
+      .alert-content {
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .alert-content p {
+        margin: 0;
+      }
+
+      .alert-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 12px;
+      }
+
       @media (max-width: 600px) {
         .loader-window {
           width: min(94vw, 400px);
@@ -115,6 +150,26 @@
       </div>
     </div>
 
+    <div class="alert-overlay" id="alert-overlay" aria-hidden="true">
+      <div class="window alert-window" role="alertdialog" aria-labelledby="alert-title">
+        <div class="title-bar">
+          <div class="title-bar-text" id="alert-title">System Alert</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" id="alert-close"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="alert-content">
+            <img src="assets/app-icons/ico/msg_warning.ico" alt="Warning" width="32" height="32" />
+            <p>Patience is a virtue.</p>
+          </div>
+          <div class="alert-actions">
+            <button id="alert-ok" class="default">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
       const progressBar = document.getElementById("progress-bar");
       const progressWrap = document.querySelector(".progress-indicator");
@@ -122,6 +177,12 @@
       const loaderCopy = document.getElementById("loader-copy");
       const proceedButton = document.getElementById("proceed-button");
       const cancelButton = document.getElementById("cancel-button");
+      const alertOverlay = document.getElementById("alert-overlay");
+      const alertOk = document.getElementById("alert-ok");
+      const alertClose = document.getElementById("alert-close");
+      const loaderClose = document.querySelector('.loader-window .title-bar-controls button[aria-label="Close"]');
+      const loaderMinimize = document.querySelector('.loader-window .title-bar-controls button[aria-label="Minimize"]');
+      const loaderMaximize = document.querySelector('.loader-window .title-bar-controls button[aria-label="Maximize"]');
       let progress = 0;
       let ticking = false;
       let timerId = null;
@@ -185,8 +246,35 @@
       });
 
       cancelButton.addEventListener("click", () => {
-        window.location.reload();
+        alertOverlay.classList.add("is-open");
+        alertOverlay.setAttribute("aria-hidden", "false");
       });
+
+      const closeAlert = () => {
+        alertOverlay.classList.remove("is-open");
+        alertOverlay.setAttribute("aria-hidden", "true");
+      };
+
+      alertOk.addEventListener("click", closeAlert);
+      alertClose.addEventListener("click", closeAlert);
+
+      if (loaderClose) {
+        loaderClose.addEventListener("click", () => {
+          window.location.reload();
+        });
+      }
+
+      const skipToHome = () => {
+        window.location.href = "home.html";
+      };
+
+      if (loaderMinimize) {
+        loaderMinimize.addEventListener("click", skipToHome);
+      }
+
+      if (loaderMaximize) {
+        loaderMaximize.addEventListener("click", skipToHome);
+      }
     </script>
   </body>
 </html>

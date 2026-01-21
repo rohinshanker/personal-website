@@ -116,6 +116,33 @@
         margin: 0 0 12px;
       }
 
+      .credits-line {
+        display: flex;
+        align-items: center;
+      }
+
+      .credits-logo-icon {
+        width: 28px;
+        height: 28px;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+
+      .credits-css-icon {
+        width: 28px;
+        height: 28px;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+
+      .credits-thumb {
+        width: 28px;
+        height: 28px;
+        margin-right: 8px;
+        object-fit: cover;
+        vertical-align: middle;
+      }
+
       .about-title {
         margin: 0 0 12px;
         font-size: 20px;
@@ -127,6 +154,244 @@
         height: auto;
         display: block;
         margin: 0 auto 12px;
+      }
+
+      .portfolio-window {
+        width: min(90vw, 680px);
+      }
+
+      .portfolio-window .window-body {
+        display: flex;
+        gap: 12px;
+        min-height: 360px;
+        height: 360px;
+      }
+
+      .selector-panel,
+      .viewer-panel {
+        padding: 8px;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .selector-panel {
+        width: 42%;
+        min-width: 220px;
+        display: flex;
+        flex-direction: column;
+        flex: 0 0 auto;
+      }
+
+      .selector-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        overflow-y: auto;
+        flex: 1;
+      }
+
+      .selector-item {
+        width: 100%;
+        border: none;
+        background: transparent;
+        box-shadow: none;
+        text-align: left;
+        padding: 8px;
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 8px;
+        cursor: pointer;
+        min-width: 0;
+        min-height: 0;
+      }
+
+      .selector-item:hover {
+        background: rgba(0, 0, 128, 0.15);
+      }
+
+      .selector-item.is-active {
+        background: rgba(0, 0, 128, 0.2);
+        outline: 1px dotted #000;
+        outline-offset: -2px;
+      }
+
+      .selector-thumb {
+        width: 36px;
+        height: 36px;
+        display: block;
+      }
+
+      .selector-title {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .selector-desc {
+        display: block;
+        font-size: 10px;
+        line-height: 1.3;
+      }
+
+      .viewer-panel {
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      .panel-divider {
+        width: 3px;
+        height: 15%;
+        cursor: col-resize;
+        background: var(--button-shadow);
+        box-shadow: inset 1px 0 var(--button-highlight);
+        align-self: center;
+      }
+
+      .viewer-content.is-hidden {
+        display: none;
+      }
+
+      .pdf-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 8px 0 12px;
+      }
+
+      .button-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 23px;
+        padding: 0 12px;
+        background: var(--surface);
+        box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .button-link:active {
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .pdf-window {
+        width: min(92vw, 760px);
+        height: 620px;
+      }
+
+      .pdf-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        height: 100%;
+      }
+
+      .pdf-viewer {
+        flex: 1;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .pdf-viewer iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+
+
+      .video-embed {
+        position: relative;
+        width: 100%;
+        padding-top: 56.25%;
+        margin: 8px 0 12px;
+        background: #000;
+      }
+
+      .video-embed iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+
+      .writing-image {
+        width: 100%;
+        height: auto;
+        display: block;
+        margin: 8px 0 12px;
+      }
+
+      .gallery-frame {
+        padding: 6px;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        margin-top: 12px;
+      }
+
+      .gallery-scroll {
+        max-height: 240px;
+        overflow: hidden;
+        background: #000;
+      }
+
+      .gallery-scroll img {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .gallery-controls {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .gallery-controls button {
+        min-width: 80px;
+      }
+
+      .credits-body {
+        max-height: 220px;
+        overflow-y: auto;
+      }
+
+      .socials-body {
+        max-height: 220px;
+        overflow-y: auto;
+      }
+
+      .socials-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .socials-list a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .socials-logo {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+      }
+
+      .socials-name {
+        font-weight: bold;
+        display: block;
+      }
+
+      .socials-username {
+        display: block;
       }
 
       .title-bar {
@@ -412,21 +677,33 @@
         <img src="assets/app-icons/ico/help_book_big.ico" alt="" />
         About Me
       </button>
-      <button class="desktop-icon" data-app="windows" aria-label="Windows">
-        <img src="assets/app-icons/ico/windows_three.ico" alt="" />
-        Windows
+      <button class="desktop-icon" data-app="windows" aria-label="Projects">
+        <img src="assets/app-icons/ico/regedit.ico" alt="" />
+        Projects
       </button>
-      <button class="desktop-icon" data-app="paint" aria-label="Paint">
+      <button class="desktop-icon" data-app="taskmgr" aria-label="Writing">
+        <img src="assets/app-icons/ico/shell_window6.ico" alt="" />
+        Writing
+      </button>
+      <button class="desktop-icon" data-app="modeling" aria-label="Modeling">
+        <img src="assets/app-icons/ico/accessibility_window_objs.ico" alt="" />
+        Modeling
+      </button>
+      <button class="desktop-icon" data-app="paint" aria-label="Creative Work">
         <img src="assets/app-icons/ico/paint_old.ico" alt="" />
-        Paint
+        Creative Work
       </button>
-      <button class="desktop-icon" data-app="taskmgr" aria-label="Task Manager">
-        <img src="assets/app-icons/ico/computer_taskmgr.ico" alt="" />
-        Task Manager
+      <button class="desktop-icon" data-app="socials" aria-label="Socials">
+        <img src="assets/app-icons/ico/connected_world.ico" alt="" />
+        Socials
       </button>
       <button class="desktop-icon" data-app="minesweeper" aria-label="Minesweeper">
         <img src="assets/app-icons/ico/minesweeper.ico" alt="" />
         Minesweeper
+      </button>
+      <button class="desktop-icon" data-app="credits" aria-label="Credits">
+        <img src="assets/app-icons/ico/search_laptop_1.ico" alt="" data-credits-icon />
+        Credits
       </button>
     </div>
     <div class="window-stack">
@@ -446,42 +723,266 @@
         </div>
       </div>
 
-      <div class="window app-window is-hidden" data-app-window="windows">
+      <div class="window app-window is-hidden portfolio-window" data-app-window="windows">
         <div class="title-bar">
-          <div class="title-bar-text">Windows</div>
+          <div class="title-bar-text">Projects</div>
           <div class="title-bar-controls">
             <button aria-label="Help"></button>
             <button aria-label="Close" data-close="windows"></button>
           </div>
         </div>
         <div class="window-body">
-          <p>Window placeholder.</p>
+          <div class="selector-panel">
+            <ul class="selector-list">
+              <li>
+                <button class="selector-item is-active" type="button" data-view="projects-portfolio-os">
+                  <img class="selector-thumb" src="assets/app-icons/ico/monitor_windows.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Portfolio OS</span>
+                    <span class="selector-desc">Retro desktop concept with interactive windows.</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="projects-signal-dashboard">
+                  <img class="selector-thumb" src="assets/app-icons/ico/bar_graph.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Signal Dashboard</span>
+                    <span class="selector-desc">Data-rich dashboard prototype for trend tracking.</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="projects-research-explorer">
+                  <img class="selector-thumb" src="assets/app-icons/ico/search_web.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Research Explorer</span>
+                    <span class="selector-desc">Navigation model for large archival collections.</span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
+          <div class="viewer-panel">
+            <div class="viewer-content" data-view="projects-portfolio-os">
+              <h3>Portfolio OS</h3>
+              <p>Filler content: a nostalgic interface that blends modern UX patterns with classic desktop metaphors.</p>
+              <p>Highlights: drag-and-drop windows, modular panels, and thematic microcopy.</p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="projects-signal-dashboard">
+              <h3>Signal Dashboard</h3>
+              <p>Filler content: a data-dense monitoring surface for cross-team visibility.</p>
+              <p>Highlights: composable charts, alert tiers, and clarity-first hierarchy.</p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="projects-research-explorer">
+              <h3>Research Explorer</h3>
+              <p>Filler content: a discovery interface for longform archives and annotations.</p>
+              <p>Highlights: faceted search, timeline views, and contextual previews.</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="window app-window is-hidden" data-app-window="paint">
+      <div class="window app-window is-hidden portfolio-window" data-app-window="paint">
         <div class="title-bar">
-          <div class="title-bar-text">Paint</div>
+          <div class="title-bar-text">Creative Work</div>
           <div class="title-bar-controls">
             <button aria-label="Help"></button>
             <button aria-label="Close" data-close="paint"></button>
           </div>
         </div>
         <div class="window-body">
-          <p>Window placeholder.</p>
+          <div class="selector-panel">
+            <ul class="selector-list">
+              <li>
+                <button class="selector-item is-active" type="button" data-view="creative-pathfinder">
+                  <img class="selector-thumb" src="assets/creative-work/pathfinder-logo.png" alt="" />
+                  <span>
+                    <span class="selector-title">Pathfinder - Wear it Your Way</span>
+                    <span class="selector-desc">
+                      Hand-drawn Product Pitch Video
+                      <br />
+                      April 30, 2023
+                    </span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
+          <div class="viewer-panel">
+            <div class="viewer-content" data-view="creative-pathfinder">
+              <h3>Pathfinder</h3>
+              <div class="video-embed">
+                <iframe width="560" height="315" src="https://www.youtube.com/embed/rduOw_oshqM?si=JKRMSKOS6UJrs9jK" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+              </div>
+              <p>
+                A video product pitch I scripted, storyboarded, drew myself for DESINV 21 (Visual
+                Communication and Sketching) at Berkeley. Special thanks to Kiara for Voicing and
+                Miles for letting me borrow one of his unreleased instrumentals. Enjoy!
+              </p>
+              <div class="gallery-frame" id="pathfinder-gallery">
+                <div class="gallery-scroll">
+                  <img
+                    id="pathfinder-image"
+                    src="assets/creative-work/pathfinder-logo.png"
+                    alt="Pathfinder work sample"
+                  />
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="pathfinder-prev">Previous</button>
+                  <button type="button" id="pathfinder-next">Next</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="window app-window is-hidden" data-app-window="taskmgr">
+      <div class="window app-window is-hidden portfolio-window" data-app-window="taskmgr">
         <div class="title-bar">
-          <div class="title-bar-text">Task Manager</div>
+          <div class="title-bar-text">Writing</div>
           <div class="title-bar-controls">
             <button aria-label="Help"></button>
             <button aria-label="Close" data-close="taskmgr"></button>
           </div>
         </div>
         <div class="window-body">
-          <p>Window placeholder.</p>
+          <div class="selector-panel">
+            <ul class="selector-list">
+              <li>
+                <button class="selector-item is-active" type="button" data-view="writing-frontiers">
+                  <img class="selector-thumb" src="assets/app-icons/ico/notepad.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Frontiers in Microbial Systems Biology</span>
+                    <span class="selector-desc">
+                      Spring 2025
+                    </span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="writing-genomic">
+                  <img class="selector-thumb" src="assets/app-icons/ico/xml.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Genomic Mechanisms Driving Fungal Resilience</span>
+                    <span class="selector-desc">
+                      Summer 2024
+                    </span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
+          <div class="viewer-panel">
+            <div class="viewer-content" data-view="writing-frontiers">
+              <h3>Frontiers in Microbial Systems Biology</h3>
+              <p>Spring 2025, 10 pgs</p>
+              <div class="pdf-actions">
+                <button type="button" id="open-frontiers-pdf">Open in Window</button>
+                <a
+                  class="button-link"
+                  href="assets/writing/MEC-Comment.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open in new tab
+                </a>
+              </div>
+              <p>This was a final project for BIOE 135 with Professor Adam Arkin. The drawings were a bit rushed but it was really fun to make!</p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="writing-genomic">
+              <h3>Genomic Mechanisms Driving Fungal Resilience, Summer 2024</h3>
+              <img
+                class="writing-image"
+                src="assets/writing/behind-the-scene.png"
+                alt="Behind the scenes writing visual"
+              />
+              <p>Shah, K., Deyett, E., Gao, Y., Shanker, R., Mahendra, S. Behind the scenes: Genomic mechanisms driving fungal resilience and response to fluorinated compounds. <em>In Prep.</em></p>
+              <p>Started on this paper at the Mahendra Lab at UCLA. Manuscript is still in preparation, stay tuned!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden portfolio-window" data-app-window="modeling">
+        <div class="title-bar">
+          <div class="title-bar-text">Modeling</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help"></button>
+            <button aria-label="Close" data-close="modeling"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="selector-panel">
+            <ul class="selector-list">
+              <li>
+                <button class="selector-item is-active" type="button" data-view="modeling-urban-blocks">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Urban Blocks</span>
+                    <span class="selector-desc">Massing studies for dense, mixed-use layouts.</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-kinetic-study">
+                  <img class="selector-thumb" src="assets/app-icons/ico/chart1.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Kinetic Study</span>
+                    <span class="selector-desc">Mechanism mockups exploring motion + balance.</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-furniture-prototype">
+                  <img class="selector-thumb" src="assets/app-icons/ico/printer_big.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Furniture Prototype</span>
+                    <span class="selector-desc">Iterative 3D prints with joint variations.</span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
+          <div class="viewer-panel">
+            <div class="viewer-content" data-view="modeling-urban-blocks">
+              <h3>Urban Blocks</h3>
+              <p>Filler content: modular massing and daylight studies across multiple block configurations.</p>
+              <p>Includes: render snapshots, plan overlays, and scale tests.</p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-kinetic-study">
+              <h3>Kinetic Study</h3>
+              <p>Filler content: rotating assemblies and material balance experiments.</p>
+              <p>Includes: exploded diagrams, load tests, and motion studies.</p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-furniture-prototype">
+              <h3>Furniture Prototype</h3>
+              <p>Filler content: ergonomic furniture forms and joinery refinements.</p>
+              <p>Includes: print iterations, weight tests, and finish mockups.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden pdf-window" data-app-window="mec-pdf" id="mec-pdf-window">
+        <div class="title-bar">
+          <div class="title-bar-text">MEC-Comment.pdf</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="mec-pdf"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="pdf-viewer">
+            <iframe
+              id="pdf-iframe"
+              src="assets/writing/MEC-Comment.pdf#page=1&zoom=100&toolbar=0&navpanes=0"
+              title="MEC-Comment.pdf"
+            ></iframe>
+          </div>
         </div>
       </div>
 
@@ -497,6 +998,158 @@
           <p>Window placeholder.</p>
         </div>
       </div>
+
+      <div class="window app-window is-hidden" data-app-window="credits">
+        <div class="title-bar">
+          <div class="title-bar-text">Credits</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help"></button>
+            <button aria-label="Close" data-close="credits"></button>
+          </div>
+        </div>
+        <div class="window-body credits-body">
+          <p class="credits-line">
+            <img
+              class="credits-logo-icon"
+              src="assets/app-icons/ico/windows.ico"
+              alt=""
+              aria-hidden="true"
+            />
+            Icons by
+            &nbsp;
+            <a href="https://win98icons.alexmeub.com/" target="_blank" rel="noreferrer">
+              win98icons.alexmeub.com
+            </a>
+          </p>
+          <p class="credits-line">
+            <img
+              class="credits-css-icon"
+              src="assets/app-icons/ico/computer.ico"
+              alt=""
+              aria-hidden="true"
+            />
+            CSS styling by
+            &nbsp;
+            <a href="https://github.com/jdan/98.css" target="_blank" rel="noreferrer">
+              github.com/jdan/98.css
+            </a>
+          </p>
+          <p class="credits-line">
+            <img
+              class="credits-thumb"
+              src="assets/mountain-and-sky.png"
+              alt=""
+              aria-hidden="true"
+            />
+            Blue sky wallpaper via Red Star OS
+          </p>
+          <p class="credits-line">
+            <img
+              class="credits-thumb"
+              src="assets/background.jpg"
+              alt=""
+              aria-hidden="true"
+            />
+            Desktop wallpaper via Asdal Stock Photos
+          </p>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden" data-app-window="socials">
+        <div class="title-bar">
+          <div class="title-bar-text">Socials</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help"></button>
+            <button aria-label="Close" data-close="socials"></button>
+          </div>
+        </div>
+        <div class="window-body socials-body">
+          <p>Find me here:</p>
+          <ul class="socials-list">
+            <li>
+              <a href="https://www.linkedin.com/in/rohin-shanker/" target="_blank" rel="noreferrer">
+                <img class="socials-logo" src="assets/app-icons/ico/users_green.ico" alt="" />
+                <span>
+                  <span class="socials-name">LinkedIn</span>
+                  <span class="socials-username">@rohin-shanker</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="mailto:rohin@example.com">
+                <img class="socials-logo" src="assets/app-icons/ico/mailbox_world.ico" alt="" />
+                <span>
+                  <span class="socials-name">Email</span>
+                  <span class="socials-username">rohins [at] berkeley [dot] edu</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="https://substack.com/@rohins" target="_blank" rel="noreferrer">
+                <img class="socials-logo" src="assets/app-icons/ico/newspaper.ico" alt="" />
+                <span>
+                  <span class="socials-name">Substack</span>
+                  <span class="socials-username">@rohins</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="https://open.spotify.com/user/rohindaman?si=ee2c1491d5eb48fe" target="_blank" rel="noreferrer">
+                <img class="socials-logo" src="assets/app-icons/ico/keyboard_musical_midi.ico" alt="" />
+                <span>
+                  <span class="socials-name">Spotify</span>
+                  <span class="socials-username">@rohin</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="https://www.costarastrology.com/" target="_blank" rel="noreferrer">
+                <img class="socials-logo" src="assets/app-icons/ico/utopia_smiley.ico" alt="" />
+                <span>
+                  <span class="socials-name">Co-Star</span>
+                  <span class="socials-username">@rohins</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="https://www.instagram.com/rohin.personal" target="_blank" rel="noreferrer">
+                <img class="socials-logo" src="assets/app-icons/ico/camera.ico" alt="" />
+                <span>
+                  <span class="socials-name">Instagram (personal)</span>
+                  <span class="socials-username">@rrohinss</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="https://www.instagram.com/rohin.food" target="_blank" rel="noreferrer">
+                <img class="socials-logo" src="assets/app-icons/ico/camera3.ico" alt="" />
+                <span>
+                  <span class="socials-name">Instagram (food blog)</span>
+                  <span class="socials-username">@cremebrulee4lyfe</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="https://steamcommunity.com/id/cloudstryder/" target="_blank" rel="noreferrer">
+                <img class="socials-logo" src="assets/app-icons/ico/joystick_alt.ico" alt="" />
+                <span>
+                  <span class="socials-name">Steam</span>
+                  <span class="socials-username">@cloudstryder</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="https://link.clashroyale.com/invite/friend/en?tag=28CYYU08P&token=kb6jg2ap&platform=iOS" target="_blank" rel="noreferrer">
+                <img class="socials-logo" src="assets/app-icons/ico/game_freecell.ico" alt="" />
+                <span>
+                  <span class="socials-name">Clash Royale</span>
+                  <span class="socials-username">@[Rohin]</span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
 
     <div class="taskbar" role="toolbar" aria-label="Taskbar">
@@ -509,17 +1162,26 @@
         <button class="taskbar-icon" id="about-app-taskbar" data-app="about" aria-label="About Me">
           <img src="assets/app-icons/ico/help_book_big.ico" alt="Help" />
         </button>
-        <button class="taskbar-icon" data-app="windows" aria-label="Windows">
-          <img src="assets/app-icons/ico/windows_three.ico" alt="Windows" />
+        <button class="taskbar-icon" data-app="windows" aria-label="Projects">
+          <img src="assets/app-icons/ico/regedit.ico" alt="Projects" />
         </button>
-        <button class="taskbar-icon" data-app="paint" aria-label="Paint">
-          <img src="assets/app-icons/ico/paint_old.ico" alt="Paint" />
+        <button class="taskbar-icon" data-app="taskmgr" aria-label="Writing">
+          <img src="assets/app-icons/ico/shell_window6.ico" alt="Writing" />
         </button>
-        <button class="taskbar-icon" data-app="taskmgr" aria-label="Task Manager">
-          <img src="assets/app-icons/ico/computer_taskmgr.ico" alt="Task Manager" />
+        <button class="taskbar-icon" data-app="modeling" aria-label="Modeling">
+          <img src="assets/app-icons/ico/accessibility_window_objs.ico" alt="Modeling" />
+        </button>
+        <button class="taskbar-icon" data-app="paint" aria-label="Creative Work">
+          <img src="assets/app-icons/ico/paint_old.ico" alt="Creative Work" />
+        </button>
+        <button class="taskbar-icon" data-app="socials" aria-label="Socials">
+          <img src="assets/app-icons/ico/connected_world.ico" alt="Socials" />
         </button>
         <button class="taskbar-icon" data-app="minesweeper" aria-label="Minesweeper">
           <img src="assets/app-icons/ico/minesweeper.ico" alt="Minesweeper" />
+        </button>
+        <button class="taskbar-icon" data-app="credits" aria-label="Credits">
+          <img src="assets/app-icons/ico/search_laptop_1.ico" alt="Credits" data-credits-icon />
         </button>
       </div>
       <span class="taskbar-divider" aria-hidden="true"></span>
@@ -569,6 +1231,7 @@
       const appWindows = document.querySelectorAll("[data-app-window]");
       const closeButtons = document.querySelectorAll("[data-close]");
       const draggableWindows = document.querySelectorAll(".window");
+      const creditsIcons = document.querySelectorAll("[data-credits-icon]");
       const calendarButton = document.getElementById("taskbar-clock-button");
       const calendarPopout = document.getElementById("calendar-popout");
       const calendarPanel = document.getElementById("calendar-panel");
@@ -580,9 +1243,12 @@
       const calendarClock = document.getElementById("calendar-clock");
       const clockImage = document.getElementById("clock-image");
       const clockQuote = document.getElementById("clock-quote");
+      const openFrontiersPdf = document.getElementById("open-frontiers-pdf");
+      const pdfIframe = document.getElementById("pdf-iframe");
 
       let topZ = 10;
       let calendarDate = new Date();
+      let windowOffsetIndex = 0;
 
       const updateClock = () => {
         const now = new Date();
@@ -631,6 +1297,34 @@
         const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
         if (win) {
           win.classList.toggle("is-hidden", !open);
+          if (open) {
+            if (win.classList.contains("home-window")) {
+              win.classList.add("app-window--center");
+              win.style.left = "";
+              win.style.top = "";
+              win.style.transform = "";
+              return;
+            }
+            const paddingX = 24;
+            const paddingY = 24;
+            const maxLeft = Math.max(
+              paddingX,
+              window.innerWidth - win.offsetWidth - paddingX
+            );
+            const maxTop = Math.max(
+              paddingY,
+              window.innerHeight - win.offsetHeight - 90
+            );
+            const randomLeft =
+              paddingX + Math.random() * (maxLeft - paddingX);
+            const randomTop = paddingY + Math.random() * (maxTop - paddingY);
+
+            win.classList.remove("app-window--center");
+            win.style.transform = "none";
+            win.style.left = `${Math.round(randomLeft)}px`;
+            win.style.top = `${Math.round(randomTop)}px`;
+            win.style.zIndex = String(topZ++);
+          }
         }
       };
 
@@ -645,6 +1339,123 @@
       setInterval(updateClock, 1000 * 30);
       updateCalendarClock();
       setInterval(updateCalendarClock, 500);
+
+      const creditsFrames = [
+        "assets/app-icons/ico/search_laptop_1.ico",
+        "assets/app-icons/ico/search_laptop_2.ico",
+        "assets/app-icons/ico/search_laptop_3.ico",
+        "assets/app-icons/ico/search_laptop_4.ico",
+      ];
+
+      creditsIcons.forEach((icon) => {
+        let frameIndex = 0;
+        let intervalId = null;
+        const startAnimation = () => {
+          if (intervalId) return;
+          intervalId = setInterval(() => {
+            frameIndex = (frameIndex + 1) % creditsFrames.length;
+            icon.setAttribute("src", creditsFrames[frameIndex]);
+          }, 140);
+        };
+        const stopAnimation = () => {
+          if (!intervalId) return;
+          clearInterval(intervalId);
+          intervalId = null;
+          frameIndex = 0;
+          icon.setAttribute("src", creditsFrames[0]);
+        };
+
+        icon.addEventListener("mouseenter", startAnimation);
+        icon.addEventListener("mouseleave", stopAnimation);
+        icon.addEventListener("focus", startAnimation);
+        icon.addEventListener("blur", stopAnimation);
+      });
+
+      document.querySelectorAll(".portfolio-window").forEach((windowEl) => {
+        const selectorButtons = windowEl.querySelectorAll(".selector-item");
+        const viewerPanels = windowEl.querySelectorAll(".viewer-content");
+        const selectorPanel = windowEl.querySelector(".selector-panel");
+        const divider = windowEl.querySelector(".panel-divider");
+
+        selectorButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const viewId = button.getAttribute("data-view");
+            if (!viewId) return;
+
+            selectorButtons.forEach((item) => item.classList.remove("is-active"));
+            button.classList.add("is-active");
+
+            viewerPanels.forEach((panel) => {
+              const matches = panel.getAttribute("data-view") === viewId;
+              panel.classList.toggle("is-hidden", !matches);
+            });
+          });
+        });
+
+        if (divider && selectorPanel) {
+          divider.addEventListener("pointerdown", (event) => {
+            const body = windowEl.querySelector(".window-body");
+            if (!body) return;
+            const bodyRect = body.getBoundingClientRect();
+            const startX = event.clientX;
+            const startWidth = selectorPanel.getBoundingClientRect().width;
+            const minWidth = 200;
+            const maxWidth = Math.min(420, bodyRect.width - 220);
+
+            divider.setPointerCapture(event.pointerId);
+
+            const onMove = (moveEvent) => {
+              const delta = moveEvent.clientX - startX;
+              const nextWidth = Math.max(minWidth, Math.min(startWidth + delta, maxWidth));
+              selectorPanel.style.width = `${nextWidth}px`;
+            };
+
+            const onUp = (upEvent) => {
+              divider.releasePointerCapture(upEvent.pointerId);
+              divider.removeEventListener("pointermove", onMove);
+              divider.removeEventListener("pointerup", onUp);
+            };
+
+            divider.addEventListener("pointermove", onMove);
+            divider.addEventListener("pointerup", onUp);
+          });
+        }
+      });
+
+      const pathfinderImages = [
+        "assets/creative-work/pathfinder-logo.png",
+        "assets/creative-work/pathfinder-cad.png",
+        "assets/creative-work/pathfinder-new-trash.png",
+        "assets/creative-work/pathfinder-perso%20n.png",
+      ];
+      const pathfinderImage = document.getElementById("pathfinder-image");
+      const pathfinderPrev = document.getElementById("pathfinder-prev");
+      const pathfinderNext = document.getElementById("pathfinder-next");
+      let pathfinderIndex = 0;
+
+      const updatePathfinderImage = () => {
+        if (!pathfinderImage) return;
+        pathfinderImage.setAttribute("src", pathfinderImages[pathfinderIndex]);
+      };
+
+      if (pathfinderPrev && pathfinderNext) {
+        pathfinderPrev.addEventListener("click", () => {
+          pathfinderIndex =
+            (pathfinderIndex - 1 + pathfinderImages.length) % pathfinderImages.length;
+          updatePathfinderImage();
+        });
+
+        pathfinderNext.addEventListener("click", () => {
+          pathfinderIndex = (pathfinderIndex + 1) % pathfinderImages.length;
+          updatePathfinderImage();
+        });
+      }
+
+      if (openFrontiersPdf) {
+        openFrontiersPdf.addEventListener("click", () => {
+          setWindowOpen("mec-pdf", true);
+        });
+      }
 
       const calendarImages = {
         0: "assets/calendar-pics/jan.jpg",
@@ -662,7 +1473,7 @@
       };
 
       const calendarQuotes = {
-        0: `"perhaps you were made for this moment, to walk through blazing fire and come forth as gold"<br>—Morgan Harper Nichols`,
+        0: `"Perhaps you were made for this moment, to walk through blazing fire and come forth as gold"<br>—Morgan Harper Nichols`,
         1: `"The gentle yield of water will cut obstinate stone"<br>—Lao Tzu`,
         2:
           `"Man will not merely endure: he will prevail. He is immortal, not because he alone among creatures has an inexhaustible voice, but because he has a soul, a spirit capable of compassion and sacrifice and endurance."<br>` +
@@ -671,6 +1482,15 @@
           `"Happiness, like success, cannot be pursued; it must ensue, and it only does so as the unintended side-effect of dedication to a cause greater than oneself"<br>` +
           `—Viktor E. Frankl`,
         4: `"We don't dance to get to the end of the song."<br>—Sydney Rheeder`,
+        5:
+          `"I took a deep breath and listened to the old brag of my heart. I am, I am, I am." ` +
+          `—Sylvia Plath`,
+        6: `"It takes great courage to see the world in all its tainted glory, and still to love it." —Oscar Wilde`,
+        7: `"In the depth of winter, I finally learned that within me there lay an invincible summer. —Albert Camus`,
+        8: `"It isn’t constancy that keeps us alive, it’s the progression we use to move us." —Olivie Blake`,
+        9: `"The best way to predict the future it to create it"<br>—Peter Drucker`,
+        10: `"Our life is shaped by our mind, for we become what we think."<br>—Buddha`,
+        11: `"To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment"<br>—Ralph Waldo Emerson`,
       };
 
       const updateCalendarQuote = (month) => {
