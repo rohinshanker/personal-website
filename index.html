@@ -131,7 +131,7 @@
           </div>
         </div>
         <div class="window-body">
-          <p class="loader-copy" id="loader-copy">Preparing the environment. Please wait...</p>
+          <p class="loader-copy" id="loader-copy">This website is optimized for desktop.<br />Preparing the environment, Please wait...</p>
           <div
             class="progress-indicator segmented"
             role="progressbar"
@@ -216,7 +216,7 @@
         progress = 0;
         progressBar.style.width = "0%";
         progressWrap.setAttribute("aria-valuenow", "0");
-        loaderCopy.textContent = "Preparing the environment. Please wait...";
+        loaderCopy.innerHTML = "This website is optimized for desktop. Preparing the environment...";
         statusText.textContent = "Starting...";
         proceedButton.disabled = true;
         ticking = false;

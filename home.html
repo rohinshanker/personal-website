@@ -143,6 +143,399 @@
         vertical-align: middle;
       }
 
+      .minesweeper-window {
+        width: min(92vw, 520px);
+      }
+
+      .minesweeper-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .ms-app {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: relative;
+      }
+
+      .ms-top-panel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .ms-counter {
+        background: #000;
+        box-shadow: inset 1px 1px 0 #222, inset -1px -1px 0 #555;
+        border-radius: 0;
+      }
+
+      .ms-reset {
+        width: 38px;
+        height: 38px;
+        border: none;
+        padding: 0;
+        background: none;
+        box-shadow: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        min-height: 38px;
+        text-shadow: none;
+        color: #000;
+      }
+
+      .ms-reset::before {
+        content: "";
+        width: 32px;
+        height: 32px;
+        background: center / contain no-repeat var(--ms-face-image, none);
+        display: block;
+        image-rendering: pixelated;
+      }
+
+      .ms-reset[data-face="smile"] {
+        --ms-face-image: url("assets/minesweeper_assets/faces/face_smile.png");
+      }
+
+      .ms-reset[data-face="ooh"] {
+        --ms-face-image: url("assets/minesweeper_assets/faces/face_surprised.png");
+      }
+
+      .ms-reset[data-face="pressed"] {
+        --ms-face-image: url("assets/minesweeper_assets/faces/face_pressed.png");
+      }
+
+      .ms-reset[data-face="lose"] {
+        --ms-face-image: url("assets/minesweeper_assets/faces/face_dead.png");
+      }
+
+      .ms-reset[data-face="win"] {
+        --ms-face-image: url("assets/minesweeper_assets/faces/face_cool.png");
+      }
+
+      .ms-board {
+        padding: 6px;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        overflow: auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .ms-grid {
+        --ms-cell-size: 20px;
+        display: grid;
+        gap: 0;
+        user-select: none;
+        touch-action: none;
+        align-content: start;
+        justify-content: start;
+      }
+
+      .ms-cell {
+        width: var(--ms-cell-size);
+        height: var(--ms-cell-size);
+        min-width: var(--ms-cell-size);
+        min-height: var(--ms-cell-size);
+        border: none;
+        padding: 0;
+        background: center / contain no-repeat url("assets/minesweeper_assets/tiles/tile_covered.png");
+        box-shadow: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        line-height: 1;
+        appearance: none;
+        -webkit-appearance: none;
+        font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif;
+        text-shadow: none;
+        color: transparent;
+        image-rendering: pixelated;
+      }
+
+      .ms-cell:focus {
+        outline: none;
+      }
+
+      .ms-cell.is-revealed {
+        background-image: url("assets/minesweeper_assets/tiles/tile_revealed_empty.png");
+        box-shadow: none;
+        cursor: default;
+      }
+
+      .ms-cell.is-flagged {
+        background-image: url("assets/minesweeper_assets/tiles/tile_flag.png");
+      }
+
+      .ms-cell.is-question {
+        background-image: url("assets/minesweeper_assets/tiles/tile_question.png");
+      }
+
+      .ms-cell.is-question.is-pressed {
+        background-image: url("assets/minesweeper_assets/tiles/tile_question_pressed.png");
+      }
+
+      .ms-cell.is-pressed {
+        background-image: url("assets/minesweeper_assets/tiles/tile_revealed_empty.png");
+      }
+
+      .ms-cell.is-mine {
+        background-image: url("assets/minesweeper_assets/tiles/tile_mine.png");
+      }
+
+      .ms-cell.is-blown {
+        background-image: url("assets/minesweeper_assets/tiles/tile_mine_exploded.png");
+      }
+
+      .ms-cell.is-mine-wrong {
+        background-image: url("assets/minesweeper_assets/tiles/tile_mine_wrong.png");
+      }
+
+      .ms-cell[data-number="1"] {
+        background-image: url("assets/minesweeper_assets/cell_numbers/cell_1.png");
+      }
+
+      .ms-cell[data-number="2"] {
+        background-image: url("assets/minesweeper_assets/cell_numbers/cell_2.png");
+      }
+
+      .ms-cell[data-number="3"] {
+        background-image: url("assets/minesweeper_assets/cell_numbers/cell_3.png");
+      }
+
+      .ms-cell[data-number="4"] {
+        background-image: url("assets/minesweeper_assets/cell_numbers/cell_4.png");
+      }
+
+      .ms-cell[data-number="5"] {
+        background-image: url("assets/minesweeper_assets/cell_numbers/cell_5.png");
+      }
+
+      .ms-cell[data-number="6"] {
+        background-image: url("assets/minesweeper_assets/cell_numbers/cell_6.png");
+      }
+
+      .ms-cell[data-number="7"] {
+        background-image: url("assets/minesweeper_assets/cell_numbers/cell_7.png");
+      }
+
+      .ms-cell[data-number="8"] {
+        background-image: url("assets/minesweeper_assets/cell_numbers/cell_8.png");
+      }
+
+      .ms-counter {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        padding: 3px 4px;
+      }
+
+      .ms-digit {
+        width: 18px;
+        height: 30px;
+        display: block;
+        image-rendering: pixelated;
+      }
+
+      .ms-footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+      }
+
+      .ms-footer select {
+        height: 22px;
+      }
+
+      .ms-lose-banner {
+        position: absolute;
+        left: 0;
+        right: 2px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 5;
+        opacity: 0;
+        transition: opacity 2.5s ease-out;
+      }
+
+      .ms-lose-banner img {
+        width: 100%;
+        height: auto;
+        display: block;
+        image-rendering: pixelated;
+      }
+
+      .ms-lose-banner.is-visible {
+        opacity: 1;
+      }
+
+      .ms-confetti {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 100;
+      }
+
+      /* Clash Royale app styles (disabled for now).
+       * To re-enable: remove this block comment and the matching HTML + JS comments below.
+      /*
+      .cr-app {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .cr-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 11px;
+      }
+
+      .cr-status {
+        color: #1a1a1a;
+      }
+
+      .cr-panel {
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        padding: 10px;
+      }
+
+      .cr-player-header {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .cr-title-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .cr-player-name {
+        font-weight: 700;
+        font-size: 15px;
+      }
+
+      .cr-tag {
+        font-size: 11px;
+        color: #4b4b4b;
+      }
+
+      .cr-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 6px 12px;
+        font-size: 11px;
+      }
+
+      .cr-stat {
+        display: flex;
+        gap: 6px;
+      }
+
+      .cr-stat strong {
+        min-width: 70px;
+      }
+
+      .cr-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .cr-chip {
+        padding: 2px 6px;
+        border: 1px solid #b5b5b5;
+        background: #f4f4f4;
+        font-size: 10px;
+      }
+
+      .cr-battle-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .cr-battle-item {
+        border: 1px solid #c3c3c3;
+        background: #f8f8f8;
+        padding: 6px 8px;
+      }
+
+      .cr-battle-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        font-size: 11px;
+      }
+
+      .cr-result {
+        font-weight: 700;
+        padding: 2px 6px;
+        border: 1px solid #222;
+      }
+
+      .cr-result.is-win {
+        background: #c9f2d0;
+      }
+
+      .cr-result.is-loss {
+        background: #f7c6c6;
+      }
+
+      .cr-result.is-draw {
+        background: #f7efc6;
+      }
+
+      .cr-battle-detail {
+        margin-top: 8px;
+        font-size: 11px;
+        display: grid;
+        gap: 6px;
+      }
+
+      .cr-deck-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .cr-deck-card {
+        padding: 2px 6px;
+        border: 1px solid #b5b5b5;
+        background: #fff;
+        font-size: 10px;
+      }
+
+      .cr-section-title {
+        margin: 0 0 6px;
+        font-size: 12px;
+      }
+      */
+
       .about-title {
         margin: 0 0 12px;
         font-size: 20px;
@@ -705,6 +1098,14 @@
         <img src="assets/app-icons/ico/search_laptop_1.ico" alt="" data-credits-icon />
         Credits
       </button>
+      <!-- Clash Royale app (disabled for now).
+           To re-enable: remove this comment wrapper AND the matching taskbar icon
+           + JS disable comments near the script block. 
+      <button class="desktop-icon" data-app="clash-royale" aria-label="Clash Royale">
+        <img src="assets/app-icons/ico/game_freecell.ico" alt="" />
+        Clash Royale
+      </button>
+    -->
     </div>
     <div class="window-stack">
       <div class="window home-window app-window app-window--center" data-app-window="about" id="about-window">
@@ -986,7 +1387,7 @@
         </div>
       </div>
 
-      <div class="window app-window is-hidden" data-app-window="minesweeper">
+      <div class="window app-window is-hidden minesweeper-window" data-app-window="minesweeper">
         <div class="title-bar">
           <div class="title-bar-text">Minesweeper</div>
           <div class="title-bar-controls">
@@ -995,7 +1396,36 @@
           </div>
         </div>
         <div class="window-body">
-          <p>Window placeholder.</p>
+          <div class="ms-app" aria-label="Minesweeper game">
+            <div class="ms-lose-banner" id="ms-lose-banner" aria-hidden="true">
+              <img src="assets/minesweeper_assets/YOU-LOSE.png" alt="You Lose" />
+            </div>
+            <div class="ms-top-panel">
+              <div class="ms-counter" id="ms-mines" aria-label="Mines remaining">
+                <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
+                <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
+                <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
+              </div>
+              <button class="ms-reset" id="ms-reset" data-face="smile" type="button" aria-label="New game"></button>
+              <div class="ms-counter" id="ms-time" aria-label="Elapsed time">
+                <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
+                <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
+                <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
+              </div>
+            </div>
+            <div class="ms-board">
+              <div class="ms-grid" id="ms-grid" role="grid" aria-label="Minesweeper grid"></div>
+            </div>
+            <div class="ms-footer">
+              <label aria-label="Difficulty">
+                <select id="ms-difficulty">
+                  <option value="beginner">Beginner 9x9 (10 mines)</option>
+                  <option value="intermediate">Intermediate 16x16 (40 mines)</option>
+                  <option value="expert">Expert 30x16 (99 mines)</option>
+                </select>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1015,7 +1445,7 @@
               alt=""
               aria-hidden="true"
             />
-            Icons by
+            Windows icons from
             &nbsp;
             <a href="https://win98icons.alexmeub.com/" target="_blank" rel="noreferrer">
               win98icons.alexmeub.com
@@ -1055,6 +1485,82 @@
         </div>
       </div>
 
+      <!-- Clash Royale app (disabled for now).
+           To re-enable: remove this comment wrapper AND the matching desktop icon
+           + JS disable comments near the script block. -->
+      <div class="window app-window is-hidden" data-app-window="clash-royale">
+        <div class="title-bar">
+          <div class="title-bar-text">Clash Royale</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help"></button>
+            <button aria-label="Close" data-close="clash-royale"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="cr-app">
+            <div class="cr-toolbar">
+              <span class="cr-status" id="cr-status">Ready to load player data.</span>
+              <button id="cr-refresh" class="default" type="button">Refresh</button>
+            </div>
+            <section class="cr-panel">
+              <h3 class="cr-section-title">Player Card</h3>
+              <div class="cr-player-header" id="cr-player-card">
+                <div class="cr-title-row">
+                  <span class="cr-player-name" id="cr-player-name">--</span>
+                  <span class="cr-tag" id="cr-player-tag">--</span>
+                </div>
+                <div class="cr-stat-grid">
+                  <div class="cr-stat"><strong>King:</strong><span id="cr-king-level">--</span></div>
+                  <div class="cr-stat"><strong>Trophies:</strong><span id="cr-trophies">--</span></div>
+                  <div class="cr-stat"><strong>Best:</strong><span id="cr-best-trophies">--</span></div>
+                  <div class="cr-stat"><strong>Arena:</strong><span id="cr-arena">--</span></div>
+                  <div class="cr-stat"><strong>Favorite:</strong><span id="cr-favorite-card">--</span></div>
+                  <div class="cr-stat"><strong>Clan:</strong><span id="cr-clan">--</span></div>
+                  <div class="cr-stat"><strong>Role:</strong><span id="cr-role">--</span></div>
+                  <div class="cr-stat"><strong>Donations:</strong><span id="cr-donations">--</span></div>
+                </div>
+                <div>
+                  <strong>Badges:</strong>
+                  <div class="cr-chip-row" id="cr-badges"></div>
+                </div>
+                <div class="cr-tag">Last updated: <span id="cr-last-updated">--</span></div>
+              </div>
+            </section>
+            <section class="cr-panel">
+              <h3 class="cr-section-title">Rolling Performance</h3>
+              <div class="cr-stat-grid">
+                <div class="cr-stat"><strong>Sample:</strong><span id="cr-sample">--</span></div>
+                <div class="cr-stat"><strong>Win rate:</strong><span id="cr-win-rate">--</span></div>
+                <div class="cr-stat"><strong>Crown diff:</strong><span id="cr-crown-diff">--</span></div>
+                <div class="cr-stat"><strong>Avg crowns:</strong><span id="cr-crown-avg">--</span></div>
+                <div class="cr-stat"><strong>Ladder WR:</strong><span id="cr-ladder-winrate">--</span></div>
+                <div class="cr-stat"><strong>Avg trophy:</strong><span id="cr-avg-trophy">--</span></div>
+                <div class="cr-stat"><strong>Deck stability:</strong><span id="cr-deck-stability">--</span></div>
+                <div class="cr-stat"><strong>Archetype:</strong><span id="cr-archetype">--</span></div>
+              </div>
+              <div style="margin-top: 8px;">
+                <strong>Most played cards:</strong>
+                <div class="cr-chip-row" id="cr-top-cards"></div>
+              </div>
+            </section>
+            <section class="cr-panel">
+              <h3 class="cr-section-title">Main Deck</h3>
+              <div class="cr-stat-grid">
+                <div class="cr-stat"><strong>Deck:</strong><span id="cr-main-deck-name">--</span></div>
+                <div class="cr-stat"><strong>Avg elixir:</strong><span id="cr-main-elixir">--</span></div>
+                <div class="cr-stat"><strong>Win rate:</strong><span id="cr-main-winrate">--</span></div>
+              </div>
+              <div class="cr-deck-row" id="cr-main-deck"></div>
+            </section>
+            <section class="cr-panel">
+              <h3 class="cr-section-title">Recent Battles</h3>
+              <div class="cr-battle-list" id="cr-battle-log"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+      -->
+
       <div class="window app-window is-hidden" data-app-window="socials">
         <div class="title-bar">
           <div class="title-bar-text">Socials</div>
@@ -1081,6 +1587,15 @@
                 <span>
                   <span class="socials-name">Email</span>
                   <span class="socials-username">rohins [at] berkeley [dot] edu</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="https://github.com/rohinshanker" target="_blank" rel="noreferrer">
+                <img class="socials-logo" src="assets/app-icons/ico/gears.ico" alt="" />
+                <span>
+                  <span class="socials-name">GitHub</span>
+                  <span class="socials-username">@rohinshanker</span>
                 </span>
               </a>
             </li>
@@ -1183,6 +1698,11 @@
         <button class="taskbar-icon" data-app="credits" aria-label="Credits">
           <img src="assets/app-icons/ico/search_laptop_1.ico" alt="Credits" data-credits-icon />
         </button>
+        <!-- Clash Royale app (disabled for now).
+        <button class="taskbar-icon" data-app="clash-royale" aria-label="Clash Royale">
+          <img src="assets/app-icons/ico/game_freecell.ico" alt="Clash Royale" />
+        </button>
+        -->
       </div>
       <span class="taskbar-divider" aria-hidden="true"></span>
       <button class="taskbar-right" id="taskbar-clock-button" aria-label="Date and time">
@@ -1225,6 +1745,8 @@
       </div>
     </div>
 
+    <canvas class="ms-confetti" id="ms-confetti" aria-hidden="true"></canvas>
+
     <script>
       const clock = document.getElementById("taskbar-clock");
       const appButtons = document.querySelectorAll("[data-app]");
@@ -1245,10 +1767,22 @@
       const clockQuote = document.getElementById("clock-quote");
       const openFrontiersPdf = document.getElementById("open-frontiers-pdf");
       const pdfIframe = document.getElementById("pdf-iframe");
+      // Clash Royale app logic (disabled for now).
+      // To re-enable: uncomment the CLASH_* constants, clash* variables,
+      // the block below, and the two event hooks further down.
+      // const clashRefresh = document.getElementById("cr-refresh");
+      // const clashStatus = document.getElementById("cr-status");
+
+      // const CLASH_API_BASE_URL = "https://api.clashroyale.com/v1";
+      // const CLASH_API_TOKEN = "";
+      // const CLASH_PLAYER_TAG = "28CYYU08P";
+      // const CLASH_SAMPLE_SIZE = 25;
 
       let topZ = 10;
       let calendarDate = new Date();
       let windowOffsetIndex = 0;
+      // let clashRoyaleLoaded = false;
+      // let clashRoyaleLoading = false;
 
       const updateClock = () => {
         const now = new Date();
@@ -1328,10 +1862,378 @@
         }
       };
 
+      const formatNumber = (value) => {
+        if (value === null || value === undefined || Number.isNaN(value)) return "--";
+        return Number(value).toLocaleString();
+      };
+
+      const parseBattleTime = (value) => {
+        if (!value) return null;
+        if (value.includes("-")) {
+          const parsed = new Date(value);
+          return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+        const match = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+        if (!match) return null;
+        const [, year, month, day, hour, minute, second] = match;
+        const iso = `${year}-${month}-${day}T${hour}:${minute}:${second}Z`;
+        const parsed = new Date(iso);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      };
+
+      const formatBattleLabel = (battle) => {
+        if (!battle) return "Unknown";
+        if (battle.gameMode && battle.gameMode.name) return battle.gameMode.name;
+        if (battle.type) return battle.type;
+        return "Battle";
+      };
+
+      const formatClan = (clan) => {
+        if (!clan) return "--";
+        const clanTag = clan.tag ? clan.tag : "";
+        return `${clan.name || "--"}${clanTag ? ` (${clanTag})` : ""}`;
+      };
+
+      const buildDeckSignature = (cards) => {
+        if (!Array.isArray(cards) || cards.length === 0) return "";
+        return cards.map((card) => card.name).sort().join("|");
+      };
+
+      const averageElixir = (cards) => {
+        if (!Array.isArray(cards) || cards.length === 0) return null;
+        const costs = cards
+          .map((card) => Number(card.elixirCost))
+          .filter((value) => !Number.isNaN(value));
+        if (costs.length === 0) return null;
+        const sum = costs.reduce((acc, value) => acc + value, 0);
+        return Math.round((sum / costs.length) * 10) / 10;
+      };
+
+      const guessArchetype = (cards) => {
+        const names = new Set(cards.map((card) => card.name));
+        if (names.has("Hog Rider")) return "Hog Cycle";
+        if (names.has("Golem")) return "Golem Beatdown";
+        if (names.has("Lava Hound")) return "LavaLoon";
+        if (names.has("Royal Giant")) return "Royal Giant";
+        if (names.has("X-Bow")) return "X-Bow";
+        if (names.has("Mortar")) return "Mortar";
+        if (names.has("Balloon")) return "Balloon";
+        if (names.has("P.E.K.K.A")) return "P.E.K.K.A Bridge Spam";
+        if (names.has("Graveyard")) return "Graveyard";
+        return "Mixed";
+      };
+
+      /* Clash Royale app logic (disabled for now).
+       * To re-enable: remove this block comment and the two event hooks below.
+       * (block continues below)
+      const updateClashStatus = (message) => {
+        if (clashStatus) {
+          clashStatus.textContent = message;
+        }
+      };
+
+      const renderChips = (container, items) => {
+        if (!container) return;
+        container.innerHTML = "";
+        if (!items || items.length === 0) {
+          const chip = document.createElement("span");
+          chip.className = "cr-chip";
+          chip.textContent = "--";
+          container.appendChild(chip);
+          return;
+        }
+        items.forEach((item) => {
+          const chip = document.createElement("span");
+          chip.className = "cr-chip";
+          chip.textContent = item;
+          container.appendChild(chip);
+        });
+      };
+
+      const renderDeck = (container, cards) => {
+        if (!container) return;
+        container.innerHTML = "";
+        if (!Array.isArray(cards) || cards.length === 0) {
+          const chip = document.createElement("span");
+          chip.className = "cr-deck-card";
+          chip.textContent = "--";
+          container.appendChild(chip);
+          return;
+        }
+        cards.forEach((card) => {
+          const chip = document.createElement("span");
+          chip.className = "cr-deck-card";
+          chip.textContent = card.name;
+          container.appendChild(chip);
+        });
+      };
+
+      const renderBattleLog = (battles) => {
+        const battleLog = document.getElementById("cr-battle-log");
+        if (!battleLog) return;
+        battleLog.innerHTML = "";
+        if (!Array.isArray(battles) || battles.length === 0) {
+          const empty = document.createElement("div");
+          empty.textContent = "No battles found.";
+          battleLog.appendChild(empty);
+          return;
+        }
+        battles.forEach((battle) => {
+          const team = battle.team ? battle.team[0] : null;
+          const opponent = battle.opponent ? battle.opponent[0] : null;
+          const teamCrowns = team?.crowns ?? 0;
+          const oppCrowns = opponent?.crowns ?? 0;
+          const result = teamCrowns > oppCrowns ? "win" : teamCrowns < oppCrowns ? "loss" : "draw";
+          const trophyDelta = team?.trophyChange ?? battle.trophyChange ?? null;
+          const time = parseBattleTime(battle.battleTime);
+          const summary = document.createElement("details");
+          summary.className = "cr-battle-item";
+          const summaryRow = document.createElement("summary");
+          summaryRow.className = "cr-battle-summary";
+          const resultBadge = document.createElement("span");
+          resultBadge.className = `cr-result is-${result}`;
+          resultBadge.textContent = result.toUpperCase();
+          const mode = document.createElement("span");
+          mode.textContent = formatBattleLabel(battle);
+          const crownText = document.createElement("span");
+          crownText.textContent = `Crowns ${teamCrowns}-${oppCrowns}`;
+          const trophyText = document.createElement("span");
+          trophyText.textContent = trophyDelta === null ? "No trophy delta" : `Trophies ${trophyDelta > 0 ? "+" : ""}${trophyDelta}`;
+          const timeText = document.createElement("span");
+          timeText.textContent = time ? time.toLocaleString() : "Unknown time";
+          summaryRow.appendChild(resultBadge);
+          summaryRow.appendChild(mode);
+          summaryRow.appendChild(crownText);
+          summaryRow.appendChild(trophyText);
+          summaryRow.appendChild(timeText);
+          summary.appendChild(summaryRow);
+
+          const detail = document.createElement("div");
+          detail.className = "cr-battle-detail";
+          const oppLine = document.createElement("div");
+          const oppClan = opponent?.clan ? ` (${opponent.clan.name})` : "";
+          oppLine.textContent = `Opponent: ${opponent?.name || "--"}${oppClan} ${opponent?.tag || ""}`;
+          const deckRow = document.createElement("div");
+          deckRow.innerHTML = "<strong>Your deck:</strong>";
+          const deckCards = document.createElement("div");
+          deckCards.className = "cr-deck-row";
+          renderDeck(deckCards, team?.cards || []);
+          const oppDeckRow = document.createElement("div");
+          oppDeckRow.innerHTML = "<strong>Opponent deck:</strong>";
+          const oppDeckCards = document.createElement("div");
+          oppDeckCards.className = "cr-deck-row";
+          renderDeck(oppDeckCards, opponent?.cards || []);
+          const elixirLine = document.createElement("div");
+          const teamElixir = averageElixir(team?.cards || []);
+          const oppElixir = averageElixir(opponent?.cards || []);
+          elixirLine.textContent = `Elixir avg: you ${teamElixir ?? "--"} / opp ${oppElixir ?? "--"}`;
+          detail.appendChild(oppLine);
+          detail.appendChild(deckRow);
+          detail.appendChild(deckCards);
+          detail.appendChild(oppDeckRow);
+          detail.appendChild(oppDeckCards);
+          detail.appendChild(elixirLine);
+          summary.appendChild(detail);
+
+          battleLog.appendChild(summary);
+        });
+      };
+
+      const updatePlayerCard = (player) => {
+        const nameEl = document.getElementById("cr-player-name");
+        const tagEl = document.getElementById("cr-player-tag");
+        const kingEl = document.getElementById("cr-king-level");
+        const trophiesEl = document.getElementById("cr-trophies");
+        const bestEl = document.getElementById("cr-best-trophies");
+        const arenaEl = document.getElementById("cr-arena");
+        const favEl = document.getElementById("cr-favorite-card");
+        const clanEl = document.getElementById("cr-clan");
+        const roleEl = document.getElementById("cr-role");
+        const donationsEl = document.getElementById("cr-donations");
+        const badgesEl = document.getElementById("cr-badges");
+        const lastUpdatedEl = document.getElementById("cr-last-updated");
+
+        if (nameEl) nameEl.textContent = player?.name || "--";
+        if (tagEl) tagEl.textContent = player?.tag || "--";
+        if (kingEl) kingEl.textContent = formatNumber(player?.expLevel || player?.experienceLevel);
+        if (trophiesEl) trophiesEl.textContent = formatNumber(player?.trophies);
+        if (bestEl) bestEl.textContent = formatNumber(player?.bestTrophies);
+        if (arenaEl) arenaEl.textContent = player?.arena?.name || player?.currentArena?.name || "--";
+        if (favEl) favEl.textContent = player?.currentFavouriteCard?.name || "--";
+        if (clanEl) clanEl.textContent = formatClan(player?.clan);
+        if (roleEl) roleEl.textContent = player?.role || "--";
+        if (donationsEl) donationsEl.textContent = formatNumber(player?.donations);
+        if (badgesEl) {
+          const badgeNames = Array.isArray(player?.badges)
+            ? player.badges.slice(0, 6).map((badge) => badge.name)
+            : [];
+          renderChips(badgesEl, badgeNames);
+        }
+        if (lastUpdatedEl) lastUpdatedEl.textContent = new Date().toLocaleString();
+      };
+
+      const updateAnalytics = (battles) => {
+        const sample = battles.slice(0, CLASH_SAMPLE_SIZE);
+        const total = sample.length;
+        let wins = 0;
+        let draws = 0;
+        let crownsFor = 0;
+        let crownsAgainst = 0;
+        let ladderWins = 0;
+        let ladderTotal = 0;
+        let trophyDeltaSum = 0;
+        let trophyDeltaCount = 0;
+        const cardCounts = new Map();
+        const deckCounts = new Map();
+
+        sample.forEach((battle) => {
+          const team = battle.team ? battle.team[0] : null;
+          const opponent = battle.opponent ? battle.opponent[0] : null;
+          const teamCrowns = team?.crowns ?? 0;
+          const oppCrowns = opponent?.crowns ?? 0;
+          crownsFor += teamCrowns;
+          crownsAgainst += oppCrowns;
+          if (teamCrowns > oppCrowns) wins += 1;
+          else if (teamCrowns === oppCrowns) draws += 1;
+
+          const isLadder = battle.type === "ladder" || battle.gameMode?.name?.toLowerCase().includes("ladder");
+          if (isLadder) {
+            ladderTotal += 1;
+            if (teamCrowns > oppCrowns) ladderWins += 1;
+            const delta = team?.trophyChange ?? battle.trophyChange;
+            if (typeof delta === "number") {
+              trophyDeltaSum += delta;
+              trophyDeltaCount += 1;
+            }
+          }
+
+          if (Array.isArray(team?.cards)) {
+            team.cards.forEach((card) => {
+              cardCounts.set(card.name, (cardCounts.get(card.name) || 0) + 1);
+            });
+            const signature = buildDeckSignature(team.cards);
+            if (signature) {
+              deckCounts.set(signature, (deckCounts.get(signature) || 0) + 1);
+            }
+          }
+        });
+
+        const winRate = total > 0 ? (wins / total) * 100 : 0;
+        const crownDiff = crownsFor - crownsAgainst;
+        const avgCrownsFor = total > 0 ? (crownsFor / total).toFixed(2) : "--";
+        const avgCrownsAgainst = total > 0 ? (crownsAgainst / total).toFixed(2) : "--";
+        const ladderWinRate = ladderTotal > 0 ? ((ladderWins / ladderTotal) * 100).toFixed(1) : "--";
+        const avgTrophyDelta = trophyDeltaCount > 0 ? (trophyDeltaSum / trophyDeltaCount).toFixed(2) : "--";
+
+        const topCards = Array.from(cardCounts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8)
+          .map((entry) => entry[0]);
+
+        let stableDeck = "--";
+        if (deckCounts.size > 0 && total > 0) {
+          const topDeck = Array.from(deckCounts.values()).sort((a, b) => b - a)[0];
+          stableDeck = `${Math.round((topDeck / total) * 100)}%`;
+        }
+
+        const archetype = sample[0]?.team?.[0]?.cards ? guessArchetype(sample[0].team[0].cards) : "--";
+
+        document.getElementById("cr-sample").textContent = `${total} matches`;
+        document.getElementById("cr-win-rate").textContent = total ? `${winRate.toFixed(1)}%` : "--";
+        document.getElementById("cr-crown-diff").textContent = total ? `${crownDiff}` : "--";
+        document.getElementById("cr-crown-avg").textContent =
+          total ? `${avgCrownsFor} / ${avgCrownsAgainst}` : "--";
+        document.getElementById("cr-ladder-winrate").textContent = ladderTotal ? `${ladderWinRate}%` : "--";
+        document.getElementById("cr-avg-trophy").textContent = avgTrophyDelta !== "--" ? avgTrophyDelta : "--";
+        document.getElementById("cr-deck-stability").textContent = stableDeck;
+        document.getElementById("cr-archetype").textContent = archetype;
+        renderChips(document.getElementById("cr-top-cards"), topCards);
+      };
+
+      const updateMainDeck = (battles) => {
+        const sample = battles.slice(0, CLASH_SAMPLE_SIZE);
+        if (sample.length === 0) return;
+        const deckCounts = new Map();
+        const deckCardsMap = new Map();
+        const deckResults = new Map();
+        sample.forEach((battle) => {
+          const team = battle.team ? battle.team[0] : null;
+          if (!team?.cards) return;
+          const signature = buildDeckSignature(team.cards);
+          if (!signature) return;
+          deckCounts.set(signature, (deckCounts.get(signature) || 0) + 1);
+          deckCardsMap.set(signature, team.cards);
+          const teamCrowns = team.crowns ?? 0;
+          const oppCrowns = battle.opponent ? battle.opponent[0]?.crowns ?? 0 : 0;
+          const record = deckResults.get(signature) || { wins: 0, total: 0 };
+          record.total += 1;
+          if (teamCrowns > oppCrowns) record.wins += 1;
+          deckResults.set(signature, record);
+        });
+
+        let selectedSignature = "";
+        let maxCount = 0;
+        deckCounts.forEach((count, signature) => {
+          if (count > maxCount) {
+            maxCount = count;
+            selectedSignature = signature;
+          }
+        });
+
+        if (!selectedSignature) return;
+        const cards = deckCardsMap.get(selectedSignature) || [];
+        const deckWin = deckResults.get(selectedSignature);
+        const winRate = deckWin ? (deckWin.wins / deckWin.total) * 100 : null;
+        document.getElementById("cr-main-deck-name").textContent = `${maxCount}x recent`;
+        document.getElementById("cr-main-elixir").textContent = averageElixir(cards) ?? "--";
+        document.getElementById("cr-main-winrate").textContent = winRate ? `${winRate.toFixed(1)}%` : "--";
+        renderDeck(document.getElementById("cr-main-deck"), cards);
+      };
+
+      const loadClashRoyaleData = async (force) => {
+        if (clashRoyaleLoading) return;
+        if (clashRoyaleLoaded && !force) return;
+        if (!CLASH_API_TOKEN) {
+          updateClashStatus("Add your Clash Royale API token to load data.");
+          return;
+        }
+        clashRoyaleLoading = true;
+        updateClashStatus("Fetching player data...");
+        try {
+          const tag = encodeURIComponent(`#${CLASH_PLAYER_TAG}`);
+          const headers = {
+            Authorization: `Bearer ${CLASH_API_TOKEN}`,
+          };
+          const [playerRes, battleRes] = await Promise.all([
+            fetch(`${CLASH_API_BASE_URL}/players/${tag}`, { headers }),
+            fetch(`${CLASH_API_BASE_URL}/players/${tag}/battlelog`, { headers }),
+          ]);
+          if (!playerRes.ok) throw new Error("Player fetch failed");
+          if (!battleRes.ok) throw new Error("Battle log fetch failed");
+          const player = await playerRes.json();
+          const battles = await battleRes.json();
+          updatePlayerCard(player);
+          renderBattleLog(battles);
+          updateAnalytics(battles);
+          updateMainDeck(battles);
+          clashRoyaleLoaded = true;
+          updateClashStatus("Data loaded.");
+        } catch (error) {
+          updateClashStatus("Unable to load data. Check token and CORS.");
+        } finally {
+          clashRoyaleLoading = false;
+        }
+      };
+      */
+
       const toggleWindow = (appId) => {
         const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
         if (win) {
           setWindowOpen(appId, win.classList.contains("is-hidden"));
+          // Clash Royale app disabled for now.
+          // if (appId === "clash-royale") {
+          //   loadClashRoyaleData(false);
+          // }
         }
       };
 
@@ -1618,8 +2520,465 @@
         button.addEventListener("click", () => {
           const appId = button.getAttribute("data-close");
           setWindowOpen(appId, false);
+          if (appId === "minesweeper") {
+            msNewGame(msDifficulty ? msDifficulty.value : "beginner");
+          }
         });
       });
+
+      const msGrid = document.getElementById("ms-grid");
+      const msMines = document.getElementById("ms-mines");
+      const msTime = document.getElementById("ms-time");
+      const msReset = document.getElementById("ms-reset");
+      const msDifficulty = document.getElementById("ms-difficulty");
+      const msLoseBanner = document.getElementById("ms-lose-banner");
+
+      const msConfig = {
+        beginner: { cols: 9, rows: 9, mines: 10 },
+        intermediate: { cols: 16, rows: 16, mines: 40 },
+        expert: { cols: 30, rows: 16, mines: 99 },
+      };
+
+      const msDigitSources = {
+        "0": "assets/minesweeper_assets/digital_digits/digital_0.png",
+        "1": "assets/minesweeper_assets/digital_digits/digital_1.png",
+        "2": "assets/minesweeper_assets/digital_digits/digital_2.png",
+        "3": "assets/minesweeper_assets/digital_digits/digital_3.png",
+        "4": "assets/minesweeper_assets/digital_digits/digital_4.png",
+        "5": "assets/minesweeper_assets/digital_digits/digital_5.png",
+        "6": "assets/minesweeper_assets/digital_digits/digital_6.png",
+        "7": "assets/minesweeper_assets/digital_digits/digital_7.png",
+        "8": "assets/minesweeper_assets/digital_digits/digital_8.png",
+        "9": "assets/minesweeper_assets/digital_digits/digital_9.png",
+        "-": "assets/minesweeper_assets/digital_digits/digital_minus.png",
+        " ": "assets/minesweeper_assets/digital_digits/digital_blank.png",
+      };
+
+      const msState = {
+        cols: 9,
+        rows: 9,
+        mines: 10,
+        cells: [],
+        elements: [],
+        started: false,
+        gameOver: false,
+        timerId: null,
+        elapsed: 0,
+      };
+
+      const msConfettiCanvas = document.getElementById("ms-confetti");
+      const msConfettiCtx = msConfettiCanvas ? msConfettiCanvas.getContext("2d") : null;
+      let msConfettiPieces = [];
+      let msConfettiAnimId = null;
+
+      const msResizeConfetti = () => {
+        if (!msConfettiCanvas) return;
+        msConfettiCanvas.width = window.innerWidth;
+        msConfettiCanvas.height = window.innerHeight;
+      };
+
+      const msStartConfetti = () => {
+        if (!msConfettiCanvas || !msConfettiCtx) return;
+        msResizeConfetti();
+        msConfettiPieces = Array.from({ length: 120 }, () => ({
+          x: Math.random() * msConfettiCanvas.width,
+          y: -20 - Math.random() * msConfettiCanvas.height * 0.3,
+          size: 4 + Math.random() * 6,
+          speed: 1 + Math.random() * 3,
+          drift: (Math.random() - 0.5) * 1.5,
+          rotation: Math.random() * Math.PI,
+          rotationSpeed: (Math.random() - 0.5) * 0.2,
+          color: `hsl(${Math.random() * 360}, 90%, 60%)`,
+        }));
+        if (msConfettiAnimId) cancelAnimationFrame(msConfettiAnimId);
+
+        const animate = () => {
+          if (!msConfettiCanvas || !msConfettiCtx) return;
+          msConfettiCtx.clearRect(0, 0, msConfettiCanvas.width, msConfettiCanvas.height);
+          msConfettiPieces.forEach((piece) => {
+            piece.x += piece.drift;
+            piece.y += piece.speed;
+            piece.rotation += piece.rotationSpeed;
+            msConfettiCtx.save();
+            msConfettiCtx.translate(piece.x, piece.y);
+            msConfettiCtx.rotate(piece.rotation);
+            msConfettiCtx.fillStyle = piece.color;
+            msConfettiCtx.fillRect(-piece.size / 2, -piece.size / 2, piece.size, piece.size);
+            msConfettiCtx.restore();
+          });
+          msConfettiPieces = msConfettiPieces.filter(
+            (piece) => piece.y < msConfettiCanvas.height + 30
+          );
+          if (msConfettiPieces.length > 0) {
+            msConfettiAnimId = requestAnimationFrame(animate);
+          } else {
+            if (msConfettiAnimId) cancelAnimationFrame(msConfettiAnimId);
+            msConfettiAnimId = null;
+            msConfettiCtx.clearRect(0, 0, msConfettiCanvas.width, msConfettiCanvas.height);
+          }
+        };
+        animate();
+      };
+
+      const msIndex = (x, y) => y * msState.cols + x;
+
+      const msNeighbors = (index) => {
+        const x = index % msState.cols;
+        const y = Math.floor(index / msState.cols);
+        const list = [];
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dx = -1; dx <= 1; dx += 1) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= msState.cols || ny >= msState.rows) continue;
+            list.push(msIndex(nx, ny));
+          }
+        }
+        return list;
+      };
+
+      const msFormatCounter = (value) => {
+        const clamped = Math.max(-99, Math.min(999, value));
+        if (clamped < 0) {
+          return `-${String(Math.abs(clamped)).padStart(2, "0")}`;
+        }
+        return String(clamped).padStart(3, "0");
+      };
+
+      const msSetCounter = (el, value) => {
+        if (!el) return;
+        const digits = String(value).padStart(3, " ").slice(-3);
+        const imgs = el.querySelectorAll("img");
+        imgs.forEach((img, index) => {
+          const char = digits[index] ?? " ";
+          img.src = msDigitSources[char] || msDigitSources[" "];
+          img.alt = char.trim() || " ";
+        });
+      };
+
+      const msUpdateCounters = () => {
+        if (!msMines || !msTime) return;
+        const flags = msState.cells.filter((cell) => cell.flagged).length;
+        const remaining = msState.mines - flags;
+        msSetCounter(msMines, msFormatCounter(remaining));
+        msSetCounter(msTime, msFormatCounter(msState.elapsed));
+      };
+
+      const msSetFace = (face) => {
+        if (msReset) msReset.setAttribute("data-face", face);
+      };
+
+      const msStopTimer = () => {
+        if (msState.timerId) {
+          clearInterval(msState.timerId);
+          msState.timerId = null;
+        }
+      };
+
+      const msStartTimer = () => {
+        msStopTimer();
+        msState.timerId = setInterval(() => {
+          if (msState.gameOver || !msState.started) return;
+          if (msState.elapsed >= 999) return;
+          msState.elapsed += 1;
+          msUpdateCounters();
+        }, 1000);
+      };
+
+      const msPlaceMines = (safeIndex) => {
+        const forbidden = new Set([safeIndex, ...msNeighbors(safeIndex)]);
+        const choices = [];
+        for (let i = 0; i < msState.cols * msState.rows; i += 1) {
+          if (!forbidden.has(i)) choices.push(i);
+        }
+        for (let i = choices.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [choices[i], choices[j]] = [choices[j], choices[i]];
+        }
+        for (let i = 0; i < msState.mines; i += 1) {
+          const idx = choices[i];
+          if (idx === undefined) break;
+          msState.cells[idx].mine = true;
+        }
+      };
+
+      const msComputeAdjacents = () => {
+        msState.cells.forEach((cell, index) => {
+          if (cell.mine) {
+            cell.adjacent = 0;
+            return;
+          }
+          const count = msNeighbors(index).filter((n) => msState.cells[n].mine).length;
+          cell.adjacent = count;
+        });
+      };
+
+      const msRevealCell = (index) => {
+        const cell = msState.cells[index];
+        if (!cell || cell.revealed || cell.flagged) return;
+        cell.question = false;
+        cell.revealed = true;
+        if (cell.mine) {
+          cell.blown = true;
+          msState.gameOver = true;
+          msSetFace("lose");
+          msStopTimer();
+          if (msLoseBanner) msLoseBanner.classList.add("is-visible");
+          msRevealAllMines();
+          msRenderCell(index);
+          return;
+        }
+        msRenderCell(index);
+        if (cell.adjacent === 0) {
+          const queue = [index];
+          const visited = new Set(queue);
+          while (queue.length) {
+            const current = queue.shift();
+            msNeighbors(current).forEach((n) => {
+              const neighbor = msState.cells[n];
+              if (!neighbor || neighbor.revealed || neighbor.flagged) return;
+              neighbor.question = false;
+              neighbor.revealed = true;
+              msRenderCell(n);
+              if (neighbor.adjacent === 0 && !visited.has(n)) {
+                visited.add(n);
+                queue.push(n);
+              }
+            });
+          }
+        }
+        msCheckWin();
+      };
+
+      const msRevealAllMines = () => {
+        msState.cells.forEach((cell) => {
+          if (cell.mine) {
+            cell.revealed = true;
+          } else if (cell.flagged) {
+            cell.misflagged = true;
+          }
+        });
+        msRenderAll();
+      };
+
+      const msCheckWin = () => {
+        if (msState.gameOver) return;
+        const safeCells = msState.cells.filter((cell) => !cell.mine);
+        const revealedSafe = safeCells.filter((cell) => cell.revealed).length;
+        if (revealedSafe === safeCells.length) {
+          msState.gameOver = true;
+          msSetFace("win");
+          msStopTimer();
+          msStartConfetti();
+          msState.cells.forEach((cell) => {
+            if (cell.mine) cell.flagged = true;
+          });
+          msRenderAll();
+        }
+      };
+
+      const msRenderCell = (index) => {
+        const cell = msState.cells[index];
+        const el = msState.elements[index];
+        if (!cell || !el) return;
+        el.className = "ms-cell";
+        el.removeAttribute("data-number");
+        el.textContent = "";
+        if (cell.misflagged) {
+          el.classList.add("is-mine-wrong");
+          return;
+        }
+        if (cell.revealed) {
+          el.classList.add("is-revealed");
+          if (cell.mine) {
+            el.classList.add("is-mine");
+            if (cell.blown) el.classList.add("is-blown");
+          } else if (cell.adjacent > 0) {
+            el.setAttribute("data-number", String(cell.adjacent));
+          }
+          return;
+        }
+        if (cell.flagged) {
+          el.classList.add("is-flagged");
+        } else if (cell.question) {
+          el.classList.add("is-question");
+        }
+      };
+
+      const msRenderAll = () => {
+        msState.cells.forEach((_, index) => msRenderCell(index));
+        msUpdateCounters();
+      };
+
+      const msBuildGrid = () => {
+        if (!msGrid) return;
+        msGrid.innerHTML = "";
+        msState.elements = [];
+        msGrid.style.gridTemplateColumns = `repeat(${msState.cols}, var(--ms-cell-size))`;
+        msGrid.style.gridTemplateRows = `repeat(${msState.rows}, var(--ms-cell-size))`;
+        for (let i = 0; i < msState.cols * msState.rows; i += 1) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "ms-cell";
+          button.setAttribute("data-index", String(i));
+          button.setAttribute("role", "gridcell");
+          msGrid.appendChild(button);
+          msState.elements.push(button);
+        }
+      };
+
+      const msNewGame = (difficulty) => {
+        const config = msConfig[difficulty] || msConfig.beginner;
+        msState.cols = config.cols;
+        msState.rows = config.rows;
+        msState.mines = config.mines;
+        msState.cells = Array.from({ length: config.cols * config.rows }, () => ({
+          mine: false,
+          revealed: false,
+          flagged: false,
+          question: false,
+          blown: false,
+          misflagged: false,
+          adjacent: 0,
+        }));
+        msState.started = false;
+        msState.gameOver = false;
+        msState.elapsed = 0;
+        msSetFace("smile");
+        msStopTimer();
+        if (msLoseBanner) msLoseBanner.classList.remove("is-visible");
+        msBuildGrid();
+        msUpdateCounters();
+      };
+
+      const msHandleLeftClick = (index) => {
+        if (msState.gameOver) return;
+        const cell = msState.cells[index];
+        if (!cell) return;
+        if (cell.revealed) {
+          msChord(index);
+          return;
+        }
+        if (!msState.started) {
+          msPlaceMines(index);
+          msComputeAdjacents();
+          msState.started = true;
+          msStartTimer();
+        }
+        msRevealCell(index);
+      };
+
+      const msToggleFlag = (index) => {
+        const cell = msState.cells[index];
+        if (!cell || cell.revealed || msState.gameOver) return;
+        if (!cell.flagged && !cell.question) {
+          cell.flagged = true;
+        } else if (cell.flagged) {
+          cell.flagged = false;
+          cell.question = true;
+        } else if (cell.question) {
+          cell.question = false;
+        }
+        msRenderCell(index);
+        msUpdateCounters();
+      };
+
+      const msChord = (index) => {
+        const cell = msState.cells[index];
+        if (!cell || !cell.revealed || cell.adjacent === 0 || msState.gameOver) return;
+        const neighbors = msNeighbors(index);
+        const flaggedCount = neighbors.filter((n) => msState.cells[n].flagged).length;
+        if (flaggedCount !== cell.adjacent) return;
+        neighbors.forEach((n) => {
+          if (!msState.cells[n].flagged) msRevealCell(n);
+        });
+      };
+
+      if (msGrid) {
+        msGrid.addEventListener("click", (event) => {
+          const cell = event.target.closest(".ms-cell");
+          if (!cell) return;
+          const index = Number(cell.getAttribute("data-index"));
+          if (Number.isNaN(index)) return;
+          msHandleLeftClick(index);
+        });
+
+        msGrid.addEventListener("dblclick", (event) => {
+          const cell = event.target.closest(".ms-cell");
+          if (!cell) return;
+          const index = Number(cell.getAttribute("data-index"));
+          if (Number.isNaN(index)) return;
+          msChord(index);
+        });
+
+        msGrid.addEventListener("contextmenu", (event) => {
+          const cell = event.target.closest(".ms-cell");
+          if (!cell) return;
+          event.preventDefault();
+          const index = Number(cell.getAttribute("data-index"));
+          if (Number.isNaN(index)) return;
+          msToggleFlag(index);
+        });
+
+        msGrid.addEventListener("pointerdown", (event) => {
+          if (msState.gameOver) return;
+          const cell = event.target.closest(".ms-cell");
+          if (!cell) return;
+          msSetFace("ooh");
+          cell.classList.add("is-pressed");
+          if (cell.classList.contains("is-question")) {
+            cell.classList.add("is-pressed");
+          }
+        });
+
+        msGrid.addEventListener("pointerup", (event) => {
+          if (!msState.gameOver) msSetFace("smile");
+          const cell = event.target.closest(".ms-cell");
+          if (cell) cell.classList.remove("is-pressed");
+        });
+
+        msGrid.addEventListener("pointerleave", () => {
+          if (!msState.gameOver) msSetFace("smile");
+          msGrid.querySelectorAll(".ms-cell.is-pressed").forEach((cell) => {
+            cell.classList.remove("is-pressed");
+          });
+        });
+      }
+
+      if (msReset) {
+        msReset.addEventListener("click", () => {
+          msNewGame(msDifficulty ? msDifficulty.value : "beginner");
+        });
+
+        msReset.addEventListener("pointerdown", () => {
+          if (!msState.gameOver) msSetFace("pressed");
+        });
+
+        msReset.addEventListener("pointerup", () => {
+          if (!msState.gameOver) msSetFace("smile");
+        });
+
+        msReset.addEventListener("pointerleave", () => {
+          if (!msState.gameOver) msSetFace("smile");
+        });
+      }
+
+      if (msDifficulty) {
+        msDifficulty.addEventListener("change", () => {
+          msNewGame(msDifficulty.value);
+        });
+      }
+
+      msNewGame("beginner");
+
+      window.addEventListener("resize", msResizeConfetti);
+
+      // if (clashRefresh) {
+      //   clashRefresh.addEventListener("click", () => {
+      //     loadClashRoyaleData(true);
+      //   });
+      // }
 
       draggableWindows.forEach((win) => {
         const titleBar = win.querySelector(".title-bar");
