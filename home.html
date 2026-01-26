@@ -160,6 +160,47 @@
         position: relative;
       }
 
+      .ms-achievement {
+        position: fixed;
+        top: 18px;
+        right: 18px;
+        width: min(320px, 90vw);
+        pointer-events: none;
+        opacity: 0;
+        transform: translateX(120%);
+        z-index: 120;
+      }
+
+      .ms-achievement img {
+        width: 100%;
+        height: auto;
+        display: block;
+        image-rendering: pixelated;
+      }
+
+      .ms-achievement.is-showing {
+        animation: ms-achievement-slide 6s ease-in-out forwards;
+      }
+
+      @keyframes ms-achievement-slide {
+        0% {
+          opacity: 0;
+          transform: translateX(120%);
+        }
+        8% {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        92% {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        100% {
+          opacity: 0;
+          transform: translateX(120%);
+        }
+      }
+
       .ms-top-panel {
         display: flex;
         align-items: center;
@@ -1391,7 +1432,8 @@
         <div class="title-bar">
           <div class="title-bar-text">Minesweeper</div>
           <div class="title-bar-controls">
-            <button aria-label="Help"></button>
+            <button aria-label="Minimize"></button>
+            <button aria-label="Help" id="ms-help"></button>
             <button aria-label="Close" data-close="minesweeper"></button>
           </div>
         </div>
@@ -1399,6 +1441,9 @@
           <div class="ms-app" aria-label="Minesweeper game">
             <div class="ms-lose-banner" id="ms-lose-banner" aria-hidden="true">
               <img src="assets/minesweeper_assets/YOU-LOSE.png" alt="You Lose" />
+            </div>
+            <div class="ms-achievement" id="ms-achievement" aria-hidden="true">
+              <img src="assets/minesweeper_assets/achievement.png" alt="Achievement unlocked" />
             </div>
             <div class="ms-top-panel">
               <div class="ms-counter" id="ms-mines" aria-label="Mines remaining">
@@ -2230,6 +2275,7 @@
         const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
         if (win) {
           setWindowOpen(appId, win.classList.contains("is-hidden"));
+          // (Removed temporary Minesweeper open trigger for achievement.)
           // Clash Royale app disabled for now.
           // if (appId === "clash-royale") {
           //   loadClashRoyaleData(false);
@@ -2532,6 +2578,8 @@
       const msReset = document.getElementById("ms-reset");
       const msDifficulty = document.getElementById("ms-difficulty");
       const msLoseBanner = document.getElementById("ms-lose-banner");
+      const msAchievement = document.getElementById("ms-achievement");
+      const msHelp = document.getElementById("ms-help");
 
       const msConfig = {
         beginner: { cols: 9, rows: 9, mines: 10 },
@@ -2618,6 +2666,13 @@
           }
         };
         animate();
+      };
+
+      const msShowAchievement = () => {
+        if (!msAchievement) return;
+        msAchievement.classList.remove("is-showing");
+        void msAchievement.offsetWidth;
+        msAchievement.classList.add("is-showing");
       };
 
       const msIndex = (x, y) => y * msState.cols + x;
@@ -2771,6 +2826,9 @@
           msSetFace("win");
           msStopTimer();
           msStartConfetti();
+          if (msDifficulty && msDifficulty.value === "expert") {
+            msShowAchievement();
+          }
           msState.cells.forEach((cell) => {
             if (cell.mine) cell.flagged = true;
           });
@@ -2961,6 +3019,18 @@
 
         msReset.addEventListener("pointerleave", () => {
           if (!msState.gameOver) msSetFace("smile");
+        });
+      }
+
+      if (msAchievement) {
+        msAchievement.addEventListener("animationend", () => {
+          msAchievement.classList.remove("is-showing");
+        });
+      }
+
+      if (msHelp) {
+        msHelp.addEventListener("click", () => {
+          window.open("https://en.wikipedia.org/wiki/Minesweeper_(video_game)", "_blank", "noopener,noreferrer");
         });
       }
 
