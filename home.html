@@ -271,6 +271,10 @@
         align-items: center;
       }
 
+      .ms-board.is-overflowing {
+        justify-content: flex-start;
+      }
+
       .ms-grid {
         --ms-cell-size: 20px;
         display: grid;
@@ -655,6 +659,10 @@
         display: block;
       }
 
+      .selector-thumb--white {
+        filter: brightness(0) invert(1);
+      }
+
       .selector-title {
         font-weight: bold;
         display: block;
@@ -755,6 +763,56 @@
         height: auto;
         display: block;
         margin: 8px 0 12px;
+      }
+
+      .lp-photo-image {
+        width: 100%;
+        max-height: calc(100% - 150px);
+        object-fit: contain;
+        margin: 0 0 12px;
+      }
+
+      .leaving-paradise-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .lp-link-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 10px;
+      }
+
+      .lp-link {
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface);
+        box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+        text-decoration: none;
+      }
+
+      .lp-link:active {
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .lp-link img {
+        width: 16px;
+        height: 16px;
+        display: block;
+      }
+
+      .lp-link img.lp-link-youtube-icon {
+        height: auto;
+      }
+
+      .lp-scroll-spacer {
+        height: 90px;
+        flex-shrink: 0;
       }
 
       .gallery-frame {
@@ -1169,7 +1227,8 @@
         <div class="title-bar">
           <div class="title-bar-text">Projects</div>
           <div class="title-bar-controls">
-            <button aria-label="Help"></button>
+            <button aria-label="Minimize"></button>
+            <button aria-label="Maximize"></button>
             <button aria-label="Close" data-close="windows"></button>
           </div>
         </div>
@@ -1230,13 +1289,27 @@
         <div class="title-bar">
           <div class="title-bar-text">Creative Work</div>
           <div class="title-bar-controls">
-            <button aria-label="Help"></button>
+            <button aria-label="Minimize"></button>
+            <button aria-label="Maximize"></button>
             <button aria-label="Close" data-close="paint"></button>
           </div>
         </div>
         <div class="window-body">
           <div class="selector-panel">
             <ul class="selector-list">
+              <li>
+                <button class="selector-item" type="button" data-view="creative-leaving-paradise">
+                  <img class="selector-thumb selector-thumb--white" src="assets/creative-work/lp.webp" alt="" />
+                  <span>
+                    <span class="selector-title">Leaving Paradise</span>
+                    <span class="selector-desc">
+                      Lead Actor for Feature Length Film
+                      <br />
+                      July 27th, 2025
+                    </span>
+                  </span>
+                </button>
+              </li>
               <li>
                 <button class="selector-item is-active" type="button" data-view="creative-pathfinder">
                   <img class="selector-thumb" src="assets/creative-work/pathfinder-logo.png" alt="" />
@@ -1278,6 +1351,39 @@
                 </div>
               </div>
             </div>
+            <div class="viewer-content is-hidden leaving-paradise-content" data-view="creative-leaving-paradise">
+              <h3>Leaving Paradise</h3>
+              <div class="lp-link-row" aria-label="Leaving Paradise links">
+                <a class="lp-link" href="https://www.leavingparadise.com/" target="_blank" rel="noreferrer" aria-label="Leaving Paradise website" title="Website">
+                  <img src="assets/app-icons/ico/msie1.ico" alt="" />
+                </a>
+                <a class="lp-link" href="https://www.instagram.com/dawnmakersfilms/" target="_blank" rel="noreferrer" aria-label="Dawn Makers Films Instagram" title="Instagram">
+                  <img src="assets/social-icons/instagram-icon.png" alt="" />
+                </a>
+                <a class="lp-link" href="https://www.youtube.com/@dawnmakersfilms" target="_blank" rel="noreferrer" aria-label="Dawn Makers Films YouTube" title="YouTube">
+                  <img class="lp-link-youtube-icon" src="assets/social-icons/youtube-icon.png" alt="" />
+                </a>
+                <a class="lp-link" href="https://www.tiktok.com/@leavingparadisefilm" target="_blank" rel="noreferrer" aria-label="Leaving Paradise TikTok" title="TikTok">
+                  <img src="assets/social-icons/tiktok-icon.png" alt="" />
+                </a>
+              </div>
+              <img
+                class="writing-image lp-photo-image"
+                src="assets/creative-work/lp-photo.png"
+                alt="Leaving Paradise artwork"
+              />
+              <p>
+                I had the pleasure of working with Dawn Makers Films and Powerline Pictures om
+                Leaving Paradise, a queer western feature film that takes place in Paradise Valley,
+                Montana. I played Taran, who is recently reunited with his sister as he returns from
+                India.
+              </p>
+              <p>
+                Check out the website or socials to learn more about the film. It is still being
+                edited, so stay tuned!
+              </p>
+              <div class="lp-scroll-spacer" aria-hidden="true"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1286,7 +1392,8 @@
         <div class="title-bar">
           <div class="title-bar-text">Writing</div>
           <div class="title-bar-controls">
-            <button aria-label="Help"></button>
+            <button aria-label="Minimize"></button>
+            <button aria-label="Maximize"></button>
             <button aria-label="Close" data-close="taskmgr"></button>
           </div>
         </div>
@@ -1353,7 +1460,8 @@
         <div class="title-bar">
           <div class="title-bar-text">Modeling</div>
           <div class="title-bar-controls">
-            <button aria-label="Help"></button>
+            <button aria-label="Minimize"></button>
+            <button aria-label="Maximize"></button>
             <button aria-label="Close" data-close="modeling"></button>
           </div>
         </div>
@@ -1478,7 +1586,8 @@
         <div class="title-bar">
           <div class="title-bar-text">Credits</div>
           <div class="title-bar-controls">
-            <button aria-label="Help"></button>
+            <button aria-label="Minimize"></button>
+            <button aria-label="Maximize"></button>
             <button aria-label="Close" data-close="credits"></button>
           </div>
         </div>
@@ -1532,7 +1641,7 @@
 
       <!-- Clash Royale app (disabled for now).
            To re-enable: remove this comment wrapper AND the matching desktop icon
-           + JS disable comments near the script block. -->
+           + JS disable comments near the script block. 
       <div class="window app-window is-hidden" data-app-window="clash-royale">
         <div class="title-bar">
           <div class="title-bar-text">Clash Royale</div>
@@ -1610,7 +1719,8 @@
         <div class="title-bar">
           <div class="title-bar-text">Socials</div>
           <div class="title-bar-controls">
-            <button aria-label="Help"></button>
+            <button aria-label="Minimize"></button>
+            <button aria-label="Maximize"></button>
             <button aria-label="Close" data-close="socials"></button>
           </div>
         </div>
@@ -1618,7 +1728,7 @@
           <p>Find me here:</p>
           <ul class="socials-list">
             <li>
-              <a href="https://www.linkedin.com/in/rohin-shanker/" target="_blank" rel="noreferrer">
+              <a href="https://www.linkedin.com/in/rohin-shanker/" target="_blank" rel="noreferrer" title="View my LinkedIn profile">
                 <img class="socials-logo" src="assets/app-icons/ico/users_green.ico" alt="" />
                 <span>
                   <span class="socials-name">LinkedIn</span>
@@ -1627,7 +1737,7 @@
               </a>
             </li>
             <li>
-              <a href="mailto:rohin@example.com">
+              <a href="mailto:rohin@example.com" title="Send me an email">
                 <img class="socials-logo" src="assets/app-icons/ico/mailbox_world.ico" alt="" />
                 <span>
                   <span class="socials-name">Email</span>
@@ -1636,7 +1746,7 @@
               </a>
             </li>
             <li>
-              <a href="https://github.com/rohinshanker" target="_blank" rel="noreferrer">
+              <a href="https://github.com/rohinshanker" target="_blank" rel="noreferrer" title="Browse my GitHub repositories">
                 <img class="socials-logo" src="assets/app-icons/ico/gears.ico" alt="" />
                 <span>
                   <span class="socials-name">GitHub</span>
@@ -1645,7 +1755,7 @@
               </a>
             </li>
             <li>
-              <a href="https://substack.com/@rohins" target="_blank" rel="noreferrer">
+              <a href="https://substack.com/@rohins" target="_blank" rel="noreferrer" title="Read my Substack posts">
                 <img class="socials-logo" src="assets/app-icons/ico/newspaper.ico" alt="" />
                 <span>
                   <span class="socials-name">Substack</span>
@@ -1654,7 +1764,7 @@
               </a>
             </li>
             <li>
-              <a href="https://open.spotify.com/user/rohindaman?si=ee2c1491d5eb48fe" target="_blank" rel="noreferrer">
+              <a href="https://open.spotify.com/user/rohindaman?si=ee2c1491d5eb48fe" target="_blank" rel="noreferrer" title="Check out my Spotify profile">
                 <img class="socials-logo" src="assets/app-icons/ico/keyboard_musical_midi.ico" alt="" />
                 <span>
                   <span class="socials-name">Spotify</span>
@@ -1663,7 +1773,7 @@
               </a>
             </li>
             <li>
-              <a href="https://www.costarastrology.com/" target="_blank" rel="noreferrer">
+              <a href="https://www.costarastrology.com/" target="_blank" rel="noreferrer" title="Find me on Co-Star">
                 <img class="socials-logo" src="assets/app-icons/ico/utopia_smiley.ico" alt="" />
                 <span>
                   <span class="socials-name">Co-Star</span>
@@ -1672,7 +1782,7 @@
               </a>
             </li>
             <li>
-              <a href="https://www.instagram.com/rohin.personal" target="_blank" rel="noreferrer">
+              <a href="https://www.instagram.com/rohin.personal" target="_blank" rel="noreferrer" title="Open my personal Instagram">
                 <img class="socials-logo" src="assets/app-icons/ico/camera.ico" alt="" />
                 <span>
                   <span class="socials-name">Instagram (personal)</span>
@@ -1681,7 +1791,7 @@
               </a>
             </li>
             <li>
-              <a href="https://www.instagram.com/rohin.food" target="_blank" rel="noreferrer">
+              <a href="https://www.instagram.com/rohin.food" target="_blank" rel="noreferrer" title="Open my food Instagram">
                 <img class="socials-logo" src="assets/app-icons/ico/camera3.ico" alt="" />
                 <span>
                   <span class="socials-name">Instagram (food blog)</span>
@@ -1690,7 +1800,7 @@
               </a>
             </li>
             <li>
-              <a href="https://steamcommunity.com/id/cloudstryder/" target="_blank" rel="noreferrer">
+              <a href="https://steamcommunity.com/id/cloudstryder/" target="_blank" rel="noreferrer" title="Visit my Steam profile">
                 <img class="socials-logo" src="assets/app-icons/ico/joystick_alt.ico" alt="" />
                 <span>
                   <span class="socials-name">Steam</span>
@@ -1699,7 +1809,7 @@
               </a>
             </li>
             <li>
-              <a href="https://link.clashroyale.com/invite/friend/en?tag=28CYYU08P&token=kb6jg2ap&platform=iOS" target="_blank" rel="noreferrer">
+              <a href="https://link.clashroyale.com/invite/friend/en?tag=28CYYU08P&token=kb6jg2ap&platform=iOS" target="_blank" rel="noreferrer" title="Add me in Clash Royale">
                 <img class="socials-logo" src="assets/app-icons/ico/game_freecell.ico" alt="" />
                 <span>
                   <span class="socials-name">Clash Royale</span>
@@ -1872,11 +1982,34 @@
         }
       };
 
+      const resetWindowToFirstTab = (win) => {
+        if (!win) return;
+        const selectorButtons = win.querySelectorAll(".selector-item");
+        if (!selectorButtons.length) return;
+
+        const viewerPanels = win.querySelectorAll(".viewer-content");
+        const firstButton = selectorButtons[0];
+        const firstViewId = firstButton.getAttribute("data-view");
+
+        selectorButtons.forEach((button, index) => {
+          button.classList.toggle("is-active", index === 0);
+        });
+
+        if (!viewerPanels.length) return;
+        viewerPanels.forEach((panel, index) => {
+          const isMatch = firstViewId
+            ? panel.getAttribute("data-view") === firstViewId
+            : index === 0;
+          panel.classList.toggle("is-hidden", !isMatch);
+        });
+      };
+
       const setWindowOpen = (appId, open) => {
         const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
         if (win) {
           win.classList.toggle("is-hidden", !open);
           if (open) {
+            resetWindowToFirstTab(win);
             if (win.classList.contains("home-window")) {
               win.classList.add("app-window--center");
               win.style.left = "";
@@ -2579,6 +2712,7 @@
       const msDifficulty = document.getElementById("ms-difficulty");
       const msLoseBanner = document.getElementById("ms-lose-banner");
       const msAchievement = document.getElementById("ms-achievement");
+      const msBoard = document.querySelector("[data-app-window=\"minesweeper\"] .ms-board");
       const msHelp = document.getElementById("ms-help");
 
       const msConfig = {
@@ -2886,6 +3020,12 @@
         }
       };
 
+      const msUpdateBoardAlignment = () => {
+        if (!msBoard || !msGrid) return;
+        const shouldOverflow = msGrid.scrollWidth > msBoard.clientWidth;
+        msBoard.classList.toggle("is-overflowing", shouldOverflow);
+      };
+
       const msNewGame = (difficulty) => {
         const config = msConfig[difficulty] || msConfig.beginner;
         msState.cols = config.cols;
@@ -2907,6 +3047,7 @@
         msStopTimer();
         if (msLoseBanner) msLoseBanner.classList.remove("is-visible");
         msBuildGrid();
+        msUpdateBoardAlignment();
         msUpdateCounters();
       };
 
@@ -3043,6 +3184,7 @@
       msNewGame("beginner");
 
       window.addEventListener("resize", msResizeConfetti);
+      window.addEventListener("resize", msUpdateBoardAlignment);
 
       // if (clashRefresh) {
       //   clashRefresh.addEventListener("click", () => {
@@ -3062,6 +3204,10 @@
 
           win.classList.remove("app-window--center");
           win.style.transform = "none";
+          if (win.id === "about-window") {
+            win.style.left = `${rect.left}px`;
+            win.style.top = `${rect.top}px`;
+          }
           win.style.zIndex = String(topZ++);
           titleBar.setPointerCapture(event.pointerId);
 
