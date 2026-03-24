@@ -96,16 +96,81 @@
         left: 140px;
         width: min(80vw, 420px);
         z-index: 2;
+        transform-origin: center center;
+        will-change: opacity, clip-path, scale, filter, translate;
       }
 
       .app-window--center {
         top: 25%;
         left: 50%;
-        transform: translate(-50%, -50%);
+        translate: -50% -50%;
       }
 
       .app-window .window-body {
         min-height: 120px;
+      }
+
+      .app-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .app-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      @keyframes retro-window-open {
+        0% {
+          opacity: 0;
+          scale: 0.04 0.02;
+          clip-path: inset(49.5% 47% 49.5% 47%);
+          filter: brightness(2.8) contrast(2.1);
+        }
+        38% {
+          opacity: 1;
+          scale: 1 0.04;
+          clip-path: inset(49% 0 49% 0);
+          filter: brightness(2.6) contrast(1.9);
+        }
+        72% {
+          opacity: 1;
+          scale: 1.03 1.02;
+          clip-path: inset(0 0 0 0);
+          filter: brightness(1.15) contrast(1.05);
+        }
+        100% {
+          opacity: 1;
+          scale: 1;
+          clip-path: inset(0 0 0 0);
+          filter: none;
+        }
+      }
+
+      @keyframes retro-window-close {
+        0% {
+          opacity: 1;
+          scale: 1;
+          clip-path: inset(0 0 0 0);
+          filter: none;
+        }
+        54% {
+          opacity: 1;
+          scale: 1 0.04;
+          clip-path: inset(49% 0 49% 0);
+          filter: brightness(2.6) contrast(1.9);
+        }
+        82% {
+          opacity: 1;
+          scale: 0.06 0.02;
+          clip-path: inset(49.5% 47% 49.5% 47%);
+          filter: brightness(3) contrast(2.2);
+        }
+        100% {
+          opacity: 0;
+          scale: 0;
+          clip-path: inset(50% 50% 50% 50%);
+          filter: brightness(3.2) contrast(2.4);
+        }
       }
 
       .window-stack {
@@ -1469,29 +1534,138 @@
           <div class="selector-panel">
             <ul class="selector-list">
               <li>
-                <button class="selector-item is-active" type="button" data-view="modeling-urban-blocks">
+                <button class="selector-item is-active" type="button" data-view="modeling-stand-still-drop">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Urban Blocks</span>
-                    <span class="selector-desc">Massing studies for dense, mixed-use layouts.</span>
+                    <span class="selector-title">Stand Still Drop, March 2026</span>
                   </span>
                 </button>
               </li>
               <li>
-                <button class="selector-item" type="button" data-view="modeling-kinetic-study">
-                  <img class="selector-thumb" src="assets/app-icons/ico/chart1.ico" alt="" />
+                <button class="selector-item" type="button" data-view="modeling-garb-merch-promo-shoot">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Kinetic Study</span>
-                    <span class="selector-desc">Mechanism mockups exploring motion + balance.</span>
+                    <span class="selector-title">Garb Merch Promo Shoot, February 2026</span>
                   </span>
                 </button>
               </li>
               <li>
-                <button class="selector-item" type="button" data-view="modeling-furniture-prototype">
-                  <img class="selector-thumb" src="assets/app-icons/ico/printer_big.ico" alt="" />
+                <button class="selector-item" type="button" data-view="modeling-club-rambutan-runway-show">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Furniture Prototype</span>
-                    <span class="selector-desc">Iterative 3D prints with joint variations.</span>
+                    <span class="selector-title">Club Rambutan Runway Show, September 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-arthaus-promo-shoot">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Arthaus Promo Shoot, September 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-xoxo510-x-brainscramble-shoot">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">XOXO510 x BrainScramble Shoot, May 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-fast-sonder-lookbook-shoot-2">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Fast Sonder Lookbook Shoot 2, May 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-fast-sonder-lookbook-shoot">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Fast Sonder Lookbook Shoot, May 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-saturn-los-angeles-gaia-ss25-shoot">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Saturn Los Angeles GAIA SS25 Shoot, April 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-garb-garbage-runway-show">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Garb "Garb-age" Runway Show, April 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-garb-means-business-shoot">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Garb Means Business Shoot, January 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-vampire-shoot">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Vampire Shoot, January 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-garb-garbage-runway">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Garb "Garb-age" Runway, December 2024</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-fast-crescendo-lookbook-shoot-2">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">FAST Crescendo Lookbook Shoot 2, December 2024</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-fast-crescendo-lookbook-shoot">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Fast Crescendo Lookbook Shoot, October 2024</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-fast-reverie-runway-show">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Fast Reverie Runway Show, April 2024</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-fast-reverie-lookbook-shoot">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Fast Reverie Lookbook Shoot, March 2024</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-saturn-la-black-friday-drop">
+                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Saturn Los Angeles Black Friday Drop, October 2023</span>
                   </span>
                 </button>
               </li>
@@ -1499,20 +1673,56 @@
           </div>
           <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
           <div class="viewer-panel">
-            <div class="viewer-content" data-view="modeling-urban-blocks">
-              <h3>Urban Blocks</h3>
-              <p>Filler content: modular massing and daylight studies across multiple block configurations.</p>
-              <p>Includes: render snapshots, plan overlays, and scale tests.</p>
+            <div class="viewer-content" data-view="modeling-stand-still-drop">
+              <h3>Stand Still Drop, March 2026</h3>
             </div>
-            <div class="viewer-content is-hidden" data-view="modeling-kinetic-study">
-              <h3>Kinetic Study</h3>
-              <p>Filler content: rotating assemblies and material balance experiments.</p>
-              <p>Includes: exploded diagrams, load tests, and motion studies.</p>
+            <div class="viewer-content is-hidden" data-view="modeling-garb-merch-promo-shoot">
+              <h3>Garb Merch Promo Shoot, February 2026</h3>
             </div>
-            <div class="viewer-content is-hidden" data-view="modeling-furniture-prototype">
-              <h3>Furniture Prototype</h3>
-              <p>Filler content: ergonomic furniture forms and joinery refinements.</p>
-              <p>Includes: print iterations, weight tests, and finish mockups.</p>
+            <div class="viewer-content is-hidden" data-view="modeling-club-rambutan-runway-show">
+              <h3>Club Rambutan Runway Show, September 2025</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-arthaus-promo-shoot">
+              <h3>Arthaus Promo Shoot, September 2025</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-xoxo510-x-brainscramble-shoot">
+              <h3>XOXO510 x BrainScramble Shoot, May 2025</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-fast-sonder-lookbook-shoot-2">
+              <h3>Fast Sonder Lookbook Shoot 2, May 2025</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-fast-sonder-lookbook-shoot">
+              <h3>Fast Sonder Lookbook Shoot, May 2025</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-saturn-los-angeles-gaia-ss25-shoot">
+              <h3>Saturn Los Angeles GAIA SS25 Shoot, April 2025</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway-show">
+              <h3>Garb "Garb-age" Runway Show, April 2025</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-garb-means-business-shoot">
+              <h3>Garb Means Business Shoot, January 2025</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-vampire-shoot">
+              <h3>Vampire Shoot, January 2025</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway">
+              <h3>Garb "Garb-age" Runway, December 2024</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-fast-crescendo-lookbook-shoot-2">
+              <h3>FAST Crescendo Lookbook Shoot 2, December 2024</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-fast-crescendo-lookbook-shoot">
+              <h3>Fast Crescendo Lookbook Shoot, October 2024</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-fast-reverie-runway-show">
+              <h3>Fast Reverie Runway Show, April 2024</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-fast-reverie-lookbook-shoot">
+              <h3>Fast Reverie Lookbook Shoot, March 2024</h3>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-saturn-la-black-friday-drop">
+              <h3>Saturn Los Angeles Black Friday Drop, October 2023</h3>
             </div>
           </div>
         </div>
@@ -1799,7 +2009,7 @@
                 </span>
               </a>
             </li>
-            <li>
+            <!-- <li>
               <a href="https://steamcommunity.com/id/cloudstryder/" target="_blank" rel="noreferrer" title="Visit my Steam profile">
                 <img class="socials-logo" src="assets/app-icons/ico/joystick_alt.ico" alt="" />
                 <span>
@@ -1808,7 +2018,7 @@
                 </span>
               </a>
             </li>
-            <li>
+            <li> -->
               <a href="https://link.clashroyale.com/invite/friend/en?tag=28CYYU08P&token=kb6jg2ap&platform=iOS" target="_blank" rel="noreferrer" title="Add me in Clash Royale">
                 <img class="socials-logo" src="assets/app-icons/ico/game_freecell.ico" alt="" />
                 <span>
@@ -2004,19 +2214,37 @@
         });
       };
 
+      const restartWindowAnimation = (win, animationClass) => {
+        if (!win) return;
+        win.classList.remove("is-opening", "is-closing");
+        void win.offsetWidth;
+        win.classList.add(animationClass);
+      };
+
       const setWindowOpen = (appId, open) => {
         const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
-        if (win) {
-          win.classList.toggle("is-hidden", !open);
-          if (open) {
-            resetWindowToFirstTab(win);
-            if (win.classList.contains("home-window")) {
-              win.classList.add("app-window--center");
-              win.style.left = "";
-              win.style.top = "";
-              win.style.transform = "";
-              return;
-            }
+        if (!win) return;
+
+        if (open) {
+          const isVisible =
+            !win.classList.contains("is-hidden") &&
+            !win.classList.contains("is-closing");
+
+          if (isVisible) {
+            win.style.zIndex = String(topZ++);
+            return;
+          }
+
+          win.classList.remove("is-hidden");
+          resetWindowToFirstTab(win);
+          win.style.zIndex = String(topZ++);
+
+          if (win.classList.contains("home-window")) {
+            win.classList.add("app-window--center");
+            win.style.left = "";
+            win.style.top = "";
+            win.style.translate = "";
+          } else {
             const paddingX = 24;
             const paddingY = 24;
             const maxLeft = Math.max(
@@ -2032,12 +2260,19 @@
             const randomTop = paddingY + Math.random() * (maxTop - paddingY);
 
             win.classList.remove("app-window--center");
-            win.style.transform = "none";
+            win.style.translate = "0 0";
             win.style.left = `${Math.round(randomLeft)}px`;
             win.style.top = `${Math.round(randomTop)}px`;
-            win.style.zIndex = String(topZ++);
           }
+
+          restartWindowAnimation(win, "is-opening");
+          return;
         }
+
+        if (win.classList.contains("is-hidden")) return;
+
+        win.style.zIndex = String(topZ++);
+        restartWindowAnimation(win, "is-closing");
       };
 
       const formatNumber = (value) => {
@@ -2407,7 +2642,10 @@
       const toggleWindow = (appId) => {
         const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
         if (win) {
-          setWindowOpen(appId, win.classList.contains("is-hidden"));
+          const shouldOpen =
+            win.classList.contains("is-hidden") ||
+            win.classList.contains("is-closing");
+          setWindowOpen(appId, shouldOpen);
           // (Removed temporary Minesweeper open trigger for achievement.)
           // Clash Royale app disabled for now.
           // if (appId === "clash-royale") {
@@ -2420,6 +2658,20 @@
       setInterval(updateClock, 1000 * 30);
       updateCalendarClock();
       setInterval(updateCalendarClock, 500);
+
+      appWindows.forEach((win) => {
+        win.addEventListener("animationend", (event) => {
+          if (event.target !== win) return;
+          if (event.animationName === "retro-window-open") {
+            win.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            win.classList.remove("is-closing");
+            win.classList.add("is-hidden");
+          }
+        });
+      });
 
       const creditsFrames = [
         "assets/app-icons/ico/search_laptop_1.ico",
@@ -3203,7 +3455,7 @@
           const offsetY = event.clientY - rect.top;
 
           win.classList.remove("app-window--center");
-          win.style.transform = "none";
+          win.style.translate = "0 0";
           if (win.id === "about-window") {
             win.style.left = `${rect.left}px`;
             win.style.top = `${rect.top}px`;
