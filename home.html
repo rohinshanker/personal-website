@@ -503,6 +503,285 @@
         z-index: 100;
       }
 
+      .sol-fireworks {
+        display: none;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        position: fixed;
+        z-index: 110;
+      }
+
+      .sol-fireworks.is-showing {
+        display: block;
+      }
+
+      .sol-firework-dot {
+        --sol-firework-color: #fff;
+        --sol-firework-dx: 0px;
+        --sol-firework-dy: 0px;
+        animation: sol-firework-burst 950ms ease-out forwards;
+        background: var(--sol-firework-color);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--sol-firework-color);
+        height: 5px;
+        left: 50%;
+        position: absolute;
+        top: 50%;
+        width: 5px;
+        will-change: opacity, transform;
+      }
+
+      @keyframes sol-firework-burst {
+        0% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        70% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translate(
+              calc(-50% + var(--sol-firework-dx)),
+              calc(-50% + var(--sol-firework-dy))
+            )
+            scale(0.25);
+        }
+      }
+
+      .solitaire-window {
+        width: max-content;
+        max-width: calc(100vw - 24px);
+      }
+
+      .solitaire-window .window-body {
+        max-width: calc(100vw - 48px);
+        min-height: 0;
+        overflow-x: auto;
+      }
+
+      .sol-app {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: max-content;
+        max-width: 100%;
+      }
+
+      .sol-toolbar {
+        display: flex;
+        align-items: center;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        gap: 8px;
+        justify-content: center;
+        min-height: 36px;
+        padding: 8px;
+        position: relative;
+        width: 100%;
+      }
+
+      .sol-toolbar button {
+        min-width: 70px;
+      }
+
+      .sol-reset,
+      .sol-undo {
+        align-items: center;
+        background: var(--surface);
+        border: none;
+        box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+        cursor: pointer;
+        display: inline-flex;
+        height: 34px;
+        justify-content: center;
+        min-height: 34px;
+        min-width: 34px;
+        padding: 0;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 34px;
+      }
+
+      .sol-reset {
+        left: 8px;
+      }
+
+      .sol-undo {
+        right: 8px;
+      }
+
+      .sol-reset:not(:disabled):active,
+      .sol-undo:not(:disabled):active {
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        padding: 1px 0 0 1px;
+      }
+
+      .sol-undo:disabled {
+        cursor: default;
+      }
+
+      .sol-reset img,
+      .sol-undo img {
+        display: block;
+        height: 22px;
+        image-rendering: pixelated;
+        width: 22px;
+      }
+
+      .sol-undo:disabled img {
+        opacity: 0.35;
+      }
+
+      .sol-counter {
+        flex: 0 0 auto;
+      }
+
+      .sol-status {
+        min-width: 80px;
+        position: absolute;
+        right: 50px;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .sol-board {
+        --sol-card-w: 72px;
+        --sol-card-h: 88px;
+        --sol-gap: 12px;
+        --sol-overlap: 24px;
+        background: #008000;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        box-sizing: border-box;
+        color: #fff;
+        max-height: min(68vh, 560px);
+        max-width: 100%;
+        overflow: auto;
+        padding: 10px;
+        width: max-content;
+      }
+
+      .sol-top-row,
+      .sol-tableau {
+        display: grid;
+        gap: var(--sol-gap);
+        grid-template-columns: repeat(7, var(--sol-card-w));
+        width: max-content;
+      }
+
+      .sol-top-row {
+        align-items: start;
+        margin-bottom: 14px;
+      }
+
+      .sol-slot,
+      .sol-card {
+        width: var(--sol-card-w);
+        height: var(--sol-card-h);
+        min-width: var(--sol-card-w);
+        min-height: var(--sol-card-h);
+      }
+
+      .sol-slot {
+        align-items: center;
+        background: rgba(0, 0, 0, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.35);
+        display: flex;
+        justify-content: center;
+        position: relative;
+      }
+
+      .sol-slot[role="button"] {
+        cursor: pointer;
+      }
+
+      .sol-slot:focus {
+        outline: 1px dotted #fff;
+        outline-offset: -4px;
+      }
+
+      .sol-slot-mark {
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 24px;
+        line-height: 1;
+        text-shadow: 1px 1px 0 #004400;
+      }
+
+      .sol-tableau-col {
+        min-height: var(--sol-card-h);
+      }
+
+      .sol-card {
+        background-color: transparent;
+        background-image: url("assets/solitaire-cards/poker nano.png");
+        background-position: var(--sol-sprite-x, 0%) var(--sol-sprite-y, 0%);
+        background-repeat: no-repeat;
+        background-size: 1300% auto;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        color: transparent;
+        cursor: pointer;
+        display: block;
+        image-rendering: pixelated;
+        line-height: 0;
+        overflow: hidden;
+        padding: 0;
+        position: relative;
+        text-shadow: none;
+      }
+
+      .sol-card + .sol-card {
+        margin-top: calc(var(--sol-overlap) - var(--sol-card-h));
+      }
+
+      button.sol-card:not(:disabled):active {
+        box-shadow: none;
+        text-shadow: none;
+      }
+
+      .sol-card.is-selected {
+        outline: 2px solid #ffff00;
+        outline-offset: 1px;
+        z-index: 2;
+      }
+
+      .solitaire-rules-window {
+        width: min(92vw, 430px);
+      }
+
+      .solitaire-rules-window .window-body {
+        max-height: min(60vh, 360px);
+        overflow-y: auto;
+      }
+
+      .sol-rules-list {
+        margin: 0;
+        padding-left: 18px;
+        line-height: 1.45;
+      }
+
+      .sol-rules-list li + li {
+        margin-top: 6px;
+      }
+
+      @media (max-width: 640px) {
+        .sol-board {
+          --sol-card-w: 54px;
+          --sol-card-h: 66px;
+          --sol-gap: 7px;
+          --sol-overlap: 18px;
+          padding: 8px;
+        }
+
+        .sol-slot-mark {
+          font-size: 18px;
+        }
+      }
+
       /* Clash Royale app styles (disabled for now).
        * To re-enable: remove this block comment and the matching HTML + JS comments below.
       /*
@@ -724,6 +1003,10 @@
         display: block;
       }
 
+      .selector-thumb--pixelated {
+        image-rendering: pixelated;
+      }
+
       .selector-thumb--white {
         filter: brightness(0) invert(1);
       }
@@ -758,6 +1041,20 @@
         display: none;
       }
 
+      .project-view-header {
+        margin-bottom: 12px;
+      }
+
+      .project-view-header h3 {
+        margin: 0;
+      }
+
+      .project-view-subtitle {
+        margin: 4px 0 0;
+        font-size: 10px;
+        line-height: 1.3;
+      }
+
       .pdf-actions {
         display: flex;
         gap: 8px;
@@ -775,6 +1072,63 @@
         box-shadow: var(--border-raised-outer), var(--border-raised-inner);
         text-decoration: none;
         color: inherit;
+      }
+
+      .button-link--gold-glow {
+        position: relative;
+        overflow: visible;
+        z-index: 0;
+        box-shadow:
+          var(--border-raised-outer),
+          var(--border-raised-inner),
+          0 0 0 1px rgba(214, 170, 46, 0.9),
+          0 0 8px rgba(255, 210, 84, 0.35);
+      }
+
+      .button-link--gold-glow::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border: 1px solid rgba(247, 205, 74, 0.95);
+        box-shadow:
+          0 0 8px 1px rgba(255, 210, 84, 0.6),
+          0 0 14px 2px rgba(255, 184, 28, 0.35);
+        opacity: 0.72;
+        pointer-events: none;
+        animation: gold-button-halo 3.2s ease-in-out infinite;
+      }
+
+      .button-link--gold-glow:active {
+        box-shadow:
+          var(--border-sunken-outer),
+          var(--border-sunken-inner),
+          0 0 0 1px rgba(214, 170, 46, 0.9),
+          0 0 6px rgba(255, 210, 84, 0.28);
+      }
+
+      .button-link--gold-glow:active::after {
+        animation-play-state: paused;
+        opacity: 0.55;
+        box-shadow:
+          0 0 6px 1px rgba(255, 210, 84, 0.45),
+          0 0 10px 1px rgba(255, 184, 28, 0.24);
+      }
+
+      @keyframes gold-button-halo {
+        0%,
+        100% {
+          opacity: 0.55;
+          box-shadow:
+            0 0 6px 1px rgba(255, 210, 84, 0.42),
+            0 0 12px 2px rgba(255, 184, 28, 0.22);
+        }
+
+        50% {
+          opacity: 1;
+          box-shadow:
+            0 0 14px 3px rgba(255, 224, 120, 0.82),
+            0 0 24px 6px rgba(255, 190, 44, 0.42);
+        }
       }
 
       .button-link:active {
@@ -893,10 +1247,24 @@
         background: #000;
       }
 
+      .gallery-scroll--video {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 220px;
+      }
+
       .gallery-scroll img {
         width: 100%;
         height: auto;
         display: block;
+      }
+
+      .gallery-scroll video {
+        width: 100%;
+        height: auto;
+        display: block;
+        background: #000;
       }
 
       .gallery-controls {
@@ -977,6 +1345,13 @@
         gap: 2px;
         flex: 1;
         align-items: center;
+        min-width: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+
+      .taskbar-apps::-webkit-scrollbar {
+        display: none;
       }
 
       .start-button {
@@ -1250,6 +1625,10 @@
         <img src="assets/app-icons/ico/paint_old.ico" alt="" />
         Creative Work
       </button>
+      <button class="desktop-icon" data-app="study-resources" aria-label="Study Resources">
+        <img src="assets/app-icons/ico/certificate_multiple.ico" alt="" />
+        Study Resources
+      </button>
       <button class="desktop-icon" data-app="socials" aria-label="Socials">
         <img src="assets/app-icons/ico/connected_world.ico" alt="" />
         Socials
@@ -1257,6 +1636,10 @@
       <button class="desktop-icon" data-app="minesweeper" aria-label="Minesweeper">
         <img src="assets/app-icons/ico/minesweeper.ico" alt="" />
         Minesweeper
+      </button>
+      <button class="desktop-icon" data-app="solitaire" aria-label="Solitaire">
+        <img src="assets/app-icons/ico/game_freecell.ico" alt="" />
+        Solitaire
       </button>
       <button class="desktop-icon" data-app="credits" aria-label="Credits">
         <img src="assets/app-icons/ico/search_laptop_1.ico" alt="" data-credits-icon />
@@ -1301,29 +1684,54 @@
           <div class="selector-panel">
             <ul class="selector-list">
               <li>
-                <button class="selector-item is-active" type="button" data-view="projects-portfolio-os">
-                  <img class="selector-thumb" src="assets/app-icons/ico/monitor_windows.ico" alt="" />
+                <button class="selector-item is-active" type="button" data-view="projects-pulse-oximeter">
+                  <img class="selector-thumb" src="assets/app-icons/ico/expansion_board_modem.ico" alt="" />
                   <span>
-                    <span class="selector-title">Portfolio OS</span>
-                    <span class="selector-desc">Retro desktop concept with interactive windows.</span>
+                    <span class="selector-title">Pulse Oximeter</span>
+                    <span class="selector-desc">
+                      Biomedical sensing and embedded signal processing.
+                      <br />
+                      Spring 2026
+                    </span>
                   </span>
                 </button>
               </li>
               <li>
-                <button class="selector-item" type="button" data-view="projects-signal-dashboard">
-                  <img class="selector-thumb" src="assets/app-icons/ico/bar_graph.ico" alt="" />
+                <button class="selector-item" type="button" data-view="projects-tcp-congestion-control">
+                  <img class="selector-thumb" src="assets/app-icons/ico/network_normal_two_pcs.ico" alt="" />
                   <span>
-                    <span class="selector-title">Signal Dashboard</span>
-                    <span class="selector-desc">Data-rich dashboard prototype for trend tracking.</span>
+                    <span class="selector-title">TCP Congestion Control</span>
+                    <span class="selector-desc">
+                      Network protocol simulation and analysis.
+                      <br />
+                      Spring 2026
+                    </span>
                   </span>
                 </button>
               </li>
               <li>
-                <button class="selector-item" type="button" data-view="projects-research-explorer">
-                  <img class="selector-thumb" src="assets/app-icons/ico/search_web.ico" alt="" />
+                <button class="selector-item" type="button" data-view="projects-ekg">
+                  <img class="selector-thumb" src="assets/app-icons/ico/computer_taskmgr.ico" alt="" />
                   <span>
-                    <span class="selector-title">Research Explorer</span>
-                    <span class="selector-desc">Navigation model for large archival collections.</span>
+                    <span class="selector-title">EKG</span>
+                    <span class="selector-desc">
+                      Biomedical signal acquisition and analysis.
+                      <br />
+                      Spring 2026
+                    </span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="projects-drone-navigation">
+                  <img class="selector-thumb selector-thumb--pixelated" src="assets/projects/drone-navigation-favicon-pixelated.png" alt="" />
+                  <span>
+                    <span class="selector-title">Drone Navigation Through Constrained Gate Environments</span>
+                    <span class="selector-desc">
+                      Autonomous gate navigation with ArUco vision and receding-horizon LQR.
+                      <br />
+                      Fall 2025
+                    </span>
                   </span>
                 </button>
               </li>
@@ -1331,20 +1739,77 @@
           </div>
           <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
           <div class="viewer-panel">
-            <div class="viewer-content" data-view="projects-portfolio-os">
-              <h3>Portfolio OS</h3>
-              <p>Filler content: a nostalgic interface that blends modern UX patterns with classic desktop metaphors.</p>
-              <p>Highlights: drag-and-drop windows, modular panels, and thematic microcopy.</p>
+            <div class="viewer-content" data-view="projects-pulse-oximeter">
+              <div class="project-view-header">
+                <h3>Pulse Oximeter</h3>
+                <p class="project-view-subtitle">Spring 2026</p>
+              </div>
+              <p>
+                Designed a pulse oximeter project around optical sensing, signal conditioning, and
+                embedded processing for heart-rate and oxygen-saturation measurement.
+              </p>
             </div>
-            <div class="viewer-content is-hidden" data-view="projects-signal-dashboard">
-              <h3>Signal Dashboard</h3>
-              <p>Filler content: a data-dense monitoring surface for cross-team visibility.</p>
-              <p>Highlights: composable charts, alert tiers, and clarity-first hierarchy.</p>
+            <div class="viewer-content is-hidden" data-view="projects-tcp-congestion-control">
+              <div class="project-view-header">
+                <h3>TCP Congestion Control</h3>
+                <p class="project-view-subtitle">Spring 2026</p>
+              </div>
+              <p>
+                Built and analyzed TCP congestion control behavior, focusing on how transport-layer
+                algorithms adapt throughput under changing network conditions.
+              </p>
             </div>
-            <div class="viewer-content is-hidden" data-view="projects-research-explorer">
-              <h3>Research Explorer</h3>
-              <p>Filler content: a discovery interface for longform archives and annotations.</p>
-              <p>Highlights: faceted search, timeline views, and contextual previews.</p>
+            <div class="viewer-content is-hidden" data-view="projects-ekg">
+              <div class="project-view-header">
+                <h3>EKG</h3>
+                <p class="project-view-subtitle">Spring 2026</p>
+              </div>
+              <p>
+                Built an EKG project focused on biomedical signal acquisition, filtering, and
+                waveform analysis.
+              </p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="projects-drone-navigation">
+              <div class="project-view-header">
+                <h3>Drone Navigation Through Constrained Gate Environments</h3>
+                <p class="project-view-subtitle">Fall 2025</p>
+              </div>
+              <div class="pdf-actions">
+                <a
+                  class="button-link button-link--gold-glow"
+                  href="https://rohinshanker.github.io/drone-navigation-project/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open project site
+                </a>
+                <button type="button" id="open-drone-presentation">Open presentation</button>
+              </div>
+              <p>
+                Built an autonomous drone pipeline that uses an FPV camera and ArUco marker detection
+                to localize constrained gates, then plans and executes trajectories with a
+                discrete-time receding-horizon LQR controller.
+              </p>
+              <div class="gallery-frame" id="drone-video-gallery">
+                <div class="gallery-scroll gallery-scroll--video">
+                  <video
+                    id="drone-project-video"
+                    controls
+                    playsinline
+                    preload="metadata"
+                    aria-label="Drone project demo video"
+                  ></video>
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="drone-video-prev">Previous</button>
+                  <button type="button" id="drone-video-next">Next</button>
+                </div>
+              </div>
+              <p class="project-view-subtitle" id="drone-video-caption" aria-live="polite"></p>
+              <p>
+                The system was validated in MuJoCo with propeller-thrust actuation and then adapted
+                for DJI Tello hardware using SDK-level position and yaw commands.
+              </p>
             </div>
           </div>
         </div>
@@ -1372,6 +1837,14 @@
                       <br />
                       July 27th, 2025
                     </span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="creative-my-brothers-ghost">
+                  <img class="selector-thumb" src="assets/app-icons/ico/video_mk.ico" alt="" />
+                  <span>
+                    <span class="selector-title">My Brother's Ghost</span>
                   </span>
                 </button>
               </li>
@@ -1449,7 +1922,26 @@
               </p>
               <div class="lp-scroll-spacer" aria-hidden="true"></div>
             </div>
+            <div class="viewer-content is-hidden" data-view="creative-my-brothers-ghost">
+              <h3>My Brother's Ghost</h3>
+              <p>Creative project details coming soon.</p>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden portfolio-window" data-app-window="study-resources">
+        <div class="title-bar">
+          <div class="title-bar-text">Study Resources</div>
+          <div class="title-bar-controls">
+            <button aria-label="Minimize"></button>
+            <button aria-label="Maximize"></button>
+            <button aria-label="Close" data-close="study-resources"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <h3>Study Resources</h3>
+          <p>Resources and notes coming soon.</p>
         </div>
       </div>
 
@@ -1466,7 +1958,29 @@
           <div class="selector-panel">
             <ul class="selector-list">
               <li>
-                <button class="selector-item is-active" type="button" data-view="writing-frontiers">
+                <button class="selector-item is-active" type="button" data-view="writing-structural-bioinformatics">
+                  <img class="selector-thumb" src="assets/app-icons/ico/document.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Structural Bioinformatics</span>
+                    <span class="selector-desc">
+                      Spring 2026
+                    </span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="writing-biocomputing-market-analysis">
+                  <img class="selector-thumb" src="assets/app-icons/ico/bar_graph.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Biocomputing Market Analysis</span>
+                    <span class="selector-desc">
+                      Spring 2026
+                    </span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="writing-frontiers">
                   <img class="selector-thumb" src="assets/app-icons/ico/notepad.ico" alt="" />
                   <span>
                     <span class="selector-title">Frontiers in Microbial Systems Biology</span>
@@ -1491,7 +2005,17 @@
           </div>
           <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
           <div class="viewer-panel">
-            <div class="viewer-content" data-view="writing-frontiers">
+            <div class="viewer-content" data-view="writing-structural-bioinformatics">
+              <h3>Structural Bioinformatics</h3>
+              <p class="project-view-subtitle">Spring 2026</p>
+              <p>Writing project focused on computational approaches for analyzing biological structure and function.</p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="writing-biocomputing-market-analysis">
+              <h3>Biocomputing Market Analysis</h3>
+              <p class="project-view-subtitle">Spring 2026</p>
+              <p>Market analysis covering biocomputing technologies, applications, and commercialization trends.</p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="writing-frontiers">
               <h3>Frontiers in Microbial Systems Biology</h3>
               <p>Spring 2025, 10 pgs</p>
               <div class="pdf-actions">
@@ -1537,7 +2061,8 @@
                 <button class="selector-item is-active" type="button" data-view="modeling-stand-still-drop">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Stand Still Drop, March 2026</span>
+                    <span class="selector-title">Stand Still Drop</span>
+                    <span class="selector-desc">March 2026</span>
                   </span>
                 </button>
               </li>
@@ -1545,7 +2070,8 @@
                 <button class="selector-item" type="button" data-view="modeling-garb-merch-promo-shoot">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Garb Merch Promo Shoot, February 2026</span>
+                    <span class="selector-title">Garb Merch Promo Shoot</span>
+                    <span class="selector-desc">February 2026</span>
                   </span>
                 </button>
               </li>
@@ -1553,7 +2079,8 @@
                 <button class="selector-item" type="button" data-view="modeling-club-rambutan-runway-show">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Club Rambutan Runway Show, September 2025</span>
+                    <span class="selector-title">Club Rambutan Runway Show</span>
+                    <span class="selector-desc">September 2025</span>
                   </span>
                 </button>
               </li>
@@ -1561,7 +2088,8 @@
                 <button class="selector-item" type="button" data-view="modeling-arthaus-promo-shoot">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Arthaus Promo Shoot, September 2025</span>
+                    <span class="selector-title">Arthaus Promo Shoot</span>
+                    <span class="selector-desc">September 2025</span>
                   </span>
                 </button>
               </li>
@@ -1569,7 +2097,8 @@
                 <button class="selector-item" type="button" data-view="modeling-xoxo510-x-brainscramble-shoot">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">XOXO510 x BrainScramble Shoot, May 2025</span>
+                    <span class="selector-title">XOXO510 x BrainScramble Shoot</span>
+                    <span class="selector-desc">May 2025</span>
                   </span>
                 </button>
               </li>
@@ -1577,7 +2106,8 @@
                 <button class="selector-item" type="button" data-view="modeling-fast-sonder-lookbook-shoot-2">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Fast Sonder Lookbook Shoot 2, May 2025</span>
+                    <span class="selector-title">Fast Sonder Lookbook Shoot 2</span>
+                    <span class="selector-desc">May 2025</span>
                   </span>
                 </button>
               </li>
@@ -1585,7 +2115,8 @@
                 <button class="selector-item" type="button" data-view="modeling-fast-sonder-lookbook-shoot">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Fast Sonder Lookbook Shoot, May 2025</span>
+                    <span class="selector-title">Fast Sonder Lookbook Shoot</span>
+                    <span class="selector-desc">May 2025</span>
                   </span>
                 </button>
               </li>
@@ -1593,7 +2124,8 @@
                 <button class="selector-item" type="button" data-view="modeling-saturn-los-angeles-gaia-ss25-shoot">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Saturn Los Angeles GAIA SS25 Shoot, April 2025</span>
+                    <span class="selector-title">Saturn Los Angeles GAIA SS25 Shoot</span>
+                    <span class="selector-desc">April 2025</span>
                   </span>
                 </button>
               </li>
@@ -1601,7 +2133,8 @@
                 <button class="selector-item" type="button" data-view="modeling-garb-garbage-runway-show">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Garb "Garb-age" Runway Show, April 2025</span>
+                    <span class="selector-title">Garb "Garb-age" Runway Show</span>
+                    <span class="selector-desc">April 2025</span>
                   </span>
                 </button>
               </li>
@@ -1609,7 +2142,8 @@
                 <button class="selector-item" type="button" data-view="modeling-garb-means-business-shoot">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Garb Means Business Shoot, January 2025</span>
+                    <span class="selector-title">Garb Means Business Shoot</span>
+                    <span class="selector-desc">January 2025</span>
                   </span>
                 </button>
               </li>
@@ -1617,7 +2151,8 @@
                 <button class="selector-item" type="button" data-view="modeling-vampire-shoot">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Vampire Shoot, January 2025</span>
+                    <span class="selector-title">Vampire Shoot</span>
+                    <span class="selector-desc">January 2025</span>
                   </span>
                 </button>
               </li>
@@ -1625,7 +2160,8 @@
                 <button class="selector-item" type="button" data-view="modeling-garb-garbage-runway">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Garb "Garb-age" Runway, December 2024</span>
+                    <span class="selector-title">Garb "Garb-age" Runway</span>
+                    <span class="selector-desc">December 2024</span>
                   </span>
                 </button>
               </li>
@@ -1633,7 +2169,8 @@
                 <button class="selector-item" type="button" data-view="modeling-fast-crescendo-lookbook-shoot-2">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">FAST Crescendo Lookbook Shoot 2, December 2024</span>
+                    <span class="selector-title">FAST Crescendo Lookbook Shoot 2</span>
+                    <span class="selector-desc">December 2024</span>
                   </span>
                 </button>
               </li>
@@ -1641,7 +2178,8 @@
                 <button class="selector-item" type="button" data-view="modeling-fast-crescendo-lookbook-shoot">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Fast Crescendo Lookbook Shoot, October 2024</span>
+                    <span class="selector-title">Fast Crescendo Lookbook Shoot</span>
+                    <span class="selector-desc">October 2024</span>
                   </span>
                 </button>
               </li>
@@ -1649,7 +2187,8 @@
                 <button class="selector-item" type="button" data-view="modeling-fast-reverie-runway-show">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Fast Reverie Runway Show, April 2024</span>
+                    <span class="selector-title">Fast Reverie Runway Show</span>
+                    <span class="selector-desc">April 2024</span>
                   </span>
                 </button>
               </li>
@@ -1657,7 +2196,8 @@
                 <button class="selector-item" type="button" data-view="modeling-fast-reverie-lookbook-shoot">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Fast Reverie Lookbook Shoot, March 2024</span>
+                    <span class="selector-title">Fast Reverie Lookbook Shoot</span>
+                    <span class="selector-desc">March 2024</span>
                   </span>
                 </button>
               </li>
@@ -1665,7 +2205,8 @@
                 <button class="selector-item" type="button" data-view="modeling-saturn-la-black-friday-drop">
                   <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
                   <span>
-                    <span class="selector-title">Saturn Los Angeles Black Friday Drop, October 2023</span>
+                    <span class="selector-title">Saturn Los Angeles Black Friday Drop</span>
+                    <span class="selector-desc">October 2023</span>
                   </span>
                 </button>
               </li>
@@ -1674,55 +2215,72 @@
           <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
           <div class="viewer-panel">
             <div class="viewer-content" data-view="modeling-stand-still-drop">
-              <h3>Stand Still Drop, March 2026</h3>
+              <h3>Stand Still Drop</h3>
+              <p class="project-view-subtitle">March 2026</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-merch-promo-shoot">
-              <h3>Garb Merch Promo Shoot, February 2026</h3>
+              <h3>Garb Merch Promo Shoot</h3>
+              <p class="project-view-subtitle">February 2026</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-club-rambutan-runway-show">
-              <h3>Club Rambutan Runway Show, September 2025</h3>
+              <h3>Club Rambutan Runway Show</h3>
+              <p class="project-view-subtitle">September 2025</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-arthaus-promo-shoot">
-              <h3>Arthaus Promo Shoot, September 2025</h3>
+              <h3>Arthaus Promo Shoot</h3>
+              <p class="project-view-subtitle">September 2025</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-xoxo510-x-brainscramble-shoot">
-              <h3>XOXO510 x BrainScramble Shoot, May 2025</h3>
+              <h3>XOXO510 x BrainScramble Shoot</h3>
+              <p class="project-view-subtitle">May 2025</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-sonder-lookbook-shoot-2">
-              <h3>Fast Sonder Lookbook Shoot 2, May 2025</h3>
+              <h3>Fast Sonder Lookbook Shoot 2</h3>
+              <p class="project-view-subtitle">May 2025</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-sonder-lookbook-shoot">
-              <h3>Fast Sonder Lookbook Shoot, May 2025</h3>
+              <h3>Fast Sonder Lookbook Shoot</h3>
+              <p class="project-view-subtitle">May 2025</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-saturn-los-angeles-gaia-ss25-shoot">
-              <h3>Saturn Los Angeles GAIA SS25 Shoot, April 2025</h3>
+              <h3>Saturn Los Angeles GAIA SS25 Shoot</h3>
+              <p class="project-view-subtitle">April 2025</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway-show">
-              <h3>Garb "Garb-age" Runway Show, April 2025</h3>
+              <h3>Garb "Garb-age" Runway Show</h3>
+              <p class="project-view-subtitle">April 2025</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-means-business-shoot">
-              <h3>Garb Means Business Shoot, January 2025</h3>
+              <h3>Garb Means Business Shoot</h3>
+              <p class="project-view-subtitle">January 2025</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-vampire-shoot">
-              <h3>Vampire Shoot, January 2025</h3>
+              <h3>Vampire Shoot</h3>
+              <p class="project-view-subtitle">January 2025</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway">
-              <h3>Garb "Garb-age" Runway, December 2024</h3>
+              <h3>Garb "Garb-age" Runway</h3>
+              <p class="project-view-subtitle">December 2024</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-crescendo-lookbook-shoot-2">
-              <h3>FAST Crescendo Lookbook Shoot 2, December 2024</h3>
+              <h3>FAST Crescendo Lookbook Shoot 2</h3>
+              <p class="project-view-subtitle">December 2024</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-crescendo-lookbook-shoot">
-              <h3>Fast Crescendo Lookbook Shoot, October 2024</h3>
+              <h3>Fast Crescendo Lookbook Shoot</h3>
+              <p class="project-view-subtitle">October 2024</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-reverie-runway-show">
-              <h3>Fast Reverie Runway Show, April 2024</h3>
+              <h3>Fast Reverie Runway Show</h3>
+              <p class="project-view-subtitle">April 2024</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-reverie-lookbook-shoot">
-              <h3>Fast Reverie Lookbook Shoot, March 2024</h3>
+              <h3>Fast Reverie Lookbook Shoot</h3>
+              <p class="project-view-subtitle">March 2024</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-saturn-la-black-friday-drop">
-              <h3>Saturn Los Angeles Black Friday Drop, October 2023</h3>
+              <h3>Saturn Los Angeles Black Friday Drop</h3>
+              <p class="project-view-subtitle">October 2023</p>
             </div>
           </div>
         </div>
@@ -1741,6 +2299,23 @@
               id="pdf-iframe"
               src="assets/writing/MEC-Comment.pdf#page=1&zoom=100&toolbar=0&navpanes=0"
               title="MEC-Comment.pdf"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden pdf-window" data-app-window="drone-presentation-pdf" id="drone-presentation-pdf-window">
+        <div class="title-bar">
+          <div class="title-bar-text">Drone Navigation Presentation.pdf</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="drone-presentation-pdf"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="pdf-viewer">
+            <iframe
+              id="drone-presentation-iframe"
+              title="Drone Navigation Through Constrained Gate Environments presentation"
             ></iframe>
           </div>
         </div>
@@ -1789,6 +2364,71 @@
               </label>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden solitaire-window" data-app-window="solitaire">
+        <div class="title-bar">
+          <div class="title-bar-text">Solitaire</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help" id="sol-help"></button>
+            <button aria-label="Close" data-close="solitaire"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="sol-app" aria-label="Solitaire game">
+            <div class="sol-toolbar">
+              <button class="sol-reset" id="sol-reset" type="button" aria-label="Reset game" title="Reset game">
+                <img src="assets/solitaire-cards/reset-button.png" alt="" />
+              </button>
+              <div class="ms-counter sol-counter" id="sol-moves" aria-label="Solitaire moves">
+                <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
+                <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
+                <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
+              </div>
+              <button class="sol-undo" id="sol-undo" type="button" aria-label="Undo move" title="Undo move" disabled>
+                <img src="assets/solitaire-cards/undo-button.png" alt="" />
+              </button>
+              <span class="sol-status" id="sol-status" role="status" aria-live="polite"></span>
+            </div>
+            <div class="sol-board" id="sol-board" aria-label="Solitaire board">
+              <div class="sol-top-row">
+                <div class="sol-slot" id="sol-stock" role="button" tabindex="0" data-sol-stock aria-label="Stock"></div>
+                <div class="sol-slot" id="sol-waste" aria-label="Waste"></div>
+                <div class="sol-spacer" aria-hidden="true"></div>
+                <div class="sol-slot" data-sol-foundation="spades" role="button" tabindex="0" aria-label="Spades foundation"></div>
+                <div class="sol-slot" data-sol-foundation="clubs" role="button" tabindex="0" aria-label="Clubs foundation"></div>
+                <div class="sol-slot" data-sol-foundation="diamonds" role="button" tabindex="0" aria-label="Diamonds foundation"></div>
+                <div class="sol-slot" data-sol-foundation="hearts" role="button" tabindex="0" aria-label="Hearts foundation"></div>
+              </div>
+              <div class="sol-tableau" id="sol-tableau" aria-label="Tableau"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden solitaire-rules-window" data-app-window="solitaire-rules">
+        <div class="title-bar">
+          <div class="title-bar-text">Solitaire Rules</div>
+          <div class="title-bar-controls">
+            <button aria-label="Help" id="sol-rules-help"></button>
+            <button aria-label="Close" data-close="solitaire-rules"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <ol class="sol-rules-list">
+            <li>Move all 52 cards to the four foundation piles to win.</li>
+            <li>Foundations build upward by suit from Ace to King.</li>
+            <li>Tableau columns build downward by rank and must alternate red and black cards.</li>
+            <li>Only face-up cards can move.</li>
+            <li>A face-up tableau stack can move only when every card in the stack is already in descending alternating order.</li>
+            <li>Empty tableau columns can only receive a King or a valid stack that starts with a King.</li>
+            <li>Click the stock to draw one card to the waste pile.</li>
+            <li>Only the top waste card can move to a tableau column or foundation.</li>
+            <li>The top card of a foundation can move back to the tableau if it fits.</li>
+            <li>When the stock is empty, click it to turn the waste pile back into the stock.</li>
+            <li>When a face-down tableau card is uncovered, it turns face up.</li>
+          </ol>
         </div>
       </div>
 
@@ -2054,11 +2694,17 @@
         <button class="taskbar-icon" data-app="paint" aria-label="Creative Work">
           <img src="assets/app-icons/ico/paint_old.ico" alt="Creative Work" />
         </button>
+        <button class="taskbar-icon" data-app="study-resources" aria-label="Study Resources">
+          <img src="assets/app-icons/ico/certificate_multiple.ico" alt="Study Resources" />
+        </button>
         <button class="taskbar-icon" data-app="socials" aria-label="Socials">
           <img src="assets/app-icons/ico/connected_world.ico" alt="Socials" />
         </button>
         <button class="taskbar-icon" data-app="minesweeper" aria-label="Minesweeper">
           <img src="assets/app-icons/ico/minesweeper.ico" alt="Minesweeper" />
+        </button>
+        <button class="taskbar-icon" data-app="solitaire" aria-label="Solitaire">
+          <img src="assets/app-icons/ico/game_freecell.ico" alt="Solitaire" />
         </button>
         <button class="taskbar-icon" data-app="credits" aria-label="Credits">
           <img src="assets/app-icons/ico/search_laptop_1.ico" alt="Credits" data-credits-icon />
@@ -2111,6 +2757,10 @@
     </div>
 
     <canvas class="ms-confetti" id="ms-confetti" aria-hidden="true"></canvas>
+    <div class="ms-achievement" id="sol-achievement" aria-hidden="true">
+      <img src="assets/minesweeper_assets/achievement.png" alt="Achievement unlocked" />
+    </div>
+    <div class="sol-fireworks" id="sol-fireworks" aria-hidden="true"></div>
 
     <script>
       const clock = document.getElementById("taskbar-clock");
@@ -2131,7 +2781,13 @@
       const clockImage = document.getElementById("clock-image");
       const clockQuote = document.getElementById("clock-quote");
       const openFrontiersPdf = document.getElementById("open-frontiers-pdf");
+      const openDronePresentation = document.getElementById("open-drone-presentation");
       const pdfIframe = document.getElementById("pdf-iframe");
+      const dronePresentationIframe = document.getElementById("drone-presentation-iframe");
+      const droneProjectVideo = document.getElementById("drone-project-video");
+      const droneVideoCaption = document.getElementById("drone-video-caption");
+      const droneVideoPrev = document.getElementById("drone-video-prev");
+      const droneVideoNext = document.getElementById("drone-video-next");
       // Clash Royale app logic (disabled for now).
       // To re-enable: uncomment the CLASH_* constants, clash* variables,
       // the block below, and the two event hooks further down.
@@ -2142,10 +2798,23 @@
       // const CLASH_API_TOKEN = "";
       // const CLASH_PLAYER_TAG = "28CYYU08P";
       // const CLASH_SAMPLE_SIZE = 25;
+      const DRONE_PRESENTATION_PDF_URL =
+        "https://rohinshanker.github.io/drone-navigation-project/assets/docs/EECS%20C106A%20Final%20Project%20-%20Group%2044%20-%20Google%20Slides.pdf#page=1&zoom=100&toolbar=0&navpanes=0";
+      const droneProjectVideos = [
+        {
+          src: "https://rohinshanker.github.io/drone-navigation-project/assets/videos/mujocosimulator.mp4",
+          title: "MuJoCo simulation demo",
+        },
+        {
+          src: "https://rohinshanker.github.io/drone-navigation-project/assets/videos/livedemo.mp4",
+          title: "Live drone demo",
+        },
+      ];
 
       let topZ = 10;
       let calendarDate = new Date();
       let windowOffsetIndex = 0;
+      let droneVideoIndex = 0;
       // let clashRoyaleLoaded = false;
       // let clashRoyaleLoading = false;
 
@@ -2263,6 +2932,10 @@
             win.style.translate = "0 0";
             win.style.left = `${Math.round(randomLeft)}px`;
             win.style.top = `${Math.round(randomTop)}px`;
+          }
+
+          if (appId === "windows") {
+            syncDroneProjectVideo();
           }
 
           restartWindowAnimation(win, "is-opening");
@@ -2771,6 +3444,24 @@
         pathfinderImage.setAttribute("src", pathfinderImages[pathfinderIndex]);
       };
 
+      const syncDroneProjectVideo = () => {
+        if (!droneProjectVideo || !droneProjectVideos.length) return;
+        const activeVideo = droneProjectVideos[droneVideoIndex];
+        if (!activeVideo) return;
+
+        if (droneProjectVideo.getAttribute("src") !== activeVideo.src) {
+          droneProjectVideo.pause();
+          droneProjectVideo.setAttribute("src", activeVideo.src);
+          droneProjectVideo.load();
+        }
+
+        droneProjectVideo.setAttribute("aria-label", activeVideo.title);
+
+        if (droneVideoCaption) {
+          droneVideoCaption.textContent = `${activeVideo.title} (${droneVideoIndex + 1} of ${droneProjectVideos.length})`;
+        }
+      };
+
       if (pathfinderPrev && pathfinderNext) {
         pathfinderPrev.addEventListener("click", () => {
           pathfinderIndex =
@@ -2784,9 +3475,34 @@
         });
       }
 
+      if (droneVideoPrev && droneVideoNext) {
+        droneVideoPrev.addEventListener("click", () => {
+          droneVideoIndex =
+            (droneVideoIndex - 1 + droneProjectVideos.length) % droneProjectVideos.length;
+          syncDroneProjectVideo();
+        });
+
+        droneVideoNext.addEventListener("click", () => {
+          droneVideoIndex = (droneVideoIndex + 1) % droneProjectVideos.length;
+          syncDroneProjectVideo();
+        });
+      }
+
       if (openFrontiersPdf) {
         openFrontiersPdf.addEventListener("click", () => {
           setWindowOpen("mec-pdf", true);
+        });
+      }
+
+      if (openDronePresentation) {
+        openDronePresentation.addEventListener("click", () => {
+          if (
+            dronePresentationIframe &&
+            dronePresentationIframe.getAttribute("src") !== DRONE_PRESENTATION_PDF_URL
+          ) {
+            dronePresentationIframe.setAttribute("src", DRONE_PRESENTATION_PDF_URL);
+          }
+          setWindowOpen("drone-presentation-pdf", true);
         });
       }
 
@@ -2814,7 +3530,7 @@
         3:
           `"Happiness, like success, cannot be pursued; it must ensue, and it only does so as the unintended side-effect of dedication to a cause greater than oneself"<br>` +
           `—Viktor E. Frankl`,
-        4: `"We don't dance to get to the end of the song."<br>—Sydney Rheeder`,
+        4: `"To plant a garden is to believe in tomorrow."<br>—Audrey Hepburn`,
         5:
           `"I took a deep breath and listened to the old brag of my heart. I am, I am, I am." ` +
           `—Sylvia Plath`,
@@ -3434,6 +4150,710 @@
       }
 
       msNewGame("beginner");
+
+      const solBoard = document.getElementById("sol-board");
+      const solStock = document.getElementById("sol-stock");
+      const solWaste = document.getElementById("sol-waste");
+      const solTableau = document.getElementById("sol-tableau");
+      const solFoundationSlots = document.querySelectorAll("[data-sol-foundation]");
+      const solMoves = document.getElementById("sol-moves");
+      const solStatus = document.getElementById("sol-status");
+      const solHelp = document.getElementById("sol-help");
+      const solRulesHelp = document.getElementById("sol-rules-help");
+      const solReset = document.getElementById("sol-reset");
+      const solUndo = document.getElementById("sol-undo");
+      const solAchievement = document.getElementById("sol-achievement");
+      const solFireworks = document.getElementById("sol-fireworks");
+
+      const solSuitData = {
+        spades: { symbol: "♠", label: "Spades", color: "black" },
+        clubs: { symbol: "♣", label: "Clubs", color: "black" },
+        diamonds: { symbol: "♦", label: "Diamonds", color: "red" },
+        hearts: { symbol: "♥", label: "Hearts", color: "red" },
+      };
+
+      const solSuitOrder = ["spades", "clubs", "diamonds", "hearts"];
+      const solRankNames = {
+        1: "Ace",
+        2: "Two",
+        3: "Three",
+        4: "Four",
+        5: "Five",
+        6: "Six",
+        7: "Seven",
+        8: "Eight",
+        9: "Nine",
+        10: "Ten",
+        11: "Jack",
+        12: "Queen",
+        13: "King",
+      };
+
+      const solState = {
+        stock: [],
+        waste: [],
+        foundations: {
+          spades: [],
+          clubs: [],
+          diamonds: [],
+          hearts: [],
+        },
+        tableau: [],
+        selected: null,
+        moves: 0,
+        won: false,
+      };
+      const solHistory = [];
+      const solFireworkColors = [
+        "#ff004d",
+        "#ffa300",
+        "#fff024",
+        "#00e756",
+        "#29adff",
+        "#83769c",
+        "#ff77a8",
+        "#ffffff",
+      ];
+      let solFireworkTimeout = null;
+      let solFireworkTimers = [];
+
+      const solSprite = {
+        cardHeight: 22,
+        imageHeight: 114,
+        backCol: 10,
+        backRow: 4,
+      };
+
+      const solCardColor = (card) => solSuitData[card.suit].color;
+
+      const solCardName = (card) =>
+        `${solRankNames[card.rank]} of ${solSuitData[card.suit].label}`;
+
+      const solSpritePosition = (col, row) => {
+        const x = col === 0 ? 0 : (col / 12) * 100;
+        const yDenominator = solSprite.imageHeight - solSprite.cardHeight;
+        const y = row === 0 ? 0 : ((row * solSprite.cardHeight) / yDenominator) * 100;
+        return {
+          x: `${x.toFixed(4)}%`,
+          y: `${y.toFixed(4)}%`,
+        };
+      };
+
+      const solApplyCardSprite = (button, col, row) => {
+        const position = solSpritePosition(col, row);
+        button.style.setProperty("--sol-sprite-x", position.x);
+        button.style.setProperty("--sol-sprite-y", position.y);
+      };
+
+      const solBuildDeck = () => {
+        const deck = [];
+        solSuitOrder.forEach((suit) => {
+          for (let rank = 1; rank <= 13; rank += 1) {
+            deck.push({
+              id: `${suit}-${rank}`,
+              suit,
+              rank,
+              faceUp: false,
+            });
+          }
+        });
+        return deck;
+      };
+
+      const solShuffle = (cards) => {
+        for (let i = cards.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [cards[i], cards[j]] = [cards[j], cards[i]];
+        }
+        return cards;
+      };
+
+      const solCloneCards = (cards) => cards.map((card) => ({ ...card }));
+
+      const solSnapshot = () => ({
+        stock: solCloneCards(solState.stock),
+        waste: solCloneCards(solState.waste),
+        foundations: {
+          spades: solCloneCards(solState.foundations.spades),
+          clubs: solCloneCards(solState.foundations.clubs),
+          diamonds: solCloneCards(solState.foundations.diamonds),
+          hearts: solCloneCards(solState.foundations.hearts),
+        },
+        tableau: solState.tableau.map(solCloneCards),
+        moves: solState.moves,
+        won: solState.won,
+      });
+
+      const solPushUndo = () => {
+        solHistory.push(solSnapshot());
+        if (solHistory.length > 100) solHistory.shift();
+      };
+
+      const solRestoreSnapshot = (snapshot) => {
+        solState.stock = solCloneCards(snapshot.stock);
+        solState.waste = solCloneCards(snapshot.waste);
+        solState.foundations = {
+          spades: solCloneCards(snapshot.foundations.spades),
+          clubs: solCloneCards(snapshot.foundations.clubs),
+          diamonds: solCloneCards(snapshot.foundations.diamonds),
+          hearts: solCloneCards(snapshot.foundations.hearts),
+        };
+        solState.tableau = snapshot.tableau.map(solCloneCards);
+        solState.selected = null;
+        solState.moves = snapshot.moves;
+        solState.won = snapshot.won;
+      };
+
+      const solShowAchievement = () => {
+        if (!solAchievement) return;
+        solAchievement.classList.remove("is-showing");
+        void solAchievement.offsetWidth;
+        solAchievement.classList.add("is-showing");
+      };
+
+      const solCreateFireworkBurst = (x, y) => {
+        if (!solFireworks) return;
+        const particleCount = 46;
+
+        for (let i = 0; i < particleCount; i += 1) {
+          const dot = document.createElement("span");
+          const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.22;
+          const distance = 60 + Math.random() * 155;
+          const dx = Math.cos(angle) * distance;
+          const dy = Math.sin(angle) * distance + 38;
+          const color =
+            solFireworkColors[Math.floor(Math.random() * solFireworkColors.length)];
+
+          dot.className = "sol-firework-dot";
+          dot.style.left = `${x}px`;
+          dot.style.top = `${y}px`;
+          dot.style.setProperty("--sol-firework-dx", `${dx.toFixed(1)}px`);
+          dot.style.setProperty("--sol-firework-dy", `${dy.toFixed(1)}px`);
+          dot.style.setProperty("--sol-firework-color", color);
+          solFireworks.appendChild(dot);
+        }
+      };
+
+      const solStartFireworks = () => {
+        if (!solFireworks) return;
+        solFireworkTimers.forEach((timer) => clearTimeout(timer));
+        solFireworkTimers = [];
+        if (solFireworkTimeout) clearTimeout(solFireworkTimeout);
+
+        solFireworks.innerHTML = "";
+        solFireworks.classList.add("is-showing");
+        solFireworks.setAttribute("aria-hidden", "false");
+
+        const burstCount = 9;
+        for (let i = 0; i < burstCount; i += 1) {
+          const timer = setTimeout(() => {
+            const x = window.innerWidth * (0.18 + Math.random() * 0.64);
+            const y = window.innerHeight * (0.16 + Math.random() * 0.42);
+            solCreateFireworkBurst(x, y);
+          }, i * 260);
+          solFireworkTimers.push(timer);
+        }
+
+        solFireworkTimeout = setTimeout(() => {
+          solFireworks.classList.remove("is-showing");
+          solFireworks.setAttribute("aria-hidden", "true");
+          solFireworks.innerHTML = "";
+          solFireworkTimers = [];
+          solFireworkTimeout = null;
+        }, 3600);
+      };
+
+      const solCreateSlotMark = (text) => {
+        const mark = document.createElement("span");
+        mark.className = "sol-slot-mark";
+        mark.textContent = text;
+        return mark;
+      };
+
+      const solSelectionMatches = (zone, pile, index) => {
+        const selected = solState.selected;
+        return (
+          selected &&
+          selected.zone === zone &&
+          selected.pile === pile &&
+          selected.index === index
+        );
+      };
+
+      const solIsSelectedCard = (card) =>
+        Boolean(
+          solState.selected &&
+            solState.selected.cards.some((selectedCard) => selectedCard.id === card.id)
+        );
+
+      const solCreateCardElement = (card, zone, pile, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "sol-card";
+        button.setAttribute("data-sol-card-id", card.id);
+        button.setAttribute("data-sol-zone", zone);
+        button.setAttribute("data-sol-pile", String(pile));
+        button.setAttribute("data-sol-index", String(index));
+
+        if (!card.faceUp) {
+          button.classList.add("is-face-down");
+          solApplyCardSprite(button, solSprite.backCol, solSprite.backRow);
+          button.setAttribute("aria-label", "Face-down card");
+          return button;
+        }
+
+        if (solIsSelectedCard(card)) {
+          button.classList.add("is-selected");
+        }
+
+        solApplyCardSprite(button, card.rank - 1, solSuitOrder.indexOf(card.suit));
+        button.setAttribute("aria-label", solCardName(card));
+
+        return button;
+      };
+
+      const solCreateStockBack = () => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "sol-card is-face-down";
+        button.setAttribute("data-sol-stock", "");
+        button.setAttribute("aria-label", `Stock, ${solState.stock.length} cards`);
+        solApplyCardSprite(button, solSprite.backCol, solSprite.backRow);
+        return button;
+      };
+
+      const solRender = () => {
+        if (!solBoard || !solStock || !solWaste || !solTableau) return;
+
+        solStock.innerHTML = "";
+        if (solState.stock.length) {
+          solStock.appendChild(solCreateStockBack());
+          solStock.setAttribute("aria-label", `Stock, ${solState.stock.length} cards`);
+        } else {
+          if (solState.waste.length) solStock.appendChild(solCreateSlotMark("↻"));
+          solStock.setAttribute(
+            "aria-label",
+            solState.waste.length ? "Restock waste" : "Empty stock"
+          );
+        }
+
+        solWaste.innerHTML = "";
+        const wasteTop = solState.waste[solState.waste.length - 1];
+        if (wasteTop) {
+          solWaste.appendChild(
+            solCreateCardElement(wasteTop, "waste", "waste", solState.waste.length - 1)
+          );
+        } else {
+          solWaste.appendChild(solCreateSlotMark("W"));
+        }
+        solWaste.setAttribute("aria-label", wasteTop ? `Waste, ${solCardName(wasteTop)}` : "Waste");
+
+        solFoundationSlots.forEach((slot) => {
+          const suit = slot.getAttribute("data-sol-foundation");
+          const pile = solState.foundations[suit] || [];
+          const topCard = pile[pile.length - 1];
+          slot.innerHTML = "";
+          if (topCard) {
+            slot.appendChild(solCreateCardElement(topCard, "foundation", suit, pile.length - 1));
+          } else {
+            slot.appendChild(solCreateSlotMark(solSuitData[suit].symbol));
+          }
+          slot.setAttribute(
+            "aria-label",
+            topCard
+              ? `${solSuitData[suit].label} foundation, ${solCardName(topCard)}`
+              : `${solSuitData[suit].label} foundation`
+          );
+        });
+
+        solTableau.innerHTML = "";
+        solState.tableau.forEach((column, colIndex) => {
+          const columnEl = document.createElement("div");
+          columnEl.className = "sol-tableau-col";
+          columnEl.setAttribute("data-sol-col", String(colIndex));
+          columnEl.setAttribute("role", "button");
+          columnEl.setAttribute("tabindex", "0");
+          columnEl.setAttribute("aria-label", `Tableau column ${colIndex + 1}`);
+
+          if (!column.length) {
+            const emptySlot = document.createElement("div");
+            emptySlot.className = "sol-slot";
+            emptySlot.setAttribute("aria-hidden", "true");
+            columnEl.appendChild(emptySlot);
+          } else {
+            column.forEach((card, cardIndex) => {
+              columnEl.appendChild(
+                solCreateCardElement(card, "tableau", colIndex, cardIndex)
+              );
+            });
+          }
+
+          solTableau.appendChild(columnEl);
+        });
+
+        if (solMoves) msSetCounter(solMoves, msFormatCounter(solState.moves));
+        if (solStatus) solStatus.textContent = solState.won ? "You win" : "";
+        if (solUndo) solUndo.disabled = solHistory.length === 0;
+      };
+
+      const solCheckWin = () => {
+        const foundationCount = solSuitOrder.reduce(
+          (total, suit) => total + solState.foundations[suit].length,
+          0
+        );
+        const wasWon = solState.won;
+        solState.won = foundationCount === 52;
+        if (!wasWon && solState.won) {
+          solStartFireworks();
+          solShowAchievement();
+        }
+      };
+
+      const solFlipSourceTopCard = (selected) => {
+        if (!selected || selected.zone !== "tableau") return;
+        const column = solState.tableau[selected.pile];
+        const topCard = column[column.length - 1];
+        if (topCard && !topCard.faceUp) topCard.faceUp = true;
+      };
+
+      const solRemoveSelectedCards = () => {
+        const selected = solState.selected;
+        if (!selected) return [];
+
+        if (selected.zone === "waste") {
+          return solState.waste.splice(selected.index, 1);
+        }
+
+        if (selected.zone === "tableau") {
+          return solState.tableau[selected.pile].splice(selected.index);
+        }
+
+        if (selected.zone === "foundation") {
+          return solState.foundations[selected.pile].splice(selected.index, 1);
+        }
+
+        return [];
+      };
+
+      const solCompleteMove = (selected) => {
+        solFlipSourceTopCard(selected);
+        solState.selected = null;
+        solState.moves += 1;
+        solCheckWin();
+        solRender();
+      };
+
+      const solIsPackedTableauStack = (cards) => {
+        if (!cards.length || cards.some((card) => !card.faceUp)) return false;
+
+        for (let i = 0; i < cards.length - 1; i += 1) {
+          const upper = cards[i];
+          const lower = cards[i + 1];
+          if (solCardColor(upper) === solCardColor(lower)) return false;
+          if (upper.rank !== lower.rank + 1) return false;
+        }
+
+        return true;
+      };
+
+      const solCanMoveToTableau = (cards, column) => {
+        const firstCard = cards[0];
+        if (!firstCard) return false;
+        if (!solIsPackedTableauStack(cards)) return false;
+        const targetCard = column[column.length - 1];
+
+        if (!targetCard) return firstCard.rank === 13;
+        if (!targetCard.faceUp) return false;
+
+        return (
+          solCardColor(firstCard) !== solCardColor(targetCard) &&
+          firstCard.rank + 1 === targetCard.rank
+        );
+      };
+
+      const solCanMoveToFoundation = (cards, suit) => {
+        if (!cards || cards.length !== 1) return false;
+        const card = cards[0];
+        if (card.suit !== suit) return false;
+
+        const foundation = solState.foundations[suit];
+        const topCard = foundation[foundation.length - 1];
+        if (!topCard) return card.rank === 1;
+        return card.rank === topCard.rank + 1;
+      };
+
+      const solMoveSelectedToTableau = (colIndex) => {
+        const selected = solState.selected;
+        if (!selected) return false;
+        if (selected.zone === "tableau" && selected.pile === colIndex) return false;
+
+        const column = solState.tableau[colIndex];
+        if (!solCanMoveToTableau(selected.cards, column)) return false;
+
+        solPushUndo();
+        const movingCards = solRemoveSelectedCards();
+        column.push(...movingCards);
+        solCompleteMove(selected);
+        return true;
+      };
+
+      const solMoveSelectedToFoundation = (suit) => {
+        const selected = solState.selected;
+        if (!selected) return false;
+        if (selected.zone === "foundation" && selected.pile === suit) return false;
+        if (!solCanMoveToFoundation(selected.cards, suit)) return false;
+
+        solPushUndo();
+        const movingCards = solRemoveSelectedCards();
+        solState.foundations[suit].push(...movingCards);
+        solCompleteMove(selected);
+        return true;
+      };
+
+      const solSelectWaste = () => {
+        const index = solState.waste.length - 1;
+        if (index < 0) return;
+
+        if (solSelectionMatches("waste", "waste", index)) {
+          solState.selected = null;
+        } else {
+          solState.selected = {
+            zone: "waste",
+            pile: "waste",
+            index,
+            cards: [solState.waste[index]],
+          };
+        }
+
+        solRender();
+      };
+
+      const solSelectFoundation = (suit, index) => {
+        const pile = solState.foundations[suit];
+        if (index !== pile.length - 1) return;
+
+        if (solSelectionMatches("foundation", suit, index)) {
+          solState.selected = null;
+        } else {
+          solState.selected = {
+            zone: "foundation",
+            pile: suit,
+            index,
+            cards: [pile[index]],
+          };
+        }
+
+        solRender();
+      };
+
+      const solSelectTableau = (colIndex, cardIndex) => {
+        const column = solState.tableau[colIndex];
+        const card = column[cardIndex];
+        if (!card || !card.faceUp) return;
+
+        if (solState.selected && solMoveSelectedToTableau(colIndex)) return;
+        const cards = column.slice(cardIndex);
+        if (!solIsPackedTableauStack(cards)) return;
+
+        if (solSelectionMatches("tableau", colIndex, cardIndex)) {
+          solState.selected = null;
+        } else {
+          solState.selected = {
+            zone: "tableau",
+            pile: colIndex,
+            index: cardIndex,
+            cards,
+          };
+        }
+
+        solRender();
+      };
+
+      const solDraw = () => {
+        solState.selected = null;
+
+        if (solState.stock.length) {
+          solPushUndo();
+          const card = solState.stock.pop();
+          card.faceUp = true;
+          solState.waste.push(card);
+          solState.moves += 1;
+        } else if (solState.waste.length) {
+          solPushUndo();
+          solState.stock = solState.waste.reverse().map((card) => {
+            card.faceUp = false;
+            return card;
+          });
+          solState.waste = [];
+          solState.moves += 1;
+        }
+
+        solRender();
+      };
+
+      const solNewGame = () => {
+        const deck = solShuffle(solBuildDeck());
+
+        solState.stock = [];
+        solState.waste = [];
+        solState.foundations = {
+          spades: [],
+          clubs: [],
+          diamonds: [],
+          hearts: [],
+        };
+        solState.tableau = Array.from({ length: 7 }, () => []);
+        solState.selected = null;
+        solState.moves = 0;
+        solState.won = false;
+        solHistory.length = 0;
+
+        for (let col = 0; col < 7; col += 1) {
+          for (let row = 0; row <= col; row += 1) {
+            const card = deck.pop();
+            card.faceUp = row === col;
+            solState.tableau[col].push(card);
+          }
+        }
+
+        solState.stock = deck;
+        solRender();
+      };
+
+      const solAutoMoveCardToFoundation = (zone, pile, index) => {
+        let card = null;
+
+        if (zone === "waste") {
+          const wasteIndex = solState.waste.length - 1;
+          if (index !== wasteIndex) return;
+          card = solState.waste[wasteIndex];
+          solState.selected = {
+            zone: "waste",
+            pile: "waste",
+            index: wasteIndex,
+            cards: [card],
+          };
+        } else if (zone === "tableau") {
+          const column = solState.tableau[pile];
+          if (index !== column.length - 1) return;
+          card = column[index];
+          if (!card || !card.faceUp) return;
+          solState.selected = {
+            zone: "tableau",
+            pile,
+            index,
+            cards: [card],
+          };
+        }
+
+        if (!card || !solMoveSelectedToFoundation(card.suit)) {
+          solRender();
+        }
+      };
+
+      if (solBoard) {
+        solBoard.addEventListener("click", (event) => {
+          const stockHit = event.target.closest("[data-sol-stock]");
+          if (stockHit && solBoard.contains(stockHit)) {
+            solDraw();
+            return;
+          }
+
+          const foundationEl = event.target.closest("[data-sol-foundation]");
+          const cardEl = event.target.closest("[data-sol-card-id]");
+
+          if (foundationEl && solState.selected) {
+            const suit = foundationEl.getAttribute("data-sol-foundation");
+            if (solMoveSelectedToFoundation(suit)) return;
+          }
+
+          if (cardEl) {
+            const zone = cardEl.getAttribute("data-sol-zone");
+            const pileValue = cardEl.getAttribute("data-sol-pile");
+            const index = Number(cardEl.getAttribute("data-sol-index"));
+
+            if (zone === "waste") {
+              solSelectWaste();
+              return;
+            }
+
+            if (zone === "foundation") {
+              solSelectFoundation(pileValue, index);
+              return;
+            }
+
+            if (zone === "tableau") {
+              solSelectTableau(Number(pileValue), index);
+            }
+
+            return;
+          }
+
+          if (foundationEl && solState.selected) {
+            const suit = foundationEl.getAttribute("data-sol-foundation");
+            solMoveSelectedToFoundation(suit);
+            return;
+          }
+
+          const columnEl = event.target.closest("[data-sol-col]");
+          if (columnEl && solState.selected) {
+            solMoveSelectedToTableau(Number(columnEl.getAttribute("data-sol-col")));
+          }
+        });
+
+        solBoard.addEventListener("dblclick", (event) => {
+          const cardEl = event.target.closest("[data-sol-card-id]");
+          if (!cardEl) return;
+
+          const zone = cardEl.getAttribute("data-sol-zone");
+          const pileValue = cardEl.getAttribute("data-sol-pile");
+          const pile = zone === "tableau" ? Number(pileValue) : pileValue;
+          const index = Number(cardEl.getAttribute("data-sol-index"));
+          solAutoMoveCardToFoundation(zone, pile, index);
+        });
+
+        solBoard.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          if (!target.matches('[role="button"]')) return;
+          event.preventDefault();
+          target.click();
+        });
+      }
+
+      if (solAchievement) {
+        solAchievement.addEventListener("animationend", () => {
+          solAchievement.classList.remove("is-showing");
+        });
+      }
+
+      if (solHelp) {
+        solHelp.addEventListener("click", () => {
+          setWindowOpen("solitaire-rules", true);
+        });
+      }
+
+      if (solReset) {
+        solReset.addEventListener("click", solNewGame);
+      }
+
+      if (solUndo) {
+        solUndo.addEventListener("click", () => {
+          const snapshot = solHistory.pop();
+          if (!snapshot) return;
+          solRestoreSnapshot(snapshot);
+          solRender();
+        });
+      }
+
+      if (solRulesHelp) {
+        solRulesHelp.addEventListener("click", () => {
+          window.open("https://en.wikipedia.org/wiki/Klondike_(solitaire)", "_blank", "noopener,noreferrer");
+        });
+      }
+
+      solNewGame();
 
       window.addEventListener("resize", msResizeConfetti);
       window.addEventListener("resize", msUpdateBoardAlignment);
