@@ -38,9 +38,14 @@
         position: fixed;
         top: 16px;
         left: 16px;
+        bottom: 68px;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        row-gap: 16px;
+        column-gap: 10px;
+        max-width: calc(100vw - 32px);
       }
 
       .desktop-icon {
@@ -516,6 +521,51 @@
         display: block;
       }
 
+      .sol-victory-video-overlay {
+        align-items: center;
+        background: transparent;
+        display: none;
+        inset: 0;
+        justify-content: center;
+        pointer-events: none;
+        position: absolute;
+        z-index: 5;
+      }
+
+      .sol-victory-video-overlay.is-showing {
+        display: flex;
+      }
+
+      .sol-victory-video-overlay video {
+        height: 1px;
+        opacity: 0;
+        position: absolute;
+        width: 1px;
+      }
+
+      .sol-victory-video-overlay video.is-visible-fallback {
+        height: auto;
+        max-height: 90%;
+        max-width: 96%;
+        mix-blend-mode: screen;
+        opacity: 1;
+        position: static;
+        width: min(780px, 96%);
+      }
+
+      .sol-victory-video-overlay canvas {
+        display: block;
+        filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.38));
+        height: auto;
+        max-height: 90%;
+        max-width: 96%;
+        width: min(780px, 96%);
+      }
+
+      .sol-victory-video-overlay canvas.is-hidden {
+        display: none;
+      }
+
       .sol-firework-dot {
         --sol-firework-color: #fff;
         --sol-firework-dx: 0px;
@@ -565,6 +615,7 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+        position: relative;
         width: max-content;
         max-width: 100%;
       }
@@ -947,6 +998,7 @@
         gap: 12px;
         min-height: 360px;
         height: 360px;
+        overflow: hidden;
       }
 
       .selector-panel,
@@ -954,6 +1006,8 @@
         padding: 8px;
         background: var(--surface);
         box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        min-height: 0;
+        min-width: 0;
       }
 
       .selector-panel {
@@ -1001,6 +1055,7 @@
         width: 36px;
         height: 36px;
         display: block;
+        object-fit: contain;
       }
 
       .selector-thumb--pixelated {
@@ -1026,6 +1081,7 @@
       .viewer-panel {
         flex: 1;
         overflow-y: auto;
+        padding-bottom: 12px;
       }
 
       .panel-divider {
@@ -1041,12 +1097,24 @@
         display: none;
       }
 
+      .viewer-content {
+        min-width: 0;
+      }
+
       .project-view-header {
         margin-bottom: 12px;
       }
 
       .project-view-header h3 {
         margin: 0;
+      }
+
+      .viewer-content > h3 {
+        margin: 0 0 2px;
+      }
+
+      .viewer-content > h3 + .project-view-subtitle {
+        margin-top: 0;
       }
 
       .project-view-subtitle {
@@ -1160,6 +1228,470 @@
         border: 0;
       }
 
+      .study-window {
+        width: min(96vw, 980px);
+        height: min(84vh, 660px);
+        min-width: min(96vw, 720px);
+      }
+
+      .study-window .window-body {
+        height: calc(100% - 34px);
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .study-explorer {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        height: 100%;
+        min-height: 0;
+      }
+
+      .study-menu-bar {
+        align-items: center;
+        display: flex;
+        gap: 14px;
+        min-height: 18px;
+        padding: 1px 4px;
+      }
+
+      .study-menu-bar span::first-letter {
+        text-decoration: underline;
+      }
+
+      .study-toolbar,
+      .study-address-row,
+      .study-status-bar {
+        align-items: center;
+        background: var(--surface);
+        box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+        display: flex;
+        gap: 4px;
+        min-height: 28px;
+        padding: 3px 4px;
+      }
+
+      .study-tool-button,
+      .study-preview-actions button {
+        align-items: center;
+        display: inline-flex;
+        gap: 4px;
+        justify-content: center;
+        min-width: 0;
+        padding: 0 8px;
+        white-space: nowrap;
+      }
+
+      .study-tool-button img,
+      .study-preview-actions img {
+        display: block;
+        height: 16px;
+        width: 16px;
+      }
+
+      .study-tool-button.is-active {
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        padding: 1px 7px 0 9px;
+      }
+
+      .study-address-label {
+        color: #404040;
+        padding: 0 2px;
+      }
+
+      .study-address-field {
+        align-items: center;
+        background: #fff;
+        box-shadow: var(--border-field);
+        display: flex;
+        flex: 1;
+        min-height: 21px;
+        min-width: 0;
+        overflow: hidden;
+        padding: 2px 5px;
+        white-space: nowrap;
+      }
+
+      .study-main {
+        display: grid;
+        flex: 1;
+        gap: 6px;
+        grid-template-columns: minmax(190px, 28%) minmax(0, 1fr);
+        min-height: 0;
+      }
+
+      .study-tree-pane,
+      .study-right-pane,
+      .study-file-pane,
+      .study-preview-pane {
+        background: #fff;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .study-tree-pane {
+        min-height: 0;
+        overflow: auto;
+        padding: 6px 4px;
+      }
+
+      .study-tree-list,
+      .study-tree-list ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .study-tree-list ul {
+        margin-left: 17px;
+      }
+
+      .study-tree-row {
+        align-items: center;
+        display: flex;
+        min-height: 22px;
+        white-space: nowrap;
+      }
+
+      .study-tree-toggle,
+      .study-tree-toggle-spacer {
+        align-items: center;
+        display: inline-flex;
+        height: 15px;
+        justify-content: center;
+        margin-right: 2px;
+        min-height: 15px;
+        min-width: 15px;
+        padding: 0;
+        width: 15px;
+      }
+
+      .study-tree-toggle {
+        color: inherit;
+        font-family: Arial, sans-serif;
+        font-size: 11px;
+        line-height: 1;
+        text-shadow: none;
+      }
+
+      .study-tree-item,
+      .study-file-item {
+        align-items: center;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        color: inherit;
+        display: flex;
+        gap: 6px;
+        min-height: 0;
+        min-width: 0;
+        padding: 2px 3px;
+        text-align: left;
+        text-shadow: none;
+      }
+
+      .study-tree-item {
+        flex: 1;
+        justify-content: flex-start;
+      }
+
+      .study-tree-item img,
+      .study-file-item img,
+      .study-preview-icon {
+        display: block;
+        height: 18px;
+        width: 18px;
+      }
+
+      .study-tree-meta {
+        color: #555;
+        margin-left: 4px;
+      }
+
+      .study-tree-item.is-selected,
+      .study-file-item.is-selected {
+        background: #000080;
+        color: #fff;
+        outline: 1px dotted #fff;
+        outline-offset: -2px;
+      }
+
+      .study-tree-item.is-selected .study-tree-meta {
+        color: #fff;
+      }
+
+      .study-tree-item:focus,
+      .study-file-item:focus {
+        outline: 1px dotted #000;
+        outline-offset: -2px;
+      }
+
+      .study-right-pane {
+        display: grid;
+        gap: 6px;
+        grid-template-rows: auto minmax(0, 1fr) minmax(150px, 34%);
+        min-height: 0;
+        padding: 6px;
+      }
+
+      .study-file-header,
+      .study-preview-header {
+        align-items: center;
+        display: flex;
+        gap: 8px;
+        min-height: 22px;
+      }
+
+      .study-file-title,
+      .study-preview-title {
+        font-weight: bold;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .study-file-count {
+        color: #555;
+        margin-left: auto;
+        white-space: nowrap;
+      }
+
+      .study-file-pane {
+        min-height: 0;
+        overflow: auto;
+        padding: 6px;
+      }
+
+      .study-file-pane.is-list {
+        align-content: start;
+        display: grid;
+        gap: 2px;
+      }
+
+      .study-file-pane.is-gallery {
+        align-content: start;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      }
+
+      .study-file-pane.is-list .study-file-item {
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr) 88px 82px 68px;
+        width: 100%;
+      }
+
+      .study-file-pane.is-gallery .study-file-item {
+        flex-direction: column;
+        justify-content: flex-start;
+        min-height: 82px;
+        padding: 8px 4px;
+        text-align: center;
+        width: 100%;
+      }
+
+      .study-file-pane.is-gallery .study-file-item img {
+        height: 32px;
+        width: 32px;
+      }
+
+      .study-file-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .study-file-type,
+      .study-file-subitems,
+      .study-file-storage {
+        color: #555;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .study-file-item.is-selected .study-file-type,
+      .study-file-item.is-selected .study-file-subitems,
+      .study-file-item.is-selected .study-file-storage {
+        color: #fff;
+      }
+
+      .study-empty {
+        align-items: center;
+        color: #555;
+        display: flex;
+        height: 100%;
+        justify-content: center;
+        padding: 18px;
+        text-align: center;
+      }
+
+      .study-preview-pane {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-height: 0;
+        padding: 8px;
+      }
+
+      .study-preview-body {
+        background: #fff;
+        box-shadow: var(--border-field);
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .study-preview-body iframe {
+        border: 0;
+        display: block;
+        height: 100%;
+        width: 100%;
+      }
+
+      .study-preview-pdf {
+        display: grid;
+        gap: 6px;
+        grid-template-columns: minmax(96px, 24%) minmax(0, 1fr);
+        height: 100%;
+        padding: 6px;
+      }
+
+      .study-pdf-thumbnails {
+        align-content: start;
+        display: grid;
+        gap: 6px;
+        min-height: 0;
+        overflow: auto;
+      }
+
+      .study-pdf-thumbnail {
+        background: var(--surface);
+        box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+        cursor: pointer;
+        min-height: 0;
+        padding: 5px;
+      }
+
+      .study-pdf-thumbnail.is-active {
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+      }
+
+      .study-pdf-thumbnail:focus {
+        outline: 1px dotted #000;
+        outline-offset: -3px;
+      }
+
+      .study-pdf-thumbnail-frame {
+        aspect-ratio: 3 / 4;
+        background: #fff;
+        box-shadow: var(--border-field);
+        overflow: hidden;
+      }
+
+      .study-pdf-thumbnail iframe {
+        pointer-events: none;
+      }
+
+      .study-pdf-thumbnail-label {
+        display: block;
+        margin-top: 4px;
+        overflow: hidden;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .study-pdf-main {
+        min-height: 0;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .study-preview-empty {
+        align-items: center;
+        color: #555;
+        display: flex;
+        height: 100%;
+        justify-content: center;
+        padding: 12px;
+        text-align: center;
+      }
+
+      .study-preview-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+
+      .study-status-bar {
+        box-shadow: none;
+        display: grid;
+        gap: 2px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        min-height: 22px;
+        padding: 0;
+      }
+
+      .study-status-field {
+        box-shadow: var(--border-status-field);
+        min-width: 0;
+        overflow: hidden;
+        padding: 3px 4px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 760px) {
+        .study-window {
+          min-width: 0;
+          width: calc(100vw - 24px);
+          height: calc(100vh - 96px);
+        }
+
+        .study-main {
+          grid-template-columns: 1fr;
+          grid-template-rows: 150px minmax(0, 1fr);
+        }
+
+        .study-right-pane {
+          grid-template-rows: auto minmax(150px, 1fr) minmax(150px, 34%);
+        }
+
+        .study-menu-bar {
+          gap: 9px;
+        }
+
+        .study-toolbar {
+          overflow-x: auto;
+        }
+
+        .study-file-pane.is-list .study-file-item {
+          grid-template-columns: 22px minmax(0, 1fr);
+        }
+
+        .study-file-pane.is-list .study-file-type,
+        .study-file-pane.is-list .study-file-subitems,
+        .study-file-pane.is-list .study-file-storage {
+          display: none;
+        }
+
+        .study-preview-pdf {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto minmax(0, 1fr);
+        }
+
+        .study-pdf-thumbnails {
+          grid-auto-columns: 92px;
+          grid-auto-flow: column;
+          overflow-x: auto;
+          overflow-y: hidden;
+        }
+      }
+
 
       .video-embed {
         position: relative;
@@ -1239,43 +1771,207 @@
         background: var(--surface);
         box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
         margin-top: 12px;
+        max-width: 100%;
+        min-width: 0;
       }
 
       .gallery-scroll {
-        max-height: 240px;
+        --gallery-height: clamp(180px, 34vh, 340px);
+        align-items: center;
+        background: #fff;
+        box-shadow: var(--border-field);
+        display: flex;
+        height: var(--gallery-height);
+        justify-content: center;
+        max-height: var(--gallery-height);
+        min-height: 0;
         overflow: hidden;
-        background: #000;
+        width: 100%;
       }
 
       .gallery-scroll--video {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 220px;
+        --gallery-height: clamp(220px, 40vh, 440px);
+        background: #000;
+      }
+
+      .gallery-scroll--poster {
+        --gallery-height: clamp(220px, 46vh, 460px);
+      }
+
+      .gallery-scroll--modeling {
+        --gallery-height: clamp(220px, 38vh, 360px);
       }
 
       .gallery-scroll img {
         width: 100%;
-        height: auto;
+        height: 100%;
         display: block;
+        object-fit: contain;
+      }
+
+      .gallery-scroll--poster img {
+        max-width: none;
+        max-height: none;
+      }
+
+      .gallery-scroll--modeling img {
+        max-width: none;
+        max-height: none;
       }
 
       .gallery-scroll video {
         width: 100%;
-        height: auto;
+        height: 100%;
         display: block;
         background: #000;
+        object-fit: contain;
       }
 
       .gallery-controls {
+        align-items: center;
+        container-type: inline-size;
         display: flex;
-        justify-content: space-between;
         gap: 8px;
         margin-top: 8px;
+        min-width: 0;
       }
 
       .gallery-controls button {
-        min-width: 80px;
+        flex: 0 1 88px;
+        min-width: 72px;
+        overflow: hidden;
+        padding-left: 8px;
+        padding-right: 8px;
+        text-overflow: clip;
+        white-space: nowrap;
+      }
+
+      .gallery-counter {
+        align-items: center;
+        background: var(--surface);
+        box-shadow: var(--border-status-field);
+        display: inline-flex;
+        flex: 1 1 64px;
+        justify-content: center;
+        min-height: 21px;
+        min-width: 52px;
+        padding: 3px 6px;
+        white-space: nowrap;
+      }
+
+      .app-window.is-window-expanded .gallery-scroll {
+        --gallery-height: clamp(240px, 52vh, 620px);
+      }
+
+      .app-window.is-window-expanded .gallery-scroll--poster {
+        --gallery-height: clamp(300px, 60vh, 760px);
+      }
+
+      .app-window.is-window-expanded .gallery-scroll--modeling {
+        --gallery-height: clamp(280px, 58vh, 700px);
+      }
+
+      @container (max-width: 260px) {
+        .gallery-controls button {
+          flex-basis: 52px;
+          font-size: 0;
+          min-width: 52px;
+          padding-left: 6px;
+          padding-right: 6px;
+        }
+
+        .gallery-controls button::before {
+          content: attr(data-short-label);
+          font-size: 11px;
+        }
+
+        .gallery-counter {
+          min-width: 46px;
+          padding-left: 3px;
+          padding-right: 3px;
+        }
+      }
+
+      @container (max-width: 190px) {
+        .gallery-controls {
+          gap: 4px;
+        }
+
+        .gallery-controls button {
+          flex-basis: 28px;
+          min-width: 28px;
+          padding-left: 3px;
+          padding-right: 3px;
+        }
+
+        .gallery-controls button::before {
+          content: attr(data-icon-label);
+          font-size: 13px;
+        }
+
+        .gallery-counter {
+          font-size: 9px;
+          min-width: 40px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .portfolio-window {
+          width: calc(100vw - 24px);
+        }
+
+        .portfolio-window .window-body {
+          flex-direction: column;
+          gap: 8px;
+          height: min(76vh, 640px);
+          min-height: 0;
+        }
+
+        .selector-panel {
+          max-height: 34%;
+          min-width: 0;
+          width: 100% !important;
+        }
+
+        .panel-divider {
+          display: none;
+        }
+
+        .gallery-frame {
+          margin-top: 8px;
+        }
+
+        .gallery-scroll {
+          --gallery-height: clamp(160px, 32vh, 280px);
+        }
+
+        .gallery-scroll--poster,
+        .gallery-scroll--modeling {
+          --gallery-height: clamp(180px, 38vh, 340px);
+        }
+      }
+
+      @media (max-height: 560px) {
+        .gallery-scroll {
+          --gallery-height: clamp(140px, 32vh, 240px);
+        }
+
+        .gallery-scroll--poster,
+        .gallery-scroll--modeling {
+          --gallery-height: clamp(160px, 42vh, 300px);
+        }
+      }
+
+      .gallery-empty {
+        align-items: center;
+        background: #fff;
+        box-shadow: var(--border-field);
+        color: #555;
+        display: flex;
+        min-height: 180px;
+        justify-content: center;
+        padding: 12px;
+        text-align: center;
       }
 
       .credits-body {
@@ -1802,6 +2498,7 @@
                 </div>
                 <div class="gallery-controls">
                   <button type="button" id="drone-video-prev">Previous</button>
+                  <span class="gallery-counter" id="drone-video-counter" aria-live="polite">1 of 2</span>
                   <button type="button" id="drone-video-next">Next</button>
                 </div>
               </div>
@@ -1842,9 +2539,14 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="creative-my-brothers-ghost">
-                  <img class="selector-thumb" src="assets/app-icons/ico/video_mk.ico" alt="" />
+                  <img class="selector-thumb" src="assets/creative-work/my-brothers-ghost-profile.jpg" alt="" />
                   <span>
                     <span class="selector-title">My Brother's Ghost</span>
+                    <span class="selector-desc">
+                      Supporting Actor for Short Film
+                      <br />
+                      April 2026
+                    </span>
                   </span>
                 </button>
               </li>
@@ -1857,6 +2559,19 @@
                       Hand-drawn Product Pitch Video
                       <br />
                       April 30, 2023
+                    </span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="creative-poster-redesigns">
+                  <img class="selector-thumb" src="assets/creative-work/berserk-poster-redesign/berserk-logo-square.png" alt="" />
+                  <span>
+                    <span class="selector-title">Poster Redesigns</span>
+                    <span class="selector-desc">
+                      Redesigning Berserk Posters
+                      <br />
+                      February 2023
                     </span>
                   </span>
                 </button>
@@ -1885,7 +2600,27 @@
                 </div>
                 <div class="gallery-controls">
                   <button type="button" id="pathfinder-prev">Previous</button>
+                  <span class="gallery-counter" id="pathfinder-counter" aria-live="polite">1 of 4</span>
                   <button type="button" id="pathfinder-next">Next</button>
+                </div>
+              </div>
+            </div>
+            <div class="viewer-content is-hidden" data-view="creative-poster-redesigns">
+              <h3>Poster Redesigns</h3>
+              <p class="project-view-subtitle">Redesigning Berserk Posters</p>
+              <p>February 2023</p>
+              <div class="gallery-frame" id="berserk-poster-gallery">
+                <div class="gallery-scroll gallery-scroll--poster">
+                  <img
+                    id="berserk-poster-image"
+                    src="assets/creative-work/berserk-poster-redesign/magazine%20cover.png"
+                    alt="Berserk poster redesign"
+                  />
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="berserk-poster-prev">Previous</button>
+                  <span class="gallery-counter" id="berserk-poster-counter" aria-live="polite">1 of 6</span>
+                  <button type="button" id="berserk-poster-next">Next</button>
                 </div>
               </div>
             </div>
@@ -1924,13 +2659,32 @@
             </div>
             <div class="viewer-content is-hidden" data-view="creative-my-brothers-ghost">
               <h3>My Brother's Ghost</h3>
-              <p>Creative project details coming soon.</p>
+              <p class="project-view-subtitle">
+                Two brothers reconnect in a haunted apartment...
+                <br />
+                <br />
+                Directed by Tashi Lien!
+              </p>
+              <div class="gallery-frame" id="my-brothers-ghost-gallery">
+                <div class="gallery-scroll gallery-scroll--poster">
+                  <img
+                    id="my-brothers-ghost-image"
+                    src="assets/creative-work/my-brothers-ghost-01.jpg"
+                    alt="My Brother's Ghost in production 2026 poster"
+                  />
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="my-brothers-ghost-prev">Previous</button>
+                  <span class="gallery-counter" id="my-brothers-ghost-counter" aria-live="polite">1 of 3</span>
+                  <button type="button" id="my-brothers-ghost-next">Next</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="window app-window is-hidden portfolio-window" data-app-window="study-resources">
+      <div class="window app-window is-hidden study-window" data-app-window="study-resources">
         <div class="title-bar">
           <div class="title-bar-text">Study Resources</div>
           <div class="title-bar-controls">
@@ -1940,8 +2694,90 @@
           </div>
         </div>
         <div class="window-body">
-          <h3>Study Resources</h3>
-          <p>Resources and notes coming soon.</p>
+          <div class="study-explorer" aria-label="Study resources file explorer">
+            <div class="study-menu-bar" aria-label="Explorer menu">
+              <span>File</span>
+              <span>Edit</span>
+              <span>View</span>
+              <span>Tools</span>
+              <span>Help</span>
+            </div>
+            <div class="study-toolbar" aria-label="Explorer toolbar">
+              <button class="study-tool-button" id="study-up" type="button" title="Up one level">
+                <img src="assets/app-icons/ico/directory_open.ico" alt="" />
+                Up
+              </button>
+              <div class="vertical-bar" aria-hidden="true"></div>
+              <button
+                class="study-tool-button is-active"
+                id="study-list-view"
+                type="button"
+                aria-pressed="true"
+                title="List view"
+              >
+                <img src="assets/app-icons/ico/appwizard_list.ico" alt="" />
+                List
+              </button>
+              <button
+                class="study-tool-button"
+                id="study-gallery-view"
+                type="button"
+                aria-pressed="false"
+                title="Gallery view"
+              >
+                <img src="assets/app-icons/ico/user_card_view.ico" alt="" />
+                Gallery
+              </button>
+            </div>
+            <div class="study-address-row">
+              <span class="study-address-label">Address</span>
+              <div class="study-address-field" id="study-address" role="textbox" aria-readonly="true">
+                Study Resources
+              </div>
+            </div>
+            <div class="study-main">
+              <section class="study-tree-pane" aria-label="Folder hierarchy">
+                <div id="study-tree"></div>
+              </section>
+              <section class="study-right-pane" aria-label="Folder contents and PDF preview">
+                <div class="study-file-header">
+                  <span class="study-file-title" id="study-current-title">Study Resources</span>
+                  <span class="study-file-count" id="study-item-count">0 object(s)</span>
+                </div>
+                <div class="study-file-pane is-list" id="study-file-pane" aria-label="Folder contents"></div>
+                <div class="study-preview-pane" aria-label="PDF preview">
+                  <div class="study-preview-header">
+                    <img
+                      class="study-preview-icon"
+                      id="study-preview-icon"
+                      src="assets/app-icons/ico/directory_open.ico"
+                      alt=""
+                    />
+                    <span class="study-preview-title" id="study-preview-title">Study Resources</span>
+                  </div>
+                  <div class="study-preview-body" id="study-preview-body"></div>
+                  <div class="study-preview-actions">
+                    <button id="study-open-window" type="button" disabled>
+                      <img src="assets/app-icons/ico/document.ico" alt="" />
+                      Open in window
+                    </button>
+                    <button id="study-open-tab" type="button" disabled>
+                      <img src="assets/app-icons/ico/html2.ico" alt="" />
+                      Open in new tab
+                    </button>
+                    <button id="study-download" type="button" disabled>
+                      <img src="assets/app-icons/ico/floppy_drive_3-5.ico" alt="" />
+                      Download
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
+            <div class="study-status-bar" aria-label="Explorer status">
+              <div class="study-status-field" id="study-status-left">0 object(s)</div>
+              <div class="study-status-field" id="study-status-right">Study Resources</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1973,6 +2809,17 @@
                   <img class="selector-thumb" src="assets/app-icons/ico/bar_graph.ico" alt="" />
                   <span>
                     <span class="selector-title">Biocomputing Market Analysis</span>
+                    <span class="selector-desc">
+                      Spring 2026
+                    </span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="writing-tcp-congestion-control">
+                  <img class="selector-thumb" src="assets/app-icons/ico/network_normal_two_pcs.ico" alt="" />
+                  <span>
+                    <span class="selector-title">TCP Congestion Control</span>
                     <span class="selector-desc">
                       Spring 2026
                     </span>
@@ -2014,6 +2861,11 @@
               <h3>Biocomputing Market Analysis</h3>
               <p class="project-view-subtitle">Spring 2026</p>
               <p>Market analysis covering biocomputing technologies, applications, and commercialization trends.</p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="writing-tcp-congestion-control">
+              <h3>TCP Congestion Control</h3>
+              <p class="project-view-subtitle">Spring 2026</p>
+              <p>Writing project covering TCP congestion control behavior, throughput adaptation, and network performance tradeoffs.</p>
             </div>
             <div class="viewer-content is-hidden" data-view="writing-frontiers">
               <h3>Frontiers in Microbial Systems Biology</h3>
@@ -2059,7 +2911,7 @@
             <ul class="selector-list">
               <li>
                 <button class="selector-item is-active" type="button" data-view="modeling-stand-still-drop">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/standstill-logo.jpg" alt="" />
                   <span>
                     <span class="selector-title">Stand Still Drop</span>
                     <span class="selector-desc">March 2026</span>
@@ -2068,7 +2920,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-garb-merch-promo-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/garb-logo.jpeg" alt="" />
                   <span>
                     <span class="selector-title">Garb Merch Promo Shoot</span>
                     <span class="selector-desc">February 2026</span>
@@ -2077,7 +2929,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-club-rambutan-runway-show">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/club-rambutan.jpg" alt="" />
                   <span>
                     <span class="selector-title">Club Rambutan Runway Show</span>
                     <span class="selector-desc">September 2025</span>
@@ -2086,7 +2938,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-arthaus-promo-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/arthaus-logo.jpg" alt="" />
                   <span>
                     <span class="selector-title">Arthaus Promo Shoot</span>
                     <span class="selector-desc">September 2025</span>
@@ -2095,7 +2947,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-xoxo510-x-brainscramble-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/xoxo510.jpg" alt="" />
                   <span>
                     <span class="selector-title">XOXO510 x BrainScramble Shoot</span>
                     <span class="selector-desc">May 2025</span>
@@ -2104,7 +2956,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-sonder-lookbook-shoot-2">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Sonder Lookbook Shoot 2</span>
                     <span class="selector-desc">May 2025</span>
@@ -2113,7 +2965,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-sonder-lookbook-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Sonder Lookbook Shoot</span>
                     <span class="selector-desc">May 2025</span>
@@ -2122,7 +2974,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-saturn-los-angeles-gaia-ss25-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/saturn-icon.png" alt="" />
                   <span>
                     <span class="selector-title">Saturn Los Angeles GAIA SS25 Shoot</span>
                     <span class="selector-desc">April 2025</span>
@@ -2131,7 +2983,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-garb-garbage-runway-show">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/garb-logo.jpeg" alt="" />
                   <span>
                     <span class="selector-title">Garb "Garb-age" Runway Show</span>
                     <span class="selector-desc">April 2025</span>
@@ -2140,7 +2992,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-garb-means-business-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/garb-logo.jpeg" alt="" />
                   <span>
                     <span class="selector-title">Garb Means Business Shoot</span>
                     <span class="selector-desc">January 2025</span>
@@ -2149,7 +3001,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-vampire-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/app-icons/ico/game_spider.ico" alt="" />
                   <span>
                     <span class="selector-title">Vampire Shoot</span>
                     <span class="selector-desc">January 2025</span>
@@ -2158,7 +3010,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-garb-garbage-runway">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/garb-logo.jpeg" alt="" />
                   <span>
                     <span class="selector-title">Garb "Garb-age" Runway</span>
                     <span class="selector-desc">December 2024</span>
@@ -2167,7 +3019,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-crescendo-lookbook-shoot-2">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">FAST Crescendo Lookbook Shoot 2</span>
                     <span class="selector-desc">December 2024</span>
@@ -2176,7 +3028,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-crescendo-lookbook-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Crescendo Lookbook Shoot</span>
                     <span class="selector-desc">October 2024</span>
@@ -2185,7 +3037,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-reverie-runway-show">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Reverie Runway Show</span>
                     <span class="selector-desc">April 2024</span>
@@ -2194,7 +3046,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-reverie-lookbook-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Reverie Lookbook Shoot</span>
                     <span class="selector-desc">March 2024</span>
@@ -2202,8 +3054,17 @@
                 </button>
               </li>
               <li>
+                <button class="selector-item" type="button" data-view="modeling-fast-devotion-lookbook-shoot">
+                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
+                  <span>
+                    <span class="selector-title">Fast Devotion Lookbook Shoot</span>
+                    <span class="selector-desc">November 2023</span>
+                  </span>
+                </button>
+              </li>
+              <li>
                 <button class="selector-item" type="button" data-view="modeling-saturn-la-black-friday-drop">
-                  <img class="selector-thumb" src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <img class="selector-thumb" src="assets/modeling-icons/saturn-icon.png" alt="" />
                   <span>
                     <span class="selector-title">Saturn Los Angeles Black Friday Drop</span>
                     <span class="selector-desc">October 2023</span>
@@ -2217,70 +3078,116 @@
             <div class="viewer-content" data-view="modeling-stand-still-drop">
               <h3>Stand Still Drop</h3>
               <p class="project-view-subtitle">March 2026</p>
+              <div data-modeling-links="modeling-stand-still-drop"></div>
+              <div data-modeling-gallery="modeling-stand-still-drop"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-merch-promo-shoot">
               <h3>Garb Merch Promo Shoot</h3>
               <p class="project-view-subtitle">February 2026</p>
+              <div data-modeling-links="modeling-garb-merch-promo-shoot"></div>
+              <div data-modeling-gallery="modeling-garb-merch-promo-shoot"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-club-rambutan-runway-show">
               <h3>Club Rambutan Runway Show</h3>
               <p class="project-view-subtitle">September 2025</p>
+              <div data-modeling-links="modeling-club-rambutan-runway-show"></div>
+              <div data-modeling-gallery="modeling-club-rambutan-runway-show"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-arthaus-promo-shoot">
               <h3>Arthaus Promo Shoot</h3>
               <p class="project-view-subtitle">September 2025</p>
+              <div data-modeling-links="modeling-arthaus-promo-shoot"></div>
+              <div data-modeling-gallery="modeling-arthaus-promo-shoot"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-xoxo510-x-brainscramble-shoot">
               <h3>XOXO510 x BrainScramble Shoot</h3>
               <p class="project-view-subtitle">May 2025</p>
+              <div data-modeling-links="modeling-xoxo510-x-brainscramble-shoot"></div>
+              <div data-modeling-gallery="modeling-xoxo510-x-brainscramble-shoot"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-sonder-lookbook-shoot-2">
               <h3>Fast Sonder Lookbook Shoot 2</h3>
               <p class="project-view-subtitle">May 2025</p>
+              <div data-modeling-links="modeling-fast-sonder-lookbook-shoot-2"></div>
+              <div data-modeling-gallery="modeling-fast-sonder-lookbook-shoot-2"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-sonder-lookbook-shoot">
               <h3>Fast Sonder Lookbook Shoot</h3>
               <p class="project-view-subtitle">May 2025</p>
+              <div data-modeling-links="modeling-fast-sonder-lookbook-shoot"></div>
+              <div data-modeling-gallery="modeling-fast-sonder-lookbook-shoot"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-saturn-los-angeles-gaia-ss25-shoot">
               <h3>Saturn Los Angeles GAIA SS25 Shoot</h3>
               <p class="project-view-subtitle">April 2025</p>
+              <div data-modeling-links="modeling-saturn-los-angeles-gaia-ss25-shoot"></div>
+              <div data-modeling-gallery="modeling-saturn-los-angeles-gaia-ss25-shoot"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway-show">
               <h3>Garb "Garb-age" Runway Show</h3>
               <p class="project-view-subtitle">April 2025</p>
+              <div data-modeling-links="modeling-garb-garbage-runway-show"></div>
+              <div data-modeling-gallery="modeling-garb-garbage-runway-show"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-means-business-shoot">
               <h3>Garb Means Business Shoot</h3>
               <p class="project-view-subtitle">January 2025</p>
+              <div data-modeling-links="modeling-garb-means-business-shoot"></div>
+              <div data-modeling-gallery="modeling-garb-means-business-shoot"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-vampire-shoot">
               <h3>Vampire Shoot</h3>
               <p class="project-view-subtitle">January 2025</p>
+              <div data-modeling-links="modeling-vampire-shoot"></div>
+              <div data-modeling-gallery="modeling-vampire-shoot"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway">
               <h3>Garb "Garb-age" Runway</h3>
               <p class="project-view-subtitle">December 2024</p>
+              <div data-modeling-links="modeling-garb-garbage-runway"></div>
+              <div data-modeling-gallery="modeling-garb-garbage-runway"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-crescendo-lookbook-shoot-2">
               <h3>FAST Crescendo Lookbook Shoot 2</h3>
               <p class="project-view-subtitle">December 2024</p>
+              <div data-modeling-links="modeling-fast-crescendo-lookbook-shoot-2"></div>
+              <div data-modeling-gallery="modeling-fast-crescendo-lookbook-shoot-2"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-crescendo-lookbook-shoot">
               <h3>Fast Crescendo Lookbook Shoot</h3>
               <p class="project-view-subtitle">October 2024</p>
+              <div data-modeling-links="modeling-fast-crescendo-lookbook-shoot"></div>
+              <div data-modeling-gallery="modeling-fast-crescendo-lookbook-shoot"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-reverie-runway-show">
               <h3>Fast Reverie Runway Show</h3>
               <p class="project-view-subtitle">April 2024</p>
+              <div data-modeling-links="modeling-fast-reverie-runway-show"></div>
+              <div data-modeling-gallery="modeling-fast-reverie-runway-show"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-reverie-lookbook-shoot">
               <h3>Fast Reverie Lookbook Shoot</h3>
               <p class="project-view-subtitle">March 2024</p>
+              <div data-modeling-links="modeling-fast-reverie-lookbook-shoot"></div>
+              <div data-modeling-gallery="modeling-fast-reverie-lookbook-shoot"></div>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-fast-devotion-lookbook-shoot">
+              <h3>Fast Devotion Lookbook Shoot</h3>
+              <p class="project-view-subtitle">November 2023</p>
+              <div data-modeling-links="modeling-fast-devotion-lookbook-shoot"></div>
+              <div data-modeling-gallery="modeling-fast-devotion-lookbook-shoot"></div>
+              <p>Talent: Rohin Shanker, Caleb Sandoval, Belle Vanna, Amina Yvonne, Sienna Chai</p>
+              <p>Stylist: Siena Chai</p>
+              <p>Photographer: Julianne "J-Han" Han</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-saturn-la-black-friday-drop">
               <h3>Saturn Los Angeles Black Friday Drop</h3>
               <p class="project-view-subtitle">October 2023</p>
+              <div data-modeling-links="modeling-saturn-la-black-friday-drop"></div>
+              <div data-modeling-gallery="modeling-saturn-la-black-friday-drop"></div>
+              <p>Talent: Rohin Shanker, Mamie Hirsch, Riley Benedict, Justin Lee, Kaitlyn Han</p>
+              <p>Stylist/Designer: Ryan Cheung</p>
+              <p>Photographer: flickzbyfredo</p>
             </div>
           </div>
         </div>
@@ -2321,6 +3228,20 @@
         </div>
       </div>
 
+      <div class="window app-window is-hidden pdf-window study-pdf-window" data-app-window="study-pdf" id="study-pdf-window">
+        <div class="title-bar">
+          <div class="title-bar-text" id="study-pdf-title">Study Resource.pdf</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="study-pdf"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="pdf-viewer">
+            <iframe id="study-pdf-iframe" title="Study resource PDF"></iframe>
+          </div>
+        </div>
+      </div>
+
       <div class="window app-window is-hidden minesweeper-window" data-app-window="minesweeper">
         <div class="title-bar">
           <div class="title-bar-text">Minesweeper</div>
@@ -2334,9 +3255,6 @@
           <div class="ms-app" aria-label="Minesweeper game">
             <div class="ms-lose-banner" id="ms-lose-banner" aria-hidden="true">
               <img src="assets/minesweeper_assets/YOU-LOSE.png" alt="You Lose" />
-            </div>
-            <div class="ms-achievement" id="ms-achievement" aria-hidden="true">
-              <img src="assets/minesweeper_assets/achievement.png" alt="Achievement unlocked" />
             </div>
             <div class="ms-top-panel">
               <div class="ms-counter" id="ms-mines" aria-label="Mines remaining">
@@ -2403,6 +3321,15 @@
               </div>
               <div class="sol-tableau" id="sol-tableau" aria-label="Tableau"></div>
             </div>
+            <div class="sol-victory-video-overlay" id="sol-victory-video-overlay" aria-hidden="true">
+              <video
+                id="sol-victory-video"
+                src="assets/solitaire-cards/victory-royale.webm"
+                preload="auto"
+                playsinline
+              ></video>
+              <canvas id="sol-victory-canvas" aria-hidden="true"></canvas>
+            </div>
           </div>
         </div>
       </div>
@@ -2436,8 +3363,8 @@
         <div class="title-bar">
           <div class="title-bar-text">Credits</div>
           <div class="title-bar-controls">
-            <button aria-label="Minimize"></button>
-            <button aria-label="Maximize"></button>
+            <button aria-label="Minimize" disabled></button>
+            <button aria-label="Maximize" disabled></button>
             <button aria-label="Close" data-close="credits"></button>
           </div>
         </div>
@@ -2569,8 +3496,8 @@
         <div class="title-bar">
           <div class="title-bar-text">Socials</div>
           <div class="title-bar-controls">
-            <button aria-label="Minimize"></button>
-            <button aria-label="Maximize"></button>
+            <button aria-label="Minimize" disabled></button>
+            <button aria-label="Maximize" disabled></button>
             <button aria-label="Close" data-close="socials"></button>
           </div>
         </div>
@@ -2757,6 +3684,9 @@
     </div>
 
     <canvas class="ms-confetti" id="ms-confetti" aria-hidden="true"></canvas>
+    <div class="ms-achievement" id="ms-achievement" aria-hidden="true">
+      <img src="assets/minesweeper_assets/achievement.png" alt="Achievement unlocked" />
+    </div>
     <div class="ms-achievement" id="sol-achievement" aria-hidden="true">
       <img src="assets/minesweeper_assets/achievement.png" alt="Achievement unlocked" />
     </div>
@@ -2764,6 +3694,7 @@
 
     <script>
       const clock = document.getElementById("taskbar-clock");
+      const startButton = document.querySelector(".start-button");
       const appButtons = document.querySelectorAll("[data-app]");
       const appWindows = document.querySelectorAll("[data-app-window]");
       const closeButtons = document.querySelectorAll("[data-close]");
@@ -2784,9 +3715,28 @@
       const openDronePresentation = document.getElementById("open-drone-presentation");
       const pdfIframe = document.getElementById("pdf-iframe");
       const dronePresentationIframe = document.getElementById("drone-presentation-iframe");
+      const studyTree = document.getElementById("study-tree");
+      const studyFilePane = document.getElementById("study-file-pane");
+      const studyAddress = document.getElementById("study-address");
+      const studyCurrentTitle = document.getElementById("study-current-title");
+      const studyItemCount = document.getElementById("study-item-count");
+      const studyPreviewIcon = document.getElementById("study-preview-icon");
+      const studyPreviewTitle = document.getElementById("study-preview-title");
+      const studyPreviewBody = document.getElementById("study-preview-body");
+      const studyOpenWindow = document.getElementById("study-open-window");
+      const studyOpenTab = document.getElementById("study-open-tab");
+      const studyDownload = document.getElementById("study-download");
+      const studyUp = document.getElementById("study-up");
+      const studyListView = document.getElementById("study-list-view");
+      const studyGalleryView = document.getElementById("study-gallery-view");
+      const studyStatusLeft = document.getElementById("study-status-left");
+      const studyStatusRight = document.getElementById("study-status-right");
+      const studyPdfTitle = document.getElementById("study-pdf-title");
+      const studyPdfIframe = document.getElementById("study-pdf-iframe");
       const droneProjectVideo = document.getElementById("drone-project-video");
       const droneVideoCaption = document.getElementById("drone-video-caption");
       const droneVideoPrev = document.getElementById("drone-video-prev");
+      const droneVideoCounter = document.getElementById("drone-video-counter");
       const droneVideoNext = document.getElementById("drone-video-next");
       // Clash Royale app logic (disabled for now).
       // To re-enable: uncomment the CLASH_* constants, clash* variables,
@@ -2815,6 +3765,7 @@
       let calendarDate = new Date();
       let windowOffsetIndex = 0;
       let droneVideoIndex = 0;
+      const expandedWindowState = new WeakMap();
       // let clashRoyaleLoaded = false;
       // let clashRoyaleLoading = false;
 
@@ -2890,6 +3841,91 @@
         win.classList.add(animationClass);
       };
 
+      const bringWindowToFront = (win) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        win.style.zIndex = String(topZ++);
+      };
+
+      const isSmallResizableWindow = (win) => {
+        if (!win) return false;
+        if (
+          win.classList.contains("study-window") ||
+          win.classList.contains("pdf-window") ||
+          win.classList.contains("minesweeper-window") ||
+          win.classList.contains("solitaire-window")
+        ) {
+          return false;
+        }
+
+        const rect = win.getBoundingClientRect();
+        return rect.width <= 760 && rect.height <= 620;
+      };
+
+      const restoreWindowSize = (win) => {
+        const saved = expandedWindowState.get(win);
+        if (!saved) {
+          if (win) win.classList.remove("is-window-expanded");
+          return;
+        }
+        const body = win.querySelector(".window-body");
+
+        win.style.width = saved.width;
+        win.style.height = saved.height;
+        win.style.left = saved.left;
+        win.style.top = saved.top;
+        win.style.translate = saved.translate;
+        win.classList.toggle("app-window--center", saved.centered);
+
+        if (body) {
+          body.style.height = saved.bodyHeight;
+          body.style.maxHeight = saved.bodyMaxHeight;
+        }
+
+        expandedWindowState.delete(win);
+        win.classList.remove("is-window-expanded");
+      };
+
+      const expandSmallWindow = (win) => {
+        if (!win || expandedWindowState.has(win) || !isSmallResizableWindow(win)) return;
+        const rect = win.getBoundingClientRect();
+        const body = win.querySelector(".window-body");
+        const titleBar = win.querySelector(".title-bar");
+        const maxWidth = Math.max(320, window.innerWidth - 48);
+        const maxHeight = Math.max(260, window.innerHeight - 86);
+        const nextWidth = Math.round(Math.min(maxWidth, Math.max(rect.width * 2, rect.width + 240)));
+        const nextHeight = Math.round(Math.min(maxHeight, Math.max(rect.height * 2, rect.height + 180)));
+        const maxLeft = Math.max(24, window.innerWidth - nextWidth - 24);
+        const maxTop = Math.max(16, window.innerHeight - nextHeight - 70);
+        const nextLeft = Math.round(Math.max(24, Math.min(rect.left, maxLeft)));
+        const nextTop = Math.round(Math.max(16, Math.min(rect.top, maxTop)));
+
+        expandedWindowState.set(win, {
+          width: win.style.width,
+          height: win.style.height,
+          left: win.style.left,
+          top: win.style.top,
+          translate: win.style.translate,
+          centered: win.classList.contains("app-window--center"),
+          bodyHeight: body ? body.style.height : "",
+          bodyMaxHeight: body ? body.style.maxHeight : "",
+        });
+
+        win.classList.remove("app-window--center");
+        win.classList.add("is-window-expanded");
+        win.style.translate = "0 0";
+        win.style.left = `${nextLeft}px`;
+        win.style.top = `${nextTop}px`;
+        win.style.width = `${nextWidth}px`;
+        win.style.height = `${nextHeight}px`;
+
+        if (body) {
+          const titleHeight = titleBar ? titleBar.offsetHeight : 22;
+          const nextBodyHeight = Math.max(120, nextHeight - titleHeight - 18);
+          body.style.height = `${nextBodyHeight}px`;
+          body.style.maxHeight = `${nextBodyHeight}px`;
+        }
+      };
+
       const setWindowOpen = (appId, open) => {
         const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
         if (!win) return;
@@ -2900,13 +3936,13 @@
             !win.classList.contains("is-closing");
 
           if (isVisible) {
-            win.style.zIndex = String(topZ++);
+            bringWindowToFront(win);
             return;
           }
 
           win.classList.remove("is-hidden");
           resetWindowToFirstTab(win);
-          win.style.zIndex = String(topZ++);
+          bringWindowToFront(win);
 
           if (win.classList.contains("home-window")) {
             win.classList.add("app-window--center");
@@ -2944,7 +3980,12 @@
 
         if (win.classList.contains("is-hidden")) return;
 
-        win.style.zIndex = String(topZ++);
+        if (appId === "solitaire") {
+          solHideVictoryVideo();
+        }
+
+        restoreWindowSize(win);
+        bringWindowToFront(win);
         restartWindowAnimation(win, "is-closing");
       };
 
@@ -3327,6 +4368,23 @@
         }
       };
 
+      const closeAppWindow = (appId) => {
+        setWindowOpen(appId, false);
+        if (appId === "minesweeper") {
+          msNewGame(msDifficulty ? msDifficulty.value : "beginner");
+        }
+      };
+
+      const closeAllWindows = () => {
+        appWindows.forEach((win) => {
+          closeAppWindow(win.getAttribute("data-app-window"));
+        });
+        if (calendarPopout) {
+          calendarPopout.classList.remove("is-open");
+          calendarPopout.setAttribute("aria-hidden", "true");
+        }
+      };
+
       updateClock();
       setInterval(updateClock, 1000 * 30);
       updateCalendarClock();
@@ -3436,12 +4494,441 @@
       ];
       const pathfinderImage = document.getElementById("pathfinder-image");
       const pathfinderPrev = document.getElementById("pathfinder-prev");
+      const pathfinderCounter = document.getElementById("pathfinder-counter");
       const pathfinderNext = document.getElementById("pathfinder-next");
       let pathfinderIndex = 0;
+
+      const berserkPosterImages = [
+        "assets/creative-work/berserk-poster-redesign/magazine%20cover.png",
+        "assets/creative-work/berserk-poster-redesign/watercolor%20poster.png",
+        "assets/creative-work/berserk-poster-redesign/BW.png",
+        "assets/creative-work/berserk-poster-redesign/BW%20paintbrush.png",
+        "assets/creative-work/berserk-poster-redesign/black%20cyberpunk.png",
+        "assets/creative-work/berserk-poster-redesign/yellow%20cyberpunk%20griffith.png",
+      ];
+      const berserkPosterImage = document.getElementById("berserk-poster-image");
+      const berserkPosterPrev = document.getElementById("berserk-poster-prev");
+      const berserkPosterCounter = document.getElementById("berserk-poster-counter");
+      const berserkPosterNext = document.getElementById("berserk-poster-next");
+      let berserkPosterIndex = 0;
+
+      const myBrothersGhostImages = [
+        {
+          src: "assets/creative-work/my-brothers-ghost-01.jpg",
+          caption: "In production 2026",
+          alt: "My Brother's Ghost in production 2026 poster",
+        },
+        {
+          src: "assets/creative-work/my-brothers-ghost-02.jpg",
+          caption: "Two brothers reconnect in a haunted apartment",
+          alt: "My Brother's Ghost haunted apartment poster",
+        },
+        {
+          src: "assets/creative-work/my-brothers-ghost-03.jpg",
+          caption: "Rohin Shanker is Ghost",
+          alt: "Rohin Shanker is Ghost poster",
+        },
+      ];
+      const myBrothersGhostImage = document.getElementById("my-brothers-ghost-image");
+      const myBrothersGhostPrev = document.getElementById("my-brothers-ghost-prev");
+      const myBrothersGhostCounter = document.getElementById("my-brothers-ghost-counter");
+      const myBrothersGhostNext = document.getElementById("my-brothers-ghost-next");
+      let myBrothersGhostIndex = 0;
+
+      const galleryCounterText = (index, total) => `${index + 1} of ${total}`;
+
+      const setupGalleryControlLabels = (root = document) => {
+        root.querySelectorAll(".gallery-controls button").forEach((button) => {
+          const label = button.textContent.trim();
+          const isPrevious = /^prev/i.test(label);
+          button.dataset.fullLabel = label;
+          button.dataset.shortLabel = isPrevious ? "Prev" : "Next";
+          button.dataset.iconLabel = isPrevious ? "‹" : "›";
+          if (!button.hasAttribute("aria-label")) {
+            button.setAttribute("aria-label", isPrevious ? "Previous item" : "Next item");
+          }
+        });
+      };
+
+      const modelingLinkIconPaths = {
+        website: "assets/app-icons/ico/msie1.ico",
+        instagram: "assets/social-icons/instagram-icon.png",
+        camera: "assets/app-icons/ico/camera.ico",
+      };
+
+      const modelingBrandLinks = {
+        standstill: [
+          {
+            type: "website",
+            label: "Standstill website",
+            href: "https://linktr.ee/standstill.ss",
+          },
+          {
+            type: "instagram",
+            label: "Standstill Instagram",
+            href: "https://www.instagram.com/standstill.us/",
+          },
+        ],
+        garb: [
+          {
+            type: "website",
+            label: "Garb website",
+            href: "https://www.berkeleygarb.com/",
+          },
+          {
+            type: "instagram",
+            label: "Garb Instagram",
+            href: "https://www.instagram.com/garbberkeley/",
+          },
+        ],
+        clubRambutan: [
+          {
+            type: "website",
+            label: "Club Rambutan website",
+            href: "https://www.clubrambutan.com/",
+          },
+          {
+            type: "instagram",
+            label: "Club Rambutan Instagram",
+            href: "https://www.instagram.com/club.rambutan/",
+          },
+        ],
+        arthaus: [
+          {
+            type: "website",
+            label: "ArtHaus website",
+            href: "https://arthaus.mov/",
+          },
+          {
+            type: "instagram",
+            label: "ArtHaus Instagram",
+            href: "https://www.instagram.com/arthaus.living/",
+          },
+        ],
+        brainscramble: [
+          {
+            type: "website",
+            label: "BrainScramble website",
+            href: "https://thebrainscramble.com/",
+          },
+          {
+            type: "instagram",
+            label: "BrainScramble Berkeley Instagram",
+            href: "https://www.instagram.com/brainscrambleberkeley/",
+          },
+        ],
+        fast: [
+          {
+            type: "website",
+            label: "FAST at Cal website",
+            href: "https://www.fastatcal.org/",
+          },
+          {
+            type: "instagram",
+            label: "FAST at Cal Instagram",
+            href: "https://www.instagram.com/calfast/",
+          },
+        ],
+        saturnLosAngeles: [
+          {
+            type: "website",
+            label: "Saturn Los Angeles website",
+            href: "https://www.saturnlosangeles.com/",
+          },
+          {
+            type: "instagram",
+            label: "Saturn Los Angeles Instagram",
+            href: "https://www.instagram.com/saturnlosangeles/",
+          },
+        ],
+        vampireShoot: [
+          {
+            type: "instagram",
+            label: "Ryan Photo Collection Instagram",
+            href: "https://www.instagram.com/ryanphotocollection/",
+          },
+        ],
+      };
+
+      const modelingLinkData = {
+        "modeling-stand-still-drop": modelingBrandLinks.standstill,
+        "modeling-garb-merch-promo-shoot": modelingBrandLinks.garb,
+        "modeling-club-rambutan-runway-show": modelingBrandLinks.clubRambutan,
+        "modeling-arthaus-promo-shoot": modelingBrandLinks.arthaus,
+        "modeling-xoxo510-x-brainscramble-shoot": modelingBrandLinks.brainscramble,
+        "modeling-fast-sonder-lookbook-shoot-2": modelingBrandLinks.fast,
+        "modeling-fast-sonder-lookbook-shoot": modelingBrandLinks.fast,
+        "modeling-saturn-los-angeles-gaia-ss25-shoot": modelingBrandLinks.saturnLosAngeles,
+        "modeling-garb-garbage-runway-show": modelingBrandLinks.garb,
+        "modeling-garb-means-business-shoot": modelingBrandLinks.garb,
+        "modeling-vampire-shoot": modelingBrandLinks.vampireShoot,
+        "modeling-garb-garbage-runway": modelingBrandLinks.garb,
+        "modeling-fast-crescendo-lookbook-shoot-2": modelingBrandLinks.fast,
+        "modeling-fast-crescendo-lookbook-shoot": modelingBrandLinks.fast,
+        "modeling-fast-reverie-runway-show": modelingBrandLinks.fast,
+        "modeling-fast-reverie-lookbook-shoot": modelingBrandLinks.fast,
+        "modeling-fast-devotion-lookbook-shoot": [
+          ...modelingBrandLinks.fast,
+          {
+            type: "camera",
+            label: "Julianne Han photos",
+            href: "https://juliannehan.cargo.site/",
+            title: "Photos",
+          },
+        ],
+        "modeling-saturn-la-black-friday-drop": [
+          ...modelingBrandLinks.saturnLosAngeles,
+          {
+            type: "camera",
+            label: "Flickz by Fredo photos",
+            href: "https://flickzbyfredo.mypixieset.com/",
+            title: "Photos",
+          },
+        ],
+      };
+
+      const modelingGalleryData = {
+        "modeling-stand-still-drop": {
+          folder: "assets/modeling/stand-still-mar26",
+          images: [],
+        },
+        "modeling-garb-merch-promo-shoot": {
+          folder: "assets/modeling/garb-merch-lighter-promo-feb26",
+          images: [],
+        },
+        "modeling-club-rambutan-runway-show": {
+          folder: "assets/modeling/club-rambutan-runway-show",
+          images: [],
+        },
+        "modeling-arthaus-promo-shoot": {
+          folder: "assets/modeling/arthaus-promo-shoot-sep25",
+          images: [],
+        },
+        "modeling-xoxo510-x-brainscramble-shoot": {
+          folder: "assets/modeling/xoxo510-brainscramble",
+          images: [],
+        },
+        "modeling-fast-sonder-lookbook-shoot-2": {
+          folder: "assets/modeling/fast-sonder-lb2-may2025",
+          images: [],
+        },
+        "modeling-fast-sonder-lookbook-shoot": {
+          folder: "assets/modeling/fast-sonder-lb-may2025",
+          images: [],
+        },
+        "modeling-saturn-los-angeles-gaia-ss25-shoot": {
+          folder: "assets/modeling/saturn-LA-gaia-apr2025",
+          images: [],
+        },
+        "modeling-garb-garbage-runway-show": {
+          folder: "assets/modeling/garb-garbage-rnwy-apr2025",
+          images: [],
+        },
+        "modeling-garb-means-business-shoot": {
+          folder: "assets/modeling/garb-means-business-jan2025",
+          images: [],
+        },
+        "modeling-vampire-shoot": {
+          folder: "assets/modeling/vampire-shoot-jan2025",
+          images: [],
+        },
+        "modeling-garb-garbage-runway": {
+          folder: "assets/modeling/garb-garbage-rnwy-dec2024",
+          images: [],
+        },
+        "modeling-fast-crescendo-lookbook-shoot-2": {
+          folder: "assets/modeling/fast-crescendo2-lb-oct2024",
+          images: [],
+        },
+        "modeling-fast-crescendo-lookbook-shoot": {
+          folder: "assets/modeling/fast-crescendo-lb-oct2024",
+          images: [],
+        },
+        "modeling-fast-reverie-runway-show": {
+          folder: "assets/modeling/fast-reverie-rnwy-apr2024",
+          images: [],
+        },
+        "modeling-fast-reverie-lookbook-shoot": {
+          folder: "assets/modeling/fast-reverie-lb-mar2024",
+          images: [],
+        },
+        "modeling-fast-devotion-lookbook-shoot": {
+          folder: "assets/modeling/fast-devotion-lb-nov2023",
+          images: [
+            "assets/modeling/fast-devotion-lb-nov2023/IMG_0327.jpg",
+            "assets/modeling/fast-devotion-lb-nov2023/IMG_0328.jpg",
+            "assets/modeling/fast-devotion-lb-nov2023/IMG_0329.jpg",
+            "assets/modeling/fast-devotion-lb-nov2023/IMG_0330.jpg",
+            "assets/modeling/fast-devotion-lb-nov2023/IMG_0331.jpg",
+            "assets/modeling/fast-devotion-lb-nov2023/IMG_0333.jpg",
+            "assets/modeling/fast-devotion-lb-nov2023/IMG_0334.jpg",
+            "assets/modeling/fast-devotion-lb-nov2023/IMG_0335.jpg",
+            "assets/modeling/fast-devotion-lb-nov2023/IMG_0332.jpg",
+          ],
+        },
+        "modeling-saturn-la-black-friday-drop": {
+          folder: "assets/modeling/saturn-LA-oct2023",
+          images: [
+            "assets/modeling/saturn-LA-oct2023/IMG_9695.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9696.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9697.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9698.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9699.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9700.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9701.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9702.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9703.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9704.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9705.jpg",
+            "assets/modeling/saturn-LA-oct2023/IMG_9706.jpg",
+          ],
+        },
+      };
+
+      const renderModelingLinks = (container) => {
+        const linkId = container.getAttribute("data-modeling-links");
+        const links = modelingLinkData[linkId] || [];
+
+        if (!links.length) {
+          container.replaceChildren();
+          return;
+        }
+
+        const row = document.createElement("div");
+        row.className = "lp-link-row";
+        row.setAttribute("aria-label", "Modeling project links");
+
+        links.forEach(({ type, label, href, title }) => {
+          const anchor = document.createElement("a");
+          anchor.className = "lp-link";
+          anchor.href = href;
+          anchor.target = "_blank";
+          anchor.rel = "noreferrer";
+          anchor.setAttribute("aria-label", label);
+          anchor.title =
+            title || (type === "instagram" ? "Instagram" : "Website");
+
+          const icon = document.createElement("img");
+          icon.src = modelingLinkIconPaths[type] || modelingLinkIconPaths.website;
+          icon.alt = "";
+
+          anchor.appendChild(icon);
+          row.appendChild(anchor);
+        });
+
+        container.replaceChildren(row);
+      };
+
+      const renderModelingGallery = (container) => {
+        const galleryId = container.getAttribute("data-modeling-gallery");
+        const gallery = modelingGalleryData[galleryId];
+        if (!gallery) return;
+
+        const frame = document.createElement("div");
+        frame.className = "gallery-frame";
+
+        if (!gallery.images.length) {
+          const empty = document.createElement("div");
+          empty.className = "gallery-empty";
+          empty.textContent = `No images found in ${gallery.folder} yet.`;
+          frame.appendChild(empty);
+          container.replaceChildren(frame);
+          return;
+        }
+
+        let currentIndex = 0;
+        const scroll = document.createElement("div");
+        scroll.className = "gallery-scroll gallery-scroll--modeling";
+
+        const image = document.createElement("img");
+        scroll.appendChild(image);
+
+        const controls = document.createElement("div");
+        controls.className = "gallery-controls";
+
+        const previous = document.createElement("button");
+        previous.type = "button";
+        previous.textContent = "Previous";
+
+        const counter = document.createElement("span");
+        counter.className = "gallery-counter";
+        counter.setAttribute("aria-live", "polite");
+
+        const next = document.createElement("button");
+        next.type = "button";
+        next.textContent = "Next";
+
+        controls.appendChild(previous);
+        controls.appendChild(counter);
+        controls.appendChild(next);
+        frame.appendChild(scroll);
+        frame.appendChild(controls);
+        container.replaceChildren(frame);
+
+        const update = () => {
+          image.src = gallery.images[currentIndex];
+          image.alt = `Modeling photo ${galleryCounterText(currentIndex, gallery.images.length)}`;
+          counter.textContent = galleryCounterText(currentIndex, gallery.images.length);
+        };
+
+        previous.addEventListener("click", () => {
+          currentIndex =
+            (currentIndex - 1 + gallery.images.length) % gallery.images.length;
+          update();
+        });
+
+        next.addEventListener("click", () => {
+          currentIndex = (currentIndex + 1) % gallery.images.length;
+          update();
+        });
+
+        update();
+      };
+
+      document
+        .querySelectorAll("[data-modeling-links]")
+        .forEach(renderModelingLinks);
+
+      document
+        .querySelectorAll("[data-modeling-gallery]")
+        .forEach(renderModelingGallery);
+
+      setupGalleryControlLabels();
 
       const updatePathfinderImage = () => {
         if (!pathfinderImage) return;
         pathfinderImage.setAttribute("src", pathfinderImages[pathfinderIndex]);
+        if (pathfinderCounter) {
+          pathfinderCounter.textContent = galleryCounterText(pathfinderIndex, pathfinderImages.length);
+        }
+      };
+
+      const updateBerserkPosterImage = () => {
+        if (!berserkPosterImage) return;
+        berserkPosterImage.setAttribute("src", berserkPosterImages[berserkPosterIndex]);
+        berserkPosterImage.setAttribute(
+          "alt",
+          `Berserk poster redesign ${berserkPosterIndex + 1}`
+        );
+        if (berserkPosterCounter) {
+          berserkPosterCounter.textContent = galleryCounterText(
+            berserkPosterIndex,
+            berserkPosterImages.length
+          );
+        }
+      };
+
+      const updateMyBrothersGhostImage = () => {
+        if (!myBrothersGhostImage) return;
+        const activeImage = myBrothersGhostImages[myBrothersGhostIndex];
+        myBrothersGhostImage.setAttribute("src", activeImage.src);
+        myBrothersGhostImage.setAttribute("alt", activeImage.alt);
+        if (myBrothersGhostCounter) {
+          myBrothersGhostCounter.textContent = galleryCounterText(
+            myBrothersGhostIndex,
+            myBrothersGhostImages.length
+          );
+        }
       };
 
       const syncDroneProjectVideo = () => {
@@ -3458,7 +4945,13 @@
         droneProjectVideo.setAttribute("aria-label", activeVideo.title);
 
         if (droneVideoCaption) {
-          droneVideoCaption.textContent = `${activeVideo.title} (${droneVideoIndex + 1} of ${droneProjectVideos.length})`;
+          droneVideoCaption.textContent = activeVideo.title;
+        }
+        if (droneVideoCounter) {
+          droneVideoCounter.textContent = galleryCounterText(
+            droneVideoIndex,
+            droneProjectVideos.length
+          );
         }
       };
 
@@ -3472,6 +4965,35 @@
         pathfinderNext.addEventListener("click", () => {
           pathfinderIndex = (pathfinderIndex + 1) % pathfinderImages.length;
           updatePathfinderImage();
+        });
+      }
+
+      if (berserkPosterPrev && berserkPosterNext) {
+        berserkPosterPrev.addEventListener("click", () => {
+          berserkPosterIndex =
+            (berserkPosterIndex - 1 + berserkPosterImages.length) %
+            berserkPosterImages.length;
+          updateBerserkPosterImage();
+        });
+
+        berserkPosterNext.addEventListener("click", () => {
+          berserkPosterIndex = (berserkPosterIndex + 1) % berserkPosterImages.length;
+          updateBerserkPosterImage();
+        });
+      }
+
+      if (myBrothersGhostPrev && myBrothersGhostNext) {
+        myBrothersGhostPrev.addEventListener("click", () => {
+          myBrothersGhostIndex =
+            (myBrothersGhostIndex - 1 + myBrothersGhostImages.length) %
+            myBrothersGhostImages.length;
+          updateMyBrothersGhostImage();
+        });
+
+        myBrothersGhostNext.addEventListener("click", () => {
+          myBrothersGhostIndex =
+            (myBrothersGhostIndex + 1) % myBrothersGhostImages.length;
+          updateMyBrothersGhostImage();
         });
       }
 
@@ -3504,6 +5026,824 @@
           }
           setWindowOpen("drone-presentation-pdf", true);
         });
+      }
+
+      const STUDY_ICONS = {
+        folderClosed: "assets/app-icons/ico/directory_closed.ico",
+        folderOpen: "assets/app-icons/ico/directory_open.ico",
+        document: "assets/app-icons/ico/document.ico",
+      };
+      const STUDY_MANIFEST_URL = "assets/study%20resources/manifest.json";
+
+      const studyResourcesRoot = {
+        id: "study-resources",
+        type: "folder",
+        name: "Study Resources",
+        // Future PDFs should live under assets/study resources/{school}/{type}/{course}/{resource}.pdf.
+        children: [
+          {
+            id: "uc-berkeley",
+            type: "folder",
+            name: "UC Berkeley",
+            children: [
+          {
+            id: "bioeng",
+            type: "folder",
+            name: "BIOENG",
+            children: [
+              { id: "bioeng-101", type: "folder", name: "BIOENG 101", children: [] },
+              { id: "bioeng-145", type: "folder", name: "BIOENG 145", children: [] },
+              { id: "bioeng-190", type: "folder", name: "BIOENG 190", children: [] },
+              { id: "bioeng-103", type: "folder", name: "BIOENG 103", children: [] },
+              { id: "bioeng-147", type: "folder", name: "BIOENG 147", children: [] },
+              { id: "bioeng-104", type: "folder", name: "BIOENG 104", children: [] },
+              { id: "bioeng-135", type: "folder", name: "BIOENG 135", children: [] },
+              { id: "bioeng-114", type: "folder", name: "BIOENG 114", children: [] },
+              { id: "bioeng-c149", type: "folder", name: "BIOENG C149", children: [] },
+              { id: "bioeng-11", type: "folder", name: "BIOENG 11", children: [] },
+              { id: "bioeng-100", type: "folder", name: "BIOENG 100", children: [] },
+              { id: "bioeng-26", type: "folder", name: "BIOENG 26", children: [] },
+              { id: "bioeng-25", type: "folder", name: "BIOENG 25", children: [] },
+              { id: "bioeng-171", type: "folder", name: "BIOENG 171", children: [] },
+              { id: "bioeng-10", type: "folder", name: "BIOENG 10", children: [] },
+            ],
+          },
+          {
+            id: "compsci",
+            type: "folder",
+            name: "COMPSCI",
+            children: [
+              { id: "compsci-189", type: "folder", name: "COMPSCI 189", children: [] },
+              { id: "compsci-161", type: "folder", name: "COMPSCI 161", children: [] },
+              { id: "compsci-188", type: "folder", name: "COMPSCI 188", children: [] },
+              { id: "compsci-61c", type: "folder", name: "COMPSCI 61C", children: [] },
+              { id: "compsci-70", type: "folder", name: "COMPSCI 70", children: [] },
+              { id: "compsci-61b", type: "folder", name: "COMPSCI 61B", children: [] },
+              { id: "compsci-61a", type: "folder", name: "COMPSCI 61A", children: [] },
+            ],
+          },
+          {
+            id: "engin",
+            type: "folder",
+            name: "ENGIN",
+            children: [
+              { id: "engin-198", type: "folder", name: "ENGIN 198", children: [] },
+              { id: "engin-183a", type: "folder", name: "ENGIN 183A", children: [] },
+              { id: "engin-183e", type: "folder", name: "ENGIN 183E", children: [] },
+            ],
+          },
+          {
+            id: "eecs",
+            type: "folder",
+            name: "EECS",
+            children: [
+              { id: "eecs-c106a", type: "folder", name: "EECS C106A", children: [] },
+              { id: "eecs-16b", type: "folder", name: "EECS 16B", children: [] },
+              { id: "eecs-16a", type: "folder", name: "EECS 16A", children: [] },
+            ],
+          },
+          {
+            id: "chem",
+            type: "folder",
+            name: "CHEM",
+            children: [
+              { id: "chem-3a", type: "folder", name: "CHEM 3A", children: [] },
+              { id: "chem-3al", type: "folder", name: "CHEM 3AL", children: [] },
+            ],
+          },
+          {
+            id: "math",
+            type: "folder",
+            name: "MATH",
+            children: [
+              { id: "math-54", type: "folder", name: "MATH 54", children: [] },
+              { id: "math-w53", type: "folder", name: "MATH W53", children: [] },
+            ],
+          },
+          {
+            id: "etc-tech",
+            type: "folder",
+            name: "ETC. (tech)",
+            children: [
+              {
+                id: "eleng",
+                type: "folder",
+                name: "ELENG",
+                children: [
+                  { id: "eleng-122", type: "folder", name: "ELENG 122", children: [] },
+                ],
+              },
+              {
+                id: "physics",
+                type: "folder",
+                name: "PHYSICS",
+                children: [
+                  { id: "physics-7b", type: "folder", name: "PHYSICS 7B", children: [] },
+                ],
+              },
+              {
+                id: "cmpbio",
+                type: "folder",
+                name: "CMPBIO",
+                children: [
+                  { id: "cmpbio-198bc", type: "folder", name: "CMPBIO 198BC", children: [] },
+                ],
+              },
+              {
+                id: "stat",
+                type: "folder",
+                name: "STAT",
+                children: [
+                  { id: "stat-20", type: "folder", name: "STAT 20", children: [] },
+                ],
+              },
+            ],
+          },
+          {
+            id: "etc-non-tech",
+            type: "folder",
+            name: "ETC. (non-tech)",
+            children: [
+              {
+                id: "english",
+                type: "folder",
+                name: "ENGLISH",
+                children: [
+                  { id: "english-198", type: "folder", name: "ENGLISH 198", children: [] },
+                ],
+              },
+              {
+                id: "econ",
+                type: "folder",
+                name: "ECON",
+                children: [
+                  { id: "econ-1", type: "folder", name: "ECON 1", children: [] },
+                ],
+              },
+              {
+                id: "theater",
+                type: "folder",
+                name: "THEATER",
+                children: [
+                  { id: "theater-r1b", type: "folder", name: "THEATER R1B", children: [] },
+                ],
+              },
+              {
+                id: "desinv",
+                type: "folder",
+                name: "DESINV",
+                children: [
+                  { id: "desinv-21", type: "folder", name: "DESINV 21", children: [] },
+                ],
+              },
+              {
+                id: "history",
+                type: "folder",
+                name: "HISTORY",
+                children: [
+                  { id: "history-136b", type: "folder", name: "HISTORY 136B", children: [] },
+                ],
+              },
+              {
+                id: "polsci",
+                type: "folder",
+                name: "POLSCI",
+                children: [
+                  { id: "polsci-5", type: "folder", name: "POLSCI 5", children: [] },
+                ],
+              },
+              {
+                id: "ugba",
+                type: "folder",
+                name: "UGBA",
+                children: [
+                  { id: "ugba-10", type: "folder", name: "UGBA 10", children: [] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "yale",
+        type: "folder",
+        name: "Yale",
+        children: [],
+      },
+    ],
+  };
+
+      const studyState = {
+        selectedId: "study-resources",
+        expandedIds: new Set(["study-resources"]),
+        viewMode: "list",
+      };
+      const studyIndex = new Map();
+
+      const studyBuildIndex = (node, parentId = null, path = []) => {
+        const nextPath = [...path, node.name];
+        studyIndex.set(node.id, { node, parentId, path: nextPath });
+        (node.children || []).forEach((child) => {
+          studyBuildIndex(child, node.id, nextPath);
+        });
+      };
+
+      const studyRebuildIndex = () => {
+        studyIndex.clear();
+        studyBuildIndex(studyResourcesRoot);
+      };
+
+      const studyGetEntry = (id) => studyIndex.get(id) || null;
+
+      const studyGetSelectedEntry = () => studyGetEntry(studyState.selectedId);
+
+      const studyGetParentEntry = (entry) =>
+        entry && entry.parentId ? studyGetEntry(entry.parentId) : null;
+
+      const studyIsFolder = (node) => node && node.type === "folder";
+
+      const studyIsPdf = (node) => node && node.type === "pdf";
+
+      const studyPathText = (entry) => (entry ? entry.path.join("\\") : "Study Resources");
+
+      const studyObjectCountText = (count) => `${count} object${count === 1 ? "" : "s"}`;
+
+      const studySubitemCount = (node) =>
+        studyIsFolder(node) && Array.isArray(node.children) ? node.children.length : 0;
+
+      const studySubitemText = (node) =>
+        `${studySubitemCount(node)} item${studySubitemCount(node) === 1 ? "" : "s"}`;
+
+      const studyStorageBytes = (node) => {
+        if (!node) return 0;
+        if (studyIsPdf(node)) return Number(node.sizeBytes) || 0;
+        return (node.children || []).reduce(
+          (total, child) => total + studyStorageBytes(child),
+          0
+        );
+      };
+
+      const studyFormatStorage = (bytes) => {
+        if (!bytes) return "0 KB";
+        const units = ["B", "KB", "MB", "GB"];
+        let value = bytes;
+        let unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.length - 1) {
+          value /= 1024;
+          unitIndex += 1;
+        }
+        const rounded = value >= 10 || unitIndex === 0 ? Math.round(value) : value.toFixed(1);
+        return `${rounded} ${units[unitIndex]}`;
+      };
+
+      const studyStorageText = (node) => studyFormatStorage(studyStorageBytes(node));
+
+      const studyMetadataText = (node) => `${studySubitemText(node)}, ${studyStorageText(node)}`;
+
+      const studyTypeText = (node) => (studyIsPdf(node) ? "PDF Document" : "File Folder");
+
+      const studyIconForNode = (node) => {
+        if (studyIsPdf(node)) return STUDY_ICONS.document;
+        return studyState.expandedIds.has(node.id)
+          ? STUDY_ICONS.folderOpen
+          : STUDY_ICONS.folderClosed;
+      };
+
+      const studyPdfEmbedSrc = (node, page = 1, zoom = 100) =>
+        node && node.path
+          ? `${node.path}#page=${page}&zoom=${zoom}&toolbar=0&navpanes=0`
+          : "";
+
+      const studyPdfThumbnailPages = (node) =>
+        Array.isArray(node.thumbnailPages) && node.thumbnailPages.length
+          ? node.thumbnailPages
+          : [1, 2, 3];
+
+      const studySlug = (value) =>
+        String(value)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "") || "item";
+
+      const studyChildIdExists = (root, id) => {
+        if (root.id === id) return true;
+        return (root.children || []).some((child) => studyChildIdExists(child, id));
+      };
+
+      const studyUniqueId = (baseId) => {
+        let id = baseId;
+        let index = 2;
+        while (studyChildIdExists(studyResourcesRoot, id)) {
+          id = `${baseId}-${index}`;
+          index += 1;
+        }
+        return id;
+      };
+
+      const studyEnsureFolderPath = (folderPath) => {
+        let current = studyResourcesRoot;
+        const pathParts = [];
+
+        folderPath.forEach((folderName) => {
+          pathParts.push(folderName);
+          current.children = current.children || [];
+          let next = current.children.find(
+            (child) => studyIsFolder(child) && child.name === folderName
+          );
+
+          if (!next) {
+            next = {
+              id: studyUniqueId(`folder-${pathParts.map(studySlug).join("-")}`),
+              type: "folder",
+              name: folderName,
+              children: [],
+            };
+            current.children.push(next);
+          }
+
+          current = next;
+        });
+
+        return current;
+      };
+
+      const studyMergeManifest = (manifest) => {
+        const files = Array.isArray(manifest && manifest.files) ? manifest.files : [];
+
+        files.forEach((file) => {
+          if (!file || !file.path || !file.name) return;
+          const folderPath = Array.isArray(file.folderPath) ? file.folderPath : [];
+          const folder = studyEnsureFolderPath(folderPath);
+          folder.children = folder.children || [];
+
+          const existing = folder.children.find(
+            (child) => studyIsPdf(child) && child.path === file.path
+          );
+          if (existing) {
+            existing.name = file.name;
+            existing.sizeBytes = Number(file.sizeBytes) || 0;
+            existing.thumbnailPages = file.thumbnailPages;
+            return;
+          }
+
+          folder.children.push({
+            id: studyUniqueId(
+              `pdf-${[...folderPath, file.name].map(studySlug).join("-")}`
+            ),
+            type: "pdf",
+            name: file.name,
+            path: file.path,
+            sizeBytes: Number(file.sizeBytes) || 0,
+            thumbnailPages: file.thumbnailPages,
+            downloadName: file.downloadName || file.name,
+          });
+        });
+      };
+
+      const studyLoadManifest = async () => {
+        try {
+          const response = await fetch(STUDY_MANIFEST_URL, { cache: "no-store" });
+          if (!response.ok) return;
+          const manifest = await response.json();
+          studyMergeManifest(manifest);
+          studyRebuildIndex();
+          studyRender();
+        } catch (error) {
+          // Static file browsing may block fetch(); the scaffold still works without a manifest.
+        }
+      };
+
+      const studyCreateIcon = (src) => {
+        const image = document.createElement("img");
+        image.src = src;
+        image.alt = "";
+        return image;
+      };
+
+      const studyCreateEmpty = (text, className = "study-empty") => {
+        const empty = document.createElement("div");
+        empty.className = className;
+        empty.textContent = text;
+        return empty;
+      };
+
+      const studySetSelected = (id) => {
+        if (!studyGetEntry(id)) return;
+        studyState.selectedId = id;
+        studyRender();
+      };
+
+      const studyToggleFolder = (id, forceOpen = null) => {
+        const entry = studyGetEntry(id);
+        if (!entry || !studyIsFolder(entry.node)) return;
+        const shouldOpen =
+          forceOpen === null ? !studyState.expandedIds.has(id) : Boolean(forceOpen);
+        if (shouldOpen) {
+          studyState.expandedIds.add(id);
+        } else {
+          studyState.expandedIds.delete(id);
+        }
+        studyRender();
+      };
+
+      const studySelectedPdfEntry = () => {
+        const entry = studyGetSelectedEntry();
+        return entry && studyIsPdf(entry.node) ? entry : null;
+      };
+
+      const studyOpenSelectedInWindow = () => {
+        const entry = studySelectedPdfEntry();
+        if (!entry || !entry.node.path || !studyPdfIframe || !studyPdfTitle) return;
+        studyPdfTitle.textContent = entry.node.name;
+        studyPdfIframe.title = entry.node.name;
+        studyPdfIframe.src = studyPdfEmbedSrc(entry.node);
+        setWindowOpen("study-pdf", true);
+      };
+
+      const studyOpenSelectedInTab = () => {
+        const entry = studySelectedPdfEntry();
+        if (!entry || !entry.node.path) return;
+        window.open(entry.node.path, "_blank", "noopener,noreferrer");
+      };
+
+      const studyDownloadSelected = () => {
+        const entry = studySelectedPdfEntry();
+        if (!entry || !entry.node.path) return;
+        const link = document.createElement("a");
+        link.href = entry.node.path;
+        link.download = entry.node.downloadName || entry.node.name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      };
+
+      const studyRenderTreeNode = (entry) => {
+        const { node } = entry;
+        const item = document.createElement("li");
+        const row = document.createElement("div");
+        row.className = "study-tree-row";
+
+        if (studyIsFolder(node)) {
+          const toggle = document.createElement("button");
+          toggle.type = "button";
+          toggle.className = "study-tree-toggle";
+          toggle.dataset.studyToggle = node.id;
+          toggle.setAttribute(
+            "aria-label",
+            `${studyState.expandedIds.has(node.id) ? "Close" : "Open"} ${node.name}`
+          );
+          toggle.textContent = studyState.expandedIds.has(node.id) ? "-" : "+";
+          row.appendChild(toggle);
+        } else {
+          const spacer = document.createElement("span");
+          spacer.className = "study-tree-toggle-spacer";
+          row.appendChild(spacer);
+        }
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "study-tree-item";
+        button.dataset.studySelect = node.id;
+        button.setAttribute(
+          "aria-label",
+          `${node.name}, ${studyTypeText(node)}, ${studyMetadataText(node)}`
+        );
+        if (studyState.selectedId === node.id) button.classList.add("is-selected");
+        button.appendChild(studyCreateIcon(studyIconForNode(node)));
+
+        const label = document.createElement("span");
+        label.textContent = node.name;
+        button.appendChild(label);
+
+        const meta = document.createElement("span");
+        meta.className = "study-tree-meta";
+        meta.textContent = `(${studyMetadataText(node)})`;
+        button.appendChild(meta);
+        row.appendChild(button);
+        item.appendChild(row);
+
+        if (studyIsFolder(node) && studyState.expandedIds.has(node.id)) {
+          const children = node.children || [];
+          if (children.length) {
+            const childList = document.createElement("ul");
+            children.forEach((child) => {
+              const childEntry = studyGetEntry(child.id);
+              if (childEntry) childList.appendChild(studyRenderTreeNode(childEntry));
+            });
+            item.appendChild(childList);
+          }
+        }
+
+        return item;
+      };
+
+      const studyRenderTree = () => {
+        if (!studyTree) return;
+        const rootEntry = studyGetEntry(studyResourcesRoot.id);
+        if (!rootEntry) return;
+        const list = document.createElement("ul");
+        list.className = "study-tree-list";
+        list.appendChild(studyRenderTreeNode(rootEntry));
+        studyTree.replaceChildren(list);
+      };
+
+      const studyRenderFilePane = () => {
+        if (!studyFilePane) return;
+        const selected = studyGetSelectedEntry();
+        const browseEntry =
+          selected && studyIsFolder(selected.node)
+            ? selected
+            : studyGetParentEntry(selected) || studyGetEntry(studyResourcesRoot.id);
+        const children = browseEntry && browseEntry.node.children ? browseEntry.node.children : [];
+
+        studyFilePane.classList.toggle("is-list", studyState.viewMode === "list");
+        studyFilePane.classList.toggle("is-gallery", studyState.viewMode === "gallery");
+
+        if (studyCurrentTitle) studyCurrentTitle.textContent = browseEntry.node.name;
+        if (studyItemCount) {
+          studyItemCount.textContent = `${studyObjectCountText(children.length)}, ${studyStorageText(browseEntry.node)}`;
+        }
+
+        if (!children.length) {
+          studyFilePane.replaceChildren(
+            studyCreateEmpty(
+              "This folder is empty. Course folders and PDFs will appear here after the class list is added."
+            )
+          );
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        children.forEach((child) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "study-file-item";
+          button.dataset.studyFile = child.id;
+          button.setAttribute(
+            "aria-label",
+            `${child.name}, ${studyTypeText(child)}, ${studyMetadataText(child)}`
+          );
+          if (studyState.selectedId === child.id) button.classList.add("is-selected");
+          button.appendChild(studyCreateIcon(studyIconForNode(child)));
+
+          const name = document.createElement("span");
+          name.className = "study-file-name";
+          name.textContent = child.name;
+          button.appendChild(name);
+
+          const type = document.createElement("span");
+          type.className = "study-file-type";
+          type.textContent = studyTypeText(child);
+          button.appendChild(type);
+
+          const subitems = document.createElement("span");
+          subitems.className = "study-file-subitems";
+          subitems.textContent = studySubitemText(child);
+          button.appendChild(subitems);
+
+          const storage = document.createElement("span");
+          storage.className = "study-file-storage";
+          storage.textContent = studyStorageText(child);
+          button.appendChild(storage);
+
+          fragment.appendChild(button);
+        });
+
+        studyFilePane.replaceChildren(fragment);
+      };
+
+      const studyRenderPdfPreview = (node) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "study-preview-pdf";
+
+        const thumbnails = document.createElement("div");
+        thumbnails.className = "study-pdf-thumbnails";
+        thumbnails.setAttribute("aria-label", `${node.name} page thumbnails`);
+
+        const main = document.createElement("div");
+        main.className = "study-pdf-main";
+
+        const mainIframe = document.createElement("iframe");
+        mainIframe.src = studyPdfEmbedSrc(node);
+        mainIframe.title = node.name;
+        main.appendChild(mainIframe);
+
+        const pages = studyPdfThumbnailPages(node);
+        pages.forEach((page, index) => {
+          const thumbnail = document.createElement("div");
+          thumbnail.className = "study-pdf-thumbnail";
+          if (index === 0) thumbnail.classList.add("is-active");
+          thumbnail.setAttribute("role", "button");
+          thumbnail.setAttribute("tabindex", "0");
+          thumbnail.setAttribute("aria-label", `Preview page ${page}`);
+          thumbnail.dataset.studyPreviewPage = String(page);
+
+          const frame = document.createElement("div");
+          frame.className = "study-pdf-thumbnail-frame";
+
+          const iframe = document.createElement("iframe");
+          iframe.src = studyPdfEmbedSrc(node, page, 55);
+          iframe.title = `${node.name}, page ${page}`;
+          iframe.setAttribute("tabindex", "-1");
+          frame.appendChild(iframe);
+
+          const label = document.createElement("span");
+          label.className = "study-pdf-thumbnail-label";
+          label.textContent = `Page ${page}`;
+
+          thumbnail.appendChild(frame);
+          thumbnail.appendChild(label);
+          thumbnails.appendChild(thumbnail);
+        });
+
+        const setPage = (page, thumbnail) => {
+          mainIframe.src = studyPdfEmbedSrc(node, page);
+          thumbnails.querySelectorAll(".study-pdf-thumbnail").forEach((item) => {
+            item.classList.toggle("is-active", item === thumbnail);
+          });
+        };
+
+        thumbnails.addEventListener("click", (event) => {
+          const thumbnail = event.target.closest("[data-study-preview-page]");
+          if (!thumbnail || !thumbnails.contains(thumbnail)) return;
+          setPage(Number(thumbnail.dataset.studyPreviewPage), thumbnail);
+        });
+
+        thumbnails.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          const thumbnail = event.target.closest("[data-study-preview-page]");
+          if (!thumbnail || !thumbnails.contains(thumbnail)) return;
+          event.preventDefault();
+          setPage(Number(thumbnail.dataset.studyPreviewPage), thumbnail);
+        });
+
+        wrapper.appendChild(thumbnails);
+        wrapper.appendChild(main);
+        return wrapper;
+      };
+
+      const studyRenderPreview = () => {
+        if (!studyPreviewBody || !studyPreviewTitle || !studyPreviewIcon) return;
+        const selected = studyGetSelectedEntry();
+        const canOpenPdf = selected && studyIsPdf(selected.node) && Boolean(selected.node.path);
+
+        studyPreviewIcon.src = selected ? studyIconForNode(selected.node) : STUDY_ICONS.folderOpen;
+        studyPreviewTitle.textContent = selected ? selected.node.name : "Study Resources";
+
+        if (canOpenPdf) {
+          studyPreviewBody.replaceChildren(studyRenderPdfPreview(selected.node));
+        } else {
+          const selectedFolder = selected && studyIsFolder(selected.node) ? selected.node : null;
+          const message =
+            selectedFolder && selectedFolder.children && selectedFolder.children.length
+              ? "Select a course folder or PDF resource to preview it here."
+              : "No PDFs are available in this folder yet.";
+          studyPreviewBody.replaceChildren(studyCreateEmpty(message, "study-preview-empty"));
+        }
+
+        if (studyOpenWindow) studyOpenWindow.disabled = !canOpenPdf;
+        if (studyOpenTab) studyOpenTab.disabled = !canOpenPdf;
+        if (studyDownload) studyDownload.disabled = !canOpenPdf;
+      };
+
+      const studyRenderStatus = () => {
+        const selected = studyGetSelectedEntry();
+        const browseEntry =
+          selected && studyIsFolder(selected.node)
+            ? selected
+            : studyGetParentEntry(selected) || studyGetEntry(studyResourcesRoot.id);
+        const count =
+          browseEntry && browseEntry.node.children ? browseEntry.node.children.length : 0;
+        if (studyAddress) studyAddress.textContent = studyPathText(selected);
+        if (studyStatusLeft) {
+          studyStatusLeft.textContent = `${studyObjectCountText(count)}, ${studyStorageText(browseEntry.node)}`;
+        }
+        if (studyStatusRight) studyStatusRight.textContent = studyPathText(selected);
+        if (studyUp) studyUp.disabled = !selected || !selected.parentId;
+      };
+
+      const studyRenderViewButtons = () => {
+        if (studyListView) {
+          const isList = studyState.viewMode === "list";
+          studyListView.classList.toggle("is-active", isList);
+          studyListView.setAttribute("aria-pressed", String(isList));
+        }
+        if (studyGalleryView) {
+          const isGallery = studyState.viewMode === "gallery";
+          studyGalleryView.classList.toggle("is-active", isGallery);
+          studyGalleryView.setAttribute("aria-pressed", String(isGallery));
+        }
+      };
+
+      function studyRender() {
+        studyRenderTree();
+        studyRenderFilePane();
+        studyRenderPreview();
+        studyRenderStatus();
+        studyRenderViewButtons();
+      }
+
+      if (studyTree && studyFilePane) {
+        studyRebuildIndex();
+        studyRender();
+        studyLoadManifest();
+
+        studyTree.addEventListener("click", (event) => {
+          const toggle = event.target.closest("[data-study-toggle]");
+          if (toggle && studyTree.contains(toggle)) {
+            studyToggleFolder(toggle.getAttribute("data-study-toggle"));
+            return;
+          }
+
+          const item = event.target.closest("[data-study-select]");
+          if (item && studyTree.contains(item)) {
+            const id = item.getAttribute("data-study-select");
+            const entry = studyGetEntry(id);
+            if (event.detail > 1 && entry && studyIsFolder(entry.node)) {
+              studyState.expandedIds.add(id);
+              studySetSelected(id);
+              return;
+            }
+            studySetSelected(id);
+          }
+        });
+
+        studyTree.addEventListener("dblclick", (event) => {
+          const item = event.target.closest("[data-study-select]");
+          if (!item) return;
+          const id = item.getAttribute("data-study-select");
+          const entry = studyGetEntry(id);
+          if (entry && studyIsFolder(entry.node)) {
+            studyState.expandedIds.add(id);
+            studySetSelected(id);
+          }
+        });
+
+        studyFilePane.addEventListener("click", (event) => {
+          const item = event.target.closest("[data-study-file]");
+          if (!item || !studyFilePane.contains(item)) return;
+          const id = item.getAttribute("data-study-file");
+          const entry = studyGetEntry(id);
+          if (event.detail > 1 && entry) {
+            if (studyIsFolder(entry.node)) {
+              studyState.expandedIds.add(id);
+              studySetSelected(id);
+              return;
+            }
+            studySetSelected(id);
+            studyOpenSelectedInWindow();
+            return;
+          }
+          studySetSelected(id);
+        });
+
+        studyFilePane.addEventListener("dblclick", (event) => {
+          const item = event.target.closest("[data-study-file]");
+          if (!item) return;
+          const id = item.getAttribute("data-study-file");
+          const entry = studyGetEntry(id);
+          if (!entry) return;
+          if (studyIsFolder(entry.node)) {
+            studyState.expandedIds.add(id);
+            studySetSelected(id);
+            return;
+          }
+          studySetSelected(id);
+          studyOpenSelectedInWindow();
+        });
+
+        if (studyUp) {
+          studyUp.addEventListener("click", () => {
+            const parent = studyGetParentEntry(studyGetSelectedEntry());
+            if (parent) studySetSelected(parent.node.id);
+          });
+        }
+
+        if (studyListView) {
+          studyListView.addEventListener("click", () => {
+            studyState.viewMode = "list";
+            studyRender();
+          });
+        }
+
+        if (studyGalleryView) {
+          studyGalleryView.addEventListener("click", () => {
+            studyState.viewMode = "gallery";
+            studyRender();
+          });
+        }
+
+        if (studyOpenWindow) {
+          studyOpenWindow.addEventListener("click", studyOpenSelectedInWindow);
+        }
+
+        if (studyOpenTab) {
+          studyOpenTab.addEventListener("click", studyOpenSelectedInTab);
+        }
+
+        if (studyDownload) {
+          studyDownload.addEventListener("click", studyDownloadSelected);
+        }
       }
 
       const calendarImages = {
@@ -3663,13 +6003,14 @@
         });
       });
 
+      if (startButton) {
+        startButton.addEventListener("click", closeAllWindows);
+      }
+
       closeButtons.forEach((button) => {
         button.addEventListener("click", () => {
           const appId = button.getAttribute("data-close");
-          setWindowOpen(appId, false);
-          if (appId === "minesweeper") {
-            msNewGame(msDifficulty ? msDifficulty.value : "beginner");
-          }
+          closeAppWindow(appId);
         });
       });
 
@@ -4164,6 +6505,9 @@
       const solUndo = document.getElementById("sol-undo");
       const solAchievement = document.getElementById("sol-achievement");
       const solFireworks = document.getElementById("sol-fireworks");
+      const solVictoryVideoOverlay = document.getElementById("sol-victory-video-overlay");
+      const solVictoryVideo = document.getElementById("sol-victory-video");
+      const solVictoryCanvas = document.getElementById("sol-victory-canvas");
 
       const solSuitData = {
         spades: { symbol: "♠", label: "Spades", color: "black" },
@@ -4216,6 +6560,8 @@
       ];
       let solFireworkTimeout = null;
       let solFireworkTimers = [];
+      let solVictoryFrameRequest = null;
+      let solVictoryScratchCanvas = null;
 
       const solSprite = {
         cardHeight: 22,
@@ -4311,6 +6657,168 @@
         solAchievement.classList.add("is-showing");
       };
 
+      const solHideVictoryVideo = () => {
+        if (!solVictoryVideoOverlay || !solVictoryVideo) return;
+        if (solVictoryFrameRequest) {
+          cancelAnimationFrame(solVictoryFrameRequest);
+          solVictoryFrameRequest = null;
+        }
+        solVictoryVideoOverlay.classList.remove("is-showing");
+        solVictoryVideoOverlay.setAttribute("aria-hidden", "true");
+        solVictoryVideo.classList.remove("is-visible-fallback");
+        if (solVictoryCanvas) {
+          solVictoryCanvas.classList.remove("is-hidden");
+          const context = solVictoryCanvas.getContext("2d");
+          if (context) context.clearRect(0, 0, solVictoryCanvas.width, solVictoryCanvas.height);
+        }
+        solVictoryVideo.pause();
+        try {
+          solVictoryVideo.currentTime = 0;
+        } catch (error) {
+          // Some browsers delay seeking until video metadata is ready.
+        }
+      };
+
+      const solDrawVictoryFrame = () => {
+        solVictoryFrameRequest = null;
+        if (!solVictoryVideoOverlay || !solVictoryVideo || !solVictoryCanvas) return;
+        if (!solVictoryVideoOverlay.classList.contains("is-showing")) return;
+
+        const sourceWidth = solVictoryVideo.videoWidth;
+        const sourceHeight = solVictoryVideo.videoHeight;
+        if (!sourceWidth || !sourceHeight) {
+          if (!solVictoryVideo.paused && !solVictoryVideo.ended) {
+            solVictoryFrameRequest = requestAnimationFrame(solDrawVictoryFrame);
+          }
+          return;
+        }
+
+        const width = Math.min(sourceWidth, 960);
+        const height = Math.round((sourceHeight / sourceWidth) * width);
+
+        if (!solVictoryScratchCanvas) {
+          solVictoryScratchCanvas = document.createElement("canvas");
+        }
+
+        if (
+          solVictoryScratchCanvas.width !== width ||
+          solVictoryScratchCanvas.height !== height
+        ) {
+          solVictoryScratchCanvas.width = width;
+          solVictoryScratchCanvas.height = height;
+        }
+
+        const scratchContext = solVictoryScratchCanvas.getContext("2d", {
+          willReadFrequently: true,
+        });
+        if (!scratchContext) return;
+
+        try {
+          scratchContext.clearRect(0, 0, width, height);
+          scratchContext.drawImage(solVictoryVideo, 0, 0, width, height);
+          const frame = scratchContext.getImageData(0, 0, width, height);
+          const pixels = frame.data;
+          let minX = width;
+          let minY = height;
+          let maxX = -1;
+          let maxY = -1;
+
+          for (let i = 0; i < pixels.length; i += 4) {
+            const brightest = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
+            if (brightest < 32) {
+              pixels[i + 3] = 0;
+            } else if (brightest < 72) {
+              pixels[i + 3] = Math.round(pixels[i + 3] * ((brightest - 32) / 40));
+            }
+
+            if (pixels[i + 3] > 8) {
+              const pixelIndex = i / 4;
+              const x = pixelIndex % width;
+              const y = Math.floor(pixelIndex / width);
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
+          }
+
+          const context = solVictoryCanvas.getContext("2d", { willReadFrequently: true });
+          if (!context) return;
+
+          if (maxX < minX || maxY < minY) {
+            context.clearRect(0, 0, solVictoryCanvas.width, solVictoryCanvas.height);
+            return;
+          }
+
+          const cropPadding = Math.max(
+            6,
+            Math.round(Math.max(maxX - minX + 1, maxY - minY + 1) * 0.04)
+          );
+          const cropX = Math.max(0, minX - cropPadding);
+          const cropY = Math.max(0, minY - cropPadding);
+          const cropRight = Math.min(width - 1, maxX + cropPadding);
+          const cropBottom = Math.min(height - 1, maxY + cropPadding);
+          const cropWidth = cropRight - cropX + 1;
+          const cropHeight = cropBottom - cropY + 1;
+
+          if (
+            solVictoryCanvas.width !== cropWidth ||
+            solVictoryCanvas.height !== cropHeight
+          ) {
+            solVictoryCanvas.width = cropWidth;
+            solVictoryCanvas.height = cropHeight;
+          }
+
+          const croppedFrame = context.createImageData(cropWidth, cropHeight);
+          for (let y = 0; y < cropHeight; y += 1) {
+            const sourceStart = ((cropY + y) * width + cropX) * 4;
+            const sourceEnd = sourceStart + cropWidth * 4;
+            croppedFrame.data.set(
+              pixels.subarray(sourceStart, sourceEnd),
+              y * cropWidth * 4
+            );
+          }
+
+          context.putImageData(croppedFrame, 0, 0);
+        } catch (error) {
+          solVictoryCanvas.classList.add("is-hidden");
+          solVictoryVideo.classList.add("is-visible-fallback");
+          return;
+        }
+
+        if (!solVictoryVideo.paused && !solVictoryVideo.ended) {
+          solVictoryFrameRequest = requestAnimationFrame(solDrawVictoryFrame);
+        }
+      };
+
+      const solStartVictoryCanvas = () => {
+        if (!solVictoryCanvas) return;
+        if (solVictoryFrameRequest) cancelAnimationFrame(solVictoryFrameRequest);
+        solVictoryFrameRequest = requestAnimationFrame(solDrawVictoryFrame);
+      };
+
+      const solPlayVictoryVideo = () => {
+        if (!solVictoryVideoOverlay || !solVictoryVideo) return;
+        solVictoryVideoOverlay.classList.add("is-showing");
+        solVictoryVideoOverlay.setAttribute("aria-hidden", "false");
+        solVictoryVideo.classList.remove("is-visible-fallback");
+        if (solVictoryCanvas) solVictoryCanvas.classList.remove("is-hidden");
+        solVictoryVideo.pause();
+        solVictoryVideo.muted = false;
+        solVictoryVideo.volume = 1;
+        try {
+          solVictoryVideo.currentTime = 0;
+        } catch (error) {
+          solVictoryVideo.load();
+        }
+
+        solStartVictoryCanvas();
+        const playPromise = solVictoryVideo.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.then(solStartVictoryCanvas).catch(() => {});
+        }
+      };
+
       const solCreateFireworkBurst = (x, y) => {
         if (!solFireworks) return;
         const particleCount = 46;
@@ -4361,6 +6869,12 @@
           solFireworkTimers = [];
           solFireworkTimeout = null;
         }, 3600);
+      };
+
+      const solTriggerVictoryEffects = () => {
+        solStartFireworks();
+        solShowAchievement();
+        solPlayVictoryVideo();
       };
 
       const solCreateSlotMark = (text) => {
@@ -4492,7 +7006,7 @@
         });
 
         if (solMoves) msSetCounter(solMoves, msFormatCounter(solState.moves));
-        if (solStatus) solStatus.textContent = solState.won ? "You win" : "";
+        if (solStatus) solStatus.textContent = "";
         if (solUndo) solUndo.disabled = solHistory.length === 0;
       };
 
@@ -4504,8 +7018,7 @@
         const wasWon = solState.won;
         solState.won = foundationCount === 52;
         if (!wasWon && solState.won) {
-          solStartFireworks();
-          solShowAchievement();
+          solTriggerVictoryEffects();
         }
       };
 
@@ -4707,6 +7220,7 @@
         solState.moves = 0;
         solState.won = false;
         solHistory.length = 0;
+        solHideVictoryVideo();
 
         for (let col = 0; col < 7; col += 1) {
           for (let row = 0; row <= col; row += 1) {
@@ -4843,7 +7357,18 @@
           const snapshot = solHistory.pop();
           if (!snapshot) return;
           solRestoreSnapshot(snapshot);
+          if (!solState.won) solHideVictoryVideo();
           solRender();
+        });
+      }
+
+      if (solVictoryVideo) {
+        solVictoryVideo.addEventListener("loadeddata", solStartVictoryCanvas);
+        solVictoryVideo.addEventListener("play", solStartVictoryCanvas);
+        solVictoryVideo.addEventListener("seeked", solStartVictoryCanvas);
+        solVictoryVideo.addEventListener("ended", () => {
+          solVictoryVideo.pause();
+          solDrawVictoryFrame();
         });
       }
 
@@ -4865,8 +7390,32 @@
       // }
 
       draggableWindows.forEach((win) => {
+        win.addEventListener(
+          "pointerdown",
+          () => {
+            bringWindowToFront(win);
+          },
+          { capture: true }
+        );
+
         const titleBar = win.querySelector(".title-bar");
         if (!titleBar) return;
+        const minimizeButton = win.querySelector('.title-bar-controls button[aria-label="Minimize"]');
+        const maximizeButton = win.querySelector('.title-bar-controls button[aria-label="Maximize"]');
+
+        if (maximizeButton) {
+          maximizeButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            expandSmallWindow(win);
+          });
+        }
+
+        if (minimizeButton) {
+          minimizeButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            restoreWindowSize(win);
+          });
+        }
 
         titleBar.addEventListener("pointerdown", (event) => {
           if (event.target.closest(".title-bar-controls")) return;
@@ -4880,7 +7429,6 @@
             win.style.left = `${rect.left}px`;
             win.style.top = `${rect.top}px`;
           }
-          win.style.zIndex = String(topZ++);
           titleBar.setPointerCapture(event.pointerId);
 
           const moveHandler = (moveEvent) => {
