@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="style.css" />
     <style>
       :root {
-        --bg-image: url("assets/background.jpg");
+        --bg-image: url("assets/optimized/background-2200.jpg");
       }
 
       @font-face {
@@ -213,6 +213,26 @@
         vertical-align: middle;
       }
 
+      .credits-solitaire-icon {
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
+        margin-right: 8px;
+        display: flex;
+        justify-content: center;
+      }
+
+      .credits-solitaire-icon::before {
+        width: 23px;
+        height: 28px;
+        background-image: url("assets/solitaire-cards/poker nano.png");
+        background-position: 0 0;
+        background-repeat: no-repeat;
+        background-size: 1300% auto;
+        content: "";
+        image-rendering: pixelated;
+      }
+
       .minesweeper-window {
         width: min(92vw, 520px);
       }
@@ -281,9 +301,14 @@
       }
 
       .ms-counter {
+        align-items: center;
         background: #000;
-        box-shadow: inset 1px 1px 0 #222, inset -1px -1px 0 #555;
         border-radius: 0;
+        box-shadow: inset 1px 1px 0 #222, inset -1px -1px 0 #555;
+        display: flex;
+        gap: 0;
+        justify-content: center;
+        padding: 3px 4px;
       }
 
       .ms-reset {
@@ -447,14 +472,6 @@
 
       .ms-cell[data-number="8"] {
         background-image: url("assets/minesweeper_assets/cell_numbers/cell_8.png");
-      }
-
-      .ms-counter {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0;
-        padding: 3px 4px;
       }
 
       .ms-digit {
@@ -763,6 +780,24 @@
 
       .sol-tableau-col {
         min-height: var(--sol-card-h);
+        position: relative;
+      }
+
+      .sol-tableau-tooltip {
+        background: #000;
+        border: 1px solid #fff;
+        box-shadow: 1px 1px 0 #000;
+        color: #fff;
+        display: none;
+        padding: 2px 5px;
+        pointer-events: none;
+        position: fixed;
+        white-space: nowrap;
+        z-index: 10000;
+      }
+
+      .sol-tableau-tooltip.is-visible {
+        display: block;
       }
 
       .sol-card {
@@ -993,12 +1028,41 @@
         width: min(90vw, 680px);
       }
 
+      .portfolio-window.is-corner-resizable {
+        min-height: min(220px, calc(100vh - 96px));
+        min-width: min(280px, calc(100vw - 24px));
+      }
+
       .portfolio-window .window-body {
         display: flex;
         gap: 12px;
-        min-height: 360px;
+        min-height: 0;
+        min-width: 0;
         height: 360px;
         overflow: hidden;
+      }
+
+      .portfolio-window:is(
+          [data-app-window="windows"],
+          [data-app-window="paint"],
+          [data-app-window="modeling"]
+        )
+        .window-body {
+        height: 468px;
+      }
+
+      .portfolio-window.is-resize-hover,
+      .portfolio-window.is-resize-hover *,
+      .portfolio-window.is-manual-resizing,
+      .portfolio-window.is-manual-resizing * {
+        cursor: nwse-resize !important;
+        user-select: none;
+      }
+
+      body.is-resizing-window,
+      body.is-resizing-window * {
+        cursor: nwse-resize !important;
+        user-select: none;
       }
 
       .selector-panel,
@@ -1011,11 +1075,13 @@
       }
 
       .selector-panel {
-        width: 42%;
-        min-width: 220px;
+        width: clamp(180px, 42%, 285px);
+        max-width: 52%;
+        min-width: 0;
         display: flex;
         flex-direction: column;
-        flex: 0 0 auto;
+        flex: 0 0 clamp(180px, 42%, 285px);
+        overflow: hidden;
       }
 
       .selector-list {
@@ -1024,6 +1090,7 @@
         margin: 0;
         overflow-y: auto;
         flex: 1;
+        min-height: 0;
       }
 
       .selector-item {
@@ -1034,7 +1101,7 @@
         text-align: left;
         padding: 8px;
         display: grid;
-        grid-template-columns: 36px 1fr;
+        grid-template-columns: 36px minmax(0, 1fr);
         gap: 8px;
         cursor: pointer;
         min-width: 0;
@@ -1070,27 +1137,59 @@
         font-weight: bold;
         display: block;
         margin-bottom: 2px;
+        min-width: 0;
+        overflow-wrap: anywhere;
       }
 
       .selector-desc {
         display: block;
         font-size: 10px;
         line-height: 1.3;
+        min-width: 0;
+        overflow-wrap: anywhere;
       }
 
       .viewer-panel {
         flex: 1;
-        overflow-y: auto;
+        overflow: auto;
         padding-bottom: 12px;
       }
 
+      .portfolio-window.is-portfolio-narrow .window-body {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .portfolio-window.is-portfolio-narrow .selector-panel {
+        flex: 0 0 clamp(128px, 36%, 220px);
+        max-height: none;
+        max-width: none;
+        min-height: 96px;
+        width: 100% !important;
+      }
+
+      .portfolio-window.is-portfolio-narrow .panel-divider {
+        display: none;
+      }
+
+      .portfolio-window.is-portfolio-narrow .viewer-panel {
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+
+      .portfolio-window.is-portfolio-short .selector-panel {
+        flex-basis: clamp(96px, 30%, 150px);
+        min-height: 84px;
+      }
+
       .panel-divider {
-        width: 3px;
+        width: 5px;
         height: 15%;
         cursor: col-resize;
         background: var(--button-shadow);
         box-shadow: inset 1px 0 var(--button-highlight);
         align-self: center;
+        touch-action: none;
       }
 
       .viewer-content.is-hidden {
@@ -1786,12 +1885,18 @@
         max-height: var(--gallery-height);
         min-height: 0;
         overflow: hidden;
+        padding: 2px;
         width: 100%;
       }
 
       .gallery-scroll--video {
         --gallery-height: clamp(220px, 40vh, 440px);
         background: #000;
+      }
+
+      .gallery-scroll--pdf {
+        --gallery-height: clamp(220px, 44vh, 480px);
+        background: #fff;
       }
 
       .gallery-scroll--poster {
@@ -1825,6 +1930,14 @@
         display: block;
         background: #000;
         object-fit: contain;
+      }
+
+      .gallery-scroll iframe {
+        background: #fff;
+        border: 0;
+        display: block;
+        height: 100%;
+        width: 100%;
       }
 
       .gallery-controls {
@@ -1864,6 +1977,10 @@
       }
 
       .app-window.is-window-expanded .gallery-scroll--poster {
+        --gallery-height: clamp(300px, 60vh, 760px);
+      }
+
+      .app-window.is-window-expanded .gallery-scroll--pdf {
         --gallery-height: clamp(300px, 60vh, 760px);
       }
 
@@ -1928,7 +2045,9 @@
         }
 
         .selector-panel {
-          max-height: 34%;
+          flex: 0 0 clamp(128px, 36%, 220px);
+          max-height: none;
+          min-height: 96px;
           min-width: 0;
           width: 100% !important;
         }
@@ -1946,6 +2065,7 @@
         }
 
         .gallery-scroll--poster,
+        .gallery-scroll--pdf,
         .gallery-scroll--modeling {
           --gallery-height: clamp(180px, 38vh, 340px);
         }
@@ -1957,6 +2077,7 @@
         }
 
         .gallery-scroll--poster,
+        .gallery-scroll--pdf,
         .gallery-scroll--modeling {
           --gallery-height: clamp(160px, 42vh, 300px);
         }
@@ -1974,9 +2095,8 @@
         text-align: center;
       }
 
-      .credits-body {
-        max-height: 220px;
-        overflow-y: auto;
+      [data-modeling-gallery] + p {
+        margin-top: 12px;
       }
 
       .socials-body {
@@ -2235,6 +2355,81 @@
         border-color: #000;
       }
 
+      .calendar-day[data-calendar-day] {
+        cursor: pointer;
+      }
+
+      .calendar-day.is-event-day {
+        position: relative;
+      }
+
+      .calendar-day.is-event-day:hover,
+      .calendar-day.is-event-day:focus-visible {
+        background: rgba(255, 255, 255, 0.28);
+        border-color: rgba(247, 205, 74, 0.95);
+        box-shadow:
+          0 0 0 1px rgba(214, 170, 46, 0.9),
+          0 0 8px rgba(255, 210, 84, 0.35);
+        z-index: 1;
+      }
+
+      .calendar-day.is-event-day:hover::after,
+      .calendar-day.is-event-day:focus-visible::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border: 1px solid rgba(247, 205, 74, 0.95);
+        box-shadow:
+          0 0 8px 1px rgba(255, 210, 84, 0.6),
+          0 0 14px 2px rgba(255, 184, 28, 0.35);
+        opacity: 0.72;
+        pointer-events: none;
+        animation: gold-button-halo 3.2s ease-in-out infinite;
+      }
+
+      .random-event-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(360px, calc(100vw - 32px));
+        z-index: 120;
+      }
+
+      .random-event-window.is-hidden {
+        display: none;
+      }
+
+      .random-event-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .random-event-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .random-event-window .window-body {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .random-event-window img {
+        display: block;
+        max-height: min(56vh, 360px);
+        max-width: 100%;
+        object-fit: contain;
+      }
+
+      .random-event-ok {
+        align-self: flex-end;
+        min-width: 72px;
+      }
+
       .clock-display {
         background: #000;
         color: #00ff66;
@@ -2361,7 +2556,15 @@
         </div>
         <div class="window-body">
           <h2 class="about-title">Hi, my name is Rohin!</h2>
-          <img class="about-photo" src="assets/bio-pic.jpeg" alt="Rohin" />
+          <img
+            class="about-photo"
+            src="assets/optimized/bio-pic-720.jpg"
+            width="720"
+            height="669"
+            decoding="async"
+            fetchpriority="high"
+            alt="Rohin"
+          />
           <p>Welcome to your Rohin OS home screen.</p>
           <p>Start adding sections, icons, and links here.</p>
         </div>
@@ -2381,7 +2584,7 @@
             <ul class="selector-list">
               <li>
                 <button class="selector-item is-active" type="button" data-view="projects-pulse-oximeter">
-                  <img class="selector-thumb" src="assets/app-icons/ico/expansion_board_modem.ico" alt="" />
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/expansion_board_modem.ico" alt="" />
                   <span>
                     <span class="selector-title">Pulse Oximeter</span>
                     <span class="selector-desc">
@@ -2394,7 +2597,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="projects-tcp-congestion-control">
-                  <img class="selector-thumb" src="assets/app-icons/ico/network_normal_two_pcs.ico" alt="" />
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/network_normal_two_pcs.ico" alt="" />
                   <span>
                     <span class="selector-title">TCP Congestion Control</span>
                     <span class="selector-desc">
@@ -2407,7 +2610,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="projects-ekg">
-                  <img class="selector-thumb" src="assets/app-icons/ico/computer_taskmgr.ico" alt="" />
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/computer_taskmgr.ico" alt="" />
                   <span>
                     <span class="selector-title">EKG</span>
                     <span class="selector-desc">
@@ -2420,7 +2623,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="projects-drone-navigation">
-                  <img class="selector-thumb selector-thumb--pixelated" src="assets/projects/drone-navigation-favicon-pixelated.png" alt="" />
+                  <img class="selector-thumb selector-thumb--pixelated" data-src="assets/projects/drone-navigation-favicon-pixelated.png" alt="" />
                   <span>
                     <span class="selector-title">Drone Navigation Through Constrained Gate Environments</span>
                     <span class="selector-desc">
@@ -2489,12 +2692,14 @@
               <div class="gallery-frame" id="drone-video-gallery">
                 <div class="gallery-scroll gallery-scroll--video">
                   <video
-                    id="drone-project-video"
-                    controls
-                    playsinline
-                    preload="metadata"
-                    aria-label="Drone project demo video"
-                  ></video>
+                  id="drone-project-video"
+                  controls
+                  playsinline
+                  preload="metadata"
+                  data-src="https://rohinshanker.github.io/drone-navigation-project/assets/videos/mujocosimulator.mp4"
+                  data-unload-on-hide
+                  aria-label="Drone project demo video"
+                ></video>
                 </div>
                 <div class="gallery-controls">
                   <button type="button" id="drone-video-prev">Previous</button>
@@ -2526,7 +2731,7 @@
             <ul class="selector-list">
               <li>
                 <button class="selector-item" type="button" data-view="creative-leaving-paradise">
-                  <img class="selector-thumb selector-thumb--white" src="assets/creative-work/lp.webp" alt="" />
+                  <img class="selector-thumb selector-thumb--white" data-src="assets/creative-work/lp.webp" alt="" />
                   <span>
                     <span class="selector-title">Leaving Paradise</span>
                     <span class="selector-desc">
@@ -2539,7 +2744,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="creative-my-brothers-ghost">
-                  <img class="selector-thumb" src="assets/creative-work/my-brothers-ghost-profile.jpg" alt="" />
+                  <img class="selector-thumb" data-src="assets/creative-work/my-brothers-ghost-profile.jpg" alt="" />
                   <span>
                     <span class="selector-title">My Brother's Ghost</span>
                     <span class="selector-desc">
@@ -2552,7 +2757,7 @@
               </li>
               <li>
                 <button class="selector-item is-active" type="button" data-view="creative-pathfinder">
-                  <img class="selector-thumb" src="assets/creative-work/pathfinder-logo.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/optimized/pathfinder-logo-96.png" alt="" />
                   <span>
                     <span class="selector-title">Pathfinder - Wear it Your Way</span>
                     <span class="selector-desc">
@@ -2565,7 +2770,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="creative-poster-redesigns">
-                  <img class="selector-thumb" src="assets/creative-work/berserk-poster-redesign/berserk-logo-square.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/creative-work/berserk-poster-redesign/berserk-logo-square.png" alt="" />
                   <span>
                     <span class="selector-title">Poster Redesigns</span>
                     <span class="selector-desc">
@@ -2583,7 +2788,7 @@
             <div class="viewer-content" data-view="creative-pathfinder">
               <h3>Pathfinder</h3>
               <div class="video-embed">
-                <iframe width="560" height="315" src="https://www.youtube.com/embed/rduOw_oshqM?si=JKRMSKOS6UJrs9jK" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                <iframe width="560" height="315" data-src="https://www.youtube.com/embed/rduOw_oshqM?si=JKRMSKOS6UJrs9jK" data-unload-on-hide title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
               </div>
               <p>
                 A video product pitch I scripted, storyboarded, drew myself for DESINV 21 (Visual
@@ -2594,7 +2799,9 @@
                 <div class="gallery-scroll">
                   <img
                     id="pathfinder-image"
-                    src="assets/creative-work/pathfinder-logo.png"
+                    data-src="assets/creative-work/pathfinder-logo.png"
+                    loading="lazy"
+                    decoding="async"
                     alt="Pathfinder work sample"
                   />
                 </div>
@@ -2613,7 +2820,9 @@
                 <div class="gallery-scroll gallery-scroll--poster">
                   <img
                     id="berserk-poster-image"
-                    src="assets/creative-work/berserk-poster-redesign/magazine%20cover.png"
+                    data-src="assets/creative-work/berserk-poster-redesign/magazine%20cover.png"
+                    loading="lazy"
+                    decoding="async"
                     alt="Berserk poster redesign"
                   />
                 </div>
@@ -2628,21 +2837,23 @@
               <h3>Leaving Paradise</h3>
               <div class="lp-link-row" aria-label="Leaving Paradise links">
                 <a class="lp-link" href="https://www.leavingparadise.com/" target="_blank" rel="noreferrer" aria-label="Leaving Paradise website" title="Website">
-                  <img src="assets/app-icons/ico/msie1.ico" alt="" />
+                  <img data-src="assets/app-icons/ico/msie1.ico" alt="" />
                 </a>
                 <a class="lp-link" href="https://www.instagram.com/dawnmakersfilms/" target="_blank" rel="noreferrer" aria-label="Dawn Makers Films Instagram" title="Instagram">
-                  <img src="assets/social-icons/instagram-icon.png" alt="" />
+                  <img data-src="assets/social-icons/instagram-icon.png" alt="" />
                 </a>
                 <a class="lp-link" href="https://www.youtube.com/@dawnmakersfilms" target="_blank" rel="noreferrer" aria-label="Dawn Makers Films YouTube" title="YouTube">
-                  <img class="lp-link-youtube-icon" src="assets/social-icons/youtube-icon.png" alt="" />
+                  <img class="lp-link-youtube-icon" data-src="assets/social-icons/youtube-icon.png" alt="" />
                 </a>
                 <a class="lp-link" href="https://www.tiktok.com/@leavingparadisefilm" target="_blank" rel="noreferrer" aria-label="Leaving Paradise TikTok" title="TikTok">
-                  <img src="assets/social-icons/tiktok-icon.png" alt="" />
+                  <img data-src="assets/social-icons/tiktok-icon.png" alt="" />
                 </a>
               </div>
               <img
                 class="writing-image lp-photo-image"
-                src="assets/creative-work/lp-photo.png"
+                data-src="assets/optimized/lp-photo-1600.jpg"
+                loading="lazy"
+                decoding="async"
                 alt="Leaving Paradise artwork"
               />
               <p>
@@ -2669,7 +2880,9 @@
                 <div class="gallery-scroll gallery-scroll--poster">
                   <img
                     id="my-brothers-ghost-image"
-                    src="assets/creative-work/my-brothers-ghost-01.jpg"
+                    data-src="assets/creative-work/my-brothers-ghost-01.jpg"
+                    loading="lazy"
+                    decoding="async"
                     alt="My Brother's Ghost in production 2026 poster"
                   />
                 </div>
@@ -2704,7 +2917,7 @@
             </div>
             <div class="study-toolbar" aria-label="Explorer toolbar">
               <button class="study-tool-button" id="study-up" type="button" title="Up one level">
-                <img src="assets/app-icons/ico/directory_open.ico" alt="" />
+                <img data-src="assets/app-icons/ico/directory_open.ico" alt="" />
                 Up
               </button>
               <div class="vertical-bar" aria-hidden="true"></div>
@@ -2715,7 +2928,7 @@
                 aria-pressed="true"
                 title="List view"
               >
-                <img src="assets/app-icons/ico/appwizard_list.ico" alt="" />
+                <img data-src="assets/app-icons/ico/appwizard_list.ico" alt="" />
                 List
               </button>
               <button
@@ -2725,7 +2938,7 @@
                 aria-pressed="false"
                 title="Gallery view"
               >
-                <img src="assets/app-icons/ico/user_card_view.ico" alt="" />
+                <img data-src="assets/app-icons/ico/user_card_view.ico" alt="" />
                 Gallery
               </button>
             </div>
@@ -2758,15 +2971,15 @@
                   <div class="study-preview-body" id="study-preview-body"></div>
                   <div class="study-preview-actions">
                     <button id="study-open-window" type="button" disabled>
-                      <img src="assets/app-icons/ico/document.ico" alt="" />
+                      <img data-src="assets/app-icons/ico/document.ico" alt="" />
                       Open in window
                     </button>
                     <button id="study-open-tab" type="button" disabled>
-                      <img src="assets/app-icons/ico/html2.ico" alt="" />
+                      <img data-src="assets/app-icons/ico/html2.ico" alt="" />
                       Open in new tab
                     </button>
                     <button id="study-download" type="button" disabled>
-                      <img src="assets/app-icons/ico/floppy_drive_3-5.ico" alt="" />
+                      <img data-src="assets/app-icons/ico/floppy_drive_3-5.ico" alt="" />
                       Download
                     </button>
                   </div>
@@ -2795,7 +3008,7 @@
             <ul class="selector-list">
               <li>
                 <button class="selector-item is-active" type="button" data-view="writing-structural-bioinformatics">
-                  <img class="selector-thumb" src="assets/app-icons/ico/document.ico" alt="" />
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/document.ico" alt="" />
                   <span>
                     <span class="selector-title">Structural Bioinformatics</span>
                     <span class="selector-desc">
@@ -2806,7 +3019,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="writing-biocomputing-market-analysis">
-                  <img class="selector-thumb" src="assets/app-icons/ico/bar_graph.ico" alt="" />
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/bar_graph.ico" alt="" />
                   <span>
                     <span class="selector-title">Biocomputing Market Analysis</span>
                     <span class="selector-desc">
@@ -2817,7 +3030,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="writing-tcp-congestion-control">
-                  <img class="selector-thumb" src="assets/app-icons/ico/network_normal_two_pcs.ico" alt="" />
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/network_normal_two_pcs.ico" alt="" />
                   <span>
                     <span class="selector-title">TCP Congestion Control</span>
                     <span class="selector-desc">
@@ -2828,9 +3041,9 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="writing-frontiers">
-                  <img class="selector-thumb" src="assets/app-icons/ico/notepad.ico" alt="" />
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/notepad.ico" alt="" />
                   <span>
-                    <span class="selector-title">Frontiers in Microbial Systems Biology</span>
+                    <span class="selector-title">Programmable Biological Decision Units</span>
                     <span class="selector-desc">
                       Spring 2025
                     </span>
@@ -2839,7 +3052,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="writing-genomic">
-                  <img class="selector-thumb" src="assets/app-icons/ico/xml.ico" alt="" />
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/xml.ico" alt="" />
                   <span>
                     <span class="selector-title">Genomic Mechanisms Driving Fungal Resilience</span>
                     <span class="selector-desc">
@@ -2868,7 +3081,7 @@
               <p>Writing project covering TCP congestion control behavior, throughput adaptation, and network performance tradeoffs.</p>
             </div>
             <div class="viewer-content is-hidden" data-view="writing-frontiers">
-              <h3>Frontiers in Microbial Systems Biology</h3>
+              <h3>Microbial Edge Computing: From Biosensors to Programmable Biological Decision Units</h3>
               <p>Spring 2025, 10 pgs</p>
               <div class="pdf-actions">
                 <button type="button" id="open-frontiers-pdf">Open in Window</button>
@@ -2881,13 +3094,31 @@
                   Open in new tab
                 </a>
               </div>
+              <div class="gallery-frame" id="frontiers-pdf-gallery">
+                <div class="gallery-scroll gallery-scroll--pdf">
+                  <img
+                    id="frontiers-slide-image"
+                    data-src="assets/writing/mec-slides/mec-page-4.png"
+                    loading="lazy"
+                    decoding="async"
+                    alt="Microbial Edge Computing slide 4"
+                  />
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="frontiers-slide-prev">Previous</button>
+                  <span class="gallery-counter" id="frontiers-slide-counter" aria-live="polite">1 of 2</span>
+                  <button type="button" id="frontiers-slide-next">Next</button>
+                </div>
+              </div>
               <p>This was a final project for BIOE 135 with Professor Adam Arkin. The drawings were a bit rushed but it was really fun to make!</p>
             </div>
             <div class="viewer-content is-hidden" data-view="writing-genomic">
               <h3>Genomic Mechanisms Driving Fungal Resilience, Summer 2024</h3>
               <img
                 class="writing-image"
-                src="assets/writing/behind-the-scene.png"
+                data-src="assets/writing/behind-the-scene.png"
+                loading="lazy"
+                decoding="async"
                 alt="Behind the scenes writing visual"
               />
               <p>Shah, K., Deyett, E., Gao, Y., Shanker, R., Mahendra, S. Behind the scenes: Genomic mechanisms driving fungal resilience and response to fluorinated compounds. <em>In Prep.</em></p>
@@ -2911,7 +3142,7 @@
             <ul class="selector-list">
               <li>
                 <button class="selector-item is-active" type="button" data-view="modeling-stand-still-drop">
-                  <img class="selector-thumb" src="assets/modeling-icons/standstill-logo.jpg" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/standstill-logo.jpg" alt="" />
                   <span>
                     <span class="selector-title">Stand Still Drop</span>
                     <span class="selector-desc">March 2026</span>
@@ -2920,7 +3151,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-garb-merch-promo-shoot">
-                  <img class="selector-thumb" src="assets/modeling-icons/garb-logo.jpeg" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/garb-logo.jpeg" alt="" />
                   <span>
                     <span class="selector-title">Garb Merch Promo Shoot</span>
                     <span class="selector-desc">February 2026</span>
@@ -2928,8 +3159,26 @@
                 </button>
               </li>
               <li>
+                <button class="selector-item" type="button" data-view="modeling-garb-cirque-du-moi-runway-show">
+                  <img class="selector-thumb" data-src="assets/modeling-icons/garb-logo.jpeg" alt="" />
+                  <span>
+                    <span class="selector-title">Garb "Cirque du Moi" Runway Show</span>
+                    <span class="selector-desc">December 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="modeling-garb-garbage-runway-show-oct2025">
+                  <img class="selector-thumb" data-src="assets/modeling-icons/garb-logo.jpeg" alt="" />
+                  <span>
+                    <span class="selector-title">Garb "Garb-age" Runway Show</span>
+                    <span class="selector-desc">October 2025</span>
+                  </span>
+                </button>
+              </li>
+              <li>
                 <button class="selector-item" type="button" data-view="modeling-club-rambutan-runway-show">
-                  <img class="selector-thumb" src="assets/modeling-icons/club-rambutan.jpg" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/club-rambutan.jpg" alt="" />
                   <span>
                     <span class="selector-title">Club Rambutan Runway Show</span>
                     <span class="selector-desc">September 2025</span>
@@ -2938,7 +3187,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-arthaus-promo-shoot">
-                  <img class="selector-thumb" src="assets/modeling-icons/arthaus-logo.jpg" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/arthaus-logo.jpg" alt="" />
                   <span>
                     <span class="selector-title">Arthaus Promo Shoot</span>
                     <span class="selector-desc">September 2025</span>
@@ -2947,7 +3196,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-xoxo510-x-brainscramble-shoot">
-                  <img class="selector-thumb" src="assets/modeling-icons/xoxo510.jpg" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/xoxo510.jpg" alt="" />
                   <span>
                     <span class="selector-title">XOXO510 x BrainScramble Shoot</span>
                     <span class="selector-desc">May 2025</span>
@@ -2956,7 +3205,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-sonder-lookbook-shoot-2">
-                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Sonder Lookbook Shoot 2</span>
                     <span class="selector-desc">May 2025</span>
@@ -2965,7 +3214,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-sonder-lookbook-shoot">
-                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Sonder Lookbook Shoot</span>
                     <span class="selector-desc">May 2025</span>
@@ -2974,7 +3223,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-saturn-los-angeles-gaia-ss25-shoot">
-                  <img class="selector-thumb" src="assets/modeling-icons/saturn-icon.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/optimized/saturn-icon-96.png" alt="" />
                   <span>
                     <span class="selector-title">Saturn Los Angeles GAIA SS25 Shoot</span>
                     <span class="selector-desc">April 2025</span>
@@ -2983,16 +3232,16 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-garb-garbage-runway-show">
-                  <img class="selector-thumb" src="assets/modeling-icons/garb-logo.jpeg" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/garb-logo.jpeg" alt="" />
                   <span>
-                    <span class="selector-title">Garb "Garb-age" Runway Show</span>
+                    <span class="selector-title">Garb "Sub-urban" Runway Show</span>
                     <span class="selector-desc">April 2025</span>
                   </span>
                 </button>
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-garb-means-business-shoot">
-                  <img class="selector-thumb" src="assets/modeling-icons/garb-logo.jpeg" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/garb-logo.jpeg" alt="" />
                   <span>
                     <span class="selector-title">Garb Means Business Shoot</span>
                     <span class="selector-desc">January 2025</span>
@@ -3001,7 +3250,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-vampire-shoot">
-                  <img class="selector-thumb" src="assets/app-icons/ico/game_spider.ico" alt="" />
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/game_spider.ico" alt="" />
                   <span>
                     <span class="selector-title">Vampire Shoot</span>
                     <span class="selector-desc">January 2025</span>
@@ -3010,16 +3259,16 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-garb-garbage-runway">
-                  <img class="selector-thumb" src="assets/modeling-icons/garb-logo.jpeg" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/garb-logo.jpeg" alt="" />
                   <span>
-                    <span class="selector-title">Garb "Garb-age" Runway</span>
+                    <span class="selector-title">Garb "Garb-age" Runway Show</span>
                     <span class="selector-desc">December 2024</span>
                   </span>
                 </button>
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-crescendo-lookbook-shoot-2">
-                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">FAST Crescendo Lookbook Shoot 2</span>
                     <span class="selector-desc">December 2024</span>
@@ -3028,7 +3277,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-crescendo-lookbook-shoot">
-                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Crescendo Lookbook Shoot</span>
                     <span class="selector-desc">October 2024</span>
@@ -3037,7 +3286,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-reverie-runway-show">
-                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Reverie Runway Show</span>
                     <span class="selector-desc">April 2024</span>
@@ -3046,7 +3295,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-reverie-lookbook-shoot">
-                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Reverie Lookbook Shoot</span>
                     <span class="selector-desc">March 2024</span>
@@ -3055,7 +3304,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-fast-devotion-lookbook-shoot">
-                  <img class="selector-thumb" src="assets/modeling-icons/fast-logo.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/modeling-icons/fast-logo.png" alt="" />
                   <span>
                     <span class="selector-title">Fast Devotion Lookbook Shoot</span>
                     <span class="selector-desc">November 2023</span>
@@ -3064,7 +3313,7 @@
               </li>
               <li>
                 <button class="selector-item" type="button" data-view="modeling-saturn-la-black-friday-drop">
-                  <img class="selector-thumb" src="assets/modeling-icons/saturn-icon.png" alt="" />
+                  <img class="selector-thumb" data-src="assets/optimized/saturn-icon-96.png" alt="" />
                   <span>
                     <span class="selector-title">Saturn Los Angeles Black Friday Drop</span>
                     <span class="selector-desc">October 2023</span>
@@ -3087,11 +3336,26 @@
               <div data-modeling-links="modeling-garb-merch-promo-shoot"></div>
               <div data-modeling-gallery="modeling-garb-merch-promo-shoot"></div>
             </div>
+            <div class="viewer-content is-hidden" data-view="modeling-garb-cirque-du-moi-runway-show">
+              <h3>Garb "Cirque du Moi" Runway Show</h3>
+              <p class="project-view-subtitle">December 2025</p>
+              <div data-modeling-links="modeling-garb-cirque-du-moi-runway-show"></div>
+              <div data-modeling-gallery="modeling-garb-cirque-du-moi-runway-show"></div>
+            </div>
+            <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway-show-oct2025">
+              <h3>Garb "Garb-age" Runway Show</h3>
+              <p class="project-view-subtitle">October 2025</p>
+              <div data-modeling-links="modeling-garb-garbage-runway-show-oct2025"></div>
+              <div data-modeling-gallery="modeling-garb-garbage-runway-show-oct2025"></div>
+            </div>
             <div class="viewer-content is-hidden" data-view="modeling-club-rambutan-runway-show">
               <h3>Club Rambutan Runway Show</h3>
               <p class="project-view-subtitle">September 2025</p>
               <div data-modeling-links="modeling-club-rambutan-runway-show"></div>
               <div data-modeling-gallery="modeling-club-rambutan-runway-show"></div>
+              <p>Talent: Rohin, Jay, Biana</p>
+              <p>Designer: Cole Mueller</p>
+              <p>Photo/Video: Jean Claude Cubias, Bridget Hawkley, Felix Dong</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-arthaus-promo-shoot">
               <h3>Arthaus Promo Shoot</h3>
@@ -3124,7 +3388,7 @@
               <div data-modeling-gallery="modeling-saturn-los-angeles-gaia-ss25-shoot"></div>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway-show">
-              <h3>Garb "Garb-age" Runway Show</h3>
+              <h3>Garb "Sub-urban" Runway Show</h3>
               <p class="project-view-subtitle">April 2025</p>
               <div data-modeling-links="modeling-garb-garbage-runway-show"></div>
               <div data-modeling-gallery="modeling-garb-garbage-runway-show"></div>
@@ -3140,6 +3404,10 @@
               <p class="project-view-subtitle">January 2025</p>
               <div data-modeling-links="modeling-vampire-shoot"></div>
               <div data-modeling-gallery="modeling-vampire-shoot"></div>
+              <p>Talent: Rohin Shanker, Joanna Zhu</p>
+              <p>Stylist: Rohin Shanker</p>
+              <p>Beauty: Emma Trottier</p>
+              <p>Photographer: Ryan Nava</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway">
               <h3>Garb "Garb-age" Runway</h3>
@@ -3152,24 +3420,38 @@
               <p class="project-view-subtitle">December 2024</p>
               <div data-modeling-links="modeling-fast-crescendo-lookbook-shoot-2"></div>
               <div data-modeling-gallery="modeling-fast-crescendo-lookbook-shoot-2"></div>
+              <p>Talent: Rohin Shanker, Charlotte Gardner</p>
+              <p>Stylist: Dash Davis</p>
+              <p>Makeup: Kaylee Chavez</p>
+              <p>Photographer: Charlize Chu</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-crescendo-lookbook-shoot">
               <h3>Fast Crescendo Lookbook Shoot</h3>
               <p class="project-view-subtitle">October 2024</p>
               <div data-modeling-links="modeling-fast-crescendo-lookbook-shoot"></div>
               <div data-modeling-gallery="modeling-fast-crescendo-lookbook-shoot"></div>
+              <p>Talent: Rohin Shanker, Valeria Hernandez, Angel, Chappelle</p>
+              <p>Stylist: Trista Lenford-Norris</p>
+              <p>Beauty: Trista Lenford-Norris, Gigi Guan</p>
+              <p>Photographers: Ryan Nava, Will Yau</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-reverie-runway-show">
               <h3>Fast Reverie Runway Show</h3>
               <p class="project-view-subtitle">April 2024</p>
               <div data-modeling-links="modeling-fast-reverie-runway-show"></div>
               <div data-modeling-gallery="modeling-fast-reverie-runway-show"></div>
+              <p>Talent: Rohin Shanker</p>
+              <p>Designer: Katherine Cui</p>
+              <p>Photographer: Fin Pimnara</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-reverie-lookbook-shoot">
               <h3>Fast Reverie Lookbook Shoot</h3>
               <p class="project-view-subtitle">March 2024</p>
               <div data-modeling-links="modeling-fast-reverie-lookbook-shoot"></div>
               <div data-modeling-gallery="modeling-fast-reverie-lookbook-shoot"></div>
+              <p>Talent: Rohin Shanker, Brooklyn Renee</p>
+              <p>Stylist: Mikey Fitzgerald</p>
+              <p>Photographer: Agodi</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-devotion-lookbook-shoot">
               <h3>Fast Devotion Lookbook Shoot</h3>
@@ -3204,7 +3486,8 @@
           <div class="pdf-viewer">
             <iframe
               id="pdf-iframe"
-              src="assets/writing/MEC-Comment.pdf#page=1&zoom=100&toolbar=0&navpanes=0"
+              data-src="assets/writing/MEC-Comment.pdf#page=1&zoom=100&toolbar=0&navpanes=0"
+              data-unload-on-hide
               title="MEC-Comment.pdf"
             ></iframe>
           </div>
@@ -3222,6 +3505,7 @@
           <div class="pdf-viewer">
             <iframe
               id="drone-presentation-iframe"
+              data-unload-on-hide
               title="Drone Navigation Through Constrained Gate Environments presentation"
             ></iframe>
           </div>
@@ -3237,7 +3521,7 @@
         </div>
         <div class="window-body">
           <div class="pdf-viewer">
-            <iframe id="study-pdf-iframe" title="Study resource PDF"></iframe>
+            <iframe id="study-pdf-iframe" data-unload-on-hide title="Study resource PDF"></iframe>
           </div>
         </div>
       </div>
@@ -3254,7 +3538,11 @@
         <div class="window-body">
           <div class="ms-app" aria-label="Minesweeper game">
             <div class="ms-lose-banner" id="ms-lose-banner" aria-hidden="true">
-              <img src="assets/minesweeper_assets/YOU-LOSE.png" alt="You Lose" />
+              <img
+                data-src="assets/optimized/minesweeper-you-lose-640.png"
+                decoding="async"
+                alt="You Lose"
+              />
             </div>
             <div class="ms-top-panel">
               <div class="ms-counter" id="ms-mines" aria-label="Mines remaining">
@@ -3297,7 +3585,7 @@
           <div class="sol-app" aria-label="Solitaire game">
             <div class="sol-toolbar">
               <button class="sol-reset" id="sol-reset" type="button" aria-label="Reset game" title="Reset game">
-                <img src="assets/solitaire-cards/reset-button.png" alt="" />
+                <img data-src="assets/solitaire-cards/reset-button.png" alt="" />
               </button>
               <div class="ms-counter sol-counter" id="sol-moves" aria-label="Solitaire moves">
                 <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
@@ -3305,7 +3593,7 @@
                 <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
               </div>
               <button class="sol-undo" id="sol-undo" type="button" aria-label="Undo move" title="Undo move" disabled>
-                <img src="assets/solitaire-cards/undo-button.png" alt="" />
+                <img data-src="assets/solitaire-cards/undo-button.png" alt="" />
               </button>
               <span class="sol-status" id="sol-status" role="status" aria-live="polite"></span>
             </div>
@@ -3324,8 +3612,9 @@
             <div class="sol-victory-video-overlay" id="sol-victory-video-overlay" aria-hidden="true">
               <video
                 id="sol-victory-video"
-                src="assets/solitaire-cards/victory-royale.webm"
-                preload="auto"
+                data-src="assets/solitaire-cards/victory-royale.webm"
+                data-unload-on-hide
+                preload="none"
                 playsinline
               ></video>
               <canvas id="sol-victory-canvas" aria-hidden="true"></canvas>
@@ -3372,7 +3661,7 @@
           <p class="credits-line">
             <img
               class="credits-logo-icon"
-              src="assets/app-icons/ico/windows.ico"
+              data-src="assets/app-icons/ico/windows.ico"
               alt=""
               aria-hidden="true"
             />
@@ -3385,7 +3674,7 @@
           <p class="credits-line">
             <img
               class="credits-css-icon"
-              src="assets/app-icons/ico/computer.ico"
+              data-src="assets/app-icons/ico/computer.ico"
               alt=""
               aria-hidden="true"
             />
@@ -3398,7 +3687,9 @@
           <p class="credits-line">
             <img
               class="credits-thumb"
-              src="assets/mountain-and-sky.png"
+              data-src="assets/mountain-and-sky.png"
+              loading="lazy"
+              decoding="async"
               alt=""
               aria-hidden="true"
             />
@@ -3407,11 +3698,27 @@
           <p class="credits-line">
             <img
               class="credits-thumb"
-              src="assets/background.jpg"
+              data-src="assets/optimized/background-2200.jpg"
+              loading="lazy"
+              decoding="async"
               alt=""
               aria-hidden="true"
             />
             Desktop wallpaper via Asdal Stock Photos
+          </p>
+          <p class="credits-line">
+            <span class="credits-solitaire-icon" aria-hidden="true"></span>
+            <span>
+              Solitaire cards:
+              <a
+                href="https://ahai64.itch.io/minimalpoker?download"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Minimal Poker Pack
+              </a>
+              by Ahai64
+            </span>
           </p>
         </div>
       </div>
@@ -3506,7 +3813,7 @@
           <ul class="socials-list">
             <li>
               <a href="https://www.linkedin.com/in/rohin-shanker/" target="_blank" rel="noreferrer" title="View my LinkedIn profile">
-                <img class="socials-logo" src="assets/app-icons/ico/users_green.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/users_green.ico" alt="" />
                 <span>
                   <span class="socials-name">LinkedIn</span>
                   <span class="socials-username">@rohin-shanker</span>
@@ -3515,7 +3822,7 @@
             </li>
             <li>
               <a href="mailto:rohin@example.com" title="Send me an email">
-                <img class="socials-logo" src="assets/app-icons/ico/mailbox_world.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/mailbox_world.ico" alt="" />
                 <span>
                   <span class="socials-name">Email</span>
                   <span class="socials-username">rohins [at] berkeley [dot] edu</span>
@@ -3524,7 +3831,7 @@
             </li>
             <li>
               <a href="https://github.com/rohinshanker" target="_blank" rel="noreferrer" title="Browse my GitHub repositories">
-                <img class="socials-logo" src="assets/app-icons/ico/gears.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/gears.ico" alt="" />
                 <span>
                   <span class="socials-name">GitHub</span>
                   <span class="socials-username">@rohinshanker</span>
@@ -3533,7 +3840,7 @@
             </li>
             <li>
               <a href="https://substack.com/@rohins" target="_blank" rel="noreferrer" title="Read my Substack posts">
-                <img class="socials-logo" src="assets/app-icons/ico/newspaper.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/newspaper.ico" alt="" />
                 <span>
                   <span class="socials-name">Substack</span>
                   <span class="socials-username">@rohins</span>
@@ -3542,7 +3849,7 @@
             </li>
             <li>
               <a href="https://open.spotify.com/user/rohindaman?si=ee2c1491d5eb48fe" target="_blank" rel="noreferrer" title="Check out my Spotify profile">
-                <img class="socials-logo" src="assets/app-icons/ico/keyboard_musical_midi.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/keyboard_musical_midi.ico" alt="" />
                 <span>
                   <span class="socials-name">Spotify</span>
                   <span class="socials-username">@rohin</span>
@@ -3551,7 +3858,7 @@
             </li>
             <li>
               <a href="https://www.costarastrology.com/" target="_blank" rel="noreferrer" title="Find me on Co-Star">
-                <img class="socials-logo" src="assets/app-icons/ico/utopia_smiley.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/utopia_smiley.ico" alt="" />
                 <span>
                   <span class="socials-name">Co-Star</span>
                   <span class="socials-username">@rohins</span>
@@ -3560,7 +3867,7 @@
             </li>
             <li>
               <a href="https://www.instagram.com/rohin.personal" target="_blank" rel="noreferrer" title="Open my personal Instagram">
-                <img class="socials-logo" src="assets/app-icons/ico/camera.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/camera.ico" alt="" />
                 <span>
                   <span class="socials-name">Instagram (personal)</span>
                   <span class="socials-username">@rrohinss</span>
@@ -3569,7 +3876,7 @@
             </li>
             <li>
               <a href="https://www.instagram.com/rohin.food" target="_blank" rel="noreferrer" title="Open my food Instagram">
-                <img class="socials-logo" src="assets/app-icons/ico/camera3.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/camera3.ico" alt="" />
                 <span>
                   <span class="socials-name">Instagram (food blog)</span>
                   <span class="socials-username">@cremebrulee4lyfe</span>
@@ -3578,7 +3885,7 @@
             </li>
             <!-- <li>
               <a href="https://steamcommunity.com/id/cloudstryder/" target="_blank" rel="noreferrer" title="Visit my Steam profile">
-                <img class="socials-logo" src="assets/app-icons/ico/joystick_alt.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/joystick_alt.ico" alt="" />
                 <span>
                   <span class="socials-name">Steam</span>
                   <span class="socials-username">@cloudstryder</span>
@@ -3587,7 +3894,7 @@
             </li>
             <li> -->
               <a href="https://link.clashroyale.com/invite/friend/en?tag=28CYYU08P&token=kb6jg2ap&platform=iOS" target="_blank" rel="noreferrer" title="Add me in Clash Royale">
-                <img class="socials-logo" src="assets/app-icons/ico/game_freecell.ico" alt="" />
+                <img class="socials-logo" data-src="assets/app-icons/ico/game_freecell.ico" alt="" />
                 <span>
                   <span class="socials-name">Clash Royale</span>
                   <span class="socials-username">@[Rohin]</span>
@@ -3671,7 +3978,7 @@
           <div class="clock-section">
             <div class="clock-frame clock-slot-frame" aria-label="Clock image slot">
               <div class="clock-display clock-slot">
-                <img id="clock-image" src="assets/day.png" alt="Day scene" />
+                <img id="clock-image" data-src="assets/day.png" alt="Day scene" />
               </div>
             </div>
             <div class="clock-frame">
@@ -3680,6 +3987,19 @@
             <div class="clock-quote" id="clock-quote">"Time is the canvas; moments are the paint."</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="window random-event-window is-hidden" id="random-event-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">April 20</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="random-event-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <img data-src="assets/random%20events/swed.gif" decoding="async" alt="" />
+        <button class="random-event-ok" type="button" id="random-event-ok">OK</button>
       </div>
     </div>
 
@@ -3711,6 +4031,9 @@
       const calendarClock = document.getElementById("calendar-clock");
       const clockImage = document.getElementById("clock-image");
       const clockQuote = document.getElementById("clock-quote");
+      const randomEventWindow = document.getElementById("random-event-window");
+      const randomEventClose = document.getElementById("random-event-close");
+      const randomEventOk = document.getElementById("random-event-ok");
       const openFrontiersPdf = document.getElementById("open-frontiers-pdf");
       const openDronePresentation = document.getElementById("open-drone-presentation");
       const pdfIframe = document.getElementById("pdf-iframe");
@@ -3778,7 +4101,7 @@
       };
 
       const updateCalendarClock = () => {
-        if (!calendarClock) return;
+        if (!calendarClock || !calendarPopout.classList.contains("is-open")) return;
         const now = new Date();
         const hours = String(now.getHours()).padStart(2, "0");
         const minutes = String(now.getMinutes()).padStart(2, "0");
@@ -3790,7 +4113,7 @@
       };
 
       const updateClockImage = (now) => {
-        if (!clockImage) return;
+        if (!clockImage || !calendarPopout.classList.contains("is-open")) return;
         const hour = now.getHours();
         let src = "assets/night.png";
         let label = "Night scene";
@@ -3812,26 +4135,64 @@
         }
       };
 
-      const resetWindowToFirstTab = (win) => {
+      const deferredMediaElements = (root) => {
+        if (!root) return [];
+        const elements = root.matches && root.matches("[data-src]") ? [root] : [];
+        return [...elements, ...root.querySelectorAll("[data-src]")];
+      };
+
+      const loadDeferredMedia = (root, visibleOnly = false) => {
+        deferredMediaElements(root).forEach((element) => {
+          if (visibleOnly && element.closest(".viewer-content.is-hidden")) return;
+          if (element.getAttribute("src") || !element.dataset.src) return;
+          element.setAttribute("src", element.dataset.src);
+          if (element.matches("video, audio")) element.load();
+        });
+      };
+
+      let activateVisibleContent = (root) => {
+        loadDeferredMedia(root, true);
+      };
+
+      const stopMediaPlayback = (root) => {
+        if (!root) return;
+
+        root.querySelectorAll("video, audio").forEach((media) => {
+          media.pause();
+          if (!media.matches("[data-unload-on-hide]")) return;
+          const src = media.getAttribute("src");
+          if (src) media.dataset.src = src;
+          media.removeAttribute("src");
+          media.load();
+        });
+
+        root.querySelectorAll("iframe[data-unload-on-hide]").forEach((iframe) => {
+          const src = iframe.getAttribute("src");
+          if (src) iframe.dataset.src = src;
+          iframe.removeAttribute("src");
+        });
+      };
+
+      const selectWindowTab = (win, viewId) => {
         if (!win) return;
         const selectorButtons = win.querySelectorAll(".selector-item");
-        if (!selectorButtons.length) return;
-
         const viewerPanels = win.querySelectorAll(".viewer-content");
-        const firstButton = selectorButtons[0];
-        const firstViewId = firstButton.getAttribute("data-view");
 
-        selectorButtons.forEach((button, index) => {
-          button.classList.toggle("is-active", index === 0);
+        selectorButtons.forEach((button) => {
+          button.classList.toggle("is-active", button.getAttribute("data-view") === viewId);
         });
 
-        if (!viewerPanels.length) return;
-        viewerPanels.forEach((panel, index) => {
-          const isMatch = firstViewId
-            ? panel.getAttribute("data-view") === firstViewId
-            : index === 0;
+        viewerPanels.forEach((panel) => {
+          const isMatch = panel.getAttribute("data-view") === viewId;
           panel.classList.toggle("is-hidden", !isMatch);
+          if (!isMatch) stopMediaPlayback(panel);
         });
+      };
+
+      const resetWindowToFirstTab = (win) => {
+        if (!win) return;
+        const firstButton = win.querySelector(".selector-item");
+        if (firstButton) selectWindowTab(win, firstButton.getAttribute("data-view"));
       };
 
       const restartWindowAnimation = (win, animationClass) => {
@@ -3861,10 +4222,131 @@
         return rect.width <= 760 && rect.height <= 620;
       };
 
+      const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
+
+      const syncPortfolioBodyHeight = (win, outerHeight) => {
+        if (!win || !win.classList.contains("portfolio-window")) return;
+        const body = win.querySelector(".window-body");
+        if (!body) return;
+        const titleBar = win.querySelector(".title-bar");
+        const titleHeight = titleBar ? titleBar.offsetHeight : 22;
+        const nextHeight = Math.max(180, Math.round(outerHeight - titleHeight - 18));
+        body.style.height = `${nextHeight}px`;
+        body.style.maxHeight = `${nextHeight}px`;
+      };
+
+      const setPortfolioExpandedState = (win, width, height) => {
+        if (!win || !win.classList.contains("portfolio-window")) return;
+        win.classList.toggle("is-window-expanded", width >= 780 || height >= 560);
+      };
+
+      const setPortfolioResponsiveState = (win, width, height) => {
+        if (!win || !win.classList.contains("portfolio-window")) return;
+        if (!width || !height) {
+          const rect = win.getBoundingClientRect();
+          width = rect.width;
+          height = rect.height;
+        }
+        if (!width || !height) return;
+
+        win.classList.toggle("is-portfolio-narrow", width < 540);
+        win.classList.toggle("is-portfolio-short", height < 360);
+        setPortfolioExpandedState(win, width, height);
+      };
+
+      const isPortfolioResizeCorner = (win, event) => {
+        if (!win || !event) return false;
+        const rect = win.getBoundingClientRect();
+        const hitSize = 24;
+        return (
+          event.clientX >= rect.right - hitSize &&
+          event.clientX <= rect.right &&
+          event.clientY >= rect.bottom - hitSize &&
+          event.clientY <= rect.bottom
+        );
+      };
+
+      const initPortfolioCornerResize = () => {
+        document.querySelectorAll(".portfolio-window").forEach((win) => {
+          win.classList.add("is-corner-resizable");
+
+          win.addEventListener("pointermove", (event) => {
+            if (win.classList.contains("is-manual-resizing")) return;
+            win.classList.toggle("is-resize-hover", isPortfolioResizeCorner(win, event));
+          });
+
+          win.addEventListener("pointerleave", () => {
+            if (!win.classList.contains("is-manual-resizing")) {
+              win.classList.remove("is-resize-hover");
+            }
+          });
+
+          win.addEventListener("pointerdown", (event) => {
+            if (!isPortfolioResizeCorner(win, event)) return;
+            if (event.button !== 0 && event.pointerType !== "touch") return;
+            event.preventDefault();
+            event.stopPropagation();
+            bringWindowToFront(win);
+            expandedWindowState.delete(win);
+
+            const rect = win.getBoundingClientRect();
+            const startX = event.clientX;
+            const startY = event.clientY;
+            const startWidth = rect.width;
+            const startHeight = rect.height;
+            const minWidth = Math.min(280, Math.max(240, window.innerWidth - 24));
+            const minHeight = Math.min(220, Math.max(180, window.innerHeight - 96));
+            const maxWidth = Math.max(minWidth, window.innerWidth - rect.left - 12);
+            const maxHeight = Math.max(minHeight, window.innerHeight - rect.top - 58);
+
+            win.classList.remove("app-window--center");
+            win.classList.add("is-manual-resizing");
+            document.body.classList.add("is-resizing-window");
+            win.style.translate = "0 0";
+            win.setPointerCapture(event.pointerId);
+
+            const resizeWindow = (moveEvent) => {
+              const nextWidth = Math.round(
+                clampNumber(startWidth + moveEvent.clientX - startX, minWidth, maxWidth)
+              );
+              const nextHeight = Math.round(
+                clampNumber(startHeight + moveEvent.clientY - startY, minHeight, maxHeight)
+              );
+
+              win.style.width = `${nextWidth}px`;
+              win.style.height = `${nextHeight}px`;
+              syncPortfolioBodyHeight(win, nextHeight);
+              setPortfolioResponsiveState(win, nextWidth, nextHeight);
+            };
+
+            const finishResize = (upEvent) => {
+              if (win.hasPointerCapture(upEvent.pointerId)) {
+                win.releasePointerCapture(upEvent.pointerId);
+              }
+              win.classList.remove("is-manual-resizing");
+              win.classList.remove("is-resize-hover");
+              document.body.classList.remove("is-resizing-window");
+              win.removeEventListener("pointermove", resizeWindow);
+              win.removeEventListener("pointerup", finishResize);
+              win.removeEventListener("pointercancel", finishResize);
+            };
+
+            win.addEventListener("pointermove", resizeWindow);
+            win.addEventListener("pointerup", finishResize);
+            win.addEventListener("pointercancel", finishResize);
+          }, { capture: true });
+
+          setPortfolioResponsiveState(win);
+        });
+      };
+
       const restoreWindowSize = (win) => {
         const saved = expandedWindowState.get(win);
         if (!saved) {
-          if (win) win.classList.remove("is-window-expanded");
+          if (win) {
+            win.classList.remove("is-window-expanded");
+            setPortfolioResponsiveState(win);
+          }
           return;
         }
         const body = win.querySelector(".window-body");
@@ -3883,6 +4365,7 @@
 
         expandedWindowState.delete(win);
         win.classList.remove("is-window-expanded");
+        setPortfolioResponsiveState(win);
       };
 
       const expandSmallWindow = (win) => {
@@ -3911,7 +4394,6 @@
         });
 
         win.classList.remove("app-window--center");
-        win.classList.add("is-window-expanded");
         win.style.translate = "0 0";
         win.style.left = `${nextLeft}px`;
         win.style.top = `${nextTop}px`;
@@ -3919,15 +4401,24 @@
         win.style.height = `${nextHeight}px`;
 
         if (body) {
-          const titleHeight = titleBar ? titleBar.offsetHeight : 22;
-          const nextBodyHeight = Math.max(120, nextHeight - titleHeight - 18);
-          body.style.height = `${nextBodyHeight}px`;
-          body.style.maxHeight = `${nextBodyHeight}px`;
+          if (win.classList.contains("portfolio-window")) {
+            syncPortfolioBodyHeight(win, nextHeight);
+          } else {
+            const titleHeight = titleBar ? titleBar.offsetHeight : 22;
+            const nextBodyHeight = Math.max(120, nextHeight - titleHeight - 18);
+            body.style.height = `${nextBodyHeight}px`;
+            body.style.maxHeight = `${nextBodyHeight}px`;
+          }
         }
+
+        setPortfolioResponsiveState(win, nextWidth, nextHeight);
       };
 
+      const getAppWindow = (appId) =>
+        document.querySelector(`[data-app-window=\"${appId}\"]`);
+
       const setWindowOpen = (appId, open) => {
-        const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
+        const win = getAppWindow(appId);
         if (!win) return;
 
         if (open) {
@@ -3970,15 +4461,16 @@
             win.style.top = `${Math.round(randomTop)}px`;
           }
 
-          if (appId === "windows") {
-            syncDroneProjectVideo();
-          }
+          activateVisibleContent(win);
 
+          setPortfolioResponsiveState(win);
           restartWindowAnimation(win, "is-opening");
           return;
         }
 
         if (win.classList.contains("is-hidden")) return;
+
+        stopMediaPlayback(win);
 
         if (appId === "solitaire") {
           solHideVictoryVideo();
@@ -4354,7 +4846,7 @@
       */
 
       const toggleWindow = (appId) => {
-        const win = document.querySelector(`[data-app-window=\"${appId}\"]`);
+        const win = getAppWindow(appId);
         if (win) {
           const shouldOpen =
             win.classList.contains("is-hidden") ||
@@ -4379,12 +4871,10 @@
         appWindows.forEach((win) => {
           closeAppWindow(win.getAttribute("data-app-window"));
         });
-        if (calendarPopout) {
-          calendarPopout.classList.remove("is-open");
-          calendarPopout.setAttribute("aria-hidden", "true");
-        }
+        closeCalendar();
       };
 
+      initPortfolioCornerResize();
       updateClock();
       setInterval(updateClock, 1000 * 30);
       updateCalendarClock();
@@ -4437,7 +4927,6 @@
 
       document.querySelectorAll(".portfolio-window").forEach((windowEl) => {
         const selectorButtons = windowEl.querySelectorAll(".selector-item");
-        const viewerPanels = windowEl.querySelectorAll(".viewer-content");
         const selectorPanel = windowEl.querySelector(".selector-panel");
         const divider = windowEl.querySelector(".panel-divider");
 
@@ -4446,13 +4935,8 @@
             const viewId = button.getAttribute("data-view");
             if (!viewId) return;
 
-            selectorButtons.forEach((item) => item.classList.remove("is-active"));
-            button.classList.add("is-active");
-
-            viewerPanels.forEach((panel) => {
-              const matches = panel.getAttribute("data-view") === viewId;
-              panel.classList.toggle("is-hidden", !matches);
-            });
+            selectWindowTab(windowEl, viewId);
+            activateVisibleContent(windowEl);
           });
         });
 
@@ -4460,11 +4944,13 @@
           divider.addEventListener("pointerdown", (event) => {
             const body = windowEl.querySelector(".window-body");
             if (!body) return;
+            if (event.button !== 0 && event.pointerType !== "touch") return;
+            event.preventDefault();
             const bodyRect = body.getBoundingClientRect();
             const startX = event.clientX;
             const startWidth = selectorPanel.getBoundingClientRect().width;
             const minWidth = 200;
-            const maxWidth = Math.min(420, bodyRect.width - 220);
+            const maxWidth = Math.max(minWidth, Math.min(420, bodyRect.width - 220));
 
             divider.setPointerCapture(event.pointerId);
 
@@ -4472,16 +4958,21 @@
               const delta = moveEvent.clientX - startX;
               const nextWidth = Math.max(minWidth, Math.min(startWidth + delta, maxWidth));
               selectorPanel.style.width = `${nextWidth}px`;
+              selectorPanel.style.flexBasis = `${nextWidth}px`;
             };
 
             const onUp = (upEvent) => {
-              divider.releasePointerCapture(upEvent.pointerId);
-              divider.removeEventListener("pointermove", onMove);
-              divider.removeEventListener("pointerup", onUp);
+              if (divider.hasPointerCapture(upEvent.pointerId)) {
+                divider.releasePointerCapture(upEvent.pointerId);
+              }
+              window.removeEventListener("pointermove", onMove);
+              window.removeEventListener("pointerup", onUp);
+              window.removeEventListener("pointercancel", onUp);
             };
 
-            divider.addEventListener("pointermove", onMove);
-            divider.addEventListener("pointerup", onUp);
+            window.addEventListener("pointermove", onMove);
+            window.addEventListener("pointerup", onUp);
+            window.addEventListener("pointercancel", onUp);
           });
         }
       });
@@ -4535,7 +5026,37 @@
       const myBrothersGhostNext = document.getElementById("my-brothers-ghost-next");
       let myBrothersGhostIndex = 0;
 
+      const frontiersPdfSlides = [
+        {
+          page: 4,
+          src: "assets/writing/mec-slides/mec-page-4.png",
+          alt: "Microbial Edge Computing slide 4",
+        },
+        {
+          page: 5,
+          src: "assets/writing/mec-slides/mec-page-5.png",
+          alt: "Microbial Edge Computing slide 5",
+        },
+      ];
+      const frontiersSlideImage = document.getElementById("frontiers-slide-image");
+      const frontiersSlidePrev = document.getElementById("frontiers-slide-prev");
+      const frontiersSlideCounter = document.getElementById("frontiers-slide-counter");
+      const frontiersSlideNext = document.getElementById("frontiers-slide-next");
+      let frontiersSlideIndex = 0;
+
       const galleryCounterText = (index, total) => `${index + 1} of ${total}`;
+
+      const bindGalleryNavigation = (previous, next, itemCount, getIndex, setIndex, update) => {
+        if (!previous || !next || !itemCount) return;
+
+        const move = (offset) => {
+          setIndex((getIndex() + offset + itemCount) % itemCount);
+          update();
+        };
+
+        previous.addEventListener("click", () => move(-1));
+        next.addEventListener("click", () => move(1));
+      };
 
       const setupGalleryControlLabels = (root = document) => {
         root.querySelectorAll(".gallery-controls button").forEach((button) => {
@@ -4554,6 +5075,7 @@
         website: "assets/app-icons/ico/msie1.ico",
         instagram: "assets/social-icons/instagram-icon.png",
         camera: "assets/app-icons/ico/camera.ico",
+        paintOld: "assets/app-icons/ico/paint_old.ico",
       };
 
       const modelingBrandLinks = {
@@ -4621,12 +5143,12 @@
           {
             type: "website",
             label: "FAST at Cal website",
-            href: "https://www.fastatcal.org/",
+            href: "https://bit.ly/m/FASTCal",
           },
           {
             type: "instagram",
             label: "FAST at Cal Instagram",
-            href: "https://www.instagram.com/calfast/",
+            href: "https://www.instagram.com/fastcal/",
           },
         ],
         saturnLosAngeles: [
@@ -4643,9 +5165,15 @@
         ],
         vampireShoot: [
           {
-            type: "instagram",
+            type: "camera",
             label: "Ryan Photo Collection Instagram",
             href: "https://www.instagram.com/ryanphotocollection/",
+          },
+          {
+            type: "paintOld",
+            label: "Beauty by 3mm4 Instagram",
+            href: "https://www.instagram.com/beautyby3mm4/",
+            title: "Beauty Instagram",
           },
         ],
       };
@@ -4653,9 +5181,25 @@
       const modelingLinkData = {
         "modeling-stand-still-drop": modelingBrandLinks.standstill,
         "modeling-garb-merch-promo-shoot": modelingBrandLinks.garb,
-        "modeling-club-rambutan-runway-show": modelingBrandLinks.clubRambutan,
+        "modeling-garb-cirque-du-moi-runway-show": modelingBrandLinks.garb,
+        "modeling-garb-garbage-runway-show-oct2025": modelingBrandLinks.garb,
+        "modeling-club-rambutan-runway-show": [
+          ...modelingBrandLinks.clubRambutan,
+          {
+            type: "instagram",
+            label: "Club Rambutan runway post",
+            href: "https://www.instagram.com/p/DQCyVvDkhhr/",
+          },
+        ],
         "modeling-arthaus-promo-shoot": modelingBrandLinks.arthaus,
-        "modeling-xoxo510-x-brainscramble-shoot": modelingBrandLinks.brainscramble,
+        "modeling-xoxo510-x-brainscramble-shoot": [
+          ...modelingBrandLinks.brainscramble,
+          {
+            type: "instagram",
+            label: "XOXO510 Instagram",
+            href: "https://www.instagram.com/xoxo510/",
+          },
+        ],
         "modeling-fast-sonder-lookbook-shoot-2": modelingBrandLinks.fast,
         "modeling-fast-sonder-lookbook-shoot": modelingBrandLinks.fast,
         "modeling-saturn-los-angeles-gaia-ss25-shoot": modelingBrandLinks.saturnLosAngeles,
@@ -4663,10 +5207,47 @@
         "modeling-garb-means-business-shoot": modelingBrandLinks.garb,
         "modeling-vampire-shoot": modelingBrandLinks.vampireShoot,
         "modeling-garb-garbage-runway": modelingBrandLinks.garb,
-        "modeling-fast-crescendo-lookbook-shoot-2": modelingBrandLinks.fast,
-        "modeling-fast-crescendo-lookbook-shoot": modelingBrandLinks.fast,
-        "modeling-fast-reverie-runway-show": modelingBrandLinks.fast,
-        "modeling-fast-reverie-lookbook-shoot": modelingBrandLinks.fast,
+        "modeling-fast-crescendo-lookbook-shoot-2": [
+          ...modelingBrandLinks.fast,
+          {
+            type: "camera",
+            label: "Charlize Chiu Instagram",
+            href: "https://www.instagram.com/charlize.chiu/",
+            title: "Photographer Instagram",
+          },
+        ],
+        "modeling-fast-crescendo-lookbook-shoot": [
+          ...modelingBrandLinks.fast,
+          {
+            type: "camera",
+            label: "Ryan Photo Collection Instagram",
+            href: "https://www.instagram.com/ryanphotocollection/",
+            title: "Photographer Instagram",
+          },
+          {
+            type: "camera",
+            label: "Will Yau photos",
+            href: "https://wyauphoto.mypixieset.com/",
+            title: "Photographer Portfolio",
+          },
+        ],
+        "modeling-fast-reverie-runway-show": [
+          ...modelingBrandLinks.fast,
+          {
+            type: "camera",
+            label: "Fin Pimnara Instagram",
+            href: "https://www.instagram.com/fintakesphotos/",
+          },
+        ],
+        "modeling-fast-reverie-lookbook-shoot": [
+          ...modelingBrandLinks.fast,
+          {
+            type: "camera",
+            label: "Agodi Instagram",
+            href: "https://www.instagram.com/agodi.png/",
+            title: "Photographer Instagram",
+          },
+        ],
         "modeling-fast-devotion-lookbook-shoot": [
           ...modelingBrandLinks.fast,
           {
@@ -4687,110 +5268,179 @@
         ],
       };
 
+      const modelingGallery = (folder, filenames = [], type = "images") => ({
+        folder,
+        [type]: filenames.map((filename) => `${folder}/${filename}`),
+      });
+
       const modelingGalleryData = {
-        "modeling-stand-still-drop": {
-          folder: "assets/modeling/stand-still-mar26",
-          images: [],
-        },
-        "modeling-garb-merch-promo-shoot": {
-          folder: "assets/modeling/garb-merch-lighter-promo-feb26",
-          images: [],
-        },
-        "modeling-club-rambutan-runway-show": {
-          folder: "assets/modeling/club-rambutan-runway-show",
-          images: [],
-        },
-        "modeling-arthaus-promo-shoot": {
-          folder: "assets/modeling/arthaus-promo-shoot-sep25",
-          images: [],
-        },
-        "modeling-xoxo510-x-brainscramble-shoot": {
-          folder: "assets/modeling/xoxo510-brainscramble",
-          images: [],
-        },
-        "modeling-fast-sonder-lookbook-shoot-2": {
-          folder: "assets/modeling/fast-sonder-lb2-may2025",
-          images: [],
-        },
-        "modeling-fast-sonder-lookbook-shoot": {
-          folder: "assets/modeling/fast-sonder-lb-may2025",
-          images: [],
-        },
-        "modeling-saturn-los-angeles-gaia-ss25-shoot": {
-          folder: "assets/modeling/saturn-LA-gaia-apr2025",
-          images: [],
-        },
-        "modeling-garb-garbage-runway-show": {
-          folder: "assets/modeling/garb-garbage-rnwy-apr2025",
-          images: [],
-        },
-        "modeling-garb-means-business-shoot": {
-          folder: "assets/modeling/garb-means-business-jan2025",
-          images: [],
-        },
-        "modeling-vampire-shoot": {
-          folder: "assets/modeling/vampire-shoot-jan2025",
-          images: [],
-        },
-        "modeling-garb-garbage-runway": {
-          folder: "assets/modeling/garb-garbage-rnwy-dec2024",
-          images: [],
-        },
-        "modeling-fast-crescendo-lookbook-shoot-2": {
-          folder: "assets/modeling/fast-crescendo2-lb-oct2024",
-          images: [],
-        },
-        "modeling-fast-crescendo-lookbook-shoot": {
-          folder: "assets/modeling/fast-crescendo-lb-oct2024",
-          images: [],
-        },
-        "modeling-fast-reverie-runway-show": {
-          folder: "assets/modeling/fast-reverie-rnwy-apr2024",
-          images: [],
-        },
-        "modeling-fast-reverie-lookbook-shoot": {
-          folder: "assets/modeling/fast-reverie-lb-mar2024",
-          images: [],
-        },
-        "modeling-fast-devotion-lookbook-shoot": {
-          folder: "assets/modeling/fast-devotion-lb-nov2023",
-          images: [
-            "assets/modeling/fast-devotion-lb-nov2023/IMG_0327.jpg",
-            "assets/modeling/fast-devotion-lb-nov2023/IMG_0328.jpg",
-            "assets/modeling/fast-devotion-lb-nov2023/IMG_0329.jpg",
-            "assets/modeling/fast-devotion-lb-nov2023/IMG_0330.jpg",
-            "assets/modeling/fast-devotion-lb-nov2023/IMG_0331.jpg",
-            "assets/modeling/fast-devotion-lb-nov2023/IMG_0333.jpg",
-            "assets/modeling/fast-devotion-lb-nov2023/IMG_0334.jpg",
-            "assets/modeling/fast-devotion-lb-nov2023/IMG_0335.jpg",
-            "assets/modeling/fast-devotion-lb-nov2023/IMG_0332.jpg",
+        "modeling-stand-still-drop": modelingGallery("assets/modeling/stand-still-mar26"),
+        "modeling-garb-merch-promo-shoot": modelingGallery(
+          "assets/modeling/garb-merch-lighter-promo-feb26"
+        ),
+        "modeling-garb-cirque-du-moi-runway-show": modelingGallery(
+          "assets/modeling/garb-cirque-du-moi-rnwy-dec2025"
+        ),
+        "modeling-garb-garbage-runway-show-oct2025": modelingGallery(
+          "assets/modeling/garb-garbage-rnwy-oct2025"
+        ),
+        "modeling-club-rambutan-runway-show": modelingGallery(
+          "assets/modeling/club-rambutan-runway-show",
+          [
+            "01-rambutan-photo.jpg",
+            "02-rambutan-photo.jpg",
+            "03-rambutan-photo.jpg",
+            "04-rambutan-photo.jpg",
+            "05-rambutan-photo.jpg",
+            "06-rambutan-photo.jpg",
+          ]
+        ),
+        "modeling-arthaus-promo-shoot": modelingGallery(
+          "assets/modeling/arthaus-promo-shoot-sep25"
+        ),
+        "modeling-xoxo510-x-brainscramble-shoot": modelingGallery(
+          "assets/modeling/xoxo510-brainscramble",
+          [
+            "01-brainscramble-photo.jpg",
+            "02-brainscramble-photo.jpg",
+            "03-brainscramble-photo.jpg",
+            "04-brainscramble-photo.jpg",
+            "05-brainscramble-photo.jpg",
+            "06-brainscramble-photo.jpg",
+            "07-brainscramble-photo.jpg",
+            "08-brainscramble-photo.jpg",
+            "09-brainscramble-photo.jpg",
+            "10-brainscramble-photo.jpg",
+          ]
+        ),
+        "modeling-fast-sonder-lookbook-shoot-2": modelingGallery(
+          "assets/modeling/fast-sonder-lb2-may2025"
+        ),
+        "modeling-fast-sonder-lookbook-shoot": modelingGallery(
+          "assets/modeling/fast-sonder-lb-may2025"
+        ),
+        "modeling-saturn-los-angeles-gaia-ss25-shoot": modelingGallery(
+          "assets/modeling/saturn-LA-gaia-apr2025"
+        ),
+        "modeling-garb-garbage-runway-show": modelingGallery(
+          "assets/modeling/garb-garbage-rnwy-apr2025"
+        ),
+        "modeling-garb-means-business-shoot": modelingGallery(
+          "assets/modeling/garb-means-business-jan2025"
+        ),
+        "modeling-vampire-shoot": modelingGallery("assets/modeling/vampire-shoot-jan2025", [
+          "01-vampire-photo.jpg",
+          "02-vampire-photo.jpg",
+          "03-vampire-photo.jpg",
+          "04-vampire-photo.jpg",
+          "05-vampire-photo.jpg",
+          "06-vampire-photo.jpg",
+          "07-vampire-photo.jpg",
+          "08-vampire-photo.jpg",
+          "09-vampire-photo.jpg",
+          "10-vampire-photo.jpg",
+          "11-vampire-photo.jpg",
+          "12-vampire-photo.jpg",
+          "13-vampire-photo.jpg",
+          "14-vampire-photo.jpg",
+          "15-vampire-photo.jpg",
+          "16-vampire-photo.jpg",
+        ]),
+        "modeling-garb-garbage-runway": modelingGallery(
+          "assets/modeling/garb-garbage-rnwy-dec2024"
+        ),
+        "modeling-fast-crescendo-lookbook-shoot-2": modelingGallery(
+          "assets/modeling/fast-crescendo2-lb-oct2024",
+          [
+            "IMG_0369.jpg",
+            "IMG_0370.jpg",
+            "IMG_0371.jpg",
+            "IMG_0372.jpg",
+            "IMG_0373.jpg",
+            "IMG_0374.jpg",
+            "IMG_0375.jpg",
+            "IMG_0376.jpg",
+            "IMG_0377.jpg",
+            "IMG_0378.jpg",
+          ]
+        ),
+        "modeling-fast-crescendo-lookbook-shoot": modelingGallery(
+          "assets/modeling/fast-crescendo-lb-oct2024",
+          [
+            "01-crescendo-photo.jpg",
+            "02-crescendo-photo.jpg",
+            "03-crescendo-photo.jpg",
+            "04-crescendo-photo.jpg",
+            "05-crescendo-photo.jpg",
+            "06-crescendo-photo.jpg",
+            "07-crescendo-photo.jpg",
+            "08-crescendo-photo.jpg",
+            "09-crescendo-photo.jpg",
+            "10-crescendo-photo.jpg",
+            "11-crescendo-photo.jpg",
+          ]
+        ),
+        "modeling-fast-reverie-runway-show": modelingGallery(
+          "assets/modeling/fast-reverie-rnwy-apr2024",
+          [
+            "01-runway-video.mp4",
+            "02-runway-photo.jpg",
+            "03-runway-photo.jpg",
+            "04-runway-photo.jpg",
+            "05-runway-photo.png",
           ],
-        },
-        "modeling-saturn-la-black-friday-drop": {
-          folder: "assets/modeling/saturn-LA-oct2023",
-          images: [
-            "assets/modeling/saturn-LA-oct2023/IMG_9695.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9696.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9697.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9698.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9699.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9700.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9701.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9702.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9703.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9704.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9705.jpg",
-            "assets/modeling/saturn-LA-oct2023/IMG_9706.jpg",
-          ],
-        },
+          "media"
+        ),
+        "modeling-fast-reverie-lookbook-shoot": modelingGallery(
+          "assets/modeling/fast-reverie-lb-mar2024",
+          [
+            "01-reverie-photo.jpg",
+            "02-reverie-photo.jpg",
+            "03-reverie-photo.jpg",
+            "04-reverie-photo.jpg",
+          ]
+        ),
+        "modeling-fast-devotion-lookbook-shoot": modelingGallery(
+          "assets/modeling/fast-devotion-lb-nov2023",
+          [
+            "IMG_0327.jpg",
+            "IMG_0328.jpg",
+            "IMG_0329.jpg",
+            "IMG_0330.jpg",
+            "IMG_0331.jpg",
+            "IMG_0333.jpg",
+            "IMG_0334.jpg",
+            "IMG_0335.jpg",
+            "IMG_0332.jpg",
+          ]
+        ),
+        "modeling-saturn-la-black-friday-drop": modelingGallery(
+          "assets/modeling/saturn-LA-oct2023",
+          [
+            "IMG_9695.jpg",
+            "IMG_9696.jpg",
+            "IMG_9697.jpg",
+            "IMG_9698.jpg",
+            "IMG_9699.jpg",
+            "IMG_9700.jpg",
+            "IMG_9701.jpg",
+            "IMG_9702.jpg",
+            "IMG_9703.jpg",
+            "IMG_9704.jpg",
+            "IMG_9705.jpg",
+            "IMG_9706.jpg",
+          ]
+        ),
       };
 
       const renderModelingLinks = (container) => {
+        if (container.dataset.rendered === "true") return;
         const linkId = container.getAttribute("data-modeling-links");
         const links = modelingLinkData[linkId] || [];
 
         if (!links.length) {
           container.replaceChildren();
+          container.dataset.rendered = "true";
           return;
         }
 
@@ -4817,31 +5467,32 @@
         });
 
         container.replaceChildren(row);
+        container.dataset.rendered = "true";
       };
 
       const renderModelingGallery = (container) => {
+        if (container.dataset.rendered === "true") return;
         const galleryId = container.getAttribute("data-modeling-gallery");
         const gallery = modelingGalleryData[galleryId];
         if (!gallery) return;
+        const media = gallery.media || gallery.images;
 
         const frame = document.createElement("div");
         frame.className = "gallery-frame";
 
-        if (!gallery.images.length) {
+        if (!media.length) {
           const empty = document.createElement("div");
           empty.className = "gallery-empty";
           empty.textContent = `No images found in ${gallery.folder} yet.`;
           frame.appendChild(empty);
           container.replaceChildren(frame);
+          container.dataset.rendered = "true";
           return;
         }
 
         let currentIndex = 0;
         const scroll = document.createElement("div");
         scroll.className = "gallery-scroll gallery-scroll--modeling";
-
-        const image = document.createElement("img");
-        scroll.appendChild(image);
 
         const controls = document.createElement("div");
         controls.className = "gallery-controls";
@@ -4866,32 +5517,48 @@
         container.replaceChildren(frame);
 
         const update = () => {
-          image.src = gallery.images[currentIndex];
-          image.alt = `Modeling photo ${galleryCounterText(currentIndex, gallery.images.length)}`;
-          counter.textContent = galleryCounterText(currentIndex, gallery.images.length);
+          const previousVideo = scroll.querySelector("video");
+          if (previousVideo) previousVideo.pause();
+
+          const source = media[currentIndex];
+          const isVideo = /\.(mp4|webm|ogg)(?:[?#]|$)/i.test(source);
+          const currentMedia = document.createElement(isVideo ? "video" : "img");
+          currentMedia.src = source;
+
+          if (isVideo) {
+            currentMedia.controls = true;
+            currentMedia.playsInline = true;
+            currentMedia.preload = "metadata";
+            currentMedia.dataset.unloadOnHide = "";
+            currentMedia.setAttribute(
+              "aria-label",
+              `Modeling video ${galleryCounterText(currentIndex, media.length)}`
+            );
+          } else {
+            currentMedia.loading = "lazy";
+            currentMedia.decoding = "async";
+            currentMedia.alt = `Modeling photo ${galleryCounterText(currentIndex, media.length)}`;
+          }
+
+          scroll.replaceChildren(currentMedia);
+          counter.textContent = galleryCounterText(currentIndex, media.length);
         };
 
-        previous.addEventListener("click", () => {
-          currentIndex =
-            (currentIndex - 1 + gallery.images.length) % gallery.images.length;
-          update();
-        });
-
-        next.addEventListener("click", () => {
-          currentIndex = (currentIndex + 1) % gallery.images.length;
-          update();
-        });
+        bindGalleryNavigation(
+          previous,
+          next,
+          media.length,
+          () => currentIndex,
+          (index) => {
+            currentIndex = index;
+          },
+          update
+        );
 
         update();
+        container.dataset.rendered = "true";
+        setupGalleryControlLabels(container);
       };
-
-      document
-        .querySelectorAll("[data-modeling-links]")
-        .forEach(renderModelingLinks);
-
-      document
-        .querySelectorAll("[data-modeling-gallery]")
-        .forEach(renderModelingGallery);
 
       setupGalleryControlLabels();
 
@@ -4931,11 +5598,25 @@
         }
       };
 
+      const updateFrontiersSlide = () => {
+        if (!frontiersSlideImage || !frontiersPdfSlides.length) return;
+        const activeSlide = frontiersPdfSlides[frontiersSlideIndex];
+        frontiersSlideImage.setAttribute("src", activeSlide.src);
+        frontiersSlideImage.setAttribute("alt", activeSlide.alt);
+        if (frontiersSlideCounter) {
+          frontiersSlideCounter.textContent = galleryCounterText(
+            frontiersSlideIndex,
+            frontiersPdfSlides.length
+          );
+        }
+      };
+
       const syncDroneProjectVideo = () => {
         if (!droneProjectVideo || !droneProjectVideos.length) return;
         const activeVideo = droneProjectVideos[droneVideoIndex];
         if (!activeVideo) return;
 
+        droneProjectVideo.dataset.src = activeVideo.src;
         if (droneProjectVideo.getAttribute("src") !== activeVideo.src) {
           droneProjectVideo.pause();
           droneProjectVideo.setAttribute("src", activeVideo.src);
@@ -4955,60 +5636,84 @@
         }
       };
 
-      if (pathfinderPrev && pathfinderNext) {
-        pathfinderPrev.addEventListener("click", () => {
-          pathfinderIndex =
-            (pathfinderIndex - 1 + pathfinderImages.length) % pathfinderImages.length;
-          updatePathfinderImage();
+      activateVisibleContent = (root) => {
+        if (!root) return;
+        loadDeferredMedia(root, true);
+
+        root.querySelectorAll("[data-modeling-links]").forEach((container) => {
+          if (!container.closest(".viewer-content.is-hidden")) {
+            renderModelingLinks(container);
+          }
         });
 
-        pathfinderNext.addEventListener("click", () => {
-          pathfinderIndex = (pathfinderIndex + 1) % pathfinderImages.length;
-          updatePathfinderImage();
-        });
-      }
-
-      if (berserkPosterPrev && berserkPosterNext) {
-        berserkPosterPrev.addEventListener("click", () => {
-          berserkPosterIndex =
-            (berserkPosterIndex - 1 + berserkPosterImages.length) %
-            berserkPosterImages.length;
-          updateBerserkPosterImage();
+        root.querySelectorAll("[data-modeling-gallery]").forEach((container) => {
+          if (!container.closest(".viewer-content.is-hidden")) {
+            renderModelingGallery(container);
+          }
         });
 
-        berserkPosterNext.addEventListener("click", () => {
-          berserkPosterIndex = (berserkPosterIndex + 1) % berserkPosterImages.length;
-          updateBerserkPosterImage();
-        });
-      }
-
-      if (myBrothersGhostPrev && myBrothersGhostNext) {
-        myBrothersGhostPrev.addEventListener("click", () => {
-          myBrothersGhostIndex =
-            (myBrothersGhostIndex - 1 + myBrothersGhostImages.length) %
-            myBrothersGhostImages.length;
-          updateMyBrothersGhostImage();
-        });
-
-        myBrothersGhostNext.addEventListener("click", () => {
-          myBrothersGhostIndex =
-            (myBrothersGhostIndex + 1) % myBrothersGhostImages.length;
-          updateMyBrothersGhostImage();
-        });
-      }
-
-      if (droneVideoPrev && droneVideoNext) {
-        droneVideoPrev.addEventListener("click", () => {
-          droneVideoIndex =
-            (droneVideoIndex - 1 + droneProjectVideos.length) % droneProjectVideos.length;
+        const dronePanel = root.querySelector(
+          '[data-view="projects-drone-navigation"]:not(.is-hidden)'
+        );
+        if (dronePanel && droneProjectVideo && dronePanel.contains(droneProjectVideo)) {
           syncDroneProjectVideo();
-        });
+        }
+      };
 
-        droneVideoNext.addEventListener("click", () => {
-          droneVideoIndex = (droneVideoIndex + 1) % droneProjectVideos.length;
-          syncDroneProjectVideo();
-        });
-      }
+      bindGalleryNavigation(
+        pathfinderPrev,
+        pathfinderNext,
+        pathfinderImages.length,
+        () => pathfinderIndex,
+        (index) => {
+          pathfinderIndex = index;
+        },
+        updatePathfinderImage
+      );
+
+      bindGalleryNavigation(
+        berserkPosterPrev,
+        berserkPosterNext,
+        berserkPosterImages.length,
+        () => berserkPosterIndex,
+        (index) => {
+          berserkPosterIndex = index;
+        },
+        updateBerserkPosterImage
+      );
+
+      bindGalleryNavigation(
+        myBrothersGhostPrev,
+        myBrothersGhostNext,
+        myBrothersGhostImages.length,
+        () => myBrothersGhostIndex,
+        (index) => {
+          myBrothersGhostIndex = index;
+        },
+        updateMyBrothersGhostImage
+      );
+
+      bindGalleryNavigation(
+        frontiersSlidePrev,
+        frontiersSlideNext,
+        frontiersPdfSlides.length,
+        () => frontiersSlideIndex,
+        (index) => {
+          frontiersSlideIndex = index;
+        },
+        updateFrontiersSlide
+      );
+
+      bindGalleryNavigation(
+        droneVideoPrev,
+        droneVideoNext,
+        droneProjectVideos.length,
+        () => droneVideoIndex,
+        (index) => {
+          droneVideoIndex = index;
+        },
+        syncDroneProjectVideo
+      );
 
       if (openFrontiersPdf) {
         openFrontiersPdf.addEventListener("click", () => {
@@ -5020,9 +5725,10 @@
         openDronePresentation.addEventListener("click", () => {
           if (
             dronePresentationIframe &&
-            dronePresentationIframe.getAttribute("src") !== DRONE_PRESENTATION_PDF_URL
+            dronePresentationIframe.dataset.src !== DRONE_PRESENTATION_PDF_URL
           ) {
-            dronePresentationIframe.setAttribute("src", DRONE_PRESENTATION_PDF_URL);
+            dronePresentationIframe.dataset.src = DRONE_PRESENTATION_PDF_URL;
+            dronePresentationIframe.removeAttribute("src");
           }
           setWindowOpen("drone-presentation-pdf", true);
         });
@@ -5427,6 +6133,13 @@
         return empty;
       };
 
+      const studyCreateText = (className, text) => {
+        const element = document.createElement("span");
+        if (className) element.className = className;
+        element.textContent = text;
+        return element;
+      };
+
       const studySetSelected = (id) => {
         if (!studyGetEntry(id)) return;
         studyState.selectedId = id;
@@ -5456,7 +6169,8 @@
         if (!entry || !entry.node.path || !studyPdfIframe || !studyPdfTitle) return;
         studyPdfTitle.textContent = entry.node.name;
         studyPdfIframe.title = entry.node.name;
-        studyPdfIframe.src = studyPdfEmbedSrc(entry.node);
+        studyPdfIframe.dataset.src = studyPdfEmbedSrc(entry.node);
+        studyPdfIframe.removeAttribute("src");
         setWindowOpen("study-pdf", true);
       };
 
@@ -5511,14 +6225,8 @@
         if (studyState.selectedId === node.id) button.classList.add("is-selected");
         button.appendChild(studyCreateIcon(studyIconForNode(node)));
 
-        const label = document.createElement("span");
-        label.textContent = node.name;
-        button.appendChild(label);
-
-        const meta = document.createElement("span");
-        meta.className = "study-tree-meta";
-        meta.textContent = `(${studyMetadataText(node)})`;
-        button.appendChild(meta);
+        button.appendChild(studyCreateText("", node.name));
+        button.appendChild(studyCreateText("study-tree-meta", `(${studyMetadataText(node)})`));
         row.appendChild(button);
         item.appendChild(row);
 
@@ -5586,25 +6294,10 @@
           if (studyState.selectedId === child.id) button.classList.add("is-selected");
           button.appendChild(studyCreateIcon(studyIconForNode(child)));
 
-          const name = document.createElement("span");
-          name.className = "study-file-name";
-          name.textContent = child.name;
-          button.appendChild(name);
-
-          const type = document.createElement("span");
-          type.className = "study-file-type";
-          type.textContent = studyTypeText(child);
-          button.appendChild(type);
-
-          const subitems = document.createElement("span");
-          subitems.className = "study-file-subitems";
-          subitems.textContent = studySubitemText(child);
-          button.appendChild(subitems);
-
-          const storage = document.createElement("span");
-          storage.className = "study-file-storage";
-          storage.textContent = studyStorageText(child);
-          button.appendChild(storage);
+          button.appendChild(studyCreateText("study-file-name", child.name));
+          button.appendChild(studyCreateText("study-file-type", studyTypeText(child)));
+          button.appendChild(studyCreateText("study-file-subitems", studySubitemText(child)));
+          button.appendChild(studyCreateText("study-file-storage", studyStorageText(child)));
 
           fragment.appendChild(button);
         });
@@ -5647,12 +6340,8 @@
           iframe.setAttribute("tabindex", "-1");
           frame.appendChild(iframe);
 
-          const label = document.createElement("span");
-          label.className = "study-pdf-thumbnail-label";
-          label.textContent = `Page ${page}`;
-
           thumbnail.appendChild(frame);
-          thumbnail.appendChild(label);
+          thumbnail.appendChild(studyCreateText("study-pdf-thumbnail-label", `Page ${page}`));
           thumbnails.appendChild(thumbnail);
         });
 
@@ -5723,16 +6412,15 @@
       };
 
       const studyRenderViewButtons = () => {
-        if (studyListView) {
-          const isList = studyState.viewMode === "list";
-          studyListView.classList.toggle("is-active", isList);
-          studyListView.setAttribute("aria-pressed", String(isList));
-        }
-        if (studyGalleryView) {
-          const isGallery = studyState.viewMode === "gallery";
-          studyGalleryView.classList.toggle("is-active", isGallery);
-          studyGalleryView.setAttribute("aria-pressed", String(isGallery));
-        }
+        [
+          [studyListView, "list"],
+          [studyGalleryView, "gallery"],
+        ].forEach(([button, mode]) => {
+          if (!button) return;
+          const isActive = studyState.viewMode === mode;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
       };
 
       function studyRender() {
@@ -5819,31 +6507,24 @@
           });
         }
 
-        if (studyListView) {
-          studyListView.addEventListener("click", () => {
-            studyState.viewMode = "list";
+        [
+          [studyListView, "list"],
+          [studyGalleryView, "gallery"],
+        ].forEach(([button, mode]) => {
+          if (!button) return;
+          button.addEventListener("click", () => {
+            studyState.viewMode = mode;
             studyRender();
           });
-        }
+        });
 
-        if (studyGalleryView) {
-          studyGalleryView.addEventListener("click", () => {
-            studyState.viewMode = "gallery";
-            studyRender();
-          });
-        }
-
-        if (studyOpenWindow) {
-          studyOpenWindow.addEventListener("click", studyOpenSelectedInWindow);
-        }
-
-        if (studyOpenTab) {
-          studyOpenTab.addEventListener("click", studyOpenSelectedInTab);
-        }
-
-        if (studyDownload) {
-          studyDownload.addEventListener("click", studyDownloadSelected);
-        }
+        [
+          [studyOpenWindow, studyOpenSelectedInWindow],
+          [studyOpenTab, studyOpenSelectedInTab],
+          [studyDownload, studyDownloadSelected],
+        ].forEach(([button, handler]) => {
+          if (button) button.addEventListener("click", handler);
+        });
       }
 
       const calendarImages = {
@@ -5896,6 +6577,14 @@
         calendarSection.style.backgroundImage = src ? `url("${src}")` : "none";
       };
 
+      const closeCalendar = () => {
+        if (!calendarPopout) return;
+        calendarPopout.classList.remove("is-open");
+        calendarPopout.setAttribute("aria-hidden", "true");
+        if (calendarSection) calendarSection.style.backgroundImage = "none";
+        if (clockImage) clockImage.removeAttribute("src");
+      };
+
       const clampCalendarDate = (date) => {
         const now = new Date();
         const minDate = new Date(now.getFullYear() - 1, now.getMonth(), 1);
@@ -5903,6 +6592,29 @@
         if (date < minDate) return minDate;
         if (date > maxDate) return maxDate;
         return date;
+      };
+
+      const openRandomEventWindow = () => {
+        if (!randomEventWindow) return;
+        loadDeferredMedia(randomEventWindow);
+        randomEventWindow.classList.remove("is-hidden", "is-closing");
+        randomEventWindow.setAttribute("aria-hidden", "false");
+        randomEventWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(randomEventWindow, "is-opening");
+      };
+
+      const closeRandomEventWindow = () => {
+        if (!randomEventWindow) return;
+        randomEventWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(randomEventWindow, "is-closing");
+      };
+
+      const appendCalendarCell = (text, className = "calendar-day") => {
+        const cell = document.createElement("div");
+        cell.className = className;
+        cell.textContent = String(text);
+        calendarGrid.appendChild(cell);
+        return cell;
       };
 
       const buildCalendar = (date) => {
@@ -5931,44 +6643,44 @@
 
         const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
         dayLabels.forEach((label) => {
-          const cell = document.createElement("div");
-          cell.className = "calendar-day";
-          cell.textContent = label;
-          calendarGrid.appendChild(cell);
+          appendCalendarCell(label);
         });
 
         for (let i = startDay - 1; i >= 0; i -= 1) {
-          const cell = document.createElement("div");
-          cell.className = "calendar-day is-muted";
-          cell.textContent = String(daysInPrevMonth - i);
-          calendarGrid.appendChild(cell);
+          appendCalendarCell(daysInPrevMonth - i, "calendar-day is-muted");
         }
 
         for (let day = 1; day <= daysInMonth; day += 1) {
-          const cell = document.createElement("div");
           const isToday = isCurrentMonth && day === today;
-          cell.className = `calendar-day${isToday ? " is-today" : ""}`;
-          cell.textContent = String(day);
-          calendarGrid.appendChild(cell);
+          const isApril20 = month === 3 && day === 20;
+          const cell = appendCalendarCell(
+            day,
+            `calendar-day${isToday ? " is-today" : ""}${isApril20 ? " is-event-day" : ""}`
+          );
+          cell.dataset.calendarDay = String(day);
+          cell.dataset.calendarMonth = String(month);
+          cell.dataset.calendarYear = String(year);
         }
 
         const totalCells = dayLabels.length + startDay + daysInMonth;
         const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
         for (let i = 1; i <= remaining; i += 1) {
-          const cell = document.createElement("div");
-          cell.className = "calendar-day is-muted";
-          cell.textContent = String(i);
-          calendarGrid.appendChild(cell);
+          appendCalendarCell(i, "calendar-day is-muted");
         }
       };
 
       const toggleCalendar = () => {
-        const isOpen = calendarPopout.classList.toggle("is-open");
-        calendarPopout.setAttribute("aria-hidden", String(!isOpen));
+        const isOpen = calendarPopout.classList.contains("is-open");
         if (isOpen) {
-          calendarDate = new Date();
-          buildCalendar(calendarDate);
+          closeCalendar();
+          return;
         }
+
+        calendarPopout.classList.add("is-open");
+        calendarPopout.setAttribute("aria-hidden", "false");
+        calendarDate = new Date();
+        buildCalendar(calendarDate);
+        updateCalendarClock();
       };
 
       calendarButton.addEventListener("click", toggleCalendar);
@@ -5988,12 +6700,49 @@
         buildCalendar(new Date());
       });
 
+      calendarGrid.addEventListener("click", (event) => {
+        const dayCell = event.target.closest("[data-calendar-day]");
+        if (!dayCell || !calendarGrid.contains(dayCell)) return;
+        if (Number(dayCell.dataset.calendarMonth) === 3 && Number(dayCell.dataset.calendarDay) === 20) {
+          event.stopPropagation();
+          openRandomEventWindow();
+        }
+      });
+
+      [randomEventClose, randomEventOk].forEach((button) => {
+        if (!button) return;
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          closeRandomEventWindow();
+        });
+      });
+
+      if (randomEventWindow) {
+        randomEventWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        randomEventWindow.addEventListener("animationend", (event) => {
+          if (event.target !== randomEventWindow) return;
+          if (event.animationName === "retro-window-open") {
+            randomEventWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            randomEventWindow.classList.remove("is-closing");
+            randomEventWindow.classList.add("is-hidden");
+            randomEventWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
       document.addEventListener("click", (event) => {
         if (!calendarPopout.classList.contains("is-open")) return;
         if (calendarPopout.contains(event.target)) return;
         if (calendarButton.contains(event.target)) return;
-        calendarPopout.classList.remove("is-open");
-        calendarPopout.setAttribute("aria-hidden", "true");
+        closeCalendar();
       });
 
       appButtons.forEach((button) => {
@@ -6562,6 +7311,8 @@
       let solFireworkTimers = [];
       let solVictoryFrameRequest = null;
       let solVictoryScratchCanvas = null;
+      let solActiveTableauTooltip = null;
+      let solLastCardClick = null;
 
       const solSprite = {
         cardHeight: 22,
@@ -6574,6 +7325,61 @@
 
       const solCardName = (card) =>
         `${solRankNames[card.rank]} of ${solSuitData[card.suit].label}`;
+
+      const solCardShortName = (card) => {
+        const rank = { 1: "A", 11: "J", 12: "Q", 13: "K" }[card.rank] || card.rank;
+        return `${rank} ${solSuitData[card.suit].symbol}`;
+      };
+
+      const solPositionTableauTooltip = (tooltip, pointer) => {
+        const offset = 12;
+        const minEdge = 4;
+        tooltip.style.left = `${pointer.clientX + offset}px`;
+        tooltip.style.top = `${pointer.clientY + offset}px`;
+        if (!tooltip.classList.contains("is-visible")) return;
+
+        const bounds = tooltip.getBoundingClientRect();
+        const left = Math.min(pointer.clientX + offset, window.innerWidth - bounds.width - minEdge);
+        const top = Math.min(pointer.clientY + offset, window.innerHeight - bounds.height - minEdge);
+        tooltip.style.left = `${Math.max(minEdge, left)}px`;
+        tooltip.style.top = `${Math.max(minEdge, top)}px`;
+      };
+
+      const solHideTableauTooltip = () => {
+        if (solActiveTableauTooltip) {
+          solActiveTableauTooltip.classList.remove("is-visible");
+          solActiveTableauTooltip = null;
+        }
+      };
+
+      const solAttachTableauTooltip = (column, tooltip) => {
+        let pointer = null;
+
+        const updatePointer = (event) => {
+          const card = event.target.closest(".sol-card:not(.is-face-down)");
+          if (!card || !column.contains(card)) {
+            pointer = null;
+            if (solActiveTableauTooltip === tooltip) solHideTableauTooltip();
+            return;
+          }
+
+          pointer = { clientX: event.clientX, clientY: event.clientY };
+          if (solActiveTableauTooltip !== tooltip) {
+            solHideTableauTooltip();
+            solActiveTableauTooltip = tooltip;
+            tooltip.classList.add("is-visible");
+          }
+          solPositionTableauTooltip(tooltip, pointer);
+        };
+
+        column.addEventListener("pointerenter", updatePointer);
+        column.addEventListener("pointermove", updatePointer);
+
+        column.addEventListener("pointerleave", () => {
+          pointer = null;
+          if (solActiveTableauTooltip === tooltip) solHideTableauTooltip();
+        });
+      };
 
       const solSpritePosition = (col, row) => {
         const x = col === 0 ? 0 : (col / 12) * 100;
@@ -6799,6 +7605,7 @@
 
       const solPlayVictoryVideo = () => {
         if (!solVictoryVideoOverlay || !solVictoryVideo) return;
+        loadDeferredMedia(solVictoryVideo);
         solVictoryVideoOverlay.classList.add("is-showing");
         solVictoryVideoOverlay.setAttribute("aria-hidden", "false");
         solVictoryVideo.classList.remove("is-visible-fallback");
@@ -6980,6 +7787,10 @@
           );
         });
 
+        solHideTableauTooltip();
+        document.querySelectorAll(".sol-tableau-tooltip").forEach((tooltip) => {
+          tooltip.remove();
+        });
         solTableau.innerHTML = "";
         solState.tableau.forEach((column, colIndex) => {
           const columnEl = document.createElement("div");
@@ -7000,6 +7811,20 @@
                 solCreateCardElement(card, "tableau", colIndex, cardIndex)
               );
             });
+
+            const bottomCard = column.find((card) => card.faceUp);
+            if (bottomCard) {
+              const tooltip = document.createElement("span");
+              tooltip.className = "sol-tableau-tooltip";
+              tooltip.setAttribute("role", "tooltip");
+              tooltip.textContent = `Bottom: ${solCardShortName(bottomCard)}`;
+              document.body.appendChild(tooltip);
+              solAttachTableauTooltip(columnEl, tooltip);
+              columnEl.setAttribute(
+                "aria-label",
+                `Tableau column ${colIndex + 1}, bottom card ${solCardName(bottomCard)}`
+              );
+            }
           }
 
           solTableau.appendChild(columnEl);
@@ -7007,7 +7832,7 @@
 
         if (solMoves) msSetCounter(solMoves, msFormatCounter(solState.moves));
         if (solStatus) solStatus.textContent = "";
-        if (solUndo) solUndo.disabled = solHistory.length === 0;
+        if (solUndo) solUndo.disabled = solState.won || solHistory.length === 0;
       };
 
       const solCheckWin = () => {
@@ -7220,6 +8045,7 @@
         solState.moves = 0;
         solState.won = false;
         solHistory.length = 0;
+        solLastCardClick = null;
         solHideVictoryVideo();
 
         for (let col = 0; col < 7; col += 1) {
@@ -7269,6 +8095,7 @@
         solBoard.addEventListener("click", (event) => {
           const stockHit = event.target.closest("[data-sol-stock]");
           if (stockHit && solBoard.contains(stockHit)) {
+            solLastCardClick = null;
             solDraw();
             return;
           }
@@ -7285,6 +8112,23 @@
             const zone = cardEl.getAttribute("data-sol-zone");
             const pileValue = cardEl.getAttribute("data-sol-pile");
             const index = Number(cardEl.getAttribute("data-sol-index"));
+            const cardId = cardEl.getAttribute("data-sol-card-id");
+            const clickKey = `${zone}:${pileValue}:${index}:${cardId}`;
+            const clickTime = Date.now();
+
+            if (
+              (zone === "waste" || zone === "tableau") &&
+              solLastCardClick &&
+              solLastCardClick.key === clickKey &&
+              clickTime - solLastCardClick.time <= 500
+            ) {
+              solLastCardClick = null;
+              const pile = zone === "tableau" ? Number(pileValue) : pileValue;
+              solAutoMoveCardToFoundation(zone, pile, index);
+              return;
+            }
+
+            solLastCardClick = { key: clickKey, time: clickTime };
 
             if (zone === "waste") {
               solSelectWaste();
@@ -7303,6 +8147,7 @@
             return;
           }
 
+          solLastCardClick = null;
           if (foundationEl && solState.selected) {
             const suit = foundationEl.getAttribute("data-sol-foundation");
             solMoveSelectedToFoundation(suit);
@@ -7313,17 +8158,6 @@
           if (columnEl && solState.selected) {
             solMoveSelectedToTableau(Number(columnEl.getAttribute("data-sol-col")));
           }
-        });
-
-        solBoard.addEventListener("dblclick", (event) => {
-          const cardEl = event.target.closest("[data-sol-card-id]");
-          if (!cardEl) return;
-
-          const zone = cardEl.getAttribute("data-sol-zone");
-          const pileValue = cardEl.getAttribute("data-sol-pile");
-          const pile = zone === "tableau" ? Number(pileValue) : pileValue;
-          const index = Number(cardEl.getAttribute("data-sol-index"));
-          solAutoMoveCardToFoundation(zone, pile, index);
         });
 
         solBoard.addEventListener("keydown", (event) => {
@@ -7382,6 +8216,11 @@
 
       window.addEventListener("resize", msResizeConfetti);
       window.addEventListener("resize", msUpdateBoardAlignment);
+      window.addEventListener("resize", () => {
+        document
+          .querySelectorAll(".portfolio-window")
+          .forEach((win) => setPortfolioResponsiveState(win));
+      });
 
       // if (clashRefresh) {
       //   clashRefresh.addEventListener("click", () => {

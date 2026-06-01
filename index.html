@@ -204,6 +204,7 @@
           loaderCopy.textContent = "Welcome!";
           statusText.textContent = "Ready. Click Proceed to continue.";
           proceedButton.disabled = false;
+          cancelButton.disabled = true;
         }
       };
 
@@ -219,6 +220,7 @@
         loaderCopy.innerHTML = "This website is optimized for desktop. Preparing the environment...";
         statusText.textContent = "Starting...";
         proceedButton.disabled = true;
+        cancelButton.disabled = false;
         ticking = false;
       };
 
