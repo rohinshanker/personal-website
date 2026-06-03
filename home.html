@@ -1284,17 +1284,17 @@
       @keyframes gold-button-halo {
         0%,
         100% {
-          opacity: 0.55;
-          box-shadow:
-            0 0 6px 1px rgba(255, 210, 84, 0.42),
-            0 0 12px 2px rgba(255, 184, 28, 0.22);
-        }
-
-        50% {
           opacity: 1;
           box-shadow:
             0 0 14px 3px rgba(255, 224, 120, 0.82),
             0 0 24px 6px rgba(255, 190, 44, 0.42);
+        }
+
+        50% {
+          opacity: 0.55;
+          box-shadow:
+            0 0 6px 1px rgba(255, 210, 84, 0.42),
+            0 0 12px 2px rgba(255, 184, 28, 0.22);
         }
       }
 
@@ -1924,6 +1924,12 @@
         max-height: none;
       }
 
+      .project-figure-description {
+        margin: 6px 0 0;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
       .gallery-scroll video {
         width: 100%;
         height: 100%;
@@ -2430,6 +2436,105 @@
         min-width: 72px;
       }
 
+      .random-alert-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(340px, calc(100vw - 32px));
+        z-index: 140;
+      }
+
+      .random-alert-window.is-hidden {
+        display: none;
+      }
+
+      .random-alert-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .random-alert-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .random-alert-window.is-expanded {
+        height: calc(100vh - 76px);
+        left: 12px;
+        max-width: none;
+        top: 12px;
+        translate: 0 0;
+        width: calc(100vw - 24px);
+      }
+
+      .random-alert-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .random-alert-window.is-expanded .window-body {
+        min-height: calc(100% - 34px);
+      }
+
+      .random-alert-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 50px 1fr;
+      }
+
+      .random-alert-message img {
+        height: 48px;
+        width: 48px;
+      }
+
+      .random-alert-message p {
+        margin: 0;
+      }
+
+      .random-alert-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .random-alert-actions button {
+        min-width: 74px;
+      }
+
+      .random-alert-remember {
+        align-items: center;
+        display: flex;
+        gap: 6px;
+        justify-content: flex-start;
+        margin-left: 62px;
+        text-align: left;
+      }
+
+      .random-alert-remember[hidden] {
+        display: none;
+      }
+
+      .random-alert-window.is-choice-flashing .random-alert-choice {
+        animation: random-alert-choice-flash 160ms steps(2, end) infinite;
+      }
+
+      @keyframes random-alert-choice-flash {
+        0%,
+        100% {
+          box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+          padding: 0 12px;
+        }
+
+        50% {
+          box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+          padding: 2px 10px 0 12px;
+        }
+      }
+
       .clock-display {
         background: #000;
         color: #00ff66;
@@ -2650,12 +2755,52 @@
             </div>
             <div class="viewer-content is-hidden" data-view="projects-tcp-congestion-control">
               <div class="project-view-header">
-                <h3>TCP Congestion Control</h3>
+                <h3>Comparative Analysis of Modern TCP Congestion Control</h3>
                 <p class="project-view-subtitle">Spring 2026</p>
               </div>
+              <div class="pdf-actions">
+                <a
+                  class="button-link button-link--gold-glow"
+                  href="https://rohinshanker.github.io/EE-122-simulation/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open project website
+                </a>
+                <button class="button-link" type="button" id="open-tcp-paper">
+                  Open paper
+                </button>
+                <button class="button-link" type="button" id="open-tcp-presentation">
+                  Open presentation
+                </button>
+              </div>
               <p>
-                Built and analyzed TCP congestion control behavior, focusing on how transport-layer
-                algorithms adapt throughput under changing network conditions.
+                Evaluated CUBIC, Reno, BBRv3, and Vegas across controlled tc/netem experiments,
+                including terrestrial, LEO, GEO, delay-only, and packet-loss conditions. The final
+                analysis covers 460 iperf3 trials across 23 link conditions and shows BBRv3 leading
+                throughput and utilization in high-loss, high-latency regimes, with a clear
+                retransmission tradeoff.
+              </p>
+              <div class="gallery-frame" id="tcp-results-gallery">
+                <div class="gallery-scroll gallery-scroll--pdf">
+                  <img
+                    id="tcp-results-image"
+                    data-src="https://rohinshanker.github.io/EE-122-simulation/analysis/plots/common_links/throughput_by_category_algorithm.png"
+                    alt="Throughput by algorithm across terrestrial, LEO, GEO 500 ms, and GEO 1000 ms profiles."
+                  />
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="tcp-results-prev">Previous</button>
+                  <span class="gallery-counter" id="tcp-results-counter" aria-live="polite">1 of 4</span>
+                  <button type="button" id="tcp-results-next">Next</button>
+                </div>
+              </div>
+              <p class="project-view-subtitle" id="tcp-results-caption" aria-live="polite">
+                Common links: throughput by category
+              </p>
+              <p class="project-figure-description" id="tcp-results-description" aria-live="polite">
+                Compares receiver-side throughput across representative terrestrial, LEO, GEO 500 ms,
+                and GEO 1000 ms profiles.
               </p>
             </div>
             <div class="viewer-content is-hidden" data-view="projects-ekg">
@@ -2664,8 +2809,8 @@
                 <p class="project-view-subtitle">Spring 2026</p>
               </div>
               <p>
-                Built an EKG project focused on biomedical signal acquisition, filtering, and
-                waveform analysis.
+                Designed and breadboarded an EKG. Focused on biomedical signal acquisition,
+                filtering, and waveform analysis.
               </p>
             </div>
             <div class="viewer-content is-hidden" data-view="projects-drone-navigation">
@@ -3068,7 +3213,39 @@
             <div class="viewer-content" data-view="writing-structural-bioinformatics">
               <h3>Structural Bioinformatics</h3>
               <p class="project-view-subtitle">Spring 2026</p>
-              <p>Writing project focused on computational approaches for analyzing biological structure and function.</p>
+              <p>
+                The first part is a presentation breaking down a research paper on AlphaFold-guided
+                redesign of a plant pectin methylesterase inhibitor. The paper uses structural
+                modeling to engineer a plant defense protein for broader disease resistance against
+                pathogens that target plant cell walls.
+              </p>
+              <div class="pdf-actions">
+                <button type="button" id="open-bioe190-presentation">Open in Window</button>
+                <a
+                  class="button-link"
+                  href="assets/writing/shanker-bioe190-final-pres.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open in new tab
+                </a>
+              </div>
+              <p>
+                The next part is a proposal for next steps. It outlines follow-up structural
+                modeling and experimental validation to test whether the redesigned inhibitor can be
+                extended across additional variants, pathogens, and crop contexts.
+              </p>
+              <div class="pdf-actions">
+                <button type="button" id="open-bioe190-proposal">Open in Window</button>
+                <a
+                  class="button-link"
+                  href="assets/writing/shanker-bioe190-proposal.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open in new tab
+                </a>
+              </div>
             </div>
             <div class="viewer-content is-hidden" data-view="writing-biocomputing-market-analysis">
               <h3>Biocomputing Market Analysis</h3>
@@ -3078,7 +3255,26 @@
             <div class="viewer-content is-hidden" data-view="writing-tcp-congestion-control">
               <h3>TCP Congestion Control</h3>
               <p class="project-view-subtitle">Spring 2026</p>
-              <p>Writing project covering TCP congestion control behavior, throughput adaptation, and network performance tradeoffs.</p>
+              <div class="pdf-actions">
+                <button type="button" id="open-writing-tcp-paper">Open in Window</button>
+                <a
+                  class="button-link"
+                  href="https://rohinshanker.github.io/EE-122-simulation/project-resources/extended-abstract.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open in new tab
+                </a>
+              </div>
+              <p>
+                Evaluated CUBIC, Reno, BBRv3, and Vegas across controlled tc/netem experiments,
+                including terrestrial, LEO, GEO, delay-only, and packet-loss conditions. The final
+                analysis covers 460 iperf3 trials across 23 link conditions and shows BBRv3 leading
+                throughput and utilization in high-loss, high-latency regimes, with a clear
+                retransmission tradeoff.
+                <br />
+                See entry in projects tab for more information.
+              </p>
             </div>
             <div class="viewer-content is-hidden" data-view="writing-frontiers">
               <h3>Microbial Edge Computing: From Biosensors to Programmable Biological Decision Units</h3>
@@ -3368,6 +3564,9 @@
               <p class="project-view-subtitle">May 2025</p>
               <div data-modeling-links="modeling-xoxo510-x-brainscramble-shoot"></div>
               <div data-modeling-gallery="modeling-xoxo510-x-brainscramble-shoot"></div>
+              <p>Talent: Rohin Shanker, Kyle Isaac, Caleb Sandoval</p>
+              <p>Stylist: Siena Chai</p>
+              <p>Photographer: Tressa Davies, Siena Chai</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-sonder-lookbook-shoot-2">
               <h3>Fast Sonder Lookbook Shoot 2</h3>
@@ -3494,6 +3693,44 @@
         </div>
       </div>
 
+      <div class="window app-window is-hidden pdf-window" data-app-window="bioe190-presentation-pdf" id="bioe190-presentation-pdf-window">
+        <div class="title-bar">
+          <div class="title-bar-text">BIOE 190 Presentation.pdf</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="bioe190-presentation-pdf"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="pdf-viewer">
+            <iframe
+              id="bioe190-presentation-iframe"
+              data-src="assets/writing/shanker-bioe190-final-pres.pdf#page=1&zoom=100&toolbar=0&navpanes=0"
+              data-unload-on-hide
+              title="BIOE 190 final presentation"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden pdf-window" data-app-window="bioe190-proposal-pdf" id="bioe190-proposal-pdf-window">
+        <div class="title-bar">
+          <div class="title-bar-text">BIOE 190 Proposal.pdf</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="bioe190-proposal-pdf"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="pdf-viewer">
+            <iframe
+              id="bioe190-proposal-iframe"
+              data-src="assets/writing/shanker-bioe190-proposal.pdf#page=1&zoom=100&toolbar=0&navpanes=0"
+              data-unload-on-hide
+              title="BIOE 190 research proposal"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
       <div class="window app-window is-hidden pdf-window" data-app-window="drone-presentation-pdf" id="drone-presentation-pdf-window">
         <div class="title-bar">
           <div class="title-bar-text">Drone Navigation Presentation.pdf</div>
@@ -3507,6 +3744,44 @@
               id="drone-presentation-iframe"
               data-unload-on-hide
               title="Drone Navigation Through Constrained Gate Environments presentation"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden pdf-window" data-app-window="tcp-paper-pdf" id="tcp-paper-pdf-window">
+        <div class="title-bar">
+          <div class="title-bar-text">TCP Congestion Control Paper.pdf</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="tcp-paper-pdf"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="pdf-viewer">
+            <iframe
+              id="tcp-paper-iframe"
+              data-src="https://rohinshanker.github.io/EE-122-simulation/project-resources/extended-abstract.pdf#page=1&zoom=100&toolbar=0&navpanes=0"
+              data-unload-on-hide
+              title="Comparative Analysis of Modern TCP Congestion Control paper"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden pdf-window" data-app-window="tcp-presentation-pdf" id="tcp-presentation-pdf-window">
+        <div class="title-bar">
+          <div class="title-bar-text">TCP Congestion Control Presentation.pdf</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="tcp-presentation-pdf"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="pdf-viewer">
+            <iframe
+              id="tcp-presentation-iframe"
+              data-src="https://rohinshanker.github.io/EE-122-simulation/project-resources/ee122-presentation.pdf#page=1&zoom=100&toolbar=0&navpanes=0"
+              data-unload-on-hide
+              title="Comparative Analysis of Modern TCP Congestion Control presentation"
             ></iframe>
           </div>
         </div>
@@ -3992,14 +4267,39 @@
 
     <div class="window random-event-window is-hidden" id="random-event-window" aria-hidden="true">
       <div class="title-bar">
-        <div class="title-bar-text">April 20</div>
+        <div class="title-bar-text" id="random-event-title">April 20</div>
         <div class="title-bar-controls">
           <button type="button" aria-label="Close" id="random-event-close"></button>
         </div>
       </div>
       <div class="window-body">
-        <img data-src="assets/random%20events/swed.gif" decoding="async" alt="" />
+        <img id="random-event-image" data-src="assets/random%20events/swed.gif" decoding="async" alt="" />
         <button class="random-event-ok" type="button" id="random-event-ok">OK</button>
+      </div>
+    </div>
+
+    <div class="window random-alert-window is-hidden" id="random-alert-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Minimize" id="random-alert-minimize"></button>
+          <button type="button" aria-label="Maximize" id="random-alert-maximize"></button>
+          <button type="button" aria-label="Close" id="random-alert-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message">
+          <img src="assets/app-icons/ico/msg_warning.ico" alt="" />
+          <p>Is this popup annoying?</p>
+        </div>
+        <div class="random-alert-remember" id="random-alert-remember-row" hidden>
+          <input type="checkbox" id="random-alert-remember" />
+          <label for="random-alert-remember">remember my response</label>
+        </div>
+        <div class="random-alert-actions">
+          <button class="random-alert-choice" type="button" id="random-alert-yes">Yes</button>
+          <button class="random-alert-choice" type="button" id="random-alert-no">No</button>
+        </div>
       </div>
     </div>
 
@@ -4032,10 +4332,25 @@
       const clockImage = document.getElementById("clock-image");
       const clockQuote = document.getElementById("clock-quote");
       const randomEventWindow = document.getElementById("random-event-window");
+      const randomEventTitle = document.getElementById("random-event-title");
+      const randomEventImage = document.getElementById("random-event-image");
       const randomEventClose = document.getElementById("random-event-close");
       const randomEventOk = document.getElementById("random-event-ok");
+      const randomAlertWindow = document.getElementById("random-alert-window");
+      const randomAlertClose = document.getElementById("random-alert-close");
+      const randomAlertMaximize = document.getElementById("random-alert-maximize");
+      const randomAlertMinimize = document.getElementById("random-alert-minimize");
+      const randomAlertYes = document.getElementById("random-alert-yes");
+      const randomAlertNo = document.getElementById("random-alert-no");
+      const randomAlertRememberRow = document.getElementById("random-alert-remember-row");
+      const randomAlertRemember = document.getElementById("random-alert-remember");
       const openFrontiersPdf = document.getElementById("open-frontiers-pdf");
       const openDronePresentation = document.getElementById("open-drone-presentation");
+      const openTcpPaper = document.getElementById("open-tcp-paper");
+      const openTcpPresentation = document.getElementById("open-tcp-presentation");
+      const openWritingTcpPaper = document.getElementById("open-writing-tcp-paper");
+      const openBioe190Presentation = document.getElementById("open-bioe190-presentation");
+      const openBioe190Proposal = document.getElementById("open-bioe190-proposal");
       const pdfIframe = document.getElementById("pdf-iframe");
       const dronePresentationIframe = document.getElementById("drone-presentation-iframe");
       const studyTree = document.getElementById("study-tree");
@@ -4056,6 +4371,12 @@
       const studyStatusRight = document.getElementById("study-status-right");
       const studyPdfTitle = document.getElementById("study-pdf-title");
       const studyPdfIframe = document.getElementById("study-pdf-iframe");
+      const tcpResultsImage = document.getElementById("tcp-results-image");
+      const tcpResultsCaption = document.getElementById("tcp-results-caption");
+      const tcpResultsDescription = document.getElementById("tcp-results-description");
+      const tcpResultsPrev = document.getElementById("tcp-results-prev");
+      const tcpResultsCounter = document.getElementById("tcp-results-counter");
+      const tcpResultsNext = document.getElementById("tcp-results-next");
       const droneProjectVideo = document.getElementById("drone-project-video");
       const droneVideoCaption = document.getElementById("drone-video-caption");
       const droneVideoPrev = document.getElementById("drone-video-prev");
@@ -4071,6 +4392,37 @@
       // const CLASH_API_TOKEN = "";
       // const CLASH_PLAYER_TAG = "28CYYU08P";
       // const CLASH_SAMPLE_SIZE = 25;
+      const TCP_PROJECT_BASE_URL = "https://rohinshanker.github.io/EE-122-simulation";
+      const tcpResultFigures = [
+        {
+          src: `${TCP_PROJECT_BASE_URL}/analysis/plots/common_links/throughput_by_category_algorithm.png`,
+          alt: "Throughput by algorithm across terrestrial, LEO, GEO 500 ms, and GEO 1000 ms profiles.",
+          title: "Common links: throughput by category",
+          description:
+            "Compares receiver-side throughput across representative terrestrial, LEO, GEO 500 ms, and GEO 1000 ms profiles.",
+        },
+        {
+          src: `${TCP_PROJECT_BASE_URL}/analysis/plots/delay/throughput_vs_delay_ms.png`,
+          alt: "Throughput versus configured delay for CUBIC, Reno, BBRv3, and Vegas.",
+          title: "Delay suite: throughput versus delay",
+          description:
+            "Shows how throughput changes as configured delay increases; CUBIC and Reno stay steadier while BBRv3 tapers and Vegas drops at GEO-scale delay.",
+        },
+        {
+          src: `${TCP_PROJECT_BASE_URL}/analysis/plots/loss/retransmits_per_second_vs_loss_pct.png`,
+          alt: "Retransmits per second versus configured packet loss for CUBIC, Reno, BBRv3, and Vegas.",
+          title: "Loss suite: retransmits versus loss",
+          description:
+            "Shows BBRv3's aggressive probing tradeoff: higher throughput and utilization are paired with elevated retransmission rates as loss increases.",
+        },
+        {
+          src: `${TCP_PROJECT_BASE_URL}/analysis/plots/summary/utilization_by_condition_heatmap.png`,
+          alt: "Heatmap showing utilization by condition and algorithm.",
+          title: "Utilization by condition and algorithm",
+          description:
+            "Summarizes utilization across conditions; BBRv3 is largely yellow and green, indicating higher utilization across many tested profiles.",
+        },
+      ];
       const DRONE_PRESENTATION_PDF_URL =
         "https://rohinshanker.github.io/drone-navigation-project/assets/docs/EECS%20C106A%20Final%20Project%20-%20Group%2044%20-%20Google%20Slides.pdf#page=1&zoom=100&toolbar=0&navpanes=0";
       const droneProjectVideos = [
@@ -4087,6 +4439,10 @@
       let topZ = 10;
       let calendarDate = new Date();
       let windowOffsetIndex = 0;
+      let activeRandomEventKey = "";
+      let randomAlertReopenTimer = null;
+      let randomAlertFlashTimer = null;
+      let tcpResultsIndex = 0;
       let droneVideoIndex = 0;
       const expandedWindowState = new WeakMap();
       // let clashRoyaleLoaded = false;
@@ -4201,6 +4557,166 @@
         void win.offsetWidth;
         win.classList.add(animationClass);
       };
+
+      const RANDOM_EVENT_GLOBAL_DEBUG = false;
+      const RANDOM_EVENT_RELOAD_KEY = "personalSiteRandomEventReloadPending";
+      const RANDOM_ALERT_REMEMBERED_KEY = "personalSiteRandomAlertRemembered";
+      const randomEventDefinitions = [];
+
+      const isRandomAlertVisible = () =>
+        Boolean(
+          randomAlertWindow &&
+            !randomAlertWindow.classList.contains("is-hidden") &&
+            randomAlertWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const isRandomAlertRemembered = () => {
+        try {
+          return localStorage.getItem(RANDOM_ALERT_REMEMBERED_KEY) === "true";
+        } catch (error) {
+          return false;
+        }
+      };
+
+      const setRandomAlertRemembered = () => {
+        try {
+          localStorage.setItem(RANDOM_ALERT_REMEMBERED_KEY, "true");
+        } catch (error) {
+          // Local storage can be disabled in private browsing modes.
+        }
+      };
+
+      const resetRandomAlertSize = () => {
+        if (!randomAlertWindow) return;
+        randomAlertWindow.classList.remove("is-expanded");
+        randomAlertWindow.style.left = "";
+        randomAlertWindow.style.top = "";
+        randomAlertWindow.style.width = "";
+        randomAlertWindow.style.height = "";
+        randomAlertWindow.style.translate = "";
+      };
+
+      const positionRandomAlertWindow = () => {
+        if (!randomAlertWindow || randomAlertWindow.classList.contains("is-expanded")) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = randomAlertWindow.offsetWidth;
+        const height = randomAlertWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        randomAlertWindow.style.translate = "0 0";
+        randomAlertWindow.style.left = `${Math.round(randomLeft)}px`;
+        randomAlertWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const hideRandomAlert = () => {
+        if (!randomAlertWindow) return;
+        randomAlertWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(randomAlertWindow, "is-closing");
+      };
+
+      const showRandomAlert = ({ showRemember = false, force = false } = {}) => {
+        if (!randomAlertWindow) return;
+        if (!force && isRandomAlertRemembered()) return;
+        if (randomAlertReopenTimer) {
+          clearTimeout(randomAlertReopenTimer);
+          randomAlertReopenTimer = null;
+        }
+        if (isRandomAlertVisible()) {
+          randomAlertWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        resetRandomAlertSize();
+        if (randomAlertRememberRow) randomAlertRememberRow.hidden = !showRemember;
+        if (randomAlertRemember) randomAlertRemember.checked = false;
+        randomAlertWindow.classList.remove("is-hidden", "is-closing", "is-choice-flashing");
+        randomAlertWindow.setAttribute("aria-hidden", "false");
+        positionRandomAlertWindow();
+        randomAlertWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(randomAlertWindow, "is-opening");
+      };
+
+      const flashRandomAlertChoices = () => {
+        if (!randomAlertWindow) return;
+        if (randomAlertFlashTimer) clearTimeout(randomAlertFlashTimer);
+        randomAlertWindow.classList.add("is-choice-flashing");
+        randomAlertFlashTimer = setTimeout(() => {
+          randomAlertWindow.classList.remove("is-choice-flashing");
+          randomAlertFlashTimer = null;
+        }, 300);
+      };
+
+      const respondToRandomAlert = () => {
+        if (!randomAlertWindow) return;
+        const rememberVisible = randomAlertRememberRow && !randomAlertRememberRow.hidden;
+        const rememberChecked = randomAlertRemember && randomAlertRemember.checked;
+        hideRandomAlert();
+        if (rememberVisible && rememberChecked) {
+          setRandomAlertRemembered();
+          return;
+        }
+        const delay = rememberVisible ? 2000 + Math.random() * 3000 : 1000;
+        randomAlertReopenTimer = setTimeout(() => {
+          showRandomAlert({ showRemember: true, force: true });
+        }, delay);
+      };
+
+      const registerRandomEvent = (definition) => {
+        randomEventDefinitions.push(definition);
+        return definition;
+      };
+
+      const randomEventDebugEnabled = (definition) =>
+        RANDOM_EVENT_GLOBAL_DEBUG || Boolean(definition.debug);
+
+      const randomEventProbability = (definition, triggerName) => {
+        const value =
+          definition.probabilities && triggerName in definition.probabilities
+            ? definition.probabilities[triggerName]
+            : definition.probability;
+        const probability = Number(value);
+        if (Number.isNaN(probability)) return 0;
+        return Math.min(1, Math.max(0, probability));
+      };
+
+      const triggerRandomEvents = (triggerName, detail = {}) => {
+        randomEventDefinitions.forEach((definition) => {
+          const debug = randomEventDebugEnabled(definition);
+          if (
+            definition.canTrigger &&
+            !definition.canTrigger({ triggerName, detail, debug })
+          ) {
+            return;
+          }
+          const probability = randomEventProbability(definition, triggerName);
+          if (!debug && Math.random() >= probability) return;
+          definition.run({ triggerName, detail, debug });
+        });
+      };
+
+      registerRandomEvent({
+        id: "annoying-system-alert",
+        debug: false,
+        probability: 0.025,
+        probabilities: {
+          windowOpen: 0.015,
+          windowClose: 0.015,
+          gameWin: 0.16,
+          gameLoss: 0.1,
+          startButton: 0.05,
+          newTabLink: 0.04,
+          fileDownload: 0.06,
+          pageReload: 0.12,
+          calendarOpen: 0.04,
+          tenMinute: 0.2,
+        },
+        canTrigger: ({ debug }) => debug || !isRandomAlertRemembered(),
+        run: ({ debug }) => {
+          showRandomAlert({ force: debug });
+        },
+      });
 
       const bringWindowToFront = (win) => {
         if (!win || win.classList.contains("is-hidden")) return;
@@ -4465,6 +4981,7 @@
 
           setPortfolioResponsiveState(win);
           restartWindowAnimation(win, "is-opening");
+          triggerRandomEvents("windowOpen", { appId });
           return;
         }
 
@@ -4479,6 +4996,7 @@
         restoreWindowSize(win);
         bringWindowToFront(win);
         restartWindowAnimation(win, "is-closing");
+        triggerRandomEvents("windowClose", { appId });
       };
 
       const formatNumber = (value) => {
@@ -4879,6 +5397,38 @@
       setInterval(updateClock, 1000 * 30);
       updateCalendarClock();
       setInterval(updateCalendarClock, 500);
+      window.addEventListener("beforeunload", () => {
+        try {
+          sessionStorage.setItem(RANDOM_EVENT_RELOAD_KEY, "true");
+        } catch (error) {
+          // Session storage can be disabled in some browsing modes.
+        }
+      });
+
+      window.addEventListener("load", () => {
+        let isReload = false;
+        try {
+          const navigationEntry = performance.getEntriesByType("navigation")[0];
+          isReload = navigationEntry && navigationEntry.type === "reload";
+        } catch (error) {
+          isReload = false;
+        }
+
+        try {
+          if (isReload && sessionStorage.getItem(RANDOM_EVENT_RELOAD_KEY) === "true") {
+            setTimeout(() => {
+              triggerRandomEvents("pageReload");
+            }, 300);
+          }
+          sessionStorage.removeItem(RANDOM_EVENT_RELOAD_KEY);
+        } catch (error) {
+          // Ignore storage failures; the page should still load normally.
+        }
+      });
+
+      setInterval(() => {
+        triggerRandomEvents("tenMinute");
+      }, 10 * 60 * 1000);
 
       appWindows.forEach((win) => {
         win.addEventListener("animationend", (event) => {
@@ -5198,6 +5748,12 @@
             type: "instagram",
             label: "XOXO510 Instagram",
             href: "https://www.instagram.com/xoxo510/",
+          },
+          {
+            type: "camera",
+            label: "Tressa Davies Instagram",
+            href: "https://www.instagram.com/tressatookthis/",
+            title: "Photographer Instagram",
           },
         ],
         "modeling-fast-sonder-lookbook-shoot-2": modelingBrandLinks.fast,
@@ -5611,6 +6167,26 @@
         }
       };
 
+      const updateTcpResultFigure = () => {
+        if (!tcpResultsImage || !tcpResultFigures.length) return;
+        const activeFigure = tcpResultFigures[tcpResultsIndex];
+        tcpResultsImage.dataset.src = activeFigure.src;
+        tcpResultsImage.setAttribute("src", activeFigure.src);
+        tcpResultsImage.setAttribute("alt", activeFigure.alt);
+        if (tcpResultsCaption) {
+          tcpResultsCaption.textContent = activeFigure.title;
+        }
+        if (tcpResultsDescription) {
+          tcpResultsDescription.textContent = activeFigure.description;
+        }
+        if (tcpResultsCounter) {
+          tcpResultsCounter.textContent = galleryCounterText(
+            tcpResultsIndex,
+            tcpResultFigures.length
+          );
+        }
+      };
+
       const syncDroneProjectVideo = () => {
         if (!droneProjectVideo || !droneProjectVideos.length) return;
         const activeVideo = droneProjectVideos[droneVideoIndex];
@@ -5705,6 +6281,17 @@
       );
 
       bindGalleryNavigation(
+        tcpResultsPrev,
+        tcpResultsNext,
+        tcpResultFigures.length,
+        () => tcpResultsIndex,
+        (index) => {
+          tcpResultsIndex = index;
+        },
+        updateTcpResultFigure
+      );
+
+      bindGalleryNavigation(
         droneVideoPrev,
         droneVideoNext,
         droneProjectVideos.length,
@@ -5721,6 +6308,18 @@
         });
       }
 
+      if (openBioe190Presentation) {
+        openBioe190Presentation.addEventListener("click", () => {
+          setWindowOpen("bioe190-presentation-pdf", true);
+        });
+      }
+
+      if (openBioe190Proposal) {
+        openBioe190Proposal.addEventListener("click", () => {
+          setWindowOpen("bioe190-proposal-pdf", true);
+        });
+      }
+
       if (openDronePresentation) {
         openDronePresentation.addEventListener("click", () => {
           if (
@@ -5731,6 +6330,24 @@
             dronePresentationIframe.removeAttribute("src");
           }
           setWindowOpen("drone-presentation-pdf", true);
+        });
+      }
+
+      if (openTcpPaper) {
+        openTcpPaper.addEventListener("click", () => {
+          setWindowOpen("tcp-paper-pdf", true);
+        });
+      }
+
+      if (openWritingTcpPaper) {
+        openWritingTcpPaper.addEventListener("click", () => {
+          setWindowOpen("tcp-paper-pdf", true);
+        });
+      }
+
+      if (openTcpPresentation) {
+        openTcpPresentation.addEventListener("click", () => {
+          setWindowOpen("tcp-presentation-pdf", true);
         });
       }
 
@@ -6177,6 +6794,7 @@
       const studyOpenSelectedInTab = () => {
         const entry = studySelectedPdfEntry();
         if (!entry || !entry.node.path) return;
+        triggerRandomEvents("newTabLink", { href: entry.node.path, source: "study-resources" });
         window.open(entry.node.path, "_blank", "noopener,noreferrer");
       };
 
@@ -6189,6 +6807,10 @@
         document.body.appendChild(link);
         link.click();
         link.remove();
+        triggerRandomEvents("fileDownload", {
+          href: entry.node.path,
+          source: "study-resources",
+        });
       };
 
       const studyRenderTreeNode = (entry) => {
@@ -6529,17 +7151,33 @@
 
       const calendarImages = {
         0: "assets/calendar-pics/jan.jpg",
-        1: "assets/calendar-pics/feb.png",
+        1: "assets/modeling/fast-devotion-lb-nov2023/IMG_0330.jpg",
         2: "assets/calendar-pics/mar.jpeg",
         3: "assets/calendar-pics/apr.JPG",
-        4: "assets/calendar-pics/may.jpeg",
-        5: "assets/calendar-pics/june.jpg",
-        6: "assets/calendar-pics/jul.JPG",
-        7: "assets/calendar-pics/aug.jpeg",
+        4: "assets/modeling/fast-reverie-lb-mar2024/02-reverie-photo.jpg",
+        5: "assets/modeling/fast-crescendo-lb-oct2024/01-crescendo-photo.jpg",
+        6: "assets/modeling/xoxo510-brainscramble/01-brainscramble-photo.jpg",
+        7: "assets/modeling/club-rambutan-runway-show/01-rambutan-photo.jpg",
         8: "assets/calendar-pics/sep.jpeg",
-        9: "assets/calendar-pics/oct.jpeg",
-        10: "assets/calendar-pics/nov.JPG",
+        9: "assets/modeling/vampire-shoot-jan2025/01-vampire-photo.jpg",
+        10: "assets/modeling/saturn-LA-oct2023/IMG_9696.jpg",
         11: "assets/calendar-pics/dec.JPEG",
+      };
+
+      const calendarImagePositions = {
+        4: "center calc(100% + 30px)",
+        5: "center top",
+        7: "center top",
+        9: "left center",
+        10: "center top",
+      };
+
+      const calendarImageSizes = {
+        9: "contain",
+      };
+
+      const calendarImageBackgrounds = {
+        9: "#000",
       };
 
       const calendarQuotes = {
@@ -6563,6 +7201,17 @@
         11: `"To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment"<br>—Ralph Waldo Emerson`,
       };
 
+      const calendarEvents = {
+        "1-11": {
+          title: "February 11",
+          image: "assets/random%20events/birthday.gif",
+        },
+        "3-20": {
+          title: "April 20",
+          image: "assets/random%20events/swed.gif",
+        },
+      };
+
       const updateCalendarQuote = (month) => {
         if (!clockQuote) return;
         const quote = calendarQuotes[month];
@@ -6575,13 +7224,21 @@
         if (!calendarSection) return;
         const src = calendarImages[month] || "";
         calendarSection.style.backgroundImage = src ? `url("${src}")` : "none";
+        calendarSection.style.backgroundPosition = calendarImagePositions[month] || "center";
+        calendarSection.style.backgroundSize = calendarImageSizes[month] || "cover";
+        calendarSection.style.backgroundColor = calendarImageBackgrounds[month] || "";
       };
 
       const closeCalendar = () => {
         if (!calendarPopout) return;
         calendarPopout.classList.remove("is-open");
         calendarPopout.setAttribute("aria-hidden", "true");
-        if (calendarSection) calendarSection.style.backgroundImage = "none";
+        if (calendarSection) {
+          calendarSection.style.backgroundImage = "none";
+          calendarSection.style.backgroundPosition = "center";
+          calendarSection.style.backgroundSize = "";
+          calendarSection.style.backgroundColor = "";
+        }
         if (clockImage) clockImage.removeAttribute("src");
       };
 
@@ -6594,8 +7251,23 @@
         return date;
       };
 
-      const openRandomEventWindow = () => {
+      const getCalendarEventKey = (month, day) => `${month}-${day}`;
+      const getCalendarEvent = (month, day) => calendarEvents[getCalendarEventKey(month, day)] || null;
+
+      const openRandomEventWindow = (calendarEvent, eventKey) => {
         if (!randomEventWindow) return;
+        activeRandomEventKey = eventKey || "";
+        if (calendarEvent) {
+          if (randomEventTitle) {
+            randomEventTitle.textContent = calendarEvent.title;
+          }
+          if (randomEventImage) {
+            if (randomEventImage.dataset.src !== calendarEvent.image) {
+              randomEventImage.removeAttribute("src");
+            }
+            randomEventImage.dataset.src = calendarEvent.image;
+          }
+        }
         loadDeferredMedia(randomEventWindow);
         randomEventWindow.classList.remove("is-hidden", "is-closing");
         randomEventWindow.setAttribute("aria-hidden", "false");
@@ -6605,6 +7277,7 @@
 
       const closeRandomEventWindow = () => {
         if (!randomEventWindow) return;
+        activeRandomEventKey = "";
         randomEventWindow.setAttribute("aria-hidden", "true");
         restartWindowAnimation(randomEventWindow, "is-closing");
       };
@@ -6652,10 +7325,10 @@
 
         for (let day = 1; day <= daysInMonth; day += 1) {
           const isToday = isCurrentMonth && day === today;
-          const isApril20 = month === 3 && day === 20;
+          const calendarEvent = getCalendarEvent(month, day);
           const cell = appendCalendarCell(
             day,
-            `calendar-day${isToday ? " is-today" : ""}${isApril20 ? " is-event-day" : ""}`
+            `calendar-day${isToday ? " is-today" : ""}${calendarEvent ? " is-event-day" : ""}`
           );
           cell.dataset.calendarDay = String(day);
           cell.dataset.calendarMonth = String(month);
@@ -6681,6 +7354,7 @@
         calendarDate = new Date();
         buildCalendar(calendarDate);
         updateCalendarClock();
+        triggerRandomEvents("calendarOpen");
       };
 
       calendarButton.addEventListener("click", toggleCalendar);
@@ -6703,9 +7377,22 @@
       calendarGrid.addEventListener("click", (event) => {
         const dayCell = event.target.closest("[data-calendar-day]");
         if (!dayCell || !calendarGrid.contains(dayCell)) return;
-        if (Number(dayCell.dataset.calendarMonth) === 3 && Number(dayCell.dataset.calendarDay) === 20) {
+        const eventMonth = Number(dayCell.dataset.calendarMonth);
+        const eventDay = Number(dayCell.dataset.calendarDay);
+        const eventKey = getCalendarEventKey(eventMonth, eventDay);
+        const calendarEvent = getCalendarEvent(eventMonth, eventDay);
+        if (calendarEvent) {
           event.stopPropagation();
-          openRandomEventWindow();
+          const isSameEventOpen =
+            activeRandomEventKey === eventKey &&
+            randomEventWindow &&
+            !randomEventWindow.classList.contains("is-hidden") &&
+            randomEventWindow.getAttribute("aria-hidden") === "false";
+          if (isSameEventOpen) {
+            closeRandomEventWindow();
+            return;
+          }
+          openRandomEventWindow(calendarEvent, eventKey);
         }
       });
 
@@ -6738,11 +7425,82 @@
         });
       }
 
+      if (randomAlertWindow) {
+        randomAlertWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        randomAlertWindow.addEventListener("animationend", (event) => {
+          if (event.target !== randomAlertWindow) return;
+          if (event.animationName === "retro-window-open") {
+            randomAlertWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            randomAlertWindow.classList.remove("is-closing", "is-choice-flashing");
+            randomAlertWindow.classList.add("is-hidden");
+          }
+        });
+      }
+
+      if (randomAlertMaximize) {
+        randomAlertMaximize.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!randomAlertWindow) return;
+          randomAlertWindow.classList.add("is-expanded");
+          randomAlertWindow.style.zIndex = String(topZ++);
+        });
+      }
+
+      if (randomAlertMinimize) {
+        randomAlertMinimize.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          resetRandomAlertSize();
+          if (randomAlertWindow) randomAlertWindow.style.zIndex = String(topZ++);
+        });
+      }
+
+      if (randomAlertClose) {
+        randomAlertClose.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          flashRandomAlertChoices();
+        });
+      }
+
+      [randomAlertYes, randomAlertNo].forEach((button) => {
+        if (!button) return;
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          respondToRandomAlert();
+        });
+      });
+
       document.addEventListener("click", (event) => {
         if (!calendarPopout.classList.contains("is-open")) return;
         if (calendarPopout.contains(event.target)) return;
         if (calendarButton.contains(event.target)) return;
         closeCalendar();
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!event.isTrusted) return;
+        const link = event.target.closest("a[href]");
+        if (!link || !document.documentElement.contains(link)) return;
+        if (link.hasAttribute("download")) {
+          triggerRandomEvents("fileDownload", {
+            href: link.href,
+            source: "download-link",
+          });
+        }
+        if (link.target === "_blank") {
+          triggerRandomEvents("newTabLink", {
+            href: link.href,
+            source: "anchor",
+          });
+        }
       });
 
       appButtons.forEach((button) => {
@@ -6753,7 +7511,10 @@
       });
 
       if (startButton) {
-        startButton.addEventListener("click", closeAllWindows);
+        startButton.addEventListener("click", () => {
+          triggerRandomEvents("startButton");
+          closeAllWindows();
+        });
       }
 
       closeButtons.forEach((button) => {
@@ -6974,6 +7735,7 @@
           if (msLoseBanner) msLoseBanner.classList.add("is-visible");
           msRevealAllMines();
           msRenderCell(index);
+          triggerRandomEvents("gameLoss", { game: "minesweeper" });
           return;
         }
         msRenderCell(index);
@@ -7025,6 +7787,7 @@
             if (cell.mine) cell.flagged = true;
           });
           msRenderAll();
+          triggerRandomEvents("gameWin", { game: "minesweeper" });
         }
       };
 
@@ -7229,6 +7992,10 @@
 
       if (msHelp) {
         msHelp.addEventListener("click", () => {
+          triggerRandomEvents("newTabLink", {
+            href: "https://en.wikipedia.org/wiki/Minesweeper_(video_game)",
+            source: "minesweeper-help",
+          });
           window.open("https://en.wikipedia.org/wiki/Minesweeper_(video_game)", "_blank", "noopener,noreferrer");
         });
       }
@@ -7682,6 +8449,7 @@
         solStartFireworks();
         solShowAchievement();
         solPlayVictoryVideo();
+        triggerRandomEvents("gameWin", { game: "solitaire" });
       };
 
       const solCreateSlotMark = (text) => {
@@ -8208,6 +8976,10 @@
 
       if (solRulesHelp) {
         solRulesHelp.addEventListener("click", () => {
+          triggerRandomEvents("newTabLink", {
+            href: "https://en.wikipedia.org/wiki/Klondike_(solitaire)",
+            source: "solitaire-rules",
+          });
           window.open("https://en.wikipedia.org/wiki/Klondike_(solitaire)", "_blank", "noopener,noreferrer");
         });
       }

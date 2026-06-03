@@ -270,12 +270,20 @@
         window.location.href = "home.html";
       };
 
+      const handleLoaderControl = () => {
+        if (progress >= 100) {
+          window.location.reload();
+          return;
+        }
+        skipToHome();
+      };
+
       if (loaderMinimize) {
-        loaderMinimize.addEventListener("click", skipToHome);
+        loaderMinimize.addEventListener("click", handleLoaderControl);
       }
 
       if (loaderMaximize) {
-        loaderMaximize.addEventListener("click", skipToHome);
+        loaderMaximize.addEventListener("click", handleLoaderControl);
       }
     </script>
   </body>
