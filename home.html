@@ -1557,15 +1557,17 @@
       }
 
       .study-file-pane {
+        --study-file-columns: 22px minmax(0, 1fr) 88px 82px 68px;
+        --study-list-width: 100%;
         min-height: 0;
         overflow: auto;
         padding: 6px;
+        scrollbar-gutter: stable;
       }
 
       .study-file-pane.is-list {
         align-content: start;
-        display: grid;
-        gap: 2px;
+        display: block;
       }
 
       .study-file-pane.is-gallery {
@@ -1575,16 +1577,43 @@
         grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
       }
 
+      .study-file-list-header,
       .study-file-pane.is-list .study-file-item {
+        align-items: center;
         display: grid;
-        grid-template-columns: 22px minmax(0, 1fr) 88px 82px 68px;
-        width: 100%;
+        grid-template-columns: var(--study-file-columns);
+        min-height: 23px;
+        min-width: var(--study-list-width);
+        width: var(--study-list-width);
+      }
+
+      .study-file-list-header {
+        background: var(--surface);
+        box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+        color: #000;
+        column-gap: 6px;
+        margin-bottom: 2px;
+        padding: 2px 3px;
+        position: sticky;
+        top: -6px;
+        z-index: 2;
+      }
+
+      .study-file-list-header span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .study-file-pane.is-gallery .study-file-item {
+        align-items: center;
         flex-direction: column;
+        gap: 4px;
         justify-content: flex-start;
-        min-height: 82px;
+        line-height: 1.2;
+        min-height: 132px;
+        overflow: visible;
         padding: 8px 4px;
         text-align: center;
         width: 100%;
@@ -1596,6 +1625,7 @@
       }
 
       .study-file-name {
+        line-height: 1.25;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1606,10 +1636,28 @@
       .study-file-subitems,
       .study-file-storage {
         color: #555;
+        line-height: 1.25;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .study-file-pane.is-gallery .study-file-name {
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        display: -webkit-box;
+        min-height: 2.5em;
+        text-align: center;
+        white-space: normal;
+      }
+
+      .study-file-pane.is-gallery .study-file-type,
+      .study-file-pane.is-gallery .study-file-subitems,
+      .study-file-pane.is-gallery .study-file-storage {
+        font-size: 10px;
+        max-width: 100%;
+        text-align: center;
       }
 
       .study-file-item.is-selected .study-file-type,
@@ -1768,14 +1816,17 @@
           overflow-x: auto;
         }
 
-        .study-file-pane.is-list .study-file-item {
-          grid-template-columns: 22px minmax(0, 1fr);
+        .study-file-pane {
+          --study-file-columns: 22px minmax(118px, 1fr) 74px 54px 54px;
+          --study-list-width: max(100%, 420px);
         }
 
-        .study-file-pane.is-list .study-file-type,
-        .study-file-pane.is-list .study-file-subitems,
-        .study-file-pane.is-list .study-file-storage {
-          display: none;
+        .study-file-pane.is-gallery {
+          grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+        }
+
+        .study-file-pane.is-gallery .study-file-item {
+          min-height: 136px;
         }
 
         .study-preview-pdf {
@@ -3525,6 +3576,8 @@
               <p class="project-view-subtitle">March 2026</p>
               <div data-modeling-links="modeling-stand-still-drop"></div>
               <div data-modeling-gallery="modeling-stand-still-drop"></div>
+              <p>Talent: Rohin Shanker, Miranda Martinez, Joaquin Shin</p>
+              <p>Photographer: Sebastian Ng</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-merch-promo-shoot">
               <h3>Garb Merch Promo Shoot</h3>
@@ -3537,12 +3590,17 @@
               <p class="project-view-subtitle">December 2025</p>
               <div data-modeling-links="modeling-garb-cirque-du-moi-runway-show"></div>
               <div data-modeling-gallery="modeling-garb-cirque-du-moi-runway-show"></div>
+              <p>Talent: Rohin Shanker, Hayden Oh</p>
+              <p>Designer: Zack Dell</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway-show-oct2025">
               <h3>Garb "Garb-age" Runway Show</h3>
               <p class="project-view-subtitle">October 2025</p>
               <div data-modeling-links="modeling-garb-garbage-runway-show-oct2025"></div>
               <div data-modeling-gallery="modeling-garb-garbage-runway-show-oct2025"></div>
+              <p>Talent: Rohin Shanker, Ryan Nava</p>
+              <p>Designer: Miriam Klaczynska</p>
+              <p>Photographer: Ashleigh, Bella, Kat, Katie Page</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-club-rambutan-runway-show">
               <h3>Club Rambutan Runway Show</h3>
@@ -3573,12 +3631,19 @@
               <p class="project-view-subtitle">May 2025</p>
               <div data-modeling-links="modeling-fast-sonder-lookbook-shoot-2"></div>
               <div data-modeling-gallery="modeling-fast-sonder-lookbook-shoot-2"></div>
+              <p>Talent: Rohin Shanker, Renee Messinger, Rachel Georgian, Anjana Hariprasad, Elen Papyan</p>
+              <p>Designer: Renee Messinger</p>
+              <p>Beauty: Miranda</p>
+              <p>Photographer: Charlize Chiu</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-sonder-lookbook-shoot">
               <h3>Fast Sonder Lookbook Shoot</h3>
               <p class="project-view-subtitle">May 2025</p>
               <div data-modeling-links="modeling-fast-sonder-lookbook-shoot"></div>
               <div data-modeling-gallery="modeling-fast-sonder-lookbook-shoot"></div>
+              <p>Talent: Rohin Shanker, Emily Reese</p>
+              <p>Stylist: Eesha Santosh</p>
+              <p>Photographer: Charlize Chiu</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-saturn-los-angeles-gaia-ss25-shoot">
               <h3>Saturn Los Angeles GAIA SS25 Shoot</h3>
@@ -3591,12 +3656,17 @@
               <p class="project-view-subtitle">April 2025</p>
               <div data-modeling-links="modeling-garb-garbage-runway-show"></div>
               <div data-modeling-gallery="modeling-garb-garbage-runway-show"></div>
+              <p>Talent: Rohin Shanker</p>
+              <p>Designer: Kailey Espinoza</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-means-business-shoot">
               <h3>Garb Means Business Shoot</h3>
               <p class="project-view-subtitle">January 2025</p>
               <div data-modeling-links="modeling-garb-means-business-shoot"></div>
               <div data-modeling-gallery="modeling-garb-means-business-shoot"></div>
+              <p>Talent: Rohin Shanker</p>
+              <p>Photographer: Bailey, Felix, Kat, Mina</p>
+              <p>*this shoot involved unlit prop cigarettes</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-vampire-shoot">
               <h3>Vampire Shoot</h3>
@@ -3613,6 +3683,8 @@
               <p class="project-view-subtitle">December 2024</p>
               <div data-modeling-links="modeling-garb-garbage-runway"></div>
               <div data-modeling-gallery="modeling-garb-garbage-runway"></div>
+              <p>Talent: Rohin Shanker</p>
+              <p>Designer: Nora</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-fast-crescendo-lookbook-shoot-2">
               <h3>FAST Crescendo Lookbook Shoot 2</h3>
@@ -4444,6 +4516,7 @@
       let randomAlertFlashTimer = null;
       let tcpResultsIndex = 0;
       let droneVideoIndex = 0;
+      let activeWindow = null;
       const expandedWindowState = new WeakMap();
       // let clashRoyaleLoaded = false;
       // let clashRoyaleLoading = false;
@@ -4508,6 +4581,48 @@
 
       let activateVisibleContent = (root) => {
         loadDeferredMedia(root, true);
+      };
+
+      const isWindowVisible = (win) =>
+        Boolean(
+          win &&
+            !win.classList.contains("is-hidden") &&
+            !win.classList.contains("is-closing")
+        );
+
+      const pauseMediaPlayback = (root) => {
+        if (!root) return;
+        root.querySelectorAll("video, audio").forEach((media) => {
+          media.pause();
+        });
+      };
+
+      const isVisibleMediaElement = (media) =>
+        Boolean(
+          media &&
+            !media.closest(".viewer-content.is-hidden") &&
+            !media.closest(".app-window.is-hidden, .home-window.is-hidden")
+        );
+
+      const playMediaElement = (media) => {
+        if (!media || !isVisibleMediaElement(media)) return;
+        if (!media.getAttribute("src") && media.dataset.src) {
+          media.setAttribute("src", media.dataset.src);
+          media.load();
+        }
+        const playRequest = media.play();
+        if (playRequest && typeof playRequest.catch === "function") {
+          playRequest.catch(() => {
+            // Some browsers block autoplay unless it follows a user gesture.
+          });
+        }
+      };
+
+      const playActiveAutoplayVideos = (root) => {
+        if (!root) return;
+        const win = root.matches(".window") ? root : root.closest(".window");
+        if (win && !isWindowVisible(win)) return;
+        root.querySelectorAll("video[data-autoplay-on-active]").forEach(playMediaElement);
       };
 
       const stopMediaPlayback = (root) => {
@@ -4720,7 +4835,10 @@
 
       const bringWindowToFront = (win) => {
         if (!win || win.classList.contains("is-hidden")) return;
+        if (activeWindow && activeWindow !== win) pauseMediaPlayback(activeWindow);
+        activeWindow = win;
         win.style.zIndex = String(topZ++);
+        playActiveAutoplayVideos(win);
       };
 
       const isSmallResizableWindow = (win) => {
@@ -4988,6 +5106,7 @@
         if (win.classList.contains("is-hidden")) return;
 
         stopMediaPlayback(win);
+        if (activeWindow === win) activeWindow = null;
 
         if (appId === "solitaire") {
           solHideVictoryVideo();
@@ -5626,6 +5745,7 @@
         instagram: "assets/social-icons/instagram-icon.png",
         camera: "assets/app-icons/ico/camera.ico",
         paintOld: "assets/app-icons/ico/paint_old.ico",
+        pcxAlt: "assets/app-icons/ico/pcx_alt.ico",
       };
 
       const modelingBrandLinks = {
@@ -5729,16 +5849,46 @@
       };
 
       const modelingLinkData = {
-        "modeling-stand-still-drop": modelingBrandLinks.standstill,
+        "modeling-stand-still-drop": [
+          ...modelingBrandLinks.standstill,
+          {
+            type: "pcxAlt",
+            label: "Sebastian Ng Instagram",
+            href: "https://www.instagram.com/sebastianrng/",
+            title: "Designer Instagram",
+          },
+        ],
         "modeling-garb-merch-promo-shoot": modelingBrandLinks.garb,
-        "modeling-garb-cirque-du-moi-runway-show": modelingBrandLinks.garb,
-        "modeling-garb-garbage-runway-show-oct2025": modelingBrandLinks.garb,
+        "modeling-garb-cirque-du-moi-runway-show": [
+          ...modelingBrandLinks.garb,
+          {
+            type: "pcxAlt",
+            label: "Zack Dell Instagram",
+            href: "https://www.instagram.com/eigenzack/",
+            title: "Designer Instagram",
+          },
+        ],
+        "modeling-garb-garbage-runway-show-oct2025": [
+          ...modelingBrandLinks.garb,
+          {
+            type: "pcxAlt",
+            label: "Miriam Klaczynska Instagram",
+            href: "https://www.instagram.com/sleepymiriam/",
+            title: "Designer Instagram",
+          },
+        ],
         "modeling-club-rambutan-runway-show": [
           ...modelingBrandLinks.clubRambutan,
           {
             type: "instagram",
             label: "Club Rambutan runway post",
             href: "https://www.instagram.com/p/DQCyVvDkhhr/",
+          },
+          {
+            type: "pcxAlt",
+            label: "Datou designer website",
+            href: "https://datou.online/",
+            title: "Designer Website",
           },
         ],
         "modeling-arthaus-promo-shoot": modelingBrandLinks.arthaus,
@@ -5756,10 +5906,54 @@
             title: "Photographer Instagram",
           },
         ],
-        "modeling-fast-sonder-lookbook-shoot-2": modelingBrandLinks.fast,
-        "modeling-fast-sonder-lookbook-shoot": modelingBrandLinks.fast,
-        "modeling-saturn-los-angeles-gaia-ss25-shoot": modelingBrandLinks.saturnLosAngeles,
-        "modeling-garb-garbage-runway-show": modelingBrandLinks.garb,
+        "modeling-fast-sonder-lookbook-shoot-2": [
+          ...modelingBrandLinks.fast,
+          {
+            type: "pcxAlt",
+            label: "Pauper Co Instagram",
+            href: "https://www.instagram.com/pauperco/",
+            title: "Designer Instagram",
+          },
+          {
+            type: "camera",
+            label: "Charlize Chiu Instagram",
+            href: "https://www.instagram.com/charlize.chiu/",
+            title: "Photographer Instagram",
+          },
+          {
+            type: "paintOld",
+            label: "Miranda makeup Instagram",
+            href: "https://www.instagram.com/makeup._.miranda/",
+            title: "Beauty Instagram",
+          },
+        ],
+        "modeling-fast-sonder-lookbook-shoot": [
+          ...modelingBrandLinks.fast,
+          {
+            type: "camera",
+            label: "Charlize Chiu Instagram",
+            href: "https://www.instagram.com/charlize.chiu/",
+            title: "Photographer Instagram",
+          },
+        ],
+        "modeling-saturn-los-angeles-gaia-ss25-shoot": [
+          ...modelingBrandLinks.saturnLosAngeles,
+          {
+            type: "pcxAlt",
+            label: "Ryan Cheung Instagram",
+            href: "https://www.instagram.com/rcheungus/",
+            title: "Designer Instagram",
+          },
+        ],
+        "modeling-garb-garbage-runway-show": [
+          ...modelingBrandLinks.garb,
+          {
+            type: "pcxAlt",
+            label: "Kailey Espinoza Instagram",
+            href: "https://www.instagram.com/kaileyespnza/",
+            title: "Designer Instagram",
+          },
+        ],
         "modeling-garb-means-business-shoot": modelingBrandLinks.garb,
         "modeling-vampire-shoot": modelingBrandLinks.vampireShoot,
         "modeling-garb-garbage-runway": modelingBrandLinks.garb,
@@ -5816,6 +6010,12 @@
         "modeling-saturn-la-black-friday-drop": [
           ...modelingBrandLinks.saturnLosAngeles,
           {
+            type: "pcxAlt",
+            label: "Ryan Cheung Instagram",
+            href: "https://www.instagram.com/rcheungus/",
+            title: "Designer Instagram",
+          },
+          {
             type: "camera",
             label: "Flickz by Fredo photos",
             href: "https://flickzbyfredo.mypixieset.com/",
@@ -5824,21 +6024,55 @@
         ],
       };
 
-      const modelingGallery = (folder, filenames = [], type = "images") => ({
+      const modelingGallery = (folder, filenames = [], type = "images", options = {}) => ({
         folder,
         [type]: filenames.map((filename) => `${folder}/${filename}`),
+        ...options,
       });
 
       const modelingGalleryData = {
-        "modeling-stand-still-drop": modelingGallery("assets/modeling/stand-still-mar26"),
+        "modeling-stand-still-drop": modelingGallery(
+          "assets/modeling/stand-still-mar26",
+          [
+            "1.mp4",
+            "2.jpg",
+            "3.jpg",
+            "4.jpg",
+            "5.jpg",
+            "6.jpg",
+          ],
+          "media",
+          { autoplay: true }
+        ),
         "modeling-garb-merch-promo-shoot": modelingGallery(
-          "assets/modeling/garb-merch-lighter-promo-feb26"
+          "assets/modeling/garb-merch-lighter-promo-feb26",
+          [
+            "1.jpg",
+            "2.jpg",
+          ]
         ),
         "modeling-garb-cirque-du-moi-runway-show": modelingGallery(
-          "assets/modeling/garb-cirque-du-moi-rnwy-dec2025"
+          "assets/modeling/garb-cirque-du-moi-rnwy-dec2025",
+          [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg",
+            "4.jpg",
+            "5.jpg",
+          ]
         ),
         "modeling-garb-garbage-runway-show-oct2025": modelingGallery(
-          "assets/modeling/garb-garbage-rnwy-oct2025"
+          "assets/modeling/garb-garbage-rnwy-oct2025",
+          [
+            "1.jpg",
+            "2.jpg",
+            "3.JPG",
+            "4.jpg",
+            "5.jpg",
+            "6.jpg",
+            "7.jpg",
+            "8.JPG",
+          ]
         ),
         "modeling-club-rambutan-runway-show": modelingGallery(
           "assets/modeling/club-rambutan-runway-show",
@@ -5852,7 +6086,15 @@
           ]
         ),
         "modeling-arthaus-promo-shoot": modelingGallery(
-          "assets/modeling/arthaus-promo-shoot-sep25"
+          "assets/modeling/arthaus-promo-shoot-sep25",
+          [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg",
+            "4.jpg",
+            "5.jpg",
+            "6.jpg",
+          ]
         ),
         "modeling-xoxo510-x-brainscramble-shoot": modelingGallery(
           "assets/modeling/xoxo510-brainscramble",
@@ -5870,19 +6112,64 @@
           ]
         ),
         "modeling-fast-sonder-lookbook-shoot-2": modelingGallery(
-          "assets/modeling/fast-sonder-lb2-may2025"
+          "assets/modeling/fast-sonder-lb2-may2025",
+          [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg",
+            "4.jpg",
+            "5.png",
+            "6.jpg",
+            "7.jpg",
+            "8.jpg",
+            "9.jpg",
+            "10.jpg",
+            "11.jpg",
+            "12.jpg",
+          ]
         ),
         "modeling-fast-sonder-lookbook-shoot": modelingGallery(
-          "assets/modeling/fast-sonder-lb-may2025"
+          "assets/modeling/fast-sonder-lb-may2025",
+          [
+            "1.JPG",
+            "2.JPG",
+            "3.JPG",
+            "4.JPG",
+            "5.JPG",
+            "6.JPG",
+            "7.JPG",
+            "8.JPG",
+            "9.JPG",
+            "11.JPG",
+            "12.JPG",
+            "13.JPG",
+          ]
         ),
         "modeling-saturn-los-angeles-gaia-ss25-shoot": modelingGallery(
           "assets/modeling/saturn-LA-gaia-apr2025"
         ),
         "modeling-garb-garbage-runway-show": modelingGallery(
-          "assets/modeling/garb-garbage-rnwy-apr2025"
+          "assets/modeling/garb-garbage-rnwy-apr2025",
+          [
+            "1.JPEG",
+            "2.jpeg",
+            "3.jpeg",
+            "4.jpeg",
+          ]
         ),
         "modeling-garb-means-business-shoot": modelingGallery(
-          "assets/modeling/garb-means-business-jan2025"
+          "assets/modeling/garb-means-business-jan2025",
+          [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg",
+            "4.JPG",
+            "5.JPG",
+            "6.jpg",
+            "7.JPG",
+            "8.JPG",
+            "9.jpg",
+          ]
         ),
         "modeling-vampire-shoot": modelingGallery("assets/modeling/vampire-shoot-jan2025", [
           "01-vampire-photo.jpg",
@@ -5903,7 +6190,22 @@
           "16-vampire-photo.jpg",
         ]),
         "modeling-garb-garbage-runway": modelingGallery(
-          "assets/modeling/garb-garbage-rnwy-dec2024"
+          "assets/modeling/garb-garbage-rnwy-dec2024",
+          [
+            "0.JPEG",
+            "1.JPEG",
+            "2.JPEG",
+            "3.JPEG",
+            "3-5.JPEG",
+            "4.JPEG",
+            "5.JPEG",
+            "6.JPEG",
+            "6-5.JPEG",
+            "7.JPEG",
+            "8.JPEG",
+            "9.JPEG",
+            "10.JPEG",
+          ]
         ),
         "modeling-fast-crescendo-lookbook-shoot-2": modelingGallery(
           "assets/modeling/fast-crescendo2-lb-oct2024",
@@ -6086,6 +6388,10 @@
             currentMedia.playsInline = true;
             currentMedia.preload = "metadata";
             currentMedia.dataset.unloadOnHide = "";
+            if (gallery.autoplay) {
+              currentMedia.autoplay = true;
+              currentMedia.dataset.autoplayOnActive = "";
+            }
             currentMedia.setAttribute(
               "aria-label",
               `Modeling video ${galleryCounterText(currentIndex, media.length)}`
@@ -6098,6 +6404,7 @@
 
           scroll.replaceChildren(currentMedia);
           counter.textContent = galleryCounterText(currentIndex, media.length);
+          if (gallery.autoplay && isVideo) playMediaElement(currentMedia);
         };
 
         bindGalleryNavigation(
@@ -6234,6 +6541,8 @@
         if (dronePanel && droneProjectVideo && dronePanel.contains(droneProjectVideo)) {
           syncDroneProjectVideo();
         }
+
+        playActiveAutoplayVideos(root);
       };
 
       bindGalleryNavigation(
@@ -6757,6 +7066,16 @@
         return element;
       };
 
+      const studyRenderFileListHeader = () => {
+        const header = document.createElement("div");
+        header.className = "study-file-list-header";
+        header.setAttribute("aria-hidden", "true");
+        ["", "Name", "Type", "Items", "Size"].forEach((label) => {
+          header.appendChild(studyCreateText("", label));
+        });
+        return header;
+      };
+
       const studySetSelected = (id) => {
         if (!studyGetEntry(id)) return;
         studyState.selectedId = id;
@@ -6904,6 +7223,10 @@
         }
 
         const fragment = document.createDocumentFragment();
+        if (studyState.viewMode === "list") {
+          fragment.appendChild(studyRenderFileListHeader());
+        }
+
         children.forEach((child) => {
           const button = document.createElement("button");
           button.type = "button";
@@ -8992,6 +9315,28 @@
         document
           .querySelectorAll(".portfolio-window")
           .forEach((win) => setPortfolioResponsiveState(win));
+      });
+
+      document.addEventListener(
+        "pointerdown",
+        (event) => {
+          if (!activeWindow || !isWindowVisible(activeWindow)) return;
+          if (activeWindow.contains(event.target)) return;
+          pauseMediaPlayback(activeWindow);
+          activeWindow = null;
+        },
+        { capture: true }
+      );
+
+      const pauseActiveWindowMedia = () => {
+        if (!activeWindow) return;
+        pauseMediaPlayback(activeWindow);
+        activeWindow = null;
+      };
+
+      window.addEventListener("blur", pauseActiveWindowMedia);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) pauseActiveWindowMedia();
       });
 
       // if (clashRefresh) {
