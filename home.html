@@ -2573,6 +2573,149 @@
         animation: random-alert-choice-flash 160ms steps(2, end) infinite;
       }
 
+      .john-pork-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(280px, calc(100vw - 32px));
+        z-index: 138;
+      }
+
+      .john-pork-window.is-hidden {
+        display: none;
+      }
+
+      .john-pork-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .john-pork-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .john-pork-window .window-body {
+        padding: 8px;
+      }
+
+      .john-pork-phone {
+        background: #050505;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        color: #f5f5f5;
+        display: grid;
+        grid-template-rows: auto auto 1fr auto;
+        justify-items: center;
+        min-height: 390px;
+        overflow: hidden;
+        padding: 14px 12px 12px;
+        position: relative;
+        text-align: center;
+      }
+
+      .john-pork-phone::before {
+        background:
+          linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.7),
+            rgba(0, 0, 0, 0.15) 42%,
+            rgba(0, 0, 0, 0.78)
+          );
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+        z-index: 1;
+      }
+
+      .john-pork-status {
+        color: #b8ffb8;
+        font-family: "MS Sans Serif", Arial, sans-serif;
+        font-size: 11px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        z-index: 2;
+      }
+
+      .john-pork-name {
+        font-size: 22px;
+        font-weight: bold;
+        margin: 8px 0 0;
+        text-shadow: 1px 1px 2px #000;
+        z-index: 2;
+      }
+
+      .john-pork-number {
+        color: #cfcfcf;
+        font-size: 11px;
+        text-shadow: 1px 1px 2px #000;
+        z-index: 2;
+      }
+
+      .john-pork-avatar {
+        display: block;
+        height: 100%;
+        inset: 0;
+        object-fit: cover;
+        object-position: center;
+        position: absolute;
+        width: 100%;
+        z-index: 0;
+      }
+
+      .john-pork-actions {
+        align-self: end;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        z-index: 2;
+      }
+
+      .john-pork-call-button {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        color: #f5f5f5;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-height: 74px;
+        padding: 4px;
+      }
+
+      .john-pork-call-button:hover img,
+      .john-pork-call-button:focus-visible img {
+        filter: brightness(1.18);
+        transform: translateY(-1px);
+      }
+
+      .john-pork-call-button:active img {
+        filter: brightness(0.9);
+        transform: translateY(1px);
+      }
+
+      .john-pork-call-button:focus-visible {
+        outline: 1px dotted #fff;
+        outline-offset: 2px;
+      }
+
+      .john-pork-call-button img {
+        height: 44px;
+        image-rendering: pixelated;
+        width: 44px;
+      }
+
+      .john-pork-call-button span {
+        color: #e8e8e8;
+        font-size: 10px;
+        line-height: 1;
+      }
+
       @keyframes random-alert-choice-flash {
         0%,
         100% {
@@ -4375,6 +4518,39 @@
       </div>
     </div>
 
+    <div class="window john-pork-window is-hidden" id="john-pork-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Incoming Call</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="john-pork-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="john-pork-phone" role="group" aria-label="Incoming call from John Pork">
+          <div class="john-pork-status" id="john-pork-status">Incoming call</div>
+          <img
+            class="john-pork-avatar"
+            id="john-pork-image"
+            data-src="assets/random%20events/johnpork.jpg"
+            decoding="async"
+            alt="John Pork"
+          />
+          <p class="john-pork-name">John Pork</p>
+          <div class="john-pork-number">Mobile</div>
+          <div class="john-pork-actions">
+            <button class="john-pork-call-button" type="button" id="john-pork-decline">
+              <img src="assets/app-icons/ico/trust1_restrict.ico" alt="" />
+              <span>Decline</span>
+            </button>
+            <button class="john-pork-call-button" type="button" id="john-pork-accept">
+              <img src="assets/app-icons/ico/trust0.ico" alt="" />
+              <span>Accept</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <canvas class="ms-confetti" id="ms-confetti" aria-hidden="true"></canvas>
     <div class="ms-achievement" id="ms-achievement" aria-hidden="true">
       <img src="assets/minesweeper_assets/achievement.png" alt="Achievement unlocked" />
@@ -4416,6 +4592,11 @@
       const randomAlertNo = document.getElementById("random-alert-no");
       const randomAlertRememberRow = document.getElementById("random-alert-remember-row");
       const randomAlertRemember = document.getElementById("random-alert-remember");
+      const johnPorkWindow = document.getElementById("john-pork-window");
+      const johnPorkStatus = document.getElementById("john-pork-status");
+      const johnPorkClose = document.getElementById("john-pork-close");
+      const johnPorkAccept = document.getElementById("john-pork-accept");
+      const johnPorkDecline = document.getElementById("john-pork-decline");
       const openFrontiersPdf = document.getElementById("open-frontiers-pdf");
       const openDronePresentation = document.getElementById("open-drone-presentation");
       const openTcpPaper = document.getElementById("open-tcp-paper");
@@ -4514,6 +4695,8 @@
       let activeRandomEventKey = "";
       let randomAlertReopenTimer = null;
       let randomAlertFlashTimer = null;
+      let johnPorkStatusTimer = null;
+      let johnPorkStatusFrame = 0;
       let tcpResultsIndex = 0;
       let droneVideoIndex = 0;
       let activeWindow = null;
@@ -4778,6 +4961,73 @@
         }, delay);
       };
 
+      const isJohnPorkVisible = () =>
+        Boolean(
+          johnPorkWindow &&
+            !johnPorkWindow.classList.contains("is-hidden") &&
+            johnPorkWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const updateJohnPorkStatus = () => {
+        if (!johnPorkStatus) return;
+        const dots = ".".repeat(johnPorkStatusFrame % 4);
+        johnPorkStatus.textContent = `Incoming call${dots}`;
+        johnPorkStatusFrame += 1;
+      };
+
+      const startJohnPorkStatus = () => {
+        if (johnPorkStatusTimer) return;
+        johnPorkStatusFrame = 0;
+        updateJohnPorkStatus();
+        johnPorkStatusTimer = setInterval(updateJohnPorkStatus, 420);
+      };
+
+      const stopJohnPorkStatus = () => {
+        if (johnPorkStatusTimer) {
+          clearInterval(johnPorkStatusTimer);
+          johnPorkStatusTimer = null;
+        }
+        johnPorkStatusFrame = 0;
+        if (johnPorkStatus) johnPorkStatus.textContent = "Incoming call";
+      };
+
+      const positionJohnPorkWindow = () => {
+        if (!johnPorkWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = johnPorkWindow.offsetWidth;
+        const height = johnPorkWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        johnPorkWindow.style.translate = "0 0";
+        johnPorkWindow.style.left = `${Math.round(randomLeft)}px`;
+        johnPorkWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showJohnPorkCall = () => {
+        if (!johnPorkWindow) return;
+        if (isJohnPorkVisible()) {
+          johnPorkWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(johnPorkWindow);
+        johnPorkWindow.classList.remove("is-hidden", "is-closing");
+        johnPorkWindow.setAttribute("aria-hidden", "false");
+        positionJohnPorkWindow();
+        johnPorkWindow.style.zIndex = String(topZ++);
+        startJohnPorkStatus();
+        restartWindowAnimation(johnPorkWindow, "is-opening");
+      };
+
+      const closeJohnPorkCall = () => {
+        if (!johnPorkWindow || johnPorkWindow.classList.contains("is-hidden")) return;
+        johnPorkWindow.setAttribute("aria-hidden", "true");
+        stopJohnPorkStatus();
+        restartWindowAnimation(johnPorkWindow, "is-closing");
+      };
+
       const registerRandomEvent = (definition) => {
         randomEventDefinitions.push(definition);
         return definition;
@@ -4830,6 +5080,28 @@
         canTrigger: ({ debug }) => debug || !isRandomAlertRemembered(),
         run: ({ debug }) => {
           showRandomAlert({ force: debug });
+        },
+      });
+
+      registerRandomEvent({
+        id: "john-pork",
+        debug: false,
+        probability: 0.0125,
+        probabilities: {
+          windowOpen: 0.008,
+          windowClose: 0.008,
+          gameWin: 0.06,
+          gameLoss: 0.04,
+          startButton: 0.025,
+          newTabLink: 0.02,
+          fileDownload: 0.025,
+          pageReload: 0.04,
+          calendarOpen: 0.025,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isJohnPorkVisible(),
+        run: () => {
+          showJohnPorkCall();
         },
       });
 
@@ -6047,8 +6319,8 @@
         "modeling-garb-merch-promo-shoot": modelingGallery(
           "assets/modeling/garb-merch-lighter-promo-feb26",
           [
-            "1.jpg",
             "2.jpg",
+            "1.jpg",
           ]
         ),
         "modeling-garb-cirque-du-moi-runway-show": modelingGallery(
@@ -6146,7 +6418,16 @@
           ]
         ),
         "modeling-saturn-los-angeles-gaia-ss25-shoot": modelingGallery(
-          "assets/modeling/saturn-LA-gaia-apr2025"
+          "assets/modeling/saturn-LA-gaia-apr2025",
+          [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg",
+            "4.jpg",
+            "5.jpg",
+            "6.jpg",
+            "7.jpg",
+          ]
         ),
         "modeling-garb-garbage-runway-show": modelingGallery(
           "assets/modeling/garb-garbage-rnwy-apr2025",
@@ -7475,19 +7756,21 @@
       const calendarImages = {
         0: "assets/calendar-pics/jan.jpg",
         1: "assets/modeling/fast-devotion-lb-nov2023/IMG_0330.jpg",
-        2: "assets/calendar-pics/mar.jpeg",
-        3: "assets/calendar-pics/apr.JPG",
+        2: "assets/calendar-pics/mar-standstill.jpg",
+        3: "assets/calendar-pics/apr-sonder-lb2.jpg",
         4: "assets/modeling/fast-reverie-lb-mar2024/02-reverie-photo.jpg",
         5: "assets/modeling/fast-crescendo-lb-oct2024/01-crescendo-photo.jpg",
         6: "assets/modeling/xoxo510-brainscramble/01-brainscramble-photo.jpg",
         7: "assets/modeling/club-rambutan-runway-show/01-rambutan-photo.jpg",
-        8: "assets/calendar-pics/sep.jpeg",
+        8: "assets/modeling/garb-means-business-jan2025/1.jpg",
         9: "assets/modeling/vampire-shoot-jan2025/01-vampire-photo.jpg",
         10: "assets/modeling/saturn-LA-oct2023/IMG_9696.jpg",
-        11: "assets/calendar-pics/dec.JPEG",
+        11: "assets/modeling/garb-garbage-rnwy-apr2025/1.JPEG",
       };
 
       const calendarImagePositions = {
+        2: "center top",
+        3: "center top",
         4: "center calc(100% + 30px)",
         5: "center top",
         7: "center top",
@@ -7800,6 +8083,37 @@
           respondToRandomAlert();
         });
       });
+
+      [johnPorkClose, johnPorkAccept, johnPorkDecline].forEach((button) => {
+        if (!button) return;
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeJohnPorkCall();
+        });
+      });
+
+      if (johnPorkWindow) {
+        johnPorkWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        johnPorkWindow.addEventListener("animationend", (event) => {
+          if (event.target !== johnPorkWindow) return;
+          if (event.animationName === "retro-window-open") {
+            johnPorkWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            johnPorkWindow.classList.remove("is-closing");
+            johnPorkWindow.classList.add("is-hidden");
+            stopJohnPorkStatus();
+            johnPorkWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
 
       document.addEventListener("click", (event) => {
         if (!calendarPopout.classList.contains("is-open")) return;
