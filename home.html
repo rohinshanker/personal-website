@@ -1646,6 +1646,7 @@
       .study-file-pane.is-gallery .study-file-name {
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         display: -webkit-box;
         min-height: 2.5em;
         text-align: center;
@@ -2729,6 +2730,131 @@
         min-width: 84px;
       }
 
+      .mcafee-window {
+        display: block;
+        left: 50%;
+        max-height: calc(100vh - 76px);
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(380px, calc(100vw - 32px));
+        z-index: 146;
+      }
+
+      .mcafee-window.is-hidden {
+        display: none;
+      }
+
+      .mcafee-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .mcafee-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .mcafee-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: calc(100vh - 110px);
+        overflow-y: auto;
+      }
+
+      .mcafee-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 52px 1fr;
+      }
+
+      .mcafee-message img {
+        display: block;
+        height: 48px;
+        object-fit: contain;
+        width: 48px;
+      }
+
+      .mcafee-message p {
+        margin: 0;
+      }
+
+      .mcafee-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .mcafee-actions button {
+        min-width: 92px;
+      }
+
+      .mcafee-progress {
+        height: 18px;
+      }
+
+      .mcafee-status {
+        margin: 0;
+      }
+
+      .word-error-stack-window {
+        display: block;
+        max-width: calc(100vw - 24px);
+        position: fixed;
+        translate: 0 0;
+        width: min(360px, calc(100vw - 24px));
+        z-index: 147;
+      }
+
+      .word-error-stack-window.is-hidden {
+        display: none;
+      }
+
+      .word-error-stack-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .word-error-stack-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .word-error-stack-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .word-error-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 36px 1fr;
+      }
+
+      .word-error-message img {
+        display: block;
+        height: 32px;
+        image-rendering: pixelated;
+        width: 32px;
+      }
+
+      .word-error-message p {
+        margin: 0;
+      }
+
+      .word-error-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .word-error-actions button {
+        min-width: 104px;
+      }
+
       .rohin-note-window {
         display: block;
         left: 50%;
@@ -3074,12 +3200,17 @@
       }
 
       .biden-blast-window.is-opening {
-        animation: retro-window-open 260ms steps(7, end) both;
+        animation: none;
       }
 
       .biden-blast-window.is-closing {
         pointer-events: none;
-        animation: retro-window-close 180ms steps(7, end) both;
+        animation: none;
+      }
+
+      .biden-blast-window.is-exploding {
+        pointer-events: none;
+        visibility: hidden;
       }
 
       .biden-blast-window .window-body {
@@ -3106,6 +3237,112 @@
       .biden-blast-window button {
         align-self: flex-end;
         min-width: 84px;
+      }
+
+      .biden-explode-piece {
+        background-repeat: no-repeat;
+        box-shadow: none;
+        overflow: hidden;
+        pointer-events: none;
+        position: fixed;
+        z-index: 160;
+      }
+
+      .virus-window,
+      .virus-rescue-window {
+        display: block;
+        left: 50%;
+        max-height: calc(100vh - 76px);
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(380px, calc(100vw - 32px));
+        z-index: 148;
+      }
+
+      .virus-window.is-hidden,
+      .virus-rescue-window.is-hidden {
+        display: none;
+      }
+
+      .virus-window.is-opening,
+      .virus-rescue-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .virus-window.is-closing,
+      .virus-rescue-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .virus-window.is-exploding {
+        pointer-events: none;
+        visibility: hidden;
+      }
+
+      .virus-window .window-body,
+      .virus-rescue-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: calc(100vh - 110px);
+        overflow-y: auto;
+      }
+
+      .virus-photo {
+        background: #000;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: block;
+        max-height: min(44vh, 260px);
+        object-fit: contain;
+        width: 100%;
+      }
+
+      .virus-window p,
+      .virus-rescue-window p {
+        margin: 0;
+      }
+
+      .virus-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .virus-actions button {
+        min-width: 74px;
+      }
+
+      .virus-rescue-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 52px 1fr;
+      }
+
+      .virus-rescue-message img {
+        display: block;
+        height: 48px;
+        object-fit: contain;
+        width: 48px;
+      }
+
+      .window-explode-piece {
+        overflow: hidden;
+        pointer-events: none;
+        position: fixed;
+        z-index: 161;
+      }
+
+      .virus-flashbang {
+        background: #fff;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+        position: fixed;
+        z-index: 240;
       }
 
       @keyframes random-alert-choice-flash {
@@ -4985,6 +5222,67 @@
       </div>
     </div>
 
+    <div class="window mcafee-window is-hidden" id="mcafee-prompt-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">McAfee Antivirus</div>
+      </div>
+      <div class="window-body">
+        <div class="mcafee-message">
+          <img
+            data-src="assets/random%20events/mcafee-logo.png"
+            decoding="async"
+            alt=""
+          />
+          <p>Your antivirus is out of date. Would you like to update?</p>
+        </div>
+        <div class="mcafee-actions">
+          <button type="button" id="mcafee-update-run">Let's do it!</button>
+          <button type="button" id="mcafee-update-later">Not now</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window mcafee-window is-hidden" id="mcafee-download-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">McAfee Antivirus</div>
+      </div>
+      <div class="window-body">
+        <p class="mcafee-status" id="mcafee-download-status">Downloading.</p>
+        <div
+          class="progress-indicator segmented mcafee-progress"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          id="mcafee-progress"
+        >
+          <span class="progress-indicator-bar" id="mcafee-progress-bar"></span>
+        </div>
+        <div class="mcafee-actions">
+          <button type="button" id="mcafee-complete" disabled>Complete</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window mcafee-window is-hidden" id="mcafee-thanks-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">McAfee Antivirus</div>
+      </div>
+      <div class="window-body">
+        <div class="mcafee-message">
+          <img
+            data-src="assets/random%20events/mcafee.png"
+            decoding="async"
+            alt=""
+          />
+          <p>John McAfee thanks you!</p>
+        </div>
+        <div class="mcafee-actions">
+          <button type="button" id="mcafee-thanks-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
     <div class="window rohin-note-window is-hidden" id="rohin-note-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Note</div>
@@ -5150,6 +5448,44 @@
       </div>
     </div>
 
+    <div class="window virus-window is-hidden" id="virus-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Virus</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="virus-photo"
+          data-src="assets/random%20events/virus.jpg"
+          decoding="async"
+          alt=""
+        />
+        <p>can i plase install a vairus on your computer :))</p>
+        <div class="virus-actions">
+          <button type="button" id="virus-yes">Yes</button>
+          <button type="button" id="virus-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window virus-rescue-window is-hidden" id="virus-rescue-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">McAfee Antivirus</div>
+      </div>
+      <div class="window-body">
+        <div class="virus-rescue-message">
+          <img
+            data-src="assets/random%20events/mcafee.png"
+            decoding="async"
+            alt=""
+          />
+          <p>Fear not, I am here to protect you!</p>
+        </div>
+        <div class="virus-actions">
+          <button type="button" id="virus-rescue-thanks">Thank you</button>
+        </div>
+      </div>
+    </div>
+
     <canvas class="ms-confetti" id="ms-confetti" aria-hidden="true"></canvas>
     <div class="ms-achievement" id="ms-achievement" aria-hidden="true">
       <img src="assets/minesweeper_assets/achievement.png" alt="Achievement unlocked" />
@@ -5201,6 +5537,16 @@
       const rohinUpdateWindow = document.getElementById("rohin-update-window");
       const rohinUpdateRun = document.getElementById("rohin-update-run");
       const rohinUpdateLater = document.getElementById("rohin-update-later");
+      const mcAfeePromptWindow = document.getElementById("mcafee-prompt-window");
+      const mcAfeeDownloadWindow = document.getElementById("mcafee-download-window");
+      const mcAfeeThanksWindow = document.getElementById("mcafee-thanks-window");
+      const mcAfeeUpdateRun = document.getElementById("mcafee-update-run");
+      const mcAfeeUpdateLater = document.getElementById("mcafee-update-later");
+      const mcAfeeProgress = document.getElementById("mcafee-progress");
+      const mcAfeeProgressBar = document.getElementById("mcafee-progress-bar");
+      const mcAfeeDownloadStatus = document.getElementById("mcafee-download-status");
+      const mcAfeeComplete = document.getElementById("mcafee-complete");
+      const mcAfeeThanksOk = document.getElementById("mcafee-thanks-ok");
       const rohinNoteWindow = document.getElementById("rohin-note-window");
       const rohinNoteOk = document.getElementById("rohin-note-ok");
       const earthNoteWindow = document.getElementById("earth-note-window");
@@ -5222,6 +5568,11 @@
       const advertisementNoThanks = document.getElementById("advertisement-no-thanks");
       const bidenBlastWindow = document.getElementById("biden-blast-window");
       const bidenBlastOk = document.getElementById("biden-blast-ok");
+      const virusWindow = document.getElementById("virus-window");
+      const virusYes = document.getElementById("virus-yes");
+      const virusNo = document.getElementById("virus-no");
+      const virusRescueWindow = document.getElementById("virus-rescue-window");
+      const virusRescueThanks = document.getElementById("virus-rescue-thanks");
       const openFrontiersPdf = document.getElementById("open-frontiers-pdf");
       const openDronePresentation = document.getElementById("open-drone-presentation");
       const openTcpPaper = document.getElementById("open-tcp-paper");
@@ -5325,6 +5676,16 @@
       let felizJuevesShownFallbackDate = "";
       let johnPorkStatusTimer = null;
       let johnPorkStatusFrame = 0;
+      let mcAfeeProgressValue = 0;
+      let mcAfeeProgressTimer = null;
+      let mcAfeeDotsTimer = null;
+      let mcAfeeDotsFrame = 0;
+      let wordErrorWindows = [];
+      let wordErrorOpenTimers = [];
+      let wordErrorCloseTimers = [];
+      let wordErrorStackClosing = false;
+      let virusExploding = false;
+      let virusRescueAnchor = null;
       let tcpResultsIndex = 0;
       let droneVideoIndex = 0;
       let activeWindow = null;
@@ -5412,6 +5773,7 @@
         Boolean(
           media &&
             !media.closest(".viewer-content.is-hidden") &&
+            !media.closest('.window[data-media-closing="true"]') &&
             !media.closest(".app-window.is-hidden, .home-window.is-hidden")
         );
 
@@ -5432,6 +5794,7 @@
       const playActiveAutoplayVideos = (root) => {
         if (!root) return;
         const win = root.matches(".window") ? root : root.closest(".window");
+        if (win && win.dataset.mediaClosing === "true") return;
         if (win && !isWindowVisible(win)) return;
         root.querySelectorAll("video[data-autoplay-on-active]").forEach(playMediaElement);
       };
@@ -5661,6 +6024,377 @@
         if (!rohinUpdateWindow || rohinUpdateWindow.classList.contains("is-hidden")) return;
         rohinUpdateWindow.setAttribute("aria-hidden", "true");
         restartWindowAnimation(rohinUpdateWindow, "is-closing");
+      };
+
+      const isMcAfeeWindowVisible = (win) =>
+        Boolean(win && !win.classList.contains("is-hidden"));
+
+      const isMcAfeeVisible = () =>
+        [mcAfeePromptWindow, mcAfeeDownloadWindow, mcAfeeThanksWindow].some(
+          isMcAfeeWindowVisible
+        );
+
+      const mcAfeeWindows = () =>
+        [mcAfeePromptWindow, mcAfeeDownloadWindow, mcAfeeThanksWindow].filter(Boolean);
+
+      const positionMcAfeeWindow = (win) => {
+        if (!win) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = win.offsetWidth;
+        const height = win.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        win.style.translate = "0 0";
+        win.style.left = `${Math.round(randomLeft)}px`;
+        win.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const clampMcAfeeWindowToViewport = (win) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const rect = win.getBoundingClientRect();
+        const maxLeft = Math.max(padding, window.innerWidth - rect.width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - rect.height - taskbarClearance);
+        const nextLeft = Math.round(Math.max(padding, Math.min(rect.left, maxLeft)));
+        const nextTop = Math.round(Math.max(padding, Math.min(rect.top, maxTop)));
+        win.style.translate = "0 0";
+        win.style.left = `${nextLeft}px`;
+        win.style.top = `${nextTop}px`;
+      };
+
+      const clampMcAfeeWindowAfterMediaLoad = (win) => {
+        if (!win) return;
+        requestAnimationFrame(() => clampMcAfeeWindowToViewport(win));
+        setTimeout(() => clampMcAfeeWindowToViewport(win), 80);
+        setTimeout(() => clampMcAfeeWindowToViewport(win), 240);
+        setTimeout(() => clampMcAfeeWindowToViewport(win), 360);
+        win.querySelectorAll("img").forEach((image) => {
+          if (image.complete && image.naturalWidth > 0) {
+            clampMcAfeeWindowToViewport(win);
+            return;
+          }
+          image.addEventListener("load", () => clampMcAfeeWindowToViewport(win), {
+            once: true,
+          });
+        });
+      };
+
+      const clampVisibleMcAfeeWindows = () => {
+        mcAfeeWindows().forEach((win) => clampMcAfeeWindowToViewport(win));
+      };
+
+      const showMcAfeeWindow = (win) => {
+        if (!win) return;
+        if (!win.classList.contains("is-hidden")) {
+          win.style.zIndex = String(topZ++);
+          clampMcAfeeWindowToViewport(win);
+          return;
+        }
+        win.classList.remove("is-hidden", "is-closing");
+        win.setAttribute("aria-hidden", "false");
+        positionMcAfeeWindow(win);
+        clampMcAfeeWindowToViewport(win);
+        clampMcAfeeWindowAfterMediaLoad(win);
+        loadDeferredMedia(win);
+        win.style.zIndex = String(topZ++);
+        restartWindowAnimation(win, "is-opening");
+      };
+
+      const closeMcAfeeWindow = (win) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        win.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(win, "is-closing");
+      };
+
+      const stopMcAfeeDownload = () => {
+        if (mcAfeeProgressTimer) {
+          clearTimeout(mcAfeeProgressTimer);
+          mcAfeeProgressTimer = null;
+        }
+        if (mcAfeeDotsTimer) {
+          clearInterval(mcAfeeDotsTimer);
+          mcAfeeDotsTimer = null;
+        }
+      };
+
+      const updateMcAfeeDownloadStatus = () => {
+        if (!mcAfeeDownloadStatus) return;
+        const dots = ".".repeat((mcAfeeDotsFrame % 3) + 1);
+        mcAfeeDownloadStatus.textContent = `Downloading${dots}`;
+        mcAfeeDotsFrame += 1;
+      };
+
+      const updateMcAfeeProgress = () => {
+        if (!mcAfeeProgressBar || !mcAfeeProgress) return;
+        mcAfeeProgressBar.style.width = `${mcAfeeProgressValue}%`;
+        mcAfeeProgress.setAttribute("aria-valuenow", Math.floor(mcAfeeProgressValue));
+      };
+
+      const finishMcAfeeDownload = () => {
+        stopMcAfeeDownload();
+        mcAfeeProgressValue = 100;
+        updateMcAfeeProgress();
+        if (mcAfeeDownloadStatus) mcAfeeDownloadStatus.textContent = "Download complete.";
+        if (mcAfeeComplete) mcAfeeComplete.disabled = false;
+      };
+
+      const tickMcAfeeDownload = () => {
+        const slowDown = mcAfeeProgressValue > 70 ? 4 : 0;
+        const delta = Math.max(0, Math.random() * 9 + 2 - slowDown);
+        mcAfeeProgressValue = Math.min(mcAfeeProgressValue + delta, 100);
+        updateMcAfeeProgress();
+
+        if (mcAfeeProgressValue < 100) {
+          const jitter = 160 + Math.random() * 320;
+          mcAfeeProgressTimer = setTimeout(tickMcAfeeDownload, jitter);
+          return;
+        }
+
+        finishMcAfeeDownload();
+      };
+
+      const startMcAfeeDownload = () => {
+        stopMcAfeeDownload();
+        mcAfeeProgressValue = 0;
+        mcAfeeDotsFrame = 0;
+        updateMcAfeeProgress();
+        updateMcAfeeDownloadStatus();
+        if (mcAfeeComplete) mcAfeeComplete.disabled = true;
+        mcAfeeDotsTimer = setInterval(updateMcAfeeDownloadStatus, 420);
+        mcAfeeProgressTimer = setTimeout(tickMcAfeeDownload, 300);
+      };
+
+      const showMcAfeePrompt = () => {
+        showMcAfeeWindow(mcAfeePromptWindow);
+      };
+
+      const showMcAfeeDownload = () => {
+        const alreadyVisible = isMcAfeeWindowVisible(mcAfeeDownloadWindow);
+        showMcAfeeWindow(mcAfeeDownloadWindow);
+        if (alreadyVisible) return;
+        startMcAfeeDownload();
+      };
+
+      const showMcAfeeThanks = () => {
+        showMcAfeeWindow(mcAfeeThanksWindow);
+      };
+
+      const clearWordErrorTimers = () => {
+        wordErrorOpenTimers.forEach((timer) => clearTimeout(timer));
+        wordErrorCloseTimers.forEach((timer) => clearTimeout(timer));
+        wordErrorOpenTimers = [];
+        wordErrorCloseTimers = [];
+      };
+
+      const isWordErrorStackVisible = () => wordErrorWindows.length > 0;
+
+      const shuffleWordErrorWindows = (windows) => {
+        const shuffled = [...windows];
+        for (let i = shuffled.length - 1; i > 0; i -= 1) {
+          const nextIndex = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[nextIndex]] = [shuffled[nextIndex], shuffled[i]];
+        }
+        return shuffled;
+      };
+
+      const wordErrorStackLayout = () => {
+        const count = 10;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const windowWidth = Math.min(360, Math.max(260, window.innerWidth - padding * 2));
+        const windowHeight = 136;
+        const availableWidth = Math.max(0, window.innerWidth - padding * 2 - windowWidth);
+        const availableHeight = Math.max(
+          0,
+          window.innerHeight - taskbarClearance - padding - windowHeight
+        );
+        const maxStep = Math.min(
+          28,
+          availableWidth / (count - 1),
+          availableHeight / (count - 1)
+        );
+        const step = maxStep >= 8 ? maxStep : Math.max(0, maxStep);
+        const totalOffset = step * (count - 1);
+        const startLeft = Math.round(padding + Math.max(0, (availableWidth - totalOffset) / 2));
+        const startTop = Math.round(padding + Math.max(0, (availableHeight - totalOffset) / 2));
+
+        return {
+          count,
+          step,
+          startLeft,
+          startTop,
+          windowWidth,
+        };
+      };
+
+      const removeWordErrorWindow = (win) => {
+        if (!win) return;
+        win.remove();
+        wordErrorWindows = wordErrorWindows.filter((item) => item !== win);
+        if (!wordErrorWindows.length) {
+          wordErrorStackClosing = false;
+          clearWordErrorTimers();
+        }
+      };
+
+      const closeWordErrorWindow = (win) => {
+        if (!win || win.classList.contains("is-closing")) return;
+        win.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(win, "is-closing");
+      };
+
+      const closeWordErrorStack = (selectedWindow) => {
+        if (wordErrorStackClosing) return;
+        wordErrorStackClosing = true;
+        wordErrorOpenTimers.forEach((timer) => clearTimeout(timer));
+        wordErrorOpenTimers = [];
+
+        const visibleWindows = wordErrorWindows.filter(
+          (win) => !win.classList.contains("is-hidden")
+        );
+        const hiddenWindows = wordErrorWindows.filter((win) =>
+          win.classList.contains("is-hidden")
+        );
+
+        hiddenWindows.forEach(removeWordErrorWindow);
+
+        const selectedIsVisible =
+          selectedWindow && visibleWindows.includes(selectedWindow);
+        if (selectedIsVisible) {
+          closeWordErrorWindow(selectedWindow);
+        }
+
+        const remainingWindows = shuffleWordErrorWindows(
+          visibleWindows.filter((win) => win !== selectedWindow)
+        );
+
+        remainingWindows.forEach((win, index) => {
+          const timer = setTimeout(() => closeWordErrorWindow(win), (index + 1) * 100);
+          wordErrorCloseTimers.push(timer);
+        });
+
+        if (!selectedIsVisible && !remainingWindows.length) {
+          wordErrorStackClosing = false;
+        }
+      };
+
+      const createWordErrorWindow = (index, layout) => {
+        const win = document.createElement("div");
+        win.className = "window word-error-stack-window is-hidden";
+        win.setAttribute("aria-hidden", "true");
+        win.style.left = `${Math.round(layout.startLeft + index * layout.step)}px`;
+        win.style.top = `${Math.round(layout.startTop + index * layout.step)}px`;
+        win.style.width = `${layout.windowWidth}px`;
+
+        const titleBar = document.createElement("div");
+        titleBar.className = "title-bar";
+
+        const title = document.createElement("div");
+        title.className = "title-bar-text";
+        title.textContent = "Microsoft Word";
+
+        const controls = document.createElement("div");
+        controls.className = "title-bar-controls";
+
+        const closeButton = document.createElement("button");
+        closeButton.type = "button";
+        closeButton.setAttribute("aria-label", "Close");
+
+        controls.appendChild(closeButton);
+        titleBar.appendChild(title);
+        titleBar.appendChild(controls);
+
+        const body = document.createElement("div");
+        body.className = "window-body";
+
+        const message = document.createElement("div");
+        message.className = "word-error-message";
+
+        const icon = document.createElement("img");
+        icon.src = "assets/app-icons/ico/application_hourglass_small.ico";
+        icon.alt = "";
+
+        const text = document.createElement("p");
+        text.textContent =
+          "Fatal Error: Your license could not be confirmed, please sign back into Microsft Office.";
+
+        const actions = document.createElement("div");
+        actions.className = "word-error-actions";
+
+        const noThanks = document.createElement("button");
+        noThanks.type = "button";
+        noThanks.textContent = "No, thanks.";
+
+        const thinkAboutIt = document.createElement("button");
+        thinkAboutIt.type = "button";
+        thinkAboutIt.textContent = "I'll think about it.";
+
+        [closeButton, noThanks, thinkAboutIt].forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            closeWordErrorStack(win);
+          });
+        });
+
+        win.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        win.addEventListener("animationend", (event) => {
+          if (event.target !== win) return;
+          if (event.animationName === "retro-window-open") {
+            win.classList.remove("is-opening");
+            clampMcAfeeWindowToViewport(win);
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            removeWordErrorWindow(win);
+          }
+        });
+
+        message.appendChild(icon);
+        message.appendChild(text);
+        actions.appendChild(noThanks);
+        actions.appendChild(thinkAboutIt);
+        body.appendChild(message);
+        body.appendChild(actions);
+        win.appendChild(titleBar);
+        win.appendChild(body);
+
+        return win;
+      };
+
+      const showWordErrorStack = () => {
+        if (isWordErrorStackVisible()) {
+          wordErrorWindows.forEach((win) => {
+            if (!win.classList.contains("is-hidden")) win.style.zIndex = String(topZ++);
+          });
+          return;
+        }
+
+        clearWordErrorTimers();
+        wordErrorStackClosing = false;
+        const layout = wordErrorStackLayout();
+        wordErrorWindows = Array.from({ length: layout.count }, (_, index) =>
+          createWordErrorWindow(index, layout)
+        );
+
+        wordErrorWindows.forEach((win) => document.body.appendChild(win));
+        wordErrorWindows.forEach((win, index) => {
+          const timer = setTimeout(() => {
+            if (wordErrorStackClosing || !wordErrorWindows.includes(win)) return;
+            win.classList.remove("is-hidden", "is-closing");
+            win.setAttribute("aria-hidden", "false");
+            win.style.zIndex = String(topZ++);
+            restartWindowAnimation(win, "is-opening");
+          }, index * 100);
+          wordErrorOpenTimers.push(timer);
+        });
       };
 
       const isRohinNoteVisible = () =>
@@ -6069,6 +6803,102 @@
         bidenBlastWindow.style.top = `${Math.round(randomTop)}px`;
       };
 
+      const removeBidenExplodePieces = () => {
+        document.querySelectorAll(".biden-explode-piece").forEach((piece) => {
+          piece.remove();
+        });
+      };
+
+      const animateBidenBlastExplode = (mode, onComplete) => {
+        if (!bidenBlastWindow) {
+          if (onComplete) onComplete();
+          return;
+        }
+
+        removeBidenExplodePieces();
+        const rect = bidenBlastWindow.getBoundingClientRect();
+        const columns = 3;
+        const rows = 3;
+        const pieceWidth = rect.width / columns;
+        const pieceHeight = rect.height / rows;
+        const pieces = [];
+
+        bidenBlastWindow.classList.add("is-exploding");
+
+        for (let row = 0; row < rows; row += 1) {
+          for (let column = 0; column < columns; column += 1) {
+            const piece = document.createElement("div");
+            piece.className = "biden-explode-piece";
+            piece.style.left = `${rect.left + column * pieceWidth}px`;
+            piece.style.top = `${rect.top + row * pieceHeight}px`;
+            piece.style.width = `${Math.ceil(pieceWidth)}px`;
+            piece.style.height = `${Math.ceil(pieceHeight)}px`;
+            piece.style.backgroundImage = `linear-gradient(#fff, #fff)`;
+            piece.style.backgroundSize = `${rect.width}px ${rect.height}px`;
+            piece.style.backgroundPosition = `${-column * pieceWidth}px ${-row * pieceHeight}px`;
+
+            const clone = bidenBlastWindow.cloneNode(true);
+            clone.classList.remove(
+              "is-opening",
+              "is-closing",
+              "is-hidden",
+              "is-exploding"
+            );
+            clone.removeAttribute("id");
+            clone.querySelectorAll("[id]").forEach((element) => {
+              element.removeAttribute("id");
+            });
+            clone.setAttribute("aria-hidden", "true");
+            clone.style.left = `${-column * pieceWidth}px`;
+            clone.style.top = `${-row * pieceHeight}px`;
+            clone.style.width = `${rect.width}px`;
+            clone.style.translate = "0 0";
+            clone.style.position = "absolute";
+            clone.style.pointerEvents = "none";
+            clone.style.zIndex = "0";
+            piece.appendChild(clone);
+
+            document.body.appendChild(piece);
+            pieces.push({ piece, row, column });
+          }
+        }
+
+        const centerRow = (rows - 1) / 2;
+        const centerColumn = (columns - 1) / 2;
+        let remaining = pieces.length;
+
+        pieces.forEach(({ piece, row, column }) => {
+          const deltaX = (column - centerColumn) * pieceWidth * 1.15;
+          const deltaY = (row - centerRow) * pieceHeight * 1.15;
+          const outward = `translate(${deltaX}px, ${deltaY}px) scale(0.08)`;
+          const inward = "translate(0, 0) scale(1)";
+          const fromTransform = mode === "show" ? outward : inward;
+          const toTransform = mode === "show" ? inward : outward;
+          const fromOpacity = mode === "show" ? 0 : 1;
+          const toOpacity = mode === "show" ? 1 : 0;
+
+          const animation = piece.animate(
+            [
+              { opacity: fromOpacity, transform: fromTransform },
+              { opacity: toOpacity, transform: toTransform },
+            ],
+            {
+              duration: 420,
+              easing: mode === "show" ? "cubic-bezier(.2,.8,.2,1)" : "cubic-bezier(.6,0,.8,.2)",
+              fill: "forwards",
+            }
+          );
+
+          animation.addEventListener("finish", () => {
+            remaining -= 1;
+            if (remaining > 0) return;
+            removeBidenExplodePieces();
+            bidenBlastWindow.classList.remove("is-exploding");
+            if (onComplete) onComplete();
+          });
+        });
+      };
+
       const showBidenBlastWindow = () => {
         if (!bidenBlastWindow) return;
         if (isBidenBlastVisible()) {
@@ -6076,17 +6906,255 @@
           return;
         }
         loadDeferredMedia(bidenBlastWindow);
-        bidenBlastWindow.classList.remove("is-hidden", "is-closing");
+        bidenBlastWindow.classList.remove("is-hidden", "is-closing", "is-exploding");
         bidenBlastWindow.setAttribute("aria-hidden", "false");
         positionBidenBlastWindow();
         bidenBlastWindow.style.zIndex = String(topZ++);
-        restartWindowAnimation(bidenBlastWindow, "is-opening");
+        animateBidenBlastExplode("show");
       };
 
       const closeBidenBlastWindow = () => {
         if (!bidenBlastWindow || bidenBlastWindow.classList.contains("is-hidden")) return;
         bidenBlastWindow.setAttribute("aria-hidden", "true");
-        restartWindowAnimation(bidenBlastWindow, "is-closing");
+        bidenBlastWindow.classList.add("is-closing");
+        animateBidenBlastExplode("hide", () => {
+          bidenBlastWindow.classList.remove("is-closing");
+          bidenBlastWindow.classList.add("is-hidden");
+          bidenBlastWindow.querySelectorAll("img[data-src]").forEach((image) => {
+            image.removeAttribute("src");
+          });
+        });
+      };
+
+      const isVirusWindowVisible = (win) =>
+        Boolean(win && !win.classList.contains("is-hidden"));
+
+      const virusEventWindows = () => [virusWindow, virusRescueWindow].filter(Boolean);
+
+      const isVirusVisible = () => virusEventWindows().some(isVirusWindowVisible);
+
+      const setVirusEventWindowPosition = (win, left, top) => {
+        if (!win) return;
+        const nextLeft = Math.round(left);
+        const nextTop = Math.round(top);
+        win.style.translate = "0 0";
+        win.style.left = `${nextLeft}px`;
+        win.style.top = `${nextTop}px`;
+        if (win === virusWindow) {
+          virusRescueAnchor = { left: nextLeft, top: nextTop };
+        }
+      };
+
+      const positionVirusEventWindow = (win) => {
+        if (!win) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = win.offsetWidth;
+        const height = win.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        setVirusEventWindowPosition(win, randomLeft, randomTop);
+      };
+
+      const clampVirusEventWindowToViewport = (win) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = win.offsetWidth;
+        const height = win.offsetHeight;
+        const styleLeft = Number.parseFloat(win.style.left);
+        const styleTop = Number.parseFloat(win.style.top);
+        const currentLeft = Number.isFinite(styleLeft) ? styleLeft : win.getBoundingClientRect().left;
+        const currentTop = Number.isFinite(styleTop) ? styleTop : win.getBoundingClientRect().top;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const nextLeft = Math.max(padding, Math.min(currentLeft, maxLeft));
+        const nextTop = Math.max(padding, Math.min(currentTop, maxTop));
+        setVirusEventWindowPosition(win, nextLeft, nextTop);
+      };
+
+      const clampVirusEventWindowAfterMediaLoad = (win) => {
+        if (!win) return;
+        requestAnimationFrame(() => clampVirusEventWindowToViewport(win));
+        setTimeout(() => clampVirusEventWindowToViewport(win), 80);
+        setTimeout(() => clampVirusEventWindowToViewport(win), 240);
+        win.querySelectorAll("img").forEach((image) => {
+          if (image.complete && image.naturalWidth > 0) {
+            clampVirusEventWindowToViewport(win);
+            return;
+          }
+          image.addEventListener("load", () => clampVirusEventWindowToViewport(win), {
+            once: true,
+          });
+        });
+      };
+
+      const clampVisibleVirusEventWindows = () => {
+        virusEventWindows().forEach((win) => clampVirusEventWindowToViewport(win));
+      };
+
+      const removeWindowExplodePieces = () => {
+        document.querySelectorAll(".window-explode-piece").forEach((piece) => {
+          piece.remove();
+        });
+      };
+
+      const triggerVirusFlashbang = () => {
+        const flash = document.createElement("div");
+        flash.className = "virus-flashbang";
+        document.body.appendChild(flash);
+        const animation = flash.animate(
+          [
+            { opacity: 0 },
+            { opacity: 1, offset: 0.08 },
+            { opacity: 1, offset: 0.28 },
+            { opacity: 0 },
+          ],
+          {
+            duration: 900,
+            easing: "ease-out",
+            fill: "forwards",
+          }
+        );
+        animation.addEventListener("finish", () => flash.remove(), { once: true });
+      };
+
+      const animateWindowExplode = (win, onComplete) => {
+        if (!win) {
+          if (onComplete) onComplete();
+          return;
+        }
+
+        removeWindowExplodePieces();
+        const rect = win.getBoundingClientRect();
+        const columns = 4;
+        const rows = 4;
+        const pieceWidth = rect.width / columns;
+        const pieceHeight = rect.height / rows;
+        const pieces = [];
+
+        win.classList.add("is-exploding");
+
+        for (let row = 0; row < rows; row += 1) {
+          for (let column = 0; column < columns; column += 1) {
+            const piece = document.createElement("div");
+            piece.className = "window-explode-piece";
+            piece.style.left = `${rect.left + column * pieceWidth}px`;
+            piece.style.top = `${rect.top + row * pieceHeight}px`;
+            piece.style.width = `${Math.ceil(pieceWidth)}px`;
+            piece.style.height = `${Math.ceil(pieceHeight)}px`;
+
+            const clone = win.cloneNode(true);
+            clone.classList.remove("is-opening", "is-closing", "is-hidden", "is-exploding");
+            clone.removeAttribute("id");
+            clone.querySelectorAll("[id]").forEach((element) => {
+              element.removeAttribute("id");
+            });
+            clone.setAttribute("aria-hidden", "true");
+            clone.style.left = `${-column * pieceWidth}px`;
+            clone.style.top = `${-row * pieceHeight}px`;
+            clone.style.width = `${rect.width}px`;
+            clone.style.translate = "0 0";
+            clone.style.position = "absolute";
+            clone.style.pointerEvents = "none";
+            clone.style.zIndex = "0";
+            piece.appendChild(clone);
+
+            document.body.appendChild(piece);
+            pieces.push({ piece, row, column });
+          }
+        }
+
+        const centerRow = (rows - 1) / 2;
+        const centerColumn = (columns - 1) / 2;
+        let remaining = pieces.length;
+
+        pieces.forEach(({ piece, row, column }) => {
+          const deltaX = (column - centerColumn) * pieceWidth * 2.25;
+          const deltaY = (row - centerRow) * pieceHeight * 2.25;
+          const animation = piece.animate(
+            [
+              { opacity: 1, transform: "translate(0, 0) scale(1)" },
+              {
+                opacity: 0,
+                transform: `translate(${deltaX}px, ${deltaY}px) scale(0.08)`,
+              },
+            ],
+            {
+              duration: 560,
+              easing: "cubic-bezier(.6,0,.8,.2)",
+              fill: "forwards",
+            }
+          );
+
+          animation.addEventListener("finish", () => {
+            remaining -= 1;
+            if (remaining > 0) return;
+            removeWindowExplodePieces();
+            win.classList.remove("is-exploding");
+            if (onComplete) onComplete();
+          });
+        });
+      };
+
+      const showVirusEventWindow = (win, anchor = null) => {
+        if (!win) return;
+        if (!win.classList.contains("is-hidden")) {
+          win.style.zIndex = String(topZ++);
+          clampVirusEventWindowToViewport(win);
+          return;
+        }
+        win.classList.remove("is-hidden", "is-closing", "is-exploding");
+        win.setAttribute("aria-hidden", "false");
+        if (anchor) {
+          setVirusEventWindowPosition(win, anchor.left, anchor.top);
+        } else {
+          positionVirusEventWindow(win);
+        }
+        clampVirusEventWindowToViewport(win);
+        clampVirusEventWindowAfterMediaLoad(win);
+        loadDeferredMedia(win);
+        win.style.zIndex = String(topZ++);
+        restartWindowAnimation(win, "is-opening");
+      };
+
+      const closeVirusEventWindow = (win) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        win.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(win, "is-closing");
+      };
+
+      const showVirusWindow = () => {
+        virusExploding = false;
+        virusRescueAnchor = null;
+        showVirusEventWindow(virusWindow);
+      };
+
+      const showVirusRescueWindow = () => {
+        showVirusEventWindow(virusRescueWindow, virusRescueAnchor);
+      };
+
+      const acceptVirusInstall = () => {
+        if (!virusWindow || virusExploding || virusWindow.classList.contains("is-hidden")) return;
+        virusExploding = true;
+        if (!virusRescueAnchor) {
+          virusRescueAnchor = {
+            left: Number.parseFloat(virusWindow.style.left) || 12,
+            top: Number.parseFloat(virusWindow.style.top) || 12,
+          };
+        }
+        virusWindow.setAttribute("aria-hidden", "true");
+        triggerVirusFlashbang();
+        animateWindowExplode(virusWindow, () => {
+          virusExploding = false;
+          virusWindow.classList.add("is-hidden");
+          virusWindow.querySelectorAll("img[data-src]").forEach((image) => {
+            image.removeAttribute("src");
+          });
+          setTimeout(showVirusRescueWindow, 180);
+        });
       };
 
       const registerRandomEvent = (definition) => {
@@ -6125,22 +7193,53 @@
         }
       };
 
+      const ANNOYING_RANDOM_EVENT_PROBABILITY = 0.019;
+      const ANNOYING_RANDOM_EVENT_PROBABILITIES = Object.freeze({
+        windowOpen: 0.011,
+        windowClose: 0.011,
+        gameWin: 0.12,
+        gameLoss: 0.075,
+        startButton: 0.038,
+        newTabLink: 0.03,
+        fileDownload: 0.045,
+        pageReload: 0.09,
+        calendarOpen: 0.03,
+        tenMinute: 0.15,
+      });
+
+      const STANDARD_RANDOM_EVENT_PROBABILITY = 0.0075;
+      const STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze({
+        windowOpen: 0.0045,
+        windowClose: 0.0045,
+        gameWin: 0.03,
+        gameLoss: 0.026,
+        startButton: 0.015,
+        newTabLink: 0.014,
+        fileDownload: 0.019,
+        pageReload: 0.026,
+        calendarOpen: 0.015,
+        tenMinute: 0.06,
+      });
+
+      const ELEVATED_RANDOM_EVENT_PROBABILITY = 0.0094;
+      const ELEVATED_RANDOM_EVENT_PROBABILITIES = Object.freeze({
+        windowOpen: 0.006,
+        windowClose: 0.006,
+        gameWin: 0.045,
+        gameLoss: 0.03,
+        startButton: 0.019,
+        newTabLink: 0.015,
+        fileDownload: 0.019,
+        pageReload: 0.03,
+        calendarOpen: 0.019,
+        tenMinute: 0.06,
+      });
+
       registerRandomEvent({
         id: "annoying-system-alert",
         debug: false,
-        probability: 0.025,
-        probabilities: {
-          windowOpen: 0.015,
-          windowClose: 0.015,
-          gameWin: 0.16,
-          gameLoss: 0.1,
-          startButton: 0.05,
-          newTabLink: 0.04,
-          fileDownload: 0.06,
-          pageReload: 0.12,
-          calendarOpen: 0.04,
-          tenMinute: 0.2,
-        },
+        probability: ANNOYING_RANDOM_EVENT_PROBABILITY,
+        probabilities: ANNOYING_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isRandomAlertVisible(),
         run: () => {
           showRandomAlert();
@@ -6150,19 +7249,8 @@
       registerRandomEvent({
         id: "self-love-system-alert",
         debug: false,
-        probability: 0.01,
-        probabilities: {
-          windowOpen: 0.006,
-          windowClose: 0.006,
-          gameWin: 0.04,
-          gameLoss: 0.035,
-          startButton: 0.02,
-          newTabLink: 0.018,
-          fileDownload: 0.025,
-          pageReload: 0.035,
-          calendarOpen: 0.02,
-          tenMinute: 0.08,
-        },
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isSelfLoveAlertVisible(),
         run: () => {
           showSelfLoveAlert();
@@ -6172,19 +7260,8 @@
       registerRandomEvent({
         id: "rohin-os-update",
         debug: false,
-        probability: 0.01,
-        probabilities: {
-          windowOpen: 0.006,
-          windowClose: 0.006,
-          gameWin: 0.04,
-          gameLoss: 0.035,
-          startButton: 0.02,
-          newTabLink: 0.018,
-          fileDownload: 0.025,
-          pageReload: 0.035,
-          calendarOpen: 0.02,
-          tenMinute: 0.08,
-        },
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isRohinUpdateVisible(),
         run: () => {
           showRohinUpdate();
@@ -6192,21 +7269,32 @@
       });
 
       registerRandomEvent({
+        id: "mcafee-antivirus-update",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isMcAfeeVisible(),
+        run: () => {
+          showMcAfeePrompt();
+        },
+      });
+
+      registerRandomEvent({
+        id: "microsoft-word-license-stack",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isWordErrorStackVisible(),
+        run: () => {
+          showWordErrorStack();
+        },
+      });
+
+      registerRandomEvent({
         id: "rohin-os-note",
         debug: false,
-        probability: 0.01,
-        probabilities: {
-          windowOpen: 0.006,
-          windowClose: 0.006,
-          gameWin: 0.04,
-          gameLoss: 0.035,
-          startButton: 0.02,
-          newTabLink: 0.018,
-          fileDownload: 0.025,
-          pageReload: 0.035,
-          calendarOpen: 0.02,
-          tenMinute: 0.08,
-        },
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isRohinNoteVisible(),
         run: () => {
           showRohinNote();
@@ -6216,19 +7304,8 @@
       registerRandomEvent({
         id: "earth-proverb-note",
         debug: false,
-        probability: 0.01,
-        probabilities: {
-          windowOpen: 0.006,
-          windowClose: 0.006,
-          gameWin: 0.04,
-          gameLoss: 0.035,
-          startButton: 0.02,
-          newTabLink: 0.018,
-          fileDownload: 0.025,
-          pageReload: 0.035,
-          calendarOpen: 0.02,
-          tenMinute: 0.08,
-        },
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isEarthNoteVisible(),
         run: () => {
           showEarthNote();
@@ -6238,19 +7315,8 @@
       registerRandomEvent({
         id: "health-note",
         debug: false,
-        probability: 0.01,
-        probabilities: {
-          windowOpen: 0.006,
-          windowClose: 0.006,
-          gameWin: 0.04,
-          gameLoss: 0.035,
-          startButton: 0.02,
-          newTabLink: 0.018,
-          fileDownload: 0.025,
-          pageReload: 0.035,
-          calendarOpen: 0.02,
-          tenMinute: 0.08,
-        },
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isHealthNoteVisible(),
         run: () => {
           showHealthNote();
@@ -6260,19 +7326,8 @@
       registerRandomEvent({
         id: "love-note",
         debug: false,
-        probability: 0.01,
-        probabilities: {
-          windowOpen: 0.006,
-          windowClose: 0.006,
-          gameWin: 0.04,
-          gameLoss: 0.035,
-          startButton: 0.02,
-          newTabLink: 0.018,
-          fileDownload: 0.025,
-          pageReload: 0.035,
-          calendarOpen: 0.02,
-          tenMinute: 0.08,
-        },
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isLoveNoteVisible(),
         run: () => {
           showLoveNote();
@@ -6282,19 +7337,8 @@
       registerRandomEvent({
         id: "nazar-evil-eye",
         debug: false,
-        probability: 0.0125,
-        probabilities: {
-          windowOpen: 0.008,
-          windowClose: 0.008,
-          gameWin: 0.06,
-          gameLoss: 0.04,
-          startButton: 0.025,
-          newTabLink: 0.02,
-          fileDownload: 0.025,
-          pageReload: 0.04,
-          calendarOpen: 0.025,
-          tenMinute: 0.08,
-        },
+        probability: ELEVATED_RANDOM_EVENT_PROBABILITY,
+        probabilities: ELEVATED_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isNazarVisible(),
         run: () => {
           showNazarWindow();
@@ -6304,19 +7348,8 @@
       registerRandomEvent({
         id: "john-pork",
         debug: false,
-        probability: 0.0125,
-        probabilities: {
-          windowOpen: 0.008,
-          windowClose: 0.008,
-          gameWin: 0.06,
-          gameLoss: 0.04,
-          startButton: 0.025,
-          newTabLink: 0.02,
-          fileDownload: 0.025,
-          pageReload: 0.04,
-          calendarOpen: 0.025,
-          tenMinute: 0.08,
-        },
+        probability: ELEVATED_RANDOM_EVENT_PROBABILITY,
+        probabilities: ELEVATED_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isJohnPorkVisible(),
         run: () => {
           showJohnPorkCall();
@@ -6326,19 +7359,8 @@
       registerRandomEvent({
         id: "biden-blast",
         debug: false,
-        probability: 0.01,
-        probabilities: {
-          windowOpen: 0.006,
-          windowClose: 0.006,
-          gameWin: 0.04,
-          gameLoss: 0.035,
-          startButton: 0.02,
-          newTabLink: 0.018,
-          fileDownload: 0.025,
-          pageReload: 0.035,
-          calendarOpen: 0.02,
-          tenMinute: 0.08,
-        },
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isBidenBlastVisible(),
         run: () => {
           showBidenBlastWindow();
@@ -6346,21 +7368,21 @@
       });
 
       registerRandomEvent({
+        id: "virus",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isVirusVisible(),
+        run: () => {
+          showVirusWindow();
+        },
+      });
+
+      registerRandomEvent({
         id: "evil-wizards-advertisement",
         debug: false,
-        probability: 0.01,
-        probabilities: {
-          windowOpen: 0.006,
-          windowClose: 0.006,
-          gameWin: 0.04,
-          gameLoss: 0.035,
-          startButton: 0.02,
-          newTabLink: 0.018,
-          fileDownload: 0.025,
-          pageReload: 0.035,
-          calendarOpen: 0.02,
-          tenMinute: 0.08,
-        },
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
         canTrigger: () => !isAdvertisementVisible(),
         run: () => {
           showAdvertisementWindow();
@@ -6590,6 +7612,7 @@
         if (!win) return;
 
         if (open) {
+          delete win.dataset.mediaClosing;
           const isVisible =
             !win.classList.contains("is-hidden") &&
             !win.classList.contains("is-closing");
@@ -6639,7 +7662,9 @@
 
         if (win.classList.contains("is-hidden")) return;
 
+        win.dataset.mediaClosing = "true";
         stopMediaPlayback(win);
+
         if (activeWindow === win) activeWindow = null;
 
         if (appId === "solitaire") {
@@ -6647,8 +7672,9 @@
         }
 
         restoreWindowSize(win);
-        bringWindowToFront(win);
+        win.style.zIndex = String(topZ++);
         restartWindowAnimation(win, "is-closing");
+        stopMediaPlayback(win);
         triggerRandomEvents("windowClose", { appId });
       };
 
@@ -7091,6 +8117,7 @@
             return;
           }
           if (event.animationName === "retro-window-close") {
+            stopMediaPlayback(win);
             win.classList.remove("is-closing");
             win.classList.add("is-hidden");
           }
@@ -7919,7 +8946,11 @@
 
         const update = () => {
           const previousVideo = scroll.querySelector("video");
-          if (previousVideo) previousVideo.pause();
+          if (previousVideo) {
+            previousVideo.pause();
+            previousVideo.removeAttribute("src");
+            previousVideo.load();
+          }
 
           const source = media[currentIndex];
           const isVideo = /\.(mp4|webm|ogg)(?:[?#]|$)/i.test(source);
@@ -9886,6 +10917,65 @@
         });
       }
 
+      if (mcAfeeUpdateRun) {
+        mcAfeeUpdateRun.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          showMcAfeeDownload();
+        });
+      }
+
+      if (mcAfeeUpdateLater) {
+        mcAfeeUpdateLater.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeMcAfeeWindow(mcAfeePromptWindow);
+        });
+      }
+
+      if (mcAfeeComplete) {
+        mcAfeeComplete.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (mcAfeeComplete.disabled) return;
+          stopMcAfeeDownload();
+          closeMcAfeeWindow(mcAfeePromptWindow);
+          closeMcAfeeWindow(mcAfeeDownloadWindow);
+          showMcAfeeThanks();
+        });
+      }
+
+      if (mcAfeeThanksOk) {
+        mcAfeeThanksOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeMcAfeeWindow(mcAfeeThanksWindow);
+        });
+      }
+
+      [mcAfeePromptWindow, mcAfeeDownloadWindow, mcAfeeThanksWindow].forEach((win) => {
+        if (!win) return;
+        win.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        win.addEventListener("animationend", (event) => {
+          if (event.target !== win) return;
+          if (event.animationName === "retro-window-open") {
+            win.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            win.classList.remove("is-closing");
+            win.classList.add("is-hidden");
+            if (win === mcAfeeDownloadWindow) stopMcAfeeDownload();
+            win.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      });
+
       if (rohinNoteOk) {
         rohinNoteOk.addEventListener("click", (event) => {
           event.preventDefault();
@@ -10108,6 +11198,53 @@
           }
         });
       }
+
+      if (virusYes) {
+        virusYes.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          acceptVirusInstall();
+        });
+      }
+
+      if (virusNo) {
+        virusNo.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeVirusEventWindow(virusWindow);
+        });
+      }
+
+      if (virusRescueThanks) {
+        virusRescueThanks.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeVirusEventWindow(virusRescueWindow);
+        });
+      }
+
+      [virusWindow, virusRescueWindow].forEach((win) => {
+        if (!win) return;
+        win.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        win.addEventListener("animationend", (event) => {
+          if (event.target !== win) return;
+          if (event.animationName === "retro-window-open") {
+            win.classList.remove("is-opening");
+            clampVirusEventWindowToViewport(win);
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            win.classList.remove("is-closing");
+            win.classList.add("is-hidden");
+            win.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      });
 
       document.addEventListener("click", (event) => {
         if (!calendarPopout.classList.contains("is-open")) return;
@@ -11624,6 +12761,8 @@
           .querySelectorAll(".portfolio-window")
           .forEach((win) => setPortfolioResponsiveState(win));
       });
+      window.addEventListener("resize", clampVisibleMcAfeeWindows);
+      window.addEventListener("resize", clampVisibleVirusEventWindows);
 
       document.addEventListener(
         "pointerdown",
@@ -11641,9 +12780,12 @@
         pauseMediaPlayback(activeWindow);
         activeWindow = null;
       };
+      const defaultDocumentTitle = document.title || "Rohin OS";
+      const awayDocumentTitle = "come back :(";
 
       window.addEventListener("blur", pauseActiveWindowMedia);
       document.addEventListener("visibilitychange", () => {
+        document.title = document.hidden ? awayDocumentTitle : defaultDocumentTitle;
         if (document.hidden) pauseActiveWindowMedia();
       });
 

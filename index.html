@@ -183,6 +183,8 @@
       const loaderClose = document.querySelector('.loader-window .title-bar-controls button[aria-label="Close"]');
       const loaderMinimize = document.querySelector('.loader-window .title-bar-controls button[aria-label="Minimize"]');
       const loaderMaximize = document.querySelector('.loader-window .title-bar-controls button[aria-label="Maximize"]');
+      const defaultDocumentTitle = document.title || "Rohin OS";
+      const awayDocumentTitle = "come back :(";
       let progress = 0;
       let ticking = false;
       let timerId = null;
@@ -238,6 +240,10 @@
         if (event.persisted) {
           startLoader();
         }
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        document.title = document.hidden ? awayDocumentTitle : defaultDocumentTitle;
       });
 
       proceedButton.addEventListener("click", () => {
