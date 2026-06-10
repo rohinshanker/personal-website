@@ -2487,6 +2487,53 @@
         min-width: 72px;
       }
 
+      .feliz-jueves-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(360px, calc(100vw - 32px));
+        z-index: 150;
+      }
+
+      .feliz-jueves-window.is-hidden {
+        display: none;
+      }
+
+      .feliz-jueves-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .feliz-jueves-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .feliz-jueves-window .window-body {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .feliz-jueves-window img {
+        display: block;
+        max-height: min(56vh, 360px);
+        max-width: 100%;
+        object-fit: contain;
+      }
+
+      .feliz-jueves-gracias {
+        align-self: flex-end;
+        min-width: 86px;
+      }
+
+      .feliz-jueves-window.is-choice-flashing .feliz-jueves-gracias {
+        animation: random-alert-choice-flash 160ms steps(2, end) infinite;
+      }
+
       .random-alert-window {
         display: block;
         left: 50%;
@@ -2571,6 +2618,231 @@
 
       .random-alert-window.is-choice-flashing .random-alert-choice {
         animation: random-alert-choice-flash 160ms steps(2, end) infinite;
+      }
+
+      .self-love-alert-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(360px, calc(100vw - 32px));
+        z-index: 144;
+      }
+
+      .self-love-alert-window.is-hidden {
+        display: none;
+      }
+
+      .self-love-alert-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .self-love-alert-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .self-love-alert-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .self-love-alert-window.is-yes-flashing #self-love-alert-yes {
+        animation: random-alert-choice-flash 160ms steps(2, end) infinite;
+      }
+
+      .rohin-update-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(420px, calc(100vw - 32px));
+        z-index: 145;
+      }
+
+      .rohin-update-window.is-hidden {
+        display: none;
+      }
+
+      .rohin-update-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .rohin-update-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .rohin-update-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .rohin-update-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 48px 1fr;
+      }
+
+      .rohin-update-message img {
+        display: block;
+        height: 40px;
+        image-rendering: pixelated;
+        width: 40px;
+      }
+
+      .rohin-update-message p {
+        margin: 0;
+      }
+
+      .rohin-update-label {
+        font-weight: bold;
+        margin: 0;
+      }
+
+      .rohin-update-list {
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        margin: 0;
+        max-height: 122px;
+        overflow-y: auto;
+        padding: 6px 8px 6px 24px;
+      }
+
+      .rohin-update-list li + li {
+        margin-top: 4px;
+      }
+
+      .rohin-update-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .rohin-update-actions button {
+        min-width: 84px;
+      }
+
+      .rohin-note-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(360px, calc(100vw - 32px));
+        z-index: 143;
+      }
+
+      .rohin-note-window.is-hidden {
+        display: none;
+      }
+
+      .rohin-note-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .rohin-note-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .rohin-note-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .rohin-note-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 48px 1fr;
+      }
+
+      .rohin-note-message img {
+        display: block;
+        height: 40px;
+        image-rendering: pixelated;
+        width: 40px;
+      }
+
+      .rohin-note-message p {
+        margin: 0;
+      }
+
+      .rohin-note-actions {
+        display: flex;
+        justify-content: center;
+      }
+
+      .rohin-note-actions button {
+        min-width: 84px;
+      }
+
+      .nazar-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(360px, calc(100vw - 32px));
+        z-index: 142;
+      }
+
+      .nazar-window.is-hidden {
+        display: none;
+      }
+
+      .nazar-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .nazar-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .nazar-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .nazar-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 54px 1fr;
+      }
+
+      .nazar-message img {
+        display: block;
+        height: 52px;
+        image-rendering: pixelated;
+        object-fit: contain;
+        width: 52px;
+      }
+
+      .nazar-message p {
+        margin: 0;
+      }
+
+      .nazar-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .nazar-actions button {
+        min-width: 74px;
       }
 
       .john-pork-window {
@@ -2714,6 +2986,126 @@
         color: #e8e8e8;
         font-size: 10px;
         line-height: 1;
+      }
+
+      .advertisement-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(520px, calc(100vw - 32px));
+        z-index: 136;
+      }
+
+      .advertisement-window.is-hidden {
+        display: none;
+      }
+
+      .advertisement-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .advertisement-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .advertisement-window .window-body {
+        align-items: stretch;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .advertisement-media {
+        aspect-ratio: 2 / 1;
+        background: #000;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        max-height: min(56vh, 300px);
+        overflow: hidden;
+        position: relative;
+        width: 100%;
+      }
+
+      .advertisement-media img {
+        display: block;
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
+      }
+
+      .advertisement-media .advertisement-radar-overlay {
+        inset: 0 auto 0 0;
+        pointer-events: none;
+        position: absolute;
+        width: 50%;
+        z-index: 1;
+      }
+
+      .advertisement-media .advertisement-text-pixel-overlay {
+        clip-path: inset(58% 0 0 50%);
+        image-rendering: pixelated;
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+        z-index: 2;
+      }
+
+      .advertisement-window button {
+        align-self: flex-end;
+        min-width: 96px;
+      }
+
+      .biden-blast-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(380px, calc(100vw - 32px));
+        z-index: 134;
+      }
+
+      .biden-blast-window.is-hidden {
+        display: none;
+      }
+
+      .biden-blast-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .biden-blast-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .biden-blast-window .window-body {
+        align-items: stretch;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .biden-blast-primary {
+        background: #000;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: block;
+        max-height: min(44vh, 260px);
+        object-fit: cover;
+        width: 100%;
+      }
+
+      .biden-blast-window p {
+        margin: 0;
+        text-align: left;
+      }
+
+      .biden-blast-window button {
+        align-self: flex-end;
+        min-width: 84px;
       }
 
       @keyframes random-alert-choice-flash {
@@ -4493,6 +4885,26 @@
       </div>
     </div>
 
+    <div class="window feliz-jueves-window is-hidden" id="feliz-jueves-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Feliz Jueves</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="feliz-jueves-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <img
+          id="feliz-jueves-image"
+          data-src="assets/random%20events/feliz-jueves.gif"
+          decoding="async"
+          alt=""
+        />
+        <button class="feliz-jueves-gracias" type="button" id="feliz-jueves-gracias">
+          Gracias!
+        </button>
+      </div>
+    </div>
+
     <div class="window random-alert-window is-hidden" id="random-alert-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">System Alert</div>
@@ -4514,6 +4926,145 @@
         <div class="random-alert-actions">
           <button class="random-alert-choice" type="button" id="random-alert-yes">Yes</button>
           <button class="random-alert-choice" type="button" id="random-alert-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window self-love-alert-window is-hidden"
+      id="self-love-alert-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="self-love-alert-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message">
+          <img src="assets/app-icons/ico/utopia_smiley.ico" alt="" />
+          <p>Love yourself for who you are.</p>
+        </div>
+        <div class="random-alert-actions">
+          <button class="random-alert-choice" type="button" id="self-love-alert-yes">Yes</button>
+          <button class="random-alert-choice" type="button" id="self-love-alert-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window rohin-update-window is-hidden" id="rohin-update-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="rohin-update-message">
+          <img src="assets/app-icons/ico/msg_information.ico" alt="" />
+          <p>A new version of Rohin OS is available, would you like to update?</p>
+        </div>
+        <p class="rohin-update-label">What we did:</p>
+        <ul class="rohin-update-list">
+          <li>Squashed some bugs</li>
+          <li>Appeased spirits</li>
+          <li>Deleted system 32</li>
+          <li>Fed the interns</li>
+          <li>Let it linger (just a little bit)</li>
+          <li>Scrolled on instagram during company time</li>
+          <li>Added some new super secret software that does super cool things</li>
+          <li>Fixed flux capacitor</li>
+          <li>Integrated AI</li>
+          <li>Exposed private API keys</li>
+          <li>Binged netflix</li>
+          <li>Made some pull requests and let someone else deal with them</li>
+          <li>Swept for mines</li>
+        </ul>
+        <div class="rohin-update-actions">
+          <button type="button" id="rohin-update-run">Update</button>
+          <button type="button" id="rohin-update-later">Later</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window rohin-note-window is-hidden" id="rohin-note-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Note</div>
+      </div>
+      <div class="window-body">
+        <div class="rohin-note-message">
+          <img src="assets/app-icons/ico/computer.ico" alt="" />
+          <p>Thank you for using Rohin OS today!</p>
+        </div>
+        <div class="rohin-note-actions">
+          <button type="button" id="rohin-note-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window rohin-note-window is-hidden" id="earth-note-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Note</div>
+      </div>
+      <div class="window-body">
+        <div class="rohin-note-message">
+          <img src="assets/app-icons/ico/world_star.ico" alt="" />
+          <p>“We do not inherit the earth from our ancestors, we borrow it from our children.” — Native American Proverb</p>
+        </div>
+        <div class="rohin-note-actions">
+          <button type="button" id="earth-note-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window rohin-note-window is-hidden" id="health-note-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Note</div>
+      </div>
+      <div class="window-body">
+        <div class="rohin-note-message">
+          <img src="assets/app-icons/ico/doctor_watson.ico" alt="" />
+          <p>Take care of your health, it's important!</p>
+        </div>
+        <div class="rohin-note-actions">
+          <button type="button" id="health-note-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window rohin-note-window is-hidden" id="love-note-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Note</div>
+      </div>
+      <div class="window-body">
+        <div class="rohin-note-message">
+          <img src="assets/app-icons/ico/address_book_users.ico" alt="" />
+          <p>Don't forget to tell someone important to you that you love them!</p>
+        </div>
+        <div class="rohin-note-actions">
+          <button type="button" id="love-note-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window nazar-window is-hidden" id="nazar-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Evil Eye</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="nazar-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="nazar-message">
+          <img
+            id="nazar-image"
+            data-src="assets/random%20events/nazar.png"
+            decoding="async"
+            alt=""
+          />
+          <p>Accept this evil eye to ward off bad spirits?</p>
+        </div>
+        <div class="nazar-actions">
+          <button type="button" id="nazar-yes">Yes</button>
+          <button type="button" id="nazar-no">No</button>
         </div>
       </div>
     </div>
@@ -4551,6 +5102,54 @@
       </div>
     </div>
 
+    <div class="window advertisement-window is-hidden" id="advertisement-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Advertisement</div>
+      </div>
+      <div class="window-body">
+        <div class="advertisement-media">
+          <img
+            id="advertisement-image"
+            data-src="assets/random%20events/evil-wizards-radar.gif"
+            decoding="async"
+            alt=""
+          />
+          <img
+            class="advertisement-radar-overlay"
+            data-src="assets/random%20events/radar.gif"
+            decoding="async"
+            alt=""
+            aria-hidden="true"
+          />
+          <img
+            class="advertisement-text-pixel-overlay"
+            data-src="assets/random%20events/evil-wizards-radar.gif"
+            decoding="async"
+            alt=""
+            aria-hidden="true"
+          />
+        </div>
+        <button type="button" id="advertisement-no-thanks">No Thanks...</button>
+      </div>
+    </div>
+
+    <div class="window biden-blast-window is-hidden" id="biden-blast-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Biden Blast</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="biden-blast-primary"
+          id="biden-blast-image"
+          data-src="assets/random%20events/biden-blast.jpg"
+          decoding="async"
+          alt="Biden Blast"
+        />
+        <p>Biden used Biden Blast. It was super effective!</p>
+        <button type="button" id="biden-blast-ok">OK</button>
+      </div>
+    </div>
+
     <canvas class="ms-confetti" id="ms-confetti" aria-hidden="true"></canvas>
     <div class="ms-achievement" id="ms-achievement" aria-hidden="true">
       <img src="assets/minesweeper_assets/achievement.png" alt="Achievement unlocked" />
@@ -4584,6 +5183,9 @@
       const randomEventImage = document.getElementById("random-event-image");
       const randomEventClose = document.getElementById("random-event-close");
       const randomEventOk = document.getElementById("random-event-ok");
+      const felizJuevesWindow = document.getElementById("feliz-jueves-window");
+      const felizJuevesClose = document.getElementById("feliz-jueves-close");
+      const felizJuevesGracias = document.getElementById("feliz-jueves-gracias");
       const randomAlertWindow = document.getElementById("random-alert-window");
       const randomAlertClose = document.getElementById("random-alert-close");
       const randomAlertMaximize = document.getElementById("random-alert-maximize");
@@ -4592,11 +5194,34 @@
       const randomAlertNo = document.getElementById("random-alert-no");
       const randomAlertRememberRow = document.getElementById("random-alert-remember-row");
       const randomAlertRemember = document.getElementById("random-alert-remember");
+      const selfLoveAlertWindow = document.getElementById("self-love-alert-window");
+      const selfLoveAlertClose = document.getElementById("self-love-alert-close");
+      const selfLoveAlertYes = document.getElementById("self-love-alert-yes");
+      const selfLoveAlertNo = document.getElementById("self-love-alert-no");
+      const rohinUpdateWindow = document.getElementById("rohin-update-window");
+      const rohinUpdateRun = document.getElementById("rohin-update-run");
+      const rohinUpdateLater = document.getElementById("rohin-update-later");
+      const rohinNoteWindow = document.getElementById("rohin-note-window");
+      const rohinNoteOk = document.getElementById("rohin-note-ok");
+      const earthNoteWindow = document.getElementById("earth-note-window");
+      const earthNoteOk = document.getElementById("earth-note-ok");
+      const healthNoteWindow = document.getElementById("health-note-window");
+      const healthNoteOk = document.getElementById("health-note-ok");
+      const loveNoteWindow = document.getElementById("love-note-window");
+      const loveNoteOk = document.getElementById("love-note-ok");
+      const nazarWindow = document.getElementById("nazar-window");
+      const nazarClose = document.getElementById("nazar-close");
+      const nazarYes = document.getElementById("nazar-yes");
+      const nazarNo = document.getElementById("nazar-no");
       const johnPorkWindow = document.getElementById("john-pork-window");
       const johnPorkStatus = document.getElementById("john-pork-status");
       const johnPorkClose = document.getElementById("john-pork-close");
       const johnPorkAccept = document.getElementById("john-pork-accept");
       const johnPorkDecline = document.getElementById("john-pork-decline");
+      const advertisementWindow = document.getElementById("advertisement-window");
+      const advertisementNoThanks = document.getElementById("advertisement-no-thanks");
+      const bidenBlastWindow = document.getElementById("biden-blast-window");
+      const bidenBlastOk = document.getElementById("biden-blast-ok");
       const openFrontiersPdf = document.getElementById("open-frontiers-pdf");
       const openDronePresentation = document.getElementById("open-drone-presentation");
       const openTcpPaper = document.getElementById("open-tcp-paper");
@@ -4695,6 +5320,9 @@
       let activeRandomEventKey = "";
       let randomAlertReopenTimer = null;
       let randomAlertFlashTimer = null;
+      let selfLoveAlertFlashTimer = null;
+      let felizJuevesFlashTimer = null;
+      let felizJuevesShownFallbackDate = "";
       let johnPorkStatusTimer = null;
       let johnPorkStatusFrame = 0;
       let tcpResultsIndex = 0;
@@ -4858,7 +5486,7 @@
 
       const RANDOM_EVENT_GLOBAL_DEBUG = false;
       const RANDOM_EVENT_RELOAD_KEY = "personalSiteRandomEventReloadPending";
-      const RANDOM_ALERT_REMEMBERED_KEY = "personalSiteRandomAlertRemembered";
+      const FELIZ_JUEVES_SHOWN_KEY = "personalSiteFelizJuevesShownDate";
       const randomEventDefinitions = [];
 
       const isRandomAlertVisible = () =>
@@ -4867,22 +5495,6 @@
             !randomAlertWindow.classList.contains("is-hidden") &&
             randomAlertWindow.getAttribute("aria-hidden") === "false"
         );
-
-      const isRandomAlertRemembered = () => {
-        try {
-          return localStorage.getItem(RANDOM_ALERT_REMEMBERED_KEY) === "true";
-        } catch (error) {
-          return false;
-        }
-      };
-
-      const setRandomAlertRemembered = () => {
-        try {
-          localStorage.setItem(RANDOM_ALERT_REMEMBERED_KEY, "true");
-        } catch (error) {
-          // Local storage can be disabled in private browsing modes.
-        }
-      };
 
       const resetRandomAlertSize = () => {
         if (!randomAlertWindow) return;
@@ -4915,9 +5527,8 @@
         restartWindowAnimation(randomAlertWindow, "is-closing");
       };
 
-      const showRandomAlert = ({ showRemember = false, force = false } = {}) => {
+      const showRandomAlert = ({ showRemember = false } = {}) => {
         if (!randomAlertWindow) return;
-        if (!force && isRandomAlertRemembered()) return;
         if (randomAlertReopenTimer) {
           clearTimeout(randomAlertReopenTimer);
           randomAlertReopenTimer = null;
@@ -4952,13 +5563,379 @@
         const rememberChecked = randomAlertRemember && randomAlertRemember.checked;
         hideRandomAlert();
         if (rememberVisible && rememberChecked) {
-          setRandomAlertRemembered();
           return;
         }
         const delay = rememberVisible ? 2000 + Math.random() * 3000 : 1000;
         randomAlertReopenTimer = setTimeout(() => {
-          showRandomAlert({ showRemember: true, force: true });
+          showRandomAlert({ showRemember: true });
         }, delay);
+      };
+
+      const isSelfLoveAlertVisible = () =>
+        Boolean(
+          selfLoveAlertWindow &&
+            !selfLoveAlertWindow.classList.contains("is-hidden") &&
+            selfLoveAlertWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionSelfLoveAlertWindow = () => {
+        if (!selfLoveAlertWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = selfLoveAlertWindow.offsetWidth;
+        const height = selfLoveAlertWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        selfLoveAlertWindow.style.translate = "0 0";
+        selfLoveAlertWindow.style.left = `${Math.round(randomLeft)}px`;
+        selfLoveAlertWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showSelfLoveAlert = () => {
+        if (!selfLoveAlertWindow) return;
+        if (isSelfLoveAlertVisible()) {
+          selfLoveAlertWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        selfLoveAlertWindow.classList.remove("is-hidden", "is-closing", "is-yes-flashing");
+        selfLoveAlertWindow.setAttribute("aria-hidden", "false");
+        positionSelfLoveAlertWindow();
+        selfLoveAlertWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(selfLoveAlertWindow, "is-opening");
+      };
+
+      const closeSelfLoveAlert = () => {
+        if (!selfLoveAlertWindow || selfLoveAlertWindow.classList.contains("is-hidden")) return;
+        selfLoveAlertWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(selfLoveAlertWindow, "is-closing");
+      };
+
+      const flashSelfLoveYes = () => {
+        if (!selfLoveAlertWindow) return;
+        if (selfLoveAlertFlashTimer) clearTimeout(selfLoveAlertFlashTimer);
+        selfLoveAlertWindow.classList.add("is-yes-flashing");
+        selfLoveAlertFlashTimer = setTimeout(() => {
+          selfLoveAlertWindow.classList.remove("is-yes-flashing");
+          selfLoveAlertFlashTimer = null;
+        }, 600);
+      };
+
+      const isRohinUpdateVisible = () =>
+        Boolean(
+          rohinUpdateWindow &&
+            !rohinUpdateWindow.classList.contains("is-hidden") &&
+            rohinUpdateWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionRohinUpdateWindow = () => {
+        if (!rohinUpdateWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = rohinUpdateWindow.offsetWidth;
+        const height = rohinUpdateWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        rohinUpdateWindow.style.translate = "0 0";
+        rohinUpdateWindow.style.left = `${Math.round(randomLeft)}px`;
+        rohinUpdateWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showRohinUpdate = () => {
+        if (!rohinUpdateWindow) return;
+        if (isRohinUpdateVisible()) {
+          rohinUpdateWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        rohinUpdateWindow.classList.remove("is-hidden", "is-closing");
+        rohinUpdateWindow.setAttribute("aria-hidden", "false");
+        positionRohinUpdateWindow();
+        rohinUpdateWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(rohinUpdateWindow, "is-opening");
+      };
+
+      const closeRohinUpdate = () => {
+        if (!rohinUpdateWindow || rohinUpdateWindow.classList.contains("is-hidden")) return;
+        rohinUpdateWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(rohinUpdateWindow, "is-closing");
+      };
+
+      const isRohinNoteVisible = () =>
+        Boolean(
+          rohinNoteWindow &&
+            !rohinNoteWindow.classList.contains("is-hidden") &&
+            rohinNoteWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionRohinNoteWindow = () => {
+        if (!rohinNoteWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = rohinNoteWindow.offsetWidth;
+        const height = rohinNoteWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        rohinNoteWindow.style.translate = "0 0";
+        rohinNoteWindow.style.left = `${Math.round(randomLeft)}px`;
+        rohinNoteWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showRohinNote = () => {
+        if (!rohinNoteWindow) return;
+        if (isRohinNoteVisible()) {
+          rohinNoteWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        rohinNoteWindow.classList.remove("is-hidden", "is-closing");
+        rohinNoteWindow.setAttribute("aria-hidden", "false");
+        positionRohinNoteWindow();
+        rohinNoteWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(rohinNoteWindow, "is-opening");
+      };
+
+      const closeRohinNote = () => {
+        if (!rohinNoteWindow || rohinNoteWindow.classList.contains("is-hidden")) return;
+        rohinNoteWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(rohinNoteWindow, "is-closing");
+      };
+
+      const isEarthNoteVisible = () =>
+        Boolean(
+          earthNoteWindow &&
+            !earthNoteWindow.classList.contains("is-hidden") &&
+            earthNoteWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionEarthNoteWindow = () => {
+        if (!earthNoteWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = earthNoteWindow.offsetWidth;
+        const height = earthNoteWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        earthNoteWindow.style.translate = "0 0";
+        earthNoteWindow.style.left = `${Math.round(randomLeft)}px`;
+        earthNoteWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showEarthNote = () => {
+        if (!earthNoteWindow) return;
+        if (isEarthNoteVisible()) {
+          earthNoteWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        earthNoteWindow.classList.remove("is-hidden", "is-closing");
+        earthNoteWindow.setAttribute("aria-hidden", "false");
+        positionEarthNoteWindow();
+        earthNoteWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(earthNoteWindow, "is-opening");
+      };
+
+      const closeEarthNote = () => {
+        if (!earthNoteWindow || earthNoteWindow.classList.contains("is-hidden")) return;
+        earthNoteWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(earthNoteWindow, "is-closing");
+      };
+
+      const isHealthNoteVisible = () =>
+        Boolean(
+          healthNoteWindow &&
+            !healthNoteWindow.classList.contains("is-hidden") &&
+            healthNoteWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionHealthNoteWindow = () => {
+        if (!healthNoteWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = healthNoteWindow.offsetWidth;
+        const height = healthNoteWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        healthNoteWindow.style.translate = "0 0";
+        healthNoteWindow.style.left = `${Math.round(randomLeft)}px`;
+        healthNoteWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showHealthNote = () => {
+        if (!healthNoteWindow) return;
+        if (isHealthNoteVisible()) {
+          healthNoteWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        healthNoteWindow.classList.remove("is-hidden", "is-closing");
+        healthNoteWindow.setAttribute("aria-hidden", "false");
+        positionHealthNoteWindow();
+        healthNoteWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(healthNoteWindow, "is-opening");
+      };
+
+      const closeHealthNote = () => {
+        if (!healthNoteWindow || healthNoteWindow.classList.contains("is-hidden")) return;
+        healthNoteWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(healthNoteWindow, "is-closing");
+      };
+
+      const isLoveNoteVisible = () =>
+        Boolean(
+          loveNoteWindow &&
+            !loveNoteWindow.classList.contains("is-hidden") &&
+            loveNoteWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionLoveNoteWindow = () => {
+        if (!loveNoteWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = loveNoteWindow.offsetWidth;
+        const height = loveNoteWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        loveNoteWindow.style.translate = "0 0";
+        loveNoteWindow.style.left = `${Math.round(randomLeft)}px`;
+        loveNoteWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showLoveNote = () => {
+        if (!loveNoteWindow) return;
+        if (isLoveNoteVisible()) {
+          loveNoteWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loveNoteWindow.classList.remove("is-hidden", "is-closing");
+        loveNoteWindow.setAttribute("aria-hidden", "false");
+        positionLoveNoteWindow();
+        loveNoteWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(loveNoteWindow, "is-opening");
+      };
+
+      const closeLoveNote = () => {
+        if (!loveNoteWindow || loveNoteWindow.classList.contains("is-hidden")) return;
+        loveNoteWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(loveNoteWindow, "is-closing");
+      };
+
+      const getLocalDateKey = (date = new Date()) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      const isFelizJuevesVisible = () =>
+        Boolean(
+          felizJuevesWindow &&
+            !felizJuevesWindow.classList.contains("is-hidden") &&
+            felizJuevesWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const hasShownFelizJuevesToday = (dateKey) => {
+        try {
+          return localStorage.getItem(FELIZ_JUEVES_SHOWN_KEY) === dateKey;
+        } catch (error) {
+          return felizJuevesShownFallbackDate === dateKey;
+        }
+      };
+
+      const markFelizJuevesShown = (dateKey) => {
+        felizJuevesShownFallbackDate = dateKey;
+        try {
+          localStorage.setItem(FELIZ_JUEVES_SHOWN_KEY, dateKey);
+        } catch (error) {
+          // Local storage can be disabled in private browsing modes.
+        }
+      };
+
+      const showFelizJuevesWindow = () => {
+        if (!felizJuevesWindow) return;
+        if (isFelizJuevesVisible()) {
+          felizJuevesWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(felizJuevesWindow);
+        felizJuevesWindow.classList.remove("is-hidden", "is-closing", "is-choice-flashing");
+        felizJuevesWindow.setAttribute("aria-hidden", "false");
+        felizJuevesWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(felizJuevesWindow, "is-opening");
+      };
+
+      const closeFelizJuevesWindow = () => {
+        if (!felizJuevesWindow || felizJuevesWindow.classList.contains("is-hidden")) return;
+        felizJuevesWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(felizJuevesWindow, "is-closing");
+      };
+
+      const flashFelizJuevesChoice = () => {
+        if (!felizJuevesWindow) return;
+        if (felizJuevesFlashTimer) clearTimeout(felizJuevesFlashTimer);
+        felizJuevesWindow.classList.add("is-choice-flashing");
+        felizJuevesFlashTimer = setTimeout(() => {
+          felizJuevesWindow.classList.remove("is-choice-flashing");
+          felizJuevesFlashTimer = null;
+        }, 300);
+      };
+
+      const maybeShowFelizJueves = () => {
+        const today = new Date();
+        if (today.getDay() !== 4) return;
+        const dateKey = getLocalDateKey(today);
+        if (hasShownFelizJuevesToday(dateKey)) return;
+        markFelizJuevesShown(dateKey);
+        showFelizJuevesWindow();
+      };
+
+      const isNazarVisible = () =>
+        Boolean(
+          nazarWindow &&
+            !nazarWindow.classList.contains("is-hidden") &&
+            nazarWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionNazarWindow = () => {
+        if (!nazarWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = nazarWindow.offsetWidth;
+        const height = nazarWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        nazarWindow.style.translate = "0 0";
+        nazarWindow.style.left = `${Math.round(randomLeft)}px`;
+        nazarWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showNazarWindow = () => {
+        if (!nazarWindow) return;
+        if (isNazarVisible()) {
+          nazarWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(nazarWindow);
+        nazarWindow.classList.remove("is-hidden", "is-closing");
+        nazarWindow.setAttribute("aria-hidden", "false");
+        positionNazarWindow();
+        nazarWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(nazarWindow, "is-opening");
+      };
+
+      const closeNazarWindow = () => {
+        if (!nazarWindow || nazarWindow.classList.contains("is-hidden")) return;
+        nazarWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(nazarWindow, "is-closing");
       };
 
       const isJohnPorkVisible = () =>
@@ -5028,6 +6005,90 @@
         restartWindowAnimation(johnPorkWindow, "is-closing");
       };
 
+      const isAdvertisementVisible = () =>
+        Boolean(
+          advertisementWindow &&
+            !advertisementWindow.classList.contains("is-hidden") &&
+            advertisementWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionAdvertisementWindow = () => {
+        if (!advertisementWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = advertisementWindow.offsetWidth;
+        const height = advertisementWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        advertisementWindow.style.translate = "0 0";
+        advertisementWindow.style.left = `${Math.round(randomLeft)}px`;
+        advertisementWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showAdvertisementWindow = () => {
+        if (!advertisementWindow) return;
+        if (isAdvertisementVisible()) {
+          advertisementWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(advertisementWindow);
+        advertisementWindow.classList.remove("is-hidden", "is-closing");
+        advertisementWindow.setAttribute("aria-hidden", "false");
+        positionAdvertisementWindow();
+        advertisementWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(advertisementWindow, "is-opening");
+      };
+
+      const closeAdvertisementWindow = () => {
+        if (!advertisementWindow || advertisementWindow.classList.contains("is-hidden")) return;
+        advertisementWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(advertisementWindow, "is-closing");
+      };
+
+      const isBidenBlastVisible = () =>
+        Boolean(
+          bidenBlastWindow &&
+            !bidenBlastWindow.classList.contains("is-hidden") &&
+            bidenBlastWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionBidenBlastWindow = () => {
+        if (!bidenBlastWindow) return;
+        const padding = 12;
+        const taskbarClearance = 64;
+        const width = bidenBlastWindow.offsetWidth;
+        const height = bidenBlastWindow.offsetHeight;
+        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
+        const randomLeft = padding + Math.random() * (maxLeft - padding);
+        const randomTop = padding + Math.random() * (maxTop - padding);
+        bidenBlastWindow.style.translate = "0 0";
+        bidenBlastWindow.style.left = `${Math.round(randomLeft)}px`;
+        bidenBlastWindow.style.top = `${Math.round(randomTop)}px`;
+      };
+
+      const showBidenBlastWindow = () => {
+        if (!bidenBlastWindow) return;
+        if (isBidenBlastVisible()) {
+          bidenBlastWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(bidenBlastWindow);
+        bidenBlastWindow.classList.remove("is-hidden", "is-closing");
+        bidenBlastWindow.setAttribute("aria-hidden", "false");
+        positionBidenBlastWindow();
+        bidenBlastWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(bidenBlastWindow, "is-opening");
+      };
+
+      const closeBidenBlastWindow = () => {
+        if (!bidenBlastWindow || bidenBlastWindow.classList.contains("is-hidden")) return;
+        bidenBlastWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(bidenBlastWindow, "is-closing");
+      };
+
       const registerRandomEvent = (definition) => {
         randomEventDefinitions.push(definition);
         return definition;
@@ -5059,6 +6120,9 @@
           if (!debug && Math.random() >= probability) return;
           definition.run({ triggerName, detail, debug });
         });
+        if (triggerName === "calendarOpen" || triggerName === "gameWin") {
+          maybeShowFelizJueves();
+        }
       };
 
       registerRandomEvent({
@@ -5077,9 +6141,163 @@
           calendarOpen: 0.04,
           tenMinute: 0.2,
         },
-        canTrigger: ({ debug }) => debug || !isRandomAlertRemembered(),
-        run: ({ debug }) => {
-          showRandomAlert({ force: debug });
+        canTrigger: () => !isRandomAlertVisible(),
+        run: () => {
+          showRandomAlert();
+        },
+      });
+
+      registerRandomEvent({
+        id: "self-love-system-alert",
+        debug: false,
+        probability: 0.01,
+        probabilities: {
+          windowOpen: 0.006,
+          windowClose: 0.006,
+          gameWin: 0.04,
+          gameLoss: 0.035,
+          startButton: 0.02,
+          newTabLink: 0.018,
+          fileDownload: 0.025,
+          pageReload: 0.035,
+          calendarOpen: 0.02,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isSelfLoveAlertVisible(),
+        run: () => {
+          showSelfLoveAlert();
+        },
+      });
+
+      registerRandomEvent({
+        id: "rohin-os-update",
+        debug: false,
+        probability: 0.01,
+        probabilities: {
+          windowOpen: 0.006,
+          windowClose: 0.006,
+          gameWin: 0.04,
+          gameLoss: 0.035,
+          startButton: 0.02,
+          newTabLink: 0.018,
+          fileDownload: 0.025,
+          pageReload: 0.035,
+          calendarOpen: 0.02,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isRohinUpdateVisible(),
+        run: () => {
+          showRohinUpdate();
+        },
+      });
+
+      registerRandomEvent({
+        id: "rohin-os-note",
+        debug: false,
+        probability: 0.01,
+        probabilities: {
+          windowOpen: 0.006,
+          windowClose: 0.006,
+          gameWin: 0.04,
+          gameLoss: 0.035,
+          startButton: 0.02,
+          newTabLink: 0.018,
+          fileDownload: 0.025,
+          pageReload: 0.035,
+          calendarOpen: 0.02,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isRohinNoteVisible(),
+        run: () => {
+          showRohinNote();
+        },
+      });
+
+      registerRandomEvent({
+        id: "earth-proverb-note",
+        debug: false,
+        probability: 0.01,
+        probabilities: {
+          windowOpen: 0.006,
+          windowClose: 0.006,
+          gameWin: 0.04,
+          gameLoss: 0.035,
+          startButton: 0.02,
+          newTabLink: 0.018,
+          fileDownload: 0.025,
+          pageReload: 0.035,
+          calendarOpen: 0.02,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isEarthNoteVisible(),
+        run: () => {
+          showEarthNote();
+        },
+      });
+
+      registerRandomEvent({
+        id: "health-note",
+        debug: false,
+        probability: 0.01,
+        probabilities: {
+          windowOpen: 0.006,
+          windowClose: 0.006,
+          gameWin: 0.04,
+          gameLoss: 0.035,
+          startButton: 0.02,
+          newTabLink: 0.018,
+          fileDownload: 0.025,
+          pageReload: 0.035,
+          calendarOpen: 0.02,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isHealthNoteVisible(),
+        run: () => {
+          showHealthNote();
+        },
+      });
+
+      registerRandomEvent({
+        id: "love-note",
+        debug: false,
+        probability: 0.01,
+        probabilities: {
+          windowOpen: 0.006,
+          windowClose: 0.006,
+          gameWin: 0.04,
+          gameLoss: 0.035,
+          startButton: 0.02,
+          newTabLink: 0.018,
+          fileDownload: 0.025,
+          pageReload: 0.035,
+          calendarOpen: 0.02,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isLoveNoteVisible(),
+        run: () => {
+          showLoveNote();
+        },
+      });
+
+      registerRandomEvent({
+        id: "nazar-evil-eye",
+        debug: false,
+        probability: 0.0125,
+        probabilities: {
+          windowOpen: 0.008,
+          windowClose: 0.008,
+          gameWin: 0.06,
+          gameLoss: 0.04,
+          startButton: 0.025,
+          newTabLink: 0.02,
+          fileDownload: 0.025,
+          pageReload: 0.04,
+          calendarOpen: 0.025,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isNazarVisible(),
+        run: () => {
+          showNazarWindow();
         },
       });
 
@@ -5102,6 +6320,50 @@
         canTrigger: () => !isJohnPorkVisible(),
         run: () => {
           showJohnPorkCall();
+        },
+      });
+
+      registerRandomEvent({
+        id: "biden-blast",
+        debug: false,
+        probability: 0.01,
+        probabilities: {
+          windowOpen: 0.006,
+          windowClose: 0.006,
+          gameWin: 0.04,
+          gameLoss: 0.035,
+          startButton: 0.02,
+          newTabLink: 0.018,
+          fileDownload: 0.025,
+          pageReload: 0.035,
+          calendarOpen: 0.02,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isBidenBlastVisible(),
+        run: () => {
+          showBidenBlastWindow();
+        },
+      });
+
+      registerRandomEvent({
+        id: "evil-wizards-advertisement",
+        debug: false,
+        probability: 0.01,
+        probabilities: {
+          windowOpen: 0.006,
+          windowClose: 0.006,
+          gameWin: 0.04,
+          gameLoss: 0.035,
+          startButton: 0.02,
+          newTabLink: 0.018,
+          fileDownload: 0.025,
+          pageReload: 0.035,
+          calendarOpen: 0.02,
+          tenMinute: 0.08,
+        },
+        canTrigger: () => !isAdvertisementVisible(),
+        run: () => {
+          showAdvertisementWindow();
         },
       });
 
@@ -7808,14 +9070,352 @@
       };
 
       const calendarEvents = {
+        "0-1": {
+          title: "New Year's Day",
+          image: "assets/random%20events/newyear.gif",
+        },
         "1-11": {
           title: "February 11",
           image: "assets/random%20events/birthday.gif",
+        },
+        "1-14": {
+          title: "Valentine's Day",
+          image: "assets/random%20events/valentine.gif",
+        },
+        "2-4": {
+          title: "Where did she go?",
+          image: "assets/random%20events/nana.gif",
+        },
+        "2-8": {
+          title: "International Women's Day",
+          image: "assets/random%20events/iwd.gif",
+        },
+        "2-31": {
+          title: "Transgender Day of Visibility",
+          image: "assets/random%20events/trans.gif",
         },
         "3-20": {
           title: "April 20",
           image: "assets/random%20events/swed.gif",
         },
+        "4-5": {
+          title: "Cinco de Mayo",
+          image: "assets/random%20events/cincodemayo.gif",
+        },
+        "5-1": {
+          title: "Pride Month",
+          image: "assets/random%20events/pridemonth.gif",
+        },
+        "5-19": {
+          title: "Juneteenth",
+          image: "assets/random%20events/juneteenth.gif",
+        },
+        "6-4": {
+          title: "Fourth of July",
+          image: "assets/random%20events/4thofjuly.gif",
+        },
+        "8-11": {
+          title: "September 11",
+          image: "assets/random%20events/remembering911.gif",
+        },
+        "8-23": {
+          title: "Bisexual Visibility Day",
+          image:
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRreml3ZDZodnJwZmVkYmIyaHY4bjBoOHkyc2ozdDR0cTJjZHpnOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/fJzFpWBj82lk1tW5RY/giphy.gif",
+        },
+        "9-31": {
+          title: "Halloween",
+          image: "assets/random%20events/halloween.gif",
+        },
+        "10-2": {
+          title: "Dia de los Muertos",
+          image: "assets/random%20events/diadelosmuertos.gif",
+        },
+        "11-25": {
+          title: "Christmas Day",
+          image: "assets/random%20events/christmas.gif",
+        },
+      };
+
+      const eidAlFitrEvent = {
+        title: "Eid Mubarak",
+        image: "assets/random%20events/eidmubarak.gif",
+      };
+
+      const chineseNewYearEvent = {
+        title: "Chinese New Year",
+        image: "assets/random%20events/chinesenewyear.gif",
+      };
+
+      const easterEvent = {
+        title: "Easter Day",
+        image: "assets/random%20events/easter.gif",
+      };
+
+      const diwaliEvent = {
+        title: "Diwali",
+        image: "assets/random%20events/diwali.gif",
+      };
+
+      const ramadanEvent = {
+        title: "Ramadan Starts",
+        image: "assets/random%20events/ramadan.gif",
+      };
+
+      const holiEvent = {
+        title: "Holi",
+        image: "assets/random%20events/holi.gif",
+      };
+
+      const hanukkahEvent = {
+        title: "Hanukkah",
+        image: "assets/random%20events/hanukkah.gif",
+      };
+
+      const vesakEvent = {
+        title: "Vesak Day",
+        image: "assets/random%20events/buddha.gif",
+      };
+
+      const thanksgivingEvent = {
+        title: "Thanksgiving Day",
+        image: "assets/random%20events/thanksgiving.gif",
+      };
+
+      const laborDayEvent = {
+        title: "Labor Day",
+        image: "assets/random%20events/laborday.gif",
+      };
+
+      const mothersDayEvent = {
+        title: "Mother's Day",
+        image: "assets/random%20events/mothersday.gif",
+      };
+
+      const fathersDayEvent = {
+        title: "Father's Day",
+        image: "assets/random%20events/fathersday.gif",
+      };
+
+      const onamEvent = {
+        title: "Onam",
+        image:
+          "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjRoeGk1ZW51MGxuYjd1aDQxb3RlMmZodTBnOWlsYTA1cTFuZGZoOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XGLBlMvhA0PO9MEDmv/giphy.gif",
+      };
+
+      const pongalEvent = {
+        title: "Pongal",
+        image:
+          "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDVnNmphdHYxbTJoMDJjNXNmZHg3eW5pcHF1MDNkMWVjOGw3dmpocyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Ph5WvQ9jJKJGOVLpgD/giphy.gif",
+      };
+
+      const eidAlFitrDateOverrides = {
+        2024: { month: 3, day: 10 },
+        2025: { month: 2, day: 30 },
+        2026: { month: 2, day: 20 },
+        2027: { month: 2, day: 10 },
+        2028: { month: 1, day: 27 },
+        2029: { month: 1, day: 15 },
+        2030: { month: 1, day: 5 },
+        2031: { month: 0, day: 25 },
+      };
+
+      const chineseNewYearDateOverrides = {
+        2024: { month: 1, day: 10 },
+        2025: { month: 0, day: 29 },
+        2026: { month: 1, day: 17 },
+        2027: { month: 1, day: 6 },
+        2028: { month: 0, day: 26 },
+        2029: { month: 1, day: 13 },
+        2030: { month: 1, day: 3 },
+        2031: { month: 0, day: 23 },
+        2032: { month: 1, day: 11 },
+        2033: { month: 0, day: 31 },
+        2034: { month: 1, day: 19 },
+        2035: { month: 1, day: 8 },
+        2036: { month: 0, day: 28 },
+        2037: { month: 1, day: 15 },
+        2038: { month: 1, day: 4 },
+        2039: { month: 0, day: 24 },
+        2040: { month: 1, day: 12 },
+        2041: { month: 1, day: 1 },
+        2042: { month: 0, day: 22 },
+        2043: { month: 1, day: 10 },
+      };
+
+      const diwaliDateOverrides = {
+        2024: { month: 9, day: 31 },
+        2025: { month: 9, day: 20 },
+        2026: { month: 10, day: 8 },
+        2027: { month: 9, day: 28 },
+        2028: { month: 9, day: 17 },
+        2029: { month: 10, day: 5 },
+        2030: { month: 9, day: 25 },
+      };
+
+      const ramadanStartDateOverrides = {
+        2024: [{ month: 2, day: 12 }],
+        2025: [{ month: 2, day: 1 }],
+        2026: [{ month: 1, day: 18 }],
+        2027: [{ month: 1, day: 8 }],
+        2028: [{ month: 0, day: 28 }],
+        2029: [{ month: 0, day: 16 }],
+        2030: [
+          { month: 0, day: 6 },
+          { month: 11, day: 26 },
+        ],
+        2031: [{ month: 11, day: 15 }],
+      };
+
+      const holiDateOverrides = {
+        2024: { month: 2, day: 25 },
+        2025: { month: 2, day: 14 },
+        2026: { month: 2, day: 3 },
+        2027: { month: 2, day: 22 },
+        2028: { month: 2, day: 11 },
+        2029: { month: 1, day: 28 },
+        2030: { month: 2, day: 19 },
+      };
+
+      const hanukkahDateOverrides = {
+        2024: { month: 11, day: 26 },
+        2025: { month: 11, day: 15 },
+        2026: { month: 11, day: 5 },
+        2027: { month: 11, day: 25 },
+        2028: { month: 11, day: 13 },
+        2029: { month: 11, day: 2 },
+        2030: { month: 11, day: 21 },
+        2031: { month: 11, day: 10 },
+      };
+
+      const vesakDateOverrides = {
+        2024: { month: 4, day: 23 },
+        2025: { month: 4, day: 12 },
+        2026: { month: 4, day: 1 },
+        2027: { month: 4, day: 20 },
+        2028: { month: 4, day: 8 },
+        2029: { month: 4, day: 27 },
+        2030: { month: 4, day: 17 },
+        2031: { month: 4, day: 7 },
+      };
+
+      const onamDateOverrides = {
+        2024: { month: 8, day: 15 },
+        2025: { month: 8, day: 5 },
+        2026: { month: 7, day: 26 },
+        2027: { month: 8, day: 12 },
+        2028: { month: 8, day: 1 },
+      };
+
+      const pongalDateOverrides = {
+        2024: { month: 0, day: 15 },
+        2025: { month: 0, day: 14 },
+        2026: { month: 0, day: 14 },
+        2027: { month: 0, day: 15 },
+        2028: { month: 0, day: 15 },
+        2029: { month: 0, day: 14 },
+        2030: { month: 0, day: 14 },
+        2031: { month: 0, day: 15 },
+      };
+
+      let eidAlFitrFormatter = null;
+      try {
+        eidAlFitrFormatter = new Intl.DateTimeFormat("en-u-ca-islamic-civil", {
+          month: "numeric",
+          day: "numeric",
+        });
+      } catch (error) {
+        eidAlFitrFormatter = null;
+      }
+
+      const eidAlFitrDateCache = new Map();
+
+      const getChineseNewYearDate = (year) =>
+        chineseNewYearDateOverrides[year] || null;
+
+      const getDiwaliDate = (year) => diwaliDateOverrides[year] || null;
+
+      const getRamadanStartDates = (year) =>
+        ramadanStartDateOverrides[year] || [];
+
+      const getHoliDate = (year) => holiDateOverrides[year] || null;
+
+      const getHanukkahDate = (year) => hanukkahDateOverrides[year] || null;
+
+      const getVesakDate = (year) => vesakDateOverrides[year] || null;
+
+      const getOnamDate = (year) => onamDateOverrides[year] || null;
+
+      const getPongalDate = (year) => pongalDateOverrides[year] || null;
+
+      const getThanksgivingDate = (year) => {
+        const novemberFirst = new Date(year, 10, 1);
+        const firstThursdayOffset = (4 - novemberFirst.getDay() + 7) % 7;
+        return { month: 10, day: 1 + firstThursdayOffset + 21 };
+      };
+
+      const getLaborDayDate = (year) => {
+        const septemberFirst = new Date(year, 8, 1);
+        const firstMondayOffset = (1 - septemberFirst.getDay() + 7) % 7;
+        return { month: 8, day: 1 + firstMondayOffset };
+      };
+
+      const getMothersDayDate = (year) => {
+        const mayFirst = new Date(year, 4, 1);
+        const firstSundayOffset = (7 - mayFirst.getDay()) % 7;
+        return { month: 4, day: 1 + firstSundayOffset + 7 };
+      };
+
+      const getFathersDayDate = (year) => {
+        const juneFirst = new Date(year, 5, 1);
+        const firstSundayOffset = (7 - juneFirst.getDay()) % 7;
+        return { month: 5, day: 1 + firstSundayOffset + 14 };
+      };
+
+      const getEasterDate = (year) => {
+        const a = year % 19;
+        const b = Math.floor(year / 100);
+        const c = year % 100;
+        const d = Math.floor(b / 4);
+        const e = b % 4;
+        const f = Math.floor((b + 8) / 25);
+        const g = Math.floor((b - f + 1) / 3);
+        const h = (19 * a + b - d - g + 15) % 30;
+        const i = Math.floor(c / 4);
+        const k = c % 4;
+        const l = (32 + 2 * e + 2 * i - h - k) % 7;
+        const m = Math.floor((a + 11 * h + 22 * l) / 451);
+        const month = Math.floor((h + l - 7 * m + 114) / 31);
+        const day = ((h + l - 7 * m + 114) % 31) + 1;
+        return { month: month - 1, day };
+      };
+
+      const getIslamicMonthDay = (date) => {
+        if (!eidAlFitrFormatter) return null;
+        const parts = eidAlFitrFormatter.formatToParts(date);
+        const month = Number(parts.find((part) => part.type === "month")?.value);
+        const day = Number(parts.find((part) => part.type === "day")?.value);
+        if (!month || !day) return null;
+        return { month, day };
+      };
+
+      const getEidAlFitrDate = (year) => {
+        if (eidAlFitrDateOverrides[year]) return eidAlFitrDateOverrides[year];
+        if (eidAlFitrDateCache.has(year)) return eidAlFitrDateCache.get(year);
+
+        let match = null;
+        const probe = new Date(year, 0, 1, 12);
+        while (probe.getFullYear() === year) {
+          const islamic = getIslamicMonthDay(probe);
+          if (islamic && islamic.month === 10 && islamic.day === 1) {
+            match = { month: probe.getMonth(), day: probe.getDate() };
+            break;
+          }
+          probe.setDate(probe.getDate() + 1);
+        }
+
+        eidAlFitrDateCache.set(year, match);
+        return match;
       };
 
       const updateCalendarQuote = (month) => {
@@ -7857,8 +9457,95 @@
         return date;
       };
 
-      const getCalendarEventKey = (month, day) => `${month}-${day}`;
-      const getCalendarEvent = (month, day) => calendarEvents[getCalendarEventKey(month, day)] || null;
+      const getCalendarEventKey = (year, month, day) => `${year}-${month}-${day}`;
+      const getCalendarEvent = (year, month, day) => {
+        const chineseNewYearDate = getChineseNewYearDate(year);
+        if (
+          chineseNewYearDate &&
+          chineseNewYearDate.month === month &&
+          chineseNewYearDate.day === day
+        ) {
+          return chineseNewYearEvent;
+        }
+
+        const eidAlFitrDate = getEidAlFitrDate(year);
+        if (
+          eidAlFitrDate &&
+          eidAlFitrDate.month === month &&
+          eidAlFitrDate.day === day
+        ) {
+          return eidAlFitrEvent;
+        }
+
+        const ramadanStartDates = getRamadanStartDates(year);
+        if (
+          ramadanStartDates.some(
+            (ramadanDate) => ramadanDate.month === month && ramadanDate.day === day
+          )
+        ) {
+          return ramadanEvent;
+        }
+
+        const holiDate = getHoliDate(year);
+        if (holiDate && holiDate.month === month && holiDate.day === day) {
+          return holiEvent;
+        }
+
+        const vesakDate = getVesakDate(year);
+        if (vesakDate && vesakDate.month === month && vesakDate.day === day) {
+          return vesakEvent;
+        }
+
+        const pongalDate = getPongalDate(year);
+        if (pongalDate && pongalDate.month === month && pongalDate.day === day) {
+          return pongalEvent;
+        }
+
+        const onamDate = getOnamDate(year);
+        if (onamDate && onamDate.month === month && onamDate.day === day) {
+          return onamEvent;
+        }
+
+        const easterDate = getEasterDate(year);
+        if (easterDate.month === month && easterDate.day === day) {
+          return easterEvent;
+        }
+
+        const diwaliDate = getDiwaliDate(year);
+        if (diwaliDate && diwaliDate.month === month && diwaliDate.day === day) {
+          return diwaliEvent;
+        }
+
+        const hanukkahDate = getHanukkahDate(year);
+        if (hanukkahDate && hanukkahDate.month === month && hanukkahDate.day === day) {
+          return hanukkahEvent;
+        }
+
+        const laborDayDate = getLaborDayDate(year);
+        if (laborDayDate.month === month && laborDayDate.day === day) {
+          return laborDayEvent;
+        }
+
+        const mothersDayDate = getMothersDayDate(year);
+        if (mothersDayDate.month === month && mothersDayDate.day === day) {
+          return mothersDayEvent;
+        }
+
+        const fathersDayDate = getFathersDayDate(year);
+        if (fathersDayDate.month === month && fathersDayDate.day === day) {
+          return fathersDayEvent;
+        }
+
+        const thanksgivingDate = getThanksgivingDate(year);
+        if (
+          thanksgivingDate.month === month &&
+          thanksgivingDate.day === day
+        ) {
+          return thanksgivingEvent;
+        }
+
+        return calendarEvents[`${month}-${day}`] || null;
+      };
 
       const openRandomEventWindow = (calendarEvent, eventKey) => {
         if (!randomEventWindow) return;
@@ -7931,7 +9618,7 @@
 
         for (let day = 1; day <= daysInMonth; day += 1) {
           const isToday = isCurrentMonth && day === today;
-          const calendarEvent = getCalendarEvent(month, day);
+          const calendarEvent = getCalendarEvent(year, month, day);
           const cell = appendCalendarCell(
             day,
             `calendar-day${isToday ? " is-today" : ""}${calendarEvent ? " is-event-day" : ""}`
@@ -7985,8 +9672,9 @@
         if (!dayCell || !calendarGrid.contains(dayCell)) return;
         const eventMonth = Number(dayCell.dataset.calendarMonth);
         const eventDay = Number(dayCell.dataset.calendarDay);
-        const eventKey = getCalendarEventKey(eventMonth, eventDay);
-        const calendarEvent = getCalendarEvent(eventMonth, eventDay);
+        const eventYear = Number(dayCell.dataset.calendarYear);
+        const eventKey = getCalendarEventKey(eventYear, eventMonth, eventDay);
+        const calendarEvent = getCalendarEvent(eventYear, eventMonth, eventDay);
         if (calendarEvent) {
           event.stopPropagation();
           const isSameEventOpen =
@@ -8049,6 +9737,43 @@
         });
       }
 
+      if (felizJuevesClose) {
+        felizJuevesClose.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          flashFelizJuevesChoice();
+        });
+      }
+
+      if (felizJuevesGracias) {
+        felizJuevesGracias.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeFelizJuevesWindow();
+        });
+      }
+
+      if (felizJuevesWindow) {
+        felizJuevesWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        felizJuevesWindow.addEventListener("animationend", (event) => {
+          if (event.target !== felizJuevesWindow) return;
+          if (event.animationName === "retro-window-open") {
+            felizJuevesWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            felizJuevesWindow.classList.remove("is-closing", "is-choice-flashing");
+            felizJuevesWindow.classList.add("is-hidden");
+            felizJuevesWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
       if (randomAlertMaximize) {
         randomAlertMaximize.addEventListener("click", (event) => {
           event.preventDefault();
@@ -8084,6 +9809,217 @@
         });
       });
 
+      if (selfLoveAlertClose) {
+        selfLoveAlertClose.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          flashSelfLoveYes();
+        });
+      }
+
+      if (selfLoveAlertYes) {
+        selfLoveAlertYes.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeSelfLoveAlert();
+        });
+      }
+
+      [selfLoveAlertNo].forEach((button) => {
+        if (!button) return;
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          flashSelfLoveYes();
+        });
+      });
+
+      if (selfLoveAlertWindow) {
+        selfLoveAlertWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        selfLoveAlertWindow.addEventListener("animationend", (event) => {
+          if (event.target !== selfLoveAlertWindow) return;
+          if (event.animationName === "retro-window-open") {
+            selfLoveAlertWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            selfLoveAlertWindow.classList.remove("is-closing", "is-yes-flashing");
+            selfLoveAlertWindow.classList.add("is-hidden");
+          }
+        });
+      }
+
+      if (rohinUpdateRun) {
+        rohinUpdateRun.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          window.location.href = "index.html";
+        });
+      }
+
+      if (rohinUpdateLater) {
+        rohinUpdateLater.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeRohinUpdate();
+        });
+      }
+
+      if (rohinUpdateWindow) {
+        rohinUpdateWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        rohinUpdateWindow.addEventListener("animationend", (event) => {
+          if (event.target !== rohinUpdateWindow) return;
+          if (event.animationName === "retro-window-open") {
+            rohinUpdateWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            rohinUpdateWindow.classList.remove("is-closing");
+            rohinUpdateWindow.classList.add("is-hidden");
+          }
+        });
+      }
+
+      if (rohinNoteOk) {
+        rohinNoteOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeRohinNote();
+        });
+      }
+
+      if (rohinNoteWindow) {
+        rohinNoteWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        rohinNoteWindow.addEventListener("animationend", (event) => {
+          if (event.target !== rohinNoteWindow) return;
+          if (event.animationName === "retro-window-open") {
+            rohinNoteWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            rohinNoteWindow.classList.remove("is-closing");
+            rohinNoteWindow.classList.add("is-hidden");
+          }
+        });
+      }
+
+      if (earthNoteOk) {
+        earthNoteOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeEarthNote();
+        });
+      }
+
+      if (earthNoteWindow) {
+        earthNoteWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        earthNoteWindow.addEventListener("animationend", (event) => {
+          if (event.target !== earthNoteWindow) return;
+          if (event.animationName === "retro-window-open") {
+            earthNoteWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            earthNoteWindow.classList.remove("is-closing");
+            earthNoteWindow.classList.add("is-hidden");
+          }
+        });
+      }
+
+      if (healthNoteOk) {
+        healthNoteOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeHealthNote();
+        });
+      }
+
+      if (healthNoteWindow) {
+        healthNoteWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        healthNoteWindow.addEventListener("animationend", (event) => {
+          if (event.target !== healthNoteWindow) return;
+          if (event.animationName === "retro-window-open") {
+            healthNoteWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            healthNoteWindow.classList.remove("is-closing");
+            healthNoteWindow.classList.add("is-hidden");
+          }
+        });
+      }
+
+      if (loveNoteOk) {
+        loveNoteOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeLoveNote();
+        });
+      }
+
+      if (loveNoteWindow) {
+        loveNoteWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        loveNoteWindow.addEventListener("animationend", (event) => {
+          if (event.target !== loveNoteWindow) return;
+          if (event.animationName === "retro-window-open") {
+            loveNoteWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            loveNoteWindow.classList.remove("is-closing");
+            loveNoteWindow.classList.add("is-hidden");
+          }
+        });
+      }
+
+      [nazarClose, nazarYes, nazarNo].forEach((button) => {
+        if (!button) return;
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeNazarWindow();
+        });
+      });
+
+      if (nazarWindow) {
+        nazarWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        nazarWindow.addEventListener("animationend", (event) => {
+          if (event.target !== nazarWindow) return;
+          if (event.animationName === "retro-window-open") {
+            nazarWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            nazarWindow.classList.remove("is-closing");
+            nazarWindow.classList.add("is-hidden");
+            nazarWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
       [johnPorkClose, johnPorkAccept, johnPorkDecline].forEach((button) => {
         if (!button) return;
         button.addEventListener("click", (event) => {
@@ -8109,6 +10045,64 @@
             johnPorkWindow.classList.add("is-hidden");
             stopJohnPorkStatus();
             johnPorkWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
+      if (advertisementNoThanks) {
+        advertisementNoThanks.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeAdvertisementWindow();
+        });
+      }
+
+      if (advertisementWindow) {
+        advertisementWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        advertisementWindow.addEventListener("animationend", (event) => {
+          if (event.target !== advertisementWindow) return;
+          if (event.animationName === "retro-window-open") {
+            advertisementWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            advertisementWindow.classList.remove("is-closing");
+            advertisementWindow.classList.add("is-hidden");
+            advertisementWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
+      if (bidenBlastOk) {
+        bidenBlastOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeBidenBlastWindow();
+        });
+      }
+
+      if (bidenBlastWindow) {
+        bidenBlastWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        bidenBlastWindow.addEventListener("animationend", (event) => {
+          if (event.target !== bidenBlastWindow) return;
+          if (event.animationName === "retro-window-open") {
+            bidenBlastWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            bidenBlastWindow.classList.remove("is-closing");
+            bidenBlastWindow.classList.add("is-hidden");
+            bidenBlastWindow.querySelectorAll("img[data-src]").forEach((image) => {
               image.removeAttribute("src");
             });
           }
