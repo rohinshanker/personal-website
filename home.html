@@ -1976,6 +1976,37 @@
         max-height: none;
       }
 
+      .image-fit-frame {
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        box-sizing: border-box;
+        display: flex;
+        max-width: 100%;
+        padding: 6px;
+      }
+
+      .image-fit-slot {
+        align-items: center;
+        aspect-ratio: var(--image-fit-aspect, auto);
+        background: var(--image-fit-background, #fff);
+        box-shadow: var(--border-field);
+        box-sizing: border-box;
+        display: flex;
+        flex: none;
+        justify-content: center;
+        min-height: 0;
+        overflow: hidden;
+        padding: 2px;
+      }
+
+      .image-fit-slot > img {
+        display: block;
+        height: 100%;
+        object-fit: contain;
+        object-position: center;
+        width: 100%;
+      }
+
       .project-figure-description {
         margin: 6px 0 0;
         font-size: 11px;
@@ -2912,6 +2943,434 @@
         min-width: 84px;
       }
 
+      .skill-check-window,
+      .skill-check-result-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(370px, calc(100vw - 32px));
+        z-index: 143;
+      }
+
+      .skill-check-window.is-hidden,
+      .skill-check-result-window.is-hidden {
+        display: none;
+      }
+
+      .skill-check-window.is-opening,
+      .skill-check-result-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .skill-check-window.is-closing,
+      .skill-check-result-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .skill-check-window {
+        position: fixed;
+      }
+
+      .skill-check-window .window-body,
+      .skill-check-result-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .skill-check-message,
+      .skill-check-result-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 48px 1fr;
+      }
+
+      .skill-check-message p,
+      .skill-check-result-message p {
+        margin: 0;
+      }
+
+      .skill-check-dice-icon {
+        display: block;
+        height: 40px;
+        image-rendering: pixelated;
+        object-fit: contain;
+        width: 40px;
+      }
+
+      .skill-check-roll-frame {
+        align-self: center;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        box-sizing: border-box;
+        display: flex;
+        gap: 4px;
+        padding: 6px;
+      }
+
+      .skill-check-roll-slot {
+        background: #111;
+        box-shadow: var(--border-field);
+        display: flex;
+        padding: 2px;
+      }
+
+      .skill-check-roll-slot img {
+        display: block;
+        height: 30px;
+        image-rendering: pixelated;
+        width: 18px;
+      }
+
+      .skill-check-actions,
+      .skill-check-result-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+
+      .skill-check-actions button,
+      .skill-check-result-actions button {
+        min-width: 84px;
+      }
+
+      .skill-check-lock-screen {
+        display: none;
+        inset: 0;
+        position: absolute;
+        z-index: 6;
+      }
+
+      .skill-check-window.is-locked .skill-check-lock-screen {
+        display: block;
+      }
+
+      .skill-check-result-message img {
+        display: block;
+        height: 40px;
+        image-rendering: pixelated;
+        width: 40px;
+      }
+
+      .distress-signal-window,
+      .distress-upload-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(470px, calc(100vw - 32px));
+        z-index: 143;
+      }
+
+      .distress-upload-window {
+        width: min(380px, calc(100vw - 32px));
+      }
+
+      .distress-signal-window.is-hidden,
+      .distress-upload-window.is-hidden {
+        display: none;
+      }
+
+      .distress-signal-window.is-opening,
+      .distress-upload-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .distress-signal-window.is-closing,
+      .distress-upload-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .distress-signal-window .window-body,
+      .distress-upload-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .distress-message,
+      .distress-upload-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 48px 1fr;
+      }
+
+      .distress-message img,
+      .distress-upload-message img {
+        display: block;
+        height: 40px;
+        object-fit: contain;
+        width: 40px;
+      }
+
+      .distress-message img {
+        background: #000;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        object-fit: cover;
+      }
+
+      .distress-message p,
+      .distress-upload-message p {
+        margin: 0;
+      }
+
+      .distress-actions,
+      .distress-upload-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .distress-upload-actions {
+        justify-content: center;
+      }
+
+      .distress-actions button,
+      .distress-upload-actions button {
+        min-width: 74px;
+      }
+
+      .distress-radio-panel {
+        background: #060b08;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        box-sizing: border-box;
+        overflow: hidden;
+        padding: 8px;
+        position: relative;
+      }
+
+      .distress-radio-panel.is-off .distress-radio-screen {
+        filter: brightness(0.58) saturate(0.45);
+      }
+
+      .distress-radio-screen {
+        background:
+          repeating-linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.05) 0,
+            rgba(255, 255, 255, 0.05) 1px,
+            transparent 1px,
+            transparent 5px
+          ),
+          #020403;
+        border: 1px solid #1d3a24;
+        box-sizing: border-box;
+        display: block;
+        height: 152px;
+        image-rendering: pixelated;
+        width: 100%;
+      }
+
+      .distress-power-row {
+        align-items: center;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: auto 1fr;
+      }
+
+      .distress-power-row button {
+        min-width: 84px;
+      }
+
+      .distress-power-progress {
+        background: #fff;
+        box-shadow: var(--border-field);
+        box-sizing: border-box;
+        height: 20px;
+        padding: 3px;
+      }
+
+      .distress-power-progress-bar {
+        background: #010081;
+        height: 100%;
+        width: 0%;
+      }
+
+      .distress-dials {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .distress-dial {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .distress-dial span {
+        font-size: 11px;
+      }
+
+      .distress-dial input {
+        width: 100%;
+      }
+
+      .distress-nav-panel {
+        align-items: center;
+        background: #050806;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        box-sizing: border-box;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 82px 1fr;
+        isolation: isolate;
+        overflow: hidden;
+        padding: 7px;
+        position: relative;
+      }
+
+      .distress-nav-panel > :not(.distress-panel-noise-canvas),
+      .distress-lock-status > :not(.distress-panel-noise-canvas) {
+        position: relative;
+        z-index: 1;
+      }
+
+      .distress-panel-noise-canvas {
+        display: block;
+        height: 100%;
+        image-rendering: pixelated;
+        inset: 0;
+        opacity: 0.72;
+        pointer-events: none;
+        position: absolute;
+        width: 100%;
+        z-index: 3;
+      }
+
+      .distress-minimap {
+        aspect-ratio: 1;
+        background:
+          linear-gradient(rgba(98, 255, 120, 0.11) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(98, 255, 120, 0.11) 1px, transparent 1px),
+          #020403;
+        background-size: 14px 14px;
+        border: 1px solid #1d3a24;
+        box-sizing: border-box;
+        overflow: hidden;
+        position: relative;
+        width: 82px;
+      }
+
+      .distress-minimap::before,
+      .distress-minimap::after {
+        border: 1px solid rgba(98, 255, 120, 0.2);
+        border-radius: 50%;
+        box-sizing: border-box;
+        content: "";
+        inset: 13px;
+        position: absolute;
+      }
+
+      .distress-minimap::after {
+        inset: 27px;
+      }
+
+      .distress-minimap-sweep {
+        background: conic-gradient(
+          from 0deg,
+          rgba(98, 255, 120, 0.26),
+          rgba(98, 255, 120, 0.02) 42deg,
+          transparent 74deg
+        );
+        inset: -16px;
+        opacity: 0;
+        position: absolute;
+        transform-origin: center;
+      }
+
+      .distress-nav-panel.is-scanning .distress-minimap-sweep {
+        animation: distress-minimap-scan 1400ms linear infinite;
+        opacity: 1;
+      }
+
+      .distress-minimap-arrow {
+        background: transparent;
+        color: #ff3b30;
+        font-family: "Courier New", monospace;
+        font-size: 19px;
+        font-weight: normal;
+        height: 19px;
+        left: calc(50% + var(--distress-arrow-x, 0px));
+        line-height: 1;
+        opacity: 0;
+        position: absolute;
+        top: calc(50% + var(--distress-arrow-y, 0px));
+        transform: translate(-50%, -50%) rotate(calc(var(--distress-bearing, 0deg) - 90deg));
+        transform-origin: center;
+        width: 15px;
+        z-index: 4;
+      }
+
+      .distress-minimap-arrow::before {
+        content: ">";
+        left: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .distress-minimap-center {
+        background: #62ff78;
+        border-radius: 50%;
+        height: 5px;
+        left: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 5px;
+      }
+
+      .distress-nav-panel.is-locked .distress-minimap-arrow {
+        opacity: 1;
+      }
+
+      .distress-nav-readout {
+        background: #000;
+        box-shadow: var(--border-field);
+        color: #62ff78;
+        display: grid;
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+        gap: 2px;
+        min-height: 58px;
+        padding: 5px 6px;
+        text-transform: uppercase;
+      }
+
+      .distress-nav-panel.is-off .distress-nav-readout {
+        color: rgba(98, 255, 120, 0.42);
+      }
+
+      @keyframes distress-minimap-scan {
+        to {
+          transform: rotate(-360deg);
+        }
+      }
+
+      .distress-lock-status {
+        background: #000;
+        box-shadow: var(--border-field);
+        color: #62ff78;
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+        isolation: isolate;
+        min-height: 16px;
+        overflow: hidden;
+        padding: 3px 5px;
+        position: relative;
+        text-transform: uppercase;
+      }
+
       .nazar-window {
         display: block;
         left: 50%;
@@ -2968,6 +3427,846 @@
       }
 
       .nazar-actions button {
+        min-width: 74px;
+      }
+
+      .site-grace-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(390px, calc(100vw - 32px));
+        z-index: 141;
+      }
+
+      .site-grace-window.is-hidden {
+        display: none;
+      }
+
+      .site-grace-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .site-grace-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .site-grace-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .site-grace-photo {
+        aspect-ratio: 1200 / 673;
+        background: #050403;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: block;
+        max-height: min(42vh, 260px);
+        object-fit: cover;
+        width: 100%;
+      }
+
+      .site-grace-window p {
+        margin: 0;
+      }
+
+      .site-grace-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .site-grace-actions button {
+        min-width: 104px;
+      }
+
+      .stalker-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(400px, calc(100vw - 32px));
+        z-index: 141;
+      }
+
+      .stalker-window.is-hidden {
+        display: none;
+      }
+
+      .stalker-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .stalker-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .stalker-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .stalker-photo {
+        aspect-ratio: 960 / 520;
+        background: #050403;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: block;
+        max-height: min(42vh, 260px);
+        object-fit: cover;
+        width: 100%;
+      }
+
+      .stalker-window p {
+        margin: 0;
+      }
+
+      .stalker-result-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 40px 1fr;
+      }
+
+      .stalker-result-message img {
+        display: block;
+        height: 32px;
+        image-rendering: pixelated;
+        width: 32px;
+      }
+
+      .stalker-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      #stalker-result-window .stalker-actions {
+        justify-content: center;
+      }
+
+      .stalker-actions button {
+        min-width: 74px;
+      }
+
+      .nana-encounter-window,
+      .nana-accept-window {
+        display: block;
+        left: 50%;
+        max-height: calc(100vh - 76px);
+        max-width: calc(100vw - 32px);
+        overflow: hidden;
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(390px, calc(100vw - 32px));
+        z-index: 141;
+      }
+
+      .nana-accept-window {
+        width: min(310px, calc(100vw - 32px));
+      }
+
+      .nana-encounter-window.is-hidden,
+      .nana-accept-window.is-hidden {
+        display: none;
+      }
+
+      .nana-encounter-window.is-opening,
+      .nana-accept-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .nana-encounter-window.is-closing,
+      .nana-accept-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .nana-encounter-window .window-body,
+      .nana-accept-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: calc(100vh - 110px);
+        overflow: auto;
+      }
+
+      .nana-encounter-window .nana-event-art,
+      .nana-accept-window .nana-event-art {
+        align-self: center;
+        background: #050403;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: block;
+        height: auto;
+        max-height: min(29.4vh, 182px);
+        max-width: calc(70% - 8px);
+        object-fit: contain;
+        width: auto;
+      }
+
+      .nana-encounter-window .nana-event-art {
+        aspect-ratio: 452 / 442;
+      }
+
+      .nana-encounter-window .nana-event-art--inset {
+        box-sizing: border-box;
+        padding: 3px;
+      }
+
+      .nana-accept-window .nana-event-art {
+        aspect-ratio: 500 / 274;
+        max-height: min(36vh, 220px);
+        max-width: calc(100% - 8px);
+      }
+
+      .nana-event-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 50px 1fr;
+      }
+
+      .nana-accept-window .nana-event-message {
+        gap: 6px;
+        grid-template-columns: 36px 1fr;
+      }
+
+      .nana-event-icon {
+        height: 48px;
+        object-fit: cover;
+        width: 48px;
+      }
+
+      .nana-accept-window .nana-event-icon {
+        height: 36px;
+        width: 36px;
+      }
+
+      .nana-event-icon--pixel {
+        image-rendering: pixelated;
+        object-fit: contain;
+      }
+
+      .nana-encounter-window p,
+      .nana-accept-window p {
+        margin: 0;
+      }
+
+      .nana-encounter-actions,
+      .nana-accept-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .nana-accept-actions {
+        justify-content: center;
+      }
+
+      .nana-encounter-actions button,
+      .nana-accept-actions button {
+        min-width: 74px;
+      }
+
+      .lost-grace-overlay {
+        align-items: center;
+        background: transparent;
+        display: none;
+        inset: 0;
+        justify-content: center;
+        pointer-events: none;
+        position: fixed;
+        z-index: 260;
+      }
+
+      .lost-grace-overlay.is-visible {
+        display: flex;
+      }
+
+      .lost-grace-overlay img {
+        animation: lost-grace-banner-fade 4800ms ease-in-out both;
+        display: block;
+        height: clamp(118px, 18vw, 260px);
+        object-fit: cover;
+        object-position: center;
+        width: 100vw;
+      }
+
+      @keyframes lost-grace-banner-fade {
+        0% {
+          opacity: 0;
+        }
+
+        18% {
+          opacity: 1;
+        }
+
+        78% {
+          opacity: 1;
+        }
+
+        100% {
+          opacity: 0;
+        }
+      }
+
+      .lain-alert-window,
+      .lelouch-alert-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(380px, calc(100vw - 32px));
+        z-index: 139;
+      }
+
+      .lain-alert-window.is-hidden,
+      .lelouch-alert-window.is-hidden {
+        display: none;
+      }
+
+      .lain-alert-window.is-opening,
+      .lelouch-alert-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .lain-alert-window.is-closing,
+      .lelouch-alert-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .lain-alert-window .window-body,
+      .lelouch-alert-window .window-body {
+        align-items: stretch;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .lain-alert-window img {
+        background: #000;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: block;
+        max-height: min(42vh, 260px);
+        object-fit: cover;
+        width: 100%;
+      }
+
+      .lain-alert-window img {
+        aspect-ratio: 500 / 352;
+      }
+
+      .lelouch-alert-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 64px 1fr;
+      }
+
+      .lelouch-alert-message img {
+        aspect-ratio: 1;
+        background: #000;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: block;
+        height: 56px;
+        object-fit: cover;
+        width: 56px;
+      }
+
+      .lain-alert-window p,
+      .lelouch-alert-window p {
+        margin: 0;
+      }
+
+      .lain-alert-window button {
+        align-self: flex-end;
+        min-width: 74px;
+      }
+
+      .lelouch-alert-window button {
+        align-self: center;
+        min-width: 74px;
+      }
+
+      .instrumentality-window,
+      .instrumentality-congrats-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(380px, calc(100vw - 32px));
+        z-index: 139;
+      }
+
+      .instrumentality-window.is-hidden,
+      .instrumentality-congrats-window.is-hidden {
+        display: none;
+      }
+
+      .instrumentality-window.is-opening,
+      .instrumentality-congrats-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .instrumentality-window.is-closing,
+      .instrumentality-congrats-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .instrumentality-window .window-body,
+      .instrumentality-congrats-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .instrumentality-message {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 48px 1fr;
+      }
+
+      .instrumentality-message img {
+        display: block;
+        height: 40px;
+        image-rendering: pixelated;
+        width: 40px;
+      }
+
+      .instrumentality-message p,
+      .instrumentality-congrats-window p {
+        margin: 0;
+      }
+
+      .instrumentality-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .instrumentality-actions button {
+        min-width: 74px;
+      }
+
+      .instrumentality-congrats-window img {
+        aspect-ratio: 500 / 341;
+        background: #000;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: block;
+        max-height: min(44vh, 280px);
+        object-fit: cover;
+        width: 100%;
+      }
+
+      .instrumentality-congrats-window button {
+        align-self: center;
+        min-width: 74px;
+      }
+
+      .red-tool-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(430px, calc(100vw - 32px));
+        z-index: 139;
+      }
+
+      .red-tool-window.is-hidden {
+        display: none;
+      }
+
+      .red-tool-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .red-tool-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .red-tool-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .red-tool-header {
+        align-items: center;
+        background: #ffffff;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 28px 1fr 28px;
+        padding: 6px;
+      }
+
+      .red-tool-header img {
+        display: block;
+        height: 24px;
+        image-rendering: pixelated;
+        object-fit: contain;
+        width: 24px;
+      }
+
+      .red-tool-contact {
+        min-width: 0;
+      }
+
+      .red-tool-contact strong,
+      .red-tool-contact span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .red-tool-contact span {
+        color: #008000;
+        font-size: 11px;
+      }
+
+      .red-tool-image {
+        aspect-ratio: 725 / 453;
+        background: #000;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: block;
+        max-height: min(30vh, 220px);
+        object-fit: cover;
+        width: 100%;
+      }
+
+      .red-tool-chat-log {
+        background: #fff;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        height: 150px;
+        overflow-y: auto;
+        padding: 8px;
+      }
+
+      .red-tool-message {
+        align-items: flex-start;
+        display: grid;
+        gap: 6px;
+        grid-template-columns: 20px 1fr;
+      }
+
+      .red-tool-message img {
+        display: block;
+        height: 18px;
+        image-rendering: pixelated;
+        width: 18px;
+      }
+
+      .red-tool-header img.red-tool-avatar,
+      .red-tool-message img.red-tool-avatar {
+        align-self: center;
+        image-rendering: auto;
+        justify-self: center;
+        object-fit: contain;
+        object-position: center center;
+      }
+
+      .red-tool-message img.red-tool-avatar {
+        transform: rotate(90deg);
+      }
+
+      .red-tool-message p {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .red-tool-message strong {
+        color: #000080;
+      }
+
+      .red-tool-message.is-local strong {
+        color: #800000;
+      }
+
+      .red-tool-message.is-local {
+        align-items: center;
+      }
+
+      .red-tool-message.is-local img {
+        align-self: center;
+        justify-self: center;
+        object-fit: contain;
+        object-position: center center;
+      }
+
+      .red-tool-system-alert {
+        align-items: center;
+        color: #333;
+        display: grid;
+        gap: 6px;
+        grid-template-columns: 20px 1fr;
+      }
+
+      .red-tool-system-alert img {
+        display: block;
+        height: 18px;
+        image-rendering: pixelated;
+        width: 18px;
+      }
+
+      .red-tool-system-alert p {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .red-tool-system-label {
+        font-weight: bold;
+      }
+
+      .red-tool-system-alert .red-tool-system-name {
+        color: #c00000;
+        font-weight: bold;
+        white-space: nowrap;
+      }
+
+      .red-tool-typing {
+        color: #666;
+        font-style: italic;
+      }
+
+      .red-tool-input-row {
+        align-items: center;
+        display: grid;
+        gap: 6px;
+        grid-template-columns: 20px minmax(0, 1fr) auto;
+      }
+
+      .red-tool-input-row img {
+        height: 18px;
+        image-rendering: pixelated;
+        width: 18px;
+      }
+
+      .red-tool-input-row input {
+        min-width: 0;
+        width: 100%;
+      }
+
+      .red-tool-input-row button {
+        min-width: 58px;
+      }
+
+      .fate-window {
+        display: block;
+        isolation: isolate;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        overflow: visible;
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(390px, calc(100vw - 32px));
+        z-index: 142;
+      }
+
+      .fate-window.is-hidden {
+        display: none;
+      }
+
+      .fate-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .fate-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .fate-window.is-resisting {
+        animation: fate-window-shake 130ms steps(2, end) both;
+      }
+
+      .fate-lightning-field {
+        inset: -18px;
+        overflow: visible;
+        opacity: 0;
+        pointer-events: none;
+        position: absolute;
+        z-index: 0;
+      }
+
+      .fate-window.is-resisting .fate-lightning-field {
+        opacity: 1;
+      }
+
+      .fate-lightning-canvas {
+        display: block;
+        height: 100%;
+        width: 100%;
+      }
+
+      .fate-window .title-bar,
+      .fate-window .window-body {
+        position: relative;
+        z-index: 1;
+      }
+
+      .fate-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: calc(100vh - 110px);
+        overflow-y: auto;
+      }
+
+      .fate-stage {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .fate-stage.is-hidden {
+        display: none;
+      }
+
+      .fate-photo-frame {
+        --image-fit-aspect: 562 / 650;
+        align-self: center;
+        width: fit-content;
+      }
+
+      .fate-photo-slot {
+        height: min(44vh, 320px);
+        max-width: 100%;
+        width: auto;
+      }
+
+      .fate-result-photo-frame {
+        --image-fit-aspect: 576 / 718;
+      }
+
+      .fate-result-credit {
+        color: #555;
+        font-size: 10px;
+        margin: -4px 0 0;
+        text-align: center;
+      }
+
+      .fate-result-credit.is-hidden {
+        display: none;
+      }
+
+      .fate-window p {
+        margin: 0;
+      }
+
+      .fate-progress {
+        height: 18px;
+      }
+
+      .fate-progress .progress-indicator-bar {
+        background: #b40000;
+      }
+
+      .fate-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+
+      .fate-actions button {
+        min-width: 92px;
+      }
+
+      @keyframes fate-window-shake {
+        0% {
+          transform: translate(0, 0) rotate(0deg);
+        }
+
+        25% {
+          transform: translate(-3px, 2px) rotate(-0.4deg);
+        }
+
+        50% {
+          transform: translate(3px, -2px) rotate(0.4deg);
+        }
+
+        75% {
+          transform: translate(-2px, -1px) rotate(-0.25deg);
+        }
+
+        100% {
+          transform: translate(0, 0) rotate(0deg);
+        }
+      }
+
+      .behelit-window {
+        display: block;
+        left: 50%;
+        max-width: calc(100vw - 32px);
+        position: fixed;
+        top: 50%;
+        translate: -50% -50%;
+        width: min(390px, calc(100vw - 32px));
+        z-index: 141;
+      }
+
+      .behelit-window.is-hidden {
+        display: none;
+      }
+
+      .behelit-window.is-opening {
+        animation: retro-window-open 260ms steps(7, end) both;
+      }
+
+      .behelit-window.is-closing {
+        pointer-events: none;
+        animation: retro-window-close 180ms steps(7, end) both;
+      }
+
+      .behelit-window .window-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: calc(100vh - 110px);
+        overflow-y: auto;
+      }
+
+      .behelit-photo-frame {
+        --image-fit-aspect: 640 / 495;
+        width: 100%;
+      }
+
+      .behelit-photo-slot {
+        width: 100%;
+      }
+
+      .behelit-window p {
+        margin: 0;
+      }
+
+      .behelit-actions {
+        display: flex;
+        justify-content: center;
+      }
+
+      .behelit-actions button {
         min-width: 74px;
       }
 
@@ -5343,6 +6642,165 @@
       </div>
     </div>
 
+    <div class="window rohin-note-window is-hidden" id="mana-flood-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Mana Flood</div>
+      </div>
+      <div class="window-body">
+        <div class="rohin-note-message">
+          <img src="assets/app-icons/ico/tree.ico" alt="" />
+          <p>You drew another land.</p>
+        </div>
+        <div class="rohin-note-actions">
+          <button type="button" id="mana-flood-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window rohin-note-window is-hidden" id="mimic-warning-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Mimic Warning</div>
+      </div>
+      <div class="window-body">
+        <div class="rohin-note-message">
+          <img src="assets/app-icons/ico/computer_search.ico" alt="" />
+          <p>The downloads folder is breathing.</p>
+        </div>
+        <div class="rohin-note-actions">
+          <button type="button" id="mimic-warning-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window skill-check-window is-hidden" id="skill-check-window" aria-hidden="true">
+      <div class="skill-check-lock-screen" aria-hidden="true"></div>
+      <div class="title-bar">
+        <div class="title-bar-text">A Sudden Skill Check</div>
+      </div>
+      <div class="window-body">
+        <div class="skill-check-message">
+          <img class="skill-check-dice-icon" src="assets/app-icons/ico/charmap_w2k.ico" alt="" />
+          <p>You notice a glint in the corner of your eye. Roll to investigate?</p>
+        </div>
+        <div class="skill-check-roll-frame" aria-label="d20 roll result">
+          <div class="skill-check-roll-slot">
+            <img
+              id="skill-check-die-tens"
+              src="assets/minesweeper_assets/digital_digits/digital_blank.png"
+              alt=""
+            />
+          </div>
+          <div class="skill-check-roll-slot">
+            <img
+              id="skill-check-die-ones"
+              src="assets/minesweeper_assets/digital_digits/digital_blank.png"
+              alt=""
+            />
+          </div>
+        </div>
+        <div class="skill-check-actions">
+          <button type="button" id="skill-check-roll">Roll d20</button>
+          <button type="button" id="skill-check-ignore">Ignore</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window skill-check-result-window is-hidden"
+      id="skill-check-result-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">A Sudden Skill Check</div>
+      </div>
+      <div class="window-body">
+        <div class="skill-check-result-message">
+          <img id="skill-check-result-icon" src="assets/app-icons/ico/search_file_2.ico" alt="" />
+          <p id="skill-check-result-text"></p>
+        </div>
+        <div class="skill-check-result-actions">
+          <button type="button" id="skill-check-result-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window distress-signal-window is-hidden" id="distress-signal-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Distress Signal</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="distress-signal-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="distress-message">
+          <img data-src="assets/random%20events/demeter.jpeg" decoding="async" alt="" />
+          <p>A distress signal from the Demeter has been picked up on radio channels.</p>
+        </div>
+        <div class="distress-radio-panel is-off" id="distress-radio-panel">
+          <canvas
+            class="distress-radio-screen"
+            id="distress-signal-canvas"
+            width="420"
+            height="152"
+            aria-label="Radio signal alignment display"
+          ></canvas>
+        </div>
+        <div class="distress-power-row">
+          <button type="button" id="distress-power-button">Power</button>
+          <div class="distress-power-progress" aria-label="Receiver power progress">
+            <div class="distress-power-progress-bar" id="distress-power-progress-bar"></div>
+          </div>
+        </div>
+        <div class="distress-dials">
+          <label class="distress-dial">
+            <span>Frequency</span>
+            <input type="range" id="distress-frequency-dial" min="0" max="100" value="25" disabled />
+          </label>
+          <label class="distress-dial">
+            <span>Phase</span>
+            <input type="range" id="distress-phase-dial" min="0" max="100" value="75" disabled />
+          </label>
+        </div>
+        <div class="distress-nav-panel is-off" id="distress-nav-panel">
+          <div class="distress-minimap" aria-label="Signal direction minimap">
+            <div class="distress-minimap-sweep" aria-hidden="true"></div>
+            <div class="distress-minimap-arrow" id="distress-minimap-arrow" aria-hidden="true"></div>
+            <div class="distress-minimap-center" aria-hidden="true"></div>
+          </div>
+          <div class="distress-nav-readout">
+            <span id="distress-nav-state">Map offline</span>
+            <span id="distress-bearing-readout">BRG --</span>
+            <span id="distress-range-readout">RNG --</span>
+            <span id="distress-strength-readout">SIG --</span>
+          </div>
+          <canvas class="distress-panel-noise-canvas" id="distress-nav-noise-canvas" aria-hidden="true"></canvas>
+        </div>
+        <div class="distress-lock-status" id="distress-lock-status">
+          <span id="distress-lock-status-text">Receiver offline</span>
+          <canvas
+            class="distress-panel-noise-canvas"
+            id="distress-status-noise-canvas"
+            aria-hidden="true"
+          ></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="window distress-upload-window is-hidden" id="distress-upload-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="distress-upload-message">
+          <img src="assets/app-icons/ico/msg_warning.ico" alt="" />
+          <p>Coordinates uploaded to PDA.</p>
+        </div>
+        <div class="distress-upload-actions">
+          <button type="button" id="distress-upload-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
     <div class="window nazar-window is-hidden" id="nazar-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Evil Eye</div>
@@ -5363,6 +6821,116 @@
         <div class="nazar-actions">
           <button type="button" id="nazar-yes">Yes</button>
           <button type="button" id="nazar-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window site-grace-window is-hidden" id="site-grace-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Site of Grace</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="site-grace-photo"
+          data-src="assets/random%20events/site-of-grace.jpg"
+          decoding="async"
+          alt=""
+        />
+        <p>Would you like to rest at this site of grace?</p>
+        <div class="site-grace-actions">
+          <button type="button" id="site-grace-touch">Touch Grace</button>
+          <button type="button" id="site-grace-keep">Keep Journeying</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window stalker-window is-hidden" id="stalker-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">The Zone</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="stalker-photo"
+          data-src="assets/random%20events/stalker-tarkovsky.jpg"
+          decoding="async"
+          alt=""
+        />
+        <p>Follow the Stalker into The Zone?</p>
+        <div class="stalker-actions">
+          <button type="button" id="stalker-yes">Yes</button>
+          <button type="button" id="stalker-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window stalker-window is-hidden" id="stalker-result-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">The Zone</div>
+      </div>
+      <div class="window-body">
+        <div class="stalker-result-message">
+          <img src="assets/app-icons/ico/kodak_imaging.ico" alt="" />
+          <p>You did not like what you found.</p>
+        </div>
+        <div class="stalker-actions">
+          <button type="button" id="stalker-result-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window nana-encounter-window is-hidden"
+      id="nana-encounter-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Random Encounter</div>
+      </div>
+      <div class="window-body">
+        <div class="nana-event-message">
+          <img
+            class="nana-event-icon"
+            src="assets/random%20events/nana-icon.jpg"
+            decoding="async"
+            alt=""
+          />
+          <p>Nana offers you a cigarette. Would you like to smoke with her?</p>
+        </div>
+        <img
+          class="nana-event-art nana-event-art--inset"
+          data-src="assets/random%20events/nana-offer.jpg"
+          decoding="async"
+          alt=""
+        />
+        <div class="nana-encounter-actions">
+          <button type="button" id="nana-encounter-yes">Yes</button>
+          <button type="button" id="nana-encounter-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window nana-accept-window is-hidden" id="nana-accept-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Random Encounter</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="nana-event-art"
+          data-src="assets/random%20events/nana-accept.gif"
+          decoding="async"
+          alt=""
+        />
+        <div class="nana-event-message">
+          <img
+            class="nana-event-icon nana-event-icon--pixel"
+            src="assets/app-icons/png/address_book_user.png"
+            decoding="async"
+            alt=""
+          />
+          <p>You smoke a cigarette with Nana.</p>
+        </div>
+        <div class="nana-accept-actions">
+          <button type="button" id="nana-accept-ok">OK</button>
         </div>
       </div>
     </div>
@@ -5494,6 +7062,227 @@
       <img src="assets/minesweeper_assets/achievement.png" alt="Achievement unlocked" />
     </div>
     <div class="sol-fireworks" id="sol-fireworks" aria-hidden="true"></div>
+    <div class="lost-grace-overlay" id="lost-grace-overlay" aria-hidden="true">
+      <img
+        src="assets/random%20events/lost-grace.png"
+        decoding="async"
+        alt="Lost Grace Discovered"
+      />
+    </div>
+
+    <div class="window lain-alert-window is-hidden" id="lain-alert-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">The Wired: New Message</div>
+      </div>
+      <div class="window-body">
+        <img
+          data-src="assets/random%20events/lain.gif"
+          decoding="async"
+          alt=""
+        />
+        <p>No matter where you go, everyone is connected.</p>
+        <button type="button" id="lain-alert-ok">OK</button>
+      </div>
+    </div>
+
+    <div
+      class="window lelouch-alert-window is-hidden"
+      id="lelouch-alert-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="lelouch-alert-message">
+          <img
+            data-src="assets/random%20events/lelouch.gif"
+            decoding="async"
+            alt=""
+          />
+          <p>I, Lelouch Vi Brittania, compel you to have a lovely day!!</p>
+        </div>
+        <button type="button" id="lelouch-alert-ok">OK</button>
+      </div>
+    </div>
+
+    <div
+      class="window instrumentality-window is-hidden"
+      id="instrumentality-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Human Instrumentality Project</div>
+      </div>
+      <div class="window-body">
+        <div class="instrumentality-message">
+          <img src="assets/app-icons/ico/msg_question.ico" alt="" />
+          <p>Proceed with human instrumentality project?</p>
+        </div>
+        <div class="instrumentality-actions">
+          <button type="button" id="instrumentality-yes">Yes</button>
+          <button type="button" id="instrumentality-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window instrumentality-congrats-window is-hidden"
+      id="instrumentality-congrats-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Congratulations</div>
+      </div>
+      <div class="window-body">
+        <img
+          data-src="assets/random%20events/congrats-evangelion.gif"
+          decoding="async"
+          alt=""
+        />
+        <button type="button" id="instrumentality-congrats-ok">OK</button>
+      </div>
+    </div>
+
+    <div class="window red-tool-window is-hidden" id="red-tool-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Red Tool</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="red-tool-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="red-tool-header">
+          <img class="red-tool-avatar" src="assets/random%20events/red-tool-icon.png" alt="" />
+          <div class="red-tool-contact">
+            <strong>Red Tool</strong>
+            <span>Online</span>
+          </div>
+          <img src="assets/app-icons/ico/address_book_user.ico" alt="" />
+        </div>
+        <img
+          class="red-tool-image"
+          data-src="assets/random%20events/red-tool.png"
+          decoding="async"
+          alt=""
+        />
+        <div class="red-tool-chat-log" id="red-tool-chat-log" aria-live="polite">
+          <div class="red-tool-system-alert">
+            <img src="assets/app-icons/ico/msg_information.ico" alt="" />
+            <p>
+              <strong class="red-tool-system-label">System Alert:</strong>
+              You have started a chat with
+              <span class="red-tool-system-name">Red Tool</span>.
+              It will answer your questions.
+            </p>
+          </div>
+        </div>
+        <div class="red-tool-input-row">
+          <label for="red-tool-input">
+            <img src="assets/app-icons/ico/message_tack.ico" alt="" />
+          </label>
+          <input
+            type="text"
+            id="red-tool-input"
+            autocomplete="off"
+            placeholder="Type a message and press Enter"
+          />
+          <button type="button" id="red-tool-send">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window fate-window is-hidden" id="fate-window" aria-hidden="true">
+      <div class="fate-lightning-field" aria-hidden="true">
+        <canvas class="fate-lightning-canvas" id="fate-lightning-canvas"></canvas>
+      </div>
+      <div class="title-bar">
+        <div class="title-bar-text" id="fate-title">Resist Your Fate</div>
+      </div>
+      <div class="window-body">
+        <div class="fate-stage" id="fate-ready-stage">
+          <div class="image-fit-frame fate-photo-frame" data-fit-image-frame>
+            <div class="image-fit-slot fate-photo-slot">
+              <img
+                class="fate-photo"
+                data-src="assets/random%20events/guts-v-zodd.png"
+                decoding="async"
+                alt=""
+              />
+            </div>
+          </div>
+          <p>The current pulls at you. Resist before it drags you under.</p>
+          <div class="fate-actions">
+            <button type="button" id="fate-start">Struggle</button>
+          </div>
+        </div>
+        <div class="fate-stage is-hidden" id="fate-fight-stage">
+          <div class="image-fit-frame fate-photo-frame" data-fit-image-frame>
+            <div class="image-fit-slot fate-photo-slot">
+              <img
+                class="fate-photo"
+                data-src="assets/random%20events/guts-v-zodd.png"
+                decoding="async"
+                alt=""
+              />
+            </div>
+          </div>
+          <p>Resist your fate.</p>
+          <div
+            class="progress-indicator segmented fate-progress"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            id="fate-progress"
+          >
+            <span class="progress-indicator-bar" id="fate-progress-bar"></span>
+          </div>
+          <div class="fate-actions">
+            <button type="button" id="fate-resist">Resist</button>
+          </div>
+        </div>
+        <div class="fate-stage is-hidden" id="fate-result-stage">
+          <div class="image-fit-frame fate-photo-frame fate-result-photo-frame" data-fit-image-frame>
+            <div class="image-fit-slot fate-photo-slot">
+              <img class="fate-photo" id="fate-result-image" decoding="async" alt="" />
+            </div>
+          </div>
+          <p class="fate-result-credit is-hidden" id="fate-result-credit">
+            Photo credit: shld0n_hcks
+          </p>
+          <p id="fate-result-text"></p>
+          <div class="fate-actions">
+            <button type="button" id="fate-result-ok">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="window behelit-window is-hidden" id="behelit-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Behelit Found</div>
+      </div>
+      <div class="window-body">
+        <div class="image-fit-frame behelit-photo-frame" data-fit-image-frame>
+          <div class="image-fit-slot behelit-photo-slot">
+            <img
+              class="behelit-photo"
+              data-src="assets/random%20events/behelit-found.png"
+              decoding="async"
+              alt=""
+            />
+          </div>
+        </div>
+        <p>
+          You did not find it by chance. It has found you. For now, its face sleeps,
+          and the hour of its opening has not yet come.
+        </p>
+        <div class="behelit-actions">
+          <button type="button" id="behelit-ok">OK</button>
+        </div>
+      </div>
+    </div>
 
     <script>
       const clock = document.getElementById("taskbar-clock");
@@ -5555,10 +7344,89 @@
       const healthNoteOk = document.getElementById("health-note-ok");
       const loveNoteWindow = document.getElementById("love-note-window");
       const loveNoteOk = document.getElementById("love-note-ok");
+      const manaFloodWindow = document.getElementById("mana-flood-window");
+      const manaFloodOk = document.getElementById("mana-flood-ok");
+      const mimicWarningWindow = document.getElementById("mimic-warning-window");
+      const mimicWarningOk = document.getElementById("mimic-warning-ok");
+      const skillCheckWindow = document.getElementById("skill-check-window");
+      const skillCheckResultWindow = document.getElementById("skill-check-result-window");
+      const skillCheckRoll = document.getElementById("skill-check-roll");
+      const skillCheckIgnore = document.getElementById("skill-check-ignore");
+      const skillCheckDieTens = document.getElementById("skill-check-die-tens");
+      const skillCheckDieOnes = document.getElementById("skill-check-die-ones");
+      const skillCheckResultIcon = document.getElementById("skill-check-result-icon");
+      const skillCheckResultText = document.getElementById("skill-check-result-text");
+      const skillCheckResultOk = document.getElementById("skill-check-result-ok");
+      const distressSignalWindow = document.getElementById("distress-signal-window");
+      const distressSignalClose = document.getElementById("distress-signal-close");
+      const distressRadioPanel = document.getElementById("distress-radio-panel");
+      const distressPowerButton = document.getElementById("distress-power-button");
+      const distressPowerProgressBar = document.getElementById("distress-power-progress-bar");
+      const distressSignalCanvas = document.getElementById("distress-signal-canvas");
+      const distressFrequencyDial = document.getElementById("distress-frequency-dial");
+      const distressPhaseDial = document.getElementById("distress-phase-dial");
+      const distressNavPanel = document.getElementById("distress-nav-panel");
+      const distressMinimapArrow = document.getElementById("distress-minimap-arrow");
+      const distressNavState = document.getElementById("distress-nav-state");
+      const distressBearingReadout = document.getElementById("distress-bearing-readout");
+      const distressRangeReadout = document.getElementById("distress-range-readout");
+      const distressStrengthReadout = document.getElementById("distress-strength-readout");
+      const distressLockStatus = document.getElementById("distress-lock-status");
+      const distressLockStatusText = document.getElementById("distress-lock-status-text");
+      const distressNavNoiseCanvas = document.getElementById("distress-nav-noise-canvas");
+      const distressStatusNoiseCanvas = document.getElementById("distress-status-noise-canvas");
+      const distressUploadWindow = document.getElementById("distress-upload-window");
+      const distressUploadOk = document.getElementById("distress-upload-ok");
       const nazarWindow = document.getElementById("nazar-window");
       const nazarClose = document.getElementById("nazar-close");
       const nazarYes = document.getElementById("nazar-yes");
       const nazarNo = document.getElementById("nazar-no");
+      const siteGraceWindow = document.getElementById("site-grace-window");
+      const siteGraceTouch = document.getElementById("site-grace-touch");
+      const siteGraceKeep = document.getElementById("site-grace-keep");
+      const lostGraceOverlay = document.getElementById("lost-grace-overlay");
+      const stalkerWindow = document.getElementById("stalker-window");
+      const stalkerYes = document.getElementById("stalker-yes");
+      const stalkerNo = document.getElementById("stalker-no");
+      const stalkerResultWindow = document.getElementById("stalker-result-window");
+      const stalkerResultOk = document.getElementById("stalker-result-ok");
+      const nanaEncounterWindow = document.getElementById("nana-encounter-window");
+      const nanaEncounterYes = document.getElementById("nana-encounter-yes");
+      const nanaEncounterNo = document.getElementById("nana-encounter-no");
+      const nanaAcceptWindow = document.getElementById("nana-accept-window");
+      const nanaAcceptOk = document.getElementById("nana-accept-ok");
+      const lainAlertWindow = document.getElementById("lain-alert-window");
+      const lainAlertOk = document.getElementById("lain-alert-ok");
+      const lelouchAlertWindow = document.getElementById("lelouch-alert-window");
+      const lelouchAlertOk = document.getElementById("lelouch-alert-ok");
+      const instrumentalityWindow = document.getElementById("instrumentality-window");
+      const instrumentalityYes = document.getElementById("instrumentality-yes");
+      const instrumentalityNo = document.getElementById("instrumentality-no");
+      const instrumentalityCongratsWindow = document.getElementById(
+        "instrumentality-congrats-window"
+      );
+      const instrumentalityCongratsOk = document.getElementById("instrumentality-congrats-ok");
+      const redToolWindow = document.getElementById("red-tool-window");
+      const redToolClose = document.getElementById("red-tool-close");
+      const redToolChatLog = document.getElementById("red-tool-chat-log");
+      const redToolInput = document.getElementById("red-tool-input");
+      const redToolSend = document.getElementById("red-tool-send");
+      const fateWindow = document.getElementById("fate-window");
+      const fateTitle = document.getElementById("fate-title");
+      const fateReadyStage = document.getElementById("fate-ready-stage");
+      const fateFightStage = document.getElementById("fate-fight-stage");
+      const fateResultStage = document.getElementById("fate-result-stage");
+      const fateProgress = document.getElementById("fate-progress");
+      const fateProgressBar = document.getElementById("fate-progress-bar");
+      const fateStart = document.getElementById("fate-start");
+      const fateResist = document.getElementById("fate-resist");
+      const fateLightningCanvas = document.getElementById("fate-lightning-canvas");
+      const fateResultImage = document.getElementById("fate-result-image");
+      const fateResultCredit = document.getElementById("fate-result-credit");
+      const fateResultText = document.getElementById("fate-result-text");
+      const fateResultOk = document.getElementById("fate-result-ok");
+      const behelitWindow = document.getElementById("behelit-window");
+      const behelitOk = document.getElementById("behelit-ok");
       const johnPorkWindow = document.getElementById("john-pork-window");
       const johnPorkStatus = document.getElementById("john-pork-status");
       const johnPorkClose = document.getElementById("john-pork-close");
@@ -5669,6 +7537,11 @@
       let calendarDate = new Date();
       let windowOffsetIndex = 0;
       let activeRandomEventKey = "";
+      let randomEventClickCount = 0;
+      let randomEventIdleTimer = null;
+      let activeAppDwellWindow = null;
+      let activeAppDwellStartedAt = 0;
+      let activeAppDwellTimer = null;
       let randomAlertReopenTimer = null;
       let randomAlertFlashTimer = null;
       let selfLoveAlertFlashTimer = null;
@@ -5686,6 +7559,32 @@
       let wordErrorStackClosing = false;
       let virusExploding = false;
       let virusRescueAnchor = null;
+      let lostGraceOverlayTimer = null;
+      let redToolTypingStartTimer = null;
+      let redToolReplyTimer = null;
+      let redToolTypingTimer = null;
+      let redToolTypingFrame = 0;
+      let redToolTypingElement = null;
+      let skillCheckRollTimer = null;
+      let skillCheckRollTimeout = null;
+      let skillCheckRolling = false;
+      let distressTargetFrequency = 50;
+      let distressTargetPhase = 50;
+      let distressSignalSolved = false;
+      let distressUploadTimer = null;
+      let distressNoiseAnimationFrame = null;
+      let distressPowerTimer = null;
+      let distressPoweredOn = false;
+      let distressPowerVisibleProgress = 0;
+      let distressSignalBearing = 0;
+      let distressSignalRange = 0;
+      let fateProgressValue = 0;
+      let fateDrainTimer = null;
+      let fateLightningTimer = null;
+      let fateLightningFrame = null;
+      let fateResolveTimer = null;
+      let fateResultOpenTimer = null;
+      let fateState = "idle";
       let tcpResultsIndex = 0;
       let droneVideoIndex = 0;
       let activeWindow = null;
@@ -5742,10 +7641,42 @@
         return [...elements, ...root.querySelectorAll("[data-src]")];
       };
 
+      const fitImageIntoFrame = (image) => {
+        if (!image || !image.matches("img")) return;
+        const frame = image.closest("[data-fit-image-frame]");
+        if (!frame) return;
+
+        const applyImageFit = () => {
+          if (!image.naturalWidth || !image.naturalHeight) return;
+          frame.style.setProperty(
+            "--image-fit-aspect",
+            `${image.naturalWidth} / ${image.naturalHeight}`
+          );
+        };
+
+        if (image.dataset.fitImageFrameBound !== "true") {
+          image.addEventListener("load", applyImageFit);
+          image.dataset.fitImageFrameBound = "true";
+        }
+
+        if (image.complete) applyImageFit();
+      };
+
+      const fitImagesIntoFrames = (root = document) => {
+        if (!root) return;
+        const images = [];
+        if (root.matches && root.matches("[data-fit-image-frame] img")) images.push(root);
+        if (root.querySelectorAll) {
+          images.push(...root.querySelectorAll("[data-fit-image-frame] img"));
+        }
+        images.forEach(fitImageIntoFrame);
+      };
+
       const loadDeferredMedia = (root, visibleOnly = false) => {
         deferredMediaElements(root).forEach((element) => {
           if (visibleOnly && element.closest(".viewer-content.is-hidden")) return;
           if (element.getAttribute("src") || !element.dataset.src) return;
+          fitImageIntoFrame(element);
           element.setAttribute("src", element.dataset.src);
           if (element.matches("video, audio")) element.load();
         });
@@ -5850,7 +7781,229 @@
       const RANDOM_EVENT_GLOBAL_DEBUG = false;
       const RANDOM_EVENT_RELOAD_KEY = "personalSiteRandomEventReloadPending";
       const FELIZ_JUEVES_SHOWN_KEY = "personalSiteFelizJuevesShownDate";
+      const RANDOM_EVENT_VIEWPORT_PADDING = 12;
+      const RANDOM_EVENT_TASKBAR_CLEARANCE = 64;
+      const RANDOM_EVENT_PLACEMENT_ATTEMPTS = 42;
+      const RANDOM_EVENT_OBSTACLE_GAP = 10;
+      const RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 10;
+      const RANDOM_EVENT_IDLE_DELAY_MS = 4 * 60 * 1000;
+      const RANDOM_EVENT_APP_DWELL_MS = 2 * 60 * 1000;
       const randomEventDefinitions = [];
+
+      const randomEventViewportWindows = () =>
+        [
+          randomEventWindow,
+          felizJuevesWindow,
+          randomAlertWindow,
+          selfLoveAlertWindow,
+          rohinUpdateWindow,
+          mcAfeePromptWindow,
+          mcAfeeDownloadWindow,
+          mcAfeeThanksWindow,
+          ...wordErrorWindows,
+          rohinNoteWindow,
+          earthNoteWindow,
+          healthNoteWindow,
+          loveNoteWindow,
+          manaFloodWindow,
+          mimicWarningWindow,
+          skillCheckWindow,
+          skillCheckResultWindow,
+          distressSignalWindow,
+          distressUploadWindow,
+          nazarWindow,
+          siteGraceWindow,
+          stalkerWindow,
+          stalkerResultWindow,
+          nanaEncounterWindow,
+          nanaAcceptWindow,
+          lainAlertWindow,
+          lelouchAlertWindow,
+          instrumentalityWindow,
+          instrumentalityCongratsWindow,
+          redToolWindow,
+          fateWindow,
+          behelitWindow,
+          johnPorkWindow,
+          advertisementWindow,
+          bidenBlastWindow,
+          virusWindow,
+          virusRescueWindow,
+        ].filter(Boolean);
+
+      const getRandomEventWindowBounds = (win) => {
+        const rect = win.getBoundingClientRect();
+        const width = Math.max(win.offsetWidth, rect.width);
+        const height = Math.max(win.offsetHeight, rect.height);
+        const padding = RANDOM_EVENT_VIEWPORT_PADDING;
+        return {
+          width,
+          height,
+          padding,
+          maxLeft: Math.max(padding, window.innerWidth - width - padding),
+          maxTop: Math.max(
+            padding,
+            window.innerHeight - height - RANDOM_EVENT_TASKBAR_CLEARANCE
+          ),
+        };
+      };
+
+      const randomEventCandidateRect = (bounds, left, top) => ({
+        left,
+        top,
+        right: left + bounds.width,
+        bottom: top + bounds.height,
+      });
+
+      const randomEventPlacementObstacles = (win) =>
+        Array.from(document.querySelectorAll(".window"))
+          .filter((candidate) => {
+            if (candidate === win) return false;
+            if (candidate.closest(".window-explode-piece, .biden-explode-piece")) return false;
+            if (candidate.hidden || candidate.classList.contains("is-hidden")) return false;
+            if (candidate.getAttribute("aria-hidden") === "true") return false;
+            return true;
+          })
+          .map((candidate) => candidate.getBoundingClientRect())
+          .filter((rect) => rect.width > 0 && rect.height > 0);
+
+      const randomEventOverlapArea = (a, b, gap = 0) => {
+        const overlapWidth = Math.max(
+          0,
+          Math.min(a.right, b.right + gap) - Math.max(a.left, b.left - gap)
+        );
+        const overlapHeight = Math.max(
+          0,
+          Math.min(a.bottom, b.bottom + gap) - Math.max(a.top, b.top - gap)
+        );
+        return overlapWidth * overlapHeight;
+      };
+
+      const scoreRandomEventPlacement = (candidate, obstacles) =>
+        obstacles.reduce(
+          (score, obstacle) =>
+            score + randomEventOverlapArea(candidate, obstacle, RANDOM_EVENT_OBSTACLE_GAP),
+          0
+        );
+
+      const sampleRandomEventPosition = ({ padding, maxLeft, maxTop }) => ({
+        left: padding + Math.random() * Math.max(0, maxLeft - padding),
+        top: padding + Math.random() * Math.max(0, maxTop - padding),
+      });
+
+      const clampRandomEventPosition = ({ padding, maxLeft, maxTop }, { left, top }) => ({
+        left: Math.max(padding, Math.min(left, maxLeft)),
+        top: Math.max(padding, Math.min(top, maxTop)),
+      });
+
+      const findRandomEventOpenPosition = (win, preferredPositions = []) => {
+        const bounds = getRandomEventWindowBounds(win);
+        const obstacles = randomEventPlacementObstacles(win);
+        const defaultPosition = sampleRandomEventPosition(bounds);
+
+        if (!obstacles.length) {
+          return clampRandomEventPosition(bounds, preferredPositions[0] || defaultPosition);
+        }
+
+        let bestPosition = null;
+        let bestScore = Infinity;
+        const cornerPositions = [
+          { left: bounds.padding, top: bounds.padding },
+          { left: bounds.maxLeft, top: bounds.padding },
+          { left: bounds.padding, top: bounds.maxTop },
+          { left: bounds.maxLeft, top: bounds.maxTop },
+          {
+            left: (bounds.padding + bounds.maxLeft) / 2,
+            top: (bounds.padding + bounds.maxTop) / 2,
+          },
+        ];
+
+        const considerPosition = (position) => {
+          const clamped = clampRandomEventPosition(bounds, position);
+          const rect = randomEventCandidateRect(bounds, clamped.left, clamped.top);
+          const score = scoreRandomEventPlacement(rect, obstacles);
+
+          if (score < bestScore) {
+            bestScore = score;
+            bestPosition = clamped;
+          }
+
+          return score === 0;
+        };
+
+        const seededPositions = [...preferredPositions];
+        for (const position of seededPositions) {
+          if (considerPosition(position)) return bestPosition;
+        }
+
+        for (let attempt = 0; attempt < RANDOM_EVENT_PLACEMENT_ATTEMPTS; attempt += 1) {
+          if (considerPosition(sampleRandomEventPosition(bounds))) return bestPosition;
+        }
+
+        for (const position of cornerPositions) {
+          if (considerPosition(position)) return bestPosition;
+        }
+
+        return bestPosition || defaultPosition;
+      };
+
+      const setRandomEventWindowPosition = (win, left, top, { onPosition } = {}) => {
+        if (!win) return;
+        const { padding, maxLeft, maxTop } = getRandomEventWindowBounds(win);
+        const nextLeft = Math.round(Math.max(padding, Math.min(left, maxLeft)));
+        const nextTop = Math.round(Math.max(padding, Math.min(top, maxTop)));
+        win.style.translate = "0 0";
+        win.style.left = `${nextLeft}px`;
+        win.style.top = `${nextTop}px`;
+        if (onPosition) onPosition(nextLeft, nextTop);
+      };
+
+      const positionRandomEventWindowInViewport = (win, options) => {
+        if (!win) return;
+        const { left, top } = findRandomEventOpenPosition(win);
+        setRandomEventWindowPosition(win, left, top, options);
+      };
+
+      const clampRandomEventWindowToViewport = (win, options) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        const rect = win.getBoundingClientRect();
+        const styleLeft = Number.parseFloat(win.style.left);
+        const styleTop = Number.parseFloat(win.style.top);
+        const currentLeft = Number.isFinite(styleLeft) ? styleLeft : rect.left;
+        const currentTop = Number.isFinite(styleTop) ? styleTop : rect.top;
+        setRandomEventWindowPosition(win, currentLeft, currentTop, options);
+      };
+
+      const clampRandomEventWindowAfterMediaLoad = (win, options) => {
+        if (!win) return;
+        requestAnimationFrame(() => clampRandomEventWindowToViewport(win, options));
+        [80, 240, 360].forEach((delay) => {
+          setTimeout(() => clampRandomEventWindowToViewport(win, options), delay);
+        });
+        win.querySelectorAll("img").forEach((image) => {
+          if (image.complete && image.naturalWidth > 0) {
+            clampRandomEventWindowToViewport(win, options);
+            return;
+          }
+          image.addEventListener(
+            "load",
+            () => clampRandomEventWindowToViewport(win, options),
+            { once: true }
+          );
+        });
+      };
+
+      const clampVisibleRandomEventWindows = () => {
+        randomEventViewportWindows().forEach((win) => clampRandomEventWindowToViewport(win));
+      };
+
+      const watchRandomEventViewportMedia = () => {
+        randomEventViewportWindows().forEach((win) => {
+          win.querySelectorAll("img").forEach((image) => {
+            image.addEventListener("load", () => clampRandomEventWindowToViewport(win));
+          });
+        });
+      };
 
       const isRandomAlertVisible = () =>
         Boolean(
@@ -5871,17 +8024,7 @@
 
       const positionRandomAlertWindow = () => {
         if (!randomAlertWindow || randomAlertWindow.classList.contains("is-expanded")) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = randomAlertWindow.offsetWidth;
-        const height = randomAlertWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        randomAlertWindow.style.translate = "0 0";
-        randomAlertWindow.style.left = `${Math.round(randomLeft)}px`;
-        randomAlertWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(randomAlertWindow);
       };
 
       const hideRandomAlert = () => {
@@ -5942,18 +8085,7 @@
         );
 
       const positionSelfLoveAlertWindow = () => {
-        if (!selfLoveAlertWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = selfLoveAlertWindow.offsetWidth;
-        const height = selfLoveAlertWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        selfLoveAlertWindow.style.translate = "0 0";
-        selfLoveAlertWindow.style.left = `${Math.round(randomLeft)}px`;
-        selfLoveAlertWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(selfLoveAlertWindow);
       };
 
       const showSelfLoveAlert = () => {
@@ -5993,18 +8125,7 @@
         );
 
       const positionRohinUpdateWindow = () => {
-        if (!rohinUpdateWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = rohinUpdateWindow.offsetWidth;
-        const height = rohinUpdateWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        rohinUpdateWindow.style.translate = "0 0";
-        rohinUpdateWindow.style.left = `${Math.round(randomLeft)}px`;
-        rohinUpdateWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(rohinUpdateWindow);
       };
 
       const showRohinUpdate = () => {
@@ -6038,49 +8159,15 @@
         [mcAfeePromptWindow, mcAfeeDownloadWindow, mcAfeeThanksWindow].filter(Boolean);
 
       const positionMcAfeeWindow = (win) => {
-        if (!win) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = win.offsetWidth;
-        const height = win.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        win.style.translate = "0 0";
-        win.style.left = `${Math.round(randomLeft)}px`;
-        win.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(win);
       };
 
       const clampMcAfeeWindowToViewport = (win) => {
-        if (!win || win.classList.contains("is-hidden")) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const rect = win.getBoundingClientRect();
-        const maxLeft = Math.max(padding, window.innerWidth - rect.width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - rect.height - taskbarClearance);
-        const nextLeft = Math.round(Math.max(padding, Math.min(rect.left, maxLeft)));
-        const nextTop = Math.round(Math.max(padding, Math.min(rect.top, maxTop)));
-        win.style.translate = "0 0";
-        win.style.left = `${nextLeft}px`;
-        win.style.top = `${nextTop}px`;
+        clampRandomEventWindowToViewport(win);
       };
 
       const clampMcAfeeWindowAfterMediaLoad = (win) => {
-        if (!win) return;
-        requestAnimationFrame(() => clampMcAfeeWindowToViewport(win));
-        setTimeout(() => clampMcAfeeWindowToViewport(win), 80);
-        setTimeout(() => clampMcAfeeWindowToViewport(win), 240);
-        setTimeout(() => clampMcAfeeWindowToViewport(win), 360);
-        win.querySelectorAll("img").forEach((image) => {
-          if (image.complete && image.naturalWidth > 0) {
-            clampMcAfeeWindowToViewport(win);
-            return;
-          }
-          image.addEventListener("load", () => clampMcAfeeWindowToViewport(win), {
-            once: true,
-          });
-        });
+        clampRandomEventWindowAfterMediaLoad(win);
       };
 
       const clampVisibleMcAfeeWindows = () => {
@@ -6405,18 +8492,7 @@
         );
 
       const positionRohinNoteWindow = () => {
-        if (!rohinNoteWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = rohinNoteWindow.offsetWidth;
-        const height = rohinNoteWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        rohinNoteWindow.style.translate = "0 0";
-        rohinNoteWindow.style.left = `${Math.round(randomLeft)}px`;
-        rohinNoteWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(rohinNoteWindow);
       };
 
       const showRohinNote = () => {
@@ -6446,18 +8522,7 @@
         );
 
       const positionEarthNoteWindow = () => {
-        if (!earthNoteWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = earthNoteWindow.offsetWidth;
-        const height = earthNoteWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        earthNoteWindow.style.translate = "0 0";
-        earthNoteWindow.style.left = `${Math.round(randomLeft)}px`;
-        earthNoteWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(earthNoteWindow);
       };
 
       const showEarthNote = () => {
@@ -6487,18 +8552,7 @@
         );
 
       const positionHealthNoteWindow = () => {
-        if (!healthNoteWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = healthNoteWindow.offsetWidth;
-        const height = healthNoteWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        healthNoteWindow.style.translate = "0 0";
-        healthNoteWindow.style.left = `${Math.round(randomLeft)}px`;
-        healthNoteWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(healthNoteWindow);
       };
 
       const showHealthNote = () => {
@@ -6528,18 +8582,7 @@
         );
 
       const positionLoveNoteWindow = () => {
-        if (!loveNoteWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = loveNoteWindow.offsetWidth;
-        const height = loveNoteWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        loveNoteWindow.style.translate = "0 0";
-        loveNoteWindow.style.left = `${Math.round(randomLeft)}px`;
-        loveNoteWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(loveNoteWindow);
       };
 
       const showLoveNote = () => {
@@ -6559,6 +8602,707 @@
         if (!loveNoteWindow || loveNoteWindow.classList.contains("is-hidden")) return;
         loveNoteWindow.setAttribute("aria-hidden", "true");
         restartWindowAnimation(loveNoteWindow, "is-closing");
+      };
+
+      const isManaFloodVisible = () =>
+        Boolean(
+          manaFloodWindow &&
+            !manaFloodWindow.classList.contains("is-hidden") &&
+            manaFloodWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionManaFloodWindow = () => {
+        positionRandomEventWindowInViewport(manaFloodWindow);
+      };
+
+      const showManaFlood = () => {
+        if (!manaFloodWindow) return;
+        if (isManaFloodVisible()) {
+          manaFloodWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        manaFloodWindow.classList.remove("is-hidden", "is-closing");
+        manaFloodWindow.setAttribute("aria-hidden", "false");
+        positionManaFloodWindow();
+        manaFloodWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(manaFloodWindow, "is-opening");
+      };
+
+      const closeManaFlood = () => {
+        if (!manaFloodWindow || manaFloodWindow.classList.contains("is-hidden")) return;
+        manaFloodWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(manaFloodWindow, "is-closing");
+      };
+
+      const isMimicWarningVisible = () =>
+        Boolean(
+          mimicWarningWindow &&
+            !mimicWarningWindow.classList.contains("is-hidden") &&
+            mimicWarningWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionMimicWarningWindow = () => {
+        positionRandomEventWindowInViewport(mimicWarningWindow);
+      };
+
+      const showMimicWarning = () => {
+        if (!mimicWarningWindow) return;
+        if (isMimicWarningVisible()) {
+          mimicWarningWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        mimicWarningWindow.classList.remove("is-hidden", "is-closing");
+        mimicWarningWindow.setAttribute("aria-hidden", "false");
+        positionMimicWarningWindow();
+        mimicWarningWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(mimicWarningWindow, "is-opening");
+      };
+
+      const closeMimicWarning = () => {
+        if (!mimicWarningWindow || mimicWarningWindow.classList.contains("is-hidden")) return;
+        mimicWarningWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(mimicWarningWindow, "is-closing");
+      };
+
+      const SKILL_CHECK_ROLL_DURATION_MS = 1100;
+      const SKILL_CHECK_ROLL_INTERVAL_MS = 55;
+      const SKILL_CHECK_FAILURE_ICON = "assets/app-icons/ico/search_file_2.ico";
+      const SKILL_CHECK_SUCCESS_ICON = "assets/app-icons/ico/game_solitaire.ico";
+      const SKILL_CHECK_FAILURE_TEXT = "Check failed. You found nothing.";
+      const SKILL_CHECK_SUCCESS_TEXT =
+        "Success. You notice a bag of gold behind the Solitaire app. +15 gold coins.";
+      const SKILL_CHECK_DIGIT_SOURCES = Object.freeze({
+        "0": "assets/minesweeper_assets/digital_digits/digital_0.png",
+        "1": "assets/minesweeper_assets/digital_digits/digital_1.png",
+        "2": "assets/minesweeper_assets/digital_digits/digital_2.png",
+        "3": "assets/minesweeper_assets/digital_digits/digital_3.png",
+        "4": "assets/minesweeper_assets/digital_digits/digital_4.png",
+        "5": "assets/minesweeper_assets/digital_digits/digital_5.png",
+        "6": "assets/minesweeper_assets/digital_digits/digital_6.png",
+        "7": "assets/minesweeper_assets/digital_digits/digital_7.png",
+        "8": "assets/minesweeper_assets/digital_digits/digital_8.png",
+        "9": "assets/minesweeper_assets/digital_digits/digital_9.png",
+        " ": "assets/minesweeper_assets/digital_digits/digital_blank.png",
+      });
+
+      const isSkillCheckWindowVisible = (win) =>
+        Boolean(
+          win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
+        );
+
+      const isSkillCheckVisible = () =>
+        isSkillCheckWindowVisible(skillCheckWindow) ||
+        isSkillCheckWindowVisible(skillCheckResultWindow);
+
+      const setSkillCheckDigit = (image, char) => {
+        if (!image) return;
+        const src = SKILL_CHECK_DIGIT_SOURCES[char] || SKILL_CHECK_DIGIT_SOURCES[" "];
+        image.src = src;
+      };
+
+      const setSkillCheckRollDisplay = (value = null) => {
+        const text =
+          typeof value === "number" ? String(Math.max(1, Math.min(20, value))).padStart(2, " ") : "  ";
+        setSkillCheckDigit(skillCheckDieTens, text[0]);
+        setSkillCheckDigit(skillCheckDieOnes, text[1]);
+      };
+
+      const clearSkillCheckRollTimers = () => {
+        if (skillCheckRollTimer) {
+          clearInterval(skillCheckRollTimer);
+          skillCheckRollTimer = null;
+        }
+        if (skillCheckRollTimeout) {
+          clearTimeout(skillCheckRollTimeout);
+          skillCheckRollTimeout = null;
+        }
+        skillCheckRolling = false;
+      };
+
+      const resetSkillCheckWindow = () => {
+        clearSkillCheckRollTimers();
+        if (skillCheckWindow) skillCheckWindow.classList.remove("is-locked");
+        if (skillCheckRoll) skillCheckRoll.disabled = false;
+        if (skillCheckIgnore) skillCheckIgnore.disabled = false;
+        setSkillCheckRollDisplay();
+      };
+
+      const positionSkillCheckWindow = (win) => {
+        positionRandomEventWindowInViewport(win);
+      };
+
+      const lockSkillCheckWindow = () => {
+        if (skillCheckWindow) skillCheckWindow.classList.add("is-locked");
+        if (skillCheckRoll) skillCheckRoll.disabled = true;
+        if (skillCheckIgnore) skillCheckIgnore.disabled = true;
+      };
+
+      const showSkillCheckResultWindow = (roll) => {
+        if (!skillCheckResultWindow) return;
+        const success = roll >= 15;
+        if (skillCheckResultIcon) {
+          skillCheckResultIcon.src = success ? SKILL_CHECK_SUCCESS_ICON : SKILL_CHECK_FAILURE_ICON;
+        }
+        if (skillCheckResultText) {
+          skillCheckResultText.textContent = success ? SKILL_CHECK_SUCCESS_TEXT : SKILL_CHECK_FAILURE_TEXT;
+        }
+        skillCheckResultWindow.classList.remove("is-hidden", "is-closing");
+        skillCheckResultWindow.setAttribute("aria-hidden", "false");
+        positionSkillCheckWindow(skillCheckResultWindow);
+        skillCheckResultWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(skillCheckResultWindow, "is-opening");
+        requestAnimationFrame(() => {
+          if (skillCheckResultOk) skillCheckResultOk.focus();
+        });
+      };
+
+      const beginSkillCheckRoll = () => {
+        if (!skillCheckWindow || skillCheckRolling) return;
+        skillCheckRolling = true;
+        lockSkillCheckWindow();
+        skillCheckRollTimer = setInterval(() => {
+          setSkillCheckRollDisplay(Math.floor(Math.random() * 20) + 1);
+        }, SKILL_CHECK_ROLL_INTERVAL_MS);
+        skillCheckRollTimeout = setTimeout(() => {
+          clearSkillCheckRollTimers();
+          const roll = Math.floor(Math.random() * 20) + 1;
+          setSkillCheckRollDisplay(roll);
+          lockSkillCheckWindow();
+          showSkillCheckResultWindow(roll);
+        }, SKILL_CHECK_ROLL_DURATION_MS);
+      };
+
+      const showSkillCheckWindow = () => {
+        if (!skillCheckWindow) return;
+        if (isSkillCheckVisible()) {
+          if (skillCheckResultWindow && isSkillCheckWindowVisible(skillCheckResultWindow)) {
+            skillCheckResultWindow.style.zIndex = String(topZ++);
+          } else {
+            skillCheckWindow.style.zIndex = String(topZ++);
+          }
+          return;
+        }
+        resetSkillCheckWindow();
+        skillCheckWindow.classList.remove("is-hidden", "is-closing");
+        skillCheckWindow.setAttribute("aria-hidden", "false");
+        positionSkillCheckWindow(skillCheckWindow);
+        skillCheckWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(skillCheckWindow, "is-opening");
+        requestAnimationFrame(() => {
+          if (skillCheckRoll) skillCheckRoll.focus();
+        });
+      };
+
+      const closeSkillCheckWindow = () => {
+        clearSkillCheckRollTimers();
+        if (skillCheckWindow && !skillCheckWindow.classList.contains("is-hidden")) {
+          skillCheckWindow.setAttribute("aria-hidden", "true");
+          restartWindowAnimation(skillCheckWindow, "is-closing");
+        }
+        if (skillCheckResultWindow && !skillCheckResultWindow.classList.contains("is-hidden")) {
+          skillCheckResultWindow.setAttribute("aria-hidden", "true");
+          restartWindowAnimation(skillCheckResultWindow, "is-closing");
+        }
+      };
+
+      const DISTRESS_ALIGNMENT_TOLERANCE = 3.2;
+      const DISTRESS_UPLOAD_DELAY_MS = 420;
+      const DISTRESS_POWER_DURATION_MS = 2600;
+      const DISTRESS_POWER_TICK_MS = 40;
+      const DISTRESS_CANVAS_WIDTH = 420;
+      const DISTRESS_CANVAS_HEIGHT = 152;
+      const DISTRESS_WAVE_NOISE = 0.058;
+      const DISTRESS_NOISE_SAMPLE_STEP = 1;
+      const DISTRESS_STATIC_DOTS = 390;
+      const DISTRESS_GRAIN_LINES = 58;
+
+      const isDistressWindowVisible = (win) =>
+        Boolean(
+          win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
+        );
+
+      const isDistressSignalVisible = () =>
+        isDistressWindowVisible(distressSignalWindow) ||
+        isDistressWindowVisible(distressUploadWindow);
+
+      const getDistressPhaseDelta = (value, target) => {
+        const delta = Math.abs(value - target);
+        return Math.min(delta, 100 - delta);
+      };
+
+      const getDistressAlignment = () => {
+        const frequency = distressFrequencyDial ? Number(distressFrequencyDial.value) : 0;
+        const phase = distressPhaseDial ? Number(distressPhaseDial.value) : 0;
+        return {
+          frequencyDelta: Math.abs(frequency - distressTargetFrequency),
+          phaseDelta: getDistressPhaseDelta(phase, distressTargetPhase),
+        };
+      };
+
+      const setDistressDialsDisabled = (disabled) => {
+        if (distressFrequencyDial) distressFrequencyDial.disabled = disabled;
+        if (distressPhaseDial) distressPhaseDial.disabled = disabled;
+      };
+
+      const setDistressStatus = (text) => {
+        if (distressLockStatusText) distressLockStatusText.textContent = text;
+      };
+
+      const setDistressNavigationMode = (mode) => {
+        if (!distressNavPanel) return;
+        distressNavPanel.classList.toggle("is-off", mode === "off");
+        distressNavPanel.classList.toggle("is-scanning", mode === "scanning");
+        distressNavPanel.classList.toggle("is-locked", mode === "locked");
+      };
+
+      const setDistressNavigationReadout = (
+        state,
+        bearing = "--",
+        range = "--",
+        strength = "--"
+      ) => {
+        if (distressNavState) distressNavState.textContent = state;
+        if (distressBearingReadout) distressBearingReadout.textContent = `BRG ${bearing}`;
+        if (distressRangeReadout) distressRangeReadout.textContent = `RNG ${range}`;
+        if (distressStrengthReadout) distressStrengthReadout.textContent = `SIG ${strength}`;
+      };
+
+      const resetDistressNavigation = () => {
+        setDistressNavigationMode("off");
+        if (distressMinimapArrow) {
+          distressMinimapArrow.style.setProperty("--distress-bearing", "0deg");
+          distressMinimapArrow.style.setProperty("--distress-arrow-x", "0px");
+          distressMinimapArrow.style.setProperty("--distress-arrow-y", "0px");
+        }
+        setDistressNavigationReadout("Map offline");
+      };
+
+      const scanDistressNavigation = () => {
+        setDistressNavigationMode("scanning");
+        setDistressNavigationReadout("Triangulating");
+      };
+
+      const lockDistressNavigation = () => {
+        setDistressNavigationMode("locked");
+        const bearing = Math.round(distressSignalBearing);
+        const range = `${distressSignalRange.toFixed(1)}km`;
+        if (distressMinimapArrow) {
+          const bearingRadians = (bearing * Math.PI) / 180;
+          const arrowRadius = 27;
+          distressMinimapArrow.style.setProperty("--distress-bearing", `${bearing}deg`);
+          distressMinimapArrow.style.setProperty(
+            "--distress-arrow-x",
+            `${Math.sin(bearingRadians) * arrowRadius}px`
+          );
+          distressMinimapArrow.style.setProperty(
+            "--distress-arrow-y",
+            `${Math.cos(bearingRadians) * -arrowRadius}px`
+          );
+        }
+        setDistressNavigationReadout(
+          "Signal acquired",
+          `${String(bearing).padStart(3, "0")} deg`,
+          range,
+          "100%"
+        );
+      };
+
+      const setDistressPowerProgress = (progress) => {
+        if (!distressPowerProgressBar) return;
+        distressPowerProgressBar.style.width = `${Math.max(0, Math.min(1, progress)) * 100}%`;
+      };
+
+      const getDistressThermalNoise = () =>
+        (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+
+      const drawDistressStatic = (ctx, width, height) => {
+        ctx.save();
+        for (let index = 0; index < DISTRESS_STATIC_DOTS; index += 1) {
+          const x = Math.random() * width;
+          const y = Math.random() * height;
+          const size = Math.random() < 0.72 ? 1 : 2;
+          const alpha = 0.08 + Math.random() * 0.24;
+          ctx.fillStyle = `rgba(112, 255, 135, ${alpha})`;
+          ctx.fillRect(x, y, size, 1);
+        }
+        for (let index = 0; index < DISTRESS_GRAIN_LINES; index += 1) {
+          const y = Math.random() * height;
+          const length = width * (0.1 + Math.random() * 0.46);
+          const centerJitter = (Math.random() - 0.5) * width * 0.18;
+          const x = Math.max(0, Math.min(width - length, width * 0.5 - length * 0.5 + centerJitter));
+          ctx.fillStyle = `rgba(185, 255, 196, ${0.045 + Math.random() * 0.09})`;
+          ctx.fillRect(x, y, length, 1);
+        }
+        ctx.restore();
+      };
+
+      const drawDistressDisplayGrain = (ctx, width, height) => {
+        ctx.save();
+        for (let y = 0; y < height; y += 3) {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
+          ctx.fillRect(0, y, width, 1);
+        }
+        for (let index = 0; index < 170; index += 1) {
+          const x = Math.random() * width;
+          const y = Math.random() * height;
+          const alpha = 0.012 + Math.random() * 0.04;
+          ctx.fillStyle = `rgba(220, 255, 220, ${alpha})`;
+          ctx.fillRect(x, y, 1, 1);
+        }
+        const vignette = ctx.createRadialGradient(
+          width * 0.5,
+          height * 0.48,
+          height * 0.1,
+          width * 0.5,
+          height * 0.48,
+          Math.max(width, height) * 0.68
+        );
+        vignette.addColorStop(0, "rgba(255, 255, 255, 0)");
+        vignette.addColorStop(1, "rgba(0, 0, 0, 0.34)");
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+      };
+
+      const prepareDistressPanelNoiseCanvas = (canvas) => {
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+        const ratio = window.devicePixelRatio || 1;
+        const width = Math.max(1, Math.round(canvas.clientWidth || canvas.offsetWidth || 1));
+        const height = Math.max(1, Math.round(canvas.clientHeight || canvas.offsetHeight || 1));
+        if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+          canvas.width = Math.round(width * ratio);
+          canvas.height = Math.round(height * ratio);
+        }
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+        return { ctx, width, height };
+      };
+
+      const clearDistressPanelNoiseCanvas = (canvas) => {
+        prepareDistressPanelNoiseCanvas(canvas);
+      };
+
+      const drawDistressPanelNoiseCanvas = (canvas) => {
+        const prepared = prepareDistressPanelNoiseCanvas(canvas);
+        if (!prepared) return;
+        const { ctx, width, height } = prepared;
+        drawDistressStatic(ctx, width, height);
+        drawDistressDisplayGrain(ctx, width, height);
+      };
+
+      const drawDistressPanelNoise = () => {
+        if (!distressPoweredOn) {
+          clearDistressPanelNoiseCanvas(distressNavNoiseCanvas);
+          clearDistressPanelNoiseCanvas(distressStatusNoiseCanvas);
+          return;
+        }
+        drawDistressPanelNoiseCanvas(distressNavNoiseCanvas);
+        drawDistressPanelNoiseCanvas(distressStatusNoiseCanvas);
+      };
+
+      const drawDistressOffDisplay = (ctx, width, height) => {
+        ctx.fillStyle = "#020403";
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = "rgba(41, 92, 50, 0.32)";
+        for (let y = 0; y < height; y += 4) {
+          ctx.fillRect(0, y, width, 1);
+        }
+        drawDistressDisplayGrain(ctx, width, height);
+        ctx.fillStyle = "rgba(98, 255, 120, 0.34)";
+        ctx.font = "bold 13px 'Courier New', monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("RECEIVER OFFLINE", width / 2, height / 2);
+      };
+
+      const drawDistressWave = (
+        ctx,
+        width,
+        height,
+        frequencyValue,
+        phaseValue,
+        color,
+        lineWidth
+      ) => {
+        const centerY = height * 0.52;
+        const amplitude = height * 0.28;
+        const noiseAmplitude = height * DISTRESS_WAVE_NOISE;
+        const cycles = 1.15 + (frequencyValue / 100) * 3.1;
+        const phase = (phaseValue / 100) * Math.PI * 2;
+        let thermal = getDistressThermalNoise();
+        ctx.beginPath();
+        for (let x = 0; x <= width; x += DISTRESS_NOISE_SAMPLE_STEP) {
+          const signal = Math.sin((x / width) * cycles * Math.PI * 2 + phase) * amplitude;
+          thermal = thermal * 0.04 + getDistressThermalNoise() * 0.96;
+          const fineStatic = getDistressThermalNoise() * noiseAmplitude * 1.05;
+          const jitter = thermal * noiseAmplitude + fineStatic;
+          const y = centerY + signal + jitter;
+          if (x === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+      };
+
+      const drawDistressSignals = () => {
+        drawDistressPanelNoise();
+        if (!distressSignalCanvas) return;
+        const ctx = distressSignalCanvas.getContext("2d");
+        if (!ctx) return;
+        const ratio = window.devicePixelRatio || 1;
+        const width = Math.max(
+          1,
+          Math.round(distressSignalCanvas.clientWidth || DISTRESS_CANVAS_WIDTH)
+        );
+        const height = Math.max(
+          1,
+          Math.round(distressSignalCanvas.clientHeight || DISTRESS_CANVAS_HEIGHT)
+        );
+        if (
+          distressSignalCanvas.width !== Math.round(width * ratio) ||
+          distressSignalCanvas.height !== Math.round(height * ratio)
+        ) {
+          distressSignalCanvas.width = Math.round(width * ratio);
+          distressSignalCanvas.height = Math.round(height * ratio);
+        }
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+        if (!distressPoweredOn) {
+          drawDistressOffDisplay(ctx, width, height);
+          return;
+        }
+        ctx.fillStyle = "#020403";
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = "rgba(95, 255, 122, 0.14)";
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= width; x += 28) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= height; y += 24) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+
+        drawDistressStatic(ctx, width, height);
+        const frequency = distressFrequencyDial ? Number(distressFrequencyDial.value) : 0;
+        const phase = distressPhaseDial ? Number(distressPhaseDial.value) : 0;
+        drawDistressWave(
+          ctx,
+          width,
+          height,
+          distressTargetFrequency,
+          distressTargetPhase,
+          "#8f1d1d",
+          2
+        );
+        drawDistressWave(ctx, width, height, frequency, phase, "#2f9a4b", 2);
+        drawDistressDisplayGrain(ctx, width, height);
+      };
+
+      const stopDistressNoiseAnimation = () => {
+        if (!distressNoiseAnimationFrame) return;
+        cancelAnimationFrame(distressNoiseAnimationFrame);
+        distressNoiseAnimationFrame = null;
+      };
+
+      const startDistressNoiseAnimation = () => {
+        if (!distressPoweredOn) return;
+        if (distressNoiseAnimationFrame) return;
+        const animate = () => {
+          if (!distressPoweredOn || !isDistressWindowVisible(distressSignalWindow)) {
+            distressNoiseAnimationFrame = null;
+            return;
+          }
+          drawDistressSignals();
+          distressNoiseAnimationFrame = requestAnimationFrame(animate);
+        };
+        distressNoiseAnimationFrame = requestAnimationFrame(animate);
+      };
+
+      const updateDistressTuning = () => {
+        drawDistressSignals();
+        if (
+          !distressPoweredOn ||
+          distressSignalSolved ||
+          !isDistressWindowVisible(distressSignalWindow)
+        ) {
+          return;
+        }
+        const alignment = getDistressAlignment();
+        const aligned =
+          alignment.frequencyDelta <= DISTRESS_ALIGNMENT_TOLERANCE &&
+          alignment.phaseDelta <= DISTRESS_ALIGNMENT_TOLERANCE;
+        const signalStrength = Math.max(
+          0,
+          Math.min(99, Math.round(100 - alignment.frequencyDelta * 1.4 - alignment.phaseDelta * 1.4))
+        );
+        if (aligned) {
+          distressSignalSolved = true;
+          setDistressDialsDisabled(true);
+          setDistressStatus("Signal locked");
+          lockDistressNavigation();
+          if (distressUploadTimer) clearTimeout(distressUploadTimer);
+          distressUploadTimer = setTimeout(() => {
+            distressUploadTimer = null;
+            showDistressUploadWindow();
+          }, DISTRESS_UPLOAD_DELAY_MS);
+          return;
+        }
+        const closeEnough = alignment.frequencyDelta <= 9 && alignment.phaseDelta <= 9;
+        setDistressStatus(closeEnough ? "Signal stabilizing" : "Signal drifting");
+        if (closeEnough) {
+          setDistressNavigationReadout("Bearing resolving", "--", "--", `${signalStrength}%`);
+        } else {
+          setDistressNavigationReadout("Triangulating", "--", "--", `${signalStrength}%`);
+        }
+      };
+
+      const clearDistressPowerTimer = () => {
+        if (!distressPowerTimer) return;
+        clearInterval(distressPowerTimer);
+        distressPowerTimer = null;
+      };
+
+      const finishDistressPowerOn = () => {
+        clearDistressPowerTimer();
+        distressPoweredOn = true;
+        if (distressRadioPanel) distressRadioPanel.classList.remove("is-off");
+        if (distressPowerButton) distressPowerButton.disabled = true;
+        setDistressPowerProgress(1);
+        setDistressDialsDisabled(false);
+        setDistressStatus("Signal drifting");
+        scanDistressNavigation();
+        updateDistressTuning();
+        startDistressNoiseAnimation();
+        requestAnimationFrame(() => {
+          if (distressFrequencyDial) distressFrequencyDial.focus();
+        });
+      };
+
+      const startDistressPowerSequence = () => {
+        if (distressPoweredOn || distressPowerTimer) return;
+        const startedAt = performance.now();
+        distressPowerVisibleProgress = 0;
+        if (distressPowerButton) distressPowerButton.disabled = true;
+        setDistressStatus("Receiver warming up");
+        setDistressPowerProgress(0);
+        drawDistressSignals();
+        distressPowerTimer = setInterval(() => {
+          const progress = (performance.now() - startedAt) / DISTRESS_POWER_DURATION_MS;
+          const targetProgress = Math.min(1, progress);
+          const shouldJump =
+            targetProgress >= 1 ||
+            Math.random() < 0.44 ||
+            targetProgress - distressPowerVisibleProgress > 0.09;
+          if (shouldJump) {
+            const jumpSize = 0.018 + Math.random() * 0.09;
+            distressPowerVisibleProgress = Math.min(
+              1,
+              Math.max(
+                distressPowerVisibleProgress,
+                Math.min(targetProgress + Math.random() * 0.035, distressPowerVisibleProgress + jumpSize)
+              )
+            );
+          }
+          setDistressPowerProgress(distressPowerVisibleProgress);
+          drawDistressSignals();
+          if (progress >= 1) finishDistressPowerOn();
+        }, DISTRESS_POWER_TICK_MS);
+      };
+
+      const resetDistressSignal = () => {
+        if (distressUploadTimer) {
+          clearTimeout(distressUploadTimer);
+          distressUploadTimer = null;
+        }
+        clearDistressPowerTimer();
+        stopDistressNoiseAnimation();
+        distressPoweredOn = false;
+        distressSignalSolved = false;
+        distressSignalBearing = Math.random() * 360;
+        distressSignalRange = 3.5 + Math.random() * 48;
+        if (distressRadioPanel) distressRadioPanel.classList.add("is-off");
+        if (distressPowerButton) distressPowerButton.disabled = false;
+        distressPowerVisibleProgress = 0;
+        setDistressPowerProgress(0);
+        resetDistressNavigation();
+        distressTargetFrequency = 20 + Math.random() * 60;
+        distressTargetPhase = Math.random() * 100;
+        if (distressFrequencyDial) {
+          const offset = (Math.random() < 0.5 ? -1 : 1) * (18 + Math.random() * 24);
+          distressFrequencyDial.value = String(
+            Math.max(0, Math.min(100, Math.round(distressTargetFrequency + offset)))
+          );
+        }
+        if (distressPhaseDial) {
+          distressPhaseDial.value = String(Math.round((distressTargetPhase + 35 + Math.random() * 30) % 100));
+        }
+        setDistressDialsDisabled(true);
+        setDistressStatus("Receiver offline");
+        drawDistressSignals();
+      };
+
+      const showDistressUploadWindow = () => {
+        if (!distressUploadWindow) return;
+        distressUploadWindow.classList.remove("is-hidden", "is-closing");
+        distressUploadWindow.setAttribute("aria-hidden", "false");
+        positionRandomEventWindowInViewport(distressUploadWindow);
+        distressUploadWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(distressUploadWindow, "is-opening");
+        requestAnimationFrame(() => {
+          if (distressUploadOk) distressUploadOk.focus();
+        });
+      };
+
+      const showDistressSignalWindow = () => {
+        if (!distressSignalWindow) return;
+        if (isDistressSignalVisible()) {
+          [distressUploadWindow, distressSignalWindow].some((win) => {
+            if (!isDistressWindowVisible(win)) return false;
+            win.style.zIndex = String(topZ++);
+            return true;
+          });
+          return;
+        }
+        resetDistressSignal();
+        loadDeferredMedia(distressSignalWindow);
+        distressSignalWindow.classList.remove("is-hidden", "is-closing");
+        distressSignalWindow.setAttribute("aria-hidden", "false");
+        positionRandomEventWindowInViewport(distressSignalWindow);
+        distressSignalWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(distressSignalWindow, "is-opening");
+        requestAnimationFrame(drawDistressSignals);
+      };
+
+      const closeDistressWindow = (win) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        if (win === distressSignalWindow) {
+          clearDistressPowerTimer();
+          stopDistressNoiseAnimation();
+        }
+        win.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(win, "is-closing");
+      };
+
+      const closeDistressSignalEvent = () => {
+        if (distressUploadTimer) {
+          clearTimeout(distressUploadTimer);
+          distressUploadTimer = null;
+        }
+        closeDistressWindow(distressSignalWindow);
+        closeDistressWindow(distressUploadWindow);
       };
 
       const getLocalDateKey = (date = new Date()) => {
@@ -6601,6 +9345,7 @@
         loadDeferredMedia(felizJuevesWindow);
         felizJuevesWindow.classList.remove("is-hidden", "is-closing", "is-choice-flashing");
         felizJuevesWindow.setAttribute("aria-hidden", "false");
+        positionRandomEventWindowInViewport(felizJuevesWindow);
         felizJuevesWindow.style.zIndex = String(topZ++);
         restartWindowAnimation(felizJuevesWindow, "is-opening");
       };
@@ -6623,11 +9368,12 @@
 
       const maybeShowFelizJueves = () => {
         const today = new Date();
-        if (today.getDay() !== 4) return;
+        if (today.getDay() !== 4) return false;
         const dateKey = getLocalDateKey(today);
-        if (hasShownFelizJuevesToday(dateKey)) return;
+        if (hasShownFelizJuevesToday(dateKey)) return false;
         markFelizJuevesShown(dateKey);
         showFelizJuevesWindow();
+        return true;
       };
 
       const isNazarVisible = () =>
@@ -6638,18 +9384,7 @@
         );
 
       const positionNazarWindow = () => {
-        if (!nazarWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = nazarWindow.offsetWidth;
-        const height = nazarWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        nazarWindow.style.translate = "0 0";
-        nazarWindow.style.left = `${Math.round(randomLeft)}px`;
-        nazarWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(nazarWindow);
       };
 
       const showNazarWindow = () => {
@@ -6670,6 +9405,908 @@
         if (!nazarWindow || nazarWindow.classList.contains("is-hidden")) return;
         nazarWindow.setAttribute("aria-hidden", "true");
         restartWindowAnimation(nazarWindow, "is-closing");
+      };
+
+      const isSiteGraceVisible = () =>
+        Boolean(
+          siteGraceWindow &&
+            !siteGraceWindow.classList.contains("is-hidden") &&
+            siteGraceWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionSiteGraceWindow = () => {
+        positionRandomEventWindowInViewport(siteGraceWindow);
+      };
+
+      const showSiteGraceWindow = () => {
+        if (!siteGraceWindow) return;
+        if (isSiteGraceVisible()) {
+          siteGraceWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(siteGraceWindow);
+        siteGraceWindow.classList.remove("is-hidden", "is-closing");
+        siteGraceWindow.setAttribute("aria-hidden", "false");
+        positionSiteGraceWindow();
+        siteGraceWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(siteGraceWindow, "is-opening");
+      };
+
+      const closeSiteGraceWindow = () => {
+        if (!siteGraceWindow || siteGraceWindow.classList.contains("is-hidden")) return;
+        siteGraceWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(siteGraceWindow, "is-closing");
+      };
+
+      const showLostGraceOverlay = () => {
+        if (!lostGraceOverlay) return;
+        if (lostGraceOverlayTimer) clearTimeout(lostGraceOverlayTimer);
+        lostGraceOverlay.classList.remove("is-visible");
+        void lostGraceOverlay.offsetWidth;
+        lostGraceOverlay.setAttribute("aria-hidden", "false");
+        lostGraceOverlay.classList.add("is-visible");
+        lostGraceOverlayTimer = setTimeout(() => {
+          lostGraceOverlay.classList.remove("is-visible");
+          lostGraceOverlay.setAttribute("aria-hidden", "true");
+          lostGraceOverlayTimer = null;
+        }, 4800);
+      };
+
+      const touchSiteGrace = () => {
+        closeSiteGraceWindow();
+        showLostGraceOverlay();
+      };
+
+      const isStalkerWindowVisible = (win) =>
+        Boolean(
+          win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
+        );
+
+      const isStalkerVisible = () =>
+        isStalkerWindowVisible(stalkerWindow) || isStalkerWindowVisible(stalkerResultWindow);
+
+      const positionStalkerWindow = (win) => {
+        positionRandomEventWindowInViewport(win);
+      };
+
+      const copyStalkerWindowPosition = (source, target) => {
+        if (!source || !target) return false;
+        target.style.translate = source.style.translate || "0 0";
+        target.style.left = source.style.left;
+        target.style.top = source.style.top;
+        return Boolean(source.style.left && source.style.top);
+      };
+
+      const showStalkerWindow = (win = stalkerWindow, anchorWindow = null) => {
+        if (!win) return;
+        if (isStalkerWindowVisible(win)) {
+          win.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(win);
+        win.classList.remove("is-hidden", "is-closing");
+        win.setAttribute("aria-hidden", "false");
+        if (!copyStalkerWindowPosition(anchorWindow, win)) {
+          positionStalkerWindow(win);
+        }
+        win.style.zIndex = String(topZ++);
+        restartWindowAnimation(win, "is-opening");
+      };
+
+      const closeStalkerWindow = (win = stalkerWindow) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        win.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(win, "is-closing");
+      };
+
+      const showStalkerResultWindow = (anchorWindow = null) => {
+        showStalkerWindow(stalkerResultWindow, anchorWindow);
+      };
+
+      const isNanaEncounterWindowVisible = (win) =>
+        Boolean(
+          win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
+        );
+
+      const isNanaEncounterVisible = () =>
+        isNanaEncounterWindowVisible(nanaEncounterWindow) ||
+        isNanaEncounterWindowVisible(nanaAcceptWindow);
+
+      const setNanaEncounterWindowPosition = (win, left, top) => {
+        if (!win) return false;
+        setRandomEventWindowPosition(win, left, top);
+        return true;
+      };
+
+      const positionNanaEncounterWindow = (win) => {
+        positionRandomEventWindowInViewport(win);
+      };
+
+      const copyNanaEncounterPosition = (source, target) => {
+        if (!source || !target) return false;
+        const sourceLeft = Number.parseFloat(source.style.left);
+        const sourceTop = Number.parseFloat(source.style.top);
+        if (!Number.isFinite(sourceLeft) || !Number.isFinite(sourceTop)) return false;
+        return setNanaEncounterWindowPosition(target, sourceLeft, sourceTop);
+      };
+
+      const showNanaEncounterWindow = () => {
+        if (!nanaEncounterWindow) return;
+        if (isNanaEncounterWindowVisible(nanaEncounterWindow)) {
+          nanaEncounterWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(nanaEncounterWindow);
+        nanaEncounterWindow.classList.remove("is-hidden", "is-closing");
+        nanaEncounterWindow.setAttribute("aria-hidden", "false");
+        positionNanaEncounterWindow(nanaEncounterWindow);
+        nanaEncounterWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(nanaEncounterWindow, "is-opening");
+      };
+
+      const showNanaAcceptWindow = (anchorWindow = null) => {
+        if (!nanaAcceptWindow) return;
+        if (isNanaEncounterWindowVisible(nanaAcceptWindow)) {
+          nanaAcceptWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(nanaAcceptWindow);
+        nanaAcceptWindow.classList.remove("is-hidden", "is-closing");
+        nanaAcceptWindow.setAttribute("aria-hidden", "false");
+        if (!copyNanaEncounterPosition(anchorWindow, nanaAcceptWindow)) {
+          positionNanaEncounterWindow(nanaAcceptWindow);
+        }
+        nanaAcceptWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(nanaAcceptWindow, "is-opening");
+      };
+
+      const closeNanaEncounterWindow = (win) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        win.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(win, "is-closing");
+      };
+
+      const acceptNanaEncounter = () => {
+        const anchor = nanaEncounterWindow;
+        closeNanaEncounterWindow(nanaEncounterWindow);
+        setTimeout(() => {
+          showNanaAcceptWindow(anchor);
+        }, 180);
+      };
+
+      const isLainAlertVisible = () =>
+        Boolean(
+          lainAlertWindow &&
+            !lainAlertWindow.classList.contains("is-hidden") &&
+            lainAlertWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionLainAlertWindow = () => {
+        positionRandomEventWindowInViewport(lainAlertWindow);
+      };
+
+      const showLainAlert = () => {
+        if (!lainAlertWindow) return;
+        if (isLainAlertVisible()) {
+          lainAlertWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(lainAlertWindow);
+        lainAlertWindow.classList.remove("is-hidden", "is-closing");
+        lainAlertWindow.setAttribute("aria-hidden", "false");
+        positionLainAlertWindow();
+        lainAlertWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(lainAlertWindow, "is-opening");
+      };
+
+      const closeLainAlert = () => {
+        if (!lainAlertWindow || lainAlertWindow.classList.contains("is-hidden")) return;
+        lainAlertWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(lainAlertWindow, "is-closing");
+      };
+
+      const isLelouchAlertVisible = () =>
+        Boolean(
+          lelouchAlertWindow &&
+            !lelouchAlertWindow.classList.contains("is-hidden") &&
+            lelouchAlertWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionLelouchAlertWindow = () => {
+        positionRandomEventWindowInViewport(lelouchAlertWindow);
+      };
+
+      const showLelouchAlert = () => {
+        if (!lelouchAlertWindow) return;
+        if (isLelouchAlertVisible()) {
+          lelouchAlertWindow.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(lelouchAlertWindow);
+        lelouchAlertWindow.classList.remove("is-hidden", "is-closing");
+        lelouchAlertWindow.setAttribute("aria-hidden", "false");
+        positionLelouchAlertWindow();
+        lelouchAlertWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(lelouchAlertWindow, "is-opening");
+      };
+
+      const closeLelouchAlert = () => {
+        if (!lelouchAlertWindow || lelouchAlertWindow.classList.contains("is-hidden")) return;
+        lelouchAlertWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(lelouchAlertWindow, "is-closing");
+      };
+
+      const isInstrumentalityWindowVisible = (win) =>
+        Boolean(
+          win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
+        );
+
+      const isInstrumentalityVisible = () =>
+        isInstrumentalityWindowVisible(instrumentalityWindow) ||
+        isInstrumentalityWindowVisible(instrumentalityCongratsWindow);
+
+      const positionInstrumentalityWindow = (win) => {
+        positionRandomEventWindowInViewport(win);
+      };
+
+      const showInstrumentalityWindow = (win) => {
+        if (!win) return;
+        if (isInstrumentalityWindowVisible(win)) {
+          win.style.zIndex = String(topZ++);
+          return;
+        }
+        loadDeferredMedia(win);
+        win.classList.remove("is-hidden", "is-closing");
+        win.setAttribute("aria-hidden", "false");
+        positionInstrumentalityWindow(win);
+        win.style.zIndex = String(topZ++);
+        restartWindowAnimation(win, "is-opening");
+      };
+
+      const closeInstrumentalityWindow = (win) => {
+        if (!win || win.classList.contains("is-hidden")) return;
+        win.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(win, "is-closing");
+      };
+
+      const showInstrumentalityPrompt = () => {
+        showInstrumentalityWindow(instrumentalityWindow);
+      };
+
+      const showInstrumentalityCongrats = () => {
+        showInstrumentalityWindow(instrumentalityCongratsWindow);
+      };
+
+      const rejectInstrumentality = () => {
+        closeInstrumentalityWindow(instrumentalityWindow);
+        showInstrumentalityCongrats();
+      };
+
+      const isRedToolVisible = () =>
+        Boolean(
+          redToolWindow &&
+            !redToolWindow.classList.contains("is-hidden") &&
+            redToolWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionRedToolWindow = () => {
+        positionRandomEventWindowInViewport(redToolWindow);
+      };
+
+      const scrollRedToolChatToBottom = () => {
+        if (!redToolChatLog) return;
+        redToolChatLog.scrollTop = redToolChatLog.scrollHeight;
+      };
+
+      const appendRedToolMessage = (speaker, message, { local = false } = {}) => {
+        if (!redToolChatLog) return null;
+        const row = document.createElement("div");
+        row.className = `red-tool-message${local ? " is-local" : ""}`;
+
+        const icon = document.createElement("img");
+        icon.src = local
+          ? "assets/app-icons/ico/address_book_user.ico"
+          : "assets/random%20events/red-tool-icon.png";
+        if (!local) icon.className = "red-tool-avatar";
+        icon.alt = "";
+
+        const text = document.createElement("p");
+        const name = document.createElement("strong");
+        name.textContent = `${speaker}:`;
+        text.append(name, ` ${message}`);
+
+        row.append(icon, text);
+        redToolChatLog.appendChild(row);
+        scrollRedToolChatToBottom();
+        return row;
+      };
+
+      const resetRedToolTyping = () => {
+        if (redToolTypingStartTimer) {
+          clearTimeout(redToolTypingStartTimer);
+          redToolTypingStartTimer = null;
+        }
+        if (redToolReplyTimer) {
+          clearTimeout(redToolReplyTimer);
+          redToolReplyTimer = null;
+        }
+        if (redToolTypingTimer) {
+          clearInterval(redToolTypingTimer);
+          redToolTypingTimer = null;
+        }
+        redToolTypingFrame = 0;
+        if (redToolTypingElement) {
+          redToolTypingElement.remove();
+          redToolTypingElement = null;
+        }
+        if (redToolInput) {
+          redToolInput.disabled = false;
+          redToolInput.placeholder = "Type a message and press Enter";
+        }
+        if (redToolSend) {
+          redToolSend.disabled = false;
+        }
+      };
+
+      const sampleRedToolTypingStartDelay = () => 1000 + Math.random() * 1000;
+
+      const RED_TOOL_REPLY_BASE_DELAY_MS = 3000;
+
+      const sampleRedToolReplyDelay = () => {
+        const lambda = 0.5;
+        return (-Math.log(1 - Math.random()) / lambda) * 1000;
+      };
+
+      const showRedToolTyping = () => {
+        if (!redToolChatLog) return;
+        if (redToolTypingElement) redToolTypingElement.remove();
+        const row = document.createElement("div");
+        row.className = "red-tool-message red-tool-typing";
+
+        const icon = document.createElement("img");
+        icon.src = "assets/random%20events/red-tool-icon.png";
+        icon.className = "red-tool-avatar";
+        icon.alt = "";
+
+        const text = document.createElement("p");
+        text.textContent = "Red Tool is typing";
+
+        row.append(icon, text);
+        redToolChatLog.appendChild(row);
+        redToolTypingElement = row;
+        redToolTypingFrame = 0;
+        if (redToolTypingTimer) clearInterval(redToolTypingTimer);
+        redToolTypingTimer = setInterval(() => {
+          redToolTypingFrame = (redToolTypingFrame + 1) % 4;
+          text.textContent = `Red Tool is typing${".".repeat(redToolTypingFrame)}`;
+        }, 360);
+        scrollRedToolChatToBottom();
+      };
+
+      const sendRedToolMessage = () => {
+        if (!redToolInput || redToolInput.disabled) return;
+        const message = redToolInput.value.trim();
+        if (!message) return;
+        appendRedToolMessage("You", message, { local: true });
+        redToolInput.value = "";
+        redToolInput.disabled = true;
+        redToolInput.placeholder = "Waiting for Red Tool...";
+        if (redToolSend) redToolSend.disabled = true;
+        redToolTypingStartTimer = setTimeout(() => {
+          redToolTypingStartTimer = null;
+          if (isRedToolVisible()) showRedToolTyping();
+        }, sampleRedToolTypingStartDelay());
+        redToolReplyTimer = setTimeout(() => {
+          if (redToolTypingStartTimer) {
+            clearTimeout(redToolTypingStartTimer);
+            redToolTypingStartTimer = null;
+          }
+          if (redToolTypingTimer) {
+            clearInterval(redToolTypingTimer);
+            redToolTypingTimer = null;
+          }
+          if (redToolTypingElement) redToolTypingElement.remove();
+          redToolTypingElement = null;
+          appendRedToolMessage("Red Tool", "I don't know.");
+          redToolReplyTimer = null;
+          if (redToolInput && isRedToolVisible()) {
+            redToolInput.disabled = false;
+            redToolInput.placeholder = "Type a message and press Enter";
+            redToolInput.focus();
+          }
+          if (redToolSend && isRedToolVisible()) {
+            redToolSend.disabled = false;
+          }
+        }, RED_TOOL_REPLY_BASE_DELAY_MS + sampleRedToolReplyDelay());
+      };
+
+      const showRedToolWindow = () => {
+        if (!redToolWindow) return;
+        if (isRedToolVisible()) {
+          redToolWindow.style.zIndex = String(topZ++);
+          if (redToolInput && !redToolInput.disabled) redToolInput.focus();
+          return;
+        }
+        resetRedToolTyping();
+        loadDeferredMedia(redToolWindow);
+        redToolWindow.classList.remove("is-hidden", "is-closing");
+        redToolWindow.setAttribute("aria-hidden", "false");
+        positionRedToolWindow();
+        redToolWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(redToolWindow, "is-opening");
+        requestAnimationFrame(() => {
+          if (redToolInput) redToolInput.focus();
+        });
+      };
+
+      const closeRedToolWindow = () => {
+        if (!redToolWindow || redToolWindow.classList.contains("is-hidden")) return;
+        resetRedToolTyping();
+        redToolWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(redToolWindow, "is-closing");
+      };
+
+      const FATE_START_PROGRESS = 56;
+      const FATE_PRESS_GAIN = 5;
+      const FATE_DRAIN_INTERVAL_MS = 80;
+      const FATE_DRAIN_AMOUNT = 1.9;
+      const FATE_RESULT_FREEZE_MS = 1000;
+      const FATE_RESULT_REOPEN_DELAY_MS = 500;
+      const FATE_SUCCESS_TEXT =
+        "You have resisted your fate. Maybe you aren't a shadow on the water... but instead, a fish that breaches water's surface.";
+      const FATE_LOSS_TEXT = "Perhaps you do not have the strength to resist your fate.";
+      const FATE_LIGHTNING_DURATION_MS = 220;
+      const FATE_LIGHTNING_BRANCH_CHANCE = 0.22;
+
+      const getFateLightningContext = () => {
+        if (!fateLightningCanvas) return null;
+        return fateLightningCanvas.getContext("2d");
+      };
+
+      const resizeFateLightningCanvas = () => {
+        const ctx = getFateLightningContext();
+        if (!ctx || !fateLightningCanvas) return null;
+        const field = fateLightningCanvas.parentElement;
+        const rect = field ? field.getBoundingClientRect() : fateLightningCanvas.getBoundingClientRect();
+        const width = Math.max(1, rect.width);
+        const height = Math.max(1, rect.height);
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        const nextWidth = Math.round(width * dpr);
+        const nextHeight = Math.round(height * dpr);
+
+        if (fateLightningCanvas.width !== nextWidth || fateLightningCanvas.height !== nextHeight) {
+          fateLightningCanvas.width = nextWidth;
+          fateLightningCanvas.height = nextHeight;
+        }
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, width, height };
+      };
+
+      const clearFateLightningCanvas = () => {
+        const setup = resizeFateLightningCanvas();
+        if (!setup) return;
+        setup.ctx.clearRect(0, 0, setup.width, setup.height);
+      };
+
+      const generateFateBoltPath = (
+        x1,
+        y1,
+        x2,
+        y2,
+        displacement,
+        branchLevel,
+        bolts
+      ) => {
+        const midpointX = (x1 + x2) / 2;
+        const midpointY = (y1 + y2) / 2;
+
+        if (displacement < 0.5) {
+          return [[x2, y2]];
+        }
+
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const offset = (Math.random() - 0.5) * displacement * 3 * (1 - branchLevel * 0.14);
+        const newMidX = midpointX + Math.cos(angle + Math.PI / 2) * offset;
+        const newMidY = midpointY + Math.sin(angle + Math.PI / 2) * offset;
+        const newDisplacement = displacement * 0.42;
+
+        if (branchLevel < 2 && Math.random() < FATE_LIGHTNING_BRANCH_CHANCE) {
+          const branchAngle = angle + (Math.random() - 0.5) * Math.PI * 0.95;
+          const branchLength = displacement * (Math.random() * 2.6 + 1.6);
+          const branchX2 = newMidX + Math.cos(branchAngle) * branchLength;
+          const branchY2 = newMidY + Math.sin(branchAngle) * branchLength;
+          const branchPath = generateFateBoltPath(
+            newMidX,
+            newMidY,
+            branchX2,
+            branchY2,
+            newDisplacement,
+            branchLevel + 1,
+            bolts
+          );
+
+          bolts.push({
+            path: branchPath,
+            start: [newMidX, newMidY],
+            level: branchLevel + 1,
+          });
+        }
+
+        const path1 = generateFateBoltPath(
+          x1,
+          y1,
+          newMidX,
+          newMidY,
+          newDisplacement,
+          branchLevel,
+          bolts
+        );
+        const path2 = generateFateBoltPath(
+          newMidX,
+          newMidY,
+          x2,
+          y2,
+          newDisplacement,
+          branchLevel,
+          bolts
+        );
+
+        return path1.concat([[newMidX, newMidY]], path2);
+      };
+
+      const drawFateBolt = (ctx, path, startX, startY, level, alpha) => {
+        const opacity = alpha * Math.max(0.3, 1 - level * 0.24);
+        const glowWidth = level === 0 ? 6 : 3;
+        const coreWidth = level === 0 ? 1.4 : 0.65;
+
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = `rgba(255, 0, 0, ${opacity})`;
+        ctx.lineWidth = glowWidth;
+        ctx.shadowBlur = level === 0 ? 16 : 9;
+        ctx.shadowColor = "rgba(255, 0, 0, 0.95)";
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        path.forEach(([x, y]) => ctx.lineTo(x, y));
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(255, 60, 60, ${opacity})`;
+        ctx.lineWidth = Math.max(1.4, glowWidth * 0.42);
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        path.forEach(([x, y]) => ctx.lineTo(x, y));
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(255, 235, 235, ${Math.min(1, opacity + 0.18)})`;
+        ctx.lineWidth = coreWidth;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        path.forEach(([x, y]) => ctx.lineTo(x, y));
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      const drawFateLightningBorderFrame = (alpha) => {
+        const setup = resizeFateLightningCanvas();
+        if (!setup) return;
+        const { ctx, width, height } = setup;
+        const inset = 18;
+        const left = inset;
+        const top = inset;
+        const right = Math.max(left + 1, width - inset);
+        const bottom = Math.max(top + 1, height - inset);
+        const displacement = Math.max(6, Math.min(13, Math.min(width, height) / 14));
+        const edges = [
+          [left, top, right, top],
+          [right, top, right, bottom],
+          [right, bottom, left, bottom],
+          [left, bottom, left, top],
+        ];
+        const bolts = [];
+
+        ctx.clearRect(0, 0, width, height);
+        edges.forEach(([x1, y1, x2, y2]) => {
+          const startX = x1 + (Math.random() - 0.5) * 4;
+          const startY = y1 + (Math.random() - 0.5) * 4;
+          const endX = x2 + (Math.random() - 0.5) * 4;
+          const endY = y2 + (Math.random() - 0.5) * 4;
+          const path = generateFateBoltPath(
+            startX,
+            startY,
+            endX,
+            endY,
+            displacement,
+            0,
+            bolts
+          );
+
+          bolts.push({ path, start: [startX, startY], level: 0 });
+        });
+
+        bolts.forEach((bolt) => {
+          drawFateBolt(ctx, bolt.path, bolt.start[0], bolt.start[1], bolt.level, alpha);
+        });
+      };
+
+      const startFateLightningStrike = () => {
+        if (!fateLightningCanvas) return;
+        if (fateLightningFrame) cancelAnimationFrame(fateLightningFrame);
+        const startedAt = performance.now();
+
+        const render = (now) => {
+          const progress = Math.min(1, (now - startedAt) / FATE_LIGHTNING_DURATION_MS);
+          const flicker = progress < 0.16 ? 1 : Math.random() > 0.32 ? 1 - progress * 0.42 : 0.18;
+          const alpha = Math.max(0, flicker * (1 - progress * 0.36));
+          drawFateLightningBorderFrame(alpha);
+
+          if (progress < 1) {
+            fateLightningFrame = requestAnimationFrame(render);
+            return;
+          }
+
+          fateLightningFrame = null;
+          clearFateLightningCanvas();
+        };
+
+        fateLightningFrame = requestAnimationFrame(render);
+      };
+
+      const isFateVisible = () =>
+        Boolean(
+          fateWindow &&
+            !fateWindow.classList.contains("is-hidden") &&
+            fateWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionFateWindow = () => {
+        positionRandomEventWindowInViewport(fateWindow);
+      };
+
+      const updateFateProgress = () => {
+        const progress = Math.min(100, Math.max(0, fateProgressValue));
+        if (fateProgressBar) fateProgressBar.style.width = `${progress}%`;
+        if (fateProgress) fateProgress.setAttribute("aria-valuenow", Math.round(progress));
+      };
+
+      const clearFateTimers = () => {
+        if (fateDrainTimer) {
+          clearInterval(fateDrainTimer);
+          fateDrainTimer = null;
+        }
+        if (fateLightningTimer) {
+          clearTimeout(fateLightningTimer);
+          fateLightningTimer = null;
+        }
+        if (fateLightningFrame) {
+          cancelAnimationFrame(fateLightningFrame);
+          fateLightningFrame = null;
+        }
+        if (fateResolveTimer) {
+          clearTimeout(fateResolveTimer);
+          fateResolveTimer = null;
+        }
+        if (fateResultOpenTimer) {
+          clearTimeout(fateResultOpenTimer);
+          fateResultOpenTimer = null;
+        }
+        if (fateWindow) fateWindow.classList.remove("is-resisting");
+        clearFateLightningCanvas();
+      };
+
+      const resetFateWindow = () => {
+        clearFateTimers();
+        fateState = "ready";
+        fateProgressValue = FATE_START_PROGRESS;
+        updateFateProgress();
+        if (fateTitle) fateTitle.textContent = "Resist Your Fate";
+        if (fateReadyStage) fateReadyStage.classList.remove("is-hidden");
+        if (fateFightStage) fateFightStage.classList.add("is-hidden");
+        if (fateResultStage) fateResultStage.classList.add("is-hidden");
+        if (fateResultImage) {
+          fateResultImage.removeAttribute("src");
+          fateResultImage.alt = "";
+        }
+        if (fateResultCredit) fateResultCredit.classList.add("is-hidden");
+        if (fateResultText) fateResultText.textContent = "";
+        if (fateResultOk) fateResultOk.textContent = "OK";
+        if (fateStart) fateStart.disabled = false;
+        if (fateResist) fateResist.disabled = false;
+      };
+
+      const startFateMinigame = () => {
+        if (fateState !== "ready") return;
+        fateState = "active";
+        fateProgressValue = FATE_START_PROGRESS;
+        updateFateProgress();
+        if (fateReadyStage) fateReadyStage.classList.add("is-hidden");
+        if (fateFightStage) fateFightStage.classList.remove("is-hidden");
+        if (fateStart) fateStart.disabled = true;
+        if (fateResist) {
+          fateResist.disabled = false;
+          fateResist.focus();
+        }
+        startFateDrain();
+      };
+
+      const pulseFateWindow = () => {
+        if (!fateWindow) return;
+        fateWindow.classList.remove("is-resisting");
+        void fateWindow.offsetWidth;
+        fateWindow.classList.add("is-resisting");
+        startFateLightningStrike();
+        if (fateLightningTimer) clearTimeout(fateLightningTimer);
+        fateLightningTimer = setTimeout(() => {
+          fateWindow.classList.remove("is-resisting");
+          fateLightningTimer = null;
+        }, 240);
+      };
+
+      const setFateResultContent = (success) => {
+        if (fateTitle) fateTitle.textContent = success ? "Fate Resisted" : "Fate Accepted";
+        if (fateReadyStage) fateReadyStage.classList.add("is-hidden");
+        if (fateFightStage) fateFightStage.classList.add("is-hidden");
+        if (fateResultStage) fateResultStage.classList.remove("is-hidden");
+        if (fateResultImage) {
+          fateResultImage.src = success
+            ? "assets/random%20events/zodd_defeated_by_shld0n_hcks.jpg"
+            : "assets/random%20events/guts-lost.jpeg";
+          fateResultImage.alt = "";
+        }
+        if (fateResultCredit) {
+          fateResultCredit.classList.toggle("is-hidden", !success);
+        }
+        if (fateResultText) {
+          fateResultText.textContent = success ? FATE_SUCCESS_TEXT : FATE_LOSS_TEXT;
+        }
+        if (fateResultOk) fateResultOk.textContent = success ? "OK" : "Succumb";
+      };
+
+      const openFateResultWindow = (success) => {
+        if (!fateWindow) return;
+        fateState = success ? "success" : "loss";
+        setFateResultContent(success);
+        fateWindow.classList.remove("is-hidden", "is-closing", "is-resisting");
+        fateWindow.setAttribute("aria-hidden", "false");
+        positionFateWindow();
+        clampRandomEventWindowAfterMediaLoad(fateWindow);
+        fateWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(fateWindow, "is-opening");
+        requestAnimationFrame(() => {
+          if (fateResultOk) fateResultOk.focus();
+        });
+      };
+
+      const finishFateEvent = (success) => {
+        if (fateState !== "active") return;
+        fateState = "resolving";
+        fateProgressValue = success ? 100 : 0;
+        updateFateProgress();
+        if (fateDrainTimer) {
+          clearInterval(fateDrainTimer);
+          fateDrainTimer = null;
+        }
+        if (fateLightningTimer) {
+          clearTimeout(fateLightningTimer);
+          fateLightningTimer = null;
+        }
+        if (fateLightningFrame) {
+          cancelAnimationFrame(fateLightningFrame);
+          fateLightningFrame = null;
+        }
+        if (fateWindow) fateWindow.classList.remove("is-resisting");
+        clearFateLightningCanvas();
+        if (fateResist) fateResist.disabled = true;
+        if (fateResolveTimer) clearTimeout(fateResolveTimer);
+        if (fateResultOpenTimer) clearTimeout(fateResultOpenTimer);
+
+        fateResolveTimer = setTimeout(() => {
+          fateResolveTimer = null;
+          if (!fateWindow) return;
+          fateState = "transitioning";
+          fateWindow.setAttribute("aria-hidden", "true");
+          restartWindowAnimation(fateWindow, "is-closing");
+          fateResultOpenTimer = setTimeout(() => {
+            fateResultOpenTimer = null;
+            openFateResultWindow(success);
+          }, FATE_RESULT_REOPEN_DELAY_MS);
+        }, FATE_RESULT_FREEZE_MS);
+      };
+
+      const tickFateDrain = () => {
+        if (fateState !== "active") return;
+        fateProgressValue = Math.max(0, fateProgressValue - FATE_DRAIN_AMOUNT);
+        updateFateProgress();
+        if (fateProgressValue <= 0) finishFateEvent(false);
+      };
+
+      const startFateDrain = () => {
+        if (fateDrainTimer) clearInterval(fateDrainTimer);
+        fateDrainTimer = setInterval(tickFateDrain, FATE_DRAIN_INTERVAL_MS);
+      };
+
+      const resistFate = () => {
+        if (fateState !== "active") return;
+        fateProgressValue = Math.min(100, fateProgressValue + FATE_PRESS_GAIN);
+        updateFateProgress();
+        pulseFateWindow();
+        if (fateProgressValue >= 100) {
+          finishFateEvent(true);
+        }
+      };
+
+      const handleFateKeyMash = (event) => {
+        if (fateState !== "active") return;
+        if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+        event.preventDefault();
+        resistFate();
+      };
+
+      const showFateWindow = () => {
+        if (!fateWindow) return;
+        if (isFateVisible()) {
+          fateWindow.style.zIndex = String(topZ++);
+          clampRandomEventWindowToViewport(fateWindow);
+          if (fateState === "ready" && fateStart) fateStart.focus();
+          if (fateState === "active" && fateResist) fateResist.focus();
+          return;
+        }
+        resetFateWindow();
+        loadDeferredMedia(fateWindow);
+        fateWindow.classList.remove("is-hidden", "is-closing");
+        fateWindow.setAttribute("aria-hidden", "false");
+        positionFateWindow();
+        clampRandomEventWindowAfterMediaLoad(fateWindow);
+        fateWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(fateWindow, "is-opening");
+        requestAnimationFrame(() => {
+          if (fateStart) fateStart.focus();
+        });
+      };
+
+      const closeFateWindow = () => {
+        if (!fateWindow || fateWindow.classList.contains("is-hidden")) return;
+        clearFateTimers();
+        fateState = "idle";
+        fateWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(fateWindow, "is-closing");
+      };
+
+      const isBehelitVisible = () =>
+        Boolean(
+          behelitWindow &&
+            !behelitWindow.classList.contains("is-hidden") &&
+            behelitWindow.getAttribute("aria-hidden") === "false"
+        );
+
+      const positionBehelitWindow = () => {
+        positionRandomEventWindowInViewport(behelitWindow);
+      };
+
+      const showBehelitWindow = () => {
+        if (!behelitWindow) return;
+        if (isBehelitVisible()) {
+          behelitWindow.style.zIndex = String(topZ++);
+          clampRandomEventWindowToViewport(behelitWindow);
+          return;
+        }
+        loadDeferredMedia(behelitWindow);
+        behelitWindow.classList.remove("is-hidden", "is-closing");
+        behelitWindow.setAttribute("aria-hidden", "false");
+        positionBehelitWindow();
+        clampRandomEventWindowAfterMediaLoad(behelitWindow);
+        behelitWindow.style.zIndex = String(topZ++);
+        restartWindowAnimation(behelitWindow, "is-opening");
+      };
+
+      const closeBehelitWindow = () => {
+        if (!behelitWindow || behelitWindow.classList.contains("is-hidden")) return;
+        behelitWindow.setAttribute("aria-hidden", "true");
+        restartWindowAnimation(behelitWindow, "is-closing");
       };
 
       const isJohnPorkVisible = () =>
@@ -6703,18 +10340,7 @@
       };
 
       const positionJohnPorkWindow = () => {
-        if (!johnPorkWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = johnPorkWindow.offsetWidth;
-        const height = johnPorkWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        johnPorkWindow.style.translate = "0 0";
-        johnPorkWindow.style.left = `${Math.round(randomLeft)}px`;
-        johnPorkWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(johnPorkWindow);
       };
 
       const showJohnPorkCall = () => {
@@ -6747,18 +10373,7 @@
         );
 
       const positionAdvertisementWindow = () => {
-        if (!advertisementWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = advertisementWindow.offsetWidth;
-        const height = advertisementWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        advertisementWindow.style.translate = "0 0";
-        advertisementWindow.style.left = `${Math.round(randomLeft)}px`;
-        advertisementWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(advertisementWindow);
       };
 
       const showAdvertisementWindow = () => {
@@ -6789,18 +10404,7 @@
         );
 
       const positionBidenBlastWindow = () => {
-        if (!bidenBlastWindow) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = bidenBlastWindow.offsetWidth;
-        const height = bidenBlastWindow.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        bidenBlastWindow.style.translate = "0 0";
-        bidenBlastWindow.style.left = `${Math.round(randomLeft)}px`;
-        bidenBlastWindow.style.top = `${Math.round(randomTop)}px`;
+        positionRandomEventWindowInViewport(bidenBlastWindow);
       };
 
       const removeBidenExplodePieces = () => {
@@ -6934,60 +10538,42 @@
       const isVirusVisible = () => virusEventWindows().some(isVirusWindowVisible);
 
       const setVirusEventWindowPosition = (win, left, top) => {
-        if (!win) return;
-        const nextLeft = Math.round(left);
-        const nextTop = Math.round(top);
-        win.style.translate = "0 0";
-        win.style.left = `${nextLeft}px`;
-        win.style.top = `${nextTop}px`;
-        if (win === virusWindow) {
-          virusRescueAnchor = { left: nextLeft, top: nextTop };
-        }
+        setRandomEventWindowPosition(win, left, top, {
+          onPosition: (nextLeft, nextTop) => {
+            if (win === virusWindow) {
+              virusRescueAnchor = { left: nextLeft, top: nextTop };
+            }
+          },
+        });
       };
 
       const positionVirusEventWindow = (win) => {
-        if (!win) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = win.offsetWidth;
-        const height = win.offsetHeight;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const randomLeft = padding + Math.random() * (maxLeft - padding);
-        const randomTop = padding + Math.random() * (maxTop - padding);
-        setVirusEventWindowPosition(win, randomLeft, randomTop);
+        positionRandomEventWindowInViewport(win, {
+          onPosition: (nextLeft, nextTop) => {
+            if (win === virusWindow) {
+              virusRescueAnchor = { left: nextLeft, top: nextTop };
+            }
+          },
+        });
       };
 
       const clampVirusEventWindowToViewport = (win) => {
-        if (!win || win.classList.contains("is-hidden")) return;
-        const padding = 12;
-        const taskbarClearance = 64;
-        const width = win.offsetWidth;
-        const height = win.offsetHeight;
-        const styleLeft = Number.parseFloat(win.style.left);
-        const styleTop = Number.parseFloat(win.style.top);
-        const currentLeft = Number.isFinite(styleLeft) ? styleLeft : win.getBoundingClientRect().left;
-        const currentTop = Number.isFinite(styleTop) ? styleTop : win.getBoundingClientRect().top;
-        const maxLeft = Math.max(padding, window.innerWidth - width - padding);
-        const maxTop = Math.max(padding, window.innerHeight - height - taskbarClearance);
-        const nextLeft = Math.max(padding, Math.min(currentLeft, maxLeft));
-        const nextTop = Math.max(padding, Math.min(currentTop, maxTop));
-        setVirusEventWindowPosition(win, nextLeft, nextTop);
+        clampRandomEventWindowToViewport(win, {
+          onPosition: (nextLeft, nextTop) => {
+            if (win === virusWindow) {
+              virusRescueAnchor = { left: nextLeft, top: nextTop };
+            }
+          },
+        });
       };
 
       const clampVirusEventWindowAfterMediaLoad = (win) => {
-        if (!win) return;
-        requestAnimationFrame(() => clampVirusEventWindowToViewport(win));
-        setTimeout(() => clampVirusEventWindowToViewport(win), 80);
-        setTimeout(() => clampVirusEventWindowToViewport(win), 240);
-        win.querySelectorAll("img").forEach((image) => {
-          if (image.complete && image.naturalWidth > 0) {
-            clampVirusEventWindowToViewport(win);
-            return;
-          }
-          image.addEventListener("load", () => clampVirusEventWindowToViewport(win), {
-            once: true,
-          });
+        clampRandomEventWindowAfterMediaLoad(win, {
+          onPosition: (nextLeft, nextTop) => {
+            if (win === virusWindow) {
+              virusRescueAnchor = { left: nextLeft, top: nextTop };
+            }
+          },
         });
       };
 
@@ -7165,6 +10751,11 @@
       const randomEventDebugEnabled = (definition) =>
         RANDOM_EVENT_GLOBAL_DEBUG || Boolean(definition.debug);
 
+      const RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS = new Set([
+        "failedAction",
+        "windowDrag",
+      ]);
+
       const randomEventProbability = (definition, triggerName) => {
         const value =
           definition.probabilities && triggerName in definition.probabilities
@@ -7176,21 +10767,156 @@
       };
 
       const triggerRandomEvents = (triggerName, detail = {}) => {
+        const candidates = [];
+        let debugRan = false;
+
         randomEventDefinitions.forEach((definition) => {
           const debug = randomEventDebugEnabled(definition);
+          const forceDebugRun =
+            debug && !RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS.has(triggerName);
           if (
             definition.canTrigger &&
             !definition.canTrigger({ triggerName, detail, debug })
           ) {
             return;
           }
+          if (forceDebugRun) {
+            definition.run({ triggerName, detail, debug });
+            debugRan = true;
+            return;
+          }
           const probability = randomEventProbability(definition, triggerName);
-          if (!debug && Math.random() >= probability) return;
-          definition.run({ triggerName, detail, debug });
+          if (Math.random() >= probability) return;
+          candidates.push({ definition, debug });
         });
-        if (triggerName === "calendarOpen" || triggerName === "gameWin") {
-          maybeShowFelizJueves();
+
+        if (debugRan) return true;
+
+        const selected = candidates[Math.floor(Math.random() * candidates.length)];
+        if (selected) {
+          selected.definition.run({ triggerName, detail, debug: selected.debug });
+          return true;
         }
+
+        if (triggerName === "calendarOpen" || triggerName === "gameWin") {
+          return maybeShowFelizJueves();
+        }
+
+        return false;
+      };
+
+      const scheduleRandomEventIdleTrigger = () => {
+        if (randomEventIdleTimer) clearTimeout(randomEventIdleTimer);
+        randomEventIdleTimer = setTimeout(() => {
+          randomEventIdleTimer = null;
+          if (!document.hidden) {
+            triggerRandomEvents("idleInterval", {
+              idleMs: RANDOM_EVENT_IDLE_DELAY_MS,
+            });
+          }
+          scheduleRandomEventIdleTrigger();
+        }, RANDOM_EVENT_IDLE_DELAY_MS);
+      };
+
+      const markRandomEventUserActivity = () => {
+        scheduleRandomEventIdleTrigger();
+      };
+
+      const clearAppDwellTimer = () => {
+        if (activeAppDwellTimer) {
+          clearTimeout(activeAppDwellTimer);
+          activeAppDwellTimer = null;
+        }
+      };
+
+      const clearActiveAppDwell = () => {
+        clearAppDwellTimer();
+        activeAppDwellWindow = null;
+        activeAppDwellStartedAt = 0;
+      };
+
+      const scheduleActiveAppDwellTimer = () => {
+        clearAppDwellTimer();
+        if (
+          !activeAppDwellWindow ||
+          !isWindowVisible(activeAppDwellWindow) ||
+          document.hidden
+        ) {
+          return;
+        }
+
+        activeAppDwellTimer = setTimeout(() => {
+          if (
+            !activeAppDwellWindow ||
+            !isWindowVisible(activeAppDwellWindow) ||
+            document.hidden
+          ) {
+            clearActiveAppDwell();
+            return;
+          }
+
+          triggerRandomEvents("appDwell", {
+            appId: activeAppDwellWindow.getAttribute("data-app-window") || "",
+            elapsedMs: Date.now() - activeAppDwellStartedAt,
+          });
+          scheduleActiveAppDwellTimer();
+        }, RANDOM_EVENT_APP_DWELL_MS);
+      };
+
+      const trackActiveAppDwell = (win) => {
+        if (!win || !win.matches("[data-app-window]") || !isWindowVisible(win)) {
+          clearActiveAppDwell();
+          return;
+        }
+
+        if (activeAppDwellWindow !== win) {
+          activeAppDwellWindow = win;
+          activeAppDwellStartedAt = Date.now();
+        }
+
+        scheduleActiveAppDwellTimer();
+      };
+
+      const isDisabledActionTarget = (element) =>
+        Boolean(
+          element &&
+            (element.matches(":disabled") ||
+              element.getAttribute("aria-disabled") === "true" ||
+              element.closest("[aria-disabled='true']"))
+        );
+
+      const isInertTitleBarButton = (button) =>
+        Boolean(
+          button &&
+            button.matches(".title-bar-controls button") &&
+            button.getAttribute("aria-label") === "Help" &&
+            !button.id &&
+            !button.hasAttribute("data-close") &&
+            !button.matches(":disabled")
+        );
+
+      const handleFailedActionTrigger = (event) => {
+        if (!event.isTrusted) return;
+        const target =
+          event.target instanceof Element ? event.target : event.target?.parentElement;
+        if (!target) return;
+        const actionTarget = target.closest(
+          "button, [role='button'], input, select, textarea"
+        );
+        if (!actionTarget || !document.documentElement.contains(actionTarget)) return;
+
+        const disabled = isDisabledActionTarget(actionTarget);
+        const inertTitleBar = actionTarget.matches("button") && isInertTitleBarButton(actionTarget);
+        if (!disabled && !inertTitleBar) return;
+
+        triggerRandomEvents("failedAction", {
+          reason: disabled ? "disabled" : "inert-title-bar-button",
+          label:
+            actionTarget.getAttribute("aria-label") ||
+            actionTarget.textContent.trim() ||
+            actionTarget.id ||
+            "",
+        });
       };
 
       const ANNOYING_RANDOM_EVENT_PROBABILITY = 0.019;
@@ -7204,7 +10930,11 @@
         fileDownload: 0.045,
         pageReload: 0.09,
         calendarOpen: 0.03,
-        tenMinute: 0.15,
+        tenClicks: 0.038,
+        failedAction: 0.006,
+        appDwell: 0.075,
+        windowDrag: 0.025,
+        idleInterval: 0.15,
       });
 
       const STANDARD_RANDOM_EVENT_PROBABILITY = 0.0075;
@@ -7218,8 +10948,22 @@
         fileDownload: 0.019,
         pageReload: 0.026,
         calendarOpen: 0.015,
-        tenMinute: 0.06,
+        tenClicks: 0.016,
+        failedAction: 0.002,
+        appDwell: 0.04,
+        windowDrag: 0.012,
+        idleInterval: 0.06,
       });
+
+      const HALF_STANDARD_RANDOM_EVENT_PROBABILITY = STANDARD_RANDOM_EVENT_PROBABILITY / 2;
+      const HALF_STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze(
+        Object.fromEntries(
+          Object.entries(STANDARD_RANDOM_EVENT_PROBABILITIES).map(([triggerName, probability]) => [
+            triggerName,
+            probability / 2,
+          ])
+        )
+      );
 
       const ELEVATED_RANDOM_EVENT_PROBABILITY = 0.0094;
       const ELEVATED_RANDOM_EVENT_PROBABILITIES = Object.freeze({
@@ -7232,7 +10976,11 @@
         fileDownload: 0.019,
         pageReload: 0.03,
         calendarOpen: 0.019,
-        tenMinute: 0.06,
+        tenClicks: 0.02,
+        failedAction: 0.003,
+        appDwell: 0.045,
+        windowDrag: 0.015,
+        idleInterval: 0.06,
       });
 
       registerRandomEvent({
@@ -7335,6 +11083,50 @@
       });
 
       registerRandomEvent({
+        id: "mana-flood",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isManaFloodVisible(),
+        run: () => {
+          showManaFlood();
+        },
+      });
+
+      registerRandomEvent({
+        id: "mimic-warning",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isMimicWarningVisible(),
+        run: () => {
+          showMimicWarning();
+        },
+      });
+
+      registerRandomEvent({
+        id: "sudden-skill-check",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isSkillCheckVisible(),
+        run: () => {
+          showSkillCheckWindow();
+        },
+      });
+
+      registerRandomEvent({
+        id: "distress-signal",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isDistressSignalVisible(),
+        run: () => {
+          showDistressSignalWindow();
+        },
+      });
+
+      registerRandomEvent({
         id: "nazar-evil-eye",
         debug: false,
         probability: ELEVATED_RANDOM_EVENT_PROBABILITY,
@@ -7342,6 +11134,105 @@
         canTrigger: () => !isNazarVisible(),
         run: () => {
           showNazarWindow();
+        },
+      });
+
+      registerRandomEvent({
+        id: "site-of-grace",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isSiteGraceVisible(),
+        run: () => {
+          showSiteGraceWindow();
+        },
+      });
+
+      registerRandomEvent({
+        id: "stalker-zone",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isStalkerVisible(),
+        run: () => {
+          showStalkerWindow();
+        },
+      });
+
+      registerRandomEvent({
+        id: "nana-random-encounter",
+        debug: false,
+        probability: HALF_STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: HALF_STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isNanaEncounterVisible(),
+        run: () => {
+          showNanaEncounterWindow();
+        },
+      });
+
+      registerRandomEvent({
+        id: "lain-system-alert",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isLainAlertVisible(),
+        run: () => {
+          showLainAlert();
+        },
+      });
+
+      registerRandomEvent({
+        id: "lelouch-system-alert",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isLelouchAlertVisible(),
+        run: () => {
+          showLelouchAlert();
+        },
+      });
+
+      registerRandomEvent({
+        id: "human-instrumentality-project",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isInstrumentalityVisible(),
+        run: () => {
+          showInstrumentalityPrompt();
+        },
+      });
+
+      registerRandomEvent({
+        id: "red-tool",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isRedToolVisible(),
+        run: () => {
+          showRedToolWindow();
+        },
+      });
+
+      registerRandomEvent({
+        id: "resist-your-fate",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => fateState === "idle" && !isFateVisible(),
+        run: () => {
+          showFateWindow();
+        },
+      });
+
+      registerRandomEvent({
+        id: "behelit-found",
+        debug: false,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        canTrigger: () => !isBehelitVisible(),
+        run: () => {
+          showBehelitWindow();
         },
       });
 
@@ -7395,6 +11286,7 @@
         activeWindow = win;
         win.style.zIndex = String(topZ++);
         playActiveAutoplayVideos(win);
+        trackActiveAppDwell(win);
       };
 
       const isSmallResizableWindow = (win) => {
@@ -7666,6 +11558,7 @@
         stopMediaPlayback(win);
 
         if (activeWindow === win) activeWindow = null;
+        if (activeAppDwellWindow === win) clearActiveAppDwell();
 
         if (appId === "solitaire") {
           solHideVictoryVideo();
@@ -8105,9 +11998,7 @@
         }
       });
 
-      setInterval(() => {
-        triggerRandomEvents("tenMinute");
-      }, 10 * 60 * 1000);
+      scheduleRandomEventIdleTrigger();
 
       appWindows.forEach((win) => {
         win.addEventListener("animationend", (event) => {
@@ -10105,6 +13996,10 @@
           title: "New Year's Day",
           image: "assets/random%20events/newyear.gif",
         },
+        "1-4": {
+          title: "Cancer Awareness Day",
+          image: "assets/random%20events/fcancer.gif",
+        },
         "1-11": {
           title: "February 11",
           image: "assets/random%20events/birthday.gif",
@@ -10595,6 +14490,7 @@
         loadDeferredMedia(randomEventWindow);
         randomEventWindow.classList.remove("is-hidden", "is-closing");
         randomEventWindow.setAttribute("aria-hidden", "false");
+        positionRandomEventWindowInViewport(randomEventWindow);
         randomEventWindow.style.zIndex = String(topZ++);
         restartWindowAnimation(randomEventWindow, "is-opening");
       };
@@ -11080,6 +14976,155 @@
         });
       }
 
+      if (manaFloodOk) {
+        manaFloodOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeManaFlood();
+        });
+      }
+
+      if (manaFloodWindow) {
+        manaFloodWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        manaFloodWindow.addEventListener("animationend", (event) => {
+          if (event.target !== manaFloodWindow) return;
+          if (event.animationName === "retro-window-open") {
+            manaFloodWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            manaFloodWindow.classList.remove("is-closing");
+            manaFloodWindow.classList.add("is-hidden");
+          }
+        });
+      }
+
+      if (mimicWarningOk) {
+        mimicWarningOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeMimicWarning();
+        });
+      }
+
+      if (mimicWarningWindow) {
+        mimicWarningWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        mimicWarningWindow.addEventListener("animationend", (event) => {
+          if (event.target !== mimicWarningWindow) return;
+          if (event.animationName === "retro-window-open") {
+            mimicWarningWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            mimicWarningWindow.classList.remove("is-closing");
+            mimicWarningWindow.classList.add("is-hidden");
+          }
+        });
+      }
+
+      if (skillCheckRoll) {
+        skillCheckRoll.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          beginSkillCheckRoll();
+        });
+      }
+
+      if (skillCheckIgnore) {
+        skillCheckIgnore.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeSkillCheckWindow();
+        });
+      }
+
+      if (skillCheckResultOk) {
+        skillCheckResultOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeSkillCheckWindow();
+        });
+      }
+
+      [skillCheckWindow, skillCheckResultWindow].forEach((win) => {
+        if (!win) return;
+        win.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        win.addEventListener("animationend", (event) => {
+          if (event.target !== win) return;
+          if (event.animationName === "retro-window-open") {
+            win.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            win.classList.remove("is-closing");
+            win.classList.add("is-hidden");
+            if (win === skillCheckWindow) resetSkillCheckWindow();
+          }
+        });
+      });
+
+      if (distressPowerButton) {
+        distressPowerButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          startDistressPowerSequence();
+        });
+      }
+
+      if (distressSignalClose) {
+        distressSignalClose.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeDistressSignalEvent();
+        });
+      }
+
+      [distressFrequencyDial, distressPhaseDial].forEach((dial) => {
+        if (!dial) return;
+        dial.addEventListener("input", () => {
+          updateDistressTuning();
+        });
+      });
+
+      if (distressUploadOk) {
+        distressUploadOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeDistressSignalEvent();
+        });
+      }
+
+      [distressSignalWindow, distressUploadWindow].forEach((win) => {
+        if (!win) return;
+        win.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        win.addEventListener("animationend", (event) => {
+          if (event.target !== win) return;
+          if (event.animationName === "retro-window-open") {
+            win.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            win.classList.remove("is-closing");
+            win.classList.add("is-hidden");
+            win.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      });
+
       [nazarClose, nazarYes, nazarNo].forEach((button) => {
         if (!button) return;
         button.addEventListener("click", (event) => {
@@ -11104,6 +15149,362 @@
             nazarWindow.classList.remove("is-closing");
             nazarWindow.classList.add("is-hidden");
             nazarWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
+      if (siteGraceTouch) {
+        siteGraceTouch.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          touchSiteGrace();
+        });
+      }
+
+      if (siteGraceKeep) {
+        siteGraceKeep.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeSiteGraceWindow();
+        });
+      }
+
+      if (siteGraceWindow) {
+        siteGraceWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        siteGraceWindow.addEventListener("animationend", (event) => {
+          if (event.target !== siteGraceWindow) return;
+          if (event.animationName === "retro-window-open") {
+            siteGraceWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            siteGraceWindow.classList.remove("is-closing");
+            siteGraceWindow.classList.add("is-hidden");
+            siteGraceWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
+      if (stalkerYes) {
+        stalkerYes.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeStalkerWindow(stalkerWindow);
+          showStalkerResultWindow(stalkerWindow);
+        });
+      }
+
+      if (stalkerNo) {
+        stalkerNo.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeStalkerWindow(stalkerWindow);
+        });
+      }
+
+      if (stalkerResultOk) {
+        stalkerResultOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeStalkerWindow(stalkerResultWindow);
+        });
+      }
+
+      [stalkerWindow, stalkerResultWindow].forEach((win) => {
+        if (!win) return;
+        win.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        win.addEventListener("animationend", (event) => {
+          if (event.target !== win) return;
+          if (event.animationName === "retro-window-open") {
+            win.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            win.classList.remove("is-closing");
+            win.classList.add("is-hidden");
+            win.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      });
+
+      if (nanaEncounterYes) {
+        nanaEncounterYes.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          acceptNanaEncounter();
+        });
+      }
+
+      if (nanaEncounterNo) {
+        nanaEncounterNo.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeNanaEncounterWindow(nanaEncounterWindow);
+        });
+      }
+
+      if (nanaAcceptOk) {
+        nanaAcceptOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeNanaEncounterWindow(nanaAcceptWindow);
+        });
+      }
+
+      [nanaEncounterWindow, nanaAcceptWindow].forEach((win) => {
+        if (!win) return;
+        win.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        win.addEventListener("animationend", (event) => {
+          if (event.target !== win) return;
+          if (event.animationName === "retro-window-open") {
+            win.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            win.classList.remove("is-closing");
+            win.classList.add("is-hidden");
+            win.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      });
+
+      if (lainAlertOk) {
+        lainAlertOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeLainAlert();
+        });
+      }
+
+      if (lainAlertWindow) {
+        lainAlertWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        lainAlertWindow.addEventListener("animationend", (event) => {
+          if (event.target !== lainAlertWindow) return;
+          if (event.animationName === "retro-window-open") {
+            lainAlertWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            lainAlertWindow.classList.remove("is-closing");
+            lainAlertWindow.classList.add("is-hidden");
+            lainAlertWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
+      if (lelouchAlertOk) {
+        lelouchAlertOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeLelouchAlert();
+        });
+      }
+
+      if (lelouchAlertWindow) {
+        lelouchAlertWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        lelouchAlertWindow.addEventListener("animationend", (event) => {
+          if (event.target !== lelouchAlertWindow) return;
+          if (event.animationName === "retro-window-open") {
+            lelouchAlertWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            lelouchAlertWindow.classList.remove("is-closing");
+            lelouchAlertWindow.classList.add("is-hidden");
+            lelouchAlertWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
+      if (instrumentalityYes) {
+        instrumentalityYes.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeInstrumentalityWindow(instrumentalityWindow);
+        });
+      }
+
+      if (instrumentalityNo) {
+        instrumentalityNo.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          rejectInstrumentality();
+        });
+      }
+
+      if (instrumentalityCongratsOk) {
+        instrumentalityCongratsOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeInstrumentalityWindow(instrumentalityCongratsWindow);
+        });
+      }
+
+      [instrumentalityWindow, instrumentalityCongratsWindow].forEach((win) => {
+        if (!win) return;
+        win.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        win.addEventListener("animationend", (event) => {
+          if (event.target !== win) return;
+          if (event.animationName === "retro-window-open") {
+            win.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            win.classList.remove("is-closing");
+            win.classList.add("is-hidden");
+            win.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      });
+
+      if (redToolClose) {
+        redToolClose.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeRedToolWindow();
+        });
+      }
+
+      if (redToolInput) {
+        redToolInput.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          sendRedToolMessage();
+        });
+      }
+
+      if (redToolSend) {
+        redToolSend.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          sendRedToolMessage();
+        });
+      }
+
+      if (redToolWindow) {
+        redToolWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        redToolWindow.addEventListener("animationend", (event) => {
+          if (event.target !== redToolWindow) return;
+          if (event.animationName === "retro-window-open") {
+            redToolWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            redToolWindow.classList.remove("is-closing");
+            redToolWindow.classList.add("is-hidden");
+            redToolWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+          }
+        });
+      }
+
+      if (fateStart) {
+        fateStart.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          startFateMinigame();
+        });
+      }
+
+      if (fateResist) {
+        fateResist.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          resistFate();
+        });
+      }
+
+      if (fateResultOk) {
+        fateResultOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeFateWindow();
+        });
+      }
+
+      document.addEventListener("keydown", handleFateKeyMash);
+
+      if (fateWindow) {
+        fateWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        fateWindow.addEventListener("animationend", (event) => {
+          if (event.target !== fateWindow) return;
+          if (event.animationName === "retro-window-open") {
+            fateWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            fateWindow.classList.remove("is-closing");
+            fateWindow.classList.add("is-hidden");
+            fateWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+            if (fateResultImage) fateResultImage.removeAttribute("src");
+          }
+        });
+      }
+
+      if (behelitOk) {
+        behelitOk.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeBehelitWindow();
+        });
+      }
+
+      if (behelitWindow) {
+        behelitWindow.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+
+        behelitWindow.addEventListener("animationend", (event) => {
+          if (event.target !== behelitWindow) return;
+          if (event.animationName === "retro-window-open") {
+            behelitWindow.classList.remove("is-opening");
+            return;
+          }
+          if (event.animationName === "retro-window-close") {
+            behelitWindow.classList.remove("is-closing");
+            behelitWindow.classList.add("is-hidden");
+            behelitWindow.querySelectorAll("img[data-src]").forEach((image) => {
               image.removeAttribute("src");
             });
           }
@@ -11252,6 +15653,45 @@
         if (calendarButton.contains(event.target)) return;
         closeCalendar();
       });
+
+      document.addEventListener(
+        "pointerdown",
+        (event) => {
+          if (!event.isTrusted) return;
+          markRandomEventUserActivity();
+          handleFailedActionTrigger(event);
+        },
+        { capture: true }
+      );
+
+      document.addEventListener(
+        "keydown",
+        (event) => {
+          if (event.isTrusted) markRandomEventUserActivity();
+        },
+        { capture: true }
+      );
+
+      document.addEventListener(
+        "wheel",
+        (event) => {
+          if (event.isTrusted) markRandomEventUserActivity();
+        },
+        { capture: true, passive: true }
+      );
+
+      document.addEventListener(
+        "click",
+        (event) => {
+          if (!event.isTrusted) return;
+          randomEventClickCount += 1;
+          if (randomEventClickCount % RANDOM_EVENT_CLICK_TRIGGER_INTERVAL !== 0) return;
+          triggerRandomEvents("tenClicks", {
+            clickCount: randomEventClickCount,
+          });
+        },
+        { capture: true }
+      );
 
       document.addEventListener("click", (event) => {
         if (!event.isTrusted) return;
@@ -12754,6 +17194,8 @@
 
       solNewGame();
 
+      fitImagesIntoFrames(document);
+      watchRandomEventViewportMedia();
       window.addEventListener("resize", msResizeConfetti);
       window.addEventListener("resize", msUpdateBoardAlignment);
       window.addEventListener("resize", () => {
@@ -12761,8 +17203,10 @@
           .querySelectorAll(".portfolio-window")
           .forEach((win) => setPortfolioResponsiveState(win));
       });
-      window.addEventListener("resize", clampVisibleMcAfeeWindows);
-      window.addEventListener("resize", clampVisibleVirusEventWindows);
+      window.addEventListener("resize", () => {
+        if (isDistressWindowVisible(distressSignalWindow)) requestAnimationFrame(drawDistressSignals);
+      });
+      window.addEventListener("resize", clampVisibleRandomEventWindows);
 
       document.addEventListener(
         "pointerdown",
@@ -12770,6 +17214,7 @@
           if (!activeWindow || !isWindowVisible(activeWindow)) return;
           if (activeWindow.contains(event.target)) return;
           pauseMediaPlayback(activeWindow);
+          clearActiveAppDwell();
           activeWindow = null;
         },
         { capture: true }
@@ -12778,6 +17223,7 @@
       const pauseActiveWindowMedia = () => {
         if (!activeWindow) return;
         pauseMediaPlayback(activeWindow);
+        clearActiveAppDwell();
         activeWindow = null;
       };
       const defaultDocumentTitle = document.title || "Rohin OS";
@@ -12826,8 +17272,11 @@
         titleBar.addEventListener("pointerdown", (event) => {
           if (event.target.closest(".title-bar-controls")) return;
           const rect = win.getBoundingClientRect();
+          const startX = event.clientX;
+          const startY = event.clientY;
           const offsetX = event.clientX - rect.left;
           const offsetY = event.clientY - rect.top;
+          let didDragWindow = false;
 
           win.classList.remove("app-window--center");
           win.style.translate = "0 0";
@@ -12838,6 +17287,12 @@
           titleBar.setPointerCapture(event.pointerId);
 
           const moveHandler = (moveEvent) => {
+            if (
+              !didDragWindow &&
+              Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) > 3
+            ) {
+              didDragWindow = true;
+            }
             const nextLeft = moveEvent.clientX - offsetX;
             const nextTop = moveEvent.clientY - offsetY;
             win.style.left = `${nextLeft}px`;
@@ -12848,6 +17303,15 @@
             titleBar.releasePointerCapture(upEvent.pointerId);
             titleBar.removeEventListener("pointermove", moveHandler);
             titleBar.removeEventListener("pointerup", upHandler);
+            if (randomEventViewportWindows().includes(win)) {
+              clampRandomEventWindowToViewport(win);
+            }
+            if (didDragWindow) {
+              triggerRandomEvents("windowDrag", {
+                appId: win.getAttribute("data-app-window") || "",
+                windowId: win.id || "",
+              });
+            }
           };
 
           titleBar.addEventListener("pointermove", moveHandler);
