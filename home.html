@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
     <title>Rohin OS</title>
     <meta name="description" content="Rohin OS home screen." />
     <link rel="icon" href="assets/windowsxp.png" type="image/png" />
@@ -24,6 +27,13 @@
         box-sizing: border-box;
       }
 
+      html {
+        min-height: 100%;
+        overscroll-behavior: none;
+        touch-action: pan-x pan-y;
+        -webkit-text-size-adjust: 100%;
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
@@ -32,6 +42,8 @@
         place-items: center;
         padding-bottom: 56px;
         overflow: hidden;
+        overscroll-behavior: none;
+        touch-action: pan-x pan-y;
       }
 
       .desktop {
@@ -626,6 +638,613 @@
         max-width: calc(100vw - 48px);
         min-height: 0;
         overflow-x: auto;
+      }
+
+      .snake-window {
+        width: min(92vw, 360px);
+      }
+
+      .snake-window .window-body {
+        min-height: 0;
+      }
+
+      .snake-app {
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .snake-display {
+        background: #060b08;
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        box-sizing: border-box;
+        isolation: isolate;
+        justify-self: center;
+        overflow: hidden;
+        padding: 8px;
+        position: relative;
+        width: max-content;
+      }
+
+      .snake-screen {
+        background:
+          linear-gradient(rgba(98, 255, 120, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(98, 255, 120, 0.1) 1px, transparent 1px),
+          #020403;
+        background-size: 16px 16px;
+        border: 1px solid #1d3a24;
+        box-sizing: border-box;
+        display: block;
+        height: 320px;
+        image-rendering: pixelated;
+        width: 320px;
+      }
+
+      .snake-noise-canvas {
+        display: block;
+        height: calc(100% - 16px);
+        image-rendering: pixelated;
+        inset: 8px;
+        opacity: 0.68;
+        pointer-events: none;
+        position: absolute;
+        width: calc(100% - 16px);
+        z-index: 3;
+      }
+
+      .snake-panel {
+        background: #020403;
+        border: 1px solid #1d3a24;
+        box-shadow:
+          inset 0 0 0 1px rgba(98, 255, 120, 0.08),
+          inset 0 0 16px rgba(49, 158, 75, 0.2),
+          0 0 10px rgba(49, 158, 75, 0.18);
+        box-sizing: border-box;
+        color: #62ff78;
+        display: grid;
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+        gap: 6px;
+        isolation: isolate;
+        justify-self: center;
+        overflow: hidden;
+        padding: 6px;
+        position: relative;
+        text-shadow: 0 0 5px rgba(98, 255, 120, 0.55);
+        text-transform: uppercase;
+        width: 338px;
+      }
+
+      .snake-panel::before,
+      .snake-panel::after {
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+      }
+
+      .snake-panel::before {
+        background:
+          linear-gradient(rgba(98, 255, 120, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(98, 255, 120, 0.04) 1px, transparent 1px);
+        background-size: 100% 4px, 12px 100%;
+        mix-blend-mode: screen;
+        opacity: 0.72;
+        z-index: 0;
+      }
+
+      .snake-panel::after {
+        background:
+          radial-gradient(circle at 22% 18%, rgba(98, 255, 120, 0.14), transparent 1px),
+          radial-gradient(circle at 72% 42%, rgba(98, 255, 120, 0.12), transparent 1px),
+          radial-gradient(circle at 38% 78%, rgba(98, 255, 120, 0.1), transparent 1px);
+        background-size: 9px 9px, 13px 13px, 17px 17px;
+        opacity: 0.3;
+        z-index: 0;
+      }
+
+      .snake-readouts {
+        align-items: center;
+        background: #020403;
+        border: 1px solid #1d3a24;
+        box-shadow:
+          inset 0 0 0 1px rgba(98, 255, 120, 0.08),
+          inset 0 0 10px rgba(49, 158, 75, 0.18),
+          0 0 7px rgba(49, 158, 75, 0.14);
+        box-sizing: border-box;
+        color: #62ff78;
+        display: grid;
+        gap: 5px;
+        grid-template-columns: 1fr auto auto;
+        justify-self: center;
+        padding: 4px 6px;
+        position: relative;
+        overflow: hidden;
+        text-shadow: 0 0 5px rgba(98, 255, 120, 0.55);
+        text-transform: uppercase;
+        white-space: nowrap;
+        width: 338px;
+        z-index: 1;
+      }
+
+      .snake-readouts::before,
+      .snake-readouts::after {
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+        z-index: 0;
+      }
+
+      .snake-readouts::before {
+        background:
+          linear-gradient(rgba(98, 255, 120, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(98, 255, 120, 0.035) 1px, transparent 1px);
+        background-size: 100% 3px, 10px 100%;
+        mix-blend-mode: screen;
+        opacity: 0.66;
+      }
+
+      .snake-readouts::after {
+        background:
+          radial-gradient(circle at 12% 30%, rgba(220, 255, 220, 0.12), transparent 1px),
+          radial-gradient(circle at 44% 72%, rgba(98, 255, 120, 0.12), transparent 1px),
+          radial-gradient(circle at 78% 22%, rgba(220, 255, 220, 0.1), transparent 1px);
+        background-size: 7px 7px, 11px 11px, 15px 15px;
+        opacity: 0.38;
+      }
+
+      .snake-readouts > span {
+        position: relative;
+        z-index: 1;
+      }
+
+      .snake-options {
+        align-items: stretch;
+        display: grid;
+        gap: 5px;
+        grid-template-columns: 88px minmax(0, 1fr) 88px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .snake-panel-section {
+        border: 1px solid rgba(98, 255, 120, 0.22);
+        box-shadow: inset 0 0 8px rgba(49, 158, 75, 0.14);
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+        padding: 4px;
+      }
+
+      .snake-section-label {
+        color: rgba(98, 255, 120, 0.78);
+        font-size: 10px;
+        line-height: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .snake-setup-section {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .snake-setup-section .snake-section-label {
+        grid-column: auto;
+      }
+
+      .snake-setting-control {
+        align-items: center;
+        display: grid;
+        gap: 3px;
+      }
+
+      .snake-size-control {
+        grid-template-columns: 32px repeat(4, 18px);
+        justify-content: start;
+      }
+
+      .snake-panel .snake-size-control button {
+        align-items: center;
+        display: inline-flex;
+        font-size: 9px;
+        height: 18px;
+        justify-content: center;
+        line-height: 1;
+        min-height: 18px;
+        min-width: 18px;
+        padding-left: 0;
+        padding-right: 0;
+        width: 18px;
+      }
+
+      .snake-color-control {
+        grid-template-columns: 32px repeat(4, 18px);
+        justify-content: start;
+      }
+
+      .snake-panel .snake-color-button {
+        align-items: center;
+        display: inline-flex;
+        height: 18px;
+        justify-content: center;
+        min-height: 18px;
+        min-width: 18px;
+        padding: 2px;
+        width: 18px;
+      }
+
+      .snake-color-swatch {
+        background: var(--snake-swatch);
+        box-shadow: 0 0 5px var(--snake-swatch-glow);
+        display: block;
+        height: 10px;
+        margin: 0 auto;
+        width: 10px;
+      }
+
+      .snake-color-button[data-snake-color="green"] {
+        --snake-swatch: #62ff78;
+        --snake-swatch-glow: rgba(98, 255, 120, 0.72);
+      }
+
+      .snake-color-button[data-snake-apple-color="green"] {
+        --snake-swatch: #62ff78;
+        --snake-swatch-glow: rgba(98, 255, 120, 0.72);
+      }
+
+      .snake-color-button[data-snake-color="purple"] {
+        --snake-swatch: #c77dff;
+        --snake-swatch-glow: rgba(199, 125, 255, 0.72);
+      }
+
+      .snake-color-button[data-snake-apple-color="purple"] {
+        --snake-swatch: #c77dff;
+        --snake-swatch-glow: rgba(199, 125, 255, 0.72);
+      }
+
+      .snake-color-button[data-snake-color="red"] {
+        --snake-swatch: #ff6257;
+        --snake-swatch-glow: rgba(255, 98, 87, 0.72);
+      }
+
+      .snake-color-button[data-snake-apple-color="red"] {
+        --snake-swatch: #ff6257;
+        --snake-swatch-glow: rgba(255, 98, 87, 0.72);
+      }
+
+      .snake-color-button[data-snake-color="blue"] {
+        --snake-swatch: #65b7ff;
+        --snake-swatch-glow: rgba(101, 183, 255, 0.72);
+      }
+
+      .snake-color-button[data-snake-apple-color="blue"] {
+        --snake-swatch: #65b7ff;
+        --snake-swatch-glow: rgba(101, 183, 255, 0.72);
+      }
+
+      .snake-panel button {
+        background: #020403;
+        border: 1px solid #1d3a24;
+        box-shadow:
+          inset 0 0 0 1px rgba(98, 255, 120, 0.08),
+          0 0 5px rgba(49, 158, 75, 0.16);
+        color: #62ff78;
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+        min-height: 20px;
+        text-shadow: 0 0 5px rgba(98, 255, 120, 0.55);
+        text-transform: uppercase;
+      }
+
+      .snake-panel button:hover {
+        background: #061108;
+      }
+
+      .snake-panel button.is-selected {
+        background: #0b1b0e;
+        box-shadow:
+          inset 0 0 0 1px rgba(98, 255, 120, 0.24),
+          inset 0 0 8px rgba(98, 255, 120, 0.22),
+          0 0 7px rgba(98, 255, 120, 0.2);
+      }
+
+      .snake-panel button:active {
+        background: #0b1b0e;
+        box-shadow: inset 0 0 7px rgba(98, 255, 120, 0.26);
+      }
+
+      .snake-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .snake-actions button {
+        font-size: 9px;
+        min-height: 18px;
+        min-width: 0;
+        padding-left: 1px;
+        padding-right: 1px;
+        width: 100%;
+      }
+
+      .snake-control-section {
+        justify-content: center;
+      }
+
+      .snake-pad {
+        display: grid;
+        gap: 3px;
+        grid-template-columns: repeat(3, 24px);
+      }
+
+      .snake-pad button {
+        align-items: center;
+        display: inline-flex;
+        height: 22px;
+        justify-content: center;
+        min-height: 22px;
+        min-width: 24px;
+        padding: 0;
+      }
+
+      .snake-pad button::before {
+        border-color: transparent;
+        border-style: solid;
+        content: "";
+        display: block;
+        filter: drop-shadow(0 0 4px rgba(98, 255, 120, 0.62));
+        height: 0;
+        width: 0;
+      }
+
+      .snake-pad button[data-snake-direction="up"]::before {
+        border-bottom-color: #62ff78;
+        border-width: 0 6px 8px;
+      }
+
+      .snake-pad button[data-snake-direction="down"]::before {
+        border-top-color: #62ff78;
+        border-width: 8px 6px 0;
+      }
+
+      .snake-pad button[data-snake-direction="left"]::before {
+        border-right-color: #62ff78;
+        border-width: 6px 8px 6px 0;
+      }
+
+      .snake-pad button[data-snake-direction="right"]::before {
+        border-left-color: #62ff78;
+        border-width: 6px 0 6px 8px;
+      }
+
+      .snake-pad-spacer {
+        height: 22px;
+        width: 24px;
+      }
+
+      .life-counter-window {
+        width: min(92vw, 448px);
+      }
+
+      .life-counter-title-control {
+        align-items: center;
+        background-image: none;
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: bold;
+        justify-content: center;
+        line-height: 1;
+      }
+
+      .title-bar-controls .life-counter-title-control:disabled {
+        color: #808080;
+      }
+
+      .life-counter-window .window-body {
+        min-height: 0;
+      }
+
+      .life-counter-app {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .life-counter-toolbar {
+        align-items: stretch;
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px;
+      }
+
+      .life-counter-toolbar-actions {
+        display: grid;
+        gap: 6px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .life-counter-toolbar button {
+        min-width: 0;
+      }
+
+      .life-counter-note {
+        color: #222;
+        font-size: 11px;
+        line-height: 1.3;
+      }
+
+      .life-counter-players {
+        align-items: start;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(auto-fit, 192px);
+        justify-content: start;
+        max-height: min(55vh, 420px);
+        min-height: 0;
+        overflow: auto;
+        padding: 2px 14px 2px 2px;
+        scrollbar-gutter: stable;
+      }
+
+      .life-counter-player {
+        --life-counter-step-gap: 4px;
+        --life-counter-step-size: 36px;
+        --life-counter-step-grid-size: calc(
+          var(--life-counter-step-size) * 3 + var(--life-counter-step-gap) * 2
+        );
+        --life-counter-adjust-size: calc(
+          (var(--life-counter-step-grid-size) - var(--life-counter-step-gap)) / 2
+        );
+        --life-counter-control-width: calc(
+          var(--life-counter-step-grid-size) + 6px + var(--life-counter-adjust-size)
+        );
+        background: var(--surface);
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        display: grid;
+        gap: 6px;
+        min-width: 0;
+        padding: 7px;
+        width: calc(var(--life-counter-control-width) + 14px);
+      }
+
+      .life-counter-player-header {
+        align-items: center;
+        display: grid;
+        gap: 6px;
+        grid-template-columns: minmax(0, 1fr) 22px;
+        justify-self: start;
+        width: var(--life-counter-control-width);
+      }
+
+      .life-counter-name {
+        min-width: 0;
+        width: 100%;
+      }
+
+      .life-counter-remove {
+        align-items: center;
+        display: inline-flex;
+        font-weight: bold;
+        height: 22px;
+        justify-content: center;
+        min-width: 22px;
+        padding: 0;
+        width: 22px;
+      }
+
+      .life-counter-total {
+        align-items: center;
+        background: #020202;
+        box-shadow: inset 1px 1px 0 #111, inset -1px -1px 0 #777;
+        display: flex;
+        gap: 2px;
+        height: 54px;
+        justify-content: center;
+        justify-self: start;
+        overflow: hidden;
+        padding: 5px 7px;
+        width: var(--life-counter-control-width);
+      }
+
+      .life-counter-digit {
+        display: block;
+        height: 40px;
+        image-rendering: pixelated;
+        width: 24px;
+      }
+
+      .life-counter-set-row {
+        align-items: center;
+        display: grid;
+        gap: 6px;
+        grid-template-columns: minmax(0, 1fr) 26px;
+        justify-self: start;
+        width: var(--life-counter-control-width);
+      }
+
+      .life-counter-value-input {
+        min-width: 0;
+        -moz-appearance: textfield;
+        width: 100%;
+      }
+
+      .life-counter-value-input::-webkit-outer-spin-button,
+      .life-counter-value-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .life-counter-submit {
+        align-items: center;
+        display: inline-flex;
+        height: 24px;
+        justify-content: center;
+        min-width: 26px;
+        padding: 2px;
+        width: 26px;
+      }
+
+      .life-counter-submit img {
+        display: block;
+        height: 16px;
+        image-rendering: pixelated;
+        width: 16px;
+      }
+
+      .life-counter-submit:disabled img {
+        opacity: 0.35;
+      }
+
+      .life-counter-step-grid {
+        display: grid;
+        gap: var(--life-counter-step-gap);
+        grid-template-columns: repeat(3, var(--life-counter-step-size));
+        justify-content: start;
+      }
+
+      .life-counter-step-grid button {
+        height: var(--life-counter-step-size);
+        min-width: 0;
+        padding-left: 3px;
+        padding-right: 3px;
+        width: var(--life-counter-step-size);
+      }
+
+      .life-counter-step-grid button.is-selected {
+        box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+        padding: 2px 5px 0 7px;
+      }
+
+      .life-counter-controls {
+        display: grid;
+        gap: 6px;
+        grid-template-columns: max-content max-content;
+        justify-content: start;
+        justify-self: start;
+        width: var(--life-counter-control-width);
+      }
+
+      .life-counter-adjust-row {
+        display: grid;
+        gap: var(--life-counter-step-gap);
+        grid-template-columns: var(--life-counter-adjust-size);
+        grid-template-rows: repeat(2, var(--life-counter-adjust-size));
+      }
+
+      .life-counter-adjust-row button {
+        font-size: 16px;
+        font-weight: bold;
+        height: var(--life-counter-adjust-size);
+        min-width: 0;
+        padding: 0;
+        width: var(--life-counter-adjust-size);
       }
 
       .sol-app {
@@ -2227,6 +2846,14 @@
       .title-bar {
         cursor: move;
         touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      .title-bar-text,
+      .title-bar-controls {
+        user-select: none;
+        -webkit-user-select: none;
       }
 
       .taskbar {
@@ -2445,6 +3072,10 @@
       }
 
       .calendar-day[data-calendar-day] {
+        cursor: pointer;
+      }
+
+      .calendar-day[data-calendar-weekday="thursday"] {
         cursor: pointer;
       }
 
@@ -4581,6 +5212,39 @@
         visibility: hidden;
       }
 
+      .virus-window.is-virus-struck {
+        animation: virus-window-strike-shake 82ms steps(2, end) infinite;
+        filter:
+          drop-shadow(0 0 7px rgba(72, 184, 255, 0.9))
+          drop-shadow(0 0 16px rgba(37, 132, 255, 0.56));
+        overflow: visible;
+      }
+
+      .virus-lightning-field {
+        inset: -18px;
+        overflow: visible;
+        opacity: 0;
+        pointer-events: none;
+        position: absolute;
+        z-index: 0;
+      }
+
+      .virus-window.is-virus-struck .virus-lightning-field {
+        opacity: 1;
+      }
+
+      .virus-border-lightning-canvas {
+        display: block;
+        height: 100%;
+        width: 100%;
+      }
+
+      .virus-window .title-bar,
+      .virus-window .window-body {
+        position: relative;
+        z-index: 1;
+      }
+
       .virus-window .window-body,
       .virus-rescue-window .window-body {
         display: flex;
@@ -4642,6 +5306,37 @@
         pointer-events: none;
         position: fixed;
         z-index: 240;
+      }
+
+      .virus-lightning-canvas {
+        display: block;
+        height: 100vh;
+        inset: 0;
+        pointer-events: none;
+        position: fixed;
+        width: 100vw;
+        z-index: 239;
+      }
+
+      @keyframes virus-window-strike-shake {
+        0% {
+          transform: translate(0, 0);
+        }
+        20% {
+          transform: translate(-3px, 2px);
+        }
+        40% {
+          transform: translate(3px, -2px);
+        }
+        60% {
+          transform: translate(-2px, -3px);
+        }
+        80% {
+          transform: translate(2px, 3px);
+        }
+        100% {
+          transform: translate(0, 0);
+        }
       }
 
       @keyframes random-alert-choice-flash {
@@ -4759,6 +5454,14 @@
         <img src="assets/app-icons/ico/game_freecell.ico" alt="" />
         Solitaire
       </button>
+      <button class="desktop-icon" data-app="snake" aria-label="Snake">
+        <img src="assets/snake-logo.png" alt="" />
+        Snake
+      </button>
+      <button class="desktop-icon" data-app="life-counter" aria-label="Counter">
+        <img src="assets/app-icons/ico/charmap_w2k.ico" alt="" />
+        Counter
+      </button>
       <button class="desktop-icon" data-app="credits" aria-label="Credits">
         <img src="assets/app-icons/ico/search_laptop_1.ico" alt="" data-credits-icon />
         Credits
@@ -4870,9 +5573,46 @@
                 <h3>Pulse Oximeter</h3>
                 <p class="project-view-subtitle">Spring 2026</p>
               </div>
+              <div class="pdf-actions">
+                <a
+                  class="button-link button-link--gold-glow"
+                  href="https://rohinshanker.github.io/pulse-oximeter/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open project website
+                </a>
+                <button class="button-link" type="button" id="open-pulse-presentation">
+                  Open presentation
+                </button>
+              </div>
               <p>
-                Designed a pulse oximeter project around optical sensing, signal conditioning, and
-                embedded processing for heart-rate and oxygen-saturation measurement.
+                Built a low-cost optical pulse oximeter for BioE 101 that measures heart rate
+                and blood oxygen saturation from red and infrared light absorption. The design
+                uses alternating LEDs, a BPW34 photodiode, a transimpedance amplifier, active
+                filtering, and an Arduino MKR Zero with an OLED readout to turn tiny optical
+                current changes into a live pulse waveform and SpO<sub>2</sub> estimate.
+              </p>
+              <div class="gallery-frame" id="pulse-project-gallery">
+                <div class="gallery-scroll gallery-scroll--pdf">
+                  <img
+                    id="pulse-project-image"
+                    data-src="https://rohinshanker.github.io/pulse-oximeter/site-assets/demo-photo.jpg"
+                    alt="Working pulse oximeter demo with the yellow finger sleeve, OLED readout, laptop waveform, and commercial reference oximeter."
+                  />
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="pulse-project-prev">Previous</button>
+                  <span class="gallery-counter" id="pulse-project-counter" aria-live="polite">1 of 4</span>
+                  <button type="button" id="pulse-project-next">Next</button>
+                </div>
+              </div>
+              <p class="project-view-subtitle" id="pulse-project-caption" aria-live="polite">
+                Demo and validation
+              </p>
+              <p class="project-figure-description" id="pulse-project-description" aria-live="polite">
+                Final bench demo with finger sleeve, live serial waveform, OLED readout, and
+                commercial reference oximeter.
               </p>
             </div>
             <div class="viewer-content is-hidden" data-view="projects-tcp-congestion-control">
@@ -5874,6 +6614,25 @@
         </div>
       </div>
 
+      <div class="window app-window is-hidden pdf-window" data-app-window="pulse-presentation-pdf" id="pulse-presentation-pdf-window">
+        <div class="title-bar">
+          <div class="title-bar-text">Pulse Oximeter Presentation.pdf</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="pulse-presentation-pdf"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="pdf-viewer">
+            <iframe
+              id="pulse-presentation-iframe"
+              data-src="https://rohinshanker.github.io/pulse-oximeter/course%20resources/pulse%20ox%20slides.pdf#page=1&zoom=100&toolbar=0&navpanes=0"
+              data-unload-on-hide
+              title="Pulse Oximeter final presentation"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
       <div class="window app-window is-hidden pdf-window" data-app-window="drone-presentation-pdf" id="drone-presentation-pdf-window">
         <div class="title-bar">
           <div class="title-bar-text">Drone Navigation Presentation.pdf</div>
@@ -6037,6 +6796,145 @@
               ></video>
               <canvas id="sol-victory-canvas" aria-hidden="true"></canvas>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden snake-window" data-app-window="snake">
+        <div class="title-bar">
+          <div class="title-bar-text">Snake</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="snake"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="snake-app" aria-label="Snake game">
+            <div class="snake-readouts">
+              <span id="snake-status">Ready</span>
+              <span>Score <span id="snake-score">0</span></span>
+              <span>High <span id="snake-high-score">0</span></span>
+            </div>
+            <div class="snake-display">
+              <canvas
+                class="snake-screen"
+                id="snake-canvas"
+                width="320"
+                height="320"
+                tabindex="0"
+                aria-label="Snake game board"
+              ></canvas>
+              <canvas class="snake-noise-canvas" id="snake-noise-canvas" aria-hidden="true"></canvas>
+            </div>
+            <div class="snake-panel">
+              <div class="snake-options">
+                <div class="snake-panel-section snake-setup-section">
+                  <div class="snake-actions">
+                    <button type="button" id="snake-start">Start</button>
+                    <button type="button" id="snake-reset">Reset</button>
+                  </div>
+                </div>
+                <div class="snake-panel-section">
+                  <span class="snake-section-label">Customize</span>
+                  <div class="snake-setting-control snake-size-control" role="group" aria-label="Snake board size">
+                    <span class="snake-section-label">Board</span>
+                    <button type="button" data-snake-board-size="10" aria-label="10 by 10 board">10</button>
+                    <button
+                      class="is-selected"
+                      type="button"
+                      data-snake-board-size="16"
+                      aria-label="16 by 16 board"
+                      aria-pressed="true"
+                    >16</button>
+                    <button type="button" data-snake-board-size="20" aria-label="20 by 20 board">20</button>
+                    <button type="button" data-snake-board-size="24" aria-label="24 by 24 board">24</button>
+                  </div>
+                  <div class="snake-setting-control snake-color-control" role="group" aria-label="Snake color">
+                    <span class="snake-section-label">Snake</span>
+                    <button
+                      class="snake-color-button is-selected"
+                      type="button"
+                      data-snake-color="green"
+                      aria-label="Green snake"
+                      aria-pressed="true"
+                    ><span class="snake-color-swatch" aria-hidden="true"></span></button>
+                    <button class="snake-color-button" type="button" data-snake-color="purple" aria-label="Purple snake">
+                      <span class="snake-color-swatch" aria-hidden="true"></span>
+                    </button>
+                    <button class="snake-color-button" type="button" data-snake-color="red" aria-label="Red snake">
+                      <span class="snake-color-swatch" aria-hidden="true"></span>
+                    </button>
+                    <button class="snake-color-button" type="button" data-snake-color="blue" aria-label="Blue snake">
+                      <span class="snake-color-swatch" aria-hidden="true"></span>
+                    </button>
+                  </div>
+                  <div class="snake-setting-control snake-color-control" role="group" aria-label="Apple color">
+                    <span class="snake-section-label">Apple</span>
+                    <button class="snake-color-button" type="button" data-snake-apple-color="green" aria-label="Green apple">
+                      <span class="snake-color-swatch" aria-hidden="true"></span>
+                    </button>
+                    <button class="snake-color-button" type="button" data-snake-apple-color="purple" aria-label="Purple apple">
+                      <span class="snake-color-swatch" aria-hidden="true"></span>
+                    </button>
+                    <button
+                      class="snake-color-button is-selected"
+                      type="button"
+                      data-snake-apple-color="red"
+                      aria-label="Red apple"
+                      aria-pressed="true"
+                    ><span class="snake-color-swatch" aria-hidden="true"></span></button>
+                    <button class="snake-color-button" type="button" data-snake-apple-color="blue" aria-label="Blue apple">
+                      <span class="snake-color-swatch" aria-hidden="true"></span>
+                    </button>
+                  </div>
+                </div>
+                <div class="snake-panel-section snake-control-section">
+                  <div class="snake-pad" aria-label="Direction controls">
+                    <span class="snake-pad-spacer" aria-hidden="true"></span>
+                    <button type="button" data-snake-direction="up" aria-label="Up"></button>
+                    <span class="snake-pad-spacer" aria-hidden="true"></span>
+                    <button type="button" data-snake-direction="left" aria-label="Left"></button>
+                    <span class="snake-pad-spacer" aria-hidden="true"></span>
+                    <button type="button" data-snake-direction="right" aria-label="Right"></button>
+                    <span class="snake-pad-spacer" aria-hidden="true"></span>
+                    <button type="button" data-snake-direction="down" aria-label="Down"></button>
+                    <span class="snake-pad-spacer" aria-hidden="true"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden life-counter-window" data-app-window="life-counter">
+        <div class="title-bar">
+          <div class="title-bar-text">Counter</div>
+          <div class="title-bar-controls">
+            <button
+              class="life-counter-title-control"
+              type="button"
+              id="life-counter-width-decrease"
+              aria-label="Decrease Counter width"
+            >-</button>
+            <button
+              class="life-counter-title-control"
+              type="button"
+              id="life-counter-width-increase"
+              aria-label="Increase Counter width"
+            >+</button>
+            <button aria-label="Close" data-close="life-counter"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="life-counter-app" aria-label="Life counter">
+            <div class="life-counter-toolbar">
+              <span class="life-counter-note">For all your number-tracking needs.</span>
+              <div class="life-counter-toolbar-actions">
+                <button type="button" id="life-counter-add-player">Add Player</button>
+                <button type="button" id="life-counter-reset">Reset to 20</button>
+              </div>
+            </div>
+            <div class="life-counter-players" id="life-counter-players" aria-live="polite"></div>
           </div>
         </div>
       </div>
@@ -6357,6 +7255,12 @@
         </button>
         <button class="taskbar-icon" data-app="solitaire" aria-label="Solitaire">
           <img src="assets/app-icons/ico/game_freecell.ico" alt="Solitaire" />
+        </button>
+        <button class="taskbar-icon" data-app="snake" aria-label="Snake">
+          <img src="assets/snake-logo.png" alt="Snake" />
+        </button>
+        <button class="taskbar-icon" data-app="life-counter" aria-label="Counter">
+          <img src="assets/app-icons/ico/charmap_w2k.ico" alt="Counter" />
         </button>
         <button class="taskbar-icon" data-app="credits" aria-label="Credits">
           <img src="assets/app-icons/ico/search_laptop_1.ico" alt="Credits" data-credits-icon />
@@ -7017,6 +7921,9 @@
     </div>
 
     <div class="window virus-window is-hidden" id="virus-window" aria-hidden="true">
+      <div class="virus-lightning-field" aria-hidden="true">
+        <canvas class="virus-border-lightning-canvas" id="virus-border-lightning-canvas"></canvas>
+      </div>
       <div class="title-bar">
         <div class="title-bar-text">Virus</div>
       </div>
@@ -7046,7 +7953,7 @@
             decoding="async"
             alt=""
           />
-          <p>Fear not, I am here to protect you!</p>
+          <p id="virus-rescue-text">Fear not, I am here to protect you!</p>
         </div>
         <div class="virus-actions">
           <button type="button" id="virus-rescue-thanks">Thank you</button>
@@ -7291,6 +8198,22 @@
       const appWindows = document.querySelectorAll("[data-app-window]");
       const closeButtons = document.querySelectorAll("[data-close]");
       const draggableWindows = document.querySelectorAll(".window");
+      const snakeCanvas = document.getElementById("snake-canvas");
+      const snakeNoiseCanvas = document.getElementById("snake-noise-canvas");
+      const snakeStatus = document.getElementById("snake-status");
+      const snakeScore = document.getElementById("snake-score");
+      const snakeHighScore = document.getElementById("snake-high-score");
+      const snakeBoardSizeButtons = document.querySelectorAll("[data-snake-board-size]");
+      const snakeColorButtons = document.querySelectorAll("[data-snake-color]");
+      const snakeAppleColorButtons = document.querySelectorAll("[data-snake-apple-color]");
+      const snakeStart = document.getElementById("snake-start");
+      const snakeReset = document.getElementById("snake-reset");
+      const snakeDirectionButtons = document.querySelectorAll("[data-snake-direction]");
+      const lifeCounterPlayers = document.getElementById("life-counter-players");
+      const lifeCounterAddPlayer = document.getElementById("life-counter-add-player");
+      const lifeCounterReset = document.getElementById("life-counter-reset");
+      const lifeCounterWidthDecrease = document.getElementById("life-counter-width-decrease");
+      const lifeCounterWidthIncrease = document.getElementById("life-counter-width-increase");
       const creditsIcons = document.querySelectorAll("[data-credits-icon]");
       const calendarButton = document.getElementById("taskbar-clock-button");
       const calendarPopout = document.getElementById("calendar-popout");
@@ -7437,11 +8360,14 @@
       const bidenBlastWindow = document.getElementById("biden-blast-window");
       const bidenBlastOk = document.getElementById("biden-blast-ok");
       const virusWindow = document.getElementById("virus-window");
+      const virusBorderLightningCanvas = document.getElementById("virus-border-lightning-canvas");
       const virusYes = document.getElementById("virus-yes");
       const virusNo = document.getElementById("virus-no");
       const virusRescueWindow = document.getElementById("virus-rescue-window");
+      const virusRescueText = document.getElementById("virus-rescue-text");
       const virusRescueThanks = document.getElementById("virus-rescue-thanks");
       const openFrontiersPdf = document.getElementById("open-frontiers-pdf");
+      const openPulsePresentation = document.getElementById("open-pulse-presentation");
       const openDronePresentation = document.getElementById("open-drone-presentation");
       const openTcpPaper = document.getElementById("open-tcp-paper");
       const openTcpPresentation = document.getElementById("open-tcp-presentation");
@@ -7449,6 +8375,7 @@
       const openBioe190Presentation = document.getElementById("open-bioe190-presentation");
       const openBioe190Proposal = document.getElementById("open-bioe190-proposal");
       const pdfIframe = document.getElementById("pdf-iframe");
+      const pulsePresentationIframe = document.getElementById("pulse-presentation-iframe");
       const dronePresentationIframe = document.getElementById("drone-presentation-iframe");
       const studyTree = document.getElementById("study-tree");
       const studyFilePane = document.getElementById("study-file-pane");
@@ -7468,6 +8395,12 @@
       const studyStatusRight = document.getElementById("study-status-right");
       const studyPdfTitle = document.getElementById("study-pdf-title");
       const studyPdfIframe = document.getElementById("study-pdf-iframe");
+      const pulseProjectImage = document.getElementById("pulse-project-image");
+      const pulseProjectCaption = document.getElementById("pulse-project-caption");
+      const pulseProjectDescription = document.getElementById("pulse-project-description");
+      const pulseProjectPrev = document.getElementById("pulse-project-prev");
+      const pulseProjectCounter = document.getElementById("pulse-project-counter");
+      const pulseProjectNext = document.getElementById("pulse-project-next");
       const tcpResultsImage = document.getElementById("tcp-results-image");
       const tcpResultsCaption = document.getElementById("tcp-results-caption");
       const tcpResultsDescription = document.getElementById("tcp-results-description");
@@ -7489,6 +8422,39 @@
       // const CLASH_API_TOKEN = "";
       // const CLASH_PLAYER_TAG = "28CYYU08P";
       // const CLASH_SAMPLE_SIZE = 25;
+      const PULSE_PROJECT_BASE_URL = "https://rohinshanker.github.io/pulse-oximeter";
+      const PULSE_PRESENTATION_PDF_URL =
+        `${PULSE_PROJECT_BASE_URL}/course%20resources/pulse%20ox%20slides.pdf#page=1&zoom=100&toolbar=0&navpanes=0`;
+      const pulseProjectFigures = [
+        {
+          src: `${PULSE_PROJECT_BASE_URL}/site-assets/demo-photo.jpg`,
+          alt: "Working pulse oximeter demo with the yellow finger sleeve, OLED readout, laptop waveform, and commercial reference oximeter.",
+          title: "Demo and validation",
+          description:
+            "Final bench demo with finger sleeve, live serial waveform, OLED readout, and commercial reference oximeter.",
+        },
+        {
+          src: `${PULSE_PROJECT_BASE_URL}/site-assets/breadboard-2.jpg`,
+          alt: "Early breadboard pulse oximeter circuit with Arduino and jumper wires.",
+          title: "Prototype iteration 1",
+          description:
+            "Early analog chain and LED-control testing on a compact breadboard.",
+        },
+        {
+          src: `${PULSE_PROJECT_BASE_URL}/site-assets/breadboard-1.jpg`,
+          alt: "Expanded pulse oximeter prototype with multiple breadboards, OLED displays, and a yellow finger sleeve.",
+          title: "Prototype iteration 2",
+          description:
+            "Expanded bench setup with display modules, separated wiring, and the printed finger sleeve.",
+        },
+        {
+          src: `${PULSE_PROJECT_BASE_URL}/site-assets/breadboard-3.jpg`,
+          alt: "Final breadboard prototype with Arduino MKR Zero, filtering circuit, and OLED display.",
+          title: "Final circuit",
+          description:
+            "Cleaner final circuit with MKR Zero, analog filtering, OLED readout, and the optical finger interface.",
+        },
+      ];
       const TCP_PROJECT_BASE_URL = "https://rohinshanker.github.io/EE-122-simulation";
       const tcpResultFigures = [
         {
@@ -7533,11 +8499,135 @@
         },
       ];
 
+      const SNAKE_DEFAULT_GRID_SIZE = 16;
+      const SNAKE_HIGH_SCORE_KEY = "personalSiteSnakeHighScores";
+      const SNAKE_APPLE_SCORE_INTERVAL = 10;
+      const SNAKE_SIGNATURE_SWEEP_MS = 3200;
+      const SNAKE_SIGNATURE_SWEEP_CELL_RADIUS = 2;
+      const SNAKE_COLLECTION_PULSE_MS = 820;
+      const SNAKE_COLLECTION_PULSE_CELL_RADIUS = 2.5;
+      const SNAKE_TICK_MS = 118;
+      const SNAKE_COLOR_THEMES = Object.freeze({
+        green: {
+          head: "#62ff78",
+          body: "#2f9a4b",
+          glow: "rgba(98, 255, 120, 0.75)",
+          sweep: "rgba(98, 255, 120, 0.32)",
+          sweepRing: "rgba(98, 255, 120, 0.16)",
+          pulse: (alpha) => `rgba(98, 255, 120, ${alpha})`,
+        },
+        purple: {
+          head: "#c77dff",
+          body: "#7b2cbf",
+          glow: "rgba(199, 125, 255, 0.75)",
+          sweep: "rgba(199, 125, 255, 0.32)",
+          sweepRing: "rgba(199, 125, 255, 0.16)",
+          pulse: (alpha) => `rgba(199, 125, 255, ${alpha})`,
+        },
+        red: {
+          head: "#ff6257",
+          body: "#a8211d",
+          glow: "rgba(255, 98, 87, 0.75)",
+          sweep: "rgba(255, 98, 87, 0.32)",
+          sweepRing: "rgba(255, 98, 87, 0.16)",
+          pulse: (alpha) => `rgba(255, 98, 87, ${alpha})`,
+        },
+        blue: {
+          head: "#65b7ff",
+          body: "#2368c4",
+          glow: "rgba(101, 183, 255, 0.75)",
+          sweep: "rgba(101, 183, 255, 0.32)",
+          sweepRing: "rgba(101, 183, 255, 0.16)",
+          pulse: (alpha) => `rgba(101, 183, 255, ${alpha})`,
+        },
+      });
+      const SNAKE_DIRECTIONS = Object.freeze({
+        up: { x: 0, y: -1 },
+        down: { x: 0, y: 1 },
+        left: { x: -1, y: 0 },
+        right: { x: 1, y: 0 },
+      });
+      const SNAKE_KEY_DIRECTIONS = Object.freeze({
+        ArrowUp: "up",
+        w: "up",
+        W: "up",
+        ArrowDown: "down",
+        s: "down",
+        S: "down",
+        ArrowLeft: "left",
+        a: "left",
+        A: "left",
+        ArrowRight: "right",
+        d: "right",
+        D: "right",
+      });
+
+      const LIFE_COUNTER_STARTING_LIFE = 20;
+      const LIFE_COUNTER_MIN_VALUE = -9999;
+      const LIFE_COUNTER_MAX_VALUE = 99999;
+      const LIFE_COUNTER_STEP_VALUES = [1, 5, 10, 25, 50, 100, 500, 1000, 5000];
+      const LIFE_COUNTER_WINDOW_MIN_WIDTH = 254;
+      const LIFE_COUNTER_WINDOW_DEFAULT_WIDTH = 448;
+      const LIFE_COUNTER_WINDOW_COLUMN_WIDTH = 192;
+      const LIFE_COUNTER_WINDOW_COLUMN_GAP = 8;
+      const LIFE_COUNTER_WINDOW_EXTRA_WIDTH = 56;
+      const LIFE_COUNTER_WINDOW_VIEWPORT_PADDING = 24;
+      const LIFE_COUNTER_DIGIT_SOURCES = {
+        "0": "assets/minesweeper_assets/digital_digits/digital_0.png",
+        "1": "assets/minesweeper_assets/digital_digits/digital_1.png",
+        "2": "assets/minesweeper_assets/digital_digits/digital_2.png",
+        "3": "assets/minesweeper_assets/digital_digits/digital_3.png",
+        "4": "assets/minesweeper_assets/digital_digits/digital_4.png",
+        "5": "assets/minesweeper_assets/digital_digits/digital_5.png",
+        "6": "assets/minesweeper_assets/digital_digits/digital_6.png",
+        "7": "assets/minesweeper_assets/digital_digits/digital_7.png",
+        "8": "assets/minesweeper_assets/digital_digits/digital_8.png",
+        "9": "assets/minesweeper_assets/digital_digits/digital_9.png",
+        "-": "assets/minesweeper_assets/digital_digits/digital_minus.png",
+        " ": "assets/minesweeper_assets/digital_digits/digital_blank.png",
+      };
+
       let topZ = 10;
       let calendarDate = new Date();
       let windowOffsetIndex = 0;
+      let snakeState = {
+        snake: [],
+        apples: [],
+        collectionPulses: [],
+        occupiedCells: new Set(),
+        direction: "right",
+        nextDirection: "right",
+        score: 0,
+        gridSize: SNAKE_DEFAULT_GRID_SIZE,
+        color: "green",
+        appleColor: "red",
+        highScores: {},
+        running: false,
+        hasStarted: false,
+        gameOver: false,
+        tickTimer: null,
+        noiseFrame: null,
+      };
+      let snakePointerPauseSuppressUntil = 0;
+      let snakeGridCanvas = null;
+      let snakeGridCacheKey = "";
+      let snakeHudRenderCache = {
+        score: "",
+        highScore: "",
+        startText: "",
+        statusText: "",
+        gridSize: null,
+        color: "",
+        appleColor: "",
+      };
+      let lifeCounterPlayersState = [
+        { id: 1, name: "Player 1", life: LIFE_COUNTER_STARTING_LIFE, selectedStep: 1 },
+      ];
+      let lifeCounterNextPlayerId = 2;
       let activeRandomEventKey = "";
-      let randomEventClickCount = 0;
+      let generalRandomEventClickCount = 0;
+      let minesweeperRandomEventClickCount = 0;
+      let solitaireRandomEventClickCount = 0;
       let randomEventIdleTimer = null;
       let activeAppDwellWindow = null;
       let activeAppDwellStartedAt = 0;
@@ -7559,6 +8649,9 @@
       let wordErrorStackClosing = false;
       let virusExploding = false;
       let virusRescueAnchor = null;
+      let virusStrikeTimer = null;
+      let virusStrikeFrame = null;
+      let virusStrikeCanvas = null;
       let lostGraceOverlayTimer = null;
       let redToolTypingStartTimer = null;
       let redToolReplyTimer = null;
@@ -7585,12 +8678,40 @@
       let fateResolveTimer = null;
       let fateResultOpenTimer = null;
       let fateState = "idle";
+      let pulseProjectIndex = 0;
       let tcpResultsIndex = 0;
       let droneVideoIndex = 0;
       let activeWindow = null;
       const expandedWindowState = new WeakMap();
       // let clashRoyaleLoaded = false;
       // let clashRoyaleLoading = false;
+
+      const lockMobileViewportZoom = () => {
+        let lastTouchEndAt = 0;
+        const blockGesture = (event) => event.preventDefault();
+        ["gesturestart", "gesturechange", "gestureend"].forEach((eventName) => {
+          document.addEventListener(eventName, blockGesture, { passive: false });
+        });
+        document.addEventListener(
+          "touchmove",
+          (event) => {
+            if (event.touches && event.touches.length > 1) event.preventDefault();
+          },
+          { passive: false }
+        );
+        document.addEventListener(
+          "touchend",
+          (event) => {
+            const target =
+              event.target instanceof Element ? event.target : event.target?.parentElement;
+            if (target?.closest("input, textarea, select")) return;
+            const now = Date.now();
+            if (now - lastTouchEndAt <= 300) event.preventDefault();
+            lastTouchEndAt = now;
+          },
+          { passive: false }
+        );
+      };
 
       const updateClock = () => {
         const now = new Date();
@@ -7785,10 +8906,30 @@
       const RANDOM_EVENT_TASKBAR_CLEARANCE = 64;
       const RANDOM_EVENT_PLACEMENT_ATTEMPTS = 42;
       const RANDOM_EVENT_OBSTACLE_GAP = 10;
-      const RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 10;
+      const GENERAL_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 17;
+      const MINESWEEPER_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 22;
+      const SOLITAIRE_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 27;
       const RANDOM_EVENT_IDLE_DELAY_MS = 4 * 60 * 1000;
       const RANDOM_EVENT_APP_DWELL_MS = 2 * 60 * 1000;
+      const RANDOM_EVENT_DELAY_MIN_MS = 0;
+      const RANDOM_EVENT_DELAY_MAX_MS = 2000;
+      const RANDOM_EVENT_DELAY_STEP_MS = 100;
+      const RANDOM_EVENT_REPEAT_DAMPEN_MS = 2 * 60 * 1000;
+      const RANDOM_EVENT_REPEAT_DAMPEN_FACTOR = 0.5;
+      const RANDOM_EVENT_KIND_INTERACTIVE = "interactive";
+      const RANDOM_EVENT_KIND_NON_INTERACTIVE = "noninteractive";
+      const RANDOM_EVENT_KIND_LIMITS = Object.freeze({
+        [RANDOM_EVENT_KIND_INTERACTIVE]: 1,
+        [RANDOM_EVENT_KIND_NON_INTERACTIVE]: 2,
+      });
+      const RANDOM_EVENT_MAX_LOCK_RELEASE_MS = 30 * 1000;
       const randomEventDefinitions = [];
+      const randomEventPendingDefinitions = new Set();
+      const randomEventKindMaxSince = {
+        [RANDOM_EVENT_KIND_INTERACTIVE]: 0,
+        [RANDOM_EVENT_KIND_NON_INTERACTIVE]: 0,
+      };
+      const randomEventRecentInteractiveRuns = new Map();
 
       const randomEventViewportWindows = () =>
         [
@@ -8256,6 +9397,7 @@
       };
 
       const showMcAfeePrompt = () => {
+        if (mcAfeeUpdateLater) mcAfeeUpdateLater.disabled = false;
         showMcAfeeWindow(mcAfeePromptWindow);
       };
 
@@ -9002,6 +10144,513 @@
         drawDistressPanelNoiseCanvas(distressStatusNoiseCanvas);
       };
 
+      const isSnakeWindowVisible = () => {
+        const win = getAppWindow("snake");
+        return Boolean(win && isWindowVisible(win));
+      };
+
+      const loadSnakeHighScores = () => {
+        try {
+          const stored = JSON.parse(localStorage.getItem(SNAKE_HIGH_SCORE_KEY) || "{}");
+          return stored && typeof stored === "object" ? stored : {};
+        } catch {
+          return {};
+        }
+      };
+
+      const saveSnakeHighScores = () => {
+        try {
+          localStorage.setItem(SNAKE_HIGH_SCORE_KEY, JSON.stringify(snakeState.highScores));
+        } catch {
+          // High scores are best-effort when storage is unavailable.
+        }
+      };
+
+      const getSnakeHighScore = () => {
+        const key = String(snakeState.gridSize);
+        const score = Number(snakeState.highScores[key]);
+        return Number.isFinite(score) ? score : 0;
+      };
+
+      const updateSnakeHighScore = () => {
+        const key = String(snakeState.gridSize);
+        if (snakeState.score <= getSnakeHighScore()) return;
+        snakeState.highScores[key] = snakeState.score;
+        saveSnakeHighScores();
+      };
+
+      const updateSnakeBoardSizeButtons = () => {
+        snakeBoardSizeButtons.forEach((button) => {
+          const isSelected = Number(button.dataset.snakeBoardSize) === snakeState.gridSize;
+          button.classList.toggle("is-selected", isSelected);
+          button.setAttribute("aria-pressed", String(isSelected));
+        });
+      };
+
+      const updateSnakeColorButtons = () => {
+        snakeColorButtons.forEach((button) => {
+          const isSelected = button.dataset.snakeColor === snakeState.color;
+          button.classList.toggle("is-selected", isSelected);
+          button.setAttribute("aria-pressed", String(isSelected));
+        });
+      };
+
+      const updateSnakeAppleColorButtons = () => {
+        snakeAppleColorButtons.forEach((button) => {
+          const isSelected = button.dataset.snakeAppleColor === snakeState.appleColor;
+          button.classList.toggle("is-selected", isSelected);
+          button.setAttribute("aria-pressed", String(isSelected));
+        });
+      };
+
+      const getSnakeColorTheme = () =>
+        SNAKE_COLOR_THEMES[snakeState.color] || SNAKE_COLOR_THEMES.green;
+
+      const getSnakeAppleColorTheme = () =>
+        SNAKE_COLOR_THEMES[snakeState.appleColor] || SNAKE_COLOR_THEMES.red;
+
+      const updateSnakeHud = () => {
+        const scoreText = String(snakeState.score);
+        const highScoreText = String(getSnakeHighScore());
+        const startText = snakeState.running ? "Pause" : "Start";
+        if (snakeScore && snakeHudRenderCache.score !== scoreText) {
+          snakeScore.textContent = scoreText;
+        }
+        if (snakeHighScore && snakeHudRenderCache.highScore !== highScoreText) {
+          snakeHighScore.textContent = highScoreText;
+        }
+        if (snakeStart && snakeHudRenderCache.startText !== startText) {
+          snakeStart.textContent = startText;
+        }
+        if (snakeHudRenderCache.gridSize !== snakeState.gridSize) {
+          updateSnakeBoardSizeButtons();
+        }
+        if (snakeHudRenderCache.color !== snakeState.color) {
+          updateSnakeColorButtons();
+        }
+        if (snakeHudRenderCache.appleColor !== snakeState.appleColor) {
+          updateSnakeAppleColorButtons();
+        }
+        snakeHudRenderCache.score = scoreText;
+        snakeHudRenderCache.highScore = highScoreText;
+        snakeHudRenderCache.startText = startText;
+        snakeHudRenderCache.gridSize = snakeState.gridSize;
+        snakeHudRenderCache.color = snakeState.color;
+        snakeHudRenderCache.appleColor = snakeState.appleColor;
+        let statusText = "Ready";
+        if (snakeState.gameOver) {
+          statusText = "Signal lost";
+        } else if (snakeState.running) {
+          statusText = "Tracking";
+        } else if (snakeState.hasStarted) {
+          statusText = "Paused";
+        }
+        if (snakeStatus && snakeHudRenderCache.statusText !== statusText) {
+          snakeStatus.textContent = statusText;
+        }
+        snakeHudRenderCache.statusText = statusText;
+      };
+
+      const resizeSnakeCanvas = (canvas) => {
+        if (!canvas) return null;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+        const ratio = window.devicePixelRatio || 1;
+        const width = Math.max(1, Math.round(canvas.clientWidth || 320));
+        const height = Math.max(1, Math.round(canvas.clientHeight || width));
+        if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+          canvas.width = Math.round(width * ratio);
+          canvas.height = Math.round(height * ratio);
+        }
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        return { ctx, width, height, ratio };
+      };
+
+      const getSnakeGridLayer = (width, height, ratio) => {
+        const pixelWidth = Math.max(1, Math.round(width * ratio));
+        const pixelHeight = Math.max(1, Math.round(height * ratio));
+        const cacheKey = `${pixelWidth}x${pixelHeight}:${ratio}:${snakeState.gridSize}`;
+        if (!snakeGridCanvas) snakeGridCanvas = document.createElement("canvas");
+        if (
+          snakeGridCacheKey === cacheKey &&
+          snakeGridCanvas.width === pixelWidth &&
+          snakeGridCanvas.height === pixelHeight
+        ) {
+          return snakeGridCanvas;
+        }
+        snakeGridCacheKey = cacheKey;
+        snakeGridCanvas.width = pixelWidth;
+        snakeGridCanvas.height = pixelHeight;
+        const gridCtx = snakeGridCanvas.getContext("2d");
+        if (!gridCtx) return snakeGridCanvas;
+        const cellWidth = width / snakeState.gridSize;
+        const cellHeight = height / snakeState.gridSize;
+        gridCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        gridCtx.clearRect(0, 0, width, height);
+        gridCtx.fillStyle = "#020403";
+        gridCtx.fillRect(0, 0, width, height);
+        gridCtx.strokeStyle = "rgba(95, 255, 122, 0.14)";
+        gridCtx.lineWidth = 1;
+        for (let x = 0; x <= snakeState.gridSize; x += 1) {
+          const px = x * cellWidth;
+          gridCtx.beginPath();
+          gridCtx.moveTo(px, 0);
+          gridCtx.lineTo(px, height);
+          gridCtx.stroke();
+        }
+        for (let y = 0; y <= snakeState.gridSize; y += 1) {
+          const py = y * cellHeight;
+          gridCtx.beginPath();
+          gridCtx.moveTo(0, py);
+          gridCtx.lineTo(width, py);
+          gridCtx.stroke();
+        }
+        return snakeGridCanvas;
+      };
+
+      const snakeCellsMatch = (a, b) => a.x === b.x && a.y === b.y;
+
+      const getSnakeCellKey = (x, y) => y * snakeState.gridSize + x;
+
+      const rebuildSnakeOccupiedCells = () => {
+        snakeState.occupiedCells = new Set(
+          snakeState.snake.map((segment) => getSnakeCellKey(segment.x, segment.y))
+        );
+      };
+
+      const getSnakeAppleTargetCount = () =>
+        Math.max(1, Math.floor(snakeState.score / SNAKE_APPLE_SCORE_INTERVAL) + 1);
+
+      const getSnakeRandomApple = (existingApples = snakeState.apples) => {
+        const openCells = [];
+        const appleCells = new Set(
+          existingApples.map((apple) => getSnakeCellKey(apple.x, apple.y))
+        );
+        for (let y = 0; y < snakeState.gridSize; y += 1) {
+          for (let x = 0; x < snakeState.gridSize; x += 1) {
+            const cellKey = getSnakeCellKey(x, y);
+            if (!snakeState.occupiedCells.has(cellKey) && !appleCells.has(cellKey)) {
+              openCells.push({ x, y });
+            }
+          }
+        }
+        const cell = openCells[Math.floor(Math.random() * openCells.length)];
+        return cell ? { ...cell, sweepOffset: Math.random() } : null;
+      };
+
+      const refillSnakeApples = () => {
+        const maxApples = Math.max(0, snakeState.gridSize * snakeState.gridSize - snakeState.snake.length);
+        const targetCount = Math.min(getSnakeAppleTargetCount(), maxApples);
+        while (snakeState.apples.length < targetCount) {
+          const apple = getSnakeRandomApple();
+          if (!apple) break;
+          snakeState.apples.push(apple);
+        }
+        if (snakeState.apples.length > targetCount) {
+          snakeState.apples = snakeState.apples.slice(0, targetCount);
+        }
+      };
+
+      const drawSnakeGame = () => {
+        const prepared = resizeSnakeCanvas(snakeCanvas);
+        if (!prepared) return;
+        const { ctx, width, height, ratio } = prepared;
+        const cellWidth = width / snakeState.gridSize;
+        const cellHeight = height / snakeState.gridSize;
+
+        ctx.drawImage(getSnakeGridLayer(width, height, ratio), 0, 0, width, height);
+
+        const snakeTheme = getSnakeColorTheme();
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = snakeTheme.body;
+        ctx.shadowColor = snakeTheme.glow;
+        ctx.shadowBlur = 7;
+        snakeState.snake.forEach((segment, index) => {
+          const inset = index === 0 ? 2 : 3;
+          const segmentScale = 0.8;
+          const baseX = segment.x * cellWidth + inset;
+          const baseY = segment.y * cellHeight + inset;
+          const baseWidth = cellWidth - inset * 2;
+          const baseHeight = cellHeight - inset * 2;
+          const segmentWidth = baseWidth * segmentScale;
+          const segmentHeight = baseHeight * segmentScale;
+          ctx.fillStyle = index === 0 ? snakeTheme.head : snakeTheme.body;
+          ctx.fillRect(
+            baseX + (baseWidth - segmentWidth) / 2,
+            baseY + (baseHeight - segmentHeight) / 2,
+            segmentWidth,
+            segmentHeight
+          );
+        });
+        ctx.restore();
+
+        const now = performance.now();
+        const appleTheme = getSnakeAppleColorTheme();
+        snakeState.apples.forEach((apple) => {
+          const appleX = apple.x * cellWidth + cellWidth / 2;
+          const appleY = apple.y * cellHeight + cellHeight / 2;
+          const cellSize = Math.min(cellWidth, cellHeight);
+          const dotRadius = Math.max(2.2, cellSize * 0.16);
+          const ringRadius = Math.max(dotRadius + 2, cellSize * 0.38);
+          const sweepRadius = cellSize * SNAKE_SIGNATURE_SWEEP_CELL_RADIUS;
+          const sweepOffset = Number.isFinite(apple.sweepOffset) ? apple.sweepOffset : 0;
+          const sweepAngle =
+            ((now / SNAKE_SIGNATURE_SWEEP_MS + sweepOffset) % 1) * Math.PI * 2;
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.shadowColor = appleTheme.glow;
+          ctx.shadowBlur = Math.max(5, cellSize * 0.35);
+          for (let trailIndex = 0; trailIndex < 18; trailIndex += 1) {
+            const trailStart = trailIndex / 18;
+            const trailEnd = (trailIndex + 1) / 18;
+            const startAngle = sweepAngle - trailEnd * 0.95;
+            const endAngle = sweepAngle - trailStart * 0.95;
+            const trailAlpha = 0.025 + Math.pow(1 - trailStart, 1.8) * 0.17;
+            ctx.fillStyle = appleTheme.pulse(trailAlpha);
+            ctx.beginPath();
+            ctx.arc(appleX, appleY, sweepRadius, startAngle, endAngle);
+            ctx.arc(appleX, appleY, ringRadius + 1, endAngle, startAngle, true);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.lineCap = "round";
+          ctx.shadowBlur = Math.max(6, cellSize * 0.42);
+          ctx.strokeStyle = appleTheme.pulse(0.4);
+          ctx.lineWidth = Math.max(1.5, cellSize * 0.12);
+          ctx.beginPath();
+          ctx.moveTo(
+            appleX + Math.cos(sweepAngle) * (ringRadius + 1),
+            appleY + Math.sin(sweepAngle) * (ringRadius + 1)
+          );
+          ctx.lineTo(
+            appleX + Math.cos(sweepAngle) * sweepRadius,
+            appleY + Math.sin(sweepAngle) * sweepRadius
+          );
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = appleTheme.sweepRing;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(appleX, appleY, ringRadius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = appleTheme.head;
+          ctx.shadowColor = appleTheme.glow;
+          ctx.shadowBlur = 5;
+          ctx.beginPath();
+          ctx.arc(appleX, appleY, dotRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        snakeState.collectionPulses = snakeState.collectionPulses.filter((pulse) => {
+          const age = now - pulse.startedAt;
+          return age < SNAKE_COLLECTION_PULSE_MS;
+        });
+        snakeState.collectionPulses.forEach((pulse) => {
+          const age = now - pulse.startedAt;
+          const progress = Math.max(0, Math.min(1, age / SNAKE_COLLECTION_PULSE_MS));
+          const pulseX = pulse.x * cellWidth + cellWidth / 2;
+          const pulseY = pulse.y * cellHeight + cellHeight / 2;
+          const cellSize = Math.min(cellWidth, cellHeight);
+          const radius = Math.max(
+            2.5,
+            cellSize * (0.18 + progress * (SNAKE_COLLECTION_PULSE_CELL_RADIUS - 0.18))
+          );
+          const alpha = (1 - progress) * 0.46;
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.strokeStyle = appleTheme.pulse(alpha);
+          ctx.lineWidth = 1 + (1 - progress) * 0.7;
+          ctx.beginPath();
+          ctx.arc(pulseX, pulseY, radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        if (snakeState.gameOver) {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
+          ctx.fillRect(0, height / 2 - 28, width, 56);
+          ctx.fillStyle = "rgba(98, 255, 120, 0.9)";
+          ctx.font = "bold 16px 'Courier New', monospace";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("SIGNAL LOST", width / 2, height / 2 - 9);
+          ctx.font = "11px 'Courier New', monospace";
+          ctx.fillText("Press RESET or ENTER to try again.", width / 2, height / 2 + 12);
+        } else if (snakeState.hasStarted && !snakeState.running) {
+          const pauseBarWidth = Math.max(8, width * 0.035);
+          const pauseBarHeight = Math.max(40, height * 0.16);
+          const pauseGap = Math.max(10, width * 0.04);
+          const pauseX = width / 2 - pauseGap / 2 - pauseBarWidth;
+          const pauseY = height / 2 - pauseBarHeight / 2;
+          ctx.save();
+          ctx.fillStyle = "rgba(0, 0, 0, 0.34)";
+          ctx.fillRect(0, height / 2 - pauseBarHeight * 0.7, width, pauseBarHeight * 1.4);
+          ctx.globalCompositeOperation = "lighter";
+          ctx.fillStyle = "rgba(98, 255, 120, 0.92)";
+          ctx.shadowColor = "rgba(98, 255, 120, 0.82)";
+          ctx.shadowBlur = 12;
+          ctx.fillRect(pauseX, pauseY, pauseBarWidth, pauseBarHeight);
+          ctx.fillRect(pauseX + pauseBarWidth + pauseGap, pauseY, pauseBarWidth, pauseBarHeight);
+          ctx.restore();
+        }
+      };
+
+      const drawSnakeNoise = () => {
+        if (!isSnakeWindowVisible()) return;
+        drawDistressPanelNoiseCanvas(snakeNoiseCanvas);
+      };
+
+      const stopSnakeNoiseAnimation = () => {
+        if (!snakeState.noiseFrame) return;
+        cancelAnimationFrame(snakeState.noiseFrame);
+        snakeState.noiseFrame = null;
+      };
+
+      const startSnakeNoiseAnimation = () => {
+        if (snakeState.noiseFrame) return;
+        const animate = () => {
+          if (!isSnakeWindowVisible()) {
+            snakeState.noiseFrame = null;
+            return;
+          }
+          drawSnakeGame();
+          drawSnakeNoise();
+          snakeState.noiseFrame = requestAnimationFrame(animate);
+        };
+        snakeState.noiseFrame = requestAnimationFrame(animate);
+      };
+
+      const clearSnakeTick = () => {
+        if (!snakeState.tickTimer) return;
+        clearTimeout(snakeState.tickTimer);
+        snakeState.tickTimer = null;
+      };
+
+      const setSnakeDirection = (direction) => {
+        if (!SNAKE_DIRECTIONS[direction]) return;
+        const current = SNAKE_DIRECTIONS[snakeState.direction];
+        const next = SNAKE_DIRECTIONS[direction];
+        if (current.x + next.x === 0 && current.y + next.y === 0) return;
+        snakeState.nextDirection = direction;
+      };
+
+      const resetSnakeGame = () => {
+        clearSnakeTick();
+        const centerY = Math.floor(snakeState.gridSize / 2);
+        const startX = Math.max(3, Math.floor(snakeState.gridSize / 2));
+        snakeState.snake = [
+          { x: startX, y: centerY },
+          { x: startX - 1, y: centerY },
+          { x: startX - 2, y: centerY },
+        ];
+        snakeState.direction = "right";
+        snakeState.nextDirection = "right";
+        snakeState.score = 0;
+        snakeState.running = false;
+        snakeState.hasStarted = false;
+        snakeState.gameOver = false;
+        snakeState.apples = [];
+        snakeState.collectionPulses = [];
+        rebuildSnakeOccupiedCells();
+        refillSnakeApples();
+        updateSnakeHud();
+        drawSnakeGame();
+        drawSnakeNoise();
+      };
+
+      const endSnakeGame = () => {
+        clearSnakeTick();
+        snakeState.running = false;
+        snakeState.gameOver = true;
+        updateSnakeHud();
+        drawSnakeGame();
+        triggerRandomEvents("gameLoss", { game: "snake" });
+      };
+
+      const snakeStep = () => {
+        if (!snakeState.running) return;
+        snakeState.direction = snakeState.nextDirection;
+        const direction = SNAKE_DIRECTIONS[snakeState.direction];
+        const head = snakeState.snake[0];
+        const nextHead = {
+          x: head.x + direction.x,
+          y: head.y + direction.y,
+        };
+
+        const hitWall =
+          nextHead.x < 0 ||
+          nextHead.y < 0 ||
+          nextHead.x >= snakeState.gridSize ||
+          nextHead.y >= snakeState.gridSize;
+        const nextHeadKey = getSnakeCellKey(nextHead.x, nextHead.y);
+        const hitSelf = snakeState.occupiedCells.has(nextHeadKey);
+        if (hitWall || hitSelf) {
+          endSnakeGame();
+          return;
+        }
+
+        snakeState.snake.unshift(nextHead);
+        snakeState.occupiedCells.add(nextHeadKey);
+        const eatenAppleIndex = snakeState.apples.findIndex((apple) =>
+          snakeCellsMatch(nextHead, apple)
+        );
+        if (eatenAppleIndex !== -1) {
+          const eatenApple = snakeState.apples[eatenAppleIndex];
+          snakeState.score += 1;
+          updateSnakeHighScore();
+          snakeState.collectionPulses.push({
+            x: eatenApple.x,
+            y: eatenApple.y,
+            startedAt: performance.now(),
+          });
+          snakeState.apples.splice(eatenAppleIndex, 1);
+          refillSnakeApples();
+        } else {
+          const tail = snakeState.snake.pop();
+          if (tail) snakeState.occupiedCells.delete(getSnakeCellKey(tail.x, tail.y));
+        }
+
+        updateSnakeHud();
+        drawSnakeGame();
+        snakeState.tickTimer = setTimeout(snakeStep, SNAKE_TICK_MS);
+      };
+
+      const startSnakeGame = () => {
+        if (snakeState.gameOver) resetSnakeGame();
+        if (snakeState.running) return;
+        snakeState.running = true;
+        snakeState.hasStarted = true;
+        updateSnakeHud();
+        startSnakeNoiseAnimation();
+        if (snakeCanvas) snakeCanvas.focus();
+        clearSnakeTick();
+        snakeState.tickTimer = setTimeout(snakeStep, SNAKE_TICK_MS);
+      };
+
+      const pauseSnakeGame = () => {
+        if (!snakeState.running) return;
+        snakeState.running = false;
+        clearSnakeTick();
+        updateSnakeHud();
+        drawSnakeGame();
+      };
+
+      const toggleSnakeGame = () => {
+        if (snakeState.running) {
+          pauseSnakeGame();
+          return;
+        }
+        startSnakeGame();
+      };
+
+      const shouldSuppressSnakePointerClick = () => {
+        const shouldSuppress = performance.now() < snakePointerPauseSuppressUntil;
+        if (shouldSuppress) snakePointerPauseSuppressUntil = 0;
+        return shouldSuppress;
+      };
+
       const drawDistressOffDisplay = (ctx, width, height) => {
         ctx.fillStyle = "#020403";
         ctx.fillRect(0, 0, width, height);
@@ -9371,6 +11020,13 @@
         if (today.getDay() !== 4) return false;
         const dateKey = getLocalDateKey(today);
         if (hasShownFelizJuevesToday(dateKey)) return false;
+        if (
+          !randomEventKindCanSchedule(RANDOM_EVENT_KIND_NON_INTERACTIVE, {
+            consumeRelease: true,
+          })
+        ) {
+          return false;
+        }
         markFelizJuevesShown(dateKey);
         showFelizJuevesWindow();
         return true;
@@ -10538,53 +12194,411 @@
       const isVirusVisible = () => virusEventWindows().some(isVirusWindowVisible);
 
       const setVirusEventWindowPosition = (win, left, top) => {
-        setRandomEventWindowPosition(win, left, top, {
-          onPosition: (nextLeft, nextTop) => {
-            if (win === virusWindow) {
-              virusRescueAnchor = { left: nextLeft, top: nextTop };
-            }
-          },
-        });
+        setRandomEventWindowPosition(win, left, top);
       };
 
       const positionVirusEventWindow = (win) => {
-        positionRandomEventWindowInViewport(win, {
-          onPosition: (nextLeft, nextTop) => {
-            if (win === virusWindow) {
-              virusRescueAnchor = { left: nextLeft, top: nextTop };
-            }
-          },
-        });
+        positionRandomEventWindowInViewport(win);
       };
 
       const clampVirusEventWindowToViewport = (win) => {
-        clampRandomEventWindowToViewport(win, {
-          onPosition: (nextLeft, nextTop) => {
-            if (win === virusWindow) {
-              virusRescueAnchor = { left: nextLeft, top: nextTop };
-            }
-          },
-        });
+        clampRandomEventWindowToViewport(win);
       };
 
       const clampVirusEventWindowAfterMediaLoad = (win) => {
-        clampRandomEventWindowAfterMediaLoad(win, {
-          onPosition: (nextLeft, nextTop) => {
-            if (win === virusWindow) {
-              virusRescueAnchor = { left: nextLeft, top: nextTop };
-            }
-          },
-        });
+        clampRandomEventWindowAfterMediaLoad(win);
       };
 
       const clampVisibleVirusEventWindows = () => {
         virusEventWindows().forEach((win) => clampVirusEventWindowToViewport(win));
       };
 
+      const chooseVirusRescueAnchor = () => {
+        if (!virusWindow) return { left: 12, top: 12 };
+        const initialRect = virusWindow.getBoundingClientRect();
+        const padding = RANDOM_EVENT_VIEWPORT_PADDING;
+        const width = Math.max(initialRect.width, 260);
+        const height = Math.max(initialRect.height, 140);
+        const maxLeft = Math.max(
+          padding,
+          window.innerWidth - width - padding
+        );
+        const maxTop = Math.max(
+          padding,
+          window.innerHeight - height - RANDOM_EVENT_TASKBAR_CLEARANCE
+        );
+        const gap = RANDOM_EVENT_OBSTACLE_GAP + 28;
+        const bounds = { width, height, padding, maxLeft, maxTop };
+        const initialObstacle = {
+          left: initialRect.left,
+          top: initialRect.top,
+          right: initialRect.right,
+          bottom: initialRect.bottom,
+        };
+        const obstacles = [
+          initialObstacle,
+          ...randomEventPlacementObstacles(virusRescueWindow),
+        ];
+        const preferredPositions = [
+          { left: initialRect.right + gap, top: initialRect.top },
+          { left: initialRect.left - width - gap, top: initialRect.top },
+          { left: initialRect.left, top: initialRect.bottom + gap },
+          { left: initialRect.left, top: initialRect.top - height - gap },
+          { left: padding, top: padding },
+          { left: maxLeft, top: padding },
+          { left: padding, top: maxTop },
+          { left: maxLeft, top: maxTop },
+        ];
+        let bestPosition = null;
+        let bestScore = Infinity;
+
+        const considerPosition = (position) => {
+          const clamped = clampRandomEventPosition(bounds, position);
+          const rect = randomEventCandidateRect(bounds, clamped.left, clamped.top);
+          const score = scoreRandomEventPlacement(rect, obstacles);
+          if (score < bestScore) {
+            bestScore = score;
+            bestPosition = clamped;
+          }
+          return score === 0;
+        };
+
+        for (const position of preferredPositions) {
+          if (considerPosition(position)) break;
+        }
+
+        if (bestScore > 0) {
+          for (let attempt = 0; attempt < RANDOM_EVENT_PLACEMENT_ATTEMPTS; attempt += 1) {
+            if (considerPosition(sampleRandomEventPosition(bounds))) break;
+          }
+        }
+
+        const anchor = bestPosition || clampRandomEventPosition(bounds, {
+          left: initialRect.right + gap,
+          top: initialRect.top,
+        });
+
+        return {
+          left: Math.round(anchor.left),
+          top: Math.round(anchor.top),
+          width,
+          height,
+        };
+      };
+
       const removeWindowExplodePieces = () => {
         document.querySelectorAll(".window-explode-piece").forEach((piece) => {
           piece.remove();
         });
+      };
+
+      const VIRUS_RESCUE_READY_TEXT = "Fear not, I am here to protect you!";
+      const VIRUS_RESCUE_ATTACK_TEXT =
+        "McAfee Antivirus uses lightning bolt. It is super effective!";
+      const VIRUS_STRIKE_DURATION_MS = 1000;
+
+      const setVirusRescueMessage = (message) => {
+        if (virusRescueText) virusRescueText.textContent = message;
+      };
+
+      const setVirusRescueButtonDisabled = (disabled) => {
+        if (virusRescueThanks) virusRescueThanks.disabled = disabled;
+      };
+
+      const setVirusInstallButtonsDisabled = (disabled) => {
+        if (virusYes) virusYes.disabled = disabled;
+        if (virusNo) virusNo.disabled = disabled;
+      };
+
+      const removeVirusStrikeCanvas = () => {
+        if (virusStrikeCanvas) {
+          virusStrikeCanvas.remove();
+          virusStrikeCanvas = null;
+        }
+      };
+
+      const clearVirusStrikeEffect = () => {
+        if (virusStrikeTimer) {
+          clearTimeout(virusStrikeTimer);
+          virusStrikeTimer = null;
+        }
+        if (virusStrikeFrame) {
+          cancelAnimationFrame(virusStrikeFrame);
+          virusStrikeFrame = null;
+        }
+        removeVirusStrikeCanvas();
+        clearVirusBorderLightningCanvas();
+        if (virusWindow) virusWindow.classList.remove("is-virus-struck");
+        setVirusInstallButtonsDisabled(false);
+      };
+
+      const createVirusStrikeCanvas = () => {
+        removeVirusStrikeCanvas();
+        virusStrikeCanvas = document.createElement("canvas");
+        virusStrikeCanvas.className = "virus-lightning-canvas";
+        virusStrikeCanvas.setAttribute("aria-hidden", "true");
+        document.body.appendChild(virusStrikeCanvas);
+        return virusStrikeCanvas;
+      };
+
+      const resizeVirusStrikeCanvas = () => {
+        if (!virusStrikeCanvas) return null;
+        const ctx = virusStrikeCanvas.getContext("2d");
+        if (!ctx) return null;
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const nextWidth = Math.round(width * dpr);
+        const nextHeight = Math.round(height * dpr);
+
+        if (
+          virusStrikeCanvas.width !== nextWidth ||
+          virusStrikeCanvas.height !== nextHeight
+        ) {
+          virusStrikeCanvas.width = nextWidth;
+          virusStrikeCanvas.height = nextHeight;
+        }
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, width, height };
+      };
+
+      const resizeVirusBorderLightningCanvas = () => {
+        if (!virusBorderLightningCanvas) return null;
+        const ctx = virusBorderLightningCanvas.getContext("2d");
+        if (!ctx) return null;
+        const field = virusBorderLightningCanvas.parentElement;
+        const rect = field
+          ? field.getBoundingClientRect()
+          : virusBorderLightningCanvas.getBoundingClientRect();
+        const width = Math.max(1, rect.width);
+        const height = Math.max(1, rect.height);
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        const nextWidth = Math.round(width * dpr);
+        const nextHeight = Math.round(height * dpr);
+
+        if (
+          virusBorderLightningCanvas.width !== nextWidth ||
+          virusBorderLightningCanvas.height !== nextHeight
+        ) {
+          virusBorderLightningCanvas.width = nextWidth;
+          virusBorderLightningCanvas.height = nextHeight;
+        }
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, width, height };
+      };
+
+      const clearVirusBorderLightningCanvas = () => {
+        const setup = resizeVirusBorderLightningCanvas();
+        if (!setup) return;
+        setup.ctx.clearRect(0, 0, setup.width, setup.height);
+      };
+
+      const getVirusStrikeOrigin = (targetRect) => {
+        if (isVirusWindowVisible(virusRescueWindow)) {
+          const rescueRect = virusRescueWindow.getBoundingClientRect();
+          if (rescueRect.width > 0 && rescueRect.height > 0) {
+            return {
+              x: rescueRect.left + rescueRect.width / 2,
+              y: rescueRect.top + rescueRect.height / 2,
+            };
+          }
+        }
+        const anchor = virusRescueAnchor || {
+          left: targetRect.left,
+          top: targetRect.top,
+        };
+        return {
+          x: anchor.left + (anchor.width || targetRect.width) / 2,
+          y: anchor.top + (anchor.height || targetRect.height) / 2,
+        };
+      };
+
+      const virusStrikeTargetPoint = (rect, origin) => {
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const deltaX = centerX - origin.x;
+        const deltaY = centerY - origin.y;
+        const halfWidth = Math.max(1, rect.width / 2);
+        const halfHeight = Math.max(1, rect.height / 2);
+        const scale = 1 / Math.max(
+          Math.abs(deltaX) / halfWidth,
+          Math.abs(deltaY) / halfHeight,
+          0.001
+        );
+        const borderX = centerX - deltaX * scale;
+        const borderY = centerY - deltaY * scale;
+        const hitsVerticalEdge =
+          Math.abs(borderX - rect.left) < 1 || Math.abs(borderX - rect.right) < 1;
+
+        return {
+          x: hitsVerticalEdge
+            ? borderX
+            : borderX + (Math.random() - 0.5) * rect.width * 0.16,
+          y: hitsVerticalEdge
+            ? borderY + (Math.random() - 0.5) * rect.height * 0.16
+            : borderY,
+        };
+      };
+
+      const drawVirusBolt = (ctx, path, startX, startY, level, alpha) => {
+        const opacity = alpha * Math.max(0.28, 1 - level * 0.24);
+        const glowWidth = level === 0 ? 7 : 3.5;
+        const coreWidth = level === 0 ? 1.35 : 0.7;
+
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = opacity;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = `rgba(32, 156, 255, ${opacity})`;
+        ctx.lineWidth = glowWidth;
+        ctx.shadowBlur = level === 0 ? 18 : 9;
+        ctx.shadowColor = "rgba(65, 180, 255, 0.95)";
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        path.forEach(([x, y]) => ctx.lineTo(x, y));
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(126, 219, 255, ${opacity})`;
+        ctx.lineWidth = Math.max(1.5, glowWidth * 0.38);
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        path.forEach(([x, y]) => ctx.lineTo(x, y));
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(245, 252, 255, ${Math.min(1, opacity + 0.22)})`;
+        ctx.lineWidth = coreWidth;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        path.forEach(([x, y]) => ctx.lineTo(x, y));
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      const drawVirusWindowLightningBorderFrame = (alpha) => {
+        const setup = resizeVirusBorderLightningCanvas();
+        if (!setup) return;
+        const { ctx, width, height } = setup;
+        const inset = 18;
+        const left = inset;
+        const top = inset;
+        const right = Math.max(left + 1, width - inset);
+        const bottom = Math.max(top + 1, height - inset);
+        const displacement = Math.max(6, Math.min(13, Math.min(width, height) / 14));
+        const edges = [
+          [left, top, right, top],
+          [right, top, right, bottom],
+          [right, bottom, left, bottom],
+          [left, bottom, left, top],
+        ];
+        const bolts = [];
+
+        ctx.clearRect(0, 0, width, height);
+        edges.forEach(([x1, y1, x2, y2]) => {
+          const startX = x1 + (Math.random() - 0.5) * 4;
+          const startY = y1 + (Math.random() - 0.5) * 4;
+          const endX = x2 + (Math.random() - 0.5) * 4;
+          const endY = y2 + (Math.random() - 0.5) * 4;
+          const path = generateFateBoltPath(
+            startX,
+            startY,
+            endX,
+            endY,
+            displacement,
+            0,
+            bolts
+          );
+
+          bolts.push({ path, start: [startX, startY], level: 0 });
+        });
+
+        bolts.forEach((bolt) => {
+          drawVirusBolt(ctx, bolt.path, bolt.start[0], bolt.start[1], bolt.level, alpha);
+        });
+      };
+
+      const drawVirusStrikeFrame = (origin, rect, alpha) => {
+        const setup = resizeVirusStrikeCanvas();
+        if (!setup) return;
+        const { ctx, width, height } = setup;
+        const sourceRadius = 5 + Math.random() * 5;
+
+        ctx.clearRect(0, 0, width, height);
+        drawVirusWindowLightningBorderFrame(alpha * 0.95);
+
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "rgba(225, 248, 255, 0.95)";
+        ctx.shadowBlur = 22;
+        ctx.shadowColor = "rgba(49, 169, 255, 1)";
+        ctx.beginPath();
+        ctx.arc(origin.x, origin.y, sourceRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        const target = virusStrikeTargetPoint(rect, origin);
+        const distance = Math.hypot(target.x - origin.x, target.y - origin.y);
+        const displacement = Math.max(9, Math.min(22, distance / 5.5));
+        const bolts = [];
+        const path = generateFateBoltPath(
+          origin.x,
+          origin.y,
+          target.x,
+          target.y,
+          displacement,
+          0,
+          bolts
+        );
+        bolts.push({ path, start: [origin.x, origin.y], level: 0 });
+        bolts.forEach((bolt) => {
+          drawVirusBolt(ctx, bolt.path, bolt.start[0], bolt.start[1], bolt.level, alpha);
+        });
+      };
+
+      const startVirusStrikeEffect = (onComplete) => {
+        if (!virusWindow) {
+          if (onComplete) onComplete();
+          return;
+        }
+
+        clearVirusStrikeEffect();
+        createVirusStrikeCanvas();
+        setVirusInstallButtonsDisabled(true);
+        virusWindow.classList.add("is-virus-struck");
+
+        const startedAt = performance.now();
+
+        const render = (now) => {
+          if (!virusWindow || virusWindow.classList.contains("is-hidden")) {
+            clearVirusStrikeEffect();
+            return;
+          }
+
+          const progress = Math.min(1, (now - startedAt) / VIRUS_STRIKE_DURATION_MS);
+          const rect = virusWindow.getBoundingClientRect();
+          const origin = getVirusStrikeOrigin(rect);
+          const flicker = Math.random() > 0.18 ? 1 : 0.32;
+          const alpha = Math.max(0, flicker * (1 - progress * 0.12));
+          drawVirusStrikeFrame(origin, rect, alpha);
+
+          if (progress < 1) {
+            virusStrikeFrame = requestAnimationFrame(render);
+            return;
+          }
+
+          virusStrikeFrame = null;
+        };
+
+        virusStrikeFrame = requestAnimationFrame(render);
+        virusStrikeTimer = setTimeout(() => {
+          clearVirusStrikeEffect();
+          if (onComplete) onComplete();
+        }, VIRUS_STRIKE_DURATION_MS);
       };
 
       const triggerVirusFlashbang = () => {
@@ -10685,14 +12699,20 @@
         });
       };
 
-      const showVirusEventWindow = (win, anchor = null) => {
+      const showVirusEventWindow = (win, anchor = null, { animate = true } = {}) => {
         if (!win) return;
         if (!win.classList.contains("is-hidden")) {
           win.style.zIndex = String(topZ++);
           clampVirusEventWindowToViewport(win);
           return;
         }
-        win.classList.remove("is-hidden", "is-closing", "is-exploding");
+        win.classList.remove(
+          "is-hidden",
+          "is-opening",
+          "is-closing",
+          "is-exploding",
+          "is-virus-struck"
+        );
         win.setAttribute("aria-hidden", "false");
         if (anchor) {
           setVirusEventWindowPosition(win, anchor.left, anchor.top);
@@ -10703,43 +12723,48 @@
         clampVirusEventWindowAfterMediaLoad(win);
         loadDeferredMedia(win);
         win.style.zIndex = String(topZ++);
-        restartWindowAnimation(win, "is-opening");
+        if (animate) restartWindowAnimation(win, "is-opening");
       };
 
       const closeVirusEventWindow = (win) => {
         if (!win || win.classList.contains("is-hidden")) return;
+        if (win === virusWindow) clearVirusStrikeEffect();
         win.setAttribute("aria-hidden", "true");
         restartWindowAnimation(win, "is-closing");
       };
 
       const showVirusWindow = () => {
+        clearVirusStrikeEffect();
         virusExploding = false;
         virusRescueAnchor = null;
         showVirusEventWindow(virusWindow);
       };
 
-      const showVirusRescueWindow = () => {
-        showVirusEventWindow(virusRescueWindow, virusRescueAnchor);
+      const showVirusRescueWindow = (state = "ready") => {
+        const isAttack = state === "attack";
+        setVirusRescueMessage(isAttack ? VIRUS_RESCUE_ATTACK_TEXT : VIRUS_RESCUE_READY_TEXT);
+        setVirusRescueButtonDisabled(isAttack);
+        showVirusEventWindow(virusRescueWindow, virusRescueAnchor, {
+          animate: !isAttack,
+        });
       };
 
       const acceptVirusInstall = () => {
         if (!virusWindow || virusExploding || virusWindow.classList.contains("is-hidden")) return;
         virusExploding = true;
-        if (!virusRescueAnchor) {
-          virusRescueAnchor = {
-            left: Number.parseFloat(virusWindow.style.left) || 12,
-            top: Number.parseFloat(virusWindow.style.top) || 12,
-          };
-        }
-        virusWindow.setAttribute("aria-hidden", "true");
-        triggerVirusFlashbang();
-        animateWindowExplode(virusWindow, () => {
-          virusExploding = false;
-          virusWindow.classList.add("is-hidden");
-          virusWindow.querySelectorAll("img[data-src]").forEach((image) => {
-            image.removeAttribute("src");
+        virusRescueAnchor = chooseVirusRescueAnchor();
+        showVirusRescueWindow("attack");
+        startVirusStrikeEffect(() => {
+          virusWindow.setAttribute("aria-hidden", "true");
+          triggerVirusFlashbang();
+          animateWindowExplode(virusWindow, () => {
+            virusExploding = false;
+            virusWindow.classList.add("is-hidden");
+            virusWindow.querySelectorAll("img[data-src]").forEach((image) => {
+              image.removeAttribute("src");
+            });
+            showVirusRescueWindow("ready");
           });
-          setTimeout(showVirusRescueWindow, 180);
         });
       };
 
@@ -10747,6 +12772,65 @@
         randomEventDefinitions.push(definition);
         return definition;
       };
+
+      const randomEventKind = (definition) =>
+        definition.kind || RANDOM_EVENT_KIND_NON_INTERACTIVE;
+
+      const randomEventDefinitionIsVisible = (definition) =>
+        Boolean(definition.isVisible && definition.isVisible());
+
+      const randomEventVisibleCountForKind = (kind) => {
+        const registeredCount = randomEventDefinitions.reduce(
+          (count, definition) =>
+            randomEventKind(definition) === kind && randomEventDefinitionIsVisible(definition)
+              ? count + 1
+              : count,
+          0
+        );
+        const standaloneCount =
+          kind === RANDOM_EVENT_KIND_NON_INTERACTIVE && isFelizJuevesVisible() ? 1 : 0;
+        return registeredCount + standaloneCount;
+      };
+
+      const randomEventPendingCountForKind = (kind) =>
+        Array.from(randomEventPendingDefinitions).filter(
+          (definition) => randomEventKind(definition) === kind
+        ).length;
+
+      const randomEventCountForKind = (kind) =>
+        randomEventVisibleCountForKind(kind) + randomEventPendingCountForKind(kind);
+
+      const randomEventKindCanSchedule = (kind, { consumeRelease = false } = {}) => {
+        const limit = RANDOM_EVENT_KIND_LIMITS[kind];
+        if (!limit) return true;
+
+        const count = randomEventCountForKind(kind);
+        if (count < limit) {
+          randomEventKindMaxSince[kind] = 0;
+          return true;
+        }
+
+        const now = Date.now();
+        if (!randomEventKindMaxSince[kind]) {
+          randomEventKindMaxSince[kind] = now;
+          return false;
+        }
+
+        if (now - randomEventKindMaxSince[kind] < RANDOM_EVENT_MAX_LOCK_RELEASE_MS) {
+          return false;
+        }
+
+        if (consumeRelease) randomEventKindMaxSince[kind] = now;
+        return true;
+      };
+
+      const randomEventDefinitionCanSchedule = (
+        definition,
+        { consumeRelease = false } = {}
+      ) =>
+        randomEventKindCanSchedule(randomEventKind(definition), {
+          consumeRelease,
+        });
 
       const randomEventDebugEnabled = (definition) =>
         RANDOM_EVENT_GLOBAL_DEBUG || Boolean(definition.debug);
@@ -10756,21 +12840,94 @@
         "windowDrag",
       ]);
 
-      const randomEventProbability = (definition, triggerName) => {
+      const randomEventTriggerProbability = (triggerName) => {
         const value =
-          definition.probabilities && triggerName in definition.probabilities
-            ? definition.probabilities[triggerName]
-            : definition.probability;
+          triggerName in STANDARD_RANDOM_EVENT_PROBABILITIES
+            ? STANDARD_RANDOM_EVENT_PROBABILITIES[triggerName]
+            : STANDARD_RANDOM_EVENT_PROBABILITY;
         const probability = Number(value);
         if (Number.isNaN(probability)) return 0;
         return Math.min(1, Math.max(0, probability));
       };
 
+      const recentInteractiveRandomEventRuns = (definition, now = Date.now()) => {
+        const eventId = definition.id;
+        if (!eventId || randomEventKind(definition) !== RANDOM_EVENT_KIND_INTERACTIVE) {
+          return [];
+        }
+        const cutoff = now - RANDOM_EVENT_REPEAT_DAMPEN_MS;
+        const recentRuns = (randomEventRecentInteractiveRuns.get(eventId) || []).filter(
+          (timestamp) => timestamp >= cutoff
+        );
+        if (recentRuns.length) {
+          randomEventRecentInteractiveRuns.set(eventId, recentRuns);
+        } else {
+          randomEventRecentInteractiveRuns.delete(eventId);
+        }
+        return recentRuns;
+      };
+
+      const interactiveRandomEventRepeatProbability = (definition) => {
+        const recentCount = recentInteractiveRandomEventRuns(definition).length;
+        return Math.pow(RANDOM_EVENT_REPEAT_DAMPEN_FACTOR, recentCount);
+      };
+
+      const interactiveRandomEventRepeatAllowed = (definition, { debug = false } = {}) => {
+        if (debug || randomEventKind(definition) !== RANDOM_EVENT_KIND_INTERACTIVE) {
+          return true;
+        }
+        return Math.random() < interactiveRandomEventRepeatProbability(definition);
+      };
+
+      const recordInteractiveRandomEventRun = (definition, { debug = false } = {}) => {
+        const eventId = definition.id;
+        if (
+          debug ||
+          !eventId ||
+          randomEventKind(definition) !== RANDOM_EVENT_KIND_INTERACTIVE
+        ) {
+          return;
+        }
+        const now = Date.now();
+        const recentRuns = recentInteractiveRandomEventRuns(definition, now);
+        recentRuns.push(now);
+        randomEventRecentInteractiveRuns.set(eventId, recentRuns);
+      };
+
+      const randomEventDelayMs = () => {
+        const rawDelay =
+          RANDOM_EVENT_DELAY_MIN_MS +
+          Math.random() * (RANDOM_EVENT_DELAY_MAX_MS - RANDOM_EVENT_DELAY_MIN_MS);
+        return Math.round(rawDelay / RANDOM_EVENT_DELAY_STEP_MS) * RANDOM_EVENT_DELAY_STEP_MS;
+      };
+
+      const scheduleRandomEventRun = (definition, context) => {
+        if (randomEventPendingDefinitions.has(definition)) return false;
+        if (!randomEventDefinitionCanSchedule(definition, { consumeRelease: true })) {
+          return false;
+        }
+        randomEventPendingDefinitions.add(definition);
+        window.setTimeout(() => {
+          randomEventPendingDefinitions.delete(definition);
+          const { triggerName, detail, debug } = context;
+          if (
+            definition.canTrigger &&
+            !definition.canTrigger({ triggerName, detail, debug })
+          ) {
+            return;
+          }
+          recordInteractiveRandomEventRun(definition, { debug });
+          definition.run(context);
+        }, randomEventDelayMs());
+        return true;
+      };
+
       const triggerRandomEvents = (triggerName, detail = {}) => {
-        const candidates = [];
+        const eligibleEvents = [];
         let debugRan = false;
 
         randomEventDefinitions.forEach((definition) => {
+          if (randomEventPendingDefinitions.has(definition)) return;
           const debug = randomEventDebugEnabled(definition);
           const forceDebugRun =
             debug && !RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS.has(triggerName);
@@ -10780,26 +12937,46 @@
           ) {
             return;
           }
+          if (!randomEventDefinitionCanSchedule(definition)) return;
           if (forceDebugRun) {
-            definition.run({ triggerName, detail, debug });
-            debugRan = true;
+            if (scheduleRandomEventRun(definition, { triggerName, detail, debug })) {
+              debugRan = true;
+            }
             return;
           }
-          const probability = randomEventProbability(definition, triggerName);
-          if (Math.random() >= probability) return;
-          candidates.push({ definition, debug });
+          eligibleEvents.push({ definition, debug });
         });
 
         if (debugRan) return true;
 
-        const selected = candidates[Math.floor(Math.random() * candidates.length)];
-        if (selected) {
-          selected.definition.run({ triggerName, detail, debug: selected.debug });
-          return true;
+        if (
+          !eligibleEvents.length ||
+          Math.random() >= randomEventTriggerProbability(triggerName)
+        ) {
+          if (triggerName === "calendarOpen" || triggerName === "gameWin") {
+            return maybeShowFelizJueves();
+          }
+          return false;
         }
 
-        if (triggerName === "calendarOpen" || triggerName === "gameWin") {
-          return maybeShowFelizJueves();
+        const selected = eligibleEvents[Math.floor(Math.random() * eligibleEvents.length)];
+        if (
+          !selected ||
+          !interactiveRandomEventRepeatAllowed(selected.definition, {
+            debug: selected.debug,
+          })
+        ) {
+          return false;
+        }
+
+        if (
+          scheduleRandomEventRun(selected.definition, {
+            triggerName,
+            detail,
+            debug: selected.debug,
+          })
+        ) {
+          return true;
         }
 
         return false;
@@ -10919,75 +13096,33 @@
         });
       };
 
-      const ANNOYING_RANDOM_EVENT_PROBABILITY = 0.019;
-      const ANNOYING_RANDOM_EVENT_PROBABILITIES = Object.freeze({
-        windowOpen: 0.011,
-        windowClose: 0.011,
-        gameWin: 0.12,
-        gameLoss: 0.075,
-        startButton: 0.038,
-        newTabLink: 0.03,
-        fileDownload: 0.045,
-        pageReload: 0.09,
-        calendarOpen: 0.03,
-        tenClicks: 0.038,
-        failedAction: 0.006,
-        appDwell: 0.075,
-        windowDrag: 0.025,
-        idleInterval: 0.15,
-      });
-
       const STANDARD_RANDOM_EVENT_PROBABILITY = 0.0075;
       const STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze({
-        windowOpen: 0.0045,
-        windowClose: 0.0045,
-        gameWin: 0.03,
-        gameLoss: 0.026,
-        startButton: 0.015,
-        newTabLink: 0.014,
-        fileDownload: 0.019,
-        pageReload: 0.026,
-        calendarOpen: 0.015,
-        tenClicks: 0.016,
-        failedAction: 0.002,
-        appDwell: 0.04,
-        windowDrag: 0.012,
-        idleInterval: 0.06,
-      });
-
-      const HALF_STANDARD_RANDOM_EVENT_PROBABILITY = STANDARD_RANDOM_EVENT_PROBABILITY / 2;
-      const HALF_STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze(
-        Object.fromEntries(
-          Object.entries(STANDARD_RANDOM_EVENT_PROBABILITIES).map(([triggerName, probability]) => [
-            triggerName,
-            probability / 2,
-          ])
-        )
-      );
-
-      const ELEVATED_RANDOM_EVENT_PROBABILITY = 0.0094;
-      const ELEVATED_RANDOM_EVENT_PROBABILITIES = Object.freeze({
-        windowOpen: 0.006,
-        windowClose: 0.006,
-        gameWin: 0.045,
-        gameLoss: 0.03,
-        startButton: 0.019,
-        newTabLink: 0.015,
-        fileDownload: 0.019,
-        pageReload: 0.03,
-        calendarOpen: 0.019,
-        tenClicks: 0.02,
-        failedAction: 0.003,
-        appDwell: 0.045,
-        windowDrag: 0.015,
-        idleInterval: 0.06,
+        windowOpen: 0.1,
+        windowClose: 0.1,
+        gameWin: 0.6,
+        gameLoss: 0.4,
+        startButton: 0.25,
+        newTabLink: 0.25,
+        fileDownload: 0.5,
+        pageReload: 0.4,
+        calendarOpen: 0.3,
+        generalClicks: 0.5,
+        minesweeperClicks: 0.5,
+        solitaireClicks: 0.5,
+        failedAction: 0.05,
+        appDwell: 0.5,
+        windowDrag: 0.18,
+        idleInterval: 0.3,
       });
 
       registerRandomEvent({
         id: "annoying-system-alert",
         debug: false,
-        probability: ANNOYING_RANDOM_EVENT_PROBABILITY,
-        probabilities: ANNOYING_RANDOM_EVENT_PROBABILITIES,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isRandomAlertVisible,
         canTrigger: () => !isRandomAlertVisible(),
         run: () => {
           showRandomAlert();
@@ -10999,6 +13134,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isSelfLoveAlertVisible,
         canTrigger: () => !isSelfLoveAlertVisible(),
         run: () => {
           showSelfLoveAlert();
@@ -11010,6 +13147,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isRohinUpdateVisible,
         canTrigger: () => !isRohinUpdateVisible(),
         run: () => {
           showRohinUpdate();
@@ -11021,6 +13160,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isMcAfeeVisible,
         canTrigger: () => !isMcAfeeVisible(),
         run: () => {
           showMcAfeePrompt();
@@ -11032,6 +13173,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isWordErrorStackVisible,
         canTrigger: () => !isWordErrorStackVisible(),
         run: () => {
           showWordErrorStack();
@@ -11043,6 +13186,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isRohinNoteVisible,
         canTrigger: () => !isRohinNoteVisible(),
         run: () => {
           showRohinNote();
@@ -11054,6 +13199,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isEarthNoteVisible,
         canTrigger: () => !isEarthNoteVisible(),
         run: () => {
           showEarthNote();
@@ -11065,6 +13212,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isHealthNoteVisible,
         canTrigger: () => !isHealthNoteVisible(),
         run: () => {
           showHealthNote();
@@ -11076,6 +13225,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isLoveNoteVisible,
         canTrigger: () => !isLoveNoteVisible(),
         run: () => {
           showLoveNote();
@@ -11087,6 +13238,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isManaFloodVisible,
         canTrigger: () => !isManaFloodVisible(),
         run: () => {
           showManaFlood();
@@ -11098,6 +13251,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isMimicWarningVisible,
         canTrigger: () => !isMimicWarningVisible(),
         run: () => {
           showMimicWarning();
@@ -11109,6 +13264,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isSkillCheckVisible,
         canTrigger: () => !isSkillCheckVisible(),
         run: () => {
           showSkillCheckWindow();
@@ -11120,6 +13277,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isDistressSignalVisible,
         canTrigger: () => !isDistressSignalVisible(),
         run: () => {
           showDistressSignalWindow();
@@ -11129,8 +13288,10 @@
       registerRandomEvent({
         id: "nazar-evil-eye",
         debug: false,
-        probability: ELEVATED_RANDOM_EVENT_PROBABILITY,
-        probabilities: ELEVATED_RANDOM_EVENT_PROBABILITIES,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isNazarVisible,
         canTrigger: () => !isNazarVisible(),
         run: () => {
           showNazarWindow();
@@ -11142,6 +13303,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isSiteGraceVisible,
         canTrigger: () => !isSiteGraceVisible(),
         run: () => {
           showSiteGraceWindow();
@@ -11153,6 +13316,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isStalkerVisible,
         canTrigger: () => !isStalkerVisible(),
         run: () => {
           showStalkerWindow();
@@ -11162,8 +13327,10 @@
       registerRandomEvent({
         id: "nana-random-encounter",
         debug: false,
-        probability: HALF_STANDARD_RANDOM_EVENT_PROBABILITY,
-        probabilities: HALF_STANDARD_RANDOM_EVENT_PROBABILITIES,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isNanaEncounterVisible,
         canTrigger: () => !isNanaEncounterVisible(),
         run: () => {
           showNanaEncounterWindow();
@@ -11175,6 +13342,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isLainAlertVisible,
         canTrigger: () => !isLainAlertVisible(),
         run: () => {
           showLainAlert();
@@ -11186,6 +13355,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isLelouchAlertVisible,
         canTrigger: () => !isLelouchAlertVisible(),
         run: () => {
           showLelouchAlert();
@@ -11197,6 +13368,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isInstrumentalityVisible,
         canTrigger: () => !isInstrumentalityVisible(),
         run: () => {
           showInstrumentalityPrompt();
@@ -11208,6 +13381,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isRedToolVisible,
         canTrigger: () => !isRedToolVisible(),
         run: () => {
           showRedToolWindow();
@@ -11219,6 +13394,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isFateVisible,
         canTrigger: () => fateState === "idle" && !isFateVisible(),
         run: () => {
           showFateWindow();
@@ -11230,6 +13407,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isBehelitVisible,
         canTrigger: () => !isBehelitVisible(),
         run: () => {
           showBehelitWindow();
@@ -11239,8 +13418,10 @@
       registerRandomEvent({
         id: "john-pork",
         debug: false,
-        probability: ELEVATED_RANDOM_EVENT_PROBABILITY,
-        probabilities: ELEVATED_RANDOM_EVENT_PROBABILITIES,
+        probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+        probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isJohnPorkVisible,
         canTrigger: () => !isJohnPorkVisible(),
         run: () => {
           showJohnPorkCall();
@@ -11252,6 +13433,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isBidenBlastVisible,
         canTrigger: () => !isBidenBlastVisible(),
         run: () => {
           showBidenBlastWindow();
@@ -11263,6 +13446,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_INTERACTIVE,
+        isVisible: isVirusVisible,
         canTrigger: () => !isVirusVisible(),
         run: () => {
           showVirusWindow();
@@ -11274,6 +13459,8 @@
         debug: false,
         probability: STANDARD_RANDOM_EVENT_PROBABILITY,
         probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+        kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+        isVisible: isAdvertisementVisible,
         canTrigger: () => !isAdvertisementVisible(),
         run: () => {
           showAdvertisementWindow();
@@ -11547,6 +13734,12 @@
           activateVisibleContent(win);
 
           setPortfolioResponsiveState(win);
+          if (appId === "life-counter") updateLifeCounterWidthControls();
+          if (appId === "snake") {
+            drawSnakeGame();
+            startSnakeNoiseAnimation();
+            if (snakeCanvas) snakeCanvas.focus();
+          }
           restartWindowAnimation(win, "is-opening");
           triggerRandomEvents("windowOpen", { appId });
           return;
@@ -11562,6 +13755,10 @@
 
         if (appId === "solitaire") {
           solHideVictoryVideo();
+        }
+        if (appId === "snake") {
+          pauseSnakeGame();
+          stopSnakeNoiseAnimation();
         }
 
         restoreWindowSize(win);
@@ -11963,6 +14160,346 @@
         });
         closeCalendar();
       };
+
+      const getLifeCounterWindow = () => getAppWindow("life-counter");
+
+      const getLifeCounterWindowWidth = () => {
+        const win = getLifeCounterWindow();
+        if (!win) return LIFE_COUNTER_WINDOW_DEFAULT_WIDTH;
+        const styleWidth = Number.parseFloat(win.style.width);
+        const rectWidth = win.getBoundingClientRect().width;
+        return Math.round(styleWidth || rectWidth || LIFE_COUNTER_WINDOW_DEFAULT_WIDTH);
+      };
+
+      const getLifeCounterWindowWidthForColumns = (columns) =>
+        Math.max(
+          LIFE_COUNTER_WINDOW_MIN_WIDTH,
+          columns * LIFE_COUNTER_WINDOW_COLUMN_WIDTH +
+            Math.max(0, columns - 1) * LIFE_COUNTER_WINDOW_COLUMN_GAP +
+            LIFE_COUNTER_WINDOW_EXTRA_WIDTH
+        );
+
+      const getLifeCounterWindowColumns = (width) => {
+        const safeWidth = Number.isFinite(width) ? width : LIFE_COUNTER_WINDOW_DEFAULT_WIDTH;
+        const columns = Math.round(
+          (safeWidth - LIFE_COUNTER_WINDOW_EXTRA_WIDTH + LIFE_COUNTER_WINDOW_COLUMN_GAP) /
+            (LIFE_COUNTER_WINDOW_COLUMN_WIDTH + LIFE_COUNTER_WINDOW_COLUMN_GAP)
+        );
+        return Math.max(1, columns);
+      };
+
+      const normalizeLifeCounterWindowWidth = (width) => {
+        const columns = getLifeCounterWindowColumns(width);
+        return getLifeCounterWindowWidthForColumns(columns);
+      };
+
+      const getLifeCounterMaxWidthAtPosition = () => {
+        const win = getLifeCounterWindow();
+        if (!win || win.classList.contains("is-hidden")) {
+          return Math.max(
+            LIFE_COUNTER_WINDOW_MIN_WIDTH,
+            window.innerWidth - LIFE_COUNTER_WINDOW_VIEWPORT_PADDING * 2
+          );
+        }
+        const rect = win.getBoundingClientRect();
+        return Math.max(
+          LIFE_COUNTER_WINDOW_MIN_WIDTH,
+          window.innerWidth - rect.left - LIFE_COUNTER_WINDOW_VIEWPORT_PADDING
+        );
+      };
+
+      const updateLifeCounterWidthControls = () => {
+        const win = getLifeCounterWindow();
+        if (!win || !lifeCounterWidthDecrease || !lifeCounterWidthIncrease) return;
+        const currentColumns = getLifeCounterWindowColumns(getLifeCounterWindowWidth());
+        const nextWidth = getLifeCounterWindowWidthForColumns(currentColumns + 1);
+        const maxWidth = getLifeCounterMaxWidthAtPosition();
+        lifeCounterWidthDecrease.disabled = currentColumns <= 1;
+        lifeCounterWidthIncrease.disabled = nextWidth > maxWidth;
+      };
+
+      const setLifeCounterWindowWidth = (direction) => {
+        const win = getLifeCounterWindow();
+        if (!win) return;
+        const currentColumns = getLifeCounterWindowColumns(getLifeCounterWindowWidth());
+        const nextColumns = currentColumns + direction;
+        const nextWidth = getLifeCounterWindowWidthForColumns(nextColumns);
+        const maxWidth = getLifeCounterMaxWidthAtPosition();
+        if (nextColumns < 1 || nextWidth > maxWidth) {
+          updateLifeCounterWidthControls();
+          return;
+        }
+        win.style.width = `${nextWidth}px`;
+        updateLifeCounterWidthControls();
+      };
+
+      const getLifeCounterPlayer = (playerId) =>
+        lifeCounterPlayersState.find((player) => player.id === playerId);
+
+      const normalizeLifeCounterValue = (value, fallback = LIFE_COUNTER_STARTING_LIFE) => {
+        const parsed = Number(value);
+        const nextValue = Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
+        return clampNumber(nextValue, LIFE_COUNTER_MIN_VALUE, LIFE_COUNTER_MAX_VALUE);
+      };
+
+      const getLifeCounterSelectedStep = (player) =>
+        LIFE_COUNTER_STEP_VALUES.includes(player.selectedStep)
+          ? player.selectedStep
+          : LIFE_COUNTER_STEP_VALUES[0];
+
+      const formatLifeCounterDigits = (value) => {
+        const normalized = normalizeLifeCounterValue(value);
+        if (normalized < 0) {
+          return `-${String(Math.abs(normalized)).padStart(4, "0")}`;
+        }
+        return String(normalized).padStart(5, "0");
+      };
+
+      const setLifeCounterPlayerValue = (playerId, value, fallback) => {
+        const player = getLifeCounterPlayer(playerId);
+        if (!player) return;
+        player.life = normalizeLifeCounterValue(value, fallback ?? player.life);
+        renderLifeCounter();
+      };
+
+      const lifeCounterInputHasSubmitValue = (input) => {
+        if (!input || input.value.trim() === "") return false;
+        const parsed = Number(input.value);
+        return Number.isFinite(parsed) && Math.trunc(parsed) !== 0;
+      };
+
+      const updateLifeCounterSubmitButton = (input, button) => {
+        if (!button) return;
+        button.disabled = !lifeCounterInputHasSubmitValue(input);
+      };
+
+      const submitLifeCounterInputValue = (playerId, input, button, fallback) => {
+        if (!lifeCounterInputHasSubmitValue(input)) {
+          updateLifeCounterSubmitButton(input, button);
+          return;
+        }
+        setLifeCounterPlayerValue(playerId, input.value, fallback);
+      };
+
+      const adjustLifeCounterPlayer = (playerId, direction) => {
+        const player = getLifeCounterPlayer(playerId);
+        if (!player) return;
+        const selectedStep = getLifeCounterSelectedStep(player);
+        setLifeCounterPlayerValue(playerId, player.life + direction * selectedStep, player.life);
+      };
+
+      const selectLifeCounterStep = (playerId, step) => {
+        const player = getLifeCounterPlayer(playerId);
+        if (!player || !LIFE_COUNTER_STEP_VALUES.includes(step)) return;
+        player.selectedStep = step;
+        renderLifeCounter();
+      };
+
+      const removeLifeCounterPlayer = (playerId) => {
+        lifeCounterPlayersState = lifeCounterPlayersState.filter(
+          (player) => player.id !== playerId
+        );
+
+        if (!lifeCounterPlayersState.length) {
+          lifeCounterPlayersState = [
+            {
+              id: lifeCounterNextPlayerId++,
+              name: "Player 1",
+              life: LIFE_COUNTER_STARTING_LIFE,
+              selectedStep: 1,
+            },
+          ];
+        }
+
+        renderLifeCounter();
+      };
+
+      const appendLifeCounterDigits = (container, value) => {
+        formatLifeCounterDigits(value)
+          .split("")
+          .forEach((digit) => {
+            const image = document.createElement("img");
+            image.className = "life-counter-digit";
+            image.src = LIFE_COUNTER_DIGIT_SOURCES[digit] || LIFE_COUNTER_DIGIT_SOURCES[" "];
+            image.alt = "";
+            container.append(image);
+          });
+      };
+
+      const renderLifeCounter = () => {
+        if (!lifeCounterPlayers) return;
+        lifeCounterPlayers.replaceChildren();
+
+        lifeCounterPlayersState.forEach((player) => {
+          const selectedStep = getLifeCounterSelectedStep(player);
+
+          const card = document.createElement("section");
+          card.className = "life-counter-player";
+          card.dataset.playerId = String(player.id);
+
+          const header = document.createElement("div");
+          header.className = "life-counter-player-header";
+
+          const nameInput = document.createElement("input");
+          nameInput.className = "life-counter-name";
+          nameInput.type = "text";
+          nameInput.value = player.name;
+          nameInput.setAttribute("aria-label", "Player name");
+          nameInput.addEventListener("input", () => {
+            player.name = nameInput.value;
+          });
+
+          const removeButton = document.createElement("button");
+          removeButton.className = "life-counter-remove";
+          removeButton.type = "button";
+          removeButton.textContent = "X";
+          removeButton.setAttribute(
+            "aria-label",
+            `Delete ${player.name || "player"}`
+          );
+          removeButton.addEventListener("click", () => {
+            removeLifeCounterPlayer(player.id);
+          });
+
+          header.append(nameInput, removeButton);
+
+          const total = document.createElement("div");
+          total.className = "life-counter-total";
+          total.setAttribute("aria-label", String(player.life));
+          total.setAttribute("aria-live", "polite");
+          total.setAttribute("role", "img");
+          appendLifeCounterDigits(total, player.life);
+
+          const setRow = document.createElement("div");
+          setRow.className = "life-counter-set-row";
+
+          const valueInput = document.createElement("input");
+          valueInput.className = "life-counter-value-input";
+          valueInput.type = "number";
+          valueInput.inputMode = "numeric";
+          valueInput.min = String(LIFE_COUNTER_MIN_VALUE);
+          valueInput.max = String(LIFE_COUNTER_MAX_VALUE);
+          valueInput.step = "1";
+          valueInput.placeholder = "Set value";
+          valueInput.setAttribute(
+            "aria-label",
+            `Set value for ${player.name || "player"}`
+          );
+
+          const submitButton = document.createElement("button");
+          submitButton.className = "life-counter-submit";
+          submitButton.type = "button";
+          submitButton.setAttribute(
+            "aria-label",
+            `Submit value for ${player.name || "player"}`
+          );
+
+          const submitIcon = document.createElement("img");
+          submitIcon.src = "assets/app-icons/ico/check.ico";
+          submitIcon.alt = "";
+          submitButton.append(submitIcon);
+
+          valueInput.addEventListener("input", () => {
+            updateLifeCounterSubmitButton(valueInput, submitButton);
+          });
+          valueInput.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            submitLifeCounterInputValue(player.id, valueInput, submitButton, player.life);
+          });
+          submitButton.addEventListener("click", () => {
+            submitLifeCounterInputValue(player.id, valueInput, submitButton, player.life);
+          });
+          updateLifeCounterSubmitButton(valueInput, submitButton);
+
+          setRow.append(valueInput, submitButton);
+
+          const controls = document.createElement("div");
+          controls.className = "life-counter-controls";
+
+          const stepGrid = document.createElement("div");
+          stepGrid.className = "life-counter-step-grid";
+
+          LIFE_COUNTER_STEP_VALUES.forEach((step) => {
+            const stepButton = document.createElement("button");
+            stepButton.type = "button";
+            stepButton.textContent = String(step);
+            stepButton.classList.toggle("is-selected", step === selectedStep);
+            stepButton.setAttribute("aria-pressed", String(step === selectedStep));
+            stepButton.setAttribute("aria-label", `Select ${step}`);
+            stepButton.addEventListener("click", () => {
+              selectLifeCounterStep(player.id, step);
+            });
+            stepGrid.append(stepButton);
+          });
+
+          const adjustRow = document.createElement("div");
+          adjustRow.className = "life-counter-adjust-row";
+
+          [
+            { label: "-", direction: -1, action: "Subtract" },
+            { label: "+", direction: 1, action: "Add" },
+          ].forEach(({ label, direction, action }) => {
+            const adjustButton = document.createElement("button");
+            adjustButton.type = "button";
+            adjustButton.textContent = label;
+            adjustButton.setAttribute("aria-label", `${action} selected value`);
+            adjustButton.addEventListener("click", () => {
+              adjustLifeCounterPlayer(player.id, direction);
+            });
+            adjustRow.append(adjustButton);
+          });
+
+          controls.append(stepGrid, adjustRow);
+          card.append(header, total, setRow, controls);
+          lifeCounterPlayers.append(card);
+        });
+      };
+
+      const addLifeCounterPlayer = () => {
+        const playerId = lifeCounterNextPlayerId++;
+        lifeCounterPlayersState.push({
+          id: playerId,
+          name: `Player ${playerId}`,
+          life: LIFE_COUNTER_STARTING_LIFE,
+          selectedStep: 1,
+        });
+        renderLifeCounter();
+      };
+
+      const resetLifeCounterPlayers = () => {
+        lifeCounterPlayersState.forEach((player) => {
+          player.life = LIFE_COUNTER_STARTING_LIFE;
+        });
+        renderLifeCounter();
+      };
+
+      if (lifeCounterAddPlayer) {
+        lifeCounterAddPlayer.addEventListener("click", addLifeCounterPlayer);
+      }
+
+      if (lifeCounterReset) {
+        lifeCounterReset.addEventListener("click", resetLifeCounterPlayers);
+      }
+
+      if (lifeCounterWidthDecrease) {
+        lifeCounterWidthDecrease.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setLifeCounterWindowWidth(-1);
+        });
+      }
+
+      if (lifeCounterWidthIncrease) {
+        lifeCounterWidthIncrease.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setLifeCounterWindowWidth(1);
+        });
+      }
+
+      renderLifeCounter();
+      updateLifeCounterWidthControls();
 
       initPortfolioCornerResize();
       updateClock();
@@ -12939,6 +15476,26 @@
         }
       };
 
+      const updatePulseProjectFigure = () => {
+        if (!pulseProjectImage || !pulseProjectFigures.length) return;
+        const activeFigure = pulseProjectFigures[pulseProjectIndex];
+        pulseProjectImage.dataset.src = activeFigure.src;
+        pulseProjectImage.setAttribute("src", activeFigure.src);
+        pulseProjectImage.setAttribute("alt", activeFigure.alt);
+        if (pulseProjectCaption) {
+          pulseProjectCaption.textContent = activeFigure.title;
+        }
+        if (pulseProjectDescription) {
+          pulseProjectDescription.textContent = activeFigure.description;
+        }
+        if (pulseProjectCounter) {
+          pulseProjectCounter.textContent = galleryCounterText(
+            pulseProjectIndex,
+            pulseProjectFigures.length
+          );
+        }
+      };
+
       const updateTcpResultFigure = () => {
         if (!tcpResultsImage || !tcpResultFigures.length) return;
         const activeFigure = tcpResultFigures[tcpResultsIndex];
@@ -13055,6 +15612,17 @@
       );
 
       bindGalleryNavigation(
+        pulseProjectPrev,
+        pulseProjectNext,
+        pulseProjectFigures.length,
+        () => pulseProjectIndex,
+        (index) => {
+          pulseProjectIndex = index;
+        },
+        updatePulseProjectFigure
+      );
+
+      bindGalleryNavigation(
         tcpResultsPrev,
         tcpResultsNext,
         tcpResultFigures.length,
@@ -13091,6 +15659,19 @@
       if (openBioe190Proposal) {
         openBioe190Proposal.addEventListener("click", () => {
           setWindowOpen("bioe190-proposal-pdf", true);
+        });
+      }
+
+      if (openPulsePresentation) {
+        openPulsePresentation.addEventListener("click", () => {
+          if (
+            pulsePresentationIframe &&
+            pulsePresentationIframe.dataset.src !== PULSE_PRESENTATION_PDF_URL
+          ) {
+            pulsePresentationIframe.dataset.src = PULSE_PRESENTATION_PDF_URL;
+            pulsePresentationIframe.removeAttribute("src");
+          }
+          setWindowOpen("pulse-presentation-pdf", true);
         });
       }
 
@@ -14535,8 +17116,14 @@
         updateCalendarQuote(month);
 
         const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
-        dayLabels.forEach((label) => {
-          appendCalendarCell(label);
+        dayLabels.forEach((label, index) => {
+          const labelCell = appendCalendarCell(label);
+          if (index === 4) {
+            labelCell.dataset.calendarWeekday = "thursday";
+            labelCell.setAttribute("role", "button");
+            labelCell.setAttribute("aria-label", "Feliz Jueves");
+            labelCell.title = "Feliz Jueves";
+          }
         });
 
         for (let i = startDay - 1; i >= 0; i -= 1) {
@@ -14595,6 +17182,13 @@
       });
 
       calendarGrid.addEventListener("click", (event) => {
+        const thursdayCell = event.target.closest("[data-calendar-weekday='thursday']");
+        if (thursdayCell && calendarGrid.contains(thursdayCell)) {
+          event.stopPropagation();
+          showFelizJuevesWindow();
+          return;
+        }
+
         const dayCell = event.target.closest("[data-calendar-day]");
         if (!dayCell || !calendarGrid.contains(dayCell)) return;
         const eventMonth = Number(dayCell.dataset.calendarMonth);
@@ -14817,6 +17411,7 @@
         mcAfeeUpdateRun.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
+          if (mcAfeeUpdateLater) mcAfeeUpdateLater.disabled = true;
           showMcAfeeDownload();
         });
       }
@@ -15684,10 +18279,49 @@
         "click",
         (event) => {
           if (!event.isTrusted) return;
-          randomEventClickCount += 1;
-          if (randomEventClickCount % RANDOM_EVENT_CLICK_TRIGGER_INTERVAL !== 0) return;
-          triggerRandomEvents("tenClicks", {
-            clickCount: randomEventClickCount,
+          const target =
+            event.target instanceof Element ? event.target : event.target?.parentElement;
+          if (target?.closest("#fate-resist")) return;
+          if (target?.closest('[data-app-window="minesweeper"]')) {
+            minesweeperRandomEventClickCount += 1;
+            if (
+              minesweeperRandomEventClickCount %
+                MINESWEEPER_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL !==
+              0
+            ) {
+              return;
+            }
+            triggerRandomEvents("minesweeperClicks", {
+              clickCount: minesweeperRandomEventClickCount,
+              appId: "minesweeper",
+            });
+            return;
+          }
+          if (target?.closest('[data-app-window="solitaire"]')) {
+            solitaireRandomEventClickCount += 1;
+            if (
+              solitaireRandomEventClickCount %
+                SOLITAIRE_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL !==
+              0
+            ) {
+              return;
+            }
+            triggerRandomEvents("solitaireClicks", {
+              clickCount: solitaireRandomEventClickCount,
+              appId: "solitaire",
+            });
+            return;
+          }
+          generalRandomEventClickCount += 1;
+          if (
+            generalRandomEventClickCount %
+              GENERAL_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL !==
+            0
+          ) {
+            return;
+          }
+          triggerRandomEvents("generalClicks", {
+            clickCount: generalRandomEventClickCount,
           });
         },
         { capture: true }
@@ -15731,6 +18365,144 @@
           closeAppWindow(appId);
         });
       });
+
+      document.addEventListener(
+        "pointerdown",
+        () => {
+          if (!snakeState.running || !isSnakeWindowVisible()) return;
+          pauseSnakeGame();
+          snakePointerPauseSuppressUntil = performance.now() + 250;
+        },
+        true
+      );
+
+      if (snakeStart) {
+        snakeStart.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (shouldSuppressSnakePointerClick()) return;
+          toggleSnakeGame();
+        });
+      }
+
+      if (snakeReset) {
+        snakeReset.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (shouldSuppressSnakePointerClick()) return;
+          resetSnakeGame();
+          if (snakeCanvas) snakeCanvas.focus();
+        });
+      }
+
+      snakeBoardSizeButtons.forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (shouldSuppressSnakePointerClick()) return;
+          const selectedSize = Number(button.dataset.snakeBoardSize);
+          snakeState.gridSize =
+            Number.isFinite(selectedSize) && selectedSize > 0
+              ? selectedSize
+              : SNAKE_DEFAULT_GRID_SIZE;
+          resetSnakeGame();
+          if (snakeCanvas) snakeCanvas.focus();
+        });
+      });
+
+      snakeColorButtons.forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (shouldSuppressSnakePointerClick()) return;
+          const selectedColor = button.dataset.snakeColor;
+          if (!SNAKE_COLOR_THEMES[selectedColor]) return;
+          snakeState.color = selectedColor;
+          updateSnakeHud();
+          drawSnakeGame();
+          if (snakeCanvas) snakeCanvas.focus();
+        });
+      });
+
+      snakeAppleColorButtons.forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (shouldSuppressSnakePointerClick()) return;
+          const selectedColor = button.dataset.snakeAppleColor;
+          if (!SNAKE_COLOR_THEMES[selectedColor]) return;
+          snakeState.appleColor = selectedColor;
+          updateSnakeHud();
+          drawSnakeGame();
+          if (snakeCanvas) snakeCanvas.focus();
+        });
+      });
+
+      snakeDirectionButtons.forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (shouldSuppressSnakePointerClick()) return;
+          const direction = button.getAttribute("data-snake-direction");
+          setSnakeDirection(direction);
+          if (!snakeState.running) startSnakeGame();
+        });
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (!isSnakeWindowVisible()) return;
+        const target =
+          event.target instanceof Element ? event.target : event.target?.parentElement;
+        if (target?.matches("input, textarea, select")) return;
+        if (snakeState.gameOver) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            resetSnakeGame();
+            if (snakeCanvas) snakeCanvas.focus();
+            return;
+          }
+          if (SNAKE_KEY_DIRECTIONS[event.key] || event.key === " ") {
+            event.preventDefault();
+          }
+          return;
+        }
+        const direction = SNAKE_KEY_DIRECTIONS[event.key];
+        if (direction) {
+          event.preventDefault();
+          setSnakeDirection(direction);
+          if (!snakeState.running) startSnakeGame();
+          return;
+        }
+        if (event.key === " ") {
+          event.preventDefault();
+          toggleSnakeGame();
+        }
+      });
+
+      snakeState.highScores = loadSnakeHighScores();
+      const selectedSnakeBoardSizeButton =
+        document.querySelector("[data-snake-board-size].is-selected") ||
+        snakeBoardSizeButtons[0];
+      if (selectedSnakeBoardSizeButton) {
+        const selectedSize = Number(selectedSnakeBoardSizeButton.dataset.snakeBoardSize);
+        snakeState.gridSize =
+          Number.isFinite(selectedSize) && selectedSize > 0
+            ? selectedSize
+            : SNAKE_DEFAULT_GRID_SIZE;
+      }
+      const selectedSnakeColorButton =
+        document.querySelector("[data-snake-color].is-selected") ||
+        snakeColorButtons[0];
+      if (
+        selectedSnakeColorButton &&
+        SNAKE_COLOR_THEMES[selectedSnakeColorButton.dataset.snakeColor]
+      ) {
+        snakeState.color = selectedSnakeColorButton.dataset.snakeColor;
+      }
+      const selectedSnakeAppleColorButton =
+        document.querySelector("[data-snake-apple-color].is-selected") ||
+        snakeAppleColorButtons[0];
+      if (
+        selectedSnakeAppleColorButton &&
+        SNAKE_COLOR_THEMES[selectedSnakeAppleColorButton.dataset.snakeAppleColor]
+      ) {
+        snakeState.appleColor = selectedSnakeAppleColorButton.dataset.snakeAppleColor;
+      }
+      resetSnakeGame();
 
       const msGrid = document.getElementById("ms-grid");
       const msMines = document.getElementById("ms-mines");
@@ -17194,6 +19966,7 @@
 
       solNewGame();
 
+      lockMobileViewportZoom();
       fitImagesIntoFrames(document);
       watchRandomEventViewportMedia();
       window.addEventListener("resize", msResizeConfetti);
@@ -17206,7 +19979,13 @@
       window.addEventListener("resize", () => {
         if (isDistressWindowVisible(distressSignalWindow)) requestAnimationFrame(drawDistressSignals);
       });
+      window.addEventListener("resize", () => {
+        if (!isSnakeWindowVisible()) return;
+        drawSnakeGame();
+        drawSnakeNoise();
+      });
       window.addEventListener("resize", clampVisibleRandomEventWindows);
+      window.addEventListener("resize", updateLifeCounterWidthControls);
 
       document.addEventListener(
         "pointerdown",
@@ -17311,6 +20090,9 @@
                 appId: win.getAttribute("data-app-window") || "",
                 windowId: win.id || "",
               });
+            }
+            if (win.getAttribute("data-app-window") === "life-counter") {
+              updateLifeCounterWidthControls();
             }
           };
 
