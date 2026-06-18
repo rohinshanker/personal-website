@@ -349,6 +349,7 @@ body {
   right: 12px;
   bottom: 60px;
   display: none;
+  max-width: calc(100vw - 24px);
   z-index: 50;
 }
 
@@ -358,19 +359,27 @@ body {
 
 .calendar-panel,
 .clock-panel {
-  width: 300px;
+  aspect-ratio: 1 / 1;
   color: #000;
   display: flex;
+  flex: 0 0 300px;
+  height: 300px;
+  max-width: 100%;
+  width: 300px;
 }
 
 .calendar-section,
 .clock-section {
-  padding: 8px;
   background: var(--surface);
+  box-sizing: border-box;
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 8px;
 }
 
 .calendar-section {
@@ -392,9 +401,12 @@ body {
 }
 
 .calendar-popout .window-body {
+  align-items: flex-start;
   display: flex;
   gap: 12px;
-  align-items: stretch;
+  max-height: calc(100vh - 92px);
+  max-height: calc(100dvh - 92px);
+  overflow: auto;
 }
 
 .calendar-header {
@@ -435,15 +447,21 @@ body {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(7, 24px);
+  grid-template-rows: repeat(7, minmax(0, 1fr));
   gap: 4px;
+  flex: 1;
   font-size: 11px;
+  min-height: 0;
   text-align: center;
 }
 
 .calendar-day {
-  padding: 4px 0;
+  align-items: center;
   border: 1px solid transparent;
+  display: flex;
+  justify-content: center;
+  min-height: 0;
+  padding: 0;
 }
 
 .calendar-day.is-today {
@@ -558,4 +576,43 @@ body {
   width: 2px;
   background: var(--button-shadow);
   box-shadow: inset 1px 0 var(--button-highlight);
+}
+
+@media (max-width: 680px) {
+  .calendar-popout {
+    --calendar-panel-size: min(300px, calc(100vw - 56px));
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    width: auto;
+  }
+
+  .calendar-popout .window-body {
+    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+    max-height: calc(100vh - 84px);
+    max-height: calc(100dvh - 84px);
+  }
+
+  .calendar-panel,
+  .clock-panel {
+    box-sizing: border-box;
+    flex: 0 0 var(--calendar-panel-size);
+    height: var(--calendar-panel-size);
+    width: var(--calendar-panel-size);
+  }
+
+  .calendar-grid {
+    gap: clamp(2px, 0.9vw, 4px);
+  }
+
+  .clock-display {
+    width: min(190px, calc(var(--calendar-panel-size) - 64px));
+  }
+
+  .calendar-divider {
+    height: 2px;
+    width: 100%;
+    box-shadow: inset 0 1px var(--button-highlight);
+  }
 }

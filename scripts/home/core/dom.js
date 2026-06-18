@@ -209,6 +209,7 @@ window.homeDom = {
   infinityArmoryWindow: doc.getElementById("infinity-armory-window"),
   infinityArmoryClose: doc.getElementById("infinity-armory-close"),
   infinityArmoryLevel: doc.getElementById("infinity-armory-level"),
+  infinityArmoryAttack: doc.getElementById("infinity-armory-attack"),
   infinityArmoryUpgrade: doc.getElementById("infinity-armory-upgrade"),
   infinityArmoryPrice: doc.getElementById("infinity-armory-price"),
   infinityArmoryGold: doc.getElementById("infinity-armory-gold"),

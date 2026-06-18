@@ -207,6 +207,7 @@ const {
   infinityArmoryWindow,
   infinityArmoryClose,
   infinityArmoryLevel,
+  infinityArmoryAttack,
   infinityArmoryUpgrade,
   infinityArmoryPrice,
   infinityArmoryGold,
@@ -897,18 +898,21 @@ const RANDOM_EVENT_MAX_LOCK_RELEASE_MS = 30 * 1000;
 const INFINITY_ARMORY_STARTING_GOLD = 12000;
 const INFINITY_ARMORY_UPGRADE_PRICES = Object.freeze([1000, 2500, 5000]);
 const INFINITY_ARMORY_MAX_LEVEL = INFINITY_ARMORY_UPGRADE_PRICES.length + 1;
+const INFINITY_ARMORY_BASE_ATTACK = 500;
+const INFINITY_ARMORY_ATTACK_PER_LEVEL = 50;
+const INFINITY_ARMORY_SQUARE_ATTACK_BONUS = 500;
 const INFINITY_ARMORY_SHAPES = Object.freeze(["square", "circle", "triangle"]);
 const INFINITY_ARMORY_GEM_LABELS = Object.freeze({
   square: "Square",
   circle: "Circle",
   triangle: "Triangle",
 });
-const INFINITY_ARMORY_INVENTORY_SLOT_COUNT = 15;
-const INFINITY_ARMORY_INVENTORY_GEM_COUNT = INFINITY_ARMORY_INVENTORY_SLOT_COUNT;
+const INFINITY_ARMORY_INVENTORY_SLOT_COUNT = 25;
+const INFINITY_ARMORY_INVENTORY_GEM_COUNT = 12;
 const INFINITY_ARMORY_GEM_ICON_BY_SHAPE = Object.freeze({
-  square: "assets/random%20events/ib-gem-square.webp",
-  circle: "assets/random%20events/ib-gem-circle.webp",
-  triangle: "assets/random%20events/ib-gem-triangle.webp",
+  square: "assets/random%20events/ib-assets/ib-gem-square.webp",
+  circle: "assets/random%20events/ib-assets/ib-gem-circle.webp",
+  triangle: "assets/random%20events/ib-assets/ib-gem-triangle.webp",
 });
 const INFINITY_ARMORY_GEM_COLORS = Object.freeze([
   "ruby",
@@ -1896,16 +1900,11 @@ const triggerWingedLightCollectEffect = () => {
   const overlay = document.createElement("div");
   overlay.className = "winged-light-collect-overlay";
   const starPositions = [
-    { x: 0, y: -180 },
-    { x: 0, y: -140 },
-    { x: 0, y: -100 },
-    { x: 0, y: -60 },
-    { x: 0, y: -20 },
-    { x: 0, y: 20 },
-    { x: 0, y: 60 },
-    { x: 0, y: 100 },
-    { x: 0, y: 140 },
-    { x: 0, y: 180 },
+    { x: 0, y: -128 },
+    { x: 0, y: -64 },
+    { x: 0, y: 0 },
+    { x: 0, y: 64 },
+    { x: 0, y: 128 },
   ];
 
   starPositions.forEach(({ x, y }, index) => {
@@ -1915,7 +1914,12 @@ const triggerWingedLightCollectEffect = () => {
     star.style.setProperty("--star-y", `${y}px`);
     star.style.setProperty("--star-x-end", `${Math.round(x * 1.18)}px`);
     star.style.setProperty("--star-y-end", `${Math.round(y * 1.18)}px`);
-    star.style.setProperty("--star-delay", `${index * 42}ms`);
+    star.style.setProperty("--star-delay", `${index * 45}ms`);
+    ["1", "2", "3"].forEach((tier) => {
+      const tierLayer = document.createElement("span");
+      tierLayer.className = `wing-charge-star-tier wing-charge-star-tier--${tier}`;
+      star.appendChild(tierLayer);
+    });
     overlay.appendChild(star);
   });
 
@@ -1931,7 +1935,7 @@ const triggerWingedLightCollectEffect = () => {
     cleanup();
   };
   overlay.addEventListener("animationend", handleOverlayAnimationEnd);
-  setTimeout(cleanup, 2200);
+  setTimeout(cleanup, 4300);
 };
 
 const collectWingedLight = () => {
@@ -4815,9 +4819,16 @@ const updateInfinityArmory = () => {
   const nextPrice = INFINITY_ARMORY_UPGRADE_PRICES[infinityArmoryState.level - 1] || 0;
   const isMaxLevel = infinityArmoryState.level >= INFINITY_ARMORY_MAX_LEVEL;
   const canUpgrade = !isMaxLevel && infinityArmoryState.gold >= nextPrice;
+  const attack =
+    INFINITY_ARMORY_BASE_ATTACK +
+    (infinityArmoryState.level - 1) * INFINITY_ARMORY_ATTACK_PER_LEVEL +
+    (infinityArmoryState.gems.square ? INFINITY_ARMORY_SQUARE_ATTACK_BONUS : 0);
 
   if (infinityArmoryLevel) {
     infinityArmoryLevel.textContent = `Infinity Blade Lvl ${infinityArmoryState.level}`;
+  }
+  if (infinityArmoryAttack) {
+    infinityArmoryAttack.textContent = String(attack);
   }
   if (infinityArmoryGold) {
     infinityArmoryGold.textContent = String(infinityArmoryState.gold);
@@ -6023,7 +6034,7 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "possum-springs-bulletin",
-  debug: true,
+  debug: false,
   probability: STANDARD_RANDOM_EVENT_PROBABILITY,
   probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
@@ -6036,7 +6047,7 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "winged-light",
-  debug: true,
+  debug: false,
   probability: STANDARD_RANDOM_EVENT_PROBABILITY,
   probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
@@ -6257,7 +6268,7 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "infinity-blade-armory",
-  debug: true,
+  debug: false,
   probability: STANDARD_RANDOM_EVENT_PROBABILITY,
   probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
@@ -6366,6 +6377,8 @@ const setWindowTitleBarClampedPosition = (win, left, top) => {
   win.style.top = `${position.top}px`;
   return position;
 };
+
+const isWindowDragDisabled = (win) => Boolean(win?.hasAttribute("data-no-drag"));
 
 const syncPortfolioBodyHeight = (win, outerHeight) => {
   if (!win || !win.classList.contains("portfolio-window")) return;
@@ -14493,7 +14506,8 @@ const clampVisibleWindowTitleBars = () => {
     if (
       win.hidden ||
       win.classList.contains("is-hidden") ||
-      win.classList.contains("app-window--center")
+      win.classList.contains("app-window--center") ||
+      isWindowDragDisabled(win)
     ) {
       return;
     }
@@ -14522,6 +14536,7 @@ draggableWindows.forEach((win) => {
 
   const titleBar = win.querySelector(".title-bar");
   if (!titleBar) return;
+  if (isWindowDragDisabled(win)) return;
   const minimizeButton = win.querySelector('.title-bar-controls button[aria-label="Minimize"]');
   const maximizeButton = win.querySelector('.title-bar-controls button[aria-label="Maximize"]');
 

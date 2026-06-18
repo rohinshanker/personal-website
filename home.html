@@ -10,7 +10,7 @@
     <meta name="description" content="Rohin OS home screen." />
     <link rel="icon" href="assets/windowsxp.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
-    <link rel="stylesheet" href="styles/home/base.css" />
+    <link rel="stylesheet" href="styles/home/base.css?v=calendar-square-stack-20260617" />
     <link rel="stylesheet" href="styles/home/apps/minesweeper.css" />
     <link rel="stylesheet" href="styles/home/apps/solitaire.css" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="styles/home/apps/life-counter.css" />
     <link rel="stylesheet" href="styles/home/portfolio.css" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=possum-pushpin-image-20260617" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=winged-light-cardinal-stops-20260617" />
   </head>
   <body>
     <div class="desktop" aria-label="Desktop apps">
@@ -2085,7 +2085,7 @@
       </button>
     </div>
 
-    <div class="window calendar-popout" id="calendar-popout" aria-hidden="true">
+    <div class="window calendar-popout" id="calendar-popout" aria-hidden="true" data-no-drag>
       <div class="title-bar">
         <div class="title-bar-text">Date &amp; Time</div>
       </div>
@@ -2800,20 +2800,29 @@
       </div>
       <div class="window-body">
         <div class="infinity-armory-panel">
-          <div class="infinity-armory-blade-card">
+          <div class="infinity-armory-loadout">
             <div class="infinity-armory-level" id="infinity-armory-level">
               Infinity Blade Lvl 1
             </div>
             <div class="infinity-armory-blade-frame">
               <img
                 class="infinity-armory-blade"
-                data-src="assets/random%20events/infinity%20blade.webp"
+                data-src="assets/random%20events/ib-assets/infinity%20blade.webp"
                 decoding="async"
                 alt="Infinity Blade"
               />
             </div>
-          </div>
-          <div class="infinity-armory-weapon-card">
+            <div class="infinity-armory-gems-label">Description</div>
+            <p class="infinity-armory-description">
+              Legend claims that only the Infinity Blade can kill one of the immortals known as the Deathless.
+            </p>
+            <div class="infinity-armory-gems-label">XP</div>
+            <div class="infinity-armory-xp" aria-label="XP 7,598 out of 15,000">
+              <div class="infinity-armory-xp-track">
+                <div class="infinity-armory-xp-fill" style="width: 50.65%"></div>
+              </div>
+              <div class="infinity-armory-xp-value">7,598/15,000</div>
+            </div>
             <div class="infinity-armory-slots" role="group" aria-label="Infinity Blade gem slots">
               <button
                 class="infinity-armory-slot"
@@ -2822,7 +2831,7 @@
                 aria-label="Square gem slot"
               >
                 <img
-                  data-src="assets/random%20events/ib-gem-square.webp"
+                  data-src="assets/random%20events/ib-assets/ib-gem-square.webp"
                   decoding="async"
                   alt=""
                 />
@@ -2835,7 +2844,7 @@
                 aria-label="Circle gem slot"
               >
                 <img
-                  data-src="assets/random%20events/ib-gem-circle.webp"
+                  data-src="assets/random%20events/ib-assets/ib-gem-circle.webp"
                   decoding="async"
                   alt=""
                 />
@@ -2848,19 +2857,26 @@
                 aria-label="Triangle gem slot"
               >
                 <img
-                  data-src="assets/random%20events/ib-gem-triangle.webp"
+                  data-src="assets/random%20events/ib-assets/ib-gem-triangle.webp"
                   decoding="async"
                   alt=""
                 />
                 <span class="infinity-armory-slot-shape infinity-armory-slot-shape--triangle" aria-hidden="true"></span>
               </button>
             </div>
-            <div class="infinity-armory-status" id="infinity-armory-status" aria-live="polite"></div>
+            <div class="infinity-armory-attack" aria-label="Infinity Blade attack">
+              <img
+                data-src="assets/random%20events/ib-assets/stat-attack-ib2.webp"
+                decoding="async"
+                alt=""
+              />
+              <span id="infinity-armory-attack">500</span>
+            </div>
             <div class="infinity-armory-upgrade-row">
               <button type="button" id="infinity-armory-upgrade">Upgrade</button>
               <span class="infinity-armory-price">
                 <img
-                  data-src="assets/random%20events/ib-gold-icon.webp"
+                  data-src="assets/random%20events/ib-assets/ib-gold-icon.webp"
                   decoding="async"
                   alt=""
                 />
@@ -2870,29 +2886,174 @@
           </div>
           <div class="infinity-armory-inventory">
             <div class="infinity-armory-inventory-header">
-              <span class="infinity-armory-inventory-title">Inventory</span>
+              <span class="infinity-armory-inventory-title">Gold</span>
             </div>
             <div class="infinity-armory-gold-bag">
               <img
-                data-src="assets/random%20events/ib-gold-bag.webp"
+                data-src="assets/random%20events/ib-assets/ib-gold-bag.webp"
                 decoding="async"
                 alt=""
               />
               <span class="infinity-armory-gold">
                 <img
-                  data-src="assets/random%20events/ib-gold-icon.webp"
+                  data-src="assets/random%20events/ib-assets/ib-gold-icon.webp"
                   decoding="async"
                   alt=""
                 />
                 <span id="infinity-armory-gold">12000</span>
               </span>
             </div>
+            <div class="infinity-armory-gems-label">Gems</div>
             <div
               class="infinity-armory-gems"
               id="infinity-armory-gems"
               role="grid"
               aria-label="Gem inventory"
             ></div>
+            <div class="infinity-armory-gems-label">Maps</div>
+            <div class="infinity-armory-maps" role="grid" aria-label="Map inventory">
+              <button class="infinity-armory-map" type="button" aria-label="The Vile Map">
+                <img
+                  data-src="assets/random%20events/ib-assets/ib-map-icon-3.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span class="infinity-armory-map-hint" aria-hidden="true">
+                  <strong>The Vile Map</strong>
+                  <img
+                    data-src="assets/random%20events/ib-assets/ib-map-preview-vile.webp"
+                    decoding="async"
+                    alt=""
+                  />
+                </span>
+              </button>
+              <button class="infinity-armory-map" type="button" aria-label="Worn Treasure Map">
+                <img
+                  data-src="assets/random%20events/ib-assets/ib-map-icon-1.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span class="infinity-armory-map-hint" aria-hidden="true">
+                  <strong>Worn Treasure Map</strong>
+                  <img
+                    data-src="assets/random%20events/ib-assets/ib-map-preview-worn.webp"
+                    decoding="async"
+                    alt=""
+                  />
+                </span>
+              </button>
+              <button class="infinity-armory-map" type="button" aria-label="Victors Spoils Map">
+                <img
+                  data-src="assets/random%20events/ib-assets/ib-map-icon-2.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span class="infinity-armory-map-hint" aria-hidden="true">
+                  <strong>Victors Spoils Map</strong>
+                  <img
+                    data-src="assets/random%20events/ib-assets/ib-map-preview-victors.webp"
+                    decoding="async"
+                    alt=""
+                  />
+                </span>
+              </button>
+              <button class="infinity-armory-map" type="button" aria-label="Key Treasure Map">
+                <img
+                  data-src="assets/random%20events/ib-assets/ib-map-icon-3.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span class="infinity-armory-map-hint" aria-hidden="true">
+                  <strong>Key Treasure Map</strong>
+                  <img
+                    data-src="assets/random%20events/ib-assets/ib-map-preview-key.webp"
+                    decoding="async"
+                    alt=""
+                  />
+                </span>
+              </button>
+              <button class="infinity-armory-map" type="button" aria-label="Wet Loot Map">
+                <img
+                  data-src="assets/random%20events/ib-assets/ib-map-icon-1.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span class="infinity-armory-map-hint" aria-hidden="true">
+                  <strong>Wet Loot Map</strong>
+                  <img
+                    data-src="assets/random%20events/ib-assets/ib-map-preview-wet.webp"
+                    decoding="async"
+                    alt=""
+                  />
+                </span>
+              </button>
+              <button class="infinity-armory-map" type="button" aria-label="Old Treasure Map">
+                <img
+                  data-src="assets/random%20events/ib-assets/ib-map-icon-3.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span class="infinity-armory-map-hint" aria-hidden="true">
+                  <strong>Old Treasure Map</strong>
+                  <img
+                    data-src="assets/random%20events/ib-assets/ib-map-preview-old-treasure.webp"
+                    decoding="async"
+                    alt=""
+                  />
+                </span>
+              </button>
+              <button class="infinity-armory-map" type="button" aria-label="Tree Map">
+                <img
+                  data-src="assets/random%20events/ib-assets/ib-map-icon-2.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span class="infinity-armory-map-hint" aria-hidden="true">
+                  <strong>Tree Map</strong>
+                  <img
+                    data-src="assets/random%20events/ib-assets/ib-map-preview-tree.webp"
+                    decoding="async"
+                    alt=""
+                  />
+                </span>
+              </button>
+              <button class="infinity-armory-map" type="button" aria-label="The Faceplate Map">
+                <img
+                  data-src="assets/random%20events/ib-assets/ib-map-icon-1.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span class="infinity-armory-map-hint" aria-hidden="true">
+                  <strong>The Faceplate Map</strong>
+                  <img
+                    data-src="assets/random%20events/ib-assets/ib-map-preview-faceplate.webp"
+                    decoding="async"
+                    alt=""
+                  />
+                </span>
+              </button>
+              <button class="infinity-armory-map" type="button" aria-label="Scholars Map">
+                <img
+                  data-src="assets/random%20events/ib-assets/ib-map-icon-3.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span class="infinity-armory-map-hint" aria-hidden="true">
+                  <strong>Scholars Map</strong>
+                  <img
+                    data-src="assets/random%20events/ib-assets/ib-map-preview-scholars.webp"
+                    decoding="async"
+                    alt=""
+                  />
+                </span>
+              </button>
+              <button class="infinity-armory-map is-empty" type="button" aria-label="Empty map slot" disabled></button>
+              <button class="infinity-armory-map is-empty" type="button" aria-label="Empty map slot" disabled></button>
+              <button class="infinity-armory-map is-empty" type="button" aria-label="Empty map slot" disabled></button>
+              <button class="infinity-armory-map is-empty" type="button" aria-label="Empty map slot" disabled></button>
+              <button class="infinity-armory-map is-empty" type="button" aria-label="Empty map slot" disabled></button>
+              <button class="infinity-armory-map is-empty" type="button" aria-label="Empty map slot" disabled></button>
+            </div>
           </div>
         </div>
       </div>
@@ -3171,8 +3332,8 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/core/dom.js?v=classic-20260617g"></script>
-    <script src="scripts/home/core/media.js?v=classic-20260617g"></script>
-    <script src="scripts/home/main.js?v=classic-20260617g"></script>
+    <script src="scripts/home/core/dom.js?v=classic-20260617l"></script>
+    <script src="scripts/home/core/media.js?v=classic-20260617l"></script>
+    <script src="scripts/home/main.js?v=winged-light-debug-off-20260617"></script>
   </body>
 </html>
