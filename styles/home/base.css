@@ -1,0 +1,561 @@
+:root {
+  --bg-image: url("../../assets/optimized/background-2200.jpg");
+}
+
+@font-face {
+  font-family: "Digital-7";
+  src: url("../../assets/fonts/src/digital-7/digital-7.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg-image) center / cover no-repeat;
+  display: grid;
+  place-items: center;
+  padding-bottom: 56px;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+}
+
+.desktop {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  bottom: 68px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  row-gap: 16px;
+  column-gap: 10px;
+  max-width: calc(100vw - 32px);
+}
+
+.desktop-icon {
+  width: 64px;
+  text-align: center;
+  color: #fff;
+  font-size: 11px;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  appearance: none;
+}
+
+.desktop-icon:hover {
+  background: rgba(0, 0, 128, 0.35);
+  outline: 1px dotted #fff;
+  outline-offset: 2px;
+}
+
+.desktop-icon:active {
+  background: rgba(0, 0, 128, 0.6);
+}
+
+.desktop-icon:focus {
+  outline: none;
+}
+
+.desktop-icon img {
+  width: 40px;
+  height: 40px;
+  display: block;
+  margin: 0 auto 6px;
+}
+
+.github-shortcut-image {
+  image-rendering: pixelated;
+}
+
+.home-window {
+  width: min(92vw, 520px);
+}
+
+.home-window.app-window--center {
+  top: 35%;
+}
+
+.home-window.is-hidden,
+.app-window.is-hidden {
+  display: none;
+}
+
+.app-window {
+  position: fixed;
+  top: 90px;
+  left: 140px;
+  width: min(80vw, 420px);
+  z-index: 2;
+  transform-origin: center center;
+  will-change: opacity, clip-path, scale, filter, translate;
+}
+
+.app-window--center {
+  top: 25%;
+  left: 50%;
+  translate: -50% -50%;
+}
+
+.app-window .window-body {
+  min-height: 120px;
+}
+
+.app-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.app-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+@keyframes retro-window-open {
+  0% {
+    opacity: 0;
+    scale: 0.04 0.02;
+    clip-path: inset(49.5% 47% 49.5% 47%);
+    filter: brightness(2.8) contrast(2.1);
+  }
+  38% {
+    opacity: 1;
+    scale: 1 0.04;
+    clip-path: inset(49% 0 49% 0);
+    filter: brightness(2.6) contrast(1.9);
+  }
+  72% {
+    opacity: 1;
+    scale: 1.03 1.02;
+    clip-path: inset(0 0 0 0);
+    filter: brightness(1.15) contrast(1.05);
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+    clip-path: inset(0 0 0 0);
+    filter: none;
+  }
+}
+
+@keyframes retro-window-close {
+  0% {
+    opacity: 1;
+    scale: 1;
+    clip-path: inset(0 0 0 0);
+    filter: none;
+  }
+  54% {
+    opacity: 1;
+    scale: 1 0.04;
+    clip-path: inset(49% 0 49% 0);
+    filter: brightness(2.6) contrast(1.9);
+  }
+  82% {
+    opacity: 1;
+    scale: 0.06 0.02;
+    clip-path: inset(49.5% 47% 49.5% 47%);
+    filter: brightness(3) contrast(2.2);
+  }
+  100% {
+    opacity: 0;
+    scale: 0;
+    clip-path: inset(50% 50% 50% 50%);
+    filter: brightness(3.2) contrast(2.4);
+  }
+}
+
+.window-stack {
+  position: relative;
+  z-index: 2;
+}
+.window-body p {
+  margin: 0 0 12px;
+}
+
+.credits-line {
+  display: flex;
+  align-items: center;
+}
+
+.credits-logo-icon {
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.credits-css-icon {
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.credits-thumb {
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+.credits-solitaire-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  margin-right: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.credits-solitaire-icon::before {
+  width: 23px;
+  height: 28px;
+  background-image: url("../../assets/solitaire-cards/poker nano.png");
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-size: 1300% auto;
+  content: "";
+  image-rendering: pixelated;
+}
+
+.minesweeper-window {
+  width: min(92vw, 520px);
+}
+
+.minesweeper-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.taskbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgb(192, 192, 192);
+  box-shadow: inset 0 1px var(--button-highlight),
+    inset 0 -1px var(--button-shadow);
+  color: #000;
+}
+
+.taskbar-apps {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.taskbar-apps::-webkit-scrollbar {
+  display: none;
+}
+
+.start-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px 0 6px;
+  border: none;
+  background: var(--surface);
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+}
+
+.start-button:active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+.start-button img {
+  width: 22px;
+  height: 22px;
+  margin-left: -2px;
+}
+
+.taskbar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.taskbar-icon img {
+  width: 30px;
+  height: 30px;
+}
+
+.taskbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  border: none;
+  cursor: pointer;
+}
+
+.taskbar-divider {
+  width: 2px;
+  height: 28px;
+  background: var(--button-shadow);
+  box-shadow: inset 1px 0 var(--button-highlight);
+}
+
+.taskbar-clock {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.calendar-popout {
+  position: fixed;
+  right: 12px;
+  bottom: 60px;
+  display: none;
+  z-index: 50;
+}
+
+.calendar-popout.is-open {
+  display: block;
+}
+
+.calendar-panel,
+.clock-panel {
+  width: 300px;
+  color: #000;
+  display: flex;
+}
+
+.calendar-section,
+.clock-section {
+  padding: 8px;
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-section {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.calendar-section,
+.calendar-section .calendar-header,
+.calendar-section .calendar-day,
+.calendar-section .calendar-nav button {
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.calendar-section .calendar-day.is-muted {
+  color: #cfcfcf;
+}
+
+.calendar-popout .window-body {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+#calendar-header {
+  cursor: pointer;
+}
+
+#calendar-header:hover {
+  text-decoration: underline;
+}
+
+.calendar-nav {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.calendar-nav button {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.calendar-nav button:active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(7, 24px);
+  gap: 4px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.calendar-day {
+  padding: 4px 0;
+  border: 1px solid transparent;
+}
+
+.calendar-day.is-today {
+  border-color: #000;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #000;
+}
+
+.calendar-day.is-muted {
+  color: #666;
+}
+
+.calendar-day:hover {
+  background: #fff;
+  border-color: #000;
+}
+
+.calendar-day[data-calendar-day] {
+  cursor: pointer;
+}
+
+.calendar-day[data-calendar-weekday="thursday"] {
+  cursor: pointer;
+}
+
+.calendar-day.is-event-day {
+  position: relative;
+}
+
+.calendar-day.is-event-day:hover,
+.calendar-day.is-event-day:focus-visible {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(247, 205, 74, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(214, 170, 46, 0.9),
+    0 0 8px rgba(255, 210, 84, 0.35);
+  z-index: 1;
+}
+
+.calendar-day.is-event-day:hover::after,
+.calendar-day.is-event-day:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(247, 205, 74, 0.95);
+  box-shadow:
+    0 0 8px 1px rgba(255, 210, 84, 0.6),
+    0 0 14px 2px rgba(255, 184, 28, 0.35);
+  opacity: 0.72;
+  pointer-events: none;
+  animation: gold-button-halo 3.2s ease-in-out infinite;
+}
+
+.clock-display {
+  background: #000;
+  color: #00ff66;
+  font-family: "Digital-7", "DS-Digital", "Share Tech Mono", "Courier New",
+    monospace;
+  font-size: 22px;
+  text-align: center;
+  box-sizing: border-box;
+  width: 190px;
+  height: 44px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px rgba(0, 255, 102, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.clock-colon.is-off {
+  opacity: 0.2;
+}
+
+.clock-frame {
+  padding: 6px;
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+.clock-slot-frame {
+  margin-bottom: 10px;
+}
+
+.clock-slot {
+  text-shadow: none;
+  padding: 0;
+}
+
+.clock-slot img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.clock-quote {
+  margin-top: 10px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.clock-section {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.calendar-divider {
+  width: 2px;
+  background: var(--button-shadow);
+  box-shadow: inset 1px 0 var(--button-highlight);
+}

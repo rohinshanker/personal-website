@@ -1,0 +1,342 @@
+.sol-fireworks {
+  display: none;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: fixed;
+  z-index: 110;
+}
+
+.sol-fireworks.is-showing {
+  display: block;
+}
+
+.sol-victory-video-overlay {
+  align-items: center;
+  background: transparent;
+  display: none;
+  inset: 0;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+  z-index: 5;
+}
+
+.sol-victory-video-overlay.is-showing {
+  display: flex;
+}
+
+.sol-victory-video-overlay video {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.sol-victory-video-overlay video.is-visible-fallback {
+  height: auto;
+  max-height: 90%;
+  max-width: 96%;
+  mix-blend-mode: screen;
+  opacity: 1;
+  position: static;
+  width: min(780px, 96%);
+}
+
+.sol-victory-video-overlay canvas {
+  display: block;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.38));
+  height: auto;
+  max-height: 90%;
+  max-width: 96%;
+  width: min(780px, 96%);
+}
+
+.sol-victory-video-overlay canvas.is-hidden {
+  display: none;
+}
+
+.sol-firework-dot {
+  --sol-firework-color: #fff;
+  --sol-firework-dx: 0px;
+  --sol-firework-dy: 0px;
+  animation: sol-firework-burst 950ms ease-out forwards;
+  background: var(--sol-firework-color);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--sol-firework-color);
+  height: 5px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  will-change: opacity, transform;
+}
+
+@keyframes sol-firework-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(
+        calc(-50% + var(--sol-firework-dx)),
+        calc(-50% + var(--sol-firework-dy))
+      )
+      scale(0.25);
+  }
+}
+
+.solitaire-window {
+  width: max-content;
+  max-width: calc(100vw - 24px);
+}
+
+.solitaire-window .window-body {
+  max-width: calc(100vw - 48px);
+  min-height: 0;
+  overflow-x: auto;
+}
+
+.sol-app {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+}
+
+.sol-toolbar {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  gap: 8px;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px;
+  position: relative;
+  width: 100%;
+}
+
+.sol-toolbar button {
+  min-width: 70px;
+}
+
+.sol-reset,
+.sol-undo {
+  align-items: center;
+  background: var(--surface);
+  border: none;
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 34px;
+  padding: 0;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+}
+
+.sol-reset {
+  left: 8px;
+}
+
+.sol-undo {
+  right: 8px;
+}
+
+.sol-reset:not(:disabled):active,
+.sol-undo:not(:disabled):active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  padding: 1px 0 0 1px;
+}
+
+.sol-undo:disabled {
+  cursor: default;
+}
+
+.sol-reset img,
+.sol-undo img {
+  display: block;
+  height: 22px;
+  image-rendering: pixelated;
+  width: 22px;
+}
+
+.sol-undo:disabled img {
+  opacity: 0.35;
+}
+
+.sol-counter {
+  flex: 0 0 auto;
+}
+
+.sol-status {
+  min-width: 80px;
+  position: absolute;
+  right: 50px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sol-board {
+  --sol-card-w: 72px;
+  --sol-card-h: 88px;
+  --sol-gap: 12px;
+  --sol-overlap: 24px;
+  background: #008000;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-sizing: border-box;
+  color: #fff;
+  max-height: min(68vh, 560px);
+  max-width: 100%;
+  overflow: auto;
+  padding: 10px;
+  width: max-content;
+}
+
+.sol-top-row,
+.sol-tableau {
+  display: grid;
+  gap: var(--sol-gap);
+  grid-template-columns: repeat(7, var(--sol-card-w));
+  width: max-content;
+}
+
+.sol-top-row {
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.sol-slot,
+.sol-card {
+  width: var(--sol-card-w);
+  height: var(--sol-card-h);
+  min-width: var(--sol-card-w);
+  min-height: var(--sol-card-h);
+}
+
+.sol-slot {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.sol-slot[role="button"] {
+  cursor: pointer;
+}
+
+.sol-slot:focus {
+  outline: 1px dotted #fff;
+  outline-offset: -4px;
+}
+
+.sol-slot-mark {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 24px;
+  line-height: 1;
+  text-shadow: 1px 1px 0 #004400;
+}
+
+.sol-tableau-col {
+  min-height: var(--sol-card-h);
+  position: relative;
+}
+
+.sol-tableau-tooltip {
+  background: #000;
+  border: 1px solid #fff;
+  box-shadow: 1px 1px 0 #000;
+  color: #fff;
+  display: none;
+  padding: 2px 5px;
+  pointer-events: none;
+  position: fixed;
+  white-space: nowrap;
+  z-index: 10000;
+}
+
+.sol-tableau-tooltip.is-visible {
+  display: block;
+}
+
+.sol-card {
+  background-color: transparent;
+  background-image: url("../../../assets/solitaire-cards/poker nano.png");
+  background-position: var(--sol-sprite-x, 0%) var(--sol-sprite-y, 0%);
+  background-repeat: no-repeat;
+  background-size: 1300% auto;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  color: transparent;
+  cursor: pointer;
+  display: block;
+  image-rendering: pixelated;
+  line-height: 0;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  text-shadow: none;
+}
+
+.sol-card + .sol-card {
+  margin-top: calc(var(--sol-overlap) - var(--sol-card-h));
+}
+
+button.sol-card:not(:disabled):active {
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.sol-card.is-selected {
+  outline: 2px solid #ffff00;
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+.solitaire-rules-window {
+  width: min(92vw, 430px);
+}
+
+.solitaire-rules-window .window-body {
+  max-height: min(60vh, 360px);
+  overflow-y: auto;
+}
+
+.sol-rules-list {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.45;
+}
+
+.sol-rules-list li + li {
+  margin-top: 6px;
+}
+
+@media (max-width: 640px) {
+  .sol-board {
+    --sol-card-w: 54px;
+    --sol-card-h: 66px;
+    --sol-gap: 7px;
+    --sol-overlap: 18px;
+    padding: 8px;
+  }
+
+  .sol-slot-mark {
+    font-size: 18px;
+  }
+}
