@@ -465,6 +465,64 @@
   min-width: 84px;
 }
 
+.no-smoking-window {
+  display: block;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(320px, calc(100vw - 32px));
+  z-index: 143;
+}
+
+.no-smoking-window.is-hidden {
+  display: none;
+}
+
+.no-smoking-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.no-smoking-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.no-smoking-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.no-smoking-message {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 48px 1fr;
+}
+
+.no-smoking-message img {
+  display: block;
+  height: 42px;
+  object-fit: contain;
+  width: 42px;
+}
+
+.no-smoking-message p {
+  font-weight: bold;
+  margin: 0;
+}
+
+.no-smoking-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.no-smoking-actions button {
+  min-width: 84px;
+}
+
 .castle-gate-window {
   display: block;
   left: 50%;
@@ -1679,6 +1737,505 @@
   min-width: 74px;
 }
 
+.serval-encounter-window,
+.serval-pizza-window {
+  display: block;
+  left: 50%;
+  max-height: calc(100vh - 76px);
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(360px, calc(100vw - 32px));
+  z-index: 141;
+}
+
+.serval-pizza-window {
+  width: min(340px, calc(100vw - 32px));
+}
+
+.serval-encounter-window.is-hidden,
+.serval-pizza-window.is-hidden {
+  display: none;
+}
+
+.serval-encounter-window.is-opening,
+.serval-pizza-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.serval-encounter-window.is-closing,
+.serval-pizza-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.serval-encounter-window .window-body,
+.serval-pizza-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: calc(100vh - 110px);
+  overflow: auto;
+}
+
+.serval-event-message {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 54px 1fr;
+}
+
+.serval-event-icon {
+  background: #d8d0c0;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-sizing: border-box;
+  display: block;
+  height: 50px;
+  object-fit: cover;
+  object-position: center;
+  padding: 2px;
+  width: 50px;
+}
+
+.serval-event-message p {
+  margin: 0;
+}
+
+.serval-pizza-art {
+  align-self: center;
+  background: #050403;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: block;
+  height: auto;
+  max-height: min(42vh, 260px);
+  max-width: calc(100% - 8px);
+  object-fit: contain;
+  width: auto;
+}
+
+.serval-encounter-actions,
+.serval-pizza-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.serval-encounter-actions {
+  justify-content: flex-end;
+}
+
+.serval-pizza-actions {
+  justify-content: flex-end;
+}
+
+.serval-encounter-actions button,
+.serval-pizza-actions button {
+  min-width: 84px;
+}
+
+.caracal-encounter-window,
+.caracal-result-window {
+  display: block;
+  left: 50%;
+  max-height: calc(100vh - 76px);
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(372px, calc(100vw - 32px));
+  z-index: 141;
+}
+
+.caracal-result-window {
+  width: min(370px, calc(100vw - 32px));
+}
+
+.caracal-encounter-window.is-hidden,
+.caracal-result-window.is-hidden {
+  display: none;
+}
+
+.caracal-encounter-window.is-opening,
+.caracal-result-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.caracal-encounter-window.is-closing,
+.caracal-result-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.caracal-encounter-window .window-body,
+.caracal-result-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: calc(100vh - 110px);
+  overflow: auto;
+}
+
+.caracal-event-message {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 54px 1fr;
+}
+
+.caracal-event-icon {
+  background: #d8d0c0;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-sizing: border-box;
+  display: block;
+  height: 50px;
+  object-fit: cover;
+  object-position: center;
+  padding: 2px;
+  width: 50px;
+}
+
+.caracal-event-message p,
+.caracal-result-window p {
+  margin: 0;
+}
+
+.caracal-result-window p {
+  text-align: center;
+}
+
+.caracal-result-art {
+  align-self: center;
+  background: #050403;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: block;
+  height: auto;
+  max-height: min(42vh, 260px);
+  max-width: calc(100% - 8px);
+  object-fit: contain;
+  width: auto;
+}
+
+.caracal-encounter-actions,
+.caracal-result-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.caracal-encounter-actions {
+  justify-content: flex-end;
+}
+
+.caracal-result-actions {
+  justify-content: center;
+}
+
+.caracal-encounter-actions button,
+.caracal-result-actions button {
+  min-width: 84px;
+}
+
+.shoebill-encounter-window,
+.shoebill-bow-window {
+  display: block;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(360px, calc(100vw - 32px));
+  z-index: 136;
+}
+
+.shoebill-bow-window {
+  width: min(380px, calc(100vw - 32px));
+}
+
+.shoebill-encounter-window.is-hidden,
+.shoebill-bow-window.is-hidden {
+  display: none;
+}
+
+.shoebill-encounter-window.is-opening,
+.shoebill-bow-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.shoebill-encounter-window.is-closing,
+.shoebill-bow-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.shoebill-encounter-window .window-body,
+.shoebill-bow-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shoebill-event-message {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.shoebill-event-icon {
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: block;
+  flex: 0 0 auto;
+  height: 64px;
+  object-fit: cover;
+  width: 64px;
+}
+
+.shoebill-event-message p,
+.shoebill-bow-window p {
+  margin: 0;
+}
+
+.shoebill-bow-window p {
+  text-align: center;
+}
+
+.shoebill-bow-art {
+  align-self: center;
+  background: #000;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: block;
+  height: auto;
+  max-height: min(56vh, 340px);
+  max-width: 100%;
+  object-fit: contain;
+  width: auto;
+}
+
+.shoebill-encounter-actions,
+.shoebill-bow-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.shoebill-encounter-actions {
+  justify-content: flex-end;
+}
+
+.shoebill-bow-actions {
+  justify-content: center;
+}
+
+.shoebill-encounter-actions button,
+.shoebill-bow-actions button {
+  min-width: 84px;
+}
+
+.midnight-gospel-invite-window,
+.midnight-gospel-meditation-window {
+  display: block;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(380px, calc(100vw - 32px));
+  z-index: 136;
+}
+
+.midnight-gospel-meditation-window {
+  width: min(620px, calc(100vw - 32px));
+}
+
+.midnight-gospel-invite-window.is-hidden,
+.midnight-gospel-meditation-window.is-hidden {
+  display: none;
+}
+
+.midnight-gospel-invite-window.is-opening,
+.midnight-gospel-meditation-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.midnight-gospel-invite-window.is-closing,
+.midnight-gospel-meditation-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.midnight-gospel-invite-window .window-body,
+.midnight-gospel-meditation-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.midnight-gospel-message {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.midnight-gospel-icon-frame {
+  background: var(--surface);
+  border: 3px solid var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  box-sizing: border-box;
+  display: block;
+  flex: 0 0 auto;
+  padding: 3px;
+}
+
+.midnight-gospel-icon {
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: block;
+  height: 64px;
+  object-fit: cover;
+  width: 64px;
+}
+
+.midnight-gospel-message p,
+.midnight-gospel-meditation-panel p {
+  margin: 0;
+}
+
+.midnight-gospel-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.midnight-gospel-actions button {
+  min-width: 84px;
+}
+
+.midnight-gospel-meditation-layout {
+  align-items: stretch;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(190px, 0.85fr) minmax(230px, 1fr);
+}
+
+.midnight-gospel-meditation-art {
+  align-self: center;
+  background: #000;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: block;
+  height: auto;
+  max-height: min(58vh, 340px);
+  object-fit: contain;
+  width: 100%;
+}
+
+.midnight-gospel-meditation-panel {
+  align-content: center;
+  align-self: stretch;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  min-height: 100%;
+  text-align: center;
+}
+
+.midnight-gospel-guidance {
+  box-sizing: border-box;
+  max-height: min(32vh, 190px);
+  overflow-y: auto;
+  padding-right: 4px;
+  text-align: left;
+  width: 100%;
+}
+
+.midnight-gospel-steps {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.midnight-gospel-steps li {
+  margin-bottom: 8px;
+}
+
+.midnight-gospel-steps li::marker {
+  content: counter(list-item) ") ";
+}
+
+.midnight-gospel-steps li:last-child {
+  margin-bottom: 0;
+}
+
+.midnight-gospel-steps strong {
+  display: block;
+}
+
+.midnight-gospel-steps span {
+  display: block;
+  margin-top: 2px;
+}
+
+.midnight-gospel-meditation-panel .midnight-gospel-source {
+  margin: 0 0 1em;
+  text-align: left;
+}
+
+.midnight-gospel-timer-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto auto;
+  justify-content: center;
+}
+
+.midnight-gospel-timer-frame {
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-sizing: border-box;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+}
+
+.midnight-gospel-timer-slot {
+  background: #111;
+  box-shadow: var(--border-field);
+  display: flex;
+  padding: 2px;
+}
+
+.midnight-gospel-timer-slot img {
+  display: block;
+  height: 30px;
+  image-rendering: pixelated;
+  width: 18px;
+}
+
+.midnight-gospel-timer-row button {
+  min-width: 84px;
+}
+
+.midnight-gospel-interaction-lock {
+  cursor: var(--cursor-unavailable) !important;
+  inset: 0;
+  pointer-events: auto;
+  position: fixed;
+  z-index: 100000;
+}
+
+.midnight-gospel-interaction-lock.is-hidden {
+  display: none;
+}
+
+body.is-midnight-gospel-locked,
+body.is-midnight-gospel-locked * {
+  cursor: var(--cursor-unavailable) !important;
+}
+
+@media (max-width: 560px) {
+  .midnight-gospel-meditation-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .lost-grace-overlay {
   align-items: center;
   background: transparent;
@@ -2484,6 +3041,548 @@
 .advertisement-window button {
   align-self: flex-end;
   min-width: 96px;
+}
+
+.saul-ad-window {
+  display: block;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(430px, calc(100vw - 32px));
+  z-index: 136;
+}
+
+.saul-ad-window.is-hidden {
+  display: none;
+}
+
+.saul-ad-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.saul-ad-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.saul-ad-window .window-body {
+  margin: 0;
+  padding: 4px;
+}
+
+.saul-ad-image {
+  background: #000;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-sizing: border-box;
+  display: block;
+  height: auto;
+  max-height: min(70vh, 520px);
+  object-fit: contain;
+  width: 100%;
+}
+
+.kidnamedfinger-window {
+  display: block;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(390px, calc(100vw - 32px));
+  z-index: 136;
+}
+
+.kidnamedfinger-window.is-hidden {
+  display: none;
+}
+
+.kidnamedfinger-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.kidnamedfinger-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.kidnamedfinger-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kidnamedfinger-image {
+  align-self: center;
+  background: #000;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: block;
+  height: auto;
+  max-height: min(66vh, 440px);
+  max-width: 100%;
+  object-fit: contain;
+  width: auto;
+}
+
+.kidnamedfinger-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.kidnamedfinger-actions button {
+  min-width: 84px;
+}
+
+.walter-white-window {
+  display: block;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(390px, calc(100vw - 32px));
+  z-index: 136;
+}
+
+.walter-white-window.is-hidden {
+  display: none;
+}
+
+.walter-white-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.walter-white-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.walter-white-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.walter-white-image {
+  align-self: center;
+  background: #000;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: block;
+  height: auto;
+  max-height: min(66vh, 440px);
+  max-width: 100%;
+  object-fit: contain;
+  width: auto;
+}
+
+.walter-white-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.walter-white-actions button {
+  min-width: 84px;
+}
+
+.bounty-hunter-window {
+  display: block;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(360px, calc(100vw - 32px));
+  z-index: 136;
+}
+
+.bounty-hunter-window.is-hidden {
+  display: none;
+}
+
+.bounty-hunter-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.bounty-hunter-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.bounty-hunter-window .window-body {
+  margin: 0;
+  padding: 4px;
+}
+
+.bounty-hunter-image {
+  background: #000;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-sizing: border-box;
+  display: block;
+  height: auto;
+  max-height: min(72vh, 560px);
+  object-fit: contain;
+  width: 100%;
+}
+
+.dst-night-window,
+.dst-crafting-window,
+.dst-survive-window,
+.dst-darkness-window {
+  display: block;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  z-index: 136;
+}
+
+.dst-night-window {
+  width: min(340px, calc(100vw - 32px));
+}
+
+.dst-crafting-window {
+  width: min(310px, calc(100vw - 32px));
+}
+
+.dst-survive-window {
+  width: min(360px, calc(100vw - 32px));
+}
+
+.dst-darkness-window {
+  width: min(390px, calc(100vw - 32px));
+}
+
+.dst-crafting-window,
+.dst-survive-window {
+  background: #2d2419;
+}
+
+.dst-night-window.is-hidden,
+.dst-crafting-window.is-hidden,
+.dst-survive-window.is-hidden,
+.dst-darkness-window.is-hidden {
+  display: none;
+}
+
+.dst-night-window.is-opening,
+.dst-crafting-window.is-opening,
+.dst-survive-window.is-opening,
+.dst-darkness-window.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+.dst-night-window.is-closing,
+.dst-crafting-window.is-closing,
+.dst-survive-window.is-closing,
+.dst-darkness-window.is-closing {
+  pointer-events: none;
+  animation: retro-window-close 180ms steps(7, end) both;
+}
+
+.dst-night-window .window-body {
+  background: var(--surface);
+  color: var(--text-color);
+}
+
+.dst-crafting-window .window-body,
+.dst-survive-window .window-body {
+  background: #2d2419;
+  color: #f4dfb0;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.35;
+}
+
+.dst-night-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dst-night-warning p,
+.dst-survive-window p {
+  margin: 0;
+}
+
+.dst-darkness-window p {
+  margin: 0;
+}
+
+.dst-night-actions,
+.dst-result-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.dst-darkness-window .dst-result-actions {
+  justify-content: flex-end;
+}
+
+.dst-night-actions button,
+.dst-result-actions button {
+  min-width: 84px;
+}
+
+.dst-crafting-menu {
+  --dst-craft-row-size: 46px;
+  --dst-craft-slot-size: 46px;
+  --dst-craft-item-image-size: 34px;
+  --dst-craft-3-slot-row-width: 154px;
+  display: grid;
+  gap: 8px;
+}
+
+.dst-crafting-title {
+  border-bottom: 1px solid #7d5c34;
+  color: #ffe6ac;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  padding-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.dst-crafting-layout {
+  align-items: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: max-content var(--dst-craft-3-slot-row-width);
+  justify-content: start;
+}
+
+.dst-resource-list {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-rows: repeat(2, var(--dst-craft-row-size));
+  justify-items: start;
+}
+
+.dst-resource-token {
+  align-items: center;
+  background: #4a3522;
+  border: 2px solid #1a120c;
+  box-sizing: border-box;
+  box-shadow: inset 1px 1px 0 #8b6b42, inset -1px -1px 0 #160f0a;
+  color: #f9e4b8;
+  display: flex;
+  font: bold 14px Georgia, "Times New Roman", serif;
+  gap: 6px;
+  height: var(--dst-craft-row-size);
+  justify-content: start;
+  min-height: 0;
+  min-width: 0;
+  padding: 4px 6px;
+  width: max-content;
+}
+
+.dst-resource-token.is-selected,
+.dst-resource-token:focus-visible {
+  outline: 2px solid #ffe6ac;
+  outline-offset: 2px;
+}
+
+.dst-resource-token:disabled {
+  color: #a98c5c;
+  opacity: 0.55;
+}
+
+.dst-resource-token img,
+.dst-craft-slot img {
+  display: block;
+  height: var(--dst-craft-item-image-size);
+  image-rendering: auto;
+  object-fit: contain;
+  width: var(--dst-craft-item-image-size);
+}
+
+.dst-slot-grid {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-rows: repeat(2, var(--dst-craft-row-size));
+  justify-items: start;
+  justify-self: start;
+  min-width: var(--dst-craft-3-slot-row-width);
+}
+
+.dst-slot-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  justify-content: start;
+  min-width: 0;
+}
+
+.dst-slot-row--wood {
+  grid-template-columns: repeat(2, var(--dst-craft-slot-size));
+}
+
+.dst-slot-row--grass {
+  grid-template-columns: repeat(3, var(--dst-craft-slot-size));
+}
+
+.dst-craft-slot {
+  align-items: center;
+  aspect-ratio: 1;
+  background: #1e150e;
+  border: 2px solid #110b07;
+  box-sizing: border-box;
+  box-shadow: inset 1px 1px 0 #080503, 1px 1px 0 #8b6b42;
+  display: flex;
+  height: var(--dst-craft-slot-size);
+  justify-content: center;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px;
+  position: relative;
+  width: var(--dst-craft-slot-size);
+}
+
+.dst-craft-slot::before {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  content: "";
+  filter: grayscale(0.2) brightness(0.42);
+  height: var(--dst-craft-item-image-size);
+  opacity: 0.56;
+  width: var(--dst-craft-item-image-size);
+}
+
+.dst-craft-slot[data-dst-slot="wood"] {
+  background-image: linear-gradient(135deg, rgba(112, 77, 39, 0.5), rgba(30, 21, 14, 0.95));
+}
+
+.dst-craft-slot[data-dst-slot="wood"]::before {
+  background-image: url("../../assets/random%20events/dst-log.webp");
+}
+
+.dst-craft-slot[data-dst-slot="grass"] {
+  background-image: linear-gradient(135deg, rgba(83, 99, 44, 0.5), rgba(30, 21, 14, 0.95));
+}
+
+.dst-craft-slot[data-dst-slot="grass"]::before {
+  background-image: url("../../assets/random%20events/dst-grass.webp");
+}
+
+.dst-craft-slot.is-compatible {
+  box-shadow:
+    inset 1px 1px 0 #080503,
+    1px 1px 0 #8b6b42,
+    0 0 0 2px #d4a536;
+}
+
+.dst-craft-slot.is-drag-over {
+  outline: 2px solid #ffe6ac;
+  outline-offset: -4px;
+}
+
+.dst-craft-slot.is-filled {
+  background-image: none;
+}
+
+.dst-craft-slot.is-filled::before {
+  display: none;
+}
+
+.dst-craft-button {
+  display: block;
+  justify-self: end;
+  min-width: 96px;
+}
+
+.dst-night-progress-shell {
+  background: #17100b;
+  border: 2px solid #110b07;
+  box-shadow: inset 1px 1px 0 #080503, 1px 1px 0 #8b6b42;
+  height: 18px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.dst-night-progress-fill {
+  background: linear-gradient(90deg, #f4cf61 0%, #d67b2c 62%, #9c2d24 100%);
+  height: 100%;
+  width: 100%;
+}
+
+.dst-campfire-image {
+  align-self: center;
+  display: block;
+  height: auto;
+  max-height: min(54vh, 300px);
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.dst-survive-window .window-body {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.dst-darkness-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dst-darkness-message {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.dst-darkness-icon {
+  display: block;
+  flex: 0 0 auto;
+  height: 64px;
+  object-fit: contain;
+  width: 64px;
+}
+
+.dst-carry-ghost {
+  align-items: center;
+  background: rgba(28, 18, 10, 0.88);
+  border: 1px solid #d4a536;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.45);
+  display: flex;
+  height: 44px;
+  justify-content: center;
+  left: 0;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  translate: -50% -50%;
+  width: 44px;
+  z-index: 10000;
+}
+
+.dst-carry-ghost.is-hidden {
+  display: none;
+}
+
+.dst-carry-ghost img {
+  display: block;
+  height: 34px;
+  object-fit: contain;
+  width: 34px;
+}
+
+@media (max-width: 480px) {
+  .dst-crafting-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dst-resource-list {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, var(--dst-craft-row-size));
+  }
 }
 
 .biden-blast-window {

@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="styles/home/apps/life-counter.css" />
     <link rel="stylesheet" href="styles/home/portfolio.css" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=winged-light-cardinal-stops-20260617" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=midnight-gospel-clancy-frame-wrap-20260619" />
     <link rel="stylesheet" href="styles/home/cursors.css" />
   </head>
   <body>
@@ -2440,6 +2440,25 @@
       </div>
     </div>
 
+    <div class="window no-smoking-window is-hidden" id="no-smoking-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="no-smoking-message">
+          <img
+            data-src="assets/random%20events/nosmoking.png"
+            decoding="async"
+            alt=""
+          />
+          <p>Smoking kills.</p>
+        </div>
+        <div class="no-smoking-actions">
+          <button type="button" id="no-smoking-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
     <div class="window castle-gate-window is-hidden" id="castle-gate-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Castle Gate Alert</div>
@@ -2797,6 +2816,275 @@
       </div>
     </div>
 
+    <div
+      class="window serval-encounter-window is-hidden"
+      id="serval-encounter-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Random Encounter</div>
+      </div>
+      <div class="window-body">
+        <div class="serval-event-message">
+          <img
+            class="serval-event-icon"
+            src="assets/random%20events/serval.webp"
+            decoding="async"
+            alt=""
+          />
+          <p>A curious serval approaches you.</p>
+        </div>
+        <div class="serval-encounter-actions">
+          <button type="button" id="serval-encounter-ignore">Ignore</button>
+          <button type="button" id="serval-encounter-offer-pizza">Offer Pizza</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window serval-pizza-window is-hidden"
+      id="serval-pizza-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Random Encounter</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="serval-pizza-art"
+          data-src="assets/random%20events/servalpizza.gif"
+          decoding="async"
+          alt=""
+        />
+        <div class="serval-pizza-actions">
+          <button type="button" id="serval-pizza-cool">Cool!</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window caracal-encounter-window is-hidden"
+      id="caracal-encounter-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Random Encounter</div>
+      </div>
+      <div class="window-body">
+        <div class="caracal-event-message">
+          <img
+            class="caracal-event-icon"
+            src="assets/random%20events/caracal.jpg"
+            decoding="async"
+            alt=""
+          />
+          <p>You run into a wild caracal.</p>
+        </div>
+        <div class="caracal-encounter-actions">
+          <button type="button" id="caracal-encounter-pet">Pet it!</button>
+          <button type="button" id="caracal-encounter-ignore">Ignore it</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window caracal-result-window is-hidden"
+      id="caracal-result-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Random Encounter</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="caracal-result-art"
+          id="caracal-result-image"
+          data-src="assets/random%20events/caracalpet.gif"
+          decoding="async"
+          alt=""
+        />
+        <p id="caracal-result-message">You pet the caracal. It is very fluffy!</p>
+        <div class="caracal-result-actions">
+          <button type="button" id="caracal-result-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window shoebill-encounter-window is-hidden"
+      id="shoebill-encounter-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Random Encounter</div>
+      </div>
+      <div class="window-body">
+        <div class="shoebill-event-message">
+          <img
+            class="shoebill-event-icon"
+            src="assets/random%20events/shoebill.gif"
+            decoding="async"
+            alt=""
+          />
+          <p>You spot a shoebill watching you in the woods.</p>
+        </div>
+        <div class="shoebill-encounter-actions">
+          <button type="button" id="shoebill-encounter-bow">Bow</button>
+          <button type="button" id="shoebill-encounter-run-away">Run Away</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window shoebill-bow-window is-hidden"
+      id="shoebill-bow-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Random Encounter</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="shoebill-bow-art"
+          data-src="assets/random%20events/shoebill-bow.webp"
+          decoding="async"
+          alt=""
+        />
+        <p>The shoebill bows back to you.</p>
+        <div class="shoebill-bow-actions">
+          <button type="button" id="shoebill-bow-ok">How respectful!</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window midnight-gospel-invite-window is-hidden"
+      id="midnight-gospel-invite-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Midnight Gospel</div>
+      </div>
+      <div class="window-body">
+        <div class="midnight-gospel-message">
+          <span class="midnight-gospel-icon-frame" aria-hidden="true">
+            <img
+              class="midnight-gospel-icon"
+              src="assets/random%20events/clancy.jpg"
+              decoding="async"
+              alt=""
+            />
+          </span>
+          <p>Clancy invites you to meditate for 1&nbsp;minute. Would you like to join him?</p>
+        </div>
+        <div class="midnight-gospel-actions">
+          <button type="button" id="midnight-gospel-yes">Yes</button>
+          <button type="button" id="midnight-gospel-no">No Thanks</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window midnight-gospel-meditation-window is-hidden"
+      id="midnight-gospel-meditation-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Midnight Gospel</div>
+      </div>
+      <div class="window-body">
+        <div class="midnight-gospel-meditation-layout">
+          <img
+            class="midnight-gospel-meditation-art"
+            data-src="assets/random%20events/clancy-meditate.gif"
+            decoding="async"
+            alt=""
+          />
+          <div class="midnight-gospel-meditation-panel">
+            <div class="midnight-gospel-guidance">
+              <p class="midnight-gospel-source">
+                Via
+                <a href="https://www.mindful.org/how-to-meditate/" target="_blank" rel="noopener noreferrer">
+                  mindful.org
+                </a>
+              </p>
+              <ol class="midnight-gospel-steps">
+                <li>
+                  <strong>Take a seat</strong>
+                  <span>Find place to sit that feels calm and quiet to you.</span>
+                </li>
+                <li>
+                  <strong>Set a time limit</strong>
+                  <span>
+                    If you’re just beginning, it can help to choose a short time, such as five or
+                    10 minutes.
+                  </span>
+                </li>
+                <li>
+                  <strong>Notice your body</strong>
+                  <span>
+                    You can sit in a chair with your feet on the floor, you can sit loosely
+                    cross-legged, you can kneel—all are fine. Just make sure you are stable and in
+                    a position you can stay in for a while.
+                  </span>
+                </li>
+                <li>
+                  <strong>Feel your breath</strong>
+                  <span>Follow the sensation of your breath as it goes in and as it goes out.</span>
+                </li>
+                <li>
+                  <strong>Notice when your mind has wandered</strong>
+                  <span>
+                    Inevitably, your attention will leave the breath and wander to other places.
+                    When you get around to noticing that your mind has wandered—in a few seconds, a
+                    minute, five minutes—simply return your attention to the breath.
+                  </span>
+                </li>
+                <li>
+                  <strong>Be kind to your wandering mind</strong>
+                  <span>
+                    Don’t judge yourself or obsess over the thoughts’ content you find yourself lost
+                    in. Just come back.
+                  </span>
+                </li>
+                <li>
+                  <strong>Close with kindness</strong>
+                  <span>
+                    When you’re ready, gently lift your gaze (if your eyes are closed, open them).
+                    Take a moment and notice any sounds in the environment. Notice how your body
+                    feels right now. Notice your thoughts and emotions.
+                  </span>
+                </li>
+              </ol>
+            </div>
+            <div class="midnight-gospel-timer-row">
+              <div
+                class="midnight-gospel-timer-frame"
+                id="midnight-gospel-timer"
+                aria-label="Meditation timer: 60 seconds"
+              >
+                <div class="midnight-gospel-timer-slot">
+                  <img
+                    id="midnight-gospel-timer-tens"
+                    src="assets/minesweeper_assets/digital_digits/digital_6.png"
+                    alt=""
+                  />
+                </div>
+                <div class="midnight-gospel-timer-slot">
+                  <img
+                    id="midnight-gospel-timer-ones"
+                    src="assets/minesweeper_assets/digital_digits/digital_0.png"
+                    alt=""
+                  />
+                </div>
+              </div>
+              <button type="button" id="midnight-gospel-begin">Begin!</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="window john-pork-window is-hidden" id="john-pork-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Incoming Call</div>
@@ -2858,6 +3146,187 @@
           />
         </div>
         <button type="button" id="advertisement-no-thanks">No Thanks...</button>
+      </div>
+    </div>
+
+    <div class="window saul-ad-window is-hidden" id="saul-ad-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Advertisement</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="saul-ad-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <img
+          class="saul-ad-image"
+          id="saul-ad-image"
+          data-src="assets/random%20events/saul1.jpg"
+          decoding="async"
+          alt=""
+        />
+      </div>
+    </div>
+
+    <div class="window kidnamedfinger-window is-hidden" id="kidnamedfinger-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">System Announcement</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="kidnamedfinger-image"
+          data-src="assets/random%20events/kidnamedfinger.jpg"
+          decoding="async"
+          alt=""
+        />
+        <div class="kidnamedfinger-actions">
+          <button type="button" id="kidnamedfinger-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window walter-white-window is-hidden" id="walter-white-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Public Service Announcement</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="walter-white-image"
+          data-src="assets/random%20events/walterwhite.jpg"
+          decoding="async"
+          alt=""
+        />
+        <div class="walter-white-actions">
+          <button type="button" id="walter-white-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window bounty-hunter-window is-hidden" id="bounty-hunter-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Bounty Hunter Announcement</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="bounty-hunter-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <img
+          class="bounty-hunter-image"
+          data-src="assets/random%20events/spike-spiegel-wanted-poster.webp"
+          decoding="async"
+          alt=""
+        />
+      </div>
+    </div>
+
+    <div class="window dst-night-window is-hidden" id="dst-night-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">The Sun Begins to Set...</div>
+      </div>
+      <div class="window-body">
+        <div class="dst-night-warning" id="dst-night-warning">
+          <p>Night is rapidly approaching. Craft a campfire to stave off the darkness!</p>
+          <div class="dst-night-actions">
+            <button type="button" id="dst-night-ok">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="window dst-crafting-window is-hidden" id="dst-crafting-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Craft Campfire</div>
+      </div>
+      <div class="window-body">
+        <div class="dst-crafting-menu" id="dst-crafting-menu">
+          <div class="dst-crafting-title">Campfire</div>
+          <div class="dst-crafting-layout">
+            <div class="dst-resource-list" aria-label="Available materials">
+              <button
+                type="button"
+                class="dst-resource-token"
+                id="dst-wood-source"
+                draggable="true"
+                data-dst-resource="wood"
+              >
+                <img
+                  data-src="assets/random%20events/dst-log.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span><span id="dst-wood-count">2</span>x</span>
+              </button>
+              <button
+                type="button"
+                class="dst-resource-token"
+                id="dst-grass-source"
+                draggable="true"
+                data-dst-resource="grass"
+              >
+                <img
+                  data-src="assets/random%20events/dst-grass.webp"
+                  decoding="async"
+                  alt=""
+                />
+                <span><span id="dst-grass-count">3</span>x</span>
+              </button>
+            </div>
+            <div class="dst-slot-grid" aria-label="Campfire materials">
+              <div class="dst-slot-row dst-slot-row--wood" aria-label="Wood slots">
+                <button type="button" class="dst-craft-slot" data-dst-slot="wood" aria-label="Wood slot 1"></button>
+                <button type="button" class="dst-craft-slot" data-dst-slot="wood" aria-label="Wood slot 2"></button>
+              </div>
+              <div class="dst-slot-row dst-slot-row--grass" aria-label="Grass slots">
+                <button type="button" class="dst-craft-slot" data-dst-slot="grass" aria-label="Grass slot 1"></button>
+                <button type="button" class="dst-craft-slot" data-dst-slot="grass" aria-label="Grass slot 2"></button>
+                <button type="button" class="dst-craft-slot" data-dst-slot="grass" aria-label="Grass slot 3"></button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="dst-craft-button" id="dst-craft-campfire" disabled>
+            Craft
+          </button>
+          <div class="dst-night-progress-shell" aria-label="Night timer">
+            <div class="dst-night-progress-fill" id="dst-night-progress"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="window dst-survive-window is-hidden" id="dst-survive-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Campfire</div>
+      </div>
+      <div class="window-body">
+        <img
+          class="dst-campfire-image"
+          data-src="assets/random%20events/campfire.gif"
+          decoding="async"
+          alt=""
+        />
+        <p>You survive the night</p>
+        <div class="dst-result-actions">
+          <button type="button" id="dst-survive-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window dst-darkness-window is-hidden" id="dst-darkness-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">A Grim Fate...</div>
+      </div>
+      <div class="window-body">
+        <div class="dst-darkness-message">
+          <img
+            class="dst-darkness-icon"
+            data-src="assets/random%20events/nighthand.webp"
+            decoding="async"
+            alt=""
+          />
+          <p>You don't survive the night. Maxwell sends his regards.</p>
+        </div>
+        <div class="dst-result-actions">
+          <button type="button" id="dst-darkness-ok">OK</button>
+        </div>
       </div>
     </div>
 
@@ -3419,8 +3888,8 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/core/dom.js?v=classic-20260617l"></script>
+    <script src="scripts/home/core/dom.js?v=midnight-gospel-digit-timer-20260619"></script>
     <script src="scripts/home/core/media.js?v=classic-20260617l"></script>
-    <script src="scripts/home/main.js?v=winged-light-debug-off-20260617"></script>
+    <script src="scripts/home/main.js?v=midnight-gospel-debug-off-20260619"></script>
   </body>
 </html>

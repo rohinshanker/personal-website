@@ -108,6 +108,8 @@ const {
   healthNoteOk,
   loveNoteWindow,
   loveNoteOk,
+  noSmokingWindow,
+  noSmokingOk,
   castleGateWindow,
   castleGateOk,
   possumSpringsWindow,
@@ -166,6 +168,31 @@ const {
   nanaEncounterNo,
   nanaAcceptWindow,
   nanaAcceptOk,
+  servalEncounterWindow,
+  servalEncounterIgnore,
+  servalEncounterOfferPizza,
+  servalPizzaWindow,
+  servalPizzaCool,
+  caracalEncounterWindow,
+  caracalEncounterPet,
+  caracalEncounterIgnore,
+  caracalResultWindow,
+  caracalResultImage,
+  caracalResultMessage,
+  caracalResultOk,
+  shoebillEncounterWindow,
+  shoebillEncounterBow,
+  shoebillEncounterRunAway,
+  shoebillBowWindow,
+  shoebillBowOk,
+  midnightGospelInviteWindow,
+  midnightGospelYes,
+  midnightGospelNo,
+  midnightGospelMeditationWindow,
+  midnightGospelTimer,
+  midnightGospelTimerTens,
+  midnightGospelTimerOnes,
+  midnightGospelBegin,
   lainAlertWindow,
   lainAlertOk,
   lelouchAlertWindow,
@@ -203,6 +230,31 @@ const {
   johnPorkDecline,
   advertisementWindow,
   advertisementNoThanks,
+  saulAdWindow,
+  saulAdClose,
+  saulAdImage,
+  kidnamedfingerWindow,
+  kidnamedfingerOk,
+  walterWhiteWindow,
+  walterWhiteOk,
+  bountyHunterWindow,
+  bountyHunterClose,
+  dstNightWindow,
+  dstNightWarning,
+  dstNightOk,
+  dstCraftingWindow,
+  dstCraftingMenu,
+  dstCraftCampfire,
+  dstNightProgress,
+  dstWoodSource,
+  dstGrassSource,
+  dstWoodCount,
+  dstGrassCount,
+  dstCraftSlots,
+  dstSurviveWindow,
+  dstSurviveOk,
+  dstDarknessWindow,
+  dstDarknessOk,
   bidenBlastWindow,
   bidenBlastOk,
   infinityArmoryWindow,
@@ -902,6 +954,20 @@ const restartWindowAnimation = (win, animationClass) => {
 
 const RANDOM_EVENT_GLOBAL_DEBUG = false;
 const RANDOM_EVENT_RELOAD_KEY = "personalSiteRandomEventReloadPending";
+const SAUL_AD_IMAGES = [
+  "assets/random%20events/saul1.jpg",
+  "assets/random%20events/saul2.jpg",
+];
+const CARACAL_RESULT_CONTENT = {
+  pet: {
+    image: "assets/random%20events/caracalpet.gif",
+    message: "You pet the caracal. It is very fluffy!",
+  },
+  ignore: {
+    image: "assets/random%20events/caracalbite.gif",
+    message: "In a fit of rage, the caracal bites you. How horrible!",
+  },
+};
 const FELIZ_JUEVES_SHOWN_KEY = "personalSiteFelizJuevesShownDate";
 const RANDOM_EVENT_VIEWPORT_PADDING = 12;
 const RANDOM_EVENT_TASKBAR_CLEARANCE = 64;
@@ -1018,6 +1084,7 @@ const randomEventViewportWindows = () =>
     earthNoteWindow,
     healthNoteWindow,
     loveNoteWindow,
+    noSmokingWindow,
     castleGateWindow,
     possumSpringsWindow,
     wingedLightWindow,
@@ -1033,6 +1100,14 @@ const randomEventViewportWindows = () =>
     stalkerResultWindow,
     nanaEncounterWindow,
     nanaAcceptWindow,
+    servalEncounterWindow,
+    servalPizzaWindow,
+    caracalEncounterWindow,
+    caracalResultWindow,
+    shoebillEncounterWindow,
+    shoebillBowWindow,
+    midnightGospelInviteWindow,
+    midnightGospelMeditationWindow,
     lainAlertWindow,
     lelouchAlertWindow,
     instrumentalityWindow,
@@ -1042,6 +1117,14 @@ const randomEventViewportWindows = () =>
     behelitWindow,
     johnPorkWindow,
     advertisementWindow,
+    saulAdWindow,
+    kidnamedfingerWindow,
+    walterWhiteWindow,
+    bountyHunterWindow,
+    dstNightWindow,
+    dstCraftingWindow,
+    dstSurviveWindow,
+    dstDarknessWindow,
     bidenBlastWindow,
     infinityArmoryWindow,
     virusWindow,
@@ -1820,6 +1903,34 @@ const closeLoveNote = () => {
   if (!loveNoteWindow || loveNoteWindow.classList.contains("is-hidden")) return;
   loveNoteWindow.setAttribute("aria-hidden", "true");
   restartWindowAnimation(loveNoteWindow, "is-closing");
+};
+
+const isNoSmokingVisible = () =>
+  Boolean(
+    noSmokingWindow &&
+      !noSmokingWindow.classList.contains("is-hidden") &&
+      noSmokingWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const showNoSmokingWindow = () => {
+  if (!noSmokingWindow) return;
+  if (isNoSmokingVisible()) {
+    noSmokingWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(noSmokingWindow);
+  noSmokingWindow.classList.remove("is-hidden", "is-closing");
+  noSmokingWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(noSmokingWindow);
+  noSmokingWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(noSmokingWindow);
+  restartWindowAnimation(noSmokingWindow, "is-opening");
+};
+
+const closeNoSmokingWindow = () => {
+  if (!noSmokingWindow || noSmokingWindow.classList.contains("is-hidden")) return;
+  noSmokingWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(noSmokingWindow, "is-closing");
 };
 
 const isCastleGateVisible = () =>
@@ -3750,6 +3861,369 @@ const acceptNanaEncounter = () => {
   }, 180);
 };
 
+const isServalEncounterWindowVisible = (win) =>
+  Boolean(
+    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
+  );
+
+const isServalEncounterVisible = () =>
+  isServalEncounterWindowVisible(servalEncounterWindow) ||
+  isServalEncounterWindowVisible(servalPizzaWindow);
+
+const copyServalEncounterPosition = (source, target) => {
+  if (!source || !target) return false;
+  const sourceLeft = Number.parseFloat(source.style.left);
+  const sourceTop = Number.parseFloat(source.style.top);
+  if (!Number.isFinite(sourceLeft) || !Number.isFinite(sourceTop)) return false;
+  setRandomEventWindowPosition(target, sourceLeft, sourceTop);
+  return true;
+};
+
+const showServalEncounterWindow = () => {
+  if (!servalEncounterWindow) return;
+  if (isServalEncounterWindowVisible(servalEncounterWindow)) {
+    servalEncounterWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(servalEncounterWindow);
+  servalEncounterWindow.classList.remove("is-hidden", "is-closing");
+  servalEncounterWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(servalEncounterWindow);
+  servalEncounterWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(servalEncounterWindow);
+  restartWindowAnimation(servalEncounterWindow, "is-opening");
+};
+
+const showServalPizzaWindow = (anchorWindow = null) => {
+  if (!servalPizzaWindow) return;
+  if (isServalEncounterWindowVisible(servalPizzaWindow)) {
+    servalPizzaWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(servalPizzaWindow);
+  servalPizzaWindow.classList.remove("is-hidden", "is-closing");
+  servalPizzaWindow.setAttribute("aria-hidden", "false");
+  if (!copyServalEncounterPosition(anchorWindow, servalPizzaWindow)) {
+    positionRandomEventWindowInViewport(servalPizzaWindow);
+  }
+  servalPizzaWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(servalPizzaWindow);
+  restartWindowAnimation(servalPizzaWindow, "is-opening");
+};
+
+const closeServalEncounterWindow = (win) => {
+  if (!win || win.classList.contains("is-hidden")) return;
+  win.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(win, "is-closing");
+};
+
+const offerServalPizza = () => {
+  const anchor = servalEncounterWindow;
+  closeServalEncounterWindow(servalEncounterWindow);
+  setTimeout(() => {
+    showServalPizzaWindow(anchor);
+  }, 180);
+};
+
+const isCaracalEncounterWindowVisible = (win) =>
+  Boolean(
+    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
+  );
+
+const isCaracalEncounterVisible = () =>
+  isCaracalEncounterWindowVisible(caracalEncounterWindow) ||
+  isCaracalEncounterWindowVisible(caracalResultWindow);
+
+const copyCaracalEncounterPosition = (source, target) => {
+  if (!source || !target) return false;
+  const sourceLeft = Number.parseFloat(source.style.left);
+  const sourceTop = Number.parseFloat(source.style.top);
+  if (!Number.isFinite(sourceLeft) || !Number.isFinite(sourceTop)) return false;
+  setRandomEventWindowPosition(target, sourceLeft, sourceTop);
+  return true;
+};
+
+const showCaracalEncounterWindow = () => {
+  if (!caracalEncounterWindow) return;
+  if (isCaracalEncounterWindowVisible(caracalEncounterWindow)) {
+    caracalEncounterWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(caracalEncounterWindow);
+  caracalEncounterWindow.classList.remove("is-hidden", "is-closing");
+  caracalEncounterWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(caracalEncounterWindow);
+  caracalEncounterWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(caracalEncounterWindow);
+  restartWindowAnimation(caracalEncounterWindow, "is-opening");
+};
+
+const showCaracalResultWindow = (resultKey, anchorWindow = null) => {
+  if (!caracalResultWindow) return;
+  const result = CARACAL_RESULT_CONTENT[resultKey] || CARACAL_RESULT_CONTENT.pet;
+  if (caracalResultMessage) caracalResultMessage.textContent = result.message;
+  if (caracalResultImage) {
+    caracalResultImage.removeAttribute("src");
+    caracalResultImage.dataset.src = result.image;
+  }
+  if (isCaracalEncounterWindowVisible(caracalResultWindow)) {
+    caracalResultWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(caracalResultWindow);
+  caracalResultWindow.classList.remove("is-hidden", "is-closing");
+  caracalResultWindow.setAttribute("aria-hidden", "false");
+  if (!copyCaracalEncounterPosition(anchorWindow, caracalResultWindow)) {
+    positionRandomEventWindowInViewport(caracalResultWindow);
+  }
+  caracalResultWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(caracalResultWindow);
+  restartWindowAnimation(caracalResultWindow, "is-opening");
+};
+
+const closeCaracalEncounterWindow = (win) => {
+  if (!win || win.classList.contains("is-hidden")) return;
+  win.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(win, "is-closing");
+};
+
+const chooseCaracalEncounterResult = (resultKey) => {
+  const anchor = caracalEncounterWindow;
+  closeCaracalEncounterWindow(caracalEncounterWindow);
+  setTimeout(() => {
+    showCaracalResultWindow(resultKey, anchor);
+  }, 180);
+};
+
+const isShoebillEncounterWindowVisible = (win) =>
+  Boolean(
+    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
+  );
+
+const isShoebillEncounterVisible = () =>
+  isShoebillEncounterWindowVisible(shoebillEncounterWindow) ||
+  isShoebillEncounterWindowVisible(shoebillBowWindow);
+
+const copyShoebillEncounterPosition = (source, target) => {
+  if (!source || !target) return false;
+  const sourceLeft = Number.parseFloat(source.style.left);
+  const sourceTop = Number.parseFloat(source.style.top);
+  if (!Number.isFinite(sourceLeft) || !Number.isFinite(sourceTop)) return false;
+  setRandomEventWindowPosition(target, sourceLeft, sourceTop);
+  return true;
+};
+
+const showShoebillEncounterWindow = () => {
+  if (!shoebillEncounterWindow) return;
+  if (isShoebillEncounterWindowVisible(shoebillEncounterWindow)) {
+    shoebillEncounterWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(shoebillEncounterWindow);
+  shoebillEncounterWindow.classList.remove("is-hidden", "is-closing");
+  shoebillEncounterWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(shoebillEncounterWindow);
+  shoebillEncounterWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(shoebillEncounterWindow);
+  restartWindowAnimation(shoebillEncounterWindow, "is-opening");
+};
+
+const showShoebillBowWindow = (anchorWindow = null) => {
+  if (!shoebillBowWindow) return;
+  if (isShoebillEncounterWindowVisible(shoebillBowWindow)) {
+    shoebillBowWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(shoebillBowWindow);
+  shoebillBowWindow.classList.remove("is-hidden", "is-closing");
+  shoebillBowWindow.setAttribute("aria-hidden", "false");
+  if (!copyShoebillEncounterPosition(anchorWindow, shoebillBowWindow)) {
+    positionRandomEventWindowInViewport(shoebillBowWindow);
+  }
+  shoebillBowWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(shoebillBowWindow);
+  restartWindowAnimation(shoebillBowWindow, "is-opening");
+};
+
+const closeShoebillEncounterWindow = (win) => {
+  if (!win || win.classList.contains("is-hidden")) return;
+  win.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(win, "is-closing");
+};
+
+const bowToShoebill = () => {
+  const anchor = shoebillEncounterWindow;
+  closeShoebillEncounterWindow(shoebillEncounterWindow);
+  setTimeout(() => {
+    showShoebillBowWindow(anchor);
+  }, 180);
+};
+
+const MIDNIGHT_GOSPEL_DURATION_SECONDS = 60;
+let midnightGospelIntervalId = 0;
+let midnightGospelRemainingSeconds = MIDNIGHT_GOSPEL_DURATION_SECONDS;
+let midnightGospelTimerActive = false;
+let midnightGospelComplete = false;
+let midnightGospelInteractionLock = null;
+
+const isMidnightGospelWindowVisible = (win) =>
+  Boolean(
+    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
+  );
+
+const isMidnightGospelVisible = () =>
+  isMidnightGospelWindowVisible(midnightGospelInviteWindow) ||
+  isMidnightGospelWindowVisible(midnightGospelMeditationWindow);
+
+const copyMidnightGospelPosition = (source, target) => {
+  if (!source || !target) return false;
+  const sourceLeft = Number.parseFloat(source.style.left);
+  const sourceTop = Number.parseFloat(source.style.top);
+  if (!Number.isFinite(sourceLeft) || !Number.isFinite(sourceTop)) return false;
+  setRandomEventWindowPosition(target, sourceLeft, sourceTop);
+  return true;
+};
+
+const setMidnightGospelTimerText = (seconds) => {
+  const clampedSeconds = Math.max(0, Math.min(99, seconds));
+  const digits = String(clampedSeconds).padStart(2, "0");
+  if (midnightGospelTimer) {
+    midnightGospelTimer.setAttribute(
+      "aria-label",
+      `Meditation timer: ${clampedSeconds} seconds`
+    );
+  }
+  if (midnightGospelTimerTens) {
+    midnightGospelTimerTens.src =
+      SKILL_CHECK_DIGIT_SOURCES[digits[0]] || SKILL_CHECK_DIGIT_SOURCES[" "];
+  }
+  if (midnightGospelTimerOnes) {
+    midnightGospelTimerOnes.src =
+      SKILL_CHECK_DIGIT_SOURCES[digits[1]] || SKILL_CHECK_DIGIT_SOURCES[" "];
+  }
+};
+
+const getMidnightGospelInteractionLock = () => {
+  if (midnightGospelInteractionLock) return midnightGospelInteractionLock;
+  midnightGospelInteractionLock = document.createElement("div");
+  midnightGospelInteractionLock.className = "midnight-gospel-interaction-lock is-hidden";
+  midnightGospelInteractionLock.setAttribute("aria-hidden", "true");
+  document.body.append(midnightGospelInteractionLock);
+  return midnightGospelInteractionLock;
+};
+
+const setMidnightGospelInteractionLocked = (locked) => {
+  const lock = getMidnightGospelInteractionLock();
+  lock.classList.toggle("is-hidden", !locked);
+  lock.setAttribute("aria-hidden", String(!locked));
+  document.body.classList.toggle("is-midnight-gospel-locked", locked);
+};
+
+const stopMidnightGospelTimer = ({ markComplete = false } = {}) => {
+  if (midnightGospelIntervalId) {
+    window.clearInterval(midnightGospelIntervalId);
+    midnightGospelIntervalId = 0;
+  }
+  midnightGospelTimerActive = false;
+  setMidnightGospelInteractionLocked(false);
+  if (markComplete) {
+    midnightGospelComplete = true;
+    midnightGospelRemainingSeconds = 0;
+    setMidnightGospelTimerText(0);
+    if (midnightGospelBegin) {
+      midnightGospelBegin.textContent = "Complete";
+      midnightGospelBegin.disabled = false;
+    }
+  }
+};
+
+const resetMidnightGospelMeditation = () => {
+  stopMidnightGospelTimer();
+  midnightGospelComplete = false;
+  midnightGospelRemainingSeconds = MIDNIGHT_GOSPEL_DURATION_SECONDS;
+  setMidnightGospelTimerText(midnightGospelRemainingSeconds);
+  if (midnightGospelBegin) {
+    midnightGospelBegin.textContent = "Begin!";
+    midnightGospelBegin.disabled = false;
+  }
+};
+
+const showMidnightGospelInviteWindow = () => {
+  if (!midnightGospelInviteWindow) return;
+  if (isMidnightGospelWindowVisible(midnightGospelInviteWindow)) {
+    midnightGospelInviteWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(midnightGospelInviteWindow);
+  midnightGospelInviteWindow.classList.remove("is-hidden", "is-closing");
+  midnightGospelInviteWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(midnightGospelInviteWindow);
+  midnightGospelInviteWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(midnightGospelInviteWindow);
+  restartWindowAnimation(midnightGospelInviteWindow, "is-opening");
+};
+
+const showMidnightGospelMeditationWindow = (anchorWindow = null) => {
+  if (!midnightGospelMeditationWindow) return;
+  if (isMidnightGospelWindowVisible(midnightGospelMeditationWindow)) {
+    midnightGospelMeditationWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  resetMidnightGospelMeditation();
+  loadDeferredMedia(midnightGospelMeditationWindow);
+  midnightGospelMeditationWindow.classList.remove("is-hidden", "is-closing");
+  midnightGospelMeditationWindow.setAttribute("aria-hidden", "false");
+  if (!copyMidnightGospelPosition(anchorWindow, midnightGospelMeditationWindow)) {
+    positionRandomEventWindowInViewport(midnightGospelMeditationWindow);
+  }
+  midnightGospelMeditationWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(midnightGospelMeditationWindow);
+  restartWindowAnimation(midnightGospelMeditationWindow, "is-opening");
+};
+
+const closeMidnightGospelWindow = (win) => {
+  if (!win || win.classList.contains("is-hidden")) return;
+  if (win === midnightGospelMeditationWindow) {
+    stopMidnightGospelTimer();
+  }
+  win.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(win, "is-closing");
+};
+
+const acceptMidnightGospelInvite = () => {
+  const anchor = midnightGospelInviteWindow;
+  closeMidnightGospelWindow(midnightGospelInviteWindow);
+  setTimeout(() => {
+    showMidnightGospelMeditationWindow(anchor);
+  }, 180);
+};
+
+const completeMidnightGospelMeditation = () => {
+  stopMidnightGospelTimer({ markComplete: true });
+};
+
+const startMidnightGospelTimer = () => {
+  if (midnightGospelTimerActive) return;
+  if (midnightGospelComplete) {
+    closeMidnightGospelWindow(midnightGospelMeditationWindow);
+    return;
+  }
+  midnightGospelTimerActive = true;
+  midnightGospelRemainingSeconds = MIDNIGHT_GOSPEL_DURATION_SECONDS;
+  setMidnightGospelTimerText(midnightGospelRemainingSeconds);
+  if (midnightGospelBegin) {
+    midnightGospelBegin.disabled = true;
+  }
+  setMidnightGospelInteractionLocked(true);
+  midnightGospelIntervalId = window.setInterval(() => {
+    midnightGospelRemainingSeconds -= 1;
+    setMidnightGospelTimerText(midnightGospelRemainingSeconds);
+    if (midnightGospelRemainingSeconds <= 0) {
+      completeMidnightGospelMeditation();
+    }
+  }, 1000);
+};
+
 const isLainAlertVisible = () =>
   Boolean(
     lainAlertWindow &&
@@ -4570,6 +5044,427 @@ const closeAdvertisementWindow = () => {
   if (!advertisementWindow || advertisementWindow.classList.contains("is-hidden")) return;
   advertisementWindow.setAttribute("aria-hidden", "true");
   restartWindowAnimation(advertisementWindow, "is-closing");
+};
+
+const isSaulAdVisible = () =>
+  Boolean(
+    saulAdWindow &&
+      !saulAdWindow.classList.contains("is-hidden") &&
+      saulAdWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const showSaulAdWindow = () => {
+  if (!saulAdWindow) return;
+  if (isSaulAdVisible()) {
+    saulAdWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  if (saulAdImage) {
+    const imageSrc = SAUL_AD_IMAGES[Math.floor(Math.random() * SAUL_AD_IMAGES.length)];
+    saulAdImage.removeAttribute("src");
+    saulAdImage.dataset.src = imageSrc;
+  }
+  loadDeferredMedia(saulAdWindow);
+  saulAdWindow.classList.remove("is-hidden", "is-closing");
+  saulAdWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(saulAdWindow);
+  saulAdWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(saulAdWindow);
+  restartWindowAnimation(saulAdWindow, "is-opening");
+};
+
+const closeSaulAdWindow = () => {
+  if (!saulAdWindow || saulAdWindow.classList.contains("is-hidden")) return;
+  saulAdWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(saulAdWindow, "is-closing");
+};
+
+const isKidnamedfingerVisible = () =>
+  Boolean(
+    kidnamedfingerWindow &&
+      !kidnamedfingerWindow.classList.contains("is-hidden") &&
+      kidnamedfingerWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const showKidnamedfingerWindow = () => {
+  if (!kidnamedfingerWindow) return;
+  if (isKidnamedfingerVisible()) {
+    kidnamedfingerWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(kidnamedfingerWindow);
+  kidnamedfingerWindow.classList.remove("is-hidden", "is-closing");
+  kidnamedfingerWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(kidnamedfingerWindow);
+  kidnamedfingerWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(kidnamedfingerWindow);
+  restartWindowAnimation(kidnamedfingerWindow, "is-opening");
+};
+
+const closeKidnamedfingerWindow = () => {
+  if (!kidnamedfingerWindow || kidnamedfingerWindow.classList.contains("is-hidden")) return;
+  kidnamedfingerWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(kidnamedfingerWindow, "is-closing");
+};
+
+const isWalterWhiteVisible = () =>
+  Boolean(
+    walterWhiteWindow &&
+      !walterWhiteWindow.classList.contains("is-hidden") &&
+      walterWhiteWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const showWalterWhiteWindow = () => {
+  if (!walterWhiteWindow) return;
+  if (isWalterWhiteVisible()) {
+    walterWhiteWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(walterWhiteWindow);
+  walterWhiteWindow.classList.remove("is-hidden", "is-closing");
+  walterWhiteWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(walterWhiteWindow);
+  walterWhiteWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(walterWhiteWindow);
+  restartWindowAnimation(walterWhiteWindow, "is-opening");
+};
+
+const closeWalterWhiteWindow = () => {
+  if (!walterWhiteWindow || walterWhiteWindow.classList.contains("is-hidden")) return;
+  walterWhiteWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(walterWhiteWindow, "is-closing");
+};
+
+const isBountyHunterVisible = () =>
+  Boolean(
+    bountyHunterWindow &&
+      !bountyHunterWindow.classList.contains("is-hidden") &&
+      bountyHunterWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const showBountyHunterWindow = () => {
+  if (!bountyHunterWindow) return;
+  if (isBountyHunterVisible()) {
+    bountyHunterWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(bountyHunterWindow);
+  bountyHunterWindow.classList.remove("is-hidden", "is-closing");
+  bountyHunterWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(bountyHunterWindow);
+  bountyHunterWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(bountyHunterWindow);
+  restartWindowAnimation(bountyHunterWindow, "is-opening");
+};
+
+const closeBountyHunterWindow = () => {
+  if (!bountyHunterWindow || bountyHunterWindow.classList.contains("is-hidden")) return;
+  bountyHunterWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(bountyHunterWindow, "is-closing");
+};
+
+const DST_NIGHT_DURATION_MS = 7000;
+const DST_RECIPE_REQUIREMENTS = {
+  wood: 2,
+  grass: 3,
+};
+let dstNightAnimationFrame = 0;
+let dstNightTimerStartedAt = 0;
+let dstNightCraftingActive = false;
+let dstDraggedResource = "";
+let dstCarryGhost = null;
+let dstLastPointer = {
+  x: 0,
+  y: 0,
+};
+let dstCraftState = {
+  wood: 0,
+  grass: 0,
+};
+
+const isDstWindowVisible = (win) =>
+  Boolean(
+    win &&
+      !win.classList.contains("is-hidden") &&
+      win.getAttribute("aria-hidden") === "false"
+  );
+
+const isDstNightVisible = () => isDstWindowVisible(dstNightWindow);
+const isDstCraftingVisible = () => isDstWindowVisible(dstCraftingWindow);
+const isDstSurviveVisible = () => isDstWindowVisible(dstSurviveWindow);
+const isDstDarknessVisible = () => isDstWindowVisible(dstDarknessWindow);
+const isDstCampfireEventVisible = () =>
+  isDstNightVisible() || isDstCraftingVisible() || isDstSurviveVisible() || isDstDarknessVisible();
+
+const copyDstWindowPosition = (source, target) => {
+  if (!source || !target) return false;
+  const sourceLeft = Number.parseFloat(source.style.left);
+  const sourceTop = Number.parseFloat(source.style.top);
+  if (!Number.isFinite(sourceLeft) || !Number.isFinite(sourceTop)) return false;
+  setRandomEventWindowPosition(target, sourceLeft, sourceTop);
+  return true;
+};
+
+const stopDstNightTimer = () => {
+  if (dstNightAnimationFrame) {
+    window.cancelAnimationFrame(dstNightAnimationFrame);
+    dstNightAnimationFrame = 0;
+  }
+  dstNightTimerStartedAt = 0;
+  dstNightCraftingActive = false;
+};
+
+const setDstNightProgress = (percent) => {
+  if (!dstNightProgress) return;
+  const clampedPercent = Math.max(0, Math.min(100, percent));
+  dstNightProgress.style.width = `${clampedPercent}%`;
+};
+
+const updateDstCraftCounts = () => {
+  const remainingWood = Math.max(0, DST_RECIPE_REQUIREMENTS.wood - dstCraftState.wood);
+  const remainingGrass = Math.max(0, DST_RECIPE_REQUIREMENTS.grass - dstCraftState.grass);
+  if (dstWoodCount) dstWoodCount.textContent = String(remainingWood);
+  if (dstGrassCount) dstGrassCount.textContent = String(remainingGrass);
+  if (dstWoodSource) dstWoodSource.disabled = remainingWood <= 0;
+  if (dstGrassSource) dstGrassSource.disabled = remainingGrass <= 0;
+  if (dstCraftCampfire) {
+    dstCraftCampfire.disabled = remainingWood > 0 || remainingGrass > 0;
+  }
+};
+
+const getDstResourceImage = (resource) => {
+  if (resource === "wood") return "assets/random%20events/dst-log.webp";
+  if (resource === "grass") return "assets/random%20events/dst-grass.webp";
+  return "";
+};
+
+const updateDstCompatibleSlots = (resource) => {
+  dstCraftSlots?.forEach((slot) => {
+    const isCompatible = Boolean(
+      resource && slot.dataset.dstSlot === resource && !slot.dataset.dstFilled
+    );
+    slot.classList.toggle("is-compatible", isCompatible);
+    if (!isCompatible) {
+      slot.classList.remove("is-drag-over");
+    }
+  });
+};
+
+const getDstCarryGhost = () => {
+  if (dstCarryGhost) return dstCarryGhost;
+  dstCarryGhost = document.createElement("div");
+  dstCarryGhost.className = "dst-carry-ghost is-hidden";
+  const image = document.createElement("img");
+  image.alt = "";
+  image.decoding = "async";
+  dstCarryGhost.append(image);
+  document.body.append(dstCarryGhost);
+  return dstCarryGhost;
+};
+
+const positionDstCarryGhost = (x, y) => {
+  if (!dstCarryGhost || !Number.isFinite(x) || !Number.isFinite(y)) return;
+  dstCarryGhost.style.left = `${x}px`;
+  dstCarryGhost.style.top = `${y}px`;
+};
+
+const clearDstDraggedResource = () => {
+  dstDraggedResource = "";
+  document.querySelectorAll(".dst-resource-token.is-selected").forEach((token) => {
+    token.classList.remove("is-selected");
+  });
+  updateDstCompatibleSlots("");
+  if (dstCarryGhost) {
+    dstCarryGhost.classList.add("is-hidden");
+  }
+};
+
+const carryDstResource = (resource, x = dstLastPointer.x, y = dstLastPointer.y) => {
+  const imageSrc = getDstResourceImage(resource);
+  if (!imageSrc) {
+    clearDstDraggedResource();
+    return;
+  }
+  dstDraggedResource = resource;
+  const ghost = getDstCarryGhost();
+  const image = ghost.querySelector("img");
+  if (image) {
+    image.src = imageSrc;
+  }
+  ghost.classList.remove("is-hidden");
+  positionDstCarryGhost(x, y);
+  updateDstCompatibleSlots(resource);
+};
+
+const resetDstCraftingState = () => {
+  clearDstDraggedResource();
+  dstCraftState = {
+    wood: 0,
+    grass: 0,
+  };
+  dstCraftSlots?.forEach((slot) => {
+    slot.classList.remove("is-filled", "is-drag-over");
+    slot.removeAttribute("data-dst-filled");
+    slot.replaceChildren();
+  });
+  updateDstCraftCounts();
+  setDstNightProgress(100);
+};
+
+const resetDstNightWindow = () => {
+  stopDstNightTimer();
+  dstNightWarning?.classList.remove("is-hidden");
+  resetDstCraftingState();
+};
+
+const showDstSurviveWindow = (anchorWindow = null) => {
+  if (!dstSurviveWindow) return;
+  loadDeferredMedia(dstSurviveWindow);
+  dstSurviveWindow.classList.remove("is-hidden", "is-closing");
+  dstSurviveWindow.setAttribute("aria-hidden", "false");
+  if (!copyDstWindowPosition(anchorWindow, dstSurviveWindow)) {
+    positionRandomEventWindowInViewport(dstSurviveWindow);
+  }
+  dstSurviveWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(dstSurviveWindow);
+  restartWindowAnimation(dstSurviveWindow, "is-opening");
+};
+
+const showDstDarknessWindow = (anchorWindow = null) => {
+  if (!dstDarknessWindow) return;
+  loadDeferredMedia(dstDarknessWindow);
+  dstDarknessWindow.classList.remove("is-hidden", "is-closing");
+  dstDarknessWindow.setAttribute("aria-hidden", "false");
+  if (!copyDstWindowPosition(anchorWindow, dstDarknessWindow)) {
+    positionRandomEventWindowInViewport(dstDarknessWindow);
+  }
+  dstDarknessWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(dstDarknessWindow);
+  restartWindowAnimation(dstDarknessWindow, "is-opening");
+};
+
+const closeDstNightWindow = () => {
+  if (!dstNightWindow || dstNightWindow.classList.contains("is-hidden")) return;
+  dstNightWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(dstNightWindow, "is-closing");
+};
+
+const closeDstCraftingWindow = () => {
+  if (!dstCraftingWindow || dstCraftingWindow.classList.contains("is-hidden")) return;
+  stopDstNightTimer();
+  clearDstDraggedResource();
+  dstCraftingWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(dstCraftingWindow, "is-closing");
+};
+
+const closeDstSurviveWindow = () => {
+  if (!dstSurviveWindow || dstSurviveWindow.classList.contains("is-hidden")) return;
+  dstSurviveWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(dstSurviveWindow, "is-closing");
+};
+
+const closeDstDarknessWindow = () => {
+  if (!dstDarknessWindow || dstDarknessWindow.classList.contains("is-hidden")) return;
+  dstDarknessWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(dstDarknessWindow, "is-closing");
+};
+
+const failDstNightCrafting = () => {
+  if (!dstNightCraftingActive) return;
+  const anchor = dstCraftingWindow;
+  closeDstCraftingWindow();
+  showDstDarknessWindow(anchor);
+};
+
+const completeDstNightCrafting = () => {
+  if (!dstNightCraftingActive) return;
+  if (dstCraftState.wood < DST_RECIPE_REQUIREMENTS.wood) return;
+  if (dstCraftState.grass < DST_RECIPE_REQUIREMENTS.grass) return;
+  if (dstCraftCampfire) {
+    dstCraftCampfire.disabled = true;
+  }
+  const anchor = dstCraftingWindow;
+  closeDstCraftingWindow();
+  showDstSurviveWindow(anchor);
+};
+
+const updateDstNightTimer = (timestamp) => {
+  if (!dstNightCraftingActive) return;
+  if (!dstNightTimerStartedAt) {
+    dstNightTimerStartedAt = timestamp;
+  }
+
+  const elapsed = timestamp - dstNightTimerStartedAt;
+  const remainingRatio = 1 - elapsed / DST_NIGHT_DURATION_MS;
+  setDstNightProgress(remainingRatio * 100);
+
+  if (remainingRatio <= 0) {
+    failDstNightCrafting();
+    return;
+  }
+
+  dstNightAnimationFrame = window.requestAnimationFrame(updateDstNightTimer);
+};
+
+const startDstNightCrafting = () => {
+  if (!dstCraftingWindow || dstNightCraftingActive) return;
+  const anchor = dstNightWindow;
+  closeDstNightWindow();
+  resetDstCraftingState();
+  loadDeferredMedia(dstCraftingWindow);
+  dstCraftingWindow.classList.remove("is-hidden", "is-closing");
+  dstCraftingWindow.setAttribute("aria-hidden", "false");
+  if (!copyDstWindowPosition(anchor, dstCraftingWindow)) {
+    positionRandomEventWindowInViewport(dstCraftingWindow);
+  }
+  dstCraftingWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(dstCraftingWindow);
+  restartWindowAnimation(dstCraftingWindow, "is-opening");
+  dstNightCraftingActive = true;
+  dstNightTimerStartedAt = 0;
+  dstNightAnimationFrame = window.requestAnimationFrame(updateDstNightTimer);
+};
+
+const showDstNightWindow = () => {
+  if (!dstNightWindow) return;
+  if (isDstNightVisible()) {
+    dstNightWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  resetDstNightWindow();
+  loadDeferredMedia(dstNightWindow);
+  dstNightWindow.classList.remove("is-hidden", "is-closing");
+  dstNightWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(dstNightWindow);
+  dstNightWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(dstNightWindow);
+  restartWindowAnimation(dstNightWindow, "is-opening");
+};
+
+const fillDstCraftSlot = (slot, resource) => {
+  if (!slot || !resource) return false;
+  if (slot.dataset.dstFilled) return false;
+  if (slot.dataset.dstSlot !== resource) return false;
+  if (dstCraftState[resource] >= DST_RECIPE_REQUIREMENTS[resource]) return false;
+
+  const imageSrc = getDstResourceImage(resource);
+  if (!imageSrc) return false;
+
+  const image = document.createElement("img");
+  image.src = imageSrc;
+  image.decoding = "async";
+  image.alt = "";
+  slot.replaceChildren(image);
+  slot.dataset.dstFilled = resource;
+  slot.classList.add("is-filled");
+  slot.classList.remove("is-drag-over");
+  dstCraftState = {
+    ...dstCraftState,
+    [resource]: dstCraftState[resource] + 1,
+  };
+  updateDstCraftCounts();
+  updateDstCompatibleSlots(dstDraggedResource);
+  return true;
 };
 
 const isBidenBlastVisible = () =>
@@ -6049,6 +6944,19 @@ registerRandomEvent({
 });
 
 registerRandomEvent({
+  id: "no-smoking-alert",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+  isVisible: isNoSmokingVisible,
+  canTrigger: () => !isNoSmokingVisible(),
+  run: () => {
+    showNoSmokingWindow();
+  },
+});
+
+registerRandomEvent({
   id: "castle-gate-alert",
   debug: false,
   probability: STANDARD_RANDOM_EVENT_PROBABILITY,
@@ -6192,6 +7100,58 @@ registerRandomEvent({
 });
 
 registerRandomEvent({
+  id: "serval-pizza-encounter",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isServalEncounterVisible,
+  canTrigger: () => !isServalEncounterVisible(),
+  run: () => {
+    showServalEncounterWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "caracal-encounter",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isCaracalEncounterVisible,
+  canTrigger: () => !isCaracalEncounterVisible(),
+  run: () => {
+    showCaracalEncounterWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "shoebill",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isShoebillEncounterVisible,
+  canTrigger: () => !isShoebillEncounterVisible(),
+  run: () => {
+    showShoebillEncounterWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "midnight-gospel",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isMidnightGospelVisible,
+  canTrigger: () => !isMidnightGospelVisible(),
+  run: () => {
+    showMidnightGospelInviteWindow();
+  },
+});
+
+registerRandomEvent({
   id: "lain-system-alert",
   debug: false,
   probability: STANDARD_RANDOM_EVENT_PROBABILITY,
@@ -6292,6 +7252,71 @@ registerRandomEvent({
   canTrigger: () => !isBidenBlastVisible(),
   run: () => {
     showBidenBlastWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "saul-advertisement",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+  isVisible: isSaulAdVisible,
+  canTrigger: () => !isSaulAdVisible(),
+  run: () => {
+    showSaulAdWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "kidnamedfinger",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+  isVisible: isKidnamedfingerVisible,
+  canTrigger: () => !isKidnamedfingerVisible(),
+  run: () => {
+    showKidnamedfingerWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "walter-white",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+  isVisible: isWalterWhiteVisible,
+  canTrigger: () => !isWalterWhiteVisible(),
+  run: () => {
+    showWalterWhiteWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "bounty-hunter-announcement",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+  isVisible: isBountyHunterVisible,
+  canTrigger: () => !isBountyHunterVisible(),
+  run: () => {
+    showBountyHunterWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "dont-starve-campfire",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isDstCampfireEventVisible,
+  canTrigger: () => !isDstCampfireEventVisible(),
+  run: () => {
+    showDstNightWindow();
   },
 });
 
@@ -12240,6 +13265,35 @@ if (loveNoteWindow) {
   });
 }
 
+if (noSmokingOk) {
+  noSmokingOk.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeNoSmokingWindow();
+  });
+}
+
+if (noSmokingWindow) {
+  noSmokingWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  noSmokingWindow.addEventListener("animationend", (event) => {
+    if (event.target !== noSmokingWindow) return;
+    if (event.animationName === "retro-window-open") {
+      noSmokingWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      noSmokingWindow.classList.remove("is-closing");
+      noSmokingWindow.classList.add("is-hidden");
+      noSmokingWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
 if (castleGateOk) {
   castleGateOk.addEventListener("click", (event) => {
     event.preventDefault();
@@ -12641,6 +13695,193 @@ if (nanaAcceptOk) {
   });
 });
 
+if (servalEncounterIgnore) {
+  servalEncounterIgnore.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeServalEncounterWindow(servalEncounterWindow);
+  });
+}
+
+if (servalEncounterOfferPizza) {
+  servalEncounterOfferPizza.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    offerServalPizza();
+  });
+}
+
+if (servalPizzaCool) {
+  servalPizzaCool.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeServalEncounterWindow(servalPizzaWindow);
+  });
+}
+
+[servalEncounterWindow, servalPizzaWindow].forEach((win) => {
+  if (!win) return;
+  win.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  win.addEventListener("animationend", (event) => {
+    if (event.target !== win) return;
+    if (event.animationName === "retro-window-open") {
+      win.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      win.classList.remove("is-closing");
+      win.classList.add("is-hidden");
+      win.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+});
+
+if (caracalEncounterPet) {
+  caracalEncounterPet.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    chooseCaracalEncounterResult("pet");
+  });
+}
+
+if (caracalEncounterIgnore) {
+  caracalEncounterIgnore.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    chooseCaracalEncounterResult("ignore");
+  });
+}
+
+if (caracalResultOk) {
+  caracalResultOk.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeCaracalEncounterWindow(caracalResultWindow);
+  });
+}
+
+[caracalEncounterWindow, caracalResultWindow].forEach((win) => {
+  if (!win) return;
+  win.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  win.addEventListener("animationend", (event) => {
+    if (event.target !== win) return;
+    if (event.animationName === "retro-window-open") {
+      win.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      win.classList.remove("is-closing");
+      win.classList.add("is-hidden");
+      win.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+});
+
+if (shoebillEncounterBow) {
+  shoebillEncounterBow.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    bowToShoebill();
+  });
+}
+
+if (shoebillEncounterRunAway) {
+  shoebillEncounterRunAway.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeShoebillEncounterWindow(shoebillEncounterWindow);
+  });
+}
+
+if (shoebillBowOk) {
+  shoebillBowOk.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeShoebillEncounterWindow(shoebillBowWindow);
+  });
+}
+
+[shoebillEncounterWindow, shoebillBowWindow].forEach((win) => {
+  if (!win) return;
+  win.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  win.addEventListener("animationend", (event) => {
+    if (event.target !== win) return;
+    if (event.animationName === "retro-window-open") {
+      win.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      win.classList.remove("is-closing");
+      win.classList.add("is-hidden");
+      win.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+});
+
+if (midnightGospelYes) {
+  midnightGospelYes.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    acceptMidnightGospelInvite();
+  });
+}
+
+if (midnightGospelNo) {
+  midnightGospelNo.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMidnightGospelWindow(midnightGospelInviteWindow);
+  });
+}
+
+if (midnightGospelBegin) {
+  midnightGospelBegin.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    startMidnightGospelTimer();
+  });
+}
+
+[midnightGospelInviteWindow, midnightGospelMeditationWindow].forEach((win) => {
+  if (!win) return;
+  win.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  win.addEventListener("animationend", (event) => {
+    if (event.target !== win) return;
+    if (event.animationName === "retro-window-open") {
+      win.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      win.classList.remove("is-closing");
+      win.classList.add("is-hidden");
+      if (win === midnightGospelMeditationWindow) {
+        resetMidnightGospelMeditation();
+      }
+      win.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+});
+
 if (lainAlertOk) {
   lainAlertOk.addEventListener("click", (event) => {
     event.preventDefault();
@@ -12921,6 +14162,315 @@ if (advertisementWindow) {
       advertisementWindow.classList.remove("is-closing");
       advertisementWindow.classList.add("is-hidden");
       advertisementWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
+if (saulAdClose) {
+  saulAdClose.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeSaulAdWindow();
+  });
+}
+
+if (saulAdWindow) {
+  saulAdWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  saulAdWindow.addEventListener("animationend", (event) => {
+    if (event.target !== saulAdWindow) return;
+    if (event.animationName === "retro-window-open") {
+      saulAdWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      saulAdWindow.classList.remove("is-closing");
+      saulAdWindow.classList.add("is-hidden");
+      saulAdWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
+if (kidnamedfingerOk) {
+  kidnamedfingerOk.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeKidnamedfingerWindow();
+  });
+}
+
+if (kidnamedfingerWindow) {
+  kidnamedfingerWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  kidnamedfingerWindow.addEventListener("animationend", (event) => {
+    if (event.target !== kidnamedfingerWindow) return;
+    if (event.animationName === "retro-window-open") {
+      kidnamedfingerWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      kidnamedfingerWindow.classList.remove("is-closing");
+      kidnamedfingerWindow.classList.add("is-hidden");
+      kidnamedfingerWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
+if (walterWhiteOk) {
+  walterWhiteOk.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeWalterWhiteWindow();
+  });
+}
+
+if (walterWhiteWindow) {
+  walterWhiteWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  walterWhiteWindow.addEventListener("animationend", (event) => {
+    if (event.target !== walterWhiteWindow) return;
+    if (event.animationName === "retro-window-open") {
+      walterWhiteWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      walterWhiteWindow.classList.remove("is-closing");
+      walterWhiteWindow.classList.add("is-hidden");
+      walterWhiteWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
+if (bountyHunterClose) {
+  bountyHunterClose.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeBountyHunterWindow();
+  });
+}
+
+if (bountyHunterWindow) {
+  bountyHunterWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  bountyHunterWindow.addEventListener("animationend", (event) => {
+    if (event.target !== bountyHunterWindow) return;
+    if (event.animationName === "retro-window-open") {
+      bountyHunterWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      bountyHunterWindow.classList.remove("is-closing");
+      bountyHunterWindow.classList.add("is-hidden");
+      bountyHunterWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
+if (dstNightOk) {
+  dstNightOk.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    startDstNightCrafting();
+  });
+}
+
+if (dstCraftCampfire) {
+  dstCraftCampfire.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    completeDstNightCrafting();
+  });
+}
+
+document.addEventListener("pointermove", (event) => {
+  dstLastPointer = {
+    x: event.clientX,
+    y: event.clientY,
+  };
+  if (dstDraggedResource) {
+    positionDstCarryGhost(event.clientX, event.clientY);
+  }
+});
+
+[dstWoodSource, dstGrassSource].forEach((source) => {
+  if (!source) return;
+
+  source.addEventListener("dragstart", (event) => {
+    if (source.disabled) {
+      event.preventDefault();
+      return;
+    }
+    const resource = source.dataset.dstResource || "";
+    dstDraggedResource = resource;
+    updateDstCompatibleSlots(resource);
+    event.dataTransfer?.setData("text/plain", resource);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "copy";
+    }
+  });
+
+  source.addEventListener("dragend", () => {
+    clearDstDraggedResource();
+  });
+
+  source.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (source.disabled) return;
+    clearDstDraggedResource();
+    carryDstResource(source.dataset.dstResource || "", event.clientX, event.clientY);
+    source.classList.add("is-selected");
+  });
+});
+
+dstCraftSlots?.forEach((slot) => {
+  slot.addEventListener("dragover", (event) => {
+    const resource = event.dataTransfer?.getData("text/plain") || dstDraggedResource;
+    if (!resource || slot.dataset.dstSlot !== resource || slot.dataset.dstFilled) return;
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "copy";
+    }
+    slot.classList.add("is-drag-over");
+  });
+
+  slot.addEventListener("dragleave", () => {
+    slot.classList.remove("is-drag-over");
+  });
+
+  slot.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const resource = event.dataTransfer?.getData("text/plain") || dstDraggedResource;
+    if (fillDstCraftSlot(slot, resource)) {
+      clearDstDraggedResource();
+    }
+  });
+
+  slot.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (fillDstCraftSlot(slot, dstDraggedResource)) {
+      clearDstDraggedResource();
+    }
+  });
+});
+
+if (dstSurviveOk) {
+  dstSurviveOk.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeDstSurviveWindow();
+  });
+}
+
+if (dstDarknessOk) {
+  dstDarknessOk.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeDstDarknessWindow();
+  });
+}
+
+if (dstNightWindow) {
+  dstNightWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  dstNightWindow.addEventListener("animationend", (event) => {
+    if (event.target !== dstNightWindow) return;
+    if (event.animationName === "retro-window-open") {
+      dstNightWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      dstNightWindow.classList.remove("is-closing");
+      dstNightWindow.classList.add("is-hidden");
+      if (!dstNightCraftingActive && !isDstCraftingVisible()) {
+        resetDstNightWindow();
+      }
+      dstNightWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
+if (dstCraftingWindow) {
+  dstCraftingWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  dstCraftingWindow.addEventListener("animationend", (event) => {
+    if (event.target !== dstCraftingWindow) return;
+    if (event.animationName === "retro-window-open") {
+      dstCraftingWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      dstCraftingWindow.classList.remove("is-closing");
+      dstCraftingWindow.classList.add("is-hidden");
+      resetDstCraftingState();
+      dstCraftingWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
+if (dstSurviveWindow) {
+  dstSurviveWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  dstSurviveWindow.addEventListener("animationend", (event) => {
+    if (event.target !== dstSurviveWindow) return;
+    if (event.animationName === "retro-window-open") {
+      dstSurviveWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      dstSurviveWindow.classList.remove("is-closing");
+      dstSurviveWindow.classList.add("is-hidden");
+      dstSurviveWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
+if (dstDarknessWindow) {
+  dstDarknessWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  dstDarknessWindow.addEventListener("animationend", (event) => {
+    if (event.target !== dstDarknessWindow) return;
+    if (event.animationName === "retro-window-open") {
+      dstDarknessWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      dstDarknessWindow.classList.remove("is-closing");
+      dstDarknessWindow.classList.add("is-hidden");
+      dstDarknessWindow.querySelectorAll("img[data-src]").forEach((image) => {
         image.removeAttribute("src");
       });
     }
