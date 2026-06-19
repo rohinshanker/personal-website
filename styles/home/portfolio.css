@@ -154,6 +154,16 @@
   margin: 0 auto 12px;
 }
 
+.about-link-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.about-link-list a {
+  white-space: nowrap;
+}
+
 .portfolio-window {
   width: min(90vw, 680px);
 }

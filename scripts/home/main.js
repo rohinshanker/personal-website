@@ -1,6 +1,138 @@
 (() => {
-const { fitImagesIntoFrames, loadDeferredMedia } = window.homeMedia;
+const { fitImagesIntoFrames, loadDeferredMedia: loadDeferredMediaNow } = window.homeMedia;
 const { dom } = window.homeDom;
+let homeActivationReady = !document.prerendering;
+let resolveHomeActivated = null;
+const homePrerenderDebugEnabled = (() => {
+  try {
+    return new URLSearchParams(window.location.search).get("prerenderDebug") === "1";
+  } catch (error) {
+    return false;
+  }
+})();
+const homeSawPrerendering = Boolean(document.prerendering);
+const homePerfNow = () => Math.round(performance.now());
+const getHomePrerenderActivationStart = () => {
+  try {
+    const navigationEntry = performance.getEntriesByType("navigation")[0];
+    return Number(navigationEntry?.activationStart) || 0;
+  } catch (error) {
+    return 0;
+  }
+};
+const homePerfLog = (...args) => {
+  if (!homePrerenderDebugEnabled) return;
+  console.info("[Rohin OS prerender]", ...args);
+};
+
+window.rohinHomePerf = {
+  activationStart: getHomePrerenderActivationStart(),
+  prerendered: homeSawPrerendering || getHomePrerenderActivationStart() > 0,
+  activatedAt: homeActivationReady ? homePerfNow() : null,
+  firstDesktopPaintAt: null,
+  sawPrerendering: homeSawPrerendering,
+};
+window.rohinHomePrerenderActivationStart = window.rohinHomePerf.activationStart;
+homePerfLog("boot", {
+  documentPrerendering: document.prerendering,
+  visibilityState: document.visibilityState,
+  activationStart: window.rohinHomePerf.activationStart,
+  activationStartPositive: window.rohinHomePerf.activationStart > 0,
+});
+
+const whenHomeActivated = homeActivationReady
+  ? Promise.resolve()
+  : new Promise((resolve) => {
+      resolveHomeActivated = resolve;
+    });
+
+const isHomeActivationReady = () => homeActivationReady;
+
+const recordHomeActivation = (source) => {
+  const activationStart = getHomePrerenderActivationStart();
+  window.rohinHomePerf.activationStart = activationStart;
+  window.rohinHomePerf.prerendered =
+    window.rohinHomePerf.sawPrerendering || activationStart > 0;
+  window.rohinHomePerf.activatedAt = window.rohinHomePerf.activatedAt || homePerfNow();
+  window.rohinHomePrerenderActivationStart = activationStart;
+  homePerfLog("activated", {
+    source,
+    activationStartPositive: activationStart > 0,
+    ...window.rohinHomePerf,
+  });
+};
+
+const runHomeActivationCallback = (callback) => {
+  try {
+    callback();
+  } catch (error) {
+    console.error("[Rohin OS] Activation callback failed", error);
+  }
+};
+
+function markHomeActivated(event) {
+  if (homeActivationReady) return;
+  homeActivationReady = true;
+  document.removeEventListener("visibilitychange", checkHomeActivation);
+  window.removeEventListener("pageshow", checkHomeActivation);
+  recordHomeActivation(event?.type || "markHomeActivated");
+  if (resolveHomeActivated) {
+    resolveHomeActivated();
+    resolveHomeActivated = null;
+  }
+}
+
+function checkHomeActivation(event) {
+  if (!document.prerendering && document.visibilityState !== "hidden") {
+    markHomeActivated(event);
+  }
+}
+
+if (!homeActivationReady) {
+  document.addEventListener(
+    "prerenderingchange",
+    (event) => {
+      homePerfLog("prerenderingchange", {
+        documentPrerendering: document.prerendering,
+        visibilityState: document.visibilityState,
+      });
+      markHomeActivated(event);
+    },
+    { once: true }
+  );
+  document.addEventListener("visibilitychange", checkHomeActivation);
+  window.addEventListener("pageshow", checkHomeActivation);
+} else {
+  recordHomeActivation("initial");
+}
+
+const runAfterHomeActivation = (callback) => {
+  const run = () => {
+    runHomeActivationCallback(callback);
+  };
+  if (isHomeActivationReady()) {
+    run();
+    return;
+  }
+  whenHomeActivated.then(run);
+};
+
+const loadDeferredMedia = (root, visibleOnly = false) => {
+  if (!root) return;
+  if (!isHomeActivationReady()) {
+    runAfterHomeActivation(() => loadDeferredMedia(root, visibleOnly));
+    return;
+  }
+  loadDeferredMediaNow(root, visibleOnly);
+};
+
+runAfterHomeActivation(() => {
+  requestAnimationFrame(() => {
+    if (window.rohinHomePerf.firstDesktopPaintAt !== null) return;
+    window.rohinHomePerf.firstDesktopPaintAt = homePerfNow();
+    homePerfLog("first desktop paint", window.rohinHomePerf);
+  });
+});
 
 const {
   clock,
@@ -722,6 +854,7 @@ let sudokuState = {
 };
 let sudokuCellElements = [];
 let sudokuSaveTimerId = null;
+let sudokuSaveQueuedForActivation = false;
 let sudokuFishTimerId = null;
 let sudokuBubbleTimerId = null;
 const sudokuReducedMotionMedia =
@@ -874,6 +1007,10 @@ const updateClockImage = (now) => {
 };
 
 let activateVisibleContent = (root) => {
+  if (!isHomeActivationReady()) {
+    runAfterHomeActivation(() => activateVisibleContent(root));
+    return;
+  }
   loadDeferredMedia(root, true);
 };
 
@@ -900,6 +1037,10 @@ const isVisibleMediaElement = (media) =>
   );
 
 const playMediaElement = (media) => {
+  if (!isHomeActivationReady()) {
+    runAfterHomeActivation(() => playMediaElement(media));
+    return;
+  }
   if (!media || !isVisibleMediaElement(media)) return;
   if (!media.getAttribute("src") && media.dataset.src) {
     media.setAttribute("src", media.dataset.src);
@@ -3746,6 +3887,7 @@ const closeSiteGraceWindow = () => {
 const showLostGraceOverlay = () => {
   if (!lostGraceOverlay) return;
   if (lostGraceOverlayTimer) clearTimeout(lostGraceOverlayTimer);
+  loadDeferredMedia(lostGraceOverlay);
   lostGraceOverlay.classList.remove("is-visible");
   void lostGraceOverlay.offsetWidth;
   lostGraceOverlay.setAttribute("aria-hidden", "false");
@@ -6950,6 +7092,7 @@ const scheduleRandomEventRun = (definition, context) => {
 };
 
 const triggerRandomEvents = (triggerName, detail = {}) => {
+  if (!isHomeActivationReady()) return false;
   const eligibleEvents = [];
   let debugRan = false;
 
@@ -8786,6 +8929,12 @@ const createSudokuSavePayload = () => ({
 });
 
 const flushSudokuSave = () => {
+  if (!isHomeActivationReady()) {
+    sudokuSaveQueuedForActivation = true;
+    runAfterHomeActivation(flushSudokuSave);
+    return;
+  }
+  sudokuSaveQueuedForActivation = false;
   if (sudokuSaveTimerId) {
     clearTimeout(sudokuSaveTimerId);
     sudokuSaveTimerId = null;
@@ -8798,6 +8947,14 @@ const flushSudokuSave = () => {
 };
 
 const scheduleSudokuSave = () => {
+  if (!isHomeActivationReady()) {
+    if (!sudokuSaveQueuedForActivation) {
+      sudokuSaveQueuedForActivation = true;
+      runAfterHomeActivation(scheduleSudokuSave);
+    }
+    return;
+  }
+  sudokuSaveQueuedForActivation = false;
   if (sudokuSaveTimerId) clearTimeout(sudokuSaveTimerId);
   sudokuSaveTimerId = window.setTimeout(flushSudokuSave, SUDOKU_SAVE_DEBOUNCE_MS);
 };
@@ -10531,11 +10688,14 @@ renderLifeCounter();
 updateLifeCounterWidthControls();
 
 initPortfolioCornerResize();
-updateClock();
-setInterval(updateClock, 1000 * 30);
-updateCalendarClock();
-setInterval(updateCalendarClock, 500);
-window.addEventListener("beforeunload", () => {
+runAfterHomeActivation(() => {
+  updateClock();
+  setInterval(updateClock, 1000 * 30);
+  updateCalendarClock();
+  setInterval(updateCalendarClock, 500);
+  scheduleRandomEventIdleTrigger();
+});
+const handleHomeBeforeUnload = () => {
   flushSudokuSave();
   saveSnakeHighScores();
   saveSnakeSettings();
@@ -10544,30 +10704,33 @@ window.addEventListener("beforeunload", () => {
   } catch (error) {
     // Session storage can be disabled in some browsing modes.
   }
+};
+runAfterHomeActivation(() => {
+  window.addEventListener("beforeunload", handleHomeBeforeUnload);
 });
 
 window.addEventListener("load", () => {
-  let isReload = false;
-  try {
-    const navigationEntry = performance.getEntriesByType("navigation")[0];
-    isReload = navigationEntry && navigationEntry.type === "reload";
-  } catch (error) {
-    isReload = false;
-  }
-
-  try {
-    if (isReload && sessionStorage.getItem(RANDOM_EVENT_RELOAD_KEY) === "true") {
-      setTimeout(() => {
-        triggerRandomEvents("pageReload");
-      }, 300);
+  runAfterHomeActivation(() => {
+    let isReload = false;
+    try {
+      const navigationEntry = performance.getEntriesByType("navigation")[0];
+      isReload = navigationEntry && navigationEntry.type === "reload";
+    } catch (error) {
+      isReload = false;
     }
-    sessionStorage.removeItem(RANDOM_EVENT_RELOAD_KEY);
-  } catch (error) {
-    // Ignore storage failures; the page should still load normally.
-  }
-});
 
-scheduleRandomEventIdleTrigger();
+    try {
+      if (isReload && sessionStorage.getItem(RANDOM_EVENT_RELOAD_KEY) === "true") {
+        setTimeout(() => {
+          triggerRandomEvents("pageReload");
+        }, 300);
+      }
+      sessionStorage.removeItem(RANDOM_EVENT_RELOAD_KEY);
+    } catch (error) {
+      // Ignore storage failures; the page should still load normally.
+    }
+  });
+});
 
 appWindows.forEach((win) => {
   win.addEventListener("animationend", (event) => {
@@ -11575,6 +11738,10 @@ const syncDroneProjectVideo = () => {
 
 activateVisibleContent = (root) => {
   if (!root) return;
+  if (!isHomeActivationReady()) {
+    runAfterHomeActivation(() => activateVisibleContent(root));
+    return;
+  }
   loadDeferredMedia(root, true);
 
   root.querySelectorAll("[data-modeling-links]").forEach((container) => {
@@ -15296,7 +15463,7 @@ const initCustomCursorLoadingWatcher = () => {
   scheduleCursorLoadingSync();
 };
 
-initCustomCursorLoadingWatcher();
+runAfterHomeActivation(initCustomCursorLoadingWatcher);
 
 const NEKO_SPRITE_BASE = "assets/neko-assets/sprites";
 const NEKO_SPRITES = {
@@ -16175,7 +16342,7 @@ const toggleNeko = (event) => {
 };
 
 setNekoTaskbarActionIcon("wake");
-startNekoSleepBreathing();
+runAfterHomeActivation(startNekoSleepBreathing);
 
 appButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
@@ -18082,5 +18249,5 @@ const scheduleCalendarRefresh = () => {
   }, delay);
 };
 
-scheduleCalendarRefresh();
+runAfterHomeActivation(scheduleCalendarRefresh);
 })();
