@@ -36,64 +36,81 @@
     <link rel="stylesheet" href="styles/home/portfolio.css" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
     <link rel="stylesheet" href="styles/home/random-events.css?v=winged-light-cardinal-stops-20260617" />
+    <link rel="stylesheet" href="styles/home/cursors.css" />
   </head>
   <body>
     <div class="desktop" aria-label="Desktop apps">
       <button class="desktop-icon" id="about-app-desktop" data-app="about" aria-label="About Me">
         <img src="assets/app-icons/ico/help_book_big.ico" alt="" />
-        About Me
+        <span class="desktop-icon-label">About Me</span>
       </button>
       <button class="desktop-icon" data-app="windows" aria-label="Projects">
         <img src="assets/app-icons/ico/regedit.ico" alt="" />
-        Projects
+        <span class="desktop-icon-label">Projects</span>
       </button>
       <button class="desktop-icon" data-app="taskmgr" aria-label="Writing">
         <img src="assets/app-icons/ico/shell_window6.ico" alt="" />
-        Writing
+        <span class="desktop-icon-label">Writing</span>
       </button>
       <button class="desktop-icon" data-app="modeling" aria-label="Modeling">
         <img src="assets/app-icons/ico/accessibility_window_objs.ico" alt="" />
-        Modeling
+        <span class="desktop-icon-label">Modeling</span>
       </button>
       <button class="desktop-icon" data-app="paint" aria-label="Creative Work">
         <img src="assets/app-icons/ico/paint_old.ico" alt="" />
-        Creative Work
+        <span class="desktop-icon-label">Creative Work</span>
       </button>
       <button class="desktop-icon" data-app="study-resources" aria-label="Study Resources">
         <img src="assets/app-icons/ico/certificate_multiple.ico" alt="" />
-        Study Resources
+        <span class="desktop-icon-label">Study Resources</span>
       </button>
       <button class="desktop-icon" data-app="socials" aria-label="Socials">
         <img src="assets/app-icons/ico/connected_world.ico" alt="" />
-        Socials
+        <span class="desktop-icon-label">Socials</span>
       </button>
       <button class="desktop-icon" data-app="minesweeper" aria-label="Minesweeper">
         <img src="assets/app-icons/ico/minesweeper.ico" alt="" />
-        Minesweeper
+        <span class="desktop-icon-label">Minesweeper</span>
       </button>
       <button class="desktop-icon" data-app="solitaire" aria-label="Solitaire">
         <img src="assets/app-icons/ico/game_freecell.ico" alt="" />
-        Solitaire
+        <span class="desktop-icon-label">Solitaire</span>
       </button>
       <button class="desktop-icon" data-app="snake" aria-label="Snake">
         <img src="assets/snake-assets/snake-logo.png" alt="" />
-        Snake
+        <span class="desktop-icon-label">Snake</span>
+      </button>
+      <button class="desktop-icon desktop-icon--neko" data-app="neko" aria-label="Neko">
+        <span class="neko-icon-image" data-neko-icon aria-hidden="true">
+          <img class="neko-icon-bed" src="assets/app-icons/neko-bed-empty-icon.png" alt="" />
+          <img
+            class="neko-icon-sleeping-cat"
+            data-neko-sleeping-cat
+            src="assets/neko-assets/sprites/sleep1.png"
+            alt=""
+          />
+        </span>
+        <span class="desktop-icon-label">Neko</span>
       </button>
       <button class="desktop-icon" data-app="sudoku" aria-label="Sudoku">
         <img src="assets/app-icons/ico/calendar2.ico" alt="" />
-        Sudoku
+        <span class="desktop-icon-label">Sudoku</span>
       </button>
       <button class="desktop-icon" data-app="life-counter" aria-label="Counter">
         <img src="assets/app-icons/ico/charmap_w2k.ico" alt="" />
-        Counter
+        <span class="desktop-icon-label">Counter</span>
       </button>
       <button class="desktop-icon" data-app="credits" aria-label="Credits">
         <img src="assets/app-icons/ico/search_laptop_1.ico" alt="" data-credits-icon />
-        Credits
+        <span class="desktop-icon-label">Credits</span>
+      </button>
+      <button class="desktop-icon" data-app="cursor" aria-label="Cursor Settings">
+        <img src="assets/app-icons/ico/mouse_ms.ico" alt="" />
+        <span class="desktop-icon-label">Cursor Settings</span>
       </button>
       <button class="desktop-icon" data-github-shortcut aria-label="Open GitHub repository">
         <img class="github-shortcut-image" src="assets/app-icons/github-shortcut.png" alt="" />
-        GitHub
+        <span class="desktop-icon-label">GitHub</span>
       </button>
       <!-- Clash Royale app (disabled for now).
            To re-enable: remove this comment wrapper AND the matching taskbar icon
@@ -214,13 +231,7 @@
                   Open presentation
                 </button>
               </div>
-              <p>
-                Built a low-cost optical pulse oximeter for BioE 101 that measures heart rate
-                and blood oxygen saturation from red and infrared light absorption. The design
-                uses alternating LEDs, a BPW34 photodiode, a transimpedance amplifier, active
-                filtering, and an Arduino MKR Zero with an OLED readout to turn tiny optical
-                current changes into a live pulse waveform and SpO<sub>2</sub> estimate.
-              </p>
+              <p>Architecting, simulating, validating</p>
               <div class="gallery-frame" id="pulse-project-gallery">
                 <div class="gallery-scroll gallery-scroll--pdf">
                   <img
@@ -1582,7 +1593,6 @@
                 <li>Avoid walls and your own body.</li>
                 <li>Moving into the current tail is allowed when you are not eating.</li>
                 <li>Clicking outside the Snake window pauses the game.</li>
-                <li>Board size and colors are saved for your next game.</li>
               </ol>
             </section>
           </div>
@@ -1821,6 +1831,34 @@
           <p class="credits-line">
             <img
               class="credits-thumb"
+              data-src="assets/neko-assets/assets/neko-credit-icon.png"
+              loading="lazy"
+              decoding="async"
+              alt=""
+              aria-hidden="true"
+            />
+            Neko assets and logic from
+            &nbsp;
+            <a href="https://github.com/crgimenes/neko" target="_blank" rel="noreferrer">
+              github.com/crgimenes/neko
+            </a>
+          </p>
+          <p class="credits-line">
+            <img
+              class="credits-logo-icon"
+              data-src="assets/app-icons/ico/mouse_ms.ico"
+              alt=""
+              aria-hidden="true"
+            />
+            Cursor pack by Jeelh:
+            &nbsp;
+            <a href="https://jeelh.itch.io/retro-cursor" target="_blank" rel="noreferrer">
+              Retro Cursor
+            </a>
+          </p>
+          <p class="credits-line">
+            <img
+              class="credits-thumb"
               data-src="assets/mountain-and-sky.png"
               loading="lazy"
               decoding="async"
@@ -1854,6 +1892,31 @@
               by Ahai64
             </span>
           </p>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden cursor-window" data-app-window="cursor">
+        <div class="title-bar">
+          <div class="title-bar-text">Cursor Settings</div>
+          <div class="title-bar-controls">
+            <button aria-label="Minimize" disabled></button>
+            <button aria-label="Maximize" disabled></button>
+            <button aria-label="Close" data-close="cursor"></button>
+          </div>
+        </div>
+        <div class="window-body cursor-window-body">
+          <div class="cursor-window-option">
+            <img class="cursor-window-icon" src="assets/app-icons/ico/mouse_ms.ico" alt="" />
+            <span class="cursor-window-label" id="cursor-dark-mode-label">Dark mode?</span>
+            <input
+              id="cursor-dark-mode-checkbox"
+              type="checkbox"
+              aria-labelledby="cursor-dark-mode-label"
+            />
+          </div>
+          <div class="cursor-window-actions">
+            <button type="button" id="cursor-settings-ok">OK</button>
+          </div>
         </div>
       </div>
 
@@ -2077,6 +2140,9 @@
         <button class="taskbar-icon" data-app="snake" aria-label="Snake">
           <img src="assets/snake-assets/snake-logo.png" alt="Snake" />
         </button>
+        <button class="taskbar-icon" data-app="neko" aria-label="Neko">
+          <img src="assets/neko-assets/assets/neko-credit-icon.png" alt="Neko" />
+        </button>
         <button class="taskbar-icon" data-app="sudoku" aria-label="Sudoku">
           <img src="assets/app-icons/ico/calendar2.ico" alt="Sudoku" />
         </button>
@@ -2085,6 +2151,9 @@
         </button>
         <button class="taskbar-icon" data-app="credits" aria-label="Credits">
           <img src="assets/app-icons/ico/search_laptop_1.ico" alt="Credits" data-credits-icon />
+        </button>
+        <button class="taskbar-icon" data-app="cursor" aria-label="Cursor Settings">
+          <img src="assets/app-icons/ico/mouse_ms.ico" alt="Cursor Settings" />
         </button>
         <button class="taskbar-icon" data-github-shortcut aria-label="Open GitHub repository">
           <img class="github-shortcut-image" src="assets/app-icons/github-shortcut.png" alt="GitHub repository" />

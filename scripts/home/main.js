@@ -294,14 +294,14 @@ const pulseProjectFigures = [
       "Final bench demo with finger sleeve, live serial waveform, OLED readout, and commercial reference oximeter.",
   },
   {
-    src: `${PULSE_PROJECT_BASE_URL}/site-assets/breadboard-2.jpg`,
+    src: `${PULSE_PROJECT_BASE_URL}/site-assets/breadboard-1.jpg`,
     alt: "Early breadboard pulse oximeter circuit with Arduino and jumper wires.",
     title: "Prototype iteration 1",
     description:
       "Early analog chain and LED-control testing on a compact breadboard.",
   },
   {
-    src: `${PULSE_PROJECT_BASE_URL}/site-assets/breadboard-1.jpg`,
+    src: `${PULSE_PROJECT_BASE_URL}/site-assets/breadboard-2.jpg`,
     alt: "Expanded pulse oximeter prototype with multiple breadboards, OLED displays, and a yellow finger sleeve.",
     title: "Prototype iteration 2",
     description:
@@ -488,6 +488,7 @@ const SUDOKU_WIN_EFFECTS = Object.freeze({
 });
 const SUDOKU_PUZZLES = Object.freeze({
   easy: {
+    id: "seed-easy",
     label: "Easy",
     puzzle:
       "402030000795020003001705400100004005609000000248507310900108500800050071017043092",
@@ -495,6 +496,7 @@ const SUDOKU_PUZZLES = Object.freeze({
       "462831957795426183381795426173984265659312748248567319926178534834259671517643892",
   },
   medium: {
+    id: "seed-medium",
     label: "Medium",
     puzzle:
       "000030007000026000300095426003900060650310048208067010920170000004250000510640090",
@@ -502,6 +504,7 @@ const SUDOKU_PUZZLES = Object.freeze({
       "462831957795426183381795426173984265659312748248567319926178534834259671517643892",
   },
   hard: {
+    id: "seed-hard",
     label: "Hard",
     puzzle:
       "060830000090000080381705400173080260600000708008500300000100004800250001510000092",
@@ -509,6 +512,7 @@ const SUDOKU_PUZZLES = Object.freeze({
       "462831957795426183381795426173984265659312748248567319926178534834259671517643892",
   },
   expert: {
+    id: "seed-expert",
     label: "Expert",
     puzzle:
       "002831000005400080001095406070000005059002000008060009906070530030000071000040090",
@@ -516,6 +520,7 @@ const SUDOKU_PUZZLES = Object.freeze({
       "462831957795426183381795426173984265659312748248567319926178534834259671517643892",
   },
   master: {
+    id: "seed-master",
     label: "Master",
     puzzle:
       "400031050000006000380000400000080060009000000000067019006008004800209000507600002",
@@ -523,6 +528,7 @@ const SUDOKU_PUZZLES = Object.freeze({
       "462831957795426183381795426173984265659312748248567319926178534834259671517643892",
   },
   extreme: {
+    id: "seed-extreme",
     label: "Extreme",
     puzzle:
       "600000010400000000020000000000050407008040300001090000300400200050100000000806009",
@@ -530,6 +536,16 @@ const SUDOKU_PUZZLES = Object.freeze({
       "693784512487512936125963874932651487568247391741398625319475268856129743274836159",
   },
 });
+const SUDOKU_GENERATOR_CLUES = Object.freeze({
+  easy: 42,
+  medium: 36,
+  hard: 32,
+  expert: 28,
+  master: 26,
+  extreme: 24,
+});
+const SUDOKU_GENERATOR_MAX_ATTEMPTS = 3;
+const SUDOKU_FULL_DIGIT_MASK = 0b1111111110;
 
 const LIFE_COUNTER_STARTING_LIFE = 20;
 const LIFE_COUNTER_MIN_VALUE = -9999;
@@ -608,6 +624,7 @@ const snakeReducedMotionMedia =
     : null;
 let sudokuState = {
   difficulty: "easy",
+  puzzleId: SUDOKU_PUZZLES.easy.id,
   puzzle: SUDOKU_PUZZLES.easy.puzzle,
   solution: SUDOKU_PUZZLES.easy.solution,
   mistakes: 0,
@@ -7108,6 +7125,221 @@ const normalizeSudokuSelectedIndex = (index) => {
     : -1;
 };
 
+const normalizeSudokuPuzzleString = (puzzle) => {
+  const raw = String(puzzle || "");
+  return Array.from({ length: SUDOKU_CELL_COUNT }, (_, index) =>
+    SUDOKU_DIGITS.includes(raw[index]) ? raw[index] : "0"
+  ).join("");
+};
+
+const normalizeSudokuSolutionString = (solution) => {
+  const raw = String(solution || "");
+  return Array.from({ length: SUDOKU_CELL_COUNT }, (_, index) =>
+    SUDOKU_DIGITS.includes(raw[index]) ? raw[index] : "0"
+  ).join("");
+};
+
+const sudokuBoxIndex = (row, column) =>
+  Math.floor(row / 3) * 3 + Math.floor(column / 3);
+
+const countSudokuMaskBits = (mask) => {
+  let count = 0;
+  let remainingMask = mask;
+  while (remainingMask) {
+    remainingMask &= remainingMask - 1;
+    count += 1;
+  }
+  return count;
+};
+
+const isCompleteSudokuSolution = (solution) => {
+  const normalizedSolution = normalizeSudokuSolutionString(solution);
+  if (normalizedSolution.includes("0")) return false;
+
+  for (let row = 0; row < 9; row += 1) {
+    let rowMask = 0;
+    let columnMask = 0;
+    for (let offset = 0; offset < 9; offset += 1) {
+      rowMask |= 1 << Number(normalizedSolution[row * 9 + offset]);
+      columnMask |= 1 << Number(normalizedSolution[offset * 9 + row]);
+    }
+    if (rowMask !== SUDOKU_FULL_DIGIT_MASK || columnMask !== SUDOKU_FULL_DIGIT_MASK) {
+      return false;
+    }
+  }
+
+  for (let boxRow = 0; boxRow < 3; boxRow += 1) {
+    for (let boxColumn = 0; boxColumn < 3; boxColumn += 1) {
+      let boxMask = 0;
+      for (let row = 0; row < 3; row += 1) {
+        for (let column = 0; column < 3; column += 1) {
+          const index = (boxRow * 3 + row) * 9 + boxColumn * 3 + column;
+          boxMask |= 1 << Number(normalizedSolution[index]);
+        }
+      }
+      if (boxMask !== SUDOKU_FULL_DIGIT_MASK) return false;
+    }
+  }
+
+  return true;
+};
+
+const isSudokuSolutionCompatibleWithPuzzle = (puzzle, solution) => {
+  const normalizedPuzzle = normalizeSudokuPuzzleString(puzzle);
+  const normalizedSolution = normalizeSudokuSolutionString(solution);
+  if (!isCompleteSudokuSolution(normalizedSolution)) return false;
+  return Array.from(normalizedPuzzle).every(
+    (value, index) => value === "0" || value === normalizedSolution[index]
+  );
+};
+
+const shuffleSudokuItems = (items) => {
+  const shuffledItems = Array.from(items);
+  for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffledItems[index], shuffledItems[swapIndex]] = [
+      shuffledItems[swapIndex],
+      shuffledItems[index],
+    ];
+  }
+  return shuffledItems;
+};
+
+const createSudokuFullSolution = () => {
+  const groups = [0, 1, 2];
+  const rows = shuffleSudokuItems(groups).flatMap((band) =>
+    shuffleSudokuItems(groups).map((row) => band * 3 + row)
+  );
+  const columns = shuffleSudokuItems(groups).flatMap((stack) =>
+    shuffleSudokuItems(groups).map((column) => stack * 3 + column)
+  );
+  const digits = shuffleSudokuItems(SUDOKU_DIGITS.split(""));
+  const pattern = (row, column) => (row * 3 + Math.floor(row / 3) + column) % 9;
+
+  return rows
+    .flatMap((row) => columns.map((column) => digits[pattern(row, column)]))
+    .join("");
+};
+
+const countSudokuSolutions = (puzzle, limit = 2) => {
+  const board = normalizeSudokuPuzzleString(puzzle)
+    .split("")
+    .map((value) => Number(value));
+  const rowMasks = Array.from({ length: 9 }, () => 0);
+  const columnMasks = Array.from({ length: 9 }, () => 0);
+  const boxMasks = Array.from({ length: 9 }, () => 0);
+
+  for (let index = 0; index < SUDOKU_CELL_COUNT; index += 1) {
+    const value = board[index];
+    if (!value) continue;
+    const row = Math.floor(index / 9);
+    const column = index % 9;
+    const box = sudokuBoxIndex(row, column);
+    const digitMask = 1 << value;
+    if (rowMasks[row] & digitMask || columnMasks[column] & digitMask || boxMasks[box] & digitMask) {
+      return 0;
+    }
+    rowMasks[row] |= digitMask;
+    columnMasks[column] |= digitMask;
+    boxMasks[box] |= digitMask;
+  }
+
+  let solutions = 0;
+  const solve = () => {
+    if (solutions >= limit) return;
+
+    let bestIndex = -1;
+    let bestMask = 0;
+    let bestOptionCount = 10;
+    for (let index = 0; index < SUDOKU_CELL_COUNT; index += 1) {
+      if (board[index]) continue;
+      const row = Math.floor(index / 9);
+      const column = index % 9;
+      const box = sudokuBoxIndex(row, column);
+      const candidateMask =
+        SUDOKU_FULL_DIGIT_MASK & ~(rowMasks[row] | columnMasks[column] | boxMasks[box]);
+      const optionCount = countSudokuMaskBits(candidateMask);
+      if (!optionCount) return;
+      if (optionCount < bestOptionCount) {
+        bestIndex = index;
+        bestMask = candidateMask;
+        bestOptionCount = optionCount;
+        if (optionCount === 1) break;
+      }
+    }
+
+    if (bestIndex === -1) {
+      solutions += 1;
+      return;
+    }
+
+    const row = Math.floor(bestIndex / 9);
+    const column = bestIndex % 9;
+    const box = sudokuBoxIndex(row, column);
+    let candidateMask = bestMask;
+    while (candidateMask && solutions < limit) {
+      const digitMask = candidateMask & -candidateMask;
+      const digit = Math.log2(digitMask);
+      board[bestIndex] = digit;
+      rowMasks[row] |= digitMask;
+      columnMasks[column] |= digitMask;
+      boxMasks[box] |= digitMask;
+      solve();
+      rowMasks[row] &= ~digitMask;
+      columnMasks[column] &= ~digitMask;
+      boxMasks[box] &= ~digitMask;
+      board[bestIndex] = 0;
+      candidateMask &= candidateMask - 1;
+    }
+  };
+
+  solve();
+  return solutions;
+};
+
+const createSudokuPuzzleId = (difficulty) =>
+  `generated-${difficulty}-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+
+const createGeneratedSudokuPuzzle = (difficulty) => {
+  const normalizedDifficulty = normalizeSudokuDifficulty(difficulty);
+  const targetClues = SUDOKU_GENERATOR_CLUES[normalizedDifficulty] || SUDOKU_GENERATOR_CLUES.easy;
+  let bestPuzzle = null;
+
+  for (let attempt = 0; attempt < SUDOKU_GENERATOR_MAX_ATTEMPTS; attempt += 1) {
+    const solution = createSudokuFullSolution();
+    const puzzleValues = solution.split("");
+    let clueCount = SUDOKU_CELL_COUNT;
+
+    shuffleSudokuItems(Array.from({ length: SUDOKU_CELL_COUNT }, (_, index) => index)).forEach(
+      (index) => {
+        if (clueCount <= targetClues) return;
+        const removedValue = puzzleValues[index];
+        puzzleValues[index] = "0";
+        if (countSudokuSolutions(puzzleValues.join(""), 2) === 1) {
+          clueCount -= 1;
+          return;
+        }
+        puzzleValues[index] = removedValue;
+      }
+    );
+
+    const puzzle = puzzleValues.join("");
+    const generatedPuzzle = {
+      id: createSudokuPuzzleId(normalizedDifficulty),
+      label: SUDOKU_PUZZLES[normalizedDifficulty].label,
+      puzzle,
+      solution,
+      clues: clueCount,
+    };
+    if (!bestPuzzle || clueCount < bestPuzzle.clues) bestPuzzle = generatedPuzzle;
+    if (clueCount <= targetClues) return generatedPuzzle;
+  }
+
+  return bestPuzzle || SUDOKU_PUZZLES[normalizedDifficulty];
+};
+
 const serializeSudokuValues = (values = sudokuState.values) =>
   normalizeSudokuValues(values, sudokuState.puzzle)
     .map((value) => value || "0")
@@ -7161,9 +7393,11 @@ const currentSudokuElapsedSeconds = () => {
 };
 
 const createSudokuSavePayload = () => ({
-  version: 1,
+  version: 2,
   difficulty: sudokuState.difficulty,
+  puzzleId: sudokuState.puzzleId,
   puzzle: sudokuState.puzzle,
+  solution: sudokuState.solution,
   values: serializeSudokuValues(),
   notes: normalizeSudokuNotesList(sudokuState.notes, sudokuState.puzzle),
   elapsedSeconds: currentSudokuElapsedSeconds(),
@@ -7199,15 +7433,29 @@ const restoreSudokuSavedState = () => {
   } catch (error) {
     savedState = null;
   }
-  if (!savedState || savedState.version !== 1) return false;
+  if (!savedState || ![1, 2].includes(savedState.version)) return false;
 
   const difficulty = normalizeSudokuDifficulty(savedState.difficulty);
-  const puzzle = SUDOKU_PUZZLES[difficulty];
-  if (savedState.puzzle && savedState.puzzle !== puzzle.puzzle) return false;
+  const fallbackPuzzle = SUDOKU_PUZZLES[difficulty];
+  let puzzle = fallbackPuzzle.puzzle;
+  let solution = fallbackPuzzle.solution;
+  let puzzleId = fallbackPuzzle.id;
+
+  if (savedState.version >= 2) {
+    const savedPuzzle = normalizeSudokuPuzzleString(savedState.puzzle);
+    const savedSolution = normalizeSudokuSolutionString(savedState.solution);
+    if (!isSudokuSolutionCompatibleWithPuzzle(savedPuzzle, savedSolution)) return false;
+    puzzle = savedPuzzle;
+    solution = savedSolution;
+    puzzleId = String(savedState.puzzleId || "") || createSudokuPuzzleId(difficulty);
+  } else if (savedState.puzzle && savedState.puzzle !== fallbackPuzzle.puzzle) {
+    return false;
+  }
 
   sudokuState.difficulty = difficulty;
-  sudokuState.puzzle = puzzle.puzzle;
-  sudokuState.solution = puzzle.solution;
+  sudokuState.puzzleId = puzzleId;
+  sudokuState.puzzle = puzzle;
+  sudokuState.solution = solution;
   sudokuState.mistakes = 0;
   sudokuState.elapsedSeconds = Math.max(0, Math.floor(Number(savedState.elapsedSeconds) || 0));
   sudokuState.timerId = null;
@@ -7218,8 +7466,8 @@ const restoreSudokuSavedState = () => {
   sudokuState.usedReveal = Boolean(savedState.usedReveal);
   sudokuState.hintMode = savedState.hintMode === "errors" ? "errors" : "off";
   sudokuState.noteMode = Boolean(savedState.noteMode);
-  sudokuState.values = normalizeSudokuValues(savedState.values, puzzle.puzzle);
-  sudokuState.notes = normalizeSudokuNotesList(savedState.notes, puzzle.puzzle);
+  sudokuState.values = normalizeSudokuValues(savedState.values, puzzle);
+  sudokuState.notes = normalizeSudokuNotesList(savedState.notes, puzzle);
   sudokuState.undoStack = [];
   sudokuState.redoStack = [];
   sudokuState.selectedIndex = normalizeSudokuSelectedIndex(savedState.selectedIndex);
@@ -8247,7 +8495,7 @@ const renderSudoku = () => {
 
 const loadSudokuDifficulty = (difficulty) => {
   const normalizedDifficulty = normalizeSudokuDifficulty(difficulty);
-  const puzzle = SUDOKU_PUZZLES[normalizedDifficulty];
+  const puzzle = createGeneratedSudokuPuzzle(normalizedDifficulty);
   const wasPlaying = sudokuState.playing;
   const previousHintMode = sudokuState.hintMode;
   const previousNoteMode = sudokuState.noteMode;
@@ -8260,6 +8508,7 @@ const loadSudokuDifficulty = (difficulty) => {
   pauseSudokuTimer();
   sudokuState = {
     difficulty: normalizedDifficulty,
+    puzzleId: puzzle.id,
     puzzle: puzzle.puzzle,
     solution: puzzle.solution,
     mistakes: 0,
@@ -8703,7 +8952,15 @@ if (lifeCounterWidthIncrease) {
   });
 }
 
-restoreSudokuSavedState();
+if (!restoreSudokuSavedState()) {
+  const initialSudokuPuzzle = createGeneratedSudokuPuzzle(sudokuState.difficulty);
+  sudokuState.puzzleId = initialSudokuPuzzle.id;
+  sudokuState.puzzle = initialSudokuPuzzle.puzzle;
+  sudokuState.solution = initialSudokuPuzzle.solution;
+  sudokuState.values = normalizeSudokuValues("", initialSudokuPuzzle.puzzle);
+  sudokuState.notes = createSudokuEmptyNotes();
+  scheduleSudokuSave();
+}
 renderSudoku();
 renderLifeCounter();
 updateLifeCounterWidthControls();
@@ -12723,9 +12980,873 @@ document.addEventListener("click", (event) => {
   }
 });
 
+const CURSOR_MODE_STORAGE_KEY = "rohin-os-cursor-mode";
+
+const setCursorDarkMode = (enabled) => {
+  document.documentElement.classList.toggle("is-cursor-dark-mode", enabled);
+  document.body.classList.toggle("is-cursor-dark-mode", enabled);
+};
+
+const saveCursorDarkMode = (enabled) => {
+  try {
+    localStorage.setItem(CURSOR_MODE_STORAGE_KEY, enabled ? "dark" : "light");
+  } catch (error) {
+    // The visual change should still apply even if storage is unavailable.
+  }
+};
+
+const loadCursorDarkMode = () => {
+  try {
+    return localStorage.getItem(CURSOR_MODE_STORAGE_KEY) === "dark";
+  } catch (error) {
+    return false;
+  }
+};
+
+const initCursorSettingsApp = () => {
+  const cursorDarkModeCheckbox = document.getElementById("cursor-dark-mode-checkbox");
+  const cursorSettingsOk = document.getElementById("cursor-settings-ok");
+  const syncCursorCheckbox = () => {
+    if (cursorDarkModeCheckbox) {
+      cursorDarkModeCheckbox.checked = document.body.classList.contains("is-cursor-dark-mode");
+    }
+  };
+
+  setCursorDarkMode(loadCursorDarkMode());
+  syncCursorCheckbox();
+
+  document.querySelectorAll('[data-app="cursor"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      window.setTimeout(syncCursorCheckbox, 0);
+    });
+  });
+
+  cursorSettingsOk?.addEventListener("click", () => {
+    const enabled = Boolean(cursorDarkModeCheckbox?.checked);
+    setCursorDarkMode(enabled);
+    saveCursorDarkMode(enabled);
+    closeAppWindow("cursor");
+  });
+};
+
+initCursorSettingsApp();
+
+const hasCustomCursorLoadingIndicator = () =>
+  Boolean(
+    (snakeState.loading && isSnakeWindowVisible()) ||
+      (sudokuApp?.classList.contains("is-sudoku-loading") && isSudokuWindowVisible()) ||
+      (mcAfeeProgressTimer && isMcAfeeWindowVisible(mcAfeeDownloadWindow))
+  );
+
+const initCustomCursorLoadingWatcher = () => {
+  if (!document.body) return;
+  let cursorFrameId = null;
+  let cursorLoadingFrame = 0;
+  let cursorLoadingFrameClass = "";
+  let cursorLoadingTimerId = null;
+  const cursorLoadingFrameCount = 9;
+  const cursorLoadingFrameDelay = 100;
+
+  const cursorLoadingFrameClassName = (frame) =>
+    `is-custom-cursor-loading-frame-${frame}`;
+
+  const clearCursorLoadingFrameClass = () => {
+    if (!cursorLoadingFrameClass) return;
+    document.body.classList.remove(cursorLoadingFrameClass);
+    cursorLoadingFrameClass = "";
+  };
+
+  const showNextCursorLoadingFrame = () => {
+    cursorLoadingFrame = (cursorLoadingFrame % cursorLoadingFrameCount) + 1;
+    const nextFrameClass = cursorLoadingFrameClassName(cursorLoadingFrame);
+    if (cursorLoadingFrameClass !== nextFrameClass) {
+      clearCursorLoadingFrameClass();
+      document.body.classList.add(nextFrameClass);
+      cursorLoadingFrameClass = nextFrameClass;
+    }
+  };
+
+  const startCursorLoadingAnimation = () => {
+    if (cursorLoadingTimerId) return;
+    showNextCursorLoadingFrame();
+    cursorLoadingTimerId = window.setInterval(
+      showNextCursorLoadingFrame,
+      cursorLoadingFrameDelay
+    );
+  };
+
+  const stopCursorLoadingAnimation = () => {
+    if (cursorLoadingTimerId) {
+      window.clearInterval(cursorLoadingTimerId);
+      cursorLoadingTimerId = null;
+    }
+    cursorLoadingFrame = 0;
+    clearCursorLoadingFrameClass();
+  };
+
+  const syncCursorLoadingState = () => {
+    cursorFrameId = null;
+    const isLoading = hasCustomCursorLoadingIndicator();
+    document.body.classList.toggle("is-custom-cursor-loading", isLoading);
+    if (isLoading) {
+      startCursorLoadingAnimation();
+      return;
+    }
+    stopCursorLoadingAnimation();
+  };
+
+  const scheduleCursorLoadingSync = () => {
+    if (cursorFrameId) return;
+    cursorFrameId = window.requestAnimationFrame(syncCursorLoadingState);
+  };
+
+  const observer = new MutationObserver(scheduleCursorLoadingSync);
+  observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["aria-hidden", "class", "disabled", "hidden", "style"],
+    childList: true,
+    subtree: true,
+  });
+
+  window.addEventListener("focus", scheduleCursorLoadingSync);
+  window.addEventListener("blur", scheduleCursorLoadingSync);
+  document.addEventListener("visibilitychange", scheduleCursorLoadingSync);
+  scheduleCursorLoadingSync();
+};
+
+initCustomCursorLoadingWatcher();
+
+const NEKO_SPRITE_BASE = "assets/neko-assets/sprites";
+const NEKO_SPRITES = {
+  sleep1: `${NEKO_SPRITE_BASE}/sleep1.png`,
+  sleep2: `${NEKO_SPRITE_BASE}/sleep2.png`,
+  awake: `${NEKO_SPRITE_BASE}/awake.png`,
+  yawn1: `${NEKO_SPRITE_BASE}/yawn1.png`,
+  yawn2: `${NEKO_SPRITE_BASE}/yawn2.png`,
+  wash1: `${NEKO_SPRITE_BASE}/wash1.png`,
+  scratch1: `${NEKO_SPRITE_BASE}/scratch1.png`,
+  scratch2: `${NEKO_SPRITE_BASE}/scratch2.png`,
+  up1: `${NEKO_SPRITE_BASE}/up1.png`,
+  up2: `${NEKO_SPRITE_BASE}/up2.png`,
+  upright1: `${NEKO_SPRITE_BASE}/upright1.png`,
+  upright2: `${NEKO_SPRITE_BASE}/upright2.png`,
+  right1: `${NEKO_SPRITE_BASE}/right1.png`,
+  right2: `${NEKO_SPRITE_BASE}/right2.png`,
+  downright1: `${NEKO_SPRITE_BASE}/downright1.png`,
+  downright2: `${NEKO_SPRITE_BASE}/downright2.png`,
+  down1: `${NEKO_SPRITE_BASE}/down1.png`,
+  down2: `${NEKO_SPRITE_BASE}/down2.png`,
+  downleft1: `${NEKO_SPRITE_BASE}/downleft1.png`,
+  downleft2: `${NEKO_SPRITE_BASE}/downleft2.png`,
+  left1: `${NEKO_SPRITE_BASE}/left1.png`,
+  left2: `${NEKO_SPRITE_BASE}/left2.png`,
+  upleft1: `${NEKO_SPRITE_BASE}/upleft1.png`,
+  upleft2: `${NEKO_SPRITE_BASE}/upleft2.png`,
+  upclaw1: `${NEKO_SPRITE_BASE}/upclaw1.png`,
+  upclaw2: `${NEKO_SPRITE_BASE}/upclaw2.png`,
+  rightclaw1: `${NEKO_SPRITE_BASE}/rightclaw1.png`,
+  rightclaw2: `${NEKO_SPRITE_BASE}/rightclaw2.png`,
+  downclaw1: `${NEKO_SPRITE_BASE}/downclaw1.png`,
+  downclaw2: `${NEKO_SPRITE_BASE}/downclaw2.png`,
+  leftclaw1: `${NEKO_SPRITE_BASE}/leftclaw1.png`,
+  leftclaw2: `${NEKO_SPRITE_BASE}/leftclaw2.png`,
+};
+const NEKO_RUN_SPRITES = {
+  up: ["up1", "up2"],
+  upright: ["upright1", "upright2"],
+  right: ["right1", "right2"],
+  downright: ["downright1", "downright2"],
+  down: ["down1", "down2"],
+  downleft: ["downleft1", "downleft2"],
+  left: ["left1", "left2"],
+  upleft: ["upleft1", "upleft2"],
+};
+const NEKO_FOOTPRINT_SPRITES = {
+  up: `${NEKO_SPRITE_BASE}/fp_up.png`,
+  upright: `${NEKO_SPRITE_BASE}/fp_upright.png`,
+  right: `${NEKO_SPRITE_BASE}/fp_right.png`,
+  downright: `${NEKO_SPRITE_BASE}/fp_downright.png`,
+  down: `${NEKO_SPRITE_BASE}/fp_down.png`,
+  downleft: `${NEKO_SPRITE_BASE}/fp_downleft.png`,
+  left: `${NEKO_SPRITE_BASE}/fp_left.png`,
+  upleft: `${NEKO_SPRITE_BASE}/fp_upleft.png`,
+};
+const NEKO_FOOTPRINT_VISIBLE_OFFSETS = {
+  up: { x: 0, y: 10.5 },
+  upright: { x: -12, y: 11 },
+  right: { x: -11.5, y: -1 },
+  downright: { x: -12, y: -12 },
+  down: { x: 0, y: -11.5 },
+  downleft: { x: 11, y: -12 },
+  left: { x: 10.5, y: 0 },
+  upleft: { x: 11, y: 11 },
+};
+const NEKO_SCRATCH_SPRITES = {
+  top: ["upclaw1", "upclaw2"],
+  right: ["rightclaw1", "rightclaw2"],
+  bottom: ["downclaw1", "downclaw2"],
+  left: ["leftclaw1", "leftclaw2"],
+};
+const NEKO_IDLE_ACTIONS = [
+  {
+    name: "scratchSelf",
+    frames: ["scratch1", "scratch2", "scratch1", "scratch2", "scratch1", "scratch2"],
+  },
+  {
+    name: "yawn",
+    frames: ["yawn1", "yawn2", "yawn2", "yawn1"],
+  },
+  {
+    name: "wash",
+    frames: ["wash1", "wash1", "wash1", "wash1", "wash1", "wash1"],
+  },
+];
+const NEKO_WAKE_SEQUENCE = [
+  { sprite: "awake", duration: 500 },
+  { sprite: "yawn1", duration: 450 },
+  { sprite: "yawn2", duration: 900 },
+  { sprite: "wash1", duration: 900 },
+];
+const NEKO_FRAME_INTERVAL_MS = 100;
+const NEKO_SLEEP_FRAME_INTERVAL_MS = 850;
+const NEKO_SPEED = 10;
+const NEKO_IDLE_DISTANCE = 48;
+const NEKO_SPRITE_SIZE = 42;
+const NEKO_VERTICAL_OFFSET = 10;
+const NEKO_EDGE_SCRATCH_DISTANCE = 4;
+const NEKO_IDLE_ACTION_COOLDOWN_FRAMES = 14;
+const NEKO_IDLE_ACTION_DELAY_MS = 1000;
+const NEKO_MOUSE_STILL_SLEEP_MS = 5000;
+const NEKO_EDGE_SCRATCH_SLEEP_MS = 4000;
+const NEKO_RETURN_HOME_DISTANCE = 6;
+const NEKO_FOOTPRINT_TTL_MS = 3000;
+const NEKO_FOOTPRINT_MAX = 10;
+const NEKO_FOOTPRINT_SPACING = 30;
+const NEKO_FOOTPRINT_BACK_OFFSET = 12;
+const NEKO_FOOTPRINT_SIDE_OFFSET = 6;
+const NEKO_FOOTPRINT_STAGGER = 5;
+let nekoState = "sleeping";
+let desktopNekoCat = null;
+let nekoAnimationFrameId = null;
+let nekoLastFrameTimestamp = 0;
+let nekoFrameCount = 0;
+let nekoSleepTimerId = null;
+let nekoSleepFrame = 0;
+let nekoWakeTimerId = null;
+let nekoPosX = 32;
+let nekoPosY = 32;
+let nekoMouseX = window.innerWidth / 2;
+let nekoMouseY = window.innerHeight / 2;
+let nekoMouseOutsideWindow = false;
+let nekoScratchEdge = null;
+let nekoIdleAction = null;
+let nekoIdleActionFrame = 0;
+let nekoIdleActionCooldownFrames = 0;
+let nekoIdleStartedAt = 0;
+let nekoPlayedIdleActionForCurrentIdle = false;
+let nekoLastMouseMoveAt = performance.now();
+let nekoEdgeScratchStartedAt = 0;
+let nekoIsNapping = false;
+let nekoNapFrame = 0;
+let nekoReturnX = 32;
+let nekoReturnY = 32;
+let nekoFootprints = [];
+let nekoLastFootprintX = null;
+let nekoLastFootprintY = null;
+let nekoNextFootprintSide = 1;
+
+const setNekoIconAwake = (isAwake) => {
+  document.querySelectorAll("[data-neko-icon]").forEach((icon) => {
+    icon.classList.toggle("is-awake", isAwake);
+  });
+};
+
+const setNekoSleepingIconFrame = (frame) => {
+  const sprite = frame % 2 === 0 ? NEKO_SPRITES.sleep1 : NEKO_SPRITES.sleep2;
+  document.querySelectorAll("[data-neko-sleeping-cat]").forEach((image) => {
+    image.src = sprite;
+  });
+};
+
+const startNekoSleepBreathing = () => {
+  if (nekoSleepTimerId) return;
+  nekoSleepFrame = 0;
+  setNekoSleepingIconFrame(nekoSleepFrame);
+  nekoSleepTimerId = window.setInterval(() => {
+    if (nekoState !== "sleeping") return;
+    nekoSleepFrame += 1;
+    setNekoSleepingIconFrame(nekoSleepFrame);
+  }, NEKO_SLEEP_FRAME_INTERVAL_MS);
+};
+
+const stopNekoSleepBreathing = () => {
+  if (!nekoSleepTimerId) return;
+  window.clearInterval(nekoSleepTimerId);
+  nekoSleepTimerId = null;
+};
+
+const setDesktopNekoSprite = (spriteName) => {
+  if (!desktopNekoCat) return;
+  const src = NEKO_SPRITES[spriteName] || NEKO_SPRITES.awake;
+  if (desktopNekoCat.getAttribute("src") !== src) {
+    desktopNekoCat.src = src;
+  }
+};
+
+const renderDesktopNekoCat = () => {
+  if (!desktopNekoCat) return;
+  desktopNekoCat.style.left = `${Math.round(nekoPosX)}px`;
+  desktopNekoCat.style.top = `${Math.round(nekoPosY)}px`;
+};
+
+const resetNekoFootprintSpacing = () => {
+  nekoLastFootprintX = null;
+  nekoLastFootprintY = null;
+  nekoNextFootprintSide = 1;
+};
+
+const removeNekoFootprint = (footprint) => {
+  if (!footprint) return;
+  window.clearTimeout(footprint.timerId);
+  footprint.element.remove();
+  nekoFootprints = nekoFootprints.filter((item) => item !== footprint);
+};
+
+const trimNekoFootprints = () => {
+  while (nekoFootprints.length > NEKO_FOOTPRINT_MAX) {
+    removeNekoFootprint(nekoFootprints[0]);
+  }
+};
+
+const createNekoFootprint = (x, y, direction, pawSide) => {
+  const src = NEKO_FOOTPRINT_SPRITES[direction];
+  if (!src) return;
+  const visibleOffset = NEKO_FOOTPRINT_VISIBLE_OFFSETS[direction] || { x: 0, y: 0 };
+
+  const footprint = document.createElement("img");
+  footprint.className = `desktop-neko-footprint desktop-neko-footprint--${
+    pawSide < 0 ? "left" : "right"
+  }`;
+  footprint.src = src;
+  footprint.alt = "";
+  footprint.draggable = false;
+  footprint.setAttribute("aria-hidden", "true");
+  footprint.style.left = `${Math.round(x - visibleOffset.x)}px`;
+  footprint.style.top = `${Math.round(y - visibleOffset.y)}px`;
+
+  const entry = { element: footprint, timerId: null };
+  entry.timerId = window.setTimeout(() => removeNekoFootprint(entry), NEKO_FOOTPRINT_TTL_MS);
+  nekoFootprints.push(entry);
+  document.body.append(footprint);
+  trimNekoFootprints();
+};
+
+const createNekoFootprintPair = (x, y, direction, moveX, moveY) => {
+  const distance = Math.sqrt(moveX ** 2 + moveY ** 2) || 1;
+  const alongX = moveX / distance;
+  const alongY = moveY / distance;
+  const sideX = -alongY;
+  const sideY = alongX;
+  const firstSide = nekoNextFootprintSide;
+  const secondSide = -firstSide;
+  const originX = x - alongX * NEKO_FOOTPRINT_BACK_OFFSET;
+  const originY = y - NEKO_VERTICAL_OFFSET - alongY * NEKO_FOOTPRINT_BACK_OFFSET;
+
+  createNekoFootprint(
+    originX + sideX * NEKO_FOOTPRINT_SIDE_OFFSET * firstSide - alongX * NEKO_FOOTPRINT_STAGGER,
+    originY + sideY * NEKO_FOOTPRINT_SIDE_OFFSET * firstSide - alongY * NEKO_FOOTPRINT_STAGGER,
+    direction,
+    firstSide
+  );
+  createNekoFootprint(
+    originX + sideX * NEKO_FOOTPRINT_SIDE_OFFSET * secondSide + alongX * NEKO_FOOTPRINT_STAGGER,
+    originY + sideY * NEKO_FOOTPRINT_SIDE_OFFSET * secondSide + alongY * NEKO_FOOTPRINT_STAGGER,
+    direction,
+    secondSide
+  );
+
+  nekoNextFootprintSide *= -1;
+};
+
+const maybeCreateNekoFootprints = (x, y, direction, moveX, moveY) => {
+  if (nekoLastFootprintX === null || nekoLastFootprintY === null) {
+    nekoLastFootprintX = x;
+    nekoLastFootprintY = y;
+    createNekoFootprintPair(x, y, direction, moveX, moveY);
+    return;
+  }
+
+  const distanceFromLastPrint = Math.sqrt(
+    (x - nekoLastFootprintX) ** 2 + (y - nekoLastFootprintY) ** 2
+  );
+  if (distanceFromLastPrint < NEKO_FOOTPRINT_SPACING) return;
+
+  nekoLastFootprintX = x;
+  nekoLastFootprintY = y;
+  createNekoFootprintPair(x, y, direction, moveX, moveY);
+};
+
+const updateNekoPointerTarget = (event) => {
+  if (!Number.isFinite(event?.clientX) || !Number.isFinite(event?.clientY)) return;
+  if (
+    Math.abs(event.clientX - nekoMouseX) > 1 ||
+    Math.abs(event.clientY - nekoMouseY) > 1
+  ) {
+    nekoLastMouseMoveAt = performance.now();
+    nekoIdleStartedAt = 0;
+    nekoPlayedIdleActionForCurrentIdle = false;
+    nekoIsNapping = false;
+    nekoNapFrame = 0;
+  }
+  nekoMouseOutsideWindow = false;
+  nekoScratchEdge = null;
+  nekoEdgeScratchStartedAt = 0;
+  nekoMouseX = event.clientX;
+  nekoMouseY = event.clientY;
+};
+
+const clampNekoTargetToViewport = (clientX, clientY) => ({
+  x: Math.min(Math.max(clientX, 0), window.innerWidth),
+  y: Math.min(Math.max(clientY, 0), window.innerHeight),
+});
+
+const getNekoPointerExitEdge = (clientX, clientY) => {
+  const overshoots = [
+    { edge: "left", amount: Math.max(0, -clientX) },
+    { edge: "right", amount: Math.max(0, clientX - window.innerWidth) },
+    { edge: "top", amount: Math.max(0, -clientY) },
+    { edge: "bottom", amount: Math.max(0, clientY - window.innerHeight) },
+  ];
+  const largestOvershoot = overshoots.reduce((best, item) =>
+    item.amount > best.amount ? item : best
+  );
+  if (largestOvershoot.amount > 0) return largestOvershoot.edge;
+
+  return [
+    { edge: "left", distance: Math.abs(clientX) },
+    { edge: "right", distance: Math.abs(window.innerWidth - clientX) },
+    { edge: "top", distance: Math.abs(clientY) },
+    { edge: "bottom", distance: Math.abs(window.innerHeight - clientY) },
+  ].reduce((best, item) => (item.distance < best.distance ? item : best)).edge;
+};
+
+const handleNekoPointerExit = (event) => {
+  if (!["waking", "chasing"].includes(nekoState)) return;
+  if (event.relatedTarget || event.toElement) return;
+
+  const fallbackX = Math.min(Math.max(nekoMouseX, 0), window.innerWidth);
+  const fallbackY = Math.min(Math.max(nekoMouseY, 0), window.innerHeight);
+  const clientX = Number.isFinite(event.clientX) ? event.clientX : fallbackX;
+  const clientY = Number.isFinite(event.clientY) ? event.clientY : fallbackY;
+  const edge = getNekoPointerExitEdge(clientX, clientY);
+  const target = clampNekoTargetToViewport(clientX, clientY);
+
+  nekoMouseOutsideWindow = true;
+  nekoScratchEdge = edge;
+  nekoMouseX =
+    edge === "left" ? 0 : edge === "right" ? window.innerWidth : target.x;
+  nekoMouseY =
+    edge === "top" ? 0 : edge === "bottom" ? window.innerHeight : target.y;
+};
+
+const getNekoHomePosition = () => {
+  const sleepingCat = document.querySelector("[data-neko-sleeping-cat]");
+  const sleepingCatRect = sleepingCat?.getBoundingClientRect();
+  if (sleepingCatRect?.width && sleepingCatRect?.height) {
+    return {
+      x: sleepingCatRect.left + sleepingCatRect.width / 2,
+      y: sleepingCatRect.top + sleepingCatRect.height / 2 + NEKO_VERTICAL_OFFSET,
+    };
+  }
+
+  const icon = document.querySelector("[data-neko-icon]");
+  const iconRect = icon?.getBoundingClientRect();
+  if (iconRect?.width && iconRect?.height) {
+    return {
+      x: iconRect.left + iconRect.width / 2,
+      y: iconRect.top + iconRect.height / 2 + NEKO_VERTICAL_OFFSET,
+    };
+  }
+
+  return {
+    x: window.innerWidth / 2,
+    y: window.innerHeight / 2,
+  };
+};
+
+const createDesktopNekoCat = () => {
+  desktopNekoCat = document.createElement("img");
+  desktopNekoCat.className = "desktop-neko-cat";
+  desktopNekoCat.src = NEKO_SPRITES.awake;
+  desktopNekoCat.alt = "";
+  desktopNekoCat.draggable = false;
+  desktopNekoCat.setAttribute("aria-hidden", "true");
+  desktopNekoCat.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    returnNekoToBed();
+  });
+  document.body.append(desktopNekoCat);
+};
+
+const clearNekoWakeTimer = () => {
+  if (!nekoWakeTimerId) return;
+  window.clearTimeout(nekoWakeTimerId);
+  nekoWakeTimerId = null;
+};
+
+const cancelNekoAnimationFrame = () => {
+  if (!nekoAnimationFrameId) return;
+  window.cancelAnimationFrame(nekoAnimationFrameId);
+  nekoAnimationFrameId = null;
+};
+
+const clearNekoIdleAction = () => {
+  nekoIdleAction = null;
+  nekoIdleActionFrame = 0;
+};
+
+const startRandomNekoIdleAction = () => {
+  nekoIdleAction = NEKO_IDLE_ACTIONS[Math.floor(Math.random() * NEKO_IDLE_ACTIONS.length)];
+  nekoIdleActionFrame = 0;
+  nekoPlayedIdleActionForCurrentIdle = true;
+};
+
+const chooseNekoRunDirection = (diffX, diffY, distance) => {
+  const vertical =
+    diffY / distance > 0.5 ? "up" : diffY / distance < -0.5 ? "down" : "";
+  const horizontal =
+    diffX / distance > 0.5 ? "left" : diffX / distance < -0.5 ? "right" : "";
+  return `${vertical}${horizontal}` || "down";
+};
+
+const isNekoAtScratchEdge = (edge) => {
+  const halfSize = NEKO_SPRITE_SIZE / 2;
+  switch (edge) {
+    case "left":
+      return nekoPosX <= halfSize + NEKO_EDGE_SCRATCH_DISTANCE;
+    case "right":
+      return nekoPosX >= window.innerWidth - halfSize - NEKO_EDGE_SCRATCH_DISTANCE;
+    case "top":
+      return nekoPosY <= halfSize + NEKO_EDGE_SCRATCH_DISTANCE;
+    case "bottom":
+      return nekoPosY >= window.innerHeight - halfSize - NEKO_EDGE_SCRATCH_DISTANCE;
+    default:
+      return false;
+  }
+};
+
+const scratchNekoEdge = (edge) => {
+  const sprites = NEKO_SCRATCH_SPRITES[edge];
+  if (!sprites) return false;
+  setDesktopNekoSprite(sprites[nekoFrameCount % sprites.length]);
+  renderDesktopNekoCat();
+  return true;
+};
+
+const putActiveNekoToSleep = () => {
+  clearNekoIdleAction();
+  nekoIsNapping = true;
+  nekoNapFrame = 0;
+  setDesktopNekoSprite("sleep1");
+  renderDesktopNekoCat();
+};
+
+const sleepActiveNeko = () => {
+  const sprite = Math.floor(nekoNapFrame / 8) % 2 === 0 ? "sleep1" : "sleep2";
+  setDesktopNekoSprite(sprite);
+  renderDesktopNekoCat();
+  nekoNapFrame += 1;
+};
+
+const playNekoIdleAction = () => {
+  if (!nekoIdleAction) return false;
+  const sprite = nekoIdleAction.frames[nekoIdleActionFrame];
+  setDesktopNekoSprite(sprite);
+  renderDesktopNekoCat();
+  nekoIdleActionFrame += 1;
+
+  if (nekoIdleActionFrame >= nekoIdleAction.frames.length) {
+    clearNekoIdleAction();
+    nekoIdleActionCooldownFrames = NEKO_IDLE_ACTION_COOLDOWN_FRAMES;
+  }
+
+  return true;
+};
+
+const maybeStartNekoIdleAction = (timestamp) => {
+  if (nekoIdleAction) return true;
+  if (!nekoIdleStartedAt) {
+    nekoIdleStartedAt = timestamp;
+    return false;
+  }
+  if (
+    !nekoPlayedIdleActionForCurrentIdle &&
+    timestamp - nekoIdleStartedAt >= NEKO_IDLE_ACTION_DELAY_MS
+  ) {
+    startRandomNekoIdleAction();
+    return true;
+  }
+  if (nekoIdleActionCooldownFrames > 0) {
+    nekoIdleActionCooldownFrames -= 1;
+    return false;
+  }
+  return false;
+};
+
+const setNekoStillPose = () => {
+  setDesktopNekoSprite("yawn1");
+  renderDesktopNekoCat();
+};
+
+const moveNekoTowardTarget = (targetX, targetY, stopDistance) => {
+  const diffX = nekoPosX - targetX;
+  const diffY = nekoPosY - targetY;
+  const distance = Math.sqrt(diffX ** 2 + diffY ** 2);
+
+  if (distance <= stopDistance || distance < NEKO_SPEED) {
+    return true;
+  }
+
+  const direction = chooseNekoRunDirection(diffX, diffY, distance);
+  const sprites = NEKO_RUN_SPRITES[direction] || NEKO_RUN_SPRITES.down;
+  setDesktopNekoSprite(sprites[nekoFrameCount % sprites.length]);
+
+  const moveX = -(diffX / distance) * NEKO_SPEED;
+  const moveY = -(diffY / distance) * NEKO_SPEED;
+  nekoPosX += moveX;
+  nekoPosY += moveY;
+
+  const halfSize = NEKO_SPRITE_SIZE / 2;
+  nekoPosX = Math.min(Math.max(halfSize, nekoPosX), window.innerWidth - halfSize);
+  nekoPosY = Math.min(Math.max(halfSize, nekoPosY), window.innerHeight - halfSize);
+  maybeCreateNekoFootprints(nekoPosX, nekoPosY, direction, moveX, moveY);
+  renderDesktopNekoCat();
+  return false;
+};
+
+const stepNekoTowardMouse = (timestamp) => {
+  nekoFrameCount += 1;
+
+  if (nekoIsNapping) {
+    sleepActiveNeko();
+    return;
+  }
+
+  if (playNekoIdleAction()) return;
+
+  const diffX = nekoPosX - nekoMouseX;
+  const diffY = nekoPosY - nekoMouseY;
+  const distance = Math.sqrt(diffX ** 2 + diffY ** 2);
+
+  if (
+    nekoMouseOutsideWindow &&
+    nekoScratchEdge &&
+    isNekoAtScratchEdge(nekoScratchEdge) &&
+    scratchNekoEdge(nekoScratchEdge)
+  ) {
+    if (!nekoEdgeScratchStartedAt) {
+      nekoEdgeScratchStartedAt = timestamp;
+    } else if (timestamp - nekoEdgeScratchStartedAt >= NEKO_EDGE_SCRATCH_SLEEP_MS) {
+      putActiveNekoToSleep();
+    }
+    return;
+  }
+
+  nekoEdgeScratchStartedAt = 0;
+
+  if (distance < NEKO_SPEED || distance < NEKO_IDLE_DISTANCE) {
+    if (timestamp - nekoLastMouseMoveAt >= NEKO_MOUSE_STILL_SLEEP_MS) {
+      putActiveNekoToSleep();
+      return;
+    }
+    if (maybeStartNekoIdleAction(timestamp) && playNekoIdleAction()) return;
+    setNekoStillPose();
+    return;
+  }
+
+  clearNekoIdleAction();
+  nekoIdleStartedAt = 0;
+  nekoPlayedIdleActionForCurrentIdle = false;
+  moveNekoTowardTarget(nekoMouseX, nekoMouseY, NEKO_SPEED);
+};
+
+const clearNekoActiveInterruptions = () => {
+  clearNekoIdleAction();
+  nekoMouseOutsideWindow = false;
+  nekoScratchEdge = null;
+  nekoEdgeScratchStartedAt = 0;
+  nekoIsNapping = false;
+  nekoNapFrame = 0;
+  nekoIdleStartedAt = 0;
+  nekoPlayedIdleActionForCurrentIdle = false;
+};
+
+const stepNekoTowardBed = () => {
+  nekoFrameCount += 1;
+  if (moveNekoTowardTarget(nekoReturnX, nekoReturnY, NEKO_RETURN_HOME_DISTANCE)) {
+    returnNekoToBed();
+  }
+};
+
+const animateNeko = (timestamp) => {
+  if (!["chasing", "returning"].includes(nekoState)) {
+    nekoAnimationFrameId = null;
+    return;
+  }
+
+  if (!nekoLastFrameTimestamp) {
+    nekoLastFrameTimestamp = timestamp;
+  }
+
+  if (timestamp - nekoLastFrameTimestamp >= NEKO_FRAME_INTERVAL_MS) {
+    nekoLastFrameTimestamp = timestamp;
+    if (nekoState === "returning") {
+      stepNekoTowardBed();
+    } else {
+      stepNekoTowardMouse(timestamp);
+    }
+  }
+
+  if (!["chasing", "returning"].includes(nekoState)) {
+    nekoAnimationFrameId = null;
+    return;
+  }
+
+  nekoAnimationFrameId = window.requestAnimationFrame(animateNeko);
+};
+
+const ensureNekoAnimationFrame = () => {
+  if (nekoAnimationFrameId) return;
+  nekoLastFrameTimestamp = 0;
+  nekoAnimationFrameId = window.requestAnimationFrame(animateNeko);
+};
+
+const startNekoChasing = () => {
+  if (nekoState !== "waking") return;
+  nekoState = "chasing";
+  nekoFrameCount = 0;
+  nekoLastFrameTimestamp = 0;
+  resetNekoFootprintSpacing();
+  nekoLastMouseMoveAt = performance.now();
+  nekoIdleActionCooldownFrames = NEKO_IDLE_ACTION_COOLDOWN_FRAMES;
+  nekoIdleStartedAt = 0;
+  nekoPlayedIdleActionForCurrentIdle = false;
+  nekoEdgeScratchStartedAt = 0;
+  nekoIsNapping = false;
+  nekoNapFrame = 0;
+  cancelNekoAnimationFrame();
+  nekoAnimationFrameId = window.requestAnimationFrame(animateNeko);
+};
+
+const startNekoReturnToBed = () => {
+  if (nekoState === "sleeping") return;
+  clearNekoWakeTimer();
+  clearNekoActiveInterruptions();
+  const homePosition = getNekoHomePosition();
+  nekoReturnX = homePosition.x;
+  nekoReturnY = homePosition.y;
+  nekoState = "returning";
+  resetNekoFootprintSpacing();
+  ensureNekoAnimationFrame();
+};
+
+const resumeNekoChasingMouse = () => {
+  if (nekoState !== "returning") return;
+  clearNekoActiveInterruptions();
+  nekoState = "chasing";
+  nekoLastMouseMoveAt = performance.now();
+  ensureNekoAnimationFrame();
+};
+
+const runNekoWakeSequence = (index = 0) => {
+  if (nekoState !== "waking") return;
+
+  if (index >= NEKO_WAKE_SEQUENCE.length) {
+    startNekoChasing();
+    return;
+  }
+
+  const step = NEKO_WAKE_SEQUENCE[index];
+  setDesktopNekoSprite(step.sprite);
+  renderDesktopNekoCat();
+  clearNekoWakeTimer();
+  nekoWakeTimerId = window.setTimeout(() => {
+    nekoWakeTimerId = null;
+    runNekoWakeSequence(index + 1);
+  }, step.duration);
+};
+
+const wakeNeko = (event) => {
+  if (nekoState !== "sleeping") {
+    returnNekoToBed();
+    return;
+  }
+
+  updateNekoPointerTarget(event);
+  const homePosition = getNekoHomePosition();
+  nekoPosX = homePosition.x;
+  nekoPosY = homePosition.y;
+
+  stopNekoSleepBreathing();
+  setNekoIconAwake(true);
+  createDesktopNekoCat();
+  renderDesktopNekoCat();
+  nekoState = "waking";
+  document.addEventListener("pointermove", updateNekoPointerTarget);
+  document.addEventListener("mouseout", handleNekoPointerExit);
+  document.addEventListener("mouseleave", handleNekoPointerExit);
+  runNekoWakeSequence();
+};
+
+function returnNekoToBed() {
+  if (nekoState === "sleeping") return;
+  nekoState = "sleeping";
+  clearNekoWakeTimer();
+  cancelNekoAnimationFrame();
+  clearNekoIdleAction();
+  document.removeEventListener("pointermove", updateNekoPointerTarget);
+  document.removeEventListener("mouseout", handleNekoPointerExit);
+  document.removeEventListener("mouseleave", handleNekoPointerExit);
+  nekoMouseOutsideWindow = false;
+  nekoScratchEdge = null;
+  nekoEdgeScratchStartedAt = 0;
+  nekoIsNapping = false;
+  nekoNapFrame = 0;
+  nekoIdleActionCooldownFrames = 0;
+  nekoIdleStartedAt = 0;
+  nekoPlayedIdleActionForCurrentIdle = false;
+  resetNekoFootprintSpacing();
+  desktopNekoCat?.remove();
+  desktopNekoCat = null;
+  setNekoIconAwake(false);
+  startNekoSleepBreathing();
+}
+
+const toggleNeko = (event) => {
+  if (nekoState === "returning") {
+    updateNekoPointerTarget(event);
+    resumeNekoChasingMouse();
+    return;
+  }
+  if (nekoState !== "sleeping") {
+    startNekoReturnToBed();
+    return;
+  }
+  wakeNeko(event);
+};
+
+startNekoSleepBreathing();
+
 appButtons.forEach((button) => {
-  button.addEventListener("click", () => {
+  button.addEventListener("click", (event) => {
     const appId = button.getAttribute("data-app");
+    if (appId === "neko") {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleNeko(event);
+      return;
+    }
     toggleWindow(appId);
   });
 });

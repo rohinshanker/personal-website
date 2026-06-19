@@ -1,0 +1,299 @@
+:root {
+  --cursor-normal: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Normal%20Select%20Light.cur"), auto;
+  --cursor-select: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Select%20Light.cur"), pointer;
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.cur"),
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Working%20In%20Background%20Light.ani"),
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Busy%20Light.ani"), progress;
+  --cursor-busy: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Busy%20Light.ani"), wait;
+  --cursor-unavailable: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Unavailable%20Light.cur"), not-allowed;
+  --cursor-text: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Light.cur"), text;
+  --cursor-text-thin: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Thin%20Light.cur"), text;
+  --cursor-move: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Move%20Light.cur"), move;
+  --cursor-help: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Help%20Select%20Light.cur"), help;
+  --cursor-precision: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Precision%20Select%20Light.cur"), crosshair;
+  --cursor-resize-ew: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Horizontal%20Resize%20Light.cur"), ew-resize;
+  --cursor-resize-ns: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Verticle%20Resize%20Light.cur"), ns-resize;
+  --cursor-resize-nwse: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%201%20Light.cur"), nwse-resize;
+  --cursor-resize-nesw: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%202%20Light.cur"), nesw-resize;
+}
+
+html.is-cursor-dark-mode,
+body.is-cursor-dark-mode {
+  --cursor-normal: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Normal%20Select.cur"), auto;
+  --cursor-select: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Select.cur"), pointer;
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.cur"),
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Working%20In%20Background.ani"),
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Busy.ani"), progress;
+  --cursor-busy: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Busy.ani"), wait;
+  --cursor-unavailable: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Unavailable.cur"), not-allowed;
+  --cursor-text: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select.cur"), text;
+  --cursor-text-thin: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select%20Thin.cur"), text;
+  --cursor-move: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Move.cur"), move;
+  --cursor-help: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Help%20Select.cur"), help;
+  --cursor-precision: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Precision%20Select.cur"), crosshair;
+  --cursor-resize-ew: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Horizontal%20Resize.cur"), ew-resize;
+  --cursor-resize-ns: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Verticle%20Resize.cur"), ns-resize;
+  --cursor-resize-nwse: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%201.cur"), nwse-resize;
+  --cursor-resize-nesw: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%202.cur"), nesw-resize;
+}
+
+html,
+body,
+body * {
+  cursor: var(--cursor-normal);
+}
+
+a[href],
+button:not(:disabled),
+summary,
+label,
+select:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"]),
+.desktop-icon,
+.taskbar-icon,
+.calendar-day[data-calendar-day],
+.calendar-day[data-calendar-weekday="thursday"],
+.selector-item,
+.study-tree-row,
+.study-file-item,
+.ms-cell:not(.is-revealed),
+.sol-card,
+.sol-stock,
+.sol-waste,
+.sol-foundation,
+.sol-tableau,
+.snake-direction-button,
+.sudoku-cell,
+.infinity-armory-gem:not(:disabled),
+.infinity-armory-slot:not(:disabled),
+.infinity-armory-map-slot {
+  cursor: var(--cursor-select) !important;
+}
+
+.desktop-icon:not(:disabled),
+.desktop-icon:not(:disabled) *,
+.taskbar-icon:not(:disabled),
+.taskbar-icon:not(:disabled) * {
+  cursor: var(--cursor-select) !important;
+}
+
+input:not(
+    [type="button"],
+    [type="checkbox"],
+    [type="color"],
+    [type="file"],
+    [type="image"],
+    [type="radio"],
+    [type="range"],
+    [type="reset"],
+    [type="submit"]
+  ),
+textarea,
+[contenteditable="true"],
+[contenteditable="plaintext-only"],
+.study-file-name,
+.red-tool-input {
+  cursor: var(--cursor-text) !important;
+}
+
+[aria-label*="Help" i],
+[title*="help" i],
+.snake-help-button,
+.sol-help,
+.calendar-day.is-event-day {
+  cursor: var(--cursor-help) !important;
+}
+
+.window:not([data-no-drag]) > .title-bar,
+.window:not([data-no-drag]) > .title-bar .title-bar-text {
+  cursor: var(--cursor-move) !important;
+}
+
+.title-bar-controls,
+.title-bar-controls button:not(:disabled) {
+  cursor: var(--cursor-select) !important;
+}
+
+.panel-divider {
+  cursor: var(--cursor-resize-ew) !important;
+}
+
+.portfolio-window.is-resize-hover,
+.portfolio-window.is-resize-hover *,
+.portfolio-window.is-manual-resizing,
+.portfolio-window.is-manual-resizing *,
+body.is-resizing-window,
+body.is-resizing-window * {
+  cursor: var(--cursor-resize-nwse) !important;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+option:disabled,
+[aria-disabled="true"],
+[disabled],
+.is-disabled,
+.is-unavailable {
+  cursor: var(--cursor-unavailable) !important;
+}
+
+.cursor-window {
+  width: 244px;
+}
+
+.cursor-window-body {
+  display: grid;
+  gap: 18px;
+  padding: 14px;
+}
+
+.cursor-window-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cursor-window-icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+}
+
+.cursor-window-label {
+  display: inline-flex;
+  align-items: center;
+  color: #000;
+  font-size: 13px;
+}
+
+#cursor-dark-mode-checkbox {
+  margin-left: 2px;
+}
+
+.cursor-window-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cursor-window-actions button {
+  min-width: 74px;
+}
+
+body.is-custom-cursor-loading,
+body.is-custom-cursor-loading *:not(#custom-cursor-loading-override) {
+  cursor: var(--cursor-working) !important;
+}
+
+body.is-custom-cursor-loading-frame-1 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.cur"),
+    progress;
+}
+
+body.is-custom-cursor-loading-frame-2 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-2.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-2.cur"),
+    progress;
+}
+
+body.is-custom-cursor-loading-frame-3 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-3.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-3.cur"),
+    progress;
+}
+
+body.is-custom-cursor-loading-frame-4 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-4.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-4.cur"),
+    progress;
+}
+
+body.is-custom-cursor-loading-frame-5 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-5.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-5.cur"),
+    progress;
+}
+
+body.is-custom-cursor-loading-frame-6 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-6.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-6.cur"),
+    progress;
+}
+
+body.is-custom-cursor-loading-frame-7 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-7.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-7.cur"),
+    progress;
+}
+
+body.is-custom-cursor-loading-frame-8 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-8.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-8.cur"),
+    progress;
+}
+
+body.is-custom-cursor-loading-frame-9 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-9.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-9.cur"),
+    progress;
+}
+
+body.is-cursor-dark-mode.is-custom-cursor-loading-frame-1 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.cur"),
+    progress;
+}
+
+body.is-cursor-dark-mode.is-custom-cursor-loading-frame-2 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-2.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-2.cur"),
+    progress;
+}
+
+body.is-cursor-dark-mode.is-custom-cursor-loading-frame-3 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-3.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-3.cur"),
+    progress;
+}
+
+body.is-cursor-dark-mode.is-custom-cursor-loading-frame-4 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-4.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-4.cur"),
+    progress;
+}
+
+body.is-cursor-dark-mode.is-custom-cursor-loading-frame-5 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-5.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-5.cur"),
+    progress;
+}
+
+body.is-cursor-dark-mode.is-custom-cursor-loading-frame-6 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-6.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-6.cur"),
+    progress;
+}
+
+body.is-cursor-dark-mode.is-custom-cursor-loading-frame-7 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-7.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-7.cur"),
+    progress;
+}
+
+body.is-cursor-dark-mode.is-custom-cursor-loading-frame-8 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-8.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-8.cur"),
+    progress;
+}
+
+body.is-cursor-dark-mode.is-custom-cursor-loading-frame-9 {
+  --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-9.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-9.cur"),
+    progress;
+}

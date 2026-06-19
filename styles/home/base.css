@@ -42,16 +42,22 @@ body {
   flex-direction: column;
   flex-wrap: wrap;
   align-content: flex-start;
-  row-gap: 16px;
-  column-gap: 10px;
+  row-gap: 8px;
+  column-gap: 6px;
   max-width: calc(100vw - 32px);
 }
 
 .desktop-icon {
   width: 64px;
+  height: 68px;
+  display: grid;
+  grid-template-rows: 44px 24px;
+  align-items: start;
+  justify-items: center;
   text-align: center;
   color: #fff;
   font-size: 11px;
+  line-height: 12px;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
   background: transparent;
   border: none;
@@ -78,7 +84,92 @@ body {
   width: 40px;
   height: 40px;
   display: block;
-  margin: 0 auto 6px;
+  margin: 0 auto;
+}
+
+.desktop-icon-label {
+  display: block;
+  width: 100%;
+  height: 24px;
+  line-height: 12px;
+  text-align: center;
+}
+
+.desktop-icon .neko-icon-image {
+  position: relative;
+  display: block;
+  width: 64px;
+  height: 44px;
+  margin: 0 auto;
+  image-rendering: pixelated;
+}
+
+.desktop-icon .neko-icon-bed {
+  width: 64px;
+  height: 44px;
+  display: block;
+  margin: 0;
+  image-rendering: pixelated;
+}
+
+.desktop-icon .neko-icon-sleeping-cat {
+  position: absolute;
+  left: calc(50% - 3px);
+  top: -4px;
+  width: 38px;
+  height: 38px;
+  display: block;
+  margin: 0;
+  object-fit: contain;
+  object-position: center;
+  transform: translateX(-50%);
+  image-rendering: pixelated;
+}
+
+.desktop-icon .neko-icon-image.is-awake .neko-icon-sleeping-cat {
+  opacity: 0;
+}
+
+.desktop-icon--neko .neko-icon-image {
+  margin-bottom: 0;
+}
+
+.desktop-neko-cat {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 42px;
+  height: 42px;
+  z-index: 10000;
+  image-rendering: pixelated;
+  pointer-events: auto;
+  transform: translate(-50%, calc(-50% - 10px));
+  will-change: left, top;
+}
+
+.desktop-neko-footprint {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  z-index: 9999;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  image-rendering: pixelated;
+  opacity: 0.72;
+  animation: desktop-neko-footprint-fade 3s linear forwards;
+}
+
+@keyframes desktop-neko-footprint-fade {
+  0%,
+  68% {
+    opacity: 0.72;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 
 .github-shortcut-image {
