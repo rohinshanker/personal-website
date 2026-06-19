@@ -412,6 +412,10 @@ body {
   height: 30px;
 }
 
+.taskbar-icon img[data-neko-taskbar-icon] {
+  image-rendering: pixelated;
+}
+
 .taskbar-right {
   display: flex;
   align-items: center;

@@ -52,6 +52,7 @@ window.homeDom = {
   lifeCounterPlayers: doc.getElementById("life-counter-players"),
   lifeCounterAddPlayer: doc.getElementById("life-counter-add-player"),
   lifeCounterReset: doc.getElementById("life-counter-reset"),
+  lifeCounterInitiativeToggle: doc.getElementById("life-counter-initiative-toggle"),
   lifeCounterWidthDecrease: doc.getElementById("life-counter-width-decrease"),
   lifeCounterWidthIncrease: doc.getElementById("life-counter-width-increase"),
   creditsIcons: doc.querySelectorAll("[data-credits-icon]"),

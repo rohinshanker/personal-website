@@ -1760,6 +1760,14 @@
               <div class="life-counter-toolbar-actions">
                 <button type="button" id="life-counter-add-player">Add Player</button>
                 <button type="button" id="life-counter-reset">Reset to 20</button>
+                <button
+                  class="life-counter-toggle"
+                  type="button"
+                  id="life-counter-initiative-toggle"
+                  aria-pressed="false"
+                >
+                  Show Initiative
+                </button>
               </div>
             </div>
             <div class="life-counter-players" id="life-counter-players" aria-live="polite"></div>
@@ -1831,7 +1839,7 @@
           <p class="credits-line">
             <img
               class="credits-thumb"
-              data-src="assets/neko-assets/assets/neko-credit-icon.png"
+              data-src="assets/neko-assets/neko-credit-icon.png"
               loading="lazy"
               decoding="async"
               alt=""
@@ -1899,23 +1907,16 @@
         <div class="title-bar">
           <div class="title-bar-text">Cursor Settings</div>
           <div class="title-bar-controls">
-            <button aria-label="Minimize" disabled></button>
-            <button aria-label="Maximize" disabled></button>
             <button aria-label="Close" data-close="cursor"></button>
           </div>
         </div>
         <div class="window-body cursor-window-body">
           <div class="cursor-window-option">
             <img class="cursor-window-icon" src="assets/app-icons/ico/mouse_ms.ico" alt="" />
-            <span class="cursor-window-label" id="cursor-dark-mode-label">Dark mode?</span>
-            <input
-              id="cursor-dark-mode-checkbox"
-              type="checkbox"
-              aria-labelledby="cursor-dark-mode-label"
-            />
-          </div>
-          <div class="cursor-window-actions">
-            <button type="button" id="cursor-settings-ok">OK</button>
+            <div class="cursor-mode-buttons" role="group" aria-label="Cursor color mode">
+              <button type="button" id="cursor-settings-light" data-cursor-mode="light" aria-pressed="true">Light</button>
+              <button type="button" id="cursor-settings-dark" data-cursor-mode="dark" aria-pressed="false">Dark</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2141,7 +2142,7 @@
           <img src="assets/snake-assets/snake-logo.png" alt="Snake" />
         </button>
         <button class="taskbar-icon" data-app="neko" aria-label="Neko">
-          <img src="assets/neko-assets/assets/neko-credit-icon.png" alt="Neko" />
+          <img data-neko-taskbar-icon src="assets/neko-assets/neko-credit-icon.png" alt="Neko" />
         </button>
         <button class="taskbar-icon" data-app="sudoku" aria-label="Sudoku">
           <img src="assets/app-icons/ico/calendar2.ico" alt="Sudoku" />

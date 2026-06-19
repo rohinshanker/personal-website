@@ -40,11 +40,19 @@
 .life-counter-toolbar-actions {
   display: grid;
   gap: 6px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .life-counter-toolbar button {
   min-width: 0;
+}
+
+.life-counter-toggle {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  padding-left: 5px;
+  padding-right: 5px;
 }
 
 .life-counter-note {
@@ -151,6 +159,76 @@
   height: 40px;
   image-rendering: pixelated;
   width: 24px;
+}
+
+.life-counter-initiative {
+  display: grid;
+  gap: 4px;
+  justify-self: start;
+  width: var(--life-counter-control-width);
+}
+
+.life-counter-initiative-header {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) 26px;
+}
+
+.life-counter-initiative-label {
+  color: #222;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.life-counter-initiative-roll {
+  align-items: center;
+  display: inline-flex;
+  height: 24px;
+  justify-content: center;
+  min-width: 26px;
+  padding: 2px;
+  width: 26px;
+}
+
+.life-counter-initiative-roll img {
+  display: block;
+  height: 16px;
+  image-rendering: pixelated;
+  width: 16px;
+}
+
+.life-counter-initiative-roll:disabled img {
+  opacity: 0.45;
+}
+
+.life-counter-initiative-grid {
+  display: grid;
+  gap: 2px;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+}
+
+.life-counter-initiative-grid button {
+  font-size: 10px;
+  height: 18px;
+  line-height: 1;
+  min-height: 18px;
+  min-width: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.life-counter-initiative-grid button.is-selected {
+  background: #000080;
+  color: #fff;
+  padding: 0;
+  text-shadow: 0 0 #fff;
+}
+
+.life-counter-initiative-grid button.is-rolling {
+  outline: 1px dotted #fff;
+  outline-offset: -3px;
 }
 
 .life-counter-set-row {

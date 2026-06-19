@@ -52,6 +52,7 @@ const {
   lifeCounterPlayers,
   lifeCounterAddPlayer,
   lifeCounterReset,
+  lifeCounterInitiativeToggle,
   lifeCounterWidthDecrease,
   lifeCounterWidthIncrease,
   creditsIcons,
@@ -551,6 +552,8 @@ const LIFE_COUNTER_STARTING_LIFE = 20;
 const LIFE_COUNTER_MIN_VALUE = -9999;
 const LIFE_COUNTER_MAX_VALUE = 99999;
 const LIFE_COUNTER_STEP_VALUES = [1, 5, 10, 25, 50, 100, 500, 1000, 5000];
+const LIFE_COUNTER_INITIATIVE_VALUES = Array.from({ length: 20 }, (_, index) => index + 1);
+const LIFE_COUNTER_INITIATIVE_ROLL_FRAMES = 18;
 const LIFE_COUNTER_WINDOW_MIN_WIDTH = 254;
 const LIFE_COUNTER_WINDOW_DEFAULT_WIDTH = 448;
 const LIFE_COUNTER_WINDOW_COLUMN_WIDTH = 192;
@@ -657,9 +660,18 @@ const sudokuReducedMotionMedia =
     ? window.matchMedia("(prefers-reduced-motion: reduce)")
     : null;
 let lifeCounterPlayersState = [
-  { id: 1, name: "Player 1", life: LIFE_COUNTER_STARTING_LIFE, selectedStep: 1 },
+  {
+    id: 1,
+    name: "Player 1",
+    life: LIFE_COUNTER_STARTING_LIFE,
+    selectedStep: 1,
+    initiative: null,
+    initiativeRolling: false,
+  },
 ];
 let lifeCounterNextPlayerId = 2;
+let lifeCounterInitiativeEnabled = false;
+const lifeCounterInitiativeRollTimers = new Map();
 let activeRandomEventKey = "";
 let generalRandomEventClickCount = 0;
 let minesweeperRandomEventClickCount = 0;
@@ -8624,6 +8636,13 @@ const getLifeCounterSelectedStep = (player) =>
     ? player.selectedStep
     : LIFE_COUNTER_STEP_VALUES[0];
 
+const normalizeLifeCounterInitiative = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  const normalized = Math.trunc(parsed);
+  return LIFE_COUNTER_INITIATIVE_VALUES.includes(normalized) ? normalized : null;
+};
+
 const formatLifeCounterDigits = (value) => {
   const normalized = normalizeLifeCounterValue(value);
   if (normalized < 0) {
@@ -8672,7 +8691,88 @@ const selectLifeCounterStep = (playerId, step) => {
   renderLifeCounter();
 };
 
+const clearLifeCounterInitiativeRoll = (playerId) => {
+  const roll = lifeCounterInitiativeRollTimers.get(playerId);
+  if (!roll) return;
+  window.clearTimeout(roll.timerId);
+  lifeCounterInitiativeRollTimers.delete(playerId);
+};
+
+const clearAllLifeCounterInitiativeRolls = () => {
+  lifeCounterInitiativeRollTimers.forEach((roll) => {
+    window.clearTimeout(roll.timerId);
+  });
+  lifeCounterInitiativeRollTimers.clear();
+  lifeCounterPlayersState.forEach((player) => {
+    player.initiativeRolling = false;
+  });
+};
+
+const createLifeCounterInitiativeRollSequence = (targetValue) =>
+  Array.from({ length: LIFE_COUNTER_INITIATIVE_ROLL_FRAMES }, (_, index) =>
+    index === LIFE_COUNTER_INITIATIVE_ROLL_FRAMES - 1
+      ? targetValue
+      : LIFE_COUNTER_INITIATIVE_VALUES[
+          Math.floor(Math.random() * LIFE_COUNTER_INITIATIVE_VALUES.length)
+        ]
+  );
+
+const lifeCounterInitiativeRollDelay = (index) => {
+  const progress = index / Math.max(1, LIFE_COUNTER_INITIATIVE_ROLL_FRAMES - 1);
+  return Math.round(36 + progress ** 2.45 * 245);
+};
+
+const selectLifeCounterInitiative = (playerId, initiative) => {
+  const player = getLifeCounterPlayer(playerId);
+  const normalizedInitiative = normalizeLifeCounterInitiative(initiative);
+  if (!player || normalizedInitiative === null) return;
+  clearLifeCounterInitiativeRoll(playerId);
+  player.initiative = normalizedInitiative;
+  player.initiativeRolling = false;
+  renderLifeCounter();
+};
+
+const startLifeCounterInitiativeRoll = (playerId) => {
+  const player = getLifeCounterPlayer(playerId);
+  if (!player || !lifeCounterInitiativeEnabled) return;
+
+  clearLifeCounterInitiativeRoll(playerId);
+  const targetValue =
+    LIFE_COUNTER_INITIATIVE_VALUES[
+      Math.floor(Math.random() * LIFE_COUNTER_INITIATIVE_VALUES.length)
+    ];
+  const sequence = createLifeCounterInitiativeRollSequence(targetValue);
+
+  player.initiativeRolling = true;
+
+  const advanceRoll = (index) => {
+    const activePlayer = getLifeCounterPlayer(playerId);
+    if (!activePlayer) {
+      clearLifeCounterInitiativeRoll(playerId);
+      return;
+    }
+
+    activePlayer.initiative = sequence[index];
+    activePlayer.initiativeRolling = index < sequence.length - 1;
+    renderLifeCounter();
+
+    if (index >= sequence.length - 1) {
+      lifeCounterInitiativeRollTimers.delete(playerId);
+      return;
+    }
+
+    const timerId = window.setTimeout(
+      () => advanceRoll(index + 1),
+      lifeCounterInitiativeRollDelay(index)
+    );
+    lifeCounterInitiativeRollTimers.set(playerId, { timerId });
+  };
+
+  advanceRoll(0);
+};
+
 const removeLifeCounterPlayer = (playerId) => {
+  clearLifeCounterInitiativeRoll(playerId);
   lifeCounterPlayersState = lifeCounterPlayersState.filter(
     (player) => player.id !== playerId
   );
@@ -8684,6 +8784,8 @@ const removeLifeCounterPlayer = (playerId) => {
         name: "Player 1",
         life: LIFE_COUNTER_STARTING_LIFE,
         selectedStep: 1,
+        initiative: null,
+        initiativeRolling: false,
       },
     ];
   }
@@ -8705,6 +8807,13 @@ const appendLifeCounterDigits = (container, value) => {
 
 const renderLifeCounter = () => {
   if (!lifeCounterPlayers) return;
+  const previousScrollTop = lifeCounterPlayers.scrollTop;
+  const previousScrollLeft = lifeCounterPlayers.scrollLeft;
+  const restoreScrollPosition = () => {
+    lifeCounterPlayers.scrollTop = previousScrollTop;
+    lifeCounterPlayers.scrollLeft = previousScrollLeft;
+  };
+
   lifeCounterPlayers.replaceChildren();
 
   lifeCounterPlayersState.forEach((player) => {
@@ -8746,6 +8855,61 @@ const renderLifeCounter = () => {
     total.setAttribute("aria-live", "polite");
     total.setAttribute("role", "img");
     appendLifeCounterDigits(total, player.life);
+
+    const initiative = document.createElement("div");
+    initiative.className = "life-counter-initiative";
+
+    const initiativeHeader = document.createElement("div");
+    initiativeHeader.className = "life-counter-initiative-header";
+
+    const initiativeLabel = document.createElement("span");
+    initiativeLabel.className = "life-counter-initiative-label";
+    initiativeLabel.textContent = "Initiative";
+
+    const initiativeRollButton = document.createElement("button");
+    initiativeRollButton.className = "life-counter-initiative-roll";
+    initiativeRollButton.type = "button";
+    initiativeRollButton.disabled = Boolean(player.initiativeRolling);
+    initiativeRollButton.setAttribute(
+      "aria-label",
+      `Roll initiative for ${player.name || "player"}`
+    );
+
+    const initiativeRollIcon = document.createElement("img");
+    initiativeRollIcon.src = "assets/app-icons/ico/charmap_w2k.ico";
+    initiativeRollIcon.alt = "";
+    initiativeRollButton.append(initiativeRollIcon);
+    initiativeRollButton.addEventListener("click", () => {
+      startLifeCounterInitiativeRoll(player.id);
+    });
+
+    initiativeHeader.append(initiativeLabel, initiativeRollButton);
+
+    const initiativeGrid = document.createElement("div");
+    initiativeGrid.className = "life-counter-initiative-grid";
+
+    LIFE_COUNTER_INITIATIVE_VALUES.forEach((initiativeValue) => {
+      const initiativeButton = document.createElement("button");
+      const isSelected = player.initiative === initiativeValue;
+      initiativeButton.type = "button";
+      initiativeButton.textContent = String(initiativeValue);
+      initiativeButton.classList.toggle("is-selected", isSelected);
+      initiativeButton.classList.toggle(
+        "is-rolling",
+        Boolean(player.initiativeRolling) && isSelected
+      );
+      initiativeButton.setAttribute("aria-pressed", String(isSelected));
+      initiativeButton.setAttribute(
+        "aria-label",
+        `Set initiative to ${initiativeValue}`
+      );
+      initiativeButton.addEventListener("click", () => {
+        selectLifeCounterInitiative(player.id, initiativeValue);
+      });
+      initiativeGrid.append(initiativeButton);
+    });
+
+    initiative.append(initiativeHeader, initiativeGrid);
 
     const setRow = document.createElement("div");
     setRow.className = "life-counter-set-row";
@@ -8828,9 +8992,31 @@ const renderLifeCounter = () => {
     });
 
     controls.append(stepGrid, adjustRow);
-    card.append(header, total, setRow, controls);
+    if (lifeCounterInitiativeEnabled) {
+      card.append(header, total, setRow, controls, initiative);
+    } else {
+      card.append(header, total, setRow, controls);
+    }
     lifeCounterPlayers.append(card);
   });
+
+  restoreScrollPosition();
+  window.requestAnimationFrame(restoreScrollPosition);
+};
+
+const setLifeCounterInitiativeEnabled = (enabled) => {
+  lifeCounterInitiativeEnabled = Boolean(enabled);
+  if (!lifeCounterInitiativeEnabled) clearAllLifeCounterInitiativeRolls();
+  if (lifeCounterInitiativeToggle) {
+    lifeCounterInitiativeToggle.setAttribute(
+      "aria-pressed",
+      String(lifeCounterInitiativeEnabled)
+    );
+    lifeCounterInitiativeToggle.textContent = lifeCounterInitiativeEnabled
+      ? "Hide Initiative"
+      : "Show Initiative";
+  }
+  renderLifeCounter();
 };
 
 const addLifeCounterPlayer = () => {
@@ -8840,6 +9026,8 @@ const addLifeCounterPlayer = () => {
     name: `Player ${playerId}`,
     life: LIFE_COUNTER_STARTING_LIFE,
     selectedStep: 1,
+    initiative: null,
+    initiativeRolling: false,
   });
   renderLifeCounter();
 };
@@ -8934,6 +9122,19 @@ if (lifeCounterAddPlayer) {
 
 if (lifeCounterReset) {
   lifeCounterReset.addEventListener("click", resetLifeCounterPlayers);
+}
+
+if (lifeCounterInitiativeToggle) {
+  lifeCounterInitiativeToggle.setAttribute(
+    "aria-pressed",
+    String(lifeCounterInitiativeEnabled)
+  );
+  lifeCounterInitiativeToggle.textContent = lifeCounterInitiativeEnabled
+    ? "Hide Initiative"
+    : "Show Initiative";
+  lifeCounterInitiativeToggle.addEventListener("click", () => {
+    setLifeCounterInitiativeEnabled(!lifeCounterInitiativeEnabled);
+  });
 }
 
 if (lifeCounterWidthDecrease) {
@@ -13004,28 +13205,32 @@ const loadCursorDarkMode = () => {
 };
 
 const initCursorSettingsApp = () => {
-  const cursorDarkModeCheckbox = document.getElementById("cursor-dark-mode-checkbox");
-  const cursorSettingsOk = document.getElementById("cursor-settings-ok");
-  const syncCursorCheckbox = () => {
-    if (cursorDarkModeCheckbox) {
-      cursorDarkModeCheckbox.checked = document.body.classList.contains("is-cursor-dark-mode");
-    }
+  const cursorModeButtons = document.querySelectorAll("[data-cursor-mode]");
+  const syncCursorModeButtons = () => {
+    const isDarkMode = document.body.classList.contains("is-cursor-dark-mode");
+    cursorModeButtons.forEach((button) => {
+      const isActive =
+        button.getAttribute("data-cursor-mode") === (isDarkMode ? "dark" : "light");
+      button.setAttribute("aria-pressed", String(isActive));
+    });
   };
 
   setCursorDarkMode(loadCursorDarkMode());
-  syncCursorCheckbox();
+  syncCursorModeButtons();
 
   document.querySelectorAll('[data-app="cursor"]').forEach((button) => {
     button.addEventListener("click", () => {
-      window.setTimeout(syncCursorCheckbox, 0);
+      window.setTimeout(syncCursorModeButtons, 0);
     });
   });
 
-  cursorSettingsOk?.addEventListener("click", () => {
-    const enabled = Boolean(cursorDarkModeCheckbox?.checked);
-    setCursorDarkMode(enabled);
-    saveCursorDarkMode(enabled);
-    closeAppWindow("cursor");
+  cursorModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const enabled = button.getAttribute("data-cursor-mode") === "dark";
+      setCursorDarkMode(enabled);
+      saveCursorDarkMode(enabled);
+      syncCursorModeButtons();
+    });
   });
 };
 
@@ -13187,6 +13392,8 @@ const NEKO_SCRATCH_SPRITES = {
   bottom: ["downclaw1", "downclaw2"],
   left: ["leftclaw1", "leftclaw2"],
 };
+const NEKO_TASKBAR_REST_ICON = "assets/neko-assets/neko-credit-icon.png";
+const NEKO_TASKBAR_ACTIVE_ICON = NEKO_SPRITES.sleep1;
 const NEKO_IDLE_ACTIONS = [
   {
     name: "scratchSelf",
@@ -13214,6 +13421,7 @@ const NEKO_IDLE_DISTANCE = 48;
 const NEKO_SPRITE_SIZE = 42;
 const NEKO_VERTICAL_OFFSET = 10;
 const NEKO_EDGE_SCRATCH_DISTANCE = 4;
+const NEKO_EDGE_POINTER_HOTZONE = 2;
 const NEKO_IDLE_ACTION_COOLDOWN_FRAMES = 14;
 const NEKO_IDLE_ACTION_DELAY_MS = 1000;
 const NEKO_MOUSE_STILL_SLEEP_MS = 5000;
@@ -13239,6 +13447,8 @@ let nekoMouseX = window.innerWidth / 2;
 let nekoMouseY = window.innerHeight / 2;
 let nekoMouseOutsideWindow = false;
 let nekoScratchEdge = null;
+let nekoScratchTargetX = null;
+let nekoScratchTargetY = null;
 let nekoIdleAction = null;
 let nekoIdleActionFrame = 0;
 let nekoIdleActionCooldownFrames = 0;
@@ -13258,6 +13468,16 @@ let nekoNextFootprintSide = 1;
 const setNekoIconAwake = (isAwake) => {
   document.querySelectorAll("[data-neko-icon]").forEach((icon) => {
     icon.classList.toggle("is-awake", isAwake);
+  });
+};
+
+const setNekoTaskbarIconActive = (isActive) => {
+  const iconSrc = isActive ? NEKO_TASKBAR_ACTIVE_ICON : NEKO_TASKBAR_REST_ICON;
+  document.querySelectorAll("[data-neko-taskbar-icon]").forEach((image) => {
+    if (image.getAttribute("src") !== iconSrc) {
+      image.src = iconSrc;
+    }
+    image.classList.toggle("is-neko-active", isActive);
   });
 };
 
@@ -13398,17 +13618,85 @@ const updateNekoPointerTarget = (event) => {
     nekoIsNapping = false;
     nekoNapFrame = 0;
   }
+
+  const edge = getNekoPointerViewportEdge(event.clientX, event.clientY);
+  if (edge) {
+    setNekoScratchTarget(edge, event.clientX, event.clientY);
+    return;
+  }
+
   nekoMouseOutsideWindow = false;
   nekoScratchEdge = null;
+  nekoScratchTargetX = null;
+  nekoScratchTargetY = null;
   nekoEdgeScratchStartedAt = 0;
   nekoMouseX = event.clientX;
   nekoMouseY = event.clientY;
+};
+
+const clampNekoCenterX = (x) => {
+  const halfSize = NEKO_SPRITE_SIZE / 2;
+  const maxX = Math.max(halfSize, window.innerWidth - halfSize);
+  return Math.min(Math.max(halfSize, x), maxX);
+};
+
+const clampNekoCenterY = (y) => {
+  const halfSize = NEKO_SPRITE_SIZE / 2;
+  // CSS shifts the sprite up, so the stored Y sits below the visual center.
+  const minY = halfSize + NEKO_VERTICAL_OFFSET;
+  const maxY = Math.max(minY, window.innerHeight - halfSize + NEKO_VERTICAL_OFFSET);
+  return Math.min(Math.max(minY, y), maxY);
 };
 
 const clampNekoTargetToViewport = (clientX, clientY) => ({
   x: Math.min(Math.max(clientX, 0), window.innerWidth),
   y: Math.min(Math.max(clientY, 0), window.innerHeight),
 });
+
+const getNekoScratchAnchor = (edge, targetX, targetY) => {
+  const halfSize = NEKO_SPRITE_SIZE / 2;
+  const logicalTargetY = targetY + NEKO_VERTICAL_OFFSET;
+  switch (edge) {
+    case "left":
+      return { x: halfSize, y: clampNekoCenterY(logicalTargetY) };
+    case "right":
+      return {
+        x: clampNekoCenterX(window.innerWidth - halfSize),
+        y: clampNekoCenterY(logicalTargetY),
+      };
+    case "top":
+      return { x: clampNekoCenterX(targetX), y: halfSize + NEKO_VERTICAL_OFFSET };
+    case "bottom":
+      return {
+        x: clampNekoCenterX(targetX),
+        y: clampNekoCenterY(window.innerHeight - halfSize + NEKO_VERTICAL_OFFSET),
+      };
+    default:
+      return { x: clampNekoCenterX(targetX), y: clampNekoCenterY(logicalTargetY) };
+  }
+};
+
+const getNekoPointerViewportEdge = (clientX, clientY) => {
+  const candidates = [
+    { edge: "left", distance: clientX, active: clientX <= NEKO_EDGE_POINTER_HOTZONE },
+    {
+      edge: "right",
+      distance: window.innerWidth - clientX,
+      active: clientX >= window.innerWidth - NEKO_EDGE_POINTER_HOTZONE,
+    },
+    { edge: "top", distance: clientY, active: clientY <= NEKO_EDGE_POINTER_HOTZONE },
+    {
+      edge: "bottom",
+      distance: window.innerHeight - clientY,
+      active: clientY >= window.innerHeight - NEKO_EDGE_POINTER_HOTZONE,
+    },
+  ].filter((candidate) => candidate.active);
+
+  if (!candidates.length) return null;
+  return candidates.reduce((best, item) =>
+    item.distance < best.distance ? item : best
+  ).edge;
+};
 
 const getNekoPointerExitEdge = (clientX, clientY) => {
   const overshoots = [
@@ -13430,6 +13718,28 @@ const getNekoPointerExitEdge = (clientX, clientY) => {
   ].reduce((best, item) => (item.distance < best.distance ? item : best)).edge;
 };
 
+const setNekoScratchTarget = (edge, clientX, clientY) => {
+  const target = clampNekoTargetToViewport(clientX, clientY);
+  const scratchAnchor = getNekoScratchAnchor(edge, target.x, target.y);
+  const scratchTargetChanged =
+    nekoScratchEdge !== edge ||
+    !Number.isFinite(nekoScratchTargetX) ||
+    !Number.isFinite(nekoScratchTargetY) ||
+    Math.abs(nekoScratchTargetX - scratchAnchor.x) > 1 ||
+    Math.abs(nekoScratchTargetY - scratchAnchor.y) > 1;
+
+  nekoMouseOutsideWindow = true;
+  nekoScratchEdge = edge;
+  nekoScratchTargetX = scratchAnchor.x;
+  nekoScratchTargetY = scratchAnchor.y;
+  nekoMouseX = scratchAnchor.x;
+  nekoMouseY = scratchAnchor.y;
+
+  if (scratchTargetChanged) {
+    nekoEdgeScratchStartedAt = 0;
+  }
+};
+
 const handleNekoPointerExit = (event) => {
   if (!["waking", "chasing"].includes(nekoState)) return;
   if (event.relatedTarget || event.toElement) return;
@@ -13439,14 +13749,7 @@ const handleNekoPointerExit = (event) => {
   const clientX = Number.isFinite(event.clientX) ? event.clientX : fallbackX;
   const clientY = Number.isFinite(event.clientY) ? event.clientY : fallbackY;
   const edge = getNekoPointerExitEdge(clientX, clientY);
-  const target = clampNekoTargetToViewport(clientX, clientY);
-
-  nekoMouseOutsideWindow = true;
-  nekoScratchEdge = edge;
-  nekoMouseX =
-    edge === "left" ? 0 : edge === "right" ? window.innerWidth : target.x;
-  nekoMouseY =
-    edge === "top" ? 0 : edge === "bottom" ? window.innerHeight : target.y;
+  setNekoScratchTarget(edge, clientX, clientY);
 };
 
 const getNekoHomePosition = () => {
@@ -13521,6 +13824,13 @@ const chooseNekoRunDirection = (diffX, diffY, distance) => {
 };
 
 const isNekoAtScratchEdge = (edge) => {
+  if (Number.isFinite(nekoScratchTargetX) && Number.isFinite(nekoScratchTargetY)) {
+    const distanceToScratchTarget = Math.sqrt(
+      (nekoPosX - nekoScratchTargetX) ** 2 + (nekoPosY - nekoScratchTargetY) ** 2
+    );
+    return distanceToScratchTarget <= NEKO_SPEED + NEKO_EDGE_SCRATCH_DISTANCE;
+  }
+
   const halfSize = NEKO_SPRITE_SIZE / 2;
   switch (edge) {
     case "left":
@@ -13528,9 +13838,12 @@ const isNekoAtScratchEdge = (edge) => {
     case "right":
       return nekoPosX >= window.innerWidth - halfSize - NEKO_EDGE_SCRATCH_DISTANCE;
     case "top":
-      return nekoPosY <= halfSize + NEKO_EDGE_SCRATCH_DISTANCE;
+      return nekoPosY <= halfSize + NEKO_VERTICAL_OFFSET + NEKO_EDGE_SCRATCH_DISTANCE;
     case "bottom":
-      return nekoPosY >= window.innerHeight - halfSize - NEKO_EDGE_SCRATCH_DISTANCE;
+      return (
+        nekoPosY >=
+        window.innerHeight - halfSize + NEKO_VERTICAL_OFFSET - NEKO_EDGE_SCRATCH_DISTANCE
+      );
     default:
       return false;
   }
@@ -13539,6 +13852,10 @@ const isNekoAtScratchEdge = (edge) => {
 const scratchNekoEdge = (edge) => {
   const sprites = NEKO_SCRATCH_SPRITES[edge];
   if (!sprites) return false;
+  if (Number.isFinite(nekoScratchTargetX) && Number.isFinite(nekoScratchTargetY)) {
+    nekoPosX = clampNekoCenterX(nekoScratchTargetX);
+    nekoPosY = clampNekoCenterY(nekoScratchTargetY);
+  }
   setDesktopNekoSprite(sprites[nekoFrameCount % sprites.length]);
   renderDesktopNekoCat();
   return true;
@@ -13617,9 +13934,8 @@ const moveNekoTowardTarget = (targetX, targetY, stopDistance) => {
   nekoPosX += moveX;
   nekoPosY += moveY;
 
-  const halfSize = NEKO_SPRITE_SIZE / 2;
-  nekoPosX = Math.min(Math.max(halfSize, nekoPosX), window.innerWidth - halfSize);
-  nekoPosY = Math.min(Math.max(halfSize, nekoPosY), window.innerHeight - halfSize);
+  nekoPosX = clampNekoCenterX(nekoPosX);
+  nekoPosY = clampNekoCenterY(nekoPosY);
   maybeCreateNekoFootprints(nekoPosX, nekoPosY, direction, moveX, moveY);
   renderDesktopNekoCat();
   return false;
@@ -13675,6 +13991,8 @@ const clearNekoActiveInterruptions = () => {
   clearNekoIdleAction();
   nekoMouseOutsideWindow = false;
   nekoScratchEdge = null;
+  nekoScratchTargetX = null;
+  nekoScratchTargetY = null;
   nekoEdgeScratchStartedAt = 0;
   nekoIsNapping = false;
   nekoNapFrame = 0;
@@ -13790,10 +14108,13 @@ const wakeNeko = (event) => {
 
   stopNekoSleepBreathing();
   setNekoIconAwake(true);
+  setNekoTaskbarIconActive(true);
   createDesktopNekoCat();
   renderDesktopNekoCat();
   nekoState = "waking";
   document.addEventListener("pointermove", updateNekoPointerTarget);
+  document.addEventListener("pointerout", handleNekoPointerExit);
+  document.addEventListener("pointerleave", handleNekoPointerExit);
   document.addEventListener("mouseout", handleNekoPointerExit);
   document.addEventListener("mouseleave", handleNekoPointerExit);
   runNekoWakeSequence();
@@ -13806,10 +14127,14 @@ function returnNekoToBed() {
   cancelNekoAnimationFrame();
   clearNekoIdleAction();
   document.removeEventListener("pointermove", updateNekoPointerTarget);
+  document.removeEventListener("pointerout", handleNekoPointerExit);
+  document.removeEventListener("pointerleave", handleNekoPointerExit);
   document.removeEventListener("mouseout", handleNekoPointerExit);
   document.removeEventListener("mouseleave", handleNekoPointerExit);
   nekoMouseOutsideWindow = false;
   nekoScratchEdge = null;
+  nekoScratchTargetX = null;
+  nekoScratchTargetY = null;
   nekoEdgeScratchStartedAt = 0;
   nekoIsNapping = false;
   nekoNapFrame = 0;
@@ -13820,6 +14145,7 @@ function returnNekoToBed() {
   desktopNekoCat?.remove();
   desktopNekoCat = null;
   setNekoIconAwake(false);
+  setNekoTaskbarIconActive(false);
   startNekoSleepBreathing();
 }
 
@@ -13836,6 +14162,7 @@ const toggleNeko = (event) => {
   wakeNeko(event);
 };
 
+setNekoTaskbarIconActive(false);
 startNekoSleepBreathing();
 
 appButtons.forEach((button) => {
