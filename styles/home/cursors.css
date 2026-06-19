@@ -80,6 +80,20 @@ select:not(:disabled),
   cursor: var(--cursor-select) !important;
 }
 
+.pokemon-starter-choice:not(:disabled),
+.pokemon-starter-choice:not(:disabled) *,
+.pokemon-starter-pokeball-stage:not(:disabled),
+.pokemon-starter-pokeball-stage:not(:disabled) *,
+.pokemon-starter-window.is-chosen .pokemon-starter-dialogue,
+.pokemon-starter-window.is-chosen .pokemon-starter-dialogue * {
+  cursor: var(--cursor-select) !important;
+}
+
+.pokemon-starter-window:not(.is-chosen) .pokemon-starter-dialogue,
+.pokemon-starter-window:not(.is-chosen) .pokemon-starter-dialogue * {
+  cursor: var(--cursor-normal) !important;
+}
+
 input:not(
     [type="button"],
     [type="checkbox"],

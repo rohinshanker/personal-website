@@ -239,6 +239,23 @@ const {
   walterWhiteOk,
   bountyHunterWindow,
   bountyHunterClose,
+  pokemonStarterWindow,
+  pokemonStarterClose,
+  pokemonStarterScene,
+  pokemonStarterChoices,
+  pokemonStarterInfoCard,
+  pokemonStarterInfoName,
+  pokemonStarterInfoTypes,
+  pokemonStarterInfoHp,
+  pokemonStarterInfoHpValue,
+  pokemonStarterInfoMeta,
+  pokemonStarterConfirm,
+  pokemonStarterConfirmName,
+  pokemonStarterConfirmYes,
+  pokemonStarterConfirmNo,
+  pokemonStarterPokeballStage,
+  pokemonStarterDialogue,
+  pokemonStarterDialogueText,
   dstNightWindow,
   dstNightWarning,
   dstNightOk,
@@ -1121,6 +1138,7 @@ const randomEventViewportWindows = () =>
     kidnamedfingerWindow,
     walterWhiteWindow,
     bountyHunterWindow,
+    pokemonStarterWindow,
     dstNightWindow,
     dstCraftingWindow,
     dstSurviveWindow,
@@ -5163,6 +5181,287 @@ const closeBountyHunterWindow = () => {
   restartWindowAnimation(bountyHunterWindow, "is-closing");
 };
 
+const POKEMON_STARTERS = Object.freeze({
+  bulbasaur: {
+    name: "Bulbasaur",
+    primaryType: "grass",
+    types: ["Grass", "Poison"],
+    hp: 45,
+    pokedex: "#0001",
+    height: "2'04\"",
+    weight: "15.2 lbs",
+  },
+  charmander: {
+    name: "Charmander",
+    primaryType: "fire",
+    types: ["Fire"],
+    hp: 39,
+    pokedex: "#0004",
+    height: "2'00\"",
+    weight: "18.7 lbs",
+  },
+  squirtle: {
+    name: "Squirtle",
+    primaryType: "water",
+    types: ["Water"],
+    hp: 44,
+    pokedex: "#0007",
+    height: "1'08\"",
+    weight: "19.8 lbs",
+  },
+});
+const POKEMON_STARTER_TYPEWRITER_MS = 24;
+let pokemonStarterSelected = "";
+let pokemonStarterStage = "select";
+let pokemonStarterTypingTimer = 0;
+
+const isPokemonStarterVisible = () =>
+  Boolean(
+    pokemonStarterWindow &&
+      !pokemonStarterWindow.classList.contains("is-hidden") &&
+      pokemonStarterWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const setPokemonStarterElementHidden = (element, hidden) => {
+  if (!element) return;
+  element.classList.toggle("is-hidden", hidden);
+  element.setAttribute("aria-hidden", String(hidden));
+};
+
+const clearPokemonStarterTyping = () => {
+  if (!pokemonStarterTypingTimer) return;
+  clearInterval(pokemonStarterTypingTimer);
+  pokemonStarterTypingTimer = 0;
+};
+
+const setPokemonStarterDialogue = (text, { instant = false } = {}) => {
+  if (!pokemonStarterDialogueText) return;
+  clearPokemonStarterTyping();
+  pokemonStarterDialogueText.className = "";
+  pokemonStarterDialogueText.classList.toggle("is-typewriter-complete", instant);
+  if (instant) {
+    pokemonStarterDialogueText.textContent = text;
+    return;
+  }
+  pokemonStarterDialogueText.textContent = "";
+  let index = 0;
+  pokemonStarterTypingTimer = window.setInterval(() => {
+    index += 1;
+    pokemonStarterDialogueText.textContent = text.slice(0, index);
+    if (index >= text.length) {
+      clearPokemonStarterTyping();
+    }
+  }, POKEMON_STARTER_TYPEWRITER_MS);
+};
+
+const setPokemonStarterSegmentedDialogue = (segments, className = "") => {
+  if (!pokemonStarterDialogueText) return;
+  clearPokemonStarterTyping();
+  pokemonStarterDialogueText.className = className;
+  pokemonStarterDialogueText.classList.remove("is-typewriter-complete");
+  pokemonStarterDialogueText.textContent = "";
+  let segmentIndex = 0;
+  let charIndex = 0;
+  let activeNode = null;
+  const appendNextSegment = () => {
+    const segment = segments[segmentIndex];
+    activeNode = segment.className ? document.createElement("span") : document.createTextNode("");
+    if (segment.className) activeNode.className = segment.className;
+    pokemonStarterDialogueText.appendChild(activeNode);
+  };
+  appendNextSegment();
+  pokemonStarterTypingTimer = window.setInterval(() => {
+    const segment = segments[segmentIndex];
+    if (!segment) {
+      clearPokemonStarterTyping();
+      return;
+    }
+    charIndex += 1;
+    activeNode.textContent = segment.text.slice(0, charIndex);
+    if (charIndex < segment.text.length) return;
+    segmentIndex += 1;
+    charIndex = 0;
+    if (segmentIndex >= segments.length) {
+      pokemonStarterDialogueText.classList.add("is-typewriter-complete");
+      clearPokemonStarterTyping();
+      return;
+    }
+    appendNextSegment();
+  }, POKEMON_STARTER_TYPEWRITER_MS);
+};
+
+const pokemonStarterNameSegment = (starter) => ({
+  text: starter.name,
+  className: `pokemon-starter-dialogue-name pokemon-starter-type-color--${starter.primaryType}`,
+});
+
+const setPokemonStarterChosenDialogue = (starter) => {
+  setPokemonStarterSegmentedDialogue(
+    [
+      { text: "You received " },
+      pokemonStarterNameSegment(starter),
+      { text: "! Take good care of " },
+      pokemonStarterNameSegment(starter),
+      { text: "." },
+    ],
+    "pokemon-starter-dialogue-final"
+  );
+};
+
+const setPokemonStarterReadyDialogue = (starter) => {
+  setPokemonStarterSegmentedDialogue([
+    pokemonStarterNameSegment(starter),
+    { text: " looks ready to go with you." },
+  ]);
+};
+
+const setPokemonStarterStage = (stage) => {
+  pokemonStarterStage = stage;
+  if (!pokemonStarterWindow) return;
+  pokemonStarterWindow.classList.toggle("is-confirming", stage === "confirm");
+  pokemonStarterWindow.classList.toggle("is-chosen", stage === "chosen");
+};
+
+const positionPokemonStarterInfoCard = (choice) => {
+  if (!pokemonStarterScene || !pokemonStarterInfoCard || !choice) return;
+  const sceneRect = pokemonStarterScene.getBoundingClientRect();
+  const choiceRect = choice.getBoundingClientRect();
+  const cardWidth = pokemonStarterInfoCard.offsetWidth || 190;
+  const minLeft = cardWidth / 2 + 12;
+  const maxLeft = Math.max(minLeft, sceneRect.width - cardWidth / 2 - 12);
+  const choiceCenter = choiceRect.left + choiceRect.width / 2 - sceneRect.left;
+  const cardLeft = Math.max(minLeft, Math.min(maxLeft, choiceCenter));
+  pokemonStarterInfoCard.style.left = `${Math.round(cardLeft)}px`;
+};
+
+const setPokemonStarterInfo = (starterKey, choice = null) => {
+  const starter = POKEMON_STARTERS[starterKey];
+  if (!starter || !pokemonStarterInfoCard) return;
+  pokemonStarterInfoCard.dataset.pokemonType = starter.primaryType;
+  if (pokemonStarterInfoName) pokemonStarterInfoName.textContent = starter.name;
+  if (pokemonStarterInfoTypes) {
+    pokemonStarterInfoTypes.replaceChildren(
+      ...starter.types.map((type) => {
+        const typeBadge = document.createElement("span");
+        typeBadge.className = `pokemon-starter-type pokemon-starter-type--${type.toLowerCase()}`;
+        typeBadge.textContent = type;
+        return typeBadge;
+      })
+    );
+  }
+  if (pokemonStarterInfoHp) {
+    pokemonStarterInfoHp.style.width = "100%";
+  }
+  if (pokemonStarterInfoHpValue) {
+    pokemonStarterInfoHpValue.textContent = `${starter.hp}/${starter.hp}`;
+  }
+  if (pokemonStarterInfoMeta) {
+    pokemonStarterInfoMeta.textContent = `${starter.pokedex} · HT ${starter.height} · WT ${starter.weight}`;
+  }
+  setPokemonStarterElementHidden(pokemonStarterInfoCard, false);
+  positionPokemonStarterInfoCard(choice);
+};
+
+const clearPokemonStarterChoiceState = () => {
+  pokemonStarterChoices.forEach((choice) => {
+    choice.classList.remove("is-selected");
+    choice.disabled = false;
+    choice.removeAttribute("aria-disabled");
+  });
+};
+
+const lockPokemonStarterChoiceState = (selectedChoice) => {
+  pokemonStarterChoices.forEach((choice) => {
+    const isSelected = choice === selectedChoice;
+    choice.disabled = !isSelected;
+    choice.setAttribute("aria-disabled", String(!isSelected));
+  });
+};
+
+const resetPokemonStarterEvent = ({ typewrite = false } = {}) => {
+  pokemonStarterSelected = "";
+  setPokemonStarterStage("select");
+  clearPokemonStarterChoiceState();
+  if (pokemonStarterWindow) {
+    pokemonStarterWindow.classList.remove("is-flashing");
+  }
+  setPokemonStarterElementHidden(pokemonStarterInfoCard, true);
+  setPokemonStarterElementHidden(pokemonStarterConfirm, true);
+  setPokemonStarterElementHidden(pokemonStarterPokeballStage, true);
+  if (pokemonStarterConfirmName) {
+    pokemonStarterConfirmName.className = "";
+    pokemonStarterConfirmName.textContent = "Bulbasaur";
+  }
+  setPokemonStarterDialogue("Select a starter Pokémon!", { instant: !typewrite });
+};
+
+const showPokemonStarterWindow = () => {
+  if (!pokemonStarterWindow) return;
+  if (isPokemonStarterVisible()) {
+    pokemonStarterWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  resetPokemonStarterEvent();
+  loadDeferredMedia(pokemonStarterWindow);
+  pokemonStarterWindow.classList.remove("is-hidden", "is-closing");
+  pokemonStarterWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(pokemonStarterWindow);
+  pokemonStarterWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(pokemonStarterWindow);
+  restartWindowAnimation(pokemonStarterWindow, "is-opening");
+  setPokemonStarterDialogue("Select a starter Pokémon!");
+};
+
+const closePokemonStarterWindow = () => {
+  if (!pokemonStarterWindow || pokemonStarterWindow.classList.contains("is-hidden")) return;
+  clearPokemonStarterTyping();
+  pokemonStarterWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(pokemonStarterWindow, "is-closing");
+};
+
+const choosePokemonStarter = (starterKey, choice) => {
+  const starter = POKEMON_STARTERS[starterKey];
+  if (!starter || pokemonStarterStage === "chosen") return;
+  pokemonStarterSelected = starterKey;
+  setPokemonStarterStage("confirm");
+  clearPokemonStarterChoiceState();
+  choice?.classList.add("is-selected");
+  lockPokemonStarterChoiceState(choice);
+  setPokemonStarterInfo(starterKey, choice);
+  if (pokemonStarterConfirmName) {
+    pokemonStarterConfirmName.className = `pokemon-starter-confirm-name pokemon-starter-type-color--${starter.primaryType}`;
+    pokemonStarterConfirmName.textContent = starter.name;
+  }
+  setPokemonStarterElementHidden(pokemonStarterConfirm, false);
+  setPokemonStarterReadyDialogue(starter);
+};
+
+const cancelPokemonStarterChoice = () => {
+  pokemonStarterSelected = "";
+  setPokemonStarterStage("select");
+  clearPokemonStarterChoiceState();
+  setPokemonStarterElementHidden(pokemonStarterConfirm, true);
+  setPokemonStarterElementHidden(pokemonStarterInfoCard, true);
+  setPokemonStarterDialogue("Select a starter Pokémon!");
+};
+
+const confirmPokemonStarterChoice = () => {
+  const starter = POKEMON_STARTERS[pokemonStarterSelected];
+  if (!starter || !pokemonStarterWindow) return;
+  setPokemonStarterStage("chosen");
+  pokemonStarterChoices.forEach((choice) => {
+    choice.disabled = true;
+    choice.classList.remove("is-selected");
+  });
+  setPokemonStarterElementHidden(pokemonStarterConfirm, true);
+  setPokemonStarterElementHidden(pokemonStarterInfoCard, true);
+  setPokemonStarterElementHidden(pokemonStarterPokeballStage, false);
+  pokemonStarterWindow.classList.remove("is-flashing");
+  void pokemonStarterWindow.offsetWidth;
+  pokemonStarterWindow.classList.add("is-flashing");
+  setPokemonStarterChosenDialogue(starter);
+};
+
 const DST_NIGHT_DURATION_MS = 7000;
 const DST_RECIPE_REQUIREMENTS = {
   wood: 2,
@@ -6545,14 +6844,32 @@ const RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS = new Set([
   "windowDrag",
 ]);
 
-const randomEventTriggerProbability = (triggerName) => {
+const randomEventTriggerProbability = (triggerName, definition = null) => {
+  const probabilities = definition?.probabilities || STANDARD_RANDOM_EVENT_PROBABILITIES;
+  const fallbackProbability = definition?.probability ?? STANDARD_RANDOM_EVENT_PROBABILITY;
   const value =
-    triggerName in STANDARD_RANDOM_EVENT_PROBABILITIES
-      ? STANDARD_RANDOM_EVENT_PROBABILITIES[triggerName]
-      : STANDARD_RANDOM_EVENT_PROBABILITY;
+    probabilities && triggerName in probabilities
+      ? probabilities[triggerName]
+      : fallbackProbability;
   const probability = Number(value);
   if (Number.isNaN(probability)) return 0;
   return Math.min(1, Math.max(0, probability));
+};
+
+const chooseWeightedRandomEvent = (eligibleEvents) => {
+  const totalWeight = eligibleEvents.reduce(
+    (total, event) => total + event.triggerProbability,
+    0
+  );
+  if (totalWeight <= 0) return null;
+
+  let roll = Math.random() * totalWeight;
+  for (const event of eligibleEvents) {
+    roll -= event.triggerProbability;
+    if (roll <= 0) return event;
+  }
+
+  return eligibleEvents[eligibleEvents.length - 1] || null;
 };
 
 const recentInteractiveRandomEventRuns = (definition, now = Date.now()) => {
@@ -6654,14 +6971,23 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
       }
       return;
     }
-    eligibleEvents.push({ definition, debug });
+    eligibleEvents.push({
+      definition,
+      debug,
+      triggerProbability: randomEventTriggerProbability(triggerName, definition),
+    });
   });
 
   if (debugRan) return true;
 
+  const maxTriggerProbability = eligibleEvents.reduce(
+    (maxProbability, event) => Math.max(maxProbability, event.triggerProbability),
+    0
+  );
+
   if (
     !eligibleEvents.length ||
-    Math.random() >= randomEventTriggerProbability(triggerName)
+    Math.random() >= maxTriggerProbability
   ) {
     if (triggerName === "calendarOpen" || triggerName === "gameWin") {
       return maybeShowFelizJueves();
@@ -6669,7 +6995,7 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
     return false;
   }
 
-  const selected = eligibleEvents[Math.floor(Math.random() * eligibleEvents.length)];
+  const selected = chooseWeightedRandomEvent(eligibleEvents);
   if (
     !selected ||
     !interactiveRandomEventRepeatAllowed(selected.definition, {
@@ -7304,6 +7630,19 @@ registerRandomEvent({
   canTrigger: () => !isBountyHunterVisible(),
   run: () => {
     showBountyHunterWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "pokemon-starter-selection",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isPokemonStarterVisible,
+  canTrigger: () => !isPokemonStarterVisible(),
+  run: () => {
+    showPokemonStarterWindow();
   },
 });
 
@@ -14284,6 +14623,94 @@ if (bountyHunterWindow) {
   });
 }
 
+if (pokemonStarterClose) {
+  pokemonStarterClose.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closePokemonStarterWindow();
+  });
+}
+
+pokemonStarterChoices.forEach((choice) => {
+  const starterKey = choice.dataset.pokemonStarter;
+  choice.addEventListener("pointerenter", () => {
+    if (pokemonStarterStage !== "select") return;
+    setPokemonStarterInfo(starterKey, choice);
+  });
+  choice.addEventListener("focus", () => {
+    if (pokemonStarterStage !== "select") return;
+    setPokemonStarterInfo(starterKey, choice);
+  });
+  choice.addEventListener("pointerleave", () => {
+    if (pokemonStarterSelected || pokemonStarterStage !== "select") return;
+    setPokemonStarterElementHidden(pokemonStarterInfoCard, true);
+  });
+  choice.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (pokemonStarterStage !== "select") return;
+    choosePokemonStarter(starterKey, choice);
+  });
+});
+
+if (pokemonStarterConfirmYes) {
+  pokemonStarterConfirmYes.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    confirmPokemonStarterChoice();
+  });
+}
+
+if (pokemonStarterConfirmNo) {
+  pokemonStarterConfirmNo.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    cancelPokemonStarterChoice();
+  });
+}
+
+if (pokemonStarterDialogue) {
+  pokemonStarterDialogue.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (pokemonStarterStage === "chosen") {
+      closePokemonStarterWindow();
+    }
+  });
+}
+
+if (pokemonStarterPokeballStage) {
+  pokemonStarterPokeballStage.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (pokemonStarterStage === "chosen") {
+      closePokemonStarterWindow();
+    }
+  });
+}
+
+if (pokemonStarterWindow) {
+  pokemonStarterWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  pokemonStarterWindow.addEventListener("animationend", (event) => {
+    if (event.target !== pokemonStarterWindow) return;
+    if (event.animationName === "retro-window-open") {
+      pokemonStarterWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      pokemonStarterWindow.classList.remove("is-closing");
+      pokemonStarterWindow.classList.add("is-hidden");
+      pokemonStarterWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+      resetPokemonStarterEvent();
+    }
+  });
+}
+
 if (dstNightOk) {
   dstNightOk.addEventListener("click", (event) => {
     event.preventDefault();
@@ -14942,21 +15369,30 @@ const NEKO_SCRATCH_SPRITES = {
   bottom: ["downclaw1", "downclaw2"],
   left: ["leftclaw1", "leftclaw2"],
 };
-const NEKO_TASKBAR_REST_ICON = "assets/neko-assets/neko-credit-icon.png";
-const NEKO_TASKBAR_ACTIVE_ICON = NEKO_SPRITES.sleep1;
-const NEKO_IDLE_ACTIONS = [
-  {
-    name: "scratchSelf",
-    frames: ["scratch1", "scratch2", "scratch1", "scratch2", "scratch1", "scratch2"],
-  },
-  {
-    name: "yawn",
-    frames: ["yawn1", "yawn2", "yawn2", "yawn1"],
-  },
-  {
-    name: "wash",
-    frames: ["wash1", "wash1", "wash1", "wash1", "wash1", "wash1"],
-  },
+const NEKO_TASKBAR_WAKE_ICON = NEKO_SPRITES.awake;
+const NEKO_TASKBAR_SLEEP_ICON = NEKO_SPRITES.sleep1;
+const NEKO_SCRATCH_SELF_ACTION = {
+  name: "scratchSelf",
+  frames: ["scratch1", "scratch2", "scratch1", "scratch2", "scratch1", "scratch2"],
+};
+const NEKO_YAWN_ACTION = {
+  name: "yawn",
+  frames: ["yawn1", "yawn2", "yawn2", "yawn1"],
+};
+const NEKO_WASH_ACTION = {
+  name: "wash",
+  frames: ["wash1", "wash1", "wash1", "wash1", "wash1", "wash1"],
+};
+const NEKO_AWAKE_ACTION = {
+  name: "awake",
+  frames: ["awake", "awake", "awake"],
+};
+const NEKO_IDLE_ACTIONS = [NEKO_SCRATCH_SELF_ACTION, NEKO_YAWN_ACTION, NEKO_WASH_ACTION];
+const NEKO_MANUAL_ACTIONS = [
+  NEKO_SCRATCH_SELF_ACTION,
+  NEKO_YAWN_ACTION,
+  NEKO_WASH_ACTION,
+  NEKO_AWAKE_ACTION,
 ];
 const NEKO_WAKE_SEQUENCE = [
   { sprite: "awake", duration: 500 },
@@ -15021,13 +15457,14 @@ const setNekoIconAwake = (isAwake) => {
   });
 };
 
-const setNekoTaskbarIconActive = (isActive) => {
-  const iconSrc = isActive ? NEKO_TASKBAR_ACTIVE_ICON : NEKO_TASKBAR_REST_ICON;
+const setNekoTaskbarActionIcon = (action) => {
+  const shouldSleep = action === "sleep";
+  const iconSrc = shouldSleep ? NEKO_TASKBAR_SLEEP_ICON : NEKO_TASKBAR_WAKE_ICON;
   document.querySelectorAll("[data-neko-taskbar-icon]").forEach((image) => {
     if (image.getAttribute("src") !== iconSrc) {
       image.src = iconSrc;
     }
-    image.classList.toggle("is-neko-active", isActive);
+    image.classList.toggle("is-neko-active", shouldSleep);
   });
 };
 
@@ -15337,7 +15774,7 @@ const createDesktopNekoCat = () => {
   desktopNekoCat.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    returnNekoToBed();
+    startNekoManualAction();
   });
   document.body.append(desktopNekoCat);
 };
@@ -15363,6 +15800,28 @@ const startRandomNekoIdleAction = () => {
   nekoIdleAction = NEKO_IDLE_ACTIONS[Math.floor(Math.random() * NEKO_IDLE_ACTIONS.length)];
   nekoIdleActionFrame = 0;
   nekoPlayedIdleActionForCurrentIdle = true;
+};
+
+const startNekoManualAction = () => {
+  if (!desktopNekoCat || nekoState === "sleeping") return;
+
+  if (nekoState === "waking") {
+    clearNekoWakeTimer();
+    nekoState = "chasing";
+  } else if (nekoState === "returning") {
+    nekoState = "chasing";
+  }
+
+  clearNekoActiveInterruptions();
+  nekoIdleAction = NEKO_MANUAL_ACTIONS[Math.floor(Math.random() * NEKO_MANUAL_ACTIONS.length)];
+  nekoIdleActionFrame = 0;
+  nekoIdleActionCooldownFrames = 0;
+  nekoIdleStartedAt = performance.now();
+  nekoPlayedIdleActionForCurrentIdle = true;
+  nekoLastMouseMoveAt = performance.now();
+  setNekoTaskbarActionIcon("sleep");
+  playNekoIdleAction();
+  ensureNekoAnimationFrame();
 };
 
 const chooseNekoRunDirection = (diffX, diffY, distance) => {
@@ -15593,6 +16052,7 @@ const ensureNekoAnimationFrame = () => {
 const startNekoChasing = () => {
   if (nekoState !== "waking") return;
   nekoState = "chasing";
+  setNekoTaskbarActionIcon("sleep");
   nekoFrameCount = 0;
   nekoLastFrameTimestamp = 0;
   resetNekoFootprintSpacing();
@@ -15615,6 +16075,7 @@ const startNekoReturnToBed = () => {
   nekoReturnX = homePosition.x;
   nekoReturnY = homePosition.y;
   nekoState = "returning";
+  setNekoTaskbarActionIcon("wake");
   resetNekoFootprintSpacing();
   ensureNekoAnimationFrame();
 };
@@ -15623,6 +16084,7 @@ const resumeNekoChasingMouse = () => {
   if (nekoState !== "returning") return;
   clearNekoActiveInterruptions();
   nekoState = "chasing";
+  setNekoTaskbarActionIcon("sleep");
   nekoLastMouseMoveAt = performance.now();
   ensureNekoAnimationFrame();
 };
@@ -15658,7 +16120,7 @@ const wakeNeko = (event) => {
 
   stopNekoSleepBreathing();
   setNekoIconAwake(true);
-  setNekoTaskbarIconActive(true);
+  setNekoTaskbarActionIcon("sleep");
   createDesktopNekoCat();
   renderDesktopNekoCat();
   nekoState = "waking";
@@ -15695,7 +16157,7 @@ function returnNekoToBed() {
   desktopNekoCat?.remove();
   desktopNekoCat = null;
   setNekoIconAwake(false);
-  setNekoTaskbarIconActive(false);
+  setNekoTaskbarActionIcon("wake");
   startNekoSleepBreathing();
 }
 
@@ -15712,7 +16174,7 @@ const toggleNeko = (event) => {
   wakeNeko(event);
 };
 
-setNekoTaskbarIconActive(false);
+setNekoTaskbarActionIcon("wake");
 startNekoSleepBreathing();
 
 appButtons.forEach((button) => {

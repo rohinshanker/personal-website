@@ -35,8 +35,8 @@
     <link rel="stylesheet" href="styles/home/apps/life-counter.css" />
     <link rel="stylesheet" href="styles/home/portfolio.css" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=midnight-gospel-clancy-frame-wrap-20260619" />
-    <link rel="stylesheet" href="styles/home/cursors.css" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=pokemon-cursor-targets-20260619" />
+    <link rel="stylesheet" href="styles/home/cursors.css?v=pokemon-cursor-targets-20260619" />
   </head>
   <body>
     <div class="desktop" aria-label="Desktop apps">
@@ -420,7 +420,7 @@
                   <span>
                     <span class="selector-title">Poster Redesigns</span>
                     <span class="selector-desc">
-                      Redesigning Berserk Posters
+                      Designing Berserk posters in Figma
                       <br />
                       February 2023
                     </span>
@@ -460,7 +460,7 @@
             </div>
             <div class="viewer-content is-hidden" data-view="creative-poster-redesigns">
               <h3>Poster Redesigns</h3>
-              <p class="project-view-subtitle">Redesigning Berserk Posters</p>
+              <p class="project-view-subtitle">Some Berserk posters I made for DESINV 21 using Figma!</p>
               <p>February 2023</p>
               <div class="gallery-frame" id="berserk-poster-gallery">
                 <div class="gallery-scroll gallery-scroll--poster">
@@ -3218,6 +3218,111 @@
       </div>
     </div>
 
+    <div class="window pokemon-starter-window is-hidden" id="pokemon-starter-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Select Your Starter Pokémon</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="pokemon-starter-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="pokemon-starter-scene" id="pokemon-starter-scene">
+          <div
+            class="pokemon-starter-info-card is-hidden"
+            id="pokemon-starter-info-card"
+            aria-hidden="true"
+          >
+            <div class="pokemon-starter-info-header">
+              <strong id="pokemon-starter-info-name">Bulbasaur</strong>
+              <span>Lv. 5</span>
+            </div>
+            <div class="pokemon-starter-types" id="pokemon-starter-info-types"></div>
+            <div class="pokemon-starter-hp-row">
+              <span>HP</span>
+              <div class="pokemon-starter-hp-track">
+                <span id="pokemon-starter-info-hp"></span>
+              </div>
+              <span id="pokemon-starter-info-hp-value">45/45</span>
+            </div>
+            <p id="pokemon-starter-info-meta">#0001 · HT 2'04&quot; · WT 15.2 lbs</p>
+          </div>
+          <div class="pokemon-starter-choices" id="pokemon-starter-choices" aria-label="Starter Pokémon choices">
+            <button
+              type="button"
+              class="pokemon-starter-choice"
+              data-pokemon-starter="bulbasaur"
+              aria-label="Choose Bulbasaur"
+            >
+              <img
+                data-src="assets/random%20events/pokemon-bulbasaur.png"
+                decoding="async"
+                alt="Bulbasaur"
+              />
+            </button>
+            <button
+              type="button"
+              class="pokemon-starter-choice"
+              data-pokemon-starter="charmander"
+              aria-label="Choose Charmander"
+            >
+              <img
+                data-src="assets/random%20events/pokemon-charmander.png"
+                decoding="async"
+                alt="Charmander"
+              />
+            </button>
+            <button
+              type="button"
+              class="pokemon-starter-choice"
+              data-pokemon-starter="squirtle"
+              aria-label="Choose Squirtle"
+            >
+              <img
+                data-src="assets/random%20events/pokemon-squirtle.png"
+                decoding="async"
+                alt="Squirtle"
+              />
+            </button>
+          </div>
+          <button
+            type="button"
+            class="pokemon-starter-pokeball-stage is-hidden"
+            id="pokemon-starter-pokeball-stage"
+            aria-hidden="true"
+            aria-label="Close Pokémon starter event"
+          >
+            <img
+              data-src="assets/random%20events/pokeball-pixel.png"
+              decoding="async"
+              alt=""
+            />
+          </button>
+          <div class="pokemon-starter-confirm is-hidden" id="pokemon-starter-confirm" aria-hidden="true">
+            <p>
+              Are you sure you would like
+              <strong id="pokemon-starter-confirm-name">Bulbasaur</strong>?
+            </p>
+            <div class="pokemon-starter-confirm-actions">
+              <button type="button" id="pokemon-starter-confirm-yes">Yes</button>
+              <button type="button" id="pokemon-starter-confirm-no">No</button>
+            </div>
+          </div>
+          <button type="button" class="pokemon-starter-dialogue" id="pokemon-starter-dialogue">
+            <img
+              class="pokemon-starter-oak"
+              data-src="assets/random%20events/professoroak.webp"
+              decoding="async"
+              alt=""
+            />
+            <span class="pokemon-starter-dialogue-copy">
+              <span class="pokemon-starter-speaker">Professor Oak</span>
+              <span id="pokemon-starter-dialogue-text">Select a starter Pokémon!</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="window dst-night-window is-hidden" id="dst-night-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">The Sun Begins to Set...</div>
@@ -3888,8 +3993,8 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/core/dom.js?v=midnight-gospel-digit-timer-20260619"></script>
+    <script src="scripts/home/core/dom.js?v=pokemon-starter-event-20260619"></script>
     <script src="scripts/home/core/media.js?v=classic-20260617l"></script>
-    <script src="scripts/home/main.js?v=midnight-gospel-debug-off-20260619"></script>
+    <script src="scripts/home/main.js?v=neko-click-random-action-20260619"></script>
   </body>
 </html>
