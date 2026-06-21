@@ -18,8 +18,8 @@
   inset: 0;
   justify-content: center;
   pointer-events: none;
-  position: absolute;
-  z-index: 5;
+  position: fixed;
+  z-index: 111;
 }
 
 .sol-victory-video-overlay.is-showing {
@@ -35,21 +35,21 @@
 
 .sol-victory-video-overlay video.is-visible-fallback {
   height: auto;
-  max-height: 90%;
-  max-width: 96%;
+  max-height: 45vh;
+  max-width: 48vw;
   mix-blend-mode: screen;
   opacity: 1;
   position: static;
-  width: min(780px, 96%);
+  width: min(390px, 48vw);
 }
 
 .sol-victory-video-overlay canvas {
   display: block;
   filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.38));
   height: auto;
-  max-height: 90%;
-  max-width: 96%;
-  width: min(780px, 96%);
+  max-height: 45vh;
+  max-width: 48vw;
+  width: min(390px, 48vw);
 }
 
 .sol-victory-video-overlay canvas.is-hidden {
