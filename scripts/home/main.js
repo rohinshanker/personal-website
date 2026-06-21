@@ -13319,6 +13319,7 @@ const buildCalendar = (date) => {
   dayLabels.forEach((label, index) => {
     const labelCell = appendCalendarCell(label);
     if (index === 4) {
+      labelCell.classList.add("is-event-day");
       labelCell.dataset.calendarWeekday = "thursday";
       labelCell.setAttribute("role", "button");
       labelCell.setAttribute("aria-label", "Feliz Jueves");
@@ -13385,6 +13386,10 @@ calendarGrid.addEventListener("click", (event) => {
   const thursdayCell = event.target.closest("[data-calendar-weekday='thursday']");
   if (thursdayCell && calendarGrid.contains(thursdayCell)) {
     event.stopPropagation();
+    if (isFelizJuevesVisible()) {
+      closeFelizJuevesWindow();
+      return;
+    }
     showFelizJuevesWindow();
     return;
   }

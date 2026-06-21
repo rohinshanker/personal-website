@@ -69,7 +69,9 @@ select:not(:disabled),
 .sudoku-cell,
 .infinity-armory-gem:not(:disabled),
 .infinity-armory-slot:not(:disabled),
-.infinity-armory-map-slot {
+.infinity-armory-map-slot,
+.john-pork-call-button:not(:disabled),
+.john-pork-call-button:not(:disabled) * {
   cursor: var(--cursor-select) !important;
 }
 
