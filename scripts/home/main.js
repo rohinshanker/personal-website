@@ -1131,9 +1131,9 @@ const RANDOM_EVENT_VIEWPORT_PADDING = 12;
 const RANDOM_EVENT_TASKBAR_CLEARANCE = 64;
 const RANDOM_EVENT_PLACEMENT_ATTEMPTS = 42;
 const RANDOM_EVENT_OBSTACLE_GAP = 10;
-const GENERAL_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 17;
-const MINESWEEPER_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 22;
-const SOLITAIRE_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 27;
+const GENERAL_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 14;
+const MINESWEEPER_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 18;
+const SOLITAIRE_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 22;
 const RANDOM_EVENT_IDLE_DELAY_MS = 4 * 60 * 1000;
 const RANDOM_EVENT_APP_DWELL_MS = 2 * 60 * 1000;
 const RANDOM_EVENT_DELAY_MIN_MS = 0;
@@ -7277,22 +7277,22 @@ const handleFailedActionTrigger = (event) => {
 
 const STANDARD_RANDOM_EVENT_PROBABILITY = 0.0075;
 const STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze({
-  windowOpen: 0.1,
-  windowClose: 0.1,
-  gameWin: 0.6,
-  gameLoss: 0.2,
+  windowOpen: 0.15,
+  windowClose: 0.15,
+  gameWin: 0.8,
+  gameLoss: 0.3,
   startButton: 0.25,
-  newTabLink: 0.25,
-  fileDownload: 0.5,
-  pageReload: 0.4,
+  newTabLink: 0.35,
+  fileDownload: 0.65,
+  pageReload: 0.5,
   calendarOpen: 0.3,
   generalClicks: 0.5,
   minesweeperClicks: 0.5,
   solitaireClicks: 0.5,
-  failedAction: 0.05,
-  appDwell: 0.5,
+  failedAction: 0.1,
+  appDwell: 0.6,
   windowDrag: 0.18,
-  idleInterval: 0.3,
+  idleInterval: 0.4,
 });
 
 registerRandomEvent({
