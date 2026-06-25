@@ -4866,7 +4866,7 @@ const FATE_DRAIN_AMOUNT = 1.9;
 const FATE_RESULT_FREEZE_MS = 1000;
 const FATE_RESULT_REOPEN_DELAY_MS = 500;
 const FATE_SUCCESS_TEXT =
-  "You have resisted causality. Maybe you aren't a shadow on the water... but instead, a fish that breaches water's surface.";
+  "Maybe you aren't a shadow on the water... but instead, a fish that breaches water's surface.";
 const FATE_LOSS_TEXT = "Perhaps you do not have the strength to resist causality.";
 const FATE_LIGHTNING_DURATION_MS = 220;
 const FATE_LIGHTNING_BRANCH_CHANCE = 0.22;
@@ -5192,7 +5192,7 @@ const pulseFateWindow = () => {
 };
 
 const setFateResultContent = (success) => {
-  if (fateTitle) fateTitle.textContent = success ? "Causality Resisted" : "Causality Accepted";
+  if (fateTitle) fateTitle.textContent = success ? "Causality Resisted" : "Your Fate has been Sealed";
   if (fateReadyStage) fateReadyStage.classList.add("is-hidden");
   if (fateFightStage) fateFightStage.classList.add("is-hidden");
   if (fateResultStage) fateResultStage.classList.remove("is-hidden");
@@ -7663,10 +7663,6 @@ const selectInfinityArmoryGem = (button, event) => {
     }
     return;
   }
-  if (infinityArmorySelectedGem?.id === gem.id) {
-    clearInfinityArmorySelectedGem({ status: "Gem returned to inventory." });
-    return;
-  }
   infinityArmorySelectedGem = gem;
   createInfinityArmoryCursorGem(gem, event);
   updateInfinityArmory();
@@ -7712,7 +7708,6 @@ const updateInfinityArmory = () => {
       "is-targeted",
       Boolean(infinityArmorySelectedGem && infinityArmorySelectedGem.shape === shape && !filled)
     );
-    slot.disabled = filled;
     slot.setAttribute("aria-pressed", String(filled));
     slot.setAttribute("aria-label", `${label} gem slot ${filled ? "filled" : "empty"}`);
     if (socketedGem) {
@@ -7721,6 +7716,7 @@ const updateInfinityArmory = () => {
     } else {
       delete slot.dataset.armoryColor;
     }
+    slot.disabled = filled && !infinityArmorySelectedGem;
   });
 
   infinityArmoryGems.forEach((gem) => {
@@ -7787,15 +7783,15 @@ const socketInfinityArmoryGem = (shape) => {
     return;
   }
   if (infinityArmoryState.gems[shape]) {
-    if (infinityArmoryStatus) {
-      infinityArmoryStatus.textContent = `${INFINITY_ARMORY_GEM_LABELS[shape]} slot is already filled.`;
-    }
+    clearInfinityArmorySelectedGem({
+      status: `${INFINITY_ARMORY_GEM_LABELS[shape]} slot is already filled.`,
+    });
     return;
   }
   if (infinityArmorySelectedGem.shape !== shape) {
-    if (infinityArmoryStatus) {
-      infinityArmoryStatus.textContent = `${infinityArmorySelectedGem.label} does not fit.`;
-    }
+    clearInfinityArmorySelectedGem({
+      status: `${infinityArmorySelectedGem.label} does not fit.`,
+    });
     return;
   }
   infinityArmoryState.gems[shape] = { ...infinityArmorySelectedGem };
@@ -16821,6 +16817,10 @@ if (infinityArmoryGemGrid) {
     if (!gem || !infinityArmoryGemGrid.contains(gem)) return;
     event.preventDefault();
     event.stopPropagation();
+    if (infinityArmorySelectedGem) {
+      clearInfinityArmorySelectedGem({ status: "Gem returned to inventory." });
+      return;
+    }
     selectInfinityArmoryGem(gem, event);
   });
 }
