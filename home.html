@@ -112,7 +112,7 @@
     <link rel="stylesheet" href="styles/home/apps/life-counter.css" />
     <link rel="stylesheet" href="styles/home/portfolio.css" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=pokemon-cursor-targets-20260619" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=berserk-sunrise-20260624" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=pokemon-cursor-targets-20260619" />
   </head>
   <body>
@@ -3910,6 +3910,25 @@
     </div>
 
     <div
+      class="window berserk-sunrise-window is-hidden"
+      id="berserk-sunrise-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+      </div>
+      <div class="window-body">
+        <img
+          data-src="assets/random%20events/berserk-sunrise.webp"
+          decoding="async"
+          alt=""
+        />
+        <p>Take a moment to watch the sunset tonight.</p>
+        <button type="button" id="berserk-sunrise-ok">OK</button>
+      </div>
+    </div>
+
+    <div
       class="window instrumentality-window is-hidden"
       id="instrumentality-window"
       aria-hidden="true"
@@ -4062,6 +4081,97 @@
       </div>
     </div>
 
+    <div class="window brand-burns-window is-hidden" id="brand-burns-window" aria-hidden="true">
+      <div class="brand-burns-lightning-field" aria-hidden="true">
+        <canvas class="brand-burns-lightning-canvas"></canvas>
+      </div>
+      <div class="title-bar">
+        <div class="title-bar-text" id="brand-burns-title">Your Brand Burns...</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="brand-burns-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="brand-burns-hud">
+          <span class="brand-burns-portrait-frame" aria-hidden="true">
+            <img
+              class="brand-burns-portrait"
+              id="brand-burns-combat-icon"
+              data-src="assets/random%20events/guts-icon.jpg"
+              decoding="async"
+              alt=""
+            />
+          </span>
+          <div class="brand-burns-vitals">
+            <div class="brand-burns-stat">
+              <div class="brand-burns-stat-label">
+                <span>Health</span>
+                <span id="brand-burns-health-value">4000/4000</span>
+              </div>
+              <div
+                class="progress-indicator segmented brand-burns-bar brand-burns-bar--health"
+                role="meter"
+                aria-label="Struggler health"
+              >
+                <span class="progress-indicator-bar" id="brand-burns-health"></span>
+              </div>
+            </div>
+            <div class="brand-burns-stat">
+              <div class="brand-burns-stat-label">
+                <span>Stamina</span>
+                <span id="brand-burns-stamina-value">100/100</span>
+              </div>
+              <div
+                class="progress-indicator segmented brand-burns-bar brand-burns-bar--stamina"
+                role="meter"
+                aria-label="Struggler stamina"
+              >
+                <span class="progress-indicator-bar" id="brand-burns-stamina"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="brand-burns-stage" id="brand-burns-stage-prompt">
+          <div class="brand-burns-equipment brand-burns-equipment--prompt">
+            <span class="brand-burns-weapon">
+              <img
+                class="brand-burns-icon"
+                id="brand-burns-icon"
+                data-src="assets/random%20events/guts-glowing-brand.png"
+                decoding="async"
+                alt=""
+              />
+            </span>
+            <div>
+              <p>The forces of evil stir around you.</p>
+            </div>
+          </div>
+        </div>
+        <div class="brand-burns-stage brand-burns-stage--combat is-hidden" id="brand-burns-stage-fight">
+          <div class="brand-burns-equipment">
+            <span class="brand-burns-weapon">
+              <img
+                id="brand-burns-weapon-icon"
+                data-src="assets/random%20events/dragon-slayer.jpeg"
+                decoding="async"
+                alt=""
+              />
+            </span>
+            <div>
+              <strong>Causality</strong>
+              <div class="brand-burns-status-log" id="brand-burns-status" aria-live="polite">
+                <span class="brand-burns-status-entry">The apostles are closing in.</span>
+              </div>
+            </div>
+          </div>
+          <div class="brand-burns-counter" id="brand-burns-enemy-count">Apostles remaining: 5</div>
+        </div>
+        <div class="brand-burns-actions">
+          <button type="button" id="brand-burns-fight">Fight them off!</button>
+        </div>
+      </div>
+    </div>
+
     <div class="window behelit-window is-hidden" id="behelit-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Behelit Found</div>
@@ -4086,8 +4196,8 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/core/dom.js?v=pokemon-starter-event-20260619"></script>
+    <script src="scripts/home/core/dom.js?v=berserk-sunrise-20260624"></script>
     <script src="scripts/home/core/media.js?v=classic-20260617l"></script>
-    <script src="scripts/home/main.js?v=prerender-hardening-20260619"></script>
+    <script src="scripts/home/main.js?v=sudoku-viewport-clamp-20260624"></script>
   </body>
 </html>

@@ -329,6 +329,8 @@ const {
   lainAlertOk,
   lelouchAlertWindow,
   lelouchAlertOk,
+  berserkSunriseWindow,
+  berserkSunriseOk,
   instrumentalityWindow,
   instrumentalityYes,
   instrumentalityNo,
@@ -353,6 +355,20 @@ const {
   fateResultCredit,
   fateResultText,
   fateResultOk,
+  brandBurnsWindow,
+  brandBurnsTitle,
+  brandBurnsClose,
+  brandBurnsPromptStage,
+  brandBurnsFightStage,
+  brandBurnsFight,
+  brandBurnsIcon,
+  brandBurnsCombatIcon,
+  brandBurnsHealth,
+  brandBurnsHealthValue,
+  brandBurnsStamina,
+  brandBurnsStaminaValue,
+  brandBurnsStatus,
+  brandBurnsEnemyCount,
   behelitWindow,
   behelitOk,
   johnPorkWindow,
@@ -878,6 +894,7 @@ let activeRandomEventKey = "";
 let generalRandomEventClickCount = 0;
 let minesweeperRandomEventClickCount = 0;
 let solitaireRandomEventClickCount = 0;
+let brandBurnsRandomEventButtonClickCount = 0;
 let randomEventIdleTimer = null;
 let activeAppDwellWindow = null;
 let activeAppDwellStartedAt = 0;
@@ -1134,6 +1151,7 @@ const RANDOM_EVENT_OBSTACLE_GAP = 10;
 const GENERAL_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 14;
 const MINESWEEPER_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 18;
 const SOLITAIRE_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 22;
+const BRAND_BURNS_RANDOM_EVENT_BUTTON_CLICK_RATIO = 3;
 const RANDOM_EVENT_IDLE_DELAY_MS = 4 * 60 * 1000;
 const RANDOM_EVENT_APP_DWELL_MS = 2 * 60 * 1000;
 const RANDOM_EVENT_DELAY_MIN_MS = 0;
@@ -1148,6 +1166,120 @@ const RANDOM_EVENT_KIND_LIMITS = Object.freeze({
   [RANDOM_EVENT_KIND_NON_INTERACTIVE]: 2,
 });
 const RANDOM_EVENT_MAX_LOCK_RELEASE_MS = 30 * 1000;
+const BRAND_BURNS_BRAND_ICON = "assets/random%20events/guts-glowing-brand.png";
+const BRAND_BURNS_GUTS_ICON = "assets/random%20events/guts-icon.jpg";
+const BRAND_BURNS_PUCK_IMAGE = "assets/random%20events/puck-healer.jpeg";
+const BRAND_BURNS_PUCK_WIN_IMAGE = "assets/random%20events/puck-win.jpeg";
+const BRAND_BURNS_DRAGON_SLAYER_ICON = "assets/random%20events/dragon-slayer.jpeg";
+const BRAND_BURNS_ENCOUNTER_COUNT = 5;
+const BRAND_BURNS_APOSTLE_OPEN_DELAY_MS = 240;
+const BRAND_BURNS_APOSTLE_CLOSE_DELAY_MS = 90;
+const BRAND_BURNS_ATTACK_MIN_DAMAGE = 100;
+const BRAND_BURNS_ATTACK_MAX_DAMAGE = 300;
+const BRAND_BURNS_PLAYER_MAX_HEALTH = 4000;
+const BRAND_BURNS_APOSTLE_PLAYER_ATTACK_MIN_DAMAGE = 1;
+const BRAND_BURNS_APOSTLE_PLAYER_ATTACK_MAX_DAMAGE = 300;
+const BRAND_BURNS_APOSTLE_ATTACK_MIN_DELAY_MS = 1800;
+const BRAND_BURNS_APOSTLE_ATTACK_MAX_DELAY_MS = 4200;
+const BRAND_BURNS_BLOCK_DURATION_MS = 5 * 1000;
+const BRAND_BURNS_BLOCK_COOLDOWN_MS = 5 * 1000;
+const BRAND_BURNS_BLOCK_DAMAGE_FACTOR = 1 / 6;
+const BRAND_BURNS_METER_SEGMENTS = 16;
+const BRAND_BURNS_OMEN_MIN_DELAY_MS = 900;
+const BRAND_BURNS_OMEN_MAX_DELAY_MS = 2600;
+const BRAND_BURNS_STAMINA_ATTACK_MIN_COST = 8;
+const BRAND_BURNS_STAMINA_ATTACK_MAX_COST = 18;
+const BRAND_BURNS_STAMINA_RECOVERY_MS = 380;
+const BRAND_BURNS_STAMINA_RECOVERY_AMOUNT = 6;
+const BRAND_BURNS_STAMINA_RECOVERY_MIN_FACTOR = 0.3;
+const BRAND_BURNS_STAMINA_LOW_HEALTH_BONUS = 0.45;
+const BRAND_BURNS_STAMINA_BLOCK_RECOVERY_BONUS = 2;
+const BRAND_BURNS_PUCK_HEALTH_THRESHOLD_FACTOR = 0.5;
+const BRAND_BURNS_PUCK_HEAL_MIN = 300;
+const BRAND_BURNS_PUCK_HEAL_MAX = 500;
+const BRAND_BURNS_PUCK_HEAL_COOLDOWN_MS = 4 * 1000;
+const BRAND_BURNS_FEMTO = Object.freeze({
+  id: "femto",
+  name: "Femto",
+  image:
+    "https://static.wikia.nocookie.net/berserk/images/8/8a/Manga_E86_Femto.png/revision/latest?cb=20201123221810",
+  minHealth: 3500,
+  maxHealth: 4000,
+});
+const BRAND_BURNS_APOSTLES = Object.freeze([
+  {
+    id: "zodd",
+    name: "Zodd",
+    image:
+      "https://static.wikia.nocookie.net/berserk/images/b/be/Manga_E69_Transformed_Zodd.png/revision/latest?cb=20171001233104",
+    minHealth: 2400,
+    maxHealth: 3500,
+  },
+  {
+    id: "grunbeld",
+    name: "Grunbeld",
+    image:
+      "https://static.wikia.nocookie.net/berserk/images/6/64/Apostle_Grunbeld.png/revision/latest?cb=20100923234542",
+    minHealth: 2600,
+    maxHealth: 3500,
+  },
+  {
+    id: "borkoff",
+    name: "Borkoff",
+    image:
+      "https://static.wikia.nocookie.net/berserk/images/2/2d/Borkoff_apostle.png/revision/latest?cb=20220718232429",
+    minHealth: 900,
+    maxHealth: 1900,
+  },
+  {
+    id: "locus",
+    name: "Locus",
+    image:
+      "https://static.wikia.nocookie.net/berserk/images/6/62/Manga_E233_Locus_Released.png/revision/latest?cb=20201126065418",
+    minHealth: 1800,
+    maxHealth: 3100,
+  },
+  {
+    id: "irvine",
+    name: "Irvine",
+    image:
+      "https://static.wikia.nocookie.net/berserk/images/5/58/Irvine_Sonia.jpg/revision/latest?cb=20160904203606",
+    minHealth: 1400,
+    maxHealth: 2600,
+  },
+  {
+    id: "ganishka",
+    name: "Ganishka",
+    image:
+      "https://static.wikia.nocookie.net/berserk/images/5/52/Manga_E274_Ganishka_True_Form.png/revision/latest?cb=20180527174349",
+    minHealth: 2600,
+    maxHealth: 3500,
+  },
+  {
+    id: "wyald",
+    name: "Wyald",
+    image:
+      "https://static.wikia.nocookie.net/berserk/images/0/0b/Wyald%27s_Apostle_Form.jpg/revision/latest?cb=20220603180008",
+    minHealth: 1500,
+    maxHealth: 3100,
+  },
+  {
+    id: "snake-lord",
+    name: "Snake Lord",
+    image:
+      "https://static.wikia.nocookie.net/berserk/images/e/ef/Manga_E0-1_Snake_Lord_Transformed.png/revision/latest?cb=20171021054551",
+    minHealth: 700,
+    maxHealth: 1700,
+  },
+  {
+    id: "rakshas",
+    name: "Rakshas",
+    image:
+      "https://static.wikia.nocookie.net/berserk/images/0/03/Manga_E341_Rakshas_attacked_by_snakes.png/revision/latest?cb=20240521103358",
+    minHealth: 1600,
+    maxHealth: 2900,
+  },
+]);
 const INFINITY_ARMORY_STARTING_GOLD = 12000;
 const INFINITY_ARMORY_UPGRADE_PRICES = Object.freeze([1000, 2500, 5000]);
 const INFINITY_ARMORY_MAX_LEVEL = INFINITY_ARMORY_UPGRADE_PRICES.length + 1;
@@ -1226,6 +1358,35 @@ let infinityArmoryCompleteTimer = null;
 let infinityArmorySelectedGem = null;
 let infinityArmoryCursorGem = null;
 let wingedLightCollectOverlay = null;
+let brandBurnsStage = "idle";
+let brandBurnsEnemyWindows = [];
+let brandBurnsEnemyTimers = [];
+let brandBurnsStaminaTimer = null;
+let brandBurnsOmenTimer = null;
+let brandBurnsOmenHitTimer = null;
+let brandBurnsOmenLightningFrame = null;
+let brandBurnsPreserveEnemyWindowsOnMainClose = false;
+let brandBurnsHealHitTimer = null;
+let brandBurnsHealLightningFrame = null;
+let brandBurnsPuckWindow = null;
+let brandBurnsPuckHealButton = null;
+let brandBurnsPuckCooldownTimer = null;
+let brandBurnsPuckHasAppeared = false;
+let brandBurnsPuckHealReady = false;
+let brandBurnsBlockTimer = null;
+let brandBurnsBlockCooldownTimer = null;
+let brandBurnsBlockWindow = null;
+let brandBurnsBlockProgressBar = null;
+let brandBurnsBlockProgressFrame = null;
+let brandBurnsBlocking = false;
+let brandBurnsOutcome = null;
+let brandBurnsStats = {
+  health: BRAND_BURNS_PLAYER_MAX_HEALTH,
+  maxHealth: BRAND_BURNS_PLAYER_MAX_HEALTH,
+  stamina: 100,
+  defeated: 0,
+  total: BRAND_BURNS_ENCOUNTER_COUNT,
+};
 
 const randomEventViewportWindows = () =>
   [
@@ -1268,10 +1429,15 @@ const randomEventViewportWindows = () =>
     midnightGospelMeditationWindow,
     lainAlertWindow,
     lelouchAlertWindow,
+    berserkSunriseWindow,
     instrumentalityWindow,
     instrumentalityCongratsWindow,
     redToolWindow,
     fateWindow,
+    brandBurnsWindow,
+    brandBurnsPuckWindow,
+    brandBurnsBlockWindow,
+    ...brandBurnsEnemyWindows,
     behelitWindow,
     johnPorkWindow,
     advertisementWindow,
@@ -4446,6 +4612,43 @@ const closeLelouchAlert = () => {
   restartWindowAnimation(lelouchAlertWindow, "is-closing");
 };
 
+const isBerserkSunriseTimeWindow = (date = new Date()) => {
+  const hour = date.getHours();
+  return hour >= 5 && hour < 19;
+};
+
+const isBerserkSunriseVisible = () =>
+  Boolean(
+    berserkSunriseWindow &&
+      !berserkSunriseWindow.classList.contains("is-hidden") &&
+      berserkSunriseWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const positionBerserkSunriseWindow = () => {
+  positionRandomEventWindowInViewport(berserkSunriseWindow);
+};
+
+const showBerserkSunrise = () => {
+  if (!berserkSunriseWindow) return;
+  if (isBerserkSunriseVisible()) {
+    berserkSunriseWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(berserkSunriseWindow);
+  berserkSunriseWindow.classList.remove("is-hidden", "is-closing");
+  berserkSunriseWindow.setAttribute("aria-hidden", "false");
+  positionBerserkSunriseWindow();
+  berserkSunriseWindow.style.zIndex = String(topZ++);
+  restartWindowAnimation(berserkSunriseWindow, "is-opening");
+  clampRandomEventWindowAfterMediaLoad(berserkSunriseWindow);
+};
+
+const closeBerserkSunrise = () => {
+  if (!berserkSunriseWindow || berserkSunriseWindow.classList.contains("is-hidden")) return;
+  berserkSunriseWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(berserkSunriseWindow, "is-closing");
+};
+
 const isInstrumentalityWindowVisible = (win) =>
   Boolean(
     win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
@@ -4667,37 +4870,57 @@ const FATE_SUCCESS_TEXT =
 const FATE_LOSS_TEXT = "Perhaps you do not have the strength to resist causality.";
 const FATE_LIGHTNING_DURATION_MS = 220;
 const FATE_LIGHTNING_BRANCH_CHANCE = 0.22;
+const RED_LIGHTNING_PALETTE = Object.freeze({
+  glow: "255, 0, 0",
+  mid: "255, 60, 60",
+  core: "255, 235, 235",
+  shadow: "rgba(255, 0, 0, 0.95)",
+});
+const GREEN_LIGHTNING_PALETTE = Object.freeze({
+  glow: "0, 190, 70",
+  mid: "68, 255, 130",
+  core: "232, 255, 238",
+  shadow: "rgba(0, 255, 120, 0.95)",
+});
 
 const getFateLightningContext = () => {
   if (!fateLightningCanvas) return null;
   return fateLightningCanvas.getContext("2d");
 };
 
-const resizeFateLightningCanvas = () => {
-  const ctx = getFateLightningContext();
-  if (!ctx || !fateLightningCanvas) return null;
-  const field = fateLightningCanvas.parentElement;
-  const rect = field ? field.getBoundingClientRect() : fateLightningCanvas.getBoundingClientRect();
+const resizeLightningCanvas = (canvas) => {
+  if (!canvas) return null;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const field = canvas.parentElement;
+  const rect = field ? field.getBoundingClientRect() : canvas.getBoundingClientRect();
   const width = Math.max(1, rect.width);
   const height = Math.max(1, rect.height);
   const dpr = Math.max(1, window.devicePixelRatio || 1);
   const nextWidth = Math.round(width * dpr);
   const nextHeight = Math.round(height * dpr);
 
-  if (fateLightningCanvas.width !== nextWidth || fateLightningCanvas.height !== nextHeight) {
-    fateLightningCanvas.width = nextWidth;
-    fateLightningCanvas.height = nextHeight;
+  if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+    canvas.width = nextWidth;
+    canvas.height = nextHeight;
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return { ctx, width, height };
 };
 
-const clearFateLightningCanvas = () => {
-  const setup = resizeFateLightningCanvas();
+const resizeFateLightningCanvas = () => {
+  if (!getFateLightningContext()) return null;
+  return resizeLightningCanvas(fateLightningCanvas);
+};
+
+const clearLightningCanvas = (canvas) => {
+  const setup = resizeLightningCanvas(canvas);
   if (!setup) return;
   setup.ctx.clearRect(0, 0, setup.width, setup.height);
 };
+
+const clearFateLightningCanvas = () => clearLightningCanvas(fateLightningCanvas);
 
 const generateFateBoltPath = (
   x1,
@@ -4765,7 +4988,15 @@ const generateFateBoltPath = (
   return path1.concat([[newMidX, newMidY]], path2);
 };
 
-const drawFateBolt = (ctx, path, startX, startY, level, alpha) => {
+const drawFateBolt = (
+  ctx,
+  path,
+  startX,
+  startY,
+  level,
+  alpha,
+  palette = RED_LIGHTNING_PALETTE
+) => {
   const opacity = alpha * Math.max(0.3, 1 - level * 0.24);
   const glowWidth = level === 0 ? 6 : 3;
   const coreWidth = level === 0 ? 1.4 : 0.65;
@@ -4774,16 +5005,16 @@ const drawFateBolt = (ctx, path, startX, startY, level, alpha) => {
   ctx.globalAlpha = opacity;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  ctx.strokeStyle = `rgba(255, 0, 0, ${opacity})`;
+  ctx.strokeStyle = `rgba(${palette.glow}, ${opacity})`;
   ctx.lineWidth = glowWidth;
   ctx.shadowBlur = level === 0 ? 16 : 9;
-  ctx.shadowColor = "rgba(255, 0, 0, 0.95)";
+  ctx.shadowColor = palette.shadow;
   ctx.beginPath();
   ctx.moveTo(startX, startY);
   path.forEach(([x, y]) => ctx.lineTo(x, y));
   ctx.stroke();
 
-  ctx.strokeStyle = `rgba(255, 60, 60, ${opacity})`;
+  ctx.strokeStyle = `rgba(${palette.mid}, ${opacity})`;
   ctx.lineWidth = Math.max(1.4, glowWidth * 0.42);
   ctx.shadowBlur = 6;
   ctx.beginPath();
@@ -4791,7 +5022,7 @@ const drawFateBolt = (ctx, path, startX, startY, level, alpha) => {
   path.forEach(([x, y]) => ctx.lineTo(x, y));
   ctx.stroke();
 
-  ctx.strokeStyle = `rgba(255, 235, 235, ${Math.min(1, opacity + 0.18)})`;
+  ctx.strokeStyle = `rgba(${palette.core}, ${Math.min(1, opacity + 0.18)})`;
   ctx.lineWidth = coreWidth;
   ctx.shadowBlur = 0;
   ctx.beginPath();
@@ -4801,8 +5032,8 @@ const drawFateBolt = (ctx, path, startX, startY, level, alpha) => {
   ctx.restore();
 };
 
-const drawFateLightningBorderFrame = (alpha) => {
-  const setup = resizeFateLightningCanvas();
+const drawLightningBorderFrame = (canvas, alpha, palette = RED_LIGHTNING_PALETTE) => {
+  const setup = resizeLightningCanvas(canvas);
   if (!setup) return;
   const { ctx, width, height } = setup;
   const inset = 18;
@@ -4839,8 +5070,12 @@ const drawFateLightningBorderFrame = (alpha) => {
   });
 
   bolts.forEach((bolt) => {
-    drawFateBolt(ctx, bolt.path, bolt.start[0], bolt.start[1], bolt.level, alpha);
+    drawFateBolt(ctx, bolt.path, bolt.start[0], bolt.start[1], bolt.level, alpha, palette);
   });
+};
+
+const drawFateLightningBorderFrame = (alpha) => {
+  drawLightningBorderFrame(fateLightningCanvas, alpha);
 };
 
 const startFateLightningStrike = () => {
@@ -5084,6 +5319,1266 @@ const closeFateWindow = () => {
   fateState = "idle";
   fateWindow.setAttribute("aria-hidden", "true");
   restartWindowAnimation(fateWindow, "is-closing");
+};
+
+const brandBurnsRandomInt = (min, max) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+const shuffleBrandBurnsItems = (items) => {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+};
+
+const isBrandBurnsWindowVisible = (win) =>
+  Boolean(
+    win &&
+      !win.classList.contains("is-hidden") &&
+      win.getAttribute("aria-hidden") === "false"
+  );
+
+const isBrandBurnsMainWindowVisible = () =>
+  isBrandBurnsWindowVisible(brandBurnsWindow);
+
+const isBrandBurnsEnemyWindowVisible = (win) =>
+  isBrandBurnsWindowVisible(win);
+
+const isBrandBurnsButtonClickTarget = (target) =>
+  Boolean(
+    target?.closest("button") &&
+      target.closest(
+        "#brand-burns-window, .brand-apostle-window, .brand-puck-window, .brand-block-window"
+      )
+  );
+
+const isBrandBurnsVisible = () =>
+  isBrandBurnsMainWindowVisible() ||
+  isBrandBurnsPuckWindowVisible() ||
+  isBrandBurnsBlockWindowVisible() ||
+  brandBurnsEnemyWindows.some(isBrandBurnsEnemyWindowVisible);
+
+const setBrandBurnsStageHidden = (stage, hidden) => {
+  if (!stage) return;
+  stage.classList.toggle("is-hidden", hidden);
+};
+
+const brandBurnsMeterPercent = (value, maxValue) => {
+  const max = Math.max(1, maxValue);
+  const clamped = Math.max(0, Math.min(max, value));
+  if (clamped <= 0) return 0;
+  const segments = Math.ceil((clamped / max) * BRAND_BURNS_METER_SEGMENTS);
+  return (
+    (Math.min(BRAND_BURNS_METER_SEGMENTS, segments) / BRAND_BURNS_METER_SEGMENTS) * 100
+  );
+};
+
+const updateBrandBurnsHud = () => {
+  const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
+  const health = Math.max(0, Math.min(maxHealth, brandBurnsStats.health));
+  const healthPercent = brandBurnsMeterPercent(health, maxHealth);
+  const stamina = Math.max(0, Math.min(100, brandBurnsStats.stamina));
+  const staminaPercent = brandBurnsMeterPercent(stamina, 100);
+  const remaining = Math.max(0, brandBurnsStats.total - brandBurnsStats.defeated);
+
+  if (brandBurnsHealth) brandBurnsHealth.style.width = `${healthPercent}%`;
+  if (brandBurnsHealth?.parentElement) {
+    brandBurnsHealth.parentElement.setAttribute("aria-valuenow", Math.round(health));
+    brandBurnsHealth.parentElement.setAttribute("aria-valuemax", String(maxHealth));
+  }
+  if (brandBurnsHealthValue) {
+    brandBurnsHealthValue.textContent = `${Math.round(health)}/${maxHealth}`;
+  }
+  if (brandBurnsStamina) brandBurnsStamina.style.width = `${staminaPercent}%`;
+  if (brandBurnsStamina?.parentElement) {
+    brandBurnsStamina.parentElement.setAttribute("aria-valuenow", Math.round(stamina));
+    brandBurnsStamina.parentElement.setAttribute("aria-valuemax", "100");
+  }
+  if (brandBurnsStaminaValue) {
+    brandBurnsStaminaValue.textContent = `${Math.round(stamina)}/100`;
+  }
+  if (brandBurnsEnemyCount) {
+    brandBurnsEnemyCount.textContent = `Apostles remaining: ${remaining}`;
+  }
+};
+
+const resetBrandBurnsStats = () => {
+  brandBurnsStats = {
+    health: BRAND_BURNS_PLAYER_MAX_HEALTH,
+    maxHealth: BRAND_BURNS_PLAYER_MAX_HEALTH,
+    stamina: 100,
+    defeated: 0,
+    total: BRAND_BURNS_ENCOUNTER_COUNT,
+  };
+  updateBrandBurnsHud();
+};
+
+const stopBrandBurnsStaminaRecovery = () => {
+  if (!brandBurnsStaminaTimer) return;
+  clearInterval(brandBurnsStaminaTimer);
+  brandBurnsStaminaTimer = null;
+};
+
+const hasBrandBurnsAttackStamina = () =>
+  brandBurnsStats.stamina >= BRAND_BURNS_STAMINA_ATTACK_MAX_COST;
+
+const getBrandBurnsStaminaRecoveryAmount = () => {
+  const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
+  const staminaFactor = Math.max(
+    BRAND_BURNS_STAMINA_RECOVERY_MIN_FACTOR,
+    Math.max(0, Math.min(100, brandBurnsStats.stamina)) / 100
+  );
+  const missingHealthFactor =
+    1 +
+    (1 - Math.max(0, Math.min(maxHealth, brandBurnsStats.health)) / maxHealth) *
+      BRAND_BURNS_STAMINA_LOW_HEALTH_BONUS;
+  const blockFactor = brandBurnsBlocking ? BRAND_BURNS_STAMINA_BLOCK_RECOVERY_BONUS : 1;
+
+  return BRAND_BURNS_STAMINA_RECOVERY_AMOUNT * staminaFactor * missingHealthFactor * blockFactor;
+};
+
+const startBrandBurnsStaminaRecovery = () => {
+  stopBrandBurnsStaminaRecovery();
+  brandBurnsStaminaTimer = setInterval(() => {
+    if (brandBurnsStage !== "fight") {
+      stopBrandBurnsStaminaRecovery();
+      return;
+    }
+    const nextStamina = Math.min(
+      100,
+      brandBurnsStats.stamina + getBrandBurnsStaminaRecoveryAmount()
+    );
+    if (nextStamina === brandBurnsStats.stamina) return;
+
+    brandBurnsStats.stamina = nextStamina;
+    updateBrandBurnsHud();
+    updateBrandBurnsAttackButtonStates();
+  }, BRAND_BURNS_STAMINA_RECOVERY_MS);
+};
+
+const clearBrandBurnsEnemyTimers = () => {
+  brandBurnsEnemyTimers.forEach((timer) => clearTimeout(timer));
+  brandBurnsEnemyTimers = [];
+};
+
+const updateBrandBurnsEnemyHud = (state) => {
+  const percent = Math.max(0, Math.min(100, (state.health / state.maxHealth) * 100));
+  if (state.healthBar) state.healthBar.style.width = `${percent}%`;
+  if (state.healthValue) {
+    state.healthValue.textContent = `${Math.max(0, Math.round(state.health))}/${state.maxHealth}`;
+  }
+};
+
+const brandBurnsViewerImage = () => brandBurnsWindow?.querySelector("#brand-burns-weapon-icon");
+
+const setBrandBurnsViewerImage = (src) => {
+  const image = brandBurnsViewerImage();
+  if (!image) return;
+  image.dataset.src = src;
+  image.src = src;
+};
+
+const clearBrandBurnsEnemyAttackTimer = (state) => {
+  if (!state?.playerAttackTimer) return;
+  clearTimeout(state.playerAttackTimer);
+  state.playerAttackTimer = null;
+};
+
+const brandBurnsOmenLightningCanvas = () =>
+  brandBurnsWindow?.querySelector(".brand-burns-lightning-canvas") || null;
+
+const clearBrandBurnsOmenEffect = () => {
+  if (brandBurnsOmenTimer) {
+    clearTimeout(brandBurnsOmenTimer);
+    brandBurnsOmenTimer = null;
+  }
+  if (brandBurnsOmenHitTimer) {
+    clearTimeout(brandBurnsOmenHitTimer);
+    brandBurnsOmenHitTimer = null;
+  }
+  if (brandBurnsOmenLightningFrame) {
+    cancelAnimationFrame(brandBurnsOmenLightningFrame);
+    brandBurnsOmenLightningFrame = null;
+  }
+  clearLightningCanvas(brandBurnsOmenLightningCanvas());
+  if (brandBurnsWindow) brandBurnsWindow.classList.remove("is-omen");
+};
+
+const clearBrandBurnsHealEffect = () => {
+  if (brandBurnsHealHitTimer) {
+    clearTimeout(brandBurnsHealHitTimer);
+    brandBurnsHealHitTimer = null;
+  }
+  if (brandBurnsHealLightningFrame) {
+    cancelAnimationFrame(brandBurnsHealLightningFrame);
+    brandBurnsHealLightningFrame = null;
+  }
+  clearLightningCanvas(brandBurnsOmenLightningCanvas());
+  if (brandBurnsWindow) brandBurnsWindow.classList.remove("is-healed");
+};
+
+const startBrandBurnsOmenLightningStrike = () => {
+  const canvas = brandBurnsOmenLightningCanvas();
+  if (!canvas) return;
+  if (brandBurnsOmenLightningFrame) {
+    cancelAnimationFrame(brandBurnsOmenLightningFrame);
+  }
+  const startedAt = performance.now();
+
+  const render = (now) => {
+    const progress = Math.min(1, (now - startedAt) / FATE_LIGHTNING_DURATION_MS);
+    const flicker = progress < 0.16 ? 1 : Math.random() > 0.32 ? 1 - progress * 0.42 : 0.18;
+    const alpha = Math.max(0, flicker * (1 - progress * 0.36));
+    drawLightningBorderFrame(canvas, alpha);
+
+    if (progress < 1) {
+      brandBurnsOmenLightningFrame = requestAnimationFrame(render);
+      return;
+    }
+
+    brandBurnsOmenLightningFrame = null;
+    clearLightningCanvas(canvas);
+  };
+
+  brandBurnsOmenLightningFrame = requestAnimationFrame(render);
+};
+
+const pulseBrandBurnsOmen = () => {
+  if (!brandBurnsWindow || brandBurnsStage !== "prompt" || !isBrandBurnsMainWindowVisible()) {
+    return;
+  }
+  if (brandBurnsOmenHitTimer) {
+    clearTimeout(brandBurnsOmenHitTimer);
+    brandBurnsOmenHitTimer = null;
+  }
+
+  brandBurnsWindow.classList.remove("is-omen");
+  void brandBurnsWindow.offsetWidth;
+  brandBurnsWindow.classList.add("is-omen");
+  startBrandBurnsOmenLightningStrike();
+  brandBurnsOmenHitTimer = setTimeout(() => {
+    if (brandBurnsWindow) brandBurnsWindow.classList.remove("is-omen");
+    brandBurnsOmenHitTimer = null;
+  }, 240);
+};
+
+const scheduleBrandBurnsOmenPulse = () => {
+  if (brandBurnsOmenTimer) {
+    clearTimeout(brandBurnsOmenTimer);
+    brandBurnsOmenTimer = null;
+  }
+  if (!brandBurnsWindow || brandBurnsStage !== "prompt" || !isBrandBurnsMainWindowVisible()) {
+    return;
+  }
+
+  const delay = brandBurnsRandomInt(
+    BRAND_BURNS_OMEN_MIN_DELAY_MS,
+    BRAND_BURNS_OMEN_MAX_DELAY_MS
+  );
+  brandBurnsOmenTimer = setTimeout(() => {
+    brandBurnsOmenTimer = null;
+    if (brandBurnsStage !== "prompt" || !isBrandBurnsMainWindowVisible()) return;
+    pulseBrandBurnsOmen();
+    scheduleBrandBurnsOmenPulse();
+  }, delay);
+};
+
+const startBrandBurnsHealLightningStrike = () => {
+  const canvas = brandBurnsOmenLightningCanvas();
+  if (!canvas) return;
+  if (brandBurnsHealLightningFrame) cancelAnimationFrame(brandBurnsHealLightningFrame);
+  const startedAt = performance.now();
+
+  const render = (now) => {
+    const progress = Math.min(1, (now - startedAt) / FATE_LIGHTNING_DURATION_MS);
+    const flicker = progress < 0.16 ? 1 : Math.random() > 0.32 ? 1 - progress * 0.42 : 0.18;
+    const alpha = Math.max(0, flicker * (1 - progress * 0.36));
+    drawLightningBorderFrame(canvas, alpha, GREEN_LIGHTNING_PALETTE);
+
+    if (progress < 1) {
+      brandBurnsHealLightningFrame = requestAnimationFrame(render);
+      return;
+    }
+
+    brandBurnsHealLightningFrame = null;
+    clearLightningCanvas(canvas);
+  };
+
+  brandBurnsHealLightningFrame = requestAnimationFrame(render);
+};
+
+const pulseBrandBurnsHealEffect = () => {
+  if (!brandBurnsWindow) return;
+  if (brandBurnsHealHitTimer) {
+    clearTimeout(brandBurnsHealHitTimer);
+    brandBurnsHealHitTimer = null;
+  }
+
+  brandBurnsWindow.classList.remove("is-healed");
+  void brandBurnsWindow.offsetWidth;
+  brandBurnsWindow.classList.add("is-healed");
+  startBrandBurnsHealLightningStrike();
+  brandBurnsHealHitTimer = setTimeout(() => {
+    if (brandBurnsWindow) brandBurnsWindow.classList.remove("is-healed");
+    brandBurnsHealHitTimer = null;
+  }, 240);
+};
+
+const isBrandBurnsPuckWindowVisible = () =>
+  isBrandBurnsWindowVisible(brandBurnsPuckWindow);
+
+const clearBrandBurnsPuckCooldown = () => {
+  if (!brandBurnsPuckCooldownTimer) return;
+  clearTimeout(brandBurnsPuckCooldownTimer);
+  brandBurnsPuckCooldownTimer = null;
+};
+
+const setBrandBurnsPuckHealReady = (ready) => {
+  brandBurnsPuckHealReady = ready;
+  if (!brandBurnsPuckHealButton) return;
+  const canHeal = ready && brandBurnsStage === "fight" && brandBurnsStats.health > 0;
+  brandBurnsPuckHealButton.disabled = !canHeal;
+};
+
+const createBrandBurnsStatusEntry = (...nodes) => {
+  const entry = document.createElement("span");
+  entry.className = "brand-burns-status-entry";
+  entry.append(...nodes);
+  return entry;
+};
+
+const scrollBrandBurnsStatusLog = () => {
+  if (!brandBurnsStatus) return;
+  brandBurnsStatus.scrollTop = brandBurnsStatus.scrollHeight;
+};
+
+const setBrandBurnsStatusText = (message) => {
+  if (!brandBurnsStatus) return;
+  brandBurnsStatus.replaceChildren(createBrandBurnsStatusEntry(document.createTextNode(message)));
+  scrollBrandBurnsStatusLog();
+};
+
+const appendBrandBurnsStatusWithAmount = (prefix, amount, suffix, amountClassName) => {
+  if (!brandBurnsStatus) return;
+  const amountNode = document.createElement("span");
+  amountNode.className = amountClassName;
+  amountNode.textContent = String(amount);
+  const entry = createBrandBurnsStatusEntry(
+    document.createTextNode(prefix),
+    amountNode,
+    document.createTextNode(suffix)
+  );
+  entry.classList.add("is-new");
+  brandBurnsStatus.append(entry);
+
+  while (brandBurnsStatus.children.length > 4) {
+    brandBurnsStatus.firstElementChild?.remove();
+  }
+
+  scrollBrandBurnsStatusLog();
+};
+
+const scheduleBrandBurnsPuckHealCooldown = () => {
+  clearBrandBurnsPuckCooldown();
+  setBrandBurnsPuckHealReady(false);
+  brandBurnsPuckCooldownTimer = setTimeout(() => {
+    brandBurnsPuckCooldownTimer = null;
+    setBrandBurnsPuckHealReady(true);
+  }, BRAND_BURNS_PUCK_HEAL_COOLDOWN_MS);
+};
+
+const healBrandBurnsPlayerFromPuck = () => {
+  if (!brandBurnsPuckHealReady || brandBurnsStage !== "fight" || brandBurnsStats.health <= 0) {
+    return;
+  }
+
+  const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
+  const healAmount = brandBurnsRandomInt(
+    BRAND_BURNS_PUCK_HEAL_MIN,
+    BRAND_BURNS_PUCK_HEAL_MAX
+  );
+  const previousHealth = brandBurnsStats.health;
+  brandBurnsStats.health = Math.min(maxHealth, brandBurnsStats.health + healAmount);
+  const actualHeal = Math.round(brandBurnsStats.health - previousHealth);
+
+  updateBrandBurnsHud();
+  pulseBrandBurnsHealEffect();
+  if (actualHeal > 0) {
+    appendBrandBurnsStatusWithAmount(
+      "Puck heals you for ",
+      actualHeal,
+      ".",
+      "brand-burns-status-heal"
+    );
+  } else {
+    setBrandBurnsStatusText("Puck is ready if the brand burns again.");
+  }
+  scheduleBrandBurnsPuckHealCooldown();
+};
+
+const removeBrandBurnsPuckWindow = () => {
+  clearBrandBurnsPuckCooldown();
+  if (brandBurnsPuckWindow) brandBurnsPuckWindow.remove();
+  brandBurnsPuckWindow = null;
+  brandBurnsPuckHealButton = null;
+  brandBurnsPuckHealReady = false;
+};
+
+const closeBrandBurnsPuckWindow = () => {
+  if (!brandBurnsPuckWindow) return;
+  clearBrandBurnsPuckCooldown();
+  if (brandBurnsPuckWindow.classList.contains("is-hidden")) {
+    removeBrandBurnsPuckWindow();
+    return;
+  }
+  brandBurnsPuckWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(brandBurnsPuckWindow, "is-closing");
+};
+
+const createBrandBurnsPuckWindow = () => {
+  const win = document.createElement("div");
+  win.className = "window brand-puck-window is-hidden";
+  win.setAttribute("aria-hidden", "true");
+
+  const titleBar = document.createElement("div");
+  titleBar.className = "title-bar";
+
+  const title = document.createElement("div");
+  title.className = "title-bar-text";
+  title.textContent = "Puck";
+  titleBar.append(title);
+
+  const body = document.createElement("div");
+  body.className = "window-body brand-puck-body";
+
+  const frame = document.createElement("div");
+  frame.className = "brand-puck-image-frame";
+
+  const image = document.createElement("img");
+  image.src = BRAND_BURNS_PUCK_IMAGE;
+  image.decoding = "async";
+  image.alt = "Puck";
+  frame.append(image);
+
+  const actions = document.createElement("div");
+  actions.className = "brand-puck-actions";
+
+  const healButton = document.createElement("button");
+  healButton.type = "button";
+  healButton.textContent = "Heal";
+  actions.append(healButton);
+  body.append(frame, actions);
+  win.append(titleBar, body);
+
+  brandBurnsPuckHealButton = healButton;
+
+  healButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    healBrandBurnsPlayerFromPuck();
+  });
+
+  win.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  win.addEventListener("animationend", (event) => {
+    if (event.target !== win) return;
+    if (event.animationName === "retro-window-open") {
+      win.classList.remove("is-opening");
+      clampRandomEventWindowToViewport(win);
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      removeBrandBurnsPuckWindow();
+    }
+  });
+
+  image.addEventListener("load", () => clampRandomEventWindowToViewport(win));
+  return win;
+};
+
+const showBrandBurnsPuckWindow = () => {
+  if (isBrandBurnsPuckWindowVisible()) {
+    brandBurnsPuckWindow.style.zIndex = String(topZ++);
+    clampRandomEventWindowToViewport(brandBurnsPuckWindow);
+    setBrandBurnsPuckHealReady(brandBurnsPuckHealReady);
+    return;
+  }
+
+  brandBurnsPuckWindow = createBrandBurnsPuckWindow();
+  document.body.appendChild(brandBurnsPuckWindow);
+  brandBurnsPuckWindow.classList.remove("is-hidden", "is-closing");
+  brandBurnsPuckWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(brandBurnsPuckWindow);
+  brandBurnsPuckWindow.style.zIndex = String(topZ++);
+  restartWindowAnimation(brandBurnsPuckWindow, "is-opening");
+  clampRandomEventWindowAfterMediaLoad(brandBurnsPuckWindow);
+  setBrandBurnsPuckHealReady(true);
+};
+
+const maybeShowBrandBurnsPuckWindow = () => {
+  const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
+  const isBelowThreshold =
+    brandBurnsStats.health > 0 &&
+    brandBurnsStats.health < maxHealth * BRAND_BURNS_PUCK_HEALTH_THRESHOLD_FACTOR;
+
+  if (
+    brandBurnsPuckHasAppeared ||
+    brandBurnsStage !== "fight" ||
+    !isBrandBurnsMainWindowVisible() ||
+    !isBelowThreshold
+  ) {
+    return;
+  }
+
+  brandBurnsPuckHasAppeared = true;
+  showBrandBurnsPuckWindow();
+};
+
+const clearBrandBurnsEnemyHitEffect = (state) => {
+  if (!state) return;
+  if (state.hitTimer) {
+    clearTimeout(state.hitTimer);
+    state.hitTimer = null;
+  }
+  if (state.lightningFrame) {
+    cancelAnimationFrame(state.lightningFrame);
+    state.lightningFrame = null;
+  }
+  clearLightningCanvas(state.lightningCanvas);
+  if (state.win) state.win.classList.remove("is-hit");
+};
+
+const startBrandBurnsEnemyLightningStrike = (state) => {
+  if (!state?.lightningCanvas) return;
+  if (state.lightningFrame) cancelAnimationFrame(state.lightningFrame);
+  const startedAt = performance.now();
+
+  const render = (now) => {
+    const progress = Math.min(1, (now - startedAt) / FATE_LIGHTNING_DURATION_MS);
+    const flicker = progress < 0.16 ? 1 : Math.random() > 0.32 ? 1 - progress * 0.42 : 0.18;
+    const alpha = Math.max(0, flicker * (1 - progress * 0.36));
+    drawLightningBorderFrame(state.lightningCanvas, alpha);
+
+    if (progress < 1) {
+      state.lightningFrame = requestAnimationFrame(render);
+      return;
+    }
+
+    state.lightningFrame = null;
+    clearLightningCanvas(state.lightningCanvas);
+  };
+
+  state.lightningFrame = requestAnimationFrame(render);
+};
+
+const pulseBrandBurnsEnemyHit = (state) => {
+  if (!state?.win) return;
+  if (state.hitTimer) {
+    clearTimeout(state.hitTimer);
+    state.hitTimer = null;
+  }
+
+  state.win.classList.remove("is-hit");
+  void state.win.offsetWidth;
+  state.win.classList.add("is-hit");
+  startBrandBurnsEnemyLightningStrike(state);
+  state.hitTimer = setTimeout(() => {
+    if (state.win) state.win.classList.remove("is-hit");
+    state.hitTimer = null;
+  }, 240);
+};
+
+const stopBrandBurnsEnemyAttacks = () => {
+  brandBurnsEnemyWindows.forEach((win) => {
+    if (win.brandBurnsState) clearBrandBurnsEnemyAttackTimer(win.brandBurnsState);
+  });
+};
+
+const updateBrandBurnsAttackButtonStates = () => {
+  const shouldDisableAttacks =
+    brandBurnsBlocking ||
+    brandBurnsStage !== "fight" ||
+    brandBurnsStats.health <= 0 ||
+    !hasBrandBurnsAttackStamina();
+
+  brandBurnsEnemyWindows.forEach((win) => {
+    const state = win.brandBurnsState;
+    if (!state?.attackButton) return;
+    state.attackButton.disabled = state.defeated || shouldDisableAttacks;
+  });
+};
+
+const isBrandBurnsBlockCoolingDown = () => Boolean(brandBurnsBlockCooldownTimer);
+
+const updateBrandBurnsActionButton = () => {
+  if (!brandBurnsFight) return;
+  if (brandBurnsOutcome === "won") {
+    brandBurnsFight.textContent = "Rest";
+    brandBurnsFight.disabled = false;
+    return;
+  }
+  if (brandBurnsOutcome === "lost") {
+    brandBurnsFight.textContent = "Give Up";
+    brandBurnsFight.disabled = false;
+    return;
+  }
+  if (brandBurnsStage === "prompt") {
+    brandBurnsFight.textContent = "Fight them off!";
+    brandBurnsFight.disabled = false;
+    return;
+  }
+  if (brandBurnsStage === "fight") {
+    if (brandBurnsBlocking) {
+      brandBurnsFight.textContent = "Blocking...";
+      brandBurnsFight.disabled = true;
+      return;
+    }
+    if (isBrandBurnsBlockCoolingDown()) {
+      brandBurnsFight.textContent = "Recovering...";
+      brandBurnsFight.disabled = true;
+      return;
+    }
+    brandBurnsFight.textContent = "Block";
+    brandBurnsFight.disabled = brandBurnsStats.health <= 0;
+    return;
+  }
+  brandBurnsFight.textContent = "Block";
+  brandBurnsFight.disabled = true;
+};
+
+const clearBrandBurnsBlockCooldown = () => {
+  if (!brandBurnsBlockCooldownTimer) return;
+  clearTimeout(brandBurnsBlockCooldownTimer);
+  brandBurnsBlockCooldownTimer = null;
+};
+
+const startBrandBurnsBlockCooldown = () => {
+  clearBrandBurnsBlockCooldown();
+  if (brandBurnsStage !== "fight" || brandBurnsStats.health <= 0 || brandBurnsOutcome) return;
+  brandBurnsBlockCooldownTimer = setTimeout(() => {
+    brandBurnsBlockCooldownTimer = null;
+    updateBrandBurnsActionButton();
+  }, BRAND_BURNS_BLOCK_COOLDOWN_MS);
+  updateBrandBurnsActionButton();
+};
+
+const clearBrandBurnsBlockProgress = () => {
+  if (!brandBurnsBlockProgressFrame) return;
+  cancelAnimationFrame(brandBurnsBlockProgressFrame);
+  brandBurnsBlockProgressFrame = null;
+};
+
+const isBrandBurnsBlockWindowVisible = () =>
+  isBrandBurnsWindowVisible(brandBurnsBlockWindow);
+
+const removeBrandBurnsBlockWindow = () => {
+  clearBrandBurnsBlockProgress();
+  if (brandBurnsBlockWindow) brandBurnsBlockWindow.remove();
+  brandBurnsBlockWindow = null;
+  brandBurnsBlockProgressBar = null;
+};
+
+const closeBrandBurnsBlockWindow = () => {
+  clearBrandBurnsBlockProgress();
+  if (!brandBurnsBlockWindow) return;
+  if (brandBurnsBlockWindow.classList.contains("is-hidden")) {
+    removeBrandBurnsBlockWindow();
+    return;
+  }
+  const closingWindow = brandBurnsBlockWindow;
+  brandBurnsBlockWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(brandBurnsBlockWindow, "is-closing");
+  setTimeout(() => {
+    if (brandBurnsBlockWindow === closingWindow && closingWindow.classList.contains("is-closing")) {
+      removeBrandBurnsBlockWindow();
+    }
+  }, 220);
+};
+
+const animateBrandBurnsBlockProgress = (startedAt) => {
+  if (!brandBurnsBlockProgressBar || !brandBurnsBlocking) {
+    clearBrandBurnsBlockProgress();
+    return;
+  }
+
+  const progress = Math.min(1, (performance.now() - startedAt) / BRAND_BURNS_BLOCK_DURATION_MS);
+  const percent = progress * 100;
+  brandBurnsBlockProgressBar.style.width = `${percent}%`;
+  brandBurnsBlockProgressBar.parentElement?.setAttribute(
+    "aria-valuenow",
+    String(Math.round(percent))
+  );
+
+  if (progress >= 1) {
+    brandBurnsBlockProgressFrame = null;
+    endBrandBurnsBlock();
+    return;
+  }
+
+  brandBurnsBlockProgressFrame = requestAnimationFrame(() =>
+    animateBrandBurnsBlockProgress(startedAt)
+  );
+};
+
+const createBrandBurnsBlockWindow = () => {
+  const win = document.createElement("div");
+  win.className = "window brand-block-window is-hidden";
+  win.setAttribute("aria-hidden", "true");
+
+  const titleBar = document.createElement("div");
+  titleBar.className = "title-bar";
+
+  const title = document.createElement("div");
+  title.className = "title-bar-text";
+  title.textContent = "Blocking";
+  titleBar.append(title);
+
+  const body = document.createElement("div");
+  body.className = "window-body brand-block-body";
+
+  const label = document.createElement("p");
+  label.className = "brand-block-status";
+  label.textContent = "Blocking";
+
+  const progress = document.createElement("div");
+  progress.className = "progress-indicator segmented brand-block-progress";
+  progress.setAttribute("role", "progressbar");
+  progress.setAttribute("aria-label", "Block duration");
+  progress.setAttribute("aria-valuemin", "0");
+  progress.setAttribute("aria-valuemax", "100");
+  progress.setAttribute("aria-valuenow", "0");
+
+  const bar = document.createElement("span");
+  bar.className = "progress-indicator-bar";
+  bar.style.width = "0%";
+  progress.append(bar);
+
+  const actions = document.createElement("div");
+  actions.className = "brand-block-actions";
+
+  const dropButton = document.createElement("button");
+  dropButton.type = "button";
+  dropButton.textContent = "Drop Guard";
+  actions.append(dropButton);
+
+  body.append(label, progress, actions);
+  win.append(titleBar, body);
+
+  dropButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    endBrandBurnsBlock();
+  });
+
+  win.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  win.addEventListener("animationend", (event) => {
+    if (event.target !== win) return;
+    if (event.animationName === "retro-window-open") {
+      win.classList.remove("is-opening");
+      clampRandomEventWindowToViewport(win);
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      removeBrandBurnsBlockWindow();
+    }
+  });
+
+  brandBurnsBlockProgressBar = bar;
+  return win;
+};
+
+const showBrandBurnsBlockWindow = () => {
+  removeBrandBurnsBlockWindow();
+  brandBurnsBlockWindow = createBrandBurnsBlockWindow();
+  document.body.appendChild(brandBurnsBlockWindow);
+  brandBurnsBlockWindow.classList.remove("is-hidden", "is-closing");
+  brandBurnsBlockWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(brandBurnsBlockWindow);
+  brandBurnsBlockWindow.style.zIndex = String(topZ++);
+  restartWindowAnimation(brandBurnsBlockWindow, "is-opening");
+
+  const startedAt = performance.now();
+  animateBrandBurnsBlockProgress(startedAt);
+};
+
+const endBrandBurnsBlock = () => {
+  if (brandBurnsBlockTimer) {
+    clearTimeout(brandBurnsBlockTimer);
+    brandBurnsBlockTimer = null;
+  }
+  if (!brandBurnsBlocking) return;
+  brandBurnsBlocking = false;
+  closeBrandBurnsBlockWindow();
+  startBrandBurnsBlockCooldown();
+  updateBrandBurnsAttackButtonStates();
+  updateBrandBurnsActionButton();
+  if (brandBurnsStatus && brandBurnsStage === "fight" && brandBurnsStats.health > 0) {
+    setBrandBurnsStatusText("Your guard drops. You can attack again.");
+  }
+};
+
+const clearBrandBurnsBlock = () => {
+  if (brandBurnsBlockTimer) {
+    clearTimeout(brandBurnsBlockTimer);
+    brandBurnsBlockTimer = null;
+  }
+  clearBrandBurnsBlockCooldown();
+  brandBurnsBlocking = false;
+  closeBrandBurnsBlockWindow();
+  updateBrandBurnsAttackButtonStates();
+  updateBrandBurnsActionButton();
+};
+
+const startBrandBurnsBlock = () => {
+  if (
+    brandBurnsStage !== "fight" ||
+    brandBurnsStats.health <= 0 ||
+    brandBurnsBlocking ||
+    isBrandBurnsBlockCoolingDown()
+  ) {
+    updateBrandBurnsActionButton();
+    return;
+  }
+  brandBurnsBlocking = true;
+  updateBrandBurnsAttackButtonStates();
+  updateBrandBurnsActionButton();
+  if (brandBurnsStatus) {
+    setBrandBurnsStatusText("You brace behind the Dragon Slayer.");
+  }
+  showBrandBurnsBlockWindow();
+  if (brandBurnsBlockTimer) clearTimeout(brandBurnsBlockTimer);
+  brandBurnsBlockTimer = setTimeout(endBrandBurnsBlock, BRAND_BURNS_BLOCK_DURATION_MS);
+};
+
+const finishBrandBurnsIfPlayerDefeated = () => {
+  if (brandBurnsStats.health > 0) return false;
+  brandBurnsStats.health = 0;
+  brandBurnsOutcome = "lost";
+  updateBrandBurnsHud();
+  stopBrandBurnsStaminaRecovery();
+  stopBrandBurnsEnemyAttacks();
+  clearBrandBurnsBlock();
+  clearBrandBurnsPuckCooldown();
+  setBrandBurnsPuckHealReady(false);
+  updateBrandBurnsAttackButtonStates();
+  if (brandBurnsStatus) {
+    setBrandBurnsStatusText("You have been overwhelmed.");
+  }
+  updateBrandBurnsActionButton();
+  return true;
+};
+
+const scheduleBrandBurnsEnemyAttack = (state) => {
+  clearBrandBurnsEnemyAttackTimer(state);
+  if (
+    !state ||
+    state.defeated ||
+    brandBurnsStage !== "fight" ||
+    brandBurnsStats.health <= 0 ||
+    !isBrandBurnsEnemyWindowVisible(state.win)
+  ) {
+    return;
+  }
+
+  const delay = brandBurnsRandomInt(
+    BRAND_BURNS_APOSTLE_ATTACK_MIN_DELAY_MS,
+    BRAND_BURNS_APOSTLE_ATTACK_MAX_DELAY_MS
+  );
+  state.playerAttackTimer = setTimeout(() => {
+    state.playerAttackTimer = null;
+    if (
+      state.defeated ||
+      brandBurnsStage !== "fight" ||
+      brandBurnsStats.health <= 0 ||
+      !isBrandBurnsEnemyWindowVisible(state.win)
+    ) {
+      return;
+    }
+
+    const rawDamage = brandBurnsRandomInt(
+      BRAND_BURNS_APOSTLE_PLAYER_ATTACK_MIN_DAMAGE,
+      BRAND_BURNS_APOSTLE_PLAYER_ATTACK_MAX_DAMAGE
+    );
+    const damage = brandBurnsBlocking
+      ? Math.max(1, Math.ceil(rawDamage * BRAND_BURNS_BLOCK_DAMAGE_FACTOR))
+      : rawDamage;
+    brandBurnsStats.health = Math.max(0, brandBurnsStats.health - damage);
+    updateBrandBurnsHud();
+    maybeShowBrandBurnsPuckWindow();
+    if (brandBurnsWindow) {
+      brandBurnsWindow.classList.remove("is-hit");
+      void brandBurnsWindow.offsetWidth;
+      brandBurnsWindow.classList.add("is-hit");
+      setTimeout(() => {
+        if (brandBurnsWindow) brandBurnsWindow.classList.remove("is-hit");
+      }, 190);
+    }
+    appendBrandBurnsStatusWithAmount(
+      brandBurnsBlocking
+        ? `${state.definition.name} hits your guard for `
+        : `${state.definition.name} hits you for `,
+      damage,
+      " damage.",
+      "brand-burns-status-damage"
+    );
+    if (!finishBrandBurnsIfPlayerDefeated()) {
+      scheduleBrandBurnsEnemyAttack(state);
+    }
+  }, delay);
+};
+
+const removeBrandBurnsEnemyWindow = (win) => {
+  if (!win) return;
+  if (win.brandBurnsState) clearBrandBurnsEnemyAttackTimer(win.brandBurnsState);
+  if (win.brandBurnsState) clearBrandBurnsEnemyHitEffect(win.brandBurnsState);
+  win.remove();
+  brandBurnsEnemyWindows = brandBurnsEnemyWindows.filter((item) => item !== win);
+};
+
+const closeBrandBurnsEnemyWindow = (win) => {
+  if (!win || win.classList.contains("is-closing")) return;
+  if (win.brandBurnsState) clearBrandBurnsEnemyAttackTimer(win.brandBurnsState);
+  if (win.brandBurnsState) clearBrandBurnsEnemyHitEffect(win.brandBurnsState);
+  win.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(win, "is-closing");
+};
+
+const closeBrandBurnsEnemyWindows = ({ stagger = false } = {}) => {
+  const windows = brandBurnsEnemyWindows.filter(isBrandBurnsEnemyWindowVisible);
+  if (!stagger) {
+    windows.forEach(closeBrandBurnsEnemyWindow);
+    return;
+  }
+
+  windows.forEach((win, index) => {
+    const timer = setTimeout(
+      () => closeBrandBurnsEnemyWindow(win),
+      index * BRAND_BURNS_APOSTLE_CLOSE_DELAY_MS
+    );
+    brandBurnsEnemyTimers.push(timer);
+  });
+};
+
+const finishBrandBurnsIfCleared = () => {
+  if (brandBurnsStats.defeated < brandBurnsStats.total) return;
+  brandBurnsOutcome = "won";
+  stopBrandBurnsStaminaRecovery();
+  stopBrandBurnsEnemyAttacks();
+  clearBrandBurnsBlock();
+  closeBrandBurnsPuckWindow();
+  setBrandBurnsViewerImage(BRAND_BURNS_PUCK_WIN_IMAGE);
+  if (brandBurnsStatus) {
+    setBrandBurnsStatusText("The night relents. The brand cools.");
+  }
+  if (brandBurnsEnemyCount) {
+    brandBurnsEnemyCount.textContent = "Apostles remaining: 0";
+  }
+  updateBrandBurnsActionButton();
+};
+
+const recordBrandBurnsDefeat = (state) => {
+  state.defeated = true;
+  brandBurnsStats.defeated = Math.min(
+    brandBurnsStats.total,
+    brandBurnsStats.defeated + 1
+  );
+  updateBrandBurnsHud();
+  if (brandBurnsStatus) {
+    setBrandBurnsStatusText(`${state.definition.name} is driven back.`);
+  }
+  finishBrandBurnsIfCleared();
+};
+
+const attackBrandBurnsEnemy = (state) => {
+  if (!state || state.defeated || brandBurnsBlocking || brandBurnsStats.health <= 0) return;
+  if (!hasBrandBurnsAttackStamina()) {
+    updateBrandBurnsAttackButtonStates();
+    if (brandBurnsStatus) {
+      setBrandBurnsStatusText("You need more stamina to attack.");
+    }
+    return;
+  }
+
+  const damage = brandBurnsRandomInt(
+    BRAND_BURNS_ATTACK_MIN_DAMAGE,
+    BRAND_BURNS_ATTACK_MAX_DAMAGE
+  );
+  const staminaCost = brandBurnsRandomInt(
+    BRAND_BURNS_STAMINA_ATTACK_MIN_COST,
+    BRAND_BURNS_STAMINA_ATTACK_MAX_COST
+  );
+
+  brandBurnsStats.stamina = Math.max(0, brandBurnsStats.stamina - staminaCost);
+  state.health = Math.max(0, state.health - damage);
+  updateBrandBurnsHud();
+  updateBrandBurnsAttackButtonStates();
+  updateBrandBurnsEnemyHud(state);
+
+  if (state.damageLabel) {
+    state.damageLabel.textContent = `-${damage}`;
+    state.damageLabel.classList.remove("is-flashing");
+    void state.damageLabel.offsetWidth;
+    state.damageLabel.classList.add("is-flashing");
+  }
+
+  pulseBrandBurnsEnemyHit(state);
+
+  if (state.health > 0) {
+    if (brandBurnsStatus) {
+      setBrandBurnsStatusText(`${state.definition.name} takes ${damage} damage.`);
+    }
+    return;
+  }
+
+  if (state.attackButton) {
+    state.attackButton.disabled = true;
+    state.attackButton.textContent = "Defeated";
+  }
+  clearBrandBurnsEnemyAttackTimer(state);
+  if (state.win) state.win.classList.add("is-defeated");
+  recordBrandBurnsDefeat(state);
+  setTimeout(() => closeBrandBurnsEnemyWindow(state.win), 650);
+};
+
+const createBrandBurnsEnemyWindow = (definition) => {
+  const maxHealth = brandBurnsRandomInt(definition.minHealth, definition.maxHealth);
+  const state = {
+    definition,
+    health: maxHealth,
+    maxHealth,
+    defeated: false,
+  };
+
+  const win = document.createElement("div");
+  win.className = "window brand-apostle-window is-hidden";
+  win.setAttribute("aria-hidden", "true");
+  win.dataset.brandBurnsEnemy = definition.id;
+
+  const lightningField = document.createElement("div");
+  lightningField.className = "brand-apostle-lightning-field";
+  lightningField.setAttribute("aria-hidden", "true");
+
+  const lightningCanvas = document.createElement("canvas");
+  lightningCanvas.className = "brand-apostle-lightning-canvas";
+  lightningField.append(lightningCanvas);
+
+  const titleBar = document.createElement("div");
+  titleBar.className = "title-bar";
+
+  const title = document.createElement("div");
+  title.className = "title-bar-text";
+  title.textContent = definition.name;
+
+  titleBar.append(title);
+
+  const body = document.createElement("div");
+  body.className = "window-body";
+
+  const frame = document.createElement("div");
+  frame.className = "brand-apostle-image-frame";
+
+  const image = document.createElement("img");
+  image.src = definition.image;
+  image.decoding = "async";
+  image.alt = `Released form of ${definition.name}`;
+  frame.append(image);
+
+  const healthRow = document.createElement("div");
+  healthRow.className = "brand-apostle-health-row";
+
+  const healthLabel = document.createElement("div");
+  healthLabel.className = "brand-apostle-health-label";
+
+  const healthName = document.createElement("span");
+  healthName.textContent = "Health";
+
+  const healthValue = document.createElement("span");
+  healthValue.textContent = `${maxHealth}/${maxHealth}`;
+
+  const healthTrack = document.createElement("div");
+  healthTrack.className = "brand-apostle-health-track";
+
+  const healthBar = document.createElement("span");
+  healthTrack.append(healthBar);
+
+  healthLabel.append(healthName, healthValue);
+  healthRow.append(healthLabel, healthTrack);
+
+  const combatRow = document.createElement("div");
+  combatRow.className = "brand-apostle-combat-row";
+
+  const damageLabel = document.createElement("span");
+  damageLabel.className = "brand-apostle-damage";
+  damageLabel.textContent = "-0";
+
+  const attackButton = document.createElement("button");
+  attackButton.type = "button";
+  attackButton.textContent = "Attack!";
+
+  combatRow.append(damageLabel, attackButton);
+  body.append(frame, healthRow, combatRow);
+  win.append(lightningField, titleBar, body);
+
+  state.win = win;
+  state.healthBar = healthBar;
+  state.healthValue = healthValue;
+  state.attackButton = attackButton;
+  state.damageLabel = damageLabel;
+  state.lightningCanvas = lightningCanvas;
+  win.brandBurnsState = state;
+
+  attackButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    attackBrandBurnsEnemy(state);
+  });
+
+  win.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  win.addEventListener("animationend", (event) => {
+    if (event.target !== win) return;
+    if (event.animationName === "retro-window-open") {
+      win.classList.remove("is-opening");
+      clampRandomEventWindowToViewport(win);
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      removeBrandBurnsEnemyWindow(win);
+    }
+  });
+
+  image.addEventListener("load", () => clampRandomEventWindowToViewport(win));
+  updateBrandBurnsEnemyHud(state);
+  return state;
+};
+
+const chooseBrandBurnsEnemies = () => {
+  const apostleCount = Math.max(0, BRAND_BURNS_ENCOUNTER_COUNT - 1);
+  const apostles = shuffleBrandBurnsItems(BRAND_BURNS_APOSTLES).slice(0, apostleCount);
+  return shuffleBrandBurnsItems([BRAND_BURNS_FEMTO, ...apostles]);
+};
+
+const openBrandBurnsEnemyWindow = (state) => {
+  if (!state?.win || brandBurnsStage !== "fight") return;
+  document.body.appendChild(state.win);
+  brandBurnsEnemyWindows.push(state.win);
+  state.win.classList.remove("is-hidden", "is-closing");
+  state.win.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(state.win);
+  state.win.style.zIndex = String(topZ++);
+  restartWindowAnimation(state.win, "is-opening");
+  clampRandomEventWindowAfterMediaLoad(state.win);
+  updateBrandBurnsAttackButtonStates();
+  scheduleBrandBurnsEnemyAttack(state);
+};
+
+const spawnBrandBurnsEnemies = () => {
+  clearBrandBurnsEnemyTimers();
+  const enemyStates = chooseBrandBurnsEnemies().map(createBrandBurnsEnemyWindow);
+  brandBurnsStats.total = enemyStates.length;
+  updateBrandBurnsHud();
+
+  enemyStates.forEach((state, index) => {
+    const timer = setTimeout(
+      () => openBrandBurnsEnemyWindow(state),
+      index * BRAND_BURNS_APOSTLE_OPEN_DELAY_MS
+    );
+    brandBurnsEnemyTimers.push(timer);
+  });
+};
+
+const resetBrandBurnsWindow = () => {
+  clearBrandBurnsOmenEffect();
+  clearBrandBurnsHealEffect();
+  clearBrandBurnsEnemyTimers();
+  stopBrandBurnsStaminaRecovery();
+  stopBrandBurnsEnemyAttacks();
+  brandBurnsEnemyWindows.forEach((win) => win.remove());
+  brandBurnsEnemyWindows = [];
+  removeBrandBurnsPuckWindow();
+  brandBurnsPreserveEnemyWindowsOnMainClose = false;
+  brandBurnsPuckHasAppeared = false;
+  brandBurnsOutcome = null;
+  brandBurnsStage = "prompt";
+  clearBrandBurnsBlock();
+  resetBrandBurnsStats();
+  if (brandBurnsTitle) brandBurnsTitle.textContent = "Your Brand Burns...";
+  if (brandBurnsIcon) brandBurnsIcon.dataset.src = BRAND_BURNS_BRAND_ICON;
+  if (brandBurnsCombatIcon) brandBurnsCombatIcon.dataset.src = BRAND_BURNS_GUTS_ICON;
+  setBrandBurnsViewerImage(BRAND_BURNS_DRAGON_SLAYER_ICON);
+  if (brandBurnsStatus) {
+    setBrandBurnsStatusText("The apostles are closing in.");
+  }
+  setBrandBurnsStageHidden(brandBurnsPromptStage, false);
+  setBrandBurnsStageHidden(brandBurnsFightStage, true);
+  updateBrandBurnsActionButton();
+  if (brandBurnsClose) brandBurnsClose.disabled = false;
+};
+
+const showBrandBurnsWindow = () => {
+  if (!brandBurnsWindow) return;
+  if (isBrandBurnsVisible()) {
+    if (isBrandBurnsMainWindowVisible()) {
+      brandBurnsWindow.style.zIndex = String(topZ++);
+      clampRandomEventWindowToViewport(brandBurnsWindow);
+    }
+    return;
+  }
+  resetBrandBurnsWindow();
+  loadDeferredMedia(brandBurnsWindow);
+  brandBurnsWindow.classList.remove("is-hidden", "is-closing");
+  brandBurnsWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(brandBurnsWindow);
+  clampRandomEventWindowAfterMediaLoad(brandBurnsWindow);
+  brandBurnsWindow.style.zIndex = String(topZ++);
+  restartWindowAnimation(brandBurnsWindow, "is-opening");
+  scheduleBrandBurnsOmenPulse();
+  requestAnimationFrame(() => {
+    if (brandBurnsFight) brandBurnsFight.focus();
+  });
+};
+
+const startBrandBurnsFight = () => {
+  if (!brandBurnsWindow || brandBurnsStage !== "prompt") return;
+  clearBrandBurnsOmenEffect();
+  brandBurnsStage = "fight";
+  if (brandBurnsTitle) brandBurnsTitle.textContent = "Struggler";
+  setBrandBurnsStageHidden(brandBurnsPromptStage, true);
+  setBrandBurnsStageHidden(brandBurnsFightStage, false);
+  updateBrandBurnsActionButton();
+  if (brandBurnsClose) brandBurnsClose.disabled = true;
+  loadDeferredMedia(brandBurnsWindow);
+  clampRandomEventWindowAfterMediaLoad(brandBurnsWindow);
+  startBrandBurnsStaminaRecovery();
+  spawnBrandBurnsEnemies();
+};
+
+const closeBrandBurnsWindow = () => {
+  if (!brandBurnsWindow && !brandBurnsEnemyWindows.length) return;
+  const shouldStaggerEnemyClose =
+    brandBurnsStats.health <= 0 && brandBurnsEnemyWindows.some(isBrandBurnsEnemyWindowVisible);
+  clearBrandBurnsOmenEffect();
+  clearBrandBurnsHealEffect();
+  clearBrandBurnsEnemyTimers();
+  stopBrandBurnsStaminaRecovery();
+  stopBrandBurnsEnemyAttacks();
+  clearBrandBurnsBlock();
+  closeBrandBurnsPuckWindow();
+  brandBurnsStage = "idle";
+  brandBurnsPreserveEnemyWindowsOnMainClose = shouldStaggerEnemyClose;
+  closeBrandBurnsEnemyWindows({ stagger: shouldStaggerEnemyClose });
+  if (!brandBurnsWindow || brandBurnsWindow.classList.contains("is-hidden")) return;
+  brandBurnsWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(brandBurnsWindow, "is-closing");
 };
 
 const isBehelitVisible = () =>
@@ -6982,6 +8477,7 @@ const randomEventDebugEnabled = (definition) =>
   RANDOM_EVENT_GLOBAL_DEBUG || Boolean(definition.debug);
 
 const RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS = new Set([
+  "carouselNavigation",
   "failedAction",
   "windowDrag",
 ]);
@@ -7161,6 +8657,21 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
   return false;
 };
 
+const recordGeneralRandomEventClick = (detail = {}) => {
+  generalRandomEventClickCount += 1;
+  if (
+    generalRandomEventClickCount %
+      GENERAL_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL !==
+    0
+  ) {
+    return false;
+  }
+  return triggerRandomEvents("generalClicks", {
+    clickCount: generalRandomEventClickCount,
+    ...detail,
+  });
+};
+
 const scheduleRandomEventIdleTrigger = () => {
   if (randomEventIdleTimer) clearTimeout(randomEventIdleTimer);
   randomEventIdleTimer = setTimeout(() => {
@@ -7282,6 +8793,7 @@ const STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze({
   gameWin: 0.8,
   gameLoss: 0.3,
   startButton: 0.25,
+  carouselNavigation: 0.05,
   newTabLink: 0.35,
   fileDownload: 0.65,
   pageReload: 0.5,
@@ -7647,6 +9159,19 @@ registerRandomEvent({
 });
 
 registerRandomEvent({
+  id: "berserk-sunrise",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+  isVisible: isBerserkSunriseVisible,
+  canTrigger: () => isBerserkSunriseTimeWindow() && !isBerserkSunriseVisible(),
+  run: () => {
+    showBerserkSunrise();
+  },
+});
+
+registerRandomEvent({
   id: "human-instrumentality-project",
   debug: false,
   probability: STANDARD_RANDOM_EVENT_PROBABILITY,
@@ -7682,6 +9207,19 @@ registerRandomEvent({
   canTrigger: () => fateState === "idle" && !isFateVisible(),
   run: () => {
     showFateWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "brand-burns",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isBrandBurnsVisible,
+  canTrigger: () => !isBrandBurnsVisible(),
+  run: () => {
+    showBrandBurnsWindow();
   },
 });
 
@@ -7912,6 +9450,35 @@ const setWindowTitleBarClampedPosition = (win, left, top) => {
   win.style.left = `${position.left}px`;
   win.style.top = `${position.top}px`;
   return position;
+};
+
+const clampWindowFullyIntoViewport = (win, { padding = 12 } = {}) => {
+  if (!win) return null;
+  const rect = win.getBoundingClientRect();
+  const availableWidth = Math.max(1, window.innerWidth - padding * 2);
+  const availableHeight = Math.max(
+    1,
+    window.innerHeight - getTaskbarViewportClearance() - padding * 2
+  );
+  const maxLeft = Math.max(padding, window.innerWidth - rect.width - padding);
+  const maxTop = Math.max(
+    padding,
+    window.innerHeight - getTaskbarViewportClearance() - rect.height - padding
+  );
+  const nextLeft =
+    rect.width > availableWidth
+      ? padding
+      : Math.round(clampNumber(rect.left, padding, maxLeft));
+  const nextTop =
+    rect.height > availableHeight
+      ? padding
+      : Math.round(clampNumber(rect.top, padding, maxTop));
+
+  win.classList.remove("app-window--center");
+  win.style.translate = "0 0";
+  win.style.left = `${nextLeft}px`;
+  win.style.top = `${nextTop}px`;
+  return { left: nextLeft, top: nextTop };
 };
 
 const isWindowDragDisabled = (win) => Boolean(win?.hasAttribute("data-no-drag"));
@@ -9304,6 +10871,18 @@ const syncSudokuAquariumActivity = () => {
   }
 };
 
+const clampSudokuWindowIntoViewport = () => {
+  if (!sudokuWindow || !isSudokuWindowVisible()) return;
+  clampWindowFullyIntoViewport(sudokuWindow, { padding: 12 });
+};
+
+const scheduleSudokuWindowViewportClamp = () => {
+  requestAnimationFrame(() => {
+    clampSudokuWindowIntoViewport();
+    requestAnimationFrame(clampSudokuWindowIntoViewport);
+  });
+};
+
 const setSudokuBootState = (state) => {
   if (!sudokuApp) return;
   sudokuApp.classList.toggle("is-sudoku-loading", state === "loading");
@@ -9317,8 +10896,12 @@ const setSudokuBootState = (state) => {
   if (sudokuLoadingScreen) {
     sudokuLoadingScreen.setAttribute("aria-hidden", String(state === "playing"));
   }
-  if (state === "playing") startSudokuAquarium();
-  else clearSudokuAquarium();
+  if (state === "playing") {
+    scheduleSudokuWindowViewportClamp();
+    startSudokuAquarium();
+  } else {
+    clearSudokuAquarium();
+  }
 };
 
 const finishSudokuLoadingSequence = () => {
@@ -10899,16 +12482,33 @@ let frontiersSlideIndex = 0;
 
 const galleryCounterText = (index, total) => `${index + 1} of ${total}`;
 
+const recordCarouselNavigationRandomEvent = (event, direction, index, itemCount) => {
+  if (!event?.isTrusted) return false;
+  return triggerRandomEvents("carouselNavigation", {
+    direction,
+    index,
+    itemCount,
+    source: "gallery-controls",
+  });
+};
+
 const bindGalleryNavigation = (previous, next, itemCount, getIndex, setIndex, update) => {
   if (!previous || !next || !itemCount) return;
 
-  const move = (offset) => {
-    setIndex((getIndex() + offset + itemCount) % itemCount);
+  const move = (event, offset) => {
+    const nextIndex = (getIndex() + offset + itemCount) % itemCount;
+    setIndex(nextIndex);
     update();
+    recordCarouselNavigationRandomEvent(
+      event,
+      offset < 0 ? "previous" : "next",
+      nextIndex,
+      itemCount
+    );
   };
 
-  previous.addEventListener("click", () => move(-1));
-  next.addEventListener("click", () => move(1));
+  previous.addEventListener("click", (event) => move(event, -1));
+  next.addEventListener("click", (event) => move(event, 1));
 };
 
 const setupGalleryControlLabels = (root = document) => {
@@ -14451,6 +16051,35 @@ if (lelouchAlertWindow) {
   });
 }
 
+if (berserkSunriseOk) {
+  berserkSunriseOk.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeBerserkSunrise();
+  });
+}
+
+if (berserkSunriseWindow) {
+  berserkSunriseWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  berserkSunriseWindow.addEventListener("animationend", (event) => {
+    if (event.target !== berserkSunriseWindow) return;
+    if (event.animationName === "retro-window-open") {
+      berserkSunriseWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      berserkSunriseWindow.classList.remove("is-closing");
+      berserkSunriseWindow.classList.add("is-hidden");
+      berserkSunriseWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
 if (instrumentalityYes) {
   instrumentalityYes.addEventListener("click", (event) => {
     event.preventDefault();
@@ -14586,6 +16215,61 @@ if (fateWindow) {
         image.removeAttribute("src");
       });
       if (fateResultImage) fateResultImage.removeAttribute("src");
+    }
+  });
+}
+
+if (brandBurnsFight) {
+  brandBurnsFight.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (brandBurnsOutcome) {
+      closeBrandBurnsWindow();
+      return;
+    }
+    if (brandBurnsStage === "prompt") {
+      startBrandBurnsFight();
+      return;
+    }
+    if (brandBurnsStage === "fight") {
+      startBrandBurnsBlock();
+    }
+  });
+}
+
+if (brandBurnsClose) {
+  brandBurnsClose.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeBrandBurnsWindow();
+  });
+}
+
+if (brandBurnsWindow) {
+  brandBurnsWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  brandBurnsWindow.addEventListener("animationend", (event) => {
+    if (event.target !== brandBurnsWindow) return;
+    if (event.animationName === "retro-window-open") {
+      brandBurnsWindow.classList.remove("is-opening");
+      clampRandomEventWindowToViewport(brandBurnsWindow);
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      brandBurnsWindow.classList.remove("is-closing");
+      brandBurnsWindow.classList.add("is-hidden");
+      brandBurnsWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+      if (brandBurnsPreserveEnemyWindowsOnMainClose) {
+        brandBurnsPreserveEnemyWindowsOnMainClose = false;
+        brandBurnsStage = "idle";
+        return;
+      }
+      resetBrandBurnsWindow();
+      brandBurnsStage = "idle";
     }
   });
 }
@@ -15267,6 +16951,20 @@ document.addEventListener(
     const target =
       event.target instanceof Element ? event.target : event.target?.parentElement;
     if (target?.closest("#fate-resist")) return;
+    if (isBrandBurnsButtonClickTarget(target)) {
+      brandBurnsRandomEventButtonClickCount += 1;
+      if (
+        brandBurnsRandomEventButtonClickCount %
+          BRAND_BURNS_RANDOM_EVENT_BUTTON_CLICK_RATIO ===
+        0
+      ) {
+        recordGeneralRandomEventClick({
+          source: "brand-burns-buttons",
+          buttonClickCount: brandBurnsRandomEventButtonClickCount,
+        });
+      }
+      return;
+    }
     if (target?.closest('[data-app-window="minesweeper"]')) {
       minesweeperRandomEventClickCount += 1;
       if (
@@ -15297,17 +16995,7 @@ document.addEventListener(
       });
       return;
     }
-    generalRandomEventClickCount += 1;
-    if (
-      generalRandomEventClickCount %
-        GENERAL_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL !==
-      0
-    ) {
-      return;
-    }
-    triggerRandomEvents("generalClicks", {
-      clickCount: generalRandomEventClickCount,
-    });
+    recordGeneralRandomEventClick();
   },
   { capture: true }
 );
@@ -18086,6 +19774,10 @@ window.addEventListener("resize", () => {
 window.addEventListener("resize", () => {
   if (!isSnakeWindowVisible()) return;
   requestSnakeRender();
+});
+window.addEventListener("resize", () => {
+  if (!sudokuApp?.classList.contains("is-sudoku-playing")) return;
+  scheduleSudokuWindowViewportClamp();
 });
 window.addEventListener("resize", clampVisibleRandomEventWindows);
 window.addEventListener("resize", updateLifeCounterWidthControls);
