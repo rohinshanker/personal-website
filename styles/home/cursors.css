@@ -11,6 +11,7 @@
   --cursor-text-thin: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Thin%20Light.cur"), text;
   --cursor-move: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Move%20Light.cur"), move;
   --cursor-help: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Help%20Select%20Light.cur"), help;
+  --cursor-pressed: var(--cursor-move);
   --cursor-precision: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Precision%20Select%20Light.cur"), crosshair;
   --cursor-resize-ew: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Horizontal%20Resize%20Light.cur"), ew-resize;
   --cursor-resize-ns: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Verticle%20Resize%20Light.cur"), ns-resize;
@@ -32,6 +33,7 @@ body.is-cursor-dark-mode {
   --cursor-text-thin: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select%20Thin.cur"), text;
   --cursor-move: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Move.cur"), move;
   --cursor-help: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Help%20Select.cur"), help;
+  --cursor-pressed: var(--cursor-move);
   --cursor-precision: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Precision%20Select.cur"), crosshair;
   --cursor-resize-ew: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Horizontal%20Resize.cur"), ew-resize;
   --cursor-resize-ns: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Verticle%20Resize.cur"), ns-resize;
@@ -129,10 +131,36 @@ textarea,
   cursor: var(--cursor-text) !important;
 }
 
+.infinity-armory-map:not(:disabled),
+.infinity-armory-map:not(:disabled) *,
 [aria-label*="Help" i],
+[aria-label*="Help" i] *,
+[aria-label*="Info" i],
+[aria-label*="Info" i] *,
+[aria-label*="Question" i],
+[aria-label*="Question" i] *,
 [title*="help" i],
+[title*="help" i] *,
+[title*="info" i],
+[title*="info" i] *,
+[title*="question" i],
+[title*="question" i] *,
+button:has(img[alt*="Help" i]),
+button:has(img[alt*="Help" i]) *,
+button:has(img[alt*="Info" i]),
+button:has(img[alt*="Info" i]) *,
+button:has(img[alt*="Question" i]),
+button:has(img[alt*="Question" i]) *,
+button:has(img[src*="help" i]),
+button:has(img[src*="help" i]) *,
+button:has(img[src*="info" i]),
+button:has(img[src*="info" i]) *,
+button:has(img[src*="question" i]),
+button:has(img[src*="question" i]) *,
 .snake-help-button,
+.snake-help-button *,
 .sol-help,
+.sol-help *,
 .calendar-day.is-event-day {
   cursor: var(--cursor-help) !important;
 }
@@ -142,9 +170,60 @@ textarea,
   cursor: var(--cursor-move) !important;
 }
 
+.calendar-popout > .title-bar,
+.calendar-popout > .title-bar .title-bar-text {
+  cursor: var(--cursor-normal) !important;
+}
+
 .title-bar-controls,
 .title-bar-controls button:not(:disabled) {
   cursor: var(--cursor-select) !important;
+}
+
+.window:not([data-no-drag]) > .title-bar:active,
+.window:not([data-no-drag]) > .title-bar:active *,
+a[href]:active,
+a[href]:active *,
+button:not(:disabled):active,
+button:not(:disabled):active *,
+summary:active,
+summary:active *,
+label:active,
+label:active *,
+select:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active,
+[role="button"]:not([aria-disabled="true"]):active *,
+[tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"]):active,
+[tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"]):active *,
+.desktop-icon:not(:disabled):active,
+.desktop-icon:not(:disabled):active *,
+.taskbar-icon:not(:disabled):active,
+.taskbar-icon:not(:disabled):active *,
+.calendar-day[data-calendar-day]:active,
+.selector-item:active,
+.study-tree-row:active,
+.study-file-item:active,
+.ms-cell:not(.is-revealed):active,
+.sol-card:active,
+.sol-stock:active,
+.sol-waste:active,
+.sol-foundation:active,
+.sol-tableau:active,
+.snake-direction-button:active,
+.sudoku-cell:active,
+.dst-resource-token:not(:disabled):active,
+.dst-resource-token:not(:disabled):active *,
+.dst-craft-slot:active,
+.dst-craft-slot:active *,
+.infinity-armory-gem:not(:disabled):active,
+.infinity-armory-gem:not(:disabled):active *,
+.infinity-armory-slot:not(:disabled):active,
+.infinity-armory-slot:not(:disabled):active *,
+.infinity-armory-map:not(:disabled):active,
+.infinity-armory-map:not(:disabled):active *,
+.john-pork-call-button:not(:disabled):active,
+.john-pork-call-button:not(:disabled):active * {
+  cursor: var(--cursor-pressed) !important;
 }
 
 .panel-divider {
@@ -170,6 +249,11 @@ option:disabled,
 .is-disabled,
 .is-unavailable {
   cursor: var(--cursor-unavailable) !important;
+}
+
+body.is-holding-pointer-item,
+body.is-holding-pointer-item * {
+  cursor: var(--cursor-pressed) !important;
 }
 
 .cursor-window {

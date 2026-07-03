@@ -9,7 +9,7 @@
     <title>Rohin OS</title>
     <meta
       name="description"
-      content="Technical &amp; Creative Portfolio"
+      content="My personal website. Best enjoyed on desktop ₍^. .^₎⟆"
     />
     <link rel="icon" href="assets/windowsxp.png" type="image/png" />
     <link rel="apple-touch-icon" href="assets/windowsxp.png" />
@@ -19,14 +19,14 @@
     <meta property="og:title" content="Rohin OS" />
     <meta
       property="og:description"
-      content="Technical &amp; Creative Portfolio"
+      content="My personal website. Best enjoyed on desktop ₍^. .^₎⟆"
     />
     <meta property="og:url" content="https://rohin.shanker.me/" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Rohin OS" />
     <meta
       name="twitter:description"
-      content="Technical &amp; Creative Portfolio"
+      content="My personal website. Best enjoyed on desktop ₍^. .^₎⟆"
     />
     <script type="application/ld+json">
       {
@@ -38,7 +38,7 @@
             "url": "https://rohin.shanker.me/",
             "name": "Rohin OS",
             "alternateName": "Rohin Shanker",
-            "description": "Personal portfolio of Rohin Shanker, featuring engineering projects, writing, modeling, acting, creative work, Berkeley coursework, and social links."
+            "description": "My personal website. Best enjoyed on desktop ₍^. .^₎⟆"
           },
           {
             "@type": "ProfilePage",
@@ -109,11 +109,11 @@
     <link rel="stylesheet" href="styles/home/apps/solitaire.css" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css" />
-    <link rel="stylesheet" href="styles/home/apps/life-counter.css" />
+    <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
     <link rel="stylesheet" href="styles/home/portfolio.css" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=berserk-sunrise-20260624" />
-    <link rel="stylesheet" href="styles/home/cursors.css?v=scrollbar-click-cursor-20260624" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=dodging-button-hide-20260703" />
+    <link rel="stylesheet" href="styles/home/cursors.css?v=calendar-close-20260703" />
   </head>
   <body>
     <div class="desktop" aria-label="Desktop apps">
@@ -1853,14 +1853,26 @@
               <div class="life-counter-toolbar-actions">
                 <button type="button" id="life-counter-add-player">Add Player</button>
                 <button type="button" id="life-counter-reset">Reset to 20</button>
-                <button
-                  class="life-counter-toggle"
-                  type="button"
-                  id="life-counter-initiative-toggle"
-                  aria-pressed="false"
-                >
-                  Show Initiative
-                </button>
+                <div class="life-counter-initiative-actions" id="life-counter-initiative-actions">
+                  <button
+                    class="life-counter-roll-all"
+                    type="button"
+                    id="life-counter-roll-all"
+                    aria-label="Roll all initiatives"
+                    hidden
+                  >
+                    <img src="assets/app-icons/ico/charmap_w2k.ico" alt="" />
+                    <span>Roll All</span>
+                  </button>
+                  <button
+                    class="life-counter-toggle"
+                    type="button"
+                    id="life-counter-initiative-toggle"
+                    aria-pressed="false"
+                  >
+                    Show Initiative
+                  </button>
+                </div>
               </div>
             </div>
             <div class="life-counter-players" id="life-counter-players" aria-live="polite"></div>
@@ -2268,6 +2280,9 @@
     <div class="window calendar-popout" id="calendar-popout" aria-hidden="true" data-no-drag>
       <div class="title-bar">
         <div class="title-bar-text">Date &amp; Time</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="calendar-close"></button>
+        </div>
       </div>
       <div class="window-body">
         <div class="calendar-panel" id="calendar-panel">
@@ -2353,6 +2368,109 @@
         <div class="random-alert-actions">
           <button class="random-alert-choice" type="button" id="random-alert-yes">Yes</button>
           <button class="random-alert-choice" type="button" id="random-alert-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window random-alert-window vanishing-popup-window is-hidden"
+      id="vanishing-popup-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+        <div class="title-bar-controls">
+          <button
+            type="button"
+            aria-label="Minimize"
+            id="vanishing-popup-minimize"
+            data-vanishing-popup-button
+          ></button>
+          <button
+            type="button"
+            aria-label="Maximize"
+            id="vanishing-popup-maximize"
+            data-vanishing-popup-button
+          ></button>
+          <button
+            type="button"
+            aria-label="Close"
+            id="vanishing-popup-close"
+            data-vanishing-popup-button
+          ></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message">
+          <img src="assets/app-icons/ico/msg_warning.ico" alt="" />
+          <p>Is this popup annoying?</p>
+        </div>
+        <div class="random-alert-actions">
+          <button
+            class="random-alert-choice"
+            type="button"
+            id="vanishing-popup-yes"
+            data-vanishing-popup-button
+          >
+            Yes
+          </button>
+          <button
+            class="random-alert-choice"
+            type="button"
+            id="vanishing-popup-no"
+            data-vanishing-popup-button
+          >
+            No
+          </button>
+        </div>
+      </div>
+    </div>
+    <img
+      class="vanishing-popup-explosion"
+      id="vanishing-popup-explosion"
+      data-src="assets/random%20events/pixel-explosion.gif"
+      alt=""
+      aria-hidden="true"
+    />
+
+    <div
+      class="window random-alert-window dodging-popup-window is-hidden"
+      id="dodging-popup-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+        <div class="title-bar-controls">
+          <button
+            type="button"
+            aria-label="Close"
+            id="dodging-popup-close"
+            data-dodging-popup-button
+          ></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message">
+          <img src="assets/app-icons/ico/msg_warning.ico" alt="" />
+          <p>Is this popup annoying?</p>
+        </div>
+        <div class="random-alert-actions">
+          <button
+            class="random-alert-choice"
+            type="button"
+            id="dodging-popup-yes"
+            data-dodging-popup-button
+          >
+            Yes
+          </button>
+          <button
+            class="random-alert-choice"
+            type="button"
+            id="dodging-popup-no"
+            data-dodging-popup-button
+          >
+            No
+          </button>
         </div>
       </div>
     </div>
@@ -3929,6 +4047,30 @@
     </div>
 
     <div
+      class="window calendar-reminder-window is-hidden"
+      id="calendar-reminder-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="calendar-reminder-message">
+          <img
+            data-src="assets/app-icons/ico/calendar.ico"
+            decoding="async"
+            alt=""
+          />
+          <p>Don't forget to check out the calendar!</p>
+        </div>
+        <div class="calendar-reminder-actions">
+          <button type="button" id="calendar-reminder-show">Show me!</button>
+          <button type="button" id="calendar-reminder-later">Later</button>
+        </div>
+      </div>
+    </div>
+
+    <div
       class="window instrumentality-window is-hidden"
       id="instrumentality-window"
       aria-hidden="true"
@@ -4199,8 +4341,8 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/core/dom.js?v=berserk-sunrise-20260624"></script>
-    <script src="scripts/home/core/media.js?v=classic-20260617l"></script>
-    <script src="scripts/home/main.js?v=debug-fate-infinity-off-20260624"></script>
+    <script src="scripts/home/core/dom.js?v=dodging-button-hide-20260703"></script>
+    <script src="scripts/home/core/media.js?v=random-event-preload-20260703"></script>
+    <script src="scripts/home/main.js?v=dodging-debug-off-20260703"></script>
   </body>
 </html>

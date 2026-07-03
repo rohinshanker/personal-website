@@ -1,5 +1,9 @@
 (() => {
-const { fitImagesIntoFrames, loadDeferredMedia: loadDeferredMediaNow } = window.homeMedia;
+const {
+  fitImagesIntoFrames,
+  loadDeferredMedia: loadDeferredMediaNow,
+  preloadDeferredMedia: preloadDeferredMediaNow,
+} = window.homeMedia;
 const { dom } = window.homeDom;
 let homeActivationReady = !document.prerendering;
 let resolveHomeActivated = null;
@@ -126,6 +130,14 @@ const loadDeferredMedia = (root, visibleOnly = false) => {
   loadDeferredMediaNow(root, visibleOnly);
 };
 
+const preloadDeferredMedia = (root, visibleOnly = false) => {
+  if (!root) return Promise.resolve();
+  if (!isHomeActivationReady()) {
+    return whenHomeActivated.then(() => preloadDeferredMedia(root, visibleOnly));
+  }
+  return preloadDeferredMediaNow(root, visibleOnly);
+};
+
 runAfterHomeActivation(() => {
   requestAnimationFrame(() => {
     if (window.rohinHomePerf.firstDesktopPaintAt !== null) return;
@@ -184,6 +196,8 @@ const {
   lifeCounterPlayers,
   lifeCounterAddPlayer,
   lifeCounterReset,
+  lifeCounterInitiativeActions,
+  lifeCounterRollAll,
   lifeCounterInitiativeToggle,
   lifeCounterWidthDecrease,
   lifeCounterWidthIncrease,
@@ -196,6 +210,7 @@ const {
   calendarGrid,
   calendarPrev,
   calendarNext,
+  calendarClose,
   calendarClock,
   clockImage,
   clockQuote,
@@ -215,6 +230,17 @@ const {
   randomAlertNo,
   randomAlertRememberRow,
   randomAlertRemember,
+  vanishingPopupWindow,
+  vanishingPopupClose,
+  vanishingPopupMaximize,
+  vanishingPopupMinimize,
+  vanishingPopupYes,
+  vanishingPopupNo,
+  vanishingPopupExplosion,
+  dodgingPopupWindow,
+  dodgingPopupClose,
+  dodgingPopupYes,
+  dodgingPopupNo,
   selfLoveAlertWindow,
   selfLoveAlertClose,
   selfLoveAlertYes,
@@ -331,6 +357,9 @@ const {
   lelouchAlertOk,
   berserkSunriseWindow,
   berserkSunriseOk,
+  calendarReminderWindow,
+  calendarReminderShow,
+  calendarReminderLater,
   instrumentalityWindow,
   instrumentalityYes,
   instrumentalityNo,
@@ -889,6 +918,8 @@ let lifeCounterPlayersState = [
 ];
 let lifeCounterNextPlayerId = 2;
 let lifeCounterInitiativeEnabled = false;
+let lifeCounterInitiativeLeaderIds = new Set();
+let lifeCounterInitiativeLeaderUpdatePending = false;
 const lifeCounterInitiativeRollTimers = new Map();
 let activeRandomEventKey = "";
 let generalRandomEventClickCount = 0;
@@ -901,6 +932,12 @@ let activeAppDwellStartedAt = 0;
 let activeAppDwellTimer = null;
 let randomAlertReopenTimer = null;
 let randomAlertFlashTimer = null;
+let vanishingPopupCloseTimer = null;
+let dodgingPopupAttempts = 0;
+let dodgingPopupDirectAttempts = 0;
+let dodgingPopupFinalDodgeComplete = false;
+let dodgingPopupSlideTimer = null;
+let dodgingPopupAutoCloseTimer = null;
 let selfLoveAlertFlashTimer = null;
 let felizJuevesFlashTimer = null;
 let felizJuevesShownFallbackDate = "";
@@ -1393,6 +1430,8 @@ const randomEventViewportWindows = () =>
     randomEventWindow,
     felizJuevesWindow,
     randomAlertWindow,
+    vanishingPopupWindow,
+    dodgingPopupWindow,
     selfLoveAlertWindow,
     rohinUpdateWindow,
     mcAfeePromptWindow,
@@ -1430,6 +1469,7 @@ const randomEventViewportWindows = () =>
     lainAlertWindow,
     lelouchAlertWindow,
     berserkSunriseWindow,
+    calendarReminderWindow,
     instrumentalityWindow,
     instrumentalityCongratsWindow,
     redToolWindow,
@@ -1700,6 +1740,267 @@ const respondToRandomAlert = () => {
   randomAlertReopenTimer = setTimeout(() => {
     showRandomAlert({ showRemember: true });
   }, delay);
+};
+
+const VANISHING_POPUP_EXPLOSION_DURATION_MS = 1800;
+
+const getVanishingPopupButtons = () =>
+  vanishingPopupWindow
+    ? Array.from(vanishingPopupWindow.querySelectorAll("[data-vanishing-popup-button]"))
+    : [];
+
+const isVanishingPopupVisible = () =>
+  Boolean(
+    vanishingPopupWindow &&
+      !vanishingPopupWindow.classList.contains("is-hidden") &&
+      vanishingPopupWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const resetVanishingPopup = () => {
+  if (!vanishingPopupWindow) return;
+  if (vanishingPopupCloseTimer) {
+    clearTimeout(vanishingPopupCloseTimer);
+    vanishingPopupCloseTimer = null;
+  }
+  vanishingPopupWindow.classList.remove("is-expanded", "is-exploding");
+  vanishingPopupWindow.style.left = "";
+  vanishingPopupWindow.style.top = "";
+  vanishingPopupWindow.style.width = "";
+  vanishingPopupWindow.style.height = "";
+  vanishingPopupWindow.style.translate = "";
+  getVanishingPopupButtons().forEach((button) => {
+    button.hidden = false;
+  });
+  if (vanishingPopupExplosion) {
+    vanishingPopupExplosion.classList.remove("is-active");
+    vanishingPopupExplosion.removeAttribute("src");
+    vanishingPopupExplosion.removeAttribute("style");
+  }
+};
+
+const positionVanishingPopupWindow = () => {
+  positionRandomEventWindowInViewport(vanishingPopupWindow);
+};
+
+const lockVanishingPopupSize = () => {
+  if (!vanishingPopupWindow) return;
+  const rect = vanishingPopupWindow.getBoundingClientRect();
+  vanishingPopupWindow.style.width = `${Math.ceil(rect.width)}px`;
+  vanishingPopupWindow.style.height = `${Math.ceil(rect.height)}px`;
+};
+
+const closeVanishingPopup = () => {
+  if (!vanishingPopupWindow || vanishingPopupWindow.classList.contains("is-hidden")) return;
+  if (vanishingPopupCloseTimer) {
+    clearTimeout(vanishingPopupCloseTimer);
+    vanishingPopupCloseTimer = null;
+  }
+  vanishingPopupWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(vanishingPopupWindow, "is-closing");
+};
+
+const positionVanishingPopupExplosion = () => {
+  if (!vanishingPopupWindow || !vanishingPopupExplosion) return;
+  const rect = vanishingPopupWindow.getBoundingClientRect();
+  const windowZIndex = Number.parseInt(vanishingPopupWindow.style.zIndex, 10);
+  vanishingPopupExplosion.style.left = `${rect.left + rect.width / 2}px`;
+  vanishingPopupExplosion.style.top = `${rect.top + rect.height / 2}px`;
+  vanishingPopupExplosion.style.zIndex = String(
+    Number.isFinite(windowZIndex) ? windowZIndex + 1 : topZ++
+  );
+};
+
+const startVanishingPopupExplosion = () => {
+  if (!vanishingPopupWindow || vanishingPopupWindow.classList.contains("is-exploding")) return;
+  vanishingPopupWindow.classList.remove("is-opening");
+  vanishingPopupWindow.classList.add("is-exploding");
+  if (vanishingPopupExplosion && vanishingPopupExplosion.dataset.src) {
+    positionVanishingPopupExplosion();
+    vanishingPopupExplosion.classList.add("is-active");
+    vanishingPopupExplosion.removeAttribute("src");
+    void vanishingPopupExplosion.offsetWidth;
+    vanishingPopupExplosion.src = `${vanishingPopupExplosion.dataset.src}?t=${Date.now()}`;
+  }
+  vanishingPopupCloseTimer = window.setTimeout(
+    closeVanishingPopup,
+    VANISHING_POPUP_EXPLOSION_DURATION_MS
+  );
+};
+
+const hideVanishingPopupButton = (button) => {
+  if (!button || button.hidden || !vanishingPopupWindow) return;
+  button.hidden = true;
+  const remainingButtons = getVanishingPopupButtons().filter((candidate) => !candidate.hidden);
+  if (!remainingButtons.length) {
+    startVanishingPopupExplosion();
+  }
+};
+
+const showVanishingPopup = () => {
+  if (!vanishingPopupWindow) return;
+  if (isVanishingPopupVisible()) {
+    vanishingPopupWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  resetVanishingPopup();
+  vanishingPopupWindow.classList.remove("is-hidden", "is-closing");
+  vanishingPopupWindow.setAttribute("aria-hidden", "false");
+  positionVanishingPopupWindow();
+  lockVanishingPopupSize();
+  vanishingPopupWindow.style.zIndex = String(topZ++);
+  restartWindowAnimation(vanishingPopupWindow, "is-opening");
+};
+
+const DODGING_POPUP_DODGE_LIMIT = 14;
+const DODGING_POPUP_DIRECT_DODGE_LIMIT = 5;
+const DODGING_POPUP_SLIDE_DURATION_MS = 360;
+
+const getDodgingPopupButtons = () =>
+  dodgingPopupWindow
+    ? Array.from(dodgingPopupWindow.querySelectorAll("[data-dodging-popup-button]"))
+    : [];
+
+const isDodgingPopupVisible = () =>
+  Boolean(
+    dodgingPopupWindow &&
+      !dodgingPopupWindow.classList.contains("is-hidden") &&
+      dodgingPopupWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const resetDodgingPopup = () => {
+  if (!dodgingPopupWindow) return;
+  if (dodgingPopupSlideTimer) {
+    clearTimeout(dodgingPopupSlideTimer);
+    dodgingPopupSlideTimer = null;
+  }
+  if (dodgingPopupAutoCloseTimer) {
+    clearTimeout(dodgingPopupAutoCloseTimer);
+    dodgingPopupAutoCloseTimer = null;
+  }
+  dodgingPopupAttempts = 0;
+  dodgingPopupDirectAttempts = 0;
+  dodgingPopupFinalDodgeComplete = false;
+  dodgingPopupWindow.classList.remove("is-expanded", "is-dodging");
+  dodgingPopupWindow.style.left = "";
+  dodgingPopupWindow.style.top = "";
+  dodgingPopupWindow.style.width = "";
+  dodgingPopupWindow.style.height = "";
+  dodgingPopupWindow.style.translate = "";
+  getDodgingPopupButtons().forEach((button) => {
+    button.hidden = false;
+  });
+};
+
+const lockDodgingPopupSize = () => {
+  if (!dodgingPopupWindow) return;
+  const rect = dodgingPopupWindow.getBoundingClientRect();
+  dodgingPopupWindow.style.width = `${Math.ceil(rect.width)}px`;
+  dodgingPopupWindow.style.height = `${Math.ceil(rect.height)}px`;
+};
+
+const getDodgingPopupSlidePosition = () => {
+  const bounds = getRandomEventWindowBounds(dodgingPopupWindow);
+  const rect = dodgingPopupWindow.getBoundingClientRect();
+  const styleLeft = Number.parseFloat(dodgingPopupWindow.style.left);
+  const styleTop = Number.parseFloat(dodgingPopupWindow.style.top);
+  const currentLeft = Number.isFinite(styleLeft) ? styleLeft : rect.left;
+  const currentTop = Number.isFinite(styleTop) ? styleTop : rect.top;
+  let farthestPosition = sampleRandomEventPosition(bounds);
+  let farthestDistance = -1;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const position = sampleRandomEventPosition(bounds);
+    const xDistance = position.left - currentLeft;
+    const yDistance = position.top - currentTop;
+    const distance = xDistance * xDistance + yDistance * yDistance;
+    if (distance > farthestDistance) {
+      farthestDistance = distance;
+      farthestPosition = position;
+    }
+  }
+
+  return farthestPosition;
+};
+
+const dodgingPopupDodgeLimitReached = () =>
+  dodgingPopupAttempts >= DODGING_POPUP_DODGE_LIMIT ||
+  dodgingPopupDirectAttempts >= DODGING_POPUP_DIRECT_DODGE_LIMIT;
+
+const dodgeDodgingPopup = ({ direct = false, force = false } = {}) => {
+  if (
+    !isDodgingPopupVisible() ||
+    dodgingPopupWindow.classList.contains("is-dodging") ||
+    (!force && dodgingPopupDodgeLimitReached())
+  ) {
+    return false;
+  }
+
+  if (direct) dodgingPopupDirectAttempts += 1;
+  dodgingPopupAttempts += 1;
+  dodgingPopupWindow.classList.add("is-dodging");
+  void dodgingPopupWindow.offsetWidth;
+  dodgingPopupWindow.style.zIndex = String(topZ++);
+  const nextPosition = getDodgingPopupSlidePosition();
+  setRandomEventWindowPosition(dodgingPopupWindow, nextPosition.left, nextPosition.top);
+  if (dodgingPopupSlideTimer) clearTimeout(dodgingPopupSlideTimer);
+  dodgingPopupSlideTimer = window.setTimeout(() => {
+    dodgingPopupWindow.classList.remove("is-dodging");
+    dodgingPopupSlideTimer = null;
+  }, DODGING_POPUP_SLIDE_DURATION_MS);
+  return true;
+};
+
+const closeDodgingPopup = () => {
+  if (!dodgingPopupWindow || dodgingPopupWindow.classList.contains("is-hidden")) return;
+  if (dodgingPopupSlideTimer) {
+    clearTimeout(dodgingPopupSlideTimer);
+    dodgingPopupSlideTimer = null;
+  }
+  if (dodgingPopupAutoCloseTimer) {
+    clearTimeout(dodgingPopupAutoCloseTimer);
+    dodgingPopupAutoCloseTimer = null;
+  }
+  dodgingPopupWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(dodgingPopupWindow, "is-closing");
+};
+
+const scheduleDodgingPopupAutoClose = () => {
+  if (dodgingPopupAutoCloseTimer) clearTimeout(dodgingPopupAutoCloseTimer);
+  dodgingPopupAutoCloseTimer = window.setTimeout(() => {
+    dodgingPopupAutoCloseTimer = null;
+    closeDodgingPopup();
+  }, 2000);
+};
+
+const pressDodgingPopupButton = (button) => {
+  if (!button || button.hidden || !dodgingPopupWindow) return;
+  const visibleButtons = getDodgingPopupButtons().filter((candidate) => !candidate.hidden);
+  if (visibleButtons.length <= 1) {
+    if (!dodgingPopupFinalDodgeComplete) {
+      dodgingPopupFinalDodgeComplete = true;
+      dodgeDodgingPopup({ force: true });
+      return;
+    }
+    button.hidden = true;
+    scheduleDodgingPopupAutoClose();
+    return;
+  }
+  button.hidden = true;
+};
+
+const showDodgingPopup = () => {
+  if (!dodgingPopupWindow) return;
+  if (isDodgingPopupVisible()) {
+    dodgingPopupWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  resetDodgingPopup();
+  dodgingPopupWindow.classList.remove("is-hidden", "is-closing");
+  dodgingPopupWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(dodgingPopupWindow);
+  lockDodgingPopupSize();
+  dodgingPopupWindow.style.zIndex = String(topZ++);
+  restartWindowAnimation(dodgingPopupWindow, "is-opening");
 };
 
 const isSelfLoveAlertVisible = () =>
@@ -4649,6 +4950,42 @@ const closeBerserkSunrise = () => {
   restartWindowAnimation(berserkSunriseWindow, "is-closing");
 };
 
+const isCalendarReminderVisible = () =>
+  Boolean(
+    calendarReminderWindow &&
+      !calendarReminderWindow.classList.contains("is-hidden") &&
+      calendarReminderWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const positionCalendarReminderWindow = () => {
+  positionRandomEventWindowInViewport(calendarReminderWindow);
+};
+
+const showCalendarReminder = () => {
+  if (!calendarReminderWindow) return;
+  if (isCalendarReminderVisible()) {
+    calendarReminderWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  loadDeferredMedia(calendarReminderWindow);
+  calendarReminderWindow.classList.remove("is-hidden", "is-closing");
+  calendarReminderWindow.setAttribute("aria-hidden", "false");
+  positionCalendarReminderWindow();
+  calendarReminderWindow.style.zIndex = String(topZ++);
+  restartWindowAnimation(calendarReminderWindow, "is-opening");
+};
+
+const closeCalendarReminder = () => {
+  if (!calendarReminderWindow || calendarReminderWindow.classList.contains("is-hidden")) return;
+  calendarReminderWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(calendarReminderWindow, "is-closing");
+};
+
+const showCalendarFromReminder = () => {
+  openCalendar({ triggerEvent: false });
+  closeCalendarReminder();
+};
+
 const isInstrumentalityWindowVisible = (win) =>
   Boolean(
     win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
@@ -7113,6 +7450,8 @@ let dstLastPointer = {
   x: 0,
   y: 0,
 };
+const POINTER_HELD_ITEM_CURSOR_CLASS = "is-holding-pointer-item";
+const pointerHeldItemCursorSources = new Set();
 let dstCraftState = {
   wood: 0,
   grass: 0,
@@ -7186,6 +7525,19 @@ const updateDstCompatibleSlots = (resource) => {
   });
 };
 
+const setPointerHeldItemCursor = (source, isHeld) => {
+  if (!source) return;
+  if (isHeld) {
+    pointerHeldItemCursorSources.add(source);
+  } else {
+    pointerHeldItemCursorSources.delete(source);
+  }
+  document.body?.classList.toggle(
+    POINTER_HELD_ITEM_CURSOR_CLASS,
+    pointerHeldItemCursorSources.size > 0
+  );
+};
+
 const getDstCarryGhost = () => {
   if (dstCarryGhost) return dstCarryGhost;
   dstCarryGhost = document.createElement("div");
@@ -7206,6 +7558,7 @@ const positionDstCarryGhost = (x, y) => {
 
 const clearDstDraggedResource = () => {
   dstDraggedResource = "";
+  setPointerHeldItemCursor("dst-resource", false);
   document.querySelectorAll(".dst-resource-token.is-selected").forEach((token) => {
     token.classList.remove("is-selected");
   });
@@ -7222,6 +7575,7 @@ const carryDstResource = (resource, x = dstLastPointer.x, y = dstLastPointer.y) 
     return;
   }
   dstDraggedResource = resource;
+  setPointerHeldItemCursor("dst-resource", true);
   const ghost = getDstCarryGhost();
   const image = ghost.querySelector("img");
   if (image) {
@@ -7630,6 +7984,7 @@ const moveInfinityArmoryCursorGem = (event) => {
 
 const clearInfinityArmorySelectedGem = ({ update = true, status = "" } = {}) => {
   infinityArmorySelectedGem = null;
+  setPointerHeldItemCursor("infinity-armory-gem", false);
   if (infinityArmoryCursorGem) {
     infinityArmoryCursorGem.remove();
     infinityArmoryCursorGem = null;
@@ -7650,6 +8005,7 @@ const createInfinityArmoryCursorGem = (gem, event) => {
   cursorGem.appendChild(image);
   document.body.appendChild(cursorGem);
   infinityArmoryCursorGem = cursorGem;
+  setPointerHeldItemCursor("infinity-armory-gem", true);
   moveInfinityArmoryCursorGem(event);
 };
 
@@ -8478,6 +8834,11 @@ const RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS = new Set([
   "windowDrag",
 ]);
 
+const NEKO_RANDOM_EVENT_PROBABILITY_BONUS = 0.075;
+
+const isNekoRandomEventBoostActive = () =>
+  Boolean(document.querySelector("[data-neko-taskbar-icon].is-neko-active"));
+
 const randomEventTriggerProbability = (triggerName, definition = null) => {
   const probabilities = definition?.probabilities || STANDARD_RANDOM_EVENT_PROBABILITIES;
   const fallbackProbability = definition?.probability ?? STANDARD_RANDOM_EVENT_PROBABILITY;
@@ -8487,7 +8848,9 @@ const randomEventTriggerProbability = (triggerName, definition = null) => {
       : fallbackProbability;
   const probability = Number(value);
   if (Number.isNaN(probability)) return 0;
-  return Math.min(1, Math.max(0, probability));
+  const boostedProbability =
+    probability + (isNekoRandomEventBoostActive() ? NEKO_RANDOM_EVENT_PROBABILITY_BONUS : 0);
+  return Math.min(1, Math.max(0, boostedProbability));
 };
 
 const chooseWeightedRandomEvent = (eligibleEvents) => {
@@ -8557,6 +8920,179 @@ const randomEventDelayMs = () => {
   return Math.round(rawDelay / RANDOM_EVENT_DELAY_STEP_MS) * RANDOM_EVENT_DELAY_STEP_MS;
 };
 
+const randomEventPreloadSourceCache = new Map();
+
+const preloadRandomEventSource = (src) => {
+  const normalizedSrc = String(src || "");
+  if (!normalizedSrc) return Promise.resolve();
+  if (randomEventPreloadSourceCache.has(normalizedSrc)) {
+    return randomEventPreloadSourceCache.get(normalizedSrc);
+  }
+
+  const loadRequest = new Promise((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const finish = (loaded = true) => {
+      if (settled) return;
+      settled = true;
+      image.removeEventListener("load", finishLoaded);
+      image.removeEventListener("error", finishErrored);
+      if (!loaded) randomEventPreloadSourceCache.delete(normalizedSrc);
+      resolve();
+    };
+    const finishLoaded = () => finish(true);
+    const finishErrored = () => finish(false);
+
+    image.addEventListener("load", finishLoaded, { once: true });
+    image.addEventListener("error", finishErrored, { once: true });
+    image.src = normalizedSrc;
+    if (image.complete) finish(Boolean(image.naturalWidth));
+  });
+
+  randomEventPreloadSourceCache.set(normalizedSrc, loadRequest);
+  return loadRequest;
+};
+
+const collectRandomEventPreloadTargets = (target, collection = []) => {
+  if (!target) return collection;
+  if (
+    typeof target === "string" ||
+    target instanceof Element ||
+    typeof target.then === "function"
+  ) {
+    collection.push(target);
+    return collection;
+  }
+  if (typeof target[Symbol.iterator] === "function") {
+    Array.from(target).forEach((item) => {
+      collectRandomEventPreloadTargets(item, collection);
+    });
+  }
+  return collection;
+};
+
+const brandBurnsPreloadTargets = () => [
+  brandBurnsWindow,
+  BRAND_BURNS_BRAND_ICON,
+  BRAND_BURNS_GUTS_ICON,
+  BRAND_BURNS_PUCK_IMAGE,
+  BRAND_BURNS_PUCK_WIN_IMAGE,
+  BRAND_BURNS_DRAGON_SLAYER_ICON,
+  BRAND_BURNS_FEMTO.image,
+  BRAND_BURNS_APOSTLES.map((apostle) => apostle.image),
+];
+
+const infinityArmoryPreloadTargets = () => [
+  infinityArmoryWindow,
+  Object.values(INFINITY_ARMORY_GEM_ICON_BY_SHAPE),
+];
+
+const randomEventPreloadTargetsById = Object.freeze({
+  "annoying-system-alert": () => [randomAlertWindow],
+  "dodging-popup-alert": () => [dodgingPopupWindow],
+  "vanishing-popup-alert": () => [vanishingPopupWindow, vanishingPopupExplosion],
+  "self-love-system-alert": () => [selfLoveAlertWindow],
+  "rohin-os-update": () => [rohinUpdateWindow],
+  "mcafee-antivirus-update": () => [
+    mcAfeePromptWindow,
+    mcAfeeDownloadWindow,
+    mcAfeeThanksWindow,
+  ],
+  "microsoft-word-license-stack": () => [wordErrorWindows],
+  "rohin-os-note": () => [rohinNoteWindow],
+  "earth-proverb-note": () => [earthNoteWindow],
+  "health-note": () => [healthNoteWindow],
+  "love-note": () => [loveNoteWindow],
+  "no-smoking-alert": () => [noSmokingWindow],
+  "castle-gate-alert": () => [castleGateWindow],
+  "possum-springs-bulletin": () => [possumSpringsWindow],
+  "winged-light": () => [wingedLightWindow],
+  "mana-flood": () => [manaFloodWindow],
+  "mimic-warning": () => [mimicWarningWindow],
+  "sudden-skill-check": () => [skillCheckWindow, skillCheckResultWindow],
+  "distress-signal": () => [distressSignalWindow, distressUploadWindow],
+  "nazar-evil-eye": () => [nazarWindow],
+  "site-of-grace": () => [siteGraceWindow, lostGraceOverlay],
+  "stalker-zone": () => [stalkerWindow, stalkerResultWindow],
+  "nana-random-encounter": () => [nanaEncounterWindow, nanaAcceptWindow],
+  "serval-pizza-encounter": () => [servalEncounterWindow, servalPizzaWindow],
+  "caracal-encounter": () => [
+    caracalEncounterWindow,
+    caracalResultWindow,
+    Object.values(CARACAL_RESULT_CONTENT).map((result) => result.image),
+  ],
+  shoebill: () => [shoebillEncounterWindow, shoebillBowWindow],
+  "midnight-gospel": () => [
+    midnightGospelInviteWindow,
+    midnightGospelMeditationWindow,
+  ],
+  "lain-system-alert": () => [lainAlertWindow],
+  "lelouch-system-alert": () => [lelouchAlertWindow],
+  "berserk-sunrise": () => [berserkSunriseWindow],
+  "calendar-reminder": () => [calendarReminderWindow],
+  "human-instrumentality-project": () => [
+    instrumentalityWindow,
+    instrumentalityCongratsWindow,
+  ],
+  "red-tool": () => [redToolWindow],
+  "resist-your-fate": () => [
+    fateWindow,
+    "assets/random%20events/zodd_defeated_by_shld0n_hcks.jpg",
+    "assets/random%20events/guts-lost.jpeg",
+  ],
+  "brand-burns": brandBurnsPreloadTargets,
+  "behelit-found": () => [behelitWindow],
+  "john-pork": () => [johnPorkWindow],
+  "biden-blast": () => [bidenBlastWindow],
+  "saul-advertisement": () => [saulAdWindow, SAUL_AD_IMAGES],
+  kidnamedfinger: () => [kidnamedfingerWindow],
+  "walter-white": () => [walterWhiteWindow],
+  "bounty-hunter-announcement": () => [bountyHunterWindow],
+  "pokemon-starter-selection": () => [pokemonStarterWindow],
+  "dont-starve-campfire": () => [
+    dstNightWindow,
+    dstCraftingWindow,
+    dstSurviveWindow,
+    dstDarknessWindow,
+  ],
+  "infinity-blade-armory": infinityArmoryPreloadTargets,
+  virus: () => [virusWindow, virusRescueWindow],
+  "evil-wizards-advertisement": () => [advertisementWindow],
+});
+
+const preloadRandomEventTarget = (target) => {
+  if (!target) return Promise.resolve();
+  if (typeof target === "string") return preloadRandomEventSource(target);
+  if (target instanceof Element) return preloadDeferredMedia(target);
+  if (typeof target.then === "function") return target.catch(() => {});
+  return Promise.resolve();
+};
+
+const getRandomEventPreloadTargets = (definition, context) => {
+  const preloadTargets =
+    definition.preloadTargets || randomEventPreloadTargetsById[definition.id];
+  return typeof preloadTargets === "function"
+    ? preloadTargets(context)
+    : preloadTargets;
+};
+
+const preloadRandomEventAssets = (definition, context) => {
+  let targets = [];
+  try {
+    targets = collectRandomEventPreloadTargets(
+      getRandomEventPreloadTargets(definition, context)
+    );
+    if (!targets.length) return Promise.resolve();
+  } catch (error) {
+    console.warn("[Rohin OS] Random event asset preload setup failed", definition.id, error);
+    return Promise.resolve();
+  }
+
+  return Promise.all(targets.map(preloadRandomEventTarget)).catch((error) => {
+    console.warn("[Rohin OS] Random event asset preload failed", definition.id, error);
+  });
+};
+
 const scheduleRandomEventRun = (definition, context) => {
   if (randomEventPendingDefinitions.has(definition)) return false;
   if (
@@ -8568,7 +9104,12 @@ const scheduleRandomEventRun = (definition, context) => {
     return false;
   }
   randomEventPendingDefinitions.add(definition);
-  window.setTimeout(() => {
+  const delayRequest = new Promise((resolve) => {
+    window.setTimeout(resolve, randomEventDelayMs());
+  });
+  const preloadRequest = preloadRandomEventAssets(definition, context);
+
+  Promise.all([delayRequest, preloadRequest]).then(() => {
     randomEventPendingDefinitions.delete(definition);
     const { triggerName, detail, debug } = context;
     if (
@@ -8579,7 +9120,7 @@ const scheduleRandomEventRun = (definition, context) => {
     }
     recordInteractiveRandomEventRun(definition, { debug });
     definition.run(context);
-  }, randomEventDelayMs());
+  });
   return true;
 };
 
@@ -8813,6 +9354,32 @@ registerRandomEvent({
   canTrigger: () => !isRandomAlertVisible(),
   run: () => {
     showRandomAlert();
+  },
+});
+
+registerRandomEvent({
+  id: "dodging-popup-alert",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isDodgingPopupVisible,
+  canTrigger: () => !isDodgingPopupVisible(),
+  run: () => {
+    showDodgingPopup();
+  },
+});
+
+registerRandomEvent({
+  id: "vanishing-popup-alert",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isVanishingPopupVisible,
+  canTrigger: () => !isVanishingPopupVisible(),
+  run: () => {
+    showVanishingPopup();
   },
 });
 
@@ -9164,6 +9731,21 @@ registerRandomEvent({
   canTrigger: () => isBerserkSunriseTimeWindow() && !isBerserkSunriseVisible(),
   run: () => {
     showBerserkSunrise();
+  },
+});
+
+registerRandomEvent({
+  id: "calendar-reminder",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isCalendarReminderVisible,
+  canTrigger: () =>
+    !isCalendarReminderVisible() &&
+    !(calendarPopout && calendarPopout.classList.contains("is-open")),
+  run: () => {
+    showCalendarReminder();
   },
 });
 
@@ -11697,8 +12279,42 @@ const getLifeCounterMaxWidthAtPosition = () => {
   );
 };
 
+const syncLifeCounterInitiativeToolbar = () => {
+  const currentColumns = getLifeCounterWindowColumns(getLifeCounterWindowWidth());
+  const isCompactRollAll = currentColumns <= 2;
+
+  if (lifeCounterInitiativeActions) {
+    lifeCounterInitiativeActions.classList.toggle(
+      "is-split",
+      lifeCounterInitiativeEnabled
+    );
+    lifeCounterInitiativeActions.classList.toggle(
+      "is-compact-roll-all",
+      lifeCounterInitiativeEnabled && isCompactRollAll
+    );
+  }
+
+  if (lifeCounterRollAll) {
+    lifeCounterRollAll.hidden = !lifeCounterInitiativeEnabled;
+    lifeCounterRollAll.classList.toggle("is-icon-only", isCompactRollAll);
+    lifeCounterRollAll.setAttribute("aria-label", "Roll all initiatives");
+    lifeCounterRollAll.title = isCompactRollAll ? "Roll all initiatives" : "";
+  }
+
+  if (lifeCounterInitiativeToggle) {
+    lifeCounterInitiativeToggle.setAttribute(
+      "aria-pressed",
+      String(lifeCounterInitiativeEnabled)
+    );
+    lifeCounterInitiativeToggle.textContent = lifeCounterInitiativeEnabled
+      ? "Hide Initiative"
+      : "Show Initiative";
+  }
+};
+
 const updateLifeCounterWidthControls = () => {
   const win = getLifeCounterWindow();
+  syncLifeCounterInitiativeToolbar();
   if (!win || !lifeCounterWidthDecrease || !lifeCounterWidthIncrease) return;
   const currentColumns = getLifeCounterWindowColumns(getLifeCounterWindowWidth());
   const nextWidth = getLifeCounterWindowWidthForColumns(currentColumns + 1);
@@ -11808,6 +12424,39 @@ const clearAllLifeCounterInitiativeRolls = () => {
   });
 };
 
+const clearLifeCounterInitiativeLeaders = () => {
+  lifeCounterInitiativeLeaderIds = new Set();
+};
+
+const updateLifeCounterInitiativeLeaders = ({ force = false } = {}) => {
+  if (!force && !lifeCounterInitiativeLeaderUpdatePending) return;
+  if (
+    !lifeCounterInitiativeEnabled ||
+    lifeCounterPlayersState.some((player) => player.initiativeRolling)
+  ) {
+    return;
+  }
+
+  const playersWithInitiative = lifeCounterPlayersState.filter(
+    (player) => normalizeLifeCounterInitiative(player.initiative) !== null
+  );
+  if (!playersWithInitiative.length) {
+    clearLifeCounterInitiativeLeaders();
+    lifeCounterInitiativeLeaderUpdatePending = false;
+    return;
+  }
+
+  const highestInitiative = Math.max(
+    ...playersWithInitiative.map((player) => player.initiative)
+  );
+  lifeCounterInitiativeLeaderIds = new Set(
+    playersWithInitiative
+      .filter((player) => player.initiative === highestInitiative)
+      .map((player) => player.id)
+  );
+  lifeCounterInitiativeLeaderUpdatePending = false;
+};
+
 const createLifeCounterInitiativeRollSequence = (targetValue) =>
   Array.from({ length: LIFE_COUNTER_INITIATIVE_ROLL_FRAMES }, (_, index) =>
     index === LIFE_COUNTER_INITIATIVE_ROLL_FRAMES - 1
@@ -11829,6 +12478,8 @@ const selectLifeCounterInitiative = (playerId, initiative) => {
   clearLifeCounterInitiativeRoll(playerId);
   player.initiative = normalizedInitiative;
   player.initiativeRolling = false;
+  lifeCounterInitiativeLeaderUpdatePending = false;
+  clearLifeCounterInitiativeLeaders();
   renderLifeCounter();
 };
 
@@ -11837,6 +12488,7 @@ const startLifeCounterInitiativeRoll = (playerId) => {
   if (!player || !lifeCounterInitiativeEnabled) return;
 
   clearLifeCounterInitiativeRoll(playerId);
+  lifeCounterInitiativeLeaderUpdatePending = true;
   const targetValue =
     LIFE_COUNTER_INITIATIVE_VALUES[
       Math.floor(Math.random() * LIFE_COUNTER_INITIATIVE_VALUES.length)
@@ -11852,14 +12504,18 @@ const startLifeCounterInitiativeRoll = (playerId) => {
       return;
     }
 
+    const isFinalRollFrame = index >= sequence.length - 1;
     activePlayer.initiative = sequence[index];
-    activePlayer.initiativeRolling = index < sequence.length - 1;
-    renderLifeCounter();
+    activePlayer.initiativeRolling = !isFinalRollFrame;
 
-    if (index >= sequence.length - 1) {
+    if (isFinalRollFrame) {
       lifeCounterInitiativeRollTimers.delete(playerId);
+      updateLifeCounterInitiativeLeaders();
+      renderLifeCounter();
       return;
     }
+
+    renderLifeCounter();
 
     const timerId = window.setTimeout(
       () => advanceRoll(index + 1),
@@ -11869,6 +12525,13 @@ const startLifeCounterInitiativeRoll = (playerId) => {
   };
 
   advanceRoll(0);
+};
+
+const startAllLifeCounterInitiativeRolls = () => {
+  if (!lifeCounterInitiativeEnabled) return;
+  lifeCounterPlayersState.forEach((player) => {
+    startLifeCounterInitiativeRoll(player.id);
+  });
 };
 
 const removeLifeCounterPlayer = (playerId) => {
@@ -11890,6 +12553,9 @@ const removeLifeCounterPlayer = (playerId) => {
     ];
   }
 
+  if (lifeCounterInitiativeLeaderIds.size) {
+    updateLifeCounterInitiativeLeaders({ force: true });
+  }
   renderLifeCounter();
 };
 
@@ -11922,6 +12588,10 @@ const renderLifeCounter = () => {
     const card = document.createElement("section");
     card.className = "life-counter-player";
     card.dataset.playerId = String(player.id);
+    card.classList.toggle(
+      "is-initiative-leader",
+      lifeCounterInitiativeLeaderIds.has(player.id)
+    );
 
     const header = document.createElement("div");
     header.className = "life-counter-player-header";
@@ -12106,16 +12776,12 @@ const renderLifeCounter = () => {
 
 const setLifeCounterInitiativeEnabled = (enabled) => {
   lifeCounterInitiativeEnabled = Boolean(enabled);
-  if (!lifeCounterInitiativeEnabled) clearAllLifeCounterInitiativeRolls();
-  if (lifeCounterInitiativeToggle) {
-    lifeCounterInitiativeToggle.setAttribute(
-      "aria-pressed",
-      String(lifeCounterInitiativeEnabled)
-    );
-    lifeCounterInitiativeToggle.textContent = lifeCounterInitiativeEnabled
-      ? "Hide Initiative"
-      : "Show Initiative";
+  if (!lifeCounterInitiativeEnabled) {
+    clearAllLifeCounterInitiativeRolls();
+    lifeCounterInitiativeLeaderUpdatePending = false;
+    clearLifeCounterInitiativeLeaders();
   }
+  syncLifeCounterInitiativeToolbar();
   renderLifeCounter();
 };
 
@@ -12225,16 +12891,13 @@ if (lifeCounterReset) {
 }
 
 if (lifeCounterInitiativeToggle) {
-  lifeCounterInitiativeToggle.setAttribute(
-    "aria-pressed",
-    String(lifeCounterInitiativeEnabled)
-  );
-  lifeCounterInitiativeToggle.textContent = lifeCounterInitiativeEnabled
-    ? "Hide Initiative"
-    : "Show Initiative";
   lifeCounterInitiativeToggle.addEventListener("click", () => {
     setLifeCounterInitiativeEnabled(!lifeCounterInitiativeEnabled);
   });
+}
+
+if (lifeCounterRollAll) {
+  lifeCounterRollAll.addEventListener("click", startAllLifeCounterInitiativeRolls);
 }
 
 if (lifeCounterWidthDecrease) {
@@ -14946,6 +15609,18 @@ const buildCalendar = (date) => {
   }
 };
 
+const openCalendar = ({ triggerEvent = true } = {}) => {
+  if (!calendarPopout) return;
+  calendarPopout.classList.add("is-open");
+  calendarPopout.setAttribute("aria-hidden", "false");
+  calendarDate = new Date();
+  buildCalendar(calendarDate);
+  updateCalendarClock();
+  if (triggerEvent) {
+    triggerRandomEvents("calendarOpen");
+  }
+};
+
 const toggleCalendar = () => {
   const isOpen = calendarPopout.classList.contains("is-open");
   if (isOpen) {
@@ -14953,15 +15628,18 @@ const toggleCalendar = () => {
     return;
   }
 
-  calendarPopout.classList.add("is-open");
-  calendarPopout.setAttribute("aria-hidden", "false");
-  calendarDate = new Date();
-  buildCalendar(calendarDate);
-  updateCalendarClock();
-  triggerRandomEvents("calendarOpen");
+  openCalendar();
 };
 
 calendarButton.addEventListener("click", toggleCalendar);
+if (calendarClose) {
+  calendarClose.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeCalendar();
+  });
+}
+
 calendarPrev.addEventListener("click", (event) => {
   event.stopPropagation();
   const nextDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1);
@@ -15055,6 +15733,92 @@ if (randomAlertWindow) {
     if (event.animationName === "retro-window-close") {
       randomAlertWindow.classList.remove("is-closing", "is-choice-flashing");
       randomAlertWindow.classList.add("is-hidden");
+    }
+  });
+}
+
+[
+  vanishingPopupClose,
+  vanishingPopupMaximize,
+  vanishingPopupMinimize,
+  vanishingPopupYes,
+  vanishingPopupNo,
+].forEach((button) => {
+  if (!button) return;
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    hideVanishingPopupButton(button);
+  });
+});
+
+if (vanishingPopupWindow) {
+  vanishingPopupWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  vanishingPopupWindow.addEventListener("animationend", (event) => {
+    if (event.target !== vanishingPopupWindow) return;
+    if (event.animationName === "retro-window-open") {
+      vanishingPopupWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      vanishingPopupWindow.classList.remove("is-closing", "is-exploding");
+      vanishingPopupWindow.classList.add("is-hidden");
+      if (vanishingPopupExplosion) {
+        vanishingPopupExplosion.classList.remove("is-active");
+        vanishingPopupExplosion.removeAttribute("src");
+        vanishingPopupExplosion.removeAttribute("style");
+      }
+    }
+  });
+}
+
+getDodgingPopupButtons().forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    pressDodgingPopupButton(button);
+  });
+});
+
+if (dodgingPopupWindow) {
+  dodgingPopupWindow.addEventListener("pointerenter", (event) => {
+    if (event.pointerType !== "mouse") return;
+    dodgeDodgingPopup();
+  });
+
+  dodgingPopupWindow.addEventListener(
+    "click",
+    (event) => {
+      if (dodgingPopupWindow.classList.contains("is-dodging")) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (!dodgingPopupDodgeLimitReached()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        dodgeDodgingPopup({ direct: true });
+      }
+    },
+    true
+  );
+
+  dodgingPopupWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  dodgingPopupWindow.addEventListener("animationend", (event) => {
+    if (event.target !== dodgingPopupWindow) return;
+    if (event.animationName === "retro-window-open") {
+      dodgingPopupWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      dodgingPopupWindow.classList.remove("is-closing", "is-dodging");
+      dodgingPopupWindow.classList.add("is-hidden");
     }
   });
 }
@@ -16076,6 +16840,43 @@ if (berserkSunriseWindow) {
   });
 }
 
+if (calendarReminderShow) {
+  calendarReminderShow.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    showCalendarFromReminder();
+  });
+}
+
+if (calendarReminderLater) {
+  calendarReminderLater.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeCalendarReminder();
+  });
+}
+
+if (calendarReminderWindow) {
+  calendarReminderWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  calendarReminderWindow.addEventListener("animationend", (event) => {
+    if (event.target !== calendarReminderWindow) return;
+    if (event.animationName === "retro-window-open") {
+      calendarReminderWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      calendarReminderWindow.classList.remove("is-closing");
+      calendarReminderWindow.classList.add("is-hidden");
+      calendarReminderWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+    }
+  });
+}
+
 if (instrumentalityYes) {
   instrumentalityYes.addEventListener("click", (event) => {
     event.preventDefault();
@@ -16599,6 +17400,7 @@ document.addEventListener("pointermove", (event) => {
     }
     const resource = source.dataset.dstResource || "";
     dstDraggedResource = resource;
+    setPointerHeldItemCursor("dst-resource", true);
     updateDstCompatibleSlots(resource);
     event.dataTransfer?.setData("text/plain", resource);
     if (event.dataTransfer) {
@@ -17257,7 +18059,7 @@ const NEKO_MANUAL_ACTIONS = [
 const NEKO_WAKE_SEQUENCE = [
   { sprite: "awake", duration: 500 },
   { sprite: "yawn1", duration: 450 },
-  { sprite: "yawn2", duration: 900 },
+  { sprite: "yawn2", duration: 900, waitForRunAssets: true },
   { sprite: "wash1", duration: 900 },
 ];
 const NEKO_FRAME_INTERVAL_MS = 100;
@@ -17310,6 +18112,44 @@ let nekoFootprints = [];
 let nekoLastFootprintX = null;
 let nekoLastFootprintY = null;
 let nekoNextFootprintSide = 1;
+let nekoRunAssetsPreloadStarted = false;
+let nekoRunAssetsLoaded = false;
+let nekoRunAssetsPreloadPromise = null;
+const nekoPreloadedRunAssetImages = [];
+
+const preloadNekoRunAssets = () => {
+  if (nekoRunAssetsPreloadStarted) return nekoRunAssetsPreloadPromise;
+  nekoRunAssetsPreloadStarted = true;
+  const assetUrls = new Set([
+    ...Object.values(NEKO_SPRITES),
+    ...Object.values(NEKO_FOOTPRINT_SPRITES),
+  ]);
+
+  nekoRunAssetsPreloadPromise = Promise.all(
+    Array.from(assetUrls, (src) =>
+      new Promise((resolve) => {
+        const image = new Image();
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        };
+
+        image.decoding = "async";
+        image.addEventListener("load", finish, { once: true });
+        image.addEventListener("error", finish, { once: true });
+        image.src = src;
+        if (image.complete) finish();
+        nekoPreloadedRunAssetImages.push(image);
+      })
+    )
+  ).then(() => {
+    nekoRunAssetsLoaded = true;
+  });
+
+  return nekoRunAssetsPreloadPromise;
+};
 
 const setNekoIconAwake = (isAwake) => {
   document.querySelectorAll("[data-neko-icon]").forEach((icon) => {
@@ -17963,6 +18803,13 @@ const runNekoWakeSequence = (index = 0) => {
   clearNekoWakeTimer();
   nekoWakeTimerId = window.setTimeout(() => {
     nekoWakeTimerId = null;
+    if (step.waitForRunAssets && !nekoRunAssetsLoaded) {
+      preloadNekoRunAssets().then(() => {
+        if (nekoState !== "waking") return;
+        runNekoWakeSequence(index + 1);
+      });
+      return;
+    }
     runNekoWakeSequence(index + 1);
   }, step.duration);
 };
@@ -17983,6 +18830,7 @@ const wakeNeko = (event) => {
   setNekoTaskbarActionIcon("sleep");
   createDesktopNekoCat();
   renderDesktopNekoCat();
+  preloadNekoRunAssets();
   nekoState = "waking";
   document.addEventListener("pointermove", updateNekoPointerTarget);
   document.addEventListener("pointerout", handleNekoPointerExit);
@@ -19894,6 +20742,7 @@ draggableWindows.forEach((win) => {
       win.style.top = `${rect.top}px`;
     }
     titleBar.setPointerCapture(event.pointerId);
+    setPointerHeldItemCursor("window-drag", true);
 
     const moveHandler = (moveEvent) => {
       if (
@@ -19908,9 +20757,13 @@ draggableWindows.forEach((win) => {
     };
 
     const upHandler = (upEvent) => {
-      titleBar.releasePointerCapture(upEvent.pointerId);
+      if (titleBar.hasPointerCapture(upEvent.pointerId)) {
+        titleBar.releasePointerCapture(upEvent.pointerId);
+      }
       titleBar.removeEventListener("pointermove", moveHandler);
       titleBar.removeEventListener("pointerup", upHandler);
+      titleBar.removeEventListener("pointercancel", upHandler);
+      setPointerHeldItemCursor("window-drag", false);
       if (randomEventViewportWindows().includes(win)) {
         clampRandomEventWindowToViewport(win);
       } else {
@@ -19930,6 +20783,7 @@ draggableWindows.forEach((win) => {
 
     titleBar.addEventListener("pointermove", moveHandler);
     titleBar.addEventListener("pointerup", upHandler);
+    titleBar.addEventListener("pointercancel", upHandler);
   });
 });
 

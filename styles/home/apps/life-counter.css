@@ -47,12 +47,113 @@
   min-width: 0;
 }
 
+.life-counter-initiative-actions {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.life-counter-initiative-actions.is-split {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.life-counter-initiative-actions.is-split.is-compact-roll-all {
+  grid-template-columns: 26px minmax(0, 1fr);
+}
+
+.life-counter-roll-all {
+  align-items: center;
+  box-shadow:
+    var(--border-raised-outer),
+    var(--border-raised-inner),
+    0 0 0 1px rgba(214, 170, 46, 0.9),
+    0 0 8px rgba(255, 210, 84, 0.35);
+  display: inline-flex;
+  gap: 4px;
+  justify-content: center;
+  overflow: visible;
+  padding-left: 4px;
+  padding-right: 4px;
+  position: relative;
+  white-space: nowrap;
+  z-index: 0;
+}
+
+.life-counter-roll-all::after {
+  animation: gold-button-halo 3.2s ease-in-out infinite;
+  border: 1px solid rgba(247, 205, 74, 0.95);
+  box-shadow:
+    0 0 8px 1px rgba(255, 210, 84, 0.6),
+    0 0 14px 2px rgba(255, 184, 28, 0.35);
+  content: "";
+  inset: 0;
+  opacity: 0.72;
+  pointer-events: none;
+  position: absolute;
+}
+
+.life-counter-roll-all[hidden] {
+  display: none;
+}
+
+.life-counter-roll-all:active {
+  box-shadow:
+    var(--border-sunken-outer),
+    var(--border-sunken-inner),
+    0 0 0 1px rgba(214, 170, 46, 0.9),
+    0 0 6px rgba(255, 210, 84, 0.28);
+}
+
+.life-counter-roll-all:active::after {
+  animation-play-state: paused;
+  box-shadow:
+    0 0 6px 1px rgba(255, 210, 84, 0.45),
+    0 0 10px 1px rgba(255, 184, 28, 0.24);
+  opacity: 0.55;
+}
+
+.life-counter-roll-all img {
+  display: none;
+  flex: 0 0 auto;
+  height: 16px;
+  image-rendering: pixelated;
+  width: 16px;
+}
+
+.life-counter-roll-all.is-icon-only {
+  padding: 2px;
+  width: 26px;
+}
+
+.life-counter-roll-all.is-icon-only img {
+  display: block;
+}
+
+.life-counter-roll-all.is-icon-only span {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 .life-counter-toggle {
   align-items: center;
   display: inline-flex;
   justify-content: center;
   padding-left: 5px;
   padding-right: 5px;
+}
+
+.life-counter-initiative-actions.is-compact-roll-all .life-counter-toggle {
+  font-size: 10px;
+  line-height: 1.05;
+  padding-left: 2px;
+  padding-right: 2px;
+  white-space: normal;
 }
 
 .life-counter-note {
@@ -113,6 +214,30 @@
   min-width: 0;
   padding: 7px;
   width: calc(var(--life-counter-control-width) + 14px);
+}
+
+.life-counter-player.is-initiative-leader {
+  box-shadow:
+    var(--border-sunken-outer),
+    var(--border-sunken-inner),
+    0 0 0 1px rgba(214, 170, 46, 0.9),
+    0 0 8px rgba(255, 210, 84, 0.35);
+  overflow: visible;
+  position: relative;
+  z-index: 0;
+}
+
+.life-counter-player.is-initiative-leader::after {
+  animation: gold-button-halo 3.2s ease-in-out infinite;
+  border: 1px solid rgba(247, 205, 74, 0.95);
+  box-shadow:
+    0 0 8px 1px rgba(255, 210, 84, 0.6),
+    0 0 14px 2px rgba(255, 184, 28, 0.35);
+  content: "";
+  inset: 0;
+  opacity: 0.72;
+  pointer-events: none;
+  position: absolute;
 }
 
 .life-counter-player-header {
