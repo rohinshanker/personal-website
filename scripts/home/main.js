@@ -360,6 +360,36 @@ const {
   calendarReminderWindow,
   calendarReminderShow,
   calendarReminderLater,
+  gradescopeCurveWindow,
+  gradescopeCurvePrompt,
+  gradescopeCurveYes,
+  gradescopeCurveNo,
+  gradescopeCurveGraph,
+  gradescopeCurvePath,
+  gradescopeCurveAdjust,
+  gradescopeCurveSlider,
+  gradescopeCurveSetRow,
+  gradescopeCurveSet,
+  gearsNestWindow,
+  gearsNestPrompt,
+  gearsNestEngage,
+  gearsNestRetreat,
+  gearsNestCombat,
+  gearsNestBattlefield,
+  gearsNestEnemyCovers,
+  gearsNestEnemies,
+  gearsNestPlayerCovers,
+  gearsNestProjectiles,
+  gearsNestPlayer,
+  gearsNestCoverButtons,
+  gearsNestHealth,
+  gearsNestHealthValue,
+  gearsNestAmmo,
+  gearsNestStatus,
+  gearsNestResult,
+  gearsNestResultText,
+  gearsNestResultOk,
+  gearsNestReloadCursor,
   instrumentalityWindow,
   instrumentalityYes,
   instrumentalityNo,
@@ -384,6 +414,24 @@ const {
   fateResultCredit,
   fateResultText,
   fateResultOk,
+  lancerBattleWindow,
+  lancerBattleTitle,
+  lancerBattleReadyStage,
+  lancerBattleClashStage,
+  lancerBattleResultStage,
+  lancerBattleFinalStage,
+  lancerBattleClashVideo,
+  lancerBattleLightningCanvas,
+  lancerBattleProgress,
+  lancerBattleProgressBar,
+  lancerBattleStatus,
+  lancerBattleStart,
+  lancerBattlePush,
+  lancerBattleResultImage,
+  lancerBattleResultVideo,
+  lancerBattleResultText,
+  lancerBattleFinalText,
+  lancerBattleClose,
   brandBurnsWindow,
   brandBurnsTitle,
   brandBurnsClose,
@@ -509,6 +557,13 @@ const {
   tcpResultsPrev,
   tcpResultsCounter,
   tcpResultsNext,
+  ekgProjectImage,
+  ekgProjectVideo,
+  ekgProjectCaption,
+  ekgProjectDescription,
+  ekgProjectPrev,
+  ekgProjectCounter,
+  ekgProjectNext,
   droneProjectVideo,
   droneVideoCaption,
   droneVideoPrev,
@@ -529,10 +584,34 @@ let infinityArmoryInventoryGems = [];
 // const CLASH_API_TOKEN = "";
 // const CLASH_PLAYER_TAG = "28CYYU08P";
 // const CLASH_SAMPLE_SIZE = 25;
+/**
+ * @typedef {Object} ImageGalleryItem
+ * @property {string} src
+ * @property {string} alt
+ * @property {string} [title]
+ * @property {string} [description]
+ */
+
+/**
+ * @typedef {Object} ProjectMediaItem
+ * @property {"image" | "video"} type
+ * @property {string} src
+ * @property {string} title
+ * @property {string} description
+ * @property {string} [alt]
+ */
+
+/**
+ * @typedef {Object} VideoGalleryItem
+ * @property {string} src
+ * @property {string} title
+ */
+
 const PULSE_PROJECT_BASE_URL = "https://rohinshanker.github.io/pulse-oximeter";
 const PULSE_PRESENTATION_PDF_URL =
   `${PULSE_PROJECT_BASE_URL}/course%20resources/pulse%20ox%20slides.pdf#page=1&zoom=100&toolbar=0&navpanes=0`;
-const pulseProjectFigures = [
+/** @type {ReadonlyArray<ImageGalleryItem>} */
+const pulseProjectFigures = Object.freeze([
   {
     src: `${PULSE_PROJECT_BASE_URL}/site-assets/demo-photo.jpg`,
     alt: "Working pulse oximeter demo with the yellow finger sleeve, OLED readout, laptop waveform, and commercial reference oximeter.",
@@ -561,11 +640,12 @@ const pulseProjectFigures = [
     description:
       "Cleaner final circuit with MKR Zero, analog filtering, OLED readout, and the optical finger interface.",
   },
-];
+]);
 const TCP_PROJECT_BASE_URL = "https://rohinshanker.github.io/EE-122-simulation";
 const GITHUB_REPOSITORY_URL =
   "https://github.com/rohinshanker/personal-website";
-const tcpResultFigures = [
+/** @type {ReadonlyArray<ImageGalleryItem>} */
+const tcpResultFigures = Object.freeze([
   {
     src: `${TCP_PROJECT_BASE_URL}/analysis/plots/common_links/throughput_by_category_algorithm.png`,
     alt: "Throughput by algorithm across terrestrial, LEO, GEO 500 ms, and GEO 1000 ms profiles.",
@@ -594,10 +674,33 @@ const tcpResultFigures = [
     description:
       "Summarizes utilization across conditions; BBRv3 is largely yellow and green, indicating higher utilization across many tested profiles.",
   },
-];
+]);
 const DRONE_PRESENTATION_PDF_URL =
   "https://rohinshanker.github.io/drone-navigation-project/assets/docs/EECS%20C106A%20Final%20Project%20-%20Group%2044%20-%20Google%20Slides.pdf#page=1&zoom=100&toolbar=0&navpanes=0";
-const droneProjectVideos = [
+/** @type {ReadonlyArray<ProjectMediaItem>} */
+const ekgProjectMedia = Object.freeze([
+  {
+    type: "image",
+    src: "assets/projects/ekg-project/final-breadboard.jpeg",
+    alt: "Final EKG breadboard.",
+    title: "Final breadboard",
+    description: "Final breadboard.",
+  },
+  {
+    type: "video",
+    src: "assets/projects/ekg-project/signal-closeup.MOV",
+    title: "Signal closeup",
+    description: "Signal closeup.",
+  },
+  {
+    type: "video",
+    src: "assets/projects/ekg-project/video-demo.mov",
+    title: "Video demo",
+    description: "Video demo.",
+  },
+]);
+/** @type {ReadonlyArray<VideoGalleryItem>} */
+const droneProjectVideos = Object.freeze([
   {
     src: "https://rohinshanker.github.io/drone-navigation-project/assets/videos/mujocosimulator.mp4",
     title: "MuJoCo simulation demo",
@@ -606,7 +709,7 @@ const droneProjectVideos = [
     src: "https://rohinshanker.github.io/drone-navigation-project/assets/videos/livedemo.mp4",
     title: "Live drone demo",
   },
-];
+]);
 
 const SNAKE_DEFAULT_GRID_SIZE = 16;
 const SNAKE_HIGH_SCORE_KEY = "personalSiteSnakeHighScores";
@@ -982,8 +1085,23 @@ let fateLightningFrame = null;
 let fateResolveTimer = null;
 let fateResultOpenTimer = null;
 let fateState = "idle";
+let lancerBattleProgressValue = 0;
+let lancerBattleState = "idle";
+let lancerBattleDrainTimer = null;
+let lancerBattleClashTimer = null;
+let lancerBattleBoomerangFrame = null;
+let lancerBattleLightningFrame = null;
+let lancerBattleLightningTimer = null;
+let lancerBattleResolveTimer = null;
+let lancerBattleResultTimer = null;
+let lancerBattleResultVideoToken = 0;
+let lancerBattleOpenFinalAfterClose = false;
+let lancerBattleBoomerangDirection = 1;
+let lancerBattleBoomerangStart = 0;
+let lancerBattleBoomerangEnd = 0;
 let pulseProjectIndex = 0;
 let tcpResultsIndex = 0;
+let ekgProjectIndex = 0;
 let droneVideoIndex = 0;
 let activeWindow = null;
 const expandedWindowState = new WeakMap();
@@ -1214,6 +1332,7 @@ const BRAND_BURNS_APOSTLE_CLOSE_DELAY_MS = 90;
 const BRAND_BURNS_ATTACK_MIN_DAMAGE = 100;
 const BRAND_BURNS_ATTACK_MAX_DAMAGE = 300;
 const BRAND_BURNS_PLAYER_MAX_HEALTH = 4000;
+const BRAND_BURNS_PLAYER_MAX_STAMINA = 100;
 const BRAND_BURNS_APOSTLE_PLAYER_ATTACK_MIN_DAMAGE = 1;
 const BRAND_BURNS_APOSTLE_PLAYER_ATTACK_MAX_DAMAGE = 300;
 const BRAND_BURNS_APOSTLE_ATTACK_MIN_DELAY_MS = 1800;
@@ -1231,10 +1350,15 @@ const BRAND_BURNS_STAMINA_RECOVERY_AMOUNT = 6;
 const BRAND_BURNS_STAMINA_RECOVERY_MIN_FACTOR = 0.3;
 const BRAND_BURNS_STAMINA_LOW_HEALTH_BONUS = 0.45;
 const BRAND_BURNS_STAMINA_BLOCK_RECOVERY_BONUS = 2;
-const BRAND_BURNS_PUCK_HEALTH_THRESHOLD_FACTOR = 0.5;
-const BRAND_BURNS_PUCK_HEAL_MIN = 300;
-const BRAND_BURNS_PUCK_HEAL_MAX = 500;
+const BRAND_BURNS_PUCK_HEALTH_THRESHOLD_FACTOR = 0.65;
 const BRAND_BURNS_PUCK_HEAL_COOLDOWN_MS = 4 * 1000;
+const BRAND_BURNS_PUCK_HEAL_RANGES_BY_REMAINING = Object.freeze({
+  5: [400, 500],
+  4: [300, 500],
+  3: [300, 400],
+  2: [200, 300],
+  1: [100, 200],
+});
 const BRAND_BURNS_FEMTO = Object.freeze({
   id: "femto",
   name: "Femto",
@@ -1331,6 +1455,7 @@ const INFINITY_ARMORY_GEM_LABELS = Object.freeze({
 });
 const INFINITY_ARMORY_INVENTORY_SLOT_COUNT = 25;
 const INFINITY_ARMORY_INVENTORY_GEM_COUNT = 12;
+const INFINITY_ARMORY_CURSOR_GEM_MIN_Z_INDEX = 10000;
 const INFINITY_ARMORY_GEM_ICON_BY_SHAPE = Object.freeze({
   square: "assets/random%20events/ib-assets/ib-gem-square.webp",
   circle: "assets/random%20events/ib-assets/ib-gem-circle.webp",
@@ -1420,7 +1545,7 @@ let brandBurnsOutcome = null;
 let brandBurnsStats = {
   health: BRAND_BURNS_PLAYER_MAX_HEALTH,
   maxHealth: BRAND_BURNS_PLAYER_MAX_HEALTH,
-  stamina: 100,
+  stamina: BRAND_BURNS_PLAYER_MAX_STAMINA,
   defeated: 0,
   total: BRAND_BURNS_ENCOUNTER_COUNT,
 };
@@ -1470,10 +1595,13 @@ const randomEventViewportWindows = () =>
     lelouchAlertWindow,
     berserkSunriseWindow,
     calendarReminderWindow,
+    gradescopeCurveWindow,
+    gearsNestWindow,
     instrumentalityWindow,
     instrumentalityCongratsWindow,
     redToolWindow,
     fateWindow,
+    lancerBattleWindow,
     brandBurnsWindow,
     brandBurnsPuckWindow,
     brandBurnsBlockWindow,
@@ -1667,6 +1795,81 @@ const watchRandomEventViewportMedia = () => {
     win.querySelectorAll("img").forEach((image) => {
       image.addEventListener("load", () => clampRandomEventWindowToViewport(win));
     });
+  });
+};
+
+const unloadDeferredImages = (root) => {
+  if (!root) return;
+  root.querySelectorAll("img[data-src]").forEach((image) => {
+    image.removeAttribute("src");
+  });
+};
+
+const isManagedRandomEventWindowVisible = (win) =>
+  Boolean(
+    win &&
+      !win.classList.contains("is-hidden") &&
+      win.getAttribute("aria-hidden") === "false"
+  );
+
+const showManagedRandomEventWindow = (
+  win,
+  { beforeShow, clampAfterMediaLoad = false } = {}
+) => {
+  if (!win) return false;
+  if (isManagedRandomEventWindowVisible(win)) {
+    win.style.zIndex = String(topZ++);
+    return false;
+  }
+
+  if (beforeShow) beforeShow();
+  loadDeferredMedia(win);
+  win.classList.remove("is-hidden", "is-closing");
+  win.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(win);
+  win.style.zIndex = String(topZ++);
+  restartWindowAnimation(win, "is-opening");
+  if (clampAfterMediaLoad) clampRandomEventWindowAfterMediaLoad(win);
+  return true;
+};
+
+const closeManagedRandomEventWindow = (win) => {
+  if (!win || win.classList.contains("is-hidden")) return;
+  win.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(win, "is-closing");
+};
+
+const bindManagedRandomEventWindowAnimation = (
+  win,
+  { afterClose, unloadImages = true } = {}
+) => {
+  if (!win) return;
+
+  win.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  win.addEventListener("animationend", (event) => {
+    if (event.target !== win) return;
+    if (event.animationName === "retro-window-open") {
+      win.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      win.classList.remove("is-closing");
+      win.classList.add("is-hidden");
+      if (afterClose) afterClose();
+      if (unloadImages) unloadDeferredImages(win);
+    }
+  });
+};
+
+const bindRandomEventButton = (button, action) => {
+  if (!button) return;
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    action(event);
   });
 };
 
@@ -4852,65 +5055,25 @@ const startMidnightGospelTimer = () => {
 };
 
 const isLainAlertVisible = () =>
-  Boolean(
-    lainAlertWindow &&
-      !lainAlertWindow.classList.contains("is-hidden") &&
-      lainAlertWindow.getAttribute("aria-hidden") === "false"
-  );
-
-const positionLainAlertWindow = () => {
-  positionRandomEventWindowInViewport(lainAlertWindow);
-};
+  isManagedRandomEventWindowVisible(lainAlertWindow);
 
 const showLainAlert = () => {
-  if (!lainAlertWindow) return;
-  if (isLainAlertVisible()) {
-    lainAlertWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(lainAlertWindow);
-  lainAlertWindow.classList.remove("is-hidden", "is-closing");
-  lainAlertWindow.setAttribute("aria-hidden", "false");
-  positionLainAlertWindow();
-  lainAlertWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(lainAlertWindow, "is-opening");
+  showManagedRandomEventWindow(lainAlertWindow);
 };
 
 const closeLainAlert = () => {
-  if (!lainAlertWindow || lainAlertWindow.classList.contains("is-hidden")) return;
-  lainAlertWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(lainAlertWindow, "is-closing");
+  closeManagedRandomEventWindow(lainAlertWindow);
 };
 
 const isLelouchAlertVisible = () =>
-  Boolean(
-    lelouchAlertWindow &&
-      !lelouchAlertWindow.classList.contains("is-hidden") &&
-      lelouchAlertWindow.getAttribute("aria-hidden") === "false"
-  );
-
-const positionLelouchAlertWindow = () => {
-  positionRandomEventWindowInViewport(lelouchAlertWindow);
-};
+  isManagedRandomEventWindowVisible(lelouchAlertWindow);
 
 const showLelouchAlert = () => {
-  if (!lelouchAlertWindow) return;
-  if (isLelouchAlertVisible()) {
-    lelouchAlertWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(lelouchAlertWindow);
-  lelouchAlertWindow.classList.remove("is-hidden", "is-closing");
-  lelouchAlertWindow.setAttribute("aria-hidden", "false");
-  positionLelouchAlertWindow();
-  lelouchAlertWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(lelouchAlertWindow, "is-opening");
+  showManagedRandomEventWindow(lelouchAlertWindow);
 };
 
 const closeLelouchAlert = () => {
-  if (!lelouchAlertWindow || lelouchAlertWindow.classList.contains("is-hidden")) return;
-  lelouchAlertWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(lelouchAlertWindow, "is-closing");
+  closeManagedRandomEventWindow(lelouchAlertWindow);
 };
 
 const isBerserkSunriseTimeWindow = (date = new Date()) => {
@@ -4919,71 +5082,900 @@ const isBerserkSunriseTimeWindow = (date = new Date()) => {
 };
 
 const isBerserkSunriseVisible = () =>
-  Boolean(
-    berserkSunriseWindow &&
-      !berserkSunriseWindow.classList.contains("is-hidden") &&
-      berserkSunriseWindow.getAttribute("aria-hidden") === "false"
-  );
-
-const positionBerserkSunriseWindow = () => {
-  positionRandomEventWindowInViewport(berserkSunriseWindow);
-};
+  isManagedRandomEventWindowVisible(berserkSunriseWindow);
 
 const showBerserkSunrise = () => {
-  if (!berserkSunriseWindow) return;
-  if (isBerserkSunriseVisible()) {
-    berserkSunriseWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(berserkSunriseWindow);
-  berserkSunriseWindow.classList.remove("is-hidden", "is-closing");
-  berserkSunriseWindow.setAttribute("aria-hidden", "false");
-  positionBerserkSunriseWindow();
-  berserkSunriseWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(berserkSunriseWindow, "is-opening");
-  clampRandomEventWindowAfterMediaLoad(berserkSunriseWindow);
+  showManagedRandomEventWindow(berserkSunriseWindow, { clampAfterMediaLoad: true });
 };
 
 const closeBerserkSunrise = () => {
-  if (!berserkSunriseWindow || berserkSunriseWindow.classList.contains("is-hidden")) return;
-  berserkSunriseWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(berserkSunriseWindow, "is-closing");
+  closeManagedRandomEventWindow(berserkSunriseWindow);
 };
 
 const isCalendarReminderVisible = () =>
-  Boolean(
-    calendarReminderWindow &&
-      !calendarReminderWindow.classList.contains("is-hidden") &&
-      calendarReminderWindow.getAttribute("aria-hidden") === "false"
-  );
-
-const positionCalendarReminderWindow = () => {
-  positionRandomEventWindowInViewport(calendarReminderWindow);
-};
+  isManagedRandomEventWindowVisible(calendarReminderWindow);
 
 const showCalendarReminder = () => {
-  if (!calendarReminderWindow) return;
-  if (isCalendarReminderVisible()) {
-    calendarReminderWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(calendarReminderWindow);
-  calendarReminderWindow.classList.remove("is-hidden", "is-closing");
-  calendarReminderWindow.setAttribute("aria-hidden", "false");
-  positionCalendarReminderWindow();
-  calendarReminderWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(calendarReminderWindow, "is-opening");
+  showManagedRandomEventWindow(calendarReminderWindow);
 };
 
 const closeCalendarReminder = () => {
-  if (!calendarReminderWindow || calendarReminderWindow.classList.contains("is-hidden")) return;
-  calendarReminderWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(calendarReminderWindow, "is-closing");
+  closeManagedRandomEventWindow(calendarReminderWindow);
 };
 
 const showCalendarFromReminder = () => {
   openCalendar({ triggerEvent: false });
   closeCalendarReminder();
+};
+
+const GRADESCOPE_CURVE_SLIDER_DEFAULT = 72;
+const GRADESCOPE_CURVE_GRAPH_LEFT = 20;
+const GRADESCOPE_CURVE_GRAPH_RIGHT = 260;
+const GRADESCOPE_CURVE_GRAPH_BASE_Y = 132;
+const GRADESCOPE_CURVE_GRAPH_AMPLITUDE = 84;
+const GRADESCOPE_CURVE_GRAPH_SIGMA = 34;
+const GRADESCOPE_CURVE_GRAPH_STEPS = 36;
+
+const isGradescopeCurveVisible = () =>
+  isManagedRandomEventWindowVisible(gradescopeCurveWindow);
+
+const updateGradescopeCurvePath = () => {
+  if (!gradescopeCurvePath || !gradescopeCurveSlider) return;
+  const min = Number(gradescopeCurveSlider.min) || 0;
+  const max = Number(gradescopeCurveSlider.max) || 100;
+  const rawValue = Number(gradescopeCurveSlider.value);
+  const value = Number.isFinite(rawValue) ? rawValue : GRADESCOPE_CURVE_SLIDER_DEFAULT;
+  const ratio = Math.max(0, Math.min(1, (value - min) / Math.max(1, max - min)));
+  const center =
+    GRADESCOPE_CURVE_GRAPH_LEFT +
+    ratio * (GRADESCOPE_CURVE_GRAPH_RIGHT - GRADESCOPE_CURVE_GRAPH_LEFT);
+  const points = [];
+  for (let index = 0; index <= GRADESCOPE_CURVE_GRAPH_STEPS; index += 1) {
+    const x =
+      GRADESCOPE_CURVE_GRAPH_LEFT +
+      ((GRADESCOPE_CURVE_GRAPH_RIGHT - GRADESCOPE_CURVE_GRAPH_LEFT) * index) /
+        GRADESCOPE_CURVE_GRAPH_STEPS;
+    const offset = x - center;
+    const y =
+      GRADESCOPE_CURVE_GRAPH_BASE_Y -
+      GRADESCOPE_CURVE_GRAPH_AMPLITUDE *
+        Math.exp(-(offset * offset) / (2 * GRADESCOPE_CURVE_GRAPH_SIGMA ** 2));
+    points.push(`${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`);
+  }
+  gradescopeCurvePath.setAttribute("d", points.join(" "));
+};
+
+const setGradescopeCurveMode = (mode) => {
+  const adjusting = mode === "adjusting";
+  gradescopeCurveWindow?.classList.toggle("is-adjusting", adjusting);
+  gradescopeCurvePrompt?.classList.toggle("is-hidden", adjusting);
+  gradescopeCurveAdjust?.classList.toggle("is-hidden", !adjusting);
+  gradescopeCurveSetRow?.classList.toggle("is-hidden", !adjusting);
+  if (adjusting) {
+    updateGradescopeCurvePath();
+    requestAnimationFrame(() => {
+      gradescopeCurveSlider?.focus({ preventScroll: true });
+    });
+  }
+};
+
+const resetGradescopeCurve = () => {
+  if (gradescopeCurveSlider) {
+    gradescopeCurveSlider.value = String(GRADESCOPE_CURVE_SLIDER_DEFAULT);
+  }
+  updateGradescopeCurvePath();
+  setGradescopeCurveMode("prompt");
+};
+
+const showGradescopeCurve = () => {
+  showManagedRandomEventWindow(gradescopeCurveWindow, {
+    beforeShow: resetGradescopeCurve,
+    clampAfterMediaLoad: true,
+  });
+};
+
+const closeGradescopeCurve = () => {
+  closeManagedRandomEventWindow(gradescopeCurveWindow);
+};
+
+const GEARS_NEST_ASSETS = Object.freeze({
+  nest: "assets/random%20events/scourge-nest-background.png",
+  cogGear: "assets/random%20events/gears-nest/cog-gear.webp",
+  drone: "assets/random%20events/gears-nest/locust-drone.webp",
+  boomer: "assets/random%20events/gears-nest/boomer.webp",
+  lancer: "assets/random%20events/gears-nest/lancer.webp",
+  explosion: "assets/random%20events/pixel-explosion.gif",
+});
+const GEARS_NEST_STAGE_PROMPT = "prompt";
+const GEARS_NEST_STAGE_COMBAT = "combat";
+const GEARS_NEST_PLAYER_MAX_HEALTH = 100;
+const GEARS_NEST_MAGAZINE_SIZE = 32;
+const GEARS_NEST_RELOAD_MS = 1050;
+const GEARS_NEST_ENEMY_HEALTH_MULTIPLIER = 3 * 0.9;
+const GEARS_NEST_PLAYER_ATTACK_MULTIPLIER = 1.1;
+const GEARS_NEST_DRONE_DAMAGE = 3.5 * GEARS_NEST_PLAYER_ATTACK_MULTIPLIER;
+const GEARS_NEST_BOOMER_DAMAGE = 4 * GEARS_NEST_PLAYER_ATTACK_MULTIPLIER;
+const GEARS_NEST_EXPLOSION_DURATION_MS = 1800;
+const GEARS_NEST_SHOOTING_RECOVER_MS = 360;
+const GEARS_NEST_RAPID_FIRE_MS = 130;
+const GEARS_NEST_COVER_CHANGE_MS = 310;
+const GEARS_NEST_ENEMY_ATTACK_MS = 1050;
+const GEARS_NEST_GRENADE_FUSE_MS = 1700;
+const GEARS_NEST_ROCKET_FUSE_MS = 1900;
+const GEARS_NEST_GRENADE_MIN_GAP_MS = 3000;
+const GEARS_NEST_ROCKET_MIN_GAP_MS = 4200;
+const GEARS_NEST_COVER_POSITIONS = Object.freeze([
+  { index: 0, label: "left cover", shortLabel: "Left", x: 19, y: 87, width: 132 },
+  { index: 1, label: "center cover", shortLabel: "Center", x: 50, y: 90, width: 144 },
+  { index: 2, label: "right cover", shortLabel: "Right", x: 80, y: 86, width: 132 },
+]);
+const GEARS_NEST_ENEMY_COVER_SLOTS = Object.freeze([
+  { id: "enemy-cover-left", x: 18, y: 67, width: 106, enemyX: 18, enemyY: 58, enemyWidth: 66 },
+  { id: "enemy-cover-mid-left", x: 36, y: 63, width: 94, enemyX: 36, enemyY: 54, enemyWidth: 72 },
+  { id: "enemy-cover-mid-right", x: 58, y: 64, width: 100, enemyX: 58, enemyY: 55, enemyWidth: 62 },
+  { id: "enemy-cover-right", x: 75, y: 68, width: 104, enemyX: 75, enemyY: 59, enemyWidth: 68 },
+]);
+const GEARS_NEST_ENEMY_TEMPLATES = Object.freeze([
+  {
+    id: "drone-left",
+    name: "Locust Drone",
+    type: "drone",
+    baseHealth: 30,
+    hasCover: true,
+    coverSlotIndex: 0,
+    image: GEARS_NEST_ASSETS.drone,
+    coverDamage: 1,
+    exposedDamage: 7,
+  },
+  {
+    id: "drone-center",
+    name: "Locust Drone",
+    type: "drone",
+    baseHealth: 34,
+    hasCover: true,
+    coverSlotIndex: 1,
+    image: GEARS_NEST_ASSETS.drone,
+    coverDamage: 1,
+    exposedDamage: 8,
+  },
+  {
+    id: "drone-mid-right",
+    name: "Locust Drone",
+    type: "drone",
+    baseHealth: 28,
+    hasCover: true,
+    coverSlotIndex: 2,
+    image: GEARS_NEST_ASSETS.drone,
+    coverDamage: 1,
+    exposedDamage: 8,
+  },
+  {
+    id: "drone-right",
+    name: "Locust Drone",
+    type: "drone",
+    baseHealth: 30,
+    hasCover: true,
+    coverSlotIndex: 3,
+    image: GEARS_NEST_ASSETS.drone,
+    coverDamage: 1,
+    exposedDamage: 7,
+  },
+  {
+    id: "boomer",
+    name: "Boomer",
+    type: "boomer",
+    baseHealth: 58,
+    hasCover: false,
+    x: 86,
+    y: 47,
+    width: 118,
+    image: GEARS_NEST_ASSETS.boomer,
+    coverDamage: 2,
+    exposedDamage: 11,
+  },
+]);
+
+const applyGearsNestEnemyCoverSlot = (enemy, coverSlotIndex) => {
+  const cover = GEARS_NEST_ENEMY_COVER_SLOTS[coverSlotIndex];
+  if (!cover) return enemy;
+  return {
+    ...enemy,
+    coverSlotIndex,
+    coverId: cover.id,
+    x: cover.enemyX,
+    y: cover.enemyY,
+    width: cover.enemyWidth,
+  };
+};
+
+const getGearsNestEnemyHealth = (enemy) =>
+  Math.ceil(enemy.baseHealth * GEARS_NEST_ENEMY_HEALTH_MULTIPLIER);
+
+const createGearsNestEnemies = () =>
+  GEARS_NEST_ENEMY_TEMPLATES.map((enemy) => {
+    const positionedEnemy = enemy.hasCover
+      ? applyGearsNestEnemyCoverSlot(enemy, enemy.coverSlotIndex)
+      : enemy;
+    const maxHealth = getGearsNestEnemyHealth(positionedEnemy);
+    return {
+      ...positionedEnemy,
+      maxHealth,
+      health: maxHealth,
+    };
+  });
+
+const createGearsNestState = () => ({
+  active: false,
+  completed: false,
+  outcome: "",
+  stage: GEARS_NEST_STAGE_PROMPT,
+  health: GEARS_NEST_PLAYER_MAX_HEALTH,
+  ammo: GEARS_NEST_MAGAZINE_SIZE,
+  coverIndex: 1,
+  exposed: false,
+  exposureEndsAt: 0,
+  firing: false,
+  heldEnemyId: "",
+  switching: false,
+  reloading: false,
+  enemies: createGearsNestEnemies(),
+  enemyFiringIds: new Set(),
+  hazards: [],
+  nextHazardId: 1,
+  explosions: [],
+  nextExplosionId: 1,
+  lastGrenadeAt: 0,
+  lastRocketAt: 0,
+  enemyCoverShift: 1,
+  timerIds: new Set(),
+  attackIntervalId: 0,
+  fireIntervalId: 0,
+});
+
+let gearsNestState = createGearsNestState();
+
+const isGearsNestVisible = () =>
+  isManagedRandomEventWindowVisible(gearsNestWindow);
+
+const gearsNestAliveEnemies = () =>
+  gearsNestState.enemies.filter((enemy) => enemy.health > 0);
+
+const setGearsNestTimer = (callback, delay) => {
+  const timerId = window.setTimeout(() => {
+    gearsNestState.timerIds.delete(timerId);
+    callback();
+  }, delay);
+  gearsNestState.timerIds.add(timerId);
+  return timerId;
+};
+
+const clearGearsNestAttackTimer = () => {
+  if (!gearsNestState.attackIntervalId) return;
+  window.clearInterval(gearsNestState.attackIntervalId);
+  gearsNestState.attackIntervalId = 0;
+};
+
+const clearGearsNestFireTimer = () => {
+  if (!gearsNestState.fireIntervalId) return;
+  window.clearInterval(gearsNestState.fireIntervalId);
+  gearsNestState.fireIntervalId = 0;
+};
+
+const clearGearsNestTimers = () => {
+  gearsNestState.timerIds.forEach((timerId) => {
+    window.clearTimeout(timerId);
+  });
+  gearsNestState.timerIds.clear();
+  clearGearsNestAttackTimer();
+  clearGearsNestFireTimer();
+};
+
+const setGearsNestStage = (stage) => {
+  gearsNestState.stage = stage;
+  const isPrompt = stage === GEARS_NEST_STAGE_PROMPT;
+  const isCombat = stage === GEARS_NEST_STAGE_COMBAT;
+  gearsNestPrompt?.classList.toggle("is-hidden", !isPrompt);
+  gearsNestCombat?.classList.remove("is-hidden");
+  gearsNestWindow?.classList.toggle("is-combat", isCombat);
+  gearsNestWindow?.classList.toggle("is-prompting", isPrompt);
+};
+
+const setGearsNestStatus = (message) => {
+  if (gearsNestStatus) gearsNestStatus.textContent = message;
+};
+
+const renderGearsNestPlayerCovers = () => {
+  if (!gearsNestPlayerCovers) return;
+  const covers = GEARS_NEST_COVER_POSITIONS.map((cover) => {
+    const marker = document.createElement("span");
+    marker.className = "gears-nest-player-cover";
+    marker.dataset.gearsNestCoverProp = String(cover.index);
+    marker.style.left = `${cover.x}%`;
+    marker.style.top = `${cover.y}%`;
+    marker.style.width = `${cover.width}px`;
+    return marker;
+  });
+  gearsNestPlayerCovers.replaceChildren(...covers);
+};
+
+const renderGearsNestEnemyCovers = () => {
+  if (!gearsNestEnemyCovers) return;
+  const occupiedCoverIds = new Set(
+    gearsNestAliveEnemies()
+      .map((enemy) => enemy.coverId)
+      .filter(Boolean)
+  );
+  const covers = GEARS_NEST_ENEMY_COVER_SLOTS.map((cover) => {
+    const marker = document.createElement("span");
+    marker.className = "gears-nest-enemy-cover";
+    marker.classList.toggle("is-occupied", occupiedCoverIds.has(cover.id));
+    marker.dataset.gearsNestEnemyCover = cover.id;
+    marker.style.left = `${cover.x}%`;
+    marker.style.top = `${cover.y}%`;
+    marker.style.width = `${cover.width}px`;
+    return marker;
+  });
+  gearsNestEnemyCovers.replaceChildren(...covers);
+};
+
+const renderGearsNestProjectiles = () => {
+  if (!gearsNestProjectiles) return;
+  const projectiles = gearsNestState.hazards.map((hazard) => {
+    const marker = document.createElement("div");
+    marker.className = `gears-nest-projectile gears-nest-projectile--${hazard.type}`;
+    marker.style.setProperty("--start-x", `${hazard.source.x}%`);
+    marker.style.setProperty("--start-y", `${hazard.source.y}%`);
+    marker.style.setProperty("--mid-x", `${(hazard.source.x + hazard.target.x) / 2}%`);
+    marker.style.setProperty(
+      "--arc-y",
+      `${Math.min(hazard.source.y, hazard.target.y) - hazard.arcLift}%`
+    );
+    marker.style.setProperty("--end-x", `${hazard.target.x}%`);
+    marker.style.setProperty("--end-y", `${hazard.target.y}%`);
+    marker.style.setProperty("--flight-ms", `${hazard.durationMs}ms`);
+
+    const body = document.createElement("span");
+    body.className = "gears-nest-projectile-body";
+    body.textContent = hazard.type === "rocket" ? "BOOM" : "";
+    marker.append(body);
+
+    const warning = document.createElement("span");
+    warning.className = "gears-nest-hazard";
+    warning.textContent = hazard.type === "rocket" ? "ROCKET" : "FRAG";
+    warning.style.left = `${hazard.warning.x}%`;
+    warning.style.top = `${hazard.warning.y}%`;
+    marker.append(warning);
+
+    return marker;
+  });
+  const explosions = gearsNestState.explosions.map((explosion) => {
+    const image = document.createElement("img");
+    image.className = "gears-nest-explosion";
+    image.src = explosion.src;
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
+    image.style.left = `${explosion.x}%`;
+    image.style.top = `${explosion.y}%`;
+    return image;
+  });
+  gearsNestProjectiles.replaceChildren(...projectiles, ...explosions);
+};
+
+const updateGearsNestHud = () => {
+  const health = Math.max(0, gearsNestState.health);
+  const healthPercent = `${health}%`;
+  if (gearsNestHealth) gearsNestHealth.style.width = healthPercent;
+  const healthbar = gearsNestHealth?.closest(".gears-nest-healthbar");
+  if (healthbar) healthbar.setAttribute("aria-valuenow", String(health));
+  if (gearsNestHealthValue) gearsNestHealthValue.textContent = String(health);
+  if (gearsNestAmmo) {
+    gearsNestAmmo.textContent = gearsNestState.reloading
+      ? "Reloading..."
+      : `${gearsNestState.ammo} / ${GEARS_NEST_MAGAZINE_SIZE}`;
+  }
+  gearsNestWindow?.classList.toggle("is-reloading", gearsNestState.reloading);
+  gearsNestWindow?.classList.toggle("is-firing", gearsNestState.firing);
+  gearsNestWindow?.classList.toggle("is-switching-cover", gearsNestState.switching);
+  gearsNestPlayer?.classList.toggle("is-peeking", gearsNestState.exposed);
+  gearsNestPlayer?.classList.toggle("is-firing", gearsNestState.firing);
+  gearsNestPlayer?.classList.toggle("is-switching", gearsNestState.switching);
+  if (gearsNestPlayer) {
+    gearsNestPlayer.dataset.cover = String(gearsNestState.coverIndex);
+  }
+  gearsNestCoverButtons.forEach((button) => {
+    const coverIndex = Number(button.getAttribute("data-gears-nest-cover"));
+    const active = coverIndex === gearsNestState.coverIndex;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+    button.disabled = gearsNestState.completed || !gearsNestState.active;
+  });
+};
+
+const renderGearsNestEnemies = () => {
+  if (!gearsNestEnemies) return;
+  renderGearsNestEnemyCovers();
+  const enemyButtons = gearsNestAliveEnemies().map((enemy) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `gears-nest-enemy gears-nest-enemy--${enemy.type}`;
+    button.classList.toggle("is-behind-cover", Boolean(enemy.coverId));
+    button.classList.toggle("is-firing", gearsNestState.enemyFiringIds.has(enemy.id));
+    button.classList.toggle("is-targeted", gearsNestState.heldEnemyId === enemy.id);
+    button.dataset.gearsNestEnemy = enemy.id;
+    button.style.left = `${enemy.x}%`;
+    button.style.top = `${enemy.y}%`;
+    button.style.width = `${enemy.width}px`;
+    button.setAttribute(
+      "aria-label",
+      `${enemy.name}, ${enemy.health} health remaining`
+    );
+
+    const image = document.createElement("img");
+    image.src = enemy.image;
+    image.decoding = "async";
+    image.alt = "";
+    button.append(image);
+
+    const meter = document.createElement("span");
+    meter.className = "gears-nest-enemy-health";
+    meter.style.width = `${Math.max(0, (enemy.health / enemy.maxHealth) * 100)}%`;
+    button.append(meter);
+
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      startGearsNestFiring(enemy.id);
+    });
+    button.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+    return button;
+  });
+  gearsNestEnemies.replaceChildren(...enemyButtons);
+};
+
+const moveGearsNestEnemyToCoverSlot = (enemy, coverSlotIndex) => {
+  const cover = GEARS_NEST_ENEMY_COVER_SLOTS[coverSlotIndex];
+  if (!cover) return;
+  enemy.coverSlotIndex = coverSlotIndex;
+  enemy.coverId = cover.id;
+  enemy.x = cover.enemyX;
+  enemy.y = cover.enemyY;
+  enemy.width = cover.enemyWidth;
+};
+
+const moveGearsNestAliveDronesToOpenCovers = () => {
+  const aliveDrones = gearsNestAliveEnemies().filter(
+    (enemy) => enemy.type === "drone"
+  );
+  if (!aliveDrones.length) return;
+  const startIndex =
+    gearsNestState.enemyCoverShift % GEARS_NEST_ENEMY_COVER_SLOTS.length;
+  aliveDrones.forEach((enemy, offset) => {
+    const coverSlotIndex =
+      (startIndex + offset) % GEARS_NEST_ENEMY_COVER_SLOTS.length;
+    moveGearsNestEnemyToCoverSlot(enemy, coverSlotIndex);
+  });
+  gearsNestState.enemyCoverShift =
+    (gearsNestState.enemyCoverShift + 1) % GEARS_NEST_ENEMY_COVER_SLOTS.length;
+};
+
+const resetGearsNestPrompt = () => {
+  clearGearsNestTimers();
+  gearsNestState = createGearsNestState();
+  gearsNestWindow?.classList.remove(
+    "is-cleared",
+    "is-damaged",
+    "is-failed",
+    "is-firing",
+    "is-reloading",
+    "is-switching-cover"
+  );
+  gearsNestPlayer?.classList.remove("is-firing", "is-peeking", "is-switching");
+  renderGearsNestPlayerCovers();
+  renderGearsNestEnemies();
+  if (gearsNestProjectiles) gearsNestProjectiles.replaceChildren();
+  gearsNestResult?.classList.add("is-hidden");
+  if (gearsNestResultText) gearsNestResultText.textContent = "";
+  setGearsNestStatus("Scourge Nest emerging. Engage to clear it.");
+  setGearsNestStage(GEARS_NEST_STAGE_PROMPT);
+  updateGearsNestHud();
+};
+
+const flashGearsNestDamage = () => {
+  gearsNestWindow?.classList.add("is-damaged");
+  setGearsNestTimer(() => {
+    gearsNestWindow?.classList.remove("is-damaged");
+  }, 260);
+};
+
+const completeGearsNestEvent = (outcome) => {
+  if (gearsNestState.completed) return;
+  clearGearsNestTimers();
+  gearsNestState.active = false;
+  gearsNestState.completed = true;
+  gearsNestState.outcome = outcome;
+  gearsNestState.exposed = false;
+  gearsNestState.exposureEndsAt = 0;
+  gearsNestState.firing = false;
+  gearsNestState.heldEnemyId = "";
+  gearsNestState.switching = false;
+  gearsNestState.reloading = false;
+  gearsNestState.enemyFiringIds.clear();
+  gearsNestState.hazards = [];
+  gearsNestState.explosions = [];
+  renderGearsNestProjectiles();
+  gearsNestWindow?.classList.toggle("is-cleared", outcome === "cleared");
+  gearsNestWindow?.classList.toggle("is-failed", outcome === "failed");
+  updateGearsNestHud();
+  renderGearsNestEnemies();
+  if (gearsNestResultText) {
+    gearsNestResultText.textContent =
+      outcome === "cleared"
+        ? "Scourge Nest cleared."
+        : "The nest overran your position.";
+  }
+  gearsNestResult?.classList.remove("is-hidden");
+  setGearsNestStatus(
+    outcome === "cleared"
+      ? "Area secured. The Grubs are down."
+      : "Downed in the breach."
+  );
+  requestAnimationFrame(() => {
+    gearsNestResultOk?.focus({ preventScroll: true });
+  });
+};
+
+const isGearsNestPlayerOutOfCover = () =>
+  gearsNestState.exposed || gearsNestState.switching;
+
+const damageGearsNestPlayer = (amount, message, { flash = false } = {}) => {
+  if (!gearsNestState.active || gearsNestState.completed || amount <= 0) return;
+  gearsNestState.health = Math.max(0, gearsNestState.health - amount);
+  if (flash) flashGearsNestDamage();
+  updateGearsNestHud();
+  if (message) setGearsNestStatus(message);
+  if (gearsNestState.health <= 0) completeGearsNestEvent("failed");
+};
+
+const incomingGearsNestBulletDamage = (enemy) =>
+  isGearsNestPlayerOutOfCover() ? enemy.exposedDamage : enemy.coverDamage;
+
+const markGearsNestEnemyFiring = (enemyId) => {
+  if (!enemyId || gearsNestState.completed) return;
+  gearsNestState.enemyFiringIds.add(enemyId);
+  renderGearsNestEnemies();
+  setGearsNestTimer(() => {
+    gearsNestState.enemyFiringIds.delete(enemyId);
+    renderGearsNestEnemies();
+  }, 260);
+};
+
+const applyGearsNestBulletDamage = (enemy) => {
+  markGearsNestEnemyFiring(enemy.id);
+  const playerOutOfCover = isGearsNestPlayerOutOfCover();
+  const amount = incomingGearsNestBulletDamage(enemy);
+  const coverText = playerOutOfCover
+    ? "caught you out of cover"
+    : "peppered the cover";
+  damageGearsNestPlayer(amount, `${enemy.name} ${coverText}.`, {
+    flash: playerOutOfCover,
+  });
+};
+
+const scheduleGearsNestExposureRecovery = (delayMs) => {
+  gearsNestState.exposureEndsAt = Math.max(
+    gearsNestState.exposureEndsAt,
+    Date.now() + delayMs
+  );
+  setGearsNestTimer(removeGearsNestExposure, delayMs);
+};
+
+const stopGearsNestFiring = () => {
+  if (!gearsNestState.firing && !gearsNestState.fireIntervalId) return;
+  clearGearsNestFireTimer();
+  gearsNestState.firing = false;
+  gearsNestState.heldEnemyId = "";
+  if (gearsNestState.active && !gearsNestState.completed && gearsNestState.exposed) {
+    scheduleGearsNestExposureRecovery(GEARS_NEST_SHOOTING_RECOVER_MS);
+  }
+  updateGearsNestHud();
+  renderGearsNestEnemies();
+};
+
+const startGearsNestReload = () => {
+  if (!gearsNestState.active || gearsNestState.completed || gearsNestState.reloading) {
+    return;
+  }
+  stopGearsNestFiring();
+  gearsNestState.reloading = true;
+  setGearsNestStatus("Reloading the Lancer...");
+  updateGearsNestHud();
+  setGearsNestTimer(() => {
+    if (!gearsNestState.active || gearsNestState.completed) return;
+    gearsNestState.reloading = false;
+    gearsNestState.ammo = GEARS_NEST_MAGAZINE_SIZE;
+    setGearsNestStatus("Lancer reloaded. Keep firing.");
+    updateGearsNestHud();
+  }, GEARS_NEST_RELOAD_MS);
+};
+
+const removeGearsNestExposure = () => {
+  if (gearsNestState.firing) return;
+  const remainingExposureMs = gearsNestState.exposureEndsAt - Date.now();
+  if (remainingExposureMs > 0) {
+    setGearsNestTimer(removeGearsNestExposure, remainingExposureMs);
+    return;
+  }
+  gearsNestState.exposed = false;
+  gearsNestState.exposureEndsAt = 0;
+  updateGearsNestHud();
+};
+
+const fireGearsNestEnemy = (enemyId) => {
+  if (!gearsNestState.active || gearsNestState.completed) return;
+  if (gearsNestState.reloading) {
+    setGearsNestStatus("Reloading. Stay in cover.");
+    return;
+  }
+  if (gearsNestState.ammo <= 0) {
+    startGearsNestReload();
+    return;
+  }
+
+  const enemy = gearsNestState.enemies.find(
+    (candidate) => candidate.id === enemyId && candidate.health > 0
+  );
+  if (!enemy) return;
+
+  gearsNestState.exposed = true;
+  gearsNestState.ammo -= 1;
+  const damage =
+    enemy.type === "boomer" ? GEARS_NEST_BOOMER_DAMAGE : GEARS_NEST_DRONE_DAMAGE;
+  enemy.health = Math.max(0, Number((enemy.health - damage).toFixed(2)));
+  if (enemy.health <= 0) moveGearsNestAliveDronesToOpenCovers();
+  setGearsNestStatus(
+    enemy.health > 0 ? `${enemy.name} hit.` : `${enemy.name} down.`
+  );
+  updateGearsNestHud();
+  renderGearsNestEnemies();
+
+  if (gearsNestState.completed) return;
+
+  scheduleGearsNestExposureRecovery(GEARS_NEST_SHOOTING_RECOVER_MS);
+  if (!gearsNestAliveEnemies().length) {
+    completeGearsNestEvent("cleared");
+    return;
+  }
+  if (gearsNestState.ammo <= 0) startGearsNestReload();
+};
+
+const startGearsNestFiring = (enemyId) => {
+  if (!gearsNestState.active || gearsNestState.completed || gearsNestState.reloading) {
+    return;
+  }
+  const enemy = gearsNestState.enemies.find(
+    (candidate) => candidate.id === enemyId && candidate.health > 0
+  );
+  if (!enemy) return;
+
+  clearGearsNestFireTimer();
+  gearsNestState.firing = true;
+  gearsNestState.heldEnemyId = enemyId;
+  updateGearsNestHud();
+  renderGearsNestEnemies();
+  fireGearsNestEnemy(enemyId);
+
+  if (gearsNestState.completed || gearsNestState.reloading) return;
+  gearsNestState.fireIntervalId = window.setInterval(() => {
+    if (!gearsNestState.firing || gearsNestState.reloading) {
+      stopGearsNestFiring();
+      return;
+    }
+    const target = gearsNestState.enemies.find(
+      (candidate) =>
+        candidate.id === gearsNestState.heldEnemyId && candidate.health > 0
+    );
+    if (!target) {
+      stopGearsNestFiring();
+      return;
+    }
+    fireGearsNestEnemy(target.id);
+  }, GEARS_NEST_RAPID_FIRE_MS);
+};
+
+const setGearsNestCover = (coverIndex) => {
+  if (
+    !gearsNestState.active ||
+    gearsNestState.completed ||
+    gearsNestState.switching ||
+    coverIndex === gearsNestState.coverIndex ||
+    !GEARS_NEST_COVER_POSITIONS[coverIndex]
+  ) {
+    return;
+  }
+  gearsNestState.coverIndex = coverIndex;
+  gearsNestState.switching = true;
+  const cover = GEARS_NEST_COVER_POSITIONS[coverIndex];
+  setGearsNestStatus(`Moving to ${cover.label}.`);
+  updateGearsNestHud();
+  setGearsNestTimer(() => {
+    if (!gearsNestState.active || gearsNestState.completed) return;
+    gearsNestState.switching = false;
+    setGearsNestStatus(`Set behind ${cover.label}.`);
+    updateGearsNestHud();
+  }, GEARS_NEST_COVER_CHANGE_MS);
+};
+
+const resolveGearsNestHazard = (hazardId) => {
+  const hazard = gearsNestState.hazards.find((candidate) => candidate.id === hazardId);
+  if (!hazard || !gearsNestState.active || gearsNestState.completed) return;
+  gearsNestState.hazards = gearsNestState.hazards.filter(
+    (candidate) => candidate.id !== hazardId
+  );
+  const stillInBlastCover = gearsNestState.coverIndex === hazard.coverIndex;
+  if (!stillInBlastCover) {
+    setGearsNestStatus(
+      hazard.type === "rocket" ? "Boomshot missed the cover." : "Frag avoided."
+    );
+  } else {
+    const exposed = isGearsNestPlayerOutOfCover();
+    const amount =
+      hazard.type === "rocket" ? (exposed ? 40 : 14) : exposed ? 28 : 20;
+    damageGearsNestPlayer(
+      amount,
+      hazard.type === "rocket"
+        ? "Boomshot hit the cover."
+        : "Frag detonated on your cover.",
+      { flash: exposed }
+    );
+  }
+
+  const explosion = {
+    id: gearsNestState.nextExplosionId,
+    src: `${GEARS_NEST_ASSETS.explosion}?impact=${Date.now()}-${gearsNestState.nextExplosionId}`,
+    x: hazard.impact.x,
+    y: hazard.impact.y,
+  };
+  gearsNestState.nextExplosionId += 1;
+  gearsNestState.explosions.push(explosion);
+  renderGearsNestProjectiles();
+  setGearsNestTimer(() => {
+    gearsNestState.explosions = gearsNestState.explosions.filter(
+      (candidate) => candidate.id !== explosion.id
+    );
+    renderGearsNestProjectiles();
+  }, GEARS_NEST_EXPLOSION_DURATION_MS);
+};
+
+const launchGearsNestHazard = (type, enemy) => {
+  if (!gearsNestState.active || gearsNestState.completed) return;
+  const targetCoverIndex = gearsNestState.coverIndex;
+  const target = GEARS_NEST_COVER_POSITIONS[targetCoverIndex];
+  const hazard = {
+    id: gearsNestState.nextHazardId,
+    type,
+    coverIndex: targetCoverIndex,
+    durationMs: type === "rocket" ? GEARS_NEST_ROCKET_FUSE_MS : GEARS_NEST_GRENADE_FUSE_MS,
+    arcLift: type === "rocket" ? 8 : 24,
+    source: {
+      x: enemy.x,
+      y: type === "rocket" ? enemy.y + 12 : enemy.y + 8,
+    },
+    target: {
+      x: target.x,
+      y: type === "rocket" ? target.y - 16 : target.y - 10,
+    },
+    warning: {
+      x: target.x,
+      y: target.y - 12,
+    },
+    impact: {
+      x: target.x,
+      y: target.y - 6,
+    },
+  };
+  gearsNestState.nextHazardId += 1;
+  gearsNestState.hazards.push(hazard);
+  markGearsNestEnemyFiring(enemy.id);
+  renderGearsNestProjectiles();
+  setGearsNestStatus(
+    type === "rocket"
+      ? `${enemy.name} yelled BOOM. Switch cover!`
+      : `${enemy.name} threw a frag. Switch cover!`
+  );
+  setGearsNestTimer(
+    () => resolveGearsNestHazard(hazard.id),
+    type === "rocket" ? GEARS_NEST_ROCKET_FUSE_MS : GEARS_NEST_GRENADE_FUSE_MS
+  );
+};
+
+const chooseGearsNestEnemyAttack = () => {
+  if (!gearsNestState.active || gearsNestState.completed) return;
+  const aliveEnemies = gearsNestAliveEnemies();
+  if (!aliveEnemies.length) {
+    completeGearsNestEvent("cleared");
+    return;
+  }
+
+  const now = Date.now();
+  const boomer = aliveEnemies.find((enemy) => enemy.type === "boomer");
+  const drones = aliveEnemies.filter((enemy) => enemy.type === "drone");
+  const canLaunchHazard = gearsNestState.hazards.length < 2;
+
+  if (
+    boomer &&
+    canLaunchHazard &&
+    now - gearsNestState.lastRocketAt > GEARS_NEST_ROCKET_MIN_GAP_MS &&
+    Math.random() < 0.42
+  ) {
+    gearsNestState.lastRocketAt = now;
+    launchGearsNestHazard("rocket", boomer);
+    return;
+  }
+
+  if (
+    drones.length &&
+    canLaunchHazard &&
+    now - gearsNestState.lastGrenadeAt > GEARS_NEST_GRENADE_MIN_GAP_MS &&
+    Math.random() < 0.34
+  ) {
+    gearsNestState.lastGrenadeAt = now;
+    launchGearsNestHazard(
+      "grenade",
+      drones[Math.floor(Math.random() * drones.length)]
+    );
+    return;
+  }
+
+  if (!drones.length) return;
+  applyGearsNestBulletDamage(drones[Math.floor(Math.random() * drones.length)]);
+};
+
+const startGearsNestEnemyAttacks = () => {
+  clearGearsNestAttackTimer();
+  gearsNestState.attackIntervalId = window.setInterval(
+    chooseGearsNestEnemyAttack,
+    GEARS_NEST_ENEMY_ATTACK_MS
+  );
+};
+
+const startGearsNestCombat = () => {
+  clearGearsNestTimers();
+  gearsNestState = createGearsNestState();
+  gearsNestState.active = true;
+  setGearsNestStage(GEARS_NEST_STAGE_COMBAT);
+  gearsNestResult?.classList.add("is-hidden");
+  gearsNestWindow?.classList.remove(
+    "is-cleared",
+    "is-damaged",
+    "is-failed",
+    "is-firing"
+  );
+  setGearsNestStatus("Hold fire on a Grub to spray the Lancer.");
+  updateGearsNestHud();
+  renderGearsNestEnemies();
+  renderGearsNestProjectiles();
+  startGearsNestEnemyAttacks();
+};
+
+const showGearsNest = () => {
+  showManagedRandomEventWindow(gearsNestWindow, {
+    beforeShow: resetGearsNestPrompt,
+    clampAfterMediaLoad: true,
+  });
+};
+
+const closeGearsNest = () => {
+  clearGearsNestTimers();
+  closeManagedRandomEventWindow(gearsNestWindow);
+};
+
+const moveGearsNestReloadCursor = (event) => {
+  if (!gearsNestBattlefield || !gearsNestReloadCursor) return;
+  const rect = gearsNestBattlefield.getBoundingClientRect();
+  gearsNestReloadCursor.style.left = `${event.clientX - rect.left}px`;
+  gearsNestReloadCursor.style.top = `${event.clientY - rect.top}px`;
 };
 
 const isInstrumentalityWindowVisible = (win) =>
@@ -5218,6 +6210,12 @@ const GREEN_LIGHTNING_PALETTE = Object.freeze({
   mid: "68, 255, 130",
   core: "232, 255, 238",
   shadow: "rgba(0, 255, 120, 0.95)",
+});
+const YELLOW_LIGHTNING_PALETTE = Object.freeze({
+  glow: "255, 209, 0",
+  mid: "255, 238, 86",
+  core: "255, 255, 232",
+  shadow: "rgba(255, 214, 0, 0.95)",
 });
 
 const getFateLightningContext = () => {
@@ -5658,6 +6656,519 @@ const closeFateWindow = () => {
   restartWindowAnimation(fateWindow, "is-closing");
 };
 
+const LANCER_BATTLE_CLASH_VIDEO =
+  "https://imgix.bustle.com/inverse/8d/d9/86/e4/92b5/4dec/b80e/3402288d9a18/giphy-9gif.gif?w=825&h=464&fit=max&fm=mp4";
+const LANCER_BATTLE_WIN_VIDEO_START_SECONDS = 29.5;
+const LANCER_BATTLE_WIN_VIDEO_END_SECONDS = 36.5;
+const LANCER_BATTLE_WIN_VIDEO_SRC =
+  "assets/random%20events/lancer-battle/lancer-battle-win.mp4";
+const LANCER_BATTLE_LOSS_VIDEO_START_SECONDS = 21.5;
+const LANCER_BATTLE_LOSS_VIDEO_END_SECONDS = 25;
+const LANCER_BATTLE_LOSS_VIDEO_SRC =
+  "assets/random%20events/lancer-battle/lancer-battle-loss.mp4";
+const LANCER_BATTLE_START_PROGRESS = FATE_START_PROGRESS;
+const LANCER_BATTLE_PUSH_GAIN = FATE_PRESS_GAIN;
+const LANCER_BATTLE_DRAIN_INTERVAL_MS = FATE_DRAIN_INTERVAL_MS;
+const LANCER_BATTLE_DRAIN_AMOUNT = FATE_DRAIN_AMOUNT;
+const LANCER_BATTLE_FALLBACK_CLASH_MS = 3600;
+const LANCER_BATTLE_BOOMERANG_SECONDS = 0.5;
+const LANCER_BATTLE_BOOMERANG_START_BUFFER_SECONDS = 0.05;
+const LANCER_BATTLE_BOOMERANG_STEP = 0.033;
+const LANCER_BATTLE_CLICK_COUNTER_PROBABILITY = 0.4;
+const LANCER_BATTLE_WIN_CLIP_MS =
+  (LANCER_BATTLE_WIN_VIDEO_END_SECONDS - LANCER_BATTLE_WIN_VIDEO_START_SECONDS) * 1000;
+const LANCER_BATTLE_LOSS_CLIP_MS =
+  (LANCER_BATTLE_LOSS_VIDEO_END_SECONDS - LANCER_BATTLE_LOSS_VIDEO_START_SECONDS) * 1000;
+
+const LANCER_BATTLE_STAGES = Object.freeze({
+  ready: "ready",
+  intro: "intro",
+  active: "active",
+  resolving: "resolving",
+  win: "win",
+  loss: "loss",
+  final: "final",
+  idle: "idle",
+});
+
+const isLancerBattleVisible = () =>
+  isManagedRandomEventWindowVisible(lancerBattleWindow);
+
+const setLancerBattleStatus = (message) => {
+  if (lancerBattleStatus) lancerBattleStatus.textContent = message;
+};
+
+const showLancerBattleStage = (stage) => {
+  lancerBattleReadyStage?.classList.toggle("is-hidden", stage !== "ready");
+  lancerBattleClashStage?.classList.toggle("is-hidden", stage !== "clash");
+  lancerBattleResultStage?.classList.toggle("is-hidden", stage !== "result");
+  lancerBattleFinalStage?.classList.toggle("is-hidden", stage !== "final");
+  lancerBattleWindow?.classList.toggle("is-ready", stage === "ready");
+};
+
+const updateLancerBattleProgress = () => {
+  const progress = Math.min(100, Math.max(0, lancerBattleProgressValue));
+  if (lancerBattleProgressBar) {
+    lancerBattleProgressBar.style.width = `${progress}%`;
+  }
+  if (lancerBattleProgress) {
+    lancerBattleProgress.setAttribute("aria-valuenow", Math.round(progress));
+  }
+};
+
+const clearLancerBattleVideo = () => {
+  if (!lancerBattleClashVideo) return;
+  lancerBattleClashVideo.pause();
+  lancerBattleClashVideo.currentTime = 0;
+};
+
+const clearLancerBattleLightning = () => {
+  if (lancerBattleLightningFrame) {
+    cancelAnimationFrame(lancerBattleLightningFrame);
+    lancerBattleLightningFrame = null;
+  }
+  clearLightningCanvas(lancerBattleLightningCanvas);
+};
+
+const clearLancerBattleTimers = () => {
+  if (lancerBattleDrainTimer) {
+    clearInterval(lancerBattleDrainTimer);
+    lancerBattleDrainTimer = null;
+  }
+  if (lancerBattleClashTimer) {
+    clearTimeout(lancerBattleClashTimer);
+    lancerBattleClashTimer = null;
+  }
+  if (lancerBattleLightningTimer) {
+    clearTimeout(lancerBattleLightningTimer);
+    lancerBattleLightningTimer = null;
+  }
+  if (lancerBattleBoomerangFrame) {
+    cancelAnimationFrame(lancerBattleBoomerangFrame);
+    lancerBattleBoomerangFrame = null;
+  }
+  if (lancerBattleResolveTimer) {
+    clearTimeout(lancerBattleResolveTimer);
+    lancerBattleResolveTimer = null;
+  }
+  if (lancerBattleResultTimer) {
+    clearTimeout(lancerBattleResultTimer);
+    lancerBattleResultTimer = null;
+  }
+  lancerBattleWindow?.classList.remove("is-striking");
+  clearLancerBattleLightning();
+};
+
+const clearLancerBattleResultMedia = () => {
+  lancerBattleResultVideoToken += 1;
+  if (lancerBattleResultImage) {
+    lancerBattleResultImage.removeAttribute("src");
+    lancerBattleResultImage.classList.remove("is-hidden");
+  }
+  if (lancerBattleResultVideo) {
+    lancerBattleResultVideo.pause();
+    lancerBattleResultVideo.removeAttribute("src");
+    lancerBattleResultVideo.load();
+    lancerBattleResultVideo.classList.add("is-hidden");
+  }
+};
+
+const setLancerBattleResultImage = (src) => {
+  if (!lancerBattleResultImage) return;
+  if (lancerBattleResultVideo) {
+    lancerBattleResultVideo.pause();
+    lancerBattleResultVideo.removeAttribute("src");
+    lancerBattleResultVideo.load();
+    lancerBattleResultVideo.classList.add("is-hidden");
+  }
+  lancerBattleResultImage.classList.remove("is-hidden");
+  lancerBattleResultImage.src = `${src}${src.includes("?") ? "&" : "?"}replay=${Date.now()}`;
+  lancerBattleResultImage.alt = "";
+};
+
+const playLancerBattleResultVideo = (src, token, onPlaybackStarted = () => {}) => {
+  let hasStartedPlayback = false;
+  const markStarted = () => {
+    if (token !== lancerBattleResultVideoToken) return;
+    if (hasStartedPlayback) return;
+    hasStartedPlayback = true;
+    onPlaybackStarted();
+  };
+  if (lancerBattleResultImage) {
+    lancerBattleResultImage.removeAttribute("src");
+    lancerBattleResultImage.classList.add("is-hidden");
+  }
+  lancerBattleResultVideo.pause();
+  lancerBattleResultVideo.currentTime = 0;
+  lancerBattleResultVideo.src = `${src}${src.includes("?") ? "&" : "?"}replay=${Date.now()}`;
+  lancerBattleResultVideo.classList.remove("is-hidden");
+  lancerBattleResultVideo.addEventListener("playing", markStarted, { once: true });
+  const playRequest = lancerBattleResultVideo.play();
+  if (playRequest && typeof playRequest.then === "function") {
+    playRequest.then(markStarted).catch(markStarted);
+  } else {
+    markStarted();
+  }
+};
+
+const setLancerBattleResultVideo = (src, options = {}) => {
+  if (!lancerBattleResultVideo) return;
+  lancerBattleResultVideoToken += 1;
+  playLancerBattleResultVideo(src, lancerBattleResultVideoToken, options.onPlaybackStarted);
+};
+
+const resetLancerBattleWindow = () => {
+  clearLancerBattleTimers();
+  clearLancerBattleVideo();
+  lancerBattleOpenFinalAfterClose = false;
+  lancerBattleState = LANCER_BATTLE_STAGES.ready;
+  lancerBattleProgressValue = LANCER_BATTLE_START_PROGRESS;
+  lancerBattleBoomerangDirection = 1;
+  lancerBattleBoomerangStart = 0;
+  lancerBattleBoomerangEnd = 0;
+  updateLancerBattleProgress();
+  lancerBattleWindow?.classList.remove(
+    "is-clashing",
+    "is-win",
+    "is-loss",
+    "is-final-alert"
+  );
+  if (lancerBattleTitle) lancerBattleTitle.textContent = "Lancer Duel";
+  if (lancerBattlePush) {
+    lancerBattlePush.disabled = true;
+    lancerBattlePush.textContent = "Fight Back";
+  }
+  if (lancerBattleClose) lancerBattleClose.textContent = "Close";
+  setLancerBattleStatus("Wait for the clash.");
+  clearLancerBattleResultMedia();
+  if (lancerBattleResultText) lancerBattleResultText.textContent = "";
+  if (lancerBattleFinalText) lancerBattleFinalText.textContent = "";
+  showLancerBattleStage("ready");
+};
+
+const startLancerBattleLightningStrike = () => {
+  if (!lancerBattleLightningCanvas || !isLancerBattleVisible()) return;
+  if (lancerBattleLightningFrame) cancelAnimationFrame(lancerBattleLightningFrame);
+  const startedAt = performance.now();
+
+  const render = (now) => {
+    if (!isLancerBattleVisible()) {
+      clearLancerBattleLightning();
+      return;
+    }
+    const progress = Math.min(1, (now - startedAt) / FATE_LIGHTNING_DURATION_MS);
+    const flicker = progress < 0.16 ? 1 : Math.random() > 0.32 ? 1 - progress * 0.42 : 0.18;
+    const alpha = Math.max(0, flicker * (1 - progress * 0.36));
+    drawLightningBorderFrame(
+      lancerBattleLightningCanvas,
+      alpha,
+      YELLOW_LIGHTNING_PALETTE
+    );
+
+    if (progress < 1) {
+      lancerBattleLightningFrame = requestAnimationFrame(render);
+      return;
+    }
+
+    lancerBattleLightningFrame = null;
+    clearLightningCanvas(lancerBattleLightningCanvas);
+  };
+
+  lancerBattleLightningFrame = requestAnimationFrame(render);
+};
+
+const pulseLancerBattleWindow = () => {
+  if (!lancerBattleWindow) return;
+  lancerBattleWindow.classList.remove("is-striking");
+  void lancerBattleWindow.offsetWidth;
+  lancerBattleWindow.classList.add("is-striking");
+  startLancerBattleLightningStrike();
+  if (lancerBattleLightningTimer) clearTimeout(lancerBattleLightningTimer);
+  lancerBattleLightningTimer = setTimeout(() => {
+    lancerBattleWindow.classList.remove("is-striking");
+    lancerBattleLightningTimer = null;
+  }, 240);
+};
+
+const updateLancerBattleBoomerangFrame = () => {
+  if (
+    !lancerBattleClashVideo ||
+    lancerBattleState !== LANCER_BATTLE_STAGES.active
+  ) {
+    lancerBattleBoomerangFrame = null;
+    return;
+  }
+
+  const current = lancerBattleClashVideo.currentTime;
+  if (current >= lancerBattleBoomerangEnd) {
+    lancerBattleBoomerangDirection = -1;
+  } else if (current <= lancerBattleBoomerangStart) {
+    lancerBattleBoomerangDirection = 1;
+  }
+  const nextTime =
+    current + LANCER_BATTLE_BOOMERANG_STEP * lancerBattleBoomerangDirection;
+  lancerBattleClashVideo.currentTime = Math.min(
+    lancerBattleBoomerangEnd,
+    Math.max(lancerBattleBoomerangStart, nextTime)
+  );
+  lancerBattleBoomerangFrame = requestAnimationFrame(
+    updateLancerBattleBoomerangFrame
+  );
+};
+
+const startLancerBattleBoomerang = () => {
+  if (!lancerBattleClashVideo) return;
+  const duration = Number.isFinite(lancerBattleClashVideo.duration)
+    ? lancerBattleClashVideo.duration
+    : 0;
+  lancerBattleBoomerangEnd = Math.max(0.2, duration || lancerBattleClashVideo.currentTime);
+  lancerBattleBoomerangStart = Math.max(
+    0,
+    lancerBattleBoomerangEnd - LANCER_BATTLE_BOOMERANG_SECONDS
+  );
+  lancerBattleBoomerangDirection = 1;
+  lancerBattleClashVideo.pause();
+  lancerBattleClashVideo.currentTime = lancerBattleBoomerangStart;
+  if (lancerBattleBoomerangFrame) {
+    cancelAnimationFrame(lancerBattleBoomerangFrame);
+  }
+  lancerBattleBoomerangFrame = requestAnimationFrame(
+    updateLancerBattleBoomerangFrame
+  );
+};
+
+const showLancerBattleFinalPrompt = (success) => {
+  if (!success) {
+    closeLancerBattleWindow();
+    return;
+  }
+  lancerBattleState = LANCER_BATTLE_STAGES.final;
+  lancerBattleWindow?.classList.add("is-final-alert");
+  if (lancerBattleTitle) {
+    lancerBattleTitle.textContent = "Duel Won";
+  }
+  clearLancerBattleResultMedia();
+  if (lancerBattleFinalText) {
+    lancerBattleFinalText.textContent = "Good job, Gear.";
+  }
+  if (lancerBattleClose) lancerBattleClose.textContent = "OK";
+  showLancerBattleStage("final");
+  requestAnimationFrame(() => {
+    lancerBattleClose?.focus({ preventScroll: true });
+  });
+};
+
+const reopenLancerBattleFinalPrompt = () => {
+  if (!lancerBattleWindow) return;
+  showLancerBattleFinalPrompt(true);
+  lancerBattleWindow.classList.remove("is-hidden", "is-closing");
+  lancerBattleWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(lancerBattleWindow);
+  clampRandomEventWindowToViewport(lancerBattleWindow);
+  lancerBattleWindow.style.zIndex = String(topZ++);
+  restartWindowAnimation(lancerBattleWindow, "is-opening");
+};
+
+const transitionLancerBattleWinToFinalPrompt = () => {
+  if (!lancerBattleWindow || lancerBattleWindow.classList.contains("is-hidden")) {
+    showLancerBattleFinalPrompt(true);
+    return;
+  }
+  lancerBattleOpenFinalAfterClose = true;
+  lancerBattleWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(lancerBattleWindow, "is-closing");
+};
+
+const queueLancerBattleResultCompletion = (success) => {
+  if (lancerBattleResultTimer) {
+    clearTimeout(lancerBattleResultTimer);
+  }
+  lancerBattleResultTimer = setTimeout(() => {
+    lancerBattleResultTimer = null;
+    if (success) {
+      transitionLancerBattleWinToFinalPrompt();
+    } else {
+      closeLancerBattleWindow();
+    }
+  }, success ? LANCER_BATTLE_WIN_CLIP_MS : LANCER_BATTLE_LOSS_CLIP_MS);
+};
+
+const showLancerBattleResult = (success) => {
+  lancerBattleState = success ? LANCER_BATTLE_STAGES.win : LANCER_BATTLE_STAGES.loss;
+  lancerBattleWindow?.classList.toggle("is-win", success);
+  lancerBattleWindow?.classList.toggle("is-loss", !success);
+  if (lancerBattleTitle) {
+    lancerBattleTitle.textContent = success ? "Enemy Executed" : "You get Overwhelmed";
+  }
+  if (success) {
+    setLancerBattleResultVideo(LANCER_BATTLE_WIN_VIDEO_SRC, {
+      onPlaybackStarted: () => queueLancerBattleResultCompletion(true),
+    });
+  } else {
+    setLancerBattleResultVideo(LANCER_BATTLE_LOSS_VIDEO_SRC, {
+      onPlaybackStarted: () => queueLancerBattleResultCompletion(false),
+    });
+  }
+  if (lancerBattleResultText) {
+    lancerBattleResultText.textContent = success ? "Marcus wins the blade lock." : "";
+  }
+  showLancerBattleStage("result");
+};
+
+const finishLancerBattle = (success) => {
+  if (lancerBattleState !== LANCER_BATTLE_STAGES.active) return;
+  lancerBattleState = LANCER_BATTLE_STAGES.resolving;
+  clearLancerBattleTimers();
+  clearLancerBattleVideo();
+  lancerBattleWindow?.classList.remove("is-clashing");
+  lancerBattleProgressValue = success ? 100 : 0;
+  updateLancerBattleProgress();
+  if (lancerBattlePush) lancerBattlePush.disabled = true;
+  lancerBattleResolveTimer = setTimeout(() => {
+    lancerBattleResolveTimer = null;
+    showLancerBattleResult(success);
+  }, 420);
+};
+
+const tickLancerBattleDrain = () => {
+  if (lancerBattleState !== LANCER_BATTLE_STAGES.active) return;
+  lancerBattleProgressValue = Math.max(
+    0,
+    lancerBattleProgressValue - LANCER_BATTLE_DRAIN_AMOUNT
+  );
+  updateLancerBattleProgress();
+  if (lancerBattleProgressValue <= 0) finishLancerBattle(false);
+};
+
+const startLancerBattleDrain = () => {
+  if (lancerBattleDrainTimer) clearInterval(lancerBattleDrainTimer);
+  lancerBattleDrainTimer = setInterval(
+    tickLancerBattleDrain,
+    LANCER_BATTLE_DRAIN_INTERVAL_MS
+  );
+};
+
+const enterLancerBattleClash = () => {
+  if (lancerBattleState !== LANCER_BATTLE_STAGES.intro) return;
+  lancerBattleState = LANCER_BATTLE_STAGES.active;
+  lancerBattleProgressValue = LANCER_BATTLE_START_PROGRESS;
+  updateLancerBattleProgress();
+  lancerBattleWindow?.classList.add("is-clashing");
+  if (lancerBattlePush) {
+    lancerBattlePush.disabled = false;
+    lancerBattlePush.focus({ preventScroll: true });
+  }
+  setLancerBattleStatus("Fight back through the Lancer lock!");
+  startLancerBattleBoomerang();
+  startLancerBattleDrain();
+};
+
+const scheduleLancerBattleClash = () => {
+  if (lancerBattleClashTimer) clearTimeout(lancerBattleClashTimer);
+  const durationMs =
+    lancerBattleClashVideo && Number.isFinite(lancerBattleClashVideo.duration)
+      ? Math.max(
+          800,
+          (
+            lancerBattleClashVideo.duration -
+            LANCER_BATTLE_BOOMERANG_SECONDS -
+            LANCER_BATTLE_BOOMERANG_START_BUFFER_SECONDS
+          ) * 1000
+        )
+      : LANCER_BATTLE_FALLBACK_CLASH_MS;
+  lancerBattleClashTimer = setTimeout(() => {
+    lancerBattleClashTimer = null;
+    enterLancerBattleClash();
+  }, durationMs);
+};
+
+const startLancerBattle = () => {
+  if (lancerBattleState !== LANCER_BATTLE_STAGES.ready) return;
+  lancerBattleState = LANCER_BATTLE_STAGES.intro;
+  if (lancerBattleTitle) lancerBattleTitle.textContent = "Chainsaw Clash";
+  showLancerBattleStage("clash");
+  setLancerBattleStatus("The blades are biting...");
+  if (lancerBattlePush) {
+    lancerBattlePush.disabled = true;
+  }
+  loadDeferredMedia(lancerBattleWindow);
+  if (lancerBattleClashVideo) {
+    lancerBattleClashVideo.currentTime = 0;
+    const playRequest = lancerBattleClashVideo.play();
+    if (playRequest && typeof playRequest.catch === "function") {
+      playRequest.catch(() => {});
+    }
+    if (lancerBattleClashVideo.readyState >= 1) {
+      scheduleLancerBattleClash();
+    } else {
+      lancerBattleClashVideo.addEventListener(
+        "loadedmetadata",
+        scheduleLancerBattleClash,
+        { once: true }
+      );
+      lancerBattleClashTimer = setTimeout(() => {
+        lancerBattleClashTimer = null;
+        enterLancerBattleClash();
+      }, LANCER_BATTLE_FALLBACK_CLASH_MS);
+    }
+  } else {
+    lancerBattleClashTimer = setTimeout(
+      enterLancerBattleClash,
+      LANCER_BATTLE_FALLBACK_CLASH_MS
+    );
+  }
+};
+
+const pushLancerBattle = () => {
+  if (lancerBattleState !== LANCER_BATTLE_STAGES.active) return;
+  lancerBattleProgressValue = Math.min(
+    100,
+    lancerBattleProgressValue + LANCER_BATTLE_PUSH_GAIN
+  );
+  updateLancerBattleProgress();
+  setLancerBattleStatus("Keep fighting back!");
+  pulseLancerBattleWindow();
+  if (lancerBattleProgressValue >= 100) finishLancerBattle(true);
+};
+
+const handleLancerBattleKeyMash = (event) => {
+  if (lancerBattleState !== LANCER_BATTLE_STAGES.active) return;
+  if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+  event.preventDefault();
+  pushLancerBattle();
+};
+
+const showLancerBattleWindow = () => {
+  if (!lancerBattleWindow) return;
+  if (isLancerBattleVisible()) {
+    lancerBattleWindow.style.zIndex = String(topZ++);
+    clampRandomEventWindowToViewport(lancerBattleWindow);
+    return;
+  }
+  resetLancerBattleWindow();
+  loadDeferredMedia(lancerBattleWindow);
+  lancerBattleWindow.classList.remove("is-hidden", "is-closing");
+  lancerBattleWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(lancerBattleWindow);
+  clampRandomEventWindowAfterMediaLoad(lancerBattleWindow);
+  lancerBattleWindow.style.zIndex = String(topZ++);
+  restartWindowAnimation(lancerBattleWindow, "is-opening");
+  requestAnimationFrame(() => {
+    lancerBattleStart?.focus({ preventScroll: true });
+  });
+};
+
+const closeLancerBattleWindow = () => {
+  if (!lancerBattleWindow || lancerBattleWindow.classList.contains("is-hidden")) return;
+  lancerBattleOpenFinalAfterClose = false;
+  clearLancerBattleTimers();
+  clearLancerBattleVideo();
+  clearLancerBattleResultMedia();
+  lancerBattleState = LANCER_BATTLE_STAGES.idle;
+  lancerBattleWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(lancerBattleWindow, "is-closing");
+};
+
 const brandBurnsRandomInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
@@ -5716,8 +7227,8 @@ const updateBrandBurnsHud = () => {
   const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
   const health = Math.max(0, Math.min(maxHealth, brandBurnsStats.health));
   const healthPercent = brandBurnsMeterPercent(health, maxHealth);
-  const stamina = Math.max(0, Math.min(100, brandBurnsStats.stamina));
-  const staminaPercent = brandBurnsMeterPercent(stamina, 100);
+  const stamina = Math.max(0, Math.min(BRAND_BURNS_PLAYER_MAX_STAMINA, brandBurnsStats.stamina));
+  const staminaPercent = brandBurnsMeterPercent(stamina, BRAND_BURNS_PLAYER_MAX_STAMINA);
   const remaining = Math.max(0, brandBurnsStats.total - brandBurnsStats.defeated);
 
   if (brandBurnsHealth) brandBurnsHealth.style.width = `${healthPercent}%`;
@@ -5731,10 +7242,13 @@ const updateBrandBurnsHud = () => {
   if (brandBurnsStamina) brandBurnsStamina.style.width = `${staminaPercent}%`;
   if (brandBurnsStamina?.parentElement) {
     brandBurnsStamina.parentElement.setAttribute("aria-valuenow", Math.round(stamina));
-    brandBurnsStamina.parentElement.setAttribute("aria-valuemax", "100");
+    brandBurnsStamina.parentElement.setAttribute(
+      "aria-valuemax",
+      String(BRAND_BURNS_PLAYER_MAX_STAMINA)
+    );
   }
   if (brandBurnsStaminaValue) {
-    brandBurnsStaminaValue.textContent = `${Math.round(stamina)}/100`;
+    brandBurnsStaminaValue.textContent = `${Math.round(stamina)}/${BRAND_BURNS_PLAYER_MAX_STAMINA}`;
   }
   if (brandBurnsEnemyCount) {
     brandBurnsEnemyCount.textContent = `Apostles remaining: ${remaining}`;
@@ -5745,7 +7259,7 @@ const resetBrandBurnsStats = () => {
   brandBurnsStats = {
     health: BRAND_BURNS_PLAYER_MAX_HEALTH,
     maxHealth: BRAND_BURNS_PLAYER_MAX_HEALTH,
-    stamina: 100,
+    stamina: BRAND_BURNS_PLAYER_MAX_STAMINA,
     defeated: 0,
     total: BRAND_BURNS_ENCOUNTER_COUNT,
   };
@@ -5759,13 +7273,23 @@ const stopBrandBurnsStaminaRecovery = () => {
 };
 
 const hasBrandBurnsAttackStamina = () =>
-  brandBurnsStats.stamina >= BRAND_BURNS_STAMINA_ATTACK_MAX_COST;
+  brandBurnsStats.stamina >= BRAND_BURNS_STAMINA_ATTACK_MIN_COST;
+
+const getBrandBurnsAttackStaminaCost = () =>
+  brandBurnsRandomInt(
+    BRAND_BURNS_STAMINA_ATTACK_MIN_COST,
+    Math.min(
+      BRAND_BURNS_STAMINA_ATTACK_MAX_COST,
+      Math.max(BRAND_BURNS_STAMINA_ATTACK_MIN_COST, Math.floor(brandBurnsStats.stamina))
+    )
+  );
 
 const getBrandBurnsStaminaRecoveryAmount = () => {
   const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
   const staminaFactor = Math.max(
     BRAND_BURNS_STAMINA_RECOVERY_MIN_FACTOR,
-    Math.max(0, Math.min(100, brandBurnsStats.stamina)) / 100
+    Math.max(0, Math.min(BRAND_BURNS_PLAYER_MAX_STAMINA, brandBurnsStats.stamina)) /
+      BRAND_BURNS_PLAYER_MAX_STAMINA
   );
   const missingHealthFactor =
     1 +
@@ -5784,7 +7308,7 @@ const startBrandBurnsStaminaRecovery = () => {
       return;
     }
     const nextStamina = Math.min(
-      100,
+      BRAND_BURNS_PLAYER_MAX_STAMINA,
       brandBurnsStats.stamina + getBrandBurnsStaminaRecoveryAmount()
     );
     if (nextStamina === brandBurnsStats.stamina) return;
@@ -6026,16 +7550,21 @@ const scheduleBrandBurnsPuckHealCooldown = () => {
   }, BRAND_BURNS_PUCK_HEAL_COOLDOWN_MS);
 };
 
+const getBrandBurnsRemainingApostleCount = () =>
+  Math.max(0, brandBurnsStats.total - brandBurnsStats.defeated);
+
+const getBrandBurnsPuckHealRange = () =>
+  BRAND_BURNS_PUCK_HEAL_RANGES_BY_REMAINING[getBrandBurnsRemainingApostleCount()] ||
+  BRAND_BURNS_PUCK_HEAL_RANGES_BY_REMAINING[1];
+
 const healBrandBurnsPlayerFromPuck = () => {
   if (!brandBurnsPuckHealReady || brandBurnsStage !== "fight" || brandBurnsStats.health <= 0) {
     return;
   }
 
   const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
-  const healAmount = brandBurnsRandomInt(
-    BRAND_BURNS_PUCK_HEAL_MIN,
-    BRAND_BURNS_PUCK_HEAL_MAX
-  );
+  const [healMin, healMax] = getBrandBurnsPuckHealRange();
+  const healAmount = brandBurnsRandomInt(healMin, healMax);
   const previousHealth = brandBurnsStats.health;
   brandBurnsStats.health = Math.min(maxHealth, brandBurnsStats.health + healAmount);
   const actualHeal = Math.round(brandBurnsStats.health - previousHealth);
@@ -6647,10 +8176,7 @@ const attackBrandBurnsEnemy = (state) => {
     BRAND_BURNS_ATTACK_MIN_DAMAGE,
     BRAND_BURNS_ATTACK_MAX_DAMAGE
   );
-  const staminaCost = brandBurnsRandomInt(
-    BRAND_BURNS_STAMINA_ATTACK_MIN_COST,
-    BRAND_BURNS_STAMINA_ATTACK_MAX_COST
-  );
+  const staminaCost = getBrandBurnsAttackStaminaCost();
 
   brandBurnsStats.stamina = Math.max(0, brandBurnsStats.stamina - staminaCost);
   state.health = Math.max(0, state.health - damage);
@@ -7923,6 +9449,7 @@ const infinityArmoryIsComplete = () =>
   infinityArmoryAllGemsSocketed();
 
 const renderInfinityArmoryInventory = () => {
+  infinityArmoryGems = [];
   if (!infinityArmoryGemGrid) return;
   infinityArmoryGemGrid.replaceChildren();
   for (let index = 0; index < INFINITY_ARMORY_INVENTORY_SLOT_COUNT; index += 1) {
@@ -7944,6 +9471,7 @@ const renderInfinityArmoryInventory = () => {
     button.dataset.armoryGem = gem.shape;
     button.dataset.armoryColor = gem.color;
     button.dataset.armoryLabel = gem.label;
+    button.dataset.armorySrc = gem.src;
     button.setAttribute("aria-label", gem.label);
 
     const image = document.createElement("img");
@@ -7958,12 +9486,22 @@ const renderInfinityArmoryInventory = () => {
   );
 };
 
+const getInfinityArmoryEventTarget = (event) =>
+  event?.target instanceof Element ? event.target : event?.target?.parentElement || null;
+
+const getInfinityArmoryGemIcon = (shape) => INFINITY_ARMORY_GEM_ICON_BY_SHAPE[shape] || "";
+
 const getInfinityArmoryGemFromButton = (button) => {
-  if (!button) return null;
+  if (!button || button.disabled || button.classList.contains("is-empty")) return null;
   const shape = button.dataset.armoryGem;
   const color = button.dataset.armoryColor || "ruby";
   if (!INFINITY_ARMORY_SHAPES.includes(shape)) return null;
   const image = button.querySelector("img");
+  const src =
+    image?.getAttribute("src") ||
+    image?.dataset.src ||
+    button.dataset.armorySrc ||
+    getInfinityArmoryGemIcon(shape);
   return {
     id: button.dataset.armoryGemId || `${shape}-${color}`,
     shape,
@@ -7972,14 +9510,38 @@ const getInfinityArmoryGemFromButton = (button) => {
       button.dataset.armoryLabel ||
       button.getAttribute("aria-label") ||
       `${color} ${shape}`,
-    src: image?.getAttribute("src") || image?.dataset.src || "",
+    src,
   };
 };
 
-const moveInfinityArmoryCursorGem = (event) => {
-  if (!infinityArmoryCursorGem || !event) return;
-  infinityArmoryCursorGem.style.left = `${event.clientX}px`;
-  infinityArmoryCursorGem.style.top = `${event.clientY}px`;
+const getInfinityArmoryCursorPosition = (event, fallbackElement = null) => {
+  const hasPointerCoordinates =
+    Number.isFinite(event?.clientX) &&
+    Number.isFinite(event?.clientY) &&
+    (event.clientX !== 0 || event.clientY !== 0 || event.detail > 0);
+  if (hasPointerCoordinates) {
+    return { x: event.clientX, y: event.clientY };
+  }
+
+  const rect = fallbackElement?.getBoundingClientRect?.();
+  if (rect?.width || rect?.height) {
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  }
+
+  return {
+    x: window.innerWidth / 2,
+    y: window.innerHeight / 2,
+  };
+};
+
+const moveInfinityArmoryCursorGem = (event, fallbackElement = null) => {
+  if (!infinityArmoryCursorGem) return;
+  const { x, y } = getInfinityArmoryCursorPosition(event, fallbackElement);
+  infinityArmoryCursorGem.style.left = `${x}px`;
+  infinityArmoryCursorGem.style.top = `${y}px`;
 };
 
 const clearInfinityArmorySelectedGem = ({ update = true, status = "" } = {}) => {
@@ -7993,20 +9555,25 @@ const clearInfinityArmorySelectedGem = ({ update = true, status = "" } = {}) => 
   if (status && infinityArmoryStatus) infinityArmoryStatus.textContent = status;
 };
 
-const createInfinityArmoryCursorGem = (gem, event) => {
+const createInfinityArmoryCursorGem = (gem, event, sourceElement = null) => {
   if (!gem) return;
   if (infinityArmoryCursorGem) infinityArmoryCursorGem.remove();
   const cursorGem = document.createElement("span");
   cursorGem.className = "infinity-armory-cursor-gem";
   cursorGem.dataset.armoryColor = gem.color;
+  cursorGem.setAttribute("aria-hidden", "true");
+  cursorGem.style.zIndex = String(
+    Math.max(INFINITY_ARMORY_CURSOR_GEM_MIN_Z_INDEX, topZ + 20)
+  );
   const image = document.createElement("img");
-  image.src = gem.src;
+  image.src = gem.src || getInfinityArmoryGemIcon(gem.shape);
   image.alt = "";
   cursorGem.appendChild(image);
+  if (!document.body) return;
   document.body.appendChild(cursorGem);
   infinityArmoryCursorGem = cursorGem;
   setPointerHeldItemCursor("infinity-armory-gem", true);
-  moveInfinityArmoryCursorGem(event);
+  moveInfinityArmoryCursorGem(event, sourceElement);
 };
 
 const selectInfinityArmoryGem = (button, event) => {
@@ -8020,7 +9587,7 @@ const selectInfinityArmoryGem = (button, event) => {
     return;
   }
   infinityArmorySelectedGem = gem;
-  createInfinityArmoryCursorGem(gem, event);
+  createInfinityArmoryCursorGem(gem, event, button);
   updateInfinityArmory();
   if (infinityArmoryStatus) {
     infinityArmoryStatus.textContent = `${gem.label} selected.`;
@@ -8165,6 +9732,11 @@ const showInfinityArmoryWindow = () => {
   if (!infinityArmoryWindow) return;
   if (isInfinityArmoryVisible()) {
     infinityArmoryWindow.style.zIndex = String(topZ++);
+    if (infinityArmoryCursorGem) {
+      infinityArmoryCursorGem.style.zIndex = String(
+        Math.max(INFINITY_ARMORY_CURSOR_GEM_MIN_Z_INDEX, topZ + 20)
+      );
+    }
     return;
   }
   resetInfinityArmory();
@@ -9030,6 +10602,8 @@ const randomEventPreloadTargetsById = Object.freeze({
   "lelouch-system-alert": () => [lelouchAlertWindow],
   "berserk-sunrise": () => [berserkSunriseWindow],
   "calendar-reminder": () => [calendarReminderWindow],
+  "gradescope-curve": () => [gradescopeCurveWindow],
+  "gears-nest-clear": () => [gearsNestWindow, Object.values(GEARS_NEST_ASSETS)],
   "human-instrumentality-project": () => [
     instrumentalityWindow,
     instrumentalityCongratsWindow,
@@ -9039,6 +10613,9 @@ const randomEventPreloadTargetsById = Object.freeze({
     fateWindow,
     "assets/random%20events/zodd_defeated_by_shld0n_hcks.jpg",
     "assets/random%20events/guts-lost.jpeg",
+  ],
+  "lancer-battle": () => [
+    lancerBattleWindow,
   ],
   "brand-burns": brandBurnsPreloadTargets,
   "behelit-found": () => [behelitWindow],
@@ -9750,6 +11327,32 @@ registerRandomEvent({
 });
 
 registerRandomEvent({
+  id: "gradescope-curve",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isGradescopeCurveVisible,
+  canTrigger: () => !isGradescopeCurveVisible(),
+  run: () => {
+    showGradescopeCurve();
+  },
+});
+
+registerRandomEvent({
+  id: "gears-nest-clear",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isGearsNestVisible,
+  canTrigger: () => !isGearsNestVisible(),
+  run: () => {
+    showGearsNest();
+  },
+});
+
+registerRandomEvent({
   id: "human-instrumentality-project",
   debug: false,
   probability: STANDARD_RANDOM_EVENT_PROBABILITY,
@@ -9785,6 +11388,20 @@ registerRandomEvent({
   canTrigger: () => fateState === "idle" && !isFateVisible(),
   run: () => {
     showFateWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "lancer-battle",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isLancerBattleVisible,
+  canTrigger: () =>
+    lancerBattleState === LANCER_BATTLE_STAGES.idle && !isLancerBattleVisible(),
+  run: () => {
+    showLancerBattleWindow();
   },
 });
 
@@ -12025,7 +13642,7 @@ const triggerSudokuVictoryEffects = () => {
   if (isSudokuReducedMotion()) return;
   const effects = SUDOKU_WIN_EFFECTS[sudokuState.difficulty];
   if (!effects) return;
-  showSudokuAchievement();
+  if (!sudokuState.usedReveal) showSudokuAchievement();
   if (effects.fireworks && !sudokuState.usedHint) solStartFireworks();
   if (effects.confetti) msStartConfetti();
 };
@@ -13141,6 +14758,53 @@ let frontiersSlideIndex = 0;
 
 const galleryCounterText = (index, total) => `${index + 1} of ${total}`;
 
+const galleryItemSource = (item) =>
+  typeof item === "string" ? item : item?.src || "";
+
+const setGalleryCounterText = (counter, index, itemCount) => {
+  if (counter) counter.textContent = galleryCounterText(index, itemCount);
+};
+
+const setGalleryText = (element, text) => {
+  if (element && typeof text === "string") element.textContent = text;
+};
+
+const setGalleryImageSource = (image, item, { trackDeferredSource = false } = {}) => {
+  if (!image || !item) return;
+  const src = galleryItemSource(item);
+  if (!src) return;
+  if (trackDeferredSource) image.dataset.src = src;
+  image.setAttribute("src", src);
+  if (typeof item !== "string" && item.alt) image.setAttribute("alt", item.alt);
+};
+
+const setProjectFigureContent = ({ image, caption, description, counter }, item, index, itemCount) => {
+  if (!item) return;
+  setGalleryImageSource(image, item, { trackDeferredSource: true });
+  setGalleryText(caption, item.title);
+  setGalleryText(description, item.description);
+  setGalleryCounterText(counter, index, itemCount);
+};
+
+const clearProjectVideo = (video) => {
+  if (!video) return;
+  video.pause();
+  video.removeAttribute("src");
+  delete video.dataset.src;
+  video.load();
+};
+
+const setProjectVideoSource = (video, item) => {
+  if (!video || !item?.src) return;
+  video.dataset.src = item.src;
+  if (video.getAttribute("src") !== item.src) {
+    video.pause();
+    video.setAttribute("src", item.src);
+    video.load();
+  }
+  if (item.title) video.setAttribute("aria-label", item.title);
+};
+
 const recordCarouselNavigationRandomEvent = (event, direction, index, itemCount) => {
   if (!event?.isTrusted) return false;
   return triggerRandomEvents("carouselNavigation", {
@@ -13882,92 +15546,96 @@ const renderModelingGallery = (container) => {
 setupGalleryControlLabels();
 
 const updatePathfinderImage = () => {
-  if (!pathfinderImage) return;
-  pathfinderImage.setAttribute("src", pathfinderImages[pathfinderIndex]);
-  if (pathfinderCounter) {
-    pathfinderCounter.textContent = galleryCounterText(pathfinderIndex, pathfinderImages.length);
-  }
+  setGalleryImageSource(pathfinderImage, pathfinderImages[pathfinderIndex]);
+  setGalleryCounterText(pathfinderCounter, pathfinderIndex, pathfinderImages.length);
 };
 
 const updateBerserkPosterImage = () => {
-  if (!berserkPosterImage) return;
-  berserkPosterImage.setAttribute("src", berserkPosterImages[berserkPosterIndex]);
-  berserkPosterImage.setAttribute(
-    "alt",
-    `Berserk poster redesign ${berserkPosterIndex + 1}`
-  );
-  if (berserkPosterCounter) {
-    berserkPosterCounter.textContent = galleryCounterText(
-      berserkPosterIndex,
-      berserkPosterImages.length
+  if (berserkPosterImage) {
+    berserkPosterImage.setAttribute("src", berserkPosterImages[berserkPosterIndex]);
+    berserkPosterImage.setAttribute(
+      "alt",
+      `Berserk poster redesign ${berserkPosterIndex + 1}`
     );
   }
+  setGalleryCounterText(berserkPosterCounter, berserkPosterIndex, berserkPosterImages.length);
 };
 
 const updateMyBrothersGhostImage = () => {
-  if (!myBrothersGhostImage) return;
   const activeImage = myBrothersGhostImages[myBrothersGhostIndex];
-  myBrothersGhostImage.setAttribute("src", activeImage.src);
-  myBrothersGhostImage.setAttribute("alt", activeImage.alt);
-  if (myBrothersGhostCounter) {
-    myBrothersGhostCounter.textContent = galleryCounterText(
-      myBrothersGhostIndex,
-      myBrothersGhostImages.length
-    );
-  }
+  setGalleryImageSource(myBrothersGhostImage, activeImage);
+  setGalleryCounterText(
+    myBrothersGhostCounter,
+    myBrothersGhostIndex,
+    myBrothersGhostImages.length
+  );
 };
 
 const updateFrontiersSlide = () => {
-  if (!frontiersSlideImage || !frontiersPdfSlides.length) return;
   const activeSlide = frontiersPdfSlides[frontiersSlideIndex];
-  frontiersSlideImage.setAttribute("src", activeSlide.src);
-  frontiersSlideImage.setAttribute("alt", activeSlide.alt);
-  if (frontiersSlideCounter) {
-    frontiersSlideCounter.textContent = galleryCounterText(
-      frontiersSlideIndex,
-      frontiersPdfSlides.length
-    );
-  }
+  setGalleryImageSource(frontiersSlideImage, activeSlide);
+  setGalleryCounterText(frontiersSlideCounter, frontiersSlideIndex, frontiersPdfSlides.length);
 };
 
 const updatePulseProjectFigure = () => {
-  if (!pulseProjectImage || !pulseProjectFigures.length) return;
   const activeFigure = pulseProjectFigures[pulseProjectIndex];
-  pulseProjectImage.dataset.src = activeFigure.src;
-  pulseProjectImage.setAttribute("src", activeFigure.src);
-  pulseProjectImage.setAttribute("alt", activeFigure.alt);
-  if (pulseProjectCaption) {
-    pulseProjectCaption.textContent = activeFigure.title;
-  }
-  if (pulseProjectDescription) {
-    pulseProjectDescription.textContent = activeFigure.description;
-  }
-  if (pulseProjectCounter) {
-    pulseProjectCounter.textContent = galleryCounterText(
-      pulseProjectIndex,
-      pulseProjectFigures.length
-    );
-  }
+  setProjectFigureContent(
+    {
+      image: pulseProjectImage,
+      caption: pulseProjectCaption,
+      description: pulseProjectDescription,
+      counter: pulseProjectCounter,
+    },
+    activeFigure,
+    pulseProjectIndex,
+    pulseProjectFigures.length
+  );
 };
 
 const updateTcpResultFigure = () => {
-  if (!tcpResultsImage || !tcpResultFigures.length) return;
   const activeFigure = tcpResultFigures[tcpResultsIndex];
-  tcpResultsImage.dataset.src = activeFigure.src;
-  tcpResultsImage.setAttribute("src", activeFigure.src);
-  tcpResultsImage.setAttribute("alt", activeFigure.alt);
-  if (tcpResultsCaption) {
-    tcpResultsCaption.textContent = activeFigure.title;
+  setProjectFigureContent(
+    {
+      image: tcpResultsImage,
+      caption: tcpResultsCaption,
+      description: tcpResultsDescription,
+      counter: tcpResultsCounter,
+    },
+    activeFigure,
+    tcpResultsIndex,
+    tcpResultFigures.length
+  );
+};
+
+const updateEkgProjectMedia = () => {
+  if (!ekgProjectMedia.length) return;
+  const activeMedia = ekgProjectMedia[ekgProjectIndex];
+  if (!activeMedia) return;
+
+  const isVideo = activeMedia.type === "video";
+
+  if (ekgProjectImage) {
+    ekgProjectImage.hidden = isVideo;
+    if (isVideo) {
+      ekgProjectImage.removeAttribute("src");
+      delete ekgProjectImage.dataset.src;
+    } else {
+      setGalleryImageSource(ekgProjectImage, activeMedia, { trackDeferredSource: true });
+    }
   }
-  if (tcpResultsDescription) {
-    tcpResultsDescription.textContent = activeFigure.description;
+
+  if (ekgProjectVideo) {
+    ekgProjectVideo.hidden = !isVideo;
+    if (isVideo) {
+      setProjectVideoSource(ekgProjectVideo, activeMedia);
+    } else {
+      clearProjectVideo(ekgProjectVideo);
+    }
   }
-  if (tcpResultsCounter) {
-    tcpResultsCounter.textContent = galleryCounterText(
-      tcpResultsIndex,
-      tcpResultFigures.length
-    );
-  }
+
+  setGalleryText(ekgProjectCaption, activeMedia.title);
+  setGalleryText(ekgProjectDescription, activeMedia.description);
+  setGalleryCounterText(ekgProjectCounter, ekgProjectIndex, ekgProjectMedia.length);
 };
 
 const syncDroneProjectVideo = () => {
@@ -13975,24 +15643,9 @@ const syncDroneProjectVideo = () => {
   const activeVideo = droneProjectVideos[droneVideoIndex];
   if (!activeVideo) return;
 
-  droneProjectVideo.dataset.src = activeVideo.src;
-  if (droneProjectVideo.getAttribute("src") !== activeVideo.src) {
-    droneProjectVideo.pause();
-    droneProjectVideo.setAttribute("src", activeVideo.src);
-    droneProjectVideo.load();
-  }
-
-  droneProjectVideo.setAttribute("aria-label", activeVideo.title);
-
-  if (droneVideoCaption) {
-    droneVideoCaption.textContent = activeVideo.title;
-  }
-  if (droneVideoCounter) {
-    droneVideoCounter.textContent = galleryCounterText(
-      droneVideoIndex,
-      droneProjectVideos.length
-    );
-  }
+  setProjectVideoSource(droneProjectVideo, activeVideo);
+  setGalleryText(droneVideoCaption, activeVideo.title);
+  setGalleryCounterText(droneVideoCounter, droneVideoIndex, droneProjectVideos.length);
 };
 
 activateVisibleContent = (root) => {
@@ -14020,6 +15673,11 @@ activateVisibleContent = (root) => {
   );
   if (dronePanel && droneProjectVideo && dronePanel.contains(droneProjectVideo)) {
     syncDroneProjectVideo();
+  }
+
+  const ekgPanel = root.querySelector('[data-view="projects-ekg"]:not(.is-hidden)');
+  if (ekgPanel) {
+    updateEkgProjectMedia();
   }
 
   playActiveAutoplayVideos(root);
@@ -14089,6 +15747,17 @@ bindGalleryNavigation(
     tcpResultsIndex = index;
   },
   updateTcpResultFigure
+);
+
+bindGalleryNavigation(
+  ekgProjectPrev,
+  ekgProjectNext,
+  ekgProjectMedia.length,
+  () => ekgProjectIndex,
+  (index) => {
+    ekgProjectIndex = index;
+  },
+  updateEkgProjectMedia
 );
 
 bindGalleryNavigation(
@@ -16753,129 +18422,53 @@ if (midnightGospelBegin) {
   });
 });
 
-if (lainAlertOk) {
-  lainAlertOk.addEventListener("click", (event) => {
+bindRandomEventButton(lainAlertOk, closeLainAlert);
+bindManagedRandomEventWindowAnimation(lainAlertWindow);
+
+bindRandomEventButton(lelouchAlertOk, closeLelouchAlert);
+bindManagedRandomEventWindowAnimation(lelouchAlertWindow);
+
+bindRandomEventButton(berserkSunriseOk, closeBerserkSunrise);
+bindManagedRandomEventWindowAnimation(berserkSunriseWindow);
+
+bindRandomEventButton(calendarReminderShow, showCalendarFromReminder);
+bindRandomEventButton(calendarReminderLater, closeCalendarReminder);
+bindManagedRandomEventWindowAnimation(calendarReminderWindow);
+
+bindRandomEventButton(gradescopeCurveYes, () => {
+  setGradescopeCurveMode("adjusting");
+});
+bindRandomEventButton(gradescopeCurveNo, closeGradescopeCurve);
+
+if (gradescopeCurveSlider) {
+  gradescopeCurveSlider.addEventListener("input", () => {
+    updateGradescopeCurvePath();
+  });
+}
+
+bindRandomEventButton(gradescopeCurveSet, closeGradescopeCurve);
+bindManagedRandomEventWindowAnimation(gradescopeCurveWindow, {
+  afterClose: resetGradescopeCurve,
+  unloadImages: false,
+});
+
+bindRandomEventButton(gearsNestEngage, startGearsNestCombat);
+bindRandomEventButton(gearsNestRetreat, closeGearsNest);
+bindRandomEventButton(gearsNestResultOk, closeGearsNest);
+gearsNestCoverButtons.forEach((button) => {
+  button.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    closeLainAlert();
+    setGearsNestCover(Number(button.getAttribute("data-gears-nest-cover")));
   });
-}
-
-if (lainAlertWindow) {
-  lainAlertWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  lainAlertWindow.addEventListener("animationend", (event) => {
-    if (event.target !== lainAlertWindow) return;
-    if (event.animationName === "retro-window-open") {
-      lainAlertWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      lainAlertWindow.classList.remove("is-closing");
-      lainAlertWindow.classList.add("is-hidden");
-      lainAlertWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
-
-if (lelouchAlertOk) {
-  lelouchAlertOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeLelouchAlert();
-  });
-}
-
-if (lelouchAlertWindow) {
-  lelouchAlertWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  lelouchAlertWindow.addEventListener("animationend", (event) => {
-    if (event.target !== lelouchAlertWindow) return;
-    if (event.animationName === "retro-window-open") {
-      lelouchAlertWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      lelouchAlertWindow.classList.remove("is-closing");
-      lelouchAlertWindow.classList.add("is-hidden");
-      lelouchAlertWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
-
-if (berserkSunriseOk) {
-  berserkSunriseOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeBerserkSunrise();
-  });
-}
-
-if (berserkSunriseWindow) {
-  berserkSunriseWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  berserkSunriseWindow.addEventListener("animationend", (event) => {
-    if (event.target !== berserkSunriseWindow) return;
-    if (event.animationName === "retro-window-open") {
-      berserkSunriseWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      berserkSunriseWindow.classList.remove("is-closing");
-      berserkSunriseWindow.classList.add("is-hidden");
-      berserkSunriseWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
-
-if (calendarReminderShow) {
-  calendarReminderShow.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    showCalendarFromReminder();
-  });
-}
-
-if (calendarReminderLater) {
-  calendarReminderLater.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeCalendarReminder();
-  });
-}
-
-if (calendarReminderWindow) {
-  calendarReminderWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  calendarReminderWindow.addEventListener("animationend", (event) => {
-    if (event.target !== calendarReminderWindow) return;
-    if (event.animationName === "retro-window-open") {
-      calendarReminderWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      calendarReminderWindow.classList.remove("is-closing");
-      calendarReminderWindow.classList.add("is-hidden");
-      calendarReminderWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+});
+gearsNestBattlefield?.addEventListener("pointermove", moveGearsNestReloadCursor);
+gearsNestBattlefield?.addEventListener("pointerleave", stopGearsNestFiring);
+document.addEventListener("pointerup", stopGearsNestFiring);
+document.addEventListener("pointercancel", stopGearsNestFiring);
+bindManagedRandomEventWindowAnimation(gearsNestWindow, {
+  afterClose: resetGearsNestPrompt,
+});
 
 if (instrumentalityYes) {
   instrumentalityYes.addEventListener("click", (event) => {
@@ -17012,6 +18605,44 @@ if (fateWindow) {
         image.removeAttribute("src");
       });
       if (fateResultImage) fateResultImage.removeAttribute("src");
+    }
+  });
+}
+
+bindRandomEventButton(lancerBattleStart, startLancerBattle);
+bindRandomEventButton(lancerBattlePush, pushLancerBattle);
+bindRandomEventButton(lancerBattleClose, closeLancerBattleWindow);
+document.addEventListener("keydown", handleLancerBattleKeyMash);
+
+if (lancerBattleWindow) {
+  lancerBattleWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  lancerBattleWindow.addEventListener("animationend", (event) => {
+    if (event.target !== lancerBattleWindow) return;
+    if (event.animationName === "retro-window-open") {
+      lancerBattleWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      lancerBattleWindow.classList.remove("is-closing");
+      lancerBattleWindow.classList.add("is-hidden");
+      lancerBattleWindow.classList.remove(
+        "is-clashing",
+        "is-win",
+        "is-loss",
+        "is-final-alert"
+      );
+      lancerBattleWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+      clearLancerBattleResultMedia();
+      clearLancerBattleVideo();
+      if (lancerBattleOpenFinalAfterClose) {
+        lancerBattleOpenFinalAfterClose = false;
+        reopenLancerBattleFinalPrompt();
+      }
     }
   });
 }
@@ -17613,8 +19244,7 @@ infinityArmorySlots.forEach((slot) => {
 
 if (infinityArmoryGemGrid) {
   infinityArmoryGemGrid.addEventListener("click", (event) => {
-    const target =
-      event.target instanceof Element ? event.target : event.target?.parentElement;
+    const target = getInfinityArmoryEventTarget(event);
     const gem = target?.closest("[data-armory-gem]");
     if (!gem || !infinityArmoryGemGrid.contains(gem)) return;
     event.preventDefault();
@@ -17630,16 +19260,14 @@ if (infinityArmoryGemGrid) {
 document.addEventListener("pointermove", moveInfinityArmoryCursorGem);
 document.addEventListener("click", (event) => {
   if (!infinityArmorySelectedGem) return;
-  const target =
-    event.target instanceof Element ? event.target : event.target?.parentElement;
-  if (target?.closest("#infinity-armory-window")) return;
+  const target = getInfinityArmoryEventTarget(event);
+  if (target && infinityArmoryWindow?.contains(target)) return;
   clearInfinityArmorySelectedGem({ status: "Gem returned to inventory." });
 });
 
 if (infinityArmoryWindow) {
   infinityArmoryWindow.addEventListener("click", (event) => {
-    const target =
-      event.target instanceof Element ? event.target : event.target?.parentElement;
+    const target = getInfinityArmoryEventTarget(event);
     if (
       infinityArmorySelectedGem &&
       !target?.closest("[data-armory-slot], [data-armory-gem]")
@@ -17753,6 +19381,14 @@ document.addEventListener(
     const target =
       event.target instanceof Element ? event.target : event.target?.parentElement;
     if (target?.closest("#fate-resist")) return;
+    if (target?.closest("#lancer-battle-push")) {
+      if (Math.random() < LANCER_BATTLE_CLICK_COUNTER_PROBABILITY) {
+        recordGeneralRandomEventClick({
+          source: "lancer-battle-fight-back",
+        });
+      }
+      return;
+    }
     if (isBrandBurnsButtonClickTarget(target)) {
       brandBurnsRandomEventButtonClickCount += 1;
       if (

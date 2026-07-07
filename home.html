@@ -110,9 +110,9 @@
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
-    <link rel="stylesheet" href="styles/home/portfolio.css" />
+    <link rel="stylesheet" href="styles/home/portfolio.css?v=ekg-carousel-20260703" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=dodging-button-hide-20260703" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=nest-local-assets-20260706" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=calendar-close-20260703" />
   </head>
   <body>
@@ -403,8 +403,37 @@
                 <p class="project-view-subtitle">Spring 2026</p>
               </div>
               <p>
-                Designed and breadboarded an EKG. Focused on biomedical signal acquisition,
-                filtering, and waveform analysis.
+                Designed and breadboarded an EKG. Focused on biomedical signal acquisition and
+                filtering.
+              </p>
+              <div class="gallery-frame" id="ekg-project-gallery">
+                <div class="gallery-scroll gallery-scroll--video">
+                  <img
+                    id="ekg-project-image"
+                    data-src="assets/projects/ekg-project/final-breadboard.jpeg"
+                    alt="Final EKG breadboard."
+                  />
+                  <video
+                    id="ekg-project-video"
+                    hidden
+                    controls
+                    playsinline
+                    preload="metadata"
+                    data-unload-on-hide
+                    aria-label="EKG project media"
+                  ></video>
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="ekg-project-prev">Previous</button>
+                  <span class="gallery-counter" id="ekg-project-counter" aria-live="polite">1 of 3</span>
+                  <button type="button" id="ekg-project-next">Next</button>
+                </div>
+              </div>
+              <p class="project-view-subtitle" id="ekg-project-caption" aria-live="polite">
+                Final breadboard
+              </p>
+              <p class="project-figure-description" id="ekg-project-description" aria-live="polite">
+                Final breadboard.
               </p>
             </div>
             <div class="viewer-content is-hidden" data-view="projects-drone-navigation">
@@ -4071,6 +4100,216 @@
     </div>
 
     <div
+      class="window gradescope-curve-window is-hidden"
+      id="gradescope-curve-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Gradescope</div>
+      </div>
+      <div class="window-body">
+        <div class="gradescope-curve-prompt" id="gradescope-curve-prompt">
+          <p>Set the curve for your CS class?</p>
+          <div class="gradescope-curve-actions">
+            <button type="button" id="gradescope-curve-yes">Yes</button>
+            <button type="button" id="gradescope-curve-no">No</button>
+          </div>
+        </div>
+        <div
+          class="gradescope-curve-graph"
+          id="gradescope-curve-graph"
+          aria-label="Grade distribution graph"
+        >
+          <svg viewBox="0 0 280 150" aria-hidden="true" focusable="false">
+            <path class="gradescope-grid-line" d="M20 32H260M20 72H260M20 112H260" />
+            <path class="gradescope-axis-line" d="M20 12V132H264" />
+            <g class="gradescope-bars">
+              <rect x="34" y="116" width="16" height="16" />
+              <rect x="58" y="102" width="16" height="30" />
+              <rect x="82" y="84" width="16" height="48" />
+              <rect x="106" y="62" width="16" height="70" />
+              <rect x="130" y="46" width="16" height="86" />
+              <rect x="154" y="58" width="16" height="74" />
+              <rect x="178" y="76" width="16" height="56" />
+              <rect x="202" y="96" width="16" height="36" />
+              <rect x="226" y="110" width="16" height="22" />
+            </g>
+            <path class="gradescope-curve-path" id="gradescope-curve-path" d="" />
+          </svg>
+          <div class="gradescope-curve-adjust is-hidden" id="gradescope-curve-adjust">
+            <input
+              type="range"
+              id="gradescope-curve-slider"
+              min="35"
+              max="95"
+              value="72"
+              aria-label="Curve peak"
+            />
+          </div>
+        </div>
+        <div class="gradescope-curve-set-row is-hidden" id="gradescope-curve-set-row">
+          <button type="button" id="gradescope-curve-set">Set Curve</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window gears-nest-window is-hidden"
+      id="gears-nest-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Scourge Nest Emergence</div>
+      </div>
+      <div class="window-body">
+        <section
+          class="gears-nest-stage gears-nest-combat"
+          id="gears-nest-combat"
+          aria-label="Clear the emerging nest"
+        >
+          <div class="gears-nest-hud">
+            <div class="gears-nest-weapon">
+              <img
+                data-src="assets/random%20events/gears-nest/lancer.webp"
+                decoding="async"
+                alt=""
+              />
+              <div>
+                <span class="gears-nest-hud-label">Lancer</span>
+                <strong id="gears-nest-ammo">32 / 32</strong>
+              </div>
+            </div>
+            <div class="gears-nest-health-panel">
+              <img
+                data-src="assets/random%20events/gears-nest/cog-gear.webp"
+                decoding="async"
+                alt=""
+              />
+              <div class="gears-nest-health-copy">
+                <span class="gears-nest-hud-label">COG Gear</span>
+                <div
+                  class="gears-nest-healthbar"
+                  role="progressbar"
+                  aria-label="COG Gear health"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="100"
+                >
+                  <span id="gears-nest-health"></span>
+                </div>
+              </div>
+              <strong id="gears-nest-health-value">100</strong>
+            </div>
+          </div>
+
+          <div class="gears-nest-battlefield" id="gears-nest-battlefield">
+            <img
+              class="gears-nest-map-image"
+              data-src="assets/random%20events/scourge-nest-background.png"
+              data-source-url="https://stefvelzeboer.artstation.com/projects/9eg9QW"
+              decoding="async"
+              alt=""
+            />
+            <div class="gears-nest-damage-flash" aria-hidden="true"></div>
+            <div
+              class="gears-nest-enemy-covers"
+              id="gears-nest-enemy-covers"
+              aria-hidden="true"
+            ></div>
+            <div class="gears-nest-enemies" id="gears-nest-enemies"></div>
+            <div
+              class="gears-nest-player-covers"
+              id="gears-nest-player-covers"
+              aria-hidden="true"
+            ></div>
+            <div
+              class="gears-nest-projectiles"
+              id="gears-nest-projectiles"
+              aria-hidden="true"
+            ></div>
+            <section
+              class="window gears-nest-prompt"
+              id="gears-nest-prompt"
+              aria-labelledby="gears-nest-prompt-title"
+              data-no-drag
+            >
+              <div class="title-bar">
+                <div class="title-bar-text">Scourge Nest Emergence</div>
+              </div>
+              <div class="window-body">
+                <div class="gears-nest-prompt-content">
+                  <img src="assets/app-icons/ico/msg_warning.ico" alt="" />
+                  <div>
+                    <h2 id="gears-nest-prompt-title">Nest emerging!</h2>
+                    <p>
+                      A Scourge Nest is pushing up through the ground. Clear it
+                      before the Grubs overrun the area?
+                    </p>
+                  </div>
+                </div>
+                <div class="gears-nest-actions">
+                  <button type="button" id="gears-nest-engage">Yes</button>
+                  <button type="button" id="gears-nest-retreat">No</button>
+                </div>
+              </div>
+            </section>
+            <div
+              class="gears-nest-cover-controls"
+              role="group"
+              aria-label="Cover positions"
+            >
+              <button
+                type="button"
+                data-gears-nest-cover="0"
+                aria-pressed="false"
+              >
+                Left cover
+              </button>
+              <button
+                type="button"
+                data-gears-nest-cover="1"
+                aria-pressed="true"
+              >
+                Center cover
+              </button>
+              <button
+                type="button"
+                data-gears-nest-cover="2"
+                aria-pressed="false"
+              >
+                Right cover
+              </button>
+            </div>
+            <div class="gears-nest-player" id="gears-nest-player" data-cover="1">
+              <img
+                data-src="assets/random%20events/gears-nest/cog-gear.webp"
+                decoding="async"
+                alt="COG Gear soldier"
+              />
+            </div>
+            <div
+              class="gears-nest-reload-cursor"
+              id="gears-nest-reload-cursor"
+              aria-hidden="true"
+            ></div>
+          </div>
+
+          <p class="gears-nest-status" id="gears-nest-status" aria-live="polite">
+            Scourge Nest emerging. Engage to clear it.
+          </p>
+          <div
+            class="gears-nest-result is-hidden"
+            id="gears-nest-result"
+            aria-live="assertive"
+          >
+            <p id="gears-nest-result-text"></p>
+            <button type="button" id="gears-nest-result-ok">OK</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div
       class="window instrumentality-window is-hidden"
       id="instrumentality-window"
       aria-hidden="true"
@@ -4226,6 +4465,81 @@
       </div>
     </div>
 
+    <div class="window lancer-battle-window is-hidden" id="lancer-battle-window" aria-hidden="true">
+      <div class="lancer-battle-lightning-field" aria-hidden="true">
+        <canvas class="lancer-battle-lightning-canvas" id="lancer-battle-lightning-canvas"></canvas>
+      </div>
+      <div class="title-bar">
+        <div class="title-bar-text" id="lancer-battle-title">Lancer Duel</div>
+      </div>
+      <div class="window-body">
+        <div class="lancer-battle-stage" id="lancer-battle-ready-stage">
+          <div class="lancer-battle-media-frame">
+            <img
+              class="lancer-battle-ready-image"
+              data-src="assets/random%20events/lancer-battle-ready.png"
+              decoding="async"
+              alt=""
+            />
+          </div>
+          <p>Delta Squad, an enemy approaches. Hold the line!</p>
+          <div class="lancer-battle-actions">
+            <button type="button" id="lancer-battle-start">Start</button>
+          </div>
+        </div>
+        <div class="lancer-battle-stage is-hidden" id="lancer-battle-clash-stage">
+          <div class="lancer-battle-media-frame">
+            <video
+              class="lancer-battle-clash-video"
+              id="lancer-battle-clash-video"
+              data-src="https://imgix.bustle.com/inverse/8d/d9/86/e4/92b5/4dec/b80e/3402288d9a18/giphy-9gif.gif?w=825&amp;h=464&amp;fit=max&amp;fm=mp4"
+              muted
+              playsinline
+              preload="metadata"
+              aria-label="Lancer chainsaw clash"
+            ></video>
+          </div>
+          <p id="lancer-battle-status" aria-live="polite">Wait for the clash.</p>
+          <div
+            class="progress-indicator segmented lancer-battle-progress"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            id="lancer-battle-progress"
+          >
+            <span class="progress-indicator-bar" id="lancer-battle-progress-bar"></span>
+          </div>
+          <div class="lancer-battle-actions">
+            <button type="button" id="lancer-battle-push" disabled>Fight Back</button>
+          </div>
+        </div>
+        <div class="lancer-battle-stage is-hidden" id="lancer-battle-result-stage">
+          <div class="lancer-battle-media-frame">
+            <video
+              class="lancer-battle-result-video is-hidden"
+              id="lancer-battle-result-video"
+              title="Marcus Fenix execution clip"
+              muted
+              playsinline
+              preload="auto"
+            ></video>
+            <img class="lancer-battle-result-image" id="lancer-battle-result-image" decoding="async" alt="" />
+          </div>
+          <p id="lancer-battle-result-text" aria-live="polite"></p>
+        </div>
+        <div class="lancer-battle-stage is-hidden" id="lancer-battle-final-stage">
+          <div class="random-alert-message">
+            <img src="assets/app-icons/ico/gears.ico" alt="" />
+            <p id="lancer-battle-final-text"></p>
+          </div>
+          <div class="random-alert-actions">
+            <button type="button" id="lancer-battle-close">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="window brand-burns-window is-hidden" id="brand-burns-window" aria-hidden="true">
       <div class="brand-burns-lightning-field" aria-hidden="true">
         <canvas class="brand-burns-lightning-canvas"></canvas>
@@ -4341,8 +4655,8 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/core/dom.js?v=dodging-button-hide-20260703"></script>
+    <script src="scripts/home/core/dom.js?v=lancer-win-video-20260706"></script>
     <script src="scripts/home/core/media.js?v=random-event-preload-20260703"></script>
-    <script src="scripts/home/main.js?v=dodging-debug-off-20260703"></script>
+    <script src="scripts/home/main.js?v=nest-local-assets-20260706"></script>
   </body>
 </html>

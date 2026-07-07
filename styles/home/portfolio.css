@@ -516,6 +516,10 @@ body.is-resizing-window * {
   object-fit: contain;
 }
 
+.gallery-scroll [hidden] {
+  display: none !important;
+}
+
 .gallery-scroll--poster img {
   max-width: none;
   max-height: none;
