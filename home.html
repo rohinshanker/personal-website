@@ -112,8 +112,8 @@
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=ekg-carousel-20260703" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=nest-local-assets-20260706" />
-    <link rel="stylesheet" href="styles/home/cursors.css?v=calendar-close-20260703" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=soot-puff-clouds-20260709" />
+    <link rel="stylesheet" href="styles/home/cursors.css?v=cursor-titlebar-clickable-20260709" />
   </head>
   <body>
     <div class="desktop" aria-label="Desktop apps">
@@ -3547,18 +3547,99 @@
               <button type="button" id="pokemon-starter-confirm-no">No</button>
             </div>
           </div>
-          <button type="button" class="pokemon-starter-dialogue" id="pokemon-starter-dialogue">
+          <button
+            type="button"
+            class="pokemon-starter-dialogue pokemon-dialogue"
+            id="pokemon-starter-dialogue"
+          >
             <img
-              class="pokemon-starter-oak"
+              class="pokemon-starter-oak pokemon-dialogue-portrait"
               data-src="assets/random%20events/professoroak.webp"
               decoding="async"
               alt=""
             />
-            <span class="pokemon-starter-dialogue-copy">
-              <span class="pokemon-starter-speaker">Professor Oak</span>
-              <span id="pokemon-starter-dialogue-text">Select a starter Pokémon!</span>
+            <span class="pokemon-starter-dialogue-copy pokemon-dialogue-copy">
+              <span class="pokemon-starter-speaker pokemon-dialogue-speaker">Professor Oak</span>
+              <span
+                class="pokemon-dialogue-text"
+                id="pokemon-starter-dialogue-text"
+              >Select a starter Pokémon!</span>
             </span>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window relic-recovery-window is-hidden"
+      id="relic-recovery-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Relic Recovery</div>
+      </div>
+      <div class="window-body">
+        <div class="relic-recovery-scene" id="relic-recovery-scene">
+          <div
+            class="relic-recovery-relics"
+            id="relic-recovery-relics"
+            aria-label="Relics scattered across the Abyss"
+          ></div>
+          <div
+            class="relic-recovery-detail is-hidden"
+            id="relic-recovery-detail"
+            aria-hidden="true"
+            role="button"
+            tabindex="-1"
+          >
+            <span class="relic-recovery-detail-panel">
+              <img
+                id="relic-recovery-detail-image"
+                decoding="async"
+                alt=""
+              />
+              <strong id="relic-recovery-detail-name"></strong>
+              <span id="relic-recovery-detail-description"></span>
+              <em>[Press anywhere to continue]</em>
+            </span>
+          </div>
+          <div
+            class="relic-recovery-dialog pokemon-dialogue"
+            id="relic-recovery-dialog"
+            role="dialog"
+            aria-live="polite"
+          >
+            <img
+              class="relic-recovery-nanachi pokemon-dialogue-portrait"
+              data-src="assets/random%20events/nanachi-icon.webp"
+              decoding="async"
+              alt=""
+            />
+            <div class="relic-recovery-dialog-copy pokemon-dialogue-copy">
+              <span class="relic-recovery-speaker pokemon-dialogue-speaker">Nanachi</span>
+              <span
+                class="pokemon-dialogue-text"
+                id="relic-recovery-dialog-text"
+              >Let's collect some relics!</span>
+              <span class="relic-recovery-dialog-actions" id="relic-recovery-dialog-actions">
+                <button type="button" id="relic-recovery-start">Sounds good!</button>
+                <button type="button" id="relic-recovery-decline">Maybe another time.</button>
+                <button
+                  type="button"
+                  class="is-hidden"
+                  id="relic-recovery-continue"
+                  aria-hidden="true"
+                >
+                  Continue
+                </button>
+              </span>
+            </div>
+          </div>
+          <div
+            class="relic-recovery-hotbar"
+            id="relic-recovery-hotbar"
+            aria-label="Retrieved relics"
+          ></div>
         </div>
       </div>
     </div>
@@ -4395,6 +4476,290 @@
       </div>
     </div>
 
+    <div class="window death-note-window is-hidden" id="death-note-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Death Note</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="death-note-title-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="death-note-book" aria-label="Open Death Note notebook">
+          <section class="death-note-page death-note-inside-cover" aria-label="Inside cover">
+            <div class="death-note-cover-title">Death Note</div>
+            <ol class="death-note-rules">
+              <li>The human whose name is written in this note shall die.</li>
+              <li>This note will not take effect unless the writer has the person's face in their mind when writing their name.</li>
+              <li>If the cause of death is written within 40 seconds of writing the person's name, it will happen.</li>
+            </ol>
+          </section>
+          <section class="death-note-page death-note-lined-page" aria-label="Lined notebook page">
+            <textarea
+              class="death-note-entry"
+              id="death-note-entry"
+              aria-label="Write in the Death Note"
+              autocomplete="off"
+              spellcheck="false"
+            ></textarea>
+          </section>
+        </div>
+        <div class="death-note-actions">
+          <button type="button" id="death-note-close">Close Notebook</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window random-alert-window wall-breach-window is-hidden"
+      id="wall-breach-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Wall Breach</div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message wall-breach-message">
+          <img
+            class="wall-breach-logo"
+            data-src="assets/random%20events/wall-maria-logo.png"
+            decoding="async"
+            alt="Wall Maria logo"
+          />
+          <p>Wall Maria has been breached. All scouts to their posts!</p>
+        </div>
+        <div class="random-alert-actions wall-breach-actions">
+          <button type="button" id="wall-breach-suit-up">Suit up!</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window current-public-info-window is-hidden"
+      id="current-public-info-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Current Publicly Available Information</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="current-public-info-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <img
+          id="current-public-info-image"
+          data-src="assets/random%20events/current-publicly-available-information/season-1.webp"
+          decoding="async"
+          alt=""
+        />
+        <div class="current-public-info-actions">
+          <button type="button" id="current-public-info-thanks">
+            Thanks for sharing...
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window random-alert-window trna-request-window is-hidden"
+      id="trna-request-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Spare a tRNA?</div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message trna-request-message">
+          <img
+            class="trna-request-icon"
+            data-src="assets/random%20events/ribosome-icon.svg"
+            decoding="async"
+            alt="Clip art ribosome"
+          />
+          <p>A poor ribosome passes by and asks if you have an extra tRNA it could borrow.</p>
+        </div>
+        <div class="random-alert-actions trna-request-actions">
+          <button type="button" id="trna-request-yes">Yes</button>
+          <button type="button" id="trna-request-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window random-alert-window spell-stack-window is-hidden"
+      id="spell-stack-window"
+      aria-hidden="true"
+    >
+      <div class="spell-stack-lightning-field" aria-hidden="true">
+        <canvas
+          class="spell-stack-lightning-canvas"
+          id="spell-stack-lightning-canvas"
+        ></canvas>
+      </div>
+      <div class="title-bar">
+        <div class="title-bar-text">Spell on the Stack</div>
+      </div>
+      <div class="window-body">
+        <div class="spell-stack-image-frame">
+          <img
+            class="spell-stack-image"
+            data-src="assets/random%20events/lightning-bolt.png"
+            decoding="async"
+            alt="Lightning Bolt"
+          />
+        </div>
+        <div class="spell-stack-message">
+          <p>Chandra targets your 1/1 Soldier Token with lightning bolt. Would you like to counter?</p>
+        </div>
+        <div class="random-alert-actions spell-stack-actions">
+          <button type="button" id="spell-stack-yes">Yes</button>
+          <button type="button" id="spell-stack-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window random-alert-window soot-sprites-window is-hidden"
+      id="soot-sprites-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message soot-sprites-message">
+          <img src="assets/app-icons/ico/hardware.ico" alt="" />
+          <p>There seems to be something hiding in your GPU. Would you like to take a look?</p>
+        </div>
+        <div class="random-alert-actions soot-sprites-actions">
+          <button type="button" id="soot-sprites-yes">Yes</button>
+          <button type="button" id="soot-sprites-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window nataraja-window is-hidden" id="nataraja-window" aria-hidden="true">
+      <div class="title-bar">
+        <div class="title-bar-text">Nataraja</div>
+      </div>
+      <div class="window-body">
+        <video
+          class="nataraja-video"
+          id="nataraja-video"
+          data-src="assets/random%20events/nataraja.mp4"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          aria-label="Looping Nataraja animation"
+        ></video>
+        <p class="nataraja-credit">Art credit: u/sol_erides</p>
+        <p>Leave an offering?</p>
+        <div class="nataraja-actions">
+          <button type="button" id="nataraja-yes">Yes</button>
+          <button type="button" id="nataraja-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window random-alert-window noble-steed-window is-hidden"
+      id="noble-steed-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Noble Steed</div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message">
+          <img
+            data-src="assets/random%20events/horse.jpeg"
+            decoding="async"
+            alt="Horse"
+          />
+          <p>Bring your horse to water?</p>
+        </div>
+        <div class="random-alert-actions">
+          <button type="button" id="noble-steed-yes">Yes</button>
+          <button type="button" id="noble-steed-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window random-alert-window noble-steed-result-window is-hidden"
+      id="noble-steed-result-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message">
+          <img src="assets/app-icons/ico/globe_map.ico" alt="" />
+          <p>The horse does not drink any water.</p>
+        </div>
+        <div class="random-alert-actions">
+          <button type="button" id="noble-steed-result-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window toxic-jungle-window is-hidden"
+      id="toxic-jungle-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Toxic Jungle</div>
+      </div>
+      <div class="window-body">
+        <div
+          class="toxic-jungle-scene"
+          id="toxic-jungle-scene"
+          aria-label="Collect spores in the toxic jungle"
+        >
+          <div
+            class="toxic-jungle-spores"
+            id="toxic-jungle-spores"
+            aria-label="Floating spores"
+          ></div>
+          <div
+            class="toxic-jungle-counter-panel is-hidden"
+            id="toxic-jungle-counters"
+            aria-hidden="true"
+            aria-label="Collected spores"
+          ></div>
+          <div
+            class="toxic-jungle-dialog pokemon-dialogue"
+            id="toxic-jungle-dialog"
+            role="dialog"
+            aria-live="polite"
+          >
+            <img
+              class="toxic-jungle-nausicaa pokemon-dialogue-portrait"
+              data-src="assets/random%20events/nausicaa.jpg"
+              decoding="async"
+              alt="Nausicaa"
+            />
+            <div class="toxic-jungle-dialog-copy pokemon-dialogue-copy">
+              <span class="toxic-jungle-speaker pokemon-dialogue-speaker">Nausicaa</span>
+              <span
+                class="pokemon-dialogue-text"
+                id="toxic-jungle-dialog-text"
+              >
+                Hey! Can you help me collect some spores?
+              </span>
+              <span class="toxic-jungle-dialog-actions" id="toxic-jungle-dialog-actions">
+                <button type="button" id="toxic-jungle-start">Of course!</button>
+                <button type="button" id="toxic-jungle-decline">Another time...</button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="window fate-window is-hidden" id="fate-window" aria-hidden="true">
       <div class="fate-lightning-field" aria-hidden="true">
         <canvas class="fate-lightning-canvas" id="fate-lightning-canvas"></canvas>
@@ -4471,6 +4836,9 @@
       </div>
       <div class="title-bar">
         <div class="title-bar-text" id="lancer-battle-title">Lancer Duel</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="lancer-battle-title-close"></button>
+        </div>
       </div>
       <div class="window-body">
         <div class="lancer-battle-stage" id="lancer-battle-ready-stage">
@@ -4655,8 +5023,8 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/core/dom.js?v=lancer-win-video-20260706"></script>
+    <script src="scripts/home/core/dom.js?v=lancer-title-close-20260709"></script>
     <script src="scripts/home/core/media.js?v=random-event-preload-20260703"></script>
-    <script src="scripts/home/main.js?v=nest-local-assets-20260706"></script>
+    <script src="scripts/home/main.js?v=soot-normal-gating-20260709"></script>
   </body>
 </html>

@@ -400,6 +400,44 @@ const {
   redToolChatLog,
   redToolInput,
   redToolSend,
+  deathNoteWindow,
+  deathNoteEntry,
+  deathNoteTitleClose,
+  deathNoteClose,
+  wallBreachWindow,
+  wallBreachSuitUp,
+  currentPublicInfoWindow,
+  currentPublicInfoClose,
+  currentPublicInfoThanks,
+  currentPublicInfoImage,
+  trnaRequestWindow,
+  trnaRequestYes,
+  trnaRequestNo,
+  spellStackWindow,
+  spellStackLightningCanvas,
+  spellStackYes,
+  spellStackNo,
+  sootSpritesWindow,
+  sootSpritesYes,
+  sootSpritesNo,
+  natarajaWindow,
+  natarajaVideo,
+  natarajaYes,
+  natarajaNo,
+  nobleSteedWindow,
+  nobleSteedYes,
+  nobleSteedNo,
+  nobleSteedResultWindow,
+  nobleSteedResultOk,
+  toxicJungleWindow,
+  toxicJungleScene,
+  toxicJungleSpores,
+  toxicJungleCounters,
+  toxicJungleDialog,
+  toxicJungleDialogText,
+  toxicJungleDialogActions,
+  toxicJungleStart,
+  toxicJungleDecline,
   fateWindow,
   fateTitle,
   fateReadyStage,
@@ -416,6 +454,7 @@ const {
   fateResultOk,
   lancerBattleWindow,
   lancerBattleTitle,
+  lancerBattleTitleClose,
   lancerBattleReadyStage,
   lancerBattleClashStage,
   lancerBattleResultStage,
@@ -481,6 +520,20 @@ const {
   pokemonStarterPokeballStage,
   pokemonStarterDialogue,
   pokemonStarterDialogueText,
+  relicRecoveryWindow,
+  relicRecoveryScene,
+  relicRecoveryRelics,
+  relicRecoveryHotbar,
+  relicRecoveryDialog,
+  relicRecoveryDialogText,
+  relicRecoveryDialogActions,
+  relicRecoveryStart,
+  relicRecoveryDecline,
+  relicRecoveryContinue,
+  relicRecoveryDetail,
+  relicRecoveryDetailImage,
+  relicRecoveryDetailName,
+  relicRecoveryDetailDescription,
   dstNightWindow,
   dstNightWarning,
   dstNightOk,
@@ -1314,6 +1367,9 @@ const RANDOM_EVENT_DELAY_MAX_MS = 2000;
 const RANDOM_EVENT_DELAY_STEP_MS = 100;
 const RANDOM_EVENT_REPEAT_DAMPEN_MS = 2 * 60 * 1000;
 const RANDOM_EVENT_REPEAT_DAMPEN_FACTOR = 0.5;
+const WALL_BREACH_SHAKE_INTERVAL_MS = 1500;
+const WALL_BREACH_SHAKE_DURATION_MS = 360;
+const WALL_BREACH_FLASH_DURATION_MS = 760;
 const RANDOM_EVENT_KIND_INTERACTIVE = "interactive";
 const RANDOM_EVENT_KIND_NON_INTERACTIVE = "noninteractive";
 const RANDOM_EVENT_KIND_LIMITS = Object.freeze({
@@ -1542,6 +1598,14 @@ let brandBurnsBlockProgressBar = null;
 let brandBurnsBlockProgressFrame = null;
 let brandBurnsBlocking = false;
 let brandBurnsOutcome = null;
+let wallBreachSequenceActive = false;
+let spellStackLightningFrame = null;
+let spellStackLightningTimer = null;
+let sootSpritesOverlay = null;
+let sootSpritesRevealTimer = null;
+let sootSpritesCleanupTimer = null;
+let nobleSteedResultTimer = null;
+let nobleSteedResultPosition = null;
 let brandBurnsStats = {
   health: BRAND_BURNS_PLAYER_MAX_HEALTH,
   maxHealth: BRAND_BURNS_PLAYER_MAX_HEALTH,
@@ -1600,6 +1664,16 @@ const randomEventViewportWindows = () =>
     instrumentalityWindow,
     instrumentalityCongratsWindow,
     redToolWindow,
+    deathNoteWindow,
+    wallBreachWindow,
+    currentPublicInfoWindow,
+    trnaRequestWindow,
+    spellStackWindow,
+    sootSpritesWindow,
+    natarajaWindow,
+    nobleSteedWindow,
+    nobleSteedResultWindow,
+    toxicJungleWindow,
     fateWindow,
     lancerBattleWindow,
     brandBurnsWindow,
@@ -6656,6 +6730,1251 @@ const closeFateWindow = () => {
   restartWindowAnimation(fateWindow, "is-closing");
 };
 
+const isDeathNoteVisible = () => isManagedRandomEventWindowVisible(deathNoteWindow);
+
+const showDeathNoteWindow = () => {
+  const didOpen = showManagedRandomEventWindow(deathNoteWindow, {
+    beforeShow: () => {
+      if (deathNoteEntry) deathNoteEntry.value = "";
+    },
+    clampAfterMediaLoad: true,
+  });
+  if (didOpen) {
+    requestAnimationFrame(() => {
+      deathNoteEntry?.focus({ preventScroll: true });
+    });
+  }
+};
+
+const closeDeathNoteWindow = () => {
+  closeManagedRandomEventWindow(deathNoteWindow);
+};
+
+const isWallBreachVisible = () =>
+  wallBreachSequenceActive || isManagedRandomEventWindowVisible(wallBreachWindow);
+
+const triggerWallBreachShake = () => {
+  document.documentElement.classList.remove("is-wall-breach-shaking");
+  void document.documentElement.offsetWidth;
+  document.documentElement.classList.add("is-wall-breach-shaking");
+  window.setTimeout(() => {
+    document.documentElement.classList.remove("is-wall-breach-shaking");
+  }, WALL_BREACH_SHAKE_DURATION_MS);
+};
+
+const triggerWallBreachFlash = () =>
+  new Promise((resolve) => {
+    const flash = document.createElement("div");
+    flash.className = "wall-breach-flash";
+    document.body.appendChild(flash);
+    const animation = flash.animate(
+      [
+        { opacity: 0 },
+        { opacity: 1, offset: 0.08 },
+        { opacity: 1, offset: 0.36 },
+        { opacity: 0 },
+      ],
+      {
+        duration: WALL_BREACH_FLASH_DURATION_MS,
+        easing: "ease-out",
+        fill: "forwards",
+      }
+    );
+    animation.addEventListener(
+      "finish",
+      () => {
+        flash.remove();
+        resolve();
+      },
+      { once: true }
+    );
+  });
+
+const waitForWallBreachShakeInterval = () =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, WALL_BREACH_SHAKE_INTERVAL_MS);
+  });
+
+const showWallBreachWindow = () => {
+  showManagedRandomEventWindow(wallBreachWindow, { clampAfterMediaLoad: true });
+};
+
+const runWallBreachSequence = async () => {
+  if (isWallBreachVisible()) return;
+  wallBreachSequenceActive = true;
+  try {
+    for (let count = 0; count < 3; count += 1) {
+      triggerWallBreachShake();
+      await waitForWallBreachShakeInterval();
+    }
+    triggerWallBreachShake();
+    await triggerWallBreachFlash();
+    showWallBreachWindow();
+  } finally {
+    wallBreachSequenceActive = false;
+  }
+};
+
+const closeWallBreachWindow = () => {
+  closeManagedRandomEventWindow(wallBreachWindow);
+};
+
+const CURRENT_PUBLIC_INFO_ASSETS = Object.freeze([
+  "assets/random%20events/current-publicly-available-information/season-1.webp",
+  "assets/random%20events/current-publicly-available-information/season-2.webp",
+  "assets/random%20events/current-publicly-available-information/season-3.webp",
+  "assets/random%20events/current-publicly-available-information/final-season.webp",
+  "assets/random%20events/current-publicly-available-information/ova.webp",
+]);
+
+const isCurrentPublicInfoVisible = () =>
+  isManagedRandomEventWindowVisible(currentPublicInfoWindow);
+
+const selectCurrentPublicInfoImage = () => {
+  if (!currentPublicInfoImage || !CURRENT_PUBLIC_INFO_ASSETS.length) return;
+  const selected =
+    CURRENT_PUBLIC_INFO_ASSETS[
+      Math.floor(Math.random() * CURRENT_PUBLIC_INFO_ASSETS.length)
+    ];
+  if (currentPublicInfoImage.dataset.src !== selected) {
+    currentPublicInfoImage.removeAttribute("src");
+  }
+  currentPublicInfoImage.dataset.src = selected;
+};
+
+const showCurrentPublicInfoWindow = () => {
+  showManagedRandomEventWindow(currentPublicInfoWindow, {
+    beforeShow: selectCurrentPublicInfoImage,
+    clampAfterMediaLoad: true,
+  });
+};
+
+const closeCurrentPublicInfoWindow = () => {
+  closeManagedRandomEventWindow(currentPublicInfoWindow);
+};
+
+const isTrnaRequestVisible = () => isManagedRandomEventWindowVisible(trnaRequestWindow);
+
+const showTrnaRequestWindow = () => {
+  showManagedRandomEventWindow(trnaRequestWindow, { clampAfterMediaLoad: true });
+};
+
+const closeTrnaRequestWindow = () => {
+  closeManagedRandomEventWindow(trnaRequestWindow);
+};
+
+const isSpellStackVisible = () => isManagedRandomEventWindowVisible(spellStackWindow);
+
+const clearSpellStackLightning = () => {
+  if (spellStackLightningFrame) {
+    cancelAnimationFrame(spellStackLightningFrame);
+    spellStackLightningFrame = null;
+  }
+  if (spellStackLightningTimer) {
+    clearTimeout(spellStackLightningTimer);
+    spellStackLightningTimer = null;
+  }
+  spellStackWindow?.classList.remove("is-spell-hit");
+  clearLightningCanvas(spellStackLightningCanvas);
+};
+
+const showSpellStackWindow = () => {
+  clearSpellStackLightning();
+  showManagedRandomEventWindow(spellStackWindow, { clampAfterMediaLoad: true });
+};
+
+const triggerSpellStackCounterFlash = () => {
+  const flash = document.createElement("div");
+  flash.className = "spell-stack-counter-flash";
+  document.body.appendChild(flash);
+  const animation = flash.animate(
+    [
+      { opacity: 0 },
+      { opacity: 0.88, offset: 0.12 },
+      { opacity: 0.72, offset: 0.36 },
+      { opacity: 0 },
+    ],
+    {
+      duration: 620,
+      easing: "ease-out",
+      fill: "forwards",
+    }
+  );
+  animation.addEventListener("finish", () => flash.remove(), { once: true });
+};
+
+const counterSpellOnStack = () => {
+  if (!spellStackWindow || spellStackWindow.classList.contains("is-hidden")) return;
+  clearSpellStackLightning();
+  triggerSpellStackCounterFlash();
+  closeManagedRandomEventWindow(spellStackWindow);
+};
+
+const triggerSpellStackLightning = () => {
+  if (!spellStackWindow || !spellStackLightningCanvas) return;
+  clearSpellStackLightning();
+  spellStackWindow.classList.add("is-spell-hit");
+  const startedAt = performance.now();
+  const duration = 900;
+
+  const render = (now) => {
+    const progress = Math.min(1, (now - startedAt) / duration);
+    const alpha = Math.max(0, 1 - progress * 0.55);
+    drawLightningBorderFrame(spellStackLightningCanvas, alpha, RED_LIGHTNING_PALETTE);
+    if (progress < 1) {
+      spellStackLightningFrame = requestAnimationFrame(render);
+      return;
+    }
+    clearSpellStackLightning();
+  };
+
+  spellStackLightningFrame = requestAnimationFrame(render);
+  spellStackLightningTimer = window.setTimeout(clearSpellStackLightning, duration + 80);
+};
+
+const refuseSpellOnStackCounter = () => {
+  if (!spellStackWindow || spellStackWindow.classList.contains("is-hidden")) return;
+  triggerSpellStackLightning();
+  closeManagedRandomEventWindow(spellStackWindow);
+};
+
+const SOOT_SPRITES_DESKTOP_COUNT = 32;
+const SOOT_SPRITES_MOBILE_COUNT = 20;
+const SOOT_SPRITES_CLEANUP_MS = 27000;
+const SOOT_SPRITES_REVEAL_DELAY_MS = 120;
+const SOOT_SPRITES_CLOSE_AFTER_LOAD_MS = 120;
+const SOOT_SPRITES_FALL_SAMPLE_COUNT = 12;
+const SOOT_SPRITES_DIRECTION_SWITCH_CHANCE = 0.55;
+const SOOT_SPRITES_DIRECTION_SWITCH_MIN_DELAY_MS = 1000;
+const SOOT_SPRITES_DIRECTION_SWITCH_MAX_DELAY_MS = 3000;
+const SOOT_SPRITES_MIN_PATH_SPEED = 0.22;
+const SOOT_CANDY_LANDING_PROGRESS = 0.72;
+const SOOT_CANDY_HOLD_AFTER_LANDING_MS = 4000;
+const SOOT_CANDY_FADE_DURATION_MS = 1200;
+const SOOT_SPRITES_CANDY_COLORS = Object.freeze([
+  "#c9f7c2",
+  "#ffc6dc",
+  "#fff2a6",
+  "#fffaf0",
+  "#bde7ff",
+]);
+
+const isSootSpritesVisible = () =>
+  isManagedRandomEventWindowVisible(sootSpritesWindow) ||
+  Boolean(sootSpritesOverlay || sootSpritesRevealTimer);
+
+const randomSootSpriteValue = (min, max) => min + Math.random() * (max - min);
+
+const randomSootCandyColor = () =>
+  SOOT_SPRITES_CANDY_COLORS[
+    Math.floor(Math.random() * SOOT_SPRITES_CANDY_COLORS.length)
+  ];
+
+const setSootSpritePx = (element, property, value) => {
+  element.style.setProperty(property, `${Math.round(value)}px`);
+};
+
+const cleanupSootSpritesOverlay = () => {
+  if (sootSpritesOverlay) {
+    sootSpritesOverlay.remove();
+    sootSpritesOverlay = null;
+  }
+  if (sootSpritesCleanupTimer) {
+    window.clearTimeout(sootSpritesCleanupTimer);
+    sootSpritesCleanupTimer = null;
+  }
+  document.body.classList.remove("is-soot-sprites-active");
+};
+
+const setSootSpritesWindowLoading = (loading) => {
+  sootSpritesWindow?.classList.toggle("is-loading-sprites", loading);
+  [sootSpritesYes, sootSpritesNo].forEach((button) => {
+    if (!button) return;
+    button.disabled = loading;
+    button.setAttribute("aria-disabled", String(loading));
+  });
+};
+
+const getSootSpritesLaunchRect = () => {
+  const rect = sootSpritesWindow?.getBoundingClientRect();
+  if (rect && rect.width > 0 && rect.height > 0) return rect;
+  const width = Math.min(340, window.innerWidth - 32);
+  const height = 150;
+  return {
+    left: (window.innerWidth - width) / 2,
+    top: Math.max(16, (window.innerHeight - height) / 2),
+    width,
+    height,
+  };
+};
+
+const getSootSpritesToolbarTop = () => {
+  const appMenu = document.querySelector(".taskbar-apps");
+  const taskbar = appMenu || document.querySelector(".taskbar");
+  return taskbar?.getBoundingClientRect().top || window.innerHeight - 52;
+};
+
+const getSootSpritesGroundY = (spriteSize) => {
+  const toolbarTop = getSootSpritesToolbarTop();
+  return Math.max(
+    0,
+    Math.min(window.innerHeight - spriteSize, toolbarTop - spriteSize)
+  );
+};
+
+const getSootCandyLandingY = (candySize) => {
+  const toolbarTop = getSootSpritesToolbarTop();
+  return Math.max(
+    0,
+    Math.min(window.innerHeight - candySize, toolbarTop - candySize)
+  );
+};
+
+const getSootSpriteParabolaPoint = (trajectory, progress) => {
+  const clampedProgress = Math.min(1, Math.max(0, progress));
+  return {
+    x: trajectory.startX + (trajectory.landingX - trajectory.startX) * clampedProgress,
+    y:
+      trajectory.startY +
+      (trajectory.groundY - trajectory.startY) * clampedProgress * clampedProgress,
+  };
+};
+
+const createSootSpriteFallSamples = (trajectory) => {
+  let previousPoint = getSootSpriteParabolaPoint(trajectory, 0);
+  let distance = 0;
+  const samples = [
+    {
+      ...previousPoint,
+      distance,
+      progress: 0,
+    },
+  ];
+
+  for (let index = 1; index <= SOOT_SPRITES_FALL_SAMPLE_COUNT; index += 1) {
+    const progress = index / SOOT_SPRITES_FALL_SAMPLE_COUNT;
+    const point = getSootSpriteParabolaPoint(trajectory, progress);
+    distance += Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y);
+    samples.push({
+      ...point,
+      distance,
+      progress,
+    });
+    previousPoint = point;
+  }
+
+  return samples;
+};
+
+const getSootSpriteFallPointAtDistance = (trajectory, distance) => {
+  const samples = trajectory.fallSamples;
+  if (!samples?.length) return getSootSpriteParabolaPoint(trajectory, 0);
+  if (distance <= 0) return samples[0];
+
+  for (let index = 1; index < samples.length; index += 1) {
+    const previousSample = samples[index - 1];
+    const nextSample = samples[index];
+    if (distance > nextSample.distance) continue;
+
+    const span = nextSample.distance - previousSample.distance || 1;
+    const segmentProgress = (distance - previousSample.distance) / span;
+    return {
+      distance,
+      progress:
+        previousSample.progress +
+        (nextSample.progress - previousSample.progress) * segmentProgress,
+      x: previousSample.x + (nextSample.x - previousSample.x) * segmentProgress,
+      y: previousSample.y + (nextSample.y - previousSample.y) * segmentProgress,
+    };
+  }
+
+  return samples[samples.length - 1];
+};
+
+const getSootSpriteFallScale = (pathProgress, runScale) => {
+  const progress = Math.min(1, Math.max(0, pathProgress));
+  const baseScale = 1 + (runScale - 1) * progress;
+  const arcStretch = Math.sin(progress * Math.PI) * 0.04;
+  return Number((baseScale + arcStretch).toFixed(3));
+};
+
+const getSootSpriteTransform = (point, scale) =>
+  `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) scale(${scale})`;
+
+const getSootSpriteTimelineOffset = (trajectory, distance) => {
+  if (!trajectory.duration || !trajectory.pathSpeed) return 0;
+  if (distance <= trajectory.fallLength) {
+    return Math.min(1, Math.max(0, distance / trajectory.pathSpeed / trajectory.duration));
+  }
+
+  const segment =
+    trajectory.runSegments.find((candidate) => distance <= candidate.endDistance) ||
+    trajectory.runSegments[trajectory.runSegments.length - 1];
+  if (!segment) return 1;
+
+  const elapsedTime =
+    segment.startTime +
+    (distance - segment.startDistance) / Math.max(0.001, segment.speed);
+  return Math.min(1, Math.max(0, elapsedTime / trajectory.duration));
+};
+
+const createSootSpritePathKeyframes = (trajectory) => [
+  ...trajectory.fallSamples.map((sample) => ({
+    offset: getSootSpriteTimelineOffset(trajectory, sample.distance),
+    opacity: 1,
+    transform: getSootSpriteTransform(
+      sample,
+      getSootSpriteFallScale(sample.progress, trajectory.runScale)
+    ),
+  })),
+  ...trajectory.runSegments.map((segment) => ({
+    offset: Math.min(1, Math.max(0, segment.endTime / trajectory.duration)),
+    opacity: 1,
+    transform: getSootSpriteTransform(
+      { x: segment.endX, y: trajectory.exitY },
+      trajectory.runScale
+    ),
+  })),
+];
+
+const animateSootSpriteElement = (sprite, trajectory) => {
+  if (typeof sprite.animate !== "function") return;
+  sprite.classList.add("soot-sprite--scripted");
+  sprite.animate(createSootSpritePathKeyframes(trajectory), {
+    delay: trajectory.delay,
+    duration: trajectory.duration,
+    easing: "linear",
+    fill: "both",
+  });
+};
+
+const getSootCandyGravityPoint = (trajectory, progress) => {
+  const clampedProgress = Math.min(1, Math.max(0, progress));
+  return {
+    x:
+      trajectory.startX +
+      (trajectory.landingX - trajectory.startX) * clampedProgress,
+    y:
+      trajectory.startY +
+      (trajectory.landingY - trajectory.startY) * clampedProgress * clampedProgress,
+  };
+};
+
+const createSootCandyTrajectory = ({
+  startX,
+  startY,
+  size,
+  minHorizontalTravel,
+  maxHorizontalTravel,
+}) => {
+  const landingY = getSootCandyLandingY(size);
+  const safeStartX = Math.max(
+    6,
+    Math.min(window.innerWidth - size - 6, startX)
+  );
+  const safeStartY = Math.max(
+    0,
+    Math.min(startY, landingY - randomSootSpriteValue(18, 72))
+  );
+  const landingDirection = Math.random() < 0.5 ? -1 : 1;
+  const landingX = Math.max(
+    6,
+    Math.min(
+      window.innerWidth - size - 6,
+      safeStartX +
+        landingDirection *
+          randomSootSpriteValue(minHorizontalTravel, maxHorizontalTravel)
+    )
+  );
+  const trajectory = {
+    startX: safeStartX,
+    startY: safeStartY,
+    landingX,
+    landingY,
+  };
+  const fallQuarter = getSootCandyGravityPoint(trajectory, 0.25);
+  const fallMidpoint = getSootCandyGravityPoint(trajectory, 0.5);
+  const fallThreeQuarter = getSootCandyGravityPoint(trajectory, 0.75);
+
+  return {
+    ...trajectory,
+    fallQuarterX: fallQuarter.x,
+    fallQuarterY: fallQuarter.y,
+    fallMidpointX: fallMidpoint.x,
+    fallMidpointY: fallMidpoint.y,
+    fallThreeQuarterX: fallThreeQuarter.x,
+    fallThreeQuarterY: fallThreeQuarter.y,
+  };
+};
+
+const setSootCandyTrajectoryProperties = (candy, trajectory) => {
+  setSootSpritePx(candy, "--candy-x0", trajectory.startX);
+  setSootSpritePx(candy, "--candy-y0", trajectory.startY);
+  setSootSpritePx(candy, "--candy-x-fall-25", trajectory.fallQuarterX);
+  setSootSpritePx(candy, "--candy-y-fall-25", trajectory.fallQuarterY);
+  setSootSpritePx(candy, "--candy-x-fall-50", trajectory.fallMidpointX);
+  setSootSpritePx(candy, "--candy-y-fall-50", trajectory.fallMidpointY);
+  setSootSpritePx(candy, "--candy-x-fall-75", trajectory.fallThreeQuarterX);
+  setSootSpritePx(candy, "--candy-y-fall-75", trajectory.fallThreeQuarterY);
+  setSootSpritePx(candy, "--candy-x-land", trajectory.landingX);
+  setSootSpritePx(candy, "--candy-y-land", trajectory.landingY);
+};
+
+const setSootCandySpinProperties = (candy, spin) => {
+  candy.style.setProperty("--candy-spin-25", `${(spin * 0.25).toFixed(0)}deg`);
+  candy.style.setProperty("--candy-spin-50", `${(spin * 0.5).toFixed(0)}deg`);
+  candy.style.setProperty("--candy-spin-75", `${(spin * 0.75).toFixed(0)}deg`);
+  candy.style.setProperty("--candy-spin", `${spin.toFixed(0)}deg`);
+};
+
+const setSootCandyTimingProperties = (candy, { delay, fallDuration }) => {
+  const landingDelay =
+    delay + fallDuration * SOOT_CANDY_LANDING_PROGRESS;
+  const fadeDelay = landingDelay + SOOT_CANDY_HOLD_AFTER_LANDING_MS;
+
+  candy.style.setProperty("--candy-delay", `${delay}ms`);
+  candy.style.setProperty("--candy-fall-duration", `${fallDuration}ms`);
+  candy.style.setProperty(
+    "--candy-hold-duration",
+    `${SOOT_CANDY_HOLD_AFTER_LANDING_MS}ms`
+  );
+  candy.style.setProperty(
+    "--candy-fade-duration",
+    `${SOOT_CANDY_FADE_DURATION_MS}ms`
+  );
+  candy.style.setProperty("--candy-fade-delay", `${fadeDelay}ms`);
+};
+
+const getSootSpriteRunExitX = (size, direction) =>
+  direction < 0
+    ? -size - randomSootSpriteValue(60, 190)
+    : window.innerWidth + randomSootSpriteValue(60, 190);
+
+const isSootSpriteOnScreenAtX = (x, size) => x + size > 0 && x < window.innerWidth;
+
+const createSootSpriteRunSegment = ({
+  startX,
+  endX,
+  startDistance,
+  groundY,
+}) => {
+  const length = Math.max(1, Math.hypot(endX - startX, 0));
+  return {
+    startDistance,
+    endDistance: startDistance + length,
+    startX,
+    endX,
+    y: groundY,
+    length,
+  };
+};
+
+const applySootSpriteRunSegmentTiming = ({
+  fallLength,
+  pathSpeed,
+  runSegments,
+  switchSpeedMultiplier,
+}) => {
+  let elapsedTime = fallLength / pathSpeed;
+  return runSegments.map((segment, index) => {
+    const speedMultiplier = index === 0 ? 1 : switchSpeedMultiplier;
+    const speed = pathSpeed * speedMultiplier;
+    const duration = segment.length / speed;
+    const timedSegment = {
+      ...segment,
+      duration,
+      endTime: elapsedTime + duration,
+      speed,
+      speedMultiplier,
+      startTime: elapsedTime,
+    };
+    elapsedTime = timedSegment.endTime;
+    return timedSegment;
+  });
+};
+
+const createSootSpriteTrajectory = (launchRect) => {
+  const size = Math.round(randomSootSpriteValue(24, 40));
+  const startX = launchRect.left + randomSootSpriteValue(10, Math.max(12, launchRect.width - 24));
+  const groundY = getSootSpritesGroundY(size);
+  const startY = Math.max(
+    0,
+    Math.min(
+      launchRect.top + randomSootSpriteValue(0, Math.max(8, launchRect.height * 0.38)),
+      groundY - randomSootSpriteValue(118, 220)
+    )
+  );
+  const minLandingX = 10;
+  const maxLandingX = Math.max(minLandingX, window.innerWidth - size - 10);
+  const leftTravel = Math.max(0, startX - minLandingX);
+  const rightTravel = Math.max(0, maxLandingX - startX);
+  let fallSide = Math.random() < 0.5 ? -1 : 1;
+  if ((fallSide < 0 ? leftTravel : rightTravel) < 80) {
+    fallSide = leftTravel > rightTravel ? -1 : 1;
+  }
+  const availableFallTravel = fallSide < 0 ? leftTravel : rightTravel;
+  const maxFallTravel = Math.min(availableFallTravel, randomSootSpriteValue(190, 380));
+  const minFallTravel = Math.min(maxFallTravel, 72);
+  const fallTravel =
+    maxFallTravel <= 0 ? 0 : randomSootSpriteValue(minFallTravel, maxFallTravel);
+  const landingX = startX + fallSide * fallTravel;
+  const initialRunDirection = Math.random() < 0.5 ? -1 : 1;
+  const initialExitX = getSootSpriteRunExitX(size, initialRunDirection);
+  const exitY = groundY;
+  const delay = randomSootSpriteValue(0, 220);
+  const baseDuration = randomSootSpriteValue(3600, 4800);
+  const runScale = randomSootSpriteValue(0.78, 1.08);
+  const directionSwitchDelay = randomSootSpriteValue(
+    SOOT_SPRITES_DIRECTION_SWITCH_MIN_DELAY_MS,
+    SOOT_SPRITES_DIRECTION_SWITCH_MAX_DELAY_MS
+  );
+  const directionSwitchRoll = Math.random();
+  const trajectory = {
+    size,
+    startX,
+    startY,
+    groundY,
+    landingX,
+    exitX: initialExitX,
+    exitY,
+    delay,
+    duration: baseDuration,
+    initialRunDirection,
+    runScale,
+  };
+  const fallSamples = createSootSpriteFallSamples(trajectory);
+  const fallLength = fallSamples[fallSamples.length - 1].distance;
+  const initialRunSegment = createSootSpriteRunSegment({
+    startX: landingX,
+    endX: initialExitX,
+    startDistance: fallLength,
+    groundY,
+  });
+  const basePathLength = Math.max(1, fallLength + initialRunSegment.length);
+  const pathSpeed = Math.max(SOOT_SPRITES_MIN_PATH_SPEED, basePathLength / baseDuration);
+  const switchRunDistance = pathSpeed * directionSwitchDelay;
+  const switchX = landingX + initialRunDirection * switchRunDistance;
+  const shouldSwitchDirection =
+    directionSwitchRoll < SOOT_SPRITES_DIRECTION_SWITCH_CHANCE &&
+    switchRunDistance < initialRunSegment.length &&
+    isSootSpriteOnScreenAtX(switchX, size);
+  const directionSwitchSpeedMultiplier = shouldSwitchDirection
+    ? randomSootSpriteValue(1, 2)
+    : 1;
+  const runSegments = shouldSwitchDirection
+    ? [
+        createSootSpriteRunSegment({
+          startX: landingX,
+          endX: switchX,
+          startDistance: fallLength,
+          groundY,
+        }),
+      ]
+    : [initialRunSegment];
+
+  if (shouldSwitchDirection) {
+    const switchedExitX = getSootSpriteRunExitX(size, -initialRunDirection);
+    runSegments.push(
+      createSootSpriteRunSegment({
+        startX: switchX,
+        endX: switchedExitX,
+        startDistance: runSegments[0].endDistance,
+        groundY,
+      })
+    );
+  }
+
+  const exitX = runSegments[runSegments.length - 1].endX;
+  const runLength = runSegments.reduce((total, segment) => total + segment.length, 0);
+  const totalPathLength = Math.max(1, fallLength + runLength);
+  const timedRunSegments = applySootSpriteRunSegmentTiming({
+    fallLength,
+    pathSpeed,
+    runSegments,
+    switchSpeedMultiplier: directionSwitchSpeedMultiplier,
+  });
+  const fallDuration = fallLength / pathSpeed;
+  const totalPathDuration =
+    timedRunSegments[timedRunSegments.length - 1]?.endTime || fallDuration;
+  const measuredTrajectory = {
+    ...trajectory,
+    directionSwitchDelay,
+    directionSwitchRoll,
+    directionSwitchSpeedMultiplier,
+    didSwitchDirection: shouldSwitchDirection,
+    duration: totalPathDuration,
+    exitX,
+    fallDuration,
+    fallLength,
+    fallSamples,
+    landingProgress: fallDuration / totalPathDuration,
+    pathSpeed,
+    runSegments: timedRunSegments,
+    runLength,
+    totalPathDuration,
+    totalPathLength,
+  };
+  const fallQuarter = getSootSpriteFallPointAtDistance(
+    measuredTrajectory,
+    fallLength * 0.25
+  );
+  const fallMidpoint = getSootSpriteFallPointAtDistance(
+    measuredTrajectory,
+    fallLength * 0.5
+  );
+  const fallThreeQuarter = getSootSpriteFallPointAtDistance(
+    measuredTrajectory,
+    fallLength * 0.75
+  );
+
+  return {
+    ...measuredTrajectory,
+    fallQuarterX: fallQuarter.x,
+    fallQuarterY: fallQuarter.y,
+    fallMidpointX: fallMidpoint.x,
+    fallMidpointY: fallMidpoint.y,
+    fallThreeQuarterX: fallThreeQuarter.x,
+    fallThreeQuarterY: fallThreeQuarter.y,
+  };
+};
+
+const getSootSpriteTrajectoryPoint = (trajectory, progress) => {
+  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const elapsedTime = clampedProgress * trajectory.duration;
+  if (elapsedTime <= trajectory.fallDuration) {
+    return getSootSpriteFallPointAtDistance(
+      trajectory,
+      elapsedTime * trajectory.pathSpeed
+    );
+  }
+
+  const segment =
+    trajectory.runSegments.find((candidate) => elapsedTime <= candidate.endTime) ||
+    trajectory.runSegments[trajectory.runSegments.length - 1];
+  const segmentProgress =
+    (elapsedTime - segment.startTime) / Math.max(1, segment.duration);
+  return {
+    x: segment.startX + (segment.endX - segment.startX) * segmentProgress,
+    y: segment.y,
+  };
+};
+
+const createSootSpriteElement = (index, trajectory) => {
+  const sprite = document.createElement("span");
+  sprite.className = "soot-sprite";
+  sprite.setAttribute("aria-hidden", "true");
+
+  setSootSpritePx(sprite, "--soot-x0", trajectory.startX);
+  setSootSpritePx(sprite, "--soot-y0", trajectory.startY);
+  setSootSpritePx(sprite, "--soot-x-fall-25", trajectory.fallQuarterX);
+  setSootSpritePx(sprite, "--soot-y-fall-25", trajectory.fallQuarterY);
+  setSootSpritePx(sprite, "--soot-x-fall-50", trajectory.fallMidpointX);
+  setSootSpritePx(sprite, "--soot-y-fall-50", trajectory.fallMidpointY);
+  setSootSpritePx(sprite, "--soot-x-fall-75", trajectory.fallThreeQuarterX);
+  setSootSpritePx(sprite, "--soot-y-fall-75", trajectory.fallThreeQuarterY);
+  setSootSpritePx(sprite, "--soot-x-land", trajectory.landingX);
+  setSootSpritePx(sprite, "--soot-y-land", trajectory.groundY);
+  setSootSpritePx(sprite, "--soot-x3", trajectory.exitX);
+  setSootSpritePx(sprite, "--soot-y3", trajectory.exitY);
+  setSootSpritePx(sprite, "--soot-size", trajectory.size);
+  sprite.style.setProperty("--soot-delay", `${trajectory.delay}ms`);
+  sprite.style.setProperty("--soot-duration", `${trajectory.duration}ms`);
+  sprite.style.setProperty("--soot-run-scale", String(trajectory.runScale));
+  sprite.style.setProperty(
+    "--soot-body-radius",
+    `${Math.round(randomSootSpriteValue(42, 58))}% ${Math.round(
+      randomSootSpriteValue(42, 58)
+    )}% ${Math.round(randomSootSpriteValue(42, 58))}% ${Math.round(
+      randomSootSpriteValue(42, 58)
+    )}% / ${Math.round(randomSootSpriteValue(42, 58))}% ${Math.round(
+      randomSootSpriteValue(42, 58)
+    )}% ${Math.round(randomSootSpriteValue(42, 58))}% ${Math.round(
+      randomSootSpriteValue(42, 58)
+    )}%`
+  );
+  sprite.style.setProperty("--soot-wobble-delay", `${index * -83}ms`);
+  sprite.style.setProperty("--soot-left-eye-width", `${randomSootSpriteValue(7, 10).toFixed(1)}px`);
+  sprite.style.setProperty("--soot-left-eye-height", `${randomSootSpriteValue(8, 12).toFixed(1)}px`);
+  sprite.style.setProperty("--soot-right-eye-width", `${randomSootSpriteValue(7, 10).toFixed(1)}px`);
+  sprite.style.setProperty("--soot-right-eye-height", `${randomSootSpriteValue(8, 12).toFixed(1)}px`);
+  sprite.style.setProperty("--soot-left-eye-rotate", `${randomSootSpriteValue(-10, 9).toFixed(1)}deg`);
+  sprite.style.setProperty("--soot-right-eye-rotate", `${randomSootSpriteValue(-9, 10).toFixed(1)}deg`);
+
+  const body = document.createElement("span");
+  body.className = "soot-sprite-body";
+  const leftEye = document.createElement("span");
+  leftEye.className = "soot-sprite-eye soot-sprite-eye--left";
+  const rightEye = document.createElement("span");
+  rightEye.className = "soot-sprite-eye soot-sprite-eye--right";
+  body.append(leftEye, rightEye);
+  sprite.append(body);
+  animateSootSpriteElement(sprite, trajectory);
+  return sprite;
+};
+
+const createSootCandyElement = (launchRect) => {
+  const candy = document.createElement("span");
+  candy.className = "soot-star-candy";
+  candy.setAttribute("aria-hidden", "true");
+  const size = Math.round(randomSootSpriteValue(8, 14));
+  const x0 = launchRect.left + randomSootSpriteValue(8, Math.max(10, launchRect.width - 16));
+  const y0 = launchRect.top + randomSootSpriteValue(8, Math.max(10, launchRect.height - 12));
+  const trajectory = createSootCandyTrajectory({
+    startX: x0,
+    startY: y0,
+    size,
+    minHorizontalTravel: 44,
+    maxHorizontalTravel: 250,
+  });
+  const spin = randomSootSpriteValue(-820, 820);
+  setSootCandyTrajectoryProperties(candy, trajectory);
+  setSootSpritePx(candy, "--candy-size", size);
+  candy.style.setProperty("--candy-color", randomSootCandyColor());
+  setSootCandyTimingProperties(candy, {
+    delay: randomSootSpriteValue(140, 520),
+    fallDuration: randomSootSpriteValue(3600, 4800),
+  });
+  setSootCandySpinProperties(candy, spin);
+  return candy;
+};
+
+const createSootTrailCandyElement = (trajectory, progress) => {
+  const candy = document.createElement("span");
+  candy.className = "soot-star-candy soot-star-candy--trail";
+  candy.setAttribute("aria-hidden", "true");
+  const size = Math.round(randomSootSpriteValue(6, 11));
+  const origin = getSootSpriteTrajectoryPoint(trajectory, progress);
+  const x0 = origin.x + randomSootSpriteValue(-12, 12);
+  const y0 = origin.y + randomSootSpriteValue(-10, 14);
+  const candyTrajectory = createSootCandyTrajectory({
+    startX: x0,
+    startY: y0,
+    size,
+    minHorizontalTravel: 36,
+    maxHorizontalTravel: 176,
+  });
+  const spin = randomSootSpriteValue(-620, 620);
+  setSootCandyTrajectoryProperties(candy, candyTrajectory);
+  setSootSpritePx(candy, "--candy-size", size);
+  candy.style.setProperty("--candy-color", randomSootCandyColor());
+  setSootCandyTimingProperties(candy, {
+    delay:
+      trajectory.delay +
+      trajectory.duration * progress +
+      randomSootSpriteValue(-90, 140),
+    fallDuration: randomSootSpriteValue(3200, 4300),
+  });
+  setSootCandySpinProperties(candy, spin);
+  return candy;
+};
+
+const createSootPuffElement = (launchRect, large = false) => {
+  const puff = document.createElement("span");
+  puff.className = large ? "soot-puff soot-puff--large" : "soot-puff";
+  puff.setAttribute("aria-hidden", "true");
+  const size = randomSootSpriteValue(large ? 192 : 84, large ? 380 : 208);
+  const x0 = launchRect.left + randomSootSpriteValue(-20, launchRect.width + 20);
+  const y0 = launchRect.top + randomSootSpriteValue(-14, launchRect.height + 20);
+  setSootSpritePx(puff, "--puff-x0", x0);
+  setSootSpritePx(puff, "--puff-y0", y0);
+  setSootSpritePx(puff, "--puff-x1", x0 + randomSootSpriteValue(-320, 320));
+  setSootSpritePx(puff, "--puff-y1", y0 + randomSootSpriteValue(large ? -140 : -210, large ? 230 : 150));
+  setSootSpritePx(puff, "--puff-size", size);
+  puff.style.setProperty("--puff-delay", `${randomSootSpriteValue(40, 360)}ms`);
+  puff.style.setProperty("--puff-duration", `${randomSootSpriteValue(5400, 7600)}ms`);
+  return puff;
+};
+
+const createSootTrailPuffElement = (trajectory, index, progress) => {
+  const puff = document.createElement("span");
+  puff.className = index % 5 === 0 ? "soot-puff soot-puff--trail soot-puff--large" : "soot-puff soot-puff--trail";
+  puff.setAttribute("aria-hidden", "true");
+  const direction = trajectory.exitX < trajectory.landingX ? -1 : 1;
+  const size = randomSootSpriteValue(76, 196);
+  const origin = getSootSpriteTrajectoryPoint(trajectory, progress);
+  const x0 = origin.x + direction * randomSootSpriteValue(4, 28);
+  const y0 = origin.y + randomSootSpriteValue(-10, 18);
+  setSootSpritePx(puff, "--puff-x0", x0);
+  setSootSpritePx(puff, "--puff-y0", y0);
+  setSootSpritePx(puff, "--puff-x1", x0 + direction * randomSootSpriteValue(70, 240));
+  setSootSpritePx(puff, "--puff-y1", y0 + randomSootSpriteValue(-46, 54));
+  setSootSpritePx(puff, "--puff-size", size);
+  puff.style.setProperty(
+    "--puff-delay",
+    `${trajectory.delay + trajectory.duration * progress + randomSootSpriteValue(-120, 180)}ms`
+  );
+  puff.style.setProperty("--puff-duration", `${randomSootSpriteValue(5300, 7300)}ms`);
+  return puff;
+};
+
+const showSootSpritesSwarm = (launchRect = getSootSpritesLaunchRect()) => {
+  cleanupSootSpritesOverlay();
+  const overlay = document.createElement("div");
+  overlay.className = "soot-sprites-swarm";
+  overlay.setAttribute("aria-hidden", "true");
+
+  const spriteCount =
+    window.innerWidth < 560 ? SOOT_SPRITES_MOBILE_COUNT : SOOT_SPRITES_DESKTOP_COUNT;
+  const trajectories = Array.from({ length: spriteCount }, () =>
+    createSootSpriteTrajectory(launchRect)
+  );
+  trajectories.forEach((trajectory, index) => {
+    overlay.append(createSootSpriteElement(index, trajectory));
+  });
+
+  const trailCandyCount = Math.round(spriteCount * 4.4);
+  for (let index = 0; index < trailCandyCount; index += 1) {
+    const progress = 0.08 + ((index * 0.19) % 0.82);
+    overlay.append(
+      createSootTrailCandyElement(trajectories[index % trajectories.length], progress)
+    );
+  }
+
+  const trailPuffCount = Math.round(spriteCount * 1.4);
+  for (let index = 0; index < trailPuffCount; index += 1) {
+    const progress = 0.04 + ((index * 0.13) % 0.92);
+    overlay.append(
+      createSootTrailPuffElement(trajectories[index % trajectories.length], index, progress)
+    );
+  }
+
+  const candyCount = Math.round(spriteCount * 1.28);
+  for (let index = 0; index < candyCount; index += 1) {
+    overlay.append(createSootCandyElement(launchRect));
+  }
+
+  const puffCount = Math.round(spriteCount * 0.48);
+  for (let index = 0; index < puffCount; index += 1) {
+    overlay.append(createSootPuffElement(launchRect, index % 5 === 0));
+  }
+
+  document.body.append(overlay);
+  document.body.classList.add("is-soot-sprites-active");
+  sootSpritesOverlay = overlay;
+  sootSpritesCleanupTimer = window.setTimeout(cleanupSootSpritesOverlay, SOOT_SPRITES_CLEANUP_MS);
+  return overlay;
+};
+
+const showSootSpritesWindow = () => {
+  showManagedRandomEventWindow(sootSpritesWindow, { clampAfterMediaLoad: true });
+};
+
+const closeSootSpritesWindow = () => {
+  setSootSpritesWindowLoading(false);
+  closeManagedRandomEventWindow(sootSpritesWindow);
+};
+
+const inspectSootSpritesGpu = () => {
+  if (!sootSpritesWindow || sootSpritesWindow.classList.contains("is-hidden")) return;
+  const launchRect = getSootSpritesLaunchRect();
+  setSootSpritesWindowLoading(true);
+  if (sootSpritesRevealTimer) window.clearTimeout(sootSpritesRevealTimer);
+  sootSpritesRevealTimer = window.setTimeout(() => {
+    sootSpritesRevealTimer = null;
+    showSootSpritesSwarm(launchRect);
+    window.setTimeout(() => {
+      setSootSpritesWindowLoading(false);
+      closeManagedRandomEventWindow(sootSpritesWindow);
+    }, SOOT_SPRITES_CLOSE_AFTER_LOAD_MS);
+  }, SOOT_SPRITES_REVEAL_DELAY_MS);
+};
+
+const isNatarajaVisible = () => isManagedRandomEventWindowVisible(natarajaWindow);
+
+const playNatarajaVideo = () => {
+  if (!natarajaVideo) return;
+  natarajaVideo.play().catch(() => undefined);
+};
+
+const resetNatarajaVideo = () => {
+  if (!natarajaVideo) return;
+  natarajaVideo.pause();
+  try {
+    natarajaVideo.currentTime = 0;
+  } catch (error) {
+    // Some browsers reject seeking before video metadata is ready.
+  }
+};
+
+const showNatarajaWindow = () => {
+  const didOpen = showManagedRandomEventWindow(natarajaWindow, {
+    clampAfterMediaLoad: true,
+  });
+  if (didOpen) requestAnimationFrame(playNatarajaVideo);
+};
+
+const closeNatarajaWindow = () => {
+  resetNatarajaVideo();
+  closeManagedRandomEventWindow(natarajaWindow);
+};
+
+const isNobleSteedVisible = () =>
+  Boolean(
+    nobleSteedResultTimer ||
+      isManagedRandomEventWindowVisible(nobleSteedWindow) ||
+      isManagedRandomEventWindowVisible(nobleSteedResultWindow)
+  );
+
+const clearNobleSteedResultTimer = () => {
+  if (!nobleSteedResultTimer) return;
+  window.clearTimeout(nobleSteedResultTimer);
+  nobleSteedResultTimer = null;
+};
+
+const getRandomEventWindowPosition = (win) => {
+  if (!win) return null;
+  const rect = win.getBoundingClientRect();
+  const styleLeft = Number.parseFloat(win.style.left);
+  const styleTop = Number.parseFloat(win.style.top);
+  return {
+    left: Number.isFinite(styleLeft) ? styleLeft : rect.left,
+    top: Number.isFinite(styleTop) ? styleTop : rect.top,
+  };
+};
+
+const showNobleSteedWindow = () => {
+  clearNobleSteedResultTimer();
+  nobleSteedResultPosition = null;
+  closeManagedRandomEventWindow(nobleSteedResultWindow);
+  showManagedRandomEventWindow(nobleSteedWindow, { clampAfterMediaLoad: true });
+};
+
+const closeNobleSteedWindow = () => {
+  clearNobleSteedResultTimer();
+  nobleSteedResultPosition = null;
+  closeManagedRandomEventWindow(nobleSteedWindow);
+};
+
+const showNobleSteedResultWindow = () => {
+  nobleSteedResultTimer = null;
+  const didOpen = showManagedRandomEventWindow(nobleSteedResultWindow, {
+    clampAfterMediaLoad: true,
+  });
+  if (didOpen && nobleSteedResultPosition) {
+    setRandomEventWindowPosition(
+      nobleSteedResultWindow,
+      nobleSteedResultPosition.left,
+      nobleSteedResultPosition.top
+    );
+  }
+};
+
+const acceptNobleSteedOffer = () => {
+  if (!nobleSteedWindow || nobleSteedWindow.classList.contains("is-hidden")) return;
+  clearNobleSteedResultTimer();
+  nobleSteedResultPosition = getRandomEventWindowPosition(nobleSteedWindow);
+  closeManagedRandomEventWindow(nobleSteedWindow);
+  nobleSteedResultTimer = window.setTimeout(showNobleSteedResultWindow, 2000);
+};
+
+const closeNobleSteedResultWindow = () => {
+  clearNobleSteedResultTimer();
+  nobleSteedResultPosition = null;
+  closeManagedRandomEventWindow(nobleSteedResultWindow);
+};
+
+const TOXIC_JUNGLE_ASSETS = Object.freeze({
+  background: "assets/random%20events/toxic-jungle.webp",
+  nausicaa: "assets/random%20events/nausicaa.jpg",
+});
+const TOXIC_JUNGLE_STAGE_PROMPT = "prompt";
+const TOXIC_JUNGLE_STAGE_ACTIVE = "active";
+const TOXIC_JUNGLE_STAGE_COMPLETE = "complete";
+const TOXIC_JUNGLE_SPORE_TARGET = 10;
+const TOXIC_JUNGLE_ACTIVE_SPORES_PER_TYPE = 3;
+const TOXIC_JUNGLE_PROMPT =
+  "Hey! Can you help me collect some spores?";
+const TOXIC_JUNGLE_COMPLETE_MESSAGE =
+  "Thanks for the help! Watch your back out there.";
+const TOXIC_JUNGLE_SPORE_TYPES = Object.freeze([
+  { id: "blue", label: "Blue", color: "#a9cbd4" },
+  { id: "red", label: "Red", color: "#d6a2a0" },
+  { id: "white", label: "White", color: "#d7d4c6" },
+]);
+
+let toxicJungleStage = TOXIC_JUNGLE_STAGE_PROMPT;
+let toxicJungleCounts = {};
+let toxicJungleSporeSequence = 0;
+
+const createToxicJungleCounts = () =>
+  Object.fromEntries(TOXIC_JUNGLE_SPORE_TYPES.map((type) => [type.id, 0]));
+
+const isToxicJungleVisible = () =>
+  isManagedRandomEventWindowVisible(toxicJungleWindow);
+
+const setToxicJungleElementHidden = (element, hidden) => {
+  if (!element) return;
+  element.classList.toggle("is-hidden", hidden);
+  element.setAttribute("aria-hidden", String(hidden));
+};
+
+const clearToxicJungleTyping = () => {
+  clearPokemonStyleDialogueTyping(toxicJungleDialogText);
+};
+
+const setToxicJungleDialog = (message, { instant = false } = {}) => {
+  if (instant) {
+    setPokemonStyleDialogueText(toxicJungleDialogText, message, {
+      instant: true,
+      arrow: true,
+    });
+    return;
+  }
+  setPokemonStyleSegmentedDialogue(
+    toxicJungleDialogText,
+    [{ text: message }],
+    { arrow: true }
+  );
+};
+
+const renderToxicJungleCounters = () => {
+  if (!toxicJungleCounters) return;
+  const rows = TOXIC_JUNGLE_SPORE_TYPES.map((type) => {
+    const row = document.createElement("span");
+    row.className = "toxic-jungle-counter-row";
+
+    const symbol = document.createElement("span");
+    symbol.className = `toxic-jungle-counter-symbol toxic-jungle-counter-symbol--${type.id}`;
+    symbol.style.setProperty("--spore-color", type.color);
+    symbol.setAttribute("aria-hidden", "true");
+
+    const count = document.createElement("span");
+    count.textContent = `${type.label}: ${toxicJungleCounts[type.id] || 0}/${TOXIC_JUNGLE_SPORE_TARGET}`;
+
+    row.append(symbol, count);
+    return row;
+  });
+  toxicJungleCounters.replaceChildren(...rows);
+};
+
+const getToxicJungleSporeTravel = () => {
+  const width = toxicJungleScene?.clientWidth || 760;
+  return `${Math.max(width + 72, 420)}px`;
+};
+
+const spawnToxicJungleSpore = (type) => {
+  if (
+    !toxicJungleSpores ||
+    toxicJungleStage !== TOXIC_JUNGLE_STAGE_ACTIVE ||
+    (toxicJungleCounts[type.id] || 0) >= TOXIC_JUNGLE_SPORE_TARGET
+  ) {
+    return;
+  }
+
+  toxicJungleSporeSequence += 1;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `toxic-jungle-spore toxic-jungle-spore--${type.id}`;
+  button.dataset.toxicJungleSpore = type.id;
+  button.style.setProperty("--spore-color", type.color);
+  button.style.setProperty("--spore-y", `${18 + Math.random() * 58}%`);
+  button.style.setProperty("--spore-scale", `${0.72 + Math.random() * 0.42}`);
+  button.style.setProperty("--spore-duration", `${9 + Math.random() * 5}s`);
+  button.style.setProperty("--spore-delay", "0s");
+  button.style.setProperty("--spore-travel", getToxicJungleSporeTravel());
+  button.style.setProperty("--spore-bob-delay", `${toxicJungleSporeSequence * -0.17}s`);
+  button.setAttribute("aria-label", `Collect ${type.label.toLowerCase()} spore`);
+  const sporeCore = document.createElement("span");
+  sporeCore.className = "toxic-jungle-spore-core";
+  sporeCore.setAttribute("aria-hidden", "true");
+  button.append(sporeCore);
+  toxicJungleSpores.append(button);
+};
+
+const clearToxicJungleSpores = () => {
+  toxicJungleSpores?.replaceChildren();
+};
+
+const populateToxicJungleSpores = () => {
+  clearToxicJungleSpores();
+  TOXIC_JUNGLE_SPORE_TYPES.forEach((type) => {
+    for (let count = 0; count < TOXIC_JUNGLE_ACTIVE_SPORES_PER_TYPE; count += 1) {
+      spawnToxicJungleSpore(type);
+    }
+  });
+};
+
+const isToxicJungleComplete = () =>
+  TOXIC_JUNGLE_SPORE_TYPES.every(
+    (type) => (toxicJungleCounts[type.id] || 0) >= TOXIC_JUNGLE_SPORE_TARGET
+  );
+
+const completeToxicJungle = () => {
+  toxicJungleStage = TOXIC_JUNGLE_STAGE_COMPLETE;
+  clearToxicJungleSpores();
+  toxicJungleWindow?.classList.add("is-complete");
+  setToxicJungleElementHidden(toxicJungleDialog, false);
+  setToxicJungleElementHidden(toxicJungleStart, true);
+  setToxicJungleElementHidden(toxicJungleDecline, true);
+  toxicJungleDialogActions?.classList.add("is-hidden");
+  toxicJungleDialogActions?.setAttribute("aria-hidden", "true");
+  setToxicJungleDialog(TOXIC_JUNGLE_COMPLETE_MESSAGE);
+};
+
+const collectToxicJungleSpore = (button) => {
+  if (!button || toxicJungleStage !== TOXIC_JUNGLE_STAGE_ACTIVE) return;
+  const type = TOXIC_JUNGLE_SPORE_TYPES.find(
+    (candidate) => candidate.id === button.dataset.toxicJungleSpore
+  );
+  if (!type) return;
+
+  toxicJungleCounts[type.id] = Math.min(
+    TOXIC_JUNGLE_SPORE_TARGET,
+    (toxicJungleCounts[type.id] || 0) + 1
+  );
+  button.remove();
+  renderToxicJungleCounters();
+
+  if (isToxicJungleComplete()) {
+    completeToxicJungle();
+    return;
+  }
+
+  spawnToxicJungleSpore(type);
+};
+
+const resetToxicJungleEvent = ({ typewrite = false } = {}) => {
+  toxicJungleStage = TOXIC_JUNGLE_STAGE_PROMPT;
+  toxicJungleCounts = createToxicJungleCounts();
+  toxicJungleSporeSequence = 0;
+  clearToxicJungleSpores();
+  clearToxicJungleTyping();
+  toxicJungleWindow?.classList.remove("is-complete");
+  setToxicJungleElementHidden(toxicJungleDialog, false);
+  setToxicJungleElementHidden(toxicJungleCounters, true);
+  setToxicJungleElementHidden(toxicJungleStart, false);
+  setToxicJungleElementHidden(toxicJungleDecline, false);
+  toxicJungleDialogActions?.classList.remove("is-hidden");
+  toxicJungleDialogActions?.setAttribute("aria-hidden", "false");
+  setToxicJungleDialog(TOXIC_JUNGLE_PROMPT, { instant: !typewrite });
+  renderToxicJungleCounters();
+};
+
+const showToxicJungleWindow = () => {
+  const didOpen = showManagedRandomEventWindow(toxicJungleWindow, {
+    beforeShow: () => resetToxicJungleEvent({ typewrite: true }),
+    clampAfterMediaLoad: true,
+  });
+  if (!didOpen && isToxicJungleVisible()) {
+    toxicJungleWindow.style.zIndex = String(topZ++);
+  }
+};
+
+const closeToxicJungleWindow = () => {
+  clearToxicJungleTyping();
+  closeManagedRandomEventWindow(toxicJungleWindow);
+};
+
+const startToxicJungleCollection = () => {
+  if (!isToxicJungleVisible()) return;
+  clearToxicJungleTyping();
+  toxicJungleStage = TOXIC_JUNGLE_STAGE_ACTIVE;
+  setToxicJungleElementHidden(toxicJungleDialog, true);
+  setToxicJungleElementHidden(toxicJungleCounters, false);
+  renderToxicJungleCounters();
+  populateToxicJungleSpores();
+};
+
 const LANCER_BATTLE_CLASH_VIDEO =
   "https://imgix.bustle.com/inverse/8d/d9/86/e4/92b5/4dec/b80e/3402288d9a18/giphy-9gif.gif?w=825&h=464&fit=max&fm=mp4";
 const LANCER_BATTLE_WIN_VIDEO_START_SECONDS = 29.5;
@@ -8710,10 +10029,10 @@ const POKEMON_STARTERS = Object.freeze({
     weight: "19.8 lbs",
   },
 });
-const POKEMON_STARTER_TYPEWRITER_MS = 24;
+const POKEMON_DIALOGUE_TYPEWRITER_MS = 24;
+const pokemonStyleDialogueTimers = new WeakMap();
 let pokemonStarterSelected = "";
 let pokemonStarterStage = "select";
-let pokemonStarterTypingTimer = 0;
 
 const isPokemonStarterVisible = () =>
   Boolean(
@@ -8728,38 +10047,67 @@ const setPokemonStarterElementHidden = (element, hidden) => {
   element.setAttribute("aria-hidden", String(hidden));
 };
 
-const clearPokemonStarterTyping = () => {
-  if (!pokemonStarterTypingTimer) return;
-  clearInterval(pokemonStarterTypingTimer);
-  pokemonStarterTypingTimer = 0;
+const setPokemonStyleDialogueTextClass = (
+  textElement,
+  { className = "", arrow = false, complete = false } = {}
+) => {
+  if (!textElement) return;
+  textElement.className = [
+    "pokemon-dialogue-text",
+    className,
+    arrow ? "has-pokemon-dialogue-arrow" : "",
+    complete ? "is-typewriter-complete" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 };
 
-const setPokemonStarterDialogue = (text, { instant = false } = {}) => {
-  if (!pokemonStarterDialogueText) return;
-  clearPokemonStarterTyping();
-  pokemonStarterDialogueText.className = "";
-  pokemonStarterDialogueText.classList.toggle("is-typewriter-complete", instant);
+const clearPokemonStyleDialogueTyping = (textElement) => {
+  if (!textElement) return;
+  const timerId = pokemonStyleDialogueTimers.get(textElement);
+  if (!timerId) return;
+  clearInterval(timerId);
+  pokemonStyleDialogueTimers.delete(textElement);
+};
+
+const setPokemonStyleDialogueText = (
+  textElement,
+  text,
+  { instant = false, className = "", arrow = false } = {}
+) => {
+  if (!textElement) return;
+  clearPokemonStyleDialogueTyping(textElement);
+  setPokemonStyleDialogueTextClass(textElement, {
+    className,
+    arrow,
+    complete: instant,
+  });
   if (instant) {
-    pokemonStarterDialogueText.textContent = text;
+    textElement.textContent = text;
     return;
   }
-  pokemonStarterDialogueText.textContent = "";
+  textElement.textContent = "";
   let index = 0;
-  pokemonStarterTypingTimer = window.setInterval(() => {
+  const timerId = window.setInterval(() => {
     index += 1;
-    pokemonStarterDialogueText.textContent = text.slice(0, index);
+    textElement.textContent = text.slice(0, index);
     if (index >= text.length) {
-      clearPokemonStarterTyping();
+      textElement.classList.add("is-typewriter-complete");
+      clearPokemonStyleDialogueTyping(textElement);
     }
-  }, POKEMON_STARTER_TYPEWRITER_MS);
+  }, POKEMON_DIALOGUE_TYPEWRITER_MS);
+  pokemonStyleDialogueTimers.set(textElement, timerId);
 };
 
-const setPokemonStarterSegmentedDialogue = (segments, className = "") => {
-  if (!pokemonStarterDialogueText) return;
-  clearPokemonStarterTyping();
-  pokemonStarterDialogueText.className = className;
-  pokemonStarterDialogueText.classList.remove("is-typewriter-complete");
-  pokemonStarterDialogueText.textContent = "";
+const setPokemonStyleSegmentedDialogue = (
+  textElement,
+  segments,
+  { className = "", arrow = false } = {}
+) => {
+  if (!textElement) return;
+  clearPokemonStyleDialogueTyping(textElement);
+  setPokemonStyleDialogueTextClass(textElement, { className, arrow });
+  textElement.textContent = "";
   let segmentIndex = 0;
   let charIndex = 0;
   let activeNode = null;
@@ -8767,13 +10115,13 @@ const setPokemonStarterSegmentedDialogue = (segments, className = "") => {
     const segment = segments[segmentIndex];
     activeNode = segment.className ? document.createElement("span") : document.createTextNode("");
     if (segment.className) activeNode.className = segment.className;
-    pokemonStarterDialogueText.appendChild(activeNode);
+    textElement.appendChild(activeNode);
   };
   appendNextSegment();
-  pokemonStarterTypingTimer = window.setInterval(() => {
+  const timerId = window.setInterval(() => {
     const segment = segments[segmentIndex];
     if (!segment) {
-      clearPokemonStarterTyping();
+      clearPokemonStyleDialogueTyping(textElement);
       return;
     }
     charIndex += 1;
@@ -8782,17 +10130,32 @@ const setPokemonStarterSegmentedDialogue = (segments, className = "") => {
     segmentIndex += 1;
     charIndex = 0;
     if (segmentIndex >= segments.length) {
-      pokemonStarterDialogueText.classList.add("is-typewriter-complete");
-      clearPokemonStarterTyping();
+      textElement.classList.add("is-typewriter-complete");
+      clearPokemonStyleDialogueTyping(textElement);
       return;
     }
     appendNextSegment();
-  }, POKEMON_STARTER_TYPEWRITER_MS);
+  }, POKEMON_DIALOGUE_TYPEWRITER_MS);
+  pokemonStyleDialogueTimers.set(textElement, timerId);
+};
+
+const clearPokemonStarterTyping = () => {
+  clearPokemonStyleDialogueTyping(pokemonStarterDialogueText);
+};
+
+const setPokemonStarterDialogue = (text, { instant = false } = {}) => {
+  setPokemonStyleDialogueText(pokemonStarterDialogueText, text, { instant });
+};
+
+const setPokemonStarterSegmentedDialogue = (segments, className = "") => {
+  setPokemonStyleSegmentedDialogue(pokemonStarterDialogueText, segments, {
+    className,
+  });
 };
 
 const pokemonStarterNameSegment = (starter) => ({
   text: starter.name,
-  className: `pokemon-starter-dialogue-name pokemon-starter-type-color--${starter.primaryType}`,
+  className: `pokemon-dialogue-name pokemon-starter-type-color--${starter.primaryType}`,
 });
 
 const setPokemonStarterChosenDialogue = (starter) => {
@@ -8960,6 +10323,461 @@ const confirmPokemonStarterChoice = () => {
   void pokemonStarterWindow.offsetWidth;
   pokemonStarterWindow.classList.add("is-flashing");
   setPokemonStarterChosenDialogue(starter);
+};
+
+const RELIC_RECOVERY_ASSETS = Object.freeze({
+  background: "assets/random%20events/made-in-abyss-background.webp",
+  nanachi: "assets/random%20events/nanachi-icon.webp",
+  offering: "assets/random%20events/relic-recovery/offering.webp",
+  uglySpinner: "assets/random%20events/relic-recovery/ugly-spinner.webp",
+  ivyBadge: "assets/random%20events/relic-recovery/ivy-badge.webp",
+  pulledTeeth: "assets/random%20events/relic-recovery/pulled-teeth.webp",
+  doubleBellBall: "assets/random%20events/relic-recovery/double-bell-ball.webp",
+  spiralingHeatStone:
+    "assets/random%20events/relic-recovery/spiraling-heat-stone.webp",
+  shatterPot: "assets/random%20events/relic-recovery/shatter-pot.webp",
+  tangledFluid: "assets/random%20events/relic-recovery/tangled-fluid.webp",
+});
+
+const RELIC_RECOVERY_ITEMS = Object.freeze([
+  {
+    id: "offering",
+    name: "Offering",
+    description: "A coin-shaped Relic material.",
+    image: RELIC_RECOVERY_ASSETS.offering,
+    color: "#d8a64a",
+    x: 80,
+    y: 34,
+    scale: 0.58,
+    depth: 2,
+  },
+  {
+    id: "ugly-spinner",
+    name: "Ugly Spinner",
+    description:
+      "A material used to make Relic equipment. If you try to stack them, they spin away for some reason.",
+    image: RELIC_RECOVERY_ASSETS.uglySpinner,
+    color: "#8e6f46",
+    x: 28,
+    y: 66,
+    scale: 1.12,
+    depth: 6,
+  },
+  {
+    id: "ivy-badge",
+    name: "Ivy Badge",
+    description: "A badge-like Relic material.",
+    image: RELIC_RECOVERY_ASSETS.ivyBadge,
+    color: "#5f8f52",
+    x: 54,
+    y: 44,
+    scale: 0.68,
+    depth: 3,
+  },
+  {
+    id: "pulled-teeth",
+    name: "Pulled Teeth",
+    description: "A Relic material that resembles a pulled tooth.",
+    image: RELIC_RECOVERY_ASSETS.pulledTeeth,
+    color: "#d8d0b9",
+    x: 79,
+    y: 47,
+    scale: 0.7,
+    depth: 3,
+  },
+  {
+    id: "double-bell-ball",
+    name: "Double-Bell Ball",
+    description:
+      "A ball within a ball. It makes a strange sound when shaken. It's softer than it looks.",
+    image: RELIC_RECOVERY_ASSETS.doubleBellBall,
+    color: "#c98536",
+    x: 87,
+    y: 41,
+    scale: 0.66,
+    depth: 3,
+  },
+  {
+    id: "spiraling-heat-stone",
+    name: "Spiraling Heat Stone",
+    description:
+      "A material used for Relic equipment. Squeezing it will cause the rock in the middle to emit heat.",
+    image: RELIC_RECOVERY_ASSETS.spiralingHeatStone,
+    color: "#cf7241",
+    x: 24,
+    y: 31,
+    scale: 0.54,
+    depth: 1,
+  },
+  {
+    id: "shatter-pot",
+    name: "Shatter Pot",
+    description:
+      "A material that looks like shattered pot pieces. Surprisingly, they're extremely hard.",
+    image: RELIC_RECOVERY_ASSETS.shatterPot,
+    color: "#8f7b68",
+    x: 62,
+    y: 68,
+    scale: 1.24,
+    depth: 7,
+  },
+  {
+    id: "tangled-fluid",
+    name: "Tangled Fluid",
+    description: "The inner fluids can be used as a strong adhesive.",
+    image: RELIC_RECOVERY_ASSETS.tangledFluid,
+    color: "#9a77b9",
+    x: 43,
+    y: 44,
+    scale: 0.66,
+    depth: 2,
+  },
+]);
+
+const RELIC_RECOVERY_STAGE_PROMPT = "prompt";
+const RELIC_RECOVERY_STAGE_ACTIVE = "active";
+const RELIC_RECOVERY_STAGE_DETAIL = "detail";
+const RELIC_RECOVERY_STAGE_COMPLETE = "complete";
+let relicRecoveryStage = RELIC_RECOVERY_STAGE_PROMPT;
+let relicRecoveryCollectedIds = new Set();
+let relicRecoveryPendingId = "";
+let relicRecoveryFlyingId = "";
+let relicRecoveryDetailCloseTimer = 0;
+let relicRecoveryFlyTimer = 0;
+
+const isRelicRecoveryVisible = () =>
+  Boolean(
+    relicRecoveryWindow &&
+      !relicRecoveryWindow.classList.contains("is-hidden") &&
+      relicRecoveryWindow.getAttribute("aria-hidden") === "false"
+  );
+
+const setRelicRecoveryElementHidden = (element, hidden) => {
+  if (!element) return;
+  element.classList.toggle("is-hidden", hidden);
+  element.setAttribute("aria-hidden", String(hidden));
+};
+
+const getRelicRecoveryItem = (relicId) =>
+  RELIC_RECOVERY_ITEMS.find((item) => item.id === relicId);
+
+const clearRelicRecoveryDetailCloseTimer = () => {
+  if (!relicRecoveryDetailCloseTimer) return;
+  window.clearTimeout(relicRecoveryDetailCloseTimer);
+  relicRecoveryDetailCloseTimer = 0;
+};
+
+const clearRelicRecoveryFlyTimer = () => {
+  if (!relicRecoveryFlyTimer) return;
+  window.clearTimeout(relicRecoveryFlyTimer);
+  relicRecoveryFlyTimer = 0;
+};
+
+const clearRelicRecoveryFlyers = () => {
+  clearRelicRecoveryFlyTimer();
+  relicRecoveryFlyingId = "";
+  relicRecoveryScene
+    ?.querySelectorAll(".relic-recovery-flyer")
+    .forEach((flyer) => flyer.remove());
+};
+
+const clearRelicRecoveryTyping = () => {
+  clearPokemonStyleDialogueTyping(relicRecoveryDialogText);
+};
+
+const relicRecoveryNotableSegment = (text, colorClass) => ({
+  text,
+  className: `pokemon-dialogue-name ${colorClass}`,
+});
+
+const setRelicRecoveryDialog = (
+  message,
+  { complete = false, instant = false } = {}
+) => {
+  if (complete) {
+    const segments = [
+      { text: "Thanks for all the help. See you in " },
+      relicRecoveryNotableSegment("Layer 2", "pokemon-starter-type-color--water"),
+      { text: "!" },
+    ];
+    if (instant) {
+      setPokemonStyleDialogueText(relicRecoveryDialogText, message, {
+        instant: true,
+        arrow: true,
+      });
+    } else {
+      setPokemonStyleSegmentedDialogue(relicRecoveryDialogText, segments, {
+        arrow: true,
+      });
+    }
+  } else {
+    const segments = [
+      { text: "Let's collect some " },
+      relicRecoveryNotableSegment("relics", "pokemon-starter-type-color--grass"),
+      { text: "!" },
+    ];
+    if (instant) {
+      setPokemonStyleDialogueText(relicRecoveryDialogText, message, {
+        instant: true,
+        arrow: true,
+      });
+    } else {
+      setPokemonStyleSegmentedDialogue(relicRecoveryDialogText, segments, {
+        arrow: true,
+      });
+    }
+  }
+  setRelicRecoveryElementHidden(relicRecoveryDialog, false);
+  setRelicRecoveryElementHidden(relicRecoveryStart, complete);
+  setRelicRecoveryElementHidden(relicRecoveryDecline, complete);
+  setRelicRecoveryElementHidden(relicRecoveryContinue, !complete);
+  relicRecoveryDialogActions?.classList.remove("is-hidden");
+};
+
+const renderRelicRecoveryHotbar = () => {
+  if (!relicRecoveryHotbar) return;
+  const slots = RELIC_RECOVERY_ITEMS.map((item) => {
+    const slot = document.createElement("span");
+    slot.className = "relic-recovery-slot";
+    slot.dataset.relicRecoverySlot = item.id;
+    const collected = relicRecoveryCollectedIds.has(item.id);
+    slot.classList.toggle("is-collected", collected);
+    slot.setAttribute(
+      "aria-label",
+      collected ? `${item.name}: ${item.description}` : `Unrecovered ${item.name}`
+    );
+    if (collected) {
+      slot.dataset.relicTooltipName = item.name;
+      slot.dataset.relicTooltipDescription = item.description;
+      slot.tabIndex = 0;
+    }
+    const image = document.createElement("img");
+    image.src = item.image;
+    image.alt = collected ? item.name : "";
+    image.setAttribute("aria-hidden", String(!collected));
+    slot.append(image);
+    if (collected) {
+      const tooltip = document.createElement("span");
+      tooltip.className = "relic-recovery-tooltip";
+      tooltip.setAttribute("role", "tooltip");
+
+      const tooltipName = document.createElement("strong");
+      tooltipName.textContent = item.name;
+      tooltipName.style.color = item.color;
+
+      const tooltipDescription = document.createElement("span");
+      tooltipDescription.textContent = item.description;
+
+      tooltip.append(tooltipName, tooltipDescription);
+      slot.append(tooltip);
+    }
+    return slot;
+  });
+  relicRecoveryHotbar.replaceChildren(...slots);
+};
+
+const renderRelicRecoveryItems = () => {
+  if (!relicRecoveryRelics) return;
+  const relicButtons = RELIC_RECOVERY_ITEMS.filter(
+    (item) =>
+      !relicRecoveryCollectedIds.has(item.id) &&
+      item.id !== relicRecoveryPendingId &&
+      item.id !== relicRecoveryFlyingId
+  ).map((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "relic-recovery-item";
+    button.dataset.relicRecoveryItem = item.id;
+    button.style.setProperty("--relic-x", `${item.x}%`);
+    button.style.setProperty("--relic-y", `${item.y}%`);
+    button.style.setProperty("--relic-scale", String(item.scale));
+    button.style.setProperty("--relic-depth", String(item.depth));
+    button.setAttribute("aria-label", `Retrieve ${item.name}`);
+
+    const image = document.createElement("img");
+    image.src = item.image;
+    image.alt = item.name;
+    button.append(image);
+    return button;
+  });
+  relicRecoveryRelics.replaceChildren(...relicButtons);
+};
+
+const renderRelicRecovery = () => {
+  renderRelicRecoveryItems();
+  renderRelicRecoveryHotbar();
+};
+
+const completeRelicRecoveryCollection = (relicId) => {
+  if (!relicId) return;
+  clearRelicRecoveryFlyers();
+  relicRecoveryFlyingId = "";
+  relicRecoveryCollectedIds.add(relicId);
+  relicRecoveryWindow?.classList.remove("is-detail-open");
+  renderRelicRecovery();
+
+  if (relicRecoveryCollectedIds.size >= RELIC_RECOVERY_ITEMS.length) {
+    relicRecoveryStage = RELIC_RECOVERY_STAGE_COMPLETE;
+    relicRecoveryWindow?.classList.add("is-complete");
+    setRelicRecoveryDialog("Thanks for all the help. See you in Layer 2!", {
+      complete: true,
+    });
+    relicRecoveryContinue?.focus({ preventScroll: true });
+    return;
+  }
+
+  relicRecoveryStage = RELIC_RECOVERY_STAGE_ACTIVE;
+};
+
+const animateRelicRecoveryToHotbar = (item) => {
+  if (!item || !relicRecoveryScene) {
+    completeRelicRecoveryCollection(item?.id || "");
+    return;
+  }
+
+  clearRelicRecoveryFlyers();
+  relicRecoveryFlyingId = item.id;
+  renderRelicRecovery();
+  const sceneRect = relicRecoveryScene.getBoundingClientRect();
+  const targetSlot = relicRecoveryHotbar?.querySelector(
+    `[data-relic-recovery-slot="${item.id}"]`
+  );
+  const targetRect = targetSlot?.getBoundingClientRect();
+  if (!sceneRect.width || !sceneRect.height || !targetRect) {
+    completeRelicRecoveryCollection(item.id);
+    return;
+  }
+
+  const flyer = document.createElement("img");
+  flyer.className = "relic-recovery-flyer";
+  flyer.src = item.image;
+  flyer.alt = "";
+  flyer.setAttribute("aria-hidden", "true");
+  flyer.style.setProperty("--fly-start-x", `${sceneRect.width * 0.5}px`);
+  flyer.style.setProperty("--fly-start-y", `${sceneRect.height * 0.48}px`);
+  flyer.style.setProperty(
+    "--fly-end-x",
+    `${targetRect.left + targetRect.width / 2 - sceneRect.left}px`
+  );
+  flyer.style.setProperty(
+    "--fly-end-y",
+    `${targetRect.top + targetRect.height / 2 - sceneRect.top}px`
+  );
+  flyer.style.setProperty(
+    "--fly-mid-x",
+    `${(sceneRect.width * 0.5 + targetRect.left + targetRect.width / 2 - sceneRect.left) / 2}px`
+  );
+  flyer.style.setProperty(
+    "--fly-mid-y",
+    `${Math.min(sceneRect.height * 0.48, targetRect.top + targetRect.height / 2 - sceneRect.top) - 74}px`
+  );
+  relicRecoveryScene.append(flyer);
+
+  const finishFly = () => completeRelicRecoveryCollection(item.id);
+  flyer.addEventListener("animationend", finishFly, { once: true });
+  relicRecoveryFlyTimer = window.setTimeout(finishFly, 760);
+};
+
+const resetRelicRecoveryEvent = ({ typewrite = false } = {}) => {
+  relicRecoveryStage = RELIC_RECOVERY_STAGE_PROMPT;
+  relicRecoveryCollectedIds = new Set();
+  relicRecoveryPendingId = "";
+  relicRecoveryFlyingId = "";
+  clearRelicRecoveryDetailCloseTimer();
+  clearRelicRecoveryFlyers();
+  relicRecoveryWindow?.classList.remove("is-detail-open", "is-complete");
+  relicRecoveryDetail?.classList.remove("is-opening", "is-closing");
+  setRelicRecoveryElementHidden(relicRecoveryDetail, true);
+  setRelicRecoveryDialog("Let's collect some relics!", { instant: !typewrite });
+  renderRelicRecovery();
+};
+
+const showRelicRecoveryWindow = () => {
+  if (!relicRecoveryWindow) return;
+  if (isRelicRecoveryVisible()) {
+    relicRecoveryWindow.style.zIndex = String(topZ++);
+    return;
+  }
+  resetRelicRecoveryEvent({ typewrite: true });
+  loadDeferredMedia(relicRecoveryWindow);
+  relicRecoveryWindow.classList.remove("is-hidden", "is-closing");
+  relicRecoveryWindow.setAttribute("aria-hidden", "false");
+  positionRandomEventWindowInViewport(relicRecoveryWindow);
+  relicRecoveryWindow.style.zIndex = String(topZ++);
+  clampRandomEventWindowAfterMediaLoad(relicRecoveryWindow);
+  restartWindowAnimation(relicRecoveryWindow, "is-opening");
+};
+
+const closeRelicRecoveryWindow = () => {
+  if (!relicRecoveryWindow || relicRecoveryWindow.classList.contains("is-hidden")) {
+    return;
+  }
+  clearRelicRecoveryTyping();
+  relicRecoveryWindow.setAttribute("aria-hidden", "true");
+  restartWindowAnimation(relicRecoveryWindow, "is-closing");
+};
+
+const startRelicRecovery = () => {
+  if (!isRelicRecoveryVisible()) return;
+  clearRelicRecoveryTyping();
+  relicRecoveryStage = RELIC_RECOVERY_STAGE_ACTIVE;
+  setRelicRecoveryElementHidden(relicRecoveryDialog, true);
+  renderRelicRecovery();
+};
+
+const showRelicRecoveryDetail = (relicId) => {
+  const item = getRelicRecoveryItem(relicId);
+  if (!item || relicRecoveryStage !== RELIC_RECOVERY_STAGE_ACTIVE) return;
+  relicRecoveryStage = RELIC_RECOVERY_STAGE_DETAIL;
+  relicRecoveryPendingId = item.id;
+  relicRecoveryWindow?.classList.add("is-detail-open");
+  relicRecoveryDetail?.classList.remove("is-closing");
+  if (relicRecoveryDetailImage) {
+    relicRecoveryDetailImage.src = item.image;
+    relicRecoveryDetailImage.alt = item.name;
+  }
+  if (relicRecoveryDetailName) relicRecoveryDetailName.textContent = item.name;
+  if (relicRecoveryDetailDescription) {
+    relicRecoveryDetailDescription.textContent = item.description;
+  }
+  setRelicRecoveryElementHidden(relicRecoveryDetail, false);
+  relicRecoveryDetail?.classList.add("is-opening");
+  renderRelicRecovery();
+  relicRecoveryDetail?.focus({ preventScroll: true });
+};
+
+const finishRelicRecoveryDetail = () => {
+  if (
+    relicRecoveryStage !== RELIC_RECOVERY_STAGE_DETAIL ||
+    !relicRecoveryPendingId ||
+    relicRecoveryDetail?.classList.contains("is-opening") ||
+    relicRecoveryDetail?.classList.contains("is-closing")
+  ) {
+    return;
+  }
+  clearRelicRecoveryDetailCloseTimer();
+  relicRecoveryDetail?.classList.remove("is-opening");
+  relicRecoveryDetail?.classList.add("is-closing");
+  relicRecoveryDetailCloseTimer = window.setTimeout(
+    completeRelicRecoveryDetailClose,
+    220
+  );
+};
+
+const completeRelicRecoveryDetailClose = () => {
+  if (
+    relicRecoveryStage !== RELIC_RECOVERY_STAGE_DETAIL ||
+    !relicRecoveryPendingId
+  ) {
+    return;
+  }
+  clearRelicRecoveryDetailCloseTimer();
+  const item = getRelicRecoveryItem(relicRecoveryPendingId);
+  relicRecoveryWindow?.classList.remove("is-detail-open");
+  relicRecoveryDetail?.classList.remove("is-closing");
+  setRelicRecoveryElementHidden(relicRecoveryDetail, true);
+  relicRecoveryPendingId = "";
+  animateRelicRecoveryToHotbar(item);
 };
 
 const DST_NIGHT_DURATION_MS = 7000;
@@ -10609,6 +12427,25 @@ const randomEventPreloadTargetsById = Object.freeze({
     instrumentalityCongratsWindow,
   ],
   "red-tool": () => [redToolWindow],
+  "death-note": () => [deathNoteWindow],
+  "wall-breach": () => [wallBreachWindow],
+  "current-publicly-available-information": () => [
+    currentPublicInfoWindow,
+    CURRENT_PUBLIC_INFO_ASSETS,
+  ],
+  "spare-a-trna": () => [trnaRequestWindow],
+  "spell-on-the-stack": () => [spellStackWindow],
+  "soot-sprites": () => [sootSpritesWindow],
+  nataraja: () => [natarajaWindow, "assets/random%20events/nataraja.mp4"],
+  "noble-steed": () => [
+    nobleSteedWindow,
+    nobleSteedResultWindow,
+    "assets/random%20events/horse.jpeg",
+  ],
+  "toxic-jungle": () => [
+    toxicJungleWindow,
+    Object.values(TOXIC_JUNGLE_ASSETS),
+  ],
   "resist-your-fate": () => [
     fateWindow,
     "assets/random%20events/zodd_defeated_by_shld0n_hcks.jpg",
@@ -10626,6 +12463,10 @@ const randomEventPreloadTargetsById = Object.freeze({
   "walter-white": () => [walterWhiteWindow],
   "bounty-hunter-announcement": () => [bountyHunterWindow],
   "pokemon-starter-selection": () => [pokemonStarterWindow],
+  "relic-recovery": () => [
+    relicRecoveryWindow,
+    Object.values(RELIC_RECOVERY_ASSETS),
+  ],
   "dont-starve-campfire": () => [
     dstNightWindow,
     dstCraftingWindow,
@@ -11379,6 +13220,122 @@ registerRandomEvent({
 });
 
 registerRandomEvent({
+  id: "death-note",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+  isVisible: isDeathNoteVisible,
+  canTrigger: () => !isDeathNoteVisible(),
+  run: () => {
+    showDeathNoteWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "current-publicly-available-information",
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+  isVisible: isCurrentPublicInfoVisible,
+  canTrigger: () => !isCurrentPublicInfoVisible(),
+  run: () => {
+    showCurrentPublicInfoWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "spare-a-trna",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isTrnaRequestVisible,
+  canTrigger: () => !isTrnaRequestVisible(),
+  run: () => {
+    showTrnaRequestWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "spell-on-the-stack",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isSpellStackVisible,
+  canTrigger: () => !isSpellStackVisible(),
+  run: () => {
+    showSpellStackWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "soot-sprites",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isSootSpritesVisible,
+  canTrigger: () => !isSootSpritesVisible(),
+  run: () => {
+    showSootSpritesWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "nataraja",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isNatarajaVisible,
+  canTrigger: () => !isNatarajaVisible(),
+  run: () => {
+    showNatarajaWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "noble-steed",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isNobleSteedVisible,
+  canTrigger: () => !isNobleSteedVisible(),
+  run: () => {
+    showNobleSteedWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "toxic-jungle",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isToxicJungleVisible,
+  canTrigger: () => !isToxicJungleVisible(),
+  run: () => {
+    showToxicJungleWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "wall-breach",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isWallBreachVisible,
+  canTrigger: () => !isWallBreachVisible(),
+  run: () => {
+    runWallBreachSequence();
+  },
+});
+
+registerRandomEvent({
   id: "resist-your-fate",
   debug: false,
   probability: STANDARD_RANDOM_EVENT_PROBABILITY,
@@ -11519,6 +13476,19 @@ registerRandomEvent({
   canTrigger: () => !isPokemonStarterVisible(),
   run: () => {
     showPokemonStarterWindow();
+  },
+});
+
+registerRandomEvent({
+  id: "relic-recovery",
+  debug: false,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isRelicRecoveryVisible,
+  canTrigger: () => !isRelicRecoveryVisible(),
+  run: () => {
+    showRelicRecoveryWindow();
   },
 });
 
@@ -16749,6 +18719,10 @@ const calendarEvents = {
     title: "Fourth of July",
     image: "assets/random%20events/4thofjuly.gif",
   },
+  "6-5": {
+    title: "July 5th",
+    image: "assets/random%20events/jul5.png",
+  },
   "8-11": {
     title: "September 11",
     image: "assets/random%20events/remembering911.gif",
@@ -18561,6 +20535,75 @@ if (redToolWindow) {
   });
 }
 
+bindRandomEventButton(deathNoteClose, closeDeathNoteWindow);
+bindRandomEventButton(deathNoteTitleClose, closeDeathNoteWindow);
+bindManagedRandomEventWindowAnimation(deathNoteWindow, { unloadImages: false });
+deathNoteWindow?.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  if (!target?.closest(".death-note-lined-page")) return;
+  deathNoteEntry?.focus({ preventScroll: true });
+  const cursorPosition = deathNoteEntry?.value.length || 0;
+  deathNoteEntry?.setSelectionRange(cursorPosition, cursorPosition);
+});
+
+bindRandomEventButton(currentPublicInfoClose, closeCurrentPublicInfoWindow);
+bindRandomEventButton(currentPublicInfoThanks, closeCurrentPublicInfoWindow);
+bindManagedRandomEventWindowAnimation(currentPublicInfoWindow);
+
+bindRandomEventButton(trnaRequestYes, closeTrnaRequestWindow);
+bindRandomEventButton(trnaRequestNo, closeTrnaRequestWindow);
+bindManagedRandomEventWindowAnimation(trnaRequestWindow);
+
+bindRandomEventButton(spellStackYes, counterSpellOnStack);
+bindRandomEventButton(spellStackNo, refuseSpellOnStackCounter);
+bindManagedRandomEventWindowAnimation(spellStackWindow, {
+  afterClose: clearSpellStackLightning,
+});
+
+bindRandomEventButton(sootSpritesYes, inspectSootSpritesGpu);
+bindRandomEventButton(sootSpritesNo, closeSootSpritesWindow);
+bindManagedRandomEventWindowAnimation(sootSpritesWindow);
+
+bindRandomEventButton(natarajaYes, closeNatarajaWindow);
+bindRandomEventButton(natarajaNo, closeNatarajaWindow);
+bindManagedRandomEventWindowAnimation(natarajaWindow, {
+  afterClose: resetNatarajaVideo,
+  unloadImages: false,
+});
+
+bindRandomEventButton(nobleSteedYes, acceptNobleSteedOffer);
+bindRandomEventButton(nobleSteedNo, closeNobleSteedWindow);
+bindRandomEventButton(nobleSteedResultOk, closeNobleSteedResultWindow);
+bindManagedRandomEventWindowAnimation(nobleSteedWindow);
+bindManagedRandomEventWindowAnimation(nobleSteedResultWindow);
+
+bindRandomEventButton(toxicJungleStart, startToxicJungleCollection);
+bindRandomEventButton(toxicJungleDecline, closeToxicJungleWindow);
+if (toxicJungleSpores) {
+  toxicJungleSpores.addEventListener("click", (event) => {
+    const target =
+      event.target instanceof Element
+        ? event.target.closest("[data-toxic-jungle-spore]")
+        : null;
+    if (!target || !toxicJungleSpores.contains(target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    collectToxicJungleSpore(target);
+  });
+}
+bindManagedRandomEventWindowAnimation(toxicJungleWindow, {
+  afterClose: resetToxicJungleEvent,
+});
+toxicJungleWindow?.addEventListener("click", (event) => {
+  if (toxicJungleStage !== TOXIC_JUNGLE_STAGE_COMPLETE) return;
+  event.preventDefault();
+  event.stopPropagation();
+  closeToxicJungleWindow();
+});
+
+bindRandomEventButton(wallBreachSuitUp, closeWallBreachWindow);
+bindManagedRandomEventWindowAnimation(wallBreachWindow);
+
 if (fateStart) {
   fateStart.addEventListener("click", (event) => {
     event.preventDefault();
@@ -18611,6 +20654,7 @@ if (fateWindow) {
 
 bindRandomEventButton(lancerBattleStart, startLancerBattle);
 bindRandomEventButton(lancerBattlePush, pushLancerBattle);
+bindRandomEventButton(lancerBattleTitleClose, closeLancerBattleWindow);
 bindRandomEventButton(lancerBattleClose, closeLancerBattleWindow);
 document.addEventListener("keydown", handleLancerBattleKeyMash);
 
@@ -18991,6 +21035,103 @@ if (pokemonStarterWindow) {
         image.removeAttribute("src");
       });
       resetPokemonStarterEvent();
+    }
+  });
+}
+
+if (relicRecoveryStart) {
+  relicRecoveryStart.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    startRelicRecovery();
+  });
+}
+
+if (relicRecoveryDecline) {
+  relicRecoveryDecline.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeRelicRecoveryWindow();
+  });
+}
+
+if (relicRecoveryContinue) {
+  relicRecoveryContinue.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (relicRecoveryStage === RELIC_RECOVERY_STAGE_COMPLETE) {
+      closeRelicRecoveryWindow();
+    }
+  });
+}
+
+if (relicRecoveryDetail) {
+  relicRecoveryDetail.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    finishRelicRecoveryDetail();
+  });
+
+  relicRecoveryDetail.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
+    finishRelicRecoveryDetail();
+  });
+
+  relicRecoveryDetail.addEventListener("animationend", (event) => {
+    if (event.target !== relicRecoveryDetail) return;
+    if (event.animationName === "retro-window-open") {
+      relicRecoveryDetail.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      completeRelicRecoveryDetailClose();
+    }
+  });
+}
+
+if (relicRecoveryRelics) {
+  relicRecoveryRelics.addEventListener("click", (event) => {
+    const relicButton = event.target.closest("[data-relic-recovery-item]");
+    if (!relicButton || !relicRecoveryRelics.contains(relicButton)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    showRelicRecoveryDetail(relicButton.dataset.relicRecoveryItem);
+  });
+}
+
+if (relicRecoveryScene) {
+  relicRecoveryScene.addEventListener("click", (event) => {
+    if (relicRecoveryStage !== RELIC_RECOVERY_STAGE_DETAIL) return;
+    event.preventDefault();
+    event.stopPropagation();
+    finishRelicRecoveryDetail();
+  });
+}
+
+if (relicRecoveryWindow) {
+  relicRecoveryWindow.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  relicRecoveryWindow.addEventListener("animationend", (event) => {
+    if (event.target !== relicRecoveryWindow) return;
+    if (event.animationName === "retro-window-open") {
+      relicRecoveryWindow.classList.remove("is-opening");
+      return;
+    }
+    if (event.animationName === "retro-window-close") {
+      relicRecoveryWindow.classList.remove("is-closing");
+      relicRecoveryWindow.classList.add("is-hidden");
+      relicRecoveryWindow.querySelectorAll("img[data-src]").forEach((image) => {
+        image.removeAttribute("src");
+      });
+      if (relicRecoveryDetailImage) {
+        relicRecoveryDetailImage.removeAttribute("src");
+        relicRecoveryDetailImage.alt = "";
+      }
+      resetRelicRecoveryEvent();
     }
   });
 }
@@ -19457,6 +21598,61 @@ document.addEventListener("click", (event) => {
 });
 
 const CURSOR_MODE_STORAGE_KEY = "rohin-os-cursor-mode";
+const CUSTOM_CURSOR_PRELOAD_SOURCES = Object.freeze([
+  "assets/cursor-assets/generated-png/normal-light.png",
+  "assets/cursor-assets/generated-png/select-light.png",
+  "assets/cursor-assets/generated-png/text-light.png",
+  "assets/cursor-assets/generated-png/text-thin-light.png",
+  "assets/cursor-assets/generated-png/move-light.png",
+  "assets/cursor-assets/generated-png/help-light.png",
+  "assets/cursor-assets/generated-png/unavailable-light.png",
+  "assets/cursor-assets/generated-png/precision-light.png",
+  "assets/cursor-assets/generated-png/resize-ew-light.png",
+  "assets/cursor-assets/generated-png/resize-ns-light.png",
+  "assets/cursor-assets/generated-png/resize-nwse-light.png",
+  "assets/cursor-assets/generated-png/resize-nesw-light.png",
+  "assets/cursor-assets/generated-png/normal-dark.png",
+  "assets/cursor-assets/generated-png/select-dark.png",
+  "assets/cursor-assets/generated-png/text-dark.png",
+  "assets/cursor-assets/generated-png/text-thin-dark.png",
+  "assets/cursor-assets/generated-png/move-dark.png",
+  "assets/cursor-assets/generated-png/help-dark.png",
+  "assets/cursor-assets/generated-png/unavailable-dark.png",
+  "assets/cursor-assets/generated-png/precision-dark.png",
+  "assets/cursor-assets/generated-png/resize-ew-dark.png",
+  "assets/cursor-assets/generated-png/resize-ns-dark.png",
+  "assets/cursor-assets/generated-png/resize-nwse-dark.png",
+  "assets/cursor-assets/generated-png/resize-nesw-dark.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Normal%20Select%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Select%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Thin%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Move%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Help%20Select%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Unavailable%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Precision%20Select%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Horizontal%20Resize%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Verticle%20Resize%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%201%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%202%20Light.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Working%20In%20Background%20Light.ani",
+  "assets/cursor-assets/Jeelh-Cursor-Light/Busy%20Light.ani",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Normal%20Select.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Select.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select%20Thin.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Move.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Help%20Select.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Unavailable.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Precision%20Select.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Horizontal%20Resize.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Verticle%20Resize.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%201.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%202.cur",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Working%20In%20Background.ani",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/Busy.ani",
+]);
+let customCursorPreloadPromise = null;
 
 const setCursorDarkMode = (enabled) => {
   document.documentElement.classList.toggle("is-cursor-dark-mode", enabled);
@@ -19479,6 +21675,30 @@ const loadCursorDarkMode = () => {
   }
 };
 
+const markCustomCursorsReady = () => {
+  document.body?.classList.add("is-custom-cursor-ready");
+};
+
+const preloadCustomCursorAssets = () => {
+  if (customCursorPreloadPromise) return customCursorPreloadPromise;
+  if (!window.fetch) {
+    customCursorPreloadPromise = Promise.resolve();
+    return customCursorPreloadPromise;
+  }
+
+  customCursorPreloadPromise = Promise.allSettled(
+    CUSTOM_CURSOR_PRELOAD_SOURCES.map((source) =>
+      fetch(new URL(source, document.baseURI), { cache: "force-cache" })
+    )
+  ).then(() => undefined);
+  return customCursorPreloadPromise;
+};
+
+const preloadAndApplyCustomCursors = () => {
+  markCustomCursorsReady();
+  preloadCustomCursorAssets().then(markCustomCursorsReady);
+};
+
 const initCursorSettingsApp = () => {
   const cursorModeButtons = document.querySelectorAll("[data-cursor-mode]");
   const syncCursorModeButtons = () => {
@@ -19492,6 +21712,10 @@ const initCursorSettingsApp = () => {
 
   setCursorDarkMode(loadCursorDarkMode());
   syncCursorModeButtons();
+  preloadAndApplyCustomCursors();
+
+  window.addEventListener("pageshow", preloadAndApplyCustomCursors);
+  runAfterHomeActivation(preloadAndApplyCustomCursors);
 
   document.querySelectorAll('[data-app="cursor"]').forEach((button) => {
     button.addEventListener("click", () => {
@@ -19505,6 +21729,7 @@ const initCursorSettingsApp = () => {
       setCursorDarkMode(enabled);
       saveCursorDarkMode(enabled);
       syncCursorModeButtons();
+      preloadAndApplyCustomCursors();
     });
   });
 };

@@ -1,50 +1,74 @@
 :root {
-  --cursor-normal: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Normal%20Select%20Light.cur"), auto;
-  --cursor-select: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Select%20Light.cur"), pointer;
+  --cursor-normal: url("../../assets/cursor-assets/generated-png/normal-light.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Normal%20Select%20Light.cur"), auto;
+  --cursor-select: url("../../assets/cursor-assets/generated-png/select-light.png") 2 3,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Select%20Light.cur"), pointer;
   --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.png") 2 1,
     url("../../assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.cur"),
     url("../../assets/cursor-assets/Jeelh-Cursor-Light/Working%20In%20Background%20Light.ani"),
     url("../../assets/cursor-assets/Jeelh-Cursor-Light/Busy%20Light.ani"), progress;
   --cursor-busy: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Busy%20Light.ani"), wait;
-  --cursor-unavailable: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Unavailable%20Light.cur"), not-allowed;
-  --cursor-text: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Light.cur"), text;
-  --cursor-text-thin: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Thin%20Light.cur"), text;
-  --cursor-move: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Move%20Light.cur"), move;
-  --cursor-help: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Help%20Select%20Light.cur"), help;
+  --cursor-unavailable: url("../../assets/cursor-assets/generated-png/unavailable-light.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Unavailable%20Light.cur"), not-allowed;
+  --cursor-text: url("../../assets/cursor-assets/generated-png/text-light.png") 6 8,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Light.cur"), text;
+  --cursor-text-thin: url("../../assets/cursor-assets/generated-png/text-thin-light.png") 6 8,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Thin%20Light.cur"), text;
+  --cursor-move: url("../../assets/cursor-assets/generated-png/move-light.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Move%20Light.cur"), move;
+  --cursor-help: url("../../assets/cursor-assets/generated-png/help-light.png") 2 3,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Help%20Select%20Light.cur"), help;
   --cursor-pressed: var(--cursor-move);
-  --cursor-precision: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Precision%20Select%20Light.cur"), crosshair;
-  --cursor-resize-ew: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Horizontal%20Resize%20Light.cur"), ew-resize;
-  --cursor-resize-ns: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Verticle%20Resize%20Light.cur"), ns-resize;
-  --cursor-resize-nwse: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%201%20Light.cur"), nwse-resize;
-  --cursor-resize-nesw: url("../../assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%202%20Light.cur"), nesw-resize;
+  --cursor-precision: url("../../assets/cursor-assets/generated-png/precision-light.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Precision%20Select%20Light.cur"), crosshair;
+  --cursor-resize-ew: url("../../assets/cursor-assets/generated-png/resize-ew-light.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Horizontal%20Resize%20Light.cur"), ew-resize;
+  --cursor-resize-ns: url("../../assets/cursor-assets/generated-png/resize-ns-light.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Verticle%20Resize%20Light.cur"), ns-resize;
+  --cursor-resize-nwse: url("../../assets/cursor-assets/generated-png/resize-nwse-light.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%201%20Light.cur"), nwse-resize;
+  --cursor-resize-nesw: url("../../assets/cursor-assets/generated-png/resize-nesw-light.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%202%20Light.cur"), nesw-resize;
 }
 
 html.is-cursor-dark-mode,
 body.is-cursor-dark-mode {
-  --cursor-normal: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Normal%20Select.cur"), auto;
-  --cursor-select: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Select.cur"), pointer;
+  --cursor-normal: url("../../assets/cursor-assets/generated-png/normal-dark.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Normal%20Select.cur"), auto;
+  --cursor-select: url("../../assets/cursor-assets/generated-png/select-dark.png") 2 3,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Select.cur"), pointer;
   --cursor-working: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.png") 2 1,
     url("../../assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.cur"),
     url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Working%20In%20Background.ani"),
     url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Busy.ani"), progress;
   --cursor-busy: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Busy.ani"), wait;
-  --cursor-unavailable: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Unavailable.cur"), not-allowed;
-  --cursor-text: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select.cur"), text;
-  --cursor-text-thin: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select%20Thin.cur"), text;
-  --cursor-move: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Move.cur"), move;
-  --cursor-help: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Help%20Select.cur"), help;
+  --cursor-unavailable: url("../../assets/cursor-assets/generated-png/unavailable-dark.png") 2 1,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Unavailable.cur"), not-allowed;
+  --cursor-text: url("../../assets/cursor-assets/generated-png/text-dark.png") 6 8,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select.cur"), text;
+  --cursor-text-thin: url("../../assets/cursor-assets/generated-png/text-thin-dark.png") 6 8,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select%20Thin.cur"), text;
+  --cursor-move: url("../../assets/cursor-assets/generated-png/move-dark.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Move.cur"), move;
+  --cursor-help: url("../../assets/cursor-assets/generated-png/help-dark.png") 2 3,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Help%20Select.cur"), help;
   --cursor-pressed: var(--cursor-move);
-  --cursor-precision: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Precision%20Select.cur"), crosshair;
-  --cursor-resize-ew: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Horizontal%20Resize.cur"), ew-resize;
-  --cursor-resize-ns: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Verticle%20Resize.cur"), ns-resize;
-  --cursor-resize-nwse: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%201.cur"), nwse-resize;
-  --cursor-resize-nesw: url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%202.cur"), nesw-resize;
+  --cursor-precision: url("../../assets/cursor-assets/generated-png/precision-dark.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Precision%20Select.cur"), crosshair;
+  --cursor-resize-ew: url("../../assets/cursor-assets/generated-png/resize-ew-dark.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Horizontal%20Resize.cur"), ew-resize;
+  --cursor-resize-ns: url("../../assets/cursor-assets/generated-png/resize-ns-dark.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Verticle%20Resize.cur"), ns-resize;
+  --cursor-resize-nwse: url("../../assets/cursor-assets/generated-png/resize-nwse-dark.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%201.cur"), nwse-resize;
+  --cursor-resize-nesw: url("../../assets/cursor-assets/generated-png/resize-nesw-dark.png") 15 15,
+    url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%202.cur"), nesw-resize;
 }
 
 html,
 body,
 body * {
-  cursor: var(--cursor-normal);
+  cursor: var(--cursor-normal) !important;
 }
 
 ::-webkit-scrollbar,
@@ -83,6 +107,32 @@ select:not(:disabled),
 .infinity-armory-map-slot,
 .john-pork-call-button:not(:disabled),
 .john-pork-call-button:not(:disabled) * {
+  cursor: var(--cursor-select) !important;
+}
+
+a[href] *,
+button:not(:disabled) *,
+summary *,
+label *,
+select:not(:disabled) *,
+[role="button"]:not([aria-disabled="true"]) *,
+[tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"]) *,
+.calendar-day[data-calendar-day] *,
+.calendar-day[data-calendar-weekday="thursday"] *,
+.selector-item *,
+.study-tree-row *,
+.study-file-item *,
+.ms-cell:not(.is-revealed) *,
+.sol-card *,
+.sol-stock *,
+.sol-waste *,
+.sol-foundation *,
+.sol-tableau *,
+.snake-direction-button *,
+.sudoku-cell *,
+.infinity-armory-gem:not(:disabled) *,
+.infinity-armory-slot:not(:disabled) *,
+.infinity-armory-map-slot * {
   cursor: var(--cursor-select) !important;
 }
 
@@ -131,6 +181,13 @@ textarea,
   cursor: var(--cursor-text) !important;
 }
 
+[contenteditable="true"] *,
+[contenteditable="plaintext-only"] *,
+.study-file-name *,
+.red-tool-input * {
+  cursor: var(--cursor-text) !important;
+}
+
 .infinity-armory-map:not(:disabled),
 .infinity-armory-map:not(:disabled) *,
 [aria-label*="Help" i],
@@ -161,17 +218,18 @@ button:has(img[src*="question" i]) *,
 .snake-help-button *,
 .sol-help,
 .sol-help *,
-.calendar-day.is-event-day {
+.calendar-day.is-event-day,
+.calendar-day.is-event-day * {
   cursor: var(--cursor-help) !important;
 }
 
 .window:not([data-no-drag]) > .title-bar,
-.window:not([data-no-drag]) > .title-bar .title-bar-text {
+.window:not([data-no-drag]) > .title-bar * {
   cursor: var(--cursor-move) !important;
 }
 
 .calendar-popout > .title-bar,
-.calendar-popout > .title-bar .title-bar-text {
+.calendar-popout > .title-bar * {
   cursor: var(--cursor-normal) !important;
 }
 
@@ -226,6 +284,29 @@ select:not(:disabled):active,
   cursor: var(--cursor-pressed) !important;
 }
 
+.title-bar-controls,
+.title-bar-controls *,
+.window:not([data-no-drag]) > .title-bar :is(
+    a[href],
+    button:not(:disabled),
+    summary,
+    label,
+    select:not(:disabled),
+    [role="button"]:not([aria-disabled="true"]),
+    [tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"])
+  ),
+.window:not([data-no-drag]) > .title-bar :is(
+    a[href],
+    button:not(:disabled),
+    summary,
+    label,
+    select:not(:disabled),
+    [role="button"]:not([aria-disabled="true"]),
+    [tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"])
+  ) * {
+  cursor: var(--cursor-select) !important;
+}
+
 .panel-divider {
   cursor: var(--cursor-resize-ew) !important;
 }
@@ -247,7 +328,16 @@ option:disabled,
 [aria-disabled="true"],
 [disabled],
 .is-disabled,
-.is-unavailable {
+.is-unavailable,
+button:disabled *,
+input:disabled *,
+select:disabled *,
+textarea:disabled *,
+option:disabled *,
+[aria-disabled="true"] *,
+[disabled] *,
+.is-disabled *,
+.is-unavailable * {
   cursor: var(--cursor-unavailable) !important;
 }
 
