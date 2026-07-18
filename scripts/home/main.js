@@ -440,6 +440,7 @@ const {
   toxicJungleDecline,
   fateWindow,
   fateTitle,
+  fateTitleClose,
   fateReadyStage,
   fateFightStage,
   fateResultStage,
@@ -20627,6 +20628,8 @@ if (fateResultOk) {
     closeFateWindow();
   });
 }
+
+bindRandomEventButton(fateTitleClose, closeFateWindow);
 
 document.addEventListener("keydown", handleFateKeyMash);
 

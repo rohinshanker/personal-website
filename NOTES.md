@@ -1,5 +1,13 @@
 # Work Notes
 
+## 2026-07-16 Resist Causality Window
+
+- Added a title-bar close control for the Resist Causality random event and
+  routed it through the existing `closeFateWindow` cleanup path.
+- Adjusted the Fate image slot sizing so the media keeps a visible clamped
+  footprint on narrow or short mobile viewports, with the window body scrolling
+  rather than collapsing the image away.
+
 ## 2026-07-08 Soot Sprites Random Event
 
 - Added `soot-sprites` as an interactive random event using a System

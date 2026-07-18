@@ -912,6 +912,36 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
   await access(new URL("assets/random events/toxic-jungle.webp", root));
 });
 
+test("resist causality window has title close and mobile-visible imagery", async () => {
+  const registrationStart = mainSource.indexOf('id: "resist-your-fate"');
+  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const windowStart = homeSource.indexOf('id="fate-window"');
+  const windowEnd = homeSource.indexOf('<div class="window lancer-battle-window', windowStart);
+
+  assert.notEqual(registrationStart, -1, "Missing Resist Causality registration");
+  assert.notEqual(registrationEnd, -1, "Missing Resist Causality registration end");
+  assert.notEqual(windowStart, -1, "Missing Resist Causality window");
+  assert.notEqual(windowEnd, -1, "Missing Resist Causality window end");
+
+  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const windowMarkup = homeSource.slice(windowStart, windowEnd);
+
+  assert.match(registration, /debug: false,/);
+  assert.doesNotMatch(registration, /debug: true,/);
+  assert.match(windowMarkup, /id="fate-title-close"/);
+  assert.match(windowMarkup, /aria-label="Close"/);
+  assert.match(domSource, /fateTitleClose: doc\.getElementById\("fate-title-close"\)/);
+  assert.match(mainSource, /bindRandomEventButton\(fateTitleClose, closeFateWindow\);/);
+  assert.match(getCssBlock(".fate-photo-frame"), /max-width: 100%;/);
+  assert.match(getCssBlock(".fate-photo-slot"), /height: clamp\(118px, 40vh, 320px\);/);
+  assert.match(getCssBlock(".fate-photo-slot"), /min-height: 104px;/);
+  assert.match(
+    eventStyles,
+    /@media \(max-width: 520px\), \(max-height: 620px\) \{[\s\S]*?\.fate-window \.window-body \{[\s\S]*?max-height: calc\(100vh - 74px\);[\s\S]*?\.fate-photo-slot \{[\s\S]*?height: clamp\(104px, 30vh, 240px\);/
+  );
+  await access(new URL("assets/random events/guts-v-zodd.png", root));
+});
+
 test("wall breach event shakes, flashes, and opens a probability-gated popup", async () => {
   const registrationStart = mainSource.indexOf('id: "wall-breach"');
   const registrationEnd = mainSource.indexOf("});", registrationStart);
@@ -1071,9 +1101,9 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=soot-puff-clouds-20260709/);
+    assert.match(source, /random-events\.css\?v=fate-mobile-image-20260716/);
     assert.match(source, /cursors\.css\?v=cursor-titlebar-clickable-20260709/);
-    assert.match(source, /core\/dom\.js\?v=lancer-title-close-20260709/);
-    assert.match(source, /main\.js\?v=soot-normal-gating-20260709/);
+    assert.match(source, /core\/dom\.js\?v=fate-title-close-20260716/);
+    assert.match(source, /main\.js\?v=fate-title-close-20260716/);
   }
 });

@@ -4395,12 +4395,14 @@ html.is-wall-breach-shaking body {
 .fate-photo-frame {
   --image-fit-aspect: 562 / 650;
   align-self: center;
+  max-width: 100%;
   width: fit-content;
 }
 
 .fate-photo-slot {
-  height: min(44vh, 320px);
+  height: clamp(118px, 40vh, 320px);
   max-width: 100%;
+  min-height: 104px;
   width: auto;
 }
 
@@ -4439,6 +4441,17 @@ html.is-wall-breach-shaking body {
 
 .fate-actions button {
   min-width: 92px;
+}
+
+@media (max-width: 520px), (max-height: 620px) {
+  .fate-window .window-body {
+    max-height: calc(100vh - 74px);
+  }
+
+  .fate-photo-slot {
+    height: clamp(104px, 30vh, 240px);
+    min-height: 104px;
+  }
 }
 
 @keyframes fate-window-shake {

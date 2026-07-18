@@ -301,6 +301,7 @@ window.homeDom = {
   toxicJungleDecline: byId("toxic-jungle-decline"),
   fateWindow: doc.getElementById("fate-window"),
   fateTitle: doc.getElementById("fate-title"),
+  fateTitleClose: doc.getElementById("fate-title-close"),
   fateReadyStage: doc.getElementById("fate-ready-stage"),
   fateFightStage: doc.getElementById("fate-fight-stage"),
   fateResultStage: doc.getElementById("fate-result-stage"),
