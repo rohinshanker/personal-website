@@ -193,6 +193,20 @@ const {
   sudokuSolveMessage,
   sudokuSolveOk,
   sudokuAchievement,
+  gameStatsWindow,
+  gameStatsTitle,
+  gameStatsContent,
+  gameStatsExport,
+  gameStatsPendingCount,
+  gameStatsOpenButtons,
+  gameProfilePrompt,
+  gameProfileName,
+  gameProfileReroll,
+  gameProfileRerollCount,
+  gameProfileIconSearch,
+  gameProfileIconGallery,
+  gameProfileSave,
+  gameProfileCancel,
   lifeCounterPlayers,
   lifeCounterAddPlayer,
   lifeCounterReset,
@@ -977,6 +991,861 @@ const LIFE_COUNTER_DIGIT_SOURCES = {
   "-": "assets/minesweeper_assets/digital_digits/digital_minus.png",
   " ": "assets/minesweeper_assets/digital_digits/digital_blank.png",
 };
+
+const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
+const GAME_STATS_PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
+const GAME_STATS_EXPORT_SOURCE = "personal-website-game-stats";
+const GAME_STATS_PERCHANCE_NAME_URL =
+  "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true";
+const GAME_STATS_PERCHANCE_TIMEOUT_MS = 900;
+const GAME_STATS_MAX_NAME_REROLLS = 5;
+const GAME_STATS_DEFAULT_ICON = "assets/app-icons/ico/user_card.ico";
+const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
+const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
+  "easy",
+  "medium",
+  "hard",
+  "expert",
+  "master",
+  "extreme",
+]);
+const GAME_STATS_SNAKE_BOARD_SIZES = Object.freeze(["10", "16", "20", "24"]);
+const GAME_STATS_HINT_BUCKETS = Object.freeze(["noHints", "withHints"]);
+const GAME_STATS_MEDAL_SOURCES = Object.freeze([
+  "assets/minesweeper_assets/gold-medal.png",
+  "assets/minesweeper_assets/silver-medal.png",
+  "assets/minesweeper_assets/bronze-medal.png",
+]);
+const GAME_STATS_DIGIT_SOURCES = LIFE_COUNTER_DIGIT_SOURCES;
+const GAME_STATS_NAME_SYLLABLES = Object.freeze([
+  "Ari",
+  "Asha",
+  "Ciel",
+  "Eli",
+  "Ira",
+  "Kai",
+  "Lio",
+  "Lumi",
+  "Mira",
+  "Nari",
+  "Ori",
+  "Rin",
+  "Sola",
+  "Tavi",
+  "Una",
+  "Vela",
+  "Wren",
+  "Yara",
+]);
+const GAME_STATS_ICON_MANIFEST = Object.freeze(
+  (Array.isArray(window.rohinAppIconManifest) ? window.rohinAppIconManifest : [])
+    .filter((filename) => /^[^/]+\.ico$/i.test(String(filename)))
+    .map((filename) => ({
+      filename: String(filename),
+      src: `assets/app-icons/ico/${String(filename)}`,
+    }))
+);
+
+const createGameStatsEmptyMinesweeperWins = () =>
+  Object.fromEntries(GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, 0]));
+
+const createGameStatsEmptyMinesweeperLeaderboards = () =>
+  Object.fromEntries(GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, []]));
+
+const createGameStatsEmptySnakeGames = () =>
+  Object.fromEntries(GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, 0]));
+
+const createGameStatsEmptySnakeLeaderboards = () =>
+  Object.fromEntries(GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, []]));
+
+const createGameStatsEmptySudokuWins = () =>
+  Object.fromEntries(
+    GAME_STATS_SUDOKU_DIFFICULTIES.map((difficulty) => [
+      difficulty,
+      { noHints: 0, withHints: 0 },
+    ])
+  );
+
+const createEmptyGameStatsData = () => ({
+  version: 1,
+  generatedAt: new Date(0).toISOString(),
+  eventIds: [],
+  pendingEvents: [],
+  totals: {
+    minesweeper: { wins: createGameStatsEmptyMinesweeperWins() },
+    solitaire: { wins: 0 },
+    snake: {
+      totalGamesPlayed: 0,
+      gamesPlayed: createGameStatsEmptySnakeGames(),
+    },
+    sudoku: { wins: createGameStatsEmptySudokuWins() },
+  },
+  leaderboards: {
+    minesweeper: createGameStatsEmptyMinesweeperLeaderboards(),
+    solitaire: [],
+    snake: createGameStatsEmptySnakeLeaderboards(),
+  },
+});
+
+const gameStatsPositiveInteger = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? Math.trunc(number) : 0;
+};
+
+const normalizeGameStatsIsoDate = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date(0).toISOString() : date.toISOString();
+};
+
+const normalizeGameStatsProfile = (profile) => {
+  if (!profile || typeof profile !== "object") return null;
+  const id = String(profile.id || "").trim();
+  const name = String(profile.name || "").trim().slice(0, 32);
+  const icon = String(profile.icon || "").trim();
+  const rerollCount = gameStatsPositiveInteger(profile.rerollCount);
+  if (!id || !name || !/^assets\/app-icons\/ico\/[^/]+\.ico$/.test(icon)) return null;
+  return {
+    id,
+    name,
+    icon,
+    rerollCount: Math.min(GAME_STATS_MAX_NAME_REROLLS, rerollCount),
+  };
+};
+
+const normalizeGameStatsLeaderboardEntries = (entries, direction, limit) =>
+  (Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+      const profile = normalizeGameStatsProfile({
+        id: entry.playerId,
+        name: entry.name,
+        icon: entry.icon,
+      });
+      const eventId = String(entry.eventId || "").trim();
+      if (!profile || !eventId) return null;
+      return {
+        eventId,
+        playerId: profile.id,
+        name: profile.name,
+        icon: profile.icon,
+        metric: gameStatsPositiveInteger(entry.metric),
+        metricKind: String(entry.metricKind || ""),
+        occurredAt: normalizeGameStatsIsoDate(entry.occurredAt),
+      };
+    })
+    .filter(Boolean)
+    .sort((first, second) => compareGameStatsLeaderboardEntries(direction, first, second))
+    .slice(0, limit);
+
+const normalizeGameStatsData = (rawData = {}) => {
+  const data = createEmptyGameStatsData();
+  const totals = rawData && typeof rawData === "object" ? rawData.totals || {} : {};
+  const leaderboards =
+    rawData && typeof rawData === "object" ? rawData.leaderboards || {} : {};
+
+  GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
+    data.totals.minesweeper.wins[difficulty] = gameStatsPositiveInteger(
+      totals.minesweeper?.wins?.[difficulty]
+    );
+    data.leaderboards.minesweeper[difficulty] = normalizeGameStatsLeaderboardEntries(
+      leaderboards.minesweeper?.[difficulty],
+      "asc",
+      3
+    );
+  });
+
+  data.totals.solitaire.wins = gameStatsPositiveInteger(totals.solitaire?.wins);
+  data.leaderboards.solitaire = normalizeGameStatsLeaderboardEntries(
+    leaderboards.solitaire,
+    "asc",
+    5
+  );
+
+  data.totals.snake.totalGamesPlayed = gameStatsPositiveInteger(
+    totals.snake?.totalGamesPlayed
+  );
+  GAME_STATS_SNAKE_BOARD_SIZES.forEach((size) => {
+    data.totals.snake.gamesPlayed[size] = gameStatsPositiveInteger(
+      totals.snake?.gamesPlayed?.[size]
+    );
+    data.leaderboards.snake[size] = normalizeGameStatsLeaderboardEntries(
+      leaderboards.snake?.[size],
+      "desc",
+      5
+    );
+  });
+
+  GAME_STATS_SUDOKU_DIFFICULTIES.forEach((difficulty) => {
+    GAME_STATS_HINT_BUCKETS.forEach((hintBucket) => {
+      data.totals.sudoku.wins[difficulty][hintBucket] = gameStatsPositiveInteger(
+        totals.sudoku?.wins?.[difficulty]?.[hintBucket]
+      );
+    });
+  });
+
+  data.generatedAt = normalizeGameStatsIsoDate(rawData.generatedAt);
+  data.eventIds = Array.from(
+    new Set((Array.isArray(rawData.eventIds) ? rawData.eventIds : []).map(String))
+  ).filter((id) => /^[a-z0-9-]{8,80}$/.test(id));
+  data.pendingEvents = (Array.isArray(rawData.pendingEvents) ? rawData.pendingEvents : [])
+    .map(normalizeGameStatsEvent)
+    .filter(Boolean);
+  return data;
+};
+
+function compareGameStatsLeaderboardEntries(direction, first, second) {
+  if (first.metric !== second.metric) {
+    return direction === "desc"
+      ? second.metric - first.metric
+      : first.metric - second.metric;
+  }
+  const firstTime = new Date(first.occurredAt).getTime();
+  const secondTime = new Date(second.occurredAt).getTime();
+  if (firstTime !== secondTime) return firstTime - secondTime;
+  return String(first.eventId).localeCompare(String(second.eventId));
+}
+
+const createGameStatsEventId = () => {
+  if (window.crypto?.randomUUID) return `local-${window.crypto.randomUUID()}`;
+  return `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+};
+
+const normalizeGameStatsMetric = (value) => {
+  const metric = Number(value);
+  return Number.isFinite(metric) && metric >= 0 ? Math.trunc(metric) : null;
+};
+
+function normalizeGameStatsEvent(rawEvent) {
+  if (!rawEvent || typeof rawEvent !== "object") return null;
+  const id = String(rawEvent.id || "").trim();
+  const game = String(rawEvent.game || "").trim();
+  const type = String(rawEvent.type || "").trim();
+  const occurredAt = normalizeGameStatsIsoDate(rawEvent.occurredAt);
+  const profile = normalizeGameStatsProfile(rawEvent.profile);
+  if (!/^[a-z0-9-]{8,80}$/.test(id)) return null;
+
+  if (game === "minesweeper") {
+    const difficulty = String(rawEvent.difficulty || rawEvent.category || "").trim();
+    const metric = normalizeGameStatsMetric(rawEvent.metric ?? rawEvent.seconds);
+    if (type !== "win" || !GAME_STATS_DIFFICULTIES.includes(difficulty) || metric === null) {
+      return null;
+    }
+    return {
+      id,
+      game,
+      type,
+      occurredAt,
+      difficulty,
+      metric,
+      metricKind: "seconds",
+      profile,
+    };
+  }
+
+  if (game === "solitaire") {
+    const metric = normalizeGameStatsMetric(rawEvent.metric ?? rawEvent.moves);
+    if (type !== "win" || metric === null) return null;
+    return {
+      id,
+      game,
+      type,
+      occurredAt,
+      metric,
+      metricKind: "moves",
+      profile,
+    };
+  }
+
+  if (game === "snake") {
+    const boardSize = String(rawEvent.boardSize || rawEvent.category || "").trim();
+    const metric = normalizeGameStatsMetric(rawEvent.metric ?? rawEvent.score);
+    if (
+      type !== "gamePlayed" ||
+      !GAME_STATS_SNAKE_BOARD_SIZES.includes(boardSize) ||
+      metric === null
+    ) {
+      return null;
+    }
+    return {
+      id,
+      game,
+      type,
+      occurredAt,
+      boardSize,
+      metric,
+      metricKind: "score",
+      profile,
+    };
+  }
+
+  if (game === "sudoku") {
+    const difficulty = String(rawEvent.difficulty || "").trim();
+    const hintBucket = String(rawEvent.hintBucket || "").trim();
+    if (
+      type !== "win" ||
+      !GAME_STATS_SUDOKU_DIFFICULTIES.includes(difficulty) ||
+      !GAME_STATS_HINT_BUCKETS.includes(hintBucket)
+    ) {
+      return null;
+    }
+    return { id, game, type, occurredAt, difficulty, hintBucket, profile };
+  }
+
+  return null;
+}
+
+const loadGameStatsLocalState = () => {
+  try {
+    return normalizeGameStatsData(
+      JSON.parse(localStorage.getItem(GAME_STATS_STORAGE_KEY) || "null") || {}
+    );
+  } catch {
+    return createEmptyGameStatsData();
+  }
+};
+
+const saveGameStatsLocalState = () => {
+  try {
+    localStorage.setItem(GAME_STATS_STORAGE_KEY, JSON.stringify(gameStatsLocalState));
+  } catch {
+    // Game stats are best-effort when local storage is unavailable.
+  }
+};
+
+const loadGameStatsProfile = () => {
+  try {
+    return normalizeGameStatsProfile(
+      JSON.parse(localStorage.getItem(GAME_STATS_PROFILE_STORAGE_KEY) || "null")
+    );
+  } catch {
+    return null;
+  }
+};
+
+const saveGameStatsProfile = (profile) => {
+  gameStatsProfile = normalizeGameStatsProfile(profile);
+  if (!gameStatsProfile) return;
+  try {
+    localStorage.setItem(GAME_STATS_PROFILE_STORAGE_KEY, JSON.stringify(gameStatsProfile));
+  } catch {
+    // Profile identity is best-effort when local storage is unavailable.
+  }
+};
+
+const createGameStatsLeaderboardEntry = (event) => ({
+  eventId: event.id,
+  playerId: event.profile.id,
+  name: event.profile.name,
+  icon: event.profile.icon,
+  metric: event.metric,
+  metricKind: event.metricKind,
+  occurredAt: event.occurredAt,
+});
+
+const upsertGameStatsLeaderboardEntry = (leaderboard, event, limit, direction) => {
+  if (!event.profile || !Number.isFinite(event.metric)) return leaderboard;
+  const nextEntry = createGameStatsLeaderboardEntry(event);
+  const entries = Array.isArray(leaderboard) ? [...leaderboard] : [];
+  const existingIndex = entries.findIndex((entry) => entry.playerId === nextEntry.playerId);
+  if (existingIndex >= 0) {
+    const existing = entries[existingIndex];
+    if (compareGameStatsLeaderboardEntries(direction, nextEntry, existing) < 0) {
+      entries[existingIndex] = nextEntry;
+    }
+  } else {
+    entries.push(nextEntry);
+  }
+  return entries
+    .sort((first, second) => compareGameStatsLeaderboardEntries(direction, first, second))
+    .slice(0, limit);
+};
+
+const applyGameStatsEventToData = (data, rawEvent) => {
+  const event = normalizeGameStatsEvent(rawEvent);
+  if (!event || data.eventIds.includes(event.id)) return false;
+  data.eventIds.push(event.id);
+
+  if (event.game === "minesweeper") {
+    data.totals.minesweeper.wins[event.difficulty] += 1;
+    data.leaderboards.minesweeper[event.difficulty] = upsertGameStatsLeaderboardEntry(
+      data.leaderboards.minesweeper[event.difficulty],
+      event,
+      3,
+      "asc"
+    );
+  } else if (event.game === "solitaire") {
+    data.totals.solitaire.wins += 1;
+    data.leaderboards.solitaire = upsertGameStatsLeaderboardEntry(
+      data.leaderboards.solitaire,
+      event,
+      5,
+      "asc"
+    );
+  } else if (event.game === "snake") {
+    data.totals.snake.totalGamesPlayed += 1;
+    data.totals.snake.gamesPlayed[event.boardSize] += 1;
+    data.leaderboards.snake[event.boardSize] = upsertGameStatsLeaderboardEntry(
+      data.leaderboards.snake[event.boardSize],
+      event,
+      5,
+      "desc"
+    );
+  } else if (event.game === "sudoku") {
+    data.totals.sudoku.wins[event.difficulty][event.hintBucket] += 1;
+  }
+
+  return true;
+};
+
+const getGameStatsLeaderboardSpec = (event) => {
+  if (!event || !Number.isFinite(event.metric)) return null;
+  if (event.game === "minesweeper") {
+    return {
+      entries: (data) => data.leaderboards.minesweeper[event.difficulty],
+      limit: 3,
+      direction: "asc",
+    };
+  }
+  if (event.game === "solitaire") {
+    return {
+      entries: (data) => data.leaderboards.solitaire,
+      limit: 5,
+      direction: "asc",
+    };
+  }
+  if (event.game === "snake") {
+    return {
+      entries: (data) => data.leaderboards.snake[event.boardSize],
+      limit: 5,
+      direction: "desc",
+    };
+  }
+  return null;
+};
+
+const gameStatsEventQualifiesForData = (data, event) => {
+  const spec = getGameStatsLeaderboardSpec(event);
+  if (!spec) return false;
+  const entries = spec.entries(data);
+  if (!Array.isArray(entries) || entries.length < spec.limit) return true;
+  const candidate = {
+    eventId: event.id,
+    metric: event.metric,
+    occurredAt: event.occurredAt,
+  };
+  const worst = entries[entries.length - 1];
+  return compareGameStatsLeaderboardEntries(spec.direction, candidate, worst) < 0;
+};
+
+const gameStatsEventQualifiesForLeaderboard = (event) =>
+  gameStatsEventQualifiesForData(gameStatsLocalState, event) ||
+  gameStatsEventQualifiesForData(gameStatsPublishedState, event);
+
+const createGameStatsEvent = (payload) =>
+  normalizeGameStatsEvent({
+    id: createGameStatsEventId(),
+    occurredAt: new Date().toISOString(),
+    ...payload,
+  });
+
+const gameStatsRandomItem = (items) =>
+  items[Math.floor(Math.random() * items.length)];
+
+const generateFallbackGameStatsName = () => {
+  const first = gameStatsRandomItem(GAME_STATS_NAME_SYLLABLES);
+  const second = gameStatsRandomItem(GAME_STATS_NAME_SYLLABLES).toLowerCase();
+  return `${first}${second}`.slice(0, 18);
+};
+
+const fetchPerchanceGameStatsName = async () => {
+  if (typeof fetch !== "function" || typeof AbortController !== "function") return "";
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), GAME_STATS_PERCHANCE_TIMEOUT_MS);
+  try {
+    const response = await fetch(GAME_STATS_PERCHANCE_NAME_URL, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) return "";
+    const text = await response.text();
+    const candidates = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^[A-Za-z][A-Za-z' -]{2,22}$/.test(line))
+      .filter((line) => !/^(output|name|random|import|title|html)$/i.test(line));
+    return candidates.length ? gameStatsRandomItem(candidates).slice(0, 32) : "";
+  } catch {
+    return "";
+  } finally {
+    window.clearTimeout(timer);
+  }
+};
+
+const generateGameStatsName = async () =>
+  (await fetchPerchanceGameStatsName()) || generateFallbackGameStatsName();
+
+const setGameProfilePromptVisible = (visible) => {
+  if (!gameProfilePrompt) return;
+  gameProfilePrompt.classList.toggle("is-hidden", !visible);
+  gameProfilePrompt.setAttribute("aria-hidden", String(!visible));
+};
+
+const updateGameProfileRerollState = () => {
+  if (!gameStatsDraftProfile) return;
+  const remaining = Math.max(
+    0,
+    GAME_STATS_MAX_NAME_REROLLS - gameStatsDraftProfile.rerollCount
+  );
+  if (gameProfileReroll) gameProfileReroll.disabled = remaining <= 0;
+  if (gameProfileRerollCount) {
+    gameProfileRerollCount.textContent = `${remaining} left`;
+  }
+};
+
+const renderGameProfileIconGallery = () => {
+  if (!gameProfileIconGallery || !gameStatsDraftProfile) return;
+  const filter = String(gameProfileIconSearch?.value || "").trim().toLowerCase();
+  const icons = GAME_STATS_ICON_MANIFEST.filter((icon) =>
+    icon.filename.toLowerCase().includes(filter)
+  ).slice(0, 180);
+  gameProfileIconGallery.replaceChildren();
+  if (!icons.length) {
+    const empty = document.createElement("div");
+    empty.className = "game-stats-empty";
+    empty.textContent = "No matching icons.";
+    gameProfileIconGallery.append(empty);
+    return;
+  }
+  icons.forEach((icon) => {
+    const button = document.createElement("button");
+    button.className = "game-profile-icon-option";
+    button.type = "button";
+    button.classList.toggle("is-selected", icon.src === gameStatsDraftProfile.icon);
+    button.setAttribute("aria-selected", String(icon.src === gameStatsDraftProfile.icon));
+    const image = document.createElement("img");
+    image.src = icon.src;
+    image.alt = "";
+    const label = document.createElement("span");
+    label.textContent = icon.filename;
+    button.append(image, label);
+    button.addEventListener("click", () => {
+      gameStatsDraftProfile.icon = icon.src;
+      renderGameProfileIconGallery();
+    });
+    gameProfileIconGallery.append(button);
+  });
+};
+
+const resolveGameStatsProfilePrompt = (profile) => {
+  const resolve = gameStatsProfilePromptResolve;
+  gameStatsProfilePromptResolve = null;
+  gameStatsDraftProfile = null;
+  setGameProfilePromptVisible(false);
+  if (resolve) resolve(profile);
+};
+
+const requestGameStatsProfile = async () => {
+  if (gameStatsProfile) return gameStatsProfile;
+  if (!gameProfilePrompt || gameStatsProfilePromptResolve) return null;
+  const defaultIcon =
+    GAME_STATS_ICON_MANIFEST.find((icon) => icon.src === GAME_STATS_DEFAULT_ICON)?.src ||
+    GAME_STATS_ICON_MANIFEST[0]?.src ||
+    GAME_STATS_DEFAULT_ICON;
+  gameStatsDraftProfile = {
+    id: createGameStatsEventId().replace(/^local-/, "player-"),
+    name: await generateGameStatsName(),
+    icon: defaultIcon,
+    rerollCount: 0,
+  };
+  if (gameProfileName) gameProfileName.value = gameStatsDraftProfile.name;
+  if (gameProfileIconSearch) gameProfileIconSearch.value = "";
+  updateGameProfileRerollState();
+  renderGameProfileIconGallery();
+  setGameProfilePromptVisible(true);
+  requestAnimationFrame(() => gameProfileName?.focus());
+  return new Promise((resolve) => {
+    gameStatsProfilePromptResolve = resolve;
+  });
+};
+
+const recordGameStatsEvent = async (rawEvent) => {
+  const event = normalizeGameStatsEvent(rawEvent);
+  if (!event) return;
+  if (gameStatsEventQualifiesForLeaderboard(event)) {
+    const profile = await requestGameStatsProfile();
+    if (profile) event.profile = profile;
+  }
+  const applied = applyGameStatsEventToData(gameStatsLocalState, event);
+  if (!applied) return;
+  gameStatsLocalState.pendingEvents.push(event);
+  saveGameStatsLocalState();
+  renderGameStatsWindow();
+};
+
+const formatGameStatsCounter = (value, length = 3) =>
+  String(Math.max(0, Math.min(99999, Math.trunc(Number(value) || 0)))).padStart(
+    length,
+    "0"
+  );
+
+const appendGameStatsDigits = (container, value, length = 3) => {
+  const strip = document.createElement("span");
+  strip.className = "game-stats-digit-strip";
+  formatGameStatsCounter(value, length)
+    .slice(-length)
+    .split("")
+    .forEach((digit) => {
+      const image = document.createElement("img");
+      image.src = GAME_STATS_DIGIT_SOURCES[digit] || GAME_STATS_DIGIT_SOURCES[" "];
+      image.alt = digit;
+      strip.append(image);
+    });
+  container.append(strip);
+};
+
+const createGameStatsNode = (tagName, className, text = "") => {
+  const node = document.createElement(tagName);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
+};
+
+const appendGameStatsSummary = (container, label, localValue, globalValue) => {
+  const item = createGameStatsNode("div", "game-stats-inlay");
+  item.append(
+    createGameStatsNode("span", "game-stats-label", label),
+    createGameStatsNode(
+      "span",
+      "game-stats-value",
+      `Local ${localValue} / Global ${globalValue}`
+    )
+  );
+  container.append(item);
+};
+
+const appendGameStatsMetric = (container, entry) => {
+  if (entry.metricKind === "seconds") {
+    appendGameStatsDigits(container, entry.metric, 3);
+    return;
+  }
+  container.append(createGameStatsNode("span", "", String(entry.metric)));
+};
+
+const appendGameStatsLeaderboard = (
+  container,
+  title,
+  entries,
+  { medals = false } = {}
+) => {
+  const panel = createGameStatsNode("section", "game-stats-leaderboard");
+  panel.append(createGameStatsNode("div", "game-stats-section-title", title));
+  const list = createGameStatsNode("div", "game-stats-list");
+  if (!entries.length) {
+    list.append(createGameStatsNode("div", "game-stats-empty", "No entries yet."));
+  } else {
+    entries.forEach((entry, index) => {
+      const row = createGameStatsNode("div", "game-stats-row");
+      if (medals && GAME_STATS_MEDAL_SOURCES[index]) {
+        const medal = document.createElement("img");
+        medal.className = "game-stats-rank";
+        medal.src = GAME_STATS_MEDAL_SOURCES[index];
+        medal.alt = `${index + 1}`;
+        row.append(medal);
+      } else {
+        row.append(createGameStatsNode("span", "game-stats-rank", `#${index + 1}`));
+      }
+      const icon = document.createElement("img");
+      icon.className = "game-stats-player-icon";
+      icon.src = entry.icon;
+      icon.alt = "";
+      row.append(icon, createGameStatsNode("span", "game-stats-player-name", entry.name));
+      const metric = createGameStatsNode("span", "game-stats-metric");
+      appendGameStatsMetric(metric, entry);
+      row.append(metric);
+      list.append(row);
+    });
+  }
+  panel.append(list);
+  container.append(panel);
+};
+
+const renderGameStatsMinesweeper = (root) => {
+  const summary = createGameStatsNode("div", "game-stats-summary-grid");
+  GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
+    appendGameStatsSummary(
+      summary,
+      `${difficulty[0].toUpperCase()}${difficulty.slice(1)} wins`,
+      gameStatsLocalState.totals.minesweeper.wins[difficulty],
+      gameStatsPublishedState.totals.minesweeper.wins[difficulty]
+    );
+  });
+  root.append(summary);
+  GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
+    const grid = createGameStatsNode("div", "game-stats-leaderboard-grid");
+    const label = `${difficulty[0].toUpperCase()}${difficulty.slice(1)} fastest`;
+    appendGameStatsLeaderboard(
+      grid,
+      `${label} - Local`,
+      gameStatsLocalState.leaderboards.minesweeper[difficulty],
+      { medals: true }
+    );
+    appendGameStatsLeaderboard(
+      grid,
+      `${label} - Global`,
+      gameStatsPublishedState.leaderboards.minesweeper[difficulty],
+      { medals: true }
+    );
+    root.append(grid);
+  });
+};
+
+const renderGameStatsSolitaire = (root) => {
+  const summary = createGameStatsNode("div", "game-stats-summary-grid");
+  appendGameStatsSummary(
+    summary,
+    "Wins",
+    gameStatsLocalState.totals.solitaire.wins,
+    gameStatsPublishedState.totals.solitaire.wins
+  );
+  root.append(summary);
+  const grid = createGameStatsNode("div", "game-stats-leaderboard-grid");
+  appendGameStatsLeaderboard(grid, "Lowest moves - Local", gameStatsLocalState.leaderboards.solitaire);
+  appendGameStatsLeaderboard(
+    grid,
+    "Lowest moves - Global",
+    gameStatsPublishedState.leaderboards.solitaire
+  );
+  root.append(grid);
+};
+
+const renderGameStatsSnake = (root) => {
+  const summary = createGameStatsNode("div", "game-stats-summary-grid");
+  appendGameStatsSummary(
+    summary,
+    "Completed games",
+    gameStatsLocalState.totals.snake.totalGamesPlayed,
+    gameStatsPublishedState.totals.snake.totalGamesPlayed
+  );
+  GAME_STATS_SNAKE_BOARD_SIZES.forEach((size) => {
+    appendGameStatsSummary(
+      summary,
+      `${size}x${size} games`,
+      gameStatsLocalState.totals.snake.gamesPlayed[size],
+      gameStatsPublishedState.totals.snake.gamesPlayed[size]
+    );
+  });
+  root.append(summary);
+  GAME_STATS_SNAKE_BOARD_SIZES.forEach((size) => {
+    const grid = createGameStatsNode("div", "game-stats-leaderboard-grid");
+    appendGameStatsLeaderboard(
+      grid,
+      `${size}x${size} high scores - Local`,
+      gameStatsLocalState.leaderboards.snake[size]
+    );
+    appendGameStatsLeaderboard(
+      grid,
+      `${size}x${size} high scores - Global`,
+      gameStatsPublishedState.leaderboards.snake[size]
+    );
+    root.append(grid);
+  });
+};
+
+const renderGameStatsSudoku = (root) => {
+  const summary = createGameStatsNode("div", "game-stats-summary-grid");
+  GAME_STATS_SUDOKU_DIFFICULTIES.forEach((difficulty) => {
+    const localWins = gameStatsLocalState.totals.sudoku.wins[difficulty];
+    const globalWins = gameStatsPublishedState.totals.sudoku.wins[difficulty];
+    appendGameStatsSummary(
+      summary,
+      `${difficulty[0].toUpperCase()}${difficulty.slice(1)} no hints`,
+      localWins.noHints,
+      globalWins.noHints
+    );
+    appendGameStatsSummary(
+      summary,
+      `${difficulty[0].toUpperCase()}${difficulty.slice(1)} with hints`,
+      localWins.withHints,
+      globalWins.withHints
+    );
+  });
+  root.append(summary);
+};
+
+const renderGameStatsWindow = () => {
+  if (!gameStatsContent) return;
+  const pendingCount = gameStatsLocalState.pendingEvents.length;
+  if (gameStatsPendingCount) {
+    gameStatsPendingCount.textContent = `${pendingCount} pending`;
+  }
+  if (gameStatsExport) gameStatsExport.disabled = pendingCount === 0;
+  if (gameStatsTitle) {
+    const title = gameStatsCurrentGame
+      ? `${gameStatsCurrentGame[0].toUpperCase()}${gameStatsCurrentGame.slice(1)} Stats`
+      : "Game Stats";
+    gameStatsTitle.textContent = title;
+  }
+
+  gameStatsContent.replaceChildren();
+  if (gameStatsCurrentGame === "minesweeper") {
+    renderGameStatsMinesweeper(gameStatsContent);
+  } else if (gameStatsCurrentGame === "solitaire") {
+    renderGameStatsSolitaire(gameStatsContent);
+  } else if (gameStatsCurrentGame === "snake") {
+    renderGameStatsSnake(gameStatsContent);
+  } else if (gameStatsCurrentGame === "sudoku") {
+    renderGameStatsSudoku(gameStatsContent);
+  }
+};
+
+const exportPendingGameStats = () => {
+  if (!gameStatsLocalState.pendingEvents.length) return;
+  const payload = {
+    version: 1,
+    source: GAME_STATS_EXPORT_SOURCE,
+    exportedAt: new Date().toISOString(),
+    events: gameStatsLocalState.pendingEvents,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `rohin-game-stats-pending-${new Date()
+    .toISOString()
+    .replace(/[:.]/g, "-")}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const openGameStatsWindow = (game) => {
+  if (!["minesweeper", "solitaire", "snake", "sudoku"].includes(game)) return;
+  gameStatsCurrentGame = game;
+  renderGameStatsWindow();
+  setWindowOpen("game-stats", true);
+};
+
+const gameStatsPublishedState = normalizeGameStatsData(window.rohinGameStatsGlobal || {});
+let gameStatsLocalState = loadGameStatsLocalState();
+let gameStatsProfile = loadGameStatsProfile();
+let gameStatsCurrentGame = "minesweeper";
+let gameStatsProfilePromptResolve = null;
+let gameStatsDraftProfile = null;
+
+const removePublishedGameStatsPendingEvents = () => {
+  const publishedEventIds = new Set(gameStatsPublishedState.eventIds);
+  if (!publishedEventIds.size || !gameStatsLocalState.pendingEvents.length) return;
+  const pendingEvents = gameStatsLocalState.pendingEvents.filter(
+    (event) => !publishedEventIds.has(event.id)
+  );
+  if (pendingEvents.length === gameStatsLocalState.pendingEvents.length) return;
+  gameStatsLocalState.pendingEvents = pendingEvents;
+  saveGameStatsLocalState();
+};
+
+removePublishedGameStatsPendingEvents();
 
 let topZ = 10;
 let calendarDate = new Date();
@@ -4065,6 +4934,16 @@ const endSnakeGame = () => {
   snakeState.directionQueue = [];
   snakeState.running = false;
   snakeState.gameOver = true;
+  if (snakeState.hasStarted) {
+    recordGameStatsEvent(
+      createGameStatsEvent({
+        game: "snake",
+        type: "gamePlayed",
+        boardSize: String(snakeState.gridSize),
+        metric: snakeState.score,
+      })
+    );
+  }
   saveSnakeHighScores();
   updateSnakeHud();
   requestSnakeRender();
@@ -15712,6 +16591,15 @@ const checkSudokuBoard = () => {
   pauseSudokuTimer();
   if (!sudokuState.solved) {
     sudokuState.solved = true;
+    recordGameStatsEvent(
+      createGameStatsEvent({
+        game: "sudoku",
+        type: "win",
+        difficulty: sudokuState.difficulty,
+        hintBucket:
+          sudokuState.usedHint || sudokuState.usedReveal ? "withHints" : "noHints",
+      })
+    );
     triggerSudokuVictoryEffects();
     triggerRandomEvents("gameWin", { game: "sudoku" });
     scheduleSudokuSave();
@@ -22786,6 +23674,77 @@ closeButtons.forEach((button) => {
   });
 });
 
+gameStatsOpenButtons.forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openGameStatsWindow(button.getAttribute("data-game-stats-open"));
+  });
+});
+
+if (gameStatsExport) {
+  gameStatsExport.addEventListener("click", exportPendingGameStats);
+}
+
+if (gameProfileName) {
+  gameProfileName.addEventListener("input", () => {
+    if (!gameStatsDraftProfile) return;
+    gameStatsDraftProfile.name = gameProfileName.value;
+  });
+}
+
+if (gameProfileReroll) {
+  gameProfileReroll.addEventListener("click", async () => {
+    if (
+      !gameStatsDraftProfile ||
+      gameStatsDraftProfile.rerollCount >= GAME_STATS_MAX_NAME_REROLLS
+    ) {
+      return;
+    }
+    gameStatsDraftProfile.rerollCount += 1;
+    updateGameProfileRerollState();
+    gameProfileReroll.disabled = true;
+    const name = await generateGameStatsName();
+    gameStatsDraftProfile.name = name;
+    if (gameProfileName) gameProfileName.value = name;
+    updateGameProfileRerollState();
+  });
+}
+
+if (gameProfileIconSearch) {
+  gameProfileIconSearch.addEventListener("input", renderGameProfileIconGallery);
+}
+
+if (gameProfileSave) {
+  gameProfileSave.addEventListener("click", () => {
+    if (!gameStatsDraftProfile) return;
+    const profile = normalizeGameStatsProfile({
+      ...gameStatsDraftProfile,
+      name: gameProfileName?.value || gameStatsDraftProfile.name,
+    });
+    if (!profile) {
+      gameProfileName?.focus();
+      return;
+    }
+    saveGameStatsProfile(profile);
+    resolveGameStatsProfilePrompt(profile);
+  });
+}
+
+if (gameProfileCancel) {
+  gameProfileCancel.addEventListener("click", () => {
+    resolveGameStatsProfilePrompt(null);
+  });
+}
+
+document.addEventListener("keydown", (event) => {
+  if (!gameStatsProfilePromptResolve || event.key !== "Escape") return;
+  event.preventDefault();
+  resolveGameStatsProfilePrompt(null);
+});
+
+renderGameStatsWindow();
+
 document.addEventListener(
   "pointerdown",
   (event) => {
@@ -23242,6 +24201,14 @@ const msCheckWin = () => {
       if (cell.mine) cell.flagged = true;
     });
     msRenderAll();
+    recordGameStatsEvent(
+      createGameStatsEvent({
+        game: "minesweeper",
+        type: "win",
+        difficulty: msDifficulty?.value || "beginner",
+        metric: msState.elapsed,
+      })
+    );
     triggerRandomEvents("gameWin", { game: "minesweeper" });
   }
 };
@@ -23904,6 +24871,13 @@ const solTriggerVictoryEffects = () => {
   solStartFireworks();
   solShowAchievement();
   solPlayVictoryVideo();
+  recordGameStatsEvent(
+    createGameStatsEvent({
+      game: "solitaire",
+      type: "win",
+      metric: solState.moves,
+    })
+  );
   triggerRandomEvents("gameWin", { game: "solitaire" });
 };
 

@@ -1,5 +1,28 @@
 # Work Notes
 
+## 2026-07-19 Game Stats And Leaderboards
+
+- Chosen persistence model: local browser stats stay in `localStorage`, while
+  published/global stats live in a repo-tracked static script that can be
+  updated by a merge script before pushing.
+- This avoids pretending a static GitHub Pages site can receive arbitrary
+  visitor writes without a backend. Local play can still be folded into the
+  public totals by exporting pending events and merging them into the tracked
+  global data file.
+- Trophy controls should be regular title-bar buttons for Minesweeper,
+  Solitaire, Snake, and Sudoku, with one shared stats window rendering the
+  selected game's counters and leaderboards.
+- Leaderboard identity is device-local: a player profile is requested only
+  when a result qualifies for a leaderboard, then reused for later qualifying
+  results.
+- Verification: syntax checks pass for the stats runtime and merge script,
+  `node:test` covers merge/dedupe/sorting/category rejection/HTML wiring, and
+  headless browser QA confirmed the trophy stats window renders seeded local
+  Solitaire data plus pending-export state.
+- Follow-up adjustment: Minesweeper no longer shows the unused minimize
+  control, and the stats title-bar button uses Pixelarticons' base rounded
+  outline trophy instead of the sharp filled glyph.
+
 ## 2026-07-16 Resist Causality Window
 
 - Added a title-bar close control for the Resist Causality random event and

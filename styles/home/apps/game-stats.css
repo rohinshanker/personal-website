@@ -1,0 +1,257 @@
+.game-stats-window {
+  width: min(94vw, 560px);
+}
+
+.game-stats-window .window-body {
+  max-height: min(72vh, 620px);
+  min-height: 0;
+  overflow: auto;
+}
+
+.game-stats-app {
+  display: grid;
+  gap: 8px;
+}
+
+.game-stats-toolbar {
+  align-items: center;
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 6px;
+}
+
+.game-stats-toolbar button {
+  min-width: 136px;
+}
+
+.game-stats-toolbar span {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.game-stats-content {
+  display: grid;
+  gap: 8px;
+}
+
+.game-stats-summary-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-stats-inlay,
+.game-stats-leaderboard {
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  padding: 8px;
+}
+
+.game-stats-inlay {
+  display: grid;
+  gap: 3px;
+}
+
+.game-stats-label {
+  color: #333;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.game-stats-value {
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.game-stats-section-title {
+  align-items: center;
+  display: flex;
+  font-size: 12px;
+  font-weight: bold;
+  justify-content: space-between;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.game-stats-leaderboard-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-stats-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+
+.game-stats-row {
+  align-items: center;
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: grid;
+  gap: 5px;
+  grid-template-columns: 20px 24px minmax(0, 1fr) auto;
+  min-height: 32px;
+  padding: 4px;
+}
+
+.game-stats-rank,
+.game-stats-player-icon {
+  height: 20px;
+  image-rendering: pixelated;
+  width: 20px;
+}
+
+.game-stats-player-icon {
+  display: block;
+  object-fit: contain;
+}
+
+.game-stats-player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-stats-empty {
+  color: #555;
+  font-size: 11px;
+  padding: 4px 2px;
+}
+
+.game-stats-digit-strip {
+  align-items: center;
+  background: #000;
+  box-shadow: inset 1px 1px 0 #222, inset -1px -1px 0 #555;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 24px;
+  justify-content: center;
+  padding: 2px 3px;
+}
+
+.game-stats-digit-strip img {
+  display: block;
+  height: 20px;
+  image-rendering: pixelated;
+  width: 12px;
+}
+
+.game-profile-prompt {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.32);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 20000;
+}
+
+.game-profile-prompt.is-hidden {
+  display: none;
+}
+
+.game-profile-dialog {
+  max-width: min(94vw, 520px);
+  width: 520px;
+}
+
+.game-profile-body {
+  display: grid;
+  gap: 8px;
+}
+
+.game-profile-name-row {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.game-profile-name-row input,
+.game-profile-search-label + input {
+  min-width: 0;
+}
+
+.game-profile-name-row button {
+  min-width: 62px;
+}
+
+.game-profile-name-row span {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.game-profile-search-label {
+  font-size: 11px;
+}
+
+.game-profile-icon-gallery {
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  max-height: min(42vh, 280px);
+  overflow: auto;
+  padding: 6px;
+}
+
+.game-profile-icon-option {
+  align-items: center;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  min-height: 68px;
+  min-width: 0;
+  padding: 5px 3px;
+}
+
+.game-profile-icon-option.is-selected {
+  background: #000080;
+  color: #fff;
+}
+
+.game-profile-icon-option img {
+  display: block;
+  height: 28px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  width: 28px;
+}
+
+.game-profile-icon-option span {
+  font-size: 10px;
+  line-height: 1.1;
+  max-width: 72px;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.game-profile-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 560px) {
+  .game-stats-summary-grid,
+  .game-stats-leaderboard-grid,
+  .game-profile-name-row {
+    grid-template-columns: 1fr;
+  }
+
+  .game-stats-toolbar,
+  .game-profile-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

@@ -1103,7 +1103,8 @@ test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
     assert.match(source, /random-events\.css\?v=fate-mobile-image-20260716/);
     assert.match(source, /cursors\.css\?v=cursor-titlebar-clickable-20260709/);
-    assert.match(source, /core\/dom\.js\?v=fate-title-close-20260716/);
-    assert.match(source, /main\.js\?v=fate-title-close-20260716/);
+    assert.match(source, /game-stats\.css\?v=game-stats-20260719/);
+    assert.match(source, /core\/dom\.js\?v=game-stats-20260719/);
+    assert.match(source, /main\.js\?v=game-stats-20260719/);
   }
 });

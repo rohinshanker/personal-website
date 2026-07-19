@@ -309,6 +309,14 @@ input[type="reset"]:disabled,
   background-position: top 2px left 5px;
 }
 
+.title-bar-controls button[aria-label="Stats"],
+.title-bar-controls button[aria-label].stats {
+  background-image: url("assets/icon/trophy.svg");
+  background-repeat: no-repeat;
+  background-position: top 1px left 2px;
+  background-size: 12px 12px;
+}
+
 .title-bar-controls button[aria-label="Close"],
 .title-bar-controls button[aria-label].close {
   margin-left: 2px;

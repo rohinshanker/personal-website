@@ -109,6 +109,7 @@
     <link rel="stylesheet" href="styles/home/apps/solitaire.css" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css" />
+    <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=game-stats-20260719" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=ekg-carousel-20260703" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
@@ -1468,7 +1469,7 @@
         <div class="title-bar">
           <div class="title-bar-text">Minesweeper</div>
           <div class="title-bar-controls">
-            <button aria-label="Minimize"></button>
+            <button class="game-stats-title-control" aria-label="Stats" data-game-stats-open="minesweeper"></button>
             <button aria-label="Help" id="ms-help"></button>
             <button aria-label="Close" data-close="minesweeper"></button>
           </div>
@@ -1515,6 +1516,7 @@
         <div class="title-bar">
           <div class="title-bar-text">Solitaire</div>
           <div class="title-bar-controls">
+            <button class="game-stats-title-control" aria-label="Stats" data-game-stats-open="solitaire"></button>
             <button aria-label="Help" id="sol-help"></button>
             <button aria-label="Close" data-close="solitaire"></button>
           </div>
@@ -1565,6 +1567,7 @@
         <div class="title-bar">
           <div class="title-bar-text">Snake</div>
           <div class="title-bar-controls">
+            <button class="game-stats-title-control" aria-label="Stats" data-game-stats-open="snake"></button>
             <button aria-label="Close" data-close="snake"></button>
           </div>
         </div>
@@ -1725,6 +1728,7 @@
         <div class="title-bar">
           <div class="title-bar-text">Sudoku</div>
           <div class="title-bar-controls">
+            <button class="game-stats-title-control" aria-label="Stats" data-game-stats-open="sudoku"></button>
             <button aria-label="Close" data-close="sudoku"></button>
           </div>
         </div>
@@ -1852,6 +1856,24 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="window app-window is-hidden game-stats-window" data-app-window="game-stats" id="game-stats-window">
+        <div class="title-bar">
+          <div class="title-bar-text" id="game-stats-title">Game Stats</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="game-stats"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="game-stats-app">
+            <div class="game-stats-toolbar">
+              <button type="button" id="game-stats-export">Export Pending Stats</button>
+              <span id="game-stats-pending-count" aria-live="polite">0 pending</span>
+            </div>
+            <div class="game-stats-content" id="game-stats-content"></div>
           </div>
         </div>
       </div>
@@ -2234,6 +2256,31 @@
               </a>
             </li>
           </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-profile-prompt is-hidden" id="game-profile-prompt" aria-hidden="true">
+      <div class="window game-profile-dialog" role="dialog" aria-modal="true" aria-labelledby="game-profile-title">
+        <div class="title-bar">
+          <div class="title-bar-text" id="game-profile-title">Leaderboard Profile</div>
+        </div>
+        <div class="window-body">
+          <div class="game-profile-body">
+            <div class="game-profile-name-row">
+              <label for="game-profile-name">Name</label>
+              <input type="text" id="game-profile-name" maxlength="32" autocomplete="off" />
+              <button type="button" id="game-profile-reroll">Reroll</button>
+              <span id="game-profile-reroll-count">5 left</span>
+            </div>
+            <label class="game-profile-search-label" for="game-profile-icon-search">Icon Search</label>
+            <input type="search" id="game-profile-icon-search" autocomplete="off" />
+            <div class="game-profile-icon-gallery" id="game-profile-icon-gallery" role="listbox" aria-label="Player icons"></div>
+            <div class="game-profile-actions">
+              <button type="button" id="game-profile-save">Save Profile</button>
+              <button type="button" id="game-profile-cancel">Skip Leaderboard</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -5026,8 +5073,10 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/core/dom.js?v=fate-title-close-20260716"></script>
+    <script src="scripts/home/game-stats-global.js?v=game-stats-20260719"></script>
+    <script src="scripts/home/app-icon-manifest.js?v=game-stats-20260719"></script>
+    <script src="scripts/home/core/dom.js?v=game-stats-20260719"></script>
     <script src="scripts/home/core/media.js?v=random-event-preload-20260703"></script>
-    <script src="scripts/home/main.js?v=fate-title-close-20260716"></script>
+    <script src="scripts/home/main.js?v=game-stats-20260719"></script>
   </body>
 </html>
