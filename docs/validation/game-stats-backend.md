@@ -1,10 +1,10 @@
 # Game Stats Backend Setup
 
-Purpose: Controlled Cloudflare Worker and D1 release, security, and production verification.
+Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 
-Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, and release synchronization.
+Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
 
-Last verified: 2026-07-24
+Last verified: 2026-07-25
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -15,7 +15,7 @@ Local browser stats remain useful offline. This backend stores public global
 statistics and leaderboards; it is not a trustworthy record for a competitive
 or high-stakes game.
 
-## Verified State — 2026-07-24
+## Verified State — 2026-07-25
 
 - The public Worker endpoint is
   `https://personal-site-game-stats.rohinshankerme.workers.dev`. Worker version
@@ -36,9 +36,16 @@ or high-stakes game.
   Minesweeper completion. The event returned `201` with `applied: true`,
   beginner wins incremented, the protected profile changed from no rank to
   rank 2 of 2 and appeared in the Top 3, and the browser queue drained.
-- A direct read-only D1 reconciliation found exactly the five matching rows:
-  four ordinary-profile game events and the protected-profile event. The
-  rendered stats windows agreed with D1 and reported no console or page errors.
+- A direct read-only D1 reconciliation originally found the five matching
+  verification events: four ordinary-profile game events and one protected
+  event. The rendered stats windows agreed with D1 and reported no console or
+  page errors.
+- On 2026-07-25, the requested production reset removed all 5 event rows, 11
+  session rows, and 3 rate-limit rows. Post-reset checks found zero application
+  rows and zero player identities, retained both migrations and all application
+  tables, returned `ok` from `PRAGMA quick_check`, and received empty event IDs
+  and leaderboards, zero numeric counters, and Minesweeper ranks with
+  `{ "rank": null, "totalPlayers": 0 }` from the public `/stats` endpoint.
 
 Do not invent a Worker URL from the account ID. After deploying, copy the URL
 from Wrangler's successful deployment output. A `workers.dev` URL is normally
@@ -458,6 +465,62 @@ version, and malformed metric are rejected. Test CORS with the expected origin
 and a different origin. Test a reused Turnstile token only after the complete
 Turnstile client flow is released.
 
+## Reset Production Game Data
+
+Use this only for an intentional full reset of server-held player and game
+state. It preserves the D1 database, schema, indexes, migrations, Worker,
+bindings, configuration, and secrets.
+
+The reset target is exactly:
+
+- `game_events`: game results and their public player identities;
+- `game_stat_sessions`: issued/consumed session state and keyed IP hashes; and
+- `game_stats_rate_limits`: event, session, and Administrator sign-in buckets.
+
+Do not delete `d1_migrations`, `_cf_KV`, `sqlite_sequence`, tables, indexes, or
+the database. Before deletion, inspect counts and capture the current Time
+Travel bookmark. Cloudflare maintains Time Travel automatically; keep the
+bookmark out of source and use it only for an approved recovery within the
+account's retention window.
+
+```bash
+cd workers/game-stats
+npx wrangler d1 time-travel info personal_site_game_stats --json
+npx wrangler d1 execute personal_site_game_stats --remote \
+  --command "SELECT (SELECT COUNT(*) FROM game_events) AS game_events, (SELECT COUNT(*) FROM game_stat_sessions) AS game_stat_sessions, (SELECT COUNT(*) FROM game_stats_rate_limits) AS game_stats_rate_limits;" \
+  --json
+```
+
+Execute the three deletions as one semicolon-separated D1 batch. D1 batches
+are transactional; do not add explicit `BEGIN` or `COMMIT`.
+
+```bash
+npx wrangler d1 execute personal_site_game_stats --remote \
+  --command "DELETE FROM game_stat_sessions; DELETE FROM game_events; DELETE FROM game_stats_rate_limits;" \
+  --json
+```
+
+Verify the reset with a separate read. Expected results are zero application
+rows, the known migration count and names, and `quick_check = ok`.
+
+```bash
+npx wrangler d1 execute personal_site_game_stats --remote \
+  --command "SELECT (SELECT COUNT(*) FROM game_events) AS game_events, (SELECT COUNT(*) FROM game_stat_sessions) AS game_stat_sessions, (SELECT COUNT(*) FROM game_stats_rate_limits) AS game_stats_rate_limits, (SELECT COUNT(DISTINCT player_id) FROM game_events WHERE player_id IS NOT NULL) AS distinct_players, (SELECT COUNT(*) FROM d1_migrations) AS d1_migrations; SELECT id, name FROM d1_migrations ORDER BY id; PRAGMA quick_check;" \
+  --json
+```
+
+Finally, request public `/stats` both without a player ID and with a previously
+valid player ID. Both responses must have no event IDs, empty leaderboard
+arrays, every numeric counter in `totals` set to zero, and Minesweeper rank
+objects equal to `{ "rank": null, "totalPlayers": 0 }`. Do not submit a
+successful event as a smoke test because that would repopulate the reset
+database. Re-query D1 after the public reads to detect a concurrent write.
+
+This operation cannot erase profiles, progress, queues, or scores already held
+in visitors' browser storage. A separately approved frontend storage-epoch
+release can clear selected keys when a visitor next loads the site, but it
+cannot reach dormant browsers or already-open tabs before reload.
+
 ## Repository And GitHub Secret Protection
 
 Before every commit and release, run the repository guard:
@@ -519,6 +582,7 @@ session proofs, raw IPs, or IP HMACs to logs or analytics.
 
 - [Workers Wrangler configuration](https://developers.cloudflare.com/workers/wrangler/configuration/)
 - [D1 migrations](https://developers.cloudflare.com/d1/reference/migrations/)
+- [D1 Time Travel and backups](https://developers.cloudflare.com/d1/reference/time-travel/)
 - [D1 Wrangler commands](https://developers.cloudflare.com/workers/wrangler/commands/d1/)
 - [Workers secrets](https://developers.cloudflare.com/workers/configuration/secrets/)
 - [Workers custom domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/)
