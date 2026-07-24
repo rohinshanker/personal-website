@@ -101,7 +101,7 @@
       }
     </script>
     <link rel="preload" href="assets/mountain-and-sky.png" as="image" />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=first-win-stats-handoff-20260722" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cursor-titlebar-clickable-20260709" />
     <style>
       :root {
@@ -312,21 +312,21 @@
       let homeWarmupStarted = false;
       const homeWarmupResources = [
         ["styles/home/base.css?v=calendar-square-stack-20260617", "style"],
-        ["styles/home/apps/minesweeper.css", "style"],
+        ["styles/home/apps/minesweeper.css?v=minesweeper-mark-icons-20260722", "style"],
         ["styles/home/apps/solitaire.css", "style"],
         ["styles/home/apps/snake.css", "style"],
-        ["styles/home/apps/sudoku.css", "style"],
-        ["styles/home/apps/game-stats.css?v=game-stats-20260719", "style"],
+        ["styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722", "style"],
+        ["styles/home/apps/game-stats.css?v=profile-name-combobox-20260724", "style"],
         ["styles/home/apps/life-counter.css?v=counter-project-glow-20260703", "style"],
-        ["styles/home/portfolio.css?v=ekg-carousel-20260703", "style"],
+        ["styles/home/portfolio.css?v=carousel-hourglass-loader-20260722", "style"],
         ["styles/home/study-resources.css", "style"],
-        ["styles/home/random-events.css?v=fate-mobile-image-20260716", "style"],
+        ["styles/home/random-events.css?v=soot-custom-loading-cursor-20260723", "style"],
         ["styles/home/cursors.css?v=cursor-titlebar-clickable-20260709", "style"],
-        ["scripts/home/game-stats-global.js?v=game-stats-20260719", "script"],
-        ["scripts/home/app-icon-manifest.js?v=game-stats-20260719", "script"],
-        ["scripts/home/core/dom.js?v=game-stats-20260719", "script"],
-        ["scripts/home/core/media.js?v=random-event-preload-20260703", "script"],
-        ["scripts/home/main.js?v=game-stats-20260719", "script"],
+        ["scripts/home/game-stats-backend.js?v=game-build-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c", "script"],
+        ["scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721", "script"],
+        ["scripts/home/core/dom.js?v=game-build-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c", "script"],
+        ["scripts/home/core/media.js?v=media-priority-loader-20260723", "script"],
+        ["scripts/home/main.js?v=game-build-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c", "script"],
       ];
 
       const addHomeWarmupPrefetch = ([href, as]) => {

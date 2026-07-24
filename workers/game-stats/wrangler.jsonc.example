@@ -1,0 +1,32 @@
+{
+  "name": "personal-site-game-stats",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-07-21",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "d1_databases": [
+    {
+      "binding": "personal_site_game_stats",
+      "database_name": "personal_site_game_stats",
+      "database_id": "replace-with-d1-database-id",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "https://rohin.shanker.me",
+    "TURNSTILE_EXPECTED_HOSTNAME": "rohin.shanker.me",
+    "TURNSTILE_EXPECTED_ACTION": "game-session",
+    "GAME_BUILD_VERSION": "sha256-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c"
+  },
+  "secrets": {
+    "required": [
+      "EVENT_SIGNING_SECRET",
+      "IP_HASH_SECRET",
+      "ADMIN_USERNAME",
+      "ADMIN_PASSWORD",
+      "ADMIN_SESSION_SIGNING_SECRET"
+    ]
+  }
+}

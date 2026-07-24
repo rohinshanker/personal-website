@@ -384,6 +384,104 @@ body.is-holding-pointer-item * {
   padding: 2px 11px 0 13px;
 }
 
+.administrator-window {
+  width: min(352px, calc(100vw - 24px));
+}
+
+.administrator-window .window-body {
+  min-height: 0;
+}
+
+.administrator-window-body {
+  padding: 16px;
+}
+
+.administrator-sign-in-form {
+  display: grid;
+  gap: 12px;
+}
+
+.administrator-field {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 78px minmax(0, 1fr);
+}
+
+.administrator-field label {
+  min-width: 0;
+}
+
+.administrator-field input {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+
+.administrator-sign-in-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.administrator-sign-in-actions button {
+  min-width: 88px;
+}
+
+.administrator-alert-window {
+  width: min(328px, calc(100vw - 24px));
+}
+
+.administrator-alert-window .window-body {
+  min-height: 0;
+}
+
+.administrator-alert-body {
+  align-items: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 16px;
+}
+
+.administrator-alert-body p {
+  margin: 0;
+}
+
+.administrator-alert-icon {
+  align-items: center;
+  background: #ff0;
+  border: 1px solid #000;
+  border-radius: 50%;
+  color: #000;
+  display: inline-flex;
+  font-family: "Pixelated MS Sans Serif", "MS Sans Serif", sans-serif;
+  font-size: 17px;
+  font-weight: bold;
+  height: 26px;
+  justify-content: center;
+  line-height: 1;
+  width: 26px;
+}
+
+.administrator-alert-body button {
+  grid-column: 1 / -1;
+  justify-self: center;
+  min-width: 80px;
+}
+
+@media (max-width: 360px) {
+  .administrator-window-body {
+    padding: 12px;
+  }
+
+  .administrator-field {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
 body.is-custom-cursor-loading,
 body.is-custom-cursor-loading *:not(#custom-cursor-loading-override) {
   cursor: var(--cursor-working) !important;

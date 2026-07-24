@@ -573,72 +573,6 @@
   min-width: 84px;
 }
 
-.castle-gate-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(360px, calc(100vw - 32px));
-  z-index: 142;
-}
-
-.castle-gate-window.is-hidden {
-  display: none;
-}
-
-.castle-gate-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.castle-gate-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
-}
-
-.castle-gate-window .window-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.castle-gate-message {
-  align-items: center;
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 48px 1fr;
-}
-
-.castle-gate-message p {
-  font-weight: bold;
-  margin: 0;
-}
-
-.god-king-icon {
-  background: #090807;
-  border: 2px solid #6a3f13;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 242, 173, 0.52),
-    inset 0 -8px 12px rgba(0, 0, 0, 0.45),
-    1px 1px 0 #fff;
-  box-sizing: border-box;
-  display: block;
-  height: 48px;
-  object-fit: cover;
-  object-position: center top;
-  width: 48px;
-}
-
-.castle-gate-actions {
-  display: flex;
-  justify-content: center;
-}
-
-.castle-gate-actions button {
-  min-width: 84px;
-}
-
 .possum-springs-window {
   display: block;
   left: 50%;
@@ -3930,7 +3864,7 @@ html.is-wall-breach-shaking body {
 
 .soot-sprites-window.is-loading-sprites,
 .soot-sprites-window.is-loading-sprites * {
-  cursor: var(--cursor-busy, wait) !important;
+  cursor: var(--cursor-working) !important;
 }
 
 .soot-sprites-message img {
@@ -3943,6 +3877,15 @@ html.is-wall-breach-shaking body {
   pointer-events: none;
   position: fixed;
   z-index: 21000;
+}
+
+.soot-sprites-swarm.is-staged {
+  z-index: 0;
+}
+
+.soot-sprites-swarm.is-staged,
+.soot-sprites-swarm.is-staged * {
+  animation-play-state: paused;
 }
 
 .soot-sprite,

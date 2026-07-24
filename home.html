@@ -103,17 +103,17 @@
         ]
       }
     </script>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=first-win-stats-handoff-20260722" />
     <link rel="stylesheet" href="styles/home/base.css?v=calendar-square-stack-20260617" />
-    <link rel="stylesheet" href="styles/home/apps/minesweeper.css" />
+    <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-mark-icons-20260722" />
     <link rel="stylesheet" href="styles/home/apps/solitaire.css" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
-    <link rel="stylesheet" href="styles/home/apps/sudoku.css" />
-    <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=game-stats-20260719" />
+    <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722" />
+    <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=profile-name-combobox-20260724" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
-    <link rel="stylesheet" href="styles/home/portfolio.css?v=ekg-carousel-20260703" />
+    <link rel="stylesheet" href="styles/home/portfolio.css?v=carousel-hourglass-loader-20260722" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=fate-mobile-image-20260716" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=soot-custom-loading-cursor-20260723" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cursor-titlebar-clickable-20260709" />
   </head>
   <body>
@@ -173,6 +173,10 @@
       <button class="desktop-icon" data-app="sudoku" aria-label="Sudoku">
         <img src="assets/app-icons/ico/calendar2.ico" alt="" />
         <span class="desktop-icon-label">Sudoku</span>
+      </button>
+      <button class="desktop-icon" data-app="game-progress" aria-label="Game Progress">
+        <img src="assets/app-icons/ico/joystick_alt.ico" alt="" />
+        <span class="desktop-icon-label">Game Progress</span>
       </button>
       <button class="desktop-icon" data-app="life-counter" aria-label="Counter">
         <img src="assets/app-icons/ico/charmap_w2k.ico" alt="" />
@@ -1489,7 +1493,25 @@
                 <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
                 <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
               </div>
+              <button
+                class="ms-mark-control"
+                id="ms-flag-mode"
+                type="button"
+                data-ms-mark-mode="flag"
+                aria-label="Toggle flag placement mode"
+                aria-pressed="false"
+                title="Toggle flag placement mode"
+              ></button>
               <button class="ms-reset" id="ms-reset" data-face="smile" type="button" aria-label="New game"></button>
+              <button
+                class="ms-mark-control"
+                id="ms-question-mode"
+                type="button"
+                data-ms-mark-mode="question"
+                aria-label="Toggle question-mark placement mode"
+                aria-pressed="false"
+                title="Toggle question-mark placement mode"
+              ></button>
               <div class="ms-counter" id="ms-time" aria-label="Elapsed time">
                 <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
                 <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
@@ -1791,12 +1813,6 @@
                   <div class="sudoku-grid-frame">
                     <div class="sudoku-grid" id="sudoku-grid" aria-label="Sudoku board"></div>
                   </div>
-                  <div class="sudoku-actions">
-                    <button type="button" id="sudoku-new">New Game</button>
-                    <button type="button" id="sudoku-undo" disabled>Undo</button>
-                    <button type="button" id="sudoku-redo" disabled>Redo</button>
-                    <button type="button" id="sudoku-check">Check</button>
-                  </div>
                 </div>
                 <div class="sudoku-control-panel" aria-label="Sudoku controls">
                   <div class="sudoku-control-section">
@@ -1834,6 +1850,12 @@
                       <button type="button" data-sudoku-hint="reveal">Reveal</button>
                     </div>
                   </div>
+                  <div class="sudoku-actions">
+                    <button type="button" id="sudoku-new">New Game</button>
+                    <button type="button" id="sudoku-undo" disabled>Undo</button>
+                    <button type="button" id="sudoku-redo" disabled>Redo</button>
+                    <button type="button" id="sudoku-check">Check</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1860,20 +1882,209 @@
         </div>
       </div>
 
-      <div class="window app-window is-hidden game-stats-window" data-app-window="game-stats" id="game-stats-window">
+      <div
+        class="window app-window is-hidden game-stats-window"
+        data-app-window="game-stats-minesweeper"
+        data-game-stats-window="minesweeper"
+        id="game-stats-window-minesweeper"
+      >
         <div class="title-bar">
-          <div class="title-bar-text" id="game-stats-title">Game Stats</div>
+          <div class="title-bar-text" data-game-stats-title>Minesweeper Stats</div>
           <div class="title-bar-controls">
-            <button aria-label="Close" data-close="game-stats"></button>
+            <button aria-label="Close" data-close="game-stats-minesweeper"></button>
           </div>
         </div>
         <div class="window-body">
           <div class="game-stats-app">
-            <div class="game-stats-toolbar">
-              <button type="button" id="game-stats-export">Export Pending Stats</button>
-              <span id="game-stats-pending-count" aria-live="polite">0 pending</span>
-            </div>
-            <div class="game-stats-content" id="game-stats-content"></div>
+            <p class="game-stats-sync-status" data-game-stats-sync-status role="status"></p>
+            <div class="game-stats-content" data-game-stats-content></div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="window app-window is-hidden game-stats-window"
+        data-app-window="game-stats-solitaire"
+        data-game-stats-window="solitaire"
+        id="game-stats-window-solitaire"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" data-game-stats-title>Solitaire Stats</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="game-stats-solitaire"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="game-stats-app">
+            <p class="game-stats-sync-status" data-game-stats-sync-status role="status"></p>
+            <div class="game-stats-content" data-game-stats-content></div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="window app-window is-hidden game-stats-window"
+        data-app-window="game-stats-snake"
+        data-game-stats-window="snake"
+        id="game-stats-window-snake"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" data-game-stats-title>Snake Stats</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="game-stats-snake"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="game-stats-app">
+            <p class="game-stats-sync-status" data-game-stats-sync-status role="status"></p>
+            <div class="game-stats-content" data-game-stats-content></div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="window app-window is-hidden game-stats-window"
+        data-app-window="game-stats-sudoku"
+        data-game-stats-window="sudoku"
+        id="game-stats-window-sudoku"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" data-game-stats-title>Sudoku Stats</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="game-stats-sudoku"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="game-stats-app">
+            <p class="game-stats-sync-status" data-game-stats-sync-status role="status"></p>
+            <div class="game-stats-content" data-game-stats-content></div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="window app-window is-hidden portfolio-window game-progress-window"
+        data-app-window="game-progress"
+        id="game-progress-window"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text">Game Progress</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" data-close="game-progress"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="selector-panel game-progress-tab-panel">
+            <ul class="selector-list" aria-label="Game Progress tabs">
+              <li>
+                <button
+                  class="selector-item is-active"
+                  type="button"
+                  data-view="game-progress-profile"
+                >
+                  <img class="selector-thumb" src="assets/app-icons/ico/user_card.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Profile</span>
+                    <span class="selector-desc">Your local game identity</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="game-progress-minesweeper">
+                  <img class="selector-thumb" src="assets/app-icons/ico/minesweeper.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Minesweeper</span>
+                    <span class="selector-desc">Wins and best clears</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="game-progress-solitaire">
+                  <img class="selector-thumb" src="assets/app-icons/ico/game_freecell.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Solitaire</span>
+                    <span class="selector-desc">Wins and fewest moves</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="game-progress-snake">
+                  <img class="selector-thumb game-progress-snake-logo" src="assets/snake-assets/snake-logo.png" alt="" />
+                  <span>
+                    <span class="selector-title">Snake</span>
+                    <span class="selector-desc">Games played and high scores</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="game-progress-sudoku">
+                  <img class="selector-thumb" src="assets/app-icons/ico/calendar2.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Sudoku</span>
+                    <span class="selector-desc">Wins by difficulty</span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
+          <div class="viewer-panel game-progress-viewer-panel">
+            <section class="viewer-content game-progress-content" data-view="game-progress-profile">
+              <header class="game-progress-header">
+                <h3>Profile</h3>
+                <p>Local identity used for future verified wins.</p>
+              </header>
+              <div class="game-progress-profile-content" id="game-progress-profile-content">
+                <p class="game-progress-empty">Loading local profile…</p>
+              </div>
+              <div class="game-progress-actions">
+                <button type="button" id="game-progress-create-profile">Create Profile</button>
+                <button type="button" id="game-progress-reset-local">Reset Local Stats</button>
+              </div>
+              <p class="game-progress-reset-note">
+                Reset clears this browser’s game progress only. Published results remain on global stats and leaderboards.
+              </p>
+            </section>
+
+            <section class="viewer-content game-progress-content is-hidden" data-view="game-progress-minesweeper">
+              <header class="game-progress-header">
+                <h3>Minesweeper</h3>
+                <p>Local wins and personal records.</p>
+              </header>
+              <div class="game-progress-game-content" id="game-progress-minesweeper-content">
+                <p class="game-progress-empty">Loading local Minesweeper progress…</p>
+              </div>
+            </section>
+
+            <section class="viewer-content game-progress-content is-hidden" data-view="game-progress-solitaire">
+              <header class="game-progress-header">
+                <h3>Solitaire</h3>
+                <p>Local wins and personal record.</p>
+              </header>
+              <div class="game-progress-game-content" id="game-progress-solitaire-content">
+                <p class="game-progress-empty">Loading local Solitaire progress…</p>
+              </div>
+            </section>
+
+            <section class="viewer-content game-progress-content is-hidden" data-view="game-progress-snake">
+              <header class="game-progress-header">
+                <h3>Snake</h3>
+                <p>Local games played and high scores.</p>
+              </header>
+              <div class="game-progress-game-content" id="game-progress-snake-content">
+                <p class="game-progress-empty">Loading local Snake progress…</p>
+              </div>
+            </section>
+
+            <section class="viewer-content game-progress-content is-hidden" data-view="game-progress-sudoku">
+              <header class="game-progress-header">
+                <h3>Sudoku</h3>
+                <p>Local wins by difficulty and hint use.</p>
+              </header>
+              <div class="game-progress-game-content" id="game-progress-sudoku-content">
+                <p class="game-progress-empty">Loading local Sudoku progress…</p>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -2063,6 +2274,14 @@
         <div class="title-bar">
           <div class="title-bar-text">Cursor Settings</div>
           <div class="title-bar-controls">
+            <button
+              type="button"
+              id="cursor-settings-administrator"
+              class="help"
+              data-app="administrator"
+              aria-label="Administrator sign in"
+              title="Administrator sign in"
+            ></button>
             <button aria-label="Close" data-close="cursor"></button>
           </div>
         </div>
@@ -2074,6 +2293,74 @@
               <button type="button" id="cursor-settings-dark" data-cursor-mode="dark" aria-pressed="false">Dark</button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div
+        class="window app-window is-hidden administrator-window"
+        data-app-window="administrator"
+        id="administrator-window"
+        aria-labelledby="administrator-window-title"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" id="administrator-window-title">Administrator</div>
+          <div class="title-bar-controls">
+            <button type="button" aria-label="Close" data-close="administrator"></button>
+          </div>
+        </div>
+        <div class="window-body administrator-window-body">
+          <form id="administrator-sign-in-form" class="administrator-sign-in-form">
+            <div class="administrator-field">
+              <label for="administrator-username">Username</label>
+              <input
+                id="administrator-username"
+                name="username"
+                type="text"
+                autocomplete="username"
+                maxlength="128"
+                required
+              />
+            </div>
+            <div class="administrator-field">
+              <label for="administrator-password">Password</label>
+              <input
+                id="administrator-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                maxlength="1024"
+                required
+              />
+            </div>
+            <div class="administrator-sign-in-actions">
+              <button type="submit" id="administrator-sign-in" class="default">Sign In</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div
+        class="window app-window is-hidden administrator-alert-window"
+        data-app-window="administrator-alert"
+        id="administrator-alert-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="administrator-alert-title"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" id="administrator-alert-title">System Alert</div>
+          <div class="title-bar-controls">
+            <button type="button" aria-label="Close" data-close="administrator-alert"></button>
+          </div>
+        </div>
+        <div class="window-body administrator-alert-body">
+          <span class="administrator-alert-icon" aria-hidden="true">!</span>
+          <p>
+            <strong>Administrator Access Granted</strong>
+            <br />
+            Game Progress profile updated to rohin ^.^.
+          </p>
+          <button type="button" id="administrator-alert-close" class="default" data-close="administrator-alert">OK</button>
         </div>
       </div>
 
@@ -2261,18 +2548,77 @@
     </div>
 
     <div class="game-profile-prompt is-hidden" id="game-profile-prompt" aria-hidden="true">
-      <div class="window game-profile-dialog" role="dialog" aria-modal="true" aria-labelledby="game-profile-title">
+      <div
+        class="window game-profile-dialog"
+        id="game-profile-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="game-profile-title"
+      >
         <div class="title-bar">
           <div class="title-bar-text" id="game-profile-title">Leaderboard Profile</div>
+          <div class="title-bar-controls">
+            <button
+              class="close"
+              id="game-profile-close"
+              type="button"
+              aria-label="Close leaderboard profile"
+            ></button>
+          </div>
         </div>
         <div class="window-body">
           <div class="game-profile-body">
             <div class="game-profile-name-row">
-              <label for="game-profile-name">Name</label>
-              <input type="text" id="game-profile-name" maxlength="32" autocomplete="off" />
-              <button type="button" id="game-profile-reroll">Reroll</button>
-              <span id="game-profile-reroll-count">5 left</span>
+              <span class="game-profile-name-label" id="game-profile-name-label">Name</span>
+              <div class="game-profile-name-picker" id="game-profile-name-picker">
+                <input
+                  class="game-profile-generated-name"
+                  id="game-profile-name"
+                  type="text"
+                  autocomplete="off"
+                  readonly
+                  role="combobox"
+                  aria-autocomplete="none"
+                  aria-busy="false"
+                  aria-controls="game-profile-name-options"
+                  aria-expanded="false"
+                  aria-haspopup="listbox"
+                  aria-labelledby="game-profile-name-label"
+                  placeholder="Choose a generated name"
+                />
+                <button
+                  class="game-profile-name-toggle"
+                  id="game-profile-name-toggle"
+                  type="button"
+                  aria-label="Show generated names"
+                  aria-controls="game-profile-name-options"
+                  aria-expanded="false"
+                ><span aria-hidden="true">▼</span></button>
+                <div
+                  class="game-profile-name-options is-hidden"
+                  id="game-profile-name-options"
+                  role="listbox"
+                  aria-label="Generated names"
+                  aria-hidden="true"
+                ></div>
+              </div>
+              <button
+                class="game-profile-reroll"
+                type="button"
+                id="game-profile-reroll"
+                aria-label="Reroll generated name"
+              >
+                <img src="assets/app-icons/ico/charmap_w2k.ico" alt="" />
+                <span id="game-profile-reroll-label">Reroll</span>
+              </button>
+              <span id="game-profile-reroll-count" aria-live="polite">10 left</span>
             </div>
+            <p class="game-profile-name-credit">
+              via
+              <a href="https://perchance.org/sky-cotl-namegen" target="_blank" rel="noopener noreferrer">Sky Name Generator</a>
+              on
+              <a href="https://perchance.org/" target="_blank" rel="noopener noreferrer">Perchance</a>
+            </p>
             <label class="game-profile-search-label" for="game-profile-icon-search">Icon Search</label>
             <input type="search" id="game-profile-icon-search" autocomplete="off" />
             <div class="game-profile-icon-gallery" id="game-profile-icon-gallery" role="listbox" aria-label="Player icons"></div>
@@ -2327,6 +2673,9 @@
         </button>
         <button class="taskbar-icon" data-app="sudoku" aria-label="Sudoku">
           <img src="assets/app-icons/ico/calendar2.ico" alt="Sudoku" />
+        </button>
+        <button class="taskbar-icon" data-app="game-progress" aria-label="Game Progress">
+          <img src="assets/app-icons/ico/joystick_alt.ico" alt="Game Progress" />
         </button>
         <button class="taskbar-icon" data-app="life-counter" aria-label="Counter">
           <img src="assets/app-icons/ico/charmap_w2k.ico" alt="Counter" />
@@ -2742,26 +3091,6 @@
         </div>
         <div class="no-smoking-actions">
           <button type="button" id="no-smoking-ok">OK</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="window castle-gate-window is-hidden" id="castle-gate-window" aria-hidden="true">
-      <div class="title-bar">
-        <div class="title-bar-text">Castle Gate Alert</div>
-      </div>
-      <div class="window-body">
-        <div class="castle-gate-message">
-          <img
-            class="god-king-icon"
-            data-src="assets/random%20events/godking.webp"
-            decoding="async"
-            alt="God King"
-          />
-          <p>The God King Awaits.</p>
-        </div>
-        <div class="castle-gate-actions">
-          <button type="button" id="castle-gate-ok">OK</button>
         </div>
       </div>
     </div>
@@ -4575,7 +4904,7 @@
           <p>Wall Maria has been breached. All scouts to their posts!</p>
         </div>
         <div class="random-alert-actions wall-breach-actions">
-          <button type="button" id="wall-breach-suit-up">Suit up!</button>
+          <button type="button" id="wall-breach-suit-up">Copy that!</button>
         </div>
       </div>
     </div>
@@ -5073,10 +5402,10 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-global.js?v=game-stats-20260719"></script>
-    <script src="scripts/home/app-icon-manifest.js?v=game-stats-20260719"></script>
-    <script src="scripts/home/core/dom.js?v=game-stats-20260719"></script>
-    <script src="scripts/home/core/media.js?v=random-event-preload-20260703"></script>
-    <script src="scripts/home/main.js?v=game-stats-20260719"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c"></script>
+    <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c"></script>
+    <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
+    <script src="scripts/home/main.js?v=game-build-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c"></script>
   </body>
 </html>

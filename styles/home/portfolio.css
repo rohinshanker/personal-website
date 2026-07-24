@@ -488,6 +488,7 @@ body.is-resizing-window * {
   min-height: 0;
   overflow: hidden;
   padding: 2px;
+  position: relative;
   width: 100%;
 }
 
@@ -514,6 +515,30 @@ body.is-resizing-window * {
   height: 100%;
   display: block;
   object-fit: contain;
+}
+
+.gallery-loading-indicator {
+  align-items: center;
+  background: #fff;
+  display: flex;
+  inset: 2px;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.gallery-loading-indicator__image {
+  height: 100% !important;
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: cover !important;
+  width: 100% !important;
+}
+
+.gallery-loading-indicator--compact .gallery-loading-indicator__image {
+  object-fit: contain !important;
 }
 
 .gallery-scroll [hidden] {

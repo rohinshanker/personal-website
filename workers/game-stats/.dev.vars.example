@@ -1,0 +1,11 @@
+# Local-only secrets for `npx wrangler dev --local`.
+# Copy this file to `.dev.vars` and replace every placeholder before testing
+# session creation. Do not commit `.dev.vars`.
+# Do not commit `.dev.vars`.
+#
+# EVENT_SIGNING_SECRET="replace-with-a-long-random-local-secret"
+# IP_HASH_SECRET="replace-with-a-different-long-random-local-secret"
+# ADMIN_USERNAME="replace-with-a-local-administrator-username"
+# ADMIN_PASSWORD="replace-with-a-long-unique-local-administrator-password"
+# ADMIN_SESSION_SIGNING_SECRET="replace-with-a-third-long-random-local-secret"
+# ALLOWED_ORIGIN="http://127.0.0.1:8000"

@@ -181,6 +181,11 @@ input[type="reset"]:not(:disabled):active {
   text-shadow: 1px 1px var(--text-color);
 }
 
+.title-bar-controls .game-stats-title-control.is-pressed {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  text-shadow: 1px 1px var(--text-color);
+}
+
 button.default:not(:disabled):active,
 input[type="submit"].default:not(:disabled):active,
 input[type="reset"].default:not(:disabled):active {

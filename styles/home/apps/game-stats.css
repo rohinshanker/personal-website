@@ -2,10 +2,164 @@
   width: min(94vw, 560px);
 }
 
+#game-stats-window-minesweeper {
+  width: min(94vw, 627.2px);
+}
+
+#game-stats-window-solitaire {
+  width: min(94vw, 421.47px);
+}
+
+#game-stats-window-sudoku {
+  width: min(94vw, 627.2px);
+}
+
 .game-stats-window .window-body {
   max-height: min(72vh, 620px);
   min-height: 0;
   overflow: auto;
+}
+
+.game-progress-window {
+  width: min(94vw, 680px);
+}
+
+/* This app uses the shared selectable-window behavior, but keeps its compact
+ * local-stat presentation independent of portfolio content styling. */
+.game-progress-window.game-progress-window .window-body {
+  height: auto;
+  max-height: min(70vh, 470px);
+}
+
+.game-progress-window .selector-panel {
+  flex-basis: clamp(156px, 34%, 214px);
+  width: clamp(156px, 34%, 214px);
+}
+
+.game-progress-window .selector-item {
+  grid-template-columns: 28px minmax(0, 1fr);
+  padding: 6px;
+}
+
+.game-progress-window .selector-thumb {
+  height: 28px;
+  image-rendering: pixelated;
+  width: 28px;
+}
+
+.game-progress-window .game-progress-snake-logo {
+  image-rendering: auto;
+}
+
+.game-progress-window .selector-desc {
+  line-height: 1.2;
+}
+
+.game-progress-viewer-panel {
+  display: block;
+}
+
+.game-progress-content {
+  align-content: start;
+  align-items: start;
+  display: grid;
+  gap: 10px;
+}
+
+.game-progress-header h3 {
+  font-size: 16px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.game-progress-header p,
+.game-progress-reset-note {
+  color: #444;
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 3px 0 0;
+}
+
+.game-progress-profile-content,
+.game-progress-game-content {
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  min-height: 0;
+  padding: 8px;
+}
+
+.game-stats-row.game-progress-profile-row {
+  grid-template-areas: "icon name saved";
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+}
+
+.game-progress-profile-row .game-stats-player-icon {
+  grid-area: icon;
+  height: 24px;
+  width: 24px;
+}
+
+.game-progress-profile-name {
+  font-size: 14px;
+  font-weight: bold;
+  grid-area: name;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
+  white-space: normal;
+}
+
+.game-progress-profile-saved {
+  align-self: center;
+  color: #008000;
+  font-weight: bold;
+  grid-area: saved;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.game-progress-empty {
+  color: #555;
+  font-size: 11px;
+  margin: 0;
+}
+
+.game-progress-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.game-progress-actions button {
+  align-self: center;
+}
+
+.game-progress-actions button:last-child {
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .game-progress-window.game-progress-window .window-body {
+    height: auto;
+    max-height: min(76vh, 640px);
+  }
+
+  .game-progress-window .selector-panel {
+    flex-basis: clamp(128px, 36%, 220px);
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .game-progress-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .game-progress-actions button:last-child {
+    margin-left: 0;
+  }
 }
 
 .game-stats-app {
@@ -13,24 +167,14 @@
   gap: 8px;
 }
 
-.game-stats-toolbar {
-  align-items: center;
+.game-stats-sync-status {
   background: var(--surface);
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
-  display: flex;
-  gap: 8px;
-  justify-content: space-between;
-  min-height: 34px;
-  padding: 6px;
-}
-
-.game-stats-toolbar button {
-  min-width: 136px;
-}
-
-.game-stats-toolbar span {
+  color: #333;
   font-size: 11px;
-  white-space: nowrap;
+  line-height: 1.35;
+  margin: 0;
+  padding: 6px 8px;
 }
 
 .game-stats-content {
@@ -42,6 +186,21 @@
   display: grid;
   gap: 6px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-progress-snake-content {
+  display: grid;
+  gap: 6px;
+}
+
+.game-progress-snake-total .game-stats-inlay {
+  background: #fff;
+}
+
+.game-progress-sudoku-stats {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .game-stats-inlay,
@@ -84,6 +243,287 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.game-stats-minesweeper-columns {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.game-stats-sudoku-columns {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.game-stats-sudoku-column {
+  align-content: start;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.game-stats-snake-columns {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-stats-snake-column {
+  align-content: start;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.game-stats-leaderboard-template,
+.game-stats-minesweeper-column {
+  align-content: start;
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px;
+}
+
+.game-stats-leaderboard-template-heading,
+.game-stats-leaderboard-template-subheading,
+.game-stats-minesweeper-heading,
+.game-stats-minesweeper-subheading {
+  margin: 0;
+}
+
+.game-stats-leaderboard-template-heading,
+.game-stats-minesweeper-heading {
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.game-stats-leaderboard-template-subheading,
+.game-stats-minesweeper-subheading {
+  color: #333;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+.game-stats-leaderboard-template-list,
+.game-stats-minesweeper-list {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.game-stats-leaderboard-template-row,
+.game-stats-minesweeper-row {
+  align-items: center;
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: grid;
+  gap: 4px;
+  grid-template-areas: "medal player metric";
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  min-height: 28px;
+  padding: 3px;
+}
+
+.game-stats-minesweeper-medal,
+.game-stats-minesweeper-row .game-stats-minesweeper-player-icon,
+.game-stats-leaderboard-template-medal,
+.game-stats-leaderboard-template-row .game-stats-leaderboard-template-player-icon {
+  display: block;
+  grid-area: medal;
+  height: 22px;
+  image-rendering: pixelated;
+  justify-self: center;
+  object-fit: contain;
+  width: 22px;
+}
+
+.game-stats-minesweeper-player,
+.game-stats-leaderboard-template-player {
+  align-items: center;
+  display: flex;
+  font-size: 11px;
+  gap: 2px;
+  grid-area: player;
+  min-width: 0;
+}
+
+.game-stats-minesweeper-player-icon,
+.game-stats-leaderboard-template-player-icon {
+  display: block;
+  flex: 0 0 auto;
+  height: 14px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  width: 14px;
+}
+
+.game-stats-minesweeper-row .game-stats-metric {
+  grid-area: metric;
+  justify-self: end;
+}
+
+.game-stats-leaderboard-template-row .game-stats-metric {
+  grid-area: metric;
+  justify-self: end;
+}
+
+.game-stats-leaderboard-template-row .game-stats-metric--text {
+  align-items: center;
+  display: inline-flex;
+  font-family: "Pixelated MS Sans Serif", "MS Sans Serif", sans-serif;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+  justify-content: end;
+  line-height: 1;
+  min-height: 22px;
+  white-space: nowrap;
+}
+
+.game-stats-minesweeper-row .game-stats-player-name {
+  flex: 1 1 auto;
+  font-size: 11px;
+  min-width: 0;
+}
+
+.game-stats-leaderboard-template-row .game-stats-player-name {
+  flex: 1 1 auto;
+  font-size: 11px;
+  min-width: 0;
+}
+
+.game-stats-minesweeper-row .game-stats-digit-strip {
+  box-sizing: border-box;
+  height: 22px;
+  padding: 2px;
+}
+
+.game-stats-minesweeper-row .game-stats-digit-strip img {
+  height: 18px;
+  width: 11px;
+}
+
+.game-stats-leaderboard-template-row .game-stats-digit-strip {
+  box-sizing: border-box;
+  height: 22px;
+  padding: 2px;
+}
+
+.game-stats-leaderboard-template-row .game-stats-digit-strip img {
+  height: 18px;
+  width: 11px;
+}
+
+.game-stats-minesweeper-rank {
+  align-items: center;
+  display: flex;
+  font-size: 11px;
+  font-weight: bold;
+  grid-area: medal;
+  height: 22px;
+  justify-content: center;
+  justify-self: center;
+  line-height: 1;
+  width: 22px;
+}
+
+.game-stats-leaderboard-template-rank {
+  align-items: center;
+  display: flex;
+  font-size: 11px;
+  font-weight: bold;
+  grid-area: medal;
+  height: 22px;
+  justify-content: center;
+  justify-self: center;
+  line-height: 1;
+  width: 22px;
+}
+
+.game-stats-player-name.is-current-player {
+  color: #008000;
+}
+
+.game-stats-leaderboard-template-section,
+.game-stats-minesweeper-stat {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.game-stats-minesweeper-stat-value {
+  align-items: center;
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-sizing: border-box;
+  display: flex;
+  font-size: 16px;
+  font-weight: bold;
+  min-height: 28px;
+  padding: 3px;
+}
+
+.game-stats-leaderboard-template-stat-value {
+  align-items: center;
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-sizing: border-box;
+  display: flex;
+  font-size: 16px;
+  font-weight: bold;
+  min-height: 28px;
+  padding: 3px;
+}
+
+.game-stats-global-counter-value {
+  align-self: stretch;
+  justify-content: center;
+  min-width: 0;
+  padding: 3px;
+  width: 100%;
+}
+
+.game-stats-global-counter-value .game-stats-digit-strip {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  height: 22px;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px;
+  width: 100%;
+}
+
+.game-stats-global-counter-value .game-stats-digit-strip img {
+  flex: 0 0 auto;
+  height: 18px;
+  width: min(
+    11px,
+    calc(100% / var(--game-stats-digit-count, 1))
+  );
+}
+
+.game-stats-game-progress-handoff {
+  align-items: center;
+  display: flex;
+  font-size: 11px;
+  gap: 5px;
+  justify-content: center;
+  margin: 0;
+  text-align: center;
+}
+
+.game-stats-game-progress-handoff img {
+  height: 20px;
+  image-rendering: pixelated;
+  width: 20px;
+}
+
 .game-stats-list {
   display: grid;
   gap: 4px;
@@ -115,9 +555,43 @@
 }
 
 .game-stats-player-name {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.game-stats-player-name-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.game-stats-player-name.is-overflowing {
+  text-overflow: clip;
+}
+
+.game-stats-player-name.is-overflowing .game-stats-player-name-text {
+  animation: game-stats-player-name-marquee var(--game-stats-name-scroll-duration, 4s)
+    ease-in-out 700ms infinite alternate;
+  padding-right: 14px;
+}
+
+@keyframes game-stats-player-name-marquee {
+  0%,
+  18% {
+    transform: translateX(0);
+  }
+
+  82%,
+  100% {
+    transform: translateX(calc(-1 * var(--game-stats-name-scroll-distance, 0px)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-stats-player-name.is-overflowing .game-stats-player-name-text {
+    animation: none;
+  }
 }
 
 .game-stats-empty {
@@ -160,8 +634,23 @@
 }
 
 .game-profile-dialog {
+  left: 50%;
   max-width: min(94vw, 520px);
+  position: absolute;
+  top: 50%;
+  transform-origin: center;
+  translate: -50% -50%;
   width: 520px;
+}
+
+.game-profile-dialog.is-opening {
+  animation: retro-window-open 260ms steps(7, end) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-profile-dialog.is-opening {
+    animation-duration: 1ms;
+  }
 }
 
 .game-profile-body {
@@ -176,18 +665,140 @@
   grid-template-columns: auto minmax(0, 1fr) auto auto;
 }
 
-.game-profile-name-row input,
+.game-profile-name-picker {
+  min-width: 0;
+  position: relative;
+}
+
 .game-profile-search-label + input {
   min-width: 0;
 }
 
-.game-profile-name-row button {
-  min-width: 62px;
-}
-
+.game-profile-name-label,
 .game-profile-name-row span {
   font-size: 11px;
   white-space: nowrap;
+}
+
+.game-profile-generated-name {
+  background: #fff;
+  box-shadow: var(--border-field);
+  box-sizing: border-box;
+  color: #000;
+  font-size: 12px;
+  height: 21px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 25px 2px 4px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.game-profile-generated-name:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -3px;
+}
+
+.game-profile-name-toggle {
+  align-items: center;
+  background: #d4d0c8;
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  box-sizing: border-box;
+  display: inline-flex;
+  font-size: 8px;
+  height: 19px;
+  justify-content: center;
+  margin: 0;
+  min-height: 19px;
+  min-width: 19px;
+  padding: 0;
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  z-index: 1;
+}
+
+.game-profile-name-toggle:active,
+.game-profile-name-toggle[aria-expanded="true"] {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+.game-profile-name-options {
+  background: #fff;
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  display: grid;
+  gap: 0;
+  grid-column: 1 / -1;
+  left: 0;
+  max-height: 110px;
+  overflow-y: auto;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 1px);
+  z-index: 4;
+}
+
+.game-profile-name-options.is-hidden {
+  display: none;
+}
+
+.game-profile-name-option {
+  background: #fff;
+  border: 0;
+  box-shadow: none;
+  color: #000;
+  font: inherit;
+  min-height: 21px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 3px 5px;
+  text-align: left;
+  text-shadow: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-profile-name-option:hover,
+.game-profile-name-option:focus-visible,
+.game-profile-name-option.is-active {
+  background: #000080;
+  color: #fff;
+  outline: none;
+}
+
+.game-profile-reroll {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+  inline-size: 86px;
+  justify-content: flex-start;
+}
+
+.game-profile-reroll img {
+  flex: 0 0 auto;
+  height: 16px;
+  image-rendering: pixelated;
+  width: 16px;
+}
+
+.game-profile-reroll:disabled img {
+  opacity: 0.45;
+}
+
+.game-profile-reroll-label {
+  display: inline-block;
+  min-width: 38px;
+  text-align: center;
+}
+
+.game-profile-name-row > .game-profile-reroll {
+  min-width: 62px;
+}
+
+.game-profile-name-credit {
+  font-size: 11px;
+  margin: -2px 0 0;
 }
 
 .game-profile-search-label {
@@ -203,6 +814,30 @@
   max-height: min(42vh, 280px);
   overflow: auto;
   padding: 6px;
+  scrollbar-gutter: stable;
+}
+
+/* Chromium exposes two button slots at each end of a legacy scrollbar. Keep
+ * only the conventional up/down slots so the icon picker does not show paired
+ * arrows at either end. */
+.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:start:increment,
+.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:end:decrement {
+  display: none;
+  height: 0;
+}
+
+.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:start:decrement,
+.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:end:increment {
+  display: block;
+  height: 17px;
+}
+
+.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:start:decrement {
+  background-image: url("../../../assets/icon/button-up.svg");
+}
+
+.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:end:increment {
+  background-image: url("../../../assets/icon/button-down.svg");
 }
 
 .game-profile-icon-option {
@@ -249,7 +884,19 @@
     grid-template-columns: 1fr;
   }
 
-  .game-stats-toolbar,
+  .game-profile-name-picker {
+    min-height: 21px;
+    width: 100%;
+  }
+
+  .game-progress-snake-board-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .game-progress-sudoku-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .game-profile-actions {
     align-items: stretch;
     flex-direction: column;

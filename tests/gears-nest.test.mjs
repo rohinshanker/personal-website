@@ -94,6 +94,16 @@ test("blade lock event is not registered in debug mode", () => {
   assert.doesNotMatch(registration, /debug: true,/);
 });
 
+test("castle gate event and its exclusive God King asset are fully retired", async () => {
+  for (const source of [mainSource, domSource, homeSource, eventStyles]) {
+    assert.doesNotMatch(source, /castle-gate|godking|god king/i);
+  }
+
+  await assert.rejects(access(new URL("assets/random events/godking.webp", root)), {
+    code: "ENOENT",
+  });
+});
+
 test("blade lock event has a title-bar close control during setup and clash", () => {
   const windowStart = homeSource.indexOf('id="lancer-battle-window"');
   const windowEnd = homeSource.indexOf('id="brand-burns-window"', windowStart);
@@ -566,11 +576,17 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(mainSource, /const SOOT_SPRITES_DESKTOP_COUNT = 32;/);
   assert.match(mainSource, /const SOOT_SPRITES_MOBILE_COUNT = 20;/);
   assert.match(mainSource, /const SOOT_SPRITES_CLEANUP_MS = 27000;/);
+  assert.match(mainSource, /const SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS = 1000;/);
+  assert.doesNotMatch(mainSource, /SOOT_SPRITES_WINDOW_CLOSE_DURATION_MS/);
+  assert.doesNotMatch(mainSource, /SOOT_SPRITES_HOVER_DURATION_MS/);
+  assert.match(mainSource, /const SOOT_SPRITES_SPAWN_CLEARANCE = 64;/);
   assert.match(mainSource, /const SOOT_SPRITES_FALL_SAMPLE_COUNT = 12;/);
   assert.match(mainSource, /const SOOT_SPRITES_DIRECTION_SWITCH_CHANCE = 0\.55;/);
   assert.match(mainSource, /const SOOT_SPRITES_DIRECTION_SWITCH_MIN_DELAY_MS = 1000;/);
   assert.match(mainSource, /const SOOT_SPRITES_DIRECTION_SWITCH_MAX_DELAY_MS = 3000;/);
   assert.match(mainSource, /const SOOT_SPRITES_MIN_PATH_SPEED = 0\.22;/);
+  assert.match(mainSource, /const SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE = 2\.2;/);
+  assert.match(mainSource, /const SOOT_SPRITES_GROUND_RUN_CANDY_MULTIPLIER = 2;/);
   assert.doesNotMatch(mainSource, /SOOT_SPRITES_FALL_ACCELERATION_EXPONENT/);
   assert.match(mainSource, /const SOOT_CANDY_LANDING_PROGRESS = 0\.72;/);
   assert.match(mainSource, /const SOOT_CANDY_HOLD_AFTER_LANDING_MS = 4000;/);
@@ -617,8 +633,16 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(mainSource, /"--candy-hold-duration"[\s\S]*?SOOT_CANDY_HOLD_AFTER_LANDING_MS/);
   assert.match(mainSource, /"--candy-fade-duration"[\s\S]*?SOOT_CANDY_FADE_DURATION_MS/);
   assert.match(mainSource, /"--candy-fade-delay", `\$\{fadeDelay\}ms`/);
-  assert.match(mainSource, /const createSootSpriteTrajectory = \(launchRect\) =>/);
+  assert.match(mainSource, /const createSootSpriteSpawnGrid = \(launchRect, spriteCount\) =>/);
+  assert.match(mainSource, /const columns = Math\.max\([\s\S]*?Math\.round\(Math\.sqrt\(spriteCount \* aspectRatio\)\)/);
+  assert.match(mainSource, /const rows = Math\.ceil\(spriteCount \/ columns\);/);
+  assert.match(mainSource, /return Array\.from\(\{ length: spriteCount \}, \(_, index\) =>/);
+  assert.match(mainSource, /const createSootSpriteTrajectory = \(launchRect, \{ startPoint \} = \{\}\) =>/);
   assert.match(mainSource, /const size = Math\.round\(randomSootSpriteValue\(24, 40\)\);/);
+  assert.match(mainSource, /startPoint\.x - size \/ 2/);
+  assert.match(mainSource, /startPoint\.y - size \/ 2/);
+  assert.doesNotMatch(mainSource, /launchRect\.bottom \+ randomSootSpriteValue\(8, 24\)/);
+  assert.match(mainSource, /groundY - minimumFallDistance/);
   assert.match(mainSource, /const initialRunDirection = Math\.random\(\) < 0\.5 \? -1 : 1;/);
   assert.match(
     mainSource,
@@ -650,7 +674,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(mainSource, /fallLength \* 0\.25/);
   assert.match(mainSource, /fallLength \* 0\.5/);
   assert.match(mainSource, /fallLength \* 0\.75/);
-  assert.match(mainSource, /createSootSpriteElement\(index, trajectory\)/);
+  assert.match(mainSource, /createSootSpriteElement\(index, trajectory, \{ paused: true \}\)/);
   assert.match(mainSource, /createSootCandyElement\(launchRect\)/);
   assert.match(mainSource, /const size = Math\.round\(randomSootSpriteValue\(8, 14\)\);/);
   assert.match(mainSource, /const size = Math\.round\(randomSootSpriteValue\(6, 11\)\);/);
@@ -659,21 +683,31 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(mainSource, /"--puff-duration", `\$\{randomSootSpriteValue\(5400, 7600\)\}ms`/);
   assert.match(mainSource, /const size = randomSootSpriteValue\(76, 196\);/);
   assert.match(mainSource, /"--puff-duration", `\$\{randomSootSpriteValue\(5300, 7300\)\}ms`/);
-  assert.match(mainSource, /createSootTrailCandyElement\(trajectories\[index % trajectories\.length\], progress\)/);
   assert.match(mainSource, /createSootTrailPuffElement\(trajectories\[index % trajectories\.length\], index, progress\)/);
-  assert.match(mainSource, /const trailCandyCount = Math\.round\(spriteCount \* 4\.4\);/);
+  assert.match(mainSource, /const getSootSpriteAirTrailProgress = \(trajectory\) =>/);
+  assert.match(mainSource, /const getSootSpriteGroundRunProgress = \(trajectory\) =>/);
+  assert.match(mainSource, /const airTrailCandyCount = Math\.round\([\s\S]*?SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE/);
+  assert.match(mainSource, /const groundRunCandyCount = Math\.round\([\s\S]*?SOOT_SPRITES_GROUND_RUN_CANDY_MULTIPLIER/);
+  assert.match(mainSource, /createSootTrailCandyElement\(trajectory, getSootSpriteGroundRunProgress\(trajectory\)\)/);
   assert.match(mainSource, /const trailPuffCount = Math\.round\(spriteCount \* 1\.4\);/);
   assert.match(mainSource, /const candyCount = Math\.round\(spriteCount \* 1\.28\);/);
   assert.match(mainSource, /const puffCount = Math\.round\(spriteCount \* 0\.48\);/);
   assert.match(mainSource, /getSootSpritesGroundY\(size\)/);
   assert.match(mainSource, /document\.querySelector\("\.taskbar-apps"\)/);
   assert.match(mainSource, /document\.querySelector\("\.taskbar"\)/);
-  assert.match(mainSource, /const SOOT_SPRITES_CLOSE_AFTER_LOAD_MS = 120;/);
   assert.match(mainSource, /setSootSpritesWindowLoading\(true\);/);
+  assert.match(mainSource, /const getSootSpritesStagedZIndex = \(\) =>/);
+  assert.match(mainSource, /const reserveSootSpritesSpawnLane = \(\) =>/);
+  assert.match(mainSource, /toolbarTop - sootSpritesWindow\.offsetHeight - SOOT_SPRITES_SPAWN_CLEARANCE/);
+  assert.match(mainSource, /if \(didOpen\) reserveSootSpritesSpawnLane\(\);/);
+  assert.match(mainSource, /overlay\.style\.zIndex = String\(getSootSpritesStagedZIndex\(\)\);/);
   assert.match(
     mainSource,
-    /showSootSpritesSwarm\(launchRect\);[\s\S]*?window\.setTimeout\(\(\) => \{[\s\S]*?setSootSpritesWindowLoading\(false\);[\s\S]*?closeManagedRandomEventWindow\(sootSpritesWindow\);[\s\S]*?\}, SOOT_SPRITES_CLOSE_AFTER_LOAD_MS\);/
+    /showSootSpritesSwarm\(launchRect\);[\s\S]*?window\.requestAnimationFrame\(\(\) => \{[\s\S]*?window\.setTimeout\(\(\) => \{[\s\S]*?closeManagedRandomEventWindow\(sootSpritesWindow\);[\s\S]*?\}, SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS\);/
   );
+  assert.match(mainSource, /const releaseSootSpritesSwarm = \(\) => \{[\s\S]*?overlay\.classList\.remove\("is-staged"\);[\s\S]*?sootSpriteMotionAnimations\.get\(sprite\)\?\.play\(\);/);
+  assert.match(mainSource, /bindManagedRandomEventWindowAnimation\(sootSpritesWindow, \{[\s\S]*?afterClose: releaseSootSpritesSwarm,/);
+  assert.match(mainSource, /motion\.pause\(\);[\s\S]*?sootSpriteMotionAnimations\.set\(sprite, motion\);/);
   assert.doesNotMatch(
     mainSource,
     /const inspectSootSpritesGpu = \(\) => \{[\s\S]*?const launchRect = getSootSpritesLaunchRect\(\);[\s\S]*?closeManagedRandomEventWindow\(sootSpritesWindow\);[\s\S]*?showSootSpritesSwarm/
@@ -681,9 +715,67 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(getCssBlock(".soot-sprites-window"), /width: min\(372px, calc\(100vw - 32px\)\);/);
   assert.match(
     eventStyles,
-    /\.soot-sprites-window\.is-loading-sprites,[\s\S]*?\.soot-sprites-window\.is-loading-sprites \* \{[\s\S]*?cursor: var\(--cursor-busy, wait\) !important;/
+    /\.soot-sprites-window\.is-loading-sprites,[\s\S]*?\.soot-sprites-window\.is-loading-sprites \* \{[\s\S]*?cursor: var\(--cursor-working(?:, progress)?\) !important;/
   );
+  assert.doesNotMatch(
+    eventStyles,
+    /\.soot-sprites-window\.is-loading-sprites,[\s\S]*?\.soot-sprites-window\.is-loading-sprites \* \{[\s\S]*?--cursor-busy/
+  );
+  assert.match(
+    mainSource,
+    /const hasCustomCursorLoadingIndicator = \(\) =>[\s\S]*?sootSpritesWindow\?\.classList\.contains\("is-loading-sprites"\)[\s\S]*?isSootSpritesVisible\(\)/
+  );
+  const cursorWatcherStart = mainSource.indexOf("const initCustomCursorLoadingWatcher");
+  const cursorWatcherEnd = mainSource.indexOf(
+    "runAfterHomeActivation(initCustomCursorLoadingWatcher);",
+    cursorWatcherStart
+  );
+  assert.notEqual(cursorWatcherStart, -1, "Missing custom cursor loading watcher");
+  assert.notEqual(cursorWatcherEnd, -1, "Missing custom cursor loading watcher boundary");
+  const cursorLoadingWatcher = mainSource.slice(cursorWatcherStart, cursorWatcherEnd);
+  assert.match(cursorLoadingWatcher, /is-custom-cursor-loading-frame-\$\{frame\}/);
+  assert.doesNotMatch(cursorLoadingWatcher, /pointermove|mousemove|createElement/);
+  assert.match(
+    cursorStyles,
+    /--cursor-working: url\("\.\.\/\.\.\/assets\/cursor-assets\/Jeelh-Cursor-Light\/working-in-background-frames\/working-in-background-light-1\.png"\) 2 1,[\s\S]*?working-in-background-light-1\.cur"\),[\s\S]*?progress;/
+  );
+  assert.match(
+    cursorStyles,
+    /body\.is-cursor-dark-mode\.is-custom-cursor-loading-frame-1 \{[\s\S]*?working-in-background-1\.png"\) 2 1,[\s\S]*?working-in-background-1\.cur"\),[\s\S]*?progress;/
+  );
+  const cursorPreloadStart = mainSource.indexOf(
+    "const CUSTOM_CURSOR_PRELOAD_SOURCES = Object.freeze(["
+  );
+  const cursorPreloadEnd = mainSource.indexOf(
+    "]);",
+    cursorPreloadStart
+  );
+  assert.notEqual(cursorPreloadStart, -1, "Missing custom cursor preload sources");
+  assert.notEqual(cursorPreloadEnd, -1, "Missing custom cursor preload source boundary");
+  const cursorPreloadSources = mainSource.slice(cursorPreloadStart, cursorPreloadEnd);
+  for (const variant of [
+    {
+      directory: "Jeelh-Cursor-Light/working-in-background-frames",
+      prefix: "working-in-background-light-",
+    },
+    {
+      directory: "Jeelh-Cursor-Dark/working-in-background-frames",
+      prefix: "working-in-background-",
+    },
+  ]) {
+    for (let frame = 1; frame <= 9; frame += 1) {
+      const asset =
+        `assets/cursor-assets/${variant.directory}/${variant.prefix}${frame}.png`;
+      assert.match(cursorPreloadSources, new RegExp(asset));
+      await access(new URL(asset, root));
+    }
+  }
   assert.match(getCssBlock(".soot-sprites-swarm"), /position: fixed;/);
+  assert.match(getCssBlock(".soot-sprites-swarm.is-staged"), /z-index: 0;/);
+  assert.match(
+    eventStyles,
+    /\.soot-sprites-swarm\.is-staged,[\s\S]*?\.soot-sprites-swarm\.is-staged \* \{[\s\S]*?animation-play-state: paused;/
+  );
   assert.match(getCssBlock(".soot-sprite-body"), /border-radius: var\(--soot-body-radius\);/);
   assert.match(getCssBlock(".soot-sprite-body"), /filter: drop-shadow/);
   assert.match(getCssBlock(".soot-sprite-body"), /isolation: isolate;/);
@@ -965,7 +1057,7 @@ test("wall breach event shakes, flashes, and opens a probability-gated popup", a
   assert.match(homeSource, /class="random-alert-message wall-breach-message"/);
   assert.match(homeSource, /class="random-alert-actions wall-breach-actions"/);
   assert.match(homeSource, /Wall Maria has been breached\. All scouts to their posts!/);
-  assert.match(homeSource, /id="wall-breach-suit-up">Suit up!<\/button>/);
+  assert.match(homeSource, /id="wall-breach-suit-up">Copy that!<\/button>/);
   assert.match(homeSource, /data-src="assets\/random%20events\/wall-maria-logo\.png"/);
   assert.match(getCssBlock(".wall-breach-flash"), /background: #fff;/);
   assert.match(getCssBlock(".random-alert-message img"), /height: 48px;/);
@@ -1101,10 +1193,13 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=fate-mobile-image-20260716/);
+    assert.match(source, /random-events\.css\?v=soot-custom-loading-cursor-20260723/);
     assert.match(source, /cursors\.css\?v=cursor-titlebar-clickable-20260709/);
-    assert.match(source, /game-stats\.css\?v=game-stats-20260719/);
-    assert.match(source, /core\/dom\.js\?v=game-stats-20260719/);
-    assert.match(source, /main\.js\?v=game-stats-20260719/);
+    assert.match(source, /minesweeper\.css\?v=minesweeper-mark-icons-20260722/);
+    assert.match(source, /game-stats\.css\?v=profile-name-combobox-20260724/);
+    assert.match(source, /style\.css\?v=first-win-stats-handoff-20260722/);
+    assert.match(source, /core\/dom\.js\?v=game-build-[a-f0-9]{64}/);
+    assert.match(source, /game-stats-backend\.js\?v=game-build-[a-f0-9]{64}/);
+    assert.match(source, /main\.js\?v=game-build-[a-f0-9]{64}/);
   }
 });

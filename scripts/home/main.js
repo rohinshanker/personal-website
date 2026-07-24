@@ -3,6 +3,9 @@ const {
   fitImagesIntoFrames,
   loadDeferredMedia: loadDeferredMediaNow,
   preloadDeferredMedia: preloadDeferredMediaNow,
+  preloadDeferredMediaInOrder: preloadDeferredMediaInOrderNow,
+  preloadMediaSourcesAfter,
+  preloadMediaSourcesInOrder,
 } = window.homeMedia;
 const { dom } = window.homeDom;
 let homeActivationReady = !document.prerendering;
@@ -138,6 +141,14 @@ const preloadDeferredMedia = (root, visibleOnly = false) => {
   return preloadDeferredMediaNow(root, visibleOnly);
 };
 
+const preloadDeferredMediaInOrder = (root, options = {}) => {
+  if (!root) return Promise.resolve();
+  if (!isHomeActivationReady()) {
+    return whenHomeActivated.then(() => preloadDeferredMediaInOrder(root, options));
+  }
+  return preloadDeferredMediaInOrderNow(root, options);
+};
+
 runAfterHomeActivation(() => {
   requestAnimationFrame(() => {
     if (window.rohinHomePerf.firstDesktopPaintAt !== null) return;
@@ -169,6 +180,13 @@ const {
   snakeReset,
   snakeHelp,
   snakeDirectionButtons,
+  administratorWindow,
+  administratorSignInForm,
+  administratorUsername,
+  administratorPassword,
+  administratorSignIn,
+  administratorAlertWindow,
+  administratorAlertClose,
   sudokuWindow,
   sudokuApp,
   sudokuAeroPanel,
@@ -193,20 +211,22 @@ const {
   sudokuSolveMessage,
   sudokuSolveOk,
   sudokuAchievement,
-  gameStatsWindow,
-  gameStatsTitle,
-  gameStatsContent,
-  gameStatsExport,
-  gameStatsPendingCount,
+  gameStatsWindows,
   gameStatsOpenButtons,
   gameProfilePrompt,
+  gameProfileDialog,
+  gameProfileNamePicker,
   gameProfileName,
+  gameProfileNameToggle,
+  gameProfileNameOptions,
   gameProfileReroll,
+  gameProfileRerollLabel,
   gameProfileRerollCount,
   gameProfileIconSearch,
   gameProfileIconGallery,
   gameProfileSave,
   gameProfileCancel,
+  gameProfileClose,
   lifeCounterPlayers,
   lifeCounterAddPlayer,
   lifeCounterReset,
@@ -282,8 +302,6 @@ const {
   loveNoteOk,
   noSmokingWindow,
   noSmokingOk,
-  castleGateWindow,
-  castleGateOk,
   possumSpringsWindow,
   possumSpringsOk,
   wingedLightWindow,
@@ -993,13 +1011,29 @@ const LIFE_COUNTER_DIGIT_SOURCES = {
 };
 
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
+const GAME_STATS_SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
 const GAME_STATS_PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
-const GAME_STATS_EXPORT_SOURCE = "personal-website-game-stats";
-const GAME_STATS_PERCHANCE_NAME_URL =
-  "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true";
-const GAME_STATS_PERCHANCE_TIMEOUT_MS = 900;
-const GAME_STATS_MAX_NAME_REROLLS = 5;
+const GAME_STATS_MAX_SYNC_QUEUE_LENGTH = 100;
+const GAME_STATS_API_TIMEOUT_MS = 8000;
+const GAME_STATS_MAX_NAME_REROLLS = 10;
+const GAME_STATS_NAME_ROLL_COOLDOWN_MS = 3000;
+const GAME_STATS_NAME_SUGGESTION_COUNT = 5;
+const GAME_STATS_FIRST_WIN_TROPHY_PRESS_COUNT = 2;
+const GAME_STATS_FIRST_WIN_TROPHY_PRESS_MS = 120;
+const GAME_STATS_FIRST_WIN_TROPHY_RELEASE_MS = 100;
 const GAME_STATS_DEFAULT_ICON = "assets/app-icons/ico/user_card.ico";
+const GAME_STATS_EMPTY_LEADERBOARD_ICON = "assets/app-icons/ico/address_book_user.ico";
+const GAME_STATS_ROHIN_NEKO_AVATAR_ICON = "assets/neko-assets/sprites/yawn1.png";
+const GAME_STATS_ROHIN_NEKO_PROFILE = Object.freeze({
+  id: "player-rohin-neko",
+  name: "rohin ^.^",
+  icon: GAME_STATS_ROHIN_NEKO_AVATAR_ICON,
+  rerollCount: 0,
+});
+const GAME_STATS_API_ERROR_NAME = "API Error";
+const GAME_STATS_SKY_NAME_GENERATOR_URL =
+  "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true";
+const GAME_STATS_NAME_GENERATOR_TIMEOUT_MS = 8000;
 const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
 const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
   "easy",
@@ -1011,32 +1045,18 @@ const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
 ]);
 const GAME_STATS_SNAKE_BOARD_SIZES = Object.freeze(["10", "16", "20", "24"]);
 const GAME_STATS_HINT_BUCKETS = Object.freeze(["noHints", "withHints"]);
+const GAME_STATS_SUPPORTED_GAMES = Object.freeze([
+  "minesweeper",
+  "solitaire",
+  "snake",
+  "sudoku",
+]);
 const GAME_STATS_MEDAL_SOURCES = Object.freeze([
   "assets/minesweeper_assets/gold-medal.png",
   "assets/minesweeper_assets/silver-medal.png",
   "assets/minesweeper_assets/bronze-medal.png",
 ]);
 const GAME_STATS_DIGIT_SOURCES = LIFE_COUNTER_DIGIT_SOURCES;
-const GAME_STATS_NAME_SYLLABLES = Object.freeze([
-  "Ari",
-  "Asha",
-  "Ciel",
-  "Eli",
-  "Ira",
-  "Kai",
-  "Lio",
-  "Lumi",
-  "Mira",
-  "Nari",
-  "Ori",
-  "Rin",
-  "Sola",
-  "Tavi",
-  "Una",
-  "Vela",
-  "Wren",
-  "Yara",
-]);
 const GAME_STATS_ICON_MANIFEST = Object.freeze(
   (Array.isArray(window.rohinAppIconManifest) ? window.rohinAppIconManifest : [])
     .filter((filename) => /^[^/]+\.ico$/i.test(String(filename)))
@@ -1046,11 +1066,34 @@ const GAME_STATS_ICON_MANIFEST = Object.freeze(
     }))
 );
 
+const normalizeGameStatsBackendConfig = (rawConfig) => {
+  if (!rawConfig || typeof rawConfig !== "object") {
+    return { apiBaseUrl: "", buildVersion: "" };
+  }
+  const apiBaseUrl = String(rawConfig.apiBaseUrl || "").trim().replace(/\/+$/, "");
+  const buildVersion = String(rawConfig.buildVersion || "").trim();
+  if (!apiBaseUrl || !buildVersion) return { apiBaseUrl: "", buildVersion: "" };
+  try {
+    const url = new URL(apiBaseUrl);
+    if (!/^https?:$/.test(url.protocol)) throw new Error("Unsupported API protocol");
+  } catch {
+    return { apiBaseUrl: "", buildVersion: "" };
+  }
+  return { apiBaseUrl, buildVersion };
+};
+
+const gameStatsBackend = normalizeGameStatsBackendConfig(window.rohinGameStatsBackend);
+
 const createGameStatsEmptyMinesweeperWins = () =>
   Object.fromEntries(GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, 0]));
 
 const createGameStatsEmptyMinesweeperLeaderboards = () =>
   Object.fromEntries(GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, []]));
+
+const createGameStatsEmptyMinesweeperPlayerRanks = () =>
+  Object.fromEntries(
+    GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, { rank: null, totalPlayers: 0 }])
+  );
 
 const createGameStatsEmptySnakeGames = () =>
   Object.fromEntries(GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, 0]));
@@ -1066,11 +1109,18 @@ const createGameStatsEmptySudokuWins = () =>
     ])
   );
 
+const createGameStatsEmptySudokuBestTimes = () =>
+  Object.fromEntries(
+    GAME_STATS_SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, null])
+  );
+
+const createGameStatsEmptySudokuLeaderboards = () =>
+  Object.fromEntries(GAME_STATS_SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, []]));
+
 const createEmptyGameStatsData = () => ({
   version: 1,
   generatedAt: new Date(0).toISOString(),
   eventIds: [],
-  pendingEvents: [],
   totals: {
     minesweeper: { wins: createGameStatsEmptyMinesweeperWins() },
     solitaire: { wins: 0 },
@@ -1078,18 +1128,44 @@ const createEmptyGameStatsData = () => ({
       totalGamesPlayed: 0,
       gamesPlayed: createGameStatsEmptySnakeGames(),
     },
-    sudoku: { wins: createGameStatsEmptySudokuWins() },
+    sudoku: {
+      wins: createGameStatsEmptySudokuWins(),
+      bestTimes: createGameStatsEmptySudokuBestTimes(),
+    },
   },
   leaderboards: {
     minesweeper: createGameStatsEmptyMinesweeperLeaderboards(),
     solitaire: [],
     snake: createGameStatsEmptySnakeLeaderboards(),
+    sudoku: createGameStatsEmptySudokuLeaderboards(),
+  },
+  playerRanks: {
+    minesweeper: createGameStatsEmptyMinesweeperPlayerRanks(),
   },
 });
 
 const gameStatsPositiveInteger = (value) => {
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? Math.trunc(number) : 0;
+};
+
+const isGameStatsAllowedProfileIcon = (icon) =>
+  /^assets\/app-icons\/ico\/[^/]+\.ico$/.test(icon) ||
+  icon === GAME_STATS_ROHIN_NEKO_AVATAR_ICON;
+
+const gameStatsOptionalPositiveInteger = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? Math.trunc(number) : null;
+};
+
+const normalizeGameStatsPlayerRank = (value) => {
+  const totalPlayers = gameStatsPositiveInteger(value?.totalPlayers);
+  const rank = gameStatsPositiveInteger(value?.rank);
+  return {
+    rank: rank > 0 && rank <= totalPlayers ? rank : null,
+    totalPlayers,
+  };
 };
 
 const normalizeGameStatsIsoDate = (value) => {
@@ -1103,13 +1179,31 @@ const normalizeGameStatsProfile = (profile) => {
   const name = String(profile.name || "").trim().slice(0, 32);
   const icon = String(profile.icon || "").trim();
   const rerollCount = gameStatsPositiveInteger(profile.rerollCount);
-  if (!id || !name || !/^assets\/app-icons\/ico\/[^/]+\.ico$/.test(icon)) return null;
+  if (!id || !name || !isGameStatsAllowedProfileIcon(icon)) return null;
   return {
     id,
     name,
     icon,
     rerollCount: Math.min(GAME_STATS_MAX_NAME_REROLLS, rerollCount),
   };
+};
+
+const normalizeAdministratorSignInResponse = (payload) => {
+  if (!payload || typeof payload !== "object") return null;
+  const proof = String(payload.proof || "").trim();
+  const expiresAtMs = new Date(payload.expiresAt || "").getTime();
+  const profile = normalizeGameStatsProfile(payload.profile);
+  if (
+    !/^[A-Za-z0-9._~+=\/-]{16,4096}$/.test(proof) ||
+    !Number.isFinite(expiresAtMs) ||
+    expiresAtMs <= Date.now() ||
+    profile?.id !== GAME_STATS_ROHIN_NEKO_PROFILE.id ||
+    profile.name !== GAME_STATS_ROHIN_NEKO_PROFILE.name ||
+    profile.icon !== GAME_STATS_ROHIN_NEKO_AVATAR_ICON
+  ) {
+    return null;
+  }
+  return { proof, expiresAt: new Date(expiresAtMs).toISOString() };
 };
 
 const normalizeGameStatsLeaderboardEntries = (entries, direction, limit) =>
@@ -1136,11 +1230,16 @@ const normalizeGameStatsLeaderboardEntries = (entries, direction, limit) =>
     .sort((first, second) => compareGameStatsLeaderboardEntries(direction, first, second))
     .slice(0, limit);
 
-const normalizeGameStatsData = (rawData = {}) => {
+const normalizeGameStatsData = (
+  rawData = {},
+  { solitaireLeaderboardDirection = "asc" } = {}
+) => {
   const data = createEmptyGameStatsData();
   const totals = rawData && typeof rawData === "object" ? rawData.totals || {} : {};
   const leaderboards =
     rawData && typeof rawData === "object" ? rawData.leaderboards || {} : {};
+  const playerRanks =
+    rawData && typeof rawData === "object" ? rawData.playerRanks || {} : {};
 
   GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
     data.totals.minesweeper.wins[difficulty] = gameStatsPositiveInteger(
@@ -1151,12 +1250,15 @@ const normalizeGameStatsData = (rawData = {}) => {
       "asc",
       3
     );
+    data.playerRanks.minesweeper[difficulty] = normalizeGameStatsPlayerRank(
+      playerRanks.minesweeper?.[difficulty]
+    );
   });
 
   data.totals.solitaire.wins = gameStatsPositiveInteger(totals.solitaire?.wins);
   data.leaderboards.solitaire = normalizeGameStatsLeaderboardEntries(
     leaderboards.solitaire,
-    "asc",
+    solitaireLeaderboardDirection,
     5
   );
 
@@ -1180,15 +1282,20 @@ const normalizeGameStatsData = (rawData = {}) => {
         totals.sudoku?.wins?.[difficulty]?.[hintBucket]
       );
     });
+    data.totals.sudoku.bestTimes[difficulty] = gameStatsOptionalPositiveInteger(
+      totals.sudoku?.bestTimes?.[difficulty]
+    );
+    data.leaderboards.sudoku[difficulty] = normalizeGameStatsLeaderboardEntries(
+      leaderboards.sudoku?.[difficulty],
+      "asc",
+      3
+    );
   });
 
   data.generatedAt = normalizeGameStatsIsoDate(rawData.generatedAt);
   data.eventIds = Array.from(
     new Set((Array.isArray(rawData.eventIds) ? rawData.eventIds : []).map(String))
   ).filter((id) => /^[a-z0-9-]{8,80}$/.test(id));
-  data.pendingEvents = (Array.isArray(rawData.pendingEvents) ? rawData.pendingEvents : [])
-    .map(normalizeGameStatsEvent)
-    .filter(Boolean);
   return data;
 };
 
@@ -1280,14 +1387,31 @@ function normalizeGameStatsEvent(rawEvent) {
   if (game === "sudoku") {
     const difficulty = String(rawEvent.difficulty || "").trim();
     const hintBucket = String(rawEvent.hintBucket || "").trim();
+    const metricSource = rawEvent.metric ?? rawEvent.seconds;
+    const metric =
+      metricSource === undefined || metricSource === null || metricSource === ""
+        ? null
+        : normalizeGameStatsMetric(metricSource);
     if (
       type !== "win" ||
       !GAME_STATS_SUDOKU_DIFFICULTIES.includes(difficulty) ||
-      !GAME_STATS_HINT_BUCKETS.includes(hintBucket)
+      !GAME_STATS_HINT_BUCKETS.includes(hintBucket) ||
+      (metricSource !== undefined && metricSource !== null && metricSource !== "" &&
+        metric === null) ||
+      (metric !== null && String(rawEvent.metricKind || "seconds").trim() !== "seconds")
     ) {
       return null;
     }
-    return { id, game, type, occurredAt, difficulty, hintBucket, profile };
+    return {
+      id,
+      game,
+      type,
+      occurredAt,
+      difficulty,
+      hintBucket,
+      ...(metric === null ? {} : { metric, metricKind: "seconds" }),
+      profile,
+    };
   }
 
   return null;
@@ -1311,6 +1435,144 @@ const saveGameStatsLocalState = () => {
   }
 };
 
+const normalizeGameStatsSession = (rawSession) => {
+  if (!rawSession || typeof rawSession !== "object") return null;
+  const id = String(rawSession.id || rawSession.sessionId || "").trim();
+  const token = String(rawSession.token || rawSession.sessionToken || "").trim();
+  const expiresAt = String(rawSession.expiresAt || "").trim();
+  const expiresAtMs = new Date(expiresAt).getTime();
+  if (
+    !/^[A-Za-z0-9._~+\/-]{8,256}$/.test(id) ||
+    !/^[A-Za-z0-9._~+=\/-]{8,2048}$/.test(token) ||
+    !Number.isFinite(expiresAtMs)
+  ) {
+    return null;
+  }
+  return { id, token, expiresAt: new Date(expiresAtMs).toISOString() };
+};
+
+const normalizeGameStatsSubmission = (rawSubmission) => {
+  if (!rawSubmission || typeof rawSubmission !== "object") return null;
+  const event = normalizeGameStatsEvent(rawSubmission.event);
+  if (!event) return null;
+  return {
+    event,
+    session: normalizeGameStatsSession(rawSubmission.session),
+  };
+};
+
+const loadGameStatsSubmissionQueue = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(GAME_STATS_SYNC_QUEUE_STORAGE_KEY) || "[]");
+    if (!Array.isArray(stored)) return [];
+    return stored
+      .map(normalizeGameStatsSubmission)
+      .filter(Boolean)
+      .slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
+  } catch {
+    return [];
+  }
+};
+
+const saveGameStatsSubmissionQueue = () => {
+  try {
+    localStorage.setItem(
+      GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+      JSON.stringify(gameStatsSubmissionQueue)
+    );
+  } catch {
+    // Sync retries are best-effort when local storage is unavailable.
+  }
+};
+
+const isGameStatsBackendConfigured = () =>
+  Boolean(gameStatsBackend.apiBaseUrl && gameStatsBackend.buildVersion);
+
+const gameStatsApiUrl = (path) => `${gameStatsBackend.apiBaseUrl}${path}`;
+
+const fetchGameStatsApi = async (path, options = {}) => {
+  if (!isGameStatsBackendConfigured()) {
+    throw new Error("Automatic game tracking is not configured");
+  }
+  if (typeof fetch !== "function") throw new Error("Fetch is unavailable");
+
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const timeout = controller
+    ? window.setTimeout(() => controller.abort(), GAME_STATS_API_TIMEOUT_MS)
+    : 0;
+  try {
+    return await fetch(gameStatsApiUrl(path), {
+      ...options,
+      signal: controller?.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+  } finally {
+    if (timeout) window.clearTimeout(timeout);
+  }
+};
+
+const readGameStatsApiJson = async (response) => {
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+  if (!response.ok) {
+    const message = String(payload?.error || `Game stats request failed (${response.status})`);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
+};
+
+let gameStatsSessionSequence = 0;
+const gameStatsSessions = new Map();
+let gameStatsAdministratorProof = null;
+
+const getAdministratorEventHeaders = (profile) => {
+  if (profile?.id !== GAME_STATS_ROHIN_NEKO_PROFILE.id) return {};
+  const expiresAtMs = new Date(gameStatsAdministratorProof?.expiresAt || "").getTime();
+  if (
+    !gameStatsAdministratorProof?.proof ||
+    !Number.isFinite(expiresAtMs) ||
+    expiresAtMs <= Date.now()
+  ) {
+    gameStatsAdministratorProof = null;
+    return {};
+  }
+  return { Authorization: `Bearer ${gameStatsAdministratorProof.proof}` };
+};
+
+const startGameStatsSession = (game, config) => {
+  const sessionKey = `${game}-${Date.now().toString(36)}-${(gameStatsSessionSequence += 1)}`;
+  const sessionRequest = (async () => {
+    if (!isGameStatsBackendConfigured()) return null;
+    try {
+      const response = await fetchGameStatsApi("/sessions", {
+        method: "POST",
+        body: JSON.stringify({ game, config, buildVersion: gameStatsBackend.buildVersion }),
+      });
+      return normalizeGameStatsSession(await readGameStatsApiJson(response));
+    } catch {
+      return null;
+    }
+  })();
+  gameStatsSessions.set(sessionKey, sessionRequest);
+  return sessionKey;
+};
+
+const getGameStatsSession = async (sessionKey) => {
+  if (!sessionKey || !gameStatsSessions.has(sessionKey)) return null;
+  const sessionRequest = gameStatsSessions.get(sessionKey);
+  gameStatsSessions.delete(sessionKey);
+  return await sessionRequest;
+};
+
 const loadGameStatsProfile = () => {
   try {
     return normalizeGameStatsProfile(
@@ -1322,10 +1584,24 @@ const loadGameStatsProfile = () => {
 };
 
 const saveGameStatsProfile = (profile) => {
-  gameStatsProfile = normalizeGameStatsProfile(profile);
-  if (!gameStatsProfile) return;
+  if (gameStatsProfile) return gameStatsProfile;
+  const normalizedProfile = normalizeGameStatsProfile(profile);
+  if (!normalizedProfile) return null;
+  gameStatsProfile = normalizedProfile;
   try {
     localStorage.setItem(GAME_STATS_PROFILE_STORAGE_KEY, JSON.stringify(gameStatsProfile));
+  } catch {
+    // Profile identity is best-effort when local storage is unavailable.
+  }
+  return gameStatsProfile;
+};
+
+const clearGameStatsProfile = () => {
+  gameStatsProfile = null;
+  gameStatsAdministratorProof = null;
+  stopRohinNekoAvatarAnimation();
+  try {
+    localStorage.removeItem(GAME_STATS_PROFILE_STORAGE_KEY);
   } catch {
     // Profile identity is best-effort when local storage is unavailable.
   }
@@ -1391,9 +1667,25 @@ const applyGameStatsEventToData = (data, rawEvent) => {
     );
   } else if (event.game === "sudoku") {
     data.totals.sudoku.wins[event.difficulty][event.hintBucket] += 1;
+    if (event.hintBucket === "noHints" && Number.isFinite(event.metric)) {
+      data.leaderboards.sudoku[event.difficulty] = upsertGameStatsLeaderboardEntry(
+        data.leaderboards.sudoku[event.difficulty],
+        event,
+        3,
+        "asc"
+      );
+    }
   }
 
   return true;
+};
+
+const updateGameStatsSudokuBestTime = (data, difficulty, seconds) => {
+  const nextBestTime = gameStatsOptionalPositiveInteger(seconds);
+  if (nextBestTime === null) return;
+  const currentBestTime = data.totals.sudoku.bestTimes[difficulty];
+  data.totals.sudoku.bestTimes[difficulty] =
+    currentBestTime === null ? nextBestTime : Math.min(currentBestTime, nextBestTime);
 };
 
 const getGameStatsLeaderboardSpec = (event) => {
@@ -1405,18 +1697,18 @@ const getGameStatsLeaderboardSpec = (event) => {
       direction: "asc",
     };
   }
-  if (event.game === "solitaire") {
-    return {
-      entries: (data) => data.leaderboards.solitaire,
-      limit: 5,
-      direction: "asc",
-    };
-  }
   if (event.game === "snake") {
     return {
       entries: (data) => data.leaderboards.snake[event.boardSize],
       limit: 5,
       direction: "desc",
+    };
+  }
+  if (event.game === "sudoku" && event.hintBucket === "noHints") {
+    return {
+      entries: (data) => data.leaderboards.sudoku[event.difficulty],
+      limit: 3,
+      direction: "asc",
     };
   }
   return null;
@@ -1438,7 +1730,7 @@ const gameStatsEventQualifiesForData = (data, event) => {
 
 const gameStatsEventQualifiesForLeaderboard = (event) =>
   gameStatsEventQualifiesForData(gameStatsLocalState, event) ||
-  gameStatsEventQualifiesForData(gameStatsPublishedState, event);
+  gameStatsEventQualifiesForData(gameStatsGlobalState, event);
 
 const createGameStatsEvent = (payload) =>
   normalizeGameStatsEvent({
@@ -1447,46 +1739,235 @@ const createGameStatsEvent = (payload) =>
     ...payload,
   });
 
-const gameStatsRandomItem = (items) =>
-  items[Math.floor(Math.random() * items.length)];
-
-const generateFallbackGameStatsName = () => {
-  const first = gameStatsRandomItem(GAME_STATS_NAME_SYLLABLES);
-  const second = gameStatsRandomItem(GAME_STATS_NAME_SYLLABLES).toLowerCase();
-  return `${first}${second}`.slice(0, 18);
+const gameStatsRandomIndex = (length) => {
+  if (!Number.isInteger(length) || length < 1) return 0;
+  if (window.crypto?.getRandomValues) {
+    const values = new Uint32Array(1);
+    const unbiasedLimit = 0x100000000 - (0x100000000 % length);
+    do {
+      window.crypto.getRandomValues(values);
+    } while (values[0] >= unbiasedLimit);
+    return values[0] % length;
+  }
+  return Math.floor(Math.random() * length);
 };
 
-const fetchPerchanceGameStatsName = async () => {
-  if (typeof fetch !== "function" || typeof AbortController !== "function") return "";
+const parseGameStatsSkyNameList = (source, listName) => {
+  const lines = String(source || "").split(/\r?\n/);
+  const listStart = lines.findIndex((line) => line.trim() === listName);
+  if (listStart < 0) throw new Error("Sky name generator list is unavailable.");
+
+  const values = [];
+  for (let index = listStart + 1; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) continue;
+    if (/^[a-z][a-z0-9-]*$/i.test(line) && line.length > 1) break;
+    const match = line.match(/^([a-z])(?:\s+\^([0-9]+(?:\.[0-9]+)?))?$/i);
+    if (!match) throw new Error("Sky name generator list is invalid.");
+    const weight = Number(match[2] || "1");
+    const weightUnits = weight * 2;
+    if (!Number.isInteger(weightUnits) || weightUnits < 1 || weightUnits > 20) {
+      throw new Error("Sky name generator weight is invalid.");
+    }
+    for (let repeat = 0; repeat < weightUnits; repeat += 1) {
+      values.push(match[1].toLowerCase());
+    }
+  }
+  if (!values.length) throw new Error("Sky name generator list is empty.");
+  return values;
+};
+
+const parseGameStatsSkyNamePatterns = (source) => {
+  const lines = String(source || "").split(/\r?\n/);
+  const namesStart = lines.findIndex((line) => line.trim() === "names");
+  if (namesStart < 0) throw new Error("Sky name generator patterns are unavailable.");
+
+  const patterns = [];
+  for (let index = namesStart + 1; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (line === "vowels") break;
+    if (!line) continue;
+    const parts = [...line.matchAll(/\[(vowels|consonants)\]/g)].map((match) => match[1]);
+    if (!parts.length) throw new Error("Sky name generator pattern is invalid.");
+    if (
+      parts.length < 4 ||
+      parts.length > 8 ||
+      parts.some((part, partIndex) => partIndex > 0 && part === parts[partIndex - 1])
+    ) {
+      throw new Error("Sky name generator pattern is invalid.");
+    }
+    patterns.push(parts);
+  }
+  if (patterns.length !== 10) throw new Error("Sky name generator patterns are incomplete.");
+  return patterns;
+};
+
+const parseGameStatsSkyNameGrammar = (source) => {
+  const definition = String(source || "");
+  if (!/^title\s*=\s*Sky Name Generator\s*$/m.test(definition)) {
+    throw new Error("Sky name generator definition is invalid.");
+  }
+  const vowels = parseGameStatsSkyNameList(definition, "vowels");
+  if (vowels.length !== 10 || new Set(vowels).size !== 5 || vowels.some((vowel) => !"aeiou".includes(vowel))) {
+    throw new Error("Sky name generator vowels are invalid.");
+  }
+  return Object.freeze({
+    vowels,
+    consonants: parseGameStatsSkyNameList(definition, "consonants"),
+    patterns: parseGameStatsSkyNamePatterns(definition),
+  });
+};
+
+const createGameStatsSkyName = (grammar) => {
+  const pattern = grammar.patterns[gameStatsRandomIndex(grammar.patterns.length)];
+  const name = pattern
+    .map((part) => {
+      const values = grammar[part];
+      return values[gameStatsRandomIndex(values.length)];
+    })
+    .join("");
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+};
+
+let gameStatsSkyNameGrammar = null;
+
+const fetchGameStatsSkyNameGrammar = async () => {
+  if (typeof window.fetch !== "function") {
+    throw new Error("Name generator is unavailable.");
+  }
+  if (gameStatsSkyNameGrammar) return gameStatsSkyNameGrammar;
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), GAME_STATS_PERCHANCE_TIMEOUT_MS);
+  const timeoutId = window.setTimeout(
+    () => controller.abort(),
+    GAME_STATS_NAME_GENERATOR_TIMEOUT_MS
+  );
   try {
-    const response = await fetch(GAME_STATS_PERCHANCE_NAME_URL, {
+    const response = await window.fetch(GAME_STATS_SKY_NAME_GENERATOR_URL, {
       cache: "no-store",
+      credentials: "omit",
       signal: controller.signal,
     });
-    if (!response.ok) return "";
-    const text = await response.text();
-    const candidates = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => /^[A-Za-z][A-Za-z' -]{2,22}$/.test(line))
-      .filter((line) => !/^(output|name|random|import|title|html)$/i.test(line));
-    return candidates.length ? gameStatsRandomItem(candidates).slice(0, 32) : "";
-  } catch {
-    return "";
+    if (!response.ok) throw new Error("Name generator request failed.");
+    gameStatsSkyNameGrammar = parseGameStatsSkyNameGrammar(await response.text());
+    return gameStatsSkyNameGrammar;
   } finally {
-    window.clearTimeout(timer);
+    window.clearTimeout(timeoutId);
   }
 };
 
-const generateGameStatsName = async () =>
-  (await fetchPerchanceGameStatsName()) || generateFallbackGameStatsName();
+const fetchGameStatsName = async () =>
+  createGameStatsSkyName(await fetchGameStatsSkyNameGrammar());
+
+const fetchGameStatsNameSuggestions = async () => {
+  const grammar = await fetchGameStatsSkyNameGrammar();
+  const suggestions = [];
+  const attempts = GAME_STATS_NAME_SUGGESTION_COUNT * 8;
+  for (let index = 0; index < attempts && suggestions.length < GAME_STATS_NAME_SUGGESTION_COUNT; index += 1) {
+    const name = createGameStatsSkyName(grammar);
+    if (!suggestions.includes(name)) suggestions.push(name);
+  }
+  if (suggestions.length !== GAME_STATS_NAME_SUGGESTION_COUNT) {
+    throw new Error("Name generator did not provide enough unique names.");
+  }
+  return suggestions;
+};
+
+let gameStatsNameRollInFlight = false;
+let gameStatsNameRollId = 0;
+let gameStatsNameRollCooldownEndsAt = 0;
+let gameStatsNameRollCooldownTimer = null;
+let gameStatsDraftNameSuggestions = [];
+let gameStatsNameSuggestionsOpen = false;
+let gameStatsNameSuggestionActiveIndex = -1;
+let gameStatsPreserveNameSuggestionsAfterReroll = false;
 
 const setGameProfilePromptVisible = (visible) => {
   if (!gameProfilePrompt) return;
   gameProfilePrompt.classList.toggle("is-hidden", !visible);
   gameProfilePrompt.setAttribute("aria-hidden", String(!visible));
+  if (visible) {
+    gameProfileDialog?.classList.add("app-window--center");
+    gameProfileDialog?.style.removeProperty("left");
+    gameProfileDialog?.style.removeProperty("top");
+    gameProfileDialog?.style.removeProperty("translate");
+    restartWindowAnimation(gameProfileDialog, "is-opening");
+  }
+};
+
+const getGameStatsNameRollCooldownSeconds = () =>
+  Math.max(0, Math.ceil((gameStatsNameRollCooldownEndsAt - Date.now()) / 1000));
+
+const stopGameStatsNameRollCooldown = () => {
+  if (gameStatsNameRollCooldownTimer !== null) {
+    window.clearInterval(gameStatsNameRollCooldownTimer);
+    gameStatsNameRollCooldownTimer = null;
+  }
+  gameStatsNameRollCooldownEndsAt = 0;
+};
+
+const setGameProfileNameSuggestionsVisible = (visible) => {
+  const isVisible = Boolean(
+    visible &&
+      !gameStatsNameRollInFlight &&
+      gameStatsDraftNameSuggestions.length &&
+      gameProfileNameOptions
+  );
+  gameStatsNameSuggestionsOpen = isVisible;
+  gameProfileNameOptions?.classList.toggle("is-hidden", !isVisible);
+  gameProfileNameOptions?.setAttribute("aria-hidden", String(!isVisible));
+  gameProfileName?.setAttribute("aria-expanded", String(isVisible));
+  gameProfileNameToggle?.setAttribute("aria-expanded", String(isVisible));
+};
+
+const setGameProfileNameSuggestionActive = (index, { focus = false } = {}) => {
+  if (!gameProfileNameOptions || !gameStatsNameSuggestionsOpen) return;
+  const options = [...gameProfileNameOptions.querySelectorAll("[role='option']")];
+  if (!options.length) return;
+  const normalizedIndex = Number.isInteger(index) && index >= 0 && index < options.length ? index : -1;
+  gameStatsNameSuggestionActiveIndex = normalizedIndex;
+  options.forEach((option, optionIndex) => {
+    const isActive = optionIndex === normalizedIndex;
+    option.classList.toggle("is-active", isActive);
+  });
+  if (normalizedIndex === -1) {
+    gameProfileName?.removeAttribute("aria-activedescendant");
+    return;
+  }
+  gameProfileName?.setAttribute("aria-activedescendant", options[normalizedIndex].id);
+  if (focus) options[normalizedIndex].focus();
+};
+
+const selectGameStatsDraftName = (name) => {
+  if (!gameStatsDraftProfile || !gameStatsDraftNameSuggestions.includes(name)) return;
+  gameStatsDraftProfile.name = name;
+  gameStatsNameSuggestionActiveIndex = gameStatsDraftNameSuggestions.indexOf(name);
+  [...(gameProfileNameOptions?.querySelectorAll("[role='option']") || [])].forEach(
+    (option, optionIndex) => {
+      option.setAttribute(
+        "aria-selected",
+        String(gameStatsDraftNameSuggestions[optionIndex] === name)
+      );
+    }
+  );
+  setGameProfileNameSuggestionsVisible(false);
+  updateGameProfileRerollState();
+  gameProfileName?.focus();
+};
+
+const renderGameProfileNameSuggestions = () => {
+  if (!gameProfileNameOptions) return;
+  gameProfileNameOptions.replaceChildren();
+  gameStatsDraftNameSuggestions.forEach((name, index) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "game-profile-name-option";
+    option.id = `game-profile-name-option-${index}`;
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(name === gameStatsDraftProfile?.name));
+    option.textContent = name;
+    option.addEventListener("click", () => selectGameStatsDraftName(name));
+    gameProfileNameOptions.append(option);
+  });
 };
 
 const updateGameProfileRerollState = () => {
@@ -1495,18 +1976,104 @@ const updateGameProfileRerollState = () => {
     0,
     GAME_STATS_MAX_NAME_REROLLS - gameStatsDraftProfile.rerollCount
   );
-  if (gameProfileReroll) gameProfileReroll.disabled = remaining <= 0;
+  const cooldownSeconds = getGameStatsNameRollCooldownSeconds();
+  if (gameProfileName) {
+    gameProfileName.setAttribute("aria-busy", String(gameStatsNameRollInFlight));
+    gameProfileName.disabled = gameStatsNameRollInFlight;
+    gameProfileName.value = gameStatsDraftProfile.name;
+    gameProfileName.placeholder = gameStatsNameRollInFlight
+      ? "Loading generated names…"
+      : "Choose a generated name";
+  }
+  if (gameProfileNameToggle) {
+    gameProfileNameToggle.disabled = gameStatsNameRollInFlight || !gameStatsDraftNameSuggestions.length;
+  }
+  if (gameProfileReroll) {
+    gameProfileReroll.disabled =
+      remaining <= 0 || gameStatsNameRollInFlight || cooldownSeconds > 0;
+    gameProfileReroll.setAttribute(
+      "aria-label",
+      cooldownSeconds > 0
+        ? `Reroll available in ${cooldownSeconds} second${cooldownSeconds === 1 ? "" : "s"}`
+        : "Reroll generated name"
+    );
+  }
+  if (gameProfileRerollLabel) {
+    gameProfileRerollLabel.textContent = cooldownSeconds > 0 ? `${cooldownSeconds}s` : "Reroll";
+  }
+  if (gameProfileSave) {
+    gameProfileSave.disabled = gameStatsNameRollInFlight || !gameStatsDraftProfile.name.trim();
+  }
   if (gameProfileRerollCount) {
     gameProfileRerollCount.textContent = `${remaining} left`;
   }
 };
+
+const startGameStatsNameRollCooldown = () => {
+  stopGameStatsNameRollCooldown();
+  gameStatsNameRollCooldownEndsAt = Date.now() + GAME_STATS_NAME_ROLL_COOLDOWN_MS;
+  updateGameProfileRerollState();
+  gameStatsNameRollCooldownTimer = window.setInterval(() => {
+    if (getGameStatsNameRollCooldownSeconds() === 0) stopGameStatsNameRollCooldown();
+    updateGameProfileRerollState();
+  }, 250);
+};
+
+const rollGameStatsDraftName = async ({ isReroll = false } = {}) => {
+  if (
+    !gameStatsDraftProfile ||
+    gameStatsNameRollInFlight ||
+    (isReroll && getGameStatsNameRollCooldownSeconds() > 0)
+  ) {
+    return false;
+  }
+  if (isReroll) startGameStatsNameRollCooldown();
+  const rollId = ++gameStatsNameRollId;
+  gameStatsNameRollInFlight = true;
+  setGameProfileNameSuggestionsVisible(false);
+  updateGameProfileRerollState();
+  try {
+    const suggestions = await fetchGameStatsNameSuggestions();
+    if (!gameStatsDraftProfile || rollId !== gameStatsNameRollId) return false;
+    gameStatsDraftNameSuggestions = suggestions;
+    if (!isReroll || !gameStatsDraftProfile.name.trim()) {
+      gameStatsDraftProfile.name = suggestions[0];
+    }
+    gameStatsNameSuggestionActiveIndex = suggestions.indexOf(gameStatsDraftProfile.name);
+    renderGameProfileNameSuggestions();
+    return true;
+  } catch {
+    if (!gameStatsDraftProfile || rollId !== gameStatsNameRollId) return false;
+    if (!isReroll || !gameStatsDraftProfile.name.trim()) {
+      gameStatsDraftProfile.name = GAME_STATS_API_ERROR_NAME;
+      gameStatsDraftNameSuggestions = [];
+      renderGameProfileNameSuggestions();
+    }
+    return false;
+  } finally {
+    if (rollId !== gameStatsNameRollId) return;
+    gameStatsNameRollInFlight = false;
+    updateGameProfileRerollState();
+    setGameProfileNameSuggestionsVisible(Boolean(gameStatsDraftNameSuggestions.length));
+    if (gameStatsNameSuggestionsOpen) {
+      setGameProfileNameSuggestionActive(gameStatsNameSuggestionActiveIndex);
+    }
+  }
+};
+
+const getGameStatsProfileNameFromIcon = (filename) =>
+  String(filename || "")
+    .replace(/\.ico$/i, "")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .slice(0, 32);
 
 const renderGameProfileIconGallery = () => {
   if (!gameProfileIconGallery || !gameStatsDraftProfile) return;
   const filter = String(gameProfileIconSearch?.value || "").trim().toLowerCase();
   const icons = GAME_STATS_ICON_MANIFEST.filter((icon) =>
     icon.filename.toLowerCase().includes(filter)
-  ).slice(0, 180);
+  );
   gameProfileIconGallery.replaceChildren();
   if (!icons.length) {
     const empty = document.createElement("div");
@@ -1529,6 +2096,10 @@ const renderGameProfileIconGallery = () => {
     button.append(image, label);
     button.addEventListener("click", () => {
       gameStatsDraftProfile.icon = icon.src;
+      if (gameStatsDraftProfile.name === GAME_STATS_API_ERROR_NAME) {
+        gameStatsDraftProfile.name = getGameStatsProfileNameFromIcon(icon.filename);
+      }
+      updateGameProfileRerollState();
       renderGameProfileIconGallery();
     });
     gameProfileIconGallery.append(button);
@@ -1539,8 +2110,21 @@ const resolveGameStatsProfilePrompt = (profile) => {
   const resolve = gameStatsProfilePromptResolve;
   gameStatsProfilePromptResolve = null;
   gameStatsDraftProfile = null;
+  gameStatsNameRollId += 1;
+  gameStatsNameRollInFlight = false;
+  gameStatsDraftNameSuggestions = [];
+  gameStatsNameSuggestionsOpen = false;
+  gameStatsNameSuggestionActiveIndex = -1;
+  renderGameProfileNameSuggestions();
+  setGameProfileNameSuggestionsVisible(false);
+  stopGameStatsNameRollCooldown();
   setGameProfilePromptVisible(false);
+  renderGameProgressWindow();
   if (resolve) resolve(profile);
+};
+
+const skipGameStatsProfilePrompt = () => {
+  resolveGameStatsProfilePrompt(null);
 };
 
 const requestGameStatsProfile = async () => {
@@ -1550,56 +2134,265 @@ const requestGameStatsProfile = async () => {
     GAME_STATS_ICON_MANIFEST.find((icon) => icon.src === GAME_STATS_DEFAULT_ICON)?.src ||
     GAME_STATS_ICON_MANIFEST[0]?.src ||
     GAME_STATS_DEFAULT_ICON;
+  gameStatsNameRollId += 1;
+  gameStatsNameRollInFlight = false;
+  stopGameStatsNameRollCooldown();
   gameStatsDraftProfile = {
     id: createGameStatsEventId().replace(/^local-/, "player-"),
-    name: await generateGameStatsName(),
+    name: "",
     icon: defaultIcon,
     rerollCount: 0,
   };
-  if (gameProfileName) gameProfileName.value = gameStatsDraftProfile.name;
+  gameStatsDraftNameSuggestions = [];
+  gameStatsNameSuggestionsOpen = false;
+  gameStatsNameSuggestionActiveIndex = -1;
+  renderGameProfileNameSuggestions();
+  setGameProfileNameSuggestionsVisible(false);
   if (gameProfileIconSearch) gameProfileIconSearch.value = "";
   updateGameProfileRerollState();
   renderGameProfileIconGallery();
   setGameProfilePromptVisible(true);
-  requestAnimationFrame(() => gameProfileName?.focus());
+  void rollGameStatsDraftName();
+  requestAnimationFrame(() => gameProfileReroll?.focus());
   return new Promise((resolve) => {
     gameStatsProfilePromptResolve = resolve;
   });
 };
 
-const recordGameStatsEvent = async (rawEvent) => {
+const createGameProgressProfile = async () => {
+  if (gameStatsProfile) return gameStatsProfile;
+  const profile = await requestGameStatsProfile();
+  renderGameProgressWindow();
+  return profile;
+};
+
+const queueGameStatsSubmission = (event, session) => {
+  gameStatsSubmissionQueue.push({ event, session });
+  if (gameStatsSubmissionQueue.length > GAME_STATS_MAX_SYNC_QUEUE_LENGTH) {
+    gameStatsSubmissionQueue = gameStatsSubmissionQueue.slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
+  }
+  saveGameStatsSubmissionQueue();
+};
+
+const gameStatsLocalWinCount = (data) => {
+  const minesweeperWins = Object.values(data.totals.minesweeper.wins).reduce(
+    (total, wins) => total + wins,
+    0
+  );
+  const sudokuWins = Object.values(data.totals.sudoku.wins).reduce(
+    (total, difficultyWins) => total + difficultyWins.noHints + difficultyWins.withHints,
+    0
+  );
+  return minesweeperWins + data.totals.solitaire.wins + sudokuWins;
+};
+
+const isGameStatsFirstLocalWin = (event) =>
+  event.type === "win" && gameStatsLocalWinCount(gameStatsLocalState) === 0;
+
+const waitForGameStatsTrophyState = (delayMs) =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, delayMs);
+  });
+
+const playFirstGameStatsTrophyHandoff = async (game) => {
+  if (gameStatsFirstWinHandoffInProgress) return;
+  gameStatsFirstWinHandoffInProgress = true;
+  const trophyButton = Array.from(gameStatsOpenButtons).find(
+    (button) => button.getAttribute("data-game-stats-open") === game
+  );
+  const reduceMotion = Boolean(
+    typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+
+  try {
+    if (trophyButton && !reduceMotion) {
+      for (let press = 0; press < GAME_STATS_FIRST_WIN_TROPHY_PRESS_COUNT; press += 1) {
+        trophyButton.classList.add("is-pressed");
+        await waitForGameStatsTrophyState(GAME_STATS_FIRST_WIN_TROPHY_PRESS_MS);
+        trophyButton.classList.remove("is-pressed");
+        await waitForGameStatsTrophyState(GAME_STATS_FIRST_WIN_TROPHY_RELEASE_MS);
+      }
+    }
+    openGameStatsWindow(game);
+  } finally {
+    if (trophyButton?.classList.contains("is-pressed")) {
+      trophyButton.classList.remove("is-pressed");
+    }
+    gameStatsFirstWinHandoffInProgress = false;
+  }
+};
+
+const refreshGameStatsGlobalState = async () => {
+  if (!isGameStatsBackendConfigured()) return false;
+  try {
+    const playerId = gameStatsProfile?.id;
+    const statsPath = playerId ? `/stats?playerId=${encodeURIComponent(playerId)}` : "/stats";
+    const response = await fetchGameStatsApi(statsPath, { method: "GET" });
+    gameStatsGlobalState = normalizeGameStatsData(await readGameStatsApiJson(response), {
+      solitaireLeaderboardDirection: "desc",
+    });
+    gameStatsSyncMessage = "Global stats are up to date.";
+    renderGameStatsWindows();
+    return true;
+  } catch {
+    gameStatsSyncMessage = "Global stats are temporarily unavailable; local stats are still saved.";
+    renderGameStatsWindows();
+    return false;
+  }
+};
+
+const syncQueuedGameStats = async () => {
+  if (!isGameStatsBackendConfigured() || gameStatsSyncInProgress) return;
+  gameStatsSyncInProgress = true;
+  let rejectedCount = 0;
+  let waitingForSessionCount = 0;
+  const remainingSubmissions = [];
+
+  for (const submission of gameStatsSubmissionQueue) {
+    if (!submission.session) {
+      waitingForSessionCount += 1;
+      remainingSubmissions.push(submission);
+      continue;
+    }
+    if (new Date(submission.session.expiresAt).getTime() <= Date.now()) {
+      rejectedCount += 1;
+      continue;
+    }
+    try {
+      const response = await fetchGameStatsApi("/events", {
+        method: "POST",
+        headers: getAdministratorEventHeaders(submission.event.profile),
+        body: JSON.stringify({
+          event: submission.event,
+          session: {
+            id: submission.session.id,
+            token: submission.session.token,
+          },
+        }),
+      });
+      await readGameStatsApiJson(response);
+    } catch (error) {
+      if (Number(error?.status) >= 400 && Number(error.status) < 500) {
+        rejectedCount += 1;
+      } else {
+        remainingSubmissions.push(submission);
+      }
+    }
+  }
+
+  gameStatsSubmissionQueue = remainingSubmissions;
+  saveGameStatsSubmissionQueue();
+  gameStatsSyncInProgress = false;
+  if (waitingForSessionCount) {
+    gameStatsSyncMessage =
+      "Local stats are saved. A result without a verified game session cannot be published.";
+  } else if (rejectedCount) {
+    gameStatsSyncMessage =
+      "Local stats are saved, but a result could not pass server verification.";
+  } else if (gameStatsSubmissionQueue.length) {
+    gameStatsSyncMessage = "Verified results will retry automatically when the API is available.";
+  } else {
+    gameStatsSyncMessage = "Global stats are up to date.";
+  }
+  renderGameStatsWindows();
+  if (!gameStatsSubmissionQueue.length) await refreshGameStatsGlobalState();
+};
+
+const recordGameStatsEvent = async (
+  rawEvent,
+  sessionKey = "",
+  { sudokuNoHintsSeconds = null } = {}
+) => {
   const event = normalizeGameStatsEvent(rawEvent);
   if (!event) return;
-  if (gameStatsEventQualifiesForLeaderboard(event)) {
+  const isFirstLocalWin = isGameStatsFirstLocalWin(event);
+  const resetGeneration = gameStatsLocalResetGeneration;
+  if (
+    (!gameStatsProfile && event.type === "win") ||
+    gameStatsEventQualifiesForLeaderboard(event)
+  ) {
     const profile = await requestGameStatsProfile();
     if (profile) event.profile = profile;
   }
+  if (resetGeneration !== gameStatsLocalResetGeneration) return;
   const applied = applyGameStatsEventToData(gameStatsLocalState, event);
   if (!applied) return;
-  gameStatsLocalState.pendingEvents.push(event);
+  if (event.game === "sudoku" && event.hintBucket === "noHints") {
+    updateGameStatsSudokuBestTime(
+      gameStatsLocalState,
+      event.difficulty,
+      sudokuNoHintsSeconds
+    );
+  }
+  const session = await getGameStatsSession(sessionKey);
+  queueGameStatsSubmission(event, session);
   saveGameStatsLocalState();
-  renderGameStatsWindow();
+  gameStatsSyncMessage = session
+    ? "Saving verified result…"
+    : "Local stats are saved. This result started without a verified game session.";
+  renderGameStatsWindows();
+  void syncQueuedGameStats();
+  if (isFirstLocalWin) await playFirstGameStatsTrophyHandoff(event.game);
 };
 
 const formatGameStatsCounter = (value, length = 3) =>
-  String(Math.max(0, Math.min(99999, Math.trunc(Number(value) || 0)))).padStart(
-    length,
-    "0"
-  );
+  String(Math.max(0, Math.trunc(Number(value) || 0))).padStart(length, "0");
 
-const appendGameStatsDigits = (container, value, length = 3) => {
+const gameStatsDigitResizeObservers = new WeakMap();
+
+const disconnectGameStatsDigitResizeObservers = (container) => {
+  container?.querySelectorAll(".game-stats-digit-strip").forEach((strip) => {
+    const observer = gameStatsDigitResizeObservers.get(strip);
+    if (!observer) return;
+    observer.disconnect();
+    gameStatsDigitResizeObservers.delete(strip);
+  });
+};
+
+const appendGameStatsDigits = (
+  container,
+  value,
+  length = 3,
+  { decorative = false, fillWidth = false } = {}
+) => {
   const strip = document.createElement("span");
   strip.className = "game-stats-digit-strip";
-  formatGameStatsCounter(value, length)
-    .slice(-length)
-    .split("")
-    .forEach((digit) => {
+  if (decorative) strip.setAttribute("aria-hidden", "true");
+  const renderDigits = () => {
+    const availableDigitSlots = fillWidth
+      ? Math.floor(Math.max(0, strip.clientWidth - 4) / 11)
+      : 0;
+    const digitLength = Math.max(length, availableDigitSlots);
+    if (strip.dataset.gameStatsDigitLength === String(digitLength)) return;
+    const digits = formatGameStatsCounter(value, digitLength).slice(-digitLength);
+    strip.dataset.gameStatsDigitLength = String(digitLength);
+    strip.style.setProperty("--game-stats-digit-count", String(digits.length));
+    strip.replaceChildren();
+    digits.split("").forEach((digit) => {
       const image = document.createElement("img");
       image.src = GAME_STATS_DIGIT_SOURCES[digit] || GAME_STATS_DIGIT_SOURCES[" "];
-      image.alt = digit;
+      image.alt = decorative ? "" : digit;
       strip.append(image);
     });
+  };
+
+  renderDigits();
   container.append(strip);
+  if (fillWidth) {
+    window.requestAnimationFrame(renderDigits);
+    if (typeof ResizeObserver === "undefined") return;
+    const digitResizeObserver = new ResizeObserver(() => {
+      if (!strip.isConnected) {
+        digitResizeObserver.disconnect();
+        gameStatsDigitResizeObservers.delete(strip);
+        return;
+      }
+      renderDigits();
+    });
+    gameStatsDigitResizeObservers.set(strip, digitResizeObserver);
+    digitResizeObserver.observe(strip);
+  }
 };
 
 const createGameStatsNode = (tagName, className, text = "") => {
@@ -1630,6 +2423,65 @@ const appendGameStatsMetric = (container, entry) => {
   container.append(createGameStatsNode("span", "", String(entry.metric)));
 };
 
+const createGameStatsPlayerIcon = (source, className = "game-stats-player-icon") => {
+  const icon = document.createElement("img");
+  const fallback = GAME_STATS_DEFAULT_ICON;
+  icon.className = className;
+  icon.src = source || fallback;
+  icon.alt = "";
+  if (source === GAME_STATS_ROHIN_NEKO_AVATAR_ICON) {
+    icon.dataset.rohinNekoAvatar = "true";
+  }
+  icon.addEventListener(
+    "error",
+    () => {
+      icon.src = fallback;
+    },
+    { once: true }
+  );
+  return icon;
+};
+
+const createGameStatsPlayerName = (value, { currentPlayer = false } = {}) => {
+  const name = createGameStatsNode("span", "game-stats-player-name");
+  const fullName = String(value || "N/A");
+  const text = createGameStatsNode("span", "game-stats-player-name-text", fullName);
+  name.title = fullName;
+  if (currentPlayer) name.classList.add("is-current-player");
+  name.append(text);
+  return name;
+};
+
+const updateGameStatsPlayerNameMarquees = (root = document) => {
+  if (!root) return;
+  root.querySelectorAll(".game-stats-player-name").forEach((name) => {
+    const text = name.querySelector(".game-stats-player-name-text");
+    if (!text || !name.clientWidth) return;
+    const distance = Math.max(0, Math.ceil(text.scrollWidth - name.clientWidth));
+    const isOverflowing = distance > 0;
+    name.classList.toggle("is-overflowing", isOverflowing);
+    if (isOverflowing) {
+      name.style.setProperty("--game-stats-name-scroll-distance", `${distance}px`);
+      name.style.setProperty(
+        "--game-stats-name-scroll-duration",
+        `${Math.min(10, Math.max(3, distance / 12)).toFixed(2)}s`
+      );
+    } else {
+      name.style.removeProperty("--game-stats-name-scroll-distance");
+      name.style.removeProperty("--game-stats-name-scroll-duration");
+    }
+  });
+};
+
+let gameStatsNameMarqueeFrame = 0;
+const scheduleGameStatsPlayerNameMarquees = () => {
+  if (gameStatsNameMarqueeFrame) window.cancelAnimationFrame(gameStatsNameMarqueeFrame);
+  gameStatsNameMarqueeFrame = window.requestAnimationFrame(() => {
+    gameStatsNameMarqueeFrame = 0;
+    updateGameStatsPlayerNameMarquees();
+  });
+};
+
 const appendGameStatsLeaderboard = (
   container,
   title,
@@ -1653,11 +2505,10 @@ const appendGameStatsLeaderboard = (
       } else {
         row.append(createGameStatsNode("span", "game-stats-rank", `#${index + 1}`));
       }
-      const icon = document.createElement("img");
-      icon.className = "game-stats-player-icon";
-      icon.src = entry.icon;
-      icon.alt = "";
-      row.append(icon, createGameStatsNode("span", "game-stats-player-name", entry.name));
+      row.append(
+        createGameStatsPlayerIcon(entry.icon),
+        createGameStatsPlayerName(entry.name)
+      );
       const metric = createGameStatsNode("span", "game-stats-metric");
       appendGameStatsMetric(metric, entry);
       row.append(metric);
@@ -1668,184 +2519,1046 @@ const appendGameStatsLeaderboard = (
   container.append(panel);
 };
 
+const gameStatsMinesweeperPersonalRecord = (difficulty) => {
+  const localEntries = gameStatsLocalState.leaderboards.minesweeper[difficulty] || [];
+  const globalEntries = gameStatsProfile
+    ? (gameStatsGlobalState.leaderboards.minesweeper[difficulty] || []).filter(
+        (entry) => entry.playerId === gameStatsProfile.id
+      )
+    : [];
+  const times = [...localEntries, ...globalEntries]
+    .map((entry) => entry.metric)
+    .filter((metric) => Number.isFinite(metric));
+  return times.length ? Math.min(...times) : 999;
+};
+
+const createGameStatsLeaderboardPlayer = (
+  nameValue,
+  iconSource,
+  {
+    currentPlayer = false,
+    className = "",
+    iconClassName = "",
+  } = {}
+) => {
+  const identity = createGameStatsNode(
+    "span",
+    ["game-stats-leaderboard-template-player", className]
+      .filter(Boolean)
+      .join(" ")
+  );
+  identity.append(
+    createGameStatsPlayerIcon(
+      iconSource,
+      ["game-stats-leaderboard-template-player-icon", iconClassName]
+        .filter(Boolean)
+        .join(" ")
+    ),
+    createGameStatsPlayerName(nameValue, { currentPlayer })
+  );
+  return identity;
+};
+
+const createMinesweeperLeaderboardPlayer = (
+  nameValue,
+  iconSource,
+  { currentPlayer = false } = {}
+) =>
+  createGameStatsLeaderboardPlayer(nameValue, iconSource, {
+    currentPlayer,
+    className: "game-stats-minesweeper-player",
+    iconClassName: "game-stats-minesweeper-player-icon",
+  });
+
+/**
+ * Builds the shared shell for an ordered game leaderboard. Consumers provide
+ * their game-specific classes and can override the metric presentation while
+ * the panel, heading, label, and list keep a consistent accessible structure.
+ */
+const createGameStatsLeaderboardTemplate = ({
+  title,
+  titleId = "",
+  sectionLabel = "Leaderboard",
+  className = "",
+  headingClassName = "",
+  sectionLabelClassName = "",
+  listClassName = "",
+  metricPresentation = "digits",
+  metricFormatter = null,
+}) => {
+  const panel = createGameStatsNode(
+    "section",
+    ["game-stats-leaderboard-template", className].filter(Boolean).join(" ")
+  );
+  const heading = createGameStatsNode(
+    "h3",
+    ["game-stats-leaderboard-template-heading", headingClassName]
+      .filter(Boolean)
+      .join(" "),
+    title
+  );
+  if (titleId) {
+    heading.id = titleId;
+    panel.setAttribute("aria-labelledby", titleId);
+  }
+  const label = createGameStatsNode(
+    "div",
+    ["game-stats-leaderboard-template-subheading", sectionLabelClassName]
+      .filter(Boolean)
+      .join(" "),
+    sectionLabel
+  );
+  const list = createGameStatsNode(
+    "ol",
+    ["game-stats-leaderboard-template-list", listClassName]
+      .filter(Boolean)
+      .join(" ")
+  );
+  const appendMetric = (container, value, options = {}) => {
+    if (metricPresentation === "text") {
+      container.classList.add("game-stats-metric--text");
+      container.textContent =
+        typeof metricFormatter === "function" ? metricFormatter(value) : String(value);
+      return;
+    }
+    appendGameStatsLeaderboardMetric(container, value, options);
+  };
+  panel.append(heading, label, list);
+  return { panel, list, appendMetric };
+};
+
+/**
+ * Builds a three-slot leaderboard entry: rank, player identity, and metric.
+ * The caller owns the slot content so medals, numeric ranks, and digit-based
+ * timers remain interchangeable without changing the row structure.
+ */
+const createGameStatsLeaderboardRow = ({
+  tagName = "div",
+  className = "",
+  rank,
+  identity,
+  metric,
+  ariaLabel = "",
+}) => {
+  const row = createGameStatsNode(
+    tagName,
+    ["game-stats-leaderboard-template-row", className].filter(Boolean).join(" ")
+  );
+  if (ariaLabel) row.setAttribute("aria-label", ariaLabel);
+  row.append(rank, identity, metric);
+  return row;
+};
+
+/**
+ * Adds a labeled leaderboard detail without introducing an extra layout
+ * wrapper. This keeps record and aggregate cards aligned with leaderboard
+ * entries while allowing games to supply their own presentation classes.
+ */
+const createGameStatsLeaderboardLabeledSection = ({
+  label,
+  value,
+  className = "",
+  labelClassName = "",
+}) => {
+  const section = createGameStatsNode(
+    "div",
+    ["game-stats-leaderboard-template-section", className]
+      .filter(Boolean)
+      .join(" ")
+  );
+  section.append(
+    createGameStatsNode(
+      "div",
+      ["game-stats-leaderboard-template-subheading", labelClassName]
+        .filter(Boolean)
+        .join(" "),
+      label
+    ),
+    value
+  );
+  return section;
+};
+
+const appendMinesweeperLeaderboardRows = (list, entries) => {
+  Array.from({ length: 3 }, (_, index) => {
+    const entry = entries[index] || null;
+    const metricValue = entry?.metric ?? 999;
+    const medal = document.createElement("img");
+    medal.className = "game-stats-minesweeper-medal";
+    medal.src = GAME_STATS_MEDAL_SOURCES[index];
+    medal.alt = "";
+    medal.setAttribute("aria-hidden", "true");
+
+    const isCurrentPlayer = Boolean(
+      entry && gameStatsProfile && entry.playerId === gameStatsProfile.id
+    );
+    const iconSource = entry?.icon || (
+      entry ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+    );
+    const identity = createMinesweeperLeaderboardPlayer(
+      entry?.name || "N/A",
+      iconSource,
+      { currentPlayer: isCurrentPlayer }
+    );
+    const metric = createGameStatsNode("span", "game-stats-metric");
+    appendGameStatsDigits(metric, metricValue, 3);
+    const row = createGameStatsLeaderboardRow({
+      tagName: "li",
+      className: "game-stats-minesweeper-row",
+      rank: medal,
+      identity,
+      metric,
+      ariaLabel: `Rank ${index + 1}: ${entry?.name || "N/A"}, ${metricValue} seconds${
+        isCurrentPlayer ? ", your entry" : ""
+      }`,
+    });
+    list.append(row);
+  });
+};
+
+const appendGameStatsLeaderboardMetric = (
+  container,
+  metricValue,
+  { decorative = false, fillWidth = false } = {}
+) => {
+  const normalizedMetric = Math.max(0, Number(metricValue) || 0);
+  appendGameStatsDigits(
+    container,
+    normalizedMetric,
+    Math.max(3, String(Math.trunc(normalizedMetric)).length),
+    { decorative, fillWidth }
+  );
+};
+
+const createGameStatsGlobalCounterValue = (value, ariaLabel, className) => {
+  const displayValue = createGameStatsNode(
+    "span",
+    [className, "game-stats-global-counter-value"].filter(Boolean).join(" ")
+  );
+  displayValue.setAttribute("role", "img");
+  displayValue.setAttribute("aria-label", ariaLabel);
+  appendGameStatsLeaderboardMetric(displayValue, value, {
+    decorative: true,
+    fillWidth: true,
+  });
+  return displayValue;
+};
+
+const formatGameStatsSudokuDifficulty = (difficulty) =>
+  `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
+
+const gameStatsSudokuTotalGames = (difficulty) => {
+  const wins = gameStatsGlobalState.totals.sudoku.wins[difficulty];
+  return wins.noHints + wins.withHints;
+};
+
+const appendSudokuGlobalLeaderboardRows = (list, entries, appendMetric) => {
+  Array.from({ length: 3 }, (_, index) => {
+    const entry = entries[index] || null;
+    const seconds = entry?.metric ?? 999;
+    const medal = document.createElement("img");
+    medal.className = "game-stats-leaderboard-template-medal";
+    medal.src = GAME_STATS_MEDAL_SOURCES[index];
+    medal.alt = "";
+    medal.setAttribute("aria-hidden", "true");
+
+    const isCurrentPlayer = Boolean(
+      entry && gameStatsProfile && entry.playerId === gameStatsProfile.id
+    );
+    const iconSource = entry?.icon || (
+      entry ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+    );
+    const identity = createGameStatsLeaderboardPlayer(entry?.name || "N/A", iconSource, {
+      currentPlayer: isCurrentPlayer,
+    });
+    const metric = createGameStatsNode("span", "game-stats-metric");
+    appendMetric(metric, seconds);
+    list.append(
+      createGameStatsLeaderboardRow({
+        tagName: "li",
+        className: "game-stats-sudoku-row",
+        rank: medal,
+        identity,
+        metric,
+        ariaLabel: `Rank ${index + 1}: ${entry?.name || "N/A"}, ${seconds} seconds${
+          isCurrentPlayer ? ", your entry" : ""
+        }`,
+      })
+    );
+  });
+};
+
+const appendSudokuLocalBest = (panel, difficulty, appendMetric) => {
+  const entry = gameStatsLocalState.leaderboards.sudoku[difficulty][0] || null;
+  const seconds = entry?.metric ?? 999;
+  const hasEntry = Boolean(entry);
+  const rank = createGameStatsNode(
+    "span",
+    "game-stats-leaderboard-template-rank",
+    hasEntry ? "#1" : "#—"
+  );
+  rank.setAttribute("aria-label", hasEntry ? "Best local entry" : "No local record");
+  const iconSource = entry?.icon || (
+    entry ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+  );
+  const identity = createGameStatsLeaderboardPlayer(entry?.name || "N/A", iconSource, {
+    currentPlayer: Boolean(entry && gameStatsProfile && entry.playerId === gameStatsProfile.id),
+  });
+  const metric = createGameStatsNode("span", "game-stats-metric");
+  appendMetric(metric, seconds);
+  const row = createGameStatsLeaderboardRow({
+    className: "game-stats-sudoku-row game-stats-sudoku-local-best-row",
+    rank,
+    identity,
+    metric,
+    ariaLabel: `Best local no-hints record: ${entry?.name || "N/A"}, ${seconds} seconds`,
+  });
+  panel.append(
+    createGameStatsLeaderboardLabeledSection({
+      label: "Best Local",
+      value: row,
+      className: "game-stats-sudoku-local-best",
+    })
+  );
+};
+
+const appendSudokuTotalGames = (panel, difficulty) => {
+  const totalGames = gameStatsSudokuTotalGames(difficulty);
+  const label = formatGameStatsSudokuDifficulty(difficulty);
+  const value = createGameStatsGlobalCounterValue(
+    totalGames,
+    `Total verified Sudoku completions on ${label}: ${totalGames}`,
+    "game-stats-leaderboard-template-stat-value"
+  );
+  panel.append(
+    createGameStatsLeaderboardLabeledSection({
+      label: "Total Games",
+      value,
+      className: "game-stats-sudoku-total-games",
+    })
+  );
+};
+
+const appendSolitaireGlobalLeaderboardRows = (list, entries) => {
+  Array.from({ length: 3 }, (_, index) => {
+    const entry = entries[index] || null;
+    const wins = entry?.metric ?? 0;
+    const medal = document.createElement("img");
+    medal.className = "game-stats-leaderboard-template-medal";
+    medal.src = GAME_STATS_MEDAL_SOURCES[index];
+    medal.alt = "";
+    medal.setAttribute("aria-hidden", "true");
+
+    const isCurrentPlayer = Boolean(
+      entry && gameStatsProfile && entry.playerId === gameStatsProfile.id
+    );
+    const iconSource = entry?.icon || (
+      entry ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+    );
+    const identity = createGameStatsLeaderboardPlayer(entry?.name || "N/A", iconSource, {
+      currentPlayer: isCurrentPlayer,
+    });
+    const metric = createGameStatsNode("span", "game-stats-metric");
+    appendGameStatsLeaderboardMetric(metric, wins);
+    list.append(
+      createGameStatsLeaderboardRow({
+        tagName: "li",
+        className: "game-stats-solitaire-row",
+        rank: medal,
+        identity,
+        metric,
+        ariaLabel: `Rank ${index + 1}: ${entry?.name || "N/A"}, ${wins} ${
+          wins === 1 ? "win" : "wins"
+        }${
+          isCurrentPlayer ? ", your entry" : ""
+        }`,
+      })
+    );
+  });
+};
+
+const appendSolitaireLocalWins = (panel) => {
+  const wins = gameStatsLocalState.totals.solitaire.wins;
+  const hasProfile = Boolean(gameStatsProfile);
+  const rank = createGameStatsNode(
+    "span",
+    "game-stats-leaderboard-template-rank",
+    hasProfile ? "#1" : "#—"
+  );
+  rank.setAttribute("aria-label", hasProfile ? "Local Solitaire wins" : "No local profile");
+  const iconSource = gameStatsProfile?.icon || (
+    hasProfile ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+  );
+  const identity = createGameStatsLeaderboardPlayer(gameStatsProfile?.name || "N/A", iconSource, {
+    currentPlayer: hasProfile,
+  });
+  const metric = createGameStatsNode("span", "game-stats-metric");
+  appendGameStatsLeaderboardMetric(metric, wins);
+  const row = createGameStatsLeaderboardRow({
+    className: "game-stats-solitaire-row game-stats-solitaire-local-wins-row",
+    rank,
+    identity,
+    metric,
+    ariaLabel: `Local Solitaire wins: ${gameStatsProfile?.name || "N/A"}, ${wins} ${
+      wins === 1 ? "win" : "wins"
+    }`,
+  });
+  panel.append(
+    createGameStatsLeaderboardLabeledSection({
+      label: "Your Wins",
+      value: row,
+      className: "game-stats-solitaire-local-wins",
+    })
+  );
+};
+
+const appendSolitaireGlobalWins = (panel) => {
+  const wins = gameStatsGlobalState.totals.solitaire.wins;
+  const value = createGameStatsGlobalCounterValue(
+    wins,
+    `Global wins: ${wins}`,
+    "game-stats-leaderboard-template-stat-value"
+  );
+  panel.append(
+    createGameStatsLeaderboardLabeledSection({
+      label: "Global Wins",
+      value,
+      className: "game-stats-solitaire-global-wins",
+    })
+  );
+};
+
+const appendSnakeGlobalLeaderboardRows = (list, entries) => {
+  Array.from({ length: 3 }, (_, index) => {
+    const entry = entries[index] || null;
+    const score = entry?.metric ?? 0;
+    const medal = document.createElement("img");
+    medal.className = "game-stats-leaderboard-template-medal";
+    medal.src = GAME_STATS_MEDAL_SOURCES[index];
+    medal.alt = "";
+    medal.setAttribute("aria-hidden", "true");
+
+    const isCurrentPlayer = Boolean(
+      entry && gameStatsProfile && entry.playerId === gameStatsProfile.id
+    );
+    const iconSource = entry?.icon || (
+      entry ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+    );
+    const identity = createGameStatsLeaderboardPlayer(entry?.name || "N/A", iconSource, {
+      currentPlayer: isCurrentPlayer,
+    });
+    const metric = createGameStatsNode("span", "game-stats-metric");
+    appendGameStatsLeaderboardMetric(metric, score);
+    list.append(
+      createGameStatsLeaderboardRow({
+        tagName: "li",
+        className: "game-stats-snake-row",
+        rank: medal,
+        identity,
+        metric,
+        ariaLabel: `Rank ${index + 1}: ${entry?.name || "N/A"}, ${score} points${
+          isCurrentPlayer ? ", your entry" : ""
+        }`,
+      })
+    );
+  });
+};
+
+const appendSnakeLocalBest = (panel, size) => {
+  const entry = gameStatsLocalState.leaderboards.snake[size][0] || null;
+  const score = entry?.metric ?? 0;
+  const hasEntry = Boolean(entry);
+  const rank = createGameStatsNode(
+    "span",
+    "game-stats-leaderboard-template-rank",
+    hasEntry ? "#1" : "#—"
+  );
+  rank.setAttribute("aria-label", hasEntry ? "Best local entry" : "No local record");
+  const iconSource = entry?.icon || (
+    entry ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+  );
+  const identity = createGameStatsLeaderboardPlayer(entry?.name || "N/A", iconSource, {
+    currentPlayer: Boolean(entry && gameStatsProfile && entry.playerId === gameStatsProfile.id),
+  });
+  const metric = createGameStatsNode("span", "game-stats-metric");
+  appendGameStatsLeaderboardMetric(metric, score);
+  const row = createGameStatsLeaderboardRow({
+    className: "game-stats-snake-row game-stats-snake-local-best-row",
+    rank,
+    identity,
+    metric,
+    ariaLabel: `Best local score: ${entry?.name || "N/A"}, ${score} points`,
+  });
+  panel.append(
+    createGameStatsLeaderboardLabeledSection({
+      label: "Best Local",
+      value: row,
+      className: "game-stats-snake-local-best",
+    })
+  );
+};
+
+const appendSnakeTotalGames = (panel, size) => {
+  const gamesPlayed = gameStatsGlobalState.totals.snake.gamesPlayed[size];
+  const value = createGameStatsGlobalCounterValue(
+    gamesPlayed,
+    `Global games played on ${size}×${size}: ${gamesPlayed}`,
+    "game-stats-leaderboard-template-stat-value"
+  );
+  panel.append(
+    createGameStatsLeaderboardLabeledSection({
+      label: "Total Games",
+      value,
+      className: "game-stats-snake-total-games",
+    })
+  );
+};
+
+const appendMinesweeperStat = (
+  container,
+  label,
+  value,
+  { digits = false, globalCounter = false, className = "" } = {}
+) => {
+  const displayValue = globalCounter
+    ? createGameStatsGlobalCounterValue(
+        value,
+        `${label}: ${value}`,
+        "game-stats-minesweeper-stat-value"
+      )
+    : createGameStatsNode("span", "game-stats-minesweeper-stat-value");
+  if (digits && !globalCounter) {
+    appendGameStatsDigits(displayValue, value, 3);
+  } else if (!globalCounter) {
+    displayValue.textContent = String(value);
+  }
+  container.append(
+    createGameStatsLeaderboardLabeledSection({
+      label,
+      value: displayValue,
+      className: ["game-stats-minesweeper-stat", className].filter(Boolean).join(" "),
+      labelClassName: "game-stats-minesweeper-subheading",
+    })
+  );
+};
+
+const appendMinesweeperPersonalRecord = (container, difficulty) => {
+  const playerRank = gameStatsGlobalState.playerRanks.minesweeper[difficulty];
+  const profile = gameStatsProfile || {
+    name: "No saved player",
+    icon: GAME_STATS_DEFAULT_ICON,
+  };
+  const rankText = `#${playerRank.rank ?? "—"}`;
+  const rank = createGameStatsNode("span", "game-stats-minesweeper-rank", rankText);
+  rank.setAttribute("aria-label", playerRank.rank ? `Global rank ${playerRank.rank}` : "No global rank");
+  const metric = createGameStatsNode("span", "game-stats-metric");
+  appendGameStatsDigits(metric, gameStatsMinesweeperPersonalRecord(difficulty), 3);
+  const identity = createMinesweeperLeaderboardPlayer(profile.name, profile.icon, {
+    currentPlayer: Boolean(gameStatsProfile),
+  });
+  const row = createGameStatsLeaderboardRow({
+    className: "game-stats-minesweeper-row game-stats-minesweeper-record-row",
+    rank,
+    identity,
+    metric,
+    ariaLabel: `Your record: ${rankText}, ${profile.name}, ${gameStatsMinesweeperPersonalRecord(
+      difficulty
+    )} seconds`,
+  });
+  container.append(
+    createGameStatsLeaderboardLabeledSection({
+      label: "Your Record",
+      value: row,
+      className: "game-stats-minesweeper-stat game-stats-minesweeper-record",
+      labelClassName: "game-stats-minesweeper-subheading",
+    })
+  );
+};
+
 const renderGameStatsMinesweeper = (root) => {
-  const summary = createGameStatsNode("div", "game-stats-summary-grid");
+  const columns = createGameStatsNode("div", "game-stats-minesweeper-columns");
   GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
-    appendGameStatsSummary(
-      summary,
-      `${difficulty[0].toUpperCase()}${difficulty.slice(1)} wins`,
-      gameStatsLocalState.totals.minesweeper.wins[difficulty],
-      gameStatsPublishedState.totals.minesweeper.wins[difficulty]
+    const label = `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
+    const leaderboard = createGameStatsLeaderboardTemplate({
+      title: label,
+      titleId: `game-stats-minesweeper-${difficulty}`,
+      className: "game-stats-minesweeper-column",
+      headingClassName: "game-stats-minesweeper-heading",
+      sectionLabelClassName: "game-stats-minesweeper-subheading",
+      listClassName: "game-stats-minesweeper-list",
+    });
+    appendMinesweeperLeaderboardRows(
+      leaderboard.list,
+      gameStatsGlobalState.leaderboards.minesweeper[difficulty]
     );
+    appendMinesweeperPersonalRecord(leaderboard.panel, difficulty);
+    appendMinesweeperStat(
+      leaderboard.panel,
+      "Global Wins",
+      gameStatsGlobalState.totals.minesweeper.wins[difficulty],
+      {
+        globalCounter: true,
+        className: "game-stats-minesweeper-global-wins",
+      }
+    );
+    columns.append(leaderboard.panel);
   });
-  root.append(summary);
-  GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
-    const grid = createGameStatsNode("div", "game-stats-leaderboard-grid");
-    const label = `${difficulty[0].toUpperCase()}${difficulty.slice(1)} fastest`;
-    appendGameStatsLeaderboard(
-      grid,
-      `${label} - Local`,
-      gameStatsLocalState.leaderboards.minesweeper[difficulty],
-      { medals: true }
-    );
-    appendGameStatsLeaderboard(
-      grid,
-      `${label} - Global`,
-      gameStatsPublishedState.leaderboards.minesweeper[difficulty],
-      { medals: true }
-    );
-    root.append(grid);
-  });
+  root.append(columns);
+
+  const handoff = createGameStatsNode("p", "game-stats-game-progress-handoff");
+  const icon = document.createElement("img");
+  icon.src = "assets/app-icons/ico/joystick_alt.ico";
+  icon.alt = "";
+  handoff.append(icon, document.createTextNode("View your personal stats in the Game Progress app"));
+  root.append(handoff);
 };
 
 const renderGameStatsSolitaire = (root) => {
-  const summary = createGameStatsNode("div", "game-stats-summary-grid");
-  appendGameStatsSummary(
-    summary,
-    "Wins",
-    gameStatsLocalState.totals.solitaire.wins,
-    gameStatsPublishedState.totals.solitaire.wins
+  const leaderboard = createGameStatsLeaderboardTemplate({
+    title: "Most Wins",
+    titleId: "game-stats-solitaire-most-wins",
+    sectionLabel: "Global Top 3",
+    className: "game-stats-solitaire-column",
+  });
+  appendSolitaireGlobalLeaderboardRows(
+    leaderboard.list,
+    gameStatsGlobalState.leaderboards.solitaire
   );
-  root.append(summary);
-  const grid = createGameStatsNode("div", "game-stats-leaderboard-grid");
-  appendGameStatsLeaderboard(grid, "Lowest moves - Local", gameStatsLocalState.leaderboards.solitaire);
-  appendGameStatsLeaderboard(
-    grid,
-    "Lowest moves - Global",
-    gameStatsPublishedState.leaderboards.solitaire
-  );
-  root.append(grid);
+  appendSolitaireLocalWins(leaderboard.panel);
+  appendSolitaireGlobalWins(leaderboard.panel);
+  root.append(leaderboard.panel);
 };
 
 const renderGameStatsSnake = (root) => {
-  const summary = createGameStatsNode("div", "game-stats-summary-grid");
-  appendGameStatsSummary(
-    summary,
-    "Completed games",
-    gameStatsLocalState.totals.snake.totalGamesPlayed,
-    gameStatsPublishedState.totals.snake.totalGamesPlayed
-  );
-  GAME_STATS_SNAKE_BOARD_SIZES.forEach((size) => {
-    appendGameStatsSummary(
-      summary,
-      `${size}x${size} games`,
-      gameStatsLocalState.totals.snake.gamesPlayed[size],
-      gameStatsPublishedState.totals.snake.gamesPlayed[size]
+  const columns = createGameStatsNode("div", "game-stats-snake-columns");
+  const boardSizesPerColumn = Math.ceil(GAME_STATS_SNAKE_BOARD_SIZES.length / 2);
+  for (let columnIndex = 0; columnIndex < 2; columnIndex += 1) {
+    const column = createGameStatsNode("div", "game-stats-snake-column");
+    const boardSizes = GAME_STATS_SNAKE_BOARD_SIZES.slice(
+      columnIndex * boardSizesPerColumn,
+      (columnIndex + 1) * boardSizesPerColumn
     );
-  });
-  root.append(summary);
-  GAME_STATS_SNAKE_BOARD_SIZES.forEach((size) => {
-    const grid = createGameStatsNode("div", "game-stats-leaderboard-grid");
-    appendGameStatsLeaderboard(
-      grid,
-      `${size}x${size} high scores - Local`,
-      gameStatsLocalState.leaderboards.snake[size]
-    );
-    appendGameStatsLeaderboard(
-      grid,
-      `${size}x${size} high scores - Global`,
-      gameStatsPublishedState.leaderboards.snake[size]
-    );
-    root.append(grid);
-  });
+    boardSizes.forEach((size) => {
+      const leaderboard = createGameStatsLeaderboardTemplate({
+        title: `${size}×${size} High Scores`,
+        titleId: `game-stats-snake-${size}`,
+        sectionLabel: "Global Top 3",
+        className: "game-stats-snake-leaderboard",
+      });
+      appendSnakeGlobalLeaderboardRows(
+        leaderboard.list,
+        gameStatsGlobalState.leaderboards.snake[size]
+      );
+      appendSnakeLocalBest(leaderboard.panel, size);
+      appendSnakeTotalGames(leaderboard.panel, size);
+      column.append(leaderboard.panel);
+    });
+    columns.append(column);
+  }
+  root.append(columns);
 };
 
 const renderGameStatsSudoku = (root) => {
+  const columns = createGameStatsNode("div", "game-stats-sudoku-columns");
+  const difficultiesPerColumn = Math.ceil(GAME_STATS_SUDOKU_DIFFICULTIES.length / 3);
+  for (let columnIndex = 0; columnIndex < 3; columnIndex += 1) {
+    const column = createGameStatsNode("div", "game-stats-sudoku-column");
+    const difficulties = GAME_STATS_SUDOKU_DIFFICULTIES.slice(
+      columnIndex * difficultiesPerColumn,
+      (columnIndex + 1) * difficultiesPerColumn
+    );
+    difficulties.forEach((difficulty) => {
+      const label = formatGameStatsSudokuDifficulty(difficulty);
+      const leaderboard = createGameStatsLeaderboardTemplate({
+        title: label,
+        titleId: `game-stats-sudoku-${difficulty}`,
+        sectionLabel: "No-Hints Top 3",
+        className: "game-stats-sudoku-leaderboard",
+        metricPresentation: "text",
+        metricFormatter: formatSudokuTime,
+      });
+      appendSudokuGlobalLeaderboardRows(
+        leaderboard.list,
+        gameStatsGlobalState.leaderboards.sudoku[difficulty],
+        leaderboard.appendMetric
+      );
+      appendSudokuLocalBest(leaderboard.panel, difficulty, leaderboard.appendMetric);
+      appendSudokuTotalGames(leaderboard.panel, difficulty);
+      column.append(leaderboard.panel);
+    });
+    columns.append(column);
+  }
+  root.append(columns);
+};
+
+const getGameProgressContent = (id) => document.getElementById(id);
+
+const appendGameProgressStat = (
+  container,
+  label,
+  value,
+  { ariaLabel = "" } = {}
+) => {
+  const item = createGameStatsNode("div", "game-stats-inlay");
+  if (ariaLabel) item.setAttribute("aria-label", ariaLabel);
+  item.append(
+    createGameStatsNode("span", "game-stats-label", label),
+    createGameStatsNode("span", "game-stats-value", String(value))
+  );
+  container.append(item);
+};
+
+const formatGameProgressRecord = (entry, unit) =>
+  entry && Number.isFinite(entry.metric) ? `${entry.metric} ${unit}` : "No record yet";
+
+const formatGameProgressSudokuBestTime = (seconds) =>
+  Number.isFinite(seconds) ? formatSudokuTime(seconds) : "—";
+
+const renderGameProgressProfile = () => {
+  const content = getGameProgressContent("game-progress-profile-content");
+  const createButton = document.getElementById("game-progress-create-profile");
+  if (!content) return;
+
+  disconnectGameStatsDigitResizeObservers(content);
+  content.replaceChildren();
+  if (!gameStatsProfile) {
+    content.append(
+      createGameStatsNode(
+        "p",
+        "game-progress-empty",
+        "No profile is saved on this browser. Create one now, or choose it after your next qualifying win."
+      )
+    );
+    if (createButton) {
+      createButton.hidden = false;
+      createButton.disabled = Boolean(gameStatsProfilePromptResolve);
+    }
+    return;
+  }
+
+  const profile = createGameStatsNode("div", "game-stats-row game-progress-profile-row");
+  const icon = createGameStatsPlayerIcon(gameStatsProfile.icon);
+  profile.append(
+    icon,
+    createGameStatsNode("span", "game-progress-profile-name", gameStatsProfile.name),
+    createGameStatsNode("span", "game-progress-profile-saved", "Saved")
+  );
+  content.append(profile);
+  if (createButton) {
+    createButton.hidden = true;
+    createButton.disabled = true;
+  }
+};
+
+const renderGameProgressMinesweeper = () => {
+  const content = getGameProgressContent("game-progress-minesweeper-content");
+  if (!content) return;
   const summary = createGameStatsNode("div", "game-stats-summary-grid");
+  GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
+    const label = `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
+    appendGameProgressStat(
+      summary,
+      `${label} wins`,
+      gameStatsLocalState.totals.minesweeper.wins[difficulty]
+    );
+    appendGameProgressStat(
+      summary,
+      `${label} best clear`,
+      formatGameProgressRecord(
+        gameStatsLocalState.leaderboards.minesweeper[difficulty][0],
+        "seconds"
+      )
+    );
+  });
+  content.replaceChildren(summary);
+};
+
+const renderGameProgressSolitaire = () => {
+  const content = getGameProgressContent("game-progress-solitaire-content");
+  if (!content) return;
+  const summary = createGameStatsNode("div", "game-stats-summary-grid");
+  appendGameProgressStat(summary, "Wins", gameStatsLocalState.totals.solitaire.wins);
+  appendGameProgressStat(
+    summary,
+    "Fewest moves",
+    formatGameProgressRecord(gameStatsLocalState.leaderboards.solitaire[0], "moves")
+  );
+  content.replaceChildren(summary);
+};
+
+const renderGameProgressSnake = () => {
+  const content = getGameProgressContent("game-progress-snake-content");
+  if (!content) return;
+  content.classList.add("game-progress-snake-content");
+  const totalGames = createGameStatsNode("div", "game-progress-snake-total");
+  appendGameProgressStat(
+    totalGames,
+    "Games played",
+    gameStatsLocalState.totals.snake.totalGamesPlayed
+  );
+
+  const boardStats = createGameStatsNode(
+    "div",
+    "game-stats-summary-grid game-progress-snake-board-stats"
+  );
+  GAME_STATS_SNAKE_BOARD_SIZES.forEach((size) => {
+    appendGameProgressStat(
+      boardStats,
+      `${size}×${size} games`,
+      gameStatsLocalState.totals.snake.gamesPlayed[size]
+    );
+    appendGameProgressStat(
+      boardStats,
+      `${size}×${size} high score`,
+      gameStatsPositiveInteger(snakeState.highScores[size])
+    );
+  });
+  content.replaceChildren(totalGames, boardStats);
+};
+
+const renderGameProgressSudoku = () => {
+  const content = getGameProgressContent("game-progress-sudoku-content");
+  if (!content) return;
+  const summary = createGameStatsNode("div", "game-progress-sudoku-stats");
   GAME_STATS_SUDOKU_DIFFICULTIES.forEach((difficulty) => {
-    const localWins = gameStatsLocalState.totals.sudoku.wins[difficulty];
-    const globalWins = gameStatsPublishedState.totals.sudoku.wins[difficulty];
-    appendGameStatsSummary(
+    const label = `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
+    const wins = gameStatsLocalState.totals.sudoku.wins[difficulty];
+    const bestTime = gameStatsLocalState.totals.sudoku.bestTimes[difficulty];
+    const bestTimeValue = formatGameProgressSudokuBestTime(bestTime);
+    appendGameProgressStat(summary, `${label} (no hints)`, `${wins.noHints} Wins`);
+    appendGameProgressStat(summary, `${label} (hints)`, `${wins.withHints} Wins`);
+    appendGameProgressStat(
       summary,
-      `${difficulty[0].toUpperCase()}${difficulty.slice(1)} no hints`,
-      localWins.noHints,
-      globalWins.noHints
-    );
-    appendGameStatsSummary(
-      summary,
-      `${difficulty[0].toUpperCase()}${difficulty.slice(1)} with hints`,
-      localWins.withHints,
-      globalWins.withHints
+      "Best Time (no hints)",
+      bestTimeValue,
+      {
+        ariaLabel: `${label} best time without hints: ${
+          bestTime === null ? "No record yet" : bestTimeValue
+        }`,
+      }
     );
   });
-  root.append(summary);
+  content.replaceChildren(summary);
 };
 
-const renderGameStatsWindow = () => {
-  if (!gameStatsContent) return;
-  const pendingCount = gameStatsLocalState.pendingEvents.length;
-  if (gameStatsPendingCount) {
-    gameStatsPendingCount.textContent = `${pendingCount} pending`;
-  }
-  if (gameStatsExport) gameStatsExport.disabled = pendingCount === 0;
-  if (gameStatsTitle) {
-    const title = gameStatsCurrentGame
-      ? `${gameStatsCurrentGame[0].toUpperCase()}${gameStatsCurrentGame.slice(1)} Stats`
-      : "Game Stats";
-    gameStatsTitle.textContent = title;
-  }
-
-  gameStatsContent.replaceChildren();
-  if (gameStatsCurrentGame === "minesweeper") {
-    renderGameStatsMinesweeper(gameStatsContent);
-  } else if (gameStatsCurrentGame === "solitaire") {
-    renderGameStatsSolitaire(gameStatsContent);
-  } else if (gameStatsCurrentGame === "snake") {
-    renderGameStatsSnake(gameStatsContent);
-  } else if (gameStatsCurrentGame === "sudoku") {
-    renderGameStatsSudoku(gameStatsContent);
-  }
+const renderGameProgressWindow = () => {
+  renderGameProgressProfile();
+  renderGameProgressMinesweeper();
+  renderGameProgressSolitaire();
+  renderGameProgressSnake();
+  renderGameProgressSudoku();
 };
 
-const exportPendingGameStats = () => {
-  if (!gameStatsLocalState.pendingEvents.length) return;
-  const payload = {
-    version: 1,
-    source: GAME_STATS_EXPORT_SOURCE,
-    exportedAt: new Date().toISOString(),
-    events: gameStatsLocalState.pendingEvents,
+const resetGameProgressLocalData = () => {
+  gameStatsLocalResetGeneration += 1;
+  if (gameStatsProfilePromptResolve) resolveGameStatsProfilePrompt(null);
+
+  gameStatsLocalState = createEmptyGameStatsData();
+  saveGameStatsLocalState();
+  clearGameStatsProfile();
+
+  if (snakeHighScoreSaveTimer) {
+    clearTimeout(snakeHighScoreSaveTimer);
+    snakeHighScoreSaveTimer = null;
+  }
+  snakeState.highScores = {};
+  try {
+    localStorage.removeItem(SNAKE_HIGH_SCORE_KEY);
+  } catch {
+    // Local Snake records are best-effort when storage is unavailable.
+  }
+  updateSnakeHud();
+
+  // Keep the sync queue and global state intact: reset is local-only and must
+  // never retract verified or already queued leaderboard results.
+  gameStatsSyncMessage =
+    "Local progress was reset. Published and queued leaderboard results remain available.";
+  renderGameStatsWindows();
+};
+
+const getGameStatsWindowParts = (game) => {
+  const windowElement = Array.from(gameStatsWindows).find(
+    (candidate) => candidate.getAttribute("data-game-stats-window") === game
+  );
+  if (!windowElement) return null;
+  return {
+    windowElement,
+    title: windowElement.querySelector("[data-game-stats-title]"),
+    content: windowElement.querySelector("[data-game-stats-content]"),
+    syncStatus: windowElement.querySelector("[data-game-stats-sync-status]"),
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: "application/json",
+};
+
+const renderGameStatsWindow = (game) => {
+  const windowParts = getGameStatsWindowParts(game);
+  if (!windowParts?.content) return;
+  const { title, content, syncStatus } = windowParts;
+  if (syncStatus) {
+    syncStatus.textContent = gameStatsSyncMessage ||
+      (isGameStatsBackendConfigured()
+        ? "Global stats will sync automatically."
+        : "Automatic global tracking is not configured yet; local stats stay on this device.");
+  }
+  if (title) {
+    title.textContent = `${game[0].toUpperCase()}${game.slice(1)} Stats`;
+  }
+
+  content.replaceChildren();
+  if (game === "minesweeper") {
+    renderGameStatsMinesweeper(content);
+  } else if (game === "solitaire") {
+    renderGameStatsSolitaire(content);
+  } else if (game === "snake") {
+    renderGameStatsSnake(content);
+  } else if (game === "sudoku") {
+    renderGameStatsSudoku(content);
+  }
+  scheduleGameStatsPlayerNameMarquees();
+};
+
+const renderGameStatsWindows = () => {
+  GAME_STATS_SUPPORTED_GAMES.forEach((game) => {
+    const windowParts = getGameStatsWindowParts(game);
+    if (windowParts && !windowParts.windowElement.classList.contains("is-hidden")) {
+      renderGameStatsWindow(game);
+    }
   });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `rohin-game-stats-pending-${new Date()
-    .toISOString()
-    .replace(/[:.]/g, "-")}.json`;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  renderGameProgressWindow();
+};
+
+const scheduleGameStatsWindowViewportClamp = (windowElement) => {
+  if (
+    !windowElement ||
+    windowElement.dataset.gameStatsViewportClampScheduled === "true"
+  ) {
+    return;
+  }
+
+  windowElement.dataset.gameStatsViewportClampScheduled = "true";
+  let onAnimationEnd = null;
+  const clampAfterOpening = () => {
+    if (windowElement.dataset.gameStatsViewportClampScheduled !== "true") return;
+    delete windowElement.dataset.gameStatsViewportClampScheduled;
+    if (onAnimationEnd) {
+      windowElement.removeEventListener("animationend", onAnimationEnd);
+    }
+    if (
+      windowElement.classList.contains("is-hidden") ||
+      windowElement.classList.contains("is-closing")
+    ) {
+      return;
+    }
+    clampWindowFullyIntoViewport(windowElement);
+  };
+
+  if (windowElement.classList.contains("is-opening")) {
+    onAnimationEnd = (event) => {
+      if (event.target !== windowElement || event.animationName !== "retro-window-open") {
+        return;
+      }
+      window.requestAnimationFrame(clampAfterOpening);
+    };
+    windowElement.addEventListener("animationend", onAnimationEnd);
+    window.setTimeout(() => {
+      if (!windowElement.classList.contains("is-opening")) {
+        clampAfterOpening();
+      }
+    }, 320);
+    return;
+  }
+
+  window.requestAnimationFrame(clampAfterOpening);
+};
+
+const positionNewGameStatsWindow = (game, windowElement) => {
+  const gameIndex = GAME_STATS_SUPPORTED_GAMES.indexOf(game);
+  if (gameIndex < 0 || !windowElement) return;
+
+  const padding = 24;
+  const taskbarHeight = 90;
+  const gap = 16;
+  const windowWidth = windowElement.offsetWidth;
+  const windowHeight = windowElement.offsetHeight;
+  const maxLeft = Math.max(padding, window.innerWidth - windowWidth - padding);
+  const maxTop = Math.max(padding, window.innerHeight - windowHeight - taskbarHeight);
+  const canUseTwoColumns = window.innerWidth >= windowWidth * 2 + padding * 2 + gap;
+  const column = gameIndex % 2;
+  const row = Math.floor(gameIndex / 2);
+  const left = canUseTwoColumns
+    ? column === 0
+      ? padding
+      : maxLeft
+    : Math.min(maxLeft, padding + gameIndex * 28);
+  const top = canUseTwoColumns
+    ? Math.min(maxTop, padding + row * (windowHeight + gap))
+    : Math.min(maxTop, padding + gameIndex * 28);
+
+  windowElement.style.left = `${Math.round(left)}px`;
+  windowElement.style.top = `${Math.round(top)}px`;
+  scheduleGameStatsWindowViewportClamp(windowElement);
+};
+
+const positionVisibleGameStatsWindows = () => {
+  const visibleWindows = GAME_STATS_SUPPORTED_GAMES.map(getGameStatsWindowParts)
+    .filter(
+      (windowParts) =>
+        windowParts &&
+        !windowParts.windowElement.classList.contains("is-hidden") &&
+        !windowParts.windowElement.classList.contains("is-closing")
+    );
+  if (visibleWindows.length < 2) {
+    visibleWindows.forEach(({ windowElement }) => clampWindowFullyIntoViewport(windowElement));
+    return;
+  }
+
+  const padding = 24;
+  const gap = 16;
+  const largestWindowWidth = Math.max(
+    ...visibleWindows.map(({ windowElement }) => windowElement.offsetWidth)
+  );
+  const canUseTwoColumns =
+    window.innerWidth >= largestWindowWidth * 2 + padding * 2 + gap;
+
+  visibleWindows.forEach(({ windowElement }, index) => {
+    const titleBarHeight = windowElement.querySelector(".title-bar")?.offsetHeight || 24;
+    const column = canUseTwoColumns ? index % 2 : 0;
+    const row = canUseTwoColumns ? Math.floor(index / 2) : index;
+    const left =
+      column === 0
+        ? padding
+        : Math.max(padding, window.innerWidth - windowElement.offsetWidth - padding);
+    const top = canUseTwoColumns
+      ? padding + row * (windowElement.offsetHeight + gap)
+      : padding + row * (titleBarHeight + 4);
+    setWindowTitleBarClampedPosition(windowElement, left, top);
+  });
 };
 
 const openGameStatsWindow = (game) => {
-  if (!["minesweeper", "solitaire", "snake", "sudoku"].includes(game)) return;
-  gameStatsCurrentGame = game;
-  renderGameStatsWindow();
-  setWindowOpen("game-stats", true);
+  if (!GAME_STATS_SUPPORTED_GAMES.includes(game)) return;
+  const windowParts = getGameStatsWindowParts(game);
+  const wasVisible = Boolean(
+    windowParts &&
+      !windowParts.windowElement.classList.contains("is-hidden") &&
+      !windowParts.windowElement.classList.contains("is-closing")
+  );
+  setWindowOpen(`game-stats-${game}`, true);
+  renderGameStatsWindow(game);
+  if (!wasVisible) positionNewGameStatsWindow(game, windowParts?.windowElement);
+  scheduleGameStatsWindowViewportClamp(windowParts?.windowElement);
+  void refreshGameStatsGlobalState();
 };
 
-const gameStatsPublishedState = normalizeGameStatsData(window.rohinGameStatsGlobal || {});
+let gameStatsGlobalState = createEmptyGameStatsData();
 let gameStatsLocalState = loadGameStatsLocalState();
+let gameStatsSubmissionQueue = loadGameStatsSubmissionQueue();
 let gameStatsProfile = loadGameStatsProfile();
-let gameStatsCurrentGame = "minesweeper";
 let gameStatsProfilePromptResolve = null;
 let gameStatsDraftProfile = null;
-
-const removePublishedGameStatsPendingEvents = () => {
-  const publishedEventIds = new Set(gameStatsPublishedState.eventIds);
-  if (!publishedEventIds.size || !gameStatsLocalState.pendingEvents.length) return;
-  const pendingEvents = gameStatsLocalState.pendingEvents.filter(
-    (event) => !publishedEventIds.has(event.id)
-  );
-  if (pendingEvents.length === gameStatsLocalState.pendingEvents.length) return;
-  gameStatsLocalState.pendingEvents = pendingEvents;
-  saveGameStatsLocalState();
-};
-
-removePublishedGameStatsPendingEvents();
+let gameStatsSyncInProgress = false;
+let gameStatsSyncMessage = "";
+let gameStatsLocalResetGeneration = 0;
+let gameStatsFirstWinHandoffInProgress = false;
 
 let topZ = 10;
 let calendarDate = new Date();
@@ -1866,6 +3579,7 @@ let snakeState = {
   running: false,
   hasStarted: false,
   gameOver: false,
+  statsSession: "",
   tickTimer: null,
   countdownTimer: null,
   countdownStartedAt: 0,
@@ -1915,6 +3629,8 @@ let sudokuState = {
   solved: false,
   usedHint: false,
   usedReveal: false,
+  statsSession: "",
+  statsSessionEligible: true,
   hintMode: "off",
   noteMode: false,
   values: createSudokuEmptyValues(),
@@ -2235,8 +3951,6 @@ const RANDOM_EVENT_APP_DWELL_MS = 2 * 60 * 1000;
 const RANDOM_EVENT_DELAY_MIN_MS = 0;
 const RANDOM_EVENT_DELAY_MAX_MS = 2000;
 const RANDOM_EVENT_DELAY_STEP_MS = 100;
-const RANDOM_EVENT_REPEAT_DAMPEN_MS = 2 * 60 * 1000;
-const RANDOM_EVENT_REPEAT_DAMPEN_FACTOR = 0.5;
 const WALL_BREACH_SHAKE_INTERVAL_MS = 1500;
 const WALL_BREACH_SHAKE_DURATION_MS = 360;
 const WALL_BREACH_FLASH_DURATION_MS = 760;
@@ -2288,8 +4002,7 @@ const BRAND_BURNS_PUCK_HEAL_RANGES_BY_REMAINING = Object.freeze({
 const BRAND_BURNS_FEMTO = Object.freeze({
   id: "femto",
   name: "Femto",
-  image:
-    "https://static.wikia.nocookie.net/berserk/images/8/8a/Manga_E86_Femto.png/revision/latest?cb=20201123221810",
+  image: "assets/random%20events/brand-burns/femto.webp",
   minHealth: 3500,
   maxHealth: 4000,
 });
@@ -2297,72 +4010,63 @@ const BRAND_BURNS_APOSTLES = Object.freeze([
   {
     id: "zodd",
     name: "Zodd",
-    image:
-      "https://static.wikia.nocookie.net/berserk/images/b/be/Manga_E69_Transformed_Zodd.png/revision/latest?cb=20171001233104",
+    image: "assets/random%20events/brand-burns/zodd.webp",
     minHealth: 2400,
     maxHealth: 3500,
   },
   {
     id: "grunbeld",
     name: "Grunbeld",
-    image:
-      "https://static.wikia.nocookie.net/berserk/images/6/64/Apostle_Grunbeld.png/revision/latest?cb=20100923234542",
+    image: "assets/random%20events/brand-burns/grunbeld.webp",
     minHealth: 2600,
     maxHealth: 3500,
   },
   {
     id: "borkoff",
     name: "Borkoff",
-    image:
-      "https://static.wikia.nocookie.net/berserk/images/2/2d/Borkoff_apostle.png/revision/latest?cb=20220718232429",
+    image: "assets/random%20events/brand-burns/borkoff.webp",
     minHealth: 900,
     maxHealth: 1900,
   },
   {
     id: "locus",
     name: "Locus",
-    image:
-      "https://static.wikia.nocookie.net/berserk/images/6/62/Manga_E233_Locus_Released.png/revision/latest?cb=20201126065418",
+    image: "assets/random%20events/brand-burns/locus.webp",
     minHealth: 1800,
     maxHealth: 3100,
   },
   {
     id: "irvine",
     name: "Irvine",
-    image:
-      "https://static.wikia.nocookie.net/berserk/images/5/58/Irvine_Sonia.jpg/revision/latest?cb=20160904203606",
+    image: "assets/random%20events/brand-burns/irvine.webp",
     minHealth: 1400,
     maxHealth: 2600,
   },
   {
     id: "ganishka",
     name: "Ganishka",
-    image:
-      "https://static.wikia.nocookie.net/berserk/images/5/52/Manga_E274_Ganishka_True_Form.png/revision/latest?cb=20180527174349",
+    image: "assets/random%20events/brand-burns/ganishka.webp",
     minHealth: 2600,
     maxHealth: 3500,
   },
   {
     id: "wyald",
     name: "Wyald",
-    image:
-      "https://static.wikia.nocookie.net/berserk/images/0/0b/Wyald%27s_Apostle_Form.jpg/revision/latest?cb=20220603180008",
+    image: "assets/random%20events/brand-burns/wyald.webp",
     minHealth: 1500,
     maxHealth: 3100,
   },
   {
     id: "snake-lord",
     name: "Snake Lord",
-    image:
-      "https://static.wikia.nocookie.net/berserk/images/e/ef/Manga_E0-1_Snake_Lord_Transformed.png/revision/latest?cb=20171021054551",
+    image: "assets/random%20events/brand-burns/snake-lord.webp",
     minHealth: 700,
     maxHealth: 1700,
   },
   {
     id: "rakshas",
     name: "Rakshas",
-    image:
-      "https://static.wikia.nocookie.net/berserk/images/0/03/Manga_E341_Rakshas_attacked_by_snakes.png/revision/latest?cb=20240521103358",
+    image: "assets/random%20events/brand-burns/rakshas.webp",
     minHealth: 1600,
     maxHealth: 2900,
   },
@@ -2431,7 +4135,6 @@ const randomEventKindMaxSince = {
   [RANDOM_EVENT_KIND_INTERACTIVE]: 0,
   [RANDOM_EVENT_KIND_NON_INTERACTIVE]: 0,
 };
-const randomEventRecentInteractiveRuns = new Map();
 let infinityArmoryState = {
   level: 1,
   gold: INFINITY_ARMORY_STARTING_GOLD,
@@ -2473,7 +4176,9 @@ let spellStackLightningFrame = null;
 let spellStackLightningTimer = null;
 let sootSpritesOverlay = null;
 let sootSpritesRevealTimer = null;
+let sootSpritesWindowHoldTimer = null;
 let sootSpritesCleanupTimer = null;
+const sootSpriteMotionAnimations = new WeakMap();
 let nobleSteedResultTimer = null;
 let nobleSteedResultPosition = null;
 let brandBurnsStats = {
@@ -2502,7 +4207,6 @@ const randomEventViewportWindows = () =>
     healthNoteWindow,
     loveNoteWindow,
     noSmokingWindow,
-    castleGateWindow,
     possumSpringsWindow,
     wingedLightWindow,
     manaFloodWindow,
@@ -3706,38 +5410,6 @@ const closeNoSmokingWindow = () => {
   restartWindowAnimation(noSmokingWindow, "is-closing");
 };
 
-const isCastleGateVisible = () =>
-  Boolean(
-    castleGateWindow &&
-      !castleGateWindow.classList.contains("is-hidden") &&
-      castleGateWindow.getAttribute("aria-hidden") === "false"
-  );
-
-const positionCastleGateWindow = () => {
-  positionRandomEventWindowInViewport(castleGateWindow);
-};
-
-const showCastleGateWindow = () => {
-  if (!castleGateWindow) return;
-  if (isCastleGateVisible()) {
-    castleGateWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(castleGateWindow);
-  castleGateWindow.classList.remove("is-hidden", "is-closing");
-  castleGateWindow.setAttribute("aria-hidden", "false");
-  positionCastleGateWindow();
-  castleGateWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(castleGateWindow);
-  restartWindowAnimation(castleGateWindow, "is-opening");
-};
-
-const closeCastleGateWindow = () => {
-  if (!castleGateWindow || castleGateWindow.classList.contains("is-hidden")) return;
-  castleGateWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(castleGateWindow, "is-closing");
-};
-
 const isPossumSpringsVisible = () =>
   Boolean(
     possumSpringsWindow &&
@@ -4920,6 +6592,7 @@ const resetSnakeGame = () => {
   snakeState.running = false;
   snakeState.hasStarted = false;
   snakeState.gameOver = false;
+  snakeState.statsSession = "";
   snakeState.apples = [];
   snakeState.collectionPulses = [];
   rebuildSnakeOccupiedCells();
@@ -4941,7 +6614,8 @@ const endSnakeGame = () => {
         type: "gamePlayed",
         boardSize: String(snakeState.gridSize),
         metric: snakeState.score,
-      })
+      }),
+      snakeState.statsSession
     );
   }
   saveSnakeHighScores();
@@ -5028,6 +6702,11 @@ const startSnakeGame = () => {
   if (snakeState.loading) return;
   if (snakeState.gameOver) resetSnakeGame();
   if (snakeState.running || snakeState.countdownTimer) return;
+  if (!snakeState.hasStarted) {
+    snakeState.statsSession = startGameStatsSession("snake", {
+      boardSize: String(snakeState.gridSize),
+    });
+  }
   snakeState.hasStarted = true;
   snakeState.countdownStartedAt = performance.now();
   snakeState.countdownDuration = SNAKE_RESUME_COUNTDOWN_MS;
@@ -5430,10 +7109,12 @@ const flashFelizJuevesChoice = () => {
 };
 
 const maybeShowFelizJueves = () => {
+  if (isRandomEventGameplayLockActive()) return false;
   const today = new Date();
   if (today.getDay() !== 4) return false;
   const dateKey = getLocalDateKey(today);
   if (hasShownFelizJuevesToday(dateKey)) return false;
+  if (isRandomEventTriggerOnCooldown()) return false;
   if (
     !randomEventKindCanSchedule(RANDOM_EVENT_KIND_NON_INTERACTIVE, {
       consumeRelease: true,
@@ -5442,6 +7123,7 @@ const maybeShowFelizJueves = () => {
     return false;
   }
   markFelizJuevesShown(dateKey);
+  recordRandomEventTrigger();
   showFelizJuevesWindow();
   return true;
 };
@@ -7822,12 +9504,15 @@ const SOOT_SPRITES_DESKTOP_COUNT = 32;
 const SOOT_SPRITES_MOBILE_COUNT = 20;
 const SOOT_SPRITES_CLEANUP_MS = 27000;
 const SOOT_SPRITES_REVEAL_DELAY_MS = 120;
-const SOOT_SPRITES_CLOSE_AFTER_LOAD_MS = 120;
+const SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS = 1000;
+const SOOT_SPRITES_SPAWN_CLEARANCE = 64;
 const SOOT_SPRITES_FALL_SAMPLE_COUNT = 12;
 const SOOT_SPRITES_DIRECTION_SWITCH_CHANCE = 0.55;
 const SOOT_SPRITES_DIRECTION_SWITCH_MIN_DELAY_MS = 1000;
 const SOOT_SPRITES_DIRECTION_SWITCH_MAX_DELAY_MS = 3000;
 const SOOT_SPRITES_MIN_PATH_SPEED = 0.22;
+const SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE = 2.2;
+const SOOT_SPRITES_GROUND_RUN_CANDY_MULTIPLIER = 2;
 const SOOT_CANDY_LANDING_PROGRESS = 0.72;
 const SOOT_CANDY_HOLD_AFTER_LANDING_MS = 4000;
 const SOOT_CANDY_FADE_DURATION_MS = 1200;
@@ -7841,7 +9526,11 @@ const SOOT_SPRITES_CANDY_COLORS = Object.freeze([
 
 const isSootSpritesVisible = () =>
   isManagedRandomEventWindowVisible(sootSpritesWindow) ||
-  Boolean(sootSpritesOverlay || sootSpritesRevealTimer);
+  Boolean(
+    sootSpritesOverlay ||
+      sootSpritesRevealTimer ||
+      sootSpritesWindowHoldTimer
+  );
 
 const randomSootSpriteValue = (min, max) => min + Math.random() * (max - min);
 
@@ -7854,7 +9543,15 @@ const setSootSpritePx = (element, property, value) => {
   element.style.setProperty(property, `${Math.round(value)}px`);
 };
 
+const clearSootSpritesLifecycleTimers = () => {
+  if (sootSpritesRevealTimer) window.clearTimeout(sootSpritesRevealTimer);
+  if (sootSpritesWindowHoldTimer) window.clearTimeout(sootSpritesWindowHoldTimer);
+  sootSpritesRevealTimer = null;
+  sootSpritesWindowHoldTimer = null;
+};
+
 const cleanupSootSpritesOverlay = () => {
+  clearSootSpritesLifecycleTimers();
   if (sootSpritesOverlay) {
     sootSpritesOverlay.remove();
     sootSpritesOverlay = null;
@@ -7886,6 +9583,27 @@ const getSootSpritesLaunchRect = () => {
     width,
     height,
   };
+};
+
+const getSootSpritesStagedZIndex = () => {
+  const windowZIndex = Number.parseInt(sootSpritesWindow?.style.zIndex || "", 10);
+  return Math.max(0, (Number.isFinite(windowZIndex) ? windowZIndex : 140) - 1);
+};
+
+const reserveSootSpritesSpawnLane = () => {
+  if (!sootSpritesWindow) return;
+  const toolbarTop = getSootSpritesToolbarTop();
+  const currentLeft = Number.parseFloat(sootSpritesWindow.style.left);
+  const currentTop = Number.parseFloat(sootSpritesWindow.style.top);
+  const maxTop = Math.max(
+    12,
+    toolbarTop - sootSpritesWindow.offsetHeight - SOOT_SPRITES_SPAWN_CLEARANCE
+  );
+  setRandomEventWindowPosition(
+    sootSpritesWindow,
+    Number.isFinite(currentLeft) ? currentLeft : 12,
+    Math.min(Number.isFinite(currentTop) ? currentTop : maxTop, maxTop)
+  );
 };
 
 const getSootSpritesToolbarTop = () => {
@@ -8018,9 +9736,9 @@ const createSootSpritePathKeyframes = (trajectory) => [
 ];
 
 const animateSootSpriteElement = (sprite, trajectory) => {
-  if (typeof sprite.animate !== "function") return;
+  if (typeof sprite.animate !== "function") return null;
   sprite.classList.add("soot-sprite--scripted");
-  sprite.animate(createSootSpritePathKeyframes(trajectory), {
+  return sprite.animate(createSootSpritePathKeyframes(trajectory), {
     delay: trajectory.delay,
     duration: trajectory.duration,
     easing: "linear",
@@ -8173,17 +9891,52 @@ const applySootSpriteRunSegmentTiming = ({
   });
 };
 
-const createSootSpriteTrajectory = (launchRect) => {
-  const size = Math.round(randomSootSpriteValue(24, 40));
-  const startX = launchRect.left + randomSootSpriteValue(10, Math.max(12, launchRect.width - 24));
-  const groundY = getSootSpritesGroundY(size);
-  const startY = Math.max(
-    0,
-    Math.min(
-      launchRect.top + randomSootSpriteValue(0, Math.max(8, launchRect.height * 0.38)),
-      groundY - randomSootSpriteValue(118, 220)
-    )
+const createSootSpriteSpawnGrid = (launchRect, spriteCount) => {
+  const aspectRatio = launchRect.width / Math.max(1, launchRect.height);
+  const columns = Math.max(
+    1,
+    Math.min(spriteCount, Math.round(Math.sqrt(spriteCount * aspectRatio)))
   );
+  const rows = Math.ceil(spriteCount / columns);
+  const horizontalInset = Math.min(20, Math.max(8, launchRect.width * 0.08));
+  const verticalInset = Math.min(20, Math.max(8, launchRect.height * 0.1));
+  const usableWidth = Math.max(1, launchRect.width - horizontalInset * 2);
+  const usableHeight = Math.max(1, launchRect.height - verticalInset * 2);
+
+  return Array.from({ length: spriteCount }, (_, index) => {
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    const spritesInRow = Math.min(columns, spriteCount - row * columns);
+    return {
+      x:
+        launchRect.left +
+        horizontalInset +
+        (usableWidth * (column + 0.5)) / spritesInRow,
+      y:
+        launchRect.top +
+        verticalInset +
+        (usableHeight * (row + 0.5)) / rows,
+    };
+  });
+};
+
+const createSootSpriteTrajectory = (launchRect, { startPoint } = {}) => {
+  const size = Math.round(randomSootSpriteValue(24, 40));
+  const groundY = getSootSpritesGroundY(size);
+  const minimumFallDistance = Math.min(24, size);
+  const startMinX = launchRect.left + 4;
+  const startMaxX = Math.max(startMinX, launchRect.left + launchRect.width - size - 4);
+  const startMinY = launchRect.top + 4;
+  const startMaxY = Math.max(
+    startMinY,
+    Math.min(launchRect.top + launchRect.height - size - 4, groundY - minimumFallDistance)
+  );
+  const startX = startPoint
+    ? Math.max(startMinX, Math.min(startMaxX, startPoint.x - size / 2))
+    : randomSootSpriteValue(startMinX, startMaxX);
+  const startY = startPoint
+    ? Math.max(startMinY, Math.min(startMaxY, startPoint.y - size / 2))
+    : randomSootSpriteValue(startMinY, startMaxY);
   const minLandingX = 10;
   const maxLandingX = Math.max(minLandingX, window.innerWidth - size - 10);
   const leftTravel = Math.max(0, startX - minLandingX);
@@ -8201,7 +9954,7 @@ const createSootSpriteTrajectory = (launchRect) => {
   const initialRunDirection = Math.random() < 0.5 ? -1 : 1;
   const initialExitX = getSootSpriteRunExitX(size, initialRunDirection);
   const exitY = groundY;
-  const delay = randomSootSpriteValue(0, 220);
+  const delay = 0;
   const baseDuration = randomSootSpriteValue(3600, 4800);
   const runScale = randomSootSpriteValue(0.78, 1.08);
   const directionSwitchDelay = randomSootSpriteValue(
@@ -8339,7 +10092,18 @@ const getSootSpriteTrajectoryPoint = (trajectory, progress) => {
   };
 };
 
-const createSootSpriteElement = (index, trajectory) => {
+const getSootSpriteAirTrailProgress = (trajectory) => {
+  const start = 0.08;
+  const end = Math.max(start, Math.min(0.92, trajectory.landingProgress - 0.04));
+  return randomSootSpriteValue(start, end);
+};
+
+const getSootSpriteGroundRunProgress = (trajectory) => {
+  const start = Math.min(0.96, Math.max(0.08, trajectory.landingProgress + 0.04));
+  return randomSootSpriteValue(start, 0.96);
+};
+
+const createSootSpriteElement = (index, trajectory, { paused = false } = {}) => {
   const sprite = document.createElement("span");
   sprite.className = "soot-sprite";
   sprite.setAttribute("aria-hidden", "true");
@@ -8388,7 +10152,11 @@ const createSootSpriteElement = (index, trajectory) => {
   rightEye.className = "soot-sprite-eye soot-sprite-eye--right";
   body.append(leftEye, rightEye);
   sprite.append(body);
-  animateSootSpriteElement(sprite, trajectory);
+  const motion = animateSootSpriteElement(sprite, trajectory);
+  if (paused && motion) {
+    motion.pause();
+    sootSpriteMotionAnimations.set(sprite, motion);
+  }
   return sprite;
 };
 
@@ -8460,7 +10228,10 @@ const createSootPuffElement = (launchRect, large = false) => {
   setSootSpritePx(puff, "--puff-x1", x0 + randomSootSpriteValue(-320, 320));
   setSootSpritePx(puff, "--puff-y1", y0 + randomSootSpriteValue(large ? -140 : -210, large ? 230 : 150));
   setSootSpritePx(puff, "--puff-size", size);
-  puff.style.setProperty("--puff-delay", `${randomSootSpriteValue(40, 360)}ms`);
+  puff.style.setProperty(
+    "--puff-delay",
+    `${randomSootSpriteValue(40, 360)}ms`
+  );
   puff.style.setProperty("--puff-duration", `${randomSootSpriteValue(5400, 7600)}ms`);
   return puff;
 };
@@ -8490,23 +10261,40 @@ const createSootTrailPuffElement = (trajectory, index, progress) => {
 const showSootSpritesSwarm = (launchRect = getSootSpritesLaunchRect()) => {
   cleanupSootSpritesOverlay();
   const overlay = document.createElement("div");
-  overlay.className = "soot-sprites-swarm";
+  overlay.className = "soot-sprites-swarm is-staged";
+  overlay.style.zIndex = String(getSootSpritesStagedZIndex());
   overlay.setAttribute("aria-hidden", "true");
 
   const spriteCount =
     window.innerWidth < 560 ? SOOT_SPRITES_MOBILE_COUNT : SOOT_SPRITES_DESKTOP_COUNT;
-  const trajectories = Array.from({ length: spriteCount }, () =>
-    createSootSpriteTrajectory(launchRect)
+  const spawnGrid = createSootSpriteSpawnGrid(launchRect, spriteCount);
+  const trajectories = spawnGrid.map((startPoint) =>
+    createSootSpriteTrajectory(launchRect, { startPoint })
   );
   trajectories.forEach((trajectory, index) => {
-    overlay.append(createSootSpriteElement(index, trajectory));
+    overlay.append(createSootSpriteElement(index, trajectory, { paused: true }));
   });
 
-  const trailCandyCount = Math.round(spriteCount * 4.4);
-  for (let index = 0; index < trailCandyCount; index += 1) {
-    const progress = 0.08 + ((index * 0.19) % 0.82);
+  const airTrailCandyCount = Math.round(
+    spriteCount * SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE
+  );
+  for (let index = 0; index < airTrailCandyCount; index += 1) {
+    const trajectory = trajectories[index % trajectories.length];
     overlay.append(
-      createSootTrailCandyElement(trajectories[index % trajectories.length], progress)
+      createSootTrailCandyElement(trajectory, getSootSpriteAirTrailProgress(trajectory))
+    );
+  }
+
+  // Ground-run candy is intentionally twice as dense as the airborne trail.
+  const groundRunCandyCount = Math.round(
+    spriteCount *
+      SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE *
+      SOOT_SPRITES_GROUND_RUN_CANDY_MULTIPLIER
+  );
+  for (let index = 0; index < groundRunCandyCount; index += 1) {
+    const trajectory = trajectories[index % trajectories.length];
+    overlay.append(
+      createSootTrailCandyElement(trajectory, getSootSpriteGroundRunProgress(trajectory))
     );
   }
 
@@ -8535,11 +10323,25 @@ const showSootSpritesSwarm = (launchRect = getSootSpritesLaunchRect()) => {
   return overlay;
 };
 
+const releaseSootSpritesSwarm = () => {
+  const overlay = sootSpritesOverlay;
+  if (!overlay?.classList.contains("is-staged")) return;
+  overlay.classList.remove("is-staged");
+  overlay.style.removeProperty("z-index");
+  overlay.querySelectorAll(".soot-sprite").forEach((sprite) => {
+    sootSpriteMotionAnimations.get(sprite)?.play();
+  });
+};
+
 const showSootSpritesWindow = () => {
-  showManagedRandomEventWindow(sootSpritesWindow, { clampAfterMediaLoad: true });
+  const didOpen = showManagedRandomEventWindow(sootSpritesWindow, {
+    clampAfterMediaLoad: true,
+  });
+  if (didOpen) reserveSootSpritesSpawnLane();
 };
 
 const closeSootSpritesWindow = () => {
+  clearSootSpritesLifecycleTimers();
   setSootSpritesWindowLoading(false);
   closeManagedRandomEventWindow(sootSpritesWindow);
 };
@@ -8547,15 +10349,20 @@ const closeSootSpritesWindow = () => {
 const inspectSootSpritesGpu = () => {
   if (!sootSpritesWindow || sootSpritesWindow.classList.contains("is-hidden")) return;
   const launchRect = getSootSpritesLaunchRect();
+  clearSootSpritesLifecycleTimers();
   setSootSpritesWindowLoading(true);
-  if (sootSpritesRevealTimer) window.clearTimeout(sootSpritesRevealTimer);
   sootSpritesRevealTimer = window.setTimeout(() => {
     sootSpritesRevealTimer = null;
-    showSootSpritesSwarm(launchRect);
-    window.setTimeout(() => {
-      setSootSpritesWindowLoading(false);
-      closeManagedRandomEventWindow(sootSpritesWindow);
-    }, SOOT_SPRITES_CLOSE_AFTER_LOAD_MS);
+    const overlay = showSootSpritesSwarm(launchRect);
+    // The procedural sprites are ready after their nodes have been committed to a frame.
+    window.requestAnimationFrame(() => {
+      if (overlay !== sootSpritesOverlay) return;
+      sootSpritesWindowHoldTimer = window.setTimeout(() => {
+        sootSpritesWindowHoldTimer = null;
+        setSootSpritesWindowLoading(false);
+        closeManagedRandomEventWindow(sootSpritesWindow);
+      }, SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS);
+    });
   }, SOOT_SPRITES_REVEAL_DELAY_MS);
 };
 
@@ -13123,6 +14930,44 @@ const randomEventTriggerProbability = (triggerName, definition = null) => {
   return Math.min(1, Math.max(0, boostedProbability));
 };
 
+const RANDOM_EVENT_SELECTION_LOCKDOWN_MS = 2 * 60 * 1000;
+const randomEventSelectionLockdownUntil = new Map();
+const RANDOM_EVENT_TRIGGER_COOLDOWN_MS = 5 * 1000;
+let randomEventTriggerCooldownUntil = 0;
+
+const isRandomEventTriggerOnCooldown = (now = Date.now()) => {
+  if (
+    !Number.isFinite(randomEventTriggerCooldownUntil) ||
+    now >= randomEventTriggerCooldownUntil
+  ) {
+    randomEventTriggerCooldownUntil = 0;
+    return false;
+  }
+  return true;
+};
+
+const recordRandomEventTrigger = (now = Date.now()) => {
+  randomEventTriggerCooldownUntil = now + RANDOM_EVENT_TRIGGER_COOLDOWN_MS;
+};
+
+const isRandomEventOnLockdown = (definition, now = Date.now()) => {
+  const eventId = definition?.id;
+  if (!eventId) return false;
+
+  const lockdownUntil = randomEventSelectionLockdownUntil.get(eventId);
+  if (!Number.isFinite(lockdownUntil) || now >= lockdownUntil) {
+    randomEventSelectionLockdownUntil.delete(eventId);
+    return false;
+  }
+  return true;
+};
+
+const recordRandomEventSelection = (definition, now = Date.now()) => {
+  const eventId = definition?.id;
+  if (!eventId) return;
+  randomEventSelectionLockdownUntil.set(eventId, now + RANDOM_EVENT_SELECTION_LOCKDOWN_MS);
+};
+
 const chooseWeightedRandomEvent = (eligibleEvents) => {
   const totalWeight = eligibleEvents.reduce(
     (total, event) => total + event.triggerProbability,
@@ -13139,48 +14984,15 @@ const chooseWeightedRandomEvent = (eligibleEvents) => {
   return eligibleEvents[eligibleEvents.length - 1] || null;
 };
 
-const recentInteractiveRandomEventRuns = (definition, now = Date.now()) => {
-  const eventId = definition.id;
-  if (!eventId || randomEventKind(definition) !== RANDOM_EVENT_KIND_INTERACTIVE) {
-    return [];
+const chooseRandomEventOutsideLockdown = (eligibleEvents, now = Date.now()) => {
+  const candidates = [...eligibleEvents];
+  while (candidates.length) {
+    const selected = chooseWeightedRandomEvent(candidates);
+    if (!selected) return null;
+    if (!isRandomEventOnLockdown(selected.definition, now)) return selected;
+    candidates.splice(candidates.indexOf(selected), 1);
   }
-  const cutoff = now - RANDOM_EVENT_REPEAT_DAMPEN_MS;
-  const recentRuns = (randomEventRecentInteractiveRuns.get(eventId) || []).filter(
-    (timestamp) => timestamp >= cutoff
-  );
-  if (recentRuns.length) {
-    randomEventRecentInteractiveRuns.set(eventId, recentRuns);
-  } else {
-    randomEventRecentInteractiveRuns.delete(eventId);
-  }
-  return recentRuns;
-};
-
-const interactiveRandomEventRepeatProbability = (definition) => {
-  const recentCount = recentInteractiveRandomEventRuns(definition).length;
-  return Math.pow(RANDOM_EVENT_REPEAT_DAMPEN_FACTOR, recentCount);
-};
-
-const interactiveRandomEventRepeatAllowed = (definition, { debug = false } = {}) => {
-  if (debug || randomEventKind(definition) !== RANDOM_EVENT_KIND_INTERACTIVE) {
-    return true;
-  }
-  return Math.random() < interactiveRandomEventRepeatProbability(definition);
-};
-
-const recordInteractiveRandomEventRun = (definition, { debug = false } = {}) => {
-  const eventId = definition.id;
-  if (
-    debug ||
-    !eventId ||
-    randomEventKind(definition) !== RANDOM_EVENT_KIND_INTERACTIVE
-  ) {
-    return;
-  }
-  const now = Date.now();
-  const recentRuns = recentInteractiveRandomEventRuns(definition, now);
-  recentRuns.push(now);
-  randomEventRecentInteractiveRuns.set(eventId, recentRuns);
+  return null;
 };
 
 const randomEventDelayMs = () => {
@@ -13274,7 +15086,6 @@ const randomEventPreloadTargetsById = Object.freeze({
   "health-note": () => [healthNoteWindow],
   "love-note": () => [loveNoteWindow],
   "no-smoking-alert": () => [noSmokingWindow],
-  "castle-gate-alert": () => [castleGateWindow],
   "possum-springs-bulletin": () => [possumSpringsWindow],
   "winged-light": () => [wingedLightWindow],
   "mana-flood": () => [manaFloodWindow],
@@ -13391,8 +15202,18 @@ const preloadRandomEventAssets = (definition, context) => {
   });
 };
 
+const isRandomEventGameplayLockActive = () =>
+  (isBrandBurnsVisible() && brandBurnsStage === "fight") ||
+  (isFateVisible() && fateState === "active") ||
+  (isLancerBattleVisible() && lancerBattleState === LANCER_BATTLE_STAGES.active) ||
+  (isGearsNestVisible() && gearsNestState.active && !gearsNestState.completed) ||
+  (isToxicJungleVisible() && toxicJungleStage === TOXIC_JUNGLE_STAGE_ACTIVE);
+
 const scheduleRandomEventRun = (definition, context) => {
+  if (isRandomEventGameplayLockActive()) return false;
   if (randomEventPendingDefinitions.has(definition)) return false;
+  if (isRandomEventTriggerOnCooldown()) return false;
+  if (isRandomEventOnLockdown(definition)) return false;
   if (
     !randomEventDefinitionCanSchedule(definition, {
       consumeRelease: true,
@@ -13402,6 +15223,8 @@ const scheduleRandomEventRun = (definition, context) => {
     return false;
   }
   randomEventPendingDefinitions.add(definition);
+  recordRandomEventSelection(definition);
+  recordRandomEventTrigger();
   const delayRequest = new Promise((resolve) => {
     window.setTimeout(resolve, randomEventDelayMs());
   });
@@ -13409,6 +15232,7 @@ const scheduleRandomEventRun = (definition, context) => {
 
   Promise.all([delayRequest, preloadRequest]).then(() => {
     randomEventPendingDefinitions.delete(definition);
+    if (isRandomEventGameplayLockActive()) return;
     const { triggerName, detail, debug } = context;
     if (
       definition.canTrigger &&
@@ -13416,7 +15240,6 @@ const scheduleRandomEventRun = (definition, context) => {
     ) {
       return;
     }
-    recordInteractiveRandomEventRun(definition, { debug });
     definition.run(context);
   });
   return true;
@@ -13424,6 +15247,8 @@ const scheduleRandomEventRun = (definition, context) => {
 
 const triggerRandomEvents = (triggerName, detail = {}) => {
   if (!isHomeActivationReady()) return false;
+  if (isRandomEventGameplayLockActive()) return false;
+  if (isRandomEventTriggerOnCooldown()) return false;
   const eligibleEvents = [];
   let debugRan = false;
 
@@ -13469,13 +15294,11 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
     return false;
   }
 
-  const selected = chooseWeightedRandomEvent(eligibleEvents);
-  if (
-    !selected ||
-    !interactiveRandomEventRepeatAllowed(selected.definition, {
-      debug: selected.debug,
-    })
-  ) {
+  const selected = chooseRandomEventOutsideLockdown(eligibleEvents);
+  if (!selected) {
+    if (triggerName === "calendarOpen" || triggerName === "gameWin") {
+      return maybeShowFelizJueves();
+    }
     return false;
   }
 
@@ -13795,19 +15618,6 @@ registerRandomEvent({
   canTrigger: () => !isNoSmokingVisible(),
   run: () => {
     showNoSmokingWindow();
-  },
-});
-
-registerRandomEvent({
-  id: "castle-gate-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
-  kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
-  isVisible: isCastleGateVisible,
-  canTrigger: () => !isCastleGateVisible(),
-  run: () => {
-    showCastleGateWindow();
   },
 });
 
@@ -15609,6 +17419,8 @@ const restoreSudokuSavedState = () => {
   sudokuState.solved = Boolean(savedState.solved);
   sudokuState.usedHint = Boolean(savedState.usedHint);
   sudokuState.usedReveal = Boolean(savedState.usedReveal);
+  sudokuState.statsSession = "";
+  sudokuState.statsSessionEligible = false;
   sudokuState.hintMode = savedState.hintMode === "errors" ? "errors" : "off";
   sudokuState.noteMode = Boolean(savedState.noteMode);
   sudokuState.values = normalizeSudokuValues(savedState.values, puzzle);
@@ -15637,6 +17449,11 @@ const setSudokuStatus = (message) => {
 
 const startSudokuTimer = () => {
   if (sudokuState.solved || sudokuState.timerId) return;
+  if (sudokuState.statsSessionEligible && !sudokuState.statsSession) {
+    sudokuState.statsSession = startGameStatsSession("sudoku", {
+      difficulty: sudokuState.difficulty,
+    });
+  }
   sudokuState.timerStartedAt = Date.now();
   sudokuState.timerId = window.setInterval(updateSudokuTimeDisplay, 1000);
   updateSudokuTimeDisplay();
@@ -16591,14 +18408,23 @@ const checkSudokuBoard = () => {
   pauseSudokuTimer();
   if (!sudokuState.solved) {
     sudokuState.solved = true;
+    const elapsedSeconds = currentSudokuElapsedSeconds();
+    const hintBucket =
+      sudokuState.usedHint || sudokuState.usedReveal ? "withHints" : "noHints";
     recordGameStatsEvent(
       createGameStatsEvent({
         game: "sudoku",
         type: "win",
         difficulty: sudokuState.difficulty,
-        hintBucket:
-          sudokuState.usedHint || sudokuState.usedReveal ? "withHints" : "noHints",
-      })
+        hintBucket,
+        metric: elapsedSeconds,
+        metricKind: "seconds",
+      }),
+      sudokuState.statsSession,
+      {
+        sudokuNoHintsSeconds:
+          hintBucket === "noHints" ? elapsedSeconds : null,
+      }
     );
     triggerSudokuVictoryEffects();
     triggerRandomEvents("gameWin", { game: "sudoku" });
@@ -16694,6 +18520,8 @@ const loadSudokuDifficulty = (difficulty) => {
     solved: false,
     usedHint: false,
     usedReveal: false,
+    statsSession: "",
+    statsSessionEligible: true,
     hintMode: previousHintMode,
     noteMode: previousNoteMode,
     values: normalizeSudokuValues("", puzzle.puzzle),
@@ -17620,6 +19448,31 @@ const galleryCounterText = (index, total) => `${index + 1} of ${total}`;
 const galleryItemSource = (item) =>
   typeof item === "string" ? item : item?.src || "";
 
+const galleryPreloadTokens = new WeakMap();
+const modelingGalleryPreloadRefreshers = new WeakMap();
+const appMediaPrewarmTokens = new WeakMap();
+
+const orderedGallerySuccessorSources = (items, currentIndex) => {
+  if (!Array.isArray(items) || items.length < 2) return [];
+  return Array.from({ length: items.length - 1 }, (_, offset) => {
+    const index = (currentIndex + offset + 1) % items.length;
+    return galleryItemSource(items[index]);
+  }).filter(Boolean);
+};
+
+const queueGallerySuccessors = (element, items, currentIndex) => {
+  if (!element || !preloadMediaSourcesAfter) return Promise.resolve();
+  const successors = orderedGallerySuccessorSources(items, currentIndex);
+  if (!successors.length) return Promise.resolve();
+
+  const token = Symbol("gallery-preload");
+  galleryPreloadTokens.set(element, token);
+  return preloadMediaSourcesAfter(element, successors, {
+    shouldContinue: () =>
+      galleryPreloadTokens.get(element) === token && isVisibleMediaElement(element),
+  });
+};
+
 const setGalleryCounterText = (counter, index, itemCount) => {
   if (counter) counter.textContent = galleryCounterText(index, itemCount);
 };
@@ -17628,12 +19481,104 @@ const setGalleryText = (element, text) => {
   if (element && typeof text === "string") element.textContent = text;
 };
 
+const GALLERY_LOADING_RAW_ASSET = "assets/loading/windows98-hourglass-2x.gif";
+const GALLERY_LOADING_PADDED_ASSET =
+  "assets/loading/windows98-hourglass-padded-2x.gif";
+const GALLERY_LOADING_RAW_WIDTH = 258;
+const GALLERY_LOADING_RAW_HEIGHT = 272;
+const galleryImageLoadTokens = new WeakMap();
+const galleryImageLoadCleanups = new WeakMap();
+
+const galleryUsesCompactLoadingAsset = (scroll) =>
+  scroll.clientWidth < GALLERY_LOADING_RAW_WIDTH ||
+  scroll.clientHeight < GALLERY_LOADING_RAW_HEIGHT;
+
+const galleryLoadingIndicator = (scroll) => {
+  let indicator = scroll.querySelector(".gallery-loading-indicator");
+  if (indicator) return indicator;
+
+  indicator = document.createElement("div");
+  indicator.className = "gallery-loading-indicator";
+  indicator.hidden = true;
+  indicator.setAttribute("aria-hidden", "true");
+
+  const image = document.createElement("img");
+  image.className = "gallery-loading-indicator__image";
+  image.alt = "";
+  image.decoding = "async";
+  indicator.appendChild(image);
+  scroll.appendChild(indicator);
+  return indicator;
+};
+
+const setGalleryImageLoading = (image, isLoading) => {
+  const scroll = image?.closest(".gallery-scroll");
+  if (!scroll) return;
+
+  const indicator = galleryLoadingIndicator(scroll);
+  const loadingImage = indicator.querySelector("img");
+  const useCompactAsset = galleryUsesCompactLoadingAsset(scroll);
+  indicator.classList.toggle("gallery-loading-indicator--compact", useCompactAsset);
+  if (loadingImage) {
+    const asset = useCompactAsset
+      ? GALLERY_LOADING_RAW_ASSET
+      : GALLERY_LOADING_PADDED_ASSET;
+    if (loadingImage.getAttribute("src") !== asset) loadingImage.setAttribute("src", asset);
+  }
+
+  indicator.hidden = !isLoading;
+  scroll.classList.toggle("is-image-loading", isLoading);
+  if (isLoading) {
+    scroll.setAttribute("aria-busy", "true");
+  } else {
+    scroll.removeAttribute("aria-busy");
+  }
+};
+
+const loadGalleryImage = (image, src) => {
+  if (!image || !src) return image;
+  const scroll = image.closest(".gallery-scroll");
+  if (!scroll) {
+    image.setAttribute("src", src);
+    return image;
+  }
+
+  galleryImageLoadCleanups.get(image)?.();
+  const token = Symbol("gallery-image-load");
+  galleryImageLoadTokens.set(image, token);
+  setGalleryImageLoading(image, true);
+
+  const finish = () => {
+    if (galleryImageLoadTokens.get(image) !== token) return;
+    image.removeEventListener("load", finish);
+    image.removeEventListener("error", finish);
+    galleryImageLoadCleanups.delete(image);
+    setGalleryImageLoading(image, false);
+  };
+  const cleanup = () => {
+    image.removeEventListener("load", finish);
+    image.removeEventListener("error", finish);
+  };
+
+  galleryImageLoadCleanups.set(image, cleanup);
+  image.addEventListener("load", finish, { once: true });
+  image.addEventListener("error", finish, { once: true });
+  image.setAttribute("src", src);
+  if (image.complete) queueMicrotask(finish);
+  return image;
+};
+
+window.homeGallery = {
+  ...(window.homeGallery || {}),
+  loadImage: loadGalleryImage,
+};
+
 const setGalleryImageSource = (image, item, { trackDeferredSource = false } = {}) => {
   if (!image || !item) return;
   const src = galleryItemSource(item);
   if (!src) return;
   if (trackDeferredSource) image.dataset.src = src;
-  image.setAttribute("src", src);
+  loadGalleryImage(image, src);
   if (typeof item !== "string" && item.alt) image.setAttribute("alt", item.alt);
 };
 
@@ -18360,7 +20305,6 @@ const renderModelingGallery = (container) => {
     const source = media[currentIndex];
     const isVideo = /\.(mp4|webm|ogg)(?:[?#]|$)/i.test(source);
     const currentMedia = document.createElement(isVideo ? "video" : "img");
-    currentMedia.src = source;
 
     if (isVideo) {
       currentMedia.controls = true;
@@ -18382,8 +20326,14 @@ const renderModelingGallery = (container) => {
     }
 
     scroll.replaceChildren(currentMedia);
+    if (isVideo) {
+      currentMedia.src = source;
+    } else {
+      loadGalleryImage(currentMedia, source);
+    }
     counter.textContent = galleryCounterText(currentIndex, media.length);
     if (gallery.autoplay && isVideo) playMediaElement(currentMedia);
+    return queueGallerySuccessors(currentMedia, media, currentIndex);
   };
 
   bindGalleryNavigation(
@@ -18397,9 +20347,14 @@ const renderModelingGallery = (container) => {
     update
   );
 
-  update();
+  const initialPreloadTask = update();
+  modelingGalleryPreloadRefreshers.set(container, () => {
+    const currentMedia = scroll.querySelector("img, video");
+    return queueGallerySuccessors(currentMedia, media, currentIndex);
+  });
   container.dataset.rendered = "true";
   setupGalleryControlLabels(container);
+  return initialPreloadTask;
 };
 
 setupGalleryControlLabels();
@@ -18407,17 +20362,22 @@ setupGalleryControlLabels();
 const updatePathfinderImage = () => {
   setGalleryImageSource(pathfinderImage, pathfinderImages[pathfinderIndex]);
   setGalleryCounterText(pathfinderCounter, pathfinderIndex, pathfinderImages.length);
+  return queueGallerySuccessors(pathfinderImage, pathfinderImages, pathfinderIndex);
 };
 
 const updateBerserkPosterImage = () => {
   if (berserkPosterImage) {
-    berserkPosterImage.setAttribute("src", berserkPosterImages[berserkPosterIndex]);
-    berserkPosterImage.setAttribute(
-      "alt",
-      `Berserk poster redesign ${berserkPosterIndex + 1}`
-    );
+    setGalleryImageSource(berserkPosterImage, {
+      src: berserkPosterImages[berserkPosterIndex],
+      alt: `Berserk poster redesign ${berserkPosterIndex + 1}`,
+    });
   }
   setGalleryCounterText(berserkPosterCounter, berserkPosterIndex, berserkPosterImages.length);
+  return queueGallerySuccessors(
+    berserkPosterImage,
+    berserkPosterImages,
+    berserkPosterIndex
+  );
 };
 
 const updateMyBrothersGhostImage = () => {
@@ -18428,12 +20388,22 @@ const updateMyBrothersGhostImage = () => {
     myBrothersGhostIndex,
     myBrothersGhostImages.length
   );
+  return queueGallerySuccessors(
+    myBrothersGhostImage,
+    myBrothersGhostImages,
+    myBrothersGhostIndex
+  );
 };
 
 const updateFrontiersSlide = () => {
   const activeSlide = frontiersPdfSlides[frontiersSlideIndex];
   setGalleryImageSource(frontiersSlideImage, activeSlide);
   setGalleryCounterText(frontiersSlideCounter, frontiersSlideIndex, frontiersPdfSlides.length);
+  return queueGallerySuccessors(
+    frontiersSlideImage,
+    frontiersPdfSlides,
+    frontiersSlideIndex
+  );
 };
 
 const updatePulseProjectFigure = () => {
@@ -18448,6 +20418,11 @@ const updatePulseProjectFigure = () => {
     activeFigure,
     pulseProjectIndex,
     pulseProjectFigures.length
+  );
+  return queueGallerySuccessors(
+    pulseProjectImage,
+    pulseProjectFigures,
+    pulseProjectIndex
   );
 };
 
@@ -18464,6 +20439,7 @@ const updateTcpResultFigure = () => {
     tcpResultsIndex,
     tcpResultFigures.length
   );
+  return queueGallerySuccessors(tcpResultsImage, tcpResultFigures, tcpResultsIndex);
 };
 
 const updateEkgProjectMedia = () => {
@@ -18495,6 +20471,11 @@ const updateEkgProjectMedia = () => {
   setGalleryText(ekgProjectCaption, activeMedia.title);
   setGalleryText(ekgProjectDescription, activeMedia.description);
   setGalleryCounterText(ekgProjectCounter, ekgProjectIndex, ekgProjectMedia.length);
+  return queueGallerySuccessors(
+    isVideo ? ekgProjectVideo : ekgProjectImage,
+    ekgProjectMedia,
+    ekgProjectIndex
+  );
 };
 
 const syncDroneProjectVideo = () => {
@@ -18505,6 +20486,105 @@ const syncDroneProjectVideo = () => {
   setProjectVideoSource(droneProjectVideo, activeVideo);
   setGalleryText(droneVideoCaption, activeVideo.title);
   setGalleryCounterText(droneVideoCounter, droneVideoIndex, droneProjectVideos.length);
+  return queueGallerySuccessors(droneProjectVideo, droneProjectVideos, droneVideoIndex);
+};
+
+const staticCarouselPreloadDefinitions = Object.freeze([
+  {
+    element: pathfinderImage,
+    index: () => pathfinderIndex,
+    items: pathfinderImages,
+  },
+  {
+    element: berserkPosterImage,
+    index: () => berserkPosterIndex,
+    items: berserkPosterImages,
+  },
+  {
+    element: myBrothersGhostImage,
+    index: () => myBrothersGhostIndex,
+    items: myBrothersGhostImages,
+  },
+  {
+    element: frontiersSlideImage,
+    index: () => frontiersSlideIndex,
+    items: frontiersPdfSlides,
+  },
+  {
+    element: pulseProjectImage,
+    index: () => pulseProjectIndex,
+    items: pulseProjectFigures,
+  },
+  {
+    element: tcpResultsImage,
+    index: () => tcpResultsIndex,
+    items: tcpResultFigures,
+  },
+]);
+
+const isVisibleCarouselElement = (element) =>
+  Boolean(element && !element.closest(".viewer-content.is-hidden") && isVisibleMediaElement(element));
+
+const activeStaticCarouselPreloads = (root) =>
+  staticCarouselPreloadDefinitions
+    .filter(({ element }) => root.contains(element) && isVisibleCarouselElement(element))
+    .map(({ element, index, items }) => queueGallerySuccessors(element, items, index()));
+
+const orderedHiddenViewerPanels = (root) => {
+  const selectorButtons = [...root.querySelectorAll(".selector-item[data-view]")];
+  const activeIndex = selectorButtons.findIndex((button) => button.classList.contains("is-active"));
+  if (activeIndex === -1) return [];
+
+  return Array.from({ length: selectorButtons.length - 1 }, (_, offset) => {
+    const button = selectorButtons[(activeIndex + offset + 1) % selectorButtons.length];
+    const viewId = button.getAttribute("data-view");
+    return [...root.querySelectorAll(".viewer-content")].find(
+      (panel) => panel.getAttribute("data-view") === viewId
+    );
+  }).filter((panel) => panel?.classList.contains("is-hidden"));
+};
+
+const inactiveModelingGallerySources = (root) =>
+  orderedHiddenViewerPanels(root)
+    .map((panel) => panel.querySelector("[data-modeling-gallery]"))
+    .filter(Boolean)
+    .map((container) => modelingGalleryData[container.getAttribute("data-modeling-gallery")])
+    .map((gallery) => gallery?.media || gallery?.images || [])
+    .map((media) => galleryItemSource(media[0]))
+    .filter(Boolean);
+
+const prewarmHiddenAppPanels = (root, shouldContinue) => {
+  const panels = orderedHiddenViewerPanels(root);
+  if (!panels.length) {
+    return preloadDeferredMediaInOrder(root, { hiddenOnly: true, shouldContinue });
+  }
+  return panels.reduce(
+    (queue, panel) =>
+      queue.then(() =>
+        preloadDeferredMediaInOrder(panel, { hiddenOnly: true, shouldContinue })
+      ),
+    Promise.resolve()
+  );
+};
+
+const prewarmOpenedAppMedia = (root, carouselTasks) => {
+  const win = root.matches(".window") ? root : root.closest(".window");
+  const token = Symbol("app-media-prewarm");
+  appMediaPrewarmTokens.set(root, token);
+  const shouldContinue = () =>
+    appMediaPrewarmTokens.get(root) === token && (!win || isWindowVisible(win));
+  const activeMedia = preloadDeferredMediaInOrder(root, { activeOnly: true });
+
+  activeMedia
+    .then(() => Promise.all(carouselTasks))
+    .then(() => {
+      if (!shouldContinue()) return "skipped";
+      return preloadMediaSourcesInOrder(inactiveModelingGallerySources(root), { shouldContinue });
+    })
+    .then(() => {
+      if (!shouldContinue()) return "skipped";
+      return prewarmHiddenAppPanels(root, shouldContinue);
+    });
 };
 
 activateVisibleContent = (root) => {
@@ -18513,7 +20593,7 @@ activateVisibleContent = (root) => {
     runAfterHomeActivation(() => activateVisibleContent(root));
     return;
   }
-  loadDeferredMedia(root, true);
+  const carouselTasks = [];
 
   root.querySelectorAll("[data-modeling-links]").forEach((container) => {
     if (!container.closest(".viewer-content.is-hidden")) {
@@ -18523,7 +20603,11 @@ activateVisibleContent = (root) => {
 
   root.querySelectorAll("[data-modeling-gallery]").forEach((container) => {
     if (!container.closest(".viewer-content.is-hidden")) {
-      renderModelingGallery(container);
+      const preloadTask = renderModelingGallery(container);
+      const refreshPreload = modelingGalleryPreloadRefreshers.get(container);
+      if (preloadTask || refreshPreload) {
+        carouselTasks.push(preloadTask || refreshPreload());
+      }
     }
   });
 
@@ -18531,14 +20615,17 @@ activateVisibleContent = (root) => {
     '[data-view="projects-drone-navigation"]:not(.is-hidden)'
   );
   if (dronePanel && droneProjectVideo && dronePanel.contains(droneProjectVideo)) {
-    syncDroneProjectVideo();
+    carouselTasks.push(syncDroneProjectVideo());
   }
 
   const ekgPanel = root.querySelector('[data-view="projects-ekg"]:not(.is-hidden)');
   if (ekgPanel) {
-    updateEkgProjectMedia();
+    carouselTasks.push(updateEkgProjectMedia());
   }
 
+  loadDeferredMedia(root, true);
+  carouselTasks.push(...activeStaticCarouselPreloads(root));
+  prewarmOpenedAppMedia(root, carouselTasks.filter(Boolean));
   playActiveAutoplayVideos(root);
 };
 
@@ -20697,32 +22784,6 @@ if (noSmokingWindow) {
   });
 }
 
-if (castleGateOk) {
-  castleGateOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeCastleGateWindow();
-  });
-}
-
-if (castleGateWindow) {
-  castleGateWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  castleGateWindow.addEventListener("animationend", (event) => {
-    if (event.target !== castleGateWindow) return;
-    if (event.animationName === "retro-window-open") {
-      castleGateWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      castleGateWindow.classList.remove("is-closing");
-      castleGateWindow.classList.add("is-hidden");
-    }
-  });
-}
-
 if (possumSpringsOk) {
   possumSpringsOk.addEventListener("click", (event) => {
     event.preventDefault();
@@ -21451,7 +23512,9 @@ bindManagedRandomEventWindowAnimation(spellStackWindow, {
 
 bindRandomEventButton(sootSpritesYes, inspectSootSpritesGpu);
 bindRandomEventButton(sootSpritesNo, closeSootSpritesWindow);
-bindManagedRandomEventWindowAnimation(sootSpritesWindow);
+bindManagedRandomEventWindowAnimation(sootSpritesWindow, {
+  afterClose: releaseSootSpritesSwarm,
+});
 
 bindRandomEventButton(natarajaYes, closeNatarajaWindow);
 bindRandomEventButton(natarajaNo, closeNatarajaWindow);
@@ -22502,6 +24565,15 @@ const CUSTOM_CURSOR_PRELOAD_SOURCES = Object.freeze([
   "assets/cursor-assets/generated-png/resize-ns-light.png",
   "assets/cursor-assets/generated-png/resize-nwse-light.png",
   "assets/cursor-assets/generated-png/resize-nesw-light.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-2.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-3.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-4.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-5.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-6.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-7.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-8.png",
+  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-9.png",
   "assets/cursor-assets/generated-png/normal-dark.png",
   "assets/cursor-assets/generated-png/select-dark.png",
   "assets/cursor-assets/generated-png/text-dark.png",
@@ -22528,6 +24600,15 @@ const CUSTOM_CURSOR_PRELOAD_SOURCES = Object.freeze([
   "assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%202%20Light.cur",
   "assets/cursor-assets/Jeelh-Cursor-Light/Working%20In%20Background%20Light.ani",
   "assets/cursor-assets/Jeelh-Cursor-Light/Busy%20Light.ani",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.png",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-2.png",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-3.png",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-4.png",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-5.png",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-6.png",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-7.png",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-8.png",
+  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-9.png",
   "assets/cursor-assets/Jeelh-Cursor-Dark/Normal%20Select.cur",
   "assets/cursor-assets/Jeelh-Cursor-Dark/Select.cur",
   "assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select.cur",
@@ -22631,6 +24712,8 @@ const hasCustomCursorLoadingIndicator = () =>
   Boolean(
     (snakeState.loading && isSnakeWindowVisible()) ||
       (sudokuApp?.classList.contains("is-sudoku-loading") && isSudokuWindowVisible()) ||
+      (sootSpritesWindow?.classList.contains("is-loading-sprites") &&
+        isSootSpritesVisible()) ||
       (mcAfeeProgressTimer && isMcAfeeWindowVisible(mcAfeeDownloadWindow))
   );
 
@@ -22782,6 +24865,103 @@ const NEKO_SCRATCH_SPRITES = {
   right: ["rightclaw1", "rightclaw2"],
   bottom: ["downclaw1", "downclaw2"],
   left: ["leftclaw1", "leftclaw2"],
+};
+const ROHIN_NEKO_AVATAR_INITIAL_DELAY_MS = 1000;
+const ROHIN_NEKO_AVATAR_ACTION_INTERVAL_MS = 3000;
+const ROHIN_NEKO_AVATAR_ACTION_DURATION_MS = 1000;
+const ROHIN_NEKO_AVATAR_FRAME_INTERVAL_MS = 250;
+const ROHIN_NEKO_AVATAR_SCRATCH_THRESHOLD = 0.5;
+const ROHIN_NEKO_AVATAR_CLAW_THRESHOLD = 0.65;
+const ROHIN_NEKO_AVATAR_CLAW_DIRECTIONS = Object.freeze(["left", "right", "top", "bottom"]);
+let rohinNekoAvatarStartTimerId = null;
+let rohinNekoAvatarActionTimerId = null;
+let rohinNekoAvatarFrameTimerId = null;
+let rohinNekoAvatarNextTimerId = null;
+
+const isRohinNekoProfile = () =>
+  gameStatsProfile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
+  gameStatsProfile.icon === GAME_STATS_ROHIN_NEKO_AVATAR_ICON;
+
+const setRohinNekoAvatarSprite = (spriteName) => {
+  const source = NEKO_SPRITES[spriteName] || NEKO_SPRITES.yawn1;
+  document.querySelectorAll("img[data-rohin-neko-avatar]").forEach((image) => {
+    if (image.getAttribute("src") !== source) image.src = source;
+  });
+};
+
+const clearRohinNekoAvatarTimers = () => {
+  if (rohinNekoAvatarStartTimerId !== null) window.clearTimeout(rohinNekoAvatarStartTimerId);
+  if (rohinNekoAvatarActionTimerId !== null) window.clearTimeout(rohinNekoAvatarActionTimerId);
+  if (rohinNekoAvatarFrameTimerId !== null) window.clearInterval(rohinNekoAvatarFrameTimerId);
+  if (rohinNekoAvatarNextTimerId !== null) window.clearTimeout(rohinNekoAvatarNextTimerId);
+  rohinNekoAvatarStartTimerId = null;
+  rohinNekoAvatarActionTimerId = null;
+  rohinNekoAvatarFrameTimerId = null;
+  rohinNekoAvatarNextTimerId = null;
+};
+
+const getRohinNekoAvatarAction = () => {
+  const roll = Math.random();
+  if (roll < ROHIN_NEKO_AVATAR_SCRATCH_THRESHOLD) {
+    return { name: "scratch", frames: ["scratch1", "scratch2"] };
+  }
+  if (roll < ROHIN_NEKO_AVATAR_CLAW_THRESHOLD) {
+    const directionIndex = Math.min(
+      ROHIN_NEKO_AVATAR_CLAW_DIRECTIONS.length - 1,
+      Math.floor(Math.random() * ROHIN_NEKO_AVATAR_CLAW_DIRECTIONS.length)
+    );
+    const direction = ROHIN_NEKO_AVATAR_CLAW_DIRECTIONS[directionIndex];
+    return { name: `claw-${direction}`, frames: NEKO_SCRATCH_SPRITES[direction] };
+  }
+  return { name: "yawn", frames: ["yawn2"] };
+};
+
+const stopRohinNekoAvatarAnimation = () => {
+  clearRohinNekoAvatarTimers();
+  setRohinNekoAvatarSprite("yawn1");
+};
+
+const scheduleRohinNekoAvatarAction = () => {
+  if (!isRohinNekoProfile()) {
+    stopRohinNekoAvatarAnimation();
+    return;
+  }
+  const action = getRohinNekoAvatarAction();
+  let frameIndex = 0;
+  setRohinNekoAvatarSprite(action.frames[frameIndex]);
+  if (action.frames.length > 1) {
+    rohinNekoAvatarFrameTimerId = window.setInterval(() => {
+      frameIndex = (frameIndex + 1) % action.frames.length;
+      setRohinNekoAvatarSprite(action.frames[frameIndex]);
+    }, ROHIN_NEKO_AVATAR_FRAME_INTERVAL_MS);
+  }
+  rohinNekoAvatarActionTimerId = window.setTimeout(() => {
+    if (rohinNekoAvatarFrameTimerId !== null) {
+      window.clearInterval(rohinNekoAvatarFrameTimerId);
+      rohinNekoAvatarFrameTimerId = null;
+    }
+    rohinNekoAvatarActionTimerId = null;
+    setRohinNekoAvatarSprite("yawn1");
+    if (!isRohinNekoProfile()) return;
+    rohinNekoAvatarNextTimerId = window.setTimeout(
+      scheduleRohinNekoAvatarAction,
+      ROHIN_NEKO_AVATAR_ACTION_INTERVAL_MS - ROHIN_NEKO_AVATAR_ACTION_DURATION_MS
+    );
+  }, ROHIN_NEKO_AVATAR_ACTION_DURATION_MS);
+};
+
+const startRohinNekoAvatarAnimation = () => {
+  stopRohinNekoAvatarAnimation();
+  if (
+    !isRohinNekoProfile() ||
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return;
+  }
+  rohinNekoAvatarStartTimerId = window.setTimeout(
+    scheduleRohinNekoAvatarAction,
+    ROHIN_NEKO_AVATAR_INITIAL_DELAY_MS
+  );
 };
 const NEKO_TASKBAR_WAKE_ICON = NEKO_SPRITES.awake;
 const NEKO_TASKBAR_SLEEP_ICON = NEKO_SPRITES.sleep1;
@@ -23636,6 +25816,85 @@ const toggleNeko = (event) => {
 
 setNekoTaskbarActionIcon("wake");
 runAfterHomeActivation(startNekoSleepBreathing);
+runAfterHomeActivation(startRohinNekoAvatarAnimation);
+
+const closeAdministratorSignIn = () => {
+  if (administratorPassword) administratorPassword.value = "";
+  setWindowOpen("administrator", false);
+};
+
+const ADMINISTRATOR_ALERT_Z_INDEX = 1_000_000;
+
+const openAdministratorAccessAlert = () => {
+  setWindowOpen("administrator-alert", true);
+  if (administratorAlertWindow) {
+    administratorAlertWindow.style.zIndex = String(ADMINISTRATOR_ALERT_Z_INDEX);
+  }
+};
+
+const completeAdministratorSignIn = (administratorProof) => {
+  resetGameProgressLocalData();
+  const profile = saveGameStatsProfile(GAME_STATS_ROHIN_NEKO_PROFILE);
+  if (!profile) return false;
+
+  // This proof is deliberately assigned after the local reset. It remains
+  // process-memory only, so a refresh or profile reset requires another
+  // server-validated sign-in.
+  gameStatsAdministratorProof = administratorProof;
+  renderGameStatsWindows();
+  startRohinNekoAvatarAnimation();
+  void refreshGameStatsGlobalState();
+  return true;
+};
+
+if (administratorSignInForm) {
+  administratorSignInForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (administratorSignIn?.disabled) return;
+
+    const username = String(administratorUsername?.value || "");
+    const password = String(administratorPassword?.value || "");
+    if (!username || !password) {
+      closeAdministratorSignIn();
+      return;
+    }
+
+    if (administratorSignIn) administratorSignIn.disabled = true;
+    let administratorProof = null;
+    try {
+      const response = await fetchGameStatsApi("/administrator/sign-in", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      });
+      administratorProof = normalizeAdministratorSignInResponse(
+        await readGameStatsApiJson(response)
+      );
+    } catch {
+      // Authentication failures are intentionally indistinguishable in the UI.
+    } finally {
+      if (administratorSignIn) administratorSignIn.disabled = false;
+    }
+
+    if (!administratorProof || !completeAdministratorSignIn(administratorProof)) {
+      closeAdministratorSignIn();
+      return;
+    }
+    closeAdministratorSignIn();
+    openAdministratorAccessAlert();
+  });
+}
+
+administratorWindow?.addEventListener("animationend", (event) => {
+  if (event.target !== administratorWindow || event.animationName !== "retro-window-open") return;
+  administratorWindow.classList.remove("is-opening");
+  administratorUsername?.focus();
+});
+
+administratorAlertWindow?.addEventListener("animationend", (event) => {
+  if (event.target !== administratorAlertWindow || event.animationName !== "retro-window-open") return;
+  administratorAlertWindow.classList.remove("is-opening");
+  administratorAlertClose?.focus();
+});
 
 appButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
@@ -23682,34 +25941,110 @@ gameStatsOpenButtons.forEach((button) => {
   });
 });
 
-if (gameStatsExport) {
-  gameStatsExport.addEventListener("click", exportPendingGameStats);
-}
-
-if (gameProfileName) {
-  gameProfileName.addEventListener("input", () => {
-    if (!gameStatsDraftProfile) return;
-    gameStatsDraftProfile.name = gameProfileName.value;
-  });
-}
-
 if (gameProfileReroll) {
   gameProfileReroll.addEventListener("click", async () => {
     if (
       !gameStatsDraftProfile ||
+      gameStatsNameRollInFlight ||
       gameStatsDraftProfile.rerollCount >= GAME_STATS_MAX_NAME_REROLLS
     ) {
       return;
     }
-    gameStatsDraftProfile.rerollCount += 1;
+    gameStatsPreserveNameSuggestionsAfterReroll = true;
+    const rolled = await rollGameStatsDraftName({ isReroll: true });
+    if (rolled && gameStatsDraftProfile) gameStatsDraftProfile.rerollCount += 1;
     updateGameProfileRerollState();
-    gameProfileReroll.disabled = true;
-    const name = await generateGameStatsName();
-    gameStatsDraftProfile.name = name;
-    if (gameProfileName) gameProfileName.value = name;
-    updateGameProfileRerollState();
+    window.setTimeout(() => {
+      gameStatsPreserveNameSuggestionsAfterReroll = false;
+    }, 0);
   });
 }
+
+const toggleGameProfileNameSuggestions = () => {
+  if (gameStatsNameRollInFlight || !gameStatsDraftNameSuggestions.length) return;
+  setGameProfileNameSuggestionsVisible(!gameStatsNameSuggestionsOpen);
+  if (gameStatsNameSuggestionsOpen) {
+    const selectedIndex = gameStatsDraftNameSuggestions.indexOf(gameStatsDraftProfile?.name);
+    setGameProfileNameSuggestionActive(selectedIndex);
+  }
+};
+
+if (gameProfileName) {
+  gameProfileName.addEventListener("click", toggleGameProfileNameSuggestions);
+  gameProfileName.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && gameStatsNameSuggestionsOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      setGameProfileNameSuggestionsVisible(false);
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    if (!gameStatsNameSuggestionsOpen) {
+      toggleGameProfileNameSuggestions();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      const name = gameStatsDraftNameSuggestions[gameStatsNameSuggestionActiveIndex];
+      if (name) selectGameStatsDraftName(name);
+      return;
+    }
+    const movement = event.key === "ArrowDown" ? 1 : -1;
+    const nextIndex = Math.max(
+      0,
+      Math.min(
+        gameStatsNameSuggestionActiveIndex + movement,
+        gameStatsDraftNameSuggestions.length - 1
+      )
+    );
+    setGameProfileNameSuggestionActive(nextIndex);
+  });
+}
+
+if (gameProfileNameToggle) {
+  gameProfileNameToggle.addEventListener("click", toggleGameProfileNameSuggestions);
+}
+
+if (gameProfileNameOptions) {
+  gameProfileNameOptions.addEventListener("keydown", (event) => {
+    if (!event.target.matches("[role='option']")) return;
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const options = [...gameProfileNameOptions.querySelectorAll("[role='option']")];
+    const currentIndex = options.indexOf(event.target);
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? options.length - 1
+          : Math.max(0, Math.min(currentIndex + (event.key === "ArrowDown" ? 1 : -1), options.length - 1));
+    setGameProfileNameSuggestionActive(nextIndex, { focus: true });
+  });
+}
+
+if (gameProfileNamePicker) {
+  gameProfileNamePicker.addEventListener("focusout", () => {
+    window.setTimeout(() => {
+      if (
+        !gameProfileNamePicker.contains(document.activeElement) &&
+        document.activeElement !== gameProfileReroll &&
+        !gameStatsPreserveNameSuggestionsAfterReroll
+      ) {
+        setGameProfileNameSuggestionsVisible(false);
+      }
+    }, 0);
+  });
+}
+
+document.addEventListener("pointerdown", (event) => {
+  if (
+    gameStatsNameSuggestionsOpen &&
+    gameProfileNamePicker &&
+    !gameProfileNamePicker.contains(event.target)
+  ) {
+    setGameProfileNameSuggestionsVisible(false);
+  }
+});
 
 if (gameProfileIconSearch) {
   gameProfileIconSearch.addEventListener("input", renderGameProfileIconGallery);
@@ -23720,30 +26055,70 @@ if (gameProfileSave) {
     if (!gameStatsDraftProfile) return;
     const profile = normalizeGameStatsProfile({
       ...gameStatsDraftProfile,
-      name: gameProfileName?.value || gameStatsDraftProfile.name,
     });
     if (!profile) {
-      gameProfileName?.focus();
+      gameProfileReroll?.focus();
       return;
     }
-    saveGameStatsProfile(profile);
-    resolveGameStatsProfilePrompt(profile);
+    const savedProfile = saveGameStatsProfile(profile);
+    if (!savedProfile) return;
+    resolveGameStatsProfilePrompt(savedProfile);
   });
 }
 
 if (gameProfileCancel) {
   gameProfileCancel.addEventListener("click", () => {
-    resolveGameStatsProfilePrompt(null);
+    skipGameStatsProfilePrompt();
+  });
+}
+
+if (gameProfileClose) {
+  gameProfileClose.addEventListener("click", () => {
+    skipGameStatsProfilePrompt();
   });
 }
 
 document.addEventListener("keydown", (event) => {
   if (!gameStatsProfilePromptResolve || event.key !== "Escape") return;
+  if (gameStatsNameSuggestionsOpen) {
+    event.preventDefault();
+    setGameProfileNameSuggestionsVisible(false);
+    gameProfileName?.focus();
+    return;
+  }
   event.preventDefault();
-  resolveGameStatsProfilePrompt(null);
+  skipGameStatsProfilePrompt();
 });
 
-renderGameStatsWindow();
+if (gameProfileDialog) {
+  gameProfileDialog.addEventListener("animationend", (event) => {
+    if (event.animationName === "retro-window-open") {
+      gameProfileDialog.classList.remove("is-opening");
+    }
+  });
+}
+
+const gameProgressCreateProfile = document.getElementById("game-progress-create-profile");
+if (gameProgressCreateProfile) {
+  gameProgressCreateProfile.addEventListener("click", () => {
+    if (gameStatsProfile || gameStatsProfilePromptResolve) return;
+    void createGameProgressProfile();
+  });
+}
+
+const gameProgressResetLocal = document.getElementById("game-progress-reset-local");
+if (gameProgressResetLocal) {
+  gameProgressResetLocal.addEventListener("click", () => {
+    resetGameProgressLocalData();
+  });
+}
+
+renderGameStatsWindows();
+void syncQueuedGameStats();
+window.addEventListener("resize", scheduleGameStatsPlayerNameMarquees);
+window.addEventListener("resize", () => {
+  requestAnimationFrame(positionVisibleGameStatsWindows);
+});
 
 document.addEventListener(
   "pointerdown",
@@ -23942,6 +26317,8 @@ const msGrid = document.getElementById("ms-grid");
 const msMines = document.getElementById("ms-mines");
 const msTime = document.getElementById("ms-time");
 const msReset = document.getElementById("ms-reset");
+const msFlagMode = document.getElementById("ms-flag-mode");
+const msQuestionMode = document.getElementById("ms-question-mode");
 const msDifficulty = document.getElementById("ms-difficulty");
 const msLoseBanner = document.getElementById("ms-lose-banner");
 const msAchievement = document.getElementById("ms-achievement");
@@ -23979,6 +26356,8 @@ const msState = {
   gameOver: false,
   timerId: null,
   elapsed: 0,
+  markMode: null,
+  statsSession: "",
 };
 
 const msConfettiCanvas = document.getElementById("ms-confetti");
@@ -24091,6 +26470,17 @@ const msSetFace = (face) => {
   if (msReset) msReset.setAttribute("data-face", face);
 };
 
+const msSetMarkMode = (mode) => {
+  const nextMode = mode === "flag" || mode === "question" ? mode : null;
+  msState.markMode = msState.markMode === nextMode ? null : nextMode;
+  [msFlagMode, msQuestionMode].forEach((button) => {
+    if (!button) return;
+    const isActive = button.dataset.msMarkMode === msState.markMode;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+};
+
 const msStopTimer = () => {
   if (msState.timerId) {
     clearInterval(msState.timerId);
@@ -24100,6 +26490,9 @@ const msStopTimer = () => {
 
 const msStartTimer = () => {
   msStopTimer();
+  msState.statsSession = startGameStatsSession("minesweeper", {
+    difficulty: msDifficulty?.value || "beginner",
+  });
   msState.timerId = setInterval(() => {
     if (msState.gameOver || !msState.started) return;
     if (msState.elapsed >= 999) return;
@@ -24207,7 +26600,8 @@ const msCheckWin = () => {
         type: "win",
         difficulty: msDifficulty?.value || "beginner",
         metric: msState.elapsed,
-      })
+      }),
+      msState.statsSession
     );
     triggerRandomEvents("gameWin", { game: "minesweeper" });
   }
@@ -24286,6 +26680,7 @@ const msNewGame = (difficulty) => {
   msState.started = false;
   msState.gameOver = false;
   msState.elapsed = 0;
+  msState.statsSession = "";
   msSetFace("smile");
   msStopTimer();
   if (msLoseBanner) msLoseBanner.classList.remove("is-visible");
@@ -24298,6 +26693,10 @@ const msHandleLeftClick = (index) => {
   if (msState.gameOver) return;
   const cell = msState.cells[index];
   if (!cell) return;
+  if (msState.markMode) {
+    msToggleMark(index, msState.markMode);
+    return;
+  }
   if (cell.revealed) {
     msChord(index);
     return;
@@ -24321,6 +26720,22 @@ const msToggleFlag = (index) => {
     cell.question = true;
   } else if (cell.question) {
     cell.question = false;
+  }
+  msRenderCell(index);
+  msUpdateCounters();
+};
+
+const msToggleMark = (index, mode) => {
+  const cell = msState.cells[index];
+  if (!cell || cell.revealed || msState.gameOver) return;
+  if (mode === "flag") {
+    cell.flagged = !cell.flagged;
+    cell.question = false;
+  } else if (mode === "question") {
+    cell.question = !cell.question;
+    cell.flagged = false;
+  } else {
+    return;
   }
   msRenderCell(index);
   msUpdateCounters();
@@ -24367,6 +26782,7 @@ if (msGrid) {
     if (msState.gameOver) return;
     const cell = event.target.closest(".ms-cell");
     if (!cell) return;
+    if (msState.markMode) return;
     msSetFace("ooh");
     cell.classList.add("is-pressed");
     if (cell.classList.contains("is-question")) {
@@ -24406,6 +26822,13 @@ if (msReset) {
   });
 }
 
+[[msFlagMode, "flag"], [msQuestionMode, "question"]].forEach(([button, mode]) => {
+  if (!button) return;
+  button.addEventListener("click", () => {
+    msSetMarkMode(mode);
+  });
+});
+
 if (msAchievement) {
   msAchievement.addEventListener("animationend", () => {
     msAchievement.classList.remove("is-showing");
@@ -24428,6 +26851,7 @@ if (msDifficulty) {
   });
 }
 
+msSetMarkMode(null);
 msNewGame("beginner");
 
 const solBoard = document.getElementById("sol-board");
@@ -24484,6 +26908,7 @@ const solState = {
   selected: null,
   moves: 0,
   won: false,
+  statsSession: "",
 };
 const solHistory = [];
 const solFireworkColors = [
@@ -24502,6 +26927,11 @@ let solVictoryFrameRequest = null;
 let solVictoryScratchCanvas = null;
 let solActiveTableauTooltip = null;
 let solLastCardClick = null;
+
+const ensureSolitaireStatsSession = () => {
+  if (solState.statsSession) return;
+  solState.statsSession = startGameStatsSession("solitaire", {});
+};
 
 const solSprite = {
   cardHeight: 22,
@@ -24876,7 +27306,8 @@ const solTriggerVictoryEffects = () => {
       game: "solitaire",
       type: "win",
       metric: solState.moves,
-    })
+    }),
+    solState.statsSession
   );
   triggerRandomEvents("gameWin", { game: "solitaire" });
 };
@@ -25073,6 +27504,7 @@ const solRemoveSelectedCards = () => {
 const solCompleteMove = (selected) => {
   solFlipSourceTopCard(selected);
   solState.selected = null;
+  ensureSolitaireStatsSession();
   solState.moves += 1;
   solCheckWin();
   solRender();
@@ -25209,12 +27641,14 @@ const solDraw = () => {
 
   if (solState.stock.length) {
     solPushUndo();
+    ensureSolitaireStatsSession();
     const card = solState.stock.pop();
     card.faceUp = true;
     solState.waste.push(card);
     solState.moves += 1;
   } else if (solState.waste.length) {
     solPushUndo();
+    ensureSolitaireStatsSession();
     solState.stock = solState.waste.reverse().map((card) => {
       card.faceUp = false;
       return card;
@@ -25241,6 +27675,7 @@ const solNewGame = () => {
   solState.selected = null;
   solState.moves = 0;
   solState.won = false;
+  solState.statsSession = "";
   solHistory.length = 0;
   solLastCardClick = null;
   solHideVictoryVideo();
@@ -25573,12 +28008,12 @@ draggableWindows.forEach((win) => {
     const offsetY = event.clientY - rect.top;
     let didDragWindow = false;
 
-    win.classList.remove("app-window--center");
-    win.style.translate = "0 0";
-    if (win.id === "about-window") {
+    if (win.id === "about-window" || win.id === "game-profile-dialog") {
       win.style.left = `${rect.left}px`;
       win.style.top = `${rect.top}px`;
     }
+    win.classList.remove("app-window--center");
+    win.style.translate = "0 0";
     titleBar.setPointerCapture(event.pointerId);
     setPointerHeldItemCursor("window-drag", true);
 
