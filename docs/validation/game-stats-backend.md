@@ -18,15 +18,27 @@ or high-stakes game.
 ## Verified State — 2026-07-24
 
 - The public Worker endpoint is
-  `https://personal-site-game-stats.rohinshankerme.workers.dev`. On
-  2026-07-24, `GET /health` returned `200 {"ok":true}` and `GET /stats` returned
-  a valid empty D1-backed stats document from the production origin.
+  `https://personal-site-game-stats.rohinshankerme.workers.dev`. Worker version
+  `9046e2d6-6172-42e3-96b3-632d95e27508` and static application commit
+  `73b53c0` were released together on build
+  `sha256-2bd2ca9411a5784f3b5ad3170e22473d6e072010588b0ac9f6a365e4f15c40e2`.
 - The deployed Worker accepts the exact production origin and allows both
   `Authorization` and `Content-Type` in CORS preflight. It rejects local page
   origins by design, so test production credentials on the deployed site—not
   `localhost` or `127.0.0.1` against the public Worker.
 - `scripts/home/game-stats-backend.js` now uses that public HTTPS endpoint. It
   contains no credential; the Worker secrets remain server-only.
+- A fresh production profile published one real UI completion for each
+  supported game. All four session and event requests returned `201`, every
+  event returned `applied: true`, the browser queue drained, and `/stats`
+  refreshed the corresponding totals and leaderboards.
+- A production Administrator sign-in then published a protected beginner
+  Minesweeper completion. The event returned `201` with `applied: true`,
+  beginner wins incremented, the protected profile changed from no rank to
+  rank 2 of 2 and appeared in the Top 3, and the browser queue drained.
+- A direct read-only D1 reconciliation found exactly the five matching rows:
+  four ordinary-profile game events and the protected-profile event. The
+  rendered stats windows agreed with D1 and reported no console or page errors.
 
 Do not invent a Worker URL from the account ID. After deploying, copy the URL
 from Wrangler's successful deployment output. A `workers.dev` URL is normally
@@ -234,6 +246,13 @@ changes:
 - event time is a plausible, bounded timestamp; and
 - the keyed IP rate limit allows the request.
 
+An event profile has the exact public API shape `{ "id", "name", "icon" }`.
+Fields used only by the browser, including `rerollCount`, must be removed at
+the API boundary. Keep the Worker strict: an unknown profile field is a
+contract error and must not consume the session. Attach the saved profile to
+every result, including later Solitaire wins that do not reopen the profile
+prompt, so accepted events can update player leaderboards.
+
 The tracked result types are Minesweeper `win`, Solitaire `win`, Snake
 `gamePlayed` with a bounded board score, and Sudoku `win`. Keep event-ID
 idempotency as a second replay guard: retrying a completed request must not
@@ -245,13 +264,13 @@ returns the same generic `401` response for every non-matching valid credential
 pair, and limits attempts to five per keyed IP address per 15 minutes. A successful
 response contains only the public protected-profile identity and an opaque
 proof that expires after a short interval. The browser must keep that proof in
-  session storage for the current tab only, never in local storage, cookies, a
-  URL, analytics, or logs. This lets a refreshed deployed page finish saving a
-  valid, queued protected-profile completion. It is still an expiring bearer
-  proof, not a credential: the Worker checks its expiry and IP binding, and a
-  reset, a new tab, or expiry requires another sign-in. The Worker requires
-  `Authorization: Bearer <proof>` before accepting any event for the protected
-  profile; ordinary profiles retain the normal session flow.
+session storage for the current tab only, never in local storage, cookies, a
+URL, analytics, or logs. This lets a refreshed deployed page finish saving a
+valid, queued protected-profile completion. It is still an expiring bearer
+proof, not a credential: the Worker checks its expiry and IP binding, and a
+reset, a new tab, or expiry requires another sign-in. The Worker requires
+`Authorization: Bearer <proof>` before accepting any event for the protected
+profile; ordinary profiles retain the normal session flow.
 
 ## Production Turnstile
 
@@ -407,16 +426,37 @@ credential into `curl`, browser devtools, a screenshot, a test, or a shell
 command. Verify the successful flow only through the deployed site: open
 Cursor Settings, click the title-bar `?` immediately before Close, enter the
 credentials from the password manager, and confirm that the Administrator
-window closes and the System Alert says `Administrator Access Granted`.
+window closes and the System Alert:
 
-Then use the deployed site—not a handcrafted success request—to complete one
-valid run of each game. Confirm a single matching global total/leaderboard
-update, refresh the stats window, and verify that retrying the same completed
-submission neither creates a second event nor changes totals. Also verify that
-an expired/replayed session, bad HMAC, mismatched build version, and malformed
-metric are rejected. Test CORS with the expected origin and a different origin.
-Test a reused Turnstile token only after the complete Turnstile client flow is
-released.
+- uses the annoying-popup window shape and bundled warning-triangle icon;
+- says exactly `Administrator access granted.` and nothing else; and
+- has a right-aligned `OK` button.
+
+Verify ordinary and protected publishing separately:
+
+1. In a fresh browser profile on the deployed site, save the generated public
+   player profile, then complete a duration-valid run of Minesweeper,
+   Solitaire, Snake, and Sudoku through the real game controls.
+2. For every game, confirm `POST /sessions` and `POST /events` return `201`,
+   the event response has `applied: true`, the serialized profile contains
+   only `id`, `name`, and `icon`, and the local retry queue is empty.
+3. Refresh each stats window and confirm the matching count increments and the
+   player appears in the applicable Top 3. For Minesweeper, also confirm
+   `playerRanks.minesweeper.<difficulty>.rank` is non-null and agrees with the
+   visible `#N` record.
+4. In a separate fresh tab, sign in as Administrator through the visible form
+   and complete one duration-valid beginner Minesweeper game before the
+   short-lived proof expires. Confirm the protected event returns `201` with
+   `applied: true`, its count increments, its player rank agrees with its Top 3
+   position, and the queue drains.
+5. Reconcile the accepted event IDs and public player fields with a read-only
+   remote D1 query. Reopening or refreshing stats must not change totals;
+   event-ID uniqueness and the Worker tests cover duplicate submission.
+
+Also verify that an expired/replayed session, bad HMAC, mismatched build
+version, and malformed metric are rejected. Test CORS with the expected origin
+and a different origin. Test a reused Turnstile token only after the complete
+Turnstile client flow is released.
 
 ## Repository And GitHub Secret Protection
 
