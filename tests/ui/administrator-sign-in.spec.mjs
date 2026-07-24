@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
+const GAME_STATS_SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
+const ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
 const SNAKE_HIGH_SCORE_KEY = "personalSiteSnakeHighScores";
 const ADMINISTRATOR_PROFILE = Object.freeze({
   id: "player-rohin-neko",
@@ -20,7 +22,7 @@ const viewports = Object.freeze([
 const API_BASE_URL = "https://game-stats.test";
 const administratorProof = `${"a".repeat(32)}.${"b".repeat(32)}`;
 
-const configureAdministratorApi = async (page, signInStatus) => {
+const configureAdministratorApi = async (page, signInStatus, { onEvent } = {}) => {
   await page.route("**/scripts/home/game-stats-backend.js*", async (route) => {
     await route.fulfill({
       contentType: "application/javascript",
@@ -56,35 +58,49 @@ const configureAdministratorApi = async (page, signInStatus) => {
       });
       return;
     }
+    if (url.pathname === "/events") {
+      onEvent?.({
+        authorization: request.headers().authorization || "",
+        body: JSON.parse(request.postData() || "{}"),
+      });
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, applied: true }),
+      });
+      return;
+    }
     await route.fulfill({ contentType: "application/json", body: JSON.stringify({}) });
   });
 };
 
-const preparePage = async (page, signInStatus) => {
-  await page.addInitScript(
-    ({ profileStorageKey, gameStatsStorageKey, snakeHighScoreKey }) => {
-      localStorage.setItem(
-        profileStorageKey,
-        JSON.stringify({
-          id: "player-before-administrator",
-          name: "Before Administrator",
-          icon: "assets/app-icons/ico/user_card.ico",
-          rerollCount: 0,
-        })
-      );
-      localStorage.setItem(
-        gameStatsStorageKey,
-        JSON.stringify({ totals: { minesweeper: { wins: { beginner: 4 } } } })
-      );
-      localStorage.setItem(snakeHighScoreKey, JSON.stringify({ 16: 99 }));
-    },
-    {
-      profileStorageKey: PROFILE_STORAGE_KEY,
-      gameStatsStorageKey: GAME_STATS_STORAGE_KEY,
-      snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
-    }
-  );
-  await configureAdministratorApi(page, signInStatus);
+const preparePage = async (page, signInStatus, { seedLocalState = true, ...apiOptions } = {}) => {
+  if (seedLocalState) {
+    await page.addInitScript(
+      ({ profileStorageKey, gameStatsStorageKey, snakeHighScoreKey }) => {
+        localStorage.setItem(
+          profileStorageKey,
+          JSON.stringify({
+            id: "player-before-administrator",
+            name: "Before Administrator",
+            icon: "assets/app-icons/ico/user_card.ico",
+            rerollCount: 0,
+          })
+        );
+        localStorage.setItem(
+          gameStatsStorageKey,
+          JSON.stringify({ totals: { minesweeper: { wins: { beginner: 4 } } } })
+        );
+        localStorage.setItem(snakeHighScoreKey, JSON.stringify({ 16: 99 }));
+      },
+      {
+        profileStorageKey: PROFILE_STORAGE_KEY,
+        gameStatsStorageKey: GAME_STATS_STORAGE_KEY,
+        snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
+      }
+    );
+  }
+  await configureAdministratorApi(page, signInStatus, apiOptions);
   await page.goto("/home.html");
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
@@ -127,24 +143,96 @@ for (const viewport of viewports) {
     await expect(page.locator("#administrator-alert-close")).toBeFocused();
 
     const state = await page.evaluate(
-      ({ profileStorageKey, gameStatsStorageKey, snakeHighScoreKey }) => ({
+      ({
+        profileStorageKey,
+        gameStatsStorageKey,
+        snakeHighScoreKey,
+        administratorProofStorageKey,
+      }) => ({
         profile: JSON.parse(localStorage.getItem(profileStorageKey)),
         gameStats: JSON.parse(localStorage.getItem(gameStatsStorageKey)),
         snakeScores: localStorage.getItem(snakeHighScoreKey),
+        proof: JSON.parse(sessionStorage.getItem(administratorProofStorageKey)),
         documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
       }),
       {
         profileStorageKey: PROFILE_STORAGE_KEY,
         gameStatsStorageKey: GAME_STATS_STORAGE_KEY,
         snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
+        administratorProofStorageKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
       }
     );
     expect(state.profile).toEqual(ADMINISTRATOR_PROFILE);
     expect(state.gameStats.totals.minesweeper.wins.beginner).toBe(0);
     expect(state.snakeScores).toBeNull();
+    expect(state.proof.proof).toBe(administratorProof);
+    expect(Date.parse(state.proof.expiresAt)).toBeGreaterThan(Date.now());
     expect(state.documentOverflows).toBe(false);
   });
 }
+
+test("Administrator proof survives a refresh and publishes a verified Rohin result", async ({ page }) => {
+  const publishedEvents = [];
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await preparePage(page, "success", {
+    onEvent: (event) => publishedEvents.push(event),
+    seedLocalState: false,
+  });
+  await openAdministratorWindow(page);
+  await page.locator("#administrator-username").fill("administrator");
+  await page.locator("#administrator-password").fill("password");
+  await page.locator("#administrator-sign-in").click();
+  await expect(page.locator("#administrator-alert-window")).toBeVisible();
+
+  await page.evaluate(
+    ({ queueStorageKey, profile }) => {
+      localStorage.setItem(
+        queueStorageKey,
+        JSON.stringify([
+          {
+            event: {
+              id: "event-rohin-refresh-save-0001",
+              game: "minesweeper",
+              type: "win",
+              occurredAt: new Date().toISOString(),
+              difficulty: "beginner",
+              metric: 42,
+              metricKind: "seconds",
+              profile,
+            },
+            session: {
+              id: "session-rohin-refresh-save-0001",
+              token: "a".repeat(32),
+              expiresAt: new Date(Date.now() + 60_000).toISOString(),
+            },
+          },
+        ])
+      );
+    },
+    { queueStorageKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY, profile: ADMINISTRATOR_PROFILE }
+  );
+  await page.reload();
+
+  await expect.poll(() => publishedEvents.length).toBe(1);
+  expect(publishedEvents[0].authorization).toBe(`Bearer ${administratorProof}`);
+  expect(publishedEvents[0].body.event.profile).toEqual(ADMINISTRATOR_PROFILE);
+
+  const state = await page.evaluate(
+    ({ profileStorageKey, queueStorageKey, proofStorageKey }) => ({
+      profile: JSON.parse(localStorage.getItem(profileStorageKey)),
+      queuedResults: JSON.parse(localStorage.getItem(queueStorageKey)),
+      proof: JSON.parse(sessionStorage.getItem(proofStorageKey)),
+    }),
+    {
+      profileStorageKey: PROFILE_STORAGE_KEY,
+      queueStorageKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+      proofStorageKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
+    }
+  );
+  expect(state.profile).toEqual(ADMINISTRATOR_PROFILE);
+  expect(state.queuedResults).toEqual([]);
+  expect(state.proof.proof).toBe(administratorProof);
+});
 
 test("Administrator failure closes the sign-in window and never grants access", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });

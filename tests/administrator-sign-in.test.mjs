@@ -65,6 +65,15 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
     /ADMINISTRATOR_ALERT_Z_INDEX = 1_000_000[\s\S]*?administratorAlertWindow\.style\.zIndex/
   );
   assert.match(main, /Authorization\s*:\s*`Bearer \$\{[^}]+\}`/);
+  assert.match(main, /GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY/);
+  assert.match(main, /sessionStorage\.getItem\(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
+  assert.match(main, /sessionStorage\.setItem\(/);
+  assert.match(main, /sessionStorage\.removeItem\(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
+  assert.doesNotMatch(
+    main,
+    /localStorage\.setItem\(\s*GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY/,
+    "The short-lived authorization proof must not become a long-lived local credential."
+  );
 });
 
 test("Administrator credentials remain server-only and the protected profile has no keyboard backdoor", async () => {
@@ -91,7 +100,13 @@ test("Administrator credentials remain server-only and the protected profile has
     /name:\s*"rohin \^\.\^"[\s\S]*?icon:\s*GAME_STATS_ROHIN_NEKO_AVATAR_ICON/
   );
   assert.match(main, /expiresAt/);
+  assert.match(main, /normalizeAdministratorProof/);
   assert.match(main, /resetGameProgressLocalData\(\);[\s\S]*?saveGameStatsProfile\(/);
+  assert.match(
+    main,
+    /waitingForAdministratorAuthorizationCount[\s\S]*?Sign in as Administrator again to publish your verified Rohin result\./,
+    "A protected event must remain queued so it can publish after a fresh administrator sign-in."
+  );
   for (const secretName of requiredAdministratorSecrets) {
     assert.match(workerConfig, new RegExp(`"${secretName}"`));
   }

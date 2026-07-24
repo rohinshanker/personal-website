@@ -57,10 +57,12 @@
 }
 
 #ms-mines {
+  grid-column: 1;
   justify-self: start;
 }
 
 #ms-time {
+  grid-column: 5;
   justify-self: end;
 }
 
@@ -76,6 +78,7 @@
 }
 
 .ms-reset {
+  grid-column: 3;
   width: 38px;
   height: 38px;
   border: none;
@@ -105,6 +108,18 @@
   padding: 0;
   text-shadow: none;
   width: 32px;
+}
+
+.ms-mark-control[hidden] {
+  display: none;
+}
+
+#ms-flag-mode {
+  grid-column: 2;
+}
+
+#ms-question-mode {
+  grid-column: 4;
 }
 
 .ms-mark-control::before {
@@ -300,6 +315,10 @@
 
 .ms-footer select {
   height: 22px;
+}
+
+.ms-mobile-controls-label {
+  margin-right: auto;
 }
 
 .ms-lose-banner {

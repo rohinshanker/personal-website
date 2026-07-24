@@ -48,7 +48,7 @@ game completion
 Administrator sign-in
   -> POST /administrator/sign-in from the exact allowed browser origin
   -> keyed-IP limit (five attempts per 15 minutes) + constant-time credential checks
-  -> short-lived, IP-bound, server-HMAC-signed proof held only in browser memory
+  -> short-lived, IP-bound, server-HMAC-signed proof held in session storage for one browser tab
   -> protected profile events require that proof
 ```
 
@@ -245,9 +245,13 @@ returns the same generic `401` response for every non-matching valid credential
 pair, and limits attempts to five per keyed IP address per 15 minutes. A successful
 response contains only the public protected-profile identity and an opaque
 proof that expires after a short interval. The browser must keep that proof in
-memory, never in local storage, cookies, a URL, analytics, or logs. The Worker
-requires `Authorization: Bearer <proof>` before accepting any event for the
-protected profile; ordinary profiles retain the normal session flow.
+  session storage for the current tab only, never in local storage, cookies, a
+  URL, analytics, or logs. This lets a refreshed deployed page finish saving a
+  valid, queued protected-profile completion. It is still an expiring bearer
+  proof, not a credential: the Worker checks its expiry and IP binding, and a
+  reset, a new tab, or expiry requires another sign-in. The Worker requires
+  `Authorization: Bearer <proof>` before accepting any event for the protected
+  profile; ordinary profiles retain the normal session flow.
 
 ## Production Turnstile
 
@@ -400,10 +404,10 @@ curl -i -X POST "$GAME_STATS_API_URL/administrator/sign-in" \
 The administrator check must return the generic `401` response without
 revealing whether either field was wrong. Do not paste a real administrator
 credential into `curl`, browser devtools, a screenshot, a test, or a shell
-command. Verify the successful flow only through the deployed site: click the
-`?` taskbar button, enter the credentials from the password manager, and
-confirm that the Administrator window closes and the System Alert says
-`Administrator Access Granted`.
+command. Verify the successful flow only through the deployed site: open
+Cursor Settings, click the title-bar `?` immediately before Close, enter the
+credentials from the password manager, and confirm that the Administrator
+window closes and the System Alert says `Administrator Access Granted`.
 
 Then use the deployed site—not a handcrafted success request—to complete one
 valid run of each game. Confirm a single matching global total/leaderboard

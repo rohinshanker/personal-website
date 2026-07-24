@@ -1013,6 +1013,7 @@ const LIFE_COUNTER_DIGIT_SOURCES = {
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const GAME_STATS_SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
 const GAME_STATS_PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
+const GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
 const GAME_STATS_MAX_SYNC_QUEUE_LENGTH = 100;
 const GAME_STATS_API_TIMEOUT_MS = 8000;
 const GAME_STATS_MAX_NAME_REROLLS = 10;
@@ -1188,22 +1189,32 @@ const normalizeGameStatsProfile = (profile) => {
   };
 };
 
-const normalizeAdministratorSignInResponse = (payload) => {
+const normalizeAdministratorProof = (payload) => {
   if (!payload || typeof payload !== "object") return null;
   const proof = String(payload.proof || "").trim();
   const expiresAtMs = new Date(payload.expiresAt || "").getTime();
-  const profile = normalizeGameStatsProfile(payload.profile);
   if (
     !/^[A-Za-z0-9._~+=\/-]{16,4096}$/.test(proof) ||
     !Number.isFinite(expiresAtMs) ||
-    expiresAtMs <= Date.now() ||
+    expiresAtMs <= Date.now()
+  ) {
+    return null;
+  }
+  return { proof, expiresAt: new Date(expiresAtMs).toISOString() };
+};
+
+const normalizeAdministratorSignInResponse = (payload) => {
+  const proof = normalizeAdministratorProof(payload);
+  const profile = normalizeGameStatsProfile(payload?.profile);
+  if (
+    !proof ||
     profile?.id !== GAME_STATS_ROHIN_NEKO_PROFILE.id ||
     profile.name !== GAME_STATS_ROHIN_NEKO_PROFILE.name ||
     profile.icon !== GAME_STATS_ROHIN_NEKO_AVATAR_ICON
   ) {
     return null;
   }
-  return { proof, expiresAt: new Date(expiresAtMs).toISOString() };
+  return proof;
 };
 
 const normalizeGameStatsLeaderboardEntries = (entries, direction, limit) =>
@@ -1532,7 +1543,41 @@ const readGameStatsApiJson = async (response) => {
 
 let gameStatsSessionSequence = 0;
 const gameStatsSessions = new Map();
-let gameStatsAdministratorProof = null;
+
+const loadGameStatsAdministratorProof = () => {
+  try {
+    return normalizeAdministratorProof(
+      JSON.parse(sessionStorage.getItem(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY) || "null")
+    );
+  } catch {
+    return null;
+  }
+};
+
+const saveGameStatsAdministratorProof = (proof) => {
+  const normalizedProof = normalizeAdministratorProof(proof);
+  if (!normalizedProof) return null;
+  try {
+    sessionStorage.setItem(
+      GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY,
+      JSON.stringify(normalizedProof)
+    );
+  } catch {
+    // The short-lived proof remains usable for the current page when storage is unavailable.
+  }
+  return normalizedProof;
+};
+
+const clearGameStatsAdministratorProof = () => {
+  gameStatsAdministratorProof = null;
+  try {
+    sessionStorage.removeItem(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY);
+  } catch {
+    // Session storage is best-effort and never contains credentials.
+  }
+};
+
+let gameStatsAdministratorProof = loadGameStatsAdministratorProof();
 
 const getAdministratorEventHeaders = (profile) => {
   if (profile?.id !== GAME_STATS_ROHIN_NEKO_PROFILE.id) return {};
@@ -1542,7 +1587,7 @@ const getAdministratorEventHeaders = (profile) => {
     !Number.isFinite(expiresAtMs) ||
     expiresAtMs <= Date.now()
   ) {
-    gameStatsAdministratorProof = null;
+    clearGameStatsAdministratorProof();
     return {};
   }
   return { Authorization: `Bearer ${gameStatsAdministratorProof.proof}` };
@@ -1598,7 +1643,7 @@ const saveGameStatsProfile = (profile) => {
 
 const clearGameStatsProfile = () => {
   gameStatsProfile = null;
-  gameStatsAdministratorProof = null;
+  clearGameStatsAdministratorProof();
   stopRohinNekoAvatarAnimation();
   try {
     localStorage.removeItem(GAME_STATS_PROFILE_STORAGE_KEY);
@@ -2246,6 +2291,7 @@ const syncQueuedGameStats = async () => {
   if (!isGameStatsBackendConfigured() || gameStatsSyncInProgress) return;
   gameStatsSyncInProgress = true;
   let rejectedCount = 0;
+  let waitingForAdministratorAuthorizationCount = 0;
   let waitingForSessionCount = 0;
   const remainingSubmissions = [];
 
@@ -2273,6 +2319,14 @@ const syncQueuedGameStats = async () => {
       });
       await readGameStatsApiJson(response);
     } catch (error) {
+      if (
+        submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
+        Number(error?.status) === 403
+      ) {
+        waitingForAdministratorAuthorizationCount += 1;
+        remainingSubmissions.push(submission);
+        continue;
+      }
       if (Number(error?.status) >= 400 && Number(error.status) < 500) {
         rejectedCount += 1;
       } else {
@@ -2287,6 +2341,9 @@ const syncQueuedGameStats = async () => {
   if (waitingForSessionCount) {
     gameStatsSyncMessage =
       "Local stats are saved. A result without a verified game session cannot be published.";
+  } else if (waitingForAdministratorAuthorizationCount) {
+    gameStatsSyncMessage =
+      "Sign in as Administrator again to publish your verified Rohin result.";
   } else if (rejectedCount) {
     gameStatsSyncMessage =
       "Local stats are saved, but a result could not pass server verification.";
@@ -24866,44 +24923,54 @@ const NEKO_SCRATCH_SPRITES = {
   bottom: ["downclaw1", "downclaw2"],
   left: ["leftclaw1", "leftclaw2"],
 };
-const ROHIN_NEKO_AVATAR_INITIAL_DELAY_MS = 1000;
-const ROHIN_NEKO_AVATAR_ACTION_INTERVAL_MS = 3000;
-const ROHIN_NEKO_AVATAR_ACTION_DURATION_MS = 1000;
-const ROHIN_NEKO_AVATAR_FRAME_INTERVAL_MS = 250;
+const ROHIN_NEKO_AVATAR_INITIAL_DELAY_MIN_MS = 1000;
+const ROHIN_NEKO_AVATAR_INITIAL_DELAY_MAX_MS = 3000;
+const ROHIN_NEKO_AVATAR_ACTION_DELAY_MIN_MS = 4000;
+const ROHIN_NEKO_AVATAR_ACTION_DELAY_MAX_MS = 8000;
+const ROHIN_NEKO_AVATAR_SLEEP_CHANCE = 0.3;
 const ROHIN_NEKO_AVATAR_SCRATCH_THRESHOLD = 0.5;
 const ROHIN_NEKO_AVATAR_CLAW_THRESHOLD = 0.65;
-const ROHIN_NEKO_AVATAR_CLAW_DIRECTIONS = Object.freeze(["left", "right", "top", "bottom"]);
-let rohinNekoAvatarStartTimerId = null;
-let rohinNekoAvatarActionTimerId = null;
-let rohinNekoAvatarFrameTimerId = null;
-let rohinNekoAvatarNextTimerId = null;
+const ROHIN_NEKO_AVATAR_CLAW_DIRECTIONS = Object.freeze(["left", "right"]);
+const rohinNekoAvatarInstances = new Map();
+let rohinNekoAvatarObserver = null;
 
 const isRohinNekoProfile = () =>
   gameStatsProfile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
   gameStatsProfile.icon === GAME_STATS_ROHIN_NEKO_AVATAR_ICON;
 
-const setRohinNekoAvatarSprite = (spriteName) => {
+const isRohinNekoAvatarVisible = (image) =>
+  image.isConnected && !image.closest(".is-hidden, [hidden]");
+
+const setRohinNekoAvatarSprite = (instance, spriteName) => {
   const source = NEKO_SPRITES[spriteName] || NEKO_SPRITES.yawn1;
-  document.querySelectorAll("img[data-rohin-neko-avatar]").forEach((image) => {
-    if (image.getAttribute("src") !== source) image.src = source;
-  });
+  if (instance.image.getAttribute("src") !== source) instance.image.src = source;
 };
 
-const clearRohinNekoAvatarTimers = () => {
-  if (rohinNekoAvatarStartTimerId !== null) window.clearTimeout(rohinNekoAvatarStartTimerId);
-  if (rohinNekoAvatarActionTimerId !== null) window.clearTimeout(rohinNekoAvatarActionTimerId);
-  if (rohinNekoAvatarFrameTimerId !== null) window.clearInterval(rohinNekoAvatarFrameTimerId);
-  if (rohinNekoAvatarNextTimerId !== null) window.clearTimeout(rohinNekoAvatarNextTimerId);
-  rohinNekoAvatarStartTimerId = null;
-  rohinNekoAvatarActionTimerId = null;
-  rohinNekoAvatarFrameTimerId = null;
-  rohinNekoAvatarNextTimerId = null;
+const clearRohinNekoAvatarInstanceTimers = (instance) => {
+  if (instance.nextActionTimerId !== null) {
+    window.clearTimeout(instance.nextActionTimerId);
+  }
+  if (instance.frameTimerId !== null) window.clearTimeout(instance.frameTimerId);
+  if (instance.sleepTimerId !== null) window.clearInterval(instance.sleepTimerId);
+  instance.nextActionTimerId = null;
+  instance.frameTimerId = null;
+  instance.sleepTimerId = null;
 };
+
+const removeRohinNekoAvatarInstance = (image) => {
+  const instance = rohinNekoAvatarInstances.get(image);
+  if (!instance) return;
+  clearRohinNekoAvatarInstanceTimers(instance);
+  rohinNekoAvatarInstances.delete(image);
+};
+
+const randomRohinNekoAvatarDelay = (minimum, maximum) =>
+  minimum + Math.floor(Math.random() * (maximum - minimum + 1));
 
 const getRohinNekoAvatarAction = () => {
   const roll = Math.random();
   if (roll < ROHIN_NEKO_AVATAR_SCRATCH_THRESHOLD) {
-    return { name: "scratch", frames: ["scratch1", "scratch2"] };
+    return { name: "scratch", frames: NEKO_SCRATCH_SELF_ACTION.frames };
   }
   if (roll < ROHIN_NEKO_AVATAR_CLAW_THRESHOLD) {
     const directionIndex = Math.min(
@@ -24911,57 +24978,132 @@ const getRohinNekoAvatarAction = () => {
       Math.floor(Math.random() * ROHIN_NEKO_AVATAR_CLAW_DIRECTIONS.length)
     );
     const direction = ROHIN_NEKO_AVATAR_CLAW_DIRECTIONS[directionIndex];
-    return { name: `claw-${direction}`, frames: NEKO_SCRATCH_SPRITES[direction] };
+    const [firstFrame, secondFrame] = NEKO_SCRATCH_SPRITES[direction];
+    return {
+      name: `claw-${direction}`,
+      frames: [
+        firstFrame,
+        secondFrame,
+        firstFrame,
+        secondFrame,
+        firstFrame,
+        secondFrame,
+      ],
+    };
   }
-  return { name: "yawn", frames: ["yawn2"] };
+  return { name: "yawn", frames: NEKO_YAWN_ACTION.frames };
+};
+
+const canAnimateRohinNekoAvatarInstance = (instance) =>
+  isRohinNekoProfile() &&
+  isRohinNekoAvatarVisible(instance.image) &&
+  !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+const scheduleRohinNekoAvatarAction = (instance, { initial = false } = {}) => {
+  if (!canAnimateRohinNekoAvatarInstance(instance)) {
+    removeRohinNekoAvatarInstance(instance.image);
+    return;
+  }
+  const [minimumDelay, maximumDelay] = initial
+    ? [ROHIN_NEKO_AVATAR_INITIAL_DELAY_MIN_MS, ROHIN_NEKO_AVATAR_INITIAL_DELAY_MAX_MS]
+    : [ROHIN_NEKO_AVATAR_ACTION_DELAY_MIN_MS, ROHIN_NEKO_AVATAR_ACTION_DELAY_MAX_MS];
+  instance.nextActionTimerId = window.setTimeout(() => {
+    instance.nextActionTimerId = null;
+    if (!canAnimateRohinNekoAvatarInstance(instance)) {
+      removeRohinNekoAvatarInstance(instance.image);
+      return;
+    }
+
+    const action = getRohinNekoAvatarAction();
+    let frameIndex = 0;
+    const playNextFrame = () => {
+      if (!canAnimateRohinNekoAvatarInstance(instance)) {
+        removeRohinNekoAvatarInstance(instance.image);
+        return;
+      }
+      setRohinNekoAvatarSprite(instance, action.frames[frameIndex]);
+      frameIndex += 1;
+      if (frameIndex < action.frames.length) {
+        instance.frameTimerId = window.setTimeout(playNextFrame, NEKO_FRAME_INTERVAL_MS);
+        return;
+      }
+      instance.frameTimerId = window.setTimeout(() => {
+        instance.frameTimerId = null;
+        if (!canAnimateRohinNekoAvatarInstance(instance)) {
+          removeRohinNekoAvatarInstance(instance.image);
+          return;
+        }
+        setRohinNekoAvatarSprite(instance, "yawn1");
+        scheduleRohinNekoAvatarAction(instance);
+      }, NEKO_FRAME_INTERVAL_MS);
+    };
+    playNextFrame();
+  }, randomRohinNekoAvatarDelay(minimumDelay, maximumDelay));
+};
+
+const createRohinNekoAvatarInstance = (image) => {
+  if (rohinNekoAvatarInstances.has(image)) return;
+  const instance = {
+    image,
+    nextActionTimerId: null,
+    frameTimerId: null,
+    sleepTimerId: null,
+  };
+  rohinNekoAvatarInstances.set(image, instance);
+  if (Math.random() < ROHIN_NEKO_AVATAR_SLEEP_CHANCE) {
+    let sleepFrame = 0;
+    setRohinNekoAvatarSprite(instance, "sleep1");
+    instance.sleepTimerId = window.setInterval(() => {
+      if (!canAnimateRohinNekoAvatarInstance(instance)) {
+        removeRohinNekoAvatarInstance(image);
+        return;
+      }
+      sleepFrame += 1;
+      setRohinNekoAvatarSprite(instance, sleepFrame % 2 === 0 ? "sleep1" : "sleep2");
+    }, NEKO_NAP_FRAME_SWITCH_FRAMES * NEKO_FRAME_INTERVAL_MS);
+    return;
+  }
+  setRohinNekoAvatarSprite(instance, "yawn1");
+  scheduleRohinNekoAvatarAction(instance, { initial: true });
+};
+
+const syncRohinNekoAvatarInstances = () => {
+  if (!isRohinNekoProfile()) return;
+  rohinNekoAvatarInstances.forEach((instance, image) => {
+    if (!isRohinNekoAvatarVisible(image)) removeRohinNekoAvatarInstance(image);
+  });
+  document.querySelectorAll("img[data-rohin-neko-avatar]").forEach((image) => {
+    if (isRohinNekoAvatarVisible(image)) createRohinNekoAvatarInstance(image);
+  });
 };
 
 const stopRohinNekoAvatarAnimation = () => {
-  clearRohinNekoAvatarTimers();
-  setRohinNekoAvatarSprite("yawn1");
-};
-
-const scheduleRohinNekoAvatarAction = () => {
-  if (!isRohinNekoProfile()) {
-    stopRohinNekoAvatarAnimation();
-    return;
-  }
-  const action = getRohinNekoAvatarAction();
-  let frameIndex = 0;
-  setRohinNekoAvatarSprite(action.frames[frameIndex]);
-  if (action.frames.length > 1) {
-    rohinNekoAvatarFrameTimerId = window.setInterval(() => {
-      frameIndex = (frameIndex + 1) % action.frames.length;
-      setRohinNekoAvatarSprite(action.frames[frameIndex]);
-    }, ROHIN_NEKO_AVATAR_FRAME_INTERVAL_MS);
-  }
-  rohinNekoAvatarActionTimerId = window.setTimeout(() => {
-    if (rohinNekoAvatarFrameTimerId !== null) {
-      window.clearInterval(rohinNekoAvatarFrameTimerId);
-      rohinNekoAvatarFrameTimerId = null;
-    }
-    rohinNekoAvatarActionTimerId = null;
-    setRohinNekoAvatarSprite("yawn1");
-    if (!isRohinNekoProfile()) return;
-    rohinNekoAvatarNextTimerId = window.setTimeout(
-      scheduleRohinNekoAvatarAction,
-      ROHIN_NEKO_AVATAR_ACTION_INTERVAL_MS - ROHIN_NEKO_AVATAR_ACTION_DURATION_MS
-    );
-  }, ROHIN_NEKO_AVATAR_ACTION_DURATION_MS);
+  rohinNekoAvatarObserver?.disconnect();
+  rohinNekoAvatarObserver = null;
+  rohinNekoAvatarInstances.forEach((instance) => clearRohinNekoAvatarInstanceTimers(instance));
+  rohinNekoAvatarInstances.clear();
+  document.querySelectorAll("img[data-rohin-neko-avatar]").forEach((image) => {
+    if (image.getAttribute("src") !== NEKO_SPRITES.yawn1) image.src = NEKO_SPRITES.yawn1;
+  });
 };
 
 const startRohinNekoAvatarAnimation = () => {
-  stopRohinNekoAvatarAnimation();
-  if (
-    !isRohinNekoProfile() ||
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-  ) {
+  if (!isRohinNekoProfile() || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    stopRohinNekoAvatarAnimation();
     return;
   }
-  rohinNekoAvatarStartTimerId = window.setTimeout(
-    scheduleRohinNekoAvatarAction,
-    ROHIN_NEKO_AVATAR_INITIAL_DELAY_MS
-  );
+  if (!rohinNekoAvatarObserver) {
+    rohinNekoAvatarObserver = new MutationObserver(() => {
+      syncRohinNekoAvatarInstances();
+    });
+    rohinNekoAvatarObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "hidden"],
+      childList: true,
+      subtree: true,
+    });
+  }
+  syncRohinNekoAvatarInstances();
 };
 const NEKO_TASKBAR_WAKE_ICON = NEKO_SPRITES.awake;
 const NEKO_TASKBAR_SLEEP_ICON = NEKO_SPRITES.sleep1;
@@ -24996,6 +25138,7 @@ const NEKO_WAKE_SEQUENCE = [
 ];
 const NEKO_FRAME_INTERVAL_MS = 100;
 const NEKO_SLEEP_FRAME_INTERVAL_MS = 850;
+const NEKO_NAP_FRAME_SWITCH_FRAMES = 8;
 const NEKO_SPEED = 10;
 const NEKO_IDLE_DISTANCE = 48;
 const NEKO_SPRITE_SIZE = 42;
@@ -25511,7 +25654,8 @@ const putActiveNekoToSleep = () => {
 };
 
 const sleepActiveNeko = () => {
-  const sprite = Math.floor(nekoNapFrame / 8) % 2 === 0 ? "sleep1" : "sleep2";
+  const sprite =
+    Math.floor(nekoNapFrame / NEKO_NAP_FRAME_SWITCH_FRAMES) % 2 === 0 ? "sleep1" : "sleep2";
   setDesktopNekoSprite(sprite);
   renderDesktopNekoCat();
   nekoNapFrame += 1;
@@ -25837,12 +25981,11 @@ const completeAdministratorSignIn = (administratorProof) => {
   const profile = saveGameStatsProfile(GAME_STATS_ROHIN_NEKO_PROFILE);
   if (!profile) return false;
 
-  // This proof is deliberately assigned after the local reset. It remains
-  // process-memory only, so a refresh or profile reset requires another
-  // server-validated sign-in.
-  gameStatsAdministratorProof = administratorProof;
+  gameStatsAdministratorProof = saveGameStatsAdministratorProof(administratorProof);
+  if (!gameStatsAdministratorProof) return false;
   renderGameStatsWindows();
   startRohinNekoAvatarAnimation();
+  void syncQueuedGameStats();
   void refreshGameStatsGlobalState();
   return true;
 };
@@ -26319,6 +26462,7 @@ const msTime = document.getElementById("ms-time");
 const msReset = document.getElementById("ms-reset");
 const msFlagMode = document.getElementById("ms-flag-mode");
 const msQuestionMode = document.getElementById("ms-question-mode");
+const msMobileControls = document.getElementById("ms-mobile-controls");
 const msDifficulty = document.getElementById("ms-difficulty");
 const msLoseBanner = document.getElementById("ms-lose-banner");
 const msAchievement = document.getElementById("ms-achievement");
@@ -26479,6 +26623,14 @@ const msSetMarkMode = (mode) => {
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
+};
+
+const msSetMobileControlsVisible = (isVisible) => {
+  const visible = Boolean(isVisible);
+  [msFlagMode, msQuestionMode].forEach((button) => {
+    if (button) button.hidden = !visible;
+  });
+  if (!visible) msSetMarkMode(null);
 };
 
 const msStopTimer = () => {
@@ -26851,7 +27003,15 @@ if (msDifficulty) {
   });
 }
 
+if (msMobileControls) {
+  msMobileControls.checked = false;
+  msMobileControls.addEventListener("change", () => {
+    msSetMobileControlsVisible(msMobileControls.checked);
+  });
+}
+
 msSetMarkMode(null);
+msSetMobileControlsVisible(false);
 msNewGame("beginner");
 
 const solBoard = document.getElementById("sol-board");

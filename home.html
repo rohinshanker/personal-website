@@ -105,7 +105,7 @@
     </script>
     <link rel="stylesheet" href="style.css?v=first-win-stats-handoff-20260722" />
     <link rel="stylesheet" href="styles/home/base.css?v=calendar-square-stack-20260617" />
-    <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-mark-icons-20260722" />
+    <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-mobile-controls-20260724" />
     <link rel="stylesheet" href="styles/home/apps/solitaire.css" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722" />
@@ -1501,6 +1501,7 @@
                 aria-label="Toggle flag placement mode"
                 aria-pressed="false"
                 title="Toggle flag placement mode"
+                hidden
               ></button>
               <button class="ms-reset" id="ms-reset" data-face="smile" type="button" aria-label="New game"></button>
               <button
@@ -1511,6 +1512,7 @@
                 aria-label="Toggle question-mark placement mode"
                 aria-pressed="false"
                 title="Toggle question-mark placement mode"
+                hidden
               ></button>
               <div class="ms-counter" id="ms-time" aria-label="Elapsed time">
                 <img class="ms-digit" src="assets/minesweeper_assets/digital_digits/digital_0.png" alt="" />
@@ -1522,6 +1524,8 @@
               <div class="ms-grid" id="ms-grid" role="grid" aria-label="Minesweeper grid"></div>
             </div>
             <div class="ms-footer">
+              <input id="ms-mobile-controls" type="checkbox" autocomplete="off" />
+              <label class="ms-mobile-controls-label" for="ms-mobile-controls">Mobile controls?</label>
               <label aria-label="Difficulty">
                 <select id="ms-difficulty">
                   <option value="beginner">Beginner 9x9 (10 mines)</option>
@@ -5402,10 +5406,10 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-cc616b0bbf67d4ddf6562a352bede283edd88f1c659f43ecde72cc2551714ff8"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-cc616b0bbf67d4ddf6562a352bede283edd88f1c659f43ecde72cc2551714ff8"></script>
     <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
-    <script src="scripts/home/main.js?v=game-build-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c"></script>
+    <script src="scripts/home/main.js?v=game-build-cc616b0bbf67d4ddf6562a352bede283edd88f1c659f43ecde72cc2551714ff8"></script>
   </body>
 </html>

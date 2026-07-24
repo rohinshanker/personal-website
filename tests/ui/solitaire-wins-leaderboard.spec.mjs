@@ -66,6 +66,24 @@ const globalState = Object.freeze({
   },
 });
 
+const singlePlayerGlobalState = Object.freeze({
+  generatedAt: "2026-07-24T00:00:00.000Z",
+  totals: { solitaire: { wins: 1 } },
+  leaderboards: {
+    solitaire: [
+      {
+        eventId: "solitaire-global-local-01",
+        playerId: profile.id,
+        name: profile.name,
+        icon: profile.icon,
+        metric: 1,
+        metricKind: "wins",
+        occurredAt: "2026-07-24T00:00:00.000Z",
+      },
+    ],
+  },
+});
+
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
   { name: "tablet", width: 768, height: 1024 },
@@ -73,9 +91,9 @@ const viewports = Object.freeze([
   { name: "wide desktop", width: 1440, height: 900 },
 ]);
 
-const openSolitaireStats = async (page) => {
+const openSolitaireStats = async (page, statsState = globalState) => {
   await page.route(workerStatsUrl, (route) =>
-    route.fulfill({ body: JSON.stringify(globalState), contentType: "application/json" })
+    route.fulfill({ body: JSON.stringify(statsState), contentType: "application/json" })
   );
   await page.addInitScript(
     ({ savedProfile, savedState, profileKey, statsKey }) => {
@@ -118,6 +136,7 @@ for (const viewport of viewports) {
       "Rank 2: Solitaire Winner, 4 wins, your entry"
     );
     await expect(globalRows.nth(2)).toHaveAttribute("aria-label", "Rank 3: Nia, 2 wins");
+    expect((await globalRows.allTextContents()).join(" ")).not.toContain("N/A");
     await expect(globalRows.nth(1).locator(".game-stats-player-name")).toHaveCSS(
       "color",
       "rgb(0, 128, 0)"
@@ -153,3 +172,20 @@ for (const viewport of viewports) {
     });
   });
 }
+
+test("Solitaire replaces the first dummy slot with the verified current player", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const stats = await openSolitaireStats(page, singlePlayerGlobalState);
+  const leaderboard = stats.locator(".game-stats-solitaire-column");
+  const globalRows = leaderboard.locator(
+    ".game-stats-solitaire-row:not(.game-stats-solitaire-local-wins-row)"
+  );
+
+  await expect(globalRows).toHaveCount(3);
+  await expect(globalRows.nth(0)).toHaveAttribute(
+    "aria-label",
+    "Rank 1: Solitaire Winner, 1 win, your entry"
+  );
+  await expect(globalRows.nth(1)).toHaveAttribute("aria-label", "Rank 2: N/A, 0 wins");
+  await expect(globalRows.nth(2)).toHaveAttribute("aria-label", "Rank 3: N/A, 0 wins");
+});

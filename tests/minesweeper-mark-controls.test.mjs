@@ -24,15 +24,39 @@ test("Minesweeper has exclusive flag and question-mark placement controls", asyn
     home,
     /id="ms-question-mode"[\s\S]*?type="button"[\s\S]*?data-ms-mark-mode="question"[\s\S]*?aria-pressed="false"/
   );
-  assert.match(home, /minesweeper\.css\?v=minesweeper-mark-icons-20260722/);
+  assert.match(
+    home,
+    /id="ms-mobile-controls"[^>]*type="checkbox"[^>]*autocomplete="off"[\s\S]*?<label[^>]*for="ms-mobile-controls"[^>]*>Mobile controls\?<\/label>/
+  );
+  assert.doesNotMatch(
+    home.match(/<input[^>]*id="ms-mobile-controls"[^>]*>/)?.[0] || "",
+    /\schecked(?:\s|=|>)/,
+    "Mobile controls must start inactive."
+  );
+  assert.match(home, /id="ms-flag-mode"[\s\S]*?hidden/);
+  assert.match(home, /id="ms-question-mode"[\s\S]*?hidden/);
+  assert.match(home, /minesweeper\.css\?v=minesweeper-mobile-controls-20260724/);
   assert.match(home, /main\.js\?v=game-build-[a-f0-9]{64}/);
-  assert.match(index, /minesweeper\.css\?v=minesweeper-mark-icons-20260722/);
+  assert.match(index, /minesweeper\.css\?v=minesweeper-mobile-controls-20260724/);
   assert.match(index, /main\.js\?v=game-build-[a-f0-9]{64}/);
 
   assert.match(
     styles,
     /\.ms-top-panel \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 32px 38px 32px minmax\(0, 1fr\);/
   );
+  for (const columnPlacement of [
+    /#ms-mines \{[\s\S]*?grid-column: 1;/,
+    /#ms-flag-mode \{[\s\S]*?grid-column: 2;/,
+    /\.ms-reset \{[\s\S]*?grid-column: 3;/,
+    /#ms-question-mode \{[\s\S]*?grid-column: 4;/,
+    /#ms-time \{[\s\S]*?grid-column: 5;/,
+  ]) {
+    assert.match(
+      styles,
+      columnPlacement,
+      "Each top-panel item must retain its column when optional controls are hidden."
+    );
+  }
   assert.match(
     styles,
     /\.ms-mark-control \{[\s\S]*?box-shadow: none;[\s\S]*?height: 32px;[\s\S]*?min-height: 32px;[\s\S]*?min-width: 32px;[\s\S]*?width: 32px;/
@@ -49,9 +73,12 @@ test("Minesweeper has exclusive flag and question-mark placement controls", asyn
     styles,
     /\.ms-mark-control\.is-active,[\s\S]*?\.ms-mark-control\[aria-pressed="true"\] \{[\s\S]*?border-sunken/
   );
+  assert.match(styles, /\.ms-mark-control\[hidden\] \{[\s\S]*?display: none;/);
+  assert.match(styles, /\.ms-mobile-controls-label \{[\s\S]*?margin-right: auto;/);
 
   assert.match(main, /const msFlagMode = document\.getElementById\("ms-flag-mode"\);/);
   assert.match(main, /const msQuestionMode = document\.getElementById\("ms-question-mode"\);/);
+  assert.match(main, /const msMobileControls = document\.getElementById\("ms-mobile-controls"\);/);
   assert.match(main, /markMode: null,/);
   assert.match(
     main,
@@ -71,6 +98,15 @@ test("Minesweeper has exclusive flag and question-mark placement controls", asyn
     main,
     /\[\[msFlagMode, "flag"\], \[msQuestionMode, "question"\]\]\.forEach\([\s\S]*?button\.addEventListener\("click", \(\) => \{[\s\S]*?msSetMarkMode\(mode\);/
   );
+  assert.match(
+    main,
+    /const msSetMobileControlsVisible = \(isVisible\) => \{[\s\S]*?button\.hidden = !visible;[\s\S]*?if \(!visible\) msSetMarkMode\(null\);/
+  );
+  assert.match(
+    main,
+    /msMobileControls\.checked = false;[\s\S]*?msMobileControls\.addEventListener\("change", \(\) => \{[\s\S]*?msSetMobileControlsVisible\(msMobileControls\.checked\);/
+  );
+  assert.match(main, /msSetMarkMode\(null\);\s*msSetMobileControlsVisible\(false\);/);
 
   await Promise.all([
     access(new URL("assets/minesweeper_assets/tiles/tile_flag.png", root)),

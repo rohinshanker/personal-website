@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
+const workerStatsUrl =
+  /https:\/\/personal-site-game-stats\.rohinshankerme\.workers\.dev\/stats(?:\?|$)/;
 
 const profile = Object.freeze({
   id: "player-sudoku-test",
@@ -35,12 +37,39 @@ const localState = Object.freeze({
   },
 });
 
+const globalState = Object.freeze({
+  generatedAt: "2026-07-24T00:00:00.000Z",
+  totals: {
+    sudoku: {
+      wins: { easy: { noHints: 1, withHints: 0 } },
+    },
+  },
+  leaderboards: {
+    sudoku: {
+      easy: [
+        {
+          eventId: "sudoku-global-01",
+          playerId: "player-sudoku-global",
+          name: "Puzzle Ace",
+          icon: "assets/app-icons/ico/user_card.ico",
+          metric: 1004,
+          metricKind: "seconds",
+          occurredAt: "2026-07-24T00:00:01.000Z",
+        },
+      ],
+    },
+  },
+});
+
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
   { name: "desktop", width: 1280, height: 800 },
 ]);
 
 const openSudokuStats = async (page) => {
+  await page.route(workerStatsUrl, (route) =>
+    route.fulfill({ body: JSON.stringify(globalState), contentType: "application/json" })
+  );
   await page.addInitScript(
     ({ state, statsKey, savedProfile, profileKey }) => {
       Math.random = () => 0.999999;
@@ -70,15 +99,18 @@ for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     const stats = await openSudokuStats(page);
     const easyLeaderboard = stats.locator(".game-stats-sudoku-leaderboard").first();
-    const globalMetric = easyLeaderboard
-      .locator(".game-stats-leaderboard-template-row")
-      .first()
-      .locator(".game-stats-metric--text");
+    const globalRows = easyLeaderboard.locator(
+      ".game-stats-sudoku-row:not(.game-stats-sudoku-local-best-row)"
+    );
+    const globalMetric = globalRows.first().locator(".game-stats-metric--text");
     const localMetric = easyLeaderboard.locator(
       ".game-stats-sudoku-local-best-row .game-stats-metric--text"
     );
 
-    await expect(globalMetric).toHaveText("16:39");
+    await expect(globalRows).toHaveCount(3);
+    await expect(globalRows.first()).toHaveAttribute("aria-label", "Rank 1: Puzzle Ace, 1004 seconds");
+    await expect(globalRows.nth(1)).toHaveAttribute("aria-label", "Rank 2: N/A, 999 seconds");
+    await expect(globalMetric).toHaveText("16:44");
     await expect(localMetric).toHaveText("01:05");
     await expect(stats.locator(".game-stats-sudoku-row .game-stats-digit-strip")).toHaveCount(0);
     await expect(

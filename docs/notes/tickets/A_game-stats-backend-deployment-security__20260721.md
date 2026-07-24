@@ -8,7 +8,9 @@ Opened: 2026-07-21
 
 Updated: 2026-07-24
 
-Current State: The public Worker endpoint is enabled in the browser configuration: `https://personal-site-game-stats.rohinshankerme.workers.dev`. On 2026-07-24, its `/health` and `/stats` routes returned `200` from Cloudflare and D1 returned an empty valid stats payload. Its Administrator endpoint and production CORS preflight are live, including `Authorization` and `Content-Type`; all five required secret names are configured. The source now has a newer game build version for the explicit Administrator success confirmation and build-derived cache keys, so the Worker and static site still need one coordinated release. The checked-in Worker derives Solitaire leaderboard entries as per-player verified win totals (highest first); deploying it applies that view to existing stored Solitaire events without a migration.
+Current State: The public Worker endpoint is enabled in the browser configuration: `https://personal-site-game-stats.rohinshankerme.workers.dev`. On 2026-07-24, its `/health` and `/stats` routes returned `200` from Cloudflare and D1 returned an empty valid stats payload. Its Administrator endpoint and production CORS preflight are live, including `Authorization` and `Content-Type`; all five required secret names are configured. The deployed site and Worker are still the older synchronized `sha256-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c` release. The checked-in fix is build `sha256-dde488d20a4b3155c8a66661cb798665695fe18b7724354b9e114b165d589ddd` and still needs a coordinated Worker/static publish. The Worker derives Solitaire leaderboard entries as per-player verified win totals (highest first).
+
+The three visible leaderboard slots intentionally remain padded with placeholder entries. Real verified results replace those entries in rank order, including the current saved profile when it is in the top results. Rendered tests cover populated, partially populated, and empty data shapes. The production payload remains empty because no game event has yet reached D1: localhost is intentionally denied by production CORS, so a localhost game cannot obtain the server-issued session needed to publish a result.
 
 Administrator access is intentionally absent from the app dock. It is available only through the Windows-style question-mark control immediately before Close in Cursor Settings; the browser entry-point cache key was advanced with that change.
 
@@ -22,24 +24,29 @@ Local implementation, migration, integration, and secret-guard checks were
 previously completed. The Worker uses short-lived, signed, single-use sessions;
 server-side validation; HMAC-keyed rate limits; and strict CORS.
 
-The public Worker and production D1 reads are verified. The deployment’s CORS
-preflight is stale relative to the checked-in Administrator-proof code, so the
-latest Worker must be deployed before the browser configuration is published.
-Turnstile remains disabled because the browser does not yet send a widget token.
+The public Worker and production D1 reads are verified. Production CORS
+preflight allows the required Administrator headers from the exact production
+origin. Turnstile remains disabled because the browser does not yet send a
+widget token.
 
 ## Next action
 
-1. From `workers/game-stats`, use `npx wrangler secret list` to confirm the
-   five required secret names exist, then deploy the current Worker. This is
-   required to expose `Authorization` in CORS, add Administrator proof
-   validation, and publish the Solitaire most-wins projection; never record
-   secret values.
-2. Confirm `npx wrangler d1 migrations list personal_site_game_stats --remote`
-   has no pending reviewed migration, publish the static site with the enabled
-   public URL, and complete the runbook's endpoint checks for all four games.
-3. Resolve this ticket only after the production endpoint accepts one valid
-   completion for Minesweeper, Solitaire, Snake, and Sudoku and the release
-   version matches the browser artifact.
+1. Deploy the matching Worker and static release artifacts for build version
+   `sha256-dde488d20a4b3155c8a66661cb798665695fe18b7724354b9e114b165d589ddd`.
+   Verify the deployed Worker accepts that exact version before attempting a
+   production completion.
+2. On `https://rohin.shanker.me`, save the prompted leaderboard profile (do
+   not skip it), then start a new game and play beyond its server minimum.
+   Verify `POST /sessions` returns `201`, and completion `POST /events` returns
+   `201` with `applied: true`.
+3. Repeat for Minesweeper, Solitaire, Snake, and Sudoku. After each accepted
+   event, confirm the automatic stats refresh contains the nonzero total and
+   the saved player in the appropriate top-three leaderboard when their result
+   qualifies.
+4. If another code release is needed, first confirm
+   `npx wrangler d1 migrations list personal_site_game_stats --remote` has no
+   pending reviewed migration; never record secret values. Resolve this ticket
+   only after all four production completions are accepted.
 
 ## Constraints
 
@@ -67,4 +74,44 @@ Turnstile remains disabled because the browser does not yet send a widget token.
   `sha256-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c`;
   its updater also derives the three game-stat script cache keys from this
   version so browser and Worker releases stay synchronized.
+- 2026-07-24 leaderboard verification: focused static tests passed for
+  Minesweeper, Solitaire, Snake, and Sudoku. Rendered coverage confirms a
+  verified current Solitaire player occupies rank one while ranks two and
+  three retain the intended placeholder rows; rendered Sudoku coverage confirms
+  a real server player replaces only the first padded row. The same state was
+  visually inspected at 375×812, 768×1024, 1280×800, and 1440×900 with no
+  console errors or horizontal overflow. Full regression passed: 104 static
+  tests and 28 browser tests.
+- 2026-07-24 submission diagnosis: public `/stats` is still entirely empty.
+  Production CORS allows only `https://rohin.shanker.me`; it rejects
+  `http://127.0.0.1:8000`, so local completions remain local because their
+  session creation fails. A saved profile and a new, duration-valid game on
+  the deployed site are required for a player to enter the global ranks.
+- 2026-07-24 Rohin profile/session update: Administrator sign-in now stores
+  only the opaque, short-lived server proof in per-tab `sessionStorage`, never
+  a username, password, or long-lived local credential. A refreshed deployed
+  tab therefore retains its unexpired, IP-bound authorization long enough to
+  publish a verified protected-profile completion. A `403` for that profile is
+  kept in the local retry queue and asks for a fresh sign-in rather than
+  discarding the valid game result. The profile Neko now reuses the roaming
+  Neko scratch, yawn, and nap cadence; each rendered Neko image owns separate
+  timers, sleeps with a 30% per-instance chance, and only claws left or right.
+  Build metadata was regenerated to
+  `sha256-dde488d20a4b3155c8a66661cb798665695fe18b7724354b9e114b165d589ddd`.
+  Local verification passed: 105 static tests, 31 browser tests, integrity
+  check, and repository secret guard. Rendered Game Progress inspection at
+  375×812, 768×1024, 1280×800, and 1440×900 found no console errors or
+  page-level horizontal overflow; visual evidence is in
+  `/private/tmp/rohin-neko-profile-{mobile,tablet,desktop,wide}.png`.
+- 2026-07-24 production empty-leaderboard diagnosis: read-only checks of the
+  live site and Worker found an empty D1 event list, zero global counts, and
+  no player rank; the screen therefore reflects real backend state rather than
+  a rendering defect. Production still serves the old `a056` browser client,
+  which retained the Rohin Administrator proof only in JavaScript memory. A
+  refresh kept the saved `rohin ^.^` profile but lost that proof; a protected
+  completion was rejected with `403`, dropped by the old client, and then
+  misleadingly displayed as “Global stats are up to date” after a stats refresh.
+  The missing event cannot be safely reconstructed because it never reached
+  D1. Publish the current `dde` Worker/static pair, sign in again, and finish
+  a new game in the same tab while the short-lived authorization remains valid.
 - Re-run the production verification in the backend runbook before resolution.
