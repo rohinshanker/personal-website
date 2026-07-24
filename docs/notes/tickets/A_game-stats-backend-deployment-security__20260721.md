@@ -8,7 +8,7 @@ Opened: 2026-07-21
 
 Updated: 2026-07-24
 
-Current State: The public Worker endpoint is enabled in the browser configuration: `https://personal-site-game-stats.rohinshankerme.workers.dev`. On 2026-07-24, its `/health` and `/stats` routes returned `200` from Cloudflare and D1 returned an empty valid stats payload. Its Administrator endpoint and production CORS preflight are live, including `Authorization` and `Content-Type`; all five required secret names are configured. The deployed site and Worker are still the older synchronized `sha256-a056790aaf26a1c94e356568bbfc721241b933ee3829486550f3a2753fc5435c` release. The checked-in fix is build `sha256-dde488d20a4b3155c8a66661cb798665695fe18b7724354b9e114b165d589ddd` and still needs a coordinated Worker/static publish. The Worker derives Solitaire leaderboard entries as per-player verified win totals (highest first).
+Current State: The public Worker endpoint is enabled in the browser configuration: `https://personal-site-game-stats.rohinshankerme.workers.dev`. Its `/health` and `/stats` routes return `200`; production CORS is exact and includes `Authorization` and `Content-Type`; all required secrets are configured; Turnstile is absent; and no D1 migrations are pending. The deployed site and Worker are synchronized on `sha256-cc616b0bbf67d4ddf6562a352bede283edd88f1c659f43ecde72cc2551714ff8`, but D1 has five issued, unconsumed sessions and zero game events. The confirmed write failure is a browser/API contract mismatch: saved browser profiles include the local-only `rerollCount` field, while the Worker correctly accepts only `id`, `name`, and `icon`, so every profiled event is rejected with `400` before session consumption. The checked-in fix projects the public profile schema, attaches saved profiles to every game event, repairs queue cleanup/refresh/retry behavior, and is build `sha256-2bd2ca9411a5784f3b5ad3170e22473d6e072010588b0ac9f6a365e4f15c40e2`. It still needs a coordinated Worker/static publish and real production completion verification.
 
 The three visible leaderboard slots intentionally remain padded with placeholder entries. Real verified results replace those entries in rank order, including the current saved profile when it is in the top results. Rendered tests cover populated, partially populated, and empty data shapes. The production payload remains empty because no game event has yet reached D1: localhost is intentionally denied by production CORS, so a localhost game cannot obtain the server-issued session needed to publish a result.
 
@@ -32,7 +32,7 @@ widget token.
 ## Next action
 
 1. Deploy the matching Worker and static release artifacts for build version
-   `sha256-dde488d20a4b3155c8a66661cb798665695fe18b7724354b9e114b165d589ddd`.
+   `sha256-2bd2ca9411a5784f3b5ad3170e22473d6e072010588b0ac9f6a365e4f15c40e2`.
    Verify the deployed Worker accepts that exact version before attempting a
    production completion.
 2. On `https://rohin.shanker.me`, save the prompted leaderboard profile (do
@@ -67,7 +67,8 @@ widget token.
   confirm the dock has no Administrator control, while Cursor Settings opens
   the same accessible sign-in dialog from its title-bar question-mark control.
 - 2026-07-24 Administrator success confirmation: the success dialog explicitly
-  confirms that the Game Progress profile changed to `rohin ^.^.`. The public
+  says only `Administrator access granted.`, uses the bundled warning triangle,
+  and provides a right-aligned `OK` action. The public
   Worker accepts the production origin and required Administrator headers;
   local browser testing must use a local Worker because production CORS remains
   exact by design. The current source integrity is
@@ -112,6 +113,30 @@ widget token.
   completion was rejected with `403`, dropped by the old client, and then
   misleadingly displayed as “Global stats are up to date” after a stats refresh.
   The missing event cannot be safely reconstructed because it never reached
-  D1. Publish the current `dde` Worker/static pair, sign in again, and finish
+  D1. Publish the current synchronized Worker/static pair, sign in again, and finish
   a new game in the same tab while the short-lived authorization remains valid.
+- 2026-07-24 Minesweeper mobile-controls and top-panel repair: the optional
+  flag and question-mark buttons start hidden and can be enabled from the
+  bottom-left “Mobile controls?” checkbox. Every top-panel item now has an
+  explicit grid column, so hiding those optional controls cannot reflow the
+  mine counter, reset smiley, or elapsed-time counter. Build metadata was
+  regenerated to `sha256-44447e32790c63b78a334ead1f37e5d31ea2ff704f09a713c01fc1df211f6e91`.
+  Verification passed: 105 static tests, two focused browser tests, integrity
+  check, secret guard, and diff check. Rendered local inspection at 375×812,
+  768×1024, 1280×800, and 1440×900 covered both checkbox states; no overlap,
+  horizontal overflow, or console errors occurred after isolating the optional
+  production API request. Evidence is in
+  `/private/tmp/minesweeper-mobile-controls-{off-375,on-375,on-768,off-1280,on-1280,on-1440}.png`.
+- 2026-07-24 production write root cause: the live static site and Worker are
+  synchronized on `cc616`, and production successfully created five D1-backed
+  sessions, but all remain unconsumed and `game_events` remains empty. The
+  browser attached local-only `rerollCount` to every saved profile; the strict
+  Worker rejected those event bodies with `400 Unknown profile field:
+  rerollCount` before session consumption. The client now serializes exactly
+  `id`, `name`, and `icon`, attaches a saved profile to every game event,
+  discards legacy null-session queue entries, refreshes after accepted writes,
+  preserves truthful pending/error messages, retains retryable `408`, `425`,
+  and `429` responses, retries when the browser returns online, and coalesces
+  sync triggers that arrive during an active request. Generated build metadata
+  is `2bd2ca9411a5784f3b5ad3170e22473d6e072010588b0ac9f6a365e4f15c40e2`.
 - Re-run the production verification in the backend runbook before resolution.

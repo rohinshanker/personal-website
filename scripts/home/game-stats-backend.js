@@ -2,5 +2,5 @@
 // apiBaseUrl is public configuration; leave it empty until the Worker has a live route.
 window.rohinGameStatsBackend = Object.freeze({
   apiBaseUrl: "https://personal-site-game-stats.rohinshankerme.workers.dev",
-  buildVersion: "sha256-cc616b0bbf67d4ddf6562a352bede283edd88f1c659f43ecde72cc2551714ff8",
+  buildVersion: "sha256-2bd2ca9411a5784f3b5ad3170e22473d6e072010588b0ac9f6a365e4f15c40e2",
 });

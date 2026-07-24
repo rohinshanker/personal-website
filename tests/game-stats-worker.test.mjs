@@ -290,6 +290,22 @@ test("accepts only the bundled Rohin Neko yawn avatar outside the ICO icon manif
   assert.equal(unapprovedAvatar.profile, null);
 });
 
+test("rejects client-only fields in an event profile", () => {
+  assert.throws(
+    () =>
+      normalizeGameStatsEvent(
+        event({
+          id: "event-profile-field-0001",
+          profile: {
+            ...profile("player-strict-profile", "Strict"),
+            rerollCount: 1,
+          },
+        })
+      ),
+    /Unknown profile field: rerollCount/
+  );
+});
+
 test("records one verified completion for every tracked game and returns global stats", async () => {
   const env = createEnv();
   const cases = [

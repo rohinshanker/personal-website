@@ -1189,6 +1189,16 @@ const normalizeGameStatsProfile = (profile) => {
   };
 };
 
+const normalizeGameStatsEventProfile = (profile) => {
+  const normalizedProfile = normalizeGameStatsProfile(profile);
+  if (!normalizedProfile) return null;
+  return {
+    id: normalizedProfile.id,
+    name: normalizedProfile.name,
+    icon: normalizedProfile.icon,
+  };
+};
+
 const normalizeAdministratorProof = (payload) => {
   if (!payload || typeof payload !== "object") return null;
   const proof = String(payload.proof || "").trim();
@@ -1338,7 +1348,7 @@ function normalizeGameStatsEvent(rawEvent) {
   const game = String(rawEvent.game || "").trim();
   const type = String(rawEvent.type || "").trim();
   const occurredAt = normalizeGameStatsIsoDate(rawEvent.occurredAt);
-  const profile = normalizeGameStatsProfile(rawEvent.profile);
+  const profile = normalizeGameStatsEventProfile(rawEvent.profile);
   if (!/^[a-z0-9-]{8,80}$/.test(id)) return null;
 
   if (game === "minesweeper") {
@@ -2216,7 +2226,7 @@ const queueGameStatsSubmission = (event, session) => {
   if (gameStatsSubmissionQueue.length > GAME_STATS_MAX_SYNC_QUEUE_LENGTH) {
     gameStatsSubmissionQueue = gameStatsSubmissionQueue.slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
   }
-  saveGameStatsSubmissionQueue();
+  if (session) saveGameStatsSubmissionQueue();
 };
 
 const gameStatsLocalWinCount = (data) => {
@@ -2268,7 +2278,7 @@ const playFirstGameStatsTrophyHandoff = async (game) => {
   }
 };
 
-const refreshGameStatsGlobalState = async () => {
+const refreshGameStatsGlobalState = async ({ announce = true } = {}) => {
   if (!isGameStatsBackendConfigured()) return false;
   try {
     const playerId = gameStatsProfile?.id;
@@ -2277,83 +2287,116 @@ const refreshGameStatsGlobalState = async () => {
     gameStatsGlobalState = normalizeGameStatsData(await readGameStatsApiJson(response), {
       solitaireLeaderboardDirection: "desc",
     });
-    gameStatsSyncMessage = "Global stats are up to date.";
-    renderGameStatsWindows();
+    if (announce) {
+      gameStatsSyncMessage = "Global stats are up to date.";
+      renderGameStatsWindows();
+    }
     return true;
   } catch {
-    gameStatsSyncMessage = "Global stats are temporarily unavailable; local stats are still saved.";
-    renderGameStatsWindows();
+    if (announce) {
+      gameStatsSyncMessage =
+        "Global stats are temporarily unavailable; local stats are still saved.";
+      renderGameStatsWindows();
+    }
     return false;
   }
 };
 
 const syncQueuedGameStats = async () => {
-  if (!isGameStatsBackendConfigured() || gameStatsSyncInProgress) return;
+  if (!isGameStatsBackendConfigured()) return;
+  if (gameStatsSyncInProgress) {
+    gameStatsSyncRequested = true;
+    return;
+  }
   gameStatsSyncInProgress = true;
-  let rejectedCount = 0;
-  let waitingForAdministratorAuthorizationCount = 0;
-  let waitingForSessionCount = 0;
-  const remainingSubmissions = [];
+  gameStatsSyncRequested = false;
 
-  for (const submission of gameStatsSubmissionQueue) {
-    if (!submission.session) {
-      waitingForSessionCount += 1;
-      remainingSubmissions.push(submission);
-      continue;
-    }
-    if (new Date(submission.session.expiresAt).getTime() <= Date.now()) {
-      rejectedCount += 1;
-      continue;
-    }
-    try {
-      const response = await fetchGameStatsApi("/events", {
-        method: "POST",
-        headers: getAdministratorEventHeaders(submission.event.profile),
-        body: JSON.stringify({
-          event: submission.event,
-          session: {
-            id: submission.session.id,
-            token: submission.session.token,
-          },
-        }),
-      });
-      await readGameStatsApiJson(response);
-    } catch (error) {
-      if (
-        submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
-        Number(error?.status) === 403
-      ) {
-        waitingForAdministratorAuthorizationCount += 1;
-        remainingSubmissions.push(submission);
+  try {
+    let publishedCount = 0;
+    let rejectedCount = 0;
+    let waitingForAdministratorAuthorizationCount = 0;
+    let waitingForSessionCount = 0;
+    const remainingSubmissions = [];
+
+    for (const submission of gameStatsSubmissionQueue) {
+      if (!submission.session) {
+        waitingForSessionCount += 1;
         continue;
       }
-      if (Number(error?.status) >= 400 && Number(error.status) < 500) {
+      if (new Date(submission.session.expiresAt).getTime() <= Date.now()) {
         rejectedCount += 1;
-      } else {
-        remainingSubmissions.push(submission);
+        continue;
+      }
+      try {
+        const response = await fetchGameStatsApi("/events", {
+          method: "POST",
+          headers: getAdministratorEventHeaders(submission.event.profile),
+          body: JSON.stringify({
+            event: {
+              ...submission.event,
+              profile: normalizeGameStatsEventProfile(submission.event.profile),
+            },
+            session: {
+              id: submission.session.id,
+              token: submission.session.token,
+            },
+          }),
+        });
+        await readGameStatsApiJson(response);
+        publishedCount += 1;
+      } catch (error) {
+        if (
+          submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
+          Number(error?.status) === 403
+        ) {
+          waitingForAdministratorAuthorizationCount += 1;
+          remainingSubmissions.push(submission);
+          continue;
+        }
+        const status = Number(error?.status);
+        if (
+          status >= 400 &&
+          status < 500 &&
+          ![408, 425, 429].includes(status)
+        ) {
+          rejectedCount += 1;
+        } else {
+          remainingSubmissions.push(submission);
+        }
       }
     }
-  }
 
-  gameStatsSubmissionQueue = remainingSubmissions;
-  saveGameStatsSubmissionQueue();
-  gameStatsSyncInProgress = false;
-  if (waitingForSessionCount) {
-    gameStatsSyncMessage =
-      "Local stats are saved. A result without a verified game session cannot be published.";
-  } else if (waitingForAdministratorAuthorizationCount) {
-    gameStatsSyncMessage =
-      "Sign in as Administrator again to publish your verified Rohin result.";
-  } else if (rejectedCount) {
-    gameStatsSyncMessage =
-      "Local stats are saved, but a result could not pass server verification.";
-  } else if (gameStatsSubmissionQueue.length) {
-    gameStatsSyncMessage = "Verified results will retry automatically when the API is available.";
-  } else {
-    gameStatsSyncMessage = "Global stats are up to date.";
+    gameStatsSubmissionQueue = remainingSubmissions;
+    saveGameStatsSubmissionQueue();
+    const globalStatsAvailable = await refreshGameStatsGlobalState({ announce: false });
+    if (waitingForSessionCount) {
+      gameStatsSyncMessage =
+        "Local stats are saved. A result without a verified game session cannot be published.";
+    } else if (waitingForAdministratorAuthorizationCount) {
+      gameStatsSyncMessage =
+        "Sign in as Administrator again to publish your verified Rohin result.";
+    } else if (rejectedCount) {
+      gameStatsSyncMessage =
+        "Local stats are saved, but a result could not pass server verification.";
+    } else if (gameStatsSubmissionQueue.length) {
+      gameStatsSyncMessage =
+        "Verified results will retry automatically when the API is available.";
+    } else if (!globalStatsAvailable) {
+      gameStatsSyncMessage =
+        publishedCount > 0
+          ? "The verified result was published, but global stats are temporarily unavailable."
+          : "Global stats are temporarily unavailable; local stats are still saved.";
+    } else {
+      gameStatsSyncMessage = "Global stats are up to date.";
+    }
+    renderGameStatsWindows();
+  } finally {
+    gameStatsSyncInProgress = false;
+    if (gameStatsSyncRequested) {
+      gameStatsSyncRequested = false;
+      void syncQueuedGameStats();
+    }
   }
-  renderGameStatsWindows();
-  if (!gameStatsSubmissionQueue.length) await refreshGameStatsGlobalState();
 };
 
 const recordGameStatsEvent = async (
@@ -2365,13 +2408,14 @@ const recordGameStatsEvent = async (
   if (!event) return;
   const isFirstLocalWin = isGameStatsFirstLocalWin(event);
   const resetGeneration = gameStatsLocalResetGeneration;
+  let profile = gameStatsProfile;
   if (
-    (!gameStatsProfile && event.type === "win") ||
-    gameStatsEventQualifiesForLeaderboard(event)
+    !profile &&
+    (event.type === "win" || gameStatsEventQualifiesForLeaderboard(event))
   ) {
-    const profile = await requestGameStatsProfile();
-    if (profile) event.profile = profile;
+    profile = await requestGameStatsProfile();
   }
+  if (profile) event.profile = normalizeGameStatsEventProfile(profile);
   if (resetGeneration !== gameStatsLocalResetGeneration) return;
   const applied = applyGameStatsEventToData(gameStatsLocalState, event);
   if (!applied) return;
@@ -3603,7 +3647,7 @@ const openGameStatsWindow = (game) => {
   renderGameStatsWindow(game);
   if (!wasVisible) positionNewGameStatsWindow(game, windowParts?.windowElement);
   scheduleGameStatsWindowViewportClamp(windowParts?.windowElement);
-  void refreshGameStatsGlobalState();
+  void syncQueuedGameStats();
 };
 
 let gameStatsGlobalState = createEmptyGameStatsData();
@@ -3613,6 +3657,7 @@ let gameStatsProfile = loadGameStatsProfile();
 let gameStatsProfilePromptResolve = null;
 let gameStatsDraftProfile = null;
 let gameStatsSyncInProgress = false;
+let gameStatsSyncRequested = false;
 let gameStatsSyncMessage = "";
 let gameStatsLocalResetGeneration = 0;
 let gameStatsFirstWinHandoffInProgress = false;
@@ -16607,7 +16652,7 @@ const setWindowOpen = (appId, open) => {
     resetWindowToFirstTab(win);
     bringWindowToFront(win);
 
-    if (win.classList.contains("home-window")) {
+    if (win.classList.contains("home-window") || appId === "administrator-alert") {
       win.classList.add("app-window--center");
       win.style.left = "";
       win.style.top = "";
@@ -25986,7 +26031,6 @@ const completeAdministratorSignIn = (administratorProof) => {
   renderGameStatsWindows();
   startRohinNekoAvatarAnimation();
   void syncQueuedGameStats();
-  void refreshGameStatsGlobalState();
   return true;
 };
 
@@ -26258,6 +26302,9 @@ if (gameProgressResetLocal) {
 
 renderGameStatsWindows();
 void syncQueuedGameStats();
+window.addEventListener("online", () => {
+  void syncQueuedGameStats();
+});
 window.addEventListener("resize", scheduleGameStatsPlayerNameMarquees);
 window.addEventListener("resize", () => {
   requestAnimationFrame(positionVisibleGameStatsWindows);

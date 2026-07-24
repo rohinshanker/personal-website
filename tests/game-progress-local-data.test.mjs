@@ -28,8 +28,9 @@ test("Game Progress keeps a saved profile immutable and gives new profiles ten r
   assert.match(source, /const createGameProgressProfile = async \(\) => \{/);
   assert.match(
     source,
-    /\(!gameStatsProfile && event\.type === "win"\) \|\|\n    gameStatsEventQualifiesForLeaderboard\(event\)/
+    /let profile = gameStatsProfile;\n  if \(\n    !profile &&\n    \(event\.type === "win" \|\| gameStatsEventQualifiesForLeaderboard\(event\)\)/
   );
+  assert.match(source, /event\.profile = normalizeGameStatsEventProfile\(profile\);/);
 });
 
 test("Game Progress reset clears only local aggregate, profile, and Snake record data", async () => {

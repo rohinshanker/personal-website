@@ -42,8 +42,10 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
   );
   assert.match(home, /id="administrator-sign-in"[^>]*>\s*Sign In\s*</);
   assert.match(home, /id="administrator-alert-window"/);
-  assert.match(home, /Administrator Access Granted/);
-  assert.match(home, /Game Progress profile updated to rohin \^\.\^\./);
+  assert.match(home, /class="window app-window random-alert-window is-hidden administrator-alert-window"/);
+  assert.match(home, /src="assets\/app-icons\/ico\/msg_warning\.ico" alt=""/);
+  assert.match(home, /<p>Administrator access granted\.<\/p>/);
+  assert.doesNotMatch(home, /Game Progress profile updated to rohin \^\.\^\./);
   assert.match(home, /id="administrator-alert-close"/);
 
   for (const reference of [
@@ -59,11 +61,14 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
 
   assert.match(styles, /\.administrator-window\b/);
   assert.match(styles, /\.administrator-alert-window\b/);
+  assert.doesNotMatch(styles, /\.administrator-alert-body\b/);
+  assert.doesNotMatch(styles, /\.administrator-alert-icon\b/);
   assert.match(main, /"\/administrator\/sign-in"/);
   assert.match(
     main,
     /ADMINISTRATOR_ALERT_Z_INDEX = 1_000_000[\s\S]*?administratorAlertWindow\.style\.zIndex/
   );
+  assert.match(main, /win\.classList\.contains\("home-window"\) \|\| appId === "administrator-alert"/);
   assert.match(main, /Authorization\s*:\s*`Bearer \$\{[^}]+\}`/);
   assert.match(main, /GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY/);
   assert.match(main, /sessionStorage\.getItem\(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY\)/);

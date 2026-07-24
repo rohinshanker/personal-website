@@ -429,45 +429,11 @@ body.is-holding-pointer-item * {
 }
 
 .administrator-alert-window {
-  width: min(328px, calc(100vw - 24px));
+  width: min(340px, calc(100vw - 32px));
 }
 
 .administrator-alert-window .window-body {
   min-height: 0;
-}
-
-.administrator-alert-body {
-  align-items: center;
-  display: grid;
-  gap: 14px;
-  grid-template-columns: auto minmax(0, 1fr);
-  padding: 16px;
-}
-
-.administrator-alert-body p {
-  margin: 0;
-}
-
-.administrator-alert-icon {
-  align-items: center;
-  background: #ff0;
-  border: 1px solid #000;
-  border-radius: 50%;
-  color: #000;
-  display: inline-flex;
-  font-family: "Pixelated MS Sans Serif", "MS Sans Serif", sans-serif;
-  font-size: 17px;
-  font-weight: bold;
-  height: 26px;
-  justify-content: center;
-  line-height: 1;
-  width: 26px;
-}
-
-.administrator-alert-body button {
-  grid-column: 1 / -1;
-  justify-self: center;
-  min-width: 80px;
 }
 
 @media (max-width: 360px) {

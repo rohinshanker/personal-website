@@ -11,6 +11,11 @@ const ADMINISTRATOR_PROFILE = Object.freeze({
   icon: "assets/neko-assets/sprites/yawn1.png",
   rerollCount: 0,
 });
+const ADMINISTRATOR_EVENT_PROFILE = Object.freeze({
+  id: ADMINISTRATOR_PROFILE.id,
+  name: ADMINISTRATOR_PROFILE.name,
+  icon: ADMINISTRATOR_PROFILE.icon,
+});
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
@@ -59,10 +64,25 @@ const configureAdministratorApi = async (page, signInStatus, { onEvent } = {}) =
       return;
     }
     if (url.pathname === "/events") {
-      onEvent?.({
+      const publishedEvent = {
         authorization: request.headers().authorization || "",
         body: JSON.parse(request.postData() || "{}"),
-      });
+      };
+      onEvent?.(publishedEvent);
+      const unknownProfileField = Object.keys(
+        publishedEvent.body.event?.profile || {}
+      ).find((field) => !["id", "name", "icon"].includes(field));
+      if (unknownProfileField) {
+        await route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: false,
+            error: `Unknown profile field: ${unknownProfileField}`,
+          }),
+        });
+        return;
+      }
       await route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -75,6 +95,9 @@ const configureAdministratorApi = async (page, signInStatus, { onEvent } = {}) =
 };
 
 const preparePage = async (page, signInStatus, { seedLocalState = true, ...apiOptions } = {}) => {
+  await page.addInitScript(() => {
+    Math.random = () => 0.999999999;
+  });
   if (seedLocalState) {
     await page.addInitScript(
       ({ profileStorageKey, gameStatsStorageKey, snakeHighScoreKey }) => {
@@ -125,7 +148,7 @@ const openAdministratorWindow = async (page) => {
 };
 
 for (const viewport of viewports) {
-  test(`Administrator sign-in succeeds without overflow at ${viewport.name}`, async ({ page }) => {
+  test(`Administrator sign-in succeeds without overflow at ${viewport.name}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
     await preparePage(page, "success");
     const signInWindow = await openAdministratorWindow(page);
@@ -137,10 +160,29 @@ for (const viewport of viewports) {
     await expect(signInWindow).toBeHidden();
     const alertWindow = page.locator("#administrator-alert-window");
     await expect(alertWindow).toBeVisible();
-    await expect(alertWindow).toContainText("Administrator Access Granted");
-    await expect(alertWindow).toContainText("Game Progress profile updated to rohin ^.^.");
+    const alertMessage = alertWindow.locator(".random-alert-message");
+    await expect(alertMessage).toHaveText("Administrator access granted.");
+    await expect(alertMessage.locator('img[src="assets/app-icons/ico/msg_warning.ico"]')).toBeVisible();
+    await expect(alertWindow.locator(".random-alert-actions")).toHaveCSS("justify-content", "flex-end");
+    await expect(alertWindow).not.toContainText("Game Progress profile updated to rohin ^.^.");
     await expect(alertWindow).toHaveCSS("z-index", "1000000");
     await expect(page.locator("#administrator-alert-close")).toBeFocused();
+
+    const alertPosition = await alertWindow.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        centerX: bounds.left + bounds.width / 2,
+        centerY: bounds.top + bounds.height / 2,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      };
+    });
+    expect(alertPosition.centerX).toBeCloseTo(alertPosition.viewportWidth / 2, 1);
+    expect(alertPosition.centerY).toBeCloseTo(alertPosition.viewportHeight / 2, 1);
+    await page.screenshot({ path: testInfo.outputPath("administrator-access-alert.png") });
+
+    await page.locator("#administrator-alert-close").click();
+    await expect(alertWindow).toBeHidden();
 
     const state = await page.evaluate(
       ({
@@ -215,7 +257,7 @@ test("Administrator proof survives a refresh and publishes a verified Rohin resu
 
   await expect.poll(() => publishedEvents.length).toBe(1);
   expect(publishedEvents[0].authorization).toBe(`Bearer ${administratorProof}`);
-  expect(publishedEvents[0].body.event.profile).toEqual(ADMINISTRATOR_PROFILE);
+  expect(publishedEvents[0].body.event.profile).toEqual(ADMINISTRATOR_EVENT_PROFILE);
 
   const state = await page.evaluate(
     ({ profileStorageKey, queueStorageKey, proofStorageKey }) => ({
