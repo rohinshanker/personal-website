@@ -203,7 +203,11 @@ for (const viewport of viewports) {
       "Global rank 2"
     );
     await expect(localRow.locator(".game-stats-metric img")).toHaveCount(3);
-    await expect(localRow.locator(".game-stats-metric img").first()).toHaveAttribute("alt", "0");
+    await expect(localRow.locator(".game-stats-metric img").first()).toHaveAttribute("alt", " ");
+    await expect(localRow.locator(".game-stats-metric img").first()).toHaveAttribute(
+      "src",
+      /digital_unlit\.png$/
+    );
     await expect(localRow.locator(".game-stats-metric img").nth(2)).toHaveAttribute("alt", "4");
     await expect(leaderboard.getByText("Global Wins", { exact: true })).toBeVisible();
 

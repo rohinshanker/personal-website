@@ -229,10 +229,10 @@ The Worker exposes these routes:
 
 | Route | Purpose | Write behavior |
 | --- | --- | --- |
-| `GET /health` | Process/binding health check. | None; it does not by itself prove a D1 query succeeded. |
+| `GET /health` | Queries D1 and reports the active `buildVersion`. | None; a `200` proves the Worker can read its bound database and configuration. |
 | `GET /stats` | Reads global totals and Top 3 leaderboards; with `playerId`, also returns that player's rank and record for all 14 supported categories. | None; use this to verify D1 reads. |
 | `POST /sessions` | Validates the requested game/config/build and creates a short-lived server-signed session. | Creates one expiring session only after all checks pass. |
-| `POST /events` | Accepts the normalized result envelope and consumes its valid session exactly once. | Inserts one idempotent event or rejects it. |
+| `POST /events` | Accepts the normalized result envelope and consumes its valid session exactly once. | Inserts one idempotent event and consumes its session in one transactional D1 batch, or rejects both changes. |
 | `POST /administrator/sign-in` | Validates the Administrator username and password. | Creates no D1 profile data; returns a short-lived proof only after an exact-origin, rate-limited successful check. |
 
 The browser must ask for a session before a result can be submitted. A session
@@ -405,6 +405,9 @@ curl --fail-with-body \
   -H 'Origin: https://rohin.shanker.me' \
   "$GAME_STATS_API_URL/stats"
 ```
+
+Confirm the health response's `buildVersion` exactly matches
+`scripts/home/game-stats-backend.js` before testing any result submission.
 
 Run these negative checks before submitting real events; they should return a
 4xx response and make no D1 write:

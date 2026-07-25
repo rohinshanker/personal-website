@@ -2749,9 +2749,9 @@ const recordGameStatsEvent = async (
       sudokuNoHintsSeconds
     );
   }
+  saveGameStatsLocalState();
   const session = await getGameStatsSession(sessionKey);
   queueGameStatsSubmission(event, session);
-  saveGameStatsLocalState();
   if (gameStatsSyncState !== "auth-waiting") {
     setGameStatsSyncState(session ? "publishing" : "ready", {
       message: session

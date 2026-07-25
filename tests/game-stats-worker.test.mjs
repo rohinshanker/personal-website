@@ -19,7 +19,7 @@ class MockD1Statement {
   }
 
   async run() {
-    if (this.sql.includes("INSERT OR IGNORE INTO game_events")) {
+    if (this.sql.includes("INSERT INTO game_events")) {
       const [
         id,
         game,
@@ -34,7 +34,21 @@ class MockD1Statement {
         playerIcon,
         occurredAt,
       ] = this.params;
-      if (this.database.events.has(id)) return { meta: { changes: 0 } };
+      if (this.database.failNextEventInsert) {
+        this.database.failNextEventInsert = false;
+        throw new Error("Simulated event insert failure");
+      }
+      if (this.database.events.has(id)) {
+        throw new Error("UNIQUE constraint failed: game_events.id");
+      }
+      if (this.sql.includes("FROM game_stat_sessions")) {
+        const sessionId = this.params[12];
+        const unexpiredAt = this.params[13];
+        const session = this.database.sessions.get(sessionId);
+        if (!session || session.consumed_at || session.expires_at <= unexpiredAt) {
+          return { meta: { changes: 0 } };
+        }
+      }
       this.database.events.set(id, {
         id,
         game,
@@ -66,6 +80,10 @@ class MockD1Statement {
       return { meta: { changes: 1 } };
     }
     if (this.sql.includes("UPDATE game_stat_sessions")) {
+      if (this.database.failNextSessionConsume) {
+        this.database.failNextSessionConsume = false;
+        throw new Error("Simulated session consume failure");
+      }
       const [consumedAt, id, now] = this.params;
       const session = this.database.sessions.get(id);
       if (!session || session.consumed_at || session.expires_at <= now) {
@@ -98,6 +116,10 @@ class MockD1Statement {
   }
 
   async first() {
+    if (this.sql.includes("FROM sqlite_master")) {
+      if (this.database.failHealthCheck) throw new Error("Simulated D1 health check failure");
+      return { table_count: this.database.healthTableCount };
+    }
     if (this.sql.includes("FROM game_events WHERE id")) {
       return this.database.events.get(this.params[0]) || null;
     }
@@ -116,10 +138,45 @@ class MockD1Database {
     this.events = new Map();
     this.sessions = new Map();
     this.rateLimits = new Map();
+    this.failNextEventInsert = false;
+    this.failNextSessionConsume = false;
+    this.failHealthCheck = false;
+    this.healthTableCount = 3;
+    this.batchTail = Promise.resolve();
   }
 
   prepare(sql) {
     return new MockD1Statement(this, sql);
+  }
+
+  async batch(statements) {
+    const previousBatch = this.batchTail;
+    let releaseBatch;
+    this.batchTail = new Promise((resolve) => {
+      releaseBatch = resolve;
+    });
+    await previousBatch;
+    const copyRows = (rows) =>
+      new Map(Array.from(rows, ([key, value]) => [key, { ...value }]));
+    const snapshot = {
+      events: copyRows(this.events),
+      sessions: copyRows(this.sessions),
+      rateLimits: copyRows(this.rateLimits),
+    };
+    try {
+      const results = [];
+      for (const statement of statements) {
+        results.push(await statement.run());
+      }
+      return results;
+    } catch (error) {
+      this.events = snapshot.events;
+      this.sessions = snapshot.sessions;
+      this.rateLimits = snapshot.rateLimits;
+      throw error;
+    } finally {
+      releaseBatch();
+    }
   }
 }
 
@@ -404,8 +461,9 @@ test("makes an accepted event idempotent without allowing a second session use",
   const env = createEnv();
   const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
   ageSessionForCompletion(env, session.id);
-  const first = await postEvent(env, event({ id: "event-idempotent" }), session);
-  const duplicate = await postEvent(env, event({ id: "event-idempotent" }), session);
+  const idempotentEvent = event({ id: "event-idempotent" });
+  const first = await postEvent(env, idempotentEvent, session);
+  const duplicate = await postEvent(env, idempotentEvent, session);
   const secondEvent = await postEvent(env, event({ id: "event-second" }), session);
 
   assert.equal(first.status, 201);
@@ -413,6 +471,135 @@ test("makes an accepted event idempotent without allowing a second session use",
   assert.equal(duplicate.status, 200);
   assert.equal((await readJson(duplicate)).applied, false);
   assert.equal(secondEvent.status, 409);
+});
+
+test("rejects conflicting reuse of an existing event id", async () => {
+  const env = createEnv();
+  const firstSession = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  ageSessionForCompletion(env, firstSession.id);
+  const first = await postEvent(env, event({ id: "event-conflict" }), firstSession);
+
+  const secondSession = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  ageSessionForCompletion(env, secondSession.id);
+  const conflict = await postEvent(
+    env,
+    event({ id: "event-conflict", metric: 99 }),
+    secondSession
+  );
+
+  assert.equal(first.status, 201);
+  assert.equal(conflict.status, 409);
+  assert.match((await readJson(conflict)).error, /different result/);
+  assert.equal(env.personal_site_game_stats.events.get("event-conflict").metric, 42);
+  assert.equal(env.personal_site_game_stats.sessions.get(secondSession.id).consumed_at, null);
+});
+
+test("rolls back session consumption when event insertion fails and accepts a retry", async () => {
+  const env = createEnv();
+  const database = env.personal_site_game_stats;
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  ageSessionForCompletion(env, session.id);
+  database.failNextEventInsert = true;
+
+  const failed = await postEvent(env, event({ id: "event-atomic-retry" }), session);
+
+  assert.equal(failed.status, 500);
+  assert.equal(database.events.has("event-atomic-retry"), false);
+  assert.equal(database.sessions.get(session.id).consumed_at, null);
+
+  const retried = await postEvent(env, event({ id: "event-atomic-retry" }), session);
+  const retryBody = await readJson(retried);
+
+  assert.equal(retried.status, 201);
+  assert.equal(retryBody.applied, true);
+  assert.ok(database.sessions.get(session.id).consumed_at);
+  assert.equal(database.events.has("event-atomic-retry"), true);
+});
+
+test("rolls back event insertion when session consumption fails and accepts a retry", async () => {
+  const env = createEnv();
+  const database = env.personal_site_game_stats;
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  ageSessionForCompletion(env, session.id);
+  database.failNextSessionConsume = true;
+
+  const failed = await postEvent(env, event({ id: "event-consume-retry" }), session);
+
+  assert.equal(failed.status, 500);
+  assert.equal(database.events.has("event-consume-retry"), false);
+  assert.equal(database.sessions.get(session.id).consumed_at, null);
+
+  const retried = await postEvent(env, event({ id: "event-consume-retry" }), session);
+
+  assert.equal(retried.status, 201);
+  assert.equal((await readJson(retried)).applied, true);
+  assert.ok(database.sessions.get(session.id).consumed_at);
+  assert.equal(database.events.has("event-consume-retry"), true);
+});
+
+test("accepts exactly one of two concurrent results for a single session", async () => {
+  const env = createEnv();
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  ageSessionForCompletion(env, session.id);
+
+  const responses = await Promise.all([
+    postEvent(env, event({ id: "event-concurrent-a" }), session),
+    postEvent(env, event({ id: "event-concurrent-b" }), session),
+  ]);
+
+  assert.deepEqual(
+    responses.map(({ status }) => status).sort(),
+    [201, 409]
+  );
+  assert.equal(env.personal_site_game_stats.events.size, 1);
+  assert.ok(env.personal_site_game_stats.sessions.get(session.id).consumed_at);
+});
+
+test("treats simultaneous identical submissions as one accepted idempotent event", async () => {
+  const env = createEnv();
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  ageSessionForCompletion(env, session.id);
+  const idempotentEvent = event({ id: "event-concurrent-idempotent" });
+
+  const responses = await Promise.all([
+    postEvent(env, idempotentEvent, session),
+    postEvent(env, idempotentEvent, session),
+  ]);
+  const bodies = await Promise.all(responses.map((response) => readJson(response)));
+
+  assert.deepEqual(
+    responses.map(({ status }) => status).sort(),
+    [200, 201]
+  );
+  assert.deepEqual(
+    bodies.map(({ applied }) => applied).sort(),
+    [false, true]
+  );
+  assert.equal(env.personal_site_game_stats.events.size, 1);
+});
+
+test("health reports the active build and fails when D1 is unavailable", async () => {
+  const env = createEnv();
+  const healthy = await worker.fetch(new Request("https://stats.example.test/health"), env);
+
+  assert.equal(healthy.status, 200);
+  assert.deepEqual(await readJson(healthy), { ok: true, buildVersion });
+
+  env.personal_site_game_stats.failHealthCheck = true;
+  const unhealthy = await worker.fetch(new Request("https://stats.example.test/health"), env);
+
+  assert.equal(unhealthy.status, 500);
+  assert.match((await readJson(unhealthy)).error, /Internal server error/);
+
+  env.personal_site_game_stats.failHealthCheck = false;
+  env.personal_site_game_stats.healthTableCount = 2;
+  const missingSchema = await worker.fetch(
+    new Request("https://stats.example.test/health"),
+    env
+  );
+
+  assert.equal(missingSchema.status, 500);
+  assert.match((await readJson(missingSchema)).error, /D1 health check failed/);
 });
 
 test("issues an opaque, short-lived administrator proof only after valid credentials", async () => {

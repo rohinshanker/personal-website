@@ -201,16 +201,19 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
       "const gameStatsLocalState = {};",
       "let queuedSubmission = null;",
       "let appliedEvent = null;",
+      "let saveCalls = 0;",
       "let syncCalls = 0;",
+      "let resolveSession;",
+      "const pendingSession = new Promise((resolve) => { resolveSession = resolve; });",
       "const normalizeGameStatsEvent = (event) => event ? { ...event } : null;",
       "const isGameStatsFirstLocalWin = () => false;",
       "const gameStatsEventQualifiesForLeaderboard = () => false;",
       'const requestGameStatsProfile = async () => { throw new Error("saved profiles must not prompt"); };',
       "const applyGameStatsEventToData = (_data, event) => { appliedEvent = { ...event }; return true; };",
       "const updateGameStatsSudokuBestTime = () => {};",
-      'const getGameStatsSession = async () => ({ id: "session-solitaire", token: "token-solitaire", expiresAt: new Date(Date.now() + 60_000).toISOString() });',
+      "const getGameStatsSession = async () => pendingSession;",
       "const queueGameStatsSubmission = (event, session) => { queuedSubmission = { event: { ...event }, session }; };",
-      "const saveGameStatsLocalState = () => {};",
+      "const saveGameStatsLocalState = () => { saveCalls += 1; };",
       'let gameStatsSyncMessage = "";',
       'let gameStatsSyncState = "initial";',
       "const renderGameStatsWindows = () => {};",
@@ -219,12 +222,13 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
       "const playFirstGameStatsTrophyHandoff = async () => {};",
       recordEventSource,
       "globalThis.recordGameStatsEventForTest = recordGameStatsEvent;",
-      "globalThis.readRecordState = () => ({ appliedEvent, queuedSubmission, syncCalls });",
+      'globalThis.resolveSessionForTest = () => resolveSession({ id: "session-solitaire", token: "token-solitaire", expiresAt: new Date(Date.now() + 60_000).toISOString() });',
+      "globalThis.readRecordState = () => ({ appliedEvent, queuedSubmission, saveCalls, syncCalls });",
     ].join("\n"),
     context
   );
 
-  await context.recordGameStatsEventForTest(
+  const recordPromise = context.recordGameStatsEventForTest(
     {
       id: "event-solitaire-saved-profile",
       game: "solitaire",
@@ -236,15 +240,24 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
     "solitaire-session"
   );
 
-  const state = jsonClone(context.readRecordState());
   const expectedProfile = {
     id: "player-saved-profile",
     name: "Mira",
     icon: "assets/app-icons/ico/user_card.ico",
   };
+  const pendingState = jsonClone(context.readRecordState());
+  assert.deepEqual(pendingState.appliedEvent.profile, expectedProfile);
+  assert.equal(pendingState.saveCalls, 1);
+  assert.equal(pendingState.queuedSubmission, null);
+
+  context.resolveSessionForTest();
+  await recordPromise;
+  const state = jsonClone(context.readRecordState());
+
   assert.deepEqual(state.appliedEvent.profile, expectedProfile);
   assert.deepEqual(state.queuedSubmission.event.profile, expectedProfile);
   assert.equal(state.queuedSubmission.event.profile.rerollCount, undefined);
+  assert.equal(state.saveCalls, 1);
   assert.equal(state.syncCalls, 1);
 });
 

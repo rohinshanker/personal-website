@@ -103,6 +103,10 @@ test("Game Stats keeps one independently managed window for every game", async (
 
 test("each supported game opens a verified session before emitting a completion event", async () => {
   const mainSource = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const recordEventSource = mainSource.slice(
+    mainSource.indexOf("const recordGameStatsEvent ="),
+    mainSource.indexOf("\n\nconst formatGameStatsCounter")
+  );
 
   assert.match(
     mainSource,
@@ -131,6 +135,11 @@ test("each supported game opens a verified session before emitting a completion 
       new RegExp(`game: "${game}",[\\s\\S]{0,260}?statsSession`)
     );
   }
+  assert.ok(
+    recordEventSource.indexOf("saveGameStatsLocalState();") <
+      recordEventSource.indexOf("await getGameStatsSession(sessionKey)"),
+    "local results must be persisted before waiting for the network session"
+  );
 });
 
 test("a player's first local win presses the matching trophy twice before opening stats", async () => {

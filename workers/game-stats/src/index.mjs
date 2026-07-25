@@ -25,8 +25,8 @@ const ADMINISTRATOR_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const MAX_ADMINISTRATOR_SIGN_INS_PER_WINDOW = 5;
 const ADMINISTRATOR_PROFILE_ID = "player-rohin-neko";
 const ADMINISTRATOR_PROFILE_NAME = "rohin ^.^";
-const INSERT_EVENT_SQL = `
-INSERT OR IGNORE INTO game_events (
+const INSERT_EVENT_FOR_SESSION_SQL = `
+INSERT INTO game_events (
   id,
   game,
   type,
@@ -40,7 +40,9 @@ INSERT OR IGNORE INTO game_events (
   player_icon,
   occurred_at,
   schema_version
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1
+FROM game_stat_sessions
+WHERE id = ? AND consumed_at IS NULL AND expires_at > ?
 `;
 const SELECT_EVENTS_SQL = `
 SELECT
@@ -93,6 +95,12 @@ const SELECT_RATE_LIMIT_SQL = `
 SELECT request_count
 FROM game_stats_rate_limits
 WHERE bucket = ?
+`;
+const HEALTH_CHECK_SQL = `
+SELECT COUNT(*) AS table_count
+FROM sqlite_master
+WHERE type = 'table'
+  AND name IN ('game_events', 'game_stat_sessions', 'game_stats_rate_limits')
 `;
 
 class HttpError extends Error {
@@ -566,16 +574,17 @@ const rowToEvent = (row) => ({
     : null,
 });
 
-const getGameStatsDatabase = (env) => env.personal_site_game_stats || env.DB;
+const storedEventMatches = (storedEvent, event) =>
+  JSON.stringify(eventToInsertParams(storedEvent)) ===
+  JSON.stringify(eventToInsertParams(event));
 
-const storeEvent = async (env, event) => {
-  const database = getGameStatsDatabase(env);
-  const result = await database
-    .prepare(INSERT_EVENT_SQL)
-    .bind(...eventToInsertParams(event))
-    .run();
-  return Boolean(result?.meta?.changes ?? result?.changes ?? 0);
+const assertStoredEventMatches = (storedEvent, event) => {
+  if (!storedEventMatches(storedEvent, event)) {
+    throw new HttpError(409, "Event id already exists with a different result");
+  }
 };
+
+const getGameStatsDatabase = (env) => env.personal_site_game_stats || env.DB;
 
 const selectStoredEvents = async (env) => {
   const database = getGameStatsDatabase(env);
@@ -962,8 +971,10 @@ const validateAdministratorEventProof = async (request, env, event) => {
   }
 };
 
-const selectExistingEvent = async (env, id) =>
-  getGameStatsDatabase(env).prepare(SELECT_EVENT_SQL).bind(id).first();
+const selectExistingEvent = async (env, id) => {
+  const row = await getGameStatsDatabase(env).prepare(SELECT_EVENT_SQL).bind(id).first();
+  return row ? rowToEvent(row) : null;
+};
 
 const createSession = async (request, env, rawPayload) => {
   assertAllowedKeys(rawPayload, ["game", "config", "buildVersion", "turnstileToken"], "session request");
@@ -1006,7 +1017,7 @@ const createSession = async (request, env, rawPayload) => {
   };
 };
 
-const validateAndConsumeSession = async (request, env, event, rawSession) => {
+const validateSession = async (request, env, event, rawSession) => {
   assertAllowedKeys(rawSession, ["id", "token"], "session proof");
   const security = requireSecurityConfig(env);
   const sessionId = String(rawSession.id || "").trim();
@@ -1024,7 +1035,15 @@ const validateAndConsumeSession = async (request, env, event, rawSession) => {
   }
 
   const session = await getGameStatsDatabase(env).prepare(SELECT_SESSION_SQL).bind(sessionId).first();
-  if (!session || session.consumed_at) throw new HttpError(409, "Game session was already used");
+  if (!session) throw new HttpError(409, "Game session was already used");
+  if (session.consumed_at) {
+    const existing = await selectExistingEvent(env, event.id);
+    if (existing) {
+      assertStoredEventMatches(existing, event);
+      return null;
+    }
+    throw new HttpError(409, "Game session was already used");
+  }
   if (
     session.game !== event.game ||
     session.build_version !== security.buildVersion ||
@@ -1048,11 +1067,41 @@ const validateAndConsumeSession = async (request, env, event, rawSession) => {
     throw new HttpError(400, "Game result was completed too quickly or outside its session window");
   }
   await enforceRateLimit(env, ipHash, "events", MAX_EVENTS_PER_WINDOW);
-  const consumed = await getGameStatsDatabase(env)
-    .prepare(CONSUME_SESSION_SQL)
-    .bind(new Date().toISOString(), sessionId, new Date().toISOString())
-    .run();
-  if (!getChanges(consumed)) throw new HttpError(409, "Game session was already used");
+  return sessionId;
+};
+
+const consumeSessionAndStoreEvent = async (env, sessionId, event) => {
+  const database = getGameStatsDatabase(env);
+  const consumedAt = new Date().toISOString();
+  let results;
+  try {
+    results = await database.batch([
+      database
+        .prepare(INSERT_EVENT_FOR_SESSION_SQL)
+        .bind(...eventToInsertParams(event), sessionId, consumedAt),
+      database
+        .prepare(CONSUME_SESSION_SQL)
+        .bind(consumedAt, sessionId, consumedAt),
+    ]);
+  } catch (error) {
+    const existing = await selectExistingEvent(env, event.id);
+    if (existing) {
+      assertStoredEventMatches(existing, event);
+      return false;
+    }
+    throw error;
+  }
+
+  const [inserted, consumed] = results;
+  if (!getChanges(inserted) || !getChanges(consumed)) {
+    const existing = await selectExistingEvent(env, event.id);
+    if (existing) {
+      assertStoredEventMatches(existing, event);
+      return false;
+    }
+    throw new HttpError(409, "Game session was already used");
+  }
+  return true;
 };
 
 const handleOptions = (request, env) => {
@@ -1074,6 +1123,16 @@ const handleGetStats = async (request, env) => {
   return jsonResponse(request, env, createGameStatsDataFromEvents(events, getStatsPlayerId(request)));
 };
 
+const handleGetHealth = async (request, env) => {
+  const database = getGameStatsDatabase(env);
+  const health = await database.prepare(HEALTH_CHECK_SQL).first();
+  if (Number(health?.table_count) !== 3) {
+    throw new HttpError(500, "D1 health check failed");
+  }
+  const { buildVersion } = requireSecurityConfig(env);
+  return jsonResponse(request, env, { ok: true, buildVersion });
+};
+
 const handlePostSession = async (request, env) => {
   assertOriginAllowed(request, env);
   const session = await createSession(request, env, await readJsonBody(request));
@@ -1093,12 +1152,17 @@ const handlePostEvent = async (request, env) => {
   const event = normalizeGameStatsEvent(payload.event);
   await validateAdministratorEventProof(request, env, event);
   const existing = await selectExistingEvent(env, event.id);
-  if (existing) return jsonResponse(request, env, { ok: true, applied: false, eventId: event.id });
+  if (existing) {
+    assertStoredEventMatches(existing, event);
+    return jsonResponse(request, env, { ok: true, applied: false, eventId: event.id });
+  }
   if (event.game === "sudoku" && !Number.isFinite(event.metric)) {
     throw new HttpError(400, "Sudoku result requires a completion time");
   }
-  await validateAndConsumeSession(request, env, event, payload.session);
-  const applied = await storeEvent(env, event);
+  const sessionId = await validateSession(request, env, event, payload.session);
+  const applied = sessionId
+    ? await consumeSessionAndStoreEvent(env, sessionId, event)
+    : false;
   return jsonResponse(request, env, { ok: true, applied, eventId: event.id }, applied ? 201 : 200);
 };
 
@@ -1114,7 +1178,7 @@ export const handleRequest = async (request, env) => {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return handleOptions(request, env);
     if (url.pathname === "/health" && request.method === "GET") {
-      return jsonResponse(request, env, { ok: true });
+      return await handleGetHealth(request, env);
     }
     if (url.pathname === "/stats" && request.method === "GET") return await handleGetStats(request, env);
     if (url.pathname === "/sessions" && request.method === "POST") {
