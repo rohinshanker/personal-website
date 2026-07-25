@@ -28,7 +28,7 @@ test("Game Progress keeps a saved profile immutable and gives new profiles ten r
   assert.match(source, /const createGameProgressProfile = async \(\) => \{/);
   assert.match(
     source,
-    /let profile = gameStatsProfile;\n  if \(\n    !profile &&\n    \(event\.type === "win" \|\| gameStatsEventQualifiesForLeaderboard\(event\)\)/
+    /let profile = gameStatsProfile;\n  if \(\n    !profile &&\n    \(event\.type === "win" \|\|[\s\S]*?gameStatsEventQualifiesForLeaderboard\(event\)\)/
   );
   assert.match(source, /event\.profile = normalizeGameStatsEventProfile\(profile\);/);
 });

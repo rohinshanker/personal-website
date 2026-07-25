@@ -142,20 +142,20 @@ test("each supported game opens a verified session before emitting a completion 
   );
 });
 
-test("a player's first local win presses the matching trophy twice before opening stats", async () => {
+test("a new personal record presses the matching trophy twice before opening stats", async () => {
   const [mainSource, styleSource] = await Promise.all([
     readFile(new URL("scripts/home/main.js", root), "utf8"),
     readFile(new URL("style.css", root), "utf8"),
   ]);
 
-  assert.match(mainSource, /const GAME_STATS_FIRST_WIN_TROPHY_PRESS_COUNT = 2;/);
+  assert.match(mainSource, /const GAME_STATS_RECORD_TROPHY_PRESS_COUNT = 2;/);
   assert.match(
     mainSource,
-    /const isGameStatsFirstLocalWin = \(event\) =>\s*event\.type === "win" && gameStatsLocalWinCount\(gameStatsLocalState\) === 0;/
+    /const gameStatsEventBeatsPersonalRecord = \([\s\S]*?const spec = getGameStatsLeaderboardSpec\(event\);/
   );
   assert.match(
     mainSource,
-    /const isFirstLocalWin = isGameStatsFirstLocalWin\(event\);[\s\S]*?const applied = applyGameStatsEventToData/
+    /const beatPersonalRecord = gameStatsEventBeatsPersonalRecord\([\s\S]*?const applied = applyGameStatsEventToData/
   );
   assert.match(
     mainSource,
@@ -163,15 +163,28 @@ test("a player's first local win presses the matching trophy twice before openin
   );
   assert.match(
     mainSource,
-    /for \(let press = 0; press < GAME_STATS_FIRST_WIN_TROPHY_PRESS_COUNT; press \+= 1\)[\s\S]*?classList\.add\("is-pressed"\)[\s\S]*?classList\.remove\("is-pressed"\)/
+    /for \(let press = 0; press < GAME_STATS_RECORD_TROPHY_PRESS_COUNT; press \+= 1\)[\s\S]*?classList\.add\("is-pressed"\)[\s\S]*?classList\.remove\("is-pressed"\)/
   );
   assert.match(
     mainSource,
-    /if \(isFirstLocalWin\) await playFirstGameStatsTrophyHandoff\(event\.game\);/
+    /saveGameStatsLocalState\(\);[\s\S]*?const recordHandoffPromise = beatPersonalRecord[\s\S]*?playGameStatsRecordHandoff\(event\.game\)[\s\S]*?await getGameStatsSession\(sessionKey\)[\s\S]*?queueGameStatsSubmission\(event, session\);/
   );
   assert.match(
     mainSource,
-    /const playFirstGameStatsTrophyHandoff[\s\S]*?openGameStatsWindow\(game\);/
+    /const playGameStatsRecordHandoff[\s\S]*?openGameStatsWindow\(game\);/
+  );
+  assert.match(
+    mainSource,
+    /snakeState\.recordAtStart = Number\.isFinite\(storedHighScore\)[\s\S]*?startGameStatsSession\("snake"/
+  );
+  assert.match(
+    mainSource,
+    /snakePreviousHighScore: snakeState\.recordAtStart/
+  );
+  assert.doesNotMatch(mainSource, /isGameStatsFirstLocalWin|playFirstGameStatsTrophyHandoff/);
+  assert.match(
+    mainSource,
+    /const handoffPromise = gameStatsRecordHandoffQueue\.then\(runHandoff, runHandoff\);[\s\S]*?gameStatsRecordHandoffQueue = handoffPromise\.catch/
   );
   assert.match(
     styleSource,

@@ -1027,9 +1027,9 @@ const GAME_STATS_PROFILE_EDITOR_MODES = Object.freeze({
   create: "create",
   icon: "icon",
 });
-const GAME_STATS_FIRST_WIN_TROPHY_PRESS_COUNT = 2;
-const GAME_STATS_FIRST_WIN_TROPHY_PRESS_MS = 120;
-const GAME_STATS_FIRST_WIN_TROPHY_RELEASE_MS = 100;
+const GAME_STATS_RECORD_TROPHY_PRESS_COUNT = 2;
+const GAME_STATS_RECORD_TROPHY_PRESS_MS = 120;
+const GAME_STATS_RECORD_TROPHY_RELEASE_MS = 100;
 const GAME_STATS_DEFAULT_ICON = "assets/app-icons/ico/user_card.ico";
 const GAME_STATS_EMPTY_LEADERBOARD_ICON = "assets/app-icons/ico/address_book_user.ico";
 const GAME_STATS_ROHIN_NEKO_AVATAR_ICON = "assets/neko-assets/sprites/yawn1.png";
@@ -1855,6 +1855,14 @@ const upsertGameStatsLeaderboardEntry = (leaderboard, event, limit, direction) =
     .slice(0, limit);
 };
 
+const updateGameStatsPlayerRecord = (record, event, direction) =>
+  upsertGameStatsLeaderboardEntry(
+    record ? [record] : [],
+    event,
+    1,
+    direction
+  )[0] || record || null;
+
 const applyGameStatsEventToData = (data, rawEvent) => {
   const event = normalizeGameStatsEvent(rawEvent);
   if (!event || data.eventIds.includes(event.id)) return false;
@@ -1866,6 +1874,11 @@ const applyGameStatsEventToData = (data, rawEvent) => {
       data.leaderboards.minesweeper[event.difficulty],
       event,
       3,
+      "asc"
+    );
+    data.playerRecords.minesweeper[event.difficulty] = updateGameStatsPlayerRecord(
+      data.playerRecords.minesweeper[event.difficulty],
+      event,
       "asc"
     );
   } else if (event.game === "solitaire") {
@@ -1885,6 +1898,11 @@ const applyGameStatsEventToData = (data, rawEvent) => {
       5,
       "desc"
     );
+    data.playerRecords.snake[event.boardSize] = updateGameStatsPlayerRecord(
+      data.playerRecords.snake[event.boardSize],
+      event,
+      "desc"
+    );
   } else if (event.game === "sudoku") {
     data.totals.sudoku.wins[event.difficulty][event.hintBucket] += 1;
     if (event.hintBucket === "noHints" && Number.isFinite(event.metric)) {
@@ -1892,6 +1910,11 @@ const applyGameStatsEventToData = (data, rawEvent) => {
         data.leaderboards.sudoku[event.difficulty],
         event,
         3,
+        "asc"
+      );
+      data.playerRecords.sudoku[event.difficulty] = updateGameStatsPlayerRecord(
+        data.playerRecords.sudoku[event.difficulty],
+        event,
         "asc"
       );
     }
@@ -1913,6 +1936,7 @@ const getGameStatsLeaderboardSpec = (event) => {
   if (event.game === "minesweeper") {
     return {
       entries: (data) => data.leaderboards.minesweeper[event.difficulty],
+      playerRecord: (data) => data.playerRecords.minesweeper[event.difficulty],
       limit: 3,
       direction: "asc",
     };
@@ -1920,6 +1944,7 @@ const getGameStatsLeaderboardSpec = (event) => {
   if (event.game === "snake") {
     return {
       entries: (data) => data.leaderboards.snake[event.boardSize],
+      playerRecord: (data) => data.playerRecords.snake[event.boardSize],
       limit: 5,
       direction: "desc",
     };
@@ -1927,11 +1952,59 @@ const getGameStatsLeaderboardSpec = (event) => {
   if (event.game === "sudoku" && event.hintBucket === "noHints") {
     return {
       entries: (data) => data.leaderboards.sudoku[event.difficulty],
+      playerRecord: (data) => data.playerRecords.sudoku[event.difficulty],
       limit: 3,
       direction: "asc",
     };
   }
   return null;
+};
+
+const gameStatsEventBeatsPersonalRecord = (
+  localData,
+  globalData,
+  event,
+  { snakePreviousHighScore = undefined } = {}
+) => {
+  const spec = getGameStatsLeaderboardSpec(event);
+  if (!spec) return false;
+
+  const playerId = event.profile?.id || "";
+  const recordMetrics = [];
+  const addRecordMetric = (record) => {
+    if (
+      record &&
+      playerId &&
+      record.playerId === playerId &&
+      Number.isFinite(record.metric)
+    ) {
+      recordMetrics.push(record.metric);
+    }
+  };
+
+  const localEntries = spec.entries(localData);
+  if (Array.isArray(localEntries)) {
+    addRecordMetric(localEntries.find((entry) => entry.playerId === playerId));
+  }
+  addRecordMetric(spec.playerRecord(localData));
+  addRecordMetric(spec.playerRecord(globalData));
+
+  if (event.game === "snake" && Number.isFinite(snakePreviousHighScore)) {
+    recordMetrics.push(snakePreviousHighScore);
+  }
+  if (event.game === "sudoku") {
+    const localBestTime = localData.totals.sudoku.bestTimes[event.difficulty];
+    if (Number.isFinite(localBestTime)) recordMetrics.push(localBestTime);
+  }
+
+  if (!recordMetrics.length) return true;
+  const previousRecord =
+    spec.direction === "desc"
+      ? Math.max(...recordMetrics)
+      : Math.min(...recordMetrics);
+  return spec.direction === "desc"
+    ? event.metric > previousRecord
+    : event.metric < previousRecord;
 };
 
 const gameStatsEventQualifiesForData = (data, event) => {
@@ -2460,53 +2533,41 @@ const queueGameStatsSubmission = (event, session) => {
   if (session) saveGameStatsSubmissionQueue();
 };
 
-const gameStatsLocalWinCount = (data) => {
-  const minesweeperWins = Object.values(data.totals.minesweeper.wins).reduce(
-    (total, wins) => total + wins,
-    0
-  );
-  const sudokuWins = Object.values(data.totals.sudoku.wins).reduce(
-    (total, difficultyWins) => total + difficultyWins.noHints + difficultyWins.withHints,
-    0
-  );
-  return minesweeperWins + data.totals.solitaire.wins + sudokuWins;
-};
-
-const isGameStatsFirstLocalWin = (event) =>
-  event.type === "win" && gameStatsLocalWinCount(gameStatsLocalState) === 0;
-
 const waitForGameStatsTrophyState = (delayMs) =>
   new Promise((resolve) => {
     window.setTimeout(resolve, delayMs);
   });
 
-const playFirstGameStatsTrophyHandoff = async (game) => {
-  if (gameStatsFirstWinHandoffInProgress) return;
-  gameStatsFirstWinHandoffInProgress = true;
-  const trophyButton = Array.from(gameStatsOpenButtons).find(
-    (button) => button.getAttribute("data-game-stats-open") === game
-  );
-  const reduceMotion = Boolean(
-    typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
+const playGameStatsRecordHandoff = (game) => {
+  const runHandoff = async () => {
+    const trophyButton = Array.from(gameStatsOpenButtons).find(
+      (button) => button.getAttribute("data-game-stats-open") === game
+    );
+    const reduceMotion = Boolean(
+      typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
 
-  try {
-    if (trophyButton && !reduceMotion) {
-      for (let press = 0; press < GAME_STATS_FIRST_WIN_TROPHY_PRESS_COUNT; press += 1) {
-        trophyButton.classList.add("is-pressed");
-        await waitForGameStatsTrophyState(GAME_STATS_FIRST_WIN_TROPHY_PRESS_MS);
+    try {
+      if (trophyButton && !reduceMotion) {
+        for (let press = 0; press < GAME_STATS_RECORD_TROPHY_PRESS_COUNT; press += 1) {
+          trophyButton.classList.add("is-pressed");
+          await waitForGameStatsTrophyState(GAME_STATS_RECORD_TROPHY_PRESS_MS);
+          trophyButton.classList.remove("is-pressed");
+          await waitForGameStatsTrophyState(GAME_STATS_RECORD_TROPHY_RELEASE_MS);
+        }
+      }
+      openGameStatsWindow(game);
+    } finally {
+      if (trophyButton?.classList.contains("is-pressed")) {
         trophyButton.classList.remove("is-pressed");
-        await waitForGameStatsTrophyState(GAME_STATS_FIRST_WIN_TROPHY_RELEASE_MS);
       }
     }
-    openGameStatsWindow(game);
-  } finally {
-    if (trophyButton?.classList.contains("is-pressed")) {
-      trophyButton.classList.remove("is-pressed");
-    }
-    gameStatsFirstWinHandoffInProgress = false;
-  }
+  };
+
+  const handoffPromise = gameStatsRecordHandoffQueue.then(runHandoff, runHandoff);
+  gameStatsRecordHandoffQueue = handoffPromise.catch(() => {});
+  return handoffPromise;
 };
 
 const getGameStatsSyncStateDefinition = () =>
@@ -2725,21 +2786,35 @@ const syncQueuedGameStats = ({ manual = false } = {}) => {
 const recordGameStatsEvent = async (
   rawEvent,
   sessionKey = "",
-  { sudokuNoHintsSeconds = null } = {}
+  { sudokuNoHintsSeconds = null, snakePreviousHighScore = undefined } = {}
 ) => {
   const event = normalizeGameStatsEvent(rawEvent);
   if (!event) return;
-  const isFirstLocalWin = isGameStatsFirstLocalWin(event);
+  const recordOptions = { snakePreviousHighScore };
+  const mayBeatPersonalRecord = gameStatsEventBeatsPersonalRecord(
+    gameStatsLocalState,
+    gameStatsGlobalState,
+    event,
+    recordOptions
+  );
   const resetGeneration = gameStatsLocalResetGeneration;
   let profile = gameStatsProfile;
   if (
     !profile &&
-    (event.type === "win" || gameStatsEventQualifiesForLeaderboard(event))
+    (event.type === "win" ||
+      mayBeatPersonalRecord ||
+      gameStatsEventQualifiesForLeaderboard(event))
   ) {
     profile = await requestGameStatsProfile();
   }
   if (profile) event.profile = normalizeGameStatsEventProfile(profile);
   if (resetGeneration !== gameStatsLocalResetGeneration) return;
+  const beatPersonalRecord = gameStatsEventBeatsPersonalRecord(
+    gameStatsLocalState,
+    gameStatsGlobalState,
+    event,
+    recordOptions
+  );
   const applied = applyGameStatsEventToData(gameStatsLocalState, event);
   if (!applied) return;
   if (event.game === "sudoku" && event.hintBucket === "noHints") {
@@ -2750,6 +2825,9 @@ const recordGameStatsEvent = async (
     );
   }
   saveGameStatsLocalState();
+  const recordHandoffPromise = beatPersonalRecord
+    ? playGameStatsRecordHandoff(event.game)
+    : null;
   const session = await getGameStatsSession(sessionKey);
   queueGameStatsSubmission(event, session);
   if (gameStatsSyncState !== "auth-waiting") {
@@ -2760,7 +2838,7 @@ const recordGameStatsEvent = async (
     });
   }
   void syncQueuedGameStats();
-  if (isFirstLocalWin) await playFirstGameStatsTrophyHandoff(event.game);
+  if (recordHandoffPromise) await recordHandoffPromise;
 };
 
 const formatGameStatsCounter = (value, length = 3) =>
@@ -4148,7 +4226,7 @@ let gameStatsSyncAnnouncementGame = "";
 let administratorSignInAttemptId = 0;
 let administratorSignInAbortController = null;
 let gameStatsLocalResetGeneration = 0;
-let gameStatsFirstWinHandoffInProgress = false;
+let gameStatsRecordHandoffQueue = Promise.resolve();
 
 let topZ = 10;
 let calendarDate = new Date();
@@ -4170,6 +4248,7 @@ let snakeState = {
   hasStarted: false,
   gameOver: false,
   statsSession: "",
+  recordAtStart: null,
   tickTimer: null,
   countdownTimer: null,
   countdownStartedAt: 0,
@@ -7183,6 +7262,7 @@ const resetSnakeGame = () => {
   snakeState.hasStarted = false;
   snakeState.gameOver = false;
   snakeState.statsSession = "";
+  snakeState.recordAtStart = null;
   snakeState.apples = [];
   snakeState.collectionPulses = [];
   rebuildSnakeOccupiedCells();
@@ -7205,7 +7285,8 @@ const endSnakeGame = () => {
         boardSize: String(snakeState.gridSize),
         metric: snakeState.score,
       }),
-      snakeState.statsSession
+      snakeState.statsSession,
+      { snakePreviousHighScore: snakeState.recordAtStart }
     );
   }
   saveSnakeHighScores();
@@ -7293,6 +7374,12 @@ const startSnakeGame = () => {
   if (snakeState.gameOver) resetSnakeGame();
   if (snakeState.running || snakeState.countdownTimer) return;
   if (!snakeState.hasStarted) {
+    const storedHighScore = Number(
+      snakeState.highScores[String(snakeState.gridSize)]
+    );
+    snakeState.recordAtStart = Number.isFinite(storedHighScore)
+      ? storedHighScore
+      : null;
     snakeState.statsSession = startGameStatsSession("snake", {
       boardSize: String(snakeState.gridSize),
     });
