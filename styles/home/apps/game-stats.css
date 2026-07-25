@@ -174,7 +174,7 @@
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   display: grid;
   gap: 4px;
-  grid-template-columns: minmax(0, 1fr) 34px;
+  grid-template-columns: minmax(0, 1fr) 24px;
   min-width: 0;
   padding: 4px;
 }
@@ -184,10 +184,10 @@
   display: block;
   font-size: 11px;
   line-height: 1.35;
-  min-height: 34px;
+  min-height: 24px;
   min-width: 0;
   overflow-wrap: anywhere;
-  padding: 6px 4px;
+  padding: 4px;
   white-space: normal;
 }
 
@@ -213,28 +213,28 @@
   align-self: start;
   box-sizing: border-box;
   display: grid;
-  height: 34px;
-  min-height: 34px;
-  min-width: 34px;
-  padding: 4px;
+  height: 24px;
+  min-height: 24px;
+  min-width: 24px;
+  padding: 3px;
   place-items: center;
   position: relative;
-  width: 34px;
+  width: 24px;
 }
 
 .game-stats-refresh-button img {
   display: block;
-  height: 22px;
+  height: 14px;
   image-rendering: auto;
   max-width: 100%;
   object-fit: contain;
   pointer-events: none;
-  width: 22px;
+  width: 14px;
 }
 
 .game-stats-refresh-button:focus-visible {
   outline: 1px dotted #000;
-  outline-offset: -4px;
+  outline-offset: -3px;
 }
 
 .game-stats-refresh-button:disabled {
@@ -262,7 +262,7 @@
   gap: 1px;
   inset: 0;
   justify-content: center;
-  padding-bottom: 9px;
+  padding-bottom: 5px;
   pointer-events: none;
   position: absolute;
 }
@@ -456,7 +456,7 @@
   background: #fff;
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   display: grid;
-  gap: 4px;
+  gap: 2px;
   grid-template-areas: "medal player metric";
   grid-template-columns: 22px minmax(0, 1fr) auto;
   min-height: 28px;
@@ -797,6 +797,11 @@
   display: grid;
   gap: 6px;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.game-profile-name-row[hidden],
+.game-profile-name-credit[hidden] {
+  display: none;
 }
 
 .game-profile-name-picker {

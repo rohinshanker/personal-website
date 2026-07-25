@@ -89,3 +89,81 @@ for (const viewport of viewports) {
     expect(layout.saved.bottom).toBeGreaterThanOrEqual(layout.name.top);
   });
 }
+
+const disableRemoteGameStats = async (page) => {
+  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
+    })
+  );
+};
+
+for (const viewport of viewports) {
+  test(`Game Progress changes only the icon at ${viewport.name}`, async ({ page }, testInfo) => {
+    const consoleErrors = [];
+    const runtimeErrors = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    page.on("pageerror", (error) => runtimeErrors.push(error.message));
+    await page.setViewportSize(viewport);
+    await page.addInitScript(
+      ({ profile, storageKey }) => {
+        Math.random = () => 0.999999;
+        localStorage.setItem(storageKey, JSON.stringify(profile));
+      },
+      { profile: PROFILE, storageKey: PROFILE_STORAGE_KEY }
+    );
+    await disableRemoteGameStats(page);
+    await page.goto("/home.html");
+    await page.locator('.taskbar-icon[data-app="game-progress"]').click();
+
+    const app = page.locator("#game-progress-window");
+    const changeIcon = app.getByRole("button", { name: "Change Icon" });
+    await expect(changeIcon).toBeVisible();
+    await expect(app.getByRole("button", { name: "Create Profile" })).toHaveCount(0);
+
+    await changeIcon.click();
+    const dialog = page.getByRole("dialog", { name: "Change Profile Icon" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("#game-profile-name-controls")).toBeHidden();
+    await expect(dialog.locator("#game-profile-name-credit")).toBeHidden();
+    await expect(dialog.locator("#game-profile-name")).toBeHidden();
+    await expect(dialog.locator("#game-profile-reroll")).toBeHidden();
+    await expect(dialog.locator("#game-profile-icon-search")).toBeFocused();
+    await page.screenshot({
+      path: testInfo.outputPath(`game-progress-icon-picker-${viewport.width}x${viewport.height}.png`),
+      fullPage: true,
+    });
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(changeIcon).toBeFocused();
+
+    await changeIcon.click();
+    const iconOptions = dialog.locator(".game-profile-icon-option");
+    const nextIconIndex = await iconOptions.evaluateAll((options) =>
+      options.findIndex((option) => option.getAttribute("aria-selected") !== "true")
+    );
+    expect(nextIconIndex).toBeGreaterThanOrEqual(0);
+    const nextIcon = await iconOptions.nth(nextIconIndex).locator("img").getAttribute("src");
+    await iconOptions.nth(nextIconIndex).click();
+    await expect(iconOptions.nth(nextIconIndex)).toHaveAttribute("aria-selected", "true");
+    await dialog.getByRole("button", { name: "Save Icon" }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(app.locator(".game-progress-profile-name")).toHaveText(PROFILE.name);
+    await expect(app.locator(".game-progress-profile-row .game-stats-player-icon")).toHaveAttribute(
+      "src",
+      nextIcon
+    );
+    const storedProfile = await page.evaluate((storageKey) =>
+      JSON.parse(localStorage.getItem(storageKey) || "null"),
+      PROFILE_STORAGE_KEY
+    );
+    expect(storedProfile).toMatchObject({ id: PROFILE.id, name: PROFILE.name, icon: nextIcon });
+    expect(consoleErrors).toEqual([]);
+    expect(runtimeErrors).toEqual([]);
+  });
+}

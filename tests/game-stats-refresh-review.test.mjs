@@ -50,6 +50,10 @@ test("review artifact contains every refresh and informational state once", () =
 test("review artifact captures the success, multiplayer, and empty-data contract", () => {
   assert.match(
     reviewHtml,
+    /\.score-row \{[\s\S]*?gap: 2px;[\s\S]*?grid-template-columns: auto minmax\(0, 1fr\) auto;/
+  );
+  assert.match(
+    reviewHtml,
     /src="\.\.\/\.\.\/\.\.\/assets\/app-icons\/ico\/msg_warning\.ico"/
   );
   assert.equal(

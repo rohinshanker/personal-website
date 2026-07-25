@@ -216,6 +216,9 @@ const {
   gameStatsRefreshButtons,
   gameProfilePrompt,
   gameProfileDialog,
+  gameProfileTitle,
+  gameProfileNameControls,
+  gameProfileNameCredit,
   gameProfileNamePicker,
   gameProfileName,
   gameProfileNameToggle,
@@ -1008,7 +1011,7 @@ const LIFE_COUNTER_DIGIT_SOURCES = {
   "8": "assets/minesweeper_assets/digital_digits/digital_8.png",
   "9": "assets/minesweeper_assets/digital_digits/digital_9.png",
   "-": "assets/minesweeper_assets/digital_digits/digital_minus.png",
-  " ": "assets/minesweeper_assets/digital_digits/digital_blank.png",
+  " ": "assets/minesweeper_assets/digital_digits/digital_unlit.png",
 };
 
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -1020,6 +1023,10 @@ const GAME_STATS_API_TIMEOUT_MS = 8000;
 const GAME_STATS_MAX_NAME_REROLLS = 10;
 const GAME_STATS_NAME_ROLL_COOLDOWN_MS = 3000;
 const GAME_STATS_NAME_SUGGESTION_COUNT = 5;
+const GAME_STATS_PROFILE_EDITOR_MODES = Object.freeze({
+  create: "create",
+  icon: "icon",
+});
 const GAME_STATS_FIRST_WIN_TROPHY_PRESS_COUNT = 2;
 const GAME_STATS_FIRST_WIN_TROPHY_PRESS_MS = 120;
 const GAME_STATS_FIRST_WIN_TROPHY_RELEASE_MS = 100;
@@ -1116,7 +1123,10 @@ const GAME_STATS_MEDAL_SOURCES = Object.freeze([
   "assets/minesweeper_assets/silver-medal.png",
   "assets/minesweeper_assets/bronze-medal.png",
 ]);
-const GAME_STATS_DIGIT_SOURCES = LIFE_COUNTER_DIGIT_SOURCES;
+const GAME_STATS_DIGIT_SOURCES = Object.freeze({
+  ...LIFE_COUNTER_DIGIT_SOURCES,
+  " ": "assets/minesweeper_assets/digital_digits/digital_unlit.png",
+});
 const GAME_STATS_ICON_MANIFEST = Object.freeze(
   (Array.isArray(window.rohinAppIconManifest) ? window.rohinAppIconManifest : [])
     .filter((filename) => /^[^/]+\.ico$/i.test(String(filename)))
@@ -1792,6 +1802,19 @@ const saveGameStatsProfile = (profile) => {
   return gameStatsProfile;
 };
 
+const saveGameStatsProfileIcon = (icon) => {
+  if (!gameStatsProfile) return null;
+  const nextProfile = normalizeGameStatsProfile({ ...gameStatsProfile, icon });
+  if (!nextProfile) return null;
+  gameStatsProfile = nextProfile;
+  try {
+    localStorage.setItem(GAME_STATS_PROFILE_STORAGE_KEY, JSON.stringify(gameStatsProfile));
+  } catch {
+    // Profile identity is best-effort when local storage is unavailable.
+  }
+  return gameStatsProfile;
+};
+
 const clearGameStatsProfile = () => {
   gameStatsProfile = null;
   clearGameStatsGlobalPlayerScope();
@@ -2077,6 +2100,32 @@ let gameStatsDraftNameSuggestions = [];
 let gameStatsNameSuggestionsOpen = false;
 let gameStatsNameSuggestionActiveIndex = -1;
 let gameStatsPreserveNameSuggestionsAfterReroll = false;
+let gameStatsProfileEditorMode = GAME_STATS_PROFILE_EDITOR_MODES.create;
+let gameStatsProfileDialogReturnFocus = null;
+
+const isGameStatsProfileIconEditor = () =>
+  gameStatsProfileEditorMode === GAME_STATS_PROFILE_EDITOR_MODES.icon;
+
+const setGameStatsProfileEditorMode = (mode) => {
+  const iconOnly = mode === GAME_STATS_PROFILE_EDITOR_MODES.icon;
+  gameStatsProfileEditorMode = iconOnly
+    ? GAME_STATS_PROFILE_EDITOR_MODES.icon
+    : GAME_STATS_PROFILE_EDITOR_MODES.create;
+  gameProfileDialog?.classList.toggle("is-icon-only", iconOnly);
+  if (gameProfileTitle) {
+    gameProfileTitle.textContent = iconOnly ? "Change Profile Icon" : "Leaderboard Profile";
+  }
+  if (gameProfileNameControls) gameProfileNameControls.hidden = iconOnly;
+  if (gameProfileNameCredit) gameProfileNameCredit.hidden = iconOnly;
+  if (gameProfileSave) gameProfileSave.textContent = iconOnly ? "Save Icon" : "Save Profile";
+  if (gameProfileCancel) gameProfileCancel.textContent = iconOnly ? "Cancel" : "Skip Leaderboard";
+  if (gameProfileClose) {
+    gameProfileClose.setAttribute(
+      "aria-label",
+      iconOnly ? "Close icon picker" : "Close leaderboard profile"
+    );
+  }
+};
 
 const setGameProfilePromptVisible = (visible) => {
   if (!gameProfilePrompt) return;
@@ -2105,6 +2154,7 @@ const stopGameStatsNameRollCooldown = () => {
 const setGameProfileNameSuggestionsVisible = (visible) => {
   const isVisible = Boolean(
     visible &&
+      !isGameStatsProfileIconEditor() &&
       !gameStatsNameRollInFlight &&
       gameStatsDraftNameSuggestions.length &&
       gameProfileNameOptions
@@ -2294,7 +2344,9 @@ const renderGameProfileIconGallery = () => {
     button.addEventListener("click", () => {
       gameStatsDraftProfile.icon = icon.src;
       if (gameStatsDraftProfile.name === GAME_STATS_API_ERROR_NAME) {
-        gameStatsDraftProfile.name = getGameStatsProfileNameFromIcon(icon.filename);
+        if (!isGameStatsProfileIconEditor()) {
+          gameStatsDraftProfile.name = getGameStatsProfileNameFromIcon(icon.filename);
+        }
       }
       updateGameProfileRerollState();
       renderGameProfileIconGallery();
@@ -2305,7 +2357,9 @@ const renderGameProfileIconGallery = () => {
 
 const resolveGameStatsProfilePrompt = (profile) => {
   const resolve = gameStatsProfilePromptResolve;
+  const returnFocus = gameStatsProfileDialogReturnFocus;
   gameStatsProfilePromptResolve = null;
+  gameStatsProfileDialogReturnFocus = null;
   gameStatsDraftProfile = null;
   gameStatsNameRollId += 1;
   gameStatsNameRollInFlight = false;
@@ -2316,8 +2370,12 @@ const resolveGameStatsProfilePrompt = (profile) => {
   setGameProfileNameSuggestionsVisible(false);
   stopGameStatsNameRollCooldown();
   setGameProfilePromptVisible(false);
+  setGameStatsProfileEditorMode(GAME_STATS_PROFILE_EDITOR_MODES.create);
   renderGameProgressWindow();
   if (resolve) resolve(profile);
+  if (returnFocus?.isConnected) {
+    window.setTimeout(() => returnFocus.focus(), 0);
+  }
 };
 
 const skipGameStatsProfilePrompt = () => {
@@ -2326,7 +2384,7 @@ const skipGameStatsProfilePrompt = () => {
 
 const requestGameStatsProfile = async () => {
   if (gameStatsProfile) return gameStatsProfile;
-  if (!gameProfilePrompt || gameStatsProfilePromptResolve) return null;
+  if (!gameProfilePrompt || gameStatsProfilePromptResolve || gameStatsDraftProfile) return null;
   const defaultIcon =
     GAME_STATS_ICON_MANIFEST.find((icon) => icon.src === GAME_STATS_DEFAULT_ICON)?.src ||
     GAME_STATS_ICON_MANIFEST[0]?.src ||
@@ -2334,6 +2392,7 @@ const requestGameStatsProfile = async () => {
   gameStatsNameRollId += 1;
   gameStatsNameRollInFlight = false;
   stopGameStatsNameRollCooldown();
+  setGameStatsProfileEditorMode(GAME_STATS_PROFILE_EDITOR_MODES.create);
   gameStatsDraftProfile = {
     id: createGameStatsEventId().replace(/^local-/, "player-"),
     name: "",
@@ -2354,6 +2413,36 @@ const requestGameStatsProfile = async () => {
   return new Promise((resolve) => {
     gameStatsProfilePromptResolve = resolve;
   });
+};
+
+const openGameProgressProfileIconPicker = () => {
+  if (
+    !gameStatsProfile ||
+    !gameProfilePrompt ||
+    gameStatsProfilePromptResolve ||
+    gameStatsDraftProfile
+  ) {
+    return false;
+  }
+  gameStatsNameRollId += 1;
+  gameStatsNameRollInFlight = false;
+  stopGameStatsNameRollCooldown();
+  gameStatsDraftProfile = { ...gameStatsProfile };
+  gameStatsDraftNameSuggestions = [];
+  gameStatsNameSuggestionsOpen = false;
+  gameStatsNameSuggestionActiveIndex = -1;
+  renderGameProfileNameSuggestions();
+  setGameStatsProfileEditorMode(GAME_STATS_PROFILE_EDITOR_MODES.icon);
+  setGameProfileNameSuggestionsVisible(false);
+  if (gameProfileIconSearch) gameProfileIconSearch.value = "";
+  updateGameProfileRerollState();
+  renderGameProfileIconGallery();
+  gameStatsProfileDialogReturnFocus = document.getElementById(
+    "game-progress-create-profile"
+  );
+  setGameProfilePromptVisible(true);
+  requestAnimationFrame(() => gameProfileIconSearch?.focus());
+  return true;
 };
 
 const createGameProgressProfile = async () => {
@@ -2675,7 +2764,7 @@ const recordGameStatsEvent = async (
 };
 
 const formatGameStatsCounter = (value, length = 3) =>
-  String(Math.max(0, Math.trunc(Number(value) || 0))).padStart(length, "0");
+  String(Math.max(0, Math.trunc(Number(value) || 0))).padStart(length, " ");
 
 const gameStatsDigitResizeObservers = new WeakMap();
 
@@ -3646,6 +3735,8 @@ const renderGameProgressProfile = () => {
     if (createButton) {
       createButton.hidden = false;
       createButton.disabled = Boolean(gameStatsProfilePromptResolve);
+      createButton.textContent = "Create Profile";
+      createButton.setAttribute("aria-label", "Create Profile");
     }
     return;
   }
@@ -3659,8 +3750,10 @@ const renderGameProgressProfile = () => {
   );
   content.append(profile);
   if (createButton) {
-    createButton.hidden = true;
-    createButton.disabled = true;
+    createButton.hidden = false;
+    createButton.disabled = Boolean(gameStatsDraftProfile);
+    createButton.textContent = "Change Icon";
+    createButton.setAttribute("aria-label", "Change Icon");
   }
 };
 
@@ -3765,7 +3858,7 @@ const renderGameProgressWindow = () => {
 
 const resetGameProgressLocalData = () => {
   gameStatsLocalResetGeneration += 1;
-  if (gameStatsProfilePromptResolve) resolveGameStatsProfilePrompt(null);
+  if (gameStatsDraftProfile) resolveGameStatsProfilePrompt(null);
 
   gameStatsLocalState = createEmptyGameStatsData();
   saveGameStatsLocalState();
@@ -8337,6 +8430,9 @@ const GEARS_NEST_GRENADE_FUSE_MS = 1700;
 const GEARS_NEST_ROCKET_FUSE_MS = 1900;
 const GEARS_NEST_GRENADE_MIN_GAP_MS = 3000;
 const GEARS_NEST_ROCKET_MIN_GAP_MS = 4200;
+const GEARS_NEST_GRENADE_CHANCE = 0.4;
+const GEARS_NEST_ROCKET_CHANCE = 0.46;
+const GEARS_NEST_LONE_BOOMER_ROCKET_SPEED_MULTIPLIER = 2;
 const GEARS_NEST_COVER_POSITIONS = Object.freeze([
   { index: 0, label: "left cover", shortLabel: "Left", x: 19, y: 87, width: 132 },
   { index: 1, label: "center cover", shortLabel: "Center", x: 50, y: 90, width: 144 },
@@ -8472,6 +8568,14 @@ const isGearsNestVisible = () =>
 
 const gearsNestAliveEnemies = () =>
   gearsNestState.enemies.filter((enemy) => enemy.health > 0);
+
+const getGearsNestRocketMinGapMs = (aliveEnemies) => {
+  const isLoneBoomer =
+    aliveEnemies.length === 1 && aliveEnemies[0].type === "boomer";
+  return isLoneBoomer
+    ? GEARS_NEST_ROCKET_MIN_GAP_MS / GEARS_NEST_LONE_BOOMER_ROCKET_SPEED_MULTIPLIER
+    : GEARS_NEST_ROCKET_MIN_GAP_MS;
+};
 
 const setGearsNestTimer = (callback, delay) => {
   const timerId = window.setTimeout(() => {
@@ -9035,12 +9139,13 @@ const chooseGearsNestEnemyAttack = () => {
   const boomer = aliveEnemies.find((enemy) => enemy.type === "boomer");
   const drones = aliveEnemies.filter((enemy) => enemy.type === "drone");
   const canLaunchHazard = gearsNestState.hazards.length < 2;
+  const rocketMinGapMs = getGearsNestRocketMinGapMs(aliveEnemies);
 
   if (
     boomer &&
     canLaunchHazard &&
-    now - gearsNestState.lastRocketAt > GEARS_NEST_ROCKET_MIN_GAP_MS &&
-    Math.random() < 0.42
+    now - gearsNestState.lastRocketAt > rocketMinGapMs &&
+    Math.random() < GEARS_NEST_ROCKET_CHANCE
   ) {
     gearsNestState.lastRocketAt = now;
     launchGearsNestHazard("rocket", boomer);
@@ -9051,7 +9156,7 @@ const chooseGearsNestEnemyAttack = () => {
     drones.length &&
     canLaunchHazard &&
     now - gearsNestState.lastGrenadeAt > GEARS_NEST_GRENADE_MIN_GAP_MS &&
-    Math.random() < 0.34
+    Math.random() < GEARS_NEST_GRENADE_CHANCE
   ) {
     gearsNestState.lastGrenadeAt = now;
     launchGearsNestHazard(
@@ -9791,10 +9896,36 @@ const closeFateWindow = () => {
 
 const isDeathNoteVisible = () => isManagedRandomEventWindowVisible(deathNoteWindow);
 
+const limitDeathNoteEntryToVisibleLines = () => {
+  if (!deathNoteEntry) return;
+  deathNoteEntry.scrollTop = 0;
+  if (deathNoteEntry.clientHeight <= 0) return;
+  const initialValue = deathNoteEntry.value;
+  const selectionStart = deathNoteEntry.selectionStart;
+  const selectionEnd = deathNoteEntry.selectionEnd;
+  let value = initialValue;
+
+  while (deathNoteEntry.scrollHeight > deathNoteEntry.clientHeight && value) {
+    const finalLineBreak = value.lastIndexOf("\n");
+    value = finalLineBreak >= 0 ? value.slice(0, finalLineBreak) : value.slice(0, -1);
+    deathNoteEntry.value = value;
+  }
+
+  if (value !== initialValue) {
+    deathNoteEntry.setSelectionRange(
+      Math.min(selectionStart, value.length),
+      Math.min(selectionEnd, value.length)
+    );
+  }
+};
+
 const showDeathNoteWindow = () => {
   const didOpen = showManagedRandomEventWindow(deathNoteWindow, {
     beforeShow: () => {
-      if (deathNoteEntry) deathNoteEntry.value = "";
+      if (deathNoteEntry) {
+        deathNoteEntry.value = "";
+        limitDeathNoteEntryToVisibleLines();
+      }
     },
     clampAfterMediaLoad: true,
   });
@@ -19175,9 +19306,9 @@ const normalizeLifeCounterInitiative = (value) => {
 const formatLifeCounterDigits = (value) => {
   const normalized = normalizeLifeCounterValue(value);
   if (normalized < 0) {
-    return `-${String(Math.abs(normalized)).padStart(4, "0")}`;
+    return `-${String(Math.abs(normalized)).padStart(4, " ")}`;
   }
-  return String(normalized).padStart(5, "0");
+  return String(normalized).padStart(5, " ");
 };
 
 const setLifeCounterPlayerValue = (playerId, value, fallback) => {
@@ -23997,6 +24128,7 @@ if (redToolWindow) {
 bindRandomEventButton(deathNoteClose, closeDeathNoteWindow);
 bindRandomEventButton(deathNoteTitleClose, closeDeathNoteWindow);
 bindManagedRandomEventWindowAnimation(deathNoteWindow, { unloadImages: false });
+deathNoteEntry?.addEventListener("input", limitDeathNoteEntryToVisibleLines);
 deathNoteWindow?.addEventListener("click", (event) => {
   const target = event.target instanceof Element ? event.target : event.target?.parentElement;
   if (!target?.closest(".death-note-lined-page")) return;
@@ -26688,6 +26820,15 @@ if (gameProfileIconSearch) {
 if (gameProfileSave) {
   gameProfileSave.addEventListener("click", () => {
     if (!gameStatsDraftProfile) return;
+    if (isGameStatsProfileIconEditor()) {
+      const savedProfile = saveGameStatsProfileIcon(gameStatsDraftProfile.icon);
+      if (!savedProfile) {
+        gameProfileIconSearch?.focus();
+        return;
+      }
+      resolveGameStatsProfilePrompt(savedProfile);
+      return;
+    }
     const profile = normalizeGameStatsProfile({
       ...gameStatsDraftProfile,
     });
@@ -26714,7 +26855,7 @@ if (gameProfileClose) {
 }
 
 document.addEventListener("keydown", (event) => {
-  if (!gameStatsProfilePromptResolve || event.key !== "Escape") return;
+  if (!gameStatsDraftProfile || event.key !== "Escape") return;
   if (gameStatsNameSuggestionsOpen) {
     event.preventDefault();
     setGameProfileNameSuggestionsVisible(false);
@@ -26736,7 +26877,11 @@ if (gameProfileDialog) {
 const gameProgressCreateProfile = document.getElementById("game-progress-create-profile");
 if (gameProgressCreateProfile) {
   gameProgressCreateProfile.addEventListener("click", () => {
-    if (gameStatsProfile || gameStatsProfilePromptResolve) return;
+    if (gameStatsProfilePromptResolve || gameStatsDraftProfile) return;
+    if (gameStatsProfile) {
+      openGameProgressProfileIconPicker();
+      return;
+    }
     void createGameProgressProfile();
   });
 }

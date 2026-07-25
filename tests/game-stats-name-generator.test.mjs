@@ -112,6 +112,7 @@ const createNameGeneratorRuntime = (source, responses) => {
     'const GAME_STATS_SKY_NAME_GENERATOR_URL = "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true";',
     "const GAME_STATS_NAME_GENERATOR_TIMEOUT_MS = 8000;",
     "const GAME_STATS_NAME_SUGGESTION_COUNT = 5;",
+    'const GAME_STATS_PROFILE_EDITOR_MODES = Object.freeze({ create: "create", icon: "icon" });',
     getNameGeneratorSource(source),
     "globalThis.fetchGeneratedName = fetchGameStatsName;",
     "globalThis.fetchGeneratedNames = fetchGameStatsNameSuggestions;",
@@ -192,6 +193,7 @@ test("a failed roll keeps API Error inside the name field and allows saving", as
     "let gameStatsDraftNameSuggestions = [];",
     "let gameStatsNameSuggestionsOpen = false;",
     "let gameStatsNameSuggestionActiveIndex = -1;",
+    "const isGameStatsProfileIconEditor = () => false;",
     "const gameProfileName = { value: \"\", removeAttribute: () => {}, setAttribute: () => {}, focus: () => {} };",
     "const gameProfileNameToggle = { disabled: false, setAttribute: () => {} };",
     "const gameProfileNameOptions = { classList: { toggle: () => {} }, setAttribute: () => {}, querySelectorAll: () => [], replaceChildren: () => {}, append: () => {} };",
@@ -237,6 +239,8 @@ test("icon selection replaces API Error only and keeps successful names unchange
     'const GAME_STATS_API_ERROR_NAME = "API Error";',
     "const GAME_STATS_ICON_MANIFEST = [{ filename: \"address_book_user.ico\", src: \"assets/app-icons/ico/address_book_user.ico\" }, { filename: \"Roland_GS.ico\", src: \"assets/app-icons/ico/Roland_GS.ico\" }];",
     "let gameStatsDraftProfile = { name: \"API Error\", icon: \"\" };",
+    "let iconEditorOpen = false;",
+    "const isGameStatsProfileIconEditor = () => iconEditorOpen;",
     "const gameProfileIconSearch = { value: \"\" };",
     "const gameProfileIconGallery = { children: [], replaceChildren() { this.children = []; }, append(child) { this.children.push(child); } };",
     "let profileStateUpdates = 0;",
@@ -245,6 +249,7 @@ test("icon selection replaces API Error only and keeps successful names unchange
     "globalThis.renderPicker = renderGameProfileIconGallery;",
     "globalThis.selectIcon = (index) => gameProfileIconGallery.children[index].listeners.click();",
     "globalThis.setName = (name) => { gameStatsDraftProfile.name = name; };",
+    "globalThis.setIconEditorOpen = (open) => { iconEditorOpen = open; };",
     "globalThis.profile = () => ({ ...gameStatsDraftProfile, profileStateUpdates });",
   ].join("\n");
   vm.runInNewContext(declarations, runtime);
@@ -264,6 +269,16 @@ test("icon selection replaces API Error only and keeps successful names unchange
     name: "Ayla",
     icon: "assets/app-icons/ico/Roland_GS.ico",
     profileStateUpdates: 2,
+  });
+
+  runtime.setName("API Error");
+  runtime.setIconEditorOpen(true);
+  runtime.renderPicker();
+  runtime.selectIcon(0);
+  assert.deepEqual(JSON.parse(JSON.stringify(runtime.profile())), {
+    name: "API Error",
+    icon: "assets/app-icons/ico/address_book_user.ico",
+    profileStateUpdates: 3,
   });
 });
 
@@ -297,6 +312,7 @@ test("a user reroll has a fixed three-second cooldown and blocks duplicate fetch
     "let gameStatsDraftNameSuggestions = [];",
     "let gameStatsNameSuggestionsOpen = false;",
     "let gameStatsNameSuggestionActiveIndex = -1;",
+    "const isGameStatsProfileIconEditor = () => false;",
     "let fetchCount = 0;",
     "const gameProfileName = { value: \"\", removeAttribute: () => {}, setAttribute: () => {}, focus: () => {} };",
     "const gameProfileNameToggle = { disabled: false, setAttribute: () => {} };",
@@ -360,6 +376,7 @@ test("name suggestions preserve the selected favorite while replacing the five-c
     "let gameStatsDraftNameSuggestions = [];",
     "let gameStatsNameSuggestionsOpen = false;",
     "let gameStatsNameSuggestionActiveIndex = -1;",
+    "const isGameStatsProfileIconEditor = () => false;",
     "const gameProfileName = { value: \"\", removeAttribute: () => {}, setAttribute: () => {}, focus: () => {} };",
     "const gameProfileNameToggle = { disabled: false, setAttribute: () => {} };",
     "const gameProfileNameOptions = { children: [], classList: { toggle: () => {} }, setAttribute: () => {}, querySelectorAll() { return this.children; }, replaceChildren() { this.children = []; }, append(child) { this.children.push(child); } };",
@@ -449,7 +466,10 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   assert.match(home, /id="game-profile-reroll-count" aria-live="polite">10 left</);
   assert.match(home, /href="https:\/\/perchance\.org\/sky-cotl-namegen"/);
   assert.match(home, /href="https:\/\/perchance\.org\/"[^>]*>Perchance<\//);
-  assert.match(home, /<p class="game-profile-name-credit">\s*via\s*<a href="https:\/\/perchance\.org\/sky-cotl-namegen"/);
+  assert.match(
+    home,
+    /<p class="game-profile-name-credit"(?:\s+[^>]*)?>\s*via\s*<a href="https:\/\/perchance\.org\/sky-cotl-namegen"/
+  );
   assert.doesNotMatch(home, /Names via/);
   assert.doesNotMatch(home, /Sky-style names|fantasynamegenerators\.com|lukewh\.com/);
   assert.match(dom, /gameProfileNamePicker: byId\("game-profile-name-picker"\),/);

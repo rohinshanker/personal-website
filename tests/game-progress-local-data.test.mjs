@@ -33,6 +33,38 @@ test("Game Progress keeps a saved profile immutable and gives new profiles ten r
   assert.match(source, /event\.profile = normalizeGameStatsEventProfile\(profile\);/);
 });
 
+test("Game Progress changes only the icon of a saved profile", async () => {
+  const [source, home, dom] = await Promise.all([
+    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readFile(new URL("home.html", root), "utf8"),
+    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
+  ]);
+
+  assert.match(home, /id="game-profile-name-controls"/);
+  assert.match(home, /id="game-profile-name-credit"/);
+  assert.match(dom, /gameProfileNameControls: byId\("game-profile-name-controls"\),/);
+  assert.match(dom, /gameProfileNameCredit: byId\("game-profile-name-credit"\),/);
+  assert.match(
+    source,
+    /const saveGameStatsProfileIcon = \(icon\) => \{[\s\S]*?\{ \.\.\.gameStatsProfile, icon \}/
+  );
+  assert.match(
+    source,
+    /const openGameProgressProfileIconPicker = \(\) => \{[\s\S]*?gameStatsDraftProfile = \{ \.\.\.gameStatsProfile \};[\s\S]*?setGameStatsProfileEditorMode\(GAME_STATS_PROFILE_EDITOR_MODES\.icon\);/
+  );
+  assert.match(source, /gameProfileNameControls\.hidden = iconOnly;/);
+  assert.match(source, /gameProfileNameCredit\.hidden = iconOnly;/);
+  assert.match(source, /createButton\.textContent = "Change Icon";/);
+  assert.match(
+    source,
+    /if \(gameStatsProfile\) \{[\s\S]*?openGameProgressProfileIconPicker\(\);/
+  );
+  assert.match(
+    source,
+    /!isGameStatsProfileIconEditor\(\) &&[\s\S]*?gameStatsDraftProfile\.name === GAME_STATS_API_ERROR_NAME/
+  );
+});
+
 test("Game Progress reset clears only local aggregate, profile, and Snake record data", async () => {
   const { resetSource } = await readResetFunction();
 

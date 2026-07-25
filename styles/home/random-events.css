@@ -3663,6 +3663,7 @@ button.gears-nest-enemy:not(:disabled) {
   line-height: 26px;
   min-height: 284px;
   outline: 0;
+  overflow: hidden;
   padding: 7px 0 0;
   position: relative;
   resize: none;
@@ -3743,7 +3744,7 @@ html.is-wall-breach-shaking body {
   position: fixed;
   top: 50%;
   translate: -50% -50%;
-  width: min(760px, calc(100vw - 24px));
+  width: min(494px, calc(100vw - 24px));
   z-index: 142;
 }
 

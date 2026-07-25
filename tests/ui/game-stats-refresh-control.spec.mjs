@@ -351,6 +351,8 @@ const expectNoHorizontalOverflow = async (parts) => {
           statusStartsInsideRow: statusBounds.left >= rowBounds.left - 1,
           statusEndsBeforeButton: statusBounds.right <= buttonBounds.left,
           buttonEndsInsideRow: buttonBounds.right <= rowBounds.right + 1,
+          buttonIsCompact: buttonBounds.width <= 24.5,
+          buttonDoesNotExpandRow: buttonBounds.height <= statusBounds.height + 1,
         };
       })
     )
@@ -360,6 +362,8 @@ const expectNoHorizontalOverflow = async (parts) => {
       statusStartsInsideRow: true,
       statusEndsBeforeButton: true,
       buttonEndsInsideRow: true,
+      buttonIsCompact: true,
+      buttonDoesNotExpandRow: true,
     });
 };
 

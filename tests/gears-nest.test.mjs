@@ -375,6 +375,10 @@ test("current publicly available information event uses local AOT assets outside
     mainSource,
     /Math\.floor\(Math\.random\(\) \* CURRENT_PUBLIC_INFO_ASSETS\.length\)/
   );
+  assert.match(
+    getCssBlock(".current-public-info-window"),
+    /width: min\(494px, calc\(100vw - 24px\)\);/
+  );
   assert.match(getCssBlock(".current-public-info-window .window-body"), /padding: 0;/);
   assert.match(getCssBlock(".current-public-info-actions"), /justify-content: flex-end;/);
 

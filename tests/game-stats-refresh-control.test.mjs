@@ -42,7 +42,7 @@ test("every Game Stats window has an independently accessible refresh row", asyn
   assert.equal(
     (
       homeSource.match(
-        /<img[\s\S]*?assets\/solitaire-cards\/undo-button\.png[\s\S]*?alt=""[\s\S]*?width="22"[\s\S]*?height="22"/g
+        /<img[\s\S]*?assets\/solitaire-cards\/undo-button\.png[\s\S]*?alt=""[\s\S]*?width="14"[\s\S]*?height="14"/g
       ) ?? []
     ).length,
     4
@@ -70,7 +70,7 @@ test("Game Stats refresh rows stay bounded and expose disabled and loading state
 
   assert.match(
     cssSource,
-    /\.game-stats-sync-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+34px;[\s\S]*?min-width:\s*0;/
+    /\.game-stats-sync-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+24px;[\s\S]*?min-width:\s*0;/
   );
   assert.match(
     cssSource,
@@ -78,11 +78,11 @@ test("Game Stats refresh rows stay bounded and expose disabled and loading state
   );
   assert.match(
     cssSource,
-    /\.game-stats-refresh-button\s*\{[\s\S]*?height:\s*34px;[\s\S]*?min-width:\s*34px;[\s\S]*?width:\s*34px;/
+    /\.game-stats-refresh-button\s*\{[\s\S]*?height:\s*24px;[\s\S]*?min-width:\s*24px;[\s\S]*?width:\s*24px;/
   );
   assert.match(
     cssSource,
-    /\.game-stats-refresh-button img\s*\{[\s\S]*?height:\s*22px;[\s\S]*?width:\s*22px;/
+    /\.game-stats-refresh-button img\s*\{[\s\S]*?height:\s*14px;[\s\S]*?width:\s*14px;/
   );
   assert.match(cssSource, /\.game-stats-refresh-button:disabled/);
   assert.match(cssSource, /\.game-stats-refresh-button\[aria-busy="true"\]/);

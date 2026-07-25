@@ -140,7 +140,7 @@ test("Minesweeper stats use the reusable leaderboard template in three fixed col
   assert.doesNotMatch(currentPlayerStyle[1], /outline\s*:/);
   assert.match(
     styles,
-    /\.game-stats-leaderboard-template-row,[\s\S]*?\.game-stats-minesweeper-row \{[\s\S]*?align-items: center;[\s\S]*?grid-template-areas: "medal player metric";[\s\S]*?grid-template-columns: 22px minmax\(0, 1fr\) auto;[\s\S]*?min-height: 28px;[\s\S]*?padding: 3px;/
+    /\.game-stats-leaderboard-template-row,[\s\S]*?\.game-stats-minesweeper-row \{[\s\S]*?align-items: center;[\s\S]*?gap: 2px;[\s\S]*?grid-template-areas: "medal player metric";[\s\S]*?grid-template-columns: 22px minmax\(0, 1fr\) auto;[\s\S]*?min-height: 28px;[\s\S]*?padding: 3px;/
   );
   assert.match(
     styles,

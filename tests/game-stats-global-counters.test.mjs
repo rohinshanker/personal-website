@@ -1,13 +1,20 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
+import vm from "node:vm";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 
 test("global leaderboard aggregates fill their black digit strips without overflowing", async () => {
-  const [main, styles] = await Promise.all([
+  const [main, styles, unlitDigit] = await Promise.all([
     readFile(new URL("scripts/home/main.js", root), "utf8"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
+    readFile(
+      new URL(
+        "assets/minesweeper_assets/digital_digits/digital_unlit.png",
+        root
+      )
+    ),
   ]);
   const digitRenderer = main.match(
     /const appendGameStatsDigits = \(([\s\S]*?)\n\};\n\nconst createGameStatsNode/
@@ -18,11 +25,33 @@ test("global leaderboard aggregates fill their black digit strips without overfl
   const minesweeperStat = main.match(
     /const appendMinesweeperStat = \(([\s\S]*?)\n\};\n\nconst appendMinesweeperPersonalRecord/
   );
+  const counterFormatter = main.match(
+    /const formatGameStatsCounter = \(value, length = 3\) =>\n  [^;]+;/
+  );
 
   assert.ok(digitRenderer, "Digit rendering should support a shared accessible mode");
   assert.ok(globalCounter, "Global aggregates should share one digital counter renderer");
   assert.ok(minesweeperStat, "Minesweeper should support the shared global counter");
-  assert.match(main, /String\(Math\.max\(0, Math\.trunc\(Number\(value\) \|\| 0\)\)\)\.padStart/);
+  assert.ok(counterFormatter, "Game Stats counters should format their leading slots");
+  await access(
+    new URL("assets/minesweeper_assets/digital_digits/digital_unlit.png", root)
+  );
+  assert.equal(unlitDigit.readUInt32BE(16), 116);
+  assert.equal(unlitDigit.readUInt32BE(20), 205);
+  assert.equal(unlitDigit[25], 6, "The unlit digit must retain RGBA pixels");
+  assert.match(
+    main,
+    /const GAME_STATS_DIGIT_SOURCES = Object\.freeze\(\{[\s\S]*?" ": "assets\/minesweeper_assets\/digital_digits\/digital_unlit\.png",[\s\S]*?\}\);/
+  );
+  assert.match(
+    main,
+    /String\(Math\.max\(0, Math\.trunc\(Number\(value\) \|\| 0\)\)\)\.padStart\(length, " "\)/
+  );
+  const formatCounter = vm.runInNewContext(
+    `${counterFormatter[0]}\nformatGameStatsCounter;`
+  );
+  assert.equal(formatCounter(20, 6), "    20");
+  assert.equal(formatCounter(0, 6), "     0");
   assert.doesNotMatch(main, /Math\.min\(99999, Math\.trunc\(Number\(value\) \|\| 0\)\)/);
   assert.match(digitRenderer[1], /\{ decorative = false, fillWidth = false \} = \{\}/);
   assert.match(digitRenderer[1], /strip\.setAttribute\("aria-hidden", "true"\)/);
@@ -34,12 +63,12 @@ test("global leaderboard aggregates fill their black digit strips without overfl
   assert.match(
     digitRenderer[1],
     /const availableDigitSlots = fillWidth[\s\S]*?Math\.floor\([\s\S]*?\)\s*:\s*0;/,
-    "Fill mode should calculate extra leading-zero slots only when requested"
+    "Fill mode should calculate extra unlit slots only when requested"
   );
   assert.match(
     digitRenderer[1],
     /Math\.max\(length, availableDigitSlots\)/,
-    "Fill mode should retain every real digit while adding zero sprites only for available width"
+    "Fill mode should retain every real digit while adding unlit sprites only for available width"
   );
   assert.match(
     digitRenderer[1],
@@ -54,7 +83,7 @@ test("global leaderboard aggregates fill their black digit strips without overfl
   assert.match(
     globalCounter[1],
     /appendGameStatsLeaderboardMetric\(displayValue, value, \{[\s\S]*?decorative: true,[\s\S]*?fillWidth: true,[\s\S]*?\}\);/,
-    "Only shared global aggregate counters should opt into zero-fill mode"
+    "Only shared global aggregate counters should opt into unlit-slot fill mode"
   );
   assert.match(
     main,

@@ -24,7 +24,9 @@ const SUDOKU_DIFFICULTIES = Object.freeze([
 ]);
 const VIEWPORTS = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
+  { name: "tablet", width: 768, height: 1024 },
   { name: "desktop", width: 1280, height: 800 },
+  { name: "wide desktop", width: 1440, height: 900 },
 ]);
 
 const PLAYERS = Object.freeze(
@@ -554,11 +556,60 @@ const assertNoHorizontalOverflow = async (page, stats) => {
   );
 };
 
+const assertLeaderboardRankSpacing = async (stats) => {
+  await expect
+    .poll(
+      () =>
+        stats.evaluate((windowElement) =>
+          Array.from(
+            windowElement.querySelectorAll(
+              ".game-stats-leaderboard-template-row, .game-stats-minesweeper-row"
+            )
+          ).every((row) => {
+            const rank = row.querySelector(
+              ".game-stats-leaderboard-template-medal, .game-stats-minesweeper-medal, .game-stats-leaderboard-template-rank, .game-stats-minesweeper-rank"
+            );
+            const icon = row.querySelector(
+              ".game-stats-leaderboard-template-player-icon, .game-stats-minesweeper-player-icon"
+            );
+            const name = row.querySelector(".game-stats-player-name");
+            if (!rank || !icon || !name) return false;
+
+            const rankBounds = rank.getBoundingClientRect();
+            const iconBounds = icon.getBoundingClientRect();
+            const nameBounds = name.getBoundingClientRect();
+            const rankToIconGap = iconBounds.left - rankBounds.right;
+            const iconToNameGap = nameBounds.left - iconBounds.right;
+
+            return (
+              Math.abs(rankToIconGap - iconToNameGap) <= 0.5 &&
+              Math.abs(rankToIconGap - 2) <= 0.5
+            );
+          })
+        ),
+      { message: "leaderboard rank and player-name gaps should both be 2px" }
+    )
+    .toBe(true);
+};
+
 const expectDigitMetric = async (row, metric) => {
-  const digits = await row
+  const digitImages = await row
     .locator(".game-stats-metric img")
-    .evaluateAll((images) => images.map((image) => image.alt).join(""));
-  expect(digits).toBe(String(metric).padStart(3, "0"));
+    .evaluateAll((images) =>
+      images.map((image) => ({
+        alt: image.alt,
+        source: new URL(image.src).pathname,
+      }))
+    );
+  const expectedDigits = String(metric).padStart(3, " ");
+  expect(digitImages.map(({ alt }) => alt).join("")).toBe(expectedDigits);
+  expect(digitImages.map(({ source }, index) => source)).toEqual(
+    expectedDigits.split("").map((digit) =>
+      `/assets/minesweeper_assets/digital_digits/digital_${
+        digit === " " ? "unlit" : digit
+      }.png`
+    )
+  );
 };
 
 const formatSudokuTime = (seconds) =>
@@ -783,6 +834,7 @@ for (const viewport of VIEWPORTS) {
         });
       }
       await assertNoHorizontalOverflow(page, stats);
+      await assertLeaderboardRankSpacing(stats);
       await closeStatsWindow(page, game, app, stats);
     }
 
@@ -809,6 +861,7 @@ for (const viewport of VIEWPORTS) {
       await expectEveryGlobalTopThree(stats, game);
       await expectUnplayedRanks(stats, game);
       await assertNoHorizontalOverflow(page, stats);
+      await assertLeaderboardRankSpacing(stats);
       await closeStatsWindow(page, game, app, stats);
     }
 

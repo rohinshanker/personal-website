@@ -232,7 +232,7 @@
         box-shadow: var(--sunken);
         display: grid;
         gap: 4px;
-        grid-template-columns: minmax(0, 1fr) 34px;
+        grid-template-columns: minmax(0, 1fr) 24px;
         min-width: 0;
         padding: 4px;
       }
@@ -241,10 +241,10 @@
         color: #333;
         font-size: 11px;
         line-height: 1.35;
-        min-height: 34px;
+        min-height: 24px;
         min-width: 0;
         overflow-wrap: anywhere;
-        padding: 6px 4px;
+        padding: 4px;
       }
 
       button {
@@ -267,18 +267,22 @@
       .refresh-button {
         align-self: start;
         display: grid;
-        height: 34px;
-        padding: 4px;
+        height: 24px;
+        padding: 3px;
         place-items: center;
         position: relative;
-        width: 34px;
+        width: 24px;
       }
 
       .refresh-button img {
         display: block;
-        height: 22px;
+        height: 14px;
         object-fit: contain;
-        width: 22px;
+        width: 14px;
+      }
+
+      .refresh-button:focus-visible {
+        outline-offset: -3px;
       }
 
       .refresh-button:disabled {
@@ -305,7 +309,7 @@
         gap: 1px;
         inset: 0;
         justify-content: center;
-        padding-bottom: 9px;
+        padding-bottom: 5px;
         pointer-events: none;
         position: absolute;
       }
@@ -450,7 +454,7 @@
         border-bottom: 1px solid #aaa;
         display: grid;
         font-size: 10px;
-        gap: 6px;
+        gap: 2px;
         grid-template-columns: auto minmax(0, 1fr) auto;
         min-width: 0;
         padding: 4px;
