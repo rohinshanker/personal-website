@@ -6104,14 +6104,17 @@ html.is-wall-breach-shaking body {
 }
 
 .relic-recovery-window {
+  --relic-recovery-fit-scale: 1;
   display: block;
   left: 50%;
-  max-width: calc(100vw - 32px);
+  max-width: none;
   overflow: visible;
   position: fixed;
   top: 50%;
+  transform: scale(var(--relic-recovery-fit-scale));
+  transform-origin: center center;
   translate: -50% -50%;
-  width: min(820px, calc(100vw - 32px));
+  width: 820px;
   z-index: 137;
 }
 
@@ -6140,8 +6143,7 @@ html.is-wall-breach-shaking body {
     center / cover no-repeat url("../../assets/random%20events/made-in-abyss-background.webp");
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   box-sizing: border-box;
-  height: min(480px, calc(100vh - 116px));
-  min-height: 360px;
+  height: 480px;
   overflow: visible;
   position: relative;
 }
@@ -6426,11 +6428,22 @@ html.is-wall-breach-shaking body {
   line-height: 1.25;
   padding: 7px 8px;
   text-align: left;
-  width: min(240px, 70vw);
+  width: 240px;
 }
 
 .relic-recovery-tooltip strong {
   font-weight: bold;
+}
+
+.relic-recovery-slot:first-child .relic-recovery-tooltip {
+  left: 0;
+  transform: translate(0, 6px);
+}
+
+.relic-recovery-slot:last-child .relic-recovery-tooltip {
+  left: auto;
+  right: 0;
+  transform: translate(0, 6px);
 }
 
 .relic-recovery-slot.is-collected::after {
@@ -6448,36 +6461,13 @@ html.is-wall-breach-shaking body {
   transform: translate(-50%, 0);
 }
 
-@media (max-width: 560px) {
-  .relic-recovery-scene {
-    height: min(440px, calc(100vh - 116px));
-    min-height: 390px;
-  }
-
-  .relic-recovery-dialog {
-    bottom: 202px;
-    grid-template-columns: 44px 1fr;
-    min-height: 92px;
-  }
-
-  .relic-recovery-nanachi {
-    height: 42px;
-    width: 42px;
-  }
-
-  .relic-recovery-dialog-actions {
-    justify-content: flex-start;
-  }
-
-  .relic-recovery-hotbar {
-    gap: 4px;
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .relic-recovery-slot img {
-    max-height: 72%;
-    max-width: 72%;
-  }
+.relic-recovery-slot.is-collected:first-child:hover .relic-recovery-tooltip,
+.relic-recovery-slot.is-collected:first-child:focus-visible
+  .relic-recovery-tooltip,
+.relic-recovery-slot.is-collected:last-child:hover .relic-recovery-tooltip,
+.relic-recovery-slot.is-collected:last-child:focus-visible
+  .relic-recovery-tooltip {
+  transform: translate(0, 0);
 }
 
 .toxic-jungle-window {

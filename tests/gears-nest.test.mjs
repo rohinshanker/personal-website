@@ -199,6 +199,48 @@ test("relic recovery event has prompt, hotbar, detail flow, and normal gating", 
   assert.match(getCssBlock(".relic-recovery-slot"), /aspect-ratio: 1;/);
 });
 
+test("relic recovery scales one canonical composition to its viewport", () => {
+  const windowStyles = getCssBlock(".relic-recovery-window");
+  const sceneStyles = getCssBlock(".relic-recovery-scene");
+  const tooltipStyles = getCssBlock(".relic-recovery-tooltip");
+  const relicStyles = eventStyles.slice(
+    eventStyles.indexOf(".relic-recovery-window"),
+    eventStyles.indexOf(".toxic-jungle-window")
+  );
+
+  assert.match(windowStyles, /--relic-recovery-fit-scale: 1;/);
+  assert.match(windowStyles, /width: 820px;/);
+  assert.match(windowStyles, /max-width: none;/);
+  assert.match(windowStyles, /transform: scale\(var\(--relic-recovery-fit-scale\)\);/);
+  assert.match(windowStyles, /transform-origin: center center;/);
+  assert.match(sceneStyles, /height: 480px;/);
+  assert.doesNotMatch(sceneStyles, /100vh|min-height/);
+  assert.match(tooltipStyles, /width: 240px;/);
+  assert.doesNotMatch(relicStyles, /@media/);
+
+  assert.match(mainSource, /const updateRelicRecoveryViewportFit = \(\) =>/);
+  assert.match(
+    mainSource,
+    /availableWidth \/ relicRecoveryWindow\.offsetWidth,[\s\S]*availableHeight \/ relicRecoveryWindow\.offsetHeight/
+  );
+  assert.match(
+    mainSource,
+    /relicRecoveryWindow\.style\.setProperty\(\s*RELIC_RECOVERY_FIT_SCALE_PROPERTY/
+  );
+  assert.match(
+    mainSource,
+    /pokemonStarterWindow,\s*relicRecoveryWindow,\s*dstNightWindow/
+  );
+  assert.match(
+    mainSource,
+    /relicRecoveryWindow\.setAttribute\("aria-hidden", "false"\);\s*updateRelicRecoveryViewportFit\(\);\s*positionRandomEventWindowInViewport/
+  );
+  assert.match(
+    mainSource,
+    /window\.addEventListener\("resize", \(\) => \{\s*updateRelicRecoveryViewportFit\(\);\s*clampVisibleRandomEventWindows\(\);/
+  );
+});
+
 test("relic recovery detail popup uses exact window animations", () => {
   assert.match(mainSource, /let relicRecoveryDetailCloseTimer = 0;/);
   assert.match(mainSource, /relicRecoveryDetail\?\.classList\.add\("is-opening"\);/);
@@ -243,6 +285,9 @@ test("relic recovery keeps the relic visible while it flies to the hotbar", () =
   assert.match(mainSource, /flyer\.style\.setProperty\("--fly-start-x"/);
   assert.match(mainSource, /flyer\.style\.setProperty\(\s*"--fly-end-x"/);
   assert.match(mainSource, /flyer\.style\.setProperty\(\s*"--fly-mid-x"/);
+  assert.match(mainSource, /const sceneWidth = sceneRect\.width \/ fitScale;/);
+  assert.match(mainSource, /const targetCenterX =[\s\S]*\/ fitScale;/);
+  assert.match(mainSource, /flyer\.style\.setProperty\("--fly-end-x", `\$\{targetCenterX\}px`\);/);
   assert.match(mainSource, /animateRelicRecoveryToHotbar\(item\);/);
   assert.match(mainSource, /const completeRelicRecoveryCollection = \(relicId\) =>/);
   assert.match(
@@ -1197,7 +1242,7 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=soot-custom-loading-cursor-20260723/);
+    assert.match(source, /random-events\.css\?v=relic-recovery-fit-20260725/);
     assert.match(source, /cursors\.css\?v=cursor-titlebar-clickable-20260709/);
     assert.match(source, /minesweeper\.css\?v=minesweeper-mobile-controls-20260724/);
     assert.match(source, /game-stats\.css\?v=global-leaderboard-launchers-20260725/);

@@ -4609,6 +4609,7 @@ const CARACAL_RESULT_CONTENT = {
 const FELIZ_JUEVES_SHOWN_KEY = "personalSiteFelizJuevesShownDate";
 const RANDOM_EVENT_VIEWPORT_PADDING = 12;
 const RANDOM_EVENT_TASKBAR_CLEARANCE = 64;
+const RELIC_RECOVERY_FIT_SCALE_PROPERTY = "--relic-recovery-fit-scale";
 const RANDOM_EVENT_PLACEMENT_ATTEMPTS = 42;
 const RANDOM_EVENT_OBSTACLE_GAP = 10;
 const GENERAL_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL = 14;
@@ -4931,6 +4932,7 @@ const randomEventViewportWindows = () =>
     walterWhiteWindow,
     bountyHunterWindow,
     pokemonStarterWindow,
+    relicRecoveryWindow,
     dstNightWindow,
     dstCraftingWindow,
     dstSurviveWindow,
@@ -4941,10 +4943,82 @@ const randomEventViewportWindows = () =>
     virusRescueWindow,
   ].filter(Boolean);
 
+const getRelicRecoveryFitScale = () => {
+  const scale = Number.parseFloat(
+    relicRecoveryWindow?.style.getPropertyValue(RELIC_RECOVERY_FIT_SCALE_PROPERTY)
+  );
+  return Number.isFinite(scale) && scale > 0 ? Math.min(1, scale) : 1;
+};
+
+const getRandomEventVisualInsets = (win) => {
+  if (win !== relicRecoveryWindow) {
+    return { scale: 1, insetX: 0, insetY: 0 };
+  }
+  const scale = getRelicRecoveryFitScale();
+  return {
+    scale,
+    insetX: (win.offsetWidth * (1 - scale)) / 2,
+    insetY: (win.offsetHeight * (1 - scale)) / 2,
+  };
+};
+
+const updateRelicRecoveryViewportFit = () => {
+  if (
+    !relicRecoveryWindow ||
+    relicRecoveryWindow.classList.contains("is-hidden") ||
+    relicRecoveryWindow.offsetWidth <= 0 ||
+    relicRecoveryWindow.offsetHeight <= 0
+  ) {
+    return;
+  }
+
+  const previousInsets = getRandomEventVisualInsets(relicRecoveryWindow);
+  const previousStyleLeft = Number.parseFloat(relicRecoveryWindow.style.left);
+  const previousStyleTop = Number.parseFloat(relicRecoveryWindow.style.top);
+  const preserveVisualPosition =
+    relicRecoveryWindow.style.left.endsWith("px") &&
+    relicRecoveryWindow.style.top.endsWith("px") &&
+    Number.isFinite(previousStyleLeft) &&
+    Number.isFinite(previousStyleTop);
+  const previousVisualLeft = previousStyleLeft + previousInsets.insetX;
+  const previousVisualTop = previousStyleTop + previousInsets.insetY;
+  const availableWidth = Math.max(
+    1,
+    window.innerWidth - RANDOM_EVENT_VIEWPORT_PADDING * 2
+  );
+  const availableHeight = Math.max(
+    1,
+    window.innerHeight -
+      RANDOM_EVENT_TASKBAR_CLEARANCE -
+      RANDOM_EVENT_VIEWPORT_PADDING * 2
+  );
+  const fitScale = Math.min(
+    1,
+    availableWidth / relicRecoveryWindow.offsetWidth,
+    availableHeight / relicRecoveryWindow.offsetHeight
+  );
+  relicRecoveryWindow.style.setProperty(
+    RELIC_RECOVERY_FIT_SCALE_PROPERTY,
+    String(fitScale)
+  );
+
+  if (!preserveVisualPosition) return;
+  const nextInsets = getRandomEventVisualInsets(relicRecoveryWindow);
+  relicRecoveryWindow.style.left = `${previousVisualLeft - nextInsets.insetX}px`;
+  relicRecoveryWindow.style.top = `${previousVisualTop - nextInsets.insetY}px`;
+};
+
 const getRandomEventWindowBounds = (win) => {
   const rect = win.getBoundingClientRect();
-  const width = Math.max(win.offsetWidth, rect.width);
-  const height = Math.max(win.offsetHeight, rect.height);
+  const { scale } = getRandomEventVisualInsets(win);
+  const width =
+    win === relicRecoveryWindow
+      ? win.offsetWidth * scale
+      : Math.max(win.offsetWidth, rect.width);
+  const height =
+    win === relicRecoveryWindow
+      ? win.offsetHeight * scale
+      : Math.max(win.offsetHeight, rect.height);
   const padding = RANDOM_EVENT_VIEWPORT_PADDING;
   return {
     width,
@@ -5062,9 +5136,10 @@ const setRandomEventWindowPosition = (win, left, top, { onPosition } = {}) => {
   const { padding, maxLeft, maxTop } = getRandomEventWindowBounds(win);
   const nextLeft = Math.round(Math.max(padding, Math.min(left, maxLeft)));
   const nextTop = Math.round(Math.max(padding, Math.min(top, maxTop)));
+  const { insetX, insetY } = getRandomEventVisualInsets(win);
   win.style.translate = "0 0";
-  win.style.left = `${nextLeft}px`;
-  win.style.top = `${nextTop}px`;
+  win.style.left = `${nextLeft - insetX}px`;
+  win.style.top = `${nextTop - insetY}px`;
   if (onPosition) onPosition(nextLeft, nextTop);
 };
 
@@ -5079,8 +5154,9 @@ const clampRandomEventWindowToViewport = (win, options) => {
   const rect = win.getBoundingClientRect();
   const styleLeft = Number.parseFloat(win.style.left);
   const styleTop = Number.parseFloat(win.style.top);
-  const currentLeft = Number.isFinite(styleLeft) ? styleLeft : rect.left;
-  const currentTop = Number.isFinite(styleTop) ? styleTop : rect.top;
+  const { insetX, insetY } = getRandomEventVisualInsets(win);
+  const currentLeft = Number.isFinite(styleLeft) ? styleLeft + insetX : rect.left;
+  const currentTop = Number.isFinite(styleTop) ? styleTop + insetY : rect.top;
   setRandomEventWindowPosition(win, currentLeft, currentTop, options);
 };
 
@@ -14049,29 +14125,30 @@ const animateRelicRecoveryToHotbar = (item) => {
     completeRelicRecoveryCollection(item.id);
     return;
   }
+  const fitScale = getRelicRecoveryFitScale();
+  const sceneWidth = sceneRect.width / fitScale;
+  const sceneHeight = sceneRect.height / fitScale;
+  const targetCenterX =
+    (targetRect.left + targetRect.width / 2 - sceneRect.left) / fitScale;
+  const targetCenterY =
+    (targetRect.top + targetRect.height / 2 - sceneRect.top) / fitScale;
 
   const flyer = document.createElement("img");
   flyer.className = "relic-recovery-flyer";
   flyer.src = item.image;
   flyer.alt = "";
   flyer.setAttribute("aria-hidden", "true");
-  flyer.style.setProperty("--fly-start-x", `${sceneRect.width * 0.5}px`);
-  flyer.style.setProperty("--fly-start-y", `${sceneRect.height * 0.48}px`);
-  flyer.style.setProperty(
-    "--fly-end-x",
-    `${targetRect.left + targetRect.width / 2 - sceneRect.left}px`
-  );
-  flyer.style.setProperty(
-    "--fly-end-y",
-    `${targetRect.top + targetRect.height / 2 - sceneRect.top}px`
-  );
+  flyer.style.setProperty("--fly-start-x", `${sceneWidth * 0.5}px`);
+  flyer.style.setProperty("--fly-start-y", `${sceneHeight * 0.48}px`);
+  flyer.style.setProperty("--fly-end-x", `${targetCenterX}px`);
+  flyer.style.setProperty("--fly-end-y", `${targetCenterY}px`);
   flyer.style.setProperty(
     "--fly-mid-x",
-    `${(sceneRect.width * 0.5 + targetRect.left + targetRect.width / 2 - sceneRect.left) / 2}px`
+    `${(sceneWidth * 0.5 + targetCenterX) / 2}px`
   );
   flyer.style.setProperty(
     "--fly-mid-y",
-    `${Math.min(sceneRect.height * 0.48, targetRect.top + targetRect.height / 2 - sceneRect.top) - 74}px`
+    `${Math.min(sceneHeight * 0.48, targetCenterY) - 74}px`
   );
   relicRecoveryScene.append(flyer);
 
@@ -14104,6 +14181,7 @@ const showRelicRecoveryWindow = () => {
   loadDeferredMedia(relicRecoveryWindow);
   relicRecoveryWindow.classList.remove("is-hidden", "is-closing");
   relicRecoveryWindow.setAttribute("aria-hidden", "false");
+  updateRelicRecoveryViewportFit();
   positionRandomEventWindowInViewport(relicRecoveryWindow);
   relicRecoveryWindow.style.zIndex = String(topZ++);
   clampRandomEventWindowAfterMediaLoad(relicRecoveryWindow);
@@ -17017,8 +17095,9 @@ const clampWindowTitleBarPosition = (win, left, top) => {
 
 const setWindowTitleBarClampedPosition = (win, left, top) => {
   const position = clampWindowTitleBarPosition(win, left, top);
-  win.style.left = `${position.left}px`;
-  win.style.top = `${position.top}px`;
+  const { insetX, insetY } = getRandomEventVisualInsets(win);
+  win.style.left = `${position.left - insetX}px`;
+  win.style.top = `${position.top - insetY}px`;
   return position;
 };
 
@@ -28787,7 +28866,10 @@ window.addEventListener("resize", () => {
   if (!sudokuApp?.classList.contains("is-sudoku-playing")) return;
   scheduleSudokuWindowViewportClamp();
 });
-window.addEventListener("resize", clampVisibleRandomEventWindows);
+window.addEventListener("resize", () => {
+  updateRelicRecoveryViewportFit();
+  clampVisibleRandomEventWindows();
+});
 window.addEventListener("resize", updateLifeCounterWidthControls);
 document.addEventListener("visibilitychange", handleSnakeActivityChange);
 window.addEventListener("blur", handleSnakeActivityChange);
