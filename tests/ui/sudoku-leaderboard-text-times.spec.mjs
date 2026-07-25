@@ -89,7 +89,7 @@ const openSudokuStats = async (page) => {
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
   await page.locator('.desktop-icon[data-app="sudoku"]').click();
-  await page.locator('[data-game-stats-open="sudoku"]').click();
+  await page.locator('[data-app-window="sudoku"] [data-game-stats-open="sudoku"]').click();
 
   const stats = page.locator("#game-stats-window-sudoku");
   await expect(stats).toBeVisible();

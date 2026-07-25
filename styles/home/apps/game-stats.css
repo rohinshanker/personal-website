@@ -139,6 +139,58 @@
   margin-left: auto;
 }
 
+.game-progress-global-leaderboards {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.game-progress-global-leaderboards h4 {
+  font-size: 13px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.game-progress-global-leaderboard-list {
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(36px, 1fr));
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 8px;
+}
+
+.game-progress-global-leaderboard-list li {
+  display: flex;
+  min-width: 0;
+}
+
+.game-progress-global-leaderboard-button {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 0;
+  padding: 4px;
+  width: 100%;
+}
+
+.game-progress-global-leaderboard-button img {
+  height: 32px;
+  image-rendering: pixelated;
+  max-width: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  width: 32px;
+}
+
+.game-progress-global-leaderboard-button .game-progress-global-leaderboard-snake-logo {
+  image-rendering: auto;
+}
+
 @media (max-width: 640px) {
   .game-progress-window.game-progress-window .window-body {
     height: auto;

@@ -109,7 +109,7 @@
     <link rel="stylesheet" href="styles/home/apps/solitaire.css" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722" />
-    <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=leaderboard-refresh-20260725" />
+    <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=global-leaderboard-launchers-20260725" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=carousel-hourglass-loader-20260722" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
@@ -2156,6 +2156,90 @@
               <p class="game-progress-reset-note">
                 Reset clears this browser’s game progress only. Published results remain on global stats and leaderboards.
               </p>
+              <section
+                class="game-progress-global-leaderboards"
+                aria-labelledby="game-progress-global-leaderboards-title"
+              >
+                <h4 id="game-progress-global-leaderboards-title">Global Leaderboards</h4>
+                <ul
+                  class="game-progress-global-leaderboard-list"
+                  aria-labelledby="game-progress-global-leaderboards-title"
+                >
+                  <li>
+                    <button
+                      class="game-progress-global-leaderboard-button"
+                      type="button"
+                      data-game-stats-open="minesweeper"
+                      aria-label="Open Minesweeper global leaderboard"
+                      aria-controls="game-stats-window-minesweeper"
+                      title="Minesweeper"
+                    >
+                      <img
+                        src="assets/app-icons/ico/minesweeper.ico"
+                        alt=""
+                        aria-hidden="true"
+                        width="32"
+                        height="32"
+                      />
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      class="game-progress-global-leaderboard-button"
+                      type="button"
+                      data-game-stats-open="solitaire"
+                      aria-label="Open Solitaire global leaderboard"
+                      aria-controls="game-stats-window-solitaire"
+                      title="Solitaire"
+                    >
+                      <img
+                        src="assets/app-icons/ico/game_freecell.ico"
+                        alt=""
+                        aria-hidden="true"
+                        width="32"
+                        height="32"
+                      />
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      class="game-progress-global-leaderboard-button"
+                      type="button"
+                      data-game-stats-open="snake"
+                      aria-label="Open Snake global leaderboard"
+                      aria-controls="game-stats-window-snake"
+                      title="Snake"
+                    >
+                      <img
+                        class="game-progress-global-leaderboard-snake-logo"
+                        src="assets/snake-assets/snake-logo.png"
+                        alt=""
+                        aria-hidden="true"
+                        width="32"
+                        height="32"
+                      />
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      class="game-progress-global-leaderboard-button"
+                      type="button"
+                      data-game-stats-open="sudoku"
+                      aria-label="Open Sudoku global leaderboard"
+                      aria-controls="game-stats-window-sudoku"
+                      title="Sudoku"
+                    >
+                      <img
+                        src="assets/app-icons/ico/calendar2.ico"
+                        alt=""
+                        aria-hidden="true"
+                        width="32"
+                        height="32"
+                      />
+                    </button>
+                  </li>
+                </ul>
+              </section>
             </section>
 
             <section class="viewer-content game-progress-content is-hidden" data-view="game-progress-minesweeper">

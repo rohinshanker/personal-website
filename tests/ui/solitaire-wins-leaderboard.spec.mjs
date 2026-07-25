@@ -163,7 +163,9 @@ const openSolitaireStats = async (
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
   await page.locator('.desktop-icon[data-app="solitaire"]').click();
-  await page.locator('[data-game-stats-open="solitaire"]').click();
+  await page
+    .locator('[data-app-window="solitaire"] [data-game-stats-open="solitaire"]')
+    .click();
   const stats = page.locator("#game-stats-window-solitaire");
   await expect(stats).toBeVisible();
   return stats;

@@ -23,9 +23,9 @@ test("Leaderboard profile prompt opens as a draggable window with a shared skip 
   );
   assert.match(home, /id="game-profile-cancel">Skip Leaderboard</);
   assert.doesNotMatch(home, /id="game-profile-dialog"[^>]*data-no-drag/);
-  assert.match(home, /game-stats\.css\?v=leaderboard-refresh-20260725/);
+  assert.match(home, /game-stats\.css\?v=global-leaderboard-launchers-20260725/);
   assert.match(home, /main\.js\?v=game-build-[a-f0-9]{64}/);
-  assert.match(index, /game-stats\.css\?v=leaderboard-refresh-20260725/);
+  assert.match(index, /game-stats\.css\?v=global-leaderboard-launchers-20260725/);
   assert.match(index, /main\.js\?v=game-build-[a-f0-9]{64}/);
 
   assert.match(dom, /gameProfileDialog: byId\("game-profile-dialog"\),/);

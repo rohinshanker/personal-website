@@ -56,6 +56,54 @@ test("Game Progress uses compact, top-aligned profile and game layouts", async (
   assert.match(styles, /\.game-progress-actions \{[\s\S]*?align-items: center;/);
 });
 
+test("Game Progress profile launches every global leaderboard from a white icon panel", async () => {
+  const [home, styles, source] = await Promise.all([
+    readFile(new URL("home.html", root), "utf8"),
+    readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
+    readFile(new URL("scripts/home/main.js", root), "utf8"),
+  ]);
+  const profileStart = home.indexOf(
+    '<section class="viewer-content game-progress-content" data-view="game-progress-profile">'
+  );
+  const profileEnd = home.indexOf(
+    '<section class="viewer-content game-progress-content is-hidden" data-view="game-progress-minesweeper">',
+    profileStart
+  );
+  const profile = home.slice(profileStart, profileEnd);
+  const launchers = [
+    ["minesweeper", "Minesweeper", "assets/app-icons/ico/minesweeper.ico"],
+    ["solitaire", "Solitaire", "assets/app-icons/ico/game_freecell.ico"],
+    ["snake", "Snake", "assets/snake-assets/snake-logo.png"],
+    ["sudoku", "Sudoku", "assets/app-icons/ico/calendar2.ico"],
+  ];
+
+  assert.match(profile, /id="game-progress-global-leaderboards-title">Global Leaderboards<\/h4>/);
+  assert.match(profile, /class="game-progress-global-leaderboard-list"/);
+  assert.equal(profile.match(/data-game-stats-open=/g)?.length, launchers.length);
+  for (const [game, label, icon] of launchers) {
+    assert.match(
+      profile,
+      new RegExp(
+        `<button[\\s\\S]*?type="button"[\\s\\S]*?data-game-stats-open="${game}"[\\s\\S]*?aria-label="Open ${label} global leaderboard"`
+      )
+    );
+    assert.match(profile, new RegExp(`aria-label="Open ${label} global leaderboard"`));
+    assert.match(profile, new RegExp(`aria-controls="game-stats-window-${game}"`));
+    assert.match(
+      profile,
+      new RegExp(`src="${icon.replaceAll("/", "\\/")}"[\\s\\S]*?alt=""[\\s\\S]*?aria-hidden="true"`)
+    );
+  }
+  assert.match(
+    styles,
+    /\.game-progress-global-leaderboard-list \{[\s\S]*?background: #fff;[\s\S]*?grid-template-columns: repeat\(4, minmax\(36px, 1fr\)\);/
+  );
+  assert.match(
+    source,
+    /gameStatsOpenButtons\.forEach\(\(button\) => \{[\s\S]*?openGameStatsWindow\(button\.getAttribute\("data-game-stats-open"\)\);/
+  );
+});
+
 test("Snake Game Progress separates its total and keeps board pairs on one row", async () => {
   const styles = await readFile(new URL("styles/home/apps/game-stats.css", root), "utf8");
 
