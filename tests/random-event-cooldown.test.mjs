@@ -64,7 +64,20 @@ test("all registered random events keep debug mode disabled", async () => {
   assert.match(source, /randomEventDefinitions\.forEach\(\(definition\) => \{/);
   assert.ok(registrations.length > 0, "The normal random-event registry must remain populated");
 
-  const registeredIds = registrations.map((registration) => {
+  const standardRegistrations = registrations.filter((registration) =>
+    /\bid:\s*"[^"]+"/.test(registration)
+  );
+  assert.equal(
+    registrations.length,
+    standardRegistrations.length + 1,
+    "Only the data-driven debug alert family may omit a literal id"
+  );
+  assert.equal(
+    source.match(/\bdebug\s*:\s*true\b/g)?.length ?? 0,
+    0,
+    "Every random event must keep per-event debug mode disabled"
+  );
+  const registeredIds = standardRegistrations.map((registration) => {
     const id = registration.match(/\bid:\s*"([^"]+)"/);
     assert.ok(id, "Every registered random event must retain an id");
     assert.match(registration, /\brun:\s*\(/, `Event ${id[1]} must remain runnable`);
@@ -72,6 +85,10 @@ test("all registered random events keep debug mode disabled", async () => {
     return id[1];
   });
   assert.equal(new Set(registeredIds).size, registeredIds.length, "Event ids must remain unique");
+  assert.match(
+    source,
+    /DEBUG_SYSTEM_ALERTS\.forEach\(\(alert\) => \{[\s\S]*?id: `debug-system-alert-\$\{alert\.id\}`,[\s\S]*?debug: false,/
+  );
 });
 
 const createCooldownRuntime = (source) => {

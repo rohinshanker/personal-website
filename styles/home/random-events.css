@@ -157,6 +157,14 @@
   min-width: 74px;
 }
 
+.random-alert-actions.is-centered {
+  justify-content: center;
+}
+
+.debug-system-alert-message p {
+  overflow-wrap: anywhere;
+}
+
 .random-alert-remember {
   align-items: center;
   display: flex;

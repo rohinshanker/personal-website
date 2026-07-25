@@ -113,7 +113,7 @@
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=carousel-hourglass-loader-20260722" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=relic-recovery-fit-20260725" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=system-alert-events-20260726" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cursor-titlebar-clickable-20260709" />
   </head>
   <body>
@@ -2995,6 +2995,33 @@
     </div>
 
     <div
+      class="window random-alert-window debug-system-alert-window is-hidden"
+      id="debug-system-alert-window"
+      role="alertdialog"
+      aria-modal="false"
+      aria-hidden="true"
+      aria-labelledby="debug-system-alert-title"
+      aria-describedby="debug-system-alert-message"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text" id="debug-system-alert-title">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message debug-system-alert-message">
+          <img
+            id="debug-system-alert-icon"
+            src="assets/app-icons/ico/processor.ico"
+            alt=""
+          />
+          <p id="debug-system-alert-message">RAM prices went up again.</p>
+        </div>
+        <div class="random-alert-actions" id="debug-system-alert-actions">
+          <button type="button" id="debug-system-alert-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div
       class="window random-alert-window vanishing-popup-window is-hidden"
       id="vanishing-popup-window"
       aria-hidden="true"
@@ -5599,10 +5626,10 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-3d9373a79b40a8eba4254ebf936efc71165856880ae67ab59c72578bb19227fd"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-410939c2759bfb1d7f27eb367f0950de67fa12d237caffea5a91a1fd43d36480"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-3d9373a79b40a8eba4254ebf936efc71165856880ae67ab59c72578bb19227fd"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-410939c2759bfb1d7f27eb367f0950de67fa12d237caffea5a91a1fd43d36480"></script>
     <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
-    <script src="scripts/home/main.js?v=game-build-3d9373a79b40a8eba4254ebf936efc71165856880ae67ab59c72578bb19227fd"></script>
+    <script src="scripts/home/main.js?v=game-build-410939c2759bfb1d7f27eb367f0950de67fa12d237caffea5a91a1fd43d36480"></script>
   </body>
 </html>

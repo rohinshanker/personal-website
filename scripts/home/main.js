@@ -268,6 +268,12 @@ const {
   randomAlertNo,
   randomAlertRememberRow,
   randomAlertRemember,
+  debugSystemAlertWindow,
+  debugSystemAlertTitle,
+  debugSystemAlertIcon,
+  debugSystemAlertMessage,
+  debugSystemAlertActions,
+  debugSystemAlertOk,
   vanishingPopupWindow,
   vanishingPopupClose,
   vanishingPopupMaximize,
@@ -4591,6 +4597,78 @@ const restartWindowAnimation = (win, animationClass) => {
 };
 
 const RANDOM_EVENT_GLOBAL_DEBUG = false;
+const DEBUG_SYSTEM_ALERTS = Object.freeze([
+  Object.freeze({
+    id: "ram-prices",
+    title: "System Alert",
+    icon: "assets/app-icons/ico/processor.ico",
+    message: "RAM prices went up again.",
+    alignment: "right",
+  }),
+  Object.freeze({
+    id: "computer-nevermind",
+    title: "System Alert",
+    icon: "assets/app-icons/ico/msg_error.ico",
+    message: "Error: your computer is umm.. uh. actually never mind",
+    alignment: "right",
+  }),
+  Object.freeze({
+    id: "received-fax",
+    title: "System Alert",
+    icon: "assets/app-icons/ico/fax_machine_exclam.ico",
+    message: "You received a fax.",
+    alignment: "right",
+  }),
+  Object.freeze({
+    id: "make-art",
+    title: "System Alert",
+    icon: "assets/app-icons/ico/paint_old.ico",
+    message: "Go make some art today!",
+    alignment: "right",
+  }),
+  Object.freeze({
+    id: "required-file",
+    title: "Error Starting Program",
+    icon: "assets/app-icons/ico/msg_warning.ico",
+    message: "A required file È9å|ļ1(VÿB.LL was not found.",
+    alignment: "center",
+  }),
+  Object.freeze({
+    id: "unexpected-error",
+    title: "Microsoft Data Link",
+    icon: "assets/app-icons/ico/msg_warning.ico",
+    message: "An unexpected error. Please investigate.",
+    alignment: "center",
+  }),
+  Object.freeze({
+    id: "three-wise-monkeys",
+    title: "System Alert",
+    icon: "assets/app-icons/ico/msagent_file.ico",
+    message: "See no evil, hear no evil, speak no evil.",
+    alignment: "center",
+  }),
+  Object.freeze({
+    id: "ask-for-help",
+    title: "System Alert",
+    icon: "assets/app-icons/ico/help_question_mark.ico",
+    message: "It is okay to ask for help when you need it.",
+    alignment: "center",
+  }),
+  Object.freeze({
+    id: "leave-the-house",
+    title: "System Alert",
+    icon: "assets/app-icons/ico/address_book_home.ico",
+    message: "Don't forget to leave your house sometimes!",
+    alignment: "center",
+  }),
+  Object.freeze({
+    id: "always-watching",
+    title: "System Alert",
+    icon: "assets/app-icons/ico/file_eye.ico",
+    message: "They are always watching.",
+    alignment: "center",
+  }),
+]);
 const RANDOM_EVENT_RELOAD_KEY = "personalSiteRandomEventReloadPending";
 const SAUL_AD_IMAGES = [
   "assets/random%20events/saul1.jpg",
@@ -4851,6 +4929,8 @@ let sootSpritesCleanupTimer = null;
 const sootSpriteMotionAnimations = new WeakMap();
 let nobleSteedResultTimer = null;
 let nobleSteedResultPosition = null;
+let debugSystemAlertActiveId = "";
+let debugSystemAlertFocusReturn = null;
 let brandBurnsStats = {
   health: BRAND_BURNS_PLAYER_MAX_HEALTH,
   maxHealth: BRAND_BURNS_PLAYER_MAX_HEALTH,
@@ -4864,6 +4944,7 @@ const randomEventViewportWindows = () =>
     randomEventWindow,
     felizJuevesWindow,
     randomAlertWindow,
+    debugSystemAlertWindow,
     vanishingPopupWindow,
     dodgingPopupWindow,
     selfLoveAlertWindow,
@@ -5264,6 +5345,53 @@ const bindRandomEventButton = (button, action) => {
     event.stopPropagation();
     action(event);
   });
+};
+
+const isDebugSystemAlertVisible = () =>
+  isManagedRandomEventWindowVisible(debugSystemAlertWindow);
+
+const resetDebugSystemAlert = () => {
+  debugSystemAlertActiveId = "";
+  if (debugSystemAlertWindow) delete debugSystemAlertWindow.dataset.alertId;
+  const focusTarget = debugSystemAlertFocusReturn;
+  debugSystemAlertFocusReturn = null;
+  if (
+    focusTarget?.isConnected &&
+    !focusTarget.closest("[inert]") &&
+    typeof focusTarget.focus === "function"
+  ) {
+    focusTarget.focus({ preventScroll: true });
+  }
+};
+
+const showDebugSystemAlert = (alert) => {
+  if (!alert) return false;
+
+  const focusReturn =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const didOpen = showManagedRandomEventWindow(debugSystemAlertWindow, {
+    beforeShow: () => {
+      debugSystemAlertTitle.textContent = alert.title;
+      debugSystemAlertIcon.src = alert.icon;
+      debugSystemAlertMessage.textContent = alert.message;
+      debugSystemAlertActions.classList.toggle(
+        "is-centered",
+        alert.alignment === "center"
+      );
+      debugSystemAlertWindow.dataset.alertId = alert.id;
+    },
+    clampAfterMediaLoad: true,
+  });
+  if (!didOpen) return false;
+
+  debugSystemAlertActiveId = alert.id;
+  debugSystemAlertFocusReturn = focusReturn;
+  requestAnimationFrame(() => debugSystemAlertOk?.focus({ preventScroll: true }));
+  return true;
+};
+
+const closeDebugSystemAlert = () => {
+  closeManagedRandomEventWindow(debugSystemAlertWindow);
 };
 
 const isRandomAlertVisible = () =>
@@ -16258,6 +16386,22 @@ const STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze({
   idleInterval: 0.4,
 });
 
+DEBUG_SYSTEM_ALERTS.forEach((alert) => {
+  registerRandomEvent({
+    id: `debug-system-alert-${alert.id}`,
+    debug: false,
+    probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+    probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+    kind: RANDOM_EVENT_KIND_INTERACTIVE,
+    isVisible: isDebugSystemAlertVisible,
+    canTrigger: () => !isDebugSystemAlertVisible(),
+    preloadTargets: () => [alert.icon],
+    run: () => {
+      showDebugSystemAlert(alert);
+    },
+  });
+});
+
 registerRandomEvent({
   id: "annoying-system-alert",
   debug: false,
@@ -24335,6 +24479,17 @@ bindRandomEventButton(nobleSteedNo, closeNobleSteedWindow);
 bindRandomEventButton(nobleSteedResultOk, closeNobleSteedResultWindow);
 bindManagedRandomEventWindowAnimation(nobleSteedWindow);
 bindManagedRandomEventWindowAnimation(nobleSteedResultWindow);
+
+bindRandomEventButton(debugSystemAlertOk, closeDebugSystemAlert);
+bindManagedRandomEventWindowAnimation(debugSystemAlertWindow, {
+  afterClose: resetDebugSystemAlert,
+  unloadImages: false,
+});
+debugSystemAlertWindow?.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  closeDebugSystemAlert();
+});
 
 bindRandomEventButton(toxicJungleStart, startToxicJungleCollection);
 bindRandomEventButton(toxicJungleDecline, closeToxicJungleWindow);

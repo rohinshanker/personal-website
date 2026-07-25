@@ -1242,7 +1242,7 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=relic-recovery-fit-20260725/);
+    assert.match(source, /random-events\.css\?v=system-alert-events-20260726/);
     assert.match(source, /cursors\.css\?v=cursor-titlebar-clickable-20260709/);
     assert.match(source, /minesweeper\.css\?v=minesweeper-mobile-controls-20260724/);
     assert.match(source, /game-stats\.css\?v=global-leaderboard-launchers-20260725/);
