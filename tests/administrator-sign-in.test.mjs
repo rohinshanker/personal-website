@@ -109,8 +109,12 @@ test("Administrator credentials remain server-only and the protected profile has
   assert.match(main, /resetGameProgressLocalData\(\);[\s\S]*?saveGameStatsProfile\(/);
   assert.match(
     main,
-    /waitingForAdministratorAuthorizationCount[\s\S]*?Sign in as Administrator again to publish your verified Rohin result\./,
+    /waitingForAdministratorAuthorizationCount \+= 1;[\s\S]*?remainingSubmissions\.push\(submission\);[\s\S]*?continue;/,
     "A protected event must remain queued so it can publish after a fresh administrator sign-in."
+  );
+  assert.match(
+    main,
+    /else if \(waitingForAdministratorAuthorizationCount\) \{[\s\S]*?setGameStatsSyncState\("auth-required"\);/
   );
   for (const secretName of requiredAdministratorSecrets) {
     assert.match(workerConfig, new RegExp(`"${secretName}"`));

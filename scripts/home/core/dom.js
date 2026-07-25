@@ -61,6 +61,8 @@ window.homeDom = {
   sudokuAchievement: doc.getElementById("sudoku-achievement"),
   gameStatsWindows: all("[data-game-stats-window]"),
   gameStatsOpenButtons: all("[data-game-stats-open]"),
+  gameStatsSyncStatuses: all("[data-game-stats-sync-status]"),
+  gameStatsRefreshButtons: all("[data-game-stats-refresh]"),
   gameProfilePrompt: byId("game-profile-prompt"),
   gameProfileDialog: byId("game-profile-dialog"),
   gameProfileNamePicker: byId("game-profile-name-picker"),

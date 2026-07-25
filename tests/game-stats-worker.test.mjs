@@ -210,6 +210,24 @@ const postEvent = (env, rawEvent, session, options = {}) =>
     env
   );
 
+const storeTrustedEvent = (env, rawEvent) => {
+  env.personal_site_game_stats.events.set(rawEvent.id, {
+    id: rawEvent.id,
+    game: rawEvent.game,
+    type: rawEvent.type,
+    difficulty: rawEvent.difficulty || null,
+    board_size: rawEvent.boardSize || null,
+    hint_bucket: rawEvent.hintBucket || null,
+    metric:
+      rawEvent.metric === null || rawEvent.metric === undefined ? null : Number(rawEvent.metric),
+    metric_kind: rawEvent.metricKind || null,
+    player_id: rawEvent.profile?.id || null,
+    player_name: rawEvent.profile?.name || null,
+    player_icon: rawEvent.profile?.icon || null,
+    occurred_at: rawEvent.occurredAt,
+  });
+};
+
 test("normalizes all supported game shapes and rejects malformed data", () => {
   assert.equal(normalizeGameStatsEvent(event()).metricKind, "seconds");
   assert.equal(
@@ -362,6 +380,24 @@ test("records one verified completion for every tracked game and returns global 
   assert.equal(stats.totals.solitaire.wins, 1);
   assert.equal(stats.totals.snake.gamesPlayed["16"], 1);
   assert.equal(stats.totals.sudoku.wins.hard.withHints, 1);
+});
+
+test("rejects stale event submissions before consuming their sessions", async () => {
+  const env = createEnv();
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  ageSessionForCompletion(env, session.id);
+  const response = await postEvent(
+    env,
+    event({
+      id: "event-stale-submission",
+      occurredAt: "2020-01-01T00:00:00.000Z",
+    }),
+    session
+  );
+
+  assert.equal(response.status, 400);
+  assert.match((await readJson(response)).error, /outside the accepted window/);
+  assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
 });
 
 test("makes an accepted event idempotent without allowing a second session use", async () => {
@@ -771,43 +807,337 @@ test("returns a requested player's best Minesweeper rank beyond the public top t
   );
 });
 
-test("stats query returns only the requested player's rank and rejects invalid player ids", async () => {
+test("breaks equal metrics by earliest completion and then event id for every game", () => {
+  const tiedPlayers = [
+    profile("tie-player-alpha", "Alpha"),
+    profile("tie-player-bravo", "Bravo"),
+    profile("tie-player-charlie", "Charlie"),
+  ];
+  const early = "2024-01-01T00:00:00.000Z";
+  const late = "2024-01-02T00:00:00.000Z";
+  const tiedEvents = [];
+
+  [
+    ["tie-ms-alpha-01", tiedPlayers[0], early],
+    ["tie-ms-bravo-01", tiedPlayers[1], early],
+    ["tie-ms-charlie-01", tiedPlayers[2], late],
+  ].forEach(([id, player, occurredAt]) => {
+    tiedEvents.push(event({ id, metric: 42, occurredAt, profile: player }));
+  });
+  [
+    ["tie-sol-alpha-01", tiedPlayers[0], early],
+    ["tie-sol-bravo-01", tiedPlayers[1], early],
+    ["tie-sol-charlie-01", tiedPlayers[2], late],
+  ].forEach(([id, player, occurredAt]) => {
+    tiedEvents.push(
+      event({
+        id,
+        game: "solitaire",
+        type: "win",
+        metric: 80,
+        metricKind: "moves",
+        occurredAt,
+        profile: player,
+      })
+    );
+  });
+  [
+    ["tie-snake-alpha-01", tiedPlayers[0], early],
+    ["tie-snake-bravo-01", tiedPlayers[1], early],
+    ["tie-snake-charlie-01", tiedPlayers[2], late],
+  ].forEach(([id, player, occurredAt]) => {
+    tiedEvents.push(
+      event({
+        id,
+        game: "snake",
+        type: "gamePlayed",
+        boardSize: "10",
+        metric: 50,
+        metricKind: "score",
+        occurredAt,
+        profile: player,
+      })
+    );
+  });
+  [
+    ["tie-sudoku-alpha-01", tiedPlayers[0], early],
+    ["tie-sudoku-bravo-01", tiedPlayers[1], early],
+    ["tie-sudoku-charlie-01", tiedPlayers[2], late],
+  ].forEach(([id, player, occurredAt]) => {
+    tiedEvents.push(
+      event({
+        id,
+        game: "sudoku",
+        type: "win",
+        difficulty: "easy",
+        hintBucket: "noHints",
+        metric: 77,
+        metricKind: "seconds",
+        occurredAt,
+        profile: player,
+      })
+    );
+  });
+
+  const stats = createGameStatsDataFromEvents(tiedEvents, tiedPlayers[1].id);
+  const expectedPlayerOrder = tiedPlayers.map(({ id }) => id);
+  assert.deepEqual(
+    stats.leaderboards.minesweeper.beginner.map(({ playerId }) => playerId),
+    expectedPlayerOrder
+  );
+  assert.deepEqual(
+    stats.leaderboards.solitaire.map(({ playerId }) => playerId),
+    expectedPlayerOrder
+  );
+  assert.deepEqual(
+    stats.leaderboards.snake["10"].map(({ playerId }) => playerId),
+    expectedPlayerOrder
+  );
+  assert.deepEqual(
+    stats.leaderboards.sudoku.easy.map(({ playerId }) => playerId),
+    expectedPlayerOrder
+  );
+  assert.deepEqual(stats.playerRanks.minesweeper.beginner, {
+    rank: 2,
+    totalPlayers: 3,
+  });
+  assert.deepEqual(stats.playerRanks.solitaire, { rank: 2, totalPlayers: 3 });
+  assert.deepEqual(stats.playerRanks.snake["10"], { rank: 2, totalPlayers: 3 });
+  assert.deepEqual(stats.playerRanks.sudoku.easy, { rank: 2, totalPlayers: 3 });
+});
+
+test("ranks every multiplayer category across trusted historical stored events", async () => {
   const env = createEnv();
-  const rawEvents = [
-    event({ id: "event-query-0001", metric: 10, profile: profile("player-alpha", "Alpha") }),
-    event({ id: "event-query-0002", metric: 20, profile: profile("player-bravo", "Bravo") }),
-    event({ id: "event-query-0003", metric: 30, profile: profile("player-charlie", "Charlie") }),
-    event({ id: "event-query-0004", metric: 40, profile: profile("player-delta", "Delta") }),
-  ].map(normalizeGameStatsEvent);
-  rawEvents.forEach((storedEvent) => {
-    env.personal_site_game_stats.events.set(storedEvent.id, {
-      id: storedEvent.id,
-      game: storedEvent.game,
-      type: storedEvent.type,
-      difficulty: storedEvent.difficulty,
-      board_size: null,
-      hint_bucket: null,
-      metric: storedEvent.metric,
-      metric_kind: storedEvent.metricKind,
-      player_id: storedEvent.profile.id,
-      player_name: storedEvent.profile.name,
-      player_icon: storedEvent.profile.icon,
-      occurred_at: storedEvent.occurredAt,
+  const minesweeperDifficulties = ["beginner", "intermediate", "expert"];
+  const snakeBoardSizes = ["10", "16", "20", "24"];
+  const sudokuDifficulties = ["easy", "medium", "hard", "expert", "master", "extreme"];
+  const players = Array.from({ length: 12 }, (_, index) =>
+    profile(`stress-player-${String(index).padStart(2, "0")}`, `Player ${index}`)
+  );
+  let timestampOffset = 0;
+  const recentTimestamp = () =>
+    new Date(Date.now() - 60 * 60 * 1000 - timestampOffset++ * 1000).toISOString();
+
+  players.forEach((player, playerIndex) => {
+    minesweeperDifficulties.forEach((difficulty, difficultyIndex) => {
+      storeTrustedEvent(
+        env,
+        event({
+          id: `stress-ms-${difficulty}-${String(playerIndex).padStart(2, "0")}`,
+          difficulty,
+          metric: 10 + playerIndex + difficultyIndex,
+          occurredAt:
+            playerIndex === 0 && difficulty === "beginner"
+              ? "2020-01-01T00:00:00.000Z"
+              : recentTimestamp(),
+          profile: player,
+        })
+      );
+    });
+
+    for (let winIndex = 0; winIndex < players.length - playerIndex; winIndex += 1) {
+      storeTrustedEvent(
+        env,
+        event({
+          id: `stress-sol-${String(playerIndex).padStart(2, "0")}-${String(winIndex).padStart(2, "0")}`,
+          game: "solitaire",
+          type: "win",
+          metric: 80 + winIndex,
+          metricKind: "moves",
+          occurredAt: recentTimestamp(),
+          profile: player,
+        })
+      );
+    }
+
+    snakeBoardSizes.forEach((boardSize, sizeIndex) => {
+      storeTrustedEvent(
+        env,
+        event({
+          id: `stress-snake-${boardSize}-${String(playerIndex).padStart(2, "0")}`,
+          game: "snake",
+          type: "gamePlayed",
+          boardSize,
+          metric: 80 - playerIndex - sizeIndex,
+          metricKind: "score",
+          occurredAt: recentTimestamp(),
+          profile: player,
+        })
+      );
+    });
+
+    sudokuDifficulties.forEach((difficulty, difficultyIndex) => {
+      storeTrustedEvent(
+        env,
+        event({
+          id: `stress-sudoku-${difficulty}-${String(playerIndex).padStart(2, "0")}`,
+          game: "sudoku",
+          type: "win",
+          difficulty,
+          hintBucket: "noHints",
+          metric: 100 + playerIndex + difficultyIndex,
+          metricKind: "seconds",
+          occurredAt: recentTimestamp(),
+          profile: player,
+        })
+      );
+      storeTrustedEvent(
+        env,
+        event({
+          id: `stress-hints-${difficulty}-${String(playerIndex).padStart(2, "0")}`,
+          game: "sudoku",
+          type: "win",
+          difficulty,
+          hintBucket: "withHints",
+          metric: 1,
+          metricKind: "seconds",
+          occurredAt: recentTimestamp(),
+          profile: player,
+        })
+      );
     });
   });
 
-  const rankedResponse = await worker.fetch(
-    new Request("https://stats.example.test/stats?playerId=player-delta", {
-      headers: { Origin: "https://rohin.shanker.me" },
-    }),
-    env
+  const partialPlayer = profile("stress-player-partial", "Partial");
+  storeTrustedEvent(
+    env,
+    event({
+      id: "stress-partial-beginner",
+      difficulty: "beginner",
+      metric: 900,
+      occurredAt: recentTimestamp(),
+      profile: partialPlayer,
+    })
   );
-  assert.equal(rankedResponse.status, 200);
-  assert.deepEqual((await readJson(rankedResponse)).playerRanks.minesweeper.beginner, {
-    rank: 4,
-    totalPlayers: 4,
+
+  const fetchStats = async (playerId) => {
+    const response = await worker.fetch(
+      new Request(`https://stats.example.test/stats?playerId=${playerId}`, {
+        headers: { Origin: "https://rohin.shanker.me" },
+      }),
+      env
+    );
+    assert.equal(response.status, 200);
+    return readJson(response);
+  };
+  const assertPlayerAcrossCategories = (stats, playerIndex, expectedRank) => {
+    const expectedPlayerId = players[playerIndex].id;
+    minesweeperDifficulties.forEach((difficulty, difficultyIndex) => {
+      assert.deepEqual(stats.playerRanks.minesweeper[difficulty], {
+        rank: expectedRank,
+        totalPlayers: difficulty === "beginner" ? 13 : 12,
+      });
+      assert.equal(stats.playerRecords.minesweeper[difficulty].playerId, expectedPlayerId);
+      assert.equal(
+        stats.playerRecords.minesweeper[difficulty].metric,
+        10 + playerIndex + difficultyIndex
+      );
+    });
+    assert.deepEqual(stats.playerRanks.solitaire, { rank: expectedRank, totalPlayers: 12 });
+    assert.equal(stats.playerRecords.solitaire.playerId, expectedPlayerId);
+    assert.equal(stats.playerRecords.solitaire.metric, players.length - playerIndex);
+    snakeBoardSizes.forEach((boardSize, sizeIndex) => {
+      assert.deepEqual(stats.playerRanks.snake[boardSize], {
+        rank: expectedRank,
+        totalPlayers: 12,
+      });
+      assert.equal(stats.playerRecords.snake[boardSize].playerId, expectedPlayerId);
+      assert.equal(stats.playerRecords.snake[boardSize].metric, 80 - playerIndex - sizeIndex);
+    });
+    sudokuDifficulties.forEach((difficulty, difficultyIndex) => {
+      assert.deepEqual(stats.playerRanks.sudoku[difficulty], {
+        rank: expectedRank,
+        totalPlayers: 12,
+      });
+      assert.equal(stats.playerRecords.sudoku[difficulty].playerId, expectedPlayerId);
+      assert.equal(
+        stats.playerRecords.sudoku[difficulty].metric,
+        100 + playerIndex + difficultyIndex
+      );
+    });
+  };
+  const assertGlobalTopThree = (stats) => {
+    const topPlayerIds = players.slice(0, 3).map((player) => player.id);
+    minesweeperDifficulties.forEach((difficulty) => {
+      assert.deepEqual(
+        stats.leaderboards.minesweeper[difficulty].map((entry) => entry.playerId),
+        topPlayerIds
+      );
+    });
+    assert.deepEqual(
+      stats.leaderboards.solitaire.map((entry) => entry.playerId),
+      topPlayerIds
+    );
+    snakeBoardSizes.forEach((boardSize) => {
+      assert.deepEqual(
+        stats.leaderboards.snake[boardSize].map((entry) => entry.playerId),
+        topPlayerIds
+      );
+    });
+    sudokuDifficulties.forEach((difficulty) => {
+      assert.deepEqual(
+        stats.leaderboards.sudoku[difficulty].map((entry) => entry.playerId),
+        topPlayerIds
+      );
+    });
+  };
+
+  const topThreeStats = await fetchStats(players[2].id);
+  assertPlayerAcrossCategories(topThreeStats, 2, 3);
+  assertGlobalTopThree(topThreeStats);
+
+  const outsideTopThreeStats = await fetchStats(players[10].id);
+  assertPlayerAcrossCategories(outsideTopThreeStats, 10, 11);
+  assertGlobalTopThree(outsideTopThreeStats);
+  assert.ok(
+    Object.values(outsideTopThreeStats.leaderboards).every((leaderboardGroup) =>
+      Array.isArray(leaderboardGroup)
+        ? leaderboardGroup.every((entry) => entry.playerId !== players[10].id)
+        : Object.values(leaderboardGroup).every((entries) =>
+            entries.every((entry) => entry.playerId !== players[10].id)
+          )
+    )
+  );
+
+  const partialStats = await fetchStats(partialPlayer.id);
+  assert.deepEqual(partialStats.playerRanks.minesweeper.beginner, {
+    rank: 13,
+    totalPlayers: 13,
+  });
+  assert.equal(partialStats.playerRecords.minesweeper.beginner.playerId, partialPlayer.id);
+  minesweeperDifficulties.slice(1).forEach((difficulty) => {
+    assert.deepEqual(partialStats.playerRanks.minesweeper[difficulty], {
+      rank: null,
+      totalPlayers: 12,
+    });
+    assert.equal(partialStats.playerRecords.minesweeper[difficulty], null);
+  });
+  assert.deepEqual(partialStats.playerRanks.solitaire, { rank: null, totalPlayers: 12 });
+  assert.equal(partialStats.playerRecords.solitaire, null);
+  snakeBoardSizes.forEach((boardSize) => {
+    assert.deepEqual(partialStats.playerRanks.snake[boardSize], {
+      rank: null,
+      totalPlayers: 12,
+    });
+    assert.equal(partialStats.playerRecords.snake[boardSize], null);
+  });
+  sudokuDifficulties.forEach((difficulty) => {
+    assert.deepEqual(partialStats.playerRanks.sudoku[difficulty], {
+      rank: null,
+      totalPlayers: 12,
+    });
+    assert.equal(partialStats.playerRecords.sudoku[difficulty], null);
   });
 
+  assert.equal(topThreeStats.totals.sudoku.wins.easy.withHints, 12);
+  assert.equal(
+    topThreeStats.leaderboards.minesweeper.beginner[0].occurredAt,
+    "2020-01-01T00:00:00.000Z"
+  );
+});
+
+test("stats query rejects invalid player ids", async () => {
+  const env = createEnv();
   const invalidResponse = await worker.fetch(
     new Request("https://stats.example.test/stats?playerId=invalid", {
       headers: { Origin: "https://rohin.shanker.me" },

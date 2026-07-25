@@ -19,10 +19,13 @@ test("Minesweeper stats use the reusable leaderboard template in three fixed col
     /const createGameStatsLeaderboardLabeledSection = \(\{([\s\S]*?)\n\};\n\nconst appendMinesweeperLeaderboardRows/
   );
   const leaderboardRows = main.match(
-    /const appendMinesweeperLeaderboardRows = \(list, entries\) => \{([\s\S]*?)\n\};\n\nconst appendMinesweeperStat/
+    /const appendMinesweeperLeaderboardRows = \(list, entries\) => \{([\s\S]*?)\n\};\n\nconst appendGameStatsLeaderboardMetric/
   );
   const renderMinesweeper = main.match(
     /const renderGameStatsMinesweeper = \(root\) => \{([\s\S]*?)\n\};\n\nconst renderGameStatsSolitaire/
+  );
+  const personalRecordMetric = main.match(
+    /const gameStatsMinesweeperPersonalRecord = \(difficulty\) => \{([\s\S]*?)\n\};\n\nconst getGameStatsVerifiedPlayerRecord/
   );
   const personalRecord = main.match(
     /const appendMinesweeperPersonalRecord = \(container, difficulty\) => \{([\s\S]*?)\n\};\n\nconst renderGameStatsMinesweeper/
@@ -33,6 +36,10 @@ test("Minesweeper stats use the reusable leaderboard template in three fixed col
   assert.ok(labeledSection, "A reusable labeled leaderboard section should exist");
   assert.ok(leaderboardRows, "Minesweeper leaderboard rows should have a dedicated renderer");
   assert.ok(renderMinesweeper, "Minesweeper should have a dedicated stats renderer");
+  assert.ok(
+    personalRecordMetric,
+    "Minesweeper should resolve the signed-in player's verified or local record"
+  );
   assert.ok(personalRecord, "Minesweeper should render a dedicated personal record card");
   assert.match(leaderboardTemplate[1], /"game-stats-leaderboard-template"/);
   assert.match(leaderboardTemplate[1], /"game-stats-leaderboard-template-list"/);
@@ -78,15 +85,34 @@ test("Minesweeper stats use the reusable leaderboard template in three fixed col
 
   assert.match(personalRecord[1], /game-stats-minesweeper-record/);
   assert.match(personalRecord[1], /playerRanks\.minesweeper\[difficulty\]/);
+  assert.match(
+    personalRecord[1],
+    /getGameStatsVerifiedPlayerRecord\([\s\S]*?playerRecords\.minesweeper\[difficulty\]/
+  );
+  assert.match(personalRecord[1], /const profile = verifiedEntry \|\| gameStatsProfile/);
   assert.match(personalRecord[1], /const rankText = `#\$\{playerRank\.rank \?\? "—"\}`;/);
+  assert.doesNotMatch(personalRecord[1], /["'`]#1["'`]/);
   assert.doesNotMatch(personalRecord[1], /of \$\{playerRank\.totalPlayers\}/);
   assert.match(personalRecord[1], /game-stats-minesweeper-record-row/);
   assert.match(personalRecord[1], /game-stats-minesweeper-rank/);
   assert.match(personalRecord[1], /createGameStatsLeaderboardLabeledSection\(\{/);
   assert.match(personalRecord[1], /label: "Your Record"/);
   assert.match(personalRecord[1], /createMinesweeperLeaderboardPlayer\(profile\.name, profile\.icon/);
-  assert.match(personalRecord[1], /appendGameStatsDigits\(metric, gameStatsMinesweeperPersonalRecord\(difficulty\), 3\)/);
+  assert.match(personalRecord[1], /const personalRecord = gameStatsMinesweeperPersonalRecord\(difficulty\)/);
+  assert.match(personalRecord[1], /appendGameStatsDigits\(metric, personalRecord, 3\)/);
   assert.match(personalRecord[1], /createGameStatsLeaderboardRow\(\{/);
+  assert.match(
+    personalRecordMetric[1],
+    /gameStatsGlobalState\.playerRecords\.minesweeper\[difficulty\]/
+  );
+  assert.match(
+    personalRecordMetric[1],
+    /gameStatsProfile[\s\S]*?globalRecord\?\.playerId === gameStatsProfile\.id[\s\S]*?return globalRecord\.metric/
+  );
+  assert.match(
+    personalRecordMetric[1],
+    /gameStatsLocalState\.leaderboards\.minesweeper\[difficulty\]/
+  );
 
   assert.match(renderMinesweeper[1], /"game-stats-minesweeper-columns"/);
   assert.match(renderMinesweeper[1], /createGameStatsLeaderboardTemplate\(\{/);

@@ -5,6 +5,7 @@ const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const GAME_STATS_SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
 const ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
 const SNAKE_HIGH_SCORE_KEY = "personalSiteSnakeHighScores";
+const SUDOKU_STORAGE_KEY = "personalSiteSudokuStateV1";
 const ADMINISTRATOR_PROFILE = Object.freeze({
   id: "player-rohin-neko",
   name: "rohin ^.^",
@@ -100,7 +101,7 @@ const preparePage = async (page, signInStatus, { seedLocalState = true, ...apiOp
   });
   if (seedLocalState) {
     await page.addInitScript(
-      ({ profileStorageKey, gameStatsStorageKey, snakeHighScoreKey }) => {
+      ({ profileStorageKey, gameStatsStorageKey, snakeHighScoreKey, sudokuStorageKey }) => {
         localStorage.setItem(
           profileStorageKey,
           JSON.stringify({
@@ -115,11 +116,21 @@ const preparePage = async (page, signInStatus, { seedLocalState = true, ...apiOp
           JSON.stringify({ totals: { minesweeper: { wins: { beginner: 4 } } } })
         );
         localStorage.setItem(snakeHighScoreKey, JSON.stringify({ 16: 99 }));
+        localStorage.setItem(
+          sudokuStorageKey,
+          JSON.stringify({
+            version: 1,
+            difficulty: "easy",
+            values: "9".repeat(81),
+            elapsedSeconds: 123,
+          })
+        );
       },
       {
         profileStorageKey: PROFILE_STORAGE_KEY,
         gameStatsStorageKey: GAME_STATS_STORAGE_KEY,
         snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
+        sudokuStorageKey: SUDOKU_STORAGE_KEY,
       }
     );
   }
@@ -189,11 +200,13 @@ for (const viewport of viewports) {
         profileStorageKey,
         gameStatsStorageKey,
         snakeHighScoreKey,
+        sudokuStorageKey,
         administratorProofStorageKey,
       }) => ({
         profile: JSON.parse(localStorage.getItem(profileStorageKey)),
         gameStats: JSON.parse(localStorage.getItem(gameStatsStorageKey)),
         snakeScores: localStorage.getItem(snakeHighScoreKey),
+        sudokuGame: JSON.parse(localStorage.getItem(sudokuStorageKey) || "null"),
         proof: JSON.parse(sessionStorage.getItem(administratorProofStorageKey)),
         documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
       }),
@@ -201,12 +214,15 @@ for (const viewport of viewports) {
         profileStorageKey: PROFILE_STORAGE_KEY,
         gameStatsStorageKey: GAME_STATS_STORAGE_KEY,
         snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
+        sudokuStorageKey: SUDOKU_STORAGE_KEY,
         administratorProofStorageKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
       }
     );
     expect(state.profile).toEqual(ADMINISTRATOR_PROFILE);
     expect(state.gameStats.totals.minesweeper.wins.beginner).toBe(0);
     expect(state.snakeScores).toBeNull();
+    expect(state.sudokuGame?.elapsedSeconds ?? 0).toBe(0);
+    expect(state.sudokuGame?.values || "").not.toBe("9".repeat(81));
     expect(state.proof.proof).toBe(administratorProof);
     expect(Date.parse(state.proof.expiresAt)).toBeGreaterThan(Date.now());
     expect(state.documentOverflows).toBe(false);

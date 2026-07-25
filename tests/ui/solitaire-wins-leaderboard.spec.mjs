@@ -30,6 +30,12 @@ const localState = Object.freeze({
   },
 });
 
+const zeroWinsLocalState = Object.freeze({
+  generatedAt: "2026-07-24T00:00:00.000Z",
+  totals: { solitaire: { wins: 0 } },
+  leaderboards: { solitaire: [] },
+});
+
 const globalState = Object.freeze({
   generatedAt: "2026-07-24T00:00:00.000Z",
   totals: { solitaire: { wins: 13 } },
@@ -64,6 +70,20 @@ const globalState = Object.freeze({
       },
     ],
   },
+  playerRanks: {
+    solitaire: { rank: 2, totalPlayers: 3 },
+  },
+  playerRecords: {
+    solitaire: {
+      eventId: "solitaire-global-local-01",
+      playerId: profile.id,
+      name: profile.name,
+      icon: profile.icon,
+      metric: 4,
+      metricKind: "wins",
+      occurredAt: "2026-07-24T00:00:02.000Z",
+    },
+  },
 });
 
 const singlePlayerGlobalState = Object.freeze({
@@ -82,6 +102,28 @@ const singlePlayerGlobalState = Object.freeze({
       },
     ],
   },
+  playerRanks: {
+    solitaire: { rank: 1, totalPlayers: 1 },
+  },
+  playerRecords: {
+    solitaire: {
+      eventId: "solitaire-global-local-01",
+      playerId: profile.id,
+      name: profile.name,
+      icon: profile.icon,
+      metric: 1,
+      metricKind: "wins",
+      occurredAt: "2026-07-24T00:00:00.000Z",
+    },
+  },
+});
+
+const emptyGlobalState = Object.freeze({
+  generatedAt: "2026-07-24T00:00:00.000Z",
+  totals: { solitaire: { wins: 0 } },
+  leaderboards: { solitaire: [] },
+  playerRanks: { solitaire: { rank: null, totalPlayers: 0 } },
+  playerRecords: { solitaire: null },
 });
 
 const viewports = Object.freeze([
@@ -91,19 +133,28 @@ const viewports = Object.freeze([
   { name: "wide desktop", width: 1440, height: 900 },
 ]);
 
-const openSolitaireStats = async (page, statsState = globalState) => {
+const openSolitaireStats = async (
+  page,
+  statsState = globalState,
+  savedLocalState = localState,
+  savedProfile = profile
+) => {
   await page.route(workerStatsUrl, (route) =>
     route.fulfill({ body: JSON.stringify(statsState), contentType: "application/json" })
   );
   await page.addInitScript(
     ({ savedProfile, savedState, profileKey, statsKey }) => {
       Math.random = () => 0.999999;
-      localStorage.setItem(profileKey, JSON.stringify(savedProfile));
+      if (savedProfile) {
+        localStorage.setItem(profileKey, JSON.stringify(savedProfile));
+      } else {
+        localStorage.removeItem(profileKey);
+      }
       localStorage.setItem(statsKey, JSON.stringify(savedState));
     },
     {
-      savedProfile: profile,
-      savedState: localState,
+      savedProfile,
+      savedState: savedLocalState,
       profileKey: PROFILE_STORAGE_KEY,
       statsKey: GAME_STATS_STORAGE_KEY,
     }
@@ -141,10 +192,15 @@ for (const viewport of viewports) {
       "color",
       "rgb(0, 128, 0)"
     );
-    await expect(leaderboard.getByText("Your Wins", { exact: true })).toBeVisible();
+    await expect(leaderboard.getByText("Your Record", { exact: true })).toBeVisible();
     await expect(localRow).toHaveAttribute(
       "aria-label",
-      "Local Solitaire wins: Solitaire Winner, 4 wins"
+      "Your Solitaire record: #2, Solitaire Winner, 4 wins"
+    );
+    await expect(localRow.locator(".game-stats-leaderboard-template-rank")).toHaveText("#2");
+    await expect(localRow.locator(".game-stats-leaderboard-template-rank")).toHaveAttribute(
+      "aria-label",
+      "Global rank 2"
     );
     await expect(localRow.locator(".game-stats-metric img")).toHaveCount(3);
     await expect(localRow.locator(".game-stats-metric img").first()).toHaveAttribute("alt", "0");
@@ -171,6 +227,37 @@ for (const viewport of viewports) {
       expect(row.right).toBeLessThanOrEqual(layout.panel.right);
     });
   });
+
+  test(`Solitaire leaves a zero-win player unranked at ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    const stats = await openSolitaireStats(page, emptyGlobalState, zeroWinsLocalState);
+    const localRow = stats.locator(".game-stats-solitaire-local-wins-row");
+    const rank = localRow.locator(".game-stats-leaderboard-template-rank");
+
+    await expect(localRow).toHaveAttribute(
+      "aria-label",
+      "Your Solitaire record: #—, Solitaire Winner, 0 wins"
+    );
+    await expect(rank).toHaveText("#—");
+    await expect(rank).toHaveAttribute("aria-label", "No global rank");
+    await expect(localRow.locator(".game-stats-metric img")).toHaveCount(3);
+    await expect(localRow.locator(".game-stats-metric img").nth(2)).toHaveAttribute("alt", "0");
+
+    const layout = await localRow.evaluate((element) => ({
+      documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
+      rowRight: element.getBoundingClientRect().right,
+      viewportWidth: window.innerWidth,
+    }));
+    expect(layout.documentOverflows).toBe(false);
+    expect(layout.rowRight).toBeLessThanOrEqual(layout.viewportWidth);
+
+    await page.screenshot({
+      path: testInfo.outputPath("solitaire-zero-wins-unranked.png"),
+      fullPage: true,
+    });
+  });
 }
 
 test("Solitaire replaces the first dummy slot with the verified current player", async ({ page }) => {
@@ -188,4 +275,20 @@ test("Solitaire replaces the first dummy slot with the verified current player",
   );
   await expect(globalRows.nth(1)).toHaveAttribute("aria-label", "Rank 2: N/A, 0 wins");
   await expect(globalRows.nth(2)).toHaveAttribute("aria-label", "Rank 3: N/A, 0 wins");
+});
+
+test("Solitaire does not rank persisted wins without a local profile", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const stats = await openSolitaireStats(page, emptyGlobalState, localState, null);
+  const localRow = stats.locator(".game-stats-solitaire-local-wins-row");
+  const rank = localRow.locator(".game-stats-leaderboard-template-rank");
+
+  await expect(localRow).toHaveAttribute(
+    "aria-label",
+    "Your Solitaire record: #—, N/A, 4 wins"
+  );
+  await expect(rank).toHaveText("#—");
+  await expect(rank).toHaveAttribute("aria-label", "No global rank");
+  await expect(localRow.locator(".game-stats-player-name")).toHaveText("N/A");
+  await expect(localRow.locator(".game-stats-metric img").nth(2)).toHaveAttribute("alt", "4");
 });

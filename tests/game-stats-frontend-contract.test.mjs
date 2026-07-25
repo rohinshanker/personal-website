@@ -23,6 +23,161 @@ const waitFor = async (predicate, message) => {
   assert.fail(message);
 };
 
+test("empty and normalized stats cover every player rank, record, and global Top 3", async () => {
+  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const dataSource = extractSource(
+    source,
+    "const createGameStatsEmptyMinesweeperWins =",
+    "\n\nconst createGameStatsEventId"
+  );
+  const context = vm.createContext({});
+
+  vm.runInContext(
+    [
+      'const GAME_STATS_ROHIN_NEKO_AVATAR_ICON = "assets/neko-assets/sprites/yawn1.png";',
+      "const GAME_STATS_MAX_NAME_REROLLS = 10;",
+      'const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);',
+      'const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze(["easy", "medium", "hard", "expert", "master", "extreme"]);',
+      'const GAME_STATS_SNAKE_BOARD_SIZES = Object.freeze(["10", "16", "20", "24"]);',
+      'const GAME_STATS_HINT_BUCKETS = Object.freeze(["noHints", "withHints"]);',
+      dataSource,
+      "globalThis.createEmptyGameStatsDataForTest = createEmptyGameStatsData;",
+      "globalThis.normalizeGameStatsDataForTest = normalizeGameStatsData;",
+    ].join("\n"),
+    context
+  );
+
+  const minesweeperDifficulties = ["beginner", "intermediate", "expert"];
+  const snakeBoardSizes = ["10", "16", "20", "24"];
+  const sudokuDifficulties = ["easy", "medium", "hard", "expert", "master", "extreme"];
+  const currentPlayerId = "player-current-record";
+  const icon = "assets/app-icons/ico/user_card.ico";
+  const createEntry = (category, index, metric, playerId = `player-public-${index}`) => ({
+    eventId: `event-${category}-${index}`,
+    playerId,
+    name: playerId === currentPlayerId ? "Current Player" : `Public ${index}`,
+    icon,
+    metric,
+    metricKind: category.startsWith("snake") ? "score" : "seconds",
+    occurredAt: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+  });
+  const ascendingTopFive = (category) =>
+    Array.from({ length: 5 }, (_, index) => createEntry(category, index + 1, index + 10));
+  const descendingTopFive = (category) =>
+    Array.from({ length: 5 }, (_, index) => createEntry(category, index + 1, 50 - index));
+  const playerRank = { rank: 7, totalPlayers: 12 };
+
+  const empty = jsonClone(context.createEmptyGameStatsDataForTest());
+  const normalizedEmpty = jsonClone(context.normalizeGameStatsDataForTest({}));
+  for (const data of [empty, normalizedEmpty]) {
+    for (const difficulty of minesweeperDifficulties) {
+      assert.deepEqual(data.playerRanks.minesweeper[difficulty], {
+        rank: null,
+        totalPlayers: 0,
+      });
+      assert.equal(data.playerRecords.minesweeper[difficulty], null);
+    }
+    assert.deepEqual(data.playerRanks.solitaire, { rank: null, totalPlayers: 0 });
+    assert.equal(data.playerRecords.solitaire, null);
+    for (const size of snakeBoardSizes) {
+      assert.deepEqual(data.playerRanks.snake[size], { rank: null, totalPlayers: 0 });
+      assert.equal(data.playerRecords.snake[size], null);
+    }
+    for (const difficulty of sudokuDifficulties) {
+      assert.deepEqual(data.playerRanks.sudoku[difficulty], {
+        rank: null,
+        totalPlayers: 0,
+      });
+      assert.equal(data.playerRecords.sudoku[difficulty], null);
+    }
+  }
+
+  const rawData = {
+    generatedAt: "2026-07-25T00:00:00.000Z",
+    leaderboards: {
+      minesweeper: Object.fromEntries(
+        minesweeperDifficulties.map((difficulty) => [
+          difficulty,
+          ascendingTopFive(`minesweeper-${difficulty}`),
+        ])
+      ),
+      solitaire: descendingTopFive("solitaire"),
+      snake: Object.fromEntries(
+        snakeBoardSizes.map((size) => [size, descendingTopFive(`snake-${size}`)])
+      ),
+      sudoku: Object.fromEntries(
+        sudokuDifficulties.map((difficulty) => [
+          difficulty,
+          ascendingTopFive(`sudoku-${difficulty}`),
+        ])
+      ),
+    },
+    playerRanks: {
+      minesweeper: Object.fromEntries(
+        minesweeperDifficulties.map((difficulty) => [difficulty, playerRank])
+      ),
+      solitaire: playerRank,
+      snake: Object.fromEntries(snakeBoardSizes.map((size) => [size, playerRank])),
+      sudoku: Object.fromEntries(
+        sudokuDifficulties.map((difficulty) => [difficulty, playerRank])
+      ),
+    },
+    playerRecords: {
+      minesweeper: Object.fromEntries(
+        minesweeperDifficulties.map((difficulty, index) => [
+          difficulty,
+          createEntry(`current-minesweeper-${difficulty}`, 1, 90 + index, currentPlayerId),
+        ])
+      ),
+      solitaire: createEntry("current-solitaire", 1, 5, currentPlayerId),
+      snake: Object.fromEntries(
+        snakeBoardSizes.map((size, index) => [
+          size,
+          createEntry(`current-snake-${size}`, 1, 5 + index, currentPlayerId),
+        ])
+      ),
+      sudoku: Object.fromEntries(
+        sudokuDifficulties.map((difficulty, index) => [
+          difficulty,
+          createEntry(`current-sudoku-${difficulty}`, 1, 90 + index, currentPlayerId),
+        ])
+      ),
+    },
+  };
+  const normalized = jsonClone(
+    context.normalizeGameStatsDataForTest(rawData, {
+      solitaireLeaderboardDirection: "desc",
+    })
+  );
+
+  const assertIndependentTopThree = (entries) => {
+    assert.equal(entries.length, 3);
+    assert.equal(entries.some((entry) => entry.playerId === currentPlayerId), false);
+  };
+  for (const difficulty of minesweeperDifficulties) {
+    assertIndependentTopThree(normalized.leaderboards.minesweeper[difficulty]);
+    assert.deepEqual(normalized.playerRanks.minesweeper[difficulty], playerRank);
+    assert.equal(
+      normalized.playerRecords.minesweeper[difficulty].playerId,
+      currentPlayerId
+    );
+  }
+  assertIndependentTopThree(normalized.leaderboards.solitaire);
+  assert.deepEqual(normalized.playerRanks.solitaire, playerRank);
+  assert.equal(normalized.playerRecords.solitaire.playerId, currentPlayerId);
+  assert.equal(normalized.playerRecords.solitaire.metric, 5);
+  for (const size of snakeBoardSizes) {
+    assertIndependentTopThree(normalized.leaderboards.snake[size]);
+    assert.deepEqual(normalized.playerRanks.snake[size], playerRank);
+    assert.equal(normalized.playerRecords.snake[size].playerId, currentPlayerId);
+  }
+  for (const difficulty of sudokuDifficulties) {
+    assertIndependentTopThree(normalized.leaderboards.sudoku[difficulty]);
+    assert.deepEqual(normalized.playerRanks.sudoku[difficulty], playerRank);
+    assert.equal(normalized.playerRecords.sudoku[difficulty].playerId, currentPlayerId);
+  }
+});
+
 test("a saved profile is attached to a non-leaderboard Solitaire win without client-only fields", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
   const eventProfileSource = extractSource(
@@ -57,7 +212,9 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
       "const queueGameStatsSubmission = (event, session) => { queuedSubmission = { event: { ...event }, session }; };",
       "const saveGameStatsLocalState = () => {};",
       'let gameStatsSyncMessage = "";',
+      'let gameStatsSyncState = "initial";',
       "const renderGameStatsWindows = () => {};",
+      "const setGameStatsSyncState = (state, { message = '' } = {}) => { gameStatsSyncState = state; gameStatsSyncMessage = message; };",
       "const syncQueuedGameStats = async () => { syncCalls += 1; };",
       "const playFirstGameStatsTrophyHandoff = async () => {};",
       recordEventSource,
@@ -112,8 +269,11 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
       'let gameStatsProfile = { id: "player-saved-profile", name: "Mira", icon: "assets/app-icons/ico/user_card.ico", rerollCount: 7 };',
       "let gameStatsGlobalState = null;",
       'let gameStatsSyncMessage = "";',
+      'let gameStatsSyncState = "initial";',
       "let gameStatsSyncInProgress = false;",
       "let gameStatsSyncRequested = false;",
+      "let gameStatsSyncPromise = null;",
+      "let gameStatsManualRefreshInProgress = false;",
       `let gameStatsSubmissionQueue = ${JSON.stringify([
         {
           event: {
@@ -173,9 +333,14 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
       'const GAME_STATS_ROHIN_NEKO_PROFILE = { id: "player-rohin-neko" };',
       "const saveGameStatsSubmissionQueue = () => { saveCalls += 1; };",
       "const renderGameStatsWindows = () => { renderCalls += 1; };",
+      "const setGameStatsSyncState = (state, { message = '' } = {}) => {",
+      "  gameStatsSyncState = state;",
+      "  gameStatsSyncMessage = message || (state === 'ready' ? 'Global stats are up to date.' : state);",
+      "  renderGameStatsWindows();",
+      "};",
       syncSource,
       "globalThis.syncQueuedGameStatsForTest = syncQueuedGameStats;",
-      "globalThis.readSyncState = () => ({ gameStatsSubmissionQueue, gameStatsGlobalState, gameStatsSyncMessage, gameStatsSyncInProgress, eventRequests, statsPaths, saveCalls, renderCalls });",
+      "globalThis.readSyncState = () => ({ gameStatsSubmissionQueue, gameStatsGlobalState, gameStatsSyncMessage, gameStatsSyncState, gameStatsSyncInProgress, eventRequests, statsPaths, saveCalls, renderCalls });",
     ].join("\n"),
     context
   );
@@ -194,12 +359,13 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
   assert.equal(state.eventRequests[0].event.profile.rerollCount, undefined);
   assert.deepEqual(state.statsPaths, ["/stats?playerId=player-saved-profile"]);
   assert.deepEqual(state.gameStatsGlobalState, { marker: "fresh-global-stats" });
+  assert.equal(state.gameStatsSyncState, "ready");
   assert.equal(
     state.gameStatsSyncMessage,
     "Local stats are saved. A result without a verified game session cannot be published."
   );
   assert.equal(state.saveCalls, 1);
-  assert.equal(state.renderCalls, 1);
+  assert.equal(state.renderCalls, 4);
 });
 
 test("an overlapping queue sync is coalesced into one rerun after the active refresh", async () => {
@@ -216,8 +382,11 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
       "let gameStatsProfile = null;",
       "let gameStatsGlobalState = null;",
       'let gameStatsSyncMessage = "";',
+      'let gameStatsSyncState = "initial";',
       "let gameStatsSyncInProgress = false;",
       "let gameStatsSyncRequested = false;",
+      "let gameStatsSyncPromise = null;",
+      "let gameStatsManualRefreshInProgress = false;",
       "let gameStatsSubmissionQueue = [];",
       "const statsPaths = [];",
       "const pendingStatsResponses = [];",
@@ -238,6 +407,11 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
       "const normalizeGameStatsData = (payload) => ({ ...payload });",
       "const saveGameStatsSubmissionQueue = () => { saveCalls += 1; };",
       "const renderGameStatsWindows = () => { renderCalls += 1; };",
+      "const setGameStatsSyncState = (state, { message = '' } = {}) => {",
+      "  gameStatsSyncState = state;",
+      "  gameStatsSyncMessage = message || state;",
+      "  renderGameStatsWindows();",
+      "};",
       syncSource,
       "globalThis.syncQueuedGameStatsForTest = syncQueuedGameStats;",
       "globalThis.resolveNextStatsResponse = () => pendingStatsResponses.shift()?.();",
@@ -252,14 +426,14 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
     "the first sync should wait for its global stats refresh"
   );
 
-  await context.syncQueuedGameStatsForTest();
+  const overlappingSync = context.syncQueuedGameStatsForTest();
+  assert.equal(overlappingSync, firstSync);
   let state = jsonClone(context.readSyncState());
   assert.equal(state.gameStatsSyncInProgress, true);
   assert.equal(state.gameStatsSyncRequested, true);
   assert.deepEqual(state.statsPaths, ["/stats"]);
 
   context.resolveNextStatsResponse();
-  await firstSync;
   await waitFor(
     () => context.readSyncState().statsPaths.length === 2,
     "the overlapping request should start one coalesced sync rerun"
@@ -271,10 +445,7 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
   assert.equal(state.pendingResponseCount, 1);
 
   context.resolveNextStatsResponse();
-  await waitFor(
-    () => !context.readSyncState().gameStatsSyncInProgress,
-    "the coalesced sync rerun should settle"
-  );
+  await Promise.all([firstSync, overlappingSync]);
 
   state = jsonClone(context.readSyncState());
   assert.deepEqual(state.statsPaths, ["/stats", "/stats"]);
@@ -282,5 +453,5 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
   assert.equal(state.gameStatsSyncRequested, false);
   assert.equal(state.pendingResponseCount, 0);
   assert.equal(state.saveCalls, 2);
-  assert.equal(state.renderCalls, 2);
+  assert.equal(state.renderCalls, 7);
 });

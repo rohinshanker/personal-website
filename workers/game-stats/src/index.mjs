@@ -122,6 +122,28 @@ const createEmptyMinesweeperPlayerRanks = () =>
     GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, { rank: null, totalPlayers: 0 }])
   );
 
+const createEmptySnakePlayerRanks = () =>
+  Object.fromEntries(
+    GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, { rank: null, totalPlayers: 0 }])
+  );
+
+const createEmptySudokuPlayerRanks = () =>
+  Object.fromEntries(
+    GAME_STATS_SUDOKU_DIFFICULTIES.map((difficulty) => [
+      difficulty,
+      { rank: null, totalPlayers: 0 },
+    ])
+  );
+
+const createEmptyMinesweeperPlayerRecords = () =>
+  Object.fromEntries(GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, null]));
+
+const createEmptySnakePlayerRecords = () =>
+  Object.fromEntries(GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, null]));
+
+const createEmptySudokuPlayerRecords = () =>
+  Object.fromEntries(GAME_STATS_SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, null]));
+
 const createEmptySnakeGames = () =>
   Object.fromEntries(GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, 0]));
 
@@ -160,16 +182,28 @@ export const createEmptyGameStatsData = () => ({
   },
   playerRanks: {
     minesweeper: createEmptyMinesweeperPlayerRanks(),
+    solitaire: { rank: null, totalPlayers: 0 },
+    snake: createEmptySnakePlayerRanks(),
+    sudoku: createEmptySudokuPlayerRanks(),
+  },
+  playerRecords: {
+    minesweeper: createEmptyMinesweeperPlayerRecords(),
+    solitaire: null,
+    snake: createEmptySnakePlayerRecords(),
+    sudoku: createEmptySudokuPlayerRecords(),
   },
 });
 
-const normalizeIsoDate = (value) => {
+const normalizeIsoDate = (value, { allowHistorical = false } = {}) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     throw new HttpError(400, "Invalid event date");
   }
   const now = Date.now();
-  if (date.getTime() < now - MAX_EVENT_AGE_MS || date.getTime() > now + MAX_EVENT_FUTURE_MS) {
+  if (
+    (!allowHistorical && date.getTime() < now - MAX_EVENT_AGE_MS) ||
+    date.getTime() > now + MAX_EVENT_FUTURE_MS
+  ) {
     throw new HttpError(400, "Event date is outside the accepted window");
   }
   return date.toISOString();
@@ -217,7 +251,7 @@ const requireMetricKind = (rawEvent, expectedKind) => {
   return metricKind;
 };
 
-export const normalizeGameStatsEvent = (rawEvent) => {
+const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } = {}) => {
   assertAllowedKeys(
     rawEvent,
     [
@@ -238,7 +272,7 @@ export const normalizeGameStatsEvent = (rawEvent) => {
   const id = String(rawEvent.id || "").trim();
   const game = String(rawEvent.game || "").trim();
   const type = String(rawEvent.type || "").trim();
-  const occurredAt = normalizeIsoDate(rawEvent.occurredAt);
+  const occurredAt = normalizeIsoDate(rawEvent.occurredAt, { allowHistorical });
   const profile = normalizeProfile(rawEvent.profile);
 
   if (!/^[a-z0-9-]{8,80}$/.test(id)) {
@@ -334,6 +368,8 @@ export const normalizeGameStatsEvent = (rawEvent) => {
   throw new HttpError(400, `Unsupported game: ${game}`);
 };
 
+export const normalizeGameStatsEvent = (rawEvent) => normalizeGameStatsEventInternal(rawEvent);
+
 export const compareLeaderboardEntries = (direction, first, second) => {
   if (first.metric !== second.metric) {
     return direction === "desc"
@@ -399,19 +435,24 @@ const addSolitaireWinToLeaderboard = (winsByPlayer, event) => {
 export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "") => {
   const stats = createEmptyGameStatsData();
   const requestedPlayer = String(requestedPlayerId || "").trim();
-  const minesweeperPlayerRankings = createEmptyMinesweeperLeaderboards();
+  const playerRankings = {
+    minesweeper: createEmptyMinesweeperLeaderboards(),
+    solitaire: [],
+    snake: createEmptySnakeLeaderboards(),
+    sudoku: createEmptySudokuLeaderboards(),
+  };
   const solitaireWinsByPlayer = new Map();
   stats.generatedAt = new Date().toISOString();
 
   for (const rawEvent of rawEvents) {
-    const event = normalizeGameStatsEvent(rawEvent);
+    const event = normalizeGameStatsEventInternal(rawEvent, { allowHistorical: true });
     if (stats.eventIds.includes(event.id)) continue;
     stats.eventIds.push(event.id);
 
     if (event.game === "minesweeper") {
       stats.totals.minesweeper.wins[event.difficulty] += 1;
-      minesweeperPlayerRankings[event.difficulty] = upsertLeaderboardEntry(
-        minesweeperPlayerRankings[event.difficulty],
+      playerRankings.minesweeper[event.difficulty] = upsertLeaderboardEntry(
+        playerRankings.minesweeper[event.difficulty],
         event,
         Number.MAX_SAFE_INTEGER,
         "asc"
@@ -422,19 +463,19 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
     } else if (event.game === "snake") {
       stats.totals.snake.totalGamesPlayed += 1;
       stats.totals.snake.gamesPlayed[event.boardSize] += 1;
-      stats.leaderboards.snake[event.boardSize] = upsertLeaderboardEntry(
-        stats.leaderboards.snake[event.boardSize],
+      playerRankings.snake[event.boardSize] = upsertLeaderboardEntry(
+        playerRankings.snake[event.boardSize],
         event,
-        5,
+        Number.MAX_SAFE_INTEGER,
         "desc"
       );
     } else if (event.game === "sudoku") {
       stats.totals.sudoku.wins[event.difficulty][event.hintBucket] += 1;
       if (event.hintBucket === "noHints" && Number.isFinite(event.metric)) {
-        stats.leaderboards.sudoku[event.difficulty] = upsertLeaderboardEntry(
-          stats.leaderboards.sudoku[event.difficulty],
+        playerRankings.sudoku[event.difficulty] = upsertLeaderboardEntry(
+          playerRankings.sudoku[event.difficulty],
           event,
-          3,
+          Number.MAX_SAFE_INTEGER,
           "asc"
         );
       }
@@ -442,18 +483,51 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
   }
 
   GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
-    const rankings = minesweeperPlayerRankings[difficulty];
+    const rankings = playerRankings.minesweeper[difficulty];
     const rankIndex = rankings.findIndex((entry) => entry.playerId === requestedPlayer);
     stats.leaderboards.minesweeper[difficulty] = rankings.slice(0, 3);
     stats.playerRanks.minesweeper[difficulty] = {
       rank: rankIndex >= 0 ? rankIndex + 1 : null,
       totalPlayers: rankings.length,
     };
+    stats.playerRecords.minesweeper[difficulty] = rankIndex >= 0 ? rankings[rankIndex] : null;
   });
 
-  stats.leaderboards.solitaire = Array.from(solitaireWinsByPlayer.values())
-    .sort((first, second) => compareLeaderboardEntries("desc", first, second))
-    .slice(0, 3);
+  playerRankings.solitaire = Array.from(solitaireWinsByPlayer.values()).sort((first, second) =>
+    compareLeaderboardEntries("desc", first, second)
+  );
+  const solitaireRankIndex = playerRankings.solitaire.findIndex(
+    (entry) => entry.playerId === requestedPlayer
+  );
+  stats.leaderboards.solitaire = playerRankings.solitaire.slice(0, 3);
+  stats.playerRanks.solitaire = {
+    rank: solitaireRankIndex >= 0 ? solitaireRankIndex + 1 : null,
+    totalPlayers: playerRankings.solitaire.length,
+  };
+  stats.playerRecords.solitaire =
+    solitaireRankIndex >= 0 ? playerRankings.solitaire[solitaireRankIndex] : null;
+
+  GAME_STATS_SNAKE_BOARD_SIZES.forEach((size) => {
+    const rankings = playerRankings.snake[size];
+    const rankIndex = rankings.findIndex((entry) => entry.playerId === requestedPlayer);
+    stats.leaderboards.snake[size] = rankings.slice(0, 3);
+    stats.playerRanks.snake[size] = {
+      rank: rankIndex >= 0 ? rankIndex + 1 : null,
+      totalPlayers: rankings.length,
+    };
+    stats.playerRecords.snake[size] = rankIndex >= 0 ? rankings[rankIndex] : null;
+  });
+
+  GAME_STATS_SUDOKU_DIFFICULTIES.forEach((difficulty) => {
+    const rankings = playerRankings.sudoku[difficulty];
+    const rankIndex = rankings.findIndex((entry) => entry.playerId === requestedPlayer);
+    stats.leaderboards.sudoku[difficulty] = rankings.slice(0, 3);
+    stats.playerRanks.sudoku[difficulty] = {
+      rank: rankIndex >= 0 ? rankIndex + 1 : null,
+      totalPlayers: rankings.length,
+    };
+    stats.playerRecords.sudoku[difficulty] = rankIndex >= 0 ? rankings[rankIndex] : null;
+  });
 
   return stats;
 };

@@ -63,7 +63,9 @@ const globalState = Object.freeze({
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
+  { name: "tablet", width: 768, height: 1024 },
   { name: "desktop", width: 1280, height: 800 },
+  { name: "wide", width: 1440, height: 900 },
 ]);
 
 const openSudokuStats = async (page) => {
@@ -95,23 +97,38 @@ const openSudokuStats = async (page) => {
 };
 
 for (const viewport of viewports) {
-  test(`Sudoku leaderboard uses bold text times at ${viewport.name}`, async ({ page }) => {
+  test(`Sudoku leaderboard uses real times and 99:99 placeholders at ${viewport.name}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
     const stats = await openSudokuStats(page);
     const easyLeaderboard = stats.locator(".game-stats-sudoku-leaderboard").first();
+    const emptyLeaderboard = stats.locator(".game-stats-sudoku-leaderboard").nth(1);
     const globalRows = easyLeaderboard.locator(
       ".game-stats-sudoku-row:not(.game-stats-sudoku-local-best-row)"
     );
     const globalMetric = globalRows.first().locator(".game-stats-metric--text");
+    const placeholderGlobalMetric = globalRows.nth(1).locator(".game-stats-metric--text");
     const localMetric = easyLeaderboard.locator(
       ".game-stats-sudoku-local-best-row .game-stats-metric--text"
     );
+    const placeholderLocalRow = emptyLeaderboard.locator(
+      ".game-stats-sudoku-local-best-row"
+    );
+    const placeholderMetrics = stats
+      .locator(".game-stats-sudoku-row .game-stats-metric--text")
+      .filter({ hasText: "99:99" });
 
     await expect(globalRows).toHaveCount(3);
     await expect(globalRows.first()).toHaveAttribute("aria-label", "Rank 1: Puzzle Ace, 1004 seconds");
-    await expect(globalRows.nth(1)).toHaveAttribute("aria-label", "Rank 2: N/A, 999 seconds");
+    await expect(globalRows.nth(1)).toHaveAttribute("aria-label", "Rank 2: N/A, no recorded time");
+    await expect(placeholderLocalRow).toHaveAttribute(
+      "aria-label",
+      "Your no-hints record: #—, N/A, no record"
+    );
     await expect(globalMetric).toHaveText("16:44");
+    await expect(placeholderGlobalMetric).toHaveText("99:99");
     await expect(localMetric).toHaveText("01:05");
+    await expect(placeholderLocalRow.locator(".game-stats-metric--text")).toHaveText("99:99");
+    await expect(placeholderMetrics).toHaveCount(22);
     await expect(stats.locator(".game-stats-sudoku-row .game-stats-digit-strip")).toHaveCount(0);
     await expect(
       stats.locator(".game-stats-sudoku-total-games .game-stats-digit-strip").first()
@@ -130,5 +147,9 @@ for (const viewport of viewports) {
     });
     expect(layout.documentOverflows).toBe(false);
     expect(layout.metricRight).toBeLessThanOrEqual(layout.rowRight);
+    await page.screenshot({
+      path: testInfo.outputPath("sudoku-placeholder-times.png"),
+      fullPage: true,
+    });
   });
 }

@@ -213,6 +213,7 @@ const {
   sudokuAchievement,
   gameStatsWindows,
   gameStatsOpenButtons,
+  gameStatsRefreshButtons,
   gameProfilePrompt,
   gameProfileDialog,
   gameProfileNamePicker,
@@ -1044,6 +1045,7 @@ const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
   "master",
   "extreme",
 ]);
+const GAME_STATS_SUDOKU_PLACEHOLDER_TIME = "99:99";
 const GAME_STATS_SNAKE_BOARD_SIZES = Object.freeze(["10", "16", "20", "24"]);
 const GAME_STATS_HINT_BUCKETS = Object.freeze(["noHints", "withHints"]);
 const GAME_STATS_SUPPORTED_GAMES = Object.freeze([
@@ -1052,6 +1054,63 @@ const GAME_STATS_SUPPORTED_GAMES = Object.freeze([
   "snake",
   "sudoku",
 ]);
+const GAME_STATS_SYNC_STATES = Object.freeze({
+  initial: Object.freeze({
+    message: "Global stats will sync automatically.",
+    action: "refresh",
+    busy: false,
+    disabled: false,
+  }),
+  fetching: Object.freeze({
+    message: "Fetching latest stats...",
+    action: "none",
+    busy: true,
+    disabled: true,
+  }),
+  publishing: Object.freeze({
+    message: "Publishing saved results...",
+    action: "none",
+    busy: true,
+    disabled: true,
+  }),
+  "auth-required": Object.freeze({
+    message: "Sign in as Administrator to publish your verified Rohin result.",
+    action: "authenticate",
+    busy: false,
+    disabled: false,
+  }),
+  "auth-waiting": Object.freeze({
+    message: "Waiting for authentication...",
+    action: "none",
+    busy: true,
+    disabled: true,
+  }),
+  ready: Object.freeze({
+    message: "Global stats are up to date.",
+    action: "refresh",
+    busy: false,
+    disabled: false,
+  }),
+  "request-failed": Object.freeze({
+    message: "Request failed. Try again later.",
+    action: "refresh",
+    busy: false,
+    disabled: false,
+  }),
+  "auth-request-failed": Object.freeze({
+    message: "Request failed. Try again later.",
+    action: "authenticate",
+    busy: false,
+    disabled: false,
+  }),
+  unconfigured: Object.freeze({
+    message:
+      "Automatic global tracking is not configured yet; local stats stay on this device.",
+    action: "none",
+    busy: false,
+    disabled: true,
+  }),
+});
 const GAME_STATS_MEDAL_SOURCES = Object.freeze([
   "assets/minesweeper_assets/gold-medal.png",
   "assets/minesweeper_assets/silver-medal.png",
@@ -1091,16 +1150,29 @@ const createGameStatsEmptyMinesweeperWins = () =>
 const createGameStatsEmptyMinesweeperLeaderboards = () =>
   Object.fromEntries(GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, []]));
 
+const createGameStatsEmptyPlayerRank = () => ({ rank: null, totalPlayers: 0 });
+
 const createGameStatsEmptyMinesweeperPlayerRanks = () =>
   Object.fromEntries(
-    GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, { rank: null, totalPlayers: 0 }])
+    GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, createGameStatsEmptyPlayerRank()])
   );
+
+const createGameStatsEmptyMinesweeperPlayerRecords = () =>
+  Object.fromEntries(GAME_STATS_DIFFICULTIES.map((difficulty) => [difficulty, null]));
 
 const createGameStatsEmptySnakeGames = () =>
   Object.fromEntries(GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, 0]));
 
 const createGameStatsEmptySnakeLeaderboards = () =>
   Object.fromEntries(GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, []]));
+
+const createGameStatsEmptySnakePlayerRanks = () =>
+  Object.fromEntries(
+    GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, createGameStatsEmptyPlayerRank()])
+  );
+
+const createGameStatsEmptySnakePlayerRecords = () =>
+  Object.fromEntries(GAME_STATS_SNAKE_BOARD_SIZES.map((size) => [size, null]));
 
 const createGameStatsEmptySudokuWins = () =>
   Object.fromEntries(
@@ -1117,6 +1189,17 @@ const createGameStatsEmptySudokuBestTimes = () =>
 
 const createGameStatsEmptySudokuLeaderboards = () =>
   Object.fromEntries(GAME_STATS_SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, []]));
+
+const createGameStatsEmptySudokuPlayerRanks = () =>
+  Object.fromEntries(
+    GAME_STATS_SUDOKU_DIFFICULTIES.map((difficulty) => [
+      difficulty,
+      createGameStatsEmptyPlayerRank(),
+    ])
+  );
+
+const createGameStatsEmptySudokuPlayerRecords = () =>
+  Object.fromEntries(GAME_STATS_SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, null]));
 
 const createEmptyGameStatsData = () => ({
   version: 1,
@@ -1142,6 +1225,15 @@ const createEmptyGameStatsData = () => ({
   },
   playerRanks: {
     minesweeper: createGameStatsEmptyMinesweeperPlayerRanks(),
+    solitaire: createGameStatsEmptyPlayerRank(),
+    snake: createGameStatsEmptySnakePlayerRanks(),
+    sudoku: createGameStatsEmptySudokuPlayerRanks(),
+  },
+  playerRecords: {
+    minesweeper: createGameStatsEmptyMinesweeperPlayerRecords(),
+    solitaire: null,
+    snake: createGameStatsEmptySnakePlayerRecords(),
+    sudoku: createGameStatsEmptySudokuPlayerRecords(),
   },
 });
 
@@ -1230,6 +1322,7 @@ const normalizeAdministratorSignInResponse = (payload) => {
 const normalizeGameStatsLeaderboardEntries = (entries, direction, limit) =>
   (Array.isArray(entries) ? entries : [])
     .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
       const profile = normalizeGameStatsProfile({
         id: entry.playerId,
         name: entry.name,
@@ -1261,6 +1354,8 @@ const normalizeGameStatsData = (
     rawData && typeof rawData === "object" ? rawData.leaderboards || {} : {};
   const playerRanks =
     rawData && typeof rawData === "object" ? rawData.playerRanks || {} : {};
+  const playerRecords =
+    rawData && typeof rawData === "object" ? rawData.playerRecords || {} : {};
 
   GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
     data.totals.minesweeper.wins[difficulty] = gameStatsPositiveInteger(
@@ -1274,14 +1369,27 @@ const normalizeGameStatsData = (
     data.playerRanks.minesweeper[difficulty] = normalizeGameStatsPlayerRank(
       playerRanks.minesweeper?.[difficulty]
     );
+    data.playerRecords.minesweeper[difficulty] =
+      normalizeGameStatsLeaderboardEntries(
+        [playerRecords.minesweeper?.[difficulty]],
+        "asc",
+        1
+      )[0] || null;
   });
 
   data.totals.solitaire.wins = gameStatsPositiveInteger(totals.solitaire?.wins);
   data.leaderboards.solitaire = normalizeGameStatsLeaderboardEntries(
     leaderboards.solitaire,
     solitaireLeaderboardDirection,
-    5
+    3
   );
+  data.playerRanks.solitaire = normalizeGameStatsPlayerRank(playerRanks.solitaire);
+  data.playerRecords.solitaire =
+    normalizeGameStatsLeaderboardEntries(
+      [playerRecords.solitaire],
+      solitaireLeaderboardDirection,
+      1
+    )[0] || null;
 
   data.totals.snake.totalGamesPlayed = gameStatsPositiveInteger(
     totals.snake?.totalGamesPlayed
@@ -1293,8 +1401,14 @@ const normalizeGameStatsData = (
     data.leaderboards.snake[size] = normalizeGameStatsLeaderboardEntries(
       leaderboards.snake?.[size],
       "desc",
-      5
+      3
     );
+    data.playerRanks.snake[size] = normalizeGameStatsPlayerRank(
+      playerRanks.snake?.[size]
+    );
+    data.playerRecords.snake[size] =
+      normalizeGameStatsLeaderboardEntries([playerRecords.snake?.[size]], "desc", 1)[0] ||
+      null;
   });
 
   GAME_STATS_SUDOKU_DIFFICULTIES.forEach((difficulty) => {
@@ -1311,6 +1425,15 @@ const normalizeGameStatsData = (
       "asc",
       3
     );
+    data.playerRanks.sudoku[difficulty] = normalizeGameStatsPlayerRank(
+      playerRanks.sudoku?.[difficulty]
+    );
+    data.playerRecords.sudoku[difficulty] =
+      normalizeGameStatsLeaderboardEntries(
+        [playerRecords.sudoku?.[difficulty]],
+        "asc",
+        1
+      )[0] || null;
   });
 
   data.generatedAt = normalizeGameStatsIsoDate(rawData.generatedAt);
@@ -1517,21 +1640,31 @@ const fetchGameStatsApi = async (path, options = {}) => {
   }
   if (typeof fetch !== "function") throw new Error("Fetch is unavailable");
 
+  const { signal: externalSignal, ...fetchOptions } = options;
   const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const abortFromExternalSignal = () => controller?.abort();
+  if (externalSignal && controller) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener("abort", abortFromExternalSignal, { once: true });
+    }
+  }
   const timeout = controller
     ? window.setTimeout(() => controller.abort(), GAME_STATS_API_TIMEOUT_MS)
     : 0;
   try {
     return await fetch(gameStatsApiUrl(path), {
-      ...options,
-      signal: controller?.signal,
+      ...fetchOptions,
+      signal: controller?.signal || externalSignal,
       headers: {
         "Content-Type": "application/json",
-        ...(options.headers || {}),
+        ...(fetchOptions.headers || {}),
       },
     });
   } finally {
     if (timeout) window.clearTimeout(timeout);
+    externalSignal?.removeEventListener?.("abort", abortFromExternalSignal);
   }
 };
 
@@ -1638,10 +1771,18 @@ const loadGameStatsProfile = () => {
   }
 };
 
+const clearGameStatsGlobalPlayerScope = () => {
+  if (!gameStatsGlobalState) return;
+  const emptyData = createEmptyGameStatsData();
+  gameStatsGlobalState.playerRanks = emptyData.playerRanks;
+  gameStatsGlobalState.playerRecords = emptyData.playerRecords;
+};
+
 const saveGameStatsProfile = (profile) => {
   if (gameStatsProfile) return gameStatsProfile;
   const normalizedProfile = normalizeGameStatsProfile(profile);
   if (!normalizedProfile) return null;
+  clearGameStatsGlobalPlayerScope();
   gameStatsProfile = normalizedProfile;
   try {
     localStorage.setItem(GAME_STATS_PROFILE_STORAGE_KEY, JSON.stringify(gameStatsProfile));
@@ -1653,6 +1794,7 @@ const saveGameStatsProfile = (profile) => {
 
 const clearGameStatsProfile = () => {
   gameStatsProfile = null;
+  clearGameStatsGlobalPlayerScope();
   clearGameStatsAdministratorProof();
   stopRohinNekoAvatarAnimation();
   try {
@@ -2278,125 +2420,217 @@ const playFirstGameStatsTrophyHandoff = async (game) => {
   }
 };
 
+const getGameStatsSyncStateDefinition = () =>
+  GAME_STATS_SYNC_STATES[gameStatsSyncState] || GAME_STATS_SYNC_STATES.initial;
+
+const setGameStatsSyncState = (state, { message = "" } = {}) => {
+  if (!GAME_STATS_SYNC_STATES[state]) return;
+  gameStatsSyncState = state;
+  gameStatsSyncMessage = message || GAME_STATS_SYNC_STATES[state].message;
+  renderGameStatsWindows();
+};
+
+const isGameStatsSyncBusy = () => getGameStatsSyncStateDefinition().busy;
+
+const isVisibleGameStatsRefreshButton = (button) => {
+  const windowElement = button?.closest("[data-game-stats-window]");
+  return Boolean(
+    button?.isConnected &&
+      !button.disabled &&
+      windowElement &&
+      !windowElement.classList.contains("is-hidden") &&
+      !windowElement.classList.contains("is-closing")
+  );
+};
+
+const restoreGameStatsAuthenticationFocus = (preferredButton) => {
+  const focusTarget = isVisibleGameStatsRefreshButton(preferredButton)
+    ? preferredButton
+    : Array.from(gameStatsRefreshButtons).find(isVisibleGameStatsRefreshButton) ||
+      startButton;
+  window.setTimeout(() => focusTarget?.focus(), 0);
+};
+
+const cancelGameStatsAuthenticationWait = () => {
+  if (gameStatsSyncState !== "auth-waiting") return;
+  const returnFocus = gameStatsAuthenticationReturnFocus;
+  gameStatsAuthenticationReturnFocus = null;
+  gameStatsManualRefreshInProgress = false;
+  setGameStatsSyncState("auth-required");
+  restoreGameStatsAuthenticationFocus(returnFocus);
+};
+
+const failGameStatsAuthenticationWait = () => {
+  if (gameStatsSyncState !== "auth-waiting") return;
+  const returnFocus = gameStatsAuthenticationReturnFocus;
+  gameStatsAuthenticationReturnFocus = null;
+  gameStatsManualRefreshInProgress = false;
+  setGameStatsSyncState("auth-request-failed");
+  restoreGameStatsAuthenticationFocus(returnFocus);
+};
+
+const requestGameStatsAdministratorAuthentication = (returnFocus) => {
+  if (!["auth-required", "auth-request-failed"].includes(gameStatsSyncState)) return;
+  gameStatsAuthenticationReturnFocus = returnFocus || null;
+  gameStatsManualRefreshInProgress = true;
+  setGameStatsSyncState("auth-waiting");
+  setWindowOpen("administrator", true);
+  window.setTimeout(() => administratorUsername?.focus(), 0);
+};
+
 const refreshGameStatsGlobalState = async ({ announce = true } = {}) => {
-  if (!isGameStatsBackendConfigured()) return false;
+  if (!isGameStatsBackendConfigured()) {
+    if (announce) setGameStatsSyncState("unconfigured");
+    return false;
+  }
   try {
-    const playerId = gameStatsProfile?.id;
-    const statsPath = playerId ? `/stats?playerId=${encodeURIComponent(playerId)}` : "/stats";
+    const requestedPlayerId = gameStatsProfile?.id || "";
+    const statsPath = requestedPlayerId
+      ? `/stats?playerId=${encodeURIComponent(requestedPlayerId)}`
+      : "/stats";
     const response = await fetchGameStatsApi(statsPath, { method: "GET" });
-    gameStatsGlobalState = normalizeGameStatsData(await readGameStatsApiJson(response), {
+    const nextGlobalState = normalizeGameStatsData(await readGameStatsApiJson(response), {
       solitaireLeaderboardDirection: "desc",
     });
+    if ((gameStatsProfile?.id || "") !== requestedPlayerId) {
+      gameStatsSyncRequested = true;
+      return null;
+    }
+    gameStatsGlobalState = nextGlobalState;
     if (announce) {
-      gameStatsSyncMessage = "Global stats are up to date.";
-      renderGameStatsWindows();
+      setGameStatsSyncState("ready");
     }
     return true;
   } catch {
     if (announce) {
-      gameStatsSyncMessage =
-        "Global stats are temporarily unavailable; local stats are still saved.";
-      renderGameStatsWindows();
+      setGameStatsSyncState("request-failed");
     }
     return false;
   }
 };
 
-const syncQueuedGameStats = async () => {
-  if (!isGameStatsBackendConfigured()) return;
-  if (gameStatsSyncInProgress) {
-    gameStatsSyncRequested = true;
+const runGameStatsSyncPass = async () => {
+  let rejectedCount = 0;
+  let waitingForAdministratorAuthorizationCount = 0;
+  let waitingForSessionCount = 0;
+  const remainingSubmissions = [];
+  const hasQueuedSubmissions = gameStatsSubmissionQueue.length > 0;
+
+  setGameStatsSyncState(hasQueuedSubmissions ? "publishing" : "fetching");
+
+  for (const submission of gameStatsSubmissionQueue) {
+    if (!submission.session) {
+      waitingForSessionCount += 1;
+      continue;
+    }
+    if (new Date(submission.session.expiresAt).getTime() <= Date.now()) {
+      rejectedCount += 1;
+      continue;
+    }
+    try {
+      const response = await fetchGameStatsApi("/events", {
+        method: "POST",
+        headers: getAdministratorEventHeaders(submission.event.profile),
+        body: JSON.stringify({
+          event: {
+            ...submission.event,
+            profile: normalizeGameStatsEventProfile(submission.event.profile),
+          },
+          session: {
+            id: submission.session.id,
+            token: submission.session.token,
+          },
+        }),
+      });
+      await readGameStatsApiJson(response);
+    } catch (error) {
+      if (
+        submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
+        Number(error?.status) === 403
+      ) {
+        waitingForAdministratorAuthorizationCount += 1;
+        remainingSubmissions.push(submission);
+        continue;
+      }
+      const status = Number(error?.status);
+      if (
+        status >= 400 &&
+        status < 500 &&
+        ![408, 425, 429].includes(status)
+      ) {
+        rejectedCount += 1;
+      } else {
+        remainingSubmissions.push(submission);
+      }
+    }
+  }
+
+  gameStatsSubmissionQueue = remainingSubmissions;
+  saveGameStatsSubmissionQueue();
+  setGameStatsSyncState("fetching");
+  const globalStatsAvailable = await refreshGameStatsGlobalState({ announce: false });
+
+  if (globalStatsAvailable === null) {
     return;
   }
-  gameStatsSyncInProgress = true;
-  gameStatsSyncRequested = false;
-
-  try {
-    let publishedCount = 0;
-    let rejectedCount = 0;
-    let waitingForAdministratorAuthorizationCount = 0;
-    let waitingForSessionCount = 0;
-    const remainingSubmissions = [];
-
-    for (const submission of gameStatsSubmissionQueue) {
-      if (!submission.session) {
-        waitingForSessionCount += 1;
-        continue;
-      }
-      if (new Date(submission.session.expiresAt).getTime() <= Date.now()) {
-        rejectedCount += 1;
-        continue;
-      }
-      try {
-        const response = await fetchGameStatsApi("/events", {
-          method: "POST",
-          headers: getAdministratorEventHeaders(submission.event.profile),
-          body: JSON.stringify({
-            event: {
-              ...submission.event,
-              profile: normalizeGameStatsEventProfile(submission.event.profile),
-            },
-            session: {
-              id: submission.session.id,
-              token: submission.session.token,
-            },
-          }),
-        });
-        await readGameStatsApiJson(response);
-        publishedCount += 1;
-      } catch (error) {
-        if (
-          submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
-          Number(error?.status) === 403
-        ) {
-          waitingForAdministratorAuthorizationCount += 1;
-          remainingSubmissions.push(submission);
-          continue;
-        }
-        const status = Number(error?.status);
-        if (
-          status >= 400 &&
-          status < 500 &&
-          ![408, 425, 429].includes(status)
-        ) {
-          rejectedCount += 1;
-        } else {
-          remainingSubmissions.push(submission);
-        }
-      }
-    }
-
-    gameStatsSubmissionQueue = remainingSubmissions;
-    saveGameStatsSubmissionQueue();
-    const globalStatsAvailable = await refreshGameStatsGlobalState({ announce: false });
-    if (waitingForSessionCount) {
-      gameStatsSyncMessage =
-        "Local stats are saved. A result without a verified game session cannot be published.";
-    } else if (waitingForAdministratorAuthorizationCount) {
-      gameStatsSyncMessage =
-        "Sign in as Administrator again to publish your verified Rohin result.";
-    } else if (rejectedCount) {
-      gameStatsSyncMessage =
-        "Local stats are saved, but a result could not pass server verification.";
-    } else if (gameStatsSubmissionQueue.length) {
-      gameStatsSyncMessage =
-        "Verified results will retry automatically when the API is available.";
-    } else if (!globalStatsAvailable) {
-      gameStatsSyncMessage =
-        publishedCount > 0
-          ? "The verified result was published, but global stats are temporarily unavailable."
-          : "Global stats are temporarily unavailable; local stats are still saved.";
-    } else {
-      gameStatsSyncMessage = "Global stats are up to date.";
-    }
-    renderGameStatsWindows();
-  } finally {
-    gameStatsSyncInProgress = false;
-    if (gameStatsSyncRequested) {
-      gameStatsSyncRequested = false;
-      void syncQueuedGameStats();
-    }
+  if (!globalStatsAvailable) {
+    setGameStatsSyncState(
+      waitingForAdministratorAuthorizationCount
+        ? "auth-request-failed"
+        : "request-failed"
+    );
+  } else if (waitingForSessionCount) {
+    setGameStatsSyncState("ready", {
+      message:
+        "Local stats are saved. A result without a verified game session cannot be published.",
+    });
+  } else if (waitingForAdministratorAuthorizationCount) {
+    setGameStatsSyncState("auth-required");
+  } else if (rejectedCount) {
+    setGameStatsSyncState("ready", {
+      message: "Local stats are saved, but a result could not pass server verification.",
+    });
+  } else if (gameStatsSubmissionQueue.length) {
+    setGameStatsSyncState("request-failed");
+  } else {
+    setGameStatsSyncState("ready");
   }
+};
+
+const syncQueuedGameStats = ({ manual = false } = {}) => {
+  if (gameStatsSyncState === "auth-waiting") {
+    return gameStatsSyncPromise || Promise.resolve(false);
+  }
+  if (!isGameStatsBackendConfigured()) {
+    setGameStatsSyncState("unconfigured");
+    return Promise.resolve(false);
+  }
+  if (manual) gameStatsManualRefreshInProgress = true;
+  if (gameStatsSyncPromise) {
+    gameStatsSyncRequested = true;
+    return gameStatsSyncPromise;
+  }
+
+  gameStatsSyncInProgress = true;
+  gameStatsSyncPromise = (async () => {
+    do {
+      gameStatsSyncRequested = false;
+      await runGameStatsSyncPass();
+    } while (gameStatsSyncRequested);
+    return gameStatsSyncState !== "request-failed";
+  })()
+    .catch(() => {
+      setGameStatsSyncState("request-failed");
+      return false;
+    })
+    .finally(() => {
+      gameStatsSyncInProgress = false;
+      gameStatsSyncRequested = false;
+      gameStatsManualRefreshInProgress = false;
+      gameStatsSyncPromise = null;
+      renderGameStatsWindows();
+    });
+  return gameStatsSyncPromise;
 };
 
 const recordGameStatsEvent = async (
@@ -2429,10 +2663,13 @@ const recordGameStatsEvent = async (
   const session = await getGameStatsSession(sessionKey);
   queueGameStatsSubmission(event, session);
   saveGameStatsLocalState();
-  gameStatsSyncMessage = session
-    ? "Saving verified result…"
-    : "Local stats are saved. This result started without a verified game session.";
-  renderGameStatsWindows();
+  if (gameStatsSyncState !== "auth-waiting") {
+    setGameStatsSyncState(session ? "publishing" : "ready", {
+      message: session
+        ? "Publishing saved results..."
+        : "Local stats are saved. This result started without a verified game session.",
+    });
+  }
   void syncQueuedGameStats();
   if (isFirstLocalWin) await playFirstGameStatsTrophyHandoff(event.game);
 };
@@ -2621,17 +2858,29 @@ const appendGameStatsLeaderboard = (
 };
 
 const gameStatsMinesweeperPersonalRecord = (difficulty) => {
+  const globalRecord = gameStatsProfile
+    ? gameStatsGlobalState.playerRecords.minesweeper[difficulty]
+    : null;
+  if (
+    gameStatsProfile &&
+    globalRecord?.playerId === gameStatsProfile.id &&
+    Number.isFinite(globalRecord.metric)
+  ) {
+    return globalRecord.metric;
+  }
   const localEntries = gameStatsLocalState.leaderboards.minesweeper[difficulty] || [];
-  const globalEntries = gameStatsProfile
-    ? (gameStatsGlobalState.leaderboards.minesweeper[difficulty] || []).filter(
-        (entry) => entry.playerId === gameStatsProfile.id
-      )
-    : [];
-  const times = [...localEntries, ...globalEntries]
+  const times = localEntries
+    .filter((entry) => entry.playerId === gameStatsProfile?.id)
     .map((entry) => entry.metric)
     .filter((metric) => Number.isFinite(metric));
   return times.length ? Math.min(...times) : 999;
 };
+
+const getGameStatsVerifiedPlayerRecord = (record) =>
+  gameStatsProfile && record?.playerId === gameStatsProfile.id ? record : null;
+
+const getGameStatsLocalPlayerRecord = (record) =>
+  gameStatsProfile && record?.playerId === gameStatsProfile.id ? record : null;
 
 const createGameStatsLeaderboardPlayer = (
   nameValue,
@@ -2848,6 +3097,9 @@ const createGameStatsGlobalCounterValue = (value, ariaLabel, className) => {
 const formatGameStatsSudokuDifficulty = (difficulty) =>
   `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
 
+const formatGameStatsSudokuLeaderboardTime = (seconds) =>
+  Number.isFinite(seconds) ? formatSudokuTime(seconds) : GAME_STATS_SUDOKU_PLACEHOLDER_TIME;
+
 const gameStatsSudokuTotalGames = (difficulty) => {
   const wins = gameStatsGlobalState.totals.sudoku.wins[difficulty];
   return wins.noHints + wins.withHints;
@@ -2856,7 +3108,8 @@ const gameStatsSudokuTotalGames = (difficulty) => {
 const appendSudokuGlobalLeaderboardRows = (list, entries, appendMetric) => {
   Array.from({ length: 3 }, (_, index) => {
     const entry = entries[index] || null;
-    const seconds = entry?.metric ?? 999;
+    const seconds = Number.isFinite(entry?.metric) ? entry.metric : null;
+    const timeLabel = seconds === null ? "no recorded time" : `${seconds} seconds`;
     const medal = document.createElement("img");
     medal.className = "game-stats-leaderboard-template-medal";
     medal.src = GAME_STATS_MEDAL_SOURCES[index];
@@ -2881,7 +3134,7 @@ const appendSudokuGlobalLeaderboardRows = (list, entries, appendMetric) => {
         rank: medal,
         identity,
         metric,
-        ariaLabel: `Rank ${index + 1}: ${entry?.name || "N/A"}, ${seconds} seconds${
+        ariaLabel: `Rank ${index + 1}: ${entry?.name || "N/A"}, ${timeLabel}${
           isCurrentPlayer ? ", your entry" : ""
         }`,
       })
@@ -2889,22 +3142,38 @@ const appendSudokuGlobalLeaderboardRows = (list, entries, appendMetric) => {
   });
 };
 
-const appendSudokuLocalBest = (panel, difficulty, appendMetric) => {
-  const entry = gameStatsLocalState.leaderboards.sudoku[difficulty][0] || null;
-  const seconds = entry?.metric ?? 999;
-  const hasEntry = Boolean(entry);
+const appendSudokuPersonalRecord = (panel, difficulty, appendMetric) => {
+  const verifiedEntry = getGameStatsVerifiedPlayerRecord(
+    gameStatsGlobalState.playerRecords.sudoku[difficulty]
+  );
+  const localEntry = getGameStatsLocalPlayerRecord(
+    gameStatsLocalState.leaderboards.sudoku[difficulty][0]
+  );
+  const entry = verifiedEntry || localEntry;
+  const playerRank = verifiedEntry
+    ? gameStatsGlobalState.playerRanks.sudoku[difficulty]
+    : createGameStatsEmptyPlayerRank();
+  const seconds = Number.isFinite(entry?.metric) ? entry.metric : null;
+  const hasEntry = Boolean(entry && seconds !== null);
+  const rankText = `#${playerRank.rank ?? "—"}`;
   const rank = createGameStatsNode(
     "span",
     "game-stats-leaderboard-template-rank",
-    hasEntry ? "#1" : "#—"
+    rankText
   );
-  rank.setAttribute("aria-label", hasEntry ? "Best local entry" : "No local record");
-  const iconSource = entry?.icon || (
-    entry ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+  rank.setAttribute(
+    "aria-label",
+    playerRank.rank ? `Global rank ${playerRank.rank}` : "No global rank"
   );
-  const identity = createGameStatsLeaderboardPlayer(entry?.name || "N/A", iconSource, {
-    currentPlayer: Boolean(entry && gameStatsProfile && entry.playerId === gameStatsProfile.id),
-  });
+  const iconSource =
+    entry?.icon || gameStatsProfile?.icon || GAME_STATS_EMPTY_LEADERBOARD_ICON;
+  const identity = createGameStatsLeaderboardPlayer(
+    entry?.name || gameStatsProfile?.name || "N/A",
+    iconSource,
+    {
+      currentPlayer: Boolean(gameStatsProfile),
+    }
+  );
   const metric = createGameStatsNode("span", "game-stats-metric");
   appendMetric(metric, seconds);
   const row = createGameStatsLeaderboardRow({
@@ -2912,11 +3181,13 @@ const appendSudokuLocalBest = (panel, difficulty, appendMetric) => {
     rank,
     identity,
     metric,
-    ariaLabel: `Best local no-hints record: ${entry?.name || "N/A"}, ${seconds} seconds`,
+    ariaLabel: hasEntry
+      ? `Your no-hints record: ${rankText}, ${entry.name}, ${seconds} seconds`
+      : `Your no-hints record: ${rankText}, N/A, no record`,
   });
   panel.append(
     createGameStatsLeaderboardLabeledSection({
-      label: "Best Local",
+      label: "Your Record",
       value: row,
       className: "game-stats-sudoku-local-best",
     })
@@ -2978,21 +3249,36 @@ const appendSolitaireGlobalLeaderboardRows = (list, entries) => {
   });
 };
 
-const appendSolitaireLocalWins = (panel) => {
-  const wins = gameStatsLocalState.totals.solitaire.wins;
+const appendSolitairePersonalRecord = (panel) => {
+  const verifiedEntry = getGameStatsVerifiedPlayerRecord(
+    gameStatsGlobalState.playerRecords.solitaire
+  );
+  const wins = verifiedEntry?.metric ?? gameStatsLocalState.totals.solitaire.wins;
   const hasProfile = Boolean(gameStatsProfile);
+  const playerRank = verifiedEntry
+    ? gameStatsGlobalState.playerRanks.solitaire
+    : createGameStatsEmptyPlayerRank();
+  const rankText = `#${playerRank.rank ?? "—"}`;
   const rank = createGameStatsNode(
     "span",
     "game-stats-leaderboard-template-rank",
-    hasProfile ? "#1" : "#—"
+    rankText
   );
-  rank.setAttribute("aria-label", hasProfile ? "Local Solitaire wins" : "No local profile");
-  const iconSource = gameStatsProfile?.icon || (
-    hasProfile ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+  rank.setAttribute(
+    "aria-label",
+    playerRank.rank ? `Global rank ${playerRank.rank}` : "No global rank"
   );
-  const identity = createGameStatsLeaderboardPlayer(gameStatsProfile?.name || "N/A", iconSource, {
-    currentPlayer: hasProfile,
-  });
+  const iconSource =
+    verifiedEntry?.icon ||
+    gameStatsProfile?.icon ||
+    (hasProfile ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON);
+  const identity = createGameStatsLeaderboardPlayer(
+    verifiedEntry?.name || gameStatsProfile?.name || "N/A",
+    iconSource,
+    {
+      currentPlayer: hasProfile,
+    }
+  );
   const metric = createGameStatsNode("span", "game-stats-metric");
   appendGameStatsLeaderboardMetric(metric, wins);
   const row = createGameStatsLeaderboardRow({
@@ -3000,13 +3286,15 @@ const appendSolitaireLocalWins = (panel) => {
     rank,
     identity,
     metric,
-    ariaLabel: `Local Solitaire wins: ${gameStatsProfile?.name || "N/A"}, ${wins} ${
+    ariaLabel: `Your Solitaire record: ${rankText}, ${
+      verifiedEntry?.name || gameStatsProfile?.name || "N/A"
+    }, ${wins} ${
       wins === 1 ? "win" : "wins"
     }`,
   });
   panel.append(
     createGameStatsLeaderboardLabeledSection({
-      label: "Your Wins",
+      label: "Your Record",
       value: row,
       className: "game-stats-solitaire-local-wins",
     })
@@ -3065,22 +3353,37 @@ const appendSnakeGlobalLeaderboardRows = (list, entries) => {
   });
 };
 
-const appendSnakeLocalBest = (panel, size) => {
-  const entry = gameStatsLocalState.leaderboards.snake[size][0] || null;
+const appendSnakePersonalRecord = (panel, size) => {
+  const verifiedEntry = getGameStatsVerifiedPlayerRecord(
+    gameStatsGlobalState.playerRecords.snake[size]
+  );
+  const localEntry = getGameStatsLocalPlayerRecord(
+    gameStatsLocalState.leaderboards.snake[size][0]
+  );
+  const entry = verifiedEntry || localEntry;
+  const playerRank = verifiedEntry
+    ? gameStatsGlobalState.playerRanks.snake[size]
+    : createGameStatsEmptyPlayerRank();
   const score = entry?.metric ?? 0;
-  const hasEntry = Boolean(entry);
+  const rankText = `#${playerRank.rank ?? "—"}`;
   const rank = createGameStatsNode(
     "span",
     "game-stats-leaderboard-template-rank",
-    hasEntry ? "#1" : "#—"
+    rankText
   );
-  rank.setAttribute("aria-label", hasEntry ? "Best local entry" : "No local record");
-  const iconSource = entry?.icon || (
-    entry ? GAME_STATS_DEFAULT_ICON : GAME_STATS_EMPTY_LEADERBOARD_ICON
+  rank.setAttribute(
+    "aria-label",
+    playerRank.rank ? `Global rank ${playerRank.rank}` : "No global rank"
   );
-  const identity = createGameStatsLeaderboardPlayer(entry?.name || "N/A", iconSource, {
-    currentPlayer: Boolean(entry && gameStatsProfile && entry.playerId === gameStatsProfile.id),
-  });
+  const iconSource =
+    entry?.icon || gameStatsProfile?.icon || GAME_STATS_EMPTY_LEADERBOARD_ICON;
+  const identity = createGameStatsLeaderboardPlayer(
+    entry?.name || gameStatsProfile?.name || "N/A",
+    iconSource,
+    {
+      currentPlayer: Boolean(gameStatsProfile),
+    }
+  );
   const metric = createGameStatsNode("span", "game-stats-metric");
   appendGameStatsLeaderboardMetric(metric, score);
   const row = createGameStatsLeaderboardRow({
@@ -3088,11 +3391,13 @@ const appendSnakeLocalBest = (panel, size) => {
     rank,
     identity,
     metric,
-    ariaLabel: `Best local score: ${entry?.name || "N/A"}, ${score} points`,
+    ariaLabel: `Your record: ${rankText}, ${
+      entry?.name || gameStatsProfile?.name || "N/A"
+    }, ${score} points`,
   });
   panel.append(
     createGameStatsLeaderboardLabeledSection({
-      label: "Best Local",
+      label: "Your Record",
       value: row,
       className: "game-stats-snake-local-best",
     })
@@ -3144,16 +3449,22 @@ const appendMinesweeperStat = (
 };
 
 const appendMinesweeperPersonalRecord = (container, difficulty) => {
-  const playerRank = gameStatsGlobalState.playerRanks.minesweeper[difficulty];
-  const profile = gameStatsProfile || {
+  const verifiedEntry = getGameStatsVerifiedPlayerRecord(
+    gameStatsGlobalState.playerRecords.minesweeper[difficulty]
+  );
+  const playerRank = verifiedEntry
+    ? gameStatsGlobalState.playerRanks.minesweeper[difficulty]
+    : createGameStatsEmptyPlayerRank();
+  const profile = verifiedEntry || gameStatsProfile || {
     name: "No saved player",
     icon: GAME_STATS_DEFAULT_ICON,
   };
+  const personalRecord = gameStatsMinesweeperPersonalRecord(difficulty);
   const rankText = `#${playerRank.rank ?? "—"}`;
   const rank = createGameStatsNode("span", "game-stats-minesweeper-rank", rankText);
   rank.setAttribute("aria-label", playerRank.rank ? `Global rank ${playerRank.rank}` : "No global rank");
   const metric = createGameStatsNode("span", "game-stats-metric");
-  appendGameStatsDigits(metric, gameStatsMinesweeperPersonalRecord(difficulty), 3);
+  appendGameStatsDigits(metric, personalRecord, 3);
   const identity = createMinesweeperLeaderboardPlayer(profile.name, profile.icon, {
     currentPlayer: Boolean(gameStatsProfile),
   });
@@ -3162,9 +3473,7 @@ const appendMinesweeperPersonalRecord = (container, difficulty) => {
     rank,
     identity,
     metric,
-    ariaLabel: `Your record: ${rankText}, ${profile.name}, ${gameStatsMinesweeperPersonalRecord(
-      difficulty
-    )} seconds`,
+    ariaLabel: `Your record: ${rankText}, ${profile.name}, ${personalRecord} seconds`,
   });
   container.append(
     createGameStatsLeaderboardLabeledSection({
@@ -3225,7 +3534,7 @@ const renderGameStatsSolitaire = (root) => {
     leaderboard.list,
     gameStatsGlobalState.leaderboards.solitaire
   );
-  appendSolitaireLocalWins(leaderboard.panel);
+  appendSolitairePersonalRecord(leaderboard.panel);
   appendSolitaireGlobalWins(leaderboard.panel);
   root.append(leaderboard.panel);
 };
@@ -3250,7 +3559,7 @@ const renderGameStatsSnake = (root) => {
         leaderboard.list,
         gameStatsGlobalState.leaderboards.snake[size]
       );
-      appendSnakeLocalBest(leaderboard.panel, size);
+      appendSnakePersonalRecord(leaderboard.panel, size);
       appendSnakeTotalGames(leaderboard.panel, size);
       column.append(leaderboard.panel);
     });
@@ -3276,14 +3585,18 @@ const renderGameStatsSudoku = (root) => {
         sectionLabel: "No-Hints Top 3",
         className: "game-stats-sudoku-leaderboard",
         metricPresentation: "text",
-        metricFormatter: formatSudokuTime,
+        metricFormatter: formatGameStatsSudokuLeaderboardTime,
       });
       appendSudokuGlobalLeaderboardRows(
         leaderboard.list,
         gameStatsGlobalState.leaderboards.sudoku[difficulty],
         leaderboard.appendMetric
       );
-      appendSudokuLocalBest(leaderboard.panel, difficulty, leaderboard.appendMetric);
+      appendSudokuPersonalRecord(
+        leaderboard.panel,
+        difficulty,
+        leaderboard.appendMetric
+      );
       appendSudokuTotalGames(leaderboard.panel, difficulty);
       column.append(leaderboard.panel);
     });
@@ -3470,11 +3783,49 @@ const resetGameProgressLocalData = () => {
   }
   updateSnakeHud();
 
+  pauseSudokuTimer();
+  sudokuState.playing = false;
+  sudokuState.hintMode = "off";
+  sudokuState.noteMode = false;
+  loadSudokuDifficulty("easy");
+  try {
+    localStorage.removeItem(SUDOKU_STORAGE_KEY);
+  } catch {
+    // The fresh in-memory puzzle still replaces the previous player's game.
+  }
+
   // Keep the sync queue and global state intact: reset is local-only and must
   // never retract verified or already queued leaderboard results.
-  gameStatsSyncMessage =
-    "Local progress was reset. Published and queued leaderboard results remain available.";
-  renderGameStatsWindows();
+  if (gameStatsSyncPromise || gameStatsSyncState === "auth-waiting") {
+    renderGameStatsWindows();
+  } else {
+    setGameStatsSyncState("ready", {
+      message:
+        "Local progress was reset. Published and queued leaderboard results remain available.",
+    });
+  }
+};
+
+const renderGameStatsSyncStatus = (status, message, animated, state) => {
+  if (!status) return;
+  status.setAttribute("aria-busy", String(animated));
+  status.dataset.gameStatsSyncState = state;
+  if (!animated || !message.endsWith("...")) {
+    status.removeAttribute("aria-label");
+    status.textContent = message;
+    return;
+  }
+
+  const ellipsis = createGameStatsNode("span", "game-stats-sync-ellipsis");
+  ellipsis.setAttribute("aria-hidden", "true");
+  Array.from({ length: 3 }, () => {
+    ellipsis.append(createGameStatsNode("span", "", "."));
+  });
+  status.setAttribute("aria-label", message);
+  status.replaceChildren(
+    document.createTextNode(message.slice(0, -3)),
+    ellipsis
+  );
 };
 
 const getGameStatsWindowParts = (game) => {
@@ -3487,18 +3838,42 @@ const getGameStatsWindowParts = (game) => {
     title: windowElement.querySelector("[data-game-stats-title]"),
     content: windowElement.querySelector("[data-game-stats-content]"),
     syncStatus: windowElement.querySelector("[data-game-stats-sync-status]"),
+    refreshButton: windowElement.querySelector("[data-game-stats-refresh]"),
   };
 };
 
 const renderGameStatsWindow = (game) => {
   const windowParts = getGameStatsWindowParts(game);
   if (!windowParts?.content) return;
-  const { title, content, syncStatus } = windowParts;
-  if (syncStatus) {
-    syncStatus.textContent = gameStatsSyncMessage ||
-      (isGameStatsBackendConfigured()
-        ? "Global stats will sync automatically."
-        : "Automatic global tracking is not configured yet; local stats stay on this device.");
+  const { title, content, syncStatus, refreshButton } = windowParts;
+  if (!gameStatsSyncAnnouncementGame) gameStatsSyncAnnouncementGame = game;
+  syncStatus?.setAttribute(
+    "aria-live",
+    game === gameStatsSyncAnnouncementGame ? "polite" : "off"
+  );
+  const backendConfigured = isGameStatsBackendConfigured();
+  const syncStateKey = backendConfigured ? gameStatsSyncState : "unconfigured";
+  const syncState = backendConfigured
+    ? getGameStatsSyncStateDefinition()
+    : GAME_STATS_SYNC_STATES.unconfigured;
+  const syncMessage =
+    (backendConfigured && gameStatsSyncMessage) || syncState.message;
+  renderGameStatsSyncStatus(syncStatus, syncMessage, syncState.busy, syncStateKey);
+
+  if (refreshButton) {
+    const gameLabel = `${game[0].toUpperCase()}${game.slice(1)}`;
+    const actionLabel =
+      syncState.action === "authenticate"
+        ? `Sign in as Administrator to sync ${gameLabel} stats`
+        : syncState.action === "refresh"
+          ? `Refresh ${gameLabel} stats`
+          : `Game stats refresh unavailable for ${gameLabel}`;
+    refreshButton.disabled = syncState.disabled;
+    refreshButton.dataset.gameStatsAction = syncState.action;
+    refreshButton.dataset.gameStatsSyncState = syncStateKey;
+    refreshButton.setAttribute("aria-busy", String(syncState.busy));
+    refreshButton.setAttribute("aria-label", actionLabel);
+    refreshButton.title = actionLabel;
   }
   if (title) {
     title.textContent = `${game[0].toUpperCase()}${game.slice(1)} Stats`;
@@ -3518,12 +3893,24 @@ const renderGameStatsWindow = (game) => {
 };
 
 const renderGameStatsWindows = () => {
-  GAME_STATS_SUPPORTED_GAMES.forEach((game) => {
-    const windowParts = getGameStatsWindowParts(game);
-    if (windowParts && !windowParts.windowElement.classList.contains("is-hidden")) {
-      renderGameStatsWindow(game);
-    }
+  const visibleGames = GAME_STATS_SUPPORTED_GAMES.filter((game) => {
+    const windowElement = getGameStatsWindowParts(game)?.windowElement;
+    return Boolean(
+      windowElement &&
+        !windowElement.classList.contains("is-hidden") &&
+        !windowElement.classList.contains("is-closing")
+    );
   });
+  if (!visibleGames.includes(gameStatsSyncAnnouncementGame)) {
+    gameStatsSyncAnnouncementGame = visibleGames[0] || "";
+  }
+  GAME_STATS_SUPPORTED_GAMES.forEach((game) => {
+    getGameStatsWindowParts(game)?.syncStatus?.setAttribute(
+      "aria-live",
+      game === gameStatsSyncAnnouncementGame ? "polite" : "off"
+    );
+  });
+  visibleGames.forEach(renderGameStatsWindow);
   renderGameProgressWindow();
 };
 
@@ -3637,6 +4024,7 @@ const positionVisibleGameStatsWindows = () => {
 
 const openGameStatsWindow = (game) => {
   if (!GAME_STATS_SUPPORTED_GAMES.includes(game)) return;
+  gameStatsSyncAnnouncementGame = game;
   const windowParts = getGameStatsWindowParts(game);
   const wasVisible = Boolean(
     windowParts &&
@@ -3658,7 +4046,14 @@ let gameStatsProfilePromptResolve = null;
 let gameStatsDraftProfile = null;
 let gameStatsSyncInProgress = false;
 let gameStatsSyncRequested = false;
+let gameStatsSyncPromise = null;
+let gameStatsManualRefreshInProgress = false;
+let gameStatsSyncState = "initial";
 let gameStatsSyncMessage = "";
+let gameStatsAuthenticationReturnFocus = null;
+let gameStatsSyncAnnouncementGame = "";
+let administratorSignInAttemptId = 0;
+let administratorSignInAbortController = null;
 let gameStatsLocalResetGeneration = 0;
 let gameStatsFirstWinHandoffInProgress = false;
 
@@ -17091,6 +17486,10 @@ const toggleWindow = (appId) => {
     const shouldOpen =
       win.classList.contains("is-hidden") ||
       win.classList.contains("is-closing");
+    if (appId === "administrator" && !shouldOpen) {
+      closeAppWindow(appId);
+      return;
+    }
     setWindowOpen(appId, shouldOpen);
     // (Removed temporary Minesweeper open trigger for achievement.)
     // Clash Royale app disabled for now.
@@ -17101,6 +17500,14 @@ const toggleWindow = (appId) => {
 };
 
 const closeAppWindow = (appId) => {
+  if (appId === "administrator") {
+    administratorSignInAttemptId += 1;
+    administratorSignInAbortController?.abort();
+    administratorSignInAbortController = null;
+    if (administratorSignIn) administratorSignIn.disabled = false;
+    if (administratorPassword) administratorPassword.value = "";
+    cancelGameStatsAuthenticationWait();
+  }
   setWindowOpen(appId, false);
   if (appId === "minesweeper") {
     msNewGame(msDifficulty ? msDifficulty.value : "beginner");
@@ -24812,7 +25219,8 @@ initCursorSettingsApp();
 
 const hasCustomCursorLoadingIndicator = () =>
   Boolean(
-    (snakeState.loading && isSnakeWindowVisible()) ||
+    (gameStatsManualRefreshInProgress && isGameStatsSyncBusy()) ||
+      (snakeState.loading && isSnakeWindowVisible()) ||
       (sudokuApp?.classList.contains("is-sudoku-loading") && isSudokuWindowVisible()) ||
       (sootSpritesWindow?.classList.contains("is-loading-sprites") &&
         isSootSpritesVisible()) ||
@@ -26008,8 +26416,7 @@ runAfterHomeActivation(startNekoSleepBreathing);
 runAfterHomeActivation(startRohinNekoAvatarAnimation);
 
 const closeAdministratorSignIn = () => {
-  if (administratorPassword) administratorPassword.value = "";
-  setWindowOpen("administrator", false);
+  closeAppWindow("administrator");
 };
 
 const ADMINISTRATOR_ALERT_Z_INDEX = 1_000_000;
@@ -26022,6 +26429,7 @@ const openAdministratorAccessAlert = () => {
 };
 
 const completeAdministratorSignIn = (administratorProof) => {
+  const resumeManualRefresh = gameStatsSyncState === "auth-waiting";
   resetGameProgressLocalData();
   const profile = saveGameStatsProfile(GAME_STATS_ROHIN_NEKO_PROFILE);
   if (!profile) return false;
@@ -26030,7 +26438,9 @@ const completeAdministratorSignIn = (administratorProof) => {
   if (!gameStatsAdministratorProof) return false;
   renderGameStatsWindows();
   startRohinNekoAvatarAnimation();
-  void syncQueuedGameStats();
+  gameStatsAuthenticationReturnFocus = null;
+  if (resumeManualRefresh) setGameStatsSyncState("ready");
+  void syncQueuedGameStats({ manual: resumeManualRefresh });
   return true;
 };
 
@@ -26047,26 +26457,48 @@ if (administratorSignInForm) {
     }
 
     if (administratorSignIn) administratorSignIn.disabled = true;
+    const signInAttemptId = (administratorSignInAttemptId += 1);
+    const signInController =
+      typeof AbortController === "function" ? new AbortController() : null;
+    administratorSignInAbortController = signInController;
     let administratorProof = null;
+    let authenticationRequestFailed = false;
     try {
       const response = await fetchGameStatsApi("/administrator/sign-in", {
         method: "POST",
         body: JSON.stringify({ username, password }),
+        signal: signInController?.signal,
       });
       administratorProof = normalizeAdministratorSignInResponse(
         await readGameStatsApiJson(response)
       );
-    } catch {
-      // Authentication failures are intentionally indistinguishable in the UI.
+    } catch (error) {
+      const status = Number(error?.status);
+      authenticationRequestFailed =
+        !Number.isFinite(status) ||
+        status >= 500 ||
+        [408, 425, 429].includes(status);
+      // Credential failures stay generic; transient request failures use the shared retry state.
     } finally {
-      if (administratorSignIn) administratorSignIn.disabled = false;
+      if (signInAttemptId === administratorSignInAttemptId) {
+        administratorSignInAbortController = null;
+        if (administratorSignIn) administratorSignIn.disabled = false;
+      }
     }
 
+    if (signInAttemptId !== administratorSignInAttemptId) return;
     if (!administratorProof || !completeAdministratorSignIn(administratorProof)) {
+      if (authenticationRequestFailed && gameStatsSyncState === "auth-waiting") {
+        failGameStatsAuthenticationWait();
+        if (administratorPassword) administratorPassword.value = "";
+        setWindowOpen("administrator", false);
+        return;
+      }
       closeAdministratorSignIn();
       return;
     }
-    closeAdministratorSignIn();
+    if (administratorPassword) administratorPassword.value = "";
+    setWindowOpen("administrator", false);
     openAdministratorAccessAlert();
   });
 }
@@ -26125,6 +26557,22 @@ gameStatsOpenButtons.forEach((button) => {
     event.preventDefault();
     event.stopPropagation();
     openGameStatsWindow(button.getAttribute("data-game-stats-open"));
+  });
+});
+
+gameStatsRefreshButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    gameStatsSyncAnnouncementGame =
+      button.getAttribute("data-game-stats-refresh") || gameStatsSyncAnnouncementGame;
+    const syncState = getGameStatsSyncStateDefinition();
+    if (button.disabled || syncState.disabled || syncState.busy) return;
+    if (syncState.action === "authenticate") {
+      requestGameStatsAdministratorAuthentication(button);
+      return;
+    }
+    if (syncState.action === "refresh") {
+      void syncQueuedGameStats({ manual: true });
+    }
   });
 });
 

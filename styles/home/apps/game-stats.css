@@ -165,16 +165,150 @@
 .game-stats-app {
   display: grid;
   gap: 8px;
+  min-width: 0;
+}
+
+.game-stats-sync-row {
+  align-items: stretch;
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  min-width: 0;
+  padding: 4px;
 }
 
 .game-stats-sync-status {
-  background: var(--surface);
-  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   color: #333;
+  display: block;
   font-size: 11px;
   line-height: 1.35;
-  margin: 0;
-  padding: 6px 8px;
+  min-height: 34px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 6px 4px;
+  white-space: normal;
+}
+
+.game-stats-sync-ellipsis {
+  white-space: nowrap;
+}
+
+.game-stats-sync-ellipsis > span {
+  animation: game-stats-refresh-dot 900ms ease-in-out infinite;
+  display: inline-block;
+  opacity: 0.28;
+}
+
+.game-stats-sync-ellipsis > span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.game-stats-sync-ellipsis > span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+.game-stats-refresh-button {
+  align-self: start;
+  box-sizing: border-box;
+  display: grid;
+  height: 34px;
+  min-height: 34px;
+  min-width: 34px;
+  padding: 4px;
+  place-items: center;
+  position: relative;
+  width: 34px;
+}
+
+.game-stats-refresh-button img {
+  display: block;
+  height: 22px;
+  image-rendering: auto;
+  max-width: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  width: 22px;
+}
+
+.game-stats-refresh-button:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+.game-stats-refresh-button:disabled {
+  color: #666;
+  cursor: not-allowed;
+}
+
+.game-stats-refresh-button[aria-busy="true"] {
+  color: #666;
+  cursor: progress;
+}
+
+.game-stats-refresh-button:disabled:not([aria-busy="true"]) img {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.game-stats-refresh-button[aria-busy="true"] img {
+  opacity: 0;
+}
+
+.game-stats-refresh-loading {
+  align-items: flex-end;
+  display: none;
+  gap: 1px;
+  inset: 0;
+  justify-content: center;
+  padding-bottom: 9px;
+  pointer-events: none;
+  position: absolute;
+}
+
+.game-stats-refresh-button[aria-busy="true"] .game-stats-refresh-loading {
+  display: flex;
+}
+
+.game-stats-refresh-loading > span {
+  animation: game-stats-refresh-dot 900ms ease-in-out infinite;
+  background: currentColor;
+  border-radius: 50%;
+  height: 3px;
+  opacity: 0.28;
+  width: 3px;
+}
+
+.game-stats-refresh-loading > span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.game-stats-refresh-loading > span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+@keyframes game-stats-refresh-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-stats-sync-ellipsis > span,
+  .game-stats-refresh-loading > span {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .game-stats-content {

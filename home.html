@@ -109,7 +109,7 @@
     <link rel="stylesheet" href="styles/home/apps/solitaire.css" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722" />
-    <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=profile-name-combobox-20260724" />
+    <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=leaderboard-refresh-20260725" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=carousel-hourglass-loader-20260722" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
@@ -1900,7 +1900,34 @@
         </div>
         <div class="window-body">
           <div class="game-stats-app">
-            <p class="game-stats-sync-status" data-game-stats-sync-status role="status"></p>
+            <div class="game-stats-sync-row">
+              <span
+                class="game-stats-sync-status"
+                data-game-stats-sync-status
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >Global stats will sync automatically.</span>
+              <button
+                class="game-stats-refresh-button"
+                type="button"
+                data-game-stats-refresh="minesweeper"
+                aria-label="Refresh Minesweeper stats"
+                aria-busy="false"
+                title="Refresh Minesweeper stats"
+              >
+                <img
+                  data-src="assets/solitaire-cards/undo-button.png"
+                  alt=""
+                  aria-hidden="true"
+                  width="22"
+                  height="22"
+                />
+                <span class="game-stats-refresh-loading" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </span>
+              </button>
+            </div>
             <div class="game-stats-content" data-game-stats-content></div>
           </div>
         </div>
@@ -1920,7 +1947,34 @@
         </div>
         <div class="window-body">
           <div class="game-stats-app">
-            <p class="game-stats-sync-status" data-game-stats-sync-status role="status"></p>
+            <div class="game-stats-sync-row">
+              <span
+                class="game-stats-sync-status"
+                data-game-stats-sync-status
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >Global stats will sync automatically.</span>
+              <button
+                class="game-stats-refresh-button"
+                type="button"
+                data-game-stats-refresh="solitaire"
+                aria-label="Refresh Solitaire stats"
+                aria-busy="false"
+                title="Refresh Solitaire stats"
+              >
+                <img
+                  data-src="assets/solitaire-cards/undo-button.png"
+                  alt=""
+                  aria-hidden="true"
+                  width="22"
+                  height="22"
+                />
+                <span class="game-stats-refresh-loading" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </span>
+              </button>
+            </div>
             <div class="game-stats-content" data-game-stats-content></div>
           </div>
         </div>
@@ -1940,7 +1994,34 @@
         </div>
         <div class="window-body">
           <div class="game-stats-app">
-            <p class="game-stats-sync-status" data-game-stats-sync-status role="status"></p>
+            <div class="game-stats-sync-row">
+              <span
+                class="game-stats-sync-status"
+                data-game-stats-sync-status
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >Global stats will sync automatically.</span>
+              <button
+                class="game-stats-refresh-button"
+                type="button"
+                data-game-stats-refresh="snake"
+                aria-label="Refresh Snake stats"
+                aria-busy="false"
+                title="Refresh Snake stats"
+              >
+                <img
+                  data-src="assets/solitaire-cards/undo-button.png"
+                  alt=""
+                  aria-hidden="true"
+                  width="22"
+                  height="22"
+                />
+                <span class="game-stats-refresh-loading" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </span>
+              </button>
+            </div>
             <div class="game-stats-content" data-game-stats-content></div>
           </div>
         </div>
@@ -1960,7 +2041,34 @@
         </div>
         <div class="window-body">
           <div class="game-stats-app">
-            <p class="game-stats-sync-status" data-game-stats-sync-status role="status"></p>
+            <div class="game-stats-sync-row">
+              <span
+                class="game-stats-sync-status"
+                data-game-stats-sync-status
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >Global stats will sync automatically.</span>
+              <button
+                class="game-stats-refresh-button"
+                type="button"
+                data-game-stats-refresh="sudoku"
+                aria-label="Refresh Sudoku stats"
+                aria-busy="false"
+                title="Refresh Sudoku stats"
+              >
+                <img
+                  data-src="assets/solitaire-cards/undo-button.png"
+                  alt=""
+                  aria-hidden="true"
+                  width="22"
+                  height="22"
+                />
+                <span class="game-stats-refresh-loading" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </span>
+              </button>
+            </div>
             <div class="game-stats-content" data-game-stats-content></div>
           </div>
         </div>
@@ -2304,6 +2412,7 @@
         class="window app-window is-hidden administrator-window"
         data-app-window="administrator"
         id="administrator-window"
+        role="dialog"
         aria-labelledby="administrator-window-title"
       >
         <div class="title-bar">
@@ -5406,10 +5515,10 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-2bd2ca9411a5784f3b5ad3170e22473d6e072010588b0ac9f6a365e4f15c40e2"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-12e4247a7ac5ad874b25a3be22c55d3ac4a2f7ae8fad67ac4de5fe44c0189f35"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-2bd2ca9411a5784f3b5ad3170e22473d6e072010588b0ac9f6a365e4f15c40e2"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-12e4247a7ac5ad874b25a3be22c55d3ac4a2f7ae8fad67ac4de5fe44c0189f35"></script>
     <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
-    <script src="scripts/home/main.js?v=game-build-2bd2ca9411a5784f3b5ad3170e22473d6e072010588b0ac9f6a365e4f15c40e2"></script>
+    <script src="scripts/home/main.js?v=game-build-12e4247a7ac5ad874b25a3be22c55d3ac4a2f7ae8fad67ac4de5fe44c0189f35"></script>
   </body>
 </html>
