@@ -585,6 +585,36 @@ Keep Workers observability enabled, but record only operational outcomes and
 coarse error reasons. Never emit request bodies, Turnstile responses, secrets,
 session proofs, raw IPs, or IP HMACs to logs or analytics.
 
+## Operational Next Steps
+
+Use this checklist after the verified release and after every future Game Stats
+change:
+
+1. Keep frontend and Worker build metadata atomic: regenerate integrity
+   metadata, deploy the Worker, publish the same committed static state, and
+   confirm the live files and Worker use the identical build hash.
+2. Run the full source and rendered UI suites, including mobile and desktop
+   multiplayer, unplayed, empty, loading, authentication, failure, and timeout
+   states. Inspect the committed at-a-glance contact sheet when copy or state
+   logic changes.
+3. Exercise one ordinary player and the protected Administrator through the
+   visible production UI. Confirm the local queue drains, requested-player
+   rank/record agrees with `/stats`, and public Top 3 data does not depend on
+   the queried player.
+4. For any production smoke run, export D1 and capture a Time Travel bookmark
+   immediately before writes. Use a unique run prefix and a temporary manifest,
+   then delete only exact manifest-listed events and sessions and reconcile
+   every pre-existing row afterward.
+5. Monitor Worker errors, rate-limit pressure, and D1 growth without logging
+   request bodies, credentials, proofs, raw IPs, or IP-derived hashes. Let
+   shared rate counters expire normally.
+6. Rotate Administrator and signing secrets on the security schedule or after
+   suspected exposure. Re-test the visible sign-in, short-lived proof,
+   protected publish, and failure copy after rotation.
+7. Add Turnstile only as an atomic browser-and-Worker release. Do not set the
+   production secret until the widget sends a fresh token and the complete
+   flow passes on the deployed origin.
+
 ## Official References
 
 - [Workers Wrangler configuration](https://developers.cloudflare.com/workers/wrangler/configuration/)
