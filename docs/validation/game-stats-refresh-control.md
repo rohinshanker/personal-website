@@ -8,7 +8,13 @@ stats windows.
 
 Last verified: 2026-07-25
 
-![Game Stats refresh and leaderboard state contact sheet](assets/game-stats-refresh-states.png)
+[Open the complete, responsive Game Stats state review](assets/game-stats-refresh-review.html).
+It shows every exact status/action state, animated and reduced-motion loading
+indicators, cursor rules, local-result notice, the Administrator success popup,
+multiplayer rank edge cases, and the Sudoku `99:99` empty value in one page.
+
+The [rendered production-state contact sheet](assets/game-stats-refresh-states.png)
+remains a representative screenshot sample.
 
 ## State Contract
 
@@ -30,6 +36,15 @@ atomic announcement, and become static under reduced motion.
 
 The refresh action stays right-aligned inside the shared sunken status strip
 and uses the bundled Solitaire undo icon.
+
+## Local Result and Reset Notices
+
+| Situation | Exact status copy | Network action |
+| --- | --- | --- |
+| Queued result has no verified session | `Local stats are saved. A result without a verified game session cannot be published.` | Refresh remains available. |
+| Server verification rejects a result | `Local stats are saved, but a result could not pass server verification.` | Refresh remains available. |
+| Game began without a verified session | `Local stats are saved. This result started without a verified game session.` | Refresh remains available. |
+| Administrator sign-in resets local progress | `Local progress was reset. Published and queued leaderboard results remain available.` | Refresh remains available. |
 
 Canceling Administrator sign-in restores the initiating refresh button when it
 is still visible, otherwise focus moves to another visible refresh action or
@@ -55,10 +70,12 @@ node --test tests/game-stats-refresh-control.test.mjs \
   tests/game-stats-frontend-contract.test.mjs \
   tests/administrator-sign-in.test.mjs
 npx playwright test tests/ui/game-stats-refresh-control.spec.mjs \
-  tests/ui/administrator-sign-in.spec.mjs
+  tests/ui/administrator-sign-in.spec.mjs \
+  tests/ui/game-stats-refresh-review.spec.mjs
 ```
 
 The rendered suite covers 375×812 and 1280×800, exact copy, animated/busy
 semantics, the loading cursor, queue publication, request failure, backend
 absence, shared/coalesced requests, Administrator cancel/success races, focus,
-and horizontal overflow.
+and horizontal overflow. The review artifact additionally renders at 768×1024
+and 1440×900.

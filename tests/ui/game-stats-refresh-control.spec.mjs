@@ -72,6 +72,7 @@ const installApiHarness = async (
   const statsBehaviors = [];
   const eventGates = [];
   const signInGates = [];
+  const signInFailureStatuses = [];
 
   await page.route(`${API_BASE_URL}/**`, async (route) => {
     const request = route.request();
@@ -138,6 +139,18 @@ const installApiHarness = async (
       const gate = signInGates.shift();
       gate?.started.resolve();
       if (gate) await gate.release.promise;
+      const failureStatus = signInFailureStatuses.shift();
+      if (failureStatus) {
+        await route.fulfill({
+          status: failureStatus,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: false,
+            error: "Authentication service unavailable",
+          }),
+        });
+        return;
+      }
       try {
         await route.fulfill({
           contentType: "application/json",
@@ -163,6 +176,9 @@ const installApiHarness = async (
 
   return {
     eventRequests,
+    failNextSignIn(status = 503) {
+      signInFailureStatuses.push(status);
+    },
     holdNextEvent() {
       const gate = { release: createDeferred(), started: createDeferred() };
       eventGates.push(gate);
@@ -664,6 +680,82 @@ test("authentication action waits, cancel restores focus, and sign-in resumes pu
     path: testInfo.outputPath("administrator-sign-in-resumed.png"),
   });
   expectNoUnexpectedRuntimeErrors(runtime, /403 \(Forbidden\)/);
+});
+
+test("Administrator request failure stays retryable and restores refresh focus", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize(viewports[1]);
+  const runtime = collectRuntimeErrors(page);
+  await installBackendConfig(page);
+  const api = await installApiHarness(page, {
+    requireAdministratorProof: true,
+  });
+  api.failNextSignIn(503);
+  await preparePage(page, {
+    queue: [createQueuedSubmission(ADMINISTRATOR_PROFILE)],
+  });
+  const stats = await openStatsWindow(page, "minesweeper");
+  await expect(stats.status).toHaveText(
+    "Sign in as Administrator to publish your verified Rohin result."
+  );
+
+  await stats.button.click();
+  const administratorWindow = page.locator("#administrator-window");
+  const username = page.locator("#administrator-username");
+  const password = page.locator("#administrator-password");
+  const submit = page.locator("#administrator-sign-in");
+  await expect(administratorWindow).toBeVisible();
+  await expect(username).toBeFocused();
+  await username.fill("administrator");
+  await password.fill("password");
+  await submit.click();
+
+  await expect(administratorWindow).toBeHidden();
+  await expectSyncState(stats, {
+    busy: false,
+    buttonDisabled: false,
+    buttonLabel: "Sign in as Administrator to sync Minesweeper stats",
+    message: "Request failed. Try again later.",
+  });
+  await expect(stats.status).toHaveAttribute(
+    "data-game-stats-sync-state",
+    "auth-request-failed"
+  );
+  await expect(stats.button).toHaveAttribute(
+    "data-game-stats-action",
+    "authenticate"
+  );
+  await expect(stats.button).toBeFocused();
+  await expect(submit).toBeEnabled();
+  await expect(password).toHaveValue("");
+  await expect(page.locator("#administrator-alert-window")).toBeHidden();
+  await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
+  await expectNoHorizontalOverflow(stats);
+  await page.screenshot({
+    path: testInfo.outputPath("administrator-request-failed.png"),
+  });
+
+  await stats.button.click();
+  await expect(administratorWindow).toBeVisible();
+  await expect(username).toBeFocused();
+  await expect(submit).toBeEnabled();
+  await expectSyncState(stats, {
+    busy: true,
+    buttonDisabled: true,
+    buttonLabel: "Game stats refresh unavailable for Minesweeper",
+    message: "Waiting for authentication...",
+  });
+  await page.screenshot({
+    path: testInfo.outputPath("administrator-request-retry-open.png"),
+  });
+  expect(api.signInRequests).toEqual([
+    { username: "administrator", password: "password" },
+  ]);
+  expectNoUnexpectedRuntimeErrors(
+    runtime,
+    /403 \(Forbidden\)|503 \(Service Unavailable\)/
+  );
 });
 
 test("closing Administrator sign-in invalidates a delayed successful response", async ({
