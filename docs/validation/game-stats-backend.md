@@ -19,9 +19,9 @@ or high-stakes game.
 
 - The public Worker endpoint is
   `https://personal-site-game-stats.rohinshankerme.workers.dev`. Worker version
-  `20589694-337d-4c6a-9664-52611d79c2ae` and static application commit
-  `5ed0043` were released together on build
-  `sha256-12e4247a7ac5ad874b25a3be22c55d3ac4a2f7ae8fad67ac4de5fe44c0189f35`.
+  `c59b72c1-9dc8-4a4a-83fe-5a7ce45f3d68` and static application commit
+  `ac2870d` were released together on build
+  `sha256-da7f63bd97a6ef8a28de5ef48e5297495253fe7809d9a88af33c21d5148d3ab5`.
   The deployed `index.html`, `home.html`, and generated browser backend config
   matched the committed file hashes after GitHub Pages converged.
 - The deployed Worker accepts the exact production origin and allows both
@@ -30,21 +30,23 @@ or high-stakes game.
   `localhost` or `127.0.0.1` against the public Worker.
 - `scripts/home/game-stats-backend.js` now uses that public HTTPS endpoint. It
   contains no credential; the Worker secrets remain server-only.
-- The source suite passes 116 tests and the rendered browser suite passes 55
-  tests, including a 12-player all-category model at mobile and desktop
-  viewports. The public Worker health check and D1-backed `/stats` read both
-  succeed on the deployed release.
-- A uniquely tagged production stress run created ten independent beginner
-  Minesweeper sessions and ten newly applied events. Every session/event request
-  returned `201`. Every requested-player rank and record reconciled with a
-  direct D1 query, including the protected Administrator and an unplayed
-  profile, while every response returned the same public Top 3.
-- Exact manifest-based cleanup removed only those ten tagged events and ten
-  captured sessions. Every pre-existing event and session row remained, as did
-  the pre-existing rate-bucket identities. No tagged event, player, session, or
-  public payload entry remains, and `PRAGMA quick_check` returns `ok`.
-  Rate-limit counters were intentionally not rolled back; they expire under the
-  normal rate-limit lifecycle.
+- The source suite passes 129 tests and the rendered browser suite passes 91
+  tests. The leaderboard remained visible at 375×812, 768×1024, 1280×800, and
+  1440×900. The D1-backed health check reports the exact active build, the
+  current build rejects an unsupported game with `400`, and the previous build
+  is rejected with `409`.
+- A fresh public profile and the protected Administrator each completed one
+  duration-valid Easy no-hints Sudoku through the deployed UI. Local progress,
+  the requested-player record/rank, the public Top 3, and direct D1 rows agreed:
+  the public profile ranked 2 of 2 at `04:53`, and Administrator ranked 1 of 2
+  at `00:48`. Both exact sessions were consumed with their events in the
+  transactional batch, and the browser status returned to up to date.
+- Exact manifest-based cleanup removed the two verification events and all six
+  sessions opened during the run, including four unused sessions. The two
+  pre-existing events, six pre-existing sessions, three shared rate-limit
+  buckets, and two migrations remained unchanged. A local reset plus reload did
+  not republish either event; public Sudoku data returned to empty, and
+  `PRAGMA quick_check` returned `ok`.
 
 Do not invent a Worker URL from the account ID. After deploying, copy the URL
 from Wrangler's successful deployment output. A `workers.dev` URL is normally
