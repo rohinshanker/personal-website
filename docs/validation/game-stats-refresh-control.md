@@ -28,11 +28,23 @@ request. Only the initiating visible status uses `aria-live="polite"`; duplicate
 visible copies use `aria-live="off"`. Animated dots are decorative, remain one
 atomic announcement, and become static under reduced motion.
 
+The refresh action stays right-aligned inside the shared sunken status strip
+and uses the bundled Solitaire undo icon.
+
 Canceling Administrator sign-in restores the initiating refresh button when it
 is still visible, otherwise focus moves to another visible refresh action or
 the Start button. Closing the dialog also aborts and invalidates its request, so
 a delayed response cannot grant access, reset local data, or open the success
 alert.
+
+A successful Administrator sign-in clears this browser's saved profile and
+local game aggregates, clears Snake high scores, replaces any prior Sudoku save
+with a fresh easy puzzle, then installs the protected profile. It deliberately
+keeps already published global data and the verified-result sync queue, so a
+pending protected result can still publish. The opaque proof remains only in
+the current tab's session storage. The centered success alert uses the annoying
+popup shape and bundled `msg_warning.ico` warning-triangle icon, contains only
+`Administrator access granted.`, and provides one right-aligned `OK` button.
 
 ## Repeatable Verification
 
