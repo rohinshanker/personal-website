@@ -33,6 +33,10 @@ test("media loading uses active-content-first and sequential background contract
   assert.match(main, /const queueGallerySuccessors = \(element, items, currentIndex\) =>/);
   assert.match(main, /preloadMediaSourcesAfter\(element, successors, \{/);
   assert.match(main, /galleryPreloadTokens\.get\(element\) === token && isVisibleMediaElement\(element\)/);
+  assert.match(
+    main,
+    /const staticCarouselPreloadDefinitions = Object\.freeze\(\[[\s\S]*?element: aboutCarouselImage,[\s\S]*?items: ABOUT_CAROUSEL_ITEMS,/
+  );
   assert.match(main, /const prewarmOpenedAppMedia = \(root, carouselTasks\) =>/);
   assert.match(main, /preloadDeferredMediaInOrder\(root, \{ activeOnly: true \}\)/);
   assert.match(main, /activeMedia\s*\.then\(\(\) => Promise\.all\(carouselTasks\)\)/);

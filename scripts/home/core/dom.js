@@ -7,6 +7,11 @@ const all = (selector) => doc.querySelectorAll(selector);
 window.homeDom = {
   dom: {
   clock: byId("taskbar-clock"),
+  aboutCurrentDate: byId("about-current-date"),
+  aboutCarouselImage: byId("about-carousel-image"),
+  aboutCarouselPrev: byId("about-carousel-prev"),
+  aboutCarouselCounter: byId("about-carousel-counter"),
+  aboutCarouselNext: byId("about-carousel-next"),
   startButton: one(".start-button"),
   appButtons: all("[data-app]"),
   appWindows: all("[data-app-window]"),

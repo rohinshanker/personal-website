@@ -159,6 +159,11 @@ runAfterHomeActivation(() => {
 
 const {
   clock,
+  aboutCurrentDate,
+  aboutCarouselImage,
+  aboutCarouselPrev,
+  aboutCarouselCounter,
+  aboutCarouselNext,
   startButton,
   appButtons,
   appWindows,
@@ -4449,12 +4454,143 @@ const lockMobileViewportZoom = () => {
   );
 };
 
+const aboutDateOrdinalSuffix = (day) => {
+  const lastTwoDigits = day % 100;
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 13) return "th";
+  if (day % 10 === 1) return "st";
+  if (day % 10 === 2) return "nd";
+  if (day % 10 === 3) return "rd";
+  return "th";
+};
+
+const aboutDateLabel = (date) => {
+  const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
+  const month = date.toLocaleDateString("en-US", { month: "long" });
+  const day = date.getDate();
+  return `${weekday} the ${day}${aboutDateOrdinalSuffix(day)}, ${month} ${date.getFullYear()}`;
+};
+
+const aboutDateValue = (date) =>
+  [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+    .map((part, index) => (index ? String(part).padStart(2, "0") : String(part)))
+    .join("-");
+
+const updateAboutCurrentDate = (now = new Date()) => {
+  if (!aboutCurrentDate) return;
+  aboutCurrentDate.dateTime = aboutDateValue(now);
+  aboutCurrentDate.textContent = aboutDateLabel(now);
+};
+
+const ABOUT_DEGREE_DWELL_MS = 1000;
+const ABOUT_DEGREE_SCROLL_SPEED_PX_PER_SECOND = 30;
+const ABOUT_DEGREE_MIN_TRAVEL_MS = 1200;
+const aboutDegreeAnimations = new WeakMap();
+const aboutDegreeTypes = [...document.querySelectorAll(".about-degree-type")];
+const aboutDegreeFields = [...document.querySelectorAll("[data-about-degree-field]")];
+const aboutDegreeReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let aboutDegreeRefreshFrame = 0;
+
+const cancelAboutDegreeAnimation = (field) => {
+  const animation = aboutDegreeAnimations.get(field);
+  if (!animation) return;
+  animation.cancel();
+  aboutDegreeAnimations.delete(field);
+};
+
+const updateAboutDegreeTypeLabel = (type) => {
+  const fullLabel = type.dataset.fullLabel || type.textContent;
+  const shortLabel = type.dataset.shortLabel || fullLabel;
+  type.textContent = fullLabel;
+  if (type.clientWidth > 1 && type.scrollWidth > type.clientWidth + 1) {
+    type.textContent = shortLabel;
+  }
+};
+
+const updateAboutDegreeField = (field) => {
+  const track = field.querySelector(".about-degree-field-track");
+  cancelAboutDegreeAnimation(field);
+  field.classList.remove("is-overflowing");
+  field.tabIndex = -1;
+  field.scrollLeft = 0;
+  if (!track || field.clientWidth <= 1) return;
+
+  const distance = Math.ceil(track.scrollWidth - field.clientWidth);
+  if (distance <= 1) return;
+
+  field.classList.add("is-overflowing");
+  field.tabIndex = 0;
+  if (
+    aboutDegreeReducedMotion.matches ||
+    document.activeElement === field ||
+    typeof track.animate !== "function"
+  ) {
+    return;
+  }
+
+  const travelMs = Math.max(
+    ABOUT_DEGREE_MIN_TRAVEL_MS,
+    (distance / ABOUT_DEGREE_SCROLL_SPEED_PX_PER_SECOND) * 1000
+  );
+  const duration = 2 * (ABOUT_DEGREE_DWELL_MS + travelMs);
+  const animation = track.animate(
+    [
+      { transform: "translateX(0px)", offset: 0 },
+      {
+        transform: "translateX(0px)",
+        offset: ABOUT_DEGREE_DWELL_MS / duration,
+      },
+      {
+        transform: `translateX(-${distance}px)`,
+        offset: (ABOUT_DEGREE_DWELL_MS + travelMs) / duration,
+      },
+      {
+        transform: `translateX(-${distance}px)`,
+        offset: (2 * ABOUT_DEGREE_DWELL_MS + travelMs) / duration,
+      },
+      { transform: "translateX(0px)", offset: 1 },
+    ],
+    { duration, easing: "linear", iterations: Infinity }
+  );
+  aboutDegreeAnimations.set(field, animation);
+};
+
+const refreshAboutDegrees = () => {
+  aboutDegreeRefreshFrame = 0;
+  aboutDegreeTypes.forEach(updateAboutDegreeTypeLabel);
+  aboutDegreeFields.forEach(updateAboutDegreeField);
+};
+
+const queueAboutDegreeRefresh = () => {
+  if (aboutDegreeRefreshFrame) cancelAnimationFrame(aboutDegreeRefreshFrame);
+  aboutDegreeRefreshFrame = requestAnimationFrame(refreshAboutDegrees);
+};
+
+aboutDegreeFields.forEach((field) => {
+  field.addEventListener("focus", () => updateAboutDegreeField(field));
+  field.addEventListener("blur", queueAboutDegreeRefresh);
+  field.addEventListener("mouseenter", () => aboutDegreeAnimations.get(field)?.pause());
+  field.addEventListener("mouseleave", () => aboutDegreeAnimations.get(field)?.play());
+});
+
+if (typeof ResizeObserver === "function") {
+  const aboutDegreeResizeObserver = new ResizeObserver(queueAboutDegreeRefresh);
+  [...aboutDegreeTypes, ...aboutDegreeFields].forEach((element) => {
+    aboutDegreeResizeObserver.observe(element);
+  });
+} else {
+  window.addEventListener("resize", queueAboutDegreeRefresh);
+}
+aboutDegreeReducedMotion.addEventListener("change", queueAboutDegreeRefresh);
+document.fonts?.ready.then(queueAboutDegreeRefresh);
+queueAboutDegreeRefresh();
+
 const updateClock = () => {
   const now = new Date();
   clock.textContent = now.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
+  updateAboutCurrentDate(now);
 };
 
 const updateCalendarClock = () => {
@@ -4597,6 +4733,9 @@ const restartWindowAnimation = (win, animationClass) => {
 };
 
 const RANDOM_EVENT_GLOBAL_DEBUG = false;
+// For local testing, enable this together with individual event debug flags.
+// Keep false in committed code.
+const RANDOM_EVENT_DEVELOPER_MODE = false;
 const DEBUG_SYSTEM_ALERTS = Object.freeze([
   Object.freeze({
     id: "ram-prices",
@@ -7990,6 +8129,7 @@ const flashFelizJuevesChoice = () => {
 };
 
 const maybeShowFelizJueves = () => {
+  if (RANDOM_EVENT_DEVELOPER_MODE) return false;
   if (isRandomEventGameplayLockActive()) return false;
   const today = new Date();
   if (today.getDay() !== 4) return false;
@@ -15826,6 +15966,9 @@ const randomEventDefinitionCanSchedule = (
 const randomEventDebugEnabled = (definition) =>
   RANDOM_EVENT_GLOBAL_DEBUG || Boolean(definition.debug);
 
+const randomEventDeveloperModeAllows = (definition) =>
+  !RANDOM_EVENT_DEVELOPER_MODE || Boolean(definition.debug);
+
 const RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS = new Set([
   "carouselNavigation",
   "failedAction",
@@ -15853,7 +15996,7 @@ const randomEventTriggerProbability = (triggerName, definition = null) => {
 
 const RANDOM_EVENT_SELECTION_LOCKDOWN_MS = 2 * 60 * 1000;
 const randomEventSelectionLockdownUntil = new Map();
-const RANDOM_EVENT_TRIGGER_COOLDOWN_MS = 5 * 1000;
+const RANDOM_EVENT_TRIGGER_COOLDOWN_MS = 7.5 * 1000;
 let randomEventTriggerCooldownUntil = 0;
 
 const isRandomEventTriggerOnCooldown = (now = Date.now()) => {
@@ -16131,21 +16274,22 @@ const isRandomEventGameplayLockActive = () =>
   (isToxicJungleVisible() && toxicJungleStage === TOXIC_JUNGLE_STAGE_ACTIVE);
 
 const scheduleRandomEventRun = (definition, context) => {
+  const debug = Boolean(context.debug);
   if (isRandomEventGameplayLockActive()) return false;
   if (randomEventPendingDefinitions.has(definition)) return false;
-  if (isRandomEventTriggerOnCooldown()) return false;
+  if (!debug && isRandomEventTriggerOnCooldown()) return false;
   if (isRandomEventOnLockdown(definition)) return false;
   if (
     !randomEventDefinitionCanSchedule(definition, {
       consumeRelease: true,
-      debug: Boolean(context.debug),
+      debug,
     })
   ) {
     return false;
   }
   randomEventPendingDefinitions.add(definition);
   recordRandomEventSelection(definition);
-  recordRandomEventTrigger();
+  if (!debug) recordRandomEventTrigger();
   const delayRequest = new Promise((resolve) => {
     window.setTimeout(resolve, randomEventDelayMs());
   });
@@ -16154,7 +16298,7 @@ const scheduleRandomEventRun = (definition, context) => {
   Promise.all([delayRequest, preloadRequest]).then(() => {
     randomEventPendingDefinitions.delete(definition);
     if (isRandomEventGameplayLockActive()) return;
-    const { triggerName, detail, debug } = context;
+    const { triggerName, detail } = context;
     if (
       definition.canTrigger &&
       !definition.canTrigger({ triggerName, detail, debug })
@@ -16169,13 +16313,19 @@ const scheduleRandomEventRun = (definition, context) => {
 const triggerRandomEvents = (triggerName, detail = {}) => {
   if (!isHomeActivationReady()) return false;
   if (isRandomEventGameplayLockActive()) return false;
-  if (isRandomEventTriggerOnCooldown()) return false;
+  const triggerOnCooldown = isRandomEventTriggerOnCooldown();
+  const debugEventPending = Array.from(randomEventPendingDefinitions).some(
+    randomEventDebugEnabled
+  );
   const eligibleEvents = [];
-  let debugRan = false;
+  const forcedDebugEvents = [];
 
   randomEventDefinitions.forEach((definition) => {
     if (randomEventPendingDefinitions.has(definition)) return;
+    if (!randomEventDeveloperModeAllows(definition)) return;
     const debug = randomEventDebugEnabled(definition);
+    if (debugEventPending && debug) return;
+    if (triggerOnCooldown && !debug) return;
     const forceDebugRun =
       debug && !RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS.has(triggerName);
     if (
@@ -16186,9 +16336,11 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
     }
     if (!randomEventDefinitionCanSchedule(definition, { debug })) return;
     if (forceDebugRun) {
-      if (scheduleRandomEventRun(definition, { triggerName, detail, debug })) {
-        debugRan = true;
-      }
+      forcedDebugEvents.push({
+        definition,
+        debug,
+        triggerProbability: 1,
+      });
       return;
     }
     eligibleEvents.push({
@@ -16198,7 +16350,17 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
     });
   });
 
-  if (debugRan) return true;
+  const selectedDebug = chooseRandomEventOutsideLockdown(forcedDebugEvents);
+  if (
+    selectedDebug &&
+    scheduleRandomEventRun(selectedDebug.definition, {
+      triggerName,
+      detail,
+      debug: selectedDebug.debug,
+    })
+  ) {
+    return true;
+  }
 
   const maxTriggerProbability = eligibleEvents.reduce(
     (maxProbability, event) => Math.max(maxProbability, event.triggerProbability),
@@ -17474,6 +17636,9 @@ const setWindowOpen = (appId, open) => {
   if (!win) return;
 
   if (open) {
+    if (appId === "minesweeper") {
+      void preloadMinesweeperNumberAssets();
+    }
     delete win.dataset.mediaClosing;
     const isVisible =
       !win.classList.contains("is-hidden") &&
@@ -21309,6 +21474,64 @@ const renderModelingGallery = (container) => {
 
 setupGalleryControlLabels();
 
+const ABOUT_CAROUSEL_ITEMS = Object.freeze([
+  Object.freeze({
+    src: "assets/about-carousel/1.jpg",
+    alt: "Portrait of Rohin Shanker in front of red rock formations",
+  }),
+  Object.freeze({
+    src: "assets/about-carousel/2.jpg",
+    alt: "Rohin Shanker seated for the Fast Sonder Lookbook Shoot 2",
+  }),
+  Object.freeze({
+    src: "assets/about-carousel/3.jpg",
+    alt: "Rohin Shanker making a pie with a friend",
+  }),
+  Object.freeze({
+    src: "assets/about-carousel/4.jpg",
+    alt: "Rohin Shanker walking in the Club Rambutan runway show",
+  }),
+  Object.freeze({
+    src: "assets/about-carousel/5.jpg",
+    alt: "Rohin Shanker celebrating graduation with friends at UC Berkeley",
+  }),
+  Object.freeze({
+    src: "assets/about-carousel/6.jpg",
+    alt: "Rohin Shanker backstage at the Garb Sub-urban runway show",
+  }),
+  Object.freeze({
+    src: "assets/about-carousel/7.jpg",
+    alt: "Rohin Shanker with a friend at a music festival",
+  }),
+  Object.freeze({
+    src: "assets/about-carousel/8.jpg",
+    alt: "Rohin Shanker resting beside climbing pads",
+  }),
+  Object.freeze({
+    src: "assets/about-carousel/9.jpg",
+    alt: "Rohin Shanker modeling in the Garb Means Business shoot",
+  }),
+]);
+let aboutCarouselIndex = 0;
+
+const updateAboutCarousel = () => {
+  const activeImage = ABOUT_CAROUSEL_ITEMS[aboutCarouselIndex];
+  setGalleryImageSource(aboutCarouselImage, activeImage);
+  setGalleryCounterText(
+    aboutCarouselCounter,
+    aboutCarouselIndex,
+    ABOUT_CAROUSEL_ITEMS.length
+  );
+  const navigationDisabled = ABOUT_CAROUSEL_ITEMS.length < 2;
+  if (aboutCarouselPrev) aboutCarouselPrev.disabled = navigationDisabled;
+  if (aboutCarouselNext) aboutCarouselNext.disabled = navigationDisabled;
+  return queueGallerySuccessors(
+    aboutCarouselImage,
+    ABOUT_CAROUSEL_ITEMS,
+    aboutCarouselIndex
+  );
+};
+
 const updatePathfinderImage = () => {
   setGalleryImageSource(pathfinderImage, pathfinderImages[pathfinderIndex]);
   setGalleryCounterText(pathfinderCounter, pathfinderIndex, pathfinderImages.length);
@@ -21440,6 +21663,11 @@ const syncDroneProjectVideo = () => {
 };
 
 const staticCarouselPreloadDefinitions = Object.freeze([
+  {
+    element: aboutCarouselImage,
+    index: () => aboutCarouselIndex,
+    items: ABOUT_CAROUSEL_ITEMS,
+  },
   {
     element: pathfinderImage,
     index: () => pathfinderIndex,
@@ -21578,6 +21806,18 @@ activateVisibleContent = (root) => {
   prewarmOpenedAppMedia(root, carouselTasks.filter(Boolean));
   playActiveAutoplayVideos(root);
 };
+
+bindGalleryNavigation(
+  aboutCarouselPrev,
+  aboutCarouselNext,
+  ABOUT_CAROUSEL_ITEMS.length,
+  () => aboutCarouselIndex,
+  (index) => {
+    aboutCarouselIndex = index;
+  },
+  updateAboutCarousel
+);
+void updateAboutCarousel();
 
 bindGalleryNavigation(
   pathfinderPrev,
@@ -27429,6 +27669,50 @@ const msLoseBanner = document.getElementById("ms-lose-banner");
 const msAchievement = document.getElementById("ms-achievement");
 const msBoard = document.querySelector("[data-app-window=\"minesweeper\"] .ms-board");
 const msHelp = document.getElementById("ms-help");
+
+const MS_CELL_NUMBER_SOURCES = Object.freeze(
+  Array.from(
+    { length: 8 },
+    (_, index) => `assets/minesweeper_assets/cell_numbers/cell_${index + 1}.png`
+  )
+);
+const msNumberAssetPreloads = new Map();
+
+const preloadMinesweeperNumberAsset = (src) => {
+  const cached = msNumberAssetPreloads.get(src);
+  if (cached) return cached.promise;
+
+  const preload = document.createElement("link");
+  const promise = new Promise((resolve) => {
+    let settled = false;
+    const finish = (loaded) => {
+      if (settled) return;
+      settled = true;
+      preload.removeEventListener("load", handleLoad);
+      preload.removeEventListener("error", handleError);
+      if (!loaded) {
+        msNumberAssetPreloads.delete(src);
+        preload.remove();
+      }
+      resolve(loaded);
+    };
+    const handleLoad = () => finish(true);
+    const handleError = () => finish(false);
+
+    preload.rel = "preload";
+    preload.as = "image";
+    preload.href = src;
+    preload.addEventListener("load", handleLoad, { once: true });
+    preload.addEventListener("error", handleError, { once: true });
+    document.head.append(preload);
+  });
+
+  msNumberAssetPreloads.set(src, { element: preload, promise });
+  return promise;
+};
+
+const preloadMinesweeperNumberAssets = () =>
+  Promise.all(MS_CELL_NUMBER_SOURCES.map(preloadMinesweeperNumberAsset));
 
 const msConfig = {
   beginner: { cols: 9, rows: 9, mines: 10 },

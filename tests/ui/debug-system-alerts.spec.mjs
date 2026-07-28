@@ -21,12 +21,29 @@ const disableRemoteGameStats = async (page) => {
   );
 };
 
-const installDebugAlertTestBridge = async (page) => {
+const installDebugAlertTestBridge = async (
+  page,
+  { developerMode = false } = {}
+) => {
   const mainSource = await readFile(
     new URL("../../scripts/home/main.js", import.meta.url),
     "utf8"
   );
-  const zeroDelaySource = mainSource.replace(
+  const developerModeSource = developerMode
+    ? mainSource.replace(
+        "const RANDOM_EVENT_DEVELOPER_MODE = false;",
+        "const RANDOM_EVENT_DEVELOPER_MODE = true;"
+      )
+    : mainSource;
+  const debugAlertRegistration =
+    'id: `debug-system-alert-${alert.id}`,\n    debug: false,';
+  const developerSource = developerMode
+    ? developerModeSource.replace(
+        debugAlertRegistration,
+        debugAlertRegistration.replace("debug: false", "debug: true")
+      )
+    : developerModeSource;
+  const zeroDelaySource = developerSource.replace(
     "const RANDOM_EVENT_DELAY_MAX_MS = 2000;",
     "const RANDOM_EVENT_DELAY_MAX_MS = 0;"
   );
@@ -44,11 +61,21 @@ window.__debugSystemAlertsTest = Object.freeze({
   trigger(name = "startButton") {
     return triggerRandomEvents(name);
   },
+  triggerFelizJuevesFallback() {
+    return maybeShowFelizJueves();
+  },
+  startCooldown() {
+    recordRandomEventTrigger();
+    return randomEventTriggerCooldownUntil;
+  },
+  cooldownUntil: () => randomEventTriggerCooldownUntil,
 });
 })();`
   );
   if (
-    zeroDelaySource === mainSource ||
+    (developerMode && developerModeSource === mainSource) ||
+    (developerMode && developerSource === developerModeSource) ||
+    zeroDelaySource === developerSource ||
     instrumentedSource === zeroDelaySource
   ) {
     throw new Error("Unable to install the debug system alert test bridge.");
@@ -226,6 +253,96 @@ test("all system alerts schedule normally and render responsively", async ({
       }
     });
   }
+
+  expect(runtimeErrors).toEqual([]);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("developer mode isolates debug alerts and bypasses the global cooldown", async ({
+  page,
+}) => {
+  const consoleErrors = [];
+  const runtimeErrors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.clock.setFixedTime(new Date("2026-07-30T12:00:00Z"));
+  await page.addInitScript(() => {
+    Math.random = () => 0;
+    localStorage.clear();
+  });
+  await disableRemoteGameStats(page);
+  await installDebugAlertTestBridge(page, { developerMode: true });
+  await page.goto("/home.html", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => Boolean(window.__debugSystemAlertsTest));
+
+  const win = page.locator("#debug-system-alert-window");
+  const felizJueves = page.locator("#feliz-jueves-window");
+  const sentinel = page.locator("#taskbar-clock-button");
+
+  expect(
+    await page.evaluate(() =>
+      window.__debugSystemAlertsTest.triggerFelizJuevesFallback()
+    )
+  ).toBe(false);
+  await expect(win).toBeHidden();
+  await expect(felizJueves).toBeHidden();
+
+  const seededCooldown = await page.evaluate(() => {
+    return {
+      now: Date.now(),
+      until: window.__debugSystemAlertsTest.startCooldown(),
+    };
+  });
+  expect(seededCooldown.until - seededCooldown.now).toBe(7500);
+
+  expect(
+    await page.evaluate(() => {
+      Math.random = () => 0.999999;
+      return window.__debugSystemAlertsTest.trigger("windowDrag");
+    })
+  ).toBe(false);
+  await expect(win).toBeHidden();
+  expect(
+    await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
+  ).toBe(seededCooldown.until);
+
+  await sentinel.focus();
+  expect(
+    await page.evaluate(() => {
+      Math.random = () => 0;
+      return [
+        window.__debugSystemAlertsTest.trigger("windowDrag"),
+        window.__debugSystemAlertsTest.trigger("windowDrag"),
+      ];
+    })
+  ).toEqual([true, false]);
+  await expect(win).toBeVisible();
+  await expect(win).toHaveAttribute("data-alert-id", "ram-prices");
+  await expect(page.locator("#debug-system-alert-ok")).toBeFocused();
+  expect(
+    await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
+  ).toBe(seededCooldown.until);
+  await dispatchAnimationEnd(win, "retro-window-open");
+  await closeAlert(page);
+  await expect(sentinel).toBeFocused();
+
+  expect(
+    await page.evaluate(() => window.__debugSystemAlertsTest.trigger("startButton"))
+  ).toBe(true);
+  await expect(win).toBeVisible();
+  await expect(win).toHaveAttribute("data-alert-id", "computer-nevermind");
+  await expect(page.locator("#debug-system-alert-ok")).toBeFocused();
+  expect(
+    await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
+  ).toBe(seededCooldown.until);
+  await dispatchAnimationEnd(win, "retro-window-open");
+  await closeAlert(page);
+  await expect(sentinel).toBeFocused();
 
   expect(runtimeErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);

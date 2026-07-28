@@ -3771,12 +3771,17 @@ html.is-wall-breach-shaking body {
 
 .current-public-info-window .window-body {
   margin: 0;
-  padding: 0;
+  padding: 4px;
 }
 
 .current-public-info-window img {
+  background: #000;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-sizing: border-box;
   display: block;
-  max-height: min(78vh, 720px);
+  height: auto;
+  max-height: min(78vh, 720px, calc(100vh - 155px));
+  object-fit: contain;
   width: 100%;
 }
 

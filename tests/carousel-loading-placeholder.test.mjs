@@ -97,8 +97,14 @@ test("gallery image loads use a local hourglass overlay instead of stale or empt
     /galleryScroll && window\.homeGallery\?\.loadImage[\s\S]{0,120}window\.homeGallery\.loadImage\(element, element\.dataset\.src\)/
   );
 
-  assert.match(styles, /\.gallery-scroll \{[\s\S]*?position: relative;/);
-  assert.match(styles, /\.gallery-loading-indicator \{[\s\S]*?background: #fff;[\s\S]*?position: absolute;/);
+  assert.match(
+    styles,
+    /\.gallery-scroll \{[\s\S]*?--gallery-content-inset: 2px;[\s\S]*?padding: var\(--gallery-content-inset\);[\s\S]*?position: relative;/
+  );
+  assert.match(
+    styles,
+    /\.gallery-loading-indicator \{[\s\S]*?background: #fff;[\s\S]*?inset: var\(--gallery-content-inset\);[\s\S]*?position: absolute;/
+  );
   assert.match(styles, /\.gallery-loading-indicator__image \{[\s\S]*?object-fit: cover !important;/);
   assert.match(
     styles,

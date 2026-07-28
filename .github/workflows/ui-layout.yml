@@ -1,0 +1,28 @@
+name: UI layout regression
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  game-progress-profile:
+    name: Game Progress profile layout
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-progress-profile-layout-artifacts
+          path: test-results/
+          if-no-files-found: ignore

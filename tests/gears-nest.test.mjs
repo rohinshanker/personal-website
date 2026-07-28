@@ -424,8 +424,23 @@ test("current publicly available information event uses local AOT assets outside
     getCssBlock(".current-public-info-window"),
     /width: min\(494px, calc\(100vw - 24px\)\);/
   );
-  assert.match(getCssBlock(".current-public-info-window .window-body"), /padding: 0;/);
+  assert.match(getCssBlock(".current-public-info-window .window-body"), /padding: 4px;/);
+  const imageStyles = getCssBlock(".current-public-info-window img");
+  assert.match(imageStyles, /background: #000;/);
+  assert.match(
+    imageStyles,
+    /box-shadow: var\(--border-sunken-outer\), var\(--border-sunken-inner\);/
+  );
+  assert.match(imageStyles, /box-sizing: border-box;/);
+  assert.match(imageStyles, /height: auto;/);
+  assert.match(imageStyles, /max-height: min\(78vh, 720px, calc\(100vh - 155px\)\);/);
+  assert.match(imageStyles, /object-fit: contain;/);
   assert.match(getCssBlock(".current-public-info-actions"), /justify-content: flex-end;/);
+  assert.ok(
+    windowMarkup.indexOf('id="current-public-info-image"') <
+      windowMarkup.indexOf('class="current-public-info-actions"'),
+    "The public-information action row must remain below its image"
+  );
 
   for (const filename of expectedAssets) {
     const asset = `assets/random events/current-publicly-available-information/${filename}`;
@@ -1242,7 +1257,7 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=system-alert-events-20260726/);
+    assert.match(source, /random-events\.css\?v=public-info-spacing-20260728/);
     assert.match(source, /cursors\.css\?v=cursor-titlebar-clickable-20260709/);
     assert.match(source, /minesweeper\.css\?v=minesweeper-mobile-controls-20260724/);
     assert.match(source, /game-stats\.css\?v=global-leaderboard-launchers-20260725/);

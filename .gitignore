@@ -1,1 +1,25 @@
 .DS_Store
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+!.env.example
+!.dev.vars.example
+# Private key containers belong in a secret manager or local-only storage.
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_ecdsa
+id_ed25519
+credentials*.json
+service-account*.json
+secrets*.json
+node_modules/
+.wrangler/
+playwright-report/
+test-results/
+.playwright-cli/

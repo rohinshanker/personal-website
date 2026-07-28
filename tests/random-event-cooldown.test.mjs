@@ -57,6 +57,12 @@ test("all registered random events keep debug mode disabled", async () => {
   const registrations = getRandomEventRegistrationBlocks(source);
 
   assert.match(source, /const RANDOM_EVENT_GLOBAL_DEBUG = false;/);
+  assert.equal(
+    source.match(/const RANDOM_EVENT_DEVELOPER_MODE = false;/g)?.length,
+    1,
+    "Random event developer mode must have one commit-safe disabled toggle"
+  );
+  assert.doesNotMatch(source, /const RANDOM_EVENT_DEVELOPER_MODE = true;/);
   assert.match(
     source,
     /const registerRandomEvent = \(definition\) => \{\n  randomEventDefinitions\.push\(definition\);\n  return definition;\n\};/
@@ -160,15 +166,15 @@ const createGameplayLockRuntime = (source) => {
   return context.randomEventGameplayLock;
 };
 
-test("any accepted random-event trigger starts a global five-second cooldown", async () => {
+test("accepted normal random-event triggers use the global seven-and-a-half-second cooldown", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
   const cooldown = createCooldownRuntime(source);
 
   cooldown.recordRandomEventTrigger(1000);
   assert.equal(cooldown.isRandomEventTriggerOnCooldown(1000), true);
-  assert.equal(cooldown.isRandomEventTriggerOnCooldown(5999), true);
-  assert.equal(cooldown.isRandomEventTriggerOnCooldown(6000), false);
-  assert.equal(cooldown.isRandomEventTriggerOnCooldown(6001), false);
+  assert.equal(cooldown.isRandomEventTriggerOnCooldown(8499), true);
+  assert.equal(cooldown.isRandomEventTriggerOnCooldown(8500), false);
+  assert.equal(cooldown.isRandomEventTriggerOnCooldown(8501), false);
 });
 
 test("random-event selections remain locked until exactly two minutes have elapsed", async () => {
@@ -265,19 +271,23 @@ test("active combat and click-collection gameplay blocks random events until it 
   assert.equal(lock.isActive(), false);
 });
 
-test("the scheduler locks and globally cools down every accepted event before its asynchronous run", async () => {
+test("the scheduler isolates developer events and only cools down normal accepted events", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
   const scheduler = source.match(
     /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
   );
 
   assert.ok(scheduler, "The scheduler should remain a dedicated helper");
+  assert.match(scheduler[1], /const debug = Boolean\(context\.debug\);/);
   assert.match(scheduler[1], /if \(isRandomEventGameplayLockActive\(\)\) return false;/);
-  assert.match(scheduler[1], /if \(isRandomEventTriggerOnCooldown\(\)\) return false;/);
+  assert.match(
+    scheduler[1],
+    /if \(!debug && isRandomEventTriggerOnCooldown\(\)\) return false;/
+  );
   assert.match(scheduler[1], /if \(isRandomEventOnLockdown\(definition\)\) return false;/);
   assert.match(
     scheduler[1],
-    /randomEventPendingDefinitions\.add\(definition\);\n  recordRandomEventSelection\(definition\);\n  recordRandomEventTrigger\(\);\n  const delayRequest/
+    /randomEventPendingDefinitions\.add\(definition\);\n  recordRandomEventSelection\(definition\);\n  if \(!debug\) recordRandomEventTrigger\(\);\n  const delayRequest/
   );
   assert.match(
     scheduler[1],
@@ -291,7 +301,15 @@ test("the scheduler locks and globally cools down every accepted event before it
   assert.ok(trigger, "The trigger should remain a dedicated helper");
   assert.match(
     trigger[1],
-    /if \(!isHomeActivationReady\(\)\) return false;\n  if \(isRandomEventGameplayLockActive\(\)\) return false;\n  if \(isRandomEventTriggerOnCooldown\(\)\) return false;/
+    /if \(!isHomeActivationReady\(\)\) return false;\n  if \(isRandomEventGameplayLockActive\(\)\) return false;\n  const triggerOnCooldown = isRandomEventTriggerOnCooldown\(\);/
+  );
+  assert.match(
+    trigger[1],
+    /const debugEventPending = Array\.from\(randomEventPendingDefinitions\)\.some\(\n    randomEventDebugEnabled\n  \);[\s\S]*?if \(!randomEventDeveloperModeAllows\(definition\)\) return;\n    const debug = randomEventDebugEnabled\(definition\);\n    if \(debugEventPending && debug\) return;\n    if \(triggerOnCooldown && !debug\) return;/
+  );
+  assert.match(
+    trigger[1],
+    /if \(forceDebugRun\) \{[\s\S]*?forcedDebugEvents\.push\([\s\S]*?triggerProbability: 1,[\s\S]*?const selectedDebug = chooseRandomEventOutsideLockdown\(forcedDebugEvents\);[\s\S]*?scheduleRandomEventRun\(selectedDebug\.definition,/
   );
   assert.match(
     trigger[1],
@@ -300,11 +318,15 @@ test("the scheduler locks and globally cools down every accepted event before it
 
   assert.match(
     source,
-    /const maybeShowFelizJueves = \(\) => \{\n  if \(isRandomEventGameplayLockActive\(\)\) return false;[\s\S]*?if \(isRandomEventTriggerOnCooldown\(\)\) return false;[\s\S]*?markFelizJuevesShown\(dateKey\);\n  recordRandomEventTrigger\(\);\n  showFelizJuevesWindow\(\);/
+    /const maybeShowFelizJueves = \(\) => \{\n  if \(RANDOM_EVENT_DEVELOPER_MODE\) return false;\n  if \(isRandomEventGameplayLockActive\(\)\) return false;[\s\S]*?if \(isRandomEventTriggerOnCooldown\(\)\) return false;[\s\S]*?markFelizJuevesShown\(dateKey\);\n  recordRandomEventTrigger\(\);\n  showFelizJuevesWindow\(\);/
+  );
+  assert.match(
+    source,
+    /const randomEventDeveloperModeAllows = \(definition\) =>\n  !RANDOM_EVENT_DEVELOPER_MODE \|\| Boolean\(definition\.debug\);/
   );
 });
 
-test("the scheduler rejects active gameplay and holds other events during the global cooldown", async () => {
+test("debug scheduling bypasses only the global cooldown", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
   const scheduler = source.match(
     /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
@@ -317,12 +339,17 @@ test("the scheduler rejects active gameplay and holds other events during the gl
       let cooldownActive = false;
       let canSchedule = false;
       let gameplayLockActive = true;
+      let lockdownActive = false;
+      let triggerCount = 0;
       let selectionCount = 0;
       const randomEventPendingDefinitions = new Set();
       const isRandomEventGameplayLockActive = () => gameplayLockActive;
       const isRandomEventTriggerOnCooldown = () => cooldownActive;
-      const recordRandomEventTrigger = () => { cooldownActive = true; };
-      const isRandomEventOnLockdown = () => false;
+      const recordRandomEventTrigger = () => {
+        cooldownActive = true;
+        triggerCount += 1;
+      };
+      const isRandomEventOnLockdown = () => lockdownActive;
       const randomEventDefinitionCanSchedule = () => canSchedule;
       const recordRandomEventSelection = () => { selectionCount += 1; };
       const randomEventDelayMs = () => 0;
@@ -334,9 +361,12 @@ test("the scheduler rejects active gameplay and holds other events during the gl
         getCooldownActive: () => cooldownActive,
         getPendingCount: () => randomEventPendingDefinitions.size,
         getSelectionCount: () => selectionCount,
+        getTriggerCount: () => triggerCount,
         schedule: scheduleRandomEventRun,
+        setCooldownActive: (value) => { cooldownActive = value; },
         setCanSchedule: (value) => { canSchedule = value; },
         setGameplayLockActive: (value) => { gameplayLockActive = value; },
+        setLockdownActive: (value) => { lockdownActive = value; },
       };
     `,
     context
@@ -344,7 +374,7 @@ test("the scheduler rejects active gameplay and holds other events during the gl
 
   const runtime = context.randomEventScheduler;
   const first = { id: "first", run: () => {} };
-  const second = { id: "second", run: () => {} };
+  const second = { id: "second", debug: true, run: () => {} };
 
   assert.equal(runtime.schedule(first, { triggerName: "gameWin" }), false);
   assert.equal(runtime.getCooldownActive(), false);
@@ -357,9 +387,97 @@ test("the scheduler rejects active gameplay and holds other events during the gl
   assert.equal(runtime.getCooldownActive(), true);
   assert.equal(runtime.getPendingCount(), 1);
   assert.equal(runtime.getSelectionCount(), 1);
+  assert.equal(runtime.getTriggerCount(), 1);
   assert.equal(runtime.schedule(second, { triggerName: "windowOpen" }), false);
   assert.equal(runtime.getPendingCount(), 1);
   assert.equal(runtime.getSelectionCount(), 1);
+
+  runtime.setGameplayLockActive(true);
+  assert.equal(
+    runtime.schedule(second, { triggerName: "windowOpen", debug: true }),
+    false
+  );
+  runtime.setGameplayLockActive(false);
+  runtime.setLockdownActive(true);
+  assert.equal(
+    runtime.schedule(second, { triggerName: "windowOpen", debug: true }),
+    false
+  );
+  runtime.setLockdownActive(false);
+  runtime.setCooldownActive(true);
+  assert.equal(
+    runtime.schedule(second, { triggerName: "windowOpen", debug: true }),
+    true
+  );
+  assert.equal(runtime.getPendingCount(), 2);
+  assert.equal(runtime.getSelectionCount(), 2);
+  assert.equal(runtime.getTriggerCount(), 1);
+});
+
+test("developer mode uses raw flags and takes precedence over global debug", async () => {
+  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const effectiveDebugHelper = source.match(
+    /const randomEventDebugEnabled = \(definition\) =>\n  RANDOM_EVENT_GLOBAL_DEBUG \|\| Boolean\(definition\.debug\);/
+  );
+  const developerModeHelper = source.match(
+    /const randomEventDeveloperModeAllows = \(definition\) =>\n  !RANDOM_EVENT_DEVELOPER_MODE \|\| Boolean\(definition\.debug\);/
+  );
+  assert.ok(effectiveDebugHelper, "Effective debug state should remain a dedicated helper");
+  assert.ok(developerModeHelper, "The developer-mode filter should remain a dedicated helper");
+
+  const evaluate = ({ developerMode, globalDebug, definition }) => {
+    const context = vm.createContext({ Boolean, definition });
+    return JSON.parse(
+      vm.runInContext(
+        `const RANDOM_EVENT_DEVELOPER_MODE = ${developerMode};\n` +
+          `const RANDOM_EVENT_GLOBAL_DEBUG = ${globalDebug};\n` +
+          `${effectiveDebugHelper[0]}\n${developerModeHelper[0]}\n` +
+          `JSON.stringify({ allowed: randomEventDeveloperModeAllows(definition), debug: randomEventDebugEnabled(definition) });`,
+        context
+      )
+    );
+  };
+
+  assert.deepEqual(
+    evaluate({
+      developerMode: false,
+      globalDebug: false,
+      definition: { debug: false },
+    }),
+    { allowed: true, debug: false }
+  );
+  assert.deepEqual(
+    evaluate({
+      developerMode: false,
+      globalDebug: false,
+      definition: { debug: true },
+    }),
+    { allowed: true, debug: true }
+  );
+  assert.deepEqual(
+    evaluate({
+      developerMode: false,
+      globalDebug: true,
+      definition: { debug: false },
+    }),
+    { allowed: true, debug: true }
+  );
+  assert.deepEqual(
+    evaluate({
+      developerMode: true,
+      globalDebug: true,
+      definition: { debug: false },
+    }),
+    { allowed: false, debug: true }
+  );
+  assert.deepEqual(
+    evaluate({
+      developerMode: true,
+      globalDebug: false,
+      definition: { debug: true },
+    }),
+    { allowed: true, debug: true }
+  );
 });
 
 test("a queued event does not appear after a gameplay lock begins", async () => {

@@ -111,9 +111,9 @@
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=global-leaderboard-launchers-20260725" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
-    <link rel="stylesheet" href="styles/home/portfolio.css?v=carousel-hourglass-loader-20260722" />
+    <link rel="stylesheet" href="styles/home/portfolio.css?v=degree-card-spacing-20260728" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=system-alert-events-20260726" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=public-info-spacing-20260728" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cursor-titlebar-clickable-20260709" />
   </head>
   <body>
@@ -204,41 +204,284 @@
     -->
     </div>
     <div class="window-stack">
-      <div class="window home-window app-window app-window--center" data-app-window="about" id="about-window">
+      <div
+        class="window home-window app-window app-window--center"
+        data-app-window="about"
+        id="about-window"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="about-window-title"
+      >
         <div class="title-bar">
-          <div class="title-bar-text">About Me</div>
+          <div class="title-bar-text" id="about-window-title">About Me</div>
           <div class="title-bar-controls">
             <button aria-label="Help"></button>
             <button aria-label="Close" data-close="about"></button>
           </div>
         </div>
-        <div class="window-body">
-          <h2 class="about-title">Hi, my name is Rohin!</h2>
-          <h2 hidden>Hi, my name is Rohin Shanker!</h2>
-          <img
-            class="about-photo"
-            src="assets/optimized/bio-pic-720.jpg"
-            width="720"
-            height="669"
-            decoding="async"
-            fetchpriority="high"
-            alt="Portrait of Rohin Shanker"
-          />
-          <p>Coming soon.</p>
-          <div hidden>
-            <p>
-              I build and collect work across engineering projects, writing, modeling, acting, and
-              creative work. This site is my portfolio for projects, Berkeley coursework, runway and
-              lookbook work, film links, and social profiles.
-            </p>
-            <p class="about-link-list" aria-label="Rohin Shanker links">
-              <a href="https://www.linkedin.com/in/rohin-shanker/" target="_blank" rel="noreferrer">LinkedIn</a>
-              <a href="https://github.com/rohinshanker" target="_blank" rel="noreferrer">GitHub</a>
-              <a href="https://substack.com/@rohins" target="_blank" rel="noreferrer">Substack</a>
-              <a href="https://www.instagram.com/rohin.personal" target="_blank" rel="noreferrer">Instagram</a>
-              <a href="https://www.tiktok.com/@garbberkeley" target="_blank" rel="noreferrer">Garb Berkeley TikTok</a>
-              <a href="https://www.tiktok.com/@leavingparadisefilm" target="_blank" rel="noreferrer">Leaving Paradise TikTok</a>
-            </p>
+        <div class="window-body about-body" tabindex="0" aria-label="About Rohin Shanker">
+          <div class="about-page">
+            <header class="about-page-header">
+              <h2 class="about-title">Welcome to my Website!</h2>
+              <time class="about-date" id="about-current-date"></time>
+            </header>
+
+            <div class="about-intro-grid">
+              <section class="about-carousel-section" aria-labelledby="about-photo-heading">
+                <h3 class="about-visually-hidden" id="about-photo-heading">Photo carousel</h3>
+                <div class="gallery-frame about-carousel">
+                  <div class="gallery-scroll about-carousel-media">
+                    <img
+                      class="about-photo"
+                      id="about-carousel-image"
+                      src="assets/about-carousel/1.jpg"
+                      width="720"
+                      height="669"
+                      decoding="async"
+                      fetchpriority="high"
+                      alt="Portrait of Rohin Shanker in front of red rock formations"
+                    />
+                  </div>
+                  <div class="gallery-controls about-carousel-controls">
+                    <button type="button" id="about-carousel-prev">Previous</button>
+                    <span class="gallery-counter" id="about-carousel-counter" aria-live="polite">
+                      1 of 9
+                    </span>
+                    <button type="button" id="about-carousel-next">Next</button>
+                  </div>
+                </div>
+              </section>
+
+              <aside class="about-overview-panel" aria-label="Website and degrees overview">
+                <section class="about-website-section" aria-labelledby="about-website-heading">
+                  <h3 id="about-website-heading">About this Website</h3>
+                  <p>
+                    Welcome to my personal website! I wanted to make something unique &amp; playful
+                    that would give me a reason to come back to often (and hopefully you too!) while
+                    also keeping record of a few things I’m proud of in one place. Enjoy your stay :)
+                    <br />
+                    —Rohin
+                  </p>
+                </section>
+
+                <section class="about-degrees-section" aria-labelledby="about-degrees-heading">
+                  <h3 id="about-degrees-heading">Degrees</h3>
+                  <div
+                    class="about-degrees-list"
+                    role="region"
+                    aria-label="Academic degrees"
+                    tabindex="0"
+                  >
+                    <section class="about-institution" aria-labelledby="about-institution-one">
+                      <h4 id="about-institution-one">Yale University (2026-2027)</h4>
+                      <ul>
+                        <li class="about-degree-card">
+                          <img src="assets/app-icons/ico/certificate_gear.ico" alt="" />
+                          <span class="about-degree-copy">
+                            <strong
+                              class="about-degree-type"
+                              data-full-label="Master of Science"
+                              data-short-label="M.S."
+                              aria-label="Master of Science"
+                            >Master of Science</strong>
+                            <span
+                              class="about-degree-field"
+                              data-about-degree-field
+                              aria-label="Biomedical Engineering"
+                              title="Biomedical Engineering"
+                            ><span class="about-degree-field-track" aria-hidden="true">Biomedical Engineering</span></span>
+                          </span>
+                        </li>
+                      </ul>
+                    </section>
+                    <section class="about-institution" aria-labelledby="about-institution-two">
+                      <h4 id="about-institution-two">University of California, Berkeley (2022-2026)</h4>
+                      <ul>
+                        <li class="about-degree-card">
+                          <img src="assets/app-icons/ico/certificate.ico" alt="" />
+                          <span class="about-degree-copy">
+                            <strong
+                              class="about-degree-type"
+                              data-full-label="Bachelor of Science"
+                              data-short-label="B.S."
+                              aria-label="Bachelor of Science"
+                            >Bachelor of Science</strong>
+                            <span
+                              class="about-degree-field"
+                              data-about-degree-field
+                              aria-label="Electrical Engineering &amp; Computer Science (EECS)"
+                              title="Electrical Engineering &amp; Computer Science (EECS)"
+                            ><span class="about-degree-field-track" aria-hidden="true">Electrical Engineering &amp; Computer Science (EECS)</span></span>
+                          </span>
+                        </li>
+                        <li class="about-degree-card">
+                          <img src="assets/app-icons/ico/certificate.ico" alt="" />
+                          <span class="about-degree-copy">
+                            <strong
+                              class="about-degree-type"
+                              data-full-label="Bachelor of Science"
+                              data-short-label="B.S."
+                              aria-label="Bachelor of Science"
+                            >Bachelor of Science</strong>
+                            <span
+                              class="about-degree-field"
+                              data-about-degree-field
+                              aria-label="Bioengineering"
+                              title="Bioengineering"
+                            ><span class="about-degree-field-track" aria-hidden="true">Bioengineering</span></span>
+                          </span>
+                        </li>
+                        <li class="about-degree-card">
+                          <img src="assets/app-icons/ico/certificate_seal.ico" alt="" />
+                          <span class="about-degree-copy">
+                            <strong
+                              class="about-degree-type"
+                              data-full-label="Certificate"
+                              data-short-label="Cert."
+                              aria-label="Certificate"
+                            >Certificate</strong>
+                            <span
+                              class="about-degree-field"
+                              data-about-degree-field
+                              aria-label="Entrepreneurship &amp; Technology (SCET)"
+                              title="Entrepreneurship &amp; Technology (SCET)"
+                            ><span class="about-degree-field-track" aria-hidden="true">Entrepreneurship &amp; Technology (SCET)</span></span>
+                          </span>
+                        </li>
+                      </ul>
+                    </section>
+                  </div>
+                </section>
+              </aside>
+            </div>
+
+            <section class="about-socials-section" aria-labelledby="about-socials-heading">
+              <h3 id="about-socials-heading">Quick Social Links</h3>
+              <nav class="about-social-links" aria-label="Rohin Shanker social profiles">
+                <a
+                  class="about-social-link"
+                  href="https://www.linkedin.com/in/rohin-shanker/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img class="socials-logo" src="assets/app-icons/ico/users_green.ico" alt="" />
+                  <span class="about-social-copy">
+                    <span class="socials-name">LinkedIn</span>
+                    <span class="socials-username">@rohin-shanker</span>
+                  </span>
+                </a>
+                <a
+                  class="about-social-link"
+                  href="https://www.instagram.com/rohin.personal"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img class="socials-logo" src="assets/app-icons/ico/camera.ico" alt="" />
+                  <span class="about-social-copy">
+                    <span class="socials-name">Instagram</span>
+                    <span class="socials-username">@rrohinss</span>
+                  </span>
+                </a>
+                <a
+                  class="about-social-link"
+                  href="https://substack.com/@rohins"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img class="socials-logo" src="assets/app-icons/ico/newspaper.ico" alt="" />
+                  <span class="about-social-copy">
+                    <span class="socials-name">Substack</span>
+                    <span class="socials-username">@rohins</span>
+                  </span>
+                </a>
+                <a
+                  class="about-social-link"
+                  href="https://open.spotify.com/user/rohindaman?si=ee2c1491d5eb48fe"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img
+                    class="socials-logo"
+                    src="assets/app-icons/ico/keyboard_musical_midi.ico"
+                    alt=""
+                  />
+                  <span class="about-social-copy">
+                    <span class="socials-name">Spotify</span>
+                    <span class="socials-username">@rohin</span>
+                  </span>
+                </a>
+                <a
+                  class="about-social-link"
+                  href="https://github.com/rohinshanker"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img class="socials-logo" src="assets/app-icons/ico/gears.ico" alt="" />
+                  <span class="about-social-copy">
+                    <span class="socials-name">GitHub</span>
+                    <span class="socials-username">@rohinshanker</span>
+                  </span>
+                </a>
+                <button
+                  class="about-social-link about-social-launcher"
+                  type="button"
+                  data-app="socials"
+                  aria-controls="socials-window"
+                  aria-haspopup="dialog"
+                >
+                  <img
+                    class="socials-logo"
+                    src="assets/app-icons/ico/connected_world.ico"
+                    alt=""
+                  />
+                  <span class="about-social-copy">
+                    <span class="socials-name">Socials</span>
+                    <span class="socials-username">See All</span>
+                  </span>
+                </button>
+              </nav>
+            </section>
+
+            <section class="about-article-section" aria-labelledby="about-article-heading">
+              <div class="about-article-header">
+                <h3 id="about-article-heading">About Me</h3>
+                <div class="about-article-date-field">
+                  <label for="about-article-date">Entry date</label>
+                  <select id="about-article-date" aria-controls="about-article-copy">
+                    <option value="27-07-2026">27/07/2026</option>
+                  </select>
+                </div>
+              </div>
+              <article class="about-article-copy" id="about-article-copy" aria-live="polite">
+                <p>
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae justo
+                  vitae sapien facilisis posuere. Suspendisse potenti, sed cursus neque feugiat
+                  non.
+                </p>
+                <p>
+                  Praesent ullamcorper, nibh at feugiat consequat, erat ligula vulputate augue,
+                  vitae tincidunt lacus arcu sed erat. Nulla facilisi, donec tempus sem at lectus
+                  luctus.
+                </p>
+                <p>
+                  Curabitur dignissim, massa sit amet gravida tincidunt, lorem libero interdum
+                  justo, sed fermentum tortor neque et velit. Vivamus posuere velit non ipsum
+                  volutpat.
+                </p>
+              </article>
+            </section>
+
+            <footer class="about-signoff">
+              <p>Yours Truly,</p>
+              <p>Rohin Shanker</p>
+              <div
+                class="about-signature-slot"
+                role="img"
+                aria-label="Placeholder for Rohin Shanker's signature image"
+              >
+                <span>Signature PNG</span>
+              </div>
+            </footer>
           </div>
         </div>
       </div>
@@ -2637,9 +2880,16 @@
       </div>
       -->
 
-      <div class="window app-window is-hidden" data-app-window="socials">
+      <div
+        class="window app-window is-hidden"
+        id="socials-window"
+        data-app-window="socials"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="socials-window-title"
+      >
         <div class="title-bar">
-          <div class="title-bar-text">Socials</div>
+          <div class="title-bar-text" id="socials-window-title">Socials</div>
           <div class="title-bar-controls">
             <button aria-label="Minimize" disabled></button>
             <button aria-label="Maximize" disabled></button>
@@ -5626,10 +5876,10 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-410939c2759bfb1d7f27eb367f0950de67fa12d237caffea5a91a1fd43d36480"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-5c96dea824aedfbf841853690c0f34267b84f947dd36cbec0462bcb450ecbed6"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-410939c2759bfb1d7f27eb367f0950de67fa12d237caffea5a91a1fd43d36480"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-5c96dea824aedfbf841853690c0f34267b84f947dd36cbec0462bcb450ecbed6"></script>
     <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
-    <script src="scripts/home/main.js?v=game-build-410939c2759bfb1d7f27eb367f0950de67fa12d237caffea5a91a1fd43d36480"></script>
+    <script src="scripts/home/main.js?v=game-build-5c96dea824aedfbf841853690c0f34267b84f947dd36cbec0462bcb450ecbed6"></script>
   </body>
 </html>
