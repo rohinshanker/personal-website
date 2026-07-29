@@ -52,7 +52,7 @@ const globalState = Object.freeze({
           playerId: "player-sudoku-global",
           name: "Puzzle Ace",
           icon: "assets/app-icons/ico/user_card.ico",
-          metric: 1004,
+          metric: 21_600,
           metricKind: "seconds",
           occurredAt: "2026-07-24T00:00:01.000Z",
         },
@@ -118,13 +118,16 @@ for (const viewport of viewports) {
       .filter({ hasText: "99:99" });
 
     await expect(globalRows).toHaveCount(3);
-    await expect(globalRows.first()).toHaveAttribute("aria-label", "Rank 1: Puzzle Ace, 1004 seconds");
+    await expect(globalRows.first()).toHaveAttribute(
+      "aria-label",
+      "Rank 1: Puzzle Ace, 21600 seconds"
+    );
     await expect(globalRows.nth(1)).toHaveAttribute("aria-label", "Rank 2: N/A, no recorded time");
     await expect(placeholderLocalRow).toHaveAttribute(
       "aria-label",
       "Your no-hints record: #—, N/A, no record"
     );
-    await expect(globalMetric).toHaveText("16:44");
+    await expect(globalMetric).toHaveText("360:00");
     await expect(placeholderGlobalMetric).toHaveText("99:99");
     await expect(localMetric).toHaveText("01:05");
     await expect(placeholderLocalRow.locator(".game-stats-metric--text")).toHaveText("99:99");
@@ -135,7 +138,9 @@ for (const viewport of viewports) {
     ).toBeVisible();
 
     const layout = await easyLeaderboard.evaluate((panel) => {
-      const row = panel.querySelector(".game-stats-sudoku-local-best-row");
+      const row = panel.querySelector(
+        ".game-stats-sudoku-row:not(.game-stats-sudoku-local-best-row)"
+      );
       const metric = row.querySelector(".game-stats-metric--text");
       const rowRect = row.getBoundingClientRect();
       const metricRect = metric.getBoundingClientRect();

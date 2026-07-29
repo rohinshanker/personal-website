@@ -81,8 +81,14 @@ const loadRecordPredicate = async () => {
 
 const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true } = {}) => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const failureStart = source.indexOf("const reportGameStatsSessionFailure =");
+  const failureEnd = source.indexOf("\n\nconst startGameStatsSession =", failureStart);
   const start = source.indexOf("const recordGameStatsEvent =");
   const end = source.indexOf("\n\nconst formatGameStatsCounter", start);
+  assert.ok(
+    failureStart >= 0 && failureEnd > failureStart,
+    "session failure reporter source must be extractable"
+  );
   assert.ok(start >= 0 && end > start, "record flow source must be extractable");
   const context = vm.createContext({});
   vm.runInContext(
@@ -101,6 +107,7 @@ const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true }
       "let handoffCalls = 0;",
       "let queueCalls = 0;",
       "let syncCalls = 0;",
+      "let queuedSession = null;",
       "let resolveSession;",
       "let resolveProfile;",
       "const pendingSession = new Promise((resolve) => { resolveSession = resolve; });",
@@ -115,14 +122,17 @@ const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true }
       "const saveGameStatsLocalState = () => { saveCalls += 1; };",
       "const playGameStatsRecordHandoff = async () => { handoffCalls += 1; };",
       "const getGameStatsSession = () => pendingSession;",
-      "const queueGameStatsSubmission = () => { queueCalls += 1; };",
+      "const queueGameStatsSubmission = (_event, session) => { queueCalls += 1; queuedSession = session; };",
       'let gameStatsSyncState = "ready";',
-      "const setGameStatsSyncState = () => {};",
+      'let gameStatsSyncMessage = "";',
+      "const setGameStatsSyncState = (state, { message = '' } = {}) => { gameStatsSyncState = state; gameStatsSyncMessage = message; };",
       "const syncQueuedGameStats = () => { syncCalls += 1; };",
+      source.slice(failureStart, failureEnd),
       source.slice(start, end),
       "globalThis.recordForTest = recordGameStatsEvent;",
-      "globalThis.readFlowState = () => ({ applyCalls, saveCalls, handoffCalls, queueCalls, syncCalls });",
-      "globalThis.resolveSessionForTest = () => resolveSession(null);",
+      "globalThis.readFlowState = () => ({ applyCalls, saveCalls, handoffCalls, queueCalls, syncCalls, queuedSession, gameStatsSyncState, gameStatsSyncMessage });",
+      'globalThis.resolveSessionForTest = () => resolveSession({ session: { id: "session-current", token: "session-current-token", expiresAt: new Date(Date.now() + 60_000).toISOString() }, status: 201 });',
+      "globalThis.resolveSessionFailureForTest = (status, reason = '') => resolveSession({ session: null, status, ...(reason ? { reason } : {}) });",
       'globalThis.cancelProfileForTest = () => { gameStatsLocalResetGeneration += 1; resolveProfile({ id: "player-current", name: "Current", icon: "assets/app-icons/ico/user_card.ico" }); };',
     ].join("\n"),
     context
@@ -328,28 +338,124 @@ test("a record handoff starts after local save without waiting for its session",
   });
 
   assert.deepEqual(
-    { ...context.readFlowState() },
+    {
+      ...context.readFlowState(),
+      queuedSession: context.readFlowState().queuedSession
+        ? { ...context.readFlowState().queuedSession }
+        : null,
+    },
     {
       applyCalls: 1,
       saveCalls: 1,
       handoffCalls: 1,
       queueCalls: 0,
       syncCalls: 0,
+      queuedSession: null,
+      gameStatsSyncState: "ready",
+      gameStatsSyncMessage: "",
     }
   );
 
   context.resolveSessionForTest();
   await recordPromise;
   assert.deepEqual(
-    { ...context.readFlowState() },
+    {
+      ...context.readFlowState(),
+      queuedSession: { ...context.readFlowState().queuedSession },
+    },
     {
       applyCalls: 1,
       saveCalls: 1,
       handoffCalls: 1,
       queueCalls: 1,
       syncCalls: 1,
+      queuedSession: {
+        id: "session-current",
+        token: "session-current-token",
+        expiresAt: context.readFlowState().queuedSession.expiresAt,
+      },
+      gameStatsSyncState: "publishing",
+      gameStatsSyncMessage: "Publishing saved results...",
     }
   );
+});
+
+test("session creation failures remain local and report their exact failure branch", async () => {
+  const cases = [
+    {
+      name: "stale build",
+      sessionKey: "solitaire-session",
+      status: 409,
+      expectedState: "build-mismatch",
+      expectedMessage: "",
+    },
+    {
+      name: "upstream rejection",
+      sessionKey: "solitaire-session",
+      status: 503,
+      expectedState: "request-failed",
+      expectedMessage:
+        "Local stats are saved, but the verified game session request failed (HTTP 503). Start a new game and try again.",
+    },
+    {
+      name: "network failure",
+      sessionKey: "solitaire-session",
+      status: 0,
+      expectedState: "request-failed",
+      expectedMessage:
+        "Local stats are saved, but the verified game session request failed. Start a new game and try again.",
+    },
+    {
+      name: "invalid success response",
+      sessionKey: "solitaire-session",
+      status: 0,
+      reason: "invalid-response",
+      expectedState: "request-failed",
+      expectedMessage:
+        "Local stats are saved, but the game server returned an invalid session response. Start a new game and try again.",
+    },
+    {
+      name: "unconfigured backend",
+      sessionKey: "solitaire-session",
+      status: 0,
+      reason: "unconfigured",
+      expectedState: "unconfigured",
+      expectedMessage: "",
+    },
+    {
+      name: "no started session",
+      sessionKey: "",
+      status: 0,
+      expectedState: "ready",
+      expectedMessage:
+        "Local stats are saved. This result started without a verified game session.",
+    },
+  ];
+
+  for (const failureCase of cases) {
+    const context = await loadRecordFlowHarness();
+    const recordPromise = context.recordForTest(
+      {
+        id: `event-${failureCase.name.replaceAll(" ", "-")}`,
+        game: "solitaire",
+        type: "win",
+        metric: 80,
+      },
+      failureCase.sessionKey
+    );
+    context.resolveSessionFailureForTest(failureCase.status, failureCase.reason);
+    await recordPromise;
+    const state = context.readFlowState();
+
+    assert.equal(state.applyCalls, 1, failureCase.name);
+    assert.equal(state.saveCalls, 1, failureCase.name);
+    assert.equal(state.handoffCalls, 1, failureCase.name);
+    assert.equal(state.queueCalls, 0, failureCase.name);
+    assert.equal(state.syncCalls, 0, failureCase.name);
+    assert.equal(state.queuedSession, null, failureCase.name);
+    assert.equal(state.gameStatsSyncState, failureCase.expectedState, failureCase.name);
+    assert.equal(state.gameStatsSyncMessage, failureCase.expectedMessage, failureCase.name);
+  }
 });
 
 test("duplicate and reset-cancelled records never open a leaderboard", async () => {
@@ -368,6 +474,9 @@ test("duplicate and reset-cancelled records never open a leaderboard", async () 
       handoffCalls: 0,
       queueCalls: 0,
       syncCalls: 0,
+      queuedSession: null,
+      gameStatsSyncState: "ready",
+      gameStatsSyncMessage: "",
     }
   );
 
@@ -388,6 +497,9 @@ test("duplicate and reset-cancelled records never open a leaderboard", async () 
       handoffCalls: 0,
       queueCalls: 0,
       syncCalls: 0,
+      queuedSession: null,
+      gameStatsSyncState: "ready",
+      gameStatsSyncMessage: "",
     }
   );
 });

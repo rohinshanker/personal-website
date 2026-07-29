@@ -223,7 +223,7 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
       "const playGameStatsRecordHandoff = async () => {};",
       recordEventSource,
       "globalThis.recordGameStatsEventForTest = recordGameStatsEvent;",
-      'globalThis.resolveSessionForTest = () => resolveSession({ id: "session-solitaire", token: "token-solitaire", expiresAt: new Date(Date.now() + 60_000).toISOString() });',
+      'globalThis.resolveSessionForTest = () => resolveSession({ session: { id: "session-solitaire", token: "token-solitaire", expiresAt: new Date(Date.now() + 60_000).toISOString() }, status: 201 });',
       "globalThis.readRecordState = () => ({ appliedEvent, queuedSubmission, saveCalls, syncCalls });",
     ].join("\n"),
     context

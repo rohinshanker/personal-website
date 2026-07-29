@@ -4,7 +4,7 @@ Purpose: Controlled Cloudflare Worker and D1 release, security, production verif
 
 Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
 
-Last verified: 2026-07-25
+Last verified: 2026-07-29
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -15,38 +15,74 @@ Local browser stats remain useful offline. This backend stores public global
 statistics and leaderboards; it is not a trustworthy record for a competitive
 or high-stakes game.
 
-## Verified State — 2026-07-25
+## Verified State — 2026-07-28
 
 - The public Worker endpoint is
   `https://personal-site-game-stats.rohinshankerme.workers.dev`. Worker version
-  `c59b72c1-9dc8-4a4a-83fe-5a7ce45f3d68` and static application commit
-  `ac2870d` were released together on build
-  `sha256-da7f63bd97a6ef8a28de5ef48e5297495253fe7809d9a88af33c21d5148d3ab5`.
-  The deployed `index.html`, `home.html`, and generated browser backend config
-  matched the committed file hashes after GitHub Pages converged.
+  `2cd1c298-e6b8-434e-8319-9fafa8fe3f9e` and static application commit
+  `438ac4b` are active on build
+  `sha256-5c96dea824aedfbf841853690c0f34267b84f947dd36cbec0462bcb450ecbed6`.
+  A cache-busted production check recomputed that exact hash from the live
+  completion sources, found the corresponding cache tokens in both HTML entry
+  points, and matched it to Worker `/health` in one attempt.
 - The deployed Worker accepts the exact production origin and allows both
   `Authorization` and `Content-Type` in CORS preflight. It rejects local page
   origins by design, so test production credentials on the deployed site—not
   `localhost` or `127.0.0.1` against the public Worker.
 - `scripts/home/game-stats-backend.js` now uses that public HTTPS endpoint. It
   contains no credential; the Worker secrets remain server-only.
-- The source suite passes 129 tests and the rendered browser suite passes 91
-  tests. The leaderboard remained visible at 375×812, 768×1024, 1280×800, and
-  1440×900. The D1-backed health check reports the exact active build, the
-  current build rejects an unsupported game with `400`, and the previous build
-  is rejected with `409`.
-- A fresh public profile and the protected Administrator each completed one
-  duration-valid Easy no-hints Sudoku through the deployed UI. Local progress,
-  the requested-player record/rank, the public Top 3, and direct D1 rows agreed:
-  the public profile ranked 2 of 2 at `04:53`, and Administrator ranked 1 of 2
-  at `00:48`. Both exact sessions were consumed with their events in the
-  transactional batch, and the browser status returned to up to date.
-- Exact manifest-based cleanup removed the two verification events and all six
-  sessions opened during the run, including four unused sessions. The two
-  pre-existing events, six pre-existing sessions, three shared rate-limit
-  buckets, and two migrations remained unchanged. A local reset plus reload did
-  not republish either event; public Sudoku data returned to empty, and
-  `PRAGMA quick_check` returned `ok`.
+- New sessions require the exact active browser hash. A valid signed and
+  D1-backed session issued before a deployment remains usable until expiry,
+  while any token-to-D1 build, issue-time, config, IP, expiry, or signature
+  mismatch is rejected without consuming the session or storing an event.
+- The source suite passes all 195 tests. The 120-test rendered matrix has
+  complete passing coverage: 114 passed in the final full pass and six cases
+  interrupted by a host network change passed on immediate isolated rerun.
+  The seven Snake publishing checks pass together, including real movement and
+  collision, delayed success, retained `425` retry, rejection, and layouts at
+  375×812, 768×1024, 1280×800, and 1440×900. The final updated Solitaire
+  publishing check also passes independently and starts its signed session
+  through a real stock draw before exercising the win.
+- A fresh local D1 integration accepted an immediate zero-score Snake result
+  with `201` after a 4.974-second server eligibility wait, returned `200` with
+  `applied: false` for the identical retry, and retained exactly one event, one
+  consumed session, one global game, and one leaderboard score. A missing
+  Origin returned `403`. The production deploy and parity checks made no D1
+  event writes.
+
+## Local Release Candidate — 2026-07-29 (Not Deployed)
+
+- The checked-in candidate is build
+  `sha256-96994628e2137242d12aa9b9438da817e3f3d91347852efe6127bb6b7dc94df0`.
+  It is not the live build described above. Do not deploy its Worker by itself:
+  first let the static release gate observe this exact browser hash and cache
+  token, then deploy the matching Worker and run the full parity gate.
+- The browser now reports session-creation and stale-build failures instead of
+  silently treating them as publishable results. Queued global submissions
+  from the normal client flow always include a normalized, unexpired session
+  proof; the Worker remains responsible for verifying its signature and D1
+  state. The Worker still requires the active hash for new sessions while
+  allowing an already-issued HMAC- and D1-matched session from an earlier
+  accepted build to finish before its normal expiry.
+- Sudoku has a persisted one-completion-per-puzzle latch. Both hint buckets
+  increment the verified difficulty total, while only finite no-hints times
+  enter Top 3, rank, and record data. Strict new-write validation rejects
+  missing or non-integer times, malformed scalar/profile fields, mismatched
+  difficulty, irrelevant cross-game fields, and invalid HMACs without consuming
+  a reusable session. Repeating the exact accepted event is idempotent rather
+  than incrementing any counter. Defensive historical-row reads remain
+  separate from strict ingress.
+- Local verification passes 203 source tests, 44 focused Worker tests, the
+  integrity check, JavaScript syntax and diff checks, and Wrangler 4.114.0's
+  deployment dry-run. The real rendered Sudoku flow passes 9/9 cases without
+  retries across 375×812, 768×1024, 1280×800, and 1440×900; the maximum
+  `360:00` time and `99:99` placeholder layout passes another 4/4 cases.
+- A fresh isolated local D1 run on the final candidate accepted two no-hints
+  wins and one hinted win, rejected a difficulty mismatch without consuming
+  its session, accepted the corrected event, and returned `applied: false` for
+  replay. The no-hints leaderboard contained only the 87- and 120-second
+  results, the requested player was rank 1 of 2, and zero sessions remained
+  unconsumed. No production D1 writes or deployments were performed.
 
 Do not invent a Worker URL from the account ID. After deploying, copy the URL
 from Wrangler's successful deployment output. A `workers.dev` URL is normally
@@ -78,8 +114,10 @@ read or changed by the visitor. An attacker can also automate a real browser
 and request a valid session. Server-held HMAC keys, a single-use session,
 timestamp/config checks, bounded metrics, rate limits, and Turnstile make
 casual forgery and bulk spam harder, but cannot prove that a game was honestly
-completed. Treat these as moderation-grade public stats. A competitive system
-would require authoritative server-side game simulation or a trusted platform.
+completed. Ordinary public profile IDs also do not prove account ownership.
+Treat these as moderation-grade public stats. A competitive system would
+require authenticated profiles plus authoritative server-side game simulation
+or a server-validated deterministic seed and input replay.
 
 Never turn CORS, a public hash, a client-only CAPTCHA result, or an event ID
 into an authentication mechanism. CORS only controls cooperative browsers;
@@ -189,6 +227,74 @@ edit it by hand. The `--check` command and test fail when generated metadata
 is stale. Commit the generated changes together with the gameplay change, then
 redeploy the Worker because its accepted `GAME_BUILD_VERSION` changed.
 
+Use the local-only check to compare the checked-in generated browser config
+with the active Worker before a controlled release:
+
+```bash
+npm run game-stats:deployment:local-check
+```
+
+After a production release, check what browsers actually receive instead of
+assuming that the checked-in file has reached the site:
+
+```bash
+npm run game-stats:deployment:check
+# Equivalent from the Worker package:
+npm --prefix workers/game-stats run deployment:check
+```
+
+The live-only check requests
+`https://rohin.shanker.me/scripts/home/game-stats-backend.js` with `no-store`
+semantics and a unique cache-busting query, parses its API URL and SHA-256, then
+requests that API's no-store `/health` endpoint. It fails unless the deployed
+browser hash and Worker hash are identical. It never creates a session or
+writes to D1.
+
+The release gate additionally requires the checked-in API URL and SHA-256 to
+equal the deployed browser config and Worker health. It also fetches the live
+`scripts/home/main.js` and `scripts/home/core/dom.js` bytes without caches,
+recomputes the updater's ordered `relative path + NUL + bytes + NUL` digest,
+and verifies that both live HTML entry points reference all three integrity
+assets with the corresponding `game-build-...` cache token:
+
+```bash
+npm run game-stats:release:check
+```
+
+It polls the cache-busted browser config, completion sources, and HTML entries
+for up to two minutes so an in-progress Pages deployment can converge. A stale
+live config, source file, or HTML cache reference fails even when the
+checked-in config and Worker already match.
+
+Before deploying the Worker, run the static-only form of the same polling gate:
+
+```bash
+npm run game-stats:static-release:check
+```
+
+This requires the checked-in config, recomputed live completion-source hash,
+and both live HTML cache-token sets to converge while intentionally ignoring
+Worker `/health`. The release workflow runs this gate before `wrangler deploy`,
+then runs the full browser/source/HTML/Worker gate afterward. This ordering
+prevents a Worker for a newer hash from replacing the current Worker while the
+production site still serves the older browser release.
+
+`.github/workflows/game-stats-worker-release.yml` runs source tests, the
+integrity check, and a lockfile-installed Wrangler dry-run for pull requests and
+pushes. Pull requests are read-only. On `main`, it requires both repository
+secrets, waits for the static-only gate, deploys the current
+`workers/game-stats/wrangler.jsonc`, and then runs the full polling release
+gate. Releases share one concurrency group per ref and a
+new push cancels the superseded run, so an older `main` run cannot later deploy
+over the newest Worker. Configure these GitHub Actions repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`: a narrowly scoped token allowed to deploy this Worker.
+- `CLOUDFLARE_ACCOUNT_ID`: the account that owns the Worker and D1 database.
+
+Keep both values in GitHub Actions secrets, never in repository variables or
+source. A `main` release fails with an explicit error when either value is
+missing; it must never report success while leaving an older Worker active.
+
 If gameplay-completion logic moves to another file, first add that file to
 `GAME_COMPLETION_SOURCE_FILES` in the script, update its test, run the updater,
 and deploy the static site and Worker as one release. The script preserves the
@@ -254,6 +360,15 @@ changes:
 - event time is a plausible, bounded timestamp; and
 - the keyed IP rate limit allows the request.
 
+Strict event ingress accepts only scalar strings and the exact fields for that
+game. The common fields are `id`, `game`, `type`, `occurredAt`, `metric`,
+`metricKind`, and `profile`; Minesweeper adds only `difficulty`, Snake adds
+only `boardSize`, and Sudoku adds only `difficulty` and `hintBucket`.
+Solitaire has no category field. Reject arrays, objects in scalar fields,
+unknown fields, and irrelevant cross-game fields before reading or consuming
+the session. Historical D1 rows may be normalized more defensively for public
+read availability, but that tolerance must never be reused for new writes.
+
 An event profile has the exact public API shape `{ "id", "name", "icon" }`.
 Fields used only by the browser, including `rerollCount`, must be removed at
 the API boundary. Keep the Worker strict: an unknown profile field is a
@@ -265,6 +380,27 @@ The tracked result types are Minesweeper `win`, Solitaire `win`, Snake
 `gamePlayed` with a bounded board score, and Sudoku `win`. Keep event-ID
 idempotency as a second replay guard: retrying a completed request must not
 increment counts twice.
+
+Sudoku records both `noHints` and `withHints` completions in the matching
+difficulty total, but only a finite `noHints` time may enter a leaderboard,
+requested-player rank, or personal record. The browser also keeps a persisted
+per-puzzle completion latch: undo, redo, notes, or cell edits after a solve
+must not record the same generated puzzle again. Only generating a fresh
+puzzle may reset that latch and request a fresh single-use session. A puzzle
+restored from local storage remains local-only because its original in-memory
+session proof is unavailable; do not make restored client-controlled puzzle
+state globally eligible by starting a new session for it.
+
+Ingress metrics must be JSON safe integers. Minesweeper and Sudoku times and
+Solitaire moves start at one; Snake scores start at zero; every game retains
+its upper bound. Invalid stored legacy rows are skipped individually so one
+old or corrupt value cannot take all public stats offline. For Snake, retain a
+five-second minimum and the score-aware floor `900 + score × 118` milliseconds.
+When a genuine quick result needs no more than five additional seconds, use
+the Workers Scheduler wait and recheck the clock before the atomic D1 write.
+Longer remaining delays return `425` with bounded `Retry-After` metadata and
+must not consume the session, increment its event rate bucket, or insert an
+event. The browser keeps that submission queued for a later manual refresh.
 
 The administrator endpoint accepts exactly `{ "username", "password" }` and
 never returns a credential. It requires an explicit allowed `Origin` header,
@@ -391,9 +527,23 @@ session HMACs, or an IP-derived identifier.
    credential.
 
 7. On releases that change covered gameplay sources, run the integrity updater
-   first, deploy the Worker with its new `GAME_BUILD_VERSION`, then publish the
-   matching static files. Old open tabs can fail closed until refresh; do not
-   weaken version checks to support them.
+   first and publish the matching static files. Wait for
+   `npm run game-stats:static-release:check` to prove that the public config,
+   completion sources, and both HTML entry points have converged; only then
+   deploy the Worker and run `npm run game-stats:release:check`. New sessions
+   from stale builds fail closed with a reload action, while an already-issued,
+   unexpired signed and D1-backed session remains valid across the deployment.
+
+For a Worker-only hotfix while production static files remain on an older
+valid hash, do not run the ordinary deploy from a newer worktree. First read
+the cache-busted live browser config and verify its sources and HTML cache
+tokens. Then dry-run and deploy with that exact live hash passed through
+`--var GAME_BUILD_VERSION:<live-sha256> --keep-vars --strict`. `--keep-vars`
+preserves remote configuration and `--strict` fails rather than overwriting a
+concurrent deployment. Run `npm run game-stats:deployment:check` immediately
+afterward; the reported hash must remain the live browser hash. The normal
+release command becomes safe again only after the static site and checked-in
+Worker configuration converge.
 
 ## Endpoint Verification After Deploy
 
@@ -595,9 +745,10 @@ session proofs, raw IPs, or IP HMACs to logs or analytics.
 Use this checklist after the verified release and after every future Game Stats
 change:
 
-1. Keep frontend and Worker build metadata atomic: regenerate integrity
-   metadata, deploy the Worker, publish the same committed static state, and
-   confirm the live files and Worker use the identical build hash.
+1. Keep frontend and Worker build metadata synchronized: regenerate integrity
+   metadata, publish the same committed static state, wait for the static-only
+   convergence gate, deploy the Worker, then require the full live
+   browser/source/HTML/Worker gate to pass on the identical build hash.
 2. Run the full source and rendered UI suites, including mobile and desktop
    multiplayer, unplayed, empty, loading, authentication, failure, and timeout
    states. Inspect the committed at-a-glance contact sheet when copy or state
@@ -622,6 +773,8 @@ change:
 
 ## Official References
 
+- [Workers Scheduler](https://developers.cloudflare.com/workers/runtime-apis/scheduler/)
+- [Wrangler deploy command](https://developers.cloudflare.com/workers/wrangler/commands/workers/#deploy)
 - [Workers Wrangler configuration](https://developers.cloudflare.com/workers/wrangler/configuration/)
 - [D1 migrations](https://developers.cloudflare.com/d1/reference/migrations/)
 - [D1 Time Travel and backups](https://developers.cloudflare.com/d1/reference/time-travel/)

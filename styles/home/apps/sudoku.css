@@ -1010,7 +1010,7 @@
 }
 
 .sudoku-hint-options {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .sudoku-number-grid button,
@@ -1219,17 +1219,6 @@
   font-weight: bold;
 }
 
-.sudoku-grid .sudoku-cell.is-correct:not(.is-given) {
-  background:
-    linear-gradient(var(--sudoku-axis-highlight), var(--sudoku-axis-highlight)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(156, 243, 255, 0.84) 42%, rgba(0, 151, 220, 0.82) 43%, rgba(191, 251, 255, 0.92)),
-    #6ee6ff;
-  color: #00568f;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.96),
-    0 0 5px rgba(255, 255, 255, 0.9);
-}
-
 .sudoku-grid .sudoku-cell.is-solved-wave {
   animation: sudoku-solved-tile-blue 520ms ease-out var(--sudoku-solve-delay, 0ms) both;
 }
@@ -1291,7 +1280,7 @@
   display: grid;
   font-size: 11px;
   gap: 0;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(96px, 1fr) 82px 90px;
   min-height: 20px;
 }
 
@@ -1315,10 +1304,28 @@
 .sudoku-statusbar span {
   align-items: center;
   border-right: 1px solid #808080;
+  box-sizing: border-box;
   display: flex;
   min-width: 0;
+  overflow: hidden;
   padding: 2px 7px;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+#sudoku-mistakes,
+#sudoku-time,
+#sudoku-leaderboard-checks {
+  font-variant-numeric: tabular-nums;
+}
+
+#sudoku-time {
+  border-right: 0;
+}
+
+#sudoku-leaderboard-checks {
+  border-top: 1px solid #808080;
+  grid-column: 1 / -1;
 }
 
 .sudoku-statusbar span:last-child {
@@ -1338,6 +1345,26 @@
 
 .sudoku-solve-popup.is-visible {
   display: flex;
+}
+
+.sudoku-errors-prompt {
+  background: transparent;
+  border: 0;
+  color: #000;
+  margin: auto;
+  max-height: calc(100vh - 32px);
+  max-width: calc(100vw - 32px);
+  padding: 0;
+  width: min(320px, calc(100vw - 32px));
+}
+
+.sudoku-errors-prompt::backdrop {
+  background: rgba(0, 30, 52, 0.46);
+}
+
+.sudoku-errors-prompt .sudoku-solve-dialog {
+  max-width: 100%;
+  width: 100%;
 }
 
 .sudoku-solve-dialog {
@@ -1409,6 +1436,11 @@
 
 .sudoku-solve-actions button {
   min-width: 72px;
+}
+
+.sudoku-errors-prompt-actions {
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 @container (max-width: 540px) {

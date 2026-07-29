@@ -5,8 +5,13 @@
   "scripts": {
     "dev": "wrangler dev --local",
     "deploy": "wrangler deploy",
+    "deploy:check": "wrangler deploy --dry-run --config wrangler.jsonc",
     "integrity:update": "node ../../scripts/update-game-integrity.mjs",
     "integrity:check": "node ../../scripts/update-game-integrity.mjs --check",
+    "deployment:local-check": "node ../../scripts/check-game-stats-deployment.mjs",
+    "deployment:check": "node ../../scripts/check-game-stats-deployment.mjs --live",
+    "static-release:check": "node ../../scripts/check-game-stats-deployment.mjs --static-release",
+    "release:check": "node ../../scripts/check-game-stats-deployment.mjs --release",
     "migrate:local": "wrangler d1 migrations apply personal_site_game_stats --local",
     "migrate:remote": "wrangler d1 migrations apply personal_site_game_stats --remote",
     "test": "node --test ../../tests/game-stats-worker.test.mjs"

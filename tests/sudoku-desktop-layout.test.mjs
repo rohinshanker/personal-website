@@ -44,4 +44,21 @@ test("Sudoku keeps desktop controls beside the board in the requested order", as
     styles,
     /@container \(max-width: 540px\) \{[\s\S]*?\.sudoku-game-content \{[\s\S]*?grid-template-columns: 1fr;[\s\S]*?\.sudoku-control-panel \.sudoku-actions \{[\s\S]*?grid-column: 1 \/ -1;/
   );
+  assert.match(
+    styles,
+    /\.sudoku-statusbar \{[\s\S]*?grid-template-columns: minmax\(96px, 1fr\) 82px 90px;/,
+    "mistakes and timer need fixed tracks so timer digits cannot shift adjacent items"
+  );
+  assert.match(
+    styles,
+    /#sudoku-mistakes,[\s\S]*?#sudoku-time,[\s\S]*?#sudoku-leaderboard-checks \{[\s\S]*?font-variant-numeric: tabular-nums;/
+  );
+  assert.match(
+    styles,
+    /#sudoku-leaderboard-checks \{[\s\S]*?grid-column: 1 \/ -1;/
+  );
+  assert.match(
+    home,
+    /id="sudoku-leaderboard-checks"[^>]*>0\/3 allowed checks used to place on leaderboard<\/span>/
+  );
 });

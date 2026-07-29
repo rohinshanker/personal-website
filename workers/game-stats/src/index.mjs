@@ -9,6 +9,31 @@ const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
 ]);
 const GAME_STATS_SNAKE_BOARD_SIZES = Object.freeze(["10", "16", "20", "24"]);
 const GAME_STATS_HINT_BUCKETS = Object.freeze(["noHints", "withHints"]);
+const GAME_STATS_COMMON_EVENT_KEYS = Object.freeze([
+  "id",
+  "game",
+  "type",
+  "occurredAt",
+  "metric",
+  "metricKind",
+  "profile",
+]);
+const GAME_STATS_EVENT_KEYS = Object.freeze({
+  minesweeper: Object.freeze([...GAME_STATS_COMMON_EVENT_KEYS, "difficulty"]),
+  solitaire: GAME_STATS_COMMON_EVENT_KEYS,
+  snake: Object.freeze([...GAME_STATS_COMMON_EVENT_KEYS, "boardSize"]),
+  sudoku: Object.freeze([
+    ...GAME_STATS_COMMON_EVENT_KEYS,
+    "difficulty",
+    "hintBucket",
+  ]),
+});
+const GAME_STATS_HISTORICAL_EVENT_KEYS = Object.freeze([
+  ...GAME_STATS_COMMON_EVENT_KEYS,
+  "difficulty",
+  "boardSize",
+  "hintBucket",
+]);
 const MAX_EVENT_BODY_BYTES = 4096;
 const MAX_SOLITAIRE_MOVES = 99999;
 const MAX_MINESWEEPER_SECONDS = 999;
@@ -17,6 +42,12 @@ const MAX_EVENT_AGE_MS = 24 * 60 * 60 * 1000;
 const MAX_EVENT_FUTURE_MS = 60 * 1000;
 const SESSION_TTL_MS = 6 * 60 * 60 * 1000;
 const SESSION_EVENT_START_GRACE_MS = 2 * 60 * 1000;
+const MIN_SNAKE_SESSION_DURATION_MS = 5 * 1000;
+// The browser aborts after eight seconds, leaving a nominal three-second transport/D1 budget.
+const MAX_INLINE_SNAKE_ELIGIBILITY_WAIT_MS = 5 * 1000;
+const MAX_RETRY_AFTER_MS = 60 * 1000;
+const SNAKE_RESUME_COUNTDOWN_MS = 900;
+const SNAKE_TICK_MS = 118;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_SESSIONS_PER_WINDOW = 24;
 const MAX_EVENTS_PER_WINDOW = 24;
@@ -60,7 +91,8 @@ SELECT
   occurred_at
 FROM game_events
 `;
-const SELECT_EVENT_SQL = "SELECT id FROM game_events WHERE id = ?";
+const SELECT_EVENT_SQL = `${SELECT_EVENTS_SQL.trim()}
+WHERE id = ?`;
 const INSERT_SESSION_SQL = `
 INSERT INTO game_stat_sessions (
   id, game, config_json, build_version, ip_hash, issued_at, expires_at
@@ -104,9 +136,10 @@ WHERE type = 'table'
 `;
 
 class HttpError extends Error {
-  constructor(status, message) {
+  constructor(status, message, { retryAfterMs = 0 } = {}) {
     super(message);
     this.status = status;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -117,6 +150,13 @@ const assertAllowedKeys = (value, allowedKeys, label) => {
   if (!isPlainObject(value)) throw new HttpError(400, `${label} must be an object`);
   const unknownKey = Object.keys(value).find((key) => !allowedKeys.includes(key));
   if (unknownKey) throw new HttpError(400, `Unknown ${label} field: ${unknownKey}`);
+};
+
+const normalizeEventString = (value, label, { allowHistorical = false } = {}) => {
+  if (!allowHistorical && typeof value !== "string") {
+    throw new HttpError(400, `${label} must be a string`);
+  }
+  return String(value ?? "").trim();
 };
 
 const createEmptyMinesweeperWins = () =>
@@ -217,16 +257,18 @@ const normalizeIsoDate = (value, { allowHistorical = false } = {}) => {
   return date.toISOString();
 };
 
-const normalizeMetric = (value, label, maxValue = Number.MAX_SAFE_INTEGER) => {
-  const metric = Number(value);
-  if (!Number.isFinite(metric) || metric < 0) {
+const normalizeMetric = (
+  value,
+  label,
+  { minValue = 0, maxValue = Number.MAX_SAFE_INTEGER } = {}
+) => {
+  if (!Number.isSafeInteger(value) || value < minValue) {
     throw new HttpError(400, `Invalid ${label}`);
   }
-  const integerMetric = Math.trunc(metric);
-  if (integerMetric > maxValue) {
+  if (value > maxValue) {
     throw new HttpError(400, `${label} is out of range`);
   }
-  return integerMetric;
+  return value;
 };
 
 const ROHIN_NEKO_AVATAR_ICON = "assets/neko-assets/sprites/yawn1.png";
@@ -239,20 +281,36 @@ const ADMINISTRATOR_PROFILE = Object.freeze({
 const isAllowedProfileIcon = (icon) =>
   /^assets\/app-icons\/ico\/[^/]+\.ico$/.test(icon) || icon === ROHIN_NEKO_AVATAR_ICON;
 
-const normalizeProfile = (profile) => {
+const normalizeProfile = (profile, { allowHistorical = false } = {}) => {
   if (profile === null || profile === undefined) return null;
-  assertAllowedKeys(profile, ["id", "name", "icon"], "profile");
-  if (!isPlainObject(profile)) return null;
-  const id = String(profile.id || "").trim();
-  const name = String(profile.name || "").trim().slice(0, 32);
-  const icon = String(profile.icon || "").trim();
-  if (!/^[a-z0-9-]{8,80}$/.test(id)) return null;
-  if (!name || !isAllowedProfileIcon(icon)) return null;
+  try {
+    assertAllowedKeys(profile, ["id", "name", "icon"], "profile");
+  } catch (error) {
+    if (allowHistorical && error instanceof HttpError) return null;
+    throw error;
+  }
+  const nonStringField = ["id", "name", "icon"].find(
+    (field) => typeof profile[field] !== "string"
+  );
+  if (nonStringField) {
+    if (allowHistorical) return null;
+    throw new HttpError(400, `Event profile ${nonStringField} must be a string`);
+  }
+  const id = profile.id.trim();
+  const name = profile.name.trim().slice(0, 32);
+  const icon = profile.icon.trim();
+  if (!/^[a-z0-9-]{8,80}$/.test(id) || !name || !isAllowedProfileIcon(icon)) {
+    if (allowHistorical) return null;
+    throw new HttpError(400, "Invalid event profile");
+  }
   return { id, name, icon };
 };
 
-const requireMetricKind = (rawEvent, expectedKind) => {
-  const metricKind = String(rawEvent.metricKind || expectedKind).trim();
+const requireMetricKind = (rawEvent, expectedKind, { allowHistorical = false } = {}) => {
+  if (rawEvent.metricKind === undefined) return expectedKind;
+  const metricKind = normalizeEventString(rawEvent.metricKind, "Event metric kind", {
+    allowHistorical,
+  });
   if (metricKind !== expectedKind) {
     throw new HttpError(400, `Invalid metric kind for ${rawEvent.game}`);
   }
@@ -260,35 +318,32 @@ const requireMetricKind = (rawEvent, expectedKind) => {
 };
 
 const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } = {}) => {
-  assertAllowedKeys(
-    rawEvent,
-    [
-      "id",
-      "game",
-      "type",
-      "occurredAt",
-      "difficulty",
-      "boardSize",
-      "hintBucket",
-      "metric",
-      "metricKind",
-      "profile",
-    ],
-    "event"
-  );
+  if (!isPlainObject(rawEvent)) throw new HttpError(400, "event must be an object");
+  const game = normalizeEventString(rawEvent.game, "Event game", { allowHistorical });
+  const allowedKeys = allowHistorical
+    ? GAME_STATS_HISTORICAL_EVENT_KEYS
+    : Object.hasOwn(GAME_STATS_EVENT_KEYS, game)
+      ? GAME_STATS_EVENT_KEYS[game]
+      : null;
+  if (!allowedKeys) throw new HttpError(400, `Unsupported game: ${game}`);
+  assertAllowedKeys(rawEvent, allowedKeys, "event");
 
-  const id = String(rawEvent.id || "").trim();
-  const game = String(rawEvent.game || "").trim();
-  const type = String(rawEvent.type || "").trim();
+  const id = normalizeEventString(rawEvent.id, "Event id", { allowHistorical });
+  const type = normalizeEventString(rawEvent.type, "Event type", { allowHistorical });
+  if (!allowHistorical && typeof rawEvent.occurredAt !== "string") {
+    throw new HttpError(400, "Event date must be a string");
+  }
   const occurredAt = normalizeIsoDate(rawEvent.occurredAt, { allowHistorical });
-  const profile = normalizeProfile(rawEvent.profile);
+  const profile = normalizeProfile(rawEvent.profile, { allowHistorical });
 
   if (!/^[a-z0-9-]{8,80}$/.test(id)) {
     throw new HttpError(400, "Invalid event id");
   }
 
   if (game === "minesweeper") {
-    const difficulty = String(rawEvent.difficulty || rawEvent.category || "").trim();
+    const difficulty = normalizeEventString(rawEvent.difficulty, "Minesweeper difficulty", {
+      allowHistorical,
+    });
     if (type !== "win" || !GAME_STATS_DIFFICULTIES.includes(difficulty)) {
       throw new HttpError(400, "Invalid Minesweeper event");
     }
@@ -299,11 +354,11 @@ const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } =
       occurredAt,
       difficulty,
       metric: normalizeMetric(
-        rawEvent.metric ?? rawEvent.seconds,
+        rawEvent.metric,
         "Minesweeper time",
-        MAX_MINESWEEPER_SECONDS
+        { minValue: 1, maxValue: MAX_MINESWEEPER_SECONDS }
       ),
-      metricKind: requireMetricKind(rawEvent, "seconds"),
+      metricKind: requireMetricKind(rawEvent, "seconds", { allowHistorical }),
       profile,
     };
   }
@@ -316,17 +371,19 @@ const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } =
       type,
       occurredAt,
       metric: normalizeMetric(
-        rawEvent.metric ?? rawEvent.moves,
+        rawEvent.metric,
         "Solitaire moves",
-        MAX_SOLITAIRE_MOVES
+        { minValue: 1, maxValue: MAX_SOLITAIRE_MOVES }
       ),
-      metricKind: requireMetricKind(rawEvent, "moves"),
+      metricKind: requireMetricKind(rawEvent, "moves", { allowHistorical }),
       profile,
     };
   }
 
   if (game === "snake") {
-    const boardSize = String(rawEvent.boardSize || rawEvent.category || "").trim();
+    const boardSize = normalizeEventString(rawEvent.boardSize, "Snake board size", {
+      allowHistorical,
+    });
     if (type !== "gamePlayed" || !GAME_STATS_SNAKE_BOARD_SIZES.includes(boardSize)) {
       throw new HttpError(400, "Invalid Snake event");
     }
@@ -337,18 +394,22 @@ const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } =
       occurredAt,
       boardSize,
       metric: normalizeMetric(
-        rawEvent.metric ?? rawEvent.score,
+        rawEvent.metric,
         "Snake score",
-        Number(boardSize) * Number(boardSize) - 3
+        { maxValue: Number(boardSize) * Number(boardSize) - 3 }
       ),
-      metricKind: requireMetricKind(rawEvent, "score"),
+      metricKind: requireMetricKind(rawEvent, "score", { allowHistorical }),
       profile,
     };
   }
 
   if (game === "sudoku") {
-    const difficulty = String(rawEvent.difficulty || "").trim();
-    const hintBucket = String(rawEvent.hintBucket || "").trim();
+    const difficulty = normalizeEventString(rawEvent.difficulty, "Sudoku difficulty", {
+      allowHistorical,
+    });
+    const hintBucket = normalizeEventString(rawEvent.hintBucket, "Sudoku hint bucket", {
+      allowHistorical,
+    });
     if (
       type !== "win" ||
       !GAME_STATS_SUDOKU_DIFFICULTIES.includes(difficulty) ||
@@ -356,8 +417,11 @@ const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } =
     ) {
       throw new HttpError(400, "Invalid Sudoku event");
     }
-    const metricSource = rawEvent.metric ?? rawEvent.seconds;
+    const metricSource = rawEvent.metric;
     if (metricSource === undefined || metricSource === null || metricSource === "") {
+      if (!allowHistorical) {
+        throw new HttpError(400, "Sudoku result requires a completion time");
+      }
       return { id, game, type, occurredAt, difficulty, hintBucket, profile };
     }
     return {
@@ -367,8 +431,11 @@ const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } =
       occurredAt,
       difficulty,
       hintBucket,
-      metric: normalizeMetric(metricSource, "Sudoku time", MAX_SUDOKU_SECONDS),
-      metricKind: requireMetricKind(rawEvent, "seconds"),
+      metric: normalizeMetric(metricSource, "Sudoku time", {
+        minValue: 1,
+        maxValue: MAX_SUDOKU_SECONDS,
+      }),
+      metricKind: requireMetricKind(rawEvent, "seconds", { allowHistorical }),
       profile,
     };
   }
@@ -453,7 +520,15 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
   stats.generatedAt = new Date().toISOString();
 
   for (const rawEvent of rawEvents) {
-    const event = normalizeGameStatsEventInternal(rawEvent, { allowHistorical: true });
+    let event;
+    try {
+      event = normalizeGameStatsEventInternal(rawEvent, { allowHistorical: true });
+    } catch (error) {
+      // A malformed legacy row must not take every public counter and
+      // leaderboard offline. New writes still pass strict ingress validation.
+      if (error instanceof HttpError) continue;
+      throw error;
+    }
     if (stats.eventIds.includes(event.id)) continue;
     stats.eventIds.push(event.id);
 
@@ -643,13 +718,14 @@ const assertBrowserOriginAllowed = (request, env) => {
   }
 };
 
-const jsonResponse = (request, env, body, status = 200) =>
+const jsonResponse = (request, env, body, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
       ...corsHeaders(request, env),
+      ...extraHeaders,
     },
   });
 
@@ -743,7 +819,10 @@ const getClientIp = (request) => String(request.headers.get("CF-Connecting-IP") 
 const normalizeSessionConfig = (game, rawConfig) => {
   if (game === "minesweeper") {
     assertAllowedKeys(rawConfig, ["difficulty"], "Minesweeper session config");
-    const difficulty = String(rawConfig.difficulty || "").trim();
+    if (typeof rawConfig.difficulty !== "string") {
+      throw new HttpError(400, "Minesweeper difficulty must be a string");
+    }
+    const difficulty = rawConfig.difficulty.trim();
     if (!GAME_STATS_DIFFICULTIES.includes(difficulty)) {
       throw new HttpError(400, "Invalid Minesweeper session config");
     }
@@ -755,7 +834,10 @@ const normalizeSessionConfig = (game, rawConfig) => {
   }
   if (game === "snake") {
     assertAllowedKeys(rawConfig, ["boardSize"], "Snake session config");
-    const boardSize = String(rawConfig.boardSize || "").trim();
+    if (typeof rawConfig.boardSize !== "string") {
+      throw new HttpError(400, "Snake board size must be a string");
+    }
+    const boardSize = rawConfig.boardSize.trim();
     if (!GAME_STATS_SNAKE_BOARD_SIZES.includes(boardSize)) {
       throw new HttpError(400, "Invalid Snake session config");
     }
@@ -763,7 +845,10 @@ const normalizeSessionConfig = (game, rawConfig) => {
   }
   if (game === "sudoku") {
     assertAllowedKeys(rawConfig, ["difficulty"], "Sudoku session config");
-    const difficulty = String(rawConfig.difficulty || "").trim();
+    if (typeof rawConfig.difficulty !== "string") {
+      throw new HttpError(400, "Sudoku difficulty must be a string");
+    }
+    const difficulty = rawConfig.difficulty.trim();
     if (!GAME_STATS_SUDOKU_DIFFICULTIES.includes(difficulty)) {
       throw new HttpError(400, "Invalid Sudoku session config");
     }
@@ -780,11 +865,57 @@ const sessionConfigMatchesEvent = (config, event) => {
   return event.game === "solitaire";
 };
 
-const minimumSessionDurationMs = (game) => {
-  if (game === "minesweeper") return 3 * 1000;
-  if (game === "solitaire") return 8 * 1000;
-  if (game === "snake") return 5 * 1000;
+const minimumSessionDurationMs = (event) => {
+  if (event.game === "minesweeper") return 3 * 1000;
+  if (event.game === "solitaire") return 8 * 1000;
+  if (event.game === "snake") {
+    return Math.max(
+      MIN_SNAKE_SESSION_DURATION_MS,
+      SNAKE_RESUME_COUNTDOWN_MS + event.metric * SNAKE_TICK_MS
+    );
+  }
   return 10 * 1000;
+};
+
+const waitForSnakeEligibility = async (delayMs) => {
+  if (
+    !Number.isSafeInteger(delayMs) ||
+    delayMs < 1 ||
+    delayMs > MAX_INLINE_SNAKE_ELIGIBILITY_WAIT_MS
+  ) {
+    throw new HttpError(500, "Invalid Snake eligibility delay");
+  }
+  const schedulerApi = globalThis.scheduler;
+  if (typeof schedulerApi?.wait === "function") {
+    await schedulerApi.wait(delayMs);
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+};
+
+const requireSessionEligibility = async (event, sessionIssuedAt) => {
+  const minimumDurationMs = minimumSessionDurationMs(event);
+  const eligibleAt = sessionIssuedAt + minimumDurationMs;
+  const elapsedMs = Date.now() - sessionIssuedAt;
+  if (elapsedMs >= minimumDurationMs) return;
+
+  if (event.game !== "snake") {
+    throw new HttpError(400, "Game result was completed too quickly");
+  }
+
+  const remainingMs = Math.ceil(minimumDurationMs - elapsedMs);
+  if (remainingMs <= MAX_INLINE_SNAKE_ELIGIBILITY_WAIT_MS) {
+    await waitForSnakeEligibility(remainingMs);
+    const remainingAfterWaitMs = Math.ceil(eligibleAt - Date.now());
+    if (remainingAfterWaitMs <= 0) return;
+    throw new HttpError(425, "Snake result is not eligible yet", {
+      retryAfterMs: Math.min(remainingAfterWaitMs, MAX_RETRY_AFTER_MS),
+    });
+  }
+
+  throw new HttpError(425, "Snake result is not eligible yet", {
+    retryAfterMs: Math.min(remainingMs, MAX_RETRY_AFTER_MS),
+  });
 };
 
 const verifyTurnstileIfRequired = async (request, env, payload) => {
@@ -979,8 +1110,14 @@ const selectExistingEvent = async (env, id) => {
 const createSession = async (request, env, rawPayload) => {
   assertAllowedKeys(rawPayload, ["game", "config", "buildVersion", "turnstileToken"], "session request");
   const security = requireSecurityConfig(env);
-  const game = String(rawPayload.game || "").trim();
-  const buildVersion = String(rawPayload.buildVersion || "").trim();
+  if (typeof rawPayload.game !== "string") {
+    throw new HttpError(400, "Session game must be a string");
+  }
+  if (typeof rawPayload.buildVersion !== "string") {
+    throw new HttpError(400, "Game build version must be a string");
+  }
+  const game = rawPayload.game.trim();
+  const buildVersion = rawPayload.buildVersion.trim();
   if (buildVersion !== security.buildVersion) throw new HttpError(409, "Game build version is not current");
   const config = normalizeSessionConfig(game, rawPayload.config);
   await verifyTurnstileIfRequired(request, env, rawPayload);
@@ -1027,7 +1164,6 @@ const validateSession = async (request, env, event, rawSession) => {
   if (
     tokenPayload.id !== sessionId ||
     tokenPayload.game !== event.game ||
-    tokenPayload.buildVersion !== security.buildVersion ||
     tokenPayload.ipHash !== ipHash ||
     !isPlainObject(tokenPayload.config)
   ) {
@@ -1046,9 +1182,10 @@ const validateSession = async (request, env, event, rawSession) => {
   }
   if (
     session.game !== event.game ||
-    session.build_version !== security.buildVersion ||
+    session.build_version !== tokenPayload.buildVersion ||
     session.ip_hash !== ipHash ||
     session.config_json !== JSON.stringify(tokenPayload.config) ||
+    session.issued_at !== tokenPayload.issuedAt ||
     session.expires_at !== tokenPayload.expiresAt ||
     new Date(session.expires_at).getTime() <= Date.now()
   ) {
@@ -1061,11 +1198,11 @@ const validateSession = async (request, env, event, rawSession) => {
   const sessionIssuedAt = new Date(session.issued_at).getTime();
   if (
     eventTime < sessionIssuedAt - SESSION_EVENT_START_GRACE_MS ||
-    eventTime > Date.now() + MAX_EVENT_FUTURE_MS ||
-    Date.now() - sessionIssuedAt < minimumSessionDurationMs(event.game)
+    eventTime > Date.now() + MAX_EVENT_FUTURE_MS
   ) {
-    throw new HttpError(400, "Game result was completed too quickly or outside its session window");
+    throw new HttpError(400, "Game result is outside its session window");
   }
+  await requireSessionEligibility(event, sessionIssuedAt);
   await enforceRateLimit(env, ipHash, "events", MAX_EVENTS_PER_WINDOW);
   return sessionId;
 };
@@ -1134,7 +1271,7 @@ const handleGetHealth = async (request, env) => {
 };
 
 const handlePostSession = async (request, env) => {
-  assertOriginAllowed(request, env);
+  assertBrowserOriginAllowed(request, env);
   const session = await createSession(request, env, await readJsonBody(request));
   return jsonResponse(request, env, { ok: true, ...session }, 201);
 };
@@ -1146,7 +1283,7 @@ const handlePostAdministratorSignIn = async (request, env) => {
 };
 
 const handlePostEvent = async (request, env) => {
-  assertOriginAllowed(request, env);
+  assertBrowserOriginAllowed(request, env);
   const payload = await readJsonBody(request);
   assertAllowedKeys(payload, ["event", "session"], "event request");
   const event = normalizeGameStatsEvent(payload.event);
@@ -1155,9 +1292,6 @@ const handlePostEvent = async (request, env) => {
   if (existing) {
     assertStoredEventMatches(existing, event);
     return jsonResponse(request, env, { ok: true, applied: false, eventId: event.id });
-  }
-  if (event.game === "sudoku" && !Number.isFinite(event.metric)) {
-    throw new HttpError(400, "Sudoku result requires a completion time");
   }
   const sessionId = await validateSession(request, env, event, payload.session);
   const applied = sessionId
@@ -1169,7 +1303,22 @@ const handlePostEvent = async (request, env) => {
 const errorResponse = (request, env, error) => {
   const status = error instanceof HttpError ? error.status : 500;
   const message = error instanceof HttpError ? error.message : "Internal server error";
-  return jsonResponse(request, env, { ok: false, error: message }, status);
+  const retryAfterMs =
+    error instanceof HttpError && Number.isSafeInteger(error.retryAfterMs)
+      ? Math.max(0, Math.min(error.retryAfterMs, MAX_RETRY_AFTER_MS))
+      : 0;
+  return jsonResponse(
+    request,
+    env,
+    { ok: false, error: message, ...(retryAfterMs ? { retryAfterMs } : {}) },
+    status,
+    retryAfterMs
+      ? {
+          "Access-Control-Expose-Headers": "Retry-After",
+          "Retry-After": String(Math.max(1, Math.ceil(retryAfterMs / 1000))),
+        }
+      : {}
+  );
 };
 
 export const handleRequest = async (request, env) => {

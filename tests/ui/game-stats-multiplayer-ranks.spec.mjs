@@ -438,7 +438,7 @@ const installMockBackend = async (
 
   await page.route(CONFIG_SCRIPT_URL, (route) =>
     route.fulfill({
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "${API_BASE_URL}", buildVersion: "test-multiplayer-ranks" });`,
+      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "${API_BASE_URL}", buildVersion: "sha256-${"d".repeat(64)}" });`,
       contentType: "application/javascript",
     })
   );

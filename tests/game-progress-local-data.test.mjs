@@ -129,5 +129,5 @@ test("Sudoku Game Progress keeps compact win columns and a local no-hints best t
   assert.match(source, /totals\.sudoku\?\.bestTimes\?\.\[difficulty\]/);
   assert.match(source, /value === null \|\| value === undefined \|\| value === ""/);
   assert.match(source, /currentBestTime === null \? nextBestTime : Math\.min\(currentBestTime, nextBestTime\)/);
-  assert.match(source, /sudokuNoHintsSeconds:\n          hintBucket === "noHints"/);
+  assert.match(source, /sudokuNoHintsSeconds:\s+hintBucket === "noHints"/);
 });

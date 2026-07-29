@@ -212,6 +212,11 @@ const {
   sudokuStatus,
   sudokuMistakes,
   sudokuTime,
+  sudokuLeaderboardChecks,
+  sudokuErrorsHint,
+  sudokuErrorsPrompt,
+  sudokuErrorsCancel,
+  sudokuErrorsConfirm,
   sudokuSolvePopup,
   sudokuSolveMessage,
   sudokuSolveOk,
@@ -889,6 +894,7 @@ const SUDOKU_CELL_COUNT = 81;
 const SUDOKU_STORAGE_KEY = "personalSiteSudokuStateV1";
 const SUDOKU_SAVE_DEBOUNCE_MS = 250;
 const SUDOKU_MAX_UNDO_STATES = 80;
+const SUDOKU_MAX_LEADERBOARD_CHECKS = 3;
 const SUDOKU_MAX_FISH = 18;
 const SUDOKU_MAX_BUBBLE_CLUSTERS = 5;
 const createSudokuEmptyValues = () =>
@@ -1121,6 +1127,13 @@ const GAME_STATS_SYNC_STATES = Object.freeze({
     busy: false,
     disabled: false,
   }),
+  "build-mismatch": Object.freeze({
+    message:
+      "Results cannot be published while the game update is deploying. Reload this page after the update finishes, then start a new game.",
+    action: "reload",
+    busy: false,
+    disabled: false,
+  }),
   unconfigured: Object.freeze({
     message:
       "Automatic global tracking is not configured yet; local stats stay on this device.",
@@ -1151,16 +1164,22 @@ const normalizeGameStatsBackendConfig = (rawConfig) => {
   if (!rawConfig || typeof rawConfig !== "object") {
     return { apiBaseUrl: "", buildVersion: "" };
   }
-  const apiBaseUrl = String(rawConfig.apiBaseUrl || "").trim().replace(/\/+$/, "");
+  const apiBaseUrl = String(rawConfig.apiBaseUrl || "").trim();
   const buildVersion = String(rawConfig.buildVersion || "").trim();
-  if (!apiBaseUrl || !buildVersion) return { apiBaseUrl: "", buildVersion: "" };
+  if (!apiBaseUrl || !/^sha256-[a-f0-9]{64}$/.test(buildVersion)) {
+    return { apiBaseUrl: "", buildVersion: "" };
+  }
   try {
     const url = new URL(apiBaseUrl);
     if (!/^https?:$/.test(url.protocol)) throw new Error("Unsupported API protocol");
+    if (url.username || url.password || url.search || url.hash) {
+      throw new Error("Unsupported API URL components");
+    }
+    url.pathname = url.pathname.replace(/\/+$/, "") || "/";
+    return { apiBaseUrl: url.toString().replace(/\/$/, ""), buildVersion };
   } catch {
     return { apiBaseUrl: "", buildVersion: "" };
   }
-  return { apiBaseUrl, buildVersion };
 };
 
 const gameStatsBackend = normalizeGameStatsBackendConfig(window.rohinGameStatsBackend);
@@ -1609,7 +1628,8 @@ const normalizeGameStatsSession = (rawSession) => {
   if (
     !/^[A-Za-z0-9._~+\/-]{8,256}$/.test(id) ||
     !/^[A-Za-z0-9._~+=\/-]{8,2048}$/.test(token) ||
-    !Number.isFinite(expiresAtMs)
+    !Number.isFinite(expiresAtMs) ||
+    expiresAtMs <= Date.now()
   ) {
     return null;
   }
@@ -1757,18 +1777,56 @@ const getAdministratorEventHeaders = (profile) => {
   return { Authorization: `Bearer ${gameStatsAdministratorProof.proof}` };
 };
 
+const reportGameStatsSessionFailure = (
+  { status = 0, reason = "" } = {},
+  { localSaved = false } = {}
+) => {
+  if (status === 409) {
+    setGameStatsSyncState("build-mismatch");
+    return;
+  }
+  if (reason === "unconfigured") {
+    setGameStatsSyncState("unconfigured");
+    return;
+  }
+  const prefix = localSaved ? "Local stats are saved, but " : "";
+  const subject = localSaved ? "the" : "The";
+  const message =
+    reason === "invalid-response"
+      ? `${prefix}${subject} game server returned an invalid session response. Start a new game and try again.`
+      : `${prefix}${subject} verified game session request failed${
+          status ? ` (HTTP ${status})` : ""
+        }. Start a new game and try again.`;
+  setGameStatsSyncState("request-failed", { message });
+};
+
 const startGameStatsSession = (game, config) => {
   const sessionKey = `${game}-${Date.now().toString(36)}-${(gameStatsSessionSequence += 1)}`;
   const sessionRequest = (async () => {
-    if (!isGameStatsBackendConfigured()) return null;
+    if (!isGameStatsBackendConfigured()) {
+      const failure = { session: null, status: 0, reason: "unconfigured" };
+      reportGameStatsSessionFailure(failure);
+      return failure;
+    }
     try {
       const response = await fetchGameStatsApi("/sessions", {
         method: "POST",
         body: JSON.stringify({ game, config, buildVersion: gameStatsBackend.buildVersion }),
       });
-      return normalizeGameStatsSession(await readGameStatsApiJson(response));
-    } catch {
-      return null;
+      const session = normalizeGameStatsSession(await readGameStatsApiJson(response));
+      if (!session) {
+        const failure = { session: null, status: 0, reason: "invalid-response" };
+        reportGameStatsSessionFailure(failure);
+        return failure;
+      }
+      return {
+        session,
+        status: Number(response.status) || 0,
+      };
+    } catch (error) {
+      const failure = { session: null, status: Number(error?.status) || 0 };
+      reportGameStatsSessionFailure(failure);
+      return failure;
     }
   })();
   gameStatsSessions.set(sessionKey, sessionRequest);
@@ -1776,7 +1834,9 @@ const startGameStatsSession = (game, config) => {
 };
 
 const getGameStatsSession = async (sessionKey) => {
-  if (!sessionKey || !gameStatsSessions.has(sessionKey)) return null;
+  if (!sessionKey || !gameStatsSessions.has(sessionKey)) {
+    return { session: null, status: 0 };
+  }
   const sessionRequest = gameStatsSessions.get(sessionKey);
   gameStatsSessions.delete(sessionKey);
   return await sessionRequest;
@@ -2537,11 +2597,13 @@ const createGameProgressProfile = async () => {
 };
 
 const queueGameStatsSubmission = (event, session) => {
+  if (!session) return false;
   gameStatsSubmissionQueue.push({ event, session });
   if (gameStatsSubmissionQueue.length > GAME_STATS_MAX_SYNC_QUEUE_LENGTH) {
     gameStatsSubmissionQueue = gameStatsSubmissionQueue.slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
   }
-  if (session) saveGameStatsSubmissionQueue();
+  saveGameStatsSubmissionQueue();
+  return true;
 };
 
 const waitForGameStatsTrophyState = (delayMs) =>
@@ -2586,6 +2648,7 @@ const getGameStatsSyncStateDefinition = () =>
 
 const setGameStatsSyncState = (state, { message = "" } = {}) => {
   if (!GAME_STATS_SYNC_STATES[state]) return;
+  if (gameStatsSyncState === "build-mismatch" && state !== "build-mismatch") return;
   gameStatsSyncState = state;
   gameStatsSyncMessage = message || GAME_STATS_SYNC_STATES[state].message;
   renderGameStatsWindows();
@@ -2759,6 +2822,7 @@ const runGameStatsSyncPass = async () => {
 };
 
 const syncQueuedGameStats = ({ manual = false } = {}) => {
+  if (gameStatsSyncState === "build-mismatch") return Promise.resolve(false);
   if (gameStatsSyncState === "auth-waiting") {
     return gameStatsSyncPromise || Promise.resolve(false);
   }
@@ -2839,13 +2903,23 @@ const recordGameStatsEvent = async (
   const recordHandoffPromise = beatPersonalRecord
     ? playGameStatsRecordHandoff(event.game)
     : null;
-  const session = await getGameStatsSession(sessionKey);
+  const sessionResult = await getGameStatsSession(sessionKey);
+  const session = sessionResult?.session || null;
+  if (!session) {
+    if (sessionKey) {
+      reportGameStatsSessionFailure(sessionResult, { localSaved: true });
+    } else {
+      setGameStatsSyncState("ready", {
+        message: "Local stats are saved. This result started without a verified game session.",
+      });
+    }
+    if (recordHandoffPromise) await recordHandoffPromise;
+    return;
+  }
   queueGameStatsSubmission(event, session);
   if (gameStatsSyncState !== "auth-waiting") {
-    setGameStatsSyncState(session ? "publishing" : "ready", {
-      message: session
-        ? "Publishing saved results..."
-        : "Local stats are saved. This result started without a verified game session.",
+    setGameStatsSyncState("publishing", {
+      message: "Publishing saved results...",
     });
   }
   void syncQueuedGameStats();
@@ -4047,6 +4121,8 @@ const renderGameStatsWindow = (game) => {
     const actionLabel =
       syncState.action === "authenticate"
         ? `Sign in as Administrator to sync ${gameLabel} stats`
+        : syncState.action === "reload"
+          ? `Reload page to update ${gameLabel} stats`
         : syncState.action === "refresh"
           ? `Refresh ${gameLabel} stats`
           : `Game stats refresh unavailable for ${gameLabel}`;
@@ -4307,8 +4383,11 @@ let sudokuState = {
   loadingProgress: 0,
   playing: false,
   solved: false,
+  completionRecorded: false,
   usedHint: false,
   usedReveal: false,
+  checksUsed: 0,
+  errorsConfirmed: false,
   statsSession: "",
   statsSessionEligible: true,
   hintMode: "off",
@@ -18449,7 +18528,7 @@ const currentSudokuElapsedSeconds = () => {
 };
 
 const createSudokuSavePayload = () => ({
-  version: 2,
+  version: 3,
   difficulty: sudokuState.difficulty,
   puzzleId: sudokuState.puzzleId,
   puzzle: sudokuState.puzzle,
@@ -18462,7 +18541,10 @@ const createSudokuSavePayload = () => ({
   selectedIndex: normalizeSudokuSelectedIndex(sudokuState.selectedIndex),
   usedHint: sudokuState.usedHint,
   usedReveal: sudokuState.usedReveal,
+  checksUsed: sudokuState.checksUsed,
+  errorsConfirmed: sudokuState.errorsConfirmed,
   solved: sudokuState.solved,
+  completionRecorded: sudokuState.completionRecorded,
 });
 
 const flushSudokuSave = () => {
@@ -18503,7 +18585,7 @@ const restoreSudokuSavedState = () => {
   } catch (error) {
     savedState = null;
   }
-  if (!savedState || ![1, 2].includes(savedState.version)) return false;
+  if (!savedState || ![1, 2, 3].includes(savedState.version)) return false;
 
   const difficulty = normalizeSudokuDifficulty(savedState.difficulty);
   const fallbackPuzzle = SUDOKU_PUZZLES[difficulty];
@@ -18532,8 +18614,24 @@ const restoreSudokuSavedState = () => {
   sudokuState.timerStartedAt = 0;
   sudokuState.playing = false;
   sudokuState.solved = Boolean(savedState.solved);
-  sudokuState.usedHint = Boolean(savedState.usedHint);
+  sudokuState.completionRecorded = Boolean(
+    savedState.completionRecorded || savedState.solved
+  );
+  sudokuState.usedHint = Boolean(savedState.usedHint || savedState.usedReveal);
   sudokuState.usedReveal = Boolean(savedState.usedReveal);
+  sudokuState.checksUsed = Math.max(
+    0,
+    Math.min(
+      SUDOKU_MAX_LEADERBOARD_CHECKS,
+      Math.floor(Number(savedState.checksUsed) || 0)
+    )
+  );
+  sudokuState.errorsConfirmed = Boolean(
+    savedState.errorsConfirmed ||
+      savedState.hintMode === "errors" ||
+      savedState.usedHint ||
+      savedState.usedReveal
+  );
   sudokuState.statsSession = "";
   sudokuState.statsSessionEligible = false;
   sudokuState.hintMode = savedState.hintMode === "errors" ? "errors" : "off";
@@ -18556,10 +18654,21 @@ const updateSudokuMistakesDisplay = () => {
   if (sudokuMistakes) sudokuMistakes.textContent = `Mistakes: ${sudokuState.mistakes}`;
 };
 
+const updateSudokuLeaderboardChecksDisplay = () => {
+  if (!sudokuLeaderboardChecks) return;
+  const message =
+    `${sudokuState.checksUsed}/${SUDOKU_MAX_LEADERBOARD_CHECKS} ` +
+    "allowed checks used to place on leaderboard";
+  if (sudokuLeaderboardChecks.textContent !== message) {
+    sudokuLeaderboardChecks.textContent = message;
+  }
+};
+
 const setSudokuStatus = (message) => {
   if (sudokuStatus) sudokuStatus.textContent = message;
   updateSudokuMistakesDisplay();
   updateSudokuTimeDisplay();
+  updateSudokuLeaderboardChecksDisplay();
 };
 
 const startSudokuTimer = () => {
@@ -18923,6 +19032,7 @@ const tickSudokuLoadingSequence = () => {
 const startSudokuBootSequence = () => {
   if (!sudokuApp) return;
   pauseSudokuTimer();
+  hideSudokuErrorsPrompt({ restoreFocus: false });
   hideSudokuSolvePopup();
   clearSudokuLoadingTimer();
   clearSudokuTransitionTimer();
@@ -18944,6 +19054,7 @@ const clearSudokuBootSequence = ({ resetView = true } = {}) => {
   clearSudokuTransitionTimer();
   clearSudokuPlayBurst();
   clearSudokuAquarium();
+  hideSudokuErrorsPrompt({ restoreFocus: false });
   hideSudokuSolvePopup();
   sudokuState.playing = false;
   sudokuState.loadingStartedAt = 0;
@@ -19130,7 +19241,7 @@ const updateSudokuNumberButtons = () => {
 const updateSudokuHintButtons = () => {
   sudokuHintButtons.forEach((button) => {
     const mode = button.dataset.sudokuHint;
-    const isSelected = mode !== "reveal" && mode === sudokuState.hintMode;
+    const isSelected = mode === sudokuState.hintMode;
     button.classList.toggle("is-selected", isSelected);
     button.setAttribute("aria-pressed", String(isSelected));
   });
@@ -19147,6 +19258,34 @@ const clearSudokuSolvedWave = () => {
   });
 };
 
+const hideSudokuErrorsPrompt = ({ restoreFocus = true } = {}) => {
+  if (!sudokuErrorsPrompt?.open) return;
+  sudokuErrorsPrompt.close();
+  if (restoreFocus) {
+    requestAnimationFrame(() => sudokuErrorsHint?.focus());
+  }
+};
+
+const showSudokuErrorsPrompt = () => {
+  if (!sudokuErrorsPrompt || sudokuErrorsPrompt.open) return;
+  sudokuErrorsPrompt.showModal();
+  requestAnimationFrame(() => sudokuErrorsCancel?.focus());
+};
+
+const trapSudokuErrorsPromptFocus = (event) => {
+  if (event.key !== "Tab" || !sudokuErrorsPrompt?.open) return;
+  const firstControl = sudokuErrorsCancel;
+  const lastControl = sudokuErrorsConfirm;
+  if (!firstControl || !lastControl) return;
+  if (event.shiftKey && document.activeElement === firstControl) {
+    event.preventDefault();
+    lastControl.focus();
+  } else if (!event.shiftKey && document.activeElement === lastControl) {
+    event.preventDefault();
+    firstControl.focus();
+  }
+};
+
 const hideSudokuSolvePopup = () => {
   if (!sudokuSolvePopup) return;
   sudokuSolvePopup.classList.remove("is-visible");
@@ -19155,7 +19294,7 @@ const hideSudokuSolvePopup = () => {
 
 const showSudokuSolvePopup = () => {
   if (!sudokuSolvePopup || !sudokuSolveMessage) return;
-  sudokuSolveMessage.textContent = sudokuState.usedReveal
+  sudokuSolveMessage.textContent = sudokuState.usedHint || sudokuState.usedReveal
     ? "Good job! Try not to use hints next time."
     : "Good job!";
   sudokuSolvePopup.classList.add("is-visible");
@@ -19189,13 +19328,8 @@ const selectSudokuCell = (selectedCell) => {
   scheduleSudokuSave();
 };
 
-const syncSudokuCellFeedback = (input, index) => {
+const syncSudokuCellFeedback = (input) => {
   input.classList.remove("is-invalid");
-  const isCorrect =
-    !isSudokuCellReadOnly(input) &&
-    Boolean(getSudokuCellValue(input)) &&
-    getSudokuCellValue(input) === sudokuState.solution[index];
-  input.classList.toggle("is-correct", isCorrect);
 };
 
 const refreshAllSudokuCells = () => {
@@ -19233,20 +19367,19 @@ const validateSudokuBoard = ({ mark = false } = {}) => {
   };
 };
 
-const updateSudokuMistakesFromBoard = () => {
-  const result = validateSudokuBoard();
-  sudokuState.mistakes = result.mistakes;
-  updateSudokuMistakesDisplay();
-  return result;
-};
-
 const refreshSudokuHintFeedback = () => {
   if (sudokuState.hintMode !== "errors") {
     clearSudokuHighlights();
-    return updateSudokuMistakesFromBoard();
+    sudokuState.mistakes = 0;
+    updateSudokuMistakesDisplay();
+    return validateSudokuBoard();
   }
   const result = validateSudokuBoard({ mark: true });
   sudokuState.mistakes = result.mistakes;
+  if (result.mistakes > 0 && !sudokuState.usedHint) {
+    sudokuState.usedHint = true;
+    scheduleSudokuSave();
+  }
   updateSudokuMistakesDisplay();
   return result;
 };
@@ -19363,47 +19496,22 @@ const applySudokuNumber = (value) => {
   (selectedSudokuCell() || cell).focus();
 };
 
-const revealSudokuHint = () => {
-  const cells = sudokuCells();
-  let cell = selectedSudokuCell();
-  if (
-    !cell ||
-    isSudokuCellReadOnly(cell) ||
-    getSudokuCellValue(cell) === sudokuState.solution[sudokuState.selectedIndex]
-  ) {
-    cell =
-      cells.find(
-        (candidate, index) =>
-          !isSudokuCellReadOnly(candidate) &&
-          getSudokuCellValue(candidate) !== sudokuState.solution[index]
-      ) || null;
-  }
-  if (!cell || isSudokuCellReadOnly(cell)) return false;
-  const index = Number(cell.dataset.sudokuIndex);
-  if (!Number.isInteger(index)) return false;
-  sudokuState.selectedIndex = index;
-  selectSudokuCell(cell);
-  updateSudokuCellValue(cell, index, sudokuState.solution[index]);
-  cell.focus();
-  return true;
-};
-
 const setSudokuHintMode = (mode) => {
-  if (mode === "reveal") {
-    if (revealSudokuHint()) {
-      sudokuState.usedHint = true;
-      sudokuState.usedReveal = true;
-      scheduleSudokuSave();
-    }
-    updateSudokuHintButtons();
+  if (mode === "errors" && !sudokuState.errorsConfirmed) {
+    showSudokuErrorsPrompt();
     return;
   }
-  if (mode === "errors") sudokuState.usedHint = true;
   sudokuState.hintMode = mode === "errors" ? "errors" : "off";
   updateSudokuHintButtons();
   refreshSudokuHintFeedback();
   setSudokuStatus("Ready");
   scheduleSudokuSave();
+};
+
+const confirmSudokuErrors = () => {
+  sudokuState.errorsConfirmed = true;
+  hideSudokuErrorsPrompt();
+  setSudokuHintMode("errors");
 };
 
 const setSudokuNoteMode = (enabled) => {
@@ -19424,7 +19532,7 @@ const triggerSudokuVictoryEffects = () => {
   if (isSudokuReducedMotion()) return;
   const effects = SUDOKU_WIN_EFFECTS[sudokuState.difficulty];
   if (!effects) return;
-  if (!sudokuState.usedReveal) showSudokuAchievement();
+  if (!sudokuState.usedHint && !sudokuState.usedReveal) showSudokuAchievement();
   if (effects.fireworks && !sudokuState.usedHint) solStartFireworks();
   if (effects.confetti) msStartConfetti();
 };
@@ -19494,7 +19602,14 @@ const handleSudokuGridKeydown = (event) => {
 const handleSudokuUndoRedoShortcut = (event) => {
   const isUndoKey = event.key === "z" || event.key === "Z";
   const isRedoKey = event.key === "y" || event.key === "Y";
-  if (!isSudokuWindowVisible() || (!event.metaKey && !event.ctrlKey) || event.altKey) return;
+  if (
+    sudokuErrorsPrompt?.open ||
+    !isSudokuWindowVisible() ||
+    (!event.metaKey && !event.ctrlKey) ||
+    event.altKey
+  ) {
+    return;
+  }
   if (!isUndoKey && !isRedoKey) return;
   const target = event.target instanceof Element ? event.target : null;
   if (target?.matches("input, textarea, select")) return;
@@ -19504,18 +19619,30 @@ const handleSudokuUndoRedoShortcut = (event) => {
 };
 
 const checkSudokuBoard = () => {
-  const result = validateSudokuBoard({ mark: true });
-  sudokuState.mistakes = result.mistakes;
-  updateSudokuMistakesDisplay();
-  if (!result.valid) {
-    setSudokuStatus("System alert");
+  const result = validateSudokuBoard();
+  if (!result.complete || !result.valid) {
+    if (sudokuState.checksUsed >= SUDOKU_MAX_LEADERBOARD_CHECKS) {
+      clearSudokuHighlights();
+      sudokuState.mistakes = 0;
+      setSudokuStatus("No checks remaining");
+      scheduleSudokuSave();
+      return;
+    }
+
+    sudokuState.checksUsed += 1;
+    const diagnosticResult = validateSudokuBoard({ mark: true });
+    sudokuState.mistakes = diagnosticResult.mistakes;
+    if (!diagnosticResult.valid) {
+      setSudokuStatus("System alert");
+    } else {
+      triggerSudokuCheckBubbleBurst();
+      setSudokuStatus("Ready");
+    }
+    scheduleSudokuSave();
     return;
   }
-  if (!result.complete) {
-    triggerSudokuCheckBubbleBurst();
-    setSudokuStatus("Ready");
-    return;
-  }
+
+  sudokuState.mistakes = 0;
   setSudokuStatus("Solved");
   triggerSudokuFullBubbleBurst();
   triggerSudokuSolvedTileWave();
@@ -19523,26 +19650,29 @@ const checkSudokuBoard = () => {
   pauseSudokuTimer();
   if (!sudokuState.solved) {
     sudokuState.solved = true;
-    const elapsedSeconds = currentSudokuElapsedSeconds();
-    const hintBucket =
-      sudokuState.usedHint || sudokuState.usedReveal ? "withHints" : "noHints";
-    recordGameStatsEvent(
-      createGameStatsEvent({
-        game: "sudoku",
-        type: "win",
-        difficulty: sudokuState.difficulty,
-        hintBucket,
-        metric: elapsedSeconds,
-        metricKind: "seconds",
-      }),
-      sudokuState.statsSession,
-      {
-        sudokuNoHintsSeconds:
-          hintBucket === "noHints" ? elapsedSeconds : null,
-      }
-    );
-    triggerSudokuVictoryEffects();
-    triggerRandomEvents("gameWin", { game: "sudoku" });
+    if (!sudokuState.completionRecorded) {
+      sudokuState.completionRecorded = true;
+      const elapsedSeconds = currentSudokuElapsedSeconds();
+      const hintBucket =
+        sudokuState.usedHint || sudokuState.usedReveal ? "withHints" : "noHints";
+      recordGameStatsEvent(
+        createGameStatsEvent({
+          game: "sudoku",
+          type: "win",
+          difficulty: sudokuState.difficulty,
+          hintBucket,
+          metric: elapsedSeconds,
+          metricKind: "seconds",
+        }),
+        sudokuState.statsSession,
+        {
+          sudokuNoHintsSeconds:
+            hintBucket === "noHints" ? elapsedSeconds : null,
+        }
+      );
+      triggerSudokuVictoryEffects();
+      triggerRandomEvents("gameWin", { game: "sudoku" });
+    }
     scheduleSudokuSave();
   }
 };
@@ -19608,13 +19738,13 @@ const loadSudokuDifficulty = (difficulty) => {
   const normalizedDifficulty = normalizeSudokuDifficulty(difficulty);
   const puzzle = createGeneratedSudokuPuzzle(normalizedDifficulty);
   const wasPlaying = sudokuState.playing;
-  const previousHintMode = sudokuState.hintMode;
   const previousNoteMode = sudokuState.noteMode;
   const loadingTimerId = sudokuState.loadingTimerId;
   const transitionTimerId = sudokuState.transitionTimerId;
   const loadingStartedAt = sudokuState.loadingStartedAt;
   const loadingDuration = sudokuState.loadingDuration;
   const loadingProgress = sudokuState.loadingProgress;
+  hideSudokuErrorsPrompt({ restoreFocus: false });
   hideSudokuSolvePopup();
   pauseSudokuTimer();
   sudokuState = {
@@ -19633,11 +19763,14 @@ const loadSudokuDifficulty = (difficulty) => {
     loadingProgress,
     playing: wasPlaying,
     solved: false,
+    completionRecorded: false,
     usedHint: false,
     usedReveal: false,
+    checksUsed: 0,
+    errorsConfirmed: false,
     statsSession: "",
     statsSessionEligible: true,
-    hintMode: previousHintMode,
+    hintMode: "off",
     noteMode: previousNoteMode,
     values: normalizeSudokuValues("", puzzle.puzzle),
     notes: createSudokuEmptyNotes(),
@@ -20290,6 +20423,22 @@ if (sudokuReducedMotionMedia) {
 
 if (sudokuSolveOk) {
   sudokuSolveOk.addEventListener("click", hideSudokuSolvePopup);
+}
+
+if (sudokuErrorsCancel) {
+  sudokuErrorsCancel.addEventListener("click", () => hideSudokuErrorsPrompt());
+}
+
+if (sudokuErrorsConfirm) {
+  sudokuErrorsConfirm.addEventListener("click", confirmSudokuErrors);
+}
+
+if (sudokuErrorsPrompt) {
+  sudokuErrorsPrompt.addEventListener("keydown", trapSudokuErrorsPromptFocus);
+  sudokuErrorsPrompt.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    hideSudokuErrorsPrompt();
+  });
 }
 
 if (sudokuSolvePopup) {
@@ -27261,6 +27410,10 @@ gameStatsRefreshButtons.forEach((button) => {
     if (button.disabled || syncState.disabled || syncState.busy) return;
     if (syncState.action === "authenticate") {
       requestGameStatsAdministratorAuthentication(button);
+      return;
+    }
+    if (syncState.action === "reload") {
+      window.location.reload();
       return;
     }
     if (syncState.action === "refresh") {

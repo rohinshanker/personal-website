@@ -2094,7 +2094,6 @@
                     <div class="sudoku-hint-options" role="group" aria-label="Sudoku hints">
                       <button class="is-selected" type="button" data-sudoku-hint="off" aria-pressed="true">Off</button>
                       <button type="button" data-sudoku-hint="errors">Errors</button>
-                      <button type="button" data-sudoku-hint="reveal">Reveal</button>
                     </div>
                   </div>
                   <div class="sudoku-actions">
@@ -2106,11 +2105,34 @@
                 </div>
               </div>
             </div>
-            <div class="sudoku-statusbar" aria-live="polite">
-              <span id="sudoku-status">Ready</span>
+            <div class="sudoku-statusbar">
+              <span id="sudoku-status" aria-live="polite" aria-atomic="true">Ready</span>
               <span id="sudoku-mistakes">Mistakes: 0</span>
               <span id="sudoku-time">Time: 00:00</span>
+              <span id="sudoku-leaderboard-checks" aria-live="polite" aria-atomic="true">0/3 allowed checks used to place on leaderboard</span>
             </div>
+            <dialog
+              class="sudoku-errors-prompt"
+              id="sudoku-errors-prompt"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="sudoku-errors-prompt-title"
+              aria-describedby="sudoku-errors-prompt-message"
+            >
+              <div class="sudoku-solve-dialog">
+                <div class="title-bar">
+                  <div class="title-bar-text" id="sudoku-errors-prompt-title">Sudoku</div>
+                </div>
+                <div class="sudoku-solve-body">
+                  <span class="sudoku-solve-ball" aria-hidden="true"></span>
+                  <p class="sudoku-solve-message" id="sudoku-errors-prompt-message">Are you sure you would like to have errors revealed? Doing so will disqualify you from the leaderboard.</p>
+                  <div class="sudoku-solve-actions sudoku-errors-prompt-actions">
+                    <button type="button" id="sudoku-errors-cancel" autofocus>Cancel</button>
+                    <button type="button" id="sudoku-errors-confirm">Reveal errors</button>
+                  </div>
+                </div>
+              </div>
+            </dialog>
             <div class="sudoku-solve-popup" id="sudoku-solve-popup" aria-hidden="true">
               <div class="sudoku-solve-dialog" role="dialog" aria-modal="true" aria-labelledby="sudoku-solve-title">
                 <div class="title-bar">
@@ -5876,10 +5898,10 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-5c96dea824aedfbf841853690c0f34267b84f947dd36cbec0462bcb450ecbed6"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-46a52e074099899c9b8cade7dbca878bc071f026873f16fb83c87e41b2ddadbd"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-5c96dea824aedfbf841853690c0f34267b84f947dd36cbec0462bcb450ecbed6"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-46a52e074099899c9b8cade7dbca878bc071f026873f16fb83c87e41b2ddadbd"></script>
     <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
-    <script src="scripts/home/main.js?v=game-build-5c96dea824aedfbf841853690c0f34267b84f947dd36cbec0462bcb450ecbed6"></script>
+    <script src="scripts/home/main.js?v=game-build-46a52e074099899c9b8cade7dbca878bc071f026873f16fb83c87e41b2ddadbd"></script>
   </body>
 </html>
