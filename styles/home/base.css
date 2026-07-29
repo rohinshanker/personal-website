@@ -80,6 +80,12 @@ body {
   outline: none;
 }
 
+.desktop-icon:focus-visible {
+  background: rgba(0, 0, 128, 0.35);
+  outline: 1px dotted #fff;
+  outline-offset: 2px;
+}
+
 .desktop-icon img {
   width: 40px;
   height: 40px;
@@ -159,6 +165,67 @@ body {
   image-rendering: pixelated;
   opacity: 0.72;
   animation: desktop-neko-footprint-fade 3s linear forwards;
+}
+
+.neko-stream-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.neko-stream-cat {
+  --neko-stream-pose-offset-y: 0px;
+
+  position: absolute;
+  left: 0;
+  top: var(--neko-stream-lane-y, calc(100vh - 91.375px));
+  width: 42px;
+  height: 42px;
+  image-rendering: pixelated;
+  pointer-events: none;
+  transform: translate(-50%, var(--neko-stream-pose-offset-y));
+  will-change: left, transform;
+}
+
+.neko-context-menu {
+  position: fixed;
+  z-index: 10002;
+  width: max-content;
+  min-width: 140px;
+  max-width: calc(100vw - 12px);
+  padding: 3px;
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  color: #000;
+}
+
+.neko-context-menu[hidden] {
+  display: none;
+}
+
+.neko-context-menu__item {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 2px 20px 2px 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  line-height: 20px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.neko-context-menu__item:hover,
+.neko-context-menu__item:focus {
+  outline: 0;
+  background: navy;
+  color: #fff;
 }
 
 @keyframes desktop-neko-footprint-fade {

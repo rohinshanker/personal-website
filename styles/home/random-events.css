@@ -165,6 +165,18 @@
   overflow-wrap: anywhere;
 }
 
+.neko-stream-alert-message img {
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neko-stream-alert-window.is-opening,
+  .neko-stream-alert-window.is-closing {
+    animation: none;
+  }
+}
+
 .random-alert-remember {
   align-items: center;
   display: flex;

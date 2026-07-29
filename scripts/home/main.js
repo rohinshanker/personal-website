@@ -166,6 +166,11 @@ const {
   aboutCarouselNext,
   startButton,
   appButtons,
+  nekoLaunchers,
+  nekoContextMenu,
+  nekoStreamCommand,
+  nekoStreamLayer,
+  taskbar,
   appWindows,
   closeButtons,
   draggableWindows,
@@ -284,6 +289,10 @@ const {
   debugSystemAlertMessage,
   debugSystemAlertActions,
   debugSystemAlertOk,
+  nekoStreamAlertWindow,
+  nekoStreamAlertIcon,
+  nekoStreamAlertYes,
+  nekoStreamAlertNo,
   vanishingPopupWindow,
   vanishingPopupClose,
   vanishingPopupMaximize,
@@ -5149,6 +5158,10 @@ let nobleSteedResultTimer = null;
 let nobleSteedResultPosition = null;
 let debugSystemAlertActiveId = "";
 let debugSystemAlertFocusReturn = null;
+let nekoStreamAlertFocusReturn = null;
+let nekoStreamAlertIconFrame = 0;
+let nekoStreamAlertIconTimerId = null;
+let nekoStreamAlertResponsePending = false;
 let brandBurnsStats = {
   health: BRAND_BURNS_PLAYER_MAX_HEALTH,
   maxHealth: BRAND_BURNS_PLAYER_MAX_HEALTH,
@@ -5163,6 +5176,7 @@ const randomEventViewportWindows = () =>
     felizJuevesWindow,
     randomAlertWindow,
     debugSystemAlertWindow,
+    nekoStreamAlertWindow,
     vanishingPopupWindow,
     dodgingPopupWindow,
     selfLoveAlertWindow,
@@ -5610,6 +5624,129 @@ const showDebugSystemAlert = (alert) => {
 
 const closeDebugSystemAlert = () => {
   closeManagedRandomEventWindow(debugSystemAlertWindow);
+};
+
+const isNekoStreamAlertVisible = () =>
+  isManagedRandomEventWindowVisible(nekoStreamAlertWindow);
+
+const nekoStreamAlertReducedMotionQuery =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)")
+    : null;
+
+const prefersReducedNekoStreamAlertMotion = () =>
+  Boolean(nekoStreamAlertReducedMotionQuery?.matches);
+
+const setNekoStreamAlertIconFrame = () => {
+  if (!nekoStreamAlertIcon) return;
+  const sprite = nekoStreamAlertIconFrame % 2 === 0
+    ? NEKO_SPRITES.sleep1
+    : NEKO_SPRITES.sleep2;
+  if (nekoStreamAlertIcon.getAttribute("src") !== sprite) {
+    nekoStreamAlertIcon.src = sprite;
+  }
+};
+
+const stopNekoStreamAlertIconAnimation = () => {
+  if (nekoStreamAlertIconTimerId !== null) {
+    window.clearInterval(nekoStreamAlertIconTimerId);
+  }
+  nekoStreamAlertIconTimerId = null;
+};
+
+const restoreNekoStreamAlertFocus = () => {
+  const focusTarget = nekoStreamAlertFocusReturn;
+  nekoStreamAlertFocusReturn = null;
+  if (
+    focusTarget?.isConnected &&
+    !focusTarget.closest("[inert]") &&
+    typeof focusTarget.focus === "function"
+  ) {
+    focusTarget.focus({ preventScroll: true });
+  }
+  if (nekoStreamAlertWindow?.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
+};
+
+const startNekoStreamAlertIconAnimation = () => {
+  stopNekoStreamAlertIconAnimation();
+  nekoStreamAlertIconFrame = 0;
+  setNekoStreamAlertIconFrame();
+  if (prefersReducedNekoStreamAlertMotion()) return;
+  nekoStreamAlertIconTimerId = window.setInterval(() => {
+    if (!isNekoStreamAlertVisible()) {
+      stopNekoStreamAlertIconAnimation();
+      return;
+    }
+    nekoStreamAlertIconFrame += 1;
+    setNekoStreamAlertIconFrame();
+  }, NEKO_SLEEP_FRAME_INTERVAL_MS);
+};
+
+const resetNekoStreamAlert = () => {
+  stopNekoStreamAlertIconAnimation();
+  nekoStreamAlertResponsePending = false;
+  restoreNekoStreamAlertFocus();
+};
+
+const handleNekoStreamAlertMotionPreferenceChange = () => {
+  if (!prefersReducedNekoStreamAlertMotion()) {
+    if (isNekoStreamAlertVisible() && nekoStreamAlertResponsePending) {
+      startNekoStreamAlertIconAnimation();
+    }
+    return;
+  }
+
+  stopNekoStreamAlertIconAnimation();
+  nekoStreamAlertIconFrame = 0;
+  setNekoStreamAlertIconFrame();
+  if (!nekoStreamAlertWindow) return;
+
+  const wasClosing = nekoStreamAlertWindow.classList.contains("is-closing");
+  nekoStreamAlertWindow.classList.remove("is-opening");
+  if (!wasClosing) return;
+  nekoStreamAlertWindow.classList.remove("is-closing");
+  nekoStreamAlertWindow.classList.add("is-hidden");
+  resetNekoStreamAlert();
+};
+
+const showNekoStreamAlert = () => {
+  const focusReturn =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const didOpen = showManagedRandomEventWindow(nekoStreamAlertWindow, {
+    beforeShow: () => {
+      stopNekoStreamAlertIconAnimation();
+      nekoStreamAlertIconFrame = 0;
+      setNekoStreamAlertIconFrame();
+    },
+    clampAfterMediaLoad: true,
+  });
+  if (!didOpen) return false;
+
+  nekoStreamAlertFocusReturn = focusReturn;
+  nekoStreamAlertResponsePending = true;
+  startNekoStreamAlertIconAnimation();
+  if (prefersReducedNekoStreamAlertMotion()) {
+    nekoStreamAlertWindow.classList.remove("is-opening");
+  }
+  requestAnimationFrame(() => nekoStreamAlertYes?.focus({ preventScroll: true }));
+  return true;
+};
+
+const respondToNekoStreamAlert = (shouldStartStream) => {
+  if (!nekoStreamAlertResponsePending || !isNekoStreamAlertVisible()) return false;
+  nekoStreamAlertResponsePending = false;
+  stopNekoStreamAlertIconAnimation();
+  restoreNekoStreamAlertFocus();
+  closeManagedRandomEventWindow(nekoStreamAlertWindow);
+  if (prefersReducedNekoStreamAlertMotion()) {
+    nekoStreamAlertWindow.classList.remove("is-opening", "is-closing");
+    nekoStreamAlertWindow.classList.add("is-hidden");
+    resetNekoStreamAlert();
+  }
+  if (shouldStartStream) startNekoStream();
+  return true;
 };
 
 const isRandomAlertVisible = () =>
@@ -16644,6 +16781,25 @@ DEBUG_SYSTEM_ALERTS.forEach((alert) => {
 });
 
 registerRandomEvent({
+  id: "neko-stream-system-alert",
+  debug: true,
+  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+  kind: RANDOM_EVENT_KIND_INTERACTIVE,
+  isVisible: isNekoStreamAlertVisible,
+  canTrigger: ({ triggerName, debug } = {}) =>
+    !isNekoStreamAlertVisible() && (!debug || triggerName === "startButton"),
+  preloadTargets: () => [
+    nekoStreamAlertWindow,
+    NEKO_SPRITES.sleep1,
+    NEKO_SPRITES.sleep2,
+  ],
+  run: () => {
+    showNekoStreamAlert();
+  },
+});
+
+registerRandomEvent({
   id: "annoying-system-alert",
   debug: false,
   probability: STANDARD_RANDOM_EVENT_PROBABILITY,
@@ -24880,6 +25036,29 @@ debugSystemAlertWindow?.addEventListener("keydown", (event) => {
   closeDebugSystemAlert();
 });
 
+bindRandomEventButton(nekoStreamAlertYes, () => respondToNekoStreamAlert(true));
+bindRandomEventButton(nekoStreamAlertNo, () => respondToNekoStreamAlert(false));
+bindManagedRandomEventWindowAnimation(nekoStreamAlertWindow, {
+  afterClose: resetNekoStreamAlert,
+  unloadImages: false,
+});
+if (typeof nekoStreamAlertReducedMotionQuery?.addEventListener === "function") {
+  nekoStreamAlertReducedMotionQuery.addEventListener(
+    "change",
+    handleNekoStreamAlertMotionPreferenceChange
+  );
+} else {
+  nekoStreamAlertReducedMotionQuery?.addListener?.(
+    handleNekoStreamAlertMotionPreferenceChange
+  );
+}
+nekoStreamAlertWindow?.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  event.stopPropagation();
+  respondToNekoStreamAlert(false);
+});
+
 bindRandomEventButton(toxicJungleStart, startToxicJungleCollection);
 bindRandomEventButton(toxicJungleDecline, closeToxicJungleWindow);
 if (toxicJungleSpores) {
@@ -26520,6 +26699,603 @@ const preloadNekoRunAssets = () => {
 
   return nekoRunAssetsPreloadPromise;
 };
+
+const NEKO_STREAM_COUNT = 40;
+const NEKO_STREAM_SPAWN_WINDOW_MS = 10_000;
+const NEKO_STREAM_MIN_SPEED_MULTIPLIER = 0.8;
+const NEKO_STREAM_MAX_SPEED_MULTIPLIER = 1.7;
+const NEKO_STREAM_ACTION_CHANCE = 0.25;
+const NEKO_STREAM_ACTION_PROGRESS_MIN = 0.2;
+const NEKO_STREAM_ACTION_PROGRESS_MAX = 0.8;
+const NEKO_STREAM_NON_SLEEP_ACTION_MIN_MS = 5_000;
+const NEKO_STREAM_NON_SLEEP_ACTION_MAX_MS = 10_000;
+const NEKO_STREAM_YAWN_ACTION_DURATION_MS = 3_000;
+const NEKO_STREAM_SLEEP_ACTION_DURATION_MS = 20_000;
+const NEKO_STREAM_CLEAN_SIT_PHASE_MS = 1_000;
+const NEKO_STREAM_CLEAN_WASH_PHASE_MS = 2_000;
+const NEKO_STREAM_CLEAN_CYCLE_MS =
+  NEKO_STREAM_CLEAN_SIT_PHASE_MS + NEKO_STREAM_CLEAN_WASH_PHASE_MS;
+const NEKO_STREAM_OFFSCREEN_MARGIN = NEKO_SPRITE_SIZE * 2;
+const NEKO_STREAM_SOURCE_SIZE_PX = 32;
+const NEKO_STREAM_BASE_OPAQUE_HEIGHT_PX = 30;
+const NEKO_STREAM_MAX_OPAQUE_BOTTOM_RATIO =
+  NEKO_STREAM_BASE_OPAQUE_HEIGHT_PX / NEKO_STREAM_SOURCE_SIZE_PX;
+const NEKO_STREAM_SLEEP_OVERLAP_PX = 1;
+const NEKO_STREAM_FALLBACK_TASKBAR_HEIGHT_PX = 52;
+const NEKO_CONTEXT_MENU_PADDING = 6;
+const NEKO_STREAM_OPAQUE_HEIGHT_BY_SPRITE = Object.freeze({
+  left1: 27,
+  left2: 26,
+  right1: 27,
+  right2: 26,
+  awake: 29,
+  scratch1: 29,
+  scratch2: 29,
+  wash1: 29,
+  yawn1: 29,
+  yawn2: 29,
+  sleep1: 30,
+  sleep2: 30,
+});
+const NEKO_STREAM_ACTIONS = Object.freeze([
+  Object.freeze({
+    name: "sit",
+    frames: NEKO_AWAKE_ACTION.frames,
+  }),
+  Object.freeze({
+    name: "scratch",
+    frames: NEKO_SCRATCH_SELF_ACTION.frames,
+  }),
+  Object.freeze({
+    name: "clean",
+    frames: Object.freeze([NEKO_AWAKE_ACTION.frames[0], NEKO_WASH_ACTION.frames[0]]),
+  }),
+  Object.freeze({
+    name: "yawn",
+    frames: NEKO_YAWN_ACTION.frames,
+    fixedDurationMs: NEKO_STREAM_YAWN_ACTION_DURATION_MS,
+  }),
+  Object.freeze({
+    name: "sleep",
+    frames: Object.freeze(["sleep1", "sleep2"]),
+    fixedDurationMs: NEKO_STREAM_SLEEP_ACTION_DURATION_MS,
+  }),
+]);
+
+const nekoStreamCats = new Map();
+const nekoStreamSpawnTimerIds = new Set();
+let nekoStreamAnimationFrameId = null;
+let nekoStreamLastFrameTimestamp = 0;
+let nekoStreamGeneration = 0;
+let nekoStreamSpawnedCount = 0;
+let nekoStreamPlannedCount = 0;
+let nekoContextMenuOrigin = null;
+
+const sampleNekoStreamRoll = (random = Math.random) => {
+  const value = Number(random());
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(1, Math.max(0, value));
+};
+
+const sampleNekoStreamRange = (minimum, maximum, random = Math.random) =>
+  Math.min(maximum, minimum + sampleNekoStreamRoll(random) * (maximum - minimum));
+
+const sampleNekoStreamIndex = (length, random = Math.random) =>
+  Math.min(length - 1, Math.floor(sampleNekoStreamRoll(random) * length));
+
+const sampleNekoStreamSpawnSlotRoll = (random = Math.random) =>
+  Math.min(sampleNekoStreamRoll(random), 1 - 1e-9);
+
+const createNekoStreamPlan = ({
+  count = NEKO_STREAM_COUNT,
+  durationMs = NEKO_STREAM_SPAWN_WINDOW_MS,
+  random = Math.random,
+} = {}) => {
+  const spawnSlotDurationMs = count > 0 ? durationMs / count : 0;
+  const plans = Array.from({ length: count }, (_, id) => {
+    const spawnSlotStartMs = id * spawnSlotDurationMs;
+    const spawnDelayMs =
+      spawnSlotStartMs + sampleNekoStreamSpawnSlotRoll(random) * spawnSlotDurationMs;
+    const entrySide = sampleNekoStreamRoll(random) < 0.5 ? "left" : "right";
+    const initialDirection = entrySide === "left" ? 1 : -1;
+    const initialSpeedMultiplier = sampleNekoStreamRange(
+      NEKO_STREAM_MIN_SPEED_MULTIPLIER,
+      NEKO_STREAM_MAX_SPEED_MULTIPLIER,
+      random
+    );
+    const action =
+      sampleNekoStreamRoll(random) < NEKO_STREAM_ACTION_CHANCE
+        ? NEKO_STREAM_ACTIONS[sampleNekoStreamIndex(NEKO_STREAM_ACTIONS.length, random)]
+        : null;
+
+    if (!action) {
+      return Object.freeze({
+        id,
+        spawnDelayMs,
+        entrySide,
+        initialDirection,
+        initialSpeedMultiplier,
+        action: null,
+        actionTriggerProgress: null,
+        actionDurationMs: null,
+        postActionDirection: null,
+        postActionSpeedMultiplier: null,
+      });
+    }
+
+    return Object.freeze({
+      id,
+      spawnDelayMs,
+      entrySide,
+      initialDirection,
+      initialSpeedMultiplier,
+      action,
+      actionTriggerProgress: sampleNekoStreamRange(
+        NEKO_STREAM_ACTION_PROGRESS_MIN,
+        NEKO_STREAM_ACTION_PROGRESS_MAX,
+        random
+      ),
+      actionDurationMs:
+        action.fixedDurationMs ??
+        sampleNekoStreamRange(
+          NEKO_STREAM_NON_SLEEP_ACTION_MIN_MS,
+          NEKO_STREAM_NON_SLEEP_ACTION_MAX_MS,
+          random
+        ),
+      postActionDirection: null,
+      postActionSpeedMultiplier: null,
+    });
+  });
+
+  return Object.freeze(plans.sort((first, second) => first.spawnDelayMs - second.spawnDelayMs));
+};
+
+const isNekoStreamOutsideViewport = (
+  x,
+  viewportWidth,
+  margin = NEKO_STREAM_OFFSCREEN_MARGIN
+) => x < -margin || x > viewportWidth + margin;
+
+const getNekoStreamPoseOffsetY = (spriteName) => {
+  const opaqueHeight =
+    NEKO_STREAM_OPAQUE_HEIGHT_BY_SPRITE[spriteName] ??
+    NEKO_STREAM_BASE_OPAQUE_HEIGHT_PX;
+  const transparentBaselineCorrection =
+    ((NEKO_STREAM_BASE_OPAQUE_HEIGHT_PX - opaqueHeight) * NEKO_SPRITE_SIZE) /
+    NEKO_STREAM_SOURCE_SIZE_PX;
+  const intentionalOverlap = spriteName.startsWith("sleep")
+    ? NEKO_STREAM_SLEEP_OVERLAP_PX
+    : 0;
+  return transparentBaselineCorrection + intentionalOverlap;
+};
+
+const syncNekoStreamLane = () => {
+  if (!nekoStreamLayer) return;
+  const taskbarBounds = taskbar?.getBoundingClientRect();
+  const taskbarTop =
+    taskbarBounds && taskbarBounds.height > 0
+      ? taskbarBounds.top
+      : window.innerHeight - NEKO_STREAM_FALLBACK_TASKBAR_HEIGHT_PX;
+  nekoStreamLayer.style.setProperty(
+    "--neko-stream-lane-y",
+    `${
+      taskbarTop -
+      NEKO_SPRITE_SIZE * NEKO_STREAM_MAX_OPAQUE_BOTTOM_RATIO
+    }px`
+  );
+};
+
+const setNekoStreamCatSprite = (cat, spriteName) => {
+  const resolvedSpriteName = NEKO_SPRITES[spriteName] ? spriteName : "awake";
+  const source = NEKO_SPRITES[resolvedSpriteName];
+  cat.element.dataset.sprite = resolvedSpriteName;
+  cat.element.style.setProperty(
+    "--neko-stream-pose-offset-y",
+    `${getNekoStreamPoseOffsetY(resolvedSpriteName)}px`
+  );
+  if (cat.element.getAttribute("src") !== source) cat.element.src = source;
+};
+
+const setNekoStreamCatDirection = (cat, direction) => {
+  cat.direction = direction;
+  cat.element.dataset.direction = direction < 0 ? "left" : "right";
+};
+
+const setNekoStreamCatSpeed = (cat, speedMultiplier) => {
+  cat.speedMultiplier = speedMultiplier;
+  cat.element.dataset.speedMultiplier = speedMultiplier.toFixed(3);
+};
+
+const setNekoStreamCatMode = (cat, mode) => {
+  cat.mode = mode;
+  cat.element.dataset.mode = mode;
+};
+
+const renderNekoStreamCat = (cat) => {
+  cat.element.style.left = `${cat.x.toFixed(2)}px`;
+};
+
+const removeNekoStreamCat = (cat) => {
+  cat.element.remove();
+  nekoStreamCats.delete(cat.id);
+};
+
+const getNekoStreamEntryProgress = (cat, viewportWidth) => {
+  if (viewportWidth <= 0) return 0;
+  return cat.entrySide === "left"
+    ? cat.x / viewportWidth
+    : (viewportWidth - cat.x) / viewportWidth;
+};
+
+const isNekoStreamCatFullyVisible = (cat, viewportWidth) => {
+  const halfSprite = NEKO_SPRITE_SIZE / 2;
+  return cat.x >= halfSprite && cat.x <= viewportWidth - halfSprite;
+};
+
+const getNekoStreamActionSpriteName = (action, elapsedMs) => {
+  const safeElapsedMs = Math.max(0, Number(elapsedMs) || 0);
+  if (action.name === "clean") {
+    const cycleElapsedMs = safeElapsedMs % NEKO_STREAM_CLEAN_CYCLE_MS;
+    return action.frames[
+      cycleElapsedMs < NEKO_STREAM_CLEAN_SIT_PHASE_MS ? 0 : 1
+    ];
+  }
+
+  if (action.name === "yawn") {
+    const frameDurationMs =
+      NEKO_STREAM_YAWN_ACTION_DURATION_MS / action.frames.length;
+    const frameIndex = Math.min(
+      action.frames.length - 1,
+      Math.floor(safeElapsedMs / frameDurationMs)
+    );
+    return action.frames[frameIndex];
+  }
+
+  const frameIntervalMs =
+    action.name === "sleep"
+      ? NEKO_NAP_FRAME_SWITCH_FRAMES * NEKO_FRAME_INTERVAL_MS
+      : NEKO_FRAME_INTERVAL_MS;
+  const frameIndex =
+    Math.floor(safeElapsedMs / frameIntervalMs) % action.frames.length;
+  return action.frames[frameIndex];
+};
+
+const startNekoStreamCatAction = (cat, timestamp) => {
+  cat.actionStartedAt = timestamp;
+  cat.actionCount += 1;
+  cat.element.dataset.actionCount = String(cat.actionCount);
+  setNekoStreamCatMode(cat, cat.action.name);
+  setNekoStreamCatSprite(cat, getNekoStreamActionSpriteName(cat.action, 0));
+};
+
+const completeNekoStreamCatAction = (cat) => {
+  cat.actionCompleted = true;
+  cat.element.dataset.actionCompleted = "true";
+  const nextDirection =
+    cat.postActionDirection ?? (sampleNekoStreamRoll() < 0.5 ? -1 : 1);
+  const nextSpeedMultiplier =
+    cat.postActionSpeedMultiplier ??
+    sampleNekoStreamRange(
+      NEKO_STREAM_MIN_SPEED_MULTIPLIER,
+      NEKO_STREAM_MAX_SPEED_MULTIPLIER
+    );
+  setNekoStreamCatDirection(cat, nextDirection);
+  setNekoStreamCatSpeed(cat, nextSpeedMultiplier);
+  cat.runFrameIndex = 0;
+  cat.runFrameElapsedMs = 0;
+  setNekoStreamCatMode(cat, "running");
+  setNekoStreamCatSprite(
+    cat,
+    NEKO_RUN_SPRITES[cat.direction < 0 ? "left" : "right"][0]
+  );
+};
+
+const updateNekoStreamCatAction = (cat, timestamp) => {
+  const elapsedMs = Math.max(0, timestamp - cat.actionStartedAt);
+  if (elapsedMs >= cat.actionDurationMs) {
+    completeNekoStreamCatAction(cat);
+    return;
+  }
+
+  setNekoStreamCatSprite(
+    cat,
+    getNekoStreamActionSpriteName(cat.action, elapsedMs)
+  );
+};
+
+const updateRunningNekoStreamCat = (cat, deltaMs, timestamp, viewportWidth) => {
+  if (
+    cat.action &&
+    !cat.actionCompleted &&
+    cat.actionStartedAt === null &&
+    isNekoStreamCatFullyVisible(cat, viewportWidth) &&
+    getNekoStreamEntryProgress(cat, viewportWidth) >= cat.actionTriggerProgress
+  ) {
+    startNekoStreamCatAction(cat, timestamp);
+    return;
+  }
+
+  cat.x +=
+    cat.direction *
+    NEKO_SPEED *
+    cat.speedMultiplier *
+    (deltaMs / NEKO_FRAME_INTERVAL_MS);
+  cat.runFrameElapsedMs += deltaMs;
+  if (cat.runFrameElapsedMs >= NEKO_FRAME_INTERVAL_MS) {
+    const frameSteps = Math.floor(cat.runFrameElapsedMs / NEKO_FRAME_INTERVAL_MS);
+    cat.runFrameElapsedMs %= NEKO_FRAME_INTERVAL_MS;
+    cat.runFrameIndex = (cat.runFrameIndex + frameSteps) % 2;
+    const directionName = cat.direction < 0 ? "left" : "right";
+    setNekoStreamCatSprite(cat, NEKO_RUN_SPRITES[directionName][cat.runFrameIndex]);
+  }
+
+  if (isNekoStreamOutsideViewport(cat.x, viewportWidth)) {
+    removeNekoStreamCat(cat);
+    return;
+  }
+  renderNekoStreamCat(cat);
+};
+
+const animateNekoStream = (timestamp) => {
+  if (!nekoStreamCats.size) {
+    nekoStreamAnimationFrameId = null;
+    nekoStreamLastFrameTimestamp = 0;
+    return;
+  }
+
+  if (!nekoStreamLastFrameTimestamp) nekoStreamLastFrameTimestamp = timestamp;
+  const deltaMs = Math.min(
+    NEKO_FRAME_INTERVAL_MS * 2,
+    Math.max(0, timestamp - nekoStreamLastFrameTimestamp)
+  );
+  nekoStreamLastFrameTimestamp = timestamp;
+  const viewportWidth = window.innerWidth;
+
+  nekoStreamCats.forEach((cat) => {
+    if (isNekoStreamOutsideViewport(cat.x, viewportWidth)) {
+      removeNekoStreamCat(cat);
+      return;
+    }
+    if (cat.mode === "running") {
+      updateRunningNekoStreamCat(cat, deltaMs, timestamp, viewportWidth);
+    } else {
+      updateNekoStreamCatAction(cat, timestamp);
+    }
+  });
+
+  if (!nekoStreamCats.size) {
+    nekoStreamAnimationFrameId = null;
+    nekoStreamLastFrameTimestamp = 0;
+    return;
+  }
+  nekoStreamAnimationFrameId = window.requestAnimationFrame(animateNekoStream);
+};
+
+const ensureNekoStreamAnimation = () => {
+  if (nekoStreamAnimationFrameId !== null || !nekoStreamCats.size) return;
+  nekoStreamLastFrameTimestamp = 0;
+  nekoStreamAnimationFrameId = window.requestAnimationFrame(animateNekoStream);
+};
+
+const spawnNekoStreamCat = (plan) => {
+  if (!nekoStreamLayer) return;
+  const element = document.createElement("img");
+  element.className = "neko-stream-cat";
+  element.alt = "";
+  element.draggable = false;
+  element.setAttribute("aria-hidden", "true");
+  element.dataset.nekoStreamCat = String(plan.id);
+  element.dataset.entrySide = plan.entrySide;
+  element.dataset.action = plan.action?.name || "none";
+  element.dataset.actionCount = "0";
+  element.dataset.actionCompleted = "false";
+
+  const cat = {
+    id: plan.id,
+    element,
+    x:
+      plan.entrySide === "left"
+        ? -NEKO_SPRITE_SIZE / 2
+        : window.innerWidth + NEKO_SPRITE_SIZE / 2,
+    entrySide: plan.entrySide,
+    direction: plan.initialDirection,
+    speedMultiplier: plan.initialSpeedMultiplier,
+    action: plan.action,
+    actionTriggerProgress: plan.actionTriggerProgress,
+    actionDurationMs: plan.actionDurationMs,
+    postActionDirection: plan.postActionDirection,
+    postActionSpeedMultiplier: plan.postActionSpeedMultiplier,
+    actionStartedAt: null,
+    actionCompleted: false,
+    actionCount: 0,
+    mode: "running",
+    runFrameIndex: 0,
+    runFrameElapsedMs: 0,
+  };
+
+  setNekoStreamCatDirection(cat, plan.initialDirection);
+  setNekoStreamCatSpeed(cat, plan.initialSpeedMultiplier);
+  setNekoStreamCatMode(cat, "running");
+  setNekoStreamCatSprite(
+    cat,
+    NEKO_RUN_SPRITES[plan.initialDirection < 0 ? "left" : "right"][0]
+  );
+  renderNekoStreamCat(cat);
+  nekoStreamLayer.append(element);
+  nekoStreamCats.set(cat.id, cat);
+  nekoStreamSpawnedCount += 1;
+  ensureNekoStreamAnimation();
+};
+
+const stopNekoStream = () => {
+  nekoStreamGeneration += 1;
+  nekoStreamSpawnTimerIds.forEach((timerId) => window.clearTimeout(timerId));
+  nekoStreamSpawnTimerIds.clear();
+  if (nekoStreamAnimationFrameId !== null) {
+    window.cancelAnimationFrame(nekoStreamAnimationFrameId);
+  }
+  nekoStreamAnimationFrameId = null;
+  nekoStreamLastFrameTimestamp = 0;
+  nekoStreamCats.clear();
+  nekoStreamLayer?.replaceChildren();
+};
+
+const startNekoStream = (plan = createNekoStreamPlan()) => {
+  stopNekoStream();
+  if (!nekoStreamLayer) return;
+  const generation = nekoStreamGeneration;
+  const streamPlan = Array.isArray(plan) ? plan : [];
+  nekoStreamSpawnedCount = 0;
+  nekoStreamPlannedCount = streamPlan.length;
+  syncNekoStreamLane();
+
+  const scheduleSpawns = () => {
+    if (generation !== nekoStreamGeneration) return;
+    streamPlan.forEach((catPlan) => {
+      let timerId = null;
+      timerId = window.setTimeout(() => {
+        nekoStreamSpawnTimerIds.delete(timerId);
+        if (generation !== nekoStreamGeneration) return;
+        spawnNekoStreamCat(catPlan);
+      }, catPlan.spawnDelayMs);
+      nekoStreamSpawnTimerIds.add(timerId);
+    });
+  };
+
+  if (nekoRunAssetsLoaded) {
+    scheduleSpawns();
+    return;
+  }
+  void preloadNekoRunAssets().then(scheduleSpawns);
+};
+
+const closeNekoContextMenu = ({ restoreFocus = false } = {}) => {
+  if (!nekoContextMenu) return;
+  const origin = nekoContextMenuOrigin;
+  nekoContextMenu.hidden = true;
+  nekoContextMenu.style.removeProperty("left");
+  nekoContextMenu.style.removeProperty("top");
+  nekoContextMenu.style.removeProperty("visibility");
+  nekoLaunchers.forEach((launcher) => launcher.setAttribute("aria-expanded", "false"));
+  nekoContextMenuOrigin = null;
+  if (restoreFocus && origin?.isConnected) origin.focus({ preventScroll: true });
+};
+
+const focusAdjacentNekoLauncherControl = (moveBackward) => {
+  const origin = nekoContextMenuOrigin;
+  if (!origin) {
+    closeNekoContextMenu();
+    return;
+  }
+  const controls = Array.from(
+    origin.parentElement?.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ) || []
+  ).filter((control) => control.getClientRects().length > 0);
+  const originIndex = controls.indexOf(origin);
+  const target = controls[originIndex + (moveBackward ? -1 : 1)] || origin;
+  closeNekoContextMenu();
+  target.focus({ preventScroll: true });
+};
+
+const openNekoContextMenu = (launcher, clientX, clientY) => {
+  if (!nekoContextMenu || !nekoStreamCommand) return;
+  void preloadNekoRunAssets();
+  closeNekoContextMenu();
+  nekoContextMenuOrigin = launcher;
+  launcher.setAttribute("aria-expanded", "true");
+  nekoContextMenu.hidden = false;
+  nekoContextMenu.style.visibility = "hidden";
+  nekoContextMenu.style.left = "0px";
+  nekoContextMenu.style.top = "0px";
+
+  const menuBounds = nekoContextMenu.getBoundingClientRect();
+  const launcherBounds = launcher.getBoundingClientRect();
+  const taskbarBounds = taskbar?.getBoundingClientRect();
+  const requestedLeft = Number.isFinite(clientX) ? clientX : launcherBounds.left;
+  const requestedTop = Number.isFinite(clientY) ? clientY : launcherBounds.bottom;
+  const availableBottom = Math.min(
+    window.innerHeight - NEKO_CONTEXT_MENU_PADDING,
+    taskbarBounds?.top ?? window.innerHeight - NEKO_CONTEXT_MENU_PADDING
+  );
+  const maximumLeft = Math.max(
+    NEKO_CONTEXT_MENU_PADDING,
+    window.innerWidth - menuBounds.width - NEKO_CONTEXT_MENU_PADDING
+  );
+  const maximumTop = Math.max(
+    NEKO_CONTEXT_MENU_PADDING,
+    availableBottom - menuBounds.height - NEKO_CONTEXT_MENU_PADDING
+  );
+  const left = Math.min(maximumLeft, Math.max(NEKO_CONTEXT_MENU_PADDING, requestedLeft));
+  const top = Math.min(maximumTop, Math.max(NEKO_CONTEXT_MENU_PADDING, requestedTop));
+
+  nekoContextMenu.style.left = `${Math.round(left)}px`;
+  nekoContextMenu.style.top = `${Math.round(top)}px`;
+  nekoContextMenu.style.visibility = "visible";
+  nekoStreamCommand.focus({ preventScroll: true });
+};
+
+nekoLaunchers.forEach((launcher) => {
+  launcher.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openNekoContextMenu(launcher, event.clientX, event.clientY);
+  });
+  launcher.addEventListener("keydown", (event) => {
+    const opensContextMenu =
+      event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
+    if (!opensContextMenu) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const bounds = launcher.getBoundingClientRect();
+    openNekoContextMenu(launcher, bounds.left, bounds.bottom);
+  });
+});
+
+nekoStreamCommand?.addEventListener("click", () => {
+  closeNekoContextMenu({ restoreFocus: true });
+  startNekoStream();
+});
+
+nekoContextMenu?.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    closeNekoContextMenu({ restoreFocus: true });
+    return;
+  }
+  if (event.key === "Tab") {
+    event.preventDefault();
+    focusAdjacentNekoLauncherControl(event.shiftKey);
+    return;
+  }
+  if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+    event.preventDefault();
+    nekoStreamCommand?.focus({ preventScroll: true });
+  }
+});
+
+document.addEventListener("pointerdown", (event) => {
+  if (nekoContextMenu?.hidden || nekoContextMenu?.contains(event.target)) return;
+  closeNekoContextMenu();
+});
+
+document.addEventListener("contextmenu", (event) => {
+  if (nekoContextMenu?.hidden || event.target.closest?.('[data-app="neko"]')) return;
+  closeNekoContextMenu();
+});
+
+window.addEventListener("resize", () => {
+  closeNekoContextMenu({ restoreFocus: true });
+  syncNekoStreamLane();
+});
+window.addEventListener(
+  "scroll",
+  () => closeNekoContextMenu({ restoreFocus: true }),
+  true
+);
+window.addEventListener("blur", () => closeNekoContextMenu());
+window.addEventListener("pagehide", stopNekoStream);
 
 const setNekoIconAwake = (isAwake) => {
   document.querySelectorAll("[data-neko-icon]").forEach((icon) => {

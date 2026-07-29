@@ -43,7 +43,13 @@ const installDebugAlertTestBridge = async (
         debugAlertRegistration.replace("debug: false", "debug: true")
       )
     : developerModeSource;
-  const zeroDelaySource = developerSource.replace(
+  const isolatedSource = developerMode
+    ? developerSource
+    : developerSource.replace(
+        'id: "neko-stream-system-alert",\n  debug: true,',
+        'id: "neko-stream-system-alert",\n  debug: false,'
+      );
+  const zeroDelaySource = isolatedSource.replace(
     "const RANDOM_EVENT_DELAY_MAX_MS = 2000;",
     "const RANDOM_EVENT_DELAY_MAX_MS = 0;"
   );
@@ -75,7 +81,8 @@ window.__debugSystemAlertsTest = Object.freeze({
   if (
     (developerMode && developerModeSource === mainSource) ||
     (developerMode && developerSource === developerModeSource) ||
-    zeroDelaySource === developerSource ||
+    (!developerMode && isolatedSource === developerSource) ||
+    zeroDelaySource === isolatedSource ||
     instrumentedSource === zeroDelaySource
   ) {
     throw new Error("Unable to install the debug system alert test bridge.");

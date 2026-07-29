@@ -52,7 +52,7 @@ const getRandomEventRegistrationBlocks = (source) => {
   }
 };
 
-test("all registered random events keep debug mode disabled", async () => {
+test("only the intentionally exposed Neko prompt uses per-event debug mode", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
   const registrations = getRandomEventRegistrationBlocks(source);
 
@@ -80,14 +80,18 @@ test("all registered random events keep debug mode disabled", async () => {
   );
   assert.equal(
     source.match(/\bdebug\s*:\s*true\b/g)?.length ?? 0,
-    0,
-    "Every random event must keep per-event debug mode disabled"
+    1,
+    "Only the requested Neko prompt may bypass probability and the global cooldown"
   );
   const registeredIds = standardRegistrations.map((registration) => {
     const id = registration.match(/\bid:\s*"([^"]+)"/);
     assert.ok(id, "Every registered random event must retain an id");
     assert.match(registration, /\brun:\s*\(/, `Event ${id[1]} must remain runnable`);
-    assert.doesNotMatch(registration, /\bdebug\s*:\s*true\b/, id[1]);
+    if (id[1] === "neko-stream-system-alert") {
+      assert.match(registration, /\bdebug\s*:\s*true\b/, id[1]);
+    } else {
+      assert.doesNotMatch(registration, /\bdebug\s*:\s*true\b/, id[1]);
+    }
     return id[1];
   });
   assert.equal(new Set(registeredIds).size, registeredIds.length, "Event ids must remain unique");

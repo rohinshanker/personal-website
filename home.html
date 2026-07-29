@@ -104,7 +104,7 @@
       }
     </script>
     <link rel="stylesheet" href="style.css?v=first-win-stats-handoff-20260722" />
-    <link rel="stylesheet" href="styles/home/base.css?v=calendar-square-stack-20260617" />
+    <link rel="stylesheet" href="styles/home/base.css?v=neko-stream-pose-cadence-20260729" />
     <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-mobile-controls-20260724" />
     <link rel="stylesheet" href="styles/home/apps/solitaire.css" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
@@ -113,7 +113,7 @@
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=degree-card-spacing-20260728" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=public-info-spacing-20260728" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=neko-stream-alert-20260729" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cursor-titlebar-clickable-20260709" />
   </head>
   <body>
@@ -158,7 +158,14 @@
         <img src="assets/snake-assets/snake-logo.png" alt="" />
         <span class="desktop-icon-label">Snake</span>
       </button>
-      <button class="desktop-icon desktop-icon--neko" data-app="neko" aria-label="Neko">
+      <button
+        class="desktop-icon desktop-icon--neko"
+        data-app="neko"
+        aria-label="Neko"
+        aria-haspopup="menu"
+        aria-controls="neko-context-menu"
+        aria-expanded="false"
+      >
         <span class="neko-icon-image" data-neko-icon aria-hidden="true">
           <img class="neko-icon-bed" src="assets/app-icons/neko-bed-empty-icon.png" alt="" />
           <img
@@ -3137,7 +3144,14 @@
         <button class="taskbar-icon" data-app="snake" aria-label="Snake">
           <img src="assets/snake-assets/snake-logo.png" alt="Snake" />
         </button>
-        <button class="taskbar-icon" data-app="neko" aria-label="Neko">
+        <button
+          class="taskbar-icon"
+          data-app="neko"
+          aria-label="Neko"
+          aria-haspopup="menu"
+          aria-controls="neko-context-menu"
+          aria-expanded="false"
+        >
           <img data-neko-taskbar-icon src="assets/neko-assets/neko-credit-icon.png" alt="Neko" />
         </button>
         <button class="taskbar-icon" data-app="sudoku" aria-label="Sudoku">
@@ -3168,6 +3182,24 @@
       <button class="taskbar-right" id="taskbar-clock-button" aria-label="Date and time">
         <img src="assets/app-icons/ico/calendar.ico" alt="Calendar" width="16" height="16" />
         <span class="taskbar-clock" id="taskbar-clock">--:--</span>
+      </button>
+    </div>
+
+    <div class="neko-stream-layer" id="neko-stream-layer" aria-hidden="true"></div>
+    <div
+      class="neko-context-menu"
+      id="neko-context-menu"
+      role="menu"
+      aria-label="Neko commands"
+      hidden
+    >
+      <button
+        class="neko-context-menu__item"
+        id="neko-stream-command"
+        type="button"
+        role="menuitem"
+      >
+        /nekostream
       </button>
     </div>
 
@@ -3289,6 +3321,34 @@
         </div>
         <div class="random-alert-actions" id="debug-system-alert-actions">
           <button type="button" id="debug-system-alert-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="window random-alert-window neko-stream-alert-window is-hidden"
+      id="neko-stream-alert-window"
+      role="alertdialog"
+      aria-modal="false"
+      aria-hidden="true"
+      aria-labelledby="neko-stream-alert-title"
+      aria-describedby="neko-stream-alert-message"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text" id="neko-stream-alert-title">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message neko-stream-alert-message">
+          <img
+            id="neko-stream-alert-icon"
+            src="assets/neko-assets/sprites/sleep1.png"
+            alt=""
+          />
+          <p id="neko-stream-alert-message">Trigger /nekostream?</p>
+        </div>
+        <div class="random-alert-actions" id="neko-stream-alert-actions">
+          <button type="button" id="neko-stream-alert-yes">Yes</button>
+          <button type="button" id="neko-stream-alert-no">No</button>
         </div>
       </div>
     </div>
@@ -5898,10 +5958,10 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-46a52e074099899c9b8cade7dbca878bc071f026873f16fb83c87e41b2ddadbd"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-f6d3d09b3f8a91dce0045af503e3c825c77bcf27a98e72ffb22e35feb62fe69f"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-46a52e074099899c9b8cade7dbca878bc071f026873f16fb83c87e41b2ddadbd"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-f6d3d09b3f8a91dce0045af503e3c825c77bcf27a98e72ffb22e35feb62fe69f"></script>
     <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
-    <script src="scripts/home/main.js?v=game-build-46a52e074099899c9b8cade7dbca878bc071f026873f16fb83c87e41b2ddadbd"></script>
+    <script src="scripts/home/main.js?v=game-build-f6d3d09b3f8a91dce0045af503e3c825c77bcf27a98e72ffb22e35feb62fe69f"></script>
   </body>
 </html>
