@@ -59,7 +59,7 @@ const aboutCarouselItems = [
   ],
 ];
 
-test("About Me provides the requested page structure and placeholder content", async () => {
+test("About Me provides the requested page structure and dated article", async () => {
   const html = await readFile(new URL("home.html", root), "utf8");
   const aboutStart = html.indexOf('id="about-window"');
   const aboutEnd = html.indexOf('\n      <div class="window app-window is-hidden portfolio-window"', aboutStart);
@@ -148,14 +148,27 @@ test("About Me provides the requested page structure and placeholder content", a
     "Degree types must use their requested certificate icon variants"
   );
   assert.match(about, /<h3 id="about-article-heading">About Me<\/h3>/);
-  assert.match(about, /<option value="27-07-2026">27\/07\/2026<\/option>/);
+  assert.match(about, /<option value="30-07-2026">30\/07\/2026<\/option>/);
   assert.equal(
-    about.match(/<p>\s*Lorem ipsum|<p>\s*Praesent ullamcorper|<p>\s*Curabitur dignissim/g)?.length,
-    3,
-    "The dated article must retain three placeholder paragraphs"
+    about.match(/<article class="about-article-copy"[\s\S]*?<\/article>/)?.[0].match(/<p(?:>|\s)/g)
+      ?.length,
+    8,
+    "The dated article must retain all seven prose paragraphs and its quoted paragraph"
   );
+  assert.match(about, /My name is Rohin! I am a creative and aspiring polymath/);
+  assert.match(about, /doesn’t really make me <em>me<\/em>/);
+  assert.match(about, /class="about-article-quote"/);
+  assert.match(
+    about,
+    /<strong[\s\S]*?>When a tree is growing, it’s tender and pliant\.[\s\S]*?never win\.<\/strong/
+  );
+  assert.match(about, /class="about-article-quote-source">—Andrei Tarkovsky<\/footer>/);
+  assert.match(about, /more importantly <em>you<\/em> should take charge/);
   assert.match(about, /<p>Yours Truly,<\/p>\s*<p>Rohin Shanker<\/p>/);
-  assert.match(about, /class="about-signature-slot"/);
+  assert.match(
+    about,
+    /class="about-signature"[\s\S]*?src="assets\/about-signature\.png"[\s\S]*?width="1404"[\s\S]*?height="648"[\s\S]*?alt="Rohin S\. Shanker handwritten signature"/
+  );
   assert.match(
     about,
     /class="about-social-link about-social-launcher"[\s\S]*?type="button"[\s\S]*?data-app="socials"[\s\S]*?aria-controls="socials-window"[\s\S]*?aria-haspopup="dialog"[\s\S]*?connected_world\.ico[\s\S]*?<span class="socials-name">Socials<\/span>[\s\S]*?<span class="socials-username">See All<\/span>/
@@ -192,6 +205,7 @@ test("About Me links every requested social profile with safe external navigatio
       "assets/app-icons/ico/keyboard_musical_midi.ico",
       "assets/app-icons/ico/gears.ico",
       "assets/app-icons/ico/connected_world.ico",
+      "assets/about-signature.png",
     ].map((asset) => access(new URL(asset, root)))
   );
 });
@@ -382,6 +396,23 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   );
   assert.match(
     css,
-    /@media \(max-width: 744px\) \{[\s\S]*?\.about-intro-grid \{\n    grid-template-columns: minmax\(0, 1fr\);/
+    /\.about-article-copy \{[\s\S]*?box-sizing: border-box;[\s\S]*?margin-inline: auto;[\s\S]*?width: 75%;/
+  );
+  assert.match(
+    css,
+    /\.about-article-quote \{[\s\S]*?border-inline-start: 4px solid var\(--dialog-blue\);[\s\S]*?box-sizing: border-box;[\s\S]*?margin: 20px 0;[\s\S]*?padding: 0;[\s\S]*?padding-inline-start: 20px;/
+  );
+  assert.doesNotMatch(css, /\.about-article-quote > \*/);
+  assert.doesNotMatch(
+    css.match(/\.about-signature-slot \{[^}]+\}/)?.[0] ?? "",
+    /background|box-shadow/
+  );
+  assert.match(
+    css,
+    /\.about-signature \{[\s\S]*?display: block;[\s\S]*?height: auto;[\s\S]*?max-width: 100%;[\s\S]*?width: 100%;/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 744px\) \{[\s\S]*?\.about-article-copy \{[\s\S]*?width: 100%;[\s\S]*?\.about-intro-grid \{\n    grid-template-columns: minmax\(0, 1fr\);/
   );
 });

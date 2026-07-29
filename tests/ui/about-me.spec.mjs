@@ -119,7 +119,23 @@ const aboutMetrics = (page) =>
     const socialLinks = [...document.querySelectorAll(".about-social-link")];
     const linkRects = socialLinks.map((link) => link.getBoundingClientRect());
     const socialLinksContainer = document.querySelector(".about-social-links");
+    const articleSection = document.querySelector(".about-article-section");
+    const article = document.querySelector(".about-article-copy");
+    const quote = document.querySelector(".about-article-quote");
+    const quoteStyle = getComputedStyle(quote);
+    const quoteTextRects = [];
+    const quoteTextWalker = document.createTreeWalker(quote, NodeFilter.SHOW_TEXT);
+    while (quoteTextWalker.nextNode()) {
+      const textNode = quoteTextWalker.currentNode;
+      if (!textNode.textContent.trim()) continue;
+      const range = document.createRange();
+      range.selectNodeContents(textNode);
+      quoteTextRects.push(...range.getClientRects());
+    }
     return {
+      article: rect(".about-article-copy"),
+      articleHorizontalOverflow: article.scrollWidth > article.clientWidth + 1,
+      articleSection: rect(".about-article-section"),
       body: rect("#about-window .about-body"),
       bodyClientHeight: body.clientHeight,
       bodyOverflowY: getComputedStyle(body).overflowY,
@@ -247,6 +263,15 @@ const aboutMetrics = (page) =>
         Math.max(...linkRects.map(({ top }) => top)) -
         Math.min(...linkRects.map(({ top }) => top)),
       overview: rect(".about-overview-panel"),
+      quote: rect(".about-article-quote"),
+      quoteBorderInlineStart: Number.parseFloat(quoteStyle.borderInlineStartWidth),
+      quoteChildLefts: [...quote.children].map(
+        (child) => child.getBoundingClientRect().left
+      ),
+      quoteHorizontalOverflow: quote.scrollWidth > quote.clientWidth + 1,
+      quotePaddingInlineStart: Number.parseFloat(quoteStyle.paddingInlineStart),
+      quoteTextLeft: Math.min(...quoteTextRects.map(({ left }) => left)),
+      quoteTextRight: Math.max(...quoteTextRects.map(({ right }) => right)),
       socialContentUsesRows: socialLinks.every((link) => {
         const icon = link.querySelector(".socials-logo").getBoundingClientRect();
         const copy = link.querySelector(".about-social-copy").getBoundingClientRect();
@@ -485,9 +510,44 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
   await degreeList.evaluate((element) => {
     element.scrollTop = 0;
   });
-  await expect(page.locator("#about-article-date")).toHaveValue("27-07-2026");
-  await expect(page.locator("#about-article-date option")).toHaveText("27/07/2026");
-  await expect(page.locator("#about-article-copy p")).toHaveCount(3);
+  await expect(page.locator("#about-article-date")).toHaveValue("30-07-2026");
+  await expect(page.locator("#about-article-date option")).toHaveText("30/07/2026");
+  await expect(page.locator("#about-article-copy > p")).toHaveCount(7);
+  await expect(page.locator(".about-article-quote")).toHaveCount(1);
+  await expect(page.locator(".about-article-quote strong")).toContainText(
+    "When a tree is growing, it’s tender and pliant."
+  );
+  await expect(page.locator(".about-article-quote-source")).toHaveText("—Andrei Tarkovsky");
+  const signature = page.locator(".about-signature");
+  await expect(signature).toHaveAttribute("src", "assets/about-signature.png");
+  await expect(signature).toHaveAttribute("alt", "Rohin S. Shanker handwritten signature");
+  await expect
+    .poll(() => signature.evaluate((element) => element.complete && element.naturalWidth === 1404))
+    .toBe(true);
+  const signatureAlpha = await signature.evaluate((element) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = element.naturalWidth;
+    canvas.height = element.naturalHeight;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.drawImage(element, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const alphaAt = (x, y) => pixels[(y * canvas.width + x) * 4 + 3];
+    let visiblePixels = 0;
+    for (let index = 3; index < pixels.length; index += 4) {
+      if (pixels[index] > 0) visiblePixels += 1;
+    }
+    return {
+      corners: [
+        alphaAt(0, 0),
+        alphaAt(canvas.width - 1, 0),
+        alphaAt(0, canvas.height - 1),
+        alphaAt(canvas.width - 1, canvas.height - 1),
+      ],
+      visiblePixels,
+    };
+  });
+  expect(signatureAlpha.corners).toEqual([0, 0, 0, 0]);
+  expect(signatureAlpha.visiblePixels).toBeGreaterThan(10_000);
   await expect(page.locator(".about-signoff")).toContainText("Yours Truly,");
   await expect(page.locator(".about-signoff")).toContainText("Rohin Shanker");
 
@@ -627,6 +687,24 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
         0
       );
       expect(metrics.bodyScrollHeight).toBeGreaterThan(metrics.bodyClientHeight);
+      expect(metrics.articleHorizontalOverflow).toBe(false);
+      expect(metrics.quoteHorizontalOverflow).toBe(false);
+      const expectedArticleRatio = viewport.width <= 744 ? 1 : 0.75;
+      expect(metrics.article.width / metrics.articleSection.width).toBeCloseTo(
+        expectedArticleRatio,
+        2
+      );
+      expect(metrics.article.left - metrics.articleSection.left).toBeCloseTo(
+        metrics.articleSection.right - metrics.article.right,
+        1
+      );
+      const quoteBorderEdge = metrics.quote.left + metrics.quoteBorderInlineStart;
+      expect(metrics.quotePaddingInlineStart).toBeCloseTo(20, 1);
+      expect(metrics.quoteTextLeft - quoteBorderEdge).toBeGreaterThanOrEqual(19.5);
+      expect(metrics.quoteTextRight).toBeLessThanOrEqual(metrics.quote.right + 0.6);
+      for (const childLeft of metrics.quoteChildLefts) {
+        expect(childLeft - quoteBorderEdge).toBeGreaterThanOrEqual(19.5);
+      }
       expect(metrics.degreeHorizontalOverflow).toBe(false);
       expect(metrics.degreeIconContained).toBe(true);
       expect(metrics.degreeIconSizes).toHaveLength(4);

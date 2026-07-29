@@ -470,9 +470,12 @@
 
 .about-article-copy {
   background: #fff;
+  box-sizing: border-box;
   box-shadow: var(--border-field);
   line-height: 1.55;
+  margin-inline: auto;
   padding: 12px;
+  width: 75%;
 }
 
 .about-article-copy p {
@@ -481,6 +484,19 @@
 
 .about-article-copy p + p {
   margin-top: 11px;
+}
+
+.about-article-quote {
+  border-inline-start: 4px solid var(--dialog-blue);
+  box-sizing: border-box;
+  margin: 20px 0;
+  padding: 0;
+  padding-inline-start: 20px;
+}
+
+.about-article-quote-source {
+  font-weight: bold;
+  margin-top: 8px;
 }
 
 .about-signoff {
@@ -499,19 +515,23 @@
 }
 
 .about-signature-slot {
-  align-items: center;
-  background: #fff;
-  box-shadow: var(--border-field);
-  color: var(--button-shadow);
-  display: flex;
-  height: 96px;
-  justify-content: center;
   margin-top: 8px;
   max-width: 100%;
   width: 260px;
 }
 
+.about-signature {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  width: 100%;
+}
+
 @media (max-width: 744px) {
+  .about-article-copy {
+    width: 100%;
+  }
+
   .about-intro-grid {
     grid-template-columns: minmax(0, 1fr);
   }
