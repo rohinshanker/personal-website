@@ -741,6 +741,10 @@ body {
 }
 
 @media (max-width: 680px) {
+  .desktop-icon {
+    min-width: 64px;
+  }
+
   .calendar-popout {
     --calendar-panel-size: min(300px, calc(100vw - 56px));
     left: max(8px, env(safe-area-inset-left));

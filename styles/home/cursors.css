@@ -65,6 +65,14 @@ body.is-cursor-dark-mode {
     url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%202.cur"), nesw-resize;
 }
 
+html.is-custom-cursor-text-selection,
+body.is-custom-cursor-text-selection {
+  --cursor-normal: var(--cursor-text);
+  --cursor-select: var(--cursor-text);
+  --cursor-text-thin: var(--cursor-text);
+  --cursor-help: var(--cursor-text);
+}
+
 html,
 body,
 body * {

@@ -102,7 +102,11 @@
     </script>
     <link rel="preload" href="assets/mountain-and-sky.png" as="image" />
     <link rel="stylesheet" href="style.css?v=first-win-stats-handoff-20260722" />
-    <link rel="stylesheet" href="styles/home/cursors.css?v=cursor-titlebar-clickable-20260709" />
+    <link rel="stylesheet" href="styles/home/cursors.css?v=text-selection-cursor-20260806" />
+    <script
+      src="scripts/home/text-selection-cursor.js?v=text-selection-cursor-20260806"
+      defer
+    ></script>
     <style>
       :root {
         --loader-image: url("assets/mountain-and-sky.png");
@@ -311,22 +315,22 @@
       let timerId = null;
       let homeWarmupStarted = false;
       const homeWarmupResources = [
-        ["styles/home/base.css?v=neko-stream-pose-cadence-20260729", "style"],
+        ["styles/home/base.css?v=admin-launchers-20260803", "style"],
         ["styles/home/apps/minesweeper.css?v=minesweeper-mobile-controls-20260724", "style"],
         ["styles/home/apps/solitaire.css", "style"],
         ["styles/home/apps/snake.css", "style"],
         ["styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722", "style"],
-        ["styles/home/apps/game-stats.css?v=global-leaderboard-launchers-20260725", "style"],
+        ["styles/home/apps/game-stats.css?v=profile-icon-frame-20260807", "style"],
         ["styles/home/apps/life-counter.css?v=counter-project-glow-20260703", "style"],
-        ["styles/home/portfolio.css?v=about-article-refine-20260730", "style"],
+        ["styles/home/portfolio.css?v=about-mobile-height-20260805", "style"],
         ["styles/home/study-resources.css", "style"],
-        ["styles/home/random-events.css?v=neko-stream-alert-20260729", "style"],
-        ["styles/home/cursors.css?v=cursor-titlebar-clickable-20260709", "style"],
-        ["scripts/home/game-stats-backend.js?v=game-build-f6d3d09b3f8a91dce0045af503e3c825c77bcf27a98e72ffb22e35feb62fe69f", "script"],
+        ["styles/home/random-events.css?v=lain-wired-chat-v2-20260806", "style"],
+        ["styles/home/cursors.css?v=text-selection-cursor-20260806", "style"],
+        ["scripts/home/game-stats-backend.js?v=game-build-08944fd6024cc54945b189566031b7b4b5d7fbd1d970c011cfc850d9253dec6a", "script"],
         ["scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721", "script"],
-        ["scripts/home/core/dom.js?v=game-build-f6d3d09b3f8a91dce0045af503e3c825c77bcf27a98e72ffb22e35feb62fe69f", "script"],
+        ["scripts/home/core/dom.js?v=game-build-08944fd6024cc54945b189566031b7b4b5d7fbd1d970c011cfc850d9253dec6a", "script"],
         ["scripts/home/core/media.js?v=media-priority-loader-20260723", "script"],
-        ["scripts/home/main.js?v=game-build-f6d3d09b3f8a91dce0045af503e3c825c77bcf27a98e72ffb22e35feb62fe69f", "script"],
+        ["scripts/home/main.js?v=game-build-08944fd6024cc54945b189566031b7b4b5d7fbd1d970c011cfc850d9253dec6a", "script"],
       ];
 
       const addHomeWarmupPrefetch = ([href, as]) => {

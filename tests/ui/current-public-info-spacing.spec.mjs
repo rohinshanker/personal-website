@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
@@ -21,10 +21,7 @@ const disableRemoteGameStats = async (page) => {
 };
 
 const installCurrentPublicInfoTestBridge = async (page) => {
-  const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
+  const mainSource = await readIsolatedMainSource();
   const instrumentedSource = mainSource.replace(
     /\n\}\)\(\);\s*$/,
     `

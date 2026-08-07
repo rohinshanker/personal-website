@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(120_000);
 
@@ -109,10 +109,7 @@ const installApi = async (page) => {
 };
 
 const installMainBridge = async (page) => {
-  const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
+  const mainSource = await readIsolatedMainSource();
   const instrumentedSource = mainSource.replace(
     /\n\}\)\(\);\s*$/,
     `

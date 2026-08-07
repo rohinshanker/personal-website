@@ -75,6 +75,34 @@ const expectedAlerts = [
     message: "They are always watching.",
     alignment: "center",
   },
+  {
+    id: "seneca-announcement",
+    debug: false,
+    title: "System Announcement",
+    icon: "assets/app-icons/ico/certificate_no.ico",
+    message:
+      "“Let it offend you that someone else could be handed your days and turn them into something greater.”\n" +
+      "—Lucius Annaeus Seneca",
+    alignment: "right",
+  },
+  {
+    id: "deodorant-reminder",
+    debug: false,
+    title: "System Alert",
+    icon: "assets/app-icons/ico/user_computer_pair.ico",
+    message:
+      "Be sure to shower and wear deodorant! Or don't. I'm just a website, who am I to tell you?",
+    alignment: "right",
+  },
+  {
+    id: "power-cycle-reminder",
+    debug: false,
+    title: "System Alert",
+    icon: "assets/app-icons/ico/shell_window1.ico",
+    message:
+      "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
+    alignment: "center",
+  },
 ];
 
 const readAlertConfiguration = (source) => {
@@ -96,6 +124,10 @@ test("system alert events preserve the requested content and local assets", asyn
 
   assert.deepEqual(alerts, expectedAlerts);
   assert.equal(new Set(alerts.map(({ id }) => id)).size, expectedAlerts.length);
+  assert.deepEqual(
+    alerts.filter(({ debug }) => debug).map(({ id }) => id),
+    []
+  );
   await Promise.all(alerts.map(({ icon }) => access(new URL(icon, root))));
 });
 
@@ -114,6 +146,7 @@ test("system alert events use one accessible managed shell with exact alignment"
   assert.match(html, /<button type="button" id="debug-system-alert-ok">OK<\/button>/);
   assert.match(css, /\.random-alert-actions\.is-centered \{\n  justify-content: center;/);
   assert.match(css, /\.debug-system-alert-message p \{\n  overflow-wrap: anywhere;/);
+  assert.match(css, /\.debug-system-alert-message p \{[\s\S]*?white-space: pre-line;/);
   for (const binding of [
     "debugSystemAlertWindow",
     "debugSystemAlertTitle",
@@ -128,7 +161,7 @@ test("system alert events use one accessible managed shell with exact alignment"
 
   assert.match(source, /DEBUG_SYSTEM_ALERTS\.forEach\(\(alert\) => \{/);
   assert.match(source, /id: `debug-system-alert-\$\{alert\.id\}`/);
-  assert.match(source, /debug: false/);
+  assert.match(source, /debug: alert\.debug === true/);
   assert.doesNotMatch(source, /DEBUG_SYSTEM_ALERT_BROWSER_TRIGGER_ENABLED/);
   assert.match(
     source,
@@ -140,4 +173,16 @@ test("system alert events use one accessible managed shell with exact alignment"
   assert.match(source, /bindManagedRandomEventWindowAnimation\(debugSystemAlertWindow/);
   assert.match(source, /debugSystemAlertOk\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(source, /event\.key !== "Escape"/);
+  assert.match(
+    source,
+    /"debug-system-alert-seneca-announcement": "System Announcement — Seneca"/
+  );
+  assert.match(
+    source,
+    /"debug-system-alert-deodorant-reminder": "System Alert — Hygiene Reminder"/
+  );
+  assert.match(
+    source,
+    /"debug-system-alert-power-cycle-reminder": "System Alert — Power-Cycle Reminder"/
+  );
 });

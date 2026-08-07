@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.mjs";
 
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -136,8 +136,23 @@ const preparePage = async (page, signInStatus, { seedLocalState = true, ...apiOp
   }
   await configureAdministratorApi(page, signInStatus, apiOptions);
   await page.goto("/home.html");
-  const aboutClose = page.locator('#about-window [data-close="about"]');
-  if (await aboutClose.isVisible()) await aboutClose.click();
+  await page.locator("#about-window").evaluate((element) => {
+    element.classList.remove("is-opening", "is-closing");
+    element.classList.add("is-hidden");
+    element.setAttribute("aria-hidden", "true");
+  });
+  await page.evaluate(() => {
+    const controller = window.rohinAdminControlsController;
+    if (!controller) return;
+    window.rohinAdminControlsController = Object.freeze({
+      ...controller,
+      shouldPauseNaturalEvents: () => true,
+    });
+  });
+};
+
+const finishWindowAnimation = async (win, animationName) => {
+  await win.dispatchEvent("animationend", { animationName });
 };
 
 const openAdministratorWindow = async (page) => {
@@ -226,6 +241,15 @@ for (const viewport of viewports) {
     expect(state.proof.proof).toBe(administratorProof);
     expect(Date.parse(state.proof.expiresAt)).toBeGreaterThan(Date.now());
     expect(state.documentOverflows).toBe(false);
+
+    const adminLauncher = page
+      .getByRole("toolbar", { name: "Taskbar" })
+      .getByRole("button", { name: "Admin", exact: true });
+    await adminLauncher.scrollIntoViewIfNeeded();
+    await adminLauncher.click();
+    await expect(page.locator("#admin-controls-window")).toBeVisible();
+    await expect(page.locator("#admin-controls-stand-in-window")).toBeHidden();
+    await expect(page.locator('[data-admin-tab="run"]')).toBeFocused();
   });
 }
 
@@ -292,6 +316,36 @@ test("Administrator proof survives a refresh and publishes a verified Rohin resu
   expect(state.proof.proof).toBe(administratorProof);
 });
 
+test("Administrator launch keeps focus when replacing an open access notice", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await preparePage(page, "success");
+  const adminLauncher = page
+    .getByRole("toolbar", { name: "Taskbar" })
+    .getByRole("button", { name: "Admin", exact: true });
+  const standIn = page.locator("#admin-controls-stand-in-window");
+
+  await adminLauncher.scrollIntoViewIfNeeded();
+  await adminLauncher.click();
+  await expect(standIn).toBeVisible();
+  await expect(page.locator("#admin-controls-stand-in-ok")).toBeFocused();
+
+  const signInWindow = await openAdministratorWindow(page);
+  await page.locator("#administrator-username").fill("administrator");
+  await page.locator("#administrator-password").fill("password");
+  await page.locator("#administrator-sign-in").click();
+  await expect(signInWindow).toBeHidden();
+  await page.locator("#administrator-alert-close").click();
+  await expect(page.locator("#administrator-alert-window")).toBeHidden();
+
+  await adminLauncher.click();
+  await expect(page.locator("#admin-controls-window")).toBeVisible();
+  const runTab = page.locator('[data-admin-tab="run"]');
+  await expect(runTab).toBeFocused();
+  await finishWindowAnimation(standIn, "retro-window-close");
+  await expect(standIn).toBeHidden();
+  await expect(runTab).toBeFocused();
+});
+
 test("Administrator failure closes the sign-in window and never grants access", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await preparePage(page, "failure");
@@ -309,4 +363,62 @@ test("Administrator failure closes the sign-in window and never grants access", 
       page.evaluate((profileStorageKey) => JSON.parse(localStorage.getItem(profileStorageKey)).name, PROFILE_STORAGE_KEY)
     )
     .toBe("Before Administrator");
+
+  const adminLauncher = page
+    .getByRole("toolbar", { name: "Taskbar" })
+    .getByRole("button", { name: "Admin", exact: true });
+  await adminLauncher.scrollIntoViewIfNeeded();
+  await adminLauncher.click();
+  await expect(page.locator("#admin-controls-stand-in-window")).toBeVisible();
+  await expect(page.locator("#admin-controls-window")).toBeHidden();
+});
+
+test("Administrator sign-in stays fully visible when an open desktop window resizes to mobile", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await preparePage(page, "success");
+  const signInWindow = await openAdministratorWindow(page);
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect
+    .poll(() =>
+      signInWindow.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          horizontallyContained:
+            bounds.left >= 0 && bounds.right <= window.innerWidth,
+          verticallyContained:
+            bounds.top >= 0 && bounds.bottom <= window.innerHeight,
+          viewport: `${window.innerWidth}x${window.innerHeight}`,
+        };
+      })
+    )
+    .toEqual({
+      horizontallyContained: true,
+      verticallyContained: true,
+      viewport: "375x812",
+    });
+
+  const geometry = await signInWindow.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      bottom: bounds.bottom,
+      documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
+      left: bounds.left,
+      right: bounds.right,
+      top: bounds.top,
+      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  expect(geometry.left).toBeGreaterThanOrEqual(0);
+  expect(geometry.top).toBeGreaterThanOrEqual(0);
+  expect(geometry.right).toBeLessThanOrEqual(geometry.viewportWidth);
+  expect(geometry.bottom).toBeLessThanOrEqual(geometry.viewportHeight);
+  expect(geometry.documentOverflows).toBe(false);
+  await expect(page.locator("#administrator-username")).toBeFocused();
+  await page.screenshot({
+    path: testInfo.outputPath("administrator-resized-desktop-to-mobile.png"),
+  });
 });

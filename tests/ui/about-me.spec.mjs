@@ -1,13 +1,21 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { isolateProductionPerEventDebug } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
 const viewports = [
+  { width: 320, height: 568, name: "small-mobile" },
   { width: 375, height: 812, name: "mobile" },
   { width: 375, height: 500, name: "short-mobile" },
+  { width: 568, height: 320, name: "short-landscape" },
+  { width: 640, height: 900, name: "at-compact-width" },
+  { width: 641, height: 900, name: "above-compact-width" },
   { width: 744, height: 900, name: "at-stack-breakpoint" },
   { width: 745, height: 900, name: "above-stack-breakpoint" },
   { width: 768, height: 1024, name: "tablet" },
+  { width: 900, height: 500, name: "at-compact-height" },
+  { width: 900, height: 501, name: "above-compact-height" },
   { width: 1280, height: 720, name: "actual-desktop" },
   { width: 1280, height: 800, name: "desktop" },
   { width: 1440, height: 900, name: "wide" },
@@ -79,13 +87,36 @@ const disableRemoteGameStats = async (page) => {
   );
 };
 
+const isolateDebugRandomEvents = async (page) => {
+  const mainSource = await readFile(
+    new URL("../../scripts/home/main.js", import.meta.url),
+    "utf8"
+  );
+  const isolatedSystemAlerts = mainSource.replace(
+    "debug: alert.debug === true,",
+    "debug: false,"
+  );
+  const isolatedSource = isolateProductionPerEventDebug(isolatedSystemAlerts);
+  if (isolatedSystemAlerts === mainSource) {
+    throw new Error("Unable to isolate debug random events for the About Me suite.");
+  }
+  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body: isolatedSource,
+    })
+  );
+};
+
 const prepareAboutPage = async (page, { reducedMotion = "reduce" } = {}) => {
   await page.emulateMedia({ reducedMotion });
   await page.clock.setFixedTime(new Date("2026-07-27T12:00:00Z"));
   await page.addInitScript(() => {
     Math.random = () => 0.999999;
     localStorage.clear();
+    sessionStorage.clear();
   });
+  await isolateDebugRandomEvents(page);
   await disableRemoteGameStats(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
 };
@@ -106,6 +137,13 @@ const aboutMetrics = (page) =>
     const body = document.querySelector("#about-window .about-body");
     const bodyBounds = body.getBoundingClientRect();
     const bodyStyle = getComputedStyle(body);
+    const closeButton = document.querySelector('#about-window [data-close="about"]');
+    const closeBounds = closeButton.getBoundingClientRect();
+    const closeHitTarget = document.elementFromPoint(
+      closeBounds.left + closeBounds.width / 2,
+      closeBounds.top + closeBounds.height / 2
+    );
+    const visualViewport = window.visualViewport;
     const contentBounds = document
       .querySelector(".about-page-header")
       .getBoundingClientRect();
@@ -149,6 +187,8 @@ const aboutMetrics = (page) =>
         getComputedStyle(document.querySelector(".about-carousel-media")).padding
       ),
       carouselObjectFit: getComputedStyle(image).objectFit,
+      close: rect('#about-window [data-close="about"]'),
+      closeHitTarget: closeHitTarget?.closest?.('[data-close="about"]') === closeButton,
       degreeCardHeights: degreeCards.map((card) => card.getBoundingClientRect().height),
       degreeIconContained: degreeIcons.every((icon) => {
         const iconBounds = icon.getBoundingClientRect();
@@ -302,12 +342,23 @@ const aboutMetrics = (page) =>
       socialColumnCount: new Set(linkRects.map(({ left }) => Math.round(left))).size,
       socialRowCount: new Set(linkRects.map(({ top }) => Math.round(top))).size,
       taskbar: rect(".taskbar"),
+      titleBar: rect("#about-window > .title-bar"),
       visibleLeftInset:
         Number.parseFloat(bodyStyle.marginLeft) +
         contentBounds.left -
         (bodyBounds.left + body.clientLeft),
       visibleRightInset:
         bodyBounds.left + body.clientLeft + body.clientWidth - contentBounds.right,
+      visualViewport: {
+        bottom:
+          (visualViewport?.offsetTop || 0) +
+          (visualViewport?.height || window.innerHeight),
+        left: visualViewport?.offsetLeft || 0,
+        right:
+          (visualViewport?.offsetLeft || 0) +
+          (visualViewport?.width || window.innerWidth),
+        top: visualViewport?.offsetTop || 0,
+      },
       window: rect("#about-window"),
     };
   });
@@ -336,6 +387,7 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
     "datetime",
     "2026-07-27"
   );
+  await expect(page.locator("#about-degrees-heading")).toHaveText("Education");
   const websiteDescription = await page.locator(".about-website-section p").evaluate(
     (paragraph) => ({
       breakCount: paragraph.querySelectorAll("br").length,
@@ -345,7 +397,7 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
   expect(websiteDescription).toEqual({
     breakCount: 1,
     text:
-      "Welcome to my personal website! I wanted to make something unique & playful that would give me a reason to come back to often (and hopefully you too!) while also keeping record of a few things I’m proud of in one place. Enjoy your stay :)\n—Rohin",
+      "Welcome to my personal website! I wanted to make something unique & playful that would give me a reason to come back to often (and hopefully you too!) while also keeping record of a few things I’m proud of in one place. Be sure to check out the games, all of them have leaderboards and save your progress! Enjoy your stay :)\n—Rohin",
   });
 
   const image = page.locator("#about-carousel-image");
@@ -675,17 +727,31 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
       });
 
       const metrics = await aboutMetrics(page);
+      const compactViewport = viewport.width <= 640 || viewport.height <= 500;
+      const expectedBodyHeight = compactViewport
+        ? Math.max(
+            Math.min(220, viewport.height - 140),
+            Math.min(viewport.height * 0.65, 640, viewport.height - 140)
+          )
+        : Math.min(viewport.height * 0.79, 750, viewport.height - 116);
       expect(metrics.documentOverflow).toBe(false);
       expect(metrics.window.left).toBeGreaterThanOrEqual(11.5);
       expect(metrics.window.right).toBeLessThanOrEqual(viewport.width - 11.5);
       expect(metrics.window.width).toBeCloseTo(Math.min(viewport.width - 24, 720), 0);
-      expect(metrics.window.top).toBeGreaterThanOrEqual(9.5);
+      expect(metrics.window.top).toBeGreaterThanOrEqual(compactViewport ? 19.5 : 9.5);
       expect(metrics.window.bottom).toBeLessThanOrEqual(metrics.taskbar.top - 7.5);
+      expect(metrics.body.bottom).toBeLessThanOrEqual(metrics.window.bottom + 0.6);
+      expect(metrics.titleBar.top).toBeGreaterThanOrEqual(metrics.visualViewport.top);
+      expect(metrics.titleBar.left).toBeGreaterThanOrEqual(metrics.visualViewport.left);
+      expect(metrics.titleBar.right).toBeLessThanOrEqual(metrics.visualViewport.right);
+      expect(metrics.close.top).toBeGreaterThanOrEqual(metrics.titleBar.top);
+      expect(metrics.close.bottom).toBeLessThanOrEqual(metrics.titleBar.bottom);
+      expect(metrics.close.left).toBeGreaterThanOrEqual(metrics.titleBar.left);
+      expect(metrics.close.right).toBeLessThanOrEqual(metrics.titleBar.right);
+      expect(metrics.close.bottom).toBeLessThanOrEqual(metrics.visualViewport.bottom);
+      expect(metrics.closeHitTarget).toBe(true);
       expect(metrics.bodyOverflowY).toBe("auto");
-      expect(metrics.bodyClientHeight).toBeCloseTo(
-        Math.min(viewport.height * 0.79, 750, viewport.height - 116),
-        0
-      );
+      expect(metrics.bodyClientHeight).toBeCloseTo(expectedBodyHeight, 0);
       expect(metrics.bodyScrollHeight).toBeGreaterThan(metrics.bodyClientHeight);
       expect(metrics.articleHorizontalOverflow).toBe(false);
       expect(metrics.quoteHorizontalOverflow).toBe(false);
@@ -734,7 +800,9 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
       }
       expect(metrics.degreeTextFitsVertically).toBe(true);
       expect(metrics.degreeFieldContained).toBe(true);
-      expect(metrics.degreeFieldTracksFullyVisible).toBe(true);
+      expect(metrics.degreeFieldTracksFullyVisible).toBe(
+        metrics.degreeFieldOverflowCount === 0
+      );
       expect(metrics.degreeFieldOverflowContract).toBe(true);
       expect(metrics.degreeFieldsManageOverflow).toBe(true);
       expect(metrics.degreeTypeAnimationCount).toBe(0);
@@ -742,13 +810,17 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
       expect(metrics.degreeTypesFit).toBe(true);
       expect(metrics.degreeTypeFontWeights.every((weight) => weight >= 600)).toBe(true);
       expect(metrics.degreeFieldFontWeights.every((weight) => weight < 600)).toBe(true);
-      expect(metrics.degreeFieldOverflowCount).toBe(0);
+      if (viewport.width <= 320) {
+        expect(metrics.degreeFieldOverflowCount).toBeGreaterThan(0);
+      } else {
+        expect(metrics.degreeFieldOverflowCount).toBe(0);
+      }
       expect(metrics.socialContentUsesRows).toBe(true);
       expect(metrics.socialContentContained).toBe(true);
       expect(metrics.socialCardHeightSpread).toBeLessThan(0.6);
       expect(metrics.socialHorizontalOverflow).toBe(false);
-      expect(metrics.socialColumnCount).toBe(3);
-      expect(metrics.socialRowCount).toBe(2);
+      expect(metrics.socialColumnCount).toBe(viewport.width <= 340 ? 2 : 3);
+      expect(metrics.socialRowCount).toBe(viewport.width <= 340 ? 3 : 2);
       expect(metrics.visibleLeftInset).toBeCloseTo(10, 1);
       expect(metrics.visibleRightInset).toBeCloseTo(10, 1);
       expect(Math.abs(metrics.visibleLeftInset - metrics.visibleRightInset)).toBeLessThan(0.6);
@@ -813,6 +885,107 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
         document.activeElement?.blur();
         document.querySelector("#about-window .about-body").scrollTop = 0;
       });
+    });
+  }
+
+  expect(runtimeErrors).toEqual([]);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("About Me keeps its Close button reachable in compact phone viewports", async ({
+  page,
+}, testInfo) => {
+  const consoleErrors = [];
+  const runtimeErrors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+
+  const compactViewports = [
+    { width: 320, height: 568, name: "small-mobile" },
+    { width: 375, height: 500, name: "short-mobile" },
+    { width: 375, height: 812, name: "mobile" },
+    { width: 568, height: 320, name: "short-landscape" },
+    { width: 640, height: 900, name: "at-compact-width" },
+    { width: 900, height: 500, name: "at-compact-height" },
+  ];
+  await page.setViewportSize(compactViewports[0]);
+  await prepareAboutPage(page);
+
+  const aboutWindow = page.locator("#about-window");
+  const aboutBody = aboutWindow.locator(".about-body");
+  const closeButton = aboutWindow.locator('[data-close="about"]');
+  const taskbarLauncher = page.locator("#about-app-taskbar");
+
+  for (const [index, viewport] of compactViewports.entries()) {
+    await test.step(viewport.name, async () => {
+      if (index > 0) {
+        await page.setViewportSize(viewport);
+        await page.reload({ waitUntil: "domcontentloaded" });
+      }
+      await expect(aboutWindow).toBeVisible();
+      await aboutBody.evaluate((element) => {
+        element.scrollTop = 0;
+      });
+
+      const topMetrics = await aboutMetrics(page);
+      expect(topMetrics.window.top).toBeGreaterThanOrEqual(19.5);
+      expect(topMetrics.window.bottom).toBeLessThanOrEqual(topMetrics.taskbar.top - 7.5);
+      expect(topMetrics.body.bottom).toBeLessThanOrEqual(topMetrics.window.bottom + 0.6);
+      expect(topMetrics.bodyOverflowY).toBe("auto");
+      expect(topMetrics.bodyScrollHeight).toBeGreaterThan(topMetrics.bodyClientHeight);
+      expect(topMetrics.documentOverflow).toBe(false);
+      expect(topMetrics.titleBar.top).toBeGreaterThanOrEqual(
+        topMetrics.visualViewport.top
+      );
+      expect(topMetrics.close.top).toBeGreaterThanOrEqual(topMetrics.titleBar.top);
+      expect(topMetrics.close.bottom).toBeLessThanOrEqual(topMetrics.titleBar.bottom);
+      expect(topMetrics.close.right).toBeLessThanOrEqual(topMetrics.visualViewport.right);
+      expect(topMetrics.closeHitTarget).toBe(true);
+
+      if (viewport.height > viewport.width) {
+        const previousBodyHeight = Math.max(
+          220,
+          Math.min(viewport.height * 0.79, 750, viewport.height - 116)
+        );
+        const previousWindowHeight = Math.min(
+          viewport.height - 76,
+          previousBodyHeight + 42
+        );
+        expect(topMetrics.window.height / previousWindowHeight).toBeLessThanOrEqual(0.88);
+      }
+
+      if (viewport.name === "small-mobile" || viewport.name === "short-landscape") {
+        await page.screenshot({
+          path: testInfo.outputPath(`about-compact-${viewport.name}-top.png`),
+        });
+      }
+
+      await aboutBody.focus();
+      await aboutBody.press("End");
+      await expect.poll(() => aboutBody.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+      await expect(page.locator(".about-signoff")).toBeInViewport();
+      const bottomMetrics = await aboutMetrics(page);
+      expect(bottomMetrics.titleBar.top).toBeCloseTo(topMetrics.titleBar.top, 1);
+      expect(bottomMetrics.close.top).toBeCloseTo(topMetrics.close.top, 1);
+      expect(bottomMetrics.closeHitTarget).toBe(true);
+
+      if (viewport.name === "small-mobile" || viewport.name === "short-landscape") {
+        await page.screenshot({
+          path: testInfo.outputPath(`about-compact-${viewport.name}-bottom.png`),
+        });
+      }
+
+      await closeButton.click();
+      await expect(aboutWindow).toBeHidden();
+
+      await taskbarLauncher.click();
+      await expect(aboutWindow).toBeVisible();
+      await expect(aboutWindow).not.toHaveClass(/is-opening/);
+      const reopenedMetrics = await aboutMetrics(page);
+      expect(reopenedMetrics.window.top).toBeGreaterThanOrEqual(19.5);
+      expect(reopenedMetrics.closeHitTarget).toBe(true);
     });
   }
 

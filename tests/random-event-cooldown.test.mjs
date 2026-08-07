@@ -52,9 +52,14 @@ const getRandomEventRegistrationBlocks = (source) => {
   }
 };
 
-test("only the intentionally exposed Neko prompt uses per-event debug mode", async () => {
+test("only the requested Neko event uses debug mode", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
   const registrations = getRandomEventRegistrationBlocks(source);
+  const alertConfigStart = source.indexOf("const DEBUG_SYSTEM_ALERTS =");
+  const alertConfigEnd = source.indexOf("\nconst RANDOM_EVENT_RELOAD_KEY", alertConfigStart);
+  assert.notEqual(alertConfigStart, -1, "The shared system-alert configuration must exist");
+  assert.notEqual(alertConfigEnd, -1, "The shared system-alert configuration must be bounded");
+  const alertConfig = source.slice(alertConfigStart, alertConfigEnd);
 
   assert.match(source, /const RANDOM_EVENT_GLOBAL_DEBUG = false;/);
   assert.equal(
@@ -81,23 +86,54 @@ test("only the intentionally exposed Neko prompt uses per-event debug mode", asy
   assert.equal(
     source.match(/\bdebug\s*:\s*true\b/g)?.length ?? 0,
     1,
-    "Only the requested Neko prompt may bypass probability and the global cooldown"
+    "Only the requested Neko event may bypass probability and the global cooldown"
   );
+  assert.equal(alertConfig.match(/\bdebug\s*:\s*true\b/g)?.length ?? 0, 0);
+  assert.match(
+    alertConfig,
+    /id: "seneca-announcement",[\s\S]*?debug: false,/
+  );
+  assert.match(
+    alertConfig,
+    /id: "deodorant-reminder",[\s\S]*?debug: false,/
+  );
+  assert.match(
+    alertConfig,
+    /id: "power-cycle-reminder",[\s\S]*?debug: false,/
+  );
+  const expectedDebugIds = new Set([
+    "neko-stream-system-alert",
+  ]);
+  const actualDebugIds = new Set();
   const registeredIds = standardRegistrations.map((registration) => {
     const id = registration.match(/\bid:\s*"([^"]+)"/);
     assert.ok(id, "Every registered random event must retain an id");
     assert.match(registration, /\brun:\s*\(/, `Event ${id[1]} must remain runnable`);
-    if (id[1] === "neko-stream-system-alert") {
+    if (expectedDebugIds.has(id[1])) {
       assert.match(registration, /\bdebug\s*:\s*true\b/, id[1]);
+      actualDebugIds.add(id[1]);
     } else {
       assert.doesNotMatch(registration, /\bdebug\s*:\s*true\b/, id[1]);
     }
     return id[1];
   });
+  assert.deepEqual(actualDebugIds, expectedDebugIds);
+  assert.match(
+    standardRegistrations.find((registration) =>
+      /\bid:\s*"lain-system-alert"/.test(registration)
+    ),
+    /\bdebug\s*:\s*false\b/,
+    "Lain must remain on its normal probability-gated path"
+  );
+  assert.match(
+    standardRegistrations.find((registration) => /\bid:\s*"red-tool"/.test(registration)),
+    /\bdebug\s*:\s*false\b/,
+    "Red Tool must remain on its normal probability-gated path"
+  );
   assert.equal(new Set(registeredIds).size, registeredIds.length, "Event ids must remain unique");
   assert.match(
     source,
-    /DEBUG_SYSTEM_ALERTS\.forEach\(\(alert\) => \{[\s\S]*?id: `debug-system-alert-\$\{alert\.id\}`,[\s\S]*?debug: false,/
+    /DEBUG_SYSTEM_ALERTS\.forEach\(\(alert\) => \{[\s\S]*?id: `debug-system-alert-\$\{alert\.id\}`,[\s\S]*?debug: alert\.debug === true,/
   );
 });
 
@@ -305,7 +341,7 @@ test("the scheduler isolates developer events and only cools down normal accepte
   assert.ok(trigger, "The trigger should remain a dedicated helper");
   assert.match(
     trigger[1],
-    /if \(!isHomeActivationReady\(\)\) return false;\n  if \(isRandomEventGameplayLockActive\(\)\) return false;\n  const triggerOnCooldown = isRandomEventTriggerOnCooldown\(\);/
+    /if \(!isHomeActivationReady\(\)\) return false;\n  if \(shouldPauseNaturalRandomEvents\(\)\) return false;\n  if \(isRandomEventGameplayLockActive\(\)\) return false;\n  const triggerOnCooldown = isRandomEventTriggerOnCooldown\(\);/
   );
   assert.match(
     trigger[1],

@@ -1,9 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import {
+  isolateAllProductionDebug,
+  isolateProductionPerEventDebug,
+} from "./helpers/random-event-debug.mjs";
 
-test.setTimeout(180_000);
+test.setTimeout(300_000);
 
 const viewports = [
+  { width: 320, height: 568, name: "short-mobile" },
   { width: 371, height: 812, name: "below-width-threshold" },
   { width: 373, height: 812, name: "above-width-threshold" },
   { width: 375, height: 812, name: "mobile" },
@@ -23,32 +28,15 @@ const disableRemoteGameStats = async (page) => {
 
 const installDebugAlertTestBridge = async (
   page,
-  { developerMode = false } = {}
+  { preserveSystemAlertDebugFlags = false } = {}
 ) => {
   const mainSource = await readFile(
     new URL("../../scripts/home/main.js", import.meta.url),
     "utf8"
   );
-  const developerModeSource = developerMode
-    ? mainSource.replace(
-        "const RANDOM_EVENT_DEVELOPER_MODE = false;",
-        "const RANDOM_EVENT_DEVELOPER_MODE = true;"
-      )
-    : mainSource;
-  const debugAlertRegistration =
-    'id: `debug-system-alert-${alert.id}`,\n    debug: false,';
-  const developerSource = developerMode
-    ? developerModeSource.replace(
-        debugAlertRegistration,
-        debugAlertRegistration.replace("debug: false", "debug: true")
-      )
-    : developerModeSource;
-  const isolatedSource = developerMode
-    ? developerSource
-    : developerSource.replace(
-        'id: "neko-stream-system-alert",\n  debug: true,',
-        'id: "neko-stream-system-alert",\n  debug: false,'
-      );
+  const isolatedSource = preserveSystemAlertDebugFlags
+    ? isolateProductionPerEventDebug(mainSource)
+    : isolateAllProductionDebug(mainSource);
   const zeroDelaySource = isolatedSource.replace(
     "const RANDOM_EVENT_DELAY_MAX_MS = 2000;",
     "const RANDOM_EVENT_DELAY_MAX_MS = 0;"
@@ -79,9 +67,7 @@ window.__debugSystemAlertsTest = Object.freeze({
 })();`
   );
   if (
-    (developerMode && developerModeSource === mainSource) ||
-    (developerMode && developerSource === developerModeSource) ||
-    (!developerMode && isolatedSource === developerSource) ||
+    isolatedSource === mainSource ||
     zeroDelaySource === isolatedSource ||
     instrumentedSource === zeroDelaySource
   ) {
@@ -136,6 +122,9 @@ const measureAlert = (page) =>
       actions: bounds("#debug-system-alert-actions"),
       ok: bounds("#debug-system-alert-ok"),
       imageLoaded: image.complete && image.naturalWidth > 0,
+      messageWhiteSpace: getComputedStyle(
+        document.querySelector("#debug-system-alert-message")
+      ).whiteSpace,
       documentOverflow:
         document.documentElement.scrollWidth > window.innerWidth ||
         document.documentElement.scrollHeight > window.innerHeight,
@@ -149,7 +138,18 @@ const expectContained = (inner, outer, tolerance = 0.6) => {
   expect(inner.bottom).toBeLessThanOrEqual(outer.bottom + tolerance);
 };
 
-test("all system alerts schedule normally and render responsively", async ({
+const expectAlertActionAlignment = async (page, metrics, alignment) => {
+  const actions = page.locator("#debug-system-alert-actions");
+  if (alignment === "center") {
+    await expect(actions).toHaveClass(/\bis-centered\b/);
+    expect(Math.abs(metrics.ok.centerX - metrics.actions.centerX)).toBeLessThan(1);
+    return;
+  }
+  await expect(actions).not.toHaveClass(/\bis-centered\b/);
+  expect(Math.abs(metrics.ok.right - metrics.actions.right)).toBeLessThan(1);
+};
+
+test("normal system alerts schedule and all alerts render responsively", async ({
   page,
 }, testInfo) => {
   const consoleErrors = [];
@@ -171,9 +171,10 @@ test("all system alerts schedule normally and render responsively", async ({
   await page.waitForFunction(() => Boolean(window.__debugSystemAlertsTest));
 
   const alerts = await page.evaluate(() => window.__debugSystemAlertsTest.alerts);
-  expect(alerts).toHaveLength(10);
-  expect(alerts.filter(({ alignment }) => alignment === "right")).toHaveLength(4);
-  expect(alerts.filter(({ alignment }) => alignment === "center")).toHaveLength(6);
+  expect(alerts).toHaveLength(13);
+  expect(alerts.filter(({ alignment }) => alignment === "right")).toHaveLength(6);
+  expect(alerts.filter(({ alignment }) => alignment === "center")).toHaveLength(7);
+  expect(alerts.filter(({ debug }) => debug).map(({ id }) => id)).toEqual([]);
 
   const win = page.locator("#debug-system-alert-window");
   const sentinel = page.locator("#taskbar-clock-button");
@@ -238,15 +239,23 @@ test("all system alerts schedule normally and render responsively", async ({
         expectContained(metrics.message, metrics.body);
         expectContained(metrics.ok, metrics.body);
         expect(Math.abs(metrics.icon.centerY - metrics.message.centerY)).toBeLessThan(1);
-        if (alert.alignment === "center") {
-          expect(Math.abs(metrics.ok.centerX - metrics.actions.centerX)).toBeLessThan(1);
-        } else {
-          expect(Math.abs(metrics.ok.right - metrics.actions.right)).toBeLessThan(1);
+        await expectAlertActionAlignment(page, metrics, alert.alignment);
+        if (alert.id === "seneca-announcement") {
+          expect(metrics.win.width).toBeCloseTo(
+            Math.min(340, viewport.width - 32),
+            1
+          );
+          expect(metrics.icon.width).toBeCloseTo(48, 1);
+          expect(metrics.icon.height).toBeCloseTo(48, 1);
+          expect(metrics.messageWhiteSpace).toBe("pre-line");
         }
 
         if (
           alert.id === "computer-nevermind" ||
-          alert.id === "required-file"
+          alert.id === "required-file" ||
+          alert.id === "seneca-announcement" ||
+          alert.id === "deodorant-reminder" ||
+          alert.id === "power-cycle-reminder"
         ) {
           await page.screenshot({
             path: testInfo.outputPath(
@@ -265,7 +274,7 @@ test("all system alerts schedule normally and render responsively", async ({
   expect(consoleErrors).toEqual([]);
 });
 
-test("developer mode isolates debug alerts and bypasses the global cooldown", async ({
+test("reminder alerts respect cooldown and remain directly Admin-triggerable", async ({
   page,
 }) => {
   const consoleErrors = [];
@@ -279,25 +288,18 @@ test("developer mode isolates debug alerts and bypasses the global cooldown", as
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.clock.setFixedTime(new Date("2026-07-30T12:00:00Z"));
   await page.addInitScript(() => {
-    Math.random = () => 0;
+    Math.random = () => 0.999999;
     localStorage.clear();
   });
   await disableRemoteGameStats(page);
-  await installDebugAlertTestBridge(page, { developerMode: true });
+  await installDebugAlertTestBridge(page, {
+    preserveSystemAlertDebugFlags: true,
+  });
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => Boolean(window.__debugSystemAlertsTest));
 
   const win = page.locator("#debug-system-alert-window");
-  const felizJueves = page.locator("#feliz-jueves-window");
   const sentinel = page.locator("#taskbar-clock-button");
-
-  expect(
-    await page.evaluate(() =>
-      window.__debugSystemAlertsTest.triggerFelizJuevesFallback()
-    )
-  ).toBe(false);
-  await expect(win).toBeHidden();
-  await expect(felizJueves).toBeHidden();
 
   const seededCooldown = await page.evaluate(() => {
     return {
@@ -307,49 +309,71 @@ test("developer mode isolates debug alerts and bypasses the global cooldown", as
   });
   expect(seededCooldown.until - seededCooldown.now).toBe(7500);
 
+  await sentinel.focus();
   expect(
-    await page.evaluate(() => {
-      Math.random = () => 0.999999;
-      return window.__debugSystemAlertsTest.trigger("windowDrag");
-    })
+    await page.evaluate(() => window.__debugSystemAlertsTest.trigger("pageReload"))
   ).toBe(false);
   await expect(win).toBeHidden();
   expect(
     await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
   ).toBe(seededCooldown.until);
 
-  await sentinel.focus();
-  expect(
-    await page.evaluate(() => {
-      Math.random = () => 0;
-      return [
-        window.__debugSystemAlertsTest.trigger("windowDrag"),
-        window.__debugSystemAlertsTest.trigger("windowDrag"),
-      ];
-    })
-  ).toEqual([true, false]);
-  await expect(win).toBeVisible();
-  await expect(win).toHaveAttribute("data-alert-id", "ram-prices");
-  await expect(page.locator("#debug-system-alert-ok")).toBeFocused();
-  expect(
-    await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
-  ).toBe(seededCooldown.until);
-  await dispatchAnimationEnd(win, "retro-window-open");
-  await closeAlert(page);
-  await expect(sentinel).toBeFocused();
+  const reminders = [
+    {
+      eventId: "debug-system-alert-deodorant-reminder",
+      alertId: "deodorant-reminder",
+      resultMessage: "Triggered System Alert — Hygiene Reminder.",
+      message:
+        "Be sure to shower and wear deodorant! Or don't. I'm just a website, who am I to tell you?",
+      icon: "assets/app-icons/ico/user_computer_pair.ico",
+      alignment: "right",
+      useEscape: false,
+    },
+    {
+      eventId: "debug-system-alert-power-cycle-reminder",
+      alertId: "power-cycle-reminder",
+      resultMessage: "Triggered System Alert — Power-Cycle Reminder.",
+      message:
+        "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
+      icon: "assets/app-icons/ico/shell_window1.ico",
+      alignment: "center",
+      useEscape: true,
+    },
+  ];
 
-  expect(
-    await page.evaluate(() => window.__debugSystemAlertsTest.trigger("startButton"))
-  ).toBe(true);
-  await expect(win).toBeVisible();
-  await expect(win).toHaveAttribute("data-alert-id", "computer-nevermind");
-  await expect(page.locator("#debug-system-alert-ok")).toBeFocused();
-  expect(
-    await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
-  ).toBe(seededCooldown.until);
-  await dispatchAnimationEnd(win, "retro-window-open");
-  await closeAlert(page);
-  await expect(sentinel).toBeFocused();
+  for (const reminder of reminders) {
+    await test.step(reminder.alertId, async () => {
+      await sentinel.focus();
+      expect(
+        await page.evaluate(
+          ({ eventId, alertId }) =>
+            window.rohinAdminOrchestrator.runEvent(eventId, {
+              source: `${alertId}-debug-off-ui-test`,
+            }),
+          reminder
+        )
+      ).toEqual({ ok: true, message: reminder.resultMessage });
+      await expect(win).toBeVisible();
+      await expect(win).toHaveAttribute("data-alert-id", reminder.alertId);
+      await expect(page.locator("#debug-system-alert-title")).toHaveText("System Alert");
+      await expect(page.locator("#debug-system-alert-message")).toHaveText(
+        reminder.message
+      );
+      await expect(page.locator("#debug-system-alert-icon")).toHaveAttribute(
+        "src",
+        reminder.icon
+      );
+      await expect(page.locator("#debug-system-alert-ok")).toBeFocused();
+      const metrics = await measureAlert(page);
+      await expectAlertActionAlignment(page, metrics, reminder.alignment);
+      expect(
+        await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
+      ).toBe(seededCooldown.until);
+      await dispatchAnimationEnd(win, "retro-window-open");
+      await closeAlert(page, reminder.useEscape);
+      await expect(sentinel).toBeFocused();
+    });
+  }
 
   expect(runtimeErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);

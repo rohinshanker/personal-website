@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.mjs";
 
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";

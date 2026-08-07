@@ -996,15 +996,21 @@
   font-size: 11px;
 }
 
-.game-profile-icon-gallery {
+.game-profile-icon-gallery-frame {
   background: #fff;
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  overflow: hidden;
+  padding: 2px;
+}
+
+.game-profile-icon-gallery {
+  background: #fff;
   display: grid;
   gap: 6px;
   grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
   max-height: min(42vh, 280px);
   overflow: auto;
-  padding: 6px;
+  padding: 4px;
   scrollbar-gutter: stable;
 }
 

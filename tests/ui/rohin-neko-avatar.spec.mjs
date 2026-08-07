@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.mjs";
 
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const ROHIN_PROFILE = Object.freeze({
@@ -72,4 +72,3 @@ test("visible Rohin Neko icons animate independently with the canonical scratch 
   await expect(sleepingAvatar).toHaveAttribute("src", /assets\/neko-assets\/sprites\/sleep2\.png$/);
   await expect(awakeAvatar).toHaveAttribute("src", /assets\/neko-assets\/sprites\/scratch1\.png$/);
 });
-

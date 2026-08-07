@@ -262,7 +262,7 @@ window.homeDom = {
   midnightGospelTimerOnes: doc.getElementById("midnight-gospel-timer-ones"),
   midnightGospelBegin: doc.getElementById("midnight-gospel-begin"),
   lainAlertWindow: doc.getElementById("lain-alert-window"),
-  lainAlertOk: doc.getElementById("lain-alert-ok"),
+  lainAlertClose: doc.getElementById("lain-alert-close"),
   lelouchAlertWindow: doc.getElementById("lelouch-alert-window"),
   lelouchAlertOk: doc.getElementById("lelouch-alert-ok"),
   berserkSunriseWindow: doc.getElementById("berserk-sunrise-window"),

@@ -74,6 +74,19 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
   assert.match(main, /sessionStorage\.getItem\(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
   assert.match(main, /sessionStorage\.setItem\(/);
   assert.match(main, /sessionStorage\.removeItem\(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
+  assert.match(
+    main,
+    /const hasActiveGameStatsAdministratorAccess = \(\) =>\s*hasActiveGameStatsAdministratorProof\(\);/
+  );
+  assert.match(
+    main,
+    /const resolveAdminControlsLaunchAppId = \(appId\) =>[\s\S]*?ADMIN_CONTROLS_STAND_IN_APP_ID/
+  );
+  assert.match(
+    main,
+    /Number\(error\?\.status\) === 403\s*\) \{\s*clearGameStatsAdministratorProof\(\);\s*waitingForAdministratorAuthorizationCount \+= 1;/,
+    "A rejected Administrator proof must stop authorizing Admin Controls before reauthentication."
+  );
   assert.doesNotMatch(
     main,
     /localStorage\.setItem\(\s*GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY/,
@@ -115,6 +128,33 @@ test("Administrator credentials remain server-only and the protected profile has
   assert.match(
     main,
     /else if \(waitingForAdministratorAuthorizationCount\) \{[\s\S]*?setGameStatsSyncState\("auth-required"\);/
+  );
+  assert.match(
+    main,
+    /if \(waitingForAdministratorAuthorizationCount\) \{\s*requestGameStatsAdministratorAuthentication\(\);\s*\}/,
+    "A protected completed result must open Administrator sign-in as soon as renewed authorization is required."
+  );
+  assert.match(main, /GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX = 999_999/);
+  assert.match(
+    main,
+    /administratorWindow\.style\.zIndex = String\(\s*GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX\s*\)/,
+    "The automatic sign-in window must stay above game windows and completion effects."
+  );
+  assert.match(
+    main,
+    /windowStack\.style\.zIndex = String\(GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX\)/,
+    "The containing window layer must rise above root-level completion effects during authentication."
+  );
+  assert.match(main, /windowStack\.style\.removeProperty\("z-index"\)/);
+  assert.match(
+    main,
+    /sudokuSolvePopup\?\.classList\.contains\("is-visible"\)[\s\S]*?gameStatsAuthenticationDeferredForCompletion = true;[\s\S]*?return;/,
+    "Administrator sign-in must wait until Sudoku's active completion modal is dismissed."
+  );
+  assert.match(
+    main,
+    /const hideSudokuSolvePopup = \(\) => \{[\s\S]*?if \(gameStatsAuthenticationDeferredForCompletion\) \{[\s\S]*?requestGameStatsAdministratorAuthentication\(\);/,
+    "Dismissing the Sudoku completion modal must resume deferred Administrator sign-in."
   );
   for (const secretName of requiredAdministratorSecrets) {
     assert.match(workerConfig, new RegExp(`"${secretName}"`));

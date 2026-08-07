@@ -127,6 +127,10 @@
   gap: 10px;
 }
 
+.coming-soon-window .window-body {
+  min-height: 0;
+}
+
 .random-alert-window.is-expanded .window-body {
   min-height: calc(100% - 34px);
 }
@@ -163,6 +167,7 @@
 
 .debug-system-alert-message p {
   overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 
 .neko-stream-alert-message img {
@@ -2282,7 +2287,6 @@ body.is-midnight-gospel-locked * {
   }
 }
 
-.lain-alert-window,
 .lelouch-alert-window,
 .berserk-sunrise-window,
 .calendar-reminder-window,
@@ -2297,7 +2301,6 @@ body.is-midnight-gospel-locked * {
   z-index: 139;
 }
 
-.lain-alert-window.is-hidden,
 .lelouch-alert-window.is-hidden,
 .berserk-sunrise-window.is-hidden,
 .calendar-reminder-window.is-hidden,
@@ -2305,7 +2308,6 @@ body.is-midnight-gospel-locked * {
   display: none;
 }
 
-.lain-alert-window.is-opening,
 .lelouch-alert-window.is-opening,
 .berserk-sunrise-window.is-opening,
 .calendar-reminder-window.is-opening,
@@ -2313,7 +2315,6 @@ body.is-midnight-gospel-locked * {
   animation: retro-window-open 260ms steps(7, end) both;
 }
 
-.lain-alert-window.is-closing,
 .lelouch-alert-window.is-closing,
 .berserk-sunrise-window.is-closing,
 .calendar-reminder-window.is-closing,
@@ -2322,7 +2323,6 @@ body.is-midnight-gospel-locked * {
   animation: retro-window-close 180ms steps(7, end) both;
 }
 
-.lain-alert-window .window-body,
 .lelouch-alert-window .window-body,
 .berserk-sunrise-window .window-body,
 .calendar-reminder-window .window-body,
@@ -2333,7 +2333,6 @@ body.is-midnight-gospel-locked * {
   gap: 10px;
 }
 
-.lain-alert-window img,
 .berserk-sunrise-window img {
   background: #000;
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
@@ -2341,10 +2340,6 @@ body.is-midnight-gospel-locked * {
   max-height: min(42vh, 260px);
   object-fit: cover;
   width: 100%;
-}
-
-.lain-alert-window img {
-  aspect-ratio: 500 / 352;
 }
 
 .berserk-sunrise-window img {
@@ -2470,7 +2465,6 @@ body.is-midnight-gospel-locked * {
   width: 100%;
 }
 
-.lain-alert-window p,
 .lelouch-alert-window p,
 .berserk-sunrise-window p,
 .calendar-reminder-window p,
@@ -2478,7 +2472,6 @@ body.is-midnight-gospel-locked * {
   margin: 0;
 }
 
-.lain-alert-window button,
 .berserk-sunrise-window button,
 .calendar-reminder-window button,
 .gradescope-curve-window button {
@@ -3374,7 +3367,7 @@ button.gears-nest-enemy:not(:disabled) {
   min-width: 74px;
 }
 
-.red-tool-window {
+.event-chat-window {
   display: block;
   left: 50%;
   max-width: calc(100vw - 32px);
@@ -3385,20 +3378,20 @@ button.gears-nest-enemy:not(:disabled) {
   z-index: 139;
 }
 
-.red-tool-window.is-hidden {
+.event-chat-window.is-hidden {
   display: none;
 }
 
-.red-tool-window.is-opening {
+.event-chat-window.is-opening {
   animation: retro-window-open 260ms steps(7, end) both;
 }
 
-.red-tool-window.is-closing {
+.event-chat-window.is-closing {
   pointer-events: none;
   animation: retro-window-close 180ms steps(7, end) both;
 }
 
-.red-tool-window .window-body {
+.event-chat-window .window-body {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -3449,6 +3442,20 @@ button.gears-nest-enemy:not(:disabled) {
   width: 100%;
 }
 
+.lain-alert-image-frame {
+  aspect-ratio: 500 / 352;
+  box-sizing: border-box;
+  max-height: min(35vh, 260px);
+  padding: 6px;
+}
+
+.lain-alert-image {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
 .red-tool-chat-log {
   background: #fff;
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
@@ -3458,6 +3465,40 @@ button.gears-nest-enemy:not(:disabled) {
   height: 150px;
   overflow-y: auto;
   padding: 8px;
+  scrollbar-gutter: stable;
+}
+
+.lain-alert-chat-log {
+  height: auto;
+  max-height: 150px;
+  min-height: 52px;
+}
+
+.lain-alert-input-row input:disabled,
+.lain-alert-input-row button:disabled {
+  cursor: var(--cursor-manual-only);
+}
+
+/* Chromium exposes a mirrored legacy button slot at each scrollbar end.
+ * Hide those duplicates while retaining the conventional 98-style arrows. */
+.red-tool-chat-log::-webkit-scrollbar-button:vertical:start:increment,
+.red-tool-chat-log::-webkit-scrollbar-button:vertical:end:decrement {
+  display: none;
+  height: 0;
+}
+
+.red-tool-chat-log::-webkit-scrollbar-button:vertical:start:decrement,
+.red-tool-chat-log::-webkit-scrollbar-button:vertical:end:increment {
+  display: block;
+  height: 17px;
+}
+
+.red-tool-chat-log::-webkit-scrollbar-button:vertical:start:decrement {
+  background-image: url("../../assets/icon/button-up.svg");
+}
+
+.red-tool-chat-log::-webkit-scrollbar-button:vertical:end:increment {
+  background-image: url("../../assets/icon/button-down.svg");
 }
 
 .red-tool-message {
@@ -4214,11 +4255,11 @@ html.is-wall-breach-shaking body {
 .nataraja-window {
   display: block;
   left: 50%;
-  max-width: calc(100vw - 24px);
+  max-width: calc(75vw - 18px);
   position: fixed;
   top: 50%;
   translate: -50% -50%;
-  width: min(430px, calc(100vw - 24px));
+  width: min(322.5px, calc(75vw - 18px));
   z-index: 142;
 }
 
@@ -4239,14 +4280,14 @@ html.is-wall-breach-shaking body {
   display: grid;
   gap: 10px;
   margin: 0;
-  padding: 10px;
+  padding: 10px 6.75px;
 }
 
 .nataraja-video {
   background: #000;
   display: block;
   height: auto;
-  max-height: min(62vh, 520px);
+  max-height: min(46.5vh, 390px);
   width: 100%;
 }
 

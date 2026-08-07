@@ -12,13 +12,19 @@
 }
 
 .sol-victory-video-overlay {
-  align-items: center;
+  --sol-victory-height-limit: 27vh;
+  --sol-victory-width-limit: 28.8vw;
+  --sol-victory-width: min(234px, var(--sol-victory-width-limit));
+  align-items: flex-start;
   background: transparent;
+  box-sizing: border-box;
   display: none;
-  inset: 0;
+  inset: 60px 0 0;
   justify-content: center;
+  overflow: hidden;
+  padding-top: 16px;
   pointer-events: none;
-  position: fixed;
+  position: absolute;
   z-index: 111;
 }
 
@@ -35,21 +41,21 @@
 
 .sol-victory-video-overlay video.is-visible-fallback {
   height: auto;
-  max-height: 45vh;
-  max-width: 48vw;
+  max-height: var(--sol-victory-height-limit);
+  max-width: var(--sol-victory-width-limit);
   mix-blend-mode: screen;
   opacity: 1;
   position: static;
-  width: min(390px, 48vw);
+  width: var(--sol-victory-width);
 }
 
 .sol-victory-video-overlay canvas {
   display: block;
   filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.38));
   height: auto;
-  max-height: 45vh;
-  max-width: 48vw;
-  width: min(390px, 48vw);
+  max-height: var(--sol-victory-height-limit);
+  max-width: var(--sol-victory-width-limit);
+  width: var(--sol-victory-width);
 }
 
 .sol-victory-video-overlay canvas.is-hidden {

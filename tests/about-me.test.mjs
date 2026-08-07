@@ -74,6 +74,7 @@ test("About Me provides the requested page structure and dated article", async (
   assert.match(about, /<time class="about-date" id="about-current-date"><\/time>/);
   assert.match(about, /class="window-body about-body" tabindex="0"/);
   assert.match(about, /<h3 id="about-website-heading">About this Website<\/h3>/);
+  assert.match(about, /<h3 id="about-degrees-heading">Education<\/h3>/);
   const websiteSectionStart = about.indexOf('class="about-website-section"');
   const websiteSectionEnd = about.indexOf("</section>", websiteSectionStart);
   const websiteSection = about.slice(websiteSectionStart, websiteSectionEnd);
@@ -84,7 +85,7 @@ test("About Me provides the requested page structure and dated article", async (
   );
   assert.match(
     websiteSection,
-    /Welcome to my personal website! I wanted to make something unique &amp; playful[\s\S]*?that would give me a reason to come back to often \(and hopefully you too!\) while[\s\S]*?also keeping record of a few things I’m proud of in one place\. Enjoy your stay :\)[\s\S]*?<br \/>[\s\S]*?—Rohin/
+    /Welcome to my personal website! I wanted to make something unique &amp; playful[\s\S]*?that would give me a reason to come back to often \(and hopefully you too!\) while[\s\S]*?also keeping record of a few things I’m proud of in one place\. Be sure to check[\s\S]*?out the games, all of them have leaderboards and save your progress! Enjoy your[\s\S]*?stay :\)[\s\S]*?<br \/>[\s\S]*?—Rohin/
   );
   assert.equal(
     about.match(/class="about-degree-card"/g)?.length,
@@ -311,7 +312,20 @@ test("About Me date, degree marquee, and carousel stay data driven", async () =>
 });
 
 test("About Me layout is bounded, responsive, and visibly interactive", async () => {
-  const css = await readFile(new URL("styles/home/portfolio.css", root), "utf8");
+  const [css, homeHtml, indexHtml] = await Promise.all([
+    readFile(new URL("styles/home/portfolio.css", root), "utf8"),
+    readFile(new URL("home.html", root), "utf8"),
+    readFile(new URL("index.html", root), "utf8"),
+  ]);
+
+  const homePortfolioToken = homeHtml.match(
+    /href="styles\/home\/portfolio\.css\?v=([^"]+)"/
+  )?.[1];
+  const warmupPortfolioToken = indexHtml.match(
+    /\["styles\/home\/portfolio\.css\?v=([^"]+)", "style"\]/
+  )?.[1];
+  assert.equal(homePortfolioToken, "about-mobile-height-20260805");
+  assert.equal(warmupPortfolioToken, homePortfolioToken);
 
   assert.match(
     css,
@@ -327,7 +341,20 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   );
   assert.match(
     css,
-    /\.about-page \{[\s\S]*?padding: 2px;[\s\S]*?padding-inline-end: 10px;/
+    /@media \(max-width: 640px\), \(max-height: 500px\) \{[\s\S]*?#about-window \.about-body \{[\s\S]*?height: min\(65vh, 640px\);[\s\S]*?height: min\(65dvh, 640px\);[\s\S]*?max-height: calc\(100dvh - 140px\);[\s\S]*?min-height: min\(220px, calc\(100dvh - 140px\)\);/
+  );
+  for (const fallbackPair of [
+    /max-height: calc\(100vh - 76px\);\n    max-height: calc\(100dvh - 76px\);/,
+    /top: calc\(50vh - 28px\);\n    top: calc\(50dvh - 28px\);/,
+    /height: min\(65vh, 640px\);\n    height: min\(65dvh, 640px\);/,
+    /max-height: calc\(100vh - 140px\);\n    max-height: calc\(100dvh - 140px\);/,
+    /min-height: min\(220px, calc\(100vh - 140px\)\);\n    min-height: min\(220px, calc\(100dvh - 140px\)\);/,
+  ]) {
+    assert.match(css, fallbackPair);
+  }
+  assert.match(
+    css,
+    /\.about-page \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);[\s\S]*?padding: 2px;[\s\S]*?padding-inline-end: 10px;/
   );
   assert.match(
     css,
@@ -384,6 +411,10 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   assert.match(
     css,
     /\.about-social-links \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 340px\) \{[\s\S]*?\.about-social-links \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/
   );
   assert.match(
     css,

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.mjs";
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.mjs";
 
 const API_BASE_URL = "https://game-stats-refresh.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -606,7 +606,7 @@ for (const viewport of viewports) {
   });
 }
 
-test("authentication action waits, cancel restores focus, and sign-in resumes publish", async ({
+test("required authentication opens automatically, cancel restores focus, and sign-in resumes publish", async ({
   page,
 }, testInfo) => {
   await page.setViewportSize(viewports[1]);
@@ -615,21 +615,36 @@ test("authentication action waits, cancel restores focus, and sign-in resumes pu
   const api = await installApiHarness(page, {
     requireAdministratorProof: true,
   });
+  const rejectedEvent = api.holdNextEvent();
   await preparePage(page, {
     queue: [createQueuedSubmission(ADMINISTRATOR_PROFILE)],
   });
-  const stats = await openStatsWindow(page, "minesweeper");
-
-  await expectSyncState(stats, {
-    busy: false,
-    buttonDisabled: false,
-    buttonLabel: "Sign in as Administrator to sync Minesweeper stats",
-    message: "Sign in as Administrator to publish your verified Rohin result.",
-  });
-  await stats.button.click();
+  await rejectedEvent.started.promise;
+  await expect(page.locator("#administrator-window")).toBeHidden();
+  rejectedEvent.release.resolve();
   const administratorWindow = page.locator("#administrator-window");
   await expect(administratorWindow).toBeVisible();
+  await expect(administratorWindow).not.toHaveClass(/is-opening/);
   await expect(page.locator("#administrator-username")).toBeFocused();
+  await expect(administratorWindow).toHaveCSS("z-index", "999999");
+  await expect(page.locator(".window-stack")).toHaveCSS("z-index", "999999");
+  expect(api.eventRequests).toHaveLength(1);
+  expect(api.eventRequests[0].authorization).toBe("");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]").length,
+        GAME_STATS_SYNC_QUEUE_STORAGE_KEY
+      )
+    )
+    .toBe(1);
+  await page.screenshot({
+    path: testInfo.outputPath("administrator-sign-in-opened-automatically.png"),
+  });
+
+  const stats = await openStatsWindow(page, "minesweeper", {
+    programmatic: true,
+  });
   await expectSyncState(stats, {
     busy: true,
     buttonDisabled: true,
@@ -640,11 +655,12 @@ test("authentication action waits, cancel restores focus, and sign-in resumes pu
     "aria-label",
     "Waiting for authentication..."
   );
-  await expect(page.locator("body")).toHaveClass(/is-custom-cursor-loading/);
+  await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   await page.screenshot({ path: testInfo.outputPath("waiting-for-authentication.png") });
 
   await administratorWindow.getByRole("button", { name: "Close" }).click();
   await expect(administratorWindow).toBeHidden();
+  await expect(page.locator(".window-stack")).toHaveCSS("z-index", "2");
   await expectSyncState(stats, {
     busy: false,
     buttonDisabled: false,
@@ -696,21 +712,27 @@ test("Administrator request failure stays retryable and restores refresh focus",
     requireAdministratorProof: true,
   });
   api.failNextSignIn(503);
+  const rejectedEvent = api.holdNextEvent();
   await preparePage(page, {
     queue: [createQueuedSubmission(ADMINISTRATOR_PROFILE)],
   });
-  const stats = await openStatsWindow(page, "minesweeper");
-  await expect(stats.status).toHaveText(
-    "Sign in as Administrator to publish your verified Rohin result."
-  );
-
-  await stats.button.click();
+  await rejectedEvent.started.promise;
+  rejectedEvent.release.resolve();
   const administratorWindow = page.locator("#administrator-window");
   const username = page.locator("#administrator-username");
   const password = page.locator("#administrator-password");
   const submit = page.locator("#administrator-sign-in");
   await expect(administratorWindow).toBeVisible();
   await expect(username).toBeFocused();
+  const stats = await openStatsWindow(page, "minesweeper", {
+    programmatic: true,
+  });
+  await expectSyncState(stats, {
+    busy: true,
+    buttonDisabled: true,
+    buttonLabel: "Game stats refresh unavailable for Minesweeper",
+    message: "Waiting for authentication...",
+  });
   await username.fill("administrator");
   await password.fill("password");
   await submit.click();
@@ -772,6 +794,7 @@ test("closing Administrator sign-in invalidates a delayed successful response", 
     requireAdministratorProof: true,
   });
   const delayedSignIn = api.holdNextSignIn();
+  const rejectedEvent = api.holdNextEvent();
   const originalProfile = {
     id: "player-before-delayed-admin",
     name: "Existing Player",
@@ -793,15 +816,21 @@ test("closing Administrator sign-in invalidates a delayed successful response", 
     queue: [createQueuedSubmission(ADMINISTRATOR_PROFILE)],
     snakeHighScores: originalSnakeHighScores,
   });
-  const stats = await openStatsWindow(page, "minesweeper");
-  await expect(stats.status).toHaveText(
-    "Sign in as Administrator to publish your verified Rohin result."
-  );
-
-  await stats.button.click();
+  await rejectedEvent.started.promise;
+  rejectedEvent.release.resolve();
   const administratorWindow = page.locator("#administrator-window");
   const submit = page.locator("#administrator-sign-in");
   await expect(administratorWindow).toBeVisible();
+  await expect(page.locator("#administrator-username")).toBeFocused();
+  const stats = await openStatsWindow(page, "minesweeper", {
+    programmatic: true,
+  });
+  await expectSyncState(stats, {
+    busy: true,
+    buttonDisabled: true,
+    buttonLabel: "Game stats refresh unavailable for Minesweeper",
+    message: "Waiting for authentication...",
+  });
   await page.locator("#administrator-username").fill("administrator");
   await page.locator("#administrator-password").fill("password");
   await submit.click();

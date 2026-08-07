@@ -163,6 +163,7 @@
 .about-page {
   display: grid;
   gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   padding: 2px;
   padding-inline-end: 10px;
@@ -545,6 +546,33 @@
   .about-degrees-section,
   .about-degrees-list {
     overflow: visible;
+  }
+}
+
+@media (max-width: 640px), (max-height: 500px) {
+  #about-window {
+    max-height: calc(100vh - 76px);
+    max-height: calc(100dvh - 76px);
+  }
+
+  #about-window.app-window--center {
+    top: calc(50vh - 28px);
+    top: calc(50dvh - 28px);
+  }
+
+  #about-window .about-body {
+    height: min(65vh, 640px);
+    height: min(65dvh, 640px);
+    max-height: calc(100vh - 140px);
+    max-height: calc(100dvh - 140px);
+    min-height: min(220px, calc(100vh - 140px));
+    min-height: min(220px, calc(100dvh - 140px));
+  }
+}
+
+@media (max-width: 340px) {
+  .about-social-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -6,7 +6,7 @@ and Administrator-authentication control.
 Scope: The status/action row in the Minesweeper, Solitaire, Snake, and Sudoku
 stats windows.
 
-Last verified: 2026-07-25
+Last verified: 2026-07-30
 
 [Open the complete, responsive Game Stats state review](assets/game-stats-refresh-review.html).
 It shows every exact status/action state, animated and reduced-motion loading
@@ -52,6 +52,13 @@ the Start button. Closing the dialog also aborts and invalidates its request, so
 a delayed response cannot grant access, reset local data, or open the success
 alert.
 
+When an automatic completed-game sync finds that a protected Rohin result needs
+fresh authentication, it opens and focuses the Administrator sign-in dialog
+without discarding the queued result. The dialog remains above game-completion
+effects, stays fully inside the viewport after a resize, and retries the queued
+publication after sign-in. If Sudoku's solved modal is still open, the sign-in
+dialog waits until that modal closes so focus never escapes an active modal.
+
 A successful Administrator sign-in clears this browser's saved profile and
 local game aggregates, clears Snake high scores, replaces any prior Sudoku save
 with a fresh easy puzzle, then installs the protected profile. It deliberately
@@ -71,11 +78,14 @@ node --test tests/game-stats-refresh-control.test.mjs \
   tests/administrator-sign-in.test.mjs
 npx playwright test tests/ui/game-stats-refresh-control.spec.mjs \
   tests/ui/administrator-sign-in.spec.mjs \
-  tests/ui/game-stats-refresh-review.spec.mjs
+  tests/ui/game-stats-refresh-review.spec.mjs \
+  tests/ui/solitaire-publish-flow.spec.mjs
 ```
 
 The rendered suite covers 375×812 and 1280×800, exact copy, animated/busy
 semantics, the loading cursor, queue publication, request failure, backend
-absence, shared/coalesced requests, Administrator cancel/success races, focus,
-and horizontal overflow. The review artifact additionally renders at 768×1024
-and 1440×900.
+absence, shared/coalesced requests, automatic Administrator reauthentication,
+cancel/success races, focus, resize containment, and horizontal overflow. The
+completed-Solitaire publication flow also exercises the reauthentication dialog
+at 375×812, 768×1024, 1280×800, and 1440×900. The review artifact additionally
+renders at 768×1024 and 1440×900.

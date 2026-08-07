@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.mjs";
 
 const API_BASE_URL = "https://game-stats.test";
 const CONFIG_SCRIPT_URL =

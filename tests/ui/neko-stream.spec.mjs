@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { isolateProductionPerEventDebug } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(120_000);
 
@@ -23,7 +24,17 @@ const installNekoStreamBridge = async (page) => {
     new URL("../../scripts/home/main.js", import.meta.url),
     "utf8"
   );
-  const instrumentedSource = mainSource.replace(
+  const isolatedSystemAlerts = mainSource.replace(
+    "debug: alert.debug === true,",
+    "debug: false,"
+  );
+  if (isolatedSystemAlerts === mainSource) {
+    throw new Error("Unable to isolate the Neko stream event from shared debug alerts.");
+  }
+  const isolatedSource = isolateProductionPerEventDebug(isolatedSystemAlerts, {
+    except: ["neko-stream-system-alert"],
+  });
+  const instrumentedSource = isolatedSource.replace(
     /\n\}\)\(\);\s*$/,
     `
 const createNekoStreamTestPlan = (specs) =>
@@ -137,7 +148,7 @@ window.__nekoStreamTest = Object.freeze({
 });
 })();`
   );
-  if (instrumentedSource === mainSource) {
+  if (instrumentedSource === isolatedSource) {
     throw new Error("Unable to install the Neko stream test bridge.");
   }
   await page.route("**/scripts/home/main.js*", (route) =>

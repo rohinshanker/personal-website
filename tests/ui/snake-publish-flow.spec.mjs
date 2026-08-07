@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
 
 const API_BASE_URL = "https://game-stats-snake-publish.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -49,10 +50,7 @@ const installBackendConfig = async (page) => {
 };
 
 const installMainBridge = async (page) => {
-  const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
+  const mainSource = await readIsolatedMainSource();
   const instrumentedSource = mainSource.replace(
     /\n\}\)\(\);\s*$/,
     `

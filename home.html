@@ -104,17 +104,22 @@
       }
     </script>
     <link rel="stylesheet" href="style.css?v=first-win-stats-handoff-20260722" />
-    <link rel="stylesheet" href="styles/home/base.css?v=neko-stream-pose-cadence-20260729" />
+    <link rel="stylesheet" href="styles/home/base.css?v=admin-launchers-20260803" />
     <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-mobile-controls-20260724" />
-    <link rel="stylesheet" href="styles/home/apps/solitaire.css" />
+    <link rel="stylesheet" href="styles/home/apps/solitaire.css?v=solitaire-victory-scale-20260730" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722" />
-    <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=global-leaderboard-launchers-20260725" />
+    <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=profile-icon-frame-20260807" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
-    <link rel="stylesheet" href="styles/home/portfolio.css?v=about-article-refine-20260730" />
+    <link rel="stylesheet" href="styles/home/portfolio.css?v=about-mobile-height-20260805" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=neko-stream-alert-20260729" />
-    <link rel="stylesheet" href="styles/home/cursors.css?v=cursor-titlebar-clickable-20260709" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=lain-wired-chat-v2-20260806" />
+    <link rel="stylesheet" href="styles/home/cursors.css?v=text-selection-cursor-20260806" />
+    <link rel="stylesheet" href="styles/home/admin-controls.css?v=admin-controls-20260731" />
+    <script
+      src="scripts/home/text-selection-cursor.js?v=text-selection-cursor-20260806"
+      defer
+    ></script>
   </head>
   <body>
     <div class="desktop" aria-label="Desktop apps">
@@ -197,6 +202,36 @@
         <img src="assets/app-icons/ico/mouse_ms.ico" alt="" />
         <span class="desktop-icon-label">Cursor Settings</span>
       </button>
+      <button
+        class="desktop-icon"
+        data-app="video-editor"
+        aria-label="Video Editor"
+        aria-haspopup="dialog"
+        aria-controls="video-editor-coming-soon-window"
+      >
+        <img src="assets/app-icons/ico/camera3_vid.ico" alt="" />
+        <span class="desktop-icon-label">Video Editor</span>
+      </button>
+      <button
+        class="desktop-icon"
+        data-app="image-tools"
+        aria-label="Image Tools"
+        aria-haspopup="dialog"
+        aria-controls="image-tools-coming-soon-window"
+      >
+        <img src="assets/app-icons/ico/pcx_alt.ico" alt="" />
+        <span class="desktop-icon-label">Image Tools</span>
+      </button>
+      <button
+        class="desktop-icon"
+        data-app="admin-controls"
+        aria-label="Admin"
+        aria-haspopup="dialog"
+        aria-controls="admin-controls-window admin-controls-stand-in-window"
+      >
+        <img src="assets/app-icons/ico/program_manager.ico" alt="" />
+        <span class="desktop-icon-label">Admin</span>
+      </button>
       <button class="desktop-icon" data-github-shortcut aria-label="Open GitHub repository">
         <img class="github-shortcut-image" src="assets/app-icons/github-shortcut.png" alt="" />
         <span class="desktop-icon-label">GitHub</span>
@@ -265,14 +300,16 @@
                   <p>
                     Welcome to my personal website! I wanted to make something unique &amp; playful
                     that would give me a reason to come back to often (and hopefully you too!) while
-                    also keeping record of a few things I’m proud of in one place. Enjoy your stay :)
+                    also keeping record of a few things I’m proud of in one place. Be sure to check
+                    out the games, all of them have leaderboards and save your progress! Enjoy your
+                    stay :)
                     <br />
                     —Rohin
                   </p>
                 </section>
 
                 <section class="about-degrees-section" aria-labelledby="about-degrees-heading">
-                  <h3 id="about-degrees-heading">Degrees</h3>
+                  <h3 id="about-degrees-heading">Education</h3>
                   <div
                     class="about-degrees-list"
                     role="region"
@@ -2831,6 +2868,471 @@
       </div>
 
       <div
+        class="window home-window app-window app-window--center random-alert-window coming-soon-window is-hidden"
+        data-app-window="video-editor"
+        data-coming-soon-window
+        data-random-viewport-position
+        id="video-editor-coming-soon-window"
+        role="alertdialog"
+        aria-modal="false"
+        aria-hidden="true"
+        aria-labelledby="video-editor-coming-soon-title"
+        aria-describedby="video-editor-coming-soon-message"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" id="video-editor-coming-soon-title">Video Editor</div>
+          <div class="title-bar-controls">
+            <button type="button" aria-label="Close" data-close="video-editor"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="random-alert-message">
+            <img src="assets/app-icons/ico/camera3_vid.ico" alt="" />
+            <p id="video-editor-coming-soon-message">Coming soon</p>
+          </div>
+          <div class="random-alert-actions">
+            <button
+              type="button"
+              id="video-editor-coming-soon-ok"
+              data-coming-soon-ok
+              data-close="video-editor"
+            >OK</button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="window home-window app-window app-window--center random-alert-window coming-soon-window is-hidden"
+        data-app-window="image-tools"
+        data-coming-soon-window
+        data-random-viewport-position
+        id="image-tools-coming-soon-window"
+        role="alertdialog"
+        aria-modal="false"
+        aria-hidden="true"
+        aria-labelledby="image-tools-coming-soon-title"
+        aria-describedby="image-tools-coming-soon-message"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" id="image-tools-coming-soon-title">Image Tools</div>
+          <div class="title-bar-controls">
+            <button type="button" aria-label="Close" data-close="image-tools"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="random-alert-message">
+            <img src="assets/app-icons/ico/pcx_alt.ico" alt="" />
+            <p id="image-tools-coming-soon-message">Coming soon</p>
+          </div>
+          <div class="random-alert-actions">
+            <button
+              type="button"
+              id="image-tools-coming-soon-ok"
+              data-coming-soon-ok
+              data-close="image-tools"
+            >OK</button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="window home-window app-window app-window--center random-alert-window coming-soon-window is-hidden"
+        data-app-window="admin-controls-stand-in"
+        data-coming-soon-window
+        id="admin-controls-stand-in-window"
+        role="alertdialog"
+        aria-modal="false"
+        aria-hidden="true"
+        aria-labelledby="admin-controls-stand-in-title"
+        aria-describedby="admin-controls-stand-in-message"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" id="admin-controls-stand-in-title">Admin Controls</div>
+          <div class="title-bar-controls">
+            <button type="button" aria-label="Close" data-close="admin-controls-stand-in"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="random-alert-message">
+            <img src="assets/app-icons/ico/program_manager.ico" alt="" />
+            <p id="admin-controls-stand-in-message">nothing to see here...</p>
+          </div>
+          <div class="random-alert-actions">
+            <button
+              type="button"
+              id="admin-controls-stand-in-ok"
+              data-coming-soon-ok
+              data-close="admin-controls-stand-in"
+            >OK</button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="window home-window app-window app-window--center admin-controls-window is-hidden"
+        data-app-window="admin-controls"
+        id="admin-controls-window"
+        role="dialog"
+        aria-modal="false"
+        aria-hidden="true"
+        aria-labelledby="admin-controls-title"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text admin-controls-title" id="admin-controls-title">
+            <img
+              class="admin-controls-title-icon"
+              src="assets/app-icons/ico/program_manager.ico"
+              alt=""
+            />
+            <span>Admin Controls</span>
+          </div>
+          <div class="title-bar-controls">
+            <button type="button" aria-label="Close" data-close="admin-controls"></button>
+          </div>
+        </div>
+        <div class="window-body admin-controls-body" id="admin-controls-body">
+          <div class="admin-controls-tabs" role="tablist" aria-label="Admin Controls sections">
+            <button
+              type="button"
+              class="admin-controls-tab"
+              id="admin-tab-run"
+              data-admin-tab="run"
+              role="tab"
+              aria-selected="true"
+              aria-controls="admin-panel-run"
+              tabindex="0"
+            >Run</button>
+            <button
+              type="button"
+              class="admin-controls-tab"
+              id="admin-tab-events"
+              data-admin-tab="events"
+              role="tab"
+              aria-selected="false"
+              aria-controls="admin-panel-events"
+              tabindex="-1"
+            >Events</button>
+            <button
+              type="button"
+              class="admin-controls-tab"
+              id="admin-tab-bindings"
+              data-admin-tab="bindings"
+              role="tab"
+              aria-selected="false"
+              aria-controls="admin-panel-bindings"
+              tabindex="-1"
+            >Bindings</button>
+            <button
+              type="button"
+              class="admin-controls-tab"
+              id="admin-tab-capture"
+              data-admin-tab="capture"
+              role="tab"
+              aria-selected="false"
+              aria-controls="admin-panel-capture"
+              tabindex="-1"
+            >Capture</button>
+          </div>
+
+          <div class="admin-controls-panels">
+            <section
+              class="admin-controls-panel"
+              id="admin-panel-run"
+              data-admin-panel="run"
+              role="tabpanel"
+              aria-labelledby="admin-tab-run"
+              tabindex="0"
+            >
+              <fieldset>
+                <legend>Quick scene</legend>
+                <div class="admin-preset-grid">
+                  <button type="button" data-admin-preset="game-win">Game Win</button>
+                  <button type="button" data-admin-preset="dialog">Dialog</button>
+                  <button type="button" data-admin-preset="notification">Notification</button>
+                  <button type="button" data-admin-preset="desktop-activity">Desktop Activity</button>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Take controls</legend>
+                <div class="admin-settings-grid">
+                  <div class="admin-control-field">
+                    <label for="admin-countdown">Delay</label>
+                    <select id="admin-countdown">
+                      <option value="0">No delay</option>
+                      <option value="3" selected>3 seconds</option>
+                      <option value="5">5 seconds</option>
+                      <option value="10">10 seconds</option>
+                    </select>
+                  </div>
+                  <div class="admin-checkbox-stack">
+                    <div class="admin-checkbox-row">
+                      <input type="checkbox" id="admin-hide-before-trigger" checked />
+                      <label for="admin-hide-before-trigger">Hide Admin before triggering</label>
+                    </div>
+                    <div class="admin-checkbox-row">
+                      <input type="checkbox" id="admin-show-countdown" checked />
+                      <label for="admin-show-countdown">Show countdown overlay</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="admin-control-actions">
+                  <button type="button" id="admin-start-take">Start Take</button>
+                  <button type="button" id="admin-stop-take" disabled>Stop</button>
+                  <button type="button" id="admin-reset-scene">Reset Scene</button>
+                </div>
+              </fieldset>
+            </section>
+
+            <section
+              class="admin-controls-panel"
+              id="admin-panel-events"
+              data-admin-panel="events"
+              role="tabpanel"
+              aria-labelledby="admin-tab-events"
+              tabindex="0"
+              hidden
+            >
+              <fieldset class="admin-fill-fieldset">
+                <legend>Random events</legend>
+                <div class="admin-event-toolbar">
+                  <div class="admin-control-field">
+                    <label for="admin-event-search">Search</label>
+                    <input
+                      type="search"
+                      id="admin-event-search"
+                      autocomplete="off"
+                      placeholder="Find an event"
+                    />
+                  </div>
+                  <div class="admin-control-field">
+                    <label for="admin-event-kind">Type</label>
+                    <select id="admin-event-kind">
+                      <option value="all">All events</option>
+                      <option value="interactive">Interactive</option>
+                      <option value="noninteractive">Non-interactive</option>
+                    </select>
+                  </div>
+                </div>
+                <label class="admin-list-label" for="admin-event-list">Available events</label>
+                <select class="admin-event-list" id="admin-event-list" size="8">
+                  <option value="">Loading events...</option>
+                </select>
+                <div class="admin-control-actions">
+                  <button type="button" id="admin-trigger-now">Trigger Now</button>
+                  <button type="button" id="admin-run-sequence-next">Run Next Cue</button>
+                  <button type="button" id="admin-add-cue">Add Cue</button>
+                </div>
+              </fieldset>
+            </section>
+
+            <section
+              class="admin-controls-panel"
+              id="admin-panel-bindings"
+              data-admin-panel="bindings"
+              role="tabpanel"
+              aria-labelledby="admin-tab-bindings"
+              tabindex="0"
+              hidden
+            >
+              <fieldset>
+                <legend>Seed a control</legend>
+                <div class="admin-control-field">
+                  <label for="admin-target-search">Find a button or link</label>
+                  <input
+                    type="search"
+                    id="admin-target-search"
+                    autocomplete="off"
+                    placeholder="Search controls"
+                  />
+                </div>
+                <div class="admin-target-row">
+                  <div class="admin-control-field">
+                    <label for="admin-binding-target">Target</label>
+                    <select id="admin-binding-target">
+                      <option value="">Choose a control</option>
+                    </select>
+                  </div>
+                  <button type="button" id="admin-pick-target">Pick on Screen...</button>
+                </div>
+                <div class="admin-control-field">
+                  <label for="admin-binding-event">Event</label>
+                  <select id="admin-binding-event">
+                    <option value="__random__">Random eligible event</option>
+                  </select>
+                </div>
+                <div class="admin-radio-row" role="radiogroup" aria-label="Binding frequency">
+                  <div>
+                    <input
+                      type="radio"
+                      id="admin-binding-once"
+                      name="admin-binding-frequency"
+                      value="once"
+                      checked
+                    />
+                    <label for="admin-binding-once">Next click only</label>
+                  </div>
+                  <div>
+                    <input
+                      type="radio"
+                      id="admin-binding-repeat"
+                      name="admin-binding-frequency"
+                      value="repeat"
+                    />
+                    <label for="admin-binding-repeat">Every click</label>
+                  </div>
+                </div>
+                <div class="admin-control-actions">
+                  <button type="button" id="admin-save-binding">Seed Control</button>
+                  <button type="button" id="admin-clear-bindings">Clear Bindings</button>
+                </div>
+              </fieldset>
+
+              <fieldset class="admin-bindings-fieldset">
+                <legend>Seeded controls</legend>
+                <ul class="sunken-panel admin-binding-list" id="admin-binding-list">
+                  <li class="admin-empty-state">No controls are seeded.</li>
+                </ul>
+              </fieldset>
+            </section>
+
+            <section
+              class="admin-controls-panel"
+              id="admin-panel-capture"
+              data-admin-panel="capture"
+              role="tabpanel"
+              aria-labelledby="admin-tab-capture"
+              tabindex="0"
+              hidden
+            >
+              <fieldset>
+                <legend>Repeatable sequence</legend>
+                <div class="admin-seed-row">
+                  <div class="admin-control-field">
+                    <label for="admin-sequence-seed">Sequence seed</label>
+                    <input
+                      type="text"
+                      id="admin-sequence-seed"
+                      autocomplete="off"
+                      maxlength="64"
+                      value="promo-001"
+                    />
+                  </div>
+                  <div class="admin-control-actions admin-seed-actions">
+                    <button type="button" id="admin-generate-sequence">Generate</button>
+                    <button type="button" id="admin-replay-sequence">Replay</button>
+                  </div>
+                </div>
+                <ol class="sunken-panel admin-sequence-preview" id="admin-sequence-preview">
+                  <li class="admin-empty-state">Generate a sequence to preview its cues.</li>
+                </ol>
+              </fieldset>
+
+              <fieldset>
+                <legend>Sequence pacing</legend>
+                <div class="admin-settings-grid admin-settings-grid--three">
+                  <div class="admin-control-field">
+                    <label for="admin-frequency">Frequency</label>
+                    <select id="admin-frequency">
+                      <option value="5">Every 5 sec</option>
+                      <option value="15" selected>Every 15 sec</option>
+                      <option value="30">Every 30 sec</option>
+                      <option value="60">Every 60 sec</option>
+                    </select>
+                  </div>
+                  <div class="admin-control-field">
+                    <label for="admin-duration">Duration</label>
+                    <select id="admin-duration">
+                      <option value="15">15 seconds</option>
+                      <option value="30" selected>30 seconds</option>
+                      <option value="60">60 seconds</option>
+                      <option value="120">120 seconds</option>
+                    </select>
+                  </div>
+                  <div class="admin-control-field">
+                    <label for="admin-intensity">Intensity</label>
+                    <select id="admin-intensity">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Shot list</legend>
+                <ol class="sunken-panel admin-shot-list" id="admin-shot-list">
+                  <li class="admin-empty-state">No cues have been added.</li>
+                </ol>
+                <div class="admin-cue-bar">
+                  <span id="admin-cue-current">No cue selected</span>
+                  <div class="admin-cue-actions">
+                    <button type="button" id="admin-cue-prev" aria-label="Previous cue">Previous</button>
+                    <button type="button" id="admin-cue-next" aria-label="Next cue">Next</button>
+                    <button type="button" id="admin-show-cue">Show Cue</button>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Recording and safety</legend>
+                <div class="admin-settings-grid">
+                  <div class="admin-control-field">
+                    <label for="admin-guide">Frame guide</label>
+                    <select id="admin-guide">
+                      <option value="off">Off</option>
+                      <option value="vertical">Vertical 9:16</option>
+                      <option value="square">Square 1:1</option>
+                      <option value="landscape">Landscape 16:9</option>
+                    </select>
+                  </div>
+                  <div class="admin-checkbox-stack">
+                    <div class="admin-checkbox-row">
+                      <input type="checkbox" id="admin-safe-area" />
+                      <label for="admin-safe-area">Show safe area</label>
+                    </div>
+                    <div class="admin-checkbox-row">
+                      <input type="checkbox" id="admin-audio" checked />
+                      <label for="admin-audio">Audio</label>
+                    </div>
+                    <div class="admin-checkbox-row">
+                      <input type="checkbox" id="admin-vfx" checked />
+                      <label for="admin-vfx">Extra visual effects</label>
+                    </div>
+                    <div class="admin-checkbox-row">
+                      <input type="checkbox" id="admin-privacy" />
+                      <label for="admin-privacy">Privacy fixtures</label>
+                    </div>
+                    <div class="admin-checkbox-row">
+                      <input type="checkbox" id="admin-pause-natural" checked />
+                      <label for="admin-pause-natural">Pause natural random events</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="admin-control-actions admin-danger-actions">
+                  <button type="button" id="admin-clear-data">Clear Admin Data</button>
+                </div>
+              </fieldset>
+            </section>
+          </div>
+
+          <div class="status-bar admin-controls-status-bar" aria-label="Admin Controls status">
+            <p
+              class="status-bar-field"
+              id="admin-controls-status"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >Ready · Local only</p>
+            <p class="status-bar-field admin-seed-status">
+              <span id="admin-seed-count">0</span> seeded
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div
         class="window app-window is-hidden administrator-window"
         data-app-window="administrator"
         id="administrator-window"
@@ -3163,7 +3665,9 @@
             </p>
             <label class="game-profile-search-label" for="game-profile-icon-search">Icon Search</label>
             <input type="search" id="game-profile-icon-search" autocomplete="off" />
-            <div class="game-profile-icon-gallery" id="game-profile-icon-gallery" role="listbox" aria-label="Player icons"></div>
+            <div class="game-profile-icon-gallery-frame">
+              <div class="game-profile-icon-gallery" id="game-profile-icon-gallery" role="listbox" aria-label="Player icons"></div>
+            </div>
             <div class="game-profile-actions">
               <button type="button" id="game-profile-save">Save Profile</button>
               <button type="button" id="game-profile-cancel">Skip Leaderboard</button>
@@ -3172,6 +3676,33 @@
         </div>
       </div>
     </div>
+
+    <div
+      class="admin-countdown-overlay"
+      id="admin-countdown-overlay"
+      aria-hidden="true"
+      hidden
+    ></div>
+    <div
+      class="admin-cue-overlay"
+      id="admin-cue-overlay"
+      aria-hidden="true"
+      hidden
+    ></div>
+    <div
+      class="admin-safe-area-guide"
+      id="admin-safe-area-guide"
+      data-guide="off"
+      aria-hidden="true"
+      hidden
+    ></div>
+    <div
+      class="admin-visually-hidden"
+      id="admin-controls-announcer"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
 
     <div class="taskbar" role="toolbar" aria-label="Taskbar">
       <button class="start-button">
@@ -3234,6 +3765,33 @@
         </button>
         <button class="taskbar-icon" data-app="cursor" aria-label="Cursor Settings">
           <img src="assets/app-icons/ico/mouse_ms.ico" alt="Cursor Settings" />
+        </button>
+        <button
+          class="taskbar-icon"
+          data-app="video-editor"
+          aria-label="Video Editor"
+          aria-haspopup="dialog"
+          aria-controls="video-editor-coming-soon-window"
+        >
+          <img src="assets/app-icons/ico/camera3_vid.ico" alt="" />
+        </button>
+        <button
+          class="taskbar-icon"
+          data-app="image-tools"
+          aria-label="Image Tools"
+          aria-haspopup="dialog"
+          aria-controls="image-tools-coming-soon-window"
+        >
+          <img src="assets/app-icons/ico/pcx_alt.ico" alt="" />
+        </button>
+        <button
+          class="taskbar-icon"
+          data-app="admin-controls"
+          aria-label="Admin"
+          aria-haspopup="dialog"
+          aria-controls="admin-controls-window admin-controls-stand-in-window"
+        >
+          <img src="assets/app-icons/ico/program_manager.ico" alt="" />
         </button>
         <button class="taskbar-icon" data-github-shortcut aria-label="Open GitHub repository">
           <img class="github-shortcut-image" src="assets/app-icons/github-shortcut.png" alt="GitHub repository" />
@@ -4746,7 +5304,7 @@
             decoding="async"
             alt=""
           />
-          <p>You don't survive the night. Maxwell sends his regards.</p>
+          <p>You don't survive the night. Charlie sends her regards.</p>
         </div>
         <div class="dst-result-actions">
           <button type="button" id="dst-darkness-ok">OK</button>
@@ -5099,18 +5657,63 @@
       />
     </div>
 
-    <div class="window lain-alert-window is-hidden" id="lain-alert-window" aria-hidden="true">
+    <div
+      class="window event-chat-window lain-alert-window is-hidden"
+      id="lain-alert-window"
+      role="dialog"
+      aria-hidden="true"
+      aria-labelledby="lain-alert-title"
+      aria-describedby="lain-alert-message"
+    >
       <div class="title-bar">
-        <div class="title-bar-text">The Wired: New Message</div>
+        <div class="title-bar-text" id="lain-alert-title">The Wired: New Message</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="lain-alert-close"></button>
+        </div>
       </div>
       <div class="window-body">
-        <img
-          data-src="assets/random%20events/lain.gif"
-          decoding="async"
-          alt=""
-        />
-        <p>No matter where you go, everyone is connected.</p>
-        <button type="button" id="lain-alert-ok">OK</button>
+        <div class="red-tool-image lain-alert-image-frame">
+          <img
+            class="lain-alert-image"
+            data-src="assets/random%20events/lain.gif"
+            decoding="async"
+            alt=""
+          />
+        </div>
+        <div
+          class="red-tool-chat-log lain-alert-chat-log"
+          id="lain-alert-chat-log"
+          role="log"
+          aria-label="Message history"
+        >
+          <div class="red-tool-message lain-alert-message">
+            <img src="assets/app-icons/ico/user_computer.ico" alt="" />
+            <p id="lain-alert-message">
+              <strong>Admin:</strong> No matter where you go, everyone is connected.
+            </p>
+          </div>
+          <div class="red-tool-system-alert lain-alert-system-alert">
+            <img src="assets/app-icons/ico/msg_information.ico" alt="" />
+            <p>
+              <strong class="red-tool-system-label">System Alert:</strong>
+              You cannot send any messages in this chat.
+            </p>
+          </div>
+        </div>
+        <div class="red-tool-input-row lain-alert-input-row">
+          <label for="lain-alert-input">
+            <img src="assets/app-icons/ico/message_tack.ico" alt="" />
+          </label>
+          <input
+            type="text"
+            id="lain-alert-input"
+            aria-label="Reply unavailable"
+            autocomplete="off"
+            placeholder="Replies are disabled"
+            disabled
+          />
+          <button type="button" id="lain-alert-send" disabled>Send</button>
+        </div>
       </div>
     </div>
 
@@ -5426,7 +6029,11 @@
       </div>
     </div>
 
-    <div class="window red-tool-window is-hidden" id="red-tool-window" aria-hidden="true">
+    <div
+      class="window event-chat-window red-tool-window is-hidden"
+      id="red-tool-window"
+      aria-hidden="true"
+    >
       <div class="title-bar">
         <div class="title-bar-text">Red Tool</div>
         <div class="title-bar-controls">
@@ -6024,10 +6631,11 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-f6d3d09b3f8a91dce0045af503e3c825c77bcf27a98e72ffb22e35feb62fe69f"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-08944fd6024cc54945b189566031b7b4b5d7fbd1d970c011cfc850d9253dec6a"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-f6d3d09b3f8a91dce0045af503e3c825c77bcf27a98e72ffb22e35feb62fe69f"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-08944fd6024cc54945b189566031b7b4b5d7fbd1d970c011cfc850d9253dec6a"></script>
     <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
-    <script src="scripts/home/main.js?v=game-build-f6d3d09b3f8a91dce0045af503e3c825c77bcf27a98e72ffb22e35feb62fe69f"></script>
+    <script src="scripts/home/main.js?v=game-build-08944fd6024cc54945b189566031b7b4b5d7fbd1d970c011cfc850d9253dec6a"></script>
+    <script src="scripts/home/admin-controls.js?v=admin-launchers-20260803"></script>
   </body>
 </html>

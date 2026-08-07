@@ -147,8 +147,8 @@ test("Neko launchers expose one accessible context command above a non-interacti
   assert.doesNotMatch(styles, /\.neko-stream-cat\[data-mode=/);
   assert.match(styles, /\.neko-context-menu \{[\s\S]*?z-index: 10002;/);
   assert.match(styles, /\.neko-context-menu\[hidden\] \{\s*display: none;/);
-  assert.match(home, /styles\/home\/base\.css\?v=neko-stream-pose-cadence-20260729/);
-  assert.match(index, /styles\/home\/base\.css\?v=neko-stream-pose-cadence-20260729/);
+  assert.match(home, /styles\/home\/base\.css\?v=admin-launchers-20260803/);
+  assert.match(index, /styles\/home\/base\.css\?v=admin-launchers-20260803/);
   assert.doesNotMatch(main, /window\.__nekoStreamTest/);
 });
 
@@ -191,11 +191,11 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
   );
   assert.match(
     home,
-    /styles\/home\/random-events\.css\?v=neko-stream-alert-20260729/
+    /styles\/home\/random-events\.css\?v=lain-wired-chat-v2-20260806/
   );
   assert.match(
     index,
-    /styles\/home\/random-events\.css\?v=neko-stream-alert-20260729/
+    /styles\/home\/random-events\.css\?v=lain-wired-chat-v2-20260806/
   );
   await Promise.all([
     readFile(new URL("assets/neko-assets/sprites/sleep1.png", root)),

@@ -927,8 +927,15 @@ test("nataraja event is probability-gated and loops local video with offer butto
   assert.match(mainSource, /bindRandomEventButton\(natarajaYes, closeNatarajaWindow\);/);
   assert.match(mainSource, /bindRandomEventButton\(natarajaNo, closeNatarajaWindow\);/);
   assert.match(mainSource, /afterClose: resetNatarajaVideo,/);
-  assert.match(getCssBlock(".nataraja-window"), /width: min\(430px, calc\(100vw - 24px\)\);/);
-  assert.match(getCssBlock(".nataraja-video"), /max-height: min\(62vh, 520px\);/);
+  assert.match(
+    getCssBlock(".nataraja-window"),
+    /max-width: calc\(75vw - 18px\);[\s\S]*?width: min\(322\.5px, calc\(75vw - 18px\)\);/
+  );
+  assert.match(
+    getCssBlock(".nataraja-window .window-body"),
+    /gap: 10px;[\s\S]*?padding: 10px 6\.75px;/
+  );
+  assert.match(getCssBlock(".nataraja-video"), /max-height: min\(46\.5vh, 390px\);/);
   assert.match(getCssBlock(".nataraja-credit"), /font-size: 11px;/);
   await access(new URL("assets/random events/nataraja.mp4", root));
 });
@@ -1257,10 +1264,10 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=neko-stream-alert-20260729/);
-    assert.match(source, /cursors\.css\?v=cursor-titlebar-clickable-20260709/);
+    assert.match(source, /random-events\.css\?v=lain-wired-chat-v2-20260806/);
+    assert.match(source, /cursors\.css\?v=text-selection-cursor-20260806/);
     assert.match(source, /minesweeper\.css\?v=minesweeper-mobile-controls-20260724/);
-    assert.match(source, /game-stats\.css\?v=global-leaderboard-launchers-20260725/);
+    assert.match(source, /game-stats\.css\?v=profile-icon-frame-20260807/);
     assert.match(source, /style\.css\?v=first-win-stats-handoff-20260722/);
     assert.match(source, /core\/dom\.js\?v=game-build-[a-f0-9]{64}/);
     assert.match(source, /game-stats-backend\.js\?v=game-build-[a-f0-9]{64}/);

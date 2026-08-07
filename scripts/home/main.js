@@ -413,7 +413,7 @@ const {
   midnightGospelTimerOnes,
   midnightGospelBegin,
   lainAlertWindow,
-  lainAlertOk,
+  lainAlertClose,
   lelouchAlertWindow,
   lelouchAlertOk,
   berserkSunriseWindow,
@@ -1044,6 +1044,7 @@ const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const GAME_STATS_SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
 const GAME_STATS_PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
+const GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX = 999_999;
 const GAME_STATS_MAX_SYNC_QUEUE_LENGTH = 100;
 const GAME_STATS_API_TIMEOUT_MS = 8000;
 const GAME_STATS_MAX_NAME_REROLLS = 10;
@@ -1354,15 +1355,15 @@ const normalizeAdministratorProof = (payload) => {
   return { proof, expiresAt: new Date(expiresAtMs).toISOString() };
 };
 
+const isGameStatsAdministratorProfile = (profile) =>
+  profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
+  profile.name === GAME_STATS_ROHIN_NEKO_PROFILE.name &&
+  profile.icon === GAME_STATS_ROHIN_NEKO_AVATAR_ICON;
+
 const normalizeAdministratorSignInResponse = (payload) => {
   const proof = normalizeAdministratorProof(payload);
   const profile = normalizeGameStatsProfile(payload?.profile);
-  if (
-    !proof ||
-    profile?.id !== GAME_STATS_ROHIN_NEKO_PROFILE.id ||
-    profile.name !== GAME_STATS_ROHIN_NEKO_PROFILE.name ||
-    profile.icon !== GAME_STATS_ROHIN_NEKO_AVATAR_ICON
-  ) {
+  if (!proof || !isGameStatsAdministratorProfile(profile)) {
     return null;
   }
   return proof;
@@ -1772,17 +1773,19 @@ const clearGameStatsAdministratorProof = () => {
 
 let gameStatsAdministratorProof = loadGameStatsAdministratorProof();
 
-const getAdministratorEventHeaders = (profile) => {
-  if (profile?.id !== GAME_STATS_ROHIN_NEKO_PROFILE.id) return {};
-  const expiresAtMs = new Date(gameStatsAdministratorProof?.expiresAt || "").getTime();
-  if (
-    !gameStatsAdministratorProof?.proof ||
-    !Number.isFinite(expiresAtMs) ||
-    expiresAtMs <= Date.now()
-  ) {
+const hasActiveGameStatsAdministratorProof = () => {
+  const normalizedProof = normalizeAdministratorProof(gameStatsAdministratorProof);
+  if (!normalizedProof) {
     clearGameStatsAdministratorProof();
-    return {};
+    return false;
   }
+  gameStatsAdministratorProof = normalizedProof;
+  return true;
+};
+
+const getAdministratorEventHeaders = (profile) => {
+  if (!isGameStatsAdministratorProfile(profile)) return {};
+  if (!hasActiveGameStatsAdministratorProof()) return {};
   return { Authorization: `Bearer ${gameStatsAdministratorProof.proof}` };
 };
 
@@ -2468,6 +2471,16 @@ const getGameStatsProfileNameFromIcon = (filename) =>
     .trim()
     .slice(0, 32);
 
+const updateGameProfileIconOptionSelection = (selectedButton) => {
+  gameProfileIconGallery
+    ?.querySelectorAll(".game-profile-icon-option")
+    .forEach((option) => {
+      const selected = option === selectedButton;
+      option.classList.toggle("is-selected", selected);
+      option.setAttribute("aria-selected", String(selected));
+    });
+};
+
 const renderGameProfileIconGallery = () => {
   if (!gameProfileIconGallery || !gameStatsDraftProfile) return;
   const filter = String(gameProfileIconSearch?.value || "").trim().toLowerCase();
@@ -2502,7 +2515,7 @@ const renderGameProfileIconGallery = () => {
         }
       }
       updateGameProfileRerollState();
-      renderGameProfileIconGallery();
+      updateGameProfileIconOptionSelection(button);
     });
     gameProfileIconGallery.append(button);
   });
@@ -2702,12 +2715,48 @@ const failGameStatsAuthenticationWait = () => {
   restoreGameStatsAuthenticationFocus(returnFocus);
 };
 
+const setAdministratorAuthenticationLayerElevated = (elevated) => {
+  const windowStack = administratorWindow?.closest(".window-stack");
+  if (!windowStack) return;
+  if (elevated) {
+    windowStack.style.zIndex = String(GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX);
+  } else {
+    windowStack.style.removeProperty("z-index");
+  }
+};
+
+const clampVisibleAdministratorWindow = () => {
+  if (
+    !administratorWindow ||
+    administratorWindow.classList.contains("is-hidden") ||
+    administratorWindow.classList.contains("is-closing")
+  ) {
+    return;
+  }
+  clampWindowFullyIntoViewport(administratorWindow);
+};
+
 const requestGameStatsAdministratorAuthentication = (returnFocus) => {
   if (!["auth-required", "auth-request-failed"].includes(gameStatsSyncState)) return;
-  gameStatsAuthenticationReturnFocus = returnFocus || null;
+  gameStatsAuthenticationReturnFocus =
+    returnFocus || gameStatsAuthenticationReturnFocus || null;
+  if (
+    sudokuSolvePopup?.classList.contains("is-visible") &&
+    sudokuSolvePopup.getAttribute("aria-hidden") === "false"
+  ) {
+    gameStatsAuthenticationDeferredForCompletion = true;
+    return;
+  }
+  gameStatsAuthenticationDeferredForCompletion = false;
   gameStatsManualRefreshInProgress = true;
   setGameStatsSyncState("auth-waiting");
+  setAdministratorAuthenticationLayerElevated(true);
   setWindowOpen("administrator", true);
+  if (administratorWindow) {
+    administratorWindow.style.zIndex = String(
+      GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX
+    );
+  }
   window.setTimeout(() => administratorUsername?.focus(), 0);
 };
 
@@ -2781,6 +2830,7 @@ const runGameStatsSyncPass = async () => {
         submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
         Number(error?.status) === 403
       ) {
+        clearGameStatsAdministratorProof();
         waitingForAdministratorAuthorizationCount += 1;
         remainingSubmissions.push(submission);
         continue;
@@ -2827,6 +2877,10 @@ const runGameStatsSyncPass = async () => {
     setGameStatsSyncState("request-failed");
   } else {
     setGameStatsSyncState("ready");
+  }
+
+  if (waitingForAdministratorAuthorizationCount) {
+    requestGameStatsAdministratorAuthentication();
   }
 };
 
@@ -4309,6 +4363,16 @@ let gameStatsGlobalState = createEmptyGameStatsData();
 let gameStatsLocalState = loadGameStatsLocalState();
 let gameStatsSubmissionQueue = loadGameStatsSubmissionQueue();
 let gameStatsProfile = loadGameStatsProfile();
+const ADMIN_CONTROLS_APP_ID = "admin-controls";
+const ADMIN_CONTROLS_STAND_IN_APP_ID = "admin-controls-stand-in";
+const isAdminControlsAppId = (appId) =>
+  appId === ADMIN_CONTROLS_APP_ID || appId === ADMIN_CONTROLS_STAND_IN_APP_ID;
+const hasActiveGameStatsAdministratorAccess = () =>
+  hasActiveGameStatsAdministratorProof();
+const resolveAdminControlsLaunchAppId = (appId) =>
+  appId === ADMIN_CONTROLS_APP_ID && !hasActiveGameStatsAdministratorAccess()
+    ? ADMIN_CONTROLS_STAND_IN_APP_ID
+    : appId;
 let gameStatsProfilePromptResolve = null;
 let gameStatsDraftProfile = null;
 let gameStatsSyncInProgress = false;
@@ -4318,6 +4382,7 @@ let gameStatsManualRefreshInProgress = false;
 let gameStatsSyncState = "initial";
 let gameStatsSyncMessage = "";
 let gameStatsAuthenticationReturnFocus = null;
+let gameStatsAuthenticationDeferredForCompletion = false;
 let gameStatsSyncAnnouncementGame = "";
 let administratorSignInAttemptId = 0;
 let administratorSignInAbortController = null;
@@ -4511,6 +4576,7 @@ let tcpResultsIndex = 0;
 let ekgProjectIndex = 0;
 let droneVideoIndex = 0;
 let activeWindow = null;
+const comingSoonFocusReturns = new WeakMap();
 const expandedWindowState = new WeakMap();
 // let clashRoyaleLoaded = false;
 // let clashRoyaleLoading = false;
@@ -4895,6 +4961,34 @@ const DEBUG_SYSTEM_ALERTS = Object.freeze([
     message: "They are always watching.",
     alignment: "center",
   }),
+  Object.freeze({
+    id: "seneca-announcement",
+    debug: false,
+    title: "System Announcement",
+    icon: "assets/app-icons/ico/certificate_no.ico",
+    message:
+      "“Let it offend you that someone else could be handed your days and turn them into something greater.”\n" +
+      "—Lucius Annaeus Seneca",
+    alignment: "right",
+  }),
+  Object.freeze({
+    id: "deodorant-reminder",
+    debug: false,
+    title: "System Alert",
+    icon: "assets/app-icons/ico/user_computer_pair.ico",
+    message:
+      "Be sure to shower and wear deodorant! Or don't. I'm just a website, who am I to tell you?",
+    alignment: "right",
+  }),
+  Object.freeze({
+    id: "power-cycle-reminder",
+    debug: false,
+    title: "System Alert",
+    icon: "assets/app-icons/ico/shell_window1.ico",
+    message:
+      "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
+    alignment: "center",
+  }),
 ]);
 const RANDOM_EVENT_RELOAD_KEY = "personalSiteRandomEventReloadPending";
 const SAUL_AD_IMAGES = [
@@ -5159,6 +5253,7 @@ let nobleSteedResultPosition = null;
 let debugSystemAlertActiveId = "";
 let debugSystemAlertFocusReturn = null;
 let nekoStreamAlertFocusReturn = null;
+let lainAlertFocusReturn = null;
 let nekoStreamAlertIconFrame = 0;
 let nekoStreamAlertIconTimerId = null;
 let nekoStreamAlertResponsePending = false;
@@ -5254,6 +5349,7 @@ const randomEventViewportWindows = () =>
     infinityArmoryWindow,
     virusWindow,
     virusRescueWindow,
+    ...document.querySelectorAll("[data-random-viewport-position]"),
   ].filter(Boolean);
 
 const getRelicRecoveryFitScale = () => {
@@ -8930,8 +9026,26 @@ const startMidnightGospelTimer = () => {
 const isLainAlertVisible = () =>
   isManagedRandomEventWindowVisible(lainAlertWindow);
 
+const resetLainAlert = () => {
+  const focusTarget = lainAlertFocusReturn;
+  lainAlertFocusReturn = null;
+  if (
+    focusTarget?.isConnected &&
+    !focusTarget.closest("[inert]") &&
+    typeof focusTarget.focus === "function"
+  ) {
+    focusTarget.focus({ preventScroll: true });
+  }
+};
+
 const showLainAlert = () => {
-  showManagedRandomEventWindow(lainAlertWindow);
+  const focusReturn =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const didOpen = showManagedRandomEventWindow(lainAlertWindow);
+  if (!didOpen) return false;
+  lainAlertFocusReturn = focusReturn;
+  requestAnimationFrame(() => lainAlertClose?.focus({ preventScroll: true }));
+  return true;
 };
 
 const closeLainAlert = () => {
@@ -16214,6 +16328,23 @@ const RANDOM_EVENT_SELECTION_LOCKDOWN_MS = 2 * 60 * 1000;
 const randomEventSelectionLockdownUntil = new Map();
 const RANDOM_EVENT_TRIGGER_COOLDOWN_MS = 7.5 * 1000;
 let randomEventTriggerCooldownUntil = 0;
+let adminNaturalTriggerSuppressionDepth = 0;
+
+const suppressAdminNaturalTriggersForCurrentTask = () => {
+  adminNaturalTriggerSuppressionDepth += 1;
+  window.setTimeout(() => {
+    adminNaturalTriggerSuppressionDepth = Math.max(
+      0,
+      adminNaturalTriggerSuppressionDepth - 1
+    );
+  }, 0);
+};
+
+const shouldPauseNaturalRandomEvents = () =>
+  adminNaturalTriggerSuppressionDepth > 0 ||
+  Boolean(
+    window.rohinAdminControlsController?.shouldPauseNaturalEvents?.()
+  );
 
 const isRandomEventTriggerOnCooldown = (now = Date.now()) => {
   if (
@@ -16528,6 +16659,7 @@ const scheduleRandomEventRun = (definition, context) => {
 
 const triggerRandomEvents = (triggerName, detail = {}) => {
   if (!isHomeActivationReady()) return false;
+  if (shouldPauseNaturalRandomEvents()) return false;
   if (isRandomEventGameplayLockActive()) return false;
   const triggerOnCooldown = isRandomEventTriggerOnCooldown();
   const debugEventPending = Array.from(randomEventPendingDefinitions).some(
@@ -16688,7 +16820,12 @@ const scheduleActiveAppDwellTimer = () => {
 };
 
 const trackActiveAppDwell = (win) => {
-  if (!win || !win.matches("[data-app-window]") || !isWindowVisible(win)) {
+  if (
+    !win ||
+    !win.matches("[data-app-window]") ||
+    isAdminControlsAppId(win.getAttribute("data-app-window")) ||
+    !isWindowVisible(win)
+  ) {
     clearActiveAppDwell();
     return;
   }
@@ -16767,7 +16904,7 @@ const STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze({
 DEBUG_SYSTEM_ALERTS.forEach((alert) => {
   registerRandomEvent({
     id: `debug-system-alert-${alert.id}`,
-    debug: false,
+    debug: alert.debug === true,
     probability: STANDARD_RANDOM_EVENT_PROBABILITY,
     probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
     kind: RANDOM_EVENT_KIND_INTERACTIVE,
@@ -17870,6 +18007,34 @@ const setWindowOpen = (appId, open) => {
   const win = getAppWindow(appId);
   if (!win) return;
 
+  if (open && appId === ADMIN_CONTROLS_APP_ID) {
+    const resolvedAppId = resolveAdminControlsLaunchAppId(appId);
+    if (resolvedAppId !== appId) {
+      if (!win.classList.contains("is-hidden")) {
+        setWindowOpen(appId, false);
+      }
+      const standInWindow = getAppWindow(resolvedAppId);
+      const activeFocus =
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement !== document.body
+          ? document.activeElement
+          : document.querySelector('.taskbar-icon[data-app="admin-controls"]');
+      if (standInWindow && activeFocus) {
+        comingSoonFocusReturns.set(standInWindow, activeFocus);
+      }
+      setWindowOpen(resolvedAppId, true);
+      requestAnimationFrame(() => {
+        getAppWindow(resolvedAppId)
+          ?.querySelector("[data-coming-soon-ok]")
+          ?.focus({ preventScroll: true });
+      });
+      return;
+    }
+    const standInWindow = getAppWindow(ADMIN_CONTROLS_STAND_IN_APP_ID);
+    setWindowOpen(ADMIN_CONTROLS_STAND_IN_APP_ID, false);
+    if (standInWindow) comingSoonFocusReturns.delete(standInWindow);
+  }
+
   if (open) {
     if (appId === "minesweeper") {
       void preloadMinesweeperNumberAssets();
@@ -17885,10 +18050,16 @@ const setWindowOpen = (appId, open) => {
     }
 
     win.classList.remove("is-hidden");
+    if (win.hasAttribute("aria-hidden")) {
+      win.setAttribute("aria-hidden", "false");
+    }
     resetWindowToFirstTab(win);
     bringWindowToFront(win);
 
-    if (win.classList.contains("home-window") || appId === "administrator-alert") {
+    if (win.hasAttribute("data-random-viewport-position")) {
+      win.classList.remove("app-window--center");
+      positionRandomEventWindowInViewport(win);
+    } else if (win.classList.contains("home-window") || appId === "administrator-alert") {
       win.classList.add("app-window--center");
       win.style.left = "";
       win.style.top = "";
@@ -17925,11 +18096,24 @@ const setWindowOpen = (appId, open) => {
       startSudokuBootSequence();
     }
     restartWindowAnimation(win, "is-opening");
-    triggerRandomEvents("windowOpen", { appId });
+    if (!isAdminControlsAppId(appId)) {
+      triggerRandomEvents("windowOpen", { appId });
+    }
     return;
   }
 
   if (win.classList.contains("is-hidden")) return;
+
+  if (
+    win.matches("[data-coming-soon-window]") &&
+    document.activeElement instanceof HTMLElement &&
+    !win.contains(document.activeElement)
+  ) {
+    comingSoonFocusReturns.set(win, document.activeElement);
+  }
+  if (win.hasAttribute("aria-hidden")) {
+    win.setAttribute("aria-hidden", "true");
+  }
 
   win.dataset.mediaClosing = "true";
   stopMediaPlayback(win);
@@ -17954,7 +18138,9 @@ const setWindowOpen = (appId, open) => {
   win.style.zIndex = String(topZ++);
   restartWindowAnimation(win, "is-closing");
   stopMediaPlayback(win);
-  triggerRandomEvents("windowClose", { appId });
+  if (!isAdminControlsAppId(appId)) {
+    triggerRandomEvents("windowClose", { appId });
+  }
 };
 
 const formatNumber = (value) => {
@@ -18350,6 +18536,9 @@ const closeAppWindow = (appId) => {
     cancelGameStatsAuthenticationWait();
   }
   setWindowOpen(appId, false);
+  if (appId === "administrator" || appId === "administrator-alert") {
+    setAdministratorAuthenticationLayerElevated(false);
+  }
   if (appId === "minesweeper") {
     msNewGame(msDifficulty ? msDifficulty.value : "beginner");
   }
@@ -19446,6 +19635,10 @@ const hideSudokuSolvePopup = () => {
   if (!sudokuSolvePopup) return;
   sudokuSolvePopup.classList.remove("is-visible");
   sudokuSolvePopup.setAttribute("aria-hidden", "true");
+  if (gameStatsAuthenticationDeferredForCompletion) {
+    gameStatsAuthenticationDeferredForCompletion = false;
+    requestGameStatsAdministratorAuthentication();
+  }
 };
 
 const showSudokuSolvePopup = () => {
@@ -20686,7 +20879,14 @@ window.addEventListener("load", () => {
     }
 
     try {
-      if (isReload && sessionStorage.getItem(RANDOM_EVENT_RELOAD_KEY) === "true") {
+      const adminResetReload = Boolean(
+        window.rohinAdminControlsController?.wasResetReload?.()
+      );
+      if (
+        isReload &&
+        !adminResetReload &&
+        sessionStorage.getItem(RANDOM_EVENT_RELOAD_KEY) === "true"
+      ) {
         setTimeout(() => {
           triggerRandomEvents("pageReload");
         }, 300);
@@ -20709,6 +20909,17 @@ appWindows.forEach((win) => {
       stopMediaPlayback(win);
       win.classList.remove("is-closing");
       win.classList.add("is-hidden");
+      if (win.matches("[data-coming-soon-window]")) {
+        const focusTarget = comingSoonFocusReturns.get(win);
+        comingSoonFocusReturns.delete(win);
+        if (
+          focusTarget?.isConnected &&
+          !focusTarget.closest("[inert]") &&
+          typeof focusTarget.focus === "function"
+        ) {
+          focusTarget.focus({ preventScroll: true });
+        }
+      }
     }
   });
 });
@@ -23135,8 +23346,13 @@ const calendarQuotes = {
     `—Sylvia Plath`,
   6: `"It takes great courage to see the world in all its tainted glory, and still to love it." —Oscar Wilde`,
   7: `"In the depth of winter, I finally learned that within me there lay an invincible summer. —Albert Camus`,
-  8: `"It isn’t constancy that keeps us alive, it’s the progression we use to move us." —Olivie Blake`,
-  9: `"The best way to predict the future it to create it"<br>—Peter Drucker`,
+  8:
+    `A human being should be able to change a diaper, plan an invasion, butcher a hog, conn a ship, ` +
+    `design a building, write a sonnet, balance accounts, build a wall, set a bone, ` +
+    `comfort the dying, take orders, give orders, cooperate, act alone, solve equations, ` +
+    `analyze a new problem, pitch manure, program a computer, cook a tasty meal, ` +
+    `fight efficiently, die gallantly. Specialization is for insects.<br>—Robert A. Heinlein`,
+  9: `“I have no special talents. I am only passionately curious.”<br>—Albert Einstein`,
   10: `"Our life is shaped by our mind, for we become what we think."<br>—Buddha`,
   11: `"To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment"<br>—Ralph Waldo Emerson`,
 };
@@ -24841,8 +25057,16 @@ if (midnightGospelBegin) {
   });
 });
 
-bindRandomEventButton(lainAlertOk, closeLainAlert);
-bindManagedRandomEventWindowAnimation(lainAlertWindow);
+bindRandomEventButton(lainAlertClose, closeLainAlert);
+bindManagedRandomEventWindowAnimation(lainAlertWindow, {
+  afterClose: resetLainAlert,
+});
+lainAlertWindow?.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  event.stopPropagation();
+  closeLainAlert();
+});
 
 bindRandomEventButton(lelouchAlertOk, closeLelouchAlert);
 bindManagedRandomEventWindowAnimation(lelouchAlertWindow);
@@ -25977,6 +26201,9 @@ document.addEventListener(
   "pointerdown",
   (event) => {
     if (!event.isTrusted) return;
+    const target =
+      event.target instanceof Element ? event.target : event.target?.parentElement;
+    if (target?.closest("#admin-controls-window, #admin-controls-stand-in-window")) return;
     markRandomEventUserActivity();
     handleFailedActionTrigger(event);
   },
@@ -26005,6 +26232,14 @@ document.addEventListener(
     if (!event.isTrusted) return;
     const target =
       event.target instanceof Element ? event.target : event.target?.parentElement;
+    const adminInteraction =
+      window.rohinAdminControlsController?.handleDocumentClick?.(event) || null;
+    if (
+      adminInteraction ||
+      target?.closest("#admin-controls-window, #admin-controls-stand-in-window")
+    ) {
+      return;
+    }
     if (target?.closest("#fate-resist")) return;
     if (target?.closest("#lancer-battle-push")) {
       if (Math.random() < LANCER_BATTLE_CLICK_COUNTER_PROBABILITY) {
@@ -28110,6 +28345,7 @@ if (administratorSignInForm) {
         failGameStatsAuthenticationWait();
         if (administratorPassword) administratorPassword.value = "";
         setWindowOpen("administrator", false);
+        setAdministratorAuthenticationLayerElevated(false);
         return;
       }
       closeAdministratorSignIn();
@@ -28142,8 +28378,55 @@ appButtons.forEach((button) => {
       toggleNeko(event);
       return;
     }
-    toggleWindow(appId);
+    const launchAppId = resolveAdminControlsLaunchAppId(appId);
+    if (appId === ADMIN_CONTROLS_APP_ID) {
+      const inactiveAppId =
+        launchAppId === ADMIN_CONTROLS_APP_ID
+          ? ADMIN_CONTROLS_STAND_IN_APP_ID
+          : ADMIN_CONTROLS_APP_ID;
+      const inactiveWindow = getAppWindow(inactiveAppId);
+      setWindowOpen(inactiveAppId, false);
+      if (inactiveAppId === ADMIN_CONTROLS_STAND_IN_APP_ID && inactiveWindow) {
+        comingSoonFocusReturns.delete(inactiveWindow);
+      }
+    }
+    const win = getAppWindow(launchAppId);
+    const opensComingSoonWindow = Boolean(
+      win?.matches("[data-coming-soon-window]") &&
+      (win.classList.contains("is-hidden") || win.classList.contains("is-closing"))
+    );
+    if (opensComingSoonWindow) {
+      comingSoonFocusReturns.set(win, button);
+    }
+    toggleWindow(launchAppId);
+    if (opensComingSoonWindow) {
+      requestAnimationFrame(() => {
+        win.querySelector("[data-coming-soon-ok]")?.focus({ preventScroll: true });
+      });
+    }
   });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  const focusedComingSoonWindow =
+    document.activeElement instanceof Element
+      ? document.activeElement.closest("[data-coming-soon-window]")
+      : null;
+  const openComingSoonWindow = [
+    focusedComingSoonWindow,
+    activeWindow,
+    ...document.querySelectorAll("[data-coming-soon-window]"),
+  ].find(
+    (win) =>
+      win?.matches("[data-coming-soon-window]") &&
+      !win.classList.contains("is-hidden") &&
+      !win.classList.contains("is-closing")
+  );
+  if (!openComingSoonWindow) return;
+  event.preventDefault();
+  event.stopPropagation();
+  closeAppWindow(openComingSoonWindow.getAttribute("data-app-window"));
 });
 
 document.querySelectorAll("[data-github-shortcut]").forEach((button) => {
@@ -28391,6 +28674,7 @@ window.addEventListener("online", () => {
 window.addEventListener("resize", scheduleGameStatsPlayerNameMarquees);
 window.addEventListener("resize", () => {
   requestAnimationFrame(positionVisibleGameStatsWindows);
+  requestAnimationFrame(clampVisibleAdministratorWindow);
 });
 
 document.addEventListener(
@@ -30380,7 +30664,10 @@ draggableWindows.forEach((win) => {
         const rect = win.getBoundingClientRect();
         setWindowTitleBarClampedPosition(win, rect.left, rect.top);
       }
-      if (didDragWindow) {
+      if (
+        didDragWindow &&
+        !isAdminControlsAppId(win.getAttribute("data-app-window"))
+      ) {
         triggerRandomEvents("windowDrag", {
           appId: win.getAttribute("data-app-window") || "",
           windowId: win.id || "",
@@ -30409,6 +30696,192 @@ const scheduleCalendarRefresh = () => {
     scheduleCalendarRefresh();
   }, delay);
 };
+
+const ADMIN_RANDOM_EVENT_LABELS = Object.freeze({
+  "annoying-system-alert": "Annoying System Alert",
+  "current-publicly-available-information": "Current Public Information",
+  "debug-system-alert-deodorant-reminder": "System Alert — Hygiene Reminder",
+  "debug-system-alert-power-cycle-reminder": "System Alert — Power-Cycle Reminder",
+  "debug-system-alert-seneca-announcement": "System Announcement — Seneca",
+  "dont-starve-campfire": "Don't Starve Campfire",
+  "feliz-jueves": "Feliz Jueves",
+  "gears-nest-clear": "Gears Nest",
+  "neko-stream-system-alert": "Neko Stream Alert",
+  "resist-your-fate": "Resist Your Fate",
+  "rohin-os-note": "Rohin OS Note",
+  "rohin-os-update": "Rohin OS Update",
+  "spare-a-trna": "Spare a tRNA",
+});
+
+const formatAdminRandomEventLabel = (eventId) => {
+  if (ADMIN_RANDOM_EVENT_LABELS[eventId]) {
+    return ADMIN_RANDOM_EVENT_LABELS[eventId];
+  }
+  if (eventId.startsWith("debug-system-alert-")) {
+    const alertId = eventId.slice("debug-system-alert-".length);
+    const alert = DEBUG_SYSTEM_ALERTS.find((candidate) => candidate.id === alertId);
+    return alert ? `System Alert — ${alert.message}` : "System Alert";
+  }
+  return eventId
+    .split("-")
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+    .join(" ");
+};
+
+const listAdminRandomEvents = () => [
+  ...randomEventDefinitions.map((definition) => ({
+    id: definition.id,
+    kind: randomEventKind(definition),
+    label: formatAdminRandomEventLabel(definition.id),
+  })),
+  {
+    id: "feliz-jueves",
+    kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
+    label: formatAdminRandomEventLabel("feliz-jueves"),
+  },
+].sort((left, right) => left.label.localeCompare(right.label));
+
+const adminRandomEventResult = (ok, message) => ({ ok, message });
+
+const runAdminRandomEvent = async (eventId, { source = "admin-controls" } = {}) => {
+  if (!isHomeActivationReady()) await whenHomeActivated;
+  if (isRandomEventGameplayLockActive()) {
+    return adminRandomEventResult(false, "Finish the active gameplay event first.");
+  }
+
+  if (eventId === "feliz-jueves") {
+    if (isFelizJuevesVisible()) {
+      return adminRandomEventResult(false, "Feliz Jueves is already open.");
+    }
+    suppressAdminNaturalTriggersForCurrentTask();
+    showFelizJuevesWindow();
+    return adminRandomEventResult(true, "Triggered Feliz Jueves.");
+  }
+
+  const definition = randomEventDefinitions.find((candidate) => candidate.id === eventId);
+  if (!definition) {
+    return adminRandomEventResult(false, "That event is no longer available.");
+  }
+  if (randomEventPendingDefinitions.has(definition)) {
+    return adminRandomEventResult(false, `${formatAdminRandomEventLabel(eventId)} is loading.`);
+  }
+  if (randomEventDefinitionIsVisible(definition)) {
+    return adminRandomEventResult(false, `${formatAdminRandomEventLabel(eventId)} is already open.`);
+  }
+
+  randomEventPendingDefinitions.add(definition);
+  try {
+    await preloadRandomEventAssets(definition, {
+      triggerName: "adminControls",
+      detail: { source },
+      admin: true,
+    });
+    if (isRandomEventGameplayLockActive()) {
+      return adminRandomEventResult(false, "An interactive gameplay event started first.");
+    }
+    if (randomEventDefinitionIsVisible(definition)) {
+      return adminRandomEventResult(false, `${formatAdminRandomEventLabel(eventId)} is already open.`);
+    }
+
+    suppressAdminNaturalTriggersForCurrentTask();
+    const runResult = await Promise.resolve(
+      definition.run({
+        triggerName: "adminControls",
+        detail: { source },
+        admin: true,
+      })
+    );
+    if (runResult === false) {
+      return adminRandomEventResult(false, `${formatAdminRandomEventLabel(eventId)} could not start.`);
+    }
+    return adminRandomEventResult(true, `Triggered ${formatAdminRandomEventLabel(eventId)}.`);
+  } catch (error) {
+    console.error("[Rohin OS] Admin event failed", eventId, error);
+    return adminRandomEventResult(false, `${formatAdminRandomEventLabel(eventId)} failed to start.`);
+  } finally {
+    randomEventPendingDefinitions.delete(definition);
+  }
+};
+
+const ADMIN_DESKTOP_ACTIVITY_APPS = Object.freeze([
+  "windows",
+  "taskmgr",
+  "paint",
+]);
+
+const adminPresetIntensityCount = (intensity) => {
+  if (intensity === "high") return 3;
+  if (intensity === "medium") return 2;
+  return 1;
+};
+
+const runAdminScenePreset = async (
+  presetId,
+  { intensity = "medium", visualEffects = true } = {}
+) => {
+  if (!isHomeActivationReady()) await whenHomeActivated;
+  if (isRandomEventGameplayLockActive()) {
+    return adminRandomEventResult(false, "Finish the active gameplay event first.");
+  }
+
+  suppressAdminNaturalTriggersForCurrentTask();
+  if (presetId === "game-win") {
+    setWindowOpen("solitaire", true);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    if (visualEffects) {
+      solStartFireworks();
+      solShowAchievement();
+    }
+    solPlayVictoryVideo();
+    return adminRandomEventResult(true, "Previewing a local Solitaire win.");
+  }
+
+  if (presetId === "dialog") {
+    const dialogWindow = getAppWindow("image-tools");
+    const activeFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusReturn =
+      activeFocus?.closest("#admin-controls-window") &&
+      activeFocus.closest("#admin-controls-window").getAttribute("aria-hidden") === "true"
+        ? document.querySelector('.taskbar-icon[data-app="admin-controls"]')
+        : activeFocus;
+    if (dialogWindow && focusReturn) {
+      comingSoonFocusReturns.set(dialogWindow, focusReturn);
+    }
+    setWindowOpen("image-tools", true);
+    requestAnimationFrame(() => {
+      dialogWindow?.querySelector("[data-coming-soon-ok]")?.focus({ preventScroll: true });
+    });
+    return adminRandomEventResult(true, "Opened a dialog scene.");
+  }
+
+  if (presetId === "notification") {
+    const opened = showDebugSystemAlert(DEBUG_SYSTEM_ALERTS[0]);
+    return adminRandomEventResult(
+      opened,
+      opened ? "Opened a notification scene." : "A notification is already open."
+    );
+  }
+
+  if (presetId === "desktop-activity") {
+    ADMIN_DESKTOP_ACTIVITY_APPS
+      .slice(0, adminPresetIntensityCount(intensity))
+      .forEach((appId) => setWindowOpen(appId, true));
+    return adminRandomEventResult(true, "Opened a desktop activity scene.");
+  }
+
+  return adminRandomEventResult(false, "That scene preset is not available.");
+};
+
+window.rohinAdminOrchestrator = Object.freeze({
+  closeWindow: () => closeAppWindow("admin-controls"),
+  listEvents: listAdminRandomEvents,
+  resetScene: () => window.location.reload(),
+  runEvent: runAdminRandomEvent,
+  runPreset: runAdminScenePreset,
+  suppressNaturalTriggers: suppressAdminNaturalTriggersForCurrentTask,
+});
 
 runAfterHomeActivation(scheduleCalendarRefresh);
 })();

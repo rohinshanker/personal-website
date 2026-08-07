@@ -222,8 +222,18 @@ test("icon selection replaces API Error only and keeps successful names unchange
   const runtime = {
     document: {
       createElement: () => ({
+        attributes: {},
         children: [],
-        classList: { toggle: () => {} },
+        classList: {
+          values: new Set(),
+          contains(name) {
+            return this.values.has(name);
+          },
+          toggle(name, force) {
+            if (force) this.values.add(name);
+            else this.values.delete(name);
+          },
+        },
         listeners: {},
         addEventListener(type, listener) {
           this.listeners[type] = listener;
@@ -231,7 +241,9 @@ test("icon selection replaces API Error only and keeps successful names unchange
         append(...children) {
           this.children.push(...children);
         },
-        setAttribute: () => {},
+        setAttribute(name, value) {
+          this.attributes[name] = String(value);
+        },
       }),
     },
   };
@@ -242,12 +254,15 @@ test("icon selection replaces API Error only and keeps successful names unchange
     "let iconEditorOpen = false;",
     "const isGameStatsProfileIconEditor = () => iconEditorOpen;",
     "const gameProfileIconSearch = { value: \"\" };",
-    "const gameProfileIconGallery = { children: [], replaceChildren() { this.children = []; }, append(child) { this.children.push(child); } };",
+    "const gameProfileIconGallery = { children: [], replaceCount: 0, scrollTop: 0, replaceChildren() { this.children = []; this.replaceCount += 1; this.scrollTop = 0; }, append(child) { this.children.push(child); }, querySelectorAll() { return this.children; } };",
     "let profileStateUpdates = 0;",
     "const updateGameProfileRerollState = () => { profileStateUpdates += 1; };",
     getIconPickerSource(source),
     "globalThis.renderPicker = renderGameProfileIconGallery;",
     "globalThis.selectIcon = (index) => gameProfileIconGallery.children[index].listeners.click();",
+    "globalThis.iconNode = (index) => gameProfileIconGallery.children[index];",
+    "globalThis.setGalleryScrollTop = (value) => { gameProfileIconGallery.scrollTop = value; };",
+    "globalThis.galleryState = () => ({ replaceCount: gameProfileIconGallery.replaceCount, scrollTop: gameProfileIconGallery.scrollTop, selectedIndexes: gameProfileIconGallery.children.map((option, index) => option.attributes['aria-selected'] === 'true' && option.classList.contains('is-selected') ? index : -1).filter((index) => index >= 0) });",
     "globalThis.setName = (name) => { gameStatsDraftProfile.name = name; };",
     "globalThis.setIconEditorOpen = (open) => { iconEditorOpen = open; };",
     "globalThis.profile = () => ({ ...gameStatsDraftProfile, profileStateUpdates });",
@@ -255,7 +270,15 @@ test("icon selection replaces API Error only and keeps successful names unchange
   vm.runInNewContext(declarations, runtime);
 
   runtime.renderPicker();
+  const firstIconNode = runtime.iconNode(0);
+  runtime.setGalleryScrollTop(137);
   runtime.selectIcon(0);
+  assert.equal(runtime.iconNode(0), firstIconNode);
+  assert.deepEqual(JSON.parse(JSON.stringify(runtime.galleryState())), {
+    replaceCount: 1,
+    scrollTop: 137,
+    selectedIndexes: [0],
+  });
   assert.deepEqual(JSON.parse(JSON.stringify(runtime.profile())), {
     name: "address book user",
     icon: "assets/app-icons/ico/address_book_user.ico",
@@ -264,7 +287,15 @@ test("icon selection replaces API Error only and keeps successful names unchange
 
   runtime.setName("Ayla");
   runtime.renderPicker();
+  const secondIconNode = runtime.iconNode(1);
+  runtime.setGalleryScrollTop(83);
   runtime.selectIcon(1);
+  assert.equal(runtime.iconNode(1), secondIconNode);
+  assert.deepEqual(JSON.parse(JSON.stringify(runtime.galleryState())), {
+    replaceCount: 2,
+    scrollTop: 83,
+    selectedIndexes: [1],
+  });
   assert.deepEqual(JSON.parse(JSON.stringify(runtime.profile())), {
     name: "Ayla",
     icon: "assets/app-icons/ico/Roland_GS.ico",
@@ -456,7 +487,7 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   assert.match(source, /gameProfileRerollCount\.textContent = `\$\{remaining\} left`;/);
   assert.doesNotMatch(source, /gameStatsNameRollError|Could not generate a name\. Try Reroll\./);
   assert.match(source, /if \(gameStatsDraftProfile\.name === GAME_STATS_API_ERROR_NAME\) \{[\s\S]*?getGameStatsProfileNameFromIcon\(icon\.filename\);/);
-  assert.match(source, /updateGameProfileRerollState\(\);[\s\S]*?renderGameProfileIconGallery\(\);/);
+  assert.match(source, /updateGameProfileRerollState\(\);[\s\S]*?updateGameProfileIconOptionSelection\(button\);/);
   assert.doesNotMatch(source, /name: gameProfileName\?\.value/);
   assert.match(home, /<input[\s\S]*class="game-profile-generated-name"[\s\S]*id="game-profile-name"[\s\S]*readonly[\s\S]*role="combobox"/);
   assert.match(home, /id="game-profile-name-toggle"[\s\S]*aria-controls="game-profile-name-options"/);

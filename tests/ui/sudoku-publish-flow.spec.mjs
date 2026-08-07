@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(300_000);
 
@@ -78,10 +79,7 @@ const installBackendConfig = async (page) => {
 };
 
 const installMainBridge = async (page) => {
-  const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
+  const mainSource = await readIsolatedMainSource();
   const instrumentedSource = mainSource.replace(
     /\n\}\)\(\);\s*$/,
     `
@@ -555,7 +553,9 @@ const preparePage = async (page, viewport, scenario) => {
 
   const statsWindow = page.locator("#game-stats-window-sudoku");
   if (!(await statsWindow.isVisible())) {
-    await sudokuWindow.locator('[data-game-stats-open="sudoku"]').click();
+    await sudokuWindow
+      .locator('[data-game-stats-open="sudoku"]')
+      .evaluate((button) => button.click());
   }
   await expect(statsWindow).toBeVisible();
   await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(

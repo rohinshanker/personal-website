@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
 
 const API_BASE_URL = "https://game-stats-build-mismatch.test";
 const BUILD_VERSION = `sha256-${"c".repeat(64)}`;
@@ -23,10 +23,7 @@ const viewports = Object.freeze([
 ]);
 
 const installMainBridge = async (page) => {
-  const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
+  const mainSource = await readIsolatedMainSource();
   const instrumentedSource = mainSource.replace(
     /\n\}\)\(\);\s*$/,
     `
@@ -213,6 +210,13 @@ for (const viewport of viewports) {
     expect(stored.queue).toEqual([]);
     expect(stored.stats.totals.solitaire.wins).toBe(1);
 
+    await expect
+      .poll(() =>
+        statsWindow.evaluate(
+          (element) => element.getBoundingClientRect().right <= window.innerWidth
+        )
+      )
+      .toBe(true);
     const layout = await statsWindow.evaluate((element) => ({
       documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
       statusOverflows:

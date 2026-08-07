@@ -4,12 +4,12 @@ Purpose: Preserve the Neko launcher and random-event entry points, bounded taskb
 
 Scope: Desktop and taskbar Neko launchers, random-event confirmation, focus, 40-cat planning and animation, sprite preloading, cleanup, and responsive taskbar geometry.
 
-Last verified: 2026-07-29
+Last verified: 2026-08-07
 
 ## Behavior Contract
 
 - Right-click, Shift+F10, or the Context Menu key on either Neko launcher opens one viewport-bounded menu item named `/nekostream`. Ordinary left-click behavior remains the independent mouse-following Neko.
-- The interactive `System Alert` whose exact message is `Trigger /nekostream?` currently has its per-event debug flag enabled for inspection. Pressing Start force-selects it while debug is enabled; unrelated app interactions remain unobstructed. The debug run bypasses the global trigger cooldown and kind capacity but still respects the two-minute per-event selection lockdown, duplicate-pending guard, random zero-to-two-second delay, gameplay locks, and visibility guard.
+- The interactive `System Alert` whose exact message is `Trigger /nekostream?` is the sole production debug event. Pressing Start force-selects it while it is available. Hygiene, power-cycle, Lain, and Red Tool are not debug candidates and remain on their normal probability-gated paths. A debug run bypasses the global trigger cooldown and kind capacity but still respects the two-minute per-event selection lockdown, duplicate-pending guard, random zero-to-two-second delay, gameplay locks, and visibility guard.
 - The random-event preloader warms the prompt plus both sleeping sprites before opening. The decorative icon alternates `sleep1` and `sleep2` every 850 milliseconds; reduced-motion users receive a static first frame and no shell opening or closing animation.
 - Yes and No both close the alert and synchronously restore the prior focus target. Escape is equivalent to No. Only the first valid Yes response starts the stream; duplicate clicks during or after closing cannot replace or start another wave.
 - One command schedules exactly 40 cats in forty consecutive 250-millisecond slots across ten seconds, with an independent random offset inside each slot. Each enters from a random side at 0.8–1.7 times the roaming Neko's canonical 10-pixel-per-100-millisecond speed.

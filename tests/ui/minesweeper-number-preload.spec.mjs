@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.mjs";
 
 const CELL_NUMBER_ASSET = /\/assets\/minesweeper_assets\/cell_numbers\/cell_([1-8])\.png$/;
 
