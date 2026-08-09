@@ -46,6 +46,8 @@ consonants
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
+  { name: "compact breakpoint", width: 560, height: 900 },
+  { name: "above compact breakpoint", width: 561, height: 900 },
   { name: "tablet", width: 768, height: 1024 },
   { name: "desktop", width: 1280, height: 800 },
   { name: "wide desktop", width: 1440, height: 900 },
@@ -92,15 +94,23 @@ for (const viewport of viewports) {
       const comboboxElement = document.querySelector("#game-profile-name");
       const toggleElement = document.querySelector("#game-profile-name-toggle");
       const getRect = (element) => {
-        const { bottom, left, right, top } = element.getBoundingClientRect();
-        return { bottom, left, right, top };
+        const { bottom, height, left, right, top, width } = element.getBoundingClientRect();
+        return { bottom, height, left, right, top, width };
       };
+      const toggle = getRect(toggleElement);
       return {
         combobox: getRect(comboboxElement),
         dialog: getRect(dialogElement),
         documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
         listbox: getRect(listboxElement),
-        toggle: getRect(toggleElement),
+        toggle,
+        toggleOwnsCenter:
+          document
+            .elementFromPoint(
+              toggle.left + toggle.width / 2,
+              toggle.top + toggle.height / 2
+            )
+            ?.closest("#game-profile-name-toggle") === toggleElement,
       };
     });
 
@@ -110,9 +120,12 @@ for (const viewport of viewports) {
     expect(layout.listbox.top).toBeGreaterThanOrEqual(layout.combobox.bottom);
     expect(layout.listbox.bottom).toBeLessThanOrEqual(layout.dialog.bottom);
     expect(layout.toggle.left).toBeGreaterThanOrEqual(layout.combobox.left);
-    expect(layout.toggle.right).toBeLessThanOrEqual(layout.combobox.right);
-    expect(layout.toggle.top).toBeGreaterThanOrEqual(layout.combobox.top);
-    expect(layout.toggle.bottom).toBeLessThanOrEqual(layout.combobox.bottom);
+    expect(layout.toggle.width).toBeCloseTo(17, 1);
+    expect(layout.toggle.height).toBeCloseTo(17, 1);
+    expect(layout.combobox.right - layout.toggle.right).toBeCloseTo(2, 1);
+    expect(layout.toggle.top - layout.combobox.top).toBeCloseTo(2, 1);
+    expect(layout.combobox.bottom - layout.toggle.bottom).toBeCloseTo(2, 1);
+    expect(layout.toggleOwnsCenter).toBe(true);
   });
 }
 

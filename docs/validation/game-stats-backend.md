@@ -104,7 +104,7 @@ game completion
 Administrator sign-in
   -> POST /administrator/sign-in from the exact allowed browser origin
   -> keyed-IP limit (five attempts per 15 minutes) + constant-time credential checks
-  -> short-lived, IP-bound, server-HMAC-signed proof held in session storage for one browser tab
+  -> one-hour, IP-bound, server-HMAC-signed proof held in session storage for one browser tab
   -> protected profile events require that proof
 ```
 
@@ -154,7 +154,7 @@ credential.
 | `IP_HASH_SECRET` | Worker secret | HMACs `CF-Connecting-IP` before rate accounting, so D1 does not need the raw IP. | Required in production; do not use a plain or unsalted hash. |
 | `ADMIN_USERNAME` | Worker secret | Administrator sign-in username. | Choose a non-personal identifier, store it in a password manager, and enter it only in Wrangler's prompt. |
 | `ADMIN_PASSWORD` | Worker secret | Administrator sign-in password. | Use a unique high-entropy password; never put it in source, a command line, browser storage, or a URL. |
-| `ADMIN_SESSION_SIGNING_SECRET` | Worker secret | Separately signs the short-lived proof for the protected administrator profile. | Generate a different random value from every other secret; rotation immediately invalidates outstanding administrator proofs. |
+| `ADMIN_SESSION_SIGNING_SECRET` | Worker secret | Separately signs the one-hour proof for the protected administrator profile. | Generate a different random value from every other secret; rotation immediately invalidates outstanding administrator proofs. |
 | `TURNSTILE_SECRET_KEY` | Worker secret | Calls Cloudflare Siteverify. | Do **not** set it yet: the current browser client does not send a Turnstile token. Set it only after shipping and testing the client widget flow; never expose it to the browser. |
 | `GAME_BUILD_VERSION` | committed Worker var | Must equal the generated browser build version. | Public release metadata, updated only by the integrity script. |
 | `ALLOWED_ORIGIN` | committed Worker var | Browser CORS allowlist. | Public, but set it to the one exact production site origin. |
@@ -341,7 +341,7 @@ The Worker exposes these routes:
 | `GET /stats` | Reads global totals and Top 3 leaderboards; with `playerId`, also returns that player's rank and record for all 14 supported categories. | None; use this to verify D1 reads. |
 | `POST /sessions` | Validates the requested game/config/build and creates a short-lived server-signed session. | Creates one expiring session only after all checks pass. |
 | `POST /events` | Accepts the normalized result envelope and consumes its valid session exactly once. | Inserts one idempotent event and consumes its session in one transactional D1 batch, or rejects both changes. |
-| `POST /administrator/sign-in` | Validates the Administrator username and password. | Creates no D1 profile data; returns a short-lived proof only after an exact-origin, rate-limited successful check. |
+| `POST /administrator/sign-in` | Validates the Administrator username and password. | Creates no D1 profile data; returns a one-hour proof only after an exact-origin, rate-limited successful check. |
 
 The browser must ask for a session before a result can be submitted. A session
 request contains `game`, the allowed game `config`, the generated
@@ -407,7 +407,7 @@ never returns a credential. It requires an explicit allowed `Origin` header,
 returns the same generic `401` response for every non-matching valid credential
 pair, and limits attempts to five per keyed IP address per 15 minutes. A successful
 response contains only the public protected-profile identity and an opaque
-proof that expires after a short interval. The browser must keep that proof in
+proof that expires one hour after issuance. The browser must keep that proof in
 session storage for the current tab only, never in local storage, cookies, a
 URL, analytics, or logs. This lets a refreshed deployed page finish saving a
 valid, queued protected-profile completion. It is still an expiring bearer
@@ -415,6 +415,11 @@ proof, not a credential: the Worker checks its expiry and IP binding, and a
 reset, a new tab, or expiry requires another sign-in. The Worker requires
 `Authorization: Bearer <proof>` before accepting any event for the protected
 profile; ordinary profiles retain the normal session flow.
+
+The one-hour lifetime applies only to proofs issued after the updated Worker is
+deployed. Previously issued proofs retain the expiry embedded in their signed
+payload, including the former ten-minute lifetime; neither a browser refresh
+nor the deployment extends them.
 
 ## Production Turnstile
 
@@ -609,7 +614,7 @@ Verify ordinary and protected publishing separately:
    replace a better global entry.
 4. In a separate fresh tab, sign in as Administrator through the visible form
    and complete one duration-valid beginner Minesweeper game before the
-   short-lived proof expires. Confirm the protected event returns `201` with
+   one-hour proof expires. Confirm the protected event returns `201` with
    `applied: true`, its count increments, its requested-player rank/record is
    correct independently of its public Top 3 position, and the queue drains.
 5. Reconcile the accepted event IDs and public player fields with a read-only
@@ -732,9 +737,11 @@ Never display the replacement in source, a shell command, a note, or a test.
 - Rotate the Turnstile secret in the Cloudflare Turnstile dashboard, update
   `TURNSTILE_SECRET_KEY` in the Worker immediately, deploy, and verify one
   real widget flow. Rotate the sitekey only if the widget itself is replaced.
-- A source-code change is not a secret rotation: it requires
-  `node scripts/update-game-integrity.mjs`, a matching Worker deploy, and a
-  matching static-site publish.
+- A change to either hashed browser completion source is not a secret rotation:
+  it requires `node scripts/update-game-integrity.mjs`, a matching Worker
+  deploy, and a matching static-site publish. A Worker-only change that leaves
+  `GAME_BUILD_VERSION` untouched requires Worker verification and deployment,
+  but no integrity regeneration or static-site publish.
 
 Keep Workers observability enabled, but record only operational outcomes and
 coarse error reasons. Never emit request bodies, Turnstile responses, secrets,
@@ -765,7 +772,7 @@ change:
    request bodies, credentials, proofs, raw IPs, or IP-derived hashes. Let
    shared rate counters expire normally.
 6. Rotate Administrator and signing secrets on the security schedule or after
-   suspected exposure. Re-test the visible sign-in, short-lived proof,
+   suspected exposure. Re-test the visible sign-in, one-hour proof,
    protected publish, and failure copy after rotation.
 7. Add Turnstile only as an atomic browser-and-Worker release. Do not set the
    production secret until the widget sends a fresh token and the complete

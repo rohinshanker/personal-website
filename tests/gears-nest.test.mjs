@@ -122,6 +122,48 @@ test("blade lock event has a title-bar close control during setup and clash", ()
   );
 });
 
+test("blade lock result clips keep playing through inside and outside clicks", () => {
+  const windowStart = homeSource.indexOf('id="lancer-battle-window"');
+  const windowEnd = homeSource.indexOf('id="brand-burns-window"', windowStart);
+  const markup = homeSource.slice(windowStart, windowEnd);
+  const resultVideoTag = [...markup.matchAll(/<video\b[^>]*>/g)]
+    .map(([tag]) => tag)
+    .find((tag) => tag.includes('id="lancer-battle-result-video"'));
+  assert.ok(resultVideoTag, "Missing Lancer result video.");
+  assert.doesNotMatch(resultVideoTag, /\bcontrols\b/);
+  assert.match(
+    eventStyles,
+    /\.lancer-battle-result-video \{\s*pointer-events: none;\s*\}/
+  );
+  assert.match(
+    mainSource,
+    /const shouldKeepLancerBattleResultMediaPlaying = \(win\) =>\s*win === lancerBattleWindow &&\s*\(lancerBattleState === LANCER_BATTLE_STAGES\.win \|\|\s*lancerBattleState === LANCER_BATTLE_STAGES\.loss\);/
+  );
+
+  const clickAwayStart = mainSource.lastIndexOf(
+    'document.addEventListener(\n  "pointerdown",\n  (event) => {\n    if (!activeWindow'
+  );
+  const clickAwayEnd = mainSource.indexOf(
+    "\n\nconst pauseActiveWindowMedia",
+    clickAwayStart
+  );
+  assert.notEqual(clickAwayStart, -1, "Missing active-window click-away handler.");
+  assert.notEqual(clickAwayEnd, -1, "Missing click-away handler boundary.");
+  const clickAwayHandler = mainSource.slice(clickAwayStart, clickAwayEnd);
+  assert.match(
+    clickAwayHandler,
+    /if \(!shouldKeepLancerBattleResultMediaPlaying\(activeWindow\)\) \{\s*pauseMediaPlayback\(activeWindow\);\s*\}/
+  );
+  assert.match(
+    clickAwayHandler,
+    /clearActiveAppDwell\(\);\s*activeWindow = null;/
+  );
+  assert.match(
+    mainSource,
+    /const pauseActiveWindowMedia = \(\) => \{[\s\S]*?pauseMediaPlayback\(activeWindow\);[\s\S]*?activeWindow = null;/
+  );
+});
+
 test("relic recovery event defines local relic assets and wiki descriptions", async () => {
   const expectedRelics = [
     ["Offering", "A coin-shaped Relic material.", "offering.webp"],
@@ -1264,10 +1306,10 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=lain-wired-chat-v2-20260806/);
+    assert.match(source, /random-events\.css\?v=lancer-result-click-20260808/);
     assert.match(source, /cursors\.css\?v=text-selection-cursor-20260806/);
     assert.match(source, /minesweeper\.css\?v=minesweeper-mobile-controls-20260724/);
-    assert.match(source, /game-stats\.css\?v=profile-icon-frame-20260807/);
+    assert.match(source, /game-stats\.css\?v=name-caret-fit-20260808/);
     assert.match(source, /style\.css\?v=first-win-stats-handoff-20260722/);
     assert.match(source, /core\/dom\.js\?v=game-build-[a-f0-9]{64}/);
     assert.match(source, /game-stats-backend\.js\?v=game-build-[a-f0-9]{64}/);

@@ -512,7 +512,10 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   assert.match(css, /\.game-profile-generated-name[\s\S]*var\(--border-field\)/);
   assert.match(css, /\.game-profile-generated-name[\s\S]*padding: 2px 25px 2px 4px;/);
   assert.match(css, /\.game-profile-name-toggle[\s\S]*position: absolute;/);
-  assert.match(css, /\.game-profile-name-toggle[\s\S]*right: 1px;[\s\S]*top: 1px;/);
+  assert.match(
+    css,
+    /\.game-profile-name-toggle[\s\S]*height: 17px;[\s\S]*min-height: 17px;[\s\S]*min-width: 17px;[\s\S]*right: 2px;[\s\S]*top: 2px;[\s\S]*width: 17px;/
+  );
   assert.match(css, /\.game-profile-reroll \{/);
   assert.match(css, /inline-size: 86px;/);
   assert.match(css, /\.game-profile-reroll[\s\S]*justify-content: flex-start;/);

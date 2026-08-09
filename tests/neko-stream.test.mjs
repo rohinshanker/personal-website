@@ -191,11 +191,11 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
   );
   assert.match(
     home,
-    /styles\/home\/random-events\.css\?v=lain-wired-chat-v2-20260806/
+    /styles\/home\/random-events\.css\?v=lancer-result-click-20260808/
   );
   assert.match(
     index,
-    /styles\/home\/random-events\.css\?v=lain-wired-chat-v2-20260806/
+    /styles\/home\/random-events\.css\?v=lancer-result-click-20260808/
   );
   await Promise.all([
     readFile(new URL("assets/neko-assets/sprites/sleep1.png", root)),

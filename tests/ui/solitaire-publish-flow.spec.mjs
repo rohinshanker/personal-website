@@ -282,7 +282,7 @@ const installAdministratorReauthenticationApi = async (page) => {
           ok: true,
           profile: administratorProfile,
           proof: administratorProof,
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
         }),
       });
       return;

@@ -12089,6 +12089,11 @@ const LANCER_BATTLE_STAGES = Object.freeze({
 const isLancerBattleVisible = () =>
   isManagedRandomEventWindowVisible(lancerBattleWindow);
 
+const shouldKeepLancerBattleResultMediaPlaying = (win) =>
+  win === lancerBattleWindow &&
+  (lancerBattleState === LANCER_BATTLE_STAGES.win ||
+    lancerBattleState === LANCER_BATTLE_STAGES.loss);
+
 const setLancerBattleStatus = (message) => {
   if (lancerBattleStatus) lancerBattleStatus.textContent = message;
 };
@@ -30539,7 +30544,9 @@ document.addEventListener(
   (event) => {
     if (!activeWindow || !isWindowVisible(activeWindow)) return;
     if (activeWindow.contains(event.target)) return;
-    pauseMediaPlayback(activeWindow);
+    if (!shouldKeepLancerBattleResultMediaPlaying(activeWindow)) {
+      pauseMediaPlayback(activeWindow);
+    }
     clearActiveAppDwell();
     activeWindow = null;
   },

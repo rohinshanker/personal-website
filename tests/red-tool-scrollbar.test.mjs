@@ -58,7 +58,7 @@ test("Red Tool chat keeps exactly one native arrow at each scrollbar end", async
   );
 
   const expectedReference =
-    "styles/home/random-events.css?v=lain-wired-chat-v2-20260806";
+    "styles/home/random-events.css?v=lancer-result-click-20260808";
   assert.ok(home.includes(expectedReference));
   assert.ok(index.includes(expectedReference));
   const globalStyleIndex = home.indexOf('href="style.css?');

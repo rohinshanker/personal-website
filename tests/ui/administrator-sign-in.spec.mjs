@@ -52,7 +52,7 @@ const configureAdministratorApi = async (page, signInStatus, { onEvent } = {}) =
               icon: ADMINISTRATOR_PROFILE.icon,
             },
             proof: administratorProof,
-            expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
           }),
         });
         return;

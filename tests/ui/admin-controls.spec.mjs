@@ -62,7 +62,7 @@ const preparePage = async (
           JSON.stringify({
             proof,
             expiresAt: new Date(
-              Date.now() + (access === "expired" ? -60_000 : 10 * 60_000)
+              Date.now() + (access === "expired" ? -60_000 : 60 * 60_000)
             ).toISOString(),
           })
         );

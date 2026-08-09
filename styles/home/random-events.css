@@ -4610,6 +4610,10 @@ html.is-wall-breach-shaking body {
   width: 100%;
 }
 
+.lancer-battle-result-video {
+  pointer-events: none;
+}
+
 .lancer-battle-window.is-clashing .lancer-battle-clash-video {
   filter: contrast(1.16) saturate(1.18) brightness(0.96);
 }

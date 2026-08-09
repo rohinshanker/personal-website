@@ -275,6 +275,10 @@ test("content-tool desktop and dock apps open responsive, keyboard-friendly Comi
     const viewport = { width: 1280, height: 800 };
     await page.setViewportSize(viewport);
 
+    const aboutWindow = page.locator("#about-window");
+    await aboutWindow.locator('[data-close="about"]').click();
+    await finishCloseAnimation(aboutWindow);
+
     const openWithRandomValue = async (launcher, win, randomValue) => {
       await launcher.scrollIntoViewIfNeeded();
       await launcher.focus();

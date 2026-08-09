@@ -1692,7 +1692,7 @@ test("health reports the active build and fails when D1 is unavailable", async (
   assert.match((await readJson(missingSchema)).error, /D1 health check failed/);
 });
 
-test("issues an opaque, short-lived administrator proof only after valid credentials", async () => {
+test("issues an opaque, one-hour administrator proof only after valid credentials", async () => {
   const env = createEnv();
   const response = await signInAsAdministrator(env, {
     username: env.ADMIN_USERNAME,
@@ -1709,6 +1709,15 @@ test("issues an opaque, short-lived administrator proof only after valid credent
   });
   assert.match(body.proof, /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
   assert.ok(Date.parse(body.expiresAt) > Date.now());
+  const [encodedProofPayload] = body.proof.split(".");
+  const signedProofPayload = JSON.parse(
+    Buffer.from(encodedProofPayload, "base64url").toString("utf8")
+  );
+  assert.equal(body.expiresAt, signedProofPayload.expiresAt);
+  assert.equal(
+    Date.parse(signedProofPayload.expiresAt) - Date.parse(signedProofPayload.issuedAt),
+    60 * 60 * 1000
+  );
   assert.equal(response.headers.get("Access-Control-Allow-Headers"), "Authorization, Content-Type");
   assert.doesNotMatch(JSON.stringify(body), /test-administrator/);
 
@@ -1741,6 +1750,104 @@ test("issues an opaque, short-lived administrator proof only after valid credent
   }
   assert.equal(missingOrigin.status, 403);
   assert.equal(unsupportedMethod.status, 405);
+});
+
+test("accepts an administrator proof until exactly its one-hour expiry", async () => {
+  const env = createEnv();
+  const signInResponse = await signInAsAdministrator(env, {
+    username: env.ADMIN_USERNAME,
+    password: env.ADMIN_PASSWORD,
+  });
+  const signIn = await readJson(signInResponse);
+  const expiresAtMs = Date.parse(signIn.expiresAt);
+  const acceptedSession = await createSession(env, "minesweeper", {
+    difficulty: "beginner",
+  });
+  const expiredSession = await createSession(env, "minesweeper", {
+    difficulty: "beginner",
+  });
+  await ageSessionForCompletion(env, acceptedSession);
+  await ageSessionForCompletion(env, expiredSession);
+  const administratorProfile = {
+    id: "player-rohin-neko",
+    name: "rohin ^.^",
+    icon: "assets/neko-assets/sprites/yawn1.png",
+  };
+  const acceptedEvent = event({
+    id: "event-administrator-proof-before-expiry",
+    profile: administratorProfile,
+  });
+  const expiredEvent = event({
+    id: "event-administrator-proof-at-expiry",
+    profile: administratorProfile,
+  });
+
+  await withMockedNow(expiresAtMs - 1, async ({ advance }) => {
+    const accepted = await postEvent(env, acceptedEvent, acceptedSession, {
+      authorization: `Bearer ${signIn.proof}`,
+    });
+    assert.equal(accepted.status, 201);
+
+    advance(1);
+    const expired = await postEvent(env, expiredEvent, expiredSession, {
+      authorization: `Bearer ${signIn.proof}`,
+    });
+    assert.equal(expired.status, 403);
+    assert.deepEqual(await readJson(expired), {
+      ok: false,
+      error: "Administrator authorization is invalid",
+    });
+  });
+
+  assert.equal(env.personal_site_game_stats.events.has(acceptedEvent.id), true);
+  assert.equal(env.personal_site_game_stats.events.has(expiredEvent.id), false);
+  assert.equal(env.personal_site_game_stats.sessions.get(expiredSession.id).consumed_at, null);
+});
+
+test("keeps a one-hour administrator proof bound to its sign-in IP", async () => {
+  const env = createEnv();
+  const signInResponse = await signInAsAdministrator(env, {
+    username: env.ADMIN_USERNAME,
+    password: env.ADMIN_PASSWORD,
+  });
+  const signIn = await readJson(signInResponse);
+  const differentIp = "203.0.113.99";
+  const sessionResponse = await worker.fetch(
+    jsonRequest(
+      "/sessions",
+      {
+        game: "minesweeper",
+        config: { difficulty: "beginner" },
+        buildVersion: env.GAME_BUILD_VERSION,
+      },
+      { ip: differentIp }
+    ),
+    env
+  );
+  assert.equal(sessionResponse.status, 201);
+  const session = await readJson(sessionResponse);
+  await ageSessionForCompletion(env, session);
+  const protectedEvent = event({
+    id: "event-administrator-proof-wrong-ip",
+    profile: {
+      id: "player-rohin-neko",
+      name: "rohin ^.^",
+      icon: "assets/neko-assets/sprites/yawn1.png",
+    },
+  });
+
+  const rejected = await postEvent(env, protectedEvent, session, {
+    authorization: `Bearer ${signIn.proof}`,
+    ip: differentIp,
+  });
+
+  assert.equal(rejected.status, 403);
+  assert.deepEqual(await readJson(rejected), {
+    ok: false,
+    error: "Administrator authorization is invalid",
+  });
+  assert.equal(env.personal_site_game_stats.events.has(protectedEvent.id), false);
+  assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
 });
 
 test("rate-limits administrator sign-in attempts and protects the administrator profile", async () => {

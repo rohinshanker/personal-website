@@ -136,7 +136,7 @@ test("each content-tool launcher owns an accessible Coming soon alert", async ()
   assert.match(main, /comingSoonFocusReturns\.get\(win\)[\s\S]*?focusTarget\.focus\(\{ preventScroll: true \}\)/);
   assert.match(
     home,
-    /styles\/home\/random-events\.css\?v=lain-wired-chat-v2-20260806/
+    /styles\/home\/random-events\.css\?v=lancer-result-click-20260808/
   );
   assert.match(
     randomEventStyles,

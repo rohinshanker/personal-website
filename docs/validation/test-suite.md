@@ -151,9 +151,9 @@ that a state machine or user flow executes correctly.
    retain/drop/authentication/status/persistence outcomes.
 
 4. **Complete administrator-proof security coverage.** The Worker tests cover
-   missing, valid, and tampered proofs around
-   `workers/game-stats/src/index.mjs:1075`, but not expired proof, wrong IP,
-   scope, version or profile ID, malformed/missing Bearer tokens, wrong
+   missing, valid, tampered, wrong-IP, and expiry-boundary proofs around
+   `workers/game-stats/src/index.mjs:1075`, but not scope, version or profile
+   ID, malformed/missing Bearer tokens, wrong
    protected name/icon, or incomplete administrator configuration. Every
    rejection must assert zero event inserts and zero session consumption.
 
