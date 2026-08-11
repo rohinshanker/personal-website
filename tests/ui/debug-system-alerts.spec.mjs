@@ -114,6 +114,7 @@ const measureAlert = (page) =>
       };
     };
     const image = document.querySelector("#debug-system-alert-icon");
+    const actions = document.querySelector("#debug-system-alert-actions");
     return {
       win: bounds("#debug-system-alert-window"),
       body: bounds("#debug-system-alert-window .window-body"),
@@ -121,6 +122,7 @@ const measureAlert = (page) =>
       message: bounds("#debug-system-alert-message"),
       actions: bounds("#debug-system-alert-actions"),
       ok: bounds("#debug-system-alert-ok"),
+      actionsJustifyContent: getComputedStyle(actions).justifyContent,
       imageLoaded: image.complete && image.naturalWidth > 0,
       messageWhiteSpace: getComputedStyle(
         document.querySelector("#debug-system-alert-message")
@@ -142,10 +144,12 @@ const expectAlertActionAlignment = async (page, metrics, alignment) => {
   const actions = page.locator("#debug-system-alert-actions");
   if (alignment === "center") {
     await expect(actions).toHaveClass(/\bis-centered\b/);
+    expect(metrics.actionsJustifyContent).toBe("center");
     expect(Math.abs(metrics.ok.centerX - metrics.actions.centerX)).toBeLessThan(1);
     return;
   }
   await expect(actions).not.toHaveClass(/\bis-centered\b/);
+  expect(metrics.actionsJustifyContent).toBe("flex-end");
   expect(Math.abs(metrics.ok.right - metrics.actions.right)).toBeLessThan(1);
 };
 
@@ -172,8 +176,8 @@ test("normal system alerts schedule and all alerts render responsively", async (
 
   const alerts = await page.evaluate(() => window.__debugSystemAlertsTest.alerts);
   expect(alerts).toHaveLength(13);
-  expect(alerts.filter(({ alignment }) => alignment === "right")).toHaveLength(6);
-  expect(alerts.filter(({ alignment }) => alignment === "center")).toHaveLength(7);
+  expect(alerts.filter(({ alignment }) => alignment === "right")).toHaveLength(13);
+  expect(alerts.filter(({ alignment }) => alignment === "center")).toHaveLength(0);
   expect(alerts.filter(({ debug }) => debug).map(({ id }) => id)).toEqual([]);
 
   const win = page.locator("#debug-system-alert-window");
@@ -336,7 +340,7 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
       message:
         "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
       icon: "assets/app-icons/ico/shell_window1.ico",
-      alignment: "center",
+      alignment: "right",
       useEscape: true,
     },
   ];

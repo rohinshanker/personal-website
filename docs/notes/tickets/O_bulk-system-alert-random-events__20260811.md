@@ -26,9 +26,153 @@ The finished implementation must expose a canonical template equivalent to:
 
 ```js
 Object.freeze({
-  id: "replace-with-unique-event-id",
+  id: "System Alert – Substack Reminder",
+  icon: "assets/app-icons/ico/help_book_computer.ico",
+  body: "Don't forget to check out my substack!",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert – Goldfish",
   icon: "assets/app-icons/ico/msg_information.ico",
-  body: "Replace with the system-alert body text.",
+  body: "Don't overfeed your goldfish!",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — Browser Infected",
+  icon: "assets/app-icons/ico/msie1.ico",
+  body: "Attention!!! Multiple viruses have been detected on your computer. I think.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert – Operation Unsupported",
+  icon: "assets/app-icons/ico/msg_error.ico",
+  body: "Error: Operation is not supported.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — Time Warning",
+  icon: "assets/app-icons/ico/clock.ico",
+  body: "Your time is limited. Make the most of it!",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — Question Everything",
+  icon: "assets/app-icons/ico/circle_question.ico",
+  body: "Question everything.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — Degrees",
+  icon: "assets/app-icons/ico/certificate_seal.ico",
+  body: "C's get degrees.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — Comdex",
+  icon: "assets/app-icons/ico/rj_jack.ico",
+  body: "Don't plug in a USB scanner during the COMDEX 1998 Spring Keynote...",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — battery",
+  icon: "assets/app-icons/ico/battery.ico",
+  body: "Warning: Your device has low battery. I believe.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — tabs",
+  icon: "assets/app-icons/ico/accessibility_two_windows.ico",
+  body: "Don't forget to close your unused tabs!",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — eye strain",
+  icon: "assets/app-icons/ico/color_profile_gray.ico",
+  body: "Spending too much time on screens will strain your eyes.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — social media",
+  icon: "assets/app-icons/ico/installer_generic_old.ico",
+  body: "Social media promotes inflammatory content to maintian your attention and make the most ad revenue off of you.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — Language",
+  icon: "assets/app-icons/ico/charmap.ico",
+  body: "Learn another language! There are few better things you can spend your time doing.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — radio waves",
+  icon: "assets/app-icons/ico/infrared.ico",
+  body: "Continuous exposure to Wi-Fi and radio waves isn't the best for your body.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — Cereal",
+  icon: "assets/app-icons/ico/search_computer.ico",
+  body: "I love cereal.",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert — Keys",
+  icon: "assets/app-icons/ico/keys.ico",
+  body: "Don't forget your keys, phone, and wallet!",
+  buttons: Object.freeze([
+    Object.freeze({ label: "OK", action: "dismiss" }),
+  ]),
+  buttonAlignment: "right",
+})
+Object.freeze({
+  id: "System Alert - Photos",
+  icon: "assets/app-icons/ico/pictures.ico",
+  body: "Don't forget to backup your photos. Memories are irreplaceable.",
   buttons: Object.freeze([
     Object.freeze({ label: "OK", action: "dismiss" }),
   ]),

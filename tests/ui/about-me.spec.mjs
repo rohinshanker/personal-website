@@ -29,7 +29,12 @@ const expectedLinks = [
     "users_green.ico",
   ],
   ["Instagram", "@rrohinss", "https://www.instagram.com/rohin.personal", "camera.ico"],
-  ["Substack", "@rohins", "https://substack.com/@rohins", "newspaper.ico"],
+  [
+    "Substack",
+    "@rohins",
+    "https://rohins.substack.com/?utm_campaign=profile_chips",
+    "newspaper.ico",
+  ],
   [
     "Spotify",
     "@rohin",

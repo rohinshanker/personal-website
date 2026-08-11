@@ -38,42 +38,42 @@ const expectedAlerts = [
     title: "Error Starting Program",
     icon: "assets/app-icons/ico/msg_warning.ico",
     message: "A required file È9å|ļ1(VÿB.LL was not found.",
-    alignment: "center",
+    alignment: "right",
   },
   {
     id: "unexpected-error",
     title: "Microsoft Data Link",
     icon: "assets/app-icons/ico/msg_warning.ico",
     message: "An unexpected error. Please investigate.",
-    alignment: "center",
+    alignment: "right",
   },
   {
     id: "three-wise-monkeys",
     title: "System Alert",
     icon: "assets/app-icons/ico/msagent_file.ico",
     message: "See no evil, hear no evil, speak no evil.",
-    alignment: "center",
+    alignment: "right",
   },
   {
     id: "ask-for-help",
     title: "System Alert",
     icon: "assets/app-icons/ico/help_question_mark.ico",
     message: "It is okay to ask for help when you need it.",
-    alignment: "center",
+    alignment: "right",
   },
   {
     id: "leave-the-house",
     title: "System Alert",
     icon: "assets/app-icons/ico/address_book_home.ico",
     message: "Don't forget to leave your house sometimes!",
-    alignment: "center",
+    alignment: "right",
   },
   {
     id: "always-watching",
     title: "System Alert",
     icon: "assets/app-icons/ico/file_eye.ico",
     message: "They are always watching.",
-    alignment: "center",
+    alignment: "right",
   },
   {
     id: "seneca-announcement",
@@ -101,8 +101,17 @@ const expectedAlerts = [
     icon: "assets/app-icons/ico/shell_window1.ico",
     message:
       "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
-    alignment: "center",
+    alignment: "right",
   },
+];
+const formerlyCenteredAlertIds = [
+  "required-file",
+  "unexpected-error",
+  "three-wise-monkeys",
+  "ask-for-help",
+  "leave-the-house",
+  "always-watching",
+  "power-cycle-reminder",
 ];
 
 const readAlertConfiguration = (source) => {
@@ -127,6 +136,12 @@ test("system alert events preserve the requested content and local assets", asyn
   assert.deepEqual(
     alerts.filter(({ debug }) => debug).map(({ id }) => id),
     []
+  );
+  assert.deepEqual(
+    alerts
+      .filter(({ id }) => formerlyCenteredAlertIds.includes(id))
+      .map(({ id, alignment }) => ({ id, alignment })),
+    formerlyCenteredAlertIds.map((id) => ({ id, alignment: "right" }))
   );
   await Promise.all(alerts.map(({ icon }) => access(new URL(icon, root))));
 });

@@ -548,6 +548,26 @@ test("direct events and fixed seeded controls run locally without duplicate natu
     "someone else could be handed your days"
   );
 
+  await eventList.selectOption("debug-system-alert-power-cycle-reminder");
+  const systemAlertPreviewActions = eventPreview.locator(
+    "#debug-system-alert-actions"
+  );
+  await expect(systemAlertPreviewActions).not.toHaveClass(/\bis-centered\b/);
+  await expect(systemAlertPreviewActions).toHaveCSS("justify-content", "flex-end");
+  const systemAlertPreviewAlignment = {
+    actionsRight: await systemAlertPreviewActions.evaluate(
+      (actions) => actions.getBoundingClientRect().right
+    ),
+    okRight: await eventPreview
+      .locator("#debug-system-alert-ok")
+      .evaluate((ok) => ok.getBoundingClientRect().right),
+  };
+  expect(
+    Math.abs(
+      systemAlertPreviewAlignment.okRight - systemAlertPreviewAlignment.actionsRight
+    )
+  ).toBeLessThan(1);
+
   await eventList.selectOption("feliz-jueves");
   await expect(eventPreview.locator("#feliz-jueves-window")).toBeVisible();
 
