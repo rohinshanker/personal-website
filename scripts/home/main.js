@@ -287,11 +287,6 @@ const {
   randomAlertRememberRow,
   randomAlertRemember,
   debugSystemAlertWindow,
-  debugSystemAlertTitle,
-  debugSystemAlertIcon,
-  debugSystemAlertMessage,
-  debugSystemAlertActions,
-  debugSystemAlertOk,
   nekoStreamAlertWindow,
   nekoStreamAlertIcon,
   nekoStreamAlertYes,
@@ -4900,106 +4895,7 @@ const RANDOM_EVENT_GLOBAL_DEBUG = false;
 // For local testing, enable this together with individual event debug flags.
 // Keep false in committed code.
 const RANDOM_EVENT_DEVELOPER_MODE = false;
-const DEBUG_SYSTEM_ALERTS = Object.freeze([
-  Object.freeze({
-    id: "ram-prices",
-    title: "System Alert",
-    icon: "assets/app-icons/ico/processor.ico",
-    message: "RAM prices went up again.",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "computer-nevermind",
-    title: "System Alert",
-    icon: "assets/app-icons/ico/msg_error.ico",
-    message: "Error: your computer is umm.. uh. actually never mind",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "received-fax",
-    title: "System Alert",
-    icon: "assets/app-icons/ico/fax_machine_exclam.ico",
-    message: "You received a fax.",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "make-art",
-    title: "System Alert",
-    icon: "assets/app-icons/ico/paint_old.ico",
-    message: "Go make some art today!",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "required-file",
-    title: "Error Starting Program",
-    icon: "assets/app-icons/ico/msg_warning.ico",
-    message: "A required file È9å|ļ1(VÿB.LL was not found.",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "unexpected-error",
-    title: "Microsoft Data Link",
-    icon: "assets/app-icons/ico/msg_warning.ico",
-    message: "An unexpected error. Please investigate.",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "three-wise-monkeys",
-    title: "System Alert",
-    icon: "assets/app-icons/ico/msagent_file.ico",
-    message: "See no evil, hear no evil, speak no evil.",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "ask-for-help",
-    title: "System Alert",
-    icon: "assets/app-icons/ico/help_question_mark.ico",
-    message: "It is okay to ask for help when you need it.",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "leave-the-house",
-    title: "System Alert",
-    icon: "assets/app-icons/ico/address_book_home.ico",
-    message: "Don't forget to leave your house sometimes!",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "always-watching",
-    title: "System Alert",
-    icon: "assets/app-icons/ico/file_eye.ico",
-    message: "They are always watching.",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "seneca-announcement",
-    debug: false,
-    title: "System Announcement",
-    icon: "assets/app-icons/ico/certificate_no.ico",
-    message:
-      "“Let it offend you that someone else could be handed your days and turn them into something greater.”\n" +
-      "—Lucius Annaeus Seneca",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "deodorant-reminder",
-    debug: false,
-    title: "System Alert",
-    icon: "assets/app-icons/ico/user_computer_pair.ico",
-    message:
-      "Be sure to shower and wear deodorant! Or don't. I'm just a website, who am I to tell you?",
-    alignment: "right",
-  }),
-  Object.freeze({
-    id: "power-cycle-reminder",
-    debug: false,
-    title: "System Alert",
-    icon: "assets/app-icons/ico/shell_window1.ico",
-    message:
-      "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
-    alignment: "right",
-  }),
-]);
+const SYSTEM_ALERTS = window.rohinSystemAlerts.definitions;
 const RANDOM_EVENT_RELOAD_KEY = "personalSiteRandomEventReloadPending";
 const SAUL_AD_IMAGES = [
   "assets/random%20events/saul1.jpg",
@@ -5688,6 +5584,11 @@ const bindRandomEventButton = (button, action) => {
 const isDebugSystemAlertVisible = () =>
   isManagedRandomEventWindowVisible(debugSystemAlertWindow);
 
+const debugSystemAlertReducedMotionQuery =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)")
+    : null;
+
 const resetDebugSystemAlert = () => {
   debugSystemAlertActiveId = "";
   if (debugSystemAlertWindow) delete debugSystemAlertWindow.dataset.alertId;
@@ -5700,6 +5601,44 @@ const resetDebugSystemAlert = () => {
   ) {
     focusTarget.focus({ preventScroll: true });
   }
+  if (debugSystemAlertWindow?.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
+};
+
+const renderDebugSystemAlert = (
+  alert,
+  {
+    root = debugSystemAlertWindow,
+    interactive = root === debugSystemAlertWindow,
+  } = {}
+) => {
+  if (!alert || !root) return [];
+  const title = root.querySelector("#debug-system-alert-title");
+  const icon = root.querySelector("#debug-system-alert-icon");
+  const message = root.querySelector("#debug-system-alert-message");
+  const actions = root.querySelector("#debug-system-alert-actions");
+  if (title) title.textContent = alert.title;
+  if (icon) icon.src = alert.icon;
+  if (message) message.textContent = alert.body;
+  if (!actions) return [];
+
+  actions.dataset.buttonAlignment = alert.buttonAlignment;
+  const buttons = alert.buttons.map((buttonDefinition) => {
+    const button = actions.ownerDocument.createElement("button");
+    button.type = "button";
+    button.className = "debug-system-alert-action";
+    button.dataset.systemAlertButtonId = buttonDefinition.id;
+    button.dataset.systemAlertAction = buttonDefinition.action;
+    button.textContent = buttonDefinition.label;
+    if (interactive && buttonDefinition.action === "dismiss") {
+      bindRandomEventButton(button, closeDebugSystemAlert);
+    }
+    return button;
+  });
+  actions.replaceChildren(...buttons);
+  root.dataset.alertId = alert.id;
+  return buttons;
 };
 
 const showDebugSystemAlert = (alert) => {
@@ -5707,16 +5646,10 @@ const showDebugSystemAlert = (alert) => {
 
   const focusReturn =
     document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  let actionButtons = [];
   const didOpen = showManagedRandomEventWindow(debugSystemAlertWindow, {
     beforeShow: () => {
-      debugSystemAlertTitle.textContent = alert.title;
-      debugSystemAlertIcon.src = alert.icon;
-      debugSystemAlertMessage.textContent = alert.message;
-      debugSystemAlertActions.classList.toggle(
-        "is-centered",
-        alert.alignment === "center"
-      );
-      debugSystemAlertWindow.dataset.alertId = alert.id;
+      actionButtons = renderDebugSystemAlert(alert);
     },
     clampAfterMediaLoad: true,
   });
@@ -5724,12 +5657,19 @@ const showDebugSystemAlert = (alert) => {
 
   debugSystemAlertActiveId = alert.id;
   debugSystemAlertFocusReturn = focusReturn;
-  requestAnimationFrame(() => debugSystemAlertOk?.focus({ preventScroll: true }));
+  if (debugSystemAlertReducedMotionQuery?.matches) {
+    debugSystemAlertWindow.classList.remove("is-opening");
+  }
+  requestAnimationFrame(() => actionButtons[0]?.focus({ preventScroll: true }));
   return true;
 };
 
 const closeDebugSystemAlert = () => {
   closeManagedRandomEventWindow(debugSystemAlertWindow);
+  if (!debugSystemAlertReducedMotionQuery?.matches || !debugSystemAlertWindow) return;
+  debugSystemAlertWindow.classList.remove("is-closing");
+  debugSystemAlertWindow.classList.add("is-hidden");
+  resetDebugSystemAlert();
 };
 
 const isNekoStreamAlertVisible = () =>
@@ -16926,19 +16866,18 @@ const STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze({
   idleInterval: 0.4,
 });
 
-DEBUG_SYSTEM_ALERTS.forEach((alert) => {
+SYSTEM_ALERTS.forEach((alert) => {
   registerRandomEvent({
     id: `debug-system-alert-${alert.id}`,
-    debug: alert.debug === true,
+    debug: false,
     probability: STANDARD_RANDOM_EVENT_PROBABILITY,
     probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
     kind: RANDOM_EVENT_KIND_INTERACTIVE,
     isVisible: isDebugSystemAlertVisible,
     canTrigger: () => !isDebugSystemAlertVisible(),
     preloadTargets: () => [alert.icon],
-    run: () => {
-      showDebugSystemAlert(alert);
-    },
+    run: () => showDebugSystemAlert(alert),
+    systemAlert: alert,
   });
 });
 
@@ -25322,7 +25261,6 @@ bindRandomEventButton(nobleSteedResultOk, closeNobleSteedResultWindow);
 bindManagedRandomEventWindowAnimation(nobleSteedWindow);
 bindManagedRandomEventWindowAnimation(nobleSteedResultWindow);
 
-bindRandomEventButton(debugSystemAlertOk, closeDebugSystemAlert);
 bindManagedRandomEventWindowAnimation(debugSystemAlertWindow, {
   afterClose: resetDebugSystemAlert,
   unloadImages: false,
@@ -30798,8 +30736,8 @@ const formatAdminRandomEventLabel = (eventId) => {
   }
   if (eventId.startsWith("debug-system-alert-")) {
     const alertId = eventId.slice("debug-system-alert-".length);
-    const alert = DEBUG_SYSTEM_ALERTS.find((candidate) => candidate.id === alertId);
-    return alert ? `System Alert — ${alert.message}` : "System Alert";
+    const alert = SYSTEM_ALERTS.find((candidate) => candidate.id === alertId);
+    return alert ? alert.label : "System Alert";
   }
   return eventId
     .split("-")
@@ -31133,16 +31071,7 @@ const drawDistressSignalPreview = (preview) => {
 };
 
 const configureDebugSystemAlertPreview = (preview, alert) => {
-  if (!preview || !alert) return;
-  const title = preview.querySelector("#debug-system-alert-title");
-  const icon = preview.querySelector("#debug-system-alert-icon");
-  const message = preview.querySelector("#debug-system-alert-message");
-  const actions = preview.querySelector("#debug-system-alert-actions");
-  if (title) title.textContent = alert.title;
-  if (icon) icon.src = alert.icon;
-  if (message) message.textContent = alert.message;
-  actions?.classList.toggle("is-centered", alert.alignment === "center");
-  preview.setAttribute("data-alert-id", alert.id);
+  renderDebugSystemAlert(alert, { root: preview, interactive: false });
 };
 
 const createAdminRandomEventPreviewTemplate = (eventId) => {
@@ -31151,19 +31080,15 @@ const createAdminRandomEventPreviewTemplate = (eventId) => {
     return prepareAdminRandomEventPreview(felizJuevesWindow, normalizedId);
   }
 
-  const debugPrefix = "debug-system-alert-";
-  if (normalizedId.startsWith(debugPrefix)) {
-    const alert = DEBUG_SYSTEM_ALERTS.find(
-      (candidate) => candidate.id === normalizedId.slice(debugPrefix.length)
-    );
-    const preview = prepareAdminRandomEventPreview(debugSystemAlertWindow, normalizedId);
-    configureDebugSystemAlertPreview(preview, alert);
-    return alert ? preview : null;
-  }
-
   const definition = randomEventDefinitions.find(
     (candidate) => candidate.id === normalizedId
   );
+  if (definition?.systemAlert) {
+    const preview = prepareAdminRandomEventPreview(debugSystemAlertWindow, normalizedId);
+    configureDebugSystemAlertPreview(preview, definition.systemAlert);
+    return preview;
+  }
+
   const preview = prepareAdminRandomEventPreview(
     getAdminRandomEventPreviewSource(definition),
     normalizedId
@@ -31307,7 +31232,7 @@ const runAdminScenePreset = async (
   }
 
   if (presetId === "notification") {
-    const opened = showDebugSystemAlert(DEBUG_SYSTEM_ALERTS[0]);
+    const opened = showDebugSystemAlert(SYSTEM_ALERTS[0]);
     return adminRandomEventResult(
       opened,
       opened ? "Opened a notification scene." : "A notification is already open."

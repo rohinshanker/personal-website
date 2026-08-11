@@ -201,7 +201,9 @@ test("content-tool random placement is contained and accessible across the viewp
         );
 
         const nativeButtonStyles = await getNativeButtonStyle(
-          page.locator("#debug-system-alert-ok")
+          page.locator(
+            '#debug-system-alert-actions [data-system-alert-button-id="ok"]'
+          )
         );
         for (const selector of app.actionSelectors) {
           const action = opened.win.locator(selector);

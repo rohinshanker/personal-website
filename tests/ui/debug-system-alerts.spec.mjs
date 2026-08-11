@@ -1,9 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import {
-  isolateAllProductionDebug,
-  isolateProductionPerEventDebug,
-} from "./helpers/random-event-debug.mjs";
+import { isolateProductionPerEventDebug } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(300_000);
 
@@ -26,17 +23,12 @@ const disableRemoteGameStats = async (page) => {
   );
 };
 
-const installDebugAlertTestBridge = async (
-  page,
-  { preserveSystemAlertDebugFlags = false } = {}
-) => {
+const installDebugAlertTestBridge = async (page) => {
   const mainSource = await readFile(
     new URL("../../scripts/home/main.js", import.meta.url),
     "utf8"
   );
-  const isolatedSource = preserveSystemAlertDebugFlags
-    ? isolateProductionPerEventDebug(mainSource)
-    : isolateAllProductionDebug(mainSource);
+  const isolatedSource = isolateProductionPerEventDebug(mainSource);
   const zeroDelaySource = isolatedSource.replace(
     "const RANDOM_EVENT_DELAY_MAX_MS = 2000;",
     "const RANDOM_EVENT_DELAY_MAX_MS = 0;"
@@ -45,12 +37,26 @@ const installDebugAlertTestBridge = async (
     /\n\}\)\(\);\s*$/,
     `
 window.__debugSystemAlertsTest = Object.freeze({
-  alerts: DEBUG_SYSTEM_ALERTS.map((alert) => ({ ...alert })),
+  alerts: SYSTEM_ALERTS.map((alert) => ({
+    ...alert,
+    buttons: alert.buttons.map((button) => ({ ...button })),
+  })),
   activeId: () => debugSystemAlertActiveId,
   open(id) {
-    const alertIndex = DEBUG_SYSTEM_ALERTS.findIndex((alert) => alert.id === id);
+    const alertIndex = SYSTEM_ALERTS.findIndex((alert) => alert.id === id);
     if (alertIndex < 0) return false;
-    return showDebugSystemAlert(DEBUG_SYSTEM_ALERTS[alertIndex]);
+    return showDebugSystemAlert(SYSTEM_ALERTS[alertIndex]);
+  },
+  normalize(input) {
+    const alert = window.rohinSystemAlerts.normalizeDefinitions([input])[0];
+    return {
+      ...alert,
+      buttons: alert.buttons.map((button) => ({ ...button })),
+    };
+  },
+  openSynthetic(input) {
+    const alert = window.rohinSystemAlerts.normalizeDefinitions([input])[0];
+    return showDebugSystemAlert(alert);
   },
   trigger(name = "startButton") {
     return triggerRandomEvents(name);
@@ -85,17 +91,46 @@ const dispatchAnimationEnd = async (locator, animationName) => {
   await locator.dispatchEvent("animationend", { animationName });
 };
 
-const closeAlert = async (page, useEscape = false) => {
+const systemAlertButtons = (page) =>
+  page.locator("#debug-system-alert-actions [data-system-alert-action]");
+
+const closeAlert = async (
+  page,
+  { buttonId = null, key = "Enter", useEscape = false } = {}
+) => {
   const win = page.locator("#debug-system-alert-window");
-  const ok = page.locator("#debug-system-alert-ok");
+  const button = buttonId
+    ? page.locator(
+        `#debug-system-alert-actions [data-system-alert-button-id="${buttonId}"]`
+      )
+    : systemAlertButtons(page).first();
   if (useEscape) {
-    await ok.press("Escape");
+    await button.press("Escape");
   } else {
-    await ok.press("Enter");
+    await button.press(key);
   }
   await expect(win).toHaveAttribute("aria-hidden", "true");
+  const reducedMotion = await page.evaluate(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+  if (reducedMotion) {
+    await expect(win).toBeHidden();
+    await expect(win).not.toHaveClass(/is-closing/);
+    return;
+  }
   await dispatchAnimationEnd(win, "retro-window-close");
   await expect(win).toBeHidden();
+};
+
+const waitForSystemAlertIcon = async (page) => {
+  const icon = page.locator("#debug-system-alert-icon");
+  await expect.poll(
+    () =>
+      icon.evaluate(
+        (image) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0
+      ),
+    { message: "system-alert icon should finish decoding" }
+  ).toBe(true);
 };
 
 const measureAlert = (page) =>
@@ -115,15 +150,26 @@ const measureAlert = (page) =>
     };
     const image = document.querySelector("#debug-system-alert-icon");
     const actions = document.querySelector("#debug-system-alert-actions");
+    const actionButtons = Array.from(
+      actions.querySelectorAll("[data-system-alert-action]")
+    );
     return {
       win: bounds("#debug-system-alert-window"),
       body: bounds("#debug-system-alert-window .window-body"),
       icon: bounds("#debug-system-alert-icon"),
       message: bounds("#debug-system-alert-message"),
       actions: bounds("#debug-system-alert-actions"),
-      ok: bounds("#debug-system-alert-ok"),
+      actionButtons: actionButtons.map((button) => {
+        const rect = button.getBoundingClientRect();
+        return {
+          left: rect.left,
+          right: rect.right,
+          centerX: rect.left + rect.width / 2,
+        };
+      }),
       actionsJustifyContent: getComputedStyle(actions).justifyContent,
-      imageLoaded: image.complete && image.naturalWidth > 0,
+      imageLoaded:
+        image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
       messageWhiteSpace: getComputedStyle(
         document.querySelector("#debug-system-alert-message")
       ).whiteSpace,
@@ -142,18 +188,25 @@ const expectContained = (inner, outer, tolerance = 0.6) => {
 
 const expectAlertActionAlignment = async (page, metrics, alignment) => {
   const actions = page.locator("#debug-system-alert-actions");
-  if (alignment === "center") {
-    await expect(actions).toHaveClass(/\bis-centered\b/);
-    expect(metrics.actionsJustifyContent).toBe("center");
-    expect(Math.abs(metrics.ok.centerX - metrics.actions.centerX)).toBeLessThan(1);
+  await expect(actions).toHaveAttribute("data-button-alignment", alignment);
+  const firstButton = metrics.actionButtons[0];
+  const lastButton = metrics.actionButtons.at(-1);
+  const buttonGroupCenter = (firstButton.left + lastButton.right) / 2;
+  if (alignment === "left") {
+    expect(metrics.actionsJustifyContent).toBe("flex-start");
+    expect(Math.abs(firstButton.left - metrics.actions.left)).toBeLessThan(1);
     return;
   }
-  await expect(actions).not.toHaveClass(/\bis-centered\b/);
+  if (alignment === "center") {
+    expect(metrics.actionsJustifyContent).toBe("center");
+    expect(Math.abs(buttonGroupCenter - metrics.actions.centerX)).toBeLessThan(1);
+    return;
+  }
   expect(metrics.actionsJustifyContent).toBe("flex-end");
-  expect(Math.abs(metrics.ok.right - metrics.actions.right)).toBeLessThan(1);
+  expect(Math.abs(lastButton.right - metrics.actions.right)).toBeLessThan(1);
 };
 
-test("normal system alerts schedule and all alerts render responsively", async ({
+test("all production system alerts schedule and render through the shared shell", async ({
   page,
 }, testInfo) => {
   const consoleErrors = [];
@@ -175,10 +228,13 @@ test("normal system alerts schedule and all alerts render responsively", async (
   await page.waitForFunction(() => Boolean(window.__debugSystemAlertsTest));
 
   const alerts = await page.evaluate(() => window.__debugSystemAlertsTest.alerts);
-  expect(alerts).toHaveLength(13);
-  expect(alerts.filter(({ alignment }) => alignment === "right")).toHaveLength(13);
-  expect(alerts.filter(({ alignment }) => alignment === "center")).toHaveLength(0);
-  expect(alerts.filter(({ debug }) => debug).map(({ id }) => id)).toEqual([]);
+  expect(alerts).toHaveLength(30);
+  expect(alerts.filter(({ buttonAlignment }) => buttonAlignment === "right")).toHaveLength(
+    30
+  );
+  expect(alerts.every(({ buttons }) => buttons.length === 1)).toBe(true);
+  expect(alerts.map(({ id }) => id)).toContain("substack-reminder");
+  expect(alerts.map(({ id }) => id)).toContain("photos");
 
   const win = page.locator("#debug-system-alert-window");
   const sentinel = page.locator("#taskbar-clock-button");
@@ -196,7 +252,11 @@ test("normal system alerts schedule and all alerts render responsively", async (
   expect(normallyScheduled).toBe(true);
   await expect(win).toBeVisible();
   await expect(win).toHaveAttribute("data-alert-id", "ram-prices");
-  await expect(page.locator("#debug-system-alert-ok")).toBeFocused();
+  await expect(systemAlertButtons(page).first()).toBeFocused();
+  await expect(win).not.toHaveClass(/is-opening/);
+  expect(await win.evaluate((element) => getComputedStyle(element).animationName)).toBe(
+    "none"
+  );
   await dispatchAnimationEnd(win, "retro-window-open");
   await closeAlert(page);
   await page.evaluate(() => {
@@ -204,7 +264,11 @@ test("normal system alerts schedule and all alerts render responsively", async (
   });
   await expect(sentinel).toBeFocused();
 
-  for (const viewport of viewports) {
+  const productionViewports = [
+    { width: 375, height: 812, name: "mobile" },
+    { width: 1280, height: 800, name: "desktop" },
+  ];
+  for (const viewport of productionViewports) {
     await test.step(viewport.name, async () => {
       await page.setViewportSize(viewport);
       for (const alert of alerts) {
@@ -221,16 +285,24 @@ test("normal system alerts schedule and all alerts render responsively", async (
         await expect(win).toHaveAttribute("role", "alertdialog");
         await expect(win).toHaveAttribute("data-alert-id", alert.id);
         await expect(win).toHaveAccessibleName(alert.title);
-        await expect(win).toHaveAccessibleDescription(alert.message);
+        await expect(win).toHaveAccessibleDescription(alert.body);
         await expect(page.locator("#debug-system-alert-title")).toHaveText(alert.title);
         await expect(page.locator("#debug-system-alert-message")).toHaveText(
-          alert.message
+          alert.body
         );
         await expect(page.locator("#debug-system-alert-icon")).toHaveAttribute(
           "src",
           alert.icon
         );
-        await expect(page.locator("#debug-system-alert-ok")).toBeFocused();
+        const buttons = systemAlertButtons(page);
+        await expect(buttons).toHaveCount(alert.buttons.length);
+        await expect(buttons.first()).toBeFocused();
+        await expect(buttons.first()).toHaveAttribute(
+          "data-system-alert-button-id",
+          alert.buttons[0].id
+        );
+        await expect(buttons.first()).toHaveText(alert.buttons[0].label);
+        await waitForSystemAlertIcon(page);
 
         const metrics = await measureAlert(page);
         expect(metrics.imageLoaded).toBe(true);
@@ -241,9 +313,21 @@ test("normal system alerts schedule and all alerts render responsively", async (
         expect(metrics.win.bottom).toBeLessThanOrEqual(viewport.height - 63.5);
         expectContained(metrics.icon, metrics.body);
         expectContained(metrics.message, metrics.body);
-        expectContained(metrics.ok, metrics.body);
+        for (const actionButton of await buttons.all()) {
+          const box = await actionButton.boundingBox();
+          expect(box).not.toBeNull();
+          expectContained(
+            {
+              left: box.x,
+              top: box.y,
+              right: box.x + box.width,
+              bottom: box.y + box.height,
+            },
+            metrics.body
+          );
+        }
         expect(Math.abs(metrics.icon.centerY - metrics.message.centerY)).toBeLessThan(1);
-        await expectAlertActionAlignment(page, metrics, alert.alignment);
+        await expectAlertActionAlignment(page, metrics, alert.buttonAlignment);
         if (alert.id === "seneca-announcement") {
           expect(metrics.win.width).toBeCloseTo(
             Math.min(340, viewport.width - 32),
@@ -259,7 +343,9 @@ test("normal system alerts schedule and all alerts render responsively", async (
           alert.id === "required-file" ||
           alert.id === "seneca-announcement" ||
           alert.id === "deodorant-reminder" ||
-          alert.id === "power-cycle-reminder"
+          alert.id === "power-cycle-reminder" ||
+          alert.id === "social-media" ||
+          alert.id === "photos"
         ) {
           await page.screenshot({
             path: testInfo.outputPath(
@@ -268,11 +354,172 @@ test("normal system alerts schedule and all alerts render responsively", async (
           });
         }
 
-        await closeAlert(page, alert.id === "always-watching");
+        await closeAlert(page, { useEscape: alert.id === "always-watching" });
         await expect(sentinel).toBeFocused();
       }
     });
   }
+
+  expect(runtimeErrors).toEqual([]);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("normalized alert configurations render every alignment and content stress case", async ({
+  page,
+}, testInfo) => {
+  const consoleErrors = [];
+  const runtimeErrors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(() => {
+    Math.random = () => 0.999999;
+    localStorage.clear();
+  });
+  await disableRemoteGameStats(page);
+  await installDebugAlertTestBridge(page);
+  await page.goto("/home.html", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => Boolean(window.__debugSystemAlertsTest));
+
+  const rawCases = [
+    {
+      id: "synthetic-default",
+      icon: "assets/app-icons/ico/msg_information.ico",
+      body: "Defaults create one right-aligned OK button.",
+    },
+    {
+      id: "synthetic-left",
+      icon: "assets/app-icons/ico/circle_question.ico",
+      body: "Left-aligned action.",
+      buttons: [{ id: "continue", label: "Continue", action: "dismiss" }],
+      buttonAlignment: "left",
+    },
+    {
+      id: "synthetic-center",
+      icon: "assets/app-icons/ico/keys.ico",
+      body: "Two centered actions stay in their configured order.",
+      buttons: [
+        { id: "retry", label: "Retry", action: "dismiss" },
+        { id: "cancel", label: "Cancel", action: "dismiss" },
+      ],
+      buttonAlignment: "center",
+    },
+    {
+      id: "synthetic-long-content",
+      title: "System Alert <not markup>",
+      icon: "assets/app-icons/ico/pictures.ico",
+      body:
+        "First line with <strong>plain text</strong> & characters.\n" +
+        "Second line contains a deliberately long uninterrupted value: " +
+        "this-is-a-long-unbroken-string-that-must-wrap-without-overflowing-the-window-or-viewport.",
+      buttons: [
+        { id: "first", label: "First", action: "dismiss" },
+        { id: "second", label: "Second", action: "dismiss" },
+        { id: "third", label: "Third", action: "dismiss" },
+      ],
+      buttonAlignment: "right",
+    },
+  ];
+  const cases = await page.evaluate((inputs) =>
+    inputs.map((input) => window.__debugSystemAlertsTest.normalize(input)), rawCases
+  );
+  expect(cases[0]).toMatchObject({
+    title: "System Alert",
+    buttonAlignment: "right",
+    buttons: [{ id: "ok", label: "OK", action: "dismiss" }],
+  });
+
+  const win = page.locator("#debug-system-alert-window");
+  const sentinel = page.locator("#taskbar-clock-button");
+  for (const viewport of viewports) {
+    await test.step(viewport.name, async () => {
+      await page.setViewportSize(viewport);
+      for (const [caseIndex, alert] of cases.entries()) {
+        await sentinel.focus();
+        expect(
+          await page.evaluate(
+            (input) => window.__debugSystemAlertsTest.openSynthetic(input),
+            rawCases[caseIndex]
+          )
+        ).toBe(true);
+        await expect(win).toBeVisible();
+        await dispatchAnimationEnd(win, "retro-window-open");
+        await expect(win).toHaveAccessibleName(alert.title);
+        await expect(win).toHaveAccessibleDescription(alert.body);
+        await expect(page.locator("#debug-system-alert-title")).toHaveText(alert.title);
+        await expect(page.locator("#debug-system-alert-message")).toHaveText(alert.body);
+        await expect(page.locator("#debug-system-alert-message strong")).toHaveCount(0);
+        await expect(page.locator("#debug-system-alert-icon")).toHaveAttribute(
+          "src",
+          alert.icon
+        );
+        await waitForSystemAlertIcon(page);
+
+        const buttons = systemAlertButtons(page);
+        await expect(buttons).toHaveCount(alert.buttons.length);
+        await expect(buttons).toHaveText(alert.buttons.map(({ label }) => label));
+        await expect(buttons.first()).toBeFocused();
+        expect(
+          await buttons.evaluateAll((elements) =>
+            elements.map((button) => button.dataset.systemAlertButtonId)
+          )
+        ).toEqual(alert.buttons.map(({ id }) => id));
+
+        const metrics = await measureAlert(page);
+        expect(metrics.imageLoaded).toBe(true);
+        expect(metrics.documentOverflow).toBe(false);
+        expect(metrics.win.left).toBeGreaterThanOrEqual(11.5);
+        expect(metrics.win.top).toBeGreaterThanOrEqual(11.5);
+        expect(metrics.win.right).toBeLessThanOrEqual(viewport.width - 11.5);
+        expect(metrics.win.bottom).toBeLessThanOrEqual(viewport.height - 63.5);
+        expect(metrics.messageWhiteSpace).toBe("pre-line");
+        await expectAlertActionAlignment(page, metrics, alert.buttonAlignment);
+
+        if (
+          (viewport.name === "short-mobile" || viewport.name === "large-desktop") &&
+          alert.id === "synthetic-long-content"
+        ) {
+          await page.screenshot({
+            path: testInfo.outputPath(
+              `system-alert-${viewport.name}-${alert.id}.png`
+            ),
+          });
+        }
+
+        const lastButtonId = alert.buttons.at(-1).id;
+        await closeAlert(page, {
+          buttonId: lastButtonId,
+          key: alert.id === "synthetic-center" ? "Space" : "Enter",
+        });
+        await expect(sentinel).toBeFocused();
+      }
+    });
+  }
+
+  await sentinel.focus();
+  expect(await page.evaluate(() => window.__debugSystemAlertsTest.open("ram-prices"))).toBe(
+    true
+  );
+  await expect(systemAlertButtons(page).first()).toBeFocused();
+  expect(await page.evaluate(() => window.__debugSystemAlertsTest.open("photos"))).toBe(
+    false
+  );
+  await expect(win).toHaveAttribute("data-alert-id", "ram-prices");
+  await dispatchAnimationEnd(win, "retro-window-open");
+  await closeAlert(page, { useEscape: true });
+  await expect(sentinel).toBeFocused();
+
+  expect(await page.evaluate(() => window.__debugSystemAlertsTest.open("ram-prices"))).toBe(
+    true
+  );
+  await expect(systemAlertButtons(page).first()).toBeFocused();
+  await dispatchAnimationEnd(win, "retro-window-open");
+  await closeAlert(page);
+  await expect(sentinel).toBeFocused();
 
   expect(runtimeErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);
@@ -296,9 +543,7 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
     localStorage.clear();
   });
   await disableRemoteGameStats(page);
-  await installDebugAlertTestBridge(page, {
-    preserveSystemAlertDebugFlags: true,
-  });
+  await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => Boolean(window.__debugSystemAlertsTest));
 
@@ -330,7 +575,7 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
       message:
         "Be sure to shower and wear deodorant! Or don't. I'm just a website, who am I to tell you?",
       icon: "assets/app-icons/ico/user_computer_pair.ico",
-      alignment: "right",
+      buttonAlignment: "right",
       useEscape: false,
     },
     {
@@ -340,7 +585,7 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
       message:
         "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
       icon: "assets/app-icons/ico/shell_window1.ico",
-      alignment: "right",
+      buttonAlignment: "right",
       useEscape: true,
     },
   ];
@@ -367,14 +612,15 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
         "src",
         reminder.icon
       );
-      await expect(page.locator("#debug-system-alert-ok")).toBeFocused();
+      await waitForSystemAlertIcon(page);
+      await expect(systemAlertButtons(page).first()).toBeFocused();
       const metrics = await measureAlert(page);
-      await expectAlertActionAlignment(page, metrics, reminder.alignment);
+      await expectAlertActionAlignment(page, metrics, reminder.buttonAlignment);
       expect(
         await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
       ).toBe(seededCooldown.until);
       await dispatchAnimationEnd(win, "retro-window-open");
-      await closeAlert(page, reminder.useEscape);
+      await closeAlert(page, { useEscape: reminder.useEscape });
       await expect(sentinel).toBeFocused();
     });
   }

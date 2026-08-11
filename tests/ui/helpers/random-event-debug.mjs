@@ -29,14 +29,22 @@ export const isolateProductionPerEventDebug = (
 };
 
 export const isolateAllProductionDebug = (source, { except = [] } = {}) => {
-  const dataDrivenMarker = "debug: alert.debug === true,";
-  if (!source.includes(dataDrivenMarker)) {
+  const dataDrivenStart = "SYSTEM_ALERTS.forEach((alert) => {";
+  const dataDrivenEnd = "\n});\n\nregisterRandomEvent({\n  id: \"neko-stream-system-alert\",";
+  const dataDrivenStartIndex = source.indexOf(dataDrivenStart);
+  const dataDrivenEndIndex = source.indexOf(dataDrivenEnd, dataDrivenStartIndex);
+  const dataDrivenRegistration = source.slice(
+    dataDrivenStartIndex,
+    dataDrivenEndIndex
+  );
+  if (
+    dataDrivenStartIndex < 0 ||
+    dataDrivenEndIndex < 0 ||
+    !dataDrivenRegistration.includes("debug: false,")
+  ) {
     throw new Error("Unable to isolate the data-driven debug alert family.");
   }
-  return isolateProductionPerEventDebug(
-    source.replace(dataDrivenMarker, "debug: false,"),
-    { except }
-  );
+  return isolateProductionPerEventDebug(source, { except });
 };
 
 export const readIsolatedMainSource = async ({ except = [] } = {}) => {

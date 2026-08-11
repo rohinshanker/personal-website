@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { isolateProductionPerEventDebug } from "./helpers/random-event-debug.mjs";
+import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
@@ -24,14 +24,7 @@ const isolateDebugRandomEvents = async (page) => {
     new URL("../../scripts/home/main.js", import.meta.url),
     "utf8"
   );
-  const isolatedSystemAlerts = mainSource.replace(
-    "debug: alert.debug === true,",
-    "debug: false,"
-  );
-  const isolatedSource = isolateProductionPerEventDebug(isolatedSystemAlerts);
-  if (isolatedSystemAlerts === mainSource) {
-    throw new Error("Unable to isolate debug random events for the Red Tool suite.");
-  }
+  const isolatedSource = isolateAllProductionDebug(mainSource);
   await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
     route.fulfill({
       contentType: "application/javascript",

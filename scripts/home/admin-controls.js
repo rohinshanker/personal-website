@@ -45,7 +45,7 @@ const GITHUB_TARGET_PATTERN = /^github:(\d{1,2})$/;
 const EVENT_PREVIEW_STYLESHEETS = Object.freeze([
   "style.css?v=first-win-stats-handoff-20260722",
   "styles/home/base.css?v=admin-launchers-20260803",
-  "styles/home/random-events.css?v=video-editor-launch-20260809",
+  "styles/home/random-events.css?v=bulk-system-alerts-20260811",
 ]);
 const EVENT_PREVIEW_STAGE_STYLES = `
   :host {

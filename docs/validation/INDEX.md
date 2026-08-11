@@ -2,6 +2,7 @@
 
 | Purpose | Scope | Last verified | Document |
 | --- | --- | --- | --- |
+| Copy/paste authoring and validated runtime behavior for basic system-alert random events. | Bulk alert configuration, normalization, shared rendering, automatic registration, Administrator previews, focus, and responsive behavior. | 2026-08-11 | [system-alert-random-events.md](system-alert-random-events.md) |
 | Native-style custom cursor meaning across hover, selection, guarded controls, and Admin target picking. | Entry and Home cursor tokens, pointer-selection lifecycle, light/dark packs, and semantic precedence. | 2026-08-11 | [custom-cursors.md](custom-cursors.md) |
 | Native Windows 98 scrollbar styling without duplicate Chromium arrow slots. | Scoped WebKit scrollbar-button compatibility rules and Red Tool chat scrolling. | 2026-08-06 | [native-scrollbars.md](native-scrollbars.md) |
 | Reachable About Me title bar, compact dynamic height, and internally scrollable content. | About Me window sizing, compact content grid, Close control, taskbar clearance, and breakpoint behavior. | 2026-08-05 | [about-me-responsive.md](about-me-responsive.md) |

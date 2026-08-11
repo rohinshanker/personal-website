@@ -152,7 +152,7 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
   );
   assert.match(
     home,
-    /scripts\/home\/admin-controls\.js\?v=admin-event-preview-20260811/
+    /scripts\/home\/admin-controls\.js\?v=bulk-system-alerts-20260811/
   );
   assert.ok(
     home.indexOf("scripts/home/admin-controls.js") >

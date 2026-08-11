@@ -140,7 +140,6 @@ window.homeDom = {
   debugSystemAlertIcon: byId("debug-system-alert-icon"),
   debugSystemAlertMessage: byId("debug-system-alert-message"),
   debugSystemAlertActions: byId("debug-system-alert-actions"),
-  debugSystemAlertOk: byId("debug-system-alert-ok"),
   nekoStreamAlertWindow: byId("neko-stream-alert-window"),
   nekoStreamAlertIcon: byId("neko-stream-alert-icon"),
   nekoStreamAlertYes: byId("neko-stream-alert-yes"),

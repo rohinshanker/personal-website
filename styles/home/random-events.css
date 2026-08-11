@@ -154,6 +154,7 @@
 
 .random-alert-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
 }
@@ -162,8 +163,16 @@
   min-width: 74px;
 }
 
-.random-alert-actions.is-centered {
+.random-alert-actions[data-button-alignment="left"] {
+  justify-content: flex-start;
+}
+
+.random-alert-actions[data-button-alignment="center"] {
   justify-content: center;
+}
+
+.random-alert-actions[data-button-alignment="right"] {
+  justify-content: flex-end;
 }
 
 .video-editor-launch-error {
@@ -182,6 +191,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .debug-system-alert-window.is-opening,
+  .debug-system-alert-window.is-closing,
   .neko-stream-alert-window.is-opening,
   .neko-stream-alert-window.is-closing {
     animation: none;

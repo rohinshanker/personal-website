@@ -52,14 +52,50 @@ const getRandomEventRegistrationBlocks = (source) => {
   }
 };
 
-test("only the requested Neko event uses debug mode", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+test("all 30 system alerts register normally and only Neko uses debug mode", async () => {
+  const [source, systemAlertSource] = await Promise.all([
+    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readFile(new URL("scripts/home/system-alerts.js", root), "utf8"),
+  ]);
   const registrations = getRandomEventRegistrationBlocks(source);
-  const alertConfigStart = source.indexOf("const DEBUG_SYSTEM_ALERTS =");
-  const alertConfigEnd = source.indexOf("\nconst RANDOM_EVENT_RELOAD_KEY", alertConfigStart);
-  assert.notEqual(alertConfigStart, -1, "The shared system-alert configuration must exist");
-  assert.notEqual(alertConfigEnd, -1, "The shared system-alert configuration must be bounded");
-  const alertConfig = source.slice(alertConfigStart, alertConfigEnd);
+  const alertConfigStart = systemAlertSource.indexOf(
+    "const SYSTEM_ALERT_INPUTS = Object.freeze(["
+  );
+  const alertConfigEnd = systemAlertSource.indexOf(
+    "\n  ]);\n\n  const definitions =",
+    alertConfigStart
+  );
+  assert.notEqual(alertConfigStart, -1, "The shared system-alert inputs must exist");
+  assert.notEqual(alertConfigEnd, -1, "The shared system-alert inputs must be bounded");
+  const alertConfig = systemAlertSource.slice(alertConfigStart, alertConfigEnd);
+  const alertIds = Array.from(
+    alertConfig.matchAll(/^\s+id: "([^"]+)",/gm),
+    (match) => match[1]
+  );
+  const addedAlertIds = [
+    "substack-reminder",
+    "goldfish",
+    "browser-infected",
+    "operation-unsupported",
+    "time-warning",
+    "question-everything",
+    "degrees",
+    "comdex",
+    "battery",
+    "tabs",
+    "eye-strain",
+    "social-media",
+    "language",
+    "radio-waves",
+    "cereal",
+    "keys",
+    "photos",
+  ];
+
+  assert.equal(alertIds.length, 30, "Every system-alert input must register");
+  assert.equal(new Set(alertIds).size, 30, "System-alert input ids must be unique");
+  assert.deepEqual(alertIds.slice(13), addedAlertIds);
+  assert.equal(addedAlertIds.length, 17);
 
   assert.match(source, /const RANDOM_EVENT_GLOBAL_DEBUG = false;/);
   assert.equal(
@@ -81,26 +117,14 @@ test("only the requested Neko event uses debug mode", async () => {
   assert.equal(
     registrations.length,
     standardRegistrations.length + 1,
-    "Only the data-driven debug alert family may omit a literal id"
+    "Only the data-driven system-alert family may omit a literal id"
   );
   assert.equal(
     source.match(/\bdebug\s*:\s*true\b/g)?.length ?? 0,
     1,
     "Only the requested Neko event may bypass probability and the global cooldown"
   );
-  assert.equal(alertConfig.match(/\bdebug\s*:\s*true\b/g)?.length ?? 0, 0);
-  assert.match(
-    alertConfig,
-    /id: "seneca-announcement",[\s\S]*?debug: false,/
-  );
-  assert.match(
-    alertConfig,
-    /id: "deodorant-reminder",[\s\S]*?debug: false,/
-  );
-  assert.match(
-    alertConfig,
-    /id: "power-cycle-reminder",[\s\S]*?debug: false,/
-  );
+  assert.doesNotMatch(systemAlertSource, /\bdebug\s*:/);
   const expectedDebugIds = new Set([
     "neko-stream-system-alert",
   ]);
@@ -130,10 +154,38 @@ test("only the requested Neko event uses debug mode", async () => {
     /\bdebug\s*:\s*false\b/,
     "Red Tool must remain on its normal probability-gated path"
   );
-  assert.equal(new Set(registeredIds).size, registeredIds.length, "Event ids must remain unique");
+  const generatedSystemAlertIds = alertIds.map((id) => `debug-system-alert-${id}`);
+  assert.equal(generatedSystemAlertIds.length, 30);
+  assert.equal(
+    new Set([...registeredIds, ...generatedSystemAlertIds]).size,
+    registeredIds.length + generatedSystemAlertIds.length,
+    "Literal and generated event ids must remain unique"
+  );
+  const systemAlertRegistration = registrations.find((registration) =>
+    /id: `debug-system-alert-\$\{alert\.id\}`/.test(registration)
+  );
+  assert.ok(systemAlertRegistration, "The common system-alert registration must exist");
+  assert.match(systemAlertRegistration, /\bdebug:\s*false,/);
+  assert.match(
+    systemAlertRegistration,
+    /\bprobability:\s*STANDARD_RANDOM_EVENT_PROBABILITY,/
+  );
+  assert.match(
+    systemAlertRegistration,
+    /\bprobabilities:\s*STANDARD_RANDOM_EVENT_PROBABILITIES,/
+  );
+  assert.match(systemAlertRegistration, /\bkind:\s*RANDOM_EVENT_KIND_INTERACTIVE,/);
+  assert.match(systemAlertRegistration, /\bisVisible:\s*isDebugSystemAlertVisible,/);
+  assert.match(
+    systemAlertRegistration,
+    /\bcanTrigger:\s*\(\) => !isDebugSystemAlertVisible\(\),/
+  );
+  assert.match(systemAlertRegistration, /\bpreloadTargets:\s*\(\) => \[alert\.icon\],/);
+  assert.match(systemAlertRegistration, /\brun:\s*\(\) => showDebugSystemAlert\(alert\),/);
+  assert.match(systemAlertRegistration, /\bsystemAlert:\s*alert,/);
   assert.match(
     source,
-    /DEBUG_SYSTEM_ALERTS\.forEach\(\(alert\) => \{[\s\S]*?id: `debug-system-alert-\$\{alert\.id\}`,[\s\S]*?debug: alert\.debug === true,/
+    /SYSTEM_ALERTS\.forEach\(\(alert\) => \{[\s\S]*?id: `debug-system-alert-\$\{alert\.id\}`,[\s\S]*?debug: false,/
   );
 });
 

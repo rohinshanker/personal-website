@@ -14,6 +14,25 @@ const administratorProfile = Object.freeze({
   rerollCount: 0,
 });
 const administratorProof = `${"a".repeat(32)}.${"b".repeat(32)}`;
+const bulkSystemAlertEventIds = Object.freeze([
+  "debug-system-alert-substack-reminder",
+  "debug-system-alert-goldfish",
+  "debug-system-alert-browser-infected",
+  "debug-system-alert-operation-unsupported",
+  "debug-system-alert-time-warning",
+  "debug-system-alert-question-everything",
+  "debug-system-alert-degrees",
+  "debug-system-alert-comdex",
+  "debug-system-alert-battery",
+  "debug-system-alert-tabs",
+  "debug-system-alert-eye-strain",
+  "debug-system-alert-social-media",
+  "debug-system-alert-language",
+  "debug-system-alert-radio-waves",
+  "debug-system-alert-cereal",
+  "debug-system-alert-keys",
+  "debug-system-alert-photos",
+]);
 const viewports = [
   { name: "short-mobile", width: 320, height: 568 },
   { name: "mobile", width: 375, height: 812 },
@@ -505,6 +524,24 @@ test("direct events and fixed seeded controls run locally without duplicate natu
     )
   ).toEqual([]);
   const eventLabels = await eventList.locator("option").allTextContents();
+  const bulkSystemAlertCounts = await page.evaluate(
+    (eventIds) =>
+      Object.fromEntries(
+        eventIds.map((eventId) => [
+          eventId,
+          window.rohinAdminOrchestrator
+            .listEvents()
+            .filter((eventDefinition) => eventDefinition.id === eventId).length,
+        ])
+      ),
+    bulkSystemAlertEventIds
+  );
+  expect(bulkSystemAlertCounts).toEqual(
+    Object.fromEntries(bulkSystemAlertEventIds.map((eventId) => [eventId, 1]))
+  );
+  for (const eventId of bulkSystemAlertEventIds) {
+    await expect(eventList.locator(`option[value="${eventId}"]`)).toHaveCount(1);
+  }
   const annoyingLabels = eventLabels.filter((label) => label.startsWith("Annoying "));
   expect(annoyingLabels).toEqual([
     "Annoying Dodging Popup Alert",
@@ -552,15 +589,23 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   const systemAlertPreviewActions = eventPreview.locator(
     "#debug-system-alert-actions"
   );
-  await expect(systemAlertPreviewActions).not.toHaveClass(/\bis-centered\b/);
+  await expect(systemAlertPreviewActions).toHaveAttribute(
+    "data-button-alignment",
+    "right"
+  );
   await expect(systemAlertPreviewActions).toHaveCSS("justify-content", "flex-end");
+  const systemAlertPreviewOk = systemAlertPreviewActions.locator(
+    '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+  );
+  await expect(systemAlertPreviewOk).toHaveCount(1);
+  await expect(systemAlertPreviewOk).toHaveText("OK");
   const systemAlertPreviewAlignment = {
     actionsRight: await systemAlertPreviewActions.evaluate(
       (actions) => actions.getBoundingClientRect().right
     ),
-    okRight: await eventPreview
-      .locator("#debug-system-alert-ok")
-      .evaluate((ok) => ok.getBoundingClientRect().right),
+    okRight: await systemAlertPreviewOk.evaluate(
+      (ok) => ok.getBoundingClientRect().right
+    ),
   };
   expect(
     Math.abs(
@@ -589,14 +634,71 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   );
   await expect(senecaOption).toHaveCount(1);
   await expect(senecaOption).toHaveText("System Announcement — Seneca");
-  await eventList.selectOption("debug-system-alert-seneca-announcement");
-  await page.locator("#admin-trigger-now").click();
+
+  await eventList.selectOption("debug-system-alert-substack-reminder");
+  await expect(eventPreview).toHaveAttribute(
+    "aria-label",
+    "First window preview: System Alert – Substack Reminder"
+  );
+  await expect(eventPreview.locator("#debug-system-alert-title")).toHaveText(
+    "System Alert"
+  );
+  await expect(eventPreview.locator("#debug-system-alert-message")).toHaveText(
+    "Don't forget to check out my substack!"
+  );
+  await expect(eventPreview.locator("#debug-system-alert-icon")).toHaveAttribute(
+    "src",
+    "assets/app-icons/ico/help_book_computer.ico"
+  );
+  const substackPreviewActions = eventPreview.locator("#debug-system-alert-actions");
+  await expect(substackPreviewActions).toHaveAttribute(
+    "data-button-alignment",
+    "right"
+  );
+  const substackPreviewOk = substackPreviewActions.locator(
+    '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+  );
+  await expect(substackPreviewOk).toHaveCount(1);
+  await expect(substackPreviewOk).toHaveText("OK");
+
+  const triggerNow = page.locator("#admin-trigger-now");
+  await triggerNow.click();
   const systemAlert = page.locator(
     "#debug-system-alert-window:not([data-admin-event-preview-window])"
   );
   await expect(systemAlert).toBeVisible();
+  await expect(systemAlert).toHaveAttribute("data-alert-id", "substack-reminder");
+  await expect(systemAlert.locator("#debug-system-alert-title")).toHaveText(
+    "System Alert"
+  );
+  await expect(systemAlert.locator("#debug-system-alert-message")).toHaveText(
+    "Don't forget to check out my substack!"
+  );
+  await expect(systemAlert.locator("#debug-system-alert-icon")).toHaveAttribute(
+    "src",
+    "assets/app-icons/ico/help_book_computer.ico"
+  );
+  const substackLiveActions = systemAlert.locator("#debug-system-alert-actions");
+  await expect(substackLiveActions).toHaveAttribute("data-button-alignment", "right");
+  const substackLiveOk = substackLiveActions.locator(
+    '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+  );
+  await expect(substackLiveOk).toHaveCount(1);
+  await expect(substackLiveOk).toHaveText("OK");
+  await expect(substackLiveOk).toBeFocused();
+  await closeManagedWindow(systemAlert, substackLiveOk);
+  await expect(triggerNow).toBeFocused();
+
+  await eventList.selectOption("debug-system-alert-seneca-announcement");
+  await page.locator("#admin-trigger-now").click();
+  await expect(systemAlert).toBeVisible();
   await expect(systemAlert).toHaveAttribute("data-alert-id", "seneca-announcement");
-  await closeManagedWindow(systemAlert, systemAlert.locator("#debug-system-alert-ok"));
+  await closeManagedWindow(
+    systemAlert,
+    systemAlert.locator(
+      '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+    )
+  );
 
   await eventList.selectOption("behelit-found");
   await page.locator("#admin-trigger-now").click();
@@ -897,7 +999,12 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
   await page.locator('[data-admin-preset="notification"]').click();
   const notification = page.locator("#debug-system-alert-window");
   await expect(notification).toBeVisible();
-  await closeManagedWindow(notification, page.locator("#debug-system-alert-ok"));
+  await closeManagedWindow(
+    notification,
+    notification.locator(
+      '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+    )
+  );
 
   await page.locator('[data-admin-preset="desktop-activity"]').click();
   await expect(page.locator('[data-app-window="windows"]')).toBeVisible();
