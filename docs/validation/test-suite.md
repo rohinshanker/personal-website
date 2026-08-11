@@ -6,7 +6,7 @@ prioritized hardening backlog.
 Scope: Source and contract tests, browser UI tests, the Game Stats Worker and
 D1 boundary, generated artifacts, repository security checks, and CI wiring.
 
-Last verified: 2026-07-31
+Last verified: 2026-08-09
 
 ## Priority scale
 
@@ -19,7 +19,7 @@ Last verified: 2026-07-31
   pass.
 - **P3:** Cleanup that should follow stronger replacement coverage.
 
-## Current inventory
+## 2026-07-31 inventory
 
 | Layer | Files | Collected cases | Assessment |
 | --- | ---: | ---: | --- |
@@ -312,6 +312,26 @@ that a state machine or user flow executes correctly.
    containment edge case.
 
 ## Verification contract
+
+### Layout-regression stability
+
+- Scope geometry assertions from the visible element under test. When a dialog
+  contains hidden and visible copies of the same structure, locate the unique
+  target first and use its nearest containing frame instead of the first
+  generic descendant.
+- Wait for opening and closing animation classes to clear before reading exact
+  `getBoundingClientRect()` values. If production cleanup branches on an
+  animation name, dispatch an `AnimationEvent` with that name rather than a
+  generic event payload.
+- Freeze Playwright Clock for exact timer-backed snapshots. A poll followed by
+  a separate read is otherwise a time-of-check/time-of-use race when a pending
+  timer can mutate the asserted collection between those operations.
+
+The 2026-08-09 regression repair was verified with 238/238 Node tests and
+198/198 Playwright tests using the CI configuration and one worker. Additional
+stress runs passed 24/24 Lancer result cases (four workers, three repeats),
+10/10 Neko menu cases (five workers, ten repeats), and 27/27 profile icon
+picker cases (one worker, three repeats). No visual baseline changed.
 
 Run the smallest affected tests while developing, then complete these gates
 before release:

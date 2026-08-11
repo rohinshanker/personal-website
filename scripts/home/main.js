@@ -174,6 +174,9 @@ const {
   appWindows,
   closeButtons,
   draggableWindows,
+  videoEditorLaunchWindow,
+  videoEditorLaunchYes,
+  videoEditorLaunchError,
   snakeLoadingPanel,
   snakeLoadingMeter,
   snakeLoadingMeterFill,
@@ -4578,6 +4581,13 @@ let droneVideoIndex = 0;
 let activeWindow = null;
 const comingSoonFocusReturns = new WeakMap();
 const expandedWindowState = new WeakMap();
+const FOCUS_RETURN_WINDOW_SELECTOR =
+  "[data-coming-soon-window], [data-launch-prompt-window]";
+const DIALOG_INITIAL_FOCUS_SELECTOR =
+  "[data-dialog-initial-focus], [data-coming-soon-ok]";
+const VIDEO_EDITOR_PATH = "/video-editor/";
+const VIDEO_EDITOR_POPUP_ERROR =
+  "The new tab was blocked. Allow pop-ups for this site, then choose Yes again.";
 // let clashRoyaleLoaded = false;
 // let clashRoyaleLoading = false;
 
@@ -18008,9 +18018,57 @@ const expandSmallWindow = (win) => {
 const getAppWindow = (appId) =>
   document.querySelector(`[data-app-window=\"${appId}\"]`);
 
+const resetVideoEditorLaunchError = () => {
+  if (!videoEditorLaunchError) return;
+  videoEditorLaunchError.textContent = "";
+  videoEditorLaunchError.hidden = true;
+};
+
+const showVideoEditorLaunchError = () => {
+  if (!videoEditorLaunchError) return;
+  videoEditorLaunchError.textContent = VIDEO_EDITOR_POPUP_ERROR;
+  videoEditorLaunchError.hidden = false;
+  requestAnimationFrame(() => {
+    if (videoEditorLaunchWindow) {
+      clampRandomEventWindowToViewport(videoEditorLaunchWindow);
+    }
+  });
+};
+
+const openVideoEditorInNewTab = () => {
+  resetVideoEditorLaunchError();
+  let openedWindow = null;
+  try {
+    openedWindow = window.open(VIDEO_EDITOR_PATH, "_blank");
+  } catch (error) {
+    showVideoEditorLaunchError();
+    return;
+  }
+  if (!openedWindow) {
+    showVideoEditorLaunchError();
+    return;
+  }
+  try {
+    openedWindow.opener = null;
+  } catch (error) {
+    openedWindow.close();
+    showVideoEditorLaunchError();
+    return;
+  }
+  triggerRandomEvents("newTabLink", {
+    href: VIDEO_EDITOR_PATH,
+    source: "video-editor-launcher",
+  });
+  closeAppWindow("video-editor");
+};
+
 const setWindowOpen = (appId, open) => {
   const win = getAppWindow(appId);
   if (!win) return;
+
+  if (open && appId === "video-editor") {
+    resetVideoEditorLaunchError();
+  }
 
   if (open && appId === ADMIN_CONTROLS_APP_ID) {
     const resolvedAppId = resolveAdminControlsLaunchAppId(appId);
@@ -18030,7 +18088,7 @@ const setWindowOpen = (appId, open) => {
       setWindowOpen(resolvedAppId, true);
       requestAnimationFrame(() => {
         getAppWindow(resolvedAppId)
-          ?.querySelector("[data-coming-soon-ok]")
+          ?.querySelector(DIALOG_INITIAL_FOCUS_SELECTOR)
           ?.focus({ preventScroll: true });
       });
       return;
@@ -18110,7 +18168,7 @@ const setWindowOpen = (appId, open) => {
   if (win.classList.contains("is-hidden")) return;
 
   if (
-    win.matches("[data-coming-soon-window]") &&
+    win.matches(FOCUS_RETURN_WINDOW_SELECTOR) &&
     document.activeElement instanceof HTMLElement &&
     !win.contains(document.activeElement)
   ) {
@@ -20914,7 +20972,7 @@ appWindows.forEach((win) => {
       stopMediaPlayback(win);
       win.classList.remove("is-closing");
       win.classList.add("is-hidden");
-      if (win.matches("[data-coming-soon-window]")) {
+      if (win.matches(FOCUS_RETURN_WINDOW_SELECTOR)) {
         const focusTarget = comingSoonFocusReturns.get(win);
         comingSoonFocusReturns.delete(win);
         if (
@@ -28396,17 +28454,17 @@ appButtons.forEach((button) => {
       }
     }
     const win = getAppWindow(launchAppId);
-    const opensComingSoonWindow = Boolean(
-      win?.matches("[data-coming-soon-window]") &&
+    const opensFocusReturnWindow = Boolean(
+      win?.matches(FOCUS_RETURN_WINDOW_SELECTOR) &&
       (win.classList.contains("is-hidden") || win.classList.contains("is-closing"))
     );
-    if (opensComingSoonWindow) {
+    if (opensFocusReturnWindow) {
       comingSoonFocusReturns.set(win, button);
     }
     toggleWindow(launchAppId);
-    if (opensComingSoonWindow) {
+    if (opensFocusReturnWindow) {
       requestAnimationFrame(() => {
-        win.querySelector("[data-coming-soon-ok]")?.focus({ preventScroll: true });
+        win.querySelector(DIALOG_INITIAL_FOCUS_SELECTOR)?.focus({ preventScroll: true });
       });
     }
   });
@@ -28414,25 +28472,27 @@ appButtons.forEach((button) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
-  const focusedComingSoonWindow =
+  const focusedFocusReturnWindow =
     document.activeElement instanceof Element
-      ? document.activeElement.closest("[data-coming-soon-window]")
+      ? document.activeElement.closest(FOCUS_RETURN_WINDOW_SELECTOR)
       : null;
-  const openComingSoonWindow = [
-    focusedComingSoonWindow,
+  const openFocusReturnWindow = [
+    focusedFocusReturnWindow,
     activeWindow,
-    ...document.querySelectorAll("[data-coming-soon-window]"),
+    ...document.querySelectorAll(FOCUS_RETURN_WINDOW_SELECTOR),
   ].find(
     (win) =>
-      win?.matches("[data-coming-soon-window]") &&
+      win?.matches(FOCUS_RETURN_WINDOW_SELECTOR) &&
       !win.classList.contains("is-hidden") &&
       !win.classList.contains("is-closing")
   );
-  if (!openComingSoonWindow) return;
+  if (!openFocusReturnWindow) return;
   event.preventDefault();
   event.stopPropagation();
-  closeAppWindow(openComingSoonWindow.getAttribute("data-app-window"));
+  closeAppWindow(openFocusReturnWindow.getAttribute("data-app-window"));
 });
+
+videoEditorLaunchYes?.addEventListener("click", openVideoEditorInNewTab);
 
 document.querySelectorAll("[data-github-shortcut]").forEach((button) => {
   button.addEventListener("click", () => {

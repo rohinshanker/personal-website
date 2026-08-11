@@ -65,11 +65,13 @@ const preparePage = async (page) => {
     Math.random = () => 0.999999;
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
+  const testTime = new Date("2026-08-08T12:00:00Z");
+  await page.clock.install({ time: testTime.getTime() - 1_000 });
+  await page.clock.pauseAt(testTime);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await expect
     .poll(() => page.evaluate(() => Boolean(window.__lancerBattleResultPlaybackTest)))
     .toBe(true);
-  await page.clock.install({ time: new Date("2026-08-08T12:00:00Z") });
 
   return { consoleErrors, runtimeErrors };
 };
@@ -119,6 +121,14 @@ const expectPlaybackContinuesAfter = async (video, expectedState, click) => {
     });
 };
 
+const dispatchWindowAnimationEnd = (locator, animationName) =>
+  locator.evaluate((element, name) => {
+    if (name === "retro-window-close" && !element.classList.contains("is-closing")) {
+      return;
+    }
+    element.dispatchEvent(new AnimationEvent("animationend", { animationName: name }));
+  }, animationName);
+
 for (const viewport of viewports) {
   for (const outcome of [
     { label: "winning", state: "win", success: true },
@@ -157,8 +167,11 @@ for (const viewport of viewports) {
       });
 
       const geometry = await win.evaluate((windowElement) => {
-        const frame = windowElement.querySelector(".lancer-battle-media-frame");
         const videoElement = windowElement.querySelector("#lancer-battle-result-video");
+        const frame = videoElement?.closest(".lancer-battle-media-frame");
+        if (!frame || !videoElement) {
+          throw new Error("Expected the Lancer result video inside its media frame.");
+        }
         const frameRect = frame.getBoundingClientRect();
         const videoRect = videoElement.getBoundingClientRect();
         const windowRect = windowElement.getBoundingClientRect();
@@ -230,7 +243,7 @@ for (const viewport of viewports) {
         await expect(resultStage).toBeVisible();
         await page.clock.runFor(1);
         await expect(win).toHaveAttribute("aria-hidden", "true");
-        await win.dispatchEvent("animationend", { animationName: "retro-window-close" });
+        await dispatchWindowAnimationEnd(win, "retro-window-close");
         await expect(video).toHaveClass(/is-hidden/);
         if (outcome.success) {
           await page.clock.runFor(17);
@@ -241,9 +254,7 @@ for (const viewport of viewports) {
           );
           await expect(page.locator("#lancer-battle-close")).toBeFocused();
           await page.locator("#lancer-battle-close").click();
-          await win.dispatchEvent("animationend", {
-            animationName: "retro-window-close",
-          });
+          await dispatchWindowAnimationEnd(win, "retro-window-close");
         }
       } else {
         await page.locator("#lancer-battle-title-close").click();
@@ -260,7 +271,7 @@ for (const viewport of viewports) {
             () => window.__lancerBattleResultPlaybackTest.getState().resultTimerActive
           )
         ).toBe(false);
-        await win.dispatchEvent("animationend", { animationName: "retro-window-close" });
+        await dispatchWindowAnimationEnd(win, "retro-window-close");
       }
       await expect(win).toBeHidden();
 

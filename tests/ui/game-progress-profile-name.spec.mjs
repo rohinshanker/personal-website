@@ -166,6 +166,7 @@ for (const viewport of viewports) {
     await changeIcon.click();
     const dialog = page.getByRole("dialog", { name: "Change Profile Icon" });
     await expect(dialog).toBeVisible();
+    await expect(dialog).not.toHaveClass(/is-opening/);
     await expect(dialog.locator("#game-profile-name-controls")).toBeHidden();
     await expect(dialog.locator("#game-profile-name-credit")).toBeHidden();
     await expect(dialog.locator("#game-profile-name")).toBeHidden();
@@ -181,6 +182,7 @@ for (const viewport of viewports) {
     await expect(changeIcon).toBeFocused();
 
     await changeIcon.click();
+    await expect(dialog).not.toHaveClass(/is-opening/);
     const frame = dialog.locator(".game-profile-icon-gallery-frame");
     const gallery = dialog.locator("#game-profile-icon-gallery");
     const iconOptions = dialog.locator(".game-profile-icon-option");

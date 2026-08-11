@@ -127,7 +127,8 @@
   gap: 10px;
 }
 
-.coming-soon-window .window-body {
+.coming-soon-window .window-body,
+.launch-prompt-window .window-body {
   min-height: 0;
 }
 
@@ -163,6 +164,11 @@
 
 .random-alert-actions.is-centered {
   justify-content: center;
+}
+
+.video-editor-launch-error {
+  color: #800000;
+  margin: 0;
 }
 
 .debug-system-alert-message p {

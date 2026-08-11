@@ -18,7 +18,7 @@
     "ALLOWED_ORIGIN": "https://rohin.shanker.me",
     "TURNSTILE_EXPECTED_HOSTNAME": "rohin.shanker.me",
     "TURNSTILE_EXPECTED_ACTION": "game-session",
-    "GAME_BUILD_VERSION": "sha256-8da5fabb2d24da0b79b4cbb6a314df595fefbd926adab3a1447c185d865aa6e2"
+    "GAME_BUILD_VERSION": "sha256-815068deb2a45fb9247df47a028bbb168996bd30baa86341f519925cc091f33a"
   },
   "secrets": {
     "required": [

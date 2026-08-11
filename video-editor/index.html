@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Video Editor | Rohin OS</title>
+    <meta
+      name="description"
+      content="Arrange and preview local video and audio files in a browser-based Windows 98 video editor."
+    />
+    <link rel="icon" href="../assets/app-icons/ico/movie_maker.ico" type="image/x-icon" />
+    <link rel="canonical" href="https://rohin.shanker.me/video-editor/" />
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="../scripts/home/game-stats-backend.js"></script>
+    <script src="script.js" type="module"></script>
+  </head>
+  <body class="video-editor-page" data-video-editor-auth-state="unauthenticated">
+    <h1 class="visually-hidden">Video Editor</h1>
+    <div
+      class="window desktop-required-window"
+      id="desktop-required"
+      data-testid="desktop-required"
+      role="alert"
+      aria-labelledby="desktop-required-title"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text" id="desktop-required-title">Desktop Required</div>
+      </div>
+      <div class="window-body desktop-required-window__body">
+        <img
+          src="../assets/app-icons/ico/monitor_black.ico"
+          width="32"
+          height="32"
+          alt=""
+        />
+        <div>
+          <p><strong>This video editor needs a larger desktop window.</strong></p>
+          <p>Open this page in a browser window at least 1024 pixels wide.</p>
+        </div>
+      </div>
+    </div>
+
+    <main
+      class="video-editor"
+      id="video-editor-app"
+      data-testid="video-editor"
+      aria-label="Video editor workspace"
+      aria-hidden="true"
+      inert
+    >
+      <section
+        class="window editor-window media-panel"
+        id="media-panel"
+        data-panel="media"
+        aria-labelledby="media-panel-title"
+      >
+        <div class="title-bar">
+          <h2 class="title-bar-text" id="media-panel-title">Project Media</h2>
+        </div>
+        <div class="window-body media-panel__body">
+          <section class="import-section" aria-labelledby="import-media-heading">
+            <h2 class="editor-heading" id="import-media-heading">Import Media</h2>
+            <input
+              id="media-file-input"
+              data-testid="media-file-input"
+              type="file"
+              accept="video/*,audio/*"
+              multiple
+              hidden
+            />
+            <button
+              class="import-media-button default"
+              id="import-media-button"
+              data-action="import-media"
+              type="button"
+            >
+              Choose Video or Audio&hellip;
+            </button>
+            <div
+              class="media-drop-zone"
+              id="media-drop-zone"
+              data-testid="media-drop-zone"
+              role="button"
+              tabindex="0"
+              aria-label="Drop video or audio files here, or press Enter to choose files"
+            >
+              <span class="media-drop-zone__arrow" aria-hidden="true">&#8681;</span>
+              <span>Drop local files here</span>
+              <small>Video and audio only</small>
+            </div>
+          </section>
+
+          <section class="media-bin-section" aria-labelledby="media-bin-heading">
+            <div class="section-heading-row">
+              <h2 class="editor-heading" id="media-bin-heading">Media Bin</h2>
+              <output class="item-count" id="media-count" aria-live="polite">0 items</output>
+            </div>
+            <div class="sunken-panel media-bin-scroll">
+              <ul
+                class="media-bin"
+                id="media-bin"
+                data-testid="media-bin"
+                aria-label="Imported local media"
+              >
+                <li class="empty-state media-empty-state" id="media-empty-state">
+                  <span>No media imported.</span>
+                  <small>Your files stay in this browser tab.</small>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="effects-library" aria-labelledby="effects-library-heading">
+            <h2 class="editor-heading" id="effects-library-heading">Effects</h2>
+            <div class="effect-launchers">
+              <button
+                class="effect-launcher"
+                type="button"
+                data-effect="closed-captions"
+                data-effect-tab-target="effect-tab-closed-captions"
+                aria-controls="effect-panel-closed-captions"
+              >
+                <img
+                  src="../assets/app-icons/ico/accessibility_window_speak.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <span>Closed Captions</span>
+              </button>
+              <button
+                class="effect-launcher"
+                type="button"
+                data-effect="windows-98"
+                data-effect-tab-target="effect-tab-windows-98"
+                aria-controls="effect-panel-windows-98"
+              >
+                <img
+                  src="../assets/app-icons/ico/windows.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <span>Windows 98</span>
+              </button>
+              <button
+                class="effect-launcher"
+                type="button"
+                data-effect="transitions"
+                data-effect-tab-target="effect-tab-transitions"
+                aria-controls="effect-panel-transitions"
+              >
+                <img
+                  src="../assets/app-icons/ico/movie_maker.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <span>Transitions</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section
+        class="window editor-window compose-panel"
+        id="compose-panel"
+        data-panel="compose"
+        aria-labelledby="compose-panel-title"
+      >
+        <div class="title-bar">
+          <h2 class="title-bar-text" id="compose-panel-title">Video Editor</h2>
+        </div>
+        <div class="window-body compose-panel__body">
+          <section class="preview-section" aria-labelledby="preview-heading">
+            <div class="section-heading-row preview-heading-row">
+              <h3 class="editor-heading" id="preview-heading">Preview</h3>
+              <output id="preview-clip-name" class="preview-clip-name">No active clip</output>
+            </div>
+            <div
+              class="preview-stage"
+              id="preview-stage"
+              data-testid="preview-stage"
+              aria-label="Composed timeline preview"
+            >
+              <video id="preview-video" playsinline hidden></video>
+              <div id="preview-audio-mix" aria-hidden="true"></div>
+              <div class="preview-empty-state" id="preview-empty-state">
+                <img
+                  src="../assets/app-icons/ico/movie_maker.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <span>Nothing at the playhead</span>
+              </div>
+            </div>
+            <div class="playback-controls" aria-label="Playback controls">
+              <button
+                class="transport-button"
+                id="play-pause-button"
+                data-action="toggle-playback"
+                type="button"
+                aria-label="Play"
+                aria-pressed="false"
+              >
+                <span aria-hidden="true">&#9654;</span>
+              </button>
+              <label class="visually-hidden" for="playhead-scrubber">Timeline playhead</label>
+              <input
+                id="playhead-scrubber"
+                data-testid="playhead-scrubber"
+                type="range"
+                min="0"
+                max="30"
+                value="0"
+                step="0.01"
+              />
+              <div class="time-readout" aria-label="Current time and project duration">
+                <output id="current-time" for="playhead-scrubber">00:00.00</output>
+                <span aria-hidden="true">/</span>
+                <output id="total-duration" for="playhead-scrubber">00:30.00</output>
+              </div>
+            </div>
+          </section>
+
+          <section class="timeline-section" aria-labelledby="timeline-heading">
+            <div class="timeline-toolbar">
+              <h3 class="editor-heading" id="timeline-heading">Timeline</h3>
+              <div class="timeline-tier-controls" aria-label="Add timeline tier">
+                <button
+                  id="add-video-tier"
+                  data-add-tier="video"
+                  type="button"
+                  aria-label="Add video tier"
+                >
+                  + Video
+                </button>
+                <button
+                  id="add-audio-tier"
+                  data-add-tier="audio"
+                  type="button"
+                  aria-label="Add audio tier"
+                >
+                  + Audio
+                </button>
+              </div>
+              <div class="timeline-zoom-control">
+                <label for="timeline-scale">Scale</label>
+                <input
+                  id="timeline-scale"
+                  data-testid="timeline-scale"
+                  type="range"
+                  min="20"
+                  max="160"
+                  value="64"
+                  step="4"
+                />
+              </div>
+            </div>
+
+            <div
+              class="timeline-scroll sunken-panel"
+              id="timeline-scroll"
+              data-testid="timeline-scroll"
+              tabindex="0"
+              aria-label="Timeline. Scroll horizontally to view later times."
+            >
+              <div class="timeline-canvas" id="timeline-canvas">
+                <div class="timeline-ruler-row">
+                  <div class="timeline-corner" aria-hidden="true">Time</div>
+                  <div class="timeline-ruler" id="timeline-ruler" aria-hidden="true"></div>
+                </div>
+                <div
+                  class="timeline-tiers"
+                  id="timeline-tiers"
+                  data-testid="timeline-tiers"
+                  aria-label="Video and audio tiers"
+                >
+                  <section
+                    class="timeline-tier"
+                    data-tier-id="video-1"
+                    data-kind="video"
+                    aria-labelledby="video-1-label"
+                  >
+                    <h4 class="timeline-tier__label" id="video-1-label">Video 1</h4>
+                    <div
+                      class="timeline-track"
+                      data-tier-id="video-1"
+                      data-kind="video"
+                      data-testid="timeline-tier-video-1"
+                      role="list"
+                      tabindex="0"
+                      aria-label="Video 1 clips"
+                    >
+                      <span class="timeline-track__empty" data-track-empty>Drop video clips here</span>
+                    </div>
+                  </section>
+                  <section
+                    class="timeline-tier"
+                    data-tier-id="audio-1"
+                    data-kind="audio"
+                    aria-labelledby="audio-1-label"
+                  >
+                    <h4 class="timeline-tier__label" id="audio-1-label">Audio 1</h4>
+                    <div
+                      class="timeline-track"
+                      data-tier-id="audio-1"
+                      data-kind="audio"
+                      data-testid="timeline-tier-audio-1"
+                      role="list"
+                      tabindex="0"
+                      aria-label="Audio 1 clips"
+                    >
+                      <span class="timeline-track__empty" data-track-empty>Drop audio clips here</span>
+                    </div>
+                  </section>
+                </div>
+                <section class="effects-tier" aria-labelledby="effects-lane-label">
+                  <h4 class="timeline-tier__label" id="effects-lane-label">Effects</h4>
+                  <div
+                    class="effects-track"
+                    id="effects-track"
+                    data-testid="effects-lane"
+                    role="list"
+                    aria-label="Timeline effects"
+                  >
+                    <span class="timeline-track__empty" data-effects-empty>Effects appear here</span>
+                  </div>
+                </section>
+                <div class="timeline-playhead" id="timeline-playhead" aria-hidden="true"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div class="status-bar" role="status" aria-live="polite" aria-atomic="true">
+          <p class="status-bar-field" id="editor-status">Empty project ready.</p>
+          <p class="status-bar-field status-bar-field--mode">Local session</p>
+        </div>
+      </section>
+
+      <section
+        class="window editor-window effects-panel"
+        id="effects-panel"
+        data-panel="effects"
+        aria-labelledby="effects-panel-title"
+      >
+        <div class="title-bar">
+          <h2 class="title-bar-text" id="effects-panel-title">Effect Editor</h2>
+        </div>
+        <div class="window-body effects-panel__body">
+          <div class="effect-browser-toolbar">
+            <span aria-hidden="true">Tabs</span>
+            <button
+              id="reopen-effect-tab"
+              data-action="reopen-effect-tab"
+              type="button"
+              disabled
+            >
+              Reopen closed tab
+            </button>
+          </div>
+          <div class="effect-tab-scroll">
+            <div
+              class="effect-tab-list"
+              id="effect-tab-list"
+              data-testid="effect-tab-list"
+              role="tablist"
+              aria-label="Open effect editors"
+            ></div>
+          </div>
+          <div class="effect-editor-well sunken-panel" id="effect-editor-well">
+            <div class="effect-editor-empty" id="effect-editor-empty">
+              <img
+                src="../assets/app-icons/ico/directory_program_group_cool.ico"
+                width="32"
+                height="32"
+                alt=""
+              />
+              <p>Choose an effect from Project Media to open its editor.</p>
+            </div>
+
+            <section
+              class="effect-editor"
+              id="effect-panel-closed-captions"
+              data-effect-editor="closed-captions"
+              role="tabpanel"
+              aria-labelledby="effect-tab-closed-captions"
+              hidden
+            >
+              <header class="effect-editor__header">
+                <img
+                  src="../assets/app-icons/ico/accessibility_window_speak.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <div>
+                  <h3>Closed Captions</h3>
+                  <p>Caption editor placeholder</p>
+                </div>
+              </header>
+              <fieldset disabled>
+                <legend>Settings preview</legend>
+                <label for="caption-placeholder-text">Caption text</label>
+                <textarea id="caption-placeholder-text" rows="4">Caption tools are not connected yet.</textarea>
+              </fieldset>
+              <p class="effect-placeholder-note">
+                This placeholder does not change or render in the preview.
+              </p>
+              <button type="button" data-add-effect="closed-captions">Add to timeline</button>
+            </section>
+
+            <section
+              class="effect-editor"
+              id="effect-panel-windows-98"
+              data-effect-editor="windows-98"
+              role="tabpanel"
+              aria-labelledby="effect-tab-windows-98"
+              hidden
+            >
+              <header class="effect-editor__header">
+                <img
+                  src="../assets/app-icons/ico/windows.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <div>
+                  <h3>Windows 98</h3>
+                  <p>Windows 98 effect placeholder</p>
+                </div>
+              </header>
+              <fieldset disabled>
+                <legend>Settings preview</legend>
+                <label for="windows-placeholder-style">Window style</label>
+                <select id="windows-placeholder-style">
+                  <option>Classic blue title bar</option>
+                </select>
+              </fieldset>
+              <p class="effect-placeholder-note">
+                This placeholder does not change or render in the preview.
+              </p>
+              <button type="button" data-add-effect="windows-98">Add to timeline</button>
+            </section>
+
+            <section
+              class="effect-editor"
+              id="effect-panel-transitions"
+              data-effect-editor="transitions"
+              role="tabpanel"
+              aria-labelledby="effect-tab-transitions"
+              hidden
+            >
+              <header class="effect-editor__header">
+                <img
+                  src="../assets/app-icons/ico/movie_maker.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <div>
+                  <h3>Transitions</h3>
+                  <p>Transition editor placeholder</p>
+                </div>
+              </header>
+              <fieldset disabled>
+                <legend>Settings preview</legend>
+                <label for="transition-placeholder-style">Transition</label>
+                <select id="transition-placeholder-style">
+                  <option>Cross dissolve</option>
+                </select>
+              </fieldset>
+              <p class="effect-placeholder-note">
+                This placeholder does not change or render in the preview.
+              </p>
+              <button type="button" data-add-effect="transitions">Add to timeline</button>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div
+      class="video-editor-auth-overlay"
+      id="video-editor-auth-overlay"
+      data-testid="video-editor-auth-overlay"
+      data-video-editor-auth-gate
+    >
+      <section
+        class="window video-editor-auth-dialog"
+        id="video-editor-auth-dialog"
+        data-testid="video-editor-auth-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="video-editor-auth-title"
+        aria-describedby="video-editor-auth-description"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" id="video-editor-auth-title">Sign In</div>
+        </div>
+        <div class="window-body video-editor-auth-dialog__body">
+          <div class="video-editor-auth-intro">
+            <img
+              src="../assets/app-icons/ico/key_win_alt.ico"
+              width="32"
+              height="32"
+              alt=""
+            />
+            <p id="video-editor-auth-description">
+              Enter your credentials to use Video Editor.
+            </p>
+          </div>
+          <form
+            class="video-editor-auth-form"
+            id="video-editor-auth-form"
+            data-testid="video-editor-auth-form"
+            aria-busy="false"
+          >
+            <div class="video-editor-auth-field">
+              <label for="video-editor-auth-username">Username</label>
+              <input
+                id="video-editor-auth-username"
+                data-testid="video-editor-auth-username"
+                name="username"
+                type="text"
+                autocomplete="username"
+                autocapitalize="none"
+                spellcheck="false"
+                required
+              />
+            </div>
+            <div class="video-editor-auth-field">
+              <label for="video-editor-auth-password">Password</label>
+              <input
+                id="video-editor-auth-password"
+                data-testid="video-editor-auth-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </div>
+            <p
+              class="video-editor-auth-status"
+              id="video-editor-auth-status"
+              data-testid="video-editor-auth-status"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            ></p>
+            <div class="video-editor-auth-actions">
+              <button
+                class="default"
+                id="video-editor-auth-submit"
+                data-testid="video-editor-auth-submit"
+                type="submit"
+              >
+                Sign In
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <template id="media-item-template">
+      <li class="media-item" data-media-id="" draggable="true">
+        <button class="media-item__select" type="button" data-select-media>
+          <span class="media-item__icon" aria-hidden="true"></span>
+          <span class="media-item__details">
+            <strong class="media-item__name" data-media-name></strong>
+            <span class="media-item__meta" data-media-meta></span>
+          </span>
+        </button>
+        <button class="media-item__insert" type="button" data-insert-media>Add</button>
+      </li>
+    </template>
+
+    <template id="tier-template">
+      <section class="timeline-tier" data-tier-id="" data-kind="">
+        <h4 class="timeline-tier__label" data-tier-label></h4>
+        <div
+          class="timeline-track"
+          data-tier-id=""
+          data-kind=""
+          role="list"
+          tabindex="0"
+        >
+          <span class="timeline-track__empty" data-track-empty></span>
+        </div>
+      </section>
+    </template>
+
+    <template id="clip-template">
+      <article class="timeline-clip" data-clip-id="" role="listitem" tabindex="0" draggable="true">
+        <button class="trim-handle trim-handle--start" type="button" data-trim="start">
+          <span class="visually-hidden">Trim clip start</span>
+        </button>
+        <span class="timeline-item__label" data-clip-label></span>
+        <button class="timeline-item__delete" type="button" data-delete-clip aria-label="Delete clip">
+          &times;
+        </button>
+        <button class="trim-handle trim-handle--end" type="button" data-trim="end">
+          <span class="visually-hidden">Trim clip end</span>
+        </button>
+      </article>
+    </template>
+
+    <template id="effect-item-template">
+      <article
+        class="effect-item"
+        data-effect-item-id=""
+        data-effect=""
+        role="listitem"
+        tabindex="0"
+        draggable="true"
+      >
+        <button class="trim-handle trim-handle--start" type="button" data-resize-effect="start">
+          <span class="visually-hidden">Resize effect start</span>
+        </button>
+        <img class="effect-item__icon" data-effect-item-icon width="16" height="16" alt="" />
+        <span class="timeline-item__label" data-effect-item-label></span>
+        <button
+          class="timeline-item__delete"
+          type="button"
+          data-delete-effect
+          aria-label="Delete effect"
+        >
+          &times;
+        </button>
+        <button class="trim-handle trim-handle--end" type="button" data-resize-effect="end">
+          <span class="visually-hidden">Resize effect end</span>
+        </button>
+      </article>
+    </template>
+
+    <template id="effect-tab-template">
+      <div class="effect-tab" data-effect-tab-wrapper role="presentation" draggable="true">
+        <button
+          class="effect-tab__button"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          tabindex="-1"
+          data-effect-tab
+        >
+          <img data-effect-tab-icon width="16" height="16" alt="" />
+          <span data-effect-tab-label></span>
+        </button>
+        <button class="effect-tab__close" type="button" data-close-effect-tab>
+          <span aria-hidden="true">&times;</span>
+          <span class="visually-hidden" data-close-effect-tab-label>Close effect tab</span>
+        </button>
+      </div>
+    </template>
+  </body>
+</html>

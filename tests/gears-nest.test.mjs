@@ -502,7 +502,10 @@ test("latest event cursor affordances use custom cursor variables", async () => 
     eventStyles,
     /\.relic-recovery-window \.relic-recovery-scene \.relic-recovery-hotbar \.relic-recovery-slot,[\s\S]*?cursor: var\(--cursor-help, help\) !important;/
   );
-  assert.match(cursorStyles, /html,\s*\nbody,\s*\nbody \* \{\s*\n  cursor: var\(--cursor-normal\) !important;/);
+  assert.match(
+    cursorStyles,
+    /:where\(html, body, body \*\) \{\s*\n  cursor: var\(--cursor-normal\) !important;/
+  );
   assert.match(getCssBlock(".death-note-lined-page"), /cursor: var\(--cursor-text, text\) !important;/);
   assert.doesNotMatch(cursorStyles, /is-custom-cursor-overlay-active/);
   assert.doesNotMatch(cursorStyles, /custom-cursor-overlay/);
@@ -1306,8 +1309,8 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=lancer-result-click-20260808/);
-    assert.match(source, /cursors\.css\?v=text-selection-cursor-20260806/);
+    assert.match(source, /random-events\.css\?v=video-editor-launch-20260809/);
+    assert.match(source, /cursors\.css\?v=text-selection-cursor-20260810/);
     assert.match(source, /minesweeper\.css\?v=minesweeper-mobile-controls-20260724/);
     assert.match(source, /game-stats\.css\?v=name-caret-fit-20260808/);
     assert.match(source, /style\.css\?v=first-win-stats-handoff-20260722/);

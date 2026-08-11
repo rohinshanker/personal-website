@@ -29,7 +29,7 @@ test("Video Editor and Image Tools have desktop and taskbar launchers with their
       appId: "video-editor",
       label: "Video Editor",
       icon: "assets/app-icons/ico/camera3_vid.ico",
-      controls: "video-editor-coming-soon-window",
+      controls: "video-editor-launch-window",
     },
     {
       appId: "image-tools",
@@ -62,93 +62,111 @@ test("Video Editor and Image Tools have desktop and taskbar launchers with their
   }
 });
 
-test("each content-tool launcher owns an accessible Coming soon alert", async () => {
-  const [home, main, randomEventStyles] = await Promise.all([
+test("Video Editor owns an accessible new-tab confirmation prompt", async () => {
+  const [home, main, dom, randomEventStyles] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
     readFile(new URL("styles/home/random-events.css", root), "utf8"),
   ]);
+  const section = windowSection(home, "video-editor");
 
-  const alerts = [
-    {
-      appId: "video-editor",
-      title: "Video Editor",
-      icon: "camera3_vid.ico",
-      id: "video-editor-coming-soon-window",
-    },
-    {
-      appId: "image-tools",
-      title: "Image Tools",
-      icon: "pcx_alt.ico",
-      id: "image-tools-coming-soon-window",
-    },
-  ];
+  assert.match(section, /data-launch-prompt-window/);
+  assert.doesNotMatch(section, /data-coming-soon-window/);
+  assert.match(section, /data-random-viewport-position/);
+  assert.match(section, /id="video-editor-launch-window"/);
+  assert.match(section, /role="alertdialog"/);
+  assert.match(section, /aria-modal="false"/);
+  assert.match(section, /aria-hidden="true"/);
+  assert.match(section, />Video Editor<\/div>/);
+  assert.match(section, /src="assets\/app-icons\/ico\/camera3_vid\.ico" alt=""/);
+  assert.match(section, />Open video editor in new tab\?<\/p>/);
+  assert.doesNotMatch(section, />Coming soon<\/p>/);
+  assert.match(
+    section,
+    /id="video-editor-launch-yes"[\s\S]*?data-video-editor-open[\s\S]*?data-dialog-initial-focus[\s\S]*?>Yes<\/button>/
+  );
+  assert.match(
+    section,
+    /id="video-editor-launch-no"[\s\S]*?data-video-editor-cancel[\s\S]*?data-close="video-editor"[\s\S]*?>No<\/button>/
+  );
+  assert.equal(count(section, /data-close="video-editor"/g), 2);
+  assert.match(
+    section,
+    /id="video-editor-launch-error"[\s\S]*?role="alert"[\s\S]*?aria-live="assertive"[\s\S]*?hidden/
+  );
 
-  for (const alert of alerts) {
-    const section = windowSection(home, alert.appId);
-    assert.match(section, /data-coming-soon-window/);
-    assert.match(section, /data-random-viewport-position/);
-    assert.match(section, new RegExp(`id="${alert.id}"`));
-    assert.match(section, /role="alertdialog"/);
-    assert.match(section, /aria-modal="false"/);
-    assert.match(section, /aria-hidden="true"/);
-    assert.match(section, new RegExp(`>${alert.title}<\\/div>`));
-    assert.match(section, new RegExp(`src="assets/app-icons/ico/${alert.icon}" alt=""`));
-    assert.match(section, />Coming soon<\/p>/);
-    assert.equal(
-      count(section, new RegExp(`data-close="${alert.appId}"`, "g")),
-      2,
-      `${alert.title} must close from both the title bar and OK button.`
-    );
-    assert.match(section, /data-coming-soon-ok[\s\S]*?data-close="[^"]+"[\s\S]*?>OK<\/button>/);
-    const okButtonTag = section.match(/<button\b[^>]*data-coming-soon-ok[^>]*>/)?.[0];
-    assert.ok(okButtonTag, `${alert.title} must have an OK button.`);
-    assert.doesNotMatch(
-      okButtonTag,
-      /\bclass=/,
-      `${alert.title} must use the native 98.css button without a variant class.`
-    );
-  }
+  assert.match(dom, /videoEditorLaunchWindow: byId\("video-editor-launch-window"\)/);
+  assert.match(dom, /videoEditorLaunchYes: byId\("video-editor-launch-yes"\)/);
+  assert.match(dom, /videoEditorLaunchError: byId\("video-editor-launch-error"\)/);
+  assert.match(main, /window\.open\(VIDEO_EDITOR_PATH, "_blank"\)/);
+  assert.match(main, /openedWindow\.opener = null/);
+  assert.match(main, /if \(!openedWindow\) \{[\s\S]*?showVideoEditorLaunchError\(\)/);
+  assert.match(main, /Allow pop-ups for this site, then choose Yes again/);
+  assert.match(
+    main,
+    /videoEditorLaunchYes\?\.addEventListener\("click", openVideoEditorInNewTab\)/
+  );
+  assert.match(
+    main,
+    /triggerRandomEvents\("newTabLink", \{[\s\S]*?source: "video-editor-launcher"/
+  );
+  assert.match(main, /closeAppWindow\("video-editor"\)/);
+  assert.match(main, /FOCUS_RETURN_WINDOW_SELECTOR[\s\S]*?data-launch-prompt-window/);
+  assert.match(
+    main,
+    /event\.key !== "Escape"[\s\S]*?closeAppWindow\(openFocusReturnWindow\.getAttribute\("data-app-window"\)\)/
+  );
+  assert.match(
+    main,
+    /comingSoonFocusReturns\.get\(win\)[\s\S]*?focusTarget\.focus\(\{ preventScroll: true \}\)/
+  );
+  assert.match(
+    home,
+    /styles\/home\/random-events\.css\?v=video-editor-launch-20260809/
+  );
+  assert.match(
+    randomEventStyles,
+    /\.launch-prompt-window \.window-body[\s\S]*?min-height:\s*0/
+  );
+  assert.match(
+    randomEventStyles,
+    /\.video-editor-launch-error\s*\{[\s\S]*?color:\s*#800000/
+  );
+});
+
+test("Image Tools keeps its accessible Coming soon alert unchanged", async () => {
+  const home = await readFile(new URL("home.html", root), "utf8");
+  const section = windowSection(home, "image-tools");
+
+  assert.match(section, /data-coming-soon-window/);
+  assert.match(section, /data-random-viewport-position/);
+  assert.match(section, /id="image-tools-coming-soon-window"/);
+  assert.match(section, /role="alertdialog"/);
+  assert.match(section, /aria-modal="false"/);
+  assert.match(section, /aria-hidden="true"/);
+  assert.match(section, />Image Tools<\/div>/);
+  assert.match(section, /src="assets\/app-icons\/ico\/pcx_alt\.ico" alt=""/);
+  assert.match(section, />Coming soon<\/p>/);
+  assert.equal(count(section, /data-close="image-tools"/g), 2);
+  assert.match(
+    section,
+    /data-coming-soon-ok[\s\S]*?data-close="image-tools"[\s\S]*?>OK<\/button>/
+  );
 
   assert.equal(
     count(home, /\bdata-random-viewport-position\b/g),
     2,
-    "Only the two content-tool placeholders should opt into random placement."
+    "Only the two content-tool dialogs should opt into random placement."
   );
   assert.doesNotMatch(
     windowSection(home, "admin-controls-stand-in"),
     /data-random-viewport-position/
   );
-
-  assert.match(main, /const comingSoonFocusReturns = new WeakMap\(\);/);
-  assert.match(
-    main,
-    /\.\.\.document\.querySelectorAll\("\[data-random-viewport-position\]"\),/
-  );
-  assert.match(
-    main,
-    /if \(win\.hasAttribute\("data-random-viewport-position"\)\) \{[\s\S]*?win\.classList\.remove\("app-window--center"\);[\s\S]*?positionRandomEventWindowInViewport\(win\);[\s\S]*?\} else if \(/
-  );
-  assert.match(main, /win\.hasAttribute\("aria-hidden"\)[\s\S]*?win\.setAttribute\("aria-hidden", "false"\)/);
-  assert.match(main, /win\.matches\("\[data-coming-soon-window\]"\)[\s\S]*?comingSoonFocusReturns\.set/);
-  assert.match(main, /querySelector\("\[data-coming-soon-ok\]"\)\?\.focus/);
-  assert.match(main, /event\.key !== "Escape"[\s\S]*?closeAppWindow\(openComingSoonWindow\.getAttribute\("data-app-window"\)\)/);
-  assert.match(main, /comingSoonFocusReturns\.get\(win\)[\s\S]*?focusTarget\.focus\(\{ preventScroll: true \}\)/);
-  assert.match(
-    home,
-    /styles\/home\/random-events\.css\?v=lancer-result-click-20260808/
-  );
-  assert.match(
-    randomEventStyles,
-    /\.coming-soon-window \.window-body\s*{\s*min-height:\s*0;\s*}/
-  );
 });
 
-test("the requested content-tool future-work tickets remain open", async () => {
-  const ticketPaths = [
-    "O_video-editor__20260731.md",
-    "O_image-tools__20260731.md",
-  ];
+test("the Image Tools future-work ticket remains open", async () => {
+  const ticketPaths = ["O_image-tools__20260731.md"];
   const [index, ...tickets] = await Promise.all([
     readFile(new URL("docs/notes/tickets/INDEX.md", root), "utf8"),
     ...ticketPaths.map((path) =>

@@ -10,77 +10,123 @@ const [script, styles, home, index] = await Promise.all([
   readFile(new URL("index.html", root), "utf8"),
 ]);
 
-const getCssBlock = (selector) => {
-  const start = styles.indexOf(`${selector} {`);
-  assert.notEqual(start, -1, `Missing CSS block for ${selector}`);
-  const end = styles.indexOf("}\n", start);
-  assert.notEqual(end, -1, `Missing CSS block end for ${selector}`);
-  return styles.slice(start, end + 1);
-};
+const compactStyles = styles.replace(/\s+/g, " ");
 
-test("both entry points load the shared text-selection cursor behavior", () => {
+test("both entry points load the pointer-aware text cursor assets", () => {
   for (const source of [home, index]) {
-    assert.match(source, /cursors\.css\?v=text-selection-cursor-20260806/);
+    assert.match(source, /cursors\.css\?v=text-selection-cursor-20260810/);
     assert.match(
       source,
-      /scripts\/home\/text-selection-cursor\.js\?v=text-selection-cursor-20260806/
+      /scripts\/home\/text-selection-cursor\.js\?v=text-selection-cursor-20260810/
     );
+  }
+  assert.match(
+    index,
+    /\["styles\/home\/cursors\.css\?v=text-selection-cursor-20260810", "style"\]/
+  );
+});
+
+test("the watcher hit-tests selectable text under a non-touch pointer", () => {
+  assert.match(script, /is-custom-cursor-text-hover/);
+  assert.match(script, /is-custom-cursor-text-selecting/);
+  assert.match(script, /caretPositionFromPoint/);
+  assert.match(script, /caretRangeFromPoint/);
+  assert.match(script, /Node\.(?:TEXT_NODE|ELEMENT_NODE)/);
+  assert.match(script, /getComputedStyle/);
+  assert.match(script, /userSelect/);
+  assert.match(script, /\/\\S\/u/);
+  assert.match(script, /event\.pointerType\s*!==\s*["']mouse["']/);
+  assert.match(script, /event\.button\s*!==\s*0/);
+  assert.match(script, /requestAnimationFrame/);
+
+  for (const exclusion of [
+    "a[href]",
+    "button",
+    "input",
+    "textarea",
+    "select",
+    "[contenteditable",
+    "[aria-disabled",
+    "[disabled]",
+    ".title-bar",
+    ".panel-divider",
+    ".is-unavailable",
+  ]) {
+    assert.ok(script.includes(exclusion), `Missing text-hover exclusion for ${exclusion}`);
   }
 });
 
-test("the cursor watcher follows only nonempty highlighted document text", () => {
-  assert.match(script, /const hasHighlightedDocumentText = \(\) => \{/);
-  assert.match(script, /selection\.rangeCount > 0/);
-  assert.match(script, /!selection\.isCollapsed/);
-  assert.match(script, /selection\.toString\(\)\.length > 0/);
-  assert.match(
-    script,
-    /document\.documentElement\.classList\.toggle\(TEXT_SELECTION_CURSOR_CLASS, hasHighlightedText\)/
-  );
-  assert.match(
-    script,
-    /document\.body\.classList\.toggle\(TEXT_SELECTION_CURSOR_CLASS, hasHighlightedText\)/
-  );
+test("selection state is limited to an active primary-pointer gesture and always cleans up", () => {
   for (const eventName of [
-    "selectionchange",
+    "pointermove",
+    "pointerdown",
     "selectstart",
     "pointerup",
     "pointercancel",
+    "lostpointercapture",
   ]) {
     assert.match(
       script,
-      new RegExp(`document\\.addEventListener\\("${eventName}", scheduleTextSelectionCursorSync\\)`)
+      new RegExp(`addEventListener\\(["']${eventName}["']`),
+      `Missing ${eventName} lifecycle handling`
+    );
+  }
+  for (const eventName of ["blur", "pageshow", "scroll", "resize"]) {
+    assert.match(
+      script,
+      new RegExp(`addEventListener\\(["']${eventName}["']`),
+      `Missing ${eventName} cleanup or hover resync handling`
     );
   }
   assert.match(
     script,
-    /window\.addEventListener\("pageshow", scheduleTextSelectionCursorSync\)/
+    /document\.documentElement\.classList\.toggle\(TEXT_SELECTING_CURSOR_CLASS, isActive\)/
   );
-  assert.match(script, /syncFrameId = window\.requestAnimationFrame\(syncTextSelectionCursor\)/);
+  assert.match(
+    script,
+    /document\.body\.classList\.toggle\(TEXT_SELECTING_CURSOR_CLASS, isActive\)/
+  );
+  assert.doesNotMatch(script, /is-custom-cursor-text-selection/);
+  assert.doesNotMatch(script, /addEventListener\(["']selectionchange["']/);
 });
 
-test("highlighted text reuses the textbox cursor without masking guarded cursors", () => {
-  const selectionBlock = getCssBlock("body.is-custom-cursor-text-selection");
-  for (const token of ["normal", "select", "text-thin", "help"]) {
-    assert.match(selectionBlock, new RegExp(`--cursor-${token}: var\\(--cursor-text\\);`));
-  }
-  for (const token of [
-    "working",
-    "busy",
-    "unavailable",
-    "pressed",
-    "move",
-    "precision",
-    "resize-ew",
-    "resize-ns",
-    "resize-nwse",
-    "resize-nesw",
-  ]) {
-    assert.doesNotMatch(selectionBlock, new RegExp(`--cursor-${token}:`));
-  }
-  assert.ok(
-    styles.indexOf("body.is-custom-cursor-text-selection") >
-      styles.indexOf("body.is-cursor-dark-mode"),
-    "The selection tokens must override the selected light or dark cursor theme"
+test("text hover and active selection styling do not remap unrelated cursor tokens", () => {
+  assert.doesNotMatch(styles, /is-custom-cursor-text-selection/);
+  assert.doesNotMatch(
+    styles,
+    /--cursor-(?:normal|select|text-thin|help):\s*var\(--cursor-text\)/
   );
+  const textStateStart = compactStyles.indexOf(".is-custom-cursor-text-hover");
+  const textStateEnd = compactStyles.indexOf("::-webkit-scrollbar", textStateStart);
+  assert.notEqual(textStateStart, -1, "Missing selectable-text hover styling");
+  assert.notEqual(textStateEnd, -1, "Missing selectable-text styling boundary");
+  const textStateBlock = compactStyles.slice(textStateStart, textStateEnd);
+  assert.match(textStateBlock, /html\.is-custom-cursor-text-selecting/);
+  assert.match(textStateBlock, /body\.is-custom-cursor-text-selecting/);
+  assert.match(textStateBlock, /cursor:\s*var\(--cursor-text\)\s*!important;/);
+
+  const precisionStateStart = compactStyles.indexOf(
+    "body.is-admin-picking-target [data-admin-pickable]"
+  );
+  const precisionStateEnd = compactStyles.indexOf("button:disabled", precisionStateStart);
+  assert.notEqual(precisionStateStart, -1, "Missing Admin picker precision styling");
+  assert.notEqual(precisionStateEnd, -1, "Missing Admin picker styling boundary");
+  const precisionStateBlock = compactStyles.slice(precisionStateStart, precisionStateEnd);
+  for (const token of ["normal", "select", "text", "move", "help", "resize-ew"]) {
+    assert.match(
+      precisionStateBlock,
+      new RegExp(`--cursor-${token}:\\s*var\\(--cursor-precision\\)`)
+    );
+  }
+
+  for (const token of [
+    "select",
+    "help",
+    "move",
+    "unavailable",
+    "resize-ew",
+    "resize-nwse",
+  ]) {
+    assert.match(styles, new RegExp(`cursor:\\s*var\\(--cursor-${token}\\)\\s*!important`));
+  }
 });

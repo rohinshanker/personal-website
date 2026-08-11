@@ -557,7 +557,10 @@ test("Yes closes the prompt and starts exactly one complete forty-cat stream", a
 test("both Neko launchers provide the bounded /nekostream menu without changing left-click behavior", async ({
   page,
 }) => {
-  const runtimeErrors = await preparePage(page, { reducedMotion: "reduce" });
+  const runtimeErrors = await preparePage(page, {
+    clock: true,
+    reducedMotion: "reduce",
+  });
   const desktopLauncher = page.locator('.desktop-icon[data-app="neko"]');
   const taskbarLauncher = page.locator('.taskbar [data-app="neko"]');
   const menu = page.getByRole("menu", { name: "Neko commands" });

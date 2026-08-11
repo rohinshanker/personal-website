@@ -486,7 +486,7 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await closeManagedWindow(behelit, page.locator("#behelit-ok"));
   await closeManagedWindow(
     videoDialog,
-    videoDialog.locator("#video-editor-coming-soon-ok")
+    videoDialog.locator("#video-editor-launch-no")
   );
   await openAdmin(page);
   await selectAdminTab(page, "bindings");

@@ -65,18 +65,17 @@ body.is-cursor-dark-mode {
     url("../../assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%202.cur"), nesw-resize;
 }
 
-html.is-custom-cursor-text-selection,
-body.is-custom-cursor-text-selection {
-  --cursor-normal: var(--cursor-text);
-  --cursor-select: var(--cursor-text);
-  --cursor-text-thin: var(--cursor-text);
-  --cursor-help: var(--cursor-text);
+:where(html, body, body *) {
+  cursor: var(--cursor-normal) !important;
 }
 
-html,
-body,
-body * {
-  cursor: var(--cursor-normal) !important;
+:where(.is-custom-cursor-text-hover),
+:where(.is-custom-cursor-text-hover) *,
+:where(html.is-custom-cursor-text-selecting),
+:where(html.is-custom-cursor-text-selecting) *,
+:where(body.is-custom-cursor-text-selecting),
+:where(body.is-custom-cursor-text-selecting) * {
+  cursor: var(--cursor-text) !important;
 }
 
 ::-webkit-scrollbar,
@@ -94,7 +93,6 @@ summary,
 label,
 select:not(:disabled),
 [role="button"]:not([aria-disabled="true"]),
-[tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"]),
 .desktop-icon,
 .taskbar-icon,
 .calendar-day[data-calendar-day],
@@ -124,7 +122,6 @@ summary *,
 label *,
 select:not(:disabled) *,
 [role="button"]:not([aria-disabled="true"]) *,
-[tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"]) *,
 .calendar-day[data-calendar-day] *,
 .calendar-day[data-calendar-weekday="thursday"] *,
 .selector-item *,
@@ -228,6 +225,8 @@ button:has(img[src*="question" i]) *,
 .sol-help *,
 .calendar-day.is-event-day,
 .calendar-day.is-event-day * {
+  --cursor-pressed: var(--cursor-help);
+  --cursor-select: var(--cursor-help);
   cursor: var(--cursor-help) !important;
 }
 
@@ -259,8 +258,6 @@ label:active *,
 select:not(:disabled):active,
 [role="button"]:not([aria-disabled="true"]):active,
 [role="button"]:not([aria-disabled="true"]):active *,
-[tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"]):active,
-[tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"]):active *,
 .desktop-icon:not(:disabled):active,
 .desktop-icon:not(:disabled):active *,
 .taskbar-icon:not(:disabled):active,
@@ -300,8 +297,7 @@ select:not(:disabled):active,
     summary,
     label,
     select:not(:disabled),
-    [role="button"]:not([aria-disabled="true"]),
-    [tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"])
+    [role="button"]:not([aria-disabled="true"])
   ),
 .window:not([data-no-drag]) > .title-bar :is(
     a[href],
@@ -309,8 +305,7 @@ select:not(:disabled):active,
     summary,
     label,
     select:not(:disabled),
-    [role="button"]:not([aria-disabled="true"]),
-    [tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"])
+    [role="button"]:not([aria-disabled="true"])
   ) * {
   cursor: var(--cursor-select) !important;
 }
@@ -326,6 +321,21 @@ select:not(:disabled):active,
 body.is-resizing-window,
 body.is-resizing-window * {
   cursor: var(--cursor-resize-nwse) !important;
+}
+
+body.is-admin-picking-target [data-admin-pickable],
+body.is-admin-picking-target [data-admin-pickable] * {
+  --cursor-normal: var(--cursor-precision);
+  --cursor-select: var(--cursor-precision);
+  --cursor-text: var(--cursor-precision);
+  --cursor-text-thin: var(--cursor-precision);
+  --cursor-move: var(--cursor-precision);
+  --cursor-help: var(--cursor-precision);
+  --cursor-pressed: var(--cursor-precision);
+  --cursor-resize-ew: var(--cursor-precision);
+  --cursor-resize-ns: var(--cursor-precision);
+  --cursor-resize-nwse: var(--cursor-precision);
+  --cursor-resize-nesw: var(--cursor-precision);
 }
 
 button:disabled,

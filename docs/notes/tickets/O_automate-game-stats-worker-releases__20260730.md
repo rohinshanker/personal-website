@@ -6,11 +6,11 @@ Status: open
 
 Opened: 2026-07-30
 
-Updated: 2026-07-30
+Updated: 2026-08-09
 
-Current State: The live browser and Worker currently match at `sha256-f6d3…fe69f`, but `.github/workflows/game-stats-worker-release.yml` is untracked and absent from `origin/main`. Game source updates therefore require a manual Worker deployment and can temporarily prevent verified results from publishing.
+Current State: A manual production deployment restored browser/Worker parity at `sha256-8da5…aa6e2` with Worker version `a3ef1b5d-0410-4725-8759-7f8c2c8de6e3`. `.github/workflows/game-stats-worker-release.yml` remains untracked and absent from `origin/main`, so future game-source updates still require a manual Worker deployment until the release automation is published and configured.
 
-Verification: Pending a successful pull-request verification run and a successful `main` release run whose final `npm run game-stats:release:check` proves live browser/source/cache-token/Worker parity.
+Verification: Worker tests pass 46/46, the Wrangler production-bundle dry run passes, remote D1 reports no pending migrations, and the static release gate confirms the live website at `sha256-8da5…aa6e2`. The manual Worker deploy completed successfully, `/health` reports the same build, live `/stats` returns successfully, and `npm run game-stats:release:check` proves full live parity. Automation verification still requires a successful pull-request run and `main` release run.
 
 Cleanup: Preserve unrelated website changes. When resolved, update existing reusable guidance in `docs/validation/game-stats-backend.md` only if the final release contract differs, then remove this ticket and its index row.
 

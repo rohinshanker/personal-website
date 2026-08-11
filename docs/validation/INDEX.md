@@ -2,10 +2,11 @@
 
 | Purpose | Scope | Last verified | Document |
 | --- | --- | --- | --- |
+| Native-style custom cursor meaning across hover, selection, guarded controls, and Admin target picking. | Entry and Home cursor tokens, pointer-selection lifecycle, light/dark packs, and semantic precedence. | 2026-08-11 | [custom-cursors.md](custom-cursors.md) |
 | Native Windows 98 scrollbar styling without duplicate Chromium arrow slots. | Scoped WebKit scrollbar-button compatibility rules and Red Tool chat scrolling. | 2026-08-06 | [native-scrollbars.md](native-scrollbars.md) |
 | Reachable About Me title bar, compact dynamic height, and internally scrollable content. | About Me window sizing, compact content grid, Close control, taskbar clearance, and breakpoint behavior. | 2026-08-05 | [about-me-responsive.md](about-me-responsive.md) |
 | Local-only promotional orchestration, seeded controls, scene presets, and capture aids. | Admin desktop and dock launchers, Admin Controls window, random-event runtime, bindings, and recording helpers. | 2026-08-03 | [admin-controls.md](admin-controls.md) |
-| Automated-test coverage contract and prioritized hardening backlog. | Source and contract tests, Playwright UI, Game Stats Worker and D1, generated artifacts, security gates, and CI. | 2026-08-08 | [test-suite.md](test-suite.md) |
+| Automated-test coverage contract and prioritized hardening backlog. | Source and contract tests, Playwright UI, Game Stats Worker and D1, generated artifacts, security gates, and CI. | 2026-08-09 | [test-suite.md](test-suite.md) |
 | Agent-native live-ticket context and reusable validation/runbook documentation. | Root instructions, active tickets, ticket indexes, and validation documents. | 2026-07-23 | [context-system.md](context-system.md) |
 | Repeatable repository quality gates and rendered UI validation. | Site JavaScript, generated artifacts, browser UI, and repository secrets. | 2026-08-06 | [site-quality-gates.md](site-quality-gates.md) |
 | Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset. | Game Stats browser client, Worker, D1, administrator secrets, Turnstile, release synchronization, and server-data reset. | 2026-08-08 | [game-stats-backend.md](game-stats-backend.md) |
@@ -13,3 +14,4 @@
 | Global Top 3 and requested-player rank/record contract with scoped stress cleanup. | Worker aggregation, browser rendering, 10+ player stress tests, and tagged production smoke data. | 2026-07-25 | [game-stats-multiplayer.md](game-stats-multiplayer.md) |
 | Sudoku diagnostic-check and assistance eligibility contract. | Sudoku controls, saved state, leaderboard classification, integrity metadata, and responsive browser checks. | 2026-07-29 | [sudoku-leaderboard-eligibility.md](sudoku-leaderboard-eligibility.md) |
 | Neko launcher and random-event entry points, bounded taskbar stream, shared sprite timing, and accessible interaction behavior. | Neko launchers, confirmation alert, focus, 40-cat animation, cleanup, and responsive taskbar geometry. | 2026-08-06 | [neko-stream.md](neko-stream.md) |
+| Auth-gated browser-local Video Editor route, launcher confirmation, responsive boundary, project-safe reauthentication, timeline editing, and effect-tab behavior. | Homepage Video Editor launchers and `/video-editor/` authentication, media, preview, timeline, effects, keyboard, and local-session contracts. | 2026-08-11 | [video-editor.md](video-editor.md) |

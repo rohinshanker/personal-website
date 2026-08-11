@@ -113,11 +113,11 @@
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=about-mobile-height-20260805" />
     <link rel="stylesheet" href="styles/home/study-resources.css" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=lancer-result-click-20260808" />
-    <link rel="stylesheet" href="styles/home/cursors.css?v=text-selection-cursor-20260806" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=video-editor-launch-20260809" />
+    <link rel="stylesheet" href="styles/home/cursors.css?v=text-selection-cursor-20260810" />
     <link rel="stylesheet" href="styles/home/admin-controls.css?v=admin-controls-20260731" />
     <script
-      src="scripts/home/text-selection-cursor.js?v=text-selection-cursor-20260806"
+      src="scripts/home/text-selection-cursor.js?v=text-selection-cursor-20260810"
       defer
     ></script>
   </head>
@@ -207,7 +207,7 @@
         data-app="video-editor"
         aria-label="Video Editor"
         aria-haspopup="dialog"
-        aria-controls="video-editor-coming-soon-window"
+        aria-controls="video-editor-launch-window"
       >
         <img src="assets/app-icons/ico/camera3_vid.ico" alt="" />
         <span class="desktop-icon-label">Video Editor</span>
@@ -2868,19 +2868,19 @@
       </div>
 
       <div
-        class="window home-window app-window app-window--center random-alert-window coming-soon-window is-hidden"
+        class="window home-window app-window app-window--center random-alert-window launch-prompt-window is-hidden"
         data-app-window="video-editor"
-        data-coming-soon-window
+        data-launch-prompt-window
         data-random-viewport-position
-        id="video-editor-coming-soon-window"
+        id="video-editor-launch-window"
         role="alertdialog"
         aria-modal="false"
         aria-hidden="true"
-        aria-labelledby="video-editor-coming-soon-title"
-        aria-describedby="video-editor-coming-soon-message"
+        aria-labelledby="video-editor-launch-title"
+        aria-describedby="video-editor-launch-message"
       >
         <div class="title-bar">
-          <div class="title-bar-text" id="video-editor-coming-soon-title">Video Editor</div>
+          <div class="title-bar-text" id="video-editor-launch-title">Video Editor</div>
           <div class="title-bar-controls">
             <button type="button" aria-label="Close" data-close="video-editor"></button>
           </div>
@@ -2888,15 +2888,28 @@
         <div class="window-body">
           <div class="random-alert-message">
             <img src="assets/app-icons/ico/camera3_vid.ico" alt="" />
-            <p id="video-editor-coming-soon-message">Coming soon</p>
+            <p id="video-editor-launch-message">Open video editor in new tab?</p>
           </div>
+          <p
+            class="video-editor-launch-error"
+            id="video-editor-launch-error"
+            role="alert"
+            aria-live="assertive"
+            hidden
+          ></p>
           <div class="random-alert-actions">
             <button
               type="button"
-              id="video-editor-coming-soon-ok"
-              data-coming-soon-ok
+              id="video-editor-launch-yes"
+              data-video-editor-open
+              data-dialog-initial-focus
+            >Yes</button>
+            <button
+              type="button"
+              id="video-editor-launch-no"
+              data-video-editor-cancel
               data-close="video-editor"
-            >OK</button>
+            >No</button>
           </div>
         </div>
       </div>
@@ -3771,7 +3784,7 @@
           data-app="video-editor"
           aria-label="Video Editor"
           aria-haspopup="dialog"
-          aria-controls="video-editor-coming-soon-window"
+          aria-controls="video-editor-launch-window"
         >
           <img src="assets/app-icons/ico/camera3_vid.ico" alt="" />
         </button>
@@ -6631,11 +6644,11 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-8da5fabb2d24da0b79b4cbb6a314df595fefbd926adab3a1447c185d865aa6e2"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-815068deb2a45fb9247df47a028bbb168996bd30baa86341f519925cc091f33a"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-8da5fabb2d24da0b79b4cbb6a314df595fefbd926adab3a1447c185d865aa6e2"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-815068deb2a45fb9247df47a028bbb168996bd30baa86341f519925cc091f33a"></script>
     <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
-    <script src="scripts/home/main.js?v=game-build-8da5fabb2d24da0b79b4cbb6a314df595fefbd926adab3a1447c185d865aa6e2"></script>
+    <script src="scripts/home/main.js?v=game-build-815068deb2a45fb9247df47a028bbb168996bd30baa86341f519925cc091f33a"></script>
     <script src="scripts/home/admin-controls.js?v=admin-launchers-20260803"></script>
   </body>
 </html>
