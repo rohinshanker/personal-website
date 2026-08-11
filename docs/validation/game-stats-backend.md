@@ -4,7 +4,7 @@ Purpose: Controlled Cloudflare Worker and D1 release, security, production verif
 
 Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
 
-Last verified: 2026-07-29
+Last verified: 2026-08-11
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -279,14 +279,22 @@ then runs the full browser/source/HTML/Worker gate afterward. This ordering
 prevents a Worker for a newer hash from replacing the current Worker while the
 production site still serves the older browser release.
 
-`.github/workflows/game-stats-worker-release.yml` runs source tests, the
-integrity check, and a lockfile-installed Wrangler dry-run for pull requests and
-pushes. Pull requests are read-only. On `main`, it requires both repository
-secrets, waits for the static-only gate, deploys the current
-`workers/game-stats/wrangler.jsonc`, and then runs the full polling release
-gate. Releases share one concurrency group per ref and a
-new push cancels the superseded run, so an older `main` run cannot later deploy
-over the newest Worker. Configure these GitHub Actions repository secrets:
+`.github/workflows/game-stats-worker-release.yml` separates a read-only verify
+job from the production release job. Every pull request and `main` push runs
+source tests, the integrity check, and a lockfile-installed strict Wrangler
+dry-run; pull requests cannot reach the secret-bearing release job. After a trusted
+`main` push or a `main` workflow dispatch passes verification, the release job
+requires both repository secrets, waits for the static-only gate, verifies that
+the workflow SHA is still the current `main` revision, deploys the checked-in
+`workers/game-stats/wrangler.jsonc` with Wrangler's `--strict` configuration
+guard, and runs the full polling release gate.
+
+Releases share one concurrency group per ref and a new push cancels the
+superseded run. The immediate current-`main` check also fails closed when an old
+successful run is manually rerun after a newer revision has landed. Both
+official GitHub actions are pinned to immutable commit SHAs and checkout does
+not persist its GitHub credential. Configure these GitHub Actions repository
+secrets:
 
 - `CLOUDFLARE_API_TOKEN`: a narrowly scoped token allowed to deploy this Worker.
 - `CLOUDFLARE_ACCOUNT_ID`: the account that owns the Worker and D1 database.

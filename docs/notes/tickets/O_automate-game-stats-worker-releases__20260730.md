@@ -6,11 +6,11 @@ Status: open
 
 Opened: 2026-07-30
 
-Updated: 2026-08-09
+Updated: 2026-08-11
 
-Current State: A manual production deployment restored browser/Worker parity at `sha256-8da5…aa6e2` with Worker version `a3ef1b5d-0410-4725-8759-7f8c2c8de6e3`. `.github/workflows/game-stats-worker-release.yml` remains untracked and absent from `origin/main`, so future game-source updates still require a manual Worker deployment until the release automation is published and configured.
+Current State: The synchronized release automation is implemented and isolated in a dedicated local commit. Pull requests use a credential-free verification job; trusted `main` runs wait for the matching static build, reject stale workflow revisions, deploy the Worker with strict configuration handling, and verify final browser/Worker parity. The commit is not yet on `origin/main`, and the repository secrets and real GitHub Actions runs still require remote configuration and validation.
 
-Verification: Worker tests pass 46/46, the Wrangler production-bundle dry run passes, remote D1 reports no pending migrations, and the static release gate confirms the live website at `sha256-8da5…aa6e2`. The manual Worker deploy completed successfully, `/health` reports the same build, live `/stats` returns successfully, and `npm run game-stats:release:check` proves full live parity. Automation verification still requires a successful pull-request run and `main` release run.
+Verification: The exact committed tree passes all 258 source tests, its generated-integrity check, secret scan, and Wrangler 4.114.0 strict deployment dry-run. The release-context guard has 100% line, branch, and function coverage. Automation verification still requires publication plus successful pull-request and trusted `main` release runs with the Actions secrets configured.
 
 Cleanup: Preserve unrelated website changes. When resolved, update existing reusable guidance in `docs/validation/game-stats-backend.md` only if the final release contract differs, then remove this ticket and its index row.
 

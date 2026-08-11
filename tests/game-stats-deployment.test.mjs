@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { parse } from "yaml";
 
 import {
   GAME_STATS_BACKEND_CONFIG_URL,
@@ -1151,42 +1152,104 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   );
   assert.equal(
     workerPackageJson.scripts["deploy:check"],
-    "wrangler deploy --dry-run --config wrangler.jsonc"
+    "wrangler deploy --dry-run --config wrangler.jsonc --strict"
   );
-  assert.match(workflow, /pull_request:/);
-  assert.match(workflow, /branches: \[main\]/);
-  assert.match(workflow, /npm test/);
-  assert.match(workflow, /npm run game-stats:integrity:check/);
-  assert.match(workflow, /npm --prefix workers\/game-stats run deploy:check/);
-  assert.match(
-    workflow,
-    /npm --prefix workers\/game-stats run deploy -- --config wrangler\.jsonc/
+  const workflowDefinition = parse(workflow);
+  assert.deepEqual(Object.keys(workflowDefinition.on).sort(), [
+    "pull_request",
+    "push",
+    "workflow_dispatch",
+  ]);
+  assert.deepEqual(workflowDefinition.on.push.branches, ["main"]);
+  assert.equal(workflowDefinition.on.pull_request, null);
+  assert.equal(workflowDefinition.on.workflow_dispatch, null);
+  assert.deepEqual(workflowDefinition.permissions, { contents: "read" });
+  assert.deepEqual(workflowDefinition.concurrency, {
+    group: "game-stats-worker-release-${{ github.ref }}",
+    "cancel-in-progress": true,
+  });
+  assert.deepEqual(Object.keys(workflowDefinition.jobs).sort(), ["release", "verify"]);
+
+  const { release, verify } = workflowDefinition.jobs;
+  const verifySource = JSON.stringify(verify);
+  assert.doesNotMatch(verifySource, /secrets\.|CLOUDFLARE_/);
+  assert.doesNotMatch(verifySource, /pull_request_target/);
+  assert.match(verifySource, /npm test/);
+  assert.match(verifySource, /npm run game-stats:integrity:check/);
+  assert.match(verifySource, /npm --prefix workers\/game-stats run deploy:check/);
+  assert.doesNotMatch(verifySource, /run deploy --/);
+
+  assert.equal(release.needs, "verify");
+  assert.match(release.if, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(release.if, /github\.event_name == 'push'/);
+  assert.match(release.if, /github\.event_name == 'workflow_dispatch'/);
+  assert.doesNotMatch(release.if, /pull_request/);
+  assert.equal(release.env, undefined);
+
+  for (const job of [verify, release]) {
+    const checkoutStep = job.steps.find((step) =>
+      step.uses?.startsWith("actions/checkout@")
+    );
+    const setupNodeStep = job.steps.find((step) =>
+      step.uses?.startsWith("actions/setup-node@")
+    );
+    assert.equal(
+      checkoutStep.uses,
+      "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"
+    );
+    assert.equal(checkoutStep.with["persist-credentials"], false);
+    assert.equal(
+      setupNodeStep.uses,
+      "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"
+    );
+  }
+
+  const stepByName = Object.fromEntries(
+    release.steps.map((step) => [step.name, step])
   );
-  assert.doesNotMatch(workflow, /cloudflare\/wrangler-action/);
-  assert.match(workflow, /secrets\.CLOUDFLARE_API_TOKEN/);
-  assert.match(workflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
-  assert.match(workflow, /Missing CLOUDFLARE_API_TOKEN repository secret/);
-  assert.match(workflow, /Missing CLOUDFLARE_ACCOUNT_ID repository secret/);
-  assert.match(workflow, /exit "\$missing"/);
-  assert.match(workflow, /npm run game-stats:static-release:check/);
-  assert.match(workflow, /npm run game-stats:release:check/);
-  assert.match(workflow, /group: game-stats-worker-release-\$\{\{ github\.ref \}\}/);
-  assert.match(workflow, /cancel-in-progress: true/);
+  assert.deepEqual(stepByName["Require production credentials"].env, {
+    CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+    CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+  });
+  assert.equal(
+    stepByName["Require production credentials"].run,
+    "node scripts/check-game-stats-release-context.mjs --credentials"
+  );
+  assert.deepEqual(stepByName["Reject a superseded workflow revision"].env, {
+    GITHUB_TOKEN: "${{ github.token }}",
+  });
+  assert.equal(
+    stepByName["Reject a superseded workflow revision"].run,
+    "node scripts/check-game-stats-release-context.mjs --current-main"
+  );
+  assert.deepEqual(stepByName["Deploy current Worker configuration"].env, {
+    CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+    CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+  });
+  assert.equal(
+    stepByName["Deploy current Worker configuration"].run,
+    "npm --prefix workers/game-stats run deploy -- --config wrangler.jsonc --strict"
+  );
+  assert.doesNotMatch(workflow, /cloudflare\/wrangler-action|pull_request_target/);
+
+  const releaseStepNames = release.steps.map((step) => step.name);
   assert.ok(
-    workflow.indexOf("npm --prefix workers/game-stats run deploy:check") <
-      workflow.indexOf("Deploy current Worker configuration")
+    releaseStepNames.indexOf("Require production credentials") <
+      releaseStepNames.indexOf("Wait for checked-in browser release to reach production")
   );
   assert.ok(
-    workflow.indexOf("Require production credentials") <
-      workflow.indexOf("npm run game-stats:static-release:check")
+    releaseStepNames.indexOf("Wait for checked-in browser release to reach production") <
+      releaseStepNames.indexOf("Reject a superseded workflow revision")
   );
   assert.ok(
-    workflow.indexOf("npm run game-stats:static-release:check") <
-      workflow.indexOf("Deploy current Worker configuration")
+    releaseStepNames.indexOf("Reject a superseded workflow revision") <
+      releaseStepNames.indexOf("Deploy current Worker configuration")
   );
   assert.ok(
-    workflow.indexOf("Deploy current Worker configuration") <
-      workflow.indexOf("npm run game-stats:release:check")
+    releaseStepNames.indexOf("Deploy current Worker configuration") <
+      releaseStepNames.indexOf(
+        "Verify checked-in/deployed browser/Worker release parity"
+      )
   );
   assert.match(validationGuide, /npm run game-stats:deployment:check/);
   assert.match(validationGuide, /npm run game-stats:static-release:check/);
@@ -1197,4 +1260,6 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.match(validationGuide, /intentionally ignoring\s+Worker `\/health`/);
   assert.match(validationGuide, /CLOUDFLARE_API_TOKEN/);
   assert.match(validationGuide, /CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(validationGuide, /current `main` revision/);
+  assert.match(validationGuide, /Wrangler's `--strict`/);
 });

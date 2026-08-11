@@ -12,6 +12,7 @@
     "game-stats:release:check": "node scripts/check-game-stats-deployment.mjs --release"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0"
+    "@playwright/test": "^1.55.0",
+    "yaml": "^2.9.0"
   }
 }

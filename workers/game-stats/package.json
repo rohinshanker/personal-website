@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "wrangler dev --local",
     "deploy": "wrangler deploy",
-    "deploy:check": "wrangler deploy --dry-run --config wrangler.jsonc",
+    "deploy:check": "wrangler deploy --dry-run --config wrangler.jsonc --strict",
     "integrity:update": "node ../../scripts/update-game-integrity.mjs",
     "integrity:check": "node ../../scripts/update-game-integrity.mjs --check",
     "deployment:local-check": "node ../../scripts/check-game-stats-deployment.mjs",
