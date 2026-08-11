@@ -5184,7 +5184,7 @@ const INFINITY_ARMORY_GEM_COLORS = Object.freeze([
   "shadow",
   "pearl",
 ]);
-const createInfinityArmoryInventoryGems = () => {
+const createInfinityArmoryInventoryGems = (random = Math.random) => {
   const gems = Array.from({ length: INFINITY_ARMORY_INVENTORY_GEM_COUNT }, (_, index) => {
     const shape = INFINITY_ARMORY_SHAPES[index % INFINITY_ARMORY_SHAPES.length];
     const color =
@@ -5202,7 +5202,7 @@ const createInfinityArmoryInventoryGems = () => {
   });
 
   for (let index = gems.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const swapIndex = Math.floor(random() * (index + 1));
     [gems[index], gems[swapIndex]] = [gems[swapIndex], gems[index]];
   }
 
@@ -7194,16 +7194,16 @@ const drawDistressStatic = (ctx, width, height) => {
   ctx.restore();
 };
 
-const drawDistressDisplayGrain = (ctx, width, height) => {
+const drawDistressDisplayGrain = (ctx, width, height, random = Math.random) => {
   ctx.save();
   for (let y = 0; y < height; y += 3) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
     ctx.fillRect(0, y, width, 1);
   }
   for (let index = 0; index < 170; index += 1) {
-    const x = Math.random() * width;
-    const y = Math.random() * height;
-    const alpha = 0.012 + Math.random() * 0.04;
+    const x = random() * width;
+    const y = random() * height;
+    const alpha = 0.012 + random() * 0.04;
     ctx.fillStyle = `rgba(220, 255, 220, ${alpha})`;
     ctx.fillRect(x, y, 1, 1);
   }
@@ -8086,14 +8086,14 @@ const shouldSuppressSnakePointerClick = () => {
   return shouldSuppress;
 };
 
-const drawDistressOffDisplay = (ctx, width, height) => {
+const drawDistressOffDisplay = (ctx, width, height, random = Math.random) => {
   ctx.fillStyle = "#020403";
   ctx.fillRect(0, 0, width, height);
   ctx.fillStyle = "rgba(41, 92, 50, 0.32)";
   for (let y = 0; y < height; y += 4) {
     ctx.fillRect(0, y, width, 1);
   }
-  drawDistressDisplayGrain(ctx, width, height);
+  drawDistressDisplayGrain(ctx, width, height, random);
   ctx.fillStyle = "rgba(98, 255, 120, 0.34)";
   ctx.font = "bold 13px 'Courier New', monospace";
   ctx.textAlign = "center";
@@ -9116,11 +9116,9 @@ const GRADESCOPE_CURVE_GRAPH_STEPS = 36;
 const isGradescopeCurveVisible = () =>
   isManagedRandomEventWindowVisible(gradescopeCurveWindow);
 
-const updateGradescopeCurvePath = () => {
-  if (!gradescopeCurvePath || !gradescopeCurveSlider) return;
-  const min = Number(gradescopeCurveSlider.min) || 0;
-  const max = Number(gradescopeCurveSlider.max) || 100;
-  const rawValue = Number(gradescopeCurveSlider.value);
+const createGradescopeCurvePath = (rawValue, rawMin = 0, rawMax = 100) => {
+  const min = Number(rawMin) || 0;
+  const max = Number(rawMax) || 100;
   const value = Number.isFinite(rawValue) ? rawValue : GRADESCOPE_CURVE_SLIDER_DEFAULT;
   const ratio = Math.max(0, Math.min(1, (value - min) / Math.max(1, max - min)));
   const center =
@@ -9139,7 +9137,19 @@ const updateGradescopeCurvePath = () => {
         Math.exp(-(offset * offset) / (2 * GRADESCOPE_CURVE_GRAPH_SIGMA ** 2));
     points.push(`${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`);
   }
-  gradescopeCurvePath.setAttribute("d", points.join(" "));
+  return points.join(" ");
+};
+
+const updateGradescopeCurvePath = () => {
+  if (!gradescopeCurvePath || !gradescopeCurveSlider) return;
+  gradescopeCurvePath.setAttribute(
+    "d",
+    createGradescopeCurvePath(
+      Number(gradescopeCurveSlider.value),
+      gradescopeCurveSlider.min,
+      gradescopeCurveSlider.max
+    )
+  );
 };
 
 const setGradescopeCurveMode = (mode) => {
@@ -30766,6 +30776,7 @@ const scheduleCalendarRefresh = () => {
 
 const ADMIN_RANDOM_EVENT_LABELS = Object.freeze({
   "annoying-system-alert": "Annoying System Alert",
+  "dodging-popup-alert": "Annoying Dodging Popup Alert",
   "current-publicly-available-information": "Current Public Information",
   "debug-system-alert-deodorant-reminder": "System Alert — Hygiene Reminder",
   "debug-system-alert-power-cycle-reminder": "System Alert — Power-Cycle Reminder",
@@ -30778,6 +30789,7 @@ const ADMIN_RANDOM_EVENT_LABELS = Object.freeze({
   "rohin-os-note": "Rohin OS Note",
   "rohin-os-update": "Rohin OS Update",
   "spare-a-trna": "Spare a tRNA",
+  "vanishing-popup-alert": "Annoying Vanishing Popup Alert",
 });
 
 const formatAdminRandomEventLabel = (eventId) => {
@@ -30808,6 +30820,377 @@ const listAdminRandomEvents = () => [
     label: formatAdminRandomEventLabel("feliz-jueves"),
   },
 ].sort((left, right) => left.label.localeCompare(right.label));
+
+const getAdminRandomEventPreviewSource = (definition) => {
+  if (!definition) return null;
+  if (definition.id === "microsoft-word-license-stack") {
+    return createWordErrorWindow(0, wordErrorStackLayout());
+  }
+  try {
+    const targets = collectRandomEventPreloadTargets(
+      getRandomEventPreloadTargets(definition, {
+        triggerName: "adminControlsPreview",
+        detail: { source: "admin-controls" },
+        admin: true,
+      })
+    );
+    return targets.find((target) => target instanceof Element) || null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const prepareAdminRandomEventPreview = (sourceWindow, eventId) => {
+  if (!(sourceWindow instanceof Element)) return null;
+  const preview = sourceWindow.cloneNode(true);
+  preview.classList.remove(
+    "is-hidden",
+    "is-opening",
+    "is-closing",
+    "is-choice-flashing"
+  );
+  preview.hidden = false;
+  preview.inert = true;
+  preview.setAttribute("aria-hidden", "true");
+  preview.removeAttribute("aria-modal");
+  preview.removeAttribute("role");
+  preview.setAttribute("data-admin-event-preview-window", eventId);
+  ["left", "right", "top", "bottom", "translate", "transform", "z-index"].forEach(
+    (property) => preview.style.removeProperty(property)
+  );
+  preview.querySelectorAll("audio, video").forEach((media) => {
+    media.autoplay = false;
+    media.controls = false;
+    media.muted = true;
+    media.removeAttribute("autoplay");
+  });
+  return preview;
+};
+
+const activateAdminRandomEventPreviewMedia = (preview) => {
+  preview?.querySelectorAll("[data-src]").forEach((media) => {
+    if (!media.hasAttribute("src")) media.setAttribute("src", media.getAttribute("data-src"));
+  });
+  return preview;
+};
+
+const configureRelicRecoveryPreview = (preview) => {
+  if (!preview) return;
+  preview.classList.remove("is-detail-open", "is-complete");
+  preview.querySelectorAll(".relic-recovery-flyer").forEach((flyer) => flyer.remove());
+
+  const detail = preview.querySelector("#relic-recovery-detail");
+  detail?.classList.add("is-hidden");
+  detail?.classList.remove("is-opening", "is-closing");
+  detail?.setAttribute("aria-hidden", "true");
+
+  const dialog = preview.querySelector("#relic-recovery-dialog");
+  dialog?.classList.remove("is-hidden");
+  dialog?.setAttribute("aria-hidden", "false");
+  const dialogText = preview.querySelector("#relic-recovery-dialog-text");
+  if (dialogText) dialogText.textContent = "Let's collect some relics!";
+
+  const start = preview.querySelector("#relic-recovery-start");
+  const decline = preview.querySelector("#relic-recovery-decline");
+  const continueButton = preview.querySelector("#relic-recovery-continue");
+  [start, decline].forEach((button) => {
+    button?.classList.remove("is-hidden");
+    button?.setAttribute("aria-hidden", "false");
+  });
+  continueButton?.classList.add("is-hidden");
+  continueButton?.setAttribute("aria-hidden", "true");
+  preview.querySelector("#relic-recovery-dialog-actions")?.classList.remove("is-hidden");
+
+  const ownerDocument = preview.ownerDocument;
+  const relics = preview.querySelector("#relic-recovery-relics");
+  const relicButtons = RELIC_RECOVERY_ITEMS.map((item) => {
+    const button = ownerDocument.createElement("button");
+    button.type = "button";
+    button.className = "relic-recovery-item";
+    button.dataset.relicRecoveryItem = item.id;
+    button.style.setProperty("--relic-x", `${item.x}%`);
+    button.style.setProperty("--relic-y", `${item.y}%`);
+    button.style.setProperty("--relic-scale", String(item.scale));
+    button.style.setProperty("--relic-depth", String(item.depth));
+    button.setAttribute("aria-label", `Retrieve ${item.name}`);
+    const image = ownerDocument.createElement("img");
+    image.dataset.src = item.image;
+    image.alt = item.name;
+    button.append(image);
+    return button;
+  });
+  relics?.replaceChildren(...relicButtons);
+
+  const hotbar = preview.querySelector("#relic-recovery-hotbar");
+  const hotbarSlots = RELIC_RECOVERY_ITEMS.map((item) => {
+    const slot = ownerDocument.createElement("span");
+    slot.className = "relic-recovery-slot";
+    slot.dataset.relicRecoverySlot = item.id;
+    slot.setAttribute("aria-label", `Unrecovered ${item.name}`);
+    const image = ownerDocument.createElement("img");
+    image.dataset.src = item.image;
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
+    slot.append(image);
+    return slot;
+  });
+  hotbar?.replaceChildren(...hotbarSlots);
+};
+
+const configureInfinityArmoryPreview = (preview) => {
+  if (!preview) return;
+  const ownerDocument = preview.ownerDocument;
+  const initialState = createInfinityArmoryState();
+  const inventory = createInfinityArmoryInventoryGems(() => 0.5);
+  const setText = (selector, value) => {
+    const element = preview.querySelector(selector);
+    if (element) element.textContent = value;
+  };
+  setText("#infinity-armory-level", `Infinity Blade Lvl ${initialState.level}`);
+  setText("#infinity-armory-attack", String(INFINITY_ARMORY_BASE_ATTACK));
+  setText("#infinity-armory-price", String(INFINITY_ARMORY_UPGRADE_PRICES[0]));
+  setText("#infinity-armory-gold", String(initialState.gold));
+  setText("#infinity-armory-status", "");
+
+  const upgrade = preview.querySelector("#infinity-armory-upgrade");
+  if (upgrade) {
+    upgrade.disabled = false;
+    upgrade.textContent = "Upgrade";
+  }
+  preview.querySelectorAll("[data-armory-slot]").forEach((slot) => {
+    const shape = slot.dataset.armorySlot;
+    const label = shape ? `${shape[0].toUpperCase()}${shape.slice(1)}` : "Gem";
+    slot.classList.remove("is-filled", "is-targeted");
+    slot.disabled = false;
+    slot.setAttribute("aria-pressed", "false");
+    slot.setAttribute("aria-label", `${label} gem slot empty`);
+    delete slot.dataset.armoryColor;
+    const image = slot.querySelector("img");
+    if (image && INFINITY_ARMORY_GEM_ICON_BY_SHAPE[shape]) {
+      image.removeAttribute("src");
+      image.dataset.src = INFINITY_ARMORY_GEM_ICON_BY_SHAPE[shape];
+    }
+  });
+
+  const gemGrid = preview.querySelector("#infinity-armory-gems");
+  const gemSlots = Array.from({ length: INFINITY_ARMORY_INVENTORY_SLOT_COUNT }, (_, index) => {
+    const gem = inventory[index];
+    const button = ownerDocument.createElement("button");
+    button.className = "infinity-armory-gem";
+    button.type = "button";
+    button.setAttribute("role", "gridcell");
+    if (!gem) {
+      button.classList.add("is-empty");
+      button.disabled = true;
+      button.setAttribute("aria-label", "Empty gem slot");
+      return button;
+    }
+    button.dataset.armoryGemId = gem.id;
+    button.dataset.armoryGem = gem.shape;
+    button.dataset.armoryColor = gem.color;
+    button.dataset.armoryLabel = gem.label;
+    button.dataset.armorySrc = gem.src;
+    button.setAttribute("aria-label", gem.label);
+    const image = ownerDocument.createElement("img");
+    image.dataset.src = gem.src;
+    image.decoding = "async";
+    image.alt = "";
+    button.append(image);
+    return button;
+  });
+  gemGrid?.replaceChildren(...gemSlots);
+};
+
+const configureGradescopeCurvePreview = (preview) => {
+  if (!preview) return;
+  preview.classList.remove("is-adjusting");
+  preview.querySelector("#gradescope-curve-prompt")?.classList.remove("is-hidden");
+  preview.querySelector("#gradescope-curve-adjust")?.classList.add("is-hidden");
+  preview.querySelector("#gradescope-curve-set-row")?.classList.add("is-hidden");
+  const slider = preview.querySelector("#gradescope-curve-slider");
+  if (slider) slider.value = String(GRADESCOPE_CURVE_SLIDER_DEFAULT);
+  preview.querySelector("#gradescope-curve-path")?.setAttribute(
+    "d",
+    createGradescopeCurvePath(
+      GRADESCOPE_CURVE_SLIDER_DEFAULT,
+      slider?.min,
+      slider?.max
+    )
+  );
+};
+
+const configureGearsNestPreview = (preview) => {
+  if (!preview) return;
+  const ownerDocument = preview.ownerDocument;
+  const state = createGearsNestState();
+  preview.classList.remove(
+    "is-cleared",
+    "is-combat",
+    "is-damaged",
+    "is-failed",
+    "is-firing",
+    "is-reloading",
+    "is-switching-cover"
+  );
+  preview.classList.add("is-prompting");
+  preview.querySelector("#gears-nest-combat")?.classList.remove("is-hidden");
+  preview.querySelector("#gears-nest-prompt")?.classList.remove("is-hidden");
+  preview.querySelector("#gears-nest-result")?.classList.add("is-hidden");
+  const resultText = preview.querySelector("#gears-nest-result-text");
+  if (resultText) resultText.textContent = "";
+  const status = preview.querySelector("#gears-nest-status");
+  if (status) status.textContent = "Scourge Nest emerging. Engage to clear it.";
+  const ammo = preview.querySelector("#gears-nest-ammo");
+  if (ammo) ammo.textContent = `${state.ammo} / ${GEARS_NEST_MAGAZINE_SIZE}`;
+  const health = preview.querySelector("#gears-nest-health");
+  if (health) health.style.width = `${state.health}%`;
+  health?.closest(".gears-nest-healthbar")?.setAttribute(
+    "aria-valuenow",
+    String(state.health)
+  );
+  const healthValue = preview.querySelector("#gears-nest-health-value");
+  if (healthValue) healthValue.textContent = String(state.health);
+  const player = preview.querySelector("#gears-nest-player");
+  player?.classList.remove("is-firing", "is-peeking", "is-switching");
+  if (player) player.dataset.cover = String(state.coverIndex);
+
+  const playerCovers = GEARS_NEST_COVER_POSITIONS.map((cover) => {
+    const marker = ownerDocument.createElement("span");
+    marker.className = "gears-nest-player-cover";
+    marker.dataset.gearsNestCoverProp = String(cover.index);
+    marker.style.left = `${cover.x}%`;
+    marker.style.top = `${cover.y}%`;
+    marker.style.width = `${cover.width}px`;
+    return marker;
+  });
+  preview.querySelector("#gears-nest-player-covers")?.replaceChildren(...playerCovers);
+
+  const occupiedCoverIds = new Set(
+    state.enemies.map((enemy) => enemy.coverId).filter(Boolean)
+  );
+  const enemyCovers = GEARS_NEST_ENEMY_COVER_SLOTS.map((cover) => {
+    const marker = ownerDocument.createElement("span");
+    marker.className = "gears-nest-enemy-cover";
+    marker.classList.toggle("is-occupied", occupiedCoverIds.has(cover.id));
+    marker.dataset.gearsNestEnemyCover = cover.id;
+    marker.style.left = `${cover.x}%`;
+    marker.style.top = `${cover.y}%`;
+    marker.style.width = `${cover.width}px`;
+    return marker;
+  });
+  preview.querySelector("#gears-nest-enemy-covers")?.replaceChildren(...enemyCovers);
+
+  const enemies = state.enemies.map((enemy) => {
+    const button = ownerDocument.createElement("button");
+    button.type = "button";
+    button.className = `gears-nest-enemy gears-nest-enemy--${enemy.type}`;
+    button.classList.toggle("is-behind-cover", Boolean(enemy.coverId));
+    button.dataset.gearsNestEnemy = enemy.id;
+    button.style.left = `${enemy.x}%`;
+    button.style.top = `${enemy.y}%`;
+    button.style.width = `${enemy.width}px`;
+    button.setAttribute("aria-label", `${enemy.name}, ${enemy.health} health remaining`);
+    const image = ownerDocument.createElement("img");
+    image.dataset.src = enemy.image;
+    image.decoding = "async";
+    image.alt = "";
+    const meter = ownerDocument.createElement("span");
+    meter.className = "gears-nest-enemy-health";
+    meter.style.width = `${Math.max(0, (enemy.health / enemy.maxHealth) * 100)}%`;
+    button.append(image, meter);
+    return button;
+  });
+  preview.querySelector("#gears-nest-enemies")?.replaceChildren(...enemies);
+  preview.querySelector("#gears-nest-projectiles")?.replaceChildren();
+  preview.querySelectorAll("[data-gears-nest-cover]").forEach((button) => {
+    const coverIndex = Number(button.getAttribute("data-gears-nest-cover"));
+    const active = coverIndex === state.coverIndex;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+    button.disabled = true;
+  });
+};
+
+const drawDistressSignalPreview = (preview) => {
+  const canvas = preview?.querySelector("#distress-signal-canvas");
+  const context = canvas?.getContext("2d");
+  if (!canvas || !context) return;
+  canvas.width = DISTRESS_CANVAS_WIDTH;
+  canvas.height = DISTRESS_CANVAS_HEIGHT;
+  let randomState = 0x51f15e;
+  const deterministicRandom = () => {
+    randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
+    return randomState / 0x100000000;
+  };
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.clearRect(0, 0, DISTRESS_CANVAS_WIDTH, DISTRESS_CANVAS_HEIGHT);
+  drawDistressOffDisplay(
+    context,
+    DISTRESS_CANVAS_WIDTH,
+    DISTRESS_CANVAS_HEIGHT,
+    deterministicRandom
+  );
+};
+
+const configureDebugSystemAlertPreview = (preview, alert) => {
+  if (!preview || !alert) return;
+  const title = preview.querySelector("#debug-system-alert-title");
+  const icon = preview.querySelector("#debug-system-alert-icon");
+  const message = preview.querySelector("#debug-system-alert-message");
+  const actions = preview.querySelector("#debug-system-alert-actions");
+  if (title) title.textContent = alert.title;
+  if (icon) icon.src = alert.icon;
+  if (message) message.textContent = alert.message;
+  actions?.classList.toggle("is-centered", alert.alignment === "center");
+  preview.setAttribute("data-alert-id", alert.id);
+};
+
+const createAdminRandomEventPreviewTemplate = (eventId) => {
+  const normalizedId = String(eventId || "");
+  if (normalizedId === "feliz-jueves") {
+    return prepareAdminRandomEventPreview(felizJuevesWindow, normalizedId);
+  }
+
+  const debugPrefix = "debug-system-alert-";
+  if (normalizedId.startsWith(debugPrefix)) {
+    const alert = DEBUG_SYSTEM_ALERTS.find(
+      (candidate) => candidate.id === normalizedId.slice(debugPrefix.length)
+    );
+    const preview = prepareAdminRandomEventPreview(debugSystemAlertWindow, normalizedId);
+    configureDebugSystemAlertPreview(preview, alert);
+    return alert ? preview : null;
+  }
+
+  const definition = randomEventDefinitions.find(
+    (candidate) => candidate.id === normalizedId
+  );
+  const preview = prepareAdminRandomEventPreview(
+    getAdminRandomEventPreviewSource(definition),
+    normalizedId
+  );
+  if (normalizedId === "relic-recovery") configureRelicRecoveryPreview(preview);
+  if (normalizedId === "infinity-blade-armory") configureInfinityArmoryPreview(preview);
+  if (normalizedId === "gradescope-curve") configureGradescopeCurvePreview(preview);
+  if (normalizedId === "gears-nest-clear") configureGearsNestPreview(preview);
+  return preview;
+};
+
+const ADMIN_RANDOM_EVENT_PREVIEW_TEMPLATES = new Map(
+  listAdminRandomEvents().map((eventDefinition) => [
+    eventDefinition.id,
+    createAdminRandomEventPreviewTemplate(eventDefinition.id),
+  ])
+);
+
+const createAdminRandomEventPreview = (eventId) => {
+  const normalizedId = String(eventId || "");
+  const template = ADMIN_RANDOM_EVENT_PREVIEW_TEMPLATES.get(normalizedId);
+  const preview = activateAdminRandomEventPreviewMedia(
+    template?.cloneNode(true) || null
+  );
+  if (normalizedId === "distress-signal") drawDistressSignalPreview(preview);
+  return preview;
+};
 
 const adminRandomEventResult = (ok, message) => ({ ok, message });
 
@@ -30943,6 +31326,7 @@ const runAdminScenePreset = async (
 
 window.rohinAdminOrchestrator = Object.freeze({
   closeWindow: () => closeAppWindow("admin-controls"),
+  createEventPreview: createAdminRandomEventPreview,
   listEvents: listAdminRandomEvents,
   resetScene: () => window.location.reload(),
   runEvent: runAdminRandomEvent,

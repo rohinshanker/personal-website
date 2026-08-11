@@ -42,6 +42,51 @@ const TARGET_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_.:-]{0,159}$/;
 const APP_TARGET_PATTERN = /^app:([a-z0-9][a-z0-9-]{0,63}):(desktop|taskbar|other-\d{1,2})$/;
 const ACTION_TARGET_PATTERN = /^action:([a-f0-9]{8}):(\d{1,2})$/;
 const GITHUB_TARGET_PATTERN = /^github:(\d{1,2})$/;
+const EVENT_PREVIEW_STYLESHEETS = Object.freeze([
+  "style.css?v=first-win-stats-handoff-20260722",
+  "styles/home/base.css?v=admin-launchers-20260803",
+  "styles/home/random-events.css?v=video-editor-launch-20260809",
+]);
+const EVENT_PREVIEW_STAGE_STYLES = `
+  :host {
+    contain: layout paint size;
+    display: block;
+    height: 100%;
+    width: 100%;
+  }
+
+  .admin-event-preview-stage {
+    background: var(--bg-image) center / cover no-repeat #008080;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  .admin-event-preview-empty {
+    align-items: center;
+    color: #fff;
+    display: flex;
+    height: 100%;
+    justify-content: center;
+    margin: 0;
+    padding: 12px;
+    text-align: center;
+    text-shadow: 1px 1px #000;
+  }
+
+  [data-admin-event-preview-window] {
+    bottom: auto !important;
+    margin: 0 !important;
+    max-height: none !important;
+    max-width: none !important;
+    position: absolute !important;
+    right: auto !important;
+    transform-origin: top left !important;
+    translate: none !important;
+    z-index: 1 !important;
+  }
+`;
 
 const cloneDefaults = () => ({
   ...DEFAULT_STATE,
@@ -203,6 +248,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     eventSearch: byId("admin-event-search"),
     eventKind: byId("admin-event-kind"),
     eventList: byId("admin-event-list"),
+    eventPreview: byId("admin-event-preview"),
     triggerNow: byId("admin-trigger-now"),
     runSequenceNext: byId("admin-run-sequence-next"),
     addCue: byId("admin-add-cue"),
@@ -286,6 +332,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
   let takeGeneration = 0;
   let cueOverlayTimer = null;
   let seedIndicatorFrame = null;
+  let eventPreviewCleanup = null;
 
   const persist = () => {
     try {
@@ -565,6 +612,96 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     });
   };
 
+  const renderEventPreview = () => {
+    if (!controls.eventPreview) return;
+    if (!isAdminOpen() || state.activeTab !== "events") return;
+    if (eventPreviewCleanup) eventPreviewCleanup();
+    eventPreviewCleanup = null;
+
+    const eventId = controls.eventList?.value || "";
+    const eventDefinition = eventById.get(eventId);
+    const eventLabelText = eventDefinition?.label || "No event selected";
+    controls.eventPreview.setAttribute(
+      "aria-label",
+      `First window preview: ${eventLabelText}`
+    );
+
+    const shadow = controls.eventPreview.shadowRoot ||
+      controls.eventPreview.attachShadow({ mode: "open" });
+    let stage = shadow.querySelector(".admin-event-preview-stage");
+    if (!stage) {
+      EVENT_PREVIEW_STYLESHEETS.forEach((href) => {
+        const link = documentRef.createElement("link");
+        link.rel = "stylesheet";
+        link.href = new URL(href, documentRef.baseURI).href;
+        shadow.append(link);
+      });
+      const stageStyles = documentRef.createElement("style");
+      stageStyles.textContent = EVENT_PREVIEW_STAGE_STYLES;
+      stage = documentRef.createElement("div");
+      stage.className = "admin-event-preview-stage";
+      stage.setAttribute("aria-hidden", "true");
+      shadow.append(stageStyles, stage);
+    }
+    stage.replaceChildren();
+
+    const previewWindow = typeof orchestrator.createEventPreview === "function"
+      ? orchestrator.createEventPreview(eventId)
+      : null;
+    if (!(previewWindow instanceof pageWindow.Element)) {
+      const empty = documentRef.createElement("p");
+      empty.className = "admin-event-preview-empty";
+      empty.textContent = eventId
+        ? "This event does not have a window preview."
+        : "Choose an event to preview its first window.";
+      stage.append(empty);
+      return;
+    }
+
+    previewWindow.inert = true;
+    previewWindow.setAttribute("inert", "");
+    stage.append(previewWindow);
+
+    const fitPreview = () => {
+      previewWindow.style.setProperty("left", "0px", "important");
+      previewWindow.style.setProperty("top", "0px", "important");
+      previewWindow.style.setProperty("transform", "none", "important");
+      const naturalBounds = previewWindow.getBoundingClientRect();
+      const availableWidth = Math.max(1, stage.clientWidth - 16);
+      const availableHeight = Math.max(1, stage.clientHeight - 16);
+      const naturalWidth = Math.max(1, naturalBounds.width);
+      const naturalHeight = Math.max(1, naturalBounds.height);
+      const scale = Math.min(
+        1,
+        availableWidth / naturalWidth,
+        availableHeight / naturalHeight
+      );
+      previewWindow.style.setProperty(
+        "left",
+        `${Math.max(8, (stage.clientWidth - naturalWidth * scale) / 2)}px`,
+        "important"
+      );
+      previewWindow.style.setProperty(
+        "top",
+        `${Math.max(8, (stage.clientHeight - naturalHeight * scale) / 2)}px`,
+        "important"
+      );
+      previewWindow.style.setProperty("transform", `scale(${scale})`, "important");
+    };
+
+    const resizeObserver = typeof pageWindow.ResizeObserver === "function"
+      ? new pageWindow.ResizeObserver(fitPreview)
+      : null;
+    resizeObserver?.observe(stage);
+    resizeObserver?.observe(previewWindow);
+    shadow.addEventListener("load", fitPreview, true);
+    pageWindow.requestAnimationFrame(fitPreview);
+    eventPreviewCleanup = () => {
+      resizeObserver?.disconnect();
+      shadow.removeEventListener("load", fitPreview, true);
+    };
+  };
+
   const renderEventList = () => {
     if (!controls.eventList) return;
     const selected = controls.eventList.value;
@@ -579,9 +716,12 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     );
     if (filtered.some((eventDefinition) => eventDefinition.id === selected)) {
       controls.eventList.value = selected;
+    } else {
+      controls.eventList.value = filtered[0]?.id || "";
     }
     controls.triggerNow.disabled = !filtered.length;
     controls.addCue.disabled = !filtered.length;
+    renderEventPreview();
   };
 
   const renderBindingEvents = () => {
@@ -718,6 +858,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     documentRef.querySelectorAll("[data-admin-panel]").forEach((panel) => {
       panel.hidden = panel.getAttribute("data-admin-panel") !== tabName;
     });
+    if (tabName === "events" && isAdminOpen()) renderEventPreview();
     if (tabName === "bindings") renderTargetChoices();
     if (save) persist();
   };
@@ -1176,6 +1317,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
 
   controls.eventSearch.addEventListener("input", renderEventList);
   controls.eventKind.addEventListener("change", renderEventList);
+  controls.eventList.addEventListener("change", renderEventPreview);
   controls.targetSearch.addEventListener("input", renderTargetChoices);
   controls.bindingTarget.addEventListener("change", () => {
     selectedTargetKey = normalizeTargetKey(controls.bindingTarget.value);
@@ -1407,6 +1549,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     if (open) {
       renderTargetChoices();
       renderBindings();
+      if (state.activeTab === "events") renderEventPreview();
       pageWindow.requestAnimationFrame(() => {
         documentRef.querySelector(`[data-admin-tab="${state.activeTab}"]`)?.focus({
           preventScroll: true,
@@ -1455,6 +1598,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     stopTake("");
     if (cueOverlayTimer) pageWindow.clearTimeout(cueOverlayTimer);
     if (seedIndicatorFrame) pageWindow.cancelAnimationFrame(seedIndicatorFrame);
+    if (eventPreviewCleanup) eventPreviewCleanup();
     adminObserver.disconnect();
     contentObserver.disconnect();
   });

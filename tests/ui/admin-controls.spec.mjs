@@ -348,11 +348,46 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
       for (const tab of ["run", "events", "bindings", "capture"]) {
         await selectAdminTab(page, tab);
       }
+      await selectAdminTab(page, "events");
+      await page.locator("#admin-event-list").selectOption("dodging-popup-alert");
+      const previewMetrics = await page.locator("#admin-panel-events").evaluate((panel) => {
+        const browser = panel.querySelector(".admin-event-browser");
+        const preview = panel.querySelector("#admin-event-preview");
+        const browserStyle = getComputedStyle(browser);
+        const previewBounds = preview.getBoundingClientRect();
+        const panelBounds = panel.getBoundingClientRect();
+        return {
+          columnCount: browserStyle.gridTemplateColumns.split(/\s+/).filter(Boolean).length,
+          panelClientWidth: panel.clientWidth,
+          panelScrollWidth: panel.scrollWidth,
+          previewCount: preview.shadowRoot.querySelectorAll(
+            '[data-admin-event-preview-window="dodging-popup-alert"]'
+          ).length,
+          previewLeft: previewBounds.left,
+          previewRight: previewBounds.right,
+          panelLeft: panelBounds.left,
+          panelRight: panelBounds.right,
+        };
+      });
+      expect(previewMetrics.columnCount).toBe(viewport.width <= 480 ? 1 : 2);
+      expect(previewMetrics.panelScrollWidth).toBeLessThanOrEqual(
+        previewMetrics.panelClientWidth
+      );
+      expect(previewMetrics.previewCount).toBe(1);
+      expect(previewMetrics.previewLeft).toBeGreaterThanOrEqual(
+        previewMetrics.panelLeft - 0.6
+      );
+      expect(previewMetrics.previewRight).toBeLessThanOrEqual(
+        previewMetrics.panelRight + 0.6
+      );
       await selectAdminTab(page, "run");
 
       const metrics = await win.evaluate((element) => {
         const rect = element.getBoundingClientRect();
         const body = element.querySelector("#admin-controls-body");
+        const tabs = element.querySelector(".admin-controls-tabs").getBoundingClientRect();
+        const panel = element.querySelector(".admin-controls-panel:not([hidden])");
+        const panelRect = panel.getBoundingClientRect();
         const taskbarTop = document.querySelector(".taskbar").getBoundingClientRect().top;
         return {
           bodyClientHeight: body.clientHeight,
@@ -361,7 +396,17 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
           documentOverflow:
             document.documentElement.scrollWidth > document.documentElement.clientWidth,
           left: rect.left,
+          panelLeft: panelRect.left,
+          panelRight: panelRect.right,
+          panelShadow: getComputedStyle(panel).boxShadow,
+          raisedControlShadow: getComputedStyle(
+            element.querySelector('[data-admin-preset="game-win"]')
+          ).boxShadow,
           right: rect.right,
+          tabsBottom: tabs.bottom,
+          tabsLeft: tabs.left,
+          tabsRight: tabs.right,
+          panelTop: panelRect.top,
           taskbarTop,
           top: rect.top,
         };
@@ -372,6 +417,11 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
       expect(metrics.bottom).toBeLessThanOrEqual(metrics.taskbarTop + 0.6);
       expect(metrics.bodyScrollHeight).toBeGreaterThanOrEqual(metrics.bodyClientHeight);
       expect(metrics.documentOverflow).toBe(false);
+      expect(Math.abs(metrics.tabsLeft - metrics.panelLeft)).toBeLessThanOrEqual(0.6);
+      expect(Math.abs(metrics.tabsRight - metrics.panelRight)).toBeLessThanOrEqual(0.6);
+      expect(metrics.tabsBottom).toBeGreaterThanOrEqual(metrics.panelTop);
+      expect(metrics.tabsBottom).toBeLessThanOrEqual(metrics.panelTop + 3);
+      expect(metrics.panelShadow).toBe(metrics.raisedControlShadow);
 
       if (["mobile", "short-landscape", "wide"].includes(viewport.name)) {
         await page.screenshot({
@@ -434,10 +484,85 @@ test("direct events and fixed seeded controls run locally without duplicate natu
 }) => {
   const diagnostics = await preparePage(page);
   await page.setViewportSize({ width: 1280, height: 800 });
+  expect(
+    await page.locator("#admin-event-preview").evaluate((preview) => preview.shadowRoot === null)
+  ).toBe(true);
   await openAdmin(page);
 
   await selectAdminTab(page, "events");
   const eventList = page.locator("#admin-event-list");
+  const eventPreview = page.locator("#admin-event-preview");
+  await expect(eventPreview).toHaveRole("img");
+  expect(
+    await page.evaluate(() =>
+      window.rohinAdminOrchestrator
+        .listEvents()
+        .filter(
+          (event) =>
+            !(window.rohinAdminOrchestrator.createEventPreview(event.id) instanceof Element)
+        )
+        .map((event) => event.id)
+    )
+  ).toEqual([]);
+  const eventLabels = await eventList.locator("option").allTextContents();
+  const annoyingLabels = eventLabels.filter((label) => label.startsWith("Annoying "));
+  expect(annoyingLabels).toEqual([
+    "Annoying Dodging Popup Alert",
+    "Annoying System Alert",
+    "Annoying Vanishing Popup Alert",
+  ]);
+  expect(eventLabels.indexOf(annoyingLabels.at(-1)) - eventLabels.indexOf(annoyingLabels[0])).toBe(2);
+
+  await eventList.selectOption("dodging-popup-alert");
+  await expect(eventPreview).toHaveAttribute(
+    "aria-label",
+    "First window preview: Annoying Dodging Popup Alert"
+  );
+  await expect(
+    eventPreview.locator('[data-admin-event-preview-window="dodging-popup-alert"]')
+  ).toBeVisible();
+  await expect(eventPreview.locator("#dodging-popup-window")).toContainText(
+    "Is this popup annoying?"
+  );
+  await expect(eventPreview.locator("#dodging-popup-window")).toHaveAttribute("inert", "");
+  await expect(eventPreview.locator("#dodging-popup-window")).toHaveAttribute(
+    "aria-hidden",
+    "true"
+  );
+  await expect(eventPreview.locator(".admin-event-preview-stage")).toHaveAttribute(
+    "aria-hidden",
+    "true"
+  );
+  await expect(eventPreview.getByRole("button")).toHaveCount(0);
+  expect(await eventPreview.ariaSnapshot()).not.toContain("button");
+
+  await eventList.selectOption("mcafee-antivirus-update");
+  await expect(eventPreview.locator("#mcafee-prompt-window")).toBeVisible();
+  await expect(eventPreview.locator("#mcafee-download-window")).toHaveCount(0);
+
+  await eventList.selectOption("debug-system-alert-seneca-announcement");
+  await expect(eventPreview.locator("#debug-system-alert-title")).toHaveText(
+    "System Announcement"
+  );
+  await expect(eventPreview.locator("#debug-system-alert-message")).toContainText(
+    "someone else could be handed your days"
+  );
+
+  await eventList.selectOption("feliz-jueves");
+  await expect(eventPreview.locator("#feliz-jueves-window")).toBeVisible();
+
+  await page.locator("#admin-event-search").fill("vanishing popup");
+  await expect(eventList).toHaveValue("vanishing-popup-alert");
+  await expect(eventPreview.locator("#vanishing-popup-window")).toBeVisible();
+  await page.locator("#admin-event-search").fill("no matching event exists");
+  await expect(eventList.locator("option")).toHaveCount(0);
+  await expect(eventPreview.locator(".admin-event-preview-empty")).toHaveText(
+    "Choose an event to preview its first window."
+  );
+  await expect(page.locator("#admin-trigger-now")).toBeDisabled();
+  await expect(page.locator("#admin-add-cue")).toBeDisabled();
+  await page.locator("#admin-event-search").fill("");
+
   await expect(eventList.locator('option[value="behelit-found"]')).toHaveCount(1);
   const senecaOption = eventList.locator(
     'option[value="debug-system-alert-seneca-announcement"]'
@@ -446,16 +571,18 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await expect(senecaOption).toHaveText("System Announcement — Seneca");
   await eventList.selectOption("debug-system-alert-seneca-announcement");
   await page.locator("#admin-trigger-now").click();
-  const systemAlert = page.locator("#debug-system-alert-window");
+  const systemAlert = page.locator(
+    "#debug-system-alert-window:not([data-admin-event-preview-window])"
+  );
   await expect(systemAlert).toBeVisible();
   await expect(systemAlert).toHaveAttribute("data-alert-id", "seneca-announcement");
-  await closeManagedWindow(systemAlert, page.locator("#debug-system-alert-ok"));
+  await closeManagedWindow(systemAlert, systemAlert.locator("#debug-system-alert-ok"));
 
   await eventList.selectOption("behelit-found");
   await page.locator("#admin-trigger-now").click();
-  const behelit = page.locator("#behelit-window");
+  const behelit = page.locator("#behelit-window:not([data-admin-event-preview-window])");
   await expect(behelit).toBeVisible();
-  await closeManagedWindow(behelit, page.locator("#behelit-ok"));
+  await closeManagedWindow(behelit, behelit.locator("#behelit-ok"));
 
   await selectAdminTab(page, "bindings");
   await page.locator("#admin-binding-target").selectOption("app:video-editor:taskbar");
@@ -483,7 +610,7 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await expect(page.locator("#debug-system-alert-window")).toBeHidden();
   await expect(target).not.toHaveAttribute("data-admin-seeded", /.+/);
 
-  await closeManagedWindow(behelit, page.locator("#behelit-ok"));
+  await closeManagedWindow(behelit, behelit.locator("#behelit-ok"));
   await closeManagedWindow(
     videoDialog,
     videoDialog.locator("#video-editor-launch-no")
@@ -499,6 +626,116 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   expect(storage.local).not.toBeNull();
   expect(() => JSON.parse(storage.local)).not.toThrow();
   expect(storage.session).toBeNull();
+
+  expect(diagnostics.consoleErrors).toEqual([]);
+  expect(diagnostics.runtimeErrors).toEqual([]);
+  expect(diagnostics.mutatingRequests).toEqual([]);
+});
+
+test("event previews preserve an initialized first-window state", async ({ page }) => {
+  const diagnostics = await preparePage(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openAdmin(page);
+  await selectAdminTab(page, "events");
+
+  const eventList = page.locator("#admin-event-list");
+  const eventPreview = page.locator("#admin-event-preview");
+  await eventList.selectOption("infinity-blade-armory");
+  await expect(eventPreview.locator("#infinity-armory-gems [role=gridcell]")).toHaveCount(25);
+  await expect(eventPreview.locator("#infinity-armory-gems [data-armory-gem]")).toHaveCount(12);
+  await expect(eventPreview.locator("#infinity-armory-level")).toHaveText(
+    "Infinity Blade Lvl 1"
+  );
+  await expect(eventPreview.locator("#infinity-armory-gold")).toHaveText("12000");
+
+  await eventList.selectOption("distress-signal");
+  const previewDistressCanvasIsPainted = await eventPreview
+    .locator("#distress-signal-canvas")
+    .evaluate((canvas) => {
+      const blank = document.createElement("canvas");
+      blank.width = canvas.width;
+      blank.height = canvas.height;
+      return canvas.toDataURL() !== blank.toDataURL();
+    });
+  expect(previewDistressCanvasIsPainted).toBe(true);
+  await page.locator("#admin-trigger-now").click();
+  const liveDistressWindow = page.locator(
+    "#distress-signal-window:not([data-admin-event-preview-window])"
+  );
+  await expect(liveDistressWindow).toBeVisible();
+  expect(
+    await liveDistressWindow.locator("#distress-signal-canvas").evaluate((canvas) => {
+      const blank = document.createElement("canvas");
+      blank.width = canvas.width;
+      blank.height = canvas.height;
+      return canvas.toDataURL() !== blank.toDataURL();
+    })
+  ).toBe(true);
+  await liveDistressWindow.locator("#distress-signal-close").click();
+
+  await eventList.selectOption("gradescope-curve");
+  await expect(eventPreview.locator("#gradescope-curve-path")).toHaveAttribute(
+    "d",
+    /M 20\.0 132\.0 L/
+  );
+  await expect(eventPreview.locator("#gradescope-curve-prompt")).toBeVisible();
+  await expect(eventPreview.locator("#gradescope-curve-adjust")).toBeHidden();
+  const previewCurvePath = await eventPreview.locator("#gradescope-curve-path").getAttribute("d");
+  await page.locator("#admin-trigger-now").click();
+  const liveGradescopeWindow = page.locator(
+    "#gradescope-curve-window:not([data-admin-event-preview-window])"
+  );
+  await expect(liveGradescopeWindow).toBeVisible();
+  await expect(liveGradescopeWindow.locator("#gradescope-curve-path")).toHaveAttribute(
+    "d",
+    previewCurvePath
+  );
+  await liveGradescopeWindow.locator("#gradescope-curve-no").click();
+
+  await eventList.selectOption("gears-nest-clear");
+  await expect(eventPreview.locator("[data-gears-nest-enemy]")).toHaveCount(5);
+  await expect(eventPreview.locator("[data-gears-nest-enemy-cover]")).toHaveCount(4);
+  await expect(eventPreview.locator("[data-gears-nest-cover-prop]")).toHaveCount(3);
+  await expect(eventPreview.locator("#gears-nest-prompt")).toBeVisible();
+  await expect(eventPreview.locator("#gears-nest-status")).toHaveText(
+    "Scourge Nest emerging. Engage to clear it."
+  );
+  await page.locator("#admin-trigger-now").click();
+  const liveGearsWindow = page.locator(
+    "#gears-nest-window:not([data-admin-event-preview-window])"
+  );
+  await expect(liveGearsWindow).toBeVisible();
+  await expect(liveGearsWindow.locator("[data-gears-nest-enemy]")).toHaveCount(5);
+  await expect(liveGearsWindow.locator("[data-gears-nest-enemy-cover]")).toHaveCount(4);
+  await expect(liveGearsWindow.locator("[data-gears-nest-cover-prop]")).toHaveCount(3);
+  await liveGearsWindow.locator("#gears-nest-retreat").click();
+
+  await eventList.selectOption("relic-recovery");
+  await expect(eventPreview.locator("[data-relic-recovery-item]")).toHaveCount(8);
+  await expect(eventPreview.locator("[data-relic-recovery-slot]")).toHaveCount(8);
+  await expect(eventPreview.locator("#relic-recovery-dialog-text")).toHaveText(
+    "Let's collect some relics!"
+  );
+  expect(await eventPreview.locator("link[rel=stylesheet]").count()).toBe(3);
+
+  await page.locator("#admin-trigger-now").click();
+  const liveRelicWindow = page.locator(
+    "#relic-recovery-window:not([data-admin-event-preview-window])"
+  );
+  await expect(liveRelicWindow).toBeVisible();
+  await liveRelicWindow.locator("#relic-recovery-start").click();
+  await expect(liveRelicWindow.locator("#relic-recovery-dialog")).toBeHidden();
+
+  await eventList.selectOption("dodging-popup-alert");
+  await eventList.selectOption("relic-recovery");
+  await expect(eventPreview.locator("[data-relic-recovery-item]")).toHaveCount(8);
+  await expect(eventPreview.locator("[data-relic-recovery-slot]")).toHaveCount(8);
+  await expect(eventPreview.locator("#relic-recovery-dialog-text")).toHaveText(
+    "Let's collect some relics!"
+  );
+  await expect(eventPreview.locator("#relic-recovery-dialog")).toBeVisible();
+  expect(await eventPreview.locator("link[rel=stylesheet]").count()).toBe(3);
+  await expect(eventPreview.getByRole("button")).toHaveCount(0);
 
   expect(diagnostics.consoleErrors).toEqual([]);
   expect(diagnostics.runtimeErrors).toEqual([]);

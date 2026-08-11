@@ -60,7 +60,7 @@ body.is-admin-privacy-mode .admin-controls-title::after {
 .admin-controls-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0 3px -8px;
+  margin: 0 0 -8px;
   min-width: 0;
   padding: 2px 0 0;
   position: relative;
@@ -102,7 +102,7 @@ body.is-admin-privacy-mode .admin-controls-title::after {
 
 .admin-controls-panel {
   background: var(--surface);
-  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
   height: 100%;
   min-height: 0;
   min-width: 0;
@@ -217,6 +217,32 @@ body.is-admin-privacy-mode .admin-controls-title::after {
   margin: 7px 0 3px;
 }
 
+.admin-event-browser {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(240px, 1.2fr);
+  min-height: 220px;
+  min-width: 0;
+}
+
+.admin-event-picker,
+.admin-event-preview {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.admin-event-preview-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
 .admin-fill-fieldset {
   display: flex;
   flex-direction: column;
@@ -226,7 +252,7 @@ body.is-admin-privacy-mode .admin-controls-title::after {
 .admin-event-list {
   background-image: none;
   flex: 1 1 auto;
-  height: clamp(112px, 32vh, 244px);
+  height: auto;
   min-height: 112px;
   padding: 2px 4px;
 }
@@ -650,11 +676,6 @@ body.is-admin-privacy-mode .admin-privacy-fixture {
     margin-right: 4px;
   }
 
-  .admin-controls-tabs {
-    margin-left: 1px;
-    margin-right: 1px;
-  }
-
   .admin-controls-tab {
     font-size: 10px;
     padding-left: 2px;
@@ -663,6 +684,15 @@ body.is-admin-privacy-mode .admin-privacy-fixture {
 
   .admin-preset-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-event-browser {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 360px;
+  }
+
+  .admin-event-preview-viewport {
+    min-height: 170px;
   }
 
   .admin-settings-grid,

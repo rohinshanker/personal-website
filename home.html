@@ -115,7 +115,7 @@
     <link rel="stylesheet" href="styles/home/study-resources.css" />
     <link rel="stylesheet" href="styles/home/random-events.css?v=video-editor-launch-20260809" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=text-selection-cursor-20260810" />
-    <link rel="stylesheet" href="styles/home/admin-controls.css?v=admin-controls-20260731" />
+    <link rel="stylesheet" href="styles/home/admin-controls.css?v=admin-event-preview-20260811" />
     <script
       src="scripts/home/text-selection-cursor.js?v=text-selection-cursor-20260810"
       defer
@@ -3127,10 +3127,24 @@
                     </select>
                   </div>
                 </div>
-                <label class="admin-list-label" for="admin-event-list">Available events</label>
-                <select class="admin-event-list" id="admin-event-list" size="8">
-                  <option value="">Loading events...</option>
-                </select>
+                <div class="admin-event-browser">
+                  <div class="admin-event-picker">
+                    <label class="admin-list-label" for="admin-event-list">Available events</label>
+                    <select class="admin-event-list" id="admin-event-list" size="8">
+                      <option value="">Loading events...</option>
+                    </select>
+                  </div>
+                  <figure class="admin-event-preview">
+                    <figcaption class="admin-list-label">First window preview</figcaption>
+                    <div
+                      class="sunken-panel admin-event-preview-viewport"
+                      id="admin-event-preview"
+                      role="img"
+                      aria-label="First window preview"
+                      aria-live="polite"
+                    ></div>
+                  </figure>
+                </div>
                 <div class="admin-control-actions">
                   <button type="button" id="admin-trigger-now">Trigger Now</button>
                   <button type="button" id="admin-run-sequence-next">Run Next Cue</button>
@@ -6644,11 +6658,11 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-815068deb2a45fb9247df47a028bbb168996bd30baa86341f519925cc091f33a"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-4e48430a393fd2eb7e42af979203330a1348f284a6e7ebd07f03fe726577959c"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-815068deb2a45fb9247df47a028bbb168996bd30baa86341f519925cc091f33a"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-4e48430a393fd2eb7e42af979203330a1348f284a6e7ebd07f03fe726577959c"></script>
     <script src="scripts/home/core/media.js?v=media-priority-loader-20260723"></script>
-    <script src="scripts/home/main.js?v=game-build-815068deb2a45fb9247df47a028bbb168996bd30baa86341f519925cc091f33a"></script>
-    <script src="scripts/home/admin-controls.js?v=admin-launchers-20260803"></script>
+    <script src="scripts/home/main.js?v=game-build-4e48430a393fd2eb7e42af979203330a1348f284a6e7ebd07f03fe726577959c"></script>
+    <script src="scripts/home/admin-controls.js?v=admin-event-preview-20260811"></script>
   </body>
 </html>

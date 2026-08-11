@@ -148,11 +148,11 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
 
   assert.match(
     home,
-    /styles\/home\/admin-controls\.css\?v=admin-controls-20260731/
+    /styles\/home\/admin-controls\.css\?v=admin-event-preview-20260811/
   );
   assert.match(
     home,
-    /scripts\/home\/admin-controls\.js\?v=admin-launchers-20260803/
+    /scripts\/home\/admin-controls\.js\?v=admin-event-preview-20260811/
   );
   assert.ok(
     home.indexOf("scripts/home/admin-controls.js") >
@@ -335,7 +335,7 @@ test("Admin launch access requires an active Administrator session proof", async
 });
 
 test("Admin Controls exposes the complete accessible capture workflow", async () => {
-  const { home, styles } = await readAdminSources();
+  const { admin, home, styles } = await readAdminSources();
   const windowTag = tagWithAttribute(home, "id", "admin-controls-window");
 
   assert.ok(windowTag, "Missing Admin Controls window.");
@@ -367,6 +367,7 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
     "admin-event-search",
     "admin-event-kind",
     "admin-event-list",
+    "admin-event-preview",
     "admin-trigger-now",
     "admin-run-sequence-next",
     "admin-add-cue",
@@ -434,11 +435,14 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
 
   const status = tagWithAttribute(home, "id", "admin-controls-status");
   const announcer = tagWithAttribute(home, "id", "admin-controls-announcer");
+  const eventPreview = tagWithAttribute(home, "id", "admin-event-preview");
   assert.equal(attributeValue(status, "role"), "status");
   assert.equal(attributeValue(status, "aria-live"), "polite");
   assert.match(home.slice(home.indexOf(status), home.indexOf(status) + 300), /Local only/);
   assert.equal(attributeValue(announcer, "role"), "status");
   assert.equal(attributeValue(announcer, "aria-live"), "polite");
+  assert.equal(attributeValue(eventPreview, "role"), "img");
+  assert.equal(attributeValue(eventPreview, "aria-live"), "polite");
 
   const taskbarStart = home.indexOf('<div class="taskbar"');
   for (const overlayId of [
@@ -458,6 +462,18 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
   assert.match(styles, /body\.is-admin-privacy-mode/);
   assert.match(styles, /\[data-admin-seeded\]/);
   assert.match(styles, /\.admin-seed-badge::before\s*\{[^}]*content:\s*"SEED"/s);
+  assert.match(
+    styles,
+    /\.admin-controls-tabs\s*\{[^}]*margin:\s*0 0 -8px;/s,
+    "The outside tabs must share the panel's left and right edges."
+  );
+  assert.match(
+    styles,
+    /\.admin-controls-panel\s*\{[^}]*box-shadow:\s*var\(--border-raised-outer\),\s*var\(--border-raised-inner\);/s,
+    "The controlled panel and its tabs must both use a raised surface."
+  );
+  assert.match(styles, /\.admin-event-preview-viewport/);
+  assert.match(admin, /\.admin-event-preview-stage/);
 });
 
 test("Admin settings use strict versioned local state with a deterministic public helper", async () => {
@@ -655,6 +671,23 @@ test("runtime orchestration integrates the complete event registry without publi
 
   assert.match(eventRuntime, /randomEventDefinitions\.map/);
   assert.match(eventRuntime, /id:\s*"feliz-jueves"/);
+  assert.match(eventRuntime, /createAdminRandomEventPreview/);
+  assert.match(eventRuntime, /ADMIN_RANDOM_EVENT_PREVIEW_TEMPLATES/);
+  assert.match(eventRuntime, /configureRelicRecoveryPreview/);
+  assert.match(eventRuntime, /configureInfinityArmoryPreview/);
+  assert.match(eventRuntime, /configureGradescopeCurvePreview/);
+  assert.match(eventRuntime, /configureGearsNestPreview/);
+  assert.match(eventRuntime, /drawDistressSignalPreview/);
+  assert.match(eventRuntime, /setAttribute\("aria-hidden", "true"\)/);
+  assert.match(eventRuntime, /data-admin-event-preview-window/);
+  assert.match(
+    main,
+    /"dodging-popup-alert":\s*"Annoying Dodging Popup Alert"/
+  );
+  assert.match(
+    main,
+    /"vanishing-popup-alert":\s*"Annoying Vanishing Popup Alert"/
+  );
   assert.match(eventRuntime, /randomEventDefinitions\.find/);
   assert.match(eventRuntime, /preloadRandomEventAssets/);
   assert.match(eventRuntime, /definition\.run/);
@@ -678,7 +711,14 @@ test("runtime orchestration integrates the complete event registry without publi
     "window.rohinAdminOrchestrator = Object.freeze({",
     "runAfterHomeActivation(scheduleCalendarRefresh)"
   );
-  for (const method of ["closeWindow", "listEvents", "resetScene", "runEvent", "runPreset"]) {
+  for (const method of [
+    "closeWindow",
+    "createEventPreview",
+    "listEvents",
+    "resetScene",
+    "runEvent",
+    "runPreset",
+  ]) {
     assert.match(publicRuntime, new RegExp(`\\b${method}:`));
   }
   assert.match(main, /shouldPauseNaturalRandomEvents\(\)/);
