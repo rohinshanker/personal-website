@@ -211,6 +211,16 @@ const createEmptySudokuWins = () =>
     ])
   );
 
+const createEmptyPlayerTotals = () => ({
+  minesweeper: { wins: createEmptyMinesweeperWins() },
+  solitaire: { wins: 0 },
+  snake: {
+    totalGamesPlayed: 0,
+    gamesPlayed: createEmptySnakeGames(),
+  },
+  sudoku: { wins: createEmptySudokuWins() },
+});
+
 export const createEmptyGameStatsData = () => ({
   version: 1,
   generatedAt: new Date(0).toISOString(),
@@ -224,6 +234,7 @@ export const createEmptyGameStatsData = () => ({
     },
     sudoku: { wins: createEmptySudokuWins() },
   },
+  playerTotals: createEmptyPlayerTotals(),
   leaderboards: {
     minesweeper: createEmptyMinesweeperLeaderboards(),
     solitaire: [],
@@ -536,6 +547,9 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
 
     if (event.game === "minesweeper") {
       stats.totals.minesweeper.wins[event.difficulty] += 1;
+      if (event.profile?.id === requestedPlayer) {
+        stats.playerTotals.minesweeper.wins[event.difficulty] += 1;
+      }
       playerRankings.minesweeper[event.difficulty] = upsertLeaderboardEntry(
         playerRankings.minesweeper[event.difficulty],
         event,
@@ -544,10 +558,17 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
       );
     } else if (event.game === "solitaire") {
       stats.totals.solitaire.wins += 1;
+      if (event.profile?.id === requestedPlayer) {
+        stats.playerTotals.solitaire.wins += 1;
+      }
       addSolitaireWinToLeaderboard(solitaireWinsByPlayer, event);
     } else if (event.game === "snake") {
       stats.totals.snake.totalGamesPlayed += 1;
       stats.totals.snake.gamesPlayed[event.boardSize] += 1;
+      if (event.profile?.id === requestedPlayer) {
+        stats.playerTotals.snake.totalGamesPlayed += 1;
+        stats.playerTotals.snake.gamesPlayed[event.boardSize] += 1;
+      }
       playerRankings.snake[event.boardSize] = upsertLeaderboardEntry(
         playerRankings.snake[event.boardSize],
         event,
@@ -556,6 +577,9 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
       );
     } else if (event.game === "sudoku") {
       stats.totals.sudoku.wins[event.difficulty][event.hintBucket] += 1;
+      if (event.profile?.id === requestedPlayer) {
+        stats.playerTotals.sudoku.wins[event.difficulty][event.hintBucket] += 1;
+      }
       if (event.hintBucket === "noHints" && Number.isFinite(event.metric)) {
         playerRankings.sudoku[event.difficulty] = upsertLeaderboardEntry(
           playerRankings.sudoku[event.difficulty],

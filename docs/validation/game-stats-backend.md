@@ -4,7 +4,7 @@ Purpose: Controlled Cloudflare Worker and D1 release, security, production verif
 
 Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
 
-Last verified: 2026-08-11
+Last verified: 2026-08-12
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -15,48 +15,43 @@ Local browser stats remain useful offline. This backend stores public global
 statistics and leaderboards; it is not a trustworthy record for a competitive
 or high-stakes game.
 
-## Verified State — 2026-07-28
+## Verified Production State — 2026-08-12
 
-- The public Worker endpoint is
-  `https://personal-site-game-stats.rohinshankerme.workers.dev`. Worker version
-  `2cd1c298-e6b8-434e-8319-9fafa8fe3f9e` and static application commit
-  `438ac4b` are active on build
-  `sha256-5c96dea824aedfbf841853690c0f34267b84f947dd36cbec0462bcb450ecbed6`.
-  A cache-busted production check recomputed that exact hash from the live
-  completion sources, found the corresponding cache tokens in both HTML entry
-  points, and matched it to Worker `/health` in one attempt.
+- The automated release for commit `6323c02db29dd18a667a98d60122466134f9a37a`
+  completed successfully in [GitHub Actions run 31568841667](https://github.com/rohinshanker/personal-website/actions/runs/31568841667).
+  Its verification, compatible Worker transition, Pages packaging, Pages
+  deployment, and final live parity jobs all passed. This proves the required
+  repository credentials and GitHub Pages Actions source are configured.
+- A cache-busted production read found both the deployed browser configuration
+  and Worker `/health` on
+  `sha256-d707808da831507ece4fe8566912ef22f65a4c8f438daea4d35ced5fe9e7c2aa`.
+  The public Worker endpoint remains
+  `https://personal-site-game-stats.rohinshankerme.workers.dev`.
 - The deployed Worker accepts the exact production origin and allows both
   `Authorization` and `Content-Type` in CORS preflight. It rejects local page
   origins by design, so test production credentials on the deployed site—not
   `localhost` or `127.0.0.1` against the public Worker.
 - `scripts/home/game-stats-backend.js` now uses that public HTTPS endpoint. It
   contains no credential; the Worker secrets remain server-only.
-- New sessions require the exact active browser hash. A valid signed and
+- New sessions require an accepted browser hash. A valid signed and
   D1-backed session issued before a deployment remains usable until expiry,
   while any token-to-D1 build, issue-time, config, IP, expiry, or signature
   mismatch is rejected without consuming the session or storing an event.
-- The source suite passes all 195 tests. The 120-test rendered matrix has
-  complete passing coverage: 114 passed in the final full pass and six cases
-  interrupted by a host network change passed on immediate isolated rerun.
-  The seven Snake publishing checks pass together, including real movement and
-  collision, delayed success, retained `425` retry, rejection, and layouts at
-  375×812, 768×1024, 1280×800, and 1440×900. The final updated Solitaire
-  publishing check also passes independently and starts its signed session
-  through a real stock draw before exercising the win.
-- A fresh local D1 integration accepted an immediate zero-score Snake result
-  with `201` after a 4.974-second server eligibility wait, returned `200` with
-  `applied: false` for the identical retry, and retained exactly one event, one
-  consumed session, one global game, and one leaderboard score. A missing
-  Origin returned `403`. The production deploy and parity checks made no D1
-  event writes.
 
-## Local Release Candidate — 2026-08-11 (Not Deployed)
+## Local Release Candidate — 2026-08-12 (Not Deployed)
 
 - The checked-in candidate is build
-  `sha256-d707808da831507ece4fe8566912ef22f65a4c8f438daea4d35ced5fe9e7c2aa`.
+  `sha256-40002bb7d1044b03e785273a5f848bf48c78052e665ab4784ddb922373540566`.
   It is not the live build described above. Deploy its rolling-compatible
   Worker first, require the transition gate, then publish the matching Pages
   artifact and run the full parity gate.
+- A player-scoped `GET /stats?playerId=...` now returns complete lifetime
+  totals for Minesweeper wins, Solitaire wins, Snake games, and Sudoku wins.
+  Game Progress prefers those verified D1-derived totals, refreshes whenever
+  it opens and after a result publishes, and keeps the last confirmed totals
+  through a transient refresh failure. Browser-local best times, scores, and
+  records remain local. No D1 migration is required because the Worker derives
+  the new totals from the existing validated event rows.
 - The browser retries a temporary stale-build rejection for two minutes while
   a release finishes, then reports the failure instead of silently treating
   the result as publishable. Queued global submissions
@@ -73,12 +68,13 @@ or high-stakes game.
   a reusable session. Repeating the exact accepted event is idempotent rather
   than incrementing any counter. Defensive historical-row reads remain
   separate from strict ingress.
-- Local verification passes all 264 source tests, the generated-integrity
-  check, JavaScript syntax and diff checks, and Wrangler 4.114.0's strict
-  deployment dry-run. The rendered temporary-mismatch recovery flow passes
-  4/4 cases across 375×812, 768×1024, 1280×800, and 1440×900, including the
-  waiting, recovered, and automatically published states with no unexpected
-  page errors or layout overflow.
+- Local verification passes all 265 source tests, the generated-integrity
+  check, JavaScript syntax checks, and Wrangler 4.114.0's strict deployment
+  dry-run. The focused 16-test rendered lifetime-total and Solitaire publish
+  matrix passes across 375×812, 768×1024, 1280×800, and 1440×900. It covers
+  historical totals, automatic refresh-on-open and post-publication refresh,
+  reload persistence, Administrator reauthorization, transient-failure
+  retention and recovery, and bounded Game Progress layouts.
 - A fresh isolated local D1 run on the final candidate accepted two no-hints
   wins and one hinted win, rejected a difficulty mismatch without consuming
   its session, accepted the corrected event, and returned `applied: false` for
@@ -387,7 +383,7 @@ The Worker exposes these routes:
 | Route | Purpose | Write behavior |
 | --- | --- | --- |
 | `GET /health` | Queries D1 and reports the active `buildVersion` plus ordered `acceptedBuildVersions`. | None; a `200` proves the Worker can read its bound database and validated rollout configuration. |
-| `GET /stats` | Reads global totals and Top 3 leaderboards; with `playerId`, also returns that player's rank and record for all 14 supported categories. | None; use this to verify D1 reads. |
+| `GET /stats` | Reads global totals and Top 3 leaderboards; with `playerId`, also returns that player's lifetime totals, rank, and record for every supported category. | None; use this to verify D1 reads. |
 | `POST /sessions` | Validates the requested game/config/build and creates a short-lived server-signed session. | Creates one expiring session only after all checks pass. |
 | `POST /events` | Accepts the normalized result envelope and consumes its valid session exactly once. | Inserts one idempotent event and consumes its session in one transactional D1 batch, or rejects both changes. |
 | `POST /administrator/sign-in` | Validates the Administrator username and password. | Creates no D1 profile data; returns a one-hour proof only after an exact-origin, rate-limited successful check. |
@@ -430,6 +426,19 @@ The tracked result types are Minesweeper `win`, Solitaire `win`, Snake
 `gamePlayed` with a bounded board score, and Sudoku `win`. Keep event-ID
 idempotency as a second replay guard: retrying a completed request must not
 increment counts twice.
+
+For a valid `playerId` query, `playerTotals` must include Minesweeper wins by
+difficulty, Solitaire wins, Snake total games and games by board size, and
+Sudoku wins by difficulty and hint bucket. Count only validated historical
+events whose normalized profile ID exactly matches the requested player;
+exclude unprofiled, malformed, other-player, and duplicate-ID rows. Return the
+complete zero-filled shape when the player has no matching events. The browser
+must treat the field as available only after a successful player-scoped
+response, preserve the previous confirmed global state when refresh fails, and
+fall back to browser-local totals when talking to an older Worker that omits
+the field. Opening Game Progress and successfully publishing a queued result
+both trigger a fresh player-scoped read. Renewing authorization for an already
+active Administrator profile must not reset that profile's browser-local data.
 
 Sudoku records both `noHints` and `withHints` completions in the matching
 difficulty total, but only a finite `noHints` time may enter a leaderboard,
@@ -815,9 +824,11 @@ change:
    states. Inspect the committed at-a-glance contact sheet when copy or state
    logic changes.
 3. Exercise one ordinary player and the protected Administrator through the
-   visible production UI. Confirm the local queue drains, requested-player
-   rank/record agrees with `/stats`, and public Top 3 data does not depend on
-   the queried player.
+   visible production UI. Confirm the local queue drains, Game Progress
+   lifetime totals and requested-player rank/record agree with
+   `/stats?playerId=...`, and public Top 3 data does not depend on the queried
+   player. Reload once with local aggregate data cleared and verify the same
+   lifetime totals return from D1.
 4. For any production smoke run, export D1 and capture a Time Travel bookmark
    immediately before writes. Use a unique run prefix and a temporary manifest,
    then delete only exact manifest-listed events and sessions and reconcile

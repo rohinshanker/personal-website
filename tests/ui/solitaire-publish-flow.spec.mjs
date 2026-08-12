@@ -160,15 +160,15 @@ const installApi = async (page) => {
     if (request.method() === "GET" && url.pathname === "/stats") {
       const refreshed = Boolean(publishedEvent);
       statsRequests.push({ path: url.pathname + url.search, refreshed });
-      const currentPlayerEntry = refreshed
-        ? createLeaderboardEntry({
-            eventId: publishedEvent.id,
-            playerId: profile.id,
-            name: profile.name,
-            metric: 1,
-            occurredAt: publishedEvent.occurredAt,
-          })
-        : null;
+      const currentPlayerEntry = createLeaderboardEntry({
+        eventId: refreshed ? publishedEvent.id : "solitaire-player-history-0001",
+        playerId: profile.id,
+        name: profile.name,
+        metric: refreshed ? 5 : 4,
+        occurredAt: refreshed
+          ? publishedEvent.occurredAt
+          : "2026-06-30T00:00:00.000Z",
+      });
       const leaderboards = [
         createLeaderboardEntry({
           eventId: "solitaire-global-aria-0001",
@@ -177,7 +177,7 @@ const installApi = async (page) => {
           metric: 2,
           occurredAt: "2026-07-01T00:00:00.000Z",
         }),
-        ...(currentPlayerEntry ? [currentPlayerEntry] : []),
+        currentPlayerEntry,
         createLeaderboardEntry({
           eventId: "solitaire-global-nia-0001",
           playerId: "player-solitaire-nia",
@@ -192,12 +192,11 @@ const installApi = async (page) => {
         headers: corsHeaders,
         body: JSON.stringify({
           generatedAt: new Date().toISOString(),
-          totals: { solitaire: { wins: refreshed ? 3 : 2 } },
+          totals: { solitaire: { wins: refreshed ? 7 : 6 } },
+          playerTotals: { solitaire: { wins: refreshed ? 5 : 4 } },
           leaderboards: { solitaire: leaderboards },
           playerRanks: {
-            solitaire: refreshed
-              ? { rank: 2, totalPlayers: 3 }
-              : { rank: null, totalPlayers: 2 },
+            solitaire: { rank: 1, totalPlayers: 3 },
           },
           playerRecords: { solitaire: currentPlayerEntry },
         }),
@@ -354,6 +353,19 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   await page.goto("/home.html");
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
+  await expect.poll(() => api.statsRequests.length).toBeGreaterThan(0);
+  await page.locator('.taskbar-icon[data-app="game-progress"]').click();
+  const gameProgressWindow = page.locator("#game-progress-window");
+  await gameProgressWindow
+    .locator('.selector-item[data-view="game-progress-solitaire"]')
+    .click();
+  await expect(
+    gameProgressWindow
+      .locator("#game-progress-solitaire-content .game-stats-inlay")
+      .filter({ hasText: "Wins" })
+      .locator(".game-stats-value")
+  ).toHaveText("4");
+  await gameProgressWindow.locator('[data-close="game-progress"]').click();
   await page.locator('.desktop-icon[data-app="solitaire"]').click();
   const solitaireWindow = page.locator('[data-app-window="solitaire"]');
   await expect(solitaireWindow).toBeVisible();
@@ -366,6 +378,21 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
 
   await page.evaluate(() => window.__solitairePublishFlowTest.triggerWin());
   await expect.poll(() => api.eventRequests.length).toBe(1);
+  await expect
+    .poll(() => api.statsRequests.filter(({ refreshed }) => refreshed).length)
+    .toBeGreaterThan(0);
+
+  await page.locator('.taskbar-icon[data-app="game-progress"]').click();
+  await gameProgressWindow
+    .locator('.selector-item[data-view="game-progress-solitaire"]')
+    .click();
+  await expect(
+    gameProgressWindow
+      .locator("#game-progress-solitaire-content .game-stats-inlay")
+      .filter({ hasText: "Wins" })
+      .locator(".game-stats-value")
+  ).toHaveText("5");
+  await gameProgressWindow.locator('[data-close="game-progress"]').click();
 
   await page
     .locator('[data-app-window="solitaire"] [data-game-stats-open="solitaire"]')
@@ -383,18 +410,18 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   );
   await expect(leaderboard.getByText("Global Top 3", { exact: true })).toBeVisible();
   await expect(globalRows).toHaveCount(3);
-  await expect(globalRows.nth(0)).toHaveAttribute("aria-label", "Rank 1: Aria, 2 wins");
-  await expect(globalRows.nth(1)).toHaveAttribute(
+  await expect(globalRows.nth(0)).toHaveAttribute(
     "aria-label",
-    "Rank 2: Solitaire Publisher, 1 win, your entry"
+    "Rank 1: Solitaire Publisher, 5 wins, your entry"
   );
+  await expect(globalRows.nth(1)).toHaveAttribute("aria-label", "Rank 2: Aria, 2 wins");
   await expect(globalRows.nth(2)).toHaveAttribute("aria-label", "Rank 3: Nia, 0 wins");
   await expect(currentRecord).toHaveAttribute(
     "aria-label",
-    "Your Solitaire record: #2, Solitaire Publisher, 1 win"
+    "Your Solitaire record: #1, Solitaire Publisher, 5 wins"
   );
   await expect(
-    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 3"]')
+    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 7"]')
   ).toBeVisible();
 
   expect(generatedBuildVersion).toMatch(/^sha256-[a-f0-9]{64}$/);
@@ -435,6 +462,18 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   );
   expect(stored.queue).toEqual([]);
   expect(stored.stats.totals.solitaire.wins).toBe(1);
+
+  await page.reload();
+  await page.locator('.taskbar-icon[data-app="game-progress"]').click();
+  await gameProgressWindow
+    .locator('.selector-item[data-view="game-progress-solitaire"]')
+    .click();
+  await expect(
+    gameProgressWindow
+      .locator("#game-progress-solitaire-content .game-stats-inlay")
+      .filter({ hasText: "Wins" })
+      .locator(".game-stats-value")
+  ).toHaveText("5");
 
   const layout = await statsWindow.evaluate((windowElement) => {
     const bounds = windowElement.getBoundingClientRect();
@@ -757,6 +796,16 @@ for (const viewport of viewports) {
         )
       )
       .toEqual([]);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          (statsKey) =>
+            JSON.parse(localStorage.getItem(statsKey) || "null")?.totals?.solitaire
+              ?.wins,
+          GAME_STATS_STORAGE_KEY
+        )
+      )
+      .toBe(1);
     await page.locator("#administrator-alert-close").click();
     await expect(page.locator("#administrator-alert-window")).toBeHidden();
     await expect(page.locator(".window-stack")).toHaveCSS("z-index", "2");

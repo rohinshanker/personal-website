@@ -79,7 +79,7 @@ test("Game Progress reset clears only local aggregate, profile, and Snake record
   assert.doesNotMatch(resetSource, /gameStatsGlobalState\s*=/);
 });
 
-test("Game Progress renders local data for its profile and every supported game", async () => {
+test("Game Progress renders lifetime totals for its profile and every supported game", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
 
   for (const contentId of [
@@ -94,6 +94,31 @@ test("Game Progress renders local data for its profile and every supported game"
 
   assert.match(source, /const gameProgressCreateProfile = document\.getElementById\(/);
   assert.match(source, /const gameProgressResetLocal = document\.getElementById\(/);
+  assert.match(
+    source,
+    /const getGameProgressPlayerTotals = \(\) =>\s*gameStatsGlobalPlayerTotalsAvailable\s*\? gameStatsGlobalState\.playerTotals\s*: gameStatsLocalState\.totals;/
+  );
+  for (const renderFunction of ["Minesweeper", "Solitaire", "Snake", "Sudoku"]) {
+    const match = source.match(
+      new RegExp(
+        `const renderGameProgress${renderFunction} = \\(\\) => \\{([\\s\\S]*?)\\n\\};`
+      )
+    );
+    assert.ok(match, `renderGameProgress${renderFunction} should remain focused`);
+    assert.match(match[1], /const playerTotals = getGameProgressPlayerTotals\(\);/);
+  }
+  assert.match(
+    source,
+    /if \(appId === "game-progress"\) \{\s*renderGameProgressWindow\(\);\s*void syncQueuedGameStats\(\);/
+  );
+  assert.match(
+    source,
+    /restartWindowAnimation\(win, "is-opening"\);\s*if \(appId === "game-progress"\) scheduleGameStatsWindowViewportClamp\(win\);/
+  );
+  assert.match(
+    source,
+    /if \(windowEl\.id === "game-progress-window"\) \{\s*scheduleGameStatsWindowViewportClamp\(windowEl\);/
+  );
 });
 
 test("Snake Game Progress keeps each board size's games and high score together", async () => {
@@ -106,7 +131,7 @@ test("Snake Game Progress keeps each board size's games and high score together"
   const snakeProgressSource = match[1];
   assert.match(snakeProgressSource, /"game-progress-snake-total"/);
   assert.match(snakeProgressSource, /game-progress-snake-board-stats/);
-  assert.match(snakeProgressSource, /gamesPlayed\[size\]/);
+  assert.match(snakeProgressSource, /playerTotals\.snake\.gamesPlayed\[size\]/);
   assert.match(snakeProgressSource, /snakeState\.highScores\[size\]/);
   assert.match(snakeProgressSource, /content\.replaceChildren\(totalGames, boardStats\);/);
 });
@@ -123,6 +148,7 @@ test("Sudoku Game Progress keeps compact win columns and a local no-hints best t
   assert.match(sudokuProgressSource, /\$\{label\} \(no hints\)/);
   assert.match(sudokuProgressSource, /\$\{label\} \(hints\)/);
   assert.match(sudokuProgressSource, /"Best Time \(no hints\)"/);
+  assert.match(sudokuProgressSource, /playerTotals\.sudoku\.wins\[difficulty\]/);
   assert.match(sudokuProgressSource, /\$\{wins\.noHints\} Wins/);
   assert.match(sudokuProgressSource, /\$\{wins\.withHints\} Wins/);
   assert.match(source, /const createGameStatsEmptySudokuBestTimes/);

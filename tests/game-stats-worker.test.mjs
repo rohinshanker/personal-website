@@ -413,6 +413,148 @@ test("normalizes all supported game shapes and rejects malformed data", () => {
   );
 });
 
+test("returns complete lifetime totals only for the requested player", () => {
+  const requestedProfile = profile("player-overall-totals", "Overall Totals");
+  const otherProfile = profile("player-other-totals", "Other Totals");
+  const occurredAt = new Date().toISOString();
+  const events = [
+    event({ id: "overall-ms-beginner-1", profile: requestedProfile, occurredAt }),
+    event({ id: "overall-ms-beginner-2", profile: requestedProfile, occurredAt }),
+    event({
+      id: "overall-ms-expert-1",
+      difficulty: "expert",
+      profile: requestedProfile,
+      occurredAt,
+    }),
+    event({ id: "overall-ms-other-1", profile: otherProfile, occurredAt }),
+    event({
+      id: "overall-solitaire-1",
+      game: "solitaire",
+      metric: 80,
+      metricKind: "moves",
+      profile: requestedProfile,
+      occurredAt,
+    }),
+    event({
+      id: "overall-solitaire-2",
+      game: "solitaire",
+      metric: 90,
+      metricKind: "moves",
+      profile: requestedProfile,
+      occurredAt,
+    }),
+    event({
+      id: "overall-solitaire-other",
+      game: "solitaire",
+      metric: 70,
+      metricKind: "moves",
+      profile: otherProfile,
+      occurredAt,
+    }),
+    event({
+      id: "overall-solitaire-unprofiled",
+      game: "solitaire",
+      metric: 75,
+      metricKind: "moves",
+      profile: null,
+      occurredAt,
+    }),
+    event({
+      id: "overall-snake-10-1",
+      game: "snake",
+      type: "gamePlayed",
+      boardSize: "10",
+      metric: 4,
+      metricKind: "score",
+      profile: requestedProfile,
+      occurredAt,
+    }),
+    event({
+      id: "overall-snake-16-1",
+      game: "snake",
+      type: "gamePlayed",
+      boardSize: "16",
+      metric: 5,
+      metricKind: "score",
+      profile: requestedProfile,
+      occurredAt,
+    }),
+    event({
+      id: "overall-snake-other",
+      game: "snake",
+      type: "gamePlayed",
+      boardSize: "10",
+      metric: 6,
+      metricKind: "score",
+      profile: otherProfile,
+      occurredAt,
+    }),
+    event({
+      id: "overall-sudoku-no-hints",
+      game: "sudoku",
+      difficulty: "easy",
+      hintBucket: "noHints",
+      metric: 90,
+      metricKind: "seconds",
+      profile: requestedProfile,
+      occurredAt,
+    }),
+    event({
+      id: "overall-sudoku-with-hints",
+      game: "sudoku",
+      difficulty: "easy",
+      hintBucket: "withHints",
+      metric: 100,
+      metricKind: "seconds",
+      profile: requestedProfile,
+      occurredAt,
+    }),
+    event({
+      id: "overall-sudoku-other",
+      game: "sudoku",
+      difficulty: "easy",
+      hintBucket: "noHints",
+      metric: 80,
+      metricKind: "seconds",
+      profile: otherProfile,
+      occurredAt,
+    }),
+  ];
+
+  const stats = createGameStatsDataFromEvents(
+    [
+      ...events,
+      events[0],
+      {
+        ...events[0],
+        id: "overall-malformed-profile",
+        profile: { ...requestedProfile, id: [requestedProfile.id] },
+      },
+    ],
+    requestedProfile.id
+  );
+
+  assert.deepEqual(stats.playerTotals.minesweeper.wins, {
+    beginner: 2,
+    intermediate: 0,
+    expert: 1,
+  });
+  assert.equal(stats.playerTotals.solitaire.wins, 2);
+  assert.deepEqual(stats.playerTotals.snake, {
+    totalGamesPlayed: 2,
+    gamesPlayed: { "10": 1, "16": 1, "20": 0, "24": 0 },
+  });
+  assert.deepEqual(stats.playerTotals.sudoku.wins.easy, {
+    noHints: 1,
+    withHints: 1,
+  });
+  assert.deepEqual(
+    createGameStatsDataFromEvents(events).playerTotals,
+    createGameStatsDataFromEvents(events, "player-missing-totals").playerTotals
+  );
+  assert.equal(createGameStatsDataFromEvents(events).playerTotals.solitaire.wins, 0);
+});
+
 test("requires scalar event strings and exact per-game event fields", () => {
   const sudokuEvent = event({
     id: "event-sudoku-strict-shape",

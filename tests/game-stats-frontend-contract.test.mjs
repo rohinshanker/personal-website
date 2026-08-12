@@ -94,6 +94,22 @@ test("empty and normalized stats cover every player rank, record, and global Top
 
   const rawData = {
     generatedAt: "2026-07-25T00:00:00.000Z",
+    playerTotals: {
+      minesweeper: {
+        wins: { beginner: 9, intermediate: "invalid", expert: -2 },
+      },
+      solitaire: { wins: 12.9 },
+      snake: {
+        totalGamesPlayed: 17,
+        gamesPlayed: { "10": 4, "16": 5, "20": null, "24": -1 },
+      },
+      sudoku: {
+        wins: {
+          easy: { noHints: 3, withHints: 2 },
+          medium: { noHints: "invalid", withHints: 1 },
+        },
+      },
+    },
     leaderboards: {
       minesweeper: Object.fromEntries(
         minesweeperDifficulties.map((difficulty) => [
@@ -154,6 +170,24 @@ test("empty and normalized stats cover every player rank, record, and global Top
     assert.equal(entries.length, 3);
     assert.equal(entries.some((entry) => entry.playerId === currentPlayerId), false);
   };
+  assert.deepEqual(normalized.playerTotals.minesweeper.wins, {
+    beginner: 9,
+    intermediate: 0,
+    expert: 0,
+  });
+  assert.equal(normalized.playerTotals.solitaire.wins, 12);
+  assert.deepEqual(normalized.playerTotals.snake, {
+    totalGamesPlayed: 17,
+    gamesPlayed: { "10": 4, "16": 5, "20": 0, "24": 0 },
+  });
+  assert.deepEqual(normalized.playerTotals.sudoku.wins.easy, {
+    noHints: 3,
+    withHints: 2,
+  });
+  assert.deepEqual(normalized.playerTotals.sudoku.wins.medium, {
+    noHints: 0,
+    withHints: 1,
+  });
   for (const difficulty of minesweeperDifficulties) {
     assertIndependentTopThree(normalized.leaderboards.minesweeper[difficulty]);
     assert.deepEqual(normalized.playerRanks.minesweeper[difficulty], playerRank);

@@ -1258,6 +1258,16 @@ const createGameStatsEmptySudokuPlayerRanks = () =>
 const createGameStatsEmptySudokuPlayerRecords = () =>
   Object.fromEntries(GAME_STATS_SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, null]));
 
+const createGameStatsEmptyPlayerTotals = () => ({
+  minesweeper: { wins: createGameStatsEmptyMinesweeperWins() },
+  solitaire: { wins: 0 },
+  snake: {
+    totalGamesPlayed: 0,
+    gamesPlayed: createGameStatsEmptySnakeGames(),
+  },
+  sudoku: { wins: createGameStatsEmptySudokuWins() },
+});
+
 const createEmptyGameStatsData = () => ({
   version: 1,
   generatedAt: new Date(0).toISOString(),
@@ -1274,6 +1284,7 @@ const createEmptyGameStatsData = () => ({
       bestTimes: createGameStatsEmptySudokuBestTimes(),
     },
   },
+  playerTotals: createGameStatsEmptyPlayerTotals(),
   leaderboards: {
     minesweeper: createGameStatsEmptyMinesweeperLeaderboards(),
     solitaire: [],
@@ -1413,10 +1424,15 @@ const normalizeGameStatsData = (
     rawData && typeof rawData === "object" ? rawData.playerRanks || {} : {};
   const playerRecords =
     rawData && typeof rawData === "object" ? rawData.playerRecords || {} : {};
+  const playerTotals =
+    rawData && typeof rawData === "object" ? rawData.playerTotals || {} : {};
 
   GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
     data.totals.minesweeper.wins[difficulty] = gameStatsPositiveInteger(
       totals.minesweeper?.wins?.[difficulty]
+    );
+    data.playerTotals.minesweeper.wins[difficulty] = gameStatsPositiveInteger(
+      playerTotals.minesweeper?.wins?.[difficulty]
     );
     data.leaderboards.minesweeper[difficulty] = normalizeGameStatsLeaderboardEntries(
       leaderboards.minesweeper?.[difficulty],
@@ -1435,6 +1451,9 @@ const normalizeGameStatsData = (
   });
 
   data.totals.solitaire.wins = gameStatsPositiveInteger(totals.solitaire?.wins);
+  data.playerTotals.solitaire.wins = gameStatsPositiveInteger(
+    playerTotals.solitaire?.wins
+  );
   data.leaderboards.solitaire = normalizeGameStatsLeaderboardEntries(
     leaderboards.solitaire,
     solitaireLeaderboardDirection,
@@ -1451,9 +1470,15 @@ const normalizeGameStatsData = (
   data.totals.snake.totalGamesPlayed = gameStatsPositiveInteger(
     totals.snake?.totalGamesPlayed
   );
+  data.playerTotals.snake.totalGamesPlayed = gameStatsPositiveInteger(
+    playerTotals.snake?.totalGamesPlayed
+  );
   GAME_STATS_SNAKE_BOARD_SIZES.forEach((size) => {
     data.totals.snake.gamesPlayed[size] = gameStatsPositiveInteger(
       totals.snake?.gamesPlayed?.[size]
+    );
+    data.playerTotals.snake.gamesPlayed[size] = gameStatsPositiveInteger(
+      playerTotals.snake?.gamesPlayed?.[size]
     );
     data.leaderboards.snake[size] = normalizeGameStatsLeaderboardEntries(
       leaderboards.snake?.[size],
@@ -1472,6 +1497,9 @@ const normalizeGameStatsData = (
     GAME_STATS_HINT_BUCKETS.forEach((hintBucket) => {
       data.totals.sudoku.wins[difficulty][hintBucket] = gameStatsPositiveInteger(
         totals.sudoku?.wins?.[difficulty]?.[hintBucket]
+      );
+      data.playerTotals.sudoku.wins[difficulty][hintBucket] = gameStatsPositiveInteger(
+        playerTotals.sudoku?.wins?.[difficulty]?.[hintBucket]
       );
     });
     data.totals.sudoku.bestTimes[difficulty] = gameStatsOptionalPositiveInteger(
@@ -1910,6 +1938,8 @@ const loadGameStatsProfile = () => {
 const clearGameStatsGlobalPlayerScope = () => {
   if (!gameStatsGlobalState) return;
   const emptyData = createEmptyGameStatsData();
+  gameStatsGlobalPlayerTotalsAvailable = false;
+  gameStatsGlobalState.playerTotals = emptyData.playerTotals;
   gameStatsGlobalState.playerRanks = emptyData.playerRanks;
   gameStatsGlobalState.playerRecords = emptyData.playerRecords;
 };
@@ -2821,7 +2851,14 @@ const refreshGameStatsGlobalState = async ({ announce = true } = {}) => {
       ? `/stats?playerId=${encodeURIComponent(requestedPlayerId)}`
       : "/stats";
     const response = await fetchGameStatsApi(statsPath, { method: "GET" });
-    const nextGlobalState = normalizeGameStatsData(await readGameStatsApiJson(response), {
+    const payload = await readGameStatsApiJson(response);
+    const nextGlobalPlayerTotalsAvailable = Boolean(
+      requestedPlayerId &&
+      payload?.playerTotals &&
+      typeof payload.playerTotals === "object" &&
+      !Array.isArray(payload.playerTotals)
+    );
+    const nextGlobalState = normalizeGameStatsData(payload, {
       solitaireLeaderboardDirection: "desc",
     });
     if ((gameStatsProfile?.id || "") !== requestedPlayerId) {
@@ -2829,6 +2866,7 @@ const refreshGameStatsGlobalState = async ({ announce = true } = {}) => {
       return null;
     }
     gameStatsGlobalState = nextGlobalState;
+    gameStatsGlobalPlayerTotalsAvailable = nextGlobalPlayerTotalsAvailable;
     if (announce) {
       setGameStatsSyncState("ready");
     }
@@ -3993,6 +4031,11 @@ const formatGameProgressRecord = (entry, unit) =>
 const formatGameProgressSudokuBestTime = (seconds) =>
   Number.isFinite(seconds) ? formatSudokuTime(seconds) : "—";
 
+const getGameProgressPlayerTotals = () =>
+  gameStatsGlobalPlayerTotalsAvailable
+    ? gameStatsGlobalState.playerTotals
+    : gameStatsLocalState.totals;
+
 const renderGameProgressProfile = () => {
   const content = getGameProgressContent("game-progress-profile-content");
   const createButton = document.getElementById("game-progress-create-profile");
@@ -4037,12 +4080,13 @@ const renderGameProgressMinesweeper = () => {
   const content = getGameProgressContent("game-progress-minesweeper-content");
   if (!content) return;
   const summary = createGameStatsNode("div", "game-stats-summary-grid");
+  const playerTotals = getGameProgressPlayerTotals();
   GAME_STATS_DIFFICULTIES.forEach((difficulty) => {
     const label = `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
     appendGameProgressStat(
       summary,
       `${label} wins`,
-      gameStatsLocalState.totals.minesweeper.wins[difficulty]
+      playerTotals.minesweeper.wins[difficulty]
     );
     appendGameProgressStat(
       summary,
@@ -4060,7 +4104,8 @@ const renderGameProgressSolitaire = () => {
   const content = getGameProgressContent("game-progress-solitaire-content");
   if (!content) return;
   const summary = createGameStatsNode("div", "game-stats-summary-grid");
-  appendGameProgressStat(summary, "Wins", gameStatsLocalState.totals.solitaire.wins);
+  const playerTotals = getGameProgressPlayerTotals();
+  appendGameProgressStat(summary, "Wins", playerTotals.solitaire.wins);
   appendGameProgressStat(
     summary,
     "Fewest moves",
@@ -4073,11 +4118,12 @@ const renderGameProgressSnake = () => {
   const content = getGameProgressContent("game-progress-snake-content");
   if (!content) return;
   content.classList.add("game-progress-snake-content");
+  const playerTotals = getGameProgressPlayerTotals();
   const totalGames = createGameStatsNode("div", "game-progress-snake-total");
   appendGameProgressStat(
     totalGames,
     "Games played",
-    gameStatsLocalState.totals.snake.totalGamesPlayed
+    playerTotals.snake.totalGamesPlayed
   );
 
   const boardStats = createGameStatsNode(
@@ -4088,7 +4134,7 @@ const renderGameProgressSnake = () => {
     appendGameProgressStat(
       boardStats,
       `${size}×${size} games`,
-      gameStatsLocalState.totals.snake.gamesPlayed[size]
+      playerTotals.snake.gamesPlayed[size]
     );
     appendGameProgressStat(
       boardStats,
@@ -4103,9 +4149,10 @@ const renderGameProgressSudoku = () => {
   const content = getGameProgressContent("game-progress-sudoku-content");
   if (!content) return;
   const summary = createGameStatsNode("div", "game-progress-sudoku-stats");
+  const playerTotals = getGameProgressPlayerTotals();
   GAME_STATS_SUDOKU_DIFFICULTIES.forEach((difficulty) => {
     const label = `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
-    const wins = gameStatsLocalState.totals.sudoku.wins[difficulty];
+    const wins = playerTotals.sudoku.wins[difficulty];
     const bestTime = gameStatsLocalState.totals.sudoku.bestTimes[difficulty];
     const bestTimeValue = formatGameProgressSudokuBestTime(bestTime);
     appendGameProgressStat(summary, `${label} (no hints)`, `${wins.noHints} Wins`);
@@ -4410,6 +4457,7 @@ const openGameStatsWindow = (game) => {
 };
 
 let gameStatsGlobalState = createEmptyGameStatsData();
+let gameStatsGlobalPlayerTotalsAvailable = false;
 let gameStatsLocalState = loadGameStatsLocalState();
 let gameStatsSubmissionQueue = loadGameStatsSubmissionQueue();
 let gameStatsProfile = loadGameStatsProfile();
@@ -18111,6 +18159,10 @@ const setWindowOpen = (appId, open) => {
 
     if (isVisible) {
       bringWindowToFront(win);
+      if (appId === "game-progress") {
+        scheduleGameStatsWindowViewportClamp(win);
+        void syncQueuedGameStats();
+      }
       return;
     }
 
@@ -18152,6 +18204,11 @@ const setWindowOpen = (appId, open) => {
 
     activateVisibleContent(win);
 
+    if (appId === "game-progress") {
+      renderGameProgressWindow();
+      void syncQueuedGameStats();
+    }
+
     setPortfolioResponsiveState(win);
     if (appId === "life-counter") updateLifeCounterWidthControls();
     if (appId === "snake") {
@@ -18161,6 +18218,7 @@ const setWindowOpen = (appId, open) => {
       startSudokuBootSequence();
     }
     restartWindowAnimation(win, "is-opening");
+    if (appId === "game-progress") scheduleGameStatsWindowViewportClamp(win);
     if (!isAdminControlsAppId(appId)) {
       triggerRandomEvents("windowOpen", { appId });
     }
@@ -21032,6 +21090,9 @@ document.querySelectorAll(".portfolio-window").forEach((windowEl) => {
 
       selectWindowTab(windowEl, viewId);
       activateVisibleContent(windowEl);
+      if (windowEl.id === "game-progress-window") {
+        scheduleGameStatsWindowViewportClamp(windowEl);
+      }
     });
   });
 
@@ -28347,8 +28408,11 @@ const openAdministratorAccessAlert = () => {
 
 const completeAdministratorSignIn = (administratorProof) => {
   const resumeManualRefresh = gameStatsSyncState === "auth-waiting";
-  resetGameProgressLocalData();
-  const profile = saveGameStatsProfile(GAME_STATS_ROHIN_NEKO_PROFILE);
+  const alreadyUsesAdministratorProfile = isGameStatsAdministratorProfile(gameStatsProfile);
+  if (!alreadyUsesAdministratorProfile) resetGameProgressLocalData();
+  const profile = alreadyUsesAdministratorProfile
+    ? gameStatsProfile
+    : saveGameStatsProfile(GAME_STATS_ROHIN_NEKO_PROFILE);
   if (!profile) return false;
 
   gameStatsAdministratorProof = saveGameStatsAdministratorProof(administratorProof);

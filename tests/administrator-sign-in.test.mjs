@@ -76,6 +76,10 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
   assert.match(main, /sessionStorage\.removeItem\(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
   assert.match(
     main,
+    /const alreadyUsesAdministratorProfile = isGameStatsAdministratorProfile\(gameStatsProfile\);\s*if \(!alreadyUsesAdministratorProfile\) resetGameProgressLocalData\(\);/
+  );
+  assert.match(
+    main,
     /const hasActiveGameStatsAdministratorAccess = \(\) =>\s*hasActiveGameStatsAdministratorProof\(\);/
   );
   assert.match(
