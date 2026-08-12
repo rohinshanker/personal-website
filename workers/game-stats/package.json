@@ -11,6 +11,7 @@
     "deployment:local-check": "node ../../scripts/check-game-stats-deployment.mjs",
     "deployment:check": "node ../../scripts/check-game-stats-deployment.mjs --live",
     "static-release:check": "node ../../scripts/check-game-stats-deployment.mjs --static-release",
+    "worker-transition:check": "node ../../scripts/check-game-stats-deployment.mjs --worker-transition",
     "release:check": "node ../../scripts/check-game-stats-deployment.mjs --release",
     "migrate:local": "wrangler d1 migrations apply personal_site_game_stats --local",
     "migrate:remote": "wrangler d1 migrations apply personal_site_game_stats --remote",

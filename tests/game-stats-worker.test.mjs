@@ -1235,7 +1235,7 @@ test("does not trust a Snake scheduler that resolves before eligibility", async 
 test("uses a bounded Node timer fallback for an inline Snake eligibility wait", async () => {
   const env = createEnv();
   const session = await createSession(env, "snake", { boardSize: "10" });
-  await ageSessionForCompletion(env, session, 4_990);
+  await ageSessionForCompletion(env, session, 4_900);
 
   const response = await withScheduler(undefined, () =>
     postEvent(
@@ -1557,10 +1557,55 @@ test("rejects a stale game build before creating a session", async () => {
   assert.equal(response.status, 409);
   assert.deepEqual(await readJson(response), {
     ok: false,
-    error: "Game build version is not current",
+    error: "Game build version is not compatible",
   });
   assert.equal(env.personal_site_game_stats.sessions.size, 0);
   assert.equal(env.personal_site_game_stats.rateLimits.size, 0);
+});
+
+test("accepts an explicitly compatible browser build during a rollout", async () => {
+  const previousBuildVersion = `sha256-${"b".repeat(64)}`;
+  const env = createEnv({
+    GAME_BUILD_COMPATIBILITY_VERSIONS: previousBuildVersion,
+  });
+  const response = await worker.fetch(
+    jsonRequest("/sessions", {
+      game: "solitaire",
+      config: {},
+      buildVersion: previousBuildVersion,
+    }),
+    env
+  );
+
+  assert.equal(response.status, 201);
+  const session = await readJson(response);
+  assert.equal(
+    env.personal_site_game_stats.sessions.get(session.id).build_version,
+    previousBuildVersion
+  );
+});
+
+test("fails closed on malformed or duplicate build compatibility configuration", async () => {
+  for (const GAME_BUILD_COMPATIBILITY_VERSIONS of [
+    "invalid",
+    buildVersion,
+    `sha256-${"b".repeat(64)},sha256-${"b".repeat(64)}`,
+    Array.from(
+      { length: 33 },
+      (_, index) => `sha256-${index.toString(16).padStart(64, "0")}`
+    ).join(","),
+  ]) {
+    const env = createEnv({ GAME_BUILD_COMPATIBILITY_VERSIONS });
+    const response = await worker.fetch(
+      new Request("https://stats.example.test/health"),
+      env
+    );
+    assert.equal(response.status, 500);
+    assert.deepEqual(await readJson(response), {
+      ok: false,
+      error: "Game stats security configuration is incomplete",
+    });
+  }
 });
 
 test("rejects conflicting reuse of an existing event id", async () => {
@@ -1668,12 +1713,19 @@ test("treats simultaneous identical submissions as one accepted idempotent event
   assert.equal(env.personal_site_game_stats.events.size, 1);
 });
 
-test("health reports the active build and fails when D1 is unavailable", async () => {
-  const env = createEnv();
+test("health reports all accepted builds and fails when D1 is unavailable", async () => {
+  const previousBuildVersion = `sha256-${"b".repeat(64)}`;
+  const env = createEnv({
+    GAME_BUILD_COMPATIBILITY_VERSIONS: previousBuildVersion,
+  });
   const healthy = await worker.fetch(new Request("https://stats.example.test/health"), env);
 
   assert.equal(healthy.status, 200);
-  assert.deepEqual(await readJson(healthy), { ok: true, buildVersion });
+  assert.deepEqual(await readJson(healthy), {
+    ok: true,
+    buildVersion,
+    acceptedBuildVersions: [buildVersion, previousBuildVersion],
+  });
 
   env.personal_site_game_stats.failHealthCheck = true;
   const unhealthy = await worker.fetch(new Request("https://stats.example.test/health"), env);

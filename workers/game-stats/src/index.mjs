@@ -9,6 +9,8 @@ const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
 ]);
 const GAME_STATS_SNAKE_BOARD_SIZES = Object.freeze(["10", "16", "20", "24"]);
 const GAME_STATS_HINT_BUCKETS = Object.freeze(["noHints", "withHints"]);
+const GAME_BUILD_VERSION_PATTERN = /^sha256-[a-f0-9]{64}$/;
+const MAX_GAME_BUILD_COMPATIBILITY_VERSIONS = 32;
 const GAME_STATS_COMMON_EVENT_KEYS = Object.freeze([
   "id",
   "game",
@@ -796,11 +798,34 @@ const constantTimeSecretEquals = async (comparisonSecret, expected, provided) =>
 const requireSecurityConfig = (env) => {
   const signingSecret = String(env.EVENT_SIGNING_SECRET || "");
   const ipHashSecret = String(env.IP_HASH_SECRET || "");
-  const buildVersion = String(env.GAME_BUILD_VERSION || "");
-  if (!signingSecret || !ipHashSecret || !/^sha256-[a-f0-9]{64}$/.test(buildVersion)) {
+  const buildVersion = String(env.GAME_BUILD_VERSION || "").trim();
+  const compatibilityVersions = String(
+    env.GAME_BUILD_COMPATIBILITY_VERSIONS || ""
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const acceptedBuildVersions = [
+    ...new Set([buildVersion, ...compatibilityVersions]),
+  ];
+  if (
+    !signingSecret ||
+    !ipHashSecret ||
+    !GAME_BUILD_VERSION_PATTERN.test(buildVersion) ||
+    compatibilityVersions.length > MAX_GAME_BUILD_COMPATIBILITY_VERSIONS ||
+    compatibilityVersions.some(
+      (value) => !GAME_BUILD_VERSION_PATTERN.test(value) || value === buildVersion
+    ) ||
+    acceptedBuildVersions.length !== compatibilityVersions.length + 1
+  ) {
     throw new HttpError(500, "Game stats security configuration is incomplete");
   }
-  return { signingSecret, ipHashSecret, buildVersion };
+  return {
+    signingSecret,
+    ipHashSecret,
+    buildVersion,
+    acceptedBuildVersions,
+  };
 };
 
 const requireAdministratorSecurityConfig = (env) => {
@@ -1118,7 +1143,9 @@ const createSession = async (request, env, rawPayload) => {
   }
   const game = rawPayload.game.trim();
   const buildVersion = rawPayload.buildVersion.trim();
-  if (buildVersion !== security.buildVersion) throw new HttpError(409, "Game build version is not current");
+  if (!security.acceptedBuildVersions.includes(buildVersion)) {
+    throw new HttpError(409, "Game build version is not compatible");
+  }
   const config = normalizeSessionConfig(game, rawPayload.config);
   await verifyTurnstileIfRequired(request, env, rawPayload);
   const ipHash = await hmacDigest(security.ipHashSecret, getClientIp(request));
@@ -1266,8 +1293,12 @@ const handleGetHealth = async (request, env) => {
   if (Number(health?.table_count) !== 3) {
     throw new HttpError(500, "D1 health check failed");
   }
-  const { buildVersion } = requireSecurityConfig(env);
-  return jsonResponse(request, env, { ok: true, buildVersion });
+  const { buildVersion, acceptedBuildVersions } = requireSecurityConfig(env);
+  return jsonResponse(request, env, {
+    ok: true,
+    buildVersion,
+    acceptedBuildVersions,
+  });
 };
 
 const handlePostSession = async (request, env) => {

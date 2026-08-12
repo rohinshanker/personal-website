@@ -302,12 +302,12 @@ const authenticationStatusForReason = (reason) => {
     return "Sign-in is unavailable right now. Reload this page and try again.";
   }
   if (reason === "expired") {
-    return "Your one-hour session expired. Your project is safe in this tab. Sign in again to continue.";
+    return "Your session expired. Your project is safe in this tab. Sign in again to continue using the Video Editor.";
   }
   if (reason === "deauthenticated") {
-    return "Your session ended. Your project is safe in this tab. Sign in again to continue.";
+    return "Your session ended. Your project is safe in this tab. Sign in again to continue using the Video Editor.";
   }
-  return "Sign in to begin. Access remains active for one hour.";
+  return "Sign in to begin.";
 };
 
 const requireAuthentication = (reason = "initial") => {
@@ -499,7 +499,7 @@ const trapAuthenticationFocus = (event) => {
   if (event.key === "Escape") {
     event.preventDefault();
     event.stopPropagation();
-    setAuthenticationStatus("Sign in is required to use Video Editor.");
+    setAuthenticationStatus("Sign in to begin.");
     focusAuthenticationForm();
     return;
   }

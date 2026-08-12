@@ -11,6 +11,8 @@ const WRANGLER_CONFIG_EXAMPLE_PATH = new URL(
   "../workers/game-stats/wrangler.jsonc.example",
   import.meta.url
 );
+const GAME_BUILD_VERSION_PATTERN = /^sha256-[a-f0-9]{64}$/;
+export const MAX_GAME_BUILD_COMPATIBILITY_VERSIONS = 32;
 
 /**
  * These are the browser files that decide when a game starts and completes.
@@ -75,7 +77,25 @@ const updateIntegrityCacheReferences = (source, cacheToken) =>
 
 const updateWranglerBuildVersion = (source, buildVersion) => {
   const config = JSON.parse(source);
-  config.vars = { ...config.vars, GAME_BUILD_VERSION: buildVersion };
+  const previousBuildVersion = String(config.vars?.GAME_BUILD_VERSION || "").trim();
+  const existingCompatibilityVersions = String(
+    config.vars?.GAME_BUILD_COMPATIBILITY_VERSIONS || ""
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => GAME_BUILD_VERSION_PATTERN.test(value));
+  const compatibilityVersions = [
+    ...new Set([previousBuildVersion, ...existingCompatibilityVersions]),
+  ]
+    .filter(
+      (value) => GAME_BUILD_VERSION_PATTERN.test(value) && value !== buildVersion
+    )
+    .slice(0, MAX_GAME_BUILD_COMPATIBILITY_VERSIONS);
+  config.vars = {
+    ...config.vars,
+    GAME_BUILD_VERSION: buildVersion,
+    GAME_BUILD_COMPATIBILITY_VERSIONS: compatibilityVersions.join(","),
+  };
   return `${JSON.stringify(config, null, 2)}\n`;
 };
 

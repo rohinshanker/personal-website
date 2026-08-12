@@ -151,7 +151,26 @@ export const fetchGameStatsHealth = async (
   if (!GAME_BUILD_VERSION_PATTERN.test(buildVersion)) {
     throw new Error("Game stats Worker health returned an invalid buildVersion");
   }
-  return { healthUrl, buildVersion };
+  const acceptedBuildVersions = payload.acceptedBuildVersions;
+  if (
+    !Array.isArray(acceptedBuildVersions) ||
+    acceptedBuildVersions.length === 0 ||
+    acceptedBuildVersions[0] !== buildVersion ||
+    acceptedBuildVersions.some(
+      (value) =>
+        typeof value !== "string" || !GAME_BUILD_VERSION_PATTERN.test(value)
+    ) ||
+    new Set(acceptedBuildVersions).size !== acceptedBuildVersions.length
+  ) {
+    throw new Error(
+      "Game stats Worker health returned invalid acceptedBuildVersions"
+    );
+  }
+  return {
+    healthUrl,
+    buildVersion,
+    acceptedBuildVersions: Object.freeze([...acceptedBuildVersions]),
+  };
 };
 
 export const fetchLiveGameStatsBackendConfig = async ({
@@ -444,8 +463,38 @@ const describeReleaseMismatch = (localConfig, liveConfig, workerHealth) => {
   return mismatches;
 };
 
+const describeWorkerTransitionMismatch = (
+  localConfig,
+  liveConfig,
+  workerHealth
+) => {
+  const mismatches = [];
+  if (liveConfig.apiBaseUrl !== localConfig.apiBaseUrl) {
+    mismatches.push(
+      `checked-in API ${localConfig.apiBaseUrl}, deployed browser API ${liveConfig.apiBaseUrl}`
+    );
+  }
+  if (!workerHealth || workerHealth.buildVersion !== localConfig.buildVersion) {
+    mismatches.push(
+      `checked-in browser ${localConfig.buildVersion}, Worker ${
+        workerHealth?.buildVersion || "unavailable"
+      }`
+    );
+  }
+  if (
+    workerHealth &&
+    !workerHealth.acceptedBuildVersions.includes(liveConfig.buildVersion)
+  ) {
+    mismatches.push(
+      `deployed browser ${liveConfig.buildVersion} is not accepted by the Worker`
+    );
+  }
+  return mismatches;
+};
+
 const checkGameStatsReleaseParity = async ({
   verifyWorkerHealth,
+  allowCompatibleLiveBuild = false,
   configUrl = GAME_STATS_BACKEND_CONFIG_URL,
   liveConfigUrl = LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   readFileImpl = readFile,
@@ -522,7 +571,9 @@ const checkGameStatsReleaseParity = async ({
         liveConfigPromise,
         workerHealthPromise,
       ]);
-      const mismatches = describeReleaseMismatch(localConfig, liveConfig, workerHealth);
+      const mismatches = allowCompatibleLiveBuild
+        ? describeWorkerTransitionMismatch(localConfig, liveConfig, workerHealth)
+        : describeReleaseMismatch(localConfig, liveConfig, workerHealth);
       let sourceBuildVersion;
       if (mismatches.length === 0) {
         const integritySnapshot = await fetchLiveIntegritySnapshot(liveConfig, {
@@ -582,6 +633,13 @@ export const checkGameStatsRelease = (options = {}) =>
     verifyWorkerHealth: true,
   });
 
+export const checkGameStatsWorkerTransition = (options = {}) =>
+  checkGameStatsReleaseParity({
+    ...options,
+    verifyWorkerHealth: true,
+    allowCompatibleLiveBuild: true,
+  });
+
 export const runGameStatsDeploymentCheck = async ({
   checkImpl = checkGameStatsDeployment,
   writeOutput = (message) => console.log(message),
@@ -616,11 +674,18 @@ export const runGameStatsStaticReleaseCheck = (options = {}) =>
     ...options,
   });
 
+export const runGameStatsWorkerTransitionCheck = (options = {}) =>
+  runGameStatsDeploymentCheck({
+    checkImpl: checkGameStatsWorkerTransition,
+    ...options,
+  });
+
 export const runGameStatsDeploymentCli = async ({
   args = process.argv.slice(2),
   runLocalImpl = runGameStatsDeploymentCheck,
   runLiveImpl = runLiveGameStatsDeploymentCheck,
   runStaticReleaseImpl = runGameStatsStaticReleaseCheck,
+  runWorkerTransitionImpl = runGameStatsWorkerTransitionCheck,
   runReleaseImpl = runGameStatsReleaseCheck,
   writeError = (message) => console.error(message),
 } = {}) => {
@@ -633,12 +698,15 @@ export const runGameStatsDeploymentCli = async ({
   if (args.length === 1 && args[0] === "--static-release") {
     return runStaticReleaseImpl();
   }
+  if (args.length === 1 && args[0] === "--worker-transition") {
+    return runWorkerTransitionImpl();
+  }
   if (args.length === 1 && args[0] === "--release") {
     return runReleaseImpl();
   }
   writeError(
     "Usage: node scripts/check-game-stats-deployment.mjs " +
-      "[--live|--static-release|--release]"
+      "[--live|--static-release|--worker-transition|--release]"
   );
   return 1;
 };

@@ -1045,6 +1045,8 @@ const GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorPro
 const GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX = 999_999;
 const GAME_STATS_MAX_SYNC_QUEUE_LENGTH = 100;
 const GAME_STATS_API_TIMEOUT_MS = 8000;
+const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 60;
+const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 2000;
 const GAME_STATS_MAX_NAME_REROLLS = 10;
 const GAME_STATS_NAME_ROLL_COOLDOWN_MS = 3000;
 const GAME_STATS_NAME_SUGGESTION_COUNT = 5;
@@ -1141,6 +1143,13 @@ const GAME_STATS_SYNC_STATES = Object.freeze({
     action: "reload",
     busy: false,
     disabled: false,
+  }),
+  "release-waiting": Object.freeze({
+    message:
+      "Game stats are finishing an update. This game's result will publish automatically when the update is ready.",
+    action: "none",
+    busy: true,
+    disabled: true,
   }),
   unconfigured: Object.freeze({
     message:
@@ -1818,26 +1827,62 @@ const startGameStatsSession = (game, config) => {
       reportGameStatsSessionFailure(failure);
       return failure;
     }
-    try {
-      const response = await fetchGameStatsApi("/sessions", {
-        method: "POST",
-        body: JSON.stringify({ game, config, buildVersion: gameStatsBackend.buildVersion }),
-      });
-      const session = normalizeGameStatsSession(await readGameStatsApiJson(response));
-      if (!session) {
-        const failure = { session: null, status: 0, reason: "invalid-response" };
+    let waitedForCompatibleBuild = false;
+    const finishCompatibleBuildWait = () => {
+      if (!waitedForCompatibleBuild) return false;
+      waitedForCompatibleBuild = false;
+      gameStatsReleaseWaitCount = Math.max(0, gameStatsReleaseWaitCount - 1);
+      return true;
+    };
+    for (
+      let attempt = 0;
+      attempt <= GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS;
+      attempt += 1
+    ) {
+      try {
+        const response = await fetchGameStatsApi("/sessions", {
+          method: "POST",
+          body: JSON.stringify({ game, config, buildVersion: gameStatsBackend.buildVersion }),
+        });
+        const session = normalizeGameStatsSession(await readGameStatsApiJson(response));
+        if (!session) {
+          finishCompatibleBuildWait();
+          const failure = { session: null, status: 0, reason: "invalid-response" };
+          reportGameStatsSessionFailure(failure);
+          return failure;
+        }
+        const finishedCompatibleBuildWait = finishCompatibleBuildWait();
+        if (
+          finishedCompatibleBuildWait &&
+          gameStatsReleaseWaitCount === 0 &&
+          gameStatsSyncState === "release-waiting"
+        ) {
+          setGameStatsSyncState("ready");
+        }
+        return {
+          session,
+          status: Number(response.status) || 0,
+        };
+      } catch (error) {
+        const status = Number(error?.status) || 0;
+        if (status === 409 && attempt < GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS) {
+          if (!waitedForCompatibleBuild) {
+            waitedForCompatibleBuild = true;
+            gameStatsReleaseWaitCount += 1;
+          }
+          setGameStatsSyncState("release-waiting");
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS)
+          );
+          continue;
+        }
+        finishCompatibleBuildWait();
+        const failure = { session: null, status };
         reportGameStatsSessionFailure(failure);
         return failure;
       }
-      return {
-        session,
-        status: Number(response.status) || 0,
-      };
-    } catch (error) {
-      const failure = { session: null, status: Number(error?.status) || 0 };
-      reportGameStatsSessionFailure(failure);
-      return failure;
     }
+    throw new Error("Game stats session retry loop exhausted unexpectedly");
   })();
   gameStatsSessions.set(sessionKey, sessionRequest);
   return sessionKey;
@@ -2669,6 +2714,13 @@ const getGameStatsSyncStateDefinition = () =>
 const setGameStatsSyncState = (state, { message = "" } = {}) => {
   if (!GAME_STATS_SYNC_STATES[state]) return;
   if (gameStatsSyncState === "build-mismatch" && state !== "build-mismatch") return;
+  if (
+    gameStatsReleaseWaitCount > 0 &&
+    state !== "release-waiting" &&
+    state !== "build-mismatch"
+  ) {
+    return;
+  }
   gameStatsSyncState = state;
   gameStatsSyncMessage = message || GAME_STATS_SYNC_STATES[state].message;
   renderGameStatsWindows();
@@ -4379,6 +4431,7 @@ let gameStatsSyncPromise = null;
 let gameStatsManualRefreshInProgress = false;
 let gameStatsSyncState = "initial";
 let gameStatsSyncMessage = "";
+let gameStatsReleaseWaitCount = 0;
 let gameStatsAuthenticationReturnFocus = null;
 let gameStatsAuthenticationDeferredForCompletion = false;
 let gameStatsSyncAnnouncementGame = "";

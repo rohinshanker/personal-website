@@ -10,6 +10,7 @@ import {
   checkGameStatsDeployment,
   checkGameStatsRelease,
   checkGameStatsStaticRelease,
+  checkGameStatsWorkerTransition,
   checkLiveGameStatsDeployment,
   fetchGameStatsHealth,
   fetchLiveGameStatsBackendConfig,
@@ -18,6 +19,7 @@ import {
   runGameStatsDeploymentCheck,
   runGameStatsReleaseCheck,
   runGameStatsStaticReleaseCheck,
+  runGameStatsWorkerTransitionCheck,
   runLiveGameStatsDeploymentCheck,
 } from "../scripts/check-game-stats-deployment.mjs";
 
@@ -41,6 +43,13 @@ const calculateReleaseBuildVersion = (sourceFiles = RELEASE_SOURCE_FILES) => {
   return `sha256-${digest.digest("hex")}`;
 };
 const RELEASE_BUILD_VERSION = calculateReleaseBuildVersion();
+const PREVIOUS_RELEASE_SOURCE_FILES = new Map([
+  ["scripts/home/main.js", Buffer.from("const previousReleaseMain = true;\n")],
+  ["scripts/home/core/dom.js", Buffer.from("const previousReleaseDom = true;\n")],
+]);
+const PREVIOUS_RELEASE_BUILD_VERSION = calculateReleaseBuildVersion(
+  PREVIOUS_RELEASE_SOURCE_FILES
+);
 
 const createConfig = ({
   apiBaseUrl = "https://worker.example.test",
@@ -51,13 +60,26 @@ const createConfig = ({
 });`;
 
 const createHealthResponse = (
-  payload = { ok: true, buildVersion: LOCAL_BUILD_VERSION },
+  payload = {
+    ok: true,
+    buildVersion: LOCAL_BUILD_VERSION,
+    acceptedBuildVersions: [LOCAL_BUILD_VERSION],
+  },
   { ok = true, status = 200 } = {}
-) => ({
-  ok,
-  status,
-  json: async () => payload,
-});
+) => {
+  const normalizedPayload =
+    payload &&
+    payload.ok === true &&
+    typeof payload.buildVersion === "string" &&
+    !Object.hasOwn(payload, "acceptedBuildVersions")
+      ? { ...payload, acceptedBuildVersions: [payload.buildVersion] }
+      : payload;
+  return {
+    ok,
+    status,
+    json: async () => normalizedPayload,
+  };
+};
 
 const createConfigResponse = (
   source = createConfig(),
@@ -95,6 +117,7 @@ const createReleaseDependencyResponse = (
     sourceFiles = RELEASE_SOURCE_FILES,
     entryBuildVersion = RELEASE_BUILD_VERSION,
     workerBuildVersion = RELEASE_BUILD_VERSION,
+    workerAcceptedBuildVersions = [workerBuildVersion],
     homeSource = createIntegrityEntry(entryBuildVersion),
     indexSource = createIntegrityEntry(entryBuildVersion),
   } = {}
@@ -106,7 +129,11 @@ const createReleaseDependencyResponse = (
   if (pathname === "/home.html") return createAssetResponse(homeSource);
   if (pathname === "/index.html") return createAssetResponse(indexSource);
   if (pathname.endsWith("/health")) {
-    return createHealthResponse({ ok: true, buildVersion: workerBuildVersion });
+    return createHealthResponse({
+      ok: true,
+      buildVersion: workerBuildVersion,
+      acceptedBuildVersions: workerAcceptedBuildVersions,
+    });
   }
   throw new Error(`Unexpected release dependency URL: ${url}`);
 };
@@ -189,6 +216,7 @@ test("fetches a no-store Worker health response through injected dependencies", 
   assert.deepEqual(result, {
     healthUrl: "https://worker.example.test/api/health",
     buildVersion: LOCAL_BUILD_VERSION,
+    acceptedBuildVersions: [LOCAL_BUILD_VERSION],
   });
   assert.deepEqual(calls, [
     [
@@ -288,6 +316,25 @@ test("reports network, response, status, JSON, and health payload failures", asy
         fetchImpl: async () => createHealthResponse({ ok: true, buildVersion }),
       }),
       /invalid buildVersion/
+    );
+  }
+  for (const acceptedBuildVersions of [
+    null,
+    [],
+    [REMOTE_BUILD_VERSION],
+    [LOCAL_BUILD_VERSION, "invalid"],
+    [LOCAL_BUILD_VERSION, LOCAL_BUILD_VERSION],
+  ]) {
+    await assert.rejects(
+      fetchGameStatsHealth("https://worker.example.test", {
+        fetchImpl: async () =>
+          createHealthResponse({
+            ok: true,
+            buildVersion: LOCAL_BUILD_VERSION,
+            acceptedBuildVersions,
+          }),
+      }),
+      /invalid acceptedBuildVersions/
     );
   }
 });
@@ -630,6 +677,62 @@ test("static release gate polls for browser convergence without requesting Worke
   assert.equal(liveFetches, 2);
   assert.equal(healthFetches, 0);
   assert.deepEqual(sleeps, [5]);
+});
+
+test("Worker transition accepts the coherent live build before Pages publication", async () => {
+  const readCandidate = async () =>
+    createConfig({ buildVersion: RELEASE_BUILD_VERSION });
+  const transitionOptions = {
+    liveConfigUrl: "https://site.example.test/game-stats-backend.js",
+    readFileImpl: readCandidate,
+    convergenceTimeoutMs: 1,
+    pollIntervalMs: 1,
+    nowImpl: () => 0,
+    sleepImpl: async () => {},
+    createCacheBust: () => "transition",
+    createTimeoutSignal: () => ({ name: "signal" }),
+  };
+  const fetchTransition = (acceptedBuildVersions) => async (url) => {
+    if (url.includes("game-stats-backend.js")) {
+      return createConfigResponse(
+        createConfig({ buildVersion: PREVIOUS_RELEASE_BUILD_VERSION })
+      );
+    }
+    return createReleaseDependencyResponse(url, {
+      sourceFiles: PREVIOUS_RELEASE_SOURCE_FILES,
+      entryBuildVersion: PREVIOUS_RELEASE_BUILD_VERSION,
+      workerBuildVersion: RELEASE_BUILD_VERSION,
+      workerAcceptedBuildVersions: acceptedBuildVersions,
+    });
+  };
+
+  assert.deepEqual(
+    await checkGameStatsWorkerTransition({
+      ...transitionOptions,
+      fetchImpl: fetchTransition([
+        RELEASE_BUILD_VERSION,
+        PREVIOUS_RELEASE_BUILD_VERSION,
+      ]),
+    }),
+    {
+      configUrl: "https://site.example.test/game-stats-backend.js",
+      apiBaseUrl: "https://worker.example.test",
+      healthUrl: "https://worker.example.test/health",
+      buildVersion: RELEASE_BUILD_VERSION,
+      sourceBuildVersion: PREVIOUS_RELEASE_BUILD_VERSION,
+      attempts: 1,
+    }
+  );
+
+  await assert.rejects(
+    checkGameStatsWorkerTransition({
+      ...transitionOptions,
+      fetchImpl: fetchTransition([RELEASE_BUILD_VERSION]),
+    }),
+    new RegExp(
+      `deployed browser ${PREVIOUS_RELEASE_BUILD_VERSION} is not accepted by the Worker`
+    )
+  );
 });
 
 test("release check rejects a stale live completion source and fetches assets uncached", async () => {
@@ -1028,7 +1131,7 @@ test("CLI runner writes through its default console reporters", async (context) 
   ]);
 });
 
-test("CLI dispatches local, live-only, static-release, and full-release parity checks", async () => {
+test("CLI dispatches every deployment and release parity check", async () => {
   const calls = [];
   const runners = {
     runLocalImpl: async () => {
@@ -1043,6 +1146,10 @@ test("CLI dispatches local, live-only, static-release, and full-release parity c
       calls.push("static-release");
       return 30;
     },
+    runWorkerTransitionImpl: async () => {
+      calls.push("worker-transition");
+      return 35;
+    },
     runReleaseImpl: async () => {
       calls.push("release");
       return 40;
@@ -1053,6 +1160,10 @@ test("CLI dispatches local, live-only, static-release, and full-release parity c
   assert.equal(
     await runGameStatsDeploymentCli({ args: ["--static-release"], ...runners }),
     30
+  );
+  assert.equal(
+    await runGameStatsDeploymentCli({ args: ["--worker-transition"], ...runners }),
+    35
   );
   assert.equal(await runGameStatsDeploymentCli({ args: ["--release"], ...runners }), 40);
 
@@ -1065,10 +1176,16 @@ test("CLI dispatches local, live-only, static-release, and full-release parity c
     }),
     1
   );
-  assert.deepEqual(calls, ["local", "live", "static-release", "release"]);
+  assert.deepEqual(calls, [
+    "local",
+    "live",
+    "static-release",
+    "worker-transition",
+    "release",
+  ]);
   assert.deepEqual(errors, [
     "Usage: node scripts/check-game-stats-deployment.mjs " +
-      "[--live|--static-release|--release]",
+      "[--live|--static-release|--worker-transition|--release]",
   ]);
   assert.equal(LIVE_GAME_STATS_BACKEND_CONFIG_URL.protocol, "https:");
 });
@@ -1079,7 +1196,7 @@ test("CLI usage failures write through the default console reporter", async (con
   assert.equal(await runGameStatsDeploymentCli({ args: ["--invalid"] }), 1);
   assert.deepEqual(errors, [
     "Usage: node scripts/check-game-stats-deployment.mjs " +
-      "[--live|--static-release|--release]",
+      "[--live|--static-release|--worker-transition|--release]",
   ]);
 });
 
@@ -1100,6 +1217,13 @@ test("specialized CLI runners retain injectable check behavior", async () => {
     0
   );
   assert.equal(
+    await runGameStatsWorkerTransitionCheck({
+      checkImpl: async () => ({ buildVersion: LOCAL_BUILD_VERSION }),
+      writeOutput: (message) => output.push(message),
+    }),
+    0
+  );
+  assert.equal(
     await runGameStatsReleaseCheck({
       checkImpl: async () => ({ buildVersion: REMOTE_BUILD_VERSION }),
       writeOutput: (message) => output.push(message),
@@ -1109,6 +1233,7 @@ test("specialized CLI runners retain injectable check behavior", async () => {
   assert.deepEqual(output, [
     `Verified game stats deployment parity: ${LOCAL_BUILD_VERSION}`,
     `Verified game stats deployment parity: ${RELEASE_BUILD_VERSION}`,
+    `Verified game stats deployment parity: ${LOCAL_BUILD_VERSION}`,
     `Verified game stats deployment parity: ${REMOTE_BUILD_VERSION}`,
   ]);
 });
@@ -1131,6 +1256,10 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     "node scripts/check-game-stats-deployment.mjs --static-release"
   );
   assert.equal(
+    packageJson.scripts["game-stats:worker-transition:check"],
+    "node scripts/check-game-stats-deployment.mjs --worker-transition"
+  );
+  assert.equal(
     packageJson.scripts["game-stats:release:check"],
     "node scripts/check-game-stats-deployment.mjs --release"
   );
@@ -1145,6 +1274,10 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.equal(
     workerPackageJson.scripts["static-release:check"],
     "node ../../scripts/check-game-stats-deployment.mjs --static-release"
+  );
+  assert.equal(
+    workerPackageJson.scripts["worker-transition:check"],
+    "node ../../scripts/check-game-stats-deployment.mjs --worker-transition"
   );
   assert.equal(
     workerPackageJson.scripts["release:check"],
@@ -1168,9 +1301,19 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     group: "game-stats-worker-release-${{ github.ref }}",
     "cancel-in-progress": true,
   });
-  assert.deepEqual(Object.keys(workflowDefinition.jobs).sort(), ["release", "verify"]);
+  assert.deepEqual(Object.keys(workflowDefinition.jobs).sort(), [
+    "deploy-pages",
+    "deploy-worker",
+    "package-pages",
+    "verify",
+  ]);
 
-  const { release, verify } = workflowDefinition.jobs;
+  const {
+    verify,
+    "deploy-worker": deployWorker,
+    "package-pages": packagePages,
+    "deploy-pages": deployPages,
+  } = workflowDefinition.jobs;
   const verifySource = JSON.stringify(verify);
   assert.doesNotMatch(verifySource, /secrets\.|CLOUDFLARE_/);
   assert.doesNotMatch(verifySource, /pull_request_target/);
@@ -1179,14 +1322,29 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.match(verifySource, /npm --prefix workers\/game-stats run deploy:check/);
   assert.doesNotMatch(verifySource, /run deploy --/);
 
-  assert.equal(release.needs, "verify");
-  assert.match(release.if, /github\.ref == 'refs\/heads\/main'/);
-  assert.match(release.if, /github\.event_name == 'push'/);
-  assert.match(release.if, /github\.event_name == 'workflow_dispatch'/);
-  assert.doesNotMatch(release.if, /pull_request/);
-  assert.equal(release.env, undefined);
+  assert.equal(deployWorker.needs, "verify");
+  assert.match(deployWorker.if, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(deployWorker.if, /github\.event_name == 'push'/);
+  assert.match(deployWorker.if, /github\.event_name == 'workflow_dispatch'/);
+  assert.doesNotMatch(deployWorker.if, /pull_request/);
+  assert.equal(deployWorker.env, undefined);
+  assert.equal(packagePages.needs, "deploy-worker");
+  assert.equal(deployPages.needs, "package-pages");
+  assert.deepEqual(packagePages.permissions, {
+    contents: "read",
+    pages: "write",
+  });
+  assert.deepEqual(deployPages.permissions, {
+    contents: "read",
+    pages: "write",
+    "id-token": "write",
+  });
+  assert.deepEqual(deployPages.environment, {
+    name: "github-pages",
+    url: "${{ steps.deployment.outputs.page_url }}",
+  });
 
-  for (const job of [verify, release]) {
+  for (const job of [verify, deployWorker, packagePages, deployPages]) {
     const checkoutStep = job.steps.find((step) =>
       step.uses?.startsWith("actions/checkout@")
     );
@@ -1204,60 +1362,109 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     );
   }
 
-  const stepByName = Object.fromEntries(
-    release.steps.map((step) => [step.name, step])
+  const workerStepByName = Object.fromEntries(
+    deployWorker.steps.map((step) => [step.name, step])
   );
-  assert.deepEqual(stepByName["Require production credentials"].env, {
+  assert.deepEqual(workerStepByName["Require production credentials"].env, {
     CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
     CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
   });
   assert.equal(
-    stepByName["Require production credentials"].run,
+    workerStepByName["Require production credentials"].run,
     "node scripts/check-game-stats-release-context.mjs --credentials"
   );
-  assert.deepEqual(stepByName["Reject a superseded workflow revision"].env, {
+  assert.deepEqual(
+    workerStepByName["Reject a superseded workflow revision"].env,
+    {
     GITHUB_TOKEN: "${{ github.token }}",
-  });
+    }
+  );
   assert.equal(
-    stepByName["Reject a superseded workflow revision"].run,
+    workerStepByName["Reject a superseded workflow revision"].run,
     "node scripts/check-game-stats-release-context.mjs --current-main"
   );
-  assert.deepEqual(stepByName["Deploy current Worker configuration"].env, {
-    CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
-    CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
-  });
+  assert.deepEqual(
+    workerStepByName["Deploy rollout-compatible Worker configuration"].env,
+    {
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+      CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+    }
+  );
   assert.equal(
-    stepByName["Deploy current Worker configuration"].run,
+    workerStepByName["Deploy rollout-compatible Worker configuration"].run,
     "npm --prefix workers/game-stats run deploy -- --config wrangler.jsonc --strict"
+  );
+  assert.equal(
+    workerStepByName[
+      "Verify live browser remains accepted by the candidate Worker"
+    ].run,
+    "npm run game-stats:worker-transition:check"
   );
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action|pull_request_target/);
 
-  const releaseStepNames = release.steps.map((step) => step.name);
+  const workerStepNames = deployWorker.steps.map((step) => step.name);
   assert.ok(
-    releaseStepNames.indexOf("Require production credentials") <
-      releaseStepNames.indexOf("Wait for checked-in browser release to reach production")
+    workerStepNames.indexOf("Require production credentials") <
+      workerStepNames.indexOf("Reject a superseded workflow revision")
   );
   assert.ok(
-    releaseStepNames.indexOf("Wait for checked-in browser release to reach production") <
-      releaseStepNames.indexOf("Reject a superseded workflow revision")
+    workerStepNames.indexOf("Reject a superseded workflow revision") <
+      workerStepNames.indexOf("Deploy rollout-compatible Worker configuration")
   );
   assert.ok(
-    releaseStepNames.indexOf("Reject a superseded workflow revision") <
-      releaseStepNames.indexOf("Deploy current Worker configuration")
-  );
-  assert.ok(
-    releaseStepNames.indexOf("Deploy current Worker configuration") <
-      releaseStepNames.indexOf(
-        "Verify checked-in/deployed browser/Worker release parity"
+    workerStepNames.indexOf("Deploy rollout-compatible Worker configuration") <
+      workerStepNames.indexOf(
+        "Verify live browser remains accepted by the candidate Worker"
       )
   );
+
+  const pagesPackageStepByName = Object.fromEntries(
+    packagePages.steps.map((step) => [step.name, step])
+  );
+  assert.equal(
+    pagesPackageStepByName["Configure GitHub Pages"].uses,
+    "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b"
+  );
+  assert.match(
+    pagesPackageStepByName["Assemble public site artifact"].run,
+    /cp -R assets styles video-editor/
+  );
+  assert.match(
+    pagesPackageStepByName["Assemble public site artifact"].run,
+    /cp -R scripts\/home/
+  );
+  assert.match(
+    pagesPackageStepByName["Assemble public site artifact"].run,
+    /cp CNAME home\.html index\.html robots\.txt sitemap\.xml style\.css/
+  );
+  assert.equal(
+    pagesPackageStepByName["Upload GitHub Pages artifact"].uses,
+    "actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b"
+  );
+
+  const pagesDeployStepByName = Object.fromEntries(
+    deployPages.steps.map((step) => [step.name, step])
+  );
+  assert.equal(
+    pagesDeployStepByName["Deploy verified GitHub Pages artifact"].uses,
+    "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e"
+  );
+  assert.equal(
+    pagesDeployStepByName[
+      "Verify checked-in/deployed browser/Worker release parity"
+    ].run,
+    "npm run game-stats:release:check"
+  );
+  assert.doesNotMatch(workflow, /Wait for checked-in browser release/);
   assert.match(validationGuide, /npm run game-stats:deployment:check/);
   assert.match(validationGuide, /npm run game-stats:static-release:check/);
+  assert.match(validationGuide, /npm run game-stats:worker-transition:check/);
   assert.match(validationGuide, /npm run game-stats:release:check/);
   assert.match(validationGuide, /unique cache-busting query/);
   assert.match(validationGuide, /relative path \+ NUL \+ bytes \+ NUL/);
   assert.match(validationGuide, /HTML cache reference fails/);
-  assert.match(validationGuide, /intentionally ignoring\s+Worker `\/health`/);
+  assert.match(validationGuide, /GitHub Actions.*publishing source/s);
+  assert.match(validationGuide, /rolling compatibility window/);
   assert.match(validationGuide, /CLOUDFLARE_API_TOKEN/);
   assert.match(validationGuide, /CLOUDFLARE_ACCOUNT_ID/);
   assert.match(validationGuide, /current `main` revision/);

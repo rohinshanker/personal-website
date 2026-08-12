@@ -286,6 +286,9 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
   );
   await expect(overlay).toHaveCSS("background-color", "rgba(0, 0, 0, 0.32)");
   await expect(username).toBeFocused();
+  await expect(page.getByTestId("video-editor-auth-status")).toHaveText(
+    "Sign in to begin."
+  );
   await expect(dialog.getByRole("button", { name: /close|cancel/i })).toHaveCount(0);
 
   await username.press("Shift+Tab");
@@ -296,6 +299,9 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
   await password.press("Escape");
   await expect(dialog).toBeVisible();
   await expect(username).toBeFocused();
+  await expect(page.getByTestId("video-editor-auth-status")).toHaveText(
+    "Sign in to begin."
+  );
 
   await expect(
     page.getByRole("button", { name: "Choose Video or Audio…" }).click({
@@ -467,6 +473,9 @@ test("expires or deauthenticates without discarding the project and restores it 
   await expect(editor).toHaveAttribute("inert", "");
   await expect(editor).toHaveAttribute("aria-hidden", "true");
   await expect(page.getByLabel("Username")).toBeFocused();
+  await expect(page.getByTestId("video-editor-auth-status")).toContainText(
+    "Sign in again to continue using the Video Editor."
+  );
   expect(
     await page.evaluate((proofStorageKey) => sessionStorage.getItem(proofStorageKey), administratorProofStorageKey)
   ).toBeNull();
@@ -500,7 +509,7 @@ test("expires or deauthenticates without discarding the project and restores it 
   await expect(overlay).toBeVisible();
   await expect(editor).toHaveAttribute("inert", "");
   await expect(page.getByTestId("video-editor-auth-status")).toContainText(
-    /session ended.*project is safe/i
+    /session ended.*Sign in again to continue using the Video Editor/i
   );
   expect(await readProjectSnapshot(page)).toEqual(projectBeforeExpiry);
   await page.screenshot({

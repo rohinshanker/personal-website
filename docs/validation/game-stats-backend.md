@@ -50,20 +50,21 @@ or high-stakes game.
   Origin returned `403`. The production deploy and parity checks made no D1
   event writes.
 
-## Local Release Candidate — 2026-07-29 (Not Deployed)
+## Local Release Candidate — 2026-08-11 (Not Deployed)
 
 - The checked-in candidate is build
-  `sha256-96994628e2137242d12aa9b9438da817e3f3d91347852efe6127bb6b7dc94df0`.
-  It is not the live build described above. Do not deploy its Worker by itself:
-  first let the static release gate observe this exact browser hash and cache
-  token, then deploy the matching Worker and run the full parity gate.
-- The browser now reports session-creation and stale-build failures instead of
-  silently treating them as publishable results. Queued global submissions
+  `sha256-d707808da831507ece4fe8566912ef22f65a4c8f438daea4d35ced5fe9e7c2aa`.
+  It is not the live build described above. Deploy its rolling-compatible
+  Worker first, require the transition gate, then publish the matching Pages
+  artifact and run the full parity gate.
+- The browser retries a temporary stale-build rejection for two minutes while
+  a release finishes, then reports the failure instead of silently treating
+  the result as publishable. Queued global submissions
   from the normal client flow always include a normalized, unexpired session
   proof; the Worker remains responsible for verifying its signature and D1
-  state. The Worker still requires the active hash for new sessions while
-  allowing an already-issued HMAC- and D1-matched session from an earlier
-  accepted build to finish before its normal expiry.
+  state. The Worker accepts the active hash and the bounded, generated
+  compatibility list for new sessions while allowing an already-issued HMAC-
+  and D1-matched session to finish before its normal expiry.
 - Sudoku has a persisted one-completion-per-puzzle latch. Both hint buckets
   increment the verified difficulty total, while only finite no-hints times
   enter Top 3, rank, and record data. Strict new-write validation rejects
@@ -72,11 +73,12 @@ or high-stakes game.
   a reusable session. Repeating the exact accepted event is idempotent rather
   than incrementing any counter. Defensive historical-row reads remain
   separate from strict ingress.
-- Local verification passes 203 source tests, 44 focused Worker tests, the
-  integrity check, JavaScript syntax and diff checks, and Wrangler 4.114.0's
-  deployment dry-run. The real rendered Sudoku flow passes 9/9 cases without
-  retries across 375×812, 768×1024, 1280×800, and 1440×900; the maximum
-  `360:00` time and `99:99` placeholder layout passes another 4/4 cases.
+- Local verification passes all 264 source tests, the generated-integrity
+  check, JavaScript syntax and diff checks, and Wrangler 4.114.0's strict
+  deployment dry-run. The rendered temporary-mismatch recovery flow passes
+  4/4 cases across 375×812, 768×1024, 1280×800, and 1440×900, including the
+  waiting, recovered, and automatically published states with no unexpected
+  page errors or layout overflow.
 - A fresh isolated local D1 run on the final candidate accepted two no-hints
   wins and one hinted win, rejected a difficulty mismatch without consuming
   its session, accepted the corrected event, and returned `applied: false` for
@@ -157,6 +159,7 @@ credential.
 | `ADMIN_SESSION_SIGNING_SECRET` | Worker secret | Separately signs the one-hour proof for the protected administrator profile. | Generate a different random value from every other secret; rotation immediately invalidates outstanding administrator proofs. |
 | `TURNSTILE_SECRET_KEY` | Worker secret | Calls Cloudflare Siteverify. | Do **not** set it yet: the current browser client does not send a Turnstile token. Set it only after shipping and testing the client widget flow; never expose it to the browser. |
 | `GAME_BUILD_VERSION` | committed Worker var | Must equal the generated browser build version. | Public release metadata, updated only by the integrity script. |
+| `GAME_BUILD_COMPATIBILITY_VERSIONS` | committed Worker var | Ordered recent browser hashes accepted during staged releases. | Public release metadata maintained only by the integrity script; never edit or reorder it manually. |
 | `ALLOWED_ORIGIN` | committed Worker var | Browser CORS allowlist. | Public, but set it to the one exact production site origin. |
 | Turnstile sitekey | browser config | Renders the Turnstile widget. | Public by design; it is not the secret key. |
 
@@ -213,6 +216,11 @@ It also derives the cache key for `scripts/home/game-stats-backend.js`,
 `scripts/home/core/dom.js`, and `scripts/home/main.js` in both HTML entry
 points from that build version. This prevents a browser from pairing a cached
 completion script or generated browser config with a newly deployed Worker.
+Before replacing `GAME_BUILD_VERSION`, the updater moves the outgoing value to
+the front of `GAME_BUILD_COMPATIBILITY_VERSIONS`, removes duplicates, and
+retains at most 32 prior hashes. This rolling compatibility window lets the
+transition Worker accept both the public site and the candidate site while
+Pages changes over.
 
 After **every** change to either listed source file, run:
 
@@ -266,32 +274,53 @@ for up to two minutes so an in-progress Pages deployment can converge. A stale
 live config, source file, or HTML cache reference fails even when the
 checked-in config and Worker already match.
 
-Before deploying the Worker, run the static-only form of the same polling gate:
+The static-only form remains available as a read-only diagnostic:
 
 ```bash
 npm run game-stats:static-release:check
 ```
 
-This requires the checked-in config, recomputed live completion-source hash,
-and both live HTML cache-token sets to converge while intentionally ignoring
-Worker `/health`. The release workflow runs this gate before `wrangler deploy`,
-then runs the full browser/source/HTML/Worker gate afterward. This ordering
-prevents a Worker for a newer hash from replacing the current Worker while the
-production site still serves the older browser release.
+It requires the checked-in config, recomputed live completion-source hash, and
+both live HTML cache-token sets to converge while intentionally ignoring
+Worker `/health`. The automated release does not use static-first ordering
+because an independently published browser can expose a new-build/old-Worker
+gap.
 
-`.github/workflows/game-stats-worker-release.yml` separates a read-only verify
-job from the production release job. Every pull request and `main` push runs
-source tests, the integrity check, and a lockfile-installed strict Wrangler
-dry-run; pull requests cannot reach the secret-bearing release job. After a trusted
-`main` push or a `main` workflow dispatch passes verification, the release job
-requires both repository secrets, waits for the static-only gate, verifies that
-the workflow SHA is still the current `main` revision, deploys the checked-in
-`workers/game-stats/wrangler.jsonc` with Wrangler's `--strict` configuration
-guard, and runs the full polling release gate.
+After deploying the candidate Worker and before publishing Pages, run:
+
+```bash
+npm run game-stats:worker-transition:check
+```
+
+This transition gate requires the Worker active hash to equal the checked-in
+candidate, verifies that the coherent browser build currently served by Pages
+is in the Worker's rolling compatibility window, and recomputes that live
+browser's completion-source hash and HTML cache references. Pages publication
+is unsafe until this check passes.
+
+`.github/workflows/game-stats-worker-release.yml` separates credential-free
+verification from production mutation jobs. Every pull request and `main` push
+runs source tests, the integrity check, and a lockfile-installed strict
+Wrangler dry-run; pull requests cannot reach Cloudflare or Pages deployment.
+After a trusted `main` push or `main` workflow dispatch passes verification,
+the workflow requires both repository secrets, rejects superseded revisions,
+deploys the rolling-compatible Worker with Wrangler's `--strict` configuration
+guard, and runs the transition gate. Only then does it package the public
+static allowlist, upload a Pages artifact, deploy that exact artifact, and run
+the full polling release gate.
+
+GitHub Pages must use **GitHub Actions** as its publishing source. In the
+repository, open **Settings → Pages → Build and deployment → Source** and choose
+**GitHub Actions**. Do not leave Pages configured to publish directly from the
+`main` branch: branch publishing can expose unverified browser files before the
+Worker transition is ready, even when the release workflow fails. Keep the
+`github-pages` deployment environment restricted to `main`.
 
 Releases share one concurrency group per ref and a new push cancels the
 superseded run. The immediate current-`main` check also fails closed when an old
 successful run is manually rerun after a newer revision has landed. Both
+Worker and Pages mutation jobs verify the current `main` revision immediately
+before their release action. All
 official GitHub actions are pinned to immutable commit SHAs and checkout does
 not persist its GitHub credential. Configure these GitHub Actions repository
 secrets:
@@ -302,6 +331,18 @@ secrets:
 Keep both values in GitHub Actions secrets, never in repository variables or
 source. A `main` release fails with an explicit error when either value is
 missing; it must never report success while leaving an older Worker active.
+Create `CLOUDFLARE_API_TOKEN` from Cloudflare's **Edit Cloudflare Workers**
+template and scope it to the account that owns `personal-site-game-stats`;
+`CLOUDFLARE_ACCOUNT_ID` is that account's ID. These CI credentials are separate
+from the five encrypted runtime secrets already attached to the Worker. Confirm
+those runtime secrets remain configured, and disable any Cloudflare Workers
+Builds/Git integration that could deploy the same Worker in parallel.
+
+Pushing alone is not enough for the first automated release. Complete the
+one-time Pages-source selection and add both repository secrets, then rerun the
+latest failed **Game Stats Worker release** run or use `workflow_dispatch` on
+`main`. The release is complete only when the transition check, Pages deploy,
+and final live parity check all pass.
 
 If gameplay-completion logic moves to another file, first add that file to
 `GAME_COMPLETION_SOURCE_FILES` in the script, update its test, run the updater,
@@ -345,7 +386,7 @@ The Worker exposes these routes:
 
 | Route | Purpose | Write behavior |
 | --- | --- | --- |
-| `GET /health` | Queries D1 and reports the active `buildVersion`. | None; a `200` proves the Worker can read its bound database and configuration. |
+| `GET /health` | Queries D1 and reports the active `buildVersion` plus ordered `acceptedBuildVersions`. | None; a `200` proves the Worker can read its bound database and validated rollout configuration. |
 | `GET /stats` | Reads global totals and Top 3 leaderboards; with `playerId`, also returns that player's rank and record for all 14 supported categories. | None; use this to verify D1 reads. |
 | `POST /sessions` | Validates the requested game/config/build and creates a short-lived server-signed session. | Creates one expiring session only after all checks pass. |
 | `POST /events` | Accepts the normalized result envelope and consumes its valid session exactly once. | Inserts one idempotent event and consumes its session in one transactional D1 batch, or rejects both changes. |
@@ -354,8 +395,9 @@ The Worker exposes these routes:
 The browser must ask for a session before a result can be submitted. A session
 request contains `game`, the allowed game `config`, the generated
 `buildVersion`, and a fresh `turnstileToken` when Turnstile is enabled. The
-Worker rejects unknown games/configurations, a mismatched build version,
-expired timestamps, or a disallowed browser Origin.
+Worker rejects unknown games/configurations, a build version outside its
+explicit rolling compatibility window, expired timestamps, or a disallowed
+browser Origin.
 
 The result post uses the Worker’s normalized event envelope and server-issued
 session proof. Do not add a frontend shortcut that sends a raw `win` directly
@@ -540,12 +582,13 @@ session HMACs, or an IP-derived identifier.
    credential.
 
 7. On releases that change covered gameplay sources, run the integrity updater
-   first and publish the matching static files. Wait for
-   `npm run game-stats:static-release:check` to prove that the public config,
-   completion sources, and both HTML entry points have converged; only then
-   deploy the Worker and run `npm run game-stats:release:check`. New sessions
-   from stale builds fail closed with a reload action, while an already-issued,
-   unexpired signed and D1-backed session remains valid across the deployment.
+   first. Deploy the candidate Worker, require
+   `npm run game-stats:worker-transition:check`, then publish the exact static
+   artifact and run `npm run game-stats:release:check`. The normal GitHub
+   Actions workflow owns this ordering. Cached builds remain in the explicit
+   compatibility window, temporary mismatches retry in the browser, and an
+   already-issued, unexpired signed and D1-backed session remains valid across
+   the deployment.
 
 For a Worker-only hotfix while production static files remain on an older
 valid hash, do not run the ordinary deploy from a newer worktree. First read
@@ -572,7 +615,9 @@ curl --fail-with-body \
 ```
 
 Confirm the health response's `buildVersion` exactly matches
-`scripts/home/game-stats-backend.js` before testing any result submission.
+`scripts/home/game-stats-backend.js`, that `acceptedBuildVersions[0]` is the
+same value, and that every remaining accepted value is a generated lowercase
+SHA-256 build before testing any result submission.
 
 Run these negative checks before submitting real events; they should return a
 4xx response and make no D1 write:
@@ -761,9 +806,10 @@ Use this checklist after the verified release and after every future Game Stats
 change:
 
 1. Keep frontend and Worker build metadata synchronized: regenerate integrity
-   metadata, publish the same committed static state, wait for the static-only
-   convergence gate, deploy the Worker, then require the full live
-   browser/source/HTML/Worker gate to pass on the identical build hash.
+   metadata, deploy the compatible transition Worker, require the transition
+   gate, publish the same committed Pages artifact through GitHub Actions, then
+   require the full live browser/source/HTML/Worker gate to pass on the
+   identical active build hash.
 2. Run the full source and rendered UI suites, including mobile and desktop
    multiplayer, unplayed, empty, loading, authentication, failure, and timeout
    states. Inspect the committed at-a-glance contact sheet when copy or state

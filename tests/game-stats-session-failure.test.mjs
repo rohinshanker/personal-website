@@ -87,22 +87,31 @@ const loadSessionHarness = async () => {
     [
       "let gameStatsSessionSequence = 0;",
       "const gameStatsSessions = new Map();",
+      "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 2;",
+      "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 1;",
+      "const window = { setTimeout: (callback) => callback() };",
       "let configured = true;",
       "let behavior = { kind: 'success', status: 201, payload: null };",
       "const requests = [];",
       "const stateChanges = [];",
-      "const setGameStatsSyncState = (state, { message = '' } = {}) => { stateChanges.push({ state, message }); };",
+      "let gameStatsSyncState = 'initial';",
+      "let gameStatsReleaseWaitCount = 0;",
+      "const setGameStatsSyncState = (state, { message = '' } = {}) => { if (gameStatsReleaseWaitCount > 0 && state !== 'release-waiting' && state !== 'build-mismatch') return; gameStatsSyncState = state; stateChanges.push({ state, message }); };",
       "const isGameStatsBackendConfigured = () => configured;",
       "const gameStatsBackend = { buildVersion: 'sha256-test' };",
       "const fetchGameStatsApi = async (path, options) => {",
       "  requests.push({ path, body: JSON.parse(options.body) });",
       "  if (behavior.kind === 'network-error') throw new Error('offline');",
-      "  return { status: behavior.status, payload: behavior.payload };",
+      "  if (behavior.kind === 'recover-after-mismatch' && behavior.failures > 0) {",
+      "    behavior.failures -= 1;",
+      "    return { kind: 'http-error', status: 409, payload: null };",
+      "  }",
+      "  return { ...behavior };",
       "};",
       "const readGameStatsApiJson = async (response) => {",
-      "  if (behavior.kind === 'http-error') {",
+      "  if (response.kind === 'http-error') {",
       "    const error = new Error('request failed');",
-      "    error.status = behavior.status;",
+      "    error.status = response.status;",
       "    throw error;",
       "  }",
       "  return response.payload;",
@@ -149,43 +158,47 @@ test("session creation returns a one-use session result without changing valid b
   assert.deepEqual(plainObject(context.readStateChangesForTest()), []);
 });
 
-test("session creation reports every unavailable-session branch immediately", async () => {
+test("session creation exhausts build retries before reporting an unavailable session", async () => {
   const cases = [
     {
       name: "build mismatch",
       behavior: { kind: "http-error", status: 409, payload: null },
       expectedResult: { session: null, status: 409 },
-      expectedChange: { state: "build-mismatch", message: "" },
+      expectedChanges: [
+        { state: "release-waiting", message: "" },
+        { state: "release-waiting", message: "" },
+        { state: "build-mismatch", message: "" },
+      ],
     },
     {
       name: "upstream rejection",
       behavior: { kind: "http-error", status: 503, payload: null },
       expectedResult: { session: null, status: 503 },
-      expectedChange: {
+      expectedChanges: [{
         state: "request-failed",
         message:
           "The verified game session request failed (HTTP 503). Start a new game and try again.",
-      },
+      }],
     },
     {
       name: "network failure",
       behavior: { kind: "network-error", status: 0, payload: null },
       expectedResult: { session: null, status: 0 },
-      expectedChange: {
+      expectedChanges: [{
         state: "request-failed",
         message:
           "The verified game session request failed. Start a new game and try again.",
-      },
+      }],
     },
     {
       name: "invalid success response",
       behavior: { kind: "success", status: 201, payload: {} },
       expectedResult: { session: null, status: 0, reason: "invalid-response" },
-      expectedChange: {
+      expectedChanges: [{
         state: "request-failed",
         message:
           "The game server returned an invalid session response. Start a new game and try again.",
-      },
+      }],
     },
     {
       name: "session response missing its token",
@@ -198,11 +211,11 @@ test("session creation reports every unavailable-session branch immediately", as
         },
       },
       expectedResult: { session: null, status: 0, reason: "invalid-response" },
-      expectedChange: {
+      expectedChanges: [{
         state: "request-failed",
         message:
           "The game server returned an invalid session response. Start a new game and try again.",
-      },
+      }],
     },
     {
       name: "already-expired session response",
@@ -216,11 +229,11 @@ test("session creation reports every unavailable-session branch immediately", as
         },
       },
       expectedResult: { session: null, status: 0, reason: "invalid-response" },
-      expectedChange: {
+      expectedChanges: [{
         state: "request-failed",
         message:
           "The game server returned an invalid session response. Start a new game and try again.",
-      },
+      }],
     },
   ];
 
@@ -231,7 +244,7 @@ test("session creation reports every unavailable-session branch immediately", as
     assert.deepEqual(plainObject(result), sessionCase.expectedResult, sessionCase.name);
     assert.deepEqual(
       plainObject(context.readStateChangesForTest()),
-      [sessionCase.expectedChange],
+      sessionCase.expectedChanges,
       sessionCase.name
     );
   }
@@ -254,6 +267,38 @@ test("session creation reports every unavailable-session branch immediately", as
     session: null,
     status: 0,
   });
+});
+
+test("session creation recovers after a temporary build mismatch", async () => {
+  const context = await loadSessionHarness();
+  const session = {
+    id: "session-after-release",
+    token: "session-after-release-token",
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  };
+  context.setBehaviorForTest({
+    kind: "recover-after-mismatch",
+    status: 201,
+    payload: session,
+    failures: 1,
+  });
+
+  const result = await context.getForTest(context.startForTest("solitaire", {}));
+  assert.deepEqual(plainObject(result), { session, status: 201 });
+  assert.deepEqual(plainObject(context.readRequestsForTest()), [
+    {
+      path: "/sessions",
+      body: { game: "solitaire", config: {}, buildVersion: "sha256-test" },
+    },
+    {
+      path: "/sessions",
+      body: { game: "solitaire", config: {}, buildVersion: "sha256-test" },
+    },
+  ]);
+  assert.deepEqual(plainObject(context.readStateChangesForTest()), [
+    { state: "release-waiting", message: "" },
+    { state: "ready", message: "" },
+  ]);
 });
 
 test("submission queue rejects null sessions and persists valid sessions", async () => {
@@ -308,6 +353,7 @@ test("build mismatch is sticky until its reload action replaces the page", async
       "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, 'build-mismatch': { message: 'reload' } };",
       "let gameStatsSyncState = 'ready';",
       "let gameStatsSyncMessage = '';",
+      "let gameStatsReleaseWaitCount = 0;",
       "let renderCalls = 0;",
       "const renderGameStatsWindows = () => { renderCalls += 1; };",
       stateSource,

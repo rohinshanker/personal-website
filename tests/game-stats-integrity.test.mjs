@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   GAME_COMPLETION_SOURCE_FILES,
+  MAX_GAME_BUILD_COMPATIBILITY_VERSIONS,
   calculateGameBuildVersion,
   updateGameIntegrity,
 } from "../scripts/update-game-integrity.mjs";
@@ -30,6 +31,22 @@ test("game build metadata matches the completion source and Worker configuration
     /apiBaseUrl: "https:\/\/personal-site-game-stats\.rohinshankerme\.workers\.dev"/
   );
   assert.equal(wranglerConfig.vars.GAME_BUILD_VERSION, buildVersion);
+  const compatibilityVersions =
+    wranglerConfig.vars.GAME_BUILD_COMPATIBILITY_VERSIONS.split(",");
+  assert.ok(
+    compatibilityVersions.includes(
+      "sha256-7c5f92037db895a1bb868a79152c2db70fc7d7a65c13482ebb56920047c40d0a"
+    )
+  );
+  assert.ok(
+    compatibilityVersions.includes(
+      "sha256-8da5fabb2d24da0b79b4cbb6a314df595fefbd926adab3a1447c185d865aa6e2"
+    )
+  );
+  assert.ok(
+    compatibilityVersions.length <= MAX_GAME_BUILD_COMPATIBILITY_VERSIONS
+  );
+  assert.equal(new Set(compatibilityVersions).size, compatibilityVersions.length);
   assert.equal(wranglerConfig.vars.ALLOWED_ORIGIN, "https://rohin.shanker.me");
   assert.equal(Object.hasOwn(wranglerConfig.vars, "LOCAL_ALLOWED_ORIGIN"), false);
   assert.equal(Object.hasOwn(wranglerConfig.vars, "EXTRA_ALLOWED_ORIGINS"), false);
