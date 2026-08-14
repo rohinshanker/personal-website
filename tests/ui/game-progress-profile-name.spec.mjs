@@ -42,6 +42,7 @@ for (const viewport of viewports) {
     const saved = row.locator(".game-progress-profile-saved");
 
     await expect(app.getByRole("heading", { name: "Profile" })).toBeVisible();
+    await expect(app).not.toHaveClass(/is-opening/);
     await expect(app.getByRole("list", { name: "Game Progress tabs" })).toBeVisible();
     await expect(name).toHaveText(PROFILE.name);
     await expect(saved).toHaveText("Saved");

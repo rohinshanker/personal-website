@@ -240,6 +240,7 @@ const tabLabels = async (page) =>
   page
     .getByTestId("effect-tab-list")
     .getByRole("tab")
+    .locator("[data-effect-tab-label]")
     .allTextContents()
     .then((labels) => labels.map((label) => label.trim()));
 
@@ -259,6 +260,76 @@ const readProjectSnapshot = (page) =>
     })),
     previewSource: document.querySelector("#preview-video")?.src,
   }));
+
+const expectPreviewAspect = async (stage, width, height) => {
+  await expect
+    .poll(() =>
+      stage.evaluate((element) =>
+        getComputedStyle(element).aspectRatio.replaceAll(" ", "")
+      )
+    )
+    .toBe(`${width}/${height}`);
+  await expect
+    .poll(() =>
+      stage.evaluate((element, expectedRatio) => {
+        const bounds = element.getBoundingClientRect();
+        return Math.abs(bounds.width / bounds.height - expectedRatio);
+      }, width / height)
+    )
+    .toBeLessThanOrEqual(0.002);
+};
+
+const clickRangeAtValue = async (range, targetValue) => {
+  const bounds = await range.boundingBox();
+  expect(bounds, "range input is rendered").not.toBeNull();
+  const { max, min, step, thumbWidth } = await range.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      max: Number(element.max),
+      min: Number(element.min),
+      step: Number(element.step) || 1,
+      thumbWidth: Number.parseFloat(
+        style.getPropertyValue("--video-editor-range-thumb-width")
+      ),
+    };
+  });
+  const fraction = (targetValue - min) / (max - min);
+  const trackStart = thumbWidth / 2;
+  const trackWidth = bounds.width - thumbWidth;
+  await range.click({
+    position: {
+      x: trackStart + trackWidth * fraction,
+      y: bounds.height / 2,
+    },
+  });
+  const actualValue = Number(await range.inputValue());
+  expect(Math.abs(actualValue - targetValue)).toBeLessThanOrEqual(step / 2 + 0.011);
+  return actualValue;
+};
+
+const readRulerMetrics = (page) =>
+  page.locator("#timeline-ruler").evaluate((ruler) => {
+    const rulerBounds = ruler.getBoundingClientRect();
+    return {
+      height: rulerBounds.height,
+      left: rulerBounds.left,
+      right: rulerBounds.right,
+      ticks: Array.from(ruler.querySelectorAll(".timeline-ruler__tick"), (tick) => {
+        const tickBounds = tick.getBoundingClientRect();
+        const label = tick.querySelector(".timeline-ruler__label");
+        const labelBounds = label?.getBoundingClientRect();
+        return {
+          kind: tick.getAttribute("data-ruler-tick"),
+          time: Number(tick.getAttribute("data-time-seconds")),
+          height: tickBounds.height,
+          left: tickBounds.left,
+          label: labelBounds
+            ? { left: labelBounds.left, right: labelBounds.right }
+            : null,
+        };
+      }),
+    };
+  });
 
 test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", async ({
   page,
@@ -311,6 +382,16 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
   await expect(dialog).toBeVisible();
   await expect(page.locator("#media-count")).toHaveText("0 items");
 
+  for (const separatorId of [
+    "#video-editor-media-compose-separator",
+    "#video-editor-compose-effects-separator",
+  ]) {
+    const separator = page.locator(separatorId);
+    const valueBefore = await separator.getAttribute("aria-valuenow");
+    await expect(separator.click({ timeout: 750 })).rejects.toThrow();
+    await expect(separator).toHaveAttribute("aria-valuenow", valueBefore);
+  }
+
   await page.screenshot({
     path: testInfo.outputPath("video-editor-auth-required-desktop.png"),
   });
@@ -341,6 +422,9 @@ test("shows only Desktop Required below 1024px even without authentication", asy
       await expect(page.getByTestId("video-editor-auth-overlay")).toBeHidden();
       await expect(page.getByTestId("video-editor-auth-dialog")).toBeHidden();
       await expect(page.getByTestId("video-editor")).toBeHidden();
+      await expect(page.locator("[data-video-editor-side-separator]")).toHaveCount(2);
+      await expect(page.locator("#video-editor-media-compose-separator")).toBeHidden();
+      await expect(page.locator("#video-editor-compose-effects-separator")).toBeHidden();
       await page.screenshot({
         path: testInfo.outputPath(`video-editor-unauthenticated-${viewport.name}.png`),
       });
@@ -523,6 +607,253 @@ test("expires or deauthenticates without discarding the project and restores it 
   await page.screenshot({
     path: testInfo.outputPath("video-editor-auth-reauthenticated-after-storage-removal.png"),
   });
+
+  runtime.expectClean();
+});
+
+test("updates the preview frame presets and contains imported video", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1440, height: 900 });
+  runtime.setOrigin(page.url());
+
+  const preset = page.locator("#video-editor-frame-preset");
+  const stage = page.getByTestId("preview-stage");
+  const customSize = page.locator("#video-editor-frame-custom-size");
+  const optionValues = await preset.locator("option").evaluateAll((options) =>
+    options.map((option) => ({ text: option.textContent.trim(), value: option.value }))
+  );
+  expect(optionValues.map(({ value }) => value)).toEqual([
+    "9:16",
+    "16:9",
+    "1:1",
+    "4:5",
+    "4:3",
+    "21:9",
+    "3:2",
+    "custom",
+  ]);
+  expect(optionValues[0].text).toBe("Reel / TikTok (9:16)");
+  await expect(preset).toHaveValue("9:16");
+  await expect(customSize).toBeHidden();
+  await expect(stage).toHaveAttribute("data-frame-preset", "9:16");
+  await expectPreviewAspect(stage, 9, 16);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-frame-reel-9x16.png"),
+  });
+
+  for (const [value, width, height] of [
+    ["16:9", 16, 9],
+    ["1:1", 1, 1],
+    ["4:5", 4, 5],
+    ["4:3", 4, 3],
+    ["21:9", 21, 9],
+    ["3:2", 3, 2],
+  ]) {
+    await test.step(value, async () => {
+      await preset.selectOption(value);
+      await expect(stage).toHaveAttribute("data-frame-preset", value);
+      await expectPreviewAspect(stage, width, height);
+      await expect(page.locator("#editor-status")).toContainText("Frame size set to");
+    });
+  }
+
+  await preset.selectOption("custom");
+  await expect(customSize).toBeVisible();
+  const customWidth = page.getByLabel("Width");
+  const customHeight = page.getByLabel("Height");
+  await expect(customWidth).toHaveValue("1080");
+  await expect(customHeight).toHaveValue("1920");
+  await customWidth.fill("2000");
+  await customHeight.fill("1000");
+  await customHeight.press("Tab");
+  await expect(stage).toHaveAttribute("data-frame-preset", "custom");
+  await expect(stage).toHaveCSS("--video-editor-frame-width", "2000");
+  await expect(stage).toHaveCSS("--video-editor-frame-height", "1000");
+  await expectPreviewAspect(stage, 2000, 1000);
+  await expect(page.locator("#editor-status")).toContainText(/2000.*1000/);
+
+  await preset.selectOption("9:16");
+  await importMedia(page, [videoAsset]);
+  await page
+    .getByTestId("media-bin")
+    .getByRole("button", { name: `Add ${videoName} at the playhead` })
+    .click();
+  const previewVideo = page.locator("#preview-video");
+  await expect(previewVideo).toBeVisible();
+  await expect(previewVideo).toHaveCSS("object-fit", "contain");
+  const containment = await previewVideo.evaluate((video) => {
+    const videoBounds = video.getBoundingClientRect();
+    const stageBounds = video.parentElement.getBoundingClientRect();
+    return {
+      naturalHeight: video.videoHeight,
+      naturalWidth: video.videoWidth,
+      withinStage:
+        videoBounds.left >= stageBounds.left &&
+        videoBounds.top >= stageBounds.top &&
+        videoBounds.right <= stageBounds.right &&
+        videoBounds.bottom <= stageBounds.bottom,
+    };
+  });
+  expect(containment.naturalWidth).toBeGreaterThan(0);
+  expect(containment.naturalHeight).toBeGreaterThan(0);
+  expect(containment.withinStage).toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-frame-contained-video.png"),
+  });
+
+  runtime.expectClean();
+});
+
+test("resizes the preview and timeline with pointer and keyboard controls", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+
+  const separator = page.getByRole("separator", {
+    name: "Resize preview and timeline",
+  });
+  const composeBody = page.locator(".compose-panel__body");
+  const previewSection = page.locator("#video-editor-preview-section");
+  const timelineSection = page.locator("#video-editor-timeline-section");
+  await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
+  await expect(separator).toHaveAttribute(
+    "aria-controls",
+    "video-editor-preview-section video-editor-timeline-section"
+  );
+  await expect(separator).toHaveAttribute("aria-valuemin", "25");
+  await expect(separator).toHaveAttribute("aria-valuemax", "75");
+  await expect(separator).toHaveAttribute("aria-valuenow", "44");
+  await expect(separator).toHaveAttribute(
+    "aria-valuetext",
+    "Preview 44%, timeline 56%"
+  );
+  await expect(composeBody).toHaveCSS("--video-editor-preview-split", "44%");
+
+  await separator.focus();
+  await separator.press("ArrowUp");
+  await expect(separator).toHaveAttribute("aria-valuenow", "39");
+  await expect(composeBody).toHaveCSS("--video-editor-preview-split", "39%");
+  await separator.press("ArrowDown");
+  await expect(separator).toHaveAttribute("aria-valuenow", "44");
+  await expect(page.locator("#editor-status")).toHaveText(
+    "Preview area set to 44 percent."
+  );
+
+  await separator.press("Home");
+  await expect(separator).toHaveAttribute("aria-valuenow", "25");
+  const minimumSizes = {
+    preview: await previewSection.evaluate((element) => element.getBoundingClientRect().height),
+    timeline: await timelineSection.evaluate((element) => element.getBoundingClientRect().height),
+  };
+  await separator.press("End");
+  await expect(separator).toHaveAttribute("aria-valuenow", "75");
+  const maximumSizes = {
+    preview: await previewSection.evaluate((element) => element.getBoundingClientRect().height),
+    timeline: await timelineSection.evaluate((element) => element.getBoundingClientRect().height),
+  };
+  expect(maximumSizes.preview).toBeGreaterThan(minimumSizes.preview);
+  expect(maximumSizes.timeline).toBeLessThan(minimumSizes.timeline);
+
+  const bodyBounds = await composeBody.boundingBox();
+  const separatorBounds = await separator.boundingBox();
+  expect(bodyBounds).not.toBeNull();
+  expect(separatorBounds).not.toBeNull();
+  await page.mouse.move(
+    separatorBounds.x + separatorBounds.width / 2,
+    separatorBounds.y + separatorBounds.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    separatorBounds.x + separatorBounds.width / 2,
+    bodyBounds.y + bodyBounds.height * 0.6,
+    { steps: 5 }
+  );
+  await page.mouse.up();
+  const pointerValue = Number(await separator.getAttribute("aria-valuenow"));
+  expect(pointerValue).toBeGreaterThanOrEqual(59);
+  expect(pointerValue).toBeLessThanOrEqual(61);
+  await expect(composeBody).toHaveCSS(
+    "--video-editor-preview-split",
+    `${pointerValue}%`
+  );
+  await expect(page.locator("#editor-status")).toHaveText(
+    `Preview area set to ${pointerValue} percent.`
+  );
+  await expect(separator).toBeFocused();
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-preview-timeline-splitter.png"),
+  });
+
+  runtime.expectClean();
+});
+
+test("aligns range clicks and renders bounded major and minor ruler ticks", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+
+  const playhead = page.getByTestId("playhead-scrubber");
+  const timelineTrack = page.getByTestId("timeline-tier-video-1");
+  const timelinePlayhead = page.locator("#timeline-playhead");
+  for (const target of [0, 7.5, 15, 22.5, 30]) {
+    await test.step(`playhead ${target}`, async () => {
+      const actual = await clickRangeAtValue(playhead, target);
+      await expect(page.locator("#current-time")).toHaveText(
+        `00:${actual.toFixed(2).padStart(5, "0")}`
+      );
+      const alignment = await Promise.all([
+        timelineTrack.evaluate((element) => element.getBoundingClientRect().left),
+        timelinePlayhead.evaluate((element) => element.getBoundingClientRect().left),
+      ]);
+      expect(alignment[1] - alignment[0]).toBeCloseTo(actual * 64, 0);
+    });
+  }
+
+  const scale = page.getByTestId("timeline-scale");
+  for (const target of [20, 55, 90, 125, 160]) {
+    await test.step(`scale ${target}`, async () => {
+      const actual = await clickRangeAtValue(scale, target);
+      await expect(page.locator("#editor-status")).toHaveText(
+        `Timeline scale set to ${actual} pixels per second.`
+      );
+    });
+  }
+
+  for (const targetScale of [20, 160]) {
+    await test.step(`ruler at scale ${targetScale}`, async () => {
+      await clickRangeAtValue(scale, targetScale);
+      const ruler = await readRulerMetrics(page);
+      const majorTicks = ruler.ticks.filter(({ kind }) => kind === "major");
+      const minorTicks = ruler.ticks.filter(({ kind }) => kind === "minor");
+      expect(majorTicks.length).toBeGreaterThan(1);
+      expect(minorTicks.length).toBeGreaterThan(1);
+      for (const tick of majorTicks) {
+        expect(tick.height / ruler.height).toBeCloseTo(1, 2);
+        expect(tick.label).not.toBeNull();
+        expect(tick.label.left).toBeGreaterThanOrEqual(tick.left - 0.5);
+        expect(tick.label.right).toBeLessThanOrEqual(ruler.right + 0.5);
+        expect(tick.left - ruler.left).toBeCloseTo(tick.time * targetScale, 0);
+      }
+      for (const tick of minorTicks) {
+        expect(tick.height / ruler.height).toBeCloseTo(0.5, 2);
+        expect(tick.label).toBeNull();
+        expect(tick.left - ruler.left).toBeCloseTo(tick.time * targetScale, 0);
+      }
+      expect(majorTicks[0].time).toBe(0);
+      expect(majorTicks[0].label.left).toBeGreaterThanOrEqual(ruler.left);
+      expect(majorTicks.at(-1).time).toBe(30);
+      expect(majorTicks.at(-1).label.right).toBeLessThanOrEqual(ruler.right + 0.5);
+      await page.screenshot({
+        path: testInfo.outputPath(`video-editor-ruler-scale-${targetScale}.png`),
+      });
+    });
+  }
 
   runtime.expectClean();
 });
@@ -836,9 +1167,25 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
     "Transitions",
   ]);
 
-  await page
-    .locator('[data-effect-tab-wrapper][data-effect="windows-98"]')
-    .dragTo(page.locator('[data-effect-tab-wrapper][data-effect="closed-captions"]'));
+  const draggedTab = page.locator(
+    '[data-effect-tab-wrapper][data-effect="windows-98"]'
+  );
+  const dragTarget = page.locator(
+    '[data-effect-tab-wrapper][data-effect="closed-captions"]'
+  );
+  await dragTarget.scrollIntoViewIfNeeded();
+  await draggedTab.scrollIntoViewIfNeeded();
+  const [draggedBounds, targetBounds] = await Promise.all([
+    draggedTab.boundingBox(),
+    dragTarget.boundingBox(),
+  ]);
+  expect(draggedBounds).not.toBeNull();
+  expect(targetBounds).not.toBeNull();
+  await page.mouse.move(draggedBounds.x + 10, draggedBounds.y + 13);
+  await page.mouse.down();
+  await page.mouse.move(draggedBounds.x + 22, draggedBounds.y + 13, { steps: 4 });
+  await page.mouse.move(targetBounds.x + 10, targetBounds.y + 13, { steps: 12 });
+  await page.mouse.up();
   expect(await tabLabels(page)).toEqual([
     "Windows 98",
     "Closed Captions",
@@ -953,6 +1300,291 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
   await expect(page.locator("#editor-status")).toContainText(
     "Closed Captions effect deleted from the timeline"
   );
+
+  runtime.expectClean();
+});
+
+test("renders semantic 98.css effect tabs with restrained close controls and marquee overflow", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+
+  const effects = [
+    {
+      type: "closed-captions",
+      label: "Closed Captions",
+      icon: "accessibility_window_speak.ico",
+    },
+    { type: "windows-98", label: "Windows 98", icon: "windows.ico" },
+    { type: "transitions", label: "Transitions", icon: "movie_maker.ico" },
+  ];
+  for (const { type } of effects) {
+    await page.locator(`[data-effect-tab-target][data-effect="${type}"]`).click();
+  }
+
+  const tabList = page.getByTestId("effect-tab-list");
+  expect(await tabList.evaluate((element) => element.tagName)).toBe("MENU");
+  await expect(tabList).toHaveAttribute("role", "tablist");
+  const directTabs = tabList.locator(":scope > li[role=tab]");
+  await expect(directTabs).toHaveCount(3);
+  await expect(directTabs.last()).toHaveAttribute("aria-selected", "true");
+  await expect(directTabs.first()).toHaveAttribute("aria-selected", "false");
+
+  for (const { icon, label, type } of effects) {
+    const tab = tabList.locator(`:scope > li[data-effect="${type}"]`);
+    await expect(tab).toHaveAttribute("role", "tab");
+    await expect(tab.locator("[data-effect-tab-title-viewport]")).toHaveAttribute(
+      "title",
+      label
+    );
+    await expect(tab.locator("[data-effect-tab-label]")).toHaveText(label);
+    await expect(tab.locator("[data-effect-tab-icon]")).toHaveAttribute(
+      "src",
+      new RegExp(`${icon.replaceAll(".", "\\.")}$`)
+    );
+    const close = tab.getByRole("button", { name: `Close ${label} tab` });
+    await expect(close.locator('[aria-hidden="true"]')).toHaveText("×");
+  }
+
+  const close = tabList
+    .locator(':scope > li[data-effect="closed-captions"]')
+    .getByRole("button", { name: "Close Closed Captions tab" });
+  const restShadow = await close.evaluate((element) => getComputedStyle(element).boxShadow);
+  expect(restShadow).toBe("none");
+  await close.hover();
+  await expect(close).toHaveCSS("box-shadow", "none");
+  await close.focus();
+  await expect(close).toHaveCSS("box-shadow", "none");
+  const closeBounds = await close.boundingBox();
+  expect(closeBounds).not.toBeNull();
+  await page.mouse.move(
+    closeBounds.x + closeBounds.width / 2,
+    closeBounds.y + closeBounds.height / 2
+  );
+  await page.mouse.down();
+  expect(await close.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe(
+    "none"
+  );
+  await page.mouse.move(0, 0);
+  await page.mouse.up();
+  await expect(close).toHaveCSS("box-shadow", "none");
+
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const longTitle = `${"Transitions and Motion Effects ".repeat(8)}Transitions`;
+  const transitionsTab = tabList.locator(':scope > li[data-effect="transitions"]');
+  const titleViewport = transitionsTab.locator("[data-effect-tab-title-viewport]");
+  const titleTrack = transitionsTab.locator("[data-effect-tab-title-track]");
+  await titleTrack.evaluate((element, title) => {
+    element.textContent = title;
+    element.parentElement.title = title;
+    window.dispatchEvent(new Event("resize"));
+  }, longTitle);
+  await expect(transitionsTab).toHaveClass(/is-title-overflowing/);
+  const overflow = await titleViewport.evaluate((viewport) => {
+    const track = viewport.querySelector("[data-effect-tab-title-track]");
+    const titledElement = viewport.closest("[title]") || viewport.querySelector("[title]");
+    return {
+      clientWidth: viewport.clientWidth,
+      scrollDistance: Number.parseFloat(
+        getComputedStyle(viewport.closest("[role=tab]")).getPropertyValue(
+          "--effect-tab-title-scroll-distance"
+        )
+      ),
+      scrollWidth: track?.scrollWidth || 0,
+      title: titledElement?.getAttribute("title") || viewport.getAttribute("title"),
+    };
+  });
+  expect(overflow.scrollWidth).toBeGreaterThan(overflow.clientWidth);
+  expect(overflow.scrollDistance).toBeGreaterThan(0);
+  expect(overflow.title).toBe(longTitle);
+
+  await transitionsTab.evaluate((element) =>
+    element.style.setProperty("--effect-tab-title-scroll-duration", "0.8s")
+  );
+  await transitionsTab.hover();
+  await expect
+    .poll(
+      () =>
+        titleTrack.evaluate((element) => {
+          const transform = getComputedStyle(element).transform;
+          return transform === "none" ? 0 : new DOMMatrixReadOnly(transform).m41;
+        }),
+      { timeout: 5_000 }
+    )
+    .toBeLessThan(-0.5);
+  expect(await titleTrack.evaluate((element) => getComputedStyle(element).animationName)).not.toBe(
+    "none"
+  );
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(titleTrack).toHaveCSS("animation-name", "none");
+  await expect(titleTrack).toHaveCSS("transform", "none");
+  await expect(titleTrack).toHaveText(longTitle);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-effect-tabs-overflow-reduced-motion.png"),
+  });
+
+  runtime.expectClean();
+});
+
+test("resizes both side panels independently while preserving the center workspace", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+
+  const editor = page.getByTestId("video-editor");
+  const mediaSeparator = page.locator("#video-editor-media-compose-separator");
+  const effectsSeparator = page.locator("#video-editor-compose-effects-separator");
+  const mediaPanel = page.locator("#media-panel");
+  const composePanel = page.locator("#compose-panel");
+  const effectsPanel = page.locator("#effects-panel");
+  for (const [separator, controls, minimum, maximum] of [
+    [mediaSeparator, "media-panel compose-panel", "220", 360],
+    [effectsSeparator, "compose-panel effects-panel", "240", 420],
+  ]) {
+    await expect(separator).toHaveAttribute("role", "separator");
+    await expect(separator).toHaveAttribute("aria-orientation", "vertical");
+    await expect(separator).toHaveAttribute("aria-controls", controls);
+    await expect(separator).toHaveAttribute("aria-valuemin", minimum);
+    expect(Number(await separator.getAttribute("aria-valuemax"))).toBeLessThanOrEqual(
+      maximum
+    );
+  }
+  await expect(mediaSeparator).toHaveAttribute("aria-valuenow", "260");
+  await expect(effectsSeparator).toHaveAttribute("aria-valuenow", "300");
+  await expect(editor).toHaveCSS("--video-editor-media-panel-width", "260px");
+  await expect(editor).toHaveCSS("--video-editor-effects-panel-width", "300px");
+
+  await mediaSeparator.focus();
+  await mediaSeparator.press("ArrowRight");
+  await expect(mediaSeparator).toHaveAttribute("aria-valuenow", "276");
+  await expect(effectsSeparator).toHaveAttribute("aria-valuenow", "300");
+  await expect(page.locator("#editor-status")).toHaveText(
+    "Project Media panel set to 276 pixels."
+  );
+  await effectsSeparator.focus();
+  await effectsSeparator.press("ArrowLeft");
+  await expect(effectsSeparator).toHaveAttribute("aria-valuenow", "316");
+  await expect(mediaSeparator).toHaveAttribute("aria-valuenow", "276");
+  await expect(page.locator("#editor-status")).toHaveText(
+    "Effect Editor panel set to 316 pixels."
+  );
+
+  await mediaSeparator.press("Home");
+  await expect(mediaSeparator).toHaveAttribute("aria-valuenow", "220");
+  await mediaSeparator.press("End");
+  await expect(mediaSeparator).toHaveAttribute(
+    "aria-valuenow",
+    await mediaSeparator.getAttribute("aria-valuemax")
+  );
+  await mediaSeparator.press("Home");
+  await effectsSeparator.press("Home");
+  await expect(effectsSeparator).toHaveAttribute("aria-valuenow", "240");
+  await effectsSeparator.press("End");
+  await expect(effectsSeparator).toHaveAttribute(
+    "aria-valuenow",
+    await effectsSeparator.getAttribute("aria-valuemax")
+  );
+  await effectsSeparator.press("Home");
+
+  const mediaBounds = await mediaSeparator.boundingBox();
+  expect(mediaBounds).not.toBeNull();
+  await page.mouse.move(
+    mediaBounds.x + mediaBounds.width / 2,
+    mediaBounds.y + mediaBounds.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    mediaBounds.x + mediaBounds.width / 2 + 32,
+    mediaBounds.y + mediaBounds.height / 2,
+    { steps: 4 }
+  );
+  await page.mouse.up();
+  const mediaPointerValue = Number(await mediaSeparator.getAttribute("aria-valuenow"));
+  expect(mediaPointerValue).toBeGreaterThanOrEqual(251);
+  expect(mediaPointerValue).toBeLessThanOrEqual(253);
+  await expect(effectsSeparator).toHaveAttribute("aria-valuenow", "240");
+
+  const effectsBounds = await effectsSeparator.boundingBox();
+  expect(effectsBounds).not.toBeNull();
+  await page.mouse.move(
+    effectsBounds.x + effectsBounds.width / 2,
+    effectsBounds.y + effectsBounds.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    effectsBounds.x + effectsBounds.width / 2 - 32,
+    effectsBounds.y + effectsBounds.height / 2,
+    { steps: 4 }
+  );
+  await page.mouse.up();
+  const effectsPointerValue = Number(await effectsSeparator.getAttribute("aria-valuenow"));
+  expect(effectsPointerValue).toBeGreaterThanOrEqual(271);
+  expect(effectsPointerValue).toBeLessThanOrEqual(273);
+  await expect(mediaSeparator).toHaveAttribute(
+    "aria-valuenow",
+    String(mediaPointerValue)
+  );
+  await expect(page.locator("#editor-status")).toHaveText(
+    `Effect Editor panel set to ${effectsPointerValue} pixels.`
+  );
+
+  const layout = await Promise.all(
+    [mediaPanel, composePanel, effectsPanel].map((panel) =>
+      panel.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return { height: bounds.height, width: bounds.width };
+      })
+    )
+  );
+  expect(layout[0].width).toBeCloseTo(mediaPointerValue, 0);
+  expect(layout[1].width).toBeGreaterThanOrEqual(420);
+  expect(layout[2].width).toBeCloseTo(effectsPointerValue, 0);
+  await expect(page.locator("#video-editor-preview-section")).toBeVisible();
+  await expect(page.locator("#video-editor-timeline-section")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    )
+  ).toBe(false);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-side-panel-separators.png"),
+  });
+
+  await page.setViewportSize({ width: 1024, height: 800 });
+  await expect
+    .poll(() =>
+      composePanel.evaluate((element) => element.getBoundingClientRect().width)
+    )
+    .toBeGreaterThanOrEqual(420);
+  const dynamicMaximums = {
+    effects: Number(await effectsSeparator.getAttribute("aria-valuemax")),
+    media: Number(await mediaSeparator.getAttribute("aria-valuemax")),
+  };
+  expect(dynamicMaximums.media).toBeGreaterThanOrEqual(220);
+  expect(dynamicMaximums.media).toBeLessThanOrEqual(360);
+  expect(dynamicMaximums.effects).toBeGreaterThanOrEqual(240);
+  expect(dynamicMaximums.effects).toBeLessThanOrEqual(420);
+  await mediaSeparator.press("End");
+  await expect(mediaSeparator).toHaveAttribute(
+    "aria-valuenow",
+    await mediaSeparator.getAttribute("aria-valuemax")
+  );
+  await effectsSeparator.press("End");
+  await expect(effectsSeparator).toHaveAttribute(
+    "aria-valuenow",
+    await effectsSeparator.getAttribute("aria-valuemax")
+  );
+  expect(
+    await composePanel.evaluate((element) => element.getBoundingClientRect().width)
+  ).toBeGreaterThanOrEqual(420);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-side-panel-separators-1024x800.png"),
+  });
 
   runtime.expectClean();
 });

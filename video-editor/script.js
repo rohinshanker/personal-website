@@ -2,6 +2,20 @@ const MIN_ITEM_DURATION = 0.25;
 const DEFAULT_PROJECT_DURATION = 30;
 const EFFECT_DURATION = 3;
 const KEYBOARD_STEP = 0.25;
+const FRAME_DIMENSION_MIN = 16;
+const FRAME_DIMENSION_MAX = 7680;
+const PREVIEW_SPLIT_MIN = 25;
+const PREVIEW_SPLIT_MAX = 75;
+const PREVIEW_SPLIT_STEP = 5;
+const TIMELINE_LABEL_RESERVE = 42;
+const MEDIA_PANEL_MIN = 220;
+const MEDIA_PANEL_MAX = 360;
+const MEDIA_PANEL_DEFAULT = 260;
+const EFFECTS_PANEL_MIN = 240;
+const EFFECTS_PANEL_MAX = 420;
+const EFFECTS_PANEL_DEFAULT = 300;
+const SIDE_PANEL_KEYBOARD_STEP = 16;
+const COMPOSE_PANEL_MIN = 420;
 const ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
 const ADMINISTRATOR_SESSION_DURATION_MS = 60 * 60 * 1000;
 const AUTHENTICATION_REQUEST_TIMEOUT_MS = 8_000;
@@ -37,6 +51,16 @@ const EFFECTS = Object.freeze({
   }),
 });
 
+const FRAME_PRESETS = Object.freeze({
+  "9:16": Object.freeze({ label: "Reel / TikTok (9:16)", width: 9, height: 16 }),
+  "16:9": Object.freeze({ label: "Widescreen (16:9)", width: 16, height: 9 }),
+  "1:1": Object.freeze({ label: "Square (1:1)", width: 1, height: 1 }),
+  "4:5": Object.freeze({ label: "Portrait (4:5)", width: 4, height: 5 }),
+  "4:3": Object.freeze({ label: "Classic (4:3)", width: 4, height: 3 }),
+  "21:9": Object.freeze({ label: "Cinematic (21:9)", width: 21, height: 9 }),
+  "3:2": Object.freeze({ label: "Photo (3:2)", width: 3, height: 2 }),
+});
+
 const elements = {
   app: document.querySelector("#video-editor-app"),
   authOverlay: document.querySelector("#video-editor-auth-overlay"),
@@ -52,9 +76,27 @@ const elements = {
   mediaBin: document.querySelector("#media-bin"),
   mediaEmpty: document.querySelector("#media-empty-state"),
   mediaCount: document.querySelector("#media-count"),
+  mediaPanel: document.querySelector("#media-panel"),
+  effectsPanel: document.querySelector("#effects-panel"),
+  mediaComposeSeparator: document.querySelector(
+    "#video-editor-media-compose-separator"
+  ),
+  composeEffectsSeparator: document.querySelector(
+    "#video-editor-compose-effects-separator"
+  ),
+  composeBody: document.querySelector(".compose-panel__body"),
+  previewStage: document.querySelector("#preview-stage"),
+  previewViewport: document.querySelector(".preview-stage-viewport"),
   previewVideo: document.querySelector("#preview-video"),
   previewEmpty: document.querySelector("#preview-empty-state"),
   previewName: document.querySelector("#preview-clip-name"),
+  framePreset: document.querySelector("#video-editor-frame-preset"),
+  frameCustomSize: document.querySelector("#video-editor-frame-custom-size"),
+  frameCustomWidth: document.querySelector("#video-editor-frame-custom-width"),
+  frameCustomHeight: document.querySelector("#video-editor-frame-custom-height"),
+  previewTimelineSeparator: document.querySelector(
+    "#video-editor-preview-timeline-separator"
+  ),
   audioMix: document.querySelector("#preview-audio-mix"),
   playButton: document.querySelector("#play-pause-button"),
   scrubber: document.querySelector("#playhead-scrubber"),
@@ -95,6 +137,14 @@ const state = {
   playing: false,
   playbackStartedAt: 0,
   animationFrame: 0,
+  framePreset: "9:16",
+  frameWidth: 9,
+  frameHeight: 16,
+  customFrameWidth: 1080,
+  customFrameHeight: 1920,
+  previewSplit: 44,
+  mediaPanelWidth: MEDIA_PANEL_DEFAULT,
+  effectsPanelWidth: EFFECTS_PANEL_DEFAULT,
 };
 
 const audioPlayers = new Map();
@@ -102,6 +152,7 @@ let nextMediaId = 1;
 let nextClipId = 1;
 let nextEffectId = 1;
 let dragPayload = null;
+let tabDragTargetIndex = null;
 let administratorProof = null;
 let authenticationExpiryTimer = 0;
 let authenticationMonitorTimer = 0;
@@ -109,6 +160,10 @@ let authenticationAttempt = 0;
 let authenticationController = null;
 let authenticationReturnFocus = null;
 let authenticationStorageAvailable = true;
+let previewResizeObserver = null;
+let sidePanelResizeObserver = null;
+let effectTabResizeObserver = null;
+let effectTabMarqueeFrame = 0;
 
 const desktopEditorQuery = window.matchMedia("(min-width: 1024px)");
 
@@ -135,6 +190,334 @@ const clamp = (value, minimum, maximum) =>
   Math.min(Math.max(value, minimum), maximum);
 
 const roundTime = (value) => Math.round(value * 100) / 100;
+
+const normalizeFrameDimension = (value, fallback) => {
+  const numericValue = Math.round(Number(value));
+  if (!Number.isFinite(numericValue)) return fallback;
+  return clamp(numericValue, FRAME_DIMENSION_MIN, FRAME_DIMENSION_MAX);
+};
+
+const fitPreviewStage = () => {
+  if (!elements.previewStage) return;
+  const viewport = elements.previewViewport || elements.previewStage.parentElement;
+  if (!viewport) return;
+  const bounds = viewport.getBoundingClientRect();
+  if (!bounds.width || !bounds.height) return;
+  const ratio = state.frameWidth / state.frameHeight;
+  let width = bounds.width;
+  let height = width / ratio;
+  if (height > bounds.height) {
+    height = bounds.height;
+    width = height * ratio;
+  }
+  elements.previewStage.style.width = `${Math.max(1, width)}px`;
+  elements.previewStage.style.height = `${Math.max(1, height)}px`;
+};
+
+const frameSelection = () => {
+  if (state.framePreset === "custom") {
+    return {
+      label: `Custom (${state.customFrameWidth} × ${state.customFrameHeight})`,
+      width: state.customFrameWidth,
+      height: state.customFrameHeight,
+    };
+  }
+  return FRAME_PRESETS[state.framePreset] || FRAME_PRESETS["9:16"];
+};
+
+const applyFrameSize = (shouldAnnounce = false) => {
+  const frame = frameSelection();
+  state.frameWidth = frame.width;
+  state.frameHeight = frame.height;
+  if (elements.previewStage) {
+    elements.previewStage.dataset.framePreset = state.framePreset;
+    elements.previewStage.dataset.frameWidth = String(frame.width);
+    elements.previewStage.dataset.frameHeight = String(frame.height);
+    elements.previewStage.style.setProperty(
+      "--video-editor-frame-aspect-ratio",
+      `${frame.width} / ${frame.height}`
+    );
+    elements.previewStage.style.setProperty(
+      "--video-editor-frame-width",
+      String(frame.width)
+    );
+    elements.previewStage.style.setProperty(
+      "--video-editor-frame-height",
+      String(frame.height)
+    );
+    elements.previewStage.setAttribute(
+      "aria-label",
+      `Composed timeline preview, ${frame.label}`
+    );
+  }
+  requestAnimationFrame(fitPreviewStage);
+  if (shouldAnnounce) announce(`Frame size set to ${frame.label}.`);
+};
+
+const updateCustomFrameSize = (shouldAnnounce = false, shouldNormalize = false) => {
+  if (!elements.frameCustomWidth || !elements.frameCustomHeight) return;
+  if (!elements.frameCustomWidth.value || !elements.frameCustomHeight.value) return;
+  const width = elements.frameCustomWidth.valueAsNumber;
+  const height = elements.frameCustomHeight.valueAsNumber;
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return;
+  if (
+    !shouldNormalize &&
+    (!Number.isInteger(width) ||
+      !Number.isInteger(height) ||
+      width < FRAME_DIMENSION_MIN ||
+      width > FRAME_DIMENSION_MAX ||
+      height < FRAME_DIMENSION_MIN ||
+      height > FRAME_DIMENSION_MAX)
+  ) {
+    return;
+  }
+  state.customFrameWidth = normalizeFrameDimension(width, state.customFrameWidth);
+  state.customFrameHeight = normalizeFrameDimension(height, state.customFrameHeight);
+  if (shouldNormalize) {
+    elements.frameCustomWidth.value = String(state.customFrameWidth);
+    elements.frameCustomHeight.value = String(state.customFrameHeight);
+  }
+  if (state.framePreset === "custom") applyFrameSize(shouldAnnounce);
+};
+
+const setPreviewSplit = (value, shouldAnnounce = false) => {
+  state.previewSplit = Math.round(clamp(value, PREVIEW_SPLIT_MIN, PREVIEW_SPLIT_MAX));
+  elements.composeBody?.style.setProperty(
+    "--video-editor-preview-split",
+    `${state.previewSplit}%`
+  );
+  if (elements.previewTimelineSeparator) {
+    elements.previewTimelineSeparator.setAttribute("aria-valuenow", String(state.previewSplit));
+    elements.previewTimelineSeparator.setAttribute(
+      "aria-valuetext",
+      `Preview ${state.previewSplit}%, timeline ${100 - state.previewSplit}%`
+    );
+  }
+  requestAnimationFrame(fitPreviewStage);
+  if (shouldAnnounce) announce(`Preview area set to ${state.previewSplit} percent.`);
+};
+
+const bindPreviewTimelineSeparator = () => {
+  const separator = elements.previewTimelineSeparator;
+  if (!separator || !elements.composeBody) return;
+  separator.addEventListener("keydown", (event) => {
+    let nextValue = null;
+    if (event.key === "ArrowUp") nextValue = state.previewSplit - PREVIEW_SPLIT_STEP;
+    else if (event.key === "ArrowDown") nextValue = state.previewSplit + PREVIEW_SPLIT_STEP;
+    else if (event.key === "Home") nextValue = PREVIEW_SPLIT_MIN;
+    else if (event.key === "End") nextValue = PREVIEW_SPLIT_MAX;
+    if (nextValue === null) return;
+    event.preventDefault();
+    setPreviewSplit(nextValue, true);
+  });
+  separator.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    separator.focus();
+    const startY = event.clientY;
+    const startValue = state.previewSplit;
+    const bounds = elements.composeBody.getBoundingClientRect();
+    let changed = false;
+    separator.setPointerCapture?.(event.pointerId);
+    const move = (moveEvent) => {
+      if (document.body.dataset.videoEditorAuthState !== AUTHENTICATED_STATE) {
+        finish();
+        return;
+      }
+      const delta = ((moveEvent.clientY - startY) / bounds.height) * 100;
+      const nextValue = clamp(startValue + delta, PREVIEW_SPLIT_MIN, PREVIEW_SPLIT_MAX);
+      changed ||= Math.round(nextValue) !== state.previewSplit;
+      setPreviewSplit(nextValue);
+    };
+    const finish = () => {
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", finish);
+      document.removeEventListener("pointercancel", finish);
+      if (changed) announce(`Preview area set to ${state.previewSplit} percent.`);
+    };
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", finish, { once: true });
+    document.addEventListener("pointercancel", finish, { once: true });
+  });
+};
+
+const sidePanelDetails = (side) =>
+  side === "media"
+    ? {
+        cssProperty: "--video-editor-media-panel-width",
+        label: "Project Media",
+        maximum: MEDIA_PANEL_MAX,
+        minimum: MEDIA_PANEL_MIN,
+        separator: elements.mediaComposeSeparator,
+        stateKey: "mediaPanelWidth",
+      }
+    : {
+        cssProperty: "--video-editor-effects-panel-width",
+        label: "Effect Editor",
+        maximum: EFFECTS_PANEL_MAX,
+        minimum: EFFECTS_PANEL_MIN,
+        separator: elements.composeEffectsSeparator,
+        stateKey: "effectsPanelWidth",
+      };
+
+const availablePanelWidth = () => {
+  if (!elements.app || !elements.app.clientWidth) return 0;
+  const style = getComputedStyle(elements.app);
+  const horizontalPadding =
+    (Number.parseFloat(style.paddingLeft) || 0) +
+    (Number.parseFloat(style.paddingRight) || 0);
+  const gap = Number.parseFloat(style.columnGap) || 0;
+  const separatorWidth =
+    (elements.mediaComposeSeparator?.getBoundingClientRect().width || 0) +
+    (elements.composeEffectsSeparator?.getBoundingClientRect().width || 0);
+  return elements.app.clientWidth - horizontalPadding - separatorWidth - gap * 4;
+};
+
+const sidePanelMaximum = (side) => {
+  const details = sidePanelDetails(side);
+  const otherWidth =
+    side === "media" ? state.effectsPanelWidth : state.mediaPanelWidth;
+  const layoutMaximum = availablePanelWidth() - otherWidth - COMPOSE_PANEL_MIN;
+  return Math.max(details.minimum, Math.min(details.maximum, layoutMaximum));
+};
+
+const scheduleEffectTabTitleMarquees = () => {
+  if (effectTabMarqueeFrame) cancelAnimationFrame(effectTabMarqueeFrame);
+  effectTabMarqueeFrame = requestAnimationFrame(() => {
+    effectTabMarqueeFrame = 0;
+    elements.tabList?.querySelectorAll("[data-effect-tab-wrapper]").forEach((tab) => {
+      const viewport = tab.querySelector("[data-effect-tab-title-viewport]");
+      const track = tab.querySelector("[data-effect-tab-title-track]");
+      if (!viewport || !track || !viewport.clientWidth) return;
+      const distance = Math.max(0, Math.ceil(track.scrollWidth - viewport.clientWidth));
+      tab.classList.toggle("is-title-overflowing", distance > 0);
+      if (distance > 0) {
+        tab.style.setProperty("--effect-tab-title-scroll-distance", `${distance}px`);
+        tab.style.setProperty(
+          "--effect-tab-title-scroll-duration",
+          `${Math.min(10, Math.max(3, distance / 12)).toFixed(2)}s`
+        );
+      } else {
+        tab.style.removeProperty("--effect-tab-title-scroll-distance");
+        tab.style.removeProperty("--effect-tab-title-scroll-duration");
+      }
+    });
+  });
+};
+
+const updateSidePanelLayout = () => {
+  if (!elements.app) return;
+  for (const side of ["media", "effects"]) {
+    const details = sidePanelDetails(side);
+    elements.app.style.setProperty(
+      details.cssProperty,
+      `${state[details.stateKey]}px`
+    );
+    if (!details.separator) continue;
+    details.separator.setAttribute("aria-valuemin", String(details.minimum));
+    details.separator.setAttribute("aria-valuemax", String(sidePanelMaximum(side)));
+    details.separator.setAttribute("aria-valuenow", String(state[details.stateKey]));
+    details.separator.setAttribute(
+      "aria-valuetext",
+      `${details.label} width ${state[details.stateKey]} pixels`
+    );
+  }
+  requestAnimationFrame(fitPreviewStage);
+  scheduleEffectTabTitleMarquees();
+};
+
+const reconcileSidePanelWidths = () => {
+  const available = availablePanelWidth();
+  if (!available) return;
+  state.mediaPanelWidth = Math.round(
+    clamp(state.mediaPanelWidth, MEDIA_PANEL_MIN, MEDIA_PANEL_MAX)
+  );
+  state.effectsPanelWidth = Math.round(
+    clamp(state.effectsPanelWidth, EFFECTS_PANEL_MIN, EFFECTS_PANEL_MAX)
+  );
+  let excess =
+    state.mediaPanelWidth + state.effectsPanelWidth + COMPOSE_PANEL_MIN - available;
+  if (excess > 0) {
+    const effectsReduction = Math.min(
+      excess,
+      state.effectsPanelWidth - EFFECTS_PANEL_MIN
+    );
+    state.effectsPanelWidth -= effectsReduction;
+    excess -= effectsReduction;
+  }
+  if (excess > 0) {
+    state.mediaPanelWidth -= Math.min(
+      excess,
+      state.mediaPanelWidth - MEDIA_PANEL_MIN
+    );
+  }
+  updateSidePanelLayout();
+};
+
+const setSidePanelWidth = (side, value, shouldAnnounce = false) => {
+  const details = sidePanelDetails(side);
+  state[details.stateKey] = Math.round(
+    clamp(value, details.minimum, sidePanelMaximum(side))
+  );
+  updateSidePanelLayout();
+  if (shouldAnnounce) {
+    announce(`${details.label} panel set to ${state[details.stateKey]} pixels.`);
+  }
+};
+
+const bindSidePanelSeparator = (side) => {
+  const details = sidePanelDetails(side);
+  const separator = details.separator;
+  if (!separator) return;
+  separator.addEventListener("keydown", (event) => {
+    let nextValue = null;
+    if (event.key === "Home") nextValue = details.minimum;
+    else if (event.key === "End") nextValue = sidePanelMaximum(side);
+    else if (side === "media" && event.key === "ArrowLeft") {
+      nextValue = state[details.stateKey] - SIDE_PANEL_KEYBOARD_STEP;
+    } else if (side === "media" && event.key === "ArrowRight") {
+      nextValue = state[details.stateKey] + SIDE_PANEL_KEYBOARD_STEP;
+    } else if (side === "effects" && event.key === "ArrowLeft") {
+      nextValue = state[details.stateKey] + SIDE_PANEL_KEYBOARD_STEP;
+    } else if (side === "effects" && event.key === "ArrowRight") {
+      nextValue = state[details.stateKey] - SIDE_PANEL_KEYBOARD_STEP;
+    }
+    if (nextValue === null) return;
+    event.preventDefault();
+    setSidePanelWidth(side, nextValue, true);
+  });
+  separator.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    separator.focus();
+    const startX = event.clientX;
+    const startWidth = state[details.stateKey];
+    let changed = false;
+    separator.setPointerCapture?.(event.pointerId);
+    const move = (moveEvent) => {
+      if (document.body.dataset.videoEditorAuthState !== AUTHENTICATED_STATE) {
+        finish();
+        return;
+      }
+      const direction = side === "media" ? 1 : -1;
+      const nextWidth = startWidth + (moveEvent.clientX - startX) * direction;
+      const previousWidth = state[details.stateKey];
+      setSidePanelWidth(side, nextWidth);
+      changed ||= previousWidth !== state[details.stateKey];
+    };
+    const finish = () => {
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", finish);
+      document.removeEventListener("pointercancel", finish);
+      if (changed) {
+        announce(`${details.label} panel set to ${state[details.stateKey]} pixels.`);
+      }
+    };
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", finish, { once: true });
+    document.addEventListener("pointercancel", finish, { once: true });
+  });
+};
 
 const formatTime = (seconds) => {
   const safeSeconds = Math.max(0, Number.isFinite(seconds) ? seconds : 0);
@@ -1045,19 +1428,36 @@ const renderTiers = () => {
 const renderRuler = () => {
   if (!elements.timelineRuler || !elements.timelineCanvas) return;
   const duration = projectDuration();
-  const width = Math.ceil(duration * state.pixelsPerSecond);
-  elements.timelineCanvas.style.setProperty("--timeline-content-width", `${width}px`);
-  elements.timelineRuler.style.backgroundSize = `${state.pixelsPerSecond}px 100%, ${
-    state.pixelsPerSecond / 4
-  }px 10px`;
+  const durationWidth = Math.ceil(duration * state.pixelsPerSecond);
+  const contentWidth = durationWidth + TIMELINE_LABEL_RESERVE;
+  elements.timelineCanvas.style.setProperty(
+    "--timeline-content-width",
+    `${contentWidth}px`
+  );
+  elements.timelineCanvas.style.setProperty(
+    "--timeline-duration-width",
+    `${durationWidth}px`
+  );
+  elements.timelineCanvas.style.setProperty(
+    "--timeline-second-width",
+    `${state.pixelsPerSecond}px`
+  );
   elements.timelineRuler.replaceChildren();
-  const interval = state.pixelsPerSecond >= 48 ? 5 : 10;
-  for (let second = 0; second <= duration; second += interval) {
-    const label = document.createElement("span");
-    label.className = "timeline-ruler__label";
-    label.style.left = `${second * state.pixelsPerSecond}px`;
-    label.textContent = formatTime(second).slice(0, 5);
-    elements.timelineRuler.append(label);
+  const labelInterval = state.pixelsPerSecond >= 48 ? 5 : 10;
+  for (let second = 0; second <= duration; second += 1) {
+    const isMajor = second % labelInterval === 0 || second === duration;
+    const tick = document.createElement("span");
+    tick.className = "timeline-ruler__tick";
+    tick.dataset.rulerTick = isMajor ? "major" : "minor";
+    tick.dataset.timeSeconds = String(second);
+    tick.style.left = `${second * state.pixelsPerSecond}px`;
+    if (isMajor) {
+      const label = document.createElement("span");
+      label.className = "timeline-ruler__label";
+      label.textContent = formatTime(second).slice(0, 5);
+      tick.append(label);
+    }
+    elements.timelineRuler.append(tick);
   }
 };
 
@@ -1341,7 +1741,11 @@ const renderTimeline = () => {
 };
 
 const focusTab = (type) => {
-  document.querySelector(`[data-effect-tab][data-effect="${type}"]`)?.focus();
+  const tab = document.querySelector(
+    `[data-effect-tab-wrapper][data-effect="${type}"]`
+  );
+  tab?.focus();
+  tab?.scrollIntoView({ block: "nearest", inline: "nearest" });
 };
 
 const activateTab = (type, shouldFocus = false) => {
@@ -1397,21 +1801,37 @@ const renderTabs = () => {
     const definition = EFFECTS[type];
     const fragment = elements.tabTemplate.content.cloneNode(true);
     const wrapper = fragment.querySelector("[data-effect-tab-wrapper]");
-    const tab = fragment.querySelector("[data-effect-tab]");
+    const tabFace = fragment.querySelector("[data-effect-tab]");
     const close = fragment.querySelector("[data-close-effect-tab]");
+    const isActive = state.activeTab === type;
     wrapper.dataset.effect = type;
-    wrapper.classList.toggle("is-active", state.activeTab === type);
-    tab.id = `effect-tab-${type}`;
-    tab.dataset.effect = type;
-    tab.setAttribute("aria-controls", `effect-panel-${type}`);
-    tab.setAttribute("aria-selected", String(state.activeTab === type));
-    tab.setAttribute("tabindex", state.activeTab === type ? "0" : "-1");
-    tab.setAttribute("aria-keyshortcuts", "Control+ArrowLeft Control+ArrowRight Delete");
+    wrapper.classList.toggle("is-active", isActive);
+    wrapper.id = `effect-tab-${type}`;
+    wrapper.setAttribute("aria-label", definition.label);
+    wrapper.setAttribute("aria-controls", `effect-panel-${type}`);
+    wrapper.setAttribute("aria-selected", String(isActive));
+    wrapper.setAttribute("tabindex", isActive ? "0" : "-1");
+    wrapper.setAttribute("aria-posinset", String(index + 1));
+    wrapper.setAttribute("aria-setsize", String(state.openTabs.length));
+    wrapper.setAttribute(
+      "aria-keyshortcuts",
+      "Control+ArrowLeft Control+ArrowRight Delete"
+    );
+    tabFace.href = `#effect-panel-${type}`;
+    tabFace.dataset.effect = type;
+    tabFace.title = definition.label;
     fragment.querySelector("[data-effect-tab-icon]").src = definition.icon;
+    const titleViewport = fragment.querySelector("[data-effect-tab-title-viewport]");
+    titleViewport.title = definition.label;
     fragment.querySelector("[data-effect-tab-label]").textContent = definition.label;
     fragment.querySelector("[data-close-effect-tab-label]").textContent = `Close ${definition.label} tab`;
-    tab.addEventListener("click", () => activateTab(type));
-    tab.addEventListener("keydown", (event) => {
+    close.setAttribute("aria-label", `Close ${definition.label} tab`);
+    tabFace.addEventListener("click", (event) => {
+      event.preventDefault();
+      activateTab(type);
+    });
+    wrapper.addEventListener("keydown", (event) => {
+      if (event.target.closest("[data-close-effect-tab]")) return;
       if (event.key === "Delete") {
         event.preventDefault();
         closeEffectTab(type);
@@ -1427,28 +1847,51 @@ const renderTabs = () => {
         activateTab(event.key === "Home" ? state.openTabs[0] : state.openTabs.at(-1), true);
       }
     });
-    close.addEventListener("click", () => closeEffectTab(type));
-    wrapper.addEventListener("dragstart", (event) => setDragData(event, DRAG_TYPES.tab, type));
-    wrapper.addEventListener("dragover", (event) => {
+    close.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeEffectTab(type);
+    });
+    wrapper.addEventListener("dragstart", (event) => {
+      if (event.target.closest("[data-close-effect-tab]")) {
+        event.preventDefault();
+        return;
+      }
+      tabDragTargetIndex = null;
+      setDragData(event, DRAG_TYPES.tab, type);
+    });
+    const acceptTabDrag = (event) => {
       const payload = getDragData(event);
       if (payload?.type !== DRAG_TYPES.tab || payload.id === type) return;
       event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+      tabDragTargetIndex = index;
       wrapper.classList.add("is-drag-target");
+    };
+    wrapper.addEventListener("dragenter", acceptTabDrag);
+    wrapper.addEventListener("dragover", acceptTabDrag);
+    wrapper.addEventListener("dragleave", (event) => {
+      if (event.relatedTarget instanceof Node && wrapper.contains(event.relatedTarget)) return;
+      wrapper.classList.remove("is-drag-target");
+      if (tabDragTargetIndex === index) tabDragTargetIndex = null;
     });
-    wrapper.addEventListener("dragleave", () => wrapper.classList.remove("is-drag-target"));
     wrapper.addEventListener("drop", (event) => {
       event.preventDefault();
       const payload = getDragData(event);
+      tabDragTargetIndex = null;
       clearDragStyles();
       if (payload?.type === DRAG_TYPES.tab) reorderTab(payload.id, index);
       dragPayload = null;
     });
     wrapper.addEventListener("dragend", () => {
+      const pendingTargetIndex = tabDragTargetIndex;
+      tabDragTargetIndex = null;
       dragPayload = null;
       clearDragStyles();
+      if (pendingTargetIndex !== null) reorderTab(type, pendingTargetIndex);
     });
     elements.tabList.append(fragment);
   });
+  scheduleEffectTabTitleMarquees();
 
   if (elements.reopenTab) elements.reopenTab.disabled = state.closedTabs.length === 0;
   if (elements.editorEmpty) elements.editorEmpty.hidden = Boolean(state.activeTab);
@@ -1460,6 +1903,25 @@ const renderTabs = () => {
 };
 
 const bindStaticControls = () => {
+  elements.framePreset?.addEventListener("change", (event) => {
+    state.framePreset = event.target.value;
+    if (elements.frameCustomSize) {
+      elements.frameCustomSize.hidden = state.framePreset !== "custom";
+    }
+    applyFrameSize(true);
+    if (state.framePreset === "custom") elements.frameCustomWidth?.focus();
+  });
+  elements.frameCustomWidth?.addEventListener("input", () => updateCustomFrameSize(true));
+  elements.frameCustomHeight?.addEventListener("input", () => updateCustomFrameSize(true));
+  elements.frameCustomWidth?.addEventListener("change", () =>
+    updateCustomFrameSize(true, true)
+  );
+  elements.frameCustomHeight?.addEventListener("change", () =>
+    updateCustomFrameSize(true, true)
+  );
+  bindPreviewTimelineSeparator();
+  bindSidePanelSeparator("media");
+  bindSidePanelSeparator("effects");
   elements.importButton?.addEventListener("click", () => elements.mediaInput?.click());
   elements.mediaInput?.addEventListener("change", (event) => importFiles(event.target.files));
   elements.dropZone?.addEventListener("click", () => elements.mediaInput?.click());
@@ -1557,6 +2019,10 @@ const bindStaticControls = () => {
     pausePlayback();
     clearAuthenticationTimers();
     authenticationController?.abort();
+    previewResizeObserver?.disconnect();
+    sidePanelResizeObserver?.disconnect();
+    effectTabResizeObserver?.disconnect();
+    cancelAnimationFrame(effectTabMarqueeFrame);
     for (const media of state.media) URL.revokeObjectURL(media.url);
   });
 };
@@ -1564,6 +2030,26 @@ const bindStaticControls = () => {
 if (elements.app) {
   elements.previewVideo.muted = true;
   bindStaticControls();
+  applyFrameSize();
+  setPreviewSplit(state.previewSplit);
+  reconcileSidePanelWidths();
+  if (elements.previewViewport && "ResizeObserver" in window) {
+    previewResizeObserver = new ResizeObserver(fitPreviewStage);
+    previewResizeObserver.observe(elements.previewViewport);
+  }
+  if ("ResizeObserver" in window) {
+    sidePanelResizeObserver = new ResizeObserver(reconcileSidePanelWidths);
+    sidePanelResizeObserver.observe(elements.app);
+    if (elements.effectsPanel) {
+      effectTabResizeObserver = new ResizeObserver(scheduleEffectTabTitleMarquees);
+      effectTabResizeObserver.observe(elements.effectsPanel);
+    }
+  }
+  window.addEventListener("resize", () => {
+    reconcileSidePanelWidths();
+    fitPreviewStage();
+    scheduleEffectTabTitleMarquees();
+  });
   renderMediaBin();
   renderTabs();
   renderTimeline();

@@ -164,6 +164,24 @@
         </div>
       </section>
 
+      <div
+        class="video-editor-side-separator"
+        id="video-editor-media-compose-separator"
+        data-video-editor-side-separator="media"
+        data-status-target="editor-status"
+        role="separator"
+        tabindex="0"
+        aria-label="Resize Project Media panel"
+        aria-orientation="vertical"
+        aria-controls="media-panel compose-panel"
+        aria-valuemin="220"
+        aria-valuemax="360"
+        aria-valuenow="260"
+        aria-valuetext="Project Media width 260 pixels"
+      >
+        <span class="video-editor-side-separator__grip" aria-hidden="true"></span>
+      </div>
+
       <section
         class="window editor-window compose-panel"
         id="compose-panel"
@@ -174,27 +192,85 @@
           <h2 class="title-bar-text" id="compose-panel-title">Video Editor</h2>
         </div>
         <div class="window-body compose-panel__body">
-          <section class="preview-section" aria-labelledby="preview-heading">
+          <section
+            class="preview-section"
+            id="video-editor-preview-section"
+            aria-labelledby="preview-heading"
+          >
             <div class="section-heading-row preview-heading-row">
               <h3 class="editor-heading" id="preview-heading">Preview</h3>
               <output id="preview-clip-name" class="preview-clip-name">No active clip</output>
             </div>
             <div
-              class="preview-stage"
-              id="preview-stage"
-              data-testid="preview-stage"
-              aria-label="Composed timeline preview"
+              class="video-editor-frame-size"
+              id="video-editor-frame-size"
+              role="group"
+              aria-label="Preview frame size"
             >
-              <video id="preview-video" playsinline hidden></video>
-              <div id="preview-audio-mix" aria-hidden="true"></div>
-              <div class="preview-empty-state" id="preview-empty-state">
-                <img
-                  src="../assets/app-icons/ico/movie_maker.ico"
-                  width="32"
-                  height="32"
-                  alt=""
+              <label for="video-editor-frame-preset">Frame size</label>
+              <select id="video-editor-frame-preset" data-video-editor-frame-preset>
+                <option value="9:16">Reel / TikTok (9:16)</option>
+                <option value="16:9">Widescreen (16:9)</option>
+                <option value="1:1">Square (1:1)</option>
+                <option value="4:5">Portrait (4:5)</option>
+                <option value="4:3">Classic (4:3)</option>
+                <option value="21:9">Cinematic (21:9)</option>
+                <option value="3:2">Photo (3:2)</option>
+                <option value="custom">Custom</option>
+              </select>
+              <div
+                class="video-editor-frame-custom-size"
+                id="video-editor-frame-custom-size"
+                data-video-editor-frame-custom-size
+                hidden
+              >
+                <label for="video-editor-frame-custom-width">Width</label>
+                <input
+                  id="video-editor-frame-custom-width"
+                  data-video-editor-frame-custom-width
+                  type="number"
+                  inputmode="numeric"
+                  min="16"
+                  max="7680"
+                  step="1"
+                  value="1080"
                 />
-                <span>Nothing at the playhead</span>
+                <span aria-hidden="true">&times;</span>
+                <label for="video-editor-frame-custom-height">Height</label>
+                <input
+                  id="video-editor-frame-custom-height"
+                  data-video-editor-frame-custom-height
+                  type="number"
+                  inputmode="numeric"
+                  min="16"
+                  max="7680"
+                  step="1"
+                  value="1920"
+                />
+              </div>
+            </div>
+            <div
+              class="preview-stage-viewport"
+              id="video-editor-preview-stage-viewport"
+              data-video-editor-preview-stage-viewport
+            >
+              <div
+                class="preview-stage"
+                id="preview-stage"
+                data-testid="preview-stage"
+                aria-label="Composed timeline preview"
+              >
+                <video id="preview-video" playsinline hidden></video>
+                <div id="preview-audio-mix" aria-hidden="true"></div>
+                <div class="preview-empty-state" id="preview-empty-state">
+                  <img
+                    src="../assets/app-icons/ico/movie_maker.ico"
+                    width="32"
+                    height="32"
+                    alt=""
+                  />
+                  <span>Nothing at the playhead</span>
+                </div>
               </div>
             </div>
             <div class="playback-controls" aria-label="Playback controls">
@@ -226,7 +302,28 @@
             </div>
           </section>
 
-          <section class="timeline-section" aria-labelledby="timeline-heading">
+          <div
+            class="video-editor-preview-timeline-separator"
+            id="video-editor-preview-timeline-separator"
+            data-video-editor-preview-timeline-separator
+            role="separator"
+            tabindex="0"
+            aria-label="Resize preview and timeline"
+            aria-orientation="horizontal"
+            aria-controls="video-editor-preview-section video-editor-timeline-section"
+            aria-valuemin="25"
+            aria-valuemax="75"
+            aria-valuenow="44"
+            aria-valuetext="Preview 44%, timeline 56%"
+          >
+            <span class="video-editor-preview-timeline-separator__grip" aria-hidden="true"></span>
+          </div>
+
+          <section
+            class="timeline-section"
+            id="video-editor-timeline-section"
+            aria-labelledby="timeline-heading"
+          >
             <div class="timeline-toolbar">
               <h3 class="editor-heading" id="timeline-heading">Timeline</h3>
               <div class="timeline-tier-controls" aria-label="Add timeline tier">
@@ -341,6 +438,24 @@
         </div>
       </section>
 
+      <div
+        class="video-editor-side-separator"
+        id="video-editor-compose-effects-separator"
+        data-video-editor-side-separator="effects"
+        data-status-target="editor-status"
+        role="separator"
+        tabindex="0"
+        aria-label="Resize Effect Editor panel"
+        aria-orientation="vertical"
+        aria-controls="compose-panel effects-panel"
+        aria-valuemin="240"
+        aria-valuemax="420"
+        aria-valuenow="300"
+        aria-valuetext="Effect Editor width 300 pixels"
+      >
+        <span class="video-editor-side-separator__grip" aria-hidden="true"></span>
+      </div>
+
       <section
         class="window editor-window effects-panel"
         id="effects-panel"
@@ -363,13 +478,13 @@
             </button>
           </div>
           <div class="effect-tab-scroll">
-            <div
+            <menu
               class="effect-tab-list"
               id="effect-tab-list"
               data-testid="effect-tab-list"
               role="tablist"
               aria-label="Open effect editors"
-            ></div>
+            ></menu>
           </div>
           <div class="effect-editor-well sunken-panel" id="effect-editor-well">
             <div class="effect-editor-empty" id="effect-editor-empty">
@@ -638,23 +753,33 @@
     </template>
 
     <template id="effect-tab-template">
-      <div class="effect-tab" data-effect-tab-wrapper role="presentation" draggable="true">
+      <li
+        class="effect-tab"
+        data-effect-tab-wrapper
+        role="tab"
+        aria-selected="false"
+        tabindex="-1"
+        draggable="true"
+      >
+        <a class="effect-tab__face" data-effect-tab tabindex="-1" draggable="false">
+          <img data-effect-tab-icon width="16" height="16" alt="" draggable="false" />
+          <span class="effect-tab__title-viewport" data-effect-tab-title-viewport>
+            <span
+              class="effect-tab__title-track"
+              data-effect-tab-title-track
+              data-effect-tab-label
+            ></span>
+          </span>
+        </a>
         <button
-          class="effect-tab__button"
+          class="effect-tab__close"
           type="button"
-          role="tab"
-          aria-selected="false"
-          tabindex="-1"
-          data-effect-tab
+          data-close-effect-tab
         >
-          <img data-effect-tab-icon width="16" height="16" alt="" />
-          <span data-effect-tab-label></span>
-        </button>
-        <button class="effect-tab__close" type="button" data-close-effect-tab>
           <span aria-hidden="true">&times;</span>
           <span class="visually-hidden" data-close-effect-tab-label>Close effect tab</span>
         </button>
-      </div>
+      </li>
     </template>
   </body>
 </html>

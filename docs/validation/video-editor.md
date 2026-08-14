@@ -7,7 +7,7 @@ Scope: Homepage Video Editor launchers and `/video-editor/` media import,
 composed preview, timeline tiers and clips, effects lane, editor tabs, and
 desktop-required boundary.
 
-Last verified: 2026-08-09
+Last verified: 2026-08-14
 
 ## Product contract
 
@@ -29,15 +29,42 @@ Last verified: 2026-08-09
   reauthentication restores the same live project and prior editor focus.
 - Imported video and audio stay in the current browser tab through object
   URLs. Reloading starts an empty project, and unload revokes every object URL.
+- Frame size defaults to `Reel / TikTok (9:16)`, followed by common widescreen,
+  square, portrait, classic, cinematic, and photo ratios. Custom integer width
+  and height values are bounded to 16–7680 pixels. Every frame is fitted and
+  centered inside the preview viewport, and active video uses `object-fit:
+  contain` so source media is never cropped by the selected frame.
+- The horizontal preview/timeline separator exposes `role="separator"`, live
+  ARIA values, pointer resizing, Arrow Up/Down five-point steps, and Home/End
+  bounds of 25% and 75%. This layout state remains in memory with the project
+  when authentication is restored.
+- Vertical separators independently resize Project Media from 220–360 pixels
+  and Effect Editor from 240–420 pixels. Pointer movement follows each panel's
+  screen edge; Arrow Left/Right, Home, and End provide keyboard equivalents.
+  Runtime maxima tighten at narrow desktop widths so the center editor retains
+  at least 420 pixels without document overflow.
 - Video and audio clips occupy compatible typed tiers without same-tier
   overlap. Pointer and keyboard paths cover placement, movement, trimming,
   deletion, tier changes, playhead movement, and scaling.
+- Editor range inputs use a 23-pixel hit area whose visible rail shares the
+  native 11-pixel thumb's center-to-center travel. Pointer positions therefore
+  match scrubber and scale values while native keyboard and step behavior stay
+  intact.
+- The scaled ruler renders one tick per second. Unlabelled ticks occupy the
+  lower half; labelled major ticks span the full 28-pixel ruler. Labels begin
+  to the right of their lines, and a 42-pixel terminal reserve keeps the final
+  time label inside scrollable ruler content.
 - The preview selects the active clip on the highest occupied video tier and
   schedules every active audio-tier clip into the local mix.
 - Closed Captions, Windows 98, and Transitions open one labelled editor tab
-  each. Tabs and three-second effect bars support pointer and keyboard
-  reordering or movement, closing or deletion, reopening, and edge resizing.
-  Effect editors remain explicit non-rendering placeholders.
+  each. The strip uses the repository's native 98.css
+  `menu[role="tablist"] > li[role="tab"] > a` structure. Every tab keeps its
+  icon, complete accessible title, and a flat close X that uses sunken chrome
+  only while pressed. Measured title overflow scrolls on hover or keyboard
+  focus, retains a tooltip, and becomes static under reduced motion. Tabs and
+  three-second effect bars support pointer and keyboard reordering or movement,
+  closing or deletion, reopening, and edge resizing. Effect editors remain
+  explicit non-rendering placeholders.
 
 ## Automated gates
 
@@ -52,7 +79,15 @@ The route spec covers 375 x 812, 768 x 1024, 1023 x 800, 1024 x 800,
 1280 x 800, and 1440 x 900. It also covers real local video metadata,
 generated WAV audio, compatible and incompatible drops, collision snapping,
 typed tiers, preview and playback, pointer and keyboard editing, effects, long
-filenames, a busy timeline, and all effect tabs. Authentication coverage
+filenames, a busy timeline, and all effect tabs. It also covers every frame
+preset and custom dimensions, contained imported video, pointer and keyboard
+preview/timeline resizing, range clicks across multiple values, and ruler
+geometry at minimum and maximum scale. Tab coverage verifies the semantic
+98.css hierarchy, selection and focus, icon/title/close content, pressed-only
+close treatment, measured marquee overflow, reduced motion, pointer and
+keyboard reordering, close, and reopen behavior. Side-panel coverage exercises
+both separators by pointer and keyboard at default and dynamic bounds while
+asserting the center workspace remains usable. Authentication coverage
 includes initial blocking, focus trapping, Escape, invalid credentials,
 network failure, one-hour reuse across reload, timed expiry, proof removal,
 project preservation, and repeated reauthentication. Every route test
@@ -81,7 +116,10 @@ Confirm the responsive boundary, empty project, imported video and audio,
 busy timeline, long filename, all open effect tabs, focused controls, closed
 tabs, blocked-popup error, launcher focus restoration, unauthenticated modal,
 invalid and network-error messages, authenticated workspace, expired project,
-and reauthenticated project. Check screenshots and semantic snapshots,
+reauthenticated project, Reel / TikTok and custom frames, extreme wide and tall
+custom ratios, the focused horizontal and vertical separators, native effect
+tabs at minimum and maximum panel widths, long tab titles, reduced motion, the
+pressed close X, and ruler scale endpoints. Check screenshots and semantic snapshots,
 document-level overflow, console output, page errors, and failed local
 resources. The repository does not currently install an automated
 accessibility scanner, so do not claim an axe audit.

@@ -64,6 +64,191 @@ test("Video Editor exposes fixed media, preview, and effects panels with stable 
   assert.match(html, /aria-live="polite"/i);
 });
 
+test("Video Editor offers frame presets, custom dimensions, and contained preview media", async () => {
+  const { css, html } = await readRouteSources();
+  const frameSelect = html.match(
+    /<select\b[^>]*\bid="video-editor-frame-preset"[^>]*>[\s\S]*?<\/select>/i
+  )?.[0];
+  assert.ok(frameSelect, "Missing the frame preset selector.");
+  const options = Array.from(
+    frameSelect.matchAll(/<option\b[^>]*\bvalue="([^"]+)"[^>]*>([^<]+)<\/option>/gi),
+    ([, value, label]) => ({ value, label: label.trim() })
+  );
+  assert.deepEqual(
+    options.map(({ value }) => value),
+    ["9:16", "16:9", "1:1", "4:5", "4:3", "21:9", "3:2", "custom"]
+  );
+  assert.equal(options[0].label, "Reel / TikTok (9:16)");
+  for (const { value, label } of options.slice(1, -1)) {
+    assert.match(label, new RegExp(value.replace(":", "\\s*:\\s*")));
+  }
+  assert.equal(options.at(-1).label, "Custom");
+
+  assert.match(
+    html,
+    /\bid="video-editor-frame-custom-size"[^>]*\bhidden(?:\s|>|=)/i
+  );
+  const customWidth = html.match(
+    /<input\b[^>]*\bid="video-editor-frame-custom-width"[^>]*>/i
+  )?.[0];
+  const customHeight = html.match(
+    /<input\b[^>]*\bid="video-editor-frame-custom-height"[^>]*>/i
+  )?.[0];
+  assert.ok(customWidth && customHeight, "Missing custom frame dimension inputs.");
+  assert.match(customWidth, /\btype="number"/i);
+  assert.match(customWidth, /\bvalue="1080"/i);
+  assert.match(customHeight, /\btype="number"/i);
+  assert.match(customHeight, /\bvalue="1920"/i);
+  assert.match(css, /#preview-video\s*\{[^}]*object-fit\s*:\s*contain/is);
+});
+
+test("Video Editor exposes an accessible preview and timeline splitter", async () => {
+  const { css, html, script } = await readRouteSources();
+
+  assert.match(html, /\bid="video-editor-preview-section"/i);
+  assert.match(html, /\bid="video-editor-timeline-section"/i);
+  const separator = html.match(
+    /<(?:div|button)\b[^>]*\bid="video-editor-preview-timeline-separator"[^>]*>/i
+  )?.[0];
+  assert.ok(separator, "Missing the preview and timeline separator.");
+  assert.match(separator, /\bdata-video-editor-preview-timeline-separator(?:\s|>|=)/i);
+  assert.match(separator, /\brole="separator"/i);
+  assert.match(separator, /\btabindex="0"/i);
+  assert.match(separator, /\baria-orientation="horizontal"/i);
+  assert.match(separator, /\baria-valuemin="25"/i);
+  assert.match(separator, /\baria-valuemax="75"/i);
+  assert.match(separator, /\baria-valuenow="44"/i);
+  assert.match(
+    separator,
+    /\baria-controls="video-editor-preview-section video-editor-timeline-section"/i
+  );
+  assert.match(css, /--video-editor-preview-split\s*:\s*44%/i);
+  assert.match(script, /video-editor-preview-timeline-separator/);
+  assert.match(script, /setPointerCapture|pointermove/);
+  assert.match(script, /ArrowUp|ArrowDown/);
+  assert.match(script, /aria-valuenow/);
+});
+
+test("Video Editor renders differentiated, bounded timeline ruler ticks", async () => {
+  const { css, script } = await readRouteSources();
+
+  assert.match(script, /timeline-ruler__tick/);
+  assert.match(script, /dataset\.rulerTick|data-ruler-tick/);
+  assert.match(script, /dataset\.timeSeconds|data-time-seconds/);
+  assert.match(script, /timeline-ruler__label/);
+  assert.match(
+    css,
+    /\.timeline-ruler__tick\s*\{[^}]*height\s*:\s*50%/is
+  );
+  assert.match(
+    css,
+    /\.timeline-ruler__tick\[data-ruler-tick="major"\]\s*\{[^}]*height\s*:\s*100%/is
+  );
+  assert.match(script, /TIMELINE_LABEL_RESERVE\s*=\s*42/);
+  assert.match(script, /durationWidth\s*\+\s*TIMELINE_LABEL_RESERVE/);
+  assert.match(css, /\.timeline-ruler__label\s*\{[^}]*left\s*:/is);
+});
+
+test("Video Editor aligns range hit areas with visible slider tracks", async () => {
+  const { css } = await readRouteSources();
+
+  assert.match(
+    css,
+    /\.video-editor input\[type="range"\]\s*\{[^}]*--video-editor-range-thumb-width\s*:\s*11px/is
+  );
+  assert.match(
+    css,
+    /calc\(100%\s*-\s*var\(--video-editor-range-thumb-width\)\)\s+4px\s+no-repeat/i
+  );
+  assert.match(
+    css,
+    /input\[type="range"\]::-(?:webkit-slider-runnable-track|moz-range-track)\s*\{/i
+  );
+});
+
+test("Video Editor uses semantic 98.css effect tabs with restrained close and overflow states", async () => {
+  const { css, html, script } = await readRouteSources();
+  const tabList = html.match(
+    /<menu\b[^>]*\bid="effect-tab-list"[^>]*\brole="tablist"[^>]*>/i
+  )?.[0];
+  assert.ok(tabList, "The dynamic effect tabs must use a 98.css menu tab list.");
+
+  const tabTemplate = html.match(
+    /<template\b[^>]*\bid="effect-tab-template"[^>]*>[\s\S]*?<\/template>/i
+  )?.[0];
+  assert.ok(tabTemplate, "Missing the dynamic effect tab template.");
+  assert.match(tabTemplate, /<li\b[^>]*\bdata-effect-tab-wrapper(?:\s|>|=)[^>]*>/i);
+  assert.match(tabTemplate, /<li\b[^>]*\brole="tab"[^>]*>/i);
+  assert.match(tabTemplate, /<li\b[^>]*\baria-selected="false"[^>]*>/i);
+  assert.match(tabTemplate, /<a\b[^>]*\bclass="effect-tab__face"[^>]*\bdata-effect-tab/i);
+  assert.match(
+    tabTemplate,
+    /<a\b[^>]*\bdata-effect-tab(?:\s|>|=)[^>]*\bdraggable="false"[^>]*>/i
+  );
+  assert.match(tabTemplate, /\bdata-effect-tab-icon(?:\s|>|=)/i);
+  assert.match(tabTemplate, /\bdata-effect-tab-title-viewport(?:\s|>|=)/i);
+  assert.match(tabTemplate, /\bdata-effect-tab-title-track(?:\s|>|=)/i);
+  assert.match(tabTemplate, /<button\b[^>]*\bclass="effect-tab__close"[^>]*\bdata-close-effect-tab/i);
+  assert.match(tabTemplate, /&times;|&#215;|>\s*×\s*</i);
+
+  assert.match(css, /\.effect-tab__close\s*\{[^}]*background\s*:\s*transparent/is);
+  assert.match(css, /\.effect-tab__close\s*\{[^}]*box-shadow\s*:\s*none/is);
+  assert.match(
+    css,
+    /\.effect-tab__close:active\s*\{[^}]*box-shadow\s*:\s*var\(--border-sunken-outer\)[^}]*var\(--border-sunken-inner\)/is
+  );
+  assert.match(css, /\.effect-tab\.is-title-overflowing[\s\S]*?\.effect-tab__title-track/);
+  assert.match(css, /@keyframes\s+effect-tab-title-[\w-]*marquee/i);
+  assert.match(css, /--effect-tab-title-scroll-distance/);
+  assert.match(
+    css,
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.effect-tab__title-track[\s\S]*?animation\s*:\s*none/is
+  );
+  assert.match(script, /scrollWidth\s*-\s*[\w.]+clientWidth/);
+  assert.match(script, /is-title-overflowing/);
+  assert.match(script, /--effect-tab-title-scroll-distance/);
+  assert.match(script, /ResizeObserver/);
+  assert.match(script, /setAttribute\("aria-selected"/);
+});
+
+test("Video Editor exposes independently bounded side-panel separators", async () => {
+  const { css, html, script } = await readRouteSources();
+  const mediaSeparator = html.match(
+    /<[^>]+\bid="video-editor-media-compose-separator"[^>]*>/i
+  )?.[0];
+  const effectsSeparator = html.match(
+    /<[^>]+\bid="video-editor-compose-effects-separator"[^>]*>/i
+  )?.[0];
+  assert.ok(mediaSeparator && effectsSeparator, "Missing the two side-panel separators.");
+
+  for (const [separator, side, minimum, maximum, controls] of [
+    [mediaSeparator, "media", "220", "360", "media-panel compose-panel"],
+    [effectsSeparator, "effects", "240", "420", "compose-panel effects-panel"],
+  ]) {
+    assert.match(separator, new RegExp(`data-video-editor-side-separator="${side}"`, "i"));
+    assert.match(separator, /\brole="separator"/i);
+    assert.match(separator, /\btabindex="0"/i);
+    assert.match(separator, /\baria-orientation="vertical"/i);
+    assert.match(separator, new RegExp(`aria-valuemin="${minimum}"`, "i"));
+    assert.match(separator, new RegExp(`aria-valuemax="${maximum}"`, "i"));
+    assert.match(separator, new RegExp(`aria-controls="${controls}"`, "i"));
+  }
+
+  assert.match(css, /--video-editor-media-panel-width\s*:\s*260px/i);
+  assert.match(css, /--video-editor-effects-panel-width\s*:\s*300px/i);
+  assert.match(css, /grid-template-columns:[^;]*--video-editor-media-panel-width[^;]*--video-editor-effects-panel-width/is);
+  assert.match(script, /SIDE_PANEL_KEYBOARD_STEP\s*=\s*16|PANEL_RESIZE_STEP\s*=\s*16/);
+  assert.match(script, /label:\s*"Project Media"/);
+  assert.match(script, /label:\s*"Effect Editor"/);
+  assert.match(
+    script,
+    /announce\(`\$\{details\.label\} panel set to \$\{state\[details\.stateKey\]\} pixels\.`\)/
+  );
+  assert.match(script, /setPointerCapture|pointermove/);
+  assert.match(script, /aria-valuemax/);
+  assert.match(script, /ArrowLeft|ArrowRight/);
+});
+
 test("Video Editor starts behind a semantic, non-dismissible Administrator gate", async () => {
   const { css, html } = await readRouteSources();
 
