@@ -76,9 +76,13 @@ test("Video Editor offers frame presets, custom dimensions, and contained previe
   );
   assert.deepEqual(
     options.map(({ value }) => value),
-    ["9:16", "16:9", "1:1", "4:5", "4:3", "21:9", "3:2", "custom"]
+    ["none", "9:16", "16:9", "1:1", "4:5", "4:3", "21:9", "3:2", "custom"]
   );
-  assert.equal(options[0].label, "Reel / TikTok (9:16)");
+  assert.equal(options[0].label, "N/A");
+  assert.match(
+    frameSelect,
+    /<option\b(?=[^>]*\bvalue="none")(?=[^>]*\bselected\b)[^>]*>N\/A<\/option>/i
+  );
   for (const { value, label } of options.slice(1, -1)) {
     assert.match(label, new RegExp(value.replace(":", "\\s*:\\s*")));
   }
@@ -102,6 +106,73 @@ test("Video Editor offers frame presets, custom dimensions, and contained previe
   assert.match(css, /#preview-video\s*\{[^}]*object-fit\s*:\s*contain/is);
 });
 
+test("Video Editor offers persistent Standard and Side by side workspace layouts", async () => {
+  const { css, html, script } = await readRouteSources();
+  assert.match(
+    html,
+    /\bclass="[^"]*compose-panel__body[^"]*"[^>]*\bdata-video-editor-workspace-layout="standard"/i
+  );
+  const layoutControls = html.match(
+    /<div\b[^>]*\bid="video-editor-workspace-layout"[^>]*>[\s\S]*?<\/div>\s*<\/div>/i
+  )?.[0];
+  assert.ok(layoutControls, "Missing workspace layout controls.");
+  assert.match(layoutControls, /\bdata-video-editor-workspace-layout-controls(?:\s|>|=)/i);
+  assert.match(layoutControls, /\brole="group"/i);
+  assert.match(layoutControls, /\baria-label="Workspace layout"/i);
+  for (const [layout, label, pressed] of [
+    ["standard", "Standard", "true"],
+    ["side-by-side", "Side by side", "false"],
+  ]) {
+    const button = layoutControls.match(
+      new RegExp(
+        `<button\\b[^>]*data-video-editor-workspace-layout-option="${layout}"[^>]*>[\\s\\S]*?<\\/button>`,
+        "i"
+      )
+    )?.[0];
+    assert.ok(button, `Missing the ${label} workspace layout button.`);
+    assert.match(button, /\btype="button"/i);
+    assert.match(button, new RegExp(`aria-pressed="${pressed}"`, "i"));
+    assert.match(
+      button,
+      /aria-controls="video-editor-preview-section video-editor-timeline-section"/i
+    );
+    assert.match(button, new RegExp(`>\\s*${label}\\s*<`, "i"));
+  }
+
+  assert.match(
+    css,
+    /\.compose-panel__body\[data-video-editor-workspace-layout="side-by-side"\]\s*\{[^}]*grid-template-columns/is
+  );
+  assert.match(css, /\.video-editor-side-separator\s*\{[^}]*background\s*:\s*transparent/is);
+  assert.match(css, /\.video-editor-side-separator\s*\{[^}]*box-shadow\s*:\s*none/is);
+  assert.match(
+    css,
+    /\.video-editor-preview-timeline-separator\s*\{[^}]*background\s*:\s*transparent/is
+  );
+  assert.match(
+    css,
+    /\.video-editor-preview-timeline-separator\s*\{[^}]*box-shadow\s*:\s*none/is
+  );
+  assert.match(css, /\.video-editor-side-separator__grip\s*\{[^}]*repeating-linear-gradient/is);
+  assert.match(
+    css,
+    /\.video-editor-preview-timeline-separator__grip\s*\{[^}]*repeating-linear-gradient/is
+  );
+  assert.match(script, /workspaceLayout:\s*"standard"/);
+  assert.match(
+    script,
+    /previewSplitByLayout:\s*\{[\s\S]*standard:\s*DEFAULT_PREVIEW_SPLIT[\s\S]*"side-by-side":\s*DEFAULT_PREVIEW_SPLIT/
+  );
+  assert.match(script, /state\.previewSplitByLayout\[state\.workspaceLayout\]\s*=\s*state\.previewSplit/);
+  assert.match(script, /state\.framePreset\s*===\s*"9:16"\s*&&\s*state\.workspaceLayout\s*===\s*"standard"/);
+  assert.match(script, /Workspace layout changed to Side by side/);
+  assert.match(script, /Workspace layout set to \$\{WORKSPACE_LAYOUTS\[layout\]\}/);
+  assert.match(script, /layout === "side-by-side" \? "vertical" : "horizontal"/);
+  assert.match(script, /Preview width \$\{state\.previewSplit\}%/);
+  assert.match(script, /Preview height \$\{state\.previewSplit\}%/);
+  assert.match(script, /Composed timeline preview, flexible frame \(N\/A\)/);
+});
+
 test("Video Editor exposes an accessible preview and timeline splitter", async () => {
   const { css, html, script } = await readRouteSources();
 
@@ -122,7 +193,10 @@ test("Video Editor exposes an accessible preview and timeline splitter", async (
     separator,
     /\baria-controls="video-editor-preview-section video-editor-timeline-section"/i
   );
-  assert.match(css, /--video-editor-preview-split\s*:\s*44%/i);
+  assert.match(css, /--video-editor-preview-split\s*:\s*44fr/i);
+  assert.match(css, /--video-editor-timeline-split\s*:\s*56fr/i);
+  assert.match(script, /--video-editor-preview-split["']\s*,\s*`\$\{state\.previewSplit\}fr`/i);
+  assert.match(script, /--video-editor-timeline-split["']\s*,\s*`\$\{100\s*-\s*state\.previewSplit\}fr`/i);
   assert.match(script, /video-editor-preview-timeline-separator/);
   assert.match(script, /setPointerCapture|pointermove/);
   assert.match(script, /ArrowUp|ArrowDown/);

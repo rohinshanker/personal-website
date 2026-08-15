@@ -191,7 +191,10 @@
         <div class="title-bar">
           <h2 class="title-bar-text" id="compose-panel-title">Video Editor</h2>
         </div>
-        <div class="window-body compose-panel__body">
+        <div
+          class="window-body compose-panel__body"
+          data-video-editor-workspace-layout="standard"
+        >
           <section
             class="preview-section"
             id="video-editor-preview-section"
@@ -201,52 +204,84 @@
               <h3 class="editor-heading" id="preview-heading">Preview</h3>
               <output id="preview-clip-name" class="preview-clip-name">No active clip</output>
             </div>
-            <div
-              class="video-editor-frame-size"
-              id="video-editor-frame-size"
-              role="group"
-              aria-label="Preview frame size"
-            >
-              <label for="video-editor-frame-preset">Frame size</label>
-              <select id="video-editor-frame-preset" data-video-editor-frame-preset>
-                <option value="9:16">Reel / TikTok (9:16)</option>
-                <option value="16:9">Widescreen (16:9)</option>
-                <option value="1:1">Square (1:1)</option>
-                <option value="4:5">Portrait (4:5)</option>
-                <option value="4:3">Classic (4:3)</option>
-                <option value="21:9">Cinematic (21:9)</option>
-                <option value="3:2">Photo (3:2)</option>
-                <option value="custom">Custom</option>
-              </select>
+            <div class="video-editor-preview-options">
               <div
-                class="video-editor-frame-custom-size"
-                id="video-editor-frame-custom-size"
-                data-video-editor-frame-custom-size
-                hidden
+                class="video-editor-frame-size"
+                id="video-editor-frame-size"
+                role="group"
+                aria-label="Preview frame size"
               >
-                <label for="video-editor-frame-custom-width">Width</label>
-                <input
-                  id="video-editor-frame-custom-width"
-                  data-video-editor-frame-custom-width
-                  type="number"
-                  inputmode="numeric"
-                  min="16"
-                  max="7680"
-                  step="1"
-                  value="1080"
-                />
-                <span aria-hidden="true">&times;</span>
-                <label for="video-editor-frame-custom-height">Height</label>
-                <input
-                  id="video-editor-frame-custom-height"
-                  data-video-editor-frame-custom-height
-                  type="number"
-                  inputmode="numeric"
-                  min="16"
-                  max="7680"
-                  step="1"
-                  value="1920"
-                />
+                <label for="video-editor-frame-preset">Frame size</label>
+                <select id="video-editor-frame-preset" data-video-editor-frame-preset>
+                  <option value="none" selected>N/A</option>
+                  <option value="9:16">Reel / TikTok (9:16)</option>
+                  <option value="16:9">Widescreen (16:9)</option>
+                  <option value="1:1">Square (1:1)</option>
+                  <option value="4:5">Portrait (4:5)</option>
+                  <option value="4:3">Classic (4:3)</option>
+                  <option value="21:9">Cinematic (21:9)</option>
+                  <option value="3:2">Photo (3:2)</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <div
+                  class="video-editor-frame-custom-size"
+                  id="video-editor-frame-custom-size"
+                  data-video-editor-frame-custom-size
+                  hidden
+                >
+                  <label for="video-editor-frame-custom-width">Width</label>
+                  <input
+                    id="video-editor-frame-custom-width"
+                    data-video-editor-frame-custom-width
+                    type="number"
+                    inputmode="numeric"
+                    min="16"
+                    max="7680"
+                    step="1"
+                    value="1080"
+                  />
+                  <span aria-hidden="true">&times;</span>
+                  <label for="video-editor-frame-custom-height">Height</label>
+                  <input
+                    id="video-editor-frame-custom-height"
+                    data-video-editor-frame-custom-height
+                    type="number"
+                    inputmode="numeric"
+                    min="16"
+                    max="7680"
+                    step="1"
+                    value="1920"
+                  />
+                </div>
+              </div>
+              <div
+                class="video-editor-workspace-layout"
+                id="video-editor-workspace-layout"
+                data-video-editor-workspace-layout-controls
+                role="group"
+                aria-label="Workspace layout"
+              >
+                <span class="video-editor-workspace-layout__label" aria-hidden="true">
+                  Layout
+                </span>
+                <div class="video-editor-workspace-layout__buttons">
+                  <button
+                    type="button"
+                    data-video-editor-workspace-layout-option="standard"
+                    aria-pressed="true"
+                    aria-controls="video-editor-preview-section video-editor-timeline-section"
+                  >
+                    Standard
+                  </button>
+                  <button
+                    type="button"
+                    data-video-editor-workspace-layout-option="side-by-side"
+                    aria-pressed="false"
+                    aria-controls="video-editor-preview-section video-editor-timeline-section"
+                  >
+                    Side by side
+                  </button>
+                </div>
               </div>
             </div>
             <div
@@ -314,7 +349,7 @@
             aria-valuemin="25"
             aria-valuemax="75"
             aria-valuenow="44"
-            aria-valuetext="Preview 44%, timeline 56%"
+            aria-valuetext="Preview height 44%, timeline height 56%"
           >
             <span class="video-editor-preview-timeline-separator__grip" aria-hidden="true"></span>
           </div>

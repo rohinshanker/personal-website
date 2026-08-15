@@ -29,20 +29,30 @@ Last verified: 2026-08-14
   reauthentication restores the same live project and prior editor focus.
 - Imported video and audio stay in the current browser tab through object
   URLs. Reloading starts an empty project, and unload revokes every object URL.
-- Frame size defaults to `Reel / TikTok (9:16)`, followed by common widescreen,
-  square, portrait, classic, cinematic, and photo ratios. Custom integer width
-  and height values are bounded to 16–7680 pixels. Every frame is fitted and
-  centered inside the preview viewport, and active video uses `object-fit:
-  contain` so source media is never cropped by the selected frame.
-- The horizontal preview/timeline separator exposes `role="separator"`, live
-  ARIA values, pointer resizing, Arrow Up/Down five-point steps, and Home/End
-  bounds of 25% and 75%. This layout state remains in memory with the project
-  when authentication is restored.
+- Frame size defaults to `N/A`, which fills the available preview viewport
+  without changing size as active media changes. Common portrait, widescreen,
+  square, classic, cinematic, and photo ratios remain selectable; custom
+  integer width and height values are bounded to 16–7680 pixels. Fixed frames
+  are fitted and centered, and active video uses `object-fit: contain` so
+  source media is never cropped.
+- The workspace defaults to Standard, with the preview above the timeline.
+  Side by side places the preview beside the timeline so portrait frames can
+  use more vertical space. Explicitly selecting `Reel / TikTok (9:16)` while
+  Standard is active switches to Side by side; a later manual layout choice is
+  preserved, other presets do not auto-revert, and each layout remembers its
+  own split value.
+- The preview/timeline separator exposes `role="separator"`, live ARIA values,
+  pointer resizing, Home/End bounds, and orientation-matched arrow keys:
+  Up/Down in Standard and Left/Right in Side by side. Responsive bounds retain
+  usable preview and timeline space, and paired fractional grid tracks keep
+  the announced percentage aligned with the rendered flexible area.
 - Vertical separators independently resize Project Media from 220–360 pixels
   and Effect Editor from 240–420 pixels. Pointer movement follows each panel's
   screen edge; Arrow Left/Right, Home, and End provide keyboard equivalents.
   Runtime maxima tighten at narrow desktop widths so the center editor retains
-  at least 420 pixels without document overflow.
+  at least 420 pixels without document overflow. All three separator rails are
+  transparent and shadowless; only their centered hatched grips remain visible,
+  with a dotted focus treatment for keyboard users.
 - Video and audio clips occupy compatible typed tiers without same-tier
   overlap. Pointer and keyboard paths cover placement, movement, trimming,
   deletion, tier changes, playhead movement, and scaling.
@@ -79,10 +89,12 @@ The route spec covers 375 x 812, 768 x 1024, 1023 x 800, 1024 x 800,
 1280 x 800, and 1440 x 900. It also covers real local video metadata,
 generated WAV audio, compatible and incompatible drops, collision snapping,
 typed tiers, preview and playback, pointer and keyboard editing, effects, long
-filenames, a busy timeline, and all effect tabs. It also covers every frame
-preset and custom dimensions, contained imported video, pointer and keyboard
-preview/timeline resizing, range clicks across multiple values, and ruler
-geometry at minimum and maximum scale. Tab coverage verifies the semantic
+filenames, a busy timeline, and all effect tabs. It also covers the flexible
+N/A frame, every fixed preset, custom dimensions, contained imported video,
+Standard and Side-by-side geometry, 9:16 automatic switching, manual layout
+persistence, per-layout split retention, transparent hatched separators,
+pointer and keyboard resizing in both axes, range clicks across multiple
+values, and ruler geometry at minimum and maximum scale. Tab coverage verifies the semantic
 98.css hierarchy, selection and focus, icon/title/close content, pressed-only
 close treatment, measured marquee overflow, reduced motion, pointer and
 keyboard reordering, close, and reopen behavior. Side-panel coverage exercises
@@ -116,9 +128,11 @@ Confirm the responsive boundary, empty project, imported video and audio,
 busy timeline, long filename, all open effect tabs, focused controls, closed
 tabs, blocked-popup error, launcher focus restoration, unauthenticated modal,
 invalid and network-error messages, authenticated workspace, expired project,
-reauthenticated project, Reel / TikTok and custom frames, extreme wide and tall
-custom ratios, the focused horizontal and vertical separators, native effect
-tabs at minimum and maximum panel widths, long tab titles, reduced motion, the
+reauthenticated project, the flexible N/A frame, Reel / TikTok and custom
+frames, extreme wide and tall custom ratios, Standard and Side-by-side layouts
+at regular and short desktop heights, the focused horizontal and vertical
+hatched grips, native effect tabs at minimum and maximum panel widths, long tab
+titles, reduced motion, the
 pressed close X, and ruler scale endpoints. Check screenshots and semantic snapshots,
 document-level overflow, console output, page errors, and failed local
 resources. The repository does not currently install an automated

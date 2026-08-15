@@ -7,6 +7,12 @@ const FRAME_DIMENSION_MAX = 7680;
 const PREVIEW_SPLIT_MIN = 25;
 const PREVIEW_SPLIT_MAX = 75;
 const PREVIEW_SPLIT_STEP = 5;
+const STANDARD_PREVIEW_MIN = 190;
+const COMPACT_STANDARD_PREVIEW_MIN = 160;
+const STANDARD_TIMELINE_MIN = 160;
+const SIDE_BY_SIDE_PREVIEW_MIN = 180;
+const SIDE_BY_SIDE_TIMELINE_MIN = 200;
+const DEFAULT_PREVIEW_SPLIT = window.innerHeight <= 680 ? 39 : 44;
 const TIMELINE_LABEL_RESERVE = 42;
 const MEDIA_PANEL_MIN = 220;
 const MEDIA_PANEL_MAX = 360;
@@ -60,6 +66,10 @@ const FRAME_PRESETS = Object.freeze({
   "21:9": Object.freeze({ label: "Cinematic (21:9)", width: 21, height: 9 }),
   "3:2": Object.freeze({ label: "Photo (3:2)", width: 3, height: 2 }),
 });
+const WORKSPACE_LAYOUTS = Object.freeze({
+  standard: "Standard",
+  "side-by-side": "Side by side",
+});
 
 const elements = {
   app: document.querySelector("#video-editor-app"),
@@ -94,6 +104,10 @@ const elements = {
   frameCustomSize: document.querySelector("#video-editor-frame-custom-size"),
   frameCustomWidth: document.querySelector("#video-editor-frame-custom-width"),
   frameCustomHeight: document.querySelector("#video-editor-frame-custom-height"),
+  workspaceLayoutControls: document.querySelector("#video-editor-workspace-layout"),
+  workspaceLayoutOptions: document.querySelectorAll(
+    "[data-video-editor-workspace-layout-option]"
+  ),
   previewTimelineSeparator: document.querySelector(
     "#video-editor-preview-timeline-separator"
   ),
@@ -137,12 +151,17 @@ const state = {
   playing: false,
   playbackStartedAt: 0,
   animationFrame: 0,
-  framePreset: "9:16",
-  frameWidth: 9,
-  frameHeight: 16,
+  framePreset: "none",
+  frameWidth: 0,
+  frameHeight: 0,
   customFrameWidth: 1080,
   customFrameHeight: 1920,
-  previewSplit: 44,
+  workspaceLayout: "standard",
+  previewSplit: DEFAULT_PREVIEW_SPLIT,
+  previewSplitByLayout: {
+    standard: DEFAULT_PREVIEW_SPLIT,
+    "side-by-side": DEFAULT_PREVIEW_SPLIT,
+  },
   mediaPanelWidth: MEDIA_PANEL_DEFAULT,
   effectsPanelWidth: EFFECTS_PANEL_DEFAULT,
 };
@@ -204,6 +223,11 @@ const fitPreviewStage = () => {
   const bounds = viewport.getBoundingClientRect();
   if (!bounds.width || !bounds.height) return;
   const ratio = state.frameWidth / state.frameHeight;
+  if (!Number.isFinite(ratio) || ratio <= 0) {
+    elements.previewStage.style.width = `${Math.max(1, bounds.width)}px`;
+    elements.previewStage.style.height = `${Math.max(1, bounds.height)}px`;
+    return;
+  }
   let width = bounds.width;
   let height = width / ratio;
   if (height > bounds.height) {
@@ -215,6 +239,9 @@ const fitPreviewStage = () => {
 };
 
 const frameSelection = () => {
+  if (state.framePreset === "none") {
+    return { label: "N/A", width: 0, height: 0 };
+  }
   if (state.framePreset === "custom") {
     return {
       label: `Custom (${state.customFrameWidth} × ${state.customFrameHeight})`,
@@ -222,32 +249,44 @@ const frameSelection = () => {
       height: state.customFrameHeight,
     };
   }
-  return FRAME_PRESETS[state.framePreset] || FRAME_PRESETS["9:16"];
+  return FRAME_PRESETS[state.framePreset] || { label: "N/A", width: 0, height: 0 };
 };
 
 const applyFrameSize = (shouldAnnounce = false) => {
   const frame = frameSelection();
+  const isFlexibleFrame = state.framePreset === "none";
   state.frameWidth = frame.width;
   state.frameHeight = frame.height;
   if (elements.previewStage) {
     elements.previewStage.dataset.framePreset = state.framePreset;
-    elements.previewStage.dataset.frameWidth = String(frame.width);
-    elements.previewStage.dataset.frameHeight = String(frame.height);
-    elements.previewStage.style.setProperty(
-      "--video-editor-frame-aspect-ratio",
-      `${frame.width} / ${frame.height}`
-    );
-    elements.previewStage.style.setProperty(
-      "--video-editor-frame-width",
-      String(frame.width)
-    );
-    elements.previewStage.style.setProperty(
-      "--video-editor-frame-height",
-      String(frame.height)
-    );
+    elements.previewStage.dataset.frameWidth = isFlexibleFrame ? "auto" : String(frame.width);
+    elements.previewStage.dataset.frameHeight = isFlexibleFrame
+      ? "auto"
+      : String(frame.height);
+    elements.previewStage.classList.toggle("is-frame-flexible", isFlexibleFrame);
+    if (isFlexibleFrame) {
+      elements.previewStage.style.removeProperty("--video-editor-frame-aspect-ratio");
+      elements.previewStage.style.removeProperty("--video-editor-frame-width");
+      elements.previewStage.style.removeProperty("--video-editor-frame-height");
+    } else {
+      elements.previewStage.style.setProperty(
+        "--video-editor-frame-aspect-ratio",
+        `${frame.width} / ${frame.height}`
+      );
+      elements.previewStage.style.setProperty(
+        "--video-editor-frame-width",
+        String(frame.width)
+      );
+      elements.previewStage.style.setProperty(
+        "--video-editor-frame-height",
+        String(frame.height)
+      );
+    }
     elements.previewStage.setAttribute(
       "aria-label",
-      `Composed timeline preview, ${frame.label}`
+      isFlexibleFrame
+        ? "Composed timeline preview, flexible frame (N/A)"
+        : `Composed timeline preview, ${frame.label}`
     );
   }
   requestAnimationFrame(fitPreviewStage);
@@ -280,21 +319,110 @@ const updateCustomFrameSize = (shouldAnnounce = false, shouldNormalize = false) 
   if (state.framePreset === "custom") applyFrameSize(shouldAnnounce);
 };
 
+const previewSplitBounds = () => {
+  if (!elements.composeBody) {
+    return {
+      flexibleSize: 0,
+      maximum: PREVIEW_SPLIT_MAX,
+      minimum: PREVIEW_SPLIT_MIN,
+    };
+  }
+  const sideBySide = state.workspaceLayout === "side-by-side";
+  const bodyBounds = elements.composeBody.getBoundingClientRect();
+  const bodyStyle = getComputedStyle(elements.composeBody);
+  const axisSize = sideBySide ? bodyBounds.width : bodyBounds.height;
+  const gap =
+    Number.parseFloat(sideBySide ? bodyStyle.columnGap : bodyStyle.rowGap) || 0;
+  const separatorSize = sideBySide
+    ? elements.previewTimelineSeparator?.offsetWidth || 9
+    : elements.previewTimelineSeparator?.offsetHeight || 9;
+  const flexibleSize = axisSize - separatorSize - gap * 2;
+  if (flexibleSize <= 0) {
+    return {
+      flexibleSize: 0,
+      maximum: PREVIEW_SPLIT_MAX,
+      minimum: PREVIEW_SPLIT_MIN,
+    };
+  }
+  let previewMinimumPixels = SIDE_BY_SIDE_PREVIEW_MIN;
+  if (!sideBySide) {
+    previewMinimumPixels =
+      window.innerHeight <= 680
+        ? COMPACT_STANDARD_PREVIEW_MIN
+        : STANDARD_PREVIEW_MIN;
+  }
+  const minimum = Math.min(
+    PREVIEW_SPLIT_MAX,
+    Math.max(
+      PREVIEW_SPLIT_MIN,
+      Math.ceil((previewMinimumPixels / flexibleSize) * 100)
+    )
+  );
+  const timelineMinimumPixels = sideBySide
+    ? SIDE_BY_SIDE_TIMELINE_MIN
+    : STANDARD_TIMELINE_MIN;
+  const maximum = Math.min(
+    PREVIEW_SPLIT_MAX,
+    Math.floor(
+      ((flexibleSize - timelineMinimumPixels) / flexibleSize) * 100
+    )
+  );
+  return {
+    flexibleSize,
+    maximum: Math.max(minimum, maximum),
+    minimum,
+  };
+};
+
 const setPreviewSplit = (value, shouldAnnounce = false) => {
-  state.previewSplit = Math.round(clamp(value, PREVIEW_SPLIT_MIN, PREVIEW_SPLIT_MAX));
+  const bounds = previewSplitBounds();
+  state.previewSplit = Math.round(clamp(value, bounds.minimum, bounds.maximum));
+  state.previewSplitByLayout[state.workspaceLayout] = state.previewSplit;
   elements.composeBody?.style.setProperty(
     "--video-editor-preview-split",
-    `${state.previewSplit}%`
+    `${state.previewSplit}fr`
+  );
+  elements.composeBody?.style.setProperty(
+    "--video-editor-timeline-split",
+    `${100 - state.previewSplit}fr`
   );
   if (elements.previewTimelineSeparator) {
+    elements.previewTimelineSeparator.setAttribute("aria-valuemin", String(bounds.minimum));
+    elements.previewTimelineSeparator.setAttribute("aria-valuemax", String(bounds.maximum));
     elements.previewTimelineSeparator.setAttribute("aria-valuenow", String(state.previewSplit));
     elements.previewTimelineSeparator.setAttribute(
       "aria-valuetext",
-      `Preview ${state.previewSplit}%, timeline ${100 - state.previewSplit}%`
+      state.workspaceLayout === "side-by-side"
+        ? `Preview width ${state.previewSplit}%, timeline width ${100 - state.previewSplit}%`
+        : `Preview height ${state.previewSplit}%, timeline height ${100 - state.previewSplit}%`
     );
   }
   requestAnimationFrame(fitPreviewStage);
   if (shouldAnnounce) announce(`Preview area set to ${state.previewSplit} percent.`);
+};
+
+const setWorkspaceLayout = (layout, shouldAnnounce = false) => {
+  if (!Object.hasOwn(WORKSPACE_LAYOUTS, layout)) return;
+  state.workspaceLayout = layout;
+  state.previewSplit = state.previewSplitByLayout[layout];
+  if (elements.composeBody) {
+    elements.composeBody.dataset.videoEditorWorkspaceLayout = layout;
+  }
+  elements.workspaceLayoutOptions.forEach((button) => {
+    const isActive = button.dataset.videoEditorWorkspaceLayoutOption === layout;
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+  if (elements.previewTimelineSeparator) {
+    elements.previewTimelineSeparator.setAttribute(
+      "aria-orientation",
+      layout === "side-by-side" ? "vertical" : "horizontal"
+    );
+  }
+  setPreviewSplit(state.previewSplit);
+  requestAnimationFrame(fitPreviewStage);
+  if (shouldAnnounce) {
+    announce(`Workspace layout set to ${WORKSPACE_LAYOUTS[layout]}.`);
+  }
 };
 
 const bindPreviewTimelineSeparator = () => {
@@ -302,10 +430,18 @@ const bindPreviewTimelineSeparator = () => {
   if (!separator || !elements.composeBody) return;
   separator.addEventListener("keydown", (event) => {
     let nextValue = null;
-    if (event.key === "ArrowUp") nextValue = state.previewSplit - PREVIEW_SPLIT_STEP;
-    else if (event.key === "ArrowDown") nextValue = state.previewSplit + PREVIEW_SPLIT_STEP;
-    else if (event.key === "Home") nextValue = PREVIEW_SPLIT_MIN;
-    else if (event.key === "End") nextValue = PREVIEW_SPLIT_MAX;
+    if (
+      (state.workspaceLayout === "standard" && event.key === "ArrowUp") ||
+      (state.workspaceLayout === "side-by-side" && event.key === "ArrowLeft")
+    ) {
+      nextValue = state.previewSplit - PREVIEW_SPLIT_STEP;
+    } else if (
+      (state.workspaceLayout === "standard" && event.key === "ArrowDown") ||
+      (state.workspaceLayout === "side-by-side" && event.key === "ArrowRight")
+    ) {
+      nextValue = state.previewSplit + PREVIEW_SPLIT_STEP;
+    } else if (event.key === "Home") nextValue = previewSplitBounds().minimum;
+    else if (event.key === "End") nextValue = previewSplitBounds().maximum;
     if (nextValue === null) return;
     event.preventDefault();
     setPreviewSplit(nextValue, true);
@@ -314,7 +450,8 @@ const bindPreviewTimelineSeparator = () => {
     if (event.button !== 0) return;
     event.preventDefault();
     separator.focus();
-    const startY = event.clientY;
+    const sideBySide = state.workspaceLayout === "side-by-side";
+    const startPointerPosition = sideBySide ? event.clientX : event.clientY;
     const startValue = state.previewSplit;
     const bounds = elements.composeBody.getBoundingClientRect();
     let changed = false;
@@ -324,8 +461,17 @@ const bindPreviewTimelineSeparator = () => {
         finish();
         return;
       }
-      const delta = ((moveEvent.clientY - startY) / bounds.height) * 100;
-      const nextValue = clamp(startValue + delta, PREVIEW_SPLIT_MIN, PREVIEW_SPLIT_MAX);
+      const pointerPosition = sideBySide ? moveEvent.clientX : moveEvent.clientY;
+      const availableSize =
+        previewSplitBounds().flexibleSize ||
+        (sideBySide ? bounds.width : bounds.height);
+      const delta = ((pointerPosition - startPointerPosition) / availableSize) * 100;
+      const splitBounds = previewSplitBounds();
+      const nextValue = clamp(
+        startValue + delta,
+        splitBounds.minimum,
+        splitBounds.maximum
+      );
       changed ||= Math.round(nextValue) !== state.previewSplit;
       setPreviewSplit(nextValue);
     };
@@ -421,6 +567,9 @@ const updateSidePanelLayout = () => {
       "aria-valuetext",
       `${details.label} width ${state[details.stateKey]} pixels`
     );
+  }
+  if (state.workspaceLayout === "side-by-side") {
+    setPreviewSplit(state.previewSplit);
   }
   requestAnimationFrame(fitPreviewStage);
   scheduleEffectTabTitleMarquees();
@@ -1908,8 +2057,21 @@ const bindStaticControls = () => {
     if (elements.frameCustomSize) {
       elements.frameCustomSize.hidden = state.framePreset !== "custom";
     }
-    applyFrameSize(true);
+    const shouldAutoSelectSideBySide =
+      state.framePreset === "9:16" && state.workspaceLayout === "standard";
+    applyFrameSize(!shouldAutoSelectSideBySide);
+    if (shouldAutoSelectSideBySide) {
+      setWorkspaceLayout("side-by-side");
+      announce(
+        "Frame size set to Reel / TikTok (9:16). Workspace layout changed to Side by side."
+      );
+    }
     if (state.framePreset === "custom") elements.frameCustomWidth?.focus();
+  });
+  elements.workspaceLayoutOptions.forEach((button) => {
+    button.addEventListener("click", () => {
+      setWorkspaceLayout(button.dataset.videoEditorWorkspaceLayoutOption, true);
+    });
   });
   elements.frameCustomWidth?.addEventListener("input", () => updateCustomFrameSize(true));
   elements.frameCustomHeight?.addEventListener("input", () => updateCustomFrameSize(true));
@@ -2031,6 +2193,7 @@ if (elements.app) {
   elements.previewVideo.muted = true;
   bindStaticControls();
   applyFrameSize();
+  setWorkspaceLayout(state.workspaceLayout);
   setPreviewSplit(state.previewSplit);
   reconcileSidePanelWidths();
   if (elements.previewViewport && "ResizeObserver" in window) {

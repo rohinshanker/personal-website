@@ -391,6 +391,16 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
     await expect(separator.click({ timeout: 750 })).rejects.toThrow();
     await expect(separator).toHaveAttribute("aria-valuenow", valueBefore);
   }
+  const sideBySideLayout = page.locator(
+    '[data-video-editor-workspace-layout-option="side-by-side"]'
+  );
+  await expect(sideBySideLayout).toHaveAttribute("aria-pressed", "false");
+  await expect(sideBySideLayout.click({ timeout: 750 })).rejects.toThrow();
+  await expect(sideBySideLayout).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator(".compose-panel__body")).toHaveAttribute(
+    "data-video-editor-workspace-layout",
+    "standard"
+  );
 
   await page.screenshot({
     path: testInfo.outputPath("video-editor-auth-required-desktop.png"),
@@ -425,6 +435,8 @@ test("shows only Desktop Required below 1024px even without authentication", asy
       await expect(page.locator("[data-video-editor-side-separator]")).toHaveCount(2);
       await expect(page.locator("#video-editor-media-compose-separator")).toBeHidden();
       await expect(page.locator("#video-editor-compose-effects-separator")).toBeHidden();
+      await expect(page.locator("#video-editor-workspace-layout")).toBeHidden();
+      await expect(page.locator("#video-editor-preview-timeline-separator")).toBeHidden();
       await page.screenshot({
         path: testInfo.outputPath(`video-editor-unauthenticated-${viewport.name}.png`),
       });
@@ -625,6 +637,7 @@ test("updates the preview frame presets and contains imported video", async ({
     options.map((option) => ({ text: option.textContent.trim(), value: option.value }))
   );
   expect(optionValues.map(({ value }) => value)).toEqual([
+    "none",
     "9:16",
     "16:9",
     "1:1",
@@ -634,16 +647,34 @@ test("updates the preview frame presets and contains imported video", async ({
     "3:2",
     "custom",
   ]);
-  expect(optionValues[0].text).toBe("Reel / TikTok (9:16)");
-  await expect(preset).toHaveValue("9:16");
+  expect(optionValues[0].text).toBe("N/A");
+  await expect(preset).toHaveValue("none");
   await expect(customSize).toBeHidden();
-  await expect(stage).toHaveAttribute("data-frame-preset", "9:16");
-  await expectPreviewAspect(stage, 9, 16);
+  await expect(stage).toHaveAttribute("data-frame-preset", "none");
+  await expect(stage).toHaveClass(/is-frame-flexible/);
+  await expect(stage).toHaveAttribute("data-frame-width", "auto");
+  await expect(stage).toHaveAttribute("data-frame-height", "auto");
+  await expect(stage).toHaveAttribute(
+    "aria-label",
+    "Composed timeline preview, flexible frame (N/A)"
+  );
+  const flexibleViewport = page.locator("#video-editor-preview-stage-viewport");
+  const emptyFlexibleLayout = await Promise.all(
+    [stage, flexibleViewport].map((element) =>
+      element.evaluate((node) => {
+        const bounds = node.getBoundingClientRect();
+        return { height: bounds.height, width: bounds.width };
+      })
+    )
+  );
+  expect(emptyFlexibleLayout[0].width).toBeCloseTo(emptyFlexibleLayout[1].width, 0);
+  expect(emptyFlexibleLayout[0].height).toBeCloseTo(emptyFlexibleLayout[1].height, 0);
   await page.screenshot({
-    path: testInfo.outputPath("video-editor-frame-reel-9x16.png"),
+    path: testInfo.outputPath("video-editor-frame-flexible-na.png"),
   });
 
   for (const [value, width, height] of [
+    ["9:16", 9, 16],
     ["16:9", 16, 9],
     ["1:1", 1, 1],
     ["4:5", 4, 5],
@@ -674,7 +705,11 @@ test("updates the preview frame presets and contains imported video", async ({
   await expectPreviewAspect(stage, 2000, 1000);
   await expect(page.locator("#editor-status")).toContainText(/2000.*1000/);
 
-  await preset.selectOption("9:16");
+  await preset.selectOption("none");
+  await expect(stage).toHaveAttribute(
+    "aria-label",
+    "Composed timeline preview, flexible frame (N/A)"
+  );
   await importMedia(page, [videoAsset]);
   await page
     .getByTestId("media-bin")
@@ -699,8 +734,154 @@ test("updates the preview frame presets and contains imported video", async ({
   expect(containment.naturalWidth).toBeGreaterThan(0);
   expect(containment.naturalHeight).toBeGreaterThan(0);
   expect(containment.withinStage).toBe(true);
+  const importedFlexibleLayout = await Promise.all(
+    [stage, flexibleViewport].map((element) =>
+      element.evaluate((node) => {
+        const bounds = node.getBoundingClientRect();
+        return { height: bounds.height, width: bounds.width };
+      })
+    )
+  );
+  expect(importedFlexibleLayout[0].width).toBeCloseTo(
+    importedFlexibleLayout[1].width,
+    0
+  );
+  expect(importedFlexibleLayout[0].height).toBeCloseTo(
+    importedFlexibleLayout[1].height,
+    0
+  );
   await page.screenshot({
     path: testInfo.outputPath("video-editor-frame-contained-video.png"),
+  });
+
+  runtime.expectClean();
+});
+
+test("switches workspace layouts automatically for 9:16 and preserves manual choices", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+
+  const composeBody = page.locator(".compose-panel__body");
+  const preset = page.locator("#video-editor-frame-preset");
+  const stage = page.getByTestId("preview-stage");
+  const viewport = page.locator("#video-editor-preview-stage-viewport");
+  const layoutGroup = page.locator("#video-editor-workspace-layout");
+  const standard = page.getByRole("button", { name: "Standard", exact: true });
+  const sideBySide = page.getByRole("button", { name: "Side by side", exact: true });
+  await expect(layoutGroup).toHaveAttribute("role", "group");
+  await expect(layoutGroup).toHaveAttribute("aria-label", "Workspace layout");
+  for (const control of [standard, sideBySide]) {
+    await expect(control).toHaveAttribute(
+      "aria-controls",
+      "video-editor-preview-section video-editor-timeline-section"
+    );
+  }
+  await expect(composeBody).toHaveAttribute(
+    "data-video-editor-workspace-layout",
+    "standard"
+  );
+  await expect(standard).toHaveAttribute("aria-pressed", "true");
+  await expect(sideBySide).toHaveAttribute("aria-pressed", "false");
+
+  const readPreviewGeometry = async () => {
+    const [stageBounds, viewportBounds] = await Promise.all(
+      [stage, viewport].map((element) =>
+        element.evaluate((node) => {
+          const bounds = node.getBoundingClientRect();
+          return { height: bounds.height, width: bounds.width };
+        })
+      )
+    );
+    const stageArea = stageBounds.width * stageBounds.height;
+    const viewportArea = viewportBounds.width * viewportBounds.height;
+    return {
+      fill: stageArea / viewportArea,
+      height: stageBounds.height,
+      stageArea,
+      width: stageBounds.width,
+    };
+  };
+
+  await preset.selectOption("9:16");
+  await expect(composeBody).toHaveAttribute(
+    "data-video-editor-workspace-layout",
+    "side-by-side"
+  );
+  await expect(sideBySide).toHaveAttribute("aria-pressed", "true");
+  await expect(standard).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#editor-status")).toHaveText(
+    "Frame size set to Reel / TikTok (9:16). Workspace layout changed to Side by side."
+  );
+  await expectPreviewAspect(stage, 9, 16);
+  const sideBySidePortrait = await readPreviewGeometry();
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-portrait-side-by-side-1280x800.png"),
+  });
+
+  await standard.click();
+  await expect(composeBody).toHaveAttribute(
+    "data-video-editor-workspace-layout",
+    "standard"
+  );
+  await expect(page.locator("#editor-status")).toHaveText(
+    "Workspace layout set to Standard."
+  );
+  await expect
+    .poll(async () => (await readPreviewGeometry()).stageArea)
+    .toBeLessThan(sideBySidePortrait.stageArea * 0.9);
+  const standardPortrait = await readPreviewGeometry();
+  expect(sideBySidePortrait.stageArea).toBeGreaterThan(standardPortrait.stageArea * 1.5);
+  expect(sideBySidePortrait.height).toBeGreaterThan(standardPortrait.height * 1.25);
+  expect(sideBySidePortrait.fill).toBeGreaterThan(standardPortrait.fill + 0.2);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-portrait-standard-1280x800.png"),
+  });
+
+  await sideBySide.focus();
+  await sideBySide.press("Space");
+  await expect(composeBody).toHaveAttribute(
+    "data-video-editor-workspace-layout",
+    "side-by-side"
+  );
+  await preset.selectOption("16:9");
+  await expect(composeBody).toHaveAttribute(
+    "data-video-editor-workspace-layout",
+    "side-by-side"
+  );
+  await expect(page.locator("#editor-status")).toHaveText(
+    "Frame size set to Widescreen (16:9)."
+  );
+
+  await standard.focus();
+  await standard.press("Enter");
+  await expect(composeBody).toHaveAttribute(
+    "data-video-editor-workspace-layout",
+    "standard"
+  );
+  await preset.selectOption("custom");
+  await expect(composeBody).toHaveAttribute(
+    "data-video-editor-workspace-layout",
+    "standard"
+  );
+  await expect(page.locator("#video-editor-frame-custom-size")).toBeVisible();
+
+  await preset.selectOption("9:16");
+  await expect(composeBody).toHaveAttribute(
+    "data-video-editor-workspace-layout",
+    "side-by-side"
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(stage).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    )
+  ).toBe(false);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-portrait-side-by-side-1440x900.png"),
   });
 
   runtime.expectClean();
@@ -724,19 +905,47 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
     "aria-controls",
     "video-editor-preview-section video-editor-timeline-section"
   );
-  await expect(separator).toHaveAttribute("aria-valuemin", "25");
-  await expect(separator).toHaveAttribute("aria-valuemax", "75");
+  const standardMinimum = Number(await separator.getAttribute("aria-valuemin"));
+  const standardMaximum = Number(await separator.getAttribute("aria-valuemax"));
+  expect(standardMinimum).toBeGreaterThanOrEqual(25);
+  expect(standardMinimum).toBeLessThan(44);
+  expect(standardMaximum).toBeGreaterThan(44);
+  expect(standardMaximum).toBeLessThanOrEqual(75);
   await expect(separator).toHaveAttribute("aria-valuenow", "44");
   await expect(separator).toHaveAttribute(
     "aria-valuetext",
-    "Preview 44%, timeline 56%"
+    "Preview height 44%, timeline height 56%"
   );
-  await expect(composeBody).toHaveCSS("--video-editor-preview-split", "44%");
+  await expect(composeBody).toHaveCSS("--video-editor-preview-split", "44fr");
+  await expect(composeBody).toHaveCSS("--video-editor-timeline-split", "56fr");
+  const standardRail = await separator.evaluate((element) => {
+    const railStyle = getComputedStyle(element);
+    const grip = element.querySelector(
+      ".video-editor-preview-timeline-separator__grip"
+    );
+    const gripBounds = grip.getBoundingClientRect();
+    return {
+      backgroundColor: railStyle.backgroundColor,
+      boxShadow: railStyle.boxShadow,
+      gripBackground: getComputedStyle(grip).backgroundImage,
+      gripHeight: gripBounds.height,
+      gripWidth: gripBounds.width,
+    };
+  });
+  expect(standardRail.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  expect(standardRail.boxShadow).toBe("none");
+  expect(standardRail.gripBackground).toContain("repeating-linear-gradient");
+  expect(standardRail.gripWidth).toBeGreaterThan(standardRail.gripHeight);
 
   await separator.focus();
+  await expect(separator).toHaveCSS("outline-style", "none");
+  await expect(
+    separator.locator(".video-editor-preview-timeline-separator__grip")
+  ).toHaveCSS("outline-style", "dotted");
   await separator.press("ArrowUp");
   await expect(separator).toHaveAttribute("aria-valuenow", "39");
-  await expect(composeBody).toHaveCSS("--video-editor-preview-split", "39%");
+  await expect(composeBody).toHaveCSS("--video-editor-preview-split", "39fr");
+  await expect(composeBody).toHaveCSS("--video-editor-timeline-split", "61fr");
   await separator.press("ArrowDown");
   await expect(separator).toHaveAttribute("aria-valuenow", "44");
   await expect(page.locator("#editor-status")).toHaveText(
@@ -744,13 +953,13 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   );
 
   await separator.press("Home");
-  await expect(separator).toHaveAttribute("aria-valuenow", "25");
+  await expect(separator).toHaveAttribute("aria-valuenow", String(standardMinimum));
   const minimumSizes = {
     preview: await previewSection.evaluate((element) => element.getBoundingClientRect().height),
     timeline: await timelineSection.evaluate((element) => element.getBoundingClientRect().height),
   };
   await separator.press("End");
-  await expect(separator).toHaveAttribute("aria-valuenow", "75");
+  await expect(separator).toHaveAttribute("aria-valuenow", String(standardMaximum));
   const maximumSizes = {
     preview: await previewSection.evaluate((element) => element.getBoundingClientRect().height),
     timeline: await timelineSection.evaluate((element) => element.getBoundingClientRect().height),
@@ -778,7 +987,11 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   expect(pointerValue).toBeLessThanOrEqual(61);
   await expect(composeBody).toHaveCSS(
     "--video-editor-preview-split",
-    `${pointerValue}%`
+    `${pointerValue}fr`
+  );
+  await expect(composeBody).toHaveCSS(
+    "--video-editor-timeline-split",
+    `${100 - pointerValue}fr`
   );
   await expect(page.locator("#editor-status")).toHaveText(
     `Preview area set to ${pointerValue} percent.`
@@ -786,6 +999,124 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   await expect(separator).toBeFocused();
   await page.screenshot({
     path: testInfo.outputPath("video-editor-preview-timeline-splitter.png"),
+  });
+
+  await page.getByRole("button", { name: "Side by side", exact: true }).click();
+  await expect(separator).toHaveAttribute("aria-orientation", "vertical");
+  const sideInitialValue = Number(await separator.getAttribute("aria-valuenow"));
+  expect(sideInitialValue).toBe(44);
+  const sideMinimum = Number(await separator.getAttribute("aria-valuemin"));
+  const sideMaximum = Number(await separator.getAttribute("aria-valuemax"));
+  expect(sideMinimum).toBeGreaterThanOrEqual(25);
+  expect(sideMinimum).toBeLessThanOrEqual(sideInitialValue);
+  expect(sideMaximum).toBeGreaterThanOrEqual(sideInitialValue);
+  expect(sideMaximum).toBeLessThanOrEqual(75);
+  await expect(separator).toHaveAttribute(
+    "aria-valuetext",
+    `Preview width ${sideInitialValue}%, timeline width ${100 - sideInitialValue}%`
+  );
+  const sideRail = await separator.evaluate((element) => {
+    const railStyle = getComputedStyle(element);
+    const grip = element.querySelector(
+      ".video-editor-preview-timeline-separator__grip"
+    );
+    const gripBounds = grip.getBoundingClientRect();
+    return {
+      backgroundColor: railStyle.backgroundColor,
+      boxShadow: railStyle.boxShadow,
+      gripBackground: getComputedStyle(grip).backgroundImage,
+      gripHeight: gripBounds.height,
+      gripWidth: gripBounds.width,
+    };
+  });
+  expect(sideRail.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  expect(sideRail.boxShadow).toBe("none");
+  expect(sideRail.gripBackground).toContain("repeating-linear-gradient");
+  expect(sideRail.gripHeight).toBeGreaterThan(sideRail.gripWidth);
+
+  await separator.focus();
+  await separator.press("ArrowLeft");
+  await expect(separator).toHaveAttribute("aria-valuenow", String(sideInitialValue - 5));
+  await separator.press("ArrowRight");
+  await expect(separator).toHaveAttribute("aria-valuenow", String(sideInitialValue));
+  await separator.press("Home");
+  await expect(separator).toHaveAttribute("aria-valuenow", String(sideMinimum));
+  const sideMinimumSizes = {
+    preview: await previewSection.evaluate((element) => element.getBoundingClientRect().width),
+    timeline: await timelineSection.evaluate((element) => element.getBoundingClientRect().width),
+  };
+  await separator.press("End");
+  await expect(separator).toHaveAttribute("aria-valuenow", String(sideMaximum));
+  const sideMaximumSizes = {
+    preview: await previewSection.evaluate((element) => element.getBoundingClientRect().width),
+    timeline: await timelineSection.evaluate((element) => element.getBoundingClientRect().width),
+  };
+  expect(sideMaximumSizes.preview).toBeGreaterThan(sideMinimumSizes.preview);
+  expect(sideMaximumSizes.timeline).toBeLessThan(sideMinimumSizes.timeline);
+  expect(sideMinimumSizes.preview).toBeGreaterThanOrEqual(179);
+  expect(sideMaximumSizes.timeline).toBeGreaterThanOrEqual(199);
+
+  const sideBodyBounds = await composeBody.boundingBox();
+  const sideSeparatorBounds = await separator.boundingBox();
+  expect(sideBodyBounds).not.toBeNull();
+  expect(sideSeparatorBounds).not.toBeNull();
+  await page.mouse.move(
+    sideSeparatorBounds.x + sideSeparatorBounds.width / 2,
+    sideSeparatorBounds.y + sideSeparatorBounds.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    sideBodyBounds.x + sideBodyBounds.width * 0.6,
+    sideSeparatorBounds.y + sideSeparatorBounds.height / 2,
+    { steps: 5 }
+  );
+  await page.mouse.up();
+  const sidePointerValue = Number(await separator.getAttribute("aria-valuenow"));
+  expect(sidePointerValue).toBeGreaterThanOrEqual(59);
+  expect(sidePointerValue).toBeLessThanOrEqual(61);
+  await expect(page.locator("#editor-status")).toHaveText(
+    `Preview area set to ${sidePointerValue} percent.`
+  );
+
+  await page.getByRole("button", { name: "Standard", exact: true }).click();
+  await expect(separator).toHaveAttribute("aria-valuenow", String(pointerValue));
+  await page.getByRole("button", { name: "Side by side", exact: true }).click();
+  await expect(separator).toHaveAttribute("aria-valuenow", String(sidePointerValue));
+
+  for (const sideSeparator of [
+    page.locator("#video-editor-media-compose-separator"),
+    page.locator("#video-editor-compose-effects-separator"),
+  ]) {
+    const rail = await sideSeparator.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const grip = element.querySelector(".video-editor-side-separator__grip");
+      const gripBounds = grip.getBoundingClientRect();
+      return {
+        backgroundColor: style.backgroundColor,
+        boxShadow: style.boxShadow,
+        gripBackground: getComputedStyle(grip).backgroundImage,
+        gripHeight: gripBounds.height,
+        gripWidth: gripBounds.width,
+      };
+    });
+    expect(rail.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    expect(rail.boxShadow).toBe("none");
+    expect(rail.gripBackground).toContain("repeating-linear-gradient");
+    expect(rail.gripHeight).toBeGreaterThan(rail.gripWidth);
+  }
+  const mediaSeparator = page.locator("#video-editor-media-compose-separator");
+  await page.getByRole("button", { name: "Transitions", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(mediaSeparator).toBeFocused();
+  await expect(mediaSeparator).toHaveCSS(
+    "outline-style",
+    "none"
+  );
+  await expect(
+    mediaSeparator.locator(".video-editor-side-separator__grip")
+  ).toHaveCSS("outline-style", "dotted");
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-preview-timeline-splitter-side-by-side.png"),
   });
 
   runtime.expectClean();

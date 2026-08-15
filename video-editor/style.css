@@ -211,40 +211,46 @@ textarea:focus-visible,
   place-items: center;
   min-width: 7px;
   min-height: 0;
-  background: var(--surface);
-  box-shadow:
-    inset 1px 1px var(--button-highlight),
-    inset -1px -1px var(--button-shadow);
+  background: transparent;
+  box-shadow: none;
   cursor: col-resize;
   touch-action: none;
   user-select: none;
 }
 
-.video-editor-side-separator::before {
-  position: absolute;
-  content: "";
-  width: 1px;
-  height: 48px;
-  border-left: 1px dotted var(--button-shadow);
-}
-
-.video-editor-side-separator:hover::before,
-.video-editor-side-separator:focus-visible::before {
-  border-left-color: var(--dialog-blue);
-}
-
+.video-editor-side-separator:focus,
 .video-editor-side-separator:focus-visible {
-  outline: 2px solid var(--dialog-blue);
-  outline-offset: 0;
+  outline: none;
 }
 
 .video-editor-side-separator__grip {
-  position: absolute;
-  width: 1px;
-  height: 48px;
-  margin-left: 3px;
-  border-left: 1px dotted var(--button-highlight);
+  width: 5px;
+  height: 56px;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      var(--button-shadow) 0 1px,
+      transparent 1px 3px
+    );
+  box-shadow: 1px 1px var(--button-highlight);
   pointer-events: none;
+}
+
+.video-editor-side-separator:hover .video-editor-side-separator__grip,
+.video-editor-side-separator:focus .video-editor-side-separator__grip,
+.video-editor-side-separator:focus-visible .video-editor-side-separator__grip {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      var(--dialog-blue) 0 1px,
+      transparent 1px 3px
+    );
+}
+
+.video-editor-side-separator:focus .video-editor-side-separator__grip,
+.video-editor-side-separator:focus-visible .video-editor-side-separator__grip {
+  outline: 1px dotted var(--dialog-blue);
+  outline-offset: 1px;
 }
 
 .editor-window {
@@ -490,13 +496,14 @@ textarea:focus-visible,
 }
 
 .compose-panel__body {
-  --video-editor-preview-split: 44%;
+  --video-editor-preview-split: 44fr;
+  --video-editor-timeline-split: 56fr;
 
   display: grid;
   grid-template-rows:
     minmax(190px, var(--video-editor-preview-split))
     9px
-    minmax(0, 1fr);
+    minmax(0, var(--video-editor-timeline-split));
   gap: 4px;
 }
 
@@ -512,8 +519,19 @@ textarea:focus-visible,
   min-height: 14px;
 }
 
+.video-editor-preview-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 5px 8px;
+}
+
 .video-editor-frame-size {
   display: flex;
+  flex: 1 1 210px;
+  flex-wrap: wrap;
   align-items: center;
   min-width: 0;
   gap: 6px;
@@ -534,6 +552,7 @@ textarea:focus-visible,
 .video-editor-frame-custom-size {
   display: flex;
   flex: 1 1 244px;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
@@ -553,6 +572,39 @@ textarea:focus-visible,
   flex: 0 1 66px;
   width: 66px;
   min-width: 48px;
+}
+
+.video-editor-workspace-layout {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-width: 0;
+  gap: 5px;
+}
+
+.video-editor-workspace-layout__label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.video-editor-workspace-layout__buttons {
+  display: flex;
+  min-width: 0;
+  gap: 2px;
+}
+
+.video-editor-workspace-layout__buttons button {
+  min-width: 62px;
+  padding-right: 7px;
+  padding-left: 7px;
+  white-space: nowrap;
+}
+
+.video-editor-workspace-layout__buttons button[aria-pressed="true"] {
+  padding: 3px 6px 2px 8px;
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  font-weight: bold;
 }
 
 .preview-stage-viewport {
@@ -580,6 +632,10 @@ textarea:focus-visible,
   border-color: #555 #fff #fff #555;
   background: #101010;
   color: #d8d8d8;
+}
+
+.preview-stage.is-frame-flexible {
+  aspect-ratio: auto;
 }
 
 #preview-video {
@@ -689,8 +745,8 @@ textarea:focus-visible,
   place-items: center;
   min-width: 0;
   min-height: 9px;
-  background: var(--surface);
-  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  background: transparent;
+  box-shadow: none;
   cursor: row-resize;
   touch-action: none;
   user-select: none;
@@ -698,22 +754,120 @@ textarea:focus-visible,
 
 .video-editor-preview-timeline-separator:hover
   .video-editor-preview-timeline-separator__grip,
+.video-editor-preview-timeline-separator:focus
+  .video-editor-preview-timeline-separator__grip,
 .video-editor-preview-timeline-separator:focus-visible
   .video-editor-preview-timeline-separator__grip {
-  background: var(--dialog-blue);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      var(--dialog-blue) 0 1px,
+      transparent 1px 3px
+    );
 }
 
+.video-editor-preview-timeline-separator:focus,
 .video-editor-preview-timeline-separator:focus-visible {
-  outline: 2px solid var(--dialog-blue);
-  outline-offset: 1px;
+  outline: none;
 }
 
 .video-editor-preview-timeline-separator__grip {
-  width: 48px;
-  height: 3px;
-  background: var(--button-shadow);
+  width: 56px;
+  height: 5px;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      var(--button-shadow) 0 1px,
+      transparent 1px 3px
+    );
   box-shadow: 1px 1px var(--button-highlight);
   pointer-events: none;
+}
+
+.video-editor-preview-timeline-separator:focus
+  .video-editor-preview-timeline-separator__grip,
+.video-editor-preview-timeline-separator:focus-visible
+  .video-editor-preview-timeline-separator__grip {
+  outline: 1px dotted var(--dialog-blue);
+  outline-offset: 1px;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"] {
+  grid-template-columns:
+    minmax(180px, var(--video-editor-preview-split))
+    9px
+    minmax(200px, var(--video-editor-timeline-split));
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .preview-section {
+  grid-area: 1 / 1;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .video-editor-preview-timeline-separator {
+  grid-area: 1 / 2;
+  min-width: 9px;
+  min-height: 0;
+  cursor: col-resize;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .video-editor-preview-timeline-separator__grip {
+  width: 5px;
+  height: 56px;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .timeline-section {
+  grid-area: 1 / 3;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .playback-controls {
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 4px;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .video-editor-frame-custom-size {
+  display: grid;
+  grid-template-columns: auto minmax(48px, 1fr);
+  justify-content: stretch;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .video-editor-frame-custom-size[hidden] {
+  display: none;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .video-editor-frame-custom-size > span {
+  display: none;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .video-editor-frame-custom-size input {
+  width: 100%;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .time-readout {
+  grid-column: 1 / -1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .timeline-toolbar {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .timeline-zoom-control {
+  grid-column: 1 / -1;
 }
 
 .timeline-section {
@@ -1255,13 +1409,14 @@ textarea:focus-visible,
 }
 
 @media (max-height: 680px) and (min-width: 1024px) {
-  .compose-panel__body {
-    --video-editor-preview-split: 39%;
+  .compose-panel__body[data-video-editor-workspace-layout="standard"] {
+    --video-editor-preview-split: 39fr;
+    --video-editor-timeline-split: 61fr;
 
     grid-template-rows:
       minmax(160px, var(--video-editor-preview-split))
       9px
-      minmax(0, 1fr);
+      minmax(0, var(--video-editor-timeline-split));
   }
 
   .media-drop-zone {
