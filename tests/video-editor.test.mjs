@@ -6,12 +6,14 @@ const root = new URL("../", import.meta.url);
 const route = new URL("video-editor/", root);
 
 const readRouteSources = async () => {
-  const [html, css, script] = await Promise.all([
+  const [html, css, script, audioAnalysis, audioAnalysisWorker] = await Promise.all([
     readFile(new URL("index.html", route), "utf8"),
     readFile(new URL("style.css", route), "utf8"),
     readFile(new URL("script.js", route), "utf8"),
+    readFile(new URL("audio-analysis.js", route), "utf8"),
+    readFile(new URL("audio-analysis-worker.js", route), "utf8"),
   ]);
-  return { css, html, script };
+  return { audioAnalysis, audioAnalysisWorker, css, html, script };
 };
 
 test("Video Editor publishes canonical route metadata and the Windows desktop shell", async () => {
@@ -104,6 +106,82 @@ test("Video Editor offers frame presets, custom dimensions, and contained previe
   assert.match(customHeight, /\btype="number"/i);
   assert.match(customHeight, /\bvalue="1920"/i);
   assert.match(css, /#preview-video\s*\{[^}]*object-fit\s*:\s*contain/is);
+});
+
+test("Video Editor offers opt-in social UI guidelines for fixed 9:16 frames", async () => {
+  const { css, html, script } = await readRouteSources();
+  const controls = html.match(
+    /<div\b[^>]*\bid="video-editor-guidelines"[^>]*>[\s\S]*?<\/small>\s*<\/div>/i
+  )?.[0];
+  assert.ok(controls, "Missing the social UI guideline controls.");
+  assert.match(controls, /\bdata-video-editor-guidelines-controls(?:\s|>|=)/i);
+  assert.match(controls, /\brole="group"/i);
+  assert.match(controls, /\baria-label="Social UI guidelines"/i);
+
+  const toggle = controls.match(
+    /<input\b[^>]*\bid="video-editor-guidelines-toggle"[^>]*>/i
+  )?.[0];
+  assert.ok(toggle, "Missing the social UI guideline toggle.");
+  assert.match(toggle, /\bdata-video-editor-guidelines-toggle(?:\s|>|=)/i);
+  assert.match(toggle, /\btype="checkbox"/i);
+  assert.doesNotMatch(toggle, /\bchecked(?:\s|>|=)/i);
+  assert.match(toggle, /\baria-controls="video-editor-social-guidelines-overlay"/i);
+  assert.match(toggle, /\baria-describedby="video-editor-guidelines-note"/i);
+  assert.match(controls, />\s*Show social UI guidelines\s*</i);
+
+  const platform = controls.match(
+    /<select\b[^>]*\bid="video-editor-guidelines-platform"[^>]*>[\s\S]*?<\/select>/i
+  )?.[0];
+  assert.ok(platform, "Missing the social guideline platform selector.");
+  assert.match(platform, /\bdata-video-editor-guidelines-platform(?:\s|>|=)/i);
+  assert.match(platform, /\bdisabled(?:\s|>|=)/i);
+  assert.match(platform, /\baria-describedby="video-editor-guidelines-note"/i);
+  assert.match(controls, /<label\b[^>]*for="video-editor-guidelines-platform"[^>]*>\s*Platform\s*<\/label>/i);
+  assert.match(
+    platform,
+    /<option\b(?=[^>]*\bvalue="instagram-reels")(?=[^>]*\bselected\b)[^>]*>Instagram Reels<\/option>/i
+  );
+  assert.match(platform, /<option\b[^>]*\bvalue="tiktok"[^>]*>TikTok<\/option>/i);
+  assert.match(
+    controls,
+    /\bid="video-editor-guidelines-note"[\s\S]*Approximate(?:&mdash;|—)platform UI varies by device, caption length, placement,[\s\S]*and add-ons\./i
+  );
+
+  const overlay = html.match(
+    /<div\b[^>]*\bid="video-editor-social-guidelines-overlay"[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i
+  )?.[0];
+  assert.ok(overlay, "Missing the social UI guideline preview overlay.");
+  assert.match(overlay, /\bdata-video-editor-social-guidelines-overlay(?:\s|>|=)/i);
+  assert.match(overlay, /\bdata-guideline-platform="instagram-reels"/i);
+  assert.match(overlay, /\baria-hidden="true"/i);
+  assert.match(overlay, /\bhidden(?:\s|>|=)/i);
+  for (const [zone, label] of [
+    ["top", "Top UI coverage"],
+    ["right", "Right UI coverage"],
+    ["bottom", "Bottom UI coverage"],
+  ]) {
+    assert.match(
+      overlay,
+      new RegExp(`data-guideline-zone="${zone}"[\\s\\S]*?>\\s*${label}\\s*<`, "i")
+    );
+  }
+  assert.match(overlay, /\bdata-guideline-safe-area(?:\s|>|=)[\s\S]*>\s*Safe content area\s*</i);
+
+  assert.match(css, /\.video-editor-social-guidelines\s*\{[^}]*pointer-events\s*:\s*none/is);
+  assert.match(css, /--guideline-top-coverage\s*:\s*13\.8%/i);
+  assert.match(css, /--guideline-safe-polygon\s*:\s*polygon\([\s\S]*5\.5%\s+13\.8%/i);
+  assert.match(
+    css,
+    /\[data-guideline-platform="tiktok"\]\s*\{[^}]*--guideline-top-coverage\s*:\s*12\.5%/is
+  );
+  assert.match(css, /\[data-guideline-platform="tiktok"\][\s\S]*72\.2%\s+65\.6%/i);
+  assert.match(script, /guidelinesEnabled:\s*false/);
+  assert.match(script, /guidelinesPlatform:\s*"instagram-reels"/);
+  assert.match(script, /state\.framePreset\s*===\s*"9:16"/);
+  assert.match(script, /Social UI guidelines hidden\./);
+  assert.match(script, /Social UI guidelines enabled\. Select Reel \/ TikTok \(9:16\) to display them\./);
+  assert.doesNotMatch(controls, /\b(?:save|saved|persist|export|download)\b/i);
+  assert.doesNotMatch(script, /sessionStorage\.(?:getItem|setItem)\([^)]*guideline/i);
 });
 
 test("Video Editor offers persistent Standard and Side by side workspace layouts", async () => {
@@ -384,6 +462,164 @@ test("Video Editor reuses the expiring Administrator proof without persisting pr
   assert.doesNotMatch(script, /\b(?:indexedDB|IDBDatabase|caches\.(?:open|match|put))\b/);
 });
 
+test("Video Editor exposes local Audio-Sync analysis and accessible guidepost controls", async () => {
+  const { audioAnalysis, audioAnalysisWorker, css, html, script } =
+    await readRouteSources();
+  assert.match(html, /<script\b[^>]*\bsrc="audio-analysis\.js"/i);
+  assert.match(html, /data-effect="audio-sync-cut"/i);
+  assert.match(html, /data-effect-tab-target="effect-tab-audio-sync-cut"/i);
+  assert.match(html, /\bid="effect-panel-audio-sync-cut"[^>]*\brole="tabpanel"/i);
+  assert.match(html, /<select\b[^>]*\bid="audio-sync-source"[^>]*>/i);
+  assert.match(html, /data-audio-sync-analyze[^>]*\bdisabled/i);
+  assert.match(html, /data-audio-sync-status[^>]*\brole="status"[^>]*\baria-live="polite"/i);
+
+  const graphSelect = html.match(
+    /<select\b[^>]*\bid="audio-sync-graph-view"[^>]*>[\s\S]*?<\/select>/i
+  )?.[0];
+  assert.ok(graphSelect, "Missing the Audio-Sync graph selector.");
+  assert.match(graphSelect, /<option\b[^>]*value="combined"[^>]*selected[^>]*>Combined<\/option>/i);
+  assert.match(graphSelect, /<option\b[^>]*value="waveform"[^>]*>Waveform<\/option>/i);
+  assert.match(graphSelect, /<option\b[^>]*value="frequency"[^>]*>Frequency<\/option>/i);
+  for (const graph of ["waveform", "spectrum"]) {
+    assert.match(
+      html,
+      new RegExp(`data-audio-sync-${graph}[\\s\\S]*?role="img"[\\s\\S]*?<canvas\\b`, "i")
+    );
+  }
+
+  for (const [id, value] of [
+    ["audio-sync-frequency-min", "40"],
+    ["audio-sync-frequency-max", "2000"],
+  ]) {
+    const input = html.match(new RegExp(`<input\\b[^>]*id="${id}"[^>]*>`, "i"))?.[0];
+    assert.ok(input, `Missing ${id}.`);
+    assert.match(input, /\btype="number"/i);
+    assert.match(input, new RegExp(`\\bvalue="${value}"`, "i"));
+  }
+  assert.match(
+    html,
+    /\bid="audio-sync-threshold"[^>]*\bmin="0"[^>]*\bmax="100"[^>]*\bstep="1"[^>]*\bvalue="65"/i
+  );
+  const direction = html.match(
+    /<select\b[^>]*\bid="audio-sync-direction"[^>]*>[\s\S]*?<\/select>/i
+  )?.[0];
+  assert.ok(direction, "Missing threshold-crossing direction selector.");
+  for (const value of ["rising", "falling", "both"]) {
+    assert.match(direction, new RegExp(`<option\\b[^>]*value="${value}"`, "i"));
+  }
+  for (const [value, label] of [
+    ["low", "Lows"],
+    ["mid", "Mids"],
+    ["high", "Highs"],
+    ["beats", "Beats"],
+  ]) {
+    assert.match(
+      html,
+      new RegExp(`data-audio-sync-recommendation="${value}"[^>]*>\\s*${label}\\s*<`, "i")
+    );
+  }
+
+  const ruleTemplate = html.match(
+    /<template\b[^>]*\bid="audio-sync-rule-template"[^>]*>[\s\S]*?<\/template>/i
+  )?.[0];
+  const guideTemplate = html.match(
+    /<template\b[^>]*\bid="audio-sync-guidepost-template"[^>]*>[\s\S]*?<\/template>/i
+  )?.[0];
+  assert.ok(ruleTemplate && guideTemplate, "Missing Audio-Sync rule or guidepost templates.");
+  assert.match(ruleTemplate, /data-audio-sync-rule-id/);
+  assert.match(ruleTemplate, /data-audio-sync-rule-color/);
+  assert.match(ruleTemplate, /data-audio-sync-rule-label/);
+  assert.match(ruleTemplate, /data-audio-sync-rule-count/);
+  for (const action of ["cut", "fill", "effect"]) {
+    assert.match(ruleTemplate, new RegExp(`data-guidepost-action="${action}"`, "i"));
+  }
+  assert.match(ruleTemplate, /data-guidepost-effect-type/);
+  assert.match(ruleTemplate, /data-delete-audio-sync-rule/);
+  assert.match(guideTemplate, /data-guidepost-group-id/);
+  assert.match(guideTemplate, /data-guidepost-color/);
+  assert.match(guideTemplate, /data-guidepost-source-clip-id/);
+  assert.match(guideTemplate, /data-guidepost-visual-id/);
+  assert.match(guideTemplate, /data-guidepost-source-time/);
+  assert.match(html, /\bid="audio-sync-guide-layer"[^>]*\baria-hidden="true"/i);
+  assert.match(html, /\bid="audio-sync-flash"[^>]*\bdata-flash-active="false"[^>]*\baria-hidden="true"/i);
+  assert.match(css, /\.audio-sync-guide-layer\s*\{[^}]*pointer-events\s*:\s*none/is);
+  assert.match(css, /\.audio-sync-flash\s*\{[^}]*pointer-events\s*:\s*none/is);
+
+  assert.match(script, /decodeAudioData\s*\(/);
+  assert.match(script, /AudioContext|webkitAudioContext/);
+  assert.match(script, /new\s+Worker\s*\(/);
+  assert.match(script, /audio-analysis-worker\.js/);
+  assert.match(audioAnalysisWorker, /importScripts\s*\(\s*["']\.\/audio-analysis\.js["']\s*\)/);
+  assert.match(audioAnalysisWorker, /postMessage\s*\(/);
+  assert.match(audioAnalysis, /createBandSeries/);
+  assert.match(audioAnalysis, /createOnsetSeries/);
+  assert.match(audioAnalysis, /findThresholdCrossings/);
+  assert.match(audioAnalysis, /recommendThreshold/);
+  assert.doesNotMatch(`${audioAnalysis}\n${audioAnalysisWorker}`, /\bfetch\s*\(|XMLHttpRequest|WebSocket/);
+  assert.match(script, /data-audio-sync-marker-list|audioSyncMarkerList/i);
+  assert.match(script, /data-guidepost-source-time|guidepostSourceTime/i);
+  assert.match(script, /sourceTime\s*-\s*[^;\n]*sourceStart/i);
+  assert.match(script, /0\.05/);
+  assert.match(script, /0\.25/);
+  assert.match(script, /ArrowLeft|ArrowRight/);
+  assert.match(script, /Delete|Backspace/);
+});
+
+test("Video Editor provides rights-safe local Audio and procedural sound-effect tools", async () => {
+  const { html, script } = await readRouteSources();
+  assert.match(html, /data-effect="audio"/i);
+  assert.match(html, /data-effect-tab-target="effect-tab-audio"/i);
+  assert.match(html, /\bid="effect-panel-audio"[^>]*\brole="tabpanel"/i);
+  for (const formLabel of [
+    "Search official YouTube for music",
+    "Search official YouTube for sound effects",
+  ]) {
+    const form = html.match(
+      new RegExp(`<form\\b[^>]*aria-label="${formLabel}"[^>]*>[\\s\\S]*?<\\/form>`, "i")
+    )?.[0];
+    assert.ok(form, `Missing ${formLabel}.`);
+    assert.match(form, /action="https:\/\/www\.youtube\.com\/results"/i);
+    assert.match(form, /method="get"/i);
+    assert.match(form, /target="_blank"/i);
+  }
+  assert.match(html, /No audio is downloaded\s+or imported\./i);
+  assert.match(html, /\bid="audio-local-file"[^>]*\btype="file"[^>]*\baccept="audio\/\*"/i);
+  assert.match(html, /\bid="audio-local-source"/i);
+  for (const id of ["audio-local-start", "audio-local-end"]) {
+    assert.match(
+      html,
+      new RegExp(`<input\\b[^>]*id="${id}"[^>]*type="number"[^>]*step="0\\.01"[^>]*disabled`, "i")
+    );
+  }
+  assert.match(html, /\bid="audio-local-preview"[^>]*\bcontrols[^>]*\bhidden/i);
+  assert.match(html, /data-audio-local-insert[^>]*\bdisabled/i);
+
+  for (const [preset, pressed] of [
+    ["click", "true"],
+    ["typing", "false"],
+  ]) {
+    assert.match(
+      html,
+      new RegExp(`data-sound-effect-preset="${preset}"[^>]*aria-pressed="${pressed}"`, "i")
+    );
+  }
+  assert.match(html, /generated procedurally in this browser and remain local/i);
+  assert.match(html, /\bid="sound-effect-loop"[^>]*\btype="checkbox"[^>]*\bdisabled/i);
+  assert.match(
+    html,
+    /\bid="sound-effect-duration"[^>]*\btype="number"[^>]*\bmin="1"[^>]*\bmax="30"[^>]*\bstep="0\.25"[^>]*\bvalue="3"[^>]*\bdisabled/i
+  );
+  assert.match(html, /data-sound-effect-preview/);
+  assert.match(html, /data-sound-effect-insert/);
+  assert.match(script, /window\.open\s*\([^)]*[_"']blank[^)]*noopener,noreferrer/is);
+  assert.match(script, /0\.12/);
+  assert.match(script, /1\.2/);
+  assert.match(script, /RIFF|WAVE/);
+  assert.doesNotMatch(script, /youtube(?:\.com)?\/(?:watch|embed)|youtu\.be|googlevideo|yt-dlp/i);
+  assert.doesNotMatch(script, /(?:extract|download)(?:YouTube|Youtube|Audio|Media)/);
+  assert.doesNotMatch(script, /(?:api[_-]?key|oauth|client[_-]?secret)/i);
+});
+
 test("Video Editor keeps imported media browser-local and releases object URLs", async () => {
   const { html, script } = await readRouteSources();
   const source = `${html}\n${script}`;
@@ -456,7 +692,10 @@ test("Video Editor swaps to a desktop-required message below 1024px", async () =
 test("Video Editor makes no export or project-persistence surface", async () => {
   const { html, script } = await readRouteSources();
 
-  assert.doesNotMatch(html, /\b(?:export|download|save project|open project)\b/i);
+  assert.doesNotMatch(
+    html,
+    /<(?:button|a|input)\b[^>]*(?:export|download|save project|open project)|\b(?:Export|Download|Save project|Open project)\b(?!ed)/i
+  );
   assert.doesNotMatch(
     script,
     /\b(?:localStorage|indexedDB|IDBDatabase|caches\.(?:open|match|put))\b/

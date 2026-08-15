@@ -7,7 +7,7 @@ Scope: Homepage Video Editor launchers and `/video-editor/` media import,
 composed preview, timeline tiers and clips, effects lane, editor tabs, and
 desktop-required boundary.
 
-Last verified: 2026-08-14
+Last verified: 2026-08-15
 
 ## Product contract
 
@@ -66,6 +66,38 @@ Last verified: 2026-08-14
   time label inside scrollable ruler content.
 - The preview selects the active clip on the highest occupied video tier and
   schedules every active audio-tier clip into the local mix.
+- Social UI guidelines are opt-in and render only for a fixed 9:16 frame.
+  Instagram Reels and TikTok each expose labelled top, right-side, and bottom
+  coverage zones plus a platform-specific safe-content outline. The selected
+  platform and enabled state survive temporary switches to an unsupported
+  frame, while the pointer-inert, assistive-technology-hidden overlay pauses
+  until 9:16 returns. These approximate editing guides do not claim to replace
+  each platform's current placement checker.
+- Audio-Sync Cut analyzes an Audio timeline clip locally after an explicit
+  action. A bounded worker pipeline downmixes the loudest channel, resamples
+  analysis to at most 22,050 Hz, applies a 1,024-sample Hann-windowed Fourier
+  transform, retains 64 logarithmic energy bands and a compact waveform, and
+  rejects oversized or undecodable input without changing the project.
+- Audio-Sync rules support editable frequency bounds, relative threshold, and
+  rising, falling, or bidirectional crossings. Lows, Mids, Highs, and Beats
+  recommendations create independent labelled color groups. Guideposts retain
+  source-audio coordinates and map through timeline moves and trims; visual
+  lines remain pointer-inert while an adjacent control list provides jump,
+  nudge, and delete keyboard actions.
+- A guidepost rule can split existing video clips, fill the first complete
+  empty guide gap with selected local video, or materialize an existing effect
+  at each marker. Batch operations reject overlaps and short source media
+  atomically. Forward playback flashes the rule color for 110 ms only when it
+  crosses an uncovered guidepost; a separate unrounded playback clock prevents
+  display-time rounding from skipping boundary crossings.
+- The Audio tool opens encoded searches on official YouTube in an isolated new
+  tab for discovery only. It never scrapes, extracts, or downloads YouTube
+  media. User-owned local audio can be previewed, bounded to a source range,
+  and inserted on an Audio tier with its source trim preserved.
+- Built-in Click and Typing sound effects are deterministic WAV files generated
+  in the browser. Click is 0.12 seconds; Typing is 1.2 seconds by default and
+  can loop for a bounded 1–30 second duration. Preview URLs and every inserted
+  media URL are revoked during their normal cleanup paths.
 - Closed Captions, Windows 98, and Transitions open one labelled editor tab
   each. The strip uses the repository's native 98.css
   `menu[role="tablist"] > li[role="tab"] > a` structure. Every tab keeps its
@@ -104,6 +136,14 @@ includes initial blocking, focus trapping, Escape, invalid credentials,
 network failure, one-hour reuse across reload, timed expiry, proof removal,
 project preservation, and repeated reauthentication. Every route test
 collects console errors, uncaught page errors, and failed local resources.
+Audio coverage uses a deterministic six-second 16 kHz WAV with separated low,
+mid, and high bursts. It verifies decoded waveform/Fourier pixels, editable and
+recommended rules, distinct guide groups, source-to-timeline mapping, marker
+keyboard actions, uncovered playback flashes, bulk effect/cut/fill actions,
+decode failure, safe YouTube discovery, local range insertion, Click/Typing
+generation, loop duration, reset behavior, and object-URL cleanup. Pure Node
+tests additionally cover FFT bounds, known-frequency directional crossings,
+silence/onset behavior, and invalid analysis inputs.
 
 Before release, run:
 
@@ -135,7 +175,10 @@ hatched grips, native effect tabs at minimum and maximum panel widths, long tab
 titles, reduced motion, the
 pressed close X, and ruler scale endpoints. Check screenshots and semantic snapshots,
 document-level overflow, console output, page errors, and failed local
-resources. The repository does not currently install an automated
+resources. For Audio-Sync, inspect empty, analyzed, multiple-rule, guidepost,
+cut/fill/effect, flash, and decode-error states. For Audio, inspect local range,
+Click, Typing, and loop states at 240-, 300-, and 420-pixel Effect Editor widths.
+The repository does not currently install an automated
 accessibility scanner, so do not claim an axe audit.
 
 ## Security boundary

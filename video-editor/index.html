@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="../style.css" />
     <link rel="stylesheet" href="style.css" />
     <script src="../scripts/home/game-stats-backend.js"></script>
+    <script src="audio-analysis.js"></script>
     <script src="script.js" type="module"></script>
   </head>
   <body class="video-editor-page" data-video-editor-auth-state="unauthenticated">
@@ -159,6 +160,36 @@
                 />
                 <span>Transitions</span>
               </button>
+              <button
+                class="effect-launcher"
+                type="button"
+                data-effect="audio-sync-cut"
+                data-effect-tab-target="effect-tab-audio-sync-cut"
+                aria-controls="effect-panel-audio-sync-cut"
+              >
+                <img
+                  src="../assets/app-icons/ico/mixer_sound.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <span>Audio-Sync Cut</span>
+              </button>
+              <button
+                class="effect-launcher"
+                type="button"
+                data-effect="audio"
+                data-effect-tab-target="effect-tab-audio"
+                aria-controls="effect-panel-audio"
+              >
+                <img
+                  src="../assets/app-icons/ico/mixer_cd_sound.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <span>Audio</span>
+              </button>
             </div>
           </section>
         </div>
@@ -283,6 +314,47 @@
                   </button>
                 </div>
               </div>
+              <div class="video-editor-guidelines-block">
+                <div
+                  class="video-editor-guidelines-controls"
+                  id="video-editor-guidelines"
+                  data-video-editor-guidelines-controls
+                  role="group"
+                  aria-label="Social UI guidelines"
+                >
+                  <div
+                    class="video-editor-guidelines-controls__toggle"
+                  >
+                    <input
+                      id="video-editor-guidelines-toggle"
+                      data-video-editor-guidelines-toggle
+                      type="checkbox"
+                      aria-controls="video-editor-social-guidelines-overlay"
+                      aria-describedby="video-editor-guidelines-note"
+                    />
+                    <label for="video-editor-guidelines-toggle">
+                      Show social UI guidelines
+                    </label>
+                  </div>
+                  <label for="video-editor-guidelines-platform">Platform</label>
+                  <select
+                    id="video-editor-guidelines-platform"
+                    data-video-editor-guidelines-platform
+                    aria-describedby="video-editor-guidelines-note"
+                    disabled
+                  >
+                    <option value="instagram-reels" selected>Instagram Reels</option>
+                    <option value="tiktok">TikTok</option>
+                  </select>
+                </div>
+                <small
+                  class="video-editor-guidelines-controls__note"
+                  id="video-editor-guidelines-note"
+                >
+                  Approximate&mdash;platform UI varies by device, caption length, placement,
+                  and add-ons.
+                </small>
+              </div>
             </div>
             <div
               class="preview-stage-viewport"
@@ -297,6 +369,62 @@
               >
                 <video id="preview-video" playsinline hidden></video>
                 <div id="preview-audio-mix" aria-hidden="true"></div>
+                <div
+                  class="video-editor-social-guidelines"
+                  id="video-editor-social-guidelines-overlay"
+                  data-video-editor-social-guidelines-overlay
+                  data-guideline-platform="instagram-reels"
+                  aria-hidden="true"
+                  hidden
+                >
+                  <div
+                    class="video-editor-social-guidelines__zone video-editor-social-guidelines__zone--top"
+                    data-guideline-zone="top"
+                  >
+                    <span>Top UI coverage</span>
+                  </div>
+                  <div
+                    class="video-editor-social-guidelines__zone video-editor-social-guidelines__zone--right"
+                    data-guideline-zone="right"
+                  >
+                    <span>Right UI coverage</span>
+                  </div>
+                  <div
+                    class="video-editor-social-guidelines__zone video-editor-social-guidelines__zone--bottom"
+                    data-guideline-zone="bottom"
+                  >
+                    <span>Bottom UI coverage</span>
+                  </div>
+                  <div
+                    class="video-editor-social-guidelines__safe-area"
+                    data-guideline-safe-area
+                  >
+                    <svg
+                      class="video-editor-social-guidelines__safe-outline"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
+                      <polygon
+                        data-guideline-safe-outline="instagram-reels"
+                        points="5.5,13.8 94.4,13.8 94.4,60 79.4,60 79.4,65.2 5.5,65.2"
+                      ></polygon>
+                      <polygon
+                        data-guideline-safe-outline="tiktok"
+                        points="11.1,12.5 72.2,12.5 72.2,65.6 11.1,65.6"
+                      ></polygon>
+                    </svg>
+                    <span>Safe content area</span>
+                  </div>
+                </div>
+                <div
+                  class="audio-sync-flash"
+                  id="audio-sync-flash"
+                  data-audio-sync-flash
+                  data-flash-active="false"
+                  aria-hidden="true"
+                  hidden
+                ></div>
                 <div class="preview-empty-state" id="preview-empty-state">
                   <img
                     src="../assets/app-icons/ico/movie_maker.ico"
@@ -462,6 +590,12 @@
                     <span class="timeline-track__empty" data-effects-empty>Effects appear here</span>
                   </div>
                 </section>
+                <div
+                  class="audio-sync-guide-layer"
+                  id="audio-sync-guide-layer"
+                  data-audio-sync-guide-layer
+                  aria-hidden="true"
+                ></div>
                 <div class="timeline-playhead" id="timeline-playhead" aria-hidden="true"></div>
               </div>
             </div>
@@ -628,6 +762,344 @@
               </p>
               <button type="button" data-add-effect="transitions">Add to timeline</button>
             </section>
+
+            <section
+              class="effect-editor audio-sync-editor"
+              id="effect-panel-audio-sync-cut"
+              data-effect-editor="audio-sync-cut"
+              role="tabpanel"
+              aria-labelledby="effect-tab-audio-sync-cut"
+              hidden
+            >
+              <header class="effect-editor__header">
+                <img
+                  src="../assets/app-icons/ico/mixer_sound.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <div>
+                  <h3>Audio-Sync Cut</h3>
+                  <p>Generate editable guideposts from local audio</p>
+                </div>
+              </header>
+
+              <fieldset class="compact-effect-fieldset">
+                <legend>Audio analysis</legend>
+                <label for="audio-sync-source">Audio timeline clip</label>
+                <select id="audio-sync-source">
+                  <option value="" selected>Select an Audio timeline clip&hellip;</option>
+                </select>
+                <button type="button" data-audio-sync-analyze disabled>
+                  Analyze source
+                </button>
+                <p
+                  class="compact-effect-status"
+                  data-audio-sync-status
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  Choose an Audio timeline clip to begin.
+                </p>
+              </fieldset>
+
+              <fieldset class="compact-effect-fieldset audio-sync-graph-controls">
+                <legend>Analysis graph</legend>
+                <label for="audio-sync-graph-view">Graph view</label>
+                <select id="audio-sync-graph-view">
+                  <option value="combined" selected>Combined</option>
+                  <option value="waveform">Waveform</option>
+                  <option value="frequency">Frequency</option>
+                </select>
+                <div class="audio-sync-graphs sunken-panel">
+                  <div
+                    class="audio-sync-graph audio-sync-graph--waveform"
+                    data-audio-sync-waveform
+                    role="img"
+                    aria-label="Waveform graph. No audio has been analyzed."
+                  >
+                    <canvas width="360" height="76" aria-hidden="true"></canvas>
+                    <span aria-hidden="true">Waveform appears after analysis</span>
+                  </div>
+                  <div
+                    class="audio-sync-graph audio-sync-graph--spectrum"
+                    data-audio-sync-spectrum
+                    role="img"
+                    aria-label="Frequency graph. No audio has been analyzed."
+                  >
+                    <canvas width="360" height="76" aria-hidden="true"></canvas>
+                    <span aria-hidden="true">Frequency spectrum appears after analysis</span>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset class="compact-effect-fieldset">
+                <legend>Guidepost rule</legend>
+                <div class="audio-sync-frequency-range">
+                  <div class="compact-effect-field">
+                    <label for="audio-sync-frequency-min">Minimum Hz</label>
+                    <input
+                      id="audio-sync-frequency-min"
+                      data-audio-sync-frequency-min
+                      type="number"
+                      inputmode="numeric"
+                      min="20"
+                      max="20000"
+                      step="1"
+                      value="40"
+                    />
+                  </div>
+                  <div class="compact-effect-field">
+                    <label for="audio-sync-frequency-max">Maximum Hz</label>
+                    <input
+                      id="audio-sync-frequency-max"
+                      data-audio-sync-frequency-max
+                      type="number"
+                      inputmode="numeric"
+                      min="20"
+                      max="20000"
+                      step="1"
+                      value="2000"
+                    />
+                  </div>
+                </div>
+                <div class="compact-effect-field">
+                  <div class="compact-effect-label-row">
+                    <label for="audio-sync-threshold">Threshold</label>
+                    <output id="audio-sync-threshold-output" for="audio-sync-threshold">
+                      65%
+                    </output>
+                  </div>
+                  <input
+                    id="audio-sync-threshold"
+                    data-audio-sync-threshold
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="65"
+                  />
+                </div>
+                <label for="audio-sync-direction">Crossing direction</label>
+                <select id="audio-sync-direction" data-audio-sync-direction>
+                  <option value="rising" selected>Rising</option>
+                  <option value="falling">Falling</option>
+                  <option value="both">Both</option>
+                </select>
+                <div class="audio-sync-recommendations" aria-label="Frequency recommendations">
+                  <span>Recommendations</span>
+                  <div class="audio-sync-recommendations__buttons">
+                    <button type="button" data-audio-sync-recommendation="low">Lows</button>
+                    <button type="button" data-audio-sync-recommendation="mid">Mids</button>
+                    <button type="button" data-audio-sync-recommendation="high">Highs</button>
+                    <button type="button" data-audio-sync-recommendation="beats">Beats</button>
+                  </div>
+                </div>
+                <button type="button" data-audio-sync-generate disabled>
+                  Generate guideposts
+                </button>
+              </fieldset>
+
+              <section class="audio-sync-rules" aria-labelledby="audio-sync-rules-heading">
+                <div class="compact-effect-section-heading">
+                  <h4 id="audio-sync-rules-heading">Guidepost rules</h4>
+                  <output data-audio-sync-rule-total aria-live="polite">0 rules</output>
+                </div>
+                <ul id="audio-sync-rules" role="list" aria-label="Audio guidepost rules">
+                  <li class="compact-effect-empty" data-audio-sync-rules-empty>
+                    Generate a rule to add color-coded timeline guideposts.
+                  </li>
+                </ul>
+              </section>
+            </section>
+
+            <section
+              class="effect-editor audio-editor"
+              id="effect-panel-audio"
+              data-effect-editor="audio"
+              role="tabpanel"
+              aria-labelledby="effect-tab-audio"
+              hidden
+            >
+              <header class="effect-editor__header">
+                <img
+                  src="../assets/app-icons/ico/mixer_cd_sound.ico"
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+                <div>
+                  <h3>Audio</h3>
+                  <p>Discover references and insert local audio</p>
+                </div>
+              </header>
+
+              <fieldset class="compact-effect-fieldset">
+                <legend>YouTube music discovery</legend>
+                <form
+                  class="compact-effect-search"
+                  action="https://www.youtube.com/results"
+                  method="get"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Search official YouTube for music"
+                >
+                  <label for="audio-effect-youtube-query">Search YouTube</label>
+                  <div class="compact-effect-search__row">
+                    <input
+                      id="audio-effect-youtube-query"
+                      name="search_query"
+                      type="search"
+                      autocomplete="off"
+                      placeholder="Song or artist"
+                    />
+                    <button type="submit" data-audio-youtube-search>Search</button>
+                  </div>
+                </form>
+                <p class="compact-effect-note">
+                  Search opens official YouTube results in a new tab. No audio is downloaded or imported.
+                </p>
+              </fieldset>
+
+              <fieldset class="compact-effect-fieldset">
+                <legend>Local audio</legend>
+                <label for="audio-local-file">Choose an audio file</label>
+                <input id="audio-local-file" type="file" accept="audio/*" />
+                <label for="audio-local-source">Local source</label>
+                <select id="audio-local-source">
+                  <option value="" selected>No local audio selected</option>
+                </select>
+                <div class="audio-local-range">
+                  <div class="compact-effect-field">
+                    <label for="audio-local-start">Start</label>
+                    <input
+                      id="audio-local-start"
+                      type="number"
+                      inputmode="decimal"
+                      min="0"
+                      max="0"
+                      step="0.01"
+                      value="0"
+                      disabled
+                    />
+                    <output for="audio-local-start" data-audio-local-start-output>00:00.00</output>
+                  </div>
+                  <div class="compact-effect-field">
+                    <label for="audio-local-end">End</label>
+                    <input
+                      id="audio-local-end"
+                      type="number"
+                      inputmode="decimal"
+                      min="0"
+                      max="0"
+                      step="0.01"
+                      value="0"
+                      disabled
+                    />
+                    <output for="audio-local-end" data-audio-local-end-output>00:00.00</output>
+                  </div>
+                </div>
+                <audio
+                  id="audio-local-preview"
+                  controls
+                  preload="metadata"
+                  aria-label="Local audio selection preview"
+                  hidden
+                ></audio>
+                <button type="button" data-audio-local-insert disabled>
+                  Insert local audio at playhead
+                </button>
+              </fieldset>
+
+              <fieldset class="compact-effect-fieldset sound-effect-editor">
+                <legend>Sound Effects</legend>
+                <form
+                  class="compact-effect-search"
+                  action="https://www.youtube.com/results"
+                  method="get"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Search official YouTube for sound effects"
+                >
+                  <label for="sound-effect-youtube-query">Find a sound effect</label>
+                  <div class="compact-effect-search__row">
+                    <input
+                      id="sound-effect-youtube-query"
+                      name="search_query"
+                      type="search"
+                      autocomplete="off"
+                      placeholder="Sound effect"
+                    />
+                    <button type="submit" data-sound-effect-youtube-search>Search</button>
+                  </div>
+                </form>
+                <p class="compact-effect-note">
+                  Search opens official YouTube results in a new tab. No audio is downloaded or imported.
+                </p>
+                <span id="sound-effect-preset-label">Built-in local presets</span>
+                <div
+                  class="sound-effect-presets"
+                  role="group"
+                  aria-labelledby="sound-effect-preset-label"
+                >
+                  <button
+                    type="button"
+                    data-sound-effect-preset="click"
+                    aria-pressed="true"
+                  >
+                    <strong>Click</strong>
+                    <span>Short interface click</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-sound-effect-preset="typing"
+                    aria-pressed="false"
+                  >
+                    <strong>Typing</strong>
+                    <span>Keyboard typing pattern</span>
+                  </button>
+                </div>
+                <p class="compact-effect-note">
+                  Click and Typing are generated procedurally in this browser and remain local.
+                </p>
+                <div class="sound-effect-options">
+                  <input id="sound-effect-loop" type="checkbox" disabled />
+                  <label for="sound-effect-loop">Loop Typing</label>
+                  <label for="sound-effect-duration">Duration</label>
+                  <div>
+                    <input
+                      id="sound-effect-duration"
+                      type="number"
+                      inputmode="numeric"
+                      min="1"
+                      max="30"
+                      step="0.25"
+                      value="3"
+                      disabled
+                    />
+                    <span>seconds</span>
+                  </div>
+                </div>
+                <div class="compact-effect-actions">
+                  <button type="button" data-sound-effect-preview>
+                    Preview Click
+                  </button>
+                  <button type="button" data-sound-effect-insert>
+                    Insert at playhead
+                  </button>
+                </div>
+                <p
+                  class="compact-effect-status"
+                  data-sound-effect-status
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  Click preset ready.
+                </p>
+              </fieldset>
+            </section>
           </div>
         </div>
       </section>
@@ -745,7 +1217,15 @@
     </template>
 
     <template id="clip-template">
-      <article class="timeline-clip" data-clip-id="" role="listitem" tabindex="0" draggable="true">
+      <article
+        class="timeline-clip"
+        data-clip-id=""
+        data-source-start=""
+        data-source-end=""
+        role="listitem"
+        tabindex="0"
+        draggable="true"
+      >
         <button class="trim-handle trim-handle--start" type="button" data-trim="start">
           <span class="visually-hidden">Trim clip start</span>
         </button>
@@ -757,6 +1237,89 @@
           <span class="visually-hidden">Trim clip end</span>
         </button>
       </article>
+    </template>
+
+    <template id="audio-sync-rule-template">
+      <li class="audio-sync-rule" data-audio-sync-rule-id="" role="listitem">
+        <div class="audio-sync-rule__heading">
+          <input
+            type="color"
+            value="#ff00ff"
+            data-audio-sync-rule-color
+            aria-label="Guidepost color"
+          />
+          <input
+            type="text"
+            value="Custom frequency rule"
+            data-audio-sync-rule-label
+            aria-label="Guidepost rule label"
+          />
+          <output data-audio-sync-rule-count>0 guideposts</output>
+        </div>
+        <div class="audio-sync-rule__actions" aria-label="Guidepost actions">
+          <button
+            type="button"
+            data-guidepost-action="cut"
+            aria-pressed="false"
+          >
+            Cut
+          </button>
+          <button
+            type="button"
+            data-guidepost-action="fill"
+            aria-pressed="false"
+          >
+            Fill
+          </button>
+          <button
+            type="button"
+            data-guidepost-action="effect"
+            aria-pressed="false"
+          >
+            Effect
+          </button>
+          <select
+            data-guidepost-effect-select
+            data-guidepost-effect-type
+            aria-label="Effect at guideposts"
+            disabled
+          >
+            <option value="closed-captions">Closed Captions</option>
+            <option value="windows-98">Windows 98</option>
+            <option value="transitions">Transitions</option>
+          </select>
+          <button
+            type="button"
+            data-audio-sync-rule-delete
+            data-delete-audio-sync-rule
+            aria-label="Delete guidepost rule"
+          >
+            Delete
+          </button>
+        </div>
+        <div
+          class="audio-sync-marker-list"
+          data-audio-sync-marker-list
+          role="list"
+          aria-label="Guideposts for this rule"
+        ></div>
+      </li>
+    </template>
+
+    <template id="audio-sync-guidepost-template">
+      <div
+        class="audio-sync-guidepost-group"
+        data-guidepost-group-id=""
+        data-guidepost-color=""
+        data-guidepost-source-clip-id=""
+      >
+        <span
+          class="audio-sync-guidepost"
+          data-guidepost-visual-id=""
+          data-guidepost-time=""
+          data-guidepost-source-time=""
+        ></span>
+      </div>
     </template>
 
     <template id="effect-item-template">

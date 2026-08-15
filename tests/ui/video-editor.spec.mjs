@@ -10,6 +10,7 @@ const videoAsset = fileURLToPath(
 );
 const videoName = "victory-royale.webm";
 const audioName = "timeline-tone.wav";
+const audioSyncName = "audio-sync-bursts.wav";
 const administratorProofStorageKey = "personalSiteAdministratorProofV1";
 const administratorApiBaseUrl = "https://game-stats.test";
 const administratorProof = `${"a".repeat(32)}.${"b".repeat(32)}`;
@@ -20,8 +21,7 @@ const administratorCredentials = Object.freeze({
 const hourInMilliseconds = 60 * 60 * 1_000;
 const authClockStart = Date.UTC(2026, 7, 11, 17, 0, 0);
 
-const createWavBuffer = ({ durationSeconds = 2, frequency = 440 } = {}) => {
-  const sampleRate = 8_000;
+const createPcmWavBuffer = ({ durationSeconds, sampleAt, sampleRate }) => {
   const channelCount = 1;
   const bytesPerSample = 2;
   const sampleCount = Math.floor(sampleRate * durationSeconds);
@@ -44,7 +44,7 @@ const createWavBuffer = ({ durationSeconds = 2, frequency = 440 } = {}) => {
 
   for (let sample = 0; sample < sampleCount; sample += 1) {
     const value = Math.round(
-      Math.sin((sample / sampleRate) * frequency * Math.PI * 2) * 4_000
+      Math.max(-1, Math.min(1, sampleAt(sample / sampleRate))) * 30_000
     );
     wav.writeInt16LE(value, 44 + sample * bytesPerSample);
   }
@@ -52,10 +52,53 @@ const createWavBuffer = ({ durationSeconds = 2, frequency = 440 } = {}) => {
   return wav;
 };
 
+const createWavBuffer = ({ durationSeconds = 2, frequency = 440 } = {}) =>
+  createPcmWavBuffer({
+    durationSeconds,
+    sampleRate: 8_000,
+    sampleAt: (time) => Math.sin(time * frequency * Math.PI * 2) * (4_000 / 30_000),
+  });
+
+const audioSyncBursts = Object.freeze([
+  { amplitude: 0.9, end: 0.5, frequency: 120, start: 0.25 },
+  { amplitude: 0.82, end: 1.5, frequency: 1_000, start: 1.25 },
+  { amplitude: 0.95, end: 2.5, frequency: 3_000, start: 2.25 },
+  { amplitude: 0.55, end: 3.5, frequency: 3_000, start: 3.25 },
+  { amplitude: 0.44, end: 4.5, frequency: 1_000, start: 4.25 },
+  { amplitude: 0.48, end: 5.75, frequency: 120, start: 5.5 },
+]);
+
+const createAudioSyncWavBuffer = () =>
+  createPcmWavBuffer({
+    durationSeconds: 6,
+    sampleRate: 16_000,
+    sampleAt: (time) => {
+      const fadeSeconds = 0.02;
+      return audioSyncBursts.reduce((value, burst) => {
+        if (time < burst.start || time >= burst.end) return value;
+        const edgeDistance = Math.min(time - burst.start, burst.end - time);
+        const fadeProgress = Math.min(1, edgeDistance / fadeSeconds);
+        const envelope = Math.sin((fadeProgress * Math.PI) / 2) ** 2;
+        return (
+          value +
+          Math.sin((time - burst.start) * burst.frequency * Math.PI * 2) *
+            burst.amplitude *
+            envelope
+        );
+      }, 0);
+    },
+  });
+
 const generatedAudio = () => ({
   name: audioName,
   mimeType: "audio/wav",
   buffer: createWavBuffer(),
+});
+
+const generatedAudioSync = () => ({
+  name: audioSyncName,
+  mimeType: "audio/wav",
+  buffer: createAudioSyncWavBuffer(),
 });
 
 const monitorRuntime = (page) => {
@@ -236,6 +279,44 @@ const setPlayhead = async (page, seconds) => {
   }, seconds);
 };
 
+const audioSyncRuleCards = (page) =>
+  page.locator("#audio-sync-rules [data-audio-sync-rule-id]");
+
+const accessibleGuideposts = (rule) =>
+  rule.locator("[data-audio-sync-marker-list] [data-guidepost-id]");
+
+const addAudioSyncClip = async (page) => {
+  await importMedia(page, [generatedAudioSync()]);
+  await page
+    .getByTestId("media-bin")
+    .getByRole("button", { name: `Add ${audioSyncName} at the playhead` })
+    .click();
+  const clip = page
+    .getByTestId("timeline-tier-audio-1")
+    .locator("article[data-clip-id]");
+  await expect(clip).toHaveCount(1);
+  return clip;
+};
+
+const analyzeAudioSyncClip = async (page) => {
+  await page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]').click();
+  const panel = page.getByRole("tabpanel", { name: "Audio-Sync Cut" });
+  await expect(panel).toBeVisible();
+  const source = page.getByLabel("Audio timeline clip", { exact: true });
+  await expect(source.locator("option")).toHaveCount(2);
+  await source.selectOption({ index: 1 });
+  const startedAt = Date.now();
+  await panel.getByRole("button", { name: "Analyze source" }).click();
+  await expect(panel.locator("[data-audio-sync-status]")).toContainText(
+    new RegExp(`Analyzed ${audioSyncName}: 00:06\\.00 at \\d+ Hz\\.`),
+    { timeout: 20_000 }
+  );
+  expect(Date.now() - startedAt, "six-second local analysis should remain responsive").toBeLessThan(
+    15_000
+  );
+  return panel;
+};
+
 const tabLabels = async (page) =>
   page
     .getByTestId("effect-tab-list")
@@ -401,6 +482,24 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
     "data-video-editor-workspace-layout",
     "standard"
   );
+  const guidelineToggle = page.getByLabel("Show social UI guidelines", {
+    exact: true,
+  });
+  const guidelinePlatform = page.getByLabel("Platform", { exact: true });
+  await expect(guidelineToggle).not.toBeChecked();
+  await expect(guidelinePlatform).toBeDisabled();
+  await expect(guidelineToggle.check({ timeout: 750 })).rejects.toThrow();
+  await expect(guidelineToggle).not.toBeChecked();
+  await expect(page.locator("#video-editor-social-guidelines-overlay")).toBeHidden();
+  for (const tool of ["audio-sync-cut", "audio"]) {
+    const launcher = page.locator(
+      `[data-effect-tab-target][data-effect="${tool}"]`
+    );
+    await expect(launcher).toBeVisible();
+    await expect(launcher.click({ timeout: 750 })).rejects.toThrow();
+  }
+  await expect(page.locator("#effect-panel-audio-sync-cut")).toBeHidden();
+  await expect(page.locator("#effect-panel-audio")).toBeHidden();
 
   await page.screenshot({
     path: testInfo.outputPath("video-editor-auth-required-desktop.png"),
@@ -437,6 +536,12 @@ test("shows only Desktop Required below 1024px even without authentication", asy
       await expect(page.locator("#video-editor-compose-effects-separator")).toBeHidden();
       await expect(page.locator("#video-editor-workspace-layout")).toBeHidden();
       await expect(page.locator("#video-editor-preview-timeline-separator")).toBeHidden();
+      await expect(page.locator("#video-editor-guidelines")).toBeHidden();
+      await expect(page.locator("#video-editor-social-guidelines-overlay")).toBeHidden();
+      await expect(
+        page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]')
+      ).toBeHidden();
+      await expect(page.locator('[data-effect-tab-target][data-effect="audio"]')).toBeHidden();
       await page.screenshot({
         path: testInfo.outputPath(`video-editor-unauthenticated-${viewport.name}.png`),
       });
@@ -753,6 +858,201 @@ test("updates the preview frame presets and contains imported video", async ({
   await page.screenshot({
     path: testInfo.outputPath("video-editor-frame-contained-video.png"),
   });
+
+  runtime.expectClean();
+});
+
+test("shows accessible platform-specific social guidelines only for fixed 9:16 frames", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+
+  const controls = page.getByRole("group", { name: "Social UI guidelines" });
+  const toggle = page.getByLabel("Show social UI guidelines", { exact: true });
+  const platform = page.getByLabel("Platform", { exact: true });
+  const preset = page.getByLabel("Frame size", { exact: true });
+  const overlay = page.locator("#video-editor-social-guidelines-overlay");
+  const status = page.locator("#editor-status");
+  await expect(controls).toBeVisible();
+  await expect(controls).toHaveAttribute("data-guidelines-state", "off");
+  await expect(toggle).not.toBeChecked();
+  await expect(toggle).toHaveAttribute(
+    "aria-controls",
+    "video-editor-social-guidelines-overlay"
+  );
+  await expect(toggle).toHaveAttribute("aria-describedby", "video-editor-guidelines-note");
+  await expect(platform).toHaveAttribute(
+    "aria-describedby",
+    "video-editor-guidelines-note"
+  );
+  await expect(page.locator("#video-editor-guidelines-note")).toContainText(
+    /Approximate.*platform UI varies by device, caption length, placement, and add-ons\./
+  );
+  await expect(platform).toBeDisabled();
+  await expect(platform).toHaveValue("instagram-reels");
+  await expect(platform.locator("option")).toHaveText(["Instagram Reels", "TikTok"]);
+  await expect(overlay).toBeHidden();
+  await expect(overlay).toHaveAttribute("hidden", "");
+  await expect(overlay).toHaveAttribute("aria-hidden", "true");
+
+  await toggle.focus();
+  await expect(toggle).toBeFocused();
+  await toggle.press("Space");
+  await expect(toggle).toBeChecked();
+  await expect(platform).toBeEnabled();
+  await expect(overlay).toBeHidden();
+  await expect(controls).toHaveAttribute("data-guidelines-state", "paused");
+  await expect(status).toHaveText(
+    "Social UI guidelines enabled. Select Reel / TikTok (9:16) to display them."
+  );
+
+  await preset.selectOption("9:16");
+  await expect(overlay).toBeVisible();
+  await expect(overlay).not.toHaveAttribute("hidden", "");
+  await expect(overlay).toHaveAttribute("aria-hidden", "true");
+  await expect(overlay).toHaveAttribute("data-guideline-platform", "instagram-reels");
+  await expect(controls).toHaveAttribute("data-guidelines-state", "visible");
+  for (const label of [
+    "Top controls",
+    "Like / comment / share",
+    "Caption / audio / navigation",
+    "Safe content area",
+  ]) {
+    await expect(overlay.getByText(label, { exact: true })).toBeVisible();
+  }
+  await expect(overlay).toHaveCSS("pointer-events", "none");
+
+  const readGeometry = () =>
+    overlay.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const rectangle = (selector) =>
+        element.querySelector(selector).getBoundingClientRect();
+      const top = rectangle('[data-guideline-zone="top"]');
+      const right = rectangle('[data-guideline-zone="right"]');
+      const bottom = rectangle('[data-guideline-zone="bottom"]');
+      const safe = element.querySelector("[data-guideline-safe-area]");
+      return {
+        bottomHeight: bottom.height / bounds.height,
+        rightEdge: (bounds.right - right.right) / bounds.width,
+        rightBottom: (bounds.bottom - right.bottom) / bounds.height,
+        rightTop: (right.top - bounds.top) / bounds.height,
+        rightWidth: right.width / bounds.width,
+        safeClipPath: getComputedStyle(safe).clipPath,
+        topLeft: (top.left - bounds.left) / bounds.width,
+        topRight: (bounds.right - top.right) / bounds.width,
+        topHeight: top.height / bounds.height,
+      };
+    });
+  const expectGeometry = (actual, expected) => {
+    for (const [name, value] of Object.entries(expected)) {
+      expect(Math.abs(actual[name] - value), `${name} guideline ratio`).toBeLessThanOrEqual(
+        0.015
+      );
+    }
+  };
+
+  expectGeometry(await readGeometry(), {
+    bottomHeight: 0.348,
+    rightBottom: 0.348,
+    rightEdge: 0.056,
+    rightTop: 0.6,
+    rightWidth: 0.15,
+    topHeight: 0.138,
+    topLeft: 0,
+    topRight: 0,
+  });
+  expect((await readGeometry()).safeClipPath).toBe(
+    "polygon(5.5% 13.8%, 94.4% 13.8%, 94.4% 60%, 79.4% 60%, 79.4% 65.2%, 5.5% 65.2%)"
+  );
+  expect(
+    await overlay.evaluate((element) => {
+      const zone = element.querySelector('[data-guideline-zone="top"]');
+      const bounds = zone.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        bounds.left + bounds.width / 2,
+        bounds.top + bounds.height / 2
+      );
+      return Boolean(hit?.closest("#video-editor-social-guidelines-overlay"));
+    })
+  ).toBe(false);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-guidelines-instagram-reels.png"),
+  });
+
+  await toggle.press("Space");
+  await expect(overlay).toBeHidden();
+  await expect(platform).toBeDisabled();
+  await expect(status).toHaveText("Social UI guidelines hidden.");
+  await toggle.press("Space");
+  await expect(overlay).toBeVisible();
+  await expect(status).toHaveText("Instagram Reels UI guidelines shown.");
+
+  await platform.focus();
+  await expect(platform).toBeFocused();
+  await platform.selectOption("tiktok");
+  await expect(platform).toHaveValue("tiktok");
+  await expect(overlay).toHaveAttribute("data-guideline-platform", "tiktok");
+  await expect(status).toHaveText("TikTok UI guidelines shown.");
+  for (const label of [
+    "Feed header",
+    "Like / comment / save / share",
+    "Caption / sound / navigation",
+  ]) {
+    await expect(overlay.getByText(label, { exact: true })).toBeVisible();
+  }
+  expectGeometry(await readGeometry(), {
+    bottomHeight: 0.344,
+    rightBottom: 0.344,
+    rightEdge: 0.111,
+    rightTop: 0.438,
+    rightWidth: 0.167,
+    topHeight: 0.125,
+    topLeft: 0.111,
+    topRight: 0.111,
+  });
+  expect((await readGeometry()).safeClipPath).toBe(
+    "polygon(11.1% 12.5%, 72.2% 12.5%, 72.2% 65.6%, 11.1% 65.6%)"
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-guidelines-tiktok.png"),
+  });
+
+  for (const unsupportedPreset of ["16:9", "4:5", "custom", "none"]) {
+    await test.step(`guidelines pause for ${unsupportedPreset}`, async () => {
+      await preset.selectOption(unsupportedPreset);
+      await expect(toggle).toBeChecked();
+      await expect(platform).toBeEnabled();
+      await expect(platform).toHaveValue("tiktok");
+      await expect(overlay).toBeHidden();
+      await expect(overlay).toHaveAttribute("aria-hidden", "true");
+      await expect(controls).toHaveAttribute("data-guidelines-state", "paused");
+    });
+  }
+
+  await preset.selectOption("9:16");
+  await expect(toggle).toBeChecked();
+  await expect(platform).toHaveValue("tiktok");
+  await expect(overlay).toBeVisible();
+  for (const viewport of [
+    { width: 1024, height: 800, name: "minimum-desktop" },
+    { width: 1280, height: 800, name: "desktop" },
+    { width: 1440, height: 900, name: "wide" },
+  ]) {
+    await test.step(viewport.name, async () => {
+      await page.setViewportSize(viewport);
+      await expect(overlay).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+        )
+      ).toBe(false);
+      await page.screenshot({
+        path: testInfo.outputPath(`video-editor-guidelines-${viewport.name}.png`),
+      });
+    });
+  }
 
   runtime.expectClean();
 });
@@ -1105,7 +1405,7 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
     expect(rail.gripHeight).toBeGreaterThan(rail.gripWidth);
   }
   const mediaSeparator = page.locator("#video-editor-media-compose-separator");
-  await page.getByRole("button", { name: "Transitions", exact: true }).focus();
+  await page.getByRole("button", { name: "Audio", exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(mediaSeparator).toBeFocused();
   await expect(mediaSeparator).toHaveCSS(
@@ -1964,5 +2264,510 @@ test("contains long names, a busy timeline, and every effect tab at the minimum 
   await page.screenshot({
     path: testInfo.outputPath("video-editor-content-stress-1024x800.png"),
   });
+  runtime.expectClean();
+});
+
+test("analyzes a local Audio timeline clip and keeps accessible guideposts mapped to edits", async ({
+  page,
+}, testInfo) => {
+  test.slow();
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+
+  await page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]').click();
+  let panel = page.getByRole("tabpanel", { name: "Audio-Sync Cut" });
+  const source = page.getByLabel("Audio timeline clip", { exact: true });
+  await expect(source).toHaveValue("");
+  await expect(source.locator("option")).toHaveCount(1);
+  await expect(panel.getByRole("button", { name: "Analyze source" })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Generate guideposts" })).toBeDisabled();
+  await expect(page.locator("[data-audio-sync-waveform]")).toHaveAttribute(
+    "aria-label",
+    /No audio has been analyzed/
+  );
+  await expect(page.locator("[data-audio-sync-spectrum]")).toHaveAttribute(
+    "aria-label",
+    /No audio has been analyzed/
+  );
+  for (const graph of ["waveform", "spectrum"]) {
+    await expect(page.locator(`[data-audio-sync-${graph}] canvas`)).toHaveCSS(
+      "pointer-events",
+      "none"
+    );
+  }
+
+  let audioClip = await addAudioSyncClip(page);
+  panel = await analyzeAudioSyncClip(page);
+  await expect(page.getByLabel("Graph view", { exact: true })).toHaveValue("combined");
+  await expect(page.locator("[data-audio-sync-waveform]")).toHaveAttribute(
+    "aria-label",
+    /Waveform (?:graph )?for audio-sync-bursts\.wav/
+  );
+  await expect(page.locator("[data-audio-sync-spectrum]")).toHaveAttribute(
+    "aria-label",
+    /frequency spectrum for audio-sync-bursts\.wav/i
+  );
+  for (const graph of ["waveform", "spectrum"]) {
+    expect(
+      await page.locator(`[data-audio-sync-${graph}] canvas`).evaluate((canvas) =>
+        Array.from(canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data)
+          .some((channel, index) => index % 4 !== 3 && channel !== 0)
+      ),
+      `${graph} canvas should contain rendered analysis pixels`
+    ).toBe(true);
+  }
+  await page.getByLabel("Graph view", { exact: true }).selectOption("waveform");
+  await expect(page.locator("[data-audio-sync-waveform]")).toBeVisible();
+  await expect(page.locator("[data-audio-sync-spectrum]")).toBeHidden();
+  await page.getByLabel("Graph view", { exact: true }).selectOption("frequency");
+  await expect(page.locator("[data-audio-sync-waveform]")).toBeHidden();
+  await expect(page.locator("[data-audio-sync-spectrum]")).toBeVisible();
+  await page.getByLabel("Graph view", { exact: true }).selectOption("combined");
+
+  await expect(page.getByLabel("Minimum Hz", { exact: true })).toHaveValue("40");
+  await expect(page.getByLabel("Maximum Hz", { exact: true })).toHaveValue("2000");
+  await expect(page.getByLabel("Threshold", { exact: true })).toHaveValue("65");
+  await expect(page.getByLabel("Crossing direction", { exact: true })).toHaveValue(
+    "rising"
+  );
+  await panel.getByRole("button", { name: "Mids", exact: true }).click();
+  await expect(audioSyncRuleCards(page)).toHaveCount(1);
+  const recommendedRule = audioSyncRuleCards(page).first();
+  await expect(recommendedRule.locator("[data-audio-sync-rule-label]")).toHaveValue(
+    /Mids/i
+  );
+  await expect
+    .poll(() => accessibleGuideposts(recommendedRule).count())
+    .toBeGreaterThanOrEqual(2);
+  await expect(recommendedRule.locator('[data-guidepost-action="cut"]')).toHaveAttribute(
+    "aria-pressed",
+    "false"
+  );
+
+  await page.getByLabel("Minimum Hz", { exact: true }).fill("2000");
+  await page.getByLabel("Maximum Hz", { exact: true }).fill("4000");
+  await page.getByLabel("Threshold", { exact: true }).evaluate((input) => {
+    input.value = "50";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.getByLabel("Crossing direction", { exact: true }).selectOption("both");
+  await panel.getByRole("button", { name: "Generate guideposts" }).click();
+  await expect(audioSyncRuleCards(page)).toHaveCount(2);
+  const colors = await audioSyncRuleCards(page)
+    .locator("[data-audio-sync-rule-color]")
+    .evaluateAll((inputs) => inputs.map((input) => input.value));
+  expect(new Set(colors).size).toBe(2);
+
+  const marker = accessibleGuideposts(recommendedRule).first();
+  const visual = page.locator(
+    `[data-guidepost-visual-id="${await marker.getAttribute("data-guidepost-id")}"]`
+  );
+  await expect(visual).toHaveCount(1);
+  const sourceTime = Number(await visual.getAttribute("data-guidepost-source-time"));
+  const timelineTime = Number(await visual.getAttribute("data-guidepost-time"));
+  expect(timelineTime).toBeCloseTo(sourceTime, 2);
+  await expect(marker).toHaveAttribute(
+    "aria-keyshortcuts",
+    /ArrowLeft.*ArrowRight.*Delete.*Enter/
+  );
+
+  await audioClip.focus();
+  await audioClip.press("ArrowRight");
+  await expect
+    .poll(async () => Number(await visual.getAttribute("data-guidepost-time")))
+    .toBeCloseTo(timelineTime + 0.25, 2);
+
+  const markerTimeBeforeNudge = Number(await marker.getAttribute("data-guidepost-time"));
+  await marker.focus();
+  await marker.press("ArrowRight");
+  await expect(marker).toHaveAttribute(
+    "data-guidepost-time",
+    String(Number((markerTimeBeforeNudge + 0.05).toFixed(2)))
+  );
+  await marker.press("Shift+ArrowLeft");
+  await expect(page.locator("#editor-status")).toContainText(/guidepost.*moved/i);
+  const jumpedTime = Number(await marker.getAttribute("data-guidepost-time"));
+  await marker.press("Enter");
+  await expect(page.getByTestId("playhead-scrubber")).toHaveValue(String(jumpedTime));
+
+  const visibleBeforeTrim = await accessibleGuideposts(recommendedRule).count();
+  audioClip = page
+    .getByTestId("timeline-tier-audio-1")
+    .locator("article[data-clip-id]");
+  const trimStart = audioClip.getByRole("button", {
+    name: `Trim start of ${audioSyncName}`,
+  });
+  for (let index = 0; index < 6; index += 1) await trimStart.press("ArrowRight");
+  await expect
+    .poll(() => accessibleGuideposts(recommendedRule).count())
+    .toBeLessThan(visibleBeforeTrim);
+
+  const countBeforeDelete = await accessibleGuideposts(recommendedRule).count();
+  const remainingMarker = accessibleGuideposts(recommendedRule).first();
+  await remainingMarker.focus();
+  await remainingMarker.press("Delete");
+  await expect(accessibleGuideposts(recommendedRule)).toHaveCount(countBeforeDelete - 1);
+  await recommendedRule.getByRole("button", { name: "Delete guidepost rule" }).click();
+  await expect(audioSyncRuleCards(page)).toHaveCount(1);
+
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    )
+  ).toBe(false);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-audio-sync-analysis.png"),
+  });
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator("#media-count")).toHaveText("0 items");
+  await expect(audioSyncRuleCards(page)).toHaveCount(0);
+  runtime.expectClean();
+});
+
+test("applies Audio-Sync flash, effect, and atomic video-cut actions at guideposts", async ({
+  page,
+}, testInfo) => {
+  test.slow();
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+  await addAudioSyncClip(page);
+  const panel = await analyzeAudioSyncClip(page);
+  await panel.getByRole("button", { name: "Mids", exact: true }).click();
+  const rule = audioSyncRuleCards(page).first();
+  await expect
+    .poll(() => accessibleGuideposts(rule).count())
+    .toBeGreaterThanOrEqual(2);
+  const markerTimes = await accessibleGuideposts(rule).evaluateAll((markers) =>
+    markers.map((marker) => Number(marker.getAttribute("data-guidepost-time")))
+  );
+
+  const flash = page.locator("#audio-sync-flash");
+  await expect(flash).toHaveAttribute("aria-hidden", "true");
+  await expect(flash).toHaveCSS("pointer-events", "none");
+  await flash.evaluate((element) => {
+    window.__audioSyncFlashEvents = [];
+    window.__audioSyncFlashObserver = new MutationObserver(() => {
+      if (element.dataset.flashActive === "true") {
+        window.__audioSyncFlashEvents.push({
+          color: element.dataset.guidepostColor,
+          groupId: element.dataset.guidepostGroupId,
+          guidepostId: element.dataset.guidepostId,
+        });
+      }
+    });
+    window.__audioSyncFlashObserver.observe(element, { attributes: true });
+  });
+  await setPlayhead(page, Math.max(0, markerTimes[0] - 0.08));
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => window.__audioSyncFlashEvents.length), {
+      intervals: [10, 20, 30, 50],
+      timeout: 2_000,
+    })
+    .toBeGreaterThan(0);
+  await expect(flash).toHaveAttribute("data-guidepost-group-id", /.+/);
+  await expect(flash).toHaveAttribute("data-guidepost-id", /.+/);
+  await expect(flash).toHaveAttribute("data-guidepost-color", /^#[0-9a-f]{6}$/i);
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+
+  await rule.getByLabel("Effect at guideposts").selectOption("windows-98");
+  await rule.locator('[data-guidepost-action="effect"]').click();
+  const effects = page
+    .getByTestId("effects-lane")
+    .locator('[data-effect-item-id][data-effect="windows-98"]');
+  await expect(effects).toHaveCount(markerTimes.length);
+  const effectRanges = await effects.evaluateAll((items) =>
+    items.map((item) => item.getAttribute("aria-label"))
+  );
+  for (const label of effectRanges) expect(label).toMatch(/00:03\.00/);
+
+  await page.getByTestId("media-file-input").setInputFiles({
+    name: videoName,
+    mimeType: "video/webm",
+    buffer: await readFile(videoAsset),
+  });
+  await expect(page.locator("#media-count")).toHaveText("2 items", {
+    timeout: 20_000,
+  });
+  await setPlayhead(page, 0);
+  await page
+    .getByTestId("media-bin")
+    .getByRole("button", { name: `Add ${videoName} at the playhead` })
+    .click();
+  const videoTrack = page.getByTestId("timeline-tier-video-1");
+  await expect(videoTrack.locator("article[data-clip-id]")).toHaveCount(1);
+  const cutsInsideVideo = markerTimes.filter((time) => time > 0 && time < 5).length;
+  await rule.locator('[data-guidepost-action="cut"]').click();
+  await expect(videoTrack.locator("article[data-clip-id]")).toHaveCount(
+    cutsInsideVideo + 1
+  );
+  const segments = await videoTrack.locator("article[data-clip-id]").evaluateAll((clips) =>
+    clips.map((clip) => ({
+      end: Number(clip.getAttribute("data-source-end")),
+      start: Number(clip.getAttribute("data-source-start")),
+    }))
+  );
+  expect(segments[0].start).toBe(0);
+  for (let index = 1; index < segments.length; index += 1) {
+    expect(segments[index - 1].end).toBeCloseTo(segments[index].start, 2);
+  }
+  await expect(page.locator("#editor-status")).toContainText(/split|cut/i);
+
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-audio-sync-actions.png"),
+  });
+  runtime.expectClean();
+});
+
+test("fills the first complete guide interval and rejects invalid Audio-Sync fills atomically", async ({
+  page,
+}) => {
+  test.slow();
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+  await addAudioSyncClip(page);
+  const panel = await analyzeAudioSyncClip(page);
+  await panel.getByRole("button", { name: "Mids", exact: true }).click();
+  const midRule = audioSyncRuleCards(page).first();
+  await expect
+    .poll(() => accessibleGuideposts(midRule).count())
+    .toBeGreaterThanOrEqual(2);
+  const midTimes = await accessibleGuideposts(midRule).evaluateAll((markers) =>
+    markers.map((marker) => Number(marker.getAttribute("data-guidepost-time")))
+  );
+  const videoTrack = page.getByTestId("timeline-tier-video-1");
+
+  await midRule.locator('[data-guidepost-action="fill"]').click();
+  await expect(page.locator("#editor-status")).toContainText(/select.*video/i);
+  await expect(videoTrack.locator("article[data-clip-id]")).toHaveCount(0);
+
+  await page.getByTestId("media-file-input").setInputFiles({
+    name: videoName,
+    mimeType: "video/webm",
+    buffer: await readFile(videoAsset),
+  });
+  await expect(page.locator("#media-count")).toHaveText("2 items", {
+    timeout: 20_000,
+  });
+  await page
+    .locator('#media-bin [data-kind="video"] [data-select-media]')
+    .click();
+  await setPlayhead(page, 0);
+  await midRule.locator('[data-guidepost-action="fill"]').click();
+  const filledClip = videoTrack.locator("article[data-clip-id]");
+  await expect(filledClip).toHaveCount(1);
+  const firstInterval = midTimes[1] - midTimes[0];
+  const fillState = await filledClip.evaluate((clip) => ({
+    end: Number(clip.getAttribute("data-source-end")),
+    label: clip.getAttribute("aria-label"),
+    start: Number(clip.getAttribute("data-source-start")),
+  }));
+  expect(fillState.start).toBe(0);
+  expect(fillState.end).toBeCloseTo(firstInterval, 2);
+  expect(fillState.label).toContain("starts");
+  await expect(page.locator("#editor-status")).toContainText(/fill|inserted/i);
+
+  const snapshotBeforeConflict = await readProjectSnapshot(page);
+  await setPlayhead(page, 0);
+  await midRule.locator('[data-guidepost-action="fill"]').click();
+  await expect(page.locator("#editor-status")).toContainText(
+    /empty interval|occupied|overlap/i
+  );
+  expect(await readProjectSnapshot(page)).toEqual(snapshotBeforeConflict);
+
+  await filledClip.focus();
+  await filledClip.press("Delete");
+  await panel.getByRole("button", { name: "Lows", exact: true }).click();
+  const lowRule = audioSyncRuleCards(page).last();
+  await expect
+    .poll(() => accessibleGuideposts(lowRule).count())
+    .toBeGreaterThanOrEqual(2);
+  await setPlayhead(page, 0);
+  const snapshotBeforeShortSource = await readProjectSnapshot(page);
+  await lowRule.locator('[data-guidepost-action="fill"]').click();
+  await expect(page.locator("#editor-status")).toContainText(/too short|source.*short/i);
+  expect(await readProjectSnapshot(page)).toEqual(snapshotBeforeShortSource);
+  runtime.expectClean();
+});
+
+test("uses rights-safe YouTube discovery and inserts trimmed local and procedural audio", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await page.context().route("https://www.youtube.com/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<!doctype html><title>YouTube results</title>" })
+  );
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+  await page.evaluate(() => {
+    const originalPlay = HTMLMediaElement.prototype.play;
+    window.__videoEditorPlayCalls = [];
+    HTMLMediaElement.prototype.play = function trackedPlay() {
+      window.__videoEditorPlayCalls.push({ src: this.src, time: this.currentTime });
+      if (this.id === "audio-local-preview" || this.src.startsWith("blob:")) {
+        return Promise.resolve();
+      }
+      return originalPlay.call(this);
+    };
+  });
+
+  await page.locator('[data-effect-tab-target][data-effect="audio"]').click();
+  const panel = page.getByRole("tabpanel", { name: "Audio", exact: true });
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText(/No audio is downloaded\s+or imported\./i);
+  const searchOfficialYouTube = async (formName, query) => {
+    const form = panel.getByRole("form", { name: formName });
+    const queryInput = form.getByRole("searchbox");
+    await queryInput.fill(query);
+    const popupPromise = page.waitForEvent("popup");
+    await form.getByRole("button", { name: "Search" }).click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState("domcontentloaded");
+    const url = new URL(popup.url());
+    expect(url.origin).toBe("https://www.youtube.com");
+    expect(url.pathname).toBe("/results");
+    expect(url.searchParams.get("search_query")).toBe(query);
+    expect(await popup.evaluate(() => window.opener === null)).toBe(true);
+    await popup.close();
+    await expect(queryInput).toHaveValue(query);
+  };
+  await searchOfficialYouTube("Search official YouTube for music", "licensed synth loop");
+  await searchOfficialYouTube(
+    "Search official YouTube for sound effects",
+    "royalty free keyboard click"
+  );
+
+  const localFile = page.locator("#audio-local-file");
+  await localFile.setInputFiles(generatedAudioSync());
+  const localSource = page.getByLabel("Local source", { exact: true });
+  await expect(localSource.locator("option")).toHaveCount(2, { timeout: 20_000 });
+  await expect(localSource).toContainText(audioSyncName);
+  const localStart = page.getByLabel("Start", { exact: true });
+  const localEnd = page.getByLabel("End", { exact: true });
+  const localInsert = panel.getByRole("button", {
+    name: "Insert local audio at playhead",
+  });
+  await expect(localStart).toBeEnabled();
+  await expect(localEnd).toBeEnabled();
+  await expect(localStart).toHaveValue("0");
+  await expect(localEnd).toHaveValue("6");
+  await localStart.fill("1");
+  await localEnd.fill("1.1");
+  const audioTrack = page.getByTestId("timeline-tier-audio-1");
+  await expect(localInsert).toBeEnabled();
+  await localInsert.click();
+  const minimumRangeClip = audioTrack.locator("article[data-clip-id]");
+  await expect(minimumRangeClip).toHaveCount(1);
+  await expect(minimumRangeClip).toHaveAccessibleName(/00:00\.25/);
+  await minimumRangeClip.focus();
+  await minimumRangeClip.press("Delete");
+  await localStart.fill("0.5");
+  await localEnd.fill("2.25");
+  await expect(localInsert).toBeEnabled();
+  await page.locator("#audio-local-preview").evaluate((audio) => {
+    audio.dispatchEvent(new Event("play", { bubbles: true }));
+  });
+  await page.locator("#audio-local-preview").evaluate((audio) => audio.play());
+  await expect
+    .poll(() => page.evaluate(() => window.__videoEditorPlayCalls.length))
+    .toBeGreaterThan(0);
+  await setPlayhead(page, 7);
+  await localInsert.click();
+  const localClip = audioTrack.locator("article[data-clip-id]").filter({
+    hasText: audioSyncName,
+  });
+  await expect(localClip).toHaveCount(1);
+  await expect(localClip).toHaveAttribute("data-source-start", "0.5");
+  await expect(localClip).toHaveAttribute("data-source-end", "2.25");
+  await expect(localClip).toHaveAccessibleName(/00:01\.75/);
+
+  const clickPreset = panel.locator('[data-sound-effect-preset="click"]');
+  const typingPreset = panel.locator('[data-sound-effect-preset="typing"]');
+  const loop = page.getByLabel("Loop Typing", { exact: true });
+  const duration = page.getByLabel("Duration", { exact: true });
+  const soundPreview = panel.locator("[data-sound-effect-preview]");
+  const soundInsert = panel.locator("[data-sound-effect-insert]");
+  await expect(clickPreset).toHaveAttribute("aria-pressed", "true");
+  await expect(typingPreset).toHaveAttribute("aria-pressed", "false");
+  await expect(loop).toBeDisabled();
+  await expect(duration).toBeDisabled();
+  await soundPreview.click();
+  await expect(panel.locator("[data-sound-effect-status]")).toContainText(/Previewing Click/i);
+  await setPlayhead(page, 0);
+  await soundInsert.click();
+  const clickClip = audioTrack.locator("article[data-clip-id]").filter({ hasText: /Click/i });
+  await expect(clickClip).toHaveCount(1);
+  await expect(clickClip).toHaveAccessibleName(/00:00\.12/);
+
+  await typingPreset.focus();
+  await typingPreset.press("Enter");
+  await expect(typingPreset).toHaveAttribute("aria-pressed", "true");
+  await expect(clickPreset).toHaveAttribute("aria-pressed", "false");
+  await expect(loop).toBeEnabled();
+  await expect(duration).toBeDisabled();
+  await soundPreview.click();
+  await expect(panel.locator("[data-sound-effect-status]")).toContainText(/Previewing Typing/i);
+  await setPlayhead(page, 2);
+  await soundInsert.click();
+  let typingClips = audioTrack.locator("article[data-clip-id]").filter({
+    hasText: /Typing/i,
+  });
+  await expect(typingClips).toHaveCount(1);
+  await expect(typingClips.first()).toHaveAccessibleName(/00:01\.20/);
+
+  await page.getByText("Loop Typing", { exact: true }).click();
+  await expect(loop).toBeChecked();
+  await expect(duration).toBeEnabled();
+  await duration.fill("2.5");
+  await duration.press("Tab");
+  await setPlayhead(page, 4);
+  await soundInsert.click();
+  typingClips = audioTrack.locator("article[data-clip-id]").filter({ hasText: /Typing/i });
+  await expect(typingClips).toHaveCount(2);
+  await expect(typingClips.last()).toHaveAccessibleName(/00:02\.50/);
+  await clickPreset.click();
+  await expect(loop).toBeDisabled();
+  await expect(duration).toBeDisabled();
+  await expect(soundPreview).toHaveText(/Preview Click/);
+  await expect(panel.locator("[data-sound-effect-status]")).toContainText(/Click.*ready/i);
+
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    )
+  ).toBe(false);
+  await page.screenshot({ path: testInfo.outputPath("video-editor-audio-tools.png") });
+  runtime.expectClean();
+});
+
+test("retains a usable Audio-Sync error state when local decoding fails", async ({ page }) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+  await addAudioSyncClip(page);
+  await page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]').click();
+  await page.getByLabel("Audio timeline clip", { exact: true }).selectOption({ index: 1 });
+  await page.evaluate(() => {
+    const Constructor = window.AudioContext || window.webkitAudioContext;
+    Object.defineProperty(Constructor.prototype, "decodeAudioData", {
+      configurable: true,
+      value: () => Promise.reject(new Error("Synthetic decode failure.")),
+    });
+  });
+  await page.getByRole("button", { name: "Analyze source" }).click();
+  await expect(page.locator("[data-audio-sync-status]")).toHaveText(
+    "Synthetic decode failure."
+  );
+  await expect(page.locator("[data-audio-sync-status]")).toHaveAttribute(
+    "data-state",
+    "error"
+  );
+  await expect(page.getByRole("button", { name: "Analyze source" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Generate guideposts" })).toBeDisabled();
+  await expect(audioSyncRuleCards(page)).toHaveCount(0);
   runtime.expectClean();
 });

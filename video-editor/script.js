@@ -22,6 +22,23 @@ const EFFECTS_PANEL_MAX = 420;
 const EFFECTS_PANEL_DEFAULT = 300;
 const SIDE_PANEL_KEYBOARD_STEP = 16;
 const COMPOSE_PANEL_MIN = 420;
+const AUDIO_ANALYSIS_MAX_FILE_BYTES = 64 * 1024 * 1024;
+const AUDIO_ANALYSIS_MAX_DURATION = 10 * 60;
+const AUDIO_ANALYSIS_MAX_DECODED_BYTES = 256 * 1024 * 1024;
+const GUIDEPOST_NUDGE = 0.05;
+const GUIDEPOST_LARGE_NUDGE = 0.25;
+const GUIDEPOST_FLASH_DURATION_MS = 110;
+const GUIDEPOST_COLORS = Object.freeze([
+  "#ff3b30",
+  "#00a6ff",
+  "#35c759",
+  "#ff9500",
+  "#af52de",
+  "#00b8a9",
+]);
+const SOUND_EFFECT_SAMPLE_RATE = 22050;
+const CLICK_SOUND_DURATION = 0.12;
+const TYPING_SOUND_DURATION = 1.2;
 const ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
 const ADMINISTRATOR_SESSION_DURATION_MS = 60 * 60 * 1000;
 const AUTHENTICATION_REQUEST_TIMEOUT_MS = 8_000;
@@ -44,16 +61,29 @@ const EFFECTS = Object.freeze({
     label: "Closed Captions",
     color: "yellow",
     icon: "../assets/app-icons/ico/accessibility_window_speak.ico",
+    timelineInsertable: true,
   }),
   "windows-98": Object.freeze({
     label: "Windows 98",
     color: "navy",
     icon: "../assets/app-icons/ico/windows.ico",
+    timelineInsertable: true,
   }),
   transitions: Object.freeze({
     label: "Transitions",
     color: "teal",
     icon: "../assets/app-icons/ico/movie_maker.ico",
+    timelineInsertable: true,
+  }),
+  "audio-sync-cut": Object.freeze({
+    label: "Audio-Sync Cut",
+    icon: "../assets/app-icons/ico/mixer_sound.ico",
+    timelineInsertable: false,
+  }),
+  audio: Object.freeze({
+    label: "Audio",
+    icon: "../assets/app-icons/ico/mixer_cd_sound.ico",
+    timelineInsertable: false,
   }),
 });
 
@@ -69,6 +99,24 @@ const FRAME_PRESETS = Object.freeze({
 const WORKSPACE_LAYOUTS = Object.freeze({
   standard: "Standard",
   "side-by-side": "Side by side",
+});
+const SOCIAL_GUIDELINE_PLATFORMS = Object.freeze({
+  "instagram-reels": Object.freeze({
+    label: "Instagram Reels",
+    zones: Object.freeze({
+      top: "Top controls",
+      right: "Like / comment / share",
+      bottom: "Caption / audio / navigation",
+    }),
+  }),
+  tiktok: Object.freeze({
+    label: "TikTok",
+    zones: Object.freeze({
+      top: "Feed header",
+      right: "Like / comment / save / share",
+      bottom: "Caption / sound / navigation",
+    }),
+  }),
 });
 
 const elements = {
@@ -108,6 +156,14 @@ const elements = {
   workspaceLayoutOptions: document.querySelectorAll(
     "[data-video-editor-workspace-layout-option]"
   ),
+  guidelinesControls: document.querySelector("#video-editor-guidelines"),
+  guidelinesToggle: document.querySelector("#video-editor-guidelines-toggle"),
+  guidelinesPlatform: document.querySelector("#video-editor-guidelines-platform"),
+  guidelinesNote: document.querySelector("#video-editor-guidelines-note"),
+  guidelinesOverlay: document.querySelector(
+    "#video-editor-social-guidelines-overlay"
+  ),
+  guidelineZones: document.querySelectorAll("[data-guideline-zone]"),
   previewTimelineSeparator: document.querySelector(
     "#video-editor-preview-timeline-separator"
   ),
@@ -123,6 +179,48 @@ const elements = {
   timelineTiers: document.querySelector("#timeline-tiers"),
   timelinePlayhead: document.querySelector("#timeline-playhead"),
   effectsTrack: document.querySelector("#effects-track"),
+  audioSyncGuideLayer: document.querySelector("#audio-sync-guide-layer"),
+  audioSyncFlash: document.querySelector("#audio-sync-flash"),
+  audioSyncSource: document.querySelector("#audio-sync-source"),
+  audioSyncAnalyze: document.querySelector("[data-audio-sync-analyze]"),
+  audioSyncStatus: document.querySelector("[data-audio-sync-status]"),
+  audioSyncGraphView: document.querySelector("#audio-sync-graph-view"),
+  audioSyncWaveform: document.querySelector("[data-audio-sync-waveform]"),
+  audioSyncSpectrum: document.querySelector("[data-audio-sync-spectrum]"),
+  audioSyncFrequencyMin: document.querySelector("#audio-sync-frequency-min"),
+  audioSyncFrequencyMax: document.querySelector("#audio-sync-frequency-max"),
+  audioSyncThreshold: document.querySelector("#audio-sync-threshold"),
+  audioSyncThresholdOutput: document.querySelector("#audio-sync-threshold-output"),
+  audioSyncDirection: document.querySelector("#audio-sync-direction"),
+  audioSyncRecommendations: document.querySelectorAll(
+    "[data-audio-sync-recommendation]"
+  ),
+  audioSyncGenerate: document.querySelector("[data-audio-sync-generate]"),
+  audioSyncRules: document.querySelector("#audio-sync-rules"),
+  audioSyncRulesEmpty: document.querySelector("[data-audio-sync-rules-empty]"),
+  audioSyncRuleTotal: document.querySelector("[data-audio-sync-rule-total]"),
+  audioSyncRuleTemplate: document.querySelector("#audio-sync-rule-template"),
+  audioSyncGuidepostTemplate: document.querySelector(
+    "#audio-sync-guidepost-template"
+  ),
+  audioYoutubeQuery: document.querySelector("#audio-effect-youtube-query"),
+  audioYoutubeSearch: document.querySelector("[data-audio-youtube-search]"),
+  audioLocalFile: document.querySelector("#audio-local-file"),
+  audioLocalSource: document.querySelector("#audio-local-source"),
+  audioLocalStart: document.querySelector("#audio-local-start"),
+  audioLocalEnd: document.querySelector("#audio-local-end"),
+  audioLocalStartOutput: document.querySelector("[data-audio-local-start-output]"),
+  audioLocalEndOutput: document.querySelector("[data-audio-local-end-output]"),
+  audioLocalPreview: document.querySelector("#audio-local-preview"),
+  audioLocalInsert: document.querySelector("[data-audio-local-insert]"),
+  soundYoutubeQuery: document.querySelector("#sound-effect-youtube-query"),
+  soundYoutubeSearch: document.querySelector("[data-sound-effect-youtube-search]"),
+  soundEffectPresets: document.querySelectorAll("[data-sound-effect-preset]"),
+  soundEffectLoop: document.querySelector("#sound-effect-loop"),
+  soundEffectDuration: document.querySelector("#sound-effect-duration"),
+  soundEffectPreview: document.querySelector("[data-sound-effect-preview]"),
+  soundEffectInsert: document.querySelector("[data-sound-effect-insert]"),
+  soundEffectStatus: document.querySelector("[data-sound-effect-status]"),
   status: document.querySelector("#editor-status"),
   tabList: document.querySelector("#effect-tab-list"),
   reopenTab: document.querySelector("#reopen-effect-tab"),
@@ -150,17 +248,38 @@ const state = {
   pixelsPerSecond: Number(elements.timelineScale?.value) || 64,
   playing: false,
   playbackStartedAt: 0,
+  playbackPreviousTime: 0,
   animationFrame: 0,
   framePreset: "none",
   frameWidth: 0,
   frameHeight: 0,
   customFrameWidth: 1080,
   customFrameHeight: 1920,
+  guidelinesEnabled: false,
+  guidelinesPlatform: "instagram-reels",
   workspaceLayout: "standard",
   previewSplit: DEFAULT_PREVIEW_SPLIT,
   previewSplitByLayout: {
     standard: DEFAULT_PREVIEW_SPLIT,
     "side-by-side": DEFAULT_PREVIEW_SPLIT,
+  },
+  audioSync: {
+    analysis: null,
+    analysisMediaId: null,
+    graphView: "combined",
+    rules: [],
+    sourceClipId: null,
+    status: "idle",
+  },
+  audioLocal: {
+    mediaId: null,
+    sourceEnd: 0,
+    sourceStart: 0,
+  },
+  soundEffect: {
+    duration: 3,
+    loop: false,
+    preset: "click",
   },
   mediaPanelWidth: MEDIA_PANEL_DEFAULT,
   effectsPanelWidth: EFFECTS_PANEL_DEFAULT,
@@ -170,6 +289,8 @@ const audioPlayers = new Map();
 let nextMediaId = 1;
 let nextClipId = 1;
 let nextEffectId = 1;
+let nextAudioSyncRuleId = 1;
+let nextGuidepostId = 1;
 let dragPayload = null;
 let tabDragTargetIndex = null;
 let administratorProof = null;
@@ -183,6 +304,13 @@ let previewResizeObserver = null;
 let sidePanelResizeObserver = null;
 let effectTabResizeObserver = null;
 let effectTabMarqueeFrame = 0;
+let audioAnalysisGeneration = 0;
+let audioAnalysisWorker = null;
+let guidepostFlashTimer = 0;
+let soundEffectPreviewPlayer = null;
+let soundEffectPreviewUrl = "";
+
+const audioAnalysisCache = new Map();
 
 const desktopEditorQuery = window.matchMedia("(min-width: 1024px)");
 
@@ -252,6 +380,59 @@ const frameSelection = () => {
   return FRAME_PRESETS[state.framePreset] || { label: "N/A", width: 0, height: 0 };
 };
 
+const socialGuidelinesEligible = () => state.framePreset === "9:16";
+
+const applySocialGuidelines = (shouldAnnounce = false) => {
+  const platform =
+    SOCIAL_GUIDELINE_PLATFORMS[state.guidelinesPlatform] ||
+    SOCIAL_GUIDELINE_PLATFORMS["instagram-reels"];
+  const eligible = socialGuidelinesEligible();
+  const visible = state.guidelinesEnabled && eligible;
+  if (elements.guidelinesToggle) {
+    elements.guidelinesToggle.checked = state.guidelinesEnabled;
+  }
+  if (elements.guidelinesPlatform) {
+    elements.guidelinesPlatform.value = state.guidelinesPlatform;
+    elements.guidelinesPlatform.disabled = !state.guidelinesEnabled;
+  }
+  if (elements.guidelinesControls) {
+    elements.guidelinesControls.dataset.guidelinesState = visible
+      ? "visible"
+      : state.guidelinesEnabled
+        ? "paused"
+        : "off";
+  }
+  if (elements.guidelinesOverlay) {
+    elements.guidelinesOverlay.dataset.guidelinePlatform = state.guidelinesPlatform;
+    elements.guidelinesOverlay.hidden = !visible;
+    elements.guidelinesOverlay.setAttribute("aria-hidden", "true");
+  }
+  elements.guidelineZones.forEach((zone) => {
+    const label = platform.zones[zone.dataset.guidelineZone];
+    const labelNode = zone.querySelector("span");
+    if (label && labelNode) labelNode.textContent = label;
+  });
+  if (elements.guidelinesNote) {
+    elements.guidelinesNote.textContent = visible
+      ? `Approximate ${platform.label} UI coverage; placement varies by device, caption length, placement, and add-ons.`
+      : state.guidelinesEnabled
+        ? "Guidelines are paused. Select Reel / TikTok (9:16) to display them; platform UI varies by device, caption length, placement, and add-ons."
+        : "Approximate platform UI coverage for the Reel / TikTok (9:16) frame; platform UI varies by device, caption length, placement, and add-ons.";
+  }
+  if (shouldAnnounce) {
+    if (!state.guidelinesEnabled) {
+      announce("Social UI guidelines hidden.");
+    } else if (!eligible) {
+      announce(
+        "Social UI guidelines enabled. Select Reel / TikTok (9:16) to display them."
+      );
+    } else {
+      announce(`${platform.label} UI guidelines shown.`);
+    }
+  }
+  return visible;
+};
+
 const applyFrameSize = (shouldAnnounce = false) => {
   const frame = frameSelection();
   const isFlexibleFrame = state.framePreset === "none";
@@ -289,8 +470,16 @@ const applyFrameSize = (shouldAnnounce = false) => {
         : `Composed timeline preview, ${frame.label}`
     );
   }
+  const guidelinesVisible = applySocialGuidelines(false);
   requestAnimationFrame(fitPreviewStage);
-  if (shouldAnnounce) announce(`Frame size set to ${frame.label}.`);
+  if (shouldAnnounce) {
+    const guidelinesStatus = state.guidelinesEnabled
+      ? guidelinesVisible
+        ? ` ${SOCIAL_GUIDELINE_PLATFORMS[state.guidelinesPlatform].label} UI guidelines shown.`
+        : " Social UI guidelines paused until Reel / TikTok (9:16) is selected."
+      : "";
+    announce(`Frame size set to ${frame.label}.${guidelinesStatus}`);
+  }
 };
 
 const updateCustomFrameSize = (shouldAnnounce = false, shouldNormalize = false) => {
@@ -1132,10 +1321,11 @@ const readMediaDuration = (url, kind) =>
 
 const importFiles = async (fileList) => {
   const files = Array.from(fileList || []);
-  if (!files.length) return;
+  if (!files.length) return [];
 
   let imported = 0;
   let rejected = 0;
+  const importedMedia = [];
   announce(`Reading ${files.length} local ${files.length === 1 ? "file" : "files"}…`);
 
   for (const file of files) {
@@ -1148,14 +1338,16 @@ const importFiles = async (fileList) => {
     const url = URL.createObjectURL(file);
     try {
       const duration = await readMediaDuration(url, kind);
-      state.media.push({
+      const mediaItem = {
         id: `media-${nextMediaId++}`,
         file,
         kind,
         name: file.name,
         duration,
         url,
-      });
+      };
+      state.media.push(mediaItem);
+      importedMedia.push(mediaItem);
       imported += 1;
     } catch (error) {
       URL.revokeObjectURL(url);
@@ -1172,6 +1364,7 @@ const importFiles = async (fileList) => {
     announce("No files were imported. Choose readable video or audio files.");
   }
   if (elements.mediaInput) elements.mediaInput.value = "";
+  return importedMedia;
 };
 
 const renderMediaBin = () => {
@@ -1217,6 +1410,7 @@ const renderMediaBin = () => {
     });
     elements.mediaBin.append(fragment);
   }
+  renderAudioToolSources();
 };
 
 const intervalsForTier = (tierId, excludeClipId = null) =>
@@ -1254,35 +1448,73 @@ const addMediaAtPlayhead = (mediaId) => {
   addClip(item, tier.id, state.playhead);
 };
 
-const addClip = (media, tierId, desiredStart) => {
+const insertClipSegment = (
+  media,
+  tierId,
+  desiredStart,
+  sourceStart,
+  sourceEnd,
+  {
+    announceChange = true,
+    focus = true,
+    minimumDuration = MIN_ITEM_DURATION,
+    snap = true,
+  } = {}
+) => {
   const tier = state.tiers.find((candidate) => candidate.id === tierId);
   if (!tier || tier.kind !== media.kind) {
-    announce(`${media.name} is ${media.kind}; choose a ${media.kind} tier.`);
-    return false;
+    if (announceChange) {
+      announce(`${media.name} is ${media.kind}; choose a ${media.kind} tier.`);
+    }
+    return null;
   }
-  const start = findValidStart(tierId, desiredStart, media.duration);
+  const normalizedSourceStart = roundTime(
+    clamp(sourceStart, 0, Math.max(0, media.duration - minimumDuration))
+  );
+  const normalizedSourceEnd = roundTime(
+    clamp(sourceEnd, normalizedSourceStart + minimumDuration, media.duration)
+  );
+  const duration = normalizedSourceEnd - normalizedSourceStart;
+  if (duration < minimumDuration) {
+    if (announceChange) announce(`Choose at least ${formatTime(minimumDuration)} of source media.`);
+    return null;
+  }
+  const validStart = findValidStart(tierId, desiredStart, duration);
+  if (!snap && Math.abs(validStart - desiredStart) > 0.01) return null;
+  const start = snap ? validStart : roundTime(Math.max(0, desiredStart));
   const clip = {
     id: `clip-${nextClipId++}`,
     mediaId: media.id,
     kind: media.kind,
-    sourceStart: 0,
-    sourceEnd: media.duration,
+    sourceStart: normalizedSourceStart,
+    sourceEnd: normalizedSourceEnd,
     start,
     tierId,
   };
   state.clips.push(clip);
   state.playhead = start;
   renderTimeline();
-  announce(
-    `${media.name} added to ${tier.label} at ${formatTime(start)}${
-      Math.abs(start - desiredStart) > 0.01 ? "; snapped to avoid an overlap" : ""
-    }.`
-  );
-  requestAnimationFrame(() =>
-    document.querySelector(`[data-clip-id="${clip.id}"]`)?.focus({ preventScroll: true })
-  );
-  return true;
+  if (announceChange) {
+    announce(
+      `${media.name} added to ${tier.label} at ${formatTime(start)}${
+        Math.abs(start - desiredStart) > 0.01 ? "; snapped to avoid an overlap" : ""
+      }.`
+    );
+  }
+  if (focus) {
+    requestAnimationFrame(() =>
+      document.querySelector(`[data-clip-id="${clip.id}"]`)?.focus({
+        preventScroll: true,
+      })
+    );
+  }
+  return clip;
 };
+
+const addClip = (media, tierId, desiredStart) =>
+  Boolean(
+    insertClipSegment(media, tierId, desiredStart, 0, media.duration)
+  );
 
 const moveClip = (clipId, tierId, desiredStart) => {
   const clip = state.clips.find((candidate) => candidate.id === clipId);
@@ -1419,6 +1651,8 @@ const renderClip = (clip, track) => {
   const item = fragment.querySelector("[data-clip-id]");
   item.dataset.clipId = clip.id;
   item.dataset.kind = clip.kind;
+  item.dataset.sourceStart = String(clip.sourceStart);
+  item.dataset.sourceEnd = String(clip.sourceEnd);
   item.style.left = `${clip.start * state.pixelsPerSecond}px`;
   item.style.width = `${Math.max(clipDuration(clip) * state.pixelsPerSecond, 34)}px`;
   item.setAttribute(
@@ -1610,17 +1844,30 @@ const renderRuler = () => {
   }
 };
 
-const addEffect = (type) => {
+const insertEffect = (
+  type,
+  start,
+  duration = EFFECT_DURATION,
+  metadata = {}
+) => {
   const definition = EFFECTS[type];
-  if (!definition) return;
+  if (!definition?.timelineInsertable) return null;
   const effect = {
     id: `effect-${nextEffectId++}`,
     type,
-    start: roundTime(state.playhead),
-    duration: EFFECT_DURATION,
+    start: roundTime(Math.max(0, start)),
+    duration: roundTime(Math.max(MIN_ITEM_DURATION, duration)),
     tabId: `effect-tab-${type}`,
+    ...metadata,
   };
   state.effects.push(effect);
+  return effect;
+};
+
+const addEffect = (type) => {
+  const definition = EFFECTS[type];
+  const effect = insertEffect(type, state.playhead);
+  if (!definition || !effect) return;
   renderTimeline();
   announce(`${definition.label} effect added at ${formatTime(effect.start)} for three seconds.`);
   requestAnimationFrame(() =>
@@ -1724,6 +1971,910 @@ const renderEffects = () => {
     });
     elements.effectsTrack.append(fragment);
   }
+};
+
+const setAudioSyncStatus = (message, status = state.audioSync.status) => {
+  state.audioSync.status = status;
+  if (elements.audioSyncStatus) {
+    elements.audioSyncStatus.textContent = message;
+    elements.audioSyncStatus.dataset.state = status;
+  }
+};
+
+const audioClipLabel = (clip) => {
+  const media = mediaForClip(clip);
+  const tier = state.tiers.find((candidate) => candidate.id === clip.tierId);
+  return `${media?.name || "Audio clip"} · ${tier?.label || "Audio"} · ${formatTime(clip.start)}`;
+};
+
+const setAudioLocalSource = (mediaId, { resetRange = true } = {}) => {
+  const media = state.media.find(
+    (candidate) => candidate.id === mediaId && candidate.kind === "audio"
+  );
+  state.audioLocal.mediaId = media?.id || null;
+  if (resetRange) {
+    state.audioLocal.sourceStart = 0;
+    state.audioLocal.sourceEnd = media?.duration || 0;
+  }
+  for (const input of [elements.audioLocalStart, elements.audioLocalEnd]) {
+    if (!input) continue;
+    input.disabled = !media;
+    input.max = String(media?.duration || 0);
+  }
+  if (elements.audioLocalStart) {
+    elements.audioLocalStart.value = String(state.audioLocal.sourceStart);
+  }
+  if (elements.audioLocalEnd) {
+    elements.audioLocalEnd.value = String(state.audioLocal.sourceEnd);
+  }
+  if (elements.audioLocalStartOutput) {
+    elements.audioLocalStartOutput.textContent = formatTime(
+      state.audioLocal.sourceStart
+    );
+  }
+  if (elements.audioLocalEndOutput) {
+    elements.audioLocalEndOutput.textContent = formatTime(state.audioLocal.sourceEnd);
+  }
+  if (elements.audioLocalInsert) elements.audioLocalInsert.disabled = !media;
+  if (elements.audioLocalPreview) {
+    elements.audioLocalPreview.pause();
+    elements.audioLocalPreview.hidden = !media;
+    if (media && elements.audioLocalPreview.src !== media.url) {
+      elements.audioLocalPreview.src = media.url;
+    } else if (!media) {
+      elements.audioLocalPreview.removeAttribute("src");
+      elements.audioLocalPreview.load();
+    }
+  }
+};
+
+const replaceSelectOptions = (select, items, placeholder, selectedId) => {
+  if (!select) return;
+  select.replaceChildren();
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = placeholder;
+  select.append(empty);
+  for (const item of items) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.label;
+    select.append(option);
+  }
+  select.value = selectedId || "";
+};
+
+const renderAudioToolSources = () => {
+  const audioClips = state.clips
+    .filter((clip) => clip.kind === "audio" && mediaForClip(clip))
+    .sort((left, right) => left.start - right.start);
+  if (!audioClips.some((clip) => clip.id === state.audioSync.sourceClipId)) {
+    state.audioSync.sourceClipId = audioClips[0]?.id || null;
+  }
+  replaceSelectOptions(
+    elements.audioSyncSource,
+    audioClips.map((clip) => ({ id: clip.id, label: audioClipLabel(clip) })),
+    "Select an Audio timeline clip…",
+    state.audioSync.sourceClipId
+  );
+  if (elements.audioSyncAnalyze) {
+    elements.audioSyncAnalyze.disabled =
+      !state.audioSync.sourceClipId || state.audioSync.status === "analyzing";
+  }
+
+  const audioMedia = state.media.filter((media) => media.kind === "audio");
+  const priorMediaId = state.audioLocal.mediaId;
+  if (!audioMedia.some((media) => media.id === priorMediaId)) {
+    state.audioLocal.mediaId = audioMedia[0]?.id || null;
+  }
+  replaceSelectOptions(
+    elements.audioLocalSource,
+    audioMedia.map((media) => ({
+      id: media.id,
+      label: `${media.name} · ${formatTime(media.duration)}`,
+    })),
+    "No local audio selected",
+    state.audioLocal.mediaId
+  );
+  setAudioLocalSource(state.audioLocal.mediaId, {
+    resetRange: state.audioLocal.mediaId !== priorMediaId,
+  });
+};
+
+const selectedAudioSyncClip = () =>
+  state.clips.find(
+    (clip) => clip.id === state.audioSync.sourceClipId && clip.kind === "audio"
+  ) || null;
+
+const loudestAudioChannel = (audioBuffer) => {
+  let selected = audioBuffer.getChannelData(0);
+  let selectedEnergy = -1;
+  for (let channel = 0; channel < audioBuffer.numberOfChannels; channel += 1) {
+    const samples = audioBuffer.getChannelData(channel);
+    const stride = Math.max(1, Math.floor(samples.length / 20000));
+    let energy = 0;
+    for (let index = 0; index < samples.length; index += stride) {
+      energy += samples[index] * samples[index];
+    }
+    if (energy > selectedEnergy) {
+      selected = samples;
+      selectedEnergy = energy;
+    }
+  }
+  return new Float32Array(selected);
+};
+
+const waveFileSampleRate = (buffer) => {
+  if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 28) return 0;
+  const view = new DataView(buffer);
+  const text = (offset, length) =>
+    Array.from({ length }, (_, index) => String.fromCharCode(view.getUint8(offset + index))).join("");
+  if (text(0, 4) !== "RIFF" || text(8, 4) !== "WAVE") return 0;
+  for (let offset = 12; offset + 8 <= view.byteLength; ) {
+    const chunk = text(offset, 4);
+    const size = view.getUint32(offset + 4, true);
+    if (chunk === "fmt " && size >= 16 && offset + 16 <= view.byteLength) {
+      return view.getUint32(offset + 12, true);
+    }
+    offset += 8 + size + (size % 2);
+  }
+  return 0;
+};
+
+const ensureAudioAnalysisWorker = () => {
+  if (audioAnalysisWorker) return audioAnalysisWorker;
+  audioAnalysisWorker = new Worker(
+    new URL("./audio-analysis-worker.js", import.meta.url)
+  );
+  return audioAnalysisWorker;
+};
+
+const runAudioAnalysisWorker = (samples, sampleRate, generation) =>
+  new Promise((resolve, reject) => {
+    const worker = ensureAudioAnalysisWorker();
+    const receive = (event) => {
+      if (event.data?.generation !== generation) return;
+      worker.removeEventListener("message", receive);
+      worker.removeEventListener("error", fail);
+      if (event.data.ok) resolve(event.data.analysis);
+      else reject(new Error(event.data.error || "Audio analysis failed."));
+    };
+    const fail = (event) => {
+      worker.removeEventListener("message", receive);
+      worker.removeEventListener("error", fail);
+      reject(new Error(event.message || "Audio analysis worker failed."));
+    };
+    worker.addEventListener("message", receive);
+    worker.addEventListener("error", fail);
+    worker.postMessage({ generation, sampleRate, samples }, [samples.buffer]);
+  });
+
+const analyzeSelectedAudioClip = async () => {
+  const clip = selectedAudioSyncClip();
+  const media = clip ? mediaForClip(clip) : null;
+  if (!clip || !media) {
+    setAudioSyncStatus("Choose an Audio timeline clip to begin.", "idle");
+    return;
+  }
+  const generation = (audioAnalysisGeneration += 1);
+  setAudioSyncStatus(`Analyzing ${media.name}…`, "analyzing");
+  renderAudioToolSources();
+  try {
+    let analysis = audioAnalysisCache.get(media.id) || null;
+    if (!analysis) {
+      if (media.file.size > AUDIO_ANALYSIS_MAX_FILE_BYTES) {
+        throw new Error("Audio analysis supports files up to 64 MB.");
+      }
+      const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextConstructor) {
+        throw new Error("This browser does not support local audio analysis.");
+      }
+      const context = new AudioContextConstructor();
+      let audioBuffer;
+      const sourceBytes = await media.file.arrayBuffer();
+      const declaredSampleRate = waveFileSampleRate(sourceBytes);
+      try {
+        audioBuffer = await context.decodeAudioData(sourceBytes);
+      } finally {
+        await context.close().catch(() => {});
+      }
+      if (generation !== audioAnalysisGeneration) return;
+      if (audioBuffer.duration > AUDIO_ANALYSIS_MAX_DURATION) {
+        throw new Error("Audio analysis supports tracks up to ten minutes.");
+      }
+      const decodedBytes =
+        audioBuffer.length * audioBuffer.numberOfChannels * Float32Array.BYTES_PER_ELEMENT;
+      if (decodedBytes > AUDIO_ANALYSIS_MAX_DECODED_BYTES) {
+        throw new Error("This decoded audio track is too large to analyze safely.");
+      }
+      analysis = await runAudioAnalysisWorker(
+        loudestAudioChannel(audioBuffer),
+        audioBuffer.sampleRate,
+        generation
+      );
+      if (declaredSampleRate) analysis.sourceSampleRate = declaredSampleRate;
+      audioAnalysisCache.set(media.id, analysis);
+    }
+    if (generation !== audioAnalysisGeneration) return;
+    state.audioSync.analysis = analysis;
+    state.audioSync.analysisMediaId = media.id;
+    state.audioSync.status = "ready";
+    setAudioSyncStatus(
+      `Analyzed ${media.name}: ${formatTime(analysis.duration)} at ${analysis.sourceSampleRate} Hz.`,
+      "ready"
+    );
+    if (elements.audioSyncGenerate) elements.audioSyncGenerate.disabled = false;
+    elements.audioSyncRecommendations.forEach((button) => {
+      button.disabled = false;
+    });
+    renderAudioSyncGraphs();
+  } catch (error) {
+    if (generation !== audioAnalysisGeneration) return;
+    state.audioSync.analysis = null;
+    state.audioSync.analysisMediaId = null;
+    setAudioSyncStatus(
+      String(error?.message || "The browser could not analyze this audio file."),
+      "error"
+    );
+    if (elements.audioSyncGenerate) elements.audioSyncGenerate.disabled = true;
+  } finally {
+    renderAudioToolSources();
+  }
+};
+
+const audioSyncApi = () => window.VideoEditorAudioAnalysis || null;
+
+const normalizedAudioSyncRange = () => {
+  const analysis = state.audioSync.analysis;
+  const nyquist = analysis ? analysis.sampleRate / 2 : 20000;
+  const rawMinimum = Number(elements.audioSyncFrequencyMin?.value);
+  const rawMaximum = Number(elements.audioSyncFrequencyMax?.value);
+  const minimum = clamp(Number.isFinite(rawMinimum) ? rawMinimum : 40, 20, nyquist);
+  const maximum = clamp(
+    Number.isFinite(rawMaximum) ? rawMaximum : 2000,
+    minimum,
+    nyquist
+  );
+  if (elements.audioSyncFrequencyMin) elements.audioSyncFrequencyMin.value = String(Math.round(minimum));
+  if (elements.audioSyncFrequencyMax) elements.audioSyncFrequencyMax.value = String(Math.round(maximum));
+  return { maximum, minimum };
+};
+
+const selectedAudioSyncSeries = ({ detector = "band", maximum, minimum } = {}) => {
+  const analysis = state.audioSync.analysis;
+  const api = audioSyncApi();
+  if (!analysis || !api) return null;
+  return detector === "onset"
+    ? api.createOnsetSeries(analysis)
+    : api.createBandSeries(analysis, minimum, maximum);
+};
+
+const sizeCanvas = (canvas) => {
+  const bounds = canvas.getBoundingClientRect();
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const width = Math.max(1, Math.round((bounds.width || 360) * ratio));
+  const height = Math.max(1, Math.round((bounds.height || 76) * ratio));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  return { context: canvas.getContext("2d"), height, ratio, width };
+};
+
+const drawAudioSyncWaveform = (container) => {
+  const canvas = container?.querySelector("canvas");
+  const analysis = state.audioSync.analysis;
+  if (!canvas || !analysis) return;
+  const { context, height, width } = sizeCanvas(canvas);
+  if (!context) return;
+  context.clearRect(0, 0, width, height);
+  const { maximums, minimums } = analysis.waveform;
+  context.strokeStyle = "#00ffff";
+  context.lineWidth = Math.max(1, window.devicePixelRatio || 1);
+  context.beginPath();
+  for (let index = 0; index < maximums.length; index += 1) {
+    const x = (index / Math.max(1, maximums.length - 1)) * (width - 1);
+    const top = (0.5 - maximums[index] * 0.45) * height;
+    const bottom = (0.5 - minimums[index] * 0.45) * height;
+    context.moveTo(x, top);
+    context.lineTo(x, bottom);
+  }
+  context.stroke();
+};
+
+const frequencyX = (frequency, analysis, width) => {
+  const minimum = Math.max(20, analysis.bandEdges[0]);
+  const maximum = analysis.bandEdges.at(-1);
+  return (
+    (Math.log(Math.max(minimum, frequency)) - Math.log(minimum)) /
+    (Math.log(maximum) - Math.log(minimum))
+  ) * width;
+};
+
+const drawAudioSyncSpectrum = (container) => {
+  const canvas = container?.querySelector("canvas");
+  const analysis = state.audioSync.analysis;
+  if (!canvas || !analysis) return;
+  const { context, height, width } = sizeCanvas(canvas);
+  if (!context) return;
+  context.clearRect(0, 0, width, height);
+  const { minimum, maximum } = normalizedAudioSyncRange();
+  const left = frequencyX(minimum, analysis, width);
+  const right = frequencyX(maximum, analysis, width);
+  context.fillStyle = "rgba(255, 255, 0, 0.18)";
+  context.fillRect(left, 0, Math.max(1, right - left), height);
+  context.fillStyle = "#00ffff";
+  analysis.averageSpectrum.forEach((value, index) => {
+    const x1 = frequencyX(analysis.bandEdges[index], analysis, width);
+    const x2 = frequencyX(analysis.bandEdges[index + 1], analysis, width);
+    const barHeight = value * (height - 4);
+    context.fillRect(x1, height - barHeight, Math.max(1, x2 - x1 - 1), barHeight);
+  });
+};
+
+const renderAudioSyncGraphs = () => {
+  const view = elements.audioSyncGraphView?.value || state.audioSync.graphView;
+  state.audioSync.graphView = view;
+  const showWaveform = view === "combined" || view === "waveform";
+  const showSpectrum = view === "combined" || view === "frequency";
+  if (elements.audioSyncWaveform) elements.audioSyncWaveform.hidden = !showWaveform;
+  if (elements.audioSyncSpectrum) elements.audioSyncSpectrum.hidden = !showSpectrum;
+  const analysis = state.audioSync.analysis;
+  for (const container of [elements.audioSyncWaveform, elements.audioSyncSpectrum]) {
+    const placeholder = container?.querySelector("span");
+    if (placeholder) placeholder.hidden = Boolean(analysis);
+  }
+  if (!analysis) return;
+  const source = selectedAudioSyncClip();
+  const media = source ? mediaForClip(source) : null;
+  elements.audioSyncWaveform?.setAttribute(
+    "aria-label",
+    `Waveform for ${media?.name || "analyzed audio"}, ${formatTime(analysis.duration)}.`
+  );
+  const range = normalizedAudioSyncRange();
+  elements.audioSyncSpectrum?.setAttribute(
+    "aria-label",
+    `Frequency spectrum for ${media?.name || "analyzed audio"}; Fourier graph with selected range ${Math.round(range.minimum)} to ${Math.round(range.maximum)} hertz.`
+  );
+  if (showWaveform) drawAudioSyncWaveform(elements.audioSyncWaveform);
+  if (showSpectrum) drawAudioSyncSpectrum(elements.audioSyncSpectrum);
+};
+
+const guidepostTimelineTime = (rule, guidepost) => {
+  const clip = state.clips.find(
+    (candidate) => candidate.id === rule.sourceClipId && candidate.kind === "audio"
+  );
+  if (
+    !clip ||
+    guidepost.sourceTime < clip.sourceStart - 0.001 ||
+    guidepost.sourceTime > clip.sourceEnd + 0.001
+  ) {
+    return null;
+  }
+  return roundTime(clip.start + guidepost.sourceTime - clip.sourceStart);
+};
+
+const mappedGuideposts = (rule) =>
+  rule.guideposts
+    .map((guidepost) => ({
+      ...guidepost,
+      timelineTime: guidepostTimelineTime(rule, guidepost),
+    }))
+    .filter((guidepost) => guidepost.timelineTime !== null)
+    .sort((left, right) => left.timelineTime - right.timelineTime);
+
+const guidepostLabel = (rule, guidepost) =>
+  `${rule.label} guidepost at ${formatTime(guidepost.timelineTime)}, ${guidepost.polarity} threshold crossing`;
+
+const nudgeGuidepost = (ruleId, guidepostId, delta) => {
+  const rule = state.audioSync.rules.find((candidate) => candidate.id === ruleId);
+  const guidepost = rule?.guideposts.find((candidate) => candidate.id === guidepostId);
+  const analysis = state.audioSync.analysis;
+  if (!rule || !guidepost || !analysis) return;
+  guidepost.sourceTime = roundTime(clamp(guidepost.sourceTime + delta, 0, analysis.duration));
+  renderAudioSyncRules();
+  renderAudioSyncGuideposts();
+  announce(`${rule.label} guidepost moved to ${formatTime(guidepostTimelineTime(rule, guidepost) ?? 0)}.`);
+  requestAnimationFrame(() =>
+    document.querySelector(`[data-guidepost-id="${guidepost.id}"]`)?.focus()
+  );
+};
+
+const deleteGuidepost = (ruleId, guidepostId) => {
+  const rule = state.audioSync.rules.find((candidate) => candidate.id === ruleId);
+  if (!rule) return;
+  rule.guideposts = rule.guideposts.filter((candidate) => candidate.id !== guidepostId);
+  renderAudioSyncRules();
+  renderAudioSyncGuideposts();
+  announce(`${rule.label} guidepost deleted.`);
+};
+
+const splitVideoClipsAtGuideposts = (rule) => {
+  const boundaries = mappedGuideposts(rule).map((guidepost) => guidepost.timelineTime);
+  let cuts = 0;
+  const originalClips = state.clips.filter((clip) => clip.kind === "video");
+  for (const clip of originalClips) {
+    const inside = boundaries.filter(
+      (time) => time > clip.start + MIN_ITEM_DURATION && time < clip.start + clipDuration(clip) - MIN_ITEM_DURATION
+    );
+    if (!inside.length) continue;
+    const originalEnd = clip.start + clipDuration(clip);
+    const sourceTimelineOffset = clip.sourceStart - clip.start;
+    const edges = [clip.start, ...inside, originalEnd];
+    clip.sourceEnd = roundTime(edges[1] + sourceTimelineOffset);
+    for (let index = 1; index < edges.length - 1; index += 1) {
+      state.clips.push({
+        ...clip,
+        id: `clip-${nextClipId++}`,
+        sourceStart: roundTime(edges[index] + sourceTimelineOffset),
+        sourceEnd: roundTime(edges[index + 1] + sourceTimelineOffset),
+        start: roundTime(edges[index]),
+      });
+      cuts += 1;
+    }
+  }
+  renderTimeline();
+  announce(cuts ? `${rule.label} created ${cuts} video ${cuts === 1 ? "cut" : "cuts"}.` : `${rule.label} has no guideposts inside a video clip.`);
+};
+
+const tierHasRoom = (tierId, start, duration) =>
+  Math.abs(findValidStart(tierId, start, duration) - start) <= 0.01;
+
+const fillGuidepostGap = (rule) => {
+  const media = state.media.find(
+    (candidate) => candidate.id === state.selectedMediaId && candidate.kind === "video"
+  );
+  if (!media) {
+    announce("Select a video in Import Media before filling a guidepost gap.");
+    return;
+  }
+  const guideposts = mappedGuideposts(rule);
+  const interval = guideposts
+    .slice(0, -1)
+    .map((guidepost, index) => ({ end: guideposts[index + 1].timelineTime, start: guidepost.timelineTime }))
+    .find((candidate) => candidate.start >= state.playhead - 0.01);
+  if (!interval) {
+    announce(`${rule.label} has no complete guidepost gap at or after the playhead.`);
+    return;
+  }
+  const duration = roundTime(interval.end - interval.start);
+  if (duration < MIN_ITEM_DURATION || media.duration + 0.001 < duration) {
+    announce(`${media.name} is too short to fill the ${formatTime(duration)} guidepost gap.`);
+    return;
+  }
+  const tier = state.tiers.find(
+    (candidate) => candidate.kind === "video" && tierHasRoom(candidate.id, interval.start, duration)
+  );
+  if (!tier) {
+    announce("The guidepost gap is occupied or overlaps clips on every Video tier.");
+    return;
+  }
+  const clip = insertClipSegment(media, tier.id, interval.start, 0, duration, {
+    announceChange: false,
+    snap: false,
+  });
+  if (clip) announce(`${media.name} filled ${rule.label}'s ${formatTime(duration)} gap on ${tier.label}.`);
+};
+
+const addEffectsAtGuideposts = (rule, type) => {
+  const definition = EFFECTS[type];
+  if (!definition?.timelineInsertable) return;
+  const guideposts = mappedGuideposts(rule);
+  guideposts.forEach((guidepost) => insertEffect(type, guidepost.timelineTime));
+  renderTimeline();
+  announce(`${definition.label} added at ${guideposts.length} ${rule.label} guideposts.`);
+};
+
+const deleteAudioSyncRule = (ruleId) => {
+  const index = state.audioSync.rules.findIndex((candidate) => candidate.id === ruleId);
+  if (index < 0) return;
+  const [rule] = state.audioSync.rules.splice(index, 1);
+  renderAudioSyncRules();
+  renderAudioSyncGuideposts();
+  announce(`${rule.label} guidepost rule deleted.`);
+};
+
+const renderAudioSyncRules = () => {
+  if (!elements.audioSyncRules || !elements.audioSyncRuleTemplate) return;
+  elements.audioSyncRules.querySelectorAll("[data-audio-sync-rule-id]").forEach((item) => item.remove());
+  if (elements.audioSyncRulesEmpty) elements.audioSyncRulesEmpty.hidden = state.audioSync.rules.length > 0;
+  if (elements.audioSyncRuleTotal) {
+    elements.audioSyncRuleTotal.textContent = `${state.audioSync.rules.length} ${state.audioSync.rules.length === 1 ? "rule" : "rules"}`;
+  }
+  for (const rule of state.audioSync.rules) {
+    const fragment = elements.audioSyncRuleTemplate.content.cloneNode(true);
+    const item = fragment.querySelector("[data-audio-sync-rule-id]");
+    const color = fragment.querySelector("[data-audio-sync-rule-color]");
+    const label = fragment.querySelector("[data-audio-sync-rule-label]");
+    const mapped = mappedGuideposts(rule);
+    item.dataset.audioSyncRuleId = rule.id;
+    item.style.setProperty("--guidepost-color", rule.color);
+    color.value = rule.color;
+    label.value = rule.label;
+    fragment.querySelector("[data-audio-sync-rule-count]").textContent = `${mapped.length} ${mapped.length === 1 ? "guidepost" : "guideposts"}`;
+    color.addEventListener("input", (event) => {
+      rule.color = event.target.value;
+      renderAudioSyncGuideposts();
+      item.style.setProperty("--guidepost-color", rule.color);
+    });
+    label.addEventListener("change", (event) => {
+      rule.label = event.target.value.trim() || "Audio rule";
+      renderAudioSyncRules();
+      renderAudioSyncGuideposts();
+      announce(`Guidepost rule renamed ${rule.label}.`);
+    });
+    fragment.querySelector('[data-guidepost-action="cut"]').addEventListener("click", () => splitVideoClipsAtGuideposts(rule));
+    fragment.querySelector('[data-guidepost-action="fill"]').addEventListener("click", () => fillGuidepostGap(rule));
+    const effectButton = fragment.querySelector('[data-guidepost-action="effect"]');
+    const effectSelect = fragment.querySelector("[data-guidepost-effect-type]");
+    effectSelect.disabled = false;
+    effectButton.addEventListener("click", () => addEffectsAtGuideposts(rule, effectSelect.value));
+    fragment.querySelector("[data-delete-audio-sync-rule]").addEventListener("click", () => deleteAudioSyncRule(rule.id));
+    const markerList = fragment.querySelector("[data-audio-sync-marker-list]");
+    for (const guidepost of mapped) {
+      const marker = document.createElement("button");
+      marker.type = "button";
+      marker.dataset.guidepostId = guidepost.id;
+      marker.dataset.guidepostTime = String(guidepost.timelineTime);
+      marker.dataset.guidepostSourceTime = String(guidepost.sourceTime);
+      marker.dataset.guidepostGroupId = rule.id;
+      marker.setAttribute("role", "listitem");
+      marker.setAttribute("aria-label", guidepostLabel(rule, guidepost));
+      marker.setAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight Shift+ArrowLeft Shift+ArrowRight Delete Enter");
+      marker.textContent = `${formatTime(guidepost.timelineTime)} · ${guidepost.polarity}`;
+      marker.style.borderLeft = `5px solid ${rule.color}`;
+      marker.addEventListener("click", () => setPlayhead(guidepost.timelineTime, true));
+      marker.addEventListener("keydown", (event) => {
+        if (event.key === "Delete" || event.key === "Backspace") {
+          event.preventDefault();
+          deleteGuidepost(rule.id, guidepost.id);
+        } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          const amount = event.shiftKey ? GUIDEPOST_LARGE_NUDGE : GUIDEPOST_NUDGE;
+          nudgeGuidepost(rule.id, guidepost.id, event.key === "ArrowLeft" ? -amount : amount);
+        } else if (event.key === "Enter") {
+          event.preventDefault();
+          setPlayhead(guidepost.timelineTime, true);
+        }
+      });
+      markerList.append(marker);
+    }
+    elements.audioSyncRules.append(fragment);
+  }
+};
+
+const renderAudioSyncGuideposts = () => {
+  if (!elements.audioSyncGuideLayer || !elements.audioSyncGuidepostTemplate) return;
+  elements.audioSyncGuideLayer.replaceChildren();
+  for (const rule of state.audioSync.rules) {
+    const mapped = mappedGuideposts(rule);
+    if (!mapped.length) continue;
+    const template = elements.audioSyncGuidepostTemplate.content;
+    const group = template.firstElementChild.cloneNode(false);
+    group.dataset.guidepostGroupId = rule.id;
+    group.dataset.guidepostColor = rule.color;
+    group.dataset.guidepostSourceClipId = rule.sourceClipId;
+    group.style.setProperty("--guidepost-color", rule.color);
+    for (const guidepost of mapped) {
+      const marker = template.querySelector("[data-guidepost-visual-id]").cloneNode(true);
+      marker.dataset.guidepostVisualId = guidepost.id;
+      marker.dataset.guidepostTime = String(guidepost.timelineTime);
+      marker.dataset.guidepostSourceTime = String(guidepost.sourceTime);
+      marker.style.setProperty("--guidepost-x", `${guidepost.timelineTime * state.pixelsPerSecond}px`);
+      group.append(marker);
+    }
+    elements.audioSyncGuideLayer.append(group);
+  }
+};
+
+const createAudioSyncRule = ({ detector = "band", direction, label, maximum, minimum, threshold } = {}) => {
+  const analysis = state.audioSync.analysis;
+  const clip = selectedAudioSyncClip();
+  const api = audioSyncApi();
+  if (!analysis || !clip || !api) {
+    setAudioSyncStatus("Analyze an Audio timeline clip before generating guideposts.", "error");
+    return null;
+  }
+  const range = normalizedAudioSyncRange();
+  const boundedMinimum = minimum ?? range.minimum;
+  const boundedMaximum = maximum ?? range.maximum;
+  const series = selectedAudioSyncSeries({ detector, maximum: boundedMaximum, minimum: boundedMinimum });
+  const normalizedThreshold = threshold ?? Number(elements.audioSyncThreshold?.value || 65) / 100;
+  const selectedDirection = direction || elements.audioSyncDirection?.value || "rising";
+  const crossings = api.findThresholdCrossings(
+    analysis.frameTimes,
+    series,
+    normalizedThreshold,
+    selectedDirection,
+    { minimumSpacing: detector === "onset" ? 0.28 : 0.18 }
+  );
+  const rule = {
+    color: GUIDEPOST_COLORS[(nextAudioSyncRuleId - 1) % GUIDEPOST_COLORS.length],
+    detector,
+    direction: selectedDirection,
+    guideposts: crossings.map((crossing) => ({
+      id: `guidepost-${nextGuidepostId++}`,
+      polarity: crossing.polarity,
+      score: crossing.score,
+      sourceTime: roundTime(crossing.time),
+    })),
+    id: `audio-sync-rule-${nextAudioSyncRuleId++}`,
+    label: label || `${Math.round(boundedMinimum)}–${Math.round(boundedMaximum)} Hz ${selectedDirection}`,
+    maximum: boundedMaximum,
+    mediaId: state.audioSync.analysisMediaId,
+    minimum: boundedMinimum,
+    sourceClipId: clip.id,
+    threshold: normalizedThreshold,
+  };
+  state.audioSync.rules.push(rule);
+  renderAudioSyncRules();
+  renderAudioSyncGuideposts();
+  setAudioSyncStatus(`${rule.label} created ${rule.guideposts.length} ${rule.guideposts.length === 1 ? "guidepost" : "guideposts"}.`, "ready");
+  announce(`${rule.label} guidepost rule created with ${rule.guideposts.length} markers.`);
+  return rule;
+};
+
+const createRecommendedAudioSyncRule = (type) => {
+  const analysis = state.audioSync.analysis;
+  const api = audioSyncApi();
+  if (!analysis || !api) return;
+  const nyquist = analysis.sampleRate / 2;
+  const definitions = {
+    low: { label: "Recommended lows", maximum: Math.min(250, nyquist), minimum: 40 },
+    mid: { label: "Recommended mids", maximum: Math.min(2000, nyquist), minimum: 250 },
+    high: { label: "Recommended highs", maximum: Math.min(8000, nyquist), minimum: 2000 },
+    beats: { detector: "onset", label: "Recommended beats", maximum: Math.min(8000, nyquist), minimum: 40 },
+  };
+  const definition = definitions[type];
+  if (!definition) return;
+  const series = selectedAudioSyncSeries(definition);
+  createAudioSyncRule({
+    ...definition,
+    direction: "rising",
+    threshold: api.recommendThreshold(series, type === "beats" ? 0.68 : 0.75),
+  });
+};
+
+const allMappedGuideposts = () =>
+  state.audioSync.rules.flatMap((rule) =>
+    mappedGuideposts(rule).map((guidepost) => ({ ...guidepost, color: rule.color, rule }))
+  );
+
+const videoActiveAtTime = (time) =>
+  state.clips.some(
+    (clip) => clip.kind === "video" && time >= clip.start && time < clip.start + clipDuration(clip)
+  );
+
+const flashGuidepost = (guidepost) => {
+  if (!elements.audioSyncFlash || videoActiveAtTime(guidepost.timelineTime)) return;
+  window.clearTimeout(guidepostFlashTimer);
+  elements.audioSyncFlash.hidden = false;
+  elements.audioSyncFlash.dataset.flashActive = "true";
+  elements.audioSyncFlash.dataset.guidepostId = guidepost.id;
+  elements.audioSyncFlash.dataset.guidepostGroupId = guidepost.rule.id;
+  elements.audioSyncFlash.dataset.guidepostColor = guidepost.color;
+  elements.audioSyncFlash.style.backgroundColor = guidepost.color;
+  guidepostFlashTimer = window.setTimeout(() => {
+    elements.audioSyncFlash.dataset.flashActive = "false";
+    elements.audioSyncFlash.hidden = true;
+  }, GUIDEPOST_FLASH_DURATION_MS);
+};
+
+const flashCrossedGuideposts = (from, to) => {
+  if (to <= from) return;
+  const crossed = allMappedGuideposts().filter(
+    (guidepost) => guidepost.timelineTime > from && guidepost.timelineTime <= to
+  );
+  crossed.forEach(flashGuidepost);
+};
+
+const openOfficialYoutubeSearch = (query, suffix = "") => {
+  const value = String(query || "").trim();
+  if (!value) {
+    announce("Enter a YouTube search first.");
+    return false;
+  }
+  const url = new URL("https://www.youtube.com/results");
+  url.searchParams.set("search_query", `${value}${suffix}`.trim());
+  const youtubeUrl = url.href;
+  let popup = null;
+  try {
+    popup = window.open(youtubeUrl, "_blank", "noopener,noreferrer");
+    if (popup) popup.opener = null;
+  } catch {
+    popup = null;
+  }
+  if (!popup) {
+    announce("YouTube search was blocked. Allow pop-ups and try again.");
+    return false;
+  }
+  announce("Official YouTube search opened in a new tab. Import audio you have rights to use as a local file.");
+  return true;
+};
+
+const updateAudioLocalRange = () => {
+  const media = state.media.find((candidate) => candidate.id === state.audioLocal.mediaId);
+  if (!media) return false;
+  const start = clamp(Number(elements.audioLocalStart?.value || 0), 0, media.duration);
+  const end = clamp(Number(elements.audioLocalEnd?.value || media.duration), 0, media.duration);
+  state.audioLocal.sourceStart = roundTime(start);
+  state.audioLocal.sourceEnd = roundTime(end);
+  if (elements.audioLocalStart) elements.audioLocalStart.value = String(state.audioLocal.sourceStart);
+  if (elements.audioLocalEnd) elements.audioLocalEnd.value = String(state.audioLocal.sourceEnd);
+  if (elements.audioLocalStartOutput) elements.audioLocalStartOutput.textContent = formatTime(state.audioLocal.sourceStart);
+  if (elements.audioLocalEndOutput) elements.audioLocalEndOutput.textContent = formatTime(state.audioLocal.sourceEnd);
+  const valid = state.audioLocal.sourceEnd > state.audioLocal.sourceStart;
+  if (elements.audioLocalInsert) elements.audioLocalInsert.disabled = !valid;
+  if (valid && elements.audioLocalPreview) setMediaTime(elements.audioLocalPreview, state.audioLocal.sourceStart);
+  return valid;
+};
+
+const insertLocalAudioSelection = () => {
+  const media = state.media.find(
+    (candidate) => candidate.id === state.audioLocal.mediaId && candidate.kind === "audio"
+  );
+  const tier = firstTierForKind("audio");
+  if (!media || !tier || !updateAudioLocalRange()) {
+    announce("Choose at least 0.25 seconds of local audio.");
+    return;
+  }
+  if (state.audioLocal.sourceEnd - state.audioLocal.sourceStart < MIN_ITEM_DURATION) {
+    state.audioLocal.sourceEnd = roundTime(
+      Math.min(media.duration, state.audioLocal.sourceStart + MIN_ITEM_DURATION)
+    );
+    if (state.audioLocal.sourceEnd - state.audioLocal.sourceStart < MIN_ITEM_DURATION) {
+      state.audioLocal.sourceStart = roundTime(
+        Math.max(0, state.audioLocal.sourceEnd - MIN_ITEM_DURATION)
+      );
+    }
+    if (elements.audioLocalStart) elements.audioLocalStart.value = String(state.audioLocal.sourceStart);
+    if (elements.audioLocalEnd) elements.audioLocalEnd.value = String(state.audioLocal.sourceEnd);
+    if (elements.audioLocalStartOutput) elements.audioLocalStartOutput.textContent = formatTime(state.audioLocal.sourceStart);
+    if (elements.audioLocalEndOutput) elements.audioLocalEndOutput.textContent = formatTime(state.audioLocal.sourceEnd);
+  }
+  insertClipSegment(
+    media,
+    tier.id,
+    state.playhead,
+    state.audioLocal.sourceStart,
+    state.audioLocal.sourceEnd
+  );
+};
+
+const writeAscii = (view, offset, value) => {
+  for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
+};
+
+const encodeWaveFile = (samples, sampleRate) => {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  writeAscii(view, 0, "RIFF");
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeAscii(view, 8, "WAVE");
+  writeAscii(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeAscii(view, 36, "data");
+  view.setUint32(40, samples.length * 2, true);
+  samples.forEach((sample, index) => {
+    view.setInt16(44 + index * 2, Math.round(clamp(sample, -1, 1) * 32767), true);
+  });
+  return new Blob([buffer], { type: "audio/wav" });
+};
+
+const synthesizeClick = () => {
+  const samples = new Float32Array(Math.round(CLICK_SOUND_DURATION * SOUND_EFFECT_SAMPLE_RATE));
+  let noise = 0x12345678;
+  for (let index = 0; index < samples.length; index += 1) {
+    const time = index / SOUND_EFFECT_SAMPLE_RATE;
+    noise = (1664525 * noise + 1013904223) >>> 0;
+    const random = noise / 0xffffffff - 0.5;
+    const envelope = Math.exp(-time * 44);
+    samples[index] = envelope * (0.72 * Math.sin(2 * Math.PI * 1450 * time) + 0.32 * random);
+  }
+  return samples;
+};
+
+const synthesizeTyping = (duration) => {
+  const samples = new Float32Array(Math.round(duration * SOUND_EFFECT_SAMPLE_RATE));
+  const spacing = 0.145;
+  for (let pulse = 0; pulse * spacing < duration; pulse += 1) {
+    const start = Math.round(pulse * spacing * SOUND_EFFECT_SAMPLE_RATE);
+    const pitch = 720 + (pulse % 4) * 95;
+    const length = Math.min(samples.length - start, Math.round(0.055 * SOUND_EFFECT_SAMPLE_RATE));
+    for (let index = 0; index < length; index += 1) {
+      const time = index / SOUND_EFFECT_SAMPLE_RATE;
+      samples[start + index] += Math.exp(-time * 70) * Math.sin(2 * Math.PI * pitch * time) * 0.58;
+    }
+  }
+  return samples;
+};
+
+const soundEffectDuration = () =>
+  state.soundEffect.preset === "click"
+    ? CLICK_SOUND_DURATION
+    : state.soundEffect.loop
+      ? clamp(Number(elements.soundEffectDuration?.value || 3), 1, 30)
+      : TYPING_SOUND_DURATION;
+
+const createSoundEffectFile = () => {
+  const duration = soundEffectDuration();
+  const samples = state.soundEffect.preset === "click" ? synthesizeClick() : synthesizeTyping(duration);
+  const label = state.soundEffect.preset === "click" ? "Click" : "Typing";
+  return {
+    duration,
+    file: new File([encodeWaveFile(samples, SOUND_EFFECT_SAMPLE_RATE)], `${label.toLowerCase()}-sound-effect.wav`, { type: "audio/wav" }),
+    label,
+  };
+};
+
+const updateSoundEffectControls = () => {
+  const typing = state.soundEffect.preset === "typing";
+  elements.soundEffectPresets.forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.soundEffectPreset === state.soundEffect.preset));
+  });
+  if (elements.soundEffectLoop) {
+    elements.soundEffectLoop.disabled = !typing;
+    elements.soundEffectLoop.checked = typing && state.soundEffect.loop;
+  }
+  if (elements.soundEffectDuration) {
+    elements.soundEffectDuration.disabled = !typing || !state.soundEffect.loop;
+    elements.soundEffectDuration.value = String(state.soundEffect.duration);
+  }
+  if (elements.soundEffectPreview) elements.soundEffectPreview.textContent = `Preview ${typing ? "Typing" : "Click"}`;
+  if (elements.soundEffectStatus) {
+    elements.soundEffectStatus.textContent = typing
+      ? `Typing preset ready${state.soundEffect.loop ? `; loops for ${state.soundEffect.duration} seconds` : "; 1.2 seconds"}.`
+      : "Click preset ready; 0.12 seconds.";
+  }
+};
+
+const stopSoundEffectPreview = () => {
+  soundEffectPreviewPlayer?.pause();
+  soundEffectPreviewPlayer = null;
+  if (soundEffectPreviewUrl) URL.revokeObjectURL(soundEffectPreviewUrl);
+  soundEffectPreviewUrl = "";
+};
+
+const previewSoundEffect = () => {
+  stopSoundEffectPreview();
+  const generated = createSoundEffectFile();
+  soundEffectPreviewUrl = URL.createObjectURL(generated.file);
+  soundEffectPreviewPlayer = new Audio(soundEffectPreviewUrl);
+  soundEffectPreviewPlayer.addEventListener("ended", stopSoundEffectPreview, { once: true });
+  soundEffectPreviewPlayer.play().catch(() => {
+    if (elements.soundEffectStatus) elements.soundEffectStatus.textContent = "Preview could not start. Try again.";
+  });
+  if (elements.soundEffectStatus) elements.soundEffectStatus.textContent = `Previewing ${generated.label}, ${formatTime(generated.duration)}.`;
+};
+
+const insertSoundEffect = () => {
+  const generated = createSoundEffectFile();
+  const url = URL.createObjectURL(generated.file);
+  const media = {
+    duration: generated.duration,
+    file: generated.file,
+    id: `media-${nextMediaId++}`,
+    kind: "audio",
+    name: generated.file.name,
+    url,
+  };
+  state.media.push(media);
+  state.audioLocal.mediaId = media.id;
+  state.selectedMediaId = media.id;
+  renderMediaBin();
+  const tier = firstTierForKind("audio");
+  if (tier) {
+    insertClipSegment(media, tier.id, state.playhead, 0, media.duration, {
+      minimumDuration: 0.01,
+    });
+  }
+  if (elements.soundEffectStatus) elements.soundEffectStatus.textContent = `${generated.label} inserted at the playhead.`;
 };
 
 const updateTimeDisplay = () => {
@@ -1840,6 +2991,11 @@ const setPlayhead = (value, shouldAnnounce = false) => {
 const pausePlayback = () => {
   state.playing = false;
   cancelAnimationFrame(state.animationFrame);
+  window.clearTimeout(guidepostFlashTimer);
+  if (elements.audioSyncFlash) {
+    elements.audioSyncFlash.dataset.flashActive = "false";
+    elements.audioSyncFlash.hidden = true;
+  }
   elements.previewVideo?.pause();
   audioPlayers.forEach((player) => player.pause());
   if (elements.playButton) {
@@ -1853,11 +3009,14 @@ const playbackTick = (now) => {
   if (!state.playing) return;
   const nextPlayhead = (now - state.playbackStartedAt) / 1000;
   if (nextPlayhead >= projectDuration()) {
+    flashCrossedGuideposts(state.playbackPreviousTime, projectDuration());
     setPlayhead(projectDuration());
     pausePlayback();
     announce("Playback reached the end of the timeline.");
     return;
   }
+  flashCrossedGuideposts(state.playbackPreviousTime, nextPlayhead);
+  state.playbackPreviousTime = nextPlayhead;
   setPlayhead(nextPlayhead);
   state.animationFrame = requestAnimationFrame(playbackTick);
 };
@@ -1871,6 +3030,7 @@ const togglePlayback = () => {
   if (state.playhead >= projectDuration()) state.playhead = 0;
   state.playing = true;
   state.playbackStartedAt = performance.now() - state.playhead * 1000;
+  state.playbackPreviousTime = state.playhead;
   if (elements.playButton) {
     elements.playButton.setAttribute("aria-label", "Pause");
     elements.playButton.setAttribute("aria-pressed", "true");
@@ -1885,6 +3045,9 @@ const renderTimeline = () => {
   renderRuler();
   renderTiers();
   renderEffects();
+  renderAudioSyncGuideposts();
+  renderAudioSyncRules();
+  renderAudioToolSources();
   updateTimeDisplay();
   syncPreview();
 };
@@ -1901,6 +3064,7 @@ const activateTab = (type, shouldFocus = false) => {
   if (!state.openTabs.includes(type)) return;
   state.activeTab = type;
   renderTabs();
+  if (type === "audio-sync-cut") requestAnimationFrame(renderAudioSyncGraphs);
   if (shouldFocus) requestAnimationFrame(() => focusTab(type));
 };
 
@@ -1911,6 +3075,7 @@ const openEffectTab = (type) => {
   state.closedTabs = state.closedTabs.filter((candidate) => candidate !== type);
   state.activeTab = type;
   renderTabs();
+  if (type === "audio-sync-cut") requestAnimationFrame(renderAudioSyncGraphs);
   announce(`${definition.label} effect editor opened.`);
   requestAnimationFrame(() => focusTab(type));
 };
@@ -2062,8 +3227,11 @@ const bindStaticControls = () => {
     applyFrameSize(!shouldAutoSelectSideBySide);
     if (shouldAutoSelectSideBySide) {
       setWorkspaceLayout("side-by-side");
+      const guidelinesStatus = state.guidelinesEnabled
+        ? ` ${SOCIAL_GUIDELINE_PLATFORMS[state.guidelinesPlatform].label} UI guidelines shown.`
+        : "";
       announce(
-        "Frame size set to Reel / TikTok (9:16). Workspace layout changed to Side by side."
+        `Frame size set to Reel / TikTok (9:16). Workspace layout changed to Side by side.${guidelinesStatus}`
       );
     }
     if (state.framePreset === "custom") elements.frameCustomWidth?.focus();
@@ -2072,6 +3240,15 @@ const bindStaticControls = () => {
     button.addEventListener("click", () => {
       setWorkspaceLayout(button.dataset.videoEditorWorkspaceLayoutOption, true);
     });
+  });
+  elements.guidelinesToggle?.addEventListener("change", (event) => {
+    state.guidelinesEnabled = event.target.checked;
+    applySocialGuidelines(true);
+  });
+  elements.guidelinesPlatform?.addEventListener("change", (event) => {
+    if (!SOCIAL_GUIDELINE_PLATFORMS[event.target.value]) return;
+    state.guidelinesPlatform = event.target.value;
+    applySocialGuidelines(true);
   });
   elements.frameCustomWidth?.addEventListener("input", () => updateCustomFrameSize(true));
   elements.frameCustomHeight?.addEventListener("input", () => updateCustomFrameSize(true));
@@ -2086,6 +3263,109 @@ const bindStaticControls = () => {
   bindSidePanelSeparator("effects");
   elements.importButton?.addEventListener("click", () => elements.mediaInput?.click());
   elements.mediaInput?.addEventListener("change", (event) => importFiles(event.target.files));
+  elements.audioSyncSource?.addEventListener("change", (event) => {
+    state.audioSync.sourceClipId = event.target.value || null;
+    const clip = selectedAudioSyncClip();
+    const media = clip ? mediaForClip(clip) : null;
+    if (!media || state.audioSync.analysisMediaId !== media.id) {
+      state.audioSync.analysis = null;
+      state.audioSync.analysisMediaId = null;
+      if (elements.audioSyncGenerate) elements.audioSyncGenerate.disabled = true;
+      elements.audioSyncRecommendations.forEach((button) => {
+        button.disabled = true;
+      });
+      setAudioSyncStatus(
+        clip ? `Analyze ${media.name} to create guideposts.` : "Choose an Audio timeline clip to begin.",
+        "idle"
+      );
+    }
+    renderAudioSyncGraphs();
+  });
+  elements.audioSyncAnalyze?.addEventListener("click", analyzeSelectedAudioClip);
+  elements.audioSyncGraphView?.addEventListener("change", renderAudioSyncGraphs);
+  for (const input of [elements.audioSyncFrequencyMin, elements.audioSyncFrequencyMax]) {
+    input?.addEventListener("input", renderAudioSyncGraphs);
+    input?.addEventListener("change", () => {
+      normalizedAudioSyncRange();
+      renderAudioSyncGraphs();
+    });
+  }
+  elements.audioSyncThreshold?.addEventListener("input", (event) => {
+    if (elements.audioSyncThresholdOutput) {
+      elements.audioSyncThresholdOutput.textContent = `${event.target.value}%`;
+    }
+  });
+  elements.audioSyncGenerate?.addEventListener("click", () => createAudioSyncRule());
+  elements.audioSyncRecommendations.forEach((button) => {
+    button.addEventListener("click", () =>
+      createRecommendedAudioSyncRule(button.dataset.audioSyncRecommendation)
+    );
+  });
+
+  const bindYoutubeSearch = (button, input, suffix) => {
+    const form = button?.closest("form");
+    form?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      openOfficialYoutubeSearch(input?.value, suffix);
+    });
+  };
+  bindYoutubeSearch(elements.audioYoutubeSearch, elements.audioYoutubeQuery, "");
+  bindYoutubeSearch(elements.soundYoutubeSearch, elements.soundYoutubeQuery, "");
+  elements.audioLocalFile?.addEventListener("change", async (event) => {
+    const imported = await importFiles(event.target.files);
+    const media = imported.find((candidate) => candidate.kind === "audio");
+    if (media) setAudioLocalSource(media.id);
+    event.target.value = "";
+  });
+  elements.audioLocalSource?.addEventListener("change", (event) => {
+    setAudioLocalSource(event.target.value);
+    if (state.audioLocal.mediaId) {
+      const media = state.media.find((candidate) => candidate.id === state.audioLocal.mediaId);
+      announce(`${media?.name || "Local audio"} selected for trimming.`);
+    }
+  });
+  for (const input of [elements.audioLocalStart, elements.audioLocalEnd]) {
+    input?.addEventListener("input", updateAudioLocalRange);
+    input?.addEventListener("change", () => {
+      if (updateAudioLocalRange()) {
+        announce(
+          `Audio selection set from ${formatTime(state.audioLocal.sourceStart)} to ${formatTime(state.audioLocal.sourceEnd)}.`
+        );
+      }
+    });
+  }
+  elements.audioLocalPreview?.addEventListener("play", () => {
+    if (
+      elements.audioLocalPreview.currentTime < state.audioLocal.sourceStart ||
+      elements.audioLocalPreview.currentTime >= state.audioLocal.sourceEnd
+    ) {
+      elements.audioLocalPreview.currentTime = state.audioLocal.sourceStart;
+    }
+  });
+  elements.audioLocalPreview?.addEventListener("timeupdate", () => {
+    if (elements.audioLocalPreview.currentTime < state.audioLocal.sourceEnd) return;
+    elements.audioLocalPreview.pause();
+    elements.audioLocalPreview.currentTime = state.audioLocal.sourceStart;
+  });
+  elements.audioLocalInsert?.addEventListener("click", insertLocalAudioSelection);
+  elements.soundEffectPresets.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.soundEffect.preset = button.dataset.soundEffectPreset;
+      if (state.soundEffect.preset !== "typing") state.soundEffect.loop = false;
+      updateSoundEffectControls();
+      announce(`${state.soundEffect.preset === "click" ? "Click" : "Typing"} sound effect selected.`);
+    });
+  });
+  elements.soundEffectLoop?.addEventListener("change", (event) => {
+    state.soundEffect.loop = event.target.checked;
+    updateSoundEffectControls();
+  });
+  elements.soundEffectDuration?.addEventListener("change", (event) => {
+    state.soundEffect.duration = roundTime(clamp(Number(event.target.value || 3), 1, 30));
+    updateSoundEffectControls();
+  });
+  elements.soundEffectPreview?.addEventListener("click", previewSoundEffect);
+  elements.soundEffectInsert?.addEventListener("click", insertSoundEffect);
   elements.dropZone?.addEventListener("click", () => elements.mediaInput?.click());
   elements.dropZone?.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
@@ -2179,6 +3459,8 @@ const bindStaticControls = () => {
 
   window.addEventListener("beforeunload", () => {
     pausePlayback();
+    stopSoundEffectPreview();
+    audioAnalysisWorker?.terminate();
     clearAuthenticationTimers();
     authenticationController?.abort();
     previewResizeObserver?.disconnect();
@@ -2214,6 +3496,9 @@ if (elements.app) {
     scheduleEffectTabTitleMarquees();
   });
   renderMediaBin();
+  renderAudioSyncRules();
+  renderAudioSyncGraphs();
+  updateSoundEffectControls();
   renderTabs();
   renderTimeline();
   initializeAuthentication();
