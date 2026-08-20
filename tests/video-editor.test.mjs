@@ -108,43 +108,54 @@ test("Video Editor offers frame presets, custom dimensions, and contained previe
   assert.match(css, /#preview-video\s*\{[^}]*object-fit\s*:\s*contain/is);
 });
 
-test("Video Editor offers opt-in social UI guidelines for fixed 9:16 frames", async () => {
+test("Video Editor offers a single platform selector and documented UI guidelines", async () => {
   const { css, html, script } = await readRouteSources();
   const controls = html.match(
-    /<div\b[^>]*\bid="video-editor-guidelines"[^>]*>[\s\S]*?<\/small>\s*<\/div>/i
+    /<div\b[^>]*\bid="video-editor-guidelines"[^>]*>[\s\S]*?\bid="video-editor-guidelines-note"[\s\S]*?<\/div>\s*<\/div>/i
   )?.[0];
-  assert.ok(controls, "Missing the social UI guideline controls.");
+  assert.ok(controls, "Missing the UI guideline controls.");
   assert.match(controls, /\bdata-video-editor-guidelines-controls(?:\s|>|=)/i);
   assert.match(controls, /\brole="group"/i);
-  assert.match(controls, /\baria-label="Social UI guidelines"/i);
-
-  const toggle = controls.match(
-    /<input\b[^>]*\bid="video-editor-guidelines-toggle"[^>]*>/i
-  )?.[0];
-  assert.ok(toggle, "Missing the social UI guideline toggle.");
-  assert.match(toggle, /\bdata-video-editor-guidelines-toggle(?:\s|>|=)/i);
-  assert.match(toggle, /\btype="checkbox"/i);
-  assert.doesNotMatch(toggle, /\bchecked(?:\s|>|=)/i);
-  assert.match(toggle, /\baria-controls="video-editor-social-guidelines-overlay"/i);
-  assert.match(toggle, /\baria-describedby="video-editor-guidelines-note"/i);
-  assert.match(controls, />\s*Show social UI guidelines\s*</i);
+  assert.match(controls, /\baria-label="UI Guidelines"/i);
+  assert.doesNotMatch(controls, /\btype="checkbox"|video-editor-guidelines-toggle/i);
 
   const platform = controls.match(
     /<select\b[^>]*\bid="video-editor-guidelines-platform"[^>]*>[\s\S]*?<\/select>/i
   )?.[0];
   assert.ok(platform, "Missing the social guideline platform selector.");
   assert.match(platform, /\bdata-video-editor-guidelines-platform(?:\s|>|=)/i);
-  assert.match(platform, /\bdisabled(?:\s|>|=)/i);
+  assert.doesNotMatch(platform, /\bdisabled(?:\s|>|=)/i);
   assert.match(platform, /\baria-describedby="video-editor-guidelines-note"/i);
-  assert.match(controls, /<label\b[^>]*for="video-editor-guidelines-platform"[^>]*>\s*Platform\s*<\/label>/i);
+  assert.match(platform, /\baria-controls="video-editor-social-guidelines-overlay"/i);
   assert.match(
     platform,
-    /<option\b(?=[^>]*\bvalue="instagram-reels")(?=[^>]*\bselected\b)[^>]*>Instagram Reels<\/option>/i
+    /<option\b(?=[^>]*\bvalue="none")(?=[^>]*\bselected\b)[^>]*>None<\/option>/i
   );
+  assert.match(platform, /<option\b[^>]*\bvalue="instagram-reels"[^>]*>Instagram Reels<\/option>/i);
   assert.match(platform, /<option\b[^>]*\bvalue="tiktok"[^>]*>TikTok<\/option>/i);
+
+  const infoButton = controls.match(
+    /<button\b[^>]*\bid="video-editor-guidelines-info"[^>]*>[\s\S]*?<\/button>/i
+  )?.[0];
+  assert.ok(infoButton, "Missing the UI guideline information button.");
+  assert.match(infoButton, /\btype="button"/i);
+  assert.match(infoButton, /\baria-(?:label|describedby)="[^"]*(?:UI guidelines|video-editor-guidelines-note)[^"]*"/i);
+  const tooltip = controls.match(
+    /<(?:p|div|span)\b[^>]*\bid="video-editor-guidelines-note"[^>]*>[\s\S]*?<\/(?:p|div|span)>/i
+  )?.[0];
+  assert.ok(tooltip, "Missing the UI guideline information tooltip.");
+  assert.match(tooltip, /\brole="tooltip"/i);
+  assert.match(tooltip, /\brough\b/i);
+  assert.match(tooltip, /iPhone 15 Pro/i);
+  assert.match(tooltip, /updated[^<]*August 2026/i);
+  assert.match(tooltip, /UI varies/i);
   assert.match(
-    controls,
-    /\bid="video-editor-guidelines-note"[\s\S]*Approximate(?:&mdash;|—)platform UI varies by device, caption length, placement,[\s\S]*and add-ons\./i
+    css,
+    /\.video-editor-guidelines-controls__note\s*\{[^}]*(?:display\s*:\s*none|visibility\s*:\s*hidden)/is
+  );
+  assert.match(
+    css,
+    /\.video-editor-guidelines-info:(?:hover|focus|focus-visible)\s*\+\s*\.video-editor-guidelines-controls__note/is
   );
 
   const overlay = html.match(
@@ -152,7 +163,6 @@ test("Video Editor offers opt-in social UI guidelines for fixed 9:16 frames", as
   )?.[0];
   assert.ok(overlay, "Missing the social UI guideline preview overlay.");
   assert.match(overlay, /\bdata-video-editor-social-guidelines-overlay(?:\s|>|=)/i);
-  assert.match(overlay, /\bdata-guideline-platform="instagram-reels"/i);
   assert.match(overlay, /\baria-hidden="true"/i);
   assert.match(overlay, /\bhidden(?:\s|>|=)/i);
   for (const [zone, label] of [
@@ -168,20 +178,92 @@ test("Video Editor offers opt-in social UI guidelines for fixed 9:16 frames", as
   assert.match(overlay, /\bdata-guideline-safe-area(?:\s|>|=)[\s\S]*>\s*Safe content area\s*</i);
 
   assert.match(css, /\.video-editor-social-guidelines\s*\{[^}]*pointer-events\s*:\s*none/is);
-  assert.match(css, /--guideline-top-coverage\s*:\s*13\.8%/i);
-  assert.match(css, /--guideline-safe-polygon\s*:\s*polygon\([\s\S]*5\.5%\s+13\.8%/i);
   assert.match(
     css,
-    /\[data-guideline-platform="tiktok"\]\s*\{[^}]*--guideline-top-coverage\s*:\s*12\.5%/is
+    /\.video-editor-social-guidelines\s*\{[^}]*--guideline-top-coverage\s*:\s*13\.5%[^}]*--guideline-right-start\s*:\s*40%[^}]*--guideline-right-end\s*:\s*89%[^}]*--guideline-right-edge\s*:\s*0%[^}]*--guideline-right-coverage\s*:\s*18%[^}]*--guideline-bottom-coverage\s*:\s*32%/is
   );
-  assert.match(css, /\[data-guideline-platform="tiktok"\][\s\S]*72\.2%\s+65\.6%/i);
-  assert.match(script, /guidelinesEnabled:\s*false/);
-  assert.match(script, /guidelinesPlatform:\s*"instagram-reels"/);
+  assert.match(
+    css,
+    /--guideline-safe-polygon\s*:\s*polygon\(\s*5\.5%\s+14%,\s*94\.5%\s+14%,\s*94\.5%\s+39%,\s*80%\s+39%,\s*80%\s+65%,\s*5\.5%\s+65%\s*\)/is
+  );
+  assert.match(
+    css,
+    /\[data-guideline-platform="tiktok"\]\s*\{[^}]*--guideline-top-coverage\s*:\s*13%[^}]*--guideline-right-start\s*:\s*41%[^}]*--guideline-right-end\s*:\s*90%[^}]*--guideline-right-edge\s*:\s*0%[^}]*--guideline-right-coverage\s*:\s*18%[^}]*--guideline-bottom-coverage\s*:\s*31%/is
+  );
+  assert.match(
+    css,
+    /\[data-guideline-platform="tiktok"\][\s\S]*?--guideline-safe-polygon\s*:\s*polygon\(\s*5%\s+13%,\s*95%\s+13%,\s*95%\s+40%,\s*81%\s+40%,\s*81%\s+68%,\s*5%\s+68%\s*\)/is
+  );
+  assert.doesNotMatch(script, /guidelinesEnabled\s*:/);
+  assert.match(script, /guidelinesPlatform:\s*"none"/);
   assert.match(script, /state\.framePreset\s*===\s*"9:16"/);
-  assert.match(script, /Social UI guidelines hidden\./);
-  assert.match(script, /Social UI guidelines enabled\. Select Reel \/ TikTok \(9:16\) to display them\./);
+  assert.match(script, /guidelinesPlatform\s*!==?\s*"none"|guidelinesPlatform\s*===?\s*"none"/);
+  assert.match(script, /UI guidelines[^"'`]*(?:hidden|paused|shown)/i);
   assert.doesNotMatch(controls, /\b(?:save|saved|persist|export|download)\b/i);
   assert.doesNotMatch(script, /sessionStorage\.(?:getItem|setItem)\([^)]*guideline/i);
+});
+
+test("Video Editor uses vendored base Pixelarticons for action controls", async () => {
+  const { html, script } = await readRouteSources();
+  const iconNames = [
+    "play.svg",
+    "pause.svg",
+    "download.svg",
+    "info-box.svg",
+    "close.svg",
+    "delete.svg",
+  ];
+  const iconSources = await Promise.all(
+    iconNames.map((name) => readFile(new URL(`assets/pixelarticons/${name}`, root), "utf8"))
+  );
+  for (const [index, source] of iconSources.entries()) {
+    assert.match(source, /<svg\b[^>]*\bviewBox="0 0 24 24"/i, `${iconNames[index]} is not the vendored base SVG.`);
+    assert.match(source, /\bfill="currentColor"/i);
+    assert.doesNotMatch(source, /<script\b|<(?:image|use)\b[^>]*(?:href|src)=["']https?:/i);
+  }
+  const license = await readFile(new URL("assets/pixelarticons/LICENSE", root), "utf8");
+  assert.match(license, /MIT License/i);
+  assert.match(license, /Copyright \(c\) 2019 Gerrit Halfmann/i);
+
+  const source = `${html}\n${script}`;
+  for (const name of iconNames) {
+    assert.match(source, new RegExp(`assets/pixelarticons/${name.replace(".", "\\.")}`, "i"));
+  }
+  assert.doesNotMatch(source, /https?:[^"'\s]*pixelarticons/i);
+  assert.doesNotMatch(source, /[▶⏵►Ⅱ⏸⇩⬇ℹⓘ✕✖]/u);
+  const dropZone = html.match(
+    /<(?:div|button)\b(?=[^>]*\bid="media-drop-zone")[^>]*>[\s\S]*?<\/(?:div|button)>/i
+  )?.[0];
+  const infoButton = html.match(
+    /<button\b(?=[^>]*\bid="video-editor-guidelines-info")[^>]*>[\s\S]*?<\/button>/i
+  )?.[0];
+  const closeButton = html.match(
+    /<button\b(?=[^>]*\bdata-close-effect-tab)[^>]*>[\s\S]*?<\/button>/i
+  )?.[0];
+  assert.ok(dropZone && infoButton && closeButton);
+  assert.match(dropZone, /pixelarticons\/download\.svg/i);
+  assert.match(infoButton, /pixelarticons\/info-box\.svg/i);
+  assert.match(closeButton, /pixelarticons\/close\.svg/i);
+  const deleteButtons = Array.from(
+    html.matchAll(
+      /<button\b(?=[^>]*\bdata-delete-(?:clip|effect))[^>]*>[\s\S]*?<\/button>/gi
+    ),
+    (match) => match[0]
+  );
+  assert.equal(deleteButtons.length, 2);
+  for (const button of deleteButtons) {
+    assert.match(button, /pixelarticons\/delete\.svg/i);
+    assert.doesNotMatch(button, /&times;|&#(?:215|xD7);|[×✕✖]/iu);
+  }
+  assert.match(html, /\bid="play-pause-button"[^>]*\baria-label="Play"[^>]*\baria-pressed="false"/i);
+  assert.match(
+    html,
+    /\bid="play-pause-button"[\s\S]*?<img\b[^>]*\bsrc="\.\.\/assets\/pixelarticons\/play\.svg"[^>]*\balt=""/i
+  );
+  assert.match(script, /pixelarticons\/play\.svg/);
+  assert.match(script, /pixelarticons\/pause\.svg/);
+  assert.match(script, /setAttribute\s*\(\s*["']aria-label["']/);
+  assert.match(script, /setAttribute\s*\(\s*["']aria-pressed["']/);
 });
 
 test("Video Editor offers persistent Standard and Side by side workspace layouts", async () => {
@@ -320,10 +402,41 @@ test("Video Editor aligns range hit areas with visible slider tracks", async () 
 
 test("Video Editor uses semantic 98.css effect tabs with restrained close and overflow states", async () => {
   const { css, html, script } = await readRouteSources();
+  const effectsPanelId = html.indexOf('id="effects-panel"');
+  assert.notEqual(effectsPanelId, -1, "Missing the Effect Editor panel.");
+  const effectsPanel = html.slice(
+    html.lastIndexOf("<section", effectsPanelId),
+    html.indexOf("<template id=\"media-item-template\"")
+  );
+  const effectsPanelChrome = effectsPanel.slice(
+    0,
+    effectsPanel.indexOf('<div class="effect-editor-well sunken-panel"')
+  );
+  assert.doesNotMatch(effectsPanelChrome, /class="[^"]*\btitle-bar\b[^"]*"/i);
+  assert.doesNotMatch(effectsPanelChrome, /<[^>]+>\s*Tabs\s*<\/[^>]+>/i);
+  assert.doesNotMatch(effectsPanelChrome, /\bid="reopen-effect-tab"/i);
+  assert.match(effectsPanelChrome, /\bid="effects-panel-title"[^>]*>Effect Editor<\/h2>/i);
   const tabList = html.match(
-    /<menu\b[^>]*\bid="effect-tab-list"[^>]*\brole="tablist"[^>]*>/i
+    /<menu\b[^>]*\bid="effect-tab-list"[^>]*\brole="tablist"[^>]*>[\s\S]*?<\/menu>/i
   )?.[0];
   assert.ok(tabList, "The dynamic effect tabs must use a 98.css menu tab list.");
+  const defaultTab = tabList.match(
+    /<li\b(?=[^>]*\bid="effect-tab-default")(?=[^>]*\bdata-effect-default-tab)[^>]*>[\s\S]*?<\/li>/i
+  )?.[0];
+  assert.ok(defaultTab, "Missing the permanent Effect editor home tab.");
+  assert.match(defaultTab, /\brole="tab"/i);
+  assert.match(defaultTab, /\baria-label="Effect editor home"/i);
+  assert.match(defaultTab, /\baria-controls="effect-editor-empty"/i);
+  assert.match(defaultTab, /\baria-selected="true"/i);
+  assert.match(defaultTab, /\btabindex="0"/i);
+  assert.match(defaultTab, /\bdraggable="false"/i);
+  assert.match(defaultTab, /directory_program_group_cool\.ico/i);
+  assert.match(defaultTab, /\bdata-effect-default-tab-face(?:\s|>|=)/i);
+  assert.doesNotMatch(defaultTab, /data-close-effect-tab|data-effect-tab-title-track/i);
+  assert.match(
+    effectsPanel,
+    /\bid="effect-editor-empty"[^>]*\brole="tabpanel"[^>]*\baria-labelledby="effect-tab-default"/i
+  );
 
   const tabTemplate = html.match(
     /<template\b[^>]*\bid="effect-tab-template"[^>]*>[\s\S]*?<\/template>/i
@@ -341,10 +454,31 @@ test("Video Editor uses semantic 98.css effect tabs with restrained close and ov
   assert.match(tabTemplate, /\bdata-effect-tab-title-viewport(?:\s|>|=)/i);
   assert.match(tabTemplate, /\bdata-effect-tab-title-track(?:\s|>|=)/i);
   assert.match(tabTemplate, /<button\b[^>]*\bclass="effect-tab__close"[^>]*\bdata-close-effect-tab/i);
-  assert.match(tabTemplate, /&times;|&#215;|>\s*×\s*</i);
+  assert.match(tabTemplate, /assets\/pixelarticons\/close\.svg/i);
+  assert.doesNotMatch(tabTemplate, /&times;|&#215;|>\s*×\s*</i);
 
   assert.match(css, /\.effect-tab__close\s*\{[^}]*background\s*:\s*transparent/is);
   assert.match(css, /\.effect-tab__close\s*\{[^}]*box-shadow\s*:\s*none/is);
+  assert.match(css, /\.effects-panel\s*\{[^}]*grid-template-rows\s*:\s*minmax\(0,\s*1fr\)/is);
+  assert.match(css, /\.effects-panel\s*>\s*\.window-body\s*\{[^}]*margin\s*:\s*0/is);
+  assert.match(
+    css,
+    /\.effect-tab-scroll\s*\{[^}]*padding-top\s*:\s*2px[^}]*overflow-x\s*:\s*auto[^}]*overflow-y\s*:\s*hidden/is
+  );
+  assert.doesNotMatch(
+    css.match(/\.effect-tab-scroll\s*\{[^}]*}/is)?.[0] || "",
+    /contain\s*:\s*paint/i
+  );
+  const defaultTabCss = css.match(
+    /\.effect-tab-list\s*>\s*\.effect-tab\.effect-tab--default\s*\{[^}]*}/is
+  )?.[0];
+  assert.ok(defaultTabCss, "Missing the permanent home tab styles.");
+  assert.match(defaultTabCss, /position\s*:\s*sticky/i);
+  assert.match(defaultTabCss, /left\s*:\s*0/i);
+  assert.match(defaultTabCss, /z-index\s*:\s*[1-9]\d*/i);
+  assert.match(defaultTabCss, /overflow\s*:\s*hidden/i);
+  assert.match(defaultTabCss, /width\s*:\s*34px/i);
+  assert.match(defaultTabCss, /background\s*:\s*var\(--surface\)/i);
   assert.match(
     css,
     /\.effect-tab__close:active\s*\{[^}]*box-shadow\s*:\s*var\(--border-sunken-outer\)[^}]*var\(--border-sunken-inner\)/is
@@ -691,11 +825,13 @@ test("Video Editor swaps to a desktop-required message below 1024px", async () =
 
 test("Video Editor makes no export or project-persistence surface", async () => {
   const { html, script } = await readRouteSources();
+  const userFacingText = html.replace(/<[^>]+>/g, " ");
 
   assert.doesNotMatch(
     html,
-    /<(?:button|a|input)\b[^>]*(?:export|download|save project|open project)|\b(?:Export|Download|Save project|Open project)\b(?!ed)/i
+    /<(?:button|a|input)\b[^>]*(?:export|download|save project|open project)/i
   );
+  assert.doesNotMatch(userFacingText, /\b(?:Export|Download|Save project|Open project)\b(?!ed)/i);
   assert.doesNotMatch(
     script,
     /\b(?:localStorage|indexedDB|IDBDatabase|caches\.(?:open|match|put))\b/

@@ -157,9 +157,7 @@ const elements = {
     "[data-video-editor-workspace-layout-option]"
   ),
   guidelinesControls: document.querySelector("#video-editor-guidelines"),
-  guidelinesToggle: document.querySelector("#video-editor-guidelines-toggle"),
   guidelinesPlatform: document.querySelector("#video-editor-guidelines-platform"),
-  guidelinesNote: document.querySelector("#video-editor-guidelines-note"),
   guidelinesOverlay: document.querySelector(
     "#video-editor-social-guidelines-overlay"
   ),
@@ -223,7 +221,8 @@ const elements = {
   soundEffectStatus: document.querySelector("[data-sound-effect-status]"),
   status: document.querySelector("#editor-status"),
   tabList: document.querySelector("#effect-tab-list"),
-  reopenTab: document.querySelector("#reopen-effect-tab"),
+  defaultTab: document.querySelector("#effect-tab-default"),
+  defaultTabFace: document.querySelector("[data-effect-default-tab-face]"),
   editorEmpty: document.querySelector("#effect-editor-empty"),
   mediaTemplate: document.querySelector("#media-item-template"),
   tierTemplate: document.querySelector("#tier-template"),
@@ -255,8 +254,7 @@ const state = {
   frameHeight: 0,
   customFrameWidth: 1080,
   customFrameHeight: 1920,
-  guidelinesEnabled: false,
-  guidelinesPlatform: "instagram-reels",
+  guidelinesPlatform: "none",
   workspaceLayout: "standard",
   previewSplit: DEFAULT_PREVIEW_SPLIT,
   previewSplitByLayout: {
@@ -381,24 +379,20 @@ const frameSelection = () => {
 };
 
 const socialGuidelinesEligible = () => state.framePreset === "9:16";
+const socialGuidelinesSelected = () => state.guidelinesPlatform !== "none";
 
 const applySocialGuidelines = (shouldAnnounce = false) => {
-  const platform =
-    SOCIAL_GUIDELINE_PLATFORMS[state.guidelinesPlatform] ||
-    SOCIAL_GUIDELINE_PLATFORMS["instagram-reels"];
+  const platform = SOCIAL_GUIDELINE_PLATFORMS[state.guidelinesPlatform] || null;
+  const selected = socialGuidelinesSelected() && Boolean(platform);
   const eligible = socialGuidelinesEligible();
-  const visible = state.guidelinesEnabled && eligible;
-  if (elements.guidelinesToggle) {
-    elements.guidelinesToggle.checked = state.guidelinesEnabled;
-  }
+  const visible = selected && eligible;
   if (elements.guidelinesPlatform) {
-    elements.guidelinesPlatform.value = state.guidelinesPlatform;
-    elements.guidelinesPlatform.disabled = !state.guidelinesEnabled;
+    elements.guidelinesPlatform.value = selected ? state.guidelinesPlatform : "none";
   }
   if (elements.guidelinesControls) {
     elements.guidelinesControls.dataset.guidelinesState = visible
       ? "visible"
-      : state.guidelinesEnabled
+      : selected
         ? "paused"
         : "off";
   }
@@ -408,23 +402,16 @@ const applySocialGuidelines = (shouldAnnounce = false) => {
     elements.guidelinesOverlay.setAttribute("aria-hidden", "true");
   }
   elements.guidelineZones.forEach((zone) => {
-    const label = platform.zones[zone.dataset.guidelineZone];
+    const label = platform?.zones[zone.dataset.guidelineZone];
     const labelNode = zone.querySelector("span");
     if (label && labelNode) labelNode.textContent = label;
   });
-  if (elements.guidelinesNote) {
-    elements.guidelinesNote.textContent = visible
-      ? `Approximate ${platform.label} UI coverage; placement varies by device, caption length, placement, and add-ons.`
-      : state.guidelinesEnabled
-        ? "Guidelines are paused. Select Reel / TikTok (9:16) to display them; platform UI varies by device, caption length, placement, and add-ons."
-        : "Approximate platform UI coverage for the Reel / TikTok (9:16) frame; platform UI varies by device, caption length, placement, and add-ons.";
-  }
   if (shouldAnnounce) {
-    if (!state.guidelinesEnabled) {
-      announce("Social UI guidelines hidden.");
+    if (!selected) {
+      announce("UI guidelines hidden.");
     } else if (!eligible) {
       announce(
-        "Social UI guidelines enabled. Select Reel / TikTok (9:16) to display them."
+        `${platform.label} UI guidelines selected. Select Reel / TikTok (9:16) to display them.`
       );
     } else {
       announce(`${platform.label} UI guidelines shown.`);
@@ -473,10 +460,11 @@ const applyFrameSize = (shouldAnnounce = false) => {
   const guidelinesVisible = applySocialGuidelines(false);
   requestAnimationFrame(fitPreviewStage);
   if (shouldAnnounce) {
-    const guidelinesStatus = state.guidelinesEnabled
+    const guidelinesPlatform = SOCIAL_GUIDELINE_PLATFORMS[state.guidelinesPlatform];
+    const guidelinesStatus = guidelinesPlatform
       ? guidelinesVisible
-        ? ` ${SOCIAL_GUIDELINE_PLATFORMS[state.guidelinesPlatform].label} UI guidelines shown.`
-        : " Social UI guidelines paused until Reel / TikTok (9:16) is selected."
+        ? ` ${guidelinesPlatform.label} UI guidelines shown.`
+        : ` ${guidelinesPlatform.label} UI guidelines paused until Reel / TikTok (9:16) is selected.`
       : "";
     announce(`Frame size set to ${frame.label}.${guidelinesStatus}`);
   }
@@ -2988,6 +2976,18 @@ const setPlayhead = (value, shouldAnnounce = false) => {
   if (shouldAnnounce) announce(`Playhead moved to ${formatTime(state.playhead)}.`);
 };
 
+const setPlaybackButtonState = (isPlaying) => {
+  if (!elements.playButton) return;
+  elements.playButton.setAttribute("aria-label", isPlaying ? "Pause" : "Play");
+  elements.playButton.setAttribute("aria-pressed", String(isPlaying));
+  const icon = elements.playButton.querySelector("[data-transport-icon]");
+  if (icon) {
+    icon.src = isPlaying
+      ? "../assets/pixelarticons/pause.svg"
+      : "../assets/pixelarticons/play.svg";
+  }
+};
+
 const pausePlayback = () => {
   state.playing = false;
   cancelAnimationFrame(state.animationFrame);
@@ -2998,11 +2998,7 @@ const pausePlayback = () => {
   }
   elements.previewVideo?.pause();
   audioPlayers.forEach((player) => player.pause());
-  if (elements.playButton) {
-    elements.playButton.setAttribute("aria-label", "Play");
-    elements.playButton.setAttribute("aria-pressed", "false");
-    elements.playButton.querySelector("span").textContent = "▶";
-  }
+  setPlaybackButtonState(false);
 };
 
 const playbackTick = (now) => {
@@ -3031,11 +3027,7 @@ const togglePlayback = () => {
   state.playing = true;
   state.playbackStartedAt = performance.now() - state.playhead * 1000;
   state.playbackPreviousTime = state.playhead;
-  if (elements.playButton) {
-    elements.playButton.setAttribute("aria-label", "Pause");
-    elements.playButton.setAttribute("aria-pressed", "true");
-    elements.playButton.querySelector("span").textContent = "Ⅱ";
-  }
+  setPlaybackButtonState(true);
   syncPreview();
   state.animationFrame = requestAnimationFrame(playbackTick);
   announce(`Playback started at ${formatTime(state.playhead)}.`);
@@ -3053,15 +3045,15 @@ const renderTimeline = () => {
 };
 
 const focusTab = (type) => {
-  const tab = document.querySelector(
-    `[data-effect-tab-wrapper][data-effect="${type}"]`
-  );
+  const tab = type
+    ? document.querySelector(`[data-effect-tab-wrapper][data-effect="${type}"]`)
+    : elements.defaultTab;
   tab?.focus();
   tab?.scrollIntoView({ block: "nearest", inline: "nearest" });
 };
 
 const activateTab = (type, shouldFocus = false) => {
-  if (!state.openTabs.includes(type)) return;
+  if (type !== null && !state.openTabs.includes(type)) return;
   state.activeTab = type;
   renderTabs();
   if (type === "audio-sync-cut") requestAnimationFrame(renderAudioSyncGraphs);
@@ -3090,11 +3082,10 @@ const closeEffectTab = (type) => {
     state.activeTab = state.openTabs[index] || state.openTabs[index - 1] || null;
   }
   renderTabs();
-  announce(`${EFFECTS[type].label} effect editor closed. Use Reopen closed tab to restore it.`);
-  requestAnimationFrame(() => {
-    if (state.activeTab) focusTab(state.activeTab);
-    else elements.reopenTab?.focus();
-  });
+  announce(
+    `${EFFECTS[type].label} effect editor closed. Choose it from Project Media to reopen it.`
+  );
+  requestAnimationFrame(() => focusTab(state.activeTab));
 };
 
 const reorderTab = (type, targetIndex) => {
@@ -3104,13 +3095,21 @@ const reorderTab = (type, targetIndex) => {
   state.openTabs.splice(currentIndex, 1);
   state.openTabs.splice(boundedTarget, 0, type);
   renderTabs();
-  announce(`${EFFECTS[type].label} tab moved to position ${boundedTarget + 1}.`);
+  announce(`${EFFECTS[type].label} tab moved to position ${boundedTarget + 2}.`);
   requestAnimationFrame(() => focusTab(type));
 };
 
 const renderTabs = () => {
   if (!elements.tabList || !elements.tabTemplate) return;
-  elements.tabList.replaceChildren();
+  elements.tabList.replaceChildren(...(elements.defaultTab ? [elements.defaultTab] : []));
+  const defaultIsActive = state.activeTab === null;
+  if (elements.defaultTab) {
+    elements.defaultTab.classList.toggle("is-active", defaultIsActive);
+    elements.defaultTab.setAttribute("aria-selected", String(defaultIsActive));
+    elements.defaultTab.setAttribute("tabindex", defaultIsActive ? "0" : "-1");
+    elements.defaultTab.setAttribute("aria-posinset", "1");
+    elements.defaultTab.setAttribute("aria-setsize", String(state.openTabs.length + 1));
+  }
   state.openTabs.forEach((type, index) => {
     const definition = EFFECTS[type];
     const fragment = elements.tabTemplate.content.cloneNode(true);
@@ -3125,8 +3124,8 @@ const renderTabs = () => {
     wrapper.setAttribute("aria-controls", `effect-panel-${type}`);
     wrapper.setAttribute("aria-selected", String(isActive));
     wrapper.setAttribute("tabindex", isActive ? "0" : "-1");
-    wrapper.setAttribute("aria-posinset", String(index + 1));
-    wrapper.setAttribute("aria-setsize", String(state.openTabs.length));
+    wrapper.setAttribute("aria-posinset", String(index + 2));
+    wrapper.setAttribute("aria-setsize", String(state.openTabs.length + 1));
     wrapper.setAttribute(
       "aria-keyshortcuts",
       "Control+ArrowLeft Control+ArrowRight Delete"
@@ -3154,11 +3153,15 @@ const renderTabs = () => {
         reorderTab(type, index + (event.key === "ArrowLeft" ? -1 : 1));
       } else if (!event.ctrlKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
         event.preventDefault();
-        const nextIndex = (index + (event.key === "ArrowLeft" ? -1 : 1) + state.openTabs.length) % state.openTabs.length;
-        activateTab(state.openTabs[nextIndex], true);
+        const tabOrder = [null, ...state.openTabs];
+        const currentIndex = index + 1;
+        const nextIndex =
+          (currentIndex + (event.key === "ArrowLeft" ? -1 : 1) + tabOrder.length) %
+          tabOrder.length;
+        activateTab(tabOrder[nextIndex], true);
       } else if (event.key === "Home" || event.key === "End") {
         event.preventDefault();
-        activateTab(event.key === "Home" ? state.openTabs[0] : state.openTabs.at(-1), true);
+        activateTab(event.key === "Home" ? null : state.openTabs.at(-1), true);
       }
     });
     close.addEventListener("click", (event) => {
@@ -3207,8 +3210,8 @@ const renderTabs = () => {
   });
   scheduleEffectTabTitleMarquees();
 
-  if (elements.reopenTab) elements.reopenTab.disabled = state.closedTabs.length === 0;
   if (elements.editorEmpty) elements.editorEmpty.hidden = Boolean(state.activeTab);
+  elements.editorEmpty?.setAttribute("aria-hidden", String(!defaultIsActive));
   document.querySelectorAll("[data-effect-editor]").forEach((panel) => {
     const active = panel.dataset.effectEditor === state.activeTab;
     panel.hidden = !active;
@@ -3227,8 +3230,9 @@ const bindStaticControls = () => {
     applyFrameSize(!shouldAutoSelectSideBySide);
     if (shouldAutoSelectSideBySide) {
       setWorkspaceLayout("side-by-side");
-      const guidelinesStatus = state.guidelinesEnabled
-        ? ` ${SOCIAL_GUIDELINE_PLATFORMS[state.guidelinesPlatform].label} UI guidelines shown.`
+      const guidelinesPlatform = SOCIAL_GUIDELINE_PLATFORMS[state.guidelinesPlatform];
+      const guidelinesStatus = guidelinesPlatform
+        ? ` ${guidelinesPlatform.label} UI guidelines shown.`
         : "";
       announce(
         `Frame size set to Reel / TikTok (9:16). Workspace layout changed to Side by side.${guidelinesStatus}`
@@ -3241,12 +3245,25 @@ const bindStaticControls = () => {
       setWorkspaceLayout(button.dataset.videoEditorWorkspaceLayoutOption, true);
     });
   });
-  elements.guidelinesToggle?.addEventListener("change", (event) => {
-    state.guidelinesEnabled = event.target.checked;
-    applySocialGuidelines(true);
+  elements.defaultTabFace?.addEventListener("click", (event) => {
+    event.preventDefault();
+    activateTab(null);
+  });
+  elements.defaultTab?.addEventListener("keydown", (event) => {
+    if (!event.ctrlKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+      event.preventDefault();
+      const target =
+        event.key === "ArrowRight" ? state.openTabs[0] : state.openTabs.at(-1);
+      activateTab(target ?? null, true);
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      activateTab(event.key === "End" ? (state.openTabs.at(-1) ?? null) : null, true);
+    }
   });
   elements.guidelinesPlatform?.addEventListener("change", (event) => {
-    if (!SOCIAL_GUIDELINE_PLATFORMS[event.target.value]) return;
+    if (event.target.value !== "none" && !SOCIAL_GUIDELINE_PLATFORMS[event.target.value]) {
+      return;
+    }
     state.guidelinesPlatform = event.target.value;
     applySocialGuidelines(true);
   });
@@ -3400,10 +3417,6 @@ const bindStaticControls = () => {
   document.querySelectorAll("[data-add-effect]").forEach((button) =>
     button.addEventListener("click", () => addEffect(button.dataset.addEffect))
   );
-  elements.reopenTab?.addEventListener("click", () => {
-    const type = state.closedTabs.at(-1);
-    if (type) openEffectTab(type);
-  });
   elements.playButton?.addEventListener("click", togglePlayback);
   elements.scrubber?.addEventListener("input", (event) => {
     pausePlayback();

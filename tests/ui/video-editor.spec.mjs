@@ -112,6 +112,7 @@ const monitorRuntime = (page) => {
   });
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("requestfailed", (request) => {
+    if (request.failure()?.errorText === "net::ERR_ABORTED") return;
     if (pageOrigin && request.url().startsWith(pageOrigin)) {
       failedLocalResources.push(
         `${request.method()} ${request.url()} ${request.failure()?.errorText || "failed"}`
@@ -482,14 +483,14 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
     "data-video-editor-workspace-layout",
     "standard"
   );
-  const guidelineToggle = page.getByLabel("Show social UI guidelines", {
-    exact: true,
-  });
-  const guidelinePlatform = page.getByLabel("Platform", { exact: true });
-  await expect(guidelineToggle).not.toBeChecked();
-  await expect(guidelinePlatform).toBeDisabled();
-  await expect(guidelineToggle.check({ timeout: 750 })).rejects.toThrow();
-  await expect(guidelineToggle).not.toBeChecked();
+  const guidelinePlatform = page.locator("#video-editor-guidelines-platform");
+  const guidelineInfo = page.locator("#video-editor-guidelines-info");
+  await expect(guidelineInfo).toHaveAttribute("aria-label", /About UI guidelines/i);
+  await expect(guidelinePlatform).toHaveValue("none");
+  await expect(guidelinePlatform.click({ timeout: 750 })).rejects.toThrow();
+  await expect(guidelinePlatform).toHaveValue("none");
+  await expect(guidelineInfo.click({ timeout: 750 })).rejects.toThrow();
+  await expect(page.locator("#video-editor-guidelines-note")).toBeHidden();
   await expect(page.locator("#video-editor-social-guidelines-overlay")).toBeHidden();
   for (const tool of ["audio-sync-cut", "audio"]) {
     const launcher = page.locator(
@@ -862,51 +863,62 @@ test("updates the preview frame presets and contains imported video", async ({
   runtime.expectClean();
 });
 
-test("shows accessible platform-specific social guidelines only for fixed 9:16 frames", async ({
+test("shows documented platform-specific UI guidelines only for fixed 9:16 frames", async ({
   page,
 }, testInfo) => {
   const runtime = monitorRuntime(page);
   await loadEditor(page, { width: 1280, height: 800 });
   runtime.setOrigin(page.url());
 
-  const controls = page.getByRole("group", { name: "Social UI guidelines" });
-  const toggle = page.getByLabel("Show social UI guidelines", { exact: true });
-  const platform = page.getByLabel("Platform", { exact: true });
+  const controls = page.getByRole("group", { name: "UI Guidelines" });
+  const platform = page.locator("#video-editor-guidelines-platform");
+  const info = page.getByRole("button", { name: /About UI guidelines/i });
+  const tooltip = page.locator("#video-editor-guidelines-note");
   const preset = page.getByLabel("Frame size", { exact: true });
   const overlay = page.locator("#video-editor-social-guidelines-overlay");
   const status = page.locator("#editor-status");
   await expect(controls).toBeVisible();
   await expect(controls).toHaveAttribute("data-guidelines-state", "off");
-  await expect(toggle).not.toBeChecked();
-  await expect(toggle).toHaveAttribute(
+  await expect(controls.locator('input[type="checkbox"]')).toHaveCount(0);
+  await expect(platform).toHaveValue("none");
+  await expect(platform).toHaveAttribute("aria-describedby", "video-editor-guidelines-note");
+  await expect(platform).toHaveAttribute(
     "aria-controls",
     "video-editor-social-guidelines-overlay"
   );
-  await expect(toggle).toHaveAttribute("aria-describedby", "video-editor-guidelines-note");
-  await expect(platform).toHaveAttribute(
-    "aria-describedby",
-    "video-editor-guidelines-note"
+  await expect(platform.locator("option")).toHaveText([
+    "None",
+    "Instagram Reels",
+    "TikTok",
+  ]);
+  await expect(info).toHaveAttribute("aria-describedby", "video-editor-guidelines-note");
+  await expect(tooltip).toHaveAttribute("role", "tooltip");
+  await expect(tooltip).toBeHidden();
+  await expect(tooltip).toContainText(
+    /rough.*iPhone 15 Pro screenshots.*updated.*August 2026.*UI varies/is
   );
-  await expect(page.locator("#video-editor-guidelines-note")).toContainText(
-    /Approximate.*platform UI varies by device, caption length, placement, and add-ons\./
-  );
-  await expect(platform).toBeDisabled();
-  await expect(platform).toHaveValue("instagram-reels");
-  await expect(platform.locator("option")).toHaveText(["Instagram Reels", "TikTok"]);
+  await info.hover();
+  await expect(tooltip).toBeVisible();
+  await expect(page.getByRole("tooltip")).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(tooltip).toBeHidden();
+  await info.focus();
+  await expect(info).toBeFocused();
+  await expect(tooltip).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-guidelines-info-tooltip.png"),
+  });
+  await platform.focus();
+  await expect(tooltip).toBeHidden();
   await expect(overlay).toBeHidden();
   await expect(overlay).toHaveAttribute("hidden", "");
   await expect(overlay).toHaveAttribute("aria-hidden", "true");
 
-  await toggle.focus();
-  await expect(toggle).toBeFocused();
-  await toggle.press("Space");
-  await expect(toggle).toBeChecked();
-  await expect(platform).toBeEnabled();
+  await platform.selectOption("instagram-reels");
+  await expect(platform).toHaveValue("instagram-reels");
   await expect(overlay).toBeHidden();
   await expect(controls).toHaveAttribute("data-guidelines-state", "paused");
-  await expect(status).toHaveText(
-    "Social UI guidelines enabled. Select Reel / TikTok (9:16) to display them."
-  );
+  await expect(status).toContainText(/Instagram Reels.*UI guidelines/i);
 
   await preset.selectOption("9:16");
   await expect(overlay).toBeVisible();
@@ -954,17 +966,17 @@ test("shows accessible platform-specific social guidelines only for fixed 9:16 f
   };
 
   expectGeometry(await readGeometry(), {
-    bottomHeight: 0.348,
-    rightBottom: 0.348,
-    rightEdge: 0.056,
-    rightTop: 0.6,
-    rightWidth: 0.15,
-    topHeight: 0.138,
+    bottomHeight: 0.32,
+    rightBottom: 0.11,
+    rightEdge: 0,
+    rightTop: 0.4,
+    rightWidth: 0.18,
+    topHeight: 0.135,
     topLeft: 0,
     topRight: 0,
   });
   expect((await readGeometry()).safeClipPath).toBe(
-    "polygon(5.5% 13.8%, 94.4% 13.8%, 94.4% 60%, 79.4% 60%, 79.4% 65.2%, 5.5% 65.2%)"
+    "polygon(5.5% 14%, 94.5% 14%, 94.5% 39%, 80% 39%, 80% 65%, 5.5% 65%)"
   );
   expect(
     await overlay.evaluate((element) => {
@@ -981,14 +993,6 @@ test("shows accessible platform-specific social guidelines only for fixed 9:16 f
     path: testInfo.outputPath("video-editor-guidelines-instagram-reels.png"),
   });
 
-  await toggle.press("Space");
-  await expect(overlay).toBeHidden();
-  await expect(platform).toBeDisabled();
-  await expect(status).toHaveText("Social UI guidelines hidden.");
-  await toggle.press("Space");
-  await expect(overlay).toBeVisible();
-  await expect(status).toHaveText("Instagram Reels UI guidelines shown.");
-
   await platform.focus();
   await expect(platform).toBeFocused();
   await platform.selectOption("tiktok");
@@ -1003,17 +1007,17 @@ test("shows accessible platform-specific social guidelines only for fixed 9:16 f
     await expect(overlay.getByText(label, { exact: true })).toBeVisible();
   }
   expectGeometry(await readGeometry(), {
-    bottomHeight: 0.344,
-    rightBottom: 0.344,
-    rightEdge: 0.111,
-    rightTop: 0.438,
-    rightWidth: 0.167,
-    topHeight: 0.125,
-    topLeft: 0.111,
-    topRight: 0.111,
+    bottomHeight: 0.31,
+    rightBottom: 0.1,
+    rightEdge: 0,
+    rightTop: 0.41,
+    rightWidth: 0.18,
+    topHeight: 0.13,
+    topLeft: 0,
+    topRight: 0,
   });
   expect((await readGeometry()).safeClipPath).toBe(
-    "polygon(11.1% 12.5%, 72.2% 12.5%, 72.2% 65.6%, 11.1% 65.6%)"
+    "polygon(5% 13%, 95% 13%, 95% 40%, 81% 40%, 81% 68%, 5% 68%)"
   );
   await page.screenshot({
     path: testInfo.outputPath("video-editor-guidelines-tiktok.png"),
@@ -1022,8 +1026,6 @@ test("shows accessible platform-specific social guidelines only for fixed 9:16 f
   for (const unsupportedPreset of ["16:9", "4:5", "custom", "none"]) {
     await test.step(`guidelines pause for ${unsupportedPreset}`, async () => {
       await preset.selectOption(unsupportedPreset);
-      await expect(toggle).toBeChecked();
-      await expect(platform).toBeEnabled();
       await expect(platform).toHaveValue("tiktok");
       await expect(overlay).toBeHidden();
       await expect(overlay).toHaveAttribute("aria-hidden", "true");
@@ -1032,7 +1034,6 @@ test("shows accessible platform-specific social guidelines only for fixed 9:16 f
   }
 
   await preset.selectOption("9:16");
-  await expect(toggle).toBeChecked();
   await expect(platform).toHaveValue("tiktok");
   await expect(overlay).toBeVisible();
   for (const viewport of [
@@ -1054,6 +1055,114 @@ test("shows accessible platform-specific social guidelines only for fixed 9:16 f
     });
   }
 
+  await platform.selectOption("none");
+  await expect(platform).toHaveValue("none");
+  await expect(controls).toHaveAttribute("data-guidelines-state", "off");
+  await expect(overlay).toBeHidden();
+  await expect(overlay).toHaveAttribute("aria-hidden", "true");
+  await expect(status).toContainText(/UI guidelines.*hidden/i);
+
+  runtime.expectClean();
+});
+
+test("loads local Pixelarticons and preserves semantic action-button states", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+
+  const play = page.locator("#play-pause-button");
+  const playbackIcon = play.locator("img");
+  await expect(play).toHaveAccessibleName("Play");
+  await expect(play).toHaveAttribute("aria-pressed", "false");
+  await expect(playbackIcon).toHaveAttribute("src", /assets\/pixelarticons\/play\.svg$/);
+  await expect(playbackIcon).toHaveAttribute("alt", "");
+  await expect(playbackIcon).toHaveAttribute("aria-hidden", "true");
+  await play.click();
+  const pause = page.locator("#play-pause-button");
+  await expect(pause).toHaveAccessibleName("Pause");
+  await expect(pause).toHaveAttribute("aria-pressed", "true");
+  await expect(playbackIcon).toHaveAttribute("src", /assets\/pixelarticons\/pause\.svg$/);
+  await pause.click();
+  await expect(play).toHaveAccessibleName("Play");
+  await expect(play).toHaveAttribute("aria-pressed", "false");
+  await expect(playbackIcon).toHaveAttribute("src", /assets\/pixelarticons\/play\.svg$/);
+
+  await expect(page.locator("#media-drop-zone img")).toHaveAttribute(
+    "src",
+    /assets\/pixelarticons\/download\.svg$/
+  );
+  await expect(page.locator("#video-editor-guidelines-info img")).toHaveAttribute(
+    "src",
+    /assets\/pixelarticons\/info-box\.svg$/
+  );
+
+  await importMedia(page, [generatedAudio()]);
+  await page
+    .getByTestId("media-bin")
+    .getByRole("button", { name: `Add ${audioName} at the playhead` })
+    .click();
+  const clipDelete = page
+    .getByTestId("timeline-tier-audio-1")
+    .getByRole("button", { name: `Delete ${audioName}` });
+  await expect(clipDelete.locator("img")).toHaveAttribute(
+    "src",
+    /assets\/pixelarticons\/delete\.svg$/
+  );
+
+  await page.locator('[data-effect-tab-target][data-effect="closed-captions"]').click();
+  const closeTab = page.getByRole("button", { name: "Close Closed Captions tab" });
+  await expect(closeTab.locator("img")).toHaveAttribute(
+    "src",
+    /assets\/pixelarticons\/close\.svg$/
+  );
+  await page
+    .getByRole("tabpanel", { name: "Closed Captions" })
+    .getByRole("button", { name: "Add to timeline" })
+    .click();
+  const effectDelete = page
+    .getByTestId("effects-lane")
+    .getByRole("button", { name: "Delete Closed Captions effect" });
+  await expect(effectDelete.locator("img")).toHaveAttribute(
+    "src",
+    /assets\/pixelarticons\/delete\.svg$/
+  );
+
+  const icons = page.locator('img[src*="/assets/pixelarticons/"]');
+  const iconStates = await icons.evaluateAll((images) =>
+    images.map((image) => ({
+      alt: image.getAttribute("alt"),
+      ariaHidden: image.getAttribute("aria-hidden"),
+      src: image.src,
+    }))
+  );
+  expect(iconStates.length).toBeGreaterThanOrEqual(6);
+  for (const icon of iconStates) {
+    expect(icon.alt).toBe("");
+    expect(icon.ariaHidden).toBe("true");
+  }
+  const iconUrls = ["play", "pause", "download", "info-box", "close", "delete"].map(
+    (name) => new URL(`/assets/pixelarticons/${name}.svg`, page.url()).toString()
+  );
+  for (const src of iconUrls) {
+    const response = await page.request.get(src);
+    expect(response.status(), `${src} should be served locally`).toBe(200);
+    expect(response.headers()["content-type"]).toContain("image/svg+xml");
+  }
+  expect(
+    await page.locator("button").evaluateAll((buttons) =>
+      buttons.some((button) => /[▶⏵►Ⅱ⏸⇩⬇ℹⓘ×✕✖]/u.test(button.textContent || ""))
+    )
+  ).toBe(false);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    )
+  ).toBe(false);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-pixelarticon-controls.png"),
+  });
   runtime.expectClean();
 });
 
@@ -1547,8 +1656,13 @@ test("switches exactly at the desktop breakpoint and starts with an empty projec
   await expect(page.locator("#preview-empty-state")).toContainText(
     "Nothing at the playhead"
   );
-  await expect(page.getByRole("button", { name: "Reopen closed tab" })).toBeDisabled();
-  await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reopen closed tab" })).toHaveCount(0);
+  const defaultEffectTab = page.getByRole("tab", { name: "Effect editor home" });
+  await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(1);
+  await expect(defaultEffectTab).toHaveAttribute("aria-selected", "true");
+  await expect(defaultEffectTab).toHaveAttribute("tabindex", "0");
+  await expect(defaultEffectTab).toHaveAttribute("draggable", "false");
+  await expect(page.getByRole("tabpanel", { name: "Effect editor home" })).toBeVisible();
   await expect(page.locator("#editor-status")).toContainText("Empty project ready");
 
   runtime.expectClean();
@@ -1786,17 +1900,45 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
 
   const launchEffect = (type) =>
     page.locator(`[data-effect-tab-target][data-effect="${type}"]`);
+  const homeTab = page.getByRole("tab", { name: "Effect editor home" });
+  await expect(homeTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tabpanel", { name: "Effect editor home" })).toBeVisible();
   await launchEffect("closed-captions").click();
   await expect(page.getByRole("tab", { name: "Closed Captions" })).toBeFocused();
   await expect(page.getByRole("tabpanel", { name: "Closed Captions" })).toBeVisible();
   await launchEffect("windows-98").click();
   await launchEffect("transitions").click();
   await expect(page.getByRole("tab", { name: "Transitions" })).toBeFocused();
+  await expect(homeTab).toHaveAttribute("aria-selected", "false");
+  await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(4);
   expect(await tabLabels(page)).toEqual([
     "Closed Captions",
     "Windows 98",
     "Transitions",
   ]);
+
+  await homeTab.focus();
+  await homeTab.press("Delete");
+  await homeTab.press("Control+ArrowRight");
+  await expect(homeTab).toHaveCount(1);
+  await expect(homeTab).toHaveAttribute("draggable", "false");
+  expect(await tabLabels(page)).toEqual([
+    "Closed Captions",
+    "Windows 98",
+    "Transitions",
+  ]);
+  await homeTab.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Closed Captions" })).toBeFocused();
+  await page.getByRole("tab", { name: "Closed Captions" }).press("ArrowLeft");
+  await expect(homeTab).toBeFocused();
+  await homeTab.press("End");
+  await expect(page.getByRole("tab", { name: "Transitions" })).toBeFocused();
+  await page.getByRole("tab", { name: "Transitions" }).press("Home");
+  await expect(homeTab).toBeFocused();
+  await homeTab.click();
+  await expect(homeTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tabpanel", { name: "Effect editor home" })).toBeVisible();
+  await launchEffect("transitions").click();
 
   const draggedTab = page.locator(
     '[data-effect-tab-wrapper][data-effect="windows-98"]'
@@ -1804,31 +1946,25 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
   const dragTarget = page.locator(
     '[data-effect-tab-wrapper][data-effect="closed-captions"]'
   );
-  await dragTarget.scrollIntoViewIfNeeded();
-  await draggedTab.scrollIntoViewIfNeeded();
-  const [draggedBounds, targetBounds] = await Promise.all([
-    draggedTab.boundingBox(),
-    dragTarget.boundingBox(),
-  ]);
-  expect(draggedBounds).not.toBeNull();
-  expect(targetBounds).not.toBeNull();
-  await page.mouse.move(draggedBounds.x + 10, draggedBounds.y + 13);
-  await page.mouse.down();
-  await page.mouse.move(draggedBounds.x + 22, draggedBounds.y + 13, { steps: 4 });
-  await page.mouse.move(targetBounds.x + 10, targetBounds.y + 13, { steps: 12 });
-  await page.mouse.up();
+  await page.locator(".effect-tab-scroll").evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  await draggedTab.dragTo(dragTarget, {
+    sourcePosition: { x: 12, y: 13 },
+    targetPosition: { x: 12, y: 13 },
+  });
   expect(await tabLabels(page)).toEqual([
     "Windows 98",
     "Closed Captions",
     "Transitions",
   ]);
   await expect(page.locator("#editor-status")).toContainText(
-    "Windows 98 tab moved to position 1"
+    "Windows 98 tab moved to position 2"
   );
 
   await launchEffect("closed-captions").click();
   await expect(page.getByRole("tab", { name: "Closed Captions" })).toBeFocused();
-  await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(3);
+  await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(4);
   await page.getByRole("tab", { name: "Closed Captions" }).press("Control+ArrowRight");
   expect(await tabLabels(page)).toEqual([
     "Windows 98",
@@ -1836,14 +1972,13 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
     "Closed Captions",
   ]);
   await expect(page.locator("#editor-status")).toContainText(
-    "Closed Captions tab moved to position 3"
+    "Closed Captions tab moved to position 4"
   );
 
   await page.getByRole("tab", { name: "Closed Captions" }).press("Delete");
   await expect(page.getByRole("tab", { name: "Closed Captions" })).toHaveCount(0);
-  const reopen = page.getByRole("button", { name: "Reopen closed tab" });
-  await expect(reopen).toBeEnabled();
-  await reopen.click();
+  await expect(page.getByRole("button", { name: "Reopen closed tab" })).toHaveCount(0);
+  await launchEffect("closed-captions").click();
   await expect(page.getByRole("tab", { name: "Closed Captions" })).toBeFocused();
   expect(await tabLabels(page)).toEqual([
     "Windows 98",
@@ -1872,15 +2007,21 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
 
   const effectsLane = page.getByTestId("effects-lane");
   await expect(effectsLane.getByRole("listitem")).toHaveCount(3);
-  await expect(effectsLane.locator('[data-effect="closed-captions"] img')).toHaveAttribute(
+  await expect(
+    effectsLane.locator('[data-effect="closed-captions"] [data-effect-item-icon]')
+  ).toHaveAttribute(
     "src",
     /accessibility_window_speak\.ico$/
   );
-  await expect(effectsLane.locator('[data-effect="windows-98"] img')).toHaveAttribute(
+  await expect(
+    effectsLane.locator('[data-effect="windows-98"] [data-effect-item-icon]')
+  ).toHaveAttribute(
     "src",
     /windows\.ico$/
   );
-  await expect(effectsLane.locator('[data-effect="transitions"] img')).toHaveAttribute(
+  await expect(
+    effectsLane.locator('[data-effect="transitions"] [data-effect-item-icon]')
+  ).toHaveAttribute(
     "src",
     /movie_maker\.ico$/
   );
@@ -1959,9 +2100,22 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
   expect(await tabList.evaluate((element) => element.tagName)).toBe("MENU");
   await expect(tabList).toHaveAttribute("role", "tablist");
   const directTabs = tabList.locator(":scope > li[role=tab]");
-  await expect(directTabs).toHaveCount(3);
+  await expect(directTabs).toHaveCount(4);
   await expect(directTabs.last()).toHaveAttribute("aria-selected", "true");
   await expect(directTabs.first()).toHaveAttribute("aria-selected", "false");
+  const defaultTab = tabList.locator(":scope > li[data-effect-default-tab]");
+  await expect(defaultTab).toHaveAccessibleName("Effect editor home");
+  await expect(defaultTab).toHaveAttribute("draggable", "false");
+  await expect(defaultTab).not.toHaveAttribute("data-effect-tab-wrapper", "");
+  await expect(defaultTab.locator("[data-close-effect-tab]")).toHaveCount(0);
+  await expect(defaultTab.locator("[data-effect-tab-title-track]")).toHaveCount(0);
+  await expect(defaultTab.locator("img")).toHaveAttribute(
+    "src",
+    /directory_program_group_cool\.ico$/
+  );
+  await expect(page.getByRole("button", { name: "Reopen closed tab" })).toHaveCount(0);
+  await expect(page.getByText("Tabs", { exact: true })).toHaveCount(0);
+  await expect(page.locator("#effects-panel > .title-bar")).toHaveCount(0);
 
   for (const { icon, label, type } of effects) {
     const tab = tabList.locator(`:scope > li[data-effect="${type}"]`);
@@ -1976,8 +2130,52 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
       new RegExp(`${icon.replaceAll(".", "\\.")}$`)
     );
     const close = tab.getByRole("button", { name: `Close ${label} tab` });
-    await expect(close.locator('[aria-hidden="true"]')).toHaveText("×");
+    await expect(close.locator('img[aria-hidden="true"]')).toHaveAttribute(
+      "src",
+      /assets\/pixelarticons\/close\.svg$/
+    );
   }
+
+  const stripGeometry = await page.locator(".effect-tab-scroll").evaluate((scroll) => {
+    const panel = scroll.closest("#effects-panel");
+    const defaultItem = scroll.querySelector("[data-effect-default-tab]");
+    const panelBounds = panel.getBoundingClientRect();
+    const scrollBounds = scroll.getBoundingClientRect();
+    const itemBounds = defaultItem.getBoundingClientRect();
+    const firstDynamicBounds = scroll
+      .querySelector("[data-effect-tab-wrapper]")
+      .getBoundingClientRect();
+    const style = getComputedStyle(scroll);
+    const defaultStyle = getComputedStyle(defaultItem);
+    return {
+      clippedBottom: itemBounds.bottom > scrollBounds.bottom + 0.5,
+      clippedTop: itemBounds.top < scrollBounds.top - 0.5,
+      defaultBackground: defaultStyle.backgroundColor,
+      defaultOverflow: defaultStyle.overflow,
+      defaultZIndex: Number(defaultStyle.zIndex),
+      dynamicTabBehindDefault:
+        firstDynamicBounds.left < itemBounds.right &&
+        firstDynamicBounds.right > itemBounds.left,
+      homeLeftGap: itemBounds.left - scrollBounds.left,
+      panelTopGap: scrollBounds.top - panelBounds.top,
+      overflowX: style.overflowX,
+      overflowY: style.overflowY,
+      scrollLeft: scroll.scrollLeft,
+    };
+  });
+  expect(stripGeometry.clippedBottom).toBe(false);
+  expect(stripGeometry.clippedTop).toBe(false);
+  expect(stripGeometry.scrollLeft).toBeGreaterThan(0);
+  expect(stripGeometry.homeLeftGap).toBeGreaterThanOrEqual(0);
+  expect(stripGeometry.homeLeftGap).toBeLessThanOrEqual(1);
+  expect(stripGeometry.dynamicTabBehindDefault).toBe(true);
+  expect(stripGeometry.defaultBackground).not.toBe("rgba(0, 0, 0, 0)");
+  expect(stripGeometry.defaultOverflow).toBe("hidden");
+  expect(stripGeometry.defaultZIndex).toBeGreaterThan(0);
+  expect(stripGeometry.panelTopGap).toBeGreaterThanOrEqual(2);
+  expect(stripGeometry.panelTopGap).toBeLessThanOrEqual(4);
+  expect(stripGeometry.overflowX).toBe("auto");
+  expect(stripGeometry.overflowY).toBe("hidden");
 
   const close = tabList
     .locator(':scope > li[data-effect="closed-captions"]')
@@ -2245,7 +2443,7 @@ test("contains long names, a busy timeline, and every effect tab at the minimum 
   }
 
   await expect(page.getByTestId("timeline-tier-audio-1").getByRole("listitem")).toHaveCount(12);
-  await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(3);
+  await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(4);
   const containment = await page.evaluate(() => {
     const mediaName = document.querySelector("[data-media-name]");
     const timeline = document.querySelector("#timeline-scroll");

@@ -66,13 +66,20 @@ Last verified: 2026-08-15
   time label inside scrollable ruler content.
 - The preview selects the active clip on the highest occupied video tier and
   schedules every active audio-tier clip into the local mix.
-- Social UI guidelines are opt-in and render only for a fixed 9:16 frame.
-  Instagram Reels and TikTok each expose labelled top, right-side, and bottom
-  coverage zones plus a platform-specific safe-content outline. The selected
-  platform and enabled state survive temporary switches to an unsupported
-  frame, while the pointer-inert, assistive-technology-hidden overlay pauses
-  until 9:16 returns. These approximate editing guides do not claim to replace
-  each platform's current placement checker.
+- `UI Guidelines` is one compact selector whose first/default choice is
+  `None`; Instagram Reels and TikTok render only for a fixed 9:16 frame. A
+  keyboard-focusable information icon exposes a pointer-inert tooltip stating
+  that the guides are rough, based on iPhone 15 Pro screenshots, updated in
+  August 2026, and may vary by device, app state, captions, and add-ons.
+- The screenshot-derived Reels guide reserves the top 13.5%, the rightmost 18%
+  from 40–89% height, and the bottom 32%. TikTok reserves the top 13%, the
+  rightmost 18% from 41–90% height, and the bottom 31%. Each uses a stepped
+  safe-content polygon to preserve usable upper-right space before the action
+  rail begins. These editing approximations do not replace current platform
+  placement checkers, and screenshot-specific transient promotions are not
+  encoded as permanent chrome. A selected platform survives temporary frame
+  changes while the pointer-inert, assistive-technology-hidden overlay pauses
+  until 9:16 returns.
 - Audio-Sync Cut analyzes an Audio timeline clip locally after an explicit
   action. A bounded worker pipeline downmixes the loudest channel, resamples
   analysis to at most 22,050 Hz, applies a 1,024-sample Hann-windowed Fourier
@@ -98,15 +105,23 @@ Last verified: 2026-08-15
   in the browser. Click is 0.12 seconds; Typing is 1.2 seconds by default and
   can loop for a bounded 1–30 second duration. Preview URLs and every inserted
   media URL are revoked during their normal cleanup paths.
-- Closed Captions, Windows 98, and Transitions open one labelled editor tab
-  each. The strip uses the repository's native 98.css
-  `menu[role="tablist"] > li[role="tab"] > a` structure. Every tab keeps its
-  icon, complete accessible title, and a flat close X that uses sunken chrome
-  only while pressed. Measured title overflow scrolls on hover or keyboard
-  focus, retains a tooltip, and becomes static under reduced motion. Tabs and
-  three-second effect bars support pointer and keyboard reordering or movement,
-  closing or deletion, reopening, and edge resizing. Effect editors remain
-  explicit non-rendering placeholders.
+- The Effects window begins directly with the repository's native 98.css
+  `menu[role="tablist"] > li[role="tab"] > a` strip; it has no blue title bar,
+  visible `Tabs` label, or reopen toolbar. Position one is a sticky, icon-only
+  `Effect editor home` tab tied to the empty panel. It cannot close or reorder,
+  remains visible while the dynamic strip scrolls, and receives focus when the
+  last effect tab closes. Choosing an effect launcher opens or reopens its tab.
+- Closed Captions, Windows 98, and Transitions retain labelled tabs with icons,
+  complete accessible titles, and flat Pixelarticons close controls that use
+  sunken chrome only while pressed. Measured title overflow scrolls on hover or
+  keyboard focus, retains a tooltip, and becomes static under reduced motion.
+  Tabs and three-second effect bars support pointer and keyboard reordering or
+  movement, closing or deletion, launcher-based reopening, and edge resizing.
+  Effect editors remain explicit non-rendering placeholders.
+- Play, pause, local-file import, UI information, tab close, and timeline
+  delete symbols use locally vendored Pixelarticons base-style SVGs. The assets
+  are decorative inside controls with semantic names, load without a runtime
+  dependency, and retain their adjacent MIT license and provenance note.
 
 ## Automated gates
 
@@ -126,11 +141,16 @@ N/A frame, every fixed preset, custom dimensions, contained imported video,
 Standard and Side-by-side geometry, 9:16 automatic switching, manual layout
 persistence, per-layout split retention, transparent hatched separators,
 pointer and keyboard resizing in both axes, range clicks across multiple
-values, and ruler geometry at minimum and maximum scale. Tab coverage verifies the semantic
-98.css hierarchy, selection and focus, icon/title/close content, pressed-only
-close treatment, measured marquee overflow, reduced motion, pointer and
-keyboard reordering, close, and reopen behavior. Side-panel coverage exercises
-both separators by pointer and keyboard at default and dynamic bounds while
+values, and ruler geometry at minimum and maximum scale. Guideline coverage
+verifies the None-first selector, tooltip hover/focus, screenshot-derived
+Reels/TikTok geometry, frame pausing, pointer transparency, and auth/mobile
+blocking. Icon coverage checks local SVG responses, decorative semantics, and
+play/pause state swaps. Tab coverage verifies the semantic 98.css hierarchy,
+the permanent sticky home tab, selection and focus, icon/title/close content,
+pressed-only close treatment, measured marquee overflow, reduced motion,
+pointer and keyboard reordering, close, and launcher-based reopening.
+Side-panel coverage exercises both separators by pointer and keyboard at
+default and dynamic bounds while
 asserting the center workspace remains usable. Authentication coverage
 includes initial blocking, focus trapping, Escape, invalid credentials,
 network failure, one-hour reuse across reload, timed expiry, proof removal,
@@ -169,11 +189,12 @@ busy timeline, long filename, all open effect tabs, focused controls, closed
 tabs, blocked-popup error, launcher focus restoration, unauthenticated modal,
 invalid and network-error messages, authenticated workspace, expired project,
 reauthenticated project, the flexible N/A frame, Reel / TikTok and custom
-frames, extreme wide and tall custom ratios, Standard and Side-by-side layouts
+frames, each UI Guidelines platform, the information tooltip, extreme wide and
+tall custom ratios, Standard and Side-by-side layouts
 at regular and short desktop heights, the focused horizontal and vertical
-hatched grips, native effect tabs at minimum and maximum panel widths, long tab
-titles, reduced motion, the
-pressed close X, and ruler scale endpoints. Check screenshots and semantic snapshots,
+hatched grips, the permanent Effects home tab, native effect tabs at minimum
+and maximum panel widths, long tab titles, reduced motion, the pressed close
+control, and ruler scale endpoints. Check screenshots and semantic snapshots,
 document-level overflow, console output, page errors, and failed local
 resources. For Audio-Sync, inspect empty, analyzed, multiple-rule, guidepost,
 cut/fill/effect, flash, and decode-error states. For Audio, inspect local range,
