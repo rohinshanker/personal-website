@@ -64,8 +64,25 @@ const fitImagesIntoFrames = (root = document) => {
 const shouldSkipDeferredMediaElement = (element, visibleOnly) =>
   visibleOnly && isHiddenDeferredMediaElement(element);
 
+const isHiddenCarouselMediaElement = (element) =>
+  Boolean(
+    element?.closest(".gallery-scroll") &&
+      (element.hidden ||
+        isHiddenDeferredMediaElement(element) ||
+        element.closest(".app-window.is-hidden, .home-window.is-hidden"))
+  );
+
+const suspendHiddenCarouselMediaPlayback = (element) => {
+  if (!element?.matches("video, audio") || !isHiddenCarouselMediaElement(element)) return;
+
+  element.pause();
+  element.autoplay = false;
+};
+
 const loadDeferredMediaElement = (element, visibleOnly = false, { eager = false } = {}) => {
-  if (!element || shouldSkipDeferredMediaElement(element, visibleOnly)) return null;
+  if (!element) return null;
+  suspendHiddenCarouselMediaPlayback(element);
+  if (shouldSkipDeferredMediaElement(element, visibleOnly)) return null;
   if (element.getAttribute("src") || !element.dataset.src) return element;
   if (eager && element.matches("img")) element.loading = "eager";
   fitImageIntoFrame(element);

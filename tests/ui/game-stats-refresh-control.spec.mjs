@@ -672,8 +672,8 @@ test("required authentication opens automatically, cancel restores focus, and si
 
   await stats.button.click();
   await expect(administratorWindow).toBeVisible();
-  await page.locator("#administrator-username").fill("administrator");
-  await page.locator("#administrator-password").fill("password");
+  await page.locator("#administrator-username").fill("test-only-administrator");
+  await page.locator("#administrator-password").fill("test-only-password");
   await page.locator("#administrator-sign-in").click();
 
   await expect(page.locator("#administrator-alert-window")).toBeVisible();
@@ -693,7 +693,7 @@ test("required authentication opens automatically, cancel restores focus, and si
   });
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   expect(api.signInRequests).toEqual([
-    { username: "administrator", password: "password" },
+    { username: "test-only-administrator", password: "test-only-password" },
   ]);
   await expectNoHorizontalOverflow(stats);
   await page.screenshot({
@@ -733,8 +733,8 @@ test("Administrator request failure stays retryable and restores refresh focus",
     buttonLabel: "Game stats refresh unavailable for Minesweeper",
     message: "Waiting for authentication...",
   });
-  await username.fill("administrator");
-  await password.fill("password");
+  await username.fill("test-only-administrator");
+  await password.fill("test-only-password");
   await submit.click();
 
   await expect(administratorWindow).toBeHidden();
@@ -776,7 +776,7 @@ test("Administrator request failure stays retryable and restores refresh focus",
     path: testInfo.outputPath("administrator-request-retry-open.png"),
   });
   expect(api.signInRequests).toEqual([
-    { username: "administrator", password: "password" },
+    { username: "test-only-administrator", password: "test-only-password" },
   ]);
   expectNoUnexpectedRuntimeErrors(
     runtime,
@@ -831,8 +831,8 @@ test("closing Administrator sign-in invalidates a delayed successful response", 
     buttonLabel: "Game stats refresh unavailable for Minesweeper",
     message: "Waiting for authentication...",
   });
-  await page.locator("#administrator-username").fill("administrator");
-  await page.locator("#administrator-password").fill("password");
+  await page.locator("#administrator-username").fill("test-only-administrator");
+  await page.locator("#administrator-password").fill("test-only-password");
   await submit.click();
   await delayedSignIn.started.promise;
   await expect(submit).toBeDisabled();

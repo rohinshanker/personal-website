@@ -7,7 +7,7 @@ Scope: Homepage Video Editor launchers and `/video-editor/` media import,
 composed preview, timeline tiers and clips, effects lane, editor tabs, and
 desktop-required boundary.
 
-Last verified: 2026-08-15
+Last verified: 2026-08-27
 
 ## Product contract
 
@@ -64,6 +64,16 @@ Last verified: 2026-08-15
   lower half; labelled major ticks span the full 28-pixel ruler. Labels begin
   to the right of their lines, and a 42-pixel terminal reserve keeps the final
   time label inside scrollable ruler content.
+- Pixelated MS Sans Serif microcopy stays at the font's native 11-pixel size
+  with a 14-pixel integer line box. Nine- and ten-pixel rendering produces
+  uneven glyph advances and risks clipping; the only smaller editor text is
+  the 10-pixel timecode, which explicitly uses scalable Courier New.
+- Password masks are an intentional exception to the pixel font. Both
+  Administrator forms use smoothed 13-pixel Arial with normal line height and
+  one pixel of tracking because the bundled pixel font lacks the browser's
+  mask glyph; visual probes found 10 and 11 pixels too small and 12 pixels
+  borderline. Keep the inputs at `type="password"` and test them with a
+  populated synthetic value so screenshots exercise the actual mask.
 - The preview selects the active clip on the highest occupied video tier and
   schedules every active audio-tier clip into the local mix.
 - `UI Guidelines` is one compact selector whose first/default choice is
@@ -122,6 +132,13 @@ Last verified: 2026-08-15
   delete symbols use locally vendored Pixelarticons base-style SVGs. The assets
   are decorative inside controls with semantic names, load without a runtime
   dependency, and retain their adjacent MIT license and provenance note.
+- The editor reuses the Home custom-cursor stylesheet, selectable-text
+  behavior, and saved light/dark Cursor Settings value. An open editor follows
+  same-origin preference changes live. Timeline placement, scaling, dragging,
+  trimming, splitters, help, text, disabled controls, and busy authentication,
+  import, or analysis states retain distinct semantic cursors; reduced motion
+  keeps the working cursor static and pointer-operation cleanup prevents stuck
+  drag or resize cursors.
 
 ## Automated gates
 
@@ -164,6 +181,19 @@ decode failure, safe YouTube discovery, local range insertion, Click/Typing
 generation, loop duration, reset behavior, and object-URL cleanup. Pure Node
 tests additionally cover FFT bounds, known-frequency directional crossings,
 silence/onset behavior, and invalid analysis inputs.
+Cursor coverage verifies shared versioned resources, fresh and saved modes,
+live cross-tab mode changes, light/dark assets, selectable text, fixed title
+bars, help/select/text/unavailable/working/precision/move/pressed/resize
+semantics, media-import and authentication busy states, reduced motion,
+pointer-operation cleanup, mobile behavior, overflow, and local asset
+responses.
+Typography coverage waits for the bundled font, enforces the 11-pixel/14-pixel
+microcopy floor, checks text-node bounds and scroll geometry, and captures the
+empty editor plus social-guide labels at 1024 x 800, 1280 x 800, and
+1440 x 900. Authentication coverage additionally asserts the scalable
+13-pixel mask style and captures populated, still-masked password fields in
+the homepage form at 375 x 812, 768 x 1024, 1280 x 800, and 1440 x 900, plus
+the Video Editor dialog at and above its 1024-pixel boundary.
 
 Before release, run:
 
@@ -194,9 +224,14 @@ tall custom ratios, Standard and Side-by-side layouts
 at regular and short desktop heights, the focused horizontal and vertical
 hatched grips, the permanent Effects home tab, native effect tabs at minimum
 and maximum panel widths, long tab titles, reduced motion, the pressed close
-control, and ruler scale endpoints. Check screenshots and semantic snapshots,
+control, ruler scale endpoints, both custom-cursor color modes, active import
+and authentication working cursors, and in-progress horizontal and vertical
+resize cursors. Check screenshots and semantic snapshots,
 document-level overflow, console output, page errors, and failed local
-resources. For Audio-Sync, inspect empty, analyzed, multiple-rule, guidepost,
+resources. Treat 11 pixels with a 14-pixel line box as the minimum for the
+bundled pixel font; inspect preview status, tooltip, ruler, track, clip, graph,
+preset, and social-guide labels for uneven spacing or clipped glyph bounds.
+For Audio-Sync, inspect empty, analyzed, multiple-rule, guidepost,
 cut/fill/effect, flash, and decode-error states. For Audio, inspect local range,
 Click, Typing, and loop states at 240-, 300-, and 420-pixel Effect Editor widths.
 The repository does not currently install an automated

@@ -112,7 +112,7 @@ test("gallery image loads use a local hourglass overlay instead of stale or empt
   );
 
   for (const source of [home, index]) {
-    assert.match(source, /media-priority-loader-20260723/);
+    assert.match(source, /hidden-carousel-playback-20260827/);
   }
 
   assert.deepEqual(readGifDimensions(rawGif), { width: 258, height: 272 });

@@ -40,7 +40,10 @@ const configureAdministratorApi = async (page, signInStatus, { onEvent } = {}) =
     const url = new URL(request.url());
     if (url.pathname === "/administrator/sign-in") {
       const credentials = JSON.parse(request.postData() || "{}");
-      expect(credentials).toEqual({ username: "administrator", password: "password" });
+      expect(credentials).toEqual({
+        username: "test-only-administrator",
+        password: "test-only-password",
+      });
       if (signInStatus === "success") {
         await route.fulfill({
           contentType: "application/json",
@@ -179,8 +182,31 @@ for (const viewport of viewports) {
     await preparePage(page, "success");
     const signInWindow = await openAdministratorWindow(page);
 
-    await page.locator("#administrator-username").fill("administrator");
-    await page.locator("#administrator-password").fill("password");
+    await page.locator("#administrator-username").fill("test-only-administrator");
+    const password = page.locator("#administrator-password");
+    await password.fill("test-only-password");
+    await expect(password).toHaveAttribute("type", "password");
+    expect(
+      await password.evaluate((input) => {
+        const style = getComputedStyle(input);
+        return {
+          fontFamily: style.fontFamily,
+          fontSize: style.fontSize,
+          fontSmoothing: style.webkitFontSmoothing,
+          letterSpacing: style.letterSpacing,
+          lineHeight: style.lineHeight,
+        };
+      })
+    ).toEqual({
+      fontFamily: "Arial, sans-serif",
+      fontSize: "13px",
+      fontSmoothing: "auto",
+      letterSpacing: "1px",
+      lineHeight: "normal",
+    });
+    await page.screenshot({
+      path: testInfo.outputPath("administrator-password-mask.png"),
+    });
     await page.locator("#administrator-sign-in").click();
 
     await expect(signInWindow).toBeHidden();
@@ -261,8 +287,8 @@ test("Administrator proof survives a refresh and publishes a verified Rohin resu
     seedLocalState: false,
   });
   await openAdministratorWindow(page);
-  await page.locator("#administrator-username").fill("administrator");
-  await page.locator("#administrator-password").fill("password");
+  await page.locator("#administrator-username").fill("test-only-administrator");
+  await page.locator("#administrator-password").fill("test-only-password");
   await page.locator("#administrator-sign-in").click();
   await expect(page.locator("#administrator-alert-window")).toBeVisible();
 
@@ -330,8 +356,8 @@ test("Administrator launch keeps focus when replacing an open access notice", as
   await expect(page.locator("#admin-controls-stand-in-ok")).toBeFocused();
 
   const signInWindow = await openAdministratorWindow(page);
-  await page.locator("#administrator-username").fill("administrator");
-  await page.locator("#administrator-password").fill("password");
+  await page.locator("#administrator-username").fill("test-only-administrator");
+  await page.locator("#administrator-password").fill("test-only-password");
   await page.locator("#administrator-sign-in").click();
   await expect(signInWindow).toBeHidden();
   await page.locator("#administrator-alert-close").click();
@@ -351,8 +377,8 @@ test("Administrator failure closes the sign-in window and never grants access", 
   await preparePage(page, "failure");
   const signInWindow = await openAdministratorWindow(page);
 
-  await page.locator("#administrator-username").fill("administrator");
-  await page.locator("#administrator-password").fill("password");
+  await page.locator("#administrator-username").fill("test-only-administrator");
+  await page.locator("#administrator-password").fill("test-only-password");
   await page.locator("#administrator-sign-in").click();
 
   await expect(signInWindow).toBeHidden();

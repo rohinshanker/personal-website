@@ -27,7 +27,16 @@ const VALUE_RULES = Object.freeze([
   ],
 ]);
 
-const PROTECTED_SECRET_ASSIGNMENT = /(?:^|[,{;\s])(?:[A-Z][A-Z0-9_]*_(?:API_KEY|API_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|SECRET_KEY|PRIVATE_KEY)|API_KEY|API_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|SECRET_KEY|PRIVATE_KEY|PASSWORD|DATABASE_URL|EVENT_SIGNING_SECRET|IP_HASH_SECRET|TURNSTILE_SECRET_KEY|ADMIN_USERNAME|ADMIN_PASSWORD|ADMIN_SESSION_SIGNING_SECRET|CLOUDFLARE_API_TOKEN|CF_API_TOKEN|CLASH_API_TOKEN)\s*[:=]\s*["'`]([^"'`\r\n]{12,})["'`]/gm;
+const PROTECTED_SECRET_ASSIGNMENT = /(?:^|[,{;\s])(?:[A-Z][A-Z0-9_]*_(?:API_KEY|API_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|SECRET_KEY|PRIVATE_KEY)|API_KEY|API_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|SECRET_KEY|PRIVATE_KEY|PASSWORD|DATABASE_URL|EVENT_SIGNING_SECRET|IP_HASH_SECRET|TURNSTILE_SECRET_KEY|ADMIN_SESSION_SIGNING_SECRET|CLOUDFLARE_API_TOKEN|CF_API_TOKEN|CLASH_API_TOKEN)\s*[:=]\s*["'`]([^"'`\r\n]{12,})["'`]/gm;
+const ADMIN_CREDENTIAL_NAME = String.raw`(?:ADMIN_(?:USERNAME|PASSWORD)(?:_HASH)?|ADMINISTRATOR_(?:USERNAME|PASSWORD)(?:_HASH)?|admin(?:istrator)?(?:Username|Password)(?:Hash)?)`;
+const QUOTED_ADMIN_CREDENTIAL_ASSIGNMENT = new RegExp(
+  String.raw`\b${ADMIN_CREDENTIAL_NAME}\b["'\x60]?\s*[:=]\s*["'\x60]([^"'\x60\r\n]+)["'\x60]`,
+  "gm"
+);
+const ENV_ADMIN_CREDENTIAL_ASSIGNMENT = new RegExp(
+  String.raw`^\s*(?:export\s+)?${ADMIN_CREDENTIAL_NAME}\s*=\s*([^\s#;'"\x60]+)\s*;?\s*(?:#.*)?$`,
+  "gm"
+);
 
 const isApprovedTemplateFile = (relativePath) =>
   APPROVED_TEMPLATE_FILE_NAMES.has(path.basename(relativePath));
@@ -42,6 +51,22 @@ const findProtectedSecretAssignments = (source) => {
     }
   }
   return findings;
+};
+
+const findAdministratorCredentialAssignments = (source) => {
+  for (const expression of [
+    QUOTED_ADMIN_CREDENTIAL_ASSIGNMENT,
+    ENV_ADMIN_CREDENTIAL_ASSIGNMENT,
+  ]) {
+    expression.lastIndex = 0;
+    let match;
+    while ((match = expression.exec(source)) !== null) {
+      if (!SAFE_PLACEHOLDER_VALUE.test(match[1].trim())) {
+        return ["hard-coded-admin-credential"];
+      }
+    }
+  }
+  return [];
 };
 
 /**
@@ -59,6 +84,7 @@ export const findSecretFindings = (relativePath, source) => {
   for (const [rule, expression] of VALUE_RULES) {
     if (expression.test(source)) findings.add(rule);
   }
+  for (const rule of findAdministratorCredentialAssignments(source)) findings.add(rule);
   for (const rule of findProtectedSecretAssignments(source)) findings.add(rule);
   return [...findings].sort();
 };

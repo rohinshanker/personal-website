@@ -289,6 +289,7 @@ let nextClipId = 1;
 let nextEffectId = 1;
 let nextAudioSyncRuleId = 1;
 let nextGuidepostId = 1;
+let mediaImportsInFlight = 0;
 let dragPayload = null;
 let tabDragTargetIndex = null;
 let administratorProof = null;
@@ -1315,44 +1316,53 @@ const importFiles = async (fileList) => {
   let rejected = 0;
   const importedMedia = [];
   announce(`Reading ${files.length} local ${files.length === 1 ? "file" : "files"}…`);
+  mediaImportsInFlight += 1;
+  elements.app?.setAttribute("aria-busy", "true");
 
-  for (const file of files) {
-    const kind = classifyFile(file);
-    if (!kind) {
-      rejected += 1;
-      continue;
+  try {
+    for (const file of files) {
+      const kind = classifyFile(file);
+      if (!kind) {
+        rejected += 1;
+        continue;
+      }
+
+      const url = URL.createObjectURL(file);
+      try {
+        const duration = await readMediaDuration(url, kind);
+        const mediaItem = {
+          id: `media-${nextMediaId++}`,
+          file,
+          kind,
+          name: file.name,
+          duration,
+          url,
+        };
+        state.media.push(mediaItem);
+        importedMedia.push(mediaItem);
+        imported += 1;
+      } catch (error) {
+        URL.revokeObjectURL(url);
+        rejected += 1;
+      }
     }
 
-    const url = URL.createObjectURL(file);
-    try {
-      const duration = await readMediaDuration(url, kind);
-      const mediaItem = {
-        id: `media-${nextMediaId++}`,
-        file,
-        kind,
-        name: file.name,
-        duration,
-        url,
-      };
-      state.media.push(mediaItem);
-      importedMedia.push(mediaItem);
-      imported += 1;
-    } catch (error) {
-      URL.revokeObjectURL(url);
-      rejected += 1;
+    renderMediaBin();
+    if (imported && rejected) {
+      announce(`Imported ${imported} local ${imported === 1 ? "file" : "files"}; ${rejected} could not be read.`);
+    } else if (imported) {
+      announce(`Imported ${imported} local ${imported === 1 ? "file" : "files"}.`);
+    } else {
+      announce("No files were imported. Choose readable video or audio files.");
+    }
+    if (elements.mediaInput) elements.mediaInput.value = "";
+    return importedMedia;
+  } finally {
+    mediaImportsInFlight = Math.max(0, mediaImportsInFlight - 1);
+    if (mediaImportsInFlight === 0) {
+      elements.app?.setAttribute("aria-busy", "false");
     }
   }
-
-  renderMediaBin();
-  if (imported && rejected) {
-    announce(`Imported ${imported} local ${imported === 1 ? "file" : "files"}; ${rejected} could not be read.`);
-  } else if (imported) {
-    announce(`Imported ${imported} local ${imported === 1 ? "file" : "files"}.`);
-  } else {
-    announce("No files were imported. Choose readable video or audio files.");
-  }
-  if (elements.mediaInput) elements.mediaInput.value = "";
-  return importedMedia;
 };
 
 const renderMediaBin = () => {

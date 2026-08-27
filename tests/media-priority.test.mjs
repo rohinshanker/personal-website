@@ -11,6 +11,17 @@ test("media loading uses active-content-first and sequential background contract
   ]);
 
   assert.match(media, /const deferredMediaPriority = \(element\) =>/);
+  assert.match(media, /const isHiddenCarouselMediaElement = \(element\) =>/);
+  assert.match(media, /const suspendHiddenCarouselMediaPlayback = \(element\) =>/);
+  assert.match(media, /element\?\.closest\("\.gallery-scroll"\)/);
+  assert.match(media, /element\.hidden \|\|/);
+  assert.match(media, /isHiddenDeferredMediaElement\(element\) \|\|/);
+  assert.match(media, /element\.closest\("\.app-window\.is-hidden, \.home-window\.is-hidden"\)/);
+  assert.match(media, /element\.pause\(\);[\s\S]*?element\.autoplay = false;/);
+  assert.match(
+    media,
+    /suspendHiddenCarouselMediaPlayback\(element\);[\s\S]*?shouldSkipDeferredMediaElement\(element, visibleOnly\)/
+  );
   assert.match(media, /viewer && !viewer\.classList\.contains\("is-hidden"\) \? 0 : 1/);
   assert.match(media, /shouldContinue = \(\) => true/);
   assert.match(media, /const preloadDeferredMediaInOrder = \(/);

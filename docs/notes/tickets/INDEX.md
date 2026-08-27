@@ -2,5 +2,6 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
+| open | 2026-08-27 | [O_google-search-console-refresh__20260827.md](O_google-search-console-refresh__20260827.md) | Await deployment and a call-guided Search Console live test, indexing request, and post-crawl verification. |
 | open | 2026-08-03 | [O_admin-controls__20260731.md](O_admin-controls__20260731.md) | Await manual acceptance of the completed Administrator-session gate and promotional-content workflow. |
 | open | 2026-07-31 | [O_image-tools__20260731.md](O_image-tools__20260731.md) | Placeholder support ticket for future Image Tools work. |

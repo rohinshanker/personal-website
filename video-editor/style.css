@@ -5,6 +5,8 @@
   --timeline-duration-width: 1920px;
   --timeline-ruler-label-reserve: 42px;
   --timeline-row-height: 54px;
+  --editor-pixel-small-font-size: 11px;
+  --editor-pixel-small-line-height: 14px;
   --effect-yellow: #ffff00;
   --effect-navy: #000080;
   --effect-teal: #008080;
@@ -155,6 +157,14 @@ textarea:focus-visible,
   width: 100%;
 }
 
+.video-editor-auth-field input[type="password"] {
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  line-height: normal;
+  letter-spacing: 1px;
+  -webkit-font-smoothing: auto;
+}
+
 .video-editor-auth-field input:focus-visible {
   outline: 2px solid var(--dialog-blue);
   outline-offset: 1px;
@@ -276,8 +286,8 @@ textarea:focus-visible,
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: 11px;
-  line-height: 1;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -307,8 +317,8 @@ textarea:focus-visible,
   min-width: 0;
   overflow: hidden;
   color: #333;
-  font-size: 10px;
-  line-height: 1.2;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -370,7 +380,8 @@ textarea:focus-visible,
 .media-empty-state small {
   display: block;
   color: #555;
-  font-size: 10px;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
 }
 
 .media-bin-section {
@@ -456,7 +467,8 @@ textarea:focus-visible,
 }
 
 .media-item__meta {
-  font-size: 10px;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
   font-weight: normal;
 }
 
@@ -668,8 +680,8 @@ textarea:focus-visible,
   background: #ffffe1;
   box-shadow: 1px 1px #777;
   color: #000;
-  font-size: 10px;
-  line-height: 1.25;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -738,8 +750,8 @@ textarea:focus-visible,
   inset: 0;
   overflow: hidden;
   color: #fff;
-  font-size: 9px;
-  line-height: 1;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
   pointer-events: none;
   user-select: none;
 }
@@ -1243,8 +1255,8 @@ textarea:focus-visible,
   border-right: 1px solid #333;
   border-bottom: 1px solid #555;
   background: var(--surface);
-  font-size: 10px;
-  line-height: 12px;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
 }
 
 .timeline-corner {
@@ -1281,8 +1293,8 @@ textarea:focus-visible,
   top: 2px;
   left: 4px;
   color: #222;
-  font-size: 9px;
-  line-height: 1;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   pointer-events: none;
@@ -1328,7 +1340,8 @@ textarea:focus-visible,
   overflow: hidden;
   max-width: calc(100% - 16px);
   color: #3f3f3f;
-  font-size: 10px;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
   transform: translateY(-50%);
@@ -1380,7 +1393,8 @@ textarea:focus-visible,
   min-width: 0;
   overflow: hidden;
   padding: 0 3px;
-  font-size: 10px;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1842,7 +1856,8 @@ textarea:focus-visible,
   min-height: 72px;
   overflow: hidden;
   color: #c8c8c8;
-  font-size: 9px;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
   text-align: center;
   pointer-events: none;
 }
@@ -2050,8 +2065,8 @@ textarea:focus-visible,
 
 .sound-effect-presets span {
   color: #444;
-  font-size: 9px;
-  line-height: 1.15;
+  font-size: var(--editor-pixel-small-font-size);
+  line-height: var(--editor-pixel-small-line-height);
 }
 
 .sound-effect-options {
@@ -2084,6 +2099,167 @@ textarea:focus-visible,
   grid-template-columns: repeat(2, minmax(0, 1fr));
   min-width: 0;
   gap: 3px;
+}
+
+/* Shared custom cursor semantics */
+
+:where(
+    .window[data-no-drag] > .title-bar,
+    .window[data-no-drag] > .title-bar *
+  ) {
+  cursor: var(--cursor-normal) !important;
+  user-select: none;
+}
+
+.video-editor-page :is(
+    input[type="checkbox"],
+    input[type="color"],
+    input[type="file"],
+    input[type="radio"],
+    input[type="range"]
+  ) {
+  cursor: var(--cursor-select) !important;
+}
+
+#playhead-scrubber:not(:disabled),
+#timeline-ruler,
+#timeline-ruler *,
+.timeline-track,
+.timeline-track > .timeline-track__empty,
+.effects-track,
+.effects-track > [data-effects-empty],
+#timeline-playhead {
+  cursor: var(--cursor-precision) !important;
+}
+
+#timeline-scale:not(:disabled) {
+  cursor: var(--cursor-select) !important;
+}
+
+:where(
+    #effect-tab-default,
+    [data-effect-default-tab-face],
+    [data-effect-default-tab-face] *
+  ) {
+  cursor: var(--cursor-select) !important;
+}
+
+.video-editor-side-separator,
+.video-editor-side-separator * {
+  cursor: var(--cursor-resize-ew) !important;
+}
+
+.video-editor-preview-timeline-separator,
+.video-editor-preview-timeline-separator * {
+  cursor: var(--cursor-resize-ns) !important;
+}
+
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .video-editor-preview-timeline-separator,
+.compose-panel__body[data-video-editor-workspace-layout="side-by-side"]
+  .video-editor-preview-timeline-separator * {
+  cursor: var(--cursor-resize-ew) !important;
+}
+
+.media-item[draggable="true"],
+.timeline-clip[draggable="true"],
+.timeline-clip[draggable="true"] > .timeline-item__label,
+.effect-item[draggable="true"],
+.effect-item[draggable="true"] > :is(.effect-item__icon, .timeline-item__label),
+.effect-tab[data-effect-tab-wrapper][draggable="true"],
+.effect-tab[data-effect-tab-wrapper][draggable="true"] > .effect-tab__face,
+.effect-tab[data-effect-tab-wrapper][draggable="true"]
+  > .effect-tab__face
+  :is(img, .effect-tab__title-viewport, .effect-tab__title-track) {
+  cursor: var(--cursor-move) !important;
+}
+
+.media-item[draggable="true"]:active,
+.timeline-clip[draggable="true"]:active,
+.timeline-clip[draggable="true"]:active > .timeline-item__label,
+.effect-item[draggable="true"]:active,
+.effect-item[draggable="true"]:active > :is(.effect-item__icon, .timeline-item__label),
+.effect-tab[data-effect-tab-wrapper][draggable="true"]:active,
+.effect-tab[data-effect-tab-wrapper][draggable="true"]:active > .effect-tab__face,
+.effect-tab[data-effect-tab-wrapper][draggable="true"].is-drag-target,
+.timeline-track.is-drop-target,
+.effects-track.is-drop-target,
+.media-drop-zone.is-drag-over {
+  cursor: var(--cursor-pressed) !important;
+}
+
+.video-editor-page .trim-handle,
+.video-editor-page .trim-handle * {
+  cursor: var(--cursor-resize-ew) !important;
+}
+
+.video-editor-auth-form[aria-busy="true"],
+.video-editor-auth-form[aria-busy="true"] *,
+[data-audio-sync-status][data-state="analyzing"],
+[data-audio-sync-status][data-state="analyzing"] * {
+  cursor: var(--cursor-working) !important;
+}
+
+.video-editor-page :is(
+    button:disabled,
+    input:disabled,
+    select:disabled,
+    textarea:disabled,
+    [aria-disabled="true"],
+    .is-disabled,
+    .is-unavailable
+  ),
+.video-editor-page :is(
+    button:disabled,
+    input:disabled,
+    select:disabled,
+    textarea:disabled,
+    [aria-disabled="true"],
+    .is-disabled,
+    .is-unavailable
+  ) * {
+  cursor: var(--cursor-unavailable) !important;
+}
+
+body.video-editor-page.is-custom-cursor-loading,
+body.video-editor-page.is-custom-cursor-loading
+  *:not(#custom-cursor-loading-override),
+body.video-editor-page.is-custom-cursor-loading
+  :is(#video-editor-app, #video-editor-auth-overlay, #desktop-required),
+body.video-editor-page.is-custom-cursor-loading
+  :is(#video-editor-app, #video-editor-auth-overlay, #desktop-required)
+  *:not(#custom-cursor-loading-override) {
+  cursor: var(--cursor-working) !important;
+}
+
+body.video-editor-page.is-holding-pointer-item,
+body.video-editor-page.is-holding-pointer-item *,
+body.video-editor-page.is-holding-pointer-item
+  :is(#video-editor-app, #video-editor-auth-overlay, #desktop-required),
+body.video-editor-page.is-holding-pointer-item
+  :is(#video-editor-app, #video-editor-auth-overlay, #desktop-required)
+  * {
+  cursor: var(--cursor-pressed) !important;
+}
+
+body.video-editor-page.is-video-editor-resizing-ew,
+body.video-editor-page.is-video-editor-resizing-ew *,
+body.video-editor-page.is-video-editor-resizing-ew
+  :is(#video-editor-app, #video-editor-auth-overlay, #desktop-required),
+body.video-editor-page.is-video-editor-resizing-ew
+  :is(#video-editor-app, #video-editor-auth-overlay, #desktop-required)
+  * {
+  cursor: var(--cursor-resize-ew) !important;
+}
+
+body.video-editor-page.is-video-editor-resizing-ns,
+body.video-editor-page.is-video-editor-resizing-ns *,
+body.video-editor-page.is-video-editor-resizing-ns
+  :is(#video-editor-app, #video-editor-auth-overlay, #desktop-required),
+body.video-editor-page.is-video-editor-resizing-ns
+  :is(#video-editor-app, #video-editor-auth-overlay, #desktop-required)
+  * {
+  cursor: var(--cursor-resize-ns) !important;
 }
 
 @media (min-width: 1024px) and (max-width: 1120px) {

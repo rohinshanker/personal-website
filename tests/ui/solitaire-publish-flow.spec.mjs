@@ -769,8 +769,8 @@ for (const viewport of viewports) {
       fullPage: true,
     });
 
-    await page.locator("#administrator-username").fill("administrator");
-    await page.locator("#administrator-password").fill("password");
+    await page.locator("#administrator-username").fill("test-only-administrator");
+    await page.locator("#administrator-password").fill("test-only-password");
     await page.locator("#administrator-sign-in").click();
     await expect(page.locator("#administrator-alert-window")).toBeVisible();
     await expect(page.locator("#administrator-alert-window")).toHaveCSS(
@@ -786,7 +786,7 @@ for (const viewport of viewports) {
       )
       .toBe(1);
     expect(api.signInRequests).toEqual([
-      { username: "administrator", password: "password" },
+      { username: "test-only-administrator", password: "test-only-password" },
     ]);
     await expect
       .poll(() =>

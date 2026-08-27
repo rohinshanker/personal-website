@@ -12,11 +12,14 @@ const videoName = "victory-royale.webm";
 const audioName = "timeline-tone.wav";
 const audioSyncName = "audio-sync-bursts.wav";
 const administratorProofStorageKey = "personalSiteAdministratorProofV1";
+const cursorModeStorageKey = "rohin-os-cursor-mode";
+const cursorTextHoverClass = "is-custom-cursor-text-hover";
+const cursorTextSelectingClass = "is-custom-cursor-text-selecting";
 const administratorApiBaseUrl = "https://game-stats.test";
 const administratorProof = `${"a".repeat(32)}.${"b".repeat(32)}`;
 const administratorCredentials = Object.freeze({
-  username: "administrator",
-  password: "password",
+  username: "test-only-administrator",
+  password: "test-only-password",
 });
 const hourInMilliseconds = 60 * 60 * 1_000;
 const authClockStart = Date.UTC(2026, 7, 11, 17, 0, 0);
@@ -148,6 +151,109 @@ const monitorRuntime = (page) => {
       expect(failedLocalResources, "failed local resources").toEqual([]);
     },
   };
+};
+
+const cursorOf = (locator) =>
+  locator.evaluate((element) => getComputedStyle(element).cursor);
+
+const expectCursorImage = async (locator, imageName) => {
+  await expect
+    .poll(() => cursorOf(locator))
+    .toContain(`/assets/cursor-assets/${imageName}`);
+};
+
+const textDragPoints = async (locator) => {
+  await locator.scrollIntoViewIfNeeded();
+  return locator.evaluate((element) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let textNode = walker.nextNode();
+    while (textNode && !/\S/.test(textNode.textContent || "")) {
+      textNode = walker.nextNode();
+    }
+    if (!textNode) throw new Error("The cursor test target has no visible text.");
+    const range = document.createRange();
+    range.selectNodeContents(textNode);
+    const rect = Array.from(range.getClientRects()).find(
+      (candidate) => candidate.width >= 20 && candidate.height > 0
+    );
+    if (!rect) throw new Error("The cursor test target has no usable text line.");
+    const inset = Math.min(5, Math.max(2, rect.width / 10));
+    return {
+      end: { x: rect.right - inset, y: rect.top + rect.height / 2 },
+      start: { x: rect.left + inset, y: rect.top + rect.height / 2 },
+    };
+  });
+};
+
+const expectCursorSelectionState = async (page, active) => {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (className) => ({
+          body: document.body.classList.contains(className),
+          root: document.documentElement.classList.contains(className),
+        }),
+        cursorTextSelectingClass
+      )
+    )
+    .toEqual({ body: active, root: active });
+};
+
+const expectNoPageOverflow = async (page) => {
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        horizontal: document.documentElement.scrollWidth > window.innerWidth,
+        vertical: document.documentElement.scrollHeight > window.innerHeight,
+      }))
+    )
+    .toEqual({ horizontal: false, vertical: false });
+};
+
+const expectReadablePixelText = async (locator) => {
+  const metrics = await locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const bounds = element.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const textRects = Array.from(range.getClientRects(), (rect) => ({
+      bottom: rect.bottom,
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+    }));
+    return {
+      bounds: {
+        bottom: bounds.bottom,
+        left: bounds.left,
+        right: bounds.right,
+        top: bounds.top,
+      },
+      clientHeight: element.clientHeight,
+      clientWidth: element.clientWidth,
+      fontFamily: style.fontFamily,
+      fontSize: Number.parseFloat(style.fontSize),
+      letterSpacing: style.letterSpacing,
+      lineHeight: Number.parseFloat(style.lineHeight),
+      scrollHeight: element.scrollHeight,
+      scrollWidth: element.scrollWidth,
+      textRects,
+    };
+  });
+
+  expect(metrics.fontFamily).toContain("Pixelated MS Sans Serif");
+  expect(metrics.fontSize).toBeGreaterThanOrEqual(11);
+  expect(metrics.lineHeight).toBeGreaterThanOrEqual(14);
+  expect(metrics.letterSpacing).not.toMatch(/^-/);
+  expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+  expect(metrics.textRects.length).toBeGreaterThan(0);
+  for (const rect of metrics.textRects) {
+    expect(rect.top).toBeGreaterThanOrEqual(metrics.bounds.top - 1);
+    expect(rect.bottom).toBeLessThanOrEqual(metrics.bounds.bottom + 1);
+    expect(rect.left).toBeGreaterThanOrEqual(metrics.bounds.left - 1);
+    expect(rect.right).toBeLessThanOrEqual(metrics.bounds.right + 1);
+  }
 };
 
 const seedAdministratorAccess = (page) =>
@@ -444,6 +550,27 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
   );
   await expect(dialog.getByRole("button", { name: /close|cancel/i })).toHaveCount(0);
 
+  await password.fill("mask-visual-test-value-1234");
+  await expect(password).toHaveAttribute("type", "password");
+  expect(
+    await password.evaluate((input) => {
+      const style = getComputedStyle(input);
+      return {
+        fontFamily: style.fontFamily,
+        fontSize: style.fontSize,
+        fontSmoothing: style.webkitFontSmoothing,
+        letterSpacing: style.letterSpacing,
+        lineHeight: style.lineHeight,
+      };
+    })
+  ).toEqual({
+    fontFamily: "Arial, sans-serif",
+    fontSize: "13px",
+    fontSmoothing: "auto",
+    letterSpacing: "1px",
+    lineHeight: "normal",
+  });
+
   await username.press("Shift+Tab");
   await expect(submit).toBeFocused();
   await submit.press("Tab");
@@ -549,6 +676,449 @@ test("shows only Desktop Required below 1024px even without authentication", asy
     });
   }
 
+  runtime.expectClean();
+});
+
+test("loads the shared cursor resources and synchronizes saved light and dark modes", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+  await expectAuthenticated(page);
+
+  expect(
+    await page.evaluate((key) => localStorage.getItem(key), cursorModeStorageKey)
+  ).toBeNull();
+  await expect(page.locator("html")).not.toHaveClass(/is-cursor-dark-mode/);
+  await expect(page.locator("body")).not.toHaveClass(/is-cursor-dark-mode/);
+  await expectCursorImage(
+    page.locator("body"),
+    "generated-png/normal-light.png"
+  );
+  await expectCursorImage(
+    page.locator("#import-media-button"),
+    "generated-png/select-light.png"
+  );
+
+  const peer = await page.context().newPage();
+  await peer.goto(editorUrl, { waitUntil: "domcontentloaded" });
+  await peer.evaluate((key) => localStorage.setItem(key, "dark"), cursorModeStorageKey);
+  await expect(page.locator("html")).toHaveClass(/is-cursor-dark-mode/);
+  await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
+  await expectCursorImage(
+    page.locator("body"),
+    "generated-png/normal-dark.png"
+  );
+  await expectCursorImage(
+    page.locator("#import-media-button"),
+    "generated-png/select-dark.png"
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-cursors-dark-desktop.png"),
+  });
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expectAuthenticated(page);
+  await expect(page.locator("html")).toHaveClass(/is-cursor-dark-mode/);
+  await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
+  await page.evaluate(() => {
+    document.documentElement.classList.remove("is-cursor-dark-mode");
+    document.body.classList.remove("is-cursor-dark-mode");
+    window.dispatchEvent(new PageTransitionEvent("pageshow"));
+  });
+  await expect(page.locator("html")).toHaveClass(/is-cursor-dark-mode/);
+  await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
+
+  await peer.evaluate((key) => localStorage.setItem(key, "light"), cursorModeStorageKey);
+  await expect(page.locator("html")).not.toHaveClass(/is-cursor-dark-mode/);
+  await expect(page.locator("body")).not.toHaveClass(/is-cursor-dark-mode/);
+  await expectCursorImage(
+    page.locator("body"),
+    "generated-png/normal-light.png"
+  );
+
+  const cursorResources = [
+    "/styles/home/cursors.css?v=text-selection-cursor-20260810",
+    "/scripts/home/text-selection-cursor.js?v=video-editor-cursor-guards-20260826",
+    "/video-editor/cursor.js?v=video-editor-cursors-20260826",
+    ...["light", "dark"].flatMap((mode) =>
+      [
+        "normal",
+        "select",
+        "text",
+        "unavailable",
+        "move",
+        "precision",
+        "resize-ew",
+        "resize-ns",
+      ].map(
+        (name) => `/assets/cursor-assets/generated-png/${name}-${mode}.png`
+      )
+    ),
+    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.png",
+    "/assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.png",
+  ];
+  for (const resource of cursorResources) {
+    const response = await page.request.get(new URL(resource, page.url()).href);
+    expect(response.status(), `${resource} should load locally`).toBe(200);
+  }
+
+  await peer.evaluate((key) => localStorage.setItem(key, "dark"), cursorModeStorageKey);
+  await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.getByTestId("desktop-required")).toBeVisible();
+  await expect(page.getByTestId("video-editor")).toBeHidden();
+  await expect(page.getByTestId("video-editor-auth-overlay")).toBeHidden();
+  await expectCursorImage(
+    page.locator("body"),
+    "generated-png/normal-dark.png"
+  );
+  await expectNoPageOverflow(page);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-cursors-dark-mobile.png"),
+  });
+
+  await peer.close();
+  runtime.expectClean();
+});
+
+test("uses working cursors while authentication keeps the editor inert", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  let releaseSignIn;
+  const signInGate = new Promise((resolve) => {
+    releaseSignIn = resolve;
+  });
+  await page.route("**/scripts/home/game-stats-backend.js*", (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "${administratorApiBaseUrl}", buildVersion: "sha256-${"a".repeat(64)}" });`,
+    })
+  );
+  await page.route(`${administratorApiBaseUrl}/administrator/sign-in`, async (route) => {
+    await signInGate;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        expiresAt: new Date(Date.now() + hourInMilliseconds).toISOString(),
+        ok: true,
+        profile: {
+          icon: "assets/neko-assets/sprites/yawn1.png",
+          id: "player-rohin-neko",
+          name: "rohin ^.^",
+        },
+        proof: administratorProof,
+      }),
+    });
+  });
+
+  await loadEditor(
+    page,
+    { width: 1280, height: 800 },
+    { administratorAccess: "none" }
+  );
+  runtime.setOrigin(page.url());
+  const editor = page.getByTestId("video-editor");
+  const form = page.getByTestId("video-editor-auth-form");
+  await expect(editor).toHaveAttribute("inert", "");
+  await expectCursorImage(
+    page.getByLabel("Username"),
+    "generated-png/text-light.png"
+  );
+  await signIn(page);
+  await expect(form).toHaveAttribute("aria-busy", "true");
+  await expect(page.locator("body")).toHaveClass(/is-custom-cursor-loading/);
+  await expect(page.locator("body")).toHaveClass(
+    /is-custom-cursor-loading-frame-[1-9]/
+  );
+  await expectCursorImage(
+    form,
+    "Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-"
+  );
+  await expectCursorImage(
+    page.locator("body"),
+    "Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-"
+  );
+  await expect(editor).toHaveAttribute("inert", "");
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-auth-working-cursor.png"),
+  });
+
+  releaseSignIn();
+  await expectAuthenticated(page);
+  await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
+  await expect(page.locator("body")).not.toHaveClass(
+    /is-custom-cursor-loading-frame-/
+  );
+  runtime.expectClean();
+});
+
+test("keeps semantic cursors through text selection, resizing, and native dragging", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1280, height: 800 });
+  runtime.setOrigin(page.url());
+  await expectAuthenticated(page);
+
+  const selectableCopy = page.locator("#media-empty-state small");
+  const textPoints = await textDragPoints(selectableCopy);
+  await page.mouse.move(textPoints.start.x, textPoints.start.y);
+  await expect(selectableCopy).toHaveClass(
+    new RegExp(`(?:^|\\s)${cursorTextHoverClass}(?:\\s|$)`)
+  );
+  await expectCursorImage(
+    selectableCopy,
+    "generated-png/text-light.png"
+  );
+  await page.mouse.down();
+  await page.mouse.move(textPoints.end.x, textPoints.end.y, { steps: 8 });
+  await expectCursorSelectionState(page, true);
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBeTruthy();
+  await expectCursorImage(
+    page.locator("body"),
+    "generated-png/text-light.png"
+  );
+  await page.mouse.up();
+  await expectCursorSelectionState(page, false);
+  await page.locator("#import-media-button").hover();
+  await expect(selectableCopy).not.toHaveClass(
+    new RegExp(`(?:^|\\s)${cursorTextHoverClass}(?:\\s|$)`)
+  );
+
+  await expectCursorImage(
+    page.locator("body"),
+    "generated-png/normal-light.png"
+  );
+  await expectCursorImage(
+    page.locator("#media-panel-title"),
+    "generated-png/normal-light.png"
+  );
+  await expectCursorImage(
+    page.locator("#import-media-button"),
+    "generated-png/select-light.png"
+  );
+  await expectCursorImage(
+    page.locator("#video-editor-guidelines-info"),
+    "generated-png/help-light.png"
+  );
+
+  await page.locator("#video-editor-frame-preset").selectOption("custom");
+  await expectCursorImage(
+    page.locator("#video-editor-frame-custom-width"),
+    "generated-png/text-light.png"
+  );
+  await expectCursorImage(
+    page.locator("#playhead-scrubber"),
+    "generated-png/precision-light.png"
+  );
+  await expectCursorImage(
+    page.locator("#timeline-ruler"),
+    "generated-png/precision-light.png"
+  );
+  const rulerLabel = page.locator("#timeline-ruler .timeline-ruler__label").first();
+  const rulerLabelPoints = await textDragPoints(rulerLabel);
+  await page.mouse.move(rulerLabelPoints.start.x, rulerLabelPoints.start.y);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (className) => document.querySelectorAll(`.${className}`).length,
+        cursorTextHoverClass
+      )
+    )
+    .toBe(0);
+  await expectCursorImage(
+    rulerLabel,
+    "generated-png/precision-light.png"
+  );
+  await expectCursorImage(
+    page.getByTestId("timeline-scale"),
+    "generated-png/select-light.png"
+  );
+  await expectCursorImage(
+    page.locator("#video-editor-media-compose-separator"),
+    "generated-png/resize-ew-light.png"
+  );
+  await expectCursorImage(
+    page.locator("#video-editor-preview-timeline-separator"),
+    "generated-png/resize-ns-light.png"
+  );
+
+  await page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]').click();
+  const analyze = page.getByRole("button", { name: "Analyze source" });
+  await expect(analyze).toBeDisabled();
+  await expectCursorImage(
+    analyze,
+    "generated-png/unavailable-light.png"
+  );
+
+  const standardLayout = page.locator(
+    '[data-video-editor-workspace-layout-option="standard"]'
+  );
+  const standardBounds = await standardLayout.boundingBox();
+  expect(standardBounds).not.toBeNull();
+  await page.mouse.move(
+    standardBounds.x + standardBounds.width / 2,
+    standardBounds.y + standardBounds.height / 2
+  );
+  await page.mouse.down();
+  await expectCursorImage(
+    standardLayout,
+    "generated-png/move-light.png"
+  );
+  await page.mouse.move(1, 1);
+  await page.mouse.up();
+
+  const mediaSeparator = page.locator("#video-editor-media-compose-separator");
+  const mediaSeparatorBounds = await mediaSeparator.boundingBox();
+  expect(mediaSeparatorBounds).not.toBeNull();
+  await page.mouse.move(
+    mediaSeparatorBounds.x + mediaSeparatorBounds.width / 2,
+    mediaSeparatorBounds.y + mediaSeparatorBounds.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(mediaSeparatorBounds.x + 20, mediaSeparatorBounds.y + 20, {
+    steps: 4,
+  });
+  await expect(page.locator("body")).toHaveClass(/is-video-editor-resizing-ew/);
+  await expectCursorImage(
+    page.locator("body"),
+    "generated-png/resize-ew-light.png"
+  );
+  await page.mouse.up();
+  await expect(page.locator("body")).not.toHaveClass(/is-video-editor-resizing-ew/);
+
+  const previewSeparator = page.locator("#video-editor-preview-timeline-separator");
+  const previewSeparatorBounds = await previewSeparator.boundingBox();
+  expect(previewSeparatorBounds).not.toBeNull();
+  await page.mouse.move(
+    previewSeparatorBounds.x + previewSeparatorBounds.width / 2,
+    previewSeparatorBounds.y + previewSeparatorBounds.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    previewSeparatorBounds.x + previewSeparatorBounds.width / 2,
+    previewSeparatorBounds.y + 16,
+    { steps: 4 }
+  );
+  await expect(page.locator("body")).toHaveClass(/is-video-editor-resizing-ns/);
+  await expectCursorImage(
+    page.locator("body"),
+    "generated-png/resize-ns-light.png"
+  );
+  await page.mouse.up();
+  await expect(page.locator("body")).not.toHaveClass(/is-video-editor-resizing-ns/);
+
+  await page
+    .locator('[data-video-editor-workspace-layout-option="side-by-side"]')
+    .click();
+  await expectCursorImage(
+    previewSeparator,
+    "generated-png/resize-ew-light.png"
+  );
+
+  await page.evaluate(() => {
+    window.__videoEditorImportCursorStates = [];
+    const app = document.querySelector("#video-editor-app");
+    new MutationObserver(() => {
+      const busy = app.getAttribute("aria-busy") === "true";
+      const states = window.__videoEditorImportCursorStates;
+      if (states.at(-1)?.busy === busy) return;
+      states.push({
+        bodyLoading: document.body.classList.contains("is-custom-cursor-loading"),
+        busy,
+        cursor: getComputedStyle(app).cursor,
+      });
+    }).observe(app, { attributes: true, attributeFilter: ["aria-busy"] });
+  });
+  await importMedia(page, [generatedAudio()]);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.__videoEditorImportCursorStates.map(({ busy }) => busy)
+      )
+    )
+    .toEqual([true, false]);
+  const importCursorStates = await page.evaluate(
+    () => window.__videoEditorImportCursorStates
+  );
+  expect(importCursorStates[0].bodyLoading).toBe(true);
+  expect(importCursorStates[0].cursor).toContain(
+    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/"
+  );
+  await expect(page.getByTestId("video-editor")).toHaveAttribute(
+    "aria-busy",
+    "false"
+  );
+  await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
+  const mediaItem = page.getByTestId("media-bin").locator('[data-media-id][draggable="true"]');
+  await expectCursorImage(
+    mediaItem,
+    "generated-png/move-light.png"
+  );
+  const mediaName = mediaItem.locator("[data-media-name]");
+  const mediaNamePoints = await textDragPoints(mediaName);
+  await page.mouse.move(mediaNamePoints.start.x, mediaNamePoints.start.y);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (className) => document.querySelectorAll(`.${className}`).length,
+        cursorTextHoverClass
+      )
+    )
+    .toBe(0);
+  await page.locator('[data-effect-tab-target][data-effect="audio"]').click();
+  const draggableTab = page.getByRole("tab", { name: "Audio-Sync Cut" });
+  const dragTarget = page.getByRole("tab", { name: "Audio", exact: true });
+  const cancelledButtonDrag = await draggableTab
+    .locator("[data-close-effect-tab]")
+    .evaluate((button) => {
+      const event = new DragEvent("dragstart", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: new DataTransfer(),
+      });
+      button.dispatchEvent(event);
+      return {
+        defaultPrevented: event.defaultPrevented,
+        holding: document.body.classList.contains("is-holding-pointer-item"),
+      };
+    });
+  expect(cancelledButtonDrag).toEqual({ defaultPrevented: true, holding: false });
+  await page.evaluate(() => {
+    window.__videoEditorDragCursorStates = [];
+    for (const eventName of ["dragstart", "dragend"]) {
+      document.addEventListener(eventName, () => {
+        window.__videoEditorDragCursorStates.push({
+          cursor: getComputedStyle(document.body).cursor,
+          eventName,
+          holding: document.body.classList.contains("is-holding-pointer-item"),
+        });
+      });
+    }
+  });
+  await draggableTab.dragTo(dragTarget, {
+    sourcePosition: { x: 12, y: 13 },
+    targetPosition: { x: 12, y: 13 },
+  });
+  const dragCursorStates = await page.evaluate(
+    () => window.__videoEditorDragCursorStates
+  );
+  const dragStartCursor = dragCursorStates.find(
+    ({ eventName }) => eventName === "dragstart"
+  );
+  expect(dragStartCursor?.holding).toBe(true);
+  expect(dragStartCursor?.cursor).toContain(
+    "/assets/cursor-assets/generated-png/move-light.png"
+  );
+  await expect(page.locator("body")).not.toHaveClass(/is-holding-pointer-item/);
+
+  await expectNoPageOverflow(page);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-semantic-custom-cursors.png"),
+  });
   runtime.expectClean();
 });
 
@@ -1061,6 +1631,62 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
   await expect(overlay).toBeHidden();
   await expect(overlay).toHaveAttribute("aria-hidden", "true");
   await expect(status).toContainText(/UI guidelines.*hidden/i);
+
+  runtime.expectClean();
+});
+
+test("keeps small pixel-font labels readable without glyph clipping", async ({
+  page,
+}, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await loadEditor(page, { width: 1024, height: 800 });
+  runtime.setOrigin(page.url());
+  await expectAuthenticated(page);
+  await page.evaluate(() => document.fonts.ready);
+  expect(
+    await page.evaluate(() => document.fonts.check('11px "Pixelated MS Sans Serif"'))
+  ).toBe(true);
+
+  const info = page.getByRole("button", { name: /About UI guidelines/i });
+  const tooltip = page.locator("#video-editor-guidelines-note");
+  const preset = page.getByLabel("Frame size", { exact: true });
+  const platform = page.locator("#video-editor-guidelines-platform");
+
+  for (const viewport of [
+    { height: 800, name: "1024x800", width: 1024 },
+    { height: 800, name: "1280x800", width: 1280 },
+    { height: 900, name: "1440x900", width: 1440 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await expectReadablePixelText(page.locator("#preview-clip-name"));
+    await expectReadablePixelText(page.locator("#media-empty-state small"));
+    await expectReadablePixelText(page.locator("#timeline-ruler .timeline-ruler__label").first());
+    await expectReadablePixelText(page.locator("[data-track-empty]").first());
+
+    await info.focus();
+    await expect(tooltip).toBeVisible();
+    await expectReadablePixelText(tooltip);
+
+    await platform.focus();
+    await expect(tooltip).toBeHidden();
+    await platform.selectOption("instagram-reels");
+    await preset.selectOption("9:16");
+    const guidelineLabels = page.locator(
+      "#video-editor-social-guidelines-overlay [data-guideline-zone] > span, " +
+        "#video-editor-social-guidelines-overlay [data-guideline-safe-area] > span"
+    );
+    await expect(guidelineLabels).toHaveCount(4);
+    for (let index = 0; index < 4; index += 1) {
+      await expectReadablePixelText(guidelineLabels.nth(index));
+    }
+
+    await expectNoPageOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(`video-editor-readable-small-type-${viewport.name}.png`),
+    });
+    await platform.selectOption("none");
+    await preset.selectOption("none");
+  }
 
   runtime.expectClean();
 });
@@ -2496,7 +3122,29 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
   }
 
   let audioClip = await addAudioSyncClip(page);
+  await page.evaluate(() => {
+    window.__videoEditorAudioAnalysisCursorStates = [];
+    const status = document.querySelector("[data-audio-sync-status]");
+    new MutationObserver(() => {
+      window.__videoEditorAudioAnalysisCursorStates.push({
+        bodyLoading: document.body.classList.contains("is-custom-cursor-loading"),
+        cursor: getComputedStyle(status).cursor,
+        state: status.getAttribute("data-state"),
+      });
+    }).observe(status, { attributes: true, attributeFilter: ["data-state"] });
+  });
   panel = await analyzeAudioSyncClip(page);
+  const audioAnalysisCursorStates = await page.evaluate(
+    () => window.__videoEditorAudioAnalysisCursorStates
+  );
+  const analyzingCursor = audioAnalysisCursorStates.find(
+    ({ state }) => state === "analyzing"
+  );
+  expect(analyzingCursor?.bodyLoading).toBe(true);
+  expect(analyzingCursor?.cursor).toContain(
+    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/"
+  );
+  await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   await expect(page.getByLabel("Graph view", { exact: true })).toHaveValue("combined");
   await expect(page.locator("[data-audio-sync-waveform]")).toHaveAttribute(
     "aria-label",

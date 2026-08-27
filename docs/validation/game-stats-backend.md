@@ -4,7 +4,7 @@ Purpose: Controlled Cloudflare Worker and D1 release, security, production verif
 
 Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
 
-Last verified: 2026-08-12
+Last verified: 2026-08-27
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -764,6 +764,12 @@ path/rule, never a matched value. The repository's GitHub Actions workflow runs
 the same guard on pushes and pull requests. Keep `.env*`, `.dev.vars*`, private
 key containers, and any temporary secret-export file untracked; `git add -f`
 can still bypass `.gitignore`, but the guard rejects an indexed sensitive file.
+Administrator username, password, and password-hash assignments receive a
+dedicated any-length check across exact environment names and common camel-case
+aliases, including quoted source literals and unquoted environment-file values.
+Keep browser-test fixtures explicitly prefixed `test-only-` or `test-`; they
+must never duplicate a deployed credential. The CI `gitleaks` job scans all
+reachable history in addition to the current-tree source guard.
 
 In GitHub repository **Settings → Advanced Security**, enable secret scanning,
 generic secret detection when available, alert notifications, and push

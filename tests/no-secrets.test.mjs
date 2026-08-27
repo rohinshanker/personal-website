@@ -19,6 +19,7 @@ test("secret guard identifies credentials without exposing their values", () => 
 
   assert.deepEqual(findings, [
     "github-token",
+    "hard-coded-admin-credential",
     "hard-coded-secret-assignment",
     "private-key-block",
   ]);
@@ -34,6 +35,26 @@ test("secret guard permits documented local-variable templates but rejects real 
   assert.deepEqual(findSecretFindings("credentials.p12", ""), ["sensitive-file-name"]);
   assert.deepEqual(findSecretFindings("service-account-prod.json", ""), ["sensitive-file-name"]);
   assert.deepEqual(findSecretFindings("id_ed25519", ""), ["sensitive-file-name"]);
+});
+
+test("secret guard rejects short Administrator identity literals without reporting them", () => {
+  const administratorUsernameName = ["ADMIN_", "USERNAME"].join("");
+  const administratorPasswordName = ["admin", "Password"].join("");
+  const administratorPasswordHashName = ["admin", "Password", "Hash"].join("");
+  const envStylePasswordName = ["ADMIN_", "PASSWORD"].join("");
+  const findings = findSecretFindings(
+    "config.mjs",
+    `const ${administratorUsernameName} = "u";\nconst ${administratorPasswordName} = "p";\nconst ${administratorPasswordHashName} = "h";\n${envStylePasswordName}=tiny`
+  );
+
+  assert.deepEqual(findings, ["hard-coded-admin-credential"]);
+  assert.deepEqual(
+    findSecretFindings(
+      ".dev.vars.example",
+      `${administratorUsernameName}=replace-with-local-username\n${envStylePasswordName}=replace-with-local-password`
+    ),
+    []
+  );
 });
 
 test("repository candidates contain no credential indicators", async () => {

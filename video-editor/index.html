@@ -11,7 +11,16 @@
     <link rel="icon" href="../assets/app-icons/ico/movie_maker.ico" type="image/x-icon" />
     <link rel="canonical" href="https://rohin.shanker.me/video-editor/" />
     <link rel="stylesheet" href="../style.css" />
+    <link
+      rel="stylesheet"
+      href="../styles/home/cursors.css?v=text-selection-cursor-20260810"
+    />
+    <script src="cursor.js?v=video-editor-cursors-20260826"></script>
     <link rel="stylesheet" href="style.css" />
+    <script
+      src="../scripts/home/text-selection-cursor.js?v=video-editor-cursor-guards-20260826"
+      defer
+    ></script>
     <script src="../scripts/home/game-stats-backend.js"></script>
     <script src="audio-analysis.js"></script>
     <script src="script.js" type="module"></script>
@@ -22,6 +31,7 @@
       class="window desktop-required-window"
       id="desktop-required"
       data-testid="desktop-required"
+      data-no-drag
       role="alert"
       aria-labelledby="desktop-required-title"
     >
@@ -54,6 +64,7 @@
         class="window editor-window media-panel"
         id="media-panel"
         data-panel="media"
+        data-no-drag
         aria-labelledby="media-panel-title"
       >
         <div class="title-bar">
@@ -224,6 +235,7 @@
         class="window editor-window compose-panel"
         id="compose-panel"
         data-panel="compose"
+        data-no-drag
         aria-labelledby="compose-panel-title"
       >
         <div class="title-bar">
@@ -550,7 +562,12 @@
               <div class="timeline-canvas" id="timeline-canvas">
                 <div class="timeline-ruler-row">
                   <div class="timeline-corner" aria-hidden="true">Time</div>
-                  <div class="timeline-ruler" id="timeline-ruler" aria-hidden="true"></div>
+                  <div
+                    class="timeline-ruler"
+                    id="timeline-ruler"
+                    data-custom-cursor-guard
+                    aria-hidden="true"
+                  ></div>
                 </div>
                 <div
                   class="timeline-tiers"
@@ -569,6 +586,7 @@
                       class="timeline-track"
                       data-tier-id="video-1"
                       data-kind="video"
+                      data-custom-cursor-guard
                       data-testid="timeline-tier-video-1"
                       role="list"
                       tabindex="0"
@@ -588,6 +606,7 @@
                       class="timeline-track"
                       data-tier-id="audio-1"
                       data-kind="audio"
+                      data-custom-cursor-guard
                       data-testid="timeline-tier-audio-1"
                       role="list"
                       tabindex="0"
@@ -602,6 +621,7 @@
                   <div
                     class="effects-track"
                     id="effects-track"
+                    data-custom-cursor-guard
                     data-testid="effects-lane"
                     role="list"
                     aria-label="Timeline effects"
@@ -648,6 +668,7 @@
         class="window editor-window effects-panel"
         id="effects-panel"
         data-panel="effects"
+        data-no-drag
         aria-labelledby="effects-panel-title"
       >
         <h2 class="visually-hidden" id="effects-panel-title">Effect Editor</h2>
@@ -1156,6 +1177,7 @@
         class="window video-editor-auth-dialog"
         id="video-editor-auth-dialog"
         data-testid="video-editor-auth-dialog"
+        data-no-drag
         role="dialog"
         aria-modal="true"
         aria-labelledby="video-editor-auth-title"
@@ -1249,6 +1271,7 @@
           class="timeline-track"
           data-tier-id=""
           data-kind=""
+          data-custom-cursor-guard
           role="list"
           tabindex="0"
         >

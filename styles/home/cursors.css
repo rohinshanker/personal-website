@@ -436,6 +436,14 @@ body.is-holding-pointer-item * {
   width: 100%;
 }
 
+.administrator-field input[type="password"] {
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  line-height: normal;
+  letter-spacing: 1px;
+  -webkit-font-smoothing: auto;
+}
+
 .administrator-sign-in-actions {
   display: flex;
   justify-content: flex-end;

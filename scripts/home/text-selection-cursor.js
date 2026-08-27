@@ -60,6 +60,9 @@
     ".panel-divider",
     ".portfolio-window.is-resize-hover",
     ".portfolio-window.is-manual-resizing",
+    '[draggable="true"]',
+    '[role="separator"]',
+    "[data-custom-cursor-guard]",
   ].join(",");
 
   const UNAVAILABLE_TARGET_SELECTOR = [

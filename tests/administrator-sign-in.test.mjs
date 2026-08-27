@@ -61,6 +61,10 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
 
   assert.match(styles, /\.administrator-window\b/);
   assert.match(styles, /\.administrator-alert-window\b/);
+  assert.match(
+    styles,
+    /\.administrator-field\s+input\[type=["']password["']\]\s*\{[^}]*font-family\s*:\s*Arial\s*,\s*sans-serif[^}]*font-size\s*:\s*13px[^}]*line-height\s*:\s*normal[^}]*letter-spacing\s*:\s*1px[^}]*-webkit-font-smoothing\s*:\s*auto/is
+  );
   assert.doesNotMatch(styles, /\.administrator-alert-body\b/);
   assert.doesNotMatch(styles, /\.administrator-alert-icon\b/);
   assert.match(main, /"\/administrator\/sign-in"/);

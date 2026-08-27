@@ -6,14 +6,35 @@ const root = new URL("../", import.meta.url);
 const route = new URL("video-editor/", root);
 
 const readRouteSources = async () => {
-  const [html, css, script, audioAnalysis, audioAnalysisWorker] = await Promise.all([
+  const [
+    html,
+    css,
+    script,
+    cursor,
+    audioAnalysis,
+    audioAnalysisWorker,
+    sharedCursorCss,
+    textSelectionCursor,
+  ] = await Promise.all([
     readFile(new URL("index.html", route), "utf8"),
     readFile(new URL("style.css", route), "utf8"),
     readFile(new URL("script.js", route), "utf8"),
+    readFile(new URL("cursor.js", route), "utf8"),
     readFile(new URL("audio-analysis.js", route), "utf8"),
     readFile(new URL("audio-analysis-worker.js", route), "utf8"),
+    readFile(new URL("styles/home/cursors.css", root), "utf8"),
+    readFile(new URL("scripts/home/text-selection-cursor.js", root), "utf8"),
   ]);
-  return { audioAnalysis, audioAnalysisWorker, css, html, script };
+  return {
+    audioAnalysis,
+    audioAnalysisWorker,
+    css,
+    cursor,
+    html,
+    script,
+    sharedCursorCss,
+    textSelectionCursor,
+  };
 };
 
 test("Video Editor publishes canonical route metadata and the Windows desktop shell", async () => {
@@ -34,6 +55,214 @@ test("Video Editor publishes canonical route metadata and the Windows desktop sh
   assert.match(html, /<script\b[^>]*\bsrc="(?:\.\/)?script\.js(?:\?[^"#]*)?"[^>]*>/i);
   assert.match(css, /background-2200\.jpg/);
   assert.doesNotMatch(html, /\bdesktop-icon\b|\btaskbar\b/i);
+});
+
+test("Video Editor keeps pixel-font microcopy at its readable native size", async () => {
+  const { css } = await readRouteSources();
+
+  assert.match(css, /--editor-pixel-small-font-size\s*:\s*11px/);
+  assert.match(css, /--editor-pixel-small-line-height\s*:\s*14px/);
+
+  const compactCss = css.replace(/\s+/g, " ");
+  for (const selector of [
+    ".editor-window > .title-bar .title-bar-text",
+    ".preview-clip-name",
+    ".media-drop-zone small",
+    ".media-item__meta",
+    ".video-editor-guidelines-controls__note",
+    ".video-editor-social-guidelines",
+    ".timeline-tier__label",
+    ".timeline-ruler__label",
+    ".timeline-track__empty",
+    ".timeline-item__label",
+    ".audio-sync-graph",
+    ".sound-effect-presets span",
+  ]) {
+    const block = Array.from(compactCss.matchAll(/[^{}]+\{[^{}]*}/g), ([match]) => match)
+      .filter((candidate) => candidate.includes(selector))
+      .find(
+        (candidate) =>
+          candidate.includes("font-size: var(--editor-pixel-small-font-size)") &&
+          candidate.includes("line-height: var(--editor-pixel-small-line-height)")
+      );
+    assert.ok(block, `${selector} must use the readable pixel-font size and line box.`);
+  }
+
+  const undersizedBlocks = Array.from(
+    compactCss.matchAll(/([^{}]+)\{([^{}]*\bfont-size:\s*(?:9|10)px[^{}]*)\}/g),
+    ([, selector]) => selector.trim()
+  );
+  assert.deepEqual(
+    undersizedBlocks,
+    [".time-readout"],
+    "Only the scalable Courier timecode may remain below the 11px pixel-font floor."
+  );
+});
+
+test("Video Editor reuses the shared custom cursor theme and pointer semantics", async () => {
+  const { css, cursor, html, script, sharedCursorCss, textSelectionCursor } =
+    await readRouteSources();
+  const sharedStylesheet =
+    'href="../styles/home/cursors.css?v=text-selection-cursor-20260810"';
+  const cursorRuntime = 'src="cursor.js?v=video-editor-cursors-20260826"';
+  const routeStylesheet = 'href="style.css"';
+  const textSelectionScript =
+    'src="../scripts/home/text-selection-cursor.js?v=video-editor-cursor-guards-20260826"';
+  for (const reference of [
+    sharedStylesheet,
+    cursorRuntime,
+    routeStylesheet,
+    textSelectionScript,
+  ]) {
+    assert.ok(html.includes(reference), `Missing shared cursor reference ${reference}.`);
+  }
+  assert.ok(html.indexOf(sharedStylesheet) < html.indexOf(cursorRuntime));
+  assert.ok(html.indexOf(cursorRuntime) < html.indexOf(routeStylesheet));
+  assert.ok(html.indexOf(routeStylesheet) < html.indexOf(textSelectionScript));
+  assert.match(
+    html,
+    /<script\b[^>]*\bsrc="\.\.\/scripts\/home\/text-selection-cursor\.js\?v=video-editor-cursor-guards-20260826"[^>]*\bdefer(?:\s|>|=)/i
+  );
+  for (const id of [
+    "desktop-required",
+    "media-panel",
+    "compose-panel",
+    "effects-panel",
+    "video-editor-auth-dialog",
+  ]) {
+    assert.match(
+      html,
+      new RegExp(`<[^>]+(?=[^>]*\\bid="${id}")(?=[^>]*\\bdata-no-drag(?:\\s|>|=))[^>]*>`, "i"),
+      `${id} must opt out of shared draggable-title semantics.`
+    );
+  }
+
+  assert.match(cursor, /CURSOR_MODE_STORAGE_KEY\s*=\s*"rohin-os-cursor-mode"/);
+  assert.match(cursor, /localStorage\.getItem\(CURSOR_MODE_STORAGE_KEY\)\s*===\s*"dark"/);
+  assert.match(cursor, /\?\s*"dark"\s*:\s*"light"/);
+  assert.match(cursor, /document\.documentElement\.classList\.toggle\(DARK_MODE_CLASS/);
+  assert.match(cursor, /document\.body\?\.classList\.toggle\(DARK_MODE_CLASS/);
+  assert.match(cursor, /addEventListener\("storage"/);
+  assert.match(cursor, /event\.key\s*!==\s*CURSOR_MODE_STORAGE_KEY/);
+  assert.match(cursor, /event\.newValue\s*===\s*"dark"\s*\?\s*"dark"\s*:\s*"light"/);
+  assert.match(cursor, /addEventListener\("pageshow"/);
+  assert.doesNotMatch(cursor, /localStorage\.setItem/);
+  assert.match(cursor, /#video-editor-auth-form/);
+  assert.match(cursor, /#video-editor-app/);
+  assert.match(cursor, /\[data-audio-sync-status\]/);
+  assert.match(cursor, /getAttribute\("aria-busy"\)\s*===\s*"true"/);
+  assert.match(cursor, /getAttribute\("data-state"\)\s*===\s*"analyzing"/);
+  assert.match(cursor, /LOADING_FRAME_COUNT\s*=\s*9/);
+  assert.match(cursor, /MutationObserver/);
+  assert.match(cursor, /is-custom-cursor-loading/);
+  assert.match(script, /elements\.app\?\.setAttribute\("aria-busy",\s*"true"\)/);
+  assert.match(script, /finally\s*\{[^}]*elements\.app\?\.setAttribute\("aria-busy",\s*"false"\)/s);
+  assert.match(script, /let mediaImportsInFlight\s*=\s*0/);
+  assert.match(script, /mediaImportsInFlight\s*\+=\s*1/);
+  assert.match(
+    script,
+    /finally\s*\{[\s\S]*?mediaImportsInFlight\s*=\s*Math\.max\(0,\s*mediaImportsInFlight\s*-\s*1\)[\s\S]*?if\s*\(mediaImportsInFlight\s*===\s*0\)/
+  );
+  assert.match(
+    cursor,
+    /addEventListener\("dragstart"[\s\S]*?if\s*\(event\.defaultPrevented\)\s*return;/
+  );
+
+  for (const cursorToken of [
+    "normal",
+    "select",
+    "text",
+    "unavailable",
+    "working",
+    "move",
+    "pressed",
+    "precision",
+    "resize-ew",
+    "resize-ns",
+  ]) {
+    assert.match(
+      `${sharedCursorCss}\n${css}`,
+      new RegExp(`--cursor-${cursorToken.replace("-", "-")}`),
+      `Missing the ${cursorToken} custom cursor token.`
+    );
+  }
+  assert.match(sharedCursorCss, /html\.is-cursor-dark-mode,\s*body\.is-cursor-dark-mode/);
+  assert.match(sharedCursorCss, /:where\(html, body, body \*\)[^{]*\{[^}]*--cursor-normal|:where\(html, body, body \*\)\s*\{[^}]*cursor\s*:\s*var\(--cursor-normal\)/is);
+  assert.match(textSelectionCursor, /is-custom-cursor-text-hover/);
+  assert.match(textSelectionCursor, /is-custom-cursor-text-selecting/);
+  assert.match(textSelectionCursor, /caretPositionFromPoint/);
+  assert.match(textSelectionCursor, /event\.pointerType\s*!==\s*"mouse"/);
+  for (const guard of [
+    '[draggable="true"]',
+    '[role="separator"]',
+    "[data-custom-cursor-guard]",
+  ]) {
+    assert.ok(
+      textSelectionCursor.includes(guard),
+      `Missing the shared selectable-text guard ${guard}.`
+    );
+  }
+  assert.match(
+    html,
+    /\bid="timeline-ruler"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
+  );
+  assert.match(
+    html,
+    /\bclass="timeline-track"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
+  );
+  assert.match(
+    html,
+    /\bid="effects-track"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
+  );
+
+  const compactCss = css.replace(/\s+/g, " ");
+  for (const [selector, token] of [
+    ["#playhead-scrubber", "precision"],
+    ["#timeline-scale", "select"],
+    [".video-editor-side-separator", "resize-ew"],
+    [".video-editor-preview-timeline-separator", "resize-ns"],
+    ['[data-video-editor-workspace-layout="side-by-side"]', "resize-ew"],
+    ['.media-item[draggable="true"]', "move"],
+    [".trim-handle", "resize-ew"],
+    ['.video-editor-auth-form[aria-busy="true"]', "working"],
+    ['[data-audio-sync-status][data-state="analyzing"]', "working"],
+    ["button:disabled", "unavailable"],
+    ["body.video-editor-page.is-holding-pointer-item", "pressed"],
+    ["body.video-editor-page.is-video-editor-resizing-ew", "resize-ew"],
+    ["body.video-editor-page.is-video-editor-resizing-ns", "resize-ns"],
+  ]) {
+    const matchingBlock = Array.from(compactCss.matchAll(/[^{}]+\{[^{}]*}/g), ([block]) => block)
+      .filter((block) => block.includes(selector))
+      .find((block) => block.includes(`cursor: var(--cursor-${token}) !important`));
+    assert.ok(
+      matchingBlock,
+      `Missing the --cursor-${token} mapping for ${selector}.`
+    );
+  }
+  for (const operationClass of [
+    "is-holding-pointer-item",
+    "is-video-editor-resizing-ew",
+    "is-video-editor-resizing-ns",
+  ]) {
+    assert.match(cursor, new RegExp(operationClass));
+  }
+
+  await Promise.all(
+    ["light", "dark"].flatMap((mode) =>
+      [
+        "normal",
+        "select",
+        "text",
+        "unavailable",
+        "move",
+        "precision",
+        "resize-ew",
+        "resize-ns",
+      ].map((name) =>
+        access(new URL(`assets/cursor-assets/generated-png/${name}-${mode}.png`, root))
+      )
+    )
+  );
 });
 
 test("Video Editor exposes fixed media, preview, and effects panels with stable controls", async () => {
@@ -571,6 +800,10 @@ test("Video Editor starts behind a semantic, non-dismissible Administrator gate"
 
   assert.match(css, /\.video-editor-auth-overlay\s*\{[^}]*position\s*:\s*fixed/is);
   assert.match(css, /\.video-editor-auth-overlay\s*\{[^}]*background\s*:\s*rgba\(/is);
+  assert.match(
+    css,
+    /\.video-editor-auth-field\s+input\[type=["']password["']\]\s*\{[^}]*font-family\s*:\s*Arial\s*,\s*sans-serif[^}]*font-size\s*:\s*13px[^}]*line-height\s*:\s*normal[^}]*letter-spacing\s*:\s*1px[^}]*-webkit-font-smoothing\s*:\s*auto/is
+  );
   const mobileRule = css.slice(
     css.search(/@media[^\{]*(?:max-width\s*:\s*1023px|width\s*<\s*1024px)/i)
   );
