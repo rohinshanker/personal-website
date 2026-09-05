@@ -4,7 +4,7 @@ Purpose: Controlled Cloudflare Worker and D1 release, security, production verif
 
 Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
 
-Last verified: 2026-08-27
+Last verified: 2026-09-05
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -38,13 +38,16 @@ or high-stakes game.
   while any token-to-D1 build, issue-time, config, IP, expiry, or signature
   mismatch is rejected without consuming the session or storing an event.
 
-## Local Release Candidate — 2026-08-12 (Not Deployed)
+## Local Release Candidate — 2026-09-05 (Not Deployed)
 
 - The checked-in candidate is build
-  `sha256-40002bb7d1044b03e785273a5f848bf48c78052e665ab4784ddb922373540566`.
+  `sha256-3eb3d0ae0871fc21f1e49c62b0e259ac2dccc247c7047e7b4d9de2766380c8fc`.
   It is not the live build described above. Deploy its rolling-compatible
   Worker first, require the transition gate, then publish the matching Pages
   artifact and run the full parity gate.
+- Solitaire now generates randomized deals with a constructive winning path
+  under its draw-one unlimited-redeal rules. The proof and regression workflow
+  are documented in [Winnable Solitaire Deals](solitaire-winnable-deals.md).
 - A player-scoped `GET /stats?playerId=...` now returns complete lifetime
   totals for Minesweeper wins, Solitaire wins, Snake games, and Sudoku wins.
   Game Progress prefers those verified D1-derived totals, refreshes whenever
@@ -68,9 +71,9 @@ or high-stakes game.
   a reusable session. Repeating the exact accepted event is idempotent rather
   than incrementing any counter. Defensive historical-row reads remain
   separate from strict ingress.
-- Local verification passes all 265 source tests, the generated-integrity
-  check, JavaScript syntax checks, and Wrangler 4.114.0's strict deployment
-  dry-run. The focused 16-test rendered lifetime-total and Solitaire publish
+- Local verification passes all 290 source tests, all 254 browser checks after
+  isolated retry of nine parallel resource/timing flakes, and the generated-
+  integrity check. The focused 16-test rendered lifetime-total and Solitaire publish
   matrix passes across 375×812, 768×1024, 1280×800, and 1440×900. It covers
   historical totals, automatic refresh-on-open and post-publication refresh,
   reload persistence, Administrator reauthorization, transient-failure

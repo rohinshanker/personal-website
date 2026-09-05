@@ -29779,12 +29779,63 @@ const solBuildDeck = () => {
   return deck;
 };
 
-const solShuffle = (cards) => {
+const solShuffle = (cards, random = Math.random) => {
   for (let i = cards.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [cards[i], cards[j]] = [cards[j], cards[i]];
   }
   return cards;
+};
+
+// Each suit owns seven tableau cards split across unique column lengths. Its
+// columns reveal consecutive ranks; ranks between those segments stay in stock.
+const solTableauSegmentGroups = [[7], [1, 6], [2, 5], [3, 4]];
+
+const solDistributeRankGaps = (gapCount, slotCount, random) => {
+  const gaps = Array.from({ length: slotCount }, () => 0);
+  for (let gap = 0; gap < gapCount; gap += 1) {
+    gaps[Math.floor(random() * slotCount)] += 1;
+  }
+  return gaps;
+};
+
+const solBuildWinnableDeal = (random = Math.random) => {
+  const deck = solBuildDeck();
+  const cardsById = new Map(deck.map((card) => [card.id, card]));
+  const tableau = Array.from({ length: 7 }, () => []);
+  const tableauCardIds = new Set();
+  const shuffledSuits = solShuffle([...solSuitOrder], random);
+
+  shuffledSuits.forEach((suit, groupIndex) => {
+    const segmentLengths = solShuffle(
+      [...solTableauSegmentGroups[groupIndex]],
+      random
+    );
+    const gaps = solDistributeRankGaps(
+      13 - segmentLengths.reduce((total, length) => total + length, 0),
+      segmentLengths.length + 1,
+      random
+    );
+    let firstRank = 1 + gaps[0];
+
+    segmentLengths.forEach((length, segmentIndex) => {
+      const column = [];
+      for (let rank = firstRank + length - 1; rank >= firstRank; rank -= 1) {
+        const card = cardsById.get(`${suit}-${rank}`);
+        card.faceUp = rank === firstRank;
+        column.push(card);
+        tableauCardIds.add(card.id);
+      }
+      tableau[length - 1] = column;
+      firstRank += length + gaps[segmentIndex + 1];
+    });
+  });
+
+  const stock = solShuffle(
+    deck.filter((card) => !tableauCardIds.has(card.id)),
+    random
+  );
+  return { stock, tableau };
 };
 
 const solCloneCards = (cards) => cards.map((card) => ({ ...card }));
@@ -30409,9 +30460,9 @@ const solDraw = () => {
 };
 
 const solNewGame = () => {
-  const deck = solShuffle(solBuildDeck());
+  const deal = solBuildWinnableDeal();
 
-  solState.stock = [];
+  solState.stock = deal.stock;
   solState.waste = [];
   solState.foundations = {
     spades: [],
@@ -30419,7 +30470,7 @@ const solNewGame = () => {
     diamonds: [],
     hearts: [],
   };
-  solState.tableau = Array.from({ length: 7 }, () => []);
+  solState.tableau = deal.tableau;
   solState.selected = null;
   solState.moves = 0;
   solState.won = false;
@@ -30428,15 +30479,6 @@ const solNewGame = () => {
   solLastCardClick = null;
   solHideVictoryVideo();
 
-  for (let col = 0; col < 7; col += 1) {
-    for (let row = 0; row <= col; row += 1) {
-      const card = deck.pop();
-      card.faceUp = row === col;
-      solState.tableau[col].push(card);
-    }
-  }
-
-  solState.stock = deck;
   solRender();
 };
 
