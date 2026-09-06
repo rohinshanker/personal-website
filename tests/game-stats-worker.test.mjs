@@ -2044,6 +2044,43 @@ test("keeps a one-hour administrator proof bound to its sign-in IP", async () =>
   assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
 });
 
+test("counts a protected administrator win in global and player totals", async () => {
+  const env = createEnv();
+  const signInResponse = await signInAsAdministrator(env, {
+    username: env.ADMIN_USERNAME,
+    password: env.ADMIN_PASSWORD,
+  });
+  const signIn = await readJson(signInResponse);
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  await ageSessionForCompletion(env, session);
+  const administratorEvent = event({
+    id: "event-administrator-counted-win",
+    profile: {
+      id: "player-rohin-neko",
+      name: "rohin ^.^",
+      icon: "assets/neko-assets/sprites/yawn1.png",
+    },
+  });
+
+  const accepted = await postEvent(env, administratorEvent, session, {
+    authorization: `Bearer ${signIn.proof}`,
+  });
+  assert.equal(accepted.status, 201);
+  assert.equal(env.personal_site_game_stats.events.has(administratorEvent.id), true);
+
+  const statsResponse = await worker.fetch(
+    new Request("https://stats.example.test/stats?playerId=player-rohin-neko", {
+      headers: { Origin: "https://rohin.shanker.me" },
+    }),
+    env
+  );
+  const stats = await readJson(statsResponse);
+
+  assert.equal(statsResponse.status, 200);
+  assert.equal(stats.totals.minesweeper.wins.beginner, 1);
+  assert.equal(stats.playerTotals.minesweeper.wins.beginner, 1);
+});
+
 test("rate-limits administrator sign-in attempts and protects the administrator profile", async () => {
   const env = createEnv();
   for (let index = 0; index < 5; index += 1) {

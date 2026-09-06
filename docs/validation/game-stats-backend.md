@@ -4,7 +4,7 @@ Purpose: Controlled Cloudflare Worker and D1 release, security, production verif
 
 Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
 
-Last verified: 2026-09-05
+Last verified: 2026-09-06
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -15,75 +15,23 @@ Local browser stats remain useful offline. This backend stores public global
 statistics and leaderboards; it is not a trustworthy record for a competitive
 or high-stakes game.
 
-## Verified Production State — 2026-08-12
+## Production release contract
 
-- The automated release for commit `6323c02db29dd18a667a98d60122466134f9a37a`
-  completed successfully in [GitHub Actions run 31568841667](https://github.com/rohinshanker/personal-website/actions/runs/31568841667).
-  Its verification, compatible Worker transition, Pages packaging, Pages
-  deployment, and final live parity jobs all passed. This proves the required
-  repository credentials and GitHub Pages Actions source are configured.
-- A cache-busted production read found both the deployed browser configuration
-  and Worker `/health` on
-  `sha256-d707808da831507ece4fe8566912ef22f65a4c8f438daea4d35ced5fe9e7c2aa`.
-  The public Worker endpoint remains
-  `https://personal-site-game-stats.rohinshankerme.workers.dev`.
-- The deployed Worker accepts the exact production origin and allows both
-  `Authorization` and `Content-Type` in CORS preflight. It rejects local page
-  origins by design, so test production credentials on the deployed site—not
-  `localhost` or `127.0.0.1` against the public Worker.
-- `scripts/home/game-stats-backend.js` now uses that public HTTPS endpoint. It
-  contains no credential; the Worker secrets remain server-only.
-- New sessions require an accepted browser hash. A valid signed and
-  D1-backed session issued before a deployment remains usable until expiry,
-  while any token-to-D1 build, issue-time, config, IP, expiry, or signature
-  mismatch is rejected without consuming the session or storing an event.
-
-## Local Release Candidate — 2026-09-05 (Not Deployed)
-
-- The checked-in candidate is build
-  `sha256-3eb3d0ae0871fc21f1e49c62b0e259ac2dccc247c7047e7b4d9de2766380c8fc`.
-  It is not the live build described above. Deploy its rolling-compatible
-  Worker first, require the transition gate, then publish the matching Pages
-  artifact and run the full parity gate.
-- Solitaire now generates randomized deals with a constructive winning path
-  under its draw-one unlimited-redeal rules. The proof and regression workflow
-  are documented in [Winnable Solitaire Deals](solitaire-winnable-deals.md).
-- A player-scoped `GET /stats?playerId=...` now returns complete lifetime
-  totals for Minesweeper wins, Solitaire wins, Snake games, and Sudoku wins.
-  Game Progress prefers those verified D1-derived totals, refreshes whenever
-  it opens and after a result publishes, and keeps the last confirmed totals
-  through a transient refresh failure. Browser-local best times, scores, and
-  records remain local. No D1 migration is required because the Worker derives
-  the new totals from the existing validated event rows.
-- The browser retries a temporary stale-build rejection for two minutes while
-  a release finishes, then reports the failure instead of silently treating
-  the result as publishable. Queued global submissions
-  from the normal client flow always include a normalized, unexpired session
-  proof; the Worker remains responsible for verifying its signature and D1
-  state. The Worker accepts the active hash and the bounded, generated
-  compatibility list for new sessions while allowing an already-issued HMAC-
-  and D1-matched session to finish before its normal expiry.
-- Sudoku has a persisted one-completion-per-puzzle latch. Both hint buckets
-  increment the verified difficulty total, while only finite no-hints times
-  enter Top 3, rank, and record data. Strict new-write validation rejects
-  missing or non-integer times, malformed scalar/profile fields, mismatched
-  difficulty, irrelevant cross-game fields, and invalid HMACs without consuming
-  a reusable session. Repeating the exact accepted event is idempotent rather
-  than incrementing any counter. Defensive historical-row reads remain
-  separate from strict ingress.
-- Local verification passes all 290 source tests, all 254 browser checks after
-  isolated retry of nine parallel resource/timing flakes, and the generated-
-  integrity check. The focused 16-test rendered lifetime-total and Solitaire publish
-  matrix passes across 375×812, 768×1024, 1280×800, and 1440×900. It covers
-  historical totals, automatic refresh-on-open and post-publication refresh,
-  reload persistence, Administrator reauthorization, transient-failure
-  retention and recovery, and bounded Game Progress layouts.
-- A fresh isolated local D1 run on the final candidate accepted two no-hints
-  wins and one hinted win, rejected a difficulty mismatch without consuming
-  its session, accepted the corrected event, and returned `applied: false` for
-  replay. The no-hints leaderboard contained only the 87- and 120-second
-  results, the requested player was rank 1 of 2, and zero sessions remained
-  unconsumed. No production D1 writes or deployments were performed.
+- A push to `main` must run source and browser verification, perform a strict
+  Worker dry-run, deploy the rolling-compatible Worker, pass the transition
+  check, publish the matching Pages artifact, and pass final live parity.
+- When Worker source changes, record the new Cloudflare Worker version ID from
+  the successful release job. Build-hash parity alone covers browser completion
+  sources and cannot prove that a particular Worker source revision is active.
+- The public endpoint is
+  `https://personal-site-game-stats.rohinshankerme.workers.dev`. The Worker
+  accepts only the exact production origin and intentionally rejects localhost.
+- New sessions require an accepted browser build. A valid signed, D1-backed
+  session issued before a deployment remains usable until expiry while invalid
+  build, issue-time, config, IP, expiry, or signature state fails closed.
+- D1 migrations are intentionally manual. Check for pending migrations before
+  each release; do not apply one when a browser-only change uses the existing
+  event schema.
 
 Do not invent a Worker URL from the account ID. After deploying, copy the URL
 from Wrangler's successful deployment output. A `workers.dev` URL is normally
@@ -233,6 +181,37 @@ The first command is the only supported way to update `buildVersion`; do not
 edit it by hand. The `--check` command and test fail when generated metadata
 is stale. Commit the generated changes together with the gameplay change, then
 redeploy the Worker because its accepted `GAME_BUILD_VERSION` changed.
+
+## Confirmed-event UI convergence
+
+The browser removes a queued result after `POST /events` succeeds, but retains
+that exact normalized event in memory until a later `/stats` response includes
+its event ID. During that interval, the confirmed event is applied once to the
+in-memory global totals and, when the response is player-scoped, the matching
+player totals. This keeps an already-open Game Progress or Game Stats window
+current when the immediate follow-up read fails or briefly returns an older
+snapshot. Event-ID deduplication prevents the later authoritative response
+from incrementing the count twice.
+
+For Solitaire, validate all count surfaces together: Game Progress wins, the
+personal record row and rank, the current player's Global Top 3 row when
+present, and Global Wins. Re-sort the visible Top 3 after applying a confirmed
+win and derive the player's displayed rank from that order. A release
+regression must keep both windows open, publish an
+Administrator result with a valid proof, return one stale `/stats` response
+that omits the new event ID, and then return an authoritative response that
+contains it. Both states must show one increment and the same updated rank,
+and the submission queue must be empty after the accepted write.
+
+Run the focused contract and rendered checks with:
+
+```bash
+node --test tests/game-stats-frontend-contract.test.mjs \
+  tests/game-stats-worker.test.mjs \
+  tests/solitaire-stats-layout.test.mjs
+npx playwright test tests/ui/solitaire-publish-flow.spec.mjs \
+  tests/ui/game-progress-overall-totals.spec.mjs --workers=2
+```
 
 Use the local-only check to compare the checked-in generated browser config
 with the active Worker before a controlled release:

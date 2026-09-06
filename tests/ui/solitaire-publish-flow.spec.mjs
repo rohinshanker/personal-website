@@ -192,6 +192,7 @@ const installApi = async (page) => {
         headers: corsHeaders,
         body: JSON.stringify({
           generatedAt: new Date().toISOString(),
+          eventIds: refreshed ? [publishedEvent.id] : [],
           totals: { solitaire: { wins: refreshed ? 7 : 6 } },
           playerTotals: { solitaire: { wins: refreshed ? 5 : 4 } },
           leaderboards: { solitaire: leaderboards },
@@ -312,6 +313,143 @@ const installAdministratorReauthenticationApi = async (page) => {
   });
 
   return { eventRequests, sessionRequests, signInRequests };
+};
+
+const installAdministratorStaleStatsApi = async (page) => {
+  const eventRequests = [];
+  const sessionRequests = [];
+  const statsRequests = [];
+  const historicalAdministratorEventId = "solitaire-administrator-history-0001";
+  let authoritativeStats = false;
+  let publishedEvent = null;
+  const corsHeaders = {
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Origin": "*",
+  };
+
+  const createStats = () => {
+    const includesPublishedEvent = authoritativeStats && Boolean(publishedEvent);
+    const administratorWins = includesPublishedEvent ? 2 : 1;
+    const administratorEntry = createLeaderboardEntry({
+      eventId: includesPublishedEvent
+        ? publishedEvent.id
+        : historicalAdministratorEventId,
+      playerId: administratorProfile.id,
+      name: administratorProfile.name,
+      icon: administratorProfile.icon,
+      metric: administratorWins,
+      occurredAt: includesPublishedEvent
+        ? publishedEvent.occurredAt
+        : "2026-07-01T00:00:00.000Z",
+    });
+    const eventIds = [
+      "solitaire-global-aria-history-0001",
+      historicalAdministratorEventId,
+      ...(includesPublishedEvent ? [publishedEvent.id] : []),
+    ];
+    return {
+      generatedAt: new Date().toISOString(),
+      eventIds,
+      totals: { solitaire: { wins: includesPublishedEvent ? 3 : 2 } },
+      playerTotals: { solitaire: { wins: administratorWins } },
+      leaderboards: {
+        solitaire: [
+          createLeaderboardEntry({
+            eventId: "solitaire-global-aria-history-0001",
+            playerId: "player-solitaire-aria",
+            name: "Aria",
+            metric: 1,
+            occurredAt: "2026-06-30T00:00:00.000Z",
+          }),
+          administratorEntry,
+        ],
+      },
+      playerRanks: {
+        solitaire: { rank: includesPublishedEvent ? 1 : 2, totalPlayers: 2 },
+      },
+      playerRecords: { solitaire: administratorEntry },
+    };
+  };
+
+  await page.route(`${API_BASE_URL}/**`, async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    if (request.method() === "POST" && url.pathname === "/sessions") {
+      sessionRequests.push(JSON.parse(request.postData() || "{}"));
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify({
+          id: "session-solitaire-administrator-stale-0001",
+          token: "session-solitaire-administrator-stale-token",
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        }),
+      });
+      return;
+    }
+
+    if (request.method() === "POST" && url.pathname === "/events") {
+      const body = JSON.parse(request.postData() || "{}");
+      const eventRequest = {
+        authorization: request.headers().authorization || "",
+        body,
+      };
+      eventRequests.push(eventRequest);
+      publishedEvent = body.event;
+      const authorized = eventRequest.authorization === `Bearer ${administratorProof}`;
+      await route.fulfill({
+        status: authorized ? 201 : 403,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify(
+          authorized
+            ? { ok: true, applied: true, eventId: publishedEvent.id }
+            : { ok: false, error: "Administrator proof required" }
+        ),
+      });
+      return;
+    }
+
+    if (request.method() === "GET" && url.pathname === "/stats") {
+      const stats = createStats();
+      statsRequests.push({
+        authoritative: authoritativeStats,
+        eventIds: [...stats.eventIds],
+        path: url.pathname + url.search,
+        published: Boolean(publishedEvent),
+      });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify(stats),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      headers: corsHeaders,
+      body: JSON.stringify({ ok: false, error: "Unexpected test route" }),
+    });
+  });
+
+  return {
+    eventRequests,
+    sessionRequests,
+    statsRequests,
+    useAuthoritativeStats: () => {
+      authoritativeStats = true;
+    },
+  };
 };
 
 const collectRuntimeErrors = (page) => {
@@ -494,6 +632,189 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   await page.screenshot({
     fullPage: true,
     path: testInfo.outputPath("desktop-solitaire-publish-success.png"),
+  });
+  expect(runtimeErrors.consoleErrors).toEqual([]);
+  expect(runtimeErrors.pageErrors).toEqual([]);
+});
+
+test("an active Administrator win stays advanced through stale stats and exact-event reconciliation", async ({
+  page,
+}, testInfo) => {
+  const runtimeErrors = collectRuntimeErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(
+    ({ profileKey, proof, proofKey, queueKey, savedProfile, statsKey }) => {
+      Math.random = () => 0.999999;
+      localStorage.clear();
+      sessionStorage.clear();
+      localStorage.setItem(profileKey, JSON.stringify(savedProfile));
+      localStorage.removeItem(queueKey);
+      localStorage.removeItem(statsKey);
+      sessionStorage.setItem(
+        proofKey,
+        JSON.stringify({
+          proof,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        })
+      );
+    },
+    {
+      profileKey: PROFILE_STORAGE_KEY,
+      proof: administratorProof,
+      proofKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
+      queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+      savedProfile: administratorProfile,
+      statsKey: GAME_STATS_STORAGE_KEY,
+    }
+  );
+  await installBackendConfig(page);
+  await installMainBridge(page);
+  const api = await installAdministratorStaleStatsApi(page);
+
+  await page.goto("/home.html");
+  const aboutClose = page.locator('#about-window [data-close="about"]');
+  if (await aboutClose.isVisible()) await aboutClose.click();
+  await expect.poll(() => api.statsRequests.length).toBeGreaterThan(0);
+
+  const gameProgressWindow = page.locator("#game-progress-window");
+  await page.locator('.taskbar-icon[data-app="game-progress"]').click();
+  await gameProgressWindow
+    .locator('.selector-item[data-view="game-progress-solitaire"]')
+    .click();
+
+  const solitaireWindow = page.locator('[data-app-window="solitaire"]');
+  await page.locator('.desktop-icon[data-app="solitaire"]').click();
+  await expect(solitaireWindow).toBeVisible();
+  await solitaireWindow.locator('[data-game-stats-open="solitaire"]').click();
+
+  const statsWindow = page.locator("#game-stats-window-solitaire");
+  const leaderboard = statsWindow.locator(".game-stats-solitaire-column");
+  const globalRows = leaderboard.locator(
+    ".game-stats-solitaire-row:not(.game-stats-solitaire-local-wins-row)"
+  );
+  const administratorLeaderboardRow = globalRows.filter({
+    hasText: administratorProfile.name,
+  });
+  const currentRecord = leaderboard.locator(".game-stats-solitaire-local-wins-row");
+  const progressWins = gameProgressWindow
+    .locator("#game-progress-solitaire-content .game-stats-inlay")
+    .filter({ hasText: "Wins" })
+    .locator(".game-stats-value");
+  const refreshButton = statsWindow.locator('[data-game-stats-refresh="solitaire"]');
+
+  await expect(gameProgressWindow).toBeVisible();
+  await expect(statsWindow).toBeVisible();
+  await expect(progressWins).toHaveText("1");
+  await expect(currentRecord).toHaveAttribute(
+    "aria-label",
+    "Your Solitaire record: #2, rohin ^.^, 1 win"
+  );
+  await expect(administratorLeaderboardRow).toHaveAttribute(
+    "aria-label",
+    "Rank 2: rohin ^.^, 1 win, your entry"
+  );
+  await expect(
+    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 2"]')
+  ).toBeVisible();
+
+  await solitaireWindow.locator("#sol-stock").evaluate((stock) => stock.click());
+  await expect.poll(() => api.sessionRequests.length).toBe(1);
+  await page.evaluate(() => window.__solitairePublishFlowTest.triggerWin());
+  await expect.poll(() => api.eventRequests.length).toBe(1);
+  await expect
+    .poll(
+      () =>
+        api.statsRequests.filter(
+          ({ authoritative, published }) => published && !authoritative
+        ).length
+    )
+    .toBeGreaterThan(0);
+
+  const publishedEvent = api.eventRequests[0].body.event;
+  expect(api.eventRequests[0].authorization).toBe(`Bearer ${administratorProof}`);
+  expect(publishedEvent).toMatchObject({
+    game: "solitaire",
+    type: "win",
+    metric: 80,
+    metricKind: "moves",
+    profile: {
+      id: administratorProfile.id,
+      name: administratorProfile.name,
+      icon: administratorProfile.icon,
+    },
+  });
+  expect(api.statsRequests.some(({ eventIds }) => eventIds.includes(publishedEvent.id))).toBe(
+    false
+  );
+
+  await expect(progressWins).toHaveText("2");
+  await expect(currentRecord).toHaveAttribute(
+    "aria-label",
+    "Your Solitaire record: #1, rohin ^.^, 2 wins"
+  );
+  await expect(administratorLeaderboardRow).toHaveAttribute(
+    "aria-label",
+    "Rank 1: rohin ^.^, 2 wins, your entry"
+  );
+  await expect(
+    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 3"]')
+  ).toBeVisible();
+  await page.screenshot({
+    fullPage: true,
+    path: testInfo.outputPath("administrator-win-stale-stats.png"),
+  });
+
+  api.useAuthoritativeStats();
+  await expect(refreshButton).toBeEnabled();
+  await refreshButton.click();
+  await expect
+    .poll(
+      () =>
+        api.statsRequests.filter(
+          ({ authoritative, eventIds }) =>
+            authoritative && eventIds.includes(publishedEvent.id)
+        ).length
+    )
+    .toBeGreaterThan(0);
+
+  await expect(progressWins).toHaveText("2");
+  await expect(currentRecord).toHaveAttribute(
+    "aria-label",
+    "Your Solitaire record: #1, rohin ^.^, 2 wins"
+  );
+  await expect(administratorLeaderboardRow).toHaveAttribute(
+    "aria-label",
+    "Rank 1: rohin ^.^, 2 wins, your entry"
+  );
+  await expect(
+    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 3"]')
+  ).toBeVisible();
+  expect(api.eventRequests).toHaveLength(1);
+  expect(api.sessionRequests).toEqual([
+    { game: "solitaire", config: {}, buildVersion: generatedBuildVersion },
+  ]);
+  expect(
+    api.statsRequests.every(
+      ({ path }) => path === `/stats?playerId=${administratorProfile.id}`
+    )
+  ).toBe(true);
+
+  const stored = await page.evaluate(
+    ({ proofKey, queueKey }) => ({
+      proof: JSON.parse(sessionStorage.getItem(proofKey) || "null"),
+      queue: JSON.parse(localStorage.getItem(queueKey) || "[]"),
+    }),
+    {
+      proofKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
+      queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+    }
+  );
+  expect(stored.proof.proof).toBe(administratorProof);
+  expect(stored.queue).toEqual([]);
+  await page.screenshot({
+    fullPage: true,
+    path: testInfo.outputPath("administrator-win-authoritative-stats.png"),
   });
   expect(runtimeErrors.consoleErrors).toEqual([]);
   expect(runtimeErrors.pageErrors).toEqual([]);

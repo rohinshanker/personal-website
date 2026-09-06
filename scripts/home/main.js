@@ -2019,13 +2019,26 @@ const updateGameStatsPlayerRecord = (record, event, direction) =>
     direction
   )[0] || record || null;
 
+const incrementGameStatsTotals = (totals, event) => {
+  if (event.game === "minesweeper") {
+    totals.minesweeper.wins[event.difficulty] += 1;
+  } else if (event.game === "solitaire") {
+    totals.solitaire.wins += 1;
+  } else if (event.game === "snake") {
+    totals.snake.totalGamesPlayed += 1;
+    totals.snake.gamesPlayed[event.boardSize] += 1;
+  } else if (event.game === "sudoku") {
+    totals.sudoku.wins[event.difficulty][event.hintBucket] += 1;
+  }
+};
+
 const applyGameStatsEventToData = (data, rawEvent) => {
   const event = normalizeGameStatsEvent(rawEvent);
   if (!event || data.eventIds.includes(event.id)) return false;
   data.eventIds.push(event.id);
+  incrementGameStatsTotals(data.totals, event);
 
   if (event.game === "minesweeper") {
-    data.totals.minesweeper.wins[event.difficulty] += 1;
     data.leaderboards.minesweeper[event.difficulty] = upsertGameStatsLeaderboardEntry(
       data.leaderboards.minesweeper[event.difficulty],
       event,
@@ -2038,7 +2051,6 @@ const applyGameStatsEventToData = (data, rawEvent) => {
       "asc"
     );
   } else if (event.game === "solitaire") {
-    data.totals.solitaire.wins += 1;
     data.leaderboards.solitaire = upsertGameStatsLeaderboardEntry(
       data.leaderboards.solitaire,
       event,
@@ -2046,8 +2058,6 @@ const applyGameStatsEventToData = (data, rawEvent) => {
       "asc"
     );
   } else if (event.game === "snake") {
-    data.totals.snake.totalGamesPlayed += 1;
-    data.totals.snake.gamesPlayed[event.boardSize] += 1;
     data.leaderboards.snake[event.boardSize] = upsertGameStatsLeaderboardEntry(
       data.leaderboards.snake[event.boardSize],
       event,
@@ -2060,7 +2070,6 @@ const applyGameStatsEventToData = (data, rawEvent) => {
       "desc"
     );
   } else if (event.game === "sudoku") {
-    data.totals.sudoku.wins[event.difficulty][event.hintBucket] += 1;
     if (event.hintBucket === "noHints" && Number.isFinite(event.metric)) {
       data.leaderboards.sudoku[event.difficulty] = upsertGameStatsLeaderboardEntry(
         data.leaderboards.sudoku[event.difficulty],
@@ -2077,6 +2086,72 @@ const applyGameStatsEventToData = (data, rawEvent) => {
   }
 
   return true;
+};
+
+const applyConfirmedGameStatsEventToTotals = (
+  data,
+  rawEvent,
+  { playerId = "", playerTotalsAvailable = false } = {}
+) => {
+  const event = normalizeGameStatsEvent(rawEvent);
+  if (!event || data.eventIds.includes(event.id)) return false;
+  data.eventIds.push(event.id);
+  incrementGameStatsTotals(data.totals, event);
+  if (playerTotalsAvailable && event.profile?.id === playerId) {
+    incrementGameStatsTotals(data.playerTotals, event);
+    if (event.game === "solitaire") {
+      const wins = data.playerTotals.solitaire.wins;
+      const summary = {
+        eventId: event.id,
+        playerId: event.profile.id,
+        name: event.profile.name,
+        icon: event.profile.icon,
+        metric: wins,
+        metricKind: "wins",
+        occurredAt: event.occurredAt,
+      };
+      data.playerRecords.solitaire = summary;
+      const leaderboardIndex = data.leaderboards.solitaire.findIndex(
+        (entry) => entry.playerId === playerId
+      );
+      if (leaderboardIndex >= 0) {
+        data.leaderboards.solitaire[leaderboardIndex] = summary;
+        data.leaderboards.solitaire.sort((first, second) =>
+          compareGameStatsLeaderboardEntries("desc", first, second)
+        );
+        data.playerRanks.solitaire.rank =
+          data.leaderboards.solitaire.findIndex((entry) => entry.playerId === playerId) + 1;
+      }
+    }
+  }
+  return true;
+};
+
+const reconcileConfirmedGameStatsEvents = (
+  data,
+  { playerId = "", playerTotalsAvailable = false } = {}
+) => {
+  gameStatsConfirmedEvents.forEach((event, eventId) => {
+    if (data.eventIds.includes(eventId)) {
+      gameStatsConfirmedEvents.delete(eventId);
+      return;
+    }
+    applyConfirmedGameStatsEventToTotals(data, event, {
+      playerId,
+      playerTotalsAvailable,
+    });
+  });
+  return data;
+};
+
+const markGameStatsEventConfirmed = (rawEvent) => {
+  const event = normalizeGameStatsEvent(rawEvent);
+  if (!event) return false;
+  gameStatsConfirmedEvents.set(event.id, event);
+  return applyConfirmedGameStatsEventToTotals(gameStatsGlobalState, event, {
+    playerId: gameStatsProfile?.id || "",
+    playerTotalsAvailable: gameStatsGlobalPlayerTotalsAvailable,
+  });
 };
 
 const updateGameStatsSudokuBestTime = (data, difficulty, seconds) => {
@@ -2861,6 +2936,10 @@ const refreshGameStatsGlobalState = async ({ announce = true } = {}) => {
     const nextGlobalState = normalizeGameStatsData(payload, {
       solitaireLeaderboardDirection: "desc",
     });
+    reconcileConfirmedGameStatsEvents(nextGlobalState, {
+      playerId: requestedPlayerId,
+      playerTotalsAvailable: nextGlobalPlayerTotalsAvailable,
+    });
     if ((gameStatsProfile?.id || "") !== requestedPlayerId) {
       gameStatsSyncRequested = true;
       return null;
@@ -2913,6 +2992,7 @@ const runGameStatsSyncPass = async () => {
         }),
       });
       await readGameStatsApiJson(response);
+      markGameStatsEventConfirmed(submission.event);
     } catch (error) {
       if (
         submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
@@ -3656,7 +3736,9 @@ const appendSolitairePersonalRecord = (panel) => {
   const verifiedEntry = getGameStatsVerifiedPlayerRecord(
     gameStatsGlobalState.playerRecords.solitaire
   );
-  const wins = verifiedEntry?.metric ?? gameStatsLocalState.totals.solitaire.wins;
+  const wins = gameStatsGlobalPlayerTotalsAvailable
+    ? gameStatsGlobalState.playerTotals.solitaire.wins
+    : verifiedEntry?.metric ?? gameStatsLocalState.totals.solitaire.wins;
   const hasProfile = Boolean(gameStatsProfile);
   const playerRank = verifiedEntry
     ? gameStatsGlobalState.playerRanks.solitaire
@@ -4460,6 +4542,7 @@ let gameStatsGlobalState = createEmptyGameStatsData();
 let gameStatsGlobalPlayerTotalsAvailable = false;
 let gameStatsLocalState = loadGameStatsLocalState();
 let gameStatsSubmissionQueue = loadGameStatsSubmissionQueue();
+const gameStatsConfirmedEvents = new Map();
 let gameStatsProfile = loadGameStatsProfile();
 const ADMIN_CONTROLS_APP_ID = "admin-controls";
 const ADMIN_CONTROLS_STAND_IN_APP_ID = "admin-controls-stand-in";
@@ -31338,6 +31421,42 @@ const runAdminRandomEvent = async (eventId, { source = "admin-controls" } = {}) 
   }
 };
 
+const runAdminRandomEventChoice = async ({ source = "admin-controls" } = {}) => {
+  if (!isHomeActivationReady()) await whenHomeActivated;
+  if (isRandomEventGameplayLockActive()) {
+    return adminRandomEventResult(false, "Finish the active gameplay event first.");
+  }
+
+  const triggerContext = {
+    triggerName: "adminControls",
+    detail: { source },
+    admin: true,
+  };
+  const eligibleEvents = randomEventDefinitions
+    .filter((definition) => {
+      if (randomEventPendingDefinitions.has(definition)) return false;
+      if (!randomEventDeveloperModeAllows(definition)) return false;
+      if (randomEventDefinitionIsVisible(definition)) return false;
+      const debug = randomEventDebugEnabled(definition);
+      if (!randomEventDefinitionCanSchedule(definition, { debug })) return false;
+      return !definition.canTrigger || definition.canTrigger(triggerContext);
+    })
+    .map((definition) => ({
+      definition,
+      triggerProbability: 1,
+    }));
+  const selected = chooseRandomEventOutsideLockdown(eligibleEvents);
+  if (!selected) {
+    return adminRandomEventResult(
+      false,
+      "No eligible event is available outside the recent-repeat window."
+    );
+  }
+
+  recordRandomEventSelection(selected.definition);
+  return runAdminRandomEvent(selected.definition.id, { source });
+};
+
 const ADMIN_DESKTOP_ACTIVITY_APPS = Object.freeze([
   "windows",
   "taskmgr",
@@ -31414,6 +31533,7 @@ window.rohinAdminOrchestrator = Object.freeze({
   listEvents: listAdminRandomEvents,
   resetScene: () => window.location.reload(),
   runEvent: runAdminRandomEvent,
+  runRandomEvent: runAdminRandomEventChoice,
   runPreset: runAdminScenePreset,
   suppressNaturalTriggers: suppressAdminNaturalTriggersForCurrentTask,
 });

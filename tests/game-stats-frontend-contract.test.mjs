@@ -212,6 +212,174 @@ test("empty and normalized stats cover every player rank, record, and global Top
   }
 });
 
+test("confirmed events keep every total current until the server acknowledges their ids", async () => {
+  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const incrementSource = extractSource(
+    source,
+    "const incrementGameStatsTotals =",
+    "\n\nconst applyGameStatsEventToData"
+  );
+  const confirmationSource = extractSource(
+    source,
+    "const applyConfirmedGameStatsEventToTotals =",
+    "\n\nconst updateGameStatsSudokuBestTime"
+  );
+  const context = vm.createContext({});
+
+  vm.runInContext(
+    [
+      "const normalizeGameStatsEvent = (event) => event ? { ...event } : null;",
+      "const createTotals = () => ({",
+      "  minesweeper: { wins: { beginner: 0, intermediate: 0, expert: 0 } },",
+      "  solitaire: { wins: 0 },",
+      "  snake: { totalGamesPlayed: 0, gamesPlayed: { '10': 0, '16': 0, '20': 0, '24': 0 } },",
+      "  sudoku: { wins: { easy: { noHints: 0, withHints: 0 } } },",
+      "});",
+      "const createData = () => ({",
+      "  eventIds: [],",
+      "  totals: createTotals(),",
+      "  playerTotals: createTotals(),",
+      "  leaderboards: { solitaire: [] },",
+      "  playerRanks: { solitaire: { rank: null, totalPlayers: 0 } },",
+      "  playerRecords: { solitaire: null },",
+      "});",
+      "const compareGameStatsLeaderboardEntries = (_direction, first, second) => second.metric - first.metric;",
+      "const gameStatsConfirmedEvents = new Map();",
+      "let gameStatsGlobalState = createData();",
+      "let gameStatsGlobalPlayerTotalsAvailable = true;",
+      "let gameStatsProfile = { id: 'player-current' };",
+      "gameStatsGlobalState.leaderboards.solitaire.push(",
+      "  { playerId: 'player-leading', metric: 0, occurredAt: '2026-01-01T00:00:00.000Z' },",
+      "  { playerId: 'player-current', metric: 0, occurredAt: '2026-01-02T00:00:00.000Z' },",
+      ");",
+      "gameStatsGlobalState.playerRanks.solitaire = { rank: 2, totalPlayers: 2 };",
+      incrementSource,
+      confirmationSource,
+      "globalThis.applyConfirmed = applyConfirmedGameStatsEventToTotals;",
+      "globalThis.markConfirmed = markGameStatsEventConfirmed;",
+      "globalThis.reconcile = reconcileConfirmedGameStatsEvents;",
+      "globalThis.createDataForTest = createData;",
+      "globalThis.readState = () => ({ data: gameStatsGlobalState, confirmedIds: [...gameStatsConfirmedEvents.keys()] });",
+    ].join("\n"),
+    context
+  );
+
+  const currentProfile = {
+    id: "player-current",
+    name: "Current Player",
+    icon: "assets/app-icons/ico/user_card.ico",
+  };
+  const events = [
+    {
+      id: "event-confirmed-minesweeper",
+      game: "minesweeper",
+      difficulty: "beginner",
+      profile: currentProfile,
+    },
+    {
+      id: "event-confirmed-solitaire",
+      game: "solitaire",
+      profile: currentProfile,
+    },
+    {
+      id: "event-confirmed-snake",
+      game: "snake",
+      boardSize: "16",
+      profile: currentProfile,
+    },
+    {
+      id: "event-confirmed-sudoku",
+      game: "sudoku",
+      difficulty: "easy",
+      hintBucket: "noHints",
+      profile: currentProfile,
+    },
+  ];
+  assert.equal(context.markConfirmed(null), false);
+  events.forEach((event) => assert.equal(context.markConfirmed(event), true));
+  assert.equal(context.markConfirmed(events[1]), false);
+
+  let state = jsonClone(context.readState());
+  assert.deepEqual(state.confirmedIds, events.map(({ id }) => id));
+  assert.deepEqual(state.data.totals, state.data.playerTotals);
+  assert.equal(state.data.totals.minesweeper.wins.beginner, 1);
+  assert.equal(state.data.totals.solitaire.wins, 1);
+  assert.equal(state.data.totals.snake.totalGamesPlayed, 1);
+  assert.equal(state.data.totals.snake.gamesPlayed["16"], 1);
+  assert.equal(state.data.totals.sudoku.wins.easy.noHints, 1);
+  assert.equal(state.data.playerRecords.solitaire.metric, 1);
+  assert.equal(state.data.leaderboards.solitaire[0].playerId, currentProfile.id);
+  assert.equal(state.data.leaderboards.solitaire[0].metric, 1);
+  assert.equal(state.data.playerRanks.solitaire.rank, 1);
+
+  const unmatchedPlayer = context.createDataForTest();
+  context.applyConfirmed(
+    unmatchedPlayer,
+    {
+      id: "event-confirmed-other-player",
+      game: "minesweeper",
+      difficulty: "beginner",
+      profile: { ...currentProfile, id: "player-other" },
+    },
+    { playerId: currentProfile.id, playerTotalsAvailable: true }
+  );
+  assert.equal(unmatchedPlayer.totals.minesweeper.wins.beginner, 1);
+  assert.equal(unmatchedPlayer.playerTotals.minesweeper.wins.beginner, 0);
+
+  const unavailablePlayerTotals = context.createDataForTest();
+  context.applyConfirmed(unavailablePlayerTotals, events[1], {
+    playerId: currentProfile.id,
+    playerTotalsAvailable: false,
+  });
+  assert.equal(unavailablePlayerTotals.totals.solitaire.wins, 1);
+  assert.equal(unavailablePlayerTotals.playerTotals.solitaire.wins, 0);
+  assert.equal(unavailablePlayerTotals.playerRecords.solitaire, null);
+
+  const stale = context.createDataForTest();
+  context.reconcile(stale, {
+    playerId: currentProfile.id,
+    playerTotalsAvailable: true,
+  });
+  assert.equal(stale.totals.solitaire.wins, 1);
+  assert.equal(stale.playerTotals.solitaire.wins, 1);
+  assert.deepEqual(jsonClone(context.readState()).confirmedIds, events.map(({ id }) => id));
+
+  const partlyAcknowledged = context.createDataForTest();
+  partlyAcknowledged.eventIds.push(events[0].id, events[1].id);
+  partlyAcknowledged.totals.minesweeper.wins.beginner = 1;
+  partlyAcknowledged.totals.solitaire.wins = 1;
+  partlyAcknowledged.playerTotals.minesweeper.wins.beginner = 1;
+  partlyAcknowledged.playerTotals.solitaire.wins = 1;
+  context.reconcile(partlyAcknowledged, {
+    playerId: currentProfile.id,
+    playerTotalsAvailable: true,
+  });
+  assert.deepEqual(jsonClone(context.readState()).confirmedIds, [
+    events[2].id,
+    events[3].id,
+  ]);
+  assert.equal(partlyAcknowledged.totals.minesweeper.wins.beginner, 1);
+  assert.equal(partlyAcknowledged.totals.solitaire.wins, 1);
+  assert.equal(partlyAcknowledged.totals.snake.gamesPlayed["16"], 1);
+  assert.equal(partlyAcknowledged.totals.sudoku.wins.easy.noHints, 1);
+
+  const acknowledged = context.createDataForTest();
+  acknowledged.eventIds.push(events[2].id, events[3].id);
+  acknowledged.totals.snake.totalGamesPlayed = 1;
+  acknowledged.totals.snake.gamesPlayed["16"] = 1;
+  acknowledged.totals.sudoku.wins.easy.noHints = 1;
+  acknowledged.playerTotals.snake.totalGamesPlayed = 1;
+  acknowledged.playerTotals.snake.gamesPlayed["16"] = 1;
+  acknowledged.playerTotals.sudoku.wins.easy.noHints = 1;
+  context.reconcile(acknowledged, {
+    playerId: currentProfile.id,
+    playerTotalsAvailable: true,
+  });
+  assert.deepEqual(jsonClone(context.readState()).confirmedIds, []);
+  assert.equal(acknowledged.totals.snake.gamesPlayed["16"], 1);
+  assert.equal(acknowledged.playerTotals.sudoku.wins.easy.noHints, 1);
+});
+
 test("a saved profile is attached to a non-leaderboard Solitaire win without client-only fields", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
   const eventProfileSource = extractSource(
@@ -377,6 +545,8 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
       "};",
       "const readGameStatsApiJson = async (response) => response.json();",
       "const normalizeGameStatsData = (payload) => ({ ...payload });",
+      "const reconcileConfirmedGameStatsEvents = (data) => data;",
+      "const markGameStatsEventConfirmed = () => {};",
       "const getAdministratorEventHeaders = () => ({});",
       'const GAME_STATS_ROHIN_NEKO_PROFILE = { id: "player-rohin-neko" };',
       "const saveGameStatsSubmissionQueue = () => { saveCalls += 1; };",
@@ -453,6 +623,8 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
       "};",
       "const readGameStatsApiJson = async (response) => response.json();",
       "const normalizeGameStatsData = (payload) => ({ ...payload });",
+      "const reconcileConfirmedGameStatsEvents = (data) => data;",
+      "const markGameStatsEventConfirmed = () => {};",
       "const saveGameStatsSubmissionQueue = () => { saveCalls += 1; };",
       "const renderGameStatsWindows = () => { renderCalls += 1; };",
       "const setGameStatsSyncState = (state, { message = '' } = {}) => {",

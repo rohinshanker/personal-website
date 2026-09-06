@@ -41,7 +41,7 @@ test("Solitaire uses the shared leaderboard template for global most wins", asyn
   );
   assert.match(
     personalRecord[1],
-    /const wins = verifiedEntry\?\.metric \?\? gameStatsLocalState\.totals\.solitaire\.wins/
+    /const wins = gameStatsGlobalPlayerTotalsAvailable[\s\S]*?gameStatsGlobalState\.playerTotals\.solitaire\.wins[\s\S]*?verifiedEntry\?\.metric \?\? gameStatsLocalState\.totals\.solitaire\.wins/
   );
   assert.match(
     personalRecord[1],

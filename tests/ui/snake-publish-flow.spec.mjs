@@ -159,6 +159,7 @@ const createStatsPayload = (publishedEvent) => {
   ];
   return {
     generatedAt: new Date().toISOString(),
+    eventIds: refreshed ? [publishedEvent.id] : [],
     totals: {
       snake: {
         totalGamesPlayed: refreshed ? 3 : 2,

@@ -221,7 +221,7 @@ const createStatsPayload = (publishedEvents) => {
   return {
     version: 1,
     generatedAt: new Date().toISOString(),
-    eventIds: [],
+    eventIds: publishedEvents.map((event) => event.id),
     totals: {
       sudoku: {
         wins: {
