@@ -115,7 +115,7 @@
     <link rel="stylesheet" href="styles/home/study-resources.css" />
     <link rel="stylesheet" href="styles/home/random-events.css?v=bulk-system-alerts-20260811" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=text-selection-cursor-20260810" />
-    <link rel="stylesheet" href="styles/home/admin-controls.css?v=admin-event-preview-20260811" />
+    <link rel="stylesheet" href="styles/home/admin-controls.css?v=admin-seed-sequences-20260906" />
     <script
       src="scripts/home/text-selection-cursor.js?v=text-selection-cursor-20260810"
       defer
@@ -3236,15 +3236,30 @@
               <fieldset>
                 <legend>Repeatable sequence</legend>
                 <div class="admin-seed-row">
-                  <div class="admin-control-field">
+                  <div class="admin-control-field admin-seed-picker" id="admin-seed-picker">
                     <label for="admin-sequence-seed">Sequence seed</label>
                     <input
                       type="text"
                       id="admin-sequence-seed"
                       autocomplete="off"
+                      aria-controls="admin-seed-menu"
+                      aria-expanded="false"
+                      aria-haspopup="dialog"
                       maxlength="64"
                       value="promo-001"
                     />
+                    <div
+                      class="sunken-panel admin-seed-menu"
+                      id="admin-seed-menu"
+                      role="dialog"
+                      aria-label="Saved sequence seeds"
+                      hidden
+                    >
+                      <p class="admin-seed-menu-label">Saved seed names</p>
+                      <ul id="admin-seed-list">
+                        <li class="admin-empty-state">No saved seed names.</li>
+                      </ul>
+                    </div>
                   </div>
                   <div class="admin-control-actions admin-seed-actions">
                     <button type="button" id="admin-generate-sequence">Generate</button>
@@ -6670,6 +6685,6 @@
     <script src="scripts/home/core/dom.js?v=game-build-835256e7cc97a53f58460c854750ad4d9ae7c737466694a40848ae7b8db2764b"></script>
     <script src="scripts/home/core/media.js?v=hidden-carousel-playback-20260827"></script>
     <script src="scripts/home/main.js?v=game-build-835256e7cc97a53f58460c854750ad4d9ae7c737466694a40848ae7b8db2764b"></script>
-    <script src="scripts/home/admin-controls.js?v=bulk-system-alerts-20260811"></script>
+    <script src="scripts/home/admin-controls.js?v=admin-seed-sequences-20260906"></script>
   </body>
 </html>

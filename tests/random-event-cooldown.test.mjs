@@ -258,6 +258,64 @@ const createGameplayLockRuntime = (source) => {
   return context.randomEventGameplayLock;
 };
 
+const createAdminRandomChoiceRuntime = (source) => {
+  const start = source.indexOf("const runAdminRandomEventChoice = async");
+  const end = source.indexOf("\n\nconst ADMIN_DESKTOP_ACTIVITY_APPS", start);
+  assert.notEqual(start, -1, "The Admin random choice helper should exist");
+  assert.notEqual(end, -1, "The Admin random choice helper should be bounded");
+
+  const context = vm.createContext({ Promise, Set });
+  vm.runInContext(
+    `
+      let activationReady = true;
+      const whenHomeActivated = Promise.resolve();
+      let gameplayLocked = false;
+      const isHomeActivationReady = () => activationReady;
+      const isRandomEventGameplayLockActive = () => gameplayLocked;
+      const adminRandomEventResult = (ok, message) => ({ ok, message });
+      const randomEventDefinitions = [];
+      const randomEventPendingDefinitions = new Set();
+      const lockedIds = new Set();
+      const recordedIds = [];
+      const runCalls = [];
+      const candidateSnapshots = [];
+      const randomEventDeveloperModeAllows = (definition) => definition.developerAllowed !== false;
+      const randomEventDefinitionIsVisible = (definition) => definition.visible === true;
+      const randomEventDebugEnabled = (definition) => definition.debug === true;
+      const randomEventDefinitionCanSchedule = (definition) => definition.schedulable !== false;
+      const chooseRandomEventOutsideLockdown = (candidates) => {
+        candidateSnapshots.push(candidates.map((candidate) => ({
+          id: candidate.definition.id,
+          triggerProbability: candidate.triggerProbability,
+        })));
+        return candidates.find((candidate) => !lockedIds.has(candidate.definition.id)) || null;
+      };
+      const recordRandomEventSelection = (definition) => {
+        lockedIds.add(definition.id);
+        recordedIds.push(definition.id);
+      };
+      const runAdminRandomEvent = async (eventId, options) => {
+        runCalls.push({ eventId, options });
+        return { ok: true, message: \`Triggered \${eventId}.\` };
+      };
+      ${source.slice(start, end)}
+      globalThis.adminRandomChoice = {
+        run: runAdminRandomEventChoice,
+        setDefinitions: (definitions) => {
+          randomEventDefinitions.splice(0, randomEventDefinitions.length, ...definitions);
+        },
+        markPending: (definition) => randomEventPendingDefinitions.add(definition),
+        setGameplayLocked: (value) => { gameplayLocked = value; },
+        getCandidateSnapshots: () => candidateSnapshots,
+        getRecordedIds: () => recordedIds,
+        getRunCalls: () => runCalls,
+      };
+    `,
+    context
+  );
+  return context.adminRandomChoice;
+};
+
 test("accepted normal random-event triggers use the global seven-and-a-half-second cooldown", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
   const cooldown = createCooldownRuntime(source);
@@ -327,6 +385,66 @@ test("unlocked events retain their weighted selection behavior", async () => {
 
   cooldown.setRandomValues([0.95]);
   assert.equal(cooldown.chooseRandomEventOutsideLockdown([first, second], 0), second);
+});
+
+test("Admin Random uniformly selects and records through the shared repeat window", async () => {
+  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const runtime = createAdminRandomChoiceRuntime(source);
+  const pending = { id: "pending" };
+  const blockedByTrigger = { id: "trigger-blocked", canTrigger: () => false };
+  const first = { id: "first", canTrigger: ({ admin }) => admin };
+  const second = { id: "second" };
+  runtime.setDefinitions([
+    pending,
+    { id: "developer-blocked", developerAllowed: false },
+    { id: "visible", visible: true },
+    { id: "kind-blocked", schedulable: false },
+    blockedByTrigger,
+    first,
+    second,
+  ]);
+  runtime.markPending(pending);
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(await runtime.run({ source: "first-click" }))),
+    { ok: true, message: "Triggered first." }
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(await runtime.run({ source: "second-click" }))),
+    { ok: true, message: "Triggered second." }
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(await runtime.run({ source: "third-click" }))),
+    {
+      ok: false,
+      message: "No eligible event is available outside the recent-repeat window.",
+    }
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(runtime.getCandidateSnapshots())), [
+    [
+      { id: "first", triggerProbability: 1 },
+      { id: "second", triggerProbability: 1 },
+    ],
+    [
+      { id: "first", triggerProbability: 1 },
+      { id: "second", triggerProbability: 1 },
+    ],
+    [
+      { id: "first", triggerProbability: 1 },
+      { id: "second", triggerProbability: 1 },
+    ],
+  ]);
+  assert.deepEqual(JSON.parse(JSON.stringify(runtime.getRecordedIds())), ["first", "second"]);
+  assert.deepEqual(JSON.parse(JSON.stringify(runtime.getRunCalls())), [
+    { eventId: "first", options: { source: "first-click" } },
+    { eventId: "second", options: { source: "second-click" } },
+  ]);
+
+  runtime.setGameplayLocked(true);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(await runtime.run())),
+    { ok: false, message: "Finish the active gameplay event first." }
+  );
 });
 
 test("active combat and click-collection gameplay blocks random events until it ends", async () => {

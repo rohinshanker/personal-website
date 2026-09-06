@@ -31,13 +31,14 @@ const sourceBetween = (source, startMarker, endMarker) => {
 };
 
 const readAdminSources = async () => {
-  const [home, main, admin, styles] = await Promise.all([
+  const [home, main, admin, styles, validation] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("scripts/home/main.js", root), "utf8"),
     readFile(new URL(adminScriptPath, root), "utf8"),
     readFile(new URL(adminStylePath, root), "utf8"),
+    readFile(new URL("docs/validation/admin-controls.md", root), "utf8"),
   ]);
-  return { admin, home, main, styles };
+  return { admin, home, main, styles, validation };
 };
 
 const loadAdminNamespace = (source) => {
@@ -148,11 +149,11 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
 
   assert.match(
     home,
-    /styles\/home\/admin-controls\.css\?v=admin-event-preview-20260811/
+    /styles\/home\/admin-controls\.css\?v=admin-seed-sequences-20260906/
   );
   assert.match(
     home,
-    /scripts\/home\/admin-controls\.js\?v=bulk-system-alerts-20260811/
+    /scripts\/home\/admin-controls\.js\?v=admin-seed-sequences-20260906/
   );
   assert.ok(
     home.indexOf("scripts/home/admin-controls.js") >
@@ -380,7 +381,10 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
     "admin-save-binding",
     "admin-clear-bindings",
     "admin-binding-list",
+    "admin-seed-picker",
     "admin-sequence-seed",
+    "admin-seed-menu",
+    "admin-seed-list",
     "admin-generate-sequence",
     "admin-replay-sequence",
     "admin-sequence-preview",
@@ -443,6 +447,14 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
   assert.equal(attributeValue(announcer, "aria-live"), "polite");
   assert.equal(attributeValue(eventPreview, "role"), "img");
   assert.equal(attributeValue(eventPreview, "aria-live"), "polite");
+  const sequenceSeed = tagWithAttribute(home, "id", "admin-sequence-seed");
+  const seedMenu = tagWithAttribute(home, "id", "admin-seed-menu");
+  assert.equal(attributeValue(sequenceSeed, "aria-controls"), "admin-seed-menu");
+  assert.equal(attributeValue(sequenceSeed, "aria-expanded"), "false");
+  assert.equal(attributeValue(sequenceSeed, "aria-haspopup"), "dialog");
+  assert.equal(attributeValue(seedMenu, "role"), "dialog");
+  assert.equal(attributeValue(seedMenu, "aria-label"), "Saved sequence seeds");
+  assert.match(seedMenu, /\bhidden\b/);
 
   const taskbarStart = home.indexOf('<div class="taskbar"');
   for (const overlayId of [
@@ -486,6 +498,7 @@ test("Admin settings use strict versioned local state with a deterministic publi
     "RESET_PENDING_KEY",
     "RANDOM_EVENT_VALUE",
     "DEFAULT_STATE",
+    "normalizeSeedNames",
     "normalizeState",
     "createSeededSequence",
     "create",
@@ -495,6 +508,7 @@ test("Admin settings use strict versioned local state with a deterministic publi
   assert.equal(api.STORAGE_KEY, "personalSiteAdminControlsV1");
   assert.equal(api.RESET_PENDING_KEY, "personalSiteAdminControlsResetPendingV1");
   assert.equal(api.RANDOM_EVENT_VALUE, "__random__");
+  assert.equal(typeof api.normalizeSeedNames, "function");
   assert.equal(typeof api.normalizeState, "function");
   assert.equal(typeof api.createSeededSequence, "function");
   assert.equal(typeof api.create, "function");
@@ -535,6 +549,7 @@ test("Admin settings use strict versioned local state with a deterministic publi
     showCountdown: true,
     bindings: [],
     sequenceSeed: "promo-001",
+    seedNames: ["promo-001"],
     sequence: [],
     sequenceCursor: 0,
     frequency: 15,
@@ -583,6 +598,13 @@ test("Admin settings use strict versioned local state with a deterministic publi
       { target: "start", label: "Start", eventId: "__random__", mode: "unknown" },
     ],
     sequenceSeed: "  promo   take 42  ",
+    seedNames: [
+      "  promo   take 42  ",
+      "alternate-take",
+      "alternate-take",
+      "",
+      "x".repeat(70),
+    ],
     sequence: ["zeta-event", "__random__", "body *", "alpha-event"],
     sequenceCursor: "2",
     frequency: "5",
@@ -617,6 +639,7 @@ test("Admin settings use strict versioned local state with a deterministic publi
       { target: "start", label: "Start", eventId: "__random__", mode: "once" },
     ],
     sequenceSeed: "promo take 42",
+    seedNames: ["promo take 42", "alternate-take", "x".repeat(64)],
     sequence: ["zeta-event", "alpha-event"],
     sequenceCursor: 2,
     frequency: 5,
@@ -634,6 +657,28 @@ test("Admin settings use strict versioned local state with a deterministic publi
     privacy: true,
     pauseNatural: false,
   });
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(api.normalizeSeedNames([
+      " first   take ",
+      null,
+      "first take",
+      ...Array.from({ length: 60 }, (_, index) => `take-${index}`),
+    ]))),
+    ["first take", ...Array.from({ length: 49 }, (_, index) => `take-${index}`)]
+  );
+  const migrated = JSON.parse(JSON.stringify(api.normalizeState({
+    ...defaults,
+    seedNames: undefined,
+    sequenceSeed: "legacy-take",
+    sequence: ["alpha-event"],
+  })));
+  assert.deepEqual(migrated.seedNames, ["legacy-take"]);
+  const intentionallyEmpty = JSON.parse(JSON.stringify(api.normalizeState({
+    ...defaults,
+    seedNames: [],
+  })));
+  assert.deepEqual(intentionallyEmpty.seedNames, []);
 
   assert.match(admin, /const localStateStorage = storage \|\| pageWindow\.localStorage/);
   assert.match(admin, /localStateStorage\.getItem\(STORAGE_KEY\)/);
@@ -691,6 +736,10 @@ test("runtime orchestration integrates the complete event registry without publi
   assert.match(eventRuntime, /randomEventDefinitions\.find/);
   assert.match(eventRuntime, /preloadRandomEventAssets/);
   assert.match(eventRuntime, /definition\.run/);
+  assert.match(eventRuntime, /const runAdminRandomEventChoice = async/);
+  assert.match(eventRuntime, /chooseRandomEventOutsideLockdown\(eligibleEvents\)/);
+  assert.match(eventRuntime, /recordRandomEventSelection\(selected\.definition\)/);
+  assert.match(eventRuntime, /triggerProbability:\s*1/);
   assert.doesNotMatch(eventRuntime, /scheduleRandomEventRun|triggerRandomEvents/);
 
   for (const preset of ["game-win", "dialog", "notification", "desktop-activity"]) {
@@ -717,6 +766,7 @@ test("runtime orchestration integrates the complete event registry without publi
     "listEvents",
     "resetScene",
     "runEvent",
+    "runRandomEvent",
     "runPreset",
   ]) {
     assert.match(publicRuntime, new RegExp(`\\b${method}:`));
@@ -769,6 +819,35 @@ test("bindings, timing, capture aids, and reset are implemented as real controll
   }
   assert.match(admin, /localStateStorage\.removeItem\(STORAGE_KEY\)/);
   assert.match(admin, /orchestrator\.runEvent/);
+  assert.match(admin, /orchestrator\.runRandomEvent/);
+  assert.doesNotMatch(
+    sourceBetween(admin, "const runEventChoice = async", "const hideCountdownOverlay"),
+    /Math\.random/,
+    "Random Admin choices must use the site's shared repeat-avoidance runtime."
+  );
   assert.match(admin, /orchestrator\.runPreset/);
   assert.match(admin, /orchestrator\.resetScene/);
+});
+
+test("Admin validation ends with a complete repeatable promo-take runbook", async () => {
+  const { validation } = await readAdminSources();
+  const section = validation.slice(validation.lastIndexOf("## "));
+
+  assert.match(section, /^## Repeatable promo-video takes/m);
+  for (const controlOrConcept of [
+    "Sequence seed",
+    "Generate",
+    "Next deterministic sequence cue",
+    "Every click",
+    "Replay",
+    "Reset Scene",
+    "Start Take",
+    "Random",
+  ]) {
+    assert.match(section, new RegExp(escapeRegExp(controlOrConcept)));
+  }
+  assert.match(section, /same (?:order|click path)/i);
+  assert.match(section, /record/i);
+  assert.match(section, /retake/i);
+  assert.match(section, /not deterministic/i);
 });

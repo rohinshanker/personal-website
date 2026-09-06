@@ -4,7 +4,7 @@ Purpose: Validate the local-only promotional event orchestrator and recording he
 
 Scope: The Admin desktop and dock launchers, Admin Controls window, random-event runtime, seeded controls, scene presets, and capture aids on `home.html`.
 
-Last verified: 2026-08-03
+Last verified: 2026-09-06
 
 ## State and safety contract
 
@@ -29,10 +29,15 @@ Last verified: 2026-08-03
   `personalSiteAdminControlsV1`. The reset-reload handshake uses the transient
   `personalSiteAdminControlsResetPendingV1` session key; no Admin state is sent
   to a server.
+- Generated sequence names are normalized, deduplicated, limited to the 50 most
+  recently used names, and exposed through the deletable saved-seed menu.
 - Stored bindings use stable semantic target keys (`id:`, `app:`, `start`, or a
   whitelisted action fingerprint), never saved CSS selectors.
 - Direct Admin triggers bypass natural-event timing and probability but keep
   each event's gameplay, pending-state, and visible-window safety checks.
+- **Random** chooses uniformly from currently eligible registered events through
+  the site's shared two-minute per-event selection lockdown. Fixed events and
+  deterministic sequence cues remain directly repeatable.
 - Seeded controls perform their normal action and trigger the configured event
   once or repeatedly. One-shot bindings remove themselves immediately. Natural
   random events are suppressed for that browser task to prevent duplicate
@@ -71,13 +76,31 @@ npx playwright test tests/ui/admin-controls.spec.mjs --workers=1
 npx playwright test tests/ui/administrator-sign-in.spec.mjs --workers=1
 ```
 
-The browser suite checks 320x568, 375x812, 568x320, 768x1024, 1280x800, and
-1440x900.
+The browser suite checks 320x568, 375x812, 560x800, 561x800, 568x320, 768x1024,
+1280x800, and 1440x900.
 It covers valid, missing, malformed, and expired proof routing; the real mocked
 sign-in handoff; the inaccessible notice and full-window states; all four tabs;
-local persistence; deterministic sequences; direct and seeded events; the target
-picker; scene reset; presets; capture controls; media; privacy fixtures; both
-launcher paths and ordering; focus restoration; overflow; console errors; runtime
-errors; and mutating network requests.
+local persistence; the saved-seed menu and deletion; deterministic sequences;
+repeat-safe Random selection; direct and seeded events; the target picker; scene
+reset; presets; capture controls; media; privacy fixtures; both launcher paths and
+ordering; focus restoration; overflow; console errors; runtime errors; and
+mutating network requests.
 
 For a release, also run the full gates in [site-quality-gates.md](site-quality-gates.md).
+
+## Repeatable promo-video takes
+
+Use a named deterministic sequence when multiple takes must follow the same event order. Seed names, sequences, bindings, and capture settings are stored only in the current browser.
+
+1. Open **Admin Controls**. If the desktop must begin clean, choose **Reset Scene**, wait for the reload, and reopen Admin Controls.
+2. In **Capture**, type a durable name in **Sequence seed**, such as `home-intro-v1`, and choose **Generate**. Focusing or typing in the field opens the saved-seed menu. Choose a saved name to regenerate its sequence, or use its **Delete** button to remove only that name from the menu. The currently generated sequence remains active until another seed is generated or selected.
+3. In **Bindings**, build the click path. Find each button or link with **Target** or **Pick on Screen...**, set **Event** to **Next deterministic sequence cue**, select **Every click**, and choose **Seed Control**. Repeat this for every target in the path. Use a specific event when one target must always launch that event.
+4. Rehearse the same target order and the actions needed to finish or dismiss each event. A seeded target still performs its normal click, and every deterministic-sequence target advances the one shared sequence cursor. Allow time for each event to finish; safety checks can block an event that is already open or conflicts with active gameplay.
+5. Optionally build an operator shot list in **Events** with **Add Cue**, then use **Previous**, **Next**, and **Show Cue** in **Capture**. The shot list is a prompt for the operator; it does not run events. **Run Next Cue** executes the next sequence event directly when a click target is not needed.
+6. Configure the frame guide, safe area, audio, visual effects, privacy fixtures, countdown, and natural-event pause. For a click-driven take, do not use **Start Take**, because an automatic take advances the sequence independently.
+7. Immediately before recording, choose the saved seed and select **Replay** to return to cue 1. Close Admin Controls, start recording, and perform the rehearsed clicks in the same order.
+8. For every retake, use **Reset Scene**, reopen Admin Controls, choose the same seed, select **Replay**, start recording, and repeat the identical click path. The saved seed names, bindings, and capture settings survive the reset.
+
+For an automatic take, choose **Replay**, set **Frequency**, **Duration**, and **Intensity**, then use **Run** > **Start Take**. Low, medium, and high intensity run one, two, and three sequence events per beat respectively. Rehearse the pacing so one event can finish before the next begins, and use **Stop** if the take needs to end early.
+
+Choose **Random** only when variation is intentional. It chooses uniformly from events that are currently eligible and outside the website's recent-repeat window, so successive selections avoid recent events but are not deterministic. Use a named sequence or a specific event when every take must match.

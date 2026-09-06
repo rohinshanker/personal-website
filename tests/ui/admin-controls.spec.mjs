@@ -37,6 +37,8 @@ const viewports = [
   { name: "short-mobile", width: 320, height: 568 },
   { name: "mobile", width: 375, height: 812 },
   { name: "short-landscape", width: 568, height: 320 },
+  { name: "seed-breakpoint-stacked", width: 560, height: 800 },
+  { name: "seed-breakpoint-inline", width: 561, height: 800 },
   { name: "tablet", width: 768, height: 1024 },
   { name: "desktop", width: 1280, height: 800 },
   { name: "wide", width: 1440, height: 900 },
@@ -101,6 +103,10 @@ const preparePage = async (
           runEvent: async (eventId) => {
             window.__adminOrchestratedEventCalls.push(eventId);
             return { ok: true, message: `Triggered ${eventId}.` };
+          },
+          runRandomEvent: async () => {
+            window.__adminOrchestratedEventCalls.push("__random__");
+            return { ok: true, message: "Triggered a repeat-safe random event." };
           },
         });
       },
@@ -399,6 +405,42 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
       expect(previewMetrics.previewRight).toBeLessThanOrEqual(
         previewMetrics.panelRight + 0.6
       );
+      await selectAdminTab(page, "capture");
+      const seedInput = page.locator("#admin-sequence-seed");
+      const seedMenu = page.locator("#admin-seed-menu");
+      await seedInput.click();
+      await expect(seedMenu).toBeVisible();
+      const seedMenuMetrics = await page.locator("#admin-panel-capture").evaluate((panel) => {
+        const menu = panel.querySelector("#admin-seed-menu");
+        const seedRow = panel.querySelector(".admin-seed-row");
+        const menuBounds = menu.getBoundingClientRect();
+        const panelBounds = panel.getBoundingClientRect();
+        return {
+          documentOverflow:
+            document.documentElement.scrollWidth > document.documentElement.clientWidth,
+          menuBottom: menuBounds.bottom,
+          menuLeft: menuBounds.left,
+          menuRight: menuBounds.right,
+          menuTop: menuBounds.top,
+          panelBottom: panelBounds.bottom,
+          panelLeft: panelBounds.left,
+          panelRight: panelBounds.right,
+          panelTop: panelBounds.top,
+          seedRowColumnCount: getComputedStyle(seedRow).gridTemplateColumns
+            .split(/\s+/)
+            .filter(Boolean).length,
+        };
+      });
+      expect(seedMenuMetrics.documentOverflow).toBe(false);
+      expect(seedMenuMetrics.menuLeft).toBeGreaterThanOrEqual(seedMenuMetrics.panelLeft - 0.6);
+      expect(seedMenuMetrics.menuRight).toBeLessThanOrEqual(seedMenuMetrics.panelRight + 0.6);
+      expect(seedMenuMetrics.menuTop).toBeGreaterThanOrEqual(seedMenuMetrics.panelTop - 0.6);
+      expect(seedMenuMetrics.menuBottom).toBeLessThanOrEqual(
+        seedMenuMetrics.panelBottom + 0.6
+      );
+      expect(seedMenuMetrics.seedRowColumnCount).toBe(viewport.width <= 560 ? 1 : 2);
+      await seedInput.press("Escape");
+      await expect(seedMenu).toBeHidden();
       await selectAdminTab(page, "run");
 
       const metrics = await win.evaluate((element) => {
@@ -524,6 +566,8 @@ test("direct events and fixed seeded controls run locally without duplicate natu
     )
   ).toEqual([]);
   const eventLabels = await eventList.locator("option").allTextContents();
+  expect(eventLabels[0]).toBe("Random");
+  await expect(eventList.locator('option[value="__random__"]')).toHaveCount(1);
   const bulkSystemAlertCounts = await page.evaluate(
     (eventIds) =>
       Object.fromEntries(
@@ -549,6 +593,16 @@ test("direct events and fixed seeded controls run locally without duplicate natu
     "Annoying Vanishing Popup Alert",
   ]);
   expect(eventLabels.indexOf(annoyingLabels.at(-1)) - eventLabels.indexOf(annoyingLabels[0])).toBe(2);
+
+  await eventList.selectOption("__random__");
+  await expect(eventPreview).toHaveAttribute("aria-label", "First window preview: Random");
+  await expect(eventPreview.locator(".admin-event-preview-empty")).toHaveText(
+    "An eligible event is chosen when Random is triggered."
+  );
+  await page.locator("#admin-add-cue").click();
+  await selectAdminTab(page, "capture");
+  await expect(page.locator("#admin-shot-list")).toContainText("Random");
+  await selectAdminTab(page, "events");
 
   await eventList.selectOption("dodging-popup-alert");
   await expect(eventPreview).toHaveAttribute(
@@ -864,13 +918,51 @@ test("event previews preserve an initialized first-window state", async ({ page 
   expect(diagnostics.mutatingRequests).toEqual([]);
 });
 
+test("Random delegates to the repeat-safe runtime and can be added as an operator cue", async ({
+  page,
+}) => {
+  const diagnostics = await preparePage(page, { spyOnOrchestratedEvents: true });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openAdmin(page);
+
+  await selectAdminTab(page, "events");
+  await page.locator("#admin-event-list").selectOption("__random__");
+  await page.locator("#admin-trigger-now").click();
+  await expect(page.locator("#admin-controls-status")).toHaveText(
+    "Triggered a repeat-safe random event."
+  );
+  await page.locator("#admin-add-cue").click();
+  await selectAdminTab(page, "capture");
+  await expect(page.locator("#admin-shot-list")).toContainText("Random");
+  expect(await page.evaluate(() => window.__adminOrchestratedEventCalls)).toEqual([
+    "__random__",
+  ]);
+
+  expect(diagnostics.consoleErrors).toEqual([]);
+  expect(diagnostics.runtimeErrors).toEqual([]);
+  expect(diagnostics.mutatingRequests).toEqual([]);
+});
+
 test("deterministic sequence bindings and capture settings survive reload", async ({ page }) => {
   const diagnostics = await preparePage(page, { spyOnOrchestratedEvents: true });
   await page.setViewportSize({ width: 1280, height: 800 });
   await openAdmin(page);
 
   await selectAdminTab(page, "capture");
-  await page.locator("#admin-sequence-seed").fill("repeatable-promo-take");
+  const seedInput = page.locator("#admin-sequence-seed");
+  const seedMenu = page.locator("#admin-seed-menu");
+  await seedInput.click();
+  await expect(seedInput).toHaveAttribute("aria-expanded", "true");
+  await expect(seedMenu).toBeVisible();
+  const defaultSeedChoice = seedMenu.getByRole("button", { name: "Use saved seed promo-001" });
+  await expect(defaultSeedChoice).toBeVisible();
+  await seedInput.press("ArrowDown");
+  await expect(defaultSeedChoice).toBeFocused();
+  await defaultSeedChoice.press("Escape");
+  await expect(seedInput).toBeFocused();
+  await expect(seedMenu).toBeHidden();
+
+  await seedInput.fill("repeatable-promo-take");
   await page.locator("#admin-intensity").selectOption("high");
   await page.locator("#admin-generate-sequence").click();
   const preview = page.locator("#admin-sequence-preview li");
@@ -878,6 +970,36 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
   const firstPreview = await preview.allTextContents();
   await page.locator("#admin-generate-sequence").click();
   expect(await preview.allTextContents()).toEqual(firstPreview);
+
+  await seedInput.fill("alternate-promo-take");
+  await page.locator("#admin-generate-sequence").click();
+  expect(await preview.allTextContents()).not.toEqual(firstPreview);
+  await seedInput.click();
+  for (const seedName of ["alternate-promo-take", "repeatable-promo-take", "promo-001"]) {
+    await expect(
+      seedMenu.getByRole("button", { name: `Use saved seed ${seedName}` })
+    ).toBeVisible();
+  }
+  await seedMenu.getByRole("button", { name: "Use saved seed repeatable-promo-take" }).click();
+  await expect(seedInput).toHaveValue("repeatable-promo-take");
+  await expect(seedInput).toBeFocused();
+  await expect(seedMenu).toBeHidden();
+  expect(await preview.allTextContents()).toEqual(firstPreview);
+
+  await seedInput.click();
+  await seedMenu.getByRole("button", { name: "Delete saved seed alternate-promo-take" }).click();
+  await expect(
+    seedMenu.getByRole("button", { name: "Use saved seed alternate-promo-take" })
+  ).toHaveCount(0);
+  expect(await preview.allTextContents()).toEqual(firstPreview);
+  await seedInput.press("Escape");
+  await expect(seedMenu).toBeHidden();
+  await expect(seedInput).toHaveAttribute("aria-expanded", "false");
+  await expect(seedInput).toBeFocused();
+  await seedInput.click();
+  await expect(seedMenu).toBeVisible();
+  await page.locator("#admin-sequence-preview").click();
+  await expect(seedMenu).toBeHidden();
 
   const expected = await page.evaluate(() =>
     window.rohinAdminControls.createSeededSequence(
@@ -897,9 +1019,17 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
   await page.reload({ waitUntil: "domcontentloaded" });
   await openAdmin(page);
   await selectAdminTab(page, "capture");
-  await expect(page.locator("#admin-sequence-seed")).toHaveValue("repeatable-promo-take");
+  await expect(seedInput).toHaveValue("repeatable-promo-take");
   await expect(page.locator("#admin-intensity")).toHaveValue("high");
   expect(await page.locator("#admin-sequence-preview li").allTextContents()).toEqual(firstPreview);
+  await seedInput.click();
+  await expect(
+    seedMenu.getByRole("button", { name: "Use saved seed repeatable-promo-take" })
+  ).toBeVisible();
+  await expect(
+    seedMenu.getByRole("button", { name: "Use saved seed alternate-promo-take" })
+  ).toHaveCount(0);
+  await seedInput.press("Escape");
   await selectAdminTab(page, "bindings");
   await expect(page.locator("#admin-binding-list")).toContainText("Image Tools");
   await closeAdmin(page);

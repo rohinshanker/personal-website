@@ -7,6 +7,7 @@ const RANDOM_EVENT_VALUE = "__random__";
 const SEQUENCE_EVENT_VALUE = "__sequence__";
 const STATE_VERSION = 1;
 const SEQUENCE_LENGTH = 24;
+const MAX_SEED_NAMES = 50;
 
 const DEFAULT_STATE = Object.freeze({
   version: STATE_VERSION,
@@ -16,6 +17,7 @@ const DEFAULT_STATE = Object.freeze({
   showCountdown: true,
   bindings: Object.freeze([]),
   sequenceSeed: "promo-001",
+  seedNames: Object.freeze(["promo-001"]),
   sequence: Object.freeze([]),
   sequenceCursor: 0,
   frequency: 15,
@@ -91,12 +93,26 @@ const EVENT_PREVIEW_STAGE_STYLES = `
 const cloneDefaults = () => ({
   ...DEFAULT_STATE,
   bindings: [],
+  seedNames: [...DEFAULT_STATE.seedNames],
   sequence: [],
   shotList: [],
 });
 
 const cleanText = (value, maximum = 160) =>
   String(value || "").replace(/\s+/g, " ").trim().slice(0, maximum);
+
+const normalizeSeedNames = (value) => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value
+    .map((seedName) => cleanText(seedName, 64))
+    .filter((seedName) => {
+      if (!seedName || seen.has(seedName)) return false;
+      seen.add(seedName);
+      return true;
+    })
+    .slice(0, MAX_SEED_NAMES);
+};
 
 const normalizeTargetKey = (value) => {
   const key = String(value || "");
@@ -155,6 +171,9 @@ const normalizeState = (value) => {
     ? value.bindings.map(normalizeBinding).filter(Boolean).slice(0, 100)
     : [];
   normalized.sequenceSeed = cleanText(value.sequenceSeed, 64) || DEFAULT_STATE.sequenceSeed;
+  normalized.seedNames = Array.isArray(value.seedNames)
+    ? normalizeSeedNames(value.seedNames)
+    : [normalized.sequenceSeed];
   normalized.sequence = Array.isArray(value.sequence)
     ? value.sequence
         .map((eventId) => String(eventId || ""))
@@ -262,6 +281,9 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     clearBindings: byId("admin-clear-bindings"),
     bindingList: byId("admin-binding-list"),
     sequenceSeed: byId("admin-sequence-seed"),
+    seedPicker: byId("admin-seed-picker"),
+    seedMenu: byId("admin-seed-menu"),
+    seedList: byId("admin-seed-list"),
     generateSequence: byId("admin-generate-sequence"),
     replaySequence: byId("admin-replay-sequence"),
     sequencePreview: byId("admin-sequence-preview"),
@@ -374,6 +396,68 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     item.value = value;
     item.textContent = label;
     return item;
+  };
+
+  const isSeedMenuOpen = () => Boolean(controls.seedMenu && !controls.seedMenu.hidden);
+
+  const closeSeedMenu = ({ focus = false } = {}) => {
+    if (!controls.seedMenu || !controls.sequenceSeed) return;
+    if (focus) controls.sequenceSeed.focus({ preventScroll: true });
+    controls.seedMenu.hidden = true;
+    controls.sequenceSeed.setAttribute("aria-expanded", "false");
+  };
+
+  const renderSeedNames = () => {
+    if (!controls.seedList) return;
+    if (!state.seedNames.length) {
+      const empty = documentRef.createElement("li");
+      empty.className = "admin-empty-state";
+      empty.textContent = "No saved seed names.";
+      controls.seedList.replaceChildren(empty);
+      return;
+    }
+    controls.seedList.replaceChildren(
+      ...state.seedNames.map((seedName, index) => {
+        const item = documentRef.createElement("li");
+        item.className = "admin-seed-option";
+        const select = documentRef.createElement("button");
+        select.type = "button";
+        select.className = "admin-seed-choice";
+        select.textContent = seedName;
+        select.setAttribute("data-admin-select-seed", String(index));
+        select.setAttribute("aria-label", `Use saved seed ${seedName}`);
+        const remove = documentRef.createElement("button");
+        remove.type = "button";
+        remove.className = "admin-seed-delete";
+        remove.textContent = "Delete";
+        remove.setAttribute("data-admin-delete-seed", String(index));
+        remove.setAttribute("aria-label", `Delete saved seed ${seedName}`);
+        item.append(select, remove);
+        return item;
+      })
+    );
+  };
+
+  const openSeedMenu = ({ focusFirst = false } = {}) => {
+    if (!controls.seedMenu || !controls.sequenceSeed || !isAdminOpen()) return;
+    renderSeedNames();
+    controls.seedMenu.hidden = false;
+    controls.sequenceSeed.setAttribute("aria-expanded", "true");
+    if (focusFirst) {
+      controls.seedList.querySelector("[data-admin-select-seed]")?.focus({
+        preventScroll: true,
+      });
+    }
+  };
+
+  const rememberSeedName = (seedName) => {
+    const normalizedName = cleanText(seedName, 64);
+    if (!normalizedName) return;
+    state.seedNames = [
+      normalizedName,
+      ...state.seedNames.filter((candidate) => candidate !== normalizedName),
+    ].slice(0, MAX_SEED_NAMES);
+    renderSeedNames();
   };
 
   const formatControlLabel = (element) => {
@@ -620,7 +704,9 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
 
     const eventId = controls.eventList?.value || "";
     const eventDefinition = eventById.get(eventId);
-    const eventLabelText = eventDefinition?.label || "No event selected";
+    const eventLabelText = eventId === RANDOM_EVENT_VALUE
+      ? "Random"
+      : eventDefinition?.label || "No event selected";
     controls.eventPreview.setAttribute(
       "aria-label",
       `First window preview: ${eventLabelText}`
@@ -651,9 +737,11 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     if (!(previewWindow instanceof pageWindow.Element)) {
       const empty = documentRef.createElement("p");
       empty.className = "admin-event-preview-empty";
-      empty.textContent = eventId
-        ? "This event does not have a window preview."
-        : "Choose an event to preview its first window.";
+      empty.textContent = eventId === RANDOM_EVENT_VALUE
+        ? "An eligible event is chosen when Random is triggered."
+        : eventId
+          ? "This event does not have a window preview."
+          : "Choose an event to preview its first window.";
       stage.append(empty);
       return;
     }
@@ -707,9 +795,14 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     const selected = controls.eventList.value;
     const search = cleanText(controls.eventSearch?.value, 96).toLocaleLowerCase();
     const kind = controls.eventKind?.value || "all";
-    const filtered = events.filter((eventDefinition) =>
+    const randomChoice = {
+      id: RANDOM_EVENT_VALUE,
+      label: "Random",
+      kind: "all",
+    };
+    const filtered = [randomChoice, ...events].filter((eventDefinition) =>
       (!search || eventDefinition.label.toLocaleLowerCase().includes(search)) &&
-      (kind === "all" || eventDefinition.kind === kind)
+      (kind === "all" || (eventDefinition.id !== RANDOM_EVENT_VALUE && eventDefinition.kind === kind))
     );
     controls.eventList.replaceChildren(
       ...filtered.map((eventDefinition) => option(eventDefinition.id, eventDefinition.label))
@@ -848,6 +941,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
 
   const activateTab = (tabName, { focus = false, save = true } = {}) => {
     if (!TAB_VALUES.has(tabName)) return;
+    if (tabName !== "capture") closeSeedMenu();
     state.activeTab = tabName;
     documentRef.querySelectorAll("[data-admin-tab]").forEach((tab) => {
       const active = tab.getAttribute("data-admin-tab") === tabName;
@@ -990,6 +1084,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     controls.hideBeforeTrigger.checked = state.hideBeforeTrigger;
     controls.showCountdown.checked = state.showCountdown;
     controls.sequenceSeed.value = state.sequenceSeed;
+    renderSeedNames();
     controls.frequency.value = String(state.frequency);
     controls.duration.value = String(state.duration);
     controls.intensity.value = state.intensity;
@@ -1014,6 +1109,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
   const generateSequence = ({ resetCursor = true, quiet = false } = {}) => {
     const seed = cleanText(controls.sequenceSeed.value, 64) || DEFAULT_STATE.sequenceSeed;
     state.sequenceSeed = seed;
+    rememberSeedName(seed);
     state.sequence = createSeededSequence(
       seed,
       events.map((eventDefinition) => eventDefinition.id),
@@ -1069,9 +1165,22 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
   const runEventChoice = async (eventId, source = "admin-controls") => {
     if (eventId === SEQUENCE_EVENT_VALUE) return runNextSequence(source);
     if (eventId === RANDOM_EVENT_VALUE) {
-      if (!events.length) return { ok: false, message: "No events are available." };
-      const selected = events[Math.floor(Math.random() * events.length)];
-      return runEvent(selected.id, source);
+      announce("Choosing a random event…");
+      try {
+        const result = await orchestrator.runRandomEvent?.({ source });
+        const normalizedResult = result || {
+          ok: false,
+          message: "Random event selection is unavailable.",
+        };
+        announce(normalizedResult.message || (normalizedResult.ok
+          ? "Random event triggered."
+          : "No random event could start."));
+        return normalizedResult;
+      } catch (error) {
+        const result = { ok: false, message: "Random event selection failed." };
+        announce(result.message);
+        return result;
+      }
     }
     return runEvent(eventId, source);
   };
@@ -1350,7 +1459,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
   });
   controls.addCue.addEventListener("click", () => {
     const eventId = controls.eventList.value;
-    if (!eventById.has(eventId)) return;
+    if (eventId !== RANDOM_EVENT_VALUE && !eventById.has(eventId)) return;
     state.shotList = [...state.shotList, { label: eventLabel(eventId), eventId }];
     state.cueCursor = state.shotList.length - 1;
     persist();
@@ -1446,6 +1555,49 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     controls.sequenceSeed.value = state.sequenceSeed;
     persist();
   });
+  controls.sequenceSeed.addEventListener("focus", () => openSeedMenu());
+  controls.sequenceSeed.addEventListener("click", () => openSeedMenu());
+  controls.sequenceSeed.addEventListener("input", () => openSeedMenu());
+  controls.sequenceSeed.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      openSeedMenu({ focusFirst: true });
+      return;
+    }
+    if (event.key === "Escape" && isSeedMenuOpen()) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeSeedMenu();
+    }
+  });
+  controls.seedList.addEventListener("click", (event) => {
+    const select = event.target.closest("[data-admin-select-seed]");
+    if (select) {
+      const index = Number(select.getAttribute("data-admin-select-seed"));
+      const seedName = Number.isInteger(index) ? state.seedNames[index] : "";
+      if (!seedName) return;
+      controls.sequenceSeed.value = seedName;
+      generateSequence();
+      controls.sequenceSeed.focus({ preventScroll: true });
+      closeSeedMenu();
+      return;
+    }
+    const remove = event.target.closest("[data-admin-delete-seed]");
+    if (!remove) return;
+    const index = Number(remove.getAttribute("data-admin-delete-seed"));
+    if (!Number.isInteger(index) || !state.seedNames[index]) return;
+    const [removedSeed] = state.seedNames.splice(index, 1);
+    state.seedNames = [...state.seedNames];
+    persist();
+    renderSeedNames();
+    announce(`Deleted saved seed “${removedSeed}”. The current sequence is unchanged.`);
+  });
+  controls.seedMenu.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    closeSeedMenu({ focus: true });
+  });
 
   const persistToggle = (control, property, afterChange = null) => {
     control.addEventListener("change", () => {
@@ -1488,6 +1640,9 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     const rawTarget = event.target instanceof pageWindow.Element
       ? event.target
       : event.target?.parentElement;
+    if (isSeedMenuOpen() && !rawTarget?.closest("#admin-seed-picker")) {
+      closeSeedMenu();
+    }
     const control = rawTarget?.closest("button, a[href]");
     if (!control) return null;
     if (control.getAttribute("data-app") === "admin-controls") {
@@ -1557,6 +1712,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
       });
       return;
     }
+    closeSeedMenu();
     clearSeedIndicators();
     if (!pickingTarget && focusReturn?.isConnected) {
       focusReturn.focus({ preventScroll: true });
@@ -1624,6 +1780,7 @@ const namespace = Object.freeze({
   RESET_PENDING_KEY,
   RANDOM_EVENT_VALUE,
   DEFAULT_STATE,
+  normalizeSeedNames,
   normalizeState,
   createSeededSequence,
   create,
