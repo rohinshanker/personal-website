@@ -232,6 +232,11 @@
   outline: none;
 }
 
+.ms-cell:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -3px;
+}
+
 .ms-cell.is-revealed {
   background-image: url("../../../assets/minesweeper_assets/tiles/tile_revealed_empty.png");
   box-shadow: none;
@@ -306,19 +311,78 @@
 }
 
 .ms-footer {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   align-items: center;
   gap: 8px;
   font-size: 11px;
 }
 
-.ms-footer select {
-  height: 22px;
+.ms-footer label {
+  min-width: 0;
 }
 
-.ms-mobile-controls-label {
-  margin-right: auto;
+.ms-footer select {
+  height: 22px;
+  min-width: 0;
+  width: 100%;
+}
+
+.minesweeper-controls-window {
+  width: min(92vw, 330px);
+}
+
+.minesweeper-controls-window .window-body {
+  min-height: 0;
+}
+
+.minesweeper-controls-window .title-bar-controls button:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -3px;
+}
+
+.ms-controls-target-note {
+  margin: 2px 2px 8px;
+}
+
+.ms-controls-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+}
+
+.ms-controls-list li {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.ms-controls-list img {
+  height: 20px;
+  image-rendering: pixelated;
+  justify-self: center;
+  object-fit: contain;
+  width: 20px;
+}
+
+.ms-controls-list kbd {
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  display: inline-block;
+  font: inherit;
+  min-width: 14px;
+  padding: 2px 4px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .ms-footer {
+    gap: 4px;
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .ms-lose-banner {

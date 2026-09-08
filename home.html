@@ -105,7 +105,7 @@
     </script>
     <link rel="stylesheet" href="style.css?v=first-win-stats-handoff-20260722" />
     <link rel="stylesheet" href="styles/home/base.css?v=admin-launchers-20260803" />
-    <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-mobile-controls-20260724" />
+    <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-keyboard-controls-20260908" />
     <link rel="stylesheet" href="styles/home/apps/solitaire.css?v=solitaire-victory-scale-20260730" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722" />
@@ -1874,11 +1874,20 @@
               </div>
             </div>
             <div class="ms-board">
-              <div class="ms-grid" id="ms-grid" role="grid" aria-label="Minesweeper grid"></div>
+              <div
+                class="ms-grid"
+                id="ms-grid"
+                role="grid"
+                aria-label="Minesweeper grid"
+                aria-keyshortcuts="S D F"
+              ></div>
             </div>
             <div class="ms-footer">
-              <input id="ms-mobile-controls" type="checkbox" autocomplete="off" />
-              <label class="ms-mobile-controls-label" for="ms-mobile-controls">Mobile controls?</label>
+              <select id="ms-controls-mode" aria-label="Control mode">
+                <option value="keyboard" selected>Keyboard Controls (S/D/F)</option>
+                <option value="mobile">Mobile Controls</option>
+                <option value="mouse">Click/Rt Click Only</option>
+              </select>
               <label aria-label="Difficulty">
                 <select id="ms-difficulty">
                   <option value="beginner">Beginner 9x9 (10 mines)</option>
@@ -1888,6 +1897,48 @@
               </label>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div
+        class="window app-window is-hidden minesweeper-controls-window"
+        data-app-window="minesweeper-controls"
+        data-focus-return-window
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="ms-controls-title"
+        aria-describedby="ms-controls-target-note"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" id="ms-controls-title">Keyboard Controls</div>
+          <div class="title-bar-controls">
+            <button
+              class="help"
+              aria-label="Minesweeper Wikipedia"
+              id="ms-controls-help"
+              data-dialog-initial-focus
+            ></button>
+            <button aria-label="Close" data-close="minesweeper-controls"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <p class="ms-controls-target-note" id="ms-controls-target-note">
+            The current square is the square under your mouse pointer.
+          </p>
+          <ul class="ms-controls-list">
+            <li>
+              <img src="assets/app-icons/ico/mouse_ms.ico" alt="" aria-hidden="true" />
+              <span>Press <kbd>S</kbd> to click the current square.</span>
+            </li>
+            <li>
+              <img src="assets/minesweeper_assets/tiles/tile_question.png" alt="" aria-hidden="true" />
+              <span>Press <kbd>D</kbd> to maybe the current square.</span>
+            </li>
+            <li>
+              <img src="assets/minesweeper_assets/tiles/tile_flag.png" alt="" aria-hidden="true" />
+              <span>Press <kbd>F</kbd> to flag the current square.</span>
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -6679,12 +6730,12 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-835256e7cc97a53f58460c854750ad4d9ae7c737466694a40848ae7b8db2764b"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-f96bb5125fb6b91aed4fe3e58b832d66b117d4ecc58065839142a593a4812791"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
     <script src="scripts/home/system-alerts.js?v=bulk-system-alerts-20260811"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-835256e7cc97a53f58460c854750ad4d9ae7c737466694a40848ae7b8db2764b"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-f96bb5125fb6b91aed4fe3e58b832d66b117d4ecc58065839142a593a4812791"></script>
     <script src="scripts/home/core/media.js?v=hidden-carousel-playback-20260827"></script>
-    <script src="scripts/home/main.js?v=game-build-835256e7cc97a53f58460c854750ad4d9ae7c737466694a40848ae7b8db2764b"></script>
+    <script src="scripts/home/main.js?v=game-build-f96bb5125fb6b91aed4fe3e58b832d66b117d4ecc58065839142a593a4812791"></script>
     <script src="scripts/home/admin-controls.js?v=admin-seed-sequences-20260906"></script>
   </body>
 </html>

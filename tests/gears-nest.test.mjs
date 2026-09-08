@@ -1311,7 +1311,7 @@ test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
     assert.match(source, /random-events\.css\?v=bulk-system-alerts-20260811/);
     assert.match(source, /cursors\.css\?v=text-selection-cursor-20260810/);
-    assert.match(source, /minesweeper\.css\?v=minesweeper-mobile-controls-20260724/);
+    assert.match(source, /minesweeper\.css\?v=minesweeper-keyboard-controls-20260908/);
     assert.match(source, /game-stats\.css\?v=name-caret-fit-20260808/);
     assert.match(source, /style\.css\?v=first-win-stats-handoff-20260722/);
     assert.match(source, /core\/dom\.js\?v=game-build-[a-f0-9]{64}/);

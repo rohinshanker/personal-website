@@ -130,8 +130,9 @@ that a state machine or user flow executes correctly.
    cancellation, navigation, focus, runtime errors, and overflow.
 
 2. **Add behavior-level coverage for the four core games, starting with
-   Minesweeper.** Minesweeper currently has mobile-control and number-preload
-   browser coverage but no real win/publish flow. Test first-click safety,
+   Minesweeper.** Minesweeper now has browser coverage for mobile controls,
+   number preloading, and active-window keyboard actions, but no real
+   win/publish flow. Test first-click safety,
    adjacency and flood reveal, chord and mark transitions, difficulty, loss,
    reset, timer, win, exact-once event recording, queue/retry, and leaderboard
    refresh. Add executable move/session lifecycle tests for Solitaire and

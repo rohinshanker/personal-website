@@ -2,6 +2,8 @@ import { expect, test } from "./fixtures.mjs";
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
+  { name: "stacked boundary", width: 480, height: 812 },
+  { name: "two-column boundary", width: 481, height: 812 },
   { name: "desktop", width: 1280, height: 800 },
 ]);
 
@@ -41,7 +43,7 @@ const expectTopPanelAlignment = async (app) => {
 };
 
 for (const viewport of viewports) {
-  test(`Mobile controls remain opt-in at ${viewport.name}`, async ({ page }) => {
+  test(`control mode menu is exact and resets at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await configureOfflineGameStats(page);
     await page.addInitScript(() => {
@@ -52,20 +54,33 @@ for (const viewport of viewports) {
     if (await aboutClose.isVisible()) await aboutClose.click();
 
     const app = await openMinesweeper(page);
-    const checkbox = app.getByRole("checkbox", { name: "Mobile controls?" });
+    const controlsMode = app.getByRole("combobox", { name: "Control mode" });
     const flag = app.locator("#ms-flag-mode");
     const question = app.locator("#ms-question-mode");
+    const grid = app.locator("#ms-grid");
 
-    await expect(checkbox).not.toBeChecked();
+    await expect(controlsMode).toHaveValue("keyboard");
+    await expect(controlsMode.locator("option")).toHaveText([
+      "Keyboard Controls (S/D/F)",
+      "Mobile Controls",
+      "Click/Rt Click Only",
+    ]);
     await expect(flag).toBeHidden();
     await expect(question).toBeHidden();
+    await expect(grid).toHaveAttribute("aria-keyshortcuts", "S D F");
     await expectTopPanelAlignment(app);
+    const footerIsStacked = await app.locator(".ms-footer").evaluate((footer) => {
+      const controlsRect = footer.querySelector("#ms-controls-mode").getBoundingClientRect();
+      const difficultyRect = footer.querySelector("#ms-difficulty").getBoundingClientRect();
+      return difficultyRect.top >= controlsRect.bottom;
+    });
+    expect(footerIsStacked).toBe(viewport.width <= 480);
 
-    await checkbox.focus();
-    await checkbox.press("Space");
-    await expect(checkbox).toBeChecked();
+    await controlsMode.selectOption("mobile");
+    await expect(controlsMode).toHaveValue("mobile");
     await expect(flag).toBeVisible();
     await expect(question).toBeVisible();
+    await expect(grid).not.toHaveAttribute("aria-keyshortcuts");
     await expectTopPanelAlignment(app);
 
     await flag.click();
@@ -74,20 +89,32 @@ for (const viewport of viewports) {
     await expect(flag).toHaveAttribute("aria-pressed", "false");
     await expect(question).toHaveAttribute("aria-pressed", "true");
 
-    await checkbox.focus();
-    await checkbox.press("Space");
-    await expect(checkbox).not.toBeChecked();
+    await controlsMode.selectOption("mouse");
+    await expect(controlsMode).toHaveValue("mouse");
     await expect(flag).toBeHidden();
     await expect(question).toBeHidden();
     await expect(flag).toHaveAttribute("aria-pressed", "false");
     await expect(question).toHaveAttribute("aria-pressed", "false");
+    await expect(grid).not.toHaveAttribute("aria-keyshortcuts");
+
+    await controlsMode.selectOption("keyboard");
+    await expect(controlsMode).toHaveValue("keyboard");
+    await expect(grid).toHaveAttribute("aria-keyshortcuts", "S D F");
+    await expect(flag).toBeHidden();
+    await expect(question).toBeHidden();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true);
 
     await page.reload({ waitUntil: "domcontentloaded" });
     const reloadedApp = await openMinesweeper(page);
-    await expect(reloadedApp.getByRole("checkbox", { name: "Mobile controls?" })).not.toBeChecked();
+    await expect(reloadedApp.getByRole("combobox", { name: "Control mode" })).toHaveValue(
+      "keyboard"
+    );
+    await expect(reloadedApp.locator("#ms-grid")).toHaveAttribute(
+      "aria-keyshortcuts",
+      "S D F"
+    );
     await expect(reloadedApp.locator("#ms-flag-mode")).toBeHidden();
     await expect(reloadedApp.locator("#ms-question-mode")).toBeHidden();
   });

@@ -4758,10 +4758,11 @@ let tcpResultsIndex = 0;
 let ekgProjectIndex = 0;
 let droneVideoIndex = 0;
 let activeWindow = null;
+let suspendedActiveWindow = null;
 const comingSoonFocusReturns = new WeakMap();
 const expandedWindowState = new WeakMap();
 const FOCUS_RETURN_WINDOW_SELECTOR =
-  "[data-coming-soon-window], [data-launch-prompt-window]";
+  "[data-coming-soon-window], [data-launch-prompt-window], [data-focus-return-window]";
 const DIALOG_INITIAL_FOCUS_SELECTOR =
   "[data-dialog-initial-focus], [data-coming-soon-ok]";
 const VIDEO_EDITOR_PATH = "/video-editor/";
@@ -17857,6 +17858,7 @@ const bringWindowToFront = (win) => {
   if (!win || win.classList.contains("is-hidden")) return;
   if (activeWindow && activeWindow !== win) pauseMediaPlayback(activeWindow);
   activeWindow = win;
+  suspendedActiveWindow = null;
   win.style.zIndex = String(topZ++);
   playActiveAutoplayVideos(win);
   trackActiveAppDwell(win);
@@ -18325,6 +18327,7 @@ const setWindowOpen = (appId, open) => {
   stopMediaPlayback(win);
 
   if (activeWindow === win) activeWindow = null;
+  if (suspendedActiveWindow === win) suspendedActiveWindow = null;
   if (activeAppDwellWindow === win) clearActiveAppDwell();
 
   if (appId === "solitaire") {
@@ -18746,7 +18749,10 @@ const closeAppWindow = (appId) => {
     setAdministratorAuthenticationLayerElevated(false);
   }
   if (appId === "minesweeper") {
+    setWindowOpen("minesweeper-controls", false);
     msNewGame(msDifficulty ? msDifficulty.value : "beginner");
+  } else if (appId === "minesweeper-controls" && isWindowVisible(msWindow)) {
+    bringWindowToFront(msWindow);
   }
 };
 
@@ -28993,7 +28999,14 @@ snakeDirectionButtons.forEach((button) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (!isSnakeWindowVisible()) return;
+  const snakeWindow = getAppWindow("snake");
+  if (
+    !snakeWindow ||
+    activeWindow !== snakeWindow ||
+    !isWindowVisible(snakeWindow)
+  ) {
+    return;
+  }
   const target =
     event.target instanceof Element ? event.target : event.target?.parentElement;
   if (target?.matches("input, textarea, select")) return;
@@ -29089,12 +29102,20 @@ const msTime = document.getElementById("ms-time");
 const msReset = document.getElementById("ms-reset");
 const msFlagMode = document.getElementById("ms-flag-mode");
 const msQuestionMode = document.getElementById("ms-question-mode");
-const msMobileControls = document.getElementById("ms-mobile-controls");
+const msControlsMode = document.getElementById("ms-controls-mode");
+const msControlsHelp = document.getElementById("ms-controls-help");
 const msDifficulty = document.getElementById("ms-difficulty");
 const msLoseBanner = document.getElementById("ms-lose-banner");
 const msAchievement = document.getElementById("ms-achievement");
 const msBoard = document.querySelector("[data-app-window=\"minesweeper\"] .ms-board");
 const msHelp = document.getElementById("ms-help");
+const msWindow = msGrid?.closest('[data-app-window="minesweeper"]');
+
+const MS_KEYBOARD_ACTIONS = Object.freeze({
+  s: "click",
+  d: "question",
+  f: "flag",
+});
 
 const MS_CELL_NUMBER_SOURCES = Object.freeze(
   Array.from(
@@ -29304,6 +29325,20 @@ const msSetMobileControlsVisible = (isVisible) => {
   if (!visible) msSetMarkMode(null);
 };
 
+const msSetControlsMode = (mode) => {
+  const nextMode = ["keyboard", "mobile", "mouse"].includes(mode)
+    ? mode
+    : "keyboard";
+  if (msControlsMode) msControlsMode.value = nextMode;
+  msSetMobileControlsVisible(nextMode === "mobile");
+  if (!msGrid) return;
+  if (nextMode === "keyboard") {
+    msGrid.setAttribute("aria-keyshortcuts", "S D F");
+  } else {
+    msGrid.removeAttribute("aria-keyshortcuts");
+  }
+};
+
 const msStopTimer = () => {
   if (msState.timerId) {
     clearInterval(msState.timerId);
@@ -29434,6 +29469,23 @@ const msRenderCell = (index) => {
   const cell = msState.cells[index];
   const el = msState.elements[index];
   if (!cell || !el) return;
+  const row = Math.floor(index / msState.cols) + 1;
+  const column = (index % msState.cols) + 1;
+  let stateLabel = "covered";
+  if (cell.misflagged) {
+    stateLabel = "incorrectly flagged";
+  } else if (cell.revealed && cell.mine) {
+    stateLabel = cell.blown ? "triggered mine" : "mine";
+  } else if (cell.revealed && cell.adjacent > 0) {
+    stateLabel = `${cell.adjacent} adjacent ${cell.adjacent === 1 ? "mine" : "mines"}`;
+  } else if (cell.revealed) {
+    stateLabel = "revealed empty";
+  } else if (cell.flagged) {
+    stateLabel = "flagged";
+  } else if (cell.question) {
+    stateLabel = "maybe";
+  }
+  el.setAttribute("aria-label", `Row ${row}, column ${column}: ${stateLabel}`);
   el.className = "ms-cell";
   el.removeAttribute("data-number");
   el.textContent = "";
@@ -29467,6 +29519,8 @@ const msBuildGrid = () => {
   if (!msGrid) return;
   msGrid.innerHTML = "";
   msState.elements = [];
+  msGrid.setAttribute("aria-rowcount", String(msState.rows));
+  msGrid.setAttribute("aria-colcount", String(msState.cols));
   msGrid.style.gridTemplateColumns = `repeat(${msState.cols}, var(--ms-cell-size))`;
   msGrid.style.gridTemplateRows = `repeat(${msState.rows}, var(--ms-cell-size))`;
   for (let i = 0; i < msState.cols * msState.rows; i += 1) {
@@ -29475,6 +29529,12 @@ const msBuildGrid = () => {
     button.className = "ms-cell";
     button.setAttribute("data-index", String(i));
     button.setAttribute("role", "gridcell");
+    button.setAttribute("aria-rowindex", String(Math.floor(i / msState.cols) + 1));
+    button.setAttribute("aria-colindex", String((i % msState.cols) + 1));
+    button.setAttribute(
+      "aria-label",
+      `Row ${Math.floor(i / msState.cols) + 1}, column ${(i % msState.cols) + 1}: covered`
+    );
     msGrid.appendChild(button);
     msState.elements.push(button);
   }
@@ -29575,6 +29635,45 @@ const msChord = (index) => {
   });
 };
 
+const msKeyboardTargetIndex = () => {
+  if (!msGrid) return null;
+  const cell = msGrid.querySelector(".ms-cell:hover");
+  if (!cell) return null;
+  const index = Number(cell.getAttribute("data-index"));
+  if (!Number.isInteger(index) || msState.elements[index] !== cell) return null;
+  return index;
+};
+
+document.addEventListener("keydown", (event) => {
+  const action = MS_KEYBOARD_ACTIONS[event.key.toLowerCase()];
+  if (!action) return;
+  if (
+    event.defaultPrevented ||
+    event.repeat ||
+    event.isComposing ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    document.hidden ||
+    msState.gameOver ||
+    msControlsMode?.value !== "keyboard" ||
+    !msWindow ||
+    activeWindow !== msWindow ||
+    !isWindowVisible(msWindow) ||
+    (typeof document.hasFocus === "function" && !document.hasFocus())
+  ) {
+    return;
+  }
+  const index = msKeyboardTargetIndex();
+  if (index === null) return;
+  event.preventDefault();
+  if (action === "click") {
+    msHandleLeftClick(index);
+    return;
+  }
+  msToggleMark(index, action);
+});
+
 if (msGrid) {
   msGrid.addEventListener("click", (event) => {
     const cell = event.target.closest(".ms-cell");
@@ -29660,9 +29759,22 @@ if (msAchievement) {
 
 if (msHelp) {
   msHelp.addEventListener("click", () => {
+    const controlsWindow = getAppWindow("minesweeper-controls");
+    if (controlsWindow) comingSoonFocusReturns.set(controlsWindow, msHelp);
+    setWindowOpen("minesweeper-controls", true);
+    requestAnimationFrame(() => {
+      controlsWindow
+        ?.querySelector(DIALOG_INITIAL_FOCUS_SELECTOR)
+        ?.focus({ preventScroll: true });
+    });
+  });
+}
+
+if (msControlsHelp) {
+  msControlsHelp.addEventListener("click", () => {
     triggerRandomEvents("newTabLink", {
       href: "https://en.wikipedia.org/wiki/Minesweeper_(video_game)",
-      source: "minesweeper-help",
+      source: "minesweeper-controls-help",
     });
     window.open("https://en.wikipedia.org/wiki/Minesweeper_(video_game)", "_blank", "noopener,noreferrer");
   });
@@ -29674,15 +29786,14 @@ if (msDifficulty) {
   });
 }
 
-if (msMobileControls) {
-  msMobileControls.checked = false;
-  msMobileControls.addEventListener("change", () => {
-    msSetMobileControlsVisible(msMobileControls.checked);
+if (msControlsMode) {
+  msControlsMode.addEventListener("change", () => {
+    msSetControlsMode(msControlsMode.value);
   });
 }
 
 msSetMarkMode(null);
-msSetMobileControlsVisible(false);
+msSetControlsMode("keyboard");
 msNewGame("beginner");
 
 const solBoard = document.getElementById("sol-board");
@@ -30799,23 +30910,47 @@ document.addEventListener(
     }
     clearActiveAppDwell();
     activeWindow = null;
+    suspendedActiveWindow = null;
   },
   { capture: true }
 );
 
 const pauseActiveWindowMedia = () => {
   if (!activeWindow) return;
+  suspendedActiveWindow = activeWindow;
   pauseMediaPlayback(activeWindow);
   clearActiveAppDwell();
   activeWindow = null;
+};
+const restoreSuspendedActiveWindow = () => {
+  if (
+    activeWindow ||
+    !suspendedActiveWindow ||
+    document.hidden ||
+    (typeof document.hasFocus === "function" && !document.hasFocus())
+  ) {
+    return;
+  }
+  if (!isWindowVisible(suspendedActiveWindow)) {
+    suspendedActiveWindow = null;
+    return;
+  }
+  activeWindow = suspendedActiveWindow;
+  suspendedActiveWindow = null;
+  trackActiveAppDwell(activeWindow);
 };
 const defaultDocumentTitle = document.title || "Rohin OS";
 const awayDocumentTitle = "come back :(";
 
 window.addEventListener("blur", pauseActiveWindowMedia);
+window.addEventListener("focus", restoreSuspendedActiveWindow);
 document.addEventListener("visibilitychange", () => {
   document.title = document.hidden ? awayDocumentTitle : defaultDocumentTitle;
-  if (document.hidden) pauseActiveWindowMedia();
+  if (document.hidden) {
+    pauseActiveWindowMedia();
+  } else {
+    restoreSuspendedActiveWindow();
+  }
 });
 
 // if (clashRefresh) {
