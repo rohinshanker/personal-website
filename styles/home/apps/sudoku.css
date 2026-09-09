@@ -1070,6 +1070,10 @@
   backdrop-filter: blur(9px) saturate(170%);
 }
 
+.sudoku-row {
+  display: contents;
+}
+
 .sudoku-grid {
   --sudoku-board-size: calc(var(--sudoku-cell-size) * 9);
   background: rgba(255, 255, 255, 0.34);

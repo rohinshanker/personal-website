@@ -116,16 +116,18 @@ test("About Me provides the requested page structure and dated article", async (
     assert.match(
       about,
       new RegExp(
-        `class="about-degree-type"[\\s\\S]*?data-full-label="${fullLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?data-short-label="${shortLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?class="about-degree-field"[\\s\\S]*?aria-label="${field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`
+        `class="about-degree-type"[\\s\\S]*?data-full-label="${fullLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?data-short-label="${shortLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?class="about-degree-field"[\\s\\S]*?class="about-degree-field-track">${field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}<`
       )
     );
   }
   const berkeleySectionEnd = about.indexOf("</section>", berkeleyHeading);
   const berkeleySection = about.slice(berkeleyHeading, berkeleySectionEnd);
   assert.deepEqual(
-    [...berkeleySection.matchAll(/class="about-degree-field"[\s\S]*?aria-label="([^"]+)"/g)].map(
-      ([, label]) => label
-    ),
+    [
+      ...berkeleySection.matchAll(
+        /class="about-degree-field-track">([^<]+)</g
+      ),
+    ].map(([, label]) => label),
     [
       "Electrical Engineering &amp; Computer Science (EECS)",
       "Bioengineering",
@@ -140,6 +142,16 @@ test("About Me provides the requested page structure and dated article", async (
     "Every degree field must support measured overflow behavior"
   );
   assert.equal(about.match(/class="about-degree-field-track"/g)?.length, 4);
+  assert.doesNotMatch(
+    about,
+    /class="about-degree-field-track" aria-hidden="true"/,
+    "Degree field text must stay in the accessibility tree"
+  );
+  assert.doesNotMatch(
+    about,
+    /class="about-degree-field"[\s\S]{0,200}?aria-label=/,
+    "aria-label is prohibited on the plain span that wraps the degree field"
+  );
   assert.doesNotMatch(about, /about-degree-title/);
   assert.deepEqual(
     [...about.matchAll(/<li class="about-degree-card">\s*<img src="([^"]+)" alt=""/g)].map(

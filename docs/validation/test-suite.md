@@ -6,7 +6,7 @@ prioritized hardening backlog.
 Scope: Source and contract tests, browser UI tests, the Game Stats Worker and
 D1 boundary, generated artifacts, repository security checks, and CI wiring.
 
-Last verified: 2026-08-09
+Last verified: 2026-09-09
 
 ## Priority scale
 
@@ -95,13 +95,15 @@ desktop launchers, the About dialog, headings, regions, navigation, taskbar,
 and controls. The entry route logged no console errors. A direct local Home
 load made the configured production Game Stats request and logged two expected
 local-origin CORS/resource errors; this is direct evidence for the hermetic
-fixture requirement below. Automated axe coverage is not installed, so this
-review does not claim a complete accessibility audit.
+fixture requirement below. Automated axe coverage now exists, but scanning is
+not an audit, so this review still does not claim a complete accessibility
+audit.
 
 Rendered evidence is ephemeral under `.playwright-cli/`, including
 `test-suite-home-{mobile,tablet,desktop,wide}.png`. Playwright failure
-screenshots and traces are ephemeral under `test-results/`. No visual baseline
-was added or changed.
+screenshots and traces are ephemeral under `test-results/`. Committed visual
+baselines live under `tests/ui/__screenshots__/`; regenerate them only through
+[browser-visual-accessibility.md](browser-visual-accessibility.md).
 
 ## Coverage interpretation
 
@@ -165,11 +167,11 @@ that a state machine or user flow executes correctly.
    direct UI references. Add at least one `hasTouch` mobile project with real
    taps; resized desktop Chromium is not mobile-input coverage.
 
-6. **Add automated accessibility scanning.** Keep the existing semantic and
-   focus assertions, then add a small axe matrix for `index.html`, Home,
-   dialogs, game windows, and representative loading, empty, failure, and
-   success states. Add focused focus-trap checks and a small Firefox/WebKit
-   smoke matrix.
+6. **Extend accessibility scanning.** `tests/ui/accessibility.spec.mjs` now
+   runs `@axe-core/playwright` over the entry route, its alert dialog, the
+   About window, the Home desktop, and eight application windows; see
+   [browser-visual-accessibility.md](browser-visual-accessibility.md). Still
+   missing: focused focus-trap checks and a small Firefox/WebKit smoke matrix.
 
 ### P2
 
@@ -214,16 +216,10 @@ that a state machine or user flow executes correctly.
    narrow allowlists, random-event suppression, clean storage, console/page/
    request diagnostics, and explicit allowlists for intentional failures.
 
-2. **Make Playwright own and validate its server.** The fixed port and
-   `reuseExistingServer: !CI` in `playwright.config.mjs` can reuse a stale or
-   unrelated site and can invalidate a running suite if that process exits.
-   Use an environment-selectable port, prefer a test-owned server, verify the
-   served checkout, and expose server output on startup failure.
-
-3. **Tighten CI subset and flake safety.** Add
-   `forbidOnly: !!process.env.CI`. CI currently retries twice, which can hide
-   intermittent failure; fail the build on flaky tests or report and gate them
-   explicitly. Add workflow timeouts and cancellation of superseded runs.
+3. **Stop CI retries from hiding flakes.** `forbidOnly`, workflow timeouts,
+   and cancellation of superseded runs are in place. CI still retries twice,
+   which can hide intermittent failure; fail the build on flaky tests or
+   report and gate them explicitly.
 
 4. **Stabilize the two observed parallel failures.** In
    `tests/ui/neko-stream.spec.mjs`, `readNekoPoseMetrics` can call
@@ -271,10 +267,10 @@ that a state machine or user flow executes correctly.
    and programmatic `element.click()` calls. Keep narrow setup seams where
    necessary, but use public controls and Playwright actionability for usability
    claims.
-4. Choose an intentional visual-artifact policy. There are 57 unconditional
-   screenshot call sites, zero `toHaveScreenshot` assertions, and only seven
-   explicit attachments. Retain a small reviewed evidence set or add reviewed
-   visual baselines; rely on failure screenshots/traces for the rest.
+4. Reduce the 57 unconditional screenshot call sites. Reviewed
+   `toHaveScreenshot` baselines now cover the entry loader, its alert dialog,
+   the Home desktop, the About window, and two application windows; failure
+   screenshots and traces should carry the rest.
 5. Add meaningful production-module coverage thresholds after logic is
    extractable. Never gate on the current aggregate while the main browser
    controllers are absent.
@@ -340,6 +336,7 @@ before release:
 ```bash
 npm test
 npm run test:ui
+npm run test:visual
 node scripts/check-no-secrets.mjs
 node scripts/update-game-integrity.mjs --check
 node scripts/build-app-icon-manifest.mjs --check
@@ -355,6 +352,6 @@ failure.
 For UI changes, inspect the real route and applicable states at 375 x 812,
 768 x 1024, 1280 x 800, and 1440 x 900, plus nearby meaningful breakpoints.
 Check screenshots and semantic state, keyboard/focus behavior, overflow,
-console errors, page exceptions, and unexpected failed requests. Current
-Playwright screenshots and traces are ephemeral under `test-results/` and are
-not visual baselines.
+console errors, page exceptions, and unexpected failed requests. Playwright
+screenshots and traces under `test-results/` are ephemeral; the reviewed
+baselines under `tests/ui/__screenshots__/` are not.

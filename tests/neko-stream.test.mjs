@@ -147,8 +147,8 @@ test("Neko launchers expose one accessible context command above a non-interacti
   assert.doesNotMatch(styles, /\.neko-stream-cat\[data-mode=/);
   assert.match(styles, /\.neko-context-menu \{[\s\S]*?z-index: 10002;/);
   assert.match(styles, /\.neko-context-menu\[hidden\] \{\s*display: none;/);
-  assert.match(home, /styles\/home\/base\.css\?v=admin-launchers-20260803/);
-  assert.match(index, /styles\/home\/base\.css\?v=admin-launchers-20260803/);
+  assert.match(home, /styles\/home\/base\.css\?v=pinch-zoom-a11y-20260909/);
+  assert.match(index, /styles\/home\/base\.css\?v=pinch-zoom-a11y-20260909/);
   assert.doesNotMatch(main, /window\.__nekoStreamTest/);
 });
 

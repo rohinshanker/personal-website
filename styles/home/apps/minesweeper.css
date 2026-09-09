@@ -194,6 +194,10 @@
   justify-content: flex-start;
 }
 
+.ms-row {
+  display: contents;
+}
+
 .ms-grid {
   --ms-cell-size: 20px;
   display: grid;

@@ -30,9 +30,9 @@ test("Minesweeper has exclusive flag and question-mark placement controls", asyn
   );
   assert.match(home, /id="ms-flag-mode"[\s\S]*?hidden/);
   assert.match(home, /id="ms-question-mode"[\s\S]*?hidden/);
-  assert.match(home, /minesweeper\.css\?v=minesweeper-keyboard-controls-20260908/);
+  assert.match(home, /minesweeper\.css\?v=minesweeper-grid-rows-20260909/);
   assert.match(home, /main\.js\?v=game-build-[a-f0-9]{64}/);
-  assert.match(index, /minesweeper\.css\?v=minesweeper-keyboard-controls-20260908/);
+  assert.match(index, /minesweeper\.css\?v=minesweeper-grid-rows-20260909/);
   assert.match(index, /main\.js\?v=game-build-[a-f0-9]{64}/);
   assert.match(
     home,

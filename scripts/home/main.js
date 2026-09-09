@@ -898,6 +898,7 @@ const SNAKE_KEY_DIRECTIONS = Object.freeze({
 
 const SUDOKU_DIGITS = "123456789";
 const SUDOKU_CELL_COUNT = 81;
+const SUDOKU_ROW_COUNT = 9;
 const SUDOKU_STORAGE_KEY = "personalSiteSudokuStateV1";
 const SUDOKU_SAVE_DEBOUNCE_MS = 250;
 const SUDOKU_MAX_UNDO_STATES = 80;
@@ -20249,7 +20250,17 @@ const renderSudoku = () => {
   sudokuState.values = normalizeSudokuValues(sudokuState.values, puzzle);
   sudokuState.notes = normalizeSudokuNotesList(sudokuState.notes, puzzle);
 
+  // A grid must expose its cells through rows. `.sudoku-row` is
+  // `display: contents` so the board keeps its single 9x9 CSS grid.
   const fragment = document.createDocumentFragment();
+  const rowElements = Array.from({ length: SUDOKU_ROW_COUNT }, (unused, rowIndex) => {
+    const rowElement = document.createElement("div");
+    rowElement.className = "sudoku-row";
+    rowElement.setAttribute("role", "row");
+    rowElement.setAttribute("aria-rowindex", String(rowIndex + 1));
+    fragment.append(rowElement);
+    return rowElement;
+  });
   puzzle.split("").forEach((value, index) => {
     const cell = document.createElement("div");
     cell.className = "sudoku-cell";
@@ -20282,7 +20293,7 @@ const renderSudoku = () => {
     setSudokuCellValue(cell, index, sudokuState.values[index]);
     syncSudokuCellFeedback(cell, index);
     sudokuCellElements[index] = cell;
-    fragment.append(cell);
+    rowElements[Math.floor(index / SUDOKU_ROW_COUNT)].append(cell);
   });
   sudokuGrid.append(fragment);
 
@@ -29523,20 +29534,30 @@ const msBuildGrid = () => {
   msGrid.setAttribute("aria-colcount", String(msState.cols));
   msGrid.style.gridTemplateColumns = `repeat(${msState.cols}, var(--ms-cell-size))`;
   msGrid.style.gridTemplateRows = `repeat(${msState.rows}, var(--ms-cell-size))`;
-  for (let i = 0; i < msState.cols * msState.rows; i += 1) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "ms-cell";
-    button.setAttribute("data-index", String(i));
-    button.setAttribute("role", "gridcell");
-    button.setAttribute("aria-rowindex", String(Math.floor(i / msState.cols) + 1));
-    button.setAttribute("aria-colindex", String((i % msState.cols) + 1));
-    button.setAttribute(
-      "aria-label",
-      `Row ${Math.floor(i / msState.cols) + 1}, column ${(i % msState.cols) + 1}: covered`
-    );
-    msGrid.appendChild(button);
-    msState.elements.push(button);
+  // A grid must expose its cells through rows. `.ms-row` is `display: contents`
+  // so the board keeps its single CSS grid of cells.
+  for (let row = 0; row < msState.rows; row += 1) {
+    const rowElement = document.createElement("div");
+    rowElement.className = "ms-row";
+    rowElement.setAttribute("role", "row");
+    rowElement.setAttribute("aria-rowindex", String(row + 1));
+    for (let col = 0; col < msState.cols; col += 1) {
+      const index = row * msState.cols + col;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "ms-cell";
+      button.setAttribute("data-index", String(index));
+      button.setAttribute("role", "gridcell");
+      button.setAttribute("aria-rowindex", String(row + 1));
+      button.setAttribute("aria-colindex", String(col + 1));
+      button.setAttribute(
+        "aria-label",
+        `Row ${row + 1}, column ${col + 1}: covered`
+      );
+      rowElement.appendChild(button);
+      msState.elements.push(button);
+    }
+    msGrid.appendChild(rowElement);
   }
 };
 

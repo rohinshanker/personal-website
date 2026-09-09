@@ -4,7 +4,7 @@ Purpose: Repeatable repository quality gates and rendered UI validation.
 
 Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
 
-Last verified: 2026-08-06
+Last verified: 2026-09-09
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -61,8 +61,11 @@ node --test tests/app-icon-manifest.test.mjs
 
 ## Rendered UI
 
-For visible UI changes, serve the site locally and inspect the affected route,
-interactive states, and responsive viewports. Confirm page boot has no console
+For visible UI changes, run `npm run test:ui` and `npm run test:visual`, then
+serve the site locally and inspect the affected route, interactive states, and
+responsive viewports. Reference screenshots, WCAG scanning, and the container
+that regenerates baselines are documented in
+[browser-visual-accessibility.md](browser-visual-accessibility.md). Confirm page boot has no console
 errors, relevant controls remain keyboard accessible, and no overflow or
 layout regression appears at compact and desktop widths. Keep task-specific
 screenshots and observations in the active ticket; do not add them here unless

@@ -235,6 +235,7 @@
           <div
             class="progress-indicator segmented"
             role="progressbar"
+            aria-label="Rohin OS download progress"
             aria-valuemin="0"
             aria-valuemax="100"
             aria-valuenow="0"
@@ -315,23 +316,23 @@
       let timerId = null;
       let homeWarmupStarted = false;
       const homeWarmupResources = [
-        ["styles/home/base.css?v=admin-launchers-20260803", "style"],
-        ["styles/home/apps/minesweeper.css?v=minesweeper-keyboard-controls-20260908", "style"],
+        ["styles/home/base.css?v=pinch-zoom-a11y-20260909", "style"],
+        ["styles/home/apps/minesweeper.css?v=minesweeper-grid-rows-20260909", "style"],
         ["styles/home/apps/solitaire.css", "style"],
         ["styles/home/apps/snake.css", "style"],
-        ["styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722", "style"],
+        ["styles/home/apps/sudoku.css?v=sudoku-grid-rows-20260909", "style"],
         ["styles/home/apps/game-stats.css?v=name-caret-fit-20260808", "style"],
         ["styles/home/apps/life-counter.css?v=counter-project-glow-20260703", "style"],
         ["styles/home/portfolio.css?v=about-mobile-height-20260805", "style"],
         ["styles/home/study-resources.css", "style"],
         ["styles/home/random-events.css?v=bulk-system-alerts-20260811", "style"],
         ["styles/home/cursors.css?v=text-selection-cursor-20260810", "style"],
-        ["scripts/home/game-stats-backend.js?v=game-build-f96bb5125fb6b91aed4fe3e58b832d66b117d4ecc58065839142a593a4812791", "script"],
+        ["scripts/home/game-stats-backend.js?v=game-build-a99f5b285cfe22a66284b097a951c19f2ddac8b0185a81df0d1c10bd6f11e751", "script"],
         ["scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721", "script"],
         ["scripts/home/system-alerts.js?v=bulk-system-alerts-20260811", "script"],
-        ["scripts/home/core/dom.js?v=game-build-f96bb5125fb6b91aed4fe3e58b832d66b117d4ecc58065839142a593a4812791", "script"],
+        ["scripts/home/core/dom.js?v=game-build-a99f5b285cfe22a66284b097a951c19f2ddac8b0185a81df0d1c10bd6f11e751", "script"],
         ["scripts/home/core/media.js?v=hidden-carousel-playback-20260827", "script"],
-        ["scripts/home/main.js?v=game-build-f96bb5125fb6b91aed4fe3e58b832d66b117d4ecc58065839142a593a4812791", "script"],
+        ["scripts/home/main.js?v=game-build-a99f5b285cfe22a66284b097a951c19f2ddac8b0185a81df0d1c10bd6f11e751", "script"],
       ];
 
       const addHomeWarmupPrefetch = ([href, as]) => {

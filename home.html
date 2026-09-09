@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <title>Rohin OS</title>
     <meta
@@ -104,11 +104,11 @@
       }
     </script>
     <link rel="stylesheet" href="style.css?v=first-win-stats-handoff-20260722" />
-    <link rel="stylesheet" href="styles/home/base.css?v=admin-launchers-20260803" />
-    <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-keyboard-controls-20260908" />
+    <link rel="stylesheet" href="styles/home/base.css?v=pinch-zoom-a11y-20260909" />
+    <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-grid-rows-20260909" />
     <link rel="stylesheet" href="styles/home/apps/solitaire.css?v=solitaire-victory-scale-20260730" />
     <link rel="stylesheet" href="styles/home/apps/snake.css" />
-    <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-desktop-controls-20260722" />
+    <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-grid-rows-20260909" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=name-caret-fit-20260808" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=counter-project-glow-20260703" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=about-mobile-height-20260805" />
@@ -331,9 +331,8 @@
                             <span
                               class="about-degree-field"
                               data-about-degree-field
-                              aria-label="Biomedical Engineering"
                               title="Biomedical Engineering"
-                            ><span class="about-degree-field-track" aria-hidden="true">Biomedical Engineering</span></span>
+                            ><span class="about-degree-field-track">Biomedical Engineering</span></span>
                           </span>
                         </li>
                       </ul>
@@ -353,9 +352,8 @@
                             <span
                               class="about-degree-field"
                               data-about-degree-field
-                              aria-label="Electrical Engineering &amp; Computer Science (EECS)"
                               title="Electrical Engineering &amp; Computer Science (EECS)"
-                            ><span class="about-degree-field-track" aria-hidden="true">Electrical Engineering &amp; Computer Science (EECS)</span></span>
+                            ><span class="about-degree-field-track">Electrical Engineering &amp; Computer Science (EECS)</span></span>
                           </span>
                         </li>
                         <li class="about-degree-card">
@@ -370,9 +368,8 @@
                             <span
                               class="about-degree-field"
                               data-about-degree-field
-                              aria-label="Bioengineering"
                               title="Bioengineering"
-                            ><span class="about-degree-field-track" aria-hidden="true">Bioengineering</span></span>
+                            ><span class="about-degree-field-track">Bioengineering</span></span>
                           </span>
                         </li>
                         <li class="about-degree-card">
@@ -387,9 +384,8 @@
                             <span
                               class="about-degree-field"
                               data-about-degree-field
-                              aria-label="Entrepreneurship &amp; Technology (SCET)"
                               title="Entrepreneurship &amp; Technology (SCET)"
-                            ><span class="about-degree-field-track" aria-hidden="true">Entrepreneurship &amp; Technology (SCET)</span></span>
+                            ><span class="about-degree-field-track">Entrepreneurship &amp; Technology (SCET)</span></span>
                           </span>
                         </li>
                       </ul>
@@ -2020,7 +2016,7 @@
               <canvas class="snake-noise-canvas" id="snake-noise-canvas" aria-hidden="true"></canvas>
               <div class="snake-loading-panel" id="snake-loading-panel" aria-hidden="true">
                 <div class="snake-loading-title">Loading Snake</div>
-                <div class="snake-loading-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="snake-loading-meter" role="progressbar" aria-label="Snake asset loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                   <div class="snake-loading-meter-fill" id="snake-loading-meter-fill"></div>
                 </div>
                 <div class="snake-loading-status">
@@ -2202,6 +2198,7 @@
                   class="sudoku-loading-meter"
                   id="sudoku-loading-meter"
                   role="progressbar"
+                  aria-label="Sudoku puzzle generation progress"
                   aria-valuemin="0"
                   aria-valuemax="100"
                   aria-valuenow="0"
@@ -3670,8 +3667,8 @@
                   <span class="socials-username">@cloudstryder</span>
                 </span>
               </a> 
-            </li>
-            <li> -->
+            </li> -->
+            <li>
               <a href="https://link.clashroyale.com/invite/friend/en?tag=28CYYU08P&token=kb6jg2ap&platform=iOS" target="_blank" rel="noreferrer" title="Add me in Clash Royale">
                 <img class="socials-logo" data-src="assets/app-icons/ico/game_freecell.ico" alt="" />
                 <span>
@@ -4266,6 +4263,7 @@
           aria-valuemin="0"
           aria-valuemax="100"
           aria-valuenow="0"
+          aria-label="McAfee download progress"
           id="mcafee-progress"
         >
           <span class="progress-indicator-bar" id="mcafee-progress-bar"></span>
@@ -6512,6 +6510,7 @@
             aria-valuemin="0"
             aria-valuemax="100"
             aria-valuenow="0"
+            aria-label="Causality resistance progress"
             id="fate-progress"
           >
             <span class="progress-indicator-bar" id="fate-progress-bar"></span>
@@ -6581,6 +6580,7 @@
             aria-valuemin="0"
             aria-valuemax="100"
             aria-valuenow="0"
+            aria-label="Chainsaw clash progress"
             id="lancer-battle-progress"
           >
             <span class="progress-indicator-bar" id="lancer-battle-progress-bar"></span>
@@ -6730,12 +6730,12 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-f96bb5125fb6b91aed4fe3e58b832d66b117d4ecc58065839142a593a4812791"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-a99f5b285cfe22a66284b097a951c19f2ddac8b0185a81df0d1c10bd6f11e751"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
     <script src="scripts/home/system-alerts.js?v=bulk-system-alerts-20260811"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-f96bb5125fb6b91aed4fe3e58b832d66b117d4ecc58065839142a593a4812791"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-a99f5b285cfe22a66284b097a951c19f2ddac8b0185a81df0d1c10bd6f11e751"></script>
     <script src="scripts/home/core/media.js?v=hidden-carousel-playback-20260827"></script>
-    <script src="scripts/home/main.js?v=game-build-f96bb5125fb6b91aed4fe3e58b832d66b117d4ecc58065839142a593a4812791"></script>
+    <script src="scripts/home/main.js?v=game-build-a99f5b285cfe22a66284b097a951c19f2ddac8b0185a81df0d1c10bd6f11e751"></script>
     <script src="scripts/home/admin-controls.js?v=admin-seed-sequences-20260906"></script>
   </body>
 </html>

@@ -24,6 +24,19 @@ const sourceBetween = (source, startMarker, endMarker) => {
 
 const plainObject = (value) => JSON.parse(JSON.stringify(value));
 
+// Rendered Sudoku layout geometry lives in tests/ui/sudoku-desktop-layout.spec.mjs.
+// The cache-busting reference is a literal contract, so it stays a source test.
+test("Every entry point loads the current Sudoku stylesheet build", async () => {
+  const [home, index] = await Promise.all([
+    readFile(new URL("home.html", root), "utf8"),
+    readFile(new URL("index.html", root), "utf8"),
+  ]);
+  const reference = /styles\/home\/apps\/sudoku\.css\?v=sudoku-grid-rows-20260909/;
+
+  assert.match(home, reference);
+  assert.match(index, reference);
+});
+
 test("Sudoku exposes three checks, no reveal control, and an accessible Errors warning", async () => {
   const { home, dom, main } = await readSudokuSources();
   const hintOptions = sourceBetween(
