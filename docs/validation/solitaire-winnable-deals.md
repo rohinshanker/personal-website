@@ -1,35 +1,33 @@
 # Winnable Solitaire Deals
 
-Purpose: Keep every newly generated Solitaire deal provably winnable without a runtime search.
+Purpose: Generate random Solitaire deals and verify winning paths with a bounded runtime search.
 
-Scope: Solitaire deal generation, draw-one unlimited-redeal rules, constructive solution proof, browser interaction, and game-build integrity.
+Scope: Solitaire deal generation, draw-one unlimited-redeal rules, solver verification, browser interaction, and game-build integrity.
 
-Last verified: 2026-09-05
+Last verified: 2026-09-10
 
 ## Guarantee
 
-Every initial deal has at least one legal path that moves all 52 cards to the
-foundations. A player can still make choices that lose that path. The proof
-depends on the current draw-one stock and unlimited redeals; changing either
-rule requires a new construction and proof.
+`solBuildWinnableDeal` Fisher-Yates shuffles all 52 cards, deals standard
+1–7-card tableau columns with only each top card face-up, and leaves 24 cards
+face-down in the stock. It then asks `solFindWinningMoves` for a legal winning
+line. A verified deal has at least one path to all four King-topped
+foundations, although a player can still make choices that lose that path.
 
-`solBuildWinnableDeal` preserves the standard 1–7-card tableau shape and a
-24-card stock. It assigns the seven column lengths to the four suits with the
-partitions `[7]`, `[1, 6]`, `[2, 5]`, and `[3, 4]`. Each tableau column is a
-contiguous same-suit rank segment stored high-to-low, with only its lowest rank
-face-up. Six randomly distributed rank gaps per suit remain in the stock, and
-the 24 stock cards are shuffled.
+The perfect-information solver treats the draw-one, unlimited-redeal
+stock/waste cycle as an unordered set because every remaining stock card is
+reachable. It uses safe automatic foundation moves, prioritized tableau flips,
+sound move pruning, canonical visited-state keys, and depth-first search with a
+12,000-node cap per attempt. All attempts also consume a shared 40,000-node
+generation allowance, so repeated inconclusive searches cannot accumulate
+unbounded synchronous work. Foundation-to-tableau moves are deliberately
+omitted, so the solver can reject a winnable shuffle but cannot certify an
+illegal win.
 
-To construct a winning path, process each suit from Ace through King. The next
-rank is either:
-
-- the exposed top of its tableau segment, where moving it reveals the next
-  consecutive rank; or
-- in the stock/waste cycle, where draw-one plus unlimited redeals makes it
-  reachable as the waste top.
-
-No tableau-building move or foundation backmove is required. Generation is
-bounded and does not run a solver or rejection loop in the browser.
+Generation rejection-samples up to 12 independent shuffles, stopping early
+when the shared allowance is exhausted. If every bounded search is
+inconclusive, the last uniform random deal is returned with `verified: false`
+and `solution: null`; the old shaped constructive fallback is not used.
 
 ## Verification
 
@@ -40,17 +38,19 @@ node --test tests/solitaire-winnable-deals.test.mjs
 npx playwright test tests/ui/solitaire-winnable-deals.spec.mjs
 ```
 
-The source proof covers constant random boundaries and 2,000 seeded streams.
-For every deal it verifies all 52 canonical cards, the standard tableau and
-stock counts, face-up state, segment orientation, and one complete legal
-foundation sequence under the production stock orientation. It also checks
-determinism, diversity, and the fixed 53-call generation bound.
+The Node suite covers constant random boundaries and 500 seeded streams. It
+verifies all 52 canonical cards, standard tableau and stock shape, determinism,
+diversity, random-looking columns, first-shuffle and capped acceptance floors,
+the bounded unverified fallback, and every certified move with an independent
+draw-one/redeal rules simulator.
 
-The browser replay wins a deterministic deal through the public stock and card
-controls, reaches four King-topped foundations, triggers the normal victory
-state, and verifies Reset. The responsive matrix covers 375×812, 768×1024,
-1280×800, and 1440×900; the 640/641 CSS boundary should also be visually
-inspected when Solitaire styling changes.
+The browser replay computes a seeded production deal and solution in Node,
+then wins through public stock, card, tableau, and foundation controls. It
+reaches four King-topped foundations and verifies move tracking, Undo, Reset,
+the victory overlay, session requests, and the responsive matrix at 375×812,
+640×900, 641×900, 768×1024, 1280×800, and 1440×900. The replay move limit
+counts every solution move plus every stock draw or redeal and matches that
+total against the rendered move counter.
 
 For repository-wide validation, run:
 

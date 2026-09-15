@@ -30002,55 +30002,357 @@ const solShuffle = (cards, random = Math.random) => {
   return cards;
 };
 
-// Each suit owns seven tableau cards split across unique column lengths. Its
-// columns reveal consecutive ranks; ranks between those segments stay in stock.
-const solTableauSegmentGroups = [[7], [1, 6], [2, 5], [3, 4]];
+const solSolverNodeBudget = 12_000;
+const solGenerationNodeBudget = 40_000;
+const solDealAttemptCap = 12;
 
-const solDistributeRankGaps = (gapCount, slotCount, random) => {
-  const gaps = Array.from({ length: slotCount }, () => 0);
-  for (let gap = 0; gap < gapCount; gap += 1) {
-    gaps[Math.floor(random() * slotCount)] += 1;
+const solDealShuffledDeck = (random) => {
+  const deck = solShuffle(solBuildDeck(), random);
+  const tableau = [];
+  let deckIndex = 0;
+
+  for (let length = 1; length <= 7; length += 1) {
+    const column = deck.slice(deckIndex, deckIndex + length);
+    column.at(-1).faceUp = true;
+    tableau.push(column);
+    deckIndex += length;
   }
-  return gaps;
+
+  return { stock: deck.slice(deckIndex), tableau };
 };
 
-const solBuildWinnableDeal = (random = Math.random) => {
-  const deck = solBuildDeck();
-  const cardsById = new Map(deck.map((card) => [card.id, card]));
-  const tableau = Array.from({ length: 7 }, () => []);
-  const tableauCardIds = new Set();
-  const shuffledSuits = solShuffle([...solSuitOrder], random);
+const solSearchWinningMoves = (
+  deal,
+  nodeBudget,
+  generationWork = { nodes: 0, limit: nodeBudget }
+) => {
+  const cards = [...deal.stock, ...deal.tableau.flat()];
+  const cardIds = new Set(cards.map((card) => card.id));
+  const suitIndex = Object.fromEntries(
+    solSuitOrder.map((suit, index) => [suit, index])
+  );
+  const cardCode = new Map(cards.map((card, index) => [card.id, index]));
+  const codeCard = cards.map((card) => ({
+    id: card.id,
+    rank: card.rank,
+    suit: card.suit,
+    suitIndex: suitIndex[card.suit],
+    color: card.suit === "diamonds" || card.suit === "hearts" ? 1 : 0,
+  }));
+  const state = {
+    foundations: [0, 0, 0, 0],
+    stock: deal.stock.map((card) => cardCode.get(card.id)),
+    tableau: deal.tableau.map((column) => {
+      const firstFaceUp = column.findIndex((card) => card.faceUp);
+      return {
+        down: column.slice(0, firstFaceUp).map((card) => cardCode.get(card.id)),
+        up: column.slice(firstFaceUp).map((card) => cardCode.get(card.id)),
+      };
+    }),
+    path: null,
+  };
+  const visited = new Set();
+  let nodes = 0;
 
-  shuffledSuits.forEach((suit, groupIndex) => {
-    const segmentLengths = solShuffle(
-      [...solTableauSegmentGroups[groupIndex]],
-      random
-    );
-    const gaps = solDistributeRankGaps(
-      13 - segmentLengths.reduce((total, length) => total + length, 0),
-      segmentLengths.length + 1,
-      random
-    );
-    let firstRank = 1 + gaps[0];
-
-    segmentLengths.forEach((length, segmentIndex) => {
-      const column = [];
-      for (let rank = firstRank + length - 1; rank >= firstRank; rank -= 1) {
-        const card = cardsById.get(`${suit}-${rank}`);
-        card.faceUp = rank === firstRank;
-        column.push(card);
-        tableauCardIds.add(card.id);
-      }
-      tableau[length - 1] = column;
-      firstRank += length + gaps[segmentIndex + 1];
-    });
+  const cloneState = (current) => ({
+    foundations: [...current.foundations],
+    stock: [...current.stock],
+    tableau: current.tableau.map((column) => ({
+      down: [...column.down],
+      up: [...column.up],
+    })),
+    path: current.path,
   });
 
-  const stock = solShuffle(
-    deck.filter((card) => !tableauCardIds.has(card.id)),
-    random
-  );
-  return { stock, tableau };
+  const recordMove = (current, move) => {
+    current.path = { move, previous: current.path };
+  };
+
+  const flipTableauTop = (column) => {
+    if (!column.up.length && column.down.length) {
+      column.up.push(column.down.pop());
+    }
+  };
+
+  const canMoveToFoundation = (current, code) => {
+    const card = codeCard[code];
+    return current.foundations[card.suitIndex] + 1 === card.rank;
+  };
+
+  const isSafeFoundationMove = (current, code) => {
+    const card = codeCard[code];
+    if (card.rank <= 2) return true;
+    const oppositeSuitIndexes = card.color ? [0, 1] : [2, 3];
+    return oppositeSuitIndexes.every(
+      (index) => current.foundations[index] >= card.rank - 1
+    );
+  };
+
+  const moveTableauTopToFoundation = (current, columnIndex) => {
+    const column = current.tableau[columnIndex];
+    const code = column.up.pop();
+    const card = codeCard[code];
+    current.foundations[card.suitIndex] = card.rank;
+    recordMove(current, {
+      type: "toFoundation",
+      from: "tableau",
+      column: columnIndex,
+    });
+    flipTableauTop(column);
+  };
+
+  const moveStockToFoundation = (current, stockIndex) => {
+    const [code] = current.stock.splice(stockIndex, 1);
+    const card = codeCard[code];
+    current.foundations[card.suitIndex] = card.rank;
+    recordMove(current, {
+      type: "toFoundation",
+      from: "stock",
+      cardId: card.id,
+    });
+  };
+
+  const applySafeFoundationMoves = (current) => {
+    let moved = true;
+    while (moved) {
+      moved = false;
+      for (let columnIndex = 0; columnIndex < 7; columnIndex += 1) {
+        const column = current.tableau[columnIndex];
+        const code = column.up.at(-1);
+        if (
+          code !== undefined &&
+          canMoveToFoundation(current, code) &&
+          isSafeFoundationMove(current, code)
+        ) {
+          moveTableauTopToFoundation(current, columnIndex);
+          moved = true;
+          break;
+        }
+      }
+      if (moved) continue;
+
+      const stockIndex = current.stock.findIndex(
+        (code) =>
+          canMoveToFoundation(current, code) &&
+          isSafeFoundationMove(current, code)
+      );
+      if (stockIndex >= 0) {
+        moveStockToFoundation(current, stockIndex);
+        moved = true;
+      }
+    }
+  };
+
+  const encodeCodes = (codes) =>
+    String.fromCharCode(...codes.map((code) => 65 + code));
+
+  const stateKey = (current) => {
+    const stockKey = encodeCodes(
+      [...current.stock].sort((left, right) => left - right)
+    );
+    const columnKeys = current.tableau
+      .map(
+        (column) => `${encodeCodes(column.down)}/${encodeCodes(column.up)}`
+      )
+      .sort();
+    return `${encodeCodes(current.foundations)}|${stockKey}|${columnKeys.join("|")}`;
+  };
+
+  const canMoveRunToColumn = (current, code, targetIndex) => {
+    const target = current.tableau[targetIndex].up.at(-1);
+    const card = codeCard[code];
+    if (target === undefined) return card.rank === 13;
+    const targetCard = codeCard[target];
+    return card.color !== targetCard.color && card.rank + 1 === targetCard.rank;
+  };
+
+  const exposedTargetIsNeeded = (current, sourceIndex, startIndex) => {
+    const exposed = codeCard[current.tableau[sourceIndex].up[startIndex - 1]];
+    if (
+      current.foundations[exposed.suitIndex] + 1 === exposed.rank
+    ) {
+      return true;
+    }
+    const fitsExposed = (code) => {
+      const card = codeCard[code];
+      return card.color !== exposed.color && card.rank + 1 === exposed.rank;
+    };
+    if (current.stock.some(fitsExposed)) return true;
+    return current.tableau.some((column, columnIndex) => {
+      if (columnIndex === sourceIndex) return false;
+      return column.up.some((code) => fitsExposed(code));
+    });
+  };
+
+  const tableauMoves = (current) => {
+    const moves = [];
+    current.tableau.forEach((column, sourceIndex) => {
+      column.up.forEach((code, startIndex) => {
+        const isWholeRun = startIndex === 0;
+        if (
+          !isWholeRun &&
+          !exposedTargetIsNeeded(current, sourceIndex, startIndex)
+        ) {
+          return;
+        }
+
+        current.tableau.forEach((target, targetIndex) => {
+          if (targetIndex === sourceIndex) return;
+          if (!canMoveRunToColumn(current, code, targetIndex)) return;
+          if (
+            !target.up.length &&
+            !target.down.length &&
+            isWholeRun &&
+            !column.down.length &&
+            codeCard[code].rank === 13
+          ) {
+            return;
+          }
+          moves.push({
+            sourceIndex,
+            startIndex,
+            targetIndex,
+            flipsCard: isWholeRun && column.down.length > 0,
+          });
+        });
+      });
+    });
+    moves.sort((left, right) => Number(right.flipsCard) - Number(left.flipsCard));
+    return moves;
+  };
+
+  const stockTableauMoves = (current) => {
+    const moves = [];
+    current.stock.forEach((code, stockIndex) => {
+      current.tableau.forEach((column, targetIndex) => {
+        if (canMoveRunToColumn(current, code, targetIndex)) {
+          moves.push({ code, stockIndex, targetIndex });
+        }
+      });
+    });
+    return moves;
+  };
+
+  const search = (current) => {
+    if (nodes >= nodeBudget || generationWork.nodes >= generationWork.limit) {
+      return null;
+    }
+    applySafeFoundationMoves(current);
+    if (current.foundations.every((rank) => rank === 13)) {
+      const moves = [];
+      for (let step = current.path; step; step = step.previous) {
+        moves.push(step.move);
+      }
+      return moves.reverse();
+    }
+
+    const key = stateKey(current);
+    if (visited.has(key)) return null;
+    visited.add(key);
+    nodes += 1;
+    generationWork.nodes += 1;
+
+    for (let columnIndex = 0; columnIndex < 7; columnIndex += 1) {
+      const column = current.tableau[columnIndex];
+      const code = column.up.at(-1);
+      if (code !== undefined && canMoveToFoundation(current, code)) {
+        const next = cloneState(current);
+        moveTableauTopToFoundation(next, columnIndex);
+        const solution = search(next);
+        if (solution) return solution;
+      }
+    }
+
+    for (let stockIndex = 0; stockIndex < current.stock.length; stockIndex += 1) {
+      const code = current.stock[stockIndex];
+      if (canMoveToFoundation(current, code)) {
+        const next = cloneState(current);
+        moveStockToFoundation(next, stockIndex);
+        const solution = search(next);
+        if (solution) return solution;
+      }
+    }
+
+    const availableTableauMoves = tableauMoves(current);
+    const tryTableauMoves = (flipsCard) => {
+      for (const move of availableTableauMoves) {
+        if (move.flipsCard !== flipsCard) continue;
+        const next = cloneState(current);
+        const source = next.tableau[move.sourceIndex];
+        const moving = source.up.splice(move.startIndex);
+        next.tableau[move.targetIndex].up.push(...moving);
+        recordMove(next, {
+          type: "toTableau",
+          from: "tableau",
+          column: move.sourceIndex,
+          index: source.down.length + move.startIndex,
+          toColumn: move.targetIndex,
+        });
+        flipTableauTop(source);
+        const solution = search(next);
+        if (solution) return solution;
+        if (
+          nodes >= nodeBudget ||
+          generationWork.nodes >= generationWork.limit
+        ) {
+          return null;
+        }
+      }
+      return undefined;
+    };
+
+    const flipSolution = tryTableauMoves(true);
+    if (flipSolution) return flipSolution;
+
+    for (const move of stockTableauMoves(current)) {
+      const next = cloneState(current);
+      next.stock.splice(move.stockIndex, 1);
+      next.tableau[move.targetIndex].up.push(move.code);
+      recordMove(next, {
+        type: "toTableau",
+        from: "stock",
+        cardId: codeCard[move.code].id,
+        column: move.targetIndex,
+      });
+      const solution = search(next);
+      if (solution) return solution;
+      if (
+        nodes >= nodeBudget ||
+        generationWork.nodes >= generationWork.limit
+      ) {
+        break;
+      }
+    }
+
+    const rearrangeSolution = tryTableauMoves(false);
+    if (rearrangeSolution) return rearrangeSolution;
+    return null;
+  };
+
+  if (cardIds.size !== 52) return null;
+  return search(state);
+};
+
+const solFindWinningMoves = (deal, nodeBudget = solSolverNodeBudget) =>
+  solSearchWinningMoves(deal, nodeBudget);
+
+const solBuildWinnableDeal = (random = Math.random) => {
+  let deal = null;
+  const generationWork = { nodes: 0, limit: solGenerationNodeBudget };
+  for (
+    let attempt = 0;
+    attempt < solDealAttemptCap && generationWork.nodes < generationWork.limit;
+    attempt += 1
+  ) {
+    deal = solDealShuffledDeck(random);
+    const solution = solSearchWinningMoves(
+      deal,
+      solSolverNodeBudget,
+      generationWork
+    );
+    if (solution) return { ...deal, solution, verified: true };
+  }
+  return { ...deal, solution: null, verified: false };
 };
 
 const solCloneCards = (cards) => cards.map((card) => ({ ...card }));
