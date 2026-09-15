@@ -4,7 +4,7 @@ Purpose: Controlled Cloudflare Worker and D1 release, security, production verif
 
 Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
 
-Last verified: 2026-09-06
+Last verified: 2026-09-10
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -28,7 +28,8 @@ or high-stakes game.
   accepts only the exact production origin and intentionally rejects localhost.
 - New sessions require an accepted browser build. A valid signed, D1-backed
   session issued before a deployment remains usable until expiry while invalid
-  build, issue-time, config, IP, expiry, or signature state fails closed.
+  build, issue-time, config, expiry, or signature state fails closed. The
+  client address may change during a game; it is not part of validation.
 - D1 migrations are intentionally manual. Check for pending migrations before
   each release; do not apply one when a browser-only change uses the existing
   event schema.
@@ -53,8 +54,9 @@ game completion
 Administrator sign-in
   -> POST /administrator/sign-in from the exact allowed browser origin
   -> keyed-IP limit (five attempts per 15 minutes) + constant-time credential checks
-  -> one-hour, IP-bound, server-HMAC-signed proof held in session storage for one browser tab
-  -> protected profile events require that proof
+  -> one-hour, server-HMAC-signed proof held in session storage for one browser tab
+  -> protected profile events require that proof; a rejected proof answers 403 with
+     code "administrator-authorization" so the browser can renew sign-in once
 ```
 
 This is defense in depth, not proof of gameplay. The browser, its JavaScript,
@@ -63,7 +65,12 @@ read or changed by the visitor. An attacker can also automate a real browser
 and request a valid session. Server-held HMAC keys, a single-use session,
 timestamp/config checks, bounded metrics, rate limits, and Turnstile make
 casual forgery and bulk spam harder, but cannot prove that a game was honestly
-completed. Ordinary public profile IDs also do not prove account ownership.
+completed. The keyed client-IP hash feeds only rate limiting and is recorded on
+each session for abuse review; sessions and Administrator proofs are
+deliberately not bound to the request address, because mobile carriers,
+dual-stack networks, and privacy relays change it between game start,
+sign-in, and publish, and a visitor can already request a session from any
+address. Ordinary public profile IDs also do not prove account ownership.
 Treat these as moderation-grade public stats. A competitive system would
 require authenticated profiles plus authoritative server-side game simulation
 or a server-validated deterministic seed and input replay.
@@ -452,15 +459,76 @@ proof that expires one hour after issuance. The browser must keep that proof in
 session storage for the current tab only, never in local storage, cookies, a
 URL, analytics, or logs. This lets a refreshed deployed page finish saving a
 valid, queued protected-profile completion. It is still an expiring bearer
-proof, not a credential: the Worker checks its expiry and IP binding, and a
-reset, a new tab, or expiry requires another sign-in. The Worker requires
+proof, not a credential: the Worker checks its signature, scope, and expiry,
+and a reset, a new tab, or expiry requires another sign-in. The Worker requires
 `Authorization: Bearer <proof>` before accepting any event for the protected
 profile; ordinary profiles retain the normal session flow.
+
+Every rejected proof (missing, malformed, tampered, expired, or wrong profile
+identity) returns `403` with `code: "administrator-authorization"` before the
+game session is read. A `403` without that code is a rejected game session
+(tampered token, stored-row mismatch, expiry, or origin) and must never be
+treated as a lost proof. The browser applies exactly this contract in its
+sync pass:
+
+- A `403` for the protected profile with no proof attached keeps the result
+  queued and opens sign-in.
+- A coded rejection of a presented proof clears the proof, increments the
+  queued result's `proofRejections`, and renews sign-in only while that count
+  is at most `GAME_STATS_MAX_ADMINISTRATOR_PROOF_RETRIES` (one renewal).
+- Every coded rejection clears the presented proof. A proof rejected again
+  after renewal drops the queued result with the
+  `could not pass server verification` notice while keeping the local win.
+- Any other `403` drops the queued result the same way but keeps the current
+  proof, because the game session, not the sign-in, was rejected.
+- A queued result whose protected identity is not the canonical name and icon
+  is dropped before any request; no credential can repair it.
+- The proof still carries the keyed IP hash from sign-in as informational
+  data so a rolled-back Worker revision keeps accepting new proofs from the
+  same address; the current Worker does not compare it.
 
 The one-hour lifetime applies only to proofs issued after the updated Worker is
 deployed. Previously issued proofs retain the expiry embedded in their signed
 payload, including the former ten-minute lifetime; neither a browser refresh
 nor the deployment extends them.
+
+## Repair Guide: Administrator Sign-In Loop After A Protected Result
+
+Symptoms: after completing a game as the protected profile, the sign-in window
+reopens after every successful sign-in, the stats row stays on
+`Waiting for authentication...` while the dialog is open, the sign-in rate
+limit (`429`) eventually fires, the win is missing from global stats, and D1
+shows the game's session with `consumed_at = NULL`, an
+`administrator-sign-in:` bucket at its limit, and no `events:` bucket.
+
+Root cause (fixed 2026-09-10): session and proof validation compared the
+keyed client-IP hash from the current request with the one captured at issue
+time. A client whose address changed mid-game received `403` from the session
+check, and the browser treated every protected-profile `403` as a rejected
+proof, cleared it, and reopened sign-in indefinitely.
+
+Durable fix: the Worker no longer compares the request address for sessions
+or proofs and tags proof rejections with `code: "administrator-authorization"`;
+the browser reopens sign-in only for a missing or coded proof rejection,
+renews a rejected proof once per queued result, and otherwise records a
+server-verification rejection.
+
+Regression checks:
+
+```bash
+node --test tests/game-stats-worker.test.mjs \
+  tests/game-stats-administrator-publish.test.mjs \
+  tests/administrator-sign-in.test.mjs
+npx playwright test tests/ui/solitaire-publish-flow.spec.mjs \
+  -g "rejected Administrator"
+```
+
+Read-only diagnosis from the Worker directory when the symptom recurs:
+
+```bash
+npx wrangler d1 execute personal_site_game_stats --remote --json --command \
+  "SELECT game, issued_at, consumed_at, substr(ip_hash,1,6) AS ip FROM game_stat_sessions ORDER BY issued_at DESC LIMIT 10; SELECT substr(bucket,1,22) AS bucket, request_count, window_started_at FROM game_stats_rate_limits ORDER BY window_started_at DESC LIMIT 10;"
+```
 
 ## Production Turnstile
 

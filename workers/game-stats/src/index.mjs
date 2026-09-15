@@ -138,12 +138,20 @@ WHERE type = 'table'
 `;
 
 class HttpError extends Error {
-  constructor(status, message, { retryAfterMs = 0 } = {}) {
+  constructor(status, message, { retryAfterMs = 0, code = "" } = {}) {
     super(message);
     this.status = status;
     this.retryAfterMs = retryAfterMs;
+    this.code = code;
   }
 }
+
+// Machine-readable reason attached to every rejected Administrator proof so the
+// browser can renew its sign-in instead of treating other 403s as a lost proof.
+const ADMINISTRATOR_AUTHORIZATION_ERROR_CODE = "administrator-authorization";
+
+const administratorAuthorizationError = (message = "Administrator authorization is invalid") =>
+  new HttpError(403, message, { code: ADMINISTRATOR_AUTHORIZATION_ERROR_CODE });
 
 const isPlainObject = (value) =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -1064,6 +1072,8 @@ const readAdministratorCredentials = (payload) => {
   return { username: payload.username, password: payload.password };
 };
 
+// `ipHash` is informational only: it keeps a new proof usable by an earlier
+// Worker revision during a rollback and is not compared when validating.
 const createAdministratorProof = async (security, ipHash) => {
   const issuedAt = new Date();
   const expiresAt = new Date(issuedAt.getTime() + ADMINISTRATOR_SESSION_TTL_MS);
@@ -1117,37 +1127,38 @@ const createAdministratorSignIn = async (request, env, payload) => {
 const readAdministratorProof = (request) => {
   const authorization = String(request.headers.get("Authorization") || "");
   const match = /^Bearer ([A-Za-z0-9_.-]+)$/.exec(authorization);
-  if (!match) throw new HttpError(403, "Administrator authorization is invalid");
+  if (!match) throw administratorAuthorizationError();
   return match[1];
 };
 
+// The proof is a signed, expiring bearer token for one browser tab. It is not
+// bound to the client IP: mobile carriers, dual-stack networks, and privacy
+// relays legitimately change the visible address between sign-in and publish.
 const validateAdministratorEventProof = async (request, env, event) => {
   if (event.profile?.id !== ADMINISTRATOR_PROFILE_ID) return;
   if (
     event.profile.name !== ADMINISTRATOR_PROFILE.name ||
     event.profile.icon !== ADMINISTRATOR_PROFILE.icon
   ) {
-    throw new HttpError(403, "Administrator profile is invalid");
+    throw administratorAuthorizationError("Administrator profile is invalid");
   }
 
   const security = requireAdministratorSecurityConfig(env);
-  const ipHash = await hmacDigest(security.ipHashSecret, getClientIp(request));
   let proof;
   try {
     proof = await verifySessionToken(security.sessionSigningSecret, readAdministratorProof(request));
   } catch {
-    throw new HttpError(403, "Administrator authorization is invalid");
+    throw administratorAuthorizationError();
   }
   const expiresAt = Date.parse(String(proof.expiresAt || ""));
   if (
     proof.version !== 1 ||
     proof.scope !== "administrator" ||
     proof.profileId !== ADMINISTRATOR_PROFILE_ID ||
-    proof.ipHash !== ipHash ||
     !Number.isFinite(expiresAt) ||
     expiresAt <= Date.now()
   ) {
-    throw new HttpError(403, "Administrator authorization is invalid");
+    throw administratorAuthorizationError();
   }
 };
 
@@ -1211,11 +1222,14 @@ const validateSession = async (request, env, event, rawSession) => {
   const sessionId = String(rawSession.id || "").trim();
   if (!/^[A-Za-z0-9-]{8,80}$/.test(sessionId)) throw new HttpError(400, "Invalid session id");
   const tokenPayload = await verifySessionToken(security.signingSecret, rawSession.token);
+  // The keyed IP hash only feeds rate limiting. A session stays valid when the
+  // client address changes during a game; the signed token, stored row,
+  // single-use consumption, and expiry still bind the result to its session.
   const ipHash = await hmacDigest(security.ipHashSecret, getClientIp(request));
   if (
     tokenPayload.id !== sessionId ||
     tokenPayload.game !== event.game ||
-    tokenPayload.ipHash !== ipHash ||
+    typeof tokenPayload.ipHash !== "string" ||
     !isPlainObject(tokenPayload.config)
   ) {
     throw new HttpError(403, "Session proof does not match this result");
@@ -1234,7 +1248,7 @@ const validateSession = async (request, env, event, rawSession) => {
   if (
     session.game !== event.game ||
     session.build_version !== tokenPayload.buildVersion ||
-    session.ip_hash !== ipHash ||
+    session.ip_hash !== tokenPayload.ipHash ||
     session.config_json !== JSON.stringify(tokenPayload.config) ||
     session.issued_at !== tokenPayload.issuedAt ||
     session.expires_at !== tokenPayload.expiresAt ||
@@ -1362,10 +1376,16 @@ const errorResponse = (request, env, error) => {
     error instanceof HttpError && Number.isSafeInteger(error.retryAfterMs)
       ? Math.max(0, Math.min(error.retryAfterMs, MAX_RETRY_AFTER_MS))
       : 0;
+  const code = error instanceof HttpError && error.code ? error.code : "";
   return jsonResponse(
     request,
     env,
-    { ok: false, error: message, ...(retryAfterMs ? { retryAfterMs } : {}) },
+    {
+      ok: false,
+      error: message,
+      ...(code ? { code } : {}),
+      ...(retryAfterMs ? { retryAfterMs } : {}),
+    },
     status,
     retryAfterMs
       ? {

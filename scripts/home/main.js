@@ -1045,6 +1045,12 @@ const GAME_STATS_PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
 const GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX = 999_999;
 const GAME_STATS_MAX_SYNC_QUEUE_LENGTH = 100;
+// The Worker attaches this code to every rejected Administrator proof. Any other
+// 403 is a rejected game session and must not reopen sign-in.
+const GAME_STATS_ADMINISTRATOR_AUTHORIZATION_ERROR_CODE = "administrator-authorization";
+// A presented proof that the Worker rejects is renewed at most this many times
+// per queued result, so a persistent rejection cannot become a sign-in loop.
+const GAME_STATS_MAX_ADMINISTRATOR_PROOF_RETRIES = 1;
 const GAME_STATS_API_TIMEOUT_MS = 8000;
 const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 60;
 const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 2000;
@@ -1686,9 +1692,12 @@ const normalizeGameStatsSubmission = (rawSubmission) => {
   if (!rawSubmission || typeof rawSubmission !== "object") return null;
   const event = normalizeGameStatsEvent(rawSubmission.event);
   if (!event) return null;
+  const proofRejections = rawSubmission.proofRejections;
   return {
     event,
     session: normalizeGameStatsSession(rawSubmission.session),
+    proofRejections:
+      Number.isSafeInteger(proofRejections) && proofRejections > 0 ? proofRejections : 0,
   };
 };
 
@@ -1766,6 +1775,7 @@ const readGameStatsApiJson = async (response) => {
     const message = String(payload?.error || `Game stats request failed (${response.status})`);
     const error = new Error(message);
     error.status = response.status;
+    error.code = typeof payload?.code === "string" ? payload.code : "";
     throw error;
   }
   return payload;
@@ -2769,7 +2779,7 @@ const createGameProgressProfile = async () => {
 
 const queueGameStatsSubmission = (event, session) => {
   if (!session) return false;
-  gameStatsSubmissionQueue.push({ event, session });
+  gameStatsSubmissionQueue.push({ event, session, proofRejections: 0 });
   if (gameStatsSubmissionQueue.length > GAME_STATS_MAX_SYNC_QUEUE_LENGTH) {
     gameStatsSubmissionQueue = gameStatsSubmissionQueue.slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
   }
@@ -2977,10 +2987,21 @@ const runGameStatsSyncPass = async () => {
       rejectedCount += 1;
       continue;
     }
+    if (
+      submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
+      !isGameStatsAdministratorProfile(submission.event.profile)
+    ) {
+      // No proof is ever attached to a non-canonical protected identity and the
+      // Worker always rejects it, so asking for credentials could never help.
+      rejectedCount += 1;
+      continue;
+    }
+    const administratorHeaders = getAdministratorEventHeaders(submission.event.profile);
+    const sentAdministratorProof = Boolean(administratorHeaders.Authorization);
     try {
       const response = await fetchGameStatsApi("/events", {
         method: "POST",
-        headers: getAdministratorEventHeaders(submission.event.profile),
+        headers: administratorHeaders,
         body: JSON.stringify({
           event: {
             ...submission.event,
@@ -2995,16 +3016,30 @@ const runGameStatsSyncPass = async () => {
       await readGameStatsApiJson(response);
       markGameStatsEventConfirmed(submission.event);
     } catch (error) {
+      const status = Number(error?.status);
       if (
         submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
-        Number(error?.status) === 403
+        status === 403
       ) {
-        clearGameStatsAdministratorProof();
-        waitingForAdministratorAuthorizationCount += 1;
-        remainingSubmissions.push(submission);
-        continue;
+        const proofRejected =
+          sentAdministratorProof &&
+          error?.code === GAME_STATS_ADMINISTRATOR_AUTHORIZATION_ERROR_CODE;
+        if (proofRejected) {
+          submission.proofRejections = (submission.proofRejections || 0) + 1;
+          clearGameStatsAdministratorProof();
+        }
+        if (
+          !sentAdministratorProof ||
+          (proofRejected &&
+            submission.proofRejections <= GAME_STATS_MAX_ADMINISTRATOR_PROOF_RETRIES)
+        ) {
+          waitingForAdministratorAuthorizationCount += 1;
+          remainingSubmissions.push(submission);
+          continue;
+        }
+        // Any other 403 is a rejected game session, not a lost proof. Keep the
+        // proof, stop asking for credentials, and keep the result locally.
       }
-      const status = Number(error?.status);
       if (
         status >= 400 &&
         status < 500 &&

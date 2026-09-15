@@ -92,8 +92,18 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
   );
   assert.match(
     main,
-    /Number\(error\?\.status\) === 403\s*\) \{\s*clearGameStatsAdministratorProof\(\);\s*waitingForAdministratorAuthorizationCount \+= 1;/,
+    /if \(proofRejected\) \{\s*submission\.proofRejections = \(submission\.proofRejections \|\| 0\) \+ 1;\s*clearGameStatsAdministratorProof\(\);/,
     "A rejected Administrator proof must stop authorizing Admin Controls before reauthentication."
+  );
+  assert.match(
+    main,
+    /error\?\.code === GAME_STATS_ADMINISTRATOR_AUTHORIZATION_ERROR_CODE/,
+    "Only a Worker-coded proof rejection may renew Administrator sign-in for a presented proof."
+  );
+  assert.match(
+    main,
+    /submission\.proofRejections <= GAME_STATS_MAX_ADMINISTRATOR_PROOF_RETRIES/,
+    "A persistently rejected proof must stop reopening sign-in."
   );
   assert.doesNotMatch(
     main,

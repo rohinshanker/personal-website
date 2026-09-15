@@ -1139,3 +1139,286 @@ for (const viewport of viewports) {
     ).toEqual([]);
   });
 }
+
+/**
+ * Scripted `/events` responder for the protected profile. `respond` receives
+ * the request count and the presented Authorization header and returns the
+ * response body/status. Each sign-in issues a distinct proof so the browser's
+ * retry can be observed.
+ */
+const installAdministratorRejectionApi = async (page, respond) => {
+  const eventRequests = [];
+  const signInRequests = [];
+  const corsHeaders = {
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Origin": "*",
+  };
+
+  await page.route(`${API_BASE_URL}/**`, async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname === "/sessions") {
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify({
+          id: "session-solitaire-rejection-0001",
+          token: "session-solitaire-rejection-token",
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        }),
+      });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname === "/events") {
+      const authorization = request.headers().authorization || "";
+      eventRequests.push({ authorization, body: JSON.parse(request.postData() || "{}") });
+      const { status, body } = respond(eventRequests.length, authorization);
+      await route.fulfill({
+        status,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify(body),
+      });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname === "/administrator/sign-in") {
+      signInRequests.push(JSON.parse(request.postData() || "{}"));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: true,
+          profile: administratorProfile,
+          proof: `${"f".repeat(32)}.${String(signInRequests.length).padStart(32, "0")}`,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        }),
+      });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname === "/stats") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify({
+          generatedAt: new Date().toISOString(),
+          totals: {},
+          leaderboards: {},
+          playerRanks: {},
+          playerRecords: {},
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      headers: corsHeaders,
+      body: JSON.stringify({ ok: false, error: "Unexpected test route" }),
+    });
+  });
+
+  return { eventRequests, signInRequests };
+};
+
+const prepareSignedInAdministrator = async (page, viewport) => {
+  await page.setViewportSize(viewport);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(
+    ({ activeProof, felizJuevesKey, profileKey, proofKey, queueKey, savedProfile, statsKey }) => {
+      Math.random = () => 0.999999;
+      localStorage.clear();
+      sessionStorage.clear();
+      const now = new Date();
+      localStorage.setItem(
+        felizJuevesKey,
+        [
+          now.getFullYear(),
+          String(now.getMonth() + 1).padStart(2, "0"),
+          String(now.getDate()).padStart(2, "0"),
+        ].join("-")
+      );
+      localStorage.setItem(profileKey, JSON.stringify(savedProfile));
+      localStorage.removeItem(queueKey);
+      localStorage.removeItem(statsKey);
+      sessionStorage.setItem(proofKey, JSON.stringify(activeProof));
+    },
+    {
+      activeProof: {
+        proof: administratorProof,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      },
+      felizJuevesKey: FELIZ_JUEVES_SHOWN_KEY,
+      profileKey: PROFILE_STORAGE_KEY,
+      proofKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
+      queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+      savedProfile: administratorProfile,
+      statsKey: GAME_STATS_STORAGE_KEY,
+    }
+  );
+  await installBackendConfig(page);
+  await installMainBridge(page);
+};
+
+/**
+ * Starts a verified Solitaire game with its stats window already open, so the
+ * status row shows the publish outcome instead of a later refresh, then wins.
+ */
+const completeSolitaireGameWithStatsOpen = async (page) => {
+  await page.goto("/home.html");
+  const aboutClose = page.locator('#about-window [data-close="about"]');
+  if (await aboutClose.isVisible()) await aboutClose.click();
+  await page.locator('.desktop-icon[data-app="solitaire"]').click();
+  const solitaireWindow = page.locator('[data-app-window="solitaire"]');
+  await expect(solitaireWindow).toBeVisible();
+  await expect(solitaireWindow).not.toHaveClass(/is-opening/);
+  await solitaireWindow.locator("#sol-stock").click();
+  await solitaireWindow.locator('[data-game-stats-open="solitaire"]').click();
+  const statsWindow = page.locator("#game-stats-window-solitaire");
+  await expect(statsWindow).toBeVisible();
+  await expect(statsWindow).not.toHaveClass(/is-opening/);
+  await page.evaluate(() => window.__solitairePublishFlowTest.triggerWin());
+  return statsWindow;
+};
+
+const readStoredPublishState = (page) =>
+  page.evaluate(
+    ({ proofKey, queueKey, statsKey }) => ({
+      proof: JSON.parse(sessionStorage.getItem(proofKey) || "null")?.proof || null,
+      queue: JSON.parse(localStorage.getItem(queueKey) || "[]"),
+      solitaireWins: JSON.parse(localStorage.getItem(statsKey) || "null")?.totals?.solitaire
+        ?.wins,
+    }),
+    {
+      proofKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
+      queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+      statsKey: GAME_STATS_STORAGE_KEY,
+    }
+  );
+
+const rejectionViewports = Object.freeze([viewports[0], viewports[2]]);
+const REJECTED_RESULT_STATUS =
+  "Local stats are saved, but a result could not pass server verification.";
+
+for (const viewport of rejectionViewports) {
+  test(`a rejected Administrator game session keeps the proof and never reopens sign-in at ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    const runtimeErrors = collectRuntimeErrors(page);
+    await prepareSignedInAdministrator(page, viewport);
+    const api = await installAdministratorRejectionApi(page, () => ({
+      status: 403,
+      body: { ok: false, error: "Session proof does not match this result" },
+    }));
+
+    const statsWindow = await completeSolitaireGameWithStatsOpen(page);
+    await expect.poll(() => api.eventRequests.length).toBe(1);
+    expect(api.eventRequests[0].authorization).toBe(`Bearer ${administratorProof}`);
+
+    await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
+      REJECTED_RESULT_STATUS
+    );
+    await expect(page.locator("#administrator-window")).toBeHidden();
+    expect(api.signInRequests).toEqual([]);
+    expect(api.eventRequests).toHaveLength(1);
+
+    const stored = await readStoredPublishState(page);
+    expect(stored.proof).toBe(administratorProof);
+    expect(stored.queue).toEqual([]);
+    expect(stored.solitaireWins).toBe(1);
+
+    await expect(statsWindow.locator("[data-game-stats-refresh]")).toBeEnabled();
+    const layout = await statsWindow.evaluate((windowElement) => ({
+      bodyOverflows:
+        windowElement.querySelector(".window-body").scrollWidth >
+        windowElement.querySelector(".window-body").clientWidth,
+      documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
+    }));
+    expect(layout.bodyOverflows).toBe(false);
+    expect(layout.documentOverflows).toBe(false);
+    await page.screenshot({
+      fullPage: true,
+      path: testInfo.outputPath(`administrator-session-rejected-${viewport.name}.png`),
+    });
+    expect(runtimeErrors.pageErrors).toEqual([]);
+    expect(
+      runtimeErrors.consoleErrors.filter((message) => !/403 \(Forbidden\)/.test(message))
+    ).toEqual([]);
+  });
+
+  test(`a persistently rejected Administrator proof renews sign-in once and then stops at ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    const runtimeErrors = collectRuntimeErrors(page);
+    await prepareSignedInAdministrator(page, viewport);
+    const api = await installAdministratorRejectionApi(page, () => ({
+      status: 403,
+      body: {
+        ok: false,
+        error: "Administrator authorization is invalid",
+        code: "administrator-authorization",
+      },
+    }));
+
+    const statsWindow = await completeSolitaireGameWithStatsOpen(page);
+    await expect.poll(() => api.eventRequests.length).toBe(1);
+    expect(api.eventRequests[0].authorization).toBe(`Bearer ${administratorProof}`);
+
+    const administratorWindow = page.locator("#administrator-window");
+    await expect(administratorWindow).toBeVisible();
+    await expect(administratorWindow).not.toHaveClass(/is-opening/);
+    await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
+      "Waiting for authentication..."
+    );
+    let stored = await readStoredPublishState(page);
+    expect(stored.proof).toBeNull();
+    expect(stored.queue).toHaveLength(1);
+    expect(stored.queue[0].proofRejections).toBe(1);
+    await page.screenshot({
+      fullPage: true,
+      path: testInfo.outputPath(`administrator-proof-rejected-signin-${viewport.name}.png`),
+    });
+
+    await page.locator("#administrator-username").fill("test-only-administrator");
+    await page.locator("#administrator-password").fill("test-only-password");
+    await page.locator("#administrator-sign-in").click();
+    await expect(page.locator("#administrator-alert-window")).toBeVisible();
+    await expect.poll(() => api.eventRequests.length).toBe(2);
+    expect(api.eventRequests[1].authorization).toBe(
+      `Bearer ${"f".repeat(32)}.${"1".padStart(32, "0")}`
+    );
+    await page.locator("#administrator-alert-close").click();
+    await expect(page.locator("#administrator-alert-window")).toBeHidden();
+
+    await expect
+      .poll(async () => (await readStoredPublishState(page)).queue)
+      .toEqual([]);
+    await expect(administratorWindow).toBeHidden();
+    expect(api.signInRequests).toHaveLength(1);
+    expect(api.eventRequests).toHaveLength(2);
+    stored = await readStoredPublishState(page);
+    expect(stored.proof).toBeNull();
+    expect(stored.solitaireWins).toBe(1);
+
+    await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
+      REJECTED_RESULT_STATUS
+    );
+    await expect(statsWindow.locator("[data-game-stats-refresh]")).toBeEnabled();
+    await expect(administratorWindow).toBeHidden();
+    await page.screenshot({
+      fullPage: true,
+      path: testInfo.outputPath(`administrator-proof-rejected-final-${viewport.name}.png`),
+    });
+    expect(runtimeErrors.pageErrors).toEqual([]);
+    expect(
+      runtimeErrors.consoleErrors.filter((message) => !/403 \(Forbidden\)/.test(message))
+    ).toEqual([]);
+  });
+}

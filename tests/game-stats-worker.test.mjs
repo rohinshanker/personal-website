@@ -1990,6 +1990,7 @@ test("accepts an administrator proof until exactly its one-hour expiry", async (
     assert.deepEqual(await readJson(expired), {
       ok: false,
       error: "Administrator authorization is invalid",
+      code: "administrator-authorization",
     });
   });
 
@@ -1998,14 +1999,26 @@ test("accepts an administrator proof until exactly its one-hour expiry", async (
   assert.equal(env.personal_site_game_stats.sessions.get(expiredSession.id).consumed_at, null);
 });
 
-test("keeps a one-hour administrator proof bound to its sign-in IP", async () => {
+test("publishes a protected win when the client IP changes between sign-in, session, and result", async () => {
   const env = createEnv();
   const signInResponse = await signInAsAdministrator(env, {
     username: env.ADMIN_USERNAME,
     password: env.ADMIN_PASSWORD,
   });
   const signIn = await readJson(signInResponse);
-  const differentIp = "203.0.113.99";
+  const [, encodedProofPayload] = /^([A-Za-z0-9_-]+)\./.exec(signIn.proof) || [];
+  const proofPayload = JSON.parse(
+    Buffer.from(encodedProofPayload, "base64url").toString("utf8")
+  );
+  assert.match(
+    proofPayload.ipHash,
+    /^[A-Za-z0-9_-]+$/,
+    "The proof keeps a keyed hash for rollback compatibility, never a raw address."
+  );
+  assert.doesNotMatch(proofPayload.ipHash, /203\.0\.113\.7/);
+  assert.equal(proofPayload.scope, "administrator");
+
+  const sessionIp = "203.0.113.99";
   const sessionResponse = await worker.fetch(
     jsonRequest(
       "/sessions",
@@ -2014,7 +2027,7 @@ test("keeps a one-hour administrator proof bound to its sign-in IP", async () =>
         config: { difficulty: "beginner" },
         buildVersion: env.GAME_BUILD_VERSION,
       },
-      { ip: differentIp }
+      { ip: sessionIp }
     ),
     env
   );
@@ -2022,7 +2035,7 @@ test("keeps a one-hour administrator proof bound to its sign-in IP", async () =>
   const session = await readJson(sessionResponse);
   await ageSessionForCompletion(env, session);
   const protectedEvent = event({
-    id: "event-administrator-proof-wrong-ip",
+    id: "event-administrator-proof-changed-ip",
     profile: {
       id: "player-rohin-neko",
       name: "rohin ^.^",
@@ -2030,16 +2043,50 @@ test("keeps a one-hour administrator proof bound to its sign-in IP", async () =>
     },
   });
 
-  const rejected = await postEvent(env, protectedEvent, session, {
+  const accepted = await postEvent(env, protectedEvent, session, {
     authorization: `Bearer ${signIn.proof}`,
-    ip: differentIp,
+    ip: "198.51.100.42",
   });
 
-  assert.equal(rejected.status, 403);
-  assert.deepEqual(await readJson(rejected), {
-    ok: false,
-    error: "Administrator authorization is invalid",
+  assert.equal(accepted.status, 201);
+  assert.equal((await readJson(accepted)).applied, true);
+  assert.equal(env.personal_site_game_stats.events.has(protectedEvent.id), true);
+  assert.notEqual(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
+  const eventBucket = Array.from(env.personal_site_game_stats.rateLimits.keys()).filter(
+    (bucket) => bucket.startsWith("events:")
+  );
+  assert.equal(eventBucket.length, 1, "The publishing client IP still receives its own rate bucket.");
+});
+
+test("reports a rejected game session for the protected profile without the authorization code", async () => {
+  const env = createEnv();
+  const signInResponse = await signInAsAdministrator(env, {
+    username: env.ADMIN_USERNAME,
+    password: env.ADMIN_PASSWORD,
   });
+  const signIn = await readJson(signInResponse);
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  await ageSessionForCompletion(env, session);
+  const protectedEvent = event({
+    id: "event-administrator-session-rejected",
+    profile: {
+      id: "player-rohin-neko",
+      name: "rohin ^.^",
+      icon: "assets/neko-assets/sprites/yawn1.png",
+    },
+  });
+
+  const rejected = await postEvent(
+    env,
+    protectedEvent,
+    { ...session, token: `${session.token}x` },
+    { authorization: `Bearer ${signIn.proof}` }
+  );
+
+  assert.equal(rejected.status, 403);
+  const body = await readJson(rejected);
+  assert.equal(body.ok, false);
+  assert.equal(body.code, undefined, "A session rejection must not look like a lost proof.");
   assert.equal(env.personal_site_game_stats.events.has(protectedEvent.id), false);
   assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
 });
@@ -2112,6 +2159,11 @@ test("rate-limits administrator sign-in attempts and protects the administrator 
   });
   const missingProof = await postEvent(eventEnv, administratorEvent, session);
   assert.equal(missingProof.status, 403);
+  assert.deepEqual(await readJson(missingProof), {
+    ok: false,
+    error: "Administrator authorization is invalid",
+    code: "administrator-authorization",
+  });
   assert.equal(eventEnv.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
 
   const signInResponse = await signInAsAdministrator(eventEnv, {
@@ -2133,6 +2185,7 @@ test("rate-limits administrator sign-in attempts and protects the administrator 
     { authorization: `Bearer ${signIn.proof}x` }
   );
   assert.equal(tamperedProof.status, 403);
+  assert.equal((await readJson(tamperedProof)).code, "administrator-authorization");
   assert.equal(eventEnv.personal_site_game_stats.sessions.get(secondSession.id).consumed_at, null);
 });
 
@@ -2235,12 +2288,12 @@ test("requires a present allowed Origin for session and event writes", async () 
   assert.equal(env.personal_site_game_stats.events.size, 0);
 });
 
-test("keeps a rejected Snake IP mismatch from consuming its reusable session", async () => {
+test("publishes a Snake result whose client IP changed after its session was issued", async () => {
   const env = createEnv();
   const session = await createSession(env, "snake", { boardSize: "16" });
   await ageSessionForCompletion(env, session);
   const snakeEvent = event({
-    id: "event-snake-ip-bound",
+    id: "event-snake-changed-ip",
     game: "snake",
     type: "gamePlayed",
     boardSize: "16",
@@ -2248,17 +2301,27 @@ test("keeps a rejected Snake IP mismatch from consuming its reusable session", a
     metricKind: "score",
   });
 
-  const wrongIpResponse = await postEvent(env, snakeEvent, session, {
+  const changedIpResponse = await postEvent(env, snakeEvent, session, {
     ip: "198.51.100.9",
   });
-  assert.equal(wrongIpResponse.status, 403);
-  assert.match((await readJson(wrongIpResponse)).error, /proof does not match/);
-  assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
-  assert.equal(env.personal_site_game_stats.events.size, 0);
+  assert.equal(changedIpResponse.status, 201);
+  assert.equal((await readJson(changedIpResponse)).applied, true);
+  assert.notEqual(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
+  assert.equal(env.personal_site_game_stats.events.size, 1);
 
-  const acceptedResponse = await postEvent(env, snakeEvent, session);
-  assert.equal(acceptedResponse.status, 201);
-  assert.equal((await readJson(acceptedResponse)).applied, true);
+  const replayResponse = await postEvent(env, snakeEvent, session);
+  assert.equal(replayResponse.status, 200);
+  assert.equal((await readJson(replayResponse)).applied, false);
+  assert.equal(env.personal_site_game_stats.events.size, 1);
+
+  const storedSession = env.personal_site_game_stats.sessions.get(session.id);
+  const [encodedPayload] = session.token.split(".");
+  const tokenPayload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
+  assert.equal(
+    storedSession.ip_hash,
+    tokenPayload.ipHash,
+    "The issuing IP hash stays recorded on the session and inside its token."
+  );
 });
 
 test("rate-limits session creation with an HMAC-derived bucket", async () => {

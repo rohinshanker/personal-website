@@ -333,8 +333,8 @@ test("submission queue rejects null sessions and persists valid sessions", async
   }
   assert.deepEqual(plainObject(context.readForTest()), {
     queue: [
-      { event: { id: "event-2" }, session: { id: "session-2" } },
-      { event: { id: "event-3" }, session: { id: "session-3" } },
+      { event: { id: "event-2" }, session: { id: "session-2" }, proofRejections: 0 },
+      { event: { id: "event-3" }, session: { id: "session-3" }, proofRejections: 0 },
     ],
     saveCalls: 3,
   });
