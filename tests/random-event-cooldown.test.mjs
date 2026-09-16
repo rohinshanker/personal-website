@@ -214,6 +214,21 @@ const createCooldownRuntime = (source) => {
   };
 };
 
+const createPromoRandomRuntime = (source) => {
+  const start = source.indexOf("const PROMO_RANDOM_EVENT_TRIGGER_FLOOR =");
+  const end = source.indexOf("\n\nconst randomEventTriggerProbability", start);
+  assert.notEqual(start, -1, "The promo random probability helpers should exist");
+  assert.notEqual(end, -1, "The promo random probability helper block should be bounded");
+
+  const context = vm.createContext({ Math, Number });
+  vm.runInContext(
+    `${source.slice(start, end)}\n` +
+      "globalThis.promoRandom = { promoRandomEventTriggerProbability, promoRandomEventCompactnessWeight };",
+    context
+  );
+  return context.promoRandom;
+};
+
 const createGameplayLockRuntime = (source) => {
   const start = source.indexOf("const isRandomEventGameplayLockActive = () =>");
   const end = source.indexOf("\n\nconst scheduleRandomEventRun", start);
@@ -385,6 +400,50 @@ test("unlocked events retain their weighted selection behavior", async () => {
 
   cooldown.setRandomValues([0.95]);
   assert.equal(cooldown.chooseRandomEventOutsideLockdown([first, second], 0), second);
+});
+
+test("promo mode raises trigger probability and favors smaller physical footprints", async () => {
+  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const promo = createPromoRandomRuntime(source);
+
+  assert.equal(promo.promoRandomEventTriggerProbability(0), 0.7);
+  assert.equal(promo.promoRandomEventTriggerProbability(0.05), 0.7);
+  assert.equal(promo.promoRandomEventTriggerProbability(0.2), 0.8);
+  assert.equal(promo.promoRandomEventTriggerProbability(0.4), 1);
+  assert.equal(promo.promoRandomEventTriggerProbability(1), 1);
+
+  assert.equal(promo.promoRandomEventCompactnessWeight(100, 100), 1);
+  assert.equal(promo.promoRandomEventCompactnessWeight(25, 100), 2);
+  assert.equal(promo.promoRandomEventCompactnessWeight(400, 100), 0.5);
+  assert.equal(promo.promoRandomEventCompactnessWeight(1, 100), 3);
+  assert.equal(promo.promoRandomEventCompactnessWeight(0, 100), 1);
+  assert.equal(promo.promoRandomEventCompactnessWeight(100, Number.NaN), 1);
+
+  const cooldown = createCooldownRuntime(source);
+  const large = {
+    definition: { id: "large" },
+    selectionWeight: 0.5,
+    triggerProbability: 0.7,
+  };
+  const small = {
+    definition: { id: "small" },
+    selectionWeight: 2,
+    triggerProbability: 0.7,
+  };
+  cooldown.setRandomValues([0.3]);
+  assert.equal(cooldown.chooseRandomEventOutsideLockdown([large, small], 0), small);
+
+  assert.match(
+    source,
+    /selectionWeight: isPromoRandomEventModeActive\(\)[\s\S]*?getAdminRandomEventCompactnessWeight\(definition\)/
+  );
+  assert.match(source, /Math\.random\(\) >= maxTriggerProbability/);
+  assert.match(source, /const getAdminRandomEventCompactnessWeight = \(definition\) =>/);
+  assert.match(source, /querySelectorAll\("img\[data-src\], video\[data-src\]"\)/);
+  assert.match(
+    source,
+    /unresolvedMediaEventIds\.has\(eventId\)[\s\S]*?PROMO_RANDOM_EVENT_COMPACTNESS_MIN/
+  );
 });
 
 test("Admin Random uniformly selects and records through the shared repeat window", async () => {

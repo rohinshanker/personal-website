@@ -16492,9 +16492,47 @@ const RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS = new Set([
 ]);
 
 const NEKO_RANDOM_EVENT_PROBABILITY_BONUS = 0.075;
+const PROMO_RANDOM_EVENT_TRIGGER_FLOOR = 0.7;
+const PROMO_RANDOM_EVENT_PROBABILITY_MULTIPLIER = 4;
+const PROMO_RANDOM_EVENT_COMPACTNESS_MIN = 0.5;
+const PROMO_RANDOM_EVENT_COMPACTNESS_MAX = 3;
 
 const isNekoRandomEventBoostActive = () =>
   Boolean(document.querySelector("[data-neko-taskbar-icon].is-neko-active"));
+
+const isPromoRandomEventModeActive = () =>
+  Boolean(
+    window.rohinAdminControlsController?.isPromoRandomModeEnabled?.()
+  );
+
+const promoRandomEventTriggerProbability = (probability) =>
+  Math.min(
+    1,
+    Math.max(
+      PROMO_RANDOM_EVENT_TRIGGER_FLOOR,
+      probability * PROMO_RANDOM_EVENT_PROBABILITY_MULTIPLIER
+    )
+  );
+
+const promoRandomEventCompactnessWeight = (area, referenceArea) => {
+  const normalizedArea = Number(area);
+  const normalizedReference = Number(referenceArea);
+  if (
+    !Number.isFinite(normalizedArea) ||
+    normalizedArea <= 0 ||
+    !Number.isFinite(normalizedReference) ||
+    normalizedReference <= 0
+  ) {
+    return 1;
+  }
+  return Math.min(
+    PROMO_RANDOM_EVENT_COMPACTNESS_MAX,
+    Math.max(
+      PROMO_RANDOM_EVENT_COMPACTNESS_MIN,
+      Math.sqrt(normalizedReference / normalizedArea)
+    )
+  );
+};
 
 const randomEventTriggerProbability = (triggerName, definition = null) => {
   const probabilities = definition?.probabilities || STANDARD_RANDOM_EVENT_PROBABILITIES;
@@ -16507,7 +16545,10 @@ const randomEventTriggerProbability = (triggerName, definition = null) => {
   if (Number.isNaN(probability)) return 0;
   const boostedProbability =
     probability + (isNekoRandomEventBoostActive() ? NEKO_RANDOM_EVENT_PROBABILITY_BONUS : 0);
-  return Math.min(1, Math.max(0, boostedProbability));
+  const clampedProbability = Math.min(1, Math.max(0, boostedProbability));
+  return isPromoRandomEventModeActive()
+    ? promoRandomEventTriggerProbability(clampedProbability)
+    : clampedProbability;
 };
 
 const RANDOM_EVENT_SELECTION_LOCKDOWN_MS = 2 * 60 * 1000;
@@ -16567,14 +16608,14 @@ const recordRandomEventSelection = (definition, now = Date.now()) => {
 
 const chooseWeightedRandomEvent = (eligibleEvents) => {
   const totalWeight = eligibleEvents.reduce(
-    (total, event) => total + event.triggerProbability,
+    (total, event) => total + (event.selectionWeight ?? event.triggerProbability),
     0
   );
   if (totalWeight <= 0) return null;
 
   let roll = Math.random() * totalWeight;
   for (const event of eligibleEvents) {
-    roll -= event.triggerProbability;
+    roll -= event.selectionWeight ?? event.triggerProbability;
     if (roll <= 0) return event;
   }
 
@@ -16877,10 +16918,14 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
       });
       return;
     }
+    const triggerProbability = randomEventTriggerProbability(triggerName, definition);
     eligibleEvents.push({
       definition,
       debug,
-      triggerProbability: randomEventTriggerProbability(triggerName, definition),
+      triggerProbability,
+      selectionWeight: isPromoRandomEventModeActive()
+        ? triggerProbability * getAdminRandomEventCompactnessWeight(definition)
+        : triggerProbability,
     });
   });
 
@@ -22170,6 +22215,7 @@ const renderModelingGallery = (container) => {
   const previous = document.createElement("button");
   previous.type = "button";
   previous.textContent = "Previous";
+  previous.dataset.adminTarget = `modeling:${galleryId}:previous`;
 
   const counter = document.createElement("span");
   counter.className = "gallery-counter";
@@ -22178,6 +22224,7 @@ const renderModelingGallery = (container) => {
   const next = document.createElement("button");
   next.type = "button";
   next.textContent = "Next";
+  next.dataset.adminTarget = `modeling:${galleryId}:next`;
 
   controls.appendChild(previous);
   controls.appendChild(counter);
@@ -31842,6 +31889,95 @@ const ADMIN_RANDOM_EVENT_PREVIEW_TEMPLATES = new Map(
   ])
 );
 
+let adminRandomEventFootprintCacheKey = "";
+let adminRandomEventCompactnessWeights = new Map();
+
+const measureAdminRandomEventCompactnessWeights = () => {
+  const cacheKey = `${window.innerWidth}x${window.innerHeight}`;
+  if (
+    cacheKey === adminRandomEventFootprintCacheKey &&
+    adminRandomEventCompactnessWeights.size
+  ) {
+    return adminRandomEventCompactnessWeights;
+  }
+
+  const measurementHost = document.createElement("div");
+  measurementHost.setAttribute("aria-hidden", "true");
+  measurementHost.inert = true;
+  Object.assign(measurementHost.style, {
+    contain: "layout style paint",
+    height: `${Math.max(1, window.innerHeight)}px`,
+    left: "-200vw",
+    overflow: "hidden",
+    pointerEvents: "none",
+    position: "fixed",
+    top: "0",
+    visibility: "hidden",
+    width: `${Math.max(1, window.innerWidth)}px`,
+  });
+
+  const previews = [];
+  ADMIN_RANDOM_EVENT_PREVIEW_TEMPLATES.forEach((template, eventId) => {
+    if (!(template instanceof Element)) return;
+    const preview = template.cloneNode(true);
+    preview.style.setProperty("bottom", "auto", "important");
+    preview.style.setProperty("left", "auto", "important");
+    preview.style.setProperty("max-height", "none", "important");
+    preview.style.setProperty("max-width", "none", "important");
+    preview.style.setProperty("position", "static", "important");
+    preview.style.setProperty("right", "auto", "important");
+    preview.style.setProperty("top", "auto", "important");
+    preview.style.setProperty("transform", "none", "important");
+    preview.style.setProperty("translate", "none", "important");
+    previews.push({ eventId, preview });
+    measurementHost.append(preview);
+  });
+
+  const areas = new Map();
+  const unresolvedMediaEventIds = new Set();
+  try {
+    document.body.append(measurementHost);
+    previews.forEach(({ eventId, preview }) => {
+      const hasUnresolvedLayoutMedia = Array.from(
+        preview.querySelectorAll("img[data-src], video[data-src]")
+      ).some((media) => {
+        const mediaBounds = media.getBoundingClientRect();
+        const mediaWidth = Math.max(0, mediaBounds.width || media.offsetWidth);
+        const mediaHeight = Math.max(0, mediaBounds.height || media.offsetHeight);
+        return mediaWidth <= 0 || mediaHeight <= 0;
+      });
+      if (hasUnresolvedLayoutMedia) {
+        unresolvedMediaEventIds.add(eventId);
+        return;
+      }
+      const bounds = preview.getBoundingClientRect();
+      const width = Math.max(0, bounds.width || preview.offsetWidth);
+      const height = Math.max(0, bounds.height || preview.offsetHeight);
+      if (width > 0 && height > 0) areas.set(eventId, width * height);
+    });
+  } finally {
+    measurementHost.remove();
+  }
+
+  const sortedAreas = [...areas.values()].sort((left, right) => left - right);
+  const referenceArea = sortedAreas.length
+    ? sortedAreas[Math.floor(sortedAreas.length / 2)]
+    : 1;
+  adminRandomEventCompactnessWeights = new Map(
+    previews.map(({ eventId }) => [
+      eventId,
+      unresolvedMediaEventIds.has(eventId)
+        ? PROMO_RANDOM_EVENT_COMPACTNESS_MIN
+        : promoRandomEventCompactnessWeight(areas.get(eventId), referenceArea),
+    ])
+  );
+  adminRandomEventFootprintCacheKey = cacheKey;
+  return adminRandomEventCompactnessWeights;
+};
+
+const getAdminRandomEventCompactnessWeight = (definition) =>
+  measureAdminRandomEventCompactnessWeights().get(definition?.id) || 1;
+
 const createAdminRandomEventPreview = (eventId) => {
   const normalizedId = String(eventId || "");
   const template = ADMIN_RANDOM_EVENT_PREVIEW_TEMPLATES.get(normalizedId);
@@ -32023,6 +32159,8 @@ const runAdminScenePreset = async (
 window.rohinAdminOrchestrator = Object.freeze({
   closeWindow: () => closeAppWindow("admin-controls"),
   createEventPreview: createAdminRandomEventPreview,
+  getPromoRandomEventWeight: (eventId) =>
+    getAdminRandomEventCompactnessWeight({ id: String(eventId || "") }),
   listEvents: listAdminRandomEvents,
   resetScene: () => window.location.reload(),
   runEvent: runAdminRandomEvent,

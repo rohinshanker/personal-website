@@ -1,3 +1,5 @@
+import AxeBuilder from "@axe-core/playwright";
+
 import { expect, test } from "./fixtures.mjs";
 
 test.setTimeout(150_000);
@@ -943,6 +945,139 @@ test("Random delegates to the repeat-safe runtime and can be added as an operato
   expect(diagnostics.mutatingRequests).toEqual([]);
 });
 
+test("Capture quick-start drives a stable Modeling carousel promo binding", async ({ page }) => {
+  const diagnostics = await preparePage(page, { spyOnOrchestratedEvents: true });
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  const modelingLauncher = page.locator('.taskbar-icon[data-app="modeling"]');
+  await modelingLauncher.click();
+  const modelingWindow = page.locator('[data-app-window="modeling"]');
+  await expect(modelingWindow).toBeVisible();
+  await finishWindowAnimation(modelingWindow, "retro-window-open");
+  const modelingNext = modelingWindow.locator(
+    '[data-admin-target="modeling:modeling-stand-still-drop:next"]'
+  );
+  await expect(modelingNext).toBeVisible();
+  await expect(modelingNext).toHaveText("Next");
+
+  await openAdmin(page);
+  const capture = await selectAdminTab(page, "capture");
+  const quickStart = capture.locator(".admin-promo-help");
+  await expect(quickStart).toHaveAttribute("open", "");
+  await expect(quickStart).toContainText("Seed the click.");
+  await expect(quickStart).toContainText("Or trigger events on a timer.");
+  await expect(quickStart).toContainText("Promo random mode");
+  const accessibility = await new AxeBuilder({ page })
+    .include("#admin-controls-window")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+  const quickStartSummary = quickStart.locator("summary");
+  await quickStartSummary.click();
+  await expect(quickStart).not.toHaveAttribute("open", "");
+  await expect(quickStart.locator(".admin-promo-help-body")).toBeHidden();
+  await quickStartSummary.press("Enter");
+  await expect(quickStart).toHaveAttribute("open", "");
+  await expect(quickStart.locator(".admin-promo-help-body")).toBeVisible();
+  await quickStart.getByRole("button", { name: "Open Bindings" }).click();
+  await expect(page.locator('[data-admin-tab="bindings"]')).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  await expect(page.locator('[data-admin-tab="bindings"]')).toBeFocused();
+  await selectAdminTab(page, "capture");
+  await quickStart.getByRole("button", { name: "Open Run" }).click();
+  await expect(page.locator('[data-admin-tab="run"]')).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  await expect(page.locator('[data-admin-tab="run"]')).toBeFocused();
+  await selectAdminTab(page, "bindings");
+
+  await page.locator("#admin-target-search").fill("Modeling");
+  const stableTarget = "named:modeling:modeling-stand-still-drop:next";
+  await expect(page.locator(`#admin-binding-target option[value="${stableTarget}"]`)).toHaveText(
+    "Modeling — Next item"
+  );
+  await page.locator("#admin-binding-target").selectOption(stableTarget);
+  await page.locator("#admin-binding-event").selectOption("behelit-found");
+  await setLabeledToggle(page, "admin-binding-repeat", true);
+  await page.locator("#admin-save-binding").click();
+  await expect(page.locator("#admin-binding-list")).toContainText("Modeling — Next item");
+
+  await closeAdmin(page);
+  await modelingNext.click();
+  expect(await page.evaluate(() => window.__adminOrchestratedEventCalls)).toEqual([
+    "behelit-found",
+  ]);
+
+  expect(diagnostics.consoleErrors).toEqual([]);
+  expect(diagnostics.runtimeErrors).toEqual([]);
+  expect(diagnostics.mutatingRequests).toEqual([]);
+});
+
+test("Promo random mode boosts a natural carousel trigger through the safe scheduler", async ({
+  page,
+}) => {
+  const diagnostics = await preparePage(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  await page.locator('.taskbar-icon[data-app="modeling"]').click();
+  const modelingWindow = page.locator('[data-app-window="modeling"]');
+  await expect(modelingWindow).toBeVisible();
+  await finishWindowAnimation(modelingWindow, "retro-window-open");
+  const modelingNext = modelingWindow.locator(
+    '[data-admin-target="modeling:modeling-stand-still-drop:next"]'
+  );
+  await expect(modelingNext).toBeVisible();
+
+  await openAdmin(page);
+  await selectAdminTab(page, "capture");
+  await setLabeledToggle(page, "admin-promo-random-mode", true);
+  await closeAdmin(page);
+  const promoWeights = await page.evaluate(() => ({
+    compactAlert: window.rohinAdminOrchestrator.getPromoRandomEventWeight(
+      "debug-system-alert-ram-prices"
+    ),
+    deferredImageDialog: window.rohinAdminOrchestrator.getPromoRandomEventWeight(
+      "saul-advertisement"
+    ),
+  }));
+  expect(promoWeights.deferredImageDialog).toBe(0.5);
+  expect(promoWeights.compactAlert).toBeGreaterThan(
+    promoWeights.deferredImageDialog
+  );
+  await page.evaluate(() => {
+    Math.random = () => 0;
+  });
+
+  await modelingNext.click();
+  const naturalEvent = page.locator("#debug-system-alert-window");
+  await expect(naturalEvent).toBeVisible();
+  await expect(naturalEvent).toHaveAttribute("data-alert-id", "ram-prices");
+  await expect(
+    naturalEvent.locator(
+      '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+    )
+  ).toBeFocused();
+  expect(
+    await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).promoRandomMode, storageKey)
+  ).toBe(true);
+  expect(
+    await page.locator("[data-admin-event-preview-window]").count()
+  ).toBe(0);
+
+  await closeManagedWindow(
+    naturalEvent,
+    naturalEvent.locator(
+      '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+    )
+  );
+  expect(diagnostics.consoleErrors).toEqual([]);
+  expect(diagnostics.runtimeErrors).toEqual([]);
+  expect(diagnostics.mutatingRequests).toEqual([]);
+});
+
 test("deterministic sequence bindings and capture settings survive reload", async ({ page }) => {
   const diagnostics = await preparePage(page, { spyOnOrchestratedEvents: true });
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -964,6 +1099,7 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
 
   await seedInput.fill("repeatable-promo-take");
   await page.locator("#admin-intensity").selectOption("high");
+  await setLabeledToggle(page, "admin-promo-random-mode", true);
   await page.locator("#admin-generate-sequence").click();
   const preview = page.locator("#admin-sequence-preview li");
   await expect(preview.first()).toBeVisible();
@@ -1021,6 +1157,12 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
   await selectAdminTab(page, "capture");
   await expect(seedInput).toHaveValue("repeatable-promo-take");
   await expect(page.locator("#admin-intensity")).toHaveValue("high");
+  await expect(page.locator("#admin-promo-random-mode")).toBeChecked();
+  expect(
+    await page.evaluate(() =>
+      window.rohinAdminControlsController.isPromoRandomModeEnabled()
+    )
+  ).toBe(true);
   expect(await page.locator("#admin-sequence-preview li").allTextContents()).toEqual(firstPreview);
   await seedInput.click();
   await expect(

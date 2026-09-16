@@ -115,7 +115,7 @@
     <link rel="stylesheet" href="styles/home/study-resources.css" />
     <link rel="stylesheet" href="styles/home/random-events.css?v=bulk-system-alerts-20260811" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=text-selection-cursor-20260810" />
-    <link rel="stylesheet" href="styles/home/admin-controls.css?v=admin-seed-sequences-20260906" />
+    <link rel="stylesheet" href="styles/home/admin-controls.css?v=admin-promo-workflow-20260915" />
     <script
       src="scripts/home/text-selection-cursor.js?v=text-selection-cursor-20260810"
       defer
@@ -3281,6 +3281,53 @@
               tabindex="0"
               hidden
             >
+              <details class="admin-promo-help" open>
+                <summary>Promo quick-start</summary>
+                <div class="admin-promo-help-body">
+                  <p>
+                    Build one repeatable scene, rehearse it, then rewind it for every take.
+                  </p>
+                  <ol>
+                    <li>
+                      <strong>Seed the click.</strong> Put the target on screen first. For example,
+                      open Modeling and show a carousel with a <strong>Next</strong> button. Choose
+                      <strong>Open Bindings</strong>, use <strong>Pick on Screen...</strong>, click
+                      that Next button, choose an event, select <strong>Every click</strong>, and
+                      choose <strong>Seed Control</strong>.
+                    </li>
+                    <li>
+                      <strong>Make the event order repeatable.</strong> Enter a scene name below,
+                      choose <strong>Generate</strong>, and use <strong>Next deterministic sequence
+                      cue</strong> for any seeded control that should advance that exact order.
+                      Choose <strong>Replay</strong> before every take to return to cue 1.
+                    </li>
+                    <li>
+                      <strong>Or trigger events on a timer.</strong> For an automatic take instead
+                      of a click-driven take, set Frequency (time between beats), Duration (total
+                      run time), and Intensity (one, two, or three events per beat). Then choose
+                      <strong>Open Run</strong> and <strong>Start Take</strong>. Keep navigating while
+                      Admin advances the sequence automatically; <strong>Stop</strong> ends it early.
+                      Leave the take stopped when seeded clicks alone should advance the sequence.
+                    </li>
+                    <li>
+                      <strong>Record and retake.</strong> Set the frame, safe area, audio, effects,
+                      and privacy options. For another take, choose <strong>Reset Scene</strong>,
+                      reopen Admin, select the same saved scene, choose Replay, and repeat the same
+                      clicks.
+                    </li>
+                  </ol>
+                  <p class="admin-promo-help-note">
+                    <strong>Choose the right event type:</strong> a specific event is exact; Next
+                    deterministic sequence cue follows the saved scene order; Random and Promo
+                    random mode stay repeat-safe but intentionally vary between takes.
+                  </p>
+                  <div class="admin-control-actions admin-promo-help-actions">
+                    <button type="button" data-admin-go-tab="bindings">Open Bindings</button>
+                    <button type="button" data-admin-go-tab="run">Open Run</button>
+                  </div>
+                </div>
+              </details>
+
               <fieldset>
                 <legend>Repeatable sequence</legend>
                 <div class="admin-seed-row">
@@ -3290,6 +3337,8 @@
                       type="text"
                       id="admin-sequence-seed"
                       autocomplete="off"
+                      role="combobox"
+                      aria-autocomplete="none"
                       aria-controls="admin-seed-menu"
                       aria-expanded="false"
                       aria-haspopup="dialog"
@@ -3367,6 +3416,33 @@
               </fieldset>
 
               <fieldset>
+                <legend>Natural random events</legend>
+                <div class="admin-checkbox-stack">
+                  <div class="admin-checkbox-row">
+                    <input
+                      type="checkbox"
+                      id="admin-promo-random-mode"
+                      aria-describedby="admin-promo-random-mode-help"
+                    />
+                    <label for="admin-promo-random-mode">
+                      Promo random mode (more, smaller events)
+                    </label>
+                  </div>
+                  <div class="admin-checkbox-row">
+                    <input type="checkbox" id="admin-pause-natural" checked />
+                    <label for="admin-pause-natural">
+                      Pause natural events while Admin or a take is active
+                    </label>
+                  </div>
+                </div>
+                <p class="admin-control-help" id="admin-promo-random-mode-help">
+                  Promo random mode raises natural event chances while you browse and favors
+                  physically smaller event windows. Repeat avoidance, cooldowns, and safety locks
+                  still apply. Close Admin to navigate with the mode active.
+                </p>
+              </fieldset>
+
+              <fieldset>
                 <legend>Recording and safety</legend>
                 <div class="admin-settings-grid">
                   <div class="admin-control-field">
@@ -3394,10 +3470,6 @@
                     <div class="admin-checkbox-row">
                       <input type="checkbox" id="admin-privacy" />
                       <label for="admin-privacy">Privacy fixtures</label>
-                    </div>
-                    <div class="admin-checkbox-row">
-                      <input type="checkbox" id="admin-pause-natural" checked />
-                      <label for="admin-pause-natural">Pause natural random events</label>
                     </div>
                   </div>
                 </div>
@@ -6730,12 +6802,12 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-f08db67536b00a8e661222e5b8f633f723a69ca55d314be41abb557cade8a378"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-b70c14d27d6091e0308c067320efd4cfdd9cb785ddd278ac46ca265aa84220dc"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
     <script src="scripts/home/system-alerts.js?v=bulk-system-alerts-20260811"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-f08db67536b00a8e661222e5b8f633f723a69ca55d314be41abb557cade8a378"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-b70c14d27d6091e0308c067320efd4cfdd9cb785ddd278ac46ca265aa84220dc"></script>
     <script src="scripts/home/core/media.js?v=hidden-carousel-playback-20260827"></script>
-    <script src="scripts/home/main.js?v=game-build-f08db67536b00a8e661222e5b8f633f723a69ca55d314be41abb557cade8a378"></script>
-    <script src="scripts/home/admin-controls.js?v=admin-seed-sequences-20260906"></script>
+    <script src="scripts/home/main.js?v=game-build-b70c14d27d6091e0308c067320efd4cfdd9cb785ddd278ac46ca265aa84220dc"></script>
+    <script src="scripts/home/admin-controls.js?v=admin-promo-workflow-20260915"></script>
   </body>
 </html>

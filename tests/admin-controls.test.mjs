@@ -149,11 +149,11 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
 
   assert.match(
     home,
-    /styles\/home\/admin-controls\.css\?v=admin-seed-sequences-20260906/
+    /styles\/home\/admin-controls\.css\?v=admin-promo-workflow-20260915/
   );
   assert.match(
     home,
-    /scripts\/home\/admin-controls\.js\?v=admin-seed-sequences-20260906/
+    /scripts\/home\/admin-controls\.js\?v=admin-promo-workflow-20260915/
   );
   assert.ok(
     home.indexOf("scripts/home/admin-controls.js") >
@@ -401,6 +401,7 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
     "admin-audio",
     "admin-vfx",
     "admin-privacy",
+    "admin-promo-random-mode",
     "admin-pause-natural",
     "admin-clear-data",
     "admin-countdown-overlay",
@@ -449,12 +450,22 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
   assert.equal(attributeValue(eventPreview, "aria-live"), "polite");
   const sequenceSeed = tagWithAttribute(home, "id", "admin-sequence-seed");
   const seedMenu = tagWithAttribute(home, "id", "admin-seed-menu");
+  assert.equal(attributeValue(sequenceSeed, "role"), "combobox");
+  assert.equal(attributeValue(sequenceSeed, "aria-autocomplete"), "none");
   assert.equal(attributeValue(sequenceSeed, "aria-controls"), "admin-seed-menu");
   assert.equal(attributeValue(sequenceSeed, "aria-expanded"), "false");
   assert.equal(attributeValue(sequenceSeed, "aria-haspopup"), "dialog");
   assert.equal(attributeValue(seedMenu, "role"), "dialog");
   assert.equal(attributeValue(seedMenu, "aria-label"), "Saved sequence seeds");
   assert.match(seedMenu, /\bhidden\b/);
+  assert.match(home, /<details class="admin-promo-help" open>/);
+  assert.match(home, /Modeling[\s\S]*?<strong>Next<\/strong>/);
+  assert.match(home, /data-admin-go-tab="bindings"/);
+  assert.match(home, /data-admin-go-tab="run"/);
+  assert.match(
+    tagWithAttribute(home, "id", "admin-promo-random-mode"),
+    /aria-describedby="admin-promo-random-mode-help"/
+  );
 
   const taskbarStart = home.indexOf('<div class="taskbar"');
   for (const overlayId of [
@@ -562,6 +573,7 @@ test("Admin settings use strict versioned local state with a deterministic publi
     audio: true,
     visualEffects: true,
     privacy: false,
+    promoRandomMode: false,
     pauseNatural: true,
   });
   assert.deepEqual(JSON.parse(JSON.stringify(api.normalizeState(null))), defaults);
@@ -596,6 +608,12 @@ test("Admin settings use strict versioned local state with a deterministic publi
       },
       { target: "body *", label: "Unsafe selector", eventId: "behelit-found" },
       { target: "start", label: "Start", eventId: "__random__", mode: "unknown" },
+      {
+        target: "named:modeling:modeling-stand-still-drop:next",
+        label: "Modeling — Next",
+        eventId: "behelit-found",
+        mode: "repeat",
+      },
     ],
     sequenceSeed: "  promo   take 42  ",
     seedNames: [
@@ -620,6 +638,7 @@ test("Admin settings use strict versioned local state with a deterministic publi
     audio: false,
     visualEffects: false,
     privacy: true,
+    promoRandomMode: true,
     pauseNatural: false,
     credentials: { password: "discard-me" },
   })));
@@ -637,6 +656,12 @@ test("Admin settings use strict versioned local state with a deterministic publi
         mode: "repeat",
       },
       { target: "start", label: "Start", eventId: "__random__", mode: "once" },
+      {
+        target: "named:modeling:modeling-stand-still-drop:next",
+        label: "Modeling — Next",
+        eventId: "behelit-found",
+        mode: "repeat",
+      },
     ],
     sequenceSeed: "promo take 42",
     seedNames: ["promo take 42", "alternate-take", "x".repeat(64)],
@@ -655,6 +680,7 @@ test("Admin settings use strict versioned local state with a deterministic publi
     audio: false,
     visualEffects: false,
     privacy: true,
+    promoRandomMode: true,
     pauseNatural: false,
   });
 
@@ -788,6 +814,7 @@ test("bindings, timing, capture aids, and reset are implemented as real controll
     /`app:\$\{[^}]+\}:/,
     /\bstart\b/,
     /github:/,
+    /named:/,
   ]) {
     assert.match(admin, stableTargetPattern);
   }
@@ -812,6 +839,7 @@ test("bindings, timing, capture aids, and reset are implemented as real controll
     /audio/i,
     /visualEffects|\bvfx\b/i,
     /privacy/i,
+    /promoRandomMode/i,
     /pauseNatural/i,
     /resetScene/i,
   ]) {
@@ -827,6 +855,8 @@ test("bindings, timing, capture aids, and reset are implemented as real controll
   );
   assert.match(admin, /orchestrator\.runPreset/);
   assert.match(admin, /orchestrator\.resetScene/);
+  assert.match(admin, /isPromoRandomModeEnabled/);
+  assert.match(admin, /data-admin-go-tab/);
 });
 
 test("Admin validation ends with a complete repeatable promo-take runbook", async () => {
@@ -843,6 +873,9 @@ test("Admin validation ends with a complete repeatable promo-take runbook", asyn
     "Reset Scene",
     "Start Take",
     "Random",
+    "Promo random mode",
+    "Modeling",
+    "Next",
   ]) {
     assert.match(section, new RegExp(escapeRegExp(controlOrConcept)));
   }

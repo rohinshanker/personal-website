@@ -129,6 +129,10 @@ body.is-admin-privacy-mode .admin-controls-title::after {
   margin-top: 8px;
 }
 
+.admin-promo-help + fieldset {
+  margin-top: 8px;
+}
+
 .admin-controls-panel legend {
   font-weight: bold;
 }
@@ -175,6 +179,58 @@ body.is-admin-privacy-mode .admin-controls-title::after {
   display: grid;
   gap: 3px;
   min-width: 0;
+}
+
+.admin-control-help {
+  color: #333;
+  line-height: 1.35;
+  margin: 7px 0 1px;
+}
+
+.admin-promo-help {
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.admin-promo-help > summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.admin-promo-help-body {
+  border-top: 1px dotted var(--button-shadow);
+  margin-top: 6px;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.admin-promo-help-body > p {
+  margin: 0;
+}
+
+.admin-promo-help-body > ol {
+  margin: 7px 0;
+  padding-left: 24px;
+}
+
+.admin-promo-help-body li {
+  line-height: 1.35;
+}
+
+.admin-promo-help-body li + li {
+  margin-top: 6px;
+}
+
+.admin-promo-help-note {
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  padding: 6px;
+}
+
+.admin-promo-help-actions {
+  margin-top: 6px;
 }
 
 .admin-checkbox-stack {

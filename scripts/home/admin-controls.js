@@ -30,6 +30,7 @@ const DEFAULT_STATE = Object.freeze({
   audio: true,
   visualEffects: true,
   privacy: false,
+  promoRandomMode: false,
   pauseNatural: true,
 });
 
@@ -42,6 +43,7 @@ const GUIDE_VALUES = new Set(["off", "vertical", "square", "landscape"]);
 const EVENT_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,95}$/;
 const TARGET_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_.:-]{0,159}$/;
 const APP_TARGET_PATTERN = /^app:([a-z0-9][a-z0-9-]{0,63}):(desktop|taskbar|other-\d{1,2})$/;
+const NAMED_TARGET_PATTERN = /^named:([a-z0-9][a-z0-9:-]{0,159})$/;
 const ACTION_TARGET_PATTERN = /^action:([a-f0-9]{8}):(\d{1,2})$/;
 const GITHUB_TARGET_PATTERN = /^github:(\d{1,2})$/;
 const EVENT_PREVIEW_STYLESHEETS = Object.freeze([
@@ -119,6 +121,7 @@ const normalizeTargetKey = (value) => {
   if (key === "start") return key;
   if (key.startsWith("id:") && TARGET_ID_PATTERN.test(key.slice(3))) return key;
   if (APP_TARGET_PATTERN.test(key)) return key;
+  if (NAMED_TARGET_PATTERN.test(key)) return key;
   if (ACTION_TARGET_PATTERN.test(key)) return key;
   if (GITHUB_TARGET_PATTERN.test(key)) return key;
   return "";
@@ -197,6 +200,7 @@ const normalizeState = (value) => {
   normalized.audio = value.audio !== false;
   normalized.visualEffects = value.visualEffects !== false;
   normalized.privacy = value.privacy === true;
+  normalized.promoRandomMode = value.promoRandomMode === true;
   normalized.pauseNatural = value.pauseNatural !== false;
   return normalized;
 };
@@ -300,6 +304,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     audio: byId("admin-audio"),
     visualEffects: byId("admin-vfx"),
     privacy: byId("admin-privacy"),
+    promoRandomMode: byId("admin-promo-random-mode"),
     pauseNatural: byId("admin-pause-natural"),
     clearData: byId("admin-clear-data"),
     countdownOverlay: byId("admin-countdown-overlay"),
@@ -519,6 +524,11 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     if (control.id && TARGET_ID_PATTERN.test(control.id)) return `id:${control.id}`;
     if (control.matches(".start-button")) return "start";
 
+    const namedTarget = control.getAttribute("data-admin-target");
+    if (namedTarget && NAMED_TARGET_PATTERN.test(`named:${namedTarget}`)) {
+      return `named:${namedTarget}`;
+    }
+
     const appId = control.getAttribute("data-app");
     if (appId && EVENT_ID_PATTERN.test(appId)) {
       if (control.classList.contains("desktop-icon")) return `app:${appId}:desktop`;
@@ -577,6 +587,13 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
           !candidate.classList.contains("desktop-icon") &&
           !candidate.classList.contains("taskbar-icon")
       )[Number(location.slice("other-".length))] || null;
+    }
+
+    const namedMatch = normalizedKey.match(NAMED_TARGET_PATTERN);
+    if (namedMatch) {
+      return eligibleTargets().find(
+        (candidate) => candidate.getAttribute("data-admin-target") === namedMatch[1]
+      ) || null;
     }
 
     const githubMatch = normalizedKey.match(GITHUB_TARGET_PATTERN);
@@ -1093,6 +1110,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     controls.audio.checked = state.audio;
     controls.visualEffects.checked = state.visualEffects;
     controls.privacy.checked = state.privacy;
+    controls.promoRandomMode.checked = state.promoRandomMode;
     controls.pauseNatural.checked = state.pauseNatural;
     controls.startTake.disabled = takeActive || Boolean(countdownTimer);
     controls.stopTake.disabled = !takeActive && !countdownTimer;
@@ -1424,6 +1442,15 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     });
   });
 
+  documentRef.querySelectorAll("[data-admin-go-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const tabName = button.getAttribute("data-admin-go-tab");
+      if (!TAB_VALUES.has(tabName)) return;
+      activateTab(tabName, { focus: true });
+      announce(`Opened ${tabName === "run" ? "Run" : "Bindings"}.`);
+    });
+  });
+
   controls.eventSearch.addEventListener("input", renderEventList);
   controls.eventKind.addEventListener("change", renderEventList);
   controls.eventList.addEventListener("change", renderEventPreview);
@@ -1612,6 +1639,13 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
   persistToggle(controls.audio, "audio", syncAudio);
   persistToggle(controls.visualEffects, "visualEffects", syncEffects);
   persistToggle(controls.privacy, "privacy", syncEffects);
+  persistToggle(controls.promoRandomMode, "promoRandomMode", () => {
+    announce(
+      state.promoRandomMode
+        ? "Promo random mode is on. Close Admin and navigate to get more, smaller events."
+        : "Promo random mode is off. Natural events use the standard probabilities."
+    );
+  });
   persistToggle(controls.pauseNatural, "pauseNatural");
   controls.guide.addEventListener("change", () => {
     if (!GUIDE_VALUES.has(controls.guide.value)) return;
@@ -1768,6 +1802,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
   return Object.freeze({
     getState: () => normalizeState(state),
     handleDocumentClick,
+    isPromoRandomModeEnabled: () => state.promoRandomMode,
     shouldPauseNaturalEvents: () =>
       state.pauseNatural &&
       (isAdminOpen() || pickingTarget || Boolean(countdownTimer) || takeActive),
