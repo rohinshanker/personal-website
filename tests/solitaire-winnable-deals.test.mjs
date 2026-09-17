@@ -217,7 +217,9 @@ test("exhausted Solitaire generation returns a bounded standard fallback", () =>
   assertStandardDeal(deal);
   assert.equal(deal.verified, false);
   assert.equal(deal.solution, null);
-  assert.ok(elapsed < 500, `constant shuffle completed in ${elapsed.toFixed(2)} ms`);
+  // Locally this takes about 330 ms; shared CI runners have measured over 500 ms,
+  // so the bound only guards against the attempt cap failing to bound the search.
+  assert.ok(elapsed < 2_000, `constant shuffle completed in ${elapsed.toFixed(2)} ms`);
 });
 
 test("Solitaire deal generation is deterministic, diverse, and random-looking", () => {
