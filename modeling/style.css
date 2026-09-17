@@ -102,11 +102,21 @@ summary:focus-visible {
   line-height: 1.2;
 }
 
-.shoot .title-bar-controls button,
-.lightbox .title-bar-controls button {
-  min-width: 30px;
+.shoot .title-bar-controls .shoot__expand {
+  min-width: 0;
   min-height: 26px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+/* 98.css tucks its 8x7 close glyph into a corner; scale it to fill the larger control. */
+.lightbox .title-bar-controls button[aria-label].close {
+  min-width: 32px;
+  min-height: 26px;
+  padding: 6px 8px;
+  background-origin: content-box;
   background-position: center;
+  background-size: contain;
 }
 
 /* Header ---------------------------------------------------------------- */
@@ -518,17 +528,40 @@ details[open] > .shoot__credits-summary::before {
   white-space: nowrap;
 }
 
-.carousel__counter,
-.lightbox__counter {
+.carousel__download,
+.lightbox__download {
   display: inline-flex;
   flex: 1 1 64px;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  min-width: 0;
   min-height: var(--control-height);
-  padding: 3px 6px;
+  padding: 3px 10px;
   background: var(--surface);
-  box-shadow: var(--border-status-field);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  color: inherit;
+  text-decoration: none;
   white-space: nowrap;
+}
+
+.carousel__download:active,
+.lightbox__download:active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+.carousel__download:focus-visible,
+.lightbox__download:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+.carousel__download-icon,
+.lightbox__download-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 /* Fullscreen viewer ------------------------------------------------------ */

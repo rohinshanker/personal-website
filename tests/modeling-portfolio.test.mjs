@@ -5,7 +5,8 @@ import vm from "node:vm";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
-const VERSION = "modeling-portfolio-20260916";
+const DATA_VERSION = "modeling-portfolio-20260916";
+const ROUTE_VERSION = "modeling-portfolio-download-20260916";
 
 const isFile = async (path) => {
   try {
@@ -122,7 +123,7 @@ test("the Home Modeling window matches the shared data in order, titles, dates, 
 test("Home derives its modeling galleries from the shared data instead of duplicating it", async () => {
   const [home, main] = await Promise.all([read("home.html"), read("scripts/home/main.js")]);
 
-  const dataTag = `scripts/home/modeling-portfolio.js?v=${VERSION}`;
+  const dataTag = `scripts/home/modeling-portfolio.js?v=${DATA_VERSION}`;
   assert.ok(home.includes(`<script src="${dataTag}"></script>`), "Home loads the shared data");
   assert.ok(
     home.indexOf(dataTag) < home.indexOf("scripts/home/main.js?v="),
@@ -200,13 +201,18 @@ test("the /modeling/ route publishes its metadata, shared assets, and blank Drop
   assert.match(html, /<link rel="icon" href="\/assets\/favicon-96\.png" type="image\/png" sizes="96x96" \/>/);
   assert.match(html, /<link rel="apple-touch-icon" href="\/assets\/apple-touch-icon-180\.png" sizes="180x180" \/>/);
   assert.match(html, /href="\.\.\/style\.css\?v=first-win-stats-handoff-20260722"/);
-  assert.match(html, new RegExp(`href="style\\.css\\?v=${VERSION}"`));
-  assert.match(html, new RegExp(`src="\\.\\./scripts/home/modeling-portfolio\\.js\\?v=${VERSION}"`));
-  assert.match(html, new RegExp(`<script src="script\\.js\\?v=${VERSION}" defer></script>`));
+  assert.match(html, new RegExp(`href="style\\.css\\?v=${ROUTE_VERSION}"`));
+  assert.match(html, new RegExp(`src="\\.\\./scripts/home/modeling-portfolio\\.js\\?v=${DATA_VERSION}"`));
+  assert.match(html, new RegExp(`<script src="script\\.js\\?v=${ROUTE_VERSION}" defer></script>`));
   assert.ok(
-    html.indexOf("modeling-portfolio.js") < html.indexOf(`script.js?v=${VERSION}`),
+    html.indexOf("modeling-portfolio.js") < html.indexOf(`script.js?v=${ROUTE_VERSION}`),
     "the shared data loads before the route script"
   );
+  assert.match(
+    html,
+    /Tap or click any photo to view it fullscreen\. Press the download button to download the\s+current image from the carousel\./
+  );
+  assert.doesNotMatch(html, /newest first/);
 
   assert.match(html, /<h1 class="portfolio-title" id="portfolio-title">Rohin Shanker Modeling Portfolio<\/h1>/);
   assert.match(html, /data-portfolio-instagram[\s\S]*?href="https:\/\/www\.instagram\.com\/rrohinss\/"[\s\S]*?target="_blank"[\s\S]*?rel="noreferrer"/);
@@ -234,6 +240,11 @@ test("the /modeling/ route publishes its metadata, shared assets, and blank Drop
   assert.match(css, /@media \(min-width: 900px\)[\s\S]*?"gallery date"/);
   assert.doesNotMatch(css, /!important/);
 
+  assert.match(script, /assets\/app-icons\/ico\/download\.ico/);
+  assert.match(script, /link\.setAttribute\("download", downloadName\(shoot, item, index, media\.length\)\)/);
+  assert.match(script, /fullscreen\.textContent = "Expand"/);
+  assert.match(css, /\.carousel__download,\s*\.lightbox__download \{/);
+  assert.match(css, /button\[aria-label\]\.close \{[\s\S]*?background-size: contain/);
   assert.match(script, /windows98-hourglass-2x\.gif/);
   assert.match(script, /windows98-hourglass-padded-2x\.gif/);
   assert.match(script, /new IntersectionObserver\(/);

@@ -8,6 +8,7 @@
   const ASSET_ROOT = "../";
   const LOADING_ASSET = `${ASSET_ROOT}assets/loading/windows98-hourglass-2x.gif`;
   const LOADING_PADDED_ASSET = `${ASSET_ROOT}assets/loading/windows98-hourglass-padded-2x.gif`;
+  const DOWNLOAD_ICON = `${ASSET_ROOT}assets/app-icons/ico/download.ico`;
   /** Below this box the padded hourglass no longer fits, so the raw frame is shown instead. */
   const LOADING_RAW_WIDTH = 258;
   const LOADING_RAW_HEIGHT = 272;
@@ -33,6 +34,35 @@
       node.setAttribute(name, value === true ? "" : String(value));
     });
     return node;
+  };
+
+  const downloadName = (shoot, item, index, total) => {
+    const extension = (item.source.match(/\.[a-z0-9]+$/i)?.[0] || "").toLowerCase();
+    return `${anchorId(shoot.id)}-${index + 1}-of-${total}${extension}`;
+  };
+
+  /**
+   * The "n of N" readout is also the download control: the whole raised button
+   * saves whichever photo or clip is current.
+   */
+  const createDownloadControl = (block, counterAttributes) => {
+    const link = element("a", `${block}__download`, { href: "#", download: "" });
+    const counter = element("span", `${block}__counter`, counterAttributes);
+    const icon = element("img", `${block}__download-icon`, { src: DOWNLOAD_ICON, alt: "" });
+    link.append(counter, icon);
+    return {
+      link,
+      update(shoot, media, index) {
+        const item = media[index];
+        link.href = item.source;
+        link.setAttribute("download", downloadName(shoot, item, index, media.length));
+        link.setAttribute(
+          "aria-label",
+          `Download ${item.video ? "clip" : "photo"} ${counterText(index, media.length)}`
+        );
+        counter.textContent = counterText(index, media.length);
+      },
+    };
   };
 
   const shootMedia = (shoot) =>
@@ -122,13 +152,6 @@
       slot.querySelector(".portfolio-link__note")?.remove();
     });
 
-    const summary = document.querySelector("[data-portfolio-summary]");
-    if (summary && shoots.length) {
-      const newest = shoots[0].date;
-      const oldest = shoots[shoots.length - 1].date;
-      summary.textContent = `${shoots.length} shoots from ${oldest} to ${newest}, newest first. Tap or click any photo to view it fullscreen.`;
-    }
-
     const navSummary = document.querySelector("[data-portfolio-nav-summary]");
     if (navSummary) navSummary.textContent = `Jump to a shoot (${shoots.length})`;
     const navList = document.querySelector("[data-portfolio-nav-list]");
@@ -217,11 +240,11 @@
       "aria-label": "Previous photo",
     });
     previous.textContent = "Previous";
-    const counter = element("span", "carousel__counter", { "aria-live": "polite" });
-    counter.textContent = counterText(0, media.length);
+    const download = createDownloadControl("carousel", { "aria-live": "polite" });
+    download.update(shoot, media, 0);
     const next = element("button", "carousel__control", { type: "button", "aria-label": "Next photo" });
     next.textContent = "Next";
-    controls.append(previous, counter, next);
+    controls.append(previous, download.link, next);
     root.append(strip, controls);
 
     let index = 0;
@@ -273,7 +296,7 @@
       const bounded = Math.max(0, Math.min(slides.length - 1, nextIndex));
       if (bounded === index) return;
       index = bounded;
-      counter.textContent = counterText(index, slides.length);
+      download.update(shoot, media, index);
       if (active) loadAround(index);
       syncVideos();
     };
@@ -405,7 +428,7 @@
       "data-lightbox-previous": true,
     });
     previous.textContent = "Previous";
-    const counter = element("span", "lightbox__counter", {
+    const download = createDownloadControl("lightbox", {
       "aria-live": "polite",
       "data-lightbox-counter": true,
     });
@@ -415,7 +438,7 @@
       "data-lightbox-next": true,
     });
     next.textContent = "Next";
-    footer.append(previous, counter, next);
+    footer.append(previous, download.link, next);
     body.append(stage, footer);
     windowElement.append(titleBar, body);
     root.append(backdrop, windowElement);
@@ -437,7 +460,7 @@
       const previousVideo = mediaSlot.querySelector("video");
       if (previousVideo) previousVideo.pause();
       title.textContent = shoot.title;
-      counter.textContent = counterText(index, media.length);
+      download.update(shoot, media, index);
       let node;
       if (item.video) {
         node = element("video", "lightbox__video", {
@@ -584,11 +607,12 @@
     heading.appendChild(element("img", "title-bar-icon", { src: assetUrl(shoot.icon), alt: "" }));
     heading.appendChild(document.createTextNode(shoot.title));
     const controls = element("div", "title-bar-controls");
-    const fullscreen = element("button", "maximize", {
+    const fullscreen = element("button", "shoot__expand", {
       type: "button",
-      "aria-label": `View ${shoot.title} fullscreen`,
+      "aria-label": `Expand ${shoot.title} fullscreen`,
       "data-shoot-fullscreen": true,
     });
+    fullscreen.textContent = "Expand";
     controls.appendChild(fullscreen);
     titleBar.append(heading, controls);
 

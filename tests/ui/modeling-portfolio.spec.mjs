@@ -295,6 +295,9 @@ test("opens photos fullscreen, keeps the scroll position, traps focus, and resto
   await page.keyboard.press("Tab");
   await expect(viewer.getByRole("button", { name: "Previous photo" })).toBeFocused();
   await page.keyboard.press("Tab");
+  await expect(viewer.getByRole("link", { name: "Download photo 2 of 5" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(viewer.getByRole("button", { name: "Next photo" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(close).toBeFocused();
   await page.keyboard.press("Shift+Tab");
@@ -308,8 +311,9 @@ test("opens photos fullscreen, keeps the scroll position, traps focus, and resto
   await expect(opener).toBeFocused();
 
   const maximize = section(page, CIRQUE).getByRole("button", {
-    name: `View ${CIRQUE.title} fullscreen`,
+    name: `Expand ${CIRQUE.title} fullscreen`,
   });
+  await expect(maximize).toHaveText("Expand");
   await maximize.click();
   await expect(viewer).toBeVisible();
   await expect(viewer.locator("[data-lightbox-counter]")).toHaveText("2 of 5");
@@ -367,7 +371,7 @@ test("video slides keep native controls and only enter the viewer through the ti
   await expect(lightbox(page)).toBeHidden();
 
   await section(page, STAND_STILL)
-    .getByRole("button", { name: `View ${STAND_STILL.title} fullscreen` })
+    .getByRole("button", { name: `Expand ${STAND_STILL.title} fullscreen` })
     .click();
   const viewer = lightbox(page);
   await expect(viewer).toBeVisible();
@@ -446,4 +450,40 @@ test("the mobile viewer fills the screen with reachable controls", async ({ page
   expect(image.right).toBeLessThanOrEqual(MOBILE.width);
   expect(image.bottom).toBeLessThanOrEqual(next.top);
   expect(await documentOverflows(page)).toBe(false);
+});
+
+
+test("the n of N control downloads the current photo from the carousel and the viewer", async ({
+  page,
+}) => {
+  await openPortfolio(page, DESKTOP);
+  const control = section(page, STAND_STILL).locator(".carousel__download");
+
+  await expect(control).toHaveAttribute("href", /stand-still-mar26\/1\.mp4$/);
+  await expect(control).toHaveAttribute("download", "stand-still-drop-1-of-6.mp4");
+  await expect(control).toHaveAccessibleName("Download clip 1 of 6");
+  await expect(control.locator("img")).toHaveAttribute("src", /download\.ico$/);
+
+  await section(page, STAND_STILL).getByRole("button", { name: "Next photo" }).click();
+  await expect(control).toHaveAttribute("href", /stand-still-mar26\/2\.jpg$/);
+  await expect(control).toHaveAttribute("download", "stand-still-drop-2-of-6.jpg");
+  await expect(control).toHaveAccessibleName("Download photo 2 of 6");
+  await expect(control).toContainText("2 of 6");
+
+  const carouselDownload = page.waitForEvent("download");
+  await counter(page, STAND_STILL).click();
+  expect((await carouselDownload).suggestedFilename()).toBe("stand-still-drop-2-of-6.jpg");
+
+  await slide(page, STAND_STILL, 1).locator("button").click();
+  const viewer = lightbox(page);
+  await expect(viewer).toBeVisible();
+  const viewerControl = viewer.locator(".lightbox__download");
+  await expect(viewerControl).toHaveAttribute("download", "stand-still-drop-2-of-6.jpg");
+  await page.keyboard.press("ArrowRight");
+  await expect(viewerControl).toHaveAttribute("download", "stand-still-drop-3-of-6.jpg");
+  await expect(viewerControl).toHaveAccessibleName("Download photo 3 of 6");
+  const viewerDownload = page.waitForEvent("download");
+  await viewerControl.click();
+  expect((await viewerDownload).suggestedFilename()).toBe("stand-still-drop-3-of-6.jpg");
+  await expect(viewer).toBeVisible();
 });
