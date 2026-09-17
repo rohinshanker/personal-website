@@ -3,7 +3,7 @@
 (() => {
 const brandLinks = {
   standstill: [
-    { type: "website", label: "Standstill website", href: "https://linktr.ee/standstill.ss" },
+    { type: "website", label: "Standstill website", href: "https://standstill.us/" },
     { type: "instagram", label: "Standstill Instagram", href: "https://www.instagram.com/standstill.us/" },
   ],
   garb: [

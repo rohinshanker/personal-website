@@ -5,7 +5,7 @@ import vm from "node:vm";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
-const DATA_VERSION = "modeling-portfolio-20260916";
+const DATA_VERSION = "modeling-portfolio-standstill-20260916";
 const ROUTE_VERSION = "modeling-portfolio-download-20260916";
 
 const isFile = async (path) => {
