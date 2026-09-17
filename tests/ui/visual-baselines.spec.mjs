@@ -1,5 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
 import {
+  installStubbedModelingMedia,
   openApp,
   openDeterministicRoute,
   openHomeDesktop,
@@ -99,4 +100,22 @@ test("the offline Game Progress window matches its reference render", async ({ p
   await settleRender(page);
 
   await expect(progress).toHaveScreenshot("home-game-progress-window.png");
+});
+
+test("the modeling portfolio route matches its reference render at desktop and mobile", async ({
+  page,
+}) => {
+  // Photos and clips are stubbed, and the container's Chromium has no H.264
+  // decoder, so the strips are masked: their position and size are still
+  // compared while the baseline records the page chrome and controls.
+  await installStubbedModelingMedia(page);
+  for (const [name, viewport] of Object.entries({ desktop: DESKTOP, mobile: MOBILE })) {
+    await openDeterministicRoute(page, "/modeling/", viewport);
+    await expect(page.locator("section.shoot")).toHaveCount(20);
+    await settleRender(page);
+
+    await expect(page).toHaveScreenshot(`modeling-portfolio-${name}.png`, {
+      mask: [page.locator(".carousel__strip")],
+    });
+  }
 });

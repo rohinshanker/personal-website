@@ -2,6 +2,7 @@
 
 | Purpose | Scope | Last verified | Document |
 | --- | --- | --- | --- |
+| Public `/modeling/` portfolio route, shared shoot data, and the Home new-tab prompt. | Route header, per-shoot windows, swipe carousels with neighbour-only loading, credits disclosures, fullscreen viewer, shared data parity with Home, launch prompt, packaging, and sitemap. | 2026-09-16 | [modeling-portfolio.md](modeling-portfolio.md) |
 | Copy/paste authoring and validated runtime behavior for basic system-alert random events. | Bulk alert configuration, normalization, shared rendering, automatic registration, Administrator previews, focus, and responsive behavior. | 2026-08-11 | [system-alert-random-events.md](system-alert-random-events.md) |
 | Native-style custom cursor meaning across hover, selection, guarded controls, Video Editor operations, and Admin target picking. | Entry, Home, and Video Editor cursor tokens, live light/dark synchronization, pointer-selection lifecycle, loading and resize states, and semantic precedence. | 2026-08-26 | [custom-cursors.md](custom-cursors.md) |
 | Native Windows 98 scrollbar styling without duplicate Chromium arrow slots. | Scoped WebKit scrollbar-button compatibility rules and Red Tool chat scrolling. | 2026-08-06 | [native-scrollbars.md](native-scrollbars.md) |

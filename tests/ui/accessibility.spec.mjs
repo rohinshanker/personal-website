@@ -4,6 +4,7 @@ import AxeBuilder from "@axe-core/playwright";
 
 import { expect, test } from "./deterministic.mjs";
 import {
+  installStubbedModelingMedia,
   openApp,
   openDeterministicRoute,
   openHomeDesktop,
@@ -208,4 +209,38 @@ test.describe("home route accessibility", () => {
       expect(await scanForViolations(page, testInfo, `home-${app}`)).toEqual(expected);
     });
   }
+});
+
+test.describe("modeling portfolio route accessibility", () => {
+  for (const [name, viewport] of Object.entries({ mobile: MOBILE, desktop: DESKTOP })) {
+    test(`/modeling/ is free of WCAG A/AA violations at ${name}, including the fullscreen viewer`, async ({
+      page,
+    }, testInfo) => {
+      await installStubbedModelingMedia(page);
+      await openDeterministicRoute(page, "/modeling/", viewport);
+      await expect(page.locator("section.shoot")).toHaveCount(20);
+      expect(await scanForViolations(page, testInfo, `modeling-${name}`)).toEqual([]);
+
+      const shoot = page.locator("#garb-cirque-du-moi-runway-show");
+      await shoot.locator("summary").click();
+      await shoot.locator(".carousel__photo").first().click();
+      await expect(page.locator("[data-lightbox]")).toBeVisible();
+      await settleRender(page);
+      expect(await scanForViolations(page, testInfo, `modeling-viewer-${name}`)).toEqual([]);
+    });
+  }
+
+  test("the Home Modeling window and its new-tab prompt are free of WCAG A/AA violations", async ({
+    page,
+  }, testInfo) => {
+    await installStubbedModelingMedia(page);
+    await openHomeDesktop(page, DESKTOP);
+    await page.locator('.taskbar-icon[data-app="modeling"]').click();
+    const prompt = page.locator("#modeling-launch-window");
+    await expect(prompt).toBeVisible();
+    await expect(prompt).not.toHaveClass(/is-opening/);
+    await settleRender(page);
+
+    expect(await scanForViolations(page, testInfo, "home-modeling-launch")).toEqual([]);
+  });
 });

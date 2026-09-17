@@ -174,9 +174,6 @@ const {
   appWindows,
   closeButtons,
   draggableWindows,
-  videoEditorLaunchWindow,
-  videoEditorLaunchYes,
-  videoEditorLaunchError,
   snakeLoadingPanel,
   snakeLoadingMeter,
   snakeLoadingMeterFill,
@@ -4802,8 +4799,18 @@ const FOCUS_RETURN_WINDOW_SELECTOR =
 const DIALOG_INITIAL_FOCUS_SELECTOR =
   "[data-dialog-initial-focus], [data-coming-soon-ok]";
 const VIDEO_EDITOR_PATH = "/video-editor/";
-const VIDEO_EDITOR_POPUP_ERROR =
+const MODELING_PORTFOLIO_PATH = "/modeling/";
+const MODELING_LAUNCH_APP_ID = "modeling-launch";
+const LAUNCH_PROMPT_POPUP_ERROR =
   "The new tab was blocked. Allow pop-ups for this site, then choose Yes again.";
+/** Yes/No prompts that open a sibling route in a new tab, keyed by their app window id. */
+const NEW_TAB_LAUNCH_PROMPTS = Object.freeze({
+  "video-editor": Object.freeze({ path: VIDEO_EDITOR_PATH, source: "video-editor-launcher" }),
+  [MODELING_LAUNCH_APP_ID]: Object.freeze({
+    path: MODELING_PORTFOLIO_PATH,
+    source: "modeling-launcher",
+  }),
+});
 // let clashRoyaleLoaded = false;
 // let clashRoyaleLoading = false;
 
@@ -18234,56 +18241,77 @@ const expandSmallWindow = (win) => {
 const getAppWindow = (appId) =>
   document.querySelector(`[data-app-window=\"${appId}\"]`);
 
-const resetVideoEditorLaunchError = () => {
-  if (!videoEditorLaunchError) return;
-  videoEditorLaunchError.textContent = "";
-  videoEditorLaunchError.hidden = true;
+const launchPromptErrorElement = (appId) =>
+  getAppWindow(appId)?.querySelector("[data-launch-prompt-error]") || null;
+
+const resetLaunchPromptError = (appId) => {
+  const error = launchPromptErrorElement(appId);
+  if (!error) return;
+  error.textContent = "";
+  error.hidden = true;
 };
 
-const showVideoEditorLaunchError = () => {
-  if (!videoEditorLaunchError) return;
-  videoEditorLaunchError.textContent = VIDEO_EDITOR_POPUP_ERROR;
-  videoEditorLaunchError.hidden = false;
+const showLaunchPromptError = (appId) => {
+  const error = launchPromptErrorElement(appId);
+  if (!error) return;
+  error.textContent = LAUNCH_PROMPT_POPUP_ERROR;
+  error.hidden = false;
   requestAnimationFrame(() => {
-    if (videoEditorLaunchWindow) {
-      clampRandomEventWindowToViewport(videoEditorLaunchWindow);
-    }
+    const win = getAppWindow(appId);
+    if (win) clampRandomEventWindowToViewport(win);
   });
 };
 
-const openVideoEditorInNewTab = () => {
-  resetVideoEditorLaunchError();
+const openLaunchPromptInNewTab = (appId) => {
+  const prompt = NEW_TAB_LAUNCH_PROMPTS[appId];
+  if (!prompt) return;
+  resetLaunchPromptError(appId);
   let openedWindow = null;
   try {
-    openedWindow = window.open(VIDEO_EDITOR_PATH, "_blank");
+    openedWindow = window.open(prompt.path, "_blank");
   } catch (error) {
-    showVideoEditorLaunchError();
+    showLaunchPromptError(appId);
     return;
   }
   if (!openedWindow) {
-    showVideoEditorLaunchError();
+    showLaunchPromptError(appId);
     return;
   }
   try {
     openedWindow.opener = null;
   } catch (error) {
     openedWindow.close();
-    showVideoEditorLaunchError();
+    showLaunchPromptError(appId);
     return;
   }
-  triggerRandomEvents("newTabLink", {
-    href: VIDEO_EDITOR_PATH,
-    source: "video-editor-launcher",
+  triggerRandomEvents("newTabLink", { href: prompt.path, source: prompt.source });
+  closeAppWindow(appId);
+};
+
+/**
+ * The Modeling window always arrives with a prompt offering the standalone
+ * /modeling/ route. The prompt returns focus to whatever launched Modeling.
+ */
+const openModelingLaunchPrompt = () => {
+  const promptWindow = getAppWindow(MODELING_LAUNCH_APP_ID);
+  if (!promptWindow) return;
+  const focusReturn =
+    document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+      ? document.activeElement
+      : document.querySelector('.taskbar-icon[data-app="modeling"]');
+  if (focusReturn) comingSoonFocusReturns.set(promptWindow, focusReturn);
+  setWindowOpen(MODELING_LAUNCH_APP_ID, true);
+  requestAnimationFrame(() => {
+    promptWindow.querySelector(DIALOG_INITIAL_FOCUS_SELECTOR)?.focus({ preventScroll: true });
   });
-  closeAppWindow("video-editor");
 };
 
 const setWindowOpen = (appId, open) => {
   const win = getAppWindow(appId);
   if (!win) return;
 
-  if (open && appId === "video-editor") {
-    resetVideoEditorLaunchError();
+  if (open && NEW_TAB_LAUNCH_PROMPTS[appId]) {
+    resetLaunchPromptError(appId);
   }
 
   if (open && appId === ADMIN_CONTROLS_APP_ID) {
@@ -18388,6 +18416,7 @@ const setWindowOpen = (appId, open) => {
     if (!isAdminControlsAppId(appId)) {
       triggerRandomEvents("windowOpen", { appId });
     }
+    if (appId === "modeling") openModelingLaunchPrompt();
     return;
   }
 
@@ -21588,565 +21617,22 @@ const setupGalleryControlLabels = (root = document) => {
   });
 };
 
-const modelingLinkIconPaths = {
-  website: "assets/app-icons/ico/msie1.ico",
-  instagram: "assets/social-icons/instagram-icon.png",
-  camera: "assets/app-icons/ico/camera.ico",
-  paintOld: "assets/app-icons/ico/paint_old.ico",
-  pcxAlt: "assets/app-icons/ico/pcx_alt.ico",
-};
-
-const modelingBrandLinks = {
-  standstill: [
+// Shoot data lives in scripts/home/modeling-portfolio.js, shared with the /modeling/ route.
+const modelingPortfolio = window.rohinModelingPortfolio || { linkIcons: {}, shoots: [] };
+const modelingLinkIconPaths = modelingPortfolio.linkIcons;
+const modelingLinkData = Object.fromEntries(
+  modelingPortfolio.shoots.map((shoot) => [shoot.id, shoot.links])
+);
+const modelingGalleryData = Object.fromEntries(
+  modelingPortfolio.shoots.map((shoot) => [
+    shoot.id,
     {
-      type: "website",
-      label: "Standstill website",
-      href: "https://linktr.ee/standstill.ss",
+      folder: shoot.folder,
+      media: shoot.files.map((filename) => `${shoot.folder}/${filename}`),
+      autoplay: Boolean(shoot.autoplay),
     },
-    {
-      type: "instagram",
-      label: "Standstill Instagram",
-      href: "https://www.instagram.com/standstill.us/",
-    },
-  ],
-  garb: [
-    {
-      type: "website",
-      label: "Garb website",
-      href: "https://www.berkeleygarb.com/",
-    },
-    {
-      type: "instagram",
-      label: "Garb Instagram",
-      href: "https://www.instagram.com/garbberkeley/",
-    },
-  ],
-  clubRambutan: [
-    {
-      type: "website",
-      label: "Club Rambutan website",
-      href: "https://www.clubrambutan.com/",
-    },
-    {
-      type: "instagram",
-      label: "Club Rambutan Instagram",
-      href: "https://www.instagram.com/club.rambutan/",
-    },
-  ],
-  arthaus: [
-    {
-      type: "website",
-      label: "ArtHaus website",
-      href: "https://arthaus.mov/",
-    },
-    {
-      type: "instagram",
-      label: "ArtHaus Instagram",
-      href: "https://www.instagram.com/arthaus.living/",
-    },
-  ],
-  brainscramble: [
-    {
-      type: "website",
-      label: "BrainScramble website",
-      href: "https://thebrainscramble.com/",
-    },
-    {
-      type: "instagram",
-      label: "BrainScramble Berkeley Instagram",
-      href: "https://www.instagram.com/brainscrambleberkeley/",
-    },
-  ],
-  fast: [
-    {
-      type: "website",
-      label: "FAST at Cal website",
-      href: "https://bit.ly/m/FASTCal",
-    },
-    {
-      type: "instagram",
-      label: "FAST at Cal Instagram",
-      href: "https://www.instagram.com/fastcal/",
-    },
-  ],
-  saturnLosAngeles: [
-    {
-      type: "website",
-      label: "Saturn Los Angeles website",
-      href: "https://www.saturnlosangeles.com/",
-    },
-    {
-      type: "instagram",
-      label: "Saturn Los Angeles Instagram",
-      href: "https://www.instagram.com/saturnlosangeles/",
-    },
-  ],
-  vampireShoot: [
-    {
-      type: "camera",
-      label: "Ryan Photo Collection Instagram",
-      href: "https://www.instagram.com/ryanphotocollection/",
-    },
-    {
-      type: "paintOld",
-      label: "Beauty by 3mm4 Instagram",
-      href: "https://www.instagram.com/beautyby3mm4/",
-      title: "Beauty Instagram",
-    },
-  ],
-};
-
-const modelingLinkData = {
-  "modeling-stand-still-drop": [
-    ...modelingBrandLinks.standstill,
-    {
-      type: "pcxAlt",
-      label: "Sebastian Ng Instagram",
-      href: "https://www.instagram.com/sebastianrng/",
-      title: "Designer Instagram",
-    },
-  ],
-  "modeling-garb-merch-promo-shoot": modelingBrandLinks.garb,
-  "modeling-garb-cirque-du-moi-runway-show": [
-    ...modelingBrandLinks.garb,
-    {
-      type: "pcxAlt",
-      label: "Zack Dell Instagram",
-      href: "https://www.instagram.com/eigenzack/",
-      title: "Designer Instagram",
-    },
-  ],
-  "modeling-garb-garbage-runway-show-oct2025": [
-    ...modelingBrandLinks.garb,
-    {
-      type: "pcxAlt",
-      label: "Miriam Klaczynska Instagram",
-      href: "https://www.instagram.com/sleepymiriam/",
-      title: "Designer Instagram",
-    },
-  ],
-  "modeling-club-rambutan-runway-show": [
-    ...modelingBrandLinks.clubRambutan,
-    {
-      type: "instagram",
-      label: "Club Rambutan runway post",
-      href: "https://www.instagram.com/p/DQCyVvDkhhr/",
-    },
-    {
-      type: "pcxAlt",
-      label: "Datou designer website",
-      href: "https://datou.online/",
-      title: "Designer Website",
-    },
-  ],
-  "modeling-arthaus-promo-shoot": modelingBrandLinks.arthaus,
-  "modeling-xoxo510-x-brainscramble-shoot": [
-    ...modelingBrandLinks.brainscramble,
-    {
-      type: "instagram",
-      label: "XOXO510 Instagram",
-      href: "https://www.instagram.com/xoxo510/",
-    },
-    {
-      type: "camera",
-      label: "Tressa Davies Instagram",
-      href: "https://www.instagram.com/tressatookthis/",
-      title: "Photographer Instagram",
-    },
-  ],
-  "modeling-fast-sonder-lookbook-shoot-2": [
-    ...modelingBrandLinks.fast,
-    {
-      type: "pcxAlt",
-      label: "Pauper Co Instagram",
-      href: "https://www.instagram.com/pauperco/",
-      title: "Designer Instagram",
-    },
-    {
-      type: "camera",
-      label: "Charlize Chiu Instagram",
-      href: "https://www.instagram.com/charlize.chiu/",
-      title: "Photographer Instagram",
-    },
-    {
-      type: "paintOld",
-      label: "Miranda makeup Instagram",
-      href: "https://www.instagram.com/makeup._.miranda/",
-      title: "Beauty Instagram",
-    },
-  ],
-  "modeling-fast-sonder-lookbook-shoot": [
-    ...modelingBrandLinks.fast,
-    {
-      type: "camera",
-      label: "Charlize Chiu Instagram",
-      href: "https://www.instagram.com/charlize.chiu/",
-      title: "Photographer Instagram",
-    },
-  ],
-  "modeling-saturn-los-angeles-gaia-ss25-shoot": [
-    ...modelingBrandLinks.saturnLosAngeles,
-    {
-      type: "pcxAlt",
-      label: "Ryan Cheung Instagram",
-      href: "https://www.instagram.com/rcheungus/",
-      title: "Designer Instagram",
-    },
-  ],
-  "modeling-garb-garbage-runway-show": [
-    ...modelingBrandLinks.garb,
-    {
-      type: "pcxAlt",
-      label: "Kailey Espinoza Instagram",
-      href: "https://www.instagram.com/kaileyespnza/",
-      title: "Designer Instagram",
-    },
-  ],
-  "modeling-garb-means-business-shoot": modelingBrandLinks.garb,
-  "modeling-vampire-shoot": modelingBrandLinks.vampireShoot,
-  "modeling-garb-garbage-runway": modelingBrandLinks.garb,
-  "modeling-fast-crescendo-lookbook-shoot-2": [
-    ...modelingBrandLinks.fast,
-    {
-      type: "camera",
-      label: "Charlize Chiu Instagram",
-      href: "https://www.instagram.com/charlize.chiu/",
-      title: "Photographer Instagram",
-    },
-  ],
-  "modeling-fast-crescendo-lookbook-shoot": [
-    ...modelingBrandLinks.fast,
-    {
-      type: "camera",
-      label: "Ryan Photo Collection Instagram",
-      href: "https://www.instagram.com/ryanphotocollection/",
-      title: "Photographer Instagram",
-    },
-    {
-      type: "camera",
-      label: "Will Yau photos",
-      href: "https://wyauphoto.mypixieset.com/",
-      title: "Photographer Portfolio",
-    },
-  ],
-  "modeling-fast-reverie-runway-show": [
-    ...modelingBrandLinks.fast,
-    {
-      type: "camera",
-      label: "Fin Pimnara Instagram",
-      href: "https://www.instagram.com/fintakesphotos/",
-    },
-  ],
-  "modeling-fast-reverie-lookbook-shoot": [
-    ...modelingBrandLinks.fast,
-    {
-      type: "camera",
-      label: "Agodi Instagram",
-      href: "https://www.instagram.com/agodi.png/",
-      title: "Photographer Instagram",
-    },
-  ],
-  "modeling-fast-devotion-lookbook-shoot": [
-    ...modelingBrandLinks.fast,
-    {
-      type: "camera",
-      label: "Julianne Han photos",
-      href: "https://juliannehan.cargo.site/",
-      title: "Photos",
-    },
-  ],
-  "modeling-saturn-la-black-friday-drop": [
-    ...modelingBrandLinks.saturnLosAngeles,
-    {
-      type: "pcxAlt",
-      label: "Ryan Cheung Instagram",
-      href: "https://www.instagram.com/rcheungus/",
-      title: "Designer Instagram",
-    },
-    {
-      type: "camera",
-      label: "Flickz by Fredo photos",
-      href: "https://flickzbyfredo.mypixieset.com/",
-      title: "Photos",
-    },
-  ],
-};
-
-const modelingGallery = (folder, filenames = [], type = "images", options = {}) => ({
-  folder,
-  [type]: filenames.map((filename) => `${folder}/${filename}`),
-  ...options,
-});
-
-const modelingGalleryData = {
-  "modeling-stand-still-drop": modelingGallery(
-    "assets/modeling/stand-still-mar26",
-    [
-      "1.mp4",
-      "2.jpg",
-      "3.jpg",
-      "4.jpg",
-      "5.jpg",
-      "6.jpg",
-    ],
-    "media",
-    { autoplay: true }
-  ),
-  "modeling-garb-merch-promo-shoot": modelingGallery(
-    "assets/modeling/garb-merch-lighter-promo-feb26",
-    [
-      "2.jpg",
-      "1.jpg",
-    ]
-  ),
-  "modeling-garb-cirque-du-moi-runway-show": modelingGallery(
-    "assets/modeling/garb-cirque-du-moi-rnwy-dec2025",
-    [
-      "1.jpg",
-      "2.jpg",
-      "3.jpg",
-      "4.jpg",
-      "5.jpg",
-    ]
-  ),
-  "modeling-garb-garbage-runway-show-oct2025": modelingGallery(
-    "assets/modeling/garb-garbage-rnwy-oct2025",
-    [
-      "1.jpg",
-      "2.jpg",
-      "3.JPG",
-      "4.jpg",
-      "5.jpg",
-      "6.jpg",
-      "7.jpg",
-      "8.JPG",
-    ]
-  ),
-  "modeling-club-rambutan-runway-show": modelingGallery(
-    "assets/modeling/club-rambutan-runway-show",
-    [
-      "01-rambutan-photo.jpg",
-      "02-rambutan-photo.jpg",
-      "03-rambutan-photo.jpg",
-      "04-rambutan-photo.jpg",
-      "05-rambutan-photo.jpg",
-      "06-rambutan-photo.jpg",
-    ]
-  ),
-  "modeling-arthaus-promo-shoot": modelingGallery(
-    "assets/modeling/arthaus-promo-shoot-sep25",
-    [
-      "1.jpg",
-      "2.jpg",
-      "3.jpg",
-      "4.jpg",
-      "5.jpg",
-      "6.jpg",
-    ]
-  ),
-  "modeling-xoxo510-x-brainscramble-shoot": modelingGallery(
-    "assets/modeling/xoxo510-brainscramble",
-    [
-      "01-brainscramble-photo.jpg",
-      "02-brainscramble-photo.jpg",
-      "03-brainscramble-photo.jpg",
-      "04-brainscramble-photo.jpg",
-      "05-brainscramble-photo.jpg",
-      "06-brainscramble-photo.jpg",
-      "07-brainscramble-photo.jpg",
-      "08-brainscramble-photo.jpg",
-      "09-brainscramble-photo.jpg",
-      "10-brainscramble-photo.jpg",
-    ]
-  ),
-  "modeling-fast-sonder-lookbook-shoot-2": modelingGallery(
-    "assets/modeling/fast-sonder-lb2-may2025",
-    [
-      "1.jpg",
-      "2.jpg",
-      "3.jpg",
-      "4.jpg",
-      "5.png",
-      "6.jpg",
-      "7.jpg",
-      "8.jpg",
-      "9.jpg",
-      "10.jpg",
-      "11.jpg",
-      "12.jpg",
-    ]
-  ),
-  "modeling-fast-sonder-lookbook-shoot": modelingGallery(
-    "assets/modeling/fast-sonder-lb-may2025",
-    [
-      "1.JPG",
-      "2.JPG",
-      "3.JPG",
-      "4.JPG",
-      "5.JPG",
-      "6.JPG",
-      "7.JPG",
-      "8.JPG",
-      "9.JPG",
-      "11.JPG",
-      "12.JPG",
-      "13.JPG",
-    ]
-  ),
-  "modeling-saturn-los-angeles-gaia-ss25-shoot": modelingGallery(
-    "assets/modeling/saturn-LA-gaia-apr2025",
-    [
-      "1.jpg",
-      "2.jpg",
-      "3.jpg",
-      "4.jpg",
-      "5.jpg",
-      "6.jpg",
-      "7.jpg",
-    ]
-  ),
-  "modeling-garb-garbage-runway-show": modelingGallery(
-    "assets/modeling/garb-garbage-rnwy-apr2025",
-    [
-      "1.JPEG",
-      "2.jpeg",
-      "3.jpeg",
-      "4.jpeg",
-    ]
-  ),
-  "modeling-garb-means-business-shoot": modelingGallery(
-    "assets/modeling/garb-means-business-jan2025",
-    [
-      "1.jpg",
-      "2.jpg",
-      "3.jpg",
-      "4.JPG",
-      "5.JPG",
-      "6.jpg",
-      "7.JPG",
-      "8.JPG",
-      "9.jpg",
-    ]
-  ),
-  "modeling-vampire-shoot": modelingGallery("assets/modeling/vampire-shoot-jan2025", [
-    "01-vampire-photo.jpg",
-    "02-vampire-photo.jpg",
-    "03-vampire-photo.jpg",
-    "04-vampire-photo.jpg",
-    "05-vampire-photo.jpg",
-    "06-vampire-photo.jpg",
-    "07-vampire-photo.jpg",
-    "08-vampire-photo.jpg",
-    "09-vampire-photo.jpg",
-    "10-vampire-photo.jpg",
-    "11-vampire-photo.jpg",
-    "12-vampire-photo.jpg",
-    "13-vampire-photo.jpg",
-    "14-vampire-photo.jpg",
-    "15-vampire-photo.jpg",
-    "16-vampire-photo.jpg",
-  ]),
-  "modeling-garb-garbage-runway": modelingGallery(
-    "assets/modeling/garb-garbage-rnwy-dec2024",
-    [
-      "0.JPEG",
-      "1.JPEG",
-      "2.JPEG",
-      "3.JPEG",
-      "3-5.JPEG",
-      "4.JPEG",
-      "5.JPEG",
-      "6.JPEG",
-      "6-5.JPEG",
-      "7.JPEG",
-      "8.JPEG",
-      "9.JPEG",
-      "10.JPEG",
-    ]
-  ),
-  "modeling-fast-crescendo-lookbook-shoot-2": modelingGallery(
-    "assets/modeling/fast-crescendo2-lb-oct2024",
-    [
-      "IMG_0369.jpg",
-      "IMG_0370.jpg",
-      "IMG_0371.jpg",
-      "IMG_0372.jpg",
-      "IMG_0373.jpg",
-      "IMG_0374.jpg",
-      "IMG_0375.jpg",
-      "IMG_0376.jpg",
-      "IMG_0377.jpg",
-      "IMG_0378.jpg",
-    ]
-  ),
-  "modeling-fast-crescendo-lookbook-shoot": modelingGallery(
-    "assets/modeling/fast-crescendo-lb-oct2024",
-    [
-      "01-crescendo-photo.jpg",
-      "02-crescendo-photo.jpg",
-      "03-crescendo-photo.jpg",
-      "04-crescendo-photo.jpg",
-      "05-crescendo-photo.jpg",
-      "06-crescendo-photo.jpg",
-      "07-crescendo-photo.jpg",
-      "08-crescendo-photo.jpg",
-      "09-crescendo-photo.jpg",
-      "10-crescendo-photo.jpg",
-      "11-crescendo-photo.jpg",
-    ]
-  ),
-  "modeling-fast-reverie-runway-show": modelingGallery(
-    "assets/modeling/fast-reverie-rnwy-apr2024",
-    [
-      "01-runway-video.mp4",
-      "02-runway-photo.jpg",
-      "03-runway-photo.jpg",
-      "04-runway-photo.jpg",
-      "05-runway-photo.png",
-    ],
-    "media"
-  ),
-  "modeling-fast-reverie-lookbook-shoot": modelingGallery(
-    "assets/modeling/fast-reverie-lb-mar2024",
-    [
-      "01-reverie-photo.jpg",
-      "02-reverie-photo.jpg",
-      "03-reverie-photo.jpg",
-      "04-reverie-photo.jpg",
-    ]
-  ),
-  "modeling-fast-devotion-lookbook-shoot": modelingGallery(
-    "assets/modeling/fast-devotion-lb-nov2023",
-    [
-      "IMG_0327.jpg",
-      "IMG_0328.jpg",
-      "IMG_0329.jpg",
-      "IMG_0330.jpg",
-      "IMG_0331.jpg",
-      "IMG_0333.jpg",
-      "IMG_0334.jpg",
-      "IMG_0335.jpg",
-      "IMG_0332.jpg",
-    ]
-  ),
-  "modeling-saturn-la-black-friday-drop": modelingGallery(
-    "assets/modeling/saturn-LA-oct2023",
-    [
-      "IMG_9695.jpg",
-      "IMG_9696.jpg",
-      "IMG_9697.jpg",
-      "IMG_9698.jpg",
-      "IMG_9699.jpg",
-      "IMG_9700.jpg",
-      "IMG_9701.jpg",
-      "IMG_9702.jpg",
-      "IMG_9703.jpg",
-      "IMG_9704.jpg",
-      "IMG_9705.jpg",
-      "IMG_9706.jpg",
-    ]
-  ),
-};
+  ])
+);
 
 const renderModelingLinks = (container) => {
   if (container.dataset.rendered === "true") return;
@@ -22190,7 +21676,7 @@ const renderModelingGallery = (container) => {
   const galleryId = container.getAttribute("data-modeling-gallery");
   const gallery = modelingGalleryData[galleryId];
   if (!gallery) return;
-  const media = gallery.media || gallery.images;
+  const media = gallery.media;
 
   const frame = document.createElement("div");
   frame.className = "gallery-frame";
@@ -22551,7 +22037,7 @@ const inactiveModelingGallerySources = (root) =>
     .map((panel) => panel.querySelector("[data-modeling-gallery]"))
     .filter(Boolean)
     .map((container) => modelingGalleryData[container.getAttribute("data-modeling-gallery")])
-    .map((gallery) => gallery?.media || gallery?.images || [])
+    .map((gallery) => gallery?.media || [])
     .map((media) => galleryItemSource(media[0]))
     .filter(Boolean);
 
@@ -28739,7 +28225,12 @@ document.addEventListener("keydown", (event) => {
   closeAppWindow(openFocusReturnWindow.getAttribute("data-app-window"));
 });
 
-videoEditorLaunchYes?.addEventListener("click", openVideoEditorInNewTab);
+document.querySelectorAll("[data-launch-prompt-open]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const appId = button.closest("[data-app-window]")?.getAttribute("data-app-window");
+    if (appId) openLaunchPromptInNewTab(appId);
+  });
+});
 
 document.querySelectorAll("[data-github-shortcut]").forEach((button) => {
   button.addEventListener("click", () => {

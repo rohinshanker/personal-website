@@ -1605,7 +1605,7 @@
               <p>Photographer: Ryan Nava</p>
             </div>
             <div class="viewer-content is-hidden" data-view="modeling-garb-garbage-runway">
-              <h3>Garb "Garb-age" Runway</h3>
+              <h3>Garb "Garb-age" Runway Show</h3>
               <p class="project-view-subtitle">December 2024</p>
               <div data-modeling-links="modeling-garb-garbage-runway"></div>
               <div data-modeling-gallery="modeling-garb-garbage-runway"></div>
@@ -2942,6 +2942,7 @@
           <p
             class="video-editor-launch-error"
             id="video-editor-launch-error"
+            data-launch-prompt-error
             role="alert"
             aria-live="assertive"
             hidden
@@ -2950,14 +2951,59 @@
             <button
               type="button"
               id="video-editor-launch-yes"
-              data-video-editor-open
+              data-launch-prompt-open
               data-dialog-initial-focus
             >Yes</button>
             <button
               type="button"
               id="video-editor-launch-no"
-              data-video-editor-cancel
               data-close="video-editor"
+            >No</button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="window home-window app-window app-window--center random-alert-window launch-prompt-window is-hidden"
+        data-app-window="modeling-launch"
+        data-launch-prompt-window
+        id="modeling-launch-window"
+        role="alertdialog"
+        aria-modal="false"
+        aria-hidden="true"
+        aria-labelledby="modeling-launch-title"
+        aria-describedby="modeling-launch-message"
+      >
+        <div class="title-bar">
+          <div class="title-bar-text" id="modeling-launch-title">Modeling</div>
+          <div class="title-bar-controls">
+            <button type="button" aria-label="Close" data-close="modeling-launch"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="random-alert-message">
+            <img src="assets/app-icons/ico/accessibility_window_objs.ico" alt="" />
+            <p id="modeling-launch-message">Open in separate tab (rohin.shanker.me/modeling)?</p>
+          </div>
+          <p
+            class="video-editor-launch-error"
+            id="modeling-launch-error"
+            data-launch-prompt-error
+            role="alert"
+            aria-live="assertive"
+            hidden
+          ></p>
+          <div class="random-alert-actions">
+            <button
+              type="button"
+              id="modeling-launch-yes"
+              data-launch-prompt-open
+              data-dialog-initial-focus
+            >Yes</button>
+            <button
+              type="button"
+              id="modeling-launch-no"
+              data-close="modeling-launch"
             >No</button>
           </div>
         </div>
@@ -6802,12 +6848,13 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-b70c14d27d6091e0308c067320efd4cfdd9cb785ddd278ac46ca265aa84220dc"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-c103563ac96616740d4ef51f42e865aed50924c1b3635124c572d2f41acde10b"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
     <script src="scripts/home/system-alerts.js?v=bulk-system-alerts-20260811"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-b70c14d27d6091e0308c067320efd4cfdd9cb785ddd278ac46ca265aa84220dc"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-c103563ac96616740d4ef51f42e865aed50924c1b3635124c572d2f41acde10b"></script>
     <script src="scripts/home/core/media.js?v=hidden-carousel-playback-20260827"></script>
-    <script src="scripts/home/main.js?v=game-build-b70c14d27d6091e0308c067320efd4cfdd9cb785ddd278ac46ca265aa84220dc"></script>
+    <script src="scripts/home/modeling-portfolio.js?v=modeling-portfolio-20260916"></script>
+    <script src="scripts/home/main.js?v=game-build-c103563ac96616740d4ef51f42e865aed50924c1b3635124c572d2f41acde10b"></script>
     <script src="scripts/home/admin-controls.js?v=admin-promo-workflow-20260915"></script>
   </body>
 </html>

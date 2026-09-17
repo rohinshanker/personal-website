@@ -38,6 +38,31 @@ export const installOfflineGameStats = async (page) => {
   );
 };
 
+const ONE_PIXEL_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR42mNk+M/wHwAF/gL+q0g9QAAAAABJRU5ErkJggg==",
+  "base64"
+);
+
+const stubVideo = await readFile(
+  new URL("../../../assets/modeling/fast-reverie-rnwy-apr2024/01-runway-video.mp4", import.meta.url)
+);
+
+/**
+ * Serves every modeling photo as a one-pixel PNG and every modeling video as a
+ * small valid H.264 clip, so gallery specs stay fast and hermetic without a
+ * single 404. Pass a context so pages opened later, such as popups, inherit it.
+ *
+ * @param {import("@playwright/test").Page | import("@playwright/test").BrowserContext} target
+ */
+export const installStubbedModelingMedia = async (target) => {
+  await target.route(/\/assets\/modeling\/.*\.(?:mp4|mov|webm)(?:\?.*)?$/i, (route) =>
+    route.fulfill({ body: stubVideo, contentType: "video/mp4" })
+  );
+  await target.route(/\/assets\/modeling\/.*\.(?:jpe?g|png)(?:\?.*)?$/i, (route) =>
+    route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" })
+  );
+};
+
 /**
  * `net::ERR_ABORTED` is the page cancelling its own request — swapping an
  * animated icon's `src`, or tearing down a `<video>` when its window closes.

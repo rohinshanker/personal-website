@@ -84,34 +84,37 @@ test("Video Editor owns an accessible new-tab confirmation prompt", async () => 
   assert.doesNotMatch(section, />Coming soon<\/p>/);
   assert.match(
     section,
-    /id="video-editor-launch-yes"[\s\S]*?data-video-editor-open[\s\S]*?data-dialog-initial-focus[\s\S]*?>Yes<\/button>/
+    /id="video-editor-launch-yes"[\s\S]*?data-launch-prompt-open[\s\S]*?data-dialog-initial-focus[\s\S]*?>Yes<\/button>/
   );
   assert.match(
     section,
-    /id="video-editor-launch-no"[\s\S]*?data-video-editor-cancel[\s\S]*?data-close="video-editor"[\s\S]*?>No<\/button>/
+    /id="video-editor-launch-no"[\s\S]*?data-close="video-editor"[\s\S]*?>No<\/button>/
   );
   assert.equal(count(section, /data-close="video-editor"/g), 2);
   assert.match(
     section,
-    /id="video-editor-launch-error"[\s\S]*?role="alert"[\s\S]*?aria-live="assertive"[\s\S]*?hidden/
+    /id="video-editor-launch-error"[\s\S]*?data-launch-prompt-error[\s\S]*?role="alert"[\s\S]*?aria-live="assertive"[\s\S]*?hidden/
   );
 
-  assert.match(dom, /videoEditorLaunchWindow: byId\("video-editor-launch-window"\)/);
-  assert.match(dom, /videoEditorLaunchYes: byId\("video-editor-launch-yes"\)/);
-  assert.match(dom, /videoEditorLaunchError: byId\("video-editor-launch-error"\)/);
-  assert.match(main, /window\.open\(VIDEO_EDITOR_PATH, "_blank"\)/);
+  // The prompt is wired through its data attributes, not a dedicated registry entry.
+  assert.doesNotMatch(dom, /videoEditorLaunch/);
+  assert.match(
+    main,
+    /NEW_TAB_LAUNCH_PROMPTS = Object\.freeze\(\{[\s\S]*?"video-editor": Object\.freeze\(\{ path: VIDEO_EDITOR_PATH, source: "video-editor-launcher" \}\)/
+  );
+  assert.match(main, /window\.open\(prompt\.path, "_blank"\)/);
   assert.match(main, /openedWindow\.opener = null/);
-  assert.match(main, /if \(!openedWindow\) \{[\s\S]*?showVideoEditorLaunchError\(\)/);
+  assert.match(main, /if \(!openedWindow\) \{[\s\S]*?showLaunchPromptError\(appId\)/);
   assert.match(main, /Allow pop-ups for this site, then choose Yes again/);
   assert.match(
     main,
-    /videoEditorLaunchYes\?\.addEventListener\("click", openVideoEditorInNewTab\)/
+    /querySelectorAll\("\[data-launch-prompt-open\]"\)[\s\S]*?openLaunchPromptInNewTab\(appId\)/
   );
   assert.match(
     main,
-    /triggerRandomEvents\("newTabLink", \{[\s\S]*?source: "video-editor-launcher"/
+    /triggerRandomEvents\("newTabLink", \{ href: prompt\.path, source: prompt\.source \}\)/
   );
-  assert.match(main, /closeAppWindow\("video-editor"\)/);
+  assert.match(main, /closeAppWindow\(appId\)/);
   assert.match(main, /FOCUS_RETURN_WINDOW_SELECTOR[\s\S]*?data-launch-prompt-window/);
   assert.match(
     main,

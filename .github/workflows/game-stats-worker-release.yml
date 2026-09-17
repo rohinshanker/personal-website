@@ -115,7 +115,7 @@ jobs:
       - name: Assemble public site artifact
         run: |
           mkdir -p "$RUNNER_TEMP/personal-site/scripts"
-          cp -R assets styles video-editor "$RUNNER_TEMP/personal-site/"
+          cp -R assets styles video-editor modeling "$RUNNER_TEMP/personal-site/"
           cp -R scripts/home "$RUNNER_TEMP/personal-site/scripts/"
           cp CNAME home.html index.html robots.txt sitemap.xml style.css "$RUNNER_TEMP/personal-site/"
       - name: Upload GitHub Pages artifact

@@ -1,0 +1,738 @@
+:root {
+  --portfolio-wallpaper: url("../assets/optimized/background-2200.jpg");
+  --portfolio-max-width: 1180px;
+  --portfolio-gutter: 12px;
+  --carousel-height: clamp(280px, 62vh, 560px);
+  --control-height: 32px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  scroll-padding-top: var(--portfolio-gutter);
+  -webkit-text-size-adjust: 100%;
+}
+
+body.modeling-page {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--portfolio-gutter) var(--portfolio-gutter) 80px;
+  background: #008080;
+  line-height: 1.4;
+}
+
+/* A fixed pseudo-element keeps the wallpaper still on mobile browsers that
+   ignore background-attachment. */
+body.modeling-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: #008080 var(--portfolio-wallpaper) center / cover no-repeat;
+}
+
+html.is-lightbox-open body.modeling-page {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+a:focus-visible,
+summary:focus-visible {
+  outline: 1px dotted currentColor;
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--portfolio-gutter);
+  top: -100px;
+  z-index: 60;
+  padding: 8px 12px;
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  color: inherit;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: var(--portfolio-gutter);
+}
+
+/* Windows ------------------------------------------------------------- */
+
+.portfolio-header,
+.shoot,
+.portfolio-noscript {
+  width: 100%;
+  max-width: var(--portfolio-max-width);
+  margin: 0 auto;
+}
+
+.portfolio-header {
+  margin-bottom: 16px;
+}
+
+.title-bar-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.title-bar-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.shoot__title {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.shoot .title-bar-controls button,
+.lightbox .title-bar-controls button {
+  min-width: 30px;
+  min-height: 26px;
+  background-position: center;
+}
+
+/* Header ---------------------------------------------------------------- */
+
+.portfolio-header__body {
+  display: grid;
+  gap: 14px;
+}
+
+.portfolio-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.portfolio-summary,
+.portfolio-home {
+  margin: 0;
+}
+
+.portfolio-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+.portfolio-links > .portfolio-link {
+  grid-column: 1 / -1;
+}
+
+.portfolio-link-slot {
+  display: grid;
+  gap: 4px;
+}
+
+.portfolio-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 12px;
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  text-shadow: none;
+  border: 0;
+}
+
+.portfolio-link:active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+.portfolio-link:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+.portfolio-link--pending,
+.portfolio-link--pending:active {
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  color: var(--button-shadow);
+  text-shadow: 1px 1px 0 var(--button-highlight);
+  cursor: default;
+}
+
+.portfolio-link--pending .portfolio-link__icon {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.portfolio-link__icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.portfolio-link__text {
+  display: grid;
+  gap: 1px;
+  line-height: 1.2;
+}
+
+.portfolio-link__label {
+  font-size: 11px;
+}
+
+.portfolio-link__value {
+  font-size: 12px;
+}
+
+.portfolio-link__note {
+  font-size: 11px;
+  color: #444;
+  padding-left: 2px;
+}
+
+.portfolio-nav__details {
+  min-width: 0;
+}
+
+.portfolio-nav__summary,
+.shoot__credits-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--control-height);
+  padding: 0 12px;
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.portfolio-nav__summary::-webkit-details-marker,
+.shoot__credits-summary::-webkit-details-marker {
+  display: none;
+}
+
+.portfolio-nav__summary::before,
+.shoot__credits-summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid currentColor;
+}
+
+details[open] > .portfolio-nav__summary::before,
+details[open] > .shoot__credits-summary::before {
+  border-top: 5px solid currentColor;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 0;
+}
+
+.portfolio-nav__summary:active,
+.shoot__credits-summary:active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+.portfolio-nav__summary:focus-visible,
+.shoot__credits-summary:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+.portfolio-nav__list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  margin: 8px 0 0;
+  padding: 6px;
+  background: #fff;
+  box-shadow: var(--border-field);
+  list-style: none;
+}
+
+.portfolio-nav__link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--control-height);
+  padding: 4px 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.portfolio-nav__link:hover,
+.portfolio-nav__link:focus-visible {
+  background: var(--dialog-blue);
+  color: #fff;
+  outline: none;
+}
+
+.portfolio-nav__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.portfolio-nav__date {
+  flex: none;
+  font-size: 11px;
+}
+
+.portfolio-home__link {
+  color: var(--link-blue);
+}
+
+/* Shoots ---------------------------------------------------------------- */
+
+.portfolio-shoots {
+  display: grid;
+  gap: 16px;
+}
+
+.portfolio-noscript .window-body p {
+  margin: 0;
+}
+
+.shoot__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "date"
+    "gallery"
+    "links"
+    "credits";
+  gap: 10px;
+  min-width: 0;
+}
+
+.shoot__date {
+  grid-area: date;
+  margin: 0;
+  font-weight: bold;
+}
+
+.carousel {
+  grid-area: gallery;
+  min-width: 0;
+}
+
+.shoot__links {
+  grid-area: links;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shoot__credits {
+  grid-area: credits;
+  min-width: 0;
+}
+
+.shoot__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--control-height);
+  padding: 4px 10px;
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  color: inherit;
+  text-decoration: none;
+}
+
+.shoot__link:active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+.shoot__link:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+.shoot__link-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.shoot__credits-list {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: #fff;
+  box-shadow: var(--border-field);
+  list-style: none;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Carousel --------------------------------------------------------------- */
+
+.carousel__strip {
+  display: flex;
+  height: var(--carousel-height);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  background: #fff;
+  box-shadow: var(--border-field);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.carousel__strip::-webkit-scrollbar {
+  display: none;
+}
+
+.carousel__slide {
+  position: relative;
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 2px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.carousel__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  text-shadow: none;
+  cursor: zoom-in;
+}
+
+.carousel__photo:active {
+  box-shadow: none;
+}
+
+.carousel__photo:focus {
+  outline: none;
+}
+
+.carousel__photo:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -3px;
+}
+
+.carousel__image,
+.carousel__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.carousel__video {
+  background: #000;
+}
+
+.carousel__unavailable {
+  position: absolute;
+  inset: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 12px;
+  background: #fff;
+  color: #555;
+  text-align: center;
+}
+
+.media-loading {
+  position: absolute;
+  inset: 2px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #fff;
+  pointer-events: none;
+}
+
+.media-loading[hidden] {
+  display: none;
+}
+
+.media-loading__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.media-loading--compact .media-loading__image {
+  object-fit: contain;
+}
+
+.carousel__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.carousel__control,
+.lightbox__control {
+  flex: 0 1 110px;
+  min-width: 84px;
+  min-height: var(--control-height);
+  white-space: nowrap;
+}
+
+.carousel__counter,
+.lightbox__counter {
+  display: inline-flex;
+  flex: 1 1 64px;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 3px 6px;
+  background: var(--surface);
+  box-shadow: var(--border-status-field);
+  white-space: nowrap;
+}
+
+/* Fullscreen viewer ------------------------------------------------------ */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+}
+
+.lightbox[hidden] {
+  display: none;
+}
+
+.lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* Every level of this chain is a sized flex item, so the image's
+   max-height: 100% resolves against real space instead of its own height. */
+.lightbox__window {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+
+.lightbox__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  margin: 6px;
+}
+
+.lightbox__stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 2px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: var(--border-field);
+  touch-action: pan-y pinch-zoom;
+}
+
+.lightbox__media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.lightbox__image,
+.lightbox__video {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lightbox__video {
+  width: 100%;
+  height: 100%;
+}
+
+.lightbox__stage > .media-loading {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: min(258px, 80%);
+  height: min(272px, 60%);
+  translate: -50% -50%;
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+}
+
+.lightbox__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* Back to top -------------------------------------------------------------- */
+
+.portfolio-top-link {
+  position: fixed;
+  right: var(--portfolio-gutter);
+  bottom: var(--portfolio-gutter);
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  color: inherit;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.portfolio-top-link[hidden] {
+  display: none;
+}
+
+.portfolio-top-link:active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+/* Responsive --------------------------------------------------------------- */
+
+@media (min-width: 640px) {
+  .portfolio-links {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .portfolio-links > .portfolio-link {
+    grid-column: auto;
+  }
+
+  .portfolio-nav__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  :root {
+    --carousel-height: clamp(420px, 72vh, 760px);
+  }
+
+  .portfolio-nav__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .shoot__body {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "gallery date"
+      "gallery links"
+      "gallery credits"
+      "gallery .";
+    column-gap: 16px;
+    align-items: start;
+  }
+
+  .shoot__date {
+    font-size: 14px;
+  }
+
+  .shoot__links {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .shoot__credits-summary {
+    width: 100%;
+  }
+
+  .lightbox {
+    padding: var(--portfolio-gutter);
+  }
+
+  .lightbox__window {
+    width: min(100%, 1400px);
+  }
+}
+
+@media (max-width: 400px) {
+  :root {
+    --portfolio-gutter: 8px;
+  }
+
+  .portfolio-title {
+    font-size: 19px;
+  }
+
+  .carousel__control,
+  .lightbox__control {
+    min-width: 72px;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}
+
+@media (max-height: 520px) {
+  :root {
+    --carousel-height: clamp(220px, 70vh, 420px);
+  }
+}
