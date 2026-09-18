@@ -772,13 +772,43 @@ test("runtime orchestration integrates the complete event registry without publi
     assert.match(presetRuntime, new RegExp(`presetId === "${preset}"`));
   }
   assert.match(gameWinRuntime, /setWindowOpen\("solitaire", true\)/);
-  assert.match(gameWinRuntime, /solStartFireworks\(\)/);
-  assert.match(gameWinRuntime, /solShowAchievement\(\)/);
-  assert.match(gameWinRuntime, /solPlayVictoryVideo\(\)/);
+  assert.match(gameWinRuntime, /solStagePresentationWin\(\{ visualEffects \}\)/);
   assert.doesNotMatch(
     gameWinRuntime,
     /recordGame|publish|queue|sync|submit|triggerRandomEvents|fetch/i,
     "The promotional win must remain visual-only."
+  );
+
+  const stagingRuntime = sourceBetween(
+    main,
+    "const solStagePresentationWin = (",
+    "const solAutoMoveCardToFoundation = "
+  );
+  assert.match(stagingRuntime, /solState\.presentation = \{ visualEffects: Boolean\(visualEffects\) \}/);
+  assert.match(stagingRuntime, /solState\.tableau = solBuildPresentationTableau\(\)/);
+  assert.match(stagingRuntime, /solState\.statsSession = ""/);
+  assert.doesNotMatch(
+    stagingRuntime,
+    /recordGame|publish|queue|sync|submit|triggerRandomEvents|fetch/i,
+    "Staging the promotional board must remain visual-only."
+  );
+
+  const victoryRuntime = sourceBetween(
+    main,
+    "const solTriggerVictoryEffects = () => {",
+    "const solCreateSlotMark = "
+  );
+  const presentationBranch = sourceBetween(
+    victoryRuntime,
+    "if (solState.presentation) {",
+    "solStartFireworks();\n  solShowAchievement();\n  solPlayVictoryVideo();\n  recordGameStatsEvent("
+  );
+  assert.match(presentationBranch, /if \(solState\.presentation\.visualEffects\) \{[\s\S]*?solStartFireworks\(\);[\s\S]*?solShowAchievement\(\);/);
+  assert.match(presentationBranch, /solPlayVictoryVideo\(\);\s*return;/);
+  assert.doesNotMatch(
+    presentationBranch,
+    /recordGame|publish|queue|sync|submit|triggerRandomEvents|fetch/i,
+    "The presentation victory must remain visual-only."
   );
 
   const publicRuntime = sourceBetween(

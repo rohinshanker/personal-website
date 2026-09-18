@@ -1199,6 +1199,8 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
 test("capture aids, presets, privacy, media switches, and start-stop controls reflect real state", async ({
   page,
 }) => {
+  // The game-win preset now plays a real 52-card auto-solve at production cadence.
+  test.setTimeout(90_000);
   const diagnostics = await preparePage(page);
   await page.setViewportSize({ width: 1280, height: 800 });
   await openAdmin(page);
@@ -1284,10 +1286,21 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
 
   await page.locator('[data-admin-preset="game-win"]').click();
   await expect(page.locator('[data-app-window="solitaire"]')).toBeVisible();
+  await expect(page.locator("#sol-tableau .sol-tableau-col .sol-card")).toHaveCount(52);
+  await expect(page.locator("#sol-tableau .sol-card.is-face-down")).toHaveCount(0);
+  await expect(page.locator("#sol-auto-solve")).toBeVisible();
+  await expect(page.locator("#sol-reset")).toBeHidden();
   await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute(
     "aria-hidden",
-    "false"
+    "true"
   );
+  await page.locator("#sol-auto-solve").click();
+  await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute(
+    "aria-hidden",
+    "false",
+    { timeout: 25_000 }
+  );
+  await expect(page.locator("[data-sol-foundation] .sol-card")).toHaveCount(4);
   expect(await page.locator("#sol-victory-video").evaluate((video) => video.muted)).toBe(true);
 
   expect(diagnostics.consoleErrors).toEqual([]);

@@ -18441,6 +18441,7 @@ const setWindowOpen = (appId, open) => {
   if (activeAppDwellWindow === win) clearActiveAppDwell();
 
   if (appId === "solitaire") {
+    solCancelAutoSolve();
     solHideVictoryVideo();
   }
   if (appId === "snake") {
@@ -29401,6 +29402,7 @@ const solHelp = document.getElementById("sol-help");
 const solRulesHelp = document.getElementById("sol-rules-help");
 const solReset = document.getElementById("sol-reset");
 const solUndo = document.getElementById("sol-undo");
+const solAutoSolve = document.getElementById("sol-auto-solve");
 const solAchievement = document.getElementById("sol-achievement");
 const solFireworks = document.getElementById("sol-fireworks");
 const solVictoryVideoOverlay = document.getElementById("sol-victory-video-overlay");
@@ -29445,6 +29447,7 @@ const solState = {
   moves: 0,
   won: false,
   statsSession: "",
+  presentation: null,
 };
 const solHistory = [];
 const solFireworkColors = [
@@ -29463,6 +29466,8 @@ let solVictoryFrameRequest = null;
 let solVictoryScratchCanvas = null;
 let solActiveTableauTooltip = null;
 let solLastCardClick = null;
+let solAutoSolveRun = null;
+let solWindowImpact = null;
 
 const ensureSolitaireStatsSession = () => {
   if (solState.statsSession) return;
@@ -29964,6 +29969,114 @@ const solRestoreSnapshot = (snapshot) => {
   solState.won = snapshot.won;
 };
 
+const solAutoSolveTiming = Object.freeze({
+  firstIntervalMs: 1000,
+  accelerationFactor: 0.86,
+  minIntervalMs: 120,
+  liftShare: 0.55,
+  snapShare: 0.3,
+});
+
+const solAutoSolveIntervalMs = (step, timing = solAutoSolveTiming) =>
+  Math.max(
+    timing.minIntervalMs,
+    Math.round(timing.firstIntervalMs * timing.accelerationFactor ** step)
+  );
+
+const solAutoSolvePhaseMs = (intervalMs, timing = solAutoSolveTiming) => ({
+  liftMs: Math.round(intervalMs * timing.liftShare),
+  snapMs: Math.round(intervalMs * timing.snapShare),
+});
+
+const solFoundationCardCount = (state) =>
+  solSuitOrder.reduce((total, suit) => total + state.foundations[suit].length, 0);
+
+const solIsFullyRevealed = (state) =>
+  state.stock.length === 0 &&
+  state.tableau.every((column) => column.every((card) => card.faceUp));
+
+const solNextAutoSolveMove = (state) => {
+  let best = null;
+  solSuitOrder.forEach((suit) => {
+    const rank = state.foundations[suit].length + 1;
+    if (rank > 13) return;
+    const matches = (card) => card.faceUp && card.suit === suit && card.rank === rank;
+    const columnIndex = state.tableau.findIndex((column) => {
+      const top = column[column.length - 1];
+      return Boolean(top) && matches(top);
+    });
+    let move = null;
+    if (columnIndex >= 0) {
+      move = {
+        zone: "tableau",
+        pile: columnIndex,
+        index: state.tableau[columnIndex].length - 1,
+        suit,
+        rank,
+      };
+    } else {
+      const wasteIndex = state.waste.findIndex(matches);
+      if (wasteIndex >= 0) {
+        move = { zone: "waste", pile: "waste", index: wasteIndex, suit, rank };
+      }
+    }
+    if (move && (!best || move.rank < best.rank)) best = move;
+  });
+  return best;
+};
+
+const solApplyAutoSolveMove = (state, move) => {
+  const [card] =
+    move.zone === "tableau"
+      ? state.tableau[move.pile].splice(move.index, 1)
+      : state.waste.splice(move.index, 1);
+  state.foundations[move.suit].push(card);
+  return card;
+};
+
+const solPlanAutoSolve = (state) => {
+  const trial = {
+    stock: solCloneCards(state.stock),
+    waste: solCloneCards(state.waste),
+    foundations: Object.fromEntries(
+      solSuitOrder.map((suit) => [suit, solCloneCards(state.foundations[suit])])
+    ),
+    tableau: state.tableau.map(solCloneCards),
+  };
+  const moves = [];
+  while (solFoundationCardCount(trial) < 52) {
+    const move = solNextAutoSolveMove(trial);
+    if (!move) return null;
+    solApplyAutoSolveMove(trial, move);
+    moves.push(move);
+  }
+  return moves;
+};
+
+const solCanAutoSolve = (state) =>
+  !state.won &&
+  solIsFullyRevealed(state) &&
+  solFoundationCardCount(state) < 52 &&
+  solPlanAutoSolve(state) !== null;
+
+const solPresentationRunSuits = [
+  ["spades", "hearts"],
+  ["hearts", "spades"],
+  ["clubs", "diamonds"],
+  ["diamonds", "clubs"],
+];
+
+const solBuildPresentationTableau = () => {
+  const runs = solPresentationRunSuits.map(([oddSuit, evenSuit]) =>
+    Array.from({ length: 13 }, (_, offset) => {
+      const rank = 13 - offset;
+      const suit = rank % 2 ? oddSuit : evenSuit;
+      return { id: `${suit}-${rank}`, suit, rank, faceUp: true };
+    })
+  );
+  return [...runs, [], [], []];
+};
+
 const solShowAchievement = () => {
   if (!solAchievement) return;
   solAchievement.classList.remove("is-showing");
@@ -30187,6 +30300,14 @@ const solStartFireworks = () => {
 };
 
 const solTriggerVictoryEffects = () => {
+  if (solState.presentation) {
+    if (solState.presentation.visualEffects) {
+      solStartFireworks();
+      solShowAchievement();
+    }
+    solPlayVictoryVideo();
+    return;
+  }
   solStartFireworks();
   solShowAchievement();
   solPlayVictoryVideo();
@@ -30349,7 +30470,25 @@ const solRender = () => {
 
   if (solMoves) msSetCounter(solMoves, msFormatCounter(solState.moves));
   if (solStatus) solStatus.textContent = "";
-  if (solUndo) solUndo.disabled = solState.won || solHistory.length === 0;
+  solRenderToolbar();
+};
+
+/**
+ * Preview gate: the auto-solve control is only offered on boards staged by the
+ * Admin game-win preset until the animation is approved for regular deals.
+ */
+const solAutoSolveOffered = () =>
+  Boolean(solState.presentation) && solCanAutoSolve(solState);
+
+const solRenderToolbar = () => {
+  const solving = Boolean(solAutoSolveRun);
+  const showAutoSolve = solving || solAutoSolveOffered();
+  if (solReset) solReset.hidden = showAutoSolve;
+  if (solAutoSolve) {
+    solAutoSolve.hidden = !showAutoSolve;
+    solAutoSolve.disabled = solving;
+  }
+  if (solUndo) solUndo.disabled = solving || solState.won || solHistory.length === 0;
 };
 
 const solCheckWin = () => {
@@ -30362,6 +30501,202 @@ const solCheckWin = () => {
   if (!wasWon && solState.won) {
     solTriggerVictoryEffects();
   }
+};
+
+const solPrefersReducedMotion = () =>
+  Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+
+const solBoardRelativeRect = (element) => {
+  const boardRect = solBoard.getBoundingClientRect();
+  const rect = element.getBoundingClientRect();
+  return {
+    left: rect.left - boardRect.left + solBoard.scrollLeft,
+    top: rect.top - boardRect.top + solBoard.scrollTop,
+    width: rect.width,
+    height: rect.height,
+  };
+};
+
+const solFoundationSlot = (suit) =>
+  Array.from(solFoundationSlots).find(
+    (slot) => slot.getAttribute("data-sol-foundation") === suit
+  );
+
+const solAutoSolveSourceElement = (move, card) => {
+  if (move.zone === "tableau") {
+    return solTableau.querySelector(
+      `[data-sol-col="${move.pile}"] [data-sol-card-id="${card.id}"]`
+    );
+  }
+  return solWaste.querySelector(`[data-sol-card-id="${card.id}"]`);
+};
+
+const solCreateFlyingCard = (card, from) => {
+  const flyer = document.createElement("span");
+  flyer.className = "sol-card sol-flying-card";
+  flyer.setAttribute("aria-hidden", "true");
+  flyer.style.left = `${from.left}px`;
+  flyer.style.top = `${from.top}px`;
+  solApplyCardSprite(flyer, card.rank - 1, solSuitOrder.indexOf(card.suit));
+  return flyer;
+};
+
+const solAnimateFlight = (flyer, { dx, dy, liftMs, snapMs, height }) => {
+  const landed = `${dx.toFixed(1)}px ${dy.toFixed(1)}px`;
+  if (typeof flyer.animate !== "function") {
+    flyer.style.translate = landed;
+    return;
+  }
+  const liftY = -Math.max(8, Math.round(height * 0.14));
+  const shadow = "0 16px 18px rgba(0, 0, 0, 0.45)";
+  flyer.animate(
+    [
+      {
+        translate: "0 0",
+        scale: "1",
+        boxShadow: "0 0 0 rgba(0, 0, 0, 0)",
+        easing: "cubic-bezier(0.2, 0.7, 0.4, 1)",
+      },
+      {
+        translate: `0 ${liftY}px`,
+        scale: "1.07",
+        boxShadow: shadow,
+        offset: liftMs / (liftMs + snapMs),
+        easing: "cubic-bezier(0.6, 0, 1, 0.4)",
+      },
+      { translate: landed, scale: "1", boxShadow: "0 0 0 rgba(0, 0, 0, 0)" },
+    ],
+    { duration: liftMs + snapMs, fill: "forwards" }
+  );
+};
+
+const solFlashFoundation = (suit) => {
+  const slot = solFoundationSlot(suit);
+  if (!slot) return;
+  const rect = solBoardRelativeRect(slot);
+  const spread = 10;
+  const flash = document.createElement("span");
+  flash.className = "sol-foundation-flash";
+  flash.setAttribute("aria-hidden", "true");
+  flash.style.left = `${rect.left - spread}px`;
+  flash.style.top = `${rect.top - spread}px`;
+  flash.style.width = `${rect.width + spread * 2}px`;
+  flash.style.height = `${rect.height + spread * 2}px`;
+  const remove = () => flash.remove();
+  flash.addEventListener("animationend", remove, { once: true });
+  window.setTimeout(remove, 600);
+  solBoard.appendChild(flash);
+};
+
+const solCancelWindowImpact = () => {
+  if (!solWindowImpact) return;
+  solWindowImpact.cancel();
+  solWindowImpact = null;
+};
+
+const solImpactWindow = (dx, dy) => {
+  const win = solBoard.closest(".app-window");
+  if (!win || typeof win.animate !== "function" || solPrefersReducedMotion()) return;
+  const length = Math.hypot(dx, dy) || 1;
+  const push = 12;
+  const pushX = (dx / length) * push;
+  const pushY = (dy / length) * push;
+  const shift = (x, y) => `${x.toFixed(2)}px ${y.toFixed(2)}px`;
+  solCancelWindowImpact();
+  solWindowImpact = win.animate(
+    [
+      { translate: shift(0, 0) },
+      { translate: shift(pushX, pushY), offset: 0.22 },
+      { translate: shift(-pushX * 0.35, -pushY * 0.35), offset: 0.62 },
+      { translate: shift(0, 0) },
+    ],
+    { duration: 280, easing: "ease-out", composite: "add" }
+  );
+  solWindowImpact.addEventListener("finish", () => {
+    if (solWindowImpact?.playState === "finished") solWindowImpact = null;
+  });
+};
+
+const solLandAutoSolveCard = (run, move, card, flight) => {
+  run.flyer?.remove();
+  run.flyer = null;
+  solApplyAutoSolveMove(solState, move);
+  solState.moves += 1;
+  solRender();
+  solFlashFoundation(move.suit);
+  solImpactWindow(flight.dx, flight.dy);
+};
+
+const solFinishAutoSolve = (run) => {
+  if (run !== solAutoSolveRun) return;
+  solAutoSolveRun = null;
+  solBoard.classList.remove("is-auto-solving");
+  solCheckWin();
+  solRender();
+};
+
+const solRunAutoSolveStep = (run) => {
+  if (run !== solAutoSolveRun) return;
+  const move = solNextAutoSolveMove(solState);
+  if (!move) {
+    solFinishAutoSolve(run);
+    return;
+  }
+
+  const card =
+    move.zone === "tableau"
+      ? solState.tableau[move.pile][move.index]
+      : solState.waste[move.index];
+  const intervalMs = solAutoSolveIntervalMs(run.step);
+  const { liftMs, snapMs } = solAutoSolvePhaseMs(intervalMs);
+  const sourceCard = solAutoSolveSourceElement(move, card);
+  const source = sourceCard || (move.zone === "tableau" ? solTableau : solWaste);
+  const target = solFoundationSlot(move.suit);
+  const from = solBoardRelativeRect(source);
+  const to = solBoardRelativeRect(target || source);
+  const flight = { dx: to.left - from.left, dy: to.top - from.top };
+
+  sourceCard?.classList.add("is-auto-solve-lifted");
+  run.flyer = solCreateFlyingCard(card, from);
+  solBoard.appendChild(run.flyer);
+  solAnimateFlight(run.flyer, { ...flight, liftMs, snapMs, height: from.height });
+
+  run.timer = window.setTimeout(() => {
+    if (run !== solAutoSolveRun) return;
+    solLandAutoSolveCard(run, move, card, flight);
+    run.step += 1;
+    run.timer = window.setTimeout(
+      () => solRunAutoSolveStep(run),
+      Math.max(0, intervalMs - liftMs - snapMs)
+    );
+  }, liftMs + snapMs);
+};
+
+const solCancelAutoSolve = () => {
+  const run = solAutoSolveRun;
+  if (!run) return;
+  solAutoSolveRun = null;
+  window.clearTimeout(run.timer);
+  run.flyer?.remove();
+  solBoard
+    ?.querySelectorAll(".sol-flying-card, .sol-foundation-flash")
+    .forEach((element) => element.remove());
+  solBoard?.classList.remove("is-auto-solving");
+  solCancelWindowImpact();
+  solRender();
+};
+
+const solStartAutoSolve = () => {
+  if (!solBoard || solAutoSolveRun || !solAutoSolveOffered()) return false;
+  solState.selected = null;
+  solLastCardClick = null;
+  solHideTableauTooltip();
+  if (!solState.presentation) ensureSolitaireStatsSession();
+  solAutoSolveRun = { step: 0, timer: null, flyer: null };
+  solBoard.classList.add("is-auto-solving");
+  solRender();
+  solRunAutoSolveStep(solAutoSolveRun);
+  return true;
 };
 
 const solFlipSourceTopCard = (selected) => {
@@ -30552,6 +30887,8 @@ const solDraw = () => {
 const solNewGame = () => {
   const deal = solBuildWinnableDeal();
 
+  solCancelAutoSolve();
+  solState.presentation = null;
   solState.stock = deal.stock;
   solState.waste = [];
   solState.foundations = {
@@ -30561,6 +30898,34 @@ const solNewGame = () => {
     hearts: [],
   };
   solState.tableau = deal.tableau;
+  solState.selected = null;
+  solState.moves = 0;
+  solState.won = false;
+  solState.statsSession = "";
+  solHistory.length = 0;
+  solLastCardClick = null;
+  solHideVictoryVideo();
+
+  solRender();
+};
+
+/**
+ * Stage a presentation-only board: four face-up King-to-Ace runs with nothing
+ * left in the stock, so the auto-solve control is ready to play the win.
+ * Presentation wins never publish statistics or trigger random events.
+ */
+const solStagePresentationWin = ({ visualEffects = true } = {}) => {
+  solCancelAutoSolve();
+  solState.presentation = { visualEffects: Boolean(visualEffects) };
+  solState.stock = [];
+  solState.waste = [];
+  solState.foundations = {
+    spades: [],
+    clubs: [],
+    diamonds: [],
+    hearts: [],
+  };
+  solState.tableau = solBuildPresentationTableau();
   solState.selected = null;
   solState.moves = 0;
   solState.won = false;
@@ -30605,6 +30970,7 @@ const solAutoMoveCardToFoundation = (zone, pile, index) => {
 
 if (solBoard) {
   solBoard.addEventListener("click", (event) => {
+    if (solAutoSolveRun) return;
     const stockHit = event.target.closest("[data-sol-stock]");
     if (stockHit && solBoard.contains(stockHit)) {
       solLastCardClick = null;
@@ -30702,6 +31068,12 @@ if (solHelp) {
 
 if (solReset) {
   solReset.addEventListener("click", solNewGame);
+}
+
+if (solAutoSolve) {
+  solAutoSolve.addEventListener("click", () => {
+    solStartAutoSolve();
+  });
 }
 
 if (solUndo) {
@@ -31602,12 +31974,11 @@ const runAdminScenePreset = async (
   if (presetId === "game-win") {
     setWindowOpen("solitaire", true);
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    if (visualEffects) {
-      solStartFireworks();
-      solShowAchievement();
-    }
-    solPlayVictoryVideo();
-    return adminRandomEventResult(true, "Previewing a local Solitaire win.");
+    solStagePresentationWin({ visualEffects });
+    return adminRandomEventResult(
+      true,
+      "Staged a local Solitaire win. Press the check button to auto-solve."
+    );
   }
 
   if (presetId === "dialog") {
