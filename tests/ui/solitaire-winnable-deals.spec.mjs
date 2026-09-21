@@ -215,6 +215,13 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
   await page.locator('#sol-tableau [data-sol-zone="tableau"]:not(.is-face-down)').first().click();
   await expect(page.locator("#sol-tableau .sol-card.is-selected")).toHaveCount(1);
 
+  // An exposed Ace swaps Reset for the auto-solve check; run it first so
+  // Reset returns, then reset through the keyboard.
+  const autoSolve = page.locator("#sol-auto-solve");
+  if (await autoSolve.isVisible()) {
+    await autoSolve.click();
+    await expect(page.locator("#sol-reset")).toBeVisible({ timeout: 15_000 });
+  }
   const reset = page.locator("#sol-reset");
   await reset.focus();
   await expect(reset).toBeFocused();

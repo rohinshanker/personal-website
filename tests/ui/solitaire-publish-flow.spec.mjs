@@ -78,6 +78,9 @@ window.__solitairePublishFlowTest = Object.freeze({
       solSuitOrder.map((suit) => [suit, Array.from({ length: 13 }, () => ({}))])
     );
     solCheckWin();
+    // The real move path renders after the win check; the placeholder
+    // foundation cards cannot render, so refresh only the toolbar swap.
+    solRenderToolbar();
   },
 });
 })();`

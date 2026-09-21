@@ -29991,49 +29991,55 @@ const solAutoSolvePhaseMs = (intervalMs, timing = solAutoSolveTiming) => ({
 const solFoundationCardCount = (state) =>
   solSuitOrder.reduce((total, suit) => total + state.foundations[suit].length, 0);
 
-const solIsFullyRevealed = (state) =>
-  state.stock.length === 0 &&
-  state.tableau.every((column) => column.every((card) => card.faceUp));
+/** A visible card is an exposed tableau top or the top of the waste. */
+const solPlayableFoundationMove = (state, suit) => {
+  const rank = state.foundations[suit].length + 1;
+  if (rank > 13) return null;
+  const matches = (card) =>
+    Boolean(card) && card.faceUp && card.suit === suit && card.rank === rank;
+  const columnIndex = state.tableau.findIndex((column) =>
+    matches(column[column.length - 1])
+  );
+  if (columnIndex >= 0) {
+    return {
+      zone: "tableau",
+      pile: columnIndex,
+      index: state.tableau[columnIndex].length - 1,
+      suit,
+      rank,
+    };
+  }
+  const wasteIndex = state.waste.length - 1;
+  if (matches(state.waste[wasteIndex])) {
+    return { zone: "waste", pile: "waste", index: wasteIndex, suit, rank };
+  }
+  return null;
+};
 
 const solNextAutoSolveMove = (state) => {
   let best = null;
   solSuitOrder.forEach((suit) => {
-    const rank = state.foundations[suit].length + 1;
-    if (rank > 13) return;
-    const matches = (card) => card.faceUp && card.suit === suit && card.rank === rank;
-    const columnIndex = state.tableau.findIndex((column) => {
-      const top = column[column.length - 1];
-      return Boolean(top) && matches(top);
-    });
-    let move = null;
-    if (columnIndex >= 0) {
-      move = {
-        zone: "tableau",
-        pile: columnIndex,
-        index: state.tableau[columnIndex].length - 1,
-        suit,
-        rank,
-      };
-    } else {
-      const wasteIndex = state.waste.findIndex(matches);
-      if (wasteIndex >= 0) {
-        move = { zone: "waste", pile: "waste", index: wasteIndex, suit, rank };
-      }
-    }
+    const move = solPlayableFoundationMove(state, suit);
     if (move && (!best || move.rank < best.rank)) best = move;
   });
   return best;
 };
 
+/** Moves the card and flips a newly exposed face-down tableau card. */
 const solApplyAutoSolveMove = (state, move) => {
-  const [card] =
-    move.zone === "tableau"
-      ? state.tableau[move.pile].splice(move.index, 1)
-      : state.waste.splice(move.index, 1);
+  const source = move.zone === "tableau" ? state.tableau[move.pile] : state.waste;
+  const [card] = source.splice(move.index, 1);
   state.foundations[move.suit].push(card);
-  return card;
+  const exposed = move.zone === "tableau" ? source[source.length - 1] : null;
+  const flipped = Boolean(exposed && !exposed.faceUp);
+  if (flipped) exposed.faceUp = true;
+  return { card, flipped };
 };
 
+/**
+ * Every foundation move the run will make, lowest rank first, until no visible
+ * card fits. `completes` is true when that chain reaches all 52 cards.
+ */
 const solPlanAutoSolve = (state) => {
   const trial = {
     stock: solCloneCards(state.stock),
@@ -30044,20 +30050,15 @@ const solPlanAutoSolve = (state) => {
     tableau: state.tableau.map(solCloneCards),
   };
   const moves = [];
-  while (solFoundationCardCount(trial) < 52) {
-    const move = solNextAutoSolveMove(trial);
-    if (!move) return null;
+  for (let move = solNextAutoSolveMove(trial); move; move = solNextAutoSolveMove(trial)) {
     solApplyAutoSolveMove(trial, move);
     moves.push(move);
   }
-  return moves;
+  return { moves, completes: solFoundationCardCount(trial) === 52 };
 };
 
 const solCanAutoSolve = (state) =>
-  !state.won &&
-  solIsFullyRevealed(state) &&
-  solFoundationCardCount(state) < 52 &&
-  solPlanAutoSolve(state) !== null;
+  !state.won && solPlanAutoSolve(state).moves.length > 0;
 
 const solPresentationRunSuits = [
   ["spades", "hearts"],
@@ -30381,6 +30382,23 @@ const solCreateStockBack = () => {
   return button;
 };
 
+const solRenderFoundationSlot = (slot, suit) => {
+  const pile = solState.foundations[suit] || [];
+  const topCard = pile[pile.length - 1];
+  slot.innerHTML = "";
+  if (topCard) {
+    slot.appendChild(solCreateCardElement(topCard, "foundation", suit, pile.length - 1));
+  } else {
+    slot.appendChild(solCreateSlotMark(solSuitData[suit].symbol));
+  }
+  slot.setAttribute(
+    "aria-label",
+    topCard
+      ? `${solSuitData[suit].label} foundation, ${solCardName(topCard)}`
+      : `${solSuitData[suit].label} foundation`
+  );
+};
+
 const solRender = () => {
   if (!solBoard || !solStock || !solWaste || !solTableau) return;
 
@@ -30408,21 +30426,7 @@ const solRender = () => {
   solWaste.setAttribute("aria-label", wasteTop ? `Waste, ${solCardName(wasteTop)}` : "Waste");
 
   solFoundationSlots.forEach((slot) => {
-    const suit = slot.getAttribute("data-sol-foundation");
-    const pile = solState.foundations[suit] || [];
-    const topCard = pile[pile.length - 1];
-    slot.innerHTML = "";
-    if (topCard) {
-      slot.appendChild(solCreateCardElement(topCard, "foundation", suit, pile.length - 1));
-    } else {
-      slot.appendChild(solCreateSlotMark(solSuitData[suit].symbol));
-    }
-    slot.setAttribute(
-      "aria-label",
-      topCard
-        ? `${solSuitData[suit].label} foundation, ${solCardName(topCard)}`
-        : `${solSuitData[suit].label} foundation`
-    );
+    solRenderFoundationSlot(slot, slot.getAttribute("data-sol-foundation"));
   });
 
   solHideTableauTooltip();
@@ -30473,20 +30477,20 @@ const solRender = () => {
   solRenderToolbar();
 };
 
-/**
- * Preview gate: the auto-solve control is only offered on boards staged by the
- * Admin game-win preset until the animation is approved for regular deals.
- */
-const solAutoSolveOffered = () =>
-  Boolean(solState.presentation) && solCanAutoSolve(solState);
-
 const solRenderToolbar = () => {
   const solving = Boolean(solAutoSolveRun);
-  const showAutoSolve = solving || solAutoSolveOffered();
+  const plan = solving || solState.won ? null : solPlanAutoSolve(solState);
+  const showAutoSolve = solving || Boolean(plan?.moves.length);
+  const completes = solving ? solAutoSolveRun.completes : Boolean(plan?.completes);
   if (solReset) solReset.hidden = showAutoSolve;
   if (solAutoSolve) {
     solAutoSolve.hidden = !showAutoSolve;
     solAutoSolve.disabled = solving;
+    solAutoSolve.classList.toggle("is-completing", showAutoSolve && completes);
+    solAutoSolve.setAttribute(
+      "aria-label",
+      showAutoSolve && completes ? "Auto-solve and win the game" : "Auto-solve visible cards"
+    );
   }
   if (solUndo) solUndo.disabled = solving || solState.won || solHistory.length === 0;
 };
@@ -30648,12 +30652,32 @@ const solImpactWindow = (dx, dy) => {
   });
 };
 
+/**
+ * Updates only the source card and the destination pile after a landing. A
+ * full render is reserved for the cases that change more of the board: a
+ * waste source, a column that empties, or a newly flipped card.
+ */
+const solRenderLanding = (move, card, flipped) => {
+  const column = move.zone === "tableau" ? solState.tableau[move.pile] : null;
+  const columnEl = column && solTableau.querySelector(`[data-sol-col="${move.pile}"]`);
+  const cardEl = columnEl?.querySelector(`[data-sol-card-id="${card.id}"]`);
+  const slot = solFoundationSlot(move.suit);
+  if (!column?.length || flipped || !cardEl || !slot) {
+    solRender();
+    return;
+  }
+  cardEl.remove();
+  solRenderFoundationSlot(slot, move.suit);
+  if (solMoves) msSetCounter(solMoves, msFormatCounter(solState.moves));
+  solRenderToolbar();
+};
+
 const solLandAutoSolveCard = (run, move, card, flight) => {
   run.flyer?.remove();
   run.flyer = null;
-  solApplyAutoSolveMove(solState, move);
+  const { flipped } = solApplyAutoSolveMove(solState, move);
   solState.moves += 1;
-  solRender();
+  solRenderLanding(move, card, flipped);
   solFlashFoundation(move.suit);
   solPlayImpactSound();
   solImpactWindow(flight.dx, flight.dy);
@@ -30719,13 +30743,16 @@ const solCancelAutoSolve = () => {
 };
 
 const solStartAutoSolve = () => {
-  if (!solBoard || solAutoSolveRun || !solAutoSolveOffered()) return false;
+  if (!solBoard || solAutoSolveRun || solState.won) return false;
+  const plan = solPlanAutoSolve(solState);
+  if (!plan.moves.length) return false;
   solState.selected = null;
   solLastCardClick = null;
   solHideTableauTooltip();
   if (!solState.presentation) ensureSolitaireStatsSession();
+  solPushUndo();
   solPrepareImpactSound();
-  solAutoSolveRun = { step: 0, timer: null, flyer: null };
+  solAutoSolveRun = { step: 0, timer: null, flyer: null, completes: plan.completes };
   solBoard.classList.add("is-auto-solving");
   solRender();
   solRunAutoSolveStep(solAutoSolveRun);

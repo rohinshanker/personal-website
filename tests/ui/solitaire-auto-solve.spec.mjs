@@ -43,6 +43,22 @@ window.__solitaireAutoSolveTest = Object.freeze({
     if (!presentation) ensureSolitaireStatsSession();
     solRender();
   },
+  stagePartialGame: () => {
+    solCancelAutoSolve();
+    solState.presentation = null;
+    const tableau = solBuildPresentationTableau();
+    const aces = tableau.slice(0, 4).map((column) => column.pop());
+    solState.stock = [aces[3], aces[2], aces[1], aces[0]].map((card) => ({ ...card, faceUp: false }));
+    solState.waste = [];
+    solState.tableau = tableau;
+    solState.foundations = { spades: [], clubs: [], diamonds: [], hearts: [] };
+    solState.selected = null;
+    solState.moves = 10;
+    solState.won = false;
+    solHistory.length = 0;
+    ensureSolitaireStatsSession();
+    solRender();
+  },
   snapshot: () => ({
     autoSolving: Boolean(solAutoSolveRun),
     foundations: solSuitOrder.map((suit) => solState.foundations[suit].length),
@@ -209,10 +225,21 @@ const expectFinishedWin = async (page, { moves }) => {
   );
 };
 
-test("a fresh deal keeps Reset and hides the auto-solve check", async ({ page }) => {
+const glowState = (page) =>
+  page.locator("#sol-auto-solve").evaluate((button) => ({
+    completing: button.classList.contains("is-completing"),
+    label: button.getAttribute("aria-label"),
+    glow: getComputedStyle(button, "::after").boxShadow,
+    animation: getComputedStyle(button, "::after").animationName,
+  }));
+
+test("the check appears only while a visible card fits a foundation and undoes as one step", async ({
+  page,
+}) => {
   await installMainBridge(page);
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await openApp(page, "solitaire");
+  await page.evaluate(() => window.__solitaireAutoSolveTest.stagePartialGame());
   await expect(page.locator("#sol-reset")).toBeVisible();
   await expect(page.locator("#sol-auto-solve")).toBeHidden();
   const hiddenGeometry = await page.locator("#sol-auto-solve").evaluate((button) => ({
@@ -220,6 +247,36 @@ test("a fresh deal keeps Reset and hides the auto-solve check", async ({ page })
     width: button.getBoundingClientRect().width,
   }));
   expect(hiddenGeometry).toEqual({ display: "none", width: 0 });
+
+  await page.locator("#sol-stock").click();
+  await expect(page.locator("#sol-waste")).toHaveAttribute("aria-label", "Waste, Ace of Spades");
+  await expect(page.locator("#sol-auto-solve")).toBeVisible();
+  await expect(page.locator("#sol-reset")).toBeHidden();
+  const partialGlow = await glowState(page);
+  expect(partialGlow.completing).toBe(false);
+  expect(partialGlow.label).toBe("Auto-solve visible cards");
+  expect(partialGlow.glow).toBe("none");
+
+  await page.locator("#sol-auto-solve").click();
+  await expect(page.locator("#sol-reset")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("#sol-auto-solve")).toBeHidden();
+  await expect(page.locator('[data-sol-foundation="spades"]')).toHaveAttribute(
+    "aria-label",
+    "Spades foundation, Two of Spades"
+  );
+  await expect(page.locator("#sol-waste")).toHaveAttribute("aria-label", "Waste");
+  let state = await snapshot(page);
+  expect(state.moves).toBe(13);
+  expect(state.won).toBe(false);
+  expect(state.foundations).toEqual([2, 0, 0, 0]);
+  await expect(page.locator("#sol-undo")).toBeEnabled();
+
+  await page.locator("#sol-undo").click();
+  state = await snapshot(page);
+  expect(state.moves).toBe(11);
+  expect(state.foundations).toEqual([0, 0, 0, 0]);
+  await expect(page.locator("#sol-waste")).toHaveAttribute("aria-label", "Waste, Ace of Spades");
+  await expect(page.locator("#sol-auto-solve")).toBeVisible();
 });
 
 test("the Admin game-win preset stages a solvable board and the check plays the win", async ({
@@ -283,18 +340,25 @@ test("the preset honours the visual-effects switch without skipping the video", 
   await expect(page.locator("#sol-fireworks")).not.toHaveClass(/is-showing/);
 });
 
-test("a regular fully revealed deal keeps Reset while the animation is in preview", async ({
+test("a regular deal that the run would finish shows the gold glow and records the win", async ({
   page,
 }) => {
   await installMainBridge(page);
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await openApp(page, "solitaire");
   await page.evaluate(() => window.__solitaireAutoSolveTest.stageRevealedGame());
-  await expect(page.locator("#sol-tableau .sol-card.is-face-down")).toHaveCount(0);
-  await expect(page.locator("#sol-stock")).toHaveAttribute("aria-label", "Restock waste");
-  await expect(page.locator("#sol-reset")).toBeVisible();
-  await expect(page.locator("#sol-auto-solve")).toBeHidden();
+  await expect(page.locator("#sol-auto-solve")).toBeVisible();
+  await expect(page.locator("#sol-reset")).toBeHidden();
+  const glow = await glowState(page);
+  expect(glow.completing).toBe(true);
+  expect(glow.label).toBe("Auto-solve and win the game");
+  expect(glow.glow).toContain("rgb(255, 213, 74)");
+  expect(glow.animation).toBe("sol-auto-solve-glow");
   expect((await snapshot(page)).presentation).toBeNull();
+
+  await page.locator("#sol-auto-solve").click();
+  await expect(page.locator("#sol-auto-solve")).toHaveClass(/is-completing/);
+  await expectFinishedWin(page, { moves: 92 });
   expect((await snapshot(page)).statsSession).not.toBe("");
 });
 

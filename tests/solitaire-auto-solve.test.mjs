@@ -82,9 +82,7 @@ const replayPlan = (initialState, plan) => {
   const state = cloneState(initialState);
   plan.forEach((move, step) => {
     const source = move.zone === "tableau" ? state.tableau[move.pile] : state.waste;
-    if (move.zone === "tableau") {
-      assert.equal(move.index, source.length - 1, `Move ${step} must take the exposed card.`);
-    }
+    assert.equal(move.index, source.length - 1, `Move ${step} must take the visible card.`);
     const card = source[move.index];
     assert.ok(card, `Move ${step} references a missing card.`);
     assert.equal(card.faceUp, true, `Move ${step} must move a face-up card.`);
@@ -97,9 +95,21 @@ const replayPlan = (initialState, plan) => {
     );
     source.splice(move.index, 1);
     state.foundations[card.suit].push(card);
+    const exposed = move.zone === "tableau" ? source[source.length - 1] : null;
+    if (exposed && !exposed.faceUp) exposed.faceUp = true;
   });
   return state;
 };
+
+const hasPlayableCard = (state) =>
+  suits.some((suit) => {
+    const rank = state.foundations[suit].length + 1;
+    const fits = (card) => card && card.faceUp && card.suit === suit && card.rank === rank;
+    return (
+      state.tableau.some((column) => fits(column[column.length - 1])) ||
+      fits(state.waste[state.waste.length - 1])
+    );
+  });
 
 /** Builds a random legal fully-revealed board with packed runs and loose waste. */
 const buildRevealedState = (random) => {
@@ -129,7 +139,20 @@ const buildRevealedState = (random) => {
       waste.push(card);
     }
   });
+  // Face-down cards may sit under a run; the plan must flip them as they surface.
+  tableau.forEach((column) => {
+    const hidden = Math.floor(random() * Math.max(0, column.length - 1));
+    column.slice(0, hidden).forEach((card) => {
+      card.faceUp = false;
+    });
+  });
   return buildState({ tableau, waste });
+};
+
+const withoutAces = () => {
+  const tableau = solBuildPresentationTableau();
+  const aces = tableau.slice(0, 4).map((column) => column.pop());
+  return { tableau, aces };
 };
 
 test("the auto-solve cadence starts at one card per second and accelerates to a floor", () => {
@@ -178,24 +201,42 @@ test("a staged presentation board is solvable in 52 non-decreasing moves", () =>
   const state = buildState();
   assert.equal(solCanAutoSolve(state), true);
   const plan = solPlanAutoSolve(state);
-  assert.equal(plan.length, 52);
-  plan.forEach((move, index) => {
+  assert.equal(plan.completes, true);
+  assert.equal(plan.moves.length, 52);
+  plan.moves.forEach((move, index) => {
     assert.equal(move.zone, "tableau");
-    if (index) assert.ok(move.rank >= plan[index - 1].rank);
+    if (index) assert.ok(move.rank >= plan.moves[index - 1].rank);
   });
-  const finished = replayPlan(state, plan);
+  const finished = replayPlan(state, plan.moves);
   suits.forEach((suit) => assert.equal(finished.foundations[suit].length, 13));
   assert.deepEqual(solNextAutoSolveMove(finished), null);
 });
 
-test("auto-solve is available only when every card is face-up with an empty stock", () => {
-  const faceDown = buildState();
-  faceDown.tableau[2][5].faceUp = false;
-  assert.equal(solCanAutoSolve(faceDown), false);
+test("auto-solve is offered whenever a visible card fits a foundation", () => {
+  const { tableau, aces } = withoutAces();
+  const stocked = buildState({ tableau, stock: aces.map((card) => ({ ...card, faceUp: false })) });
+  assert.equal(solCanAutoSolve(stocked), false, "Aces buried in the stock are not visible.");
 
-  const stocked = buildState();
-  stocked.stock.push(stocked.tableau[3].pop());
-  assert.equal(solCanAutoSolve(stocked), false);
+  const drawn = buildState({
+    tableau: withoutAces().tableau,
+    waste: [{ ...aces[0], faceUp: true }],
+  });
+  assert.equal(solCanAutoSolve(drawn), true, "A drawn Ace on the waste is visible.");
+  const partial = solPlanAutoSolve(drawn);
+  assert.equal(partial.completes, false);
+  assert.deepEqual(
+    partial.moves.map((move) => `${move.zone}:${move.suit}-${move.rank}`),
+    ["waste:spades-1", "tableau:spades-2"],
+    "The run plays the Ace, the exposed Two, then stops at the buried Hearts Ace."
+  );
+  replayPlan(drawn, partial.moves);
+
+  const flipping = buildState();
+  flipping.tableau[2][11].faceUp = false;
+  const flippingPlan = solPlanAutoSolve(flipping);
+  assert.equal(flippingPlan.completes, true, "A face-down card flips when it surfaces.");
+  assert.equal(flippingPlan.moves.length, 52);
+  replayPlan(flipping, flippingPlan.moves);
 
   const won = buildState({ won: true });
   assert.equal(solCanAutoSolve(won), false);
@@ -221,27 +262,43 @@ test("auto-solve is available only when every card is face-up with an empty stoc
   wasted.waste = [lifted[0], lifted[2], lifted[1]];
   assert.equal(solCanAutoSolve(wasted), true);
   const plan = solPlanAutoSolve(wasted);
-  assert.equal(plan.length, 52);
-  const wasteMoves = plan.filter((move) => move.zone === "waste");
-  assert.equal(wasteMoves.length, 3);
+  assert.equal(plan.completes, true, "The waste surfaces each card in a playable order.");
+  assert.equal(plan.moves.length, 52);
   assert.deepEqual(
-    wasteMoves.map((move) => move.rank),
-    [1, 2, 3],
-    "Waste cards are taken by rank even when buried."
+    plan.moves.filter((move) => move.zone === "waste").map((move) => move.rank),
+    [2, 1, 3],
+    "Only the top waste card is ever taken."
   );
-  replayPlan(wasted, plan);
+  replayPlan(wasted, plan.moves);
+
+  const stalled = buildState();
+  const buried = stalled.tableau[0].splice(10, 3);
+  stalled.waste = [buried[1], buried[2], buried[0]];
+  const stalledPlan = solPlanAutoSolve(stalled);
+  assert.equal(solCanAutoSolve(stalled), true);
+  assert.equal(stalledPlan.completes, false, "The Spades Ace is buried under the Three.");
+  assert.ok(stalledPlan.moves.length > 0 && stalledPlan.moves.length < 52);
+  const stuck = replayPlan(stalled, stalledPlan.moves);
+  assert.equal(hasPlayableCard(stuck), false, "The run stops only when nothing fits.");
 });
 
-test("every random fully-revealed board with loose waste cards has a complete plan", () => {
+test("random boards replay legally, flip surfaced cards, and stop only when nothing fits", () => {
+  let offered = 0;
   for (let seed = 1; seed <= 300; seed += 1) {
     const state = buildRevealedState(seededRandom(seed));
-    assert.equal(solCanAutoSolve(state), true, `Seed ${seed} must be solvable.`);
     const plan = solPlanAutoSolve(state);
-    assert.equal(plan.length, 52, `Seed ${seed} must land all 52 cards.`);
-    const finished = replayPlan(state, plan);
-    suits.forEach((suit) => assert.equal(finished.foundations[suit].length, 13));
-    assert.equal(solNextAutoSolveMove(state).rank, 1, "The first move is always an Ace.");
+    assert.equal(solCanAutoSolve(state), plan.moves.length > 0);
+    assert.equal(hasPlayableCard(state), plan.moves.length > 0, `Seed ${seed} availability.`);
+    const finished = replayPlan(state, plan.moves);
+    assert.equal(hasPlayableCard(finished), false, `Seed ${seed} stopped early.`);
+    const landed = suits.reduce((total, suit) => total + finished.foundations[suit].length, 0);
+    assert.equal(plan.completes, landed === 52, `Seed ${seed} completion flag.`);
+    if (plan.moves.length) {
+      offered += 1;
+      assert.equal(plan.moves[0].rank, 1, "The first move is always an Ace.");
+    }
   }
+  assert.ok(offered > 0, "Some random boards offer the run.");
 });
 
 test("the toolbar swaps Reset for the check icon and the board hosts the flight layers", () => {
@@ -270,7 +327,12 @@ test("the toolbar swaps Reset for the check icon and the board hosts the flight 
   );
   assert.match(
     styleSource,
-    /\.sol-foundation-flash \{[\s\S]*?animation: sol-foundation-flash 210ms linear both;/
+    /\.sol-foundation-flash \{[\s\S]*?animation: sol-foundation-flash 210ms linear both;[\s\S]*?will-change: opacity;/
+  );
+  assert.match(
+    styleSource,
+    /\.sol-auto-solve\.is-completing::after \{[\s\S]*?animation: sol-auto-solve-glow 1600ms ease-in-out infinite;[\s\S]*?box-shadow:\s*0 0 0 2px #ffd54a,\s*0 0 12px 5px rgba\(255, 196, 0, 0\.8\);/,
+    "The completion glow is a gold pseudo-element that pulses opacity only."
   );
   assert.match(
     styleSource,
@@ -280,21 +342,20 @@ test("the toolbar swaps Reset for the check icon and the board hosts the flight 
 });
 
 test("the runtime blocks input while solving, lands each card before the next, and wins last", () => {
-  const gate = sourceSection("const solAutoSolveOffered = () =>", "const solRenderToolbar = () => {");
-  assert.match(
-    gate,
-    /Boolean\(solState\.presentation\) && solCanAutoSolve\(solState\)/,
-    "Only Admin-staged boards offer auto-solve during the preview period."
-  );
+  assert.doesNotMatch(mainSource, /solAutoSolveOffered|solIsFullyRevealed/, "The preview gate is gone.");
   const toolbar = sourceSection("const solRenderToolbar = () => {", "const solCheckWin = () => {");
-  assert.match(toolbar, /const showAutoSolve = solving \|\| solAutoSolveOffered\(\)/);
+  assert.match(toolbar, /const plan = solving \|\| solState\.won \? null : solPlanAutoSolve\(solState\)/);
+  assert.match(toolbar, /const showAutoSolve = solving \|\| Boolean\(plan\?\.moves\.length\)/);
   assert.match(toolbar, /solReset\.hidden = showAutoSolve/);
+  assert.match(toolbar, /classList\.toggle\("is-completing", showAutoSolve && completes\)/);
   assert.match(toolbar, /solAutoSolve\.hidden = !showAutoSolve/);
   assert.match(toolbar, /solAutoSolve\.disabled = solving/);
   assert.match(toolbar, /solUndo\.disabled = solving \|\| solState\.won \|\| solHistory\.length === 0/);
 
   const start = sourceSection("const solStartAutoSolve = () => {", "const solFlipSourceTopCard = ");
-  assert.match(start, /!solAutoSolveOffered\(\)\) return false/);
+  assert.match(start, /if \(!plan\.moves\.length\) return false/);
+  assert.match(start, /solPushUndo\(\);/, "One undo step reverts the whole run.");
+  assert.match(start, /completes: plan\.completes/);
 
   const step = sourceSection("const solRunAutoSolveStep = (run) => {", "const solCancelAutoSolve = () => {");
   assert.match(step, /solAutoSolveIntervalMs\(run\.step\)/);
@@ -302,9 +363,15 @@ test("the runtime blocks input while solving, lands each card before the next, a
   assert.match(step, /\}, liftMs \+ snapMs\);/);
   assert.match(step, /Math\.max\(0, intervalMs - liftMs - snapMs\)/);
 
+  const incremental = sourceSection("const solRenderLanding = ", "const solLandAutoSolveCard = ");
+  assert.match(incremental, /if \(!column\?\.length \|\| flipped \|\| !cardEl \|\| !slot\) \{\n    solRender\(\);/);
+  assert.match(incremental, /cardEl\.remove\(\);\s*solRenderFoundationSlot\(slot, move\.suit\);/);
+  assert.doesNotMatch(incremental.split("cardEl.remove()")[1], /solRender\(\)/, "The common landing must not rebuild the board.");
+
   const landing = sourceSection("const solLandAutoSolveCard = ", "const solFinishAutoSolve = ");
-  assert.match(landing, /solApplyAutoSolveMove\(solState, move\)/);
+  assert.match(landing, /const \{ flipped \} = solApplyAutoSolveMove\(solState, move\)/);
   assert.match(landing, /solState\.moves \+= 1/);
+  assert.match(landing, /solRenderLanding\(move, card, flipped\)/);
   assert.match(landing, /solFlashFoundation\(move\.suit\)/);
   assert.match(landing, /solPlayImpactSound\(\)/);
   assert.match(landing, /solImpactWindow\(flight\.dx, flight\.dy\)/);

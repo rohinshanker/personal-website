@@ -8,24 +8,24 @@ Last verified: 2026-09-21
 
 ## Contract
 
-- **Preview gate.** `solAutoSolveOffered` only offers the control on boards
-  staged by the Admin game-win preset (`solState.presentation` is set).
-  Regular deals keep Reset even when fully revealed. Remove that condition to
-  ship auto-solve to normal play once the live animation is approved.
-- **Availability.** `solCanAutoSolve` is true when the game is not won, the
-  stock is empty, every tableau card is face-up, fewer than 52 cards sit on the
-  foundations, and `solPlanAutoSolve` returns a complete plan. Waste cards may
-  remain; they are all face-up and reachable. Restocking the waste puts cards
-  face-down again and hides the control until the player draws through them.
+- **Availability.** `solCanAutoSolve` is true when the game is not won and at
+  least one visible card fits a foundation: an exposed tableau top or the top
+  waste card whose rank is the next for its suit. Buried waste cards and
+  face-down cards do not count until they surface. This applies to every deal.
 - **Toolbar.** While offered or running, `#sol-reset` is hidden and
   `#sol-auto-solve` (the `check.ico` button) takes its slot with the same
   70×34 frame and 22px pixelated icon as Reset and Undo. The button is disabled
-  while a run is in progress. Reset returns once the game is won, so a new deal
-  is always one click away.
-- **Ordering.** Each step moves the lowest-ranked next-needed card among the
-  four suits, taken from an exposed tableau top or from anywhere in the waste.
-  This greedy order always completes a fully revealed board, so the plan is
-  computed on the live state rather than stored.
+  while a run is in progress. When the planned run reaches all 52 cards the
+  button carries `is-completing`: a gold pseudo-element glow that pulses
+  opacity only, plus the label "Auto-solve and win the game". Reset returns
+  whenever nothing visible fits, including after the win.
+- **Ordering.** `solPlanAutoSolve` simulates the run on a clone: each step
+  moves the lowest-ranked playable card, flips a face-down tableau card that
+  surfaces, and stops when nothing visible fits. It returns the move list and
+  a `completes` flag. The plan is recomputed on every render from live state.
+- **Moves and undo.** Every landed card counts as one move. Starting a run
+  pushes one undo snapshot, so Undo reverts the whole batch in a single step
+  unless the run won the game.
 - **Cadence.** `solAutoSolveTiming`: the first card leaves immediately, the
   next after 1000ms, and each interval shrinks by ×0.86 to a 120ms floor. Each
   card floats up for 55% of its interval (slow rise, slight scale) and snaps
@@ -34,8 +34,11 @@ Last verified: 2026-09-21
 - **Lift shadow.** The flying card animates a `drop-shadow` filter, never a
   `box-shadow`, so the shadow follows the sprite's transparent rounded corners
   instead of showing square corners over the board.
-- **Impact.** On landing the state moves the card, `moves` increments, the
-  board re-renders, `.sol-foundation-flash` appears as a solid white box with
+- **Impact.** On landing the state moves the card, `moves` increments, and
+  `solRenderLanding` removes only the source card element and re-renders the
+  destination pile, counter, and toolbar; a full board render happens only
+  when the source was the waste, the column emptied, or a card flipped.
+  `.sol-foundation-flash` appears as a solid white box with
   exactly the pile's rectangle and the card's corner radius
   (`--sol-card-w / 9`, 8px desktop and 6px mobile) so the flash edge sits on
   the card edge with the glow spreading outward (peak at 70ms, fade over the
@@ -51,7 +54,8 @@ Last verified: 2026-09-21
 - **Guards.** Board clicks, keyboard activation, and pointer events are blocked
   during a run. Reset, a new deal, or closing the window calls
   `solCancelAutoSolve`, which removes flight layers, cancels the window
-  animation, and re-renders with the check button re-enabled.
+  animation, and re-renders with the check button re-enabled. Cancelling
+  mid-run leaves the landed cards in place; Undo reverts them.
 - **Admin game-win preset.** `runPreset("game-win")` opens Solitaire and calls
   `solStagePresentationWin({ visualEffects })`: four face-up King-to-Ace
   runs (spades/hearts, hearts/spades, clubs/diamonds, diamonds/clubs) in the
@@ -69,12 +73,14 @@ npx playwright test --project=ui tests/ui/solitaire-auto-solve.spec.mjs tests/ui
 ```
 
 The Node suite proves the cadence shape, the presentation tableau, plan
-completeness for the staged board and 300 random fully revealed boards with
-loose waste cards, availability edge cases, markup, styles, and runtime wiring.
+legality and stopping rules over 300 random boards with face-down prefixes and
+loose waste cards, the partial run that stops at a buried Ace, flips, the
+completion flag, markup, styles, and runtime wiring.
 
 The browser suite runs real auto-solves (fast cadence via source
-instrumentation, plus one production-cadence timing check), verifies the
-preview gate on a regular revealed deal, the swap,
+instrumentation, plus one production-cadence timing check), verifies a partial
+run from a drawn Ace with its single-step Undo, the gold glow on a completing
+regular deal, the swap,
 icon geometry, input blocking, the drop-shadow lift, 52 flashes sitting on
 their piles with a window animation and an impact sound each (muted under
 Admin audio-off), final foundations, move counter, victory overlay, cancellation on close, the

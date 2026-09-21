@@ -58,8 +58,8 @@ Last verified: 2026-09-15
   open. The target picker temporarily closes Admin Controls, pauses natural
   events, and reopens with the selected control populated.
 - The game-win preset is presentation-only: it stages a fully revealed
-  Solitaire board (four King-to-Ace runs) with the auto-solve check button
-  ready, and the win plays only when that button is pressed. See
+  Solitaire board (four King-to-Ace runs) with the gold auto-solve check
+  button ready, and the win plays only when that button is pressed. See
   [solitaire-auto-solve.md](solitaire-auto-solve.md); no result is published
   and no game statistics change.
 - Privacy fixtures are visual replacements. They must not overwrite existing

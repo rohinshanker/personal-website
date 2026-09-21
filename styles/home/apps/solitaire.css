@@ -193,6 +193,31 @@
   opacity: 0.35;
 }
 
+/* Gold glow when the run will finish the game. Opacity-only pulse. */
+.sol-auto-solve.is-completing::after {
+  animation: sol-auto-solve-glow 1600ms ease-in-out infinite;
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 2px #ffd54a,
+    0 0 12px 5px rgba(255, 196, 0, 0.8);
+  content: "";
+  inset: -1px;
+  pointer-events: none;
+  position: absolute;
+  will-change: opacity;
+}
+
+@keyframes sol-auto-solve-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 .sol-counter {
   flex: 0 0 auto;
 }
@@ -363,6 +388,7 @@ button.sol-card:not(:disabled):active {
   opacity: 0;
   pointer-events: none;
   position: absolute;
+  will-change: opacity;
   z-index: 6;
 }
 
