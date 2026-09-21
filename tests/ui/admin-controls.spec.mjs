@@ -1284,6 +1284,17 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
   await expect(page.locator('[data-app-window="windows"]')).toBeVisible();
   await expect(page.locator('[data-app-window="taskmgr"]')).toBeVisible();
 
+  await page.evaluate(() => {
+    window.__playedMedia = [];
+    const originalPlay = HTMLMediaElement.prototype.play;
+    // Admin's audio-off hook is already installed underneath, so read the
+    // muted flag after it has run.
+    HTMLMediaElement.prototype.play = function recordedPlay(...args) {
+      const result = originalPlay.apply(this, args);
+      window.__playedMedia.push({ src: this.currentSrc || this.src, muted: this.muted });
+      return result;
+    };
+  });
   await page.locator('[data-admin-preset="game-win"]').click();
   await expect(page.locator('[data-app-window="solitaire"]')).toBeVisible();
   await expect(page.locator("#sol-tableau .sol-tableau-col .sol-card")).toHaveCount(52);
@@ -1302,6 +1313,11 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
   );
   await expect(page.locator("[data-sol-foundation] .sol-card")).toHaveCount(4);
   expect(await page.locator("#sol-victory-video").evaluate((video) => video.muted)).toBe(true);
+  const impactSounds = (await page.evaluate(() => window.__playedMedia)).filter((media) =>
+    /hero-parry\.mp3$/.test(media.src)
+  );
+  expect(impactSounds).toHaveLength(52);
+  expect(impactSounds.every((media) => media.muted)).toBe(true);
 
   expect(diagnostics.consoleErrors).toEqual([]);
   expect(diagnostics.runtimeErrors).toEqual([]);

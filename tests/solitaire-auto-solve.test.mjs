@@ -259,7 +259,15 @@ test("the toolbar swaps Reset for the check icon and the board hosts the flight 
   );
   assert.match(styleSource, /\.sol-board \{[\s\S]*?position: relative;/);
   assert.match(styleSource, /\.sol-board\.is-auto-solving \.sol-card,[\s\S]*?pointer-events: none;/);
-  assert.match(styleSource, /\.sol-card\.sol-flying-card \{[\s\S]*?position: absolute;/);
+  assert.match(
+    styleSource,
+    /\.sol-card\.sol-flying-card \{[\s\S]*?box-shadow: none;[\s\S]*?position: absolute;/
+  );
+  assert.match(
+    styleSource,
+    /\.sol-foundation-flash \{[\s\S]*?background: rgba\(255, 255, 255, 0\.96\);\s*border-radius: calc\(var\(--sol-card-w\) \/ 9\);/,
+    "The flash is a solid card-shaped box with the card's rounded corners."
+  );
   assert.match(
     styleSource,
     /\.sol-foundation-flash \{[\s\S]*?animation: sol-foundation-flash 210ms linear both;/
@@ -298,7 +306,23 @@ test("the runtime blocks input while solving, lands each card before the next, a
   assert.match(landing, /solApplyAutoSolveMove\(solState, move\)/);
   assert.match(landing, /solState\.moves \+= 1/);
   assert.match(landing, /solFlashFoundation\(move\.suit\)/);
+  assert.match(landing, /solPlayImpactSound\(\)/);
   assert.match(landing, /solImpactWindow\(flight\.dx, flight\.dy\)/);
+
+  const flight = sourceSection("const solAnimateFlight = ", "const solImpactSoundSource = ");
+  assert.match(flight, /filter: lifted/, "The lift shadow follows the card's alpha.");
+  assert.doesNotMatch(flight, /boxShadow/, "A box-shadow would show square corners.");
+
+  const flash = sourceSection("const solFlashFoundation = ", "const solCancelWindowImpact = ");
+  assert.match(flash, /flash\.style\.left = `\$\{rect\.left\}px`/);
+  assert.match(flash, /flash\.style\.width = `\$\{rect\.width\}px`/);
+  assert.doesNotMatch(flash, /spread/, "The flash box must sit on the card edge.");
+
+  const sound = sourceSection("const solImpactSoundSource = ", "const solFlashFoundation = ");
+  assert.match(sound, /"assets\/solitaire-cards\/hero-parry\.mp3"/);
+  assert.match(sound, /new Audio\(solImpactSoundSource\)/);
+  assert.match(sound, /audio\.play\(\)/);
+  assert.match(mainSource, /solPrepareImpactSound\(\);\n  solAutoSolveRun = \{ step: 0/);
 
   const finish = sourceSection("const solFinishAutoSolve = ", "const solRunAutoSolveStep = ");
   assert.match(finish, /solCheckWin\(\);/);
@@ -311,4 +335,10 @@ test("the runtime blocks input while solving, lands each card before the next, a
   assert.match(mainSource, /if \(appId === "solitaire"\) \{\n    solCancelAutoSolve\(\);/);
   assert.match(mainSource, /const solNewGame = \(\) => \{[\s\S]*?solCancelAutoSolve\(\);\n  solState\.presentation = null;/);
   assert.match(mainSource, /if \(solAutoSolve\) \{\n  solAutoSolve\.addEventListener\("click", \(\) => \{\n    solStartAutoSolve\(\);/);
+});
+
+test("the impact sound asset ships with the game", async () => {
+  const { stat } = await import("node:fs/promises");
+  const info = await stat(new URL("assets/solitaire-cards/hero-parry.mp3", root));
+  assert.ok(info.size > 10_000 && info.size < 200_000, "Hero Parry should be a short clip.");
 });

@@ -30548,40 +30548,71 @@ const solAnimateFlight = (flyer, { dx, dy, liftMs, snapMs, height }) => {
     return;
   }
   const liftY = -Math.max(8, Math.round(height * 0.14));
-  const shadow = "0 16px 18px rgba(0, 0, 0, 0.45)";
+  const grounded = "drop-shadow(0 0 0 rgba(0, 0, 0, 0))";
+  const lifted = "drop-shadow(0 14px 10px rgba(0, 0, 0, 0.45))";
   flyer.animate(
     [
       {
         translate: "0 0",
         scale: "1",
-        boxShadow: "0 0 0 rgba(0, 0, 0, 0)",
+        filter: grounded,
         easing: "cubic-bezier(0.2, 0.7, 0.4, 1)",
       },
       {
         translate: `0 ${liftY}px`,
         scale: "1.07",
-        boxShadow: shadow,
+        filter: lifted,
         offset: liftMs / (liftMs + snapMs),
         easing: "cubic-bezier(0.6, 0, 1, 0.4)",
       },
-      { translate: landed, scale: "1", boxShadow: "0 0 0 rgba(0, 0, 0, 0)" },
+      { translate: landed, scale: "1", filter: grounded },
     ],
     { duration: liftMs + snapMs, fill: "forwards" }
   );
+};
+
+const solImpactSoundSource = "assets/solitaire-cards/hero-parry.mp3";
+const solImpactSoundPoolSize = 4;
+let solImpactSoundPool = [];
+let solImpactSoundIndex = 0;
+
+const solPrepareImpactSound = () => {
+  if (solImpactSoundPool.length || typeof Audio !== "function") return;
+  solImpactSoundPool = Array.from({ length: solImpactSoundPoolSize }, () => {
+    const audio = new Audio(solImpactSoundSource);
+    audio.preload = "auto";
+    audio.load();
+    return audio;
+  });
+};
+
+const solPlayImpactSound = () => {
+  solPrepareImpactSound();
+  const audio = solImpactSoundPool[solImpactSoundIndex];
+  if (!audio) return;
+  solImpactSoundIndex = (solImpactSoundIndex + 1) % solImpactSoundPool.length;
+  try {
+    audio.currentTime = 0;
+  } catch (error) {
+    // Seeking before metadata is ready is harmless; play still starts at 0.
+  }
+  const playRequest = audio.play();
+  if (playRequest && typeof playRequest.catch === "function") {
+    playRequest.catch(() => {});
+  }
 };
 
 const solFlashFoundation = (suit) => {
   const slot = solFoundationSlot(suit);
   if (!slot) return;
   const rect = solBoardRelativeRect(slot);
-  const spread = 10;
   const flash = document.createElement("span");
   flash.className = "sol-foundation-flash";
   flash.setAttribute("aria-hidden", "true");
-  flash.style.left = `${rect.left - spread}px`;
-  flash.style.top = `${rect.top - spread}px`;
-  flash.style.width = `${rect.width + spread * 2}px`;
-  flash.style.height = `${rect.height + spread * 2}px`;
+  flash.style.left = `${rect.left}px`;
+  flash.style.top = `${rect.top}px`;
+  flash.style.width = `${rect.width}px`;
+  flash.style.height = `${rect.height}px`;
   const remove = () => flash.remove();
   flash.addEventListener("animationend", remove, { once: true });
   window.setTimeout(remove, 600);
@@ -30624,6 +30655,7 @@ const solLandAutoSolveCard = (run, move, card, flight) => {
   solState.moves += 1;
   solRender();
   solFlashFoundation(move.suit);
+  solPlayImpactSound();
   solImpactWindow(flight.dx, flight.dy);
 };
 
@@ -30692,6 +30724,7 @@ const solStartAutoSolve = () => {
   solLastCardClick = null;
   solHideTableauTooltip();
   if (!solState.presentation) ensureSolitaireStatsSession();
+  solPrepareImpactSound();
   solAutoSolveRun = { step: 0, timer: null, flyer: null };
   solBoard.classList.add("is-auto-solving");
   solRender();

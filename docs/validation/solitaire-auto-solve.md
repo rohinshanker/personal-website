@@ -4,7 +4,7 @@ Purpose: Finish a fully revealed Solitaire game with an animated card-by-card au
 
 Scope: Solitaire toolbar swap, auto-solve availability rule, greedy foundation ordering, flight/flash/window-impact animation, victory playback, presentation-only Admin game-win preset, and browser interaction guards.
 
-Last verified: 2026-09-17
+Last verified: 2026-09-21
 
 ## Contract
 
@@ -28,14 +28,22 @@ Last verified: 2026-09-17
   computed on the live state rather than stored.
 - **Cadence.** `solAutoSolveTiming`: the first card leaves immediately, the
   next after 1000ms, and each interval shrinks by ×0.86 to a 120ms floor. Each
-  card floats up for 55% of its interval (slow rise, slight scale, drop shadow)
-  and snaps into its foundation over the next 30% with an ease-in curve. The
-  next card leaves after the previous one lands.
+  card floats up for 55% of its interval (slow rise, slight scale) and snaps
+  into its foundation over the next 30% with an ease-in curve. The next card
+  leaves after the previous one lands.
+- **Lift shadow.** The flying card animates a `drop-shadow` filter, never a
+  `box-shadow`, so the shadow follows the sprite's transparent rounded corners
+  instead of showing square corners over the board.
 - **Impact.** On landing the state moves the card, `moves` increments, the
-  board re-renders, `.sol-foundation-flash` appears over the pile (peak at
-  70ms, fade over the following 140ms), and the Solitaire window is knocked
-  12px along the card's travel direction with a short rebound via the Web
-  Animations API (`composite: "add"`, skipped under reduced motion).
+  board re-renders, `.sol-foundation-flash` appears as a solid white box with
+  exactly the pile's rectangle and the card's corner radius
+  (`--sol-card-w / 9`, 8px desktop and 6px mobile) so the flash edge sits on
+  the card edge with the glow spreading outward (peak at 70ms, fade over the
+  following 140ms). `assets/solitaire-cards/hero-parry.mp3` plays through a
+  four-element `Audio` pool so rapid hits overlap; the Admin audio-off switch
+  mutes it through its `HTMLMediaElement.play` hook. The Solitaire window is
+  knocked 12px along the card's travel direction with a short rebound via the
+  Web Animations API (`composite: "add"`, skipped under reduced motion).
 - **Victory.** After the last card lands `solCheckWin` runs, so the Victory
   Royale video, fireworks, achievement, stats event, and gameWin random events
   fire exactly once and only at the end. Undo stays disabled while solving and
@@ -67,8 +75,9 @@ loose waste cards, availability edge cases, markup, styles, and runtime wiring.
 The browser suite runs real auto-solves (fast cadence via source
 instrumentation, plus one production-cadence timing check), verifies the
 preview gate on a regular revealed deal, the swap,
-icon geometry, input blocking, 52 flashes with a window animation each, final
-foundations, move counter, victory overlay, cancellation on close, the
+icon geometry, input blocking, the drop-shadow lift, 52 flashes sitting on
+their piles with a window animation and an impact sound each (muted under
+Admin audio-off), final foundations, move counter, victory overlay, cancellation on close, the
 visual-effects switch, and the staged board at 375×812, 768×1024, 1280×800, and
 1440×900 with no page overflow.
 

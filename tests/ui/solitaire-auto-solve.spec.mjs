@@ -75,20 +75,45 @@ const stagePresentation = async (page, options = {}) => {
   await expect(page.locator('[data-app-window="solitaire"]')).toBeVisible();
 };
 
-/** Records every foundation flash together with the window's live animations. */
+/**
+ * Records every foundation flash together with the window's live animations,
+ * the flash geometry against its pile, and every impact sound played.
+ */
 const watchImpacts = (page) =>
   page.evaluate(() => {
     const board = document.getElementById("sol-board");
     const win = board.closest(".app-window");
     window.__solitaireImpacts = [];
+    window.__solitaireSounds = [];
+    const originalPlay = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function recordedPlay(...args) {
+      window.__solitaireSounds.push({
+        src: this.currentSrc || this.src,
+        muted: this.muted,
+        volume: this.volume,
+      });
+      return originalPlay.apply(this, args);
+    };
     const observer = new MutationObserver((records) => {
       records.forEach((record) => {
         record.addedNodes.forEach((node) => {
           if (!(node instanceof HTMLElement) || !node.classList.contains("sol-foundation-flash")) {
             return;
           }
+          const suit = [...document.querySelectorAll("[data-sol-foundation]")].find((slot) => {
+            const slotRect = slot.getBoundingClientRect();
+            const flashRect = node.getBoundingClientRect();
+            return (
+              Math.abs(slotRect.left - flashRect.left) < 0.5 &&
+              Math.abs(slotRect.top - flashRect.top) < 0.5 &&
+              Math.abs(slotRect.width - flashRect.width) < 0.5 &&
+              Math.abs(slotRect.height - flashRect.height) < 0.5
+            );
+          });
           window.__solitaireImpacts.push({
             flashAnimation: getComputedStyle(node).animationName,
+            flashRadius: getComputedStyle(node).borderRadius,
+            flashOnPile: Boolean(suit),
             windowAnimations: win.getAnimations().length,
           });
         });
@@ -214,6 +239,17 @@ test("the Admin game-win preset stages a solvable board and the check plays the 
   await expect(page.locator("#sol-board")).toHaveClass(/is-auto-solving/);
   await expect(page.locator("#sol-undo")).toBeDisabled();
   await expect(page.locator("#sol-board .sol-flying-card")).toHaveCount(1);
+  const flyerStyle = await page.locator("#sol-board .sol-flying-card").evaluate((flyer) => {
+    const [animation] = flyer.getAnimations();
+    animation?.pause();
+    if (animation) animation.currentTime = animation.effect.getTiming().duration * 0.4;
+    const style = getComputedStyle(flyer);
+    const result = { boxShadow: style.boxShadow, filter: style.filter };
+    animation?.play();
+    return result;
+  });
+  expect(flyerStyle.boxShadow).toBe("none");
+  expect(flyerStyle.filter).toMatch(/^drop-shadow\(rgba\(0, 0, 0, 0\.\d+\) 0px \d/);
   expect((await snapshot(page)).autoSolving).toBe(true);
 
   await expectFinishedWin(page, { moves: 52 });
@@ -221,7 +257,16 @@ test("the Admin game-win preset stages a solvable board and the check plays the 
   expect(impacts).toHaveLength(52);
   impacts.forEach((impact) => {
     expect(impact.flashAnimation).toBe("sol-foundation-flash");
+    expect(impact.flashOnPile).toBe(true);
+    expect(impact.flashRadius).toBe("8px");
     expect(impact.windowAnimations).toBeGreaterThanOrEqual(1);
+  });
+  const sounds = await page.evaluate(() => window.__solitaireSounds);
+  const impactSounds = sounds.filter((sound) => /hero-parry\.mp3$/.test(sound.src));
+  expect(impactSounds).toHaveLength(52);
+  impactSounds.forEach((sound) => {
+    expect(sound.muted).toBe(false);
+    expect(sound.volume).toBe(1);
   });
   const state = await snapshot(page);
   expect(state.statsSession).toBe("");
