@@ -3,8 +3,8 @@
 - Scope: Deploy the updated homepage search metadata and favicon assets, then guide a site owner through Google Search Console's live test, indexing request, and follow-up verification over a call.
 - Status: open
 - Opened: 2026-08-27
-- Updated: 2026-08-27
-- Current State: The repository changes are implemented and tested locally: both homepage documents use `My personal website. Best enjoyed on desktop…`, transient loader copy remains excluded with `data-nosnippet`, and square 96×96 and 180×180 icon assets are declared. The changes must be deployed before Search Console is asked to inspect or recrawl the homepage.
+- Updated: 2026-09-21
+- Current State: Deployed and verified live on 2026-09-21: `https://rohin.shanker.me/` serves `My personal website. Best enjoyed on desktop…`, the `data-nosnippet` loader exclusion, and the `/assets/favicon-96.png` link with `sizes="96x96"`; both icon URLs return HTTP 200 with `image/png`. The remaining steps need the site owner's Search Console access on a call: live test, one indexing request, and the post-crawl check.
 - Verification: Complete the live-site checks, record the Search Console property and indexed Last crawl date, pass Test live URL, inspect the tested HTML/resources, submit one Request indexing action, and later confirm that Google's indexed Last crawl postdates the deployment. The exact result snippet and favicon are observations, not completion requirements, because Google does not guarantee either presentation.
 - Cleanup: After the post-deployment crawl is confirmed, resolve this ticket, retain only reusable updates in `docs/validation/search-preview-favicon.md`, remove this ticket from the live index, and delete the resolved ticket.
 
@@ -163,8 +163,8 @@ Explain:
 
 ## Completion checklist
 
-- [ ] Metadata and favicon changes are live on `https://rohin.shanker.me/`.
-- [ ] Both favicon URLs return HTTP 200 with PNG content.
+- [x] Metadata and favicon changes are live on `https://rohin.shanker.me/` (verified 2026-09-21).
+- [x] Both favicon URLs return HTTP 200 with PNG content (verified 2026-09-21).
 - [ ] A verified Search Console property covers `rohin.shanker.me`.
 - [ ] The attendee has Owner or Full user access.
 - [ ] The indexed Last crawl before the request is recorded.
