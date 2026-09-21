@@ -295,7 +295,10 @@ window.rohinModelingPortfolio = Object.freeze({
   title: "Rohin Shanker Modeling Portfolio",
   instagram: Object.freeze({ handle: "@rrohinss", href: "https://www.instagram.com/rrohinss/" }),
   // Paste the Dropbox share URLs here; empty strings render as disabled "link coming soon" buttons.
-  dropbox: Object.freeze({ highlights: "", digitals: "" }),
+  dropbox: Object.freeze({
+    highlights: "",
+    digitals: "https://www.dropbox.com/scl/fo/kj1hkye0wya316iokxvrh/AFLIeXey8aV8YU3sPAKMtGM?rlkey=5tf2ch7z09ibc18d5kui6aqhr&st=xl550pd5&dl=0",
+  }),
   linkIcons: Object.freeze({
       website: "assets/app-icons/ico/msie1.ico",
       instagram: "assets/social-icons/instagram-icon.png",
