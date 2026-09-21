@@ -1,10 +1,8 @@
 # Admin Controls
 
-Purpose: Validate the local-only promotional event orchestrator and recording helpers.
-
-Scope: The Admin desktop and dock launchers, Admin Controls window, random-event runtime, seeded controls, scene presets, and capture aids on `home.html`.
-
-Last verified: 2026-09-15
+- Purpose: Validate the local-only promotional event orchestrator and recording helpers.
+- Scope: The Admin desktop and dock launchers, Admin Controls window, random-event runtime, seeded controls, scene presets, and capture aids on `home.html`.
+- Last verified: 2026-09-15
 
 ## State and safety contract
 

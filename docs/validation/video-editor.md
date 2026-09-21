@@ -1,13 +1,8 @@
 # Video Editor Validation
 
-Purpose: Preserve the public Video Editor route's local-session, responsive,
-interaction, and accessibility contracts.
-
-Scope: Homepage Video Editor launchers and `/video-editor/` media import,
-composed preview, timeline tiers and clips, effects lane, editor tabs, and
-desktop-required boundary.
-
-Last verified: 2026-08-27
+- Purpose: Preserve the public Video Editor route's local-session, responsive, interaction, and accessibility contracts.
+- Scope: Homepage Video Editor launchers and `/video-editor/` media import, composed preview, timeline tiers and clips, effects lane, editor tabs, and desktop-required boundary.
+- Last verified: 2026-08-27
 
 ## Product contract
 

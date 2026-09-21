@@ -1,8 +1,8 @@
 # Visual Baselines and Accessibility Scanning
 
-Purpose: Run and maintain browser screenshot baselines and WCAG scans.
-Scope: Browser test projects, isolated containers, fixtures, and known accessibility limitations.
-Last verified: 2026-09-09
+- Purpose: Run and maintain browser screenshot baselines and WCAG scans.
+- Scope: Browser test projects, isolated containers, fixtures, and known accessibility limitations.
+- Last verified: 2026-09-09
 
 ## Playwright projects
 

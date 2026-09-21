@@ -180,7 +180,7 @@ test("the Image Tools future-work ticket remains open", async () => {
   ticketPaths.forEach((path, indexPosition) => {
     const ticket = tickets[indexPosition];
     assert.match(ticket, new RegExp(`^# ${path.replace(".md", "")} — Open`, "m"));
-    assert.match(ticket, /^Status: open$/m);
+    assert.match(ticket, /^- Status: open$/m);
     const escapedPath = path.replaceAll(".", "\\.");
     assert.equal(
       count(index, new RegExp(`\\[${escapedPath}\\]\\(${escapedPath}\\)`, "g")),

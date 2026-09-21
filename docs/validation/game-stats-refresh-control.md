@@ -1,12 +1,8 @@
 # Game Stats Refresh Control
 
-Purpose: Review and regression-test the shared Game Stats refresh, publishing,
-and Administrator-authentication control.
-
-Scope: The status/action row in the Minesweeper, Solitaire, Snake, and Sudoku
-stats windows.
-
-Last verified: 2026-09-10
+- Purpose: Review and regression-test the shared Game Stats refresh, publishing, and Administrator-authentication control.
+- Scope: The status/action row in the Minesweeper, Solitaire, Snake, and Sudoku stats windows.
+- Last verified: 2026-09-10
 
 [Open the complete, responsive Game Stats state review](assets/game-stats-refresh-review.html).
 It shows every exact status/action state, animated and reduced-motion loading

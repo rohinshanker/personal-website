@@ -1,10 +1,8 @@
 # Search Preview and Favicon
 
-Purpose: Keep homepage search descriptions and favicon signals consistent, crawlable, and regression-tested.
-
-Scope: `/`, `/home.html`, homepage social and `WebSite` metadata, loader snippet exclusions, and square favicon assets.
-
-Last verified: 2026-08-27
+- Purpose: Keep homepage search descriptions and favicon signals consistent, crawlable, and regression-tested.
+- Scope: `/`, `/home.html`, homepage social and `WebSite` metadata, loader snippet exclusions, and square favicon assets.
+- Last verified: 2026-08-27
 
 ## Contract
 

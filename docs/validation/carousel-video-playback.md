@@ -1,10 +1,8 @@
 # Carousel Video Playback
 
-Purpose: Keep carousel video and audio paused whenever its slide, portfolio tab, or owning window is not visible.
-
-Scope: Modeling, EKG, Drone, and future carousel media using `.gallery-scroll` and deferred `data-src` loading.
-
-Last verified: 2026-08-27
+- Purpose: Keep carousel video and audio paused whenever its slide, portfolio tab, or owning window is not visible.
+- Scope: Modeling, EKG, Drone, and future carousel media using `.gallery-scroll` and deferred `data-src` loading.
+- Last verified: 2026-08-27
 
 ## Playback contract
 

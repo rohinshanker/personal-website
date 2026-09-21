@@ -1,10 +1,8 @@
 # About Me Responsive Window
 
-Purpose: Preserve a reachable About Me title bar and internally scrollable content across compact phone, tablet, and desktop viewports.
-
-Scope: `#about-window`, `.about-body`, the About content grid, and compact social-card layout on `home.html`.
-
-Last verified: 2026-08-05
+- Purpose: Preserve a reachable About Me title bar and internally scrollable content across compact phone, tablet, and desktop viewports.
+- Scope: `#about-window`, `.about-body`, the About content grid, and compact social-card layout on `home.html`.
+- Last verified: 2026-08-05
 
 ## Sizing contract
 

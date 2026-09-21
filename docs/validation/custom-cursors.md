@@ -1,11 +1,8 @@
 # Custom Cursor Semantics
 
-Purpose: Preserve native-style cursor meaning while using the Jeelh light and dark cursor packs.
-
-Scope: Entry, Home, and Video Editor cursor tokens, selectable text, guarded
-controls, loading states, editor operations, and Admin target picking.
-
-Last verified: 2026-08-26
+- Purpose: Preserve native-style cursor meaning while using the Jeelh light and dark cursor packs.
+- Scope: Entry, Home, and Video Editor cursor tokens, selectable text, guarded controls, loading states, editor operations, and Admin target picking.
+- Last verified: 2026-08-26
 
 ## Behavior contract
 

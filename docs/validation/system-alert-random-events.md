@@ -1,10 +1,8 @@
 # Data-Driven System-Alert Random Events
 
-Purpose: Preserve the copy/paste authoring, validation, registration, preview, and interaction contract for basic system-alert random events.
-
-Scope: `scripts/home/system-alerts.js`, the shared Home alert shell and renderer, random-event registration, Administrator labels/previews, icon preloading, focus, responsive layout, and reduced motion.
-
-Last verified: 2026-08-11
+- Purpose: Preserve the copy/paste authoring, validation, registration, preview, and interaction contract for basic system-alert random events.
+- Scope: `scripts/home/system-alerts.js`, the shared Home alert shell and renderer, random-event registration, Administrator labels/previews, icon preloading, focus, responsive layout, and reduced motion.
+- Last verified: 2026-08-11
 
 ## Authoring Contract
 

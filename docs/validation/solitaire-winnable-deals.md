@@ -1,10 +1,8 @@
 # Winnable Solitaire Deals
 
-Purpose: Generate random Solitaire deals and verify winning paths with a bounded runtime search.
-
-Scope: Solitaire deal generation, draw-one unlimited-redeal rules, solver verification, browser interaction, and game-build integrity.
-
-Last verified: 2026-09-10
+- Purpose: Generate random Solitaire deals and verify winning paths with a bounded runtime search.
+- Scope: Solitaire deal generation, draw-one unlimited-redeal rules, solver verification, browser interaction, and game-build integrity.
+- Last verified: 2026-09-10
 
 ## Guarantee
 

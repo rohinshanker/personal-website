@@ -1,12 +1,8 @@
 # Automated Test Suite
 
-Purpose: Define the repository's automated-test coverage contract and the
-prioritized hardening backlog.
-
-Scope: Source and contract tests, browser UI tests, the Game Stats Worker and
-D1 boundary, generated artifacts, repository security checks, and CI wiring.
-
-Last verified: 2026-09-09
+- Purpose: Define the repository's automated-test coverage contract and the prioritized hardening backlog.
+- Scope: Source and contract tests, browser UI tests, the Game Stats Worker and D1 boundary, generated artifacts, repository security checks, and CI wiring.
+- Last verified: 2026-09-09
 
 ## Priority scale
 

@@ -1,12 +1,8 @@
 # Game Stats Multiplayer Rankings
 
-Purpose: Preserve the public Top 3, requested-player rank/record, stress-test,
-and scoped-cleanup contracts for the Game Stats backend.
-
-Scope: Worker aggregation, D1 reads, frontend leaderboard rendering, and
-production verification data.
-
-Last verified: 2026-07-25
+- Purpose: Preserve the public Top 3, requested-player rank/record, stress-test, and scoped-cleanup contracts for the Game Stats backend.
+- Scope: Worker aggregation, D1 reads, frontend leaderboard rendering, and production verification data.
+- Last verified: 2026-07-25
 
 ## Response Contract
 

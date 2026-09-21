@@ -1,10 +1,8 @@
 # Solitaire Auto-Solve
 
-Purpose: Finish a fully revealed Solitaire game with an animated card-by-card auto-solve, and stage that state from Admin Controls.
-
-Scope: Solitaire toolbar swap, auto-solve availability rule, greedy foundation ordering, flight/flash/window-impact animation, victory playback, presentation-only Admin game-win preset, and browser interaction guards.
-
-Last verified: 2026-09-21
+- Purpose: Finish a fully revealed Solitaire game with an animated card-by-card auto-solve, and stage that state from Admin Controls.
+- Scope: Solitaire toolbar swap, auto-solve availability rule, greedy foundation ordering, flight/flash/window-impact animation, victory playback, presentation-only Admin game-win preset, and browser interaction guards.
+- Last verified: 2026-09-21
 
 ## Contract
 

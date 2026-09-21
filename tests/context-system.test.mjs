@@ -46,14 +46,21 @@ test("repository context uses only indexed open or active tickets", async () => 
 
     assert.match(content, new RegExp(`^# ${identifier} — ${expectedStatus[0].toUpperCase()}${expectedStatus.slice(1)}$`, "m"));
     for (const field of requiredTicketFields) {
-      assert.match(content, new RegExp(`^${field}:\\s+\\S`, "m"), `${filename} is missing ${field}`);
+      assert.match(content, new RegExp(`^- ${field}:\\s+\\S`, "m"), `${filename} is missing ${field}`);
     }
-    assert.match(content, /^Current (State|Outcome):\s+\S/m, `${filename} needs current state or outcome`);
-    assert.match(content, new RegExp(`^Status:\\s+${expectedStatus}$`, "m"));
+    assert.match(content, /^- Current (State|Outcome):\s+\S/m, `${filename} needs current state or outcome`);
+    assert.match(content, new RegExp(`^- Status:\\s+${expectedStatus}$`, "m"));
   }
 
   const ticketIndex = await readFile(new URL("docs/notes/tickets/INDEX.md", root), "utf8");
   assert.match(ticketIndex, /^# Live Tickets$/m);
+  for (const filename of ticketFiles) {
+    assert.match(
+      ticketIndex,
+      new RegExp(`^\\| ${filename[0]} \\| \\d{4}-\\d{2}-\\d{2} \\| \\[${escapeRegExp(filename)}\\]`, "m"),
+      `${filename} needs a queue row with status letter ${filename[0]}`
+    );
+  }
   const indexedTickets = [...ticketIndex.matchAll(/\]\(([^)]+\.md)\)/g)]
     .map(([, filename]) => filename)
     .sort();
@@ -68,13 +75,14 @@ test("validation documents are indexed and use the shared metadata", async () =>
 
   for (const filename of validationFiles) {
     const content = await readFile(new URL(`docs/validation/${filename}`, root), "utf8");
-    assert.match(content, /^Purpose:\s+\S/m, `${filename} is missing Purpose`);
-    assert.match(content, /^Scope:\s+\S/m, `${filename} is missing Scope`);
-    assert.match(content, /^Last verified:\s+\d{4}-\d{2}-\d{2}$/m, `${filename} is missing Last verified`);
+    assert.match(content, /^- Purpose:\s+\S/m, `${filename} is missing Purpose`);
+    assert.match(content, /^- Scope:\s+\S/m, `${filename} is missing Scope`);
+    const lastVerified = content.match(/^- Last verified:\s+(\d{4}-\d{2}-\d{2})$/m);
+    assert.ok(lastVerified, `${filename} is missing Last verified`);
     assert.match(
       validationIndex,
-      new RegExp(`\\]\\(${escapeRegExp(filename)}\\)`),
-      `${filename} is missing from the validation index`
+      new RegExp(`\\| ${lastVerified[1]} \\| \\[${escapeRegExp(filename)}\\]\\(${escapeRegExp(filename)}\\)`),
+      `${filename} index row must carry its Last verified date`
     );
   }
 });

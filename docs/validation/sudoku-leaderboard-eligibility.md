@@ -1,10 +1,8 @@
 # Sudoku Leaderboard Eligibility
 
-Purpose: Preserve Sudoku check limits, assistance classification, completion recording, and responsive control behavior.
-
-Scope: Sudoku controls, saved puzzle state, no-hints leaderboard events, completion-source integrity metadata, and rendered browser validation.
-
-Last verified: 2026-07-29
+- Purpose: Preserve Sudoku check limits, assistance classification, completion recording, and responsive control behavior.
+- Scope: Sudoku controls, saved puzzle state, no-hints leaderboard events, completion-source integrity metadata, and rendered browser validation.
+- Last verified: 2026-07-29
 
 ## Eligibility Contract
 

@@ -1,10 +1,8 @@
 # Minesweeper Keyboard Controls
 
-Purpose: Preserve the physical-keyboard control contract without allowing one open game window to consume another game's input.
-
-Scope: Minesweeper control-mode selection; S, D, and F actions; hover-only targeting; active-window, modifier, repeat, rebuild, and game-over guards; Snake coexistence; compact help window; accessible cell state and focus styling; responsive rendering.
-
-Last verified: 2026-09-08
+- Purpose: Preserve the physical-keyboard control contract without allowing one open game window to consume another game's input.
+- Scope: Minesweeper control-mode selection; S, D, and F actions; hover-only targeting; active-window, modifier, repeat, rebuild, and game-over guards; Snake coexistence; compact help window; accessible cell state and focus styling; responsive rendering.
+- Last verified: 2026-09-08
 
 ## Contract
 

@@ -1,10 +1,8 @@
 # Neko Stream
 
-Purpose: Preserve the Neko launcher and random-event entry points, bounded taskbar stream, shared sprite timing, and accessible interaction behavior.
-
-Scope: Desktop and taskbar Neko launchers, random-event confirmation, focus, 40-cat planning and animation, sprite preloading, cleanup, and responsive taskbar geometry.
-
-Last verified: 2026-08-07
+- Purpose: Preserve the Neko launcher and random-event entry points, bounded taskbar stream, shared sprite timing, and accessible interaction behavior.
+- Scope: Desktop and taskbar Neko launchers, random-event confirmation, focus, 40-cat planning and animation, sprite preloading, cleanup, and responsive taskbar geometry.
+- Last verified: 2026-08-07
 
 ## Behavior Contract
 

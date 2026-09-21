@@ -1,10 +1,8 @@
 # Native Retro Scrollbars
 
-Purpose: Preserve the native Windows 98 scrollbar appearance without duplicate Chromium arrow slots.
-
-Scope: Scrollable site containers that inherit the global WebKit scrollbar styling from `style.css`, including the Red Tool chat log.
-
-Last verified: 2026-08-06
+- Purpose: Preserve the native Windows 98 scrollbar appearance without duplicate Chromium arrow slots.
+- Scope: Scrollable site containers that inherit the global WebKit scrollbar styling from `style.css`, including the Red Tool chat log.
+- Last verified: 2026-08-06
 
 ## Contract
 

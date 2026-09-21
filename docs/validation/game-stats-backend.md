@@ -1,10 +1,8 @@
 # Game Stats Backend Setup
 
-Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
-
-Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
-
-Last verified: 2026-09-10
+- Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
+- Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
+- Last verified: 2026-09-10
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,

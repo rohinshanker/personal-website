@@ -1,18 +1,12 @@
 # O_google-search-console-refresh__20260827 — Open
 
-Scope: Deploy the updated homepage search metadata and favicon assets, then guide a site owner through Google Search Console's live test, indexing request, and follow-up verification over a call.
-
-Status: open
-
-Opened: 2026-08-27
-
-Updated: 2026-08-27
-
-Current State: The repository changes are implemented and tested locally: both homepage documents use `My personal website. Best enjoyed on desktop…`, transient loader copy remains excluded with `data-nosnippet`, and square 96×96 and 180×180 icon assets are declared. The changes must be deployed before Search Console is asked to inspect or recrawl the homepage.
-
-Verification: Complete the live-site checks, record the Search Console property and indexed Last crawl date, pass Test live URL, inspect the tested HTML/resources, submit one Request indexing action, and later confirm that Google's indexed Last crawl postdates the deployment. The exact result snippet and favicon are observations, not completion requirements, because Google does not guarantee either presentation.
-
-Cleanup: After the post-deployment crawl is confirmed, resolve this ticket, retain only reusable updates in `docs/validation/search-preview-favicon.md`, remove this ticket from the live index, and delete the resolved ticket.
+- Scope: Deploy the updated homepage search metadata and favicon assets, then guide a site owner through Google Search Console's live test, indexing request, and follow-up verification over a call.
+- Status: open
+- Opened: 2026-08-27
+- Updated: 2026-08-27
+- Current State: The repository changes are implemented and tested locally: both homepage documents use `My personal website. Best enjoyed on desktop…`, transient loader copy remains excluded with `data-nosnippet`, and square 96×96 and 180×180 icon assets are declared. The changes must be deployed before Search Console is asked to inspect or recrawl the homepage.
+- Verification: Complete the live-site checks, record the Search Console property and indexed Last crawl date, pass Test live URL, inspect the tested HTML/resources, submit one Request indexing action, and later confirm that Google's indexed Last crawl postdates the deployment. The exact result snippet and favicon are observations, not completion requirements, because Google does not guarantee either presentation.
+- Cleanup: After the post-deployment crawl is confirmed, resolve this ticket, retain only reusable updates in `docs/validation/search-preview-favicon.md`, remove this ticket from the live index, and delete the resolved ticket.
 
 ## Objective
 
