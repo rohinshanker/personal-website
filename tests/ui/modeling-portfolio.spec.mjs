@@ -94,14 +94,16 @@ test("renders the header and every shoot in order without overflow at each revie
       await expect(instagram).toHaveAttribute("href", portfolio.instagram.href);
       await expect(instagram).toContainText(portfolio.instagram.handle);
       await expect(instagram).toHaveAttribute("target", "_blank");
-      const highlights = page.getByRole("button", { name: "Dropbox Highlights" });
-      await expect(highlights).toBeDisabled();
-      await expect(highlights).toHaveAccessibleDescription("Link coming soon");
-      const digitals = page.getByRole("link", { name: "Dropbox Digitals" });
-      await expect(digitals).toHaveAttribute("href", portfolio.dropbox.digitals);
-      await expect(digitals).toHaveAttribute("target", "_blank");
-      await expect(digitals).toHaveAttribute("rel", "noreferrer");
-      await expect(page.locator(".portfolio-link__note")).toHaveCount(1);
+      for (const [slot, label] of [
+        ["highlights", "Dropbox Highlights"],
+        ["digitals", "Dropbox Digitals"],
+      ]) {
+        const link = page.getByRole("link", { name: label });
+        await expect(link).toHaveAttribute("href", portfolio.dropbox[slot]);
+        await expect(link).toHaveAttribute("target", "_blank");
+        await expect(link).toHaveAttribute("rel", "noreferrer");
+      }
+      await expect(page.locator(".portfolio-link__note")).toHaveCount(0);
 
       const nav = page.getByRole("navigation", { name: "Shoots" });
       await expect(nav.locator("summary")).toHaveText(
@@ -388,32 +390,25 @@ test("video slides keep native controls and only enter the viewer through the ti
   await expect(viewer).toBeHidden();
 });
 
-test("a configured Dropbox link replaces its disabled placeholder", async ({ page }) => {
-  expect(portfolio.dropbox.highlights).toBe("");
+test("an empty Dropbox slot keeps its disabled placeholder and note", async ({ page }) => {
+  expect(portfolio.dropbox.highlights).not.toBe("");
   await page.route(/\/scripts\/home\/modeling-portfolio\.js(?:\?.*)?$/, (route) =>
     route.fulfill({
       contentType: "application/javascript",
-      body: portfolioSource.replace(
-        'highlights: ""',
-        'highlights: "https://www.dropbox.com/scl/fo/test-highlights"'
-      ),
+      body: portfolioSource.replace(`highlights: "${portfolio.dropbox.highlights}"`, 'highlights: ""'),
     })
   );
   await openPortfolio(page, DESKTOP);
 
-  const highlights = page.getByRole("link", { name: "Dropbox Highlights" });
-  await expect(highlights).toHaveAttribute(
-    "href",
-    "https://www.dropbox.com/scl/fo/test-highlights"
-  );
-  await expect(highlights).toHaveAttribute("target", "_blank");
-  await expect(highlights).toHaveAttribute("rel", "noreferrer");
-  await expect(page.locator("#portfolio-highlights-note")).toHaveCount(0);
+  const highlights = page.getByRole("button", { name: "Dropbox Highlights" });
+  await expect(highlights).toBeDisabled();
+  await expect(highlights).toHaveAccessibleDescription("Link coming soon");
+  await expect(page.locator("#portfolio-highlights-note")).toBeVisible();
   await expect(page.getByRole("link", { name: "Dropbox Digitals" })).toHaveAttribute(
     "href",
     portfolio.dropbox.digitals
   );
-  await expect(page.locator(".portfolio-link__note")).toHaveCount(0);
+  await expect(page.locator(".portfolio-link__note")).toHaveCount(1);
 });
 
 test("deep links and the jump list land on their shoot", async ({ page }) => {
