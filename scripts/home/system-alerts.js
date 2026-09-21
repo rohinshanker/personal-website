@@ -288,7 +288,7 @@
       id: "battery",
       label: "System Alert — battery",
       icon: "assets/app-icons/ico/battery.ico",
-      body: "Warning: Your device has low battery. I believe.",
+      body: "Warning: Your device has low battery. Maybe. I don't actually know.",
     }),
     Object.freeze({
       id: "tabs",
