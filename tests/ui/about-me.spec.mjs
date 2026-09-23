@@ -1143,6 +1143,86 @@ test("About degree marquee moves only overflowing field lines with one-second en
   expect(consoleErrors).toEqual([]);
 });
 
+test("About Education list keeps a stable gutter and a whole heading when scrolled", async ({
+  page,
+}) => {
+  const consoleErrors = [];
+  const runtimeErrors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+
+  await prepareAboutPage(page);
+  const degreeList = page.locator(".about-degrees-list");
+
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(degreeList).toBeVisible();
+
+    // "Stable" means the reserved track does not depend on the content: the
+    // cards keep one width whether or not the list currently overflows.
+    const gutter = await degreeList.evaluate((element) => {
+      const overflowing = element.offsetWidth - element.clientWidth;
+      const collapsed = [...element.querySelectorAll(".about-institution")]
+        .slice(1)
+        .map((section) => {
+          const previous = section.style.display;
+          section.style.display = "none";
+          return { section, previous };
+        });
+      const settled = element.offsetWidth - element.clientWidth;
+      for (const { section, previous } of collapsed) section.style.display = previous;
+      return { overflowing, settled, scrolls: element.scrollHeight > element.clientHeight };
+    });
+    expect(gutter.scrolls).toBe(true);
+    expect(gutter.overflowing).toBeGreaterThan(0);
+    expect(gutter.settled).toBe(gutter.overflowing);
+
+    // Scrolled to the last degree, nothing may be drawn half-way: the heading
+    // above the visible cards used to be sliced through the middle of its text.
+    const scrolled = await degreeList.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+      const port = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const contentTop = port.top + Number.parseFloat(style.paddingTop);
+      const intersecting = [
+        ...element.querySelectorAll(".about-institution > h4, .about-degree-card"),
+      ]
+        .map((node) => ({ node, bounds: node.getBoundingClientRect() }))
+        .filter(({ bounds }) => bounds.bottom > port.top + 0.5 && bounds.top < port.bottom - 0.5);
+      const pinned = intersecting.find(({ node }) => node.tagName === "H4");
+      return {
+        scrollTop: element.scrollTop,
+        clipped: intersecting
+          .filter(
+            ({ bounds }) => bounds.top < port.top - 0.5 || bounds.bottom > port.bottom + 0.5
+          )
+          .map(({ node }) => node.textContent.trim()),
+        headings: intersecting.filter(({ node }) => node.tagName === "H4").length,
+        pinnedOffset: pinned ? pinned.bounds.top - contentTop : null,
+        pinnedText: pinned ? pinned.node.textContent.trim() : null,
+      };
+    });
+    expect(scrolled.scrollTop).toBeGreaterThan(0);
+    expect(scrolled.clipped).toEqual([]);
+    expect(scrolled.headings).toBe(1);
+    expect(scrolled.pinnedText).toBe("University of California, Berkeley (2022-2026)");
+    expect(scrolled.pinnedOffset).toBeLessThanOrEqual(0.6);
+    expect(scrolled.pinnedOffset).toBeGreaterThanOrEqual(-0.6);
+
+    await degreeList.evaluate((element) => {
+      element.scrollTop = 0;
+    });
+  }
+
+  expect(runtimeErrors).toEqual([]);
+  expect(consoleErrors).toEqual([]);
+});
+
 test("About degree cards scroll without growing past the photo", async ({ page }) => {
   const consoleErrors = [];
   const runtimeErrors = [];

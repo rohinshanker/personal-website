@@ -341,7 +341,7 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   const warmupPortfolioToken = indexHtml.match(
     /\["styles\/home\/portfolio\.css\?v=([^"]+)", "style"\]/
   )?.[1];
-  assert.equal(homePortfolioToken, "about-mobile-height-20260805");
+  assert.equal(homePortfolioToken, "education-scroll-gutter-20260923");
   assert.equal(warmupPortfolioToken, homePortfolioToken);
 
   assert.match(
@@ -401,7 +401,15 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   );
   assert.match(
     css,
-    /\.about-degrees-list \{[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: auto;/
+    /\.about-degrees-list \{[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: auto;[\s\S]*?scrollbar-gutter: stable;/
+  );
+  assert.match(
+    css,
+    /\.about-institution > h4 \{[\s\S]*?margin-bottom: 0;[\s\S]*?position: sticky;[\s\S]*?top: 0;/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 744px\) \{[\s\S]*?\.about-institution > h4 \{[\s\S]*?position: static;/
   );
   assert.match(
     css,

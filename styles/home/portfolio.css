@@ -298,10 +298,24 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 2px 5px 2px 2px;
+  /* Reserve the scrollbar track whether or not the browser paints one, so the
+     cards keep one width and never sit underneath it. */
+  scrollbar-gutter: stable;
 }
 
 .about-institution + .about-institution {
   margin-top: 9px;
+}
+
+/* The scrollport is shorter than the list, so pin each institution heading to
+   its top: scrolled to a degree card, the heading above it stayed half-drawn. */
+.about-institution > h4 {
+  background: var(--surface);
+  margin-bottom: 0;
+  padding-bottom: 5px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .about-institution ul {
@@ -546,6 +560,11 @@
   .about-degrees-section,
   .about-degrees-list {
     overflow: visible;
+  }
+
+  /* Nothing scrolls here, so the heading has no scrollport to pin against. */
+  .about-institution > h4 {
+    position: static;
   }
 }
 
