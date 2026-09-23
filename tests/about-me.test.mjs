@@ -401,11 +401,15 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   );
   assert.match(
     css,
-    /\.about-degrees-list \{[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: auto;[\s\S]*?scrollbar-gutter: stable;/
+    /\.about-degrees-list \{[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: auto;[\s\S]*?scroll-padding-block-start: 2px;[\s\S]*?scroll-snap-type: y mandatory;[\s\S]*?scrollbar-gutter: stable;/
   );
   assert.match(
     css,
-    /\.about-institution > h4 \{[\s\S]*?margin-bottom: 0;[\s\S]*?position: sticky;[\s\S]*?top: 0;/
+    /\.about-institution > h4 \{[\s\S]*?margin-bottom: 0;[\s\S]*?position: sticky;[\s\S]*?scroll-snap-align: start;[\s\S]*?top: 0;/
+  );
+  assert.match(
+    css,
+    /\.about-degree-card \{[\s\S]*?scroll-margin-block-start: var\(--about-degree-heading-clearance\);[\s\S]*?scroll-snap-align: start;/
   );
   assert.match(
     css,

@@ -1143,7 +1143,7 @@ test("About degree marquee moves only overflowing field lines with one-second en
   expect(consoleErrors).toEqual([]);
 });
 
-test("About Education list keeps a stable gutter and a whole heading when scrolled", async ({
+test("About Education list keeps a stable gutter and a whole heading at every rest", async ({
   page,
 }) => {
   const consoleErrors = [];
@@ -1182,41 +1182,75 @@ test("About Education list keeps a stable gutter and a whole heading when scroll
     expect(gutter.overflowing).toBeGreaterThan(0);
     expect(gutter.settled).toBe(gutter.overflowing);
 
-    // Scrolled to the last degree, nothing may be drawn half-way: the heading
-    // above the visible cards used to be sliced through the middle of its text.
-    const scrolled = await degreeList.evaluate((element) => {
-      element.scrollTop = element.scrollHeight;
-      const port = element.getBoundingClientRect();
-      const style = getComputedStyle(element);
-      const contentTop = port.top + Number.parseFloat(style.paddingTop);
-      const intersecting = [
-        ...element.querySelectorAll(".about-institution > h4, .about-degree-card"),
-      ]
-        .map((node) => ({ node, bounds: node.getBoundingClientRect() }))
-        .filter(({ bounds }) => bounds.bottom > port.top + 0.5 && bounds.top < port.bottom - 0.5);
-      const pinned = intersecting.find(({ node }) => node.tagName === "H4");
-      return {
-        scrollTop: element.scrollTop,
-        clipped: intersecting
-          .filter(
-            ({ bounds }) => bounds.top < port.top - 0.5 || bounds.bottom > port.bottom + 0.5
-          )
-          .map(({ node }) => node.textContent.trim()),
-        headings: intersecting.filter(({ node }) => node.tagName === "H4").length,
-        pinnedOffset: pinned ? pinned.bounds.top - contentTop : null,
-        pinnedText: pinned ? pinned.node.textContent.trim() : null,
+    // Walk the whole scroll range, let the list settle wherever it chooses to
+    // rest, and inspect every one of those positions. Intermediate offsets are
+    // the point: a heading pinned inside its own section is dragged through the
+    // clipping edge as that section leaves, so an end-of-scroll check alone
+    // passes while the list still stops with a heading sliced in half.
+    const sweep = await degreeList.evaluate(async (element) => {
+      const settle = () =>
+        new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const max = element.scrollHeight - element.clientHeight;
+      const inspect = () => {
+        const port = element.getBoundingClientRect();
+        const onScreen = (bounds) =>
+          bounds.bottom > port.top + 0.5 && bounds.top < port.bottom - 0.5;
+        const headings = [...element.querySelectorAll(".about-institution > h4")]
+          .map((node) => ({ node, bounds: node.getBoundingClientRect() }))
+          .filter(({ bounds }) => onScreen(bounds))
+          .sort((first, second) => first.bounds.top - second.bounds.top);
+        const [pinned] = headings;
+        return {
+          rest: Math.round(element.scrollTop),
+          pinnedText: pinned ? pinned.node.textContent.trim() : null,
+          sliced: headings
+            .filter(
+              ({ bounds }) => bounds.top < port.top - 0.5 || bounds.bottom > port.bottom + 0.5
+            )
+            .map(({ node }) => node.textContent.trim()),
+          // A snapped card must stop below the pinned heading, not under it.
+          behindHeading: pinned
+            ? [...element.querySelectorAll(".about-degree-card img, .about-degree-copy")]
+                .map((node) => ({ node, bounds: node.getBoundingClientRect() }))
+                .filter(
+                  ({ bounds }) =>
+                    onScreen(bounds) &&
+                    bounds.top < pinned.bounds.bottom - 0.5 &&
+                    bounds.bottom > pinned.bounds.top + 0.5
+                )
+                .map(({ node }) => node.closest(".about-degree-card").textContent.trim())
+            : [],
+        };
       };
-    });
-    expect(scrolled.scrollTop).toBeGreaterThan(0);
-    expect(scrolled.clipped).toEqual([]);
-    expect(scrolled.headings).toBe(1);
-    expect(scrolled.pinnedText).toBe("University of California, Berkeley (2022-2026)");
-    expect(scrolled.pinnedOffset).toBeLessThanOrEqual(0.6);
-    expect(scrolled.pinnedOffset).toBeGreaterThanOrEqual(-0.6);
 
-    await degreeList.evaluate((element) => {
+      const requested = [...new Set([...Array(Math.floor(max / 2) + 1).keys()]
+        .map((step) => step * 2)
+        .concat([56, max])
+        .filter((offset) => offset >= 0 && offset <= max))].sort((a, b) => a - b);
+      const positions = [];
+      for (const offset of requested) {
+        element.scrollTop = offset;
+        await settle();
+        positions.push({ requested: offset, ...inspect() });
+      }
       element.scrollTop = 0;
+      await settle();
+      return { max: Math.round(max), positions };
     });
+
+    expect(sweep.max).toBeGreaterThan(0);
+    expect(sweep.positions.filter((position) => position.sliced.length)).toEqual([]);
+    expect(sweep.positions.filter((position) => position.behindHeading.length)).toEqual([]);
+    // The list rests on the starts of its headings and cards, not wherever a
+    // scroll happened to stop, and the end of the range is still one of them.
+    const rests = new Set(sweep.positions.map((position) => position.rest));
+    expect(rests.size).toBeLessThan(sweep.positions.length);
+    expect(rests.has(sweep.max)).toBe(true);
+    expect(
+      sweep.positions.find((position) => position.rest === sweep.max).pinnedText
+    ).toBe("University of California, Berkeley (2022-2026)");
+    expect(sweep.positions[0].rest).toBe(0);
+    expect(sweep.positions[0].pinnedText).toBe("Yale University (2026-2027)");
   }
 
   expect(runtimeErrors).toEqual([]);

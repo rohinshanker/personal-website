@@ -292,12 +292,22 @@
 }
 
 .about-degrees-list {
+  /* How far a snapped card clears the pinned heading above it: 11px of heading
+     text at 1.25 plus its 5px rule, rounded up. */
+  --about-degree-heading-clearance: 20px;
   flex: 1 1 auto;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 2px 5px 2px 2px;
+  /* Rest only where a heading or a card starts. A sticky heading is whole at
+     every one of those offsets; in between, the list can stop while the heading
+     of the section it is leaving is half through the clipping edge. Matching
+     the snapport to the padded content box keeps the top of the list a
+     resting offset. */
+  scroll-padding-block-start: 2px;
+  scroll-snap-type: y mandatory;
   /* Reserve the scrollbar track whether or not the browser paints one, so the
      cards keep one width and never sit underneath it. */
   scrollbar-gutter: stable;
@@ -308,12 +318,14 @@
 }
 
 /* The scrollport is shorter than the list, so pin each institution heading to
-   its top: scrolled to a degree card, the heading above it stayed half-drawn. */
+   its top and let it be a snap target: the cards on screen always sit under a
+   whole heading, including at the end of the scroll range. */
 .about-institution > h4 {
   background: var(--surface);
   margin-bottom: 0;
   padding-bottom: 5px;
   position: sticky;
+  scroll-snap-align: start;
   top: 0;
   z-index: 1;
 }
@@ -337,6 +349,9 @@
   min-height: 48px;
   min-width: 0;
   padding: 4px 4px 4px 6px;
+  /* Snapped to a card, stop below the pinned heading rather than under it. */
+  scroll-margin-block-start: var(--about-degree-heading-clearance);
+  scroll-snap-align: start;
 }
 
 .about-degree-card img {
