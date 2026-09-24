@@ -100,7 +100,16 @@ const watchImpacts = (page) =>
     const board = document.getElementById("sol-board");
     const win = board.closest(".app-window");
     window.__solitaireImpacts = [];
+    window.__solitaireFlyers = [];
     window.__solitaireSounds = [];
+    window.__solitaireAutoSolveClickedAt = null;
+    document.getElementById("sol-auto-solve").addEventListener(
+      "click",
+      () => {
+        window.__solitaireAutoSolveClickedAt = performance.now();
+      },
+      { capture: true, once: true }
+    );
     const originalPlay = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function recordedPlay(...args) {
       window.__solitaireSounds.push({
@@ -110,12 +119,28 @@ const watchImpacts = (page) =>
       });
       return originalPlay.apply(this, args);
     };
+    // Probes run inside the observer, on the page's own clock, so a slow
+    // runner's round-trip latency cannot miss a short flight or skew a landing.
     const observer = new MutationObserver((records) => {
       records.forEach((record) => {
         record.addedNodes.forEach((node) => {
-          if (!(node instanceof HTMLElement) || !node.classList.contains("sol-foundation-flash")) {
+          if (!(node instanceof HTMLElement)) return;
+          if (node.classList.contains("sol-flying-card")) {
+            const [animation] = node.getAnimations();
+            if (animation) {
+              animation.pause();
+              animation.currentTime = animation.effect.getTiming().duration * 0.4;
+            }
+            const style = getComputedStyle(node);
+            window.__solitaireFlyers.push({
+              animated: Boolean(animation),
+              boxShadow: style.boxShadow,
+              filter: style.filter,
+            });
+            animation?.play();
             return;
           }
+          if (!node.classList.contains("sol-foundation-flash")) return;
           const suit = [...document.querySelectorAll("[data-sol-foundation]")].find((slot) => {
             const slotRect = slot.getBoundingClientRect();
             const flashRect = node.getBoundingClientRect();
@@ -127,6 +152,7 @@ const watchImpacts = (page) =>
             );
           });
           window.__solitaireImpacts.push({
+            at: performance.now(),
             flashAnimation: getComputedStyle(node).animationName,
             flashRadius: getComputedStyle(node).borderRadius,
             flashOnPile: Boolean(suit),
@@ -295,16 +321,11 @@ test("the Admin game-win preset stages a solvable board and the check plays the 
   await expect(page.locator("#sol-auto-solve")).toBeDisabled();
   await expect(page.locator("#sol-board")).toHaveClass(/is-auto-solving/);
   await expect(page.locator("#sol-undo")).toBeDisabled();
-  await expect(page.locator("#sol-board .sol-flying-card")).toHaveCount(1);
-  const flyerStyle = await page.locator("#sol-board .sol-flying-card").evaluate((flyer) => {
-    const [animation] = flyer.getAnimations();
-    animation?.pause();
-    if (animation) animation.currentTime = animation.effect.getTiming().duration * 0.4;
-    const style = getComputedStyle(flyer);
-    const result = { boxShadow: style.boxShadow, filter: style.filter };
-    animation?.play();
-    return result;
-  });
+  await expect
+    .poll(() => page.evaluate(() => window.__solitaireFlyers.length), { timeout: 5_000 })
+    .toBeGreaterThanOrEqual(1);
+  const flyerStyle = await page.evaluate(() => window.__solitaireFlyers[0]);
+  expect(flyerStyle.animated).toBe(true);
   expect(flyerStyle.boxShadow).toBe("none");
   expect(flyerStyle.filter).toMatch(/^drop-shadow\(rgba\(0, 0, 0, 0\.\d+\) 0px \d/);
   expect((await snapshot(page)).autoSolving).toBe(true);
@@ -413,16 +434,17 @@ test("the first card leaves after a beat and the cadence is one per second at th
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await stagePresentation(page);
   await watchImpacts(page);
-  const startedAt = Date.now();
   await page.locator("#sol-auto-solve").click();
   await expect
-    .poll(() => page.evaluate(() => window.__solitaireImpacts.length), { timeout: 5_000 })
-    .toBe(1);
-  const firstLanding = Date.now() - startedAt;
-  await expect
-    .poll(() => page.evaluate(() => window.__solitaireImpacts.length), { timeout: 5_000 })
-    .toBe(2);
-  const secondLanding = Date.now() - startedAt;
+    .poll(() => page.evaluate(() => window.__solitaireImpacts.length), { timeout: 8_000 })
+    .toBeGreaterThanOrEqual(2);
+  // Landings are stamped by the page when the flash appears, measured from
+  // the page's own click timestamp, so test-runner latency never counts.
+  const { firstLanding, secondLanding } = await page.evaluate(() => {
+    const [first, second] = window.__solitaireImpacts;
+    const clickedAt = window.__solitaireAutoSolveClickedAt;
+    return { firstLanding: first.at - clickedAt, secondLanding: second.at - clickedAt };
+  });
   expect(firstLanding).toBeGreaterThanOrEqual(800);
   expect(firstLanding).toBeLessThan(1_500);
   expect(secondLanding - firstLanding).toBeGreaterThanOrEqual(700);

@@ -2,7 +2,7 @@
 
 - Purpose: Finish a fully revealed Solitaire game with an animated card-by-card auto-solve, and stage that state from Admin Controls.
 - Scope: Solitaire toolbar swap, auto-solve availability rule, greedy foundation ordering, flight/flash/window-impact animation, victory playback, presentation-only Admin game-win preset, and browser interaction guards.
-- Last verified: 2026-09-21
+- Last verified: 2026-09-24
 
 ## Contract
 
@@ -84,6 +84,11 @@ their piles with a window animation and an impact sound each (muted under
 Admin audio-off), final foundations, move counter, victory overlay, cancellation on close, the
 visual-effects switch, and the staged board at 375×812, 768×1024, 1280×800, and
 1440×900 with no page overflow.
+
+The lift probe and the landing timestamps are taken inside the page's own
+mutation observer against the page's click timestamp. Reading them from the
+test runner instead let a slow CI runner miss the 80 ms fast flight and skew
+the cadence by half a second (six consecutive failures on 2026-09-24).
 
 For rendered inspection without tests, serve the checkout, open Home, run
 `window.rohinAdminOrchestrator.runPreset("game-win", { visualEffects: true })`
