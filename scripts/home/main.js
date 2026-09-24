@@ -897,11 +897,16 @@ const SUDOKU_DIGITS = "123456789";
 const SUDOKU_CELL_COUNT = 81;
 const SUDOKU_ROW_COUNT = 9;
 const SUDOKU_STORAGE_KEY = "personalSiteSudokuStateV1";
+const SUDOKU_COMPLETION_CLAIMS_KEY = "personalSiteSudokuCompletionsV1";
+// Claims are ~100 bytes each. The cap only bounds storage; a tab that missed
+// the claim event and outlives this many later completions could republish.
+const SUDOKU_MAX_COMPLETION_CLAIMS = 500;
 const SUDOKU_SAVE_DEBOUNCE_MS = 250;
 const SUDOKU_MAX_UNDO_STATES = 80;
 const SUDOKU_MAX_LEADERBOARD_CHECKS = 3;
 const SUDOKU_MAX_FISH = 18;
 const SUDOKU_MAX_BUBBLE_CLUSTERS = 5;
+const SUDOKU_NOTE_SHORTCUT_HINT = "Press N to toggle";
 const createSudokuEmptyValues = () =>
   Array.from({ length: SUDOKU_CELL_COUNT }, () => "");
 const createSudokuEmptyNotes = () =>
@@ -4321,6 +4326,7 @@ const resetGameProgressLocalData = () => {
   loadSudokuDifficulty("easy");
   try {
     localStorage.removeItem(SUDOKU_STORAGE_KEY);
+    localStorage.removeItem(SUDOKU_COMPLETION_CLAIMS_KEY);
   } catch {
     // The fresh in-memory puzzle still replaces the previous player's game.
   }
@@ -4692,6 +4698,7 @@ let sudokuSaveTimerId = null;
 let sudokuSaveQueuedForActivation = false;
 let sudokuFishTimerId = null;
 let sudokuBubbleTimerId = null;
+let sudokuNoteTooltip = null;
 const sudokuReducedMotionMedia =
   typeof window.matchMedia === "function"
     ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -19285,6 +19292,9 @@ const restoreSudokuSavedState = () => {
   sudokuState.completionRecorded = Boolean(
     savedState.completionRecorded || savedState.solved
   );
+  if (isSudokuCompletionClaimed(readSudokuCompletionClaims(), puzzleId, puzzle)) {
+    sudokuState.completionRecorded = true;
+  }
   sudokuState.usedHint = Boolean(savedState.usedHint || savedState.usedReveal);
   sudokuState.usedReveal = Boolean(savedState.usedReveal);
   sudokuState.checksUsed = Math.max(
@@ -19301,7 +19311,7 @@ const restoreSudokuSavedState = () => {
       savedState.usedReveal
   );
   sudokuState.statsSession = "";
-  sudokuState.statsSessionEligible = false;
+  sudokuState.statsSessionEligible = !sudokuState.completionRecorded;
   sudokuState.hintMode = savedState.hintMode === "errors" ? "errors" : "off";
   sudokuState.noteMode = Boolean(savedState.noteMode);
   sudokuState.values = normalizeSudokuValues(savedState.values, puzzle);
@@ -19724,6 +19734,7 @@ const clearSudokuBootSequence = ({ resetView = true } = {}) => {
   clearSudokuAquarium();
   hideSudokuErrorsPrompt({ restoreFocus: false });
   hideSudokuSolvePopup();
+  hideSudokuNoteTooltip();
   sudokuState.playing = false;
   sudokuState.loadingStartedAt = 0;
   sudokuState.loadingDuration = 0;
@@ -19879,6 +19890,20 @@ const updateSudokuNoteToggle = () => {
   sudokuNoteToggle.setAttribute("aria-pressed", String(sudokuState.noteMode));
 };
 
+const countSudokuDigitPlacements = () => {
+  const counts = Object.fromEntries(SUDOKU_DIGITS.split("").map((digit) => [digit, 0]));
+  normalizeSudokuValues(sudokuState.values, sudokuState.puzzle).forEach((value) => {
+    if (value) counts[value] += 1;
+  });
+  return counts;
+};
+
+// A digit placed in all nine rows has no legal cell left, so its keypad
+// button greys out. Keyboard entry stays open so a wrong ninth placement can
+// still be overwritten.
+const isSudokuDigitExhausted = (digit, counts = countSudokuDigitPlacements()) =>
+  SUDOKU_DIGITS.includes(digit) && counts[digit] >= SUDOKU_ROW_COUNT;
+
 const updateSudokuNumberButtons = () => {
   const cell = selectedSudokuCell();
   const selectedIndex = cell ? Number(cell.dataset.sudokuIndex) : -1;
@@ -19887,8 +19912,12 @@ const updateSudokuNumberButtons = () => {
     cell && !isSudokuCellReadOnly(cell) && Number.isInteger(selectedIndex)
       ? getSudokuCellNotes(selectedIndex)
       : "";
+  const digitCounts = countSudokuDigitPlacements();
   sudokuNumberButtons.forEach((button) => {
     const value = button.dataset.sudokuNumber;
+    const isExhausted = isSudokuDigitExhausted(value, digitCounts);
+    button.classList.toggle("is-exhausted", isExhausted);
+    button.disabled = isExhausted;
     const isSelected =
       (sudokuState.noteMode &&
         !selectedValue &&
@@ -19954,6 +19983,10 @@ const trapSudokuErrorsPromptFocus = (event) => {
   }
 };
 
+const isSudokuSolvePopupVisible = () =>
+  Boolean(sudokuSolvePopup?.classList.contains("is-visible")) &&
+  sudokuSolvePopup.getAttribute("aria-hidden") === "false";
+
 const hideSudokuSolvePopup = () => {
   if (!sudokuSolvePopup) return;
   sudokuSolvePopup.classList.remove("is-visible");
@@ -19976,26 +20009,35 @@ const showSudokuSolvePopup = () => {
   });
 };
 
-const selectSudokuCell = (selectedCell) => {
+// Marks the selected cell, its row and column, and every other cell holding
+// the selected value. Runs on selection changes and after any value change.
+const updateSudokuBoardHighlights = () => {
   const cells = sudokuCells();
-  const selectedIndex = selectedCell ? Number(selectedCell.dataset.sudokuIndex) : -1;
-  const hasSelection =
-    Number.isInteger(selectedIndex) &&
-    selectedIndex >= 0 &&
-    selectedIndex < cells.length;
+  const selectedIndex = normalizeSudokuSelectedIndex(sudokuState.selectedIndex);
+  const hasSelection = selectedIndex >= 0 && selectedIndex < cells.length;
   const selectedRow = hasSelection ? Math.floor(selectedIndex / 9) : -1;
   const selectedColumn = hasSelection ? selectedIndex % 9 : -1;
+  const selectedValue = hasSelection ? sudokuState.values?.[selectedIndex] || "" : "";
 
   cells.forEach((cell, index) => {
-    const isSelected = cell === selectedCell;
+    const isSelected = index === selectedIndex;
     const isAxisHighlight =
       hasSelection &&
       (Math.floor(index / 9) === selectedRow || index % 9 === selectedColumn);
+    const isSameValue =
+      Boolean(selectedValue) &&
+      !isSelected &&
+      (sudokuState.values?.[index] || "") === selectedValue;
     cell.classList.toggle("is-selected", isSelected);
     cell.classList.toggle("is-axis-highlight", isAxisHighlight);
+    cell.classList.toggle("is-same-value", isSameValue);
   });
+};
 
-  sudokuState.selectedIndex = hasSelection ? selectedIndex : -1;
+const selectSudokuCell = (selectedCell) => {
+  const selectedIndex = normalizeSudokuSelectedIndex(selectedCell?.dataset.sudokuIndex);
+  sudokuState.selectedIndex = selectedIndex < sudokuCells().length ? selectedIndex : -1;
+  updateSudokuBoardHighlights();
   updateSudokuNumberButtons();
   scheduleSudokuSave();
 };
@@ -20066,6 +20108,7 @@ const applySudokuHistoryEntry = (entry) => {
   sudokuState.solved = false;
   refreshAllSudokuCells();
   refreshSudokuHintFeedback();
+  updateSudokuBoardHighlights();
   updateSudokuNumberButtons();
   updateSudokuHistoryButtons();
   setSudokuStatus("Ready");
@@ -20111,6 +20154,7 @@ const updateSudokuCellValue = (
   setSudokuCellValue(input, index, digit);
   syncSudokuCellFeedback(input, index);
   refreshSudokuHintFeedback();
+  updateSudokuBoardHighlights();
   updateSudokuNumberButtons();
   updateSudokuHistoryButtons();
   sudokuState.solved = false;
@@ -20290,6 +20334,176 @@ const handleSudokuUndoRedoShortcut = (event) => {
   else undoSudokuMove();
 };
 
+const ensureSudokuNoteTooltip = () => {
+  if (sudokuNoteTooltip) return sudokuNoteTooltip;
+  sudokuNoteTooltip = document.createElement("span");
+  sudokuNoteTooltip.className = "sudoku-key-tooltip";
+  sudokuNoteTooltip.id = "sudoku-note-tooltip";
+  sudokuNoteTooltip.setAttribute("role", "tooltip");
+  sudokuNoteTooltip.textContent = SUDOKU_NOTE_SHORTCUT_HINT;
+  document.body.append(sudokuNoteTooltip);
+  return sudokuNoteTooltip;
+};
+
+const positionSudokuKeyTooltip = (tooltip, pointer) => {
+  const offset = 12;
+  const minEdge = 4;
+  tooltip.style.left = `${pointer.clientX + offset}px`;
+  tooltip.style.top = `${pointer.clientY + offset}px`;
+  const bounds = tooltip.getBoundingClientRect();
+  const left = Math.min(pointer.clientX + offset, window.innerWidth - bounds.width - minEdge);
+  const top = Math.min(pointer.clientY + offset, window.innerHeight - bounds.height - minEdge);
+  tooltip.style.left = `${Math.max(minEdge, left)}px`;
+  tooltip.style.top = `${Math.max(minEdge, top)}px`;
+};
+
+const hideSudokuNoteTooltip = () => {
+  sudokuNoteTooltip?.classList.remove("is-visible");
+};
+
+const showSudokuNoteTooltip = (event) => {
+  if (event.pointerType === "touch") return;
+  const tooltip = ensureSudokuNoteTooltip();
+  tooltip.classList.add("is-visible");
+  positionSudokuKeyTooltip(tooltip, event);
+};
+
+const isSudokuKeyboardActive = () => {
+  const win = getAppWindow("sudoku");
+  return Boolean(
+    win &&
+      activeWindow === win &&
+      isWindowVisible(win) &&
+      sudokuState.playing &&
+      !sudokuErrorsPrompt?.open &&
+      !isSudokuSolvePopupVisible()
+  );
+};
+
+// Window-level keys: N toggles notes anywhere in the active Sudoku window,
+// and digits or clear keys edit the selected cell even while a keypad or
+// action button holds focus. The grid keeps its own digit handling, which
+// marks those events as handled before they reach the document.
+const handleSudokuWindowKeydown = (event) => {
+  if (
+    event.defaultPrevented ||
+    event.isComposing ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    !isSudokuKeyboardActive()
+  ) {
+    return;
+  }
+  const target = event.target instanceof Element ? event.target : null;
+  if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
+  if (event.key === "n" || event.key === "N") {
+    if (event.repeat) return;
+    event.preventDefault();
+    setSudokuNoteMode(!sudokuState.noteMode);
+    return;
+  }
+  if (target && sudokuGrid?.contains(target)) return;
+  const cell = selectedSudokuCell();
+  if (!cell || isSudokuCellReadOnly(cell)) return;
+  const index = Number(cell.dataset.sudokuIndex);
+  if (!Number.isInteger(index)) return;
+  if (SUDOKU_DIGITS.includes(event.key)) {
+    event.preventDefault();
+    applySudokuDigitToCell(cell, index, event.key);
+    return;
+  }
+  if (event.key === "Backspace" || event.key === "Delete" || event.key === "0") {
+    event.preventDefault();
+    clearSudokuCellValueOrNotes(cell, index);
+  }
+};
+
+// Every tab shares one saved puzzle. Completions are claimed in a separate,
+// append-only list that ordinary debounced saves never write, so a stale
+// save from another tab cannot erase a claim. The first tab to complete a
+// puzzle claims it; the others adopt the claim from the storage event's
+// payload, or read the list at their own completion, so one puzzle publishes
+// once. Two tabs completing in the same instant remain a known limit.
+const normalizeSudokuCompletionClaims = (claims) =>
+  (Array.isArray(claims) ? claims : [])
+    .filter(
+      (claim) =>
+        claim && typeof claim.puzzleId === "string" && typeof claim.puzzle === "string"
+    )
+    .slice(-SUDOKU_MAX_COMPLETION_CLAIMS);
+
+const parseSudokuCompletionClaims = (serialized) => {
+  try {
+    return normalizeSudokuCompletionClaims(JSON.parse(serialized || "null"));
+  } catch (error) {
+    return [];
+  }
+};
+
+const readSudokuCompletionClaims = () => {
+  try {
+    return parseSudokuCompletionClaims(localStorage.getItem(SUDOKU_COMPLETION_CLAIMS_KEY));
+  } catch (error) {
+    return [];
+  }
+};
+
+const isSudokuCompletionClaimed = (
+  claims,
+  puzzleId = sudokuState.puzzleId,
+  puzzle = sudokuState.puzzle
+) => claims.some((claim) => claim.puzzleId === puzzleId && claim.puzzle === puzzle);
+
+const claimSudokuCompletion = () => {
+  const claims = readSudokuCompletionClaims();
+  if (isSudokuCompletionClaimed(claims)) return;
+  claims.push({ puzzleId: sudokuState.puzzleId, puzzle: sudokuState.puzzle });
+  try {
+    localStorage.setItem(
+      SUDOKU_COMPLETION_CLAIMS_KEY,
+      JSON.stringify(normalizeSudokuCompletionClaims(claims))
+    );
+  } catch (error) {
+    // Storage is unavailable; the in-memory latch still holds for this tab.
+  }
+};
+
+const isSudokuCompletionRecordedInStorage = () =>
+  isSudokuCompletionClaimed(readSudokuCompletionClaims());
+
+const syncSudokuCompletionFromStorage = (event) => {
+  if (sudokuState.completionRecorded) return;
+  if (event.key !== null && event.key !== SUDOKU_COMPLETION_CLAIMS_KEY) return;
+  const claims =
+    event.key === SUDOKU_COMPLETION_CLAIMS_KEY
+      ? parseSudokuCompletionClaims(event.newValue)
+      : readSudokuCompletionClaims();
+  if (isSudokuCompletionClaimed(claims)) sudokuState.completionRecorded = true;
+};
+
+const recordSudokuCompletion = () => {
+  const elapsedSeconds = currentSudokuElapsedSeconds();
+  const hintBucket =
+    sudokuState.usedHint || sudokuState.usedReveal ? "withHints" : "noHints";
+  recordGameStatsEvent(
+    createGameStatsEvent({
+      game: "sudoku",
+      type: "win",
+      difficulty: sudokuState.difficulty,
+      hintBucket,
+      metric: elapsedSeconds,
+      metricKind: "seconds",
+    }),
+    sudokuState.statsSession,
+    {
+      sudokuNoHintsSeconds: hintBucket === "noHints" ? elapsedSeconds : null,
+    }
+  );
+  triggerSudokuVictoryEffects();
+  triggerRandomEvents("gameWin", { game: "sudoku" });
+};
+
 const checkSudokuBoard = () => {
   const result = validateSudokuBoard();
   if (!result.complete || !result.valid) {
@@ -20324,26 +20538,10 @@ const checkSudokuBoard = () => {
     sudokuState.solved = true;
     if (!sudokuState.completionRecorded) {
       sudokuState.completionRecorded = true;
-      const elapsedSeconds = currentSudokuElapsedSeconds();
-      const hintBucket =
-        sudokuState.usedHint || sudokuState.usedReveal ? "withHints" : "noHints";
-      recordGameStatsEvent(
-        createGameStatsEvent({
-          game: "sudoku",
-          type: "win",
-          difficulty: sudokuState.difficulty,
-          hintBucket,
-          metric: elapsedSeconds,
-          metricKind: "seconds",
-        }),
-        sudokuState.statsSession,
-        {
-          sudokuNoHintsSeconds:
-            hintBucket === "noHints" ? elapsedSeconds : null,
-        }
-      );
-      triggerSudokuVictoryEffects();
-      triggerRandomEvents("gameWin", { game: "sudoku" });
+      const recordedByAnotherTab = isSudokuCompletionRecordedInStorage();
+      claimSudokuCompletion();
+      flushSudokuSave();
+      if (!recordedByAnotherTab) recordSudokuCompletion();
     }
     scheduleSudokuSave();
   }
@@ -21058,9 +21256,13 @@ sudokuHintButtons.forEach((button) => {
 });
 
 if (sudokuNoteToggle) {
+  ensureSudokuNoteTooltip();
   sudokuNoteToggle.addEventListener("click", () => {
     setSudokuNoteMode(!sudokuState.noteMode);
   });
+  sudokuNoteToggle.addEventListener("pointerenter", showSudokuNoteTooltip);
+  sudokuNoteToggle.addEventListener("pointermove", showSudokuNoteTooltip);
+  sudokuNoteToggle.addEventListener("pointerleave", hideSudokuNoteTooltip);
 }
 
 if (sudokuUndo) {
@@ -21092,6 +21294,8 @@ if (sudokuGrid) {
 }
 
 document.addEventListener("keydown", handleSudokuUndoRedoShortcut);
+document.addEventListener("keydown", handleSudokuWindowKeydown);
+window.addEventListener("storage", syncSudokuCompletionFromStorage);
 document.addEventListener("visibilitychange", syncSudokuAquariumActivity);
 window.addEventListener("focus", syncSudokuAquariumActivity);
 window.addEventListener("blur", syncSudokuAquariumActivity);

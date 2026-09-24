@@ -126,7 +126,11 @@ test("each supported game opens a verified session before emitting a completion 
   );
   assert.match(
     mainSource,
-    /const checkSudokuBoard[\s\S]*?const elapsedSeconds = currentSudokuElapsedSeconds\(\);[\s\S]*?metric: elapsedSeconds,[\s\S]*?metricKind: "seconds"/
+    /const recordSudokuCompletion[\s\S]*?const elapsedSeconds = currentSudokuElapsedSeconds\(\);[\s\S]*?metric: elapsedSeconds,[\s\S]*?metricKind: "seconds"/
+  );
+  assert.match(
+    mainSource,
+    /const checkSudokuBoard[\s\S]*?if \(!recordedByAnotherTab\) recordSudokuCompletion\(\);/
   );
 
   for (const game of ["minesweeper", "solitaire", "snake", "sudoku"]) {

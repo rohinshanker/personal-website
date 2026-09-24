@@ -31,7 +31,7 @@ test("Every entry point loads the current Sudoku stylesheet build", async () => 
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
   ]);
-  const reference = /styles\/home\/apps\/sudoku\.css\?v=sudoku-grid-rows-20260909/;
+  const reference = /styles\/home\/apps\/sudoku\.css\?v=sudoku-board-controls-20260924/;
 
   assert.match(home, reference);
   assert.match(index, reference);
@@ -141,8 +141,8 @@ test("Sudoku persists the quota and warning while legacy assists fail closed", a
   );
   assert.match(
     restoreSource,
-    /sudokuState\.statsSession = "";\s+sudokuState\.statsSessionEligible = false;/,
-    "Restored games must remain quarantined from global publication."
+    /sudokuState\.statsSession = "";\s+sudokuState\.statsSessionEligible = !sudokuState\.completionRecorded;/,
+    "A restored puzzle publishes only while its completion latch is still open."
   );
 
   for (const initializer of [
@@ -249,19 +249,27 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
   const { main } = await readSudokuSources();
   const checkSource = sourceBetween(
     main,
-    "const checkSudokuBoard = () => {",
+    "const normalizeSudokuCompletionClaims = (claims) =>",
     "\n\nconst renderSudoku ="
   );
   const context = vm.createContext({});
   vm.runInContext(
     [
       "const SUDOKU_MAX_LEADERBOARD_CHECKS = 3;",
+      "const SUDOKU_COMPLETION_CLAIMS_KEY = 'sudoku-claims-test';",
+      "const SUDOKU_MAX_COMPLETION_CLAIMS = 12;",
+      "let storedClaims = null;",
+      "const localStorage = {",
+      "  getItem: (key) => (key === SUDOKU_COMPLETION_CLAIMS_KEY && storedClaims ? JSON.stringify(storedClaims) : null),",
+      "  setItem: (key, value) => { if (key === SUDOKU_COMPLETION_CLAIMS_KEY) { storedClaims = JSON.parse(value); observations.claimWrites += 1; } },",
+      "};",
+      "const flushSudokuSave = () => { observations.flushes += 1; };",
       "let sudokuState = {",
-      "  checksUsed: 0, mistakes: 0, usedHint: false, usedReveal: false,",
+      "  checksUsed: 0, mistakes: 0, usedHint: false, usedReveal: false, puzzleId: 'puzzle-a', puzzle: '1'.repeat(81),",
       "  solved: false, completionRecorded: false, difficulty: 'easy', statsSession: 'verified-session'",
       "};",
       "let result = { complete: false, valid: false, mistakes: 1 };",
-      "const observations = { markedCalls: 0, unmarkedCalls: 0, clears: 0, statuses: [], saves: 0, records: [] };",
+      "const observations = { markedCalls: 0, unmarkedCalls: 0, clears: 0, statuses: [], saves: 0, flushes: 0, claimWrites: 0, records: [] };",
       "const validateSudokuBoard = ({ mark = false } = {}) => {",
       "  if (mark) observations.markedCalls += 1; else observations.unmarkedCalls += 1;",
       "  return { ...result };",
@@ -283,6 +291,10 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
       "globalThis.checkForTest = checkSudokuBoard;",
       "globalThis.setResultForTest = (next) => { result = { ...next }; };",
       "globalThis.setMistakesForTest = (mistakes) => { sudokuState.mistakes = mistakes; };",
+      "globalThis.setStoredClaimsForTest = (claims) => { storedClaims = claims; };",
+      "globalThis.readStoredClaimsForTest = () => storedClaims;",
+      "globalThis.syncStorageForTest = (event) => syncSudokuCompletionFromStorage(event);",
+      "globalThis.resetCompletionForTest = () => { sudokuState.solved = false; sudokuState.completionRecorded = false; };",
       "globalThis.readForTest = () => ({ state: { ...sudokuState }, observations: { ...observations, statuses: [...observations.statuses], records: observations.records.map((record) => ({ ...record })) } });",
     ].join("\n"),
     context
@@ -331,6 +343,155 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
       metadata: { sudokuNoHintsSeconds: 42 },
     },
   ]);
+  assert.equal(
+    snapshot.observations.flushes,
+    1,
+    "The latch must reach storage synchronously so other tabs see it."
+  );
+  assert.deepEqual(
+    plainObject(context.readStoredClaimsForTest()),
+    [{ puzzleId: "puzzle-a", puzzle: "1".repeat(81) }],
+    "A completion claims its puzzle in the append-only list."
+  );
+  assert.equal(snapshot.observations.claimWrites, 1);
+
+  // Another tab already claimed this exact puzzle: latch, but stay local.
+  context.resetCompletionForTest();
+  context.checkForTest();
+  snapshot = plainObject(context.readForTest());
+  assert.equal(snapshot.state.solved, true);
+  assert.equal(snapshot.state.completionRecorded, true);
+  assert.equal(snapshot.observations.records.length, 1, "A puzzle claimed elsewhere must not publish again.");
+  assert.equal(snapshot.observations.claimWrites, 1, "An existing claim is not rewritten.");
+  assert.equal(snapshot.observations.flushes, 2);
+
+  // A claim for a different puzzle does not block this one.
+  context.resetCompletionForTest();
+  context.setStoredClaimsForTest([{ puzzleId: "puzzle-b", puzzle: "2".repeat(81) }]);
+  context.checkForTest();
+  snapshot = plainObject(context.readForTest());
+  assert.equal(snapshot.observations.records.length, 2);
+  assert.deepEqual(
+    plainObject(context.readStoredClaimsForTest()),
+    [
+      { puzzleId: "puzzle-b", puzzle: "2".repeat(81) },
+      { puzzleId: "puzzle-a", puzzle: "1".repeat(81) },
+    ]
+  );
+
+  // The storage event's payload is adopted directly, even when the stored
+  // list has since been overwritten, so a stale save cannot re-arm the tab.
+  context.resetCompletionForTest();
+  context.setStoredClaimsForTest(null);
+  context.syncStorageForTest({
+    key: "sudoku-claims-test",
+    newValue: JSON.stringify([{ puzzleId: "puzzle-a", puzzle: "1".repeat(81) }]),
+  });
+  snapshot = plainObject(context.readForTest());
+  assert.equal(snapshot.state.completionRecorded, true, "A claim carried by the event is adopted.");
+  context.checkForTest();
+  snapshot = plainObject(context.readForTest());
+  assert.equal(snapshot.observations.records.length, 2, "An adopted claim keeps the completion local.");
+
+  // Unrelated keys and other puzzles' claims leave an open latch alone.
+  context.resetCompletionForTest();
+  context.syncStorageForTest({ key: "somethingElse", newValue: "x" });
+  context.syncStorageForTest({
+    key: "sudoku-claims-test",
+    newValue: JSON.stringify([{ puzzleId: "puzzle-c", puzzle: "3".repeat(81) }]),
+  });
+  snapshot = plainObject(context.readForTest());
+  assert.equal(snapshot.state.completionRecorded, false);
+});
+
+test("a restored puzzle honours completion claims made by other tabs", async () => {
+  const { main } = await readSudokuSources();
+  const constantsSource =
+    sourceBetween(main, "const SUDOKU_DIGITS = ", "const SUDOKU_FULL_DIGIT_MASK = ") +
+    "const SUDOKU_FULL_DIGIT_MASK = 0b1111111110;";
+  const claimsSource = sourceBetween(
+    main,
+    "const normalizeSudokuCompletionClaims = (claims) =>",
+    "\n\nconst recordSudokuCompletion = () => {"
+  );
+  const restoreSource = sourceBetween(
+    main,
+    "const sudokuCells = () =>",
+    "\n\nconst updateSudokuTimeDisplay ="
+  );
+  const context = vm.createContext({});
+  vm.runInContext(
+    [
+      constantsSource,
+      "const sudokuGrid = null;",
+      "let sudokuCellElements = [];",
+      "let sudokuState = { puzzleId: '', puzzle: '' };",
+      "const storage = new Map();",
+      "const localStorage = {",
+      "  getItem: (key) => (storage.has(key) ? storage.get(key) : null),",
+      "  setItem: (key, value) => { storage.set(key, String(value)); },",
+      "};",
+      claimsSource,
+      restoreSource,
+      "globalThis.puzzles = SUDOKU_PUZZLES;",
+      "globalThis.setSavedForTest = (saved) => { storage.set(SUDOKU_STORAGE_KEY, JSON.stringify(saved)); };",
+      "globalThis.setClaimsForTest = (claims) => { storage.set(SUDOKU_COMPLETION_CLAIMS_KEY, JSON.stringify(claims)); };",
+      "globalThis.restoreForTest = () => restoreSudokuSavedState();",
+      "globalThis.readForTest = () => ({ completionRecorded: sudokuState.completionRecorded, statsSessionEligible: sudokuState.statsSessionEligible, puzzleId: sudokuState.puzzleId });",
+    ].join("\n"),
+    context
+  );
+  const easy = plainObject(context.puzzles.easy);
+  const medium = plainObject(context.puzzles.medium);
+  const savedPuzzle = (entry, overrides = {}) => ({
+    version: 3,
+    difficulty: entry === easy ? "easy" : "medium",
+    puzzleId: `${entry.id}-tab`,
+    puzzle: entry.puzzle,
+    solution: entry.solution,
+    values: "",
+    notes: [],
+    elapsedSeconds: 90,
+    solved: false,
+    completionRecorded: false,
+    ...overrides,
+  });
+
+  // An unfinished puzzle nobody has claimed resumes publishable.
+  context.setSavedForTest(savedPuzzle(easy));
+  assert.equal(context.restoreForTest(), true);
+  assert.deepEqual(plainObject(context.readForTest()), {
+    completionRecorded: false,
+    statsSessionEligible: true,
+    puzzleId: `${easy.id}-tab`,
+  });
+
+  // The same unfinished save, once another tab has claimed it, stays local.
+  context.setClaimsForTest([{ puzzleId: `${easy.id}-tab`, puzzle: easy.puzzle }]);
+  assert.equal(context.restoreForTest(), true);
+  assert.deepEqual(plainObject(context.readForTest()), {
+    completionRecorded: true,
+    statsSessionEligible: false,
+    puzzleId: `${easy.id}-tab`,
+  });
+
+  // A claim for a different puzzle does not latch this one.
+  context.setSavedForTest(savedPuzzle(medium));
+  assert.equal(context.restoreForTest(), true);
+  assert.deepEqual(plainObject(context.readForTest()), {
+    completionRecorded: false,
+    statsSessionEligible: true,
+    puzzleId: `${medium.id}-tab`,
+  });
+
+  // Legacy solved saves remain latched with or without a claim.
+  context.setSavedForTest(savedPuzzle(medium, { solved: true }));
+  assert.equal(context.restoreForTest(), true);
+  assert.deepEqual(plainObject(context.readForTest()), {
+    completionRecorded: true,
+    statsSessionEligible: false,
+    puzzleId: `${medium.id}-tab`,
+  });
 });
 
 test("Sudoku never leaks correctness feedback while a player enters digits", async () => {

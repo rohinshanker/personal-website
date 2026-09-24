@@ -24,22 +24,51 @@ test("Sudoku records at most one completion for each generated puzzle", async ()
 
   assert.match(
     checkSource,
-    /if \(!sudokuState\.solved\) \{\s+sudokuState\.solved = true;\s+if \(!sudokuState\.completionRecorded\) \{\s+sudokuState\.completionRecorded = true;/
+    /if \(!sudokuState\.solved\) \{\s+sudokuState\.solved = true;\s+if \(!sudokuState\.completionRecorded\) \{\s+sudokuState\.completionRecorded = true;\s+const recordedByAnotherTab = isSudokuCompletionRecordedInStorage\(\);\s+claimSudokuCompletion\(\);\s+flushSudokuSave\(\);\s+if \(!recordedByAnotherTab\) recordSudokuCompletion\(\);\s+\}\s+scheduleSudokuSave\(\);/,
+    "the latch must flip and flush to storage before the record handoff, and a completion another tab already recorded must stay local"
   );
-  assert.ok(
-    checkSource.indexOf("sudokuState.completionRecorded = true;") <
-      checkSource.indexOf("recordGameStatsEvent("),
-    "the completion latch must flip before the asynchronous record handoff starts"
+  assert.doesNotMatch(checkSource, /recordGameStatsEvent\(/);
+
+  const recordSource = sourceBetween(
+    source,
+    "const recordSudokuCompletion = () => {",
+    "\n\nconst checkSudokuBoard = () => {"
+  );
+  assert.match(recordSource, /recordGameStatsEvent\(/);
+  assert.match(recordSource, /triggerRandomEvents\("gameWin", \{ game: "sudoku" \}\);/);
+  assert.doesNotMatch(recordSource, /completionRecorded/);
+
+  const storageSyncSource = sourceBetween(
+    source,
+    "const normalizeSudokuCompletionClaims = (claims) =>",
+    "\n\nconst recordSudokuCompletion = () => {"
   );
   assert.match(
-    checkSource,
-    /triggerRandomEvents\("gameWin", \{ game: "sudoku" \}\);\s+\}\s+scheduleSudokuSave\(\);/
+    storageSyncSource,
+    /claims\.some\(\(claim\) => claim\.puzzleId === puzzleId && claim\.puzzle === puzzle\)/,
+    "another tab's claim counts only for the identical puzzle"
+  );
+  assert.doesNotMatch(
+    storageSyncSource,
+    /SUDOKU_STORAGE_KEY/,
+    "claims must live apart from the mutable save slot so stale saves cannot erase them"
+  );
+  assert.match(
+    storageSyncSource,
+    /event\.key === SUDOKU_COMPLETION_CLAIMS_KEY\s+\? parseSudokuCompletionClaims\(event\.newValue\)/,
+    "a tab adopts the claim carried by the storage event rather than rereading storage"
+  );
+  assert.match(source, /window\.addEventListener\("storage", syncSudokuCompletionFromStorage\);/);
+  assert.match(
+    sourceBetween(source, "const restoreSudokuSavedState = () => {", "\n\nconst updateSudokuTimeDisplay ="),
+    /if \(isSudokuCompletionClaimed\(readSudokuCompletionClaims\(\), puzzleId, puzzle\)\) \{\s+sudokuState\.completionRecorded = true;/,
+    "a restored puzzle honours a completion claimed by another tab"
   );
 
   const editableLifecycleSource = sourceBetween(
     source,
     "const applySudokuHistoryEntry = (entry) => {",
-    "\n\nconst checkSudokuBoard = () => {"
+    "\n\n// Every tab shares one saved puzzle."
   );
   assert.doesNotMatch(
     editableLifecycleSource,
@@ -48,7 +77,7 @@ test("Sudoku records at most one completion for each generated puzzle", async ()
   );
 });
 
-test("Sudoku persists the completion latch and quarantines restored games", async () => {
+test("Sudoku persists the completion latch and gates restored publication on it", async () => {
   const source = await readMainSource();
   const saveSource = sourceBetween(
     source,
@@ -72,8 +101,8 @@ test("Sudoku persists the completion latch and quarantines restored games", asyn
   );
   assert.match(
     restoreSource,
-    /sudokuState\.statsSession = "";\s+sudokuState\.statsSessionEligible = false;/,
-    "a restored puzzle must remain ineligible for global publication"
+    /sudokuState\.statsSession = "";\s+sudokuState\.statsSessionEligible = !sudokuState\.completionRecorded;/,
+    "a restored unsolved puzzle must request a fresh verified session; a recorded one must not"
   );
 });
 

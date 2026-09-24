@@ -1031,6 +1031,32 @@
   min-height: 24px;
 }
 
+.sudoku-number-grid button.is-exhausted,
+.sudoku-number-grid button.is-exhausted.is-selected {
+  background: linear-gradient(#e6ecef, #cbd5db 47%, #b3bfc7 48%, #d2dbe0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  color: #7b8992;
+  opacity: 0.6;
+  text-shadow: none;
+}
+
+.sudoku-key-tooltip {
+  background: #000;
+  border: 1px solid #fff;
+  box-shadow: 1px 1px 0 #000;
+  color: #fff;
+  display: none;
+  padding: 2px 5px;
+  pointer-events: none;
+  position: fixed;
+  white-space: nowrap;
+  z-index: 10000;
+}
+
+.sudoku-key-tooltip.is-visible {
+  display: block;
+}
+
 .sudoku-difficulty-grid button.is-selected,
 .sudoku-number-grid button.is-selected,
 .sudoku-hint-options button.is-selected,
@@ -1131,9 +1157,11 @@
 
 .sudoku-grid .sudoku-cell {
   --sudoku-axis-highlight: transparent;
+  --sudoku-value-highlight: transparent;
   appearance: none;
   aspect-ratio: 1 / 1;
   background:
+    linear-gradient(var(--sudoku-value-highlight), var(--sudoku-value-highlight)),
     linear-gradient(var(--sudoku-axis-highlight), var(--sudoku-axis-highlight)),
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(217, 249, 255, 0.38)),
     rgba(239, 255, 255, 0.4);
@@ -1214,8 +1242,13 @@
   --sudoku-axis-highlight: rgba(255, 244, 135, 0.42);
 }
 
+.sudoku-grid .sudoku-cell.is-same-value {
+  --sudoku-value-highlight: rgba(0, 176, 255, 0.4);
+}
+
 .sudoku-grid .sudoku-cell.is-given {
   background:
+    linear-gradient(var(--sudoku-value-highlight), var(--sudoku-value-highlight)),
     linear-gradient(var(--sudoku-axis-highlight), var(--sudoku-axis-highlight)),
     linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(184, 208, 220, 0.58)),
     rgba(229, 237, 241, 0.68);
