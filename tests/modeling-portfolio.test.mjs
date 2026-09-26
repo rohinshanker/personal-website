@@ -5,8 +5,8 @@ import vm from "node:vm";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
-const DATA_VERSION = "modeling-portfolio-highlights-20260921";
-const ROUTE_VERSION = "modeling-portfolio-download-20260916";
+const DATA_VERSION = "modeling-portfolio-measurements-20260926";
+const ROUTE_VERSION = "modeling-portfolio-measurements-20260926";
 
 const isFile = async (path) => {
   try {
@@ -67,6 +67,14 @@ test("the shared modeling data is complete and every referenced file exists", as
   for (const href of Object.values(portfolio.dropbox)) {
     assert.match(href, /^(?:https:\/\/\S+)?$/, "Dropbox links are empty or https URLs");
   }
+  assert.deepEqual(portfolio.measurements, [
+    { label: "Height", inches: 74, feetInches: true },
+    { label: "Shoe", text: "US 11/EU 45" },
+    { label: "Chest/Bust", inches: 33.5 },
+    { label: "Waist", inches: 26.6 },
+    { label: "Pant Waist", inches: 28.5 },
+    { label: "Hips", inches: 34 },
+  ]);
   for (const icon of Object.values(portfolio.linkIcons)) {
     assert.ok(await isFile(icon), `${icon} must exist`);
   }
@@ -215,6 +223,18 @@ test("the /modeling/ route publishes its metadata, shared assets, and blank Drop
   assert.doesNotMatch(html, /newest first/);
 
   assert.match(html, /<h1 class="portfolio-title" id="portfolio-title">Rohin Shanker Modeling Portfolio<\/h1>/);
+  const titleEnd = html.indexOf("</h1>");
+  const measurementsStart = html.indexOf("data-portfolio-measurements");
+  const summaryStart = html.indexOf('class="portfolio-summary"');
+  assert.ok(
+    titleEnd < measurementsStart && measurementsStart < summaryStart,
+    "the measurements block sits between the title and the summary"
+  );
+  assert.match(html, /aria-label="Measurement units"[\s\S]*?data-unit="in" aria-pressed="true"[\s\S]*?data-unit="cm" aria-pressed="false"/);
+  assert.match(html, /<dl class="portfolio-measurements__list" data-portfolio-measurements-list><\/dl>/);
+  assert.match(script, /const INCH_IN_CM = 2\.54;/);
+  assert.match(script, /renderMeasurements\(\);/);
+  assert.match(css, /\.unit-toggle__button\[aria-pressed="true"\] \{[\s\S]*?border-sunken-outer/);
   assert.match(html, /data-portfolio-instagram[\s\S]*?href="https:\/\/www\.instagram\.com\/rrohinss\/"[\s\S]*?target="_blank"[\s\S]*?rel="noreferrer"/);
   assert.match(html, /data-portfolio-instagram-handle>@rrohinss</);
   for (const slot of ["highlights", "digitals"]) {

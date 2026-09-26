@@ -299,6 +299,16 @@ window.rohinModelingPortfolio = Object.freeze({
     highlights: "https://www.dropbox.com/scl/fo/m9stx3nhw5xqey71n82ds/AKBY0YL9WZAQcDxtY8uFj1U?rlkey=16e1fsphvn6v8b8g8wnltzpbq&st=51g7kmh3&dl=0",
     digitals: "https://www.dropbox.com/scl/fo/kj1hkye0wya316iokxvrh/AFLIeXey8aV8YU3sPAKMtGM?rlkey=5tf2ch7z09ibc18d5kui6aqhr&st=xl550pd5&dl=0",
   }),
+  // Comp-card measurements. Inch values convert to centimetres on the route's unit toggle;
+  // entries with `text` are shown as written in both units.
+  measurements: Object.freeze([
+    Object.freeze({ label: "Height", inches: 74, feetInches: true }),
+    Object.freeze({ label: "Shoe", text: "US 11/EU 45" }),
+    Object.freeze({ label: "Chest/Bust", inches: 33.5 }),
+    Object.freeze({ label: "Waist", inches: 26.6 }),
+    Object.freeze({ label: "Pant Waist", inches: 28.5 }),
+    Object.freeze({ label: "Hips", inches: 34 }),
+  ]),
   linkIcons: Object.freeze({
       website: "assets/app-icons/ico/msie1.ico",
       instagram: "assets/social-icons/instagram-icon.png",

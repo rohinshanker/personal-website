@@ -137,6 +137,75 @@ summary:focus-visible {
   margin: 0;
 }
 
+.portfolio-measurements {
+  display: grid;
+  gap: 8px;
+}
+
+.portfolio-measurements__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.portfolio-measurements__title {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.unit-toggle {
+  display: inline-flex;
+}
+
+.unit-toggle__button {
+  min-width: 44px;
+  min-height: 26px;
+  padding: 0 10px;
+}
+
+/* The selected unit stays pressed in, with the classic dithered face of a latched button. */
+.unit-toggle__button[aria-pressed="true"] {
+  padding: 1px 9px 0 11px;
+  background: repeating-conic-gradient(var(--button-highlight) 0 25%, var(--surface) 0 50%) 0 0 /
+    2px 2px;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+.unit-toggle__button:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+.portfolio-measurements__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px 12px;
+  margin: 0;
+  padding: 8px 10px;
+  background: #fff;
+  box-shadow: var(--border-field);
+}
+
+.portfolio-measurements__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.portfolio-measurements__item dt,
+.portfolio-measurements__item dd {
+  margin: 0;
+}
+
+.portfolio-measurements__item dd {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
 .portfolio-links {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

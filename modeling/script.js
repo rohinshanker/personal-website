@@ -15,6 +15,7 @@
   const VIDEO_PATTERN = /\.(mp4|webm|ogg)(?:[?#]|$)/i;
   const SWIPE_MIN_DISTANCE = 40;
   const TOP_LINK_SCROLL_THRESHOLD = 480;
+  const INCH_IN_CM = 2.54;
   const FOCUSABLE_SELECTOR =
     'a[href], button:not([disabled]), video[controls], [tabindex]:not([tabindex="-1"])';
 
@@ -171,6 +172,58 @@
         })
       );
     }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Measurements */
+
+  const formatInches = (item) => {
+    if (!item.feetInches) return `${item.inches}"`;
+    const feet = Math.floor(item.inches / 12);
+    return `${feet}'${item.inches - feet * 12}"`;
+  };
+
+  const formatCentimetres = (item) => {
+    const centimetres = item.inches * INCH_IN_CM;
+    return `${item.feetInches ? Math.round(centimetres) : centimetres.toFixed(1)} cm`;
+  };
+
+  const measurementText = (item, unit) =>
+    item.text ?? (unit === "cm" ? formatCentimetres(item) : formatInches(item));
+
+  /** Renders the comp-card list under the title and wires the in/cm toggle, inches first. */
+  const renderMeasurements = () => {
+    const section = document.querySelector("[data-portfolio-measurements]");
+    const list = section?.querySelector("[data-portfolio-measurements-list]");
+    const items = portfolio.measurements || [];
+    if (!section || !list) return;
+    if (!items.length) {
+      section.remove();
+      return;
+    }
+    const values = items.map((item) => {
+      const row = element("div", "portfolio-measurements__item");
+      const term = element("dt");
+      term.textContent = item.label;
+      const value = element("dd", null, { "data-measurement": item.label });
+      row.append(term, value);
+      list.appendChild(row);
+      return value;
+    });
+    const buttons = Array.from(section.querySelectorAll("[data-unit]"));
+    const apply = (unit) => {
+      values.forEach((value, index) => {
+        value.textContent = measurementText(items[index], unit);
+      });
+      buttons.forEach((button) => {
+        const active = button.dataset.unit === unit;
+        button.setAttribute("aria-pressed", String(active));
+      });
+    };
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => apply(button.dataset.unit));
+    });
+    apply("in");
   };
 
   /* ------------------------------------------------------------------ */
@@ -705,6 +758,7 @@
   };
 
   hydrateHeader();
+  renderMeasurements();
   const lightbox = createLightbox();
   const container = document.querySelector("[data-portfolio-shoots]");
   if (container) {

@@ -488,3 +488,54 @@ test("the n of N control downloads the current photo from the carousel and the v
   expect((await viewerDownload).suggestedFilename()).toBe("stand-still-drop-3-of-6.jpg");
   await expect(viewer).toBeVisible();
 });
+
+
+test("lists measurements under the title and converts between inches and centimetres", async ({
+  page,
+}) => {
+  await openPortfolio(page, DESKTOP);
+  const section = page.locator("[data-portfolio-measurements]");
+  const inches = section.getByRole("button", { name: "in" });
+  const centimetres = section.getByRole("button", { name: "cm" });
+  const values = section.locator("dd");
+
+  const title = await box(page.getByRole("heading", { level: 1 }));
+  const block = await box(section);
+  const summary = await box(page.locator(".portfolio-summary"));
+  expect(block.top).toBeGreaterThanOrEqual(title.bottom);
+  expect(block.bottom).toBeLessThanOrEqual(summary.top);
+
+  await expect(section.getByRole("heading", { level: 2 })).toHaveText("Measurements");
+  await expect(section.locator("dt")).toHaveText([
+    "Height",
+    "Shoe",
+    "Chest/Bust",
+    "Waist",
+    "Pant Waist",
+    "Hips",
+  ]);
+  await expect(values).toHaveText(['6\'2"', "US 11/EU 45", '33.5"', '26.6"', '28.5"', '34"']);
+  await expect(inches).toHaveAttribute("aria-pressed", "true");
+  await expect(centimetres).toHaveAttribute("aria-pressed", "false");
+  expect(await inches.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe(
+    await centimetres.evaluate((element) => getComputedStyle(element).boxShadow)
+  );
+
+  await centimetres.click();
+  await expect(values).toHaveText([
+    "188 cm",
+    "US 11/EU 45",
+    "85.1 cm",
+    "67.6 cm",
+    "72.4 cm",
+    "86.4 cm",
+  ]);
+  await expect(centimetres).toHaveAttribute("aria-pressed", "true");
+  await expect(inches).toHaveAttribute("aria-pressed", "false");
+
+  await inches.focus();
+  await page.keyboard.press("Enter");
+  await expect(values.first()).toHaveText('6\'2"');
+  await expect(inches).toHaveAttribute("aria-pressed", "true");
+  expect(await documentOverflows(page)).toBe(false);
+});

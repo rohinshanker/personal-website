@@ -30,9 +30,9 @@
       content="Runway shows, lookbooks, and promo shoots with full photo galleries and credits."
     />
     <link rel="stylesheet" href="../style.css?v=first-win-stats-handoff-20260722" />
-    <link rel="stylesheet" href="style.css?v=modeling-portfolio-download-20260916" />
-    <script src="../scripts/home/modeling-portfolio.js?v=modeling-portfolio-highlights-20260921"></script>
-    <script src="script.js?v=modeling-portfolio-download-20260916" defer></script>
+    <link rel="stylesheet" href="style.css?v=modeling-portfolio-measurements-20260926" />
+    <script src="../scripts/home/modeling-portfolio.js?v=modeling-portfolio-measurements-20260926"></script>
+    <script src="script.js?v=modeling-portfolio-measurements-20260926" defer></script>
   </head>
   <body class="modeling-page">
     <a class="skip-link" href="#shoots">Skip to the shoots</a>
@@ -50,6 +50,26 @@
       </div>
       <div class="window-body portfolio-header__body">
         <h1 class="portfolio-title" id="portfolio-title">Rohin Shanker Modeling Portfolio</h1>
+        <section
+          class="portfolio-measurements"
+          aria-labelledby="portfolio-measurements-title"
+          data-portfolio-measurements
+        >
+          <div class="portfolio-measurements__header">
+            <h2 class="portfolio-measurements__title" id="portfolio-measurements-title">
+              Measurements
+            </h2>
+            <div class="unit-toggle" role="group" aria-label="Measurement units">
+              <button class="unit-toggle__button" type="button" data-unit="in" aria-pressed="true">
+                in
+              </button>
+              <button class="unit-toggle__button" type="button" data-unit="cm" aria-pressed="false">
+                cm
+              </button>
+            </div>
+          </div>
+          <dl class="portfolio-measurements__list" data-portfolio-measurements-list></dl>
+        </section>
         <p class="portfolio-summary">
           Tap or click any photo to view it fullscreen. Press the download button to download the
           current image from the carousel.
