@@ -79,6 +79,21 @@ test("game build metadata matches the completion source and Worker configuration
   );
 });
 
+test("both Wrangler configurations schedule the same expiry purge", async () => {
+  const [config, exampleConfig] = await Promise.all(
+    [
+      "../workers/game-stats/wrangler.jsonc",
+      "../workers/game-stats/wrangler.jsonc.example",
+    ].map(async (relativePath) =>
+      parseJsonc(await readFile(new URL(relativePath, import.meta.url), "utf8"))
+    )
+  );
+
+  assert.deepEqual(config.triggers.crons, ["0 * * * *"]);
+  assert.deepEqual(exampleConfig.triggers, config.triggers);
+  assert.deepEqual(exampleConfig.secrets, config.secrets);
+});
+
 test("the Worker's local build-identity copies match the shared script definitions", async () => {
   const workerSource = await readFile(
     new URL("../workers/game-stats/src/index.mjs", import.meta.url),

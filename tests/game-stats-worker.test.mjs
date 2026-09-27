@@ -4,6 +4,7 @@ import test from "node:test";
 import worker, {
   createGameStatsDataFromEvents,
   normalizeGameStatsEvent,
+  purgeExpiredGameStatsRows,
 } from "../workers/game-stats/src/index.mjs";
 
 const projectEventRow = (sql, row) => {
@@ -114,6 +115,14 @@ class MockD1Statement {
       }
       return { meta: { changes: 1 } };
     }
+    if (this.sql.includes("DELETE FROM game_stat_sessions")) {
+      return { meta: { changes: this.database.deleteExpired("sessions", this.params[0]) } };
+    }
+    if (this.sql.includes("DELETE FROM game_stats_rate_limits")) {
+      return {
+        meta: { changes: this.database.deleteExpired("rateLimits", this.params[0]) },
+      };
+    }
     throw new Error(`Unhandled write query: ${this.sql}`);
   }
 
@@ -157,6 +166,18 @@ class MockD1Database {
 
   prepare(sql) {
     return new MockD1Statement(this, sql);
+  }
+
+  /** Mirrors `WHERE expires_at <= ?` for the scheduled purge. */
+  deleteExpired(table, expiredAt) {
+    let changes = 0;
+    for (const [key, row] of this[table]) {
+      if (row.expires_at <= expiredAt) {
+        this[table].delete(key);
+        changes += 1;
+      }
+    }
+    return changes;
   }
 
   async batch(statements) {
@@ -2893,4 +2914,107 @@ test("stats query rejects invalid player ids", async () => {
     env
   );
   assert.equal(invalidResponse.status, 400);
+});
+
+test("the scheduled purge deletes only expired sessions and rate-limit buckets", async () => {
+  const env = createEnv();
+  const database = env.personal_site_game_stats;
+  const past = new Date(Date.now() - 60_000).toISOString();
+  const future = new Date(Date.now() + 60 * 60_000).toISOString();
+
+  for (const [id, expiresAt] of [
+    ["expired-session", past],
+    ["live-session", future],
+  ]) {
+    database.sessions.set(id, {
+      id,
+      game: "minesweeper",
+      config_json: JSON.stringify({ difficulty: "beginner" }),
+      build_version: buildVersion,
+      ip_hash: "hash",
+      issued_at: past,
+      expires_at: expiresAt,
+      consumed_at: null,
+    });
+  }
+  for (const [bucket, expiresAt] of [
+    ["sessions:expired", past],
+    ["events:live", future],
+  ]) {
+    database.rateLimits.set(bucket, {
+      request_count: 3,
+      window_started_at: past,
+      expires_at: expiresAt,
+    });
+  }
+
+  const summary = await purgeExpiredGameStatsRows(env);
+
+  assert.equal(summary.expiredSessions, 1);
+  assert.equal(summary.expiredRateLimitBuckets, 1);
+  assert.match(summary.purgedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(Array.from(database.sessions.keys()), ["live-session"]);
+  assert.deepEqual(Array.from(database.rateLimits.keys()), ["events:live"]);
+
+  const repeated = await purgeExpiredGameStatsRows(env);
+  assert.equal(repeated.expiredSessions, 0);
+  assert.equal(repeated.expiredRateLimitBuckets, 0);
+});
+
+test("the scheduled purge keeps a consumed session until it expires", async () => {
+  const env = createEnv();
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  await ageSessionForCompletion(env, session);
+  const stored = env.personal_site_game_stats.sessions.get(session.id);
+  stored.consumed_at = new Date().toISOString();
+
+  assert.equal((await purgeExpiredGameStatsRows(env)).expiredSessions, 0);
+  assert.ok(env.personal_site_game_stats.sessions.has(session.id));
+
+  stored.expires_at = new Date(Date.now() - 1_000).toISOString();
+  assert.equal((await purgeExpiredGameStatsRows(env)).expiredSessions, 1);
+  assert.equal(env.personal_site_game_stats.sessions.size, 0);
+});
+
+test("the cron entry point purges through the Worker export and logs its summary", async (context) => {
+  const log = context.mock.method(console, "log", () => {});
+  const env = createEnv();
+  env.personal_site_game_stats.sessions.set("expired-session", {
+    id: "expired-session",
+    game: "snake",
+    config_json: "{}",
+    build_version: buildVersion,
+    ip_hash: "hash",
+    issued_at: new Date(Date.now() - 120_000).toISOString(),
+    expires_at: new Date(Date.now() - 60_000).toISOString(),
+    consumed_at: null,
+  });
+
+  await worker.scheduled({ cron: "0 * * * *", scheduledTime: Date.now() }, env);
+
+  assert.equal(env.personal_site_game_stats.sessions.size, 0);
+  assert.match(
+    log.mock.calls.at(-1).arguments[0],
+    /Purged 1 expired game sessions and 0 rate-limit buckets at /
+  );
+});
+
+test("the scheduled purge fails loudly without a database binding or on a D1 error", async () => {
+  await assert.rejects(
+    purgeExpiredGameStatsRows({}),
+    /D1 database binding is not configured/
+  );
+
+  const batchError = new Error("Simulated D1 purge failure");
+  await assert.rejects(
+    purgeExpiredGameStatsRows({
+      personal_site_game_stats: {
+        prepare: () => ({ bind: () => ({}) }),
+        batch: async () => {
+          throw batchError;
+        },
+      },
+    }),
+    batchError
+  );
 });

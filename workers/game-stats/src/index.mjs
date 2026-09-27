@@ -130,6 +130,14 @@ SELECT request_count
 FROM game_stats_rate_limits
 WHERE bucket = ?
 `;
+const DELETE_EXPIRED_SESSIONS_SQL = `
+DELETE FROM game_stat_sessions
+WHERE expires_at <= ?
+`;
+const DELETE_EXPIRED_RATE_LIMITS_SQL = `
+DELETE FROM game_stats_rate_limits
+WHERE expires_at <= ?
+`;
 const HEALTH_CHECK_SQL = `
 SELECT COUNT(*) AS table_count
 FROM sqlite_master
@@ -1423,4 +1431,35 @@ export const handleRequest = async (request, env) => {
   }
 };
 
-export default { fetch: handleRequest };
+/**
+ * `game_stat_sessions` gains a row per game start and `game_stats_rate_limits`
+ * one per bucket; nothing in the request path deletes either, so this cron purge
+ * is what keeps both tables and the `*_expiry_idx` indexes useful. Expiry is
+ * inclusive because a row whose `expires_at` equals now already fails session
+ * validation.
+ */
+export const purgeExpiredGameStatsRows = async (env) => {
+  const database = getGameStatsDatabase(env);
+  if (!database) throw new Error("D1 database binding is not configured");
+  const purgedAt = new Date().toISOString();
+  const [expiredSessions, expiredRateLimits] = await database.batch([
+    database.prepare(DELETE_EXPIRED_SESSIONS_SQL).bind(purgedAt),
+    database.prepare(DELETE_EXPIRED_RATE_LIMITS_SQL).bind(purgedAt),
+  ]);
+  return Object.freeze({
+    purgedAt,
+    expiredSessions: getChanges(expiredSessions),
+    expiredRateLimitBuckets: getChanges(expiredRateLimits),
+  });
+};
+
+export default {
+  fetch: handleRequest,
+  scheduled: async (controller, env) => {
+    const summary = await purgeExpiredGameStatsRows(env);
+    console.log(
+      `Purged ${summary.expiredSessions} expired game sessions and ` +
+        `${summary.expiredRateLimitBuckets} rate-limit buckets at ${summary.purgedAt}.`
+    );
+  },
+};
