@@ -7,9 +7,9 @@ const ONE_PIXEL_PNG = Buffer.from(
 
 const pathfinderSources = [
   "/assets/creative-work/pathfinder-logo.png",
-  "/assets/creative-work/pathfinder-cad.png",
-  "/assets/creative-work/pathfinder-new-trash.png",
-  "/assets/creative-work/pathfinder-perso%20n.png",
+  "/assets/creative-work/pathfinder-cad.webp",
+  "/assets/creative-work/pathfinder-new-trash.webp",
+  "/assets/creative-work/pathfinder-person.webp",
 ];
 
 const standStillSources = [
@@ -47,7 +47,7 @@ test("Pathfinder warms every later carousel image in display order while the fir
   const gates = new Map();
 
   await page.addInitScript(disableRandomEvents);
-  await page.route("**/assets/creative-work/pathfinder-*.png", async (route) => {
+  await page.route(/\/assets\/creative-work\/pathfinder-[a-z-]+\.(?:png|webp)$/, async (route) => {
     const path = new URL(route.request().url()).pathname;
     requests.push(path);
     const gate = deferred();
@@ -82,7 +82,7 @@ test("hidden Creative Work media waits until the selected carousel has warmed", 
   const berserkGate = deferred();
 
   await page.addInitScript(disableRandomEvents);
-  await page.route("**/assets/creative-work/pathfinder-*.png", async (route) => {
+  await page.route(/\/assets\/creative-work\/pathfinder-[a-z-]+\.(?:png|webp)$/, async (route) => {
     const path = new URL(route.request().url()).pathname;
     pathfinderRequests.push(path);
     const gate = deferred();
@@ -90,7 +90,7 @@ test("hidden Creative Work media waits until the selected carousel has warmed", 
     await gate.promise;
     await route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" });
   });
-  await page.route("**/assets/creative-work/berserk-poster-redesign/magazine%20cover.png", async (route) => {
+  await page.route("**/assets/creative-work/berserk-poster-redesign/magazine-cover.webp", async (route) => {
     berserkRequest = new URL(route.request().url()).pathname;
     await berserkGate.promise;
     await route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" });
@@ -108,7 +108,7 @@ test("hidden Creative Work media waits until the selected carousel has warmed", 
 
   pathfinderGates.get(pathfinderSources.at(-1)).resolve();
   await expect.poll(() => berserkRequest).toBe(
-    "/assets/creative-work/berserk-poster-redesign/magazine%20cover.png"
+    "/assets/creative-work/berserk-poster-redesign/magazine-cover.webp"
   );
   berserkGate.resolve();
 });

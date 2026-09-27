@@ -616,7 +616,7 @@ test("spell on the stack event is probability-gated with counter and damage effe
   assert.match(windowMarkup, /class="spell-stack-image-frame"/);
   assert.match(windowMarkup, /class="spell-stack-image"/);
   assert.doesNotMatch(windowMarkup, /class="random-alert-message spell-stack-message"/);
-  assert.match(windowMarkup, /data-src="assets\/random%20events\/lightning-bolt\.png"/);
+  assert.match(windowMarkup, /data-src="assets\/random%20events\/lightning-bolt\.webp"/);
   assert.match(windowMarkup, /alt="Lightning Bolt"/);
   assert.match(
     windowMarkup,
@@ -645,7 +645,7 @@ test("spell on the stack event is probability-gated with counter and damage effe
   assert.match(getCssBlock(".spell-stack-counter-flash"), /background: #1f6fff;/);
   assert.match(getCssBlock(".spell-stack-window.is-spell-hit"), /spell-stack-window-shake/);
   assert.match(eventStyles, /@keyframes spell-stack-window-shake/);
-  await access(new URL("assets/random events/lightning-bolt.png", root));
+  await access(new URL("assets/random events/lightning-bolt.webp", root));
 });
 
 test("soot sprites event is probability-gated GPU alert with animated swarm", async () => {

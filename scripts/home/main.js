@@ -783,20 +783,20 @@ const DRONE_PRESENTATION_PDF_URL =
 const ekgProjectMedia = Object.freeze([
   {
     type: "image",
-    src: "assets/projects/ekg-project/final-breadboard.jpeg",
+    src: "assets/projects/ekg-project/final-breadboard.webp",
     alt: "Final EKG breadboard.",
     title: "Final breadboard",
     description: "Final breadboard.",
   },
   {
     type: "video",
-    src: "assets/projects/ekg-project/signal-closeup.MOV",
+    src: "assets/projects/ekg-project/signal-closeup.mp4",
     title: "Signal closeup",
     description: "Signal closeup.",
   },
   {
     type: "video",
-    src: "assets/projects/ekg-project/video-demo.mov",
+    src: "assets/projects/ekg-project/video-demo.mp4",
     title: "Video demo",
     description: "Video demo.",
   },
@@ -9298,7 +9298,7 @@ const closeGradescopeCurve = () => {
 };
 
 const GEARS_NEST_ASSETS = Object.freeze({
-  nest: "assets/random%20events/scourge-nest-background.png",
+  nest: "assets/random%20events/scourge-nest-background.webp",
   cogGear: "assets/random%20events/gears-nest/cog-gear.webp",
   drone: "assets/random%20events/gears-nest/locust-drone.webp",
   boomer: "assets/random%20events/gears-nest/boomer.webp",
@@ -21457,9 +21457,9 @@ document.querySelectorAll(".portfolio-window").forEach((windowEl) => {
 
 const pathfinderImages = [
   "assets/creative-work/pathfinder-logo.png",
-  "assets/creative-work/pathfinder-cad.png",
-  "assets/creative-work/pathfinder-new-trash.png",
-  "assets/creative-work/pathfinder-perso%20n.png",
+  "assets/creative-work/pathfinder-cad.webp",
+  "assets/creative-work/pathfinder-new-trash.webp",
+  "assets/creative-work/pathfinder-person.webp",
 ];
 const pathfinderImage = document.getElementById("pathfinder-image");
 const pathfinderPrev = document.getElementById("pathfinder-prev");
@@ -21468,12 +21468,12 @@ const pathfinderNext = document.getElementById("pathfinder-next");
 let pathfinderIndex = 0;
 
 const berserkPosterImages = [
-  "assets/creative-work/berserk-poster-redesign/magazine%20cover.png",
-  "assets/creative-work/berserk-poster-redesign/watercolor%20poster.png",
-  "assets/creative-work/berserk-poster-redesign/BW.png",
-  "assets/creative-work/berserk-poster-redesign/BW%20paintbrush.png",
-  "assets/creative-work/berserk-poster-redesign/black%20cyberpunk.png",
-  "assets/creative-work/berserk-poster-redesign/yellow%20cyberpunk%20griffith.png",
+  "assets/creative-work/berserk-poster-redesign/magazine-cover.webp",
+  "assets/creative-work/berserk-poster-redesign/watercolor-poster.webp",
+  "assets/creative-work/berserk-poster-redesign/bw.webp",
+  "assets/creative-work/berserk-poster-redesign/bw-paintbrush.webp",
+  "assets/creative-work/berserk-poster-redesign/black-cyberpunk.webp",
+  "assets/creative-work/berserk-poster-redesign/yellow-cyberpunk-griffith.webp",
 ];
 const berserkPosterImage = document.getElementById("berserk-poster-image");
 const berserkPosterPrev = document.getElementById("berserk-poster-prev");
@@ -21507,7 +21507,7 @@ let myBrothersGhostIndex = 0;
 const frontiersPdfSlides = [
   {
     page: 4,
-    src: "assets/writing/mec-slides/mec-page-4.png",
+    src: "assets/writing/mec-slides/mec-page-4.webp",
     alt: "Microbial Edge Computing slide 4",
   },
   {
@@ -26295,11 +26295,17 @@ const CUSTOM_CURSOR_PRELOAD_SOURCES = Object.freeze([
   "assets/cursor-assets/Jeelh-Cursor-Dark/Working%20In%20Background.ani",
   "assets/cursor-assets/Jeelh-Cursor-Dark/Busy.ani",
 ]);
-let customCursorPreloadPromise = null;
+const customCursorPreloadPromises = { light: null, dark: null };
+
+const customCursorSourceMode = (source) =>
+  /-light\.png$|\/Jeelh-Cursor-Light\//.test(source) ? "light" : "dark";
+
+const activeCustomCursorMode = () => (loadCursorDarkMode() ? "dark" : "light");
 
 const setCursorDarkMode = (enabled) => {
   document.documentElement.classList.toggle("is-cursor-dark-mode", enabled);
   document.body.classList.toggle("is-cursor-dark-mode", enabled);
+  preloadCustomCursorAssets(enabled ? "dark" : "light");
 };
 
 const saveCursorDarkMode = (enabled) => {
@@ -26322,19 +26328,20 @@ const markCustomCursorsReady = () => {
   document.body?.classList.add("is-custom-cursor-ready");
 };
 
-const preloadCustomCursorAssets = () => {
-  if (customCursorPreloadPromise) return customCursorPreloadPromise;
+/** Warms one cursor mode's files; the inactive mode is fetched only when selected. */
+const preloadCustomCursorAssets = (mode = activeCustomCursorMode()) => {
+  if (customCursorPreloadPromises[mode]) return customCursorPreloadPromises[mode];
   if (!window.fetch) {
-    customCursorPreloadPromise = Promise.resolve();
-    return customCursorPreloadPromise;
+    customCursorPreloadPromises[mode] = Promise.resolve();
+    return customCursorPreloadPromises[mode];
   }
 
-  customCursorPreloadPromise = Promise.allSettled(
-    CUSTOM_CURSOR_PRELOAD_SOURCES.map((source) =>
-      fetch(new URL(source, document.baseURI), { cache: "force-cache" })
+  customCursorPreloadPromises[mode] = Promise.allSettled(
+    CUSTOM_CURSOR_PRELOAD_SOURCES.filter((source) => customCursorSourceMode(source) === mode).map(
+      (source) => fetch(new URL(source, document.baseURI), { cache: "force-cache" })
     )
   ).then(() => undefined);
-  return customCursorPreloadPromise;
+  return customCursorPreloadPromises[mode];
 };
 
 const preloadAndApplyCustomCursors = () => {
