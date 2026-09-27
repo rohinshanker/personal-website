@@ -28751,7 +28751,7 @@ const msNeighbors = (index) => {
   return list;
 };
 
-const msFormatCounter = (value) => {
+const formatSevenSegmentCounter = (value) => {
   const clamped = clampNumber(value, -99, MINESWEEPER_COUNTER_MAX);
   if (clamped < 0) {
     return `-${padTwoDigits(Math.abs(clamped))}`;
@@ -28759,7 +28759,7 @@ const msFormatCounter = (value) => {
   return String(clamped).padStart(3, "0");
 };
 
-const msSetCounter = (el, value) => {
+const setSevenSegmentCounter = (el, value) => {
   if (!el) return;
   const digits = String(value).padStart(3, " ").slice(-3);
   const imgs = el.querySelectorAll("img");
@@ -28774,8 +28774,8 @@ const msUpdateCounters = () => {
   if (!msMines || !msTime) return;
   const flags = msState.cells.filter((cell) => cell.flagged).length;
   const remaining = msState.mines - flags;
-  msSetCounter(msMines, msFormatCounter(remaining));
-  msSetCounter(msTime, msFormatCounter(msState.elapsed));
+  setSevenSegmentCounter(msMines, formatSevenSegmentCounter(remaining));
+  setSevenSegmentCounter(msTime, formatSevenSegmentCounter(msState.elapsed));
 };
 
 const msSetFace = (face) => {
@@ -30362,7 +30362,9 @@ const solRender = () => {
     solTableau.appendChild(columnEl);
   });
 
-  if (solMoves) msSetCounter(solMoves, msFormatCounter(solState.moves));
+  if (solMoves) {
+    setSevenSegmentCounter(solMoves, formatSevenSegmentCounter(solState.moves));
+  }
   if (solStatus) solStatus.textContent = "";
   solRenderToolbar();
 };
@@ -30557,7 +30559,9 @@ const solRenderLanding = (move, card, flipped) => {
   }
   cardEl.remove();
   solRenderFoundationSlot(slot, move.suit);
-  if (solMoves) msSetCounter(solMoves, msFormatCounter(solState.moves));
+  if (solMoves) {
+    setSevenSegmentCounter(solMoves, formatSevenSegmentCounter(solState.moves));
+  }
   solRenderToolbar();
 };
 
