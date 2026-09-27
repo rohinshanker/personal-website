@@ -111,7 +111,7 @@ test("the modeling portfolio route matches its reference render at desktop and m
   await installStubbedModelingMedia(page);
   for (const [name, viewport] of Object.entries({ desktop: DESKTOP, mobile: MOBILE })) {
     await openDeterministicRoute(page, "/modeling/", viewport);
-    await expect(page.locator("section.shoot")).toHaveCount(20);
+    await expect(page.locator("section.shoot")).toHaveCount(22);
     await settleRender(page);
 
     await expect(page).toHaveScreenshot(`modeling-portfolio-${name}.png`, {

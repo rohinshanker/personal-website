@@ -218,7 +218,7 @@ test.describe("modeling portfolio route accessibility", () => {
     }, testInfo) => {
       await installStubbedModelingMedia(page);
       await openDeterministicRoute(page, "/modeling/", viewport);
-      await expect(page.locator("section.shoot")).toHaveCount(20);
+      await expect(page.locator("section.shoot")).toHaveCount(22);
       expect(await scanForViolations(page, testInfo, `modeling-${name}`)).toEqual([]);
 
       const shoot = page.locator("#garb-cirque-du-moi-runway-show");

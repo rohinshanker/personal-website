@@ -5,8 +5,8 @@ import vm from "node:vm";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
-const DATA_VERSION = "modeling-portfolio-measurements-20260926";
-const ROUTE_VERSION = "modeling-portfolio-measurements-20260926";
+const DATA_VERSION = "modeling-portfolio-digitals-20260926";
+const ROUTE_VERSION = "modeling-portfolio-digitals-20260926";
 
 const isFile = async (path) => {
   try {
@@ -79,7 +79,43 @@ test("the shared modeling data is complete and every referenced file exists", as
     assert.ok(await isFile(icon), `${icon} must exist`);
   }
 
-  assert.equal(portfolio.shoots.length, 20);
+  assert.equal(portfolio.shoots.length, 22);
+  assert.deepEqual(portfolio.shoots.slice(0, 2), [
+    {
+      id: "modeling-digitals-miffy-sep2026",
+      title: "Digitals",
+      date: "September 2026",
+      icon: "assets/app-icons/ico/camera.ico",
+      folder: "assets/modeling/digitals-miffy-sep2026",
+      files: ["1.JPG", "2.JPG", "3.JPG", "4.JPG", "5.JPG", "6.JPG", "7.JPG"],
+      links: [
+        {
+          type: "camera",
+          label: "Miffy Wang Instagram",
+          href: "https://www.instagram.com/photography_miffy/",
+          title: "Photographer Instagram",
+        },
+      ],
+      credits: ["Talent: Rohin Shanker", "Photographer: Miffy Wang"],
+    },
+    {
+      id: "modeling-digitals-kehinde-sep2026",
+      title: "Digitals",
+      date: "September 2026",
+      icon: "assets/app-icons/ico/camera.ico",
+      folder: "assets/modeling/digitals-kehinde-sep2026",
+      files: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg", "9.jpg", "10.jpg"],
+      links: [
+        {
+          type: "camera",
+          label: "Kehinde Sowemimo Instagram",
+          href: "https://www.instagram.com/kapturedbykehinde/",
+          title: "Photographer Instagram",
+        },
+      ],
+      credits: ["Talent: Rohin Shanker", "Photographer: Kehinde Sowemimo"],
+    },
+  ]);
   const ids = portfolio.shoots.map((shoot) => shoot.id);
   assert.equal(new Set(ids).size, ids.length, "shoot ids are unique");
   for (const shoot of portfolio.shoots) {
@@ -87,7 +123,10 @@ test("the shared modeling data is complete and every referenced file exists", as
     assert.ok(shoot.title.trim().length, `${shoot.id} needs a title`);
     assert.match(shoot.date, /^[A-Z][a-z]+ \d{4}$/, `${shoot.id} date reads "Month YYYY"`);
     assert.ok(await isFile(shoot.icon), `${shoot.id} icon ${shoot.icon} must exist`);
-    assert.ok(shoot.files.length > 0, `${shoot.id} lists at least one file`);
+    assert.ok(
+      (await stat(new URL(`${shoot.folder}/`, root))).isDirectory(),
+      `${shoot.id} folder ${shoot.folder} must exist even before its photos are listed`
+    );
     for (const filename of shoot.files) {
       assert.ok(await isFile(`${shoot.folder}/${filename}`), `${shoot.folder}/${filename} must exist`);
     }
@@ -102,20 +141,25 @@ test("the shared modeling data is complete and every referenced file exists", as
     }
   }
   assert.equal(portfolio.shoots.filter((shoot) => shoot.autoplay).length, 1);
-  assert.equal(portfolio.shoots[0].id, "modeling-stand-still-drop");
+  assert.equal(portfolio.shoots[2].id, "modeling-stand-still-drop");
 });
 
 test("the Home Modeling window matches the shared data in order, titles, dates, and credits", async () => {
   const [portfolio, home] = await Promise.all([loadPortfolio(), read("home.html")]);
   const rows = homeSelectorRows(home);
   const panels = homeViewerPanels(home);
+  const published = portfolio.shoots.filter((shoot) => shoot.files.length > 0);
 
   assert.deepEqual(
     rows.map((row) => row.id),
-    portfolio.shoots.map((shoot) => shoot.id),
-    "selector order matches the shared order"
+    published.map((shoot) => shoot.id),
+    "selector order matches the published shared order"
   );
   for (const shoot of portfolio.shoots) {
+    if (!shoot.files.length) {
+      assert.ok(!panels[shoot.id], `${shoot.id} is unpublished and must have no Home panel`);
+      continue;
+    }
     const row = rows.find((candidate) => candidate.id === shoot.id);
     assert.equal(row.title, shoot.title, `${shoot.id} selector title`);
     assert.equal(row.date, shoot.date, `${shoot.id} selector date`);

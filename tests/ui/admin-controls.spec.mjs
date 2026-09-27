@@ -954,6 +954,7 @@ test("Capture quick-start drives a stable Modeling carousel promo binding", asyn
   const modelingWindow = page.locator('[data-app-window="modeling"]');
   await expect(modelingWindow).toBeVisible();
   await finishWindowAnimation(modelingWindow, "retro-window-open");
+  await modelingWindow.locator('.selector-item[data-view="modeling-stand-still-drop"]').click();
   const modelingNext = modelingWindow.locator(
     '[data-admin-target="modeling:modeling-stand-still-drop:next"]'
   );
@@ -1026,6 +1027,7 @@ test("Promo random mode boosts a natural carousel trigger through the safe sched
   const modelingWindow = page.locator('[data-app-window="modeling"]');
   await expect(modelingWindow).toBeVisible();
   await finishWindowAnimation(modelingWindow, "retro-window-open");
+  await modelingWindow.locator('.selector-item[data-view="modeling-stand-still-drop"]').click();
   const modelingNext = modelingWindow.locator(
     '[data-admin-target="modeling:modeling-stand-still-drop:next"]'
   );

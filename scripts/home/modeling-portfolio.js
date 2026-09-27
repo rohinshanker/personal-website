@@ -1,5 +1,6 @@
 // Modeling shoot data shared by the Home Modeling window and the /modeling/ portfolio route.
-// Order is newest first; every path is relative to the repository root.
+// Order is newest first; every path is relative to the repository root. A shoot with an empty
+// `files` list stays hidden on /modeling/ and has no Home row until its photos are listed.
 (() => {
 const brandLinks = {
   standstill: [
@@ -37,6 +38,30 @@ const brandLinks = {
 };
 
 const shoots = [
+  {
+    id: "modeling-digitals-miffy-sep2026",
+    title: "Digitals",
+    date: "September 2026",
+    icon: "assets/app-icons/ico/camera.ico",
+    folder: "assets/modeling/digitals-miffy-sep2026",
+    files: ["1.JPG", "2.JPG", "3.JPG", "4.JPG", "5.JPG", "6.JPG", "7.JPG"],
+    links: [
+      { type: "camera", label: "Miffy Wang Instagram", href: "https://www.instagram.com/photography_miffy/", title: "Photographer Instagram" },
+    ],
+    credits: ["Talent: Rohin Shanker", "Photographer: Miffy Wang"],
+  },
+  {
+    id: "modeling-digitals-kehinde-sep2026",
+    title: "Digitals",
+    date: "September 2026",
+    icon: "assets/app-icons/ico/camera.ico",
+    folder: "assets/modeling/digitals-kehinde-sep2026",
+    files: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg", "9.jpg", "10.jpg"],
+    links: [
+      { type: "camera", label: "Kehinde Sowemimo Instagram", href: "https://www.instagram.com/kapturedbykehinde/", title: "Photographer Instagram" },
+    ],
+    credits: ["Talent: Rohin Shanker", "Photographer: Kehinde Sowemimo"],
+  },
   {
     id: "modeling-stand-still-drop",
     title: "Stand Still Drop",

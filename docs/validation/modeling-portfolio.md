@@ -8,7 +8,7 @@
 
 - `scripts/home/modeling-portfolio.js` is the single source for every shoot: id, title, date, selector icon, asset folder, ordered files, autoplay, links, and credits. It publishes `window.rohinModelingPortfolio` and loads before `scripts/home/main.js` on Home and before `script.js` on the route.
 - Home keeps its static selector rows and viewer panels. `tests/modeling-portfolio.test.mjs` fails when their order, titles, dates, icons, or credit lines drift from the shared data, and when a listed file, icon, or link icon is missing from disk.
-- Add a shoot by inserting one entry in the shared data (newest first) and the matching Home selector row and viewer panel. Photos stay in `assets/modeling/<folder>/` at their original quality.
+- Add a shoot by inserting one entry in the shared data (newest first) and the matching Home selector row and viewer panel. Photos stay in `assets/modeling/<folder>/` at their original quality. A shoot whose `files` list is empty is unpublished: `/modeling/` skips it and Home must not carry a row or panel for it; listing its files publishes it, and the parity test then demands the Home markup.
 - `instagram` and `dropbox` live in the same file. An empty Dropbox URL renders a disabled Highlights or Digitals button with a "Link coming soon" note; a value renders a new-tab link in its place.
 
 ## Route contract

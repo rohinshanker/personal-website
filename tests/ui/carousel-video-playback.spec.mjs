@@ -92,6 +92,7 @@ test("Stand Still only autoplays while its carousel tab and video slide are visi
   page,
 }) => {
   const app = await openApp(page, "modeling");
+  await app.locator('.selector-item[data-view="modeling-stand-still-drop"]').click();
   const standStillPanel = app.locator(
     '.viewer-content[data-view="modeling-stand-still-drop"]'
   );

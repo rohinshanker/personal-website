@@ -3,6 +3,8 @@
 
   const portfolio = window.rohinModelingPortfolio;
   if (!portfolio || !Array.isArray(portfolio.shoots)) return;
+  /** A shoot appears only once its photo list is filled in. */
+  const publishedShoots = portfolio.shoots.filter((shoot) => shoot.files.length > 0);
 
   /** Shared data paths are repository-root relative; this route lives one level down. */
   const ASSET_ROOT = "../";
@@ -131,7 +133,8 @@
   /* Header */
 
   const hydrateHeader = () => {
-    const { instagram, dropbox = {}, shoots } = portfolio;
+    const { instagram, dropbox = {} } = portfolio;
+    const shoots = publishedShoots;
     const instagramLink = document.querySelector("[data-portfolio-instagram]");
     if (instagramLink && instagram?.href) {
       instagramLink.href = instagram.href;
@@ -762,7 +765,7 @@
   const lightbox = createLightbox();
   const container = document.querySelector("[data-portfolio-shoots]");
   if (container) {
-    container.append(...portfolio.shoots.map((shoot) => renderShoot(shoot, lightbox)));
+    container.append(...publishedShoots.map((shoot) => renderShoot(shoot, lightbox)));
   }
   bindTopLink();
   bindResize();

@@ -24,11 +24,14 @@ const portfolio = (() => {
 })();
 const anchorId = (id) => id.replace(/^modeling-/, "");
 const shootById = (id) => portfolio.shoots.find((shoot) => shoot.id === id);
+/** Shoots the route renders: everything with a photo list. */
+const PUBLISHED = portfolio.shoots.filter((shoot) => shoot.files.length > 0);
 
+const FIRST = PUBLISHED[0];
 const STAND_STILL = shootById("modeling-stand-still-drop");
 const CIRQUE = shootById("modeling-garb-cirque-du-moi-runway-show");
 const MERCH = shootById("modeling-garb-merch-promo-shoot");
-const LAST = portfolio.shoots[portfolio.shoots.length - 1];
+const LAST = PUBLISHED[PUBLISHED.length - 1];
 
 /**
  * Opens the route with stubbed media. `prepare` runs after the stubs are
@@ -48,7 +51,7 @@ const openPortfolio = async (
     sessionStorage.clear();
   });
   await page.goto(path, { waitUntil });
-  await expect(page.locator("section.shoot")).toHaveCount(portfolio.shoots.length);
+  await expect(page.locator("section.shoot")).toHaveCount(PUBLISHED.length);
   if (settle) await settleRender(page);
 };
 
@@ -107,25 +110,23 @@ test("renders the header and every shoot in order without overflow at each revie
 
       const nav = page.getByRole("navigation", { name: "Shoots" });
       await expect(nav.locator("summary")).toHaveText(
-        `Jump to a shoot (${portfolio.shoots.length})`
+        `Jump to a shoot (${PUBLISHED.length})`
       );
       await expect(nav.locator("details")).not.toHaveAttribute("open", "");
       await nav.locator("summary").click();
       const navLinks = nav.getByRole("link");
-      await expect(navLinks).toHaveCount(portfolio.shoots.length);
-      await expect(navLinks).toHaveText(
-        portfolio.shoots.map((shoot) => `${shoot.title}${shoot.date}`)
-      );
+      await expect(navLinks).toHaveCount(PUBLISHED.length);
+      await expect(navLinks).toHaveText(PUBLISHED.map((shoot) => `${shoot.title}${shoot.date}`));
       await nav.locator("summary").click();
 
       const sections = page.locator("section.shoot");
-      await expect(sections).toHaveCount(portfolio.shoots.length);
+      await expect(sections).toHaveCount(PUBLISHED.length);
       const headings = page.locator("section.shoot h2");
-      await expect(headings).toHaveText(portfolio.shoots.map((shoot) => shoot.title));
+      await expect(headings).toHaveText(PUBLISHED.map((shoot) => shoot.title));
       await expect(page.locator("section.shoot .shoot__date")).toHaveText(
-        portfolio.shoots.map((shoot) => shoot.date)
+        PUBLISHED.map((shoot) => shoot.date)
       );
-      for (const shoot of [STAND_STILL, CIRQUE, LAST]) {
+      for (const shoot of [FIRST, STAND_STILL, CIRQUE, LAST]) {
         await expect(section(page, shoot)).toHaveAttribute("id", anchorId(shoot.id));
         await expect(section(page, shoot).locator("[data-carousel-slide]")).toHaveCount(
           shoot.files.length
@@ -168,33 +169,35 @@ test("loads only nearby slides and moves through Previous, Next, and the arrow k
   page,
 }) => {
   await openPortfolio(page, DESKTOP);
+  const total = FIRST.files.length;
+  expect(total).toBeGreaterThanOrEqual(5);
 
-  await expect(slideMedia(page, STAND_STILL, 0)).toHaveAttribute("src", /1\.mp4$/);
-  await expect(slideMedia(page, STAND_STILL, 1)).toHaveAttribute("src", /2\.jpg$/);
-  for (const index of [2, 3, 4, 5]) {
-    await expect(slideMedia(page, STAND_STILL, index)).not.toHaveAttribute("src", /./);
+  await expect(slideMedia(page, FIRST, 0)).toHaveAttribute("src", /\.jpe?g$/i);
+  await expect(slideMedia(page, FIRST, 1)).toHaveAttribute("src", /\.jpe?g$/i);
+  for (let index = 2; index < total; index += 1) {
+    await expect(slideMedia(page, FIRST, index)).not.toHaveAttribute("src", /./);
   }
   await expect(section(page, LAST).locator("[data-src][src]")).toHaveCount(0);
 
-  await section(page, STAND_STILL).getByRole("button", { name: "Next photo" }).click();
-  await expect(counter(page, STAND_STILL)).toHaveText("2 of 6");
-  await expectStripAt(page, STAND_STILL, 1);
-  await expect(slideMedia(page, STAND_STILL, 2)).toHaveAttribute("src", /3\.jpg$/);
-  await expect(slideMedia(page, STAND_STILL, 4)).not.toHaveAttribute("src", /./);
+  await section(page, FIRST).getByRole("button", { name: "Next photo" }).click();
+  await expect(counter(page, FIRST)).toHaveText(`2 of ${total}`);
+  await expectStripAt(page, FIRST, 1);
+  await expect(slideMedia(page, FIRST, 2)).toHaveAttribute("src", /\.jpe?g$/i);
+  await expect(slideMedia(page, FIRST, 4)).not.toHaveAttribute("src", /./);
 
-  await slide(page, STAND_STILL, 1).locator("button").focus();
+  await slide(page, FIRST, 1).locator("button").focus();
   await page.keyboard.press("ArrowRight");
-  await expect(counter(page, STAND_STILL)).toHaveText("3 of 6");
-  await expect(slide(page, STAND_STILL, 2).locator("button")).toBeFocused();
-  await expectStripAt(page, STAND_STILL, 2);
+  await expect(counter(page, FIRST)).toHaveText(`3 of ${total}`);
+  await expect(slide(page, FIRST, 2).locator("button")).toBeFocused();
+  await expectStripAt(page, FIRST, 2);
 
-  const previous = section(page, STAND_STILL).getByRole("button", { name: "Previous photo" });
+  const previous = section(page, FIRST).getByRole("button", { name: "Previous photo" });
   await previous.click();
   await previous.click();
-  await expect(counter(page, STAND_STILL)).toHaveText("1 of 6");
+  await expect(counter(page, FIRST)).toHaveText(`1 of ${total}`);
   await previous.click();
-  await expect(counter(page, STAND_STILL)).toHaveText("6 of 6");
-  await expectStripAt(page, STAND_STILL, 5);
+  await expect(counter(page, FIRST)).toHaveText(`${total} of ${total}`);
+  await expectStripAt(page, FIRST, total - 1);
 
   await section(page, LAST).scrollIntoViewIfNeeded();
   await expect(slideMedia(page, LAST, 0)).toHaveAttribute("src", /\.jpg$/i);
@@ -364,9 +367,11 @@ test("video slides keep native controls and only enter the viewer through the ti
   page,
 }) => {
   await openPortfolio(page, DESKTOP);
+  await section(page, STAND_STILL).scrollIntoViewIfNeeded();
 
   const video = slideMedia(page, STAND_STILL, 0);
   await expect(video).toHaveJSProperty("tagName", "VIDEO");
+  await expect(video).toHaveAttribute("src", /1\.mp4$/);
   await expect(video).toHaveAttribute("controls", "");
   await expect(video).toHaveAttribute("playsinline", "");
   await expect(slide(page, STAND_STILL, 0).locator("button")).toHaveCount(0);

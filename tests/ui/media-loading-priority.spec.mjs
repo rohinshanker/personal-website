@@ -132,20 +132,26 @@ test("Modeling warms mixed video and image carousel media in display order", asy
 
   await page.goto("/home.html");
   await page.locator('.taskbar-icon[data-app="modeling"]').click();
+  // Stand Still is no longer the newest shoot, so select it; the hidden-panel
+  // prewarm may also touch its first source, hence the distinct-order comparison.
+  await page
+    .locator('[data-app-window="modeling"] .selector-item[data-view="modeling-stand-still-drop"]')
+    .click();
+  const distinct = () => Array.from(new Set(requests));
 
-  await expect.poll(() => requests).toEqual([standStillSources[0]]);
+  await expect.poll(distinct).toEqual([standStillSources[0]]);
   await page.waitForTimeout(100);
-  expect(requests).toEqual([standStillSources[0]]);
+  expect(distinct()).toEqual([standStillSources[0]]);
 
   for (let index = 0; index < standStillSources.length; index += 1) {
     gates.get(standStillSources[index]).resolve();
     if (index + 1 < standStillSources.length) {
-      await expect.poll(() => requests).toEqual(standStillSources.slice(0, index + 2));
+      await expect.poll(distinct).toEqual(standStillSources.slice(0, index + 2));
     }
   }
 
   await expect(
-    page.locator('[data-app-window="modeling"] .gallery-counter').first()
+    page.locator('[data-view="modeling-stand-still-drop"] .gallery-counter')
   ).toHaveText("1 of 6");
-  expect(requests).toEqual(standStillSources);
+  expect(distinct()).toEqual(standStillSources);
 });
