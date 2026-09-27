@@ -2,6 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
+| O | 2026-09-27 | [O_sudoku-check-prompt-and-clean-checks__20260927.md](O_sudoku-check-prompt-and-clean-checks__20260927.md) | Gold-glow double-press Check prompt when the board is full, and checks that find no errors no longer consume the three-check allowance. Nothing started. |
 | O | 2026-09-24 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Audit decisions: session budget, Minesweeper timer and close behaviour, Snake game-over loop, queue retry, expired sessions, compatibility cap, D1 id and indexes, deploy gating. Awaiting owner. |
 | O | 2026-09-24 | [O_decide-content-and-assets__20260924.md](O_decide-content-and-assets__20260924.md) | Audit decisions: Clash Royale remnants, Study Resources stub, 26 MB unreferenced calendar photos, originals and working files, background quality, shoot markup from data, pdf-window templating, renames, 98.css trim. Awaiting owner. |
 | O | 2026-09-24 | [O_decide-architecture-and-testing__20260924.md](O_decide-architecture-and-testing__20260924.md) | Audit decisions: DOM lookup strategy, defer/non-blocking load order, dialog ARIA pattern, lazy Admin Controls, load-bearing debug flag, linter, PR triggers, textual-test conversion, build-hash scope. Awaiting owner. |
