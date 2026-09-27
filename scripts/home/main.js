@@ -28661,6 +28661,8 @@ const msState = {
   gameOver: false,
   timerId: null,
   elapsed: 0,
+  flagCount: 0,
+  revealedSafeCount: 0,
   markMode: null,
   statsSession: "",
 };
@@ -28765,8 +28767,7 @@ const setSevenSegmentCounter = (el, value) => {
 
 const msUpdateCounters = () => {
   if (!msMines || !msTime) return;
-  const flags = msState.cells.filter((cell) => cell.flagged).length;
-  const remaining = msState.mines - flags;
+  const remaining = msState.mines - msState.flagCount;
   setSevenSegmentCounter(msMines, formatSevenSegmentCounter(remaining));
   setSevenSegmentCounter(msTime, formatSevenSegmentCounter(msState.elapsed));
 };
@@ -28872,22 +28873,20 @@ const msRevealCell = (index) => {
     triggerRandomEvents("gameLoss", { game: "minesweeper" });
     return;
   }
+  msState.revealedSafeCount += 1;
   msRenderCell(index);
   if (cell.adjacent === 0) {
     const queue = [index];
-    const visited = new Set(queue);
-    while (queue.length) {
-      const current = queue.shift();
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+      const current = queue[cursor];
       msNeighbors(current).forEach((n) => {
         const neighbor = msState.cells[n];
         if (!neighbor || neighbor.revealed || neighbor.flagged) return;
         neighbor.question = false;
         neighbor.revealed = true;
+        msState.revealedSafeCount += 1;
         msRenderCell(n);
-        if (neighbor.adjacent === 0 && !visited.has(n)) {
-          visited.add(n);
-          queue.push(n);
-        }
+        if (neighbor.adjacent === 0) queue.push(n);
       });
     }
   }
@@ -28907,9 +28906,7 @@ const msRevealAllMines = () => {
 
 const msCheckWin = () => {
   if (msState.gameOver) return;
-  const safeCells = msState.cells.filter((cell) => !cell.mine);
-  const revealedSafe = safeCells.filter((cell) => cell.revealed).length;
-  if (revealedSafe === safeCells.length) {
+  if (msState.revealedSafeCount === msState.cells.length - msState.mines) {
     msState.gameOver = true;
     msSetFace("win");
     msStopTimer();
@@ -28920,6 +28917,7 @@ const msCheckWin = () => {
     msState.cells.forEach((cell) => {
       if (cell.mine) cell.flagged = true;
     });
+    msState.flagCount = msState.mines;
     msRenderAll();
     recordGameStatsEvent(
       createGameStatsEvent({
@@ -29042,6 +29040,8 @@ const msNewGame = (difficulty) => {
   msState.started = false;
   msState.gameOver = false;
   msState.elapsed = 0;
+  msState.flagCount = 0;
+  msState.revealedSafeCount = 0;
   msState.statsSession = "";
   msSetFace("smile");
   msStopTimer();
@@ -29075,6 +29075,7 @@ const msHandleLeftClick = (index) => {
 const msToggleFlag = (index) => {
   const cell = msState.cells[index];
   if (!cell || cell.revealed || msState.gameOver) return;
+  const wasFlagged = cell.flagged;
   if (!cell.flagged && !cell.question) {
     cell.flagged = true;
   } else if (cell.flagged) {
@@ -29083,6 +29084,9 @@ const msToggleFlag = (index) => {
   } else if (cell.question) {
     cell.question = false;
   }
+  if (cell.flagged !== wasFlagged) {
+    msState.flagCount += cell.flagged ? 1 : -1;
+  }
   msRenderCell(index);
   msUpdateCounters();
 };
@@ -29090,6 +29094,7 @@ const msToggleFlag = (index) => {
 const msToggleMark = (index, mode) => {
   const cell = msState.cells[index];
   if (!cell || cell.revealed || msState.gameOver) return;
+  const wasFlagged = cell.flagged;
   if (mode === "flag") {
     cell.flagged = !cell.flagged;
     cell.question = false;
@@ -29098,6 +29103,9 @@ const msToggleMark = (index, mode) => {
     cell.flagged = false;
   } else {
     return;
+  }
+  if (cell.flagged !== wasFlagged) {
+    msState.flagCount += cell.flagged ? 1 : -1;
   }
   msRenderCell(index);
   msUpdateCounters();
