@@ -1783,7 +1783,9 @@ const fetchGameStatsApi = async (path, options = {}) => {
       ...fetchOptions,
       signal: controller?.signal || externalSignal,
       headers: {
-        "Content-Type": "application/json",
+        ...(fetchOptions.body === undefined || fetchOptions.body === null
+          ? {}
+          : { "Content-Type": "application/json" }),
         ...(fetchOptions.headers || {}),
       },
     });
