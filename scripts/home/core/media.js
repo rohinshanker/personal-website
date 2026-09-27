@@ -259,8 +259,10 @@ const preloadMediaSourcesAfter = (element, sources, options) =>
 window.homeMedia = {
   fitImagesIntoFrames,
   loadDeferredMedia,
+  mediaSourcePreloadRequests,
   preloadDeferredMedia,
   preloadDeferredMediaInOrder,
+  preloadMediaSource,
   preloadMediaSourcesAfter,
   preloadMediaSourcesInOrder,
 };

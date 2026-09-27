@@ -2,8 +2,10 @@
 const {
   fitImagesIntoFrames,
   loadDeferredMedia: loadDeferredMediaNow,
+  mediaSourcePreloadRequests,
   preloadDeferredMedia: preloadDeferredMediaNow,
   preloadDeferredMediaInOrder: preloadDeferredMediaInOrderNow,
+  preloadMediaSource,
   preloadMediaSourcesAfter,
   preloadMediaSourcesInOrder,
 } = window.homeMedia;
@@ -16527,37 +16529,12 @@ const randomEventDelayMs = () => {
   return Math.round(rawDelay / RANDOM_EVENT_DELAY_STEP_MS) * RANDOM_EVENT_DELAY_STEP_MS;
 };
 
-const randomEventPreloadSourceCache = new Map();
+const randomEventPreloadSourceCache = mediaSourcePreloadRequests;
 
 const preloadRandomEventSource = (src) => {
   const normalizedSrc = String(src || "");
   if (!normalizedSrc) return Promise.resolve();
-  if (randomEventPreloadSourceCache.has(normalizedSrc)) {
-    return randomEventPreloadSourceCache.get(normalizedSrc);
-  }
-
-  const loadRequest = new Promise((resolve) => {
-    const image = new Image();
-    let settled = false;
-    const finish = (loaded = true) => {
-      if (settled) return;
-      settled = true;
-      image.removeEventListener("load", finishLoaded);
-      image.removeEventListener("error", finishErrored);
-      if (!loaded) randomEventPreloadSourceCache.delete(normalizedSrc);
-      resolve();
-    };
-    const finishLoaded = () => finish(true);
-    const finishErrored = () => finish(false);
-
-    image.addEventListener("load", finishLoaded, { once: true });
-    image.addEventListener("error", finishErrored, { once: true });
-    image.src = normalizedSrc;
-    if (image.complete) finish(Boolean(image.naturalWidth));
-  });
-
-  randomEventPreloadSourceCache.set(normalizedSrc, loadRequest);
-  return loadRequest;
+  return preloadMediaSource(normalizedSrc);
 };
 
 const collectRandomEventPreloadTargets = (target, collection = []) => {
@@ -28787,40 +28764,9 @@ const MS_CELL_NUMBER_SOURCES = Object.freeze(
     (_, index) => `assets/minesweeper_assets/cell_numbers/cell_${index + 1}.png`
   )
 );
-const msNumberAssetPreloads = new Map();
+const msNumberAssetPreloads = mediaSourcePreloadRequests;
 
-const preloadMinesweeperNumberAsset = (src) => {
-  const cached = msNumberAssetPreloads.get(src);
-  if (cached) return cached.promise;
-
-  const preload = document.createElement("link");
-  const promise = new Promise((resolve) => {
-    let settled = false;
-    const finish = (loaded) => {
-      if (settled) return;
-      settled = true;
-      preload.removeEventListener("load", handleLoad);
-      preload.removeEventListener("error", handleError);
-      if (!loaded) {
-        msNumberAssetPreloads.delete(src);
-        preload.remove();
-      }
-      resolve(loaded);
-    };
-    const handleLoad = () => finish(true);
-    const handleError = () => finish(false);
-
-    preload.rel = "preload";
-    preload.as = "image";
-    preload.href = src;
-    preload.addEventListener("load", handleLoad, { once: true });
-    preload.addEventListener("error", handleError, { once: true });
-    document.head.append(preload);
-  });
-
-  msNumberAssetPreloads.set(src, { element: preload, promise });
-  return promise;
-};
+const preloadMinesweeperNumberAsset = (src) => preloadMediaSource(src);
 
 const preloadMinesweeperNumberAssets = () =>
   Promise.all(MS_CELL_NUMBER_SOURCES.map(preloadMinesweeperNumberAsset));
