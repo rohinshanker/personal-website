@@ -6503,15 +6503,6 @@ const clearWordErrorTimers = () => {
 
 const isWordErrorStackVisible = () => wordErrorWindows.length > 0;
 
-const shuffleWordErrorWindows = (windows) => {
-  const shuffled = [...windows];
-  for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const nextIndex = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[nextIndex]] = [shuffled[nextIndex], shuffled[i]];
-  }
-  return shuffled;
-};
-
 const wordErrorStackLayout = () => {
   const count = 10;
   const padding = 12;
@@ -6579,7 +6570,7 @@ const closeWordErrorStack = (selectedWindow) => {
     closeWordErrorWindow(selectedWindow);
   }
 
-  const remainingWindows = shuffleWordErrorWindows(
+  const remainingWindows = shuffle(
     visibleWindows.filter((win) => win !== selectedWindow)
   );
 
@@ -12684,15 +12675,6 @@ const closeLancerBattleWindow = () => {
 const brandBurnsRandomInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
-const shuffleBrandBurnsItems = (items) => {
-  const shuffled = [...items];
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
-  }
-  return shuffled;
-};
-
 const isBrandBurnsWindowVisible = (win) =>
   Boolean(
     win &&
@@ -13838,8 +13820,8 @@ const createBrandBurnsEnemyWindow = (definition) => {
 
 const chooseBrandBurnsEnemies = () => {
   const apostleCount = Math.max(0, BRAND_BURNS_ENCOUNTER_COUNT - 1);
-  const apostles = shuffleBrandBurnsItems(BRAND_BURNS_APOSTLES).slice(0, apostleCount);
-  return shuffleBrandBurnsItems([BRAND_BURNS_FEMTO, ...apostles]);
+  const apostles = shuffle(BRAND_BURNS_APOSTLES).slice(0, apostleCount);
+  return shuffle([BRAND_BURNS_FEMTO, ...apostles]);
 };
 
 const openBrandBurnsEnemyWindow = (state) => {
@@ -17887,6 +17869,15 @@ const isSmallResizableWindow = (win) => {
   return rect.width <= 760 && rect.height <= 620;
 };
 
+const shuffle = (items) => {
+  const shuffled = Array.from(items);
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+};
+
 const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
 
 const getTaskbarViewportClearance = () => {
@@ -18916,27 +18907,15 @@ const isSudokuSolutionCompatibleWithPuzzle = (puzzle, solution) => {
   );
 };
 
-const shuffleSudokuItems = (items) => {
-  const shuffledItems = Array.from(items);
-  for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [shuffledItems[index], shuffledItems[swapIndex]] = [
-      shuffledItems[swapIndex],
-      shuffledItems[index],
-    ];
-  }
-  return shuffledItems;
-};
-
 const createSudokuFullSolution = () => {
   const groups = [0, 1, 2];
-  const rows = shuffleSudokuItems(groups).flatMap((band) =>
-    shuffleSudokuItems(groups).map((row) => band * 3 + row)
+  const rows = shuffle(groups).flatMap((band) =>
+    shuffle(groups).map((row) => band * 3 + row)
   );
-  const columns = shuffleSudokuItems(groups).flatMap((stack) =>
-    shuffleSudokuItems(groups).map((column) => stack * 3 + column)
+  const columns = shuffle(groups).flatMap((stack) =>
+    shuffle(groups).map((column) => stack * 3 + column)
   );
-  const digits = shuffleSudokuItems(SUDOKU_DIGITS.split(""));
+  const digits = shuffle(SUDOKU_DIGITS.split(""));
   const pattern = (row, column) => (row * 3 + Math.floor(row / 3) + column) % 9;
 
   return rows
@@ -19035,7 +19014,7 @@ const createGeneratedSudokuPuzzle = (difficulty) => {
     const puzzleValues = solution.split("");
     let clueCount = SUDOKU_CELL_COUNT;
 
-    shuffleSudokuItems(Array.from({ length: SUDOKU_CELL_COUNT }, (_, index) => index)).forEach(
+    shuffle(Array.from({ length: SUDOKU_CELL_COUNT }, (_, index) => index)).forEach(
       (index) => {
         if (clueCount <= targetClues) return;
         const removedValue = puzzleValues[index];
