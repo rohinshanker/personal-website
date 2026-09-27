@@ -402,12 +402,16 @@ cd workers/game-stats
 npx wrangler deploy --dry-run --config wrangler.jsonc --strict
 # After the release job deploys, record its Worker version ID and confirm the
 # next scheduled invocation in the Cloudflare dashboard's Cron Triggers view.
+# `expires_at` holds an ISO UTC string, so the cutoff must use that exact
+# format: datetime('now') separates the date and time with a space, which sorts
+# below every 'T' timestamp and reports zero rows however long the cron is down.
 npx wrangler d1 execute personal_site_game_stats --remote --command \
-  "SELECT COUNT(*) AS expired FROM game_stat_sessions WHERE expires_at <= datetime('now')"
+  "SELECT COUNT(*) AS overdue FROM game_stat_sessions WHERE expires_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 hour')"
 ```
 
-A non-zero `expired` count more than an hour after a successful deployment means
-the trigger is not running; check the Cron Triggers view before changing code.
+Rows that expired since the last hourly run are expected, so the cutoff is an
+hour old: a non-zero `overdue` count means the trigger is not running. Check the
+Cron Triggers view before changing code.
 
 ## Hardened API Contract
 
