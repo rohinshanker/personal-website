@@ -101,18 +101,7 @@ class MockD1Statement {
       return { meta: { changes: 1 } };
     }
     if (this.sql.includes("INSERT INTO game_stats_rate_limits")) {
-      const [bucket, windowStartedAt, expiresAt, resetThreshold] = this.params;
-      const existing = this.database.rateLimits.get(bucket);
-      if (!existing || existing.window_started_at <= resetThreshold) {
-        this.database.rateLimits.set(bucket, {
-          request_count: 1,
-          window_started_at: windowStartedAt,
-          expires_at: expiresAt,
-        });
-      } else {
-        existing.request_count += 1;
-        existing.expires_at = expiresAt;
-      }
+      this.upsertRateLimit();
       return { meta: { changes: 1 } };
     }
     if (this.sql.includes("DELETE FROM game_stat_sessions")) {
@@ -126,6 +115,23 @@ class MockD1Statement {
     throw new Error(`Unhandled write query: ${this.sql}`);
   }
 
+  /** Mirrors the rate-limit upsert and its `RETURNING request_count` row. */
+  upsertRateLimit() {
+    const [bucket, windowStartedAt, expiresAt, resetThreshold] = this.params;
+    const existing = this.database.rateLimits.get(bucket);
+    if (!existing || existing.window_started_at <= resetThreshold) {
+      this.database.rateLimits.set(bucket, {
+        request_count: 1,
+        window_started_at: windowStartedAt,
+        expires_at: expiresAt,
+      });
+    } else {
+      existing.request_count += 1;
+      existing.expires_at = expiresAt;
+    }
+    return { request_count: this.database.rateLimits.get(bucket).request_count };
+  }
+
   async all() {
     assert.match(this.sql, /FROM game_events/);
     return {
@@ -134,6 +140,9 @@ class MockD1Statement {
   }
 
   async first() {
+    if (this.sql.includes("INSERT INTO game_stats_rate_limits")) {
+      return this.upsertRateLimit();
+    }
     if (this.sql.includes("FROM sqlite_master")) {
       if (this.database.failHealthCheck) throw new Error("Simulated D1 health check failure");
       return { table_count: this.database.healthTableCount };
@@ -144,9 +153,6 @@ class MockD1Statement {
     }
     if (this.sql.includes("FROM game_stat_sessions")) {
       return this.database.sessions.get(this.params[0]) || null;
-    }
-    if (this.sql.includes("FROM game_stats_rate_limits")) {
-      return this.database.rateLimits.get(this.params[0]) || null;
     }
     throw new Error(`Unhandled read query: ${this.sql}`);
   }
@@ -3017,4 +3023,152 @@ test("the scheduled purge fails loudly without a database binding or on a D1 err
     }),
     batchError
   );
+});
+
+/** A body sent without Content-Length, the way a chunked request arrives. */
+const chunkedJsonRequest = (path, body, { origin = "https://rohin.shanker.me" } = {}) =>
+  new Request(`https://stats.example.test${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: origin,
+      "CF-Connecting-IP": "203.0.113.7",
+    },
+    body: new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(JSON.stringify(body)));
+        controller.close();
+      },
+    }),
+    duplex: "half",
+  });
+
+test("the request body limit counts bytes, so a short non-ASCII body is rejected", async () => {
+  const env = createEnv();
+  // 3,000 UTF-16 code units, but three bytes each: under the old character
+  // limit and far over the 4,096-byte one.
+  const multiByteName = "✓".repeat(3_000);
+  assert.ok(multiByteName.length < 4_096);
+  assert.ok(new TextEncoder().encode(multiByteName).byteLength > 4_096);
+
+  const oversized = await worker.fetch(
+    chunkedJsonRequest("/sessions", {
+      game: "solitaire",
+      config: {},
+      buildVersion: env.GAME_BUILD_VERSION,
+      turnstileToken: multiByteName,
+    }),
+    env
+  );
+  assert.equal(oversized.status, 413);
+  assert.equal((await readJson(oversized)).error, "Request body is too large");
+  assert.equal(env.personal_site_game_stats.sessions.size, 0);
+});
+
+test("a chunked body within the byte limit is decoded and accepted", async () => {
+  const env = createEnv();
+  const accepted = await worker.fetch(
+    chunkedJsonRequest("/sessions", {
+      game: "minesweeper",
+      config: { difficulty: "beginner" },
+      buildVersion: env.GAME_BUILD_VERSION,
+    }),
+    env
+  );
+
+  assert.equal(accepted.status, 201);
+  assert.equal(env.personal_site_game_stats.sessions.size, 1);
+
+  const malformed = await worker.fetch(
+    new Request("https://stats.example.test/sessions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://rohin.shanker.me",
+        "CF-Connecting-IP": "203.0.113.7",
+      },
+      body: "{ not json",
+    }),
+    env
+  );
+  assert.equal(malformed.status, 400);
+  assert.equal((await readJson(malformed)).error, "Request body must be valid JSON");
+});
+
+test("Turnstile verification is time bounded and treats an unreadable reply as a rejection", async () => {
+  const env = createEnv({
+    TURNSTILE_SECRET_KEY: "turnstile-test-secret",
+    TURNSTILE_EXPECTED_HOSTNAME: "rohin.shanker.me",
+    TURNSTILE_EXPECTED_ACTION: "game-session",
+  });
+  const requestSession = () =>
+    worker.fetch(
+      jsonRequest("/sessions", {
+        game: "solitaire",
+        config: {},
+        buildVersion: env.GAME_BUILD_VERSION,
+        turnstileToken: "valid-turnstile-token",
+      }),
+      env
+    );
+
+  const originalFetch = globalThis.fetch;
+  const signals = [];
+  try {
+    globalThis.fetch = async (url, options) => {
+      signals.push(options.signal);
+      return new Response("<html>gateway error</html>", {
+        status: 502,
+        headers: { "Content-Type": "text/html" },
+      });
+    };
+    const htmlReply = await requestSession();
+    assert.equal(htmlReply.status, 403);
+    assert.equal((await readJson(htmlReply)).error, "Turnstile verification failed");
+
+    globalThis.fetch = async (url, options) => {
+      signals.push(options.signal);
+      return new Response(JSON.stringify({ success: false, "error-codes": ["bad"] }));
+    };
+    assert.equal((await requestSession()).status, 403);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(signals.length, 2);
+  for (const signal of signals) {
+    assert.ok(signal instanceof AbortSignal, "every Turnstile request must be bounded");
+    assert.equal(signal.aborted, false);
+  }
+  assert.equal(env.personal_site_game_stats.sessions.size, 0);
+});
+
+test("a session that was never stored is reported apart from a consumed one", async () => {
+  const env = createEnv();
+  const session = await createSession(env, "solitaire", {});
+  await ageSessionForCompletion(env, session);
+  const solitaireWin = event({
+    id: "event-missing-session",
+    game: "solitaire",
+    difficulty: undefined,
+    metric: 120,
+    metricKind: "moves",
+  });
+
+  env.personal_site_game_stats.sessions.delete(session.id);
+  const missing = await postEvent(env, solitaireWin, session);
+  assert.equal(missing.status, 409);
+  assert.equal((await readJson(missing)).error, "Game session is no longer on record");
+
+  const replayed = await createSession(env, "solitaire", {});
+  await ageSessionForCompletion(env, replayed);
+  env.personal_site_game_stats.sessions.get(replayed.id).consumed_at =
+    new Date().toISOString();
+  const consumed = await postEvent(
+    env,
+    { ...solitaireWin, id: "event-consumed-session" },
+    replayed
+  );
+  assert.equal(consumed.status, 409);
+  assert.equal((await readJson(consumed)).error, "Game session was already used");
 });

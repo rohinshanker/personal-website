@@ -1,11 +1,18 @@
-# Local-only secrets for `npx wrangler dev --local`.
+# Local-only secrets and overrides for `npx wrangler dev --local`.
 # Copy this file to `.dev.vars` and replace every placeholder before testing
 # session creation. Do not commit `.dev.vars`.
-# Do not commit `.dev.vars`.
 #
 # EVENT_SIGNING_SECRET="replace-with-a-long-random-local-secret"
 # IP_HASH_SECRET="replace-with-a-different-long-random-local-secret"
 # ADMIN_USERNAME="replace-with-a-local-administrator-username"
 # ADMIN_PASSWORD="replace-with-a-long-unique-local-administrator-password"
 # ADMIN_SESSION_SIGNING_SECRET="replace-with-a-third-long-random-local-secret"
+#
+# Origin overrides. Production serves only the ALLOWED_ORIGIN set in
+# wrangler.jsonc and intentionally rejects localhost, so these two exist for
+# local development and must never be added to wrangler.jsonc.
+# LOCAL_ALLOWED_ORIGIN accepts one extra origin; EXTRA_ALLOWED_ORIGINS accepts a
+# comma-separated list. Both are added to, never replace, ALLOWED_ORIGIN.
 # ALLOWED_ORIGIN="http://127.0.0.1:8000"
+# LOCAL_ALLOWED_ORIGIN="http://127.0.0.1:8000"
+# EXTRA_ALLOWED_ORIGINS="http://127.0.0.1:8011,http://localhost:8000"
