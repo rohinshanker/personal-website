@@ -15,10 +15,13 @@ for test scripts but no bundled build step.
 ```bash
 node --test tests/*.test.mjs
 node scripts/check-no-secrets.mjs
+npm run syntax:check
 git diff --check
 ```
 
-Run `node --check` for every changed JavaScript or MJS entry point. For
+`npm run syntax:check` runs `node --check` over every `scripts/` JavaScript and
+MJS file and every top-level `video-editor/` one; the release workflow runs the
+same script. For
 random-event changes, also run
 `node --test tests/gears-nest.test.mjs tests/random-event-cooldown.test.mjs`.
 
@@ -53,9 +56,21 @@ After changing `.ico` assets, regenerate and verify the app-icon manifest:
 
 ```bash
 node scripts/build-app-icon-manifest.mjs
-node scripts/build-app-icon-manifest.mjs --check
+npm run app-icons:check
 node --test tests/app-icon-manifest.test.mjs
 ```
+
+After adding or removing a Study Resources PDF, regenerate and verify its
+manifest:
+
+```bash
+node scripts/build-study-resources-manifest.mjs
+npm run study-resources:check
+node --test tests/study-resources-manifest.test.mjs
+```
+
+Every generator resolves the repository root from `import.meta.url`, so each of
+these commands behaves the same from any working directory.
 
 ## Rendered UI
 
@@ -68,6 +83,35 @@ errors, relevant controls remain keyboard accessible, and no overflow or
 layout regression appears at compact and desktop widths. Keep task-specific
 screenshots and observations in the active ticket; do not add them here unless
 they change this reusable procedure.
+
+## Workflow hardening standard
+
+All three workflows in `.github/workflows/` hold to one standard, and
+`tests/game-stats-deployment.test.mjs` fails the suite when a new or edited
+workflow departs from it:
+
+- Every `uses:` reference is pinned to a full 40-character commit SHA, with a
+  comment directly above naming the action and its released version. All three
+  files share one `actions/checkout` pin and one `actions/setup-node` pin.
+- `permissions` defaults to `contents: read`; a job widens it only for itself.
+- Every workflow declares a `concurrency` group keyed on `github.ref` with
+  `cancel-in-progress: true`, and every job sets `timeout-minutes`.
+- Every checkout sets `persist-credentials: false`, and every `setup-node` runs
+  Node 24.
+- `pull_request_target` appears nowhere.
+
+Each gate runs once per push. The secret scan belongs to `secret-guard.yml` as
+the script plus gitleaks; `tests/no-secrets.test.mjs` re-scans the same tree and
+so stays in `npm test` alone. The Chromium download is cached on
+`package-lock.json`, which pins the Playwright version; because that cache holds
+only browser binaries, a cache hit still runs `playwright install-deps`.
+
+To change a pinned action, resolve the tag to its SHA first:
+
+```bash
+gh api "repos/<owner>/<action>/tags?per_page=100" \
+  --jq '.[] | select(.name|startswith("v4.")) | "\(.name) \(.commit.sha)"' | head -5
+```
 
 ## Media formats and asset references
 

@@ -1,8 +1,8 @@
 # Game Stats Backend Setup
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
-- Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, release synchronization, and server-data reset.
-- Last verified: 2026-09-10
+- Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, the scheduled expiry purge, release synchronization, and server-data reset.
+- Last verified: 2026-09-27
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -31,6 +31,10 @@ or high-stakes game.
 - D1 migrations are intentionally manual. Check for pending migrations before
   each release; do not apply one when a browser-only change uses the existing
   event schema.
+- Before deploying, the release workflow asserts that every name in
+  `wrangler.jsonc` `secrets.required` is present on the account. Wrangler itself
+  ignores that block and a strict dry run says nothing about it, so a missing
+  secret would otherwise surface only as a runtime 500.
 
 Do not invent a Worker URL from the account ID. After deploying, copy the URL
 from Wrangler's successful deployment output. A `workers.dev` URL is normally
@@ -140,6 +144,11 @@ enables Turnstile as soon as that secret exists, but the current browser request
 contains no `turnstileToken`; setting it now would make every `POST /sessions`
 request fail. See [Production Turnstile](#production-turnstile) for the later,
 atomic client-and-Worker rollout.
+
+`LOCAL_ALLOWED_ORIGIN` and `EXTRA_ALLOWED_ORIGINS` are development-only origin
+additions read from `.dev.vars`; the second accepts a comma-separated list. Both
+are added to `ALLOWED_ORIGIN` rather than replacing it, and neither may appear in
+`wrangler.jsonc` — `tests/game-stats-integrity.test.mjs` asserts their absence.
 
 For local-only development, copy `.dev.vars.example` to `.dev.vars`, set
 development secret values there, and set `ALLOWED_ORIGIN` to the exact local
@@ -362,6 +371,43 @@ The Worker uses bound D1 prepared statements; do not interpolate request data
 into SQL. D1 migration application captures a backup and rolls back a failing
 migration, but it still changes production state, so it belongs in the release
 checklist rather than endpoint discovery.
+
+### Scheduled expiry purge
+
+`game_stat_sessions` gains a row for every game start and
+`game_stats_rate_limits` one per address-and-operation bucket. No request path
+deletes either, so the Worker's `scheduled` handler is the only thing that
+bounds those tables and the only consumer of the `*_expiry_idx` indexes from
+migration `0002`.
+
+The contract:
+
+- `triggers.crons` in both `wrangler.jsonc` and `wrangler.jsonc.example` is
+  `["0 * * * *"]`. The two files must always declare the same schedule.
+- One atomic batch deletes `game_stat_sessions` and `game_stats_rate_limits`
+  rows whose `expires_at` is at or before the purge time. Expiry is inclusive
+  because a session whose `expires_at` equals now already fails validation.
+- A consumed session is kept until it expires. Deleting it early would turn a
+  replayed result into "no longer on record" instead of "already used".
+- The purge deletes no `game_events` row. Published results are permanent; only
+  the short-lived security tables are swept.
+- Each run logs the two counts and the purge timestamp. Cloudflare's scheduled
+  invocation log is where to confirm the cron fired.
+
+Verify a deployed change to the handler:
+
+```bash
+node --test tests/game-stats-worker.test.mjs
+cd workers/game-stats
+npx wrangler deploy --dry-run --config wrangler.jsonc --strict
+# After the release job deploys, record its Worker version ID and confirm the
+# next scheduled invocation in the Cloudflare dashboard's Cron Triggers view.
+npx wrangler d1 execute personal_site_game_stats --remote --command \
+  "SELECT COUNT(*) AS expired FROM game_stat_sessions WHERE expires_at <= datetime('now')"
+```
+
+A non-zero `expired` count more than an hour after a successful deployment means
+the trigger is not running; check the Cron Triggers view before changing code.
 
 ## Hardened API Contract
 
