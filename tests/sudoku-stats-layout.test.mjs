@@ -71,7 +71,7 @@ test("Sudoku uses six shared leaderboard panels in three columns and two rows", 
   assert.match(renderer[1], /metricFormatter: formatGameStatsSudokuLeaderboardTime/);
   assert.match(
     main,
-    /GAME_STATS_SUDOKU_PLACEHOLDER_TIME = "99:99"[\s\S]*?const formatGameStatsSudokuLeaderboardTime = \(seconds\) =>[\s\S]*?Number\.isFinite\(seconds\) \? formatSudokuTime\(seconds\) : GAME_STATS_SUDOKU_PLACEHOLDER_TIME/
+    /GAME_STATS_SUDOKU_PLACEHOLDER_TIME = "99:99"[\s\S]*?const formatGameStatsSudokuLeaderboardTime = \(seconds\) =>[\s\S]*?formatSudokuTime\(seconds, GAME_STATS_SUDOKU_PLACEHOLDER_TIME\)/
   );
   assert.match(renderer[1], /gameStatsGlobalState\.leaderboards\.sudoku\[difficulty\]/);
   assert.match(renderer[1], /leaderboard\.appendMetric/);

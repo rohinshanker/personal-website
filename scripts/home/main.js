@@ -1075,6 +1075,7 @@ const GAME_STATS_SKY_NAME_GENERATOR_URL =
 const GAME_STATS_NAME_GENERATOR_TIMEOUT_MS = 8000;
 const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
 const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
+const padTwoDigits = (value) => String(value).padStart(2, "0");
 const reducedMotionQuery =
   typeof window.matchMedia === "function"
     ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -3566,7 +3567,7 @@ const formatGameStatsSudokuDifficulty = (difficulty) =>
   `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
 
 const formatGameStatsSudokuLeaderboardTime = (seconds) =>
-  Number.isFinite(seconds) ? formatSudokuTime(seconds) : GAME_STATS_SUDOKU_PLACEHOLDER_TIME;
+  formatSudokuTime(seconds, GAME_STATS_SUDOKU_PLACEHOLDER_TIME);
 
 const gameStatsSudokuTotalGames = (difficulty) => {
   const wins = gameStatsGlobalState.totals.sudoku.wins[difficulty];
@@ -4096,7 +4097,7 @@ const formatGameProgressRecord = (entry, unit) =>
   entry && Number.isFinite(entry.metric) ? `${entry.metric} ${unit}` : "No record yet";
 
 const formatGameProgressSudokuBestTime = (seconds) =>
-  Number.isFinite(seconds) ? formatSudokuTime(seconds) : "—";
+  formatSudokuTime(seconds, "—");
 
 const getGameProgressPlayerTotals = () =>
   gameStatsGlobalPlayerTotalsAvailable
@@ -4806,7 +4807,7 @@ const aboutDateLabel = (date) => {
 
 const aboutDateValue = (date) =>
   [date.getFullYear(), date.getMonth() + 1, date.getDate()]
-    .map((part, index) => (index ? String(part).padStart(2, "0") : String(part)))
+    .map((part, index) => (index ? padTwoDigits(part) : String(part)))
     .join("-");
 
 const updateAboutCurrentDate = (now = new Date()) => {
@@ -4930,9 +4931,9 @@ const updateClock = () => {
 const updateCalendarClock = () => {
   if (!calendarClock || !calendarPopout.classList.contains("is-open")) return;
   const now = new Date();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const hours = padTwoDigits(now.getHours());
+  const minutes = padTwoDigits(now.getMinutes());
+  const seconds = padTwoDigits(now.getSeconds());
   const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
   const colonClass = blinkOn ? "clock-colon" : "clock-colon is-off";
   calendarClock.innerHTML = `${hours}<span class="${colonClass}">:</span>${minutes}<span class="${colonClass}">:</span>${seconds}`;
@@ -8485,8 +8486,8 @@ const closeDistressSignalEvent = () => {
 
 const getLocalDateKey = (date = new Date()) => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const month = padTwoDigits(date.getMonth() + 1);
+  const day = padTwoDigits(date.getDate());
   return `${year}-${month}-${day}`;
 };
 
@@ -8989,7 +8990,7 @@ const copyMidnightGospelPosition = (source, target) => {
 
 const setMidnightGospelTimerText = (seconds) => {
   const clampedSeconds = clampNumber(seconds, 0, 99);
-  const digits = String(clampedSeconds).padStart(2, "0");
+  const digits = padTwoDigits(clampedSeconds);
   if (midnightGospelTimer) {
     midnightGospelTimer.setAttribute(
       "aria-label",
@@ -18863,10 +18864,11 @@ const pushSudokuUndoState = () => {
   updateSudokuHistoryButtons();
 };
 
-const formatSudokuTime = (seconds) => {
+const formatSudokuTime = (seconds, placeholder = "—") => {
+  if (!Number.isFinite(seconds)) return placeholder;
   const safeSeconds = Math.max(0, Math.floor(seconds));
-  const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
-  const remainingSeconds = String(safeSeconds % 60).padStart(2, "0");
+  const minutes = padTwoDigits(Math.floor(safeSeconds / 60));
+  const remainingSeconds = padTwoDigits(safeSeconds % 60);
   return `${minutes}:${remainingSeconds}`;
 };
 
@@ -28719,7 +28721,7 @@ const msNeighbors = (index) => {
 const msFormatCounter = (value) => {
   const clamped = clampNumber(value, -99, 999);
   if (clamped < 0) {
-    return `-${String(Math.abs(clamped)).padStart(2, "0")}`;
+    return `-${padTwoDigits(Math.abs(clamped))}`;
   }
   return String(clamped).padStart(3, "0");
 };
