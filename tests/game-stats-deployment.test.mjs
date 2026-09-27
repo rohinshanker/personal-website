@@ -1319,6 +1319,151 @@ test("the live config URL defaults to production and honours its env override", 
   );
 });
 
+const WORKFLOW_FILES = Object.freeze([
+  "game-stats-worker-release.yml",
+  "secret-guard.yml",
+  "ui-layout.yml",
+]);
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Every `uses:` reference with the comment line directly above it. */
+const readActionPins = (source) => {
+  const lines = source.split("\n");
+  return lines.flatMap((line, index) => {
+    const used = /^\s*(?:-\s+)?uses:\s*(\S+)\s*$/.exec(line);
+    return used ? [{ reference: used[1], comment: (lines[index - 1] ?? "").trim() }] : [];
+  });
+};
+
+test("every workflow shares one hardening standard", async () => {
+  const root = new URL("../", import.meta.url);
+  const sources = new Map(
+    await Promise.all(
+      WORKFLOW_FILES.map(async (fileName) => [
+        fileName,
+        await readFile(new URL(`.github/workflows/${fileName}`, root), "utf8"),
+      ])
+    )
+  );
+  const checkoutReferences = new Set();
+  const setupNodeReferences = new Set();
+
+  for (const [fileName, source] of sources) {
+    const definition = parse(source);
+    assert.deepEqual(
+      definition.permissions,
+      { contents: "read" },
+      `${fileName} must default to read-only repository permissions`
+    );
+    assert.equal(
+      definition.concurrency["cancel-in-progress"],
+      true,
+      `${fileName} must cancel superseded runs`
+    );
+    assert.match(definition.concurrency.group, /\$\{\{ github\.ref \}\}/);
+    assert.doesNotMatch(source, /pull_request_target/);
+
+    const pins = readActionPins(source);
+    assert.ok(pins.length > 0, `${fileName} must use at least one action`);
+    for (const { reference, comment } of pins) {
+      const [action, commitSha = ""] = reference.split("@");
+      assert.match(
+        commitSha,
+        /^[0-9a-f]{40}$/,
+        `${fileName} must pin ${reference} to a full commit SHA`
+      );
+      assert.match(
+        comment,
+        new RegExp(`^# ${escapeRegExp(action)} v\\d`),
+        `${fileName} must name the released version of ${action}`
+      );
+      if (action === "actions/checkout") checkoutReferences.add(reference);
+      if (action === "actions/setup-node") setupNodeReferences.add(reference);
+    }
+
+    for (const [jobName, job] of Object.entries(definition.jobs)) {
+      assert.ok(
+        Number.isInteger(job["timeout-minutes"]),
+        `${fileName} job ${jobName} must bound its runtime`
+      );
+      for (const step of job.steps) {
+        if (step.uses?.startsWith("actions/checkout@")) {
+          assert.equal(
+            step.with?.["persist-credentials"],
+            false,
+            `${fileName} job ${jobName} must not persist Git credentials`
+          );
+        }
+        if (step.uses?.startsWith("actions/setup-node@")) {
+          assert.equal(
+            step.with?.["node-version"],
+            24,
+            `${fileName} job ${jobName} must run the supported Node version`
+          );
+        }
+      }
+    }
+  }
+
+  assert.equal(checkoutReferences.size, 1, "every workflow must share one checkout pin");
+  assert.equal(setupNodeReferences.size, 1, "every workflow must share one setup-node pin");
+});
+
+test("secret scanning and browser installs each run once per push", async () => {
+  const root = new URL("../", import.meta.url);
+  const [secretGuard, uiLayout] = await Promise.all([
+    readFile(new URL(".github/workflows/secret-guard.yml", root), "utf8"),
+    readFile(new URL(".github/workflows/ui-layout.yml", root), "utf8"),
+  ]);
+  const secretGuardDefinition = parse(secretGuard);
+  const uiDefinition = parse(uiLayout);
+
+  const guardSteps = secretGuardDefinition.jobs["repository-guard"].steps;
+  assert.deepEqual(
+    guardSteps.filter((step) => step.run).map((step) => step.run),
+    ["node scripts/check-no-secrets.mjs"]
+  );
+  const secretGuardRuns = Object.values(secretGuardDefinition.jobs).flatMap((job) =>
+    job.steps.filter((step) => step.run).map((step) => step.run)
+  );
+  assert.deepEqual(
+    secretGuardRuns.filter((run) => run.includes("node --test")),
+    [],
+    "the guard must leave the re-scanning unit test to `npm test`"
+  );
+  assert.ok(
+    secretGuardDefinition.jobs.gitleaks.steps.some((step) =>
+      step.uses?.startsWith("gitleaks/gitleaks-action@")
+    )
+  );
+
+  const uiSteps = uiDefinition.jobs.ui.steps;
+  const cacheStep = uiSteps.find((step) => step.uses?.startsWith("actions/cache@"));
+  assert.equal(cacheStep.with.path, "~/.cache/ms-playwright");
+  assert.match(cacheStep.with.key, /hashFiles\('package-lock\.json'\)/);
+  assert.ok(cacheStep.id, "the browser cache step must expose its cache-hit output");
+
+  const installStep = uiSteps.find((step) =>
+    step.run === "npx playwright install --with-deps chromium"
+  );
+  assert.equal(
+    installStep.if,
+    `steps.${cacheStep.id}.outputs.cache-hit != 'true'`
+  );
+  const dependencyStep = uiSteps.find((step) =>
+    step.run === "npx playwright install-deps chromium"
+  );
+  assert.equal(
+    dependencyStep.if,
+    `steps.${cacheStep.id}.outputs.cache-hit == 'true'`
+  );
+  assert.ok(
+    uiSteps.indexOf(cacheStep) < uiSteps.indexOf(installStep),
+    "the cache must be restored before the browser install decision"
+  );
+});
+
 test("npm scripts, release workflow, and validation guide expose the parity guard", async () => {
   const root = new URL("../", import.meta.url);
   const [packageJson, workerPackageJson, workflow, validationGuide] = await Promise.all([
