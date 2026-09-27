@@ -1073,6 +1073,11 @@ const GAME_STATS_SKY_NAME_GENERATOR_URL =
 const GAME_STATS_NAME_GENERATOR_TIMEOUT_MS = 8000;
 const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
 const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
+const reducedMotionQuery =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)")
+    : null;
+const prefersReducedMotion = () => Boolean(reducedMotionQuery?.matches);
 const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
   "easy",
   "medium",
@@ -2792,10 +2797,7 @@ const playGameStatsRecordHandoff = (game) => {
     const trophyButton = Array.from(gameStatsOpenButtons).find(
       (button) => button.getAttribute("data-game-stats-open") === game
     );
-    const reduceMotion = Boolean(
-      typeof window.matchMedia === "function" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    );
+    const reduceMotion = prefersReducedMotion();
 
     try {
       if (trophyButton && !reduceMotion) {
@@ -4600,10 +4602,7 @@ let snakeHudRenderCache = {
   color: "",
   appleColor: "",
 };
-const snakeReducedMotionMedia =
-  typeof window.matchMedia === "function"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)")
-    : null;
+const snakeReducedMotionMedia = reducedMotionQuery;
 let sudokuState = {
   difficulty: "easy",
   puzzleId: SUDOKU_PUZZLES.easy.id,
@@ -4641,10 +4640,7 @@ let sudokuSaveQueuedForActivation = false;
 let sudokuFishTimerId = null;
 let sudokuBubbleTimerId = null;
 let sudokuNoteTooltip = null;
-const sudokuReducedMotionMedia =
-  typeof window.matchMedia === "function"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)")
-    : null;
+const sudokuReducedMotionMedia = reducedMotionQuery;
 let lifeCounterPlayersState = [
   {
     id: 1,
@@ -4823,7 +4819,7 @@ const ABOUT_DEGREE_MIN_TRAVEL_MS = 1200;
 const aboutDegreeAnimations = new WeakMap();
 const aboutDegreeTypes = [...document.querySelectorAll(".about-degree-type")];
 const aboutDegreeFields = [...document.querySelectorAll("[data-about-degree-field]")];
-const aboutDegreeReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const aboutDegreeReducedMotion = reducedMotionQuery;
 let aboutDegreeRefreshFrame = 0;
 
 const cancelAboutDegreeAnimation = (field) => {
@@ -5761,10 +5757,7 @@ const bindRandomEventButton = (button, action) => {
 const isDebugSystemAlertVisible = () =>
   isManagedRandomEventWindowVisible(debugSystemAlertWindow);
 
-const debugSystemAlertReducedMotionQuery =
-  typeof window.matchMedia === "function"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)")
-    : null;
+const debugSystemAlertReducedMotionQuery = reducedMotionQuery;
 
 const resetDebugSystemAlert = () => {
   debugSystemAlertActiveId = "";
@@ -5852,13 +5845,9 @@ const closeDebugSystemAlert = () => {
 const isNekoStreamAlertVisible = () =>
   isManagedRandomEventWindowVisible(nekoStreamAlertWindow);
 
-const nekoStreamAlertReducedMotionQuery =
-  typeof window.matchMedia === "function"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)")
-    : null;
+const nekoStreamAlertReducedMotionQuery = reducedMotionQuery;
 
-const prefersReducedNekoStreamAlertMotion = () =>
-  Boolean(nekoStreamAlertReducedMotionQuery?.matches);
+const prefersReducedNekoStreamAlertMotion = prefersReducedMotion;
 
 const setNekoStreamAlertIconFrame = () => {
   if (!nekoStreamAlertIcon) return;
@@ -26587,7 +26576,7 @@ const getRohinNekoAvatarAction = () => {
 const canAnimateRohinNekoAvatarInstance = (instance) =>
   isRohinNekoProfile() &&
   isRohinNekoAvatarVisible(instance.image) &&
-  !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  !prefersReducedMotion();
 
 const scheduleRohinNekoAvatarAction = (instance, { initial = false } = {}) => {
   if (!canAnimateRohinNekoAvatarInstance(instance)) {
@@ -26678,7 +26667,7 @@ const stopRohinNekoAvatarAnimation = () => {
 };
 
 const startRohinNekoAvatarAnimation = () => {
-  if (!isRohinNekoProfile() || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+  if (!isRohinNekoProfile() || prefersReducedMotion()) {
     stopRohinNekoAvatarAnimation();
     return;
   }
@@ -30597,8 +30586,7 @@ const solCheckWin = () => {
   }
 };
 
-const solPrefersReducedMotion = () =>
-  Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+const solPrefersReducedMotion = prefersReducedMotion;
 
 const solBoardRelativeRect = (element) => {
   const boardRect = solBoard.getBoundingClientRect();
