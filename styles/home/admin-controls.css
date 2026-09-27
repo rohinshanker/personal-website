@@ -688,8 +688,7 @@ body.is-admin-picking-target [data-admin-pickable][data-admin-pick-hover] {
   position: absolute;
 }
 
-body.is-admin-safe-area-enabled .admin-safe-area-guide::before,
-body.is-admin-safe-area-on .admin-safe-area-guide::before {
+body.is-admin-safe-area-enabled .admin-safe-area-guide::before {
   display: block;
 }
 

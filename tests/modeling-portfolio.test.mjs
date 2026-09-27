@@ -6,7 +6,7 @@ import vm from "node:vm";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 const DATA_VERSION = "modeling-portfolio-digitals-20260926";
-const ROUTE_VERSION = "modeling-portfolio-digitals-20260926";
+const ROUTE_VERSION = "repo-hygiene-20260927";
 
 const isFile = async (path) => {
   try {

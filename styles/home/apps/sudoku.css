@@ -941,9 +941,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.sudoku-actions {
   justify-content: center;
   width: 100%;
 }

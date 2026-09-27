@@ -30,7 +30,7 @@ const socialLinks = [
 
 const aboutCarouselItems = [
   [
-    "assets/about-carousel/1.jpg",
+    "assets/optimized/bio-pic-720.jpg",
     "Portrait of Rohin Shanker in front of red rock formations",
   ],
   [

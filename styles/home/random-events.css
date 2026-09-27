@@ -1210,7 +1210,6 @@
   margin: 0;
 }
 
-.distress-actions,
 .distress-upload-actions {
   display: flex;
   gap: 8px;
@@ -1221,7 +1220,6 @@
   justify-content: center;
 }
 
-.distress-actions button,
 .distress-upload-actions button {
   min-width: 74px;
 }
@@ -2351,16 +2349,13 @@ body.is-midnight-gospel-locked * {
 }
 
 .berserk-sunrise-window img {
+  aspect-ratio: 640 / 359;
   background: #000;
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   display: block;
   max-height: min(42vh, 260px);
   object-fit: cover;
   width: 100%;
-}
-
-.berserk-sunrise-window img {
-  aspect-ratio: 640 / 359;
 }
 
 .lelouch-alert-message {
@@ -6104,8 +6099,7 @@ html.is-wall-breach-shaking body {
   line-height: 1.35;
 }
 
-.pokemon-dialogue-name,
-.pokemon-starter-dialogue-name {
+.pokemon-dialogue-name {
   font-weight: bold;
 }
 
@@ -7691,6 +7685,14 @@ html.is-wall-breach-shaking body {
 
 .infinity-armory-upgrade-row button {
   min-width: 0;
+}
+
+.infinity-armory-status {
+  color: #e8c989;
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 0;
+  min-height: 15px;
 }
 
 .infinity-armory-price,

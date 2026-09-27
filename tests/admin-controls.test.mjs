@@ -149,7 +149,7 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
 
   assert.match(
     home,
-    /styles\/home\/admin-controls\.css\?v=admin-promo-workflow-20260915/
+    /styles\/home\/admin-controls\.css\?v=repo-hygiene-20260927/
   );
   assert.match(
     home,

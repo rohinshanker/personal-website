@@ -694,7 +694,7 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await eventList.selectOption("debug-system-alert-substack-reminder");
   await expect(eventPreview).toHaveAttribute(
     "aria-label",
-    "First window preview: System Alert – Substack Reminder"
+    "First window preview: System Alert — Substack Reminder"
   );
   await expect(eventPreview.locator("#debug-system-alert-title")).toHaveText(
     "System Alert"

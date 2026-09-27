@@ -51,14 +51,15 @@ test("every Game Stats window has an independently accessible refresh row", asyn
 
 test("Game Stats exposes refresh controls and statuses to application code", async () => {
   const domSource = await readFile(new URL("scripts/home/core/dom.js", root), "utf8");
+  const mainSource = await readFile(new URL("scripts/home/main.js", root), "utf8");
 
   assert.match(
     domSource,
-    /gameStatsSyncStatuses: all\("\[data-game-stats-sync-status\]"\)/
+    /gameStatsRefreshButtons: all\("\[data-game-stats-refresh\]"\)/
   );
   assert.match(
-    domSource,
-    /gameStatsRefreshButtons: all\("\[data-game-stats-refresh\]"\)/
+    mainSource,
+    /syncStatus: windowElement\.querySelector\("\[data-game-stats-sync-status\]"\)/
   );
 });
 

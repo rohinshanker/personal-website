@@ -31,7 +31,7 @@ test("Every entry point loads the current Sudoku stylesheet build", async () => 
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
   ]);
-  const reference = /styles\/home\/apps\/sudoku\.css\?v=sudoku-board-controls-20260924/;
+  const reference = /styles\/home\/apps\/sudoku\.css\?v=repo-hygiene-20260927/;
 
   assert.match(home, reference);
   assert.match(index, reference);

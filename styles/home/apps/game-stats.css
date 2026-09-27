@@ -423,12 +423,6 @@
   margin-bottom: 6px;
 }
 
-.game-stats-leaderboard-grid {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .game-stats-minesweeper-columns {
   display: grid;
   gap: 6px;
@@ -1077,7 +1071,6 @@
 
 @media (max-width: 560px) {
   .game-stats-summary-grid,
-  .game-stats-leaderboard-grid,
   .game-profile-name-row {
     grid-template-columns: 1fr;
   }

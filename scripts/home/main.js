@@ -257,7 +257,6 @@ const {
   creditsIcons,
   calendarButton,
   calendarPopout,
-  calendarPanel,
   calendarSection,
   calendarHeader,
   calendarGrid,
@@ -296,9 +295,6 @@ const {
   vanishingPopupNo,
   vanishingPopupExplosion,
   dodgingPopupWindow,
-  dodgingPopupClose,
-  dodgingPopupYes,
-  dodgingPopupNo,
   selfLoveAlertWindow,
   selfLoveAlertClose,
   selfLoveAlertYes,
@@ -358,7 +354,6 @@ const {
   distressBearingReadout,
   distressRangeReadout,
   distressStrengthReadout,
-  distressLockStatus,
   distressLockStatusText,
   distressNavNoiseCanvas,
   distressStatusNoiseCanvas,
@@ -420,7 +415,6 @@ const {
   gradescopeCurvePrompt,
   gradescopeCurveYes,
   gradescopeCurveNo,
-  gradescopeCurveGraph,
   gradescopeCurvePath,
   gradescopeCurveAdjust,
   gradescopeCurveSlider,
@@ -595,7 +589,6 @@ const {
   dstNightWarning,
   dstNightOk,
   dstCraftingWindow,
-  dstCraftingMenu,
   dstCraftCampfire,
   dstNightProgress,
   dstWoodSource,
@@ -634,7 +627,6 @@ const {
   openWritingTcpPaper,
   openBioe190Presentation,
   openBioe190Proposal,
-  pdfIframe,
   pulsePresentationIframe,
   dronePresentationIframe,
   studyTree,
@@ -3261,19 +3253,6 @@ const createGameStatsNode = (tagName, className, text = "") => {
   return node;
 };
 
-const appendGameStatsSummary = (container, label, localValue, globalValue) => {
-  const item = createGameStatsNode("div", "game-stats-inlay");
-  item.append(
-    createGameStatsNode("span", "game-stats-label", label),
-    createGameStatsNode(
-      "span",
-      "game-stats-value",
-      `Local ${localValue} / Global ${globalValue}`
-    )
-  );
-  container.append(item);
-};
-
 const appendGameStatsMetric = (container, entry) => {
   if (entry.metricKind === "seconds") {
     appendGameStatsDigits(container, entry.metric, 3);
@@ -3339,43 +3318,6 @@ const scheduleGameStatsPlayerNameMarquees = () => {
     gameStatsNameMarqueeFrame = 0;
     updateGameStatsPlayerNameMarquees();
   });
-};
-
-const appendGameStatsLeaderboard = (
-  container,
-  title,
-  entries,
-  { medals = false } = {}
-) => {
-  const panel = createGameStatsNode("section", "game-stats-leaderboard");
-  panel.append(createGameStatsNode("div", "game-stats-section-title", title));
-  const list = createGameStatsNode("div", "game-stats-list");
-  if (!entries.length) {
-    list.append(createGameStatsNode("div", "game-stats-empty", "No entries yet."));
-  } else {
-    entries.forEach((entry, index) => {
-      const row = createGameStatsNode("div", "game-stats-row");
-      if (medals && GAME_STATS_MEDAL_SOURCES[index]) {
-        const medal = document.createElement("img");
-        medal.className = "game-stats-rank";
-        medal.src = GAME_STATS_MEDAL_SOURCES[index];
-        medal.alt = `${index + 1}`;
-        row.append(medal);
-      } else {
-        row.append(createGameStatsNode("span", "game-stats-rank", `#${index + 1}`));
-      }
-      row.append(
-        createGameStatsPlayerIcon(entry.icon),
-        createGameStatsPlayerName(entry.name)
-      );
-      const metric = createGameStatsNode("span", "game-stats-metric");
-      appendGameStatsMetric(metric, entry);
-      row.append(metric);
-      list.append(row);
-    });
-  }
-  panel.append(list);
-  container.append(panel);
 };
 
 const gameStatsMinesweeperPersonalRecord = (difficulty) => {
@@ -4612,7 +4554,6 @@ let gameStatsRecordHandoffQueue = Promise.resolve();
 
 let topZ = 10;
 let calendarDate = new Date();
-let windowOffsetIndex = 0;
 let snakeState = {
   snake: [],
   apples: [],
@@ -6454,10 +6395,6 @@ const clampMcAfeeWindowToViewport = (win) => {
 
 const clampMcAfeeWindowAfterMediaLoad = (win) => {
   clampRandomEventWindowAfterMediaLoad(win);
-};
-
-const clampVisibleMcAfeeWindows = () => {
-  mcAfeeWindows().forEach((win) => clampMcAfeeWindowToViewport(win));
 };
 
 const showMcAfeeWindow = (win) => {
@@ -10438,11 +10375,6 @@ const resizeLightningCanvas = (canvas) => {
   return { ctx, width, height };
 };
 
-const resizeFateLightningCanvas = () => {
-  if (!getFateLightningContext()) return null;
-  return resizeLightningCanvas(fateLightningCanvas);
-};
-
 const clearLightningCanvas = (canvas) => {
   const setup = resizeLightningCanvas(canvas);
   if (!setup) return;
@@ -12246,8 +12178,6 @@ const startToxicJungleCollection = () => {
   populateToxicJungleSpores();
 };
 
-const LANCER_BATTLE_CLASH_VIDEO =
-  "https://imgix.bustle.com/inverse/8d/d9/86/e4/92b5/4dec/b80e/3402288d9a18/giphy-9gif.gif?w=825&h=464&fit=max&fm=mp4";
 const LANCER_BATTLE_WIN_VIDEO_START_SECONDS = 29.5;
 const LANCER_BATTLE_WIN_VIDEO_END_SECONDS = 36.5;
 const LANCER_BATTLE_WIN_VIDEO_SRC =
@@ -12366,19 +12296,6 @@ const clearLancerBattleResultMedia = () => {
     lancerBattleResultVideo.load();
     lancerBattleResultVideo.classList.add("is-hidden");
   }
-};
-
-const setLancerBattleResultImage = (src) => {
-  if (!lancerBattleResultImage) return;
-  if (lancerBattleResultVideo) {
-    lancerBattleResultVideo.pause();
-    lancerBattleResultVideo.removeAttribute("src");
-    lancerBattleResultVideo.load();
-    lancerBattleResultVideo.classList.add("is-hidden");
-  }
-  lancerBattleResultImage.classList.remove("is-hidden");
-  lancerBattleResultImage.src = `${src}${src.includes("?") ? "&" : "?"}replay=${Date.now()}`;
-  lancerBattleResultImage.alt = "";
 };
 
 const playLancerBattleResultVideo = (src, token, onPlaybackStarted = () => {}) => {
@@ -15866,10 +15783,6 @@ const clampVirusEventWindowToViewport = (win) => {
 
 const clampVirusEventWindowAfterMediaLoad = (win) => {
   clampRandomEventWindowAfterMediaLoad(win);
-};
-
-const clampVisibleVirusEventWindows = () => {
-  virusEventWindows().forEach((win) => clampVirusEventWindowToViewport(win));
 };
 
 const chooseVirusRescueAnchor = () => {
@@ -20691,11 +20604,6 @@ const getLifeCounterWindowColumns = (width) => {
   return Math.max(1, columns);
 };
 
-const normalizeLifeCounterWindowWidth = (width) => {
-  const columns = getLifeCounterWindowColumns(width);
-  return getLifeCounterWindowWidthForColumns(columns);
-};
-
 const getLifeCounterMaxWidthAtPosition = () => {
   const win = getLifeCounterWindow();
   if (!win || win.classList.contains("is-hidden")) {
@@ -21991,7 +21899,7 @@ setupGalleryControlLabels();
 
 const ABOUT_CAROUSEL_ITEMS = Object.freeze([
   Object.freeze({
-    src: "assets/about-carousel/1.jpg",
+    src: "assets/optimized/bio-pic-720.jpg",
     alt: "Portrait of Rohin Shanker in front of red rock formations",
   }),
   Object.freeze({

@@ -481,7 +481,6 @@ details[open] > .shoot__credits-summary::before {
   background: #fff;
   box-shadow: var(--border-field);
   scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
 }
 
 .carousel__strip::-webkit-scrollbar {

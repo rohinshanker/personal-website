@@ -106,106 +106,89 @@ const expectedAlerts = [
   }),
   expectedAlert({
     id: "substack-reminder",
-    label: "System Alert – Substack Reminder",
     icon: "assets/app-icons/ico/help_book_computer.ico",
     body: "Don't forget to check out my substack!",
   }),
   expectedAlert({
     id: "goldfish",
-    label: "System Alert – Goldfish",
     icon: "assets/app-icons/ico/msg_information.ico",
     body: "Don't overfeed your goldfish!",
   }),
   expectedAlert({
     id: "browser-infected",
-    label: "System Alert — Browser Infected",
     icon: "assets/app-icons/ico/msie1.ico",
     body:
       "Attention!!! Multiple viruses have been detected on your computer. I think.",
   }),
   expectedAlert({
     id: "operation-unsupported",
-    label: "System Alert – Operation Unsupported",
     icon: "assets/app-icons/ico/msg_error.ico",
     body: "Error: Operation is not supported.",
   }),
   expectedAlert({
     id: "time-warning",
-    label: "System Alert — Time Warning",
     icon: "assets/app-icons/ico/clock.ico",
     body: "Your time is limited. Make the most of it!",
   }),
   expectedAlert({
     id: "question-everything",
-    label: "System Alert — Question Everything",
     icon: "assets/app-icons/ico/circle_question.ico",
     body: "Question everything.",
   }),
   expectedAlert({
     id: "degrees",
-    label: "System Alert — Degrees",
     icon: "assets/app-icons/ico/certificate_seal.ico",
     body: "C's get degrees.",
   }),
   expectedAlert({
     id: "comdex",
-    label: "System Alert — Comdex",
     icon: "assets/app-icons/ico/rj_jack.ico",
     body: "Don't plug in a USB scanner during the COMDEX 1998 Spring Keynote...",
   }),
   expectedAlert({
     id: "battery",
-    label: "System Alert — battery",
     icon: "assets/app-icons/ico/battery.ico",
     body: "Warning: Your device has low battery. Maybe. I don't actually know.",
   }),
   expectedAlert({
     id: "tabs",
-    label: "System Alert — tabs",
     icon: "assets/app-icons/ico/accessibility_two_windows.ico",
     body: "Don't forget to close your unused tabs!",
   }),
   expectedAlert({
     id: "eye-strain",
-    label: "System Alert — eye strain",
     icon: "assets/app-icons/ico/color_profile_gray.ico",
     body: "Spending too much time on screens will strain your eyes.",
   }),
   expectedAlert({
     id: "social-media",
-    label: "System Alert — social media",
     icon: "assets/app-icons/ico/installer_generic_old.ico",
     body:
-      "Social media promotes inflammatory content to maintian your attention and make the most ad revenue off of you.",
+      "Social media promotes inflammatory content to maintain your attention and make the most ad revenue off of you.",
   }),
   expectedAlert({
     id: "language",
-    label: "System Alert — Language",
     icon: "assets/app-icons/ico/charmap.ico",
     body:
       "Learn another language! There are few better things you can spend your time doing.",
   }),
   expectedAlert({
     id: "radio-waves",
-    label: "System Alert — radio waves",
     icon: "assets/app-icons/ico/infrared.ico",
     body: "Continuous exposure to Wi-Fi and radio waves isn't the best for your body.",
   }),
   expectedAlert({
     id: "cereal",
-    label: "System Alert — Cereal",
     icon: "assets/app-icons/ico/search_computer.ico",
     body: "I love cereal.",
   }),
   expectedAlert({
     id: "keys",
-    label: "System Alert — Keys",
     icon: "assets/app-icons/ico/keys.ico",
     body: "Don't forget your keys, phone, and wallet!",
   }),
   expectedAlert({
     id: "photos",
-    label: "System Alert - Photos",
     icon: "assets/app-icons/ico/pictures.ico",
     body: "Don't forget to backup your photos. Memories are irreplaceable.",
   }),

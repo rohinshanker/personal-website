@@ -105,7 +105,7 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
   const sharedStylesheet =
     'href="../styles/home/cursors.css?v=text-selection-cursor-20260810"';
   const cursorRuntime = 'src="cursor.js?v=video-editor-cursors-20260826"';
-  const routeStylesheet = 'href="style.css"';
+  const routeStylesheet = 'href="style.css?v=repo-hygiene-20260927"';
   const textSelectionScript =
     'src="../scripts/home/text-selection-cursor.js?v=video-editor-cursor-guards-20260826"';
   for (const reference of [

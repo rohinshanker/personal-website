@@ -643,7 +643,7 @@
       swipeStart = null;
     });
 
-    return { open, dismiss, isOpen: () => Boolean(state) };
+    return { open, dismiss };
   };
 
   /* ------------------------------------------------------------------ */

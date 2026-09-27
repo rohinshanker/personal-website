@@ -46,7 +46,7 @@ const expectedLinks = [
 
 const expectedCarouselImages = [
   {
-    src: "assets/about-carousel/1.jpg",
+    src: "assets/optimized/bio-pic-720.jpg",
     alt: "Portrait of Rohin Shanker in front of red rock formations",
   },
   {

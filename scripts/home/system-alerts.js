@@ -149,11 +149,11 @@
   /*
    * Copy/paste this object into SYSTEM_ALERT_INPUTS to add a basic alert.
    * `buttons` and `buttonAlignment` may be omitted to get one right-aligned OK
-   * button that dismisses the alert.
+   * button that dismisses the alert. `label` may be omitted to derive the
+   * Administrator label from the id ("System Alert — Title Case Id").
    *
    * Object.freeze({
    *   id: "replace-with-unique-kebab-case-id",
-   *   label: "System Alert — Replace With Administrator Label",
    *   icon: "assets/app-icons/ico/msg_information.ico",
    *   body: "Replace with the system-alert body text.",
    *   buttons: Object.freeze([
@@ -237,106 +237,89 @@
     }),
     Object.freeze({
       id: "substack-reminder",
-      label: "System Alert – Substack Reminder",
       icon: "assets/app-icons/ico/help_book_computer.ico",
       body: "Don't forget to check out my substack!",
     }),
     Object.freeze({
       id: "goldfish",
-      label: "System Alert – Goldfish",
       icon: "assets/app-icons/ico/msg_information.ico",
       body: "Don't overfeed your goldfish!",
     }),
     Object.freeze({
       id: "browser-infected",
-      label: "System Alert — Browser Infected",
       icon: "assets/app-icons/ico/msie1.ico",
       body:
         "Attention!!! Multiple viruses have been detected on your computer. I think.",
     }),
     Object.freeze({
       id: "operation-unsupported",
-      label: "System Alert – Operation Unsupported",
       icon: "assets/app-icons/ico/msg_error.ico",
       body: "Error: Operation is not supported.",
     }),
     Object.freeze({
       id: "time-warning",
-      label: "System Alert — Time Warning",
       icon: "assets/app-icons/ico/clock.ico",
       body: "Your time is limited. Make the most of it!",
     }),
     Object.freeze({
       id: "question-everything",
-      label: "System Alert — Question Everything",
       icon: "assets/app-icons/ico/circle_question.ico",
       body: "Question everything.",
     }),
     Object.freeze({
       id: "degrees",
-      label: "System Alert — Degrees",
       icon: "assets/app-icons/ico/certificate_seal.ico",
       body: "C's get degrees.",
     }),
     Object.freeze({
       id: "comdex",
-      label: "System Alert — Comdex",
       icon: "assets/app-icons/ico/rj_jack.ico",
       body: "Don't plug in a USB scanner during the COMDEX 1998 Spring Keynote...",
     }),
     Object.freeze({
       id: "battery",
-      label: "System Alert — battery",
       icon: "assets/app-icons/ico/battery.ico",
       body: "Warning: Your device has low battery. Maybe. I don't actually know.",
     }),
     Object.freeze({
       id: "tabs",
-      label: "System Alert — tabs",
       icon: "assets/app-icons/ico/accessibility_two_windows.ico",
       body: "Don't forget to close your unused tabs!",
     }),
     Object.freeze({
       id: "eye-strain",
-      label: "System Alert — eye strain",
       icon: "assets/app-icons/ico/color_profile_gray.ico",
       body: "Spending too much time on screens will strain your eyes.",
     }),
     Object.freeze({
       id: "social-media",
-      label: "System Alert — social media",
       icon: "assets/app-icons/ico/installer_generic_old.ico",
       body:
-        "Social media promotes inflammatory content to maintian your attention and make the most ad revenue off of you.",
+        "Social media promotes inflammatory content to maintain your attention and make the most ad revenue off of you.",
     }),
     Object.freeze({
       id: "language",
-      label: "System Alert — Language",
       icon: "assets/app-icons/ico/charmap.ico",
       body:
         "Learn another language! There are few better things you can spend your time doing.",
     }),
     Object.freeze({
       id: "radio-waves",
-      label: "System Alert — radio waves",
       icon: "assets/app-icons/ico/infrared.ico",
       body: "Continuous exposure to Wi-Fi and radio waves isn't the best for your body.",
     }),
     Object.freeze({
       id: "cereal",
-      label: "System Alert — Cereal",
       icon: "assets/app-icons/ico/search_computer.ico",
       body: "I love cereal.",
     }),
     Object.freeze({
       id: "keys",
-      label: "System Alert — Keys",
       icon: "assets/app-icons/ico/keys.ico",
       body: "Don't forget your keys, phone, and wallet!",
     }),
     Object.freeze({
       id: "photos",
-      label: "System Alert - Photos",
       icon: "assets/app-icons/ico/pictures.ico",
       body: "Don't forget to backup your photos. Memories are irreplaceable.",
     }),

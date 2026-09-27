@@ -126,7 +126,7 @@ test("Video Editor owns an accessible new-tab confirmation prompt", async () => 
   );
   assert.match(
     home,
-    /styles\/home\/random-events\.css\?v=bulk-system-alerts-20260811/
+    /styles\/home\/random-events\.css\?v=repo-hygiene-20260927/
   );
   assert.match(
     randomEventStyles,

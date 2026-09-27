@@ -191,11 +191,11 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
   );
   assert.match(
     home,
-    /styles\/home\/random-events\.css\?v=bulk-system-alerts-20260811/
+    /styles\/home\/random-events\.css\?v=repo-hygiene-20260927/
   );
   assert.match(
     index,
-    /styles\/home\/random-events\.css\?v=bulk-system-alerts-20260811/
+    /styles\/home\/random-events\.css\?v=repo-hygiene-20260927/
   );
   await Promise.all([
     readFile(new URL("assets/neko-assets/sprites/sleep1.png", root)),

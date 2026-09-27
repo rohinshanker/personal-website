@@ -257,7 +257,6 @@ const preloadMediaSourcesAfter = (element, sources, options) =>
   });
 
 window.homeMedia = {
-  fitImageIntoFrame,
   fitImagesIntoFrames,
   loadDeferredMedia,
   preloadDeferredMedia,
