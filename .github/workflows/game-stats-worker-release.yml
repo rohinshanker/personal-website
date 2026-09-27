@@ -37,10 +37,16 @@ jobs:
         run: npm ci
       - name: Install Worker dependencies
         run: npm ci --prefix workers/game-stats
+      - name: Check script and Video Editor syntax
+        run: npm run syntax:check
       - name: Run source tests
         run: npm test
       - name: Verify generated integrity metadata
         run: npm run game-stats:integrity:check
+      - name: Verify generated app icon manifest
+        run: npm run app-icons:check
+      - name: Verify generated study resources manifest
+        run: npm run study-resources:check
       - name: Verify Worker deployment bundle
         run: npm --prefix workers/game-stats run deploy:check
 
@@ -76,6 +82,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/check-game-stats-release-context.mjs --current-main
+      - name: Require every secret the Worker configuration declares
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run game-stats:worker-secrets:check
       - name: Deploy rollout-compatible Worker configuration
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

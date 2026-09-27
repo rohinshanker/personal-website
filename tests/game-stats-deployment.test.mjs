@@ -1494,6 +1494,21 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     "node scripts/update-game-integrity.mjs --check"
   );
   assert.equal(
+    packageJson.scripts["app-icons:check"],
+    "node scripts/build-app-icon-manifest.mjs --check"
+  );
+  assert.equal(
+    packageJson.scripts["study-resources:check"],
+    "node scripts/build-study-resources-manifest.mjs --check"
+  );
+  assert.equal(
+    packageJson.scripts["game-stats:worker-secrets:check"],
+    "node scripts/check-game-stats-worker-secrets.mjs"
+  );
+  assert.match(packageJson.scripts["syntax:check"], /find scripts -type f/);
+  assert.match(packageJson.scripts["syntax:check"], /find video-editor -maxdepth 1/);
+  assert.match(packageJson.scripts["syntax:check"], /xargs -0 -n1 node --check/);
+  assert.equal(
     workerPackageJson.scripts["deployment:check"],
     "node ../../scripts/check-game-stats-deployment.mjs --live"
   );
@@ -1544,7 +1559,10 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.doesNotMatch(verifySource, /secrets\.|CLOUDFLARE_/);
   assert.doesNotMatch(verifySource, /pull_request_target/);
   assert.match(verifySource, /npm test/);
+  assert.match(verifySource, /npm run syntax:check/);
   assert.match(verifySource, /npm run game-stats:integrity:check/);
+  assert.match(verifySource, /npm run app-icons:check/);
+  assert.match(verifySource, /npm run study-resources:check/);
   assert.match(verifySource, /npm --prefix workers\/game-stats run deploy:check/);
   assert.doesNotMatch(verifySource, /run deploy --/);
 
@@ -1616,6 +1634,17 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
       CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
     }
   );
+  assert.deepEqual(
+    workerStepByName["Require every secret the Worker configuration declares"].env,
+    {
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+      CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+    }
+  );
+  assert.equal(
+    workerStepByName["Require every secret the Worker configuration declares"].run,
+    "npm run game-stats:worker-secrets:check"
+  );
   assert.equal(
     workerStepByName["Deploy rollout-compatible Worker configuration"].run,
     "npm --prefix workers/game-stats run deploy -- --config wrangler.jsonc --strict"
@@ -1635,7 +1664,14 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   );
   assert.ok(
     workerStepNames.indexOf("Reject a superseded workflow revision") <
-      workerStepNames.indexOf("Deploy rollout-compatible Worker configuration")
+      workerStepNames.indexOf(
+        "Require every secret the Worker configuration declares"
+      )
+  );
+  assert.ok(
+    workerStepNames.indexOf(
+      "Require every secret the Worker configuration declares"
+    ) < workerStepNames.indexOf("Deploy rollout-compatible Worker configuration")
   );
   assert.ok(
     workerStepNames.indexOf("Deploy rollout-compatible Worker configuration") <
