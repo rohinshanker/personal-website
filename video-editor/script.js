@@ -3270,6 +3270,28 @@ const renderTabs = () => {
   });
 };
 
+/**
+ * Frees everything the editor holds outside the DOM. Only a discarded document
+ * calls this: a page restored from the back/forward cache keeps its resources.
+ */
+const releaseProjectResources = () => {
+  audioAnalysisWorker?.terminate();
+  // terminate() leaves a dead handle behind, and the lazy getter reuses a
+  // non-null worker.
+  audioAnalysisWorker = null;
+  clearAuthenticationTimers();
+  authenticationController?.abort();
+  authenticationController = null;
+  previewResizeObserver?.disconnect();
+  sidePanelResizeObserver?.disconnect();
+  effectTabResizeObserver?.disconnect();
+  previewResizeObserver = null;
+  sidePanelResizeObserver = null;
+  effectTabResizeObserver = null;
+  audioAnalysisCache.clear();
+  for (const media of state.media) URL.revokeObjectURL(media.url);
+};
+
 const bindStaticControls = () => {
   elements.framePreset?.addEventListener("change", (event) => {
     state.framePreset = event.target.value;
@@ -3523,20 +3545,20 @@ const bindStaticControls = () => {
 
   // pagehide, not beforeunload: an unconditional beforeunload listener makes the
   // page ineligible for the back/forward cache.
-  window.addEventListener("pagehide", () => {
+  window.addEventListener("pagehide", (event) => {
+    // Quiet the page either way: the back/forward cache freezes timers, frames,
+    // and workers on its own, so nothing here needs to stop them.
     pausePlayback();
     stopSoundEffectPreview();
-    audioAnalysisWorker?.terminate();
-    clearAuthenticationTimers();
-    authenticationController?.abort();
-    previewResizeObserver?.disconnect();
-    sidePanelResizeObserver?.disconnect();
-    effectTabResizeObserver?.disconnect();
     cancelAnimationFrame(effectTabMarqueeFrame);
     cancelAnimationFrame(audioSyncGraphFrame);
     audioSyncGraphFrame = 0;
-    audioAnalysisCache.clear();
-    for (const media of state.media) URL.revokeObjectURL(media.url);
+    // A persisted page is coming back as this same document, with the same
+    // project in memory. Revoking its blob URLs, killing the analysis worker,
+    // or dropping the observers would restore an editor whose imported media
+    // no longer loads, so release those only when the document is discarded.
+    if (event.persisted) return;
+    releaseProjectResources();
   });
 };
 

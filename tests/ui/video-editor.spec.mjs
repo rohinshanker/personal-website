@@ -2375,6 +2375,112 @@ test("imports local video and generated audio, validates tier drops, and compose
   runtime.expectClean();
 });
 
+test("keeps imported media, the analysis worker, and the observers across a back/forward restoration", async ({
+  page,
+}, testInfo) => {
+  test.slow();
+  // Playwright's Chromium can never be restored from the real back/forward
+  // cache: its automation delegate reports BackForwardCacheDisabledForDelegate,
+  // so `page.goBack()` always reloads the document. The lifecycle events are
+  // therefore dispatched here with `persisted: true`, which is the state a
+  // restored page reports.
+  const runtime = monitorRuntime(page);
+  await page.addInitScript(() => {
+    const teardown = { disconnectedObservers: 0, revokedObjectUrls: [], terminatedWorkers: 0 };
+    window.__lifecycleTeardown = teardown;
+    const revokeObjectURL = URL.revokeObjectURL.bind(URL);
+    URL.revokeObjectURL = (url) => {
+      teardown.revokedObjectUrls.push(url);
+      return revokeObjectURL(url);
+    };
+    const { terminate } = Worker.prototype;
+    Worker.prototype.terminate = function recordTerminate() {
+      teardown.terminatedWorkers += 1;
+      return terminate.call(this);
+    };
+    const { disconnect } = ResizeObserver.prototype;
+    ResizeObserver.prototype.disconnect = function recordDisconnect() {
+      teardown.disconnectedObservers += 1;
+      return disconnect.call(this);
+    };
+  });
+  await loadEditor(page);
+  runtime.setOrigin(page.url());
+
+  const readTeardown = () => page.evaluate(() => window.__lifecycleTeardown);
+  const dispatchPageTransition = (type, persisted) =>
+    page.evaluate(
+      ({ eventType, isPersisted }) =>
+        window.dispatchEvent(new PageTransitionEvent(eventType, { persisted: isPersisted })),
+      { eventType: type, isPersisted: persisted }
+    );
+
+  const mediaBin = page.getByTestId("media-bin");
+  await importMedia(page, [videoAsset, generatedAudioSync()]);
+  await mediaBin
+    .getByRole("button", { name: `Add ${audioSyncName} at the playhead` })
+    .click();
+  await expect(
+    page.getByTestId("timeline-tier-audio-1").locator("article[data-clip-id]")
+  ).toHaveCount(1);
+  // Analyzing once is what creates the analysis worker the handler used to kill.
+  await analyzeAudioSyncClip(page);
+  expect(await readTeardown()).toEqual({
+    disconnectedObservers: 0,
+    revokedObjectUrls: [],
+    terminatedWorkers: 0,
+  });
+
+  await dispatchPageTransition("pagehide", true);
+  await dispatchPageTransition("pageshow", true);
+
+  expect(
+    await readTeardown(),
+    "a restored page must keep its blob URLs, analysis worker, and observers"
+  ).toEqual({ disconnectedObservers: 0, revokedObjectUrls: [], terminatedWorkers: 0 });
+  await expectAuthenticated(page);
+  await expect(mediaBin.getByRole("listitem")).toHaveCount(2);
+
+  // The reported failure only surfaced when the restored page used the media
+  // again, so add the untouched video after the restoration.
+  await mediaBin
+    .locator('[data-media-id][data-kind="video"]')
+    .getByRole("button", { name: `Add ${videoName} at the playhead` })
+    .click();
+  const preview = page.locator("#preview-video");
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveAttribute("src", /^blob:/);
+  await expect(page.locator("#preview-clip-name")).toHaveText(videoName);
+  await expect
+    .poll(
+      () =>
+        preview.evaluate((video) => ({
+          errorCode: video.error?.code ?? null,
+          hasMetadata: video.readyState >= HTMLMediaElement.HAVE_METADATA,
+        })),
+      { timeout: 20_000 }
+    )
+    .toEqual({ errorCode: null, hasMetadata: true });
+
+  const previewSource = await preview.getAttribute("src");
+  expect(
+    await page.evaluate(async (source) => (await fetch(source)).ok, previewSource),
+    "the restored page's blob URL must still resolve"
+  ).toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-restored-media.png"),
+  });
+  runtime.expectClean();
+
+  // A discarded document still releases everything: the guard narrows the
+  // teardown, it does not remove it.
+  await dispatchPageTransition("pagehide", false);
+  const discarded = await readTeardown();
+  expect(discarded.revokedObjectUrls).toContain(previewSource);
+  expect(discarded.terminatedWorkers).toBe(1);
+  expect(discarded.disconnectedObservers).toBe(3);
+});
+
 test("snaps and reorders clips, adds typed tiers, and supports keyboard editing and scale", async ({
   page,
 }) => {
