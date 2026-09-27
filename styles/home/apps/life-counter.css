@@ -345,7 +345,7 @@
 }
 
 .life-counter-initiative-grid button.is-selected {
-  background: #000080;
+  background: var(--dialog-blue);
   color: #fff;
   padding: 0;
   text-shadow: 0 0 #fff;

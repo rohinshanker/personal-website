@@ -250,9 +250,11 @@ test("the /modeling/ route publishes its metadata, shared assets, and blank Drop
   assert.match(html, /<link rel="canonical" href="https:\/\/rohin\.shanker\.me\/modeling\/" \/>/);
   assert.match(html, /<meta property="og:url" content="https:\/\/rohin\.shanker\.me\/modeling\/" \/>/);
   assert.match(html, /<meta property="og:title" content="Rohin Shanker Modeling Portfolio" \/>/);
+  assert.match(html, /<meta name="twitter:image" content="https:\/\/rohin\.shanker\.me\/assets\/optimized\/bio-pic-720\.jpg" \/>/);
+  assert.match(html, /<meta name="theme-color" content="#c0c0c0" \/>/);
   assert.match(html, /<link rel="icon" href="\/assets\/favicon-96\.png" type="image\/png" sizes="96x96" \/>/);
   assert.match(html, /<link rel="apple-touch-icon" href="\/assets\/apple-touch-icon-180\.png" sizes="180x180" \/>/);
-  assert.match(html, /href="\.\.\/style\.css\?v=first-win-stats-handoff-20260722"/);
+  assert.match(html, /href="\.\.\/style\.css\?v=html-semantics-20260927"/);
   assert.match(html, new RegExp(`href="style\\.css\\?v=${ROUTE_VERSION}"`));
   assert.match(html, new RegExp(`src="\\.\\./scripts/home/modeling-portfolio\\.js\\?v=${DATA_VERSION}"`));
   assert.match(html, new RegExp(`<script src="script\\.js\\?v=${ROUTE_VERSION}" defer></script>`));

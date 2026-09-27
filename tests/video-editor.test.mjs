@@ -49,6 +49,23 @@ test("Video Editor publishes canonical route metadata and the Windows desktop sh
   );
   assert.match(
     html,
+    /<link\b(?=[^>]*\brel="icon")(?=[^>]*\bhref="\/assets\/favicon-96\.png")(?=[^>]*\bsizes="96x96")[^>]*>/i
+  );
+  assert.match(
+    html,
+    /<link\b(?=[^>]*\brel="apple-touch-icon")(?=[^>]*\bhref="\/assets\/apple-touch-icon-180\.png")[^>]*>/i
+  );
+  for (const selector of [
+    'property="og:url"[^>]*content="https://rohin\\.shanker\\.me/video-editor/"',
+    'property="og:image"[^>]*content="https://rohin\\.shanker\\.me/assets/optimized/bio-pic-720\\.jpg"',
+    'name="twitter:card"[^>]*content="summary"',
+    'name="twitter:image"[^>]*content="https://rohin\\.shanker\\.me/assets/optimized/bio-pic-720\\.jpg"',
+    'name="theme-color"[^>]*content="#c0c0c0"',
+  ]) {
+    assert.match(html, new RegExp(`<meta\\b[^>]*${selector}[^>]*>`, "i"));
+  }
+  assert.match(
+    html,
     /<link\b[^>]*\brel="canonical"[^>]*\bhref="https:\/\/rohin\.shanker\.me\/video-editor\/"[^>]*>/i
   );
   assert.match(html, /<link\b[^>]*\bhref="(?:\.\/)?style\.css(?:\?[^"#]*)?"[^>]*>/i);

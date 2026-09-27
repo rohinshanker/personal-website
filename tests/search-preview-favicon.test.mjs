@@ -40,6 +40,43 @@ test("homepage documents publish one consistent search description", async () =>
   }
 });
 
+test("homepage documents share one JSON-LD graph, social image, and theme color", async () => {
+  const [index, home] = await Promise.all(pages.map(readPage));
+  assert.deepEqual(readJsonLd(home), readJsonLd(index));
+  assert.equal(readJsonLd(index).length, 1);
+
+  for (const page of pages) {
+    const html = await readPage(page);
+    assert.match(
+      html,
+      /<meta\b[^>]*\bname="viewport"[^>]*\bcontent="width=device-width, initial-scale=1, viewport-fit=cover"/i,
+      page
+    );
+    for (const selector of [
+      'property="og:image"[^>]*content="https://rohin\\.shanker\\.me/assets/optimized/bio-pic-720\\.jpg"',
+      'name="twitter:image"[^>]*content="https://rohin\\.shanker\\.me/assets/optimized/bio-pic-720\\.jpg"',
+      'name="theme-color"[^>]*content="#c0c0c0"',
+    ]) {
+      assert.match(html, new RegExp(`<meta\\b[^>]*${selector}[^>]*>`, "i"), page);
+    }
+  }
+});
+
+test("both entry documents expose one visually hidden h1 and Home wraps its windows in main", async () => {
+  const [index, home] = await Promise.all(pages.map(readPage));
+  for (const [page, html] of [["index.html", index], ["home.html", home]]) {
+    assert.equal(html.match(/<h1\b/g)?.length, 1, page);
+    assert.match(html, /<body>\s*<h1 class="visually-hidden">Rohin OS<\/h1>/, page);
+  }
+  assert.equal(home.match(/<main\b/g)?.length, 1);
+  assert.match(home, /<main class="window-stack">/);
+  assert.equal(home.match(/<\/main>/g)?.length, 1);
+  assert.doesNotMatch(index, /<main\b/);
+  const base = await readFile(new URL("styles/home/base.css", root), "utf8");
+  assert.match(base, /\.visually-hidden \{[\s\S]*?clip: rect\(0, 0, 0, 0\);/);
+  assert.match(index, /\.visually-hidden \{[\s\S]*?clip: rect\(0, 0, 0, 0\);/);
+});
+
 test("homepage documents publish the square favicon assets", async () => {
   for (const page of pages) {
     const html = await readPage(page);

@@ -522,7 +522,7 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   assert.match(css, /\.game-profile-name-credit/);
   assert.match(css, /\.game-profile-name-options \{/);
   assert.match(css, /\.game-profile-name-option[\s\S]*box-shadow: none;/);
-  assert.match(css, /\.game-profile-name-option:hover,[\s\S]*?background: #000080;[\s\S]*?color: #fff;/);
+  assert.match(css, /\.game-profile-name-option:hover,[\s\S]*?background: var\(--dialog-blue\);[\s\S]*?color: #fff;/);
 });
 
 test("the profile icon gallery does not truncate the manifest", async () => {

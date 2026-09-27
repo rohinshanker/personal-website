@@ -180,7 +180,7 @@
 
 .study-tree-item.is-selected,
 .study-file-item.is-selected {
-  background: #000080;
+  background: var(--dialog-blue);
   color: #fff;
   outline: 1px dotted #fff;
   outline-offset: -2px;

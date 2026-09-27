@@ -169,7 +169,7 @@ test("Wired chat assets and cache-busted stylesheet references are present", asy
     stat(new URL("assets/app-icons/ico/user_computer.ico", root)),
   ]);
   const stylesheet =
-    "styles/home/random-events.css?v=repo-hygiene-20260927";
+    "styles/home/random-events.css?v=html-semantics-20260927";
 
   assert.ok(lainAsset.isFile() && lainAsset.size > 0);
   assert.ok(avatarAsset.isFile() && avatarAsset.size > 0);

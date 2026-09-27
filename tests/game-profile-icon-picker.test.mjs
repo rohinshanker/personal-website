@@ -51,7 +51,7 @@ test("profile icon gallery separates its fixed frame and updates selection in pl
   for (const entryPoint of [home, index]) {
     assert.match(
       entryPoint,
-      /styles\/home\/apps\/game-stats\.css\?v=repo-hygiene-20260927/
+      /styles\/home\/apps\/game-stats\.css\?v=html-semantics-20260927/
     );
   }
 

@@ -747,7 +747,7 @@
 }
 
 .winged-light-window .window-body {
-  background: #c0c0c0;
+  background: var(--surface);
   color: #000;
   display: flex;
   flex-direction: column;
@@ -1405,7 +1405,7 @@
 }
 
 .distress-minimap-center {
-  background: #62ff78;
+  background: var(--snake-green);
   border-radius: 50%;
   height: 5px;
   left: 50%;
@@ -1422,7 +1422,7 @@
 .distress-nav-readout {
   background: #000;
   box-shadow: var(--border-field);
-  color: #62ff78;
+  color: var(--snake-green);
   display: grid;
   font-family: "Courier New", monospace;
   font-size: 11px;
@@ -1445,7 +1445,7 @@
 .distress-lock-status {
   background: #000;
   box-shadow: var(--border-field);
-  color: #62ff78;
+  color: var(--snake-green);
   font-family: "Courier New", monospace;
   font-size: 11px;
   isolation: isolate;
@@ -3546,7 +3546,7 @@ button.gears-nest-enemy:not(:disabled) {
 }
 
 .red-tool-message strong {
-  color: #000080;
+  color: var(--dialog-blue);
 }
 
 .red-tool-message.is-local strong {
@@ -6432,7 +6432,7 @@ html.is-wall-breach-shaking body {
 
 .relic-recovery-hotbar {
   align-items: center;
-  background: #c0c0c0;
+  background: var(--surface);
   border: 2px solid #808080;
   bottom: 10px;
   box-shadow:

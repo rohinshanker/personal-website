@@ -170,7 +170,7 @@ input[type="reset"].default {
 .vertical-bar {
   width: 4px;
   height: 20px;
-  background: #c0c0c0;
+  background: var(--surface);
   box-shadow: var(--border-raised-outer), var(--border-raised-inner);
 }
 

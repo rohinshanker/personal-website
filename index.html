@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Rohin OS</title>
     <meta
       name="description"
@@ -19,12 +22,15 @@
       content="My personal website. Best enjoyed on desktop…"
     />
     <meta property="og:url" content="https://rohin.shanker.me/" />
+    <meta property="og:image" content="https://rohin.shanker.me/assets/optimized/bio-pic-720.jpg" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Rohin OS" />
     <meta
       name="twitter:description"
       content="My personal website. Best enjoyed on desktop…"
     />
+    <meta name="twitter:image" content="https://rohin.shanker.me/assets/optimized/bio-pic-720.jpg" />
+    <meta name="theme-color" content="#c0c0c0" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -101,7 +107,7 @@
       }
     </script>
     <link rel="preload" href="assets/mountain-and-sky.png" as="image" />
-    <link rel="stylesheet" href="style.css?v=first-win-stats-handoff-20260722" />
+    <link rel="stylesheet" href="style.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cache-token-parity-20260927" />
     <script
       src="scripts/home/text-selection-cursor.js?v=cache-token-parity-20260927"
@@ -123,6 +129,18 @@
         display: grid;
         place-items: center;
         overflow: hidden;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
       }
 
       .loader {
@@ -220,6 +238,7 @@
     </style>
   </head>
   <body>
+    <h1 class="visually-hidden">Rohin OS</h1>
     <div class="loader" id="loader" aria-live="polite" data-nosnippet>
       <div class="window loader-window">
         <div class="title-bar">
@@ -316,16 +335,16 @@
       let timerId = null;
       let homeWarmupStarted = false;
       const homeWarmupResources = [
-        ["styles/home/base.css?v=pinch-zoom-a11y-20260909", "style"],
+        ["styles/home/base.css?v=html-semantics-20260927", "style"],
         ["styles/home/apps/minesweeper.css?v=minesweeper-grid-rows-20260909", "style"],
         ["styles/home/apps/solitaire.css?v=cache-token-parity-20260927", "style"],
-        ["styles/home/apps/snake.css?v=cache-token-parity-20260927", "style"],
-        ["styles/home/apps/sudoku.css?v=repo-hygiene-20260927", "style"],
-        ["styles/home/apps/game-stats.css?v=repo-hygiene-20260927", "style"],
-        ["styles/home/apps/life-counter.css?v=counter-project-glow-20260703", "style"],
+        ["styles/home/apps/snake.css?v=html-semantics-20260927", "style"],
+        ["styles/home/apps/sudoku.css?v=html-semantics-20260927", "style"],
+        ["styles/home/apps/game-stats.css?v=html-semantics-20260927", "style"],
+        ["styles/home/apps/life-counter.css?v=html-semantics-20260927", "style"],
         ["styles/home/portfolio.css?v=education-scroll-gutter-20260923", "style"],
-        ["styles/home/study-resources.css?v=cache-token-parity-20260927", "style"],
-        ["styles/home/random-events.css?v=repo-hygiene-20260927", "style"],
+        ["styles/home/study-resources.css?v=html-semantics-20260927", "style"],
+        ["styles/home/random-events.css?v=html-semantics-20260927", "style"],
         ["styles/home/cursors.css?v=cache-token-parity-20260927", "style"],
         ["styles/home/admin-controls.css?v=repo-hygiene-20260927", "style"],
         ["scripts/home/text-selection-cursor.js?v=cache-token-parity-20260927", "script"],

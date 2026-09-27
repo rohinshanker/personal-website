@@ -21,7 +21,7 @@ test("Video Editor and Image Tools have desktop and taskbar launchers with their
   const taskbar = home.slice(taskbarStart, taskbarEnd);
   const desktop = home.slice(
     home.indexOf('<div class="desktop"'),
-    home.indexOf('<div class="window-stack"')
+    home.indexOf('<main class="window-stack"')
   );
 
   const launchers = [
@@ -126,7 +126,7 @@ test("Video Editor owns an accessible new-tab confirmation prompt", async () => 
   );
   assert.match(
     home,
-    /styles\/home\/random-events\.css\?v=repo-hygiene-20260927/
+    /styles\/home\/random-events\.css\?v=html-semantics-20260927/
   );
   assert.match(
     randomEventStyles,

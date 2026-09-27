@@ -3,7 +3,7 @@
 }
 
 .sudoku-window .window-body {
-  background: #c0c0c0;
+  background: var(--surface);
   min-height: 0;
   padding: 8px;
 }
@@ -14,7 +14,7 @@
   --sudoku-cell-size: 40px;
   --sudoku-grid-line: rgba(0, 94, 154, 0.32);
   --sudoku-box-line: rgba(0, 47, 102, 0.82);
-  background: #c0c0c0;
+  background: var(--surface);
   box-shadow: var(--border-raised-outer), var(--border-raised-inner);
   display: grid;
   gap: 6px;
@@ -1309,7 +1309,7 @@
 }
 
 .sudoku-statusbar {
-  background: #c0c0c0;
+  background: var(--surface);
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   display: grid;
   font-size: 11px;
@@ -1402,7 +1402,7 @@
 }
 
 .sudoku-solve-dialog {
-  background: #c0c0c0;
+  background: var(--surface);
   box-shadow: var(--border-window-outer), var(--border-window-inner);
   box-sizing: border-box;
   max-width: min(320px, 100%);

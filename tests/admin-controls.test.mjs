@@ -103,7 +103,7 @@ const loadAdminNamespace = (source) => {
 
 test("Admin is available on the desktop and immediately before GitHub in the dock", async () => {
   const { home } = await readAdminSources();
-  const desktop = sourceBetween(home, '<div class="desktop"', '<div class="window-stack"');
+  const desktop = sourceBetween(home, '<div class="desktop"', '<main class="window-stack"');
   const taskbar = sourceBetween(home, '<div class="taskbar-apps"', "</div>");
   const desktopLauncher = tagWithAttribute(desktop, "data-app", "admin-controls");
   const dockLauncher = tagWithAttribute(taskbar, "data-app", "admin-controls");

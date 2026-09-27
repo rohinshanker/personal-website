@@ -948,7 +948,7 @@
 .game-profile-name-option:hover,
 .game-profile-name-option:focus-visible,
 .game-profile-name-option.is-active {
-  background: #000080;
+  background: var(--dialog-blue);
   color: #fff;
   outline: none;
 }
@@ -1043,7 +1043,7 @@
 }
 
 .game-profile-icon-option.is-selected {
-  background: #000080;
+  background: var(--dialog-blue);
   color: #fff;
 }
 
