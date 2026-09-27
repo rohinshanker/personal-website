@@ -303,13 +303,37 @@ let previewResizeObserver = null;
 let sidePanelResizeObserver = null;
 let effectTabResizeObserver = null;
 let effectTabMarqueeFrame = 0;
+let audioSyncGraphFrame = 0;
 let audioAnalysisGeneration = 0;
 let audioAnalysisWorker = null;
 let guidepostFlashTimer = 0;
 let soundEffectPreviewPlayer = null;
 let soundEffectPreviewUrl = "";
 
+/**
+ * Each analysis holds a spectrogram and waveform for a whole track, so the
+ * cache keeps only the few most recently analyzed clips. Without a bound it
+ * grew for the life of the session.
+ */
+const MAX_CACHED_AUDIO_ANALYSES = 4;
 const audioAnalysisCache = new Map();
+
+const readCachedAudioAnalysis = (mediaId) => {
+  const analysis = audioAnalysisCache.get(mediaId);
+  if (!analysis) return null;
+  // Reinsert so the least recently used entry is the one evicted.
+  audioAnalysisCache.delete(mediaId);
+  audioAnalysisCache.set(mediaId, analysis);
+  return analysis;
+};
+
+const cacheAudioAnalysis = (mediaId, analysis) => {
+  audioAnalysisCache.delete(mediaId);
+  audioAnalysisCache.set(mediaId, analysis);
+  while (audioAnalysisCache.size > MAX_CACHED_AUDIO_ANALYSES) {
+    audioAnalysisCache.delete(audioAnalysisCache.keys().next().value);
+  }
+};
 
 const desktopEditorQuery = window.matchMedia("(min-width: 1024px)");
 
@@ -552,8 +576,11 @@ const previewSplitBounds = () => {
   };
 };
 
-const setPreviewSplit = (value, shouldAnnounce = false) => {
-  const bounds = previewSplitBounds();
+const setPreviewSplit = (
+  value,
+  shouldAnnounce = false,
+  bounds = previewSplitBounds()
+) => {
   state.previewSplit = Math.round(clamp(value, bounds.minimum, bounds.maximum));
   state.previewSplitByLayout[state.workspaceLayout] = state.previewSplit;
   elements.composeBody?.style.setProperty(
@@ -631,7 +658,13 @@ const bindPreviewTimelineSeparator = () => {
     const sideBySide = state.workspaceLayout === "side-by-side";
     const startPointerPosition = sideBySide ? event.clientX : event.clientY;
     const startValue = state.previewSplit;
-    const bounds = elements.composeBody.getBoundingClientRect();
+    // Measure the layout once per drag. Reading it inside pointermove forced a
+    // reflow on every event, because the same handler then restyles the element
+    // it had just measured.
+    const bodyBounds = elements.composeBody.getBoundingClientRect();
+    const splitBounds = previewSplitBounds();
+    const availableSize =
+      splitBounds.flexibleSize || (sideBySide ? bodyBounds.width : bodyBounds.height);
     let changed = false;
     separator.setPointerCapture?.(event.pointerId);
     const move = (moveEvent) => {
@@ -640,18 +673,14 @@ const bindPreviewTimelineSeparator = () => {
         return;
       }
       const pointerPosition = sideBySide ? moveEvent.clientX : moveEvent.clientY;
-      const availableSize =
-        previewSplitBounds().flexibleSize ||
-        (sideBySide ? bounds.width : bounds.height);
       const delta = ((pointerPosition - startPointerPosition) / availableSize) * 100;
-      const splitBounds = previewSplitBounds();
       const nextValue = clamp(
         startValue + delta,
         splitBounds.minimum,
         splitBounds.maximum
       );
       changed ||= Math.round(nextValue) !== state.previewSplit;
-      setPreviewSplit(nextValue);
+      setPreviewSplit(nextValue, false, splitBounds);
     };
     const finish = () => {
       document.removeEventListener("pointermove", move);
@@ -2158,7 +2187,7 @@ const analyzeSelectedAudioClip = async () => {
   setAudioSyncStatus(`Analyzing ${media.name}…`, "analyzing");
   renderAudioToolSources();
   try {
-    let analysis = audioAnalysisCache.get(media.id) || null;
+    let analysis = readCachedAudioAnalysis(media.id);
     if (!analysis) {
       if (media.file.size > AUDIO_ANALYSIS_MAX_FILE_BYTES) {
         throw new Error("Audio analysis supports files up to 64 MB.");
@@ -2191,7 +2220,7 @@ const analyzeSelectedAudioClip = async () => {
         generation
       );
       if (declaredSampleRate) analysis.sourceSampleRate = declaredSampleRate;
-      audioAnalysisCache.set(media.id, analysis);
+      cacheAudioAnalysis(media.id, analysis);
     }
     if (generation !== audioAnalysisGeneration) return;
     state.audioSync.analysis = analysis;
@@ -2470,6 +2499,18 @@ const deleteAudioSyncRule = (ruleId) => {
   renderAudioSyncRules();
   renderAudioSyncGuideposts();
   announce(`${rule.label} guidepost rule deleted.`);
+};
+
+/**
+ * Both Audio-Sync canvases repaint from the whole analysis, so a dragged
+ * frequency input must not repaint once per `input` event.
+ */
+const scheduleAudioSyncGraphs = () => {
+  if (audioSyncGraphFrame) return;
+  audioSyncGraphFrame = requestAnimationFrame(() => {
+    audioSyncGraphFrame = 0;
+    renderAudioSyncGraphs();
+  });
 };
 
 const renderAudioSyncRules = () => {
@@ -3311,7 +3352,7 @@ const bindStaticControls = () => {
   elements.audioSyncAnalyze?.addEventListener("click", analyzeSelectedAudioClip);
   elements.audioSyncGraphView?.addEventListener("change", renderAudioSyncGraphs);
   for (const input of [elements.audioSyncFrequencyMin, elements.audioSyncFrequencyMax]) {
-    input?.addEventListener("input", renderAudioSyncGraphs);
+    input?.addEventListener("input", scheduleAudioSyncGraphs);
     input?.addEventListener("change", () => {
       normalizedAudioSyncRange();
       renderAudioSyncGraphs();
@@ -3480,7 +3521,9 @@ const bindStaticControls = () => {
     setPlayhead(timeForPointer(event, elements.effectsTrack), true);
   });
 
-  window.addEventListener("beforeunload", () => {
+  // pagehide, not beforeunload: an unconditional beforeunload listener makes the
+  // page ineligible for the back/forward cache.
+  window.addEventListener("pagehide", () => {
     pausePlayback();
     stopSoundEffectPreview();
     audioAnalysisWorker?.terminate();
@@ -3490,6 +3533,9 @@ const bindStaticControls = () => {
     sidePanelResizeObserver?.disconnect();
     effectTabResizeObserver?.disconnect();
     cancelAnimationFrame(effectTabMarqueeFrame);
+    cancelAnimationFrame(audioSyncGraphFrame);
+    audioSyncGraphFrame = 0;
+    audioAnalysisCache.clear();
     for (const media of state.media) URL.revokeObjectURL(media.url);
   });
 };

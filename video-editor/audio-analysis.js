@@ -57,13 +57,22 @@
     for (let index = 0; index < size; index += 1) {
       window[index] = 0.5 - 0.5 * Math.cos((2 * Math.PI * index) / (size - 1));
     }
-    return { bitReverse, size, window };
+    // The two transform buffers belong to the plan: a track can run over a
+    // thousand frames, and every frame overwrites them completely.
+    return {
+      bitReverse,
+      imaginary: new Float64Array(size),
+      real: new Float64Array(size),
+      size,
+      window,
+    };
   };
 
   const fftMagnitudes = (samples, offset, plan) => {
-    const { bitReverse, size, window } = plan;
-    const real = new Float64Array(size);
-    const imaginary = new Float64Array(size);
+    const { bitReverse, imaginary, real, size, window } = plan;
+    // bitReverse is a permutation, so every `real` slot is assigned below;
+    // only the imaginary part has to start from zero.
+    imaginary.fill(0);
     for (let index = 0; index < size; index += 1) {
       real[bitReverse[index]] = (samples[offset + index] || 0) * window[index];
     }
@@ -97,7 +106,10 @@
     const magnitudes = new Float32Array(size / 2 + 1);
     const scale = 2 / size;
     for (let index = 0; index < magnitudes.length; index += 1) {
-      magnitudes[index] = Math.hypot(real[index], imaginary[index]) * scale;
+      const realPart = real[index];
+      const imaginaryPart = imaginary[index];
+      magnitudes[index] =
+        Math.sqrt(realPart * realPart + imaginaryPart * imaginaryPart) * scale;
     }
     return magnitudes;
   };
@@ -258,7 +270,7 @@
   };
 
   const createOnsetSeries = (analysis) => {
-    const lowBands = selectedBandIndexes(analysis, 40, 200);
+    const lowBands = new Set(selectedBandIndexes(analysis, 40, 200));
     const values = new Float32Array(analysis.frameCount);
     for (let frame = 1; frame < analysis.frameCount; frame += 1) {
       let flux = 0;
@@ -268,7 +280,7 @@
         const previous = analysis.spectra[(frame - 1) * analysis.bandCount + band];
         const change = Math.max(0, current - previous);
         flux += change;
-        if (lowBands.includes(band)) lowFlux += change;
+        if (lowBands.has(band)) lowFlux += change;
       }
       values[frame] = flux + lowFlux * 1.5;
     }

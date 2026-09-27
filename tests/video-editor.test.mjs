@@ -849,7 +849,7 @@ test("Video Editor reuses the expiring Administrator proof without persisting pr
 test("Video Editor exposes local Audio-Sync analysis and accessible guidepost controls", async () => {
   const { audioAnalysis, audioAnalysisWorker, css, html, script } =
     await readRouteSources();
-  assert.match(html, /<script\b[^>]*\bsrc="audio-analysis\.js\?v=cache-token-parity-20260927"[^>]*\bdefer(?:\s|>|=)/i);
+  assert.match(html, /<script\b[^>]*\bsrc="audio-analysis\.js\?v=ci-and-worker-fixes-20260927"[^>]*\bdefer(?:\s|>|=)/i);
   assert.match(html, /data-effect="audio-sync-cut"/i);
   assert.match(html, /data-effect-tab-target="effect-tab-audio-sync-cut"/i);
   assert.match(html, /\bid="effect-panel-audio-sync-cut"[^>]*\brole="tabpanel"/i);
