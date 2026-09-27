@@ -1,35 +1,44 @@
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import { GAME_COMPLETION_SOURCE_FILES } from "./update-game-integrity.mjs";
+import {
+  GAME_BUILD_VERSION_PATTERN,
+  GAME_COMPLETION_SOURCE_FILES,
+  INTEGRITY_CACHE_ASSET_PATHS,
+  INTEGRITY_ENTRY_FILES,
+  createIntegrityCacheToken,
+  digestGameCompletionSources,
+} from "./lib/game-build.mjs";
+import {
+  assertFetchDependencies,
+  assertPositiveInteger,
+  fetchGuardedBody,
+} from "./lib/http.mjs";
 
 export const GAME_STATS_BACKEND_CONFIG_URL = new URL(
   "home/game-stats-backend.js",
   import.meta.url
 );
-export const LIVE_GAME_STATS_BACKEND_CONFIG_URL = new URL(
-  "https://rohin.shanker.me/scripts/home/game-stats-backend.js"
-);
+/** The published site. */
+export const DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL =
+  "https://rohin.shanker.me/scripts/home/game-stats-backend.js";
+
+/** `GAME_STATS_LIVE_CONFIG_URL` retargets every live and release check at
+ * another origin without editing this script. */
+export const resolveLiveGameStatsBackendConfigUrl = (environment = process.env) =>
+  new URL(
+    environment.GAME_STATS_LIVE_CONFIG_URL?.trim() ||
+      DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+  );
+
+export const LIVE_GAME_STATS_BACKEND_CONFIG_URL =
+  resolveLiveGameStatsBackendConfigUrl();
 export const GAME_STATS_DEPLOYMENT_TIMEOUT_MS = 10_000;
 export const GAME_STATS_RELEASE_CONVERGENCE_TIMEOUT_MS = 120_000;
 export const GAME_STATS_RELEASE_POLL_INTERVAL_MS = 5_000;
 
-const GAME_BUILD_VERSION_PATTERN = /^sha256-[a-f0-9]{64}$/;
 const GENERATED_STRING_PATTERN = '"(?:\\\\.|[^"\\\\])*"';
-const LIVE_GAME_STATS_ENTRY_FILES = Object.freeze(["home.html", "index.html"]);
-const LIVE_GAME_STATS_CACHE_ASSET_PATHS = Object.freeze([
-  "scripts/home/game-stats-backend.js",
-  "scripts/home/core/dom.js",
-  "scripts/home/main.js",
-]);
 let liveConfigRequestSequence = 0;
-
-const assertPositiveInteger = (value, label) => {
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new RangeError(`${label} must be a positive integer`);
-  }
-};
 
 const defaultCreateCacheBust = () =>
   `${Date.now()}-${process.pid}-${++liveConfigRequestSequence}`;
@@ -105,44 +114,34 @@ export const fetchGameStatsHealth = async (
     createTimeoutSignal = (milliseconds) => AbortSignal.timeout(milliseconds),
   } = {}
 ) => {
-  if (typeof fetchImpl !== "function") {
-    throw new TypeError("A fetch implementation is required for the deployment parity check");
-  }
-  assertPositiveInteger(timeoutMs, "Deployment parity timeout");
-  if (typeof createTimeoutSignal !== "function") {
-    throw new TypeError("A timeout signal factory is required for the deployment parity check");
-  }
+  assertFetchDependencies({
+    fetchImpl,
+    timeoutMs,
+    createTimeoutSignal,
+    purpose: "for the deployment parity check",
+    timeoutLabel: "Deployment parity timeout",
+  });
 
   const normalizedApiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
   const healthUrl = new URL("health", `${normalizedApiBaseUrl}/`).toString();
-  let response;
-  try {
-    response = await fetchImpl(healthUrl, {
+  const payload = await fetchGuardedBody(healthUrl, {
+    fetchImpl,
+    timeoutMs,
+    createTimeoutSignal,
+    readAs: "json",
+    init: {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal: createTimeoutSignal(timeoutMs),
-    });
-  } catch (error) {
-    throw new Error(`Unable to fetch game stats Worker health at ${healthUrl}`, {
-      cause: error,
-    });
-  }
-
-  if (!response || typeof response !== "object" || typeof response.json !== "function") {
-    throw new Error("Game stats Worker health returned an invalid response");
-  }
-  if (!response.ok) {
-    const status = Number.isInteger(response.status) ? response.status : "unknown";
-    throw new Error(`Game stats Worker health failed with status ${status}`);
-  }
-
-  let payload;
-  try {
-    payload = await response.json();
-  } catch (error) {
-    throw new Error("Game stats Worker health did not return valid JSON", { cause: error });
-  }
+    },
+    messages: {
+      requestFailed: `Unable to fetch game stats Worker health at ${healthUrl}`,
+      invalidResponse: "Game stats Worker health returned an invalid response",
+      statusFailed: (status) =>
+        `Game stats Worker health failed with status ${status}`,
+      bodyUnreadable: "Game stats Worker health did not return valid JSON",
+    },
+  });
   if (!payload || typeof payload !== "object" || Array.isArray(payload) || payload.ok !== true) {
     throw new Error("Game stats Worker health payload is not healthy");
   }
@@ -180,13 +179,13 @@ export const fetchLiveGameStatsBackendConfig = async ({
   createTimeoutSignal = (milliseconds) => AbortSignal.timeout(milliseconds),
   createCacheBust = defaultCreateCacheBust,
 } = {}) => {
-  if (typeof fetchImpl !== "function") {
-    throw new TypeError("A fetch implementation is required for the live config check");
-  }
-  assertPositiveInteger(timeoutMs, "Live config timeout");
-  if (typeof createTimeoutSignal !== "function") {
-    throw new TypeError("A timeout signal factory is required for the live config check");
-  }
+  assertFetchDependencies({
+    fetchImpl,
+    timeoutMs,
+    createTimeoutSignal,
+    purpose: "for the live config check",
+    timeoutLabel: "Live config timeout",
+  });
   if (typeof createCacheBust !== "function") {
     throw new TypeError("A cache-bust factory is required for the live config check");
   }
@@ -208,9 +207,12 @@ export const fetchLiveGameStatsBackendConfig = async ({
 
   const requestUrl = new URL(stableUrl);
   requestUrl.searchParams.set("game_stats_deployment_check", String(createCacheBust()));
-  let response;
-  try {
-    response = await fetchImpl(requestUrl.toString(), {
+  const source = await fetchGuardedBody(requestUrl.toString(), {
+    fetchImpl,
+    timeoutMs,
+    createTimeoutSignal,
+    readAs: "text",
+    init: {
       method: "GET",
       headers: {
         Accept: "application/javascript, text/javascript;q=0.9, */*;q=0.1",
@@ -218,29 +220,16 @@ export const fetchLiveGameStatsBackendConfig = async ({
         Pragma: "no-cache",
       },
       cache: "no-store",
-      signal: createTimeoutSignal(timeoutMs),
-    });
-  } catch (error) {
-    throw new Error(
-      `Unable to fetch the live game stats backend config at ${stableUrl}`,
-      { cause: error }
-    );
-  }
-
-  if (!response || typeof response !== "object" || typeof response.text !== "function") {
-    throw new Error("Live game stats backend config returned an invalid response");
-  }
-  if (!response.ok) {
-    const status = Number.isInteger(response.status) ? response.status : "unknown";
-    throw new Error(`Live game stats backend config failed with status ${status}`);
-  }
-
-  let source;
-  try {
-    source = await response.text();
-  } catch (error) {
-    throw new Error("Unable to read the live game stats backend config", { cause: error });
-  }
+    },
+    messages: {
+      requestFailed: `Unable to fetch the live game stats backend config at ${stableUrl}`,
+      invalidResponse:
+        "Live game stats backend config returned an invalid response",
+      statusFailed: (status) =>
+        `Live game stats backend config failed with status ${status}`,
+      bodyUnreadable: "Unable to read the live game stats backend config",
+    },
+  });
 
   let config;
   try {
@@ -268,56 +257,30 @@ const fetchLiveAsset = async (
   const requestUrl = new URL(stableUrl);
   requestUrl.searchParams.set("game_stats_deployment_check", String(createCacheBust()));
 
-  let response;
-  try {
-    response = await fetchImpl(requestUrl.toString(), {
-      method: "GET",
-      headers: {
-        Accept: "*/*",
-        "Cache-Control": "no-cache, no-store",
-        Pragma: "no-cache",
+  return Buffer.from(
+    await fetchGuardedBody(requestUrl.toString(), {
+      fetchImpl,
+      timeoutMs,
+      createTimeoutSignal,
+      readAs: "arrayBuffer",
+      init: {
+        method: "GET",
+        headers: {
+          Accept: "*/*",
+          "Cache-Control": "no-cache, no-store",
+          Pragma: "no-cache",
+        },
+        cache: "no-store",
       },
-      cache: "no-store",
-      signal: createTimeoutSignal(timeoutMs),
-    });
-  } catch (error) {
-    throw new Error(`Unable to fetch live integrity asset at ${stableUrl}`, {
-      cause: error,
-    });
-  }
-  if (
-    !response ||
-    typeof response !== "object" ||
-    typeof response.arrayBuffer !== "function"
-  ) {
-    throw new Error(`Live integrity asset returned an invalid response at ${stableUrl}`);
-  }
-  if (!response.ok) {
-    const status = Number.isInteger(response.status) ? response.status : "unknown";
-    throw new Error(`Live integrity asset failed with status ${status} at ${stableUrl}`);
-  }
-
-  let body;
-  try {
-    body = Buffer.from(await response.arrayBuffer());
-  } catch (error) {
-    throw new Error(`Unable to read live integrity asset at ${stableUrl}`, {
-      cause: error,
-    });
-  }
-  return body;
-};
-
-const calculateLiveGameBuildVersion = (sourceFiles) => {
-  const digest = createHash("sha256");
-  for (const relativePath of GAME_COMPLETION_SOURCE_FILES) {
-    const source = sourceFiles.get(relativePath);
-    digest.update(relativePath);
-    digest.update("\0");
-    digest.update(source);
-    digest.update("\0");
-  }
-  return `sha256-${digest.digest("hex")}`;
+      messages: {
+        requestFailed: `Unable to fetch live integrity asset at ${stableUrl}`,
+        invalidResponse: `Live integrity asset returned an invalid response at ${stableUrl}`,
+        statusFailed: (status) =>
+          `Live integrity asset failed with status ${status} at ${stableUrl}`,
+        bodyUnreadable: `Unable to read live integrity asset at ${stableUrl}`,
+      },
+    })
+  );
 };
 
 const fetchLiveIntegritySnapshot = async (
@@ -332,7 +295,7 @@ const fetchLiveIntegritySnapshot = async (
   const siteRootUrl = new URL("/", liveConfig.configUrl);
   const relativePaths = [
     ...GAME_COMPLETION_SOURCE_FILES,
-    ...LIVE_GAME_STATS_ENTRY_FILES,
+    ...INTEGRITY_ENTRY_FILES,
   ];
   const responses = await Promise.all(
     relativePaths.map(async (relativePath) => [
@@ -346,7 +309,9 @@ const fetchLiveIntegritySnapshot = async (
     ])
   );
   const assets = new Map(responses);
-  const sourceBuildVersion = calculateLiveGameBuildVersion(assets);
+  const sourceBuildVersion = await digestGameCompletionSources((relativePath) =>
+    assets.get(relativePath)
+  );
   const mismatches = [];
   if (sourceBuildVersion !== liveConfig.buildVersion) {
     mismatches.push(
@@ -355,10 +320,10 @@ const fetchLiveIntegritySnapshot = async (
     );
   }
 
-  const cacheToken = `game-build-${liveConfig.buildVersion.replace(/^sha256-/, "")}`;
-  for (const entryPath of LIVE_GAME_STATS_ENTRY_FILES) {
+  const cacheToken = createIntegrityCacheToken(liveConfig.buildVersion);
+  for (const entryPath of INTEGRITY_ENTRY_FILES) {
     const entrySource = assets.get(entryPath).toString("utf8");
-    for (const assetPath of LIVE_GAME_STATS_CACHE_ASSET_PATHS) {
+    for (const assetPath of INTEGRITY_CACHE_ASSET_PATHS) {
       const expectedReference = `${assetPath}?v=${cacheToken}`;
       if (!entrySource.includes(expectedReference)) {
         mismatches.push(`${entryPath} is missing cache reference ${expectedReference}`);
@@ -463,6 +428,8 @@ const describeReleaseMismatch = (localConfig, liveConfig, workerHealth) => {
   return mismatches;
 };
 
+/** The Worker-transition gate always verifies Worker health, so `workerHealth`
+ * is present here; only `describeReleaseMismatch` sees a skipped health check. */
 const describeWorkerTransitionMismatch = (
   localConfig,
   liveConfig,
@@ -474,17 +441,12 @@ const describeWorkerTransitionMismatch = (
       `checked-in API ${localConfig.apiBaseUrl}, deployed browser API ${liveConfig.apiBaseUrl}`
     );
   }
-  if (!workerHealth || workerHealth.buildVersion !== localConfig.buildVersion) {
+  if (workerHealth.buildVersion !== localConfig.buildVersion) {
     mismatches.push(
-      `checked-in browser ${localConfig.buildVersion}, Worker ${
-        workerHealth?.buildVersion || "unavailable"
-      }`
+      `checked-in browser ${localConfig.buildVersion}, Worker ${workerHealth.buildVersion}`
     );
   }
-  if (
-    workerHealth &&
-    !workerHealth.acceptedBuildVersions.includes(liveConfig.buildVersion)
-  ) {
+  if (!workerHealth.acceptedBuildVersions.includes(liveConfig.buildVersion)) {
     mismatches.push(
       `deployed browser ${liveConfig.buildVersion} is not accepted by the Worker`
     );

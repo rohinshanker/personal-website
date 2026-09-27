@@ -5,6 +5,7 @@ import test from "node:test";
 import { parse } from "yaml";
 
 import {
+  DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   GAME_STATS_BACKEND_CONFIG_URL,
   LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   checkGameStatsDeployment,
@@ -20,6 +21,7 @@ import {
   runGameStatsReleaseCheck,
   runGameStatsStaticReleaseCheck,
   runGameStatsWorkerTransitionCheck,
+  resolveLiveGameStatsBackendConfigUrl,
   runLiveGameStatsDeploymentCheck,
 } from "../scripts/check-game-stats-deployment.mjs";
 
@@ -735,6 +737,56 @@ test("Worker transition accepts the coherent live build before Pages publication
   );
 });
 
+test("Worker transition rejects a retargeted API and an unsynchronized Worker", async () => {
+  const transitionOptions = {
+    liveConfigUrl: "https://site.example.test/game-stats-backend.js",
+    readFileImpl: async () => createConfig({ buildVersion: RELEASE_BUILD_VERSION }),
+    convergenceTimeoutMs: 1,
+    pollIntervalMs: 1,
+    nowImpl: () => 0,
+    sleepImpl: async () => {},
+    createCacheBust: () => "transition",
+    createTimeoutSignal: () => ({ name: "signal" }),
+  };
+
+  await assert.rejects(
+    checkGameStatsWorkerTransition({
+      ...transitionOptions,
+      fetchImpl: async (url) => {
+        if (url.includes("game-stats-backend.js")) {
+          return createConfigResponse(
+            createConfig({
+              apiBaseUrl: "https://other-worker.example.test",
+              buildVersion: RELEASE_BUILD_VERSION,
+            })
+          );
+        }
+        return createReleaseDependencyResponse(url);
+      },
+    }),
+    /checked-in API https:\/\/worker\.example\.test, deployed browser API https:\/\/other-worker\.example\.test/
+  );
+
+  await assert.rejects(
+    checkGameStatsWorkerTransition({
+      ...transitionOptions,
+      fetchImpl: async (url) => {
+        if (url.includes("game-stats-backend.js")) {
+          return createConfigResponse(
+            createConfig({ buildVersion: RELEASE_BUILD_VERSION })
+          );
+        }
+        return createReleaseDependencyResponse(url, {
+          workerBuildVersion: PREVIOUS_RELEASE_BUILD_VERSION,
+        });
+      },
+    }),
+    new RegExp(
+      `checked-in browser ${RELEASE_BUILD_VERSION}, Worker ${PREVIOUS_RELEASE_BUILD_VERSION}`
+    )
+  );
+});
+
 test("release check rejects a stale live completion source and fetches assets uncached", async () => {
   const staleSources = new Map(RELEASE_SOURCE_FILES);
   staleSources.set("scripts/home/main.js", Buffer.from("const releaseMain = false;\n"));
@@ -1236,6 +1288,35 @@ test("specialized CLI runners retain injectable check behavior", async () => {
     `Verified game stats deployment parity: ${LOCAL_BUILD_VERSION}`,
     `Verified game stats deployment parity: ${REMOTE_BUILD_VERSION}`,
   ]);
+});
+
+test("the live config URL defaults to production and honours its env override", () => {
+  assert.equal(
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
+    "https://rohin.shanker.me/scripts/home/game-stats-backend.js"
+  );
+  assert.equal(
+    LIVE_GAME_STATS_BACKEND_CONFIG_URL.toString(),
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+  );
+
+  assert.equal(
+    resolveLiveGameStatsBackendConfigUrl({}).toString(),
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+  );
+  assert.equal(
+    resolveLiveGameStatsBackendConfigUrl({
+      GAME_STATS_LIVE_CONFIG_URL: "   ",
+    }).toString(),
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+  );
+  assert.equal(
+    resolveLiveGameStatsBackendConfigUrl({
+      GAME_STATS_LIVE_CONFIG_URL:
+        "  https://staging.example.test/scripts/home/game-stats-backend.js  ",
+    }).toString(),
+    "https://staging.example.test/scripts/home/game-stats-backend.js"
+  );
 });
 
 test("npm scripts, release workflow, and validation guide expose the parity guard", async () => {
