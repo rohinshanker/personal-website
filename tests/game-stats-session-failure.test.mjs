@@ -89,10 +89,12 @@ const loadSessionHarness = async () => {
       "const gameStatsSessions = new Map();",
       "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 2;",
       "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 1;",
+      "class AbortController { constructor() { this.signal = { aborted: false }; } abort() { this.signal.aborted = true; } }",
       "const window = { setTimeout: (callback) => callback() };",
       "let configured = true;",
       "let behavior = { kind: 'success', status: 201, payload: null };",
       "const requests = [];",
+      "const sessionSignals = [];",
       "const stateChanges = [];",
       "let gameStatsSyncState = 'initial';",
       "let gameStatsReleaseWaitCount = 0;",
@@ -101,6 +103,7 @@ const loadSessionHarness = async () => {
       "const gameStatsBackend = { buildVersion: 'sha256-test' };",
       "const fetchGameStatsApi = async (path, options) => {",
       "  requests.push({ path, body: JSON.parse(options.body) });",
+      "  sessionSignals.push(options.signal);",
       "  if (behavior.kind === 'network-error') throw new Error('offline');",
       "  if (behavior.kind === 'recover-after-mismatch' && behavior.failures > 0) {",
       "    behavior.failures -= 1;",
@@ -123,6 +126,7 @@ const loadSessionHarness = async () => {
       "globalThis.setConfiguredForTest = (value) => { configured = value; };",
       "globalThis.setBehaviorForTest = (value) => { behavior = value; };",
       "globalThis.readRequestsForTest = () => requests.map((request) => ({ ...request }));",
+      "globalThis.readSessionSignalsForTest = () => sessionSignals.map((signal) => Boolean(signal?.aborted));",
       "globalThis.readStateChangesForTest = () => stateChanges.map((change) => ({ ...change }));",
     ].join("\n"),
     context
@@ -156,6 +160,29 @@ test("session creation returns a one-use session result without changing valid b
     },
   ]);
   assert.deepEqual(plainObject(context.readStateChangesForTest()), []);
+});
+
+test("starting a new session aborts and replaces the prior session for that game", async () => {
+  const context = await loadSessionHarness();
+  const session = {
+    id: "session-latest",
+    token: "session-latest-token",
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  };
+  context.setBehaviorForTest({ kind: "success", status: 201, payload: session });
+
+  const firstKey = context.startForTest("solitaire", {});
+  const secondKey = context.startForTest("solitaire", {});
+
+  assert.deepEqual(plainObject(context.readSessionSignalsForTest()), [true, false]);
+  assert.deepEqual(plainObject(await context.getForTest(firstKey)), {
+    session: null,
+    status: 0,
+  });
+  assert.deepEqual(plainObject(await context.getForTest(secondKey)), {
+    session,
+    status: 201,
+  });
 });
 
 test("session creation exhausts build retries before reporting an unavailable session", async () => {

@@ -1891,6 +1891,8 @@ const reportGameStatsSessionFailure = (
 
 const startGameStatsSession = (game, config) => {
   const sessionKey = `${game}-${Date.now().toString(36)}-${(gameStatsSessionSequence += 1)}`;
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  gameStatsSessions.get(game)?.controller?.abort();
   const sessionRequest = (async () => {
     if (!isGameStatsBackendConfigured()) {
       const failure = { session: null, status: 0, reason: "unconfigured" };
@@ -1913,6 +1915,7 @@ const startGameStatsSession = (game, config) => {
         const response = await fetchGameStatsApi("/sessions", {
           method: "POST",
           body: JSON.stringify({ game, config, buildVersion: gameStatsBackend.buildVersion }),
+          signal: controller?.signal,
         });
         const session = normalizeGameStatsSession(await readGameStatsApiJson(response));
         if (!session) {
@@ -1934,6 +1937,10 @@ const startGameStatsSession = (game, config) => {
           status: Number(response.status) || 0,
         };
       } catch (error) {
+        if (controller?.signal.aborted) {
+          finishCompatibleBuildWait();
+          return { session: null, status: 0, reason: "aborted" };
+        }
         const status = Number(error?.status) || 0;
         if (status === 409 && attempt < GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS) {
           if (!waitedForCompatibleBuild) {
@@ -1954,17 +1961,23 @@ const startGameStatsSession = (game, config) => {
     }
     throw new Error("Game stats session retry loop exhausted unexpectedly");
   })();
-  gameStatsSessions.set(sessionKey, sessionRequest);
+  gameStatsSessions.set(game, { controller, sessionKey, sessionRequest });
   return sessionKey;
 };
 
 const getGameStatsSession = async (sessionKey) => {
-  if (!sessionKey || !gameStatsSessions.has(sessionKey)) {
+  const gameEntry = [...gameStatsSessions.entries()].find(
+    ([, entry]) => entry.sessionKey === sessionKey
+  );
+  if (!sessionKey || !gameEntry) {
     return { session: null, status: 0 };
   }
-  const sessionRequest = gameStatsSessions.get(sessionKey);
-  gameStatsSessions.delete(sessionKey);
-  return await sessionRequest;
+  const [game, entry] = gameEntry;
+  try {
+    return await entry.sessionRequest;
+  } finally {
+    if (gameStatsSessions.get(game) === entry) gameStatsSessions.delete(game);
+  }
 };
 
 const loadGameStatsProfile = () => {

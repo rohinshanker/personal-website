@@ -307,6 +307,7 @@ test("overlapping records serialize their leaderboard handoffs without dropping 
       "const createButton = (game) => ({ getAttribute: () => game, classList: { add() {}, remove() {}, contains() { return false; } } });",
       'const gameStatsOpenButtons = [createButton("minesweeper"), createButton("snake")];',
       "const window = { matchMedia: () => ({ matches: false }) };",
+      "const prefersReducedMotion = () => false;",
       "const waitForGameStatsTrophyState = async () => { await Promise.resolve(); };",
       "const openedGames = [];",
       "const openGameStatsWindow = (game) => { openedGames.push(game); };",
