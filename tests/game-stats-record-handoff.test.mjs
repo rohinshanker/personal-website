@@ -307,6 +307,7 @@ test("overlapping records serialize their leaderboard handoffs without dropping 
       "const createButton = (game) => ({ getAttribute: () => game, classList: { add() {}, remove() {}, contains() { return false; } } });",
       'const gameStatsOpenButtons = [createButton("minesweeper"), createButton("snake")];',
       "const window = { matchMedia: () => ({ matches: false }) };",
+      "const prefersReducedMotion = () => false;",
       "const waitForGameStatsTrophyState = async () => { await Promise.resolve(); };",
       "const openedGames = [];",
       "const openGameStatsWindow = (game) => { openedGames.push(game); };",
@@ -388,6 +389,14 @@ test("session creation failures remain local and report their exact failure bran
       status: 409,
       expectedState: "build-mismatch",
       expectedMessage: "",
+    },
+    {
+      name: "session rate limit",
+      sessionKey: "solitaire-session",
+      status: 429,
+      expectedState: "request-failed",
+      expectedMessage:
+        "Local stats are saved, but the verified game session request was rate limited. Try again later.",
     },
     {
       name: "upstream rejection",

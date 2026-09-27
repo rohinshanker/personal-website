@@ -2,8 +2,10 @@
 const {
   fitImagesIntoFrames,
   loadDeferredMedia: loadDeferredMediaNow,
+  mediaSourcePreloadRequests,
   preloadDeferredMedia: preloadDeferredMediaNow,
   preloadDeferredMediaInOrder: preloadDeferredMediaInOrderNow,
+  preloadMediaSource,
   preloadMediaSourcesAfter,
   preloadMediaSourcesInOrder,
 } = window.homeMedia;
@@ -829,6 +831,7 @@ const SNAKE_DIRECTION_QUEUE_MAX = 2;
 const SNAKE_RESUME_COUNTDOWN_MS = 900;
 const SNAKE_RENDER_INTERVAL_MS = 1000 / 24;
 const SNAKE_NOISE_INTERVAL_MS = 1000 / 16;
+const SNAKE_POINTER_PAUSE_SUPPRESSION_MS = 250;
 const SNAKE_RANDOM_APPLE_ATTEMPTS = 96;
 const SNAKE_COLOR_THEMES = Object.freeze({
   green: {
@@ -895,6 +898,7 @@ const SUDOKU_COMPLETION_CLAIMS_KEY = "personalSiteSudokuCompletionsV1";
 const SUDOKU_MAX_COMPLETION_CLAIMS = 500;
 const SUDOKU_SAVE_DEBOUNCE_MS = 250;
 const SUDOKU_MAX_UNDO_STATES = 80;
+const SUDOKU_TIMER_INTERVAL_MS = 1000;
 const SUDOKU_MAX_LEADERBOARD_CHECKS = 3;
 const SUDOKU_MAX_FISH = 18;
 const SUDOKU_MAX_BUBBLE_CLUSTERS = 5;
@@ -1072,6 +1076,37 @@ const GAME_STATS_SKY_NAME_GENERATOR_URL =
   "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true";
 const GAME_STATS_NAME_GENERATOR_TIMEOUT_MS = 8000;
 const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
+const MINESWEEPER_CONFIGS = Object.freeze([
+  Object.freeze({ cols: 9, rows: 9, mines: 10 }),
+  Object.freeze({ cols: 16, rows: 16, mines: 40 }),
+  Object.freeze({ cols: 30, rows: 16, mines: 99 }),
+]);
+const MINESWEEPER_COUNTER_MAX = 999;
+const MINESWEEPER_TIMER_INTERVAL_MS = 1000;
+const MINESWEEPER_CONFETTI_PIECE_COUNT = 120;
+const SOLITAIRE_MAX_UNDO_STATES = 100;
+const SOLITAIRE_DOUBLE_CLICK_WINDOW_MS = 500;
+const SOLITAIRE_FIREWORK_BURST_COUNT = 9;
+const SOLITAIRE_FIREWORK_BURST_INTERVAL_MS = 260;
+const SOLITAIRE_FIREWORK_DURATION_MS = 3600;
+const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
+const padTwoDigits = (value) => String(value).padStart(2, "0");
+const debounceTimer = (timerId, callback, delayMs) => {
+  if (timerId) window.clearTimeout(timerId);
+  return window.setTimeout(callback, delayMs);
+};
+const afterFrames = (frameCount, callback) => {
+  if (frameCount <= 0) {
+    callback();
+    return null;
+  }
+  return window.requestAnimationFrame(() => afterFrames(frameCount - 1, callback));
+};
+const reducedMotionQuery =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)")
+    : null;
+const prefersReducedMotion = () => Boolean(reducedMotionQuery?.matches);
 const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
   "easy",
   "medium",
@@ -1748,7 +1783,9 @@ const fetchGameStatsApi = async (path, options = {}) => {
       ...fetchOptions,
       signal: controller?.signal || externalSignal,
       headers: {
-        "Content-Type": "application/json",
+        ...(fetchOptions.body === undefined || fetchOptions.body === null
+          ? {}
+          : { "Content-Type": "application/json" }),
         ...(fetchOptions.headers || {}),
       },
     });
@@ -1844,7 +1881,9 @@ const reportGameStatsSessionFailure = (
   const prefix = localSaved ? "Local stats are saved, but " : "";
   const subject = localSaved ? "the" : "The";
   const message =
-    reason === "invalid-response"
+    status === 429
+      ? `${prefix}${subject} verified game session request was rate limited. Try again later.`
+      : reason === "invalid-response"
       ? `${prefix}${subject} game server returned an invalid session response. Start a new game and try again.`
       : `${prefix}${subject} verified game session request failed${
           status ? ` (HTTP ${status})` : ""
@@ -1854,6 +1893,8 @@ const reportGameStatsSessionFailure = (
 
 const startGameStatsSession = (game, config) => {
   const sessionKey = `${game}-${Date.now().toString(36)}-${(gameStatsSessionSequence += 1)}`;
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  gameStatsSessions.get(game)?.controller?.abort();
   const sessionRequest = (async () => {
     if (!isGameStatsBackendConfigured()) {
       const failure = { session: null, status: 0, reason: "unconfigured" };
@@ -1876,6 +1917,7 @@ const startGameStatsSession = (game, config) => {
         const response = await fetchGameStatsApi("/sessions", {
           method: "POST",
           body: JSON.stringify({ game, config, buildVersion: gameStatsBackend.buildVersion }),
+          signal: controller?.signal,
         });
         const session = normalizeGameStatsSession(await readGameStatsApiJson(response));
         if (!session) {
@@ -1897,6 +1939,10 @@ const startGameStatsSession = (game, config) => {
           status: Number(response.status) || 0,
         };
       } catch (error) {
+        if (controller?.signal.aborted) {
+          finishCompatibleBuildWait();
+          return { session: null, status: 0, reason: "aborted" };
+        }
         const status = Number(error?.status) || 0;
         if (status === 409 && attempt < GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS) {
           if (!waitedForCompatibleBuild) {
@@ -1917,17 +1963,23 @@ const startGameStatsSession = (game, config) => {
     }
     throw new Error("Game stats session retry loop exhausted unexpectedly");
   })();
-  gameStatsSessions.set(sessionKey, sessionRequest);
+  gameStatsSessions.set(game, { controller, sessionKey, sessionRequest });
   return sessionKey;
 };
 
 const getGameStatsSession = async (sessionKey) => {
-  if (!sessionKey || !gameStatsSessions.has(sessionKey)) {
+  const gameEntry = [...gameStatsSessions.entries()].find(
+    ([, entry]) => entry.sessionKey === sessionKey
+  );
+  if (!sessionKey || !gameEntry) {
     return { session: null, status: 0 };
   }
-  const sessionRequest = gameStatsSessions.get(sessionKey);
-  gameStatsSessions.delete(sessionKey);
-  return await sessionRequest;
+  const [game, entry] = gameEntry;
+  try {
+    return await entry.sessionRequest;
+  } finally {
+    if (gameStatsSessions.get(game) === entry) gameStatsSessions.delete(game);
+  }
 };
 
 const loadGameStatsProfile = () => {
@@ -2791,10 +2843,7 @@ const playGameStatsRecordHandoff = (game) => {
     const trophyButton = Array.from(gameStatsOpenButtons).find(
       (button) => button.getAttribute("data-game-stats-open") === game
     );
-    const reduceMotion = Boolean(
-      typeof window.matchMedia === "function" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    );
+    const reduceMotion = prefersReducedMotion();
 
     try {
       if (trophyButton && !reduceMotion) {
@@ -3302,7 +3351,7 @@ const updateGameStatsPlayerNameMarquees = (root = document) => {
       name.style.setProperty("--game-stats-name-scroll-distance", `${distance}px`);
       name.style.setProperty(
         "--game-stats-name-scroll-duration",
-        `${Math.min(10, Math.max(3, distance / 12)).toFixed(2)}s`
+        `${clampNumber(distance / 12, 3, 10).toFixed(2)}s`
       );
     } else {
       name.style.removeProperty("--game-stats-name-scroll-distance");
@@ -3561,7 +3610,7 @@ const formatGameStatsSudokuDifficulty = (difficulty) =>
   `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
 
 const formatGameStatsSudokuLeaderboardTime = (seconds) =>
-  Number.isFinite(seconds) ? formatSudokuTime(seconds) : GAME_STATS_SUDOKU_PLACEHOLDER_TIME;
+  formatSudokuTime(seconds, GAME_STATS_SUDOKU_PLACEHOLDER_TIME);
 
 const gameStatsSudokuTotalGames = (difficulty) => {
   const wins = gameStatsGlobalState.totals.sudoku.wins[difficulty];
@@ -4091,7 +4140,7 @@ const formatGameProgressRecord = (entry, unit) =>
   entry && Number.isFinite(entry.metric) ? `${entry.metric} ${unit}` : "No record yet";
 
 const formatGameProgressSudokuBestTime = (seconds) =>
-  Number.isFinite(seconds) ? formatSudokuTime(seconds) : "—";
+  formatSudokuTime(seconds, "—");
 
 const getGameProgressPlayerTotals = () =>
   gameStatsGlobalPlayerTotalsAvailable
@@ -4599,10 +4648,7 @@ let snakeHudRenderCache = {
   color: "",
   appleColor: "",
 };
-const snakeReducedMotionMedia =
-  typeof window.matchMedia === "function"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)")
-    : null;
+const snakeReducedMotionMedia = reducedMotionQuery;
 let sudokuState = {
   difficulty: "easy",
   puzzleId: SUDOKU_PUZZLES.easy.id,
@@ -4640,10 +4686,7 @@ let sudokuSaveQueuedForActivation = false;
 let sudokuFishTimerId = null;
 let sudokuBubbleTimerId = null;
 let sudokuNoteTooltip = null;
-const sudokuReducedMotionMedia =
-  typeof window.matchMedia === "function"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)")
-    : null;
+const sudokuReducedMotionMedia = reducedMotionQuery;
 let lifeCounterPlayersState = [
   {
     id: 1,
@@ -4807,7 +4850,7 @@ const aboutDateLabel = (date) => {
 
 const aboutDateValue = (date) =>
   [date.getFullYear(), date.getMonth() + 1, date.getDate()]
-    .map((part, index) => (index ? String(part).padStart(2, "0") : String(part)))
+    .map((part, index) => (index ? padTwoDigits(part) : String(part)))
     .join("-");
 
 const updateAboutCurrentDate = (now = new Date()) => {
@@ -4822,7 +4865,7 @@ const ABOUT_DEGREE_MIN_TRAVEL_MS = 1200;
 const aboutDegreeAnimations = new WeakMap();
 const aboutDegreeTypes = [...document.querySelectorAll(".about-degree-type")];
 const aboutDegreeFields = [...document.querySelectorAll("[data-about-degree-field]")];
-const aboutDegreeReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const aboutDegreeReducedMotion = reducedMotionQuery;
 let aboutDegreeRefreshFrame = 0;
 
 const cancelAboutDegreeAnimation = (field) => {
@@ -4907,13 +4950,12 @@ aboutDegreeFields.forEach((field) => {
   field.addEventListener("mouseleave", () => aboutDegreeAnimations.get(field)?.play());
 });
 
-if (typeof ResizeObserver === "function") {
+const aboutDegreeUsesResizeObserver = typeof ResizeObserver === "function";
+if (aboutDegreeUsesResizeObserver) {
   const aboutDegreeResizeObserver = new ResizeObserver(queueAboutDegreeRefresh);
   [...aboutDegreeTypes, ...aboutDegreeFields].forEach((element) => {
     aboutDegreeResizeObserver.observe(element);
   });
-} else {
-  window.addEventListener("resize", queueAboutDegreeRefresh);
 }
 aboutDegreeReducedMotion.addEventListener("change", queueAboutDegreeRefresh);
 document.fonts?.ready.then(queueAboutDegreeRefresh);
@@ -4931,12 +4973,16 @@ const updateClock = () => {
 const updateCalendarClock = () => {
   if (!calendarClock || !calendarPopout.classList.contains("is-open")) return;
   const now = new Date();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const hours = calendarClock.querySelector("[data-calendar-clock-hours]");
+  const minutes = calendarClock.querySelector("[data-calendar-clock-minutes]");
+  const seconds = calendarClock.querySelector("[data-calendar-clock-seconds]");
+  if (hours) hours.textContent = padTwoDigits(now.getHours());
+  if (minutes) minutes.textContent = padTwoDigits(now.getMinutes());
+  if (seconds) seconds.textContent = padTwoDigits(now.getSeconds());
   const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
-  const colonClass = blinkOn ? "clock-colon" : "clock-colon is-off";
-  calendarClock.innerHTML = `${hours}<span class="${colonClass}">:</span>${minutes}<span class="${colonClass}">:</span>${seconds}`;
+  calendarClock.querySelectorAll(".clock-colon").forEach((colon) => {
+    colon.classList.toggle("is-off", !blinkOn);
+  });
   updateClockImage(now);
 };
 
@@ -5567,8 +5613,8 @@ const sampleRandomEventPosition = ({ padding, maxLeft, maxTop }) => ({
 });
 
 const clampRandomEventPosition = ({ padding, maxLeft, maxTop }, { left, top }) => ({
-  left: Math.max(padding, Math.min(left, maxLeft)),
-  top: Math.max(padding, Math.min(top, maxTop)),
+  left: clampNumber(left, padding, maxLeft),
+  top: clampNumber(top, padding, maxTop),
 });
 
 const findRandomEventOpenPosition = (win, preferredPositions = []) => {
@@ -5625,8 +5671,8 @@ const findRandomEventOpenPosition = (win, preferredPositions = []) => {
 const setRandomEventWindowPosition = (win, left, top, { onPosition } = {}) => {
   if (!win) return;
   const { padding, maxLeft, maxTop } = getRandomEventWindowBounds(win);
-  const nextLeft = Math.round(Math.max(padding, Math.min(left, maxLeft)));
-  const nextTop = Math.round(Math.max(padding, Math.min(top, maxTop)));
+  const nextLeft = Math.round(clampNumber(left, padding, maxLeft));
+  const nextTop = Math.round(clampNumber(top, padding, maxTop));
   const { insetX, insetY } = getRandomEventVisualInsets(win);
   win.style.translate = "0 0";
   win.style.left = `${nextLeft - insetX}px`;
@@ -5760,10 +5806,7 @@ const bindRandomEventButton = (button, action) => {
 const isDebugSystemAlertVisible = () =>
   isManagedRandomEventWindowVisible(debugSystemAlertWindow);
 
-const debugSystemAlertReducedMotionQuery =
-  typeof window.matchMedia === "function"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)")
-    : null;
+const debugSystemAlertReducedMotionQuery = reducedMotionQuery;
 
 const resetDebugSystemAlert = () => {
   debugSystemAlertActiveId = "";
@@ -5851,13 +5894,9 @@ const closeDebugSystemAlert = () => {
 const isNekoStreamAlertVisible = () =>
   isManagedRandomEventWindowVisible(nekoStreamAlertWindow);
 
-const nekoStreamAlertReducedMotionQuery =
-  typeof window.matchMedia === "function"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)")
-    : null;
+const nekoStreamAlertReducedMotionQuery = reducedMotionQuery;
 
-const prefersReducedNekoStreamAlertMotion = () =>
-  Boolean(nekoStreamAlertReducedMotionQuery?.matches);
+const prefersReducedNekoStreamAlertMotion = prefersReducedMotion;
 
 const setNekoStreamAlertIconFrame = () => {
   if (!nekoStreamAlertIcon) return;
@@ -6243,8 +6282,7 @@ const dodgeDodgingPopup = ({ direct = false, force = false } = {}) => {
   dodgingPopupWindow.style.zIndex = String(topZ++);
   const nextPosition = getDodgingPopupSlidePosition();
   setRandomEventWindowPosition(dodgingPopupWindow, nextPosition.left, nextPosition.top);
-  if (dodgingPopupSlideTimer) clearTimeout(dodgingPopupSlideTimer);
-  dodgingPopupSlideTimer = window.setTimeout(() => {
+  dodgingPopupSlideTimer = debounceTimer(dodgingPopupSlideTimer, () => {
     dodgingPopupWindow.classList.remove("is-dodging");
     dodgingPopupSlideTimer = null;
   }, DODGING_POPUP_SLIDE_DURATION_MS);
@@ -6266,8 +6304,7 @@ const closeDodgingPopup = () => {
 };
 
 const scheduleDodgingPopupAutoClose = () => {
-  if (dodgingPopupAutoCloseTimer) clearTimeout(dodgingPopupAutoCloseTimer);
-  dodgingPopupAutoCloseTimer = window.setTimeout(() => {
+  dodgingPopupAutoCloseTimer = debounceTimer(dodgingPopupAutoCloseTimer, () => {
     dodgingPopupAutoCloseTimer = null;
     closeDodgingPopup();
   }, 2000);
@@ -6503,20 +6540,11 @@ const clearWordErrorTimers = () => {
 
 const isWordErrorStackVisible = () => wordErrorWindows.length > 0;
 
-const shuffleWordErrorWindows = (windows) => {
-  const shuffled = [...windows];
-  for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const nextIndex = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[nextIndex]] = [shuffled[nextIndex], shuffled[i]];
-  }
-  return shuffled;
-};
-
 const wordErrorStackLayout = () => {
   const count = 10;
   const padding = 12;
   const taskbarClearance = 64;
-  const windowWidth = Math.min(360, Math.max(260, window.innerWidth - padding * 2));
+  const windowWidth = clampNumber(window.innerWidth - padding * 2, 260, 360);
   const windowHeight = 136;
   const availableWidth = Math.max(0, window.innerWidth - padding * 2 - windowWidth);
   const availableHeight = Math.max(
@@ -6579,7 +6607,7 @@ const closeWordErrorStack = (selectedWindow) => {
     closeWordErrorWindow(selectedWindow);
   }
 
-  const remainingWindows = shuffleWordErrorWindows(
+  const remainingWindows = shuffle(
     visibleWindows.filter((win) => win !== selectedWindow)
   );
 
@@ -7072,7 +7100,7 @@ const setSkillCheckDigit = (image, char) => {
 
 const setSkillCheckRollDisplay = (value = null) => {
   const text =
-    typeof value === "number" ? String(Math.max(1, Math.min(20, value))).padStart(2, " ") : "  ";
+    typeof value === "number" ? String(clampNumber(value, 1, 20)).padStart(2, " ") : "  ";
   setSkillCheckDigit(skillCheckDieTens, text[0]);
   setSkillCheckDigit(skillCheckDieOnes, text[1]);
 };
@@ -7279,7 +7307,7 @@ const lockDistressNavigation = () => {
 
 const setDistressPowerProgress = (progress) => {
   if (!distressPowerProgressBar) return;
-  distressPowerProgressBar.style.width = `${Math.max(0, Math.min(1, progress)) * 100}%`;
+  distressPowerProgressBar.style.width = `${clampNumber(progress, 0, 1) * 100}%`;
 };
 
 const getDistressThermalNoise = () =>
@@ -7299,7 +7327,7 @@ const drawDistressStatic = (ctx, width, height) => {
     const y = Math.random() * height;
     const length = width * (0.1 + Math.random() * 0.46);
     const centerJitter = (Math.random() - 0.5) * width * 0.18;
-    const x = Math.max(0, Math.min(width - length, width * 0.5 - length * 0.5 + centerJitter));
+    const x = clampNumber(width * 0.5 - length * 0.5 + centerJitter, 0, width - length);
     ctx.fillStyle = `rgba(185, 255, 196, ${0.045 + Math.random() * 0.09})`;
     ctx.fillRect(x, y, length, 1);
   }
@@ -7405,7 +7433,7 @@ const clearSnakeCountdown = () => {
 };
 
 const setSnakeLoadingProgress = (progress) => {
-  snakeLoadingProgress = Math.max(0, Math.min(100, progress));
+  snakeLoadingProgress = clampNumber(progress, 0, 100);
   const roundedProgress = Math.round(snakeLoadingProgress);
   if (snakeLoadingMeterFill) {
     snakeLoadingMeterFill.style.setProperty(
@@ -7524,8 +7552,8 @@ const saveSnakeHighScores = () => {
 };
 
 const scheduleSnakeHighScoreSave = () => {
-  if (snakeHighScoreSaveTimer) clearTimeout(snakeHighScoreSaveTimer);
-  snakeHighScoreSaveTimer = window.setTimeout(
+  snakeHighScoreSaveTimer = debounceTimer(
+    snakeHighScoreSaveTimer,
     saveSnakeHighScores,
     SNAKE_HIGH_SCORE_SAVE_DEBOUNCE_MS
   );
@@ -7862,7 +7890,7 @@ const drawSnakeGame = () => {
   });
   snakeState.collectionPulses.forEach((pulse) => {
     const age = now - pulse.startedAt;
-    const progress = Math.max(0, Math.min(1, age / SNAKE_COLLECTION_PULSE_MS));
+    const progress = clampNumber(age / SNAKE_COLLECTION_PULSE_MS, 0, 1);
     const pulseX = pulse.x * cellWidth + cellWidth / 2;
     const pulseY = pulse.y * cellHeight + cellHeight / 2;
     const cellSize = Math.min(cellWidth, cellHeight);
@@ -8340,17 +8368,17 @@ const updateDistressTuning = () => {
   const aligned =
     alignment.frequencyDelta <= DISTRESS_ALIGNMENT_TOLERANCE &&
     alignment.phaseDelta <= DISTRESS_ALIGNMENT_TOLERANCE;
-  const signalStrength = Math.max(
+  const signalStrength = clampNumber(
+    Math.round(100 - alignment.frequencyDelta * 1.4 - alignment.phaseDelta * 1.4),
     0,
-    Math.min(99, Math.round(100 - alignment.frequencyDelta * 1.4 - alignment.phaseDelta * 1.4))
+    99
   );
   if (aligned) {
     distressSignalSolved = true;
     setDistressDialsDisabled(true);
     setDistressStatus("Signal locked");
     lockDistressNavigation();
-    if (distressUploadTimer) clearTimeout(distressUploadTimer);
-    distressUploadTimer = setTimeout(() => {
+    distressUploadTimer = debounceTimer(distressUploadTimer, () => {
       distressUploadTimer = null;
       showDistressUploadWindow();
     }, DISTRESS_UPLOAD_DELAY_MS);
@@ -8404,12 +8432,10 @@ const startDistressPowerSequence = () => {
       targetProgress - distressPowerVisibleProgress > 0.09;
     if (shouldJump) {
       const jumpSize = 0.018 + Math.random() * 0.09;
-      distressPowerVisibleProgress = Math.min(
-        1,
-        Math.max(
-          distressPowerVisibleProgress,
-          Math.min(targetProgress + Math.random() * 0.035, distressPowerVisibleProgress + jumpSize)
-        )
+      distressPowerVisibleProgress = clampNumber(
+        Math.min(targetProgress + Math.random() * 0.035, distressPowerVisibleProgress + jumpSize),
+        distressPowerVisibleProgress,
+        1
       );
     }
     setDistressPowerProgress(distressPowerVisibleProgress);
@@ -8439,7 +8465,7 @@ const resetDistressSignal = () => {
   if (distressFrequencyDial) {
     const offset = (Math.random() < 0.5 ? -1 : 1) * (18 + Math.random() * 24);
     distressFrequencyDial.value = String(
-      Math.max(0, Math.min(100, Math.round(distressTargetFrequency + offset)))
+      clampNumber(Math.round(distressTargetFrequency + offset), 0, 100)
     );
   }
   if (distressPhaseDial) {
@@ -8503,8 +8529,8 @@ const closeDistressSignalEvent = () => {
 
 const getLocalDateKey = (date = new Date()) => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const month = padTwoDigits(date.getMonth() + 1);
+  const day = padTwoDigits(date.getDate());
   return `${year}-${month}-${day}`;
 };
 
@@ -9006,8 +9032,8 @@ const copyMidnightGospelPosition = (source, target) => {
 };
 
 const setMidnightGospelTimerText = (seconds) => {
-  const clampedSeconds = Math.max(0, Math.min(99, seconds));
-  const digits = String(clampedSeconds).padStart(2, "0");
+  const clampedSeconds = clampNumber(seconds, 0, 99);
+  const digits = padTwoDigits(clampedSeconds);
   if (midnightGospelTimer) {
     midnightGospelTimer.setAttribute(
       "aria-label",
@@ -9232,7 +9258,7 @@ const createGradescopeCurvePath = (rawValue, rawMin = 0, rawMax = 100) => {
   const min = Number(rawMin) || 0;
   const max = Number(rawMax) || 100;
   const value = Number.isFinite(rawValue) ? rawValue : GRADESCOPE_CURVE_SLIDER_DEFAULT;
-  const ratio = Math.max(0, Math.min(1, (value - min) / Math.max(1, max - min)));
+  const ratio = clampNumber((value - min) / Math.max(1, max - min), 0, 1);
   const center =
     GRADESCOPE_CURVE_GRAPH_LEFT +
     ratio * (GRADESCOPE_CURVE_GRAPH_RIGHT - GRADESCOPE_CURVE_GRAPH_LEFT);
@@ -10502,7 +10528,7 @@ const drawLightningBorderFrame = (canvas, alpha, palette = RED_LIGHTNING_PALETTE
   const top = inset;
   const right = Math.max(left + 1, width - inset);
   const bottom = Math.max(top + 1, height - inset);
-  const displacement = Math.max(6, Math.min(13, Math.min(width, height) / 14));
+  const displacement = clampNumber(Math.min(width, height) / 14, 6, 13);
   const edges = [
     [left, top, right, top],
     [right, top, right, bottom],
@@ -10574,7 +10600,7 @@ const positionFateWindow = () => {
 };
 
 const updateFateProgress = () => {
-  const progress = Math.min(100, Math.max(0, fateProgressValue));
+  const progress = clampNumber(fateProgressValue, 0, 100);
   if (fateProgressBar) fateProgressBar.style.width = `${progress}%`;
   if (fateProgress) fateProgress.setAttribute("aria-valuenow", Math.round(progress));
 };
@@ -10645,8 +10671,7 @@ const pulseFateWindow = () => {
   void fateWindow.offsetWidth;
   fateWindow.classList.add("is-resisting");
   startFateLightningStrike();
-  if (fateLightningTimer) clearTimeout(fateLightningTimer);
-  fateLightningTimer = setTimeout(() => {
+  fateLightningTimer = debounceTimer(fateLightningTimer, () => {
     fateWindow.classList.remove("is-resisting");
     fateLightningTimer = null;
   }, 240);
@@ -11130,22 +11155,16 @@ const getSootSpritesToolbarTop = () => {
 
 const getSootSpritesGroundY = (spriteSize) => {
   const toolbarTop = getSootSpritesToolbarTop();
-  return Math.max(
-    0,
-    Math.min(window.innerHeight - spriteSize, toolbarTop - spriteSize)
-  );
+  return clampNumber(toolbarTop - spriteSize, 0, window.innerHeight - spriteSize);
 };
 
 const getSootCandyLandingY = (candySize) => {
   const toolbarTop = getSootSpritesToolbarTop();
-  return Math.max(
-    0,
-    Math.min(window.innerHeight - candySize, toolbarTop - candySize)
-  );
+  return clampNumber(toolbarTop - candySize, 0, window.innerHeight - candySize);
 };
 
 const getSootSpriteParabolaPoint = (trajectory, progress) => {
-  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const clampedProgress = clampNumber(progress, 0, 1);
   return {
     x: trajectory.startX + (trajectory.landingX - trajectory.startX) * clampedProgress,
     y:
@@ -11206,7 +11225,7 @@ const getSootSpriteFallPointAtDistance = (trajectory, distance) => {
 };
 
 const getSootSpriteFallScale = (pathProgress, runScale) => {
-  const progress = Math.min(1, Math.max(0, pathProgress));
+  const progress = clampNumber(pathProgress, 0, 1);
   const baseScale = 1 + (runScale - 1) * progress;
   const arcStretch = Math.sin(progress * Math.PI) * 0.04;
   return Number((baseScale + arcStretch).toFixed(3));
@@ -11218,7 +11237,7 @@ const getSootSpriteTransform = (point, scale) =>
 const getSootSpriteTimelineOffset = (trajectory, distance) => {
   if (!trajectory.duration || !trajectory.pathSpeed) return 0;
   if (distance <= trajectory.fallLength) {
-    return Math.min(1, Math.max(0, distance / trajectory.pathSpeed / trajectory.duration));
+    return clampNumber(distance / trajectory.pathSpeed / trajectory.duration, 0, 1);
   }
 
   const segment =
@@ -11229,7 +11248,7 @@ const getSootSpriteTimelineOffset = (trajectory, distance) => {
   const elapsedTime =
     segment.startTime +
     (distance - segment.startDistance) / Math.max(0.001, segment.speed);
-  return Math.min(1, Math.max(0, elapsedTime / trajectory.duration));
+  return clampNumber(elapsedTime / trajectory.duration, 0, 1);
 };
 
 const createSootSpritePathKeyframes = (trajectory) => [
@@ -11242,7 +11261,7 @@ const createSootSpritePathKeyframes = (trajectory) => [
     ),
   })),
   ...trajectory.runSegments.map((segment) => ({
-    offset: Math.min(1, Math.max(0, segment.endTime / trajectory.duration)),
+    offset: clampNumber(segment.endTime / trajectory.duration, 0, 1),
     opacity: 1,
     transform: getSootSpriteTransform(
       { x: segment.endX, y: trajectory.exitY },
@@ -11263,7 +11282,7 @@ const animateSootSpriteElement = (sprite, trajectory) => {
 };
 
 const getSootCandyGravityPoint = (trajectory, progress) => {
-  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const clampedProgress = clampNumber(progress, 0, 1);
   return {
     x:
       trajectory.startX +
@@ -11282,23 +11301,18 @@ const createSootCandyTrajectory = ({
   maxHorizontalTravel,
 }) => {
   const landingY = getSootCandyLandingY(size);
-  const safeStartX = Math.max(
-    6,
-    Math.min(window.innerWidth - size - 6, startX)
-  );
-  const safeStartY = Math.max(
+  const safeStartX = clampNumber(startX, 6, window.innerWidth - size - 6);
+  const safeStartY = clampNumber(
+    startY,
     0,
-    Math.min(startY, landingY - randomSootSpriteValue(18, 72))
+    landingY - randomSootSpriteValue(18, 72)
   );
   const landingDirection = Math.random() < 0.5 ? -1 : 1;
-  const landingX = Math.max(
+  const landingX = clampNumber(
+    safeStartX +
+      landingDirection * randomSootSpriteValue(minHorizontalTravel, maxHorizontalTravel),
     6,
-    Math.min(
-      window.innerWidth - size - 6,
-      safeStartX +
-        landingDirection *
-          randomSootSpriteValue(minHorizontalTravel, maxHorizontalTravel)
-    )
+    window.innerWidth - size - 6
   );
   const trajectory = {
     startX: safeStartX,
@@ -11409,13 +11423,14 @@ const applySootSpriteRunSegmentTiming = ({
 
 const createSootSpriteSpawnGrid = (launchRect, spriteCount) => {
   const aspectRatio = launchRect.width / Math.max(1, launchRect.height);
-  const columns = Math.max(
+  const columns = clampNumber(
+    Math.round(Math.sqrt(spriteCount * aspectRatio)),
     1,
-    Math.min(spriteCount, Math.round(Math.sqrt(spriteCount * aspectRatio)))
+    spriteCount
   );
   const rows = Math.ceil(spriteCount / columns);
-  const horizontalInset = Math.min(20, Math.max(8, launchRect.width * 0.08));
-  const verticalInset = Math.min(20, Math.max(8, launchRect.height * 0.1));
+  const horizontalInset = clampNumber(launchRect.width * 0.08, 8, 20);
+  const verticalInset = clampNumber(launchRect.height * 0.1, 8, 20);
   const usableWidth = Math.max(1, launchRect.width - horizontalInset * 2);
   const usableHeight = Math.max(1, launchRect.height - verticalInset * 2);
 
@@ -11443,15 +11458,16 @@ const createSootSpriteTrajectory = (launchRect, { startPoint } = {}) => {
   const startMinX = launchRect.left + 4;
   const startMaxX = Math.max(startMinX, launchRect.left + launchRect.width - size - 4);
   const startMinY = launchRect.top + 4;
-  const startMaxY = Math.max(
+  const startMaxY = clampNumber(
+    groundY - minimumFallDistance,
     startMinY,
-    Math.min(launchRect.top + launchRect.height - size - 4, groundY - minimumFallDistance)
+    launchRect.top + launchRect.height - size - 4
   );
   const startX = startPoint
-    ? Math.max(startMinX, Math.min(startMaxX, startPoint.x - size / 2))
+    ? clampNumber(startPoint.x - size / 2, startMinX, startMaxX)
     : randomSootSpriteValue(startMinX, startMaxX);
   const startY = startPoint
-    ? Math.max(startMinY, Math.min(startMaxY, startPoint.y - size / 2))
+    ? clampNumber(startPoint.y - size / 2, startMinY, startMaxY)
     : randomSootSpriteValue(startMinY, startMaxY);
   const minLandingX = 10;
   const maxLandingX = Math.max(minLandingX, window.innerWidth - size - 10);
@@ -11588,7 +11604,7 @@ const createSootSpriteTrajectory = (launchRect, { startPoint } = {}) => {
 };
 
 const getSootSpriteTrajectoryPoint = (trajectory, progress) => {
-  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const clampedProgress = clampNumber(progress, 0, 1);
   const elapsedTime = clampedProgress * trajectory.duration;
   if (elapsedTime <= trajectory.fallDuration) {
     return getSootSpriteFallPointAtDistance(
@@ -11610,12 +11626,12 @@ const getSootSpriteTrajectoryPoint = (trajectory, progress) => {
 
 const getSootSpriteAirTrailProgress = (trajectory) => {
   const start = 0.08;
-  const end = Math.max(start, Math.min(0.92, trajectory.landingProgress - 0.04));
+  const end = clampNumber(trajectory.landingProgress - 0.04, start, 0.92);
   return randomSootSpriteValue(start, end);
 };
 
 const getSootSpriteGroundRunProgress = (trajectory) => {
-  const start = Math.min(0.96, Math.max(0.08, trajectory.landingProgress + 0.04));
+  const start = clampNumber(trajectory.landingProgress + 0.04, 0.08, 0.96);
   return randomSootSpriteValue(start, 0.96);
 };
 
@@ -12232,7 +12248,7 @@ const showLancerBattleStage = (stage) => {
 };
 
 const updateLancerBattleProgress = () => {
-  const progress = Math.min(100, Math.max(0, lancerBattleProgressValue));
+  const progress = clampNumber(lancerBattleProgressValue, 0, 100);
   if (lancerBattleProgressBar) {
     lancerBattleProgressBar.style.width = `${progress}%`;
   }
@@ -12395,8 +12411,7 @@ const pulseLancerBattleWindow = () => {
   void lancerBattleWindow.offsetWidth;
   lancerBattleWindow.classList.add("is-striking");
   startLancerBattleLightningStrike();
-  if (lancerBattleLightningTimer) clearTimeout(lancerBattleLightningTimer);
-  lancerBattleLightningTimer = setTimeout(() => {
+  lancerBattleLightningTimer = debounceTimer(lancerBattleLightningTimer, () => {
     lancerBattleWindow.classList.remove("is-striking");
     lancerBattleLightningTimer = null;
   }, 240);
@@ -12419,9 +12434,10 @@ const updateLancerBattleBoomerangFrame = () => {
   }
   const nextTime =
     current + LANCER_BATTLE_BOOMERANG_STEP * lancerBattleBoomerangDirection;
-  lancerBattleClashVideo.currentTime = Math.min(
-    lancerBattleBoomerangEnd,
-    Math.max(lancerBattleBoomerangStart, nextTime)
+  lancerBattleClashVideo.currentTime = clampNumber(
+    nextTime,
+    lancerBattleBoomerangStart,
+    lancerBattleBoomerangEnd
   );
   lancerBattleBoomerangFrame = requestAnimationFrame(
     updateLancerBattleBoomerangFrame
@@ -12684,15 +12700,6 @@ const closeLancerBattleWindow = () => {
 const brandBurnsRandomInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
-const shuffleBrandBurnsItems = (items) => {
-  const shuffled = [...items];
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
-  }
-  return shuffled;
-};
-
 const isBrandBurnsWindowVisible = (win) =>
   Boolean(
     win &&
@@ -12727,7 +12734,7 @@ const setBrandBurnsStageHidden = (stage, hidden) => {
 
 const brandBurnsMeterPercent = (value, maxValue) => {
   const max = Math.max(1, maxValue);
-  const clamped = Math.max(0, Math.min(max, value));
+  const clamped = clampNumber(value, 0, max);
   if (clamped <= 0) return 0;
   const segments = Math.ceil((clamped / max) * BRAND_BURNS_METER_SEGMENTS);
   return (
@@ -12737,9 +12744,9 @@ const brandBurnsMeterPercent = (value, maxValue) => {
 
 const updateBrandBurnsHud = () => {
   const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
-  const health = Math.max(0, Math.min(maxHealth, brandBurnsStats.health));
+  const health = clampNumber(brandBurnsStats.health, 0, maxHealth);
   const healthPercent = brandBurnsMeterPercent(health, maxHealth);
-  const stamina = Math.max(0, Math.min(BRAND_BURNS_PLAYER_MAX_STAMINA, brandBurnsStats.stamina));
+  const stamina = clampNumber(brandBurnsStats.stamina, 0, BRAND_BURNS_PLAYER_MAX_STAMINA);
   const staminaPercent = brandBurnsMeterPercent(stamina, BRAND_BURNS_PLAYER_MAX_STAMINA);
   const remaining = Math.max(0, brandBurnsStats.total - brandBurnsStats.defeated);
 
@@ -12790,9 +12797,10 @@ const hasBrandBurnsAttackStamina = () =>
 const getBrandBurnsAttackStaminaCost = () =>
   brandBurnsRandomInt(
     BRAND_BURNS_STAMINA_ATTACK_MIN_COST,
-    Math.min(
-      BRAND_BURNS_STAMINA_ATTACK_MAX_COST,
-      Math.max(BRAND_BURNS_STAMINA_ATTACK_MIN_COST, Math.floor(brandBurnsStats.stamina))
+    clampNumber(
+      Math.floor(brandBurnsStats.stamina),
+      BRAND_BURNS_STAMINA_ATTACK_MIN_COST,
+      BRAND_BURNS_STAMINA_ATTACK_MAX_COST
     )
   );
 
@@ -12800,12 +12808,12 @@ const getBrandBurnsStaminaRecoveryAmount = () => {
   const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
   const staminaFactor = Math.max(
     BRAND_BURNS_STAMINA_RECOVERY_MIN_FACTOR,
-    Math.max(0, Math.min(BRAND_BURNS_PLAYER_MAX_STAMINA, brandBurnsStats.stamina)) /
+    clampNumber(brandBurnsStats.stamina, 0, BRAND_BURNS_PLAYER_MAX_STAMINA) /
       BRAND_BURNS_PLAYER_MAX_STAMINA
   );
   const missingHealthFactor =
     1 +
-    (1 - Math.max(0, Math.min(maxHealth, brandBurnsStats.health)) / maxHealth) *
+    (1 - clampNumber(brandBurnsStats.health, 0, maxHealth) / maxHealth) *
       BRAND_BURNS_STAMINA_LOW_HEALTH_BONUS;
   const blockFactor = brandBurnsBlocking ? BRAND_BURNS_STAMINA_BLOCK_RECOVERY_BONUS : 1;
 
@@ -12837,7 +12845,7 @@ const clearBrandBurnsEnemyTimers = () => {
 };
 
 const updateBrandBurnsEnemyHud = (state) => {
-  const percent = Math.max(0, Math.min(100, (state.health / state.maxHealth) * 100));
+  const percent = clampNumber((state.health / state.maxHealth) * 100, 0, 100);
   if (state.healthBar) state.healthBar.style.width = `${percent}%`;
   if (state.healthValue) {
     state.healthValue.textContent = `${Math.max(0, Math.round(state.health))}/${state.maxHealth}`;
@@ -13531,8 +13539,11 @@ const startBrandBurnsBlock = () => {
     setBrandBurnsStatusText("You brace behind the Dragon Slayer.");
   }
   showBrandBurnsBlockWindow();
-  if (brandBurnsBlockTimer) clearTimeout(brandBurnsBlockTimer);
-  brandBurnsBlockTimer = setTimeout(endBrandBurnsBlock, BRAND_BURNS_BLOCK_DURATION_MS);
+  brandBurnsBlockTimer = debounceTimer(
+    brandBurnsBlockTimer,
+    endBrandBurnsBlock,
+    BRAND_BURNS_BLOCK_DURATION_MS
+  );
 };
 
 const finishBrandBurnsIfPlayerDefeated = () => {
@@ -13838,8 +13849,8 @@ const createBrandBurnsEnemyWindow = (definition) => {
 
 const chooseBrandBurnsEnemies = () => {
   const apostleCount = Math.max(0, BRAND_BURNS_ENCOUNTER_COUNT - 1);
-  const apostles = shuffleBrandBurnsItems(BRAND_BURNS_APOSTLES).slice(0, apostleCount);
-  return shuffleBrandBurnsItems([BRAND_BURNS_FEMTO, ...apostles]);
+  const apostles = shuffle(BRAND_BURNS_APOSTLES).slice(0, apostleCount);
+  return shuffle([BRAND_BURNS_FEMTO, ...apostles]);
 };
 
 const openBrandBurnsEnemyWindow = (state) => {
@@ -14386,7 +14397,7 @@ const positionPokemonStarterInfoCard = (choice) => {
   const minLeft = cardWidth / 2 + 12;
   const maxLeft = Math.max(minLeft, sceneRect.width - cardWidth / 2 - 12);
   const choiceCenter = choiceRect.left + choiceRect.width / 2 - sceneRect.left;
-  const cardLeft = Math.max(minLeft, Math.min(maxLeft, choiceCenter));
+  const cardLeft = clampNumber(choiceCenter, minLeft, maxLeft);
   pokemonStarterInfoCard.style.left = `${Math.round(cardLeft)}px`;
 };
 
@@ -15030,7 +15041,7 @@ const stopDstNightTimer = () => {
 
 const setDstNightProgress = (percent) => {
   if (!dstNightProgress) return;
-  const clampedPercent = Math.max(0, Math.min(100, percent));
+  const clampedPercent = clampNumber(percent, 0, 100);
   dstNightProgress.style.width = `${clampedPercent}%`;
 };
 
@@ -16060,7 +16071,7 @@ const drawVirusWindowLightningBorderFrame = (alpha) => {
   const top = inset;
   const right = Math.max(left + 1, width - inset);
   const bottom = Math.max(top + 1, height - inset);
-  const displacement = Math.max(6, Math.min(13, Math.min(width, height) / 14));
+  const displacement = clampNumber(Math.min(width, height) / 14, 6, 13);
   const edges = [
     [left, top, right, top],
     [right, top, right, bottom],
@@ -16115,7 +16126,7 @@ const drawVirusStrikeFrame = (origin, rect, alpha) => {
 
   const target = virusStrikeTargetPoint(rect, origin);
   const distance = Math.hypot(target.x - origin.x, target.y - origin.y);
-  const displacement = Math.max(9, Math.min(22, distance / 5.5));
+  const displacement = clampNumber(distance / 5.5, 9, 22);
   const bolts = [];
   const path = generateFateBoltPath(
     origin.x,
@@ -16341,8 +16352,14 @@ const acceptVirusInstall = () => {
 };
 
 const registerRandomEvent = (definition) => {
-  randomEventDefinitions.push(definition);
-  return definition;
+  const registeredDefinition = {
+    debug: false,
+    probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+    probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+    ...definition,
+  };
+  randomEventDefinitions.push(registeredDefinition);
+  return registeredDefinition;
 };
 
 const randomEventKind = (definition) =>
@@ -16433,12 +16450,10 @@ const isPromoRandomEventModeActive = () =>
   );
 
 const promoRandomEventTriggerProbability = (probability) =>
-  Math.min(
-    1,
-    Math.max(
-      PROMO_RANDOM_EVENT_TRIGGER_FLOOR,
-      probability * PROMO_RANDOM_EVENT_PROBABILITY_MULTIPLIER
-    )
+  clampNumber(
+    probability * PROMO_RANDOM_EVENT_PROBABILITY_MULTIPLIER,
+    PROMO_RANDOM_EVENT_TRIGGER_FLOOR,
+    1
   );
 
 const promoRandomEventCompactnessWeight = (area, referenceArea) => {
@@ -16452,12 +16467,10 @@ const promoRandomEventCompactnessWeight = (area, referenceArea) => {
   ) {
     return 1;
   }
-  return Math.min(
-    PROMO_RANDOM_EVENT_COMPACTNESS_MAX,
-    Math.max(
-      PROMO_RANDOM_EVENT_COMPACTNESS_MIN,
-      Math.sqrt(normalizedReference / normalizedArea)
-    )
+  return clampNumber(
+    Math.sqrt(normalizedReference / normalizedArea),
+    PROMO_RANDOM_EVENT_COMPACTNESS_MIN,
+    PROMO_RANDOM_EVENT_COMPACTNESS_MAX
   );
 };
 
@@ -16472,7 +16485,7 @@ const randomEventTriggerProbability = (triggerName, definition = null) => {
   if (Number.isNaN(probability)) return 0;
   const boostedProbability =
     probability + (isNekoRandomEventBoostActive() ? NEKO_RANDOM_EVENT_PROBABILITY_BONUS : 0);
-  const clampedProbability = Math.min(1, Math.max(0, boostedProbability));
+  const clampedProbability = clampNumber(boostedProbability, 0, 1);
   return isPromoRandomEventModeActive()
     ? promoRandomEventTriggerProbability(clampedProbability)
     : clampedProbability;
@@ -16567,37 +16580,12 @@ const randomEventDelayMs = () => {
   return Math.round(rawDelay / RANDOM_EVENT_DELAY_STEP_MS) * RANDOM_EVENT_DELAY_STEP_MS;
 };
 
-const randomEventPreloadSourceCache = new Map();
+const randomEventPreloadSourceCache = mediaSourcePreloadRequests;
 
 const preloadRandomEventSource = (src) => {
   const normalizedSrc = String(src || "");
   if (!normalizedSrc) return Promise.resolve();
-  if (randomEventPreloadSourceCache.has(normalizedSrc)) {
-    return randomEventPreloadSourceCache.get(normalizedSrc);
-  }
-
-  const loadRequest = new Promise((resolve) => {
-    const image = new Image();
-    let settled = false;
-    const finish = (loaded = true) => {
-      if (settled) return;
-      settled = true;
-      image.removeEventListener("load", finishLoaded);
-      image.removeEventListener("error", finishErrored);
-      if (!loaded) randomEventPreloadSourceCache.delete(normalizedSrc);
-      resolve();
-    };
-    const finishLoaded = () => finish(true);
-    const finishErrored = () => finish(false);
-
-    image.addEventListener("load", finishLoaded, { once: true });
-    image.addEventListener("error", finishErrored, { once: true });
-    image.src = normalizedSrc;
-    if (image.complete) finish(Boolean(image.naturalWidth));
-  });
-
-  randomEventPreloadSourceCache.set(normalizedSrc, loadRequest);
-  return loadRequest;
+  return preloadMediaSource(normalizedSrc, { forceImage: true });
 };
 
 const collectRandomEventPreloadTargets = (target, collection = []) => {
@@ -16920,8 +16908,7 @@ const recordGeneralRandomEventClick = (detail = {}) => {
 };
 
 const scheduleRandomEventIdleTrigger = () => {
-  if (randomEventIdleTimer) clearTimeout(randomEventIdleTimer);
-  randomEventIdleTimer = setTimeout(() => {
+  randomEventIdleTimer = debounceTimer(randomEventIdleTimer, () => {
     randomEventIdleTimer = null;
     if (!document.hidden) {
       triggerRandomEvents("idleInterval", {
@@ -17062,9 +17049,6 @@ const STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze({
 SYSTEM_ALERTS.forEach((alert) => {
   registerRandomEvent({
     id: `debug-system-alert-${alert.id}`,
-    debug: false,
-    probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-    probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
     kind: RANDOM_EVENT_KIND_INTERACTIVE,
     isVisible: isDebugSystemAlertVisible,
     canTrigger: () => !isDebugSystemAlertVisible(),
@@ -17077,8 +17061,6 @@ SYSTEM_ALERTS.forEach((alert) => {
 registerRandomEvent({
   id: "neko-stream-system-alert",
   debug: true,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNekoStreamAlertVisible,
   canTrigger: ({ triggerName, debug } = {}) =>
@@ -17095,9 +17077,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "annoying-system-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isRandomAlertVisible,
   canTrigger: () => !isRandomAlertVisible(),
@@ -17108,9 +17087,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "dodging-popup-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isDodgingPopupVisible,
   canTrigger: () => !isDodgingPopupVisible(),
@@ -17121,9 +17097,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "vanishing-popup-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isVanishingPopupVisible,
   canTrigger: () => !isVanishingPopupVisible(),
@@ -17134,9 +17107,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "self-love-system-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSelfLoveAlertVisible,
   canTrigger: () => !isSelfLoveAlertVisible(),
@@ -17147,9 +17117,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "rohin-os-update",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isRohinUpdateVisible,
   canTrigger: () => !isRohinUpdateVisible(),
@@ -17160,9 +17127,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "mcafee-antivirus-update",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isMcAfeeVisible,
   canTrigger: () => !isMcAfeeVisible(),
@@ -17173,9 +17137,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "microsoft-word-license-stack",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isWordErrorStackVisible,
   canTrigger: () => !isWordErrorStackVisible(),
@@ -17186,9 +17147,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "rohin-os-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isRohinNoteVisible,
   canTrigger: () => !isRohinNoteVisible(),
@@ -17199,9 +17157,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "earth-proverb-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isEarthNoteVisible,
   canTrigger: () => !isEarthNoteVisible(),
@@ -17212,9 +17167,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "health-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isHealthNoteVisible,
   canTrigger: () => !isHealthNoteVisible(),
@@ -17225,9 +17177,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "love-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isLoveNoteVisible,
   canTrigger: () => !isLoveNoteVisible(),
@@ -17238,9 +17187,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "no-smoking-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isNoSmokingVisible,
   canTrigger: () => !isNoSmokingVisible(),
@@ -17251,9 +17197,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "possum-springs-bulletin",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isPossumSpringsVisible,
   canTrigger: () => !isPossumSpringsVisible(),
@@ -17264,9 +17207,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "winged-light",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isWingedLightVisible,
   canTrigger: () => !isWingedLightVisible(),
@@ -17277,9 +17217,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "mana-flood",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isManaFloodVisible,
   canTrigger: () => !isManaFloodVisible(),
@@ -17290,9 +17227,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "mimic-warning",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isMimicWarningVisible,
   canTrigger: () => !isMimicWarningVisible(),
@@ -17303,9 +17237,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "sudden-skill-check",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSkillCheckVisible,
   canTrigger: () => !isSkillCheckVisible(),
@@ -17316,9 +17247,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "distress-signal",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isDistressSignalVisible,
   canTrigger: () => !isDistressSignalVisible(),
@@ -17329,9 +17257,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "nazar-evil-eye",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNazarVisible,
   canTrigger: () => !isNazarVisible(),
@@ -17342,9 +17267,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "site-of-grace",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSiteGraceVisible,
   canTrigger: () => !isSiteGraceVisible(),
@@ -17355,9 +17277,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "stalker-zone",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isStalkerVisible,
   canTrigger: () => !isStalkerVisible(),
@@ -17368,9 +17287,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "nana-random-encounter",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNanaEncounterVisible,
   canTrigger: () => !isNanaEncounterVisible(),
@@ -17381,9 +17297,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "serval-pizza-encounter",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isServalEncounterVisible,
   canTrigger: () => !isServalEncounterVisible(),
@@ -17394,9 +17307,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "caracal-encounter",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isCaracalEncounterVisible,
   canTrigger: () => !isCaracalEncounterVisible(),
@@ -17407,9 +17317,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "shoebill",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isShoebillEncounterVisible,
   canTrigger: () => !isShoebillEncounterVisible(),
@@ -17420,9 +17327,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "midnight-gospel",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isMidnightGospelVisible,
   canTrigger: () => !isMidnightGospelVisible(),
@@ -17446,9 +17350,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "lelouch-system-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isLelouchAlertVisible,
   canTrigger: () => !isLelouchAlertVisible(),
@@ -17459,9 +17360,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "berserk-sunrise",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isBerserkSunriseVisible,
   canTrigger: () => isBerserkSunriseTimeWindow() && !isBerserkSunriseVisible(),
@@ -17472,9 +17370,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "calendar-reminder",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isCalendarReminderVisible,
   canTrigger: () =>
@@ -17487,9 +17382,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "gradescope-curve",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isGradescopeCurveVisible,
   canTrigger: () => !isGradescopeCurveVisible(),
@@ -17500,9 +17392,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "gears-nest-clear",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isGearsNestVisible,
   canTrigger: () => !isGearsNestVisible(),
@@ -17513,9 +17402,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "human-instrumentality-project",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isInstrumentalityVisible,
   canTrigger: () => !isInstrumentalityVisible(),
@@ -17539,9 +17425,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "death-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isDeathNoteVisible,
   canTrigger: () => !isDeathNoteVisible(),
@@ -17552,8 +17435,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "current-publicly-available-information",
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isCurrentPublicInfoVisible,
   canTrigger: () => !isCurrentPublicInfoVisible(),
@@ -17564,9 +17445,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "spare-a-trna",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isTrnaRequestVisible,
   canTrigger: () => !isTrnaRequestVisible(),
@@ -17577,9 +17455,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "spell-on-the-stack",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSpellStackVisible,
   canTrigger: () => !isSpellStackVisible(),
@@ -17590,9 +17465,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "soot-sprites",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSootSpritesVisible,
   canTrigger: () => !isSootSpritesVisible(),
@@ -17603,9 +17475,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "nataraja",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNatarajaVisible,
   canTrigger: () => !isNatarajaVisible(),
@@ -17616,9 +17485,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "noble-steed",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNobleSteedVisible,
   canTrigger: () => !isNobleSteedVisible(),
@@ -17629,9 +17495,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "toxic-jungle",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isToxicJungleVisible,
   canTrigger: () => !isToxicJungleVisible(),
@@ -17642,9 +17505,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "wall-breach",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isWallBreachVisible,
   canTrigger: () => !isWallBreachVisible(),
@@ -17655,9 +17515,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "resist-your-fate",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isFateVisible,
   canTrigger: () => fateState === "idle" && !isFateVisible(),
@@ -17668,9 +17525,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "lancer-battle",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isLancerBattleVisible,
   canTrigger: () =>
@@ -17682,9 +17536,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "brand-burns",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isBrandBurnsVisible,
   canTrigger: () => !isBrandBurnsVisible(),
@@ -17695,9 +17546,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "behelit-found",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isBehelitVisible,
   canTrigger: () => !isBehelitVisible(),
@@ -17708,9 +17556,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "john-pork",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isJohnPorkVisible,
   canTrigger: () => !isJohnPorkVisible(),
@@ -17721,9 +17566,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "biden-blast",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isBidenBlastVisible,
   canTrigger: () => !isBidenBlastVisible(),
@@ -17734,9 +17576,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "saul-advertisement",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isSaulAdVisible,
   canTrigger: () => !isSaulAdVisible(),
@@ -17747,9 +17586,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "kidnamedfinger",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isKidnamedfingerVisible,
   canTrigger: () => !isKidnamedfingerVisible(),
@@ -17760,9 +17596,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "walter-white",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isWalterWhiteVisible,
   canTrigger: () => !isWalterWhiteVisible(),
@@ -17773,9 +17606,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "bounty-hunter-announcement",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isBountyHunterVisible,
   canTrigger: () => !isBountyHunterVisible(),
@@ -17786,9 +17616,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "pokemon-starter-selection",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isPokemonStarterVisible,
   canTrigger: () => !isPokemonStarterVisible(),
@@ -17799,9 +17626,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "relic-recovery",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isRelicRecoveryVisible,
   canTrigger: () => !isRelicRecoveryVisible(),
@@ -17812,9 +17636,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "dont-starve-campfire",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isDstCampfireEventVisible,
   canTrigger: () => !isDstCampfireEventVisible(),
@@ -17825,9 +17646,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "infinity-blade-armory",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isInfinityArmoryVisible,
   canTrigger: () => !isInfinityArmoryVisible(),
@@ -17838,9 +17656,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "virus",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isVirusVisible,
   canTrigger: () => !isVirusVisible(),
@@ -17851,9 +17666,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "evil-wizards-advertisement",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isAdvertisementVisible,
   canTrigger: () => !isAdvertisementVisible(),
@@ -17887,7 +17699,14 @@ const isSmallResizableWindow = (win) => {
   return rect.width <= 760 && rect.height <= 620;
 };
 
-const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
+const shuffle = (items) => {
+  const shuffled = Array.from(items);
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+};
 
 const getTaskbarViewportClearance = () => {
   const taskbar = document.querySelector(".taskbar");
@@ -18038,8 +17857,8 @@ const initPortfolioCornerResize = () => {
       const startY = event.clientY;
       const startWidth = rect.width;
       const startHeight = rect.height;
-      const minWidth = Math.min(280, Math.max(240, window.innerWidth - 24));
-      const minHeight = Math.min(220, Math.max(180, window.innerHeight - 96));
+      const minWidth = clampNumber(window.innerWidth - 24, 240, 280);
+      const minHeight = clampNumber(window.innerHeight - 96, 180, 220);
       const maxWidth = Math.max(minWidth, window.innerWidth - rect.left - 12);
       const maxHeight = Math.max(minHeight, window.innerHeight - rect.top - 58);
 
@@ -18119,12 +17938,12 @@ const expandSmallWindow = (win) => {
   const titleBar = win.querySelector(".title-bar");
   const maxWidth = Math.max(320, window.innerWidth - 48);
   const maxHeight = Math.max(260, window.innerHeight - 86);
-  const nextWidth = Math.round(Math.min(maxWidth, Math.max(rect.width * 2, rect.width + 240)));
-  const nextHeight = Math.round(Math.min(maxHeight, Math.max(rect.height * 2, rect.height + 180)));
+  const nextWidth = Math.round(clampNumber(rect.width + 240, rect.width * 2, maxWidth));
+  const nextHeight = Math.round(clampNumber(rect.height + 180, rect.height * 2, maxHeight));
   const maxLeft = Math.max(24, window.innerWidth - nextWidth - 24);
   const maxTop = Math.max(16, window.innerHeight - nextHeight - 70);
-  const nextLeft = Math.round(Math.max(24, Math.min(rect.left, maxLeft)));
-  const nextTop = Math.round(Math.max(16, Math.min(rect.top, maxTop)));
+  const nextLeft = Math.round(clampNumber(rect.left, 24, maxLeft));
+  const nextTop = Math.round(clampNumber(rect.top, 16, maxTop));
 
   expandedWindowState.set(win, {
     width: win.style.width,
@@ -18916,27 +18735,15 @@ const isSudokuSolutionCompatibleWithPuzzle = (puzzle, solution) => {
   );
 };
 
-const shuffleSudokuItems = (items) => {
-  const shuffledItems = Array.from(items);
-  for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [shuffledItems[index], shuffledItems[swapIndex]] = [
-      shuffledItems[swapIndex],
-      shuffledItems[index],
-    ];
-  }
-  return shuffledItems;
-};
-
 const createSudokuFullSolution = () => {
   const groups = [0, 1, 2];
-  const rows = shuffleSudokuItems(groups).flatMap((band) =>
-    shuffleSudokuItems(groups).map((row) => band * 3 + row)
+  const rows = shuffle(groups).flatMap((band) =>
+    shuffle(groups).map((row) => band * 3 + row)
   );
-  const columns = shuffleSudokuItems(groups).flatMap((stack) =>
-    shuffleSudokuItems(groups).map((column) => stack * 3 + column)
+  const columns = shuffle(groups).flatMap((stack) =>
+    shuffle(groups).map((column) => stack * 3 + column)
   );
-  const digits = shuffleSudokuItems(SUDOKU_DIGITS.split(""));
+  const digits = shuffle(SUDOKU_DIGITS.split(""));
   const pattern = (row, column) => (row * 3 + Math.floor(row / 3) + column) % 9;
 
   return rows
@@ -19035,7 +18842,7 @@ const createGeneratedSudokuPuzzle = (difficulty) => {
     const puzzleValues = solution.split("");
     let clueCount = SUDOKU_CELL_COUNT;
 
-    shuffleSudokuItems(Array.from({ length: SUDOKU_CELL_COUNT }, (_, index) => index)).forEach(
+    shuffle(Array.from({ length: SUDOKU_CELL_COUNT }, (_, index) => index)).forEach(
       (index) => {
         if (clueCount <= targetClues) return;
         const removedValue = puzzleValues[index];
@@ -19100,10 +18907,11 @@ const pushSudokuUndoState = () => {
   updateSudokuHistoryButtons();
 };
 
-const formatSudokuTime = (seconds) => {
+const formatSudokuTime = (seconds, placeholder = "—") => {
+  if (!Number.isFinite(seconds)) return placeholder;
   const safeSeconds = Math.max(0, Math.floor(seconds));
-  const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
-  const remainingSeconds = String(safeSeconds % 60).padStart(2, "0");
+  const minutes = padTwoDigits(Math.floor(safeSeconds / 60));
+  const remainingSeconds = padTwoDigits(safeSeconds % 60);
   return `${minutes}:${remainingSeconds}`;
 };
 
@@ -19162,8 +18970,11 @@ const scheduleSudokuSave = () => {
     return;
   }
   sudokuSaveQueuedForActivation = false;
-  if (sudokuSaveTimerId) clearTimeout(sudokuSaveTimerId);
-  sudokuSaveTimerId = window.setTimeout(flushSudokuSave, SUDOKU_SAVE_DEBOUNCE_MS);
+  sudokuSaveTimerId = debounceTimer(
+    sudokuSaveTimerId,
+    flushSudokuSave,
+    SUDOKU_SAVE_DEBOUNCE_MS
+  );
 };
 
 const restoreSudokuSavedState = () => {
@@ -19210,12 +19021,10 @@ const restoreSudokuSavedState = () => {
   }
   sudokuState.usedHint = Boolean(savedState.usedHint || savedState.usedReveal);
   sudokuState.usedReveal = Boolean(savedState.usedReveal);
-  sudokuState.checksUsed = Math.max(
+  sudokuState.checksUsed = clampNumber(
+    Math.floor(Number(savedState.checksUsed) || 0),
     0,
-    Math.min(
-      SUDOKU_MAX_LEADERBOARD_CHECKS,
-      Math.floor(Number(savedState.checksUsed) || 0)
-    )
+    SUDOKU_MAX_LEADERBOARD_CHECKS
   );
   sudokuState.errorsConfirmed = Boolean(
     savedState.errorsConfirmed ||
@@ -19270,7 +19079,10 @@ const startSudokuTimer = () => {
     });
   }
   sudokuState.timerStartedAt = Date.now();
-  sudokuState.timerId = window.setInterval(updateSudokuTimeDisplay, 1000);
+  sudokuState.timerId = window.setInterval(
+    updateSudokuTimeDisplay,
+    SUDOKU_TIMER_INTERVAL_MS
+  );
   updateSudokuTimeDisplay();
 };
 
@@ -19317,7 +19129,7 @@ const isSudokuAquariumActive = () =>
   );
 
 const setSudokuLoadingProgress = (progress) => {
-  sudokuState.loadingProgress = Math.max(0, Math.min(100, progress));
+  sudokuState.loadingProgress = clampNumber(progress, 0, 100);
   const roundedProgress = Math.round(sudokuState.loadingProgress);
   if (sudokuLoadingFill) {
     sudokuLoadingFill.style.setProperty(
@@ -19468,7 +19280,7 @@ const spawnSudokuFishPass = () => {
     const fish = createSudokuFishElement({
       depth,
       type,
-      top: Math.max(8, Math.min(90, baseTop + topOffset)),
+      top: clampNumber(baseTop + topOffset, 8, 90),
       size: baseSize * sudokuRandomBetween(0.84, 1.26),
       opacity: sudokuRandomBetween(config.opacity[0], config.opacity[1]),
       blur: sudokuRandomBetween(config.blur[0], config.blur[1]),
@@ -19554,9 +19366,9 @@ const clampSudokuWindowIntoViewport = () => {
 };
 
 const scheduleSudokuWindowViewportClamp = () => {
-  requestAnimationFrame(() => {
+  afterFrames(1, () => {
     clampSudokuWindowIntoViewport();
-    requestAnimationFrame(clampSudokuWindowIntoViewport);
+    afterFrames(1, clampSudokuWindowIntoViewport);
   });
 };
 
@@ -19607,7 +19419,11 @@ const tickSudokuLoadingSequence = () => {
   const jump = 3 + Math.random() * 14;
   const catchup = Math.max(0, targetProgress - sudokuState.loadingProgress) * 0.58;
   setSudokuLoadingProgress(
-    Math.min(98, Math.max(sudokuState.loadingProgress + 1, sudokuState.loadingProgress + jump + catchup))
+    clampNumber(
+      sudokuState.loadingProgress + jump + catchup,
+      sudokuState.loadingProgress + 1,
+      98
+    )
   );
 
   const remainingMs = Math.max(
@@ -21426,15 +21242,15 @@ document.querySelectorAll(".portfolio-window").forEach((windowEl) => {
       event.preventDefault();
       const bodyRect = body.getBoundingClientRect();
       const startX = event.clientX;
-      const startWidth = selectorPanel.getBoundingClientRect().width;
+      const startWidth = selectorPanel.offsetWidth;
       const minWidth = 200;
-      const maxWidth = Math.max(minWidth, Math.min(420, bodyRect.width - 220));
+      const maxWidth = clampNumber(bodyRect.width - 220, minWidth, 420);
 
       divider.setPointerCapture(event.pointerId);
 
       const onMove = (moveEvent) => {
         const delta = moveEvent.clientX - startX;
-        const nextWidth = Math.max(minWidth, Math.min(startWidth + delta, maxWidth));
+        const nextWidth = clampNumber(startWidth + delta, minWidth, maxWidth);
         selectorPanel.style.width = `${nextWidth}px`;
         selectorPanel.style.flexBasis = `${nextWidth}px`;
       };
@@ -26619,7 +26435,7 @@ const getRohinNekoAvatarAction = () => {
 const canAnimateRohinNekoAvatarInstance = (instance) =>
   isRohinNekoProfile() &&
   isRohinNekoAvatarVisible(instance.image) &&
-  !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  !prefersReducedMotion();
 
 const scheduleRohinNekoAvatarAction = (instance, { initial = false } = {}) => {
   if (!canAnimateRohinNekoAvatarInstance(instance)) {
@@ -26710,7 +26526,7 @@ const stopRohinNekoAvatarAnimation = () => {
 };
 
 const startRohinNekoAvatarAnimation = () => {
-  if (!isRohinNekoProfile() || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+  if (!isRohinNekoProfile() || prefersReducedMotion()) {
     stopRohinNekoAvatarAnimation();
     return;
   }
@@ -26813,6 +26629,44 @@ let nekoRunAssetsPreloadStarted = false;
 let nekoRunAssetsLoaded = false;
 let nekoRunAssetsPreloadPromise = null;
 const nekoPreloadedRunAssetImages = [];
+const NEKO_RUN_ASSET_PRELOAD_ATTEMPTS = 3;
+
+const preloadNekoRunAsset = (src, attempt = 1) =>
+  new Promise((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const finish = async (loaded) => {
+      if (settled) return;
+      settled = true;
+      image.removeEventListener("load", handleLoad);
+      image.removeEventListener("error", handleError);
+      if (loaded && image.naturalWidth) {
+        try {
+          await image.decode();
+        } catch (error) {
+          // A completed image remains usable when decode() is unavailable or redundant.
+        }
+        if (image.naturalWidth) {
+          nekoPreloadedRunAssetImages.push(image);
+          resolve(true);
+          return;
+        }
+      }
+      if (attempt < NEKO_RUN_ASSET_PRELOAD_ATTEMPTS) {
+        resolve(preloadNekoRunAsset(src, attempt + 1));
+        return;
+      }
+      resolve(false);
+    };
+    const handleLoad = () => void finish(true);
+    const handleError = () => void finish(false);
+
+    image.decoding = "async";
+    image.addEventListener("load", handleLoad, { once: true });
+    image.addEventListener("error", handleError, { once: true });
+    image.src = src;
+    if (image.complete) queueMicrotask(() => void finish(Boolean(image.naturalWidth)));
+  });
 
 const preloadNekoRunAssets = () => {
   if (nekoRunAssetsPreloadStarted) return nekoRunAssetsPreloadPromise;
@@ -26823,26 +26677,10 @@ const preloadNekoRunAssets = () => {
   ]);
 
   nekoRunAssetsPreloadPromise = Promise.all(
-    Array.from(assetUrls, (src) =>
-      new Promise((resolve) => {
-        const image = new Image();
-        let settled = false;
-        const finish = () => {
-          if (settled) return;
-          settled = true;
-          resolve();
-        };
-
-        image.decoding = "async";
-        image.addEventListener("load", finish, { once: true });
-        image.addEventListener("error", finish, { once: true });
-        image.src = src;
-        if (image.complete) finish();
-        nekoPreloadedRunAssetImages.push(image);
-      })
-    )
-  ).then(() => {
-    nekoRunAssetsLoaded = true;
+    Array.from(assetUrls, (src) => preloadNekoRunAsset(src))
+  ).then((results) => {
+    nekoRunAssetsLoaded = results.every(Boolean);
+    return nekoRunAssetsLoaded;
   });
 
   return nekoRunAssetsPreloadPromise;
@@ -26922,7 +26760,7 @@ let nekoContextMenuOrigin = null;
 const sampleNekoStreamRoll = (random = Math.random) => {
   const value = Number(random());
   if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
+  return clampNumber(value, 0, 1);
 };
 
 const sampleNekoStreamRange = (minimum, maximum, random = Math.random) =>
@@ -27192,9 +27030,10 @@ const animateNekoStream = (timestamp) => {
   }
 
   if (!nekoStreamLastFrameTimestamp) nekoStreamLastFrameTimestamp = timestamp;
-  const deltaMs = Math.min(
-    NEKO_FRAME_INTERVAL_MS * 2,
-    Math.max(0, timestamp - nekoStreamLastFrameTimestamp)
+  const deltaMs = clampNumber(
+    timestamp - nekoStreamLastFrameTimestamp,
+    0,
+    NEKO_FRAME_INTERVAL_MS * 2
   );
   nekoStreamLastFrameTimestamp = timestamp;
   const viewportWidth = window.innerWidth;
@@ -27374,8 +27213,8 @@ const openNekoContextMenu = (launcher, clientX, clientY) => {
     NEKO_CONTEXT_MENU_PADDING,
     availableBottom - menuBounds.height - NEKO_CONTEXT_MENU_PADDING
   );
-  const left = Math.min(maximumLeft, Math.max(NEKO_CONTEXT_MENU_PADDING, requestedLeft));
-  const top = Math.min(maximumTop, Math.max(NEKO_CONTEXT_MENU_PADDING, requestedTop));
+  const left = clampNumber(requestedLeft, NEKO_CONTEXT_MENU_PADDING, maximumLeft);
+  const top = clampNumber(requestedTop, NEKO_CONTEXT_MENU_PADDING, maximumTop);
 
   nekoContextMenu.style.left = `${Math.round(left)}px`;
   nekoContextMenu.style.top = `${Math.round(top)}px`;
@@ -27433,10 +27272,6 @@ document.addEventListener("contextmenu", (event) => {
   closeNekoContextMenu();
 });
 
-window.addEventListener("resize", () => {
-  closeNekoContextMenu({ restoreFocus: true });
-  syncNekoStreamLane();
-});
 window.addEventListener(
   "scroll",
   () => closeNekoContextMenu({ restoreFocus: true }),
@@ -27618,7 +27453,7 @@ const updateNekoPointerTarget = (event) => {
 const clampNekoCenterX = (x) => {
   const halfSize = NEKO_SPRITE_SIZE / 2;
   const maxX = Math.max(halfSize, window.innerWidth - halfSize);
-  return Math.min(Math.max(halfSize, x), maxX);
+  return clampNumber(x, halfSize, maxX);
 };
 
 const clampNekoCenterY = (y) => {
@@ -27626,12 +27461,12 @@ const clampNekoCenterY = (y) => {
   // CSS shifts the sprite up, so the stored Y sits below the visual center.
   const minY = halfSize + NEKO_VERTICAL_OFFSET;
   const maxY = Math.max(minY, window.innerHeight - halfSize + NEKO_VERTICAL_OFFSET);
-  return Math.min(Math.max(minY, y), maxY);
+  return clampNumber(y, minY, maxY);
 };
 
 const clampNekoTargetToViewport = (clientX, clientY) => ({
-  x: Math.min(Math.max(clientX, 0), window.innerWidth),
-  y: Math.min(Math.max(clientY, 0), window.innerHeight),
+  x: clampNumber(clientX, 0, window.innerWidth),
+  y: clampNumber(clientY, 0, window.innerHeight),
 });
 
 const getNekoScratchAnchor = (edge, targetX, targetY) => {
@@ -27725,8 +27560,8 @@ const handleNekoPointerExit = (event) => {
   if (!["waking", "chasing"].includes(nekoState)) return;
   if (event.relatedTarget || event.toElement) return;
 
-  const fallbackX = Math.min(Math.max(nekoMouseX, 0), window.innerWidth);
-  const fallbackY = Math.min(Math.max(nekoMouseY, 0), window.innerHeight);
+  const fallbackX = clampNumber(nekoMouseX, 0, window.innerWidth);
+  const fallbackY = clampNumber(nekoMouseY, 0, window.innerHeight);
   const clientX = Number.isFinite(event.clientX) ? event.clientX : fallbackX;
   const clientY = Number.isFinite(event.clientY) ? event.clientY : fallbackY;
   const edge = getNekoPointerExitEdge(clientX, clientY);
@@ -28453,12 +28288,10 @@ if (gameProfileName) {
       return;
     }
     const movement = event.key === "ArrowDown" ? 1 : -1;
-    const nextIndex = Math.max(
+    const nextIndex = clampNumber(
+      gameStatsNameSuggestionActiveIndex + movement,
       0,
-      Math.min(
-        gameStatsNameSuggestionActiveIndex + movement,
-        gameStatsDraftNameSuggestions.length - 1
-      )
+      gameStatsDraftNameSuggestions.length - 1
     );
     setGameProfileNameSuggestionActive(nextIndex);
   });
@@ -28480,7 +28313,11 @@ if (gameProfileNameOptions) {
         ? 0
         : event.key === "End"
           ? options.length - 1
-          : Math.max(0, Math.min(currentIndex + (event.key === "ArrowDown" ? 1 : -1), options.length - 1));
+          : clampNumber(
+              currentIndex + (event.key === "ArrowDown" ? 1 : -1),
+              0,
+              options.length - 1
+            );
     setGameProfileNameSuggestionActive(nextIndex, { focus: true });
   });
 }
@@ -28594,12 +28431,6 @@ void syncQueuedGameStats();
 window.addEventListener("online", () => {
   void syncQueuedGameStats();
 });
-window.addEventListener("resize", scheduleGameStatsPlayerNameMarquees);
-window.addEventListener("resize", () => {
-  requestAnimationFrame(positionVisibleGameStatsWindows);
-  requestAnimationFrame(clampVisibleAdministratorWindow);
-});
-
 document.addEventListener(
   "pointerdown",
   (event) => {
@@ -28613,7 +28444,8 @@ document.addEventListener(
       event.target instanceof Element ? event.target : event.target?.parentElement;
     if (target?.closest('[data-app-window="snake"]')) return;
     pauseSnakeGame();
-    snakePointerPauseSuppressUntil = performance.now() + 250;
+    snakePointerPauseSuppressUntil =
+      performance.now() + SNAKE_POINTER_PAUSE_SUPPRESSION_MS;
   },
   true
 );
@@ -28827,49 +28659,22 @@ const MS_CELL_NUMBER_SOURCES = Object.freeze(
     (_, index) => `assets/minesweeper_assets/cell_numbers/cell_${index + 1}.png`
   )
 );
-const msNumberAssetPreloads = new Map();
+const msNumberAssetPreloads = mediaSourcePreloadRequests;
 
-const preloadMinesweeperNumberAsset = (src) => {
-  const cached = msNumberAssetPreloads.get(src);
-  if (cached) return cached.promise;
-
-  const preload = document.createElement("link");
-  const promise = new Promise((resolve) => {
-    let settled = false;
-    const finish = (loaded) => {
-      if (settled) return;
-      settled = true;
-      preload.removeEventListener("load", handleLoad);
-      preload.removeEventListener("error", handleError);
-      if (!loaded) {
-        msNumberAssetPreloads.delete(src);
-        preload.remove();
-      }
-      resolve(loaded);
-    };
-    const handleLoad = () => finish(true);
-    const handleError = () => finish(false);
-
-    preload.rel = "preload";
-    preload.as = "image";
-    preload.href = src;
-    preload.addEventListener("load", handleLoad, { once: true });
-    preload.addEventListener("error", handleError, { once: true });
-    document.head.append(preload);
-  });
-
-  msNumberAssetPreloads.set(src, { element: preload, promise });
-  return promise;
-};
+const preloadMinesweeperNumberAsset = (src) =>
+  preloadMediaSource(src, { retainImagePreload: true });
 
 const preloadMinesweeperNumberAssets = () =>
   Promise.all(MS_CELL_NUMBER_SOURCES.map(preloadMinesweeperNumberAsset));
 
-const msConfig = {
-  beginner: { cols: 9, rows: 9, mines: 10 },
-  intermediate: { cols: 16, rows: 16, mines: 40 },
-  expert: { cols: 30, rows: 16, mines: 99 },
-};
+const msConfig = Object.freeze(
+  Object.fromEntries(
+    GAME_STATS_DIFFICULTIES.map((difficulty, index) => [
+      difficulty,
+      MINESWEEPER_CONFIGS[index],
+    ])
+  )
+);
 
 const msDigitSources = {
   "0": "assets/minesweeper_assets/digital_digits/digital_0.png",
@@ -28896,6 +28701,8 @@ const msState = {
   gameOver: false,
   timerId: null,
   elapsed: 0,
+  flagCount: 0,
+  revealedSafeCount: 0,
   markMode: null,
   statsSession: "",
 };
@@ -28914,7 +28721,7 @@ const msResizeConfetti = () => {
 const msStartConfetti = () => {
   if (!msConfettiCanvas || !msConfettiCtx) return;
   msResizeConfetti();
-  msConfettiPieces = Array.from({ length: 120 }, () => ({
+  msConfettiPieces = Array.from({ length: MINESWEEPER_CONFETTI_PIECE_COUNT }, () => ({
     x: Math.random() * msConfettiCanvas.width,
     y: -20 - Math.random() * msConfettiCanvas.height * 0.3,
     size: 4 + Math.random() * 6,
@@ -28979,15 +28786,15 @@ const msNeighbors = (index) => {
   return list;
 };
 
-const msFormatCounter = (value) => {
-  const clamped = Math.max(-99, Math.min(999, value));
+const formatSevenSegmentCounter = (value) => {
+  const clamped = clampNumber(value, -99, MINESWEEPER_COUNTER_MAX);
   if (clamped < 0) {
-    return `-${String(Math.abs(clamped)).padStart(2, "0")}`;
+    return `-${padTwoDigits(Math.abs(clamped))}`;
   }
   return String(clamped).padStart(3, "0");
 };
 
-const msSetCounter = (el, value) => {
+const setSevenSegmentCounter = (el, value) => {
   if (!el) return;
   const digits = String(value).padStart(3, " ").slice(-3);
   const imgs = el.querySelectorAll("img");
@@ -29000,10 +28807,9 @@ const msSetCounter = (el, value) => {
 
 const msUpdateCounters = () => {
   if (!msMines || !msTime) return;
-  const flags = msState.cells.filter((cell) => cell.flagged).length;
-  const remaining = msState.mines - flags;
-  msSetCounter(msMines, msFormatCounter(remaining));
-  msSetCounter(msTime, msFormatCounter(msState.elapsed));
+  const remaining = msState.mines - msState.flagCount;
+  setSevenSegmentCounter(msMines, formatSevenSegmentCounter(remaining));
+  setSevenSegmentCounter(msTime, formatSevenSegmentCounter(msState.elapsed));
 };
 
 const msSetFace = (face) => {
@@ -29057,10 +28863,10 @@ const msStartTimer = () => {
   });
   msState.timerId = setInterval(() => {
     if (msState.gameOver || !msState.started) return;
-    if (msState.elapsed >= 999) return;
+    if (msState.elapsed >= MINESWEEPER_COUNTER_MAX) return;
     msState.elapsed += 1;
     msUpdateCounters();
-  }, 1000);
+  }, MINESWEEPER_TIMER_INTERVAL_MS);
 };
 
 const msPlaceMines = (safeIndex) => {
@@ -29107,22 +28913,20 @@ const msRevealCell = (index) => {
     triggerRandomEvents("gameLoss", { game: "minesweeper" });
     return;
   }
+  msState.revealedSafeCount += 1;
   msRenderCell(index);
   if (cell.adjacent === 0) {
     const queue = [index];
-    const visited = new Set(queue);
-    while (queue.length) {
-      const current = queue.shift();
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+      const current = queue[cursor];
       msNeighbors(current).forEach((n) => {
         const neighbor = msState.cells[n];
         if (!neighbor || neighbor.revealed || neighbor.flagged) return;
         neighbor.question = false;
         neighbor.revealed = true;
+        msState.revealedSafeCount += 1;
         msRenderCell(n);
-        if (neighbor.adjacent === 0 && !visited.has(n)) {
-          visited.add(n);
-          queue.push(n);
-        }
+        if (neighbor.adjacent === 0) queue.push(n);
       });
     }
   }
@@ -29142,9 +28946,7 @@ const msRevealAllMines = () => {
 
 const msCheckWin = () => {
   if (msState.gameOver) return;
-  const safeCells = msState.cells.filter((cell) => !cell.mine);
-  const revealedSafe = safeCells.filter((cell) => cell.revealed).length;
-  if (revealedSafe === safeCells.length) {
+  if (msState.revealedSafeCount === msState.cells.length - msState.mines) {
     msState.gameOver = true;
     msSetFace("win");
     msStopTimer();
@@ -29155,6 +28957,7 @@ const msCheckWin = () => {
     msState.cells.forEach((cell) => {
       if (cell.mine) cell.flagged = true;
     });
+    msState.flagCount = msState.mines;
     msRenderAll();
     recordGameStatsEvent(
       createGameStatsEvent({
@@ -29277,6 +29080,8 @@ const msNewGame = (difficulty) => {
   msState.started = false;
   msState.gameOver = false;
   msState.elapsed = 0;
+  msState.flagCount = 0;
+  msState.revealedSafeCount = 0;
   msState.statsSession = "";
   msSetFace("smile");
   msStopTimer();
@@ -29310,6 +29115,7 @@ const msHandleLeftClick = (index) => {
 const msToggleFlag = (index) => {
   const cell = msState.cells[index];
   if (!cell || cell.revealed || msState.gameOver) return;
+  const wasFlagged = cell.flagged;
   if (!cell.flagged && !cell.question) {
     cell.flagged = true;
   } else if (cell.flagged) {
@@ -29318,6 +29124,9 @@ const msToggleFlag = (index) => {
   } else if (cell.question) {
     cell.question = false;
   }
+  if (cell.flagged !== wasFlagged) {
+    msState.flagCount += cell.flagged ? 1 : -1;
+  }
   msRenderCell(index);
   msUpdateCounters();
 };
@@ -29325,6 +29134,7 @@ const msToggleFlag = (index) => {
 const msToggleMark = (index, mode) => {
   const cell = msState.cells[index];
   if (!cell || cell.revealed || msState.gameOver) return;
+  const wasFlagged = cell.flagged;
   if (mode === "flag") {
     cell.flagged = !cell.flagged;
     cell.question = false;
@@ -29333,6 +29143,9 @@ const msToggleMark = (index, mode) => {
     cell.flagged = false;
   } else {
     return;
+  }
+  if (cell.flagged !== wasFlagged) {
+    msState.flagCount += cell.flagged ? 1 : -1;
   }
   msRenderCell(index);
   msUpdateCounters();
@@ -30070,7 +29883,7 @@ const solSnapshot = () => ({
 
 const solPushUndo = () => {
   solHistory.push(solSnapshot());
-  if (solHistory.length > 100) solHistory.shift();
+  if (solHistory.length > SOLITAIRE_MAX_UNDO_STATES) solHistory.shift();
 };
 
 const solRestoreSnapshot = (snapshot) => {
@@ -30400,13 +30213,12 @@ const solStartFireworks = () => {
   solFireworks.classList.add("is-showing");
   solFireworks.setAttribute("aria-hidden", "false");
 
-  const burstCount = 9;
-  for (let i = 0; i < burstCount; i += 1) {
+  for (let i = 0; i < SOLITAIRE_FIREWORK_BURST_COUNT; i += 1) {
     const timer = setTimeout(() => {
       const x = window.innerWidth * (0.18 + Math.random() * 0.64);
       const y = window.innerHeight * (0.16 + Math.random() * 0.42);
       solCreateFireworkBurst(x, y);
-    }, i * 260);
+    }, i * SOLITAIRE_FIREWORK_BURST_INTERVAL_MS);
     solFireworkTimers.push(timer);
   }
 
@@ -30416,7 +30228,7 @@ const solStartFireworks = () => {
     solFireworks.innerHTML = "";
     solFireworkTimers = [];
     solFireworkTimeout = null;
-  }, 3600);
+  }, SOLITAIRE_FIREWORK_DURATION_MS);
 };
 
 const solTriggerVictoryEffects = () => {
@@ -30591,7 +30403,9 @@ const solRender = () => {
     solTableau.appendChild(columnEl);
   });
 
-  if (solMoves) msSetCounter(solMoves, msFormatCounter(solState.moves));
+  if (solMoves) {
+    setSevenSegmentCounter(solMoves, formatSevenSegmentCounter(solState.moves));
+  }
   if (solStatus) solStatus.textContent = "";
   solRenderToolbar();
 };
@@ -30626,8 +30440,7 @@ const solCheckWin = () => {
   }
 };
 
-const solPrefersReducedMotion = () =>
-  Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+const solPrefersReducedMotion = prefersReducedMotion;
 
 const solBoardRelativeRect = (element) => {
   const boardRect = solBoard.getBoundingClientRect();
@@ -30787,7 +30600,9 @@ const solRenderLanding = (move, card, flipped) => {
   }
   cardEl.remove();
   solRenderFoundationSlot(slot, move.suit);
-  if (solMoves) msSetCounter(solMoves, msFormatCounter(solState.moves));
+  if (solMoves) {
+    setSevenSegmentCounter(solMoves, formatSevenSegmentCounter(solState.moves));
+  }
   solRenderToolbar();
 };
 
@@ -31177,7 +30992,7 @@ if (solBoard) {
         (zone === "waste" || zone === "tableau") &&
         solLastCardClick &&
         solLastCardClick.key === clickKey &&
-        clickTime - solLastCardClick.time <= 500
+        clickTime - solLastCardClick.time <= SOLITAIRE_DOUBLE_CLICK_WINDOW_MS
       ) {
         solLastCardClick = null;
         const pile = zone === "tableau" ? Number(pileValue) : pileValue;
@@ -31313,29 +31128,6 @@ const handleSnakeReducedMotionChange = () => {
 lockMobileViewportZoom();
 fitImagesIntoFrames(document);
 watchRandomEventViewportMedia();
-window.addEventListener("resize", msResizeConfetti);
-window.addEventListener("resize", msUpdateBoardAlignment);
-window.addEventListener("resize", () => {
-  document
-    .querySelectorAll(".portfolio-window")
-    .forEach((win) => setPortfolioResponsiveState(win));
-});
-window.addEventListener("resize", () => {
-  if (isDistressWindowVisible(distressSignalWindow)) requestAnimationFrame(drawDistressSignals);
-});
-window.addEventListener("resize", () => {
-  if (!isSnakeWindowVisible()) return;
-  requestSnakeRender();
-});
-window.addEventListener("resize", () => {
-  if (!sudokuApp?.classList.contains("is-sudoku-playing")) return;
-  scheduleSudokuWindowViewportClamp();
-});
-window.addEventListener("resize", () => {
-  updateRelicRecoveryViewportFit();
-  clampVisibleRandomEventWindows();
-});
-window.addEventListener("resize", updateLifeCounterWidthControls);
 document.addEventListener("visibilitychange", handleSnakeActivityChange);
 window.addEventListener("blur", handleSnakeActivityChange);
 window.addEventListener("focus", handleSnakeActivityChange);
@@ -31406,29 +31198,69 @@ document.addEventListener("visibilitychange", () => {
 //   });
 // }
 
-const clampVisibleWindowTitleBars = () => {
-  draggableWindows.forEach((win) => {
+const readVisibleWindowTitleBarClamps = () =>
+  [...draggableWindows].flatMap((win) => {
     if (
       win.hidden ||
       win.classList.contains("is-hidden") ||
       win.classList.contains("app-window--center") ||
       isWindowDragDisabled(win)
     ) {
-      return;
+      return [];
     }
     const rect = win.getBoundingClientRect();
-    setWindowTitleBarClampedPosition(win, rect.left, rect.top);
+    const position = clampWindowTitleBarPosition(win, rect.left, rect.top);
+    const { insetX, insetY } = getRandomEventVisualInsets(win);
+    return [{ win, left: position.left - insetX, top: position.top - insetY }];
+  });
+
+const clampVisibleWindowTitleBars = (clamps = readVisibleWindowTitleBarClamps()) => {
+  clamps.forEach(({ win, left, top }) => {
+    win.style.left = `${left}px`;
+    win.style.top = `${top}px`;
   });
 };
 
-let clampWindowTitleBarsFrameId = 0;
-window.addEventListener("resize", () => {
-  if (clampWindowTitleBarsFrameId) cancelAnimationFrame(clampWindowTitleBarsFrameId);
-  clampWindowTitleBarsFrameId = requestAnimationFrame(() => {
-    clampWindowTitleBarsFrameId = 0;
-    clampVisibleWindowTitleBars();
+const readPortfolioWindowSizes = () =>
+  [...document.querySelectorAll(".portfolio-window")].map((win) => {
+    const rect = win.getBoundingClientRect();
+    return { win, width: rect.width, height: rect.height };
   });
-});
+
+let windowResizeFrameId = 0;
+const dispatchWindowResize = () => {
+  closeNekoContextMenu({ restoreFocus: true });
+  syncNekoStreamLane();
+  if (windowResizeFrameId) return;
+  windowResizeFrameId = requestAnimationFrame(() => {
+    windowResizeFrameId = 0;
+
+    // Collect layout measurements before any resize handler mutates the page.
+    const titleBarClamps = readVisibleWindowTitleBarClamps();
+    const portfolioWindowSizes = readPortfolioWindowSizes();
+
+    clampVisibleWindowTitleBars(titleBarClamps);
+    portfolioWindowSizes.forEach(({ win, width, height }) => {
+      setPortfolioResponsiveState(win, width, height);
+    });
+    if (!aboutDegreeUsesResizeObserver) queueAboutDegreeRefresh();
+    scheduleGameStatsPlayerNameMarquees();
+    positionVisibleGameStatsWindows();
+    clampVisibleAdministratorWindow();
+    msResizeConfetti();
+    msUpdateBoardAlignment();
+    if (isDistressWindowVisible(distressSignalWindow)) drawDistressSignals();
+    if (isSnakeWindowVisible()) requestSnakeRender();
+    if (sudokuApp?.classList.contains("is-sudoku-playing")) {
+      scheduleSudokuWindowViewportClamp();
+    }
+    updateRelicRecoveryViewportFit();
+    clampVisibleRandomEventWindows();
+    updateLifeCounterWidthControls();
+  });
+};
+
+window.addEventListener("resize", dispatchWindowResize);
 
 draggableWindows.forEach((win) => {
   win.addEventListener(

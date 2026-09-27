@@ -179,7 +179,17 @@ const canonicalMediaSource = (source) => {
   }
 };
 
-const backgroundMediaElement = (source) => {
+const backgroundMediaElement = (
+  source,
+  { forceImage = false, retainImagePreload = false } = {}
+) => {
+  if (retainImagePreload) {
+    const preload = document.createElement("link");
+    preload.rel = "preload";
+    preload.as = "image";
+    return { element: preload, events: ["load", "error"], retain: true };
+  }
+  if (forceImage) return { element: new Image(), events: ["load", "error"] };
   if (/\.(mp4|webm|ogg)(?:[?#]|$)/i.test(source)) {
     const video = document.createElement("video");
     video.preload = "metadata";
@@ -195,14 +205,14 @@ const backgroundMediaElement = (source) => {
   return { element: new Image(), events: ["load", "error"] };
 };
 
-const preloadMediaSource = (source) => {
+const preloadMediaSource = (source, options = {}) => {
   const key = canonicalMediaSource(source);
   if (!key) return Promise.resolve("skipped");
 
   const existing = mediaSourcePreloadRequests.get(key);
   if (existing) return existing.promise;
 
-  const { element, events } = backgroundMediaElement(source);
+  const { element, events, retain = false } = backgroundMediaElement(source, options);
   let settle;
   const record = {
     element,
@@ -217,16 +227,22 @@ const preloadMediaSource = (source) => {
     if (settled) return;
     settled = true;
     events.forEach((eventName) => element.removeEventListener(eventName, onEvent));
-    record.element = null;
+    if (!retain) record.element = null;
     if (status === "error" && mediaSourcePreloadRequests.get(key) === record) {
       mediaSourcePreloadRequests.delete(key);
+      element.remove();
     }
     settle(status);
   };
   const onEvent = (event) => finish(event.type === "error" ? "error" : "loaded");
 
   events.forEach((eventName) => element.addEventListener(eventName, onEvent, { once: true }));
-  element.src = source;
+  if (element.matches("link")) {
+    element.href = source;
+    document.head.append(element);
+  } else {
+    element.src = source;
+  }
   if (element.matches("video, audio")) element.load();
   if (element.matches("img") && element.complete) {
     queueMicrotask(() => finish(element.naturalWidth ? "loaded" : "error"));
@@ -259,8 +275,10 @@ const preloadMediaSourcesAfter = (element, sources, options) =>
 window.homeMedia = {
   fitImagesIntoFrames,
   loadDeferredMedia,
+  mediaSourcePreloadRequests,
   preloadDeferredMedia,
   preloadDeferredMediaInOrder,
+  preloadMediaSource,
   preloadMediaSourcesAfter,
   preloadMediaSourcesInOrder,
 };
