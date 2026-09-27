@@ -205,8 +205,8 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
 
   assert.match(registration, /id: "neko-stream-system-alert"/);
   assert.match(registration, /debug: true/);
-  assert.match(registration, /probability: STANDARD_RANDOM_EVENT_PROBABILITY/);
-  assert.match(registration, /probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES/);
+  assert.doesNotMatch(registration, /\bprobability:/);
+  assert.doesNotMatch(registration, /\bprobabilities:/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE/);
   assert.match(registration, /isVisible: isNekoStreamAlertVisible/);
   assert.match(

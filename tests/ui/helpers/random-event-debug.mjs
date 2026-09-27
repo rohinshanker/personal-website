@@ -40,7 +40,8 @@ export const isolateAllProductionDebug = (source, { except = [] } = {}) => {
   if (
     dataDrivenStartIndex < 0 ||
     dataDrivenEndIndex < 0 ||
-    !dataDrivenRegistration.includes("debug: false,")
+    !dataDrivenRegistration.includes('id: `debug-system-alert-${alert.id}`') ||
+    dataDrivenRegistration.includes("debug: true,")
   ) {
     throw new Error("Unable to isolate the data-driven debug alert family.");
   }

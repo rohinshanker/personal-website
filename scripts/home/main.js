@@ -16307,8 +16307,14 @@ const acceptVirusInstall = () => {
 };
 
 const registerRandomEvent = (definition) => {
-  randomEventDefinitions.push(definition);
-  return definition;
+  const registeredDefinition = {
+    debug: false,
+    probability: STANDARD_RANDOM_EVENT_PROBABILITY,
+    probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
+    ...definition,
+  };
+  randomEventDefinitions.push(registeredDefinition);
+  return registeredDefinition;
 };
 
 const randomEventKind = (definition) =>
@@ -16999,9 +17005,6 @@ const STANDARD_RANDOM_EVENT_PROBABILITIES = Object.freeze({
 SYSTEM_ALERTS.forEach((alert) => {
   registerRandomEvent({
     id: `debug-system-alert-${alert.id}`,
-    debug: false,
-    probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-    probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
     kind: RANDOM_EVENT_KIND_INTERACTIVE,
     isVisible: isDebugSystemAlertVisible,
     canTrigger: () => !isDebugSystemAlertVisible(),
@@ -17014,8 +17017,6 @@ SYSTEM_ALERTS.forEach((alert) => {
 registerRandomEvent({
   id: "neko-stream-system-alert",
   debug: true,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNekoStreamAlertVisible,
   canTrigger: ({ triggerName, debug } = {}) =>
@@ -17032,9 +17033,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "annoying-system-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isRandomAlertVisible,
   canTrigger: () => !isRandomAlertVisible(),
@@ -17045,9 +17043,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "dodging-popup-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isDodgingPopupVisible,
   canTrigger: () => !isDodgingPopupVisible(),
@@ -17058,9 +17053,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "vanishing-popup-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isVanishingPopupVisible,
   canTrigger: () => !isVanishingPopupVisible(),
@@ -17071,9 +17063,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "self-love-system-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSelfLoveAlertVisible,
   canTrigger: () => !isSelfLoveAlertVisible(),
@@ -17084,9 +17073,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "rohin-os-update",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isRohinUpdateVisible,
   canTrigger: () => !isRohinUpdateVisible(),
@@ -17097,9 +17083,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "mcafee-antivirus-update",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isMcAfeeVisible,
   canTrigger: () => !isMcAfeeVisible(),
@@ -17110,9 +17093,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "microsoft-word-license-stack",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isWordErrorStackVisible,
   canTrigger: () => !isWordErrorStackVisible(),
@@ -17123,9 +17103,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "rohin-os-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isRohinNoteVisible,
   canTrigger: () => !isRohinNoteVisible(),
@@ -17136,9 +17113,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "earth-proverb-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isEarthNoteVisible,
   canTrigger: () => !isEarthNoteVisible(),
@@ -17149,9 +17123,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "health-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isHealthNoteVisible,
   canTrigger: () => !isHealthNoteVisible(),
@@ -17162,9 +17133,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "love-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isLoveNoteVisible,
   canTrigger: () => !isLoveNoteVisible(),
@@ -17175,9 +17143,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "no-smoking-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isNoSmokingVisible,
   canTrigger: () => !isNoSmokingVisible(),
@@ -17188,9 +17153,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "possum-springs-bulletin",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isPossumSpringsVisible,
   canTrigger: () => !isPossumSpringsVisible(),
@@ -17201,9 +17163,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "winged-light",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isWingedLightVisible,
   canTrigger: () => !isWingedLightVisible(),
@@ -17214,9 +17173,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "mana-flood",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isManaFloodVisible,
   canTrigger: () => !isManaFloodVisible(),
@@ -17227,9 +17183,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "mimic-warning",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isMimicWarningVisible,
   canTrigger: () => !isMimicWarningVisible(),
@@ -17240,9 +17193,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "sudden-skill-check",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSkillCheckVisible,
   canTrigger: () => !isSkillCheckVisible(),
@@ -17253,9 +17203,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "distress-signal",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isDistressSignalVisible,
   canTrigger: () => !isDistressSignalVisible(),
@@ -17266,9 +17213,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "nazar-evil-eye",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNazarVisible,
   canTrigger: () => !isNazarVisible(),
@@ -17279,9 +17223,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "site-of-grace",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSiteGraceVisible,
   canTrigger: () => !isSiteGraceVisible(),
@@ -17292,9 +17233,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "stalker-zone",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isStalkerVisible,
   canTrigger: () => !isStalkerVisible(),
@@ -17305,9 +17243,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "nana-random-encounter",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNanaEncounterVisible,
   canTrigger: () => !isNanaEncounterVisible(),
@@ -17318,9 +17253,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "serval-pizza-encounter",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isServalEncounterVisible,
   canTrigger: () => !isServalEncounterVisible(),
@@ -17331,9 +17263,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "caracal-encounter",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isCaracalEncounterVisible,
   canTrigger: () => !isCaracalEncounterVisible(),
@@ -17344,9 +17273,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "shoebill",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isShoebillEncounterVisible,
   canTrigger: () => !isShoebillEncounterVisible(),
@@ -17357,9 +17283,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "midnight-gospel",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isMidnightGospelVisible,
   canTrigger: () => !isMidnightGospelVisible(),
@@ -17383,9 +17306,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "lelouch-system-alert",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isLelouchAlertVisible,
   canTrigger: () => !isLelouchAlertVisible(),
@@ -17396,9 +17316,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "berserk-sunrise",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isBerserkSunriseVisible,
   canTrigger: () => isBerserkSunriseTimeWindow() && !isBerserkSunriseVisible(),
@@ -17409,9 +17326,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "calendar-reminder",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isCalendarReminderVisible,
   canTrigger: () =>
@@ -17424,9 +17338,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "gradescope-curve",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isGradescopeCurveVisible,
   canTrigger: () => !isGradescopeCurveVisible(),
@@ -17437,9 +17348,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "gears-nest-clear",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isGearsNestVisible,
   canTrigger: () => !isGearsNestVisible(),
@@ -17450,9 +17358,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "human-instrumentality-project",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isInstrumentalityVisible,
   canTrigger: () => !isInstrumentalityVisible(),
@@ -17476,9 +17381,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "death-note",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isDeathNoteVisible,
   canTrigger: () => !isDeathNoteVisible(),
@@ -17489,8 +17391,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "current-publicly-available-information",
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isCurrentPublicInfoVisible,
   canTrigger: () => !isCurrentPublicInfoVisible(),
@@ -17501,9 +17401,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "spare-a-trna",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isTrnaRequestVisible,
   canTrigger: () => !isTrnaRequestVisible(),
@@ -17514,9 +17411,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "spell-on-the-stack",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSpellStackVisible,
   canTrigger: () => !isSpellStackVisible(),
@@ -17527,9 +17421,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "soot-sprites",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isSootSpritesVisible,
   canTrigger: () => !isSootSpritesVisible(),
@@ -17540,9 +17431,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "nataraja",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNatarajaVisible,
   canTrigger: () => !isNatarajaVisible(),
@@ -17553,9 +17441,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "noble-steed",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNobleSteedVisible,
   canTrigger: () => !isNobleSteedVisible(),
@@ -17566,9 +17451,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "toxic-jungle",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isToxicJungleVisible,
   canTrigger: () => !isToxicJungleVisible(),
@@ -17579,9 +17461,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "wall-breach",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isWallBreachVisible,
   canTrigger: () => !isWallBreachVisible(),
@@ -17592,9 +17471,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "resist-your-fate",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isFateVisible,
   canTrigger: () => fateState === "idle" && !isFateVisible(),
@@ -17605,9 +17481,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "lancer-battle",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isLancerBattleVisible,
   canTrigger: () =>
@@ -17619,9 +17492,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "brand-burns",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isBrandBurnsVisible,
   canTrigger: () => !isBrandBurnsVisible(),
@@ -17632,9 +17502,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "behelit-found",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isBehelitVisible,
   canTrigger: () => !isBehelitVisible(),
@@ -17645,9 +17512,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "john-pork",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isJohnPorkVisible,
   canTrigger: () => !isJohnPorkVisible(),
@@ -17658,9 +17522,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "biden-blast",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isBidenBlastVisible,
   canTrigger: () => !isBidenBlastVisible(),
@@ -17671,9 +17532,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "saul-advertisement",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isSaulAdVisible,
   canTrigger: () => !isSaulAdVisible(),
@@ -17684,9 +17542,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "kidnamedfinger",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isKidnamedfingerVisible,
   canTrigger: () => !isKidnamedfingerVisible(),
@@ -17697,9 +17552,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "walter-white",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isWalterWhiteVisible,
   canTrigger: () => !isWalterWhiteVisible(),
@@ -17710,9 +17562,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "bounty-hunter-announcement",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isBountyHunterVisible,
   canTrigger: () => !isBountyHunterVisible(),
@@ -17723,9 +17572,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "pokemon-starter-selection",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isPokemonStarterVisible,
   canTrigger: () => !isPokemonStarterVisible(),
@@ -17736,9 +17582,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "relic-recovery",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isRelicRecoveryVisible,
   canTrigger: () => !isRelicRecoveryVisible(),
@@ -17749,9 +17592,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "dont-starve-campfire",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isDstCampfireEventVisible,
   canTrigger: () => !isDstCampfireEventVisible(),
@@ -17762,9 +17602,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "infinity-blade-armory",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isInfinityArmoryVisible,
   canTrigger: () => !isInfinityArmoryVisible(),
@@ -17775,9 +17612,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "virus",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isVirusVisible,
   canTrigger: () => !isVirusVisible(),
@@ -17788,9 +17622,6 @@ registerRandomEvent({
 
 registerRandomEvent({
   id: "evil-wizards-advertisement",
-  debug: false,
-  probability: STANDARD_RANDOM_EVENT_PROBABILITY,
-  probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
   kind: RANDOM_EVENT_KIND_NON_INTERACTIVE,
   isVisible: isAdvertisementVisible,
   canTrigger: () => !isAdvertisementVisible(),

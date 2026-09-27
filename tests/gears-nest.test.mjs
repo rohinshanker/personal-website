@@ -79,7 +79,6 @@ test("nest event is not registered in debug mode", () => {
   assert.notEqual(registrationEnd, -1, "Missing gears nest registration end");
   const registration = mainSource.slice(registrationStart, registrationEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
 });
 
@@ -90,7 +89,6 @@ test("blade lock event is not registered in debug mode", () => {
   assert.notEqual(registrationEnd, -1, "Missing lancer battle registration end");
   const registration = mainSource.slice(registrationStart, registrationEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
 });
 
@@ -563,7 +561,6 @@ test("spare a trna event is a probability-gated alert with a local ribosome icon
   const registration = mainSource.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /isVisible: isTrnaRequestVisible,/);
@@ -602,7 +599,6 @@ test("spell on the stack event is probability-gated with counter and damage effe
   const registration = mainSource.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /isVisible: isSpellStackVisible,/);
@@ -662,7 +658,6 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   const registration = mainSource.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /isVisible: isSootSpritesVisible,/);
@@ -722,9 +717,15 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(mainSource, /const createSootSpriteRunSegment = \(\{/);
   assert.match(mainSource, /const applySootSpriteRunSegmentTiming = \(\{/);
   assert.match(mainSource, /const getSootSpritesToolbarTop = \(\) =>/);
-  assert.match(mainSource, /Math\.min\(window\.innerHeight - spriteSize, toolbarTop - spriteSize\)/);
+  assert.match(
+    mainSource,
+    /clampNumber\(toolbarTop - spriteSize, 0, window\.innerHeight - spriteSize\)/
+  );
   assert.match(mainSource, /const getSootCandyLandingY = \(candySize\) =>/);
-  assert.match(mainSource, /Math\.min\(window\.innerHeight - candySize, toolbarTop - candySize\)/);
+  assert.match(
+    mainSource,
+    /clampNumber\(toolbarTop - candySize, 0, window\.innerHeight - candySize\)/
+  );
   assert.match(mainSource, /const getSootCandyGravityPoint = \(trajectory, progress\) =>/);
   assert.match(mainSource, /const createSootCandyTrajectory = \(\{/);
   assert.match(mainSource, /const landingY = getSootCandyLandingY\(size\);/);
@@ -743,7 +744,10 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(mainSource, /"--candy-fade-duration"[\s\S]*?SOOT_CANDY_FADE_DURATION_MS/);
   assert.match(mainSource, /"--candy-fade-delay", `\$\{fadeDelay\}ms`/);
   assert.match(mainSource, /const createSootSpriteSpawnGrid = \(launchRect, spriteCount\) =>/);
-  assert.match(mainSource, /const columns = Math\.max\([\s\S]*?Math\.round\(Math\.sqrt\(spriteCount \* aspectRatio\)\)/);
+  assert.match(
+    mainSource,
+    /const columns = clampNumber\([\s\S]*?Math\.round\(Math\.sqrt\(spriteCount \* aspectRatio\)\)[\s\S]*?1,[\s\S]*?spriteCount/
+  );
   assert.match(mainSource, /const rows = Math\.ceil\(spriteCount \/ columns\);/);
   assert.match(mainSource, /return Array\.from\(\{ length: spriteCount \}, \(_, index\) =>/);
   assert.match(mainSource, /const createSootSpriteTrajectory = \(launchRect, \{ startPoint \} = \{\}\) =>/);
@@ -951,7 +955,6 @@ test("nataraja event is probability-gated and loops local video with offer butto
   const registration = mainSource.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /isVisible: isNatarajaVisible,/);
@@ -1002,7 +1005,6 @@ test("noble steed event delays then shows a same-place result alert", async () =
   const windowMarkup = homeSource.slice(windowStart, resultWindowStart);
   const resultWindowMarkup = homeSource.slice(resultWindowStart, windowEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /isVisible: isNobleSteedVisible,/);
@@ -1051,7 +1053,6 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
   const registration = mainSource.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /isVisible: isToxicJungleVisible,/);
@@ -1134,7 +1135,6 @@ test("resist causality window has title close and mobile-visible imagery", async
   const registration = mainSource.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(windowMarkup, /id="fate-title-close"/);
   assert.match(windowMarkup, /aria-label="Close"/);
@@ -1156,7 +1156,6 @@ test("wall breach event shakes, flashes, and opens a probability-gated popup", a
   assert.notEqual(registrationStart, -1, "Missing wall breach registration");
   const registration = mainSource.slice(registrationStart, registrationEnd);
 
-  assert.match(registration, /debug: false,/);
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /runWallBreachSequence\(\)/);
