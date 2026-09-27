@@ -133,7 +133,7 @@ test("Sudoku persists the quota and warning while legacy assists fail closed", a
   );
   assert.match(
     restoreSource,
-    /sudokuState\.checksUsed = Math\.max\([\s\S]*?Math\.min\([\s\S]*?SUDOKU_MAX_LEADERBOARD_CHECKS[\s\S]*?savedState\.checksUsed/
+    /sudokuState\.checksUsed = clampNumber\([\s\S]*?savedState\.checksUsed[\s\S]*?0,[\s\S]*?SUDOKU_MAX_LEADERBOARD_CHECKS/
   );
   assert.match(
     restoreSource,
@@ -423,6 +423,7 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
   vm.runInContext(
     [
       constantsSource,
+      "const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));",
       "const sudokuGrid = null;",
       "let sudokuCellElements = [];",
       "let sudokuState = { puzzleId: '', puzzle: '' };",

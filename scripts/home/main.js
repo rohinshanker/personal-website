@@ -1072,6 +1072,7 @@ const GAME_STATS_SKY_NAME_GENERATOR_URL =
   "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true";
 const GAME_STATS_NAME_GENERATOR_TIMEOUT_MS = 8000;
 const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
+const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
 const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
   "easy",
   "medium",
@@ -3302,7 +3303,7 @@ const updateGameStatsPlayerNameMarquees = (root = document) => {
       name.style.setProperty("--game-stats-name-scroll-distance", `${distance}px`);
       name.style.setProperty(
         "--game-stats-name-scroll-duration",
-        `${Math.min(10, Math.max(3, distance / 12)).toFixed(2)}s`
+        `${clampNumber(distance / 12, 3, 10).toFixed(2)}s`
       );
     } else {
       name.style.removeProperty("--game-stats-name-scroll-distance");
@@ -5567,8 +5568,8 @@ const sampleRandomEventPosition = ({ padding, maxLeft, maxTop }) => ({
 });
 
 const clampRandomEventPosition = ({ padding, maxLeft, maxTop }, { left, top }) => ({
-  left: Math.max(padding, Math.min(left, maxLeft)),
-  top: Math.max(padding, Math.min(top, maxTop)),
+  left: clampNumber(left, padding, maxLeft),
+  top: clampNumber(top, padding, maxTop),
 });
 
 const findRandomEventOpenPosition = (win, preferredPositions = []) => {
@@ -5625,8 +5626,8 @@ const findRandomEventOpenPosition = (win, preferredPositions = []) => {
 const setRandomEventWindowPosition = (win, left, top, { onPosition } = {}) => {
   if (!win) return;
   const { padding, maxLeft, maxTop } = getRandomEventWindowBounds(win);
-  const nextLeft = Math.round(Math.max(padding, Math.min(left, maxLeft)));
-  const nextTop = Math.round(Math.max(padding, Math.min(top, maxTop)));
+  const nextLeft = Math.round(clampNumber(left, padding, maxLeft));
+  const nextTop = Math.round(clampNumber(top, padding, maxTop));
   const { insetX, insetY } = getRandomEventVisualInsets(win);
   win.style.translate = "0 0";
   win.style.left = `${nextLeft - insetX}px`;
@@ -6507,7 +6508,7 @@ const wordErrorStackLayout = () => {
   const count = 10;
   const padding = 12;
   const taskbarClearance = 64;
-  const windowWidth = Math.min(360, Math.max(260, window.innerWidth - padding * 2));
+  const windowWidth = clampNumber(window.innerWidth - padding * 2, 260, 360);
   const windowHeight = 136;
   const availableWidth = Math.max(0, window.innerWidth - padding * 2 - windowWidth);
   const availableHeight = Math.max(
@@ -7063,7 +7064,7 @@ const setSkillCheckDigit = (image, char) => {
 
 const setSkillCheckRollDisplay = (value = null) => {
   const text =
-    typeof value === "number" ? String(Math.max(1, Math.min(20, value))).padStart(2, " ") : "  ";
+    typeof value === "number" ? String(clampNumber(value, 1, 20)).padStart(2, " ") : "  ";
   setSkillCheckDigit(skillCheckDieTens, text[0]);
   setSkillCheckDigit(skillCheckDieOnes, text[1]);
 };
@@ -7270,7 +7271,7 @@ const lockDistressNavigation = () => {
 
 const setDistressPowerProgress = (progress) => {
   if (!distressPowerProgressBar) return;
-  distressPowerProgressBar.style.width = `${Math.max(0, Math.min(1, progress)) * 100}%`;
+  distressPowerProgressBar.style.width = `${clampNumber(progress, 0, 1) * 100}%`;
 };
 
 const getDistressThermalNoise = () =>
@@ -7290,7 +7291,7 @@ const drawDistressStatic = (ctx, width, height) => {
     const y = Math.random() * height;
     const length = width * (0.1 + Math.random() * 0.46);
     const centerJitter = (Math.random() - 0.5) * width * 0.18;
-    const x = Math.max(0, Math.min(width - length, width * 0.5 - length * 0.5 + centerJitter));
+    const x = clampNumber(width * 0.5 - length * 0.5 + centerJitter, 0, width - length);
     ctx.fillStyle = `rgba(185, 255, 196, ${0.045 + Math.random() * 0.09})`;
     ctx.fillRect(x, y, length, 1);
   }
@@ -7396,7 +7397,7 @@ const clearSnakeCountdown = () => {
 };
 
 const setSnakeLoadingProgress = (progress) => {
-  snakeLoadingProgress = Math.max(0, Math.min(100, progress));
+  snakeLoadingProgress = clampNumber(progress, 0, 100);
   const roundedProgress = Math.round(snakeLoadingProgress);
   if (snakeLoadingMeterFill) {
     snakeLoadingMeterFill.style.setProperty(
@@ -7853,7 +7854,7 @@ const drawSnakeGame = () => {
   });
   snakeState.collectionPulses.forEach((pulse) => {
     const age = now - pulse.startedAt;
-    const progress = Math.max(0, Math.min(1, age / SNAKE_COLLECTION_PULSE_MS));
+    const progress = clampNumber(age / SNAKE_COLLECTION_PULSE_MS, 0, 1);
     const pulseX = pulse.x * cellWidth + cellWidth / 2;
     const pulseY = pulse.y * cellHeight + cellHeight / 2;
     const cellSize = Math.min(cellWidth, cellHeight);
@@ -8331,9 +8332,10 @@ const updateDistressTuning = () => {
   const aligned =
     alignment.frequencyDelta <= DISTRESS_ALIGNMENT_TOLERANCE &&
     alignment.phaseDelta <= DISTRESS_ALIGNMENT_TOLERANCE;
-  const signalStrength = Math.max(
+  const signalStrength = clampNumber(
+    Math.round(100 - alignment.frequencyDelta * 1.4 - alignment.phaseDelta * 1.4),
     0,
-    Math.min(99, Math.round(100 - alignment.frequencyDelta * 1.4 - alignment.phaseDelta * 1.4))
+    99
   );
   if (aligned) {
     distressSignalSolved = true;
@@ -8395,12 +8397,10 @@ const startDistressPowerSequence = () => {
       targetProgress - distressPowerVisibleProgress > 0.09;
     if (shouldJump) {
       const jumpSize = 0.018 + Math.random() * 0.09;
-      distressPowerVisibleProgress = Math.min(
-        1,
-        Math.max(
-          distressPowerVisibleProgress,
-          Math.min(targetProgress + Math.random() * 0.035, distressPowerVisibleProgress + jumpSize)
-        )
+      distressPowerVisibleProgress = clampNumber(
+        Math.min(targetProgress + Math.random() * 0.035, distressPowerVisibleProgress + jumpSize),
+        distressPowerVisibleProgress,
+        1
       );
     }
     setDistressPowerProgress(distressPowerVisibleProgress);
@@ -8430,7 +8430,7 @@ const resetDistressSignal = () => {
   if (distressFrequencyDial) {
     const offset = (Math.random() < 0.5 ? -1 : 1) * (18 + Math.random() * 24);
     distressFrequencyDial.value = String(
-      Math.max(0, Math.min(100, Math.round(distressTargetFrequency + offset)))
+      clampNumber(Math.round(distressTargetFrequency + offset), 0, 100)
     );
   }
   if (distressPhaseDial) {
@@ -8997,7 +8997,7 @@ const copyMidnightGospelPosition = (source, target) => {
 };
 
 const setMidnightGospelTimerText = (seconds) => {
-  const clampedSeconds = Math.max(0, Math.min(99, seconds));
+  const clampedSeconds = clampNumber(seconds, 0, 99);
   const digits = String(clampedSeconds).padStart(2, "0");
   if (midnightGospelTimer) {
     midnightGospelTimer.setAttribute(
@@ -9223,7 +9223,7 @@ const createGradescopeCurvePath = (rawValue, rawMin = 0, rawMax = 100) => {
   const min = Number(rawMin) || 0;
   const max = Number(rawMax) || 100;
   const value = Number.isFinite(rawValue) ? rawValue : GRADESCOPE_CURVE_SLIDER_DEFAULT;
-  const ratio = Math.max(0, Math.min(1, (value - min) / Math.max(1, max - min)));
+  const ratio = clampNumber((value - min) / Math.max(1, max - min), 0, 1);
   const center =
     GRADESCOPE_CURVE_GRAPH_LEFT +
     ratio * (GRADESCOPE_CURVE_GRAPH_RIGHT - GRADESCOPE_CURVE_GRAPH_LEFT);
@@ -10493,7 +10493,7 @@ const drawLightningBorderFrame = (canvas, alpha, palette = RED_LIGHTNING_PALETTE
   const top = inset;
   const right = Math.max(left + 1, width - inset);
   const bottom = Math.max(top + 1, height - inset);
-  const displacement = Math.max(6, Math.min(13, Math.min(width, height) / 14));
+  const displacement = clampNumber(Math.min(width, height) / 14, 6, 13);
   const edges = [
     [left, top, right, top],
     [right, top, right, bottom],
@@ -10565,7 +10565,7 @@ const positionFateWindow = () => {
 };
 
 const updateFateProgress = () => {
-  const progress = Math.min(100, Math.max(0, fateProgressValue));
+  const progress = clampNumber(fateProgressValue, 0, 100);
   if (fateProgressBar) fateProgressBar.style.width = `${progress}%`;
   if (fateProgress) fateProgress.setAttribute("aria-valuenow", Math.round(progress));
 };
@@ -11121,22 +11121,16 @@ const getSootSpritesToolbarTop = () => {
 
 const getSootSpritesGroundY = (spriteSize) => {
   const toolbarTop = getSootSpritesToolbarTop();
-  return Math.max(
-    0,
-    Math.min(window.innerHeight - spriteSize, toolbarTop - spriteSize)
-  );
+  return clampNumber(toolbarTop - spriteSize, 0, window.innerHeight - spriteSize);
 };
 
 const getSootCandyLandingY = (candySize) => {
   const toolbarTop = getSootSpritesToolbarTop();
-  return Math.max(
-    0,
-    Math.min(window.innerHeight - candySize, toolbarTop - candySize)
-  );
+  return clampNumber(toolbarTop - candySize, 0, window.innerHeight - candySize);
 };
 
 const getSootSpriteParabolaPoint = (trajectory, progress) => {
-  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const clampedProgress = clampNumber(progress, 0, 1);
   return {
     x: trajectory.startX + (trajectory.landingX - trajectory.startX) * clampedProgress,
     y:
@@ -11197,7 +11191,7 @@ const getSootSpriteFallPointAtDistance = (trajectory, distance) => {
 };
 
 const getSootSpriteFallScale = (pathProgress, runScale) => {
-  const progress = Math.min(1, Math.max(0, pathProgress));
+  const progress = clampNumber(pathProgress, 0, 1);
   const baseScale = 1 + (runScale - 1) * progress;
   const arcStretch = Math.sin(progress * Math.PI) * 0.04;
   return Number((baseScale + arcStretch).toFixed(3));
@@ -11209,7 +11203,7 @@ const getSootSpriteTransform = (point, scale) =>
 const getSootSpriteTimelineOffset = (trajectory, distance) => {
   if (!trajectory.duration || !trajectory.pathSpeed) return 0;
   if (distance <= trajectory.fallLength) {
-    return Math.min(1, Math.max(0, distance / trajectory.pathSpeed / trajectory.duration));
+    return clampNumber(distance / trajectory.pathSpeed / trajectory.duration, 0, 1);
   }
 
   const segment =
@@ -11220,7 +11214,7 @@ const getSootSpriteTimelineOffset = (trajectory, distance) => {
   const elapsedTime =
     segment.startTime +
     (distance - segment.startDistance) / Math.max(0.001, segment.speed);
-  return Math.min(1, Math.max(0, elapsedTime / trajectory.duration));
+  return clampNumber(elapsedTime / trajectory.duration, 0, 1);
 };
 
 const createSootSpritePathKeyframes = (trajectory) => [
@@ -11233,7 +11227,7 @@ const createSootSpritePathKeyframes = (trajectory) => [
     ),
   })),
   ...trajectory.runSegments.map((segment) => ({
-    offset: Math.min(1, Math.max(0, segment.endTime / trajectory.duration)),
+    offset: clampNumber(segment.endTime / trajectory.duration, 0, 1),
     opacity: 1,
     transform: getSootSpriteTransform(
       { x: segment.endX, y: trajectory.exitY },
@@ -11254,7 +11248,7 @@ const animateSootSpriteElement = (sprite, trajectory) => {
 };
 
 const getSootCandyGravityPoint = (trajectory, progress) => {
-  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const clampedProgress = clampNumber(progress, 0, 1);
   return {
     x:
       trajectory.startX +
@@ -11273,23 +11267,18 @@ const createSootCandyTrajectory = ({
   maxHorizontalTravel,
 }) => {
   const landingY = getSootCandyLandingY(size);
-  const safeStartX = Math.max(
-    6,
-    Math.min(window.innerWidth - size - 6, startX)
-  );
-  const safeStartY = Math.max(
+  const safeStartX = clampNumber(startX, 6, window.innerWidth - size - 6);
+  const safeStartY = clampNumber(
+    startY,
     0,
-    Math.min(startY, landingY - randomSootSpriteValue(18, 72))
+    landingY - randomSootSpriteValue(18, 72)
   );
   const landingDirection = Math.random() < 0.5 ? -1 : 1;
-  const landingX = Math.max(
+  const landingX = clampNumber(
+    safeStartX +
+      landingDirection * randomSootSpriteValue(minHorizontalTravel, maxHorizontalTravel),
     6,
-    Math.min(
-      window.innerWidth - size - 6,
-      safeStartX +
-        landingDirection *
-          randomSootSpriteValue(minHorizontalTravel, maxHorizontalTravel)
-    )
+    window.innerWidth - size - 6
   );
   const trajectory = {
     startX: safeStartX,
@@ -11400,13 +11389,14 @@ const applySootSpriteRunSegmentTiming = ({
 
 const createSootSpriteSpawnGrid = (launchRect, spriteCount) => {
   const aspectRatio = launchRect.width / Math.max(1, launchRect.height);
-  const columns = Math.max(
+  const columns = clampNumber(
+    Math.round(Math.sqrt(spriteCount * aspectRatio)),
     1,
-    Math.min(spriteCount, Math.round(Math.sqrt(spriteCount * aspectRatio)))
+    spriteCount
   );
   const rows = Math.ceil(spriteCount / columns);
-  const horizontalInset = Math.min(20, Math.max(8, launchRect.width * 0.08));
-  const verticalInset = Math.min(20, Math.max(8, launchRect.height * 0.1));
+  const horizontalInset = clampNumber(launchRect.width * 0.08, 8, 20);
+  const verticalInset = clampNumber(launchRect.height * 0.1, 8, 20);
   const usableWidth = Math.max(1, launchRect.width - horizontalInset * 2);
   const usableHeight = Math.max(1, launchRect.height - verticalInset * 2);
 
@@ -11434,15 +11424,16 @@ const createSootSpriteTrajectory = (launchRect, { startPoint } = {}) => {
   const startMinX = launchRect.left + 4;
   const startMaxX = Math.max(startMinX, launchRect.left + launchRect.width - size - 4);
   const startMinY = launchRect.top + 4;
-  const startMaxY = Math.max(
+  const startMaxY = clampNumber(
+    groundY - minimumFallDistance,
     startMinY,
-    Math.min(launchRect.top + launchRect.height - size - 4, groundY - minimumFallDistance)
+    launchRect.top + launchRect.height - size - 4
   );
   const startX = startPoint
-    ? Math.max(startMinX, Math.min(startMaxX, startPoint.x - size / 2))
+    ? clampNumber(startPoint.x - size / 2, startMinX, startMaxX)
     : randomSootSpriteValue(startMinX, startMaxX);
   const startY = startPoint
-    ? Math.max(startMinY, Math.min(startMaxY, startPoint.y - size / 2))
+    ? clampNumber(startPoint.y - size / 2, startMinY, startMaxY)
     : randomSootSpriteValue(startMinY, startMaxY);
   const minLandingX = 10;
   const maxLandingX = Math.max(minLandingX, window.innerWidth - size - 10);
@@ -11579,7 +11570,7 @@ const createSootSpriteTrajectory = (launchRect, { startPoint } = {}) => {
 };
 
 const getSootSpriteTrajectoryPoint = (trajectory, progress) => {
-  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const clampedProgress = clampNumber(progress, 0, 1);
   const elapsedTime = clampedProgress * trajectory.duration;
   if (elapsedTime <= trajectory.fallDuration) {
     return getSootSpriteFallPointAtDistance(
@@ -11601,12 +11592,12 @@ const getSootSpriteTrajectoryPoint = (trajectory, progress) => {
 
 const getSootSpriteAirTrailProgress = (trajectory) => {
   const start = 0.08;
-  const end = Math.max(start, Math.min(0.92, trajectory.landingProgress - 0.04));
+  const end = clampNumber(trajectory.landingProgress - 0.04, start, 0.92);
   return randomSootSpriteValue(start, end);
 };
 
 const getSootSpriteGroundRunProgress = (trajectory) => {
-  const start = Math.min(0.96, Math.max(0.08, trajectory.landingProgress + 0.04));
+  const start = clampNumber(trajectory.landingProgress + 0.04, 0.08, 0.96);
   return randomSootSpriteValue(start, 0.96);
 };
 
@@ -12223,7 +12214,7 @@ const showLancerBattleStage = (stage) => {
 };
 
 const updateLancerBattleProgress = () => {
-  const progress = Math.min(100, Math.max(0, lancerBattleProgressValue));
+  const progress = clampNumber(lancerBattleProgressValue, 0, 100);
   if (lancerBattleProgressBar) {
     lancerBattleProgressBar.style.width = `${progress}%`;
   }
@@ -12410,9 +12401,10 @@ const updateLancerBattleBoomerangFrame = () => {
   }
   const nextTime =
     current + LANCER_BATTLE_BOOMERANG_STEP * lancerBattleBoomerangDirection;
-  lancerBattleClashVideo.currentTime = Math.min(
-    lancerBattleBoomerangEnd,
-    Math.max(lancerBattleBoomerangStart, nextTime)
+  lancerBattleClashVideo.currentTime = clampNumber(
+    nextTime,
+    lancerBattleBoomerangStart,
+    lancerBattleBoomerangEnd
   );
   lancerBattleBoomerangFrame = requestAnimationFrame(
     updateLancerBattleBoomerangFrame
@@ -12709,7 +12701,7 @@ const setBrandBurnsStageHidden = (stage, hidden) => {
 
 const brandBurnsMeterPercent = (value, maxValue) => {
   const max = Math.max(1, maxValue);
-  const clamped = Math.max(0, Math.min(max, value));
+  const clamped = clampNumber(value, 0, max);
   if (clamped <= 0) return 0;
   const segments = Math.ceil((clamped / max) * BRAND_BURNS_METER_SEGMENTS);
   return (
@@ -12719,9 +12711,9 @@ const brandBurnsMeterPercent = (value, maxValue) => {
 
 const updateBrandBurnsHud = () => {
   const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
-  const health = Math.max(0, Math.min(maxHealth, brandBurnsStats.health));
+  const health = clampNumber(brandBurnsStats.health, 0, maxHealth);
   const healthPercent = brandBurnsMeterPercent(health, maxHealth);
-  const stamina = Math.max(0, Math.min(BRAND_BURNS_PLAYER_MAX_STAMINA, brandBurnsStats.stamina));
+  const stamina = clampNumber(brandBurnsStats.stamina, 0, BRAND_BURNS_PLAYER_MAX_STAMINA);
   const staminaPercent = brandBurnsMeterPercent(stamina, BRAND_BURNS_PLAYER_MAX_STAMINA);
   const remaining = Math.max(0, brandBurnsStats.total - brandBurnsStats.defeated);
 
@@ -12772,9 +12764,10 @@ const hasBrandBurnsAttackStamina = () =>
 const getBrandBurnsAttackStaminaCost = () =>
   brandBurnsRandomInt(
     BRAND_BURNS_STAMINA_ATTACK_MIN_COST,
-    Math.min(
-      BRAND_BURNS_STAMINA_ATTACK_MAX_COST,
-      Math.max(BRAND_BURNS_STAMINA_ATTACK_MIN_COST, Math.floor(brandBurnsStats.stamina))
+    clampNumber(
+      Math.floor(brandBurnsStats.stamina),
+      BRAND_BURNS_STAMINA_ATTACK_MIN_COST,
+      BRAND_BURNS_STAMINA_ATTACK_MAX_COST
     )
   );
 
@@ -12782,12 +12775,12 @@ const getBrandBurnsStaminaRecoveryAmount = () => {
   const maxHealth = Math.max(1, brandBurnsStats.maxHealth || BRAND_BURNS_PLAYER_MAX_HEALTH);
   const staminaFactor = Math.max(
     BRAND_BURNS_STAMINA_RECOVERY_MIN_FACTOR,
-    Math.max(0, Math.min(BRAND_BURNS_PLAYER_MAX_STAMINA, brandBurnsStats.stamina)) /
+    clampNumber(brandBurnsStats.stamina, 0, BRAND_BURNS_PLAYER_MAX_STAMINA) /
       BRAND_BURNS_PLAYER_MAX_STAMINA
   );
   const missingHealthFactor =
     1 +
-    (1 - Math.max(0, Math.min(maxHealth, brandBurnsStats.health)) / maxHealth) *
+    (1 - clampNumber(brandBurnsStats.health, 0, maxHealth) / maxHealth) *
       BRAND_BURNS_STAMINA_LOW_HEALTH_BONUS;
   const blockFactor = brandBurnsBlocking ? BRAND_BURNS_STAMINA_BLOCK_RECOVERY_BONUS : 1;
 
@@ -12819,7 +12812,7 @@ const clearBrandBurnsEnemyTimers = () => {
 };
 
 const updateBrandBurnsEnemyHud = (state) => {
-  const percent = Math.max(0, Math.min(100, (state.health / state.maxHealth) * 100));
+  const percent = clampNumber((state.health / state.maxHealth) * 100, 0, 100);
   if (state.healthBar) state.healthBar.style.width = `${percent}%`;
   if (state.healthValue) {
     state.healthValue.textContent = `${Math.max(0, Math.round(state.health))}/${state.maxHealth}`;
@@ -14368,7 +14361,7 @@ const positionPokemonStarterInfoCard = (choice) => {
   const minLeft = cardWidth / 2 + 12;
   const maxLeft = Math.max(minLeft, sceneRect.width - cardWidth / 2 - 12);
   const choiceCenter = choiceRect.left + choiceRect.width / 2 - sceneRect.left;
-  const cardLeft = Math.max(minLeft, Math.min(maxLeft, choiceCenter));
+  const cardLeft = clampNumber(choiceCenter, minLeft, maxLeft);
   pokemonStarterInfoCard.style.left = `${Math.round(cardLeft)}px`;
 };
 
@@ -15012,7 +15005,7 @@ const stopDstNightTimer = () => {
 
 const setDstNightProgress = (percent) => {
   if (!dstNightProgress) return;
-  const clampedPercent = Math.max(0, Math.min(100, percent));
+  const clampedPercent = clampNumber(percent, 0, 100);
   dstNightProgress.style.width = `${clampedPercent}%`;
 };
 
@@ -16042,7 +16035,7 @@ const drawVirusWindowLightningBorderFrame = (alpha) => {
   const top = inset;
   const right = Math.max(left + 1, width - inset);
   const bottom = Math.max(top + 1, height - inset);
-  const displacement = Math.max(6, Math.min(13, Math.min(width, height) / 14));
+  const displacement = clampNumber(Math.min(width, height) / 14, 6, 13);
   const edges = [
     [left, top, right, top],
     [right, top, right, bottom],
@@ -16097,7 +16090,7 @@ const drawVirusStrikeFrame = (origin, rect, alpha) => {
 
   const target = virusStrikeTargetPoint(rect, origin);
   const distance = Math.hypot(target.x - origin.x, target.y - origin.y);
-  const displacement = Math.max(9, Math.min(22, distance / 5.5));
+  const displacement = clampNumber(distance / 5.5, 9, 22);
   const bolts = [];
   const path = generateFateBoltPath(
     origin.x,
@@ -16415,12 +16408,10 @@ const isPromoRandomEventModeActive = () =>
   );
 
 const promoRandomEventTriggerProbability = (probability) =>
-  Math.min(
-    1,
-    Math.max(
-      PROMO_RANDOM_EVENT_TRIGGER_FLOOR,
-      probability * PROMO_RANDOM_EVENT_PROBABILITY_MULTIPLIER
-    )
+  clampNumber(
+    probability * PROMO_RANDOM_EVENT_PROBABILITY_MULTIPLIER,
+    PROMO_RANDOM_EVENT_TRIGGER_FLOOR,
+    1
   );
 
 const promoRandomEventCompactnessWeight = (area, referenceArea) => {
@@ -16434,12 +16425,10 @@ const promoRandomEventCompactnessWeight = (area, referenceArea) => {
   ) {
     return 1;
   }
-  return Math.min(
-    PROMO_RANDOM_EVENT_COMPACTNESS_MAX,
-    Math.max(
-      PROMO_RANDOM_EVENT_COMPACTNESS_MIN,
-      Math.sqrt(normalizedReference / normalizedArea)
-    )
+  return clampNumber(
+    Math.sqrt(normalizedReference / normalizedArea),
+    PROMO_RANDOM_EVENT_COMPACTNESS_MIN,
+    PROMO_RANDOM_EVENT_COMPACTNESS_MAX
   );
 };
 
@@ -16454,7 +16443,7 @@ const randomEventTriggerProbability = (triggerName, definition = null) => {
   if (Number.isNaN(probability)) return 0;
   const boostedProbability =
     probability + (isNekoRandomEventBoostActive() ? NEKO_RANDOM_EVENT_PROBABILITY_BONUS : 0);
-  const clampedProbability = Math.min(1, Math.max(0, boostedProbability));
+  const clampedProbability = clampNumber(boostedProbability, 0, 1);
   return isPromoRandomEventModeActive()
     ? promoRandomEventTriggerProbability(clampedProbability)
     : clampedProbability;
@@ -17878,8 +17867,6 @@ const shuffle = (items) => {
   return shuffled;
 };
 
-const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
-
 const getTaskbarViewportClearance = () => {
   const taskbar = document.querySelector(".taskbar");
   if (!taskbar) return 0;
@@ -18029,8 +18016,8 @@ const initPortfolioCornerResize = () => {
       const startY = event.clientY;
       const startWidth = rect.width;
       const startHeight = rect.height;
-      const minWidth = Math.min(280, Math.max(240, window.innerWidth - 24));
-      const minHeight = Math.min(220, Math.max(180, window.innerHeight - 96));
+      const minWidth = clampNumber(window.innerWidth - 24, 240, 280);
+      const minHeight = clampNumber(window.innerHeight - 96, 180, 220);
       const maxWidth = Math.max(minWidth, window.innerWidth - rect.left - 12);
       const maxHeight = Math.max(minHeight, window.innerHeight - rect.top - 58);
 
@@ -18110,12 +18097,12 @@ const expandSmallWindow = (win) => {
   const titleBar = win.querySelector(".title-bar");
   const maxWidth = Math.max(320, window.innerWidth - 48);
   const maxHeight = Math.max(260, window.innerHeight - 86);
-  const nextWidth = Math.round(Math.min(maxWidth, Math.max(rect.width * 2, rect.width + 240)));
-  const nextHeight = Math.round(Math.min(maxHeight, Math.max(rect.height * 2, rect.height + 180)));
+  const nextWidth = Math.round(clampNumber(rect.width + 240, rect.width * 2, maxWidth));
+  const nextHeight = Math.round(clampNumber(rect.height + 180, rect.height * 2, maxHeight));
   const maxLeft = Math.max(24, window.innerWidth - nextWidth - 24);
   const maxTop = Math.max(16, window.innerHeight - nextHeight - 70);
-  const nextLeft = Math.round(Math.max(24, Math.min(rect.left, maxLeft)));
-  const nextTop = Math.round(Math.max(16, Math.min(rect.top, maxTop)));
+  const nextLeft = Math.round(clampNumber(rect.left, 24, maxLeft));
+  const nextTop = Math.round(clampNumber(rect.top, 16, maxTop));
 
   expandedWindowState.set(win, {
     width: win.style.width,
@@ -19189,12 +19176,10 @@ const restoreSudokuSavedState = () => {
   }
   sudokuState.usedHint = Boolean(savedState.usedHint || savedState.usedReveal);
   sudokuState.usedReveal = Boolean(savedState.usedReveal);
-  sudokuState.checksUsed = Math.max(
+  sudokuState.checksUsed = clampNumber(
+    Math.floor(Number(savedState.checksUsed) || 0),
     0,
-    Math.min(
-      SUDOKU_MAX_LEADERBOARD_CHECKS,
-      Math.floor(Number(savedState.checksUsed) || 0)
-    )
+    SUDOKU_MAX_LEADERBOARD_CHECKS
   );
   sudokuState.errorsConfirmed = Boolean(
     savedState.errorsConfirmed ||
@@ -19296,7 +19281,7 @@ const isSudokuAquariumActive = () =>
   );
 
 const setSudokuLoadingProgress = (progress) => {
-  sudokuState.loadingProgress = Math.max(0, Math.min(100, progress));
+  sudokuState.loadingProgress = clampNumber(progress, 0, 100);
   const roundedProgress = Math.round(sudokuState.loadingProgress);
   if (sudokuLoadingFill) {
     sudokuLoadingFill.style.setProperty(
@@ -19447,7 +19432,7 @@ const spawnSudokuFishPass = () => {
     const fish = createSudokuFishElement({
       depth,
       type,
-      top: Math.max(8, Math.min(90, baseTop + topOffset)),
+      top: clampNumber(baseTop + topOffset, 8, 90),
       size: baseSize * sudokuRandomBetween(0.84, 1.26),
       opacity: sudokuRandomBetween(config.opacity[0], config.opacity[1]),
       blur: sudokuRandomBetween(config.blur[0], config.blur[1]),
@@ -19586,7 +19571,11 @@ const tickSudokuLoadingSequence = () => {
   const jump = 3 + Math.random() * 14;
   const catchup = Math.max(0, targetProgress - sudokuState.loadingProgress) * 0.58;
   setSudokuLoadingProgress(
-    Math.min(98, Math.max(sudokuState.loadingProgress + 1, sudokuState.loadingProgress + jump + catchup))
+    clampNumber(
+      sudokuState.loadingProgress + jump + catchup,
+      sudokuState.loadingProgress + 1,
+      98
+    )
   );
 
   const remainingMs = Math.max(
@@ -21407,13 +21396,13 @@ document.querySelectorAll(".portfolio-window").forEach((windowEl) => {
       const startX = event.clientX;
       const startWidth = selectorPanel.getBoundingClientRect().width;
       const minWidth = 200;
-      const maxWidth = Math.max(minWidth, Math.min(420, bodyRect.width - 220));
+      const maxWidth = clampNumber(bodyRect.width - 220, minWidth, 420);
 
       divider.setPointerCapture(event.pointerId);
 
       const onMove = (moveEvent) => {
         const delta = moveEvent.clientX - startX;
-        const nextWidth = Math.max(minWidth, Math.min(startWidth + delta, maxWidth));
+        const nextWidth = clampNumber(startWidth + delta, minWidth, maxWidth);
         selectorPanel.style.width = `${nextWidth}px`;
         selectorPanel.style.flexBasis = `${nextWidth}px`;
       };
@@ -26901,7 +26890,7 @@ let nekoContextMenuOrigin = null;
 const sampleNekoStreamRoll = (random = Math.random) => {
   const value = Number(random());
   if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
+  return clampNumber(value, 0, 1);
 };
 
 const sampleNekoStreamRange = (minimum, maximum, random = Math.random) =>
@@ -27171,9 +27160,10 @@ const animateNekoStream = (timestamp) => {
   }
 
   if (!nekoStreamLastFrameTimestamp) nekoStreamLastFrameTimestamp = timestamp;
-  const deltaMs = Math.min(
-    NEKO_FRAME_INTERVAL_MS * 2,
-    Math.max(0, timestamp - nekoStreamLastFrameTimestamp)
+  const deltaMs = clampNumber(
+    timestamp - nekoStreamLastFrameTimestamp,
+    0,
+    NEKO_FRAME_INTERVAL_MS * 2
   );
   nekoStreamLastFrameTimestamp = timestamp;
   const viewportWidth = window.innerWidth;
@@ -27353,8 +27343,8 @@ const openNekoContextMenu = (launcher, clientX, clientY) => {
     NEKO_CONTEXT_MENU_PADDING,
     availableBottom - menuBounds.height - NEKO_CONTEXT_MENU_PADDING
   );
-  const left = Math.min(maximumLeft, Math.max(NEKO_CONTEXT_MENU_PADDING, requestedLeft));
-  const top = Math.min(maximumTop, Math.max(NEKO_CONTEXT_MENU_PADDING, requestedTop));
+  const left = clampNumber(requestedLeft, NEKO_CONTEXT_MENU_PADDING, maximumLeft);
+  const top = clampNumber(requestedTop, NEKO_CONTEXT_MENU_PADDING, maximumTop);
 
   nekoContextMenu.style.left = `${Math.round(left)}px`;
   nekoContextMenu.style.top = `${Math.round(top)}px`;
@@ -27597,7 +27587,7 @@ const updateNekoPointerTarget = (event) => {
 const clampNekoCenterX = (x) => {
   const halfSize = NEKO_SPRITE_SIZE / 2;
   const maxX = Math.max(halfSize, window.innerWidth - halfSize);
-  return Math.min(Math.max(halfSize, x), maxX);
+  return clampNumber(x, halfSize, maxX);
 };
 
 const clampNekoCenterY = (y) => {
@@ -27605,12 +27595,12 @@ const clampNekoCenterY = (y) => {
   // CSS shifts the sprite up, so the stored Y sits below the visual center.
   const minY = halfSize + NEKO_VERTICAL_OFFSET;
   const maxY = Math.max(minY, window.innerHeight - halfSize + NEKO_VERTICAL_OFFSET);
-  return Math.min(Math.max(minY, y), maxY);
+  return clampNumber(y, minY, maxY);
 };
 
 const clampNekoTargetToViewport = (clientX, clientY) => ({
-  x: Math.min(Math.max(clientX, 0), window.innerWidth),
-  y: Math.min(Math.max(clientY, 0), window.innerHeight),
+  x: clampNumber(clientX, 0, window.innerWidth),
+  y: clampNumber(clientY, 0, window.innerHeight),
 });
 
 const getNekoScratchAnchor = (edge, targetX, targetY) => {
@@ -27704,8 +27694,8 @@ const handleNekoPointerExit = (event) => {
   if (!["waking", "chasing"].includes(nekoState)) return;
   if (event.relatedTarget || event.toElement) return;
 
-  const fallbackX = Math.min(Math.max(nekoMouseX, 0), window.innerWidth);
-  const fallbackY = Math.min(Math.max(nekoMouseY, 0), window.innerHeight);
+  const fallbackX = clampNumber(nekoMouseX, 0, window.innerWidth);
+  const fallbackY = clampNumber(nekoMouseY, 0, window.innerHeight);
   const clientX = Number.isFinite(event.clientX) ? event.clientX : fallbackX;
   const clientY = Number.isFinite(event.clientY) ? event.clientY : fallbackY;
   const edge = getNekoPointerExitEdge(clientX, clientY);
@@ -28432,12 +28422,10 @@ if (gameProfileName) {
       return;
     }
     const movement = event.key === "ArrowDown" ? 1 : -1;
-    const nextIndex = Math.max(
+    const nextIndex = clampNumber(
+      gameStatsNameSuggestionActiveIndex + movement,
       0,
-      Math.min(
-        gameStatsNameSuggestionActiveIndex + movement,
-        gameStatsDraftNameSuggestions.length - 1
-      )
+      gameStatsDraftNameSuggestions.length - 1
     );
     setGameProfileNameSuggestionActive(nextIndex);
   });
@@ -28459,7 +28447,11 @@ if (gameProfileNameOptions) {
         ? 0
         : event.key === "End"
           ? options.length - 1
-          : Math.max(0, Math.min(currentIndex + (event.key === "ArrowDown" ? 1 : -1), options.length - 1));
+          : clampNumber(
+              currentIndex + (event.key === "ArrowDown" ? 1 : -1),
+              0,
+              options.length - 1
+            );
     setGameProfileNameSuggestionActive(nextIndex, { focus: true });
   });
 }
@@ -28959,7 +28951,7 @@ const msNeighbors = (index) => {
 };
 
 const msFormatCounter = (value) => {
-  const clamped = Math.max(-99, Math.min(999, value));
+  const clamped = clampNumber(value, -99, 999);
   if (clamped < 0) {
     return `-${String(Math.abs(clamped)).padStart(2, "0")}`;
   }

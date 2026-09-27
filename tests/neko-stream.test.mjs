@@ -43,6 +43,7 @@ const loadPlanner = async () => {
   );
   const context = vm.createContext({});
   const script = new vm.Script(`
+    const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
     const NEKO_SPRITE_SIZE = 42;
     const NEKO_FRAME_INTERVAL_MS = 100;
     const NEKO_NAP_FRAME_SWITCH_FRAMES = 8;
