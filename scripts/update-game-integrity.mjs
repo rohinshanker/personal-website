@@ -6,6 +6,7 @@ const REPOSITORY_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const BACKEND_CONFIG_PATH = new URL("home/game-stats-backend.js", import.meta.url);
 const HOME_ENTRY_PATH = new URL("../home.html", import.meta.url);
 const INDEX_ENTRY_PATH = new URL("../index.html", import.meta.url);
+const VIDEO_EDITOR_ENTRY_PATH = new URL("../video-editor/index.html", import.meta.url);
 const WRANGLER_CONFIG_PATH = new URL("../workers/game-stats/wrangler.jsonc", import.meta.url);
 const WRANGLER_CONFIG_EXAMPLE_PATH = new URL(
   "../workers/game-stats/wrangler.jsonc.example",
@@ -29,6 +30,9 @@ const INTEGRITY_CACHE_ASSET_PATHS = Object.freeze([
   "scripts/home/core/dom.js",
   "scripts/home/main.js",
 ]);
+
+/** The Video Editor loads only the generated backend config. */
+const VIDEO_EDITOR_CACHE_ASSET_PATHS = Object.freeze(["scripts/home/game-stats-backend.js"]);
 
 const toRepositoryUrl = (relativePath) => new URL(relativePath, `file://${REPOSITORY_ROOT}`);
 
@@ -60,8 +64,12 @@ const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const createIntegrityCacheToken = (buildVersion) =>
   `game-build-${buildVersion.replace(/^sha256-/, "")}`;
 
-const updateIntegrityCacheReferences = (source, cacheToken) =>
-  INTEGRITY_CACHE_ASSET_PATHS.reduce((updatedSource, assetPath) => {
+const updateIntegrityCacheReferences = (
+  source,
+  cacheToken,
+  assetPaths = INTEGRITY_CACHE_ASSET_PATHS
+) =>
+  assetPaths.reduce((updatedSource, assetPath) => {
     const referencePattern = new RegExp(
       `(${escapeRegExp(assetPath)}\\?v=)[^"\\]\\s]+`,
       "g"
@@ -121,15 +129,24 @@ export const updateGameIntegrity = async ({ check = false } = {}) => {
     buildVersion
   );
   const cacheToken = createIntegrityCacheToken(buildVersion);
-  const [homeEntry, indexEntry] = await Promise.all([
+  const [homeEntry, indexEntry, videoEditorEntry] = await Promise.all([
     readFile(HOME_ENTRY_PATH, "utf8"),
     readFile(INDEX_ENTRY_PATH, "utf8"),
+    readFile(VIDEO_EDITOR_ENTRY_PATH, "utf8"),
   ]);
 
   const expectedFiles = [
     [BACKEND_CONFIG_PATH, frontendConfig],
     [HOME_ENTRY_PATH, updateIntegrityCacheReferences(homeEntry, cacheToken)],
     [INDEX_ENTRY_PATH, updateIntegrityCacheReferences(indexEntry, cacheToken)],
+    [
+      VIDEO_EDITOR_ENTRY_PATH,
+      updateIntegrityCacheReferences(
+        videoEditorEntry,
+        cacheToken,
+        VIDEO_EDITOR_CACHE_ASSET_PATHS
+      ),
+    ],
     [WRANGLER_CONFIG_PATH, wranglerConfig],
     [WRANGLER_CONFIG_EXAMPLE_PATH, wranglerConfigExample],
   ];

@@ -17,7 +17,7 @@ test("Solitaire Victory Royale media is 40% smaller and anchored to the board to
   );
   assert.match(
     home,
-    /styles\/home\/apps\/solitaire\.css\?v=solitaire-auto-solve-20260917/
+    /styles\/home\/apps\/solitaire\.css\?v=cache-token-parity-20260927/
   );
   assert.match(
     styles,

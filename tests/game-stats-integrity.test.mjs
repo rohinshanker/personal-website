@@ -18,9 +18,10 @@ test("game build metadata matches the completion source and Worker configuration
   const wranglerConfig = JSON.parse(
     await readFile(new URL("../workers/game-stats/wrangler.jsonc", import.meta.url), "utf8")
   );
-  const [home, index] = await Promise.all([
+  const [home, index, videoEditor] = await Promise.all([
     readFile(new URL("../home.html", import.meta.url), "utf8"),
     readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../video-editor/index.html", import.meta.url), "utf8"),
   ]);
   const cacheToken = `game-build-${buildVersion.replace(/^sha256-/, "")}`;
 
@@ -70,4 +71,8 @@ test("game build metadata matches the completion source and Worker configuration
       assert.match(entryPoint, new RegExp(`${assetPath.replaceAll(".", "\\.")}\\?v=${cacheToken}`));
     }
   }
+  assert.match(
+    videoEditor,
+    new RegExp(`src="\\.\\./scripts/home/game-stats-backend\\.js\\?v=${cacheToken}" defer`)
+  );
 });

@@ -306,7 +306,7 @@ test("the toolbar swaps Reset for the check icon and the board hosts the flight 
     homeSource,
     /<button class="sol-reset" id="sol-reset" type="button" aria-label="Reset game" title="Reset game">[\s\S]*?<\/button>\s*<button class="sol-auto-solve" id="sol-auto-solve" type="button" aria-label="Auto-solve game" title="Auto-solve game" hidden>\s*<img src="assets\/app-icons\/ico\/check\.ico" alt="" \/>\s*<\/button>/
   );
-  assert.match(homeSource, /solitaire\.css\?v=solitaire-auto-solve-20260917/);
+  assert.match(homeSource, /solitaire\.css\?v=cache-token-parity-20260927/);
   assert.match(styleSource, /\.sol-reset,\n\.sol-undo,\n\.sol-auto-solve \{/);
   assert.match(styleSource, /\.sol-reset\[hidden\],\n\.sol-auto-solve\[hidden\] \{\n  display: none;\n\}/);
   assert.match(

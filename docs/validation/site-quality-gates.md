@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-09-09
+- Last verified: 2026-09-27
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -69,6 +69,17 @@ layout regression appears at compact and desktop widths. Keep task-specific
 screenshots and observations in the active ticket; do not add them here unless
 they change this reusable procedure.
 
-When a referenced static script or stylesheet changes, update its cache-busting
-query string in every HTML entry point that loads it and cover the reference
-with the relevant source test.
+## Cache-busting tokens
+
+Every local stylesheet and script tag in `index.html`, `home.html`,
+`modeling/index.html`, and `video-editor/index.html` carries a `?v=` token, one
+shared asset uses one token across all four routes, and the `index.html`
+`homeWarmupResources` list mirrors the `home.html` tags exactly.
+`tests/entry-point-cache-tokens.test.mjs` enforces all three.
+
+When a referenced static script or stylesheet changes, update its token in every
+entry point that loads it (and the warm-up list) in the same change, and repoint
+any source test that pins the old literal. `scripts/update-game-integrity.mjs`
+owns the `game-build-<hash>` token on `game-stats-backend.js`, `core/dom.js`,
+and `main.js` in all three routes that load them; never edit those by hand.
+Bump `sitemap.xml` `lastmod` for a route whose entry point changed.

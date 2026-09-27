@@ -14,15 +14,15 @@ const compactStyles = styles.replace(/\s+/g, " ");
 
 test("both entry points load the pointer-aware text cursor assets", () => {
   for (const source of [home, index]) {
-    assert.match(source, /cursors\.css\?v=text-selection-cursor-20260810/);
+    assert.match(source, /cursors\.css\?v=cache-token-parity-20260927/);
     assert.match(
       source,
-      /scripts\/home\/text-selection-cursor\.js\?v=text-selection-cursor-20260810/
+      /scripts\/home\/text-selection-cursor\.js\?v=cache-token-parity-20260927/
     );
   }
   assert.match(
     index,
-    /\["styles\/home\/cursors\.css\?v=text-selection-cursor-20260810", "style"\]/
+    /\["styles\/home\/cursors\.css\?v=cache-token-parity-20260927", "style"\]/
   );
 });
 

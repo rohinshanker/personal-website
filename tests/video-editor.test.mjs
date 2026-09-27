@@ -103,11 +103,11 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
   const { css, cursor, html, script, sharedCursorCss, textSelectionCursor } =
     await readRouteSources();
   const sharedStylesheet =
-    'href="../styles/home/cursors.css?v=text-selection-cursor-20260810"';
+    'href="../styles/home/cursors.css?v=cache-token-parity-20260927"';
   const cursorRuntime = 'src="cursor.js?v=video-editor-cursors-20260826"';
   const routeStylesheet = 'href="style.css?v=repo-hygiene-20260927"';
   const textSelectionScript =
-    'src="../scripts/home/text-selection-cursor.js?v=video-editor-cursor-guards-20260826"';
+    'src="../scripts/home/text-selection-cursor.js?v=cache-token-parity-20260927"';
   for (const reference of [
     sharedStylesheet,
     cursorRuntime,
@@ -121,7 +121,7 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
   assert.ok(html.indexOf(routeStylesheet) < html.indexOf(textSelectionScript));
   assert.match(
     html,
-    /<script\b[^>]*\bsrc="\.\.\/scripts\/home\/text-selection-cursor\.js\?v=video-editor-cursor-guards-20260826"[^>]*\bdefer(?:\s|>|=)/i
+    /<script\b[^>]*\bsrc="\.\.\/scripts\/home\/text-selection-cursor\.js\?v=cache-token-parity-20260927"[^>]*\bdefer(?:\s|>|=)/i
   );
   for (const id of [
     "desktop-required",
@@ -832,7 +832,7 @@ test("Video Editor reuses the expiring Administrator proof without persisting pr
 test("Video Editor exposes local Audio-Sync analysis and accessible guidepost controls", async () => {
   const { audioAnalysis, audioAnalysisWorker, css, html, script } =
     await readRouteSources();
-  assert.match(html, /<script\b[^>]*\bsrc="audio-analysis\.js"/i);
+  assert.match(html, /<script\b[^>]*\bsrc="audio-analysis\.js\?v=cache-token-parity-20260927"[^>]*\bdefer(?:\s|>|=)/i);
   assert.match(html, /data-effect="audio-sync-cut"/i);
   assert.match(html, /data-effect-tab-target="effect-tab-audio-sync-cut"/i);
   assert.match(html, /\bid="effect-panel-audio-sync-cut"[^>]*\brole="tabpanel"/i);
