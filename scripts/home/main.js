@@ -831,6 +831,7 @@ const SNAKE_DIRECTION_QUEUE_MAX = 2;
 const SNAKE_RESUME_COUNTDOWN_MS = 900;
 const SNAKE_RENDER_INTERVAL_MS = 1000 / 24;
 const SNAKE_NOISE_INTERVAL_MS = 1000 / 16;
+const SNAKE_POINTER_PAUSE_SUPPRESSION_MS = 250;
 const SNAKE_RANDOM_APPLE_ATTEMPTS = 96;
 const SNAKE_COLOR_THEMES = Object.freeze({
   green: {
@@ -897,6 +898,7 @@ const SUDOKU_COMPLETION_CLAIMS_KEY = "personalSiteSudokuCompletionsV1";
 const SUDOKU_MAX_COMPLETION_CLAIMS = 500;
 const SUDOKU_SAVE_DEBOUNCE_MS = 250;
 const SUDOKU_MAX_UNDO_STATES = 80;
+const SUDOKU_TIMER_INTERVAL_MS = 1000;
 const SUDOKU_MAX_LEADERBOARD_CHECKS = 3;
 const SUDOKU_MAX_FISH = 18;
 const SUDOKU_MAX_BUBBLE_CLUSTERS = 5;
@@ -1074,6 +1076,19 @@ const GAME_STATS_SKY_NAME_GENERATOR_URL =
   "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true";
 const GAME_STATS_NAME_GENERATOR_TIMEOUT_MS = 8000;
 const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
+const MINESWEEPER_CONFIGS = Object.freeze([
+  Object.freeze({ cols: 9, rows: 9, mines: 10 }),
+  Object.freeze({ cols: 16, rows: 16, mines: 40 }),
+  Object.freeze({ cols: 30, rows: 16, mines: 99 }),
+]);
+const MINESWEEPER_COUNTER_MAX = 999;
+const MINESWEEPER_TIMER_INTERVAL_MS = 1000;
+const MINESWEEPER_CONFETTI_PIECE_COUNT = 120;
+const SOLITAIRE_MAX_UNDO_STATES = 100;
+const SOLITAIRE_DOUBLE_CLICK_WINDOW_MS = 500;
+const SOLITAIRE_FIREWORK_BURST_COUNT = 9;
+const SOLITAIRE_FIREWORK_BURST_INTERVAL_MS = 260;
+const SOLITAIRE_FIREWORK_DURATION_MS = 3600;
 const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
 const padTwoDigits = (value) => String(value).padStart(2, "0");
 const debounceTimer = (timerId, callback, delayMs) => {
@@ -19044,7 +19059,10 @@ const startSudokuTimer = () => {
     });
   }
   sudokuState.timerStartedAt = Date.now();
-  sudokuState.timerId = window.setInterval(updateSudokuTimeDisplay, 1000);
+  sudokuState.timerId = window.setInterval(
+    updateSudokuTimeDisplay,
+    SUDOKU_TIMER_INTERVAL_MS
+  );
   updateSudokuTimeDisplay();
 };
 
@@ -28394,7 +28412,8 @@ document.addEventListener(
       event.target instanceof Element ? event.target : event.target?.parentElement;
     if (target?.closest('[data-app-window="snake"]')) return;
     pauseSnakeGame();
-    snakePointerPauseSuppressUntil = performance.now() + 250;
+    snakePointerPauseSuppressUntil =
+      performance.now() + SNAKE_POINTER_PAUSE_SUPPRESSION_MS;
   },
   true
 );
@@ -28615,11 +28634,14 @@ const preloadMinesweeperNumberAsset = (src) => preloadMediaSource(src);
 const preloadMinesweeperNumberAssets = () =>
   Promise.all(MS_CELL_NUMBER_SOURCES.map(preloadMinesweeperNumberAsset));
 
-const msConfig = {
-  beginner: { cols: 9, rows: 9, mines: 10 },
-  intermediate: { cols: 16, rows: 16, mines: 40 },
-  expert: { cols: 30, rows: 16, mines: 99 },
-};
+const msConfig = Object.freeze(
+  Object.fromEntries(
+    GAME_STATS_DIFFICULTIES.map((difficulty, index) => [
+      difficulty,
+      MINESWEEPER_CONFIGS[index],
+    ])
+  )
+);
 
 const msDigitSources = {
   "0": "assets/minesweeper_assets/digital_digits/digital_0.png",
@@ -28664,7 +28686,7 @@ const msResizeConfetti = () => {
 const msStartConfetti = () => {
   if (!msConfettiCanvas || !msConfettiCtx) return;
   msResizeConfetti();
-  msConfettiPieces = Array.from({ length: 120 }, () => ({
+  msConfettiPieces = Array.from({ length: MINESWEEPER_CONFETTI_PIECE_COUNT }, () => ({
     x: Math.random() * msConfettiCanvas.width,
     y: -20 - Math.random() * msConfettiCanvas.height * 0.3,
     size: 4 + Math.random() * 6,
@@ -28730,7 +28752,7 @@ const msNeighbors = (index) => {
 };
 
 const msFormatCounter = (value) => {
-  const clamped = clampNumber(value, -99, 999);
+  const clamped = clampNumber(value, -99, MINESWEEPER_COUNTER_MAX);
   if (clamped < 0) {
     return `-${padTwoDigits(Math.abs(clamped))}`;
   }
@@ -28807,10 +28829,10 @@ const msStartTimer = () => {
   });
   msState.timerId = setInterval(() => {
     if (msState.gameOver || !msState.started) return;
-    if (msState.elapsed >= 999) return;
+    if (msState.elapsed >= MINESWEEPER_COUNTER_MAX) return;
     msState.elapsed += 1;
     msUpdateCounters();
-  }, 1000);
+  }, MINESWEEPER_TIMER_INTERVAL_MS);
 };
 
 const msPlaceMines = (safeIndex) => {
@@ -29820,7 +29842,7 @@ const solSnapshot = () => ({
 
 const solPushUndo = () => {
   solHistory.push(solSnapshot());
-  if (solHistory.length > 100) solHistory.shift();
+  if (solHistory.length > SOLITAIRE_MAX_UNDO_STATES) solHistory.shift();
 };
 
 const solRestoreSnapshot = (snapshot) => {
@@ -30150,13 +30172,12 @@ const solStartFireworks = () => {
   solFireworks.classList.add("is-showing");
   solFireworks.setAttribute("aria-hidden", "false");
 
-  const burstCount = 9;
-  for (let i = 0; i < burstCount; i += 1) {
+  for (let i = 0; i < SOLITAIRE_FIREWORK_BURST_COUNT; i += 1) {
     const timer = setTimeout(() => {
       const x = window.innerWidth * (0.18 + Math.random() * 0.64);
       const y = window.innerHeight * (0.16 + Math.random() * 0.42);
       solCreateFireworkBurst(x, y);
-    }, i * 260);
+    }, i * SOLITAIRE_FIREWORK_BURST_INTERVAL_MS);
     solFireworkTimers.push(timer);
   }
 
@@ -30166,7 +30187,7 @@ const solStartFireworks = () => {
     solFireworks.innerHTML = "";
     solFireworkTimers = [];
     solFireworkTimeout = null;
-  }, 3600);
+  }, SOLITAIRE_FIREWORK_DURATION_MS);
 };
 
 const solTriggerVictoryEffects = () => {
@@ -30926,7 +30947,7 @@ if (solBoard) {
         (zone === "waste" || zone === "tableau") &&
         solLastCardClick &&
         solLastCardClick.key === clickKey &&
-        clickTime - solLastCardClick.time <= 500
+        clickTime - solLastCardClick.time <= SOLITAIRE_DOUBLE_CLICK_WINDOW_MS
       ) {
         solLastCardClick = null;
         const pile = zone === "tableau" ? Number(pileValue) : pileValue;
