@@ -404,7 +404,7 @@ npx wrangler deploy --dry-run --config wrangler.jsonc --strict
 # next scheduled invocation in the Cloudflare dashboard's Cron Triggers view.
 # `expires_at` holds an ISO UTC string, so the cutoff must use that exact
 # format: datetime('now') separates the date and time with a space, which sorts
-# below every 'T' timestamp and reports zero rows however long the cron is down.
+# below every same-day 'T' timestamp and misses rows that expired earlier today.
 npx wrangler d1 execute personal_site_game_stats --remote --command \
   "SELECT COUNT(*) AS overdue FROM game_stat_sessions WHERE expires_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 hour')"
 ```

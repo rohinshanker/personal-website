@@ -2379,11 +2379,11 @@ test("keeps imported media, the analysis worker, and the observers across a back
   page,
 }, testInfo) => {
   test.slow();
-  // Playwright's Chromium can never be restored from the real back/forward
-  // cache: its automation delegate reports BackForwardCacheDisabledForDelegate,
-  // so `page.goBack()` always reloads the document. The lifecycle events are
-  // therefore dispatched here with `persisted: true`, which is the state a
-  // restored page reports.
+  // The default test browser cannot be restored from the real back/forward
+  // cache: its automation delegate reports BackForwardCacheDisabledForDelegate
+  // (a launch without `--disable-back-forward-cache` can), so `page.goBack()`
+  // reloads the document here. The lifecycle events are therefore dispatched
+  // with `persisted: true`, which is the state a restored page reports.
   const runtime = monitorRuntime(page);
   await page.addInitScript(() => {
     const teardown = { disconnectedObservers: 0, revokedObjectUrls: [], terminatedWorkers: 0 };
