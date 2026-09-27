@@ -4956,12 +4956,16 @@ const updateClock = () => {
 const updateCalendarClock = () => {
   if (!calendarClock || !calendarPopout.classList.contains("is-open")) return;
   const now = new Date();
-  const hours = padTwoDigits(now.getHours());
-  const minutes = padTwoDigits(now.getMinutes());
-  const seconds = padTwoDigits(now.getSeconds());
+  const hours = calendarClock.querySelector("[data-calendar-clock-hours]");
+  const minutes = calendarClock.querySelector("[data-calendar-clock-minutes]");
+  const seconds = calendarClock.querySelector("[data-calendar-clock-seconds]");
+  if (hours) hours.textContent = padTwoDigits(now.getHours());
+  if (minutes) minutes.textContent = padTwoDigits(now.getMinutes());
+  if (seconds) seconds.textContent = padTwoDigits(now.getSeconds());
   const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
-  const colonClass = blinkOn ? "clock-colon" : "clock-colon is-off";
-  calendarClock.innerHTML = `${hours}<span class="${colonClass}">:</span>${minutes}<span class="${colonClass}">:</span>${seconds}`;
+  calendarClock.querySelectorAll(".clock-colon").forEach((colon) => {
+    colon.classList.toggle("is-off", !blinkOn);
+  });
   updateClockImage(now);
 };
 
@@ -21221,7 +21225,7 @@ document.querySelectorAll(".portfolio-window").forEach((windowEl) => {
       event.preventDefault();
       const bodyRect = body.getBoundingClientRect();
       const startX = event.clientX;
-      const startWidth = selectorPanel.getBoundingClientRect().width;
+      const startWidth = selectorPanel.offsetWidth;
       const minWidth = 200;
       const maxWidth = clampNumber(bodyRect.width - 220, minWidth, 420);
 
