@@ -3143,6 +3143,67 @@ test("Turnstile verification is time bounded and treats an unreadable reply as a
   assert.equal(env.personal_site_game_stats.sessions.size, 0);
 });
 
+test("a Turnstile timeout or transport failure is rejected, not reported as a server fault", async () => {
+  const env = createEnv({
+    TURNSTILE_SECRET_KEY: "turnstile-test-secret",
+    TURNSTILE_EXPECTED_HOSTNAME: "rohin.shanker.me",
+    TURNSTILE_EXPECTED_ACTION: "game-session",
+  });
+  const requestSession = () =>
+    worker.fetch(
+      jsonRequest("/sessions", {
+        game: "solitaire",
+        config: {},
+        buildVersion: env.GAME_BUILD_VERSION,
+        turnstileToken: "valid-turnstile-token",
+      }),
+      env
+    );
+  const expectRejected = async (response) => {
+    assert.equal(response.status, 403);
+    assert.equal((await readJson(response)).error, "Turnstile verification failed");
+  };
+
+  const originalFetch = globalThis.fetch;
+  const originalTimeout = AbortSignal.timeout;
+  // Waiting out the handler's real five-second bound would make this test the
+  // slowest in the file, so shorten the signal it asks for and assert the bound
+  // it requested instead.
+  const requestedTimeouts = [];
+  try {
+    AbortSignal.timeout = (milliseconds) => {
+      requestedTimeouts.push(milliseconds);
+      return originalTimeout.call(AbortSignal, 20);
+    };
+
+    globalThis.fetch = async () => {
+      throw new DOMException("The operation was aborted", "AbortError");
+    };
+    await expectRejected(await requestSession());
+
+    globalThis.fetch = async () => {
+      throw new TypeError("network error");
+    };
+    await expectRejected(await requestSession());
+
+    // A transport that never answers must lose to the abort signal rather than
+    // leaving the caller with an unexplained 500.
+    globalThis.fetch = (url, options) =>
+      new Promise((_resolve, reject) => {
+        options.signal.addEventListener("abort", () =>
+          reject(options.signal.reason ?? new DOMException("Aborted", "AbortError"))
+        );
+      });
+    await expectRejected(await requestSession());
+  } finally {
+    globalThis.fetch = originalFetch;
+    AbortSignal.timeout = originalTimeout;
+  }
+
+  assert.deepEqual(requestedTimeouts, [5_000, 5_000, 5_000]);
+  assert.equal(env.personal_site_game_stats.sessions.size, 0);
+});
+
 test("a session that was never stored is reported apart from a consumed one", async () => {
   const env = createEnv();
   const session = await createSession(env, "solitaire", {});

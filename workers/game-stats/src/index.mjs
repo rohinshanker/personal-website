@@ -992,21 +992,23 @@ const verifyTurnstileIfRequired = async (request, env, payload) => {
   const token = String(payload.turnstileToken || "").trim();
   if (!token || token.length > 2048) throw new HttpError(400, "Missing Turnstile token");
 
-  const response = await fetch(TURNSTILE_VERIFY_URL, {
-    method: "POST",
-    body: new URLSearchParams({
-      secret: env.TURNSTILE_SECRET_KEY,
-      response: token,
-      remoteip: getClientIp(request),
-      idempotency_key: crypto.randomUUID(),
-    }),
-    signal: AbortSignal.timeout(TURNSTILE_VERIFY_TIMEOUT_MS),
-  });
+  let response;
   let result;
   try {
+    response = await fetch(TURNSTILE_VERIFY_URL, {
+      method: "POST",
+      body: new URLSearchParams({
+        secret: env.TURNSTILE_SECRET_KEY,
+        response: token,
+        remoteip: getClientIp(request),
+        idempotency_key: crypto.randomUUID(),
+      }),
+      signal: AbortSignal.timeout(TURNSTILE_VERIFY_TIMEOUT_MS),
+    });
     result = await response.json();
   } catch {
-    // A non-JSON reply is a failed verification, not an internal error.
+    // A timeout, transport failure, or non-JSON reply is an unverified caller,
+    // not an internal error: the request never earned its 200.
     throw new HttpError(403, "Turnstile verification failed");
   }
   if (
