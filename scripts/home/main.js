@@ -4933,13 +4933,12 @@ aboutDegreeFields.forEach((field) => {
   field.addEventListener("mouseleave", () => aboutDegreeAnimations.get(field)?.play());
 });
 
-if (typeof ResizeObserver === "function") {
+const aboutDegreeUsesResizeObserver = typeof ResizeObserver === "function";
+if (aboutDegreeUsesResizeObserver) {
   const aboutDegreeResizeObserver = new ResizeObserver(queueAboutDegreeRefresh);
   [...aboutDegreeTypes, ...aboutDegreeFields].forEach((element) => {
     aboutDegreeResizeObserver.observe(element);
   });
-} else {
-  window.addEventListener("resize", queueAboutDegreeRefresh);
 }
 aboutDegreeReducedMotion.addEventListener("change", queueAboutDegreeRefresh);
 document.fonts?.ready.then(queueAboutDegreeRefresh);
@@ -27230,10 +27229,6 @@ document.addEventListener("contextmenu", (event) => {
   closeNekoContextMenu();
 });
 
-window.addEventListener("resize", () => {
-  closeNekoContextMenu({ restoreFocus: true });
-  syncNekoStreamLane();
-});
 window.addEventListener(
   "scroll",
   () => closeNekoContextMenu({ restoreFocus: true }),
@@ -28393,12 +28388,6 @@ void syncQueuedGameStats();
 window.addEventListener("online", () => {
   void syncQueuedGameStats();
 });
-window.addEventListener("resize", scheduleGameStatsPlayerNameMarquees);
-window.addEventListener("resize", () => {
-  requestAnimationFrame(positionVisibleGameStatsWindows);
-  requestAnimationFrame(clampVisibleAdministratorWindow);
-});
-
 document.addEventListener(
   "pointerdown",
   (event) => {
@@ -31087,29 +31076,6 @@ const handleSnakeReducedMotionChange = () => {
 lockMobileViewportZoom();
 fitImagesIntoFrames(document);
 watchRandomEventViewportMedia();
-window.addEventListener("resize", msResizeConfetti);
-window.addEventListener("resize", msUpdateBoardAlignment);
-window.addEventListener("resize", () => {
-  document
-    .querySelectorAll(".portfolio-window")
-    .forEach((win) => setPortfolioResponsiveState(win));
-});
-window.addEventListener("resize", () => {
-  if (isDistressWindowVisible(distressSignalWindow)) requestAnimationFrame(drawDistressSignals);
-});
-window.addEventListener("resize", () => {
-  if (!isSnakeWindowVisible()) return;
-  requestSnakeRender();
-});
-window.addEventListener("resize", () => {
-  if (!sudokuApp?.classList.contains("is-sudoku-playing")) return;
-  scheduleSudokuWindowViewportClamp();
-});
-window.addEventListener("resize", () => {
-  updateRelicRecoveryViewportFit();
-  clampVisibleRandomEventWindows();
-});
-window.addEventListener("resize", updateLifeCounterWidthControls);
 document.addEventListener("visibilitychange", handleSnakeActivityChange);
 window.addEventListener("blur", handleSnakeActivityChange);
 window.addEventListener("focus", handleSnakeActivityChange);
@@ -31180,29 +31146,69 @@ document.addEventListener("visibilitychange", () => {
 //   });
 // }
 
-const clampVisibleWindowTitleBars = () => {
-  draggableWindows.forEach((win) => {
+const readVisibleWindowTitleBarClamps = () =>
+  draggableWindows.flatMap((win) => {
     if (
       win.hidden ||
       win.classList.contains("is-hidden") ||
       win.classList.contains("app-window--center") ||
       isWindowDragDisabled(win)
     ) {
-      return;
+      return [];
     }
     const rect = win.getBoundingClientRect();
-    setWindowTitleBarClampedPosition(win, rect.left, rect.top);
+    const position = clampWindowTitleBarPosition(win, rect.left, rect.top);
+    const { insetX, insetY } = getRandomEventVisualInsets(win);
+    return [{ win, left: position.left - insetX, top: position.top - insetY }];
+  });
+
+const clampVisibleWindowTitleBars = (clamps = readVisibleWindowTitleBarClamps()) => {
+  clamps.forEach(({ win, left, top }) => {
+    win.style.left = `${left}px`;
+    win.style.top = `${top}px`;
   });
 };
 
-let clampWindowTitleBarsFrameId = 0;
-window.addEventListener("resize", () => {
-  if (clampWindowTitleBarsFrameId) cancelAnimationFrame(clampWindowTitleBarsFrameId);
-  clampWindowTitleBarsFrameId = requestAnimationFrame(() => {
-    clampWindowTitleBarsFrameId = 0;
-    clampVisibleWindowTitleBars();
+const readPortfolioWindowSizes = () =>
+  [...document.querySelectorAll(".portfolio-window")].map((win) => {
+    const rect = win.getBoundingClientRect();
+    return { win, width: rect.width, height: rect.height };
   });
-});
+
+let windowResizeFrameId = 0;
+const dispatchWindowResize = () => {
+  if (windowResizeFrameId) return;
+  windowResizeFrameId = requestAnimationFrame(() => {
+    windowResizeFrameId = 0;
+
+    // Collect layout measurements before any resize handler mutates the page.
+    const titleBarClamps = readVisibleWindowTitleBarClamps();
+    const portfolioWindowSizes = readPortfolioWindowSizes();
+
+    clampVisibleWindowTitleBars(titleBarClamps);
+    portfolioWindowSizes.forEach(({ win, width, height }) => {
+      setPortfolioResponsiveState(win, width, height);
+    });
+    if (!aboutDegreeUsesResizeObserver) queueAboutDegreeRefresh();
+    closeNekoContextMenu({ restoreFocus: true });
+    syncNekoStreamLane();
+    scheduleGameStatsPlayerNameMarquees();
+    positionVisibleGameStatsWindows();
+    clampVisibleAdministratorWindow();
+    msResizeConfetti();
+    msUpdateBoardAlignment();
+    if (isDistressWindowVisible(distressSignalWindow)) drawDistressSignals();
+    if (isSnakeWindowVisible()) requestSnakeRender();
+    if (sudokuApp?.classList.contains("is-sudoku-playing")) {
+      scheduleSudokuWindowViewportClamp();
+    }
+    updateRelicRecoveryViewportFit();
+    clampVisibleRandomEventWindows();
+    updateLifeCounterWidthControls();
+  });
+};
+
+window.addEventListener("resize", dispatchWindowResize);
 
 draggableWindows.forEach((win) => {
   win.addEventListener(

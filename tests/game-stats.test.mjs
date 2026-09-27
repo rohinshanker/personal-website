@@ -46,7 +46,10 @@ test("game stats use the Cloudflare backend instead of static export data", asyn
   assert.match(mainSource, /fetchGameStatsApi\(statsPath/);
   assert.match(mainSource, /const createGameStatsPlayerName = \(value/);
   assert.match(mainSource, /const updateGameStatsPlayerNameMarquees/);
-  assert.match(mainSource, /window\.addEventListener\("resize", scheduleGameStatsPlayerNameMarquees\)/);
+  assert.match(
+    mainSource,
+    /const dispatchWindowResize = \(\) =>[\s\S]*?scheduleGameStatsPlayerNameMarquees\(\)[\s\S]*?window\.addEventListener\("resize", dispatchWindowResize\)/
+  );
   assert.match(mainSource, /const getGameStatsWindowParts = \(game\)/);
   assert.match(mainSource, /const renderGameStatsWindows = \(\)/);
   assert.match(mainSource, /setWindowOpen\(`game-stats-\$\{game\}`, true\)/);
@@ -97,7 +100,10 @@ test("Game Stats keeps one independently managed window for every game", async (
     mainSource,
     /if \(visibleWindows\.length < 2\) \{[\s\S]*?clampWindowFullyIntoViewport\(windowElement\)/
   );
-  assert.match(mainSource, /window\.addEventListener\("resize", \(\) => \{\s*requestAnimationFrame\(positionVisibleGameStatsWindows\)/);
+  assert.match(
+    mainSource,
+    /const dispatchWindowResize = \(\) =>[\s\S]*?positionVisibleGameStatsWindows\(\)[\s\S]*?window\.addEventListener\("resize", dispatchWindowResize\)/
+  );
   assert.match(mainSource, /if \(!wasVisible\) positionNewGameStatsWindow\(game, windowParts\?\.windowElement\)/);
 });
 
