@@ -37,6 +37,9 @@ const GAME_STATS_HISTORICAL_EVENT_KEYS = Object.freeze([
   "hintBucket",
 ]);
 const MAX_EVENT_BODY_BYTES = 4096;
+const TURNSTILE_VERIFY_URL =
+  "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const TURNSTILE_VERIFY_TIMEOUT_MS = 5 * 1000;
 const MAX_SOLITAIRE_MOVES = 99999;
 const MAX_MINESWEEPER_SECONDS = 999;
 const MAX_SUDOKU_SECONDS = 6 * 60 * 60;
@@ -124,11 +127,15 @@ ON CONFLICT(bucket) DO UPDATE SET
     ELSE game_stats_rate_limits.window_started_at
   END,
   expires_at = excluded.expires_at
+RETURNING request_count
 `;
-const SELECT_RATE_LIMIT_SQL = `
-SELECT request_count
-FROM game_stats_rate_limits
-WHERE bucket = ?
+const DELETE_EXPIRED_SESSIONS_SQL = `
+DELETE FROM game_stat_sessions
+WHERE expires_at <= ?
+`;
+const DELETE_EXPIRED_RATE_LIMITS_SQL = `
+DELETE FROM game_stats_rate_limits
+WHERE expires_at <= ?
 `;
 const HEALTH_CHECK_SQL = `
 SELECT COUNT(*) AS table_count
@@ -233,15 +240,7 @@ export const createEmptyGameStatsData = () => ({
   version: 1,
   generatedAt: new Date(0).toISOString(),
   eventIds: [],
-  totals: {
-    minesweeper: { wins: createEmptyMinesweeperWins() },
-    solitaire: { wins: 0 },
-    snake: {
-      totalGamesPlayed: 0,
-      gamesPlayed: createEmptySnakeGames(),
-    },
-    sudoku: { wins: createEmptySudokuWins() },
-  },
+  totals: createEmptyPlayerTotals(),
   playerTotals: createEmptyPlayerTotals(),
   leaderboards: {
     minesweeper: createEmptyMinesweeperLeaderboards(),
@@ -693,7 +692,7 @@ const assertStoredEventMatches = (storedEvent, event) => {
   }
 };
 
-const getGameStatsDatabase = (env) => env.personal_site_game_stats || env.DB;
+const getGameStatsDatabase = (env) => env.personal_site_game_stats;
 
 const selectStoredEvents = async (env) => {
   const database = getGameStatsDatabase(env);
@@ -716,6 +715,11 @@ const splitOrigins = (value) =>
     .map((origin) => normalizeOrigin(origin.trim()))
     .filter(Boolean);
 
+/**
+ * `ALLOWED_ORIGIN` is the production origin in `wrangler.jsonc`.
+ * `LOCAL_ALLOWED_ORIGIN` and `EXTRA_ALLOWED_ORIGINS` are comma-separated
+ * development additions set only in `.dev.vars`; production never defines them.
+ */
 const allowedOrigins = (env) =>
   new Set([
     ...splitOrigins(env.ALLOWED_ORIGIN),
@@ -763,19 +767,23 @@ const jsonResponse = (request, env, body, status = 200, extraHeaders = {}) =>
     },
   });
 
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+
 const readJsonBody = async (request) => {
   const contentLength = Number(request.headers.get("Content-Length") || 0);
   if (contentLength > MAX_EVENT_BODY_BYTES) throw new HttpError(413, "Request body is too large");
-  const text = await request.text();
-  if (text.length > MAX_EVENT_BODY_BYTES) throw new HttpError(413, "Request body is too large");
+  // Bytes, not UTF-16 code units: a 4,096-character non-ASCII body is far larger.
+  const body = await request.arrayBuffer();
+  if (body.byteLength > MAX_EVENT_BODY_BYTES) {
+    throw new HttpError(413, "Request body is too large");
+  }
   try {
-    return JSON.parse(text);
+    return JSON.parse(textDecoder.decode(body));
   } catch {
     throw new HttpError(400, "Request body must be valid JSON");
   }
 };
-
-const textEncoder = new TextEncoder();
 const toBase64Url = (value) => {
   const bytes = value instanceof Uint8Array ? value : textEncoder.encode(value);
   let binary = "";
@@ -984,7 +992,7 @@ const verifyTurnstileIfRequired = async (request, env, payload) => {
   const token = String(payload.turnstileToken || "").trim();
   if (!token || token.length > 2048) throw new HttpError(400, "Missing Turnstile token");
 
-  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+  const response = await fetch(TURNSTILE_VERIFY_URL, {
     method: "POST",
     body: new URLSearchParams({
       secret: env.TURNSTILE_SECRET_KEY,
@@ -992,8 +1000,15 @@ const verifyTurnstileIfRequired = async (request, env, payload) => {
       remoteip: getClientIp(request),
       idempotency_key: crypto.randomUUID(),
     }),
+    signal: AbortSignal.timeout(TURNSTILE_VERIFY_TIMEOUT_MS),
   });
-  const result = await response.json();
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    // A non-JSON reply is a failed verification, not an internal error.
+    throw new HttpError(403, "Turnstile verification failed");
+  }
   if (
     !response.ok ||
     !result?.success ||
@@ -1019,11 +1034,10 @@ const enforceRateLimit = async (
   const resetThreshold = new Date(now.getTime() - windowMs).toISOString();
   const expiresAt = new Date(now.getTime() + windowMs).toISOString();
   const bucket = `${operation}:${ipHash}`;
-  await database
+  const row = await database
     .prepare(UPSERT_RATE_LIMIT_SQL)
     .bind(bucket, windowStartedAt, expiresAt, resetThreshold, resetThreshold)
-    .run();
-  const row = await database.prepare(SELECT_RATE_LIMIT_SQL).bind(bucket).first();
+    .first();
   if (!row || Number(row.request_count) > limit) {
     throw new HttpError(429, "Too many game stats requests");
   }
@@ -1048,7 +1062,7 @@ const verifySessionToken = async (signingSecret, token) => {
   );
   if (!valid) throw new HttpError(403, "Invalid session token");
   try {
-    const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(encodedPayload)));
+    const payload = JSON.parse(textDecoder.decode(fromBase64Url(encodedPayload)));
     if (!isPlainObject(payload)) throw new Error("Not an object");
     return payload;
   } catch {
@@ -1236,7 +1250,7 @@ const validateSession = async (request, env, event, rawSession) => {
   }
 
   const session = await getGameStatsDatabase(env).prepare(SELECT_SESSION_SQL).bind(sessionId).first();
-  if (!session) throw new HttpError(409, "Game session was already used");
+  if (!session) throw new HttpError(409, "Game session is no longer on record");
   if (session.consumed_at) {
     const existing = await selectExistingEvent(env, event.id);
     if (existing) {
@@ -1423,4 +1437,35 @@ export const handleRequest = async (request, env) => {
   }
 };
 
-export default { fetch: handleRequest };
+/**
+ * `game_stat_sessions` gains a row per game start and `game_stats_rate_limits`
+ * one per bucket; nothing in the request path deletes either, so this cron purge
+ * is what keeps both tables and the `*_expiry_idx` indexes useful. Expiry is
+ * inclusive because a row whose `expires_at` equals now already fails session
+ * validation.
+ */
+export const purgeExpiredGameStatsRows = async (env) => {
+  const database = getGameStatsDatabase(env);
+  if (!database) throw new Error("D1 database binding is not configured");
+  const purgedAt = new Date().toISOString();
+  const [expiredSessions, expiredRateLimits] = await database.batch([
+    database.prepare(DELETE_EXPIRED_SESSIONS_SQL).bind(purgedAt),
+    database.prepare(DELETE_EXPIRED_RATE_LIMITS_SQL).bind(purgedAt),
+  ]);
+  return Object.freeze({
+    purgedAt,
+    expiredSessions: getChanges(expiredSessions),
+    expiredRateLimitBuckets: getChanges(expiredRateLimits),
+  });
+};
+
+export default {
+  fetch: handleRequest,
+  scheduled: async (controller, env) => {
+    const summary = await purgeExpiredGameStatsRows(env);
+    console.log(
+      `Purged ${summary.expiredSessions} expired game sessions and ` +
+        `${summary.expiredRateLimitBuckets} rate-limit buckets at ${summary.purgedAt}.`
+    );
+  },
+};

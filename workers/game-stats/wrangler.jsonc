@@ -6,6 +6,10 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
+  "triggers": {
+    // Hourly purge of expired sessions and rate-limit buckets.
+    "crons": ["0 * * * *"]
+  },
   "d1_databases": [
     {
       "binding": "personal_site_game_stats",

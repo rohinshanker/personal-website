@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { GAME_BUILD_VERSION_PATTERN } from "../scripts/lib/game-build.mjs";
+import { parseJsonc } from "../scripts/lib/jsonc.mjs";
 import {
   GAME_COMPLETION_SOURCE_FILES,
   MAX_GAME_BUILD_COMPATIBILITY_VERSIONS,
@@ -15,7 +17,7 @@ test("game build metadata matches the completion source and Worker configuration
     new URL("../scripts/home/game-stats-backend.js", import.meta.url),
     "utf8"
   );
-  const wranglerConfig = JSON.parse(
+  const wranglerConfig = parseJsonc(
     await readFile(new URL("../workers/game-stats/wrangler.jsonc", import.meta.url), "utf8")
   );
   const [home, index, videoEditor] = await Promise.all([
@@ -74,5 +76,38 @@ test("game build metadata matches the completion source and Worker configuration
   assert.match(
     videoEditor,
     new RegExp(`src="\\.\\./scripts/home/game-stats-backend\\.js\\?v=${cacheToken}" defer`)
+  );
+});
+
+test("both Wrangler configurations schedule the same expiry purge", async () => {
+  const [config, exampleConfig] = await Promise.all(
+    [
+      "../workers/game-stats/wrangler.jsonc",
+      "../workers/game-stats/wrangler.jsonc.example",
+    ].map(async (relativePath) =>
+      parseJsonc(await readFile(new URL(relativePath, import.meta.url), "utf8"))
+    )
+  );
+
+  assert.deepEqual(config.triggers.crons, ["0 * * * *"]);
+  assert.deepEqual(exampleConfig.triggers, config.triggers);
+  assert.deepEqual(exampleConfig.secrets, config.secrets);
+});
+
+test("the Worker's local build-identity copies match the shared script definitions", async () => {
+  const workerSource = await readFile(
+    new URL("../workers/game-stats/src/index.mjs", import.meta.url),
+    "utf8"
+  );
+
+  assert.equal(
+    workerSource.match(/^const GAME_BUILD_VERSION_PATTERN = (.+);$/m)?.[1],
+    String(GAME_BUILD_VERSION_PATTERN)
+  );
+  assert.equal(
+    Number(
+      workerSource.match(/^const MAX_GAME_BUILD_COMPATIBILITY_VERSIONS = (\d+);$/m)?.[1]
+    ),
+    MAX_GAME_BUILD_COMPATIBILITY_VERSIONS
   );
 });

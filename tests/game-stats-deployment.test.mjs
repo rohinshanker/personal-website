@@ -5,6 +5,7 @@ import test from "node:test";
 import { parse } from "yaml";
 
 import {
+  DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   GAME_STATS_BACKEND_CONFIG_URL,
   LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   checkGameStatsDeployment,
@@ -20,6 +21,7 @@ import {
   runGameStatsReleaseCheck,
   runGameStatsStaticReleaseCheck,
   runGameStatsWorkerTransitionCheck,
+  resolveLiveGameStatsBackendConfigUrl,
   runLiveGameStatsDeploymentCheck,
 } from "../scripts/check-game-stats-deployment.mjs";
 
@@ -735,6 +737,56 @@ test("Worker transition accepts the coherent live build before Pages publication
   );
 });
 
+test("Worker transition rejects a retargeted API and an unsynchronized Worker", async () => {
+  const transitionOptions = {
+    liveConfigUrl: "https://site.example.test/game-stats-backend.js",
+    readFileImpl: async () => createConfig({ buildVersion: RELEASE_BUILD_VERSION }),
+    convergenceTimeoutMs: 1,
+    pollIntervalMs: 1,
+    nowImpl: () => 0,
+    sleepImpl: async () => {},
+    createCacheBust: () => "transition",
+    createTimeoutSignal: () => ({ name: "signal" }),
+  };
+
+  await assert.rejects(
+    checkGameStatsWorkerTransition({
+      ...transitionOptions,
+      fetchImpl: async (url) => {
+        if (url.includes("game-stats-backend.js")) {
+          return createConfigResponse(
+            createConfig({
+              apiBaseUrl: "https://other-worker.example.test",
+              buildVersion: RELEASE_BUILD_VERSION,
+            })
+          );
+        }
+        return createReleaseDependencyResponse(url);
+      },
+    }),
+    /checked-in API https:\/\/worker\.example\.test, deployed browser API https:\/\/other-worker\.example\.test/
+  );
+
+  await assert.rejects(
+    checkGameStatsWorkerTransition({
+      ...transitionOptions,
+      fetchImpl: async (url) => {
+        if (url.includes("game-stats-backend.js")) {
+          return createConfigResponse(
+            createConfig({ buildVersion: RELEASE_BUILD_VERSION })
+          );
+        }
+        return createReleaseDependencyResponse(url, {
+          workerBuildVersion: PREVIOUS_RELEASE_BUILD_VERSION,
+        });
+      },
+    }),
+    new RegExp(
+      `checked-in browser ${RELEASE_BUILD_VERSION}, Worker ${PREVIOUS_RELEASE_BUILD_VERSION}`
+    )
+  );
+});
+
 test("release check rejects a stale live completion source and fetches assets uncached", async () => {
   const staleSources = new Map(RELEASE_SOURCE_FILES);
   staleSources.set("scripts/home/main.js", Buffer.from("const releaseMain = false;\n"));
@@ -1238,6 +1290,180 @@ test("specialized CLI runners retain injectable check behavior", async () => {
   ]);
 });
 
+test("the live config URL defaults to production and honours its env override", () => {
+  assert.equal(
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
+    "https://rohin.shanker.me/scripts/home/game-stats-backend.js"
+  );
+  assert.equal(
+    LIVE_GAME_STATS_BACKEND_CONFIG_URL.toString(),
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+  );
+
+  assert.equal(
+    resolveLiveGameStatsBackendConfigUrl({}).toString(),
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+  );
+  assert.equal(
+    resolveLiveGameStatsBackendConfigUrl({
+      GAME_STATS_LIVE_CONFIG_URL: "   ",
+    }).toString(),
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+  );
+  assert.equal(
+    resolveLiveGameStatsBackendConfigUrl({
+      GAME_STATS_LIVE_CONFIG_URL:
+        "  https://staging.example.test/scripts/home/game-stats-backend.js  ",
+    }).toString(),
+    "https://staging.example.test/scripts/home/game-stats-backend.js"
+  );
+});
+
+const WORKFLOW_FILES = Object.freeze([
+  "game-stats-worker-release.yml",
+  "secret-guard.yml",
+  "ui-layout.yml",
+]);
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Every `uses:` reference with the comment line directly above it. */
+const readActionPins = (source) => {
+  const lines = source.split("\n");
+  return lines.flatMap((line, index) => {
+    const used = /^\s*(?:-\s+)?uses:\s*(\S+)\s*$/.exec(line);
+    return used ? [{ reference: used[1], comment: (lines[index - 1] ?? "").trim() }] : [];
+  });
+};
+
+test("every workflow shares one hardening standard", async () => {
+  const root = new URL("../", import.meta.url);
+  const sources = new Map(
+    await Promise.all(
+      WORKFLOW_FILES.map(async (fileName) => [
+        fileName,
+        await readFile(new URL(`.github/workflows/${fileName}`, root), "utf8"),
+      ])
+    )
+  );
+  const checkoutReferences = new Set();
+  const setupNodeReferences = new Set();
+
+  for (const [fileName, source] of sources) {
+    const definition = parse(source);
+    assert.deepEqual(
+      definition.permissions,
+      { contents: "read" },
+      `${fileName} must default to read-only repository permissions`
+    );
+    assert.equal(
+      definition.concurrency["cancel-in-progress"],
+      true,
+      `${fileName} must cancel superseded runs`
+    );
+    assert.match(definition.concurrency.group, /\$\{\{ github\.ref \}\}/);
+    assert.doesNotMatch(source, /pull_request_target/);
+
+    const pins = readActionPins(source);
+    assert.ok(pins.length > 0, `${fileName} must use at least one action`);
+    for (const { reference, comment } of pins) {
+      const [action, commitSha = ""] = reference.split("@");
+      assert.match(
+        commitSha,
+        /^[0-9a-f]{40}$/,
+        `${fileName} must pin ${reference} to a full commit SHA`
+      );
+      assert.match(
+        comment,
+        new RegExp(`^# ${escapeRegExp(action)} v\\d`),
+        `${fileName} must name the released version of ${action}`
+      );
+      if (action === "actions/checkout") checkoutReferences.add(reference);
+      if (action === "actions/setup-node") setupNodeReferences.add(reference);
+    }
+
+    for (const [jobName, job] of Object.entries(definition.jobs)) {
+      assert.ok(
+        Number.isInteger(job["timeout-minutes"]),
+        `${fileName} job ${jobName} must bound its runtime`
+      );
+      for (const step of job.steps) {
+        if (step.uses?.startsWith("actions/checkout@")) {
+          assert.equal(
+            step.with?.["persist-credentials"],
+            false,
+            `${fileName} job ${jobName} must not persist Git credentials`
+          );
+        }
+        if (step.uses?.startsWith("actions/setup-node@")) {
+          assert.equal(
+            step.with?.["node-version"],
+            24,
+            `${fileName} job ${jobName} must run the supported Node version`
+          );
+        }
+      }
+    }
+  }
+
+  assert.equal(checkoutReferences.size, 1, "every workflow must share one checkout pin");
+  assert.equal(setupNodeReferences.size, 1, "every workflow must share one setup-node pin");
+});
+
+test("secret scanning and browser installs each run once per push", async () => {
+  const root = new URL("../", import.meta.url);
+  const [secretGuard, uiLayout] = await Promise.all([
+    readFile(new URL(".github/workflows/secret-guard.yml", root), "utf8"),
+    readFile(new URL(".github/workflows/ui-layout.yml", root), "utf8"),
+  ]);
+  const secretGuardDefinition = parse(secretGuard);
+  const uiDefinition = parse(uiLayout);
+
+  const guardSteps = secretGuardDefinition.jobs["repository-guard"].steps;
+  assert.deepEqual(
+    guardSteps.filter((step) => step.run).map((step) => step.run),
+    ["node scripts/check-no-secrets.mjs"]
+  );
+  const secretGuardRuns = Object.values(secretGuardDefinition.jobs).flatMap((job) =>
+    job.steps.filter((step) => step.run).map((step) => step.run)
+  );
+  assert.deepEqual(
+    secretGuardRuns.filter((run) => run.includes("node --test")),
+    [],
+    "the guard must leave the re-scanning unit test to `npm test`"
+  );
+  assert.ok(
+    secretGuardDefinition.jobs.gitleaks.steps.some((step) =>
+      step.uses?.startsWith("gitleaks/gitleaks-action@")
+    )
+  );
+
+  const uiSteps = uiDefinition.jobs.ui.steps;
+  const cacheStep = uiSteps.find((step) => step.uses?.startsWith("actions/cache@"));
+  assert.equal(cacheStep.with.path, "~/.cache/ms-playwright");
+  assert.match(cacheStep.with.key, /hashFiles\('package-lock\.json'\)/);
+  assert.ok(cacheStep.id, "the browser cache step must expose its cache-hit output");
+
+  const installStep = uiSteps.find((step) =>
+    step.run === "npx playwright install --with-deps chromium"
+  );
+  assert.equal(
+    installStep.if,
+    `steps.${cacheStep.id}.outputs.cache-hit != 'true'`
+  );
+  const dependencyStep = uiSteps.find((step) =>
+    step.run === "npx playwright install-deps chromium"
+  );
+  assert.equal(
+    dependencyStep.if,
+    `steps.${cacheStep.id}.outputs.cache-hit == 'true'`
+  );
+  assert.ok(
+    uiSteps.indexOf(cacheStep) < uiSteps.indexOf(installStep),
+    "the cache must be restored before the browser install decision"
+  );
+});
+
 test("npm scripts, release workflow, and validation guide expose the parity guard", async () => {
   const root = new URL("../", import.meta.url);
   const [packageJson, workerPackageJson, workflow, validationGuide] = await Promise.all([
@@ -1267,6 +1493,21 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     packageJson.scripts["game-stats:integrity:check"],
     "node scripts/update-game-integrity.mjs --check"
   );
+  assert.equal(
+    packageJson.scripts["app-icons:check"],
+    "node scripts/build-app-icon-manifest.mjs --check"
+  );
+  assert.equal(
+    packageJson.scripts["study-resources:check"],
+    "node scripts/build-study-resources-manifest.mjs --check"
+  );
+  assert.equal(
+    packageJson.scripts["game-stats:worker-secrets:check"],
+    "node scripts/check-game-stats-worker-secrets.mjs"
+  );
+  assert.match(packageJson.scripts["syntax:check"], /find scripts -type f/);
+  assert.match(packageJson.scripts["syntax:check"], /find video-editor -maxdepth 1/);
+  assert.match(packageJson.scripts["syntax:check"], /xargs -0 -n1 node --check/);
   assert.equal(
     workerPackageJson.scripts["deployment:check"],
     "node ../../scripts/check-game-stats-deployment.mjs --live"
@@ -1318,7 +1559,10 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.doesNotMatch(verifySource, /secrets\.|CLOUDFLARE_/);
   assert.doesNotMatch(verifySource, /pull_request_target/);
   assert.match(verifySource, /npm test/);
+  assert.match(verifySource, /npm run syntax:check/);
   assert.match(verifySource, /npm run game-stats:integrity:check/);
+  assert.match(verifySource, /npm run app-icons:check/);
+  assert.match(verifySource, /npm run study-resources:check/);
   assert.match(verifySource, /npm --prefix workers\/game-stats run deploy:check/);
   assert.doesNotMatch(verifySource, /run deploy --/);
 
@@ -1390,6 +1634,17 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
       CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
     }
   );
+  assert.deepEqual(
+    workerStepByName["Require every secret the Worker configuration declares"].env,
+    {
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+      CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+    }
+  );
+  assert.equal(
+    workerStepByName["Require every secret the Worker configuration declares"].run,
+    "npm run game-stats:worker-secrets:check"
+  );
   assert.equal(
     workerStepByName["Deploy rollout-compatible Worker configuration"].run,
     "npm --prefix workers/game-stats run deploy -- --config wrangler.jsonc --strict"
@@ -1409,7 +1664,14 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   );
   assert.ok(
     workerStepNames.indexOf("Reject a superseded workflow revision") <
-      workerStepNames.indexOf("Deploy rollout-compatible Worker configuration")
+      workerStepNames.indexOf(
+        "Require every secret the Worker configuration declares"
+      )
+  );
+  assert.ok(
+    workerStepNames.indexOf(
+      "Require every secret the Worker configuration declares"
+    ) < workerStepNames.indexOf("Deploy rollout-compatible Worker configuration")
   );
   assert.ok(
     workerStepNames.indexOf("Deploy rollout-compatible Worker configuration") <

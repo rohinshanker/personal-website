@@ -17,16 +17,41 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out source
+        # actions/checkout v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          node-version: 22
+          persist-credentials: false
+      - name: Set up Node.js
+        # actions/setup-node v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
           cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:ui
-      - if: always()
-        uses: actions/upload-artifact@v4
+      - name: Install site dependencies
+        run: npm ci
+      # The browser build is keyed on the lockfile that pins its Playwright
+      # version. System packages are not in this cache, so a hit still installs
+      # them.
+      - name: Restore the Playwright browser cache
+        id: playwright-cache
+        # actions/cache v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Chromium and its system dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Chromium system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Run browser UI tests
+        run: npm run test:ui
+      - name: Upload browser UI artifacts
+        if: always()
+        # actions/upload-artifact v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ui-artifacts
           path: test-results/
@@ -40,15 +65,24 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out source
+        # actions/checkout v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          node-version: 22
+          persist-credentials: false
+      - name: Set up Node.js
+        # actions/setup-node v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
       # Browsers and dependencies both come from the pinned container, so the
       # runner installs nothing.
-      - run: npm run test:visual
-      - if: always()
-        uses: actions/upload-artifact@v4
+      - name: Run visual baseline tests
+        run: npm run test:visual
+      - name: Upload visual baseline diffs
+        if: always()
+        # actions/upload-artifact v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: visual-baseline-diffs
           path: test-results/

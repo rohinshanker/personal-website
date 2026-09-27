@@ -14,6 +14,7 @@ runInNewContext(source, {
   Math,
   Object,
   RangeError,
+  Set,
   TypeError,
   Uint16Array,
   Uint32Array,
@@ -99,5 +100,23 @@ test("Audio-Sync onset and input guards handle silence and invalid analysis requ
   assert.throws(
     () => analysis.analyze(new Float32Array(1_024), 16_000, { fftSize: 300 }),
     RangeError
+  );
+});
+
+test("the reused Fourier buffers leak no energy into later frames", () => {
+  const input = sineBurst({ duration: 1.5, end: 0.5, start: 0.25 });
+  const result = analysis.analyze(input.samples, input.sampleRate, { maxFrames: 300 });
+  const series = analysis.createBandSeries(result, 800, 1_200);
+  const peakWithin = (from, to) =>
+    Array.from(result.frameTimes).reduce(
+      (peak, time, frame) =>
+        time >= from && time <= to ? Math.max(peak, series[frame]) : peak,
+      0
+    );
+
+  assert.ok(peakWithin(0.3, 0.45) > 0.9, "the burst must reach full band energy");
+  assert.ok(
+    peakWithin(0.9, 1.4) < 0.1,
+    "silence after the burst must not retain the previous frame's transform"
   );
 });

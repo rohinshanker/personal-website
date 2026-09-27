@@ -4,6 +4,7 @@ import test from "node:test";
 import worker, {
   createGameStatsDataFromEvents,
   normalizeGameStatsEvent,
+  purgeExpiredGameStatsRows,
 } from "../workers/game-stats/src/index.mjs";
 
 const projectEventRow = (sql, row) => {
@@ -100,21 +101,35 @@ class MockD1Statement {
       return { meta: { changes: 1 } };
     }
     if (this.sql.includes("INSERT INTO game_stats_rate_limits")) {
-      const [bucket, windowStartedAt, expiresAt, resetThreshold] = this.params;
-      const existing = this.database.rateLimits.get(bucket);
-      if (!existing || existing.window_started_at <= resetThreshold) {
-        this.database.rateLimits.set(bucket, {
-          request_count: 1,
-          window_started_at: windowStartedAt,
-          expires_at: expiresAt,
-        });
-      } else {
-        existing.request_count += 1;
-        existing.expires_at = expiresAt;
-      }
+      this.upsertRateLimit();
       return { meta: { changes: 1 } };
     }
+    if (this.sql.includes("DELETE FROM game_stat_sessions")) {
+      return { meta: { changes: this.database.deleteExpired("sessions", this.params[0]) } };
+    }
+    if (this.sql.includes("DELETE FROM game_stats_rate_limits")) {
+      return {
+        meta: { changes: this.database.deleteExpired("rateLimits", this.params[0]) },
+      };
+    }
     throw new Error(`Unhandled write query: ${this.sql}`);
+  }
+
+  /** Mirrors the rate-limit upsert and its `RETURNING request_count` row. */
+  upsertRateLimit() {
+    const [bucket, windowStartedAt, expiresAt, resetThreshold] = this.params;
+    const existing = this.database.rateLimits.get(bucket);
+    if (!existing || existing.window_started_at <= resetThreshold) {
+      this.database.rateLimits.set(bucket, {
+        request_count: 1,
+        window_started_at: windowStartedAt,
+        expires_at: expiresAt,
+      });
+    } else {
+      existing.request_count += 1;
+      existing.expires_at = expiresAt;
+    }
+    return { request_count: this.database.rateLimits.get(bucket).request_count };
   }
 
   async all() {
@@ -125,6 +140,9 @@ class MockD1Statement {
   }
 
   async first() {
+    if (this.sql.includes("INSERT INTO game_stats_rate_limits")) {
+      return this.upsertRateLimit();
+    }
     if (this.sql.includes("FROM sqlite_master")) {
       if (this.database.failHealthCheck) throw new Error("Simulated D1 health check failure");
       return { table_count: this.database.healthTableCount };
@@ -135,9 +153,6 @@ class MockD1Statement {
     }
     if (this.sql.includes("FROM game_stat_sessions")) {
       return this.database.sessions.get(this.params[0]) || null;
-    }
-    if (this.sql.includes("FROM game_stats_rate_limits")) {
-      return this.database.rateLimits.get(this.params[0]) || null;
     }
     throw new Error(`Unhandled read query: ${this.sql}`);
   }
@@ -157,6 +172,18 @@ class MockD1Database {
 
   prepare(sql) {
     return new MockD1Statement(this, sql);
+  }
+
+  /** Mirrors `WHERE expires_at <= ?` for the scheduled purge. */
+  deleteExpired(table, expiredAt) {
+    let changes = 0;
+    for (const [key, row] of this[table]) {
+      if (row.expires_at <= expiredAt) {
+        this[table].delete(key);
+        changes += 1;
+      }
+    }
+    return changes;
   }
 
   async batch(statements) {
@@ -2893,4 +2920,255 @@ test("stats query rejects invalid player ids", async () => {
     env
   );
   assert.equal(invalidResponse.status, 400);
+});
+
+test("the scheduled purge deletes only expired sessions and rate-limit buckets", async () => {
+  const env = createEnv();
+  const database = env.personal_site_game_stats;
+  const past = new Date(Date.now() - 60_000).toISOString();
+  const future = new Date(Date.now() + 60 * 60_000).toISOString();
+
+  for (const [id, expiresAt] of [
+    ["expired-session", past],
+    ["live-session", future],
+  ]) {
+    database.sessions.set(id, {
+      id,
+      game: "minesweeper",
+      config_json: JSON.stringify({ difficulty: "beginner" }),
+      build_version: buildVersion,
+      ip_hash: "hash",
+      issued_at: past,
+      expires_at: expiresAt,
+      consumed_at: null,
+    });
+  }
+  for (const [bucket, expiresAt] of [
+    ["sessions:expired", past],
+    ["events:live", future],
+  ]) {
+    database.rateLimits.set(bucket, {
+      request_count: 3,
+      window_started_at: past,
+      expires_at: expiresAt,
+    });
+  }
+
+  const summary = await purgeExpiredGameStatsRows(env);
+
+  assert.equal(summary.expiredSessions, 1);
+  assert.equal(summary.expiredRateLimitBuckets, 1);
+  assert.match(summary.purgedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(Array.from(database.sessions.keys()), ["live-session"]);
+  assert.deepEqual(Array.from(database.rateLimits.keys()), ["events:live"]);
+
+  const repeated = await purgeExpiredGameStatsRows(env);
+  assert.equal(repeated.expiredSessions, 0);
+  assert.equal(repeated.expiredRateLimitBuckets, 0);
+});
+
+test("the scheduled purge keeps a consumed session until it expires", async () => {
+  const env = createEnv();
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  await ageSessionForCompletion(env, session);
+  const stored = env.personal_site_game_stats.sessions.get(session.id);
+  stored.consumed_at = new Date().toISOString();
+
+  assert.equal((await purgeExpiredGameStatsRows(env)).expiredSessions, 0);
+  assert.ok(env.personal_site_game_stats.sessions.has(session.id));
+
+  stored.expires_at = new Date(Date.now() - 1_000).toISOString();
+  assert.equal((await purgeExpiredGameStatsRows(env)).expiredSessions, 1);
+  assert.equal(env.personal_site_game_stats.sessions.size, 0);
+});
+
+test("the cron entry point purges through the Worker export and logs its summary", async (context) => {
+  const log = context.mock.method(console, "log", () => {});
+  const env = createEnv();
+  env.personal_site_game_stats.sessions.set("expired-session", {
+    id: "expired-session",
+    game: "snake",
+    config_json: "{}",
+    build_version: buildVersion,
+    ip_hash: "hash",
+    issued_at: new Date(Date.now() - 120_000).toISOString(),
+    expires_at: new Date(Date.now() - 60_000).toISOString(),
+    consumed_at: null,
+  });
+
+  await worker.scheduled({ cron: "0 * * * *", scheduledTime: Date.now() }, env);
+
+  assert.equal(env.personal_site_game_stats.sessions.size, 0);
+  assert.match(
+    log.mock.calls.at(-1).arguments[0],
+    /Purged 1 expired game sessions and 0 rate-limit buckets at /
+  );
+});
+
+test("the scheduled purge fails loudly without a database binding or on a D1 error", async () => {
+  await assert.rejects(
+    purgeExpiredGameStatsRows({}),
+    /D1 database binding is not configured/
+  );
+
+  const batchError = new Error("Simulated D1 purge failure");
+  await assert.rejects(
+    purgeExpiredGameStatsRows({
+      personal_site_game_stats: {
+        prepare: () => ({ bind: () => ({}) }),
+        batch: async () => {
+          throw batchError;
+        },
+      },
+    }),
+    batchError
+  );
+});
+
+/** A body sent without Content-Length, the way a chunked request arrives. */
+const chunkedJsonRequest = (path, body, { origin = "https://rohin.shanker.me" } = {}) =>
+  new Request(`https://stats.example.test${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: origin,
+      "CF-Connecting-IP": "203.0.113.7",
+    },
+    body: new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(JSON.stringify(body)));
+        controller.close();
+      },
+    }),
+    duplex: "half",
+  });
+
+test("the request body limit counts bytes, so a short non-ASCII body is rejected", async () => {
+  const env = createEnv();
+  // 3,000 UTF-16 code units, but three bytes each: under the old character
+  // limit and far over the 4,096-byte one.
+  const multiByteName = "✓".repeat(3_000);
+  assert.ok(multiByteName.length < 4_096);
+  assert.ok(new TextEncoder().encode(multiByteName).byteLength > 4_096);
+
+  const oversized = await worker.fetch(
+    chunkedJsonRequest("/sessions", {
+      game: "solitaire",
+      config: {},
+      buildVersion: env.GAME_BUILD_VERSION,
+      turnstileToken: multiByteName,
+    }),
+    env
+  );
+  assert.equal(oversized.status, 413);
+  assert.equal((await readJson(oversized)).error, "Request body is too large");
+  assert.equal(env.personal_site_game_stats.sessions.size, 0);
+});
+
+test("a chunked body within the byte limit is decoded and accepted", async () => {
+  const env = createEnv();
+  const accepted = await worker.fetch(
+    chunkedJsonRequest("/sessions", {
+      game: "minesweeper",
+      config: { difficulty: "beginner" },
+      buildVersion: env.GAME_BUILD_VERSION,
+    }),
+    env
+  );
+
+  assert.equal(accepted.status, 201);
+  assert.equal(env.personal_site_game_stats.sessions.size, 1);
+
+  const malformed = await worker.fetch(
+    new Request("https://stats.example.test/sessions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://rohin.shanker.me",
+        "CF-Connecting-IP": "203.0.113.7",
+      },
+      body: "{ not json",
+    }),
+    env
+  );
+  assert.equal(malformed.status, 400);
+  assert.equal((await readJson(malformed)).error, "Request body must be valid JSON");
+});
+
+test("Turnstile verification is time bounded and treats an unreadable reply as a rejection", async () => {
+  const env = createEnv({
+    TURNSTILE_SECRET_KEY: "turnstile-test-secret",
+    TURNSTILE_EXPECTED_HOSTNAME: "rohin.shanker.me",
+    TURNSTILE_EXPECTED_ACTION: "game-session",
+  });
+  const requestSession = () =>
+    worker.fetch(
+      jsonRequest("/sessions", {
+        game: "solitaire",
+        config: {},
+        buildVersion: env.GAME_BUILD_VERSION,
+        turnstileToken: "valid-turnstile-token",
+      }),
+      env
+    );
+
+  const originalFetch = globalThis.fetch;
+  const signals = [];
+  try {
+    globalThis.fetch = async (url, options) => {
+      signals.push(options.signal);
+      return new Response("<html>gateway error</html>", {
+        status: 502,
+        headers: { "Content-Type": "text/html" },
+      });
+    };
+    const htmlReply = await requestSession();
+    assert.equal(htmlReply.status, 403);
+    assert.equal((await readJson(htmlReply)).error, "Turnstile verification failed");
+
+    globalThis.fetch = async (url, options) => {
+      signals.push(options.signal);
+      return new Response(JSON.stringify({ success: false, "error-codes": ["bad"] }));
+    };
+    assert.equal((await requestSession()).status, 403);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(signals.length, 2);
+  for (const signal of signals) {
+    assert.ok(signal instanceof AbortSignal, "every Turnstile request must be bounded");
+    assert.equal(signal.aborted, false);
+  }
+  assert.equal(env.personal_site_game_stats.sessions.size, 0);
+});
+
+test("a session that was never stored is reported apart from a consumed one", async () => {
+  const env = createEnv();
+  const session = await createSession(env, "solitaire", {});
+  await ageSessionForCompletion(env, session);
+  const solitaireWin = event({
+    id: "event-missing-session",
+    game: "solitaire",
+    difficulty: undefined,
+    metric: 120,
+    metricKind: "moves",
+  });
+
+  env.personal_site_game_stats.sessions.delete(session.id);
+  const missing = await postEvent(env, solitaireWin, session);
+  assert.equal(missing.status, 409);
+  assert.equal((await readJson(missing)).error, "Game session is no longer on record");
+
+  const replayed = await createSession(env, "solitaire", {});
+  await ageSessionForCompletion(env, replayed);
+  env.personal_site_game_stats.sessions.get(replayed.id).consumed_at =
+    new Date().toISOString();
+  const consumed = await postEvent(
+    env,
+    { ...solitaireWin, id: "event-consumed-session" },
+    replayed
+  );
+  assert.equal(consumed.status, 409);
+  assert.equal((await readJson(consumed)).error, "Game session was already used");
 });

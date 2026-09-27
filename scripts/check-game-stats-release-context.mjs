@@ -1,6 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertFetchDependencies, fetchGuardedBody } from "./lib/http.mjs";
+
 export const GITHUB_API_VERSION = "2022-11-28";
 export const GITHUB_REQUEST_TIMEOUT_MS = 10_000;
 export const PRODUCTION_CREDENTIAL_NAMES = Object.freeze([
@@ -14,12 +16,6 @@ const GITHUB_REPOSITORY_PATTERN =
 
 const normalizeEnvironmentValue = (value) =>
   typeof value === "string" ? value.trim() : "";
-
-const requirePositiveInteger = (value, label) => {
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new RangeError(`${label} must be a positive integer`);
-  }
-};
 
 const parseGitHubRepository = (repository) => {
   const normalizedRepository = normalizeEnvironmentValue(repository);
@@ -68,19 +64,22 @@ export const fetchCurrentMainCommitSha = async ({
   if (!normalizedToken) {
     throw new Error("GITHUB_TOKEN is required to verify the current main revision");
   }
-  if (typeof fetchImpl !== "function") {
-    throw new TypeError("A fetch implementation is required to verify main");
-  }
-  requirePositiveInteger(timeoutMs, "GitHub request timeout");
-  if (typeof createTimeoutSignal !== "function") {
-    throw new TypeError("A timeout signal factory is required to verify main");
-  }
+  assertFetchDependencies({
+    fetchImpl,
+    timeoutMs,
+    createTimeoutSignal,
+    purpose: "to verify main",
+    timeoutLabel: "GitHub request timeout",
+  });
 
   const url =
     `https://api.github.com/repos/${owner}/${repositoryName}/git/ref/heads/main`;
-  let response;
-  try {
-    response = await fetchImpl(url, {
+  const payload = await fetchGuardedBody(url, {
+    fetchImpl,
+    timeoutMs,
+    createTimeoutSignal,
+    readAs: "json",
+    init: {
       method: "GET",
       headers: {
         Accept: "application/vnd.github+json",
@@ -88,28 +87,15 @@ export const fetchCurrentMainCommitSha = async ({
         "User-Agent": "personal-site-game-stats-release",
         "X-GitHub-Api-Version": GITHUB_API_VERSION,
       },
-      signal: createTimeoutSignal(timeoutMs),
-    });
-  } catch (error) {
-    throw new Error("Unable to read refs/heads/main from GitHub", { cause: error });
-  }
-
-  if (!response || typeof response !== "object" || typeof response.json !== "function") {
-    throw new Error("GitHub returned an invalid refs/heads/main response");
-  }
-  if (!response.ok) {
-    const status = Number.isInteger(response.status) ? response.status : "unknown";
-    throw new Error(`GitHub refs/heads/main request failed with status ${status}`);
-  }
-
-  let payload;
-  try {
-    payload = await response.json();
-  } catch (error) {
-    throw new Error("GitHub refs/heads/main response was not valid JSON", {
-      cause: error,
-    });
-  }
+    },
+    messages: {
+      requestFailed: "Unable to read refs/heads/main from GitHub",
+      invalidResponse: "GitHub returned an invalid refs/heads/main response",
+      statusFailed: (status) =>
+        `GitHub refs/heads/main request failed with status ${status}`,
+      bodyUnreadable: "GitHub refs/heads/main response was not valid JSON",
+    },
+  });
   return parseCommitSha(payload?.object?.sha, "GitHub refs/heads/main revision");
 };
 
