@@ -933,7 +933,20 @@ test("Video Editor exposes local Audio-Sync analysis and accessible guidepost co
   assert.match(script, /AudioContext|webkitAudioContext/);
   assert.match(script, /new\s+Worker\s*\(/);
   assert.match(script, /audio-analysis-worker\.js/);
-  assert.match(audioAnalysisWorker, /importScripts\s*\(\s*["']\.\/audio-analysis\.js["']\s*\)/);
+  assert.match(
+    script,
+    /workerUrl\.search = new URL\(import\.meta\.url\)\.search;/,
+    "The worker must inherit the module's cache token."
+  );
+  assert.match(
+    audioAnalysisWorker,
+    /importScripts\(`\.\/audio-analysis\.js\$\{self\.location\.search\}`\);/,
+    "The worker must forward its cache token to audio-analysis.js."
+  );
+  assert.match(
+    audioAnalysisWorker,
+    /importScripts\s*\(\s*`\.\/audio-analysis\.js\$\{self\.location\.search\}`\s*\)/
+  );
   assert.match(audioAnalysisWorker, /postMessage\s*\(/);
   assert.match(audioAnalysis, /createBandSeries/);
   assert.match(audioAnalysis, /createOnsetSeries/);

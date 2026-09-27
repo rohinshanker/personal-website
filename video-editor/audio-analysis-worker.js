@@ -1,4 +1,5 @@
-importScripts("./audio-analysis.js");
+// The worker URL carries the module cache token; forward it to the shared analysis file.
+importScripts(`./audio-analysis.js${self.location.search}`);
 
 self.addEventListener("message", (event) => {
   const { generation, sampleRate, samples } = event.data || {};

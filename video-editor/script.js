@@ -2150,9 +2150,10 @@ const waveFileSampleRate = (buffer) => {
 
 const ensureAudioAnalysisWorker = () => {
   if (audioAnalysisWorker) return audioAnalysisWorker;
-  audioAnalysisWorker = new Worker(
-    new URL("./audio-analysis-worker.js", import.meta.url)
-  );
+  // Carry this module's cache token to the worker so both files revalidate together.
+  const workerUrl = new URL("./audio-analysis-worker.js", import.meta.url);
+  workerUrl.search = new URL(import.meta.url).search;
+  audioAnalysisWorker = new Worker(workerUrl);
   return audioAnalysisWorker;
 };
 
