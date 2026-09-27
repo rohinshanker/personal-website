@@ -277,7 +277,7 @@ test("relic recovery scales one canonical composition to its viewport", () => {
   );
   assert.match(
     mainSource,
-    /window\.addEventListener\("resize", \(\) => \{\s*updateRelicRecoveryViewportFit\(\);\s*clampVisibleRandomEventWindows\(\);/
+    /const dispatchWindowResize = \(\) => \{[\s\S]*updateRelicRecoveryViewportFit\(\);\s*clampVisibleRandomEventWindows\(\);[\s\S]*window\.addEventListener\("resize", dispatchWindowResize\);/
   );
 });
 

@@ -391,6 +391,14 @@ test("session creation failures remain local and report their exact failure bran
       expectedMessage: "",
     },
     {
+      name: "session rate limit",
+      sessionKey: "solitaire-session",
+      status: 429,
+      expectedState: "request-failed",
+      expectedMessage:
+        "Local stats are saved, but the verified game session request was rate limited. Try again later.",
+    },
+    {
       name: "upstream rejection",
       sessionKey: "solitaire-session",
       status: 503,

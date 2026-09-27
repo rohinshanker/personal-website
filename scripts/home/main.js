@@ -1881,7 +1881,9 @@ const reportGameStatsSessionFailure = (
   const prefix = localSaved ? "Local stats are saved, but " : "";
   const subject = localSaved ? "the" : "The";
   const message =
-    reason === "invalid-response"
+    status === 429
+      ? `${prefix}${subject} verified game session request was rate limited. Try again later.`
+      : reason === "invalid-response"
       ? `${prefix}${subject} game server returned an invalid session response. Start a new game and try again.`
       : `${prefix}${subject} verified game session request failed${
           status ? ` (HTTP ${status})` : ""
@@ -16583,7 +16585,7 @@ const randomEventPreloadSourceCache = mediaSourcePreloadRequests;
 const preloadRandomEventSource = (src) => {
   const normalizedSrc = String(src || "");
   if (!normalizedSrc) return Promise.resolve();
-  return preloadMediaSource(normalizedSrc);
+  return preloadMediaSource(normalizedSrc, { forceImage: true });
 };
 
 const collectRandomEventPreloadTargets = (target, collection = []) => {
@@ -26627,6 +26629,44 @@ let nekoRunAssetsPreloadStarted = false;
 let nekoRunAssetsLoaded = false;
 let nekoRunAssetsPreloadPromise = null;
 const nekoPreloadedRunAssetImages = [];
+const NEKO_RUN_ASSET_PRELOAD_ATTEMPTS = 3;
+
+const preloadNekoRunAsset = (src, attempt = 1) =>
+  new Promise((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const finish = async (loaded) => {
+      if (settled) return;
+      settled = true;
+      image.removeEventListener("load", handleLoad);
+      image.removeEventListener("error", handleError);
+      if (loaded && image.naturalWidth) {
+        try {
+          await image.decode();
+        } catch (error) {
+          // A completed image remains usable when decode() is unavailable or redundant.
+        }
+        if (image.naturalWidth) {
+          nekoPreloadedRunAssetImages.push(image);
+          resolve(true);
+          return;
+        }
+      }
+      if (attempt < NEKO_RUN_ASSET_PRELOAD_ATTEMPTS) {
+        resolve(preloadNekoRunAsset(src, attempt + 1));
+        return;
+      }
+      resolve(false);
+    };
+    const handleLoad = () => void finish(true);
+    const handleError = () => void finish(false);
+
+    image.decoding = "async";
+    image.addEventListener("load", handleLoad, { once: true });
+    image.addEventListener("error", handleError, { once: true });
+    image.src = src;
+    if (image.complete) queueMicrotask(() => void finish(Boolean(image.naturalWidth)));
+  });
 
 const preloadNekoRunAssets = () => {
   if (nekoRunAssetsPreloadStarted) return nekoRunAssetsPreloadPromise;
@@ -26637,26 +26677,10 @@ const preloadNekoRunAssets = () => {
   ]);
 
   nekoRunAssetsPreloadPromise = Promise.all(
-    Array.from(assetUrls, (src) =>
-      new Promise((resolve) => {
-        const image = new Image();
-        let settled = false;
-        const finish = () => {
-          if (settled) return;
-          settled = true;
-          resolve();
-        };
-
-        image.decoding = "async";
-        image.addEventListener("load", finish, { once: true });
-        image.addEventListener("error", finish, { once: true });
-        image.src = src;
-        if (image.complete) finish();
-        nekoPreloadedRunAssetImages.push(image);
-      })
-    )
-  ).then(() => {
-    nekoRunAssetsLoaded = true;
+    Array.from(assetUrls, (src) => preloadNekoRunAsset(src))
+  ).then((results) => {
+    nekoRunAssetsLoaded = results.every(Boolean);
+    return nekoRunAssetsLoaded;
   });
 
   return nekoRunAssetsPreloadPromise;
@@ -28637,7 +28661,8 @@ const MS_CELL_NUMBER_SOURCES = Object.freeze(
 );
 const msNumberAssetPreloads = mediaSourcePreloadRequests;
 
-const preloadMinesweeperNumberAsset = (src) => preloadMediaSource(src);
+const preloadMinesweeperNumberAsset = (src) =>
+  preloadMediaSource(src, { retainImagePreload: true });
 
 const preloadMinesweeperNumberAssets = () =>
   Promise.all(MS_CELL_NUMBER_SOURCES.map(preloadMinesweeperNumberAsset));
@@ -31174,7 +31199,7 @@ document.addEventListener("visibilitychange", () => {
 // }
 
 const readVisibleWindowTitleBarClamps = () =>
-  draggableWindows.flatMap((win) => {
+  [...draggableWindows].flatMap((win) => {
     if (
       win.hidden ||
       win.classList.contains("is-hidden") ||
@@ -31204,6 +31229,8 @@ const readPortfolioWindowSizes = () =>
 
 let windowResizeFrameId = 0;
 const dispatchWindowResize = () => {
+  closeNekoContextMenu({ restoreFocus: true });
+  syncNekoStreamLane();
   if (windowResizeFrameId) return;
   windowResizeFrameId = requestAnimationFrame(() => {
     windowResizeFrameId = 0;
@@ -31217,8 +31244,6 @@ const dispatchWindowResize = () => {
       setPortfolioResponsiveState(win, width, height);
     });
     if (!aboutDegreeUsesResizeObserver) queueAboutDegreeRefresh();
-    closeNekoContextMenu({ restoreFocus: true });
-    syncNekoStreamLane();
     scheduleGameStatsPlayerNameMarquees();
     positionVisibleGameStatsWindows();
     clampVisibleAdministratorWindow();

@@ -198,6 +198,16 @@ test("session creation exhausts build retries before reporting an unavailable se
       ],
     },
     {
+      name: "session rate limit",
+      behavior: { kind: "http-error", status: 429, payload: null },
+      expectedResult: { session: null, status: 429 },
+      expectedChanges: [{
+        state: "request-failed",
+        message:
+          "The verified game session request was rate limited. Try again later.",
+      }],
+    },
+    {
       name: "upstream rejection",
       behavior: { kind: "http-error", status: 503, payload: null },
       expectedResult: { session: null, status: 503 },
@@ -274,6 +284,13 @@ test("session creation exhausts build retries before reporting an unavailable se
       sessionCase.expectedChanges,
       sessionCase.name
     );
+    if (sessionCase.behavior.status === 429) {
+      assert.equal(
+        context.readRequestsForTest().length,
+        1,
+        "A rate-limited session request must not retry immediately"
+      );
+    }
   }
 
   const unconfiguredContext = await loadSessionHarness();
