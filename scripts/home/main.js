@@ -1076,6 +1076,17 @@ const GAME_STATS_NAME_GENERATOR_TIMEOUT_MS = 8000;
 const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
 const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
 const padTwoDigits = (value) => String(value).padStart(2, "0");
+const debounceTimer = (timerId, callback, delayMs) => {
+  if (timerId) window.clearTimeout(timerId);
+  return window.setTimeout(callback, delayMs);
+};
+const afterFrames = (frameCount, callback) => {
+  if (frameCount <= 0) {
+    callback();
+    return null;
+  }
+  return window.requestAnimationFrame(() => afterFrames(frameCount - 1, callback));
+};
 const reducedMotionQuery =
   typeof window.matchMedia === "function"
     ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -6236,8 +6247,7 @@ const dodgeDodgingPopup = ({ direct = false, force = false } = {}) => {
   dodgingPopupWindow.style.zIndex = String(topZ++);
   const nextPosition = getDodgingPopupSlidePosition();
   setRandomEventWindowPosition(dodgingPopupWindow, nextPosition.left, nextPosition.top);
-  if (dodgingPopupSlideTimer) clearTimeout(dodgingPopupSlideTimer);
-  dodgingPopupSlideTimer = window.setTimeout(() => {
+  dodgingPopupSlideTimer = debounceTimer(dodgingPopupSlideTimer, () => {
     dodgingPopupWindow.classList.remove("is-dodging");
     dodgingPopupSlideTimer = null;
   }, DODGING_POPUP_SLIDE_DURATION_MS);
@@ -6259,8 +6269,7 @@ const closeDodgingPopup = () => {
 };
 
 const scheduleDodgingPopupAutoClose = () => {
-  if (dodgingPopupAutoCloseTimer) clearTimeout(dodgingPopupAutoCloseTimer);
-  dodgingPopupAutoCloseTimer = window.setTimeout(() => {
+  dodgingPopupAutoCloseTimer = debounceTimer(dodgingPopupAutoCloseTimer, () => {
     dodgingPopupAutoCloseTimer = null;
     closeDodgingPopup();
   }, 2000);
@@ -7508,8 +7517,8 @@ const saveSnakeHighScores = () => {
 };
 
 const scheduleSnakeHighScoreSave = () => {
-  if (snakeHighScoreSaveTimer) clearTimeout(snakeHighScoreSaveTimer);
-  snakeHighScoreSaveTimer = window.setTimeout(
+  snakeHighScoreSaveTimer = debounceTimer(
+    snakeHighScoreSaveTimer,
     saveSnakeHighScores,
     SNAKE_HIGH_SCORE_SAVE_DEBOUNCE_MS
   );
@@ -8334,8 +8343,7 @@ const updateDistressTuning = () => {
     setDistressDialsDisabled(true);
     setDistressStatus("Signal locked");
     lockDistressNavigation();
-    if (distressUploadTimer) clearTimeout(distressUploadTimer);
-    distressUploadTimer = setTimeout(() => {
+    distressUploadTimer = debounceTimer(distressUploadTimer, () => {
       distressUploadTimer = null;
       showDistressUploadWindow();
     }, DISTRESS_UPLOAD_DELAY_MS);
@@ -10628,8 +10636,7 @@ const pulseFateWindow = () => {
   void fateWindow.offsetWidth;
   fateWindow.classList.add("is-resisting");
   startFateLightningStrike();
-  if (fateLightningTimer) clearTimeout(fateLightningTimer);
-  fateLightningTimer = setTimeout(() => {
+  fateLightningTimer = debounceTimer(fateLightningTimer, () => {
     fateWindow.classList.remove("is-resisting");
     fateLightningTimer = null;
   }, 240);
@@ -12369,8 +12376,7 @@ const pulseLancerBattleWindow = () => {
   void lancerBattleWindow.offsetWidth;
   lancerBattleWindow.classList.add("is-striking");
   startLancerBattleLightningStrike();
-  if (lancerBattleLightningTimer) clearTimeout(lancerBattleLightningTimer);
-  lancerBattleLightningTimer = setTimeout(() => {
+  lancerBattleLightningTimer = debounceTimer(lancerBattleLightningTimer, () => {
     lancerBattleWindow.classList.remove("is-striking");
     lancerBattleLightningTimer = null;
   }, 240);
@@ -13498,8 +13504,11 @@ const startBrandBurnsBlock = () => {
     setBrandBurnsStatusText("You brace behind the Dragon Slayer.");
   }
   showBrandBurnsBlockWindow();
-  if (brandBurnsBlockTimer) clearTimeout(brandBurnsBlockTimer);
-  brandBurnsBlockTimer = setTimeout(endBrandBurnsBlock, BRAND_BURNS_BLOCK_DURATION_MS);
+  brandBurnsBlockTimer = debounceTimer(
+    brandBurnsBlockTimer,
+    endBrandBurnsBlock,
+    BRAND_BURNS_BLOCK_DURATION_MS
+  );
 };
 
 const finishBrandBurnsIfPlayerDefeated = () => {
@@ -16864,8 +16873,7 @@ const recordGeneralRandomEventClick = (detail = {}) => {
 };
 
 const scheduleRandomEventIdleTrigger = () => {
-  if (randomEventIdleTimer) clearTimeout(randomEventIdleTimer);
-  randomEventIdleTimer = setTimeout(() => {
+  randomEventIdleTimer = debounceTimer(randomEventIdleTimer, () => {
     randomEventIdleTimer = null;
     if (!document.hidden) {
       triggerRandomEvents("idleInterval", {
@@ -18927,8 +18935,11 @@ const scheduleSudokuSave = () => {
     return;
   }
   sudokuSaveQueuedForActivation = false;
-  if (sudokuSaveTimerId) clearTimeout(sudokuSaveTimerId);
-  sudokuSaveTimerId = window.setTimeout(flushSudokuSave, SUDOKU_SAVE_DEBOUNCE_MS);
+  sudokuSaveTimerId = debounceTimer(
+    sudokuSaveTimerId,
+    flushSudokuSave,
+    SUDOKU_SAVE_DEBOUNCE_MS
+  );
 };
 
 const restoreSudokuSavedState = () => {
@@ -19317,9 +19328,9 @@ const clampSudokuWindowIntoViewport = () => {
 };
 
 const scheduleSudokuWindowViewportClamp = () => {
-  requestAnimationFrame(() => {
+  afterFrames(1, () => {
     clampSudokuWindowIntoViewport();
-    requestAnimationFrame(clampSudokuWindowIntoViewport);
+    afterFrames(1, clampSudokuWindowIntoViewport);
   });
 };
 
