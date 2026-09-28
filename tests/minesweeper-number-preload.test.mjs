@@ -13,7 +13,7 @@ test("Minesweeper preloads every revealed-cell number when its window opens", as
   );
   assert.match(
     main,
-    /const preloadMinesweeperNumberAsset = \(src\) => \{[\s\S]*?document\.createElement\("link"\)[\s\S]*?preload\.rel = "preload"[\s\S]*?preload\.as = "image"[\s\S]*?preload\.href = src[\s\S]*?document\.head\.append\(preload\)[\s\S]*?msNumberAssetPreloads\.set\(src, \{ element: preload, promise \}\)/
+    /const msNumberAssetPreloads = mediaSourcePreloadRequests;[\s\S]*?preloadMediaSource\(src, \{ retainImagePreload: true \}\)/
   );
   assert.match(
     main,

@@ -43,6 +43,7 @@ const loadPlanner = async () => {
   );
   const context = vm.createContext({});
   const script = new vm.Script(`
+    const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));
     const NEKO_SPRITE_SIZE = 42;
     const NEKO_FRAME_INTERVAL_MS = 100;
     const NEKO_NAP_FRAME_SWITCH_FRAMES = 8;
@@ -204,8 +205,8 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
 
   assert.match(registration, /id: "neko-stream-system-alert"/);
   assert.match(registration, /debug: true/);
-  assert.match(registration, /probability: STANDARD_RANDOM_EVENT_PROBABILITY/);
-  assert.match(registration, /probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES/);
+  assert.doesNotMatch(registration, /\bprobability:/);
+  assert.doesNotMatch(registration, /\bprobabilities:/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE/);
   assert.match(registration, /isVisible: isNekoStreamAlertVisible/);
   assert.match(

@@ -254,7 +254,8 @@ test("About Me date, degree marquee, and carousel stay data driven", async () =>
   assert.notEqual(dateEnd, -1, "About date helpers must remain bounded");
   const context = vm.createContext({ Date });
   vm.runInContext(
-    `${source.slice(dateStart, dateEnd)}\n` +
+    "const padTwoDigits = (value) => String(value).padStart(2, '0');\n" +
+      `${source.slice(dateStart, dateEnd)}\n` +
       "globalThis.aboutDate = { label: aboutDateLabel, value: aboutDateValue };",
     context
   );

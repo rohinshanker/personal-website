@@ -106,7 +106,7 @@ test("Centered leaderboard profile drag retains its rendered position before cle
   );
   assert.match(
     dragHandler,
-    /titleBar\.setPointerCapture\(event\.pointerId\);[\s\S]*?const nextLeft = moveEvent\.clientX - offsetX;[\s\S]*?const nextTop = moveEvent\.clientY - offsetY;[\s\S]*?setWindowTitleBarClampedPosition\(win, nextLeft, nextTop\);/,
+    /const dragTitleBarGeometry = readWindowTitleBarClampGeometry\(win, rect\);[\s\S]*?titleBar\.setPointerCapture\(event\.pointerId\);[\s\S]*?const nextLeft = moveEvent\.clientX - offsetX;[\s\S]*?const nextTop = moveEvent\.clientY - offsetY;[\s\S]*?setWindowTitleBarClampedPosition\(win, nextLeft, nextTop, dragTitleBarGeometry\);/,
     "The shared pointer-capture, pointer-offset, and clamping behavior must remain intact."
   );
 });

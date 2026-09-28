@@ -106,7 +106,7 @@ test("all 30 system alerts register normally and only Neko uses debug mode", asy
   assert.doesNotMatch(source, /const RANDOM_EVENT_DEVELOPER_MODE = true;/);
   assert.match(
     source,
-    /const registerRandomEvent = \(definition\) => \{\n  randomEventDefinitions\.push\(definition\);\n  return definition;\n\};/
+    /const registerRandomEvent = \(definition\) => \{[\s\S]*?debug: false,[\s\S]*?probability: STANDARD_RANDOM_EVENT_PROBABILITY,[\s\S]*?probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,[\s\S]*?\.\.\.definition,[\s\S]*?randomEventDefinitions\.push\(registeredDefinition\);[\s\S]*?return registeredDefinition;\n\};/
   );
   assert.match(source, /randomEventDefinitions\.forEach\(\(definition\) => \{/);
   assert.ok(registrations.length > 0, "The normal random-event registry must remain populated");
@@ -165,15 +165,7 @@ test("all 30 system alerts register normally and only Neko uses debug mode", asy
     /id: `debug-system-alert-\$\{alert\.id\}`/.test(registration)
   );
   assert.ok(systemAlertRegistration, "The common system-alert registration must exist");
-  assert.match(systemAlertRegistration, /\bdebug:\s*false,/);
-  assert.match(
-    systemAlertRegistration,
-    /\bprobability:\s*STANDARD_RANDOM_EVENT_PROBABILITY,/
-  );
-  assert.match(
-    systemAlertRegistration,
-    /\bprobabilities:\s*STANDARD_RANDOM_EVENT_PROBABILITIES,/
-  );
+  assert.doesNotMatch(systemAlertRegistration, /\b(?:debug|probability|probabilities):/);
   assert.match(systemAlertRegistration, /\bkind:\s*RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(systemAlertRegistration, /\bisVisible:\s*isDebugSystemAlertVisible,/);
   assert.match(
@@ -185,7 +177,7 @@ test("all 30 system alerts register normally and only Neko uses debug mode", asy
   assert.match(systemAlertRegistration, /\bsystemAlert:\s*alert,/);
   assert.match(
     source,
-    /SYSTEM_ALERTS\.forEach\(\(alert\) => \{[\s\S]*?id: `debug-system-alert-\$\{alert\.id\}`,[\s\S]*?debug: false,/
+    /SYSTEM_ALERTS\.forEach\(\(alert\) => \{[\s\S]*?id: `debug-system-alert-\$\{alert\.id\}`,[\s\S]*?kind: RANDOM_EVENT_KIND_INTERACTIVE,/
   );
 });
 
@@ -222,7 +214,8 @@ const createPromoRandomRuntime = (source) => {
 
   const context = vm.createContext({ Math, Number });
   vm.runInContext(
-    `${source.slice(start, end)}\n` +
+    "const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));\n" +
+      `${source.slice(start, end)}\n` +
       "globalThis.promoRandom = { promoRandomEventTriggerProbability, promoRandomEventCompactnessWeight };",
     context
   );
