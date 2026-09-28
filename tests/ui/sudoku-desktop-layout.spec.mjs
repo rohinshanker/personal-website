@@ -71,7 +71,7 @@ const readSudokuLayout = (page) =>
     };
   });
 
-for (const viewport of [DESKTOP, { width: 681, height: 900 }]) {
+for (const viewport of [DESKTOP, { width: 768, height: 1024 }, { width: 1440, height: 900 }, { width: 681, height: 900 }]) {
   test(`Sudoku places its controls beside the board at ${viewport.width}px`, async ({ page }, testInfo) => {
     await openHomeDesktop(page, viewport);
     await openSudokuBoard(page);
@@ -168,6 +168,17 @@ for (const viewport of [MOBILE, { width: 680, height: 900 }]) {
     expect(layout.keypad.bottom).toBeCloseTo(layout.hints.bottom, 0);
     expect(layout.digit.height).toBeGreaterThan(30);
     expect(layout.sections[0].width).toBeCloseTo(layout.sections[1].width, 0);
+    const [newGame, pause, redo, undo, check] = layout.actionButtons;
+    expect(newGame.top).toBeCloseTo(pause.top, 0);
+    expect(check.top).toBeCloseTo(newGame.top, 0);
+    expect(newGame.right).toBeLessThan(pause.left);
+    expect(pause.right).toBeLessThan(check.left);
+    expect(undo.top).toBeCloseTo(redo.top, 0);
+    expect(undo.top).toBeGreaterThanOrEqual(check.bottom);
+    expect(undo.right).toBeLessThan(redo.left);
+    expect(undo.left - layout.actions.left).toBeCloseTo(
+      layout.actions.right - redo.right, 0
+    );
 
     await page.screenshot({
       path: testInfo.outputPath(`sudoku-mobile-${viewport.width}x${viewport.height}.png`),

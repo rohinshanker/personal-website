@@ -72,4 +72,8 @@ and the side-by-side layout immediately above the breakpoint at 681px.
 
 In the wider layout, action rows are New Game/Pause and Redo/Undo, with
 equal-width buttons spanning the same bounds as Hints. Check is centered on
-a third row. DOM order follows the visual sequence for keyboard navigation.
+a third row. DOM order follows the wider visual sequence for keyboard navigation.
+
+The compact layout uses three equal-width actions on top (New Game, Pause,
+Check) and centers Undo/Redo together beneath them. This visual ordering is
+scoped to the compact container and must not change wider action rows.

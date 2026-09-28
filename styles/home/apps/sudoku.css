@@ -1689,6 +1689,21 @@
   .sudoku-control-panel .sudoku-actions {
     grid-column: 1 / -1;
   }
+
+  .sudoku-actions button {
+    flex: 0 0 calc((100% - 12px) / 3);
+    min-width: 0;
+  }
+
+  #sudoku-check {
+    order: 1;
+  }
+  #sudoku-undo {
+    order: 2;
+  }
+  #sudoku-redo {
+    order: 3;
+  }
 }
 
 @media (max-width: 680px) {
