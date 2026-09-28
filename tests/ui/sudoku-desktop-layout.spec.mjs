@@ -57,6 +57,9 @@ const readSudokuLayout = (page) =>
         };
       }),
       actions: find(".sudoku-control-panel .sudoku-actions"),
+      actionButtons: ["new", "pause", "redo", "undo", "check"].map((id) =>
+        find(`#sudoku-${id}`)
+      ),
       actionOrder: [...win.querySelectorAll(".sudoku-control-panel .sudoku-actions button")].map(
         (button) => button.id
       ),
@@ -98,11 +101,23 @@ for (const viewport of [DESKTOP, { width: 681, height: 900 }]) {
     expect(layout.actions.left).toBeGreaterThanOrEqual(layout.board.right);
     expect(layout.actionOrder).toEqual([
       "sudoku-new",
-      "sudoku-undo",
-      "sudoku-redo",
       "sudoku-pause",
+      "sudoku-redo",
+      "sudoku-undo",
       "sudoku-check",
     ]);
+
+    const [newGame, pause, redo, undo, check] = layout.actionButtons;
+    expect(newGame.top).toBeCloseTo(pause.top, 0);
+    expect(redo.top).toBeCloseTo(undo.top, 0);
+    expect(redo.top).toBeGreaterThanOrEqual(newGame.bottom);
+    expect(check.top).toBeGreaterThanOrEqual(redo.bottom);
+    for (const [left, right] of [[newGame, pause], [redo, undo]]) {
+      expect(left.left).toBeCloseTo(layout.hints.left, 0);
+      expect(right.right).toBeCloseTo(layout.hints.right, 0);
+      expect(left.width).toBeCloseTo(right.width, 0);
+    }
+    expect(check.width).toBeCloseTo(newGame.width, 0);
 
     expect(layout.documentOverflows).toBe(false);
     expect(layout.window.right).toBeLessThanOrEqual(viewport.width);

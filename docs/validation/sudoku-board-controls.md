@@ -69,3 +69,7 @@ keypad buttons rather than the Numbers label.
 
 `tests/ui/sudoku-desktop-layout.spec.mjs` checks these bounds at 375px and 680px
 and the side-by-side layout immediately above the breakpoint at 681px.
+
+In the wider layout, action rows are New Game/Pause and Redo/Undo, with
+equal-width buttons spanning the same bounds as Hints. Check is centered on
+a third row. DOM order follows the visual sequence for keyboard navigation.

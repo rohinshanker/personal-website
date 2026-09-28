@@ -1066,6 +1066,19 @@
 
   .sudoku-control-panel .sudoku-actions {
     align-self: end;
+    display: grid;
+    gap: 4px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sudoku-actions button {
+    min-width: 0;
+  }
+
+  #sudoku-check {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc((100% - 4px) / 2);
   }
 }
 
