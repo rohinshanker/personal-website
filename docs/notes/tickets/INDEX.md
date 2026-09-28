@@ -2,7 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| A | 2026-09-28 | [A_round3-handoff__20260928.md](A_round3-handoff__20260928.md) | Owner approved final UI and push; release and live verification in progress. |
+| A | 2026-09-28 | [A_round3-handoff__20260928.md](A_round3-handoff__20260928.md) | Approved changes pushed; release blocked on CI token D1 Edit permission (Cloudflare7403). |
 | O | 2026-09-24 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Audit decisions: session budget, Minesweeper timer and close behaviour, Snake game-over loop, queue retry, expired sessions, compatibility cap, D1 id and indexes, deploy gating. Awaiting owner. |
 | O | 2026-09-24 | [O_decide-content-and-assets__20260924.md](O_decide-content-and-assets__20260924.md) | Audit decisions: Clash Royale remnants, Study Resources stub, 26 MB unreferenced calendar photos, originals and working files, background quality, shoot markup from data, pdf-window templating, renames, 98.css trim. Awaiting owner. |
 | O | 2026-09-24 | [O_decide-architecture-and-testing__20260924.md](O_decide-architecture-and-testing__20260924.md) | Audit decisions: DOM lookup strategy, defer/non-blocking load order, dialog ARIA pattern, lazy Admin Controls, load-bearing debug flag, linter, PR triggers, textual-test conversion, build-hash scope. Awaiting owner. |
@@ -13,7 +13,7 @@
 | O | 2026-09-24 | [O_long-worker-stats-aggregation__20260924.md](O_long-worker-stats-aggregation__20260924.md) | Move GET /stats from an O(n²) full scan to SQL aggregation, drop eventIds payload, short cache, split the Worker into modules, migration 0003. Nothing started. |
 | O | 2026-09-24 | [O_long-test-suite-hardening__20260924.md](O_long-test-suite-hardening__20260924.md) | 65 s Node suite from one file, sharded no-retry browser CI, helper consolidation, 34 token literals, waitForTimeout and screenshot regressions, textual-to-behaviour conversion; refreshed 2026-07-31 backlog table. Nothing started. |
 | O | 2026-09-24 | [O_long-media-pipeline__20260924.md](O_long-media-pipeline__20260924.md) | 18 GIFs over 1 MB (48.8 MB) to WebP or looping video, plus a scripted optimize-media pipeline with a check mode. Nothing started. |
-| A | 2026-09-28 | [A_sudoku-followups__20260924.md](A_sudoku-followups__20260924.md) | Owner approved final UI and push; release and live verification in progress. |
+| A | 2026-09-28 | [A_sudoku-followups__20260924.md](A_sudoku-followups__20260924.md) | Approved changes pushed; release blocked on CI token D1 Edit permission (Cloudflare7403). |
 | O | 2026-09-21 | [O_google-search-console-refresh__20260827.md](O_google-search-console-refresh__20260827.md) | Deployment verified live; await the call-guided Search Console live test, indexing request, and post-crawl verification. |
 | O | 2026-08-03 | [O_admin-controls__20260731.md](O_admin-controls__20260731.md) | Await manual acceptance of the completed Administrator-session gate and promotional-content workflow. |
 | O | 2026-07-31 | [O_image-tools__20260731.md](O_image-tools__20260731.md) | Placeholder support ticket for future Image Tools work. |

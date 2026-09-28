@@ -320,16 +320,21 @@ official GitHub actions are pinned to immutable commit SHAs and checkout does
 not persist its GitHub credential. Configure these GitHub Actions repository
 secrets:
 
-- `CLOUDFLARE_API_TOKEN`: a narrowly scoped token allowed to deploy this Worker.
+- `CLOUDFLARE_API_TOKEN`: a narrowly scoped token allowed to deploy this Worker
+  and apply migrations with **Account → D1 → Edit** on its database account.
 - `CLOUDFLARE_ACCOUNT_ID`: the account that owns the Worker and D1 database.
 
 Keep both values in GitHub Actions secrets, never in repository variables or
 source. A `main` release fails with an explicit error when either value is
 missing; it must never report success while leaving an older Worker active.
 Create `CLOUDFLARE_API_TOKEN` from Cloudflare's **Edit Cloudflare Workers**
-template and scope it to the account that owns `personal-site-game-stats`;
+template, add **Account → D1 → Edit**, and scope it to the account that owns
+`personal-site-game-stats`;
 `CLOUDFLARE_ACCOUNT_ID` is that account's ID. These CI credentials are separate
-from the five encrypted runtime secrets already attached to the Worker. Confirm
+from the five encrypted runtime secrets already attached to the Worker. A token
+that can deploy a Worker or inspect its secrets may still lack direct D1 access;
+error `7403` during migration requires checking D1 permission and account scope,
+not bypassing the migration step. Confirm
 those runtime secrets remain configured, and disable any Cloudflare Workers
 Builds/Git integration that could deploy the same Worker in parallel.
 
