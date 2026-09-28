@@ -22116,7 +22116,6 @@ bindGalleryNavigation(
   updateAboutCarousel
 );
 void updateAboutCarousel();
-activateVisibleContent(aboutCarouselImage?.closest('[data-app-window="about"]'));
 
 bindGalleryNavigation(
   pathfinderPrev,

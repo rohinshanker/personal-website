@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-09-28
+- Last verified: 2026-09-27
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -125,10 +125,29 @@ and macOS is not; `tests/asset-references.test.mjs` enforces it.
 Images inside initially hidden windows use `data-src`, carry intrinsic `width`
 and `height` when their rendered size is fixed, and are activated by the
 window's show path through `loadDeferredMedia` or `activateVisibleContent`.
-Seven-segment Minesweeper and Solitaire counters remain eager because their
-boot-time render writes `src`; the Minesweeper cell-number preload still starts
-only when that game window opens. Re-measure static first-paint resources with
-`node docs/validation/assets/initial-load.mjs "$PWD" home.html`.
+The initially visible About window remains eager. The nine eager-image
+exceptions inside hidden windows are the six Minesweeper and three Solitaire
+seven-segment counter digits, whose boot-time render writes `src`; the
+Minesweeper cell-number preload still starts only when that game window opens.
+
+Re-measure the static first-paint estimate with
+`node docs/validation/assets/initial-load.mjs "$PWD" home.html`. The script
+counts every `data-src` tag as not loaded at first paint; it does not model a
+script that activates deferred media later in the same page load. Pair it with
+a cache-disabled browser network capture when reporting user-visible load cost.
+The 2026-09-27 reference comparison at 1440×900, current `main` `e76dc76`
+versus the hidden-window deferral tip, was:
+
+| Measurement | `main` | Deferral tip |
+| --- | ---: | ---: |
+| Static guaranteed first-paint estimate | 150 resources / 2,439 KB | 94 resources / 2,221 KB |
+| Chromium full load, encoded transfer bytes | 176 requests / 3,853,868 B | 154 requests / 3,777,048 B |
+| `bio-pic-720.jpg` request start, Fast 3G and 4× CPU | 222–224 ms | 222–223 ms |
+
+The browser figures were stable across three local-server runs with cache
+disabled; the capture waited through `load`, portrait decode, and 500 ms of
+settling. The portrait timing confirms the eager preload-scanner path remains
+equivalent to `main`.
 
 ```bash
 # Opaque artwork or photo (use -resize W 0 to cap the width)
