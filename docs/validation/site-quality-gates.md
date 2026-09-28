@@ -125,10 +125,17 @@ and macOS is not; `tests/asset-references.test.mjs` enforces it.
 Images inside initially hidden windows use `data-src`, carry intrinsic `width`
 and `height` when their rendered size is fixed, and are activated by the
 window's show path through `loadDeferredMedia` or `activateVisibleContent`.
-The initially visible About window remains eager. The nine eager-image
-exceptions inside hidden windows are the six Minesweeper and three Solitaire
-seven-segment counter digits, whose boot-time render writes `src`; the
-Minesweeper cell-number preload still starts only when that game window opens.
+The initially visible About window remains eager. Two kinds of exception exist
+inside hidden windows, and an audit must count them separately: markup-eager
+tags (the six Minesweeper and three Solitaire seven-segment counter digits,
+plus the Leaderboard Profile reroll icon, whose file is already eager on the
+desktop) and images whose boot-time render writes `src` (the Study Resources
+tree and Life Counter, six each), which carry `src` at runtime without a
+markup change. The Minesweeper cell-number preload still starts only when that
+game window opens. `tests/ui/deferred-window-media.spec.mjs` opens the affected
+app windows and triggers the affected events for real through Admin Controls;
+the Admin preview activates its clone itself, so a preview render proves
+nothing about a show path.
 
 Re-measure the static first-paint estimate with
 `node docs/validation/assets/initial-load.mjs "$PWD" home.html`. The script

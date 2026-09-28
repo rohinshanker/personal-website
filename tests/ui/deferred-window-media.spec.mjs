@@ -45,6 +45,27 @@ const affectedEventIds = Object.freeze([
   "lancer-battle",
 ]);
 
+// Events whose real show paths activate deferred media. The Admin preview
+// activates a clone itself, so only a real trigger exercises these calls.
+const realTriggerEventIds = Object.freeze([
+  "annoying-system-alert",
+  "vanishing-popup-alert",
+  "dodging-popup-alert",
+  "self-love-system-alert",
+  "rohin-os-update",
+  "rohin-os-note",
+  "earth-proverb-note",
+  "health-note",
+  "love-note",
+  "mana-flood",
+  "mimic-warning",
+  "sudden-skill-check",
+  "red-tool",
+  "john-pork",
+  "lain-system-alert",
+  "soot-sprites",
+]);
+
 const configureAdministratorApi = async (page) => {
   await page.route("**/scripts/home/game-stats-backend.js*", (route) =>
     route.fulfill({
@@ -183,6 +204,25 @@ for (const viewport of viewports) {
         eventPreview.locator(`[data-admin-event-preview-window="${eventId}"]`),
         `event preview ${eventId}`
       );
+    }
+
+    const triggerNow = adminWindow.locator("#admin-trigger-now");
+    for (const eventId of realTriggerEventIds) {
+      await eventList.selectOption(eventId);
+      const previewWindow = eventPreview.locator(
+        `[data-admin-event-preview-window="${eventId}"]`
+      );
+      const windowId = await previewWindow.getAttribute("id");
+      expect(windowId, `${eventId} preview carries the window id`).toBeTruthy();
+      await triggerNow.click();
+      const liveWindow = page.locator(`#${windowId}:not([data-admin-event-preview-window])`);
+      await expectDecodedImages(liveWindow, `live event ${eventId}`);
+      await liveWindow.evaluate((windowElement) => {
+        windowElement.classList.remove("is-opening", "is-closing");
+        windowElement.classList.add("is-hidden");
+        windowElement.setAttribute("aria-hidden", "true");
+      });
+      await expect(liveWindow).toBeHidden();
     }
 
     expect(diagnostics.consoleErrors).toEqual([]);

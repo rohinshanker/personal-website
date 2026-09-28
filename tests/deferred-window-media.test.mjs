@@ -20,8 +20,9 @@ const functionBody = (name) => {
 
 test("managed event setup runs before deferred media activation", () => {
   const body = functionBody("showManagedRandomEventWindow");
-  const setupIndex = body.indexOf("if (beforeShow) beforeShow();");
-  const loadIndex = body.indexOf("loadDeferredMedia(win);");
+  // Match only live statements: a commented-out call must not satisfy this.
+  const setupIndex = body.search(/^[ \t]*if \(beforeShow\) beforeShow\(\);/m);
+  const loadIndex = body.search(/^[ \t]*loadDeferredMedia\(win\);/m);
 
   assert.notEqual(setupIndex, -1);
   assert.notEqual(loadIndex, -1);
