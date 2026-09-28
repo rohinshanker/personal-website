@@ -43,7 +43,8 @@ node --test tests/context-system.test.mjs
 ## Generated artifacts
 
 After changing files that determine game completion
-(`scripts/home/main.js` or `scripts/home/core/dom.js`), regenerate and then
+(`scripts/home/main.js`, `scripts/home/core/dom.js`, or
+`scripts/home/sudoku-generator.worker.js`), regenerate and then
 verify the public Game Stats build version:
 
 ```bash
