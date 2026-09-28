@@ -459,6 +459,28 @@ const readCheckPressFrames = (checkButton) =>
     return frames;
   });
 
+// Fill the board and pause the press animation in the same browser call, so a
+// slow runner cannot let the 920 ms animation finish before it is inspected.
+const fillBoardAndHoldPrompt = (page) =>
+  page.evaluate(() => {
+    const filled = window.__sudokuCheckControlsTest.fillBoardWithMistake();
+    const element = document.getElementById("sudoku-check");
+    getComputedStyle(element).boxShadow;
+    const animation = element
+      .getAnimations()
+      .find(
+        (candidate) => candidate.animationName === "sudoku-check-prompt-press"
+      );
+    if (!animation) throw new Error("The Check press animation did not start.");
+    animation.pause();
+    return filled;
+  });
+
+const resumeCheckPrompt = (checkButton) =>
+  checkButton.evaluate((element) => {
+    element.getAnimations().forEach((animation) => animation.play());
+  });
+
 const settleCheckPrompt = (checkButton) =>
   checkButton.evaluate(async (element) => {
     await Promise.allSettled(
@@ -490,9 +512,7 @@ for (const viewport of [viewports[0], viewports[3]]) {
       () => document.activeElement?.id || ""
     );
     const keypadBeforePrompt = await selectedKeypad.count();
-    const filled = await page.evaluate(() =>
-      window.__sudokuCheckControlsTest.fillBoardWithMistake()
-    );
+    const filled = await fillBoardAndHoldPrompt(page);
 
     await expect(checkButton).toHaveClass(/is-board-full/);
     const prompt = await readCheckPrompt(checkButton);
@@ -546,13 +566,12 @@ for (const viewport of [viewports[0], viewports[3]]) {
       PROMPT_GOLD
     );
 
-    await page.evaluate(() =>
-      window.__sudokuCheckControlsTest.fillBoardWithMistake()
-    );
+    await fillBoardAndHoldPrompt(page);
     await expect(checkButton).toHaveClass(/is-board-full/);
     expect((await readCheckPrompt(checkButton)).presses).toEqual([
       { iterations: 2, name: "sudoku-check-prompt-press" },
     ]);
+    await resumeCheckPrompt(checkButton);
 
     // Solving the board ends it.
     await page.evaluate(() =>
