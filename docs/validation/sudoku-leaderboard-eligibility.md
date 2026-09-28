@@ -2,13 +2,14 @@
 
 - Purpose: Preserve Sudoku check limits, assistance classification, completion recording, and responsive control behavior.
 - Scope: Sudoku controls, saved puzzle state, no-hints leaderboard events, completion-source integrity metadata, and rendered browser validation.
-- Last verified: 2026-09-24
+- Last verified: 2026-09-27
 
 ## Eligibility Contract
 
 - A fresh puzzle starts with Errors off, zero of three checks used, no accepted Errors warning, and no assistance latch.
-- Each non-winning Check consumes one allowance and may reveal current mistakes. A valid completed board is a submission, not a diagnostic check, so it remains submittable after all three allowances are used.
-- Once three diagnostic checks are used, another non-winning Check clears stale markers and reports only `No checks remaining`; it must not mark cells or expose a mistake count.
+- A Check spends an allowance only when its diagnostic pass reveals at least one mistake. A Check that finds none is free: it clears stale markers, bursts, and reports `Ready`, however many allowances are already gone. A valid completed board is a submission, not a diagnostic check, so it remains submittable after all three allowances are used.
+- The diagnostic pass therefore runs before the count, not after it. Counting first burned an allowance on a clean board.
+- Once three mistake-revealing checks are used, another Check on a board with errors clears stale markers and reports only `No checks remaining`; it must not mark cells or expose a mistake count.
 - The Reveal control and its automatic-cell-fill path do not exist.
 - Enabling Errors requires the puzzle-scoped confirmation alert. Cancel or Escape keeps Errors off and prompts again on the next attempt. Acceptance alone does not disqualify the puzzle.
 - The irreversible assistance latch flips only when Errors mode visibly marks at least one incorrect value. Correcting the value, turning Errors off, undoing, or redoing cannot reverse it.
@@ -49,6 +50,6 @@ npx playwright test tests/ui/sudoku-check-controls.spec.mjs \
   tests/ui/sudoku-publish-flow.spec.mjs
 ```
 
-The publish-flow spec covers a fresh puzzle, a restored unsolved puzzle that resumes into a second session and publishes with the restored elapsed time, one puzzle open in two tabs publishing exactly once, and a restored recorded puzzle that stays quiet. The eligibility unit test runs the real completion path against a storage stub for the cross-tab cases.
+The check-controls spec covers the free clean check before and after the quota is spent, the three counted checks, and the refusal on a board with errors. The publish-flow spec covers a fresh puzzle, a restored unsolved puzzle that resumes into a second session and publishes with the restored elapsed time, one puzzle open in two tabs publishing exactly once, and a restored recorded puzzle that stays quiet. The eligibility unit test runs the real completion path against a storage stub for the cross-tab cases.
 
 The rendered checks cover 375×812, 768×1024, 1280×800, and 1440×900. Before deployment, the local hash check must pass. After deployment, run the release parity check and require the deployed HTML, completion sources, browser config, and Worker health hash to converge.
