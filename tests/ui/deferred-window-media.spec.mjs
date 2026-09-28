@@ -265,7 +265,7 @@ window.__deferredMediaTest = Object.freeze({
       await expectDecodedImages(liveWindow, `cold event ${eventId}`);
       if (eventId === "rohin-os-note" || eventId === "lain-system-alert") {
         await testInfo.attach(`${eventId}-${viewport.name}`, {
-          body: await page.screenshot(), contentType: "image/png",
+          body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
         });
       }
       await liveWindow.evaluate((element) => {
