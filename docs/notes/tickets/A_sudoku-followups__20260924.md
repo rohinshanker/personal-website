@@ -1,12 +1,12 @@
-# O_sudoku-followups__20260924 — Open
+# A_sudoku-followups__20260924 — Active
 
 - Scope: Sudoku performance and quality-of-life follow-ups identified after the 2026-09-24 board-controls and restored-puzzle publication work.
-- Status: open
+- Status: active
 - Opened: 2026-09-24
 - Updated: 2026-09-28
-- Current State: Items 3, 8, 7, 4, and 5 are implemented with tests on local branch `agent/claude-implementer/dem-143-7dd6fa7bdbf2` (tip `57796d2`, base `main` at `e76dc76`), unreviewed. Item 2 is a preserved WIP commit (`57796d2`, tests not yet green) from the run cancelled on 2026-09-28; items 6, 1, and 9 are untouched. Resume per `O_round3-handoff__20260928.md`.
-- Verification: Each item ships with its own tests per `docs/validation/site-quality-gates.md`; items that change `scripts/home/main.js` or `scripts/home/core/dom.js` regenerate the build hash; items 4, 5, and 6 also need a rendered pass at 375×812, 768×1024, 1280×800, and 1440×900 plus manual review of any new control.
-- Cleanup: Distill durable contracts into `docs/validation/sudoku-board-controls.md` or `docs/validation/sudoku-leaderboard-eligibility.md`, then delete this ticket and its index row.
+- Current State: All nine items are implemented with tests on `agent/claude-implementer/dem-143`. Both independent reviews of that branch have been answered: the four frontend findings against `f8c5669` (worker-fallback starvation, a timer restarted by a puzzle adopted while paused, unbounded superseded generation, and the generator worker sitting outside build integrity) and the three backend findings plus the migration-documentation correction against `92cb0fe` (duplicate acknowledgements inflating browser totals, the duplicate shortcut skipping session validation, and concurrent losers returning an unstored event id). Awaiting the same reviewers' final confirmation and owner acceptance of the rendered states; no work is outstanding on the branch.
+- Verification: Each item ships with its own tests per `docs/validation/site-quality-gates.md`; every change to `scripts/home/main.js`, `scripts/home/core/dom.js`, or `scripts/home/sudoku-generator.worker.js` regenerates the build hash, which now covers the worker. Items 4, 5, and 6 were rendered at 375×812, 768×1024, 1280×800, and 1440×900; item 9 pins the playing and paused Sudoku windows in the linux-arm64 container. Each review finding carries a regression that fails on the reviewed source.
+- Cleanup: Durable contracts are already folded into `docs/validation/sudoku-board-controls.md`, `docs/validation/sudoku-leaderboard-eligibility.md`, `docs/validation/game-stats-backend.md`, and `docs/validation/browser-visual-accessibility.md`. Delete this ticket and its index row once the reviews and owner acceptance close; the Worker version ID is recorded by the coordinator after release.
 
 ## Items
 

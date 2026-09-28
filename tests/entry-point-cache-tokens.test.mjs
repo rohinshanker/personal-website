@@ -14,7 +14,7 @@ const ENTRY_POINTS = Object.freeze([
 ]);
 
 const ASSET_REFERENCE_PATTERN = /\b(?:href|src)="([^"?]+\.(?:css|js))(?:\?v=([^"]+))?"/g;
-const WARMUP_ENTRY_PATTERN = /\["([^"]+)", "(?:style|script)"\]/g;
+const WARMUP_ENTRY_PATTERN = /\["([^"]+)", "(?:style|script|worker)"\]/g;
 
 /** Local stylesheet and script references, resolved to repository paths. */
 const readAssetReferences = (entryPoint, source) => {

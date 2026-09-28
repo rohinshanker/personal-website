@@ -31,7 +31,7 @@ test("Every entry point loads the current Sudoku stylesheet build", async () => 
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
   ]);
-  const reference = /styles\/home\/apps\/sudoku\.css\?v=sudoku-check-prompt-20260927/;
+  const reference = /styles\/home\/apps\/sudoku\.css\?v=sudoku-pause-20260928/;
 
   assert.match(home, reference);
   assert.match(index, reference);
@@ -47,10 +47,11 @@ test("Sudoku exposes three checks, no reveal control, and an accessible Errors w
 
   assert.equal(
     [...hintOptions.matchAll(/data-sudoku-hint=/g)].length,
-    2,
-    "Only Off and Errors may be available as Sudoku hint controls."
+    3,
+    "Only Off, Conflicts, and Errors may be available as Sudoku hint controls."
   );
   assert.match(hintOptions, /data-sudoku-hint="off"/);
+  assert.match(hintOptions, /data-sudoku-hint="conflicts"/);
   assert.match(hintOptions, /data-sudoku-hint="errors"/);
   assert.doesNotMatch(hintOptions, /data-sudoku-hint="reveal"/);
   assert.doesNotMatch(main, /const revealSudokuHint =|mode === "reveal"/);
@@ -112,7 +113,7 @@ test("Sudoku persists the quota and warning while legacy assists fail closed", a
   );
   const freshPuzzleSource = sourceBetween(
     main,
-    "const loadSudokuDifficulty = (difficulty) => {",
+    "const adoptSudokuPuzzle = (difficulty, generated) => {",
     "\n\nconst getLifeCounterWindow ="
   );
   const historySource = sourceBetween(
@@ -203,6 +204,8 @@ test("Errors mode only latches assistance after a visible mistake", async () => 
       "let result = { complete: false, valid: true, mistakes: 0 };",
       "let markedCalls = 0;",
       "let saveCalls = 0;",
+      "let conflictRefreshes = 0;",
+      "const refreshSudokuConflictMarks = () => { conflictRefreshes += 1; };",
       "const clearSudokuHighlights = () => {};",
       "const updateSudokuMistakesDisplay = () => {};",
       "const scheduleSudokuSave = () => { saveCalls += 1; };",
@@ -210,7 +213,7 @@ test("Errors mode only latches assistance after a visible mistake", async () => 
       feedbackSource,
       "globalThis.refreshForTest = refreshSudokuHintFeedback;",
       "globalThis.setResultForTest = (next) => { result = { ...next }; };",
-      "globalThis.readForTest = () => ({ ...sudokuState, markedCalls, saveCalls });",
+      "globalThis.readForTest = () => ({ ...sudokuState, markedCalls, saveCalls, conflictRefreshes });",
     ].join("\n"),
     context
   );
@@ -222,6 +225,7 @@ test("Errors mode only latches assistance after a visible mistake", async () => 
     usedHint: false,
     markedCalls: 1,
     saveCalls: 0,
+    conflictRefreshes: 1,
   });
 
   context.setResultForTest({ complete: false, valid: false, mistakes: 1 });
@@ -232,6 +236,7 @@ test("Errors mode only latches assistance after a visible mistake", async () => 
     usedHint: true,
     markedCalls: 2,
     saveCalls: 1,
+    conflictRefreshes: 2,
   });
 
   context.setResultForTest({ complete: false, valid: true, mistakes: 0 });
@@ -242,7 +247,76 @@ test("Errors mode only latches assistance after a visible mistake", async () => 
     usedHint: true,
     markedCalls: 3,
     saveCalls: 1,
+    conflictRefreshes: 3,
   });
+});
+
+test("Conflict mode reads the board alone and stays leaderboard eligible", async () => {
+  const { main, styles } = await readSudokuSources();
+  const conflictSource = sourceBetween(
+    main,
+    "const findSudokuConflictIndexes = () => {",
+    "\n\nlet sudokuConflictCache ="
+  );
+  const marksSource = sourceBetween(
+    main,
+    "const refreshSudokuConflictMarks = () => {",
+    "\n\nconst refreshSudokuHintFeedback ="
+  );
+  const hintModeSource = sourceBetween(
+    main,
+    "const setSudokuHintMode = (mode) => {",
+    "\n\nconst setSudokuNoteMode ="
+  );
+
+  // Nothing on the conflict path may reach for the solution, the check
+  // quota, the mistake count, or the assistance latch.
+  for (const source of [conflictSource, marksSource]) {
+    assert.doesNotMatch(source, /solution|usedHint|usedReveal|checksUsed|mistakes/);
+  }
+  assert.match(
+    hintModeSource,
+    /if \(mode === "errors" && !sudokuState\.errorsConfirmed\)/,
+    "Only Errors may demand the disqualifying confirmation."
+  );
+  assert.match(styles, /\.sudoku-grid \.sudoku-cell\.is-conflict \{/);
+
+  const context = vm.createContext({});
+  vm.runInContext(
+    [
+      "let sudokuState = { values: [], puzzle: '' };",
+      "const normalizeSudokuValues = (values) => values.slice();",
+      "const sudokuBoxIndex = (row, column) => Math.floor(row / 3) * 3 + Math.floor(column / 3);",
+      conflictSource,
+      "globalThis.conflictsFor = (values) => {",
+      "  sudokuState.values = values;",
+      "  return [...findSudokuConflictIndexes()].sort((a, b) => a - b);",
+      "};",
+    ].join("\n"),
+    context
+  );
+
+  const empty = Array.from({ length: 81 }, () => "");
+  const withValues = (entries) => {
+    const values = empty.slice();
+    Object.entries(entries).forEach(([index, value]) => {
+      values[Number(index)] = value;
+    });
+    return values;
+  };
+
+  const conflictsFor = (values) => plainObject(context.conflictsFor(values));
+
+  assert.deepEqual(conflictsFor(empty), []);
+  // Row 0, then column 3, then box 0.
+  assert.deepEqual(conflictsFor(withValues({ 0: "4", 5: "4" })), [0, 5]);
+  assert.deepEqual(conflictsFor(withValues({ 3: "7", 30: "7" })), [3, 30]);
+  assert.deepEqual(conflictsFor(withValues({ 0: "9", 10: "9" })), [0, 10]);
+  // Every member of an over-filled unit is marked, on any number of axes.
+  assert.deepEqual(conflictsFor(withValues({ 0: "2", 1: "2", 9: "2" })), [0, 1, 9]);
+  // A value that shares no unit is never a conflict, however wrong it is:
+  // the mode cannot tell, because it never looks at the solution.
+  assert.deepEqual(conflictsFor(withValues({ 0: "1", 40: "1" })), []);
 });
 
 // Both check tests run the real checkSudokuBoard against the same stubs.
@@ -343,6 +417,9 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
         type: "win",
         difficulty: "easy",
         hintBucket: "noHints",
+        // The puzzle identity the Worker deduplicates on.
+        puzzleId: "puzzle-a",
+        puzzle: "1".repeat(81),
         metric: 42,
         metricKind: "seconds",
       },

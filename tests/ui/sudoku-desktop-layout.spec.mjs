@@ -92,6 +92,7 @@ test("Sudoku places its controls beside the board on desktop", async ({ page }, 
     "sudoku-new",
     "sudoku-undo",
     "sudoku-redo",
+    "sudoku-pause",
     "sudoku-check",
   ]);
 

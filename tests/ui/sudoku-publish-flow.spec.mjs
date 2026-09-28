@@ -20,6 +20,16 @@ const SUDOKU_DIFFICULTIES = Object.freeze([
 ]);
 const BASELINE_NO_HINTS_WINS = 2;
 const BASELINE_WITH_HINTS_WINS = 1;
+/**
+ * The puzzle identity every Sudoku win carries, so the Worker can refuse a
+ * second win for one puzzle. The id is minted per adopted puzzle and the
+ * board is the 81-character puzzle string it was solved from.
+ */
+const SUDOKU_PUZZLE_ID_PATTERN = expect.stringMatching(
+  /^generated-(?:easy|medium|hard|expert|master|extreme)-[a-z0-9]+-[a-z0-9]{1,6}$/
+);
+const SUDOKU_PUZZLE_PATTERN = expect.stringMatching(/^[0-9]{81}$/);
+
 const PUBLISH_TIMEOUT_MS = 30_000;
 
 const profile = Object.freeze({
@@ -583,6 +593,8 @@ const expectPublishedRequestContract = (api, scenario) => {
       occurredAt: expect.any(String),
       difficulty: "easy",
       hintBucket: scenario.hintBucket,
+      puzzleId: SUDOKU_PUZZLE_ID_PATTERN,
+      puzzle: SUDOKU_PUZZLE_PATTERN,
       metric: scenario.elapsedSeconds,
       metricKind: "seconds",
       profile: {
@@ -921,6 +933,8 @@ test("a restored unsolved Sudoku puzzle publishes through a fresh verified sessi
       occurredAt: expect.any(String),
       difficulty: "easy",
       hintBucket: "noHints",
+      puzzleId: SUDOKU_PUZZLE_ID_PATTERN,
+      puzzle: SUDOKU_PUZZLE_PATTERN,
       metric: expect.any(Number),
       metricKind: "seconds",
       profile: {
@@ -1223,6 +1237,8 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
       occurredAt: expect.any(String),
       difficulty: "easy",
       hintBucket: "noHints",
+      puzzleId: SUDOKU_PUZZLE_ID_PATTERN,
+      puzzle: SUDOKU_PUZZLE_PATTERN,
       metric: 150,
       metricKind: "seconds",
       profile: {
@@ -1234,6 +1250,11 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
     session: api.sessionProofs[1],
   });
   expect(api.eventRequests[1].event.id).not.toBe(api.eventRequests[0].event.id);
+  // The identity the Worker deduplicates on follows the board, so a New Game
+  // publishes a different puzzle rather than a second win for the first one.
+  expect(api.eventRequests[1].event.puzzleId).not.toBe(
+    api.eventRequests[0].event.puzzleId
+  );
   expect(api.requestSequence.filter((request) => request === "session" || request === "event"))
     .toEqual(["session", "event", "session", "event"]);
 

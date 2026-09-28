@@ -110,8 +110,8 @@ test("only fresh Sudoku puzzle creation clears the completion latch", async () =
   const source = await readMainSource();
   const loadSource = sourceBetween(
     source,
-    "const loadSudokuDifficulty = (difficulty) => {",
-    "\n\nconst getLifeCounterWindow = () =>"
+    "const adoptSudokuPuzzle = (difficulty, generated) => {",
+    "\n\nconst getLifeCounterWindow ="
   );
   const falseInitializers = source.match(/completionRecorded:\s*false/g) || [];
 

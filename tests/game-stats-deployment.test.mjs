@@ -5,6 +5,11 @@ import test from "node:test";
 import { parse } from "yaml";
 
 import {
+  GAME_COMPLETION_SOURCE_FILES,
+  INTEGRITY_CACHE_ASSET_PATHS,
+  INTEGRITY_ENTRY_FILES,
+} from "../scripts/lib/game-build.mjs";
+import {
   DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   GAME_STATS_BACKEND_CONFIG_URL,
   LIVE_GAME_STATS_BACKEND_CONFIG_URL,
@@ -27,16 +32,21 @@ import {
 
 const LOCAL_BUILD_VERSION = `sha256-${"a".repeat(64)}`;
 const REMOTE_BUILD_VERSION = `sha256-${"b".repeat(64)}`;
-const RELEASE_SOURCE_FILES = new Map([
-  ["scripts/home/main.js", Buffer.from("const releaseMain = true;\n")],
-  ["scripts/home/core/dom.js", Buffer.from("const releaseDom = true;\n")],
-]);
+/**
+ * Stand-in bytes for every declared completion source, so adding one to
+ * `GAME_COMPLETION_SOURCE_FILES` extends this gate instead of breaking it.
+ */
+const createReleaseSourceFiles = (label) =>
+  new Map(
+    GAME_COMPLETION_SOURCE_FILES.map((relativePath) => [
+      relativePath,
+      Buffer.from(`// ${label} ${relativePath}\n`),
+    ])
+  );
+const RELEASE_SOURCE_FILES = createReleaseSourceFiles("release");
 const calculateReleaseBuildVersion = (sourceFiles = RELEASE_SOURCE_FILES) => {
   const digest = createHash("sha256");
-  for (const relativePath of [
-    "scripts/home/main.js",
-    "scripts/home/core/dom.js",
-  ]) {
+  for (const relativePath of GAME_COMPLETION_SOURCE_FILES) {
     digest.update(relativePath);
     digest.update("\0");
     digest.update(sourceFiles.get(relativePath));
@@ -45,10 +55,7 @@ const calculateReleaseBuildVersion = (sourceFiles = RELEASE_SOURCE_FILES) => {
   return `sha256-${digest.digest("hex")}`;
 };
 const RELEASE_BUILD_VERSION = calculateReleaseBuildVersion();
-const PREVIOUS_RELEASE_SOURCE_FILES = new Map([
-  ["scripts/home/main.js", Buffer.from("const previousReleaseMain = true;\n")],
-  ["scripts/home/core/dom.js", Buffer.from("const previousReleaseDom = true;\n")],
-]);
+const PREVIOUS_RELEASE_SOURCE_FILES = createReleaseSourceFiles("previous release");
 const PREVIOUS_RELEASE_BUILD_VERSION = calculateReleaseBuildVersion(
   PREVIOUS_RELEASE_SOURCE_FILES
 );
@@ -104,13 +111,9 @@ const createAssetResponse = (source, { ok = true, status = 200 } = {}) => {
 
 const createIntegrityEntry = (buildVersion = RELEASE_BUILD_VERSION) => {
   const cacheToken = `game-build-${buildVersion.replace(/^sha256-/, "")}`;
-  return [
-    "scripts/home/game-stats-backend.js",
-    "scripts/home/core/dom.js",
-    "scripts/home/main.js",
-  ]
-    .map((assetPath) => `<script src="${assetPath}?v=${cacheToken}"></script>`)
-    .join("\n");
+  return INTEGRITY_CACHE_ASSET_PATHS.map(
+    (assetPath) => `<script src="${assetPath}?v=${cacheToken}"></script>`
+  ).join("\n");
 };
 
 const createReleaseDependencyResponse = (
@@ -789,7 +792,7 @@ test("Worker transition rejects a retargeted API and an unsynchronized Worker", 
 
 test("release check rejects a stale live completion source and fetches assets uncached", async () => {
   const staleSources = new Map(RELEASE_SOURCE_FILES);
-  staleSources.set("scripts/home/main.js", Buffer.from("const releaseMain = false;\n"));
+  staleSources.set("scripts/home/main.js", Buffer.from("// stale scripts/home/main.js\n"));
   const staleSourceBuildVersion = calculateReleaseBuildVersion(staleSources);
   const assetCalls = [];
   let cacheBustSequence = 0;
@@ -827,7 +830,10 @@ test("release check rejects a stale live completion source and fetches assets un
     }
   );
 
-  assert.equal(assetCalls.length, 4);
+  assert.equal(
+    assetCalls.length,
+    GAME_COMPLETION_SOURCE_FILES.length + INTEGRITY_ENTRY_FILES.length
+  );
   for (const [url, options] of assetCalls) {
     assert.match(url, /game_stats_deployment_check=integrity-/);
     assert.equal(options.cache, "no-store");
@@ -1649,6 +1655,17 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     workerStepByName["Deploy rollout-compatible Worker configuration"].run,
     "npm --prefix workers/game-stats run deploy -- --config wrangler.jsonc --strict"
   );
+  // The schema the deployed Worker expects must already be in D1 when it
+  // starts serving, so migrations are applied with production credentials
+  // before the deploy, never after it.
+  assert.deepEqual(workerStepByName["Apply pending D1 migrations"].env, {
+    CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+    CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+  });
+  assert.equal(
+    workerStepByName["Apply pending D1 migrations"].run,
+    "npm --prefix workers/game-stats run migrate:remote"
+  );
   assert.equal(
     workerStepByName[
       "Verify live browser remains accepted by the candidate Worker"
@@ -1671,7 +1688,11 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.ok(
     workerStepNames.indexOf(
       "Require every secret the Worker configuration declares"
-    ) < workerStepNames.indexOf("Deploy rollout-compatible Worker configuration")
+    ) < workerStepNames.indexOf("Apply pending D1 migrations")
+  );
+  assert.ok(
+    workerStepNames.indexOf("Apply pending D1 migrations") <
+      workerStepNames.indexOf("Deploy rollout-compatible Worker configuration")
   );
   assert.ok(
     workerStepNames.indexOf("Deploy rollout-compatible Worker configuration") <

@@ -2,7 +2,7 @@
 
 - Purpose: Run and maintain browser screenshot baselines and WCAG scans.
 - Scope: Browser test projects, isolated containers, fixtures, and known accessibility limitations.
-- Last verified: 2026-09-09
+- Last verified: 2026-09-28
 
 ## Playwright projects
 
@@ -55,6 +55,18 @@ clears them. This keeps artifacts ignored and prevents a typo from targeting
 source directories. The container writes these files back to the checkout.
 
 ## Visual baselines
+
+The pinned set covers the entry loader and its alert, the Home desktop, the
+About window, and the Minesweeper, Game Progress, and Sudoku windows. Sudoku
+is pinned twice because its two board states share almost no pixels:
+`home-sudoku-window.png` is a playing board with a digit driven to its ninth
+placement, so one render carries the greyed exhausted keypad button, every
+remaining-count badge, the same-value tint, and the axis highlight together;
+`home-sudoku-paused-window.png` is that same board paused, so it pins the
+hidden values and notes, the thinned frame and control panel over the
+aquarium, and the single centred play button. The `visual` project renders
+with `prefers-reduced-motion: reduce`, which is what holds the aquarium still
+behind the paused board.
 
 Baselines live in
 `tests/ui/__screenshots__/{platform}-{arch}/{project}/{name}.png` and only

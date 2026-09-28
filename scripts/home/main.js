@@ -207,7 +207,12 @@ const {
   sudokuLoadingMeter,
   sudokuLoadingFill,
   sudokuPlay,
+  sudokuGeneratorSource,
   sudokuGrid,
+  sudokuGridFrame,
+  sudokuControlPanel,
+  sudokuPauseOverlay,
+  sudokuResume,
   sudokuDifficultyButtons,
   sudokuNumberButtons,
   sudokuHintButtons,
@@ -216,6 +221,7 @@ const {
   sudokuUndo,
   sudokuRedo,
   sudokuCheck,
+  sudokuPause,
   sudokuStatus,
   sudokuMistakes,
   sudokuTime,
@@ -891,6 +897,9 @@ const SNAKE_KEY_DIRECTIONS = Object.freeze({
 const SUDOKU_DIGITS = "123456789";
 const SUDOKU_CELL_COUNT = 81;
 const SUDOKU_ROW_COUNT = 9;
+// Conflicts read the board alone, so they sit alongside Errors as a mode the
+// player can hold without forfeiting the leaderboard.
+const SUDOKU_HINT_MODES = Object.freeze(["off", "conflicts", "errors"]);
 const SUDOKU_STORAGE_KEY = "personalSiteSudokuStateV1";
 const SUDOKU_COMPLETION_CLAIMS_KEY = "personalSiteSudokuCompletionsV1";
 // Claims are ~100 bytes each. The cap only bounds storage; a tab that missed
@@ -907,8 +916,10 @@ const createSudokuEmptyValues = () =>
   Array.from({ length: SUDOKU_CELL_COUNT }, () => "");
 const createSudokuEmptyNotes = () =>
   Array.from({ length: SUDOKU_CELL_COUNT }, () => "");
+// The meter's floor, so the boot screen does not flash past. Past the floor
+// the loader waits on the generator instead of on a second timer.
 const SUDOKU_LOAD_MIN_MS = 1300;
-const SUDOKU_LOAD_MAX_MS = 2800;
+const SUDOKU_LOAD_READY_POLL_MS = 90;
 const SUDOKU_PLAY_BURST_MS = 820;
 const SUDOKU_FISH_TYPES = Object.freeze(["clown", "tang", "butterfly", "wrasse"]);
 const SUDOKU_FISH_DEPTHS = Object.freeze({
@@ -1586,6 +1597,21 @@ const normalizeGameStatsMetric = (value) => {
   return Number.isFinite(metric) && metric >= 0 ? Math.trunc(metric) : null;
 };
 
+/**
+ * The puzzle a Sudoku win came from. The Worker deduplicates by this identity
+ * and the player, which is what closes the cross-tab races the browser's claim
+ * list cannot. Both fields are dropped unless both are well formed, because a
+ * half-identity is worse than none: the Worker rejects it outright.
+ */
+const normalizeSudokuEventIdentity = (rawEvent) => {
+  const puzzleId = String(rawEvent.puzzleId || "").trim();
+  const puzzle = String(rawEvent.puzzle || "").trim();
+  if (!/^[a-z0-9][a-z0-9-]{3,79}$/.test(puzzleId) || !/^[0-9]{81}$/.test(puzzle)) {
+    return {};
+  }
+  return { puzzleId, puzzle };
+};
+
 function normalizeGameStatsEvent(rawEvent) {
   if (!rawEvent || typeof rawEvent !== "object") return null;
   const id = String(rawEvent.id || "").trim();
@@ -1674,6 +1700,7 @@ function normalizeGameStatsEvent(rawEvent) {
       occurredAt,
       difficulty,
       hintBucket,
+      ...normalizeSudokuEventIdentity(rawEvent),
       ...(metric === null ? {} : { metric, metricKind: "seconds" }),
       profile,
     };
@@ -3056,8 +3083,17 @@ const runGameStatsSyncPass = async () => {
           },
         }),
       });
-      await readGameStatsApiJson(response);
-      markGameStatsEventConfirmed(submission.event);
+      const acknowledgement = await readGameStatsApiJson(response);
+      // The Worker answers with the event id the result now stands under. A
+      // different id means this submission was never stored: another tab
+      // published the same puzzle first, and the server already counts that
+      // win. Confirming this one would count it twice, and the id it would
+      // then wait on can never appear in `/stats`, so the inflation would
+      // survive every later refresh.
+      const acknowledgedId = String(acknowledgement?.eventId || "");
+      if (!acknowledgedId || acknowledgedId === submission.event.id) {
+        markGameStatsEventConfirmed(submission.event);
+      }
     } catch (error) {
       const status = Number(error?.status);
       if (
@@ -4651,9 +4687,11 @@ let snakeHudRenderCache = {
 const snakeReducedMotionMedia = reducedMotionQuery;
 let sudokuState = {
   difficulty: "easy",
-  puzzleId: SUDOKU_PUZZLES.easy.id,
-  puzzle: SUDOKU_PUZZLES.easy.puzzle,
-  solution: SUDOKU_PUZZLES.easy.solution,
+  // Blank scaffolding: the first puzzle is carved off-thread when Sudoku is
+  // opened, so a page that never opens it never adopts one.
+  puzzleId: "",
+  puzzle: "0".repeat(SUDOKU_CELL_COUNT),
+  solution: "0".repeat(SUDOKU_CELL_COUNT),
   mistakes: 0,
   elapsedSeconds: 0,
   timerId: null,
@@ -4681,6 +4719,15 @@ let sudokuState = {
   selectedIndex: -1,
 };
 let sudokuCellElements = [];
+// The boot loader holds until a real puzzle exists, and the newest request
+// for one wins, so a superseded generation cannot land on the board.
+let sudokuPuzzleReady = false;
+let sudokuPuzzleRequestToken = 0;
+// Pause is not part of sudokuState: a new puzzle replaces that object wholesale,
+// and the save payload deliberately carries no paused flag, because a reload
+// comes back through the boot loader and its Play button.
+let sudokuPaused = false;
+let sudokuStatusBeforePause = "";
 let sudokuSaveTimerId = null;
 let sudokuSaveQueuedForActivation = false;
 let sudokuFishTimerId = null;
@@ -18661,6 +18708,9 @@ const normalizeSudokuDigit = (value) =>
 const normalizeSudokuDifficulty = (difficulty) =>
   SUDOKU_PUZZLES[difficulty] ? difficulty : "easy";
 
+const normalizeSudokuHintMode = (mode) =>
+  SUDOKU_HINT_MODES.includes(mode) ? mode : "off";
+
 const isSudokuGivenAt = (puzzle, index) =>
   SUDOKU_DIGITS.includes(String(puzzle || "")[index] || "");
 
@@ -18718,6 +18768,29 @@ const normalizeSudokuSolutionString = (solution) => {
 const sudokuBoxIndex = (row, column) =>
   Math.floor(row / 3) * 3 + Math.floor(column / 3);
 
+/** The other twenty cells that share a row, column, or box with each index. */
+const SUDOKU_PEER_INDEXES = Object.freeze(
+  Array.from({ length: SUDOKU_CELL_COUNT }, (unusedCell, index) => {
+    const row = Math.floor(index / 9);
+    const column = index % 9;
+    const box = sudokuBoxIndex(row, column);
+    const peers = [];
+    for (let other = 0; other < SUDOKU_CELL_COUNT; other += 1) {
+      if (other === index) continue;
+      const otherRow = Math.floor(other / 9);
+      const otherColumn = other % 9;
+      if (
+        otherRow === row ||
+        otherColumn === column ||
+        sudokuBoxIndex(otherRow, otherColumn) === box
+      ) {
+        peers.push(other);
+      }
+    }
+    return Object.freeze(peers);
+  })
+);
+
 const countSudokuMaskBits = (mask) => {
   let count = 0;
   let remainingMask = mask;
@@ -18769,139 +18842,187 @@ const isSudokuSolutionCompatibleWithPuzzle = (puzzle, solution) => {
   );
 };
 
-const createSudokuFullSolution = () => {
-  const groups = [0, 1, 2];
-  const rows = shuffle(groups).flatMap((band) =>
-    shuffle(groups).map((row) => band * 3 + row)
-  );
-  const columns = shuffle(groups).flatMap((stack) =>
-    shuffle(groups).map((column) => stack * 3 + column)
-  );
-  const digits = shuffle(SUDOKU_DIGITS.split(""));
-  const pattern = (row, column) => (row * 3 + Math.floor(row / 3) + column) % 9;
-
-  return rows
-    .flatMap((row) => columns.map((column) => digits[pattern(row, column)]))
-    .join("");
-};
-
-const countSudokuSolutions = (puzzle, limit = 2) => {
-  const board = normalizeSudokuPuzzleString(puzzle)
-    .split("")
-    .map((value) => Number(value));
-  const rowMasks = Array.from({ length: 9 }, () => 0);
-  const columnMasks = Array.from({ length: 9 }, () => 0);
-  const boxMasks = Array.from({ length: 9 }, () => 0);
-
-  for (let index = 0; index < SUDOKU_CELL_COUNT; index += 1) {
-    const value = board[index];
-    if (!value) continue;
-    const row = Math.floor(index / 9);
-    const column = index % 9;
-    const box = sudokuBoxIndex(row, column);
-    const digitMask = 1 << value;
-    if (rowMasks[row] & digitMask || columnMasks[column] & digitMask || boxMasks[box] & digitMask) {
-      return 0;
-    }
-    rowMasks[row] |= digitMask;
-    columnMasks[column] |= digitMask;
-    boxMasks[box] |= digitMask;
-  }
-
-  let solutions = 0;
-  const solve = () => {
-    if (solutions >= limit) return;
-
-    let bestIndex = -1;
-    let bestMask = 0;
-    let bestOptionCount = 10;
-    for (let index = 0; index < SUDOKU_CELL_COUNT; index += 1) {
-      if (board[index]) continue;
-      const row = Math.floor(index / 9);
-      const column = index % 9;
-      const box = sudokuBoxIndex(row, column);
-      const candidateMask =
-        SUDOKU_FULL_DIGIT_MASK & ~(rowMasks[row] | columnMasks[column] | boxMasks[box]);
-      const optionCount = countSudokuMaskBits(candidateMask);
-      if (!optionCount) return;
-      if (optionCount < bestOptionCount) {
-        bestIndex = index;
-        bestMask = candidateMask;
-        bestOptionCount = optionCount;
-        if (optionCount === 1) break;
-      }
-    }
-
-    if (bestIndex === -1) {
-      solutions += 1;
-      return;
-    }
-
-    const row = Math.floor(bestIndex / 9);
-    const column = bestIndex % 9;
-    const box = sudokuBoxIndex(row, column);
-    let candidateMask = bestMask;
-    while (candidateMask && solutions < limit) {
-      const digitMask = candidateMask & -candidateMask;
-      const digit = Math.log2(digitMask);
-      board[bestIndex] = digit;
-      rowMasks[row] |= digitMask;
-      columnMasks[column] |= digitMask;
-      boxMasks[box] |= digitMask;
-      solve();
-      rowMasks[row] &= ~digitMask;
-      columnMasks[column] &= ~digitMask;
-      boxMasks[box] &= ~digitMask;
-      board[bestIndex] = 0;
-      candidateMask &= candidateMask - 1;
-    }
-  };
-
-  solve();
-  return solutions;
-};
-
 const createSudokuPuzzleId = (difficulty) =>
   `generated-${difficulty}-${Date.now().toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
 
-const createGeneratedSudokuPuzzle = (difficulty) => {
-  const normalizedDifficulty = normalizeSudokuDifficulty(difficulty);
-  const targetClues = SUDOKU_GENERATOR_CLUES[normalizedDifficulty] || SUDOKU_GENERATOR_CLUES.easy;
-  let bestPuzzle = null;
+/*
+ * Generation runs in scripts/home/sudoku-generator.worker.js, which owns it
+ * outright. Carving a puzzle re-solves the grid after every removed clue, and
+ * on the main thread that ran during script evaluation and again on every New
+ * Game, freezing the page both times.
+ *
+ * A puzzle is taken from a warm pool when one is waiting, which is the usual
+ * case: after each use the worker refills that difficulty in the background.
+ * A cold difficulty resolves asynchronously instead of blocking, and the boot
+ * loader holds until a real puzzle exists rather than finishing on a timer.
+ *
+ * The id is still minted here, at the moment a puzzle is adopted, so puzzle
+ * identity belongs to the state that saves it and never to the pool.
+ */
+const SUDOKU_POOL_TARGET = 1;
+const SUDOKU_GENERATING_STATUS = "Generating";
 
-  for (let attempt = 0; attempt < SUDOKU_GENERATOR_MAX_ATTEMPTS; attempt += 1) {
-    const solution = createSudokuFullSolution();
-    const puzzleValues = solution.split("");
-    let clueCount = SUDOKU_CELL_COUNT;
+let sudokuGeneratorWorker = null;
+let sudokuGeneratorUnavailable = false;
+let sudokuGeneratorNextRequestId = 0;
+/** requestId -> { difficulty, resolve }. */
+const sudokuGeneratorRequests = new Map();
+/** difficulty -> generated puzzles waiting to be adopted. */
+const sudokuPuzzlePool = new Map();
+/** difficulty -> resolvers waiting for the next puzzle of that difficulty. */
+const sudokuPuzzleWaiters = new Map();
+/** The one waiter the board itself is holding, so a newer request can drop it. */
+let sudokuPendingAdoption = null;
 
-    shuffle(Array.from({ length: SUDOKU_CELL_COUNT }, (_, index) => index)).forEach(
-      (index) => {
-        if (clueCount <= targetClues) return;
-        const removedValue = puzzleValues[index];
-        puzzleValues[index] = "0";
-        if (countSudokuSolutions(puzzleValues.join(""), 2) === 1) {
-          clueCount -= 1;
-          return;
-        }
-        puzzleValues[index] = removedValue;
-      }
-    );
+const staticSudokuPuzzle = (difficulty) => {
+  const seed = SUDOKU_PUZZLES[difficulty];
+  return { clues: 0, puzzle: seed.puzzle, solution: seed.solution };
+};
 
-    const puzzle = puzzleValues.join("");
-    const generatedPuzzle = {
-      id: createSudokuPuzzleId(normalizedDifficulty),
-      label: SUDOKU_PUZZLES[normalizedDifficulty].label,
-      puzzle,
-      solution,
-      clues: clueCount,
-    };
-    if (!bestPuzzle || clueCount < bestPuzzle.clues) bestPuzzle = generatedPuzzle;
-    if (clueCount <= targetClues) return generatedPuzzle;
+/**
+ * Hands every pending request the static puzzle its difficulty ships with.
+ * Used when the worker cannot start or dies: the site already carries a
+ * playable puzzle per difficulty, so no generation moves back to this thread.
+ */
+const abandonSudokuGenerator = () => {
+  sudokuGeneratorUnavailable = true;
+  sudokuGeneratorWorker = null;
+  const pending = [...sudokuGeneratorRequests.values()];
+  sudokuGeneratorRequests.clear();
+  pending.forEach(({ difficulty, resolve }) => resolve(staticSudokuPuzzle(difficulty)));
+  const waiting = [...sudokuPuzzleWaiters.entries()];
+  sudokuPuzzleWaiters.clear();
+  waiting.forEach(([difficulty, resolvers]) => {
+    resolvers.forEach((resolve) => resolve(staticSudokuPuzzle(difficulty)));
+  });
+};
+
+const handleSudokuGeneratorMessage = (event) => {
+  const { requestId, difficulty, puzzle, solution, clues, error } = event.data || {};
+  const request = sudokuGeneratorRequests.get(requestId);
+  if (!request) return;
+  sudokuGeneratorRequests.delete(requestId);
+  request.resolve(
+    error || !puzzle || !solution
+      ? staticSudokuPuzzle(request.difficulty)
+      : { clues, puzzle, solution }
+  );
+  if (difficulty) topUpSudokuPuzzlePool(difficulty);
+};
+
+const getSudokuGeneratorWorker = () => {
+  if (sudokuGeneratorWorker || sudokuGeneratorUnavailable) return sudokuGeneratorWorker;
+  const source = sudokuGeneratorSource?.getAttribute("href");
+  if (!source || typeof Worker !== "function") {
+    abandonSudokuGenerator();
+    return null;
   }
+  try {
+    sudokuGeneratorWorker = new Worker(source);
+  } catch (error) {
+    abandonSudokuGenerator();
+    return null;
+  }
+  sudokuGeneratorWorker.addEventListener("message", handleSudokuGeneratorMessage);
+  sudokuGeneratorWorker.addEventListener("error", abandonSudokuGenerator);
+  return sudokuGeneratorWorker;
+};
 
-  return bestPuzzle || SUDOKU_PUZZLES[normalizedDifficulty];
+/** Asks the worker for one puzzle, resolving with a static one if it cannot. */
+const generateSudokuPuzzle = (difficulty, resolve) => {
+  const worker = getSudokuGeneratorWorker();
+  if (!worker) {
+    resolve(staticSudokuPuzzle(difficulty));
+    return;
+  }
+  const requestId = (sudokuGeneratorNextRequestId += 1);
+  sudokuGeneratorRequests.set(requestId, { difficulty, resolve });
+  worker.postMessage({
+    requestId,
+    difficulty,
+    targetClues: SUDOKU_GENERATOR_CLUES[difficulty] || SUDOKU_GENERATOR_CLUES.easy,
+    maxAttempts: SUDOKU_GENERATOR_MAX_ATTEMPTS,
+  });
+};
+
+const sudokuPuzzlesInFlightFor = (difficulty) =>
+  [...sudokuGeneratorRequests.values()].filter(
+    (request) => request.difficulty === difficulty
+  ).length;
+
+/**
+ * Keeps at most `SUDOKU_POOL_TARGET` spares per difficulty. Work that was
+ * already in flight when its waiter went away still delivers, and a puzzle
+ * nobody has room for is dropped rather than stockpiled: one player can only
+ * play one board, so a full pool is the whole demand.
+ */
+const returnSudokuPuzzleToPool = (difficulty, generated) => {
+  const pool = sudokuPuzzlePool.get(difficulty) || [];
+  if (pool.length >= SUDOKU_POOL_TARGET) return;
+  pool.push(generated);
+  sudokuPuzzlePool.set(difficulty, pool);
+};
+
+/** Drops a waiter that no longer has anyone to hand its puzzle to. */
+const cancelSudokuPuzzleWaiter = (difficulty, adopt) => {
+  const waiters = sudokuPuzzleWaiters.get(difficulty);
+  const index = waiters ? waiters.indexOf(adopt) : -1;
+  if (index < 0) return;
+  waiters.splice(index, 1);
+  if (!waiters.length) sudokuPuzzleWaiters.delete(difficulty);
+};
+
+/**
+ * Keeps one spare puzzle warm for a difficulty the player is using. Untouched
+ * difficulties are never pre-generated, so opening the page costs one puzzle,
+ * not six.
+ */
+const topUpSudokuPuzzlePool = (difficulty) => {
+  if (sudokuGeneratorUnavailable) return;
+  const pooled = sudokuPuzzlePool.get(difficulty)?.length || 0;
+  const waiting = sudokuPuzzleWaiters.get(difficulty)?.length || 0;
+  const wanted = SUDOKU_POOL_TARGET + waiting - pooled - sudokuPuzzlesInFlightFor(difficulty);
+  for (let request = 0; request < wanted; request += 1) {
+    // The first request is what starts the worker, so it is also where a
+    // browser that cannot run one is found out. Stop asking the moment that
+    // happens rather than pooling spares nobody asked for.
+    if (sudokuGeneratorUnavailable) return;
+    generateSudokuPuzzle(difficulty, (generated) => {
+      const resolvers = sudokuPuzzleWaiters.get(difficulty);
+      const resolve = resolvers?.shift();
+      if (!resolvers?.length) sudokuPuzzleWaiters.delete(difficulty);
+      if (resolve) resolve(generated);
+      else returnSudokuPuzzleToPool(difficulty, generated);
+    });
+  }
+};
+
+/**
+ * Calls back with a puzzle for `difficulty` — synchronously when one is warm,
+ * which is the usual case, and otherwise as soon as the worker delivers.
+ */
+const withSudokuPuzzle = (difficulty, adopt) => {
+  const pool = sudokuPuzzlePool.get(difficulty);
+  const pooled = pool?.shift();
+  if (pool && !pool.length) sudokuPuzzlePool.delete(difficulty);
+  if (pooled) {
+    topUpSudokuPuzzlePool(difficulty);
+    adopt(pooled);
+    return;
+  }
+  // Generation that cannot run is answered here, in the same tick, rather
+  // than by a waiter no refill will ever reach: once the worker is gone the
+  // pool stops filling, so a queued request would wait forever.
+  if (sudokuGeneratorUnavailable) {
+    adopt(staticSudokuPuzzle(difficulty));
+    return;
+  }
+  const waiters = sudokuPuzzleWaiters.get(difficulty) || [];
+  waiters.push(adopt);
+  sudokuPuzzleWaiters.set(difficulty, waiters);
+  topUpSudokuPuzzlePool(difficulty);
 };
 
 const serializeSudokuValues = (values = sudokuState.values) =>
@@ -18978,6 +19099,9 @@ const createSudokuSavePayload = () => ({
 });
 
 const flushSudokuSave = () => {
+  // Before the first puzzle is adopted the board is blank scaffolding; saving
+  // it would overwrite nothing useful with nothing at all.
+  if (!sudokuPuzzleReady) return;
   if (!isHomeActivationReady()) {
     sudokuSaveQueuedForActivation = true;
     runAfterHomeActivation(flushSudokuSave);
@@ -19068,7 +19192,7 @@ const restoreSudokuSavedState = () => {
   );
   sudokuState.statsSession = "";
   sudokuState.statsSessionEligible = !sudokuState.completionRecorded;
-  sudokuState.hintMode = savedState.hintMode === "errors" ? "errors" : "off";
+  sudokuState.hintMode = normalizeSudokuHintMode(savedState.hintMode);
   sudokuState.noteMode = Boolean(savedState.noteMode);
   sudokuState.values = normalizeSudokuValues(savedState.values, puzzle);
   sudokuState.notes = normalizeSudokuNotesList(savedState.notes, puzzle);
@@ -19394,6 +19518,48 @@ const syncSudokuAquariumActivity = () => {
   }
 };
 
+/**
+ * Pause hides the board rather than covering it: every value and note goes
+ * invisible and the board and control panel drop to a thin wash so the
+ * aquarium reads through them. The two regions also go `inert`, so a paused
+ * board cannot be clicked, tabbed into, or typed on, and the single centred
+ * play button is the only way back. The aquarium keeps swimming, because
+ * `sudokuState.playing` stays true: pausing stops the clock, not the window.
+ */
+const setSudokuPaused = (paused) => {
+  const nextPaused = Boolean(paused) && sudokuState.playing && !sudokuState.solved;
+  if (nextPaused === sudokuPaused) return;
+  sudokuPaused = nextPaused;
+  sudokuApp?.classList.toggle("is-sudoku-paused", sudokuPaused);
+  if (sudokuGridFrame) sudokuGridFrame.inert = sudokuPaused;
+  if (sudokuControlPanel) sudokuControlPanel.inert = sudokuPaused;
+  if (sudokuPause) sudokuPause.setAttribute("aria-pressed", String(sudokuPaused));
+  if (sudokuPauseOverlay) {
+    sudokuPauseOverlay.setAttribute("aria-hidden", String(!sudokuPaused));
+  }
+  if (sudokuPaused) {
+    sudokuStatusBeforePause = sudokuStatus?.textContent || "";
+    pauseSudokuTimer();
+    setSudokuStatus("Paused");
+    if (isSudokuWindowVisible()) sudokuResume?.focus();
+    return;
+  }
+  setSudokuStatus(sudokuStatusBeforePause || (sudokuState.solved ? "Solved" : "Ready"));
+  sudokuStatusBeforePause = "";
+  if (!isSudokuWindowVisible() || !sudokuState.playing) return;
+  startSudokuTimer();
+  // Focus goes back to the board the player was on, not to the button that
+  // just disappeared from under the pointer.
+  (selectedSudokuCell() || sudokuPause)?.focus();
+};
+
+// A hidden tab pauses the game as well as the aquarium; coming back does not
+// resume it, so time never runs on a board nobody is looking at.
+const handleSudokuVisibilityChange = () => {
+  if (document.hidden) setSudokuPaused(true);
+  syncSudokuAquariumActivity();
+};
+
 const clampSudokuWindowIntoViewport = () => {
   if (!sudokuWindow || !isSudokuWindowVisible()) return;
   clampWindowFullyIntoViewport(sudokuWindow, { padding: 12 });
@@ -19443,8 +19609,10 @@ const tickSudokuLoadingSequence = () => {
     return;
   }
 
+  // The meter runs for at least its floor, then holds at 98 until a real
+  // puzzle exists. Play is offered on readiness, never on a timer alone.
   const elapsed = performance.now() - sudokuState.loadingStartedAt;
-  if (elapsed >= sudokuState.loadingDuration) {
+  if (elapsed >= sudokuState.loadingDuration && sudokuPuzzleReady) {
     finishSudokuLoadingSequence();
     return;
   }
@@ -19462,13 +19630,13 @@ const tickSudokuLoadingSequence = () => {
     )
   );
 
-  const remainingMs = Math.max(
-    0,
-    sudokuState.loadingDuration - (performance.now() - sudokuState.loadingStartedAt)
-  );
+  const remainingMs =
+    sudokuState.loadingDuration - (performance.now() - sudokuState.loadingStartedAt);
   sudokuState.loadingTimerId = window.setTimeout(
     tickSudokuLoadingSequence,
-    Math.min(90 + Math.random() * 210, remainingMs)
+    remainingMs > 0
+      ? Math.min(90 + Math.random() * 210, remainingMs)
+      : SUDOKU_LOAD_READY_POLL_MS
   );
 };
 
@@ -19481,9 +19649,13 @@ const startSudokuBootSequence = () => {
   clearSudokuTransitionTimer();
   clearSudokuPlayBurst();
   sudokuState.playing = false;
+  setSudokuPaused(false);
   sudokuState.loadingStartedAt = performance.now();
-  sudokuState.loadingDuration =
-    SUDOKU_LOAD_MIN_MS + Math.random() * (SUDOKU_LOAD_MAX_MS - SUDOKU_LOAD_MIN_MS);
+  sudokuState.loadingDuration = SUDOKU_LOAD_MIN_MS;
+  // Opening Sudoku is what starts the generator: the first puzzle if there is
+  // none, and otherwise a spare so the next New Game is instant.
+  if (sudokuPuzzleReady) topUpSudokuPuzzlePool(sudokuState.difficulty);
+  else loadSudokuDifficulty(sudokuState.difficulty);
   setSudokuLoadingProgress(0);
   setSudokuBootState("loading");
   sudokuState.loadingTimerId = window.setTimeout(
@@ -19501,6 +19673,7 @@ const clearSudokuBootSequence = ({ resetView = true } = {}) => {
   hideSudokuSolvePopup();
   hideSudokuNoteTooltip();
   sudokuState.playing = false;
+  setSudokuPaused(false);
   sudokuState.loadingStartedAt = 0;
   sudokuState.loadingDuration = 0;
   setSudokuLoadingProgress(0);
@@ -19603,7 +19776,11 @@ const updateSudokuCellAriaLabel = (cell, index) => {
   const notes = getSudokuCellNotes(index);
   const valueText = value ? `Value ${value}` : "Empty";
   const noteText = !value && notes ? `Notes ${notes.split("").join(", ")}` : "No notes";
-  cell.setAttribute("aria-label", `Row ${row}, column ${column}. ${valueText}. ${noteText}.`);
+  const conflictText = cell.classList.contains("is-conflict") ? " Conflict." : "";
+  cell.setAttribute(
+    "aria-label",
+    `Row ${row}, column ${column}. ${valueText}. ${noteText}.${conflictText}`
+  );
 };
 
 const renderSudokuCellNotes = (cell, index) => {
@@ -19655,11 +19832,18 @@ const updateSudokuNoteToggle = () => {
   sudokuNoteToggle.setAttribute("aria-pressed", String(sudokuState.noteMode));
 };
 
+// Counts in place rather than through normalizeSudokuValues: this runs on
+// every keystroke and the normalized copy was thrown away immediately.
 const countSudokuDigitPlacements = () => {
   const counts = Object.fromEntries(SUDOKU_DIGITS.split("").map((digit) => [digit, 0]));
-  normalizeSudokuValues(sudokuState.values, sudokuState.puzzle).forEach((value) => {
+  const puzzle = String(sudokuState.puzzle || "");
+  const values = sudokuState.values;
+  for (let index = 0; index < SUDOKU_CELL_COUNT; index += 1) {
+    const value = isSudokuGivenAt(puzzle, index)
+      ? puzzle[index]
+      : normalizeSudokuDigit(values?.[index]);
     if (value) counts[value] += 1;
-  });
+  }
   return counts;
 };
 
@@ -19668,6 +19852,53 @@ const countSudokuDigitPlacements = () => {
 // still be overwritten.
 const isSudokuDigitExhausted = (digit, counts = countSudokuDigitPlacements()) =>
   SUDOKU_DIGITS.includes(digit) && counts[digit] >= SUDOKU_ROW_COUNT;
+
+// Both refreshes run on every keystroke. Each keeps the state it last wrote
+// so an unchanged cell or button is skipped outright, instead of re-toggling
+// three class tokens across all 81 cells and every keypad button. Nothing
+// else writes these classes, and renderSudoku drops the caches with the
+// cells it replaces.
+const SUDOKU_STATE_EXHAUSTED = 1;
+const SUDOKU_STATE_SELECTED = 2;
+const SUDOKU_STATE_AXIS = 4;
+const SUDOKU_STATE_SAME_VALUE = 8;
+const SUDOKU_STATE_CONFLICT = 16;
+// The remaining count rides above the flags in the same keypad state word.
+const SUDOKU_STATE_REMAINING_SHIFT = 5;
+const SUDOKU_STATE_UNWRITTEN = -1;
+
+let sudokuHighlightCache = { elements: null, states: [] };
+let sudokuKeypadCache = { elements: null, states: [] };
+
+/**
+ * A cache is only valid for the exact element list it was written against.
+ * renderSudoku builds a fresh cell array, so keying on identity retires the
+ * stale states with the cells they described, with nothing to remember to
+ * call.
+ */
+const resolveSudokuStateCache = (cache, elements) =>
+  cache.elements === elements
+    ? cache
+    : { elements, states: new Array(elements.length).fill(SUDOKU_STATE_UNWRITTEN) };
+
+/**
+ * Shows how many placements a digit still has, so the keypad reports the
+ * whole count rather than only the greyed state at nine. The badge is
+ * decorative; the button carries the same fact in its accessible name, which
+ * keeps the visible digit at the front of the label.
+ */
+const updateSudokuRemainingBadge = (button, digit, remaining) => {
+  const badge =
+    button._sudokuRemainingBadge ||
+    button.querySelector(".sudoku-number-remaining");
+  if (!badge) return;
+  button._sudokuRemainingBadge = badge;
+  badge.textContent = remaining > 0 ? String(remaining) : "";
+  button.setAttribute(
+    "aria-label",
+    remaining > 0 ? `${digit}, ${remaining} left` : `${digit}, none left`
+  );
+};
 
 const updateSudokuNumberButtons = () => {
   const cell = selectedSudokuCell();
@@ -19678,24 +19909,35 @@ const updateSudokuNumberButtons = () => {
       ? getSudokuCellNotes(selectedIndex)
       : "";
   const digitCounts = countSudokuDigitPlacements();
-  sudokuNumberButtons.forEach((button) => {
+  sudokuKeypadCache = resolveSudokuStateCache(sudokuKeypadCache, sudokuNumberButtons);
+  sudokuNumberButtons.forEach((button, buttonIndex) => {
     const value = button.dataset.sudokuNumber;
+    const isDigit = SUDOKU_DIGITS.includes(value);
+    const remaining = isDigit ? SUDOKU_ROW_COUNT - digitCounts[value] : 0;
     const isExhausted = isSudokuDigitExhausted(value, digitCounts);
-    button.classList.toggle("is-exhausted", isExhausted);
-    button.disabled = isExhausted;
-    const isSelected =
+    const isSelected = Boolean(
       (sudokuState.noteMode &&
         !selectedValue &&
         SUDOKU_DIGITS.includes(value) &&
         selectedNotes.includes(value)) ||
-      (!sudokuState.noteMode && value === selectedValue) ||
-      (value === "clear" &&
-        cell &&
-        !isSudokuCellReadOnly(cell) &&
-        !selectedValue &&
-        !selectedNotes);
-    button.classList.toggle("is-selected", Boolean(isSelected));
-    button.setAttribute("aria-pressed", String(Boolean(isSelected)));
+        (!sudokuState.noteMode && value === selectedValue) ||
+        (value === "clear" &&
+          cell &&
+          !isSudokuCellReadOnly(cell) &&
+          !selectedValue &&
+          !selectedNotes)
+    );
+    const state =
+      (isExhausted ? SUDOKU_STATE_EXHAUSTED : 0) |
+      (isSelected ? SUDOKU_STATE_SELECTED : 0) |
+      (remaining << SUDOKU_STATE_REMAINING_SHIFT);
+    if (state === sudokuKeypadCache.states[buttonIndex]) return;
+    sudokuKeypadCache.states[buttonIndex] = state;
+    button.classList.toggle("is-exhausted", isExhausted);
+    button.disabled = isExhausted;
+    button.classList.toggle("is-selected", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
+    if (isDigit) updateSudokuRemainingBadge(button, value, remaining);
   });
   updateSudokuNoteToggle();
 };
@@ -19752,6 +19994,16 @@ const isSudokuSolvePopupVisible = () =>
   Boolean(sudokuSolvePopup?.classList.contains("is-visible")) &&
   sudokuSolvePopup.getAttribute("aria-hidden") === "false";
 
+// The solved dialog and the Errors prompt own the keyboard while they are
+// open. Every Sudoku key path consults this, so a keypress on the focused OK
+// button cannot edit a finished board or rewind it through undo.
+const isSudokuModalOpen = () =>
+  Boolean(sudokuErrorsPrompt?.open) || isSudokuSolvePopupVisible();
+
+// Pause locks the same paths: a paused board hides its values, so a keypress
+// must not edit or rewind what the player cannot see.
+const isSudokuBoardLocked = () => isSudokuModalOpen() || sudokuPaused;
+
 const hideSudokuSolvePopup = () => {
   if (!sudokuSolvePopup) return;
   sudokuSolvePopup.classList.remove("is-visible");
@@ -19802,8 +20054,15 @@ const updateSudokuBoardHighlights = () => {
   const selectedRow = hasSelection ? Math.floor(selectedIndex / 9) : -1;
   const selectedColumn = hasSelection ? selectedIndex % 9 : -1;
   const selectedValue = hasSelection ? sudokuState.values?.[selectedIndex] || "" : "";
+  // Notes matching the selected value light up through one grid attribute,
+  // so the 81 cells' note slots cost nothing to keep in step.
+  if (sudokuGrid) {
+    if (selectedValue) sudokuGrid.dataset.sudokuNoteHighlight = selectedValue;
+    else delete sudokuGrid.dataset.sudokuNoteHighlight;
+  }
+  sudokuHighlightCache = resolveSudokuStateCache(sudokuHighlightCache, cells);
 
-  cells.forEach((cell, index) => {
+  for (let index = 0; index < cells.length; index += 1) {
     const isSelected = index === selectedIndex;
     const isAxisHighlight =
       hasSelection &&
@@ -19812,10 +20071,17 @@ const updateSudokuBoardHighlights = () => {
       Boolean(selectedValue) &&
       !isSelected &&
       (sudokuState.values?.[index] || "") === selectedValue;
-    cell.classList.toggle("is-selected", isSelected);
-    cell.classList.toggle("is-axis-highlight", isAxisHighlight);
-    cell.classList.toggle("is-same-value", isSameValue);
-  });
+    const state =
+      (isSelected ? SUDOKU_STATE_SELECTED : 0) |
+      (isAxisHighlight ? SUDOKU_STATE_AXIS : 0) |
+      (isSameValue ? SUDOKU_STATE_SAME_VALUE : 0);
+    if (state === sudokuHighlightCache.states[index]) continue;
+    sudokuHighlightCache.states[index] = state;
+    const { classList } = cells[index];
+    classList.toggle("is-selected", isSelected);
+    classList.toggle("is-axis-highlight", isAxisHighlight);
+    classList.toggle("is-same-value", isSameValue);
+  }
   refreshSudokuFullBoardPrompt();
 };
 
@@ -19866,7 +20132,59 @@ const validateSudokuBoard = ({ mark = false } = {}) => {
   };
 };
 
+/**
+ * Every index holding a value that repeats inside its own row, column, or
+ * box. Givens are included: a player entry that collides with one is a
+ * conflict on both sides, and a given is already on screen.
+ *
+ * This reads the board and nothing else. It never consults the solution, so
+ * a marked cell says only "these two cannot both stand", never which of them
+ * is wrong.
+ */
+const findSudokuConflictIndexes = () => {
+  const values = normalizeSudokuValues(sudokuState.values, sudokuState.puzzle);
+  const units = new Map();
+  values.forEach((value, index) => {
+    if (!value) return;
+    const row = Math.floor(index / 9);
+    const column = index % 9;
+    const keys = [
+      `row ${row} ${value}`,
+      `column ${column} ${value}`,
+      `box ${sudokuBoxIndex(row, column)} ${value}`,
+    ];
+    keys.forEach((key) => {
+      const members = units.get(key);
+      if (members) members.push(index);
+      else units.set(key, [index]);
+    });
+  });
+  const conflicts = new Set();
+  units.forEach((members) => {
+    if (members.length > 1) members.forEach((index) => conflicts.add(index));
+  });
+  return conflicts;
+};
+
+let sudokuConflictCache = { elements: null, states: [] };
+
+// Diffed like the highlight pass: this runs on every keystroke too.
+const refreshSudokuConflictMarks = () => {
+  const cells = sudokuCells();
+  sudokuConflictCache = resolveSudokuStateCache(sudokuConflictCache, cells);
+  const conflicts =
+    sudokuState.hintMode === "conflicts" ? findSudokuConflictIndexes() : null;
+  for (let index = 0; index < cells.length; index += 1) {
+    const state = conflicts?.has(index) ? SUDOKU_STATE_CONFLICT : 0;
+    if (state === sudokuConflictCache.states[index]) continue;
+    sudokuConflictCache.states[index] = state;
+    cells[index].classList.toggle("is-conflict", state === SUDOKU_STATE_CONFLICT);
+    updateSudokuCellAriaLabel(cells[index], index);
+  }
+};
+
 const refreshSudokuHintFeedback = () => {
+  refreshSudokuConflictMarks();
   if (sudokuState.hintMode !== "errors") {
     clearSudokuHighlights();
     sudokuState.mistakes = 0;
@@ -19918,6 +20236,26 @@ const redoSudokuMove = () => {
   applySudokuHistoryEntry(nextEntry);
 };
 
+/**
+ * Placing a digit rules it out of its row, column, and box, so the pencil
+ * mark is stale the moment the value lands. Retiring it is part of the same
+ * move: the undo entry already taken covers the placement and every note it
+ * cleared, so one undo puts them all back.
+ */
+const clearSudokuPeerNotes = (index, digit) => {
+  if (!SUDOKU_DIGITS.includes(digit)) return;
+  const cells = sudokuCells();
+  SUDOKU_PEER_INDEXES[index].forEach((peer) => {
+    const notes = getSudokuCellNotes(peer);
+    if (!notes.includes(digit)) return;
+    setSudokuCellNotes(
+      cells[peer],
+      peer,
+      notes.split("").filter((noteDigit) => noteDigit !== digit).join("")
+    );
+  });
+};
+
 const updateSudokuCellValue = (
   input,
   index,
@@ -19937,6 +20275,7 @@ const updateSudokuCellValue = (
   if (sudokuState.playing) startSudokuTimer();
   if (willClearNotes) sudokuState.notes[index] = "";
   setSudokuCellValue(input, index, digit);
+  clearSudokuPeerNotes(index, digit);
   syncSudokuCellFeedback(input, index);
   refreshSudokuHintFeedback();
   updateSudokuBoardHighlights();
@@ -20002,7 +20341,7 @@ const setSudokuHintMode = (mode) => {
     showSudokuErrorsPrompt();
     return;
   }
-  sudokuState.hintMode = mode === "errors" ? "errors" : "off";
+  sudokuState.hintMode = normalizeSudokuHintMode(mode);
   updateSudokuHintButtons();
   refreshSudokuHintFeedback();
   setSudokuStatus("Ready");
@@ -20095,6 +20434,7 @@ const handleSudokuGridFocus = (event) => {
 };
 
 const handleSudokuGridKeydown = (event) => {
+  if (isSudokuBoardLocked()) return;
   const cell = event.target.closest?.(".sudoku-cell");
   if (!cell || !sudokuGrid.contains(cell)) return;
   handleSudokuCellKeydown(event, cell);
@@ -20104,7 +20444,7 @@ const handleSudokuUndoRedoShortcut = (event) => {
   const isUndoKey = event.key === "z" || event.key === "Z";
   const isRedoKey = event.key === "y" || event.key === "Y";
   if (
-    sudokuErrorsPrompt?.open ||
+    isSudokuBoardLocked() ||
     !isSudokuWindowVisible() ||
     (!event.metaKey && !event.ctrlKey) ||
     event.altKey
@@ -20160,8 +20500,7 @@ const isSudokuKeyboardActive = () => {
       activeWindow === win &&
       isWindowVisible(win) &&
       sudokuState.playing &&
-      !sudokuErrorsPrompt?.open &&
-      !isSudokuSolvePopupVisible()
+      !isSudokuBoardLocked()
   );
 };
 
@@ -20277,6 +20616,8 @@ const recordSudokuCompletion = () => {
       type: "win",
       difficulty: sudokuState.difficulty,
       hintBucket,
+      puzzleId: sudokuState.puzzleId,
+      puzzle: sudokuState.puzzle,
       metric: elapsedSeconds,
       metricKind: "seconds",
     }),
@@ -20373,9 +20714,12 @@ const renderSudoku = () => {
     notesEl.setAttribute("aria-hidden", "true");
     cell._sudokuValueEl = valueEl;
     cell._sudokuNoteDigits = [];
-    SUDOKU_DIGITS.split("").forEach(() => {
+    SUDOKU_DIGITS.split("").forEach((noteDigit) => {
       const note = document.createElement("span");
       note.className = "sudoku-note-digit";
+      // Each slot always stands for the same digit, so the stylesheet can
+      // match it against the grid's selected value with no per-key work.
+      note.dataset.sudokuNote = noteDigit;
       cell._sudokuNoteDigits.push(note);
       notesEl.append(note);
     });
@@ -20402,9 +20746,23 @@ const renderSudoku = () => {
   setSudokuStatus(sudokuState.solved ? "Solved" : "Ready");
 };
 
-const loadSudokuDifficulty = (difficulty) => {
-  const normalizedDifficulty = normalizeSudokuDifficulty(difficulty);
-  const puzzle = createGeneratedSudokuPuzzle(normalizedDifficulty);
+/**
+ * Replaces the board with a generated puzzle. The id is minted here, so a
+ * pooled puzzle has no identity until the moment it is adopted, and the live
+ * loader and note-mode state carry over rather than being captured when the
+ * request went out.
+ */
+/**
+ * A warm puzzle is adopted in the same tick, so this state is usually never
+ * seen. A cold difficulty leaves the current board up: the grid reports
+ * `aria-busy` and the status says so, rather than the window freezing.
+ */
+const setSudokuGeneratingState = (isGenerating) => {
+  sudokuGrid?.setAttribute("aria-busy", String(isGenerating));
+  if (isGenerating) setSudokuStatus(SUDOKU_GENERATING_STATUS);
+};
+
+const adoptSudokuPuzzle = (difficulty, generated) => {
   const wasPlaying = sudokuState.playing;
   const previousNoteMode = sudokuState.noteMode;
   const loadingTimerId = sudokuState.loadingTimerId;
@@ -20416,10 +20774,10 @@ const loadSudokuDifficulty = (difficulty) => {
   hideSudokuSolvePopup();
   pauseSudokuTimer();
   sudokuState = {
-    difficulty: normalizedDifficulty,
-    puzzleId: puzzle.id,
-    puzzle: puzzle.puzzle,
-    solution: puzzle.solution,
+    difficulty,
+    puzzleId: createSudokuPuzzleId(difficulty),
+    puzzle: generated.puzzle,
+    solution: generated.solution,
     mistakes: 0,
     elapsedSeconds: 0,
     timerId: null,
@@ -20440,16 +20798,62 @@ const loadSudokuDifficulty = (difficulty) => {
     statsSessionEligible: true,
     hintMode: "off",
     noteMode: previousNoteMode,
-    values: normalizeSudokuValues("", puzzle.puzzle),
+    values: normalizeSudokuValues("", generated.puzzle),
     notes: createSudokuEmptyNotes(),
     undoStack: [],
     redoStack: [],
     selectedIndex: -1,
   };
+  sudokuPuzzleReady = true;
   renderSudoku();
+  setSudokuGeneratingState(false);
   resetSudokuTimer();
   scheduleSudokuSave();
+  // A cold difficulty can land while the player is paused, by hand or by a
+  // hidden tab. The new board is adopted behind the resume overlay, so the
+  // status stays Paused and the clock waits for the play button: a timer
+  // started here would run on a board nobody can see. Resuming then reports
+  // Ready, because the status kept for the resume belongs to the old puzzle.
+  if (sudokuPaused) {
+    sudokuStatusBeforePause = "Ready";
+    setSudokuStatus("Paused");
+    return;
+  }
   if (isSudokuWindowVisible() && wasPlaying) startSudokuTimer();
+};
+
+/**
+ * New Game and the difficulty buttons never block. A warm puzzle is adopted
+ * in the same tick; a cold difficulty leaves the current board in place and
+ * reports Generating until the worker delivers.
+ *
+ * Only the newest request can reach the board, so an older one that is still
+ * waiting is withdrawn here rather than left to draw a generation nobody will
+ * adopt: ten impatient clicks on a cold difficulty are one board's worth of
+ * demand, not ten. Work already in flight still delivers, into the capped
+ * pool; the token guard catches a waiter that resolved before it was dropped.
+ */
+const loadSudokuDifficulty = (difficulty) => {
+  const normalizedDifficulty = normalizeSudokuDifficulty(difficulty);
+  const token = (sudokuPuzzleRequestToken += 1);
+  if (sudokuPendingAdoption) {
+    cancelSudokuPuzzleWaiter(
+      sudokuPendingAdoption.difficulty,
+      sudokuPendingAdoption.adopt
+    );
+    sudokuPendingAdoption = null;
+  }
+  setSudokuGeneratingState(true);
+  const adopt = (generated) => {
+    sudokuPendingAdoption = null;
+    if (token !== sudokuPuzzleRequestToken) {
+      returnSudokuPuzzleToPool(normalizedDifficulty, generated);
+      return;
+    }
+    adoptSudokuPuzzle(normalizedDifficulty, generated);
+  };
+  sudokuPendingAdoption = { difficulty: normalizedDifficulty, adopt };
+  withSudokuPuzzle(normalizedDifficulty, adopt);
 };
 
 const getLifeCounterWindow = () => getAppWindow("life-counter");
@@ -21066,6 +21470,14 @@ if (sudokuCheck) {
   sudokuCheck.addEventListener("click", checkSudokuBoard);
 }
 
+if (sudokuPause) {
+  sudokuPause.addEventListener("click", () => setSudokuPaused(true));
+}
+
+if (sudokuResume) {
+  sudokuResume.addEventListener("click", () => setSudokuPaused(false));
+}
+
 if (sudokuPlay) {
   sudokuPlay.addEventListener("click", startSudokuGameFromBoot);
 }
@@ -21079,7 +21491,7 @@ if (sudokuGrid) {
 document.addEventListener("keydown", handleSudokuUndoRedoShortcut);
 document.addEventListener("keydown", handleSudokuWindowKeydown);
 window.addEventListener("storage", syncSudokuCompletionFromStorage);
-document.addEventListener("visibilitychange", syncSudokuAquariumActivity);
+document.addEventListener("visibilitychange", handleSudokuVisibilityChange);
 window.addEventListener("focus", syncSudokuAquariumActivity);
 window.addEventListener("blur", syncSudokuAquariumActivity);
 if (sudokuReducedMotionMedia) {
@@ -21153,15 +21565,10 @@ if (lifeCounterWidthIncrease) {
   });
 }
 
-if (!restoreSudokuSavedState()) {
-  const initialSudokuPuzzle = createGeneratedSudokuPuzzle(sudokuState.difficulty);
-  sudokuState.puzzleId = initialSudokuPuzzle.id;
-  sudokuState.puzzle = initialSudokuPuzzle.puzzle;
-  sudokuState.solution = initialSudokuPuzzle.solution;
-  sudokuState.values = normalizeSudokuValues("", initialSudokuPuzzle.puzzle);
-  sudokuState.notes = createSudokuEmptyNotes();
-  scheduleSudokuSave();
-}
+// With nothing to restore the board renders empty and stays that way until
+// Sudoku is opened: the first puzzle is generated like any other, off-thread,
+// so no visitor pays for one on a page they never open.
+sudokuPuzzleReady = restoreSudokuSavedState();
 renderSudoku();
 renderLifeCounter();
 updateLifeCounterWidthControls();

@@ -4,13 +4,19 @@ import {
   openApp,
   openDeterministicRoute,
   openHomeDesktop,
+  openSudokuBoard,
   settleRender,
 } from "./helpers/rendered-site.mjs";
 
 /**
  * A small curated set of reference screenshots for the states a visitor always
  * sees: the entry loader, the Home desktop, the About window that greets every
- * visitor, and two application windows, at desktop and mobile widths.
+ * visitor, and three application windows, at desktop and mobile widths.
+ *
+ * Sudoku is pinned twice, because its two board states look nothing alike: a
+ * playing board carrying the greyed exhausted keypad, the remaining-count
+ * badges, and the same-value tint, and the paused board behind its single
+ * play button.
  *
  * Baselines are byte-comparable only when the browser, fonts, and rasterizer
  * match, so they are generated and compared exclusively in the Playwright
@@ -118,4 +124,52 @@ test("the modeling portfolio route matches its reference render at desktop and m
       mask: [page.locator(".carousel__strip")],
     });
   }
+});
+
+/**
+ * Places a digit up to its ninth placement and leaves one of those cells
+ * selected, so a single render carries the greyed exhausted keypad button,
+ * every remaining-count badge, and the same-value tint together. The values
+ * are entered through the board, so the render is of the real path.
+ */
+const exhaustSudokuDigit = async (page, win, digit) => {
+  const indexes = await page.evaluate((value) => {
+    const cells = [...document.querySelectorAll("#sudoku-grid .sudoku-cell")];
+    const placed = cells.filter((cell) => cell.dataset.sudokuValue === value).length;
+    return cells
+      .map((cell, index) => (cell.readOnly ? -1 : index))
+      .filter((index) => index >= 0)
+      .slice(0, 9 - placed);
+  }, digit);
+  for (const index of indexes) {
+    await win.locator(`.sudoku-cell[data-sudoku-index="${index}"]`).click();
+    await page.keyboard.press(digit);
+  }
+  await win.locator(`.sudoku-cell[data-sudoku-index="${indexes.at(-1)}"]`).click();
+  return indexes;
+};
+
+test("the playing Sudoku window matches its reference render", async ({ page }) => {
+  await openHomeDesktop(page, DESKTOP);
+  const win = await openSudokuBoard(page);
+  await exhaustSudokuDigit(page, win, "7");
+
+  await expect(win.locator('[data-sudoku-number="7"]')).toHaveClass(/is-exhausted/);
+  await expect(win.locator(".sudoku-cell.is-same-value")).toHaveCount(8);
+  await settleRender(page);
+
+  await expect(win).toHaveScreenshot("home-sudoku-window.png");
+});
+
+test("the paused Sudoku window matches its reference render", async ({ page }) => {
+  await openHomeDesktop(page, DESKTOP);
+  const win = await openSudokuBoard(page);
+  await exhaustSudokuDigit(page, win, "7");
+  await win.locator("#sudoku-pause").click();
+
+  await expect(win.locator("#sudoku-resume")).toBeVisible();
+  await expect(win.locator(".sudoku-app")).toHaveClass(/is-sudoku-paused/);
+  await settleRender(page);
+
+  await expect(win).toHaveScreenshot("home-sudoku-paused-window.png");
 });

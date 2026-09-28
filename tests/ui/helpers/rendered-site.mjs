@@ -9,6 +9,48 @@ import { readFile } from "node:fs/promises";
 /** Wednesday, so the Thursday-only Feliz Jueves event never registers. */
 export const FROZEN_INSTANT = new Date("2026-03-04T12:00:00.000Z");
 
+/**
+ * The draw every deterministic realm returns. Weighted random events all sit
+ * below it, so none fire, and the Sudoku generator shuffles the same way on
+ * every run.
+ */
+export const DETERMINISTIC_RANDOM_DRAW = 0.999999;
+
+/**
+ * The Sudoku generator runs in its own worker, which an init script cannot
+ * reach: a worker gets a fresh realm with its own Math. Without this the
+ * board would differ on every run, so the source is served with the same
+ * draw pinned that the page uses.
+ */
+export const readDeterministicSudokuWorkerSource = async () => {
+  const source = await readFile(
+    new URL("../../../scripts/home/sudoku-generator.worker.js", import.meta.url),
+    "utf8"
+  );
+  return `Math.random = () => ${DETERMINISTIC_RANDOM_DRAW};\n${source}`;
+};
+
+/**
+ * Holds every generator reply back by `delayMs`, so a request made from the
+ * page is still outstanding when the next interaction lands. The shared
+ * fixture already routes the pinned worker source; this route is registered
+ * later, so it is the one that answers.
+ *
+ * @param {import("@playwright/test").Page} page
+ */
+export const installDelayedSudokuGeneratorReplies = async (page, delayMs) => {
+  const source = await readDeterministicSudokuWorkerSource();
+  await page.route(/\/scripts\/home\/sudoku-generator\.worker\.js(?:\?.*)?$/, (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body:
+        "const deferredPost = self.postMessage.bind(self);\n" +
+        `self.postMessage = (data) => setTimeout(() => deferredPost(data), ${delayMs});\n` +
+        source,
+    })
+  );
+};
+
 /** The viewport matrix required for rendered UI review. */
 export const REVIEW_VIEWPORTS = Object.freeze([
   Object.freeze({ name: "mobile", width: 375, height: 812 }),
@@ -163,12 +205,12 @@ export const openDeterministicRoute = async (page, path, viewport) => {
   await installOfflineGameStats(page);
   await page.clock.setFixedTime(FROZEN_INSTANT);
   await page.setViewportSize(viewport);
-  await page.addInitScript(() => {
+  await page.addInitScript((draw) => {
     localStorage.clear();
     sessionStorage.clear();
     // Weighted random events all draw below this value, so none fire.
-    Math.random = () => 0.999999;
-  });
+    Math.random = () => draw;
+  }, DETERMINISTIC_RANDOM_DRAW);
   await page.goto(path, { waitUntil: "load" });
   await settleRender(page);
 };

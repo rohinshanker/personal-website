@@ -111,7 +111,9 @@
     <link rel="stylesheet" href="styles/home/apps/minesweeper.css?v=minesweeper-grid-rows-20260909" />
     <link rel="stylesheet" href="styles/home/apps/solitaire.css?v=cache-token-parity-20260927" />
     <link rel="stylesheet" href="styles/home/apps/snake.css?v=html-semantics-20260927" />
-    <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-check-prompt-20260927" />
+    <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-pause-20260928" />
+    <!-- The Sudoku generator runs in a worker; main.js reads its versioned URL from here. -->
+    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-8de0db13132705904f172477084ad8a3f8143b9cdf0fce9b292135d33eb22359" as="worker" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=education-scroll-gutter-20260923" />
@@ -2262,23 +2264,30 @@
                   <span class="sudoku-mode-label">Sudoku</span>
                 </div>
                 <div class="sudoku-board-column">
-                  <div class="sudoku-grid-frame">
-                    <div class="sudoku-grid" id="sudoku-grid" aria-label="Sudoku board"></div>
+                  <div class="sudoku-board-stack">
+                    <div class="sudoku-grid-frame">
+                      <div class="sudoku-grid" id="sudoku-grid" aria-label="Sudoku board"></div>
+                    </div>
+                    <div class="sudoku-pause-overlay" id="sudoku-pause-overlay" aria-hidden="true">
+                      <button class="sudoku-play-button sudoku-resume-button" id="sudoku-resume" type="button" aria-label="Resume Sudoku">
+                        <span class="sudoku-play-icon" aria-hidden="true"></span>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div class="sudoku-control-panel" aria-label="Sudoku controls">
                   <div class="sudoku-control-section">
                     <span class="sudoku-panel-label">Numbers</span>
                     <div class="sudoku-number-grid" role="group" aria-label="Number picker">
-                      <button type="button" data-sudoku-number="1">1</button>
-                      <button type="button" data-sudoku-number="2">2</button>
-                      <button type="button" data-sudoku-number="3">3</button>
-                      <button type="button" data-sudoku-number="4">4</button>
-                      <button type="button" data-sudoku-number="5">5</button>
-                      <button type="button" data-sudoku-number="6">6</button>
-                      <button type="button" data-sudoku-number="7">7</button>
-                      <button type="button" data-sudoku-number="8">8</button>
-                      <button type="button" data-sudoku-number="9">9</button>
+                      <button type="button" data-sudoku-number="1"><span class="sudoku-number-digit">1</span><span class="sudoku-number-remaining" aria-hidden="true"></span></button>
+                      <button type="button" data-sudoku-number="2"><span class="sudoku-number-digit">2</span><span class="sudoku-number-remaining" aria-hidden="true"></span></button>
+                      <button type="button" data-sudoku-number="3"><span class="sudoku-number-digit">3</span><span class="sudoku-number-remaining" aria-hidden="true"></span></button>
+                      <button type="button" data-sudoku-number="4"><span class="sudoku-number-digit">4</span><span class="sudoku-number-remaining" aria-hidden="true"></span></button>
+                      <button type="button" data-sudoku-number="5"><span class="sudoku-number-digit">5</span><span class="sudoku-number-remaining" aria-hidden="true"></span></button>
+                      <button type="button" data-sudoku-number="6"><span class="sudoku-number-digit">6</span><span class="sudoku-number-remaining" aria-hidden="true"></span></button>
+                      <button type="button" data-sudoku-number="7"><span class="sudoku-number-digit">7</span><span class="sudoku-number-remaining" aria-hidden="true"></span></button>
+                      <button type="button" data-sudoku-number="8"><span class="sudoku-number-digit">8</span><span class="sudoku-number-remaining" aria-hidden="true"></span></button>
+                      <button type="button" data-sudoku-number="9"><span class="sudoku-number-digit">9</span><span class="sudoku-number-remaining" aria-hidden="true"></span></button>
                       <button type="button" data-sudoku-number="clear">Erase</button>
                       <button class="sudoku-note-toggle" id="sudoku-note-toggle" type="button" aria-pressed="false" aria-keyshortcuts="N" aria-describedby="sudoku-note-tooltip">Notes</button>
                     </div>
@@ -2298,6 +2307,7 @@
                     <span class="sudoku-panel-label">Hints</span>
                     <div class="sudoku-hint-options" role="group" aria-label="Sudoku hints">
                       <button class="is-selected" type="button" data-sudoku-hint="off" aria-pressed="true">Off</button>
+                      <button type="button" data-sudoku-hint="conflicts">Conflicts</button>
                       <button type="button" data-sudoku-hint="errors">Errors</button>
                     </div>
                   </div>
@@ -2305,6 +2315,7 @@
                     <button type="button" id="sudoku-new">New Game</button>
                     <button type="button" id="sudoku-undo" disabled>Undo</button>
                     <button type="button" id="sudoku-redo" disabled>Redo</button>
+                    <button type="button" id="sudoku-pause" aria-pressed="false">Pause</button>
                     <button type="button" id="sudoku-check">Check</button>
                   </div>
                 </div>
@@ -6912,13 +6923,13 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-a8238c87c5700ddc116b41c767949de4c4f52dcbaaf9e715b578a938eb965241"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-8de0db13132705904f172477084ad8a3f8143b9cdf0fce9b292135d33eb22359"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
     <script src="scripts/home/system-alerts.js?v=repo-hygiene-20260927"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-a8238c87c5700ddc116b41c767949de4c4f52dcbaaf9e715b578a938eb965241"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-8de0db13132705904f172477084ad8a3f8143b9cdf0fce9b292135d33eb22359"></script>
     <script src="scripts/home/core/media.js?v=helper-dedupe-20260927"></script>
     <script src="scripts/home/modeling-portfolio.js?v=modeling-portfolio-digitals-20260926"></script>
-    <script src="scripts/home/main.js?v=game-build-a8238c87c5700ddc116b41c767949de4c4f52dcbaaf9e715b578a938eb965241"></script>
+    <script src="scripts/home/main.js?v=game-build-8de0db13132705904f172477084ad8a3f8143b9cdf0fce9b292135d33eb22359"></script>
     <script src="scripts/home/admin-controls.js?v=admin-promo-workflow-20260915"></script>
   </body>
 </html>

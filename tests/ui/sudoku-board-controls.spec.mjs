@@ -69,6 +69,32 @@ window.__sudokuBoardControlsTest = Object.freeze({
     selectedIndex: sudokuState.selectedIndex,
     values: sudokuState.values.join(""),
   }),
+  readCellClasses: () =>
+    sudokuCells().map((cell) =>
+      [...cell.classList].filter((name) => name.startsWith("is-")).sort().join(" ")
+    ),
+  // Counts the elements a refresh reaches for. A skipped cell or button never
+  // has its classList read, so the returned keys are exactly what was written.
+  measureRefresh: (kind) => {
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "classList");
+    const datasetKey = kind === "keypad" ? "sudokuNumber" : "sudokuIndex";
+    const touched = new Set();
+    Object.defineProperty(Element.prototype, "classList", {
+      configurable: true,
+      get() {
+        const key = this.dataset?.[datasetKey];
+        if (key !== undefined) touched.add(key);
+        return descriptor.get.call(this);
+      },
+    });
+    try {
+      if (kind === "keypad") updateSudokuNumberButtons();
+      else updateSudokuBoardHighlights();
+    } finally {
+      Object.defineProperty(Element.prototype, "classList", descriptor);
+    }
+    return [...touched].sort();
+  },
 });
 })();`
   );
@@ -268,6 +294,49 @@ test("N toggles notes only in the active Sudoku window and the button hints at i
   expect((await bridge(page, "readState")).noteMode).toBe(false);
 });
 
+test("highlight and keypad refreshes skip the cells and buttons that did not change", async ({
+  page,
+}) => {
+  await installBoardBridge(page);
+  await openHomeDesktop(page, DESKTOP);
+  const win = await openSudokuBoard(page);
+  const [first, second] = await bridge(page, "editableIndexesFor", "6");
+  expect(second).toBeGreaterThanOrEqual(0);
+
+  // A refresh that changes nothing writes nothing. Before the diff pass both
+  // refreshes rewrote every cell and button on every keystroke.
+  await cellAt(win, first).click();
+  expect(await bridge(page, "measureRefresh", "board")).toEqual([]);
+  expect(await bridge(page, "measureRefresh", "keypad")).toEqual([]);
+
+  await page.keyboard.press("6");
+  await expect(cellAt(win, first)).toHaveAttribute("data-sudoku-value", "6");
+  expect(await bridge(page, "measureRefresh", "board")).toEqual([]);
+  expect(await bridge(page, "measureRefresh", "keypad")).toEqual([]);
+
+  // A selection change writes exactly the cells whose classes differ.
+  const before = await bridge(page, "readCellClasses");
+  await cellAt(win, second).click();
+  const after = await bridge(page, "readCellClasses");
+  const changed = after
+    .map((classes, index) => (classes === before[index] ? -1 : index))
+    .filter((index) => index >= 0);
+  expect(changed.length).toBeGreaterThan(0);
+  expect(changed.length).toBeLessThan(81);
+  expect(await bridge(page, "measureRefresh", "board")).toEqual([]);
+
+  // A new puzzle replaces the cells, so the caches must go with them.
+  await win.locator("#sudoku-new").click();
+  await expect(win.locator(".sudoku-cell.is-selected")).toHaveCount(0);
+  const [fresh] = await bridge(page, "editableIndexesFor", "6");
+  await cellAt(win, fresh).click();
+  await expect(cellAt(win, fresh)).toHaveClass(/is-selected/);
+  // The selected cell shares its row and column with sixteen others.
+  await expect(win.locator(".sudoku-cell.is-axis-highlight")).toHaveCount(17);
+  expect(await bridge(page, "measureRefresh", "board")).toEqual([]);
+  expect(await bridge(page, "measureRefresh", "keypad")).toEqual([]);
+});
+
 test("digits typed while a panel button holds focus edit the selected cell", async ({
   page,
 }) => {
@@ -356,7 +425,10 @@ test("keys pressed on the solved dialog leave the finished board alone", async (
   const [target] = await bridge(page, "editableIndexesFor", "2");
   const solveOk = win.locator("#sudoku-solve-ok");
 
+  // One real move first, so the undo stack is not empty when the dialog opens.
   await cellAt(win, target).click();
+  await page.keyboard.press("2");
+  await expect(cellAt(win, target)).toHaveAttribute("data-sudoku-value", "2");
   await bridge(page, "completeBoard");
   await win.locator("#sudoku-check").click();
   await expect(win.locator("#sudoku-status")).toHaveText("Solved");
@@ -382,6 +454,22 @@ test("keys pressed on the solved dialog leave the finished board alone", async (
   await expect(win.locator("#sudoku-status")).toHaveText("Solved");
   await expect(cellAt(win, target)).toHaveAttribute("data-sudoku-value", "2");
 
+  // The dialog covers the board without trapping focus, so a cell can still
+  // take it. The grid's own key path and undo/redo stay inert all the same.
+  await cellAt(win, target).focus();
+  await expect(cellAt(win, target)).toBeFocused();
+  for (const key of ["Backspace", "Delete", "0", "7", "n", "ArrowUp", "ArrowRight"]) {
+    await page.keyboard.press(key);
+  }
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+Shift+z");
+  await page.keyboard.press("Control+y");
+  const afterGridKeys = await bridge(page, "readState");
+  expect(afterGridKeys.values).toBe(solvedValues);
+  expect(afterGridKeys.noteMode).toBe(false);
+  expect(afterGridKeys.selectedIndex).toBe(target);
+  await expect(win.locator("#sudoku-status")).toHaveText("Solved");
+
   // Dismissing the dialog restores keyboard editing for a new attempt.
   await solveOk.click();
   await expect(solveOk).toBeHidden();
@@ -389,4 +477,7 @@ test("keys pressed on the solved dialog leave the finished board alone", async (
   await win.locator("#sudoku-new").focus();
   await page.keyboard.press("Backspace");
   await expect(cellAt(win, target)).toHaveAttribute("data-sudoku-value", "");
+  await cellAt(win, target).focus();
+  await page.keyboard.press("2");
+  await expect(cellAt(win, target)).toHaveAttribute("data-sudoku-value", "2");
 });

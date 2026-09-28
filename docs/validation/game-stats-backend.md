@@ -1,8 +1,8 @@
 # Game Stats Backend Setup
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
-- Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-09-27
+- Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
+- Last verified: 2026-09-28
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -28,9 +28,12 @@ or high-stakes game.
   session issued before a deployment remains usable until expiry while invalid
   build, issue-time, config, expiry, or signature state fails closed. The
   client address may change during a game; it is not part of validation.
-- D1 migrations are intentionally manual. Check for pending migrations before
-  each release; do not apply one when a browser-only change uses the existing
-  event schema.
+- The Worker release workflow applies pending D1 migrations automatically,
+  immediately before the deploy, so the schema is in place when the new Worker
+  starts serving. Only additive migrations belong there: a migration the
+  previous Worker could not survive a rollback to is applied by hand, in a
+  reviewed release of its own. A browser-only change adds no migration and the
+  step is a no-op.
 - Before deploying, the release workflow asserts that every name in
   `wrangler.jsonc` `secrets.required` is present on the account. Wrangler itself
   ignores that block and a strict dry run says nothing about it, so a missing
@@ -336,9 +339,17 @@ latest failed **Game Stats Worker release** run or use `workflow_dispatch` on
 `main`. The release is complete only when the transition check, Pages deploy,
 and final live parity check all pass.
 
-If gameplay-completion logic moves to another file, first add that file to
-`GAME_COMPLETION_SOURCE_FILES` in the script, update its test, run the updater,
-and deploy the static site and Worker as one release. The script preserves the
+The completion sources are `scripts/home/main.js`, `scripts/home/core/dom.js`,
+and `scripts/home/sudoku-generator.worker.js`. The generator worker is one of
+them because the solution it returns is what decides whether a Sudoku board is
+correct and complete, so a release that changes only the worker changes what
+counts as a win. If gameplay-completion logic moves to another file, first add
+that file to `GAME_COMPLETION_SOURCE_FILES` in `scripts/lib/game-build.mjs`,
+add it to `INTEGRITY_CACHE_ASSET_PATHS` when an entry point references it,
+update its test, run the updater, and deploy the static site and Worker as one
+release. `tests/game-stats-integrity.test.mjs` mutates each declared source in
+turn and requires the build version to move, so a source that the digest does
+not actually read is caught there rather than in production. The script preserves the
 public `apiBaseUrl`; after changing only that URL, still run the updater so the
 generated config remains canonical.
 
@@ -371,6 +382,54 @@ The Worker uses bound D1 prepared statements; do not interpolate request data
 into SQL. D1 migration application captures a backup and rolls back a failing
 migration, but it still changes production state, so it belongs in the release
 checklist rather than endpoint discovery.
+
+The release workflow's `deploy-worker` job applies pending migrations with the
+production credentials immediately before `wrangler deploy`, so the schema the
+new Worker expects is already in D1 when it starts serving.
+`tests/game-stats-deployment.test.mjs` pins that step, its credentials, and its
+position ahead of the deploy. Only additive migrations may run there: a
+migration that a rollback to the previous Worker could not survive belongs in a
+reviewed manual release instead.
+
+### Sudoku puzzle identity
+
+- A Sudoku win may carry `puzzleId` and `puzzle`, the 81-character board string
+  it was solved from. Migration `0003_add_sudoku_puzzle_identity.sql` stores
+  them as one `puzzle_key` of `<puzzleId>:<puzzle>` and adds a partial unique
+  index on `(player_id, puzzle_key)` where both are non-null, so a player has at
+  most one recorded win per puzzle.
+- This closes the cross-tab races the browser's claim list cannot: same-instant
+  completions, a claim dropped by concurrent writes, and eviction past the
+  claim list's 500-puzzle cap all reach the Worker as a second event id for one
+  puzzle. The browser contract and its limits are in
+  `sudoku-leaderboard-eligibility.md`.
+- A second win for a puzzle already on record is not an error. The Worker
+  answers `{ ok: true, applied: false, eventId: <the recorded event> }`. The
+  id is the row that stands, never the submitted one, so a client is never
+  told to look in `/stats` for an event that was never written — that holds
+  for the duplicate shortcut, for a loss at the unique index, and for two
+  results racing one session.
+- The duplicate answer is not a shortcut around validation. It sits behind
+  `validateSession`, so a duplicate carrying a session for another game, a
+  different difficulty, or an unsigned proof is refused like any other bad
+  submission, and the session a duplicate does supply is spent. A duplicate
+  must not leave a validated session open for a different result. A consumed
+  session with a new event id still passes the row/token, difficulty, event
+  window, eligibility, and rate-limit checks before duplicate acknowledgement;
+  exact event-id retries retain their existing idempotent response.
+- The browser must not confirm a submission the Worker answered with another
+  event id. That submission stored nothing, so counting it would add a second
+  win to the local totals, and `reconcileConfirmedGameStatsEvents` only drops
+  a confirmed event once its own id appears in the server list — an id that
+  lost a race never will, so the inflation would survive every refresh.
+- Both fields are optional and travel together. A Worker released ahead of the
+  browser that sends them keeps accepting wins without them and stores a null
+  `puzzle_key` — the same rolling compatibility the accepted build versions
+  have. One field without the other, or a puzzle that is not 81 digits, is a
+  400: that is a malformed event, not a legacy one.
+- A stored row with no key still matches a retry that brings one, so an event
+  published before the rollout can be replayed during it. A stored key that
+  differs is a 409, as any changed result is.
 
 ### Scheduled expiry purge
 

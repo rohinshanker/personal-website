@@ -33,6 +33,7 @@ const SHIPPED_SOURCES = [
   "styles/home/apps/game-stats.css",
   "styles/home/apps/life-counter.css",
   "scripts/home/main.js",
+  "scripts/home/sudoku-generator.worker.js",
   "scripts/home/core/dom.js",
   "scripts/home/core/media.js",
   "scripts/home/system-alerts.js",

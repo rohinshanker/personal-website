@@ -906,6 +906,52 @@
   min-width: 0;
 }
 
+/*
+ * The board and its pause overlay share one box. The frame is wider than the
+ * column at the narrowest viewport, so a stack sized to the frame is what puts
+ * the resume button on the board's centre rather than the column's.
+ */
+.sudoku-board-stack {
+  display: grid;
+  position: relative;
+  width: max-content;
+}
+
+/*
+ * Paused board. The values and notes are hidden outright rather than merely
+ * faded, and the board and control panel drop to a wash so the aquarium reads
+ * through them. Both regions carry `inert` while paused, so this is only the
+ * look of the lock, never the lock itself.
+ */
+.sudoku-pause-overlay {
+  display: none;
+}
+
+.sudoku-app.is-sudoku-paused .sudoku-pause-overlay {
+  display: grid;
+  inset: 0;
+  place-items: center;
+  position: absolute;
+  z-index: 2;
+}
+
+.sudoku-pause-overlay .sudoku-play-button {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.sudoku-app.is-sudoku-paused .sudoku-grid-frame,
+.sudoku-app.is-sudoku-paused .sudoku-control-panel {
+  opacity: 0.18;
+  transition: opacity 180ms ease;
+}
+
+.sudoku-app.is-sudoku-paused .sudoku-cell-value,
+.sudoku-app.is-sudoku-paused .sudoku-cell-notes {
+  visibility: hidden;
+}
+
 .sudoku-orb {
   --gloss: 0.7;
   --hue: var(--sudoku-hue);
@@ -1052,8 +1098,13 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/*
+ * Three modes fit one row on the desktop panel. On the compact panel the
+ * longest label, Conflicts, no longer fits a third of the width, so the row
+ * reflows to two columns rather than clipping.
+ */
 .sudoku-hint-options {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
 }
 
 .sudoku-number-grid button,
@@ -1067,6 +1118,39 @@
 
 .sudoku-number-grid button {
   min-height: 30px;
+}
+
+/*
+ * A digit button carries its own remaining count in the top-right corner.
+ * The button is positioned so the badge can sit out of the digit's way, and
+ * the digit keeps the centring the plain label had.
+ */
+.sudoku-number-grid button[data-sudoku-number]:not([data-sudoku-number="clear"]) {
+  position: relative;
+}
+
+.sudoku-number-digit {
+  display: block;
+}
+
+.sudoku-number-remaining {
+  color: #2d6c8c;
+  font-size: 8px;
+  font-weight: normal;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  right: 2px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+  top: 2px;
+}
+
+.sudoku-number-grid button.is-selected .sudoku-number-remaining {
+  color: #05365c;
+}
+
+.sudoku-number-grid button.is-exhausted .sudoku-number-remaining {
+  color: inherit;
 }
 
 .sudoku-number-grid button[data-sudoku-number="clear"] {
@@ -1200,10 +1284,12 @@
 
 .sudoku-grid .sudoku-cell {
   --sudoku-axis-highlight: transparent;
+  --sudoku-conflict-highlight: transparent;
   --sudoku-value-highlight: transparent;
   appearance: none;
   aspect-ratio: 1 / 1;
   background:
+    linear-gradient(var(--sudoku-conflict-highlight), var(--sudoku-conflict-highlight)),
     linear-gradient(var(--sudoku-value-highlight), var(--sudoku-value-highlight)),
     linear-gradient(var(--sudoku-axis-highlight), var(--sudoku-axis-highlight)),
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(217, 249, 255, 0.38)),
@@ -1268,6 +1354,28 @@
   min-width: 0;
 }
 
+/*
+ * Selecting a value lights the pencil marks that name it, in the same blue
+ * as the is-same-value tint on placed digits. CSS cannot compare two
+ * attributes, so the nine pairings are written out; the grid carries the
+ * selected value, which keeps the whole board in step with one attribute.
+ * An unwritten slot is empty, and an empty slot is not a pencil mark.
+ */
+.sudoku-grid[data-sudoku-note-highlight="1"] .sudoku-note-digit[data-sudoku-note="1"]:not(:empty),
+.sudoku-grid[data-sudoku-note-highlight="2"] .sudoku-note-digit[data-sudoku-note="2"]:not(:empty),
+.sudoku-grid[data-sudoku-note-highlight="3"] .sudoku-note-digit[data-sudoku-note="3"]:not(:empty),
+.sudoku-grid[data-sudoku-note-highlight="4"] .sudoku-note-digit[data-sudoku-note="4"]:not(:empty),
+.sudoku-grid[data-sudoku-note-highlight="5"] .sudoku-note-digit[data-sudoku-note="5"]:not(:empty),
+.sudoku-grid[data-sudoku-note-highlight="6"] .sudoku-note-digit[data-sudoku-note="6"]:not(:empty),
+.sudoku-grid[data-sudoku-note-highlight="7"] .sudoku-note-digit[data-sudoku-note="7"]:not(:empty),
+.sudoku-grid[data-sudoku-note-highlight="8"] .sudoku-note-digit[data-sudoku-note="8"]:not(:empty),
+.sudoku-grid[data-sudoku-note-highlight="9"] .sudoku-note-digit[data-sudoku-note="9"]:not(:empty) {
+  background: rgba(0, 176, 255, 0.4);
+  border-radius: 2px;
+  color: #002b47;
+  text-shadow: none;
+}
+
 .sudoku-grid .sudoku-cell:focus {
   outline: none;
 }
@@ -1291,6 +1399,7 @@
 
 .sudoku-grid .sudoku-cell.is-given {
   background:
+    linear-gradient(var(--sudoku-conflict-highlight), var(--sudoku-conflict-highlight)),
     linear-gradient(var(--sudoku-value-highlight), var(--sudoku-value-highlight)),
     linear-gradient(var(--sudoku-axis-highlight), var(--sudoku-axis-highlight)),
     linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(184, 208, 220, 0.58)),
@@ -1332,6 +1441,29 @@
       0 0 6px rgba(255, 255, 255, 0.78);
     transform: scale(1);
   }
+}
+
+/*
+ * A conflict is a statement about the board, not a verdict on the entry, so
+ * it reads as a steady amber marker rather than the red alarm Errors uses:
+ * a tint layer over the cell's own background plus a wedge in the corner for
+ * anyone who cannot separate the two by hue alone.
+ */
+.sudoku-grid .sudoku-cell.is-conflict {
+  --sudoku-conflict-highlight: rgba(255, 150, 22, 0.44);
+  color: #6a2800;
+}
+
+.sudoku-grid .sudoku-cell.is-conflict::after {
+  border-left: 7px solid transparent;
+  border-top: 7px solid #a33b00;
+  content: "";
+  height: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 0;
 }
 
 .sudoku-grid .sudoku-cell.is-invalid {

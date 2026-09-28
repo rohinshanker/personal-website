@@ -14,10 +14,16 @@ export const MAX_GAME_BUILD_COMPATIBILITY_VERSIONS = 32;
  * The browser files that decide when a game starts and completes. The digest is
  * a release identifier, not a secret or proof that a client did not modify code
  * after the browser loaded it.
+ *
+ * The Sudoku generator worker belongs here because the solution it returns
+ * becomes `sudokuState.solution`, which is what decides whether a board is
+ * correct and complete. A release that changes only the worker changes what
+ * counts as a win, so it must change the build version too.
  */
 export const GAME_COMPLETION_SOURCE_FILES = Object.freeze([
   "scripts/home/main.js",
   "scripts/home/core/dom.js",
+  "scripts/home/sudoku-generator.worker.js",
 ]);
 
 /** Assets whose cache token carries the generated build version. */
@@ -25,6 +31,7 @@ export const INTEGRITY_CACHE_ASSET_PATHS = Object.freeze([
   "scripts/home/game-stats-backend.js",
   "scripts/home/core/dom.js",
   "scripts/home/main.js",
+  "scripts/home/sudoku-generator.worker.js",
 ]);
 
 /** Public HTML entry points that load the completion sources. */

@@ -28,6 +28,8 @@ const GAME_STATS_EVENT_KEYS = Object.freeze({
     ...GAME_STATS_COMMON_EVENT_KEYS,
     "difficulty",
     "hintBucket",
+    "puzzleId",
+    "puzzle",
   ]),
 });
 const GAME_STATS_HISTORICAL_EVENT_KEYS = Object.freeze([
@@ -35,7 +37,11 @@ const GAME_STATS_HISTORICAL_EVENT_KEYS = Object.freeze([
   "difficulty",
   "boardSize",
   "hintBucket",
+  "puzzleId",
+  "puzzle",
 ]);
+const SUDOKU_PUZZLE_ID_PATTERN = /^[a-z0-9][a-z0-9-]{3,79}$/;
+const SUDOKU_PUZZLE_PATTERN = /^[0-9]{81}$/;
 const MAX_EVENT_BODY_BYTES = 4096;
 const TURNSTILE_VERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -75,8 +81,9 @@ INSERT INTO game_events (
   player_name,
   player_icon,
   occurred_at,
+  puzzle_key,
   schema_version
-) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1
+) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1
 FROM game_stat_sessions
 WHERE id = ? AND consumed_at IS NULL AND expires_at > ?
 `;
@@ -93,11 +100,18 @@ SELECT
   player_id,
   player_name,
   player_icon,
-  occurred_at
+  occurred_at,
+  puzzle_key
 FROM game_events
 `;
 const SELECT_EVENT_SQL = `${SELECT_EVENTS_SQL.trim()}
 WHERE id = ?`;
+// One win per player per puzzle, enforced by the partial unique index that
+// migration 0003 adds and read back here to answer a duplicate with the
+// result that already stands.
+const SELECT_EVENT_BY_PUZZLE_SQL = `${SELECT_EVENTS_SQL.trim()}
+WHERE player_id = ? AND puzzle_key = ?
+LIMIT 1`;
 const INSERT_SESSION_SQL = `
 INSERT INTO game_stat_sessions (
   id, game, config_json, build_version, ip_hash, issued_at, expires_at
@@ -337,6 +351,30 @@ const requireMetricKind = (rawEvent, expectedKind, { allowHistorical = false } =
   return metricKind;
 };
 
+/**
+ * The puzzle a Sudoku win came from, when the browser sends one. It is
+ * optional on purpose: a Worker released before the browser that carries it
+ * must keep accepting wins, exactly as it does for a lagging build version.
+ * Both fields travel together — one without the other is a malformed event,
+ * not a legacy one.
+ */
+const normalizeSudokuIdentity = (rawEvent, { allowHistorical = false } = {}) => {
+  const hasPuzzleId = rawEvent.puzzleId !== undefined && rawEvent.puzzleId !== null;
+  const hasPuzzle = rawEvent.puzzle !== undefined && rawEvent.puzzle !== null;
+  if (!hasPuzzleId && !hasPuzzle) return {};
+  const puzzleId = normalizeEventString(rawEvent.puzzleId, "Sudoku puzzle id", {
+    allowHistorical,
+  });
+  const puzzle = normalizeEventString(rawEvent.puzzle, "Sudoku puzzle", {
+    allowHistorical,
+  });
+  if (!SUDOKU_PUZZLE_ID_PATTERN.test(puzzleId) || !SUDOKU_PUZZLE_PATTERN.test(puzzle)) {
+    if (allowHistorical) return {};
+    throw new HttpError(400, "Invalid Sudoku puzzle identity");
+  }
+  return { puzzleId, puzzle };
+};
+
 const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } = {}) => {
   if (!isPlainObject(rawEvent)) throw new HttpError(400, "event must be an object");
   const game = normalizeEventString(rawEvent.game, "Event game", { allowHistorical });
@@ -437,12 +475,13 @@ const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } =
     ) {
       throw new HttpError(400, "Invalid Sudoku event");
     }
+    const identity = normalizeSudokuIdentity(rawEvent, { allowHistorical });
     const metricSource = rawEvent.metric;
     if (metricSource === undefined || metricSource === null || metricSource === "") {
       if (!allowHistorical) {
         throw new HttpError(400, "Sudoku result requires a completion time");
       }
-      return { id, game, type, occurredAt, difficulty, hintBucket, profile };
+      return { id, game, type, occurredAt, difficulty, hintBucket, ...identity, profile };
     }
     return {
       id,
@@ -451,6 +490,7 @@ const normalizeGameStatsEventInternal = (rawEvent, { allowHistorical = false } =
       occurredAt,
       difficulty,
       hintBucket,
+      ...identity,
       metric: normalizeMetric(metricSource, "Sudoku time", {
         minValue: 1,
         maxValue: MAX_SUDOKU_SECONDS,
@@ -648,7 +688,14 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
   return stats;
 };
 
-const eventToInsertParams = (event) => [
+/**
+ * The stored identity of the puzzle a Sudoku win came from, or null when the
+ * event carries none. This is the value the partial unique index constrains.
+ */
+const puzzleKeyOf = (event) =>
+  event.puzzleId && event.puzzle ? `${event.puzzleId}:${event.puzzle}` : null;
+
+const eventToResultParams = (event) => [
   event.id,
   event.game,
   event.type,
@@ -663,6 +710,11 @@ const eventToInsertParams = (event) => [
   event.occurredAt,
 ];
 
+const eventToInsertParams = (event) => [
+  ...eventToResultParams(event),
+  puzzleKeyOf(event),
+];
+
 const rowToEvent = (row) => ({
   id: row.id,
   game: row.game,
@@ -673,6 +725,7 @@ const rowToEvent = (row) => ({
   metric: row.metric === null || row.metric === undefined ? undefined : Number(row.metric),
   metricKind: row.metric_kind || undefined,
   occurredAt: row.occurred_at,
+  ...splitPuzzleKey(row.puzzle_key),
   profile: row.player_id
     ? {
         id: row.player_id,
@@ -682,9 +735,28 @@ const rowToEvent = (row) => ({
     : null,
 });
 
-const storedEventMatches = (storedEvent, event) =>
-  JSON.stringify(eventToInsertParams(storedEvent)) ===
-  JSON.stringify(eventToInsertParams(event));
+const splitPuzzleKey = (puzzleKey) => {
+  const separator = String(puzzleKey || "").lastIndexOf(":");
+  if (separator <= 0) return {};
+  return {
+    puzzleId: puzzleKey.slice(0, separator),
+    puzzle: puzzleKey.slice(separator + 1),
+  };
+};
+
+/**
+ * Whether a replayed event id carries the same result. A row stored before
+ * the identity rollout has no puzzle key, so it still matches an event that
+ * now brings one; a stored key that differs never does.
+ */
+const storedEventMatches = (storedEvent, event) => {
+  const storedKey = puzzleKeyOf(storedEvent);
+  if (storedKey && storedKey !== puzzleKeyOf(event)) return false;
+  return (
+    JSON.stringify(eventToResultParams(storedEvent)) ===
+    JSON.stringify(eventToResultParams(event))
+  );
+};
 
 const assertStoredEventMatches = (storedEvent, event) => {
   if (!storedEventMatches(storedEvent, event)) {
@@ -1183,6 +1255,23 @@ const selectExistingEvent = async (env, id) => {
   return row ? rowToEvent(row) : null;
 };
 
+/**
+ * The win this player already has on record for this puzzle, if any. This is
+ * what closes the multi-tab races the browser's claim list cannot: same-instant
+ * completions, a claim dropped by concurrent writes, and eviction past the
+ * claim list's cap all arrive here as a second event id for one puzzle.
+ */
+const selectEventForPuzzle = async (env, event) => {
+  const puzzleKey = puzzleKeyOf(event);
+  const playerId = event.profile?.id;
+  if (!puzzleKey || !playerId) return null;
+  const row = await getGameStatsDatabase(env)
+    .prepare(SELECT_EVENT_BY_PUZZLE_SQL)
+    .bind(playerId, puzzleKey)
+    .first();
+  return row ? rowToEvent(row) : null;
+};
+
 const createSession = async (request, env, rawPayload) => {
   assertAllowedKeys(rawPayload, ["game", "config", "buildVersion", "turnstileToken"], "session request");
   const security = requireSecurityConfig(env);
@@ -1253,14 +1342,6 @@ const validateSession = async (request, env, event, rawSession) => {
 
   const session = await getGameStatsDatabase(env).prepare(SELECT_SESSION_SQL).bind(sessionId).first();
   if (!session) throw new HttpError(409, "Game session is no longer on record");
-  if (session.consumed_at) {
-    const existing = await selectExistingEvent(env, event.id);
-    if (existing) {
-      assertStoredEventMatches(existing, event);
-      return null;
-    }
-    throw new HttpError(409, "Game session was already used");
-  }
   if (
     session.game !== event.game ||
     session.build_version !== tokenPayload.buildVersion ||
@@ -1285,9 +1366,41 @@ const validateSession = async (request, env, event, rawSession) => {
   }
   await requireSessionEligibility(event, sessionIssuedAt);
   await enforceRateLimit(env, ipHash, "events", MAX_EVENTS_PER_WINDOW);
+  // A spent session is judged last, once this submission has passed every
+  // check a fresh one must. All that is left to ask is what it duplicates: its
+  // own event id (a lost-response retry), or this player's standing win for
+  // the same puzzle (two tabs racing one session). Returning no session id
+  // lets the caller acknowledge the row that stands. Anything else reused a
+  // session for a new result.
+  if (session.consumed_at) {
+    const existing = await selectExistingEvent(env, event.id);
+    if (existing) {
+      assertStoredEventMatches(existing, event);
+      return null;
+    }
+    if (await selectEventForPuzzle(env, event)) return null;
+    throw new HttpError(409, "Game session was already used");
+  }
   return sessionId;
 };
 
+/** Spends a session on its own, for a result that stored no row. */
+const consumeGameStatsSession = (env, sessionId) => {
+  const consumedAt = new Date().toISOString();
+  return getGameStatsDatabase(env)
+    .prepare(CONSUME_SESSION_SQL)
+    .bind(consumedAt, sessionId, consumedAt)
+    .run();
+};
+
+/**
+ * Stores the event and spends its session as one batch.
+ *
+ * Returns the event id the result now stands under, which is not always the
+ * submitted one: a win that lost a race for its puzzle was never stored, and
+ * the caller must report the row that won rather than an id no client could
+ * ever find in `/stats`.
+ */
 const consumeSessionAndStoreEvent = async (env, sessionId, event) => {
   const database = getGameStatsDatabase(env);
   const consumedAt = new Date().toISOString();
@@ -1305,7 +1418,15 @@ const consumeSessionAndStoreEvent = async (env, sessionId, event) => {
     const existing = await selectExistingEvent(env, event.id);
     if (existing) {
       assertStoredEventMatches(existing, event);
-      return false;
+      return { applied: false, eventId: existing.id };
+    }
+    // The unique index rejected a second win for one puzzle. The batch rolled
+    // back, so the session is still open: spend it here, or this attempt could
+    // be replayed as a different result.
+    const recorded = await selectEventForPuzzle(env, event);
+    if (recorded) {
+      await consumeGameStatsSession(env, sessionId);
+      return { applied: false, eventId: recorded.id };
     }
     throw error;
   }
@@ -1315,11 +1436,16 @@ const consumeSessionAndStoreEvent = async (env, sessionId, event) => {
     const existing = await selectExistingEvent(env, event.id);
     if (existing) {
       assertStoredEventMatches(existing, event);
-      return false;
+      return { applied: false, eventId: existing.id };
     }
+    // Two tabs racing one session: the loser's batch changed nothing, and the
+    // winner already consumed the row. When both finished the same puzzle that
+    // is a duplicate to acknowledge, not a spent session to complain about.
+    const recorded = await selectEventForPuzzle(env, event);
+    if (recorded) return { applied: false, eventId: recorded.id };
     throw new HttpError(409, "Game session was already used");
   }
-  return true;
+  return { applied: true, eventId: event.id };
 };
 
 const handleOptions = (request, env) => {
@@ -1378,11 +1504,24 @@ const handlePostEvent = async (request, env) => {
     assertStoredEventMatches(existing, event);
     return jsonResponse(request, env, { ok: true, applied: false, eventId: event.id });
   }
+  // The duplicate shortcut sits behind session validation, not in front of it.
+  // A second tab finishing an already published puzzle is still a submission:
+  // its session is checked like any other and spent here, so acknowledging the
+  // duplicate cannot leave a validated session open for a different result.
   const sessionId = await validateSession(request, env, event, payload.session);
-  const applied = sessionId
+  const recordedForPuzzle = await selectEventForPuzzle(env, event);
+  if (recordedForPuzzle) {
+    if (sessionId) await consumeGameStatsSession(env, sessionId);
+    return jsonResponse(request, env, {
+      ok: true,
+      applied: false,
+      eventId: recordedForPuzzle.id,
+    });
+  }
+  const { applied, eventId } = sessionId
     ? await consumeSessionAndStoreEvent(env, sessionId, event)
-    : false;
-  return jsonResponse(request, env, { ok: true, applied, eventId: event.id }, applied ? 201 : 200);
+    : { applied: false, eventId: event.id };
+  return jsonResponse(request, env, { ok: true, applied, eventId }, applied ? 201 : 200);
 };
 
 const errorResponse = (request, env, error) => {

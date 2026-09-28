@@ -41,6 +41,7 @@ class MockD1Statement {
         playerName,
         playerIcon,
         occurredAt,
+        puzzleKey,
       ] = this.params;
       if (this.database.failNextEventInsert) {
         this.database.failNextEventInsert = false;
@@ -49,9 +50,21 @@ class MockD1Statement {
       if (this.database.events.has(id)) {
         throw new Error("UNIQUE constraint failed: game_events.id");
       }
+      // Mirrors the partial unique index migration 0003 adds.
+      if (
+        puzzleKey &&
+        playerId &&
+        [...this.database.events.values()].some(
+          (row) => row.puzzle_key === puzzleKey && row.player_id === playerId
+        )
+      ) {
+        throw new Error(
+          "UNIQUE constraint failed: game_events.player_id, game_events.puzzle_key"
+        );
+      }
       if (this.sql.includes("FROM game_stat_sessions")) {
-        const sessionId = this.params[12];
-        const unexpiredAt = this.params[13];
+        const sessionId = this.params[13];
+        const unexpiredAt = this.params[14];
         const session = this.database.sessions.get(sessionId);
         if (!session || session.consumed_at || session.expires_at <= unexpiredAt) {
           return { meta: { changes: 0 } };
@@ -70,6 +83,7 @@ class MockD1Statement {
         player_name: playerName,
         player_icon: playerIcon,
         occurred_at: occurredAt,
+        puzzle_key: puzzleKey ?? null,
       });
       return { meta: { changes: 1 } };
     }
@@ -149,6 +163,14 @@ class MockD1Statement {
     }
     if (/FROM\s+game_events\s+WHERE\s+id/i.test(this.sql)) {
       const row = this.database.events.get(this.params[0]);
+      return row ? projectEventRow(this.sql, row) : null;
+    }
+    if (/FROM\s+game_events\s+WHERE\s+player_id\s*=\s*\?\s+AND\s+puzzle_key/i.test(this.sql)) {
+      const [playerId, puzzleKey] = this.params;
+      const row = [...this.database.events.values()].find(
+        (candidate) =>
+          candidate.player_id === playerId && candidate.puzzle_key === puzzleKey
+      );
       return row ? projectEventRow(this.sql, row) : null;
     }
     if (this.sql.includes("FROM game_stat_sessions")) {
@@ -383,8 +405,349 @@ const storeTrustedEvent = (env, rawEvent) => {
     player_name: rawEvent.profile?.name || null,
     player_icon: rawEvent.profile?.icon || null,
     occurred_at: rawEvent.occurredAt,
+    puzzle_key:
+      rawEvent.puzzleId && rawEvent.puzzle
+        ? `${rawEvent.puzzleId}:${rawEvent.puzzle}`
+        : null,
   });
 };
+
+const SUDOKU_PUZZLE = "402030000795020003001705400100004005609000000248507310900108500800050071017043092";
+
+/**
+ * Two tabs finishing the same puzzle is the race the browser's claim list
+ * cannot close. The Worker deduplicates on the puzzle identity and the player,
+ * so the second event id is answered with the result that already stands.
+ */
+test("records one Sudoku win per puzzle and player however many tabs report it", async () => {
+  const env = createEnv();
+  const player = profile("player-sudoku-identity", "Identity");
+  const identity = { puzzleId: "generated-easy-abc123", puzzle: SUDOKU_PUZZLE };
+
+  const firstSession = await createSession(env, "sudoku", { difficulty: "easy" });
+  await ageSessionForCompletion(env, firstSession);
+  const firstEvent = event({
+    id: "event-sudoku-identity-a",
+    game: "sudoku",
+    type: "win",
+    difficulty: "easy",
+    hintBucket: "noHints",
+    ...identity,
+    metric: 91,
+    metricKind: "seconds",
+    profile: player,
+  });
+  const firstResponse = await postEvent(env, firstEvent, firstSession);
+
+  assert.equal(firstResponse.status, 201);
+  assert.deepEqual(await readJson(firstResponse), {
+    ok: true,
+    applied: true,
+    eventId: firstEvent.id,
+  });
+  assert.equal(
+    env.personal_site_game_stats.events.get(firstEvent.id).puzzle_key,
+    `${identity.puzzleId}:${identity.puzzle}`
+  );
+
+  // A second tab, its own event id and its own session, same puzzle.
+  const secondSession = await createSession(env, "sudoku", { difficulty: "easy" });
+  await ageSessionForCompletion(env, secondSession);
+  const secondEvent = { ...firstEvent, id: "event-sudoku-identity-b", metric: 77 };
+  const secondResponse = await postEvent(env, secondEvent, secondSession);
+
+  assert.equal(secondResponse.status, 200);
+  assert.deepEqual(await readJson(secondResponse), {
+    ok: true,
+    applied: false,
+    eventId: firstEvent.id,
+  });
+  assert.equal(env.personal_site_game_stats.events.size, 1);
+  // The duplicate is a submission like any other: its session was validated
+  // and spent, so it cannot be turned on a different result afterwards.
+  assert.ok(env.personal_site_game_stats.sessions.get(secondSession.id).consumed_at);
+  const reuseResponse = await postEvent(
+    env,
+    {
+      ...firstEvent,
+      id: "event-sudoku-identity-reuse",
+      puzzleId: "generated-easy-reuse",
+    },
+    secondSession
+  );
+  assert.equal(reuseResponse.status, 409);
+  assert.match((await readJson(reuseResponse)).error, /session was already used/);
+  assert.equal(env.personal_site_game_stats.events.size, 1);
+
+  // Another player finishing the same puzzle is not a duplicate.
+  const otherSession = await createSession(env, "sudoku", { difficulty: "easy" });
+  await ageSessionForCompletion(env, otherSession);
+  const otherResponse = await postEvent(
+    env,
+    {
+      ...firstEvent,
+      id: "event-sudoku-identity-c",
+      profile: profile("player-sudoku-other", "Other"),
+    },
+    otherSession
+  );
+
+  assert.equal(otherResponse.status, 201);
+  assert.equal(env.personal_site_game_stats.events.size, 2);
+});
+
+/**
+ * The same race, but with both writes in flight: the fast path finds nothing,
+ * and the partial unique index is what rejects the second insert.
+ */
+test("rejects a simultaneous second win for one puzzle at the unique index", async () => {
+  const env = createEnv();
+  const player = profile("player-sudoku-race", "Racer");
+  const sessions = await Promise.all([
+    createSession(env, "sudoku", { difficulty: "hard" }),
+    createSession(env, "sudoku", { difficulty: "hard" }),
+  ]);
+  await Promise.all(sessions.map((session) => ageSessionForCompletion(env, session)));
+  const base = event({
+    game: "sudoku",
+    type: "win",
+    difficulty: "hard",
+    hintBucket: "noHints",
+    puzzleId: "generated-hard-def456",
+    puzzle: SUDOKU_PUZZLE,
+    metric: 123,
+    metricKind: "seconds",
+    profile: player,
+  });
+
+  const responses = await Promise.all([
+    postEvent(env, { ...base, id: "event-sudoku-race-a" }, sessions[0]),
+    postEvent(env, { ...base, id: "event-sudoku-race-b" }, sessions[1]),
+  ]);
+  const statuses = responses.map((response) => response.status).sort();
+  const bodies = await Promise.all(responses.map(readJson));
+
+  assert.deepEqual(statuses, [200, 201]);
+  assert.deepEqual(
+    bodies.map((body) => body.applied).sort(),
+    [false, true]
+  );
+  assert.equal(env.personal_site_game_stats.events.size, 1);
+  // Both answers name the row that actually stands. The loser's own id was
+  // never stored, so returning it would send the client looking in `/stats`
+  // for an event that does not exist.
+  const [storedId] = [...env.personal_site_game_stats.events.keys()];
+  assert.deepEqual(
+    bodies.map((body) => body.eventId),
+    [storedId, storedId]
+  );
+  // Replaying the loser gets the same standing result rather than a conflict.
+  const loserId = ["event-sudoku-race-a", "event-sudoku-race-b"].find(
+    (id) => id !== storedId
+  );
+  const replaySession = await createSession(env, "sudoku", { difficulty: "hard" });
+  await ageSessionForCompletion(env, replaySession);
+  const replayResponse = await postEvent(env, { ...base, id: loserId }, replaySession);
+  assert.equal(replayResponse.status, 200);
+  assert.deepEqual(await readJson(replayResponse), {
+    ok: true,
+    applied: false,
+    eventId: storedId,
+  });
+  // Both sessions are spent: the loser's was consumed on its own after the
+  // batch rolled back, so it cannot be replayed with a different result.
+  assert.ok(
+    sessions.every(
+      (session) => env.personal_site_game_stats.sessions.get(session.id).consumed_at
+    )
+  );
+});
+
+/**
+ * A duplicate is acknowledged, not waved through. The shortcut sits behind
+ * session validation, so an unusable session is still refused, and two results
+ * racing one session end on the standing row rather than on a conflict.
+ */
+test("a duplicate Sudoku win is still validated like any other submission", async () => {
+  const env = createEnv();
+  const player = profile("player-sudoku-guard", "Guard");
+  const identity = { puzzleId: "generated-medium-guard", puzzle: SUDOKU_PUZZLE };
+  const base = event({
+    game: "sudoku",
+    type: "win",
+    difficulty: "medium",
+    hintBucket: "noHints",
+    ...identity,
+    metric: 143,
+    metricKind: "seconds",
+    profile: player,
+  });
+
+  const firstSession = await createSession(env, "sudoku", { difficulty: "medium" });
+  await ageSessionForCompletion(env, firstSession);
+  assert.equal(
+    (await postEvent(env, { ...base, id: "event-guard-a" }, firstSession)).status,
+    201
+  );
+
+  // A session for another game cannot buy a duplicate acknowledgement.
+  const wrongGameSession = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  await ageSessionForCompletion(env, wrongGameSession);
+  const wrongGameResponse = await postEvent(
+    env,
+    { ...base, id: "event-guard-wrong-game" },
+    wrongGameSession
+  );
+  assert.equal(wrongGameResponse.status, 403);
+
+  // Neither can a session started for a different difficulty.
+  const wrongConfigSession = await createSession(env, "sudoku", { difficulty: "hard" });
+  await ageSessionForCompletion(env, wrongConfigSession);
+  const wrongConfigResponse = await postEvent(
+    env,
+    { ...base, id: "event-guard-wrong-config" },
+    wrongConfigSession
+  );
+  assert.equal(wrongConfigResponse.status, 400);
+  assert.match(
+    (await readJson(wrongConfigResponse)).error,
+    /does not match the started game/
+  );
+
+  // An unsigned session proof is refused before the duplicate is looked up.
+  const forgedResponse = await postEvent(
+    env,
+    { ...base, id: "event-guard-forged" },
+    { id: firstSession.id, token: `${firstSession.token}x` }
+  );
+  assert.ok(forgedResponse.status >= 400);
+
+  assert.equal(env.personal_site_game_stats.events.size, 1);
+
+  // Two results for one puzzle sharing a session: the loser is told which row
+  // stands instead of being refused for a session it did nothing wrong with.
+  const sharedSession = await createSession(env, "sudoku", { difficulty: "medium" });
+  await ageSessionForCompletion(env, sharedSession);
+  const sharedResponses = await Promise.all([
+    postEvent(env, { ...base, id: "event-guard-shared-a" }, sharedSession),
+    postEvent(env, { ...base, id: "event-guard-shared-b" }, sharedSession),
+  ]);
+  const sharedBodies = await Promise.all(sharedResponses.map(readJson));
+
+  assert.deepEqual(
+    sharedResponses.map((response) => response.status),
+    [200, 200]
+  );
+  assert.deepEqual(
+    sharedBodies.map((body) => body.eventId),
+    ["event-guard-a", "event-guard-a"]
+  );
+  assert.equal(env.personal_site_game_stats.events.size, 1);
+});
+
+/** Rolling compatibility: a browser that predates the identity still publishes. */
+test("accepts a Sudoku win with no puzzle identity and rejects a half one", async () => {
+  const env = createEnv();
+  const session = await createSession(env, "sudoku", { difficulty: "medium" });
+  await ageSessionForCompletion(env, session);
+  const legacyEvent = event({
+    id: "event-sudoku-no-identity",
+    game: "sudoku",
+    type: "win",
+    difficulty: "medium",
+    hintBucket: "noHints",
+    metric: 64,
+    metricKind: "seconds",
+    profile: profile("player-sudoku-legacy", "Legacy"),
+  });
+
+  const response = await postEvent(env, legacyEvent, session);
+
+  assert.equal(response.status, 201);
+  assert.equal(env.personal_site_game_stats.events.get(legacyEvent.id).puzzle_key, null);
+
+  // One field without the other is malformed, not legacy.
+  const halfSession = await createSession(env, "sudoku", { difficulty: "medium" });
+  await ageSessionForCompletion(env, halfSession);
+  const halfResponse = await postEvent(
+    env,
+    { ...legacyEvent, id: "event-sudoku-half-identity", puzzleId: "generated-medium-1" },
+    halfSession
+  );
+
+  assert.equal(halfResponse.status, 400);
+  assert.match((await readJson(halfResponse)).error, /Sudoku puzzle/);
+  assert.equal(
+    env.personal_site_game_stats.sessions.get(halfSession.id).consumed_at,
+    null
+  );
+
+  // So is a puzzle string that is not a board.
+  const shapeSession = await createSession(env, "sudoku", { difficulty: "medium" });
+  await ageSessionForCompletion(env, shapeSession);
+  const shapeResponse = await postEvent(
+    env,
+    {
+      ...legacyEvent,
+      id: "event-sudoku-bad-identity",
+      puzzleId: "generated-medium-1",
+      puzzle: "not-a-board",
+    },
+    shapeSession
+  );
+
+  assert.equal(shapeResponse.status, 400);
+  assert.match((await readJson(shapeResponse)).error, /Invalid Sudoku puzzle identity/);
+});
+
+/** A row stored before the rollout has no key, so a retry that brings one matches. */
+test("replays an identified event id against a row stored without an identity", async () => {
+  const env = createEnv();
+  const identifiedEvent = event({
+    id: "event-sudoku-rollout-replay",
+    game: "sudoku",
+    type: "win",
+    difficulty: "easy",
+    hintBucket: "noHints",
+    puzzleId: "generated-easy-rollout",
+    puzzle: SUDOKU_PUZZLE,
+    metric: 55,
+    metricKind: "seconds",
+    profile: profile("player-sudoku-rollout", "Rollout"),
+  });
+  const { puzzleId, puzzle, ...storedEvent } = identifiedEvent;
+  storeTrustedEvent(env, storedEvent);
+  const session = await createSession(env, "sudoku", { difficulty: "easy" });
+  await ageSessionForCompletion(env, session);
+
+  const response = await postEvent(env, identifiedEvent, session);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await readJson(response), {
+    ok: true,
+    applied: false,
+    eventId: identifiedEvent.id,
+  });
+
+  // Only the stored key can contradict one: a row written without an identity
+  // accepts whichever the retry brings, and a row written with one does not.
+  storeTrustedEvent(env, { ...identifiedEvent, id: "event-sudoku-rollout-keyed" });
+  const conflictResponse = await postEvent(
+    env,
+    {
+      ...identifiedEvent,
+      id: "event-sudoku-rollout-keyed",
+      puzzleId: "generated-easy-other",
+    },
+    session
+  );
+
+  assert.equal(conflictResponse.status, 409);
+  assert.match(
+    (await readJson(conflictResponse)).error,
+    /already exists with a different result/
+  );
+});
 
 test("normalizes all supported game shapes and rejects malformed data", () => {
   assert.equal(normalizeGameStatsEvent(event()).metricKind, "seconds");
@@ -3232,4 +3595,78 @@ test("a session that was never stored is reported apart from a consumed one", as
   );
   assert.equal(consumed.status, 409);
   assert.equal((await readJson(consumed)).error, "Game session was already used");
+});
+
+test("a consumed session's duplicate is validated exactly like a fresh one", async () => {
+  const env = createEnv();
+  const player = profile("player-sudoku-spent", "Spent");
+  const identity = { puzzleId: "generated-easy-spent", puzzle: SUDOKU_PUZZLE };
+  const base = event({
+    game: "sudoku",
+    type: "win",
+    difficulty: "easy",
+    hintBucket: "noHints",
+    ...identity,
+    metric: 90,
+    metricKind: "seconds",
+    profile: player,
+  });
+  const session = await createSession(env, "sudoku", { difficulty: "easy" });
+  await ageSessionForCompletion(env, session);
+  assert.equal((await postEvent(env, { ...base, id: "event-spent-first" }, session)).status, 201);
+  assert.ok(env.personal_site_game_stats.sessions.get(session.id).consumed_at);
+
+  // A lost response retried with the same id is acknowledged.
+  const retry = await postEvent(env, { ...base, id: "event-spent-first" }, session);
+  assert.equal(retry.status, 200);
+  assert.equal((await readJson(retry)).eventId, "event-spent-first");
+
+  // A second tab's own id for the same puzzle is answered with the standing row.
+  const secondTab = await postEvent(
+    env,
+    { ...base, id: "event-spent-second-tab", metric: 75 },
+    session
+  );
+  assert.equal(secondTab.status, 200);
+  assert.deepEqual(await readJson(secondTab), {
+    ok: true,
+    applied: false,
+    eventId: "event-spent-first",
+  });
+
+  // A difficulty the session was not started for is refused, as a fresh
+  // session refuses it, not acknowledged.
+  const wrongDifficulty = await postEvent(
+    env,
+    { ...base, id: "event-spent-wrong-difficulty", difficulty: "hard" },
+    session
+  );
+  assert.equal(wrongDifficulty.status, 400);
+  assert.match((await readJson(wrongDifficulty)).error, /does not match the started game/);
+
+  // So is a result dated before the session began.
+  const early = await postEvent(
+    env,
+    {
+      ...base,
+      id: "event-spent-early",
+      occurredAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    },
+    session
+  );
+  assert.equal(early.status, 400);
+  assert.match((await readJson(early)).error, /outside its session window/);
+
+  // A different puzzle on the spent session is still a reused session.
+  const reuse = await postEvent(
+    env,
+    { ...base, id: "event-spent-reuse", puzzleId: "generated-easy-spent-next" },
+    session
+  );
+  assert.equal(reuse.status, 409);
+  assert.match((await readJson(reuse)).error, /already used/);
+
+  // The first result is the only row, unchanged.
+  assert.equal(env.personal_site_game_stats.events.size, 1);
+  assert.equal(env.personal_site_game_stats.events.get("event-spent-first").metric, 90);
 });

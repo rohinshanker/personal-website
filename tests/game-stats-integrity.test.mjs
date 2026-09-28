@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { GAME_BUILD_VERSION_PATTERN } from "../scripts/lib/game-build.mjs";
+import {
+  GAME_BUILD_VERSION_PATTERN,
+  INTEGRITY_CACHE_ASSET_PATHS,
+  digestGameCompletionSources,
+} from "../scripts/lib/game-build.mjs";
 import { parseJsonc } from "../scripts/lib/jsonc.mjs";
 import {
   GAME_COMPLETION_SOURCE_FILES,
@@ -63,13 +67,10 @@ test("game build metadata matches the completion source and Worker configuration
   assert.deepEqual(GAME_COMPLETION_SOURCE_FILES, [
     "scripts/home/main.js",
     "scripts/home/core/dom.js",
+    "scripts/home/sudoku-generator.worker.js",
   ]);
   for (const entryPoint of [home, index]) {
-    for (const assetPath of [
-      "scripts/home/game-stats-backend.js",
-      "scripts/home/core/dom.js",
-      "scripts/home/main.js",
-    ]) {
+    for (const assetPath of INTEGRITY_CACHE_ASSET_PATHS) {
       assert.match(entryPoint, new RegExp(`${assetPath.replaceAll(".", "\\.")}\\?v=${cacheToken}`));
     }
   }
@@ -110,4 +111,38 @@ test("the Worker's local build-identity copies match the shared script definitio
     ),
     MAX_GAME_BUILD_COMPATIBILITY_VERSIONS
   );
+});
+
+/**
+ * A pinned file list proves only that the list has not changed by accident. It
+ * says nothing about whether the digest actually follows the files it names, so
+ * this walks the declared list and mutates each source in memory in turn. A
+ * completion source left out of the digest — the Sudoku generator worker was —
+ * shows up here as a hash that does not move.
+ */
+test("changing any declared completion source changes the build version", async () => {
+  const sources = new Map(
+    await Promise.all(
+      GAME_COMPLETION_SOURCE_FILES.map(async (relativePath) => [
+        relativePath,
+        await readFile(new URL(`../${relativePath}`, import.meta.url)),
+      ])
+    )
+  );
+  const readSource = (relativePath) => {
+    const bytes = sources.get(relativePath);
+    assert.ok(bytes, `${relativePath} must be readable from the repository root`);
+    return bytes;
+  };
+  const unchanged = await digestGameCompletionSources(readSource);
+  assert.equal(unchanged, await calculateGameBuildVersion());
+
+  for (const mutated of GAME_COMPLETION_SOURCE_FILES) {
+    const digest = await digestGameCompletionSources((relativePath) =>
+      relativePath === mutated
+        ? Buffer.concat([readSource(relativePath), Buffer.from("\n// mutated\n")])
+        : readSource(relativePath)
+    );
+    assert.notEqual(digest, unchanged, `${mutated} must be inside the build digest`);
+  }
 });

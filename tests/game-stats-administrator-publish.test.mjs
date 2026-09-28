@@ -105,6 +105,55 @@ const loadSyncHarness = async ({ submissions, eventResponses, proof }) => {
   return context;
 };
 
+/**
+ * The Worker acknowledges a duplicate with the event id that already stands,
+ * which is not the one that was submitted. That submission stored nothing, so
+ * confirming it would add a second win to the browser's totals that no later
+ * refresh could ever take back: the reconciliation only drops a confirmed
+ * event once its own id appears in the server's list, and a losing id never
+ * does.
+ */
+test("a superseded duplicate is dropped from the queue without being counted", async () => {
+  const context = await loadSyncHarness({
+    submissions: [createSubmission("event-duplicate-loser")],
+    eventResponses: [
+      {
+        status: 200,
+        body: { ok: true, applied: false, eventId: "event-duplicate-winner" },
+      },
+    ],
+    proof: "valid.proof",
+  });
+
+  await context.syncForTest();
+  const state = jsonClone(context.readForTest());
+
+  assert.equal(state.eventRequests.length, 1);
+  assert.deepEqual(state.gameStatsSubmissionQueue, []);
+  assert.deepEqual(state.confirmedEvents, []);
+  assert.equal(state.gameStatsSyncState, "ready");
+  assert.equal(state.gameStatsSyncMessage, "Global stats are up to date.");
+});
+
+test("a result the Worker stored under its own id is still confirmed", async () => {
+  const context = await loadSyncHarness({
+    submissions: [createSubmission("event-duplicate-winner")],
+    eventResponses: [
+      {
+        status: 201,
+        body: { ok: true, applied: true, eventId: "event-duplicate-winner" },
+      },
+    ],
+    proof: "valid.proof",
+  });
+
+  await context.syncForTest();
+  const state = jsonClone(context.readForTest());
+
+  assert.deepEqual(state.confirmedEvents, ["event-duplicate-winner"]);
+  assert.deepEqual(state.gameStatsSubmissionQueue, []);
+});
+
 const REJECTED_MESSAGE =
   "Local stats are saved, but a result could not pass server verification.";
 
