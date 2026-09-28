@@ -1884,10 +1884,10 @@ const reportGameStatsSessionFailure = (
     status === 429
       ? `${prefix}${subject} verified game session request was rate limited. Try again later.`
       : reason === "invalid-response"
-      ? `${prefix}${subject} game server returned an invalid session response. Start a new game and try again.`
-      : `${prefix}${subject} verified game session request failed${
-          status ? ` (HTTP ${status})` : ""
-        }. Start a new game and try again.`;
+        ? `${prefix}${subject} game server returned an invalid session response. Start a new game and try again.`
+        : `${prefix}${subject} verified game session request failed${
+            status ? ` (HTTP ${status})` : ""
+          }. Start a new game and try again.`;
   setGameStatsSyncState("request-failed", { message });
 };
 
@@ -8432,10 +8432,12 @@ const startDistressPowerSequence = () => {
       targetProgress - distressPowerVisibleProgress > 0.09;
     if (shouldJump) {
       const jumpSize = 0.018 + Math.random() * 0.09;
-      distressPowerVisibleProgress = clampNumber(
-        Math.min(targetProgress + Math.random() * 0.035, distressPowerVisibleProgress + jumpSize),
-        distressPowerVisibleProgress,
-        1
+      distressPowerVisibleProgress = Math.min(
+        1,
+        Math.max(
+          distressPowerVisibleProgress,
+          Math.min(targetProgress + Math.random() * 0.035, distressPowerVisibleProgress + jumpSize)
+        )
       );
     }
     setDistressPowerProgress(distressPowerVisibleProgress);
@@ -17716,29 +17718,43 @@ const getTaskbarViewportClearance = () => {
   return Math.max(0, window.innerHeight - rect.top);
 };
 
-const clampWindowTitleBarPosition = (win, left, top) => {
+const readWindowTitleBarClampGeometry = (win, windowRect = null) => {
   const titleBar = win?.querySelector(".title-bar");
-  if (!win || !titleBar) return { left, top };
+  if (!win || !titleBar) return null;
 
-  const rect = win.getBoundingClientRect();
+  const rect = windowRect || win.getBoundingClientRect();
   const titleRect = titleBar.getBoundingClientRect();
-  const titleOffsetX = titleRect.left - rect.left;
-  const titleOffsetY = titleRect.top - rect.top;
+  return {
+    height: titleRect.height,
+    offsetX: titleRect.left - rect.left,
+    offsetY: titleRect.top - rect.top,
+    width: titleRect.width,
+  };
+};
+
+const clampWindowTitleBarPosition = (
+  win,
+  left,
+  top,
+  geometry = readWindowTitleBarClampGeometry(win)
+) => {
+  if (!geometry) return { left, top };
+  const { height, offsetX: titleOffsetX, offsetY: titleOffsetY, width } = geometry;
   const viewportPadding = 0;
   const viewportRight = window.innerWidth - viewportPadding;
   const viewportBottom =
     window.innerHeight - getTaskbarViewportClearance() - viewportPadding;
   const maxLeft =
-    titleRect.width > viewportRight
+    width > viewportRight
       ? viewportPadding - titleOffsetX
-      : viewportRight - titleRect.width - titleOffsetX;
+      : viewportRight - width - titleOffsetX;
   const minLeft =
-    titleRect.width > viewportRight
-      ? viewportRight - titleRect.width - titleOffsetX
+    width > viewportRight
+      ? viewportRight - width - titleOffsetX
       : viewportPadding - titleOffsetX;
   const maxTop = Math.max(
     viewportPadding - titleOffsetY,
-    viewportBottom - titleRect.height - titleOffsetY
+    viewportBottom - height - titleOffsetY
   );
   const minTop = viewportPadding - titleOffsetY;
 
@@ -17748,8 +17764,8 @@ const clampWindowTitleBarPosition = (win, left, top) => {
   };
 };
 
-const setWindowTitleBarClampedPosition = (win, left, top) => {
-  const position = clampWindowTitleBarPosition(win, left, top);
+const setWindowTitleBarClampedPosition = (win, left, top, geometry) => {
+  const position = clampWindowTitleBarPosition(win, left, top, geometry);
   const { insetX, insetY } = getRandomEventVisualInsets(win);
   win.style.left = `${position.left - insetX}px`;
   win.style.top = `${position.top - insetY}px`;
@@ -17938,8 +17954,12 @@ const expandSmallWindow = (win) => {
   const titleBar = win.querySelector(".title-bar");
   const maxWidth = Math.max(320, window.innerWidth - 48);
   const maxHeight = Math.max(260, window.innerHeight - 86);
-  const nextWidth = Math.round(clampNumber(rect.width + 240, rect.width * 2, maxWidth));
-  const nextHeight = Math.round(clampNumber(rect.height + 180, rect.height * 2, maxHeight));
+  const nextWidth = Math.round(
+    clampNumber(Math.max(rect.width * 2, rect.width + 240), 0, maxWidth)
+  );
+  const nextHeight = Math.round(
+    clampNumber(Math.max(rect.height * 2, rect.height + 180), 0, maxHeight)
+  );
   const maxLeft = Math.max(24, window.innerWidth - nextWidth - 24);
   const maxTop = Math.max(16, window.innerHeight - nextHeight - 70);
   const nextLeft = Math.round(clampNumber(rect.left, 24, maxLeft));
@@ -19419,10 +19439,12 @@ const tickSudokuLoadingSequence = () => {
   const jump = 3 + Math.random() * 14;
   const catchup = Math.max(0, targetProgress - sudokuState.loadingProgress) * 0.58;
   setSudokuLoadingProgress(
-    clampNumber(
-      sudokuState.loadingProgress + jump + catchup,
-      sudokuState.loadingProgress + 1,
-      98
+    Math.min(
+      98,
+      Math.max(
+        sudokuState.loadingProgress + 1,
+        sudokuState.loadingProgress + jump + catchup
+      )
     )
   );
 
@@ -21242,7 +21264,7 @@ document.querySelectorAll(".portfolio-window").forEach((windowEl) => {
       event.preventDefault();
       const bodyRect = body.getBoundingClientRect();
       const startX = event.clientX;
-      const startWidth = selectorPanel.offsetWidth;
+      const startWidth = selectorPanel.getBoundingClientRect().width;
       const minWidth = 200;
       const maxWidth = clampNumber(bodyRect.width - 220, minWidth, 420);
 
@@ -26629,44 +26651,6 @@ let nekoRunAssetsPreloadStarted = false;
 let nekoRunAssetsLoaded = false;
 let nekoRunAssetsPreloadPromise = null;
 const nekoPreloadedRunAssetImages = [];
-const NEKO_RUN_ASSET_PRELOAD_ATTEMPTS = 3;
-
-const preloadNekoRunAsset = (src, attempt = 1) =>
-  new Promise((resolve) => {
-    const image = new Image();
-    let settled = false;
-    const finish = async (loaded) => {
-      if (settled) return;
-      settled = true;
-      image.removeEventListener("load", handleLoad);
-      image.removeEventListener("error", handleError);
-      if (loaded && image.naturalWidth) {
-        try {
-          await image.decode();
-        } catch (error) {
-          // A completed image remains usable when decode() is unavailable or redundant.
-        }
-        if (image.naturalWidth) {
-          nekoPreloadedRunAssetImages.push(image);
-          resolve(true);
-          return;
-        }
-      }
-      if (attempt < NEKO_RUN_ASSET_PRELOAD_ATTEMPTS) {
-        resolve(preloadNekoRunAsset(src, attempt + 1));
-        return;
-      }
-      resolve(false);
-    };
-    const handleLoad = () => void finish(true);
-    const handleError = () => void finish(false);
-
-    image.decoding = "async";
-    image.addEventListener("load", handleLoad, { once: true });
-    image.addEventListener("error", handleError, { once: true });
-    image.src = src;
-    if (image.complete) queueMicrotask(() => void finish(Boolean(image.naturalWidth)));
-  });
 
 const preloadNekoRunAssets = () => {
   if (nekoRunAssetsPreloadStarted) return nekoRunAssetsPreloadPromise;
@@ -26677,10 +26661,26 @@ const preloadNekoRunAssets = () => {
   ]);
 
   nekoRunAssetsPreloadPromise = Promise.all(
-    Array.from(assetUrls, (src) => preloadNekoRunAsset(src))
-  ).then((results) => {
-    nekoRunAssetsLoaded = results.every(Boolean);
-    return nekoRunAssetsLoaded;
+    Array.from(assetUrls, (src) =>
+      new Promise((resolve) => {
+        const image = new Image();
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        };
+
+        image.decoding = "async";
+        image.addEventListener("load", finish, { once: true });
+        image.addEventListener("error", finish, { once: true });
+        image.src = src;
+        if (image.complete) finish();
+        nekoPreloadedRunAssetImages.push(image);
+      })
+    )
+  ).then(() => {
+    nekoRunAssetsLoaded = true;
   });
 
   return nekoRunAssetsPreloadPromise;
@@ -31236,10 +31236,8 @@ const dispatchWindowResize = () => {
     windowResizeFrameId = 0;
 
     // Collect layout measurements before any resize handler mutates the page.
-    const titleBarClamps = readVisibleWindowTitleBarClamps();
     const portfolioWindowSizes = readPortfolioWindowSizes();
 
-    clampVisibleWindowTitleBars(titleBarClamps);
     portfolioWindowSizes.forEach(({ win, width, height }) => {
       setPortfolioResponsiveState(win, width, height);
     });
@@ -31257,6 +31255,7 @@ const dispatchWindowResize = () => {
     updateRelicRecoveryViewportFit();
     clampVisibleRandomEventWindows();
     updateLifeCounterWidthControls();
+    clampVisibleWindowTitleBars(readVisibleWindowTitleBarClamps());
   });
 };
 
@@ -31298,6 +31297,7 @@ draggableWindows.forEach((win) => {
     const startY = event.clientY;
     const offsetX = event.clientX - rect.left;
     const offsetY = event.clientY - rect.top;
+    const dragTitleBarGeometry = readWindowTitleBarClampGeometry(win, rect);
     let didDragWindow = false;
 
     if (win.id === "about-window" || win.id === "game-profile-dialog") {
@@ -31318,7 +31318,7 @@ draggableWindows.forEach((win) => {
       }
       const nextLeft = moveEvent.clientX - offsetX;
       const nextTop = moveEvent.clientY - offsetY;
-      setWindowTitleBarClampedPosition(win, nextLeft, nextTop);
+      setWindowTitleBarClampedPosition(win, nextLeft, nextTop, dragTitleBarGeometry);
     };
 
     const upHandler = (upEvent) => {
