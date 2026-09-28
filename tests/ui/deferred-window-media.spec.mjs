@@ -67,6 +67,16 @@ const realTriggerEventIds = Object.freeze([
   "john-pork",
   "lain-system-alert",
   "soot-sprites",
+  "lancer-battle",
+  "human-instrumentality-project",
+]);
+
+const chainedWindowIds = Object.freeze([
+  "skill-check-result-window",
+  "distress-upload-window",
+  "stalker-result-window",
+  "midnight-gospel-meditation-window",
+  "noble-steed-result-window",
 ]);
 
 const configureAdministratorApi = async (page) => {
@@ -243,6 +253,13 @@ window.__deferredMediaTest = Object.freeze({
   windowId: (id) => getAdminRandomEventPreviewSource(
     randomEventDefinitions.find((definition) => definition.id === id)
   )?.id,
+  showChained: (id) => ({
+    "skill-check-result-window": () => showSkillCheckResultWindow(20),
+    "distress-upload-window": showDistressUploadWindow,
+    "stalker-result-window": showStalkerResultWindow,
+    "midnight-gospel-meditation-window": showMidnightGospelMeditationWindow,
+    "noble-steed-result-window": showNobleSteedResultWindow,
+  })[id](),
   show: (id) => randomEventDefinitions.find((definition) => definition.id === id).run({
     triggerName: "adminControls", detail: { source: "media-test" }, admin: true,
   }),
@@ -264,10 +281,25 @@ window.__deferredMediaTest = Object.freeze({
       await page.evaluate((id) => window.__deferredMediaTest.show(id), eventId);
       await expectDecodedImages(liveWindow, `cold event ${eventId}`);
       if (eventId === "rohin-os-note" || eventId === "lain-system-alert") {
+        const screenshotPath = testInfo.outputPath(`${eventId}-${viewport.name}.png`);
+        await page.screenshot({ path: screenshotPath, animations: "disabled" });
         await testInfo.attach(`${eventId}-${viewport.name}`, {
-          body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
+          path: screenshotPath, contentType: "image/png",
         });
       }
+      await liveWindow.evaluate((element) => {
+        element.classList.remove("is-opening", "is-closing");
+        element.classList.add("is-hidden");
+        element.setAttribute("aria-hidden", "true");
+      });
+    }
+    for (const windowId of chainedWindowIds) {
+      const liveWindow = page.locator(`#${windowId}:not([data-admin-event-preview-window])`);
+      await expect(liveWindow).toBeHidden();
+      expect(await liveWindow.locator("img[data-src]:not([src])").count(),
+        `${windowId} starts with cold media`).toBeGreaterThan(0);
+      await page.evaluate((id) => window.__deferredMediaTest.showChained(id), windowId);
+      await expectDecodedImages(liveWindow, `cold chained window ${windowId}`);
       await liveWindow.evaluate((element) => {
         element.classList.remove("is-opening", "is-closing");
         element.classList.add("is-hidden");

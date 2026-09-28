@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-09-27
+- Last verified: 2026-09-28
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -131,7 +131,8 @@ tags (the six Minesweeper and three Solitaire seven-segment counter digits,
 plus the Leaderboard Profile reroll icon, whose file is already eager on the
 desktop) and images whose boot-time render writes `src` (the Study Resources
 tree and Life Counter, six each), which carry `src` at runtime without a
-markup change. The Minesweeper cell-number preload still starts only when that
+markup change. Lazily created gallery loader chrome also sets `src` on demand
+and should be counted separately from initial markup. The Minesweeper cell-number preload still starts only when that
 game window opens. `tests/ui/deferred-window-media.spec.mjs` opens the affected
 app windows and triggers the affected events for real through Admin Controls;
 the Admin preview activates its clone itself, so a preview render proves
@@ -170,7 +171,9 @@ The deferred-media browser spec covers both the Admin Trigger Now path and cold
 show callbacks. Trigger Now preloads the live DOM before invoking an event, so
 it cannot alone detect a missing show-path loader. Keep the cold callback checks
 and their assertion that source-less deferred images exist before each call.
-A mutation removing the shared managed-window loader must fail on Lain; removing
+Chained result callbacks are checked cold too; fixed-size markup counts remain a
+separate Node contract. Screenshots are saved by path after finite animations
+finish, so they survive the default reporter. A mutation removing the shared managed-window loader must fail on Lain; removing
 the Rohin Note loader must fail on that note. Restore mutations before gates.
 
 ## Cache-busting tokens
