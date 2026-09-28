@@ -1,10 +1,10 @@
-# O_round3-handoff__20260928 — Open
+# A_round3-handoff__20260928 — Active
 
 - Scope: Resume the two in-flight streams from the 2026-09-27/28 ticket-closing session: the deferred-media spec confirmation and the Sudoku follow-ups branch. Everything approved is on `main`; everything unreviewed sits on local branches named below.
-- Status: open
+- Status: active
 - Opened: 2026-09-28
 - Updated: 2026-09-28
-- Current State: Paused by the owner on 2026-09-28 so the machine could sleep. `main` holds every reviewed change through `edf010e` (hidden-window media deferral, approved product change) plus the runbook note `e76dc76`. Two local branches carry unreviewed work: `coord/deferred-media-spec` (`0ec5c1f`, one test/doc commit) and `agent/claude-implementer/dem-143-7dd6fa7bdbf2` (`57796d2`: five finished Sudoku follow-up items plus a WIP commit for item 2). Multica runs were cancelled; no run is active.
+- Current State: Media verification resumed by `pw-close-tickets-2` in `/Users/Rohin/.cache/pw-media-resume`; Sudoku resumed with the existing Claude implementer issue DEM-143 (run `01a0e84b-fd8b-73e0-8347-25117797af21`), per owner instruction. Previously paused by the owner on 2026-09-28 so the machine could sleep. `main` holds every reviewed change through `edf010e` (hidden-window media deferral, approved product change) plus the runbook note `e76dc76`. Two local branches carry unreviewed work: `coord/deferred-media-spec` (`0ec5c1f`, one test/doc commit) and `agent/claude-implementer/dem-143-7dd6fa7bdbf2` (`57796d2`: five finished Sudoku follow-up items plus a WIP commit for item 2). Multica runs were cancelled; no run is active.
 - Verification: Each branch's own gates are listed under its section; the shared gate list is in `docs/validation/site-quality-gates.md`. Before pushing anything from a branch, run `npm test`, `npm run test:ui`, `npm run test:ui:accessibility`, `npm run test:visual` (Colima), `node scripts/update-game-integrity.mjs --check`, and `node /Users/Rohin/scripts/check-ticket-context.mjs`.
 - Cleanup: When both branches have landed, delete this ticket and its index row; the Sudoku follow-ups ticket resolves on its own terms.
 
@@ -25,3 +25,9 @@
 - Multica review runs sometimes end with "refusing to record branch" when a reviewer detaches HEAD; the review content is still posted to the issue. Stale worktrees from those runs are removed with `git worktree remove`.
 - The Multica daemon auto-updated to 0.5.3 during the session and restarted twice; interrupted runs were re-queued automatically with no data loss.
 - Colima was started only for `npm run test:visual` and stopped at the end of the session.
+
+## Resumed verification
+
+- Both individual mutations on the original Trigger Now spec passed: the shared managed-window loader and Rohin Note loader. Root cause: `runAdminRandomEvent` calls `preloadRandomEventAssets`, which fills live DOM sources first.
+- Added cold callback coverage beside real Trigger Now coverage, with a precondition asserting unactivated images. Shared-loader removal fails at Lain (four undecoded images); Rohin Note removal fails at its computer icon. Both mutations restored; production code unchanged.
+- Cold callbacks passed at mobile/wide before mutation. Final four-viewport checks, full gates and reviewer confirmation pending.

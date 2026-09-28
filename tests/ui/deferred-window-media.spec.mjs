@@ -1,9 +1,12 @@
 import { expect, test } from "./fixtures.mjs";
+import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(150_000);
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
+  { name: "tablet", width: 768, height: 1024 },
+  { name: "desktop", width: 1280, height: 800 },
   { name: "wide", width: 1440, height: 900 },
 ]);
 
@@ -45,8 +48,8 @@ const affectedEventIds = Object.freeze([
   "lancer-battle",
 ]);
 
-// Events whose real show paths activate deferred media. The Admin preview
-// activates a clone itself, so only a real trigger exercises these calls.
+// The Admin preview activates a clone. Trigger Now exercises the live windows,
+// including the preloader; the cold-path test below isolates their show callbacks.
 const realTriggerEventIds = Object.freeze([
   "annoying-system-alert",
   "vanishing-popup-alert",
@@ -225,6 +228,52 @@ for (const viewport of viewports) {
       await expect(liveWindow).toBeHidden();
     }
 
+    expect(diagnostics.consoleErrors).toEqual([]);
+    expect(diagnostics.runtimeErrors).toEqual([]);
+  });
+}
+
+// Trigger Now preloads the live node before calling definition.run. Exercise the
+// same callbacks without that warm-up too, so a missing show-path loader fails.
+for (const viewport of viewports) {
+  test(`event show callbacks decode cold media at ${viewport.name}`, async ({ page }, testInfo) => {
+    const source = await readIsolatedMainSource();
+    const instrumented = source.replace(/\n\}\)\(\);\s*$/, `
+window.__deferredMediaTest = Object.freeze({
+  windowId: (id) => getAdminRandomEventPreviewSource(
+    randomEventDefinitions.find((definition) => definition.id === id)
+  )?.id,
+  show: (id) => randomEventDefinitions.find((definition) => definition.id === id).run({
+    triggerName: "adminControls", detail: { source: "media-test" }, admin: true,
+  }),
+});
+})();
+`);
+    expect(instrumented).not.toBe(source);
+    await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
+      route.fulfill({ contentType: "application/javascript", body: instrumented })
+    );
+    const diagnostics = await preparePage(page, viewport);
+    for (const eventId of realTriggerEventIds) {
+      const windowId = await page.evaluate((id) => window.__deferredMediaTest.windowId(id), eventId);
+      expect(windowId).toBeTruthy();
+      const liveWindow = page.locator(`#${windowId}:not([data-admin-event-preview-window])`);
+      await expect(liveWindow).toBeHidden();
+      expect(await liveWindow.locator("img[data-src]:not([src])").count(),
+        `${eventId} starts with cold media`).toBeGreaterThan(0);
+      await page.evaluate((id) => window.__deferredMediaTest.show(id), eventId);
+      await expectDecodedImages(liveWindow, `cold event ${eventId}`);
+      if (eventId === "rohin-os-note" || eventId === "lain-system-alert") {
+        await testInfo.attach(`${eventId}-${viewport.name}`, {
+          body: await page.screenshot(), contentType: "image/png",
+        });
+      }
+      await liveWindow.evaluate((element) => {
+        element.classList.remove("is-opening", "is-closing");
+        element.classList.add("is-hidden");
+        element.setAttribute("aria-hidden", "true");
+      });
+    }
     expect(diagnostics.consoleErrors).toEqual([]);
     expect(diagnostics.runtimeErrors).toEqual([]);
   });

@@ -2,7 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| O | 2026-09-28 | [O_round3-handoff__20260928.md](O_round3-handoff__20260928.md) | Resume two paused streams: confirm the deferred-media spec fix on `coord/deferred-media-spec`, then finish Sudoku follow-ups on `agent/claude-implementer/dem-143-7dd6fa7bdbf2` (5 of 9 done, item 2 WIP preserved). |
+| A | 2026-09-28 | [A_round3-handoff__20260928.md](A_round3-handoff__20260928.md) | Media mutation verification and Sudoku implementation resumed. Original streams: confirm the deferred-media spec fix on `coord/deferred-media-spec`, then finish Sudoku follow-ups on `agent/claude-implementer/dem-143-7dd6fa7bdbf2` (5 of 9 done, item 2 WIP preserved). |
 | O | 2026-09-24 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Audit decisions: session budget, Minesweeper timer and close behaviour, Snake game-over loop, queue retry, expired sessions, compatibility cap, D1 id and indexes, deploy gating. Awaiting owner. |
 | O | 2026-09-24 | [O_decide-content-and-assets__20260924.md](O_decide-content-and-assets__20260924.md) | Audit decisions: Clash Royale remnants, Study Resources stub, 26 MB unreferenced calendar photos, originals and working files, background quality, shoot markup from data, pdf-window templating, renames, 98.css trim. Awaiting owner. |
 | O | 2026-09-24 | [O_decide-architecture-and-testing__20260924.md](O_decide-architecture-and-testing__20260924.md) | Audit decisions: DOM lookup strategy, defer/non-blocking load order, dialog ARIA pattern, lazy Admin Controls, load-bearing debug flag, linter, PR triggers, textual-test conversion, build-hash scope. Awaiting owner. |

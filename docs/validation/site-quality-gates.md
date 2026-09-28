@@ -166,6 +166,13 @@ ffmpeg -i in.mov -vf "scale='min(1920,iw)':-2" -c:v libx264 -crf 26 \
 ffmpeg -v error -i in.png -vf "alphaextract,signalstats,metadata=print:key=lavfi.signalstats.YMIN:file=-" -frames:v 1 -f null -
 ```
 
+The deferred-media browser spec covers both the Admin Trigger Now path and cold
+show callbacks. Trigger Now preloads the live DOM before invoking an event, so
+it cannot alone detect a missing show-path loader. Keep the cold callback checks
+and their assertion that source-less deferred images exist before each call.
+A mutation removing the shared managed-window loader must fail on Lain; removing
+the Rohin Note loader must fail on that note. Restore mutations before gates.
+
 ## Cache-busting tokens
 
 Every local stylesheet and script tag in `index.html`, `home.html`,
