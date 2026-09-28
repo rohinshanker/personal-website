@@ -393,6 +393,9 @@ The contract:
   the short-lived security tables are swept.
 - Each run logs the two counts and the purge timestamp. Cloudflare's scheduled
   invocation log is where to confirm the cron fired.
+- First deployed with the purge handler as Worker version
+  `6d26f54b-b328-46df-a0ab-6c01e3db9ac4` (release run 36366610966,
+  2026-09-28, `schedule: 0 * * * *` reported by the deploy).
 
 Verify a deployed change to the handler:
 
