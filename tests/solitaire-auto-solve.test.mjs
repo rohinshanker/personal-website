@@ -304,7 +304,7 @@ test("random boards replay legally, flip surfaced cards, and stop only when noth
 test("the toolbar swaps Reset for the check icon and the board hosts the flight layers", () => {
   assert.match(
     homeSource,
-    /<button class="sol-reset" id="sol-reset" type="button" aria-label="Reset game" title="Reset game">[\s\S]*?<\/button>\s*<button class="sol-auto-solve" id="sol-auto-solve" type="button" aria-label="Auto-solve game" title="Auto-solve game" hidden>\s*<img src="assets\/app-icons\/ico\/check\.ico" alt="" \/>\s*<\/button>/
+    /<button class="sol-reset" id="sol-reset" type="button" aria-label="Reset game" title="Reset game">[\s\S]*?<\/button>\s*<button class="sol-auto-solve" id="sol-auto-solve" type="button" aria-label="Auto-solve game" title="Auto-solve game" hidden>\s*<img data-src="assets\/app-icons\/ico\/check\.ico" width="22" height="22" alt="" \/>\s*<\/button>/
   );
   assert.match(homeSource, /solitaire\.css\?v=cache-token-parity-20260927/);
   assert.match(styleSource, /\.sol-reset,\n\.sol-undo,\n\.sol-auto-solve \{/);

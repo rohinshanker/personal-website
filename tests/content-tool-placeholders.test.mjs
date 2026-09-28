@@ -79,7 +79,10 @@ test("Video Editor owns an accessible new-tab confirmation prompt", async () => 
   assert.match(section, /aria-modal="false"/);
   assert.match(section, /aria-hidden="true"/);
   assert.match(section, />Video Editor<\/div>/);
-  assert.match(section, /src="assets\/app-icons\/ico\/camera3_vid\.ico" alt=""/);
+  assert.match(
+    section,
+    /data-src="assets\/app-icons\/ico\/camera3_vid\.ico" width="48" height="48" alt=""/
+  );
   assert.match(section, />Open video editor in new tab\?<\/p>/);
   assert.doesNotMatch(section, />Coming soon<\/p>/);
   assert.match(
@@ -149,7 +152,10 @@ test("Image Tools keeps its accessible Coming soon alert unchanged", async () =>
   assert.match(section, /aria-modal="false"/);
   assert.match(section, /aria-hidden="true"/);
   assert.match(section, />Image Tools<\/div>/);
-  assert.match(section, /src="assets\/app-icons\/ico\/pcx_alt\.ico" alt=""/);
+  assert.match(
+    section,
+    /data-src="assets\/app-icons\/ico\/pcx_alt\.ico" width="48" height="48" alt=""/
+  );
   assert.match(section, />Coming soon<\/p>/);
   assert.equal(count(section, /data-close="image-tools"/g), 2);
   assert.match(

@@ -43,7 +43,10 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
   assert.match(home, /id="administrator-sign-in"[^>]*>\s*Sign In\s*</);
   assert.match(home, /id="administrator-alert-window"/);
   assert.match(home, /class="window app-window random-alert-window is-hidden administrator-alert-window"/);
-  assert.match(home, /src="assets\/app-icons\/ico\/msg_warning\.ico" alt=""/);
+  assert.match(
+    home,
+    /data-src="assets\/app-icons\/ico\/msg_warning\.ico" width="48" height="48" alt=""/
+  );
   assert.match(home, /<p>Administrator access granted\.<\/p>/);
   assert.doesNotMatch(home, /Game Progress profile updated to rohin \^\.\^\./);
   assert.match(home, /id="administrator-alert-close"/);

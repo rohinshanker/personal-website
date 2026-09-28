@@ -188,7 +188,7 @@ test("Admin launch access requires an active Administrator session proof", async
   assert.match(standInMarkup, /id="admin-controls-stand-in-title">Admin Controls<\/div>/);
   assert.match(
     standInMarkup,
-    /<img src="assets\/app-icons\/ico\/program_manager\.ico" alt="" \/>/
+    /<img data-src="assets\/app-icons\/ico\/program_manager\.ico" width="48" height="48" alt="" \/>/
   );
   assert.match(
     standInMarkup,
