@@ -20278,7 +20278,9 @@ const recordSudokuCompletion = () => {
 const checkSudokuBoard = () => {
   const result = validateSudokuBoard();
   if (!result.complete || !result.valid) {
-    if (sudokuState.checksUsed >= SUDOKU_MAX_LEADERBOARD_CHECKS) {
+    // Only a check that reveals a mistake spends an allowance, so an exhausted
+    // quota blocks a check that would mark errors and nothing else.
+    if (!result.valid && sudokuState.checksUsed >= SUDOKU_MAX_LEADERBOARD_CHECKS) {
       clearSudokuHighlights();
       sudokuState.mistakes = 0;
       setSudokuStatus("No checks remaining");
@@ -20286,10 +20288,10 @@ const checkSudokuBoard = () => {
       return;
     }
 
-    sudokuState.checksUsed += 1;
     const diagnosticResult = validateSudokuBoard({ mark: true });
     sudokuState.mistakes = diagnosticResult.mistakes;
     if (!diagnosticResult.valid) {
+      sudokuState.checksUsed += 1;
       setSudokuStatus("System alert");
     } else {
       triggerSudokuCheckBubbleBurst();

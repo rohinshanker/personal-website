@@ -664,6 +664,56 @@ test("Errors confirmation is repeatable, puzzle-scoped, and disqualifies only af
   expectNoUnexpectedRuntimeErrors(runtimeErrors);
 });
 
+test("a check that finds no mistake is free before and after the quota is spent", async ({
+  page,
+}) => {
+  const { runtimeErrors, sudokuWindow } = await preparePage(page);
+  const checkButton = sudokuWindow.locator("#sudoku-check");
+  const counter = sudokuWindow.locator("#sudoku-leaderboard-checks");
+  const status = sudokuWindow.locator("#sudoku-status");
+
+  // A clean partial board: validated, celebrated, and never counted.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await checkButton.click();
+    await expect(status).toHaveText("Ready");
+    await expect(counter).toHaveText(CHECK_COUNTER_TEXT(0));
+  }
+  expect(await readState(page)).toMatchObject({ checksUsed: 0, usedHint: false });
+
+  // Only mistake-revealing checks spend the allowance.
+  const { cell } = await enterIncorrectDigit(page, sudokuWindow);
+  for (let count = 1; count <= 3; count += 1) {
+    await checkButton.click();
+    await expect(counter).toHaveText(CHECK_COUNTER_TEXT(count));
+    await expect(status).toHaveText("System alert");
+    await expect(cell).toHaveClass(/is-invalid/);
+  }
+
+  // With the quota spent, correcting the board makes Check work again for free.
+  const entry = await readIncorrectEntry(page);
+  await cell.click();
+  await sudokuWindow.locator(`[data-sudoku-number="${entry.solutionDigit}"]`).click();
+  await expect(cell).toHaveAttribute("data-sudoku-value", entry.solutionDigit);
+  await checkButton.click();
+  await expect(status).toHaveText("Ready");
+  await expect(counter).toHaveText(CHECK_COUNTER_TEXT(3));
+  await expect(sudokuWindow.locator("#sudoku-mistakes")).toHaveText("Mistakes: 0");
+  expect(await readState(page)).toMatchObject({
+    checksUsed: 3,
+    mistakes: 0,
+    usedHint: false,
+  });
+
+  // A board with errors still reports only the refusal and marks nothing.
+  await cell.click();
+  await sudokuWindow.locator(`[data-sudoku-number="${entry.incorrectDigit}"]`).click();
+  await checkButton.click();
+  await expect(status).toHaveText("No checks remaining");
+  await expect(counter).toHaveText(CHECK_COUNTER_TEXT(3));
+  await expect(cell).not.toHaveClass(/is-invalid/);
+  expectNoUnexpectedRuntimeErrors(runtimeErrors);
+});
+
 test("three diagnostic checks are allowed and a completed board remains submittable", async ({
   page,
 }) => {

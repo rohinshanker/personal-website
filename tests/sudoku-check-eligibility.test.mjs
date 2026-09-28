@@ -245,8 +245,8 @@ test("Errors mode only latches assistance after a visible mistake", async () => 
   });
 });
 
-test("three diagnostic checks reveal feedback but an exhausted check does not", async () => {
-  const { main } = await readSudokuSources();
+// Both check tests run the real checkSudokuBoard against the same stubs.
+const createSudokuCheckContext = (main) => {
   const checkSource = sourceBetween(
     main,
     "const normalizeSudokuCompletionClaims = (claims) =>",
@@ -269,7 +269,7 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
       "  solved: false, completionRecorded: false, difficulty: 'easy', statsSession: 'verified-session'",
       "};",
       "let result = { complete: false, valid: false, mistakes: 1 };",
-      "const observations = { markedCalls: 0, unmarkedCalls: 0, clears: 0, statuses: [], saves: 0, flushes: 0, claimWrites: 0, promptRefreshes: 0, records: [] };",
+      "const observations = { markedCalls: 0, unmarkedCalls: 0, clears: 0, statuses: [], saves: 0, flushes: 0, claimWrites: 0, promptRefreshes: 0, bursts: 0, records: [] };",
       "const validateSudokuBoard = ({ mark = false } = {}) => {",
       "  if (mark) observations.markedCalls += 1; else observations.unmarkedCalls += 1;",
       "  return { ...result };",
@@ -277,7 +277,7 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
       "const clearSudokuHighlights = () => { observations.clears += 1; };",
       "const setSudokuStatus = (status) => { observations.statuses.push(status); };",
       "const scheduleSudokuSave = () => { observations.saves += 1; };",
-      "const triggerSudokuCheckBubbleBurst = () => {};",
+      "const triggerSudokuCheckBubbleBurst = () => { observations.bursts += 1; };",
       "const triggerSudokuFullBubbleBurst = () => {};",
       "const triggerSudokuSolvedTileWave = () => {};",
       "const showSudokuSolvePopup = () => {};",
@@ -300,6 +300,12 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
     ].join("\n"),
     context
   );
+  return context;
+};
+
+test("three diagnostic checks reveal feedback but an exhausted check does not", async () => {
+  const { main } = await readSudokuSources();
+  const context = createSudokuCheckContext(main);
 
   context.checkForTest();
   context.checkForTest();
@@ -493,6 +499,78 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
     completionRecorded: true,
     statsSessionEligible: false,
     puzzleId: `${medium.id}-tab`,
+  });
+});
+
+test("a check that reveals no mistake is free and stays free once the quota is spent", async () => {
+  const { main } = await readSudokuSources();
+  const context = createSudokuCheckContext(main);
+  const readCheck = () => {
+    const snapshot = plainObject(context.readForTest());
+    return {
+      bursts: snapshot.observations.bursts,
+      checksUsed: snapshot.state.checksUsed,
+      clears: snapshot.observations.clears,
+      markedCalls: snapshot.observations.markedCalls,
+      mistakes: snapshot.state.mistakes,
+      status: snapshot.observations.statuses.at(-1),
+      usedHint: snapshot.state.usedHint,
+    };
+  };
+
+  // A clean but unfinished board: diagnosed, celebrated, and not counted.
+  context.setResultForTest({ complete: false, valid: true, mistakes: 0 });
+  context.checkForTest();
+  context.checkForTest();
+  assert.deepEqual(readCheck(), {
+    bursts: 2,
+    checksUsed: 0,
+    clears: 0,
+    markedCalls: 2,
+    mistakes: 0,
+    status: "Ready",
+    usedHint: false,
+  });
+
+  // Only the mistake-revealing checks spend the allowance.
+  context.setResultForTest({ complete: false, valid: false, mistakes: 2 });
+  context.checkForTest();
+  context.checkForTest();
+  context.checkForTest();
+  assert.deepEqual(readCheck(), {
+    bursts: 2,
+    checksUsed: 3,
+    clears: 0,
+    markedCalls: 5,
+    mistakes: 2,
+    status: "System alert",
+    usedHint: false,
+  });
+
+  // With the quota spent, a clean board still validates and stays free.
+  context.setResultForTest({ complete: false, valid: true, mistakes: 0 });
+  context.checkForTest();
+  assert.deepEqual(readCheck(), {
+    bursts: 3,
+    checksUsed: 3,
+    clears: 0,
+    markedCalls: 6,
+    mistakes: 0,
+    status: "Ready",
+    usedHint: false,
+  });
+
+  // A board with errors reports only the refusal and marks nothing.
+  context.setResultForTest({ complete: false, valid: false, mistakes: 4 });
+  context.checkForTest();
+  assert.deepEqual(readCheck(), {
+    bursts: 3,
+    checksUsed: 3,
+    clears: 1,
+    markedCalls: 6,
+    mistakes: 0,
+    status: "No checks remaining",
+    usedHint: false,
   });
 });
 
