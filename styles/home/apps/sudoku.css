@@ -907,9 +907,8 @@
 }
 
 /*
- * The board and its pause overlay share one box. The frame is wider than the
- * column at the narrowest viewport, so a stack sized to the frame is what puts
- * the resume button on the board's centre rather than the column's.
+ * The board and its pause overlay share one box so the resume button stays
+ * centered on the board at every responsive size.
  */
 .sudoku-board-stack {
   display: grid;
@@ -1657,7 +1656,7 @@
 
 @container (max-width: 540px) {
   .sudoku-game-content {
-    --sudoku-cell-size: max(30px, min(40px, calc((100cqw - 42px) / 9)));
+    --sudoku-cell-size: min(40px, calc((100cqw - 24px) / 9));
     grid-template-columns: 1fr;
   }
 
@@ -1667,6 +1666,11 @@
 
   .sudoku-control-section:first-child {
     grid-row: span 2;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .sudoku-number-grid {
+    grid-template-rows: repeat(4, minmax(30px, 1fr));
   }
 
   .sudoku-control-panel .sudoku-actions {
@@ -1675,6 +1679,10 @@
 }
 
 @media (max-width: 680px) {
+  .sudoku-app.is-sudoku-playing .sudoku-aero-panel {
+    padding-inline: 11px;
+  }
+
   .sudoku-window {
     width: min(94vw, 424px);
   }

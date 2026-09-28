@@ -34,6 +34,12 @@ const readSudokuLayout = (page) =>
     const panel = win.querySelector(".sudoku-control-panel");
     return {
       window: box(win),
+      aquarium: find(".sudoku-aero-panel"),
+      frame: find(".sudoku-grid-frame"),
+      keypad: find(".sudoku-number-grid"),
+      difficulty: find(".sudoku-difficulty-grid"),
+      digit: find(".sudoku-number-grid button"),
+      hints: find(".sudoku-hint-options"),
       board: find(".sudoku-board-column"),
       grid: find("#sudoku-grid"),
       panel: box(panel),
@@ -47,6 +53,7 @@ const readSudokuLayout = (page) =>
           top: rect.top,
           left: rect.left,
           width: rect.width,
+          bottom: rect.bottom,
         };
       }),
       actions: find(".sudoku-control-panel .sudoku-actions"),
@@ -61,82 +68,99 @@ const readSudokuLayout = (page) =>
     };
   });
 
-test("Sudoku places its controls beside the board on desktop", async ({ page }, testInfo) => {
-  await openHomeDesktop(page, DESKTOP);
-  await openSudokuBoard(page);
+for (const viewport of [DESKTOP, { width: 681, height: 900 }]) {
+  test(`Sudoku places its controls beside the board at ${viewport.width}px`, async ({ page }, testInfo) => {
+    await openHomeDesktop(page, viewport);
+    await openSudokuBoard(page);
 
-  const layout = await readSudokuLayout(page);
+    const layout = await readSudokuLayout(page);
 
-  expect(layout.window.width).toBeCloseTo(Math.min(DESKTOP.width * 0.94, 660), 1);
-  expect(layout.panel.left).toBeGreaterThanOrEqual(layout.board.right);
-  expect(layout.panel.top).toBeCloseTo(layout.board.top, 0);
-  expect(layout.panel.bottom).toBeCloseTo(layout.board.bottom, 0);
-  expect(layout.panel.width).toBeGreaterThanOrEqual(168);
+    expect(layout.window.width).toBeCloseTo(Math.min(viewport.width * 0.94, 660), 1);
+    expect(layout.panel.left).toBeGreaterThanOrEqual(layout.board.right);
+    expect(layout.panel.top).toBeCloseTo(layout.board.top, 0);
+    expect(layout.panel.bottom).toBeCloseTo(layout.board.bottom, 0);
+    expect(layout.panel.width).toBeGreaterThanOrEqual(168);
 
-  expect(layout.sections.map((section) => section.label)).toEqual([
-    "Numbers",
-    "Difficulty",
-    "Hints",
-  ]);
-  const sectionTops = layout.sections.map((section) => section.top);
-  expect(sectionTops).toEqual([...sectionTops].sort((a, b) => a - b));
+    expect(layout.sections.map((section) => section.label)).toEqual([
+      "Numbers",
+      "Difficulty",
+      "Hints",
+    ]);
+    const sectionTops = layout.sections.map((section) => section.top);
+    expect(sectionTops).toEqual([...sectionTops].sort((a, b) => a - b));
 
-  // The action row is pinned to the bottom of the control panel column.
-  expect(layout.actions.top).toBeGreaterThan(sectionTops.at(-1));
-  expect(layout.panel.bottom - layout.actions.bottom).toBeCloseTo(
-    layout.panelInsetBottom,
-    0
-  );
-  expect(layout.actions.left).toBeGreaterThanOrEqual(layout.board.right);
-  expect(layout.actionOrder).toEqual([
-    "sudoku-new",
-    "sudoku-undo",
-    "sudoku-redo",
-    "sudoku-pause",
-    "sudoku-check",
-  ]);
+    // The action row is pinned to the bottom of the control panel column.
+    expect(layout.actions.top).toBeGreaterThan(sectionTops.at(-1));
+    expect(layout.panel.bottom - layout.actions.bottom).toBeCloseTo(
+      layout.panelInsetBottom,
+      0
+    );
+    expect(layout.actions.left).toBeGreaterThanOrEqual(layout.board.right);
+    expect(layout.actionOrder).toEqual([
+      "sudoku-new",
+      "sudoku-undo",
+      "sudoku-redo",
+      "sudoku-pause",
+      "sudoku-check",
+    ]);
 
-  expect(layout.documentOverflows).toBe(false);
-  expect(layout.window.right).toBeLessThanOrEqual(DESKTOP.width);
+    expect(layout.documentOverflows).toBe(false);
+    expect(layout.window.right).toBeLessThanOrEqual(viewport.width);
 
-  await page.screenshot({
-    path: testInfo.outputPath("sudoku-desktop-1280x800.png"),
-    fullPage: true,
+    await page.screenshot({
+      path: testInfo.outputPath(`sudoku-desktop-${viewport.width}x${viewport.height}.png`),
+      fullPage: true,
+    });
   });
-});
 
-test("Sudoku stacks its controls under the board in the compact container", async ({
-  page,
-}, testInfo) => {
-  await openHomeDesktop(page, MOBILE);
-  await openSudokuBoard(page);
+}
 
-  const layout = await readSudokuLayout(page);
+for (const viewport of [MOBILE, { width: 680, height: 900 }]) {
+  test(`Sudoku stacks aligned controls under the board at ${viewport.width}px`, async ({
+    page,
+  }, testInfo) => {
+    await openHomeDesktop(page, viewport);
+    await openSudokuBoard(page);
 
-  expect(layout.panel.top).toBeGreaterThanOrEqual(layout.board.bottom);
-  expect(layout.panel.left).toBeCloseTo(layout.board.left, 0);
+    const layout = await readSudokuLayout(page);
 
-  // The control sections share two tracks and the action row spans both.
-  expect(layout.sections).toHaveLength(3);
-  expect(layout.sections[0].left).toBeLessThan(layout.sections[1].left);
-  expect(layout.actions.left).toBeCloseTo(layout.sections[0].left, 0);
-  expect(layout.actions.right).toBeCloseTo(
-    layout.sections[1].left + layout.sections[1].width,
-    0
-  );
+    expect(layout.panel.top).toBeGreaterThanOrEqual(layout.board.bottom);
+    expect(layout.panel.left).toBeCloseTo(layout.board.left, 0);
 
-  expect(layout.documentOverflows).toBe(false);
-  expect(layout.window.left).toBeGreaterThanOrEqual(0);
-  expect(layout.window.right).toBeLessThanOrEqual(MOBILE.width);
-  // The board is allowed to exceed its column track, but never the window.
-  expect(layout.grid.left).toBeGreaterThanOrEqual(layout.window.left);
-  expect(layout.grid.right).toBeLessThanOrEqual(layout.window.right);
+    // The control sections share two tracks and the action row spans both.
+    expect(layout.sections).toHaveLength(3);
+    expect(layout.sections[0].left).toBeLessThan(layout.sections[1].left);
+    expect(layout.actions.left).toBeCloseTo(layout.sections[0].left, 0);
+    expect(layout.actions.right).toBeCloseTo(
+      layout.sections[1].left + layout.sections[1].width,
+      0
+    );
 
-  await page.screenshot({
-    path: testInfo.outputPath("sudoku-mobile-375x812.png"),
-    fullPage: true,
+    expect(layout.documentOverflows).toBe(false);
+    expect(layout.window.left).toBeGreaterThanOrEqual(0);
+    expect(layout.window.right).toBeLessThanOrEqual(viewport.width);
+    // Both panels share the aquarium's centered content track. The grid must
+    // fit its own frame, including its borders, rather than overflow that track.
+    expect(layout.frame.width).toBeCloseTo(layout.panel.width, 0);
+    expect(layout.frame.left).toBeCloseTo(layout.panel.left, 0);
+    expect(layout.frame.left - layout.aquarium.left).toBeCloseTo(
+      layout.aquarium.right - layout.frame.right, 0
+    );
+    expect(layout.grid.left).toBeGreaterThan(layout.frame.left);
+    expect(layout.grid.right).toBeLessThan(layout.frame.right);
+    expect(layout.sections[0].top).toBeCloseTo(layout.sections[1].top, 0);
+    expect(layout.keypad.top).toBeCloseTo(layout.difficulty.top, 0);
+    expect(layout.keypad.bottom).toBeCloseTo(layout.hints.bottom, 0);
+    expect(layout.digit.height).toBeGreaterThan(30);
+    expect(layout.sections[0].width).toBeCloseTo(layout.sections[1].width, 0);
+
+    await page.screenshot({
+      path: testInfo.outputPath(`sudoku-mobile-${viewport.width}x${viewport.height}.png`),
+      fullPage: true,
+    });
   });
-});
+
+}
 
 test("the Sudoku status bar holds the timer in place while its neighbours change", async ({
   page,
