@@ -14,6 +14,7 @@
   --sudoku-cell-size: 40px;
   --sudoku-grid-line: rgba(0, 94, 154, 0.32);
   --sudoku-box-line: rgba(0, 47, 102, 0.82);
+  --sudoku-prompt-gold: #ffc21a;
   background: var(--surface);
   box-shadow: var(--border-raised-outer), var(--border-raised-inner);
   display: grid;
@@ -725,6 +726,51 @@
 #sudoku-check {
   overflow: visible;
   position: relative;
+}
+
+/* A full but unsolved board can only be resolved by Check. The button keeps a
+   gold glow for as long as that state lasts and plays the Windows 98
+   sunken-then-raised press twice when it begins. */
+#sudoku-check.is-board-full {
+  --sudoku-prompt-raised: var(--border-raised-outer), var(--border-raised-inner);
+  --sudoku-prompt-sunken: var(--border-sunken-outer), var(--border-sunken-inner);
+  --sudoku-prompt-glow: 0 0 0 2px var(--sudoku-prompt-gold),
+    0 0 14px 3px var(--sudoku-prompt-gold);
+  animation: sudoku-check-prompt-press 460ms ease-in-out 2;
+  box-shadow: var(--sudoku-prompt-raised), var(--sudoku-prompt-glow);
+}
+
+#sudoku-check.is-board-full:not(:disabled):active {
+  box-shadow: var(--sudoku-prompt-sunken), var(--sudoku-prompt-glow);
+  text-shadow: 1px 1px var(--text-color);
+}
+
+/* The duplicated stops keep each press instant: the 98 frame snaps, it does
+   not cross-fade. */
+@keyframes sudoku-check-prompt-press {
+  0%,
+  24% {
+    box-shadow: var(--sudoku-prompt-raised), var(--sudoku-prompt-glow);
+    text-shadow: 0 0 var(--text-color);
+  }
+
+  26%,
+  74% {
+    box-shadow: var(--sudoku-prompt-sunken), var(--sudoku-prompt-glow);
+    text-shadow: 1px 1px var(--text-color);
+  }
+
+  76%,
+  100% {
+    box-shadow: var(--sudoku-prompt-raised), var(--sudoku-prompt-glow);
+    text-shadow: 0 0 var(--text-color);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sudoku-check.is-board-full {
+    animation: none;
+  }
 }
 
 .sudoku-burst-effect {

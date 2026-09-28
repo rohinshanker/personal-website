@@ -156,6 +156,30 @@ window.__sudokuCheckControlsTest = Object.freeze({
     setSudokuStatus("Ready");
     return { editableCellCount };
   },
+  fillBoardWithMistake: () => {
+    const cells = sudokuCells();
+    let lastIndex = -1;
+    cells.forEach((cell, index) => {
+      if (isSudokuCellReadOnly(cell)) return;
+      updateSudokuCellValue(cell, index, sudokuState.solution[index], {
+        recordHistory: false,
+      });
+      lastIndex = index;
+    });
+    if (lastIndex < 0) throw new Error("Sudoku puzzle has no editable cell.");
+    const wrongDigit = SUDOKU_DIGITS.split("").find(
+      (digit) => digit !== sudokuState.solution[lastIndex]
+    );
+    updateSudokuCellValue(cells[lastIndex], lastIndex, wrongDigit, {
+      recordHistory: false,
+    });
+    return { lastIndex, wrongDigit };
+  },
+  clearCellAt: (index) => {
+    const cells = sudokuCells();
+    clearSudokuCellValueOrNotes(cells[index], index);
+    return sudokuState.values[index];
+  },
   readState: () => ({
     checksUsed: sudokuState.checksUsed,
     errorsConfirmed: sudokuState.errorsConfirmed,
@@ -212,10 +236,14 @@ const expectNoUnexpectedRuntimeErrors = (runtimeErrors) => {
   expect(unexpectedRequestFailures).toEqual([]);
 };
 
-const preparePage = async (page, viewport = viewports[2]) => {
+const preparePage = async (
+  page,
+  viewport = viewports[2],
+  { reducedMotion = "reduce" } = {}
+) => {
   const runtimeErrors = collectRuntimeErrors(page);
   await page.setViewportSize(viewport);
-  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.emulateMedia({ reducedMotion });
   await page.addInitScript(
     ({ profileKey, savedProfile }) => {
       Math.random = () => 0.999999;
@@ -391,6 +419,165 @@ const expectViewportContainment = async (page, sudokuWindow, prompt = null) => {
     internalOverflow.statusbarClientWidth
   );
 };
+
+const PROMPT_GOLD = "rgb(255, 194, 26)";
+
+const readCheckPrompt = (checkButton) =>
+  checkButton.evaluate((element) => ({
+    boxShadow: getComputedStyle(element).boxShadow,
+    presses: element.getAnimations().map((animation) => ({
+      iterations: animation.effect?.getTiming().iterations ?? null,
+      name: animation.animationName || null,
+    })),
+  }));
+
+// Windows 98 raised frames put the dark edge bottom-right; sunken frames swap
+// it for the highlight. Reading the frame mid-animation proves the press.
+const RAISED_FRAME = /^rgb\(10, 10, 10\) -1px -1px/;
+const SUNKEN_FRAME = /^rgb\(255, 255, 255\) -1px -1px/;
+
+const readCheckPressFrames = (checkButton) =>
+  checkButton.evaluate((element) => {
+    const animation = element
+      .getAnimations()
+      .find(
+        (candidate) => candidate.animationName === "sudoku-check-prompt-press"
+      );
+    if (!animation) throw new Error("The Check press animation is not running.");
+    animation.pause();
+    const frameAt = (time) => {
+      animation.currentTime = time;
+      return getComputedStyle(element).boxShadow;
+    };
+    const frames = {
+      firstPress: frameAt(200),
+      firstRelease: frameAt(440),
+      secondPress: frameAt(660),
+      start: frameAt(0),
+    };
+    animation.play();
+    return frames;
+  });
+
+const settleCheckPrompt = (checkButton) =>
+  checkButton.evaluate(async (element) => {
+    await Promise.allSettled(
+      element.getAnimations().map((animation) => animation.finished)
+    );
+    return getComputedStyle(element).boxShadow;
+  });
+
+for (const viewport of [viewports[0], viewports[3]]) {
+  test(`a full unsolved board prompts the Check button on the ${viewport.name} viewport`, async ({
+    page,
+  }, testInfo) => {
+    const { runtimeErrors, sudokuWindow } = await preparePage(page, viewport, {
+      reducedMotion: "no-preference",
+    });
+    const checkButton = sudokuWindow.locator("#sudoku-check");
+    const counter = sudokuWindow.locator("#sudoku-leaderboard-checks");
+    const status = sudokuWindow.locator("#sudoku-status");
+    const selectedKeypad = sudokuWindow.locator(
+      '[data-sudoku-number].is-selected'
+    );
+
+    await expect(checkButton).not.toHaveClass(/is-board-full/);
+    expect((await readCheckPrompt(checkButton)).boxShadow).not.toContain(
+      PROMPT_GOLD
+    );
+
+    const focusBeforePrompt = await page.evaluate(
+      () => document.activeElement?.id || ""
+    );
+    const keypadBeforePrompt = await selectedKeypad.count();
+    const filled = await page.evaluate(() =>
+      window.__sudokuCheckControlsTest.fillBoardWithMistake()
+    );
+
+    await expect(checkButton).toHaveClass(/is-board-full/);
+    const prompt = await readCheckPrompt(checkButton);
+    expect(prompt.presses).toEqual([
+      { iterations: 2, name: "sudoku-check-prompt-press" },
+    ]);
+    expect(prompt.boxShadow).toContain(PROMPT_GOLD);
+
+    const frames = await readCheckPressFrames(checkButton);
+    expect(frames.start).toMatch(RAISED_FRAME);
+    expect(frames.firstPress).toMatch(SUNKEN_FRAME);
+    expect(frames.firstRelease).toMatch(RAISED_FRAME);
+    expect(frames.secondPress).toMatch(SUNKEN_FRAME);
+    for (const frame of Object.values(frames)) {
+      expect(frame).toContain(PROMPT_GOLD);
+    }
+
+    // The prompt is visual only.
+    expect(await page.evaluate(() => document.activeElement?.id || "")).toBe(
+      focusBeforePrompt
+    );
+    await expect(status).toHaveText("Ready");
+    await expect(counter).toHaveText(CHECK_COUNTER_TEXT(0));
+    expect(await selectedKeypad.count()).toBe(keypadBeforePrompt);
+    expect(await readState(page)).toMatchObject({
+      checksUsed: 0,
+      solved: false,
+      usedHint: false,
+    });
+
+    // The glow outlasts the two presses.
+    expect(await settleCheckPrompt(checkButton)).toContain(PROMPT_GOLD);
+    await expect(checkButton).toHaveClass(/is-board-full/);
+
+    const promptScreenshot = testInfo.outputPath(
+      `sudoku-check-prompt-${viewport.width}x${viewport.height}.png`
+    );
+    await page.screenshot({ fullPage: true, path: promptScreenshot });
+    await testInfo.attach(`sudoku-check-prompt-${viewport.name}`, {
+      path: promptScreenshot,
+      contentType: "image/png",
+    });
+
+    // Clearing a cell ends it, and refilling replays the press.
+    await page.evaluate(
+      (index) => window.__sudokuCheckControlsTest.clearCellAt(index),
+      filled.lastIndex
+    );
+    await expect(checkButton).not.toHaveClass(/is-board-full/);
+    expect((await readCheckPrompt(checkButton)).boxShadow).not.toContain(
+      PROMPT_GOLD
+    );
+
+    await page.evaluate(() =>
+      window.__sudokuCheckControlsTest.fillBoardWithMistake()
+    );
+    await expect(checkButton).toHaveClass(/is-board-full/);
+    expect((await readCheckPrompt(checkButton)).presses).toEqual([
+      { iterations: 2, name: "sudoku-check-prompt-press" },
+    ]);
+
+    // Solving the board ends it.
+    await page.evaluate(() =>
+      window.__sudokuCheckControlsTest.prepareCompletedBoard()
+    );
+    await checkButton.click();
+    await expect(status).toHaveText("Solved");
+    await expect(checkButton).not.toHaveClass(/is-board-full/);
+    expectNoUnexpectedRuntimeErrors(runtimeErrors);
+  });
+}
+
+test("reduced motion keeps the Check glow without the press", async ({ page }) => {
+  const { runtimeErrors, sudokuWindow } = await preparePage(page);
+  const checkButton = sudokuWindow.locator("#sudoku-check");
+
+  await page.evaluate(() =>
+    window.__sudokuCheckControlsTest.fillBoardWithMistake()
+  );
+  await expect(checkButton).toHaveClass(/is-board-full/);
+  const prompt = await readCheckPrompt(checkButton);
+  expect(prompt.presses).toEqual([]);
+  expect(prompt.boxShadow).toContain(PROMPT_GOLD);
+  expectNoUnexpectedRuntimeErrors(runtimeErrors);
+});
 
 test("Errors confirmation is repeatable, puzzle-scoped, and disqualifies only after a visible error", async ({
   page,

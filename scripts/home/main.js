@@ -19760,6 +19760,25 @@ const showSudokuSolvePopup = () => {
   });
 };
 
+// A full but unsolved board can only be resolved by Check, so the button glows
+// gold and replays the sunken-then-raised press. The flag holds the current
+// state so a later board update cannot restart the press mid-glow.
+let sudokuFullBoardPromptActive = false;
+
+const refreshSudokuFullBoardPrompt = () => {
+  if (!sudokuCheck) return;
+  const values = sudokuState.values;
+  const isBoardFull =
+    !sudokuState.solved &&
+    Array.isArray(values) &&
+    values.length === SUDOKU_CELL_COUNT &&
+    values.every(Boolean);
+  if (isBoardFull === sudokuFullBoardPromptActive) return;
+  sudokuFullBoardPromptActive = isBoardFull;
+  // Adding the class is what starts the press, so every re-entry replays it.
+  sudokuCheck.classList.toggle("is-board-full", isBoardFull);
+};
+
 // Marks the selected cell, its row and column, and every other cell holding
 // the selected value. Runs on selection changes and after any value change.
 const updateSudokuBoardHighlights = () => {
@@ -19783,6 +19802,7 @@ const updateSudokuBoardHighlights = () => {
     cell.classList.toggle("is-axis-highlight", isAxisHighlight);
     cell.classList.toggle("is-same-value", isSameValue);
   });
+  refreshSudokuFullBoardPrompt();
 };
 
 const selectSudokuCell = (selectedCell) => {
@@ -20296,6 +20316,7 @@ const checkSudokuBoard = () => {
     }
     scheduleSudokuSave();
   }
+  refreshSudokuFullBoardPrompt();
 };
 
 const renderSudoku = () => {

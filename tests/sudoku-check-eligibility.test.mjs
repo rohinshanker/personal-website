@@ -31,7 +31,7 @@ test("Every entry point loads the current Sudoku stylesheet build", async () => 
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
   ]);
-  const reference = /styles\/home\/apps\/sudoku\.css\?v=html-semantics-20260927/;
+  const reference = /styles\/home\/apps\/sudoku\.css\?v=sudoku-check-prompt-20260927/;
 
   assert.match(home, reference);
   assert.match(index, reference);
@@ -269,7 +269,7 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
       "  solved: false, completionRecorded: false, difficulty: 'easy', statsSession: 'verified-session'",
       "};",
       "let result = { complete: false, valid: false, mistakes: 1 };",
-      "const observations = { markedCalls: 0, unmarkedCalls: 0, clears: 0, statuses: [], saves: 0, flushes: 0, claimWrites: 0, records: [] };",
+      "const observations = { markedCalls: 0, unmarkedCalls: 0, clears: 0, statuses: [], saves: 0, flushes: 0, claimWrites: 0, promptRefreshes: 0, records: [] };",
       "const validateSudokuBoard = ({ mark = false } = {}) => {",
       "  if (mark) observations.markedCalls += 1; else observations.unmarkedCalls += 1;",
       "  return { ...result };",
@@ -287,6 +287,7 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
       "const recordGameStatsEvent = (event, session, metadata) => { observations.records.push({ event, session, metadata }); };",
       "const triggerSudokuVictoryEffects = () => {};",
       "const triggerRandomEvents = () => {};",
+      "const refreshSudokuFullBoardPrompt = () => { observations.promptRefreshes += 1; };",
       checkSource,
       "globalThis.checkForTest = checkSudokuBoard;",
       "globalThis.setResultForTest = (next) => { result = { ...next }; };",
@@ -493,6 +494,100 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
     statsSessionEligible: false,
     puzzleId: `${medium.id}-tab`,
   });
+});
+
+test("the Check button prompts while the board is full and unsolved", async () => {
+  const { main, styles } = await readSudokuSources();
+  const promptSource = sourceBetween(
+    main,
+    "let sudokuFullBoardPromptActive = false;",
+    "\n\n// Marks the selected cell"
+  );
+  const highlightSource = sourceBetween(
+    main,
+    "const updateSudokuBoardHighlights = () => {",
+    "\n\nconst selectSudokuCell ="
+  );
+
+  assert.match(
+    highlightSource,
+    /refreshSudokuFullBoardPrompt\(\);\n\};$/,
+    "The prompt must ride the existing board-update path."
+  );
+  assert.doesNotMatch(
+    promptSource,
+    /focus\(\)|setSudokuStatus|updateSudokuNumberButtons|usedHint/,
+    "The prompt is visual only: no focus, status, keypad, or latch change."
+  );
+
+  const context = vm.createContext({});
+  vm.runInContext(
+    [
+      "const SUDOKU_CELL_COUNT = 81;",
+      "const classes = new Set();",
+      "let toggles = 0;",
+      "const sudokuCheck = { classList: { toggle: (name, on) => {",
+      "  toggles += 1;",
+      "  if (on) classes.add(name); else classes.delete(name);",
+      "} } };",
+      "let sudokuState = { solved: false, values: Array.from({ length: 81 }, () => '') };",
+      promptSource,
+      "globalThis.refreshForTest = refreshSudokuFullBoardPrompt;",
+      "globalThis.setBoardForTest = ({ filled = 81, solved = false } = {}) => {",
+      "  sudokuState.solved = solved;",
+      "  sudokuState.values = Array.from({ length: 81 }, (unused, index) => (index < filled ? '5' : ''));",
+      "};",
+      "globalThis.readForTest = () => ({ classes: [...classes], toggles });",
+    ].join("\n"),
+    context
+  );
+
+  const expectPrompt = (classes, toggles, message) => {
+    assert.deepEqual(plainObject(context.readForTest()), { classes, toggles }, message);
+  };
+
+  context.refreshForTest();
+  expectPrompt([], 0, "A partial board never touches the button.");
+
+  context.setBoardForTest({ filled: 81 });
+  context.refreshForTest();
+  expectPrompt(["is-board-full"], 1, "A full unsolved board starts the prompt.");
+
+  context.refreshForTest();
+  expectPrompt(
+    ["is-board-full"],
+    1,
+    "Later board updates must not restart the press mid-glow."
+  );
+
+  context.setBoardForTest({ filled: 80 });
+  context.refreshForTest();
+  expectPrompt([], 2, "Clearing a cell ends the prompt.");
+
+  context.setBoardForTest({ filled: 81 });
+  context.refreshForTest();
+  expectPrompt(["is-board-full"], 3, "Filling the board again replays the press.");
+
+  context.setBoardForTest({ filled: 81, solved: true });
+  context.refreshForTest();
+  expectPrompt([], 4, "Solving the puzzle ends the prompt.");
+
+  assert.match(styles, /--sudoku-prompt-gold: #[0-9a-f]{6};/);
+  assert.match(
+    styles,
+    /#sudoku-check\.is-board-full \{[\s\S]*?animation: sudoku-check-prompt-press [\d]+ms [a-z-]+ 2;[\s\S]*?box-shadow: var\(--sudoku-prompt-raised\), var\(--sudoku-prompt-glow\);/,
+    "The glow must outlast the two presses."
+  );
+  assert.match(
+    styles,
+    /@keyframes sudoku-check-prompt-press \{[\s\S]*?var\(--sudoku-prompt-sunken\)[\s\S]*?var\(--sudoku-prompt-raised\)[\s\S]*?\n\}/,
+    "The press must move through the sunken frame and back."
+  );
+  assert.match(
+    styles,
+    /@media \(prefers-reduced-motion: reduce\) \{\n  #sudoku-check\.is-board-full \{\n    animation: none;/,
+    "Reduced motion keeps the glow and drops only the press."
+  );
 });
 
 test("Sudoku never leaks correctness feedback while a player enters digits", async () => {
