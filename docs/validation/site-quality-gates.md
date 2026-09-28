@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-09-27
+- Last verified: 2026-09-28
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -121,6 +121,14 @@ with `+faststart`, never HEVC. File names carry no spaces. Every literal
 `assets/…` reference in shipped HTML, CSS, and JavaScript, and every modeling
 shoot file, must resolve with exact case because GitHub Pages is case-sensitive
 and macOS is not; `tests/asset-references.test.mjs` enforces it.
+
+Images inside initially hidden windows use `data-src`, carry intrinsic `width`
+and `height` when their rendered size is fixed, and are activated by the
+window's show path through `loadDeferredMedia` or `activateVisibleContent`.
+Seven-segment Minesweeper and Solitaire counters remain eager because their
+boot-time render writes `src`; the Minesweeper cell-number preload still starts
+only when that game window opens. Re-measure static first-paint resources with
+`node docs/validation/assets/initial-load.mjs "$PWD" home.html`.
 
 ```bash
 # Opaque artwork or photo (use -resize W 0 to cap the width)

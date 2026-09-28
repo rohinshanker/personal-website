@@ -204,7 +204,10 @@ test("Home shows the Modeling launch prompt every time the Modeling window opens
   assert.match(section, /aria-labelledby="modeling-launch-title"/);
   assert.match(section, /aria-describedby="modeling-launch-message"/);
   assert.match(section, /id="modeling-launch-title">Modeling<\/div>/);
-  assert.match(section, /src="assets\/app-icons\/ico\/accessibility_window_objs\.ico" alt=""/);
+  assert.match(
+    section,
+    /data-src="assets\/app-icons\/ico\/accessibility_window_objs\.ico" width="48" height="48" alt=""/
+  );
   assert.match(
     section,
     /id="modeling-launch-message">Open in separate tab \(rohin\.shanker\.me\/modeling\)\?<\/p>/

@@ -154,7 +154,7 @@ test("About Me provides the requested page structure and dated article", async (
   );
   assert.doesNotMatch(about, /about-degree-title/);
   assert.deepEqual(
-    [...about.matchAll(/<li class="about-degree-card">\s*<img src="([^"]+)" alt=""/g)].map(
+    [...about.matchAll(/<li class="about-degree-card">\s*<img data-src="([^"]+)" width="32" height="32" alt=""/g)].map(
       ([, source]) => source
     ),
     [
@@ -185,7 +185,7 @@ test("About Me provides the requested page structure and dated article", async (
   assert.match(about, /<p>Yours Truly,<\/p>\s*<p>Rohin Shanker<\/p>/);
   assert.match(
     about,
-    /class="about-signature"[\s\S]*?src="assets\/about-signature\.png"[\s\S]*?width="1404"[\s\S]*?height="648"[\s\S]*?alt="Rohin S\. Shanker handwritten signature"/
+    /class="about-signature"[\s\S]*?data-src="assets\/about-signature\.png"[\s\S]*?width="1404"[\s\S]*?height="648"[\s\S]*?alt="Rohin S\. Shanker handwritten signature"/
   );
   assert.match(
     about,

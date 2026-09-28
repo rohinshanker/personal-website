@@ -6051,6 +6051,7 @@ const showRandomAlert = ({ showRemember = false } = {}) => {
   resetRandomAlertSize();
   if (randomAlertRememberRow) randomAlertRememberRow.hidden = !showRemember;
   if (randomAlertRemember) randomAlertRemember.checked = false;
+  loadDeferredMedia(randomAlertWindow);
   randomAlertWindow.classList.remove("is-hidden", "is-closing", "is-choice-flashing");
   randomAlertWindow.setAttribute("aria-hidden", "false");
   positionRandomAlertWindow();
@@ -6183,6 +6184,7 @@ const showVanishingPopup = () => {
     return;
   }
   resetVanishingPopup();
+  loadDeferredMedia(vanishingPopupWindow);
   vanishingPopupWindow.classList.remove("is-hidden", "is-closing");
   vanishingPopupWindow.setAttribute("aria-hidden", "false");
   positionVanishingPopupWindow();
@@ -6333,6 +6335,7 @@ const showDodgingPopup = () => {
     return;
   }
   resetDodgingPopup();
+  loadDeferredMedia(dodgingPopupWindow);
   dodgingPopupWindow.classList.remove("is-hidden", "is-closing");
   dodgingPopupWindow.setAttribute("aria-hidden", "false");
   positionRandomEventWindowInViewport(dodgingPopupWindow);
@@ -6358,6 +6361,7 @@ const showSelfLoveAlert = () => {
     selfLoveAlertWindow.style.zIndex = String(topZ++);
     return;
   }
+  loadDeferredMedia(selfLoveAlertWindow);
   selfLoveAlertWindow.classList.remove("is-hidden", "is-closing", "is-yes-flashing");
   selfLoveAlertWindow.setAttribute("aria-hidden", "false");
   positionSelfLoveAlertWindow();
@@ -6398,6 +6402,7 @@ const showRohinUpdate = () => {
     rohinUpdateWindow.style.zIndex = String(topZ++);
     return;
   }
+  loadDeferredMedia(rohinUpdateWindow);
   rohinUpdateWindow.classList.remove("is-hidden", "is-closing");
   rohinUpdateWindow.setAttribute("aria-hidden", "false");
   positionRohinUpdateWindow();
@@ -6753,6 +6758,7 @@ const showRohinNote = () => {
     rohinNoteWindow.style.zIndex = String(topZ++);
     return;
   }
+  loadDeferredMedia(rohinNoteWindow);
   rohinNoteWindow.classList.remove("is-hidden", "is-closing");
   rohinNoteWindow.setAttribute("aria-hidden", "false");
   positionRohinNoteWindow();
@@ -6783,6 +6789,7 @@ const showEarthNote = () => {
     earthNoteWindow.style.zIndex = String(topZ++);
     return;
   }
+  loadDeferredMedia(earthNoteWindow);
   earthNoteWindow.classList.remove("is-hidden", "is-closing");
   earthNoteWindow.setAttribute("aria-hidden", "false");
   positionEarthNoteWindow();
@@ -6813,6 +6820,7 @@ const showHealthNote = () => {
     healthNoteWindow.style.zIndex = String(topZ++);
     return;
   }
+  loadDeferredMedia(healthNoteWindow);
   healthNoteWindow.classList.remove("is-hidden", "is-closing");
   healthNoteWindow.setAttribute("aria-hidden", "false");
   positionHealthNoteWindow();
@@ -6843,6 +6851,7 @@ const showLoveNote = () => {
     loveNoteWindow.style.zIndex = String(topZ++);
     return;
   }
+  loadDeferredMedia(loveNoteWindow);
   loveNoteWindow.classList.remove("is-hidden", "is-closing");
   loveNoteWindow.setAttribute("aria-hidden", "false");
   positionLoveNoteWindow();
@@ -7019,6 +7028,7 @@ const showManaFlood = () => {
     manaFloodWindow.style.zIndex = String(topZ++);
     return;
   }
+  loadDeferredMedia(manaFloodWindow);
   manaFloodWindow.classList.remove("is-hidden", "is-closing");
   manaFloodWindow.setAttribute("aria-hidden", "false");
   positionManaFloodWindow();
@@ -7049,6 +7059,7 @@ const showMimicWarning = () => {
     mimicWarningWindow.style.zIndex = String(topZ++);
     return;
   }
+  loadDeferredMedia(mimicWarningWindow);
   mimicWarningWindow.classList.remove("is-hidden", "is-closing");
   mimicWarningWindow.setAttribute("aria-hidden", "false");
   positionMimicWarningWindow();
@@ -7144,6 +7155,7 @@ const showSkillCheckResultWindow = (roll) => {
   if (skillCheckResultText) {
     skillCheckResultText.textContent = success ? SKILL_CHECK_SUCCESS_TEXT : SKILL_CHECK_FAILURE_TEXT;
   }
+  loadDeferredMedia(skillCheckResultWindow);
   skillCheckResultWindow.classList.remove("is-hidden", "is-closing");
   skillCheckResultWindow.setAttribute("aria-hidden", "false");
   positionSkillCheckWindow(skillCheckResultWindow);
@@ -7181,6 +7193,7 @@ const showSkillCheckWindow = () => {
     return;
   }
   resetSkillCheckWindow();
+  loadDeferredMedia(skillCheckWindow);
   skillCheckWindow.classList.remove("is-hidden", "is-closing");
   skillCheckWindow.setAttribute("aria-hidden", "false");
   positionSkillCheckWindow(skillCheckWindow);
@@ -8480,6 +8493,7 @@ const resetDistressSignal = () => {
 
 const showDistressUploadWindow = () => {
   if (!distressUploadWindow) return;
+  loadDeferredMedia(distressUploadWindow);
   distressUploadWindow.classList.remove("is-hidden", "is-closing");
   distressUploadWindow.setAttribute("aria-hidden", "false");
   positionRandomEventWindowInViewport(distressUploadWindow);
@@ -22102,6 +22116,7 @@ bindGalleryNavigation(
   updateAboutCarousel
 );
 void updateAboutCarousel();
+activateVisibleContent(aboutCarouselImage?.closest('[data-app-window="about"]'));
 
 bindGalleryNavigation(
   pathfinderPrev,

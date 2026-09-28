@@ -62,7 +62,7 @@ test("Lain is a single-message Wired chat with a permanently disabled reply comp
   );
   assert.match(
     markup,
-    /class="red-tool-system-alert lain-alert-system-alert">[\s\S]*?<img src="assets\/app-icons\/ico\/msg_information\.ico" alt="" \/>[\s\S]*?<strong class="red-tool-system-label">System Alert:<\/strong>\s*You cannot send any messages in this chat\./
+    /class="red-tool-system-alert lain-alert-system-alert">[\s\S]*?<img data-src="assets\/app-icons\/ico\/msg_information\.ico" width="18" height="18" alt="" \/>[\s\S]*?<strong class="red-tool-system-label">System Alert:<\/strong>\s*You cannot send any messages in this chat\./
   );
   assert.ok(
     markup.indexOf('class="red-tool-message lain-alert-message"') <
@@ -76,7 +76,7 @@ test("Lain is a single-message Wired chat with a permanently disabled reply comp
   );
   assert.match(
     markup,
-    /<img src="assets\/app-icons\/ico\/user_computer\.ico" alt="" \/>/
+    /<img data-src="assets\/app-icons\/ico\/user_computer\.ico" width="18" height="18" alt="" \/>/
   );
   assert.match(
     markup,
