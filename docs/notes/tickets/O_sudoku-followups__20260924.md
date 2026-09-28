@@ -4,7 +4,7 @@
 - Status: open
 - Opened: 2026-09-24
 - Updated: 2026-09-28
-- Current State: Items 3, 8, 7, 4, and 5 are implemented with tests on local branch `agent/claude-implementer/dem-143-7dd6fa7bdbf2` (tip `a95b7fb`, base `main` at `e76dc76`), unreviewed. Item 2 was in progress when the run was cancelled on 2026-09-28 and restarts from the branch tip; items 6, 1, and 9 are untouched. Resume per `O_round3-handoff__20260928.md`.
+- Current State: Items 3, 8, 7, 4, and 5 are implemented with tests on local branch `agent/claude-implementer/dem-143-7dd6fa7bdbf2` (tip `57796d2`, base `main` at `e76dc76`), unreviewed. Item 2 is a preserved WIP commit (`57796d2`, tests not yet green) from the run cancelled on 2026-09-28; items 6, 1, and 9 are untouched. Resume per `O_round3-handoff__20260928.md`.
 - Verification: Each item ships with its own tests per `docs/validation/site-quality-gates.md`; items that change `scripts/home/main.js` or `scripts/home/core/dom.js` regenerate the build hash; items 4, 5, and 6 also need a rendered pass at 375×812, 768×1024, 1280×800, and 1440×900 plus manual review of any new control.
 - Cleanup: Distill durable contracts into `docs/validation/sudoku-board-controls.md` or `docs/validation/sudoku-leaderboard-eligibility.md`, then delete this ticket and its index row.
 
