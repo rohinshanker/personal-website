@@ -113,12 +113,12 @@
     <link rel="stylesheet" href="styles/home/apps/snake.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-mobile-actions-20260928" />
     <!-- The Sudoku generator runs in a worker; main.js reads its versioned URL from here. -->
-    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-1b330337364e055e7bdc4a98caecf90a462d003ce5644b9051a9bef1a7a2dd25" as="worker" />
+    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-7d319ed0f9aba9f38d45c698ae10609b63396613f2663e43f0fe7f071efa4ec9" as="worker" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=education-scroll-gutter-20260923" />
     <link rel="stylesheet" href="styles/home/study-resources.css?v=html-semantics-20260927" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=html-semantics-20260927" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=loop-video-lifecycle-20260929" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cache-token-parity-20260927" />
     <link rel="stylesheet" href="styles/home/admin-controls.css?v=repo-hygiene-20260927" />
     <script
@@ -4158,7 +4158,9 @@
       <div class="window-body">
         <img
           id="feliz-jueves-image"
-          data-src="assets/random%20events/feliz-jueves.gif"
+          data-src="assets/optimized/random-events/feliz-jueves.webp"
+          width="498"
+          height="498"
           decoding="async"
           alt=""
         />
@@ -4878,7 +4880,9 @@
       <div class="window-body">
         <img
           class="nana-event-art"
-          data-src="assets/random%20events/nana-accept.gif"
+          data-src="assets/optimized/random-events/nana-accept.webp"
+          width="500"
+          height="274"
           decoding="async"
           alt=""
         />
@@ -4931,12 +4935,21 @@
         <div class="title-bar-text">Random Encounter</div>
       </div>
       <div class="window-body">
-        <img
+        <video
           class="serval-pizza-art"
-          data-src="assets/random%20events/servalpizza.gif"
-          decoding="async"
-          alt=""
-        />
+          data-loop-video="servalpizza"
+          data-loop-fallback="assets/optimized/random-events/servalpizza.webp"
+          data-poster="assets/optimized/random-events/servalpizza-poster.jpg"
+          width="628"
+          height="640"
+          loop
+          muted
+          playsinline
+          preload="auto"
+        >
+          <source data-src="assets/optimized/random-events/servalpizza.webm" type="video/webm" />
+          <source data-src="assets/optimized/random-events/servalpizza.mp4" type="video/mp4" />
+        </video>
         <div class="serval-pizza-actions">
           <button type="button" id="serval-pizza-cool">Cool!</button>
         </div>
@@ -5003,7 +5016,9 @@
         <div class="shoebill-event-message">
           <img
             class="shoebill-event-icon"
-            data-src="assets/random%20events/shoebill.gif"
+            data-src="assets/optimized/random-events/shoebill.webp"
+            width="220"
+            height="220"
             decoding="async"
             alt=""
           />
@@ -5209,26 +5224,53 @@
       </div>
       <div class="window-body">
         <div class="advertisement-media">
-          <img
+          <video
             id="advertisement-image"
-            data-src="assets/random%20events/evil-wizards-radar.gif"
-            decoding="async"
-            alt=""
-          />
-          <img
+            data-loop-video="evil-wizards-radar"
+            data-loop-fallback="assets/optimized/random-events/evil-wizards-radar.webp"
+            data-poster="assets/optimized/random-events/evil-wizards-radar-poster.jpg"
+            width="1280"
+            height="640"
+            loop
+            muted
+            playsinline
+            preload="auto"
+          >
+            <source data-src="assets/optimized/random-events/evil-wizards-radar.webm" type="video/webm" />
+            <source data-src="assets/optimized/random-events/evil-wizards-radar.mp4" type="video/mp4" />
+          </video>
+          <video
             class="advertisement-radar-overlay"
-            data-src="assets/random%20events/radar.gif"
-            decoding="async"
-            alt=""
+            data-loop-video="radar"
+            data-loop-fallback="assets/optimized/random-events/radar.webp"
+            data-poster="assets/optimized/random-events/radar-poster.jpg"
+            width="640"
+            height="640"
+            loop
+            muted
+            playsinline
+            preload="auto"
             aria-hidden="true"
-          />
-          <img
+          >
+            <source data-src="assets/optimized/random-events/radar.webm" type="video/webm" />
+            <source data-src="assets/optimized/random-events/radar.mp4" type="video/mp4" />
+          </video>
+          <video
             class="advertisement-text-pixel-overlay"
-            data-src="assets/random%20events/evil-wizards-radar.gif"
-            decoding="async"
-            alt=""
+            data-loop-video="evil-wizards-radar-text"
+            data-loop-fallback="assets/optimized/random-events/evil-wizards-radar.webp"
+            data-poster="assets/optimized/random-events/evil-wizards-radar-poster.jpg"
+            width="1280"
+            height="640"
+            loop
+            muted
+            playsinline
+            preload="auto"
             aria-hidden="true"
-          />
+          >
+            <source data-src="assets/optimized/random-events/evil-wizards-radar.webm" type="video/webm" />
+            <source data-src="assets/optimized/random-events/evil-wizards-radar.mp4" type="video/mp4" />
+          </video>
         </div>
         <button type="button" id="advertisement-no-thanks">No Thanks...</button>
       </div>
@@ -5568,12 +5610,21 @@
         <div class="title-bar-text">Campfire</div>
       </div>
       <div class="window-body">
-        <img
+        <video
           class="dst-campfire-image"
-          data-src="assets/random%20events/campfire.gif"
-          decoding="async"
-          alt=""
-        />
+          data-loop-video="campfire"
+          data-loop-fallback="assets/optimized/random-events/campfire.webp"
+          data-poster="assets/optimized/random-events/campfire-poster.jpg"
+          width="858"
+          height="824"
+          loop
+          muted
+          playsinline
+          preload="auto"
+        >
+          <source data-src="assets/optimized/random-events/campfire.webm" type="video/webm" />
+          <source data-src="assets/optimized/random-events/campfire.mp4" type="video/mp4" />
+        </video>
         <p>You survive the night</p>
         <div class="dst-result-actions">
           <button type="button" id="dst-survive-ok">OK</button>
@@ -5963,12 +6014,21 @@
       </div>
       <div class="window-body">
         <div class="red-tool-image lain-alert-image-frame">
-          <img
+          <video
             class="lain-alert-image"
-            data-src="assets/random%20events/lain.gif"
-            decoding="async"
-            alt=""
-          />
+            data-loop-video="lain"
+            data-loop-fallback="assets/optimized/random-events/lain.webp"
+            data-poster="assets/optimized/random-events/lain-poster.jpg"
+            width="500"
+            height="352"
+            loop
+            muted
+            playsinline
+            preload="auto"
+          >
+            <source data-src="assets/optimized/random-events/lain.webm" type="video/webm" />
+            <source data-src="assets/optimized/random-events/lain.mp4" type="video/mp4" />
+          </video>
         </div>
         <div
           class="red-tool-chat-log lain-alert-chat-log"
@@ -6923,13 +6983,13 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-1b330337364e055e7bdc4a98caecf90a462d003ce5644b9051a9bef1a7a2dd25"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-7d319ed0f9aba9f38d45c698ae10609b63396613f2663e43f0fe7f071efa4ec9"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
     <script src="scripts/home/system-alerts.js?v=repo-hygiene-20260927"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-1b330337364e055e7bdc4a98caecf90a462d003ce5644b9051a9bef1a7a2dd25"></script>
-    <script src="scripts/home/core/media.js?v=helper-dedupe-20260927"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-7d319ed0f9aba9f38d45c698ae10609b63396613f2663e43f0fe7f071efa4ec9"></script>
+    <script src="scripts/home/core/media.js?v=loop-video-lifecycle-20260929"></script>
     <script src="scripts/home/modeling-portfolio.js?v=modeling-portfolio-digitals-20260926"></script>
-    <script src="scripts/home/main.js?v=game-build-1b330337364e055e7bdc4a98caecf90a462d003ce5644b9051a9bef1a7a2dd25"></script>
+    <script src="scripts/home/main.js?v=game-build-7d319ed0f9aba9f38d45c698ae10609b63396613f2663e43f0fe7f071efa4ec9"></script>
     <script src="scripts/home/admin-controls.js?v=admin-promo-workflow-20260915"></script>
   </body>
 </html>

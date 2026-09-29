@@ -112,7 +112,7 @@ test("gallery image loads use a local hourglass overlay instead of stale or empt
   );
 
   for (const source of [home, index]) {
-    assert.match(source, /helper-dedupe-20260927/);
+    assert.match(source, /loop-video-lifecycle-20260929/);
   }
 
   assert.deepEqual(readGifDimensions(rawGif), { width: 258, height: 272 });
