@@ -222,13 +222,15 @@ const walkFiles = (directory) => {
     if (error?.code === "ENOENT") return [];
     throw error;
   }
-  return entries
-    .sort((first, second) => (first.name < second.name ? -1 : first.name > second.name ? 1 : 0))
-    .flatMap((entry) => {
-      const fullPath = path.join(directory, entry.name);
-      if (entry.isDirectory()) return walkFiles(fullPath);
-      return entry.isFile() ? [fullPath] : [];
-    });
+  // readdir order is not guaranteed, and the sweep's order must not depend on it.
+  // Names are unique within a directory, so the default lexicographic sort is exact.
+  const entriesByName = new Map(entries.map((entry) => [entry.name, entry]));
+  return [...entriesByName.keys()].sort().flatMap((name) => {
+    const entry = entriesByName.get(name);
+    const fullPath = path.join(directory, name);
+    if (entry.isDirectory()) return walkFiles(fullPath);
+    return entry.isFile() ? [fullPath] : [];
+  });
 };
 
 /** Every covered source at or above the threshold, as repository-relative paths. */
@@ -446,25 +448,36 @@ export const optimizeMedia = ({
   return { encoded, skipped, record };
 };
 
+/**
+ * The command line: `--check` verifies, anything else encodes. The root and the
+ * two streams are injected so every branch runs in-process under a test, rather
+ * than only in a child the coverage report cannot see.
+ *
+ * @returns {number} the process exit code.
+ */
+export const runOptimizeMediaCli = ({
+  argv = process.argv.slice(2),
+  root = REPOSITORY_ROOT,
+  stdout = (text) => process.stdout.write(text),
+  stderr = (text) => process.stderr.write(text),
+} = {}) => {
+  if (argv.includes("--check")) {
+    const { ok, problems } = checkOptimizedMedia({ root });
+    if (!ok) {
+      stderr(`${problems.map((problem) => `- ${problem}`).join("\n")}\n`);
+      return 1;
+    }
+    stdout(`Optimized media is current for ${MEDIA_MANIFEST.length} sources.\n`);
+    return 0;
+  }
+
+  const { encoded, skipped } = optimizeMedia({ root, log: (line) => stdout(`${line}\n`) });
+  stdout(
+    `Encoded ${encoded.length} derivative(s), skipped ${skipped.length} already current.\n`
+  );
+  return 0;
+};
+
 const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
 
-if (isMainModule) {
-  if (process.argv.includes("--check")) {
-    const { ok, problems } = checkOptimizedMedia();
-    if (ok) {
-      process.stdout.write(
-        `Optimized media is current for ${MEDIA_MANIFEST.length} sources.\n`
-      );
-    } else {
-      process.stderr.write(`${problems.map((problem) => `- ${problem}`).join("\n")}\n`);
-      process.exitCode = 1;
-    }
-  } else {
-    const { encoded, skipped } = optimizeMedia({
-      log: (line) => process.stdout.write(`${line}\n`),
-    });
-    process.stdout.write(
-      `Encoded ${encoded.length} derivative(s), skipped ${skipped.length} already current.\n`
-    );
-  }
-}
+if (isMainModule) process.exitCode = runOptimizeMediaCli();

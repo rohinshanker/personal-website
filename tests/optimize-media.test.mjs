@@ -20,6 +20,8 @@ import {
   readRecord,
   renderRecord,
   resolveBinaryFromPath,
+  runOptimizeMediaCli,
+  spawnCommand,
 } from "../scripts/optimize-media.mjs";
 
 const run = promisify(execFile);
@@ -107,6 +109,7 @@ test("ffprobe output parses into positive dimensions", () => {
   assert.deepEqual(parseProbedDimensions("628,640\n"), { width: 628, height: 640 });
   assert.deepEqual(parseProbedDimensions("500,352\n500,352\n"), { width: 500, height: 352 });
   assert.equal(parseProbedDimensions(""), null);
+  assert.equal(parseProbedDimensions(undefined), null, "a probe that wrote nothing");
   assert.equal(parseProbedDimensions("0,240"), null);
   assert.equal(parseProbedDimensions("N/A,N/A"), null);
 });
@@ -422,6 +425,336 @@ test("--check fails when the record still lists a dropped manifest entry", (t) =
   assert.equal(ok, false);
   assert.ok(
     problems.includes("assets/random events/sample.gif is recorded but no longer in the manifest")
+  );
+});
+
+/**
+ * A scratch repository that can run the shipped CLI: the script resolves its own
+ * root from its module URL, so `<root>/scripts/optimize-media.mjs` makes `<root>`
+ * the repository it checks and encodes.
+ */
+const installScriptInto = (root) => {
+  const scriptPath = path.join(root, "scripts/optimize-media.mjs");
+  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
+  fs.copyFileSync(path.join(repositoryRoot, "scripts/optimize-media.mjs"), scriptPath);
+  return scriptPath;
+};
+
+/**
+ * Executables that stand in for the encoders on `PATH`. `ffprobe` answers with
+ * fixed dimensions; the encoders write their last argument, which is the output
+ * path for both `gif2webp -o out` and `ffmpeg ... out`.
+ */
+const installStubBinaries = (root) => {
+  const binDirectory = path.join(root, "stub-bin");
+  fs.mkdirSync(binDirectory, { recursive: true });
+  const write = (name, body) => {
+    const target = path.join(binDirectory, name);
+    fs.writeFileSync(target, body);
+    fs.chmodSync(target, 0o755);
+  };
+  write("ffprobe", "#!/bin/sh\nprintf '320,240\\n'\n");
+  const writeLastArgument = [
+    "#!/bin/sh",
+    "for out; do :; done",
+    'mkdir -p "$(dirname "$out")"',
+    "printf 'stub' > \"$out\"",
+    "",
+  ].join("\n");
+  write("gif2webp", writeLastArgument);
+  write("ffmpeg", writeLastArgument);
+  return binDirectory;
+};
+
+test("planning re-encodes a derivative that exists but was never recorded", (t) => {
+  const root = createFixtureRoot(t);
+  optimizeMedia({
+    root,
+    manifest: fixtureManifest,
+    ...createEncoderStub(),
+    resolveBinary: resolveEverything,
+  });
+  // The files are current, but a record that lost them cannot vouch for the flags
+  // they came from, so they are encoded again rather than trusted.
+  fs.writeFileSync(
+    path.join(root, RECORD_PATH),
+    renderRecord({ ...readRecord(root), entries: [] })
+  );
+
+  assert.deepEqual(
+    planMediaConversions({ root, manifest: fixtureManifest }).map((step) => [
+      step.action,
+      step.reason,
+    ]),
+    [
+      ["encode", "derivative is unrecorded"],
+      ["encode", "derivative is unrecorded"],
+    ]
+  );
+});
+
+test("a manifest entry that declares no derivatives is still measured and recorded", (t) => {
+  const root = createFixtureRoot(t);
+  const sourceOnly = [{ source: fixtureManifest[0].source, derivatives: [] }];
+  const stub = createEncoderStub({ probe: "858,824" });
+
+  const { encoded, skipped, record } = optimizeMedia({
+    root,
+    manifest: sourceOnly,
+    runCommand: stub.runCommand,
+    resolveBinary: resolveEverything,
+  });
+  assert.deepEqual({ encoded, skipped }, { encoded: [], skipped: [] });
+  assert.deepEqual(record.entries, [
+    {
+      source: "assets/random events/sample.gif",
+      sourceBytes: SIZE_THRESHOLD_BYTES + 512,
+      width: 858,
+      height: 824,
+      derivatives: [],
+    },
+  ]);
+  assert.deepEqual(checkOptimizedMedia({ root, manifest: sourceOnly }), {
+    ok: true,
+    problems: [],
+  });
+});
+
+test("the source sweep skips a directory that is not there and surfaces one that cannot be read", (t) => {
+  const root = createFixtureRoot(t);
+  assert.deepEqual(
+    oversizedSources({ root, directories: ["assets/never-created"] }),
+    [],
+    "an absent covered directory contributes nothing"
+  );
+
+  // A covered directory that is really a file is a configuration mistake, not an
+  // absent tree, so it must not be swallowed with the same shrug.
+  writeFixtureFile(root, "assets/plain-file", 8);
+  assert.throws(() => oversizedSources({ root, directories: ["assets/plain-file"] }), {
+    code: "ENOTDIR",
+  });
+});
+
+test("the sweep walks nested directories and ignores entries that are not files", (t) => {
+  const root = createFixtureRoot(t);
+  writeFixtureFile(root, "assets/random events/nested/deep.gif", SIZE_THRESHOLD_BYTES + 1);
+  fs.symlinkSync(
+    path.join(root, "assets/random events/sample.gif"),
+    path.join(root, "assets/random events/dangling.gif")
+  );
+  fs.rmSync(path.join(root, "assets/random events/sample.gif"));
+
+  assert.deepEqual(oversizedSources({ root }), ["assets/random events/nested/deep.gif"]);
+});
+
+test("--check fails when a manifest source disappeared after it was recorded", (t) => {
+  const root = createFixtureRoot(t);
+  optimizeMedia({
+    root,
+    manifest: fixtureManifest,
+    ...createEncoderStub(),
+    resolveBinary: resolveEverything,
+  });
+  fs.rmSync(path.join(root, "assets/random events/sample.gif"));
+
+  const { ok, problems } = checkOptimizedMedia({ root, manifest: fixtureManifest });
+  assert.equal(ok, false);
+  assert.ok(
+    problems.includes(
+      "assets/random events/sample.gif is listed in the manifest but missing from the repository"
+    )
+  );
+});
+
+test("--check fails when the record lost a source entry or one of its derivatives", (t) => {
+  const root = createFixtureRoot(t);
+  optimizeMedia({
+    root,
+    manifest: fixtureManifest,
+    ...createEncoderStub(),
+    resolveBinary: resolveEverything,
+  });
+  const recordPath = path.join(root, RECORD_PATH);
+  const record = readRecord(root);
+
+  fs.writeFileSync(recordPath, renderRecord({ ...record, entries: [] }));
+  assert.ok(
+    checkOptimizedMedia({ root, manifest: fixtureManifest }).problems.includes(
+      "assets/random events/sample.gif has no record entry; run: node scripts/optimize-media.mjs"
+    ),
+    "a record with no entry for the source"
+  );
+
+  fs.writeFileSync(
+    recordPath,
+    renderRecord({
+      ...record,
+      entries: [{ ...record.entries[0], derivatives: record.entries[0].derivatives.slice(0, 1) }],
+    })
+  );
+  assert.ok(
+    checkOptimizedMedia({ root, manifest: fixtureManifest }).problems.includes(
+      "assets/optimized/random-events/sample.mp4 has no record entry; run: node scripts/optimize-media.mjs"
+    ),
+    "a record that kept the source but dropped a derivative"
+  );
+});
+
+test("a probe that fails, or answers nothing usable, stops the run", (t) => {
+  const answerProbeWith = (stub, probeResult) => (binary, args) =>
+    binary.endsWith("ffprobe") ? probeResult : stub.runCommand(binary, args);
+
+  const failed = createFixtureRoot(t);
+  assert.throws(
+    () =>
+      optimizeMedia({
+        root: failed,
+        manifest: fixtureManifest,
+        runCommand: answerProbeWith(createEncoderStub(), {
+          status: 1,
+          stdout: "",
+          stderr: "moov atom not found",
+        }),
+        resolveBinary: resolveEverything,
+      }),
+    /ffprobe could not read the dimensions of assets\/random events\/sample\.gif/
+  );
+
+  const unusable = createFixtureRoot(t);
+  assert.throws(
+    () =>
+      optimizeMedia({
+        root: unusable,
+        manifest: fixtureManifest,
+        runCommand: answerProbeWith(createEncoderStub(), {
+          status: 0,
+          stdout: "N/A,N/A\n",
+          stderr: "",
+        }),
+        resolveBinary: resolveEverything,
+      }),
+    /ffprobe could not read the dimensions of/
+  );
+});
+
+test("spawnCommand reports a real process and throws when the binary cannot start", () => {
+  assert.deepEqual(
+    spawnCommand(process.execPath, [
+      "-e",
+      "process.stdout.write('320,240'); process.stderr.write('note')",
+    ]),
+    { status: 0, stdout: "320,240", stderr: "note" }
+  );
+  assert.throws(() => spawnCommand(path.join(repositoryRoot, "scripts/absent-encoder"), []), {
+    code: "ENOENT",
+  });
+});
+
+/** Collects one CLI run's streams so each branch can be asserted in-process. */
+const runCli = ({ argv, root }) => {
+  const out = [];
+  const err = [];
+  const code = runOptimizeMediaCli({
+    argv,
+    root,
+    stdout: (text) => out.push(text),
+    stderr: (text) => err.push(text),
+  });
+  return { code, stdout: out.join(""), stderr: err.join("") };
+};
+
+test("the CLI encodes, then skips, then verifies the same scratch repository", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "optimize-media-cli-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  MEDIA_MANIFEST.forEach((entry) => writeFixtureFile(root, entry.source, 512));
+
+  // The CLI owns the real manifest and resolves encoders from PATH, so the stubs
+  // go on PATH. That runs every branch in-process, where the coverage report can
+  // see it, rather than only in a child.
+  const realPath = process.env.PATH;
+  process.env.PATH = installStubBinaries(root);
+  t.after(() => {
+    process.env.PATH = realPath;
+  });
+
+  const derivativeCount = MEDIA_MANIFEST.reduce(
+    (total, entry) => total + entry.derivatives.length,
+    0
+  );
+  const summary = (encoded, skipped) =>
+    new RegExp(`Encoded ${encoded} derivative\\(s\\), skipped ${skipped} already current\\.`);
+
+  const encoded = runCli({ argv: [], root });
+  assert.equal(encoded.code, 0);
+  assert.match(encoded.stdout, summary(derivativeCount, 0));
+  assert.match(
+    encoded.stdout,
+    /^encode assets\/optimized\/random-events\/servalpizza\.webp \(derivative is missing\)$/m
+  );
+  assert.equal(readRecord(root).entries.length, MEDIA_MANIFEST.length);
+
+  const skipped = runCli({ argv: [], root });
+  assert.equal(skipped.code, 0);
+  assert.match(skipped.stdout, summary(0, derivativeCount));
+  assert.match(
+    skipped.stdout,
+    /^skip {3}assets\/optimized\/random-events\/servalpizza\.webp \(derivative is current\)$/m
+  );
+
+  const verified = runCli({ argv: ["--check"], root });
+  assert.equal(verified.code, 0);
+  assert.equal(verified.stderr, "");
+  assert.match(
+    verified.stdout,
+    new RegExp(`Optimized media is current for ${MEDIA_MANIFEST.length} sources\\.`)
+  );
+
+  fs.rmSync(path.join(root, MEDIA_MANIFEST[0].derivatives[0].path));
+  const failed = runCli({ argv: ["--check"], root });
+  assert.equal(failed.code, 1);
+  assert.equal(failed.stdout, "");
+  assert.match(failed.stderr, /^- .+ is missing; run: node scripts\/optimize-media\.mjs$/m);
+});
+
+test("the CLI reports problems on the process's own error stream by default", (t) => {
+  const root = createFixtureRoot(t);
+  const reported = [];
+  const realWrite = process.stderr.write;
+  // Only stderr is borrowed: the test runner reports on stdout.
+  process.stderr.write = (text) => {
+    reported.push(String(text));
+    return true;
+  };
+  t.after(() => {
+    process.stderr.write = realWrite;
+  });
+
+  const stdout = [];
+  const code = runOptimizeMediaCli({ argv: ["--check"], root, stdout: (text) => stdout.push(text) });
+  process.stderr.write = realWrite;
+
+  assert.equal(code, 1);
+  assert.deepEqual(stdout, [], "a failing check writes nothing to stdout");
+  assert.match(reported.join(""), /derivatives\.json is missing/);
+});
+
+test("the shipped --check exits non-zero and names what is wrong", async (t) => {
+  const root = createFixtureRoot(t);
+  installScriptInto(root);
+
+  await assert.rejects(
+    () =>
+      run(process.execPath, ["scripts/optimize-media.mjs", "--check"], {
+        cwd: root,
+        env: { ...process.env, PATH: "" },
+      }),
+    (error) => {
+      assert.equal(error.code, 1);
+      assert.match(error.stderr, /derivatives\.json is missing/);
+      assert.equal(error.stdout, "");
+      return true;
+    }
   );
 });
 
