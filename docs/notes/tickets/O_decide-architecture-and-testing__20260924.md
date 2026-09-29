@@ -3,8 +3,8 @@
 - Scope: Owner decisions surfaced by the 2026-09-24 audit that change architecture, load behaviour, accessibility patterns, or test policy. Each item lists options and a recommendation; nothing is implemented until the owner picks.
 - Status: open
 - Opened: 2026-09-24
-- Updated: 2026-09-24
-- Current State: Awaiting owner answers. Tier: needs user judgment. The long tickets that depend on these are named beside each item.
+- Updated: 2026-09-28
+- Current State: Item 7 decided and shipped on 2026-09-28. The rest await owner answers. Tier: needs user judgment. The long tickets that depend on these are named beside each item.
 - Verification: Record each answer inline (`Decision:` line under the item) with the date; the implementing ticket carries the test plan.
 - Cleanup: When every item has a decision and an owning ticket, delete this ticket and its index row.
 
@@ -17,5 +17,6 @@
 5. **`neko-stream-system-alert` is registered with `debug: true` in production** (`main.js:17166`); its `canTrigger` restricts it to the Start-button trigger and `tests/random-event-debug-fixture.test.mjs:27` requires the flag to stay. A "debug" flag that is load-bearing will be "fixed" by a future author. Rename the field (e.g. `startButtonOnly: true`) and update the fixture test, or document why. Recommendation: rename. → small.
 6. **Linter and formatter.** None exists (no eslint/prettier/biome config, no `lint` script); style is already uniform (0 `var`, double quotes on 5,737 lines vs 52, 2-space indentation). Options: Biome (single tool, zero config), ESLint flat config, or none. Recommendation: Biome, check-only in `verify`. → open a small ticket once decided (the CI ticket it originally pointed at resolved on 2026-09-27).
 7. **PR-trigger policy.** Browser UI and Secret guard run on both `push` and `pull_request`; the last 30 runs are all pushes to `main`, so no double runs today, but a PR branch would run both. Options: `push: branches: [main]` plus `pull_request`, or keep. Recommendation: restrict. → small.
+   - Decision (2026-09-28): restricted. `secret-guard.yml` and `ui-layout.yml` now match the release workflow; `tests/game-stats-deployment.test.mjs` asserts every workflow's `push` trigger is `branches: [main]`, and the rule is in `site-quality-gates.md`.
 8. **Which textual test files become behaviour tests.** 34 of 59 Node test files execute no production code; the 90%+ textual files are listed in `O_long-test-suite-hardening__20260924.md` item 6. Decide per file whether the contract is a literal invariant worth keeping (then consolidate) or behaviour (then extract). Recommendation: convert `game-stats.test.mjs`, `administrator-sign-in.test.mjs`, `minesweeper-*`, `solitaire-victory-layout`; keep the copy-text files (`dont-starve-copy`, `death-note-visible-lines`) as literal guards.
 9. **Extracted modules and the game build hash.** `scripts/update-game-integrity.mjs` hashes `main.js` and `core/dom.js` as "files that determine game completion". When Minesweeper, Solitaire, Snake, and Sudoku move to their own files, decide whether the hashed set follows them (the Worker's compatibility list then changes on every game file edit) or stays on the shell. Recommendation: hash the game files, not the shell. → `O_long-main-js-module-split__20260924.md`.
