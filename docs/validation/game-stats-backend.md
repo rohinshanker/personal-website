@@ -575,11 +575,15 @@ state globally eligible by starting a new session for it.
 
 Ingress metrics must be JSON safe integers. Minesweeper and Sudoku times and
 Solitaire moves start at one; Snake scores start at zero; every game retains
-its upper bound. The browser derives Minesweeper's time from the monotonic clock
-(`performance.now()`, whole seconds since the first reveal, capped at 999,
-never decreasing) rather than counting timer ticks or reading `Date.now()`, so
-a hidden or throttled tab reports the true duration and a device clock change
-cannot shorten or void a result. Invalid stored legacy rows are skipped individually so one
+its upper bound. The browser accumulates Minesweeper's time as real elapsed time
+since the first reveal: at each sync it adds whichever of `performance.now()`
+and `Date.now()` advanced further, never a negative amount, in whole seconds
+capped at 999. A hidden or throttled tab and a sleeping device therefore count
+in full, and moving the device clock backwards cannot shorten the metric;
+moving it forwards can only lengthen it. This covers the metric alone: the
+event timestamp still comes from the device clock, so a clock change during a
+game can put the result outside its session or event-date window and the
+Worker then rejects it. Invalid stored legacy rows are skipped individually so one
 old or corrupt value cannot take all public stats offline. For Snake, retain a
 five-second minimum and the score-aware floor `900 + score × 118` milliseconds.
 When a genuine quick result needs no more than five additional seconds, use

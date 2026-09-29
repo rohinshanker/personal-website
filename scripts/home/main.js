@@ -29144,7 +29144,8 @@ const msState = {
   started: false,
   gameOver: false,
   timerId: null,
-  startedAt: null,
+  timerSync: null,
+  elapsedMs: 0,
   elapsed: 0,
   flagCount: 0,
   revealedSafeCount: 0,
@@ -29294,17 +29295,30 @@ const msSetControlsMode = (mode) => {
   }
 };
 
+const msReadTimerClocks = () => ({
+  monotonic: performance.now(),
+  wall: Date.now(),
+});
+
 /**
- * Derives the elapsed seconds from the monotonic clock so a throttled or
- * hidden tab reports the true duration and a device clock change cannot move
- * it. The value never decreases. Returns whether the displayed value changed.
+ * Accumulates real elapsed time since the previous sync, taking whichever
+ * clock advanced further. The monotonic clock ignores device clock changes but
+ * can pause during system sleep; the wall clock covers sleep but can jump
+ * backwards, which counts as no advance. A throttled or hidden tab therefore
+ * catches up, and the displayed seconds never decrease. Returns whether the
+ * displayed value changed.
  */
 const msSyncElapsed = () => {
-  if (msState.startedAt === null) return false;
+  if (msState.timerSync === null) return false;
+  const clocks = msReadTimerClocks();
+  msState.elapsedMs += Math.max(
+    clocks.monotonic - msState.timerSync.monotonic,
+    clocks.wall - msState.timerSync.wall,
+    0
+  );
+  msState.timerSync = clocks;
   const elapsed = clampNumber(
-    Math.floor(
-      (performance.now() - msState.startedAt) / MINESWEEPER_TIMER_INTERVAL_MS
-    ),
+    Math.floor(msState.elapsedMs / MINESWEEPER_TIMER_INTERVAL_MS),
     msState.elapsed,
     MINESWEEPER_COUNTER_MAX
   );
@@ -29326,7 +29340,8 @@ const msStartTimer = () => {
   msState.statsSession = startGameStatsSession("minesweeper", {
     difficulty: msDifficulty?.value || "beginner",
   });
-  msState.startedAt = performance.now();
+  msState.timerSync = msReadTimerClocks();
+  msState.elapsedMs = 0;
   msState.timerId = setInterval(() => {
     if (msState.gameOver || !msState.started) return;
     if (msSyncElapsed()) msUpdateCounters();
@@ -29543,7 +29558,8 @@ const msNewGame = (difficulty) => {
   }));
   msState.started = false;
   msState.gameOver = false;
-  msState.startedAt = null;
+  msState.timerSync = null;
+  msState.elapsedMs = 0;
   msState.elapsed = 0;
   msState.flagCount = 0;
   msState.revealedSafeCount = 0;
