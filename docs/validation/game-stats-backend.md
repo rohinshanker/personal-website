@@ -18,6 +18,10 @@ or high-stakes game.
 - A push to `main` must run source and browser verification, perform a strict
   Worker dry-run, deploy the rolling-compatible Worker, pass the transition
   check, publish the matching Pages artifact, and pass final live parity.
+- Before deploying the Worker, confirm the build from the live browser config
+  remains in `GAME_BUILD_COMPATIBILITY_VERSIONS`. Unpublished development builds
+  can fill its 32-entry history and evict the actual live build; retain the live
+  build explicitly before running the transition gate.
 - When Worker source changes, record the new Cloudflare Worker version ID from
   the successful release job. Build-hash parity alone covers browser completion
   sources and cannot prove that a particular Worker source revision is active.
