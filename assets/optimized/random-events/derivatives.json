@@ -1,0 +1,766 @@
+{
+  "generatedBy": "scripts/optimize-media.mjs",
+  "thresholdBytes": 1000000,
+  "entries": [
+    {
+      "source": "assets/random events/servalpizza.gif",
+      "sourceBytes": 9716372,
+      "width": 628,
+      "height": 640,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/servalpizza.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 1922078,
+          "width": 628,
+          "height": 640
+        },
+        {
+          "path": "assets/optimized/random-events/servalpizza.webm",
+          "format": "webm",
+          "flags": [
+            "-c:v",
+            "libvpx-vp9",
+            "-crf",
+            "34",
+            "-b:v",
+            "0",
+            "-row-mt",
+            "1",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 658603,
+          "width": 628,
+          "height": 640
+        },
+        {
+          "path": "assets/optimized/random-events/servalpizza.mp4",
+          "format": "mp4",
+          "flags": [
+            "-c:v",
+            "libx264",
+            "-crf",
+            "28",
+            "-preset",
+            "slow",
+            "-profile:v",
+            "main",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 445011,
+          "width": 628,
+          "height": 640
+        },
+        {
+          "path": "assets/optimized/random-events/servalpizza-poster.jpg",
+          "format": "poster",
+          "flags": [
+            "-frames:v",
+            "1",
+            "-c:v",
+            "mjpeg",
+            "-q:v",
+            "4",
+            "-pix_fmt",
+            "yuvj420p",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 36087,
+          "width": 628,
+          "height": 640
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/campfire.gif",
+      "sourceBytes": 6087120,
+      "width": 858,
+      "height": 825,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/campfire.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 748214,
+          "width": 858,
+          "height": 825
+        },
+        {
+          "path": "assets/optimized/random-events/campfire.webm",
+          "format": "webm",
+          "flags": [
+            "-c:v",
+            "libvpx-vp9",
+            "-crf",
+            "34",
+            "-b:v",
+            "0",
+            "-row-mt",
+            "1",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 176756,
+          "width": 858,
+          "height": 824
+        },
+        {
+          "path": "assets/optimized/random-events/campfire.mp4",
+          "format": "mp4",
+          "flags": [
+            "-c:v",
+            "libx264",
+            "-crf",
+            "28",
+            "-preset",
+            "slow",
+            "-profile:v",
+            "main",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 122087,
+          "width": 858,
+          "height": 824
+        },
+        {
+          "path": "assets/optimized/random-events/campfire-poster.jpg",
+          "format": "poster",
+          "flags": [
+            "-frames:v",
+            "1",
+            "-c:v",
+            "mjpeg",
+            "-q:v",
+            "4",
+            "-pix_fmt",
+            "yuvj420p",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 51746,
+          "width": 858,
+          "height": 824
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/evil-wizards-radar.gif",
+      "sourceBytes": 3987487,
+      "width": 1280,
+      "height": 640,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/evil-wizards-radar.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 681520,
+          "width": 1280,
+          "height": 640
+        },
+        {
+          "path": "assets/optimized/random-events/evil-wizards-radar.webm",
+          "format": "webm",
+          "flags": [
+            "-c:v",
+            "libvpx-vp9",
+            "-crf",
+            "34",
+            "-b:v",
+            "0",
+            "-row-mt",
+            "1",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 143475,
+          "width": 1280,
+          "height": 640
+        },
+        {
+          "path": "assets/optimized/random-events/evil-wizards-radar.mp4",
+          "format": "mp4",
+          "flags": [
+            "-c:v",
+            "libx264",
+            "-crf",
+            "28",
+            "-preset",
+            "slow",
+            "-profile:v",
+            "main",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 118720,
+          "width": 1280,
+          "height": 640
+        },
+        {
+          "path": "assets/optimized/random-events/evil-wizards-radar-poster.jpg",
+          "format": "poster",
+          "flags": [
+            "-frames:v",
+            "1",
+            "-c:v",
+            "mjpeg",
+            "-q:v",
+            "4",
+            "-pix_fmt",
+            "yuvj420p",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 79639,
+          "width": 1280,
+          "height": 640
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/birthday.gif",
+      "sourceBytes": 3264097,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/birthday.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 1075952,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/ramadan.gif",
+      "sourceBytes": 2960726,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/ramadan.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 940504,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/buddha.gif",
+      "sourceBytes": 2926083,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/buddha.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 965846,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/mothersday.gif",
+      "sourceBytes": 2781317,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/mothersday.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 776736,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/trans.gif",
+      "sourceBytes": 2588030,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/trans.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 813534,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/feliz-jueves.gif",
+      "sourceBytes": 2193316,
+      "width": 498,
+      "height": 498,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/feliz-jueves.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 737614,
+          "width": 498,
+          "height": 498
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/radar.gif",
+      "sourceBytes": 2140195,
+      "width": 640,
+      "height": 640,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/radar.webp",
+          "format": "webp",
+          "flags": [
+            "-q",
+            "75",
+            "-m",
+            "6"
+          ],
+          "bytes": 1887922,
+          "width": 640,
+          "height": 640
+        },
+        {
+          "path": "assets/optimized/random-events/radar.webm",
+          "format": "webm",
+          "flags": [
+            "-c:v",
+            "libvpx-vp9",
+            "-crf",
+            "34",
+            "-b:v",
+            "0",
+            "-row-mt",
+            "1",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 306415,
+          "width": 640,
+          "height": 640
+        },
+        {
+          "path": "assets/optimized/random-events/radar.mp4",
+          "format": "mp4",
+          "flags": [
+            "-c:v",
+            "libx264",
+            "-crf",
+            "28",
+            "-preset",
+            "slow",
+            "-profile:v",
+            "main",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 256956,
+          "width": 640,
+          "height": 640
+        },
+        {
+          "path": "assets/optimized/random-events/radar-poster.jpg",
+          "format": "poster",
+          "flags": [
+            "-frames:v",
+            "1",
+            "-c:v",
+            "mjpeg",
+            "-q:v",
+            "4",
+            "-pix_fmt",
+            "yuvj420p",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 30769,
+          "width": 640,
+          "height": 640
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/fathersday.gif",
+      "sourceBytes": 1922308,
+      "width": 500,
+      "height": 416,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/fathersday.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 475536,
+          "width": 500,
+          "height": 416
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/4thofjuly.gif",
+      "sourceBytes": 1884834,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/4thofjuly.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 993550,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/lain.gif",
+      "sourceBytes": 1814442,
+      "width": 500,
+      "height": 352,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/lain.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 604334,
+          "width": 500,
+          "height": 352
+        },
+        {
+          "path": "assets/optimized/random-events/lain.webm",
+          "format": "webm",
+          "flags": [
+            "-c:v",
+            "libvpx-vp9",
+            "-crf",
+            "34",
+            "-b:v",
+            "0",
+            "-row-mt",
+            "1",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 410553,
+          "width": 500,
+          "height": 352
+        },
+        {
+          "path": "assets/optimized/random-events/lain.mp4",
+          "format": "mp4",
+          "flags": [
+            "-c:v",
+            "libx264",
+            "-crf",
+            "28",
+            "-preset",
+            "slow",
+            "-profile:v",
+            "main",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 228387,
+          "width": 500,
+          "height": 352
+        },
+        {
+          "path": "assets/optimized/random-events/lain-poster.jpg",
+          "format": "poster",
+          "flags": [
+            "-frames:v",
+            "1",
+            "-c:v",
+            "mjpeg",
+            "-q:v",
+            "4",
+            "-pix_fmt",
+            "yuvj420p",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+          ],
+          "bytes": 51296,
+          "width": 500,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/holi.gif",
+      "sourceBytes": 1612380,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/holi.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 763544,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/halloween.gif",
+      "sourceBytes": 1473960,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/halloween.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 626256,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/easter.gif",
+      "sourceBytes": 1464000,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/easter.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 460032,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/valentine.gif",
+      "sourceBytes": 1236348,
+      "width": 500,
+      "height": 500,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/valentine.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 349968,
+          "width": 500,
+          "height": 500
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/shoebill.gif",
+      "sourceBytes": 1101796,
+      "width": 220,
+      "height": 220,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/shoebill.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 770366,
+          "width": 220,
+          "height": 220
+        }
+      ]
+    },
+    {
+      "source": "assets/random events/nana-accept.gif",
+      "sourceBytes": 1029362,
+      "width": 500,
+      "height": 274,
+      "derivatives": [
+        {
+          "path": "assets/optimized/random-events/nana-accept.webp",
+          "format": "webp",
+          "flags": [
+            "-lossy",
+            "-q",
+            "75",
+            "-m",
+            "6",
+            "-mixed"
+          ],
+          "bytes": 273110,
+          "width": 500,
+          "height": 274
+        }
+      ]
+    }
+  ]
+}
