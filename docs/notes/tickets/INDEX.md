@@ -2,6 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
+| O | 2026-09-29 | [O_soot-sprite-redesign__20260929.md](O_soot-sprite-redesign__20260929.md) | Redraw the soot sprite from the Ghibli films: four original candidates on a review page, owner picks one, then ship it. Nothing started. |
 | O | 2026-09-28 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Audit decisions. Done 2026-09-28: wall-clock Minesweeper timer, documented 32-build compatibility window, D1 id note. Awaiting owner: session budget, Minesweeper close behaviour, Snake game-over loop, queue retry, expired sessions, D1 indexes, deploy gating. |
 | O | 2026-09-24 | [O_decide-content-and-assets__20260924.md](O_decide-content-and-assets__20260924.md) | Audit decisions: Clash Royale remnants, Study Resources stub, 26 MB unreferenced calendar photos, originals and working files, background quality, shoot markup from data, pdf-window templating, renames, 98.css trim. Awaiting owner. |
 | O | 2026-09-28 | [O_decide-architecture-and-testing__20260924.md](O_decide-architecture-and-testing__20260924.md) | Audit decisions. Done 2026-09-28: push triggers restricted to main. Awaiting owner: DOM lookup strategy, defer/non-blocking load order, dialog ARIA pattern, lazy Admin Controls, load-bearing debug flag, linter, textual-test conversion, build-hash scope. |
