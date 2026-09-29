@@ -1416,6 +1416,17 @@ test("every workflow shares one hardening standard", async () => {
   assert.equal(setupNodeReferences.size, 1, "every workflow must share one setup-node pin");
 });
 
+test("every workflow runs pushes only from main so a PR branch runs once", async () => {
+  const root = new URL("../", import.meta.url);
+  for (const file of WORKFLOW_FILES) {
+    const definition = parse(
+      await readFile(new URL(`.github/workflows/${file}`, root), "utf8")
+    );
+    assert.deepEqual(definition.on.push, { branches: ["main"] }, file);
+    assert.equal(definition.on.pull_request, null, file);
+  }
+});
+
 test("secret scanning and browser installs each run once per push", async () => {
   const root = new URL("../", import.meta.url);
   const [secretGuard, uiLayout] = await Promise.all([

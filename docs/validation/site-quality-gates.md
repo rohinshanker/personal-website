@@ -100,6 +100,8 @@ workflow departs from it:
 - Every checkout sets `persist-credentials: false`, and every `setup-node` runs
   Node 24.
 - `pull_request_target` appears nowhere.
+- Triggers are `pull_request` plus `push` restricted to `main`, so a pull
+  request branch runs each gate once rather than on both events.
 
 Each gate runs once per push. The secret scan belongs to `secret-guard.yml` as
 the script plus gitleaks; `tests/no-secrets.test.mjs` re-scans the same tree and
