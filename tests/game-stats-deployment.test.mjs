@@ -1753,3 +1753,60 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.match(validationGuide, /current `main` revision/);
   assert.match(validationGuide, /Wrangler's `--strict`/);
 });
+
+test("transition verifies pre-generator bytes and cache references without weakening final parity", async () => {
+  const legacySources = new Map([
+    ["scripts/home/main.js", Buffer.from("// legacy main")],
+    ["scripts/home/core/dom.js", Buffer.from("// legacy dom")],
+  ]);
+  const digest = createHash("sha256");
+  for (const [path, bytes] of legacySources) {
+    digest.update(path).update("\0").update(bytes).update("\0");
+  }
+  const legacyBuild = `sha256-${digest.digest("hex")}`;
+  const legacyEntry = ["scripts/home/game-stats-backend.js", ...legacySources.keys()]
+    .map((path) => `<script src="${path}?v=game-build-${legacyBuild.slice(7)}"></script>`)
+    .join("\n");
+  let corruptSources = false;
+  let corruptEntry = false;
+  const options = {
+    readFileImpl: async () => createConfig({ buildVersion: RELEASE_BUILD_VERSION }),
+    liveConfigUrl: "https://site.example.test/game-stats-backend.js",
+    convergenceTimeoutMs: 1,
+    pollIntervalMs: 1,
+    nowImpl: () => 0,
+    sleepImpl: async () => {},
+    fetchImpl: async (url) => {
+      if (url.includes("game-stats-backend.js")) {
+        return createConfigResponse(createConfig({ buildVersion: legacyBuild }));
+      }
+      if (url.includes("sudoku-generator.worker.js")) {
+        return createAssetResponse("Not found", { ok: false, status: 404 });
+      }
+      const sourceFiles = new Map(legacySources);
+      if (corruptSources) sourceFiles.set("scripts/home/main.js", Buffer.from("changed"));
+      return createReleaseDependencyResponse(url, {
+        sourceFiles,
+        homeSource: corruptEntry ? "" : legacyEntry,
+        indexSource: legacyEntry,
+        workerBuildVersion: RELEASE_BUILD_VERSION,
+        workerAcceptedBuildVersions: [RELEASE_BUILD_VERSION, legacyBuild],
+      });
+    },
+  };
+  const result = await checkGameStatsWorkerTransition(options);
+  assert.equal(result.sourceBuildVersion, legacyBuild);
+  await assert.rejects(checkGameStatsRelease(options), /deployed browser/);
+  await assert.rejects(checkGameStatsWorkerTransition({
+    ...options,
+    readFileImpl: async () => createConfig({ buildVersion: legacyBuild }),
+    fetchImpl: async (url) => url.includes("/health")
+      ? createHealthResponse({ ok: true, buildVersion: legacyBuild })
+      : options.fetchImpl(url),
+  }), /status 404/);
+  corruptEntry = true;
+  await assert.rejects(checkGameStatsWorkerTransition(options), /missing cache reference/);
+  corruptEntry = false;
+  corruptSources = true;
+  await assert.rejects(checkGameStatsWorkerTransition(options), /status 404/);
+});

@@ -22,6 +22,10 @@ or high-stakes game.
   remains in `GAME_BUILD_COMPATIBILITY_VERSIONS`. Unpublished development builds
   can fill its 32-entry history and evict the actual live build; retain the live
   build explicitly before running the transition gate.
+- During a transition to a different browser build, the integrity check also
+  recognizes the pre-generator two-file manifest only if its fetched bytes
+  reproduce the advertised hash and its HTML cache references match. Final
+  parity always requires the complete current manifest, including the generator.
 - When Worker source changes, record the new Cloudflare Worker version ID from
   the successful release job. Build-hash parity alone covers browser completion
   sources and cannot prove that a particular Worker source revision is active.
@@ -122,7 +126,7 @@ credential.
 | `ADMIN_SESSION_SIGNING_SECRET` | Worker secret | Separately signs the one-hour proof for the protected administrator profile. | Generate a different random value from every other secret; rotation immediately invalidates outstanding administrator proofs. |
 | `TURNSTILE_SECRET_KEY` | Worker secret | Calls Cloudflare Siteverify. | Do **not** set it yet: the current browser client does not send a Turnstile token. Set it only after shipping and testing the client widget flow; never expose it to the browser. |
 | `GAME_BUILD_VERSION` | committed Worker var | Must equal the generated browser build version. | Public release metadata, updated only by the integrity script. |
-| `GAME_BUILD_COMPATIBILITY_VERSIONS` | committed Worker var | Ordered recent browser hashes accepted during staged releases. | Public release metadata maintained only by the integrity script; never edit or reorder it manually. |
+| `GAME_BUILD_COMPATIBILITY_VERSIONS` | committed Worker var | Ordered recent browser hashes accepted during staged releases. | Public release metadata normally maintained by the integrity script; retain the observed live build before rollout if development builds evicted it. |
 | `ALLOWED_ORIGIN` | committed Worker var | Browser CORS allowlist. | Public, but set it to the one exact production site origin. |
 | Turnstile sitekey | browser config | Renders the Turnstile widget. | Public by design; it is not the secret key. |
 
@@ -401,6 +405,9 @@ migration that a rollback to the previous Worker could not survive belongs in a
 reviewed manual release instead.
 
 ### Sudoku puzzle identity
+
+- Migration `0003_add_sudoku_puzzle_identity.sql` and the puzzle-identity handler
+  first deployed as Worker version `796ee42e-72d9-4e6a-9c4c-5d61773852ae`.
 
 - A Sudoku win may carry `puzzleId` and `puzzle`, the 81-character board string
   it was solved from. Migration `0003_add_sudoku_puzzle_identity.sql` stores

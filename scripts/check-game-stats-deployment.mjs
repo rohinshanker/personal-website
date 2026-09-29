@@ -290,28 +290,39 @@ const fetchLiveIntegritySnapshot = async (
     timeoutMs,
     createTimeoutSignal,
     createCacheBust,
+    allowLegacyManifest = false,
   }
 ) => {
   const siteRootUrl = new URL("/", liveConfig.configUrl);
-  const relativePaths = [
-    ...GAME_COMPLETION_SOURCE_FILES,
-    ...INTEGRITY_ENTRY_FILES,
-  ];
-  const responses = await Promise.all(
-    relativePaths.map(async (relativePath) => [
-      relativePath,
-      await fetchLiveAsset(new URL(relativePath, siteRootUrl), {
+  // Releases before the generator worker hashed these two files only.
+  // Accept that manifest only during a transition to a different browser build,
+  // and only when its fetched bytes reproduce the advertised build hash.
+  const legacySourceFiles = ["scripts/home/main.js", "scripts/home/core/dom.js"];
+  const assets = new Map();
+  const loadAssets = async (paths) => {
+    await Promise.all(paths.filter((path) => !assets.has(path)).map(async (path) => {
+      assets.set(path, await fetchLiveAsset(new URL(path, siteRootUrl), {
         fetchImpl,
         timeoutMs,
         createTimeoutSignal,
         createCacheBust,
-      }),
-    ])
-  );
-  const assets = new Map(responses);
-  const sourceBuildVersion = await digestGameCompletionSources((relativePath) =>
-    assets.get(relativePath)
-  );
+      }));
+    }));
+  };
+  let sourceBuildVersion;
+  let cacheAssetPaths = INTEGRITY_CACHE_ASSET_PATHS;
+  if (allowLegacyManifest) {
+    await loadAssets([...legacySourceFiles, ...INTEGRITY_ENTRY_FILES]);
+    sourceBuildVersion = await digestGameCompletionSources(
+      (path) => assets.get(path), legacySourceFiles
+    );
+  }
+  if (sourceBuildVersion === liveConfig.buildVersion) {
+    cacheAssetPaths = ["scripts/home/game-stats-backend.js", ...legacySourceFiles];
+  } else {
+    await loadAssets([...GAME_COMPLETION_SOURCE_FILES, ...INTEGRITY_ENTRY_FILES]);
+    sourceBuildVersion = await digestGameCompletionSources((path) => assets.get(path));
+  }
   const mismatches = [];
   if (sourceBuildVersion !== liveConfig.buildVersion) {
     mismatches.push(
@@ -323,7 +334,7 @@ const fetchLiveIntegritySnapshot = async (
   const cacheToken = createIntegrityCacheToken(liveConfig.buildVersion);
   for (const entryPath of INTEGRITY_ENTRY_FILES) {
     const entrySource = assets.get(entryPath).toString("utf8");
-    for (const assetPath of INTEGRITY_CACHE_ASSET_PATHS) {
+    for (const assetPath of cacheAssetPaths) {
       const expectedReference = `${assetPath}?v=${cacheToken}`;
       if (!entrySource.includes(expectedReference)) {
         mismatches.push(`${entryPath} is missing cache reference ${expectedReference}`);
@@ -539,6 +550,7 @@ const checkGameStatsReleaseParity = async ({
       let sourceBuildVersion;
       if (mismatches.length === 0) {
         const integritySnapshot = await fetchLiveIntegritySnapshot(liveConfig, {
+          allowLegacyManifest: allowCompatibleLiveBuild && liveConfig.buildVersion !== localConfig.buildVersion,
           fetchImpl,
           timeoutMs: requestTimeoutMs,
           createTimeoutSignal:

@@ -45,9 +45,12 @@ export const createIntegrityCacheToken = (buildVersion) =>
  * declared order. `readSource` resolves each relative path to its bytes, so the
  * same function serves local files and fetched deployment responses.
  */
-export const digestGameCompletionSources = async (readSource) => {
+export const digestGameCompletionSources = async (
+  readSource,
+  sourceFiles = GAME_COMPLETION_SOURCE_FILES
+) => {
   const digest = createHash("sha256");
-  for (const relativePath of GAME_COMPLETION_SOURCE_FILES) {
+  for (const relativePath of sourceFiles) {
     digest.update(relativePath);
     digest.update("\0");
     digest.update(await readSource(relativePath));
