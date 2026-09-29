@@ -45,8 +45,7 @@ need a different setting:
 
 - `radar.gif` is flat-palette line art. Lossy WebP encodes it *larger* than the
   GIF (2,687,760 bytes against 2,140,195), so it ships lossless. Lossless `-q`
-  is compression effort, not fidelity: `-q 100` ran past seven minutes on this
-  one file for a speculative few per cent, so it stays at the default `-q 75`.
+  buys compression effort, not fidelity, so it stays at the default `-q 75`.
 - The Homebrew `ffmpeg` build has no `libwebp` encoder, so poster frames are
   JPEG. They are opaque video stills, which JPEG serves well.
 
