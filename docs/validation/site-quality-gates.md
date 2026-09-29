@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-09-28
+- Last verified: 2026-09-29
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -70,6 +70,20 @@ npm run study-resources:check
 node --test tests/study-resources-manifest.test.mjs
 ```
 
+After adding or re-encoding media under a directory the conversion pipeline
+covers, rebuild and verify its derivatives:
+
+```bash
+npm run media:optimize
+npm run media:check
+node --test tests/optimize-media.test.mjs tests/optimized-media-references.test.mjs
+```
+
+`npm run media:check` is pure Node and needs no encoder, so it runs in the
+release workflow's `verify` job. The conversion rules, the per-file encoder
+flags, and the looping-video contract live in
+[media-formats.md](media-formats.md).
+
 Every generator resolves the repository root from `import.meta.url`, so each of
 these commands behaves the same from any working directory.
 
@@ -120,7 +134,9 @@ gh api "repos/<owner>/<action>/tags?per_page=100" \
 
 Ship photographs and opaque artwork as WebP (or JPEG), reserve PNG for pixel
 art and images that need transparency, and ship video as H.264 `yuv420p` MP4
-with `+faststart`, never HEVC. File names carry no spaces. Every literal
+with `+faststart`, never HEVC. Animated artwork follows
+[media-formats.md](media-formats.md): animated WebP by default, and a looping
+`<video>` with an image fallback for the largest loops. File names carry no spaces. Every literal
 `assets/…` reference in shipped HTML, CSS, and JavaScript, and every modeling
 shoot file, must resolve with exact case because GitHub Pages is case-sensitive
 and macOS is not; `tests/asset-references.test.mjs` enforces it.
