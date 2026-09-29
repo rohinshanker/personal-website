@@ -29144,6 +29144,7 @@ const msState = {
   started: false,
   gameOver: false,
   timerId: null,
+  startedAt: null,
   elapsed: 0,
   flagCount: 0,
   revealedSafeCount: 0,
@@ -29293,7 +29294,24 @@ const msSetControlsMode = (mode) => {
   }
 };
 
+/**
+ * Derives the elapsed seconds from the wall clock so a throttled or hidden tab
+ * reports the true duration. Returns whether the displayed value changed.
+ */
+const msSyncElapsed = () => {
+  if (msState.startedAt === null) return false;
+  const elapsed = clampNumber(
+    Math.floor((Date.now() - msState.startedAt) / MINESWEEPER_TIMER_INTERVAL_MS),
+    0,
+    MINESWEEPER_COUNTER_MAX
+  );
+  if (elapsed === msState.elapsed) return false;
+  msState.elapsed = elapsed;
+  return true;
+};
+
 const msStopTimer = () => {
+  if (msSyncElapsed()) msUpdateCounters();
   if (msState.timerId) {
     clearInterval(msState.timerId);
     msState.timerId = null;
@@ -29305,11 +29323,10 @@ const msStartTimer = () => {
   msState.statsSession = startGameStatsSession("minesweeper", {
     difficulty: msDifficulty?.value || "beginner",
   });
+  msState.startedAt = Date.now();
   msState.timerId = setInterval(() => {
     if (msState.gameOver || !msState.started) return;
-    if (msState.elapsed >= MINESWEEPER_COUNTER_MAX) return;
-    msState.elapsed += 1;
-    msUpdateCounters();
+    if (msSyncElapsed()) msUpdateCounters();
   }, MINESWEEPER_TIMER_INTERVAL_MS);
 };
 
@@ -29523,6 +29540,7 @@ const msNewGame = (difficulty) => {
   }));
   msState.started = false;
   msState.gameOver = false;
+  msState.startedAt = null;
   msState.elapsed = 0;
   msState.flagCount = 0;
   msState.revealedSafeCount = 0;

@@ -194,6 +194,13 @@ retains at most 32 prior hashes. This rolling compatibility window lets the
 transition Worker accept both the public site and the candidate site while
 Pages changes over.
 
+The window is a count, not a time. `MAX_GAME_BUILD_COMPATIBILITY_VERSIONS` in
+the Worker refuses configurations above 32 entries, the updater keeps the 32
+newest, and every release evicts the oldest hash, so at N releases per day a
+cached browser stays accepted for roughly 32 / N days. The limit lives in
+`scripts/lib/game-build.mjs` and again in the Worker source; raise both
+together if the release cadence needs a longer grace window.
+
 After **every** change to either listed source file, run:
 
 ```bash
@@ -567,7 +574,9 @@ state globally eligible by starting a new session for it.
 
 Ingress metrics must be JSON safe integers. Minesweeper and Sudoku times and
 Solitaire moves start at one; Snake scores start at zero; every game retains
-its upper bound. Invalid stored legacy rows are skipped individually so one
+its upper bound. The browser derives Minesweeper's time from the wall clock
+(whole seconds since the first reveal, capped at 999) rather than counting
+timer ticks, so a hidden or throttled tab reports the true duration. Invalid stored legacy rows are skipped individually so one
 old or corrupt value cannot take all public stats offline. For Snake, retain a
 five-second minimum and the score-aware floor `900 + score × 118` milliseconds.
 When a genuine quick result needs no more than five additional seconds, use
