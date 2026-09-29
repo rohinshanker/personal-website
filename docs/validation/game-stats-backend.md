@@ -195,9 +195,10 @@ transition Worker accept both the public site and the candidate site while
 Pages changes over.
 
 The window is a count, not a time. `MAX_GAME_BUILD_COMPATIBILITY_VERSIONS` in
-the Worker refuses configurations above 32 entries, the updater keeps the 32
-newest, and every release evicts the oldest hash, so at N releases per day a
-cached browser stays accepted for roughly 32 / N days. The limit lives in
+the Worker refuses configurations above 32 entries and the updater keeps the
+32 newest. Only a release that changes the game build hash adds an entry, and
+once the list is full each one evicts the oldest, so at N distinct new hashes
+per day a cached browser stays accepted for roughly 32 / N days. The limit lives in
 `scripts/lib/game-build.mjs` and again in the Worker source; raise both
 together if the release cadence needs a longer grace window.
 
@@ -574,9 +575,11 @@ state globally eligible by starting a new session for it.
 
 Ingress metrics must be JSON safe integers. Minesweeper and Sudoku times and
 Solitaire moves start at one; Snake scores start at zero; every game retains
-its upper bound. The browser derives Minesweeper's time from the wall clock
-(whole seconds since the first reveal, capped at 999) rather than counting
-timer ticks, so a hidden or throttled tab reports the true duration. Invalid stored legacy rows are skipped individually so one
+its upper bound. The browser derives Minesweeper's time from the monotonic clock
+(`performance.now()`, whole seconds since the first reveal, capped at 999,
+never decreasing) rather than counting timer ticks or reading `Date.now()`, so
+a hidden or throttled tab reports the true duration and a device clock change
+cannot shorten or void a result. Invalid stored legacy rows are skipped individually so one
 old or corrupt value cannot take all public stats offline. For Snake, retain a
 five-second minimum and the score-aware floor `900 + score × 118` milliseconds.
 When a genuine quick result needs no more than five additional seconds, use

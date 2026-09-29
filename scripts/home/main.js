@@ -29295,14 +29295,17 @@ const msSetControlsMode = (mode) => {
 };
 
 /**
- * Derives the elapsed seconds from the wall clock so a throttled or hidden tab
- * reports the true duration. Returns whether the displayed value changed.
+ * Derives the elapsed seconds from the monotonic clock so a throttled or
+ * hidden tab reports the true duration and a device clock change cannot move
+ * it. The value never decreases. Returns whether the displayed value changed.
  */
 const msSyncElapsed = () => {
   if (msState.startedAt === null) return false;
   const elapsed = clampNumber(
-    Math.floor((Date.now() - msState.startedAt) / MINESWEEPER_TIMER_INTERVAL_MS),
-    0,
+    Math.floor(
+      (performance.now() - msState.startedAt) / MINESWEEPER_TIMER_INTERVAL_MS
+    ),
+    msState.elapsed,
     MINESWEEPER_COUNTER_MAX
   );
   if (elapsed === msState.elapsed) return false;
@@ -29323,7 +29326,7 @@ const msStartTimer = () => {
   msState.statsSession = startGameStatsSession("minesweeper", {
     difficulty: msDifficulty?.value || "beginner",
   });
-  msState.startedAt = Date.now();
+  msState.startedAt = performance.now();
   msState.timerId = setInterval(() => {
     if (msState.gameOver || !msState.started) return;
     if (msSyncElapsed()) msUpdateCounters();
