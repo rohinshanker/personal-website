@@ -49,8 +49,9 @@ test("Lain is a single-message Wired chat with a permanently disabled reply comp
   );
   assert.match(
     markup,
-    /class="red-tool-image lain-alert-image-frame">[\s\S]*?class="lain-alert-image"[\s\S]*?data-src="assets\/random%20events\/lain\.gif"/
+    /class="red-tool-image lain-alert-image-frame">[\s\S]*?<video\n\s+class="lain-alert-image"[\s\S]*?data-loop-fallback="assets\/optimized\/random-events\/lain\.webp"[\s\S]*?<source data-src="assets\/optimized\/random-events\/lain\.webm" type="video\/webm" \/>\s*<source data-src="assets\/optimized\/random-events\/lain\.mp4" type="video\/mp4" \/>/
   );
+  assert.doesNotMatch(markup, /assets\/random%20events\/lain\.gif/);
   assert.match(
     markup,
     /class="red-tool-chat-log lain-alert-chat-log"[\s\S]*?role="log"[\s\S]*?aria-label="Message history"/
@@ -162,16 +163,24 @@ test("Lain and Red Tool remain normally probability-gated", async () => {
 });
 
 test("Wired chat assets and cache-busted stylesheet references are present", async () => {
-  const [home, index, lainAsset, avatarAsset] = await Promise.all([
+  const derivatives = [
+    "assets/optimized/random-events/lain.webm",
+    "assets/optimized/random-events/lain.mp4",
+    "assets/optimized/random-events/lain-poster.jpg",
+    "assets/optimized/random-events/lain.webp",
+  ];
+  const [home, index, avatarAsset, ...lainAssets] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
-    stat(new URL("assets/random events/lain.gif", root)),
     stat(new URL("assets/app-icons/ico/user_computer.ico", root)),
+    ...derivatives.map((derivative) => stat(new URL(derivative, root))),
   ]);
   const stylesheet =
-    "styles/home/random-events.css?v=html-semantics-20260927";
+    "styles/home/random-events.css?v=media-derivatives-20260929";
 
-  assert.ok(lainAsset.isFile() && lainAsset.size > 0);
+  lainAssets.forEach((asset, position) => {
+    assert.ok(asset.isFile() && asset.size > 0, `${derivatives[position]} is a nonempty file`);
+  });
   assert.ok(avatarAsset.isFile() && avatarAsset.size > 0);
   assert.ok(home.includes(stylesheet));
   assert.ok(index.includes(stylesheet));

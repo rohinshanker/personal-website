@@ -47,6 +47,8 @@ jobs:
         run: npm run app-icons:check
       - name: Verify generated study resources manifest
         run: npm run study-resources:check
+      - name: Verify optimized media derivatives
+        run: npm run media:check
       - name: Verify Worker deployment bundle
         run: npm --prefix workers/game-stats run deploy:check
 

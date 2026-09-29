@@ -83,8 +83,8 @@ const measureLainWindow = (page) =>
       documentOverflow:
         document.documentElement.scrollWidth > window.innerWidth ||
         document.documentElement.scrollHeight > window.innerHeight,
-      imageNaturalHeight: image.naturalHeight,
-      imageNaturalWidth: image.naturalWidth,
+      imageNaturalHeight: image.videoHeight,
+      imageNaturalWidth: image.videoWidth,
       imageObjectFit: getComputedStyle(image).objectFit,
       imageFramePadding: Number.parseFloat(getComputedStyle(imageFrame).paddingTop),
       imageWithinFrame: (() => {
@@ -176,10 +176,9 @@ test("The Wired message is read-only, focused, and contained across viewports", 
       await expect(win).not.toHaveClass(/is-opening/);
       await expect(close).toBeFocused();
       await expect(close).toHaveAccessibleName("Close");
-      await expect(image).toHaveAttribute(
-        "src",
-        "assets/random%20events/lain.gif"
-      );
+      await expect
+        .poll(() => image.evaluate((element) => element.currentSrc))
+        .toMatch(/assets\/optimized\/random-events\/lain\.(?:webm|mp4)$/);
       await expect(
         chat.locator(".red-tool-message.lain-alert-message")
       ).toHaveCount(1);
@@ -219,8 +218,11 @@ test("The Wired message is read-only, focused, and contained across viewports", 
       await expect(dialog.getByText(/^(?:Reply|OK)$/i)).toHaveCount(0);
 
       await expect
-        .poll(() => image.evaluate((element) => element.naturalWidth))
+        .poll(() => image.evaluate((element) => element.videoWidth))
         .toBe(500);
+      await expect
+        .poll(() => image.evaluate((element) => element.paused))
+        .toBe(false);
       const metrics = await measureLainWindow(page);
       expect(metrics.imageNaturalWidth).toBe(500);
       expect(metrics.imageNaturalHeight).toBe(352);
@@ -265,7 +267,9 @@ test("The Wired message is read-only, focused, and contained across viewports", 
       await dispatchCloseAnimationEnd(win);
       await expect(win).toBeHidden();
       await expect(page.locator("#lain-test-focus-origin")).toBeFocused();
-      await expect(image).not.toHaveAttribute("src", /.+/);
+      // The loop keeps its decoded sources for the next trigger but must not run
+      // while the window is hidden.
+      await expect.poll(() => image.evaluate((element) => element.paused)).toBe(true);
     });
   }
 
