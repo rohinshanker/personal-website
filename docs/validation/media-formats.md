@@ -105,7 +105,7 @@ Markup, in `home.html` only:
   data-loop-fallback="assets/optimized/random-events/servalpizza.webp"
   data-poster="assets/optimized/random-events/servalpizza-poster.jpg"
   width="628" height="640"
-  autoplay loop muted playsinline preload="auto"
+  loop muted playsinline preload="auto"
 >
   <source data-src="assets/optimized/random-events/servalpizza.webm" type="video/webm" />
   <source data-src="assets/optimized/random-events/servalpizza.mp4" type="video/mp4" />
@@ -119,14 +119,40 @@ Markup, in `home.html` only:
   a two-format `<video>` starts a single fetch.
 - A deferred `<source>` counts as loaded only at `readyState >= 2`, so a caller
   awaiting deferred media waits for a decoded frame, not just metadata.
+- **`media.js` owns playback outright.** The markup declares no `autoplay`, and
+  the helper clears the property on every loop video it prepares. Native autoplay
+  is not scoped to a visible window: it starts as soon as `load()` finds data, so
+  it would run the loop inside a window the visitor has never opened.
 - `video[data-loop-video]` plays only while its window and the page are visible.
   Hiding or closing the window pauses it, matching
-  [carousel-video-playback.md](carousel-video-playback.md); `visibilitychange`
-  pauses it with the tab. The window is watched through a `MutationObserver`
-  scoped to the few windows that own a loop video.
+  [carousel-video-playback.md](carousel-video-playback.md). The window is watched
+  through a `MutationObserver` scoped to the few windows that own a loop video.
+  A window is registered when one of its loop videos is prepared — at boot, or
+  when its media is activated — so a window cloned or built after boot is watched
+  on the same terms.
+- **Pausing never waits for an animation frame.** A hidden document suspends
+  them, so a deferred pause can leave a loop advancing out of sight indefinitely.
+  `visibilitychange` to hidden and `pagehide` pause synchronously, and a window
+  mutation pauses whatever just went out of sight before scheduling the rest.
+  Starting is what waits for the frame: `pageshow`, a visible `visibilitychange`,
+  and a window mutation all go through the ordinary scheduled sync.
+- **Stacked layers share one clock.** Loop videos in the same window that decode
+  the same file are one group: the advertisement draws its artwork twice, plainly
+  and as the `clip-path`ed pixelated text overlay. Each `<video>` runs its own
+  clock, so a group starts only once every layer reports `readyState >= 3`, and a
+  follower more than one frame from the first layer is seeked back onto it — on
+  resume, and on every `timeupdate`. Without that, a second response arriving a
+  second later holds a one-second offset for the whole loop. Two elements are the
+  simplest design that keeps the overlay's `clip-path` and `image-rendering`
+  declarative; one shared decode would mean a canvas redrawn from script every
+  frame. A lone loop video still starts as soon as it has a source.
 - Bringing another window to the front does **not** pause a loop video: it
   replaced an animated GIF, which kept running. `pauseMediaPlayback` in
-  `scripts/home/main.js` skips `video[data-loop-video]` for that reason.
+  `scripts/home/main.js` skips `video[data-loop-video]` for that reason, and all
+  three of its callers are cases where the window stays on screen — front-change,
+  a pointer press outside the active window, and `pauseActiveWindowMedia` on
+  `blur`. The page-hide case is not among them: `media.js` handles the hidden
+  document itself, so the rule stays in the module that owns loop playback.
 - If `play()` is refused — iOS Low Power Mode, a stricter autoplay policy — the
   video is hidden and an `<img>` built from `data-loop-fallback` takes its place
   with the same classes, width, height, and `aria-hidden`. An `AbortError` from a
@@ -181,6 +207,14 @@ npx playwright test --project=ui tests/ui/deferred-window-media.spec.mjs \
 `tests/optimize-media.test.mjs` drives the pipeline through a stubbed encoder
 runner over temporary fixtures and never invokes a real encoder; the last case
 runs the shipped `--check` with an empty `PATH` to prove it needs none.
+
+`tests/ui/loop-video-lifecycle.spec.mjs` covers the playback contract: a result
+window preloaded but never opened stays at its first frame, a hidden page pauses
+without an animation frame, the advertisement's two layers stay aligned when the
+second response is held back, and a window cloned after boot pauses when hidden.
+The project runs Chromium; run that spec's scenarios in Firefox and WebKit by
+hand when the lifecycle changes, since autoplay and frame scheduling differ most
+between engines.
 
 For rendered validation, trigger each converted event through the Admin Controls
 event finder at 375×812 and 1440×900 and confirm the box, the loop, and the

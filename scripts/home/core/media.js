@@ -81,8 +81,9 @@ const suspendHiddenCarouselMediaPlayback = (element) => {
 
 /**
  * Looping event artwork that ships as `<video>` instead of an animated image.
- * It plays only while its window and the page are visible, and falls back to the
- * animated-WebP derivative in `data-loop-fallback` when `play()` is refused.
+ * This helper owns playback outright: the markup carries no `autoplay`, and a
+ * video plays only while its window and the page are visible. When `play()` is
+ * refused it falls back to the animated-WebP derivative in `data-loop-fallback`.
  */
 const LOOP_VIDEO_SELECTOR = "video[data-loop-video]";
 
@@ -95,6 +96,16 @@ const LOOP_VIDEO_INACTIVE_ANCESTORS = [
   '.window[data-media-closing="true"]',
   "[data-admin-event-preview-window]",
 ].join(", ");
+
+/** `HAVE_FUTURE_DATA`: the element has enough buffered to start without stalling. */
+const LOOP_VIDEO_READY_TO_PLAY = 3;
+
+/**
+ * How far stacked layers may drift before one is seeked back onto the group clock.
+ * One frame at 30 fps, which is tighter than the 50/3 fps clip the advertisement
+ * stacks, so a mismatch is corrected before it can show a different frame.
+ */
+const LOOP_VIDEO_DRIFT_SECONDS = 1 / 30;
 
 const loopVideoElements = (root = document) => {
   if (!root?.querySelectorAll) return [];
@@ -113,10 +124,13 @@ const isLoopVideoActive = (video) =>
 const hasResolvedMediaSource = (video) =>
   Boolean(video?.getAttribute("src") || video?.querySelector("source[src]"));
 
+/** True once the fallback image took the video's place, so it owns no playback. */
+const isLoopVideoReplaced = (video) => video?.dataset.loopFallbackActive === "true";
+
 /** Replaces a refused `<video>` with the animated image it names, keeping the same box. */
 const activateLoopVideoFallback = (video) => {
   const source = video?.dataset.loopFallback;
-  if (!source || video.dataset.loopFallbackActive === "true") return;
+  if (!source || isLoopVideoReplaced(video)) return;
   video.dataset.loopFallbackActive = "true";
   video.pause();
 
@@ -136,14 +150,51 @@ const activateLoopVideoFallback = (video) => {
   video.style.display = "none";
 };
 
-const syncLoopVideoPlayback = (video) => {
-  if (!video) return;
-  if (!isLoopVideoActive(video)) {
-    if (!video.paused) video.pause();
-    return;
-  }
-  if (!video.paused || !hasResolvedMediaSource(video)) return;
+/** Every deferred or resolved source a loop video would load, in element order. */
+const loopVideoSourceKey = (video) => {
+  if (!video?.querySelectorAll) return "";
+  const sources = [...video.querySelectorAll("source")].map(
+    (source) => source.getAttribute("src") || source.dataset.src || ""
+  );
+  return [video.getAttribute("src") || video.dataset.src || "", ...sources]
+    .filter(Boolean)
+    .join("|");
+};
 
+/**
+ * The layers that must show the same frame: loop videos in one window decoding the
+ * same file. The advertisement stacks its base artwork and a pixelated overlay
+ * clipped out of the same WebM, and each `<video>` runs its own clock, so a source
+ * that arrives a second later would otherwise hold that offset for the whole loop.
+ * Two elements are the simplest design that keeps the overlay's `clip-path` and
+ * `image-rendering` declarative; one shared decode would mean a canvas redrawn every
+ * frame from script.
+ */
+const loopVideoLayers = (video) => {
+  const owner = video?.closest?.(".window");
+  const sources = loopVideoSourceKey(video);
+  const layers =
+    owner && sources
+      ? loopVideoElements(owner).filter(
+          (layer) =>
+            layer.closest(".window") === owner && loopVideoSourceKey(layer) === sources
+        )
+      : [video];
+  return layers.filter((layer) => layer && !isLoopVideoReplaced(layer));
+};
+
+/** Seeks every follower back onto the first layer's clock once it drifts past a frame. */
+const alignLoopVideoLayers = (layers) => {
+  const [leader, ...followers] = layers;
+  if (!leader || !followers.length) return;
+  followers.forEach((follower) => {
+    if (Math.abs(follower.currentTime - leader.currentTime) <= LOOP_VIDEO_DRIFT_SECONDS) return;
+    follower.currentTime = leader.currentTime;
+  });
+};
+
+const startLoopVideo = (video) => {
+  if (!video.paused) return;
   const playRequest = video.play();
   if (!playRequest || typeof playRequest.catch !== "function") return;
   playRequest.catch((error) => {
@@ -153,7 +204,32 @@ const syncLoopVideoPlayback = (video) => {
   });
 };
 
+const syncLoopVideoPlayback = (video) => {
+  if (!video || isLoopVideoReplaced(video)) return;
+  const layers = loopVideoLayers(video);
+  if (!isLoopVideoActive(video)) {
+    layers.forEach((layer) => {
+      if (!layer.paused) layer.pause();
+    });
+    return;
+  }
+  if (!layers.every(hasResolvedMediaSource)) return;
+  // Stacked layers start together or not at all, so a late second response cannot
+  // leave them apart. A lone video still starts as early as it always did.
+  if (layers.length > 1 && layers.some((layer) => layer.readyState < LOOP_VIDEO_READY_TO_PLAY)) {
+    return;
+  }
+  alignLoopVideoLayers(layers);
+  layers.forEach(startLoopVideo);
+};
+
 let loopVideoSyncFrame = 0;
+
+const cancelLoopVideoSync = () => {
+  if (!loopVideoSyncFrame) return;
+  cancelAnimationFrame(loopVideoSyncFrame);
+  loopVideoSyncFrame = 0;
+};
 
 const scheduleLoopVideoSync = () => {
   if (loopVideoSyncFrame) return;
@@ -163,24 +239,104 @@ const scheduleLoopVideoSync = () => {
   });
 };
 
-/** Watches only the windows that own a loop video, so ordinary class churn costs nothing. */
-const watchLoopVideoVisibility = () => {
-  const owners = new Set(
-    loopVideoElements()
-      .map((video) => video.closest(".window"))
-      .filter(Boolean)
-  );
-  if (!owners.size) return;
-
-  const observer = new MutationObserver(scheduleLoopVideoSync);
-  owners.forEach((owner) => {
-    observer.observe(owner, {
-      attributeFilter: ["class", "aria-hidden", "hidden", "data-media-closing"],
-    });
+/** Stops what is out of sight now; starting again can wait for the scheduled frame. */
+const pauseInactiveLoopVideos = () => {
+  loopVideoElements().forEach((video) => {
+    if (!video.paused && !isLoopVideoActive(video)) video.pause();
   });
-  document.addEventListener("visibilitychange", scheduleLoopVideoSync);
+};
+
+/** Stops every loop video whatever its window looks like: the page itself is going. */
+const pauseAllLoopVideos = () => {
+  loopVideoElements().forEach((video) => {
+    if (!video.paused) video.pause();
+  });
+};
+
+const onLoopVideoOwnerMutation = () => {
+  pauseInactiveLoopVideos();
   scheduleLoopVideoSync();
 };
+
+/**
+ * A hidden document suspends animation frames, so a pause that waits for one may
+ * never run and the loop would keep advancing out of sight. Pausing happens here,
+ * synchronously, and drops the frame already queued so it cannot undo the pause;
+ * resuming goes back through the ordinary scheduled sync.
+ */
+const stopLoopVideosForPageHide = () => {
+  cancelLoopVideoSync();
+  pauseAllLoopVideos();
+};
+
+const onLoopVideoPageVisibilityChange = () => {
+  if (document.hidden) {
+    stopLoopVideosForPageHide();
+    return;
+  }
+  scheduleLoopVideoSync();
+};
+
+const onLoopVideoLayerTimeUpdate = (event) => {
+  const layers = loopVideoLayers(event.currentTarget);
+  if (layers.length > 1) alignLoopVideoLayers(layers);
+};
+
+let loopVideoOwnerObserver = null;
+const observedLoopVideoOwners = new WeakSet();
+
+/**
+ * Watches only the windows that own a loop video, so ordinary class churn costs
+ * nothing. Registration happens per video rather than once at boot, so a window
+ * cloned or built later is observed as soon as its media is activated.
+ */
+const observeLoopVideoOwner = (video) => {
+  const owner = video?.closest?.(".window");
+  if (!owner || observedLoopVideoOwners.has(owner)) return;
+  observedLoopVideoOwners.add(owner);
+  if (!loopVideoOwnerObserver) {
+    loopVideoOwnerObserver = new MutationObserver(onLoopVideoOwnerMutation);
+  }
+  loopVideoOwnerObserver.observe(owner, {
+    attributeFilter: ["class", "aria-hidden", "hidden", "data-media-closing"],
+  });
+};
+
+const preparedLoopVideos = new WeakSet();
+
+/**
+ * Hands one video's playback to this helper before any source can resolve: native
+ * autoplay would otherwise start it the moment `load()` finds data, inside a window
+ * that has never opened. Readiness events re-drive the sync so a layer arriving late
+ * starts its group, and `timeupdate` keeps a started group aligned.
+ */
+const prepareLoopVideo = (video) => {
+  if (!video?.matches?.(LOOP_VIDEO_SELECTOR) || preparedLoopVideos.has(video)) return;
+  preparedLoopVideos.add(video);
+  video.autoplay = false;
+  ["loadeddata", "canplay", "playing"].forEach((eventName) => {
+    video.addEventListener(eventName, scheduleLoopVideoSync);
+  });
+  video.addEventListener("timeupdate", onLoopVideoLayerTimeUpdate);
+  observeLoopVideoOwner(video);
+};
+
+const prepareLoopVideos = (root = document) => {
+  loopVideoElements(root).forEach(prepareLoopVideo);
+};
+
+const watchLoopVideoVisibility = () => {
+  prepareLoopVideos();
+  document.addEventListener("visibilitychange", onLoopVideoPageVisibilityChange);
+  // The last synchronous point before the page is frozen, cached, or discarded.
+  window.addEventListener("pagehide", stopLoopVideosForPageHide);
+  window.addEventListener("pageshow", scheduleLoopVideoSync);
+  scheduleLoopVideoSync();
+};
+
+// This module loads after the event markup, so the videos parsed so far hand over
+// playback immediately; the rest are prepared when their media is activated.
+prepareLoopVideos();
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", watchLoopVideoVisibility, { once: true });
@@ -202,6 +358,7 @@ const activateDeferredSourceOwner = (owner) => {
     owner.setAttribute("poster", owner.dataset.poster);
   }
   if (owner.querySelector("source[data-src]:not([src])")) return;
+  prepareLoopVideo(owner);
   owner.load();
   scheduleLoopVideoSync();
 };
@@ -211,6 +368,7 @@ const loadDeferredMediaElement = (element, visibleOnly = false, { eager = false 
   suspendHiddenCarouselMediaPlayback(element);
   if (shouldSkipDeferredMediaElement(element, visibleOnly)) return null;
   if (element.getAttribute("src") || !element.dataset.src) return element;
+  prepareLoopVideo(element);
   if (eager && element.matches("img")) element.loading = "eager";
   fitImageIntoFrame(element);
   const galleryScroll = element.matches("img") && element.closest(".gallery-scroll");

@@ -129,9 +129,13 @@ test("every looping event video declares the contract its playback depends on", 
 
   for (const tag of loopVideos) {
     const name = attributeValue(tag, "data-loop-video");
-    for (const attribute of ["autoplay", "loop", "muted", "playsinline"]) {
+    for (const attribute of ["loop", "muted", "playsinline"]) {
       assert.match(tag, new RegExp(`\\s${attribute}\\b`), `${name} declares ${attribute}`);
     }
+    // `scripts/home/core/media.js` owns when a loop video plays. Native autoplay
+    // would start one inside a window that has never opened, as soon as the
+    // deferred sources resolve and `load()` finds data.
+    assert.doesNotMatch(tag, /\sautoplay\b/, `${name} leaves playback to the helper`);
     assert.equal(attributeValue(tag, "preload"), "auto", `${name} preloads its media`);
     assert.ok(attributeValue(tag, "data-poster"), `${name} carries a deferred poster`);
     assert.ok(attributeValue(tag, "data-loop-fallback"), `${name} carries an image fallback`);
