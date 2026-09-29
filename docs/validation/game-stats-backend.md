@@ -575,15 +575,21 @@ state globally eligible by starting a new session for it.
 
 Ingress metrics must be JSON safe integers. Minesweeper and Sudoku times and
 Solitaire moves start at one; Snake scores start at zero; every game retains
-its upper bound. The browser accumulates Minesweeper's time as real elapsed time
-since the first reveal: at each sync it adds whichever of `performance.now()`
-and `Date.now()` advanced further, never a negative amount, in whole seconds
-capped at 999. A hidden or throttled tab and a sleeping device therefore count
-in full, and moving the device clock backwards cannot shorten the metric;
-moving it forwards can only lengthen it. This covers the metric alone: the
-event timestamp still comes from the device clock, so a clock change during a
-game can put the result outside its session or event-date window and the
-Worker then rejects it. Invalid stored legacy rows are skipped individually so one
+its upper bound. The browser accumulates Minesweeper's time since the first reveal: at
+each sync (every second while running, and once more at the win) it adds
+whichever of `performance.now()` and `Date.now()` advanced further, never a
+negative amount, in whole seconds capped at 999. The guarantees are exactly
+these: the displayed time never decreases; a hidden or throttled tab counts in
+full; system sleep counts in full; a device clock moved backwards while the
+page is awake does not change the metric; a device clock moved forwards can
+only lengthen it. The one known undercount is a backwards clock change inside
+the same sync interval as a sleep that paused the monotonic clock: only the
+wall-clock advance that remains is counted (10 s awake, 60 s asleep, clock
+back 20 s records 50, not 70), because no browser clock reports the lost time.
+The metric is a client measurement, not a tamper-proof one. This paragraph
+covers the metric alone: the event timestamp still comes from the device
+clock, so a clock change during a game can put the result outside its session
+or event-date window and the Worker then rejects it. Invalid stored legacy rows are skipped individually so one
 old or corrupt value cannot take all public stats offline. For Snake, retain a
 five-second minimum and the score-aware floor `900 + score × 118` milliseconds.
 When a genuine quick result needs no more than five additional seconds, use

@@ -204,6 +204,26 @@ test("system sleep that pauses the monotonic clock still counts", async () => {
   assert.equal(winNow(harness)[0].event.metric, 70);
 });
 
+test("a rollback during sleep counts only the wall-clock advance that remains", async () => {
+  // Known limit, documented in game-stats-backend.md: with the monotonic clock
+  // paused by sleep and the wall clock moved back inside the same sync
+  // interval, no browser clock reports the lost time.
+  for (const [rollbackMs, recorded] of [
+    [8_000, 62],
+    [20_000, 50],
+    [60_000, 10],
+    [90_000, 10],
+  ]) {
+    const harness = await createTimerHarness();
+    harness.msStartTimer();
+    harness.advance(10_000);
+    harness.tick();
+    harness.wallClock += 60_000 - rollbackMs;
+    assert.equal(winNow(harness)[0].event.metric, recorded, `rollback ${rollbackMs}`);
+    assert.ok(harness.msState.elapsed >= 10, "the displayed time never decreases");
+  }
+});
+
 test("a device clock moved forwards can only lengthen the time", async () => {
   const harness = await createTimerHarness();
   harness.msStartTimer();
