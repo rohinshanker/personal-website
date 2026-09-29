@@ -7142,6 +7142,10 @@ html.is-wall-breach-shaking body {
   max-height: min(54vh, 300px);
   max-width: 100%;
   object-fit: contain;
+  /* The `width`/`height` attributes are a presentational hint, so without this a
+     `<video>` keeps its 858px declared width and the capped height stretches the
+     box to the window. `auto` sizes it from the intrinsic ratio, as the GIF did. */
+  width: auto;
 }
 
 .dst-survive-window .window-body {

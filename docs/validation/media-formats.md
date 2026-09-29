@@ -141,7 +141,10 @@ Markup, in `home.html` only:
 
 Every `<video>` carries `width` and `height` matching its encoded derivative, so
 loading shifts no layout; `tests/optimized-media-references.test.mjs` compares
-those attributes against the generated record.
+those attributes against the generated record. Those attributes are also a
+presentational hint for `width`, which a GIF's `<img>` never supplied: a rule that
+caps `height` and leaves `width` at its default keeps the declared pixel width and
+stretches the box. Every loop video's rule states `width` explicitly.
 
 ## Pipeline
 
