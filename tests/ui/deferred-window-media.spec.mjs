@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures.mjs";
 import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
 
-test.setTimeout(150_000);
+test.setTimeout(190_000);
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
@@ -46,6 +46,7 @@ const affectedEventIds = Object.freeze([
   "soot-sprites",
   "noble-steed",
   "lancer-battle",
+  "evil-wizards-advertisement",
 ]);
 
 // The Admin preview activates a clone. Trigger Now exercises the live windows,
@@ -69,6 +70,7 @@ const realTriggerEventIds = Object.freeze([
   "soot-sprites",
   "lancer-battle",
   "human-instrumentality-project",
+  "evil-wizards-advertisement",
 ]);
 
 const chainedWindowIds = Object.freeze([
@@ -77,6 +79,8 @@ const chainedWindowIds = Object.freeze([
   "stalker-result-window",
   "midnight-gospel-meditation-window",
   "noble-steed-result-window",
+  "serval-pizza-window",
+  "dst-survive-window",
 ]);
 
 const configureAdministratorApi = async (page) => {
@@ -138,19 +142,51 @@ const preparePage = async (page, viewport) => {
   return diagnostics;
 };
 
-const expectDecodedImages = async (root, label) => {
+const expectDecodedImages = async (root, label, { expectPlaying = false } = {}) => {
   await expect(root, `${label} is visible`).toBeVisible();
   const images = root.locator("img[src], img[data-src]");
-  expect(await images.count(), `${label} contains source-bearing images`).toBeGreaterThan(0);
+  // Only the looping event artwork this contract owns; other videos in a window
+  // (a manual result clip, say) load on their own schedule.
+  const videos = root.locator("video[data-loop-video]");
+  const imageCount = await images.count();
+  const videoCount = await videos.count();
+  expect(imageCount + videoCount, `${label} contains source-bearing media`).toBeGreaterThan(0);
+
+  if (imageCount) {
+    await expect
+      .poll(
+        () =>
+          images.evaluateAll((elements) =>
+            elements
+              .filter((image) => image.naturalWidth <= 0)
+              .map((image) => image.currentSrc || image.getAttribute("src") || image.dataset.src || "")
+          ),
+        { message: `${label} images decode`, timeout: 10_000 }
+      )
+      .toEqual([]);
+  }
+
+  if (!videoCount) return;
+  // A <video> with deferred sources only counts as loaded at readyState >= 2.
   await expect
     .poll(
       () =>
-        images.evaluateAll((elements) =>
+        videos.evaluateAll((elements) =>
           elements
-            .filter((image) => image.naturalWidth <= 0)
-            .map((image) => image.currentSrc || image.getAttribute("src") || image.dataset.src || "")
+            .filter((video) => video.readyState < 2)
+            .map((video) => video.currentSrc || video.dataset.loopVideo || "")
         ),
-      { message: `${label} images decode`, timeout: 10_000 }
+      { message: `${label} videos decode a frame`, timeout: 15_000 }
+    )
+    .toEqual([]);
+  if (!expectPlaying) return;
+  await expect
+    .poll(
+      () =>
+        videos.evaluateAll((elements) =>
+          elements.filter((video) => video.paused).map((video) => video.dataset.loopVideo || "")
+        ),
+      { message: `${label} loops play while visible`, timeout: 15_000 }
     )
     .toEqual([]);
 };
@@ -229,7 +265,7 @@ for (const viewport of viewports) {
       expect(windowId, `${eventId} preview carries the window id`).toBeTruthy();
       await triggerNow.click();
       const liveWindow = page.locator(`#${windowId}:not([data-admin-event-preview-window])`);
-      await expectDecodedImages(liveWindow, `live event ${eventId}`);
+      await expectDecodedImages(liveWindow, `live event ${eventId}`, { expectPlaying: true });
       await liveWindow.evaluate((windowElement) => {
         windowElement.classList.remove("is-opening", "is-closing");
         windowElement.classList.add("is-hidden");
@@ -259,6 +295,8 @@ window.__deferredMediaTest = Object.freeze({
     "stalker-result-window": showStalkerResultWindow,
     "midnight-gospel-meditation-window": showMidnightGospelMeditationWindow,
     "noble-steed-result-window": showNobleSteedResultWindow,
+    "serval-pizza-window": showServalPizzaWindow,
+    "dst-survive-window": showDstSurviveWindow,
   })[id](),
   show: (id) => randomEventDefinitions.find((definition) => definition.id === id).run({
     triggerName: "adminControls", detail: { source: "media-test" }, admin: true,
@@ -276,10 +314,10 @@ window.__deferredMediaTest = Object.freeze({
       expect(windowId).toBeTruthy();
       const liveWindow = page.locator(`#${windowId}:not([data-admin-event-preview-window])`);
       await expect(liveWindow).toBeHidden();
-      expect(await liveWindow.locator("img[data-src]:not([src])").count(),
+      expect(await liveWindow.locator("[data-src]:not([src])").count(),
         `${eventId} starts with cold media`).toBeGreaterThan(0);
       await page.evaluate((id) => window.__deferredMediaTest.show(id), eventId);
-      await expectDecodedImages(liveWindow, `cold event ${eventId}`);
+      await expectDecodedImages(liveWindow, `cold event ${eventId}`, { expectPlaying: true });
       if (eventId === "rohin-os-note" || eventId === "lain-system-alert") {
         const screenshotPath = testInfo.outputPath(`${eventId}-${viewport.name}.png`);
         await page.screenshot({ path: screenshotPath, animations: "disabled" });
@@ -296,15 +334,30 @@ window.__deferredMediaTest = Object.freeze({
     for (const windowId of chainedWindowIds) {
       const liveWindow = page.locator(`#${windowId}:not([data-admin-event-preview-window])`);
       await expect(liveWindow).toBeHidden();
-      expect(await liveWindow.locator("img[data-src]:not([src])").count(),
+      expect(await liveWindow.locator("[data-src]:not([src])").count(),
         `${windowId} starts with cold media`).toBeGreaterThan(0);
       await page.evaluate((id) => window.__deferredMediaTest.showChained(id), windowId);
-      await expectDecodedImages(liveWindow, `cold chained window ${windowId}`);
+      await expectDecodedImages(liveWindow, `cold chained window ${windowId}`, {
+        expectPlaying: true,
+      });
+      await liveWindow.locator("video[data-loop-video]").evaluateAll((videos) => {
+        videos.forEach((video) => {
+          if (!video.loop) throw new Error(`${video.dataset.loopVideo} does not loop`);
+        });
+      });
       await liveWindow.evaluate((element) => {
         element.classList.remove("is-opening", "is-closing");
         element.classList.add("is-hidden");
         element.setAttribute("aria-hidden", "true");
       });
+      // Hiding the window stops its loops, per the carousel playback contract.
+      await expect
+        .poll(() =>
+          liveWindow
+            .locator("video[data-loop-video]")
+            .evaluateAll((videos) => videos.filter((video) => !video.paused).length)
+        )
+        .toBe(0);
     }
     expect(diagnostics.consoleErrors).toEqual([]);
     expect(diagnostics.runtimeErrors).toEqual([]);

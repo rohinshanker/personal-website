@@ -1,5 +1,7 @@
 (() => {
 const {
+  activateDeferredSourceOwner,
+  deferredSourceOwner,
   fitImagesIntoFrames,
   loadDeferredMedia: loadDeferredMediaNow,
   mediaSourcePreloadRequests,
@@ -5073,7 +5075,9 @@ const isWindowVisible = (win) =>
 
 const pauseMediaPlayback = (root) => {
   if (!root) return;
-  root.querySelectorAll("video, audio").forEach((media) => {
+  // Event loop artwork replaced an animated GIF, so it keeps running while its
+  // window is visible and stops only when the window hides.
+  root.querySelectorAll("video:not([data-loop-video]), audio").forEach((media) => {
     media.pause();
   });
 };
@@ -23557,11 +23561,11 @@ const calendarEvents = {
   },
   "1-11": {
     title: "February 11",
-    image: "assets/random%20events/birthday.gif",
+    image: "assets/optimized/random-events/birthday.webp",
   },
   "1-14": {
     title: "Valentine's Day",
-    image: "assets/random%20events/valentine.gif",
+    image: "assets/optimized/random-events/valentine.webp",
   },
   "2-4": {
     title: "Where did she go?",
@@ -23573,7 +23577,7 @@ const calendarEvents = {
   },
   "2-31": {
     title: "Transgender Day of Visibility",
-    image: "assets/random%20events/trans.gif",
+    image: "assets/optimized/random-events/trans.webp",
   },
   "3-20": {
     title: "April 20",
@@ -23593,7 +23597,7 @@ const calendarEvents = {
   },
   "6-4": {
     title: "Fourth of July",
-    image: "assets/random%20events/4thofjuly.gif",
+    image: "assets/optimized/random-events/4thofjuly.webp",
   },
   "6-5": {
     title: "July 5th",
@@ -23610,7 +23614,7 @@ const calendarEvents = {
   },
   "9-31": {
     title: "Halloween",
-    image: "assets/random%20events/halloween.gif",
+    image: "assets/optimized/random-events/halloween.webp",
   },
   "10-2": {
     title: "Dia de los Muertos",
@@ -23634,7 +23638,7 @@ const chineseNewYearEvent = {
 
 const easterEvent = {
   title: "Easter Day",
-  image: "assets/random%20events/easter.gif",
+  image: "assets/optimized/random-events/easter.webp",
 };
 
 const diwaliEvent = {
@@ -23644,12 +23648,12 @@ const diwaliEvent = {
 
 const ramadanEvent = {
   title: "Ramadan Starts",
-  image: "assets/random%20events/ramadan.gif",
+  image: "assets/optimized/random-events/ramadan.webp",
 };
 
 const holiEvent = {
   title: "Holi",
-  image: "assets/random%20events/holi.gif",
+  image: "assets/optimized/random-events/holi.webp",
 };
 
 const hanukkahEvent = {
@@ -23659,7 +23663,7 @@ const hanukkahEvent = {
 
 const vesakEvent = {
   title: "Vesak Day",
-  image: "assets/random%20events/buddha.gif",
+  image: "assets/optimized/random-events/buddha.webp",
 };
 
 const thanksgivingEvent = {
@@ -23674,12 +23678,12 @@ const laborDayEvent = {
 
 const mothersDayEvent = {
   title: "Mother's Day",
-  image: "assets/random%20events/mothersday.gif",
+  image: "assets/optimized/random-events/mothersday.webp",
 };
 
 const fathersDayEvent = {
   title: "Father's Day",
-  image: "assets/random%20events/fathersday.gif",
+  image: "assets/optimized/random-events/fathersday.webp",
 };
 
 const onamEvent = {
@@ -31926,6 +31930,8 @@ const prepareAdminRandomEventPreview = (sourceWindow, eventId) => {
 const activateAdminRandomEventPreviewMedia = (preview) => {
   preview?.querySelectorAll("[data-src]").forEach((media) => {
     if (!media.hasAttribute("src")) media.setAttribute("src", media.getAttribute("data-src"));
+    // A cloned `<video>` needs its own load() before it can paint its poster.
+    activateDeferredSourceOwner(deferredSourceOwner(media));
   });
   return preview;
 };

@@ -79,6 +79,133 @@ const suspendHiddenCarouselMediaPlayback = (element) => {
   element.autoplay = false;
 };
 
+/**
+ * Looping event artwork that ships as `<video>` instead of an animated image.
+ * It plays only while its window and the page are visible, and falls back to the
+ * animated-WebP derivative in `data-loop-fallback` when `play()` is refused.
+ */
+const LOOP_VIDEO_SELECTOR = "video[data-loop-video]";
+
+const LOOP_VIDEO_INACTIVE_ANCESTORS = [
+  ".window.is-hidden",
+  ".window.is-closing",
+  ".viewer-content.is-hidden",
+  ".app-window.is-hidden",
+  ".home-window.is-hidden",
+  '.window[data-media-closing="true"]',
+  "[data-admin-event-preview-window]",
+].join(", ");
+
+const loopVideoElements = (root = document) => {
+  if (!root?.querySelectorAll) return [];
+  const own = root.matches?.(LOOP_VIDEO_SELECTOR) ? [root] : [];
+  return [...own, ...root.querySelectorAll(LOOP_VIDEO_SELECTOR)];
+};
+
+const isLoopVideoActive = (video) =>
+  Boolean(
+    video?.isConnected &&
+      !video.hidden &&
+      !document.hidden &&
+      !video.closest(LOOP_VIDEO_INACTIVE_ANCESTORS)
+  );
+
+const hasResolvedMediaSource = (video) =>
+  Boolean(video?.getAttribute("src") || video?.querySelector("source[src]"));
+
+/** Replaces a refused `<video>` with the animated image it names, keeping the same box. */
+const activateLoopVideoFallback = (video) => {
+  const source = video?.dataset.loopFallback;
+  if (!source || video.dataset.loopFallbackActive === "true") return;
+  video.dataset.loopFallbackActive = "true";
+  video.pause();
+
+  const image = document.createElement("img");
+  image.className = video.className;
+  image.decoding = "async";
+  image.alt = "";
+  ["width", "height", "aria-hidden"].forEach((name) => {
+    if (video.hasAttribute(name)) image.setAttribute(name, video.getAttribute(name));
+  });
+  image.dataset.loopFallbackFor = video.dataset.loopVideo || "";
+  image.src = source;
+  video.insertAdjacentElement("afterend", image);
+  // The event rules set `display: block`, which outranks the `hidden` UA rule,
+  // so the replaced video needs an inline display too.
+  video.hidden = true;
+  video.style.display = "none";
+};
+
+const syncLoopVideoPlayback = (video) => {
+  if (!video) return;
+  if (!isLoopVideoActive(video)) {
+    if (!video.paused) video.pause();
+    return;
+  }
+  if (!video.paused || !hasResolvedMediaSource(video)) return;
+
+  const playRequest = video.play();
+  if (!playRequest || typeof playRequest.catch !== "function") return;
+  playRequest.catch((error) => {
+    // A pause that interrupts the request is ordinary; a refusal is not.
+    if (error?.name === "AbortError" || !isLoopVideoActive(video)) return;
+    activateLoopVideoFallback(video);
+  });
+};
+
+let loopVideoSyncFrame = 0;
+
+const scheduleLoopVideoSync = () => {
+  if (loopVideoSyncFrame) return;
+  loopVideoSyncFrame = requestAnimationFrame(() => {
+    loopVideoSyncFrame = 0;
+    loopVideoElements().forEach(syncLoopVideoPlayback);
+  });
+};
+
+/** Watches only the windows that own a loop video, so ordinary class churn costs nothing. */
+const watchLoopVideoVisibility = () => {
+  const owners = new Set(
+    loopVideoElements()
+      .map((video) => video.closest(".window"))
+      .filter(Boolean)
+  );
+  if (!owners.size) return;
+
+  const observer = new MutationObserver(scheduleLoopVideoSync);
+  owners.forEach((owner) => {
+    observer.observe(owner, {
+      attributeFilter: ["class", "aria-hidden", "hidden", "data-media-closing"],
+    });
+  });
+  document.addEventListener("visibilitychange", scheduleLoopVideoSync);
+  scheduleLoopVideoSync();
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", watchLoopVideoVisibility, { once: true });
+} else {
+  watchLoopVideoVisibility();
+}
+
+/** The `<video>`/`<audio>` a deferred `<source>` belongs to, or null for any other element. */
+const deferredSourceOwner = (element) =>
+  element?.matches("source") ? element.parentElement?.closest("video, audio") ?? null : null;
+
+/**
+ * Starts the owning media element once every one of its deferred `<source>`
+ * children carries a real `src`, so a two-format `<video>` loads exactly once.
+ */
+const activateDeferredSourceOwner = (owner) => {
+  if (!owner) return;
+  if (owner.dataset.poster && !owner.getAttribute("poster")) {
+    owner.setAttribute("poster", owner.dataset.poster);
+  }
+  if (owner.querySelector("source[data-src]:not([src])")) return;
+  owner.load();
+  scheduleLoopVideoSync();
+};
+
 const loadDeferredMediaElement = (element, visibleOnly = false, { eager = false } = {}) => {
   if (!element) return null;
   suspendHiddenCarouselMediaPlayback(element);
@@ -93,40 +220,55 @@ const loadDeferredMediaElement = (element, visibleOnly = false, { eager = false 
   }
   element.setAttribute("src", element.dataset.src);
   if (element.matches("video, audio")) element.load();
+  activateDeferredSourceOwner(deferredSourceOwner(element));
   return element;
 };
 
 const deferredMediaElementLoaded = (element) => {
+  const owner = deferredSourceOwner(element);
+  if (owner) return Boolean(element.getAttribute("src")) && owner.readyState >= 2;
   if (!element || !element.getAttribute("src")) return false;
   if (element.matches("img")) return element.complete;
   if (element.matches("video, audio")) return element.readyState >= 2;
   return true;
 };
 
-const waitForDeferredMediaElement = (element) => {
-  if (!element || deferredMediaElementLoaded(element)) return Promise.resolve();
-  if (!element.dataset.src && !element.getAttribute("src")) return Promise.resolve();
-
-  const loadEvents = element.matches("video, audio")
-    ? ["loadedmetadata", "error"]
-    : ["load", "error"];
-
-  return new Promise((resolve) => {
+const waitForMediaEvents = (target, loadEvents, isLoaded) =>
+  new Promise((resolve) => {
     let settled = false;
     const finish = () => {
       if (settled) return;
       settled = true;
       loadEvents.forEach((eventName) => {
-        element.removeEventListener(eventName, finish);
+        target.removeEventListener(eventName, finish);
       });
       resolve();
     };
 
     loadEvents.forEach((eventName) => {
-      element.addEventListener(eventName, finish, { once: true });
+      target.addEventListener(eventName, finish, { once: true });
     });
-    if (deferredMediaElementLoaded(element)) finish();
+    if (isLoaded()) finish();
   });
+
+const waitForDeferredMediaElement = (element) => {
+  if (!element || deferredMediaElementLoaded(element)) return Promise.resolve();
+  if (!element.dataset.src && !element.getAttribute("src")) return Promise.resolve();
+
+  // A deferred `<source>` counts as loaded only once its owner has decoded a
+  // frame, so it waits on `loadeddata` (readyState 2), not on metadata alone.
+  const owner = deferredSourceOwner(element);
+  if (owner) {
+    return waitForMediaEvents(owner, ["loadeddata", "error"], () =>
+      deferredMediaElementLoaded(element)
+    );
+  }
+
+  const loadEvents = element.matches("video, audio")
+    ? ["loadedmetadata", "error"]
+    : ["load", "error"];
+
+  return waitForMediaEvents(element, loadEvents, () => deferredMediaElementLoaded(element));
 };
 
 const loadDeferredMedia = (root, visibleOnly = false) => {
@@ -273,8 +415,12 @@ const preloadMediaSourcesAfter = (element, sources, options) =>
   });
 
 window.homeMedia = {
+  activateDeferredSourceOwner,
+  deferredSourceOwner,
   fitImagesIntoFrames,
   loadDeferredMedia,
+  loopVideoElements,
+  syncLoopVideoPlayback,
   mediaSourcePreloadRequests,
   preloadDeferredMedia,
   preloadDeferredMediaInOrder,

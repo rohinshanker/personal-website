@@ -42,7 +42,8 @@ const eventWindows = new Map([
   ["stalker-result-window", 1],
   ["midnight-gospel-meditation-window", 2],
   ["john-pork-window", 2],
-  ["lain-alert-window", 3],
+  // The Wired artwork is a looping <video>; only the two chat icons stay images.
+  ["lain-alert-window", 2],
   ["gears-nest-window", 1],
   ["instrumentality-window", 1],
   ["red-tool-window", 3],
