@@ -272,3 +272,40 @@ test("readiness that arrives after pagehide does not restart a loop video", asyn
   await page.evaluate(() => window.dispatchEvent(new Event("pageshow")));
   await expect.poll(() => video.evaluate((element) => element.paused)).toBe(false);
 });
+
+test("a clone whose sources already resolved is registered and pauses when hidden", async ({
+  page,
+}) => {
+  await openHomeDesktop(page, viewport);
+  await triggerEvent(page, "dont-starve-campfire");
+
+  // Preloading the original resolves its sources, so the clone below inherits a
+  // real `src` on every one of them — the shape that used to skip registration.
+  await expect
+    .poll(() => loopVideo(page, "campfire").evaluate((element) => element.readyState))
+    .toBeGreaterThanOrEqual(2);
+
+  const arrivedResolved = await page.evaluate(() => {
+    const clone = document.querySelector("#dst-survive-window").cloneNode(true);
+    clone.id = "loop-video-lifecycle-resolved-clone";
+    clone.classList.remove("is-hidden");
+    clone.setAttribute("aria-hidden", "false");
+    document.body.append(clone);
+    const sources = [...clone.querySelectorAll("video[data-loop-video] source")];
+    window.homeMedia.loadDeferredMedia(clone);
+    return sources.length > 0 && sources.every((source) => source.getAttribute("src"));
+  });
+  expect(arrivedResolved, "the clone arrived with its sources already resolved").toBe(true);
+
+  const cloned = page.locator("#loop-video-lifecycle-resolved-clone video[data-loop-video]");
+  await expect.poll(() => cloned.evaluate((element) => element.paused)).toBe(false);
+
+  await page.evaluate(() =>
+    document.querySelector("#loop-video-lifecycle-resolved-clone").classList.add("is-hidden")
+  );
+  await expect.poll(() => cloned.evaluate((element) => element.paused)).toBe(true);
+
+  const stopped = await cloned.evaluate((element) => element.currentTime);
+  await page.waitForTimeout(OBSERVATION_MS);
+  expect(await cloned.evaluate((element) => element.currentTime)).toBe(stopped);
+});

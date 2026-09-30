@@ -313,8 +313,11 @@ const loadDeferredMediaElement = (element, visibleOnly = false, { eager = false 
   if (!element) return null;
   suspendHiddenCarouselMediaPlayback(element);
   if (shouldSkipDeferredMediaElement(element, visibleOnly)) return null;
+  // Registration comes before the resolved-source return below. A window cloned
+  // from one that already loaded arrives with `src` on every source, and it still
+  // has to hand its playback over: otherwise nothing pauses it when it is hidden.
+  if (prepareLoopVideo(deferredSourceOwner(element) ?? element)) scheduleLoopVideoSync();
   if (element.getAttribute("src") || !element.dataset.src) return element;
-  prepareLoopVideo(element);
   if (eager && element.matches("img")) element.loading = "eager";
   fitImageIntoFrame(element);
   const galleryScroll = element.matches("img") && element.closest(".gallery-scroll");
