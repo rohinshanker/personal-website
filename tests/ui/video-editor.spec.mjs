@@ -717,6 +717,14 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
   await page.screenshot({
     path: testInfo.outputPath("video-editor-cursors-dark-desktop.png"),
   });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByTestId("video-editor")).toBeVisible();
+  await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
+  await expectNoPageOverflow(page);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-cursors-dark-wide.png"),
+  });
+  await page.setViewportSize({ width: 1280, height: 800 });
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expectAuthenticated(page);
@@ -740,8 +748,9 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
 
   const cursorResources = [
     "/styles/home/cursors.css?v=cache-token-parity-20260927",
-    "/scripts/home/text-selection-cursor.js?v=cache-token-parity-20260927",
-    "/video-editor/cursor.js?v=video-editor-cursors-20260826",
+    "/scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930",
+    "/scripts/home/text-selection-cursor.js?v=generic-cursor-guards-20260930",
+    "/video-editor/cursor.js?v=shared-cursor-runtime-20260930",
     ...["light", "dark"].flatMap((mode) =>
       [
         "normal",
@@ -777,6 +786,13 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
   await expectNoPageOverflow(page);
   await page.screenshot({
     path: testInfo.outputPath("video-editor-cursors-dark-mobile.png"),
+  });
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await expect(page.getByTestId("desktop-required")).toBeVisible();
+  await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
+  await expectNoPageOverflow(page);
+  await page.screenshot({
+    path: testInfo.outputPath("video-editor-cursors-dark-tablet.png"),
   });
 
   await peer.close();
@@ -830,8 +846,9 @@ test("uses working cursors while authentication keeps the editor inert", async (
   await signIn(page);
   await expect(form).toHaveAttribute("aria-busy", "true");
   await expect(page.locator("body")).toHaveClass(/is-custom-cursor-loading/);
-  await expect(page.locator("body")).toHaveClass(
-    /is-custom-cursor-loading-frame-[1-9]/
+  await expect(page.locator("body")).toHaveClass(/is-custom-cursor-loading-frame-1/);
+  await expect(page.locator("body")).not.toHaveClass(
+    /is-custom-cursor-loading-frame-[2-9]/
   );
   await expectCursorImage(
     form,
@@ -843,7 +860,9 @@ test("uses working cursors while authentication keeps the editor inert", async (
   );
   await expect(editor).toHaveAttribute("inert", "");
   await page.screenshot({
-    path: testInfo.outputPath("video-editor-auth-working-cursor.png"),
+    path: testInfo.outputPath(
+      "video-editor-auth-working-cursor-reduced-motion.png"
+    ),
   });
 
   releaseSignIn();

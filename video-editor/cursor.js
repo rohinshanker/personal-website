@@ -1,108 +1,11 @@
 (() => {
   "use strict";
 
-  const CURSOR_MODE_STORAGE_KEY = "rohin-os-cursor-mode";
-  const DARK_MODE_CLASS = "is-cursor-dark-mode";
-  const LOADING_CLASS = "is-custom-cursor-loading";
-  const LOADING_FRAME_PREFIX = "is-custom-cursor-loading-frame-";
-  const LOADING_FRAME_COUNT = 9;
-  const LOADING_FRAME_DELAY_MS = 100;
   const RESIZE_EW_CLASS = "is-video-editor-resizing-ew";
   const RESIZE_NS_CLASS = "is-video-editor-resizing-ns";
-  const CURSOR_IMAGE_NAMES = Object.freeze([
-    "normal",
-    "select",
-    "text",
-    "text-thin",
-    "move",
-    "help",
-    "unavailable",
-    "precision",
-    "resize-ew",
-    "resize-ns",
-    "resize-nwse",
-    "resize-nesw",
-  ]);
-  const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const preloadedCursorModes = new Set();
-
-  let loadingFrame = 0;
-  let loadingFrameClass = "";
-  let loadingFrameTimer = 0;
-
-  const storedCursorMode = () => {
-    try {
-      return localStorage.getItem(CURSOR_MODE_STORAGE_KEY) === "dark"
-        ? "dark"
-        : "light";
-    } catch {
-      return "light";
-    }
-  };
-
-  const applyCursorMode = (mode) => {
-    const useDarkCursors = mode === "dark";
-    document.documentElement.classList.toggle(DARK_MODE_CLASS, useDarkCursors);
-    document.body?.classList.toggle(DARK_MODE_CLASS, useDarkCursors);
-    preloadCursorAssets(useDarkCursors ? "dark" : "light");
-  };
-
-  const preloadCursorAssets = (mode) => {
-    if (!window.fetch || preloadedCursorModes.has(mode)) return;
-    preloadedCursorModes.add(mode);
-    const generatedImages = CURSOR_IMAGE_NAMES.map(
-      (name) => `../assets/cursor-assets/generated-png/${name}-${mode}.png`
-    );
-    const workingDirectory =
-      mode === "dark" ? "Jeelh-Cursor-Dark" : "Jeelh-Cursor-Light";
-    const workingPrefix =
-      mode === "dark" ? "working-in-background-" : "working-in-background-light-";
-    const workingImages = Array.from(
-      { length: LOADING_FRAME_COUNT },
-      (_, index) =>
-        `../assets/cursor-assets/${workingDirectory}/working-in-background-frames/${workingPrefix}${index + 1}.png`
-    );
-    Promise.allSettled(
-      [...generatedImages, ...workingImages].map((source) =>
-        fetch(new URL(source, document.baseURI), { cache: "force-cache" })
-      )
-    );
-  };
-
-  const clearLoadingFrame = () => {
-    if (!loadingFrameClass || !document.body) return;
-    document.body.classList.remove(loadingFrameClass);
-    loadingFrameClass = "";
-  };
-
-  const showNextLoadingFrame = () => {
-    if (!document.body) return;
-    loadingFrame = (loadingFrame % LOADING_FRAME_COUNT) + 1;
-    const nextClass = `${LOADING_FRAME_PREFIX}${loadingFrame}`;
-    if (nextClass === loadingFrameClass) return;
-    clearLoadingFrame();
-    document.body.classList.add(nextClass);
-    loadingFrameClass = nextClass;
-  };
-
-  const startLoadingAnimation = () => {
-    if (loadingFrameTimer) return;
-    showNextLoadingFrame();
-    if (reducedMotionQuery.matches) return;
-    loadingFrameTimer = window.setInterval(
-      showNextLoadingFrame,
-      LOADING_FRAME_DELAY_MS
-    );
-  };
-
-  const stopLoadingAnimation = () => {
-    if (loadingFrameTimer) {
-      window.clearInterval(loadingFrameTimer);
-      loadingFrameTimer = 0;
-    }
-    loadingFrame = 0;
-    clearLoadingFrame();
-  };
+  const cursorRuntime = window.RohinCursorRuntime;
+  if (!cursorRuntime) throw new Error("The shared cursor runtime did not load.");
+  cursorRuntime.start();
 
   const videoEditorIsBusy = () =>
     document.querySelector("#video-editor-auth-form")?.getAttribute("aria-busy") ===
@@ -113,13 +16,7 @@
       .querySelector("[data-audio-sync-status]")
       ?.getAttribute("data-state") === "analyzing";
 
-  const syncLoadingCursor = () => {
-    if (!document.body) return;
-    const isBusy = videoEditorIsBusy();
-    document.body.classList.toggle(LOADING_CLASS, isBusy);
-    if (isBusy) startLoadingAnimation();
-    else stopLoadingAnimation();
-  };
+  let loadingController = null;
 
   const clearPointerOperationCursor = () => {
     document.body?.classList.remove(
@@ -157,23 +54,22 @@
   };
 
   const initializeCursorBehavior = () => {
-    applyCursorMode(storedCursorMode());
-    document.body.classList.add("is-custom-cursor-ready");
-
     const busyTargets = [
       document.querySelector("#video-editor-auth-form"),
       document.querySelector("#video-editor-app"),
       document.querySelector("[data-audio-sync-status]"),
     ].filter(Boolean);
-    if (busyTargets.length) {
-      const observer = new MutationObserver(syncLoadingCursor);
-      busyTargets.forEach((target) =>
-        observer.observe(target, {
+    loadingController = cursorRuntime.observeLoading({
+      isLoading: videoEditorIsBusy,
+      observations: busyTargets.map((target) => ({
+        target,
+        immediate: true,
+        options: {
           attributes: true,
           attributeFilter: ["aria-busy", "data-state"],
-        })
-      );
-    }
+        },
+      })),
+    });
     const authenticationObserver = new MutationObserver(() => {
       if (document.body.dataset.videoEditorAuthState !== "authenticated") {
         clearPointerOperationCursor();
@@ -199,39 +95,16 @@
     window.addEventListener("blur", clearPointerOperationCursor);
     window.addEventListener("pagehide", () => {
       clearPointerOperationCursor();
-      stopLoadingAnimation();
     });
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         clearPointerOperationCursor();
-        stopLoadingAnimation();
-      } else {
-        syncLoadingCursor();
       }
     });
-    reducedMotionQuery.addEventListener?.("change", () => {
-      stopLoadingAnimation();
-      syncLoadingCursor();
-    });
-    syncLoadingCursor();
   };
-
-  applyCursorMode(storedCursorMode());
-
-  window.addEventListener("storage", (event) => {
-    if (event.key !== CURSOR_MODE_STORAGE_KEY && event.key !== null) return;
-    applyCursorMode(
-      event.key === null
-        ? storedCursorMode()
-        : event.newValue === "dark"
-          ? "dark"
-          : "light"
-    );
-  });
   window.addEventListener("pageshow", () => {
     clearPointerOperationCursor();
-    applyCursorMode(storedCursorMode());
-    syncLoadingCursor();
+    loadingController?.sync();
   });
 
   if (document.readyState === "loading") {

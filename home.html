@@ -122,7 +122,7 @@
     <link rel="stylesheet" href="styles/home/cursors.css?v=cache-token-parity-20260927" />
     <link rel="stylesheet" href="styles/home/admin-controls.css?v=repo-hygiene-20260927" />
     <script
-      src="scripts/home/text-selection-cursor.js?v=cache-token-parity-20260927"
+      src="scripts/home/text-selection-cursor.js?v=generic-cursor-guards-20260930"
       defer
     ></script>
   </head>
@@ -2015,14 +2015,14 @@
             <div class="sol-board" id="sol-board" aria-label="Solitaire board">
               <div class="sol-top-row">
                 <div class="sol-slot" id="sol-stock" role="button" tabindex="0" data-sol-stock aria-label="Stock"></div>
-                <div class="sol-slot" id="sol-waste" aria-label="Waste"></div>
+                <div class="sol-slot" id="sol-waste" aria-label="Waste" data-custom-cursor-guard></div>
                 <div class="sol-spacer" aria-hidden="true"></div>
                 <div class="sol-slot" data-sol-foundation="spades" role="button" tabindex="0" aria-label="Spades foundation"></div>
                 <div class="sol-slot" data-sol-foundation="clubs" role="button" tabindex="0" aria-label="Clubs foundation"></div>
                 <div class="sol-slot" data-sol-foundation="diamonds" role="button" tabindex="0" aria-label="Diamonds foundation"></div>
                 <div class="sol-slot" data-sol-foundation="hearts" role="button" tabindex="0" aria-label="Hearts foundation"></div>
               </div>
-              <div class="sol-tableau" id="sol-tableau" aria-label="Tableau"></div>
+              <div class="sol-tableau" id="sol-tableau" aria-label="Tableau" data-custom-cursor-guard></div>
             </div>
             <div class="sol-victory-video-overlay" id="sol-victory-video-overlay" aria-hidden="true">
               <video
@@ -4097,7 +4097,7 @@
     </div>
 
     <div class="window calendar-popout" id="calendar-popout" aria-hidden="true" data-no-drag>
-      <div class="title-bar">
+      <div class="title-bar" data-custom-cursor-guard>
         <div class="title-bar-text">Date &amp; Time</div>
         <div class="title-bar-controls">
           <button type="button" aria-label="Close" id="calendar-close"></button>
@@ -6971,6 +6971,7 @@
     <script src="scripts/home/core/dom.js?v=game-build-7d319ed0f9aba9f38d45c698ae10609b63396613f2663e43f0fe7f071efa4ec9"></script>
     <script src="scripts/home/core/media.js?v=shared-cross-route-20260930"></script>
     <script src="scripts/home/core/administrator-session.js?v=admin-session-module-20260930"></script>
+    <script src="scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930"></script>
     <script src="scripts/home/modeling-portfolio.js?v=modeling-portfolio-digitals-20260926"></script>
     <script src="scripts/home/main.js?v=game-build-7d319ed0f9aba9f38d45c698ae10609b63396613f2663e43f0fe7f071efa4ec9"></script>
     <script src="scripts/home/admin-controls.js?v=admin-promo-workflow-20260915"></script>

@@ -17863,12 +17863,15 @@ const initPortfolioCornerResize = () => {
 
     win.addEventListener("pointermove", (event) => {
       if (win.classList.contains("is-manual-resizing")) return;
-      win.classList.toggle("is-resize-hover", isPortfolioResizeCorner(win, event));
+      const isResizeHover = isPortfolioResizeCorner(win, event);
+      win.classList.toggle("is-resize-hover", isResizeHover);
+      win.toggleAttribute("data-custom-cursor-guard", isResizeHover);
     });
 
     win.addEventListener("pointerleave", () => {
       if (!win.classList.contains("is-manual-resizing")) {
         win.classList.remove("is-resize-hover");
+        win.removeAttribute("data-custom-cursor-guard");
       }
     });
 
@@ -17892,6 +17895,7 @@ const initPortfolioCornerResize = () => {
 
       win.classList.remove("app-window--center");
       win.classList.add("is-manual-resizing");
+      win.setAttribute("data-custom-cursor-guard", "");
       document.body.classList.add("is-resizing-window");
       win.style.translate = "0 0";
       win.setPointerCapture(event.pointerId);
@@ -17916,6 +17920,7 @@ const initPortfolioCornerResize = () => {
         }
         win.classList.remove("is-manual-resizing");
         win.classList.remove("is-resize-hover");
+        win.removeAttribute("data-custom-cursor-guard");
         document.body.classList.remove("is-resizing-window");
         win.removeEventListener("pointermove", resizeWindow);
         win.removeEventListener("pointerup", finishResize);
@@ -20657,6 +20662,7 @@ const renderSudoku = () => {
     cell.readOnly = false;
     cell.dataset.sudokuIndex = String(index);
     cell.setAttribute("role", "gridcell");
+    cell.setAttribute("data-custom-cursor-guard", "");
 
     const valueEl = document.createElement("span");
     valueEl.className = "sudoku-cell-value";
@@ -24006,6 +24012,7 @@ const buildCalendar = (date) => {
     if (index === 4) {
       labelCell.classList.add("is-event-day");
       labelCell.dataset.calendarWeekday = "thursday";
+      labelCell.setAttribute("data-custom-cursor-guard", "");
       labelCell.setAttribute("role", "button");
       labelCell.setAttribute("aria-label", "Feliz Jueves");
       labelCell.title = "Feliz Jueves";
@@ -24026,6 +24033,7 @@ const buildCalendar = (date) => {
     cell.dataset.calendarDay = String(day);
     cell.dataset.calendarMonth = String(month);
     cell.dataset.calendarYear = String(year);
+    cell.setAttribute("data-custom-cursor-guard", "");
   }
 
   const totalCells = dayLabels.length + startDay + daysInMonth;
@@ -26411,150 +26419,19 @@ document.addEventListener("click", (event) => {
   }
 });
 
-const CURSOR_MODE_STORAGE_KEY = "rohin-os-cursor-mode";
-const CUSTOM_CURSOR_PRELOAD_SOURCES = Object.freeze([
-  "assets/cursor-assets/generated-png/normal-light.png",
-  "assets/cursor-assets/generated-png/select-light.png",
-  "assets/cursor-assets/generated-png/text-light.png",
-  "assets/cursor-assets/generated-png/text-thin-light.png",
-  "assets/cursor-assets/generated-png/move-light.png",
-  "assets/cursor-assets/generated-png/help-light.png",
-  "assets/cursor-assets/generated-png/unavailable-light.png",
-  "assets/cursor-assets/generated-png/precision-light.png",
-  "assets/cursor-assets/generated-png/resize-ew-light.png",
-  "assets/cursor-assets/generated-png/resize-ns-light.png",
-  "assets/cursor-assets/generated-png/resize-nwse-light.png",
-  "assets/cursor-assets/generated-png/resize-nesw-light.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-2.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-3.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-4.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-5.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-6.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-7.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-8.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-9.png",
-  "assets/cursor-assets/generated-png/normal-dark.png",
-  "assets/cursor-assets/generated-png/select-dark.png",
-  "assets/cursor-assets/generated-png/text-dark.png",
-  "assets/cursor-assets/generated-png/text-thin-dark.png",
-  "assets/cursor-assets/generated-png/move-dark.png",
-  "assets/cursor-assets/generated-png/help-dark.png",
-  "assets/cursor-assets/generated-png/unavailable-dark.png",
-  "assets/cursor-assets/generated-png/precision-dark.png",
-  "assets/cursor-assets/generated-png/resize-ew-dark.png",
-  "assets/cursor-assets/generated-png/resize-ns-dark.png",
-  "assets/cursor-assets/generated-png/resize-nwse-dark.png",
-  "assets/cursor-assets/generated-png/resize-nesw-dark.png",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Normal%20Select%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Select%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Text%20Select%20Thin%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Move%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Help%20Select%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Unavailable%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Precision%20Select%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Horizontal%20Resize%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Verticle%20Resize%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%201%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Diagonal%20Resize%202%20Light.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Working%20In%20Background%20Light.ani",
-  "assets/cursor-assets/Jeelh-Cursor-Light/Busy%20Light.ani",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.png",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-2.png",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-3.png",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-4.png",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-5.png",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-6.png",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-7.png",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-8.png",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-9.png",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Normal%20Select.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Select.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Text%20Select%20Thin.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Move.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Help%20Select.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Unavailable.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Precision%20Select.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Horizontal%20Resize.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Verticle%20Resize.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%201.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Diagonal%20Resize%202.cur",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Working%20In%20Background.ani",
-  "assets/cursor-assets/Jeelh-Cursor-Dark/Busy.ani",
-]);
-const customCursorPreloadPromises = { light: null, dark: null };
-
-const customCursorSourceMode = (source) =>
-  /-light\.png$|\/Jeelh-Cursor-Light\//.test(source) ? "light" : "dark";
-
-const activeCustomCursorMode = () => (loadCursorDarkMode() ? "dark" : "light");
-
-const setCursorDarkMode = (enabled) => {
-  document.documentElement.classList.toggle("is-cursor-dark-mode", enabled);
-  document.body.classList.toggle("is-cursor-dark-mode", enabled);
-  preloadCustomCursorAssets(enabled ? "dark" : "light");
-};
-
-const saveCursorDarkMode = (enabled) => {
-  try {
-    localStorage.setItem(CURSOR_MODE_STORAGE_KEY, enabled ? "dark" : "light");
-  } catch (error) {
-    // The visual change should still apply even if storage is unavailable.
-  }
-};
-
-const loadCursorDarkMode = () => {
-  try {
-    return localStorage.getItem(CURSOR_MODE_STORAGE_KEY) === "dark";
-  } catch (error) {
-    return false;
-  }
-};
-
-const markCustomCursorsReady = () => {
-  document.body?.classList.add("is-custom-cursor-ready");
-};
-
-/** Warms one cursor mode's files; the inactive mode is fetched only when selected. */
-const preloadCustomCursorAssets = (mode = activeCustomCursorMode()) => {
-  if (customCursorPreloadPromises[mode]) return customCursorPreloadPromises[mode];
-  if (!window.fetch) {
-    customCursorPreloadPromises[mode] = Promise.resolve();
-    return customCursorPreloadPromises[mode];
-  }
-
-  customCursorPreloadPromises[mode] = Promise.allSettled(
-    CUSTOM_CURSOR_PRELOAD_SOURCES.filter((source) => customCursorSourceMode(source) === mode).map(
-      (source) => fetch(new URL(source, document.baseURI), { cache: "force-cache" })
-    )
-  ).then(() => undefined);
-  return customCursorPreloadPromises[mode];
-};
-
-const preloadAndApplyCustomCursors = () => {
-  markCustomCursorsReady();
-  preloadCustomCursorAssets().then(markCustomCursorsReady);
-};
-
 const initCursorSettingsApp = () => {
+  const cursorRuntime = window.RohinCursorRuntime;
+  if (!cursorRuntime) throw new Error("The shared cursor runtime did not load.");
   const cursorModeButtons = document.querySelectorAll("[data-cursor-mode]");
-  const syncCursorModeButtons = () => {
-    const isDarkMode = document.body.classList.contains("is-cursor-dark-mode");
+  const syncCursorModeButtons = (mode = cursorRuntime.getMode()) => {
     cursorModeButtons.forEach((button) => {
-      const isActive =
-        button.getAttribute("data-cursor-mode") === (isDarkMode ? "dark" : "light");
+      const isActive = button.getAttribute("data-cursor-mode") === mode;
       button.setAttribute("aria-pressed", String(isActive));
     });
   };
 
-  setCursorDarkMode(loadCursorDarkMode());
-  syncCursorModeButtons();
-  preloadAndApplyCustomCursors();
-
-  window.addEventListener("pageshow", preloadAndApplyCustomCursors);
-  runAfterHomeActivation(preloadAndApplyCustomCursors);
+  cursorRuntime.subscribe(syncCursorModeButtons);
+  cursorRuntime.start();
 
   document.querySelectorAll('[data-app="cursor"]').forEach((button) => {
     button.addEventListener("click", () => {
@@ -26564,11 +26441,9 @@ const initCursorSettingsApp = () => {
 
   cursorModeButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      const enabled = button.getAttribute("data-cursor-mode") === "dark";
-      setCursorDarkMode(enabled);
-      saveCursorDarkMode(enabled);
-      syncCursorModeButtons();
-      preloadAndApplyCustomCursors();
+      cursorRuntime.setMode(button.getAttribute("data-cursor-mode"), {
+        persist: true,
+      });
     });
   });
 };
@@ -26587,78 +26462,10 @@ const hasCustomCursorLoadingIndicator = () =>
 
 const initCustomCursorLoadingWatcher = () => {
   if (!document.body) return;
-  let cursorFrameId = null;
-  let cursorLoadingFrame = 0;
-  let cursorLoadingFrameClass = "";
-  let cursorLoadingTimerId = null;
-  const cursorLoadingFrameCount = 9;
-  const cursorLoadingFrameDelay = 100;
-
-  const cursorLoadingFrameClassName = (frame) =>
-    `is-custom-cursor-loading-frame-${frame}`;
-
-  const clearCursorLoadingFrameClass = () => {
-    if (!cursorLoadingFrameClass) return;
-    document.body.classList.remove(cursorLoadingFrameClass);
-    cursorLoadingFrameClass = "";
-  };
-
-  const showNextCursorLoadingFrame = () => {
-    cursorLoadingFrame = (cursorLoadingFrame % cursorLoadingFrameCount) + 1;
-    const nextFrameClass = cursorLoadingFrameClassName(cursorLoadingFrame);
-    if (cursorLoadingFrameClass !== nextFrameClass) {
-      clearCursorLoadingFrameClass();
-      document.body.classList.add(nextFrameClass);
-      cursorLoadingFrameClass = nextFrameClass;
-    }
-  };
-
-  const startCursorLoadingAnimation = () => {
-    if (cursorLoadingTimerId) return;
-    showNextCursorLoadingFrame();
-    cursorLoadingTimerId = window.setInterval(
-      showNextCursorLoadingFrame,
-      cursorLoadingFrameDelay
-    );
-  };
-
-  const stopCursorLoadingAnimation = () => {
-    if (cursorLoadingTimerId) {
-      window.clearInterval(cursorLoadingTimerId);
-      cursorLoadingTimerId = null;
-    }
-    cursorLoadingFrame = 0;
-    clearCursorLoadingFrameClass();
-  };
-
-  const syncCursorLoadingState = () => {
-    cursorFrameId = null;
-    const isLoading = hasCustomCursorLoadingIndicator();
-    document.body.classList.toggle("is-custom-cursor-loading", isLoading);
-    if (isLoading) {
-      startCursorLoadingAnimation();
-      return;
-    }
-    stopCursorLoadingAnimation();
-  };
-
-  const scheduleCursorLoadingSync = () => {
-    if (cursorFrameId) return;
-    cursorFrameId = window.requestAnimationFrame(syncCursorLoadingState);
-  };
-
-  const observer = new MutationObserver(scheduleCursorLoadingSync);
-  observer.observe(document.body, {
-    attributes: true,
-    attributeFilter: ["aria-hidden", "class", "disabled", "hidden", "style"],
-    childList: true,
-    subtree: true,
+  window.RohinCursorRuntime.observeLoading({
+    isLoading: hasCustomCursorLoadingIndicator,
+    observeBody: true,
   });
-
-  window.addEventListener("focus", scheduleCursorLoadingSync);
-  window.addEventListener("blur", scheduleCursorLoadingSync);
-  document.addEventListener("visibilitychange", scheduleCursorLoadingSync);
-  scheduleCursorLoadingSync();
 };
 
 runAfterHomeActivation(initCustomCursorLoadingWatcher);

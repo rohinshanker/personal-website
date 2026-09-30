@@ -3,11 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
-const [script, styles, home, index] = await Promise.all([
+const [script, styles, home, index, main, cursorRuntime] = await Promise.all([
   readFile(new URL("scripts/home/text-selection-cursor.js", root), "utf8"),
   readFile(new URL("styles/home/cursors.css", root), "utf8"),
   readFile(new URL("home.html", root), "utf8"),
   readFile(new URL("index.html", root), "utf8"),
+  readFile(new URL("scripts/home/main.js", root), "utf8"),
+  readFile(new URL("scripts/home/core/cursor-mode.js", root), "utf8"),
 ]);
 
 const compactStyles = styles.replace(/\s+/g, " ");
@@ -17,13 +19,20 @@ test("both entry points load the pointer-aware text cursor assets", () => {
     assert.match(source, /cursors\.css\?v=cache-token-parity-20260927/);
     assert.match(
       source,
-      /scripts\/home\/text-selection-cursor\.js\?v=cache-token-parity-20260927/
+      /scripts\/home\/text-selection-cursor\.js\?v=generic-cursor-guards-20260930/
     );
   }
   assert.match(
     index,
     /\["styles\/home\/cursors\.css\?v=cache-token-parity-20260927", "style"\]/
   );
+  for (const source of [home, index]) {
+    assert.match(
+      source,
+      /scripts\/home\/core\/cursor-mode\.js\?v=shared-cursor-runtime-20260930/
+    );
+  }
+  assert.match(cursorRuntime, /window\.RohinCursorRuntime\s*=\s*Object\.freeze/);
 });
 
 test("the watcher hit-tests selectable text under a non-touch pointer", () => {
@@ -49,11 +58,53 @@ test("the watcher hit-tests selectable text under a non-touch pointer", () => {
     "[aria-disabled",
     "[disabled]",
     ".title-bar",
-    ".panel-divider",
+    '[role="separator"]',
+    "[data-custom-cursor-guard]",
     ".is-unavailable",
   ]) {
     assert.ok(script.includes(exclusion), `Missing text-hover exclusion for ${exclusion}`);
   }
+});
+
+test("route-specific cursor surfaces opt in through generic guard attributes", () => {
+  for (const routeSelector of [
+    ".calendar-day",
+    ".study-tree-row",
+    ".ms-cell",
+    ".sol-card",
+    ".sudoku-cell",
+    ".infinity-armory-gem",
+    ".pokemon-starter-choice",
+    ".dst-resource-token",
+    ".portfolio-window",
+  ]) {
+    assert.equal(
+      script.includes(routeSelector),
+      false,
+      `Shared text-selection logic must not know ${routeSelector}.`
+    );
+  }
+
+  assert.match(
+    home,
+    /\bid="sol-waste"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
+  );
+  assert.match(
+    home,
+    /\bid="sol-tableau"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
+  );
+  assert.match(
+    home,
+    /\bclass="title-bar"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)[^>]*>[\s\S]*?Date &amp; Time/i
+  );
+  assert.ok(
+    (main.match(/setAttribute\("data-custom-cursor-guard", ""\)/g) || []).length >= 3,
+    "Dynamic Sudoku and calendar surfaces must carry generic cursor guards."
+  );
+  assert.match(
+    main,
+    /toggleAttribute\("data-custom-cursor-guard", isResizeHover\)/
+  );
 });
 
 test("selection state is limited to an active primary-pointer gesture and always cleans up", () => {

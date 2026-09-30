@@ -14,6 +14,7 @@ const readRouteSources = async () => {
     audioAnalysis,
     audioAnalysisWorker,
     sharedCursorCss,
+    sharedCursorRuntime,
     textSelectionCursor,
     administratorSession,
   ] = await Promise.all([
@@ -24,6 +25,7 @@ const readRouteSources = async () => {
     readFile(new URL("audio-analysis.js", route), "utf8"),
     readFile(new URL("audio-analysis-worker.js", route), "utf8"),
     readFile(new URL("styles/home/cursors.css", root), "utf8"),
+    readFile(new URL("scripts/home/core/cursor-mode.js", root), "utf8"),
     readFile(new URL("scripts/home/text-selection-cursor.js", root), "utf8"),
     readFile(new URL("scripts/home/core/administrator-session.js", root), "utf8"),
   ]);
@@ -36,6 +38,7 @@ const readRouteSources = async () => {
     html,
     script,
     sharedCursorCss,
+    sharedCursorRuntime,
     textSelectionCursor,
   };
 };
@@ -120,28 +123,39 @@ test("Video Editor keeps pixel-font microcopy at its readable native size", asyn
 });
 
 test("Video Editor reuses the shared custom cursor theme and pointer semantics", async () => {
-  const { css, cursor, html, script, sharedCursorCss, textSelectionCursor } =
-    await readRouteSources();
+  const {
+    css,
+    cursor,
+    html,
+    script,
+    sharedCursorCss,
+    sharedCursorRuntime,
+    textSelectionCursor,
+  } = await readRouteSources();
   const sharedStylesheet =
     'href="../styles/home/cursors.css?v=cache-token-parity-20260927"';
-  const cursorRuntime = 'src="cursor.js?v=video-editor-cursors-20260826"';
+  const sharedRuntimeReference =
+    'src="../scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930"';
+  const routeCursorReference = 'src="cursor.js?v=shared-cursor-runtime-20260930"';
   const routeStylesheet = 'href="style.css?v=repo-hygiene-20260927"';
   const textSelectionScript =
-    'src="../scripts/home/text-selection-cursor.js?v=cache-token-parity-20260927"';
+    'src="../scripts/home/text-selection-cursor.js?v=generic-cursor-guards-20260930"';
   for (const reference of [
     sharedStylesheet,
-    cursorRuntime,
+    sharedRuntimeReference,
+    routeCursorReference,
     routeStylesheet,
     textSelectionScript,
   ]) {
     assert.ok(html.includes(reference), `Missing shared cursor reference ${reference}.`);
   }
-  assert.ok(html.indexOf(sharedStylesheet) < html.indexOf(cursorRuntime));
-  assert.ok(html.indexOf(cursorRuntime) < html.indexOf(routeStylesheet));
+  assert.ok(html.indexOf(sharedStylesheet) < html.indexOf(sharedRuntimeReference));
+  assert.ok(html.indexOf(sharedRuntimeReference) < html.indexOf(routeCursorReference));
+  assert.ok(html.indexOf(routeCursorReference) < html.indexOf(routeStylesheet));
   assert.ok(html.indexOf(routeStylesheet) < html.indexOf(textSelectionScript));
   assert.match(
     html,
-    /<script\b[^>]*\bsrc="\.\.\/scripts\/home\/text-selection-cursor\.js\?v=cache-token-parity-20260927"[^>]*\bdefer(?:\s|>|=)/i
+    /<script\b[^>]*\bsrc="\.\.\/scripts\/home\/text-selection-cursor\.js\?v=generic-cursor-guards-20260930"[^>]*\bdefer(?:\s|>|=)/i
   );
   for (const id of [
     "desktop-required",
@@ -157,14 +171,15 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
     );
   }
 
-  assert.match(cursor, /CURSOR_MODE_STORAGE_KEY\s*=\s*"rohin-os-cursor-mode"/);
-  assert.match(cursor, /localStorage\.getItem\(CURSOR_MODE_STORAGE_KEY\)\s*===\s*"dark"/);
-  assert.match(cursor, /\?\s*"dark"\s*:\s*"light"/);
-  assert.match(cursor, /document\.documentElement\.classList\.toggle\(DARK_MODE_CLASS/);
-  assert.match(cursor, /document\.body\?\.classList\.toggle\(DARK_MODE_CLASS/);
-  assert.match(cursor, /addEventListener\("storage"/);
-  assert.match(cursor, /event\.key\s*!==\s*CURSOR_MODE_STORAGE_KEY/);
-  assert.match(cursor, /event\.newValue\s*===\s*"dark"\s*\?\s*"dark"\s*:\s*"light"/);
+  assert.match(sharedCursorRuntime, /STORAGE_KEY\s*=\s*"rohin-os-cursor-mode"/);
+  assert.match(sharedCursorRuntime, /localStorage\.getItem\(STORAGE_KEY\)/);
+  assert.match(sharedCursorRuntime, /document\.documentElement\.classList\.toggle\(DARK_MODE_CLASS/);
+  assert.match(sharedCursorRuntime, /document\.body\?\.classList\.toggle\(DARK_MODE_CLASS/);
+  assert.match(sharedCursorRuntime, /addEventListener\("storage"/);
+  assert.match(sharedCursorRuntime, /event\.key\s*!==\s*STORAGE_KEY/);
+  assert.match(sharedCursorRuntime, /applyMode\(event\.key\s*===\s*null/);
+  assert.match(cursor, /window\.RohinCursorRuntime/);
+  assert.match(cursor, /cursorRuntime\.start\(\)/);
   assert.match(cursor, /addEventListener\("pageshow"/);
   assert.doesNotMatch(cursor, /localStorage\.setItem/);
   assert.match(cursor, /#video-editor-auth-form/);
@@ -172,9 +187,11 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
   assert.match(cursor, /\[data-audio-sync-status\]/);
   assert.match(cursor, /getAttribute\("aria-busy"\)\s*===\s*"true"/);
   assert.match(cursor, /getAttribute\("data-state"\)\s*===\s*"analyzing"/);
-  assert.match(cursor, /LOADING_FRAME_COUNT\s*=\s*9/);
+  assert.match(sharedCursorRuntime, /LOADING_FRAME_COUNT\s*=\s*9/);
+  assert.match(sharedCursorRuntime, /prefers-reduced-motion:\s*reduce/);
+  assert.match(sharedCursorRuntime, /observeLoading/);
   assert.match(cursor, /MutationObserver/);
-  assert.match(cursor, /is-custom-cursor-loading/);
+  assert.match(cursor, /cursorRuntime\.observeLoading/);
   assert.match(script, /elements\.app\?\.setAttribute\("aria-busy",\s*"true"\)/);
   assert.match(script, /finally\s*\{[^}]*elements\.app\?\.setAttribute\("aria-busy",\s*"false"\)/s);
   assert.match(script, /let mediaImportsInFlight\s*=\s*0/);

@@ -3,12 +3,13 @@ import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
-const [mainSource, eventStyles, homeSource, indexSource, domSource] = await Promise.all([
+const [mainSource, eventStyles, homeSource, indexSource, domSource, cursorModeSource] = await Promise.all([
   readFile(new URL("scripts/home/main.js", root), "utf8"),
   readFile(new URL("styles/home/random-events.css", root), "utf8"),
   readFile(new URL("home.html", root), "utf8"),
   readFile(new URL("index.html", root), "utf8"),
   readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
+  readFile(new URL("scripts/home/core/cursor-mode.js", root), "utf8"),
 ]);
 const baseStyles = await readFile(new URL("styles/home/base.css", root), "utf8");
 const cursorStyles = await readFile(new URL("styles/home/cursors.css", root), "utf8");
@@ -526,18 +527,19 @@ test("latest event cursor affordances use custom cursor variables", async () => 
     cursorStyles,
     /\.title-bar-controls,[\s\S]*?\.title-bar-controls \*,[\s\S]*?cursor: var\(--cursor-select\) !important;/
   );
-  assert.match(mainSource, /const CUSTOM_CURSOR_PRELOAD_SOURCES = Object\.freeze\(\[/);
-  assert.match(mainSource, /generated-png\/normal-light\.png/);
-  assert.match(mainSource, /generated-png\/normal-dark\.png/);
-  assert.match(mainSource, /Normal%20Select%20Light\.cur/);
-  assert.match(mainSource, /Normal%20Select\.cur/);
-  assert.match(mainSource, /fetch\(new URL\(source, document\.baseURI\), \{ cache: "force-cache" \}\)/);
-  assert.match(mainSource, /const markCustomCursorsReady = \(\) => \{/);
-  assert.match(mainSource, /const preloadAndApplyCustomCursors = \(\) => \{/);
-  assert.match(mainSource, /preloadCustomCursorAssets\(\)\.then\(markCustomCursorsReady\);/);
-  assert.match(mainSource, /runAfterHomeActivation\(preloadAndApplyCustomCursors\);/);
-  assert.match(mainSource, /window\.addEventListener\("pageshow", preloadAndApplyCustomCursors\);/);
-  assert.match(mainSource, /preloadAndApplyCustomCursors\(\);[\s\S]*?syncCursorModeButtons\(\);/);
+  assert.match(cursorModeSource, /const CURSOR_IMAGE_NAMES = Object\.freeze\(\[/);
+  assert.match(cursorModeSource, /"normal"/);
+  assert.match(cursorModeSource, /generatedSuffix: "light"/);
+  assert.match(cursorModeSource, /generatedSuffix: "dark"/);
+  assert.match(cursorModeSource, /legacySuffix: " Light"/);
+  assert.match(cursorModeSource, /window\.fetch\(new URL\(path, cursorAssetRoot\)/);
+  assert.match(cursorModeSource, /const markReady = \(\) => \{/);
+  assert.match(cursorModeSource, /window\.addEventListener\("pageshow", syncStoredMode\);/);
+  assert.match(cursorModeSource, /const subscribeBodyMutations = \(listener\) => \{/);
+  assert.match(cursorModeSource, /return loadingRuntime\.subscribeBodyMutations\(listener\);/);
+  assert.match(mainSource, /cursorRuntime\.subscribe\(syncCursorModeButtons\);/);
+  assert.match(mainSource, /cursorRuntime\.start\(\);/);
+  assert.match(mainSource, /cursorRuntime\.setMode\(button\.getAttribute\("data-cursor-mode"\)/);
   assert.doesNotMatch(mainSource, /is-custom-cursor-refreshing/);
   assert.doesNotMatch(homeSource, /custom-cursor-overlay\.js/);
   assert.doesNotMatch(indexSource, /custom-cursor-overlay\.js/);
@@ -846,8 +848,11 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.notEqual(cursorWatcherStart, -1, "Missing custom cursor loading watcher");
   assert.notEqual(cursorWatcherEnd, -1, "Missing custom cursor loading watcher boundary");
   const cursorLoadingWatcher = mainSource.slice(cursorWatcherStart, cursorWatcherEnd);
-  assert.match(cursorLoadingWatcher, /is-custom-cursor-loading-frame-\$\{frame\}/);
+  assert.match(cursorLoadingWatcher, /RohinCursorRuntime\.observeLoading/);
+  assert.match(cursorLoadingWatcher, /isLoading:\s*hasCustomCursorLoadingIndicator/);
   assert.doesNotMatch(cursorLoadingWatcher, /pointermove|mousemove|createElement/);
+  assert.match(cursorModeSource, /is-custom-cursor-loading-frame-/);
+  assert.match(cursorModeSource, /prefers-reduced-motion:\s*reduce/);
   assert.match(
     cursorStyles,
     /--cursor-working: url\("\.\.\/\.\.\/assets\/cursor-assets\/Jeelh-Cursor-Light\/working-in-background-frames\/working-in-background-light-1\.png"\) 2 1,[\s\S]*?working-in-background-light-1\.cur"\),[\s\S]*?progress;/
@@ -856,16 +861,6 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
     cursorStyles,
     /body\.is-cursor-dark-mode\.is-custom-cursor-loading-frame-1 \{[\s\S]*?working-in-background-1\.png"\) 2 1,[\s\S]*?working-in-background-1\.cur"\),[\s\S]*?progress;/
   );
-  const cursorPreloadStart = mainSource.indexOf(
-    "const CUSTOM_CURSOR_PRELOAD_SOURCES = Object.freeze(["
-  );
-  const cursorPreloadEnd = mainSource.indexOf(
-    "]);",
-    cursorPreloadStart
-  );
-  assert.notEqual(cursorPreloadStart, -1, "Missing custom cursor preload sources");
-  assert.notEqual(cursorPreloadEnd, -1, "Missing custom cursor preload source boundary");
-  const cursorPreloadSources = mainSource.slice(cursorPreloadStart, cursorPreloadEnd);
   for (const variant of [
     {
       directory: "Jeelh-Cursor-Light/working-in-background-frames",
@@ -876,10 +871,13 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
       prefix: "working-in-background-",
     },
   ]) {
+    assert.ok(
+      cursorModeSource.includes(`workingPrefix: "${variant.prefix}"`),
+      `Missing shared ${variant.directory} frame prefix.`
+    );
     for (let frame = 1; frame <= 9; frame += 1) {
       const asset =
         `assets/cursor-assets/${variant.directory}/${variant.prefix}${frame}.png`;
-      assert.match(cursorPreloadSources, new RegExp(asset));
       await access(new URL(asset, root));
     }
   }
