@@ -1825,8 +1825,11 @@ const gameStatsAdministratorSession = createAdministratorSession({
   onInvalidated: () => {
     const adminWindow = document.getElementById("admin-controls-window");
     if (!adminWindow || adminWindow.getAttribute("aria-hidden") !== "false") return;
-    setWindowOpen("admin-controls", false);
-    setWindowOpen("admin-controls-stand-in", true);
+    // Reuse launch denial so the gate receives keyboard focus after closing Admin.
+    setWindowOpen("admin-controls", true);
+    const gate = document.getElementById("admin-controls-stand-in-window");
+    const launcher = document.querySelector('.taskbar-icon[data-app="admin-controls"]');
+    if (gate && launcher) comingSoonFocusReturns.set(gate, launcher);
   },
 });
 gameStatsAdministratorSession.restore();

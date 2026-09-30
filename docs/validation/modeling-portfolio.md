@@ -2,7 +2,7 @@
 
 - Purpose: Preserve the public `/modeling/` portfolio route, the shoot data it shares with Home, and the Home "Open in separate tab" prompt.
 - Scope: `modeling/index.html`, `modeling/style.css`, `modeling/script.js`, `scripts/home/modeling-portfolio.js`, the Home Modeling window and its `modeling-launch` prompt, release packaging, and the sitemap.
-- Last verified: 2026-09-16
+- Last verified: 2026-09-30
 
 ## Data contract
 

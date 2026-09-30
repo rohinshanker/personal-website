@@ -345,7 +345,7 @@ test("Admin observation and the media patch wait for the window to open", async 
   await openAdmin(page);
   const afterOpen = await readPageObservation(page);
   expect(afterOpen.mediaPlayPatched).toBe(true);
-  expect(afterOpen.bodySubtreeObservers).toBe(beforeOpen.bodySubtreeObservers + 1);
+  expect(afterOpen.bodySubtreeObservers).toBe(beforeOpen.bodySubtreeObservers);
 
   await closeAdmin(page);
   await openAdmin(page);
@@ -1514,6 +1514,11 @@ for (const reason of ["expiry", "storage removal"]) {
     }
     await expect(win).toHaveAttribute("aria-hidden", "true");
     await expect(page.locator("#admin-controls-stand-in-window")).toBeVisible();
+    await expect(page.locator("#admin-controls-stand-in-ok")).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#admin-controls-stand-in-window")).toHaveAttribute("aria-hidden", "true");
+    await finishWindowAnimation(page.locator("#admin-controls-stand-in-window"), "retro-window-close");
+    await expect(page.locator('.taskbar-icon[data-app="admin-controls"]')).toBeFocused();
     expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBe(savedSettings);
     expect(await page.evaluate((key) => sessionStorage.getItem(key), administratorProofStorageKey)).toBeNull();
     expect(diagnostics.consoleErrors).toEqual([]);

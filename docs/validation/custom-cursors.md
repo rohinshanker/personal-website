@@ -2,7 +2,7 @@
 
 - Purpose: Preserve native-style cursor meaning while using the Jeelh light and dark cursor packs.
 - Scope: Entry, Home, and Video Editor cursor tokens, selectable text, guarded controls, loading states, editor operations, and Admin target picking.
-- Last verified: 2026-08-26
+- Last verified: 2026-09-30
 
 ## Behavior contract
 
@@ -27,6 +27,27 @@
   use the nine-frame working cursor. Reduced motion holds a single frame.
   Pointer release, cancellation, lost capture, blur, page hiding, and
   deauthentication clear editor drag or resize cursor state.
+
+## Shared runtime and guards
+
+Home and Video Editor load `scripts/home/core/cursor-mode.js` before their
+route scripts. The runtime owns the storage key, active-mode preloading, mode
+notifications, and the nine-frame/100 ms loading animation. Reduced motion
+holds one frame on both routes. Route adapters provide their own busy-state
+predicates; do not copy the animation or asset lists back into them.
+`subscribeBodyMutations` shares the loading observer with Admin Controls, which
+subscribes on first open (or when saved privacy/audio settings require it).
+Admin filters for child-list changes and unsubscribes on a non-cached page exit;
+reopening the window must not attach another body-wide observer.
+
+`text-selection-cursor.js` recognizes generic semantic controls and
+`[data-custom-cursor-guard]`. Mark a custom Home interaction surface when it is
+created, including dynamically built elements, instead of teaching the shared
+text-selection module its class name. Keep the guard on the narrow surface
+that owns the specialized cursor so ordinary selectable text remains usable.
+
+`tests/shared-literals.test.mjs` compares the runtime's image preloads with the
+cursor stylesheet and verifies shared cache versions and script ordering.
 
 ## Verification
 

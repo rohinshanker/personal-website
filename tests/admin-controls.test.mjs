@@ -157,7 +157,7 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
   );
   assert.match(
     home,
-    /scripts\/home\/admin-controls\.js\?v=admin-promo-workflow-20260915/
+    /scripts\/home\/admin-controls\.js\?v=shared-cross-route-20260930/
   );
   assert.ok(
     home.indexOf("scripts/home/admin-controls.js") >
@@ -210,7 +210,7 @@ test("Admin launch access requires an active Administrator session proof", async
 
   const sessionWiringSource = sourceBetween(
     main,
-    "const gameStatsAdministratorSession = createAdministratorSession();",
+    "const gameStatsAdministratorSession = createAdministratorSession(",
     "\n\nconst getAdministratorEventHeaders"
   );
   const accessSource = sourceBetween(

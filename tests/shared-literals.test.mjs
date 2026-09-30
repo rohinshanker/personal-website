@@ -45,3 +45,57 @@ test("Video Editor authentication and CSS agree on the desktop boundary", async 
   assert.ok(mobileRule);
   assert.equal(Number(mobileRule[1]) + 1, Number(boundary));
 });
+
+test("the shared Administrator profile matches the independently deployed Worker", async () => {
+  const [session, worker] = await Promise.all([
+    read("scripts/home/core/administrator-session.js"), read("workers/game-stats/src/index.mjs"),
+  ]);
+  const context = vm.createContext({ window: {} });
+  vm.runInContext(session, context);
+  const profile = context.window.homeAdministratorSession.ADMINISTRATOR_PROFILE;
+  const workerConstant = (name) => {
+    const value = worker.match(new RegExp(`const ${name} = "([^"]+)";`))?.[1];
+    assert.ok(value, `${name} must exist in the Worker`);
+    return value;
+  };
+  assert.equal(profile.id, workerConstant("ADMINISTRATOR_PROFILE_ID"));
+  assert.equal(profile.name, workerConstant("ADMINISTRATOR_PROFILE_NAME"));
+  assert.equal(profile.icon, workerConstant("ROHIN_NEKO_AVATAR_ICON"));
+});
+
+test("shared browser modules load before their route consumers and retain matching versions", async () => {
+  const [home, landing, editor, modeling] = await Promise.all([
+    read("home.html"), read("index.html"), read("video-editor/index.html"), read("modeling/index.html"),
+  ]);
+  for (const module of ["cursor-mode", "administrator-session"]) {
+    const path = `scripts/home/core/${module}.js`;
+    const reference = onlyReference(home, path);
+    assert.equal(onlyReference(landing, path), reference, "landing prefetch matches Home");
+    assert.equal(onlyReference(editor, path, "/video-editor/"), reference, "editor matches Home");
+    assert.ok(home.indexOf(reference) < home.indexOf('src="scripts/home/main.js?'), `${module} before Home`);
+    const consumer = module === "cursor-mode" ? "cursor.js" : "script.js";
+    assert.ok(editor.indexOf(path) < editor.indexOf(`src="${consumer}?`), `${module} before editor`);
+  }
+  assert.ok(home.indexOf('src="scripts/home/core/media.js?') < home.indexOf('src="scripts/home/main.js?'));
+  assert.ok(modeling.indexOf('src="../scripts/home/core/media.js?') < modeling.indexOf('src="script.js?'));
+});
+
+test("cursor preloads and CSS name the same generated images and animation frames", async () => {
+  const [runtime, css] = await Promise.all([
+    read("scripts/home/core/cursor-mode.js"), read("styles/home/cursors.css"),
+  ]);
+  const fetched = [];
+  const context = vm.createContext({
+    URL,
+    document: { currentScript: { src: "https://site.test/scripts/home/core/cursor-mode.js" } },
+    window: { fetch: async (url) => { fetched.push(url.pathname); } },
+  });
+  vm.runInContext(runtime, context);
+  await context.window.RohinCursorRuntime.preloadMode("light");
+  await context.window.RohinCursorRuntime.preloadMode("dark");
+  const runtimeImages = [...new Set(fetched.filter((path) => path.endsWith(".png")))].sort();
+  const cssImages = [...new Set([...css.matchAll(/url\("([^"\n]+\.png)"\)/g)]
+    .map((match) => new URL(match[1], "https://site.test/styles/home/cursors.css").pathname))].sort();
+  assert.ok(cssImages.length > 0);
+  assert.deepEqual(runtimeImages, cssImages);
+});

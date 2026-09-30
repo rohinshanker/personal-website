@@ -82,7 +82,7 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
   assert.match(main, /\} = window\.homeAdministratorSession;/);
   assert.match(
     main,
-    /const gameStatsAdministratorSession = createAdministratorSession\(\);/,
+    /const gameStatsAdministratorSession = createAdministratorSession\(\{\s*onInvalidated:/,
     "Home must hold its Administrator proof in the shared session, not its own store."
   );
   assert.doesNotMatch(

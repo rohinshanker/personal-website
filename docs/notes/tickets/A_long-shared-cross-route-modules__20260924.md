@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-24
 - Updated: 2026-09-30
-- Current State: Implementation underway: isolated cursor and Administrator-session extraction; coordinator owns media helpers, integration, literal checks, and final validation. Tier: long. Lazy-loading `admin-controls.js` is a decision item in `O_decide-architecture-and-testing__20260924.md` because it touches the pending manual acceptance in `O_admin-controls__20260731.md`.
+- Current State: All six items integrated. Focused integration passes: 56 Node and four browser lifecycle checks; cursor/media render matrices passed. Full Node/browser/visual gates and final independent review underway. DEM-166 cursor and DEM-167 session results integrated; DEM-168 session review findings fixed (source assertions and gate focus). Lazy-loading the whole admin script remains a separate owner decision.
 - Verification: `npm test` with the listed text assertions re-pointed; `node scripts/check-no-secrets.mjs`; `npm run test:ui` including `video-editor.spec.mjs`, `custom-cursor-selection.spec.mjs`, `administrator-sign-in.spec.mjs`, `modeling-portfolio.spec.mjs`; rendered pass of `/home.html`, `/video-editor/`, `/modeling/` at 375×812 and 1440×900 covering light/dark cursor switching, Administrator sign-in and expiry in both apps, and the hourglass loader.
 - Cleanup: Record the shared-module contracts in `docs/validation/custom-cursors.md`, `docs/validation/game-stats-backend.md` (Administrator session), and `docs/validation/modeling-portfolio.md`, then delete this ticket and its index row.
 

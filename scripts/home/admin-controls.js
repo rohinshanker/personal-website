@@ -359,7 +359,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
   let takeGeneration = 0;
   let cueOverlayTimer = null;
   let seedIndicatorFrame = null;
-  let contentObserver = null;
+  let unsubscribeContentObservation = null;
   let eventPreviewCleanup = null;
 
   const persist = () => {
@@ -1733,14 +1733,14 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
   });
 
   /**
-   * Watching the whole page and wrapping media playback is Admin-only work that
-   * every visitor used to pay for on load. Both attach the first time the
+   * The shared body observer subscription and media playback wrapper attach when the
    * window opens, or earlier when a restored session already asks for privacy
    * fixtures or muted media, and then stay for the rest of the page.
    */
   const activateContentObservation = () => {
-    if (contentObserver) return;
-    contentObserver = new pageWindow.MutationObserver(() => {
+    if (unsubscribeContentObservation) return;
+    unsubscribeContentObservation = pageWindow.RohinCursorRuntime.subscribeBodyMutations((records) => {
+      if (!records.some((record) => record.type === "childList")) return;
       if (state.privacy) applyPrivacyFixtures();
       if (!state.audio) documentRef.querySelectorAll("audio, video").forEach(muteMediaElement);
       if (isAdminOpen() && !seedIndicatorFrame) {
@@ -1750,7 +1750,6 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
         });
       }
     });
-    contentObserver.observe(documentRef.body, { childList: true, subtree: true });
 
     const mediaPrototype = pageWindow.HTMLMediaElement?.prototype;
     const originalMediaPlay = mediaPrototype?.play;
@@ -1803,7 +1802,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     if (seedIndicatorFrame) pageWindow.cancelAnimationFrame(seedIndicatorFrame);
     if (eventPreviewCleanup) eventPreviewCleanup();
     adminObserver.disconnect();
-    contentObserver?.disconnect();
+    unsubscribeContentObservation?.();
   });
 
   syncForm();

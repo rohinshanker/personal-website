@@ -612,6 +612,18 @@ and a reset, a new tab, or expiry requires another sign-in. The Worker requires
 `Authorization: Bearer <proof>` before accepting any event for the protected
 profile; ordinary profiles retain the normal session flow.
 
+Home and Video Editor load `core/administrator-session.js` before their route
+scripts. It owns proof normalization, the session-storage key, the protected
+profile identity, and the expiry/storage lifecycle. Both routes cap a stored
+proof at the server expiry or one hour from acceptance, whichever comes first;
+restoring a normalized proof never extends its recorded expiry. In-memory
+sessions remain bounded by that expiry when browser storage is unavailable.
+Expiry or storage revocation returns an open Home Admin Controls window to its
+access gate while preserving its local settings. Video Editor retains its project
+while presenting its sign-in overlay. The shared-literal test compares the public profile with the separately deployed
+Worker constants. Keep credential submission and each route's sign-in UI in
+the route adapters.
+
 Every rejected proof (missing, malformed, tampered, expired, or wrong profile
 identity) returns `403` with `code: "administrator-authorization"` before the
 game session is read. A `403` without that code is a rejected game session
