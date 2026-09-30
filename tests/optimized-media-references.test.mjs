@@ -113,17 +113,17 @@ const attributeValue = (tag, name) =>
 
 test("every looping event video declares the contract its playback depends on", () => {
   const loopVideos = videoTags.filter((tag) => attributeValue(tag, "data-loop-video"));
-  // Six elements over five sources: the advertisement renders its artwork twice,
-  // once plainly and once as the pixelated text overlay.
-  assert.equal(loopVideos.length, 6, "every loop video is declared");
+  // One element per source. Stacked layers of one animation ship as `<img>`,
+  // because two `<video>` decoders of one file cannot share an animation clock.
+  assert.equal(loopVideos.length, 4, "every loop video is declared");
   assert.equal(
     new Set(loopVideos.map((tag) => attributeValue(tag, "data-loop-fallback"))).size,
-    5,
-    "the five large loops ship as video"
+    4,
+    "the four large loops ship as video"
   );
   assert.equal(
     new Set(loopVideos.map((tag) => attributeValue(tag, "data-loop-video"))).size,
-    6,
+    4,
     "every loop video carries a distinct name"
   );
 
@@ -180,13 +180,13 @@ test("each looping video's declared box matches its encoded derivative", () => {
   }
 });
 
-test("the five video sources are exactly the ones with WebM, MP4 and a poster", () => {
+test("the four video sources are exactly the ones with WebM, MP4 and a poster", () => {
   const withVideo = MEDIA_MANIFEST.filter((entry) =>
     entry.derivatives.some((derivative) => VIDEO_FORMATS.includes(derivative.format))
   );
   assert.deepEqual(
     withVideo.map((entry) => path.basename(entry.source, ".gif")).sort(),
-    ["campfire", "evil-wizards-radar", "lain", "radar", "servalpizza"]
+    ["campfire", "lain", "radar", "servalpizza"]
   );
   for (const entry of withVideo) {
     assert.deepEqual(

@@ -46,7 +46,7 @@ const MP4_FLAGS = Object.freeze([
   "-pix_fmt", "yuv420p", "-an", "-movflags", "+faststart", "-vf", EVEN_DIMENSIONS,
 ]);
 
-// The Homebrew ffmpeg build carries no WebP encoder, and these five first frames
+// The Homebrew ffmpeg build carries no WebP encoder, and these four first frames
 // are opaque video stills, so the poster ships as JPEG.
 const POSTER_FLAGS = Object.freeze([
   "-frames:v", "1", "-c:v", "mjpeg", "-q:v", "4", "-pix_fmt", "yuvj420p",
@@ -55,7 +55,7 @@ const POSTER_FLAGS = Object.freeze([
 
 /**
  * Every source over the threshold, the animated-WebP settings it needed, and
- * whether it is one of the five large loops that also ship as video. Quality
+ * whether it is one of the four large loops that also ship as video. Quality
  * moved off the lossy-75 default only where the derivative showed visible
  * banding or smeared text beside its source at the rendered size, or where
  * lossy WebP encoded larger than the GIF.
@@ -63,7 +63,9 @@ const POSTER_FLAGS = Object.freeze([
 const SOURCES = Object.freeze([
   { name: "servalpizza", webp: { quality: 75 }, video: true },
   { name: "campfire", webp: { quality: 75 }, video: true },
-  { name: "evil-wizards-radar", webp: { quality: 75 }, video: true },
+  // Two stacked layers of one animation, so it ships as WebP: two `<video>`
+  // decoders cannot share an animation clock, two `<img>` of one file do.
+  { name: "evil-wizards-radar", webp: { quality: 75 }, video: false },
   { name: "birthday", webp: { quality: 75 }, video: false },
   { name: "ramadan", webp: { quality: 75 }, video: false },
   { name: "buddha", webp: { quality: 75 }, video: false },

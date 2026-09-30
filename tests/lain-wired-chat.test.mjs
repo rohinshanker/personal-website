@@ -176,7 +176,7 @@ test("Wired chat assets and cache-busted stylesheet references are present", asy
     ...derivatives.map((derivative) => stat(new URL(derivative, root))),
   ]);
   const stylesheet =
-    "styles/home/random-events.css?v=loop-video-lifecycle-20260929";
+    "styles/home/random-events.css?v=loop-video-artwork-20260929";
 
   lainAssets.forEach((asset, position) => {
     assert.ok(asset.isFile() && asset.size > 0, `${derivatives[position]} is a nonempty file`);

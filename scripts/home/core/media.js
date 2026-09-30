@@ -97,16 +97,6 @@ const LOOP_VIDEO_INACTIVE_ANCESTORS = [
   "[data-admin-event-preview-window]",
 ].join(", ");
 
-/** `HAVE_FUTURE_DATA`: the element has enough buffered to start without stalling. */
-const LOOP_VIDEO_READY_TO_PLAY = 3;
-
-/**
- * How far stacked layers may drift before one is seeked back onto the group clock.
- * One frame at 30 fps, which is tighter than the 50/3 fps clip the advertisement
- * stacks, so a mismatch is corrected before it can show a different frame.
- */
-const LOOP_VIDEO_DRIFT_SECONDS = 1 / 30;
-
 const loopVideoElements = (root = document) => {
   if (!root?.querySelectorAll) return [];
   const own = root.matches?.(LOOP_VIDEO_SELECTOR) ? [root] : [];
@@ -150,49 +140,6 @@ const activateLoopVideoFallback = (video) => {
   video.style.display = "none";
 };
 
-/** Every deferred or resolved source a loop video would load, in element order. */
-const loopVideoSourceKey = (video) => {
-  if (!video?.querySelectorAll) return "";
-  const sources = [...video.querySelectorAll("source")].map(
-    (source) => source.getAttribute("src") || source.dataset.src || ""
-  );
-  return [video.getAttribute("src") || video.dataset.src || "", ...sources]
-    .filter(Boolean)
-    .join("|");
-};
-
-/**
- * The layers that must show the same frame: loop videos in one window decoding the
- * same file. The advertisement stacks its base artwork and a pixelated overlay
- * clipped out of the same WebM, and each `<video>` runs its own clock, so a source
- * that arrives a second later would otherwise hold that offset for the whole loop.
- * Two elements are the simplest design that keeps the overlay's `clip-path` and
- * `image-rendering` declarative; one shared decode would mean a canvas redrawn every
- * frame from script.
- */
-const loopVideoLayers = (video) => {
-  const owner = video?.closest?.(".window");
-  const sources = loopVideoSourceKey(video);
-  const layers =
-    owner && sources
-      ? loopVideoElements(owner).filter(
-          (layer) =>
-            layer.closest(".window") === owner && loopVideoSourceKey(layer) === sources
-        )
-      : [video];
-  return layers.filter((layer) => layer && !isLoopVideoReplaced(layer));
-};
-
-/** Seeks every follower back onto the first layer's clock once it drifts past a frame. */
-const alignLoopVideoLayers = (layers) => {
-  const [leader, ...followers] = layers;
-  if (!leader || !followers.length) return;
-  followers.forEach((follower) => {
-    if (Math.abs(follower.currentTime - leader.currentTime) <= LOOP_VIDEO_DRIFT_SECONDS) return;
-    follower.currentTime = leader.currentTime;
-  });
-};
-
 const startLoopVideo = (video) => {
   if (!video.paused) return;
   const playRequest = video.play();
@@ -206,21 +153,12 @@ const startLoopVideo = (video) => {
 
 const syncLoopVideoPlayback = (video) => {
   if (!video || isLoopVideoReplaced(video)) return;
-  const layers = loopVideoLayers(video);
   if (!isLoopVideoActive(video)) {
-    layers.forEach((layer) => {
-      if (!layer.paused) layer.pause();
-    });
+    if (!video.paused) video.pause();
     return;
   }
-  if (!layers.every(hasResolvedMediaSource)) return;
-  // Stacked layers start together or not at all, so a late second response cannot
-  // leave them apart. A lone video still starts as early as it always did.
-  if (layers.length > 1 && layers.some((layer) => layer.readyState < LOOP_VIDEO_READY_TO_PLAY)) {
-    return;
-  }
-  alignLoopVideoLayers(layers);
-  layers.forEach(startLoopVideo);
+  if (!hasResolvedMediaSource(video)) return;
+  startLoopVideo(video);
 };
 
 let loopVideoSyncFrame = 0;
@@ -277,11 +215,6 @@ const onLoopVideoPageVisibilityChange = () => {
   scheduleLoopVideoSync();
 };
 
-const onLoopVideoLayerTimeUpdate = (event) => {
-  const layers = loopVideoLayers(event.currentTarget);
-  if (layers.length > 1) alignLoopVideoLayers(layers);
-};
-
 let loopVideoOwnerObserver = null;
 const observedLoopVideoOwners = new WeakSet();
 
@@ -307,18 +240,18 @@ const preparedLoopVideos = new WeakSet();
 /**
  * Hands one video's playback to this helper before any source can resolve: native
  * autoplay would otherwise start it the moment `load()` finds data, inside a window
- * that has never opened. Readiness events re-drive the sync so a layer arriving late
- * starts its group, and `timeupdate` keeps a started group aligned.
+ * that has never opened. Readiness events re-drive the sync, so a source that
+ * arrives late still starts. Returns true only for the call that registered it.
  */
 const prepareLoopVideo = (video) => {
-  if (!video?.matches?.(LOOP_VIDEO_SELECTOR) || preparedLoopVideos.has(video)) return;
+  if (!video?.matches?.(LOOP_VIDEO_SELECTOR) || preparedLoopVideos.has(video)) return false;
   preparedLoopVideos.add(video);
   video.autoplay = false;
   ["loadeddata", "canplay", "playing"].forEach((eventName) => {
     video.addEventListener(eventName, scheduleLoopVideoSync);
   });
-  video.addEventListener("timeupdate", onLoopVideoLayerTimeUpdate);
   observeLoopVideoOwner(video);
+  return true;
 };
 
 const prepareLoopVideos = (root = document) => {

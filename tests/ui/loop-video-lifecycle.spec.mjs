@@ -4,8 +4,8 @@ import { openHomeDesktop } from "./helpers/rendered-site.mjs";
 /**
  * The playback lifecycle of `video[data-loop-video]`, which
  * `scripts/home/core/media.js` owns outright. Each case covers a way a loop could
- * keep running where the visitor can never see it, or two layers of one animation
- * could fall out of step. Contract: `docs/validation/media-formats.md`.
+ * keep running where the visitor can never see it, or stop short of running at
+ * all. Contract: `docs/validation/media-formats.md`.
  */
 
 const viewport = Object.freeze({ width: 1440, height: 900 });
@@ -17,18 +17,7 @@ const viewport = Object.freeze({ width: 1440, height: 900 });
  */
 const OBSERVATION_MS = 500;
 
-/** Held back far enough that a per-element clock would show a whole second of offset. */
-const SECOND_LAYER_DELAY_MS = 1000;
-
-/**
- * One frame at 50/3 fps, the rate of the clip the advertisement stacks twice. The
- * helper re-aligns past one frame at 30 fps, so anything beyond this is a layer
- * that never joined the group's clock.
- */
-const ONE_FRAME_SECONDS = 0.06;
-
 const loopVideo = (page, name) => page.locator(`video[data-loop-video="${name}"]`);
-
 const readPlayback = (video) =>
   video.evaluate((element) => ({
     autoplay: element.autoplay,
@@ -145,51 +134,45 @@ test("pagehide pauses a playing loop video synchronously", async ({ page }) => {
   expect(await video.evaluate((element) => element.currentTime)).toBe(stopped);
 });
 
-test("the advertisement's stacked layers share one clock when the second response is held back", async ({
+test("the advertisement draws its two stacked layers as one animated image", async ({
   page,
 }) => {
   await openHomeDesktop(page, viewport);
-
-  let radarRequests = 0;
-  // Both layers decode the same file. Holding the second response back is what
-  // drove them a second apart when each owned its own clock.
-  await page.route("**/evil-wizards-radar.webm", async (route) => {
-    radarRequests += 1;
-    if (radarRequests === 2) {
-      await new Promise((resolve) => setTimeout(resolve, SECOND_LAYER_DELAY_MS));
-    }
-    await route.continue();
-  });
-
   await triggerEvent(page, "evil-wizards-advertisement");
   await expect(page.locator("#advertisement-window")).toBeVisible();
 
-  const layerTimes = () =>
-    page.evaluate(() =>
-      ["evil-wizards-radar", "evil-wizards-radar-text"].map((name) => {
-        const element = document.querySelector(`video[data-loop-video="${name}"]`);
-        return { paused: element.paused, currentTime: element.currentTime };
-      })
-    );
-
-  await expect
-    .poll(async () => (await layerTimes()).every((layer) => !layer.paused), {
-      timeout: 15_000,
-    })
-    .toBe(true);
-  expect(radarRequests, "each layer fetched the shared source once").toBe(2);
-
-  // Neither layer may start before the other can, and neither may drift away
-  // afterwards, so the offset is sampled across a stretch of playback.
-  const offsets = [];
-  for (let sample = 0; sample < 5; sample += 1) {
-    const [base, overlay] = await layerTimes();
-    offsets.push(Math.abs(base.currentTime - overlay.currentTime));
-    await page.waitForTimeout(200);
-  }
-  expect(Math.max(...offsets), `layer offsets: ${offsets.join(", ")}`).toBeLessThanOrEqual(
-    ONE_FRAME_SECONDS
+  // Two `<video>` decoders of one file each run their own clock and drift; two
+  // `<img>` of one animated WebP share the browser's animation clock, which is
+  // how the GIF layers this replaced stayed in step.
+  const layers = page.locator(
+    "#advertisement-window #advertisement-image, " +
+      "#advertisement-window .advertisement-text-pixel-overlay"
   );
+  await expect(layers).toHaveCount(2);
+
+  const drawn = await layers.evaluateAll(async (elements) => {
+    await Promise.all(elements.map((element) => element.decode()));
+    return elements.map((element) => ({
+      tag: element.tagName,
+      source: element.currentSrc,
+      width: element.naturalWidth,
+    }));
+  });
+
+  expect(drawn.map((layer) => layer.tag)).toEqual(["IMG", "IMG"]);
+  expect(
+    new Set(drawn.map((layer) => layer.source)).size,
+    `layer sources: ${drawn.map((layer) => layer.source).join(", ")}`
+  ).toBe(1);
+  expect(drawn[0].source).toMatch(/\/assets\/optimized\/random-events\/evil-wizards-radar\.webp$/);
+  expect(drawn.every((layer) => layer.width > 0), "both layers decoded").toBe(true);
+
+  // The radar overlay is the one layer with a source of its own, so it stays a
+  // loop video and keeps the whole lifecycle contract.
+  await expect(loopVideo(page, "radar")).toHaveCount(1);
+  await expect
+    .poll(() => loopVideo(page, "radar").evaluate((element) => element.paused))
+    .toBe(false);
 });
 
 test("a window cloned after boot pauses its loop video when it is hidden", async ({ page }) => {
