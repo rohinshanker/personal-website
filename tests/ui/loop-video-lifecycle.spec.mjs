@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { openHomeDesktop } from "./helpers/rendered-site.mjs";
+import { FROZEN_INSTANT, openHomeDesktop } from "./helpers/rendered-site.mjs";
 
 /**
  * The playback lifecycle of `video[data-loop-video]`, which
@@ -17,7 +17,18 @@ const viewport = Object.freeze({ width: 1440, height: 900 });
  */
 const OBSERVATION_MS = 500;
 
+/**
+ * `LOOP_VIDEO_FALLBACK_MS` in `scripts/home/core/media.js`: how long a visible
+ * video may stay below `HAVE_FUTURE_DATA` before its animated WebP replaces it.
+ * The fallback cases jump the clock past it rather than waiting it out.
+ */
+const FALLBACK_BOUND_MS = 8000;
+
 const loopVideo = (page, name) => page.locator(`video[data-loop-video="${name}"]`);
+
+/** The image `activateLoopVideoFallback` leaves behind in a video's place. */
+const loopFallbackImage = (page, name) => page.locator(`img[data-loop-fallback-for="${name}"]`);
+
 const readPlayback = (video) =>
   video.evaluate((element) => ({
     autoplay: element.autoplay,
@@ -308,4 +319,113 @@ test("a clone whose sources already resolved is registered and pauses when hidde
   const stopped = await cloned.evaluate((element) => element.currentTime);
   await page.waitForTimeout(OBSERVATION_MS);
   expect(await cloned.evaluate((element) => element.currentTime)).toBe(stopped);
+});
+
+test("a loop video whose sources never arrive falls back to its animated WebP", async ({
+  page,
+}) => {
+  // The bound is jumped, not waited out, so the case costs no wall-clock time.
+  await page.clock.install({ time: FROZEN_INSTANT });
+
+  let releaseSources = () => {};
+  const held = new Promise((resolve) => {
+    releaseSources = resolve;
+  });
+  // A response that never finishes leaves `readyState` at `HAVE_NOTHING` with no
+  // further event to wait on. `aborted` is the page cancelling its own request,
+  // which the runtime-diagnostics fixture treats as ordinary.
+  await page.route(/\/campfire\.(?:webm|mp4)(?:\?.*)?$/, async (route) => {
+    await held;
+    await route.abort("aborted");
+  });
+
+  await openHomeDesktop(page, viewport);
+  // The window is opened directly: the event's own preloader awaits a decoded
+  // frame, which a source that never arrives never delivers.
+  await revealWindow(page, "#dst-survive-window");
+
+  const video = loopVideo(page, "campfire");
+  await expect
+    .poll(() => video.evaluate((element) => element.readyState))
+    .toBe(0);
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
+
+  await page.clock.fastForward(FALLBACK_BOUND_MS);
+
+  const fallback = loopFallbackImage(page, "campfire");
+  await expect(fallback).toHaveCount(1);
+  await expect(fallback).toHaveJSProperty("naturalWidth", 858);
+  expect(await fallback.getAttribute("src")).toBe(
+    "assets/optimized/random-events/campfire.webp"
+  );
+  expect(await video.evaluate((element) => element.hidden)).toBe(true);
+
+  releaseSources();
+});
+
+test("a loop video that never reaches HAVE_FUTURE_DATA falls back to its animated WebP", async ({
+  page,
+}) => {
+  await page.clock.install({ time: FROZEN_INSTANT });
+  await openHomeDesktop(page, viewport);
+
+  // A response that arrives but never buffers enough to start is the other half
+  // of "unplayable": the element holds a decoded poster frame and stops there.
+  await page.evaluate(() => {
+    Object.defineProperty(
+      document.querySelector('video[data-loop-video="campfire"]'),
+      "readyState",
+      { configurable: true, get: () => 1 }
+    );
+  });
+
+  await triggerEvent(page, "dont-starve-campfire");
+  await revealWindow(page, "#dst-survive-window");
+
+  const video = loopVideo(page, "campfire");
+  await expect.poll(() => video.evaluate((element) => element.readyState)).toBe(1);
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
+
+  await page.clock.fastForward(FALLBACK_BOUND_MS);
+
+  const fallback = loopFallbackImage(page, "campfire");
+  await expect(fallback).toHaveCount(1);
+  await expect(fallback).toHaveJSProperty("naturalWidth", 858);
+  expect(await video.evaluate((element) => element.paused)).toBe(true);
+  expect(await video.evaluate((element) => element.hidden)).toBe(true);
+});
+
+test("a loop video whose sources cannot be decoded falls back to its animated WebP", async ({
+  page,
+  diagnostics,
+}) => {
+  await page.clock.install({ time: FROZEN_INSTANT });
+  // Both formats answer and neither decodes. The `<video>` is left at
+  // `HAVE_NOTHING` with `NETWORK_NO_SOURCE`, and its pending `play()` never
+  // settles, so the bounded wait is the only thing that clears the poster.
+  await page.route(/\/campfire\.(?:webm|mp4)(?:\?.*)?$/, (route) =>
+    route.fulfill({ contentType: "video/webm", body: Buffer.from("not a video at all") })
+  );
+
+  await openHomeDesktop(page, viewport);
+  // Sources that fail fire `error` at the `<source>` elements, never at the
+  // `<video>`, so the event's preloader would wait on a frame that never comes.
+  await revealWindow(page, "#dst-survive-window");
+
+  const video = loopVideo(page, "campfire");
+  await expect.poll(() => video.evaluate((element) => element.networkState)).toBe(3);
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
+
+  await page.clock.fastForward(FALLBACK_BOUND_MS);
+
+  const fallback = loopFallbackImage(page, "campfire");
+  await expect(fallback).toHaveCount(1);
+  await expect(fallback).toHaveJSProperty("naturalWidth", 858);
+  expect(await fallback.getAttribute("src")).toBe(
+    "assets/optimized/random-events/campfire.webp"
+  );
+  expect(await video.evaluate((element) => element.hidden)).toBe(true);
+
+  // Undecodable media is what this case serves on purpose.
+  diagnostics.consoleErrors.length = 0;
 });

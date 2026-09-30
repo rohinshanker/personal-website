@@ -83,7 +83,8 @@ const suspendHiddenCarouselMediaPlayback = (element) => {
  * Looping event artwork that ships as `<video>` instead of an animated image.
  * This helper owns playback outright: the markup carries no `autoplay`, and a
  * video plays only while its window and the page are visible. When `play()` is
- * refused it falls back to the animated-WebP derivative in `data-loop-fallback`.
+ * refused, or the media never becomes playable, the animated-WebP derivative
+ * named by `data-loop-fallback` takes its place.
  */
 const LOOP_VIDEO_SELECTOR = "video[data-loop-video]";
 
@@ -96,6 +97,18 @@ const LOOP_VIDEO_INACTIVE_ANCESTORS = [
   '.window[data-media-closing="true"]',
   "[data-admin-event-preview-window]",
 ].join(", ");
+
+/** `HAVE_FUTURE_DATA`: the element has enough buffered to start without stalling. */
+const LOOP_VIDEO_READY_TO_PLAY = 3;
+
+/**
+ * How long a visible loop video may stay below `HAVE_FUTURE_DATA` before its
+ * animated WebP replaces it. Longer than a cold fetch of the largest derivative
+ * the site ships over a slow connection, short enough that a corrupt or
+ * never-finishing response does not leave a poster frame standing in for the
+ * animation for good.
+ */
+const LOOP_VIDEO_FALLBACK_MS = 8000;
 
 const loopVideoElements = (root = document) => {
   if (!root?.querySelectorAll) return [];
@@ -126,7 +139,7 @@ const hasResolvedMediaSource = (video) =>
 /** True once the fallback image took the video's place, so it owns no playback. */
 const isLoopVideoReplaced = (video) => video?.dataset.loopFallbackActive === "true";
 
-/** Replaces a refused `<video>` with the animated image it names, keeping the same box. */
+/** Replaces an unplayable `<video>` with the animated image it names, keeping the same box. */
 const activateLoopVideoFallback = (video) => {
   const source = video?.dataset.loopFallback;
   if (!source || isLoopVideoReplaced(video)) return;
@@ -160,6 +173,24 @@ const startLoopVideo = (video) => {
   });
 };
 
+const pendingLoopVideoFallbacks = new WeakSet();
+
+/**
+ * The bounded wait behind the fallback. A corrupt or never-finishing response
+ * can leave `readyState` below `HAVE_FUTURE_DATA` with no further event to wait
+ * on, so a timer is the only way out of a frozen poster. It gives the video up
+ * unless it became playable, was replaced, or left the screen meanwhile.
+ */
+const awaitLoopVideoOrFallback = (video) => {
+  if (pendingLoopVideoFallbacks.has(video)) return;
+  pendingLoopVideoFallbacks.add(video);
+  setTimeout(() => {
+    pendingLoopVideoFallbacks.delete(video);
+    if (!isLoopVideoActive(video) || video.readyState >= LOOP_VIDEO_READY_TO_PLAY) return;
+    activateLoopVideoFallback(video);
+  }, LOOP_VIDEO_FALLBACK_MS);
+};
+
 const syncLoopVideoPlayback = (video) => {
   if (!video || isLoopVideoReplaced(video)) return;
   if (!isLoopVideoActive(video)) {
@@ -167,6 +198,7 @@ const syncLoopVideoPlayback = (video) => {
     return;
   }
   if (!hasResolvedMediaSource(video)) return;
+  if (video.readyState < LOOP_VIDEO_READY_TO_PLAY) awaitLoopVideoOrFallback(video);
   startLoopVideo(video);
 };
 
@@ -209,8 +241,8 @@ const onLoopVideoOwnerMutation = () => {
  * A hidden document suspends animation frames, so a pause that waits for one may
  * never run and the loop would keep advancing out of sight. Pausing happens here,
  * synchronously, and drops the frame already queued. The suspended flag then holds
- * until the page comes back, so a `canplay`, `loadeddata`, or a mutation that
- * lands in between cannot start anything either.
+ * until the page comes back, so a `canplay`, `loadeddata`, `error`, or mutation
+ * that lands in between cannot start anything either.
  */
 const suspendLoopVideoPage = () => {
   loopVideoPageSuspended = true;
@@ -253,14 +285,15 @@ const preparedLoopVideos = new WeakSet();
 /**
  * Hands one video's playback to this helper before any source can resolve: native
  * autoplay would otherwise start it the moment `load()` finds data, inside a window
- * that has never opened. Readiness events re-drive the sync, so a source that
- * arrives late still starts. Returns true only for the call that registered it.
+ * that has never opened. Readiness and failure events both re-drive the sync, so a
+ * source that arrives late starts and one that never arrives falls back. Returns
+ * true only for the call that registered the video.
  */
 const prepareLoopVideo = (video) => {
   if (!video?.matches?.(LOOP_VIDEO_SELECTOR) || preparedLoopVideos.has(video)) return false;
   preparedLoopVideos.add(video);
   video.autoplay = false;
-  ["loadeddata", "canplay", "playing"].forEach((eventName) => {
+  ["loadeddata", "canplay", "playing", "error"].forEach((eventName) => {
     video.addEventListener(eventName, scheduleLoopVideoSync);
   });
   observeLoopVideoOwner(video);
