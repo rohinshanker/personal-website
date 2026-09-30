@@ -102,10 +102,9 @@ const LOOP_VIDEO_INACTIVE_ANCESTORS = [
 const LOOP_VIDEO_READY_TO_PLAY = 3;
 
 /**
- * How long a visible loop video may stay below `HAVE_FUTURE_DATA` before its
- * animated WebP replaces it. Longer than a cold fetch of the largest derivative
- * the site ships over a slow connection, short enough that a corrupt or
- * never-finishing response does not leave a poster frame standing in for the
+ * How long a loop video that has never been playable may stay visible before
+ * its animated WebP replaces it: a chosen deadline, short enough that a corrupt
+ * or never-finishing response does not leave a poster frame standing in for the
  * animation for good.
  */
 const LOOP_VIDEO_FALLBACK_MS = 8000;
@@ -144,6 +143,7 @@ const activateLoopVideoFallback = (video) => {
   const source = video?.dataset.loopFallback;
   if (!source || isLoopVideoReplaced(video)) return;
   video.dataset.loopFallbackActive = "true";
+  cancelLoopVideoFallback(video);
   video.pause();
 
   const image = document.createElement("img");
@@ -173,32 +173,54 @@ const startLoopVideo = (video) => {
   });
 };
 
-const pendingLoopVideoFallbacks = new WeakSet();
+const loopVideoFallbackTimers = new WeakMap();
+const playableLoopVideos = new WeakSet();
+
+const cancelLoopVideoFallback = (video) => {
+  if (!loopVideoFallbackTimers.has(video)) return;
+  clearTimeout(loopVideoFallbackTimers.get(video));
+  loopVideoFallbackTimers.delete(video);
+};
+
+/** A video that was playable once keeps its `<video>`, even if it buffers later. */
+const markLoopVideoPlayable = (video) => {
+  playableLoopVideos.add(video);
+  cancelLoopVideoFallback(video);
+};
 
 /**
  * The bounded wait behind the fallback. A corrupt or never-finishing response
  * can leave `readyState` below `HAVE_FUTURE_DATA` with no further event to wait
- * on, so a timer is the only way out of a frozen poster. It gives the video up
- * unless it became playable, was replaced, or left the screen meanwhile.
+ * on, so a timer is the only way out of a frozen poster. The wait belongs to one
+ * continuous stay on screen: leaving the screen or suspending the page cancels
+ * it, and the next activation starts a full one.
  */
 const awaitLoopVideoOrFallback = (video) => {
-  if (pendingLoopVideoFallbacks.has(video)) return;
-  pendingLoopVideoFallbacks.add(video);
-  setTimeout(() => {
-    pendingLoopVideoFallbacks.delete(video);
-    if (!isLoopVideoActive(video) || video.readyState >= LOOP_VIDEO_READY_TO_PLAY) return;
-    activateLoopVideoFallback(video);
-  }, LOOP_VIDEO_FALLBACK_MS);
+  if (playableLoopVideos.has(video) || loopVideoFallbackTimers.has(video)) return;
+  loopVideoFallbackTimers.set(
+    video,
+    setTimeout(() => {
+      loopVideoFallbackTimers.delete(video);
+      activateLoopVideoFallback(video);
+    }, LOOP_VIDEO_FALLBACK_MS)
+  );
+};
+
+/** Stops a video nobody can see and ends the wait that belonged to its stay on screen. */
+const settleHiddenLoopVideo = (video) => {
+  cancelLoopVideoFallback(video);
+  if (!video.paused) video.pause();
 };
 
 const syncLoopVideoPlayback = (video) => {
   if (!video || isLoopVideoReplaced(video)) return;
   if (!isLoopVideoActive(video)) {
-    if (!video.paused) video.pause();
+    settleHiddenLoopVideo(video);
     return;
   }
   if (!hasResolvedMediaSource(video)) return;
-  if (video.readyState < LOOP_VIDEO_READY_TO_PLAY) awaitLoopVideoOrFallback(video);
+  if (video.readyState >= LOOP_VIDEO_READY_TO_PLAY) markLoopVideoPlayable(video);
+  else awaitLoopVideoOrFallback(video);
   startLoopVideo(video);
 };
 
@@ -221,15 +243,13 @@ const scheduleLoopVideoSync = () => {
 /** Stops what is out of sight now; starting again can wait for the scheduled frame. */
 const pauseInactiveLoopVideos = () => {
   loopVideoElements().forEach((video) => {
-    if (!video.paused && !isLoopVideoActive(video)) video.pause();
+    if (!isLoopVideoActive(video)) settleHiddenLoopVideo(video);
   });
 };
 
 /** Stops every loop video whatever its window looks like: the page itself is going. */
 const pauseAllLoopVideos = () => {
-  loopVideoElements().forEach((video) => {
-    if (!video.paused) video.pause();
-  });
+  loopVideoElements().forEach(settleHiddenLoopVideo);
 };
 
 const onLoopVideoOwnerMutation = () => {
@@ -295,6 +315,13 @@ const prepareLoopVideo = (video) => {
   video.autoplay = false;
   ["loadeddata", "canplay", "playing", "error"].forEach((eventName) => {
     video.addEventListener(eventName, scheduleLoopVideoSync);
+  });
+  // Recorded at the event itself: readiness may have dropped again by the time
+  // the scheduled sync runs.
+  ["canplay", "playing"].forEach((eventName) => {
+    video.addEventListener(eventName, () => {
+      if (video.readyState >= LOOP_VIDEO_READY_TO_PLAY) markLoopVideoPlayable(video);
+    });
   });
   observeLoopVideoOwner(video);
   return true;

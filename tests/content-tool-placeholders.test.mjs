@@ -129,7 +129,7 @@ test("Video Editor owns an accessible new-tab confirmation prompt", async () => 
   );
   assert.match(
     home,
-    /styles\/home\/random-events\.css\?v=loop-video-artwork-20260929/
+    /styles\/home\/random-events\.css\?v=loop-video-fallback-wait-20260929/
   );
   assert.match(
     randomEventStyles,

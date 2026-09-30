@@ -395,6 +395,96 @@ test("a loop video that never reaches HAVE_FUTURE_DATA falls back to its animate
   expect(await video.evaluate((element) => element.hidden)).toBe(true);
 });
 
+const pinReadyState = (page, name, readyState) =>
+  page.evaluate(
+    ([loopName, value]) => {
+      Object.defineProperty(
+        document.querySelector(`video[data-loop-video="${loopName}"]`),
+        "readyState",
+        { configurable: true, get: () => value }
+      );
+    },
+    [name, readyState]
+  );
+
+const hideWindow = (page, windowId) =>
+  page.evaluate((id) => {
+    const owner = document.querySelector(id);
+    owner.classList.add("is-hidden");
+    owner.setAttribute("aria-hidden", "true");
+  }, windowId);
+
+test("time spent hidden does not count towards the fallback wait", async ({ page }) => {
+  await page.clock.install({ time: FROZEN_INSTANT });
+  await openHomeDesktop(page, viewport);
+  await pinReadyState(page, "campfire", 1);
+
+  await triggerEvent(page, "dont-starve-campfire");
+  await revealWindow(page, "#dst-survive-window");
+  await page.clock.runFor(1000);
+
+  await hideWindow(page, "#dst-survive-window");
+  await page.clock.runFor(6700);
+  await revealWindow(page, "#dst-survive-window");
+
+  // 8.2 s after the first reveal, 0.5 s after the second: the first stay's
+  // wait was cancelled when the window closed.
+  await page.clock.runFor(500);
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
+
+  await page.clock.runFor(FALLBACK_BOUND_MS - 600);
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
+
+  await page.clock.runFor(200);
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(1);
+});
+
+test("a suspended page cancels the fallback wait and a resumed page starts a full one", async ({
+  page,
+}) => {
+  await page.clock.install({ time: FROZEN_INSTANT });
+  await openHomeDesktop(page, viewport);
+  await pinReadyState(page, "campfire", 1);
+
+  await triggerEvent(page, "dont-starve-campfire");
+  await revealWindow(page, "#dst-survive-window");
+  await page.clock.runFor(1000);
+
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
+  await page.clock.runFor(FALLBACK_BOUND_MS);
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
+
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pageshow")));
+  await page.clock.runFor(FALLBACK_BOUND_MS - 500);
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
+
+  await page.clock.runFor(1000);
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(1);
+});
+
+test("a loop video that was playable once keeps its video when it buffers later", async ({
+  page,
+}) => {
+  await page.clock.install({ time: FROZEN_INSTANT });
+  await openHomeDesktop(page, viewport);
+  await pinReadyState(page, "campfire", 1);
+
+  await triggerEvent(page, "dont-starve-campfire");
+  await revealWindow(page, "#dst-survive-window");
+  await page.clock.runFor(500);
+
+  await pinReadyState(page, "campfire", 4);
+  await loopVideo(page, "campfire").evaluate((element) =>
+    element.dispatchEvent(new Event("canplay"))
+  );
+  // Readiness drops again before any scheduled sync could observe the 4.
+  await pinReadyState(page, "campfire", 2);
+  await page.clock.runFor(FALLBACK_BOUND_MS * 2);
+
+  await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
+  await expect(loopVideo(page, "campfire")).toBeVisible();
+});
+
 test("a loop video whose sources cannot be decoded falls back to its animated WebP", async ({
   page,
   diagnostics,

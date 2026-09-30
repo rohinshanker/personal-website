@@ -70,7 +70,8 @@ ffmpeg -v error -framerate 25 -i webp/%04d.png -framerate 25 -i gif/%04d.png \
 
 "Downloaded bytes" is what one browser actually fetches: WebM plus poster for a
 video event, the animated WebP otherwise. A video event's WebP fallback is
-fetched only when `play()` is refused, and only one of WebM/MP4 is ever chosen.
+fetched only when `play()` is refused or the video never becomes playable, and
+only one of WebM/MP4 is ever chosen.
 
 | Source | Ships as | GIF bytes | Derivative bytes | Downloaded bytes | Saved |
 | --- | --- | ---: | --- | ---: | ---: |
@@ -148,13 +149,18 @@ Markup, in `home.html` only:
   could leave a loop advancing out of sight indefinitely. Starting is what waits
   for the frame: resume and window mutations go through the ordinary scheduled
   sync.
-- **An unplayable video falls back within 8 seconds of becoming visible.** A
-  corrupt response, or one that never finishes, leaves `readyState` below
-  `HAVE_FUTURE_DATA` with no further event to wait on, so a timer armed by the
-  activation sync replaces the video with its animated WebP. The bound covers a
-  cold fetch of the largest derivative the site ships over a slow connection. It
-  is scoped to a video that never becomes playable: a video that reached
-  `HAVE_FUTURE_DATA` and stalls mid-loop keeps its `<video>`.
+- **A video that has never been playable falls back after 8 continuous seconds
+  on screen.** A corrupt response, or one that never finishes, leaves
+  `readyState` below `HAVE_FUTURE_DATA` with no further event to wait on, so a
+  timer armed by the activation sync replaces the video with its animated WebP.
+  The wait belongs to one stay on screen: hiding the window or suspending the
+  page cancels it, and the next activation starts a full one. Eight seconds is a
+  chosen deadline, not a measured one, so a connection slow enough to need
+  longer for the first frames gets the WebP instead. A video that reached
+  `HAVE_FUTURE_DATA` once keeps its `<video>` for good, even if it buffers
+  or stalls later. The guarantee covers a window that is on screen; an event
+  whose own preloader waits on undecodable media before showing its window is
+  outside it.
 - **Stacked layers of one animation are `<img>`, not `<video>`.** Two `<video>`
   elements decoding one file each run their own clock, and nothing script can do
   reconciles them: holding both back until each reports `readyState >= 3` lets one
