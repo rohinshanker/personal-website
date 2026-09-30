@@ -2,7 +2,7 @@
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 - Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-09-28
+- Last verified: 2026-09-30
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -620,8 +620,8 @@ restoring a normalized proof never extends its recorded expiry. In-memory
 sessions remain bounded by that expiry when browser storage is unavailable.
 Expiry or storage revocation returns an open Home Admin Controls window to its
 access gate while preserving its local settings. Video Editor retains its project
-while presenting its sign-in overlay. The shared-literal test compares the public profile with the separately deployed
-Worker constants. Keep credential submission and each route's sign-in UI in
+while presenting its sign-in overlay. The shared-literal test compares the public
+profile with the separately deployed Worker constants. Keep credential submission and each route's sign-in UI in
 the route adapters.
 
 Every rejected proof (missing, malformed, tampered, expired, or wrong profile
