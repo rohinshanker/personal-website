@@ -10,10 +10,11 @@ const requiredAdministratorSecrets = Object.freeze([
 ]);
 
 test("Administrator access is hidden in Cursor Settings and dialogs are wired with accessible form controls", async () => {
-  const [home, dom, main, styles] = await Promise.all([
+  const [home, dom, main, session, styles] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
     readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readFile(new URL("scripts/home/core/administrator-session.js", root), "utf8"),
     readFile(new URL("styles/home/cursors.css", root), "utf8"),
   ]);
 
@@ -77,10 +78,26 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
   );
   assert.match(main, /win\.classList\.contains\("home-window"\) \|\| appId === "administrator-alert"/);
   assert.match(main, /Authorization\s*:\s*`Bearer \$\{[^}]+\}`/);
-  assert.match(main, /GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY/);
-  assert.match(main, /sessionStorage\.getItem\(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
-  assert.match(main, /sessionStorage\.setItem\(/);
-  assert.match(main, /sessionStorage\.removeItem\(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
+  assert.match(home, /src="scripts\/home\/core\/administrator-session\.js\?v=/);
+  assert.match(main, /\} = window\.homeAdministratorSession;/);
+  assert.match(
+    main,
+    /const gameStatsAdministratorSession = createAdministratorSession\(\);/,
+    "Home must hold its Administrator proof in the shared session, not its own store."
+  );
+  assert.doesNotMatch(
+    main,
+    /ADMINISTRATOR_PROOF_STORAGE_KEY/,
+    "The proof storage key must live only in the shared Administrator session module."
+  );
+  assert.match(
+    session,
+    /const ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";/
+  );
+  assert.match(session, /sessionStorage/);
+  assert.match(session, /store\.getItem\(ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
+  assert.match(session, /store\.setItem\(\s*ADMINISTRATOR_PROOF_STORAGE_KEY,/);
+  assert.match(session, /store\.removeItem\(ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
   assert.match(
     main,
     /const alreadyUsesAdministratorProfile = isGameStatsAdministratorProfile\(gameStatsProfile\);\s*if \(!alreadyUsesAdministratorProfile\) resetGameProgressLocalData\(\);/
@@ -109,21 +126,22 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
     "A persistently rejected proof must stop reopening sign-in."
   );
   assert.doesNotMatch(
-    main,
-    /localStorage\.setItem\(\s*GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY/,
+    session,
+    /\blocalStorage\b/,
     "The short-lived authorization proof must not become a long-lived local credential."
   );
 });
 
 test("Administrator credentials remain server-only and the protected profile has no keyboard backdoor", async () => {
-  const [home, index, main, frontendConfig, workerConfig] = await Promise.all([
+  const [home, index, main, session, frontendConfig, workerConfig] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readFile(new URL("scripts/home/core/administrator-session.js", root), "utf8"),
     readFile(new URL("scripts/home/game-stats-backend.js", root), "utf8"),
     readFile(new URL("workers/game-stats/wrangler.jsonc", root), "utf8"),
   ]);
-  const browserSources = [home, index, main, frontendConfig].join("\n");
+  const browserSources = [home, index, main, session, frontendConfig].join("\n");
 
   for (const secretName of requiredAdministratorSecrets) {
     assert.doesNotMatch(
@@ -134,12 +152,26 @@ test("Administrator credentials remain server-only and the protected profile has
   }
 
   assert.doesNotMatch(main, /ROHIN_NEKO_PROFILE_SHORTCUT/);
+  assert.doesNotMatch(
+    main,
+    /"rohin \^\.\^"/,
+    "The protected profile must be declared once, in the shared Administrator session module."
+  );
   assert.match(
     main,
-    /name:\s*"rohin \^\.\^"[\s\S]*?icon:\s*GAME_STATS_ROHIN_NEKO_AVATAR_ICON/
+    /const GAME_STATS_ROHIN_NEKO_PROFILE = Object\.freeze\(\{\s*\.\.\.GAME_STATS_ADMINISTRATOR_PROFILE,/
   );
-  assert.match(main, /expiresAt/);
-  assert.match(main, /normalizeAdministratorProof/);
+  assert.match(
+    session,
+    /const ADMINISTRATOR_PROFILE = Object\.freeze\(\{\s*id: "player-rohin-neko",\s*name: "rohin \^\.\^",\s*icon: ADMINISTRATOR_AVATAR_ICON,\s*\}\);/
+  );
+  assert.match(session, /expiresAt/);
+  assert.match(session, /const normalizeAdministratorProof = /);
+  assert.match(
+    session,
+    /const ADMINISTRATOR_SESSION_DURATION_MS = 60 \* 60 \* 1000;/,
+    "Both routes must bound a browser session to the same hour."
+  );
   assert.match(main, /resetGameProgressLocalData\(\);[\s\S]*?saveGameStatsProfile\(/);
   assert.match(
     main,

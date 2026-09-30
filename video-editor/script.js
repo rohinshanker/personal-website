@@ -39,16 +39,13 @@ const GUIDEPOST_COLORS = Object.freeze([
 const SOUND_EFFECT_SAMPLE_RATE = 22050;
 const CLICK_SOUND_DURATION = 0.12;
 const TYPING_SOUND_DURATION = 1.2;
-const ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
-const ADMINISTRATOR_SESSION_DURATION_MS = 60 * 60 * 1000;
+const {
+  createAdministratorSession,
+  normalizeAdministratorSignInResponse,
+} = window.homeAdministratorSession;
 const AUTHENTICATION_REQUEST_TIMEOUT_MS = 8_000;
 const AUTHENTICATED_STATE = "authenticated";
 const UNAUTHENTICATED_STATE = "unauthenticated";
-const ADMINISTRATOR_PROFILE = Object.freeze({
-  id: "player-rohin-neko",
-  name: "rohin ^.^",
-  icon: "assets/neko-assets/sprites/yawn1.png",
-});
 const DRAG_TYPES = Object.freeze({
   media: "application/x-rohin-video-editor-media",
   clip: "application/x-rohin-video-editor-clip",
@@ -292,13 +289,9 @@ let nextGuidepostId = 1;
 let mediaImportsInFlight = 0;
 let dragPayload = null;
 let tabDragTargetIndex = null;
-let administratorProof = null;
-let authenticationExpiryTimer = 0;
-let authenticationMonitorTimer = 0;
 let authenticationAttempt = 0;
 let authenticationController = null;
 let authenticationReturnFocus = null;
-let authenticationStorageAvailable = true;
 let previewResizeObserver = null;
 let sidePanelResizeObserver = null;
 let effectTabResizeObserver = null;
@@ -928,81 +921,9 @@ const clearDragStyles = () => {
     );
 };
 
-const normalizeAdministratorProof = (payload) => {
-  if (!payload || typeof payload !== "object") return null;
-  const proof = String(payload.proof || "").trim();
-  const reportedExpiresAtMs = new Date(payload.expiresAt || "").getTime();
-  if (
-    !/^[A-Za-z0-9._~+=\/-]{16,4096}$/.test(proof) ||
-    !Number.isFinite(reportedExpiresAtMs) ||
-    reportedExpiresAtMs <= Date.now()
-  ) {
-    return null;
-  }
-  const expiresAtMs = Math.min(
-    reportedExpiresAtMs,
-    Date.now() + ADMINISTRATOR_SESSION_DURATION_MS
-  );
-  return { proof, expiresAt: new Date(expiresAtMs).toISOString() };
-};
-
-const normalizeAdministratorSignInResponse = (payload) => {
-  const proof = normalizeAdministratorProof(payload);
-  const profile = payload?.profile;
-  if (
-    !proof ||
-    profile?.id !== ADMINISTRATOR_PROFILE.id ||
-    profile?.name !== ADMINISTRATOR_PROFILE.name ||
-    profile?.icon !== ADMINISTRATOR_PROFILE.icon
-  ) {
-    return null;
-  }
-  return proof;
-};
-
-const readStoredAdministratorProof = () => {
-  if (!authenticationStorageAvailable) return { payload: null, proof: null };
-  let stored = "";
-  try {
-    stored = sessionStorage.getItem(ADMINISTRATOR_PROOF_STORAGE_KEY) || "";
-  } catch {
-    authenticationStorageAvailable = false;
-    return { payload: null, proof: null };
-  }
-  if (!stored) return { payload: null, proof: null };
-  try {
-    const payload = JSON.parse(stored);
-    return { payload, proof: normalizeAdministratorProof(payload) };
-  } catch {
-    clearStoredAdministratorProof();
-    return { payload: {}, proof: null };
-  }
-};
-
-const storeAdministratorProof = (proof) => {
-  const normalized = normalizeAdministratorProof(proof);
-  if (!normalized) return null;
-  if (authenticationStorageAvailable) {
-    try {
-      sessionStorage.setItem(
-        ADMINISTRATOR_PROOF_STORAGE_KEY,
-        JSON.stringify(normalized)
-      );
-    } catch {
-      authenticationStorageAvailable = false;
-    }
-  }
-  return normalized;
-};
-
-const clearStoredAdministratorProof = () => {
-  if (!authenticationStorageAvailable) return;
-  try {
-    sessionStorage.removeItem(ADMINISTRATOR_PROOF_STORAGE_KEY);
-  } catch {
-    authenticationStorageAvailable = false;
-  }
-};
+const administratorSession = createAdministratorSession({
+  onInvalidated: (reason) => requireAuthentication(reason),
+});
 
 const setAuthenticationStatus = (message, stateName = "") => {
   if (!elements.authStatus) return;
@@ -1029,13 +950,6 @@ const focusAuthenticationForm = () => {
   });
 };
 
-const clearAuthenticationTimers = () => {
-  window.clearTimeout(authenticationExpiryTimer);
-  window.clearInterval(authenticationMonitorTimer);
-  authenticationExpiryTimer = 0;
-  authenticationMonitorTimer = 0;
-};
-
 const authenticationStatusForReason = (reason) => {
   if (!authenticationApiBaseUrl) {
     return "Sign-in is unavailable right now. Reload this page and try again.";
@@ -1057,9 +971,7 @@ const requireAuthentication = (reason = "initial") => {
     authenticationReturnFocus = document.activeElement;
   }
 
-  administratorProof = null;
-  clearStoredAdministratorProof();
-  clearAuthenticationTimers();
+  administratorSession.clear();
   authenticationController?.abort();
   authenticationController = null;
   authenticationAttempt += 1;
@@ -1083,48 +995,10 @@ const requireAuthentication = (reason = "initial") => {
   focusAuthenticationForm();
 };
 
-const administratorProofMatchesStorage = () => {
-  if (!administratorProof || !authenticationStorageAvailable) return true;
-  const stored = readStoredAdministratorProof().proof;
-  return Boolean(
-    stored &&
-      stored.proof === administratorProof.proof &&
-      stored.expiresAt === administratorProof.expiresAt
-  );
-};
-
-const verifyActiveAuthentication = () => {
-  if (!administratorProof) return false;
-  const expiresAtMs = Date.parse(administratorProof.expiresAt);
-  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
-    requireAuthentication("expired");
-    return false;
-  }
-  if (!administratorProofMatchesStorage()) {
-    requireAuthentication("deauthenticated");
-    return false;
-  }
-  return true;
-};
-
-const scheduleAuthenticationExpiry = () => {
-  window.clearTimeout(authenticationExpiryTimer);
-  if (!administratorProof) return;
-  const remainingMs = Date.parse(administratorProof.expiresAt) - Date.now();
-  if (remainingMs <= 0) {
-    requireAuthentication("expired");
-    return;
-  }
-  authenticationExpiryTimer = window.setTimeout(() => {
-    if (verifyActiveAuthentication()) scheduleAuthenticationExpiry();
-  }, Math.min(remainingMs, 2_147_000_000));
-};
+const verifyActiveAuthentication = () => administratorSession.verify() === "active";
 
 const completeAuthentication = (proof, { initial = false } = {}) => {
-  const normalized = storeAdministratorProof(proof);
-  if (!normalized) return false;
-  administratorProof = normalized;
-  clearAuthenticationTimers();
+  if (!administratorSession.adopt(proof)) return false;
 
   document.body.dataset.videoEditorAuthState = AUTHENTICATED_STATE;
   if (elements.authOverlay) elements.authOverlay.hidden = true;
@@ -1136,8 +1010,6 @@ const completeAuthentication = (proof, { initial = false } = {}) => {
   if (elements.authPassword) elements.authPassword.value = "";
   setAuthenticationBusy(false);
   setAuthenticationStatus("");
-  scheduleAuthenticationExpiry();
-  authenticationMonitorTimer = window.setInterval(verifyActiveAuthentication, 1_000);
 
   const returnFocus =
     authenticationReturnFocus?.isConnected && elements.app?.contains(authenticationReturnFocus)
@@ -1275,7 +1147,9 @@ const initializeAuthentication = () => {
     focusAuthenticationForm();
   });
   const handleDesktopChange = () => {
-    if (desktopEditorQuery.matches && !administratorProof) focusAuthenticationForm();
+    if (desktopEditorQuery.matches && !administratorSession.getProof()) {
+      focusAuthenticationForm();
+    }
   };
   desktopEditorQuery.addEventListener?.("change", handleDesktopChange);
   window.addEventListener("focus", verifyActiveAuthentication);
@@ -1284,11 +1158,8 @@ const initializeAuthentication = () => {
     if (!document.hidden) verifyActiveAuthentication();
   });
 
-  const stored = readStoredAdministratorProof();
-  if (stored.proof) {
-    completeAuthentication(stored.proof, { initial: true });
-    return;
-  }
+  const stored = administratorSession.restore();
+  if (stored.proof && completeAuthentication(stored.proof, { initial: true })) return;
   requireAuthentication(stored.payload ? "expired" : "initial");
 };
 
@@ -3280,7 +3151,7 @@ const releaseProjectResources = () => {
   // terminate() leaves a dead handle behind, and the lazy getter reuses a
   // non-null worker.
   audioAnalysisWorker = null;
-  clearAuthenticationTimers();
+  administratorSession.stopMonitoring();
   authenticationController?.abort();
   authenticationController = null;
   previewResizeObserver?.disconnect();

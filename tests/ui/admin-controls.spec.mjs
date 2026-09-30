@@ -308,6 +308,85 @@ test("an expired Administrator proof is purged and cannot expose Admin Controls"
   expect(diagnostics.mutatingRequests).toEqual([]);
 });
 
+/**
+ * Counts the page-wide subtree observers and reports whether media playback is
+ * wrapped, so a visitor's cost can be measured rather than inferred.
+ */
+const watchPageObservation = (page) =>
+  page.addInitScript(() => {
+    const nativeObserve = MutationObserver.prototype.observe;
+    window.__bodySubtreeObservers = 0;
+    MutationObserver.prototype.observe = function observe(target, options) {
+      if (target === document.body && options?.childList && options?.subtree) {
+        window.__bodySubtreeObservers += 1;
+      }
+      return nativeObserve.call(this, target, options);
+    };
+  });
+
+const readPageObservation = (page) =>
+  page.evaluate(() => ({
+    bodySubtreeObservers: window.__bodySubtreeObservers,
+    mediaPlayPatched:
+      HTMLMediaElement.prototype.play.name === "adminControlledMediaPlay",
+  }));
+
+test("Admin observation and the media patch wait for the window to open", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await watchPageObservation(page);
+  const diagnostics = await preparePage(page);
+  await expect(page.locator("#admin-controls-window")).toBeHidden();
+
+  const beforeOpen = await readPageObservation(page);
+  expect(beforeOpen.mediaPlayPatched).toBe(false);
+
+  await openAdmin(page);
+  const afterOpen = await readPageObservation(page);
+  expect(afterOpen.mediaPlayPatched).toBe(true);
+  expect(afterOpen.bodySubtreeObservers).toBe(beforeOpen.bodySubtreeObservers + 1);
+
+  await closeAdmin(page);
+  await openAdmin(page);
+  const afterReopen = await readPageObservation(page);
+  expect(afterReopen.bodySubtreeObservers).toBe(
+    afterOpen.bodySubtreeObservers,
+    "Reopening must reuse the observer rather than attach another."
+  );
+
+  expect(diagnostics.consoleErrors).toEqual([]);
+  expect(diagnostics.runtimeErrors).toEqual([]);
+  expect(diagnostics.mutatingRequests).toEqual([]);
+});
+
+test("a restored Admin session that mutes media observes the page without opening", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await watchPageObservation(page);
+  await page.addInitScript(
+    ({ key, state }) => {
+      const seedKey = "admin-controls-muted-state-seeded";
+      if (sessionStorage.getItem(seedKey) === "true") return;
+      sessionStorage.setItem(seedKey, "true");
+      localStorage.setItem(key, JSON.stringify(state));
+    },
+    { key: storageKey, state: { version: 1, audio: false } }
+  );
+  const diagnostics = await preparePage(page);
+
+  await expect(page.locator("#admin-controls-window")).toBeHidden();
+  await expect(page.locator("body")).toHaveClass(/is-admin-audio-off/);
+  const observation = await readPageObservation(page);
+  expect(observation.mediaPlayPatched).toBe(true);
+  expect(observation.bodySubtreeObservers).toBeGreaterThan(0);
+
+  expect(diagnostics.consoleErrors).toEqual([]);
+  expect(diagnostics.runtimeErrors).toEqual([]);
+  expect(diagnostics.mutatingRequests).toEqual([]);
+});
+
 test("Admin Controls stays contained, scrollable, and keyboard accessible", async ({
   page,
 }, testInfo) => {

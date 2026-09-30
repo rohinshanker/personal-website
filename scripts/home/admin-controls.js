@@ -359,6 +359,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
   let takeGeneration = 0;
   let cueOverlayTimer = null;
   let seedIndicatorFrame = null;
+  let contentObserver = null;
   let eventPreviewCleanup = null;
 
   const persist = () => {
@@ -1094,6 +1095,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     syncGuide();
     syncAudio();
     applyPrivacyFixtures();
+    if (state.privacy || !state.audio) activateContentObservation();
   };
 
   const syncForm = () => {
@@ -1730,12 +1732,43 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     orchestrator.closeWindow?.();
   });
 
+  /**
+   * Watching the whole page and wrapping media playback is Admin-only work that
+   * every visitor used to pay for on load. Both attach the first time the
+   * window opens, or earlier when a restored session already asks for privacy
+   * fixtures or muted media, and then stay for the rest of the page.
+   */
+  const activateContentObservation = () => {
+    if (contentObserver) return;
+    contentObserver = new pageWindow.MutationObserver(() => {
+      if (state.privacy) applyPrivacyFixtures();
+      if (!state.audio) documentRef.querySelectorAll("audio, video").forEach(muteMediaElement);
+      if (isAdminOpen() && !seedIndicatorFrame) {
+        seedIndicatorFrame = pageWindow.requestAnimationFrame(() => {
+          seedIndicatorFrame = null;
+          updateSeedIndicators();
+        });
+      }
+    });
+    contentObserver.observe(documentRef.body, { childList: true, subtree: true });
+
+    const mediaPrototype = pageWindow.HTMLMediaElement?.prototype;
+    const originalMediaPlay = mediaPrototype?.play;
+    if (mediaPrototype && typeof originalMediaPlay === "function") {
+      mediaPrototype.play = function adminControlledMediaPlay(...args) {
+        if (!state.audio) muteMediaElement(this);
+        return originalMediaPlay.apply(this, args);
+      };
+    }
+  };
+
   const syncWindowState = () => {
     const open = isAdminOpen();
     updatePauseState();
     if (open === wasOpen) return;
     wasOpen = open;
     if (open) {
+      activateContentObservation();
       renderTargetChoices();
       renderBindings();
       if (state.activeTab === "events") renderEventPreview();
@@ -1758,29 +1791,9 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     attributes: true,
     attributeFilter: ["class", "aria-hidden"],
   });
-  const contentObserver = new pageWindow.MutationObserver(() => {
-    if (state.privacy) applyPrivacyFixtures();
-    if (!state.audio) documentRef.querySelectorAll("audio, video").forEach(muteMediaElement);
-    if (isAdminOpen() && !seedIndicatorFrame) {
-      seedIndicatorFrame = pageWindow.requestAnimationFrame(() => {
-        seedIndicatorFrame = null;
-        updateSeedIndicators();
-      });
-    }
-  });
-  contentObserver.observe(documentRef.body, { childList: true, subtree: true });
   pageWindow.addEventListener("resize", () => {
     if (state.privacy) applyPrivacyFixtures();
   });
-
-  const mediaPrototype = pageWindow.HTMLMediaElement?.prototype;
-  const originalMediaPlay = mediaPrototype?.play;
-  if (mediaPrototype && typeof originalMediaPlay === "function") {
-    mediaPrototype.play = function adminControlledMediaPlay(...args) {
-      if (!state.audio) muteMediaElement(this);
-      return originalMediaPlay.apply(this, args);
-    };
-  }
 
   pageWindow.addEventListener("pagehide", (event) => {
     if (event.persisted) return;
@@ -1790,7 +1803,7 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     if (seedIndicatorFrame) pageWindow.cancelAnimationFrame(seedIndicatorFrame);
     if (eventPreviewCleanup) eventPreviewCleanup();
     adminObserver.disconnect();
-    contentObserver.disconnect();
+    contentObserver?.disconnect();
   });
 
   syncForm();

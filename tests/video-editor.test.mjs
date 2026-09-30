@@ -15,6 +15,7 @@ const readRouteSources = async () => {
     audioAnalysisWorker,
     sharedCursorCss,
     textSelectionCursor,
+    administratorSession,
   ] = await Promise.all([
     readFile(new URL("index.html", route), "utf8"),
     readFile(new URL("style.css", route), "utf8"),
@@ -24,8 +25,10 @@ const readRouteSources = async () => {
     readFile(new URL("audio-analysis-worker.js", route), "utf8"),
     readFile(new URL("styles/home/cursors.css", root), "utf8"),
     readFile(new URL("scripts/home/text-selection-cursor.js", root), "utf8"),
+    readFile(new URL("scripts/home/core/administrator-session.js", root), "utf8"),
   ]);
   return {
+    administratorSession,
     audioAnalysis,
     audioAnalysisWorker,
     css,
@@ -831,19 +834,32 @@ test("Video Editor starts behind a semantic, non-dismissible Administrator gate"
 });
 
 test("Video Editor reuses the expiring Administrator proof without persisting project data", async () => {
-  const { html, script } = await readRouteSources();
+  const { administratorSession, html, script } = await readRouteSources();
 
   assert.match(html, /scripts\/home\/game-stats-backend\.js/i);
-  assert.match(script, /personalSiteAdministratorProofV1/);
-  assert.match(script, /sessionStorage\.(?:getItem|setItem|removeItem)\s*\(/);
+  assert.match(
+    html,
+    /<script src="\.\.\/scripts\/home\/core\/administrator-session\.js\?v=[^"]+" defer><\/script>[\s\S]*?<script src="script\.js\?v=[^"]+" type="module">/,
+    "The shared session module must run before the editor module that consumes it."
+  );
+  assert.match(script, /\} = window\.homeAdministratorSession;/);
+  assert.doesNotMatch(
+    script,
+    /personalSiteAdministratorProofV1|sessionStorage/,
+    "The editor must reach session storage only through the shared Administrator session."
+  );
+  assert.match(administratorSession, /personalSiteAdministratorProofV1/);
+  assert.match(administratorSession, /sessionStorage/);
+  assert.match(administratorSession, /\bexpiresAt\b/);
+  assert.match(administratorSession, /(?:60\s*\*\s*60\s*\*\s*1000|3_?600_?000)/);
   assert.match(script, /administrator\/sign-in/);
   assert.match(script, /\bPOST\b/);
-  assert.match(script, /\bexpiresAt\b/);
-  assert.match(script, /(?:60\s*\*\s*60\s*\*\s*1000|3_?600_?000)/);
   assert.match(script, /addEventListener\s*\(\s*["']visibilitychange["']/);
   assert.match(script, /addEventListener\s*\(\s*["']focus["']/);
-  assert.doesNotMatch(script, /\blocalStorage\b/);
-  assert.doesNotMatch(script, /\b(?:indexedDB|IDBDatabase|caches\.(?:open|match|put))\b/);
+  for (const source of [script, administratorSession]) {
+    assert.doesNotMatch(source, /\blocalStorage\b/);
+    assert.doesNotMatch(source, /\b(?:indexedDB|IDBDatabase|caches\.(?:open|match|put))\b/);
+  }
 });
 
 test("Video Editor exposes local Audio-Sync analysis and accessible guidepost controls", async () => {

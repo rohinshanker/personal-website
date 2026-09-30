@@ -13,6 +13,12 @@ const {
   preloadMediaSourcesAfter,
   preloadMediaSourcesInOrder,
 } = window.homeMedia;
+const {
+  createAdministratorSession,
+  isAdministratorProfile: isGameStatsAdministratorProfile,
+  normalizeAdministratorSignInResponse,
+  ADMINISTRATOR_PROFILE: GAME_STATS_ADMINISTRATOR_PROFILE,
+} = window.homeAdministratorSession;
 const { dom } = window.homeDom;
 let homeActivationReady = !document.prerendering;
 let resolveHomeActivated = null;
@@ -1055,7 +1061,6 @@ const LIFE_COUNTER_DIGIT_SOURCES = {
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const GAME_STATS_SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
 const GAME_STATS_PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
-const GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
 const GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX = 999_999;
 const GAME_STATS_MAX_SYNC_QUEUE_LENGTH = 100;
 // The Worker attaches this code to every rejected Administrator proof. Any other
@@ -1079,11 +1084,9 @@ const GAME_STATS_RECORD_TROPHY_PRESS_MS = 120;
 const GAME_STATS_RECORD_TROPHY_RELEASE_MS = 100;
 const GAME_STATS_DEFAULT_ICON = "assets/app-icons/ico/user_card.ico";
 const GAME_STATS_EMPTY_LEADERBOARD_ICON = "assets/app-icons/ico/address_book_user.ico";
-const GAME_STATS_ROHIN_NEKO_AVATAR_ICON = "assets/neko-assets/sprites/yawn1.png";
+const GAME_STATS_ROHIN_NEKO_AVATAR_ICON = GAME_STATS_ADMINISTRATOR_PROFILE.icon;
 const GAME_STATS_ROHIN_NEKO_PROFILE = Object.freeze({
-  id: "player-rohin-neko",
-  name: "rohin ^.^",
-  icon: GAME_STATS_ROHIN_NEKO_AVATAR_ICON,
+  ...GAME_STATS_ADMINISTRATOR_PROFILE,
   rerollCount: 0,
 });
 const GAME_STATS_API_ERROR_NAME = "API Error";
@@ -1408,34 +1411,6 @@ const normalizeGameStatsEventProfile = (profile) => {
     name: normalizedProfile.name,
     icon: normalizedProfile.icon,
   };
-};
-
-const normalizeAdministratorProof = (payload) => {
-  if (!payload || typeof payload !== "object") return null;
-  const proof = String(payload.proof || "").trim();
-  const expiresAtMs = new Date(payload.expiresAt || "").getTime();
-  if (
-    !/^[A-Za-z0-9._~+=\/-]{16,4096}$/.test(proof) ||
-    !Number.isFinite(expiresAtMs) ||
-    expiresAtMs <= Date.now()
-  ) {
-    return null;
-  }
-  return { proof, expiresAt: new Date(expiresAtMs).toISOString() };
-};
-
-const isGameStatsAdministratorProfile = (profile) =>
-  profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
-  profile.name === GAME_STATS_ROHIN_NEKO_PROFILE.name &&
-  profile.icon === GAME_STATS_ROHIN_NEKO_AVATAR_ICON;
-
-const normalizeAdministratorSignInResponse = (payload) => {
-  const proof = normalizeAdministratorProof(payload);
-  const profile = normalizeGameStatsProfile(payload?.profile);
-  if (!proof || !isGameStatsAdministratorProfile(profile)) {
-    return null;
-  }
-  return proof;
 };
 
 const normalizeGameStatsLeaderboardEntries = (entries, direction, limit) =>
@@ -1846,55 +1821,18 @@ const readGameStatsApiJson = async (response) => {
 let gameStatsSessionSequence = 0;
 const gameStatsSessions = new Map();
 
-const loadGameStatsAdministratorProof = () => {
-  try {
-    return normalizeAdministratorProof(
-      JSON.parse(sessionStorage.getItem(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY) || "null")
-    );
-  } catch {
-    return null;
-  }
-};
+const gameStatsAdministratorSession = createAdministratorSession();
+gameStatsAdministratorSession.restore();
 
-const saveGameStatsAdministratorProof = (proof) => {
-  const normalizedProof = normalizeAdministratorProof(proof);
-  if (!normalizedProof) return null;
-  try {
-    sessionStorage.setItem(
-      GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY,
-      JSON.stringify(normalizedProof)
-    );
-  } catch {
-    // The short-lived proof remains usable for the current page when storage is unavailable.
-  }
-  return normalizedProof;
-};
+const clearGameStatsAdministratorProof = () => gameStatsAdministratorSession.clear();
 
-const clearGameStatsAdministratorProof = () => {
-  gameStatsAdministratorProof = null;
-  try {
-    sessionStorage.removeItem(GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY);
-  } catch {
-    // Session storage is best-effort and never contains credentials.
-  }
-};
-
-let gameStatsAdministratorProof = loadGameStatsAdministratorProof();
-
-const hasActiveGameStatsAdministratorProof = () => {
-  const normalizedProof = normalizeAdministratorProof(gameStatsAdministratorProof);
-  if (!normalizedProof) {
-    clearGameStatsAdministratorProof();
-    return false;
-  }
-  gameStatsAdministratorProof = normalizedProof;
-  return true;
-};
+const hasActiveGameStatsAdministratorProof = () =>
+  gameStatsAdministratorSession.isActive();
 
 const getAdministratorEventHeaders = (profile) => {
   if (!isGameStatsAdministratorProfile(profile)) return {};
   if (!hasActiveGameStatsAdministratorProof()) return {};
-  return { Authorization: `Bearer ${gameStatsAdministratorProof.proof}` };
+  return { Authorization: `Bearer ${gameStatsAdministratorSession.getProof().proof}` };
 };
 
 const reportGameStatsSessionFailure = (
@@ -28444,8 +28382,7 @@ const completeAdministratorSignIn = (administratorProof) => {
     : saveGameStatsProfile(GAME_STATS_ROHIN_NEKO_PROFILE);
   if (!profile) return false;
 
-  gameStatsAdministratorProof = saveGameStatsAdministratorProof(administratorProof);
-  if (!gameStatsAdministratorProof) return false;
+  if (!gameStatsAdministratorSession.adopt(administratorProof)) return false;
   renderGameStatsWindows();
   startRohinNekoAvatarAnimation();
   gameStatsAuthenticationReturnFocus = null;

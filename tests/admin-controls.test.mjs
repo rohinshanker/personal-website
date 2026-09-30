@@ -5,7 +5,10 @@ import vm from "node:vm";
 
 const root = new URL("../", import.meta.url);
 const adminScriptPath = "scripts/home/admin-controls.js";
+const administratorSessionPath = "scripts/home/core/administrator-session.js";
 const adminStylePath = "styles/home/admin-controls.css";
+
+const PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
 
 const countMatches = (source, pattern) => Array.from(source.matchAll(pattern)).length;
 
@@ -31,14 +34,15 @@ const sourceBetween = (source, startMarker, endMarker) => {
 };
 
 const readAdminSources = async () => {
-  const [home, main, admin, styles, validation] = await Promise.all([
+  const [home, main, admin, session, styles, validation] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("scripts/home/main.js", root), "utf8"),
     readFile(new URL(adminScriptPath, root), "utf8"),
+    readFile(new URL(administratorSessionPath, root), "utf8"),
     readFile(new URL(adminStylePath, root), "utf8"),
     readFile(new URL("docs/validation/admin-controls.md", root), "utf8"),
   ]);
-  return { admin, home, main, styles, validation };
+  return { admin, home, main, session, styles, validation };
 };
 
 const loadAdminNamespace = (source) => {
@@ -163,7 +167,7 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
 });
 
 test("Admin launch access requires an active Administrator session proof", async () => {
-  const { home, main } = await readAdminSources();
+  const { home, main, session } = await readAdminSources();
   const standInTag = tagWithAttribute(home, "id", "admin-controls-stand-in-window");
   assert.ok(standInTag, "Missing unauthenticated Admin stand-in window.");
   assert.equal(attributeValue(standInTag, "data-app-window"), "admin-controls-stand-in");
@@ -204,24 +208,9 @@ test("Admin launch access requires an active Administrator session proof", async
     "The stand-in must retain native 98.css button styling."
   );
 
-  const normalizeProofSource = sourceBetween(
+  const sessionWiringSource = sourceBetween(
     main,
-    "const normalizeAdministratorProof =",
-    "\n\nconst isGameStatsAdministratorProfile"
-  );
-  const profileCheckSource = sourceBetween(
-    main,
-    "const isGameStatsAdministratorProfile =",
-    "\n\nconst normalizeAdministratorSignInResponse"
-  );
-  const clearProofSource = sourceBetween(
-    main,
-    "const clearGameStatsAdministratorProof =",
-    "\n\nlet gameStatsAdministratorProof"
-  );
-  const activeProofSource = sourceBetween(
-    main,
-    "const hasActiveGameStatsAdministratorProof =",
+    "const gameStatsAdministratorSession = createAdministratorSession();",
     "\n\nconst getAdministratorEventHeaders"
   );
   const accessSource = sourceBetween(
@@ -240,22 +229,31 @@ test("Admin launch access requires an active Administrator session proof", async
   };
   const runAccessCase = ({ profile, proof }) => {
     let removals = 0;
-    const context = vm.createContext({
-      Date,
-      GAME_STATS_ROHIN_NEKO_AVATAR_ICON: administratorProfile.icon,
-      GAME_STATS_ROHIN_NEKO_PROFILE: administratorProfile,
+    const store = new Map();
+    if (proof) store.set(PROOF_STORAGE_KEY, JSON.stringify(proof));
+    const pageWindow = {
       sessionStorage: {
+        getItem: (key) => store.get(key) ?? null,
+        setItem(key, value) {
+          store.set(key, value);
+        },
         removeItem(key) {
-          assert.equal(key, "personalSiteAdministratorProofV1");
+          assert.equal(key, PROOF_STORAGE_KEY);
           removals += 1;
+          store.delete(key);
         },
       },
-      GAME_STATS_ADMINISTRATOR_PROOF_STORAGE_KEY: "personalSiteAdministratorProofV1",
-    });
+      setTimeout: () => 0,
+      clearTimeout() {},
+      setInterval: () => 0,
+      clearInterval() {},
+    };
+    const context = vm.createContext({ Date, window: pageWindow });
     vm.runInContext(
-      `${normalizeProofSource}\n${profileCheckSource}\n` +
-        `let gameStatsAdministratorProof = ${JSON.stringify(proof)};\n` +
-        `${clearProofSource}\n${activeProofSource}\n` +
+      `${session}\n` +
+        "const { createAdministratorSession, isAdministratorProfile: isGameStatsAdministratorProfile } =\n" +
+        "  window.homeAdministratorSession;\n" +
+        `${sessionWiringSource}\n` +
         `let gameStatsProfile = ${JSON.stringify(profile)};\n` +
         `${accessSource}\n` +
         `const adminTarget = resolveAdminControlsLaunchAppId("admin-controls");\n` +
@@ -263,7 +261,7 @@ test("Admin launch access requires an active Administrator session proof", async
         `  access: adminTarget === ADMIN_CONTROLS_APP_ID,\n` +
         `  adminTarget,\n` +
         `  otherTarget: resolveAdminControlsLaunchAppId("solitaire"),\n` +
-        `  proof: gameStatsAdministratorProof,\n` +
+        `  proof: gameStatsAdministratorSession.getProof(),\n` +
         `};`,
       context
     );

@@ -385,7 +385,7 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
   const eventProfileSource = extractSource(
     source,
     "const normalizeGameStatsEventProfile =",
-    "\n\nconst normalizeAdministratorProof"
+    "\n\nconst normalizeGameStatsLeaderboardEntries"
   );
   const recordEventSource = extractSource(
     source,
@@ -469,7 +469,7 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
   const eventProfileSource = extractSource(
     source,
     "const normalizeGameStatsEventProfile =",
-    "\n\nconst normalizeAdministratorProof"
+    "\n\nconst normalizeGameStatsLeaderboardEntries"
   );
   const syncSource = extractSource(
     source,
