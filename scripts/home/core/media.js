@@ -103,11 +103,20 @@ const loopVideoElements = (root = document) => {
   return [...own, ...root.querySelectorAll(LOOP_VIDEO_SELECTOR)];
 };
 
+/**
+ * True while the page is hidden, frozen, or on its way into the back/forward
+ * cache. Readiness arrives on its own schedule, so without this state a
+ * `canplay` after `pagehide` would restart a loop nobody can see; only
+ * `pageshow` or a visible `visibilitychange` clears it.
+ */
+let loopVideoPageSuspended = false;
+
 const isLoopVideoActive = (video) =>
   Boolean(
     video?.isConnected &&
       !video.hidden &&
       !document.hidden &&
+      !loopVideoPageSuspended &&
       !video.closest(LOOP_VIDEO_INACTIVE_ANCESTORS)
   );
 
@@ -199,20 +208,24 @@ const onLoopVideoOwnerMutation = () => {
 /**
  * A hidden document suspends animation frames, so a pause that waits for one may
  * never run and the loop would keep advancing out of sight. Pausing happens here,
- * synchronously, and drops the frame already queued so it cannot undo the pause;
- * resuming goes back through the ordinary scheduled sync.
+ * synchronously, and drops the frame already queued. The suspended flag then holds
+ * until the page comes back, so a `canplay`, `loadeddata`, or a mutation that
+ * lands in between cannot start anything either.
  */
-const stopLoopVideosForPageHide = () => {
+const suspendLoopVideoPage = () => {
+  loopVideoPageSuspended = true;
   cancelLoopVideoSync();
   pauseAllLoopVideos();
 };
 
-const onLoopVideoPageVisibilityChange = () => {
-  if (document.hidden) {
-    stopLoopVideosForPageHide();
-    return;
-  }
+const resumeLoopVideoPage = () => {
+  loopVideoPageSuspended = false;
   scheduleLoopVideoSync();
+};
+
+const onLoopVideoPageVisibilityChange = () => {
+  if (document.hidden) suspendLoopVideoPage();
+  else resumeLoopVideoPage();
 };
 
 let loopVideoOwnerObserver = null;
@@ -262,8 +275,8 @@ const watchLoopVideoVisibility = () => {
   prepareLoopVideos();
   document.addEventListener("visibilitychange", onLoopVideoPageVisibilityChange);
   // The last synchronous point before the page is frozen, cached, or discarded.
-  window.addEventListener("pagehide", stopLoopVideosForPageHide);
-  window.addEventListener("pageshow", scheduleLoopVideoSync);
+  window.addEventListener("pagehide", suspendLoopVideoPage);
+  window.addEventListener("pageshow", resumeLoopVideoPage);
   scheduleLoopVideoSync();
 };
 

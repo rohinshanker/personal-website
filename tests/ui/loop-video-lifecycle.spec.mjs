@@ -238,3 +238,37 @@ test("every Admin Controls event preview that clones a loop video stays inert", 
   expect(states.length).toBeGreaterThan(0);
   expect(states.filter((state) => !state.paused || state.playedRanges > 0)).toEqual([]);
 });
+
+test("readiness that arrives after pagehide does not restart a loop video", async ({ page }) => {
+  await openHomeDesktop(page, viewport);
+  await triggerEvent(page, "dont-starve-campfire");
+  await revealWindow(page, "#dst-survive-window");
+
+  const video = loopVideo(page, "campfire");
+  await expect.poll(() => video.evaluate((element) => element.paused)).toBe(false);
+
+  // The media stack does not stop because the document is on its way out: a
+  // buffer that fills after `pagehide` still fires its readiness events, and the
+  // document is not `hidden` while they land.
+  const hidden = await page.evaluate(async () => {
+    const element = document.querySelector('video[data-loop-video="campfire"]');
+    window.dispatchEvent(new Event("pagehide"));
+    const pausedAtHide = element.paused;
+    ["loadeddata", "canplay", "playing"].forEach((name) => {
+      element.dispatchEvent(new Event(name));
+    });
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return { pausedAtHide, pausedAfterReadiness: element.paused };
+  });
+  expect(hidden.pausedAtHide).toBe(true);
+  expect(hidden.pausedAfterReadiness, "late readiness cannot undo the hide").toBe(true);
+
+  const stopped = await video.evaluate((element) => element.currentTime);
+  await page.waitForTimeout(OBSERVATION_MS);
+  expect(await video.evaluate((element) => element.paused)).toBe(true);
+  expect(await video.evaluate((element) => element.currentTime)).toBe(stopped);
+
+  // Only the matching resume event lifts the suspension.
+  await page.evaluate(() => window.dispatchEvent(new Event("pageshow")));
+  await expect.poll(() => video.evaluate((element) => element.paused)).toBe(false);
+});
