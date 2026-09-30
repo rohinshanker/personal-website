@@ -69,7 +69,7 @@ const updateIntegrityCacheReferences = (
  * Rewrites only the two generated build members, so hand-written formatting and
  * JSONC comments in the Wrangler configuration survive the update.
  */
-const updateWranglerBuildVersion = (source, buildVersion) => {
+export const updateWranglerBuildVersion = (source, buildVersion) => {
   const config = parseJsonc(source);
   const previousBuildVersion = String(config.vars?.GAME_BUILD_VERSION || "").trim();
   const existingCompatibilityVersions = String(

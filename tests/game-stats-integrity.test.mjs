@@ -13,6 +13,7 @@ import {
   MAX_GAME_BUILD_COMPATIBILITY_VERSIONS,
   calculateGameBuildVersion,
   updateGameIntegrity,
+  updateWranglerBuildVersion,
 } from "../scripts/update-game-integrity.mjs";
 
 test("game build metadata matches the completion source and Worker configuration", async () => {
@@ -40,16 +41,11 @@ test("game build metadata matches the completion source and Worker configuration
   assert.equal(wranglerConfig.vars.GAME_BUILD_VERSION, buildVersion);
   const compatibilityVersions =
     wranglerConfig.vars.GAME_BUILD_COMPATIBILITY_VERSIONS.split(",");
-  assert.ok(
-    compatibilityVersions.includes(
-      "sha256-7c5f92037db895a1bb868a79152c2db70fc7d7a65c13482ebb56920047c40d0a"
-    )
-  );
-  assert.ok(
-    compatibilityVersions.includes(
-      "sha256-8da5fabb2d24da0b79b4cbb6a314df595fefbd926adab3a1447c185d865aa6e2"
-    )
-  );
+  assert.ok(compatibilityVersions.length > 0);
+  for (const version of compatibilityVersions) {
+    assert.match(version, GAME_BUILD_VERSION_PATTERN);
+    assert.notEqual(version, buildVersion);
+  }
   assert.ok(
     compatibilityVersions.length <= MAX_GAME_BUILD_COMPATIBILITY_VERSIONS
   );
@@ -145,4 +141,28 @@ test("changing any declared completion source changes the build version", async 
     );
     assert.notEqual(digest, unchanged, `${mutated} must be inside the build digest`);
   }
+});
+
+
+test("build history retains the previous release, removes invalid duplicates, and evicts the oldest at its bound", () => {
+  const version = (number) => `sha256-${number.toString(16).padStart(64, "0")}`;
+  const history = Array.from({ length: MAX_GAME_BUILD_COMPATIBILITY_VERSIONS }, (_, index) => version(index + 1));
+  const previous = version(100);
+  const next = version(101);
+  const source = JSON.stringify({ vars: {
+    GAME_BUILD_VERSION: previous,
+    GAME_BUILD_COMPATIBILITY_VERSIONS: [history[0], "invalid", previous, next, ...history].join(","),
+  }});
+  const updated = parseJsonc(updateWranglerBuildVersion(source, next));
+  assert.equal(updated.vars.GAME_BUILD_VERSION, next);
+  assert.deepEqual(updated.vars.GAME_BUILD_COMPATIBILITY_VERSIONS.split(","), [previous, ...history.slice(0, -1)]);
+  assert.equal(updateWranglerBuildVersion(JSON.stringify(updated), next), JSON.stringify(updated), "rechecking the same release is idempotent");
+});
+
+test("build history starts empty when no valid prior release exists", () => {
+  const next = `sha256-${"a".repeat(64)}`;
+  const source = JSON.stringify({ vars: { GAME_BUILD_VERSION: "", GAME_BUILD_COMPATIBILITY_VERSIONS: "" } });
+  const updated = parseJsonc(updateWranglerBuildVersion(source, next));
+  assert.equal(updated.vars.GAME_BUILD_VERSION, next);
+  assert.equal(updated.vars.GAME_BUILD_COMPATIBILITY_VERSIONS, "");
 });

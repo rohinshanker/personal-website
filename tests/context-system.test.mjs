@@ -27,7 +27,7 @@ const markdownFilenames = async (directory) =>
 test("repository context uses only indexed open or active tickets", async () => {
   const noteEntries = await readdir(notesDirectory, { withFileTypes: true });
   assert.deepEqual(
-    noteEntries.map((entry) => entry.name).sort(),
+    noteEntries.map((entry) => entry.name).filter((name) => name !== ".DS_Store").sort(),
     ["tickets"],
     "Retired task history must not remain in the root note directory"
   );
