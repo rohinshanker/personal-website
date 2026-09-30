@@ -201,7 +201,9 @@ const awaitLoopVideoOrFallback = (video) => {
     video,
     setTimeout(() => {
       loopVideoFallbackTimers.delete(video);
-      activateLoopVideoFallback(video);
+      // A video removed from the document keeps its timer, since nothing
+      // observes removal; expiry re-checks that someone can still see it.
+      if (isLoopVideoActive(video)) activateLoopVideoFallback(video);
     }, LOOP_VIDEO_FALLBACK_MS)
   );
 };

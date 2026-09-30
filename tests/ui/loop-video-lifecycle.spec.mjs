@@ -417,6 +417,8 @@ const hideWindow = (page, windowId) =>
 test("time spent hidden does not count towards the fallback wait", async ({ page }) => {
   await page.clock.install({ time: FROZEN_INSTANT });
   await openHomeDesktop(page, viewport);
+  // Real time must not creep between commands: the deadlines below are exact.
+  await page.clock.pauseAt(FROZEN_INSTANT);
   await pinReadyState(page, "campfire", 1);
 
   await triggerEvent(page, "dont-starve-campfire");
@@ -444,6 +446,8 @@ test("a suspended page cancels the fallback wait and a resumed page starts a ful
 }) => {
   await page.clock.install({ time: FROZEN_INSTANT });
   await openHomeDesktop(page, viewport);
+  // Real time must not creep between commands: the deadlines below are exact.
+  await page.clock.pauseAt(FROZEN_INSTANT);
   await pinReadyState(page, "campfire", 1);
 
   await triggerEvent(page, "dont-starve-campfire");
@@ -467,6 +471,8 @@ test("a loop video that was playable once keeps its video when it buffers later"
 }) => {
   await page.clock.install({ time: FROZEN_INSTANT });
   await openHomeDesktop(page, viewport);
+  // Real time must not creep between commands: the deadlines below are exact.
+  await page.clock.pauseAt(FROZEN_INSTANT);
   await pinReadyState(page, "campfire", 1);
 
   await triggerEvent(page, "dont-starve-campfire");
@@ -483,6 +489,32 @@ test("a loop video that was playable once keeps its video when it buffers later"
 
   await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
   await expect(loopVideo(page, "campfire")).toBeVisible();
+});
+
+test("a loop video removed from the document before its wait ends is left alone", async ({
+  page,
+}) => {
+  await page.clock.install({ time: FROZEN_INSTANT });
+  await openHomeDesktop(page, viewport);
+  await page.clock.pauseAt(FROZEN_INSTANT);
+  await pinReadyState(page, "campfire", 1);
+
+  await triggerEvent(page, "dont-starve-campfire");
+  await revealWindow(page, "#dst-survive-window");
+  await page.clock.runFor(1000);
+
+  const detached = await page.evaluateHandle(() => {
+    const owner = document.querySelector("#dst-survive-window");
+    owner.remove();
+    window.dispatchEvent(new PageTransitionEvent("pagehide"));
+    return owner;
+  });
+  await page.clock.runFor(FALLBACK_BOUND_MS * 2);
+
+  expect(
+    await detached.evaluate((owner) => owner.querySelectorAll("img[data-loop-fallback-for]").length)
+  ).toBe(0);
+  expect(await detached.evaluate((owner) => owner.querySelector("video").hidden)).toBe(false);
 });
 
 test("a loop video whose sources cannot be decoded falls back to its animated WebP", async ({
