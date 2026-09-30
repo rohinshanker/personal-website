@@ -14,9 +14,15 @@ and under 1 MiB, and it belongs to this pipeline.
 - **Animated WebP is the default.** It keeps `<img>`, `data-src`, the deferred
   loader, and reduced-motion behaviour exactly as they were.
 - **A looping `<video>` replaces the largest loops**: `assets/random events/`
-  `servalpizza.gif`, `campfire.gif`, `evil-wizards-radar.gif`, `radar.gif`, and
-  `lain.gif`. Video is worth its extra markup only where the WebP is still
-  hundreds of kilobytes; below that the image path is simpler and equally fast.
+  `servalpizza.gif`, `campfire.gif`, `radar.gif`, and `lain.gif`. Video is worth
+  its extra markup only where the WebP is still hundreds of kilobytes; below that
+  the image path is simpler and equally fast.
+- **Artwork drawn as stacked layers ships as WebP**, whatever it weighs. Two
+  `<video>` elements decoding one file each run their own clock and cannot be
+  held together — see the layer rule below — while two `<img>` of one animated
+  image share the browser's animation clock the way two `<img>` of one GIF did.
+  `evil-wizards-radar.gif` is drawn twice, so it ships as WebP and costs 458,406
+  bytes more than the video derivatives would.
 - **Every video also ships its animated WebP**, because a `<video>` that cannot
   autoplay must still animate.
 - Sources stay where they are. Derivatives live under
@@ -70,7 +76,7 @@ fetched only when `play()` is refused, and only one of WebM/MP4 is ever chosen.
 | --- | --- | ---: | --- | ---: | ---: |
 | `servalpizza` | video | 9,716,372 | webm 658,603 · mp4 445,011 · poster 36,087 · webp fallback 1,922,078 | 694,690 | 93% |
 | `campfire` | video | 6,087,120 | webm 176,756 · mp4 122,087 · poster 51,746 · webp fallback 748,214 | 228,502 | 96% |
-| `evil-wizards-radar` | video | 3,987,487 | webm 143,475 · mp4 118,720 · poster 79,639 · webp fallback 681,520 | 223,114 | 94% |
+| `evil-wizards-radar` | WebP | 3,987,487 | webp 681,520 | 681,520 | 83% |
 | `birthday` | WebP | 3,264,097 | webp 1,075,952 | 1,075,952 | 67% |
 | `ramadan` | WebP | 2,960,726 | webp 940,504 | 940,504 | 68% |
 | `buddha` | WebP | 2,926,083 | webp 965,846 | 965,846 | 67% |
@@ -87,7 +93,7 @@ fetched only when `play()` is refused, and only one of WebM/MP4 is ever chosen.
 | `valentine` | WebP | 1,236,348 | webp 349,968 | 349,968 | 72% |
 | `shoebill` | WebP | 1,101,796 | webp 770,366 | 770,366 | 30% |
 | `nana-accept` | WebP | 1,029,362 | webp 273,110 | 273,110 | 73% |
-| **Total** | | **52,184,173** | | **11,967,887** | **77%** |
+| **Total** | | **52,184,173** | | **12,426,293** | **76%** |
 
 `shoebill` saves the least because its 220x220 source renders in a 64x64 icon
 box; resizing sources is a separate decision and is not part of this pipeline.
@@ -127,25 +133,38 @@ Markup, in `home.html` only:
   Hiding or closing the window pauses it, matching
   [carousel-video-playback.md](carousel-video-playback.md). The window is watched
   through a `MutationObserver` scoped to the few windows that own a loop video.
-  A window is registered when one of its loop videos is prepared — at boot, or
-  when its media is activated — so a window cloned or built after boot is watched
-  on the same terms.
-- **Pausing never waits for an animation frame.** A hidden document suspends
-  them, so a deferred pause can leave a loop advancing out of sight indefinitely.
-  `visibilitychange` to hidden and `pagehide` pause synchronously, and a window
-  mutation pauses whatever just went out of sight before scheduling the rest.
-  Starting is what waits for the frame: `pageshow`, a visible `visibilitychange`,
-  and a window mutation all go through the ordinary scheduled sync.
-- **Stacked layers share one clock.** Loop videos in the same window that decode
-  the same file are one group: the advertisement draws its artwork twice, plainly
-  and as the `clip-path`ed pixelated text overlay. Each `<video>` runs its own
-  clock, so a group starts only once every layer reports `readyState >= 3`, and a
-  follower more than one frame from the first layer is seeked back onto it — on
-  resume, and on every `timeupdate`. Without that, a second response arriving a
-  second later holds a one-second offset for the whole loop. Two elements are the
-  simplest design that keeps the overlay's `clip-path` and `image-rendering`
-  declarative; one shared decode would mean a canvas redrawn from script every
-  frame. A lone loop video still starts as soon as it has a source.
+- **Registration happens at activation, resolved sources included.** A loop video
+  is handed over when `loadDeferredMediaElement` reaches it — at boot, or when its
+  window's media is activated — and that happens before the early return for an
+  element whose `src` is already set. A window cloned from one that has already
+  loaded therefore registers like any other, so hiding it pauses it; without that
+  it would play on unwatched.
+- **A suspended page starts nothing.** `pagehide` and `visibilitychange` to hidden
+  pause synchronously, drop the animation frame already queued, and set a
+  suspended state that only `pageshow` or `visibilitychange` to visible clears.
+  While it is set, nothing starts playback: not `canplay`, `loadeddata`, `error`,
+  a window mutation, or a frame that was already queued. Pausing never waits for
+  an animation frame, because a hidden document suspends them and a deferred pause
+  could leave a loop advancing out of sight indefinitely. Starting is what waits
+  for the frame: resume and window mutations go through the ordinary scheduled
+  sync.
+- **An unplayable video falls back within 8 seconds of becoming visible.** A
+  corrupt response, or one that never finishes, leaves `readyState` below
+  `HAVE_FUTURE_DATA` with no further event to wait on, so a timer armed by the
+  activation sync replaces the video with its animated WebP. The bound covers a
+  cold fetch of the largest derivative the site ships over a slow connection. It
+  is scoped to a video that never becomes playable: a video that reached
+  `HAVE_FUTURE_DATA` and stalls mid-loop keeps its `<video>`.
+- **Stacked layers of one animation are `<img>`, not `<video>`.** Two `<video>`
+  elements decoding one file each run their own clock, and nothing script can do
+  reconciles them: holding both back until each reports `readyState >= 3` lets one
+  failed layer freeze its healthy peer, and seeking a follower onto the leader's
+  clock restarts the seek before the previous one settles. Two `<img>` of one
+  animated WebP share the browser's animation clock instead, which is how the GIF
+  layers this replaced stayed in step. The advertisement draws `evil-wizards-radar`
+  twice that way — plainly, and as the `clip-path`ed pixelated text overlay — and
+  the overlay's `clip-path` and `image-rendering` stay declarative. Every loop
+  video is therefore one element for one source, and starts as soon as it has one.
 - Bringing another window to the front does **not** pause a loop video: it
   replaced an animated GIF, which kept running. `pauseMediaPlayback` in
   `scripts/home/main.js` skips `video[data-loop-video]` for that reason, and all
@@ -153,10 +172,11 @@ Markup, in `home.html` only:
   a pointer press outside the active window, and `pauseActiveWindowMedia` on
   `blur`. The page-hide case is not among them: `media.js` handles the hidden
   document itself, so the rule stays in the module that owns loop playback.
-- If `play()` is refused — iOS Low Power Mode, a stricter autoplay policy — the
-  video is hidden and an `<img>` built from `data-loop-fallback` takes its place
-  with the same classes, width, height, and `aria-hidden`. An `AbortError` from a
-  pause that interrupted the request is not a refusal and never triggers it.
+- If `play()` is refused — iOS Low Power Mode, a stricter autoplay policy, a
+  source no decoder accepts — the video is hidden and an `<img>` built from
+  `data-loop-fallback` takes its place with the same classes, width, height, and
+  `aria-hidden`. An `AbortError` from a pause that interrupted the request is not
+  a refusal and never triggers it.
 - The Admin Controls event preview clones the window and must stay inert:
   `[data-admin-event-preview-window]` is never an active loop video, so a preview
   shows the poster frame. `activateAdminRandomEventPreviewMedia` calls `load()`
@@ -209,15 +229,18 @@ runner over temporary fixtures and never invokes a real encoder; the last case
 runs the shipped `--check` with an empty `PATH` to prove it needs none.
 
 `tests/ui/loop-video-lifecycle.spec.mjs` covers the playback contract: a result
-window preloaded but never opened stays at its first frame, a hidden page pauses
-without an animation frame, the advertisement's two layers stay aligned when the
-second response is held back, and a window cloned after boot pauses when hidden.
-The project runs Chromium; run that spec's scenarios in Firefox and WebKit by
-hand when the lifecycle changes, since autoplay and frame scheduling differ most
-between engines.
+window preloaded but never opened stays at its first frame, a hidden page and a
+`pagehide` both pause without an animation frame, readiness arriving after
+`pagehide` does not undo it, a window cloned after boot pauses when hidden
+whether its sources were resolved or not, an unplayable video is replaced by its
+WebP within the bound, and the advertisement's two layers are one animated image
+drawn twice. The two fallback cases jump the clock with `page.clock` instead of
+waiting the bound out. The project runs Chromium; run that spec's scenarios in
+Firefox and WebKit by hand when the lifecycle changes, since autoplay and frame
+scheduling differ most between engines.
 
 For rendered validation, trigger each converted event through the Admin Controls
 event finder at 375×812 and 1440×900 and confirm the box, the loop, and the
-first paint. The five video events also need: pause on window hide, resume on
+first paint. The four video events also need: pause on window hide, resume on
 reopen, and the fallback image after `HTMLMediaElement.prototype.play` is
 patched to reject.
