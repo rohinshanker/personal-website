@@ -8,13 +8,8 @@
 
   /** Shared data paths are repository-root relative; this route lives one level down. */
   const ASSET_ROOT = "../";
-  const LOADING_ASSET = `${ASSET_ROOT}assets/loading/windows98-hourglass-2x.gif`;
-  const LOADING_PADDED_ASSET = `${ASSET_ROOT}assets/loading/windows98-hourglass-padded-2x.gif`;
   const DOWNLOAD_ICON = `${ASSET_ROOT}assets/app-icons/ico/download.ico`;
-  /** Below this box the padded hourglass no longer fits, so the raw frame is shown instead. */
-  const LOADING_RAW_WIDTH = 258;
-  const LOADING_RAW_HEIGHT = 272;
-  const VIDEO_PATTERN = /\.(mp4|webm|ogg)(?:[?#]|$)/i;
+  const { createLoadingIndicator, isVideoSource, setLoading: setMediaLoading } = window.homeMedia;
   const SWIPE_MIN_DISTANCE = 40;
   const TOP_LINK_SCROLL_THRESHOLD = 480;
   const INCH_IN_CM = 2.54;
@@ -24,7 +19,6 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const scrollBehavior = () => (reducedMotion.matches ? "auto" : "smooth");
   const assetUrl = (path) => `${ASSET_ROOT}${path}`;
-  const isVideoSource = (source) => VIDEO_PATTERN.test(source);
   const counterText = (index, total) => `${index + 1} of ${total}`;
   const anchorId = (shootId) => shootId.replace(/^modeling-/, "");
   const wrapIndex = (index, total) => ((index % total) + total) % total;
@@ -82,26 +76,9 @@
   /* ------------------------------------------------------------------ */
   /* Loading indicator: the Home hourglass, covering the slot while it loads. */
 
-  const loadingIndicator = () => {
-    const indicator = element("div", "media-loading", { "aria-hidden": "true", hidden: true });
-    indicator.appendChild(element("img", "media-loading__image", { alt: "" }));
-    return indicator;
-  };
-
-  const setLoading = (slot, isLoading) => {
-    const indicator = slot.querySelector(":scope > .media-loading");
-    if (!indicator) return;
-    if (isLoading) {
-      const compact =
-        slot.clientWidth < LOADING_RAW_WIDTH || slot.clientHeight < LOADING_RAW_HEIGHT;
-      indicator.classList.toggle("media-loading--compact", compact);
-      indicator.querySelector("img").src = compact ? LOADING_ASSET : LOADING_PADDED_ASSET;
-      slot.setAttribute("aria-busy", "true");
-    } else {
-      slot.removeAttribute("aria-busy");
-    }
-    indicator.hidden = !isLoading;
-  };
+  const loadingIndicator = () => createLoadingIndicator();
+  const setLoading = (slot, isLoading) =>
+    setMediaLoading(slot, isLoading, { assetRoot: ASSET_ROOT });
 
   /**
    * Assigns the real source to a deferred image or video and keeps the

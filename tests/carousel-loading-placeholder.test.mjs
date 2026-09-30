@@ -73,10 +73,10 @@ test("gallery image loads use a local hourglass overlay instead of stale or empt
     readFile(new URL("assets/loading/windows98-hourglass-padded-2x.gif", root)),
   ]);
 
-  assert.match(main, /GALLERY_LOADING_RAW_ASSET = "assets\/loading\/windows98-hourglass-2x\.gif"/);
+  assert.match(media, /LOADING_RAW_ASSET = "assets\/loading\/windows98-hourglass-2x\.gif"/);
   assert.match(
-    main,
-    /GALLERY_LOADING_PADDED_ASSET =\s+"assets\/loading\/windows98-hourglass-padded-2x\.gif"/
+    media,
+    /LOADING_PADDED_ASSET =\s+"assets\/loading\/windows98-hourglass-padded-2x\.gif"/
   );
   assert.match(main, /const setGalleryImageLoading = \(image, isLoading\) =>/);
   assert.match(main, /image\.addEventListener\("load", finish, \{ once: true \}\)/);
@@ -112,7 +112,7 @@ test("gallery image loads use a local hourglass overlay instead of stale or empt
   );
 
   for (const source of [home, index]) {
-    assert.match(source, /loop-video-fallback-wait-20260929/);
+    assert.match(source, /shared-cross-route-20260930/);
   }
 
   assert.deepEqual(readGifDimensions(rawGif), { width: 258, height: 272 });

@@ -47,9 +47,9 @@ const NAMED_TARGET_PATTERN = /^named:([a-z0-9][a-z0-9:-]{0,159})$/;
 const ACTION_TARGET_PATTERN = /^action:([a-f0-9]{8}):(\d{1,2})$/;
 const GITHUB_TARGET_PATTERN = /^github:(\d{1,2})$/;
 const EVENT_PREVIEW_STYLESHEETS = Object.freeze([
-  "style.css?v=first-win-stats-handoff-20260722",
-  "styles/home/base.css?v=pinch-zoom-a11y-20260909",
-  "styles/home/random-events.css?v=bulk-system-alerts-20260811",
+  "style.css?v=html-semantics-20260927",
+  "styles/home/base.css?v=html-semantics-20260927",
+  "styles/home/random-events.css?v=loop-video-fallback-wait-20260929",
 ]);
 const EVENT_PREVIEW_STAGE_STYLES = `
   :host {

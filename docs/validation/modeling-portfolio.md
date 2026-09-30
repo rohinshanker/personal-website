@@ -45,3 +45,21 @@ npm run game-stats:integrity:check
 ```
 
 For rendered inspection, serve the repository and open `/modeling/` at the four review viewports plus `/home.html` with the Modeling window open. Check the header wrap at 375 pixels, the two-column shoot layout from 900 pixels, an opened Credits list, the viewer at desktop and phone sizes, console output, page errors, and failed requests. A direct local Home load logs the known localhost CORS rejection from the production Game Stats Worker; it is unrelated to this route.
+
+## Shared media helpers
+
+`core/media.js` loads before the route script and publishes `window.homeMedia`.
+Home and Modeling use its `isVideoSource`, `createLoadingIndicator`, and
+`setLoading` helpers. Video detection accepts MP4, WebM, and Ogg extensions,
+case-insensitively, before an optional query or fragment.
+
+The loader selects the raw hourglass below 258 pixels wide or 272 pixels high;
+at either exact boundary it uses the padded asset. `setLoading` owns the slot's
+`aria-busy` and the decorative indicator's visibility, reuses one direct-child
+indicator, and avoids reassigning an unchanged image source. Modeling passes
+`assetRoot: "../"`; Home passes its gallery CSS block and loading class. Keep
+route geometry and image completion/error handling in the callers.
+
+Run `node --test tests/shared-media.test.mjs tests/shared-literals.test.mjs` for
+these contracts. The literal check also keeps Home, the landing prefetch list,
+Modeling, and Admin Controls preview stylesheet versions aligned.

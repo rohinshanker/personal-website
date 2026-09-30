@@ -260,9 +260,9 @@ test("the /modeling/ route publishes its metadata, shared assets, and blank Drop
   assert.match(html, /href="\.\.\/style\.css\?v=html-semantics-20260927"/);
   assert.match(html, new RegExp(`href="style\\.css\\?v=${ROUTE_VERSION}"`));
   assert.match(html, new RegExp(`src="\\.\\./scripts/home/modeling-portfolio\\.js\\?v=${DATA_VERSION}"`));
-  assert.match(html, new RegExp(`<script src="script\\.js\\?v=${ROUTE_VERSION}" defer></script>`));
+  assert.match(html, /<script src="script\.js\?v=[^"]+" defer><\/script>/);
   assert.ok(
-    html.indexOf("modeling-portfolio.js") < html.indexOf(`script.js?v=${ROUTE_VERSION}`),
+    html.indexOf("modeling-portfolio.js") < html.indexOf("script.js?v="),
     "the shared data loads before the route script"
   );
   assert.match(
@@ -314,8 +314,9 @@ test("the /modeling/ route publishes its metadata, shared assets, and blank Drop
   assert.match(script, /fullscreen\.textContent = "Expand"/);
   assert.match(css, /\.carousel__download,\s*\.lightbox__download \{/);
   assert.match(css, /button\[aria-label\]\.close \{[\s\S]*?background-size: contain/);
-  assert.match(script, /windows98-hourglass-2x\.gif/);
-  assert.match(script, /windows98-hourglass-padded-2x\.gif/);
+  assert.match(script, /createLoadingIndicator, isVideoSource, setLoading: setMediaLoading/);
+  assert.match(html, /core\/media\.js\?v=[^"]+" defer/);
+  assert.ok(html.indexOf("core/media.js") < html.indexOf("src=\"script.js"));
   assert.match(script, /new IntersectionObserver\(/);
   assert.match(script, /rootMargin: "0px 50% 0px 50%"/);
   assert.match(script, /classList\.add\("is-lightbox-open"\)/);

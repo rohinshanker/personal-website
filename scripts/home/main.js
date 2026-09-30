@@ -3,6 +3,8 @@ const {
   activateDeferredSourceOwner,
   deferredSourceOwner,
   fitImagesIntoFrames,
+  isVideoSource,
+  setLoading,
   loadDeferredMedia: loadDeferredMediaNow,
   mediaSourcePreloadRequests,
   preloadDeferredMedia: preloadDeferredMediaNow,
@@ -21846,58 +21848,14 @@ const setGalleryText = (element, text) => {
   if (element && typeof text === "string") element.textContent = text;
 };
 
-const GALLERY_LOADING_RAW_ASSET = "assets/loading/windows98-hourglass-2x.gif";
-const GALLERY_LOADING_PADDED_ASSET =
-  "assets/loading/windows98-hourglass-padded-2x.gif";
-const GALLERY_LOADING_RAW_WIDTH = 258;
-const GALLERY_LOADING_RAW_HEIGHT = 272;
 const galleryImageLoadTokens = new WeakMap();
 const galleryImageLoadCleanups = new WeakMap();
 
-const galleryUsesCompactLoadingAsset = (scroll) =>
-  scroll.clientWidth < GALLERY_LOADING_RAW_WIDTH ||
-  scroll.clientHeight < GALLERY_LOADING_RAW_HEIGHT;
-
-const galleryLoadingIndicator = (scroll) => {
-  let indicator = scroll.querySelector(".gallery-loading-indicator");
-  if (indicator) return indicator;
-
-  indicator = document.createElement("div");
-  indicator.className = "gallery-loading-indicator";
-  indicator.hidden = true;
-  indicator.setAttribute("aria-hidden", "true");
-
-  const image = document.createElement("img");
-  image.className = "gallery-loading-indicator__image";
-  image.alt = "";
-  image.decoding = "async";
-  indicator.appendChild(image);
-  scroll.appendChild(indicator);
-  return indicator;
-};
-
 const setGalleryImageLoading = (image, isLoading) => {
-  const scroll = image?.closest(".gallery-scroll");
-  if (!scroll) return;
-
-  const indicator = galleryLoadingIndicator(scroll);
-  const loadingImage = indicator.querySelector("img");
-  const useCompactAsset = galleryUsesCompactLoadingAsset(scroll);
-  indicator.classList.toggle("gallery-loading-indicator--compact", useCompactAsset);
-  if (loadingImage) {
-    const asset = useCompactAsset
-      ? GALLERY_LOADING_RAW_ASSET
-      : GALLERY_LOADING_PADDED_ASSET;
-    if (loadingImage.getAttribute("src") !== asset) loadingImage.setAttribute("src", asset);
-  }
-
-  indicator.hidden = !isLoading;
-  scroll.classList.toggle("is-image-loading", isLoading);
-  if (isLoading) {
-    scroll.setAttribute("aria-busy", "true");
-  } else {
-    scroll.removeAttribute("aria-busy");
-  }
+  setLoading(image?.closest(".gallery-scroll"), isLoading, {
+    className: "gallery-loading-indicator",
+    loadingClass: "is-image-loading",
+  });
 };
 
 const loadGalleryImage = (image, src) => {
@@ -22127,7 +22085,7 @@ const renderModelingGallery = (container) => {
     }
 
     const source = media[currentIndex];
-    const isVideo = /\.(mp4|webm|ogg)(?:[?#]|$)/i.test(source);
+    const isVideo = isVideoSource(source);
     const currentMedia = document.createElement(isVideo ? "video" : "img");
 
     if (isVideo) {

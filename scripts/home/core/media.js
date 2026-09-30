@@ -1,4 +1,50 @@
 (() => {
+// Keep route-specific styling and asset roots at the call site.
+const LOADING_RAW_ASSET = "assets/loading/windows98-hourglass-2x.gif";
+const LOADING_PADDED_ASSET = "assets/loading/windows98-hourglass-padded-2x.gif";
+const LOADING_RAW_WIDTH = 258;
+const LOADING_RAW_HEIGHT = 272;
+
+const isVideoSource = (source) => /\.(mp4|webm|ogg)(?:[?#]|$)/i.test(source);
+
+const createLoadingIndicator = ({ className = "media-loading" } = {}) => {
+  const indicator = document.createElement("div");
+  indicator.className = className;
+  indicator.hidden = true;
+  indicator.setAttribute("aria-hidden", "true");
+  const image = document.createElement("img");
+  image.className = `${className}__image`;
+  image.alt = "";
+  image.decoding = "async";
+  indicator.appendChild(image);
+  return indicator;
+};
+
+const setLoading = (
+  slot,
+  isLoading,
+  { className = "media-loading", assetRoot = "", loadingClass = "" } = {}
+) => {
+  if (!slot) return;
+  let indicator = slot.querySelector(`:scope > .${className}`);
+  if (!indicator) {
+    indicator = createLoadingIndicator({ className });
+    slot.appendChild(indicator);
+  }
+  if (isLoading) {
+    const compact = slot.clientWidth < LOADING_RAW_WIDTH || slot.clientHeight < LOADING_RAW_HEIGHT;
+    indicator.classList.toggle(`${className}--compact`, compact);
+    const image = indicator.querySelector("img");
+    const source = assetRoot + (compact ? LOADING_RAW_ASSET : LOADING_PADDED_ASSET);
+    if (image.getAttribute("src") !== source) image.setAttribute("src", source);
+    slot.setAttribute("aria-busy", "true");
+  } else {
+    slot.removeAttribute("aria-busy");
+  }
+  indicator.hidden = !isLoading;
+  if (loadingClass) slot.classList.toggle(loadingClass, isLoading);
+};
+
 const deferredMediaElements = (root) => {
   if (!root) return [];
   const elements = root.matches && root.matches("[data-src]") ? [root] : [];
@@ -501,7 +547,7 @@ const backgroundMediaElement = (
     return { element: preload, events: ["load", "error"], retain: true };
   }
   if (forceImage) return { element: new Image(), events: ["load", "error"] };
-  if (/\.(mp4|webm|ogg)(?:[?#]|$)/i.test(source)) {
+  if (isVideoSource(source)) {
     const video = document.createElement("video");
     video.preload = "metadata";
     video.muted = true;
@@ -584,6 +630,9 @@ const preloadMediaSourcesAfter = (element, sources, options) =>
   });
 
 window.homeMedia = {
+  createLoadingIndicator,
+  isVideoSource,
+  setLoading,
   activateDeferredSourceOwner,
   deferredSourceOwner,
   fitImagesIntoFrames,
