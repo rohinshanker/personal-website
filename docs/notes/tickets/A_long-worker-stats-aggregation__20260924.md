@@ -1,10 +1,10 @@
-# O_long-worker-stats-aggregation__20260924 — Open
+# A_long-worker-stats-aggregation__20260924 — Active
 
 - Scope: Move Game Stats aggregation from an unbounded full-table scan in Worker memory into SQL, stop shipping every event id to the browser, add a short cache, and split `workers/game-stats/src/index.mjs` into modules.
-- Status: open
+- Status: active
 - Opened: 2026-09-24
-- Updated: 2026-09-24
-- Current State: Opened from the 2026-09-24 whole-site audit. Nothing started. Tier: long. Requires an additive D1 migration and the Worker version ID recorded per `docs/validation/game-stats-backend.md`; the index-drop and the committed `database_id` are decision items in `O_decide-games-and-backend__20260924.md`. Related: `O_sudoku-followups__20260924.md` item 1 also needs a migration; batch them.
+- Updated: 2026-09-30
+- Current State: Coordinator is agent-deck session `2f758d2d-1790569488`; read-only Multica scout DEM-178 is checking SQL and browser confirmation seams against baseline `178130c808481ad3c8ca32292f7a6eb1c2d750c3`. Owner decided five-second caching with fresh Refresh/publication reads, and index removal only after proving an index is phased out and unnecessary for the production build. Other-project agents retain priority. Migration 0003 already contains Sudoku puzzle identity; use 0004. Preserve confirmed-event UI convergence and cached-browser compatibility when removing the lifetime event-ID payload. Record the deployed Worker version ID and compare production totals/rank order before completion.
 - Verification: `npm --prefix workers/game-stats test` keeping the current 95% line coverage; `npm --prefix workers/game-stats run deploy:check`; the release workflow's `game-stats:worker-transition:check` and `game-stats:release:check`; `tests/ui/game-stats-multiplayer-ranks.spec.mjs` and the 10+ player stress procedure in `docs/validation/game-stats-multiplayer.md`; compare `/stats` JSON before and after on production for identical totals and top-3 ordering.
 - Cleanup: Update the aggregation and payload contract in `docs/validation/game-stats-backend.md` and `docs/validation/game-stats-multiplayer.md`, then delete this ticket and its index row.
 
@@ -16,6 +16,8 @@
 4. Not verified: whether Cloudflare rate limiting fronts the Worker, and current D1 row counts. The finding is structural.
 
 ## Plan
+
+- Owner decision (2026-09-30): five-second cache for ordinary reads; manual Refresh and a successful publication bypass it. Remove an old index only after proving production and candidate queries do not need it; retain security and Sudoku identity indexes.
 
 1. Aggregate in SQL: `GROUP BY game, difficulty` totals; window-ranked global top 3 and requested-player rank; drop `eventIds` from the payload (browser dedups locally already); use a `Set` where an in-memory pass remains.
 2. Short `Cache-Control` or Cache API TTL on `/stats` (seconds, not minutes, so a fresh win still appears on the refresh control).
