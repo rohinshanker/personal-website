@@ -1496,3 +1496,28 @@ test("picker convenience and Reset Scene preserve local Admin settings", async (
   expect(diagnostics.runtimeErrors).toEqual([]);
   expect(diagnostics.mutatingRequests).toEqual([]);
 });
+
+for (const reason of ["expiry", "storage removal"]) {
+  test(`an open Admin window returns to its gate after ${reason} without resetting settings`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.clock.install();
+    const diagnostics = await preparePage(page);
+    const { win } = await openAdmin(page);
+    await selectAdminTab(page, "capture");
+    await page.locator("#admin-intensity").selectOption("high");
+    const savedSettings = await page.evaluate((key) => localStorage.getItem(key), storageKey);
+    if (reason === "expiry") {
+      await page.clock.fastForward(60 * 60_000 + 1_000);
+    } else {
+      await page.evaluate((key) => sessionStorage.removeItem(key), administratorProofStorageKey);
+      await page.clock.fastForward(1_000);
+    }
+    await expect(win).toHaveAttribute("aria-hidden", "true");
+    await expect(page.locator("#admin-controls-stand-in-window")).toBeVisible();
+    expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBe(savedSettings);
+    expect(await page.evaluate((key) => sessionStorage.getItem(key), administratorProofStorageKey)).toBeNull();
+    expect(diagnostics.consoleErrors).toEqual([]);
+    expect(diagnostics.runtimeErrors).toEqual([]);
+    expect(diagnostics.mutatingRequests).toEqual([]);
+  });
+}

@@ -1821,7 +1821,14 @@ const readGameStatsApiJson = async (response) => {
 let gameStatsSessionSequence = 0;
 const gameStatsSessions = new Map();
 
-const gameStatsAdministratorSession = createAdministratorSession();
+const gameStatsAdministratorSession = createAdministratorSession({
+  onInvalidated: () => {
+    const adminWindow = document.getElementById("admin-controls-window");
+    if (!adminWindow || adminWindow.getAttribute("aria-hidden") !== "false") return;
+    setWindowOpen("admin-controls", false);
+    setWindowOpen("admin-controls-stand-in", true);
+  },
+});
 gameStatsAdministratorSession.restore();
 
 const clearGameStatsAdministratorProof = () => gameStatsAdministratorSession.clear();
