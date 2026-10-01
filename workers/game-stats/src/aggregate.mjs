@@ -7,6 +7,20 @@ import {
 } from "./constants.mjs";
 import { createEmptyGameStatsData } from "./data.mjs";
 
+// Match JavaScript String.trim() for trusted historical fields, including
+// line terminators and Unicode spaces that SQLite's default trim omits.
+const TRIM_CHARACTER_CODES = [
+  9, 10, 11, 12, 13, 32, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197,
+  8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288, 65279,
+];
+const trimmedColumns = Object.fromEntries(
+  ["id", "difficulty", "board_size", "hint_bucket", "metric_kind", "player_id",
+    "player_name", "player_icon"].map((column) => [
+    column,
+    `trim(coalesce(${column}, ''), char(${TRIM_CHARACTER_CODES.join(", ")}))`,
+  ])
+);
+
 /*
  * Normalize and quarantine legacy rows in SQL. New writes have already passed
  * stricter JavaScript validation; these predicates preserve the read-side
@@ -17,31 +31,31 @@ import { createEmptyGameStatsData } from "./data.mjs";
 const VALID_EVENT_PROJECTION = `
   SELECT
     rowid AS source_rowid,
-    trim(id) AS id,
+    ${trimmedColumns.id} AS id,
     game,
     type,
-    trim(coalesce(difficulty, '')) AS difficulty,
-    trim(coalesce(board_size, '')) AS board_size,
-    trim(coalesce(hint_bucket, '')) AS hint_bucket,
+    ${trimmedColumns.difficulty} AS difficulty,
+    ${trimmedColumns.board_size} AS board_size,
+    ${trimmedColumns.hint_bucket} AS hint_bucket,
     metric,
-    trim(coalesce(metric_kind, '')) AS metric_kind,
-    trim(coalesce(player_id, '')) AS player_id,
-    substr(trim(coalesce(player_name, '')), 1, 32) AS player_name,
-    trim(coalesce(player_icon, '')) AS player_icon,
+    ${trimmedColumns.metric_kind} AS metric_kind,
+    ${trimmedColumns.player_id} AS player_id,
+    substr(${trimmedColumns.player_name}, 1, 32) AS player_name,
+    ${trimmedColumns.player_icon} AS player_icon,
     strftime('%Y-%m-%dT%H:%M:%fZ', occurred_at) AS occurred_at,
     CASE WHEN
-      length(trim(coalesce(player_id, ''))) BETWEEN 8 AND 80
-      AND trim(coalesce(player_id, '')) NOT GLOB '*[^a-z0-9-]*'
-      AND length(substr(trim(coalesce(player_name, '')), 1, 32)) > 0
+      length(${trimmedColumns.player_id}) BETWEEN 8 AND 80
+      AND ${trimmedColumns.player_id} NOT GLOB '*[^a-z0-9-]*'
+      AND length(substr(${trimmedColumns.player_name}, 1, 32)) > 0
       AND (
-        trim(coalesce(player_icon, '')) = 'assets/neko-assets/sprites/yawn1.png'
+        ${trimmedColumns.player_icon} = 'assets/neko-assets/sprites/yawn1.png'
         OR (
-          trim(coalesce(player_icon, '')) GLOB 'assets/app-icons/ico/*.ico'
+          ${trimmedColumns.player_icon} GLOB 'assets/app-icons/ico/*.ico'
           AND length(
-            substr(trim(coalesce(player_icon, '')), length('assets/app-icons/ico/') + 1)
+            substr(${trimmedColumns.player_icon}, length('assets/app-icons/ico/') + 1)
           ) > length('.ico')
           AND instr(
-            substr(trim(coalesce(player_icon, '')), length('assets/app-icons/ico/') + 1),
+            substr(${trimmedColumns.player_icon}, length('assets/app-icons/ico/') + 1),
             '/'
           ) = 0
         )
@@ -50,8 +64,8 @@ const VALID_EVENT_PROJECTION = `
 `;
 
 const COMMON_EVENT_PREDICATES = `
-  length(trim(id)) BETWEEN 8 AND 80
-  AND trim(id) NOT GLOB '*[^a-z0-9-]*'
+  length(${trimmedColumns.id}) BETWEEN 8 AND 80
+  AND ${trimmedColumns.id} NOT GLOB '*[^a-z0-9-]*'
   AND julianday(occurred_at) IS NOT NULL
   AND julianday(occurred_at) <= julianday('now', '+1 minute')
 `;
@@ -71,10 +85,10 @@ WITH valid_event_candidates AS (
       game: "minesweeper",
       type: "win",
       predicates: `
-        trim(coalesce(difficulty, '')) IN ('beginner', 'intermediate', 'expert')
+        ${trimmedColumns.difficulty} IN ('beginner', 'intermediate', 'expert')
         AND typeof(metric) = 'integer'
         AND metric BETWEEN 1 AND 999
-        AND trim(coalesce(metric_kind, '')) IN ('', 'seconds')
+        AND ${trimmedColumns.metric_kind} IN ('', 'seconds')
       `,
     }),
     validEventBranch({
@@ -83,34 +97,34 @@ WITH valid_event_candidates AS (
       predicates: `
         typeof(metric) = 'integer'
         AND metric BETWEEN 1 AND 99999
-        AND trim(coalesce(metric_kind, '')) IN ('', 'moves')
+        AND ${trimmedColumns.metric_kind} IN ('', 'moves')
       `,
     }),
     validEventBranch({
       game: "snake",
       type: "gamePlayed",
       predicates: `
-        trim(coalesce(board_size, '')) IN ('10', '16', '20', '24')
+        ${trimmedColumns.board_size} IN ('10', '16', '20', '24')
         AND typeof(metric) = 'integer'
         AND metric BETWEEN 0 AND (
-          CAST(trim(board_size) AS INTEGER) * CAST(trim(board_size) AS INTEGER) - 3
+          CAST(${trimmedColumns.board_size} AS INTEGER) * CAST(${trimmedColumns.board_size} AS INTEGER) - 3
         )
-        AND trim(coalesce(metric_kind, '')) IN ('', 'score')
+        AND ${trimmedColumns.metric_kind} IN ('', 'score')
       `,
     }),
     validEventBranch({
       game: "sudoku",
       type: "win",
       predicates: `
-        trim(coalesce(difficulty, '')) IN (
+        ${trimmedColumns.difficulty} IN (
           'easy', 'medium', 'hard', 'expert', 'master', 'extreme'
         )
-        AND trim(coalesce(hint_bucket, '')) IN ('noHints', 'withHints')
+        AND ${trimmedColumns.hint_bucket} IN ('noHints', 'withHints')
         AND (
           metric IS NULL
           OR (typeof(metric) = 'integer' AND metric BETWEEN 1 AND 21600)
         )
-        AND trim(coalesce(metric_kind, '')) IN ('', 'seconds')
+        AND ${trimmedColumns.metric_kind} IN ('', 'seconds')
       `,
     }),
   ].join(" UNION ALL ")}
@@ -281,7 +295,7 @@ const resultRows = (result) => result?.results || [];
 const leaderboardEntry = (row) => ({
   eventId: String(row.event_id),
   playerId: String(row.player_id),
-  name: String(row.player_name),
+  name: String(row.player_name).slice(0, 32),
   icon: String(row.player_icon),
   metric: Number(row.metric),
   metricKind: String(row.metric_kind),

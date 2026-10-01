@@ -528,3 +528,49 @@ test("failed SQL reads return an uncached error response", async (t) => {
   });
   assert.equal(putCalls, 0);
 });
+
+
+test("SQL historical strings preserve JavaScript whitespace and UTF-16 name limits", async (t) => {
+  const database = createDatabase();
+  t.after(() => database.close());
+  const spaces = [
+    9, 10, 11, 12, 13, 32, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197,
+    8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288, 65279,
+  ];
+  const occurredAt = new Date(Date.now() - 60_000).toISOString();
+  for (const [index, code] of spaces.entries()) {
+    const space = String.fromCodePoint(code);
+    const wrap = (value) => `${space}${value}${space}`;
+    assert.equal(space.trim(), "");
+    insertEvent(database, {
+      id: wrap(`event-whitespace-${index}`),
+      game: "minesweeper", type: "win", difficulty: wrap("beginner"),
+      metric: 50 + index, metricKind: wrap("seconds"),
+      playerId: wrap(`player-whitespace-${index}`),
+      playerName: wrap("😀".repeat(20)), playerIcon: wrap(icon), occurredAt,
+    });
+  }
+  insertEvent(database, {
+    id: "event-whitespace-only-name", game: "minesweeper", type: "win",
+    difficulty: "beginner", metric: 1, metricKind: "seconds",
+    playerId: "player-whitespace-only-name", playerName: "\u00a0\u2028\ufeff",
+    playerIcon: icon, occurredAt,
+  });
+  // U+0085 is not ECMAScript whitespace and must keep this id invalid.
+  insertEvent(database, {
+    id: "\u0085event-not-js-whitespace", game: "minesweeper", type: "win",
+    difficulty: "beginner", metric: 1, metricKind: "seconds", occurredAt,
+  });
+  const stats = await selectAggregatedGameStats(
+    { personal_site_game_stats: database },
+    { protocol: "2", playerId: "player-whitespace-0", pendingEventIds: ["event-whitespace-0"] }
+  );
+  assert.equal(stats.totals.minesweeper.wins.beginner, spaces.length + 1);
+  assert.equal(stats.playerTotals.minesweeper.wins.beginner, 1);
+  assert.deepEqual(stats.playerRanks.minesweeper.beginner, { rank: 1, totalPlayers: spaces.length });
+  assert.equal(stats.playerRecords.minesweeper.beginner.name, "😀".repeat(16));
+  assert.equal(stats.playerRecords.minesweeper.beginner.icon, icon);
+  assert.deepEqual(stats.acknowledgedEventIds, ["event-whitespace-0"]);
+  assert.deepEqual(stats.leaderboards.minesweeper.beginner.map(({ eventId }) => eventId),
+    ["event-whitespace-0", "event-whitespace-1", "event-whitespace-2"]);
+});
