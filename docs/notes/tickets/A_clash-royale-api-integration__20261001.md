@@ -49,3 +49,10 @@
 - Preview: `http://127.0.0.1:4192/home.html`; open Clash Royale from the desktop. Server is `node /tmp/clash-royale-preview.mjs`, bound only to loopback, with live public GETs forwarded to the production Worker. No API key is present in the preview. Keep the server running for the owner.
 - Live backend remains compatible with the currently published browser build `sha256-781e9e3fe27f372dd47374c6a25a1012956d78dbfebd7c55067d2d06b6e9e1c6`. Candidate browser build is `sha256-25b89cbf47690075134fb790aef0e7b3c46a455282de496eff2175a7ce1f648b`.
 - The main remote is still baseline `e48e18e221390c9ecca31e0af9e00fe20ae50263`; nothing from this task has been pushed. Re-run affected checks and regenerate integrity metadata after any requested edits.
+
+## Visual audit edits in progress
+
+- Owner requested a dedicated scrollable battle log with fixed profile/deck, leaderboard-style formatting and seven-segment digits, distinct Solitaire `game_solitaire.ico` launchers, and relevant images/icons.
+- Native frontend implementer works in `/tmp/personal-website-clash-style` from `4500b89519677133450a0c0714ff5470a4876c96`; coordinator handles assets, Solitaire references, integration, and final validation. Both Multica runtimes remain offline.
+- Load only eight current-deck PNG URLs supplied by the official API (about 1.16 MB total for the current deck). No card or arena library download. Reuse the local pixel trophy and add one 286-byte MIT Pixelarticons crown. Arena art requires a verified current mapping; never show another arena under Spirit Square's label.
+- Main push and frontend publication remain on hold for owner review.

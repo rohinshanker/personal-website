@@ -16,7 +16,7 @@ const games = Object.freeze([
     slug: "minesweeper",
   },
   {
-    icon: "assets/app-icons/ico/game_freecell.ico",
+    icon: "assets/app-icons/ico/game_solitaire.ico",
     label: "Solitaire",
     slug: "solitaire",
   },

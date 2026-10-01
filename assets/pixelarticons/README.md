@@ -6,3 +6,5 @@ These local SVGs use Pixelarticons' base (non-sharp) style and remain covered by
 - `pause.svg` comes from the MIT-licensed `pixelarticons@1.8.1` package, before that asset moved out of the current free package.
 
 The files are vendored so the Video Editor has no runtime icon dependency.
+
+- `crown.svg` comes from the free [Pixelarticons source at `8275e0af`](https://github.com/halfmage/pixelarticons/blob/8275e0af7c16aa40c54ea2b90b7af83b1fe4eb4c/svg/crown.svg) and is used by the Clash Royale statistics and battle results.

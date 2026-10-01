@@ -72,7 +72,7 @@ test("Game Progress profile launches every global leaderboard from a white icon 
   const profile = home.slice(profileStart, profileEnd);
   const launchers = [
     ["minesweeper", "Minesweeper", "assets/app-icons/ico/minesweeper.ico"],
-    ["solitaire", "Solitaire", "assets/app-icons/ico/game_freecell.ico"],
+    ["solitaire", "Solitaire", "assets/app-icons/ico/game_solitaire.ico"],
     ["snake", "Snake", "assets/snake-assets/snake-logo.png"],
     ["sudoku", "Sudoku", "assets/app-icons/ico/calendar2.ico"],
   ];
