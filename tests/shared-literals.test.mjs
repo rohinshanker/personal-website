@@ -48,13 +48,14 @@ test("Video Editor authentication and CSS agree on the desktop boundary", async 
 
 test("the shared Administrator profile matches the independently deployed Worker", async () => {
   const [session, worker] = await Promise.all([
-    read("scripts/home/core/administrator-session.js"), read("workers/game-stats/src/index.mjs"),
+    read("scripts/home/core/administrator-session.js"),
+    read("workers/game-stats/src/constants.mjs"),
   ]);
   const context = vm.createContext({ window: {} });
   vm.runInContext(session, context);
   const profile = context.window.homeAdministratorSession.ADMINISTRATOR_PROFILE;
   const workerConstant = (name) => {
-    const value = worker.match(new RegExp(`const ${name} = "([^"]+)";`))?.[1];
+    const value = worker.match(new RegExp(`export const ${name} = "([^"]+)";`))?.[1];
     assert.ok(value, `${name} must exist in the Worker`);
     return value;
   };

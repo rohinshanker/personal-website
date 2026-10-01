@@ -34,6 +34,15 @@ const victoryViewports = Object.freeze([
   ...viewports.slice(1),
 ]);
 
+const isPlayerStatsPath = (path, playerId) => {
+  const url = new URL(path, API_BASE_URL);
+  return (
+    url.pathname === "/stats" &&
+    url.searchParams.get("protocol") === "2" &&
+    url.searchParams.get("playerId") === playerId
+  );
+};
+
 const generatedBackendSource = await readFile(
   new URL("../../scripts/home/game-stats-backend.js", import.meta.url),
   "utf8"
@@ -194,8 +203,12 @@ const installApi = async (page) => {
         contentType: "application/json",
         headers: corsHeaders,
         body: JSON.stringify({
+          version: 2,
           generatedAt: new Date().toISOString(),
-          eventIds: refreshed ? [publishedEvent.id] : [],
+          acknowledgedEventIds:
+            refreshed && url.searchParams.getAll("pendingEventId").includes(publishedEvent.id)
+              ? [publishedEvent.id]
+              : [],
           totals: { solitaire: { wins: refreshed ? 7 : 6 } },
           playerTotals: { solitaire: { wins: refreshed ? 5 : 4 } },
           leaderboards: { solitaire: leaderboards },
@@ -422,9 +435,15 @@ const installAdministratorStaleStatsApi = async (page) => {
 
     if (request.method() === "GET" && url.pathname === "/stats") {
       const stats = createStats();
+      const acknowledgedEventIds = stats.eventIds.filter((eventId) =>
+        url.searchParams.getAll("pendingEventId").includes(eventId)
+      );
+      delete stats.eventIds;
+      stats.version = 2;
+      stats.acknowledgedEventIds = acknowledgedEventIds;
       statsRequests.push({
         authoritative: authoritativeStats,
-        eventIds: [...stats.eventIds],
+        acknowledgedEventIds: [...acknowledgedEventIds],
         path: url.pathname + url.search,
         published: Boolean(publishedEvent),
       });
@@ -587,9 +606,16 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   });
   expect(api.statsRequests.some(({ refreshed }) => !refreshed)).toBe(true);
   expect(api.statsRequests.some(({ refreshed }) => refreshed)).toBe(true);
-  expect(api.statsRequests.every(({ path }) => path === `/stats?playerId=${profile.id}`)).toBe(
-    true
-  );
+  expect(api.statsRequests.every(({ path }) => isPlayerStatsPath(path, profile.id))).toBe(true);
+  expect(
+    api.statsRequests.some(({ path }) => {
+      const url = new URL(path, API_BASE_URL);
+      return (
+        url.searchParams.get("fresh") === "1" &&
+        url.searchParams.getAll("pendingEventId").includes(api.eventRequests[0].event.id)
+      );
+    })
+  ).toBe(true);
 
   const stored = await page.evaluate(
     ({ queueKey, statsKey }) => ({
@@ -747,9 +773,11 @@ test("an active Administrator win stays advanced through stale stats and exact-e
       icon: administratorProfile.icon,
     },
   });
-  expect(api.statsRequests.some(({ eventIds }) => eventIds.includes(publishedEvent.id))).toBe(
-    false
-  );
+  expect(
+    api.statsRequests.some(({ acknowledgedEventIds }) =>
+      acknowledgedEventIds.includes(publishedEvent.id)
+    )
+  ).toBe(false);
 
   await expect(progressWins).toHaveText("2");
   await expect(currentRecord).toHaveAttribute(
@@ -775,8 +803,8 @@ test("an active Administrator win stays advanced through stale stats and exact-e
     .poll(
       () =>
         api.statsRequests.filter(
-          ({ authoritative, eventIds }) =>
-            authoritative && eventIds.includes(publishedEvent.id)
+          ({ authoritative, acknowledgedEventIds }) =>
+            authoritative && acknowledgedEventIds.includes(publishedEvent.id)
         ).length
     )
     .toBeGreaterThan(0);
@@ -798,8 +826,8 @@ test("an active Administrator win stays advanced through stale stats and exact-e
     { game: "solitaire", config: {}, buildVersion: generatedBuildVersion },
   ]);
   expect(
-    api.statsRequests.every(
-      ({ path }) => path === `/stats?playerId=${administratorProfile.id}`
+    api.statsRequests.every(({ path }) =>
+      isPlayerStatsPath(path, administratorProfile.id)
     )
   ).toBe(true);
 

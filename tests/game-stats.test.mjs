@@ -41,9 +41,9 @@ test("game stats use the Cloudflare backend instead of static export data", asyn
   assert.match(mainSource, /fetchGameStatsApi\("\/events"/);
   assert.match(
     mainSource,
-    /const requestedPlayerId = gameStatsProfile\?\.id \|\| "";\s+const statsPath = requestedPlayerId\s+\? `\/stats\?playerId=\$\{encodeURIComponent\(requestedPlayerId\)\}`\s+: "\/stats";/
+    /const statsQuery = new URLSearchParams\(\{ protocol: GAME_STATS_API_PROTOCOL \}\);[\s\S]*?if \(requestedPlayerId\) statsQuery\.set\("playerId", requestedPlayerId\);[\s\S]*?statsQuery\.append\("pendingEventId", eventId\)[\s\S]*?if \(fresh\) statsQuery\.set\("fresh", "1"\);/
   );
-  assert.match(mainSource, /fetchGameStatsApi\(statsPath/);
+  assert.match(mainSource, /fetchGameStatsApi\(`\/stats\?\$\{statsQuery\}`/);
   assert.match(mainSource, /const createGameStatsPlayerName = \(value/);
   assert.match(mainSource, /const updateGameStatsPlayerNameMarquees/);
   assert.match(

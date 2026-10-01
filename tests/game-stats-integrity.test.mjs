@@ -93,17 +93,19 @@ test("both Wrangler configurations schedule the same expiry purge", async () => 
 
 test("the Worker's local build-identity copies match the shared script definitions", async () => {
   const workerSource = await readFile(
-    new URL("../workers/game-stats/src/index.mjs", import.meta.url),
+    new URL("../workers/game-stats/src/constants.mjs", import.meta.url),
     "utf8"
   );
 
   assert.equal(
-    workerSource.match(/^const GAME_BUILD_VERSION_PATTERN = (.+);$/m)?.[1],
+    workerSource.match(/^export const GAME_BUILD_VERSION_PATTERN = (.+);$/m)?.[1],
     String(GAME_BUILD_VERSION_PATTERN)
   );
   assert.equal(
     Number(
-      workerSource.match(/^const MAX_GAME_BUILD_COMPATIBILITY_VERSIONS = (\d+);$/m)?.[1]
+      workerSource.match(
+        /^export const MAX_GAME_BUILD_COMPATIBILITY_VERSIONS = (\d+);$/m
+      )?.[1]
     ),
     MAX_GAME_BUILD_COMPATIBILITY_VERSIONS
   );

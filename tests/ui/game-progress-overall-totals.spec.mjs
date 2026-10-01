@@ -17,6 +17,17 @@ const VIEWPORTS = Object.freeze([
   { name: "wide", width: 1440, height: 900 },
 ]);
 
+const isPlayerStatsRequest = (request, playerId) => {
+  const [method, path] = request.split(" ");
+  const url = new URL(path, API_BASE_URL);
+  return (
+    method === "GET" &&
+    url.pathname === "/stats" &&
+    url.searchParams.get("protocol") === "2" &&
+    url.searchParams.get("playerId") === playerId
+  );
+};
+
 const generatedBackendSource = await readFile(
   new URL("../../scripts/home/game-stats-backend.js", import.meta.url),
   "utf8"
@@ -134,9 +145,7 @@ for (const viewport of VIEWPORTS) {
     const app = page.locator("#game-progress-window");
     await expect(app).toBeVisible();
     await expect.poll(() => requests.length).toBeGreaterThan(initialRequestCount);
-    expect(requests.every((request) => request === `GET /stats?playerId=${PROFILE.id}`)).toBe(
-      true
-    );
+    expect(requests.every((request) => isPlayerStatsRequest(request, PROFILE.id))).toBe(true);
 
     const states = [
       {

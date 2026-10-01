@@ -46,6 +46,15 @@ const viewports = Object.freeze([
   { name: "wide", width: 1440, height: 900 },
 ]);
 
+const isPlayerStatsPath = (path, playerId) => {
+  const url = new URL(path, API_BASE_URL);
+  return (
+    url.pathname === "/stats" &&
+    url.searchParams.get("protocol") === "2" &&
+    url.searchParams.get("playerId") === playerId
+  );
+};
+
 const scenarios = Object.freeze([
   Object.freeze({
     elapsedSeconds: 120,
@@ -207,7 +216,7 @@ const baselineEntries = Object.freeze([
   ),
 ]);
 
-const createStatsPayload = (publishedEvents) => {
+const createStatsPayload = (publishedEvents, acknowledgedEventIds = []) => {
   const noHintsEvents = publishedEvents
     .filter((event) => event.hintBucket === "noHints")
     .sort((first, second) => first.metric - second.metric);
@@ -229,9 +238,9 @@ const createStatsPayload = (publishedEvents) => {
     : { rank: null, totalPlayers: 2 };
 
   return {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
-    eventIds: publishedEvents.map((event) => event.id),
+    acknowledgedEventIds,
     totals: {
       sudoku: {
         wins: {
@@ -329,9 +338,15 @@ const installApi = async (page, scenario) => {
       const refreshed = publishedEvents.length > 0;
       statsRequests.push({ path: url.pathname + url.search, refreshed });
       requestSequence.push(refreshed ? "stats-refreshed" : "stats-baseline");
+      const pendingEventIds = new Set(url.searchParams.getAll("pendingEventId"));
       await route.fulfill({
         status: 200,
-        body: JSON.stringify(createStatsPayload(publishedEvents)),
+        body: JSON.stringify(
+          createStatsPayload(
+            publishedEvents,
+            publishedEvents.map(({ id }) => id).filter((id) => pendingEventIds.has(id))
+          )
+        ),
         contentType: "application/json",
         headers: corsHeaders,
       });
@@ -622,8 +637,15 @@ const expectPublishedRequestContract = (api, scenario) => {
   expect(api.requestSequence.slice(eventIndex + 1)).toContain("stats-refreshed");
   expect(api.statsRequests.some(({ refreshed }) => !refreshed)).toBe(true);
   expect(api.statsRequests.some(({ refreshed }) => refreshed)).toBe(true);
+  expect(api.statsRequests.every(({ path }) => isPlayerStatsPath(path, profile.id))).toBe(true);
   expect(
-    api.statsRequests.every(({ path }) => path === `/stats?playerId=${profile.id}`)
+    api.statsRequests.some(({ path }) => {
+      const url = new URL(path, API_BASE_URL);
+      return (
+        url.searchParams.get("fresh") === "1" &&
+        url.searchParams.getAll("pendingEventId").includes(api.eventRequests[0].event.id)
+      );
+    })
   ).toBe(true);
 };
 

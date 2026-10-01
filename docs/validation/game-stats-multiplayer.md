@@ -2,12 +2,13 @@
 
 - Purpose: Preserve the public Top 3, requested-player rank/record, stress-test, and scoped-cleanup contracts for the Game Stats backend.
 - Scope: Worker aggregation, D1 reads, frontend leaderboard rendering, and production verification data.
-- Last verified: 2026-07-25
+- Last verified: 2026-09-30
 
 ## Response Contract
 
-`GET /stats?playerId=<id>` returns fixed global leaderboards plus the requested
-player's rank and full record:
+`GET /stats?protocol=2&playerId=<id>` computes fixed global leaderboards and
+the requested player's rank and full record in D1 with grouped aggregates and
+window functions:
 
 ```text
 playerRanks
@@ -25,10 +26,18 @@ playerRecords
 
 Sudoku ranks only no-hints completions. Minesweeper and Sudoku rank lower times
 first; Solitaire ranks higher total wins first; Snake ranks higher scores
-first. Ties use the earliest qualifying completion, then event ID. Public
+first. Minesweeper, Snake, and Sudoku ties use the earliest best completion,
+then event ID. Solitaire preserves the latest win as each player's displayed
+identity; equal win totals order by the earlier of those selected latest-win
+timestamps, then event ID. Public
 leaderboards are sliced to the global Top 3 before the requested player is
 considered; a ranked player outside the Top 3 is never injected into those
 arrays.
+
+The response never includes raw event rows or the lifetime event-ID set.
+`acknowledgedEventIds` contains only the valid IDs supplied by this request's
+bounded `pendingEventId` parameters. Protocol-1 reads are a temporary cached-
+browser compatibility path and are excluded from the five-second v2 cache.
 
 An unplayed player receives `rank: null` and `playerRecord: null`.
 `totalPlayers` still reports the global population for that category.
@@ -56,11 +65,15 @@ Run:
 
 ```bash
 node --test tests/game-stats-worker.test.mjs \
+  tests/game-stats-sql.test.mjs \
   tests/game-stats-frontend-contract.test.mjs
 npx playwright test tests/ui/game-stats-multiplayer-ranks.spec.mjs
 ```
 
-Keep full every-category stress local. Production smoke testing may use one
+`tests/game-stats-sql.test.mjs` builds a migrated in-memory SQLite database,
+loads 12 complete players in every category, verifies a requested rank outside
+the public Top 3, quarantines malformed history, and checks the migration's
+query plans. Keep full every-category stress local. Production smoke testing may use one
 representative category when the security rate budget cannot safely cover the
 entire matrix, but it must still query at least ten tagged players, an unplayed
 player, and the protected Administrator profile; reconcile ranks directly in

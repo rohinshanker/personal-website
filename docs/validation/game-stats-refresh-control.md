@@ -2,7 +2,7 @@
 
 - Purpose: Review and regression-test the shared Game Stats refresh, publishing, and Administrator-authentication control.
 - Scope: The status/action row in the Minesweeper, Solitaire, Snake, and Sudoku stats windows.
-- Last verified: 2026-09-10
+- Last verified: 2026-09-30
 
 [Open the complete, responsive Game Stats state review](assets/game-stats-refresh-review.html).
 It shows every exact status/action state, animated and reduced-motion loading
@@ -29,6 +29,12 @@ All visible Game Stats windows render the same state and share one coalesced
 request. Only the initiating visible status uses `aria-live="polite"`; duplicate
 visible copies use `aria-live="off"`. Animated dots are decorative, remain one
 atomic announcement, and become static under reduced motion.
+
+Automatic reads may use the Worker's five-second protocol-2 cache. Manual
+Refresh and the first read after any accepted publication always add `fresh=1`
+and use browser `cache: "no-store"`. A publication read also sends the bounded
+confirmed event IDs for explicit acknowledgment; a missing acknowledgment
+keeps the optimistic totals until a later authoritative response confirms them.
 
 The refresh action stays right-aligned inside the shared sunken status strip
 and uses the bundled Solitaire undo icon.

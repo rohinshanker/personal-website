@@ -100,13 +100,21 @@ scripts/
   update-game-integrity.mjs          # Generates/checks public build metadata
   home/game-stats-backend.js         # Generated public API URL + build version
 workers/game-stats/
-  src/index.mjs                      # Worker routes and server validation
+  src/index.mjs                      # Small public Worker facade
+  src/aggregate.mjs                  # D1 totals, window ranks, Top 3, acknowledgments
+  src/events.mjs                     # Stored-event normalization and validation
+  src/security.mjs                   # Origins, HMACs, rate limits, Administrator proof
+  src/sessions.mjs                   # Session creation, validation, and atomic writes
+  src/http.mjs                       # HTTP parsing, CORS, responses, five-second cache
+  src/router.mjs                     # Routes and scheduled expiry purge
+  src/constants.mjs, data.mjs        # Shared constants and response shapes
   migrations/                        # D1 schema and future additive migrations
   wrangler.jsonc                     # Deploy config; public vars only
   wrangler.jsonc.example             # Sanitized config template
   .dev.vars.example                  # Local secret names only
 tests/
   game-stats-worker.test.mjs
+  game-stats-sql.test.mjs
   game-stats-integrity.test.mjs
 ```
 
@@ -176,6 +184,7 @@ completion decisions:
 ```text
 scripts/home/main.js
 scripts/home/core/dom.js
+scripts/home/sudoku-generator.worker.js
 ```
 
 It writes the same public `buildVersion` to all three release artifacts:
@@ -215,16 +224,48 @@ edit it by hand. The `--check` command and test fail when generated metadata
 is stale. Commit the generated changes together with the gameplay change, then
 redeploy the Worker because its accepted `GAME_BUILD_VERSION` changed.
 
+## Stats read, cache, and acknowledgment contract
+
+The current browser reads
+`GET /stats?protocol=2&playerId=<id>&pendingEventId=<id>...`. Protocol 2 returns
+SQL-derived totals, global Top 3 arrays, the requested player's rank and full
+record, and only the requested IDs that D1 actually contains in
+`acknowledgedEventIds`. A request accepts at most 32 pending IDs. The response
+does not contain the lifetime event-ID set, so its size is bounded by the stats
+shape rather than table growth. An unversioned request remains an explicit
+protocol-1 compatibility path for already-cached browser builds and still
+returns `eventIds`; remove that path only in a separately verified release.
+
+Ordinary protocol-2 reads use `caches.default` for five seconds. The internal
+cache key contains the normalized protocol and player ID, never `Origin`, and
+the cached object contains no CORS headers. Each response reconstructs CORS
+for the current request and remains browser `no-store`. Reads containing
+`pendingEventId`, `fresh=1`, or a legacy protocol bypass the cache. Manual
+Refresh and the read immediately after a successful publication use `fresh=1`
+and browser `cache: "no-store"`. A successful modern bypass also refreshes the
+ordinary cache entry, stripping request-specific acknowledgments first, so a
+later ordinary read cannot regress to the pre-publication snapshot. Cache
+failures fall through to D1; failed D1 reads return an uncached 500.
+
+Migration `0004_optimize_stats_aggregation.sql` replaces the four category
+indexes with partial covering indexes matched to the grouped/window queries.
+It removes the obsolete broad game/type and player indexes while retaining
+session-expiry, rate-limit-expiry, and Sudoku puzzle-identity indexes. The real
+SQLite test asserts `EXPLAIN QUERY PLAN` uses all four category indexes.
+
 ## Confirmed-event UI convergence
 
 The browser removes a queued result after `POST /events` succeeds, but retains
-that exact normalized event in memory until a later `/stats` response includes
-its event ID. During that interval, the confirmed event is applied once to the
+that exact normalized event in a bounded 32-entry map until a later `/stats`
+response explicitly acknowledges an ID that this request sent. An absent
+acknowledgment never discards a confirmed result. During that interval, the
+confirmed event is applied once to the
 in-memory global totals and, when the response is player-scoped, the matching
 player totals. This keeps an already-open Game Progress or Game Stats window
 current when the immediate follow-up read fails or briefly returns an older
-snapshot. Event-ID deduplication prevents the later authoritative response
-from incrementing the count twice.
+snapshot. A response for a profile that changed while the request was in flight
+is ignored and schedules another sync. Explicit acknowledgment prevents the
+later authoritative response from incrementing the count twice.
 
 For Solitaire, validate all count surfaces together: Game Progress wins, the
 personal record row and rank, the current player's Global Top 3 row when
@@ -232,8 +273,8 @@ present, and Global Wins. Re-sort the visible Top 3 after applying a confirmed
 win and derive the player's displayed rank from that order. A release
 regression must keep both windows open, publish an
 Administrator result with a valid proof, return one stale `/stats` response
-that omits the new event ID, and then return an authoritative response that
-contains it. Both states must show one increment and the same updated rank,
+that omits the acknowledgment, and then return an authoritative response that
+acknowledges the requested ID. Both states must show one increment and the same updated rank,
 and the submission queue must be empty after the accepted write.
 
 Run the focused contract and rendered checks with:

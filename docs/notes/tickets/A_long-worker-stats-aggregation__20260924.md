@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-24
 - Updated: 2026-09-30
-- Current State: Coordinator is agent-deck session `2f758d2d-1790569488`; read-only Multica scout DEM-178 is checking SQL and browser confirmation seams against baseline `178130c808481ad3c8ca32292f7a6eb1c2d750c3`. Owner decided five-second caching with fresh Refresh/publication reads, and index removal only after proving an index is phased out and unnecessary for the production build. Other-project agents retain priority. Migration 0003 already contains Sudoku puzzle identity; use 0004. Preserve confirmed-event UI convergence and cached-browser compatibility when removing the lifetime event-ID payload. Record the deployed Worker version ID and compare production totals/rank order before completion.
+- Current State: Implemented locally on DEM-179 and awaiting review/integration. `/stats` now aggregates and ranks in SQL, protocol 2 uses bounded explicit acknowledgments and a five-second platform cache, Refresh/publication reads bypass it, the Worker is split into focused modules, and migration 0004 installs the proven category indexes while removing two obsolete broad indexes. The protocol-1 compatibility path remains for cached browsers. Production deployment, Worker version recording, and live before/after comparison remain coordinator-owned release work.
 - Verification: `npm --prefix workers/game-stats test` keeping the current 95% line coverage; `npm --prefix workers/game-stats run deploy:check`; the release workflow's `game-stats:worker-transition:check` and `game-stats:release:check`; `tests/ui/game-stats-multiplayer-ranks.spec.mjs` and the 10+ player stress procedure in `docs/validation/game-stats-multiplayer.md`; compare `/stats` JSON before and after on production for identical totals and top-3 ordering.
 - Cleanup: Update the aggregation and payload contract in `docs/validation/game-stats-backend.md` and `docs/validation/game-stats-multiplayer.md`, then delete this ticket and its index row.
 
@@ -21,5 +21,34 @@
 
 1. Aggregate in SQL: `GROUP BY game, difficulty` totals; window-ranked global top 3 and requested-player rank; drop `eventIds` from the payload (browser dedups locally already); use a `Set` where an in-memory pass remains.
 2. Short `Cache-Control` or Cache API TTL on `/stats` (seconds, not minutes, so a fresh win still appears on the refresh control).
-3. Split into `events.mjs`, `aggregate.mjs`, `security.mjs`, `sessions.mjs`, `http.mjs`, `router.mjs`; `deploy:check` bundle size stays under the current 50.71 KiB / 11.04 KiB gzip or the doc is updated.
-4. Migration `0003`: drop unused indexes (pending the decision) and add any index the new aggregation needs.
+3. Split into `events.mjs`, `aggregate.mjs`, `security.mjs`, `sessions.mjs`, `http.mjs`, `router.mjs`; compare the candidate bundle with the verified production baseline of 55.18 KiB / 12.05 KiB gzip and record any justified growth.
+4. Migration `0004`: replace the four category indexes with partial covering indexes used by the new query plans; remove the broad game/type and player indexes after real SQLite `EXPLAIN QUERY PLAN` evidence; retain security-expiry and Sudoku identity indexes.
+
+## Implementation Result
+
+- Verified pre-change production identity from coordinator evidence: Worker
+  version `0af44bec-ab1d-4cd9-a15e-942c8fe66be6`, build
+  `sha256-1fca6649114c1d98e7c1ad88b733dab71a772e509d0df1118b93fb64f09b0d08`.
+  The captured D1 snapshot matches the candidate totals, player totals,
+  leaderboards, ranks, and records across all seven supplied player scopes.
+- `src/index.mjs` is now a 10-line facade over constants/data, aggregation,
+  events, HTTP/cache, routing, security, and session modules. The emitted bundle
+  contains no in-memory legacy aggregation oracle; the frozen parity helper is
+  under `tests/helpers/` only.
+- SQL returns grouped totals plus window-ranked global Top 3 and the requested
+  player's record/rank. A real SQLite fixture covers 12 players in all 14
+  leaderboard categories, malformed history, tie behavior, cache isolation,
+  failures, acknowledgments, and index plans.
+- Protocol 2 caps pending acknowledgments at 32 and never returns lifetime IDs.
+  The browser retains unacknowledged confirmed events, ignores stale-profile
+  responses, and forces fresh reads after Refresh or publication.
+- Local Wrangler applied migrations 0001-0004 in an isolated D1 state and
+  listed all four category, two expiry, and Sudoku identity indexes. Wrangler
+  local D1 rejects `PRAGMA integrity_check` with `SQLITE_AUTH`; the equivalent
+  Node SQLite migration fixture and D1 index query passed.
+- Focused source/Worker tests, strict Wrangler dry-run, 95%+ line coverage, and
+  Game Stats/Game Progress Playwright checks pass at 375×812, 768×1024,
+  1280×800, and 1440×900. The candidate dry-run is 61.64 KiB / 14.15 KiB
+  gzip; the increase is the fixed SQL/window query set and cache/protocol path,
+  not the removed event-table aggregation loop. Full final gate evidence is
+  recorded in DEM-179.

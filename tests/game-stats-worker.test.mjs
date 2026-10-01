@@ -2,10 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import worker, {
-  createGameStatsDataFromEvents,
   normalizeGameStatsEvent,
   purgeExpiredGameStatsRows,
 } from "../workers/game-stats/src/index.mjs";
+import { createGameStatsDataFromEvents } from "./helpers/game-stats-reference.mjs";
+import { SqliteD1Database, applyGameStatsMigrations } from "./helpers/sqlite-d1.mjs";
+
+const gameStatsMigrationPaths = [
+  "0001_create_game_stats.sql",
+  "0002_add_game_stat_security.sql",
+  "0003_add_sudoku_puzzle_identity.sql",
+  "0004_optimize_stats_aggregation.sql",
+].map((name) => new URL(`../workers/game-stats/migrations/${name}`, import.meta.url).pathname);
 
 const projectEventRow = (sql, row) => {
   const selection = /^\s*SELECT\s+([\s\S]+?)\s+FROM\s+game_events\b/i.exec(sql)?.[1];
@@ -209,6 +217,40 @@ class MockD1Database {
   }
 
   async batch(statements) {
+    if (statements.some(({ sql }) => sql.includes("valid_event_candidates AS"))) {
+      const sqliteDatabase = new SqliteD1Database();
+      try {
+        applyGameStatsMigrations(sqliteDatabase, gameStatsMigrationPaths);
+        const insert = sqliteDatabase.sqlite.prepare(`
+          INSERT INTO game_events (
+            id, game, type, difficulty, board_size, hint_bucket, metric, metric_kind,
+            player_id, player_name, player_icon, occurred_at, puzzle_key
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const row of this.events.values()) {
+          insert.run(
+            row.id,
+            row.game,
+            row.type,
+            row.difficulty,
+            row.board_size,
+            row.hint_bucket,
+            row.metric,
+            row.metric_kind,
+            row.player_id,
+            row.player_name,
+            row.player_icon,
+            row.occurred_at,
+            row.puzzle_key
+          );
+        }
+        return await sqliteDatabase.batch(
+          statements.map(({ sql, params }) => sqliteDatabase.prepare(sql).bind(...params))
+        );
+      } finally {
+        sqliteDatabase.close();
+      }
+    }
     const previousBatch = this.batchTail;
     let releaseBatch;
     this.batchTail = new Promise((resolve) => {

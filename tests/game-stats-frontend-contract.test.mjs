@@ -30,7 +30,7 @@ test("empty and normalized stats cover every player rank, record, and global Top
     "const createGameStatsEmptyMinesweeperWins =",
     "\n\nconst createGameStatsEventId"
   );
-  const context = vm.createContext({});
+  const context = vm.createContext({ URLSearchParams });
 
   vm.runInContext(
     [
@@ -237,6 +237,8 @@ test("confirmed events keep every total current until the server acknowledges th
       "});",
       "const createData = () => ({",
       "  eventIds: [],",
+      "  acknowledgedEventIds: [],",
+      "  acknowledgementsAvailable: false,",
       "  totals: createTotals(),",
       "  playerTotals: createTotals(),",
       "  leaderboards: { solitaire: [] },",
@@ -245,6 +247,7 @@ test("confirmed events keep every total current until the server acknowledges th
       "});",
       "const compareGameStatsLeaderboardEntries = (_direction, first, second) => second.metric - first.metric;",
       "const gameStatsConfirmedEvents = new Map();",
+      "const GAME_STATS_MAX_PENDING_ACKNOWLEDGMENTS = 32;",
       "let gameStatsGlobalState = createData();",
       "let gameStatsGlobalPlayerTotalsAvailable = true;",
       "let gameStatsProfile = { id: 'player-current' };",
@@ -339,13 +342,15 @@ test("confirmed events keep every total current until the server acknowledges th
   context.reconcile(stale, {
     playerId: currentProfile.id,
     playerTotalsAvailable: true,
+    requestedAcknowledgmentIds: events.map(({ id }) => id),
   });
   assert.equal(stale.totals.solitaire.wins, 1);
   assert.equal(stale.playerTotals.solitaire.wins, 1);
   assert.deepEqual(jsonClone(context.readState()).confirmedIds, events.map(({ id }) => id));
 
   const partlyAcknowledged = context.createDataForTest();
-  partlyAcknowledged.eventIds.push(events[0].id, events[1].id);
+  partlyAcknowledged.acknowledgementsAvailable = true;
+  partlyAcknowledged.acknowledgedEventIds.push(events[0].id, events[1].id);
   partlyAcknowledged.totals.minesweeper.wins.beginner = 1;
   partlyAcknowledged.totals.solitaire.wins = 1;
   partlyAcknowledged.playerTotals.minesweeper.wins.beginner = 1;
@@ -353,6 +358,7 @@ test("confirmed events keep every total current until the server acknowledges th
   context.reconcile(partlyAcknowledged, {
     playerId: currentProfile.id,
     playerTotalsAvailable: true,
+    requestedAcknowledgmentIds: events.map(({ id }) => id),
   });
   assert.deepEqual(jsonClone(context.readState()).confirmedIds, [
     events[2].id,
@@ -364,7 +370,8 @@ test("confirmed events keep every total current until the server acknowledges th
   assert.equal(partlyAcknowledged.totals.sudoku.wins.easy.noHints, 1);
 
   const acknowledged = context.createDataForTest();
-  acknowledged.eventIds.push(events[2].id, events[3].id);
+  acknowledged.acknowledgementsAvailable = true;
+  acknowledged.acknowledgedEventIds.push(events[2].id, events[3].id);
   acknowledged.totals.snake.totalGamesPlayed = 1;
   acknowledged.totals.snake.gamesPlayed["16"] = 1;
   acknowledged.totals.sudoku.wins.easy.noHints = 1;
@@ -374,6 +381,7 @@ test("confirmed events keep every total current until the server acknowledges th
   context.reconcile(acknowledged, {
     playerId: currentProfile.id,
     playerTotalsAvailable: true,
+    requestedAcknowledgmentIds: [events[2].id, events[3].id],
   });
   assert.deepEqual(jsonClone(context.readState()).confirmedIds, []);
   assert.equal(acknowledged.totals.snake.gamesPlayed["16"], 1);
@@ -476,7 +484,7 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
     "const refreshGameStatsGlobalState =",
     "\n\nconst recordGameStatsEvent"
   );
-  const context = vm.createContext({});
+  const context = vm.createContext({ URLSearchParams });
 
   vm.runInContext(
     [
@@ -490,6 +498,9 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
       "let gameStatsSyncRequested = false;",
       "let gameStatsSyncPromise = null;",
       "let gameStatsManualRefreshInProgress = false;",
+      'const GAME_STATS_API_PROTOCOL = "2";',
+      "const GAME_STATS_MAX_PENDING_ACKNOWLEDGMENTS = 32;",
+      "const gameStatsConfirmedEvents = new Map();",
       `let gameStatsSubmissionQueue = ${JSON.stringify([
         {
           event: {
@@ -575,7 +586,9 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
     icon: "assets/app-icons/ico/user_card.ico",
   });
   assert.equal(state.eventRequests[0].event.profile.rerollCount, undefined);
-  assert.deepEqual(state.statsPaths, ["/stats?playerId=player-saved-profile"]);
+  assert.deepEqual(state.statsPaths, [
+    "/stats?protocol=2&playerId=player-saved-profile&fresh=1",
+  ]);
   assert.deepEqual(state.gameStatsGlobalState, { marker: "fresh-global-stats" });
   assert.equal(state.gameStatsSyncState, "ready");
   assert.equal(
@@ -586,14 +599,14 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
   assert.equal(state.renderCalls, 4);
 });
 
-test("an overlapping queue sync is coalesced into one rerun after the active refresh", async () => {
+test("an overlapping sync coalesces and discards a response for the prior profile", async () => {
   const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
   const syncSource = extractSource(
     source,
     "const refreshGameStatsGlobalState =",
     "\n\nconst recordGameStatsEvent"
   );
-  const context = vm.createContext({});
+  const context = vm.createContext({ URLSearchParams });
 
   vm.runInContext(
     [
@@ -605,11 +618,15 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
       "let gameStatsSyncRequested = false;",
       "let gameStatsSyncPromise = null;",
       "let gameStatsManualRefreshInProgress = false;",
+      'const GAME_STATS_API_PROTOCOL = "2";',
+      "const GAME_STATS_MAX_PENDING_ACKNOWLEDGMENTS = 32;",
+      "const gameStatsConfirmedEvents = new Map();",
       "let gameStatsSubmissionQueue = [];",
       "const statsPaths = [];",
       "const pendingStatsResponses = [];",
       "let saveCalls = 0;",
       "let renderCalls = 0;",
+      "let reconcileCalls = 0;",
       "const isGameStatsBackendConfigured = () => true;",
       "const fetchGameStatsApi = async (path) => {",
       "  statsPaths.push(path);",
@@ -623,7 +640,7 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
       "};",
       "const readGameStatsApiJson = async (response) => response.json();",
       "const normalizeGameStatsData = (payload) => ({ ...payload });",
-      "const reconcileConfirmedGameStatsEvents = (data) => data;",
+      "const reconcileConfirmedGameStatsEvents = (data) => { reconcileCalls += 1; return data; };",
       "const markGameStatsEventConfirmed = () => {};",
       "const saveGameStatsSubmissionQueue = () => { saveCalls += 1; };",
       "const renderGameStatsWindows = () => { renderCalls += 1; };",
@@ -635,7 +652,8 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
       syncSource,
       "globalThis.syncQueuedGameStatsForTest = syncQueuedGameStats;",
       "globalThis.resolveNextStatsResponse = () => pendingStatsResponses.shift()?.();",
-      "globalThis.readSyncState = () => ({ gameStatsSyncInProgress, gameStatsSyncRequested, statsPaths, pendingResponseCount: pendingStatsResponses.length, saveCalls, renderCalls });",
+      "globalThis.setProfileForTest = (profile) => { gameStatsProfile = profile; };",
+      "globalThis.readSyncState = () => ({ gameStatsGlobalState, gameStatsSyncInProgress, gameStatsSyncRequested, statsPaths, pendingResponseCount: pendingStatsResponses.length, reconcileCalls, saveCalls, renderCalls });",
     ].join("\n"),
     context
   );
@@ -651,8 +669,9 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
   let state = jsonClone(context.readSyncState());
   assert.equal(state.gameStatsSyncInProgress, true);
   assert.equal(state.gameStatsSyncRequested, true);
-  assert.deepEqual(state.statsPaths, ["/stats"]);
+  assert.deepEqual(state.statsPaths, ["/stats?protocol=2"]);
 
+  context.setProfileForTest({ id: "player-switched-profile" });
   context.resolveNextStatsResponse();
   await waitFor(
     () => context.readSyncState().statsPaths.length === 2,
@@ -663,15 +682,22 @@ test("an overlapping queue sync is coalesced into one rerun after the active ref
   assert.equal(state.gameStatsSyncInProgress, true);
   assert.equal(state.gameStatsSyncRequested, false);
   assert.equal(state.pendingResponseCount, 1);
+  assert.equal(state.reconcileCalls, 0);
+  assert.equal(state.gameStatsGlobalState, null);
 
   context.resolveNextStatsResponse();
   await Promise.all([firstSync, overlappingSync]);
 
   state = jsonClone(context.readSyncState());
-  assert.deepEqual(state.statsPaths, ["/stats", "/stats"]);
+  assert.deepEqual(state.statsPaths, [
+    "/stats?protocol=2",
+    "/stats?protocol=2&playerId=player-switched-profile",
+  ]);
   assert.equal(state.gameStatsSyncInProgress, false);
   assert.equal(state.gameStatsSyncRequested, false);
   assert.equal(state.pendingResponseCount, 0);
+  assert.equal(state.reconcileCalls, 1);
+  assert.deepEqual(state.gameStatsGlobalState, { marker: "fresh-global-stats-2" });
   assert.equal(state.saveCalls, 2);
-  assert.equal(state.renderCalls, 7);
+  assert.equal(state.renderCalls, 6);
 });

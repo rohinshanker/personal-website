@@ -50,11 +50,13 @@ const loadSyncHarness = async ({ submissions, eventResponses, proof }) => {
     "const refreshGameStatsGlobalState =",
     "\n\nconst recordGameStatsEvent"
   );
-  const context = vm.createContext({});
+  const context = vm.createContext({ URLSearchParams });
   vm.runInContext(
     [
       'const GAME_STATS_ADMINISTRATOR_AUTHORIZATION_ERROR_CODE = "administrator-authorization";',
       "const GAME_STATS_MAX_ADMINISTRATOR_PROOF_RETRIES = 1;",
+      'const GAME_STATS_API_PROTOCOL = "2";',
+      "const GAME_STATS_MAX_PENDING_ACKNOWLEDGMENTS = 32;",
       'const GAME_STATS_ROHIN_NEKO_PROFILE = { id: "player-rohin-neko" };',
       `let administratorProof = ${JSON.stringify(proof)};`,
       `let gameStatsProfile = ${JSON.stringify(administratorProfile)};`,
@@ -67,6 +69,7 @@ const loadSyncHarness = async ({ submissions, eventResponses, proof }) => {
       "let gameStatsSyncPromise = null;",
       "let gameStatsManualRefreshInProgress = false;",
       `let gameStatsSubmissionQueue = ${JSON.stringify(submissions)};`,
+      "const gameStatsConfirmedEvents = new Map();",
       `const eventResponses = ${JSON.stringify(eventResponses)};`,
       "const eventRequests = [];",
       "let authenticationRequests = 0;",

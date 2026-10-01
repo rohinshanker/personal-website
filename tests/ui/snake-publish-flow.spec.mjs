@@ -22,6 +22,15 @@ const viewports = Object.freeze([
   { name: "wide", width: 1440, height: 900 },
 ]);
 
+const isPlayerStatsPath = (path, playerId) => {
+  const url = new URL(path, API_BASE_URL);
+  return (
+    url.pathname === "/stats" &&
+    url.searchParams.get("protocol") === "2" &&
+    url.searchParams.get("playerId") === playerId
+  );
+};
+
 const generatedBackendSource = await readFile(
   new URL("../../scripts/home/game-stats-backend.js", import.meta.url),
   "utf8"
@@ -129,7 +138,7 @@ const emptySnakeMap = (valueFactory) =>
     ["10", "16", "20", "24"].map((size) => [size, valueFactory(size)])
   );
 
-const createStatsPayload = (publishedEvent) => {
+const createStatsPayload = (publishedEvent, acknowledgedEventIds = []) => {
   const refreshed = Boolean(publishedEvent);
   const currentPlayerEntry = refreshed
     ? createLeaderboardEntry({
@@ -158,8 +167,9 @@ const createStatsPayload = (publishedEvent) => {
     ...(currentPlayerEntry ? [currentPlayerEntry] : []),
   ];
   return {
+    version: 2,
     generatedAt: new Date().toISOString(),
-    eventIds: refreshed ? [publishedEvent.id] : [],
+    acknowledgedEventIds,
     totals: {
       snake: {
         totalGamesPlayed: refreshed ? 3 : 2,
@@ -287,11 +297,16 @@ const installApi = async (
       const refreshed = Boolean(publishedEvent);
       statsRequests.push({ path: url.pathname + url.search, refreshed });
       requestSequence.push(refreshed ? "stats-refreshed" : "stats-baseline");
+      const acknowledgedEventIds =
+        publishedEvent &&
+        url.searchParams.getAll("pendingEventId").includes(publishedEvent.id)
+          ? [publishedEvent.id]
+          : [];
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         headers: corsHeaders,
-        body: JSON.stringify(createStatsPayload(publishedEvent)),
+        body: JSON.stringify(createStatsPayload(publishedEvent, acknowledgedEventIds)),
       });
       return;
     }
@@ -536,9 +551,16 @@ for (const viewport of viewports) {
     expectPublishedRequestContract(api);
     expect(api.statsRequests.some(({ refreshed }) => !refreshed)).toBe(true);
     expect(api.statsRequests.some(({ refreshed }) => refreshed)).toBe(true);
-    expect(api.statsRequests.every(({ path }) => path === `/stats?playerId=${profile.id}`)).toBe(
-      true
-    );
+    expect(api.statsRequests.every(({ path }) => isPlayerStatsPath(path, profile.id))).toBe(true);
+    expect(
+      api.statsRequests.some(({ path }) => {
+        const url = new URL(path, API_BASE_URL);
+        return (
+          url.searchParams.get("fresh") === "1" &&
+          url.searchParams.getAll("pendingEventId").includes(api.eventRequests[0].event.id)
+        );
+      })
+    ).toBe(true);
     expectLocalSnakeResult(await readStoredStats(page));
 
     const refreshButton = statsWindow.locator('[data-game-stats-refresh="snake"]');

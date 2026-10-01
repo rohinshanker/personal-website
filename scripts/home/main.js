@@ -1063,6 +1063,8 @@ const GAME_STATS_SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
 const GAME_STATS_PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX = 999_999;
 const GAME_STATS_MAX_SYNC_QUEUE_LENGTH = 100;
+const GAME_STATS_API_PROTOCOL = "2";
+const GAME_STATS_MAX_PENDING_ACKNOWLEDGMENTS = 32;
 // The Worker attaches this code to every rejected Administrator proof. Any other
 // 403 is a rejected game session and must not reopen sign-in.
 const GAME_STATS_ADMINISTRATOR_AUTHORIZATION_ERROR_CODE = "administrator-authorization";
@@ -1326,6 +1328,8 @@ const createEmptyGameStatsData = () => ({
   version: 1,
   generatedAt: new Date(0).toISOString(),
   eventIds: [],
+  acknowledgedEventIds: [],
+  acknowledgementsAvailable: false,
   totals: {
     minesweeper: { wins: createGameStatsEmptyMinesweeperWins() },
     solitaire: { wins: 0 },
@@ -1550,6 +1554,15 @@ const normalizeGameStatsData = (
   data.generatedAt = normalizeGameStatsIsoDate(rawData.generatedAt);
   data.eventIds = Array.from(
     new Set((Array.isArray(rawData.eventIds) ? rawData.eventIds : []).map(String))
+  ).filter((id) => /^[a-z0-9-]{8,80}$/.test(id));
+  const rawAcknowledgedEventIds = Array.isArray(rawData.acknowledgedEventIds)
+    ? rawData.acknowledgedEventIds
+    : Array.isArray(rawData.eventIds)
+      ? rawData.eventIds
+      : null;
+  data.acknowledgementsAvailable = Boolean(rawAcknowledgedEventIds);
+  data.acknowledgedEventIds = Array.from(
+    new Set((rawAcknowledgedEventIds || []).map(String))
   ).filter((id) => /^[a-z0-9-]{8,80}$/.test(id));
   return data;
 };
@@ -2165,10 +2178,20 @@ const applyConfirmedGameStatsEventToTotals = (
 
 const reconcileConfirmedGameStatsEvents = (
   data,
-  { playerId = "", playerTotalsAvailable = false } = {}
+  {
+    playerId = "",
+    playerTotalsAvailable = false,
+    requestedAcknowledgmentIds = [],
+  } = {}
 ) => {
+  const requestedIds = new Set(requestedAcknowledgmentIds);
+  const acknowledgedIds = new Set(data.acknowledgedEventIds);
   gameStatsConfirmedEvents.forEach((event, eventId) => {
-    if (data.eventIds.includes(eventId)) {
+    if (
+      data.acknowledgementsAvailable &&
+      requestedIds.has(eventId) &&
+      acknowledgedIds.has(eventId)
+    ) {
       gameStatsConfirmedEvents.delete(eventId);
       return;
     }
@@ -2184,6 +2207,9 @@ const markGameStatsEventConfirmed = (rawEvent) => {
   const event = normalizeGameStatsEvent(rawEvent);
   if (!event) return false;
   gameStatsConfirmedEvents.set(event.id, event);
+  while (gameStatsConfirmedEvents.size > GAME_STATS_MAX_PENDING_ACKNOWLEDGMENTS) {
+    gameStatsConfirmedEvents.delete(gameStatsConfirmedEvents.keys().next().value);
+  }
   return applyConfirmedGameStatsEventToTotals(gameStatsGlobalState, event, {
     playerId: gameStatsProfile?.id || "",
     playerTotalsAvailable: gameStatsGlobalPlayerTotalsAvailable,
@@ -2948,17 +2974,26 @@ const requestGameStatsAdministratorAuthentication = (returnFocus) => {
   window.setTimeout(() => administratorUsername?.focus(), 0);
 };
 
-const refreshGameStatsGlobalState = async ({ announce = true } = {}) => {
+const refreshGameStatsGlobalState = async ({ announce = true, fresh = false } = {}) => {
   if (!isGameStatsBackendConfigured()) {
     if (announce) setGameStatsSyncState("unconfigured");
     return false;
   }
   try {
     const requestedPlayerId = gameStatsProfile?.id || "";
-    const statsPath = requestedPlayerId
-      ? `/stats?playerId=${encodeURIComponent(requestedPlayerId)}`
-      : "/stats";
-    const response = await fetchGameStatsApi(statsPath, { method: "GET" });
+    const requestedAcknowledgmentIds = Array.from(gameStatsConfirmedEvents.keys()).slice(
+      -GAME_STATS_MAX_PENDING_ACKNOWLEDGMENTS
+    );
+    const statsQuery = new URLSearchParams({ protocol: GAME_STATS_API_PROTOCOL });
+    if (requestedPlayerId) statsQuery.set("playerId", requestedPlayerId);
+    requestedAcknowledgmentIds.forEach((eventId) =>
+      statsQuery.append("pendingEventId", eventId)
+    );
+    if (fresh) statsQuery.set("fresh", "1");
+    const response = await fetchGameStatsApi(`/stats?${statsQuery}`, {
+      method: "GET",
+      ...(fresh ? { cache: "no-store" } : {}),
+    });
     const payload = await readGameStatsApiJson(response);
     const nextGlobalPlayerTotalsAvailable = Boolean(
       requestedPlayerId &&
@@ -2969,14 +3004,15 @@ const refreshGameStatsGlobalState = async ({ announce = true } = {}) => {
     const nextGlobalState = normalizeGameStatsData(payload, {
       solitaireLeaderboardDirection: "desc",
     });
-    reconcileConfirmedGameStatsEvents(nextGlobalState, {
-      playerId: requestedPlayerId,
-      playerTotalsAvailable: nextGlobalPlayerTotalsAvailable,
-    });
     if ((gameStatsProfile?.id || "") !== requestedPlayerId) {
       gameStatsSyncRequested = true;
       return null;
     }
+    reconcileConfirmedGameStatsEvents(nextGlobalState, {
+      playerId: requestedPlayerId,
+      playerTotalsAvailable: nextGlobalPlayerTotalsAvailable,
+      requestedAcknowledgmentIds,
+    });
     gameStatsGlobalState = nextGlobalState;
     gameStatsGlobalPlayerTotalsAvailable = nextGlobalPlayerTotalsAvailable;
     if (announce) {
@@ -2997,6 +3033,7 @@ const runGameStatsSyncPass = async () => {
   let waitingForSessionCount = 0;
   const remainingSubmissions = [];
   const hasQueuedSubmissions = gameStatsSubmissionQueue.length > 0;
+  let publishedSubmission = false;
 
   setGameStatsSyncState(hasQueuedSubmissions ? "publishing" : "fetching");
 
@@ -3036,6 +3073,7 @@ const runGameStatsSyncPass = async () => {
         }),
       });
       const acknowledgement = await readGameStatsApiJson(response);
+      publishedSubmission = true;
       // The Worker answers with the event id the result now stands under. A
       // different id means this submission was never stored: another tab
       // published the same puzzle first, and the server already counts that
@@ -3086,7 +3124,10 @@ const runGameStatsSyncPass = async () => {
   gameStatsSubmissionQueue = remainingSubmissions;
   saveGameStatsSubmissionQueue();
   setGameStatsSyncState("fetching");
-  const globalStatsAvailable = await refreshGameStatsGlobalState({ announce: false });
+  const globalStatsAvailable = await refreshGameStatsGlobalState({
+    announce: false,
+    fresh: gameStatsManualRefreshInProgress || publishedSubmission,
+  });
 
   if (globalStatsAvailable === null) {
     return;
