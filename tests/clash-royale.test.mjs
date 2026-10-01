@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  normalizeClashCardIconUrl,
   normalizeClashTag,
   parseClashBattleTime,
   prepareClashSnapshot,
@@ -22,6 +23,24 @@ test("normalizes compact API timestamps and rejects unavailable battle times", (
 test("normalizes Clash Royale tags for participant matching", () => {
   assert.equal(normalizeClashTag(" #28cyyu08p "), "28CYYU08P");
   assert.equal(normalizeClashTag(null), "");
+});
+
+test("accepts only card PNGs from the official HTTPS asset host", () => {
+  assert.equal(
+    normalizeClashCardIconUrl("https://api-assets.clashroyale.com/cards/300.png"),
+    "https://api-assets.clashroyale.com/cards/300.png"
+  );
+  for (const value of [
+    "http://api-assets.clashroyale.com/cards/300.png",
+    "https://api-assets.clashroyale.com.example/cards/300.png",
+    "https://user:pass@api-assets.clashroyale.com/cards/300.png",
+    "https://api-assets.clashroyale.com/cards/300.webp",
+    "data:image/png;base64,AAAA",
+    "javascript:alert(1)",
+    null,
+  ]) {
+    assert.equal(normalizeClashCardIconUrl(value), "");
+  }
 });
 
 test("resolves the configured player from either battle side", () => {
@@ -81,6 +100,25 @@ test("skips unusable battles and limits the recent sample", () => {
   assert.equal(snapshot.battles.length, 10);
   assert.deepEqual(snapshot.currentDeck, [{ id: 1, name: "Knight" }]);
   assert.equal(snapshot.playerTag, "28CYYU08P");
+});
+
+test("limits the current deck to eight named cards", () => {
+  const snapshot = prepareClashSnapshot({
+    ok: true,
+    fetchedAt: "2026-10-01T12:00:00.000Z",
+    cacheTtlSeconds: 300,
+    player: {
+      ...PLAYER,
+      currentDeck: Array.from({ length: 12 }, (_, index) => ({
+        id: index,
+        name: `Card ${index + 1}`,
+      })),
+    },
+    battles: [],
+  });
+
+  assert.equal(snapshot.currentDeck.length, 8);
+  assert.equal(snapshot.currentDeck.at(-1).name, "Card 8");
 });
 
 test("summarizes only battles with factual crown results", () => {

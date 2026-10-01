@@ -3705,14 +3705,26 @@
                   >View on RoyaleAPI</a>
                 </div>
                 <dl class="cr-stat-grid">
-                  <div class="cr-stat"><dt>Trophies</dt><dd id="cr-trophies">—</dd></div>
-                  <div class="cr-stat"><dt>Best</dt><dd id="cr-best-trophies">—</dd></div>
-                  <div class="cr-stat"><dt>Arena</dt><dd id="cr-arena">—</dd></div>
+                  <div class="cr-stat cr-stat--featured">
+                    <dt><img class="cr-stat-icon" data-src="assets/icon/trophy.svg" width="16" height="16" alt="" />Trophies</dt>
+                    <dd id="cr-trophies">—</dd>
+                  </div>
+                  <div class="cr-stat cr-stat--featured">
+                    <dt><img class="cr-stat-icon" data-src="assets/icon/trophy.svg" width="16" height="16" alt="" />Best</dt>
+                    <dd id="cr-best-trophies">—</dd>
+                  </div>
+                  <div class="cr-stat">
+                    <dt><img class="cr-stat-icon" data-src="assets/app-icons/ico/world_star.ico" width="16" height="16" alt="" />Arena</dt>
+                    <dd id="cr-arena">—</dd>
+                  </div>
                   <div class="cr-stat"><dt>Clan</dt><dd id="cr-clan">—</dd></div>
                   <div class="cr-stat"><dt>Career record</dt><dd id="cr-career-record">—</dd></div>
                   <div class="cr-stat"><dt>Win rate</dt><dd id="cr-career-win-rate">—</dd></div>
-                  <div class="cr-stat"><dt>Battles</dt><dd id="cr-battle-count">—</dd></div>
-                  <div class="cr-stat"><dt>Three-crown wins</dt><dd id="cr-three-crown-wins">—</dd></div>
+                  <div class="cr-stat cr-stat--featured"><dt>Battles</dt><dd id="cr-battle-count">—</dd></div>
+                  <div class="cr-stat cr-stat--featured">
+                    <dt><img class="cr-stat-icon" data-src="assets/pixelarticons/crown.svg" width="16" height="16" alt="" />Three-crown wins</dt>
+                    <dd id="cr-three-crown-wins">—</dd>
+                  </div>
                 </dl>
                 <p class="cr-updated">
                   Last updated: <time id="cr-last-updated">—</time>
@@ -3726,12 +3738,17 @@
                 <li class="cr-empty">No deck loaded.</li>
               </ul>
             </section>
-            <section class="cr-panel" aria-labelledby="cr-battles-heading">
+            <section class="cr-panel cr-battles-panel" aria-labelledby="cr-battles-heading">
               <div class="cr-section-heading-row">
                 <h2 class="cr-section-title" id="cr-battles-heading">Recent Battles</h2>
                 <span class="cr-sample-summary" id="cr-sample-summary">—</span>
               </div>
-              <ol class="cr-battle-list" id="cr-battle-log">
+              <ol
+                class="cr-battle-list"
+                id="cr-battle-log"
+                tabindex="0"
+                aria-labelledby="cr-battles-heading"
+              >
                 <li class="cr-empty">No battles loaded.</li>
               </ol>
             </section>

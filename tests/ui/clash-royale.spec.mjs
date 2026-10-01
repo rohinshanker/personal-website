@@ -18,8 +18,46 @@ const REQUIRED_VIEWPORTS = Object.freeze([
   Object.freeze({ name: "desktop", width: 1280, height: 800 }),
   Object.freeze({ name: "wide", width: 1440, height: 900 }),
 ]);
+const ONE_PIXEL_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64"
+);
 
-const card = (id, name, level = 14) => ({ id, level, maxLevel: 14, name });
+const card = (id, name, level = 14) => ({
+  id,
+  iconUrl: `https://api-assets.clashroyale.com/cards/${id}.png`,
+  level,
+  maxLevel: 14,
+  name,
+});
+
+const createBattles = (count = 10) =>
+  Array.from({ length: count }, (_, index) => {
+    const playerCrowns = index % 3;
+    const opponentCrowns = (index + 1) % 3;
+    return {
+      battleTime: `20261001T${String(12 - index).padStart(2, "0")}1500.000Z`,
+      type: "pathOfLegend",
+      gameMode: { id: 72000006, name: "Ranked1v1_NewArena2" },
+      team: [
+        {
+          tag: "#28CYYU08P",
+          name: "Rohin",
+          crowns: playerCrowns,
+          trophyChange: playerCrowns > opponentCrowns ? 30 : -30,
+          cards: [card(1, "Knight")],
+        },
+      ],
+      opponent: [
+        {
+          tag: `#RIVAL${index}`,
+          name: `Recent opponent ${index + 1}`,
+          crowns: opponentCrowns,
+          cards: [card(9, "Giant")],
+        },
+      ],
+    };
+  });
 
 const createPayload = ({
   battles,
@@ -45,14 +83,14 @@ const createPayload = ({
     currentDeck:
       currentDeck ??
       [
-        card(1, "Knight"),
-        card(2, "Archers"),
-        card(3, "Fireball"),
-        card(4, "The Log"),
-        card(5, "Hog Rider"),
-        card(6, "Ice Spirit"),
-        card(7, "Cannon"),
-        card(8, "Skeletons"),
+        card(1, "Lumberjack"),
+        card(2, "Tombstone"),
+        card(3, "Baby Dragon"),
+        card(4, "Minions"),
+        card(5, "Lava Hound"),
+        card(6, "Barbarian Barrel"),
+        card(7, "Poison"),
+        card(8, "Inferno Dragon"),
       ],
     ...player,
   },
@@ -140,6 +178,9 @@ const consumeExpectedHttpFailure = (diagnostics, status) => {
 };
 
 test.beforeEach(async ({ page }) => {
+  await page.route(/^https:\/\/api-assets\.clashroyale\.com\/.*\.png(?:\?.*)?$/, (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: ONE_PIXEL_PNG })
+  );
   await page.route(new RegExp(`^${API_BASE_URL}/stats(?:\\?.*)?$`), (route) =>
     route.fulfill({
       status: 200,
@@ -159,6 +200,7 @@ test("renders success and long content across the viewport matrix without overfl
     successResponse(
       route,
       createPayload({
+        battles: createBattles(),
         name: longName,
         player: {
           arena: { id: 1, name: "An arena with a deliberately long descriptive name" },
@@ -176,17 +218,21 @@ test("renders success and long content across the viewport matrix without overfl
     await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
     await expect(page.locator("#cr-player-name")).toHaveText(longName);
     await expect(page.locator("#cr-current-deck .cr-deck-card")).toHaveCount(8);
-    await expect(page.locator("#cr-battle-log .cr-battle-item")).toHaveCount(2);
+    await expect(page.locator("#cr-battle-log .cr-battle-item")).toHaveCount(10);
     await expect(page.locator("#cr-battle-log time").first()).toHaveAttribute("datetime", "2026-10-01T12:15:00.000Z");
-    await expect(page.locator("#cr-sample-summary")).toHaveText("1W–0L–0D · +1 crowns");
+    await expect(page.locator("#cr-sample-summary")).toHaveText("3W–7L–0D · -1 crowns");
     await settleRender(page);
 
     const geometry = await clashWindow.evaluate((windowElement) => {
       const body = windowElement.querySelector(".clash-royale-window-body");
       const bounds = windowElement.getBoundingClientRect();
       return {
-        bodyOverflows: body.scrollWidth > body.clientWidth,
-        documentOverflows: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        battleListOverflows: windowElement.querySelector("#cr-battle-log").scrollHeight >
+          windowElement.querySelector("#cr-battle-log").clientHeight,
+        bodyOverflowX: body.scrollWidth > body.clientWidth,
+        bodyOverflowY: body.scrollHeight > body.clientHeight,
+        documentOverflowX: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        documentOverflowY: document.documentElement.scrollHeight > document.documentElement.clientHeight,
         insideViewport:
           bounds.left >= 0 &&
           bounds.right <= window.innerWidth &&
@@ -195,11 +241,130 @@ test("renders success and long content across the viewport matrix without overfl
       };
     });
     expect(geometry, viewport.name).toEqual({
-      bodyOverflows: false,
-      documentOverflows: false,
+      battleListOverflows: true,
+      bodyOverflowX: false,
+      bodyOverflowY: false,
+      documentOverflowX: false,
+      documentOverflowY: false,
       insideViewport: true,
     });
   }
+});
+
+test("keeps the profile and deck fixed while the named battle log scrolls", async ({ page }) => {
+  await page.route(API_URL, (route) =>
+    successResponse(route, createPayload({ battles: createBattles() }))
+  );
+  const clashWindow = await openClashRoyale(page, { width: 375, height: 812 });
+  await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
+  await settleRender(page);
+  await expect.poll(() => clashWindow.evaluate((element) => element.getAnimations().length)).toBe(0);
+
+  const battleLog = page.locator("#cr-battle-log");
+  await expect(battleLog).toHaveAttribute("tabindex", "0");
+  await expect(battleLog).toHaveAttribute("aria-labelledby", "cr-battles-heading");
+  const fixedBefore = await clashWindow.evaluate((windowElement) => ({
+    bodyScrollTop: windowElement.querySelector(".clash-royale-window-body").scrollTop,
+    deckTop: windowElement.querySelector("#cr-current-deck").getBoundingClientRect().top,
+    profileTop: windowElement.querySelector("#cr-player-card").getBoundingClientRect().top,
+  }));
+  const scrollGeometry = await battleLog.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    firstRowHeight: element.querySelector(".cr-battle-item").getBoundingClientRect().height,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(scrollGeometry.scrollHeight).toBeGreaterThan(scrollGeometry.clientHeight);
+  expect(scrollGeometry.clientHeight).toBeGreaterThanOrEqual(scrollGeometry.firstRowHeight);
+
+  await battleLog.hover();
+  await page.mouse.wheel(0, 260);
+  await expect.poll(() => battleLog.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await battleLog.evaluate((element) => { element.scrollTop = 0; });
+  await battleLog.focus();
+  await page.keyboard.press("PageDown");
+  await expect.poll(() => battleLog.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+
+  const fixedAfter = await clashWindow.evaluate((windowElement) => ({
+    bodyScrollTop: windowElement.querySelector(".clash-royale-window-body").scrollTop,
+    deckTop: windowElement.querySelector("#cr-current-deck").getBoundingClientRect().top,
+    profileTop: windowElement.querySelector("#cr-player-card").getBoundingClientRect().top,
+  }));
+  expect(fixedAfter).toEqual(fixedBefore);
+  await expect(page.locator("#cr-refresh")).toBeInViewport();
+  await expect(clashWindow.locator('[data-close="clash-royale"]')).toBeInViewport();
+});
+
+test("uses shared seven-segment sprites with accessible numeric values", async ({ page }) => {
+  await page.route(API_URL, (route) => successResponse(route));
+  await openClashRoyale(page, { width: 1280, height: 800 });
+  await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
+
+  const trophies = page.locator("#cr-trophies");
+  await expect(trophies.locator(".game-stats-digit-strip.cr-digit-strip")).toHaveCount(1);
+  await expect(trophies.locator(".cr-digit-image")).toHaveCount(4);
+  await expect(trophies.locator(".visually-hidden")).toHaveText("8,123");
+  await expect(trophies.locator(".cr-digit-strip")).toHaveAttribute("aria-hidden", "true");
+  const digitSources = await trophies.locator(".cr-digit-image").evaluateAll((images) =>
+    images.map((image) => ({ alt: image.alt, path: new URL(image.src).pathname }))
+  );
+  expect(digitSources).toEqual([
+    { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_8.png" },
+    { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_1.png" },
+    { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_2.png" },
+    { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_3.png" },
+  ]);
+  await expect(page.locator("#cr-battle-log .cr-battle-metric .visually-hidden").first()).toHaveText(
+    "2 to 1 crowns"
+  );
+});
+
+test("loads only safe card images and preserves names after image failure", async ({ page }) => {
+  const requestedCardImages = [];
+  await page.route("https://api-assets.clashroyale.com/cards/broken.png", (route) => {
+    requestedCardImages.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: "image/png", body: "not an image" });
+  });
+  await page.route("https://api-assets.clashroyale.com/cards/safe.png", (route) => {
+    requestedCardImages.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: "image/png", body: ONE_PIXEL_PNG });
+  });
+  await page.route(API_URL, (route) =>
+    successResponse(
+      route,
+      createPayload({
+        currentDeck: [
+          { id: 1, name: "Safe card", iconUrl: "https://api-assets.clashroyale.com/cards/safe.png" },
+          { id: 2, name: "Broken card", iconUrl: "https://api-assets.clashroyale.com/cards/broken.png" },
+          { id: 3, name: "Unsafe card", iconUrl: "https://example.com/card.png" },
+          { id: 4, name: "Insecure card", iconUrl: "http://api-assets.clashroyale.com/cards/insecure.png" },
+        ],
+      })
+    )
+  );
+  await openClashRoyale(page, { width: 768, height: 1024 });
+  await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
+
+  const cards = page.locator("#cr-current-deck .cr-deck-card");
+  await expect(cards).toHaveCount(4);
+  await expect(cards.nth(0).locator("img")).toHaveAttribute("alt", "");
+  await expect(cards.nth(1)).toHaveClass(/is-image-unavailable/);
+  await expect(cards.nth(2)).toHaveClass(/is-image-unavailable/);
+  await expect(cards.nth(3)).toHaveClass(/is-image-unavailable/);
+  await expect(cards.locator(".cr-deck-card-name")).toHaveText([
+    "Safe card",
+    "Broken card",
+    "Unsafe card",
+    "Insecure card",
+  ]);
+  expect(requestedCardImages.sort()).toEqual([
+    "https://api-assets.clashroyale.com/cards/broken.png",
+    "https://api-assets.clashroyale.com/cards/safe.png",
+  ]);
+  const mediaSizes = await cards.locator(".cr-deck-card-media").evaluateAll((elements) =>
+    elements.map((element) => ({ height: element.offsetHeight, width: element.offsetWidth }))
+  );
+  expect(new Set(mediaSizes.map(({ height }) => height)).size).toBe(1);
+  expect(mediaSizes.every(({ width }) => width > 0)).toBe(true);
 });
 
 test("suppresses duplicate refreshes and reuses the snapshot after reopening", async ({ page }) => {

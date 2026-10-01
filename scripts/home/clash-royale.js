@@ -2,7 +2,19 @@ const CLASH_ENDPOINT_PATH = "/clash-royale";
 const CLASH_PLAYER_TAG = "28CYYU08P";
 const CLASH_REQUEST_TIMEOUT_MS = 10_000;
 const CLASH_CACHE_TTL_SECONDS = 300;
+const CLASH_MAX_CURRENT_DECK_CARDS = 8;
+const CLASH_CARD_ASSET_HOSTNAME = "api-assets.clashroyale.com";
 const EMPTY_VALUE = "—";
+const CLASH_TROPHY_ICON = "assets/icon/trophy.svg";
+const CLASH_CROWN_ICON = "assets/pixelarticons/crown.svg";
+const CLASH_DIGIT_SOURCES = Object.freeze(
+  Object.fromEntries(
+    [..."0123456789-"].map((digit) => [
+      digit,
+      `assets/minesweeper_assets/digital_digits/digital_${digit === "-" ? "minus" : digit}.png`,
+    ])
+  )
+);
 
 const elements =
   typeof document === "undefined"
@@ -35,6 +47,24 @@ export const normalizeClashTag = (tag) =>
     .trim()
     .replace(/^#/, "")
     .toUpperCase();
+
+export const normalizeClashCardIconUrl = (value) => {
+  try {
+    const url = new URL(String(value ?? "").trim());
+    if (
+      url.protocol !== "https:" ||
+      url.hostname !== CLASH_CARD_ASSET_HOSTNAME ||
+      url.username ||
+      url.password ||
+      !url.pathname.toLowerCase().endsWith(".png")
+    ) {
+      return "";
+    }
+    return url.toString();
+  } catch {
+    return "";
+  }
+};
 
 const isFiniteNonnegative = (value) =>
   typeof value === "number" && Number.isFinite(value) && value >= 0;
@@ -115,7 +145,7 @@ export const prepareClashSnapshot = (payload) => {
     .slice(0, 10);
   const currentDeck = payload.player.currentDeck.filter(
     (card) => card && typeof card === "object" && String(card.name ?? "").trim()
-  );
+  ).slice(0, CLASH_MAX_CURRENT_DECK_CARDS);
 
   return {
     battles,
@@ -154,9 +184,6 @@ const normalizeBackendBaseUrl = (rawConfig) => {
   }
 };
 
-const formatInteger = (value) =>
-  isFiniteNonnegative(value) ? Math.trunc(value).toLocaleString() : EMPTY_VALUE;
-
 const formatClan = (clan) => {
   if (!clan || typeof clan !== "object" || !String(clan.name ?? "").trim()) {
     return "No clan";
@@ -186,6 +213,58 @@ const createElement = (tagName, className, text) => {
   return element;
 };
 
+const createDecorativeIcon = (source, className) => {
+  const image = document.createElement("img");
+  image.className = className;
+  image.src = source;
+  image.alt = "";
+  return image;
+};
+
+const createDigitValue = (value, accessibleText, minimumLength = 1) => {
+  const wrapper = createElement("span", "cr-digit-value");
+  const numericText = String(value);
+  const digits = numericText.padStart(minimumLength, " ");
+  const strip = createElement("span", "game-stats-digit-strip cr-digit-strip");
+  strip.setAttribute("aria-hidden", "true");
+  [...digits].forEach((digit) => {
+    if (digit === " ") {
+      const spacer = createElement("span", "cr-digit-space");
+      strip.appendChild(spacer);
+      return;
+    }
+    const source = CLASH_DIGIT_SOURCES[digit];
+    if (!source) return;
+    strip.appendChild(createDecorativeIcon(source, "cr-digit-image"));
+  });
+  wrapper.appendChild(strip);
+  wrapper.appendChild(createElement("span", "visually-hidden", accessibleText));
+  return wrapper;
+};
+
+const renderDigitValue = (container, value, minimumLength) => {
+  if (!isFiniteNonnegative(value)) {
+    container.textContent = EMPTY_VALUE;
+    return;
+  }
+  const integer = Math.trunc(value);
+  container.replaceChildren(
+    createDigitValue(String(integer), integer.toLocaleString(), minimumLength)
+  );
+};
+
+const createBattleMetric = ({ accessibleText, icon, sign = "", value, minimumLength = 1 }) => {
+  const metric = createElement("span", "cr-battle-metric");
+  metric.appendChild(createDecorativeIcon(icon, "cr-battle-metric-icon"));
+  if (sign) {
+    const signElement = createElement("span", "cr-battle-metric-sign", sign);
+    signElement.setAttribute("aria-hidden", "true");
+    metric.appendChild(signElement);
+  }
+  metric.appendChild(createDigitValue(value, accessibleText, minimumLength));
+  return metric;
+};
+
 const renderEmptyItem = (container, message) => {
   container.replaceChildren(createElement("li", "cr-empty", message));
 };
@@ -199,7 +278,29 @@ const renderDeck = (cards) => {
 
   const items = cards.map((card) => {
     const item = createElement("li", "cr-deck-card");
-    item.appendChild(createElement("span", "cr-deck-card-name", String(card.name).trim()));
+    const cardName = String(card.name).trim();
+    const media = createElement("span", "cr-deck-card-media");
+    const iconUrl = normalizeClashCardIconUrl(card.iconUrl);
+    if (iconUrl) {
+      const image = createDecorativeIcon(iconUrl, "cr-deck-card-image");
+      image.width = 48;
+      image.height = 58;
+      image.decoding = "async";
+      image.addEventListener(
+        "error",
+        () => {
+          image.remove();
+          item.classList.add("is-image-unavailable");
+        },
+        { once: true }
+      );
+      media.appendChild(image);
+    } else {
+      item.classList.add("is-image-unavailable");
+    }
+    const name = createElement("span", "cr-deck-card-name", cardName);
+    name.title = cardName;
+    item.append(media, name);
     return item;
   });
   elements.currentDeck.replaceChildren(...items);
@@ -213,28 +314,14 @@ const renderBattles = (battles) => {
   }
 
   const items = battles.map(({ battle, hasCrowns, opponent, outcome, player }) => {
-    const item = createElement("li", "cr-battle-item");
+    const item = createElement("li", `cr-battle-item is-${outcome}`);
+    item.dataset.outcome = outcome;
     const summary = createElement("div", "cr-battle-summary");
     const labels = { draw: "DRAW", loss: "LOSS", unknown: "N/A", win: "WIN" };
     summary.appendChild(createElement("span", `cr-result is-${outcome}`, labels[outcome]));
-    summary.appendChild(createElement("span", "cr-battle-mode", formatMode(battle)));
-    summary.appendChild(
-      createElement(
-        "span",
-        "cr-battle-crowns",
-        hasCrowns ? `${player.crowns}–${opponent.crowns} crowns` : "Crowns unavailable"
-      )
-    );
-    summary.appendChild(
-      createElement(
-        "span",
-        "cr-battle-trophies",
-        typeof player.trophyChange === "number" && Number.isFinite(player.trophyChange)
-          ? `${player.trophyChange > 0 ? "+" : ""}${player.trophyChange} trophies`
-          : ""
-      )
-    );
-    summary.appendChild(
+    const details = createElement("span", "cr-battle-details");
+    details.appendChild(createElement("span", "cr-battle-mode", formatMode(battle)));
+    details.appendChild(
       createElement(
         "span",
         "cr-battle-opponent",
@@ -244,7 +331,44 @@ const renderBattles = (battles) => {
     const parsedTime = parseClashBattleTime(battle.battleTime);
     const time = createElement("time", "cr-battle-time", parsedTime?.toLocaleString() ?? "Time unavailable");
     if (parsedTime) time.dateTime = parsedTime.toISOString();
-    summary.appendChild(time);
+    details.appendChild(time);
+    summary.appendChild(details);
+
+    const metrics = createElement("span", "cr-battle-metrics");
+    if (hasCrowns) {
+      const playerCrowns = Math.trunc(player.crowns);
+      const opponentCrowns = Math.trunc(opponent.crowns);
+      metrics.appendChild(
+        createBattleMetric({
+          accessibleText: `${playerCrowns} to ${opponentCrowns} crowns`,
+          icon: CLASH_CROWN_ICON,
+          value: `${playerCrowns}-${opponentCrowns}`,
+          minimumLength: 3,
+        })
+      );
+    } else {
+      metrics.appendChild(
+        createElement(
+          "span",
+          "cr-battle-metric cr-battle-metric--unknown",
+          "Crowns unavailable"
+        )
+      );
+    }
+
+    if (typeof player.trophyChange === "number" && Number.isFinite(player.trophyChange)) {
+      const trophyChange = Math.trunc(player.trophyChange);
+      metrics.appendChild(
+        createBattleMetric({
+          accessibleText: `${trophyChange > 0 ? "+" : ""}${trophyChange} trophies`,
+          icon: CLASH_TROPHY_ICON,
+          sign: trophyChange > 0 ? "+" : "",
+          value: String(trophyChange),
+          minimumLength: 2,
+        })
+      );
+    }
+    summary.appendChild(metrics);
     item.appendChild(summary);
     return item;
   });
@@ -255,8 +379,8 @@ const renderPlayer = (snapshot) => {
   const { player } = snapshot;
   elements.playerName.textContent = String(player.name ?? "Unnamed player").trim() || "Unnamed player";
   elements.playerTag.textContent = `#${snapshot.playerTag}`;
-  elements.trophies.textContent = formatInteger(player.trophies);
-  elements.bestTrophies.textContent = formatInteger(player.bestTrophies);
+  renderDigitValue(elements.trophies, player.trophies, 4);
+  renderDigitValue(elements.bestTrophies, player.bestTrophies, 4);
   elements.arena.textContent = String(player.arena?.name ?? "Unavailable").trim() || "Unavailable";
   elements.clan.textContent = formatClan(player.clan);
 
@@ -269,8 +393,8 @@ const renderPlayer = (snapshot) => {
   const decidedBattles = hasWins && hasLosses ? player.wins + player.losses : 0;
   elements.careerWinRate.textContent =
     decidedBattles > 0 ? `${((player.wins / decidedBattles) * 100).toFixed(1)}%` : EMPTY_VALUE;
-  elements.battleCount.textContent = formatInteger(player.battleCount);
-  elements.threeCrownWins.textContent = formatInteger(player.threeCrownWins);
+  renderDigitValue(elements.battleCount, player.battleCount, 4);
+  renderDigitValue(elements.threeCrownWins, player.threeCrownWins, 3);
   elements.lastUpdated.textContent = snapshot.fetchedAt.toLocaleString();
   elements.lastUpdated.dateTime = snapshot.fetchedAt.toISOString();
 };
