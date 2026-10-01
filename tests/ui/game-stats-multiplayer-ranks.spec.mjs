@@ -1,4 +1,7 @@
-import AxeBuilder from "@axe-core/playwright";
+import {
+  SOLITAIRE_NESTED_INTERACTIVE,
+  scanForViolations,
+} from "./helpers/accessibility-contracts.mjs";
 
 import { expect, test } from "./fixtures.mjs";
 
@@ -837,18 +840,8 @@ for (const viewport of VIEWPORTS) {
           fullPage: true,
         });
       }
-      const accessibility = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze();
-      // The open Solitaire board has the existing nested keyboard controls.
-      expect(accessibility.violations.map(({ id, nodes }) => ({
-        id,
-        targets: nodes.map(({ target }) => target.join(" ")),
-      }))).toEqual(game === "solitaire" ? [{
-        id: "nested-interactive",
-        targets: ["#sol-stock", ...Array.from({ length: 7 }, (_, index) =>
-          `div[data-sol-col="${index}"]`)],
-      }] : []);
+      expect(await scanForViolations(page, testInfo, `ranked-stats-${game}`))
+        .toEqual(game === "solitaire" ? SOLITAIRE_NESTED_INTERACTIVE : []);
       await assertNoHorizontalOverflow(page, stats);
       await assertLeaderboardRankSpacing(stats);
       await closeStatsWindow(page, game, app, stats);
