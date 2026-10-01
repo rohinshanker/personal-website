@@ -46,7 +46,9 @@ If a parallel local run reports timeouts for unrelated static assets, inspect
 the failed request URLs before changing application code. Reduce `--workers`
 and rerun the affected cases; preserve the original diagnostics. A paused
 Playwright clock does not finish image decoding: await `img.decode()` before
-reading animated sprites into a canvas.
+reading animated sprites into a canvas. Before comparing window geometry, wait
+for that window’s entrance animation to finish (`getAnimations().length === 0`);
+visibility alone can still report rectangles scaled by the opening animation.
 
 To identify a listener manually on macOS:
 

@@ -535,6 +535,7 @@ const renderBattles = (battles) => {
     const summary = createElement("div", "cr-battle-summary");
     const labels = { draw: "DRAW", loss: "LOSS", unknown: "N/A", win: "WIN" };
     summary.appendChild(createElement("span", `cr-result is-${outcome}`, labels[outcome]));
+    const info = createElement("span", "cr-battle-info");
     const details = createElement("span", "cr-battle-details");
     const mode = classifyClashBattleMode(battle);
     const modeBadge = createElement(
@@ -543,11 +544,13 @@ const renderBattles = (battles) => {
       mode.label
     );
     const rawModeName = String(battle?.gameMode?.name ?? "").trim();
-    modeBadge.title = formatMode(battle);
+    let modeHint = null;
     if (mode.key === "other" && rawModeName) {
       modeBadge.tabIndex = 0;
       modeBadge.setAttribute("aria-label", `Other mode: ${rawModeName}`);
-      modeBadge.appendChild(createElement("span", "cr-mode-hint", rawModeName));
+      modeHint = createElement("span", "cr-mode-hint", rawModeName);
+    } else {
+      modeBadge.title = formatMode(battle);
     }
     details.appendChild(modeBadge);
     details.appendChild(
@@ -558,7 +561,9 @@ const renderBattles = (battles) => {
       )
     );
     details.appendChild(createBattleTime(battle.battleTime));
-    summary.appendChild(details);
+    info.appendChild(details);
+    if (modeHint) info.appendChild(modeHint);
+    summary.appendChild(info);
 
     const metrics = createElement("span", "cr-battle-metrics");
     if (hasCrowns) {

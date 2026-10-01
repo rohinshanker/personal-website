@@ -40,8 +40,10 @@ const createBattles = (count = 20) =>
     const opponentCrowns = (index + 1) % 3;
     return {
       battleTime: new Date(Date.UTC(2026, 9, 1, 12, 15) - index * 60 * 60 * 1000).toISOString(),
-      type: "pathOfLegend",
-      gameMode: { id: 72000464, name: "Ranked1v1_NewArena2" },
+      type: index === 1 ? "unknown" : "pathOfLegend",
+      gameMode: index === 1
+        ? { id: 72000529, name: "RR_FourCard_Friendly" }
+        : { id: 72000464, name: "Ranked1v1_NewArena2" },
       team: [
         {
           tag: "#28CYYU08P",
@@ -167,6 +169,7 @@ const openClashRoyale = async (page, viewport) => {
   await page.locator('.taskbar-icon[data-app="clash-royale"]').click();
   const clashWindow = page.locator("#clash-royale-window");
   await expect(clashWindow).toBeVisible();
+  await expect.poll(() => clashWindow.evaluate((element) => element.getAnimations().length)).toBe(0);
   return clashWindow;
 };
 
@@ -188,6 +191,23 @@ const consumeExpectedHttpFailure = (diagnostics, status) => {
   expect(diagnostics.errorResponses).toEqual([`${status} ${API_URL}`]);
   diagnostics.consoleErrors.pop();
   diagnostics.errorResponses.pop();
+};
+
+const hoverOtherModeHint = async (page, row) => {
+  await page.locator("#cr-battle-scroll").scrollIntoViewIfNeeded();
+  await row.evaluate((element) => {
+    const scrollport = element.closest("#cr-battle-scroll");
+    scrollport.scrollTop +=
+      element.getBoundingClientRect().top - scrollport.getBoundingClientRect().top - 2;
+  });
+  const badge = row.locator(".cr-battle-mode.is-other");
+  const hint = row.locator(".cr-mode-hint");
+  await badge.hover();
+  await expect(hint).toBeVisible();
+  const bounds = await hint.boundingBox();
+  expect(bounds).not.toBeNull();
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, { steps: 8 });
+  await expect(hint).toBeVisible();
 };
 
 test.beforeEach(async ({ page }) => {
@@ -265,6 +285,25 @@ test("renders success and long content across the viewport matrix without overfl
     );
     await settleRender(page);
 
+    const otherRow = page.locator("#cr-battle-log .cr-battle-item").nth(1);
+    const otherHint = otherRow.locator(".cr-mode-hint");
+    const otherTitle = otherRow.locator(".cr-battle-opponent");
+    const beforeHint = await otherRow.evaluate((row) => ({
+      badgeWidth: row.querySelector(".cr-battle-mode").getBoundingClientRect().width,
+      titleWidth: row.querySelector(".cr-battle-opponent").getBoundingClientRect().width,
+    }));
+    await hoverOtherModeHint(page, otherRow);
+    const afterHint = await otherRow.evaluate((row) => ({
+      badgeWidth: row.querySelector(".cr-battle-mode").getBoundingClientRect().width,
+      titleWidth: row.querySelector(".cr-battle-opponent").getBoundingClientRect().width,
+    }));
+    expect(afterHint.badgeWidth, viewport.name).toBeCloseTo(beforeHint.badgeWidth, 4);
+    expect(afterHint.titleWidth, viewport.name).toBeCloseTo(beforeHint.titleWidth, 1);
+    await expect(otherTitle).toHaveText("Rohin vs. Recent opponent 2");
+    await page.mouse.move(0, 0);
+    await expect(otherHint).toBeHidden();
+    await page.locator("#cr-battle-scroll").evaluate((element) => { element.scrollTop = 0; });
+
     if (viewport.width <= 640) {
       const mobileTextStats = await clashWindow.evaluate((windowElement) => {
         const arena = windowElement.querySelector("#cr-arena");
@@ -290,6 +329,38 @@ test("renders success and long content across the viewport matrix without overfl
         recordDisplay: "block",
         separatorText: " · ",
         someTextIsClipped: true,
+      });
+
+      const mobileDeckGeometry = await page.locator("#cr-current-deck").evaluate((deck) => {
+        const cards = [...deck.querySelectorAll(".cr-deck-card")];
+        const wordLineCounts = cards.flatMap((card) => {
+          const name = card.querySelector(".cr-deck-card-name");
+          const textNode = name.firstChild;
+          return [...textNode.textContent.matchAll(/\S+/g)].map((match) => {
+            const range = document.createRange();
+            range.setStart(textNode, match.index);
+            range.setEnd(textNode, match.index + match[0].length);
+            return range.getClientRects().length;
+          });
+        });
+        const mediaTops = cards.map((card) =>
+          Math.round(card.querySelector(".cr-deck-card-media").getBoundingClientRect().top * 10)
+        );
+        return {
+          allWordsStayOnOneLine: wordLineCounts.every((lineCount) => lineCount === 1),
+          artworkAligned:
+            new Set(mediaTops.slice(0, 4)).size === 1 &&
+            new Set(mediaTops.slice(4, 8)).size === 1,
+          titlesFit: cards.every((card) => {
+            const title = card.querySelector(".cr-deck-card-title");
+            return title.scrollWidth <= title.clientWidth && title.scrollHeight <= title.clientHeight;
+          }),
+        };
+      });
+      expect(mobileDeckGeometry, viewport.name).toEqual({
+        allWordsStayOnOneLine: true,
+        artworkAligned: true,
+        titlesFit: true,
       });
     }
 
@@ -455,19 +526,27 @@ test("centers battle badges and reveals factual Other mode names on hover and fo
     opponent: [{ tag: "#RIVAL2", name: "Ladder rival", crowns: 1, cards: [] }],
   };
   await page.route(API_URL, (route) =>
-    successResponse(route, createPayload({ battles: [otherBattle, ladderBattle] }))
+    successResponse(
+      route,
+      createPayload({ battles: [otherBattle, ladderBattle, ...createBattles(18)] })
+    )
   );
   await openClashRoyale(page, { width: 375, height: 812 });
   await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
 
-  const other = page.locator("#cr-battle-log .cr-battle-mode.is-other");
-  const hint = other.locator(".cr-mode-hint");
+  const otherRow = page.locator("#cr-battle-log .cr-battle-item").first();
+  const other = otherRow.locator(".cr-battle-mode.is-other");
+  const hint = otherRow.locator(".cr-mode-hint");
+  const title = otherRow.locator(".cr-battle-opponent");
   await expect(other).toHaveAttribute("tabindex", "0");
   await expect(other).toHaveAttribute("aria-label", "Other mode: RR_FourCard_Friendly");
+  await expect(other).not.toHaveAttribute("title", /.+/);
   await expect(hint).toHaveText("RR_FourCard_Friendly");
   await expect(hint).toBeHidden();
-  await other.hover();
-  await expect(hint).toBeVisible();
+  const titleWidthBefore = await title.evaluate((element) => element.getBoundingClientRect().width);
+  await hoverOtherModeHint(page, otherRow);
+  const titleWidthAfter = await title.evaluate((element) => element.getBoundingClientRect().width);
+  expect(titleWidthAfter).toBeCloseTo(titleWidthBefore, 1);
   await page.mouse.move(0, 0);
   await page.locator("#cr-battle-scroll").focus();
   await page.keyboard.press("Tab");
@@ -476,7 +555,7 @@ test("centers battle badges and reveals factual Other mode names on hover and fo
   expect(await scanForViolations(page, testInfo, "clash-other-mode-focus")).toEqual([]);
 
   const ladder = page.locator("#cr-battle-log .cr-battle-mode.is-ladder");
-  const centeredStyles = await page.locator("#cr-battle-log .cr-battle-item").last().evaluate((row) => ({
+  const centeredStyles = await page.locator("#cr-battle-log .cr-battle-item:has(.cr-battle-mode.is-ladder)").evaluate((row) => ({
     ladderBackground: getComputedStyle(row.querySelector(".cr-battle-mode")).backgroundColor,
     ladderColor: getComputedStyle(row.querySelector(".cr-battle-mode")).color,
     modePlaceSelf: getComputedStyle(row.querySelector(".cr-battle-mode")).placeSelf,
@@ -484,6 +563,7 @@ test("centers battle badges and reveals factual Other mode names on hover and fo
     resultJustifySelf: getComputedStyle(row.querySelector(".cr-result")).justifySelf,
   }));
   await expect(ladder).toHaveText("Ladder");
+  await expect(ladder).toHaveAttribute("title", "Ladder");
   expect(centeredStyles).toEqual({
     ladderBackground: "rgb(73, 212, 214)",
     ladderColor: "rgb(17, 17, 17)",

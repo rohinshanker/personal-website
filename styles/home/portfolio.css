@@ -219,6 +219,11 @@
   padding: 6px 8px;
 }
 
+.cr-battle-info {
+  display: block;
+  min-width: 0;
+}
+
 .cr-battle-details {
   display: grid;
   gap: 3px 7px;
@@ -285,29 +290,25 @@
 .cr-mode-hint {
   background: #ffffe1;
   border: 1px solid #111;
+  box-sizing: border-box;
   color: #111;
   display: none;
   font-weight: 400;
   margin-top: 3px;
-  max-width: 170px;
+  min-width: 0;
   overflow-wrap: anywhere;
   padding: 2px 3px;
   white-space: normal;
+  width: 100%;
 }
 
-.cr-battle-mode.is-other:hover .cr-mode-hint,
-.cr-battle-mode.is-other:focus-visible .cr-mode-hint {
+.cr-battle-item:hover .cr-mode-hint,
+.cr-battle-info:focus-within > .cr-mode-hint {
   display: block;
 }
 
 .cr-battle-opponent {
   font-size: 13px;
-  grid-column: 2;
-}
-
-.cr-battle-allies {
-  color: #333;
-  font-weight: 700;
   grid-column: 2;
 }
 
@@ -723,6 +724,20 @@
   .cr-deck-card {
     grid-template-rows: auto 74px auto;
     font-size: 9px;
+  }
+
+  .cr-deck-card:not(.cr-deck-card--compact) .cr-deck-card-title {
+    align-content: center;
+    flex-wrap: wrap;
+    min-height: 32px;
+    row-gap: 1px;
+  }
+
+  .cr-deck-card:not(.cr-deck-card--compact) .cr-deck-card-name {
+    flex: 0 0 auto;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   .cr-deck-card--compact {

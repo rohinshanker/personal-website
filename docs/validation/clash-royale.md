@@ -56,7 +56,8 @@ word), names above the artwork, per-card elixir cost, and a one-decimal average
 when every card has a known fixed cost. Hero/Evo labels sit next to current-deck
 names; compact participant cards keep labels over the art and use Windows grey
 backgrounds. The deck appearance control compares white and raised grey tiles
-without making the cards interactive.
+without making the cards interactive. At compact widths, let variant labels
+wrap rather than forcing ordinary card names to break mid-word.
 Mirror (card ID `28000006`) uses a variable `+1` label and makes the average
 unavailable; missing costs must not become zero. Career wins and losses retain
 text labels alongside green/red coloring.
@@ -99,7 +100,8 @@ Match badges use verified type/ID mappings with explicit labels. Battle context
 the known PvP/Ladder combination for Ladder; unknown modes remain Other even
 when their raw names contain a familiar word. Do not classify modes using
 substring guesses. Other exposes the actual raw mode on hover and keyboard
-focus. Ladder uses `rgb(73, 212, 214)` with dark text; keep result and mode
+focus in a separate row that preserves the battle title’s width. Avoid a
+duplicate native tooltip when the inline hint is present. Ladder uses `rgb(73, 212, 214)` with dark text; keep result and mode
 labels centered. The battle title includes the player name before “vs.” and
 preserves all participants on the correct sides.
 
