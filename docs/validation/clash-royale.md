@@ -51,8 +51,12 @@ development only, use the ignored `.dev.vars` file and the same secret name.
 ## Images and presentation
 
 The app is named Clash Royale Stats on the desktop, taskbar, and window. Its
-current deck uses four columns and two rows, with rarity styling, per-card
-elixir cost, and a one-decimal average when every card has a known fixed cost.
+current deck uses four columns and two rows, with rarity glow (no visible rarity
+word), names above the artwork, per-card elixir cost, and a one-decimal average
+when every card has a known fixed cost. Hero/Evo labels sit next to current-deck
+names; compact participant cards keep labels over the art and use Windows grey
+backgrounds. The deck appearance control compares white and raised grey tiles
+without making the cards interactive.
 Mirror (card ID `28000006`) uses a variable `+1` label and makes the average
 unavailable; missing costs must not become zero. Career wins and losses retain
 text labels alongside green/red coloring.
@@ -76,8 +80,8 @@ download a full card library. Arena art still requires a verified arena-ID
 mapping.
 
 Use the existing leaderboard digit sprites and local trophy icon. The pixel
-crown is vendored from the free MIT Pixelarticons set with its source recorded
-in `assets/pixelarticons/README.md`. Solitaire's desktop, taskbar, and Game
+crown and sword are vendored from the free MIT Pixelarticons set with sources
+recorded in `assets/pixelarticons/README.md`. Solitaire's desktop, taskbar, and Game
 Progress icons use `game_solitaire.ico`; Clash Royale Stats uses
 `game_freecell.ico`.
 
@@ -86,13 +90,18 @@ window may also scroll to accommodate the larger deck and player panels on
 compact screens. Keep the Refresh button aligned with the last-update row and
 all controls, disclosures, and the history footer reachable by keyboard and
 pointer. The footer reports the actual number of available battles, up to 20,
-and links to the fixed RoyaleAPI profile.
+and links to the fixed RoyaleAPI profile. Keep it after the final battle inside
+the bounded scroll region, hidden at the top of a full history and reachable
+at the bottom; never pin it outside that scroll area.
 
 Match badges use verified type/ID mappings with explicit labels. Battle context
 (such as Ranked or Challenge) takes precedence over a shared mode ID. Require
 the known PvP/Ladder combination for Ladder; unknown modes remain Other even
 when their raw names contain a familiar word. Do not classify modes using
-substring guesses.
+substring guesses. Other exposes the actual raw mode on hover and keyboard
+focus. Ladder uses `rgb(73, 212, 214)` with dark text; keep result and mode
+labels centered. The battle title includes the player name before “vs.” and
+preserves all participants on the correct sides.
 
 ## Validation and release
 
@@ -102,7 +111,9 @@ Run focused checks while editing, then the full quality gates in
 empty, failed refresh, retry, and long content. Confirm usable controls,
 accessible status, correct player-side battle results, Hero/Evo and
 missing-image fallbacks, deferred battle-deck loading, and no accidental
-overflow. Include the 639/641px breakpoint neighbors.
+overflow. Compare both deck appearances, badge hover/focus, and footer
+visibility at the beginning and end of battle scrolling. Include the 639/641px
+breakpoint neighbors.
 
 ```sh
 node --test tests/clash-royale*.test.mjs
