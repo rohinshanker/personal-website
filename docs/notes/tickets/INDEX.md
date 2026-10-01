@@ -2,7 +2,8 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| A | 2026-10-01 | [A_clash-royale-api-integration__20261001.md](A_clash-royale-api-integration__20261001.md) | CR-01–09 implemented and verified; live twenty-battle backend and official Hero/Evo PNGs working. Ready for owner visual audit at localhost:4192. Main/frontend publication held. |
+| A | 2026-10-01 | [A_clash-royale-api-integration__20261001.md](A_clash-royale-api-integration__20261001.md) | CR-10–14 visual refinements in progress: card layout/grey preview, player icons, centered badges and usernames, lighter Ladder, footer inside battle scroll. Live backend working; main/frontend publication held. |
+| O | 2026-10-01 | [O_study-resources-hover-highlight__20261001.md](O_study-resources-hover-highlight__20261001.md) | Add blue hover highlighting to clickable Study Resources rows on white backgrounds; queued, not implemented. |
 | O | 2026-09-29 | [O_soot-sprite-redesign__20260929.md](O_soot-sprite-redesign__20260929.md) | Redraw the soot sprite from the Ghibli films: four original candidates on a review page, owner picks one, then ship it. Nothing started. |
 | O | 2026-09-30 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Audit decisions. Done: monotonic elapsed-time Minesweeper timer, documented 32-build compatibility window, D1 id note, proven aggregation indexes and five-second stats cache with fresh bypass. Awaiting owner: session budget, Minesweeper close behaviour, Snake game-over loop, queue retry, expired sessions, deploy gating. |
 | O | 2026-10-01 | [O_decide-content-and-assets__20260924.md](O_decide-content-and-assets__20260924.md) | Clash Royale integration reopened in its own ticket. Remaining audit decisions: Study Resources stub, 26 MB unreferenced calendar photos, originals and working files, background quality, shoot markup from data, pdf-window templating, renames, 98.css trim. Awaiting owner. |
