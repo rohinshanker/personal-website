@@ -38,9 +38,10 @@ or high-stakes game.
   client address may change during a game; it is not part of validation.
 - The Worker release workflow applies pending D1 migrations automatically,
   immediately before the deploy, so the schema is in place when the new Worker
-  starts serving. Only additive migrations belong there: a migration the
-  previous Worker could not survive a rollback to is applied by hand, in a
-  reviewed release of its own. A browser-only change adds no migration and the
+  starts serving. Only rollback-compatible migrations belong there. Proven
+  unused-index removal and index replacement qualify; a table or column change
+  the previous Worker could not survive is applied by hand in a reviewed release
+  of its own. A browser-only change adds no migration and the
   step is a no-op.
 - Before deploying, the release workflow asserts that every name in
   `wrangler.jsonc` `secrets.required` is present on the account. Wrangler itself
@@ -248,10 +249,26 @@ later ordinary read cannot regress to the pre-publication snapshot. Cache
 failures fall through to D1; failed D1 reads return an uncached 500.
 
 Migration `0004_optimize_stats_aggregation.sql` replaces the four category
-indexes with partial covering indexes matched to the grouped/window queries.
+indexes with partial category indexes matched to the grouped/window queries.
 It removes the obsolete broad game/type and player indexes while retaining
 session-expiry, rate-limit-expiry, and Sudoku puzzle-identity indexes. The real
-SQLite test asserts `EXPLAIN QUERY PLAN` uses all four category indexes.
+SQLite test asserts `EXPLAIN QUERY PLAN` uses all four category indexes. They
+restrict scans by game/type; profile lookups and window sorting still read the
+table and use temporary B-trees, so they are not covering indexes.
+
+Totals, rankings, and acknowledgments share one bound future-date cutoff in a
+D1 batch. Historical calendar dates must parse in SQLite; relative values such
+as `now` and time-only strings are rejected. String fields use JavaScript's
+whitespace set, and returned names retain the 32 UTF-16-unit limit.
+
+For Worker-only coverage, exclude test helpers explicitly:
+
+```bash
+node --test --experimental-test-coverage \
+  '--test-coverage-include=**/workers/game-stats/src/**' \
+  --test-coverage-lines=95 tests/game-stats-worker.test.mjs \
+  tests/game-stats-sql.test.mjs tests/game-stats-http-request.test.mjs
+```
 
 ## Confirmed-event UI convergence
 

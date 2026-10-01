@@ -22,7 +22,7 @@
 1. Aggregate in SQL: `GROUP BY game, difficulty` totals; window-ranked global top 3 and requested-player rank; drop `eventIds` from the payload (browser dedups locally already); use a `Set` where an in-memory pass remains.
 2. Short `Cache-Control` or Cache API TTL on `/stats` (seconds, not minutes, so a fresh win still appears on the refresh control).
 3. Split into `events.mjs`, `aggregate.mjs`, `security.mjs`, `sessions.mjs`, `http.mjs`, `router.mjs`; compare the candidate bundle with the verified production baseline of 55.18 KiB / 12.05 KiB gzip and record any justified growth.
-4. Migration `0004`: replace the four category indexes with partial covering indexes used by the new query plans; remove the broad game/type and player indexes after real SQLite `EXPLAIN QUERY PLAN` evidence; retain security-expiry and Sudoku identity indexes.
+4. Migration `0004`: replace the four category indexes with partial category indexes used by the new query plans; remove the broad game/type and player indexes after real SQLite `EXPLAIN QUERY PLAN` evidence; retain security-expiry and Sudoku identity indexes.
 
 ## Implementation Result
 
@@ -48,7 +48,7 @@
   Node SQLite migration fixture and D1 index query passed.
 - Focused source/Worker tests, strict Wrangler dry-run, 95%+ line coverage, and
   Game Stats/Game Progress Playwright checks pass at 375×812, 768×1024,
-  1280×800, and 1440×900. The candidate dry-run is 61.64 KiB / 14.15 KiB
+  1280×800, and 1440×900. The candidate dry-run is 62.32 KiB / 14.39 KiB
   gzip; the increase is the fixed SQL/window query set and cache/protocol path,
   not the removed event-table aggregation loop. Full final gate evidence is
   recorded in DEM-179.

@@ -329,7 +329,7 @@ test("migration 0004 retains security and identity indexes and query plans use c
 
   const plans = [SELECT_STATS_TOTALS_SQL, SELECT_STATS_RANKINGS_SQL]
     .flatMap((sql) =>
-      database.sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all("sql-player-00")
+      database.sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(new Date(Date.now() + 60_000).toISOString(), "sql-player-00")
     )
     .map(({ detail }) => detail)
     .join("\n");
@@ -573,4 +573,42 @@ test("SQL historical strings preserve JavaScript whitespace and UTF-16 name limi
   assert.deepEqual(stats.acknowledgedEventIds, ["event-whitespace-0"]);
   assert.deepEqual(stats.leaderboards.minesweeper.beginner.map(({ eventId }) => eventId),
     ["event-whitespace-0", "event-whitespace-1", "event-whitespace-2"]);
+});
+
+
+test("all stats statements share one future cutoff and reject SQLite relative dates", async (t) => {
+  const database = createDatabase();
+  t.after(() => database.close());
+  const now = Date.parse("2026-01-01T00:00:00.000Z");
+  let clockReads = 0;
+  t.mock.method(Date, "now", () => now + clockReads++ * 1000);
+  for (const [id, occurredAt] of [
+    ["event-cutoff-included", new Date(now + 60_000).toISOString()],
+    ["event-cutoff-excluded", new Date(now + 60_001).toISOString()],
+    ["event-relative-now", "now"],
+    ["event-relative-time", "12:00:00"],
+  ]) {
+    insertEvent(database, {
+      id, occurredAt, game: "minesweeper", type: "win", difficulty: "beginner",
+      metric: 10, metricKind: "seconds", playerId: "player-cutoff-check",
+      playerName: "Cutoff Check", playerIcon: icon,
+    });
+  }
+  const originalBatch = database.batch.bind(database);
+  database.batch = async (statements) => {
+    assert.deepEqual(statements.map(({ params }) => params[0]),
+      Array(statements.length).fill(new Date(now + 60_000).toISOString()));
+    return originalBatch(statements);
+  };
+  const stats = await selectAggregatedGameStats(
+    { personal_site_game_stats: database },
+    { protocol: "2", playerId: "player-cutoff-check", pendingEventIds: [
+      "event-cutoff-included", "event-cutoff-excluded", "event-relative-now", "event-relative-time",
+    ] }
+  );
+  assert.equal(clockReads, 1);
+  assert.equal(stats.totals.minesweeper.wins.beginner, 1);
+  assert.equal(stats.playerTotals.minesweeper.wins.beginner, 1);
+  assert.deepEqual(stats.acknowledgedEventIds, ["event-cutoff-included"]);
+  assert.equal(stats.playerRecords.minesweeper.beginner.eventId, "event-cutoff-included");
 });

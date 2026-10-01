@@ -69,6 +69,17 @@ test("empty and normalized stats cover every player rank, record, and global Top
 
   const empty = jsonClone(context.createEmptyGameStatsDataForTest());
   const normalizedEmpty = jsonClone(context.normalizeGameStatsDataForTest({}));
+  assert.equal(normalizedEmpty.acknowledgementsAvailable, false);
+  const legacyAcknowledgments = jsonClone(context.normalizeGameStatsDataForTest({
+    eventIds: ["event-legacy-confirmed", "event-legacy-confirmed", "invalid"],
+  }));
+  assert.equal(legacyAcknowledgments.acknowledgementsAvailable, true);
+  assert.deepEqual(legacyAcknowledgments.acknowledgedEventIds, ["event-legacy-confirmed"]);
+  const modernAcknowledgments = jsonClone(context.normalizeGameStatsDataForTest({
+    eventIds: ["event-legacy-confirmed"], acknowledgedEventIds: [],
+  }));
+  assert.equal(modernAcknowledgments.acknowledgementsAvailable, true);
+  assert.deepEqual(modernAcknowledgments.acknowledgedEventIds, []);
   for (const data of [empty, normalizedEmpty]) {
     for (const difficulty of minesweeperDifficulties) {
       assert.deepEqual(data.playerRanks.minesweeper[difficulty], {
@@ -386,6 +397,12 @@ test("confirmed events keep every total current until the server acknowledges th
   assert.deepEqual(jsonClone(context.readState()).confirmedIds, []);
   assert.equal(acknowledged.totals.snake.gamesPlayed["16"], 1);
   assert.equal(acknowledged.playerTotals.sudoku.wins.easy.noHints, 1);
+  const overflowEvents = Array.from({ length: 40 }, (_, index) => ({
+    ...events[0], id: `event-confirmed-bound-${index}`,
+  }));
+  overflowEvents.forEach((event) => context.markConfirmed(event));
+  assert.deepEqual(jsonClone(context.readState()).confirmedIds,
+    overflowEvents.slice(-32).map(({ id }) => id));
 });
 
 test("a saved profile is attached to a non-leaderboard Solitaire win without client-only fields", async () => {
@@ -653,6 +670,8 @@ test("an overlapping sync coalesces and discards a response for the prior profil
       "globalThis.syncQueuedGameStatsForTest = syncQueuedGameStats;",
       "globalThis.resolveNextStatsResponse = () => pendingStatsResponses.shift()?.();",
       "globalThis.setProfileForTest = (profile) => { gameStatsProfile = profile; };",
+      "globalThis.refreshForTest = refreshGameStatsGlobalState;",
+      "globalThis.setPendingForTest = (ids) => { gameStatsConfirmedEvents.clear(); ids.forEach(id => gameStatsConfirmedEvents.set(id, {})); };",
       "globalThis.readSyncState = () => ({ gameStatsGlobalState, gameStatsSyncInProgress, gameStatsSyncRequested, statsPaths, pendingResponseCount: pendingStatsResponses.length, reconcileCalls, saveCalls, renderCalls });",
     ].join("\n"),
     context
@@ -700,4 +719,14 @@ test("an overlapping sync coalesces and discards a response for the prior profil
   assert.deepEqual(state.gameStatsGlobalState, { marker: "fresh-global-stats-2" });
   assert.equal(state.saveCalls, 2);
   assert.equal(state.renderCalls, 6);
+  const overflowIds = Array.from({ length: 40 }, (_, index) => `event-request-bound-${index}`);
+  context.setPendingForTest(overflowIds);
+  const freshRead = context.refreshForTest({ fresh: true });
+  await waitFor(() => context.readSyncState().pendingResponseCount === 1,
+    "the bounded request should be awaiting its response");
+  const query = new URL(context.readSyncState().statsPaths.at(-1), "https://stats.test").searchParams;
+  assert.deepEqual(query.getAll("pendingEventId"), overflowIds.slice(-32));
+  assert.equal(query.get("fresh"), "1");
+  context.resolveNextStatsResponse();
+  await freshRead;
 });

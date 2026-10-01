@@ -1,5 +1,6 @@
 import {
   GAME_STATS_DIFFICULTIES,
+  MAX_EVENT_FUTURE_MS,
   GAME_STATS_SNAKE_BOARD_SIZES,
   GAME_STATS_SUDOKU_DIFFICULTIES,
   STATS_API_PROTOCOL,
@@ -66,8 +67,9 @@ const VALID_EVENT_PROJECTION = `
 const COMMON_EVENT_PREDICATES = `
   length(${trimmedColumns.id}) BETWEEN 8 AND 80
   AND ${trimmedColumns.id} NOT GLOB '*[^a-z0-9-]*'
+  AND occurred_at GLOB '*-*-*'
   AND julianday(occurred_at) IS NOT NULL
-  AND julianday(occurred_at) <= julianday('now', '+1 minute')
+  AND julianday(occurred_at) <= julianday(?1)
 `;
 
 const validEventBranch = ({ game, type, predicates }) => `${VALID_EVENT_PROJECTION}
@@ -153,7 +155,7 @@ SELECT
   END AS category,
   CASE WHEN game = 'sudoku' THEN hint_bucket ELSE '' END AS subcategory,
   count(*) AS total_count,
-  sum(CASE WHEN valid_profile = 1 AND player_id = ? THEN 1 ELSE 0 END) AS player_count
+  sum(CASE WHEN valid_profile = 1 AND player_id = ?2 THEN 1 ELSE 0 END) AS player_count
 FROM valid_events
 GROUP BY game, category, subcategory
 ORDER BY game, category, subcategory
@@ -275,7 +277,7 @@ SELECT
   rank,
   total_players
 FROM ranked_records
-WHERE rank <= 3 OR player_id = ?
+WHERE rank <= 3 OR player_id = ?2
 ORDER BY game, category, rank
 `;
 
@@ -286,7 +288,7 @@ SELECT id FROM valid_events ORDER BY id
 const selectAcknowledgedIdsSql = (count) => `${VALID_EVENTS_CTE}
 SELECT id
 FROM valid_events
-WHERE id IN (${Array.from({ length: count }, () => "?").join(", ")})
+WHERE id IN (${Array.from({ length: count }, (_, index) => `?${index + 2}`).join(", ")})
 ORDER BY id
 `;
 
@@ -416,9 +418,10 @@ export const selectAggregatedGameStats = async (
   { protocol, playerId, pendingEventIds }
 ) => {
   const database = getGameStatsDatabase(env);
+  const cutoff = new Date(Date.now() + MAX_EVENT_FUTURE_MS).toISOString();
   const statements = [
-    database.prepare(SELECT_STATS_TOTALS_SQL).bind(playerId),
-    database.prepare(SELECT_STATS_RANKINGS_SQL).bind(playerId),
+    database.prepare(SELECT_STATS_TOTALS_SQL).bind(cutoff, playerId),
+    database.prepare(SELECT_STATS_RANKINGS_SQL).bind(cutoff, playerId),
   ];
   let acknowledgmentIndex = -1;
   let legacyIdsIndex = -1;
@@ -427,11 +430,11 @@ export const selectAggregatedGameStats = async (
     statements.push(
       database
         .prepare(selectAcknowledgedIdsSql(pendingEventIds.length))
-        .bind(...pendingEventIds)
+        .bind(cutoff, ...pendingEventIds)
     );
   } else if (protocol !== STATS_API_PROTOCOL) {
     legacyIdsIndex = statements.length;
-    statements.push(database.prepare(SELECT_LEGACY_EVENT_IDS_SQL));
+    statements.push(database.prepare(SELECT_LEGACY_EVENT_IDS_SQL).bind(cutoff));
   }
   const results = await database.batch(statements);
   return createGameStatsDataFromSqlRows({

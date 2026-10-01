@@ -1,7 +1,8 @@
 -- The four original category indexes were shaped for event-order scans. The
--- SQL aggregation ranks one record per player, so replace them with partial,
--- covering indexes whose leading columns match each category and player
--- partition. The old Worker never relies on these indexes for correctness.
+-- SQL aggregation ranks one record per player, so replace them with partial
+-- category indexes that restrict reads to the relevant game/type partition.
+-- The queries still fetch profile fields and sort window partitions. The old
+-- Worker never relies on these indexes for correctness.
 DROP INDEX game_events_minesweeper_idx;
 DROP INDEX game_events_solitaire_idx;
 DROP INDEX game_events_snake_idx;
