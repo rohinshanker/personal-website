@@ -3301,7 +3301,7 @@ const appendGameStatsDigits = (
     digits.split("").forEach((digit) => {
       const image = document.createElement("img");
       image.src = GAME_STATS_DIGIT_SOURCES[digit] || GAME_STATS_DIGIT_SOURCES[" "];
-      image.alt = decorative ? "" : digit;
+      image.alt = decorative ? "" : digit.trim();
       strip.append(image);
     });
   };

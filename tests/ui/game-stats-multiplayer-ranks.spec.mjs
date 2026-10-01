@@ -1,3 +1,5 @@
+import AxeBuilder from "@axe-core/playwright";
+
 import { expect, test } from "./fixtures.mjs";
 
 const API_BASE_URL = "https://game-stats.test";
@@ -602,7 +604,9 @@ const expectDigitMetric = async (row, metric) => {
       }))
     );
   const expectedDigits = String(metric).padStart(3, " ");
-  expect(digitImages.map(({ alt }) => alt).join("")).toBe(expectedDigits);
+  expect(digitImages.map(({ alt }) => alt)).toEqual(
+    expectedDigits.split("").map((digit) => digit.trim())
+  );
   expect(digitImages.map(({ source }, index) => source)).toEqual(
     expectedDigits.split("").map((digit) =>
       `/assets/minesweeper_assets/digital_digits/digital_${
@@ -833,6 +837,18 @@ for (const viewport of VIEWPORTS) {
           fullPage: true,
         });
       }
+      const accessibility = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .analyze();
+      // The open Solitaire board has the existing nested keyboard controls.
+      expect(accessibility.violations.map(({ id, nodes }) => ({
+        id,
+        targets: nodes.map(({ target }) => target.join(" ")),
+      }))).toEqual(game === "solitaire" ? [{
+        id: "nested-interactive",
+        targets: ["#sol-stock", ...Array.from({ length: 7 }, (_, index) =>
+          `div[data-sol-col="${index}"]`)],
+      }] : []);
       await assertNoHorizontalOverflow(page, stats);
       await assertLeaderboardRankSpacing(stats);
       await closeStatsWindow(page, game, app, stats);
