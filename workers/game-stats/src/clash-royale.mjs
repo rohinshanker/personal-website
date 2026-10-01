@@ -261,7 +261,7 @@ const fetchUpstream = async (url, token, fetchImpl) => {
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
       },
-      redirect: "error",
+      redirect: "manual",
       signal,
     });
   } catch (error) {

@@ -213,7 +213,7 @@ test("returns an allowlisted profile, current deck, and battle log", async () =>
   for (const { init } of route.calls) {
     assert.equal(init.headers.Accept, "application/json");
     assert.equal(init.headers.Authorization, "Bearer test-clash-token");
-    assert.equal(init.redirect, "error");
+    assert.equal(init.redirect, "manual");
     assert.ok(init.signal instanceof AbortSignal);
   }
   assert.equal(route.pending.length, 1);
@@ -349,6 +349,28 @@ test("maps upstream authentication failures without exposing the upstream body",
     });
     assert.doesNotMatch(JSON.stringify(body), /credential details|test-clash-token/);
   }
+});
+
+test("rejects upstream redirects without following them", async () => {
+  const calls = [];
+  const route = fetchRoute({
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return url === PLAYER_URL
+        ? new Response(null, {
+            status: 302,
+            headers: { Location: "https://untrusted.example/collect-authorization" },
+          })
+        : Response.json([]);
+    },
+  });
+  const response = await route.run();
+
+  assert.equal(response.status, 502);
+  assert.equal((await json(response)).code, "CLASH_ROYALE_UPSTREAM_ERROR");
+  assert.equal(calls.length, 2);
+  assert.ok(calls.every(({ init }) => init.redirect === "manual"));
+  assert.ok(calls.every(({ url }) => url.startsWith(PLAYER_URL)));
 });
 
 test("cancels both unread bodies after an upstream status failure", async () => {
