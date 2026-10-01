@@ -242,14 +242,10 @@
         <img class="github-shortcut-image" src="assets/app-icons/github-shortcut.png" alt="" />
         <span class="desktop-icon-label">GitHub</span>
       </button>
-      <!-- Clash Royale app (disabled for now).
-           To re-enable: remove this comment wrapper AND the matching taskbar icon
-           + JS disable comments near the script block. 
       <button class="desktop-icon" data-app="clash-royale" aria-label="Clash Royale">
         <img src="assets/app-icons/ico/game_freecell.ico" alt="" />
-        Clash Royale
+        <span class="desktop-icon-label">Clash Royale</span>
       </button>
-    -->
     </div>
     <main class="window-stack">
       <div
@@ -3670,81 +3666,77 @@
         </div>
       </div>
 
-      <!-- Clash Royale app (disabled for now).
-           To re-enable: remove this comment wrapper AND the matching desktop icon
-           + JS disable comments near the script block. 
-      <div class="window app-window is-hidden" data-app-window="clash-royale">
+      <div
+        class="window home-window app-window app-window--center clash-royale-window is-hidden"
+        data-app-window="clash-royale"
+        id="clash-royale-window"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="clash-royale-window-title"
+      >
         <div class="title-bar">
-          <div class="title-bar-text">Clash Royale</div>
+          <div class="title-bar-text" id="clash-royale-window-title">Clash Royale</div>
           <div class="title-bar-controls">
-            <button aria-label="Help"></button>
-            <button aria-label="Close" data-close="clash-royale"></button>
+            <button type="button" aria-label="Close" data-close="clash-royale"></button>
           </div>
         </div>
-        <div class="window-body">
-          <div class="cr-app">
+        <div class="window-body clash-royale-window-body">
+          <div class="cr-app" id="cr-app" aria-busy="false">
             <div class="cr-toolbar">
-              <span class="cr-status" id="cr-status">Ready to load player data.</span>
-              <button id="cr-refresh" class="default" type="button">Refresh</button>
+              <span class="cr-status" id="cr-status" role="status" aria-live="polite" aria-atomic="true">
+                Open the app to load player data.
+              </span>
+              <button id="cr-refresh" class="default" type="button" aria-controls="cr-app">
+                Refresh
+              </button>
             </div>
-            <section class="cr-panel">
-              <h3 class="cr-section-title">Player Card</h3>
+            <section class="cr-panel" aria-labelledby="cr-player-heading">
+              <h2 class="cr-section-title" id="cr-player-heading">Player</h2>
               <div class="cr-player-header" id="cr-player-card">
                 <div class="cr-title-row">
-                  <span class="cr-player-name" id="cr-player-name">--</span>
-                  <span class="cr-tag" id="cr-player-tag">--</span>
+                  <strong class="cr-player-name" id="cr-player-name">Player data has not loaded.</strong>
+                  <span class="cr-tag" id="cr-player-tag">#28CYYU08P</span>
+                  <a
+                    class="cr-profile-link"
+                    href="https://royaleapi.com/player/28CYYU08P"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >View on RoyaleAPI</a>
                 </div>
-                <div class="cr-stat-grid">
-                  <div class="cr-stat"><strong>King:</strong><span id="cr-king-level">--</span></div>
-                  <div class="cr-stat"><strong>Trophies:</strong><span id="cr-trophies">--</span></div>
-                  <div class="cr-stat"><strong>Best:</strong><span id="cr-best-trophies">--</span></div>
-                  <div class="cr-stat"><strong>Arena:</strong><span id="cr-arena">--</span></div>
-                  <div class="cr-stat"><strong>Favorite:</strong><span id="cr-favorite-card">--</span></div>
-                  <div class="cr-stat"><strong>Clan:</strong><span id="cr-clan">--</span></div>
-                  <div class="cr-stat"><strong>Role:</strong><span id="cr-role">--</span></div>
-                  <div class="cr-stat"><strong>Donations:</strong><span id="cr-donations">--</span></div>
-                </div>
-                <div>
-                  <strong>Badges:</strong>
-                  <div class="cr-chip-row" id="cr-badges"></div>
-                </div>
-                <div class="cr-tag">Last updated: <span id="cr-last-updated">--</span></div>
+                <dl class="cr-stat-grid">
+                  <div class="cr-stat"><dt>Trophies</dt><dd id="cr-trophies">—</dd></div>
+                  <div class="cr-stat"><dt>Best</dt><dd id="cr-best-trophies">—</dd></div>
+                  <div class="cr-stat"><dt>Arena</dt><dd id="cr-arena">—</dd></div>
+                  <div class="cr-stat"><dt>Clan</dt><dd id="cr-clan">—</dd></div>
+                  <div class="cr-stat"><dt>Career record</dt><dd id="cr-career-record">—</dd></div>
+                  <div class="cr-stat"><dt>Win rate</dt><dd id="cr-career-win-rate">—</dd></div>
+                  <div class="cr-stat"><dt>Battles</dt><dd id="cr-battle-count">—</dd></div>
+                  <div class="cr-stat"><dt>Three-crown wins</dt><dd id="cr-three-crown-wins">—</dd></div>
+                </dl>
+                <p class="cr-updated">
+                  Last updated: <time id="cr-last-updated">—</time>
+                  <span aria-hidden="true"> · </span>Updates at most every 5 minutes.
+                </p>
               </div>
             </section>
-            <section class="cr-panel">
-              <h3 class="cr-section-title">Rolling Performance</h3>
-              <div class="cr-stat-grid">
-                <div class="cr-stat"><strong>Sample:</strong><span id="cr-sample">--</span></div>
-                <div class="cr-stat"><strong>Win rate:</strong><span id="cr-win-rate">--</span></div>
-                <div class="cr-stat"><strong>Crown diff:</strong><span id="cr-crown-diff">--</span></div>
-                <div class="cr-stat"><strong>Avg crowns:</strong><span id="cr-crown-avg">--</span></div>
-                <div class="cr-stat"><strong>Ladder WR:</strong><span id="cr-ladder-winrate">--</span></div>
-                <div class="cr-stat"><strong>Avg trophy:</strong><span id="cr-avg-trophy">--</span></div>
-                <div class="cr-stat"><strong>Deck stability:</strong><span id="cr-deck-stability">--</span></div>
-                <div class="cr-stat"><strong>Archetype:</strong><span id="cr-archetype">--</span></div>
-              </div>
-              <div style="margin-top: 8px;">
-                <strong>Most played cards:</strong>
-                <div class="cr-chip-row" id="cr-top-cards"></div>
-              </div>
+            <section class="cr-panel" aria-labelledby="cr-deck-heading">
+              <h2 class="cr-section-title" id="cr-deck-heading">Current Deck</h2>
+              <ul class="cr-deck-row" id="cr-current-deck">
+                <li class="cr-empty">No deck loaded.</li>
+              </ul>
             </section>
-            <section class="cr-panel">
-              <h3 class="cr-section-title">Main Deck</h3>
-              <div class="cr-stat-grid">
-                <div class="cr-stat"><strong>Deck:</strong><span id="cr-main-deck-name">--</span></div>
-                <div class="cr-stat"><strong>Avg elixir:</strong><span id="cr-main-elixir">--</span></div>
-                <div class="cr-stat"><strong>Win rate:</strong><span id="cr-main-winrate">--</span></div>
+            <section class="cr-panel" aria-labelledby="cr-battles-heading">
+              <div class="cr-section-heading-row">
+                <h2 class="cr-section-title" id="cr-battles-heading">Recent Battles</h2>
+                <span class="cr-sample-summary" id="cr-sample-summary">—</span>
               </div>
-              <div class="cr-deck-row" id="cr-main-deck"></div>
-            </section>
-            <section class="cr-panel">
-              <h3 class="cr-section-title">Recent Battles</h3>
-              <div class="cr-battle-list" id="cr-battle-log"></div>
+              <ol class="cr-battle-list" id="cr-battle-log">
+                <li class="cr-empty">No battles loaded.</li>
+              </ol>
             </section>
           </div>
         </div>
       </div>
-      -->
 
       <div
         class="window app-window is-hidden"
@@ -4065,11 +4057,9 @@
         <button class="taskbar-icon" data-github-shortcut aria-label="Open GitHub repository">
           <img class="github-shortcut-image" src="assets/app-icons/github-shortcut.png" alt="GitHub repository" />
         </button>
-        <!-- Clash Royale app (disabled for now).
         <button class="taskbar-icon" data-app="clash-royale" aria-label="Clash Royale">
           <img src="assets/app-icons/ico/game_freecell.ico" alt="Clash Royale" />
         </button>
-        -->
       </div>
       <span class="taskbar-divider" aria-hidden="true"></span>
       <button class="taskbar-right" id="taskbar-clock-button" aria-label="Date and time">
@@ -6973,6 +6963,7 @@
     <script src="scripts/home/core/administrator-session.js?v=admin-session-module-20260930"></script>
     <script src="scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930"></script>
     <script src="scripts/home/modeling-portfolio.js?v=modeling-portfolio-digitals-20260926"></script>
+    <script type="module" src="scripts/home/clash-royale.js?v=clash-royale-20261001"></script>
     <script src="scripts/home/main.js?v=game-build-781e9e3fe27f372dd47374c6a25a1012956d78dbfebd7c55067d2d06b6e9e1c6"></script>
     <script src="scripts/home/admin-controls.js?v=shared-cross-route-20260930"></script>
   </body>

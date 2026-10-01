@@ -1,10 +1,28 @@
-/* Clash Royale app styles (disabled for now).
- * To re-enable: remove this block comment and the matching HTML + JS comments below.
-/*
+.clash-royale-window {
+  max-height: calc(100vh - 76px);
+  max-height: calc(100dvh - 76px);
+  width: min(calc(100vw - 24px), 720px);
+}
+
+.clash-royale-window.app-window--center {
+  top: calc(50% - 28px);
+}
+
+.clash-royale-window-body {
+  max-height: calc(100vh - 116px);
+  max-height: calc(100dvh - 116px);
+  min-height: min(320px, calc(100vh - 116px));
+  min-height: min(320px, calc(100dvh - 116px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
 .cr-app {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
 }
 
 .cr-toolbar {
@@ -17,6 +35,22 @@
 
 .cr-status {
   color: #1a1a1a;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.cr-status[data-state="error"] {
+  color: #760000;
+  font-weight: 700;
+}
+
+.cr-status[data-state="success"] {
+  color: #004b00;
+}
+
+#cr-refresh {
+  flex: none;
+  min-width: 68px;
 }
 
 .cr-panel {
@@ -33,14 +67,16 @@
 
 .cr-title-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .cr-player-name {
   font-weight: 700;
   font-size: 15px;
+  overflow-wrap: anywhere;
 }
 
 .cr-tag {
@@ -48,59 +84,84 @@
   color: #4b4b4b;
 }
 
+.cr-profile-link {
+  margin-inline-start: auto;
+}
+
 .cr-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 12px;
   font-size: 11px;
+  margin: 0;
 }
 
 .cr-stat {
-  display: flex;
-  gap: 6px;
+  display: grid;
+  gap: 2px;
+  grid-template-columns: minmax(78px, auto) minmax(0, 1fr);
+  min-width: 0;
 }
 
-.cr-stat strong {
-  min-width: 70px;
+.cr-stat dt {
+  font-weight: 700;
 }
 
-.cr-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.cr-stat dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
-.cr-chip {
-  padding: 2px 6px;
-  border: 1px solid #b5b5b5;
-  background: #f4f4f4;
+.cr-updated {
+  color: #4b4b4b;
   font-size: 10px;
+  margin: 0;
 }
 
 .cr-battle-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .cr-battle-item {
   border: 1px solid #c3c3c3;
   background: #f8f8f8;
-  padding: 6px 8px;
+  min-width: 0;
 }
 
 .cr-battle-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  gap: 5px 8px;
+  grid-template-columns: auto minmax(100px, 1fr) auto auto;
   align-items: center;
   font-size: 11px;
+  padding: 6px 8px;
+}
+
+.cr-battle-mode,
+.cr-battle-opponent {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cr-battle-opponent {
+  grid-column: 2 / -1;
+}
+
+.cr-battle-time {
+  color: #4b4b4b;
+  font-size: 10px;
 }
 
 .cr-result {
   font-weight: 700;
   padding: 2px 6px;
   border: 1px solid #222;
+  text-align: center;
 }
 
 .cr-result.is-win {
@@ -115,31 +176,94 @@
   background: #f7efc6;
 }
 
-.cr-battle-detail {
-  margin-top: 8px;
-  font-size: 11px;
-  display: grid;
-  gap: 6px;
+.cr-result.is-unknown {
+  background: #e1e1e1;
 }
 
 .cr-deck-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .cr-deck-card {
-  padding: 2px 6px;
-  border: 1px solid #b5b5b5;
   background: #fff;
+  border: 1px solid #b5b5b5;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 6px;
   font-size: 10px;
+}
+
+.cr-deck-card-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.cr-section-heading-row {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
 }
 
 .cr-section-title {
   margin: 0 0 6px;
   font-size: 12px;
 }
-*/
+
+.cr-sample-summary {
+  color: #4b4b4b;
+  font-size: 10px;
+  text-align: end;
+}
+
+.cr-empty {
+  color: #4b4b4b;
+  font-size: 11px;
+  grid-column: 1 / -1;
+  padding: 4px 0;
+}
+
+@media (max-width: 640px) {
+  .clash-royale-window-body {
+    max-height: calc(100vh - 112px);
+    max-height: calc(100dvh - 112px);
+  }
+
+  .cr-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #cr-refresh {
+    align-self: flex-end;
+  }
+
+  .cr-profile-link {
+    margin-inline-start: 0;
+  }
+
+  .cr-stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cr-deck-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cr-battle-summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .cr-battle-time {
+    grid-column: 2 / -1;
+  }
+}
 
 #about-window {
   max-height: calc(100vh - 76px);

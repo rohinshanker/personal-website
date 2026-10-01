@@ -694,16 +694,6 @@ const {
 let infinityArmoryGems = [];
 let infinityArmoryInventoryGems = [];
 
-// Clash Royale app logic (disabled for now).
-// To re-enable: uncomment the CLASH_* constants, clash* variables,
-// the block below, and the two event hooks further down.
-// const clashRefresh = document.getElementById("cr-refresh");
-// const clashStatus = document.getElementById("cr-status");
-
-// const CLASH_API_BASE_URL = "https://api.clashroyale.com/v1";
-// const CLASH_API_TOKEN = "";
-// const CLASH_PLAYER_TAG = "28CYYU08P";
-// const CLASH_SAMPLE_SIZE = 25;
 /**
  * @typedef {Object} ImageGalleryItem
  * @property {string} src
@@ -4842,9 +4832,6 @@ const NEW_TAB_LAUNCH_PROMPTS = Object.freeze({
     source: "modeling-launcher",
   }),
 });
-// let clashRoyaleLoaded = false;
-// let clashRoyaleLoading = false;
-
 const lockMobileViewportZoom = () => {
   let lastTouchEndAt = 0;
   const blockGesture = (event) => event.preventDefault();
@@ -18283,370 +18270,6 @@ const setWindowOpen = (appId, open) => {
   }
 };
 
-const formatNumber = (value) => {
-  if (value === null || value === undefined || Number.isNaN(value)) return "--";
-  return Number(value).toLocaleString();
-};
-
-const parseBattleTime = (value) => {
-  if (!value) return null;
-  if (value.includes("-")) {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-  const match = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
-  if (!match) return null;
-  const [, year, month, day, hour, minute, second] = match;
-  const iso = `${year}-${month}-${day}T${hour}:${minute}:${second}Z`;
-  const parsed = new Date(iso);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
-
-const formatBattleLabel = (battle) => {
-  if (!battle) return "Unknown";
-  if (battle.gameMode && battle.gameMode.name) return battle.gameMode.name;
-  if (battle.type) return battle.type;
-  return "Battle";
-};
-
-const formatClan = (clan) => {
-  if (!clan) return "--";
-  const clanTag = clan.tag ? clan.tag : "";
-  return `${clan.name || "--"}${clanTag ? ` (${clanTag})` : ""}`;
-};
-
-const buildDeckSignature = (cards) => {
-  if (!Array.isArray(cards) || cards.length === 0) return "";
-  return cards.map((card) => card.name).sort().join("|");
-};
-
-const averageElixir = (cards) => {
-  if (!Array.isArray(cards) || cards.length === 0) return null;
-  const costs = cards
-    .map((card) => Number(card.elixirCost))
-    .filter((value) => !Number.isNaN(value));
-  if (costs.length === 0) return null;
-  const sum = costs.reduce((acc, value) => acc + value, 0);
-  return Math.round((sum / costs.length) * 10) / 10;
-};
-
-const guessArchetype = (cards) => {
-  const names = new Set(cards.map((card) => card.name));
-  if (names.has("Hog Rider")) return "Hog Cycle";
-  if (names.has("Golem")) return "Golem Beatdown";
-  if (names.has("Lava Hound")) return "LavaLoon";
-  if (names.has("Royal Giant")) return "Royal Giant";
-  if (names.has("X-Bow")) return "X-Bow";
-  if (names.has("Mortar")) return "Mortar";
-  if (names.has("Balloon")) return "Balloon";
-  if (names.has("P.E.K.K.A")) return "P.E.K.K.A Bridge Spam";
-  if (names.has("Graveyard")) return "Graveyard";
-  return "Mixed";
-};
-
-/* Clash Royale app logic (disabled for now).
- * To re-enable: remove this block comment and the two event hooks below.
- * (block continues below)
-const updateClashStatus = (message) => {
-  if (clashStatus) {
-    clashStatus.textContent = message;
-  }
-};
-
-const renderChips = (container, items) => {
-  if (!container) return;
-  container.innerHTML = "";
-  if (!items || items.length === 0) {
-    const chip = document.createElement("span");
-    chip.className = "cr-chip";
-    chip.textContent = "--";
-    container.appendChild(chip);
-    return;
-  }
-  items.forEach((item) => {
-    const chip = document.createElement("span");
-    chip.className = "cr-chip";
-    chip.textContent = item;
-    container.appendChild(chip);
-  });
-};
-
-const renderDeck = (container, cards) => {
-  if (!container) return;
-  container.innerHTML = "";
-  if (!Array.isArray(cards) || cards.length === 0) {
-    const chip = document.createElement("span");
-    chip.className = "cr-deck-card";
-    chip.textContent = "--";
-    container.appendChild(chip);
-    return;
-  }
-  cards.forEach((card) => {
-    const chip = document.createElement("span");
-    chip.className = "cr-deck-card";
-    chip.textContent = card.name;
-    container.appendChild(chip);
-  });
-};
-
-const renderBattleLog = (battles) => {
-  const battleLog = document.getElementById("cr-battle-log");
-  if (!battleLog) return;
-  battleLog.innerHTML = "";
-  if (!Array.isArray(battles) || battles.length === 0) {
-    const empty = document.createElement("div");
-    empty.textContent = "No battles found.";
-    battleLog.appendChild(empty);
-    return;
-  }
-  battles.forEach((battle) => {
-    const team = battle.team ? battle.team[0] : null;
-    const opponent = battle.opponent ? battle.opponent[0] : null;
-    const teamCrowns = team?.crowns ?? 0;
-    const oppCrowns = opponent?.crowns ?? 0;
-    const result = teamCrowns > oppCrowns ? "win" : teamCrowns < oppCrowns ? "loss" : "draw";
-    const trophyDelta = team?.trophyChange ?? battle.trophyChange ?? null;
-    const time = parseBattleTime(battle.battleTime);
-    const summary = document.createElement("details");
-    summary.className = "cr-battle-item";
-    const summaryRow = document.createElement("summary");
-    summaryRow.className = "cr-battle-summary";
-    const resultBadge = document.createElement("span");
-    resultBadge.className = `cr-result is-${result}`;
-    resultBadge.textContent = result.toUpperCase();
-    const mode = document.createElement("span");
-    mode.textContent = formatBattleLabel(battle);
-    const crownText = document.createElement("span");
-    crownText.textContent = `Crowns ${teamCrowns}-${oppCrowns}`;
-    const trophyText = document.createElement("span");
-    trophyText.textContent = trophyDelta === null ? "No trophy delta" : `Trophies ${trophyDelta > 0 ? "+" : ""}${trophyDelta}`;
-    const timeText = document.createElement("span");
-    timeText.textContent = time ? time.toLocaleString() : "Unknown time";
-    summaryRow.appendChild(resultBadge);
-    summaryRow.appendChild(mode);
-    summaryRow.appendChild(crownText);
-    summaryRow.appendChild(trophyText);
-    summaryRow.appendChild(timeText);
-    summary.appendChild(summaryRow);
-
-    const detail = document.createElement("div");
-    detail.className = "cr-battle-detail";
-    const oppLine = document.createElement("div");
-    const oppClan = opponent?.clan ? ` (${opponent.clan.name})` : "";
-    oppLine.textContent = `Opponent: ${opponent?.name || "--"}${oppClan} ${opponent?.tag || ""}`;
-    const deckRow = document.createElement("div");
-    deckRow.innerHTML = "<strong>Your deck:</strong>";
-    const deckCards = document.createElement("div");
-    deckCards.className = "cr-deck-row";
-    renderDeck(deckCards, team?.cards || []);
-    const oppDeckRow = document.createElement("div");
-    oppDeckRow.innerHTML = "<strong>Opponent deck:</strong>";
-    const oppDeckCards = document.createElement("div");
-    oppDeckCards.className = "cr-deck-row";
-    renderDeck(oppDeckCards, opponent?.cards || []);
-    const elixirLine = document.createElement("div");
-    const teamElixir = averageElixir(team?.cards || []);
-    const oppElixir = averageElixir(opponent?.cards || []);
-    elixirLine.textContent = `Elixir avg: you ${teamElixir ?? "--"} / opp ${oppElixir ?? "--"}`;
-    detail.appendChild(oppLine);
-    detail.appendChild(deckRow);
-    detail.appendChild(deckCards);
-    detail.appendChild(oppDeckRow);
-    detail.appendChild(oppDeckCards);
-    detail.appendChild(elixirLine);
-    summary.appendChild(detail);
-
-    battleLog.appendChild(summary);
-  });
-};
-
-const updatePlayerCard = (player) => {
-  const nameEl = document.getElementById("cr-player-name");
-  const tagEl = document.getElementById("cr-player-tag");
-  const kingEl = document.getElementById("cr-king-level");
-  const trophiesEl = document.getElementById("cr-trophies");
-  const bestEl = document.getElementById("cr-best-trophies");
-  const arenaEl = document.getElementById("cr-arena");
-  const favEl = document.getElementById("cr-favorite-card");
-  const clanEl = document.getElementById("cr-clan");
-  const roleEl = document.getElementById("cr-role");
-  const donationsEl = document.getElementById("cr-donations");
-  const badgesEl = document.getElementById("cr-badges");
-  const lastUpdatedEl = document.getElementById("cr-last-updated");
-
-  if (nameEl) nameEl.textContent = player?.name || "--";
-  if (tagEl) tagEl.textContent = player?.tag || "--";
-  if (kingEl) kingEl.textContent = formatNumber(player?.expLevel || player?.experienceLevel);
-  if (trophiesEl) trophiesEl.textContent = formatNumber(player?.trophies);
-  if (bestEl) bestEl.textContent = formatNumber(player?.bestTrophies);
-  if (arenaEl) arenaEl.textContent = player?.arena?.name || player?.currentArena?.name || "--";
-  if (favEl) favEl.textContent = player?.currentFavouriteCard?.name || "--";
-  if (clanEl) clanEl.textContent = formatClan(player?.clan);
-  if (roleEl) roleEl.textContent = player?.role || "--";
-  if (donationsEl) donationsEl.textContent = formatNumber(player?.donations);
-  if (badgesEl) {
-    const badgeNames = Array.isArray(player?.badges)
-      ? player.badges.slice(0, 6).map((badge) => badge.name)
-      : [];
-    renderChips(badgesEl, badgeNames);
-  }
-  if (lastUpdatedEl) lastUpdatedEl.textContent = new Date().toLocaleString();
-};
-
-const updateAnalytics = (battles) => {
-  const sample = battles.slice(0, CLASH_SAMPLE_SIZE);
-  const total = sample.length;
-  let wins = 0;
-  let draws = 0;
-  let crownsFor = 0;
-  let crownsAgainst = 0;
-  let ladderWins = 0;
-  let ladderTotal = 0;
-  let trophyDeltaSum = 0;
-  let trophyDeltaCount = 0;
-  const cardCounts = new Map();
-  const deckCounts = new Map();
-
-  sample.forEach((battle) => {
-    const team = battle.team ? battle.team[0] : null;
-    const opponent = battle.opponent ? battle.opponent[0] : null;
-    const teamCrowns = team?.crowns ?? 0;
-    const oppCrowns = opponent?.crowns ?? 0;
-    crownsFor += teamCrowns;
-    crownsAgainst += oppCrowns;
-    if (teamCrowns > oppCrowns) wins += 1;
-    else if (teamCrowns === oppCrowns) draws += 1;
-
-    const isLadder = battle.type === "ladder" || battle.gameMode?.name?.toLowerCase().includes("ladder");
-    if (isLadder) {
-      ladderTotal += 1;
-      if (teamCrowns > oppCrowns) ladderWins += 1;
-      const delta = team?.trophyChange ?? battle.trophyChange;
-      if (typeof delta === "number") {
-        trophyDeltaSum += delta;
-        trophyDeltaCount += 1;
-      }
-    }
-
-    if (Array.isArray(team?.cards)) {
-      team.cards.forEach((card) => {
-        cardCounts.set(card.name, (cardCounts.get(card.name) || 0) + 1);
-      });
-      const signature = buildDeckSignature(team.cards);
-      if (signature) {
-        deckCounts.set(signature, (deckCounts.get(signature) || 0) + 1);
-      }
-    }
-  });
-
-  const winRate = total > 0 ? (wins / total) * 100 : 0;
-  const crownDiff = crownsFor - crownsAgainst;
-  const avgCrownsFor = total > 0 ? (crownsFor / total).toFixed(2) : "--";
-  const avgCrownsAgainst = total > 0 ? (crownsAgainst / total).toFixed(2) : "--";
-  const ladderWinRate = ladderTotal > 0 ? ((ladderWins / ladderTotal) * 100).toFixed(1) : "--";
-  const avgTrophyDelta = trophyDeltaCount > 0 ? (trophyDeltaSum / trophyDeltaCount).toFixed(2) : "--";
-
-  const topCards = Array.from(cardCounts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8)
-    .map((entry) => entry[0]);
-
-  let stableDeck = "--";
-  if (deckCounts.size > 0 && total > 0) {
-    const topDeck = Array.from(deckCounts.values()).sort((a, b) => b - a)[0];
-    stableDeck = `${Math.round((topDeck / total) * 100)}%`;
-  }
-
-  const archetype = sample[0]?.team?.[0]?.cards ? guessArchetype(sample[0].team[0].cards) : "--";
-
-  document.getElementById("cr-sample").textContent = `${total} matches`;
-  document.getElementById("cr-win-rate").textContent = total ? `${winRate.toFixed(1)}%` : "--";
-  document.getElementById("cr-crown-diff").textContent = total ? `${crownDiff}` : "--";
-  document.getElementById("cr-crown-avg").textContent =
-    total ? `${avgCrownsFor} / ${avgCrownsAgainst}` : "--";
-  document.getElementById("cr-ladder-winrate").textContent = ladderTotal ? `${ladderWinRate}%` : "--";
-  document.getElementById("cr-avg-trophy").textContent = avgTrophyDelta !== "--" ? avgTrophyDelta : "--";
-  document.getElementById("cr-deck-stability").textContent = stableDeck;
-  document.getElementById("cr-archetype").textContent = archetype;
-  renderChips(document.getElementById("cr-top-cards"), topCards);
-};
-
-const updateMainDeck = (battles) => {
-  const sample = battles.slice(0, CLASH_SAMPLE_SIZE);
-  if (sample.length === 0) return;
-  const deckCounts = new Map();
-  const deckCardsMap = new Map();
-  const deckResults = new Map();
-  sample.forEach((battle) => {
-    const team = battle.team ? battle.team[0] : null;
-    if (!team?.cards) return;
-    const signature = buildDeckSignature(team.cards);
-    if (!signature) return;
-    deckCounts.set(signature, (deckCounts.get(signature) || 0) + 1);
-    deckCardsMap.set(signature, team.cards);
-    const teamCrowns = team.crowns ?? 0;
-    const oppCrowns = battle.opponent ? battle.opponent[0]?.crowns ?? 0 : 0;
-    const record = deckResults.get(signature) || { wins: 0, total: 0 };
-    record.total += 1;
-    if (teamCrowns > oppCrowns) record.wins += 1;
-    deckResults.set(signature, record);
-  });
-
-  let selectedSignature = "";
-  let maxCount = 0;
-  deckCounts.forEach((count, signature) => {
-    if (count > maxCount) {
-      maxCount = count;
-      selectedSignature = signature;
-    }
-  });
-
-  if (!selectedSignature) return;
-  const cards = deckCardsMap.get(selectedSignature) || [];
-  const deckWin = deckResults.get(selectedSignature);
-  const winRate = deckWin ? (deckWin.wins / deckWin.total) * 100 : null;
-  document.getElementById("cr-main-deck-name").textContent = `${maxCount}x recent`;
-  document.getElementById("cr-main-elixir").textContent = averageElixir(cards) ?? "--";
-  document.getElementById("cr-main-winrate").textContent = winRate ? `${winRate.toFixed(1)}%` : "--";
-  renderDeck(document.getElementById("cr-main-deck"), cards);
-};
-
-const loadClashRoyaleData = async (force) => {
-  if (clashRoyaleLoading) return;
-  if (clashRoyaleLoaded && !force) return;
-  if (!CLASH_API_TOKEN) {
-    updateClashStatus("Add your Clash Royale API token to load data.");
-    return;
-  }
-  clashRoyaleLoading = true;
-  updateClashStatus("Fetching player data...");
-  try {
-    const tag = encodeURIComponent(`#${CLASH_PLAYER_TAG}`);
-    const headers = {
-      Authorization: `Bearer ${CLASH_API_TOKEN}`,
-    };
-    const [playerRes, battleRes] = await Promise.all([
-      fetch(`${CLASH_API_BASE_URL}/players/${tag}`, { headers }),
-      fetch(`${CLASH_API_BASE_URL}/players/${tag}/battlelog`, { headers }),
-    ]);
-    if (!playerRes.ok) throw new Error("Player fetch failed");
-    if (!battleRes.ok) throw new Error("Battle log fetch failed");
-    const player = await playerRes.json();
-    const battles = await battleRes.json();
-    updatePlayerCard(player);
-    renderBattleLog(battles);
-    updateAnalytics(battles);
-    updateMainDeck(battles);
-    clashRoyaleLoaded = true;
-    updateClashStatus("Data loaded.");
-  } catch (error) {
-    updateClashStatus("Unable to load data. Check token and CORS.");
-  } finally {
-    clashRoyaleLoading = false;
-  }
-};
-*/
-
 const toggleWindow = (appId) => {
   const win = getAppWindow(appId);
   if (win) {
@@ -18659,14 +18282,16 @@ const toggleWindow = (appId) => {
     }
     setWindowOpen(appId, shouldOpen);
     // (Removed temporary Minesweeper open trigger for achievement.)
-    // Clash Royale app disabled for now.
-    // if (appId === "clash-royale") {
-    //   loadClashRoyaleData(false);
-    // }
+    if (appId === "clash-royale" && shouldOpen) {
+      window.ClashRoyaleApp?.load(false);
+    }
   }
 };
 
 const closeAppWindow = (appId) => {
+  if (appId === "clash-royale") {
+    window.ClashRoyaleApp?.cancel();
+  }
   if (appId === "administrator") {
     administratorSignInAttemptId += 1;
     administratorSignInAbortController?.abort();
@@ -31429,12 +31054,6 @@ document.addEventListener("visibilitychange", () => {
     restoreSuspendedActiveWindow();
   }
 });
-
-// if (clashRefresh) {
-//   clashRefresh.addEventListener("click", () => {
-//     loadClashRoyaleData(true);
-//   });
-// }
 
 const readVisibleWindowTitleBarClamps = () =>
   [...draggableWindows].flatMap((win) => {
