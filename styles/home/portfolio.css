@@ -164,25 +164,29 @@
   font-weight: 700;
 }
 
-.cr-battle-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  list-style: none;
+.cr-battle-scroll {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   max-height: min(380px, 46vh);
   min-height: 190px;
-  margin: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 4px;
   scrollbar-gutter: stable;
-  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
 }
 
-.cr-battle-list:focus-visible {
+.cr-battle-scroll:focus-visible {
   outline: 1px dotted #000;
   outline-offset: -4px;
+}
+
+.cr-battle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .cr-battle-item {
@@ -222,7 +226,6 @@
   min-width: 0;
 }
 
-.cr-battle-mode,
 .cr-battle-opponent {
   min-width: 0;
   overflow: hidden;
@@ -235,13 +238,15 @@
   color: #fff;
   font-weight: 700;
   grid-row: 1 / span 2;
+  max-width: min(190px, 100%);
   padding: 2px 5px;
-  place-self: start;
+  place-self: center;
   text-align: center;
 }
 
 .cr-battle-mode.is-ladder {
-  background: #087f83;
+  background: rgb(73, 212, 214);
+  color: #111;
 }
 
 .cr-battle-mode.is-ranked {
@@ -266,6 +271,33 @@
 
 .cr-battle-mode.is-other {
   background: #666;
+}
+
+.cr-battle-mode.is-other[tabindex] {
+  cursor: help;
+}
+
+.cr-battle-mode.is-other[tabindex]:focus-visible {
+  outline: 1px dotted #fff;
+  outline-offset: -3px;
+}
+
+.cr-mode-hint {
+  background: #ffffe1;
+  border: 1px solid #111;
+  color: #111;
+  display: none;
+  font-weight: 400;
+  margin-top: 3px;
+  max-width: 170px;
+  overflow-wrap: anywhere;
+  padding: 2px 3px;
+  white-space: normal;
+}
+
+.cr-battle-mode.is-other:hover .cr-mode-hint,
+.cr-battle-mode.is-other:focus-visible .cr-mode-hint {
+  display: block;
 }
 
 .cr-battle-opponent {
@@ -295,8 +327,10 @@
 }
 
 .cr-result {
+  align-self: center;
   font-size: 13px;
   font-weight: 700;
+  justify-self: center;
   padding: 3px 4px;
   border: 1px solid #222;
   text-align: center;
@@ -383,11 +417,17 @@
   box-shadow: inset -1px -1px #dfdfdf, inset 1px 1px #fff, 1px 1px #808080;
   display: grid;
   font-size: 11px;
-  grid-template-rows: 94px auto auto;
+  grid-template-rows: auto 94px auto;
   justify-items: center;
   min-width: 0;
   overflow: hidden;
   padding: 4px;
+}
+
+.cr-deck-row.is-raised .cr-deck-card,
+.cr-deck-card--compact {
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
 }
 
 .cr-deck-card-media {
@@ -443,6 +483,13 @@
   right: 2px;
 }
 
+.cr-card-variant--inline {
+  bottom: auto;
+  flex: none;
+  position: static;
+  right: auto;
+}
+
 .cr-card-variant--evo {
   background: #d9b7f0;
 }
@@ -461,14 +508,20 @@
   outline-offset: -3px;
 }
 
-.cr-deck-card-name {
+.cr-deck-card-title {
   align-items: center;
   display: flex;
-  font-weight: 700;
+  gap: 3px;
   justify-content: center;
-  line-height: 1.1;
   max-width: 100%;
   min-height: 22px;
+  min-width: 0;
+}
+
+.cr-deck-card-name {
+  font-weight: 700;
+  line-height: 1.1;
+  min-width: 0;
   overflow-wrap: anywhere;
   text-align: center;
 }
@@ -488,12 +541,6 @@
   font-weight: 700;
 }
 
-.cr-card-rarity {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .cr-deck-average {
   color: #333;
   font-size: 11px;
@@ -505,6 +552,28 @@
   display: flex;
   gap: 8px;
   justify-content: space-between;
+}
+
+.cr-deck-heading-row {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cr-deck-style-toggle {
+  align-items: center;
+  border: 0;
+  display: flex;
+  font-size: 10px;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+}
+
+.cr-deck-style-option,
+.cr-deck-style-toggle label {
+  align-items: center;
+  display: inline-flex;
+  white-space: nowrap;
 }
 
 .cr-section-title {
@@ -527,7 +596,7 @@
 
 .cr-battles-panel {
   display: grid;
-  grid-template-rows: auto minmax(190px, auto) auto;
+  grid-template-rows: auto minmax(190px, auto);
   min-height: 0;
 }
 
@@ -575,7 +644,7 @@
 
 .cr-deck-card--compact {
   font-size: 8px;
-  grid-template-rows: 46px auto auto;
+  grid-template-rows: auto 46px auto;
   padding: 2px;
 }
 
@@ -593,18 +662,15 @@
   font-size: 8px;
 }
 
-.cr-deck-card--compact .cr-deck-card-name {
+.cr-deck-card--compact .cr-deck-card-title {
+  align-items: flex-end;
   min-height: 18px;
-}
-
-.cr-deck-card--compact .cr-card-rarity {
-  display: block;
 }
 
 .cr-history-footer {
   font-size: 11px;
   line-height: 1.3;
-  margin: 7px 0 0;
+  margin: 8px 2px 2px;
 }
 
 @media (max-width: 640px) {
@@ -655,13 +721,13 @@
   }
 
   .cr-deck-card {
-    grid-template-rows: 74px auto auto;
+    grid-template-rows: auto 74px auto;
     font-size: 9px;
   }
 
   .cr-deck-card--compact {
     font-size: 8px;
-    grid-template-rows: 46px auto auto;
+    grid-template-rows: auto 46px auto;
   }
 
   .cr-deck-card-media {
@@ -676,10 +742,6 @@
   .cr-card-metadata {
     display: block;
     font-size: 8px;
-  }
-
-  .cr-card-rarity {
-    display: block;
   }
 
   .cr-battle-summary {

@@ -240,6 +240,8 @@ test("renders success and long content across the viewport matrix without overfl
     await expect(page.locator("#cr-player-name")).toHaveText(longName);
     await expect(page.locator("#cr-current-deck .cr-deck-card")).toHaveCount(8);
     await expect(page.locator("#cr-battle-log .cr-battle-item")).toHaveCount(20);
+    await expect(page.locator("#cr-battle-log")).toHaveJSProperty("tagName", "OL");
+    await expect(page.locator("#cr-battle-scroll")).toHaveAccessibleName("Recent Battles");
     await expect(page.locator("#cr-battle-log time").first()).toHaveAttribute("datetime", "2026-10-01T12:15:00.000Z");
     await expect(page.locator("#cr-sample-summary")).toHaveText("6W–14L–0D · -2 crowns");
     await expect(page.locator("#cr-history-footer")).toHaveText(
@@ -251,7 +253,13 @@ test("renders success and long content across the viewport matrix without overfl
     await expect(page.locator(".cr-career-losses")).toHaveText("600 losses");
     await expect(page.locator("#cr-current-deck .cr-card-elixir")).toHaveCount(8);
     await expect(page.locator("#cr-current-deck .cr-card-rarity")).toHaveCount(8);
+    await expect(page.locator("#cr-current-deck .cr-card-rarity").first()).toHaveClass(
+      /visually-hidden/
+    );
     await expect(page.locator("#cr-battle-log .cr-battle-mode").first()).toHaveText("Ranked");
+    await expect(page.locator("#cr-battle-log .cr-battle-opponent").first()).toHaveText(
+      "Rohin vs. Recent opponent 1"
+    );
     await expect(page.locator("#clash-royale-window")).not.toContainText(
       "Updates at most every 5 minutes"
     );
@@ -289,14 +297,18 @@ test("renders success and long content across the viewport matrix without overfl
       const body = windowElement.querySelector(".clash-royale-window-body");
       const bounds = windowElement.getBoundingClientRect();
       const deck = windowElement.querySelector("#cr-current-deck");
+      const battleScroll = windowElement.querySelector("#cr-battle-scroll");
+      const footer = windowElement.querySelector("#cr-history-footer");
       return {
-        battleListOverflows: windowElement.querySelector("#cr-battle-log").scrollHeight >
-          windowElement.querySelector("#cr-battle-log").clientHeight,
+        battleScrollOverflows: battleScroll.scrollHeight > battleScroll.clientHeight,
         deckColumns: getComputedStyle(deck).gridTemplateColumns.split(" ").length,
         bodyOverflowX: body.scrollWidth > body.clientWidth,
         bodyOverflowY: body.scrollHeight > body.clientHeight,
         documentOverflowX: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         documentOverflowY: document.documentElement.scrollHeight > document.documentElement.clientHeight,
+        footerInsideScroll: footer.parentElement === battleScroll,
+        footerStartsBelowScroll: footer.getBoundingClientRect().top >=
+          battleScroll.getBoundingClientRect().bottom,
         insideViewport:
           bounds.left >= 0 &&
           bounds.right <= window.innerWidth &&
@@ -305,16 +317,23 @@ test("renders success and long content across the viewport matrix without overfl
       };
     });
     expect(geometry, viewport.name).toEqual({
-      battleListOverflows: true,
+      battleScrollOverflows: true,
       deckColumns: 4,
       bodyOverflowX: false,
       bodyOverflowY: true,
       documentOverflowX: false,
       documentOverflowY: false,
+      footerInsideScroll: true,
+      footerStartsBelowScroll: true,
       insideViewport: true,
     });
-    await page.locator("#cr-history-footer").scrollIntoViewIfNeeded();
-    await expect(page.locator("#cr-history-footer a")).toBeInViewport();
+    const footerAtBottom = await page.locator("#cr-battle-scroll").evaluate((scroll) => {
+      scroll.scrollTop = scroll.scrollHeight;
+      const footer = scroll.querySelector("#cr-history-footer").getBoundingClientRect();
+      const bounds = scroll.getBoundingClientRect();
+      return footer.top >= bounds.top && footer.bottom <= bounds.bottom;
+    });
+    expect(footerAtBottom, viewport.name).toBe(true);
     await expect(page.locator("#cr-history-footer a")).toHaveAttribute(
       "href",
       "https://royaleapi.com/player/28CYYU08P"
@@ -332,19 +351,19 @@ test("keeps window and named battle scrolling independent and keyboard accessibl
   await expect.poll(() => clashWindow.evaluate((element) => element.getAnimations().length)).toBe(0);
 
   const battleLog = page.locator("#cr-battle-log");
+  const battleScroll = page.locator("#cr-battle-scroll");
   const windowBody = clashWindow.locator(".clash-royale-window-body");
   await expect(page.locator("#cr-refresh")).toBeInViewport();
-  await page.locator("#cr-history-footer").scrollIntoViewIfNeeded();
+  await battleScroll.scrollIntoViewIfNeeded();
   await expect.poll(() => windowBody.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  await battleLog.scrollIntoViewIfNeeded();
-  await expect(battleLog).toHaveAttribute("tabindex", "0");
-  await expect(battleLog).toHaveAttribute("aria-labelledby", "cr-battles-heading");
+  await expect(battleScroll).toHaveAttribute("tabindex", "0");
+  await expect(battleScroll).toHaveAttribute("aria-labelledby", "cr-battles-heading");
   const fixedBefore = await clashWindow.evaluate((windowElement) => ({
     bodyScrollTop: windowElement.querySelector(".clash-royale-window-body").scrollTop,
     deckTop: windowElement.querySelector("#cr-current-deck").getBoundingClientRect().top,
     profileTop: windowElement.querySelector("#cr-player-card").getBoundingClientRect().top,
   }));
-  const scrollGeometry = await battleLog.evaluate((element) => ({
+  const scrollGeometry = await battleScroll.evaluate((element) => ({
     clientHeight: element.clientHeight,
     firstRowHeight: element.querySelector(".cr-battle-item").getBoundingClientRect().height,
     scrollHeight: element.scrollHeight,
@@ -352,13 +371,24 @@ test("keeps window and named battle scrolling independent and keyboard accessibl
   expect(scrollGeometry.scrollHeight).toBeGreaterThan(scrollGeometry.clientHeight);
   expect(scrollGeometry.clientHeight).toBeGreaterThanOrEqual(scrollGeometry.firstRowHeight);
 
-  await battleLog.hover();
+  await battleScroll.hover();
   await page.mouse.wheel(0, 260);
-  await expect.poll(() => battleLog.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  await battleLog.evaluate((element) => { element.scrollTop = 0; });
-  await battleLog.focus();
+  await expect.poll(() => battleScroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await battleScroll.evaluate((element) => { element.scrollTop = 0; });
+  await battleScroll.focus();
   await page.keyboard.press("PageDown");
-  await expect.poll(() => battleLog.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(() => battleScroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+
+  await battleScroll.evaluate((element) => { element.scrollTop = 0; });
+  await battleLog.locator("summary").last().focus();
+  await page.keyboard.press("Tab");
+  await expect(page.locator("#cr-history-footer a")).toBeFocused();
+  const footerVisibleInScroll = await battleScroll.evaluate((scroll) => {
+    const footer = scroll.querySelector("#cr-history-footer").getBoundingClientRect();
+    const bounds = scroll.getBoundingClientRect();
+    return footer.top >= bounds.top && footer.bottom <= bounds.bottom;
+  });
+  expect(footerVisibleInScroll).toBe(true);
 
   const fixedAfter = await clashWindow.evaluate((windowElement) => ({
     bodyScrollTop: windowElement.querySelector(".clash-royale-window-body").scrollTop,
@@ -390,12 +420,81 @@ test("uses shared seven-segment sprites with accessible numeric values", async (
     { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_2.png" },
     { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_3.png" },
   ]);
+  const statIconPaths = await page.locator("#cr-player-card .cr-stat-icon").evaluateAll((images) =>
+    images.map((image) => ({ alt: image.alt, path: new URL(image.src).pathname }))
+  );
+  expect(statIconPaths).toEqual(expect.arrayContaining([
+    { alt: "", path: "/assets/app-icons/ico/users.ico" },
+    { alt: "", path: "/assets/app-icons/ico/certificate_multiple.ico" },
+    { alt: "", path: "/assets/app-icons/ico/calculator.ico" },
+    { alt: "", path: "/assets/pixelarticons/sword.svg" },
+  ]));
   await expect(page.locator("#cr-battle-log .cr-battle-metric .visually-hidden").first()).toHaveText(
     "2 to 1 crowns"
   );
   const partialDeckDisclosure = page.locator("#cr-battle-log details").nth(1);
   await partialDeckDisclosure.locator("summary").click();
   await expect(partialDeckDisclosure.locator(".cr-battle-side-title")).toHaveText(["Your team"]);
+});
+
+test("centers battle badges and reveals factual Other mode names on hover and focus", async ({
+  page,
+}, testInfo) => {
+  const otherBattle = {
+    battleTime: "2026-10-01T10:00:00.000Z",
+    type: "unknown",
+    gameMode: { id: 72000529, name: "RR_FourCard_Friendly" },
+    team: [{ tag: "#28CYYU08P", name: "Rohin", crowns: 1, cards: [] }],
+    opponent: [{ tag: "#RIVAL", name: "Long factual opponent name", crowns: 2, cards: [] }],
+  };
+  const ladderBattle = {
+    battleTime: "2026-10-01T09:00:00.000Z",
+    type: "PvP",
+    gameMode: { id: 72000006, name: "Ladder" },
+    team: [{ tag: "#28CYYU08P", name: "Rohin", crowns: 2, cards: [] }],
+    opponent: [{ tag: "#RIVAL2", name: "Ladder rival", crowns: 1, cards: [] }],
+  };
+  await page.route(API_URL, (route) =>
+    successResponse(route, createPayload({ battles: [otherBattle, ladderBattle] }))
+  );
+  await openClashRoyale(page, { width: 375, height: 812 });
+  await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
+
+  const other = page.locator("#cr-battle-log .cr-battle-mode.is-other");
+  const hint = other.locator(".cr-mode-hint");
+  await expect(other).toHaveAttribute("tabindex", "0");
+  await expect(other).toHaveAttribute("aria-label", "Other mode: RR_FourCard_Friendly");
+  await expect(hint).toHaveText("RR_FourCard_Friendly");
+  await expect(hint).toBeHidden();
+  await other.hover();
+  await expect(hint).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.locator("#cr-battle-scroll").focus();
+  await page.keyboard.press("Tab");
+  await expect(other).toBeFocused();
+  await expect(hint).toBeVisible();
+  expect(await scanForViolations(page, testInfo, "clash-other-mode-focus")).toEqual([]);
+
+  const ladder = page.locator("#cr-battle-log .cr-battle-mode.is-ladder");
+  const centeredStyles = await page.locator("#cr-battle-log .cr-battle-item").last().evaluate((row) => ({
+    ladderBackground: getComputedStyle(row.querySelector(".cr-battle-mode")).backgroundColor,
+    ladderColor: getComputedStyle(row.querySelector(".cr-battle-mode")).color,
+    modePlaceSelf: getComputedStyle(row.querySelector(".cr-battle-mode")).placeSelf,
+    resultAlignSelf: getComputedStyle(row.querySelector(".cr-result")).alignSelf,
+    resultJustifySelf: getComputedStyle(row.querySelector(".cr-result")).justifySelf,
+  }));
+  await expect(ladder).toHaveText("Ladder");
+  expect(centeredStyles).toEqual({
+    ladderBackground: "rgb(73, 212, 214)",
+    ladderColor: "rgb(17, 17, 17)",
+    modePlaceSelf: "center",
+    resultAlignSelf: "center",
+    resultJustifySelf: "center",
+  });
+  const scrollHasNoHorizontalOverflow = await page.locator("#cr-battle-scroll").evaluate(
+    (element) => element.scrollWidth <= element.clientWidth
+  );
+  expect(scrollHasNoHorizontalOverflow).toBe(true);
 });
 
 test("renders factual card metadata, safe variant artwork, and resilient image fallbacks", async ({ page }) => {
@@ -459,7 +558,7 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
   await expect(cards.nth(1)).toHaveClass(/is-image-unavailable/);
   await expect(cards.nth(2)).toHaveClass(/is-image-unavailable/);
   await expect(cards.nth(3)).toHaveClass(/is-image-unavailable/);
-  await expect(cards.nth(3).locator(".cr-card-variant")).toHaveText("HERO");
+  await expect(cards.nth(3).locator(".cr-deck-card-title .cr-card-variant")).toHaveText("HERO");
   await expect(cards.nth(4)).toHaveClass(/is-variant-evo/);
   await expect(cards.nth(4)).not.toHaveClass(/is-image-unavailable/);
   await expect(cards.nth(4).locator(".cr-card-variant")).toHaveText("EVO");
@@ -470,6 +569,11 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
   await expect(cards.nth(7).locator(".cr-card-variant")).toHaveCount(0);
   await expect(cards.nth(0)).toHaveClass(/is-rarity-common/);
   await expect(cards.nth(1)).toHaveClass(/is-rarity-epic/);
+  expect(
+    await cards.locator(".cr-card-rarity").evaluateAll((elements) =>
+      elements.every((element) => element.classList.contains("visually-hidden"))
+    )
+  ).toBe(true);
   await expect(page.locator("#cr-deck-average")).toHaveText("Average elixir: unavailable");
   await expect(cards.locator(".cr-deck-card-name")).toHaveText([
     "Safe card",
@@ -487,6 +591,39 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
   );
   expect(new Set(mediaSizes.map(({ height }) => height)).size).toBe(1);
   expect(mediaSizes.every(({ width }) => width > 0)).toBe(true);
+  const cardOrder = await cards.first().evaluate((cardElement) =>
+    [...cardElement.children].map((child) => child.className)
+  );
+  expect(cardOrder).toEqual([
+    "cr-deck-card-title",
+    "cr-deck-card-media",
+    "cr-card-metadata",
+  ]);
+
+  const whiteInput = page.locator("#cr-deck-style-white");
+  const raisedInput = page.locator("#cr-deck-style-raised");
+  await expect(whiteInput).toBeChecked();
+  await expect(page.getByText("White", { exact: true })).toBeVisible();
+  await expect(page.getByText("Raised grey", { exact: true })).toBeVisible();
+  expect(await cards.first().evaluate((cardElement) => getComputedStyle(cardElement).backgroundColor))
+    .toBe("rgb(255, 255, 255)");
+  await page.getByText("Raised grey", { exact: true }).click();
+  await expect(raisedInput).toBeChecked();
+  await expect(page.locator("#cr-current-deck")).toHaveClass(/is-raised/);
+  const raisedStyle = await cards.first().evaluate((cardElement) => ({
+    background: getComputedStyle(cardElement).backgroundColor,
+    boxShadow: getComputedStyle(cardElement).boxShadow,
+  }));
+  expect(raisedStyle.background).toBe("rgb(192, 192, 192)");
+  expect(raisedStyle.boxShadow).not.toBe("none");
+  await page.getByText("White", { exact: true }).click();
+  await expect(whiteInput).toBeChecked();
+  await expect(page.locator("#cr-current-deck")).not.toHaveClass(/is-raised/);
+  await raisedInput.focus();
+  await expect(page.locator('label[for="cr-deck-style-raised"]')).toHaveCSS(
+    "outline-style",
+    "dotted"
+  );
 });
 
 test("renders team context and loads participant deck images only after disclosure", async ({ page }) => {
@@ -514,7 +651,11 @@ test("renders team context and loads participant deck images only after disclosu
         crowns: 2,
         trophyChange: 0,
         cards: Array.from({ length: 12 }, (_, index) =>
-          participantCard(101 + index, `Player card ${index + 1}`)
+          participantCard(
+            101 + index,
+            `Player card ${index + 1}`,
+            index === 0 ? { variant: "hero" } : {}
+          )
         ),
       },
       {
@@ -548,8 +689,9 @@ test("renders team context and loads participant deck images only after disclosu
   const row = page.locator("#cr-battle-log .cr-battle-item");
   await expect(row.locator(".cr-battle-mode")).toHaveText("2v2");
   await expect(row.locator(".cr-battle-mode")).toHaveClass(/is-two-v-two/);
-  await expect(row.locator(".cr-battle-opponent")).toHaveText("vs. First rival & Second rival");
-  await expect(row.locator(".cr-battle-allies")).toHaveText("With Trusted teammate");
+  await expect(row.locator(".cr-battle-opponent")).toHaveText(
+    "Rohin & Trusted teammate vs. First rival & Second rival"
+  );
   await expect(row.locator(".cr-battle-date")).toBeVisible();
   await expect(row.locator(".cr-battle-clock")).toBeVisible();
   await expect(page.locator("#cr-history-footer")).toHaveText(
@@ -581,15 +723,21 @@ test("renders team context and loads participant deck images only after disclosu
     const media = cardElement.querySelector(".cr-deck-card-media").getBoundingClientRect();
     const name = cardElement.querySelector(".cr-deck-card-name").getBoundingClientRect();
     return {
-      firstGridRow: getComputedStyle(cardElement).gridTemplateRows.split(" ")[0],
+      background: getComputedStyle(cardElement).backgroundColor,
+      boxShadow: getComputedStyle(cardElement).boxShadow,
       fontSize: getComputedStyle(cardElement).fontSize,
-      imageToNameGap: Math.round(name.top - media.bottom),
+      mediaGridRow: getComputedStyle(cardElement).gridTemplateRows.split(" ")[1],
+      nameToImageGap: Math.round(media.top - name.bottom),
+      variantParentClass: cardElement.querySelector(".cr-card-variant").parentElement.className,
     };
   });
   expect(compactCardGeometry).toEqual({
-    firstGridRow: "46px",
+    background: "rgb(192, 192, 192)",
+    boxShadow: expect.not.stringMatching(/^none$/),
     fontSize: "8px",
-    imageToNameGap: 0,
+    mediaGridRow: "46px",
+    nameToImageGap: 0,
+    variantParentClass: "cr-deck-card-media",
   });
   await row.locator("summary").click();
   await row.locator("summary").click();
@@ -651,6 +799,10 @@ test("loads an app opened before its module finishes downloading", async ({ page
     await page.goto("/home.html", { waitUntil: "commit" });
     await page.waitForFunction(() => Boolean(window.rohinAdminOrchestrator));
     await expect(page.locator("#cr-history-footer a")).toHaveText("Royale API");
+    await expect(page.locator("#cr-history-footer").locator("..")).toHaveAttribute(
+      "id",
+      "cr-battle-scroll"
+    );
     await page.locator('#about-window [data-close="about"]').click({ noWaitAfter: true });
     await page.locator('.taskbar-icon[data-app="clash-royale"]').click({ noWaitAfter: true });
     await expect(page.locator("#clash-royale-window")).toBeVisible();

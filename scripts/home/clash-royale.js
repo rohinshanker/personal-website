@@ -29,12 +29,14 @@ const elements =
         arena: document.getElementById("cr-arena"),
         battleCount: document.getElementById("cr-battle-count"),
         battleLog: document.getElementById("cr-battle-log"),
+        battleScroll: document.getElementById("cr-battle-scroll"),
         bestTrophies: document.getElementById("cr-best-trophies"),
         careerRecord: document.getElementById("cr-career-record"),
         careerWinRate: document.getElementById("cr-career-win-rate"),
         clan: document.getElementById("cr-clan"),
         currentDeck: document.getElementById("cr-current-deck"),
         deckAverage: document.getElementById("cr-deck-average"),
+        deckStyleInputs: [...document.querySelectorAll('input[name="cr-deck-style"]')],
         historyFooter: document.getElementById("cr-history-footer"),
         lastUpdated: document.getElementById("cr-last-updated"),
         playerName: document.getElementById("cr-player-name"),
@@ -375,7 +377,7 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
     item.classList.add("is-image-unavailable");
   }
 
-  if (variant) {
+  if (variant && compact) {
     media.appendChild(
       createElement(
         "span",
@@ -386,6 +388,17 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
   }
   const name = createElement("span", "cr-deck-card-name", cardName);
   name.title = cardName;
+  const title = createElement("span", "cr-deck-card-title");
+  title.appendChild(name);
+  if (variant && !compact) {
+    title.appendChild(
+      createElement(
+        "span",
+        `cr-card-variant cr-card-variant--inline cr-card-variant--${variant}`,
+        variant.toUpperCase()
+      )
+    );
+  }
   const metadata = createElement("span", "cr-card-metadata");
   const hasElixir = isValidElixirCost(card?.elixirCost);
   const isVariableElixir = isVariableClashElixirCard(card);
@@ -403,11 +416,11 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
   metadata.appendChild(
     createElement(
       "span",
-      "cr-card-rarity",
+      "visually-hidden cr-card-rarity",
       rarity ? capitalize(rarity) : "Rarity unavailable"
     )
   );
-  item.append(media, name, metadata);
+  item.append(title, media, metadata);
   return item;
 };
 
@@ -511,11 +524,12 @@ const renderBattles = (battles) => {
   if (!elements.battleLog) return;
   if (!battles.length) {
     renderEmptyItem(elements.battleLog, "No recent battles were returned.");
+    if (elements.battleScroll) elements.battleScroll.scrollTop = 0;
     return;
   }
 
   const items = battles.map((resolvedBattle) => {
-    const { allies, battle, hasCrowns, opponent, opponents, outcome, player } = resolvedBattle;
+    const { battle, hasCrowns, opponent, opponents, outcome, player, playerSide } = resolvedBattle;
     const item = createElement("li", `cr-battle-item is-${outcome}`);
     item.dataset.outcome = outcome;
     const summary = createElement("div", "cr-battle-summary");
@@ -528,16 +542,21 @@ const renderBattles = (battles) => {
       `cr-battle-mode is-${mode.key}`,
       mode.label
     );
+    const rawModeName = String(battle?.gameMode?.name ?? "").trim();
     modeBadge.title = formatMode(battle);
+    if (mode.key === "other" && rawModeName) {
+      modeBadge.tabIndex = 0;
+      modeBadge.setAttribute("aria-label", `Other mode: ${rawModeName}`);
+      modeBadge.appendChild(createElement("span", "cr-mode-hint", rawModeName));
+    }
     details.appendChild(modeBadge);
     details.appendChild(
-      createElement("strong", "cr-battle-opponent", `vs. ${opponents.map(participantName).join(" & ")}`)
+      createElement(
+        "strong",
+        "cr-battle-opponent",
+        `${playerSide.map(participantName).join(" & ")} vs. ${opponents.map(participantName).join(" & ")}`
+      )
     );
-    if (allies.length) {
-      details.appendChild(
-        createElement("span", "cr-battle-allies", `With ${allies.map(participantName).join(" & ")}`)
-      );
-    }
     details.appendChild(createBattleTime(battle.battleTime));
     summary.appendChild(details);
 
@@ -582,6 +601,7 @@ const renderBattles = (battles) => {
     return item;
   });
   elements.battleLog.replaceChildren(...items);
+  if (elements.battleScroll) elements.battleScroll.scrollTop = 0;
 };
 
 const renderPlayer = (snapshot) => {
@@ -773,6 +793,13 @@ const cancel = () => {
 if (elements.refresh) {
   elements.refresh.addEventListener("click", () => load(true));
 }
+
+elements.deckStyleInputs?.forEach((input) => {
+  input.addEventListener("change", () => {
+    if (!input.checked || !elements.currentDeck) return;
+    elements.currentDeck.classList.toggle("is-raised", input.value === "raised");
+  });
+});
 
 if (typeof window !== "undefined") {
   window.ClashRoyaleApp = Object.freeze({ cancel, load });

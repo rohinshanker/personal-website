@@ -3712,10 +3712,10 @@
                     <dt><img class="cr-stat-icon" data-src="assets/app-icons/ico/world_star.ico" width="16" height="16" alt="" />Arena</dt>
                     <dd id="cr-arena">—</dd>
                   </div>
-                  <div class="cr-stat"><dt>Clan</dt><dd id="cr-clan">—</dd></div>
-                  <div class="cr-stat"><dt>Career record</dt><dd id="cr-career-record">—</dd></div>
-                  <div class="cr-stat"><dt>Win rate</dt><dd id="cr-career-win-rate">—</dd></div>
-                  <div class="cr-stat cr-stat--featured"><dt>Battles</dt><dd id="cr-battle-count">—</dd></div>
+                  <div class="cr-stat"><dt><img class="cr-stat-icon" data-src="assets/app-icons/ico/users.ico" width="16" height="16" alt="" />Clan</dt><dd id="cr-clan">—</dd></div>
+                  <div class="cr-stat"><dt><img class="cr-stat-icon" data-src="assets/app-icons/ico/certificate_multiple.ico" width="16" height="16" alt="" />Career record</dt><dd id="cr-career-record">—</dd></div>
+                  <div class="cr-stat"><dt><img class="cr-stat-icon" data-src="assets/app-icons/ico/calculator.ico" width="16" height="16" alt="" />Win rate</dt><dd id="cr-career-win-rate">—</dd></div>
+                  <div class="cr-stat cr-stat--featured"><dt><img class="cr-stat-icon" data-src="assets/pixelarticons/sword.svg" width="16" height="16" alt="" />Battles</dt><dd id="cr-battle-count">—</dd></div>
                   <div class="cr-stat cr-stat--featured">
                     <dt><img class="cr-stat-icon" data-src="assets/pixelarticons/crown.svg" width="16" height="16" alt="" />Three-crown wins</dt>
                     <dd id="cr-three-crown-wins">—</dd>
@@ -3730,8 +3730,19 @@
               </div>
             </section>
             <section class="cr-panel" aria-labelledby="cr-deck-heading">
-              <div class="cr-section-heading-row">
+              <div class="cr-section-heading-row cr-deck-heading-row">
                 <h2 class="cr-section-title" id="cr-deck-heading">Current Deck</h2>
+                <fieldset class="cr-deck-style-toggle">
+                  <legend class="visually-hidden">Current Deck tile appearance</legend>
+                  <span class="cr-deck-style-option">
+                    <input id="cr-deck-style-white" type="radio" name="cr-deck-style" value="white" checked />
+                    <label for="cr-deck-style-white">White</label>
+                  </span>
+                  <span class="cr-deck-style-option">
+                    <input id="cr-deck-style-raised" type="radio" name="cr-deck-style" value="raised" />
+                    <label for="cr-deck-style-raised">Raised grey</label>
+                  </span>
+                </fieldset>
                 <span class="cr-deck-average" id="cr-deck-average">Average elixir: —</span>
               </div>
               <ul class="cr-deck-row" id="cr-current-deck">
@@ -3743,19 +3754,22 @@
                 <h2 class="cr-section-title" id="cr-battles-heading">Recent Battles</h2>
                 <span class="cr-sample-summary" id="cr-sample-summary">—</span>
               </div>
-              <ol
-                class="cr-battle-list"
-                id="cr-battle-log"
+              <div
+                class="cr-battle-scroll"
+                id="cr-battle-scroll"
+                role="region"
                 tabindex="0"
                 aria-labelledby="cr-battles-heading"
               >
-                <li class="cr-empty">No battles loaded.</li>
-              </ol>
-              <p class="cr-history-footer" id="cr-history-footer">
-                No recent battles loaded. View
-                <a href="https://royaleapi.com/player/28CYYU08P" target="_blank" rel="noopener noreferrer">Royale API</a>
-                for full list.
-              </p>
+                <ol class="cr-battle-list" id="cr-battle-log">
+                  <li class="cr-empty">No battles loaded.</li>
+                </ol>
+                <p class="cr-history-footer" id="cr-history-footer">
+                  No recent battles loaded. View
+                  <a href="https://royaleapi.com/player/28CYYU08P" target="_blank" rel="noopener noreferrer">Royale API</a>
+                  for full list.
+                </p>
+              </div>
             </section>
           </div>
         </div>
