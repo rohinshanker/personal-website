@@ -319,9 +319,10 @@ const expectNoRuntimeErrors = (runtimeErrors) => {
 };
 
 const readNekoPoseMetrics = (page) =>
-  page.evaluate(() => {
+  page.evaluate(async () => {
     const taskbarTop = document.querySelector(".taskbar").getBoundingClientRect().top;
     const cats = Array.from(document.querySelectorAll(".neko-stream-cat"));
+    await Promise.all(cats.map((cat) => cat.decode()));
     return {
       taskbarTop,
       poses: cats.map((cat) => {
@@ -1087,10 +1088,11 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
         contentType: "text/yaml",
       });
 
-      const metrics = await page.evaluate(() => {
+      const metrics = await page.evaluate(async () => {
         const taskbar = document.querySelector(".taskbar").getBoundingClientRect();
         const layer = document.querySelector("#neko-stream-layer");
         const cats = Array.from(document.querySelectorAll(".neko-stream-cat"));
+        await Promise.all(cats.map((cat) => cat.decode()));
         return {
           catBounds: cats.map((cat) => {
             const bounds = cat.getBoundingClientRect();
