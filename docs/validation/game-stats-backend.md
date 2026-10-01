@@ -109,13 +109,14 @@ workers/game-stats/
   src/http.mjs                       # HTTP parsing, CORS, responses, five-second cache
   src/router.mjs                     # Routes and scheduled expiry purge
   src/constants.mjs, data.mjs        # Shared constants and response shapes
-  migrations/                        # D1 schema and future additive migrations
+  migrations/                        # D1 schema and rollback-compatible migrations
   wrangler.jsonc                     # Deploy config; public vars only
   wrangler.jsonc.example             # Sanitized config template
   .dev.vars.example                  # Local secret names only
 tests/
   game-stats-worker.test.mjs
   game-stats-sql.test.mjs
+  game-stats-http-request.test.mjs
   game-stats-integrity.test.mjs
 ```
 
@@ -227,6 +228,11 @@ redeploy the Worker because its accepted `GAME_BUILD_VERSION` changed.
 
 ## Stats read, cache, and acknowledgment contract
 
+The SQL aggregation and protocol-2 source was verified in production as Worker
+version `a28081b4-d91f-4c93-8329-87b82353dd01`. Record a new version ID when
+Worker source changes; a later documentation-only deployment can have a new
+version ID with identical source.
+
 The current browser reads
 `GET /stats?protocol=2&playerId=<id>&pendingEventId=<id>...`. Protocol 2 returns
 SQL-derived totals, global Top 3 arrays, the requested player's rank and full
@@ -255,6 +261,9 @@ session-expiry, rate-limit-expiry, and Sudoku puzzle-identity indexes. The real
 SQLite test asserts `EXPLAIN QUERY PLAN` uses all four category indexes. They
 restrict scans by game/type; profile lookups and window sorting still read the
 table and use temporary B-trees, so they are not covering indexes.
+Every uncached read normalizes historical strings and scans those partitions.
+Unicode trimming costs more than SQLite’s default ASCII-space trim; retain the
+parity regression tests and monitor D1 latency as history grows.
 
 Totals, rankings, and acknowledgments share one bound future-date cutoff in a
 D1 batch. Historical unpadded calendar dates must parse in SQLite; relative values such
@@ -443,7 +452,8 @@ numbered migration instead.
 From the repository root, validate locally and then inspect remote state:
 
 ```bash
-node --test tests/game-stats-worker.test.mjs tests/game-stats-integrity.test.mjs
+node --test tests/game-stats-worker.test.mjs tests/game-stats-sql.test.mjs \
+  tests/game-stats-http-request.test.mjs tests/game-stats-integrity.test.mjs
 node scripts/update-game-integrity.mjs --check
 
 cd workers/game-stats
@@ -467,7 +477,7 @@ The release workflow's `deploy-worker` job applies pending migrations with the
 production credentials immediately before `wrangler deploy`, so the schema the
 new Worker expects is already in D1 when it starts serving.
 `tests/game-stats-deployment.test.mjs` pins that step, its credentials, and its
-position ahead of the deploy. Only additive migrations may run there: a
+position ahead of the deploy. Only rollback-compatible migrations may run there: a
 migration that a rollback to the previous Worker could not survive belongs in a
 reviewed manual release instead.
 
@@ -1120,6 +1130,7 @@ change:
 
 ## Official References
 
+- [Workers Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/)
 - [Workers Scheduler](https://developers.cloudflare.com/workers/runtime-apis/scheduler/)
 - [Wrangler deploy command](https://developers.cloudflare.com/workers/wrangler/commands/workers/#deploy)
 - [Workers Wrangler configuration](https://developers.cloudflare.com/workers/wrangler/configuration/)

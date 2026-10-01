@@ -163,7 +163,10 @@ that a state machine or user flow executes correctly.
    direct UI references. Add at least one `hasTouch` mobile project with real
    taps; resized desktop Chromium is not mobile-input coverage.
 
-6. **Extend accessibility scanning.** `tests/ui/accessibility.spec.mjs` now
+6. **Extend accessibility scanning.** The shared scanner and exact Solitaire
+   exception live in `tests/ui/helpers/accessibility-contracts.mjs`; populated
+   ranks add 16 whole-document scans across four games and four viewports.
+   `tests/ui/accessibility.spec.mjs` also
    runs `@axe-core/playwright` over the entry route, its alert dialog, the
    About window, the Home desktop, and eight application windows; see
    [browser-visual-accessibility.md](browser-visual-accessibility.md). Still

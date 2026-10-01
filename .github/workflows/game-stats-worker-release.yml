@@ -93,8 +93,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        # Migrations are additive and run before the deploy, so the Worker that
-        # comes up already has the columns and indexes its code expects.
+        # Migrations remain compatible with the previous Worker and run before
+        # deploy, so the candidate already has the columns and indexes it needs.
         run: npm --prefix workers/game-stats run migrate:remote
       - name: Deploy rollout-compatible Worker configuration
         env:

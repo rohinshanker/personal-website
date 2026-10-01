@@ -66,6 +66,7 @@ Run:
 ```bash
 node --test tests/game-stats-worker.test.mjs \
   tests/game-stats-sql.test.mjs \
+  tests/game-stats-http-request.test.mjs \
   tests/game-stats-frontend-contract.test.mjs
 npx playwright test tests/ui/game-stats-multiplayer-ranks.spec.mjs
 ```

@@ -4,7 +4,7 @@
 - Status: open
 - Opened: 2026-09-24
 - Updated: 2026-09-30
-- Current State: Items 2, 7, and 8 decided and shipped on 2026-09-28. The rest await owner answers. Tier: needs user judgment. Once answered, each item moves into the small or long ticket named beside it.
+- Current State: Items 2, 7, and 8 decided and shipped on 2026-09-28; item 9 shipped on 2026-09-30. The rest await owner answers. Tier: needs user judgment. Once answered, each item moves into the small or long ticket named beside it.
 - Verification: Record each answer inline (`Decision:` line under the item) and the date; the implementing ticket carries the test plan.
 - Cleanup: When every item has a decision and an owning ticket, delete this ticket and its index row.
 
@@ -21,6 +21,6 @@
    - Decision (2026-09-28): a documented count of 32, not a time. `game-stats-backend.md` now states the cap, the eviction behaviour, the resulting grace window at N releases per day, and where to raise the limit.
 8. **Committed `database_id`** in `wrangler.jsonc:13` while the `.example` uses a placeholder. Keep in git or move to an env/secret. Recommendation: keep (it is not a credential) and say so in the doc. → a one-line note in `docs/validation/game-stats-backend.md` once decided (the CI ticket it originally pointed at resolved on 2026-09-27).
    - Decision (2026-09-28): keep. `game-stats-backend.md` already states that the D1 `database_id` is configuration, not a credential.
-9. **Drop the six unused D1 indexes?** They are used by no query today (`migrations/0001:18-23`) but the SQL aggregation in `O_long-worker-stats-aggregation__20260924.md` may want some. Recommendation: decide together with that ticket's new queries; one migration.
-   - Decision (2026-09-30): remove only indexes proven phased out and unnecessary for production queries; preserve or replace any index justified by candidate query plans. Implement and verify in `A_long-worker-stats-aggregation__20260924.md` using migration 0004. Ordinary reads may cache for five seconds; manual Refresh and successful publication must fetch fresh results.
+9. **D1 aggregation indexes and stats freshness.** Decide index cleanup together with the SQL aggregation queries.
+   - Decision (2026-09-30, shipped): remove only indexes proven phased out and unnecessary for production queries. Migration 0004 replaces four category indexes used by the new production query plans and removes the obsolete broad game/type and player indexes; Sudoku identity and security-expiry indexes remain. Ordinary reads cache for five seconds; manual Refresh and successful publication fetch fresh results. The SQL, acknowledgment, cache, and validation contracts are in [game-stats-backend.md](../../validation/game-stats-backend.md).
 10. **Deploy gating on the browser suite.** The Worker and Pages deploy on `verify` alone; a push that breaks `home.html` deploys while Browser UI is still running or failing (happened at eccfd37: release succeeded 21:37, UI failed 22:19). Options: make the UI job a `needs` of `deploy-worker` (adds ~20 min to every release until the suite is sharded), or `workflow_run` gating, or accept the risk. Recommendation: gate after sharding lands. → `O_long-test-suite-hardening__20260924.md`.

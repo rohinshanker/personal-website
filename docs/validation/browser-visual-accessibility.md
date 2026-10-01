@@ -2,7 +2,7 @@
 
 - Purpose: Run and maintain browser screenshot baselines and WCAG scans.
 - Scope: Browser test projects, isolated containers, fixtures, and known accessibility limitations.
-- Last verified: 2026-09-28
+- Last verified: 2026-09-30
 
 ## Playwright projects
 
@@ -127,6 +127,14 @@ Sudoku, Solitaire, Snake, Game Progress, Credits, Socials, and Projects
 windows. Each scan writes its full violation report to
 `<artifact dir>/<test>/axe-<state>.json`.
 
+`tests/ui/game-stats-multiplayer-ranks.spec.mjs` adds populated Game Stats
+scans for all four games at 375×812, 768×1024, 1280×800, and 1440×900: 16
+whole-document scans with `axe-ranked-stats-<game>.json` reports. Both specs
+use `tests/ui/helpers/accessibility-contracts.mjs` for scanning, report
+attachments, and the shared exact Solitaire exception.
+The combined four-game scenario has a 60-second budget for its interactions
+and scans; the project default remains 30 seconds.
+
 Each state asserts an **exact** violation list rather than "no new violations",
 so both a new defect and a repaired one fail the suite until the record is
 updated. Record a limitation only when repairing it is a real redesign, and
@@ -143,7 +151,8 @@ progress-bar name checks cover the loading meters that axe would otherwise miss.
 - **Solitaire nested interactive content.** `#sol-stock` and the seven
   `[data-sol-col]` tableau columns are keyboard controls that contain the
   individually clickable card buttons. Removing the nesting means redesigning
-  Solitaire's keyboard model. Recorded exactly in the spec.
+  Solitaire's keyboard model. Recorded exactly in
+  `tests/ui/helpers/accessibility-contracts.mjs`.
 - Automated scanning is not an audit. It cannot judge whether an accessible
   name is *useful*, whether focus order is sensible, or whether a live region
   announces at the right moment. Keep the suite's existing focus and keyboard
