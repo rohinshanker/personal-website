@@ -37,7 +37,19 @@ const profile = (overrides = {}) => ({
   threeCrownWins: 900,
   clan: { tag: "#2ABC", name: "Example Clan", badgeId: 16000000 },
   arena: { id: 54000012, name: "Legendary Arena" },
-  currentDeck: [card({ ignoredCardField: "not exposed" })],
+  currentDeck: [
+    card({
+      elixirCost: 3,
+      rarity: "COMMON",
+      evolutionLevel: 1,
+      iconUrls: {
+        medium: "https://api-assets.clashroyale.com/cards/300/knight.png",
+        evolutionMedium:
+          "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
+      },
+      ignoredCardField: "not exposed",
+    }),
+  ],
   ignoredProfileField: "not exposed",
   ...overrides,
 });
@@ -60,8 +72,15 @@ const battlelog = (overrides = {}) => [
         cards: [
           card({
             id: 26000001,
-            name: "Archers",
-            iconUrls: { medium: "https://untrusted.example/card.png" },
+            name: "Mini P.E.K.K.A",
+            elixirCost: 4,
+            rarity: "Rare",
+            evolutionLevel: 2,
+            iconUrls: {
+              medium: "https://untrusted.example/card.png",
+              heroMedium:
+                "https://api-assets.clashroyale.com/cardheroes/300/mini-pekka.png",
+            },
           }),
         ],
       }),
@@ -171,7 +190,13 @@ test("returns an allowlisted profile, current deck, and battle log", async () =>
         name: "Knight",
         level: 14,
         maxLevel: 14,
+        evolutionLevel: 1,
+        elixirCost: 3,
+        rarity: "common",
+        variant: "evo",
         iconUrl: "https://api-assets.clashroyale.com/cards/300/knight.png",
+        variantIconUrl:
+          "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
       },
     ],
   });
@@ -204,7 +229,20 @@ test("returns an allowlisted profile, current deck, and battle log", async () =>
         name: "Opponent",
         crowns: 1,
         trophyChange: -30,
-        cards: [{ id: 26000001, name: "Archers", level: 14, maxLevel: 14 }],
+        cards: [
+          {
+            id: 26000001,
+            name: "Mini P.E.K.K.A",
+            level: 14,
+            maxLevel: 14,
+            evolutionLevel: 2,
+            elixirCost: 4,
+            rarity: "rare",
+            variant: "hero",
+            variantIconUrl:
+              "https://api-assets.clashroyale.com/cardheroes/300/mini-pekka.png",
+          },
+        ],
       },
     ],
   });
@@ -233,6 +271,151 @@ test("returns an empty deck when the upstream profile omits it", async () => {
   assert.deepEqual(body.battles, []);
 });
 
+test("caps battle history at twenty while preserving shorter histories", async () => {
+  const battles = Array.from({ length: 25 }, (_, index) => ({
+    ...battlelog()[0],
+    battleTime: `20261001T${String(index).padStart(2, "0")}0000.000Z`,
+  }));
+  const capped = await fetchRoute({
+    fetchImpl: successFetch([], profile(), battles),
+  }).run();
+  const cappedBody = await json(capped);
+
+  assert.equal(cappedBody.battles.length, 20);
+  assert.equal(cappedBody.battles.at(-1).battleTime, "20261001T190000.000Z");
+
+  const short = await fetchRoute({
+    fetchImpl: successFetch([], profile(), battles.slice(0, 3)),
+  }).run();
+  assert.equal((await json(short)).battles.length, 3);
+});
+
+test("normalizes optional card cost, rarity, and equipped variant metadata", async () => {
+  const metadataCards = [
+    card({
+      id: 1,
+      name: "Zero Cost",
+      elixirCost: 0,
+      rarity: " Legendary ",
+      evolutionLevel: 1,
+      maxEvolutionLevel: 2,
+      iconUrls: {
+        medium: "https://api-assets.clashroyale.com/cards/300/base.png",
+        evolutionMedium:
+          "https://api-assets.clashroyale.com/cardevolutions/300/evo.png",
+        heroMedium: "https://api-assets.clashroyale.com/cardheroes/300/unused.png",
+      },
+    }),
+    card({
+      id: 2,
+      name: "Invalid Fractional Cost",
+      elixirCost: 2.5,
+      rarity: "champion",
+      evolutionLevel: 2,
+      iconUrls: {
+        medium: "https://api-assets.clashroyale.com/cards/300/base.svg",
+        evolutionMedium:
+          "https://api-assets.clashroyale.com/cardevolutions/300/unused.png",
+        heroMedium: "https://api-assets.clashroyale.com/cardheroes/300/hero.png",
+      },
+    }),
+    card({
+      id: 3,
+      name: "Ambiguous Variant",
+      elixirCost: -1,
+      rarity: "mythic",
+      evolutionLevel: 3,
+      iconUrls: {
+        medium: "https://api-assets.clashroyale.com/not-a-card/base.png",
+        evolutionMedium:
+          "https://api-assets.clashroyale.com/cardevolutions/300/ambiguous.png",
+        heroMedium:
+          "https://api-assets.clashroyale.com/cardheroes/300/ambiguous.png",
+      },
+    }),
+    card({ id: 4, name: "Unknown Cost", elixirCost: null, rarity: null }),
+    card({
+      id: 5,
+      name: "Evo Without Artwork",
+      evolutionLevel: 1,
+      rarity: "EPIC",
+      iconUrls: {
+        medium: "https://api-assets.clashroyale.com/cards/300/fallback.png",
+        evolutionMedium:
+          "https://api-assets.clashroyale.com/cardheroes/300/wrong-variant.png",
+      },
+    }),
+    card({
+      id: 28000006,
+      name: "Mirror",
+      elixirCost: 1,
+      rarity: "Epic",
+      iconUrls: {
+        medium: "https://api-assets.clashroyale.com/cards/300/mirror.png",
+      },
+    }),
+  ];
+  const response = await fetchRoute({
+    fetchImpl: successFetch([], profile({ currentDeck: metadataCards }), []),
+  }).run();
+  const cards = (await json(response)).player.currentDeck;
+
+  assert.deepEqual(cards[0], {
+    id: 1,
+    name: "Zero Cost",
+    level: 14,
+    maxLevel: 14,
+    evolutionLevel: 1,
+    elixirCost: 0,
+    rarity: "legendary",
+    variant: "evo",
+    iconUrl: "https://api-assets.clashroyale.com/cards/300/base.png",
+    variantIconUrl: "https://api-assets.clashroyale.com/cardevolutions/300/evo.png",
+  });
+  assert.deepEqual(cards[1], {
+    id: 2,
+    name: "Invalid Fractional Cost",
+    level: 14,
+    maxLevel: 14,
+    evolutionLevel: 2,
+    rarity: "champion",
+    variant: "hero",
+    variantIconUrl: "https://api-assets.clashroyale.com/cardheroes/300/hero.png",
+  });
+  assert.deepEqual(cards[2], {
+    id: 3,
+    name: "Ambiguous Variant",
+    level: 14,
+    maxLevel: 14,
+    evolutionLevel: 3,
+  });
+  assert.deepEqual(cards[3], {
+    id: 4,
+    name: "Unknown Cost",
+    level: 14,
+    maxLevel: 14,
+    iconUrl: "https://api-assets.clashroyale.com/cards/300/knight.png",
+  });
+  assert.deepEqual(cards[4], {
+    id: 5,
+    name: "Evo Without Artwork",
+    level: 14,
+    maxLevel: 14,
+    evolutionLevel: 1,
+    rarity: "epic",
+    variant: "evo",
+    iconUrl: "https://api-assets.clashroyale.com/cards/300/fallback.png",
+  });
+  assert.deepEqual(cards[5], {
+    id: 28000006,
+    name: "Mirror",
+    level: 14,
+    maxLevel: 14,
+    rarity: "epic",
+    iconUrl: "https://api-assets.clashroyale.com/cards/300/mirror.png",
+  });
+});
+
 test("serves a valid successful cache entry and refetches a corrupt one", async () => {
   const cache = new MemoryCache();
   const first = fetchRoute({ cache });
@@ -248,7 +431,7 @@ test("serves a valid successful cache entry and refetches a corrupt one", async 
   assert.deepEqual(await json(await hit.run()), firstBody);
 
   cache.responses.set(
-    "GET https://stats.example.test/clash-royale",
+    "GET https://stats.example.test/clash-royale?schema=2",
     Response.json({ ok: true, player: { tag: "#WRONG" }, battles: [] })
   );
   const missCalls = [];
@@ -257,13 +440,35 @@ test("serves a valid successful cache entry and refetches a corrupt one", async 
   assert.equal(missCalls.length, 2);
 
   cache.responses.set(
-    "GET https://stats.example.test/clash-royale",
+    "GET https://stats.example.test/clash-royale?schema=2",
     new Response("not-json")
   );
   const invalidJsonCalls = [];
   const invalidJson = fetchRoute({ cache, fetchImpl: successFetch(invalidJsonCalls) });
   assert.equal((await json(await invalidJson.run())).ok, true);
   assert.equal(invalidJsonCalls.length, 2);
+});
+
+test("does not serve payloads from the legacy cache schema", async () => {
+  const cache = new MemoryCache();
+  cache.responses.set(
+    "GET https://stats.example.test/clash-royale",
+    Response.json({
+      ok: true,
+      player: { tag: "#28CYYU08P", name: "Legacy", currentDeck: [] },
+      battles: Array.from({ length: 10 }, () => battlelog()[0]),
+      fetchedAt: new Date(FIXED_NOW).toISOString(),
+      cacheTtlSeconds: 300,
+    })
+  );
+  const calls = [];
+  const route = fetchRoute({ cache, fetchImpl: successFetch(calls) });
+
+  assert.equal((await json(await route.run())).player.name, "Rohin");
+  assert.equal(calls.length, 2);
+  await Promise.all(route.pending);
+  assert.equal(cache.puts[0].key,
+    "GET https://stats.example.test/clash-royale?schema=2");
 });
 
 test("ignores Cache API failures without taking the endpoint down", async () => {

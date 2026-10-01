@@ -21,8 +21,46 @@ const profile = {
   tag: "#28CYYU08P",
   name: "Runtime Player",
   trophies: 8000,
-  currentDeck: [],
+  currentDeck: [
+    {
+      id: 26000000,
+      name: "Knight",
+      level: 14,
+      maxLevel: 14,
+      elixirCost: 3,
+      rarity: "Common",
+      evolutionLevel: 1,
+      iconUrls: {
+        medium: "https://api-assets.clashroyale.com/cards/300/knight.png",
+        evolutionMedium:
+          "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
+      },
+    },
+  ],
 };
+const battles = Array.from({ length: 21 }, (_, index) => ({
+  battleTime: `20261001T${String(index).padStart(2, "0")}0000.000Z`,
+  team: [{ tag: "#28CYYU08P", name: "Runtime Player", crowns: 1, cards: [] }],
+  opponent: [{
+    tag: "#9XYZ",
+    name: "Opponent",
+    crowns: 0,
+    cards: [{
+      id: 26000018,
+      name: "Mini P.E.K.K.A",
+      level: 14,
+      maxLevel: 14,
+      elixirCost: 4,
+      rarity: "RARE",
+      evolutionLevel: 2,
+      iconUrls: {
+        medium: "https://api-assets.clashroyale.com/cards/300/mini-pekka.png",
+        heroMedium:
+          "https://api-assets.clashroyale.com/cardheroes/300/mini-pekka.png",
+      },
+    }],
+  }],
+}));
 
 const createRuntime = (outboundService) =>
   new Miniflare({
@@ -52,7 +90,7 @@ test("workerd executes the real Worker, mocked upstream, and Cache API", async (
       authorization: request.headers.get("Authorization"),
     });
     if (request.url === playerUrl) return Response.json(profile);
-    if (request.url === battlelogUrl) return Response.json([]);
+    if (request.url === battlelogUrl) return Response.json(battles);
     return new Response(null, { status: 404 });
   });
 
@@ -63,6 +101,23 @@ test("workerd executes the real Worker, mocked upstream, and Cache API", async (
     assert.equal(firstBody.ok, true);
     assert.equal(firstBody.player.tag, "#28CYYU08P");
     assert.equal(firstBody.cacheTtlSeconds, 300);
+    assert.equal(firstBody.battles.length, 20);
+    assert.deepEqual(
+      {
+        elixirCost: firstBody.player.currentDeck[0].elixirCost,
+        rarity: firstBody.player.currentDeck[0].rarity,
+        variant: firstBody.player.currentDeck[0].variant,
+        variantIconUrl: firstBody.player.currentDeck[0].variantIconUrl,
+      },
+      {
+        elixirCost: 3,
+        rarity: "common",
+        variant: "evo",
+        variantIconUrl:
+          "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
+      }
+    );
+    assert.equal(firstBody.battles[0].opponent[0].cards[0].variant, "hero");
     assert.equal(
       first.headers.get("Access-Control-Allow-Origin"),
       "https://rohin.shanker.me"
@@ -78,7 +133,7 @@ test("workerd executes the real Worker, mocked upstream, and Cache API", async (
     const cache = (await runtime.getCaches()).default;
     let cached;
     for (let attempt = 0; attempt < 100; attempt += 1) {
-      cached = await cache.match("https://stats.example.test/clash-royale");
+      cached = await cache.match("https://stats.example.test/clash-royale?schema=2");
       if (cached) break;
       await delay(20);
     }

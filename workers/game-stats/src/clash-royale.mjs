@@ -10,12 +10,24 @@ const UPSTREAM_TIMEOUT_MS = 8_000;
 const MAX_PROFILE_BYTES = 256 * 1024;
 const MAX_BATTLELOG_BYTES = 1024 * 1024;
 const MAX_CACHED_PAYLOAD_BYTES = 512 * 1024;
-const MAX_BATTLES = 10;
+const CACHE_SCHEMA_VERSION = "2";
+const MAX_BATTLES = 20;
 const MAX_CARDS = 16;
 const MAX_TEXT_LENGTH = 256;
 const DEFAULT_RATE_LIMIT_RETRY_MS = 30_000;
 const MAX_RATE_LIMIT_RETRY_MS = 60_000;
 const ASSET_HOST = "api-assets.clashroyale.com";
+const CARD_ASSET_PATH = "/cards/300/";
+const EVOLUTION_ASSET_PATH = "/cardevolutions/300/";
+const HERO_ASSET_PATH = "/cardheroes/300/";
+const VARIABLE_ELIXIR_CARD_IDS = new Set([28000006]);
+const CARD_RARITIES = new Set([
+  "common",
+  "rare",
+  "epic",
+  "legendary",
+  "champion",
+]);
 
 const isRecord = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -44,17 +56,29 @@ const optionalText = (value) =>
 const optionalInteger = (value, { allowNegative = false } = {}) =>
   Number.isSafeInteger(value) && (allowNegative || value >= 0) ? value : undefined;
 
+const optionalRarity = (value) => {
+  if (typeof value !== "string") return undefined;
+  const rarity = value.trim().toLowerCase();
+  return CARD_RARITIES.has(rarity) ? rarity : undefined;
+};
+
 const normalizeTag = (value) => {
   const tag = requiredText(value).trim().toUpperCase();
   if (!/^#[A-Z0-9]{3,20}$/.test(tag)) throw upstreamDataError();
   return tag;
 };
 
-const optionalAssetUrl = (value) => {
+const optionalAssetUrl = (value, pathPrefix) => {
   if (typeof value !== "string" || value.length > 2_048) return undefined;
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname === ASSET_HOST
+    return url.protocol === "https:" &&
+      url.hostname === ASSET_HOST &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      url.pathname.startsWith(pathPrefix) &&
+      url.pathname.endsWith(".png")
       ? url.toString()
       : undefined;
   } catch {
@@ -86,7 +110,17 @@ const normalizeCard = (value) => {
   if (!isRecord(value)) throw upstreamDataError();
   const id = optionalInteger(value.id);
   if (id === undefined) throw upstreamDataError();
-  const iconUrl = optionalAssetUrl(value.iconUrls?.medium);
+  const iconUrl = optionalAssetUrl(value.iconUrls?.medium, CARD_ASSET_PATH);
+  const variant = value.evolutionLevel === 1
+    ? "evo"
+    : value.evolutionLevel === 2
+      ? "hero"
+      : undefined;
+  const variantIconUrl = variant === "evo"
+    ? optionalAssetUrl(value.iconUrls?.evolutionMedium, EVOLUTION_ASSET_PATH)
+    : variant === "hero"
+      ? optionalAssetUrl(value.iconUrls?.heroMedium, HERO_ASSET_PATH)
+      : undefined;
   return compact([
     ["id", id],
     ["name", requiredText(value.name)],
@@ -94,7 +128,13 @@ const normalizeCard = (value) => {
     ["maxLevel", optionalInteger(value.maxLevel)],
     ["starLevel", optionalInteger(value.starLevel)],
     ["evolutionLevel", optionalInteger(value.evolutionLevel)],
+    ["elixirCost", VARIABLE_ELIXIR_CARD_IDS.has(id)
+      ? undefined
+      : optionalInteger(value.elixirCost)],
+    ["rarity", optionalRarity(value.rarity)],
+    ["variant", variant],
     ["iconUrl", iconUrl],
+    ["variantIconUrl", variantIconUrl],
   ]);
 };
 
@@ -171,6 +211,7 @@ const cacheKey = (request) => {
   const url = new URL(request.url);
   url.pathname = "/clash-royale";
   url.search = "";
+  url.searchParams.set("schema", CACHE_SCHEMA_VERSION);
   return new Request(url.toString(), { method: "GET" });
 };
 

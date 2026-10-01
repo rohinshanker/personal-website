@@ -10,6 +10,91 @@ import { fetchGuardedBody } from "./lib/http.mjs";
 const SITE_ORIGIN = "https://rohin.shanker.me";
 const PLAYER_TAG = "#28CYYU08P";
 const CACHE_TTL_SECONDS = 300;
+const MAX_BATTLES = 20;
+const MAX_CURRENT_DECK_CARDS = 8;
+const MAX_PARTICIPANT_CARDS = 16;
+const MAX_PARTICIPANTS = 4;
+const ASSET_ORIGIN = "https://api-assets.clashroyale.com";
+const CARD_ASSET_PATH = "/cards/300/";
+const EVOLUTION_ASSET_PATH = "/cardevolutions/300/";
+const HERO_ASSET_PATH = "/cardheroes/300/";
+const MIRROR_CARD_ID = 28000006;
+const CARD_RARITIES = new Set([
+  "common", "rare", "epic", "legendary", "champion",
+]);
+const CARD_VARIANTS = new Set(["evo", "hero"]);
+
+const isRecord = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+const isOptionalNonNegativeInteger = (value) =>
+  value === undefined || (Number.isSafeInteger(value) && value >= 0);
+
+const isAssetUrl = (value, pathPrefix) => {
+  if (value === undefined) return true;
+  if (typeof value !== "string" || value.length > 2_048) return false;
+  try {
+    const url = new URL(value);
+    return url.origin === ASSET_ORIGIN &&
+      !url.username &&
+      !url.password &&
+      url.pathname.startsWith(pathPrefix) &&
+      url.pathname.endsWith(".png");
+  } catch {
+    return false;
+  }
+};
+
+const isCard = (card) => {
+  if (
+    !isRecord(card) ||
+    !Number.isSafeInteger(card.id) ||
+    card.id < 0 ||
+    typeof card.name !== "string" ||
+    !card.name.trim() ||
+    !isOptionalNonNegativeInteger(card.level) ||
+    !isOptionalNonNegativeInteger(card.maxLevel) ||
+    !isOptionalNonNegativeInteger(card.starLevel) ||
+    !isOptionalNonNegativeInteger(card.evolutionLevel) ||
+    (card.elixirCost !== undefined &&
+      (!Number.isSafeInteger(card.elixirCost) || card.elixirCost < 0 ||
+        card.id === MIRROR_CARD_ID)) ||
+    (card.rarity !== undefined && !CARD_RARITIES.has(card.rarity)) ||
+    (card.variant !== undefined && !CARD_VARIANTS.has(card.variant)) ||
+    !isAssetUrl(card.iconUrl, CARD_ASSET_PATH)
+  ) {
+    return false;
+  }
+  const expectedVariant = card.evolutionLevel === 1
+    ? "evo"
+    : card.evolutionLevel === 2
+      ? "hero"
+      : undefined;
+  if (card.variant !== expectedVariant) return false;
+  const variantPath = card.variant === "evo"
+    ? EVOLUTION_ASSET_PATH
+    : card.variant === "hero"
+      ? HERO_ASSET_PATH
+      : undefined;
+  return card.variantIconUrl === undefined ||
+    (variantPath !== undefined && isAssetUrl(card.variantIconUrl, variantPath));
+};
+
+const isCardArray = (value, limit) =>
+  Array.isArray(value) && value.length <= limit && value.every(isCard);
+
+const isParticipant = (value) =>
+  isRecord(value) &&
+  (value.cards === undefined || isCardArray(value.cards, MAX_PARTICIPANT_CARDS));
+
+const isParticipantArray = (value) =>
+  Array.isArray(value) && value.length > 0 &&
+  value.length <= MAX_PARTICIPANTS && value.every(isParticipant);
+
+const isBattle = (value) =>
+  isRecord(value) &&
+  isParticipantArray(value.team) &&
+  isParticipantArray(value.opponent);
 
 /** Checks the deployed integration without reading or transmitting a secret. */
 export const checkClashRoyaleDeployment = async ({
@@ -54,7 +139,10 @@ export const checkClashRoyaleDeployment = async ({
     payload.player?.tag !== PLAYER_TAG ||
     typeof payload.player?.name !== "string" ||
     !payload.player.name.trim() ||
+    !isCardArray(payload.player?.currentDeck, MAX_CURRENT_DECK_CARDS) ||
     !Array.isArray(payload.battles) ||
+    payload.battles.length > MAX_BATTLES ||
+    !payload.battles.every(isBattle) ||
     payload.cacheTtlSeconds !== CACHE_TTL_SECONDS
   ) {
     throw new Error("Clash Royale endpoint returned an invalid player snapshot");
