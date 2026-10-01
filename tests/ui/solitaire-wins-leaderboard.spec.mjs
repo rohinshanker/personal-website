@@ -205,7 +205,7 @@ for (const viewport of viewports) {
       "Global rank 2"
     );
     await expect(localRow.locator(".game-stats-metric img")).toHaveCount(3);
-    await expect(localRow.locator(".game-stats-metric img").first()).toHaveAttribute("alt", " ");
+    await expect(localRow.locator(".game-stats-metric img").first()).toHaveAttribute("alt", "");
     await expect(localRow.locator(".game-stats-metric img").first()).toHaveAttribute(
       "src",
       /digital_unlit\.png$/

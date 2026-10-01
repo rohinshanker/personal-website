@@ -819,6 +819,8 @@ for (const viewport of VIEWPORTS) {
   test(`12-player rankings keep global Top 3 independent at ${viewport.name}`, async ({
     page,
   }, testInfo) => {
+    // Four complete game flows now include whole-document accessibility scans.
+    test.setTimeout(60_000);
     await page.setViewportSize(viewport);
     const diagnostics = await installMockBackend(page, {
       profile: RANKED_PROFILE,
