@@ -577,12 +577,12 @@ test("both Neko launchers provide the bounded /nekostream menu without changing 
   await desktopLauncher.click({ button: "right" });
   await command.press("Tab");
   await expect(menu).toBeHidden();
-  await expect(page.locator('.desktop-icon[data-app="sudoku"]')).toBeFocused();
+  await expect(page.locator('.desktop-icon[data-app="credits"]')).toBeFocused();
 
   await desktopLauncher.click({ button: "right" });
   await command.press("Shift+Tab");
   await expect(menu).toBeHidden();
-  await expect(page.locator('.desktop-icon[data-app="snake"]')).toBeFocused();
+  await expect(page.locator('.desktop-icon[data-app="life-counter"]')).toBeFocused();
 
   await desktopLauncher.focus();
   await desktopLauncher.press("Shift+F10");
