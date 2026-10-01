@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import test from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const workerPackageUrl = new URL("../workers/game-stats/package.json", import.meta.url);
@@ -74,6 +75,14 @@ test("workerd executes the real Worker, mocked upstream, and Cache API", async (
       outboundRequests.map(({ authorization }) => authorization),
       [`Bearer ${syntheticApiKey}`, `Bearer ${syntheticApiKey}`]
     );
+    const cache = (await runtime.getCaches()).default;
+    let cached;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      cached = await cache.match("https://stats.example.test/clash-royale");
+      if (cached) break;
+      await delay(20);
+    }
+    assert.ok(cached, "the background cache write must finish within two seconds");
     const second = await dispatch(runtime);
     assert.equal(second.status, 200);
     assert.equal((await second.json()).fetchedAt, firstBody.fetchedAt);

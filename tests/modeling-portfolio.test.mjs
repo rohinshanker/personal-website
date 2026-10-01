@@ -234,7 +234,7 @@ test("Home shows the Modeling launch prompt every time the Modeling window opens
   assert.match(main, /const openModelingLaunchPrompt = \(\) => \{[\s\S]*?setWindowOpen\(MODELING_LAUNCH_APP_ID, true\)/);
   assert.match(
     main,
-    /restartWindowAnimation\(win, "is-opening"\);[\s\S]*?if \(appId === "modeling"\) openModelingLaunchPrompt\(\);\s*return;/
+    /restartWindowAnimation\(win, "is-opening"\);[\s\S]*?if \(appId === "modeling"\) openModelingLaunchPrompt\(\);[\s\S]*?return;/
   );
 });
 

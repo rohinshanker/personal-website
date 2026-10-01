@@ -113,10 +113,10 @@
     <link rel="stylesheet" href="styles/home/apps/snake.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-mobile-actions-20260928" />
     <!-- The Sudoku generator runs in a worker; main.js reads its versioned URL from here. -->
-    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-781e9e3fe27f372dd47374c6a25a1012956d78dbfebd7c55067d2d06b6e9e1c6" as="worker" />
+    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-25b89cbf47690075134fb790aef0e7b3c46a455282de496eff2175a7ce1f648b" as="worker" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=html-semantics-20260927" />
-    <link rel="stylesheet" href="styles/home/portfolio.css?v=education-scroll-gutter-20260923" />
+    <link rel="stylesheet" href="styles/home/portfolio.css?v=clash-royale-20261001" />
     <link rel="stylesheet" href="styles/home/study-resources.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/random-events.css?v=loop-video-fallback-wait-20260929" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cache-token-parity-20260927" />
@@ -228,6 +228,10 @@
         <img src="assets/app-icons/ico/pcx_alt.ico" alt="" />
         <span class="desktop-icon-label">Image Tools</span>
       </button>
+      <button class="desktop-icon" data-app="clash-royale" aria-label="Clash Royale">
+        <img src="assets/app-icons/ico/game_freecell.ico" alt="" />
+        <span class="desktop-icon-label">Clash Royale</span>
+      </button>
       <button
         class="desktop-icon"
         data-app="admin-controls"
@@ -241,10 +245,6 @@
       <button class="desktop-icon" data-github-shortcut aria-label="Open GitHub repository">
         <img class="github-shortcut-image" src="assets/app-icons/github-shortcut.png" alt="" />
         <span class="desktop-icon-label">GitHub</span>
-      </button>
-      <button class="desktop-icon" data-app="clash-royale" aria-label="Clash Royale">
-        <img src="assets/app-icons/ico/game_freecell.ico" alt="" />
-        <span class="desktop-icon-label">Clash Royale</span>
       </button>
     </div>
     <main class="window-stack">
@@ -3671,6 +3671,7 @@
         data-app-window="clash-royale"
         id="clash-royale-window"
         role="dialog"
+        aria-hidden="true"
         aria-modal="false"
         aria-labelledby="clash-royale-window-title"
       >
@@ -4045,6 +4046,9 @@
         >
           <img src="assets/app-icons/ico/pcx_alt.ico" alt="" />
         </button>
+        <button class="taskbar-icon" data-app="clash-royale" aria-label="Clash Royale">
+          <img src="assets/app-icons/ico/game_freecell.ico" alt="Clash Royale" />
+        </button>
         <button
           class="taskbar-icon"
           data-app="admin-controls"
@@ -4056,9 +4060,6 @@
         </button>
         <button class="taskbar-icon" data-github-shortcut aria-label="Open GitHub repository">
           <img class="github-shortcut-image" src="assets/app-icons/github-shortcut.png" alt="GitHub repository" />
-        </button>
-        <button class="taskbar-icon" data-app="clash-royale" aria-label="Clash Royale">
-          <img src="assets/app-icons/ico/game_freecell.ico" alt="Clash Royale" />
         </button>
       </div>
       <span class="taskbar-divider" aria-hidden="true"></span>
@@ -6955,16 +6956,16 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-781e9e3fe27f372dd47374c6a25a1012956d78dbfebd7c55067d2d06b6e9e1c6"></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-25b89cbf47690075134fb790aef0e7b3c46a455282de496eff2175a7ce1f648b"></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721"></script>
     <script src="scripts/home/system-alerts.js?v=repo-hygiene-20260927"></script>
-    <script src="scripts/home/core/dom.js?v=game-build-781e9e3fe27f372dd47374c6a25a1012956d78dbfebd7c55067d2d06b6e9e1c6"></script>
+    <script src="scripts/home/core/dom.js?v=game-build-25b89cbf47690075134fb790aef0e7b3c46a455282de496eff2175a7ce1f648b"></script>
     <script src="scripts/home/core/media.js?v=shared-cross-route-20260930"></script>
     <script src="scripts/home/core/administrator-session.js?v=admin-session-module-20260930"></script>
     <script src="scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930"></script>
     <script src="scripts/home/modeling-portfolio.js?v=modeling-portfolio-digitals-20260926"></script>
     <script type="module" src="scripts/home/clash-royale.js?v=clash-royale-20261001"></script>
-    <script src="scripts/home/main.js?v=game-build-781e9e3fe27f372dd47374c6a25a1012956d78dbfebd7c55067d2d06b6e9e1c6"></script>
+    <script src="scripts/home/main.js?v=game-build-25b89cbf47690075134fb790aef0e7b3c46a455282de496eff2175a7ce1f648b"></script>
     <script src="scripts/home/admin-controls.js?v=shared-cross-route-20260930"></script>
   </body>
 </html>

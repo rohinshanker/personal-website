@@ -105,6 +105,8 @@ jobs:
           --config wrangler.jsonc --strict
       - name: Verify live browser remains accepted by the candidate Worker
         run: npm run game-stats:worker-transition:check
+      - name: Verify live Clash Royale data before publishing its UI
+        run: npm run clash-royale:deployment:check
 
   package-pages:
     name: Package verified Pages release
@@ -177,3 +179,5 @@ jobs:
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
       - name: Verify checked-in/deployed browser/Worker release parity
         run: npm run game-stats:release:check
+      - name: Verify live Clash Royale data after publication
+        run: npm run clash-royale:deployment:check

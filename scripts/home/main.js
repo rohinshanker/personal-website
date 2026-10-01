@@ -18224,10 +18224,13 @@ const setWindowOpen = (appId, open) => {
       triggerRandomEvents("windowOpen", { appId });
     }
     if (appId === "modeling") openModelingLaunchPrompt();
+    if (appId === "clash-royale") window.ClashRoyaleApp?.load(false);
     return;
   }
 
   if (win.classList.contains("is-hidden")) return;
+
+  if (appId === "clash-royale") window.ClashRoyaleApp?.cancel();
 
   if (
     win.matches(FOCUS_RETURN_WINDOW_SELECTOR) &&
@@ -18282,16 +18285,10 @@ const toggleWindow = (appId) => {
     }
     setWindowOpen(appId, shouldOpen);
     // (Removed temporary Minesweeper open trigger for achievement.)
-    if (appId === "clash-royale" && shouldOpen) {
-      window.ClashRoyaleApp?.load(false);
-    }
   }
 };
 
 const closeAppWindow = (appId) => {
-  if (appId === "clash-royale") {
-    window.ClashRoyaleApp?.cancel();
-  }
   if (appId === "administrator") {
     administratorSignInAttemptId += 1;
     administratorSignInAbortController?.abort();

@@ -22,7 +22,8 @@
     "game-stats:static-release:check": "node scripts/check-game-stats-deployment.mjs --static-release",
     "game-stats:worker-transition:check": "node scripts/check-game-stats-deployment.mjs --worker-transition",
     "game-stats:release:check": "node scripts/check-game-stats-deployment.mjs --release",
-    "game-stats:worker-secrets:check": "node scripts/check-game-stats-worker-secrets.mjs"
+    "game-stats:worker-secrets:check": "node scripts/check-game-stats-worker-secrets.mjs",
+    "clash-royale:deployment:check": "node scripts/check-clash-royale-deployment.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

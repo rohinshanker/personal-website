@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   normalizeClashTag,
+  parseClashBattleTime,
   prepareClashSnapshot,
   resolveClashBattle,
   summarizeClashBattles,
@@ -10,6 +11,13 @@ import {
 
 const PLAYER = Object.freeze({ tag: "#28CYYU08P", name: "Rohin" });
 const OPPONENT = Object.freeze({ tag: "#ABC123", name: "Opponent" });
+
+test("normalizes compact API timestamps and rejects unavailable battle times", () => {
+  for (const value of ["20261001T121500.000Z", "20261001T121500Z", "2026-10-01T12:15:00Z"]) {
+    assert.equal(parseClashBattleTime(value).toISOString(), "2026-10-01T12:15:00.000Z");
+  }
+  for (const value of [null, "", "not a date"]) assert.equal(parseClashBattleTime(value), null);
+});
 
 test("normalizes Clash Royale tags for participant matching", () => {
   assert.equal(normalizeClashTag(" #28cyyu08p "), "28CYYU08P");

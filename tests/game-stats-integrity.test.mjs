@@ -59,6 +59,7 @@ test("game build metadata matches the completion source and Worker configuration
     "ADMIN_USERNAME",
     "ADMIN_PASSWORD",
     "ADMIN_SESSION_SIGNING_SECRET",
+    "CLASH_ROYALE_API_KEY",
   ]);
   assert.deepEqual(GAME_COMPLETION_SOURCE_FILES, [
     "scripts/home/main.js",

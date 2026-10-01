@@ -222,6 +222,17 @@ test("returns an allowlisted profile, current deck, and battle log", async () =>
   assert.equal(route.cache.puts[0].response.headers.get("Cache-Control"), "max-age=300");
 });
 
+test("returns an empty deck when the upstream profile omits it", async () => {
+  const route = fetchRoute({
+    fetchImpl: successFetch([], { tag: "#28CYYU08P", name: "Rohin" }, []),
+  });
+  const response = await route.run();
+  assert.equal(response.status, 200);
+  const body = await json(response);
+  assert.deepEqual(body.player.currentDeck, []);
+  assert.deepEqual(body.battles, []);
+});
+
 test("serves a valid successful cache entry and refetches a corrupt one", async () => {
   const cache = new MemoryCache();
   const first = fetchRoute({ cache });

@@ -2,7 +2,7 @@
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 - Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-09-30
+- Last verified: 2026-10-01
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -47,6 +47,9 @@ or high-stakes game.
   `wrangler.jsonc` `secrets.required` is present on the account. Wrangler itself
   ignores that block and a strict dry run says nothing about it, so a missing
   secret would otherwise surface only as a runtime 500.
+- The same Worker serves the public Clash Royale profile. Its live data check
+  gates Pages publication after Worker deployment and runs again after release;
+  see [Clash Royale setup and validation](clash-royale.md).
 
 Do not invent a Worker URL from the account ID. After deploying, copy the URL
 from Wrangler's successful deployment output. A `workers.dev` URL is normally
@@ -134,6 +137,7 @@ credential.
 | `ADMIN_USERNAME` | Worker secret | Administrator sign-in username. | Choose a non-personal identifier, store it in a password manager, and enter it only in Wrangler's prompt. |
 | `ADMIN_PASSWORD` | Worker secret | Administrator sign-in password. | Use a unique high-entropy password; never put it in source, a command line, browser storage, or a URL. |
 | `ADMIN_SESSION_SIGNING_SECRET` | Worker secret | Separately signs the one-hour proof for the protected administrator profile. | Generate a different random value from every other secret; rotation immediately invalidates outstanding administrator proofs. |
+| `CLASH_ROYALE_API_KEY` | Worker secret | Reads the fixed Clash Royale player's profile and battle log through RoyaleAPI's proxy. | Required for the Clash Royale release gate; configure the upstream IP allowlist as described in [clash-royale.md](clash-royale.md). |
 | `TURNSTILE_SECRET_KEY` | Worker secret | Calls Cloudflare Siteverify. | Do **not** set it yet: the current browser client does not send a Turnstile token. Set it only after shipping and testing the client widget flow; never expose it to the browser. |
 | `GAME_BUILD_VERSION` | committed Worker var | Must equal the generated browser build version. | Public release metadata, updated only by the integrity script. |
 | `GAME_BUILD_COMPATIBILITY_VERSIONS` | committed Worker var | Ordered recent browser hashes accepted during staged releases. | Public release metadata normally maintained by the integrity script; retain the observed live build before rollout if development builds evicted it. |

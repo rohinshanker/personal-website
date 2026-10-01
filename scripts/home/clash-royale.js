@@ -165,15 +165,15 @@ const formatClan = (clan) => {
   return `${String(clan.name).trim()}${tag ? ` (${tag})` : ""}`;
 };
 
-const formatBattleTime = (value) => {
+export const parseClashBattleTime = (value) => {
   const text = String(value ?? "").trim();
-  if (!text) return "Time unavailable";
-  const compactMatch = text.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+  if (!text) return null;
+  const compactMatch = text.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(\.\d{1,3})?Z$/);
   const timestamp = compactMatch
-    ? `${compactMatch[1]}-${compactMatch[2]}-${compactMatch[3]}T${compactMatch[4]}:${compactMatch[5]}:${compactMatch[6]}Z`
+    ? `${compactMatch[1]}-${compactMatch[2]}-${compactMatch[3]}T${compactMatch[4]}:${compactMatch[5]}:${compactMatch[6]}${compactMatch[7] ?? ""}Z`
     : text;
   const date = new Date(timestamp);
-  return Number.isNaN(date.getTime()) ? "Time unavailable" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? null : date;
 };
 
 const formatMode = (battle) =>
@@ -241,9 +241,9 @@ const renderBattles = (battles) => {
         `vs. ${String(opponent.name ?? opponent.tag).trim() || "Unknown player"}`
       )
     );
-    const time = createElement("time", "cr-battle-time", formatBattleTime(battle.battleTime));
-    const parsedTime = new Date(battle.battleTime);
-    if (!Number.isNaN(parsedTime.getTime())) time.dateTime = parsedTime.toISOString();
+    const parsedTime = parseClashBattleTime(battle.battleTime);
+    const time = createElement("time", "cr-battle-time", parsedTime?.toLocaleString() ?? "Time unavailable");
+    if (parsedTime) time.dateTime = parsedTime.toISOString();
     summary.appendChild(time);
     item.appendChild(summary);
     return item;
@@ -415,4 +415,7 @@ if (elements.refresh) {
 
 if (typeof window !== "undefined") {
   window.ClashRoyaleApp = Object.freeze({ cancel, load });
+  if (document.getElementById("clash-royale-window")?.getAttribute("aria-hidden") === "false") {
+    load(false);
+  }
 }

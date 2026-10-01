@@ -137,7 +137,7 @@ export const normalizeClashRoyalePayload = (profile, battlelog, fetchedAt) => {
   if (!isRecord(profile) || !Array.isArray(battlelog)) throw upstreamDataError();
   const tag = normalizeTag(profile.tag);
   if (tag !== CLASH_ROYALE_PLAYER_TAG) throw upstreamDataError();
-  const currentDeck = normalizeCards(profile.currentDeck, 8);
+  const currentDeck = normalizeCards(profile.currentDeck, 8) ?? [];
   return {
     ok: true,
     player: compact([

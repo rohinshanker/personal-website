@@ -177,6 +177,7 @@ test("renders success and long content across the viewport matrix without overfl
     await expect(page.locator("#cr-player-name")).toHaveText(longName);
     await expect(page.locator("#cr-current-deck .cr-deck-card")).toHaveCount(8);
     await expect(page.locator("#cr-battle-log .cr-battle-item")).toHaveCount(2);
+    await expect(page.locator("#cr-battle-log time").first()).toHaveAttribute("datetime", "2026-10-01T12:15:00.000Z");
     await expect(page.locator("#cr-sample-summary")).toHaveText("1W–0L–0D · +1 crowns");
     await settleRender(page);
 
@@ -230,13 +231,36 @@ test("suppresses duplicate refreshes and reuses the snapshot after reopening", a
     window.ClashRoyaleApp.load(true);
   });
   expect(requestCount).toBe(1);
-  await clashWindow.locator('[data-close="clash-royale"]').click();
+  await page.locator('.taskbar-icon[data-app="clash-royale"]').click();
+  await expect(page.locator("#cr-refresh")).toBeEnabled();
+  await expect(page.locator("#cr-status")).toHaveText("Refresh cancelled.");
   await page.locator('.taskbar-icon[data-app="clash-royale"]').click();
   await expect(clashWindow).toBeVisible();
   await expect.poll(() => requestCount).toBe(2);
   await expect(page.locator("#cr-refresh")).toBeEnabled();
   await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
   expect(requestCount).toBe(2);
+});
+
+test("loads an app opened before its module finishes downloading", async ({ page }) => {
+  let releaseModule;
+  const moduleReady = new Promise((resolve) => { releaseModule = resolve; });
+  await page.route(/\/scripts\/home\/clash-royale\.js(?:\?.*)?$/, async (route) => {
+    await moduleReady;
+    await route.continue();
+  });
+  await page.route(API_URL, (route) => successResponse(route));
+  try {
+    await page.goto("/home.html", { waitUntil: "commit" });
+    await page.waitForFunction(() => Boolean(window.rohinAdminOrchestrator));
+    await page.locator('#about-window [data-close="about"]').click({ noWaitAfter: true });
+    await page.locator('.taskbar-icon[data-app="clash-royale"]').click({ noWaitAfter: true });
+    await expect(page.locator("#clash-royale-window")).toBeVisible();
+    releaseModule();
+    await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
+  } finally {
+    releaseModule();
+  }
 });
 
 test("retains a snapshot after an error and clears stale fields on an empty success", async ({

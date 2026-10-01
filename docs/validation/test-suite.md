@@ -2,7 +2,7 @@
 
 - Purpose: Define the repository's automated-test coverage contract and the prioritized hardening backlog.
 - Scope: Source and contract tests, browser UI tests, the Game Stats Worker and D1 boundary, generated artifacts, repository security checks, and CI wiring.
-- Last verified: 2026-09-09
+- Last verified: 2026-10-01
 
 ## Priority scale
 
@@ -159,8 +159,9 @@ that a state machine or user flow executes correctly.
 5. **Add a generic app-window contract and real touch smoke.** Exercise every
    desktop/taskbar launcher through public controls and verify open, close,
    Escape, focus placement/restoration, accessible naming, and responsive
-   containment. Study Resources, Credits, and Clash Royale currently have no
-   direct UI references. Add at least one `hasTouch` mobile project with real
+   containment. Clash Royale has focused loading, refresh, cancellation,
+   error, empty, responsive, and axe coverage in `tests/ui/clash-royale.spec.mjs`.
+   Add at least one `hasTouch` mobile project with real
    taps; resized desktop Chromium is not mobile-input coverage.
 
 6. **Extend accessibility scanning.** The shared scanner and exact Solitaire
@@ -188,8 +189,8 @@ that a state machine or user flow executes correctly.
    Previous/Next, countdown completion, pause-natural-events, and toggle
    restoration.
 3. Add the profile-name provider's timeout, non-OK, invalid, empty, insufficient
-   data, loading, retry, and reroll-preservation states. Add carousel/media and
-   Clash Royale loading, failure, and empty-state coverage.
+   data, loading, retry, and reroll-preservation states. Add carousel/media
+   coverage.
 4. Add rejection and callback-throw cases for deferred random-event preloading;
    verify `pending` cleanup and absence of unhandled rejections. Expand Gears
    executable coverage beyond source regex to active, completed, no-enemy,

@@ -2,7 +2,7 @@
 
 - Purpose: Run and maintain browser screenshot baselines and WCAG scans.
 - Scope: Browser test projects, isolated containers, fixtures, and known accessibility limitations.
-- Last verified: 2026-09-30
+- Last verified: 2026-10-01
 
 ## Playwright projects
 
@@ -134,6 +134,12 @@ use `tests/ui/helpers/accessibility-contracts.mjs` for scanning, report
 attachments, and the shared exact Solitaire exception.
 The combined four-game scenario has a 60-second budget for its interactions
 and scans; the project default remains 30 seconds.
+
+`tests/ui/clash-royale.spec.mjs` adds populated Clash Royale scans at mobile
+and desktop, plus responsive success, long content, loading, refresh failure,
+empty data, and close/reopen cancellation checks. Its API fixtures contain
+public snapshots only; authenticated upstream verification belongs to the
+[live deployment gate](clash-royale.md).
 
 Each state asserts an **exact** violation list rather than "no new violations",
 so both a new defect and a repaired one fail the suite until the record is
