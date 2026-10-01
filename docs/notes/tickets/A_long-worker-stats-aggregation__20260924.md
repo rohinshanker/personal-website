@@ -48,7 +48,7 @@
   Node SQLite migration fixture and D1 index query passed.
 - Focused source/Worker tests, strict Wrangler dry-run, 95%+ line coverage, and
   Game Stats/Game Progress Playwright checks pass at 375×812, 768×1024,
-  1280×800, and 1440×900. The candidate dry-run is 62.32 KiB / 14.39 KiB
+  1280×800, and 1440×900. The candidate dry-run is 62.39 KiB / 14.41 KiB
   gzip; the increase is the fixed SQL/window query set and cache/protocol path,
   not the removed event-table aggregation loop. Full final gate evidence is
   recorded in DEM-179.

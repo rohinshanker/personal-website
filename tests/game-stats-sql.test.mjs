@@ -587,6 +587,7 @@ test("all stats statements share one future cutoff and reject SQLite relative da
     ["event-cutoff-excluded", new Date(now + 60_001).toISOString()],
     ["event-relative-now", "now"],
     ["event-relative-time", "12:00:00"],
+    ["event-padded-date", "2026-01-01T00:00:00.000Z "],
   ]) {
     insertEvent(database, {
       id, occurredAt, game: "minesweeper", type: "win", difficulty: "beginner",
@@ -604,6 +605,7 @@ test("all stats statements share one future cutoff and reject SQLite relative da
     { personal_site_game_stats: database },
     { protocol: "2", playerId: "player-cutoff-check", pendingEventIds: [
       "event-cutoff-included", "event-cutoff-excluded", "event-relative-now", "event-relative-time",
+      "event-padded-date",
     ] }
   );
   assert.equal(clockReads, 1);

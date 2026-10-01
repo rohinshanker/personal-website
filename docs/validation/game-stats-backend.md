@@ -257,8 +257,9 @@ restrict scans by game/type; profile lookups and window sorting still read the
 table and use temporary B-trees, so they are not covering indexes.
 
 Totals, rankings, and acknowledgments share one bound future-date cutoff in a
-D1 batch. Historical calendar dates must parse in SQLite; relative values such
-as `now` and time-only strings are rejected. String fields use JavaScript's
+D1 batch. Historical unpadded calendar dates must parse in SQLite; relative values such
+as `now`, time-only strings, and padded ISO timestamps are rejected. Released
+Workers store canonical UTC ISO timestamps. String fields use JavaScript's
 whitespace set, and returned names retain the 32 UTF-16-unit limit.
 
 For Worker-only coverage, exclude test helpers explicitly:

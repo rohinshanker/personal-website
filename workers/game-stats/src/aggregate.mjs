@@ -16,7 +16,7 @@ const TRIM_CHARACTER_CODES = [
 ];
 const trimmedColumns = Object.fromEntries(
   ["id", "difficulty", "board_size", "hint_bucket", "metric_kind", "player_id",
-    "player_name", "player_icon"].map((column) => [
+    "player_name", "player_icon", "occurred_at"].map((column) => [
     column,
     `trim(coalesce(${column}, ''), char(${TRIM_CHARACTER_CODES.join(", ")}))`,
   ])
@@ -24,8 +24,8 @@ const trimmedColumns = Object.fromEntries(
 
 /*
  * Normalize and quarantine legacy rows in SQL. New writes have already passed
- * stricter JavaScript validation; these predicates preserve the read-side
- * tolerance that kept one corrupt historical row from taking /stats offline.
+ * stricter JavaScript validation. Retain category/profile/metric tolerance
+ * for stored calendar timestamps while skipping malformed historical rows.
  * Event ids are primary keys, so no JavaScript-side deduplication pass is
  * needed after the query has accepted the row.
  */
@@ -67,6 +67,7 @@ const VALID_EVENT_PROJECTION = `
 const COMMON_EVENT_PREDICATES = `
   length(${trimmedColumns.id}) BETWEEN 8 AND 80
   AND ${trimmedColumns.id} NOT GLOB '*[^a-z0-9-]*'
+  AND occurred_at = ${trimmedColumns.occurred_at}
   AND occurred_at GLOB '*-*-*'
   AND julianday(occurred_at) IS NOT NULL
   AND julianday(occurred_at) <= julianday(?1)
