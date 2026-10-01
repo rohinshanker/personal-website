@@ -2,7 +2,7 @@
 
 | Purpose | Scope | Last verified | Document |
 | --- | --- | --- | --- |
-| Configure and verify the public Clash Royale player app. | Twenty-battle snapshots, card elixir/rarity and Hero/Evo artwork, deferred participant decks, scrolling and card-layout contracts, server-side credentials, caching, and the live release gate. | 2026-10-01 | [clash-royale.md](clash-royale.md) |
+| Configure and verify the public Clash Royale player app. | Twenty-battle snapshots, card elixir/rarity and Hero/Evo artwork, deferred participant decks, raised cards, inset counters, potion costs, scrolling, server-side credentials, caching, and the live release gate. | 2026-10-01 | [clash-royale.md](clash-royale.md) |
 | Animated Solitaire auto-solve for every deal and the staged Admin game-win board. | Playable-card availability, completion glow, toolbar swap, greedy ordering with flips, batch undo, incremental landings, accelerating flight with card-edge flash, impact sound, and window knock, end-of-run victory, cancellation, and the presentation-only preset. | 2026-09-24 | [solitaire-auto-solve.md](solitaire-auto-solve.md) |
 | Public `/modeling/` portfolio route, shared shoot data, and the Home new-tab prompt. | Route header, per-shoot windows, swipe carousels with neighbour-only loading, credits disclosures, fullscreen viewer, shared data parity with Home, launch prompt, packaging, and sitemap. | 2026-09-30 | [modeling-portfolio.md](modeling-portfolio.md) |
 | Copy/paste authoring and validated runtime behavior for basic system-alert random events. | Bulk alert configuration, normalization, shared rendering, automatic registration, Administrator previews, focus, and responsive behavior. | 2026-08-11 | [system-alert-random-events.md](system-alert-random-events.md) |

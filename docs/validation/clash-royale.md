@@ -55,12 +55,18 @@ current deck uses four columns and two rows, with rarity glow (no visible rarity
 word), names above the artwork, per-card elixir cost, and a one-decimal average
 when every card has a known fixed cost. Hero/Evo labels sit next to current-deck
 names; compact participant cards keep labels over the art and use Windows grey
-backgrounds. The deck appearance control compares white and raised grey tiles
-without making the cards interactive. At compact widths, let variant labels
-wrap rather than forcing ordinary card names to break mid-word.
+backgrounds. Current Deck tiles use raised grey borders that depress on hover
+and active without changing tile or grid dimensions. They remain semantic list
+items. Player/stat frames use the shared sunken borders, with a separate inset
+around each digit counter. At compact widths, let variant labels wrap rather
+than forcing ordinary card names to break mid-word.
 Mirror (card ID `28000006`) uses a variable `+1` label and makes the average
 unavailable; missing costs must not become zero. Career wins and losses retain
-text labels alongside green/red coloring.
+text labels alongside green/red coloring. Per-card costs show the number and a
+local potion icon whose accessible name identifies elixir; unknown costs show
+an em dash with “Elixir unavailable” alternative text. Mirror retains its
+`+1 variable` qualifier. The summary reads `Average Elixir: 3.9` followed by a
+decorative potion icon (or “unavailable” when the average cannot be calculated).
 
 Card images use only validated HTTPS PNG URLs supplied by the official API on
 `api-assets.clashroyale.com`. Current-deck art loads when the app opens; battle
@@ -81,8 +87,8 @@ download a full card library. Arena art still requires a verified arena-ID
 mapping.
 
 Use the existing leaderboard digit sprites and local trophy icon. The pixel
-crown and sword are vendored from the free MIT Pixelarticons set with sources
-recorded in `assets/pixelarticons/README.md`. Solitaire's desktop, taskbar, and Game
+crown, sword, and potion are vendored from the free MIT Pixelarticons set, with
+sources recorded in `assets/pixelarticons/README.md`. Solitaire's desktop, taskbar, and Game
 Progress icons use `game_solitaire.ico`; Clash Royale Stats uses
 `game_freecell.ico`.
 
@@ -114,9 +120,10 @@ Run focused checks while editing, then the full quality gates in
 empty, failed refresh, retry, and long content. Confirm usable controls,
 accessible status, correct player-side battle results, Hero/Evo and
 missing-image fallbacks, deferred battle-deck loading, and no accidental
-overflow. Compare both deck appearances, badge hover/focus, and footer
-visibility at the beginning and end of battle scrolling. Include the 639/641px
-breakpoint neighbors.
+overflow. Check raised/hover/active/reset card states, nested counter frames,
+accessible elixir icons, badge hover/focus, and footer visibility at the
+beginning and end of battle scrolling. Include the 639/641px breakpoint
+neighbors.
 
 ```sh
 node --test tests/clash-royale*.test.mjs

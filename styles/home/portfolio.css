@@ -64,6 +64,11 @@
   gap: 7px;
 }
 
+.cr-player-panel {
+  border: 2px solid;
+  border-color: var(--button-shadow) var(--button-highlight) var(--button-highlight) var(--button-shadow);
+}
+
 .cr-title-row {
   display: flex;
   align-items: center;
@@ -102,13 +107,13 @@
 .cr-stat {
   align-items: center;
   background: #fff;
-  box-shadow: inset -1px -1px #fff, inset 1px 1px #808080;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   display: grid;
   gap: 4px;
   grid-template-columns: minmax(70px, auto) minmax(0, 1fr);
   min-height: 34px;
   min-width: 0;
-  padding: 2px 5px;
+  padding: 4px 5px;
 }
 
 .cr-stat dt {
@@ -387,6 +392,12 @@
   display: inline-flex;
 }
 
+.cr-stat .cr-digit-value {
+  background: var(--surface);
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  padding: 3px;
+}
+
 .cr-digit-strip {
   height: 23px;
   padding: 2px;
@@ -414,8 +425,8 @@
 }
 
 .cr-deck-card {
-  background: #fff;
-  box-shadow: inset -1px -1px #dfdfdf, inset 1px 1px #fff, 1px 1px #808080;
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
   display: grid;
   font-size: 11px;
   grid-template-rows: auto 94px auto;
@@ -425,10 +436,10 @@
   padding: 4px;
 }
 
-.cr-deck-row.is-raised .cr-deck-card,
-.cr-deck-card--compact {
-  background: var(--surface);
-  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+#cr-current-deck .cr-deck-card:hover,
+#cr-current-deck .cr-deck-card:active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  padding: 5px 3px 3px 5px;
 }
 
 .cr-deck-card-media {
@@ -539,13 +550,26 @@
 }
 
 .cr-card-elixir {
+  align-items: center;
+  display: inline-flex;
   font-weight: 700;
+  gap: 3px;
+}
+
+.cr-elixir-icon {
+  flex: none;
+  height: 14px;
+  image-rendering: pixelated;
+  width: 14px;
 }
 
 .cr-deck-average {
+  align-items: center;
   color: #333;
+  display: inline-flex;
   font-size: 11px;
   font-weight: 700;
+  gap: 3px;
 }
 
 .cr-section-heading-row {
@@ -558,23 +582,6 @@
 .cr-deck-heading-row {
   align-items: center;
   flex-wrap: wrap;
-}
-
-.cr-deck-style-toggle {
-  align-items: center;
-  border: 0;
-  display: flex;
-  font-size: 10px;
-  gap: 7px;
-  margin: 0;
-  padding: 0;
-}
-
-.cr-deck-style-option,
-.cr-deck-style-toggle label {
-  align-items: center;
-  display: inline-flex;
-  white-space: nowrap;
 }
 
 .cr-section-title {

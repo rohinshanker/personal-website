@@ -116,7 +116,7 @@
     <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-25b89cbf47690075134fb790aef0e7b3c46a455282de496eff2175a7ce1f648b" as="worker" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=html-semantics-20260927" />
-    <link rel="stylesheet" href="styles/home/portfolio.css?v=clash-royale-mobile-20261001" />
+    <link rel="stylesheet" href="styles/home/portfolio.css?v=clash-royale-inlays-20261001" />
     <link rel="stylesheet" href="styles/home/study-resources.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/random-events.css?v=loop-video-fallback-wait-20260929" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cache-token-parity-20260927" />
@@ -3686,7 +3686,7 @@
             <span class="cr-status" id="cr-status" role="status" aria-live="polite" aria-atomic="true">
               Open the app to load player data.
             </span>
-            <section class="cr-panel" aria-labelledby="cr-player-heading">
+            <section class="cr-panel cr-player-panel" aria-labelledby="cr-player-heading">
               <h2 class="cr-section-title" id="cr-player-heading">Player</h2>
               <div class="cr-player-header" id="cr-player-card">
                 <div class="cr-title-row">
@@ -3732,18 +3732,7 @@
             <section class="cr-panel" aria-labelledby="cr-deck-heading">
               <div class="cr-section-heading-row cr-deck-heading-row">
                 <h2 class="cr-section-title" id="cr-deck-heading">Current Deck</h2>
-                <fieldset class="cr-deck-style-toggle">
-                  <legend class="visually-hidden">Current Deck tile appearance</legend>
-                  <span class="cr-deck-style-option">
-                    <input id="cr-deck-style-white" type="radio" name="cr-deck-style" value="white" checked />
-                    <label for="cr-deck-style-white">White</label>
-                  </span>
-                  <span class="cr-deck-style-option">
-                    <input id="cr-deck-style-raised" type="radio" name="cr-deck-style" value="raised" />
-                    <label for="cr-deck-style-raised">Raised grey</label>
-                  </span>
-                </fieldset>
-                <span class="cr-deck-average" id="cr-deck-average">Average elixir: —</span>
+                <span class="cr-deck-average" id="cr-deck-average">Average Elixir: —</span>
               </div>
               <ul class="cr-deck-row" id="cr-current-deck">
                 <li class="cr-empty">No deck loaded.</li>
@@ -7000,7 +6989,7 @@
     <script src="scripts/home/core/administrator-session.js?v=admin-session-module-20260930"></script>
     <script src="scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930"></script>
     <script src="scripts/home/modeling-portfolio.js?v=modeling-portfolio-digitals-20260926"></script>
-    <script type="module" src="scripts/home/clash-royale.js?v=clash-royale-mobile-20261001"></script>
+    <script type="module" src="scripts/home/clash-royale.js?v=clash-royale-inlays-20261001"></script>
     <script src="scripts/home/main.js?v=game-build-25b89cbf47690075134fb790aef0e7b3c46a455282de496eff2175a7ce1f648b"></script>
     <script src="scripts/home/admin-controls.js?v=shared-cross-route-20260930"></script>
   </body>

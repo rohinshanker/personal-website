@@ -267,7 +267,7 @@ test("renders success and long content across the viewport matrix without overfl
     await expect(page.locator("#cr-history-footer")).toHaveText(
       "Most recent 20 battles loaded. View Royale API for full list."
     );
-    await expect(page.locator("#cr-deck-average")).toHaveText("Average elixir: 3.9");
+    await expect(page.locator("#cr-deck-average")).toHaveText("Average Elixir: 3.9");
     await expect(page.locator(".cr-player-footer #cr-refresh")).toBeVisible();
     await expect(page.locator(".cr-career-wins")).toHaveText("1,400 wins");
     await expect(page.locator(".cr-career-losses")).toHaveText("600 losses");
@@ -634,7 +634,7 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
 
   const cards = page.locator("#cr-current-deck .cr-deck-card");
   await expect(cards).toHaveCount(8);
-  await expect(cards.nth(0).locator("img")).toHaveAttribute("alt", "");
+  await expect(cards.nth(0).locator(".cr-deck-card-image")).toHaveAttribute("alt", "");
   await expect(cards.nth(1)).toHaveClass(/is-image-unavailable/);
   await expect(cards.nth(2)).toHaveClass(/is-image-unavailable/);
   await expect(cards.nth(3)).toHaveClass(/is-image-unavailable/);
@@ -644,8 +644,8 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
   await expect(cards.nth(4).locator(".cr-card-variant")).toHaveText("EVO");
   await expect(cards.nth(5)).toHaveClass(/is-variant-hero/);
   await expect(cards.nth(5).locator(".cr-card-variant")).toHaveText("HERO");
-  await expect(cards.nth(6).locator(".cr-card-elixir")).toHaveText("+1 variable elixir");
-  await expect(cards.nth(7).locator(".cr-card-elixir")).toHaveText("Elixir unavailable");
+  await expect(cards.nth(6).locator(".cr-card-elixir")).toHaveText("+1 variable");
+  await expect(cards.nth(7).locator(".cr-card-elixir")).toHaveText("—");
   await expect(cards.nth(7).locator(".cr-card-variant")).toHaveCount(0);
   await expect(cards.nth(0)).toHaveClass(/is-rarity-common/);
   await expect(cards.nth(1)).toHaveClass(/is-rarity-epic/);
@@ -654,7 +654,7 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
       elements.every((element) => element.classList.contains("visually-hidden"))
     )
   ).toBe(true);
-  await expect(page.locator("#cr-deck-average")).toHaveText("Average elixir: unavailable");
+  await expect(page.locator("#cr-deck-average")).toHaveText("Average Elixir: unavailable");
   await expect(cards.locator(".cr-deck-card-name")).toHaveText([
     "Safe card",
     "Broken card",
@@ -680,30 +680,69 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
     "cr-card-metadata",
   ]);
 
-  const whiteInput = page.locator("#cr-deck-style-white");
-  const raisedInput = page.locator("#cr-deck-style-raised");
-  await expect(whiteInput).toBeChecked();
-  await expect(page.getByText("White", { exact: true })).toBeVisible();
-  await expect(page.getByText("Raised grey", { exact: true })).toBeVisible();
-  expect(await cards.first().evaluate((cardElement) => getComputedStyle(cardElement).backgroundColor))
-    .toBe("rgb(255, 255, 255)");
-  await page.getByText("Raised grey", { exact: true }).click();
-  await expect(raisedInput).toBeChecked();
-  await expect(page.locator("#cr-current-deck")).toHaveClass(/is-raised/);
-  const raisedStyle = await cards.first().evaluate((cardElement) => ({
-    background: getComputedStyle(cardElement).backgroundColor,
-    boxShadow: getComputedStyle(cardElement).boxShadow,
-  }));
-  expect(raisedStyle.background).toBe("rgb(192, 192, 192)");
-  expect(raisedStyle.boxShadow).not.toBe("none");
-  await page.getByText("White", { exact: true }).click();
-  await expect(whiteInput).toBeChecked();
-  await expect(page.locator("#cr-current-deck")).not.toHaveClass(/is-raised/);
-  await raisedInput.focus();
-  await expect(page.locator('label[for="cr-deck-style-raised"]')).toHaveCSS(
-    "outline-style",
-    "dotted"
+  await expect(cards.nth(6).locator(".cr-elixir-icon")).toHaveAccessibleName("elixir");
+  await expect(cards.nth(7).locator(".cr-elixir-icon")).toHaveAccessibleName("Elixir unavailable");
+  await expect(cards.first().locator(".cr-card-elixir")).toHaveText("2");
+  await expect(cards.first().locator(".cr-elixir-icon")).toHaveAttribute(
+    "src", "assets/pixelarticons/potion.svg"
   );
+  await expect(page.locator("#cr-deck-average .cr-elixir-icon")).toHaveAttribute("alt", "");
+  expect(await cards.locator(".cr-elixir-icon").evaluateAll((icons) =>
+    icons.every((icon) => icon.complete && icon.naturalWidth > 0)
+  )).toBe(true);
+
+});
+
+test("uses raised cards with stable pressed hover and nested player counter inlays", async ({ page }) => {
+  await page.route(API_URL, (route) => successResponse(route));
+  for (const viewport of [REQUIRED_VIEWPORTS[0], REQUIRED_VIEWPORTS[4]]) {
+    await openClashRoyale(page, viewport);
+    const cards = page.locator("#cr-current-deck .cr-deck-card");
+    await expect(cards).toHaveCount(8);
+    await expect(page.locator('input[name="cr-deck-style"]')).toHaveCount(0);
+    await expect(page.locator("#cr-deck-average")).toHaveText("Average Elixir: 3.9");
+    await cards.first().scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    const geometry = () => cards.evaluateAll((items) => items.map((item) => {
+      const bounds = item.getBoundingClientRect();
+      return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+    }));
+    const restGeometry = await geometry();
+    const restShadow = await cards.first().evaluate((item) => getComputedStyle(item).boxShadow);
+    const restGlow = await cards.first().locator(".cr-deck-card-media").evaluate(
+      (item) => getComputedStyle(item).filter
+    );
+    await expect(cards.first()).toHaveCSS("background-color", "rgb(192, 192, 192)");
+    const sunkenShadow = await page.locator(".cr-player-panel").evaluate(
+      (item) => getComputedStyle(item).boxShadow
+    );
+    await cards.first().hover();
+    await expect(cards.first()).toHaveCSS("box-shadow", sunkenShadow);
+    expect(sunkenShadow).not.toBe(restShadow);
+    expect(await geometry()).toEqual(restGeometry);
+    await expect(cards.first().locator(".cr-deck-card-media")).toHaveCSS("filter", restGlow);
+    await page.mouse.down();
+    await expect(cards.first()).toHaveCSS("box-shadow", sunkenShadow);
+    expect(await geometry()).toEqual(restGeometry);
+    await page.mouse.up();
+    await page.mouse.move(0, 0);
+    await expect(cards.first()).toHaveCSS("box-shadow", restShadow);
+    await expect(page.locator(".cr-player-panel")).toHaveCSS("border-top-width", "2px");
+    const counterFrames = page.locator(".cr-stat .cr-digit-value");
+    await expect(counterFrames).toHaveCount(4);
+    for (const frame of await counterFrames.all()) {
+      await expect(frame).toHaveCSS("box-shadow", sunkenShadow);
+      expect(await frame.evaluate((element) => {
+        const frameBounds = element.getBoundingClientRect();
+        const strip = element.querySelector(".cr-digit-strip").getBoundingClientRect();
+        const value = element.closest("dd");
+        return strip.left >= frameBounds.left + 3 && strip.top >= frameBounds.top + 3 &&
+          strip.right <= frameBounds.right - 3 && strip.bottom <= frameBounds.bottom - 3 &&
+          value.scrollWidth <= value.clientWidth;
+      })).toBe(true);
+    }
+    await expect(page.locator(".cr-stat").first()).toHaveCSS("box-shadow", sunkenShadow);
+  }
 });
 
 test("renders team context and loads participant deck images only after disclosure", async ({ page }) => {
@@ -797,8 +836,8 @@ test("renders team context and loads participant deck images only after disclosu
   ]);
   await expect.poll(() => participantImageRequests.length).toBe(18);
   await expect(row.locator(".cr-participant-deck").first().locator(".cr-deck-card")).toHaveCount(12);
-  await expect(row.locator(".cr-participant-deck img")).toHaveCount(18);
-  await expect(row.locator(".cr-participant-deck img").first()).not.toHaveAttribute("data-cr-card-src");
+  await expect(row.locator(".cr-participant-deck .cr-deck-card-image")).toHaveCount(18);
+  await expect(row.locator(".cr-participant-deck .cr-deck-card-image").first()).not.toHaveAttribute("data-cr-card-src");
   const compactCardGeometry = await row.locator(".cr-deck-card--compact").first().evaluate((cardElement) => {
     const media = cardElement.querySelector(".cr-deck-card-media").getBoundingClientRect();
     const name = cardElement.querySelector(".cr-deck-card-name").getBoundingClientRect();
@@ -946,7 +985,7 @@ test("retains a snapshot after an error and clears stale fields on an empty succ
   await expect(page.locator("#cr-current-deck .cr-empty")).toHaveText(
     "No current deck was returned."
   );
-  await expect(page.locator("#cr-deck-average")).toHaveText("Average elixir: unavailable");
+  await expect(page.locator("#cr-deck-average")).toHaveText("Average Elixir: unavailable");
   await expect(page.locator("#cr-battle-log .cr-empty")).toHaveText(
     "No recent battles were returned."
   );

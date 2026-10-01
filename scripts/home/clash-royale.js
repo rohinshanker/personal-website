@@ -36,7 +36,6 @@ const elements =
         clan: document.getElementById("cr-clan"),
         currentDeck: document.getElementById("cr-current-deck"),
         deckAverage: document.getElementById("cr-deck-average"),
-        deckStyleInputs: [...document.querySelectorAll('input[name="cr-deck-style"]')],
         historyFooter: document.getElementById("cr-history-footer"),
         lastUpdated: document.getElementById("cr-last-updated"),
         playerName: document.getElementById("cr-player-name"),
@@ -402,17 +401,15 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
   const metadata = createElement("span", "cr-card-metadata");
   const hasElixir = isValidElixirCost(card?.elixirCost);
   const isVariableElixir = isVariableClashElixirCard(card);
-  metadata.appendChild(
-    createElement(
-      "span",
-      "cr-card-elixir",
-      isVariableElixir
-        ? "+1 variable elixir"
-        : hasElixir
-          ? `${card.elixirCost} elixir`
-          : "Elixir unavailable"
-    )
+  const elixir = createElement(
+    "span",
+    "cr-card-elixir",
+    isVariableElixir ? "+1 variable" : hasElixir ? String(card.elixirCost) : "—"
   );
+  const elixirIcon = createDecorativeIcon("assets/pixelarticons/potion.svg", "cr-elixir-icon");
+  elixirIcon.alt = isVariableElixir || hasElixir ? "elixir" : "Elixir unavailable";
+  elixir.appendChild(elixirIcon);
+  metadata.appendChild(elixir);
   metadata.appendChild(
     createElement(
       "span",
@@ -437,19 +434,19 @@ const renderEmptyItem = (container, message) => {
 
 const renderDeck = (cards) => {
   if (!elements.currentDeck) return;
+  const averageElixir = calculateAverageElixir(cards);
+  if (elements.deckAverage) {
+    elements.deckAverage.replaceChildren(
+      `Average Elixir: ${averageElixir === null ? "unavailable" : averageElixir.toFixed(1)}`,
+      createDecorativeIcon("assets/pixelarticons/potion.svg", "cr-elixir-icon")
+    );
+  }
   if (!cards.length) {
     renderEmptyItem(elements.currentDeck, "No current deck was returned.");
-    if (elements.deckAverage) elements.deckAverage.textContent = "Average elixir: unavailable";
     return;
   }
   const items = cards.map((card) => createCardItem(card));
   elements.currentDeck.replaceChildren(...items);
-  const averageElixir = calculateAverageElixir(cards);
-  if (elements.deckAverage) {
-    elements.deckAverage.textContent = averageElixir === null
-      ? "Average elixir: unavailable"
-      : `Average elixir: ${averageElixir.toFixed(1)}`;
-  }
 };
 
 const participantName = (participant) =>
@@ -798,13 +795,6 @@ const cancel = () => {
 if (elements.refresh) {
   elements.refresh.addEventListener("click", () => load(true));
 }
-
-elements.deckStyleInputs?.forEach((input) => {
-  input.addEventListener("change", () => {
-    if (!input.checked || !elements.currentDeck) return;
-    elements.currentDeck.classList.toggle("is-raised", input.value === "raised");
-  });
-});
 
 if (typeof window !== "undefined") {
   window.ClashRoyaleApp = Object.freeze({ cancel, load });
