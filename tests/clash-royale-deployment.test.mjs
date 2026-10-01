@@ -36,10 +36,11 @@ const snapshot = () => ({
 const response = (payload = snapshot(), headers = {}) => Response.json(payload, {
   headers: { "Access-Control-Allow-Origin": "https://rohin.shanker.me", ...headers },
 });
-const options = (fetchImpl = async () => response()) => ({
+const options = (fetchImpl = async () => response(), overrides = {}) => ({
   readFileImpl: async () => SOURCE,
   fetchImpl,
   now: () => NOW,
+  ...overrides,
 });
 
 test("live gate uses configured endpoint, production CORS, and no credentials", async () => {
@@ -132,6 +133,106 @@ test("live gate accepts normalized card metadata and artwork fallbacks", async (
   })));
 });
 
+test("live gate polls through a transition-era Worker snapshot", async () => {
+  const oldCard = card({ evolutionLevel: 1 });
+  const newCard = card({ evolutionLevel: 1, variant: "evo" });
+  let fetches = 0;
+  let elapsedMs = 0;
+  const sleeps = [];
+  const result = await checkClashRoyaleDeployment(options(async () => {
+    fetches += 1;
+    const currentDeck = fetches === 1 ? [oldCard] : [newCard];
+    return response({
+      ...snapshot(),
+      player: { ...snapshot().player, currentDeck },
+    });
+  }, {
+    convergenceTimeoutMs: 10,
+    pollIntervalMs: 5,
+    pollNow: () => elapsedMs,
+    sleepImpl: async (milliseconds) => {
+      sleeps.push(milliseconds);
+      elapsedMs += milliseconds;
+    },
+  }));
+
+  assert.deepEqual(result, { playerTag: "#28CYYU08P", battleCount: 0 });
+  assert.equal(fetches, 2);
+  assert.deepEqual(sleeps, [5]);
+});
+
+test("live gate reports bounded transition polling exhaustion", async () => {
+  const oldSnapshot = {
+    ...snapshot(),
+    player: {
+      ...snapshot().player,
+      currentDeck: [card({ evolutionLevel: 2 })],
+    },
+  };
+  let fetches = 0;
+  let elapsedMs = 0;
+  await assert.rejects(checkClashRoyaleDeployment(options(async () => {
+    fetches += 1;
+    return response(oldSnapshot);
+  }, {
+    convergenceTimeoutMs: 10,
+    pollIntervalMs: 5,
+    pollNow: () => elapsedMs,
+    sleepImpl: async (milliseconds) => { elapsedMs += milliseconds; },
+  })), (error) => {
+    assert.match(error.message,
+      /did not converge within 10ms after 2 attempts/);
+    assert.match(error.message, /legacy card variant metadata/);
+    return true;
+  });
+  assert.equal(fetches, 2);
+});
+
+test("live gate fails permanent snapshots and invalid polling config immediately", async () => {
+  let fetches = 0;
+  let sleeps = 0;
+  await assert.rejects(checkClashRoyaleDeployment(options(async () => {
+    fetches += 1;
+    return response({ ...snapshot(), player: null });
+  }, {
+    convergenceTimeoutMs: 10,
+    pollIntervalMs: 5,
+    sleepImpl: async () => { sleeps += 1; },
+  })), /invalid player snapshot/);
+  assert.equal(fetches, 1);
+  assert.equal(sleeps, 0);
+
+  let reads = 0;
+  const invalidOptions = [
+    { convergenceTimeoutMs: 0 },
+    { convergenceTimeoutMs: 1.5 },
+    { pollIntervalMs: 0 },
+    { pollIntervalMs: 1.5 },
+    { sleepImpl: null },
+    { pollNow: null },
+  ];
+  for (const overrides of invalidOptions) {
+    await assert.rejects(checkClashRoyaleDeployment({
+      ...options(),
+      ...overrides,
+      readFileImpl: async () => {
+        reads += 1;
+        return SOURCE;
+      },
+    }), /positive integer|Polling dependencies/);
+  }
+  assert.equal(reads, 0);
+
+  let invalidClockFetches = 0;
+  await assert.rejects(checkClashRoyaleDeployment(options(async () => {
+    invalidClockFetches += 1;
+    return response();
+  }, {
+    pollNow: () => NaN,
+  })), /deployment clock returned an invalid time/);
+  assert.equal(invalidClockFetches, 0);
+});
+
 test("live gate rejects malformed card and participant data", async () => {
   const withCard = (overrides) => ({
     ...snapshot(),
@@ -153,7 +254,6 @@ test("live gate rejects malformed card and participant data", async () => {
     withCard({ elixirCost: 2.5 }),
     withCard({ rarity: "Legendary" }),
     withCard({ rarity: "mythic" }),
-    withCard({ evolutionLevel: 1 }),
     withCard({ evolutionLevel: 2, variant: "evo" }),
     withCard({ variant: "evo" }),
     withCard({ iconUrl: "https://example.test/cards/300/knight.png" }),
