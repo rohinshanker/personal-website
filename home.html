@@ -228,9 +228,9 @@
         <img src="assets/app-icons/ico/pcx_alt.ico" alt="" />
         <span class="desktop-icon-label">Image Tools</span>
       </button>
-      <button class="desktop-icon" data-app="clash-royale" aria-label="Clash Royale">
+      <button class="desktop-icon" data-app="clash-royale" aria-label="Clash Royale Stats">
         <img src="assets/app-icons/ico/game_freecell.ico" alt="" />
-        <span class="desktop-icon-label">Clash Royale</span>
+        <span class="desktop-icon-label">Clash Royale Stats</span>
       </button>
       <button
         class="desktop-icon"
@@ -3676,21 +3676,16 @@
         aria-labelledby="clash-royale-window-title"
       >
         <div class="title-bar">
-          <div class="title-bar-text" id="clash-royale-window-title">Clash Royale</div>
+          <div class="title-bar-text" id="clash-royale-window-title">Clash Royale Stats</div>
           <div class="title-bar-controls">
             <button type="button" aria-label="Close" data-close="clash-royale"></button>
           </div>
         </div>
         <div class="window-body clash-royale-window-body">
           <div class="cr-app" id="cr-app" aria-busy="false">
-            <div class="cr-toolbar">
-              <span class="cr-status" id="cr-status" role="status" aria-live="polite" aria-atomic="true">
-                Open the app to load player data.
-              </span>
-              <button id="cr-refresh" class="default" type="button" aria-controls="cr-app">
-                Refresh
-              </button>
-            </div>
+            <span class="cr-status" id="cr-status" role="status" aria-live="polite" aria-atomic="true">
+              Open the app to load player data.
+            </span>
             <section class="cr-panel" aria-labelledby="cr-player-heading">
               <h2 class="cr-section-title" id="cr-player-heading">Player</h2>
               <div class="cr-player-header" id="cr-player-card">
@@ -3726,14 +3721,19 @@
                     <dd id="cr-three-crown-wins">—</dd>
                   </div>
                 </dl>
-                <p class="cr-updated">
-                  Last updated: <time id="cr-last-updated">—</time>
-                  <span aria-hidden="true"> · </span>Updates at most every 5 minutes.
-                </p>
+                <div class="cr-player-footer">
+                  <p class="cr-updated">Last updated: <time id="cr-last-updated">—</time></p>
+                  <button id="cr-refresh" class="default" type="button" aria-controls="cr-app">
+                    Refresh
+                  </button>
+                </div>
               </div>
             </section>
             <section class="cr-panel" aria-labelledby="cr-deck-heading">
-              <h2 class="cr-section-title" id="cr-deck-heading">Current Deck</h2>
+              <div class="cr-section-heading-row">
+                <h2 class="cr-section-title" id="cr-deck-heading">Current Deck</h2>
+                <span class="cr-deck-average" id="cr-deck-average">Average elixir: —</span>
+              </div>
               <ul class="cr-deck-row" id="cr-current-deck">
                 <li class="cr-empty">No deck loaded.</li>
               </ul>
@@ -3751,6 +3751,10 @@
               >
                 <li class="cr-empty">No battles loaded.</li>
               </ol>
+              <p class="cr-history-footer" id="cr-history-footer">
+                No recent battles loaded.
+                <a href="https://royaleapi.com/player/28CYYU08P" target="_blank" rel="noopener noreferrer">View Royale API for full list.</a>
+              </p>
             </section>
           </div>
         </div>
@@ -4063,8 +4067,8 @@
         >
           <img src="assets/app-icons/ico/pcx_alt.ico" alt="" />
         </button>
-        <button class="taskbar-icon" data-app="clash-royale" aria-label="Clash Royale">
-          <img src="assets/app-icons/ico/game_freecell.ico" alt="Clash Royale" />
+        <button class="taskbar-icon" data-app="clash-royale" aria-label="Clash Royale Stats">
+          <img src="assets/app-icons/ico/game_freecell.ico" alt="Clash Royale Stats" />
         </button>
         <button
           class="taskbar-icon"

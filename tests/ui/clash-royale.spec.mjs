@@ -23,22 +23,25 @@ const ONE_PIXEL_PNG = Buffer.from(
   "base64"
 );
 
-const card = (id, name, level = 14) => ({
+const card = (id, name, metadata = {}) => ({
+  elixirCost: 3,
   id,
   iconUrl: `https://api-assets.clashroyale.com/cards/${id}.png`,
-  level,
+  level: 14,
   maxLevel: 14,
   name,
+  rarity: "rare",
+  ...metadata,
 });
 
-const createBattles = (count = 10) =>
+const createBattles = (count = 20) =>
   Array.from({ length: count }, (_, index) => {
     const playerCrowns = index % 3;
     const opponentCrowns = (index + 1) % 3;
     return {
-      battleTime: `20261001T${String(12 - index).padStart(2, "0")}1500.000Z`,
+      battleTime: new Date(Date.UTC(2026, 9, 1, 12, 15) - index * 60 * 60 * 1000).toISOString(),
       type: "pathOfLegend",
-      gameMode: { id: 72000006, name: "Ranked1v1_NewArena2" },
+      gameMode: { id: 72000464, name: "Ranked1v1_NewArena2" },
       team: [
         {
           tag: "#28CYYU08P",
@@ -83,14 +86,24 @@ const createPayload = ({
     currentDeck:
       currentDeck ??
       [
-        card(1, "Lumberjack"),
-        card(2, "Tombstone"),
-        card(3, "Baby Dragon"),
-        card(4, "Minions"),
-        card(5, "Lava Hound"),
-        card(6, "Barbarian Barrel"),
-        card(7, "Poison"),
-        card(8, "Inferno Dragon"),
+        card(1, "Lumberjack", {
+          elixirCost: 4,
+          rarity: "legendary",
+          variant: "evo",
+          variantIconUrl: "https://api-assets.clashroyale.com/cardevolutions/300/lumberjack.png",
+        }),
+        card(2, "Tombstone", {
+          elixirCost: 3,
+          rarity: "rare",
+          variant: "hero",
+          variantIconUrl: "https://api-assets.clashroyale.com/cardheroes/300/tombstone.png",
+        }),
+        card(3, "Baby Dragon", { elixirCost: 4, rarity: "epic" }),
+        card(4, "Minions", { elixirCost: 3, rarity: "common" }),
+        card(5, "Lava Hound", { elixirCost: 7, rarity: "legendary" }),
+        card(6, "Barbarian Barrel", { elixirCost: 2, rarity: "epic" }),
+        card(7, "Poison", { elixirCost: 4, rarity: "epic" }),
+        card(8, "Inferno Dragon", { elixirCost: 4, rarity: "legendary" }),
       ],
     ...player,
   },
@@ -215,20 +228,43 @@ test("renders success and long content across the viewport matrix without overfl
 
   for (const viewport of REQUIRED_VIEWPORTS) {
     const clashWindow = await openClashRoyale(page, viewport);
+    await expect(clashWindow).toHaveAccessibleName("Clash Royale Stats");
+    await expect(page.locator('.desktop-icon[data-app="clash-royale"]')).toHaveAccessibleName(
+      "Clash Royale Stats"
+    );
+    await expect(page.locator('.taskbar-icon[data-app="clash-royale"]')).toHaveAccessibleName(
+      "Clash Royale Stats"
+    );
     await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
+    await expect(page.locator("#cr-status")).toBeHidden();
     await expect(page.locator("#cr-player-name")).toHaveText(longName);
     await expect(page.locator("#cr-current-deck .cr-deck-card")).toHaveCount(8);
-    await expect(page.locator("#cr-battle-log .cr-battle-item")).toHaveCount(10);
+    await expect(page.locator("#cr-battle-log .cr-battle-item")).toHaveCount(20);
     await expect(page.locator("#cr-battle-log time").first()).toHaveAttribute("datetime", "2026-10-01T12:15:00.000Z");
-    await expect(page.locator("#cr-sample-summary")).toHaveText("3W–7L–0D · -1 crowns");
+    await expect(page.locator("#cr-sample-summary")).toHaveText("6W–14L–0D · -2 crowns");
+    await expect(page.locator("#cr-history-footer")).toHaveText(
+      "Most recent 20 battles loaded. View Royale API for full list."
+    );
+    await expect(page.locator("#cr-deck-average")).toHaveText("Average elixir: 3.9");
+    await expect(page.locator(".cr-player-footer #cr-refresh")).toBeVisible();
+    await expect(page.locator(".cr-career-wins")).toHaveText("1,400 wins");
+    await expect(page.locator(".cr-career-losses")).toHaveText("600 losses");
+    await expect(page.locator("#cr-current-deck .cr-card-elixir")).toHaveCount(8);
+    await expect(page.locator("#cr-current-deck .cr-card-rarity")).toHaveCount(8);
+    await expect(page.locator("#cr-battle-log .cr-battle-mode").first()).toHaveText("Ranked");
+    await expect(page.locator("#clash-royale-window")).not.toContainText(
+      "Updates at most every 5 minutes"
+    );
     await settleRender(page);
 
     const geometry = await clashWindow.evaluate((windowElement) => {
       const body = windowElement.querySelector(".clash-royale-window-body");
       const bounds = windowElement.getBoundingClientRect();
+      const deck = windowElement.querySelector("#cr-current-deck");
       return {
         battleListOverflows: windowElement.querySelector("#cr-battle-log").scrollHeight >
           windowElement.querySelector("#cr-battle-log").clientHeight,
+        deckColumns: getComputedStyle(deck).gridTemplateColumns.split(" ").length,
         bodyOverflowX: body.scrollWidth > body.clientWidth,
         bodyOverflowY: body.scrollHeight > body.clientHeight,
         documentOverflowX: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -242,16 +278,23 @@ test("renders success and long content across the viewport matrix without overfl
     });
     expect(geometry, viewport.name).toEqual({
       battleListOverflows: true,
+      deckColumns: 4,
       bodyOverflowX: false,
-      bodyOverflowY: false,
+      bodyOverflowY: true,
       documentOverflowX: false,
       documentOverflowY: false,
       insideViewport: true,
     });
+    await page.locator("#cr-history-footer").scrollIntoViewIfNeeded();
+    await expect(page.locator("#cr-history-footer a")).toBeInViewport();
+    await expect(page.locator("#cr-history-footer a")).toHaveAttribute(
+      "href",
+      "https://royaleapi.com/player/28CYYU08P"
+    );
   }
 });
 
-test("keeps the profile and deck fixed while the named battle log scrolls", async ({ page }) => {
+test("keeps window and named battle scrolling independent and keyboard accessible", async ({ page }) => {
   await page.route(API_URL, (route) =>
     successResponse(route, createPayload({ battles: createBattles() }))
   );
@@ -261,6 +304,11 @@ test("keeps the profile and deck fixed while the named battle log scrolls", asyn
   await expect.poll(() => clashWindow.evaluate((element) => element.getAnimations().length)).toBe(0);
 
   const battleLog = page.locator("#cr-battle-log");
+  const windowBody = clashWindow.locator(".clash-royale-window-body");
+  await expect(page.locator("#cr-refresh")).toBeInViewport();
+  await page.locator("#cr-history-footer").scrollIntoViewIfNeeded();
+  await expect.poll(() => windowBody.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await battleLog.scrollIntoViewIfNeeded();
   await expect(battleLog).toHaveAttribute("tabindex", "0");
   await expect(battleLog).toHaveAttribute("aria-labelledby", "cr-battles-heading");
   const fixedBefore = await clashWindow.evaluate((windowElement) => ({
@@ -290,6 +338,7 @@ test("keeps the profile and deck fixed while the named battle log scrolls", asyn
     profileTop: windowElement.querySelector("#cr-player-card").getBoundingClientRect().top,
   }));
   expect(fixedAfter).toEqual(fixedBefore);
+  await windowBody.evaluate((element) => { element.scrollTop = 0; });
   await expect(page.locator("#cr-refresh")).toBeInViewport();
   await expect(clashWindow.locator('[data-close="clash-royale"]')).toBeInViewport();
 });
@@ -316,27 +365,59 @@ test("uses shared seven-segment sprites with accessible numeric values", async (
   await expect(page.locator("#cr-battle-log .cr-battle-metric .visually-hidden").first()).toHaveText(
     "2 to 1 crowns"
   );
+  const partialDeckDisclosure = page.locator("#cr-battle-log details").nth(1);
+  await partialDeckDisclosure.locator("summary").click();
+  await expect(partialDeckDisclosure.locator(".cr-battle-side-title")).toHaveText(["Your team"]);
 });
 
-test("loads only safe card images and preserves names after image failure", async ({ page }) => {
+test("renders factual card metadata, safe variant artwork, and resilient image fallbacks", async ({ page }) => {
   const requestedCardImages = [];
-  await page.route("https://api-assets.clashroyale.com/cards/broken.png", (route) => {
+  const trackedImages = [
+    "https://api-assets.clashroyale.com/cards/broken.png",
+    "https://api-assets.clashroyale.com/cards/safe.png",
+    "https://api-assets.clashroyale.com/cards/evo-fallback.png",
+    "https://api-assets.clashroyale.com/cardevolutions/300/evo-broken.png",
+    "https://api-assets.clashroyale.com/cardheroes/300/hero.png",
+  ];
+  await page.route(trackedImages[0], (route) => {
     requestedCardImages.push(route.request().url());
     return route.fulfill({ status: 200, contentType: "image/png", body: "not an image" });
   });
-  await page.route("https://api-assets.clashroyale.com/cards/safe.png", (route) => {
+  await page.route("https://api-assets.clashroyale.com/cardevolutions/300/evo-broken.png", (route) => {
     requestedCardImages.push(route.request().url());
-    return route.fulfill({ status: 200, contentType: "image/png", body: ONE_PIXEL_PNG });
+    return route.fulfill({ status: 200, contentType: "image/png", body: "not an image" });
   });
+  for (const url of [trackedImages[1], trackedImages[2], trackedImages[4]]) {
+    await page.route(url, (route) => {
+      requestedCardImages.push(route.request().url());
+      return route.fulfill({ status: 200, contentType: "image/png", body: ONE_PIXEL_PNG });
+    });
+  }
   await page.route(API_URL, (route) =>
     successResponse(
       route,
       createPayload({
         currentDeck: [
-          { id: 1, name: "Safe card", iconUrl: "https://api-assets.clashroyale.com/cards/safe.png" },
-          { id: 2, name: "Broken card", iconUrl: "https://api-assets.clashroyale.com/cards/broken.png" },
+          { id: 1, name: "Safe card", iconUrl: "https://api-assets.clashroyale.com/cards/safe.png", elixirCost: 2, rarity: "common" },
+          { id: 2, name: "Broken card", iconUrl: "https://api-assets.clashroyale.com/cards/broken.png", elixirCost: 3, rarity: "epic" },
           { id: 3, name: "Unsafe card", iconUrl: "https://example.com/card.png" },
-          { id: 4, name: "Insecure card", iconUrl: "http://api-assets.clashroyale.com/cards/insecure.png" },
+          { id: 4, name: "Insecure card", iconUrl: "http://api-assets.clashroyale.com/cards/insecure.png", variant: "hero" },
+          {
+            id: 5,
+            name: "Evolution fallback",
+            iconUrl: "https://api-assets.clashroyale.com/cards/evo-fallback.png",
+            variant: "evo",
+            variantIconUrl: "https://api-assets.clashroyale.com/cardevolutions/300/evo-broken.png",
+          },
+          {
+            id: 6,
+            name: "Hero artwork",
+            iconUrl: "https://api-assets.clashroyale.com/cards/hero-fallback.png",
+            variant: "hero",
+            variantIconUrl: "https://api-assets.clashroyale.com/cardheroes/300/hero.png",
+          },
+          { id: 28000006, name: "Mirror", elixirCost: 1, rarity: "epic" },
+          { id: 8, name: "Fractional", elixirCost: 3.5, rarity: "unknown", variant: "both" },
         ],
       })
     )
@@ -345,26 +426,132 @@ test("loads only safe card images and preserves names after image failure", asyn
   await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
 
   const cards = page.locator("#cr-current-deck .cr-deck-card");
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(8);
   await expect(cards.nth(0).locator("img")).toHaveAttribute("alt", "");
   await expect(cards.nth(1)).toHaveClass(/is-image-unavailable/);
   await expect(cards.nth(2)).toHaveClass(/is-image-unavailable/);
   await expect(cards.nth(3)).toHaveClass(/is-image-unavailable/);
+  await expect(cards.nth(3).locator(".cr-card-variant")).toHaveText("HERO");
+  await expect(cards.nth(4)).toHaveClass(/is-variant-evo/);
+  await expect(cards.nth(4)).not.toHaveClass(/is-image-unavailable/);
+  await expect(cards.nth(4).locator(".cr-card-variant")).toHaveText("EVO");
+  await expect(cards.nth(5)).toHaveClass(/is-variant-hero/);
+  await expect(cards.nth(5).locator(".cr-card-variant")).toHaveText("HERO");
+  await expect(cards.nth(6).locator(".cr-card-elixir")).toHaveText("+1 variable elixir");
+  await expect(cards.nth(7).locator(".cr-card-elixir")).toHaveText("Elixir unavailable");
+  await expect(cards.nth(7).locator(".cr-card-variant")).toHaveCount(0);
+  await expect(cards.nth(0)).toHaveClass(/is-rarity-common/);
+  await expect(cards.nth(1)).toHaveClass(/is-rarity-epic/);
+  await expect(page.locator("#cr-deck-average")).toHaveText("Average elixir: unavailable");
   await expect(cards.locator(".cr-deck-card-name")).toHaveText([
     "Safe card",
     "Broken card",
     "Unsafe card",
     "Insecure card",
+    "Evolution fallback",
+    "Hero artwork",
+    "Mirror",
+    "Fractional",
   ]);
-  expect(requestedCardImages.sort()).toEqual([
-    "https://api-assets.clashroyale.com/cards/broken.png",
-    "https://api-assets.clashroyale.com/cards/safe.png",
-  ]);
+  expect(requestedCardImages.sort()).toEqual(trackedImages.sort());
   const mediaSizes = await cards.locator(".cr-deck-card-media").evaluateAll((elements) =>
     elements.map((element) => ({ height: element.offsetHeight, width: element.offsetWidth }))
   );
   expect(new Set(mediaSizes.map(({ height }) => height)).size).toBe(1);
   expect(mediaSizes.every(({ width }) => width > 0)).toBe(true);
+});
+
+test("renders team context and loads participant deck images only after disclosure", async ({ page }) => {
+  const participantImageRequests = [];
+  await page.route(/^https:\/\/api-assets\.clashroyale\.com\/cards\/participant-.*\.png$/, (route) => {
+    participantImageRequests.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: "image/png", body: ONE_PIXEL_PNG });
+  });
+  const participantCard = (id, name, metadata = {}) => ({
+    id,
+    name,
+    elixirCost: 3,
+    rarity: "common",
+    iconUrl: `https://api-assets.clashroyale.com/cards/participant-${id}.png`,
+    ...metadata,
+  });
+  const teamBattle = {
+    battleTime: "2026-10-01T10:30:00.000Z",
+    type: "PvP",
+    gameMode: { id: 72000014, name: "TeamVsTeam" },
+    team: [
+      {
+        tag: "#28CYYU08P",
+        name: "Rohin",
+        crowns: 2,
+        trophyChange: 0,
+        cards: Array.from({ length: 12 }, (_, index) =>
+          participantCard(101 + index, `Player card ${index + 1}`)
+        ),
+      },
+      {
+        tag: "#ALLY",
+        name: "Trusted teammate",
+        crowns: 2,
+        cards: [participantCard(113, "Giant"), participantCard(114, "Arrows")],
+      },
+    ],
+    opponent: [
+      {
+        tag: "#RIVAL1",
+        name: "First rival",
+        crowns: 1,
+        cards: [participantCard(115, "Minions"), participantCard(116, "Zap")],
+      },
+      {
+        tag: "#RIVAL2",
+        name: "Second rival",
+        crowns: 1,
+        cards: [participantCard(117, "Cannon"), participantCard(118, "Fireball")],
+      },
+    ],
+  };
+  await page.route(API_URL, (route) =>
+    successResponse(route, createPayload({ battles: [teamBattle] }))
+  );
+  await openClashRoyale(page, { width: 768, height: 1024 });
+  await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
+
+  const row = page.locator("#cr-battle-log .cr-battle-item");
+  await expect(row.locator(".cr-battle-mode")).toHaveText("2v2");
+  await expect(row.locator(".cr-battle-mode")).toHaveClass(/is-two-v-two/);
+  await expect(row.locator(".cr-battle-opponent")).toHaveText("vs. First rival & Second rival");
+  await expect(row.locator(".cr-battle-allies")).toHaveText("With Trusted teammate");
+  await expect(row.locator(".cr-battle-date")).toBeVisible();
+  await expect(row.locator(".cr-battle-clock")).toBeVisible();
+  await expect(page.locator("#cr-history-footer")).toHaveText(
+    "Most recent 1 battle loaded. View Royale API for full list."
+  );
+  await expect(row.locator("details")).not.toHaveAttribute("open", "");
+  expect(participantImageRequests).toEqual([]);
+  const clashWindow = page.locator("#clash-royale-window");
+  await clashWindow.locator('[data-close="clash-royale"]').click();
+  await clashWindow.waitFor({ state: "hidden" });
+  await page.locator('.taskbar-icon[data-app="clash-royale"]').click();
+  await expect(clashWindow).toBeVisible();
+  expect(participantImageRequests).toEqual([]);
+
+  await row.locator("summary").click();
+  await expect(row.locator("details")).toHaveAttribute("open", "");
+  await expect(row.locator(".cr-battle-side-title")).toHaveText(["Your team", "Opponents"]);
+  await expect(row.locator(".cr-participant-name")).toHaveText([
+    "Rohin",
+    "Trusted teammate",
+    "First rival",
+    "Second rival",
+  ]);
+  await expect.poll(() => participantImageRequests.length).toBe(18);
+  await expect(row.locator(".cr-participant-deck").first().locator(".cr-deck-card")).toHaveCount(12);
+  await expect(row.locator(".cr-participant-deck img")).toHaveCount(18);
+  await expect(row.locator(".cr-participant-deck img").first()).not.toHaveAttribute("data-cr-card-src");
+  await row.locator("summary").click();
+  await row.locator("summary").click();
+  expect(participantImageRequests).toHaveLength(18);
 });
 
 test("suppresses duplicate refreshes and reuses the snapshot after reopening", async ({ page }) => {
@@ -391,6 +578,8 @@ test("suppresses duplicate refreshes and reuses the snapshot after reopening", a
   await openClashRoyale(page, { width: 1280, height: 800 });
   await expect(page.locator("#cr-refresh")).toBeDisabled();
   await expect(page.locator("#cr-refresh")).toHaveText("Refreshing…");
+  await expect(page.locator("#cr-status")).toBeVisible();
+  await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "loading");
   await page.evaluate(() => {
     window.ClashRoyaleApp.load(true);
     window.ClashRoyaleApp.load(true);
@@ -404,6 +593,7 @@ test("suppresses duplicate refreshes and reuses the snapshot after reopening", a
   await expect.poll(() => requestCount).toBe(2);
   await expect(page.locator("#cr-refresh")).toBeEnabled();
   await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
+  await expect(page.locator("#cr-status")).toBeHidden();
   expect(requestCount).toBe(2);
 });
 
@@ -481,10 +671,14 @@ test("retains a snapshot after an error and clears stale fields on an empty succ
   await expect(page.locator("#cr-current-deck .cr-empty")).toHaveText(
     "No current deck was returned."
   );
+  await expect(page.locator("#cr-deck-average")).toHaveText("Average elixir: unavailable");
   await expect(page.locator("#cr-battle-log .cr-empty")).toHaveText(
     "No recent battles were returned."
   );
   await expect(page.locator("#cr-sample-summary")).toHaveText("No usable battles");
+  await expect(page.locator("#cr-history-footer")).toHaveText(
+    "No recent battles loaded. View Royale API for full list."
+  );
 });
 
 for (const { status, message } of [

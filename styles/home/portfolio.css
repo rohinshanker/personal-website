@@ -1,7 +1,7 @@
 .clash-royale-window {
   max-height: calc(100vh - 76px);
   max-height: calc(100dvh - 76px);
-  width: min(calc(100vw - 24px), 720px);
+  width: min(calc(100vw - 24px), 760px);
 }
 
 .clash-royale-window.app-window--center {
@@ -10,41 +10,39 @@
 
 .clash-royale-window-body {
   box-sizing: border-box;
-  height: min(650px, calc(100vh - 116px));
-  height: min(650px, calc(100dvh - 116px));
-  overflow: hidden;
+  height: min(720px, calc(100vh - 116px));
+  height: min(720px, calc(100dvh - 116px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .cr-app {
   display: grid;
-  gap: 7px;
-  grid-template-rows: auto auto auto minmax(92px, 1fr);
-  height: 100%;
-  min-height: 0;
-  min-width: 0;
-}
-
-.cr-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  font-size: 11px;
+  min-width: 0;
 }
 
 .cr-status {
+  background: #fff;
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   color: #1a1a1a;
+  display: none;
+  font-size: 11px;
   line-height: 1.25;
   min-width: 0;
+  padding: 6px 8px;
+}
+
+.cr-status[data-state="loading"],
+.cr-status[data-state="error"] {
+  display: block;
 }
 
 .cr-status[data-state="error"] {
   color: #760000;
   font-weight: 700;
-}
-
-.cr-status[data-state="success"] {
-  color: #004b00;
 }
 
 #cr-refresh {
@@ -63,7 +61,7 @@
 .cr-player-header {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
 }
 
 .cr-title-row {
@@ -76,7 +74,7 @@
 
 .cr-player-name {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 18px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -84,7 +82,7 @@
 }
 
 .cr-tag {
-  font-size: 11px;
+  font-size: 12px;
   color: #4b4b4b;
 }
 
@@ -96,8 +94,8 @@
 .cr-stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3px 6px;
-  font-size: 11px;
+  gap: 4px 7px;
+  font-size: 12px;
   margin: 0;
 }
 
@@ -108,7 +106,7 @@
   display: grid;
   gap: 4px;
   grid-template-columns: minmax(70px, auto) minmax(0, 1fr);
-  min-height: 25px;
+  min-height: 34px;
   min-width: 0;
   padding: 2px 5px;
 }
@@ -132,9 +130,9 @@
 
 .cr-stat-icon {
   flex: none;
-  height: 14px;
+  height: 16px;
   image-rendering: pixelated;
-  width: 14px;
+  width: 16px;
 }
 
 .cr-stat--featured dd {
@@ -144,9 +142,26 @@
 
 .cr-updated {
   color: #4b4b4b;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.2;
   margin: 0;
+}
+
+.cr-player-footer {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.cr-career-wins {
+  color: #086b24;
+  font-weight: 700;
+}
+
+.cr-career-losses {
+  color: #9b1717;
+  font-weight: 700;
 }
 
 .cr-battle-list {
@@ -154,7 +169,8 @@
   flex-direction: column;
   gap: 4px;
   list-style: none;
-  min-height: 0;
+  max-height: min(380px, 46vh);
+  min-height: 190px;
   margin: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -192,17 +208,17 @@
 .cr-battle-summary {
   display: grid;
   gap: 6px;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
   align-items: center;
-  font-size: 11px;
-  min-height: 48px;
-  padding: 4px 6px;
+  font-size: 12px;
+  min-height: 70px;
+  padding: 6px 8px;
 }
 
 .cr-battle-details {
   display: grid;
-  gap: 1px 6px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 7px;
+  grid-template-columns: auto minmax(0, 1fr);
   min-width: 0;
 }
 
@@ -215,20 +231,71 @@
 }
 
 .cr-battle-mode {
+  border: 1px solid #333;
+  color: #fff;
   font-weight: 700;
+  grid-row: 1 / span 2;
+  padding: 2px 5px;
+  place-self: start;
+  text-align: center;
+}
+
+.cr-battle-mode.is-ladder {
+  background: #087f83;
+}
+
+.cr-battle-mode.is-ranked {
+  background: #70409b;
+}
+
+.cr-battle-mode.is-two-v-two {
+  background: #3267a8;
+}
+
+.cr-battle-mode.is-challenge {
+  background: #a35f05;
+}
+
+.cr-battle-mode.is-friendly {
+  background: #377d3c;
+}
+
+.cr-battle-mode.is-clan-war {
+  background: #9a3737;
+}
+
+.cr-battle-mode.is-other {
+  background: #666;
 }
 
 .cr-battle-opponent {
-  grid-column: 1 / -1;
+  font-size: 13px;
+  grid-column: 2;
+}
+
+.cr-battle-allies {
+  color: #333;
+  font-weight: 700;
+  grid-column: 2;
 }
 
 .cr-battle-time {
   color: #4b4b4b;
-  font-size: 10px;
-  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  gap: 1px;
+  grid-column: 2;
+  line-height: 1.2;
+}
+
+.cr-battle-date,
+.cr-battle-clock {
+  display: block;
 }
 
 .cr-result {
+  font-size: 13px;
   font-weight: 700;
   padding: 3px 4px;
   border: 1px solid #222;
@@ -270,10 +337,10 @@
 }
 
 .cr-battle-metric-icon {
-  height: 18px;
+  height: 20px;
   image-rendering: pixelated;
   object-fit: contain;
-  width: 18px;
+  width: 20px;
 }
 
 .cr-battle-metric-sign {
@@ -286,15 +353,15 @@
 }
 
 .cr-digit-strip {
-  height: 19px;
+  height: 23px;
   padding: 2px;
 }
 
 .cr-digit-strip .cr-digit-image,
 .cr-digit-space {
   flex: none;
-  height: 15px;
-  width: 9px;
+  height: 19px;
+  width: 11px;
 }
 
 .cr-digit-image {
@@ -304,8 +371,8 @@
 
 .cr-deck-row {
   display: grid;
-  gap: 3px;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   list-style: none;
   margin: 0;
   padding: 0;
@@ -315,20 +382,21 @@
   background: #fff;
   box-shadow: inset -1px -1px #dfdfdf, inset 1px 1px #fff, 1px 1px #808080;
   display: grid;
-  grid-template-rows: 50px auto;
+  font-size: 11px;
+  grid-template-rows: 94px auto auto;
   justify-items: center;
   min-width: 0;
   overflow: hidden;
-  padding: 2px;
-  font-size: 10px;
+  padding: 4px;
 }
 
 .cr-deck-card-media {
   align-items: center;
   display: flex;
-  height: 50px;
+  height: 94px;
   justify-content: center;
   min-width: 0;
+  position: relative;
   width: 100%;
 }
 
@@ -338,19 +406,98 @@
 }
 
 .cr-deck-card-image {
-  height: 48px;
+  height: 88px;
   max-width: 100%;
   object-fit: contain;
-  width: 40px;
+  width: 72px;
+}
+
+.cr-deck-card.is-rarity-common .cr-deck-card-media {
+  filter: drop-shadow(0 0 4px #79a7c9);
+}
+
+.cr-deck-card.is-rarity-rare .cr-deck-card-media {
+  filter: drop-shadow(0 0 4px #c77924);
+}
+
+.cr-deck-card.is-rarity-epic .cr-deck-card-media {
+  filter: drop-shadow(0 0 5px #8b43aa);
+}
+
+.cr-deck-card.is-rarity-legendary .cr-deck-card-media {
+  filter: drop-shadow(0 0 5px #299f87);
+}
+
+.cr-deck-card.is-rarity-champion .cr-deck-card-media {
+  filter: drop-shadow(0 0 5px #d1a315);
+}
+
+.cr-card-variant {
+  border: 1px solid #222;
+  bottom: 2px;
+  color: #111;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 3px;
+  position: absolute;
+  right: 2px;
+}
+
+.cr-card-variant--evo {
+  background: #d9b7f0;
+}
+
+.cr-card-variant--hero {
+  background: #f4dc68;
+}
+
+.cr-deck-card.is-variant-evo {
+  outline: 2px solid #7c35a2;
+  outline-offset: -3px;
+}
+
+.cr-deck-card.is-variant-hero {
+  outline: 2px solid #b58c00;
+  outline-offset: -3px;
 }
 
 .cr-deck-card-name {
+  align-items: center;
+  display: flex;
   font-weight: 700;
+  justify-content: center;
+  line-height: 1.1;
   max-width: 100%;
-  overflow: hidden;
+  min-height: 22px;
+  overflow-wrap: anywhere;
   text-align: center;
+}
+
+.cr-card-metadata {
+  align-items: center;
+  color: #333;
+  display: flex;
+  font-size: 10px;
+  gap: 3px 6px;
+  justify-content: center;
+  max-width: 100%;
+  text-align: center;
+}
+
+.cr-card-elixir {
+  font-weight: 700;
+}
+
+.cr-card-rarity {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cr-deck-average {
+  color: #333;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .cr-section-heading-row {
@@ -380,8 +527,84 @@
 
 .cr-battles-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(190px, auto) auto;
   min-height: 0;
+}
+
+.cr-battle-disclosure {
+  border-top: 1px solid #aaa;
+  padding: 5px 8px 7px;
+}
+
+.cr-battle-disclosure-summary {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cr-battle-disclosure-summary:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: 2px;
+}
+
+.cr-battle-decks {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-top: 6px;
+}
+
+.cr-battle-side-title,
+.cr-participant-name {
+  font-size: 11px;
+  margin: 0 0 4px;
+}
+
+.cr-participant-deck-group + .cr-participant-deck-group {
+  margin-top: 7px;
+}
+
+.cr-participant-deck {
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cr-deck-card--compact {
+  font-size: 8px;
+  grid-template-rows: 46px auto auto;
+  padding: 2px;
+}
+
+.cr-deck-card--compact .cr-deck-card-media {
+  height: 46px;
+}
+
+.cr-deck-card--compact .cr-deck-card-image {
+  height: 44px;
+  width: 36px;
+}
+
+.cr-deck-card--compact .cr-card-metadata {
+  display: block;
+  font-size: 8px;
+}
+
+.cr-deck-card--compact .cr-deck-card-name {
+  min-height: 18px;
+}
+
+.cr-deck-card--compact .cr-card-rarity {
+  display: block;
+}
+
+.cr-history-footer {
+  font-size: 11px;
+  line-height: 1.3;
+  margin: 7px 0 0;
 }
 
 @media (max-width: 640px) {
@@ -398,60 +621,79 @@
   }
 
   .cr-stat {
-    display: block;
-    min-height: 31px;
-    padding: 2px 4px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 42px;
+    padding: 3px 4px;
   }
 
   .cr-stat dt {
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.1;
   }
 
   .cr-stat dd,
   .cr-stat--featured dd {
-    display: block;
-    font-size: 10px;
+    display: flex;
+    font-size: 11px;
+    justify-content: flex-start;
     text-align: start;
   }
 
   .cr-digit-strip .cr-digit-image,
   .cr-digit-space {
-    height: 13px;
-    width: 8px;
+    height: 17px;
+    width: 10px;
   }
 
   .cr-digit-strip {
-    height: 17px;
+    height: 21px;
     padding: 1px 2px;
   }
 
   .cr-deck-card {
-    grid-template-rows: 41px auto;
+    grid-template-rows: 74px auto auto;
     font-size: 9px;
   }
 
-  .cr-deck-row {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .cr-deck-card-media {
-    height: 41px;
+    height: 74px;
   }
 
   .cr-deck-card-image {
-    height: 40px;
-    width: 33px;
+    height: 70px;
+    width: 57px;
+  }
+
+  .cr-card-metadata {
+    display: block;
+    font-size: 8px;
+  }
+
+  .cr-card-rarity {
+    display: block;
   }
 
   .cr-battle-summary {
     gap: 4px;
-    grid-template-columns: 39px minmax(0, 1fr);
+    grid-template-columns: 48px minmax(0, 1fr);
   }
 
   .cr-battle-metrics {
     grid-column: 1 / -1;
     justify-content: flex-end;
+  }
+
+  .cr-battle-decks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cr-participant-deck {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .cr-player-footer {
+    align-items: flex-end;
   }
 }
 

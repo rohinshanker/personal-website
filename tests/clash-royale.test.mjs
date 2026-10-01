@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  calculateAverageElixir,
+  classifyClashBattleMode,
+  isVariableClashElixirCard,
   normalizeClashCardIconUrl,
+  normalizeClashCardRarity,
+  normalizeClashCardVariant,
   normalizeClashTag,
   parseClashBattleTime,
   prepareClashSnapshot,
@@ -43,6 +48,59 @@ test("accepts only card PNGs from the official HTTPS asset host", () => {
   }
 });
 
+test("normalizes only supported rarity and equipped variant values", () => {
+  assert.equal(normalizeClashCardRarity(" Legendary "), "legendary");
+  assert.equal(normalizeClashCardRarity("mythic"), "");
+  assert.equal(normalizeClashCardVariant("EVO"), "evo");
+  assert.equal(normalizeClashCardVariant("hero"), "hero");
+  assert.equal(normalizeClashCardVariant("both"), "");
+});
+
+test("calculates average elixir only when every cost is factual", () => {
+  assert.equal(calculateAverageElixir([{ elixirCost: 3 }, { elixirCost: 4 }]), 3.5);
+  assert.equal(calculateAverageElixir([{ elixirCost: 0 }, { elixirCost: 4 }]), 2);
+  assert.equal(calculateAverageElixir([{ elixirCost: 3 }, {}]), null);
+  assert.equal(calculateAverageElixir([{ elixirCost: 3.5 }, { elixirCost: 4 }]), null);
+  assert.equal(
+    calculateAverageElixir([{ id: 28000006, elixirCost: 1 }, { elixirCost: 4 }]),
+    null
+  );
+  assert.equal(isVariableClashElixirCard({ id: 28000006 }), true);
+  assert.equal(isVariableClashElixirCard({ id: 28000007 }), false);
+  assert.equal(calculateAverageElixir([]), null);
+});
+
+test("classifies only reviewed battle mode IDs and exact types", () => {
+  assert.deepEqual(classifyClashBattleMode({ type: "PvP", gameMode: { id: 72000006 } }), {
+    key: "ladder",
+    label: "Ladder",
+  });
+  assert.deepEqual(classifyClashBattleMode({ type: "pathOfLegend" }), {
+    key: "ranked",
+    label: "Ranked",
+  });
+  assert.deepEqual(classifyClashBattleMode({ gameMode: { id: 72000014 } }), {
+    key: "two-v-two",
+    label: "2v2",
+  });
+  assert.deepEqual(classifyClashBattleMode({ type: "challenge" }), {
+    key: "challenge",
+    label: "Challenge",
+  });
+  assert.deepEqual(
+    classifyClashBattleMode({ gameMode: { id: 72000529, name: "RR_FourCard_Friendly" } }),
+    { key: "other", label: "Other" }
+  );
+  assert.deepEqual(
+    classifyClashBattleMode({ type: "unknown", gameMode: { id: 72000006, name: "Ladder" } }),
+    { key: "other", label: "Other" }
+  );
+  assert.deepEqual(
+    classifyClashBattleMode({ type: "pathOfLegend", gameMode: { id: 72000007 } }),
+    { key: "ranked", label: "Ranked" }
+  );
+});
+
 test("resolves the configured player from either battle side", () => {
   const fromTeam = resolveClashBattle(
     { team: [{ ...PLAYER, crowns: 2 }], opponent: [{ ...OPPONENT, crowns: 1 }] },
@@ -50,6 +108,8 @@ test("resolves the configured player from either battle side", () => {
   );
   assert.equal(fromTeam.player.name, "Rohin");
   assert.equal(fromTeam.opponent.name, "Opponent");
+  assert.deepEqual(fromTeam.playerSide, [{ ...PLAYER, crowns: 2 }]);
+  assert.deepEqual(fromTeam.opponents, [{ ...OPPONENT, crowns: 1 }]);
   assert.equal(fromTeam.outcome, "win");
 
   const fromOpponent = resolveClashBattle(
@@ -78,7 +138,7 @@ test("does not fabricate a result when crowns are missing", () => {
   });
 });
 
-test("skips unusable battles and limits the recent sample", () => {
+test("skips unusable battles and limits the recent sample to twenty", () => {
   const usableBattle = {
     team: [{ ...PLAYER, crowns: 1 }],
     opponent: [{ ...OPPONENT, crowns: 0 }],
@@ -93,11 +153,11 @@ test("skips unusable battles and limits the recent sample", () => {
     },
     battles: [
       { team: [OPPONENT], opponent: [{ tag: "#SOMEONE", name: "Other" }] },
-      ...Array.from({ length: 12 }, () => usableBattle),
+      ...Array.from({ length: 25 }, () => usableBattle),
     ],
   });
 
-  assert.equal(snapshot.battles.length, 10);
+  assert.equal(snapshot.battles.length, 20);
   assert.deepEqual(snapshot.currentDeck, [{ id: 1, name: "Knight" }]);
   assert.equal(snapshot.playerTag, "28CYYU08P");
 });
