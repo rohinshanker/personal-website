@@ -43,6 +43,24 @@ development only, use the ignored `.dev.vars` file and the same secret name.
 - Recent-battle arithmetic covers only the returned sample; it is not an
   account's full history or a reproduction of RoyaleAPI's proprietary analytics.
 
+## Images and presentation
+
+Current-deck art loads from the official API's allowlisted
+`https://api-assets.clashroyale.com` PNG URLs, for at most eight cards when the
+app opens. Do not download a whole card library or guess image URLs. Keep card
+names usable when an image is unavailable, and retain intrinsic image sizes so
+loading cannot move the surrounding controls. Arena artwork requires a verified
+mapping to the actual arena ID; otherwise keep the arena name.
+
+Use the existing leaderboard digit sprites and local trophy icon. The pixel
+crown is vendored from the free MIT Pixelarticons set with its source recorded
+in `assets/pixelarticons/README.md`. Solitaire's desktop, taskbar, and Game
+Progress icons use `game_solitaire.ico`; Clash Royale uses `game_freecell.ico`.
+
+The battle list owns vertical scrolling. Keep the title, Refresh control,
+profile statistics, deck, and battle-list heading stationary. Verify keyboard
+and wheel scrolling with ten battles at phone, tablet, and desktop sizes.
+
 ## Validation and release
 
 Run focused checks while editing, then the full quality gates in
