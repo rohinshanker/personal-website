@@ -632,12 +632,15 @@
     line-height: 1.1;
   }
 
-  .cr-stat dd,
+  .cr-stat dd {
+    display: block;
+    font-size: 11px;
+    text-align: start;
+  }
+
   .cr-stat--featured dd {
     display: flex;
-    font-size: 11px;
     justify-content: flex-start;
-    text-align: start;
   }
 
   .cr-digit-strip .cr-digit-image,
@@ -654,6 +657,11 @@
   .cr-deck-card {
     grid-template-rows: 74px auto auto;
     font-size: 9px;
+  }
+
+  .cr-deck-card--compact {
+    font-size: 8px;
+    grid-template-rows: 46px auto auto;
   }
 
   .cr-deck-card-media {

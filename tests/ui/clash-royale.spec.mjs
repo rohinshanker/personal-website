@@ -257,6 +257,34 @@ test("renders success and long content across the viewport matrix without overfl
     );
     await settleRender(page);
 
+    if (viewport.width <= 640) {
+      const mobileTextStats = await clashWindow.evaluate((windowElement) => {
+        const arena = windowElement.querySelector("#cr-arena");
+        const clan = windowElement.querySelector("#cr-clan");
+        const record = windowElement.querySelector("#cr-career-record");
+        const separator = windowElement.querySelector(".cr-career-separator");
+        return {
+          arenaDisplay: getComputedStyle(arena).display,
+          arenaTextOverflow: getComputedStyle(arena).textOverflow,
+          clanDisplay: getComputedStyle(clan).display,
+          clanTextOverflow: getComputedStyle(clan).textOverflow,
+          recordDisplay: getComputedStyle(record).display,
+          separatorText: separator.textContent,
+          someTextIsClipped:
+            arena.scrollWidth > arena.clientWidth || clan.scrollWidth > clan.clientWidth,
+        };
+      });
+      expect(mobileTextStats, viewport.name).toEqual({
+        arenaDisplay: "block",
+        arenaTextOverflow: "ellipsis",
+        clanDisplay: "block",
+        clanTextOverflow: "ellipsis",
+        recordDisplay: "block",
+        separatorText: " · ",
+        someTextIsClipped: true,
+      });
+    }
+
     const geometry = await clashWindow.evaluate((windowElement) => {
       const body = windowElement.querySelector(".clash-royale-window-body");
       const bounds = windowElement.getBoundingClientRect();
@@ -514,7 +542,7 @@ test("renders team context and loads participant deck images only after disclosu
   await page.route(API_URL, (route) =>
     successResponse(route, createPayload({ battles: [teamBattle] }))
   );
-  await openClashRoyale(page, { width: 768, height: 1024 });
+  await openClashRoyale(page, { width: 375, height: 812 });
   await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
 
   const row = page.locator("#cr-battle-log .cr-battle-item");
@@ -549,6 +577,20 @@ test("renders team context and loads participant deck images only after disclosu
   await expect(row.locator(".cr-participant-deck").first().locator(".cr-deck-card")).toHaveCount(12);
   await expect(row.locator(".cr-participant-deck img")).toHaveCount(18);
   await expect(row.locator(".cr-participant-deck img").first()).not.toHaveAttribute("data-cr-card-src");
+  const compactCardGeometry = await row.locator(".cr-deck-card--compact").first().evaluate((cardElement) => {
+    const media = cardElement.querySelector(".cr-deck-card-media").getBoundingClientRect();
+    const name = cardElement.querySelector(".cr-deck-card-name").getBoundingClientRect();
+    return {
+      firstGridRow: getComputedStyle(cardElement).gridTemplateRows.split(" ")[0],
+      fontSize: getComputedStyle(cardElement).fontSize,
+      imageToNameGap: Math.round(name.top - media.bottom),
+    };
+  });
+  expect(compactCardGeometry).toEqual({
+    firstGridRow: "46px",
+    fontSize: "8px",
+    imageToNameGap: 0,
+  });
   await row.locator("summary").click();
   await row.locator("summary").click();
   expect(participantImageRequests).toHaveLength(18);
@@ -608,6 +650,7 @@ test("loads an app opened before its module finishes downloading", async ({ page
   try {
     await page.goto("/home.html", { waitUntil: "commit" });
     await page.waitForFunction(() => Boolean(window.rohinAdminOrchestrator));
+    await expect(page.locator("#cr-history-footer a")).toHaveText("Royale API");
     await page.locator('#about-window [data-close="about"]').click({ noWaitAfter: true });
     await page.locator('.taskbar-icon[data-app="clash-royale"]').click({ noWaitAfter: true });
     await expect(page.locator("#clash-royale-window")).toBeVisible();
