@@ -342,7 +342,7 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   const warmupPortfolioToken = indexHtml.match(
     /\["styles\/home\/portfolio\.css\?v=([^"]+)", "style"\]/
   )?.[1];
-  assert.equal(homePortfolioToken, "clash-royale-style-20261001");
+  assert.equal(homePortfolioToken, "clash-royale-audit-20261001");
   assert.equal(warmupPortfolioToken, homePortfolioToken);
 
   assert.match(
