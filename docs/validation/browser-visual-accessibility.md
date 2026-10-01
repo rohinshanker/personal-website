@@ -42,6 +42,12 @@ baselines exist for. So `reuseExistingServer` is `false` with no opt-in: an
 occupied port fails the run. Give each concurrent worktree its own
 `UI_TEST_PORT` rather than sharing one.
 
+If a parallel local run reports timeouts for unrelated static assets, inspect
+the failed request URLs before changing application code. Reduce `--workers`
+and rerun the affected cases; preserve the original diagnostics. A paused
+Playwright clock does not finish image decoding: await `img.decode()` before
+reading animated sprites into a canvas.
+
 To identify a listener manually on macOS:
 
 ```bash
