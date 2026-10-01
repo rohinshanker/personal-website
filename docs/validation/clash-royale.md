@@ -101,7 +101,8 @@ the known PvP/Ladder combination for Ladder; unknown modes remain Other even
 when their raw names contain a familiar word. Do not classify modes using
 substring guesses. Other exposes the actual raw mode on hover and keyboard
 focus in a separate row that preserves the battle title’s width. Avoid a
-duplicate native tooltip when the inline hint is present. Ladder uses `rgb(73, 212, 214)` with dark text; keep result and mode
+duplicate native tooltip when the inline hint is present. Ladder uses
+`rgb(73, 212, 214)` with dark text; keep result and mode
 labels centered. The battle title includes the player name before “vs.” and
 preserves all participants on the correct sides.
 

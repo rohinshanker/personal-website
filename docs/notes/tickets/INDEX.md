@@ -2,7 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| A | 2026-10-01 | [A_clash-royale-api-integration__20261001.md](A_clash-royale-api-integration__20261001.md) | CR-10–14 implemented; 533 Node and 9 visual gates pass. Full browser suite running; applying two mobile readability repairs from Multica review DEM-188. Preview localhost:4192; main/frontend publication held. |
+| A | 2026-10-01 | [A_clash-royale-api-integration__20261001.md](A_clash-royale-api-integration__20261001.md) | CR-01–14 implemented and verified, including mobile repairs. Multica DEM-188 confirmed no blockers; ready for owner visual audit. Owner preview localhost:4192; main/frontend publication held. |
 | O | 2026-10-01 | [O_study-resources-hover-highlight__20261001.md](O_study-resources-hover-highlight__20261001.md) | Add blue hover highlighting to clickable Study Resources rows on white backgrounds; queued, not implemented. |
 | O | 2026-09-29 | [O_soot-sprite-redesign__20260929.md](O_soot-sprite-redesign__20260929.md) | Redraw the soot sprite from the Ghibli films: four original candidates on a review page, owner picks one, then ship it. Nothing started. |
 | O | 2026-09-30 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Audit decisions. Done: monotonic elapsed-time Minesweeper timer, documented 32-build compatibility window, D1 id note, proven aggregation indexes and five-second stats cache with fresh bypass. Awaiting owner: session budget, Minesweeper close behaviour, Snake game-over loop, queue retry, expired sessions, deploy gating. |
