@@ -15,7 +15,7 @@
     "release:check": "node ../../scripts/check-game-stats-deployment.mjs --release",
     "migrate:local": "wrangler d1 migrations apply personal_site_game_stats --local",
     "migrate:remote": "wrangler d1 migrations apply personal_site_game_stats --remote",
-    "test": "node --test ../../tests/game-stats-worker.test.mjs"
+    "test": "node --test ../../tests/game-stats-worker.test.mjs ../../tests/clash-royale-worker.test.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.114.0"

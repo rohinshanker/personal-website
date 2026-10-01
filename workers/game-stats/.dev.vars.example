@@ -7,6 +7,7 @@
 # ADMIN_USERNAME="replace-with-a-local-administrator-username"
 # ADMIN_PASSWORD="replace-with-a-long-unique-local-administrator-password"
 # ADMIN_SESSION_SIGNING_SECRET="replace-with-a-third-long-random-local-secret"
+# CLASH_ROYALE_API_KEY="replace-with-a-local-clash-royale-api-key"
 #
 # Origin overrides. Production serves only the ALLOWED_ORIGIN set in
 # wrangler.jsonc and intentionally rejects localhost, so these two exist for

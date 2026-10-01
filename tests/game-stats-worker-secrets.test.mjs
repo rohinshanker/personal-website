@@ -15,12 +15,13 @@ const REQUIRED_SECRET_NAMES = Object.freeze([
   "ADMIN_USERNAME",
   "ADMIN_PASSWORD",
   "ADMIN_SESSION_SIGNING_SECRET",
+  "CLASH_ROYALE_API_KEY",
 ]);
 
 const secretListOutput = (names) =>
   JSON.stringify(names.map((name) => ({ name, type: "secret_text" })));
 
-test("the checked-in Wrangler configuration lists the five required secrets", async () => {
+test("the checked-in Wrangler configuration lists the six required secrets", async () => {
   assert.deepEqual(
     Array.from(await readRequiredSecretNames()),
     REQUIRED_SECRET_NAMES
@@ -90,7 +91,7 @@ test("the gate accepts a complete secret set and names what is missing", async (
       listDeployedSecretsImpl: () =>
         secretListOutput(["EVENT_SIGNING_SECRET", "IP_HASH_SECRET"]),
     }),
-    /missing required secrets: ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_SESSION_SIGNING_SECRET/
+    /missing required secrets: ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_SESSION_SIGNING_SECRET, CLASH_ROYALE_API_KEY/
   );
 });
 
@@ -163,7 +164,7 @@ test("the secrets runner annotates failures and returns shell exit codes", async
     0
   );
   assert.deepEqual(output, [
-    "Verified 5 required Worker secrets are configured.",
+    "Verified 6 required Worker secrets are configured.",
   ]);
   assert.deepEqual(errors, []);
 

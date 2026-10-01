@@ -1,4 +1,5 @@
 import { selectAggregatedGameStats } from "./aggregate.mjs";
+import { handleClashRoyaleRequest } from "./clash-royale.mjs";
 import {
   STATS_API_PROTOCOL,
   getGameStatsDatabase,
@@ -128,12 +129,24 @@ const handlePostEvent = async (request, env) => {
   return jsonResponse(request, env, { ok: true, applied, eventId }, applied ? 201 : 200);
 };
 
-export const handleRequest = async (request, env, context) => {
+export const handleRequest = async (request, env, context, dependencies = {}) => {
   try {
+    const url = new URL(request.url);
+    if (url.pathname === "/clash-royale") {
+      if (request.method === "OPTIONS") return handleOptions(request, env);
+      if (request.method === "GET") {
+        return await handleClashRoyaleRequest(
+          request,
+          env,
+          context,
+          dependencies.clashRoyale
+        );
+      }
+      throw new HttpError(405, "Method is not allowed");
+    }
     if (!getGameStatsDatabase(env)) {
       throw new HttpError(500, "D1 database binding is not configured");
     }
-    const url = new URL(request.url);
     if (request.method === "OPTIONS") return handleOptions(request, env);
     if (url.pathname === "/health" && request.method === "GET") {
       return await handleGetHealth(request, env);
