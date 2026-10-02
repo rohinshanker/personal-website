@@ -1,12 +1,12 @@
-# O_study-resources-hover-highlight__20261001 — Open
+# A_study-resources-hover-highlight__20261001 — Active
 
 - Scope: Study Resources clickable rows on white backgrounds, including folder rows.
-- Status: open
+- Status: active
 - Opened: 2026-10-01
 - Updated: 2026-10-01
-- Current State: Owner requested a separate ticket. Implementation has not started; do not bundle it into the Clash Royale visual patch.
-- Verification: Pending implementation and rendered validation.
-- Cleanup: On completion, retain only reusable validation guidance if needed, resolve and delete this ticket, and remove its queue row.
+- Current State: Implementation and focused validation are complete on the isolated task branch; awaiting coordinator review and integration.
+- Verification: Focused Playwright Study Resources contract passes 10/10 across 375×812, 768×1024, 1280×800, 1440×900, 759×900, and 761×900, including simultaneous hover/focus, list/gallery PDF states, folder and file actions, disabled actions, runtime diagnostics, and axe. Cache-token and manifest tests pass. Fresh rendered inspection found no clipping outside the intentional mobile file-list scroller, no layout shift from row paint, and no console or request failures.
+- Cleanup: Coordinator will resolve and delete this ticket and remove its queue row after independent review and integration.
 
 ## Requested behavior
 

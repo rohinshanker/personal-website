@@ -2,7 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| O | 2026-10-01 | [O_study-resources-hover-highlight__20261001.md](O_study-resources-hover-highlight__20261001.md) | Add blue hover highlighting to clickable Study Resources rows on white backgrounds; queued, not implemented. |
+| A | 2026-10-01 | [A_study-resources-hover-highlight__20261001.md](A_study-resources-hover-highlight__20261001.md) | Implementation and focused rendered validation complete; awaiting coordinator review and integration. |
 | O | 2026-09-29 | [O_soot-sprite-redesign__20260929.md](O_soot-sprite-redesign__20260929.md) | Redraw the soot sprite from the Ghibli films: four original candidates on a review page, owner picks one, then ship it. Nothing started. |
 | O | 2026-09-30 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Audit decisions. Done: monotonic elapsed-time Minesweeper timer, documented 32-build compatibility window, D1 id note, proven aggregation indexes and five-second stats cache with fresh bypass. Awaiting owner: session budget, Minesweeper close behaviour, Snake game-over loop, queue retry, expired sessions, deploy gating. |
 | O | 2026-10-01 | [O_decide-content-and-assets__20260924.md](O_decide-content-and-assets__20260924.md) | Remaining audit decisions: Study Resources stub, 26 MB unreferenced calendar photos, originals and working files, background quality, shoot markup from data, pdf-window templating, renames, 98.css trim. Awaiting owner. |

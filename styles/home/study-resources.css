@@ -190,10 +190,38 @@
   color: #fff;
 }
 
-.study-tree-item:focus,
-.study-file-item:focus {
+.study-tree-toggle:focus-visible,
+.study-tree-item:focus-visible,
+.study-file-item:focus-visible {
   outline: 1px dotted #000;
   outline-offset: -2px;
+}
+
+.study-tree-item.is-selected:focus-visible,
+.study-file-item.is-selected:focus-visible {
+  outline-color: #fff;
+}
+
+@media (hover: hover) {
+  .study-tree-row:has(.study-tree-item:not(:disabled)):hover .study-tree-toggle:not(:disabled),
+  .study-tree-row:has(.study-tree-item:not(:disabled)):hover .study-tree-item:not(:disabled),
+  .study-file-item:not(:disabled):hover {
+    background: var(--dialog-blue);
+    color: #fff;
+  }
+
+  .study-tree-row:has(.study-tree-item:not(:disabled)):hover .study-tree-meta,
+  .study-file-item:not(:disabled):hover .study-file-type,
+  .study-file-item:not(:disabled):hover .study-file-subitems,
+  .study-file-item:not(:disabled):hover .study-file-storage {
+    color: #fff;
+  }
+
+  .study-tree-row:hover .study-tree-toggle:focus-visible,
+  .study-tree-row:hover .study-tree-item:focus-visible,
+  .study-file-item:not(:disabled):hover:focus-visible {
+    outline-color: #fff;
+  }
 }
 
 .study-right-pane {
