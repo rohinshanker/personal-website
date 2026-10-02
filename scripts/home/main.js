@@ -5784,6 +5784,8 @@ const showManagedRandomEventWindow = (
     beforeShow,
     position,
     afterShow,
+    clearClasses,
+    animate = true,
     clampAfterMediaLoad = false,
   } = {}
 ) => {
@@ -5796,12 +5798,12 @@ const showManagedRandomEventWindow = (
 
   if (beforeShow) beforeShow();
   loadDeferredMedia(win);
-  win.classList.remove("is-hidden", "is-closing");
+  win.classList.remove("is-hidden", "is-closing", ...(clearClasses || []));
   win.setAttribute("aria-hidden", "false");
   if (position) position(win);
   else positionRandomEventWindowInViewport(win);
   win.style.zIndex = String(topZ++);
-  restartWindowAnimation(win, "is-opening");
+  if (animate) restartWindowAnimation(win, "is-opening");
   if (clampAfterMediaLoad) clampRandomEventWindowAfterMediaLoad(win);
   if (afterShow) afterShow();
   return true;
@@ -5828,7 +5830,7 @@ const closeManagedRandomEventWindow = (
 // `closingClasses` are cleared alongside `is-closing`.
 const bindManagedRandomEventWindowAnimation = (
   win,
-  { afterOpen, afterClose, closingClasses, unloadImages = true } = {}
+  { afterOpen, afterClose, onClose, closingClasses, unloadImages = true } = {}
 ) => {
   if (!win) return;
 
@@ -5843,12 +5845,15 @@ const bindManagedRandomEventWindowAnimation = (
       if (afterOpen) afterOpen();
       return;
     }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing", ...(closingClasses || []));
-      win.classList.add("is-hidden");
-      if (unloadImages) unloadDeferredImages(win);
-      if (afterClose) afterClose();
+    if (event.animationName !== "retro-window-close") return;
+    if (onClose) {
+      onClose();
+      return;
     }
+    win.classList.remove("is-closing", ...(closingClasses || []));
+    win.classList.add("is-hidden");
+    if (unloadImages) unloadDeferredImages(win);
+    if (afterClose) afterClose();
   });
 };
 
@@ -6095,19 +6100,15 @@ const showRandomAlert = ({ showRemember = false } = {}) => {
     clearTimeout(randomAlertReopenTimer);
     randomAlertReopenTimer = null;
   }
-  if (isRandomAlertVisible()) {
-    randomAlertWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  resetRandomAlertSize();
-  if (randomAlertRememberRow) randomAlertRememberRow.hidden = !showRemember;
-  if (randomAlertRemember) randomAlertRemember.checked = false;
-  loadDeferredMedia(randomAlertWindow);
-  randomAlertWindow.classList.remove("is-hidden", "is-closing", "is-choice-flashing");
-  randomAlertWindow.setAttribute("aria-hidden", "false");
-  positionRandomAlertWindow();
-  randomAlertWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(randomAlertWindow, "is-opening");
+  showManagedRandomEventWindow(randomAlertWindow, {
+    clearClasses: ["is-choice-flashing"],
+    beforeShow: () => {
+      resetRandomAlertSize();
+      if (randomAlertRememberRow) randomAlertRememberRow.hidden = !showRemember;
+      if (randomAlertRemember) randomAlertRemember.checked = false;
+    },
+    position: positionRandomAlertWindow,
+  });
 };
 
 const flashRandomAlertChoices = () => {
@@ -6165,7 +6166,6 @@ const resetVanishingPopup = () => {
     vanishingPopupExplosion.removeAttribute("style");
   }
 };
-
 
 const lockVanishingPopupSize = () => {
   if (!vanishingPopupWindow) return;
@@ -6372,19 +6372,10 @@ const showDodgingPopup = () => {
 const isSelfLoveAlertVisible = () =>
   isManagedRandomEventWindowVisible(selfLoveAlertWindow);
 
-
 const showSelfLoveAlert = () => {
-  if (!selfLoveAlertWindow) return;
-  if (isSelfLoveAlertVisible()) {
-    selfLoveAlertWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(selfLoveAlertWindow);
-  selfLoveAlertWindow.classList.remove("is-hidden", "is-closing", "is-yes-flashing");
-  selfLoveAlertWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(selfLoveAlertWindow);
-  selfLoveAlertWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(selfLoveAlertWindow, "is-opening");
+  showManagedRandomEventWindow(selfLoveAlertWindow, {
+    clearClasses: ["is-yes-flashing"],
+  });
 };
 
 const closeSelfLoveAlert = () => {
@@ -6402,7 +6393,6 @@ const flashSelfLoveYes = () => {
 };
 
 const isRohinUpdateVisible = () => isManagedRandomEventWindowVisible(rohinUpdateWindow);
-
 
 const showRohinUpdate = () => {
   showManagedRandomEventWindow(rohinUpdateWindow);
@@ -6422,9 +6412,6 @@ const isMcAfeeVisible = () =>
 
 const mcAfeeWindows = () =>
   [mcAfeePromptWindow, mcAfeeDownloadWindow, mcAfeeThanksWindow].filter(Boolean);
-
-
-
 
 const showMcAfeeWindow = (win) => {
   showManagedRandomEventWindow(win, {
@@ -6664,20 +6651,9 @@ const createWordErrorWindow = (index, layout) => {
     });
   });
 
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      clampRandomEventWindowToViewport(win);
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      removeWordErrorWindow(win);
-    }
+  bindManagedRandomEventWindowAnimation(win, {
+    afterOpen: () => clampRandomEventWindowToViewport(win),
+    onClose: () => removeWordErrorWindow(win),
   });
 
   message.appendChild(icon);
@@ -6723,7 +6699,6 @@ const showWordErrorStack = () => {
 
 const isRohinNoteVisible = () => isManagedRandomEventWindowVisible(rohinNoteWindow);
 
-
 const showRohinNote = () => {
   showManagedRandomEventWindow(rohinNoteWindow);
 };
@@ -6733,7 +6708,6 @@ const closeRohinNote = () => {
 };
 
 const isEarthNoteVisible = () => isManagedRandomEventWindowVisible(earthNoteWindow);
-
 
 const showEarthNote = () => {
   showManagedRandomEventWindow(earthNoteWindow);
@@ -6745,7 +6719,6 @@ const closeEarthNote = () => {
 
 const isHealthNoteVisible = () => isManagedRandomEventWindowVisible(healthNoteWindow);
 
-
 const showHealthNote = () => {
   showManagedRandomEventWindow(healthNoteWindow);
 };
@@ -6755,7 +6728,6 @@ const closeHealthNote = () => {
 };
 
 const isLoveNoteVisible = () => isManagedRandomEventWindowVisible(loveNoteWindow);
-
 
 const showLoveNote = () => {
   showManagedRandomEventWindow(loveNoteWindow);
@@ -6778,7 +6750,6 @@ const closeNoSmokingWindow = () => {
 const isPossumSpringsVisible = () =>
   isManagedRandomEventWindowVisible(possumSpringsWindow);
 
-
 const showPossumSpringsWindow = () => {
   showManagedRandomEventWindow(possumSpringsWindow, { clampAfterMediaLoad: true });
 };
@@ -6788,7 +6759,6 @@ const closePossumSpringsWindow = () => {
 };
 
 const isWingedLightVisible = () => isManagedRandomEventWindowVisible(wingedLightWindow);
-
 
 const showWingedLightWindow = () => {
   showManagedRandomEventWindow(wingedLightWindow, { clampAfterMediaLoad: true });
@@ -6854,7 +6824,6 @@ const collectWingedLight = () => {
 
 const isManaFloodVisible = () => isManagedRandomEventWindowVisible(manaFloodWindow);
 
-
 const showManaFlood = () => {
   showManagedRandomEventWindow(manaFloodWindow);
 };
@@ -6865,7 +6834,6 @@ const closeManaFlood = () => {
 
 const isMimicWarningVisible = () =>
   isManagedRandomEventWindowVisible(mimicWarningWindow);
-
 
 const showMimicWarning = () => {
   showManagedRandomEventWindow(mimicWarningWindow);
@@ -6934,7 +6902,6 @@ const resetSkillCheckWindow = () => {
   if (skillCheckIgnore) skillCheckIgnore.disabled = false;
   setSkillCheckRollDisplay();
 };
-
 
 const lockSkillCheckWindow = () => {
   if (skillCheckWindow) skillCheckWindow.classList.add("is-locked");
@@ -8348,17 +8315,9 @@ const markFelizJuevesShown = (dateKey) => {
 };
 
 const showFelizJuevesWindow = () => {
-  if (!felizJuevesWindow) return;
-  if (isFelizJuevesVisible()) {
-    felizJuevesWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(felizJuevesWindow);
-  felizJuevesWindow.classList.remove("is-hidden", "is-closing", "is-choice-flashing");
-  felizJuevesWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(felizJuevesWindow);
-  felizJuevesWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(felizJuevesWindow, "is-opening");
+  showManagedRandomEventWindow(felizJuevesWindow, {
+    clearClasses: ["is-choice-flashing"],
+  });
 };
 
 const closeFelizJuevesWindow = () => {
@@ -8398,7 +8357,6 @@ const maybeShowFelizJueves = () => {
 
 const isNazarVisible = () => isManagedRandomEventWindowVisible(nazarWindow);
 
-
 const showNazarWindow = () => {
   showManagedRandomEventWindow(nazarWindow);
 };
@@ -8408,7 +8366,6 @@ const closeNazarWindow = () => {
 };
 
 const isSiteGraceVisible = () => isManagedRandomEventWindowVisible(siteGraceWindow);
-
 
 const showSiteGraceWindow = () => {
   showManagedRandomEventWindow(siteGraceWindow);
@@ -8442,7 +8399,6 @@ const isStalkerWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isStalkerVisible = () =>
   isStalkerWindowVisible(stalkerWindow) || isStalkerWindowVisible(stalkerResultWindow);
-
 
 const copyStalkerWindowPosition = (source, target) => {
   if (!source || !target) return false;
@@ -8480,7 +8436,6 @@ const setNanaEncounterWindowPosition = (win, left, top) => {
   setRandomEventWindowPosition(win, left, top);
   return true;
 };
-
 
 const copyNanaEncounterPosition = (source, target) => {
   if (!source || !target) return false;
@@ -9766,7 +9721,6 @@ const isInstrumentalityVisible = () =>
   isInstrumentalityWindowVisible(instrumentalityWindow) ||
   isInstrumentalityWindowVisible(instrumentalityCongratsWindow);
 
-
 const showInstrumentalityWindow = (win) => {
   showManagedRandomEventWindow(win);
 };
@@ -9789,7 +9743,6 @@ const rejectInstrumentality = () => {
 };
 
 const isRedToolVisible = () => isManagedRandomEventWindowVisible(redToolWindow);
-
 
 const scrollRedToolChatToBottom = () => {
   if (!redToolChatLog) return;
@@ -10183,7 +10136,6 @@ const startFateLightningStrike = () => {
 
 const isFateVisible = () => isManagedRandomEventWindowVisible(fateWindow);
 
-
 const updateFateProgress = () => {
   const progress = clampNumber(fateProgressValue, 0, 100);
   if (fateProgressBar) fateProgressBar.style.width = `${progress}%`;
@@ -10286,14 +10238,15 @@ const openFateResultWindow = (success) => {
   if (!fateWindow) return;
   fateState = success ? "success" : "loss";
   setFateResultContent(success);
-  fateWindow.classList.remove("is-hidden", "is-closing", "is-resisting");
-  fateWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(fateWindow);
-  clampRandomEventWindowAfterMediaLoad(fateWindow);
-  fateWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(fateWindow, "is-opening");
-  requestAnimationFrame(() => {
-    if (fateResultOk) fateResultOk.focus();
+  showManagedRandomEventWindow(fateWindow, {
+    isVisible: () => false,
+    clearClasses: ["is-resisting"],
+    clampAfterMediaLoad: true,
+    afterShow: () => {
+      requestAnimationFrame(() => {
+        if (fateResultOk) fateResultOk.focus();
+      });
+    },
   });
 };
 
@@ -12731,20 +12684,9 @@ const createBrandBurnsPuckWindow = () => {
     healBrandBurnsPlayerFromPuck();
   });
 
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      clampRandomEventWindowToViewport(win);
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      removeBrandBurnsPuckWindow();
-    }
+  bindManagedRandomEventWindowAnimation(win, {
+    afterOpen: () => clampRandomEventWindowToViewport(win),
+    onClose: removeBrandBurnsPuckWindow,
   });
 
   image.addEventListener("load", () => clampRandomEventWindowToViewport(win));
@@ -13022,20 +12964,9 @@ const createBrandBurnsBlockWindow = () => {
     endBrandBurnsBlock();
   });
 
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      clampRandomEventWindowToViewport(win);
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      removeBrandBurnsBlockWindow();
-    }
+  bindManagedRandomEventWindowAnimation(win, {
+    afterOpen: () => clampRandomEventWindowToViewport(win),
+    onClose: removeBrandBurnsBlockWindow,
   });
 
   brandBurnsBlockProgressBar = bar;
@@ -13388,20 +13319,9 @@ const createBrandBurnsEnemyWindow = (definition) => {
     attackBrandBurnsEnemy(state);
   });
 
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      clampRandomEventWindowToViewport(win);
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      removeBrandBurnsEnemyWindow(win);
-    }
+  bindManagedRandomEventWindowAnimation(win, {
+    afterOpen: () => clampRandomEventWindowToViewport(win),
+    onClose: () => removeBrandBurnsEnemyWindow(win),
   });
 
   image.addEventListener("load", () => clampRandomEventWindowToViewport(win));
@@ -13527,7 +13447,6 @@ const closeBrandBurnsWindow = () => {
 
 const isBehelitVisible = () => isManagedRandomEventWindowVisible(behelitWindow);
 
-
 const showBehelitWindow = () => {
   showManagedRandomEventWindow(behelitWindow, {
     onFront: () => clampRandomEventWindowToViewport(behelitWindow),
@@ -13564,7 +13483,6 @@ const stopJohnPorkStatus = () => {
   if (johnPorkStatus) johnPorkStatus.textContent = "Incoming call";
 };
 
-
 const showJohnPorkCall = () => {
   showManagedRandomEventWindow(johnPorkWindow, {
     afterShow: startJohnPorkStatus,
@@ -13579,7 +13497,6 @@ const closeJohnPorkCall = () => {
 
 const isAdvertisementVisible = () =>
   isManagedRandomEventWindowVisible(advertisementWindow);
-
 
 const showAdvertisementWindow = () => {
   showManagedRandomEventWindow(advertisementWindow);
@@ -14694,7 +14611,6 @@ const fillDstCraftSlot = (slot, resource) => {
 
 const isBidenBlastVisible = () => isManagedRandomEventWindowVisible(bidenBlastWindow);
 
-
 const removeBidenExplodePieces = () => {
   document.querySelectorAll(".biden-explode-piece").forEach((piece) => {
     piece.remove();
@@ -14791,18 +14707,15 @@ const animateBidenBlastExplode = (mode, onComplete) => {
   });
 };
 
+// The blast replaces the shared open/close animation with its own piece
+// explosion, so it opts out of `animate` and runs its own close sequence
+// instead of `closeManagedRandomEventWindow`.
 const showBidenBlastWindow = () => {
-  if (!bidenBlastWindow) return;
-  if (isBidenBlastVisible()) {
-    bidenBlastWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(bidenBlastWindow);
-  bidenBlastWindow.classList.remove("is-hidden", "is-closing", "is-exploding");
-  bidenBlastWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(bidenBlastWindow);
-  bidenBlastWindow.style.zIndex = String(topZ++);
-  animateBidenBlastExplode("show");
+  showManagedRandomEventWindow(bidenBlastWindow, {
+    clearClasses: ["is-exploding"],
+    animate: false,
+    afterShow: () => animateBidenBlastExplode("show"),
+  });
 };
 
 const closeBidenBlastWindow = () => {
@@ -14812,9 +14725,7 @@ const closeBidenBlastWindow = () => {
   animateBidenBlastExplode("hide", () => {
     bidenBlastWindow.classList.remove("is-closing");
     bidenBlastWindow.classList.add("is-hidden");
-    bidenBlastWindow.querySelectorAll("img[data-src]").forEach((image) => {
-      image.removeAttribute("src");
-    });
+    unloadDeferredImages(bidenBlastWindow);
   });
 };
 
@@ -15119,7 +15030,6 @@ const socketInfinityArmoryGem = (shape) => {
   scheduleInfinityArmoryCompletionCheck();
 };
 
-
 const showInfinityArmoryWindow = () => {
   showManagedRandomEventWindow(infinityArmoryWindow, {
     onFront: () => {
@@ -15142,15 +15052,6 @@ const isVirusVisible = () => virusEventWindows().some(isVirusWindowVisible);
 
 const setVirusEventWindowPosition = (win, left, top) => {
   setRandomEventWindowPosition(win, left, top);
-};
-
-
-const clampVirusEventWindowToViewport = (win) => {
-  clampRandomEventWindowToViewport(win);
-};
-
-const clampVirusEventWindowAfterMediaLoad = (win) => {
-  clampRandomEventWindowAfterMediaLoad(win);
 };
 
 const chooseVirusRescueAnchor = () => {
@@ -15640,30 +15541,18 @@ const animateWindowExplode = (win, onComplete) => {
 };
 
 const showVirusEventWindow = (win, anchor = null, { animate = true } = {}) => {
-  if (!win) return;
-  if (!win.classList.contains("is-hidden")) {
-    win.style.zIndex = String(topZ++);
-    clampVirusEventWindowToViewport(win);
-    return;
-  }
-  win.classList.remove(
-    "is-hidden",
-    "is-opening",
-    "is-closing",
-    "is-exploding",
-    "is-virus-struck"
-  );
-  win.setAttribute("aria-hidden", "false");
-  if (anchor) {
-    setVirusEventWindowPosition(win, anchor.left, anchor.top);
-  } else {
-    positionRandomEventWindowInViewport(win);
-  }
-  clampVirusEventWindowToViewport(win);
-  clampVirusEventWindowAfterMediaLoad(win);
-  loadDeferredMedia(win);
-  win.style.zIndex = String(topZ++);
-  if (animate) restartWindowAnimation(win, "is-opening");
+  showManagedRandomEventWindow(win, {
+    isVisible: () => isVirusWindowVisible(win),
+    onFront: () => clampRandomEventWindowToViewport(win),
+    clearClasses: ["is-opening", "is-exploding", "is-virus-struck"],
+    position: (target) => {
+      if (anchor) setVirusEventWindowPosition(target, anchor.left, anchor.top);
+      else positionRandomEventWindowInViewport(target);
+      clampRandomEventWindowToViewport(target);
+    },
+    clampAfterMediaLoad: true,
+    animate,
+  });
 };
 
 const closeVirusEventWindow = (win) => {
@@ -23108,44 +22997,12 @@ calendarGrid.addEventListener("click", (event) => {
   });
 });
 
-if (randomEventWindow) {
-  randomEventWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
+bindManagedRandomEventWindowAnimation(randomEventWindow);
 
-  randomEventWindow.addEventListener("animationend", (event) => {
-    if (event.target !== randomEventWindow) return;
-    if (event.animationName === "retro-window-open") {
-      randomEventWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      randomEventWindow.classList.remove("is-closing");
-      randomEventWindow.classList.add("is-hidden");
-      randomEventWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
-
-if (randomAlertWindow) {
-  randomAlertWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  randomAlertWindow.addEventListener("animationend", (event) => {
-    if (event.target !== randomAlertWindow) return;
-    if (event.animationName === "retro-window-open") {
-      randomAlertWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      randomAlertWindow.classList.remove("is-closing", "is-choice-flashing");
-      randomAlertWindow.classList.add("is-hidden");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(randomAlertWindow, {
+  closingClasses: ["is-choice-flashing"],
+  unloadImages: false,
+});
 
 [
   vanishingPopupClose,
@@ -23162,28 +23019,16 @@ if (randomAlertWindow) {
   });
 });
 
-if (vanishingPopupWindow) {
-  vanishingPopupWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  vanishingPopupWindow.addEventListener("animationend", (event) => {
-    if (event.target !== vanishingPopupWindow) return;
-    if (event.animationName === "retro-window-open") {
-      vanishingPopupWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      vanishingPopupWindow.classList.remove("is-closing", "is-exploding");
-      vanishingPopupWindow.classList.add("is-hidden");
-      if (vanishingPopupExplosion) {
-        vanishingPopupExplosion.classList.remove("is-active");
-        vanishingPopupExplosion.removeAttribute("src");
-        vanishingPopupExplosion.removeAttribute("style");
-      }
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(vanishingPopupWindow, {
+  closingClasses: ["is-exploding"],
+  unloadImages: false,
+  afterClose: () => {
+    if (!vanishingPopupExplosion) return;
+    vanishingPopupExplosion.classList.remove("is-active");
+    vanishingPopupExplosion.removeAttribute("src");
+    vanishingPopupExplosion.removeAttribute("style");
+  },
+});
 
 getDodgingPopupButtons().forEach((button) => {
   button.addEventListener("click", (event) => {
@@ -23216,20 +23061,9 @@ if (dodgingPopupWindow) {
     true
   );
 
-  dodgingPopupWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  dodgingPopupWindow.addEventListener("animationend", (event) => {
-    if (event.target !== dodgingPopupWindow) return;
-    if (event.animationName === "retro-window-open") {
-      dodgingPopupWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      dodgingPopupWindow.classList.remove("is-closing", "is-dodging");
-      dodgingPopupWindow.classList.add("is-hidden");
-    }
+  bindManagedRandomEventWindowAnimation(dodgingPopupWindow, {
+    closingClasses: ["is-dodging"],
+    unloadImages: false,
   });
 }
 
@@ -23249,26 +23083,9 @@ if (felizJuevesGracias) {
   });
 }
 
-if (felizJuevesWindow) {
-  felizJuevesWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  felizJuevesWindow.addEventListener("animationend", (event) => {
-    if (event.target !== felizJuevesWindow) return;
-    if (event.animationName === "retro-window-open") {
-      felizJuevesWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      felizJuevesWindow.classList.remove("is-closing", "is-choice-flashing");
-      felizJuevesWindow.classList.add("is-hidden");
-      felizJuevesWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(felizJuevesWindow, {
+  closingClasses: ["is-choice-flashing"],
+});
 
 if (randomAlertMaximize) {
   randomAlertMaximize.addEventListener("click", (event) => {
@@ -23330,23 +23147,10 @@ if (selfLoveAlertYes) {
   });
 });
 
-if (selfLoveAlertWindow) {
-  selfLoveAlertWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  selfLoveAlertWindow.addEventListener("animationend", (event) => {
-    if (event.target !== selfLoveAlertWindow) return;
-    if (event.animationName === "retro-window-open") {
-      selfLoveAlertWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      selfLoveAlertWindow.classList.remove("is-closing", "is-yes-flashing");
-      selfLoveAlertWindow.classList.add("is-hidden");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(selfLoveAlertWindow, {
+  closingClasses: ["is-yes-flashing"],
+  unloadImages: false,
+});
 
 if (rohinUpdateRun) {
   rohinUpdateRun.addEventListener("click", (event) => {
@@ -23364,23 +23168,7 @@ if (rohinUpdateLater) {
   });
 }
 
-if (rohinUpdateWindow) {
-  rohinUpdateWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  rohinUpdateWindow.addEventListener("animationend", (event) => {
-    if (event.target !== rohinUpdateWindow) return;
-    if (event.animationName === "retro-window-open") {
-      rohinUpdateWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      rohinUpdateWindow.classList.remove("is-closing");
-      rohinUpdateWindow.classList.add("is-hidden");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(rohinUpdateWindow, { unloadImages: false });
 
 if (mcAfeeUpdateRun) {
   mcAfeeUpdateRun.addEventListener("click", (event) => {
@@ -23420,25 +23208,10 @@ if (mcAfeeThanksOk) {
 }
 
 [mcAfeePromptWindow, mcAfeeDownloadWindow, mcAfeeThanksWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
+  bindManagedRandomEventWindowAnimation(win, {
+    afterClose: () => {
       if (win === mcAfeeDownloadWindow) stopMcAfeeDownload();
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
+    },
   });
 });
 
@@ -23450,23 +23223,7 @@ if (rohinNoteOk) {
   });
 }
 
-if (rohinNoteWindow) {
-  rohinNoteWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  rohinNoteWindow.addEventListener("animationend", (event) => {
-    if (event.target !== rohinNoteWindow) return;
-    if (event.animationName === "retro-window-open") {
-      rohinNoteWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      rohinNoteWindow.classList.remove("is-closing");
-      rohinNoteWindow.classList.add("is-hidden");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(rohinNoteWindow, { unloadImages: false });
 
 if (earthNoteOk) {
   earthNoteOk.addEventListener("click", (event) => {
@@ -23476,23 +23233,7 @@ if (earthNoteOk) {
   });
 }
 
-if (earthNoteWindow) {
-  earthNoteWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  earthNoteWindow.addEventListener("animationend", (event) => {
-    if (event.target !== earthNoteWindow) return;
-    if (event.animationName === "retro-window-open") {
-      earthNoteWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      earthNoteWindow.classList.remove("is-closing");
-      earthNoteWindow.classList.add("is-hidden");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(earthNoteWindow, { unloadImages: false });
 
 if (healthNoteOk) {
   healthNoteOk.addEventListener("click", (event) => {
@@ -23502,23 +23243,7 @@ if (healthNoteOk) {
   });
 }
 
-if (healthNoteWindow) {
-  healthNoteWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  healthNoteWindow.addEventListener("animationend", (event) => {
-    if (event.target !== healthNoteWindow) return;
-    if (event.animationName === "retro-window-open") {
-      healthNoteWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      healthNoteWindow.classList.remove("is-closing");
-      healthNoteWindow.classList.add("is-hidden");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(healthNoteWindow, { unloadImages: false });
 
 if (loveNoteOk) {
   loveNoteOk.addEventListener("click", (event) => {
@@ -23528,23 +23253,7 @@ if (loveNoteOk) {
   });
 }
 
-if (loveNoteWindow) {
-  loveNoteWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  loveNoteWindow.addEventListener("animationend", (event) => {
-    if (event.target !== loveNoteWindow) return;
-    if (event.animationName === "retro-window-open") {
-      loveNoteWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      loveNoteWindow.classList.remove("is-closing");
-      loveNoteWindow.classList.add("is-hidden");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(loveNoteWindow, { unloadImages: false });
 
 if (noSmokingOk) {
   noSmokingOk.addEventListener("click", (event) => {
@@ -23554,26 +23263,7 @@ if (noSmokingOk) {
   });
 }
 
-if (noSmokingWindow) {
-  noSmokingWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  noSmokingWindow.addEventListener("animationend", (event) => {
-    if (event.target !== noSmokingWindow) return;
-    if (event.animationName === "retro-window-open") {
-      noSmokingWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      noSmokingWindow.classList.remove("is-closing");
-      noSmokingWindow.classList.add("is-hidden");
-      noSmokingWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(noSmokingWindow);
 
 if (possumSpringsOk) {
   possumSpringsOk.addEventListener("click", (event) => {
@@ -23583,26 +23273,7 @@ if (possumSpringsOk) {
   });
 }
 
-if (possumSpringsWindow) {
-  possumSpringsWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  possumSpringsWindow.addEventListener("animationend", (event) => {
-    if (event.target !== possumSpringsWindow) return;
-    if (event.animationName === "retro-window-open") {
-      possumSpringsWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      possumSpringsWindow.classList.remove("is-closing");
-      possumSpringsWindow.classList.add("is-hidden");
-      possumSpringsWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(possumSpringsWindow);
 
 if (wingedLightCollect) {
   wingedLightCollect.addEventListener("click", (event) => {
@@ -23620,26 +23291,7 @@ if (wingedLightLater) {
   });
 }
 
-if (wingedLightWindow) {
-  wingedLightWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  wingedLightWindow.addEventListener("animationend", (event) => {
-    if (event.target !== wingedLightWindow) return;
-    if (event.animationName === "retro-window-open") {
-      wingedLightWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      wingedLightWindow.classList.remove("is-closing");
-      wingedLightWindow.classList.add("is-hidden");
-      wingedLightWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(wingedLightWindow);
 
 if (manaFloodOk) {
   manaFloodOk.addEventListener("click", (event) => {
@@ -23649,23 +23301,7 @@ if (manaFloodOk) {
   });
 }
 
-if (manaFloodWindow) {
-  manaFloodWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  manaFloodWindow.addEventListener("animationend", (event) => {
-    if (event.target !== manaFloodWindow) return;
-    if (event.animationName === "retro-window-open") {
-      manaFloodWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      manaFloodWindow.classList.remove("is-closing");
-      manaFloodWindow.classList.add("is-hidden");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(manaFloodWindow, { unloadImages: false });
 
 if (mimicWarningOk) {
   mimicWarningOk.addEventListener("click", (event) => {
@@ -23675,23 +23311,7 @@ if (mimicWarningOk) {
   });
 }
 
-if (mimicWarningWindow) {
-  mimicWarningWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  mimicWarningWindow.addEventListener("animationend", (event) => {
-    if (event.target !== mimicWarningWindow) return;
-    if (event.animationName === "retro-window-open") {
-      mimicWarningWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      mimicWarningWindow.classList.remove("is-closing");
-      mimicWarningWindow.classList.add("is-hidden");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(mimicWarningWindow, { unloadImages: false });
 
 if (skillCheckRoll) {
   skillCheckRoll.addEventListener("click", (event) => {
@@ -23718,22 +23338,11 @@ if (skillCheckResultOk) {
 }
 
 [skillCheckWindow, skillCheckResultWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
+  bindManagedRandomEventWindowAnimation(win, {
+    afterClose: () => {
       if (win === skillCheckWindow) resetSkillCheckWindow();
-    }
+    },
+    unloadImages: false,
   });
 });
 
@@ -23768,27 +23377,7 @@ if (distressUploadOk) {
   });
 }
 
-[distressSignalWindow, distressUploadWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-});
+[distressSignalWindow, distressUploadWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
 
 [nazarClose, nazarYes, nazarNo].forEach((button) => {
   if (!button) return;
@@ -23799,26 +23388,7 @@ if (distressUploadOk) {
   });
 });
 
-if (nazarWindow) {
-  nazarWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  nazarWindow.addEventListener("animationend", (event) => {
-    if (event.target !== nazarWindow) return;
-    if (event.animationName === "retro-window-open") {
-      nazarWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      nazarWindow.classList.remove("is-closing");
-      nazarWindow.classList.add("is-hidden");
-      nazarWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(nazarWindow);
 
 if (siteGraceTouch) {
   siteGraceTouch.addEventListener("click", (event) => {
@@ -23836,26 +23406,7 @@ if (siteGraceKeep) {
   });
 }
 
-if (siteGraceWindow) {
-  siteGraceWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  siteGraceWindow.addEventListener("animationend", (event) => {
-    if (event.target !== siteGraceWindow) return;
-    if (event.animationName === "retro-window-open") {
-      siteGraceWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      siteGraceWindow.classList.remove("is-closing");
-      siteGraceWindow.classList.add("is-hidden");
-      siteGraceWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(siteGraceWindow);
 
 if (stalkerYes) {
   stalkerYes.addEventListener("click", (event) => {
@@ -23882,27 +23433,7 @@ if (stalkerResultOk) {
   });
 }
 
-[stalkerWindow, stalkerResultWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-});
+[stalkerWindow, stalkerResultWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
 
 if (nanaEncounterYes) {
   nanaEncounterYes.addEventListener("click", (event) => {
@@ -23928,27 +23459,7 @@ if (nanaAcceptOk) {
   });
 }
 
-[nanaEncounterWindow, nanaAcceptWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-});
+[nanaEncounterWindow, nanaAcceptWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
 
 if (servalEncounterIgnore) {
   servalEncounterIgnore.addEventListener("click", (event) => {
@@ -23974,27 +23485,7 @@ if (servalPizzaCool) {
   });
 }
 
-[servalEncounterWindow, servalPizzaWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-});
+[servalEncounterWindow, servalPizzaWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
 
 if (caracalEncounterPet) {
   caracalEncounterPet.addEventListener("click", (event) => {
@@ -24020,27 +23511,7 @@ if (caracalResultOk) {
   });
 }
 
-[caracalEncounterWindow, caracalResultWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-});
+[caracalEncounterWindow, caracalResultWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
 
 if (shoebillEncounterBow) {
   shoebillEncounterBow.addEventListener("click", (event) => {
@@ -24066,27 +23537,7 @@ if (shoebillBowOk) {
   });
 }
 
-[shoebillEncounterWindow, shoebillBowWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-});
+[shoebillEncounterWindow, shoebillBowWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
 
 if (midnightGospelYes) {
   midnightGospelYes.addEventListener("click", (event) => {
@@ -24113,27 +23564,12 @@ if (midnightGospelBegin) {
 }
 
 [midnightGospelInviteWindow, midnightGospelMeditationWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
+  bindManagedRandomEventWindowAnimation(win, {
+    afterClose: () => {
       if (win === midnightGospelMeditationWindow) {
         resetMidnightGospelMeditation();
       }
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
+    },
   });
 });
 
@@ -24217,27 +23653,7 @@ if (instrumentalityCongratsOk) {
   });
 }
 
-[instrumentalityWindow, instrumentalityCongratsWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-});
+[instrumentalityWindow, instrumentalityCongratsWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
 
 if (redToolClose) {
   redToolClose.addEventListener("click", (event) => {
@@ -24263,26 +23679,7 @@ if (redToolSend) {
   });
 }
 
-if (redToolWindow) {
-  redToolWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  redToolWindow.addEventListener("animationend", (event) => {
-    if (event.target !== redToolWindow) return;
-    if (event.animationName === "retro-window-open") {
-      redToolWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      redToolWindow.classList.remove("is-closing");
-      redToolWindow.classList.add("is-hidden");
-      redToolWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(redToolWindow);
 
 bindRandomEventButton(deathNoteClose, closeDeathNoteWindow);
 bindRandomEventButton(deathNoteTitleClose, closeDeathNoteWindow);
@@ -24417,27 +23814,11 @@ bindRandomEventButton(fateTitleClose, closeFateWindow);
 
 document.addEventListener("keydown", handleFateKeyMash);
 
-if (fateWindow) {
-  fateWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  fateWindow.addEventListener("animationend", (event) => {
-    if (event.target !== fateWindow) return;
-    if (event.animationName === "retro-window-open") {
-      fateWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      fateWindow.classList.remove("is-closing");
-      fateWindow.classList.add("is-hidden");
-      fateWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-      if (fateResultImage) fateResultImage.removeAttribute("src");
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(fateWindow, {
+  afterClose: () => {
+    if (fateResultImage) fateResultImage.removeAttribute("src");
+  },
+});
 
 bindRandomEventButton(lancerBattleStart, startLancerBattle);
 bindRandomEventButton(lancerBattlePush, pushLancerBattle);
@@ -24445,38 +23826,16 @@ bindRandomEventButton(lancerBattleTitleClose, closeLancerBattleWindow);
 bindRandomEventButton(lancerBattleClose, closeLancerBattleWindow);
 document.addEventListener("keydown", handleLancerBattleKeyMash);
 
-if (lancerBattleWindow) {
-  lancerBattleWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  lancerBattleWindow.addEventListener("animationend", (event) => {
-    if (event.target !== lancerBattleWindow) return;
-    if (event.animationName === "retro-window-open") {
-      lancerBattleWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      lancerBattleWindow.classList.remove("is-closing");
-      lancerBattleWindow.classList.add("is-hidden");
-      lancerBattleWindow.classList.remove(
-        "is-clashing",
-        "is-win",
-        "is-loss",
-        "is-final-alert"
-      );
-      lancerBattleWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-      clearLancerBattleResultMedia();
-      clearLancerBattleVideo();
-      if (lancerBattleOpenFinalAfterClose) {
-        lancerBattleOpenFinalAfterClose = false;
-        reopenLancerBattleFinalPrompt();
-      }
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(lancerBattleWindow, {
+  closingClasses: ["is-clashing", "is-win", "is-loss", "is-final-alert"],
+  afterClose: () => {
+    clearLancerBattleResultMedia();
+    clearLancerBattleVideo();
+    if (!lancerBattleOpenFinalAfterClose) return;
+    lancerBattleOpenFinalAfterClose = false;
+    reopenLancerBattleFinalPrompt();
+  },
+});
 
 if (brandBurnsFight) {
   brandBurnsFight.addEventListener("click", (event) => {
@@ -24504,34 +23863,19 @@ if (brandBurnsClose) {
   });
 }
 
-if (brandBurnsWindow) {
-  brandBurnsWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  brandBurnsWindow.addEventListener("animationend", (event) => {
-    if (event.target !== brandBurnsWindow) return;
-    if (event.animationName === "retro-window-open") {
-      brandBurnsWindow.classList.remove("is-opening");
-      clampRandomEventWindowToViewport(brandBurnsWindow);
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      brandBurnsWindow.classList.remove("is-closing");
-      brandBurnsWindow.classList.add("is-hidden");
-      brandBurnsWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-      if (brandBurnsPreserveEnemyWindowsOnMainClose) {
-        brandBurnsPreserveEnemyWindowsOnMainClose = false;
-        brandBurnsStage = "idle";
-        return;
-      }
+bindManagedRandomEventWindowAnimation(brandBurnsWindow, {
+  afterOpen: () => clampRandomEventWindowToViewport(brandBurnsWindow),
+  afterClose: () => {
+    // A staggered enemy close keeps those windows alive past the main close, so
+    // the full reset waits for them instead of tearing them down here.
+    if (brandBurnsPreserveEnemyWindowsOnMainClose) {
+      brandBurnsPreserveEnemyWindowsOnMainClose = false;
+    } else {
       resetBrandBurnsWindow();
-      brandBurnsStage = "idle";
     }
-  });
-}
+    brandBurnsStage = "idle";
+  },
+});
 
 if (behelitOk) {
   behelitOk.addEventListener("click", (event) => {
@@ -24541,26 +23885,7 @@ if (behelitOk) {
   });
 }
 
-if (behelitWindow) {
-  behelitWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  behelitWindow.addEventListener("animationend", (event) => {
-    if (event.target !== behelitWindow) return;
-    if (event.animationName === "retro-window-open") {
-      behelitWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      behelitWindow.classList.remove("is-closing");
-      behelitWindow.classList.add("is-hidden");
-      behelitWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(behelitWindow);
 
 [johnPorkClose, johnPorkAccept, johnPorkDecline].forEach((button) => {
   if (!button) return;
@@ -24571,27 +23896,9 @@ if (behelitWindow) {
   });
 });
 
-if (johnPorkWindow) {
-  johnPorkWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  johnPorkWindow.addEventListener("animationend", (event) => {
-    if (event.target !== johnPorkWindow) return;
-    if (event.animationName === "retro-window-open") {
-      johnPorkWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      johnPorkWindow.classList.remove("is-closing");
-      johnPorkWindow.classList.add("is-hidden");
-      stopJohnPorkStatus();
-      johnPorkWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(johnPorkWindow, {
+  afterClose: stopJohnPorkStatus,
+});
 
 if (advertisementNoThanks) {
   advertisementNoThanks.addEventListener("click", (event) => {
@@ -24601,26 +23908,7 @@ if (advertisementNoThanks) {
   });
 }
 
-if (advertisementWindow) {
-  advertisementWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  advertisementWindow.addEventListener("animationend", (event) => {
-    if (event.target !== advertisementWindow) return;
-    if (event.animationName === "retro-window-open") {
-      advertisementWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      advertisementWindow.classList.remove("is-closing");
-      advertisementWindow.classList.add("is-hidden");
-      advertisementWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(advertisementWindow);
 
 if (saulAdClose) {
   saulAdClose.addEventListener("click", (event) => {
@@ -24630,26 +23918,7 @@ if (saulAdClose) {
   });
 }
 
-if (saulAdWindow) {
-  saulAdWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  saulAdWindow.addEventListener("animationend", (event) => {
-    if (event.target !== saulAdWindow) return;
-    if (event.animationName === "retro-window-open") {
-      saulAdWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      saulAdWindow.classList.remove("is-closing");
-      saulAdWindow.classList.add("is-hidden");
-      saulAdWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(saulAdWindow);
 
 if (kidnamedfingerOk) {
   kidnamedfingerOk.addEventListener("click", (event) => {
@@ -24659,26 +23928,7 @@ if (kidnamedfingerOk) {
   });
 }
 
-if (kidnamedfingerWindow) {
-  kidnamedfingerWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  kidnamedfingerWindow.addEventListener("animationend", (event) => {
-    if (event.target !== kidnamedfingerWindow) return;
-    if (event.animationName === "retro-window-open") {
-      kidnamedfingerWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      kidnamedfingerWindow.classList.remove("is-closing");
-      kidnamedfingerWindow.classList.add("is-hidden");
-      kidnamedfingerWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(kidnamedfingerWindow);
 
 if (walterWhiteOk) {
   walterWhiteOk.addEventListener("click", (event) => {
@@ -24688,26 +23938,7 @@ if (walterWhiteOk) {
   });
 }
 
-if (walterWhiteWindow) {
-  walterWhiteWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  walterWhiteWindow.addEventListener("animationend", (event) => {
-    if (event.target !== walterWhiteWindow) return;
-    if (event.animationName === "retro-window-open") {
-      walterWhiteWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      walterWhiteWindow.classList.remove("is-closing");
-      walterWhiteWindow.classList.add("is-hidden");
-      walterWhiteWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(walterWhiteWindow);
 
 if (bountyHunterClose) {
   bountyHunterClose.addEventListener("click", (event) => {
@@ -24717,26 +23948,7 @@ if (bountyHunterClose) {
   });
 }
 
-if (bountyHunterWindow) {
-  bountyHunterWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  bountyHunterWindow.addEventListener("animationend", (event) => {
-    if (event.target !== bountyHunterWindow) return;
-    if (event.animationName === "retro-window-open") {
-      bountyHunterWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      bountyHunterWindow.classList.remove("is-closing");
-      bountyHunterWindow.classList.add("is-hidden");
-      bountyHunterWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(bountyHunterWindow);
 
 if (pokemonStarterClose) {
   pokemonStarterClose.addEventListener("click", (event) => {
@@ -24804,27 +24016,9 @@ if (pokemonStarterPokeballStage) {
   });
 }
 
-if (pokemonStarterWindow) {
-  pokemonStarterWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  pokemonStarterWindow.addEventListener("animationend", (event) => {
-    if (event.target !== pokemonStarterWindow) return;
-    if (event.animationName === "retro-window-open") {
-      pokemonStarterWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      pokemonStarterWindow.classList.remove("is-closing");
-      pokemonStarterWindow.classList.add("is-hidden");
-      pokemonStarterWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-      resetPokemonStarterEvent();
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(pokemonStarterWindow, {
+  afterClose: resetPokemonStarterEvent,
+});
 
 if (relicRecoveryStart) {
   relicRecoveryStart.addEventListener("click", (event) => {
@@ -24865,18 +24059,11 @@ if (relicRecoveryDetail) {
     event.stopPropagation();
     finishRelicRecoveryDetail();
   });
-
-  relicRecoveryDetail.addEventListener("animationend", (event) => {
-    if (event.target !== relicRecoveryDetail) return;
-    if (event.animationName === "retro-window-open") {
-      relicRecoveryDetail.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      completeRelicRecoveryDetailClose();
-    }
-  });
 }
+
+bindManagedRandomEventWindowAnimation(relicRecoveryDetail, {
+  onClose: completeRelicRecoveryDetailClose,
+});
 
 if (relicRecoveryRelics) {
   relicRecoveryRelics.addEventListener("click", (event) => {
@@ -24897,31 +24084,15 @@ if (relicRecoveryScene) {
   });
 }
 
-if (relicRecoveryWindow) {
-  relicRecoveryWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  relicRecoveryWindow.addEventListener("animationend", (event) => {
-    if (event.target !== relicRecoveryWindow) return;
-    if (event.animationName === "retro-window-open") {
-      relicRecoveryWindow.classList.remove("is-opening");
-      return;
+bindManagedRandomEventWindowAnimation(relicRecoveryWindow, {
+  afterClose: () => {
+    if (relicRecoveryDetailImage) {
+      relicRecoveryDetailImage.removeAttribute("src");
+      relicRecoveryDetailImage.alt = "";
     }
-    if (event.animationName === "retro-window-close") {
-      relicRecoveryWindow.classList.remove("is-closing");
-      relicRecoveryWindow.classList.add("is-hidden");
-      relicRecoveryWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-      if (relicRecoveryDetailImage) {
-        relicRecoveryDetailImage.removeAttribute("src");
-        relicRecoveryDetailImage.alt = "";
-      }
-      resetRelicRecoveryEvent();
-    }
-  });
-}
+    resetRelicRecoveryEvent();
+  },
+});
 
 if (dstNightOk) {
   dstNightOk.addEventListener("click", (event) => {
@@ -25029,93 +24200,22 @@ if (dstDarknessOk) {
   });
 }
 
-if (dstNightWindow) {
-  dstNightWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
+bindManagedRandomEventWindowAnimation(dstNightWindow, {
+  afterClose: () => {
+    // Handing off to the crafting window is not the end of the chain, so the
+    // night state survives until nothing in the chain is open.
+    if (dstNightCraftingActive || isDstCraftingVisible()) return;
+    resetDstNightWindow();
+  },
+});
 
-  dstNightWindow.addEventListener("animationend", (event) => {
-    if (event.target !== dstNightWindow) return;
-    if (event.animationName === "retro-window-open") {
-      dstNightWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      dstNightWindow.classList.remove("is-closing");
-      dstNightWindow.classList.add("is-hidden");
-      if (!dstNightCraftingActive && !isDstCraftingVisible()) {
-        resetDstNightWindow();
-      }
-      dstNightWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(dstCraftingWindow, {
+  afterClose: resetDstCraftingState,
+});
 
-if (dstCraftingWindow) {
-  dstCraftingWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
+bindManagedRandomEventWindowAnimation(dstSurviveWindow);
 
-  dstCraftingWindow.addEventListener("animationend", (event) => {
-    if (event.target !== dstCraftingWindow) return;
-    if (event.animationName === "retro-window-open") {
-      dstCraftingWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      dstCraftingWindow.classList.remove("is-closing");
-      dstCraftingWindow.classList.add("is-hidden");
-      resetDstCraftingState();
-      dstCraftingWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
-
-if (dstSurviveWindow) {
-  dstSurviveWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  dstSurviveWindow.addEventListener("animationend", (event) => {
-    if (event.target !== dstSurviveWindow) return;
-    if (event.animationName === "retro-window-open") {
-      dstSurviveWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      dstSurviveWindow.classList.remove("is-closing");
-      dstSurviveWindow.classList.add("is-hidden");
-      dstSurviveWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
-
-if (dstDarknessWindow) {
-  dstDarknessWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  dstDarknessWindow.addEventListener("animationend", (event) => {
-    if (event.target !== dstDarknessWindow) return;
-    if (event.animationName === "retro-window-open") {
-      dstDarknessWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      dstDarknessWindow.classList.remove("is-closing");
-      dstDarknessWindow.classList.add("is-hidden");
-      dstDarknessWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(dstDarknessWindow);
 
 if (bidenBlastOk) {
   bidenBlastOk.addEventListener("click", (event) => {
@@ -25125,26 +24225,7 @@ if (bidenBlastOk) {
   });
 }
 
-if (bidenBlastWindow) {
-  bidenBlastWindow.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  bidenBlastWindow.addEventListener("animationend", (event) => {
-    if (event.target !== bidenBlastWindow) return;
-    if (event.animationName === "retro-window-open") {
-      bidenBlastWindow.classList.remove("is-opening");
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      bidenBlastWindow.classList.remove("is-closing");
-      bidenBlastWindow.classList.add("is-hidden");
-      bidenBlastWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
-}
+bindManagedRandomEventWindowAnimation(bidenBlastWindow);
 
 if (infinityArmoryClose) {
   infinityArmoryClose.addEventListener("click", (event) => {
@@ -25204,23 +24285,11 @@ if (infinityArmoryWindow) {
     }
     event.stopPropagation();
   });
-
-  infinityArmoryWindow.addEventListener("animationend", (event) => {
-    if (event.target !== infinityArmoryWindow) return;
-    if (event.animationName === "retro-window-open") {
-      infinityArmoryWindow.classList.remove("is-opening");
-      clampRandomEventWindowToViewport(infinityArmoryWindow);
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      infinityArmoryWindow.classList.remove("is-closing");
-      infinityArmoryWindow.classList.add("is-hidden");
-      infinityArmoryWindow.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
-  });
 }
+
+bindManagedRandomEventWindowAnimation(infinityArmoryWindow, {
+  afterOpen: () => clampRandomEventWindowToViewport(infinityArmoryWindow),
+});
 
 if (virusYes) {
   virusYes.addEventListener("click", (event) => {
@@ -25247,25 +24316,8 @@ if (virusRescueThanks) {
 }
 
 [virusWindow, virusRescueWindow].forEach((win) => {
-  if (!win) return;
-  win.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  win.addEventListener("animationend", (event) => {
-    if (event.target !== win) return;
-    if (event.animationName === "retro-window-open") {
-      win.classList.remove("is-opening");
-      clampVirusEventWindowToViewport(win);
-      return;
-    }
-    if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
-      win.classList.add("is-hidden");
-      win.querySelectorAll("img[data-src]").forEach((image) => {
-        image.removeAttribute("src");
-      });
-    }
+  bindManagedRandomEventWindowAnimation(win, {
+    afterOpen: () => clampRandomEventWindowToViewport(win),
   });
 });
 
