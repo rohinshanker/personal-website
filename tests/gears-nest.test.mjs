@@ -274,7 +274,7 @@ test("relic recovery scales one canonical composition to its viewport", () => {
   );
   assert.match(
     mainSource,
-    /relicRecoveryWindow\.setAttribute\("aria-hidden", "false"\);\s*updateRelicRecoveryViewportFit\(\);\s*positionRandomEventWindowInViewport/
+    /position: \(win\) => \{[^}]*updateRelicRecoveryViewportFit\(\);\s*positionRandomEventWindowInViewport\(win\);/
   );
   assert.match(
     mainSource,
@@ -1191,7 +1191,10 @@ test("July 5 calendar event opens the standard random event image window", async
     /`calendar-day\$\{isToday \? " is-today" : ""\}\$\{calendarEvent \? " is-event-day" : ""\}`/
   );
   assert.match(mainSource, /openRandomEventWindow\(calendarEvent, eventKey\);/);
-  assert.match(mainSource, /restartWindowAnimation\(randomEventWindow, "is-opening"\);/);
+  assert.match(
+    mainSource,
+    /showManagedRandomEventWindow\(randomEventWindow, \{ isVisible: \(\) => false \}\);/
+  );
   assert.match(homeSource, /id="random-event-window"/);
   assert.match(getBaseCssBlock(".calendar-day.is-event-day"), /position: relative;/);
   await access(new URL("assets/random events/jul5.png", root));

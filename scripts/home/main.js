@@ -6166,9 +6166,6 @@ const resetVanishingPopup = () => {
   }
 };
 
-const positionVanishingPopupWindow = () => {
-  positionRandomEventWindowInViewport(vanishingPopupWindow);
-};
 
 const lockVanishingPopupSize = () => {
   if (!vanishingPopupWindow) return;
@@ -6226,19 +6223,13 @@ const hideVanishingPopupButton = (button) => {
 };
 
 const showVanishingPopup = () => {
-  if (!vanishingPopupWindow) return;
-  if (isVanishingPopupVisible()) {
-    vanishingPopupWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  resetVanishingPopup();
-  loadDeferredMedia(vanishingPopupWindow);
-  vanishingPopupWindow.classList.remove("is-hidden", "is-closing");
-  vanishingPopupWindow.setAttribute("aria-hidden", "false");
-  positionVanishingPopupWindow();
-  lockVanishingPopupSize();
-  vanishingPopupWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(vanishingPopupWindow, "is-opening");
+  showManagedRandomEventWindow(vanishingPopupWindow, {
+    beforeShow: resetVanishingPopup,
+    position: (win) => {
+      positionRandomEventWindowInViewport(win);
+      lockVanishingPopupSize();
+    },
+  });
 };
 
 const DODGING_POPUP_DODGE_LIMIT = 14;
@@ -6369,27 +6360,18 @@ const pressDodgingPopupButton = (button) => {
 };
 
 const showDodgingPopup = () => {
-  if (!dodgingPopupWindow) return;
-  if (isDodgingPopupVisible()) {
-    dodgingPopupWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  resetDodgingPopup();
-  loadDeferredMedia(dodgingPopupWindow);
-  dodgingPopupWindow.classList.remove("is-hidden", "is-closing");
-  dodgingPopupWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(dodgingPopupWindow);
-  lockDodgingPopupSize();
-  dodgingPopupWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(dodgingPopupWindow, "is-opening");
+  showManagedRandomEventWindow(dodgingPopupWindow, {
+    beforeShow: resetDodgingPopup,
+    position: (win) => {
+      positionRandomEventWindowInViewport(win);
+      lockDodgingPopupSize();
+    },
+  });
 };
 
 const isSelfLoveAlertVisible = () =>
   isManagedRandomEventWindowVisible(selfLoveAlertWindow);
 
-const positionSelfLoveAlertWindow = () => {
-  positionRandomEventWindowInViewport(selfLoveAlertWindow);
-};
 
 const showSelfLoveAlert = () => {
   if (!selfLoveAlertWindow) return;
@@ -6400,7 +6382,7 @@ const showSelfLoveAlert = () => {
   loadDeferredMedia(selfLoveAlertWindow);
   selfLoveAlertWindow.classList.remove("is-hidden", "is-closing", "is-yes-flashing");
   selfLoveAlertWindow.setAttribute("aria-hidden", "false");
-  positionSelfLoveAlertWindow();
+  positionRandomEventWindowInViewport(selfLoveAlertWindow);
   selfLoveAlertWindow.style.zIndex = String(topZ++);
   restartWindowAnimation(selfLoveAlertWindow, "is-opening");
 };
@@ -6421,22 +6403,9 @@ const flashSelfLoveYes = () => {
 
 const isRohinUpdateVisible = () => isManagedRandomEventWindowVisible(rohinUpdateWindow);
 
-const positionRohinUpdateWindow = () => {
-  positionRandomEventWindowInViewport(rohinUpdateWindow);
-};
 
 const showRohinUpdate = () => {
-  if (!rohinUpdateWindow) return;
-  if (isRohinUpdateVisible()) {
-    rohinUpdateWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(rohinUpdateWindow);
-  rohinUpdateWindow.classList.remove("is-hidden", "is-closing");
-  rohinUpdateWindow.setAttribute("aria-hidden", "false");
-  positionRohinUpdateWindow();
-  rohinUpdateWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(rohinUpdateWindow, "is-opening");
+  showManagedRandomEventWindow(rohinUpdateWindow);
 };
 
 const closeRohinUpdate = () => {
@@ -6454,33 +6423,19 @@ const isMcAfeeVisible = () =>
 const mcAfeeWindows = () =>
   [mcAfeePromptWindow, mcAfeeDownloadWindow, mcAfeeThanksWindow].filter(Boolean);
 
-const positionMcAfeeWindow = (win) => {
-  positionRandomEventWindowInViewport(win);
-};
 
-const clampMcAfeeWindowToViewport = (win) => {
-  clampRandomEventWindowToViewport(win);
-};
 
-const clampMcAfeeWindowAfterMediaLoad = (win) => {
-  clampRandomEventWindowAfterMediaLoad(win);
-};
 
 const showMcAfeeWindow = (win) => {
-  if (!win) return;
-  if (!win.classList.contains("is-hidden")) {
-    win.style.zIndex = String(topZ++);
-    clampMcAfeeWindowToViewport(win);
-    return;
-  }
-  win.classList.remove("is-hidden", "is-closing");
-  win.setAttribute("aria-hidden", "false");
-  positionMcAfeeWindow(win);
-  clampMcAfeeWindowToViewport(win);
-  clampMcAfeeWindowAfterMediaLoad(win);
-  loadDeferredMedia(win);
-  win.style.zIndex = String(topZ++);
-  restartWindowAnimation(win, "is-opening");
+  showManagedRandomEventWindow(win, {
+    isVisible: () => isMcAfeeWindowVisible(win),
+    onFront: () => clampRandomEventWindowToViewport(win),
+    position: (target) => {
+      positionRandomEventWindowInViewport(target);
+      clampRandomEventWindowToViewport(target);
+    },
+    clampAfterMediaLoad: true,
+  });
 };
 
 const closeMcAfeeWindow = (win) => {
@@ -6717,7 +6672,7 @@ const createWordErrorWindow = (index, layout) => {
     if (event.target !== win) return;
     if (event.animationName === "retro-window-open") {
       win.classList.remove("is-opening");
-      clampMcAfeeWindowToViewport(win);
+      clampRandomEventWindowToViewport(win);
       return;
     }
     if (event.animationName === "retro-window-close") {
@@ -6756,10 +6711,11 @@ const showWordErrorStack = () => {
   wordErrorWindows.forEach((win, index) => {
     const timer = setTimeout(() => {
       if (wordErrorStackClosing || !wordErrorWindows.includes(win)) return;
-      win.classList.remove("is-hidden", "is-closing");
-      win.setAttribute("aria-hidden", "false");
-      win.style.zIndex = String(topZ++);
-      restartWindowAnimation(win, "is-opening");
+      showManagedRandomEventWindow(win, {
+        isVisible: () => false,
+        // The stack cascades its own windows; viewport centring would undo it.
+        position: () => {},
+      });
     }, index * 100);
     wordErrorOpenTimers.push(timer);
   });
@@ -6767,22 +6723,9 @@ const showWordErrorStack = () => {
 
 const isRohinNoteVisible = () => isManagedRandomEventWindowVisible(rohinNoteWindow);
 
-const positionRohinNoteWindow = () => {
-  positionRandomEventWindowInViewport(rohinNoteWindow);
-};
 
 const showRohinNote = () => {
-  if (!rohinNoteWindow) return;
-  if (isRohinNoteVisible()) {
-    rohinNoteWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(rohinNoteWindow);
-  rohinNoteWindow.classList.remove("is-hidden", "is-closing");
-  rohinNoteWindow.setAttribute("aria-hidden", "false");
-  positionRohinNoteWindow();
-  rohinNoteWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(rohinNoteWindow, "is-opening");
+  showManagedRandomEventWindow(rohinNoteWindow);
 };
 
 const closeRohinNote = () => {
@@ -6791,22 +6734,9 @@ const closeRohinNote = () => {
 
 const isEarthNoteVisible = () => isManagedRandomEventWindowVisible(earthNoteWindow);
 
-const positionEarthNoteWindow = () => {
-  positionRandomEventWindowInViewport(earthNoteWindow);
-};
 
 const showEarthNote = () => {
-  if (!earthNoteWindow) return;
-  if (isEarthNoteVisible()) {
-    earthNoteWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(earthNoteWindow);
-  earthNoteWindow.classList.remove("is-hidden", "is-closing");
-  earthNoteWindow.setAttribute("aria-hidden", "false");
-  positionEarthNoteWindow();
-  earthNoteWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(earthNoteWindow, "is-opening");
+  showManagedRandomEventWindow(earthNoteWindow);
 };
 
 const closeEarthNote = () => {
@@ -6815,22 +6745,9 @@ const closeEarthNote = () => {
 
 const isHealthNoteVisible = () => isManagedRandomEventWindowVisible(healthNoteWindow);
 
-const positionHealthNoteWindow = () => {
-  positionRandomEventWindowInViewport(healthNoteWindow);
-};
 
 const showHealthNote = () => {
-  if (!healthNoteWindow) return;
-  if (isHealthNoteVisible()) {
-    healthNoteWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(healthNoteWindow);
-  healthNoteWindow.classList.remove("is-hidden", "is-closing");
-  healthNoteWindow.setAttribute("aria-hidden", "false");
-  positionHealthNoteWindow();
-  healthNoteWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(healthNoteWindow, "is-opening");
+  showManagedRandomEventWindow(healthNoteWindow);
 };
 
 const closeHealthNote = () => {
@@ -6839,22 +6756,9 @@ const closeHealthNote = () => {
 
 const isLoveNoteVisible = () => isManagedRandomEventWindowVisible(loveNoteWindow);
 
-const positionLoveNoteWindow = () => {
-  positionRandomEventWindowInViewport(loveNoteWindow);
-};
 
 const showLoveNote = () => {
-  if (!loveNoteWindow) return;
-  if (isLoveNoteVisible()) {
-    loveNoteWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(loveNoteWindow);
-  loveNoteWindow.classList.remove("is-hidden", "is-closing");
-  loveNoteWindow.setAttribute("aria-hidden", "false");
-  positionLoveNoteWindow();
-  loveNoteWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(loveNoteWindow, "is-opening");
+  showManagedRandomEventWindow(loveNoteWindow);
 };
 
 const closeLoveNote = () => {
@@ -6864,18 +6768,7 @@ const closeLoveNote = () => {
 const isNoSmokingVisible = () => isManagedRandomEventWindowVisible(noSmokingWindow);
 
 const showNoSmokingWindow = () => {
-  if (!noSmokingWindow) return;
-  if (isNoSmokingVisible()) {
-    noSmokingWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(noSmokingWindow);
-  noSmokingWindow.classList.remove("is-hidden", "is-closing");
-  noSmokingWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(noSmokingWindow);
-  noSmokingWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(noSmokingWindow);
-  restartWindowAnimation(noSmokingWindow, "is-opening");
+  showManagedRandomEventWindow(noSmokingWindow, { clampAfterMediaLoad: true });
 };
 
 const closeNoSmokingWindow = () => {
@@ -6885,23 +6778,9 @@ const closeNoSmokingWindow = () => {
 const isPossumSpringsVisible = () =>
   isManagedRandomEventWindowVisible(possumSpringsWindow);
 
-const positionPossumSpringsWindow = () => {
-  positionRandomEventWindowInViewport(possumSpringsWindow);
-};
 
 const showPossumSpringsWindow = () => {
-  if (!possumSpringsWindow) return;
-  if (isPossumSpringsVisible()) {
-    possumSpringsWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(possumSpringsWindow);
-  possumSpringsWindow.classList.remove("is-hidden", "is-closing");
-  possumSpringsWindow.setAttribute("aria-hidden", "false");
-  positionPossumSpringsWindow();
-  possumSpringsWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(possumSpringsWindow);
-  restartWindowAnimation(possumSpringsWindow, "is-opening");
+  showManagedRandomEventWindow(possumSpringsWindow, { clampAfterMediaLoad: true });
 };
 
 const closePossumSpringsWindow = () => {
@@ -6910,23 +6789,9 @@ const closePossumSpringsWindow = () => {
 
 const isWingedLightVisible = () => isManagedRandomEventWindowVisible(wingedLightWindow);
 
-const positionWingedLightWindow = () => {
-  positionRandomEventWindowInViewport(wingedLightWindow);
-};
 
 const showWingedLightWindow = () => {
-  if (!wingedLightWindow) return;
-  if (isWingedLightVisible()) {
-    wingedLightWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(wingedLightWindow);
-  wingedLightWindow.classList.remove("is-hidden", "is-closing");
-  wingedLightWindow.setAttribute("aria-hidden", "false");
-  positionWingedLightWindow();
-  wingedLightWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(wingedLightWindow);
-  restartWindowAnimation(wingedLightWindow, "is-opening");
+  showManagedRandomEventWindow(wingedLightWindow, { clampAfterMediaLoad: true });
 };
 
 const closeWingedLightWindow = () => {
@@ -6989,22 +6854,9 @@ const collectWingedLight = () => {
 
 const isManaFloodVisible = () => isManagedRandomEventWindowVisible(manaFloodWindow);
 
-const positionManaFloodWindow = () => {
-  positionRandomEventWindowInViewport(manaFloodWindow);
-};
 
 const showManaFlood = () => {
-  if (!manaFloodWindow) return;
-  if (isManaFloodVisible()) {
-    manaFloodWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(manaFloodWindow);
-  manaFloodWindow.classList.remove("is-hidden", "is-closing");
-  manaFloodWindow.setAttribute("aria-hidden", "false");
-  positionManaFloodWindow();
-  manaFloodWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(manaFloodWindow, "is-opening");
+  showManagedRandomEventWindow(manaFloodWindow);
 };
 
 const closeManaFlood = () => {
@@ -7014,22 +6866,9 @@ const closeManaFlood = () => {
 const isMimicWarningVisible = () =>
   isManagedRandomEventWindowVisible(mimicWarningWindow);
 
-const positionMimicWarningWindow = () => {
-  positionRandomEventWindowInViewport(mimicWarningWindow);
-};
 
 const showMimicWarning = () => {
-  if (!mimicWarningWindow) return;
-  if (isMimicWarningVisible()) {
-    mimicWarningWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(mimicWarningWindow);
-  mimicWarningWindow.classList.remove("is-hidden", "is-closing");
-  mimicWarningWindow.setAttribute("aria-hidden", "false");
-  positionMimicWarningWindow();
-  mimicWarningWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(mimicWarningWindow, "is-opening");
+  showManagedRandomEventWindow(mimicWarningWindow);
 };
 
 const closeMimicWarning = () => {
@@ -7096,9 +6935,6 @@ const resetSkillCheckWindow = () => {
   setSkillCheckRollDisplay();
 };
 
-const positionSkillCheckWindow = (win) => {
-  positionRandomEventWindowInViewport(win);
-};
 
 const lockSkillCheckWindow = () => {
   if (skillCheckWindow) skillCheckWindow.classList.add("is-locked");
@@ -7115,14 +6951,13 @@ const showSkillCheckResultWindow = (roll) => {
   if (skillCheckResultText) {
     skillCheckResultText.textContent = success ? SKILL_CHECK_SUCCESS_TEXT : SKILL_CHECK_FAILURE_TEXT;
   }
-  loadDeferredMedia(skillCheckResultWindow);
-  skillCheckResultWindow.classList.remove("is-hidden", "is-closing");
-  skillCheckResultWindow.setAttribute("aria-hidden", "false");
-  positionSkillCheckWindow(skillCheckResultWindow);
-  skillCheckResultWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(skillCheckResultWindow, "is-opening");
-  requestAnimationFrame(() => {
-    if (skillCheckResultOk) skillCheckResultOk.focus();
+  showManagedRandomEventWindow(skillCheckResultWindow, {
+    isVisible: () => false,
+    afterShow: () => {
+      requestAnimationFrame(() => {
+        if (skillCheckResultOk) skillCheckResultOk.focus();
+      });
+    },
   });
 };
 
@@ -7145,22 +6980,20 @@ const beginSkillCheckRoll = () => {
 const showSkillCheckWindow = () => {
   if (!skillCheckWindow) return;
   if (isSkillCheckVisible()) {
-    if (skillCheckResultWindow && isSkillCheckWindowVisible(skillCheckResultWindow)) {
-      skillCheckResultWindow.style.zIndex = String(topZ++);
-    } else {
-      skillCheckWindow.style.zIndex = String(topZ++);
-    }
+    // The result window, when up, is the one the player should see on top.
+    const front = isSkillCheckWindowVisible(skillCheckResultWindow)
+      ? skillCheckResultWindow
+      : skillCheckWindow;
+    front.style.zIndex = String(topZ++);
     return;
   }
-  resetSkillCheckWindow();
-  loadDeferredMedia(skillCheckWindow);
-  skillCheckWindow.classList.remove("is-hidden", "is-closing");
-  skillCheckWindow.setAttribute("aria-hidden", "false");
-  positionSkillCheckWindow(skillCheckWindow);
-  skillCheckWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(skillCheckWindow, "is-opening");
-  requestAnimationFrame(() => {
-    if (skillCheckRoll) skillCheckRoll.focus();
+  showManagedRandomEventWindow(skillCheckWindow, {
+    beforeShow: resetSkillCheckWindow,
+    afterShow: () => {
+      requestAnimationFrame(() => {
+        if (skillCheckRoll) skillCheckRoll.focus();
+      });
+    },
   });
 };
 
@@ -8443,15 +8276,13 @@ const resetDistressSignal = () => {
 };
 
 const showDistressUploadWindow = () => {
-  if (!distressUploadWindow) return;
-  loadDeferredMedia(distressUploadWindow);
-  distressUploadWindow.classList.remove("is-hidden", "is-closing");
-  distressUploadWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(distressUploadWindow);
-  distressUploadWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(distressUploadWindow, "is-opening");
-  requestAnimationFrame(() => {
-    if (distressUploadOk) distressUploadOk.focus();
+  showManagedRandomEventWindow(distressUploadWindow, {
+    isVisible: () => false,
+    afterShow: () => {
+      requestAnimationFrame(() => {
+        if (distressUploadOk) distressUploadOk.focus();
+      });
+    },
   });
 };
 
@@ -8465,14 +8296,10 @@ const showDistressSignalWindow = () => {
     });
     return;
   }
-  resetDistressSignal();
-  loadDeferredMedia(distressSignalWindow);
-  distressSignalWindow.classList.remove("is-hidden", "is-closing");
-  distressSignalWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(distressSignalWindow);
-  distressSignalWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(distressSignalWindow, "is-opening");
-  requestAnimationFrame(drawDistressSignals);
+  showManagedRandomEventWindow(distressSignalWindow, {
+    beforeShow: resetDistressSignal,
+    afterShow: () => requestAnimationFrame(drawDistressSignals),
+  });
 };
 
 const closeDistressWindow = (win) => {
@@ -8571,22 +8398,9 @@ const maybeShowFelizJueves = () => {
 
 const isNazarVisible = () => isManagedRandomEventWindowVisible(nazarWindow);
 
-const positionNazarWindow = () => {
-  positionRandomEventWindowInViewport(nazarWindow);
-};
 
 const showNazarWindow = () => {
-  if (!nazarWindow) return;
-  if (isNazarVisible()) {
-    nazarWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(nazarWindow);
-  nazarWindow.classList.remove("is-hidden", "is-closing");
-  nazarWindow.setAttribute("aria-hidden", "false");
-  positionNazarWindow();
-  nazarWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(nazarWindow, "is-opening");
+  showManagedRandomEventWindow(nazarWindow);
 };
 
 const closeNazarWindow = () => {
@@ -8595,22 +8409,9 @@ const closeNazarWindow = () => {
 
 const isSiteGraceVisible = () => isManagedRandomEventWindowVisible(siteGraceWindow);
 
-const positionSiteGraceWindow = () => {
-  positionRandomEventWindowInViewport(siteGraceWindow);
-};
 
 const showSiteGraceWindow = () => {
-  if (!siteGraceWindow) return;
-  if (isSiteGraceVisible()) {
-    siteGraceWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(siteGraceWindow);
-  siteGraceWindow.classList.remove("is-hidden", "is-closing");
-  siteGraceWindow.setAttribute("aria-hidden", "false");
-  positionSiteGraceWindow();
-  siteGraceWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(siteGraceWindow, "is-opening");
+  showManagedRandomEventWindow(siteGraceWindow);
 };
 
 const closeSiteGraceWindow = () => {
@@ -8642,9 +8443,6 @@ const isStalkerWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 const isStalkerVisible = () =>
   isStalkerWindowVisible(stalkerWindow) || isStalkerWindowVisible(stalkerResultWindow);
 
-const positionStalkerWindow = (win) => {
-  positionRandomEventWindowInViewport(win);
-};
 
 const copyStalkerWindowPosition = (source, target) => {
   if (!source || !target) return false;
@@ -8655,19 +8453,12 @@ const copyStalkerWindowPosition = (source, target) => {
 };
 
 const showStalkerWindow = (win = stalkerWindow, anchorWindow = null) => {
-  if (!win) return;
-  if (isStalkerWindowVisible(win)) {
-    win.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(win);
-  win.classList.remove("is-hidden", "is-closing");
-  win.setAttribute("aria-hidden", "false");
-  if (!copyStalkerWindowPosition(anchorWindow, win)) {
-    positionStalkerWindow(win);
-  }
-  win.style.zIndex = String(topZ++);
-  restartWindowAnimation(win, "is-opening");
+  showManagedRandomEventWindow(win, {
+    position: (target) => {
+      if (copyStalkerWindowPosition(anchorWindow, target)) return;
+      positionRandomEventWindowInViewport(target);
+    },
+  });
 };
 
 const closeStalkerWindow = (win = stalkerWindow) => {
@@ -8690,9 +8481,6 @@ const setNanaEncounterWindowPosition = (win, left, top) => {
   return true;
 };
 
-const positionNanaEncounterWindow = (win) => {
-  positionRandomEventWindowInViewport(win);
-};
 
 const copyNanaEncounterPosition = (source, target) => {
   if (!source || !target) return false;
@@ -8703,33 +8491,16 @@ const copyNanaEncounterPosition = (source, target) => {
 };
 
 const showNanaEncounterWindow = () => {
-  if (!nanaEncounterWindow) return;
-  if (isNanaEncounterWindowVisible(nanaEncounterWindow)) {
-    nanaEncounterWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(nanaEncounterWindow);
-  nanaEncounterWindow.classList.remove("is-hidden", "is-closing");
-  nanaEncounterWindow.setAttribute("aria-hidden", "false");
-  positionNanaEncounterWindow(nanaEncounterWindow);
-  nanaEncounterWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(nanaEncounterWindow, "is-opening");
+  showManagedRandomEventWindow(nanaEncounterWindow);
 };
 
 const showNanaAcceptWindow = (anchorWindow = null) => {
-  if (!nanaAcceptWindow) return;
-  if (isNanaEncounterWindowVisible(nanaAcceptWindow)) {
-    nanaAcceptWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(nanaAcceptWindow);
-  nanaAcceptWindow.classList.remove("is-hidden", "is-closing");
-  nanaAcceptWindow.setAttribute("aria-hidden", "false");
-  if (!copyNanaEncounterPosition(anchorWindow, nanaAcceptWindow)) {
-    positionNanaEncounterWindow(nanaAcceptWindow);
-  }
-  nanaAcceptWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(nanaAcceptWindow, "is-opening");
+  showManagedRandomEventWindow(nanaAcceptWindow, {
+    position: (target) => {
+      if (copyNanaEncounterPosition(anchorWindow, target)) return;
+      positionRandomEventWindowInViewport(target);
+    },
+  });
 };
 
 const closeNanaEncounterWindow = (win) => {
@@ -8760,35 +8531,19 @@ const copyServalEncounterPosition = (source, target) => {
 };
 
 const showServalEncounterWindow = () => {
-  if (!servalEncounterWindow) return;
-  if (isServalEncounterWindowVisible(servalEncounterWindow)) {
-    servalEncounterWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(servalEncounterWindow);
-  servalEncounterWindow.classList.remove("is-hidden", "is-closing");
-  servalEncounterWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(servalEncounterWindow);
-  servalEncounterWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(servalEncounterWindow);
-  restartWindowAnimation(servalEncounterWindow, "is-opening");
+  showManagedRandomEventWindow(servalEncounterWindow, {
+    clampAfterMediaLoad: true,
+  });
 };
 
 const showServalPizzaWindow = (anchorWindow = null) => {
-  if (!servalPizzaWindow) return;
-  if (isServalEncounterWindowVisible(servalPizzaWindow)) {
-    servalPizzaWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(servalPizzaWindow);
-  servalPizzaWindow.classList.remove("is-hidden", "is-closing");
-  servalPizzaWindow.setAttribute("aria-hidden", "false");
-  if (!copyServalEncounterPosition(anchorWindow, servalPizzaWindow)) {
-    positionRandomEventWindowInViewport(servalPizzaWindow);
-  }
-  servalPizzaWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(servalPizzaWindow);
-  restartWindowAnimation(servalPizzaWindow, "is-opening");
+  showManagedRandomEventWindow(servalPizzaWindow, {
+    position: (target) => {
+      if (copyServalEncounterPosition(anchorWindow, target)) return;
+      positionRandomEventWindowInViewport(target);
+    },
+    clampAfterMediaLoad: true,
+  });
 };
 
 const closeServalEncounterWindow = (win) => {
@@ -8819,18 +8574,9 @@ const copyCaracalEncounterPosition = (source, target) => {
 };
 
 const showCaracalEncounterWindow = () => {
-  if (!caracalEncounterWindow) return;
-  if (isCaracalEncounterWindowVisible(caracalEncounterWindow)) {
-    caracalEncounterWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(caracalEncounterWindow);
-  caracalEncounterWindow.classList.remove("is-hidden", "is-closing");
-  caracalEncounterWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(caracalEncounterWindow);
-  caracalEncounterWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(caracalEncounterWindow);
-  restartWindowAnimation(caracalEncounterWindow, "is-opening");
+  showManagedRandomEventWindow(caracalEncounterWindow, {
+    clampAfterMediaLoad: true,
+  });
 };
 
 const showCaracalResultWindow = (resultKey, anchorWindow = null) => {
@@ -8841,19 +8587,13 @@ const showCaracalResultWindow = (resultKey, anchorWindow = null) => {
     caracalResultImage.removeAttribute("src");
     caracalResultImage.dataset.src = result.image;
   }
-  if (isCaracalEncounterWindowVisible(caracalResultWindow)) {
-    caracalResultWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(caracalResultWindow);
-  caracalResultWindow.classList.remove("is-hidden", "is-closing");
-  caracalResultWindow.setAttribute("aria-hidden", "false");
-  if (!copyCaracalEncounterPosition(anchorWindow, caracalResultWindow)) {
-    positionRandomEventWindowInViewport(caracalResultWindow);
-  }
-  caracalResultWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(caracalResultWindow);
-  restartWindowAnimation(caracalResultWindow, "is-opening");
+  showManagedRandomEventWindow(caracalResultWindow, {
+    position: (target) => {
+      if (copyCaracalEncounterPosition(anchorWindow, target)) return;
+      positionRandomEventWindowInViewport(target);
+    },
+    clampAfterMediaLoad: true,
+  });
 };
 
 const closeCaracalEncounterWindow = (win) => {
@@ -8884,35 +8624,19 @@ const copyShoebillEncounterPosition = (source, target) => {
 };
 
 const showShoebillEncounterWindow = () => {
-  if (!shoebillEncounterWindow) return;
-  if (isShoebillEncounterWindowVisible(shoebillEncounterWindow)) {
-    shoebillEncounterWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(shoebillEncounterWindow);
-  shoebillEncounterWindow.classList.remove("is-hidden", "is-closing");
-  shoebillEncounterWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(shoebillEncounterWindow);
-  shoebillEncounterWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(shoebillEncounterWindow);
-  restartWindowAnimation(shoebillEncounterWindow, "is-opening");
+  showManagedRandomEventWindow(shoebillEncounterWindow, {
+    clampAfterMediaLoad: true,
+  });
 };
 
 const showShoebillBowWindow = (anchorWindow = null) => {
-  if (!shoebillBowWindow) return;
-  if (isShoebillEncounterWindowVisible(shoebillBowWindow)) {
-    shoebillBowWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(shoebillBowWindow);
-  shoebillBowWindow.classList.remove("is-hidden", "is-closing");
-  shoebillBowWindow.setAttribute("aria-hidden", "false");
-  if (!copyShoebillEncounterPosition(anchorWindow, shoebillBowWindow)) {
-    positionRandomEventWindowInViewport(shoebillBowWindow);
-  }
-  shoebillBowWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(shoebillBowWindow);
-  restartWindowAnimation(shoebillBowWindow, "is-opening");
+  showManagedRandomEventWindow(shoebillBowWindow, {
+    position: (target) => {
+      if (copyShoebillEncounterPosition(anchorWindow, target)) return;
+      positionRandomEventWindowInViewport(target);
+    },
+    clampAfterMediaLoad: true,
+  });
 };
 
 const closeShoebillEncounterWindow = (win) => {
@@ -9014,36 +8738,20 @@ const resetMidnightGospelMeditation = () => {
 };
 
 const showMidnightGospelInviteWindow = () => {
-  if (!midnightGospelInviteWindow) return;
-  if (isMidnightGospelWindowVisible(midnightGospelInviteWindow)) {
-    midnightGospelInviteWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(midnightGospelInviteWindow);
-  midnightGospelInviteWindow.classList.remove("is-hidden", "is-closing");
-  midnightGospelInviteWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(midnightGospelInviteWindow);
-  midnightGospelInviteWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(midnightGospelInviteWindow);
-  restartWindowAnimation(midnightGospelInviteWindow, "is-opening");
+  showManagedRandomEventWindow(midnightGospelInviteWindow, {
+    clampAfterMediaLoad: true,
+  });
 };
 
 const showMidnightGospelMeditationWindow = (anchorWindow = null) => {
-  if (!midnightGospelMeditationWindow) return;
-  if (isMidnightGospelWindowVisible(midnightGospelMeditationWindow)) {
-    midnightGospelMeditationWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  resetMidnightGospelMeditation();
-  loadDeferredMedia(midnightGospelMeditationWindow);
-  midnightGospelMeditationWindow.classList.remove("is-hidden", "is-closing");
-  midnightGospelMeditationWindow.setAttribute("aria-hidden", "false");
-  if (!copyMidnightGospelPosition(anchorWindow, midnightGospelMeditationWindow)) {
-    positionRandomEventWindowInViewport(midnightGospelMeditationWindow);
-  }
-  midnightGospelMeditationWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(midnightGospelMeditationWindow);
-  restartWindowAnimation(midnightGospelMeditationWindow, "is-opening");
+  showManagedRandomEventWindow(midnightGospelMeditationWindow, {
+    beforeShow: resetMidnightGospelMeditation,
+    position: (target) => {
+      if (copyMidnightGospelPosition(anchorWindow, target)) return;
+      positionRandomEventWindowInViewport(target);
+    },
+    clampAfterMediaLoad: true,
+  });
 };
 
 const closeMidnightGospelWindow = (win) => {
@@ -10058,22 +9766,9 @@ const isInstrumentalityVisible = () =>
   isInstrumentalityWindowVisible(instrumentalityWindow) ||
   isInstrumentalityWindowVisible(instrumentalityCongratsWindow);
 
-const positionInstrumentalityWindow = (win) => {
-  positionRandomEventWindowInViewport(win);
-};
 
 const showInstrumentalityWindow = (win) => {
-  if (!win) return;
-  if (isInstrumentalityWindowVisible(win)) {
-    win.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(win);
-  win.classList.remove("is-hidden", "is-closing");
-  win.setAttribute("aria-hidden", "false");
-  positionInstrumentalityWindow(win);
-  win.style.zIndex = String(topZ++);
-  restartWindowAnimation(win, "is-opening");
+  showManagedRandomEventWindow(win);
 };
 
 const closeInstrumentalityWindow = (win) => {
@@ -10095,9 +9790,6 @@ const rejectInstrumentality = () => {
 
 const isRedToolVisible = () => isManagedRandomEventWindowVisible(redToolWindow);
 
-const positionRedToolWindow = () => {
-  positionRandomEventWindowInViewport(redToolWindow);
-};
 
 const scrollRedToolChatToBottom = () => {
   if (!redToolChatLog) return;
@@ -10227,21 +9919,16 @@ const sendRedToolMessage = () => {
 };
 
 const showRedToolWindow = () => {
-  if (!redToolWindow) return;
-  if (isRedToolVisible()) {
-    redToolWindow.style.zIndex = String(topZ++);
-    if (redToolInput && !redToolInput.disabled) redToolInput.focus();
-    return;
-  }
-  resetRedToolTyping();
-  loadDeferredMedia(redToolWindow);
-  redToolWindow.classList.remove("is-hidden", "is-closing");
-  redToolWindow.setAttribute("aria-hidden", "false");
-  positionRedToolWindow();
-  redToolWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(redToolWindow, "is-opening");
-  requestAnimationFrame(() => {
-    if (redToolInput) redToolInput.focus();
+  showManagedRandomEventWindow(redToolWindow, {
+    onFront: () => {
+      if (redToolInput && !redToolInput.disabled) redToolInput.focus();
+    },
+    beforeShow: resetRedToolTyping,
+    afterShow: () => {
+      requestAnimationFrame(() => {
+        if (redToolInput) redToolInput.focus();
+      });
+    },
   });
 };
 
@@ -10496,9 +10183,6 @@ const startFateLightningStrike = () => {
 
 const isFateVisible = () => isManagedRandomEventWindowVisible(fateWindow);
 
-const positionFateWindow = () => {
-  positionRandomEventWindowInViewport(fateWindow);
-};
 
 const updateFateProgress = () => {
   const progress = clampNumber(fateProgressValue, 0, 100);
@@ -10604,7 +10288,7 @@ const openFateResultWindow = (success) => {
   setFateResultContent(success);
   fateWindow.classList.remove("is-hidden", "is-closing", "is-resisting");
   fateWindow.setAttribute("aria-hidden", "false");
-  positionFateWindow();
+  positionRandomEventWindowInViewport(fateWindow);
   clampRandomEventWindowAfterMediaLoad(fateWindow);
   fateWindow.style.zIndex = String(topZ++);
   restartWindowAnimation(fateWindow, "is-opening");
@@ -10678,24 +10362,19 @@ const handleFateKeyMash = (event) => {
 };
 
 const showFateWindow = () => {
-  if (!fateWindow) return;
-  if (isFateVisible()) {
-    fateWindow.style.zIndex = String(topZ++);
-    clampRandomEventWindowToViewport(fateWindow);
-    if (fateState === "ready" && fateStart) fateStart.focus();
-    if (fateState === "active" && fateResist) fateResist.focus();
-    return;
-  }
-  resetFateWindow();
-  loadDeferredMedia(fateWindow);
-  fateWindow.classList.remove("is-hidden", "is-closing");
-  fateWindow.setAttribute("aria-hidden", "false");
-  positionFateWindow();
-  clampRandomEventWindowAfterMediaLoad(fateWindow);
-  fateWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(fateWindow, "is-opening");
-  requestAnimationFrame(() => {
-    if (fateStart) fateStart.focus();
+  showManagedRandomEventWindow(fateWindow, {
+    onFront: () => {
+      clampRandomEventWindowToViewport(fateWindow);
+      if (fateState === "ready" && fateStart) fateStart.focus();
+      if (fateState === "active" && fateResist) fateResist.focus();
+    },
+    beforeShow: resetFateWindow,
+    clampAfterMediaLoad: true,
+    afterShow: () => {
+      requestAnimationFrame(() => {
+        if (fateStart) fateStart.focus();
+      });
+    },
   });
 };
 
@@ -12388,14 +12067,14 @@ const showLancerBattleFinalPrompt = (success) => {
 };
 
 const reopenLancerBattleFinalPrompt = () => {
-  if (!lancerBattleWindow) return;
-  showLancerBattleFinalPrompt(true);
-  lancerBattleWindow.classList.remove("is-hidden", "is-closing");
-  lancerBattleWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(lancerBattleWindow);
-  clampRandomEventWindowToViewport(lancerBattleWindow);
-  lancerBattleWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(lancerBattleWindow, "is-opening");
+  showManagedRandomEventWindow(lancerBattleWindow, {
+    isVisible: () => false,
+    beforeShow: () => showLancerBattleFinalPrompt(true),
+    position: (win) => {
+      positionRandomEventWindowInViewport(win);
+      clampRandomEventWindowToViewport(win);
+    },
+  });
 };
 
 const transitionLancerBattleWinToFinalPrompt = () => {
@@ -12567,22 +12246,15 @@ const handleLancerBattleKeyMash = (event) => {
 };
 
 const showLancerBattleWindow = () => {
-  if (!lancerBattleWindow) return;
-  if (isLancerBattleVisible()) {
-    lancerBattleWindow.style.zIndex = String(topZ++);
-    clampRandomEventWindowToViewport(lancerBattleWindow);
-    return;
-  }
-  resetLancerBattleWindow();
-  loadDeferredMedia(lancerBattleWindow);
-  lancerBattleWindow.classList.remove("is-hidden", "is-closing");
-  lancerBattleWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(lancerBattleWindow);
-  clampRandomEventWindowAfterMediaLoad(lancerBattleWindow);
-  lancerBattleWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(lancerBattleWindow, "is-opening");
-  requestAnimationFrame(() => {
-    lancerBattleStart?.focus({ preventScroll: true });
+  showManagedRandomEventWindow(lancerBattleWindow, {
+    onFront: () => clampRandomEventWindowToViewport(lancerBattleWindow),
+    beforeShow: resetLancerBattleWindow,
+    clampAfterMediaLoad: true,
+    afterShow: () => {
+      requestAnimationFrame(() => {
+        lancerBattleStart?.focus({ preventScroll: true });
+      });
+    },
   });
 };
 
@@ -13089,13 +12761,11 @@ const showBrandBurnsPuckWindow = () => {
 
   brandBurnsPuckWindow = createBrandBurnsPuckWindow();
   document.body.appendChild(brandBurnsPuckWindow);
-  brandBurnsPuckWindow.classList.remove("is-hidden", "is-closing");
-  brandBurnsPuckWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(brandBurnsPuckWindow);
-  brandBurnsPuckWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(brandBurnsPuckWindow, "is-opening");
-  clampRandomEventWindowAfterMediaLoad(brandBurnsPuckWindow);
-  setBrandBurnsPuckHealReady(true);
+  showManagedRandomEventWindow(brandBurnsPuckWindow, {
+    isVisible: () => false,
+    clampAfterMediaLoad: true,
+    afterShow: () => setBrandBurnsPuckHealReady(true),
+  });
 };
 
 const maybeShowBrandBurnsPuckWindow = () => {
@@ -13376,11 +13046,7 @@ const showBrandBurnsBlockWindow = () => {
   removeBrandBurnsBlockWindow();
   brandBurnsBlockWindow = createBrandBurnsBlockWindow();
   document.body.appendChild(brandBurnsBlockWindow);
-  brandBurnsBlockWindow.classList.remove("is-hidden", "is-closing");
-  brandBurnsBlockWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(brandBurnsBlockWindow);
-  brandBurnsBlockWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(brandBurnsBlockWindow, "is-opening");
+  showManagedRandomEventWindow(brandBurnsBlockWindow, { isVisible: () => false });
 
   const startedAt = performance.now();
   animateBrandBurnsBlockProgress(startedAt);
@@ -13753,12 +13419,10 @@ const openBrandBurnsEnemyWindow = (state) => {
   if (!state?.win || brandBurnsStage !== "fight") return;
   document.body.appendChild(state.win);
   brandBurnsEnemyWindows.push(state.win);
-  state.win.classList.remove("is-hidden", "is-closing");
-  state.win.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(state.win);
-  state.win.style.zIndex = String(topZ++);
-  restartWindowAnimation(state.win, "is-opening");
-  clampRandomEventWindowAfterMediaLoad(state.win);
+  showManagedRandomEventWindow(state.win, {
+    isVisible: () => false,
+    clampAfterMediaLoad: true,
+  });
   updateBrandBurnsAttackButtonStates();
   scheduleBrandBurnsEnemyAttack(state);
 };
@@ -13809,23 +13473,23 @@ const resetBrandBurnsWindow = () => {
 const showBrandBurnsWindow = () => {
   if (!brandBurnsWindow) return;
   if (isBrandBurnsVisible()) {
+    // A visible puck, block or enemy window keeps the event owned by its stage;
+    // only the main window gets raised.
     if (isBrandBurnsMainWindowVisible()) {
       brandBurnsWindow.style.zIndex = String(topZ++);
       clampRandomEventWindowToViewport(brandBurnsWindow);
     }
     return;
   }
-  resetBrandBurnsWindow();
-  loadDeferredMedia(brandBurnsWindow);
-  brandBurnsWindow.classList.remove("is-hidden", "is-closing");
-  brandBurnsWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(brandBurnsWindow);
-  clampRandomEventWindowAfterMediaLoad(brandBurnsWindow);
-  brandBurnsWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(brandBurnsWindow, "is-opening");
-  scheduleBrandBurnsOmenPulse();
-  requestAnimationFrame(() => {
-    if (brandBurnsFight) brandBurnsFight.focus();
+  showManagedRandomEventWindow(brandBurnsWindow, {
+    beforeShow: resetBrandBurnsWindow,
+    clampAfterMediaLoad: true,
+    afterShow: () => {
+      scheduleBrandBurnsOmenPulse();
+      requestAnimationFrame(() => {
+        if (brandBurnsFight) brandBurnsFight.focus();
+      });
+    },
   });
 };
 
@@ -13863,24 +13527,12 @@ const closeBrandBurnsWindow = () => {
 
 const isBehelitVisible = () => isManagedRandomEventWindowVisible(behelitWindow);
 
-const positionBehelitWindow = () => {
-  positionRandomEventWindowInViewport(behelitWindow);
-};
 
 const showBehelitWindow = () => {
-  if (!behelitWindow) return;
-  if (isBehelitVisible()) {
-    behelitWindow.style.zIndex = String(topZ++);
-    clampRandomEventWindowToViewport(behelitWindow);
-    return;
-  }
-  loadDeferredMedia(behelitWindow);
-  behelitWindow.classList.remove("is-hidden", "is-closing");
-  behelitWindow.setAttribute("aria-hidden", "false");
-  positionBehelitWindow();
-  clampRandomEventWindowAfterMediaLoad(behelitWindow);
-  behelitWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(behelitWindow, "is-opening");
+  showManagedRandomEventWindow(behelitWindow, {
+    onFront: () => clampRandomEventWindowToViewport(behelitWindow),
+    clampAfterMediaLoad: true,
+  });
 };
 
 const closeBehelitWindow = () => {
@@ -13912,23 +13564,11 @@ const stopJohnPorkStatus = () => {
   if (johnPorkStatus) johnPorkStatus.textContent = "Incoming call";
 };
 
-const positionJohnPorkWindow = () => {
-  positionRandomEventWindowInViewport(johnPorkWindow);
-};
 
 const showJohnPorkCall = () => {
-  if (!johnPorkWindow) return;
-  if (isJohnPorkVisible()) {
-    johnPorkWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(johnPorkWindow);
-  johnPorkWindow.classList.remove("is-hidden", "is-closing");
-  johnPorkWindow.setAttribute("aria-hidden", "false");
-  positionJohnPorkWindow();
-  johnPorkWindow.style.zIndex = String(topZ++);
-  startJohnPorkStatus();
-  restartWindowAnimation(johnPorkWindow, "is-opening");
+  showManagedRandomEventWindow(johnPorkWindow, {
+    afterShow: startJohnPorkStatus,
+  });
 };
 
 const closeJohnPorkCall = () => {
@@ -13940,22 +13580,9 @@ const closeJohnPorkCall = () => {
 const isAdvertisementVisible = () =>
   isManagedRandomEventWindowVisible(advertisementWindow);
 
-const positionAdvertisementWindow = () => {
-  positionRandomEventWindowInViewport(advertisementWindow);
-};
 
 const showAdvertisementWindow = () => {
-  if (!advertisementWindow) return;
-  if (isAdvertisementVisible()) {
-    advertisementWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(advertisementWindow);
-  advertisementWindow.classList.remove("is-hidden", "is-closing");
-  advertisementWindow.setAttribute("aria-hidden", "false");
-  positionAdvertisementWindow();
-  advertisementWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(advertisementWindow, "is-opening");
+  showManagedRandomEventWindow(advertisementWindow);
 };
 
 const closeAdvertisementWindow = () => {
@@ -13975,13 +13602,7 @@ const showSaulAdWindow = () => {
     saulAdImage.removeAttribute("src");
     saulAdImage.dataset.src = imageSrc;
   }
-  loadDeferredMedia(saulAdWindow);
-  saulAdWindow.classList.remove("is-hidden", "is-closing");
-  saulAdWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(saulAdWindow);
-  saulAdWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(saulAdWindow);
-  restartWindowAnimation(saulAdWindow, "is-opening");
+  showManagedRandomEventWindow(saulAdWindow, { clampAfterMediaLoad: true });
 };
 
 const closeSaulAdWindow = () => {
@@ -13992,18 +13613,7 @@ const isKidnamedfingerVisible = () =>
   isManagedRandomEventWindowVisible(kidnamedfingerWindow);
 
 const showKidnamedfingerWindow = () => {
-  if (!kidnamedfingerWindow) return;
-  if (isKidnamedfingerVisible()) {
-    kidnamedfingerWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(kidnamedfingerWindow);
-  kidnamedfingerWindow.classList.remove("is-hidden", "is-closing");
-  kidnamedfingerWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(kidnamedfingerWindow);
-  kidnamedfingerWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(kidnamedfingerWindow);
-  restartWindowAnimation(kidnamedfingerWindow, "is-opening");
+  showManagedRandomEventWindow(kidnamedfingerWindow, { clampAfterMediaLoad: true });
 };
 
 const closeKidnamedfingerWindow = () => {
@@ -14013,18 +13623,7 @@ const closeKidnamedfingerWindow = () => {
 const isWalterWhiteVisible = () => isManagedRandomEventWindowVisible(walterWhiteWindow);
 
 const showWalterWhiteWindow = () => {
-  if (!walterWhiteWindow) return;
-  if (isWalterWhiteVisible()) {
-    walterWhiteWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(walterWhiteWindow);
-  walterWhiteWindow.classList.remove("is-hidden", "is-closing");
-  walterWhiteWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(walterWhiteWindow);
-  walterWhiteWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(walterWhiteWindow);
-  restartWindowAnimation(walterWhiteWindow, "is-opening");
+  showManagedRandomEventWindow(walterWhiteWindow, { clampAfterMediaLoad: true });
 };
 
 const closeWalterWhiteWindow = () => {
@@ -14035,18 +13634,7 @@ const isBountyHunterVisible = () =>
   isManagedRandomEventWindowVisible(bountyHunterWindow);
 
 const showBountyHunterWindow = () => {
-  if (!bountyHunterWindow) return;
-  if (isBountyHunterVisible()) {
-    bountyHunterWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  loadDeferredMedia(bountyHunterWindow);
-  bountyHunterWindow.classList.remove("is-hidden", "is-closing");
-  bountyHunterWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(bountyHunterWindow);
-  bountyHunterWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(bountyHunterWindow);
-  restartWindowAnimation(bountyHunterWindow, "is-opening");
+  showManagedRandomEventWindow(bountyHunterWindow, { clampAfterMediaLoad: true });
 };
 
 const closeBountyHunterWindow = () => {
@@ -14308,20 +13896,11 @@ const resetPokemonStarterEvent = ({ typewrite = false } = {}) => {
 };
 
 const showPokemonStarterWindow = () => {
-  if (!pokemonStarterWindow) return;
-  if (isPokemonStarterVisible()) {
-    pokemonStarterWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  resetPokemonStarterEvent();
-  loadDeferredMedia(pokemonStarterWindow);
-  pokemonStarterWindow.classList.remove("is-hidden", "is-closing");
-  pokemonStarterWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(pokemonStarterWindow);
-  pokemonStarterWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(pokemonStarterWindow);
-  restartWindowAnimation(pokemonStarterWindow, "is-opening");
-  setPokemonStarterDialogue("Select a starter Pokémon!");
+  showManagedRandomEventWindow(pokemonStarterWindow, {
+    beforeShow: resetPokemonStarterEvent,
+    clampAfterMediaLoad: true,
+    afterShow: () => setPokemonStarterDialogue("Select a starter Pokémon!"),
+  });
 };
 
 const closePokemonStarterWindow = () => {
@@ -14738,20 +14317,15 @@ const resetRelicRecoveryEvent = ({ typewrite = false } = {}) => {
 };
 
 const showRelicRecoveryWindow = () => {
-  if (!relicRecoveryWindow) return;
-  if (isRelicRecoveryVisible()) {
-    relicRecoveryWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  resetRelicRecoveryEvent({ typewrite: true });
-  loadDeferredMedia(relicRecoveryWindow);
-  relicRecoveryWindow.classList.remove("is-hidden", "is-closing");
-  relicRecoveryWindow.setAttribute("aria-hidden", "false");
-  updateRelicRecoveryViewportFit();
-  positionRandomEventWindowInViewport(relicRecoveryWindow);
-  relicRecoveryWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(relicRecoveryWindow);
-  restartWindowAnimation(relicRecoveryWindow, "is-opening");
+  showManagedRandomEventWindow(relicRecoveryWindow, {
+    beforeShow: () => resetRelicRecoveryEvent({ typewrite: true }),
+    position: (win) => {
+      // The scale fit has to settle before the viewport placement measures it.
+      updateRelicRecoveryViewportFit();
+      positionRandomEventWindowInViewport(win);
+    },
+    clampAfterMediaLoad: true,
+  });
 };
 
 const closeRelicRecoveryWindow = () => {
@@ -14860,6 +14434,13 @@ const copyDstWindowPosition = (source, target) => {
   if (!Number.isFinite(sourceLeft) || !Number.isFinite(sourceTop)) return false;
   setRandomEventWindowPosition(target, sourceLeft, sourceTop);
   return true;
+};
+
+// Each campfire window opens where the one it replaced sat, so the chain reads
+// as one window changing rather than several appearing in different places.
+const positionDstWindow = (win, anchorWindow) => {
+  if (copyDstWindowPosition(anchorWindow, win)) return;
+  positionRandomEventWindowInViewport(win);
 };
 
 const stopDstNightTimer = () => {
@@ -14990,29 +14571,19 @@ const resetDstNightWindow = () => {
 };
 
 const showDstSurviveWindow = (anchorWindow = null) => {
-  if (!dstSurviveWindow) return;
-  loadDeferredMedia(dstSurviveWindow);
-  dstSurviveWindow.classList.remove("is-hidden", "is-closing");
-  dstSurviveWindow.setAttribute("aria-hidden", "false");
-  if (!copyDstWindowPosition(anchorWindow, dstSurviveWindow)) {
-    positionRandomEventWindowInViewport(dstSurviveWindow);
-  }
-  dstSurviveWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(dstSurviveWindow);
-  restartWindowAnimation(dstSurviveWindow, "is-opening");
+  showManagedRandomEventWindow(dstSurviveWindow, {
+    isVisible: () => false,
+    position: (win) => positionDstWindow(win, anchorWindow),
+    clampAfterMediaLoad: true,
+  });
 };
 
 const showDstDarknessWindow = (anchorWindow = null) => {
-  if (!dstDarknessWindow) return;
-  loadDeferredMedia(dstDarknessWindow);
-  dstDarknessWindow.classList.remove("is-hidden", "is-closing");
-  dstDarknessWindow.setAttribute("aria-hidden", "false");
-  if (!copyDstWindowPosition(anchorWindow, dstDarknessWindow)) {
-    positionRandomEventWindowInViewport(dstDarknessWindow);
-  }
-  dstDarknessWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(dstDarknessWindow);
-  restartWindowAnimation(dstDarknessWindow, "is-opening");
+  showManagedRandomEventWindow(dstDarknessWindow, {
+    isVisible: () => false,
+    position: (win) => positionDstWindow(win, anchorWindow),
+    clampAfterMediaLoad: true,
+  });
 };
 
 const closeDstNightWindow = () => {
@@ -15077,35 +14648,22 @@ const startDstNightCrafting = () => {
   if (!dstCraftingWindow || dstNightCraftingActive) return;
   const anchor = dstNightWindow;
   closeDstNightWindow();
-  resetDstCraftingState();
-  loadDeferredMedia(dstCraftingWindow);
-  dstCraftingWindow.classList.remove("is-hidden", "is-closing");
-  dstCraftingWindow.setAttribute("aria-hidden", "false");
-  if (!copyDstWindowPosition(anchor, dstCraftingWindow)) {
-    positionRandomEventWindowInViewport(dstCraftingWindow);
-  }
-  dstCraftingWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(dstCraftingWindow);
-  restartWindowAnimation(dstCraftingWindow, "is-opening");
+  showManagedRandomEventWindow(dstCraftingWindow, {
+    isVisible: () => false,
+    beforeShow: resetDstCraftingState,
+    position: (win) => positionDstWindow(win, anchor),
+    clampAfterMediaLoad: true,
+  });
   dstNightCraftingActive = true;
   dstNightTimerStartedAt = 0;
   dstNightAnimationFrame = window.requestAnimationFrame(updateDstNightTimer);
 };
 
 const showDstNightWindow = () => {
-  if (!dstNightWindow) return;
-  if (isDstNightVisible()) {
-    dstNightWindow.style.zIndex = String(topZ++);
-    return;
-  }
-  resetDstNightWindow();
-  loadDeferredMedia(dstNightWindow);
-  dstNightWindow.classList.remove("is-hidden", "is-closing");
-  dstNightWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(dstNightWindow);
-  dstNightWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(dstNightWindow);
-  restartWindowAnimation(dstNightWindow, "is-opening");
+  showManagedRandomEventWindow(dstNightWindow, {
+    beforeShow: resetDstNightWindow,
+    clampAfterMediaLoad: true,
+  });
 };
 
 const fillDstCraftSlot = (slot, resource) => {
@@ -15136,9 +14694,6 @@ const fillDstCraftSlot = (slot, resource) => {
 
 const isBidenBlastVisible = () => isManagedRandomEventWindowVisible(bidenBlastWindow);
 
-const positionBidenBlastWindow = () => {
-  positionRandomEventWindowInViewport(bidenBlastWindow);
-};
 
 const removeBidenExplodePieces = () => {
   document.querySelectorAll(".biden-explode-piece").forEach((piece) => {
@@ -15245,7 +14800,7 @@ const showBidenBlastWindow = () => {
   loadDeferredMedia(bidenBlastWindow);
   bidenBlastWindow.classList.remove("is-hidden", "is-closing", "is-exploding");
   bidenBlastWindow.setAttribute("aria-hidden", "false");
-  positionBidenBlastWindow();
+  positionRandomEventWindowInViewport(bidenBlastWindow);
   bidenBlastWindow.style.zIndex = String(topZ++);
   animateBidenBlastExplode("show");
 };
@@ -15564,29 +15119,18 @@ const socketInfinityArmoryGem = (shape) => {
   scheduleInfinityArmoryCompletionCheck();
 };
 
-const positionInfinityArmoryWindow = () => {
-  positionRandomEventWindowInViewport(infinityArmoryWindow);
-};
 
 const showInfinityArmoryWindow = () => {
-  if (!infinityArmoryWindow) return;
-  if (isInfinityArmoryVisible()) {
-    infinityArmoryWindow.style.zIndex = String(topZ++);
-    if (infinityArmoryCursorGem) {
+  showManagedRandomEventWindow(infinityArmoryWindow, {
+    onFront: () => {
+      if (!infinityArmoryCursorGem) return;
       infinityArmoryCursorGem.style.zIndex = String(
         Math.max(INFINITY_ARMORY_CURSOR_GEM_MIN_Z_INDEX, topZ + 20)
       );
-    }
-    return;
-  }
-  resetInfinityArmory();
-  loadDeferredMedia(infinityArmoryWindow);
-  infinityArmoryWindow.classList.remove("is-hidden", "is-closing");
-  infinityArmoryWindow.setAttribute("aria-hidden", "false");
-  positionInfinityArmoryWindow();
-  infinityArmoryWindow.style.zIndex = String(topZ++);
-  clampRandomEventWindowAfterMediaLoad(infinityArmoryWindow);
-  restartWindowAnimation(infinityArmoryWindow, "is-opening");
+    },
+    beforeShow: resetInfinityArmory,
+    clampAfterMediaLoad: true,
+  });
 };
 
 const isVirusWindowVisible = (win) =>
@@ -15600,9 +15144,6 @@ const setVirusEventWindowPosition = (win, left, top) => {
   setRandomEventWindowPosition(win, left, top);
 };
 
-const positionVirusEventWindow = (win) => {
-  positionRandomEventWindowInViewport(win);
-};
 
 const clampVirusEventWindowToViewport = (win) => {
   clampRandomEventWindowToViewport(win);
@@ -16116,7 +15657,7 @@ const showVirusEventWindow = (win, anchor = null, { animate = true } = {}) => {
   if (anchor) {
     setVirusEventWindowPosition(win, anchor.left, anchor.top);
   } else {
-    positionVirusEventWindow(win);
+    positionRandomEventWindowInViewport(win);
   }
   clampVirusEventWindowToViewport(win);
   clampVirusEventWindowAfterMediaLoad(win);
@@ -23397,12 +22938,7 @@ const openRandomEventWindow = (calendarEvent, eventKey) => {
       randomEventImage.dataset.src = calendarEvent.image;
     }
   }
-  loadDeferredMedia(randomEventWindow);
-  randomEventWindow.classList.remove("is-hidden", "is-closing");
-  randomEventWindow.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(randomEventWindow);
-  randomEventWindow.style.zIndex = String(topZ++);
-  restartWindowAnimation(randomEventWindow, "is-opening");
+  showManagedRandomEventWindow(randomEventWindow, { isVisible: () => false });
 };
 
 const closeRandomEventWindow = () => {
