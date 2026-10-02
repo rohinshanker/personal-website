@@ -91,15 +91,14 @@
   animation: random-alert-choice-flash 160ms steps(2, end) infinite;
 }
 
+/*
+ * The alert chrome. The Administrator alert, coming-soon and launch-prompt app
+ * windows borrow it without the managed lifecycle, so they carry
+ * `random-event-window` too and read the same two properties.
+ */
 .random-alert-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(340px, calc(100vw - 32px));
-  z-index: 140;
+  --event-window-width: 340px;
+  --event-window-z: 140;
 }
 
 .random-alert-window.is-expanded {
@@ -3267,7 +3266,7 @@ button.gears-nest-enemy:not(:disabled) {
 }
 
 .wall-breach-window {
-  z-index: 142;
+  --event-window-z: 142;
 }
 
 .wall-breach-message .wall-breach-logo {
@@ -3360,10 +3359,10 @@ html.is-wall-breach-shaking body {
 }
 
 .spell-stack-window {
+  --event-window-width: 420px;
+  --event-window-z: 143;
   isolation: isolate;
   overflow: visible;
-  width: min(420px, calc(100vw - 32px));
-  z-index: 143;
 }
 
 .spell-stack-window.is-spell-hit {
@@ -3433,7 +3432,7 @@ html.is-wall-breach-shaking body {
 }
 
 .soot-sprites-window {
-  width: min(372px, calc(100vw - 32px));
+  --event-window-width: 372px;
 }
 
 .soot-sprites-window.is-loading-sprites,

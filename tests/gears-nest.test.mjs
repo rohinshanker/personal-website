@@ -631,7 +631,7 @@ test("spell on the stack event is probability-gated with counter and damage effe
     /const refuseSpellOnStackCounter = \(\) => \{[\s\S]*?triggerSpellStackLightning\(\);[\s\S]*?closeManagedRandomEventWindow\(spellStackWindow\);[\s\S]*?\};/
   );
   assert.match(mainSource, /drawLightningBorderFrame\(spellStackLightningCanvas, alpha, RED_LIGHTNING_PALETTE\);/);
-  assert.match(getCssBlock(".spell-stack-window"), /width: min\(420px, calc\(100vw - 32px\)\);/);
+  assert.match(getCssBlock(".spell-stack-window"), /--event-window-width: 420px;/);
   assert.match(getCssBlock(".spell-stack-image-frame"), /max-height: min\(58vh, 520px\);/);
   assert.match(getCssBlock(".spell-stack-image-frame"), /--spell-stack-image-inset: 20px;/);
   assert.match(getCssBlock(".spell-stack-image-frame"), /padding: var\(--spell-stack-image-inset\);/);
@@ -827,7 +827,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
     mainSource,
     /const inspectSootSpritesGpu = \(\) => \{[\s\S]*?const launchRect = getSootSpritesLaunchRect\(\);[\s\S]*?closeManagedRandomEventWindow\(sootSpritesWindow\);[\s\S]*?showSootSpritesSwarm/
   );
-  assert.match(getCssBlock(".soot-sprites-window"), /width: min\(372px, calc\(100vw - 32px\)\);/);
+  assert.match(getCssBlock(".soot-sprites-window"), /--event-window-width: 372px;/);
   assert.match(
     eventStyles,
     /\.soot-sprites-window\.is-loading-sprites,[\s\S]*?\.soot-sprites-window\.is-loading-sprites \* \{[\s\S]*?cursor: var\(--cursor-working(?:, progress)?\) !important;/
