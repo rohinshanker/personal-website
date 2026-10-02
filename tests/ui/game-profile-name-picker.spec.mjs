@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures.mjs";
+import { DETERMINISTIC_RANDOM_DRAW } from "./helpers/rendered-site.mjs";
 
 const skyGeneratorDefinition = `title = Sky Name Generator
 
@@ -54,6 +55,8 @@ const viewports = Object.freeze([
 ]);
 
 const prepareNamePicker = async (page) => {
+  // Keep unrelated random alerts out of the picker; names use Web Crypto.
+  await page.addInitScript((draw) => { Math.random = () => draw; }, DETERMINISTIC_RANDOM_DRAW);
   await page.route(/https:\/\/perchance\.org\/api\/downloadGenerator/, (route) =>
     route.fulfill({ body: skyGeneratorDefinition, contentType: "text/plain" })
   );

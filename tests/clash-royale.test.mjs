@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   calculateAverageElixir,
   classifyClashBattleMode,
+  formatClashBattleMode,
   isVariableClashElixirCard,
   normalizeClashCardIconUrl,
   normalizeClashCardRarity,
@@ -99,6 +100,33 @@ test("classifies only reviewed battle mode IDs and exact types", () => {
     classifyClashBattleMode({ type: "pathOfLegend", gameMode: { id: 72000007 } }),
     { key: "ranked", label: "Ranked" }
   );
+});
+
+test("classifies Clan War context across shared and dedicated mode IDs", () => {
+  for (const type of ["boatBattle", "riverRacePvP", "riverRaceDuel", "riverRaceDuelColosseum"]) {
+    for (const id of [undefined, 72000060, 72000266, 72000267, 72000268]) {
+      assert.deepEqual(classifyClashBattleMode({ type, gameMode: { id } }), {
+        key: "clan-war", label: "Clan War",
+      });
+    }
+  }
+  for (const id of [72000098, 72000101, 72000102, 72000266, 72000267, 72000268]) {
+    assert.equal(classifyClashBattleMode({ gameMode: { id } }).key, "clan-war");
+  }
+  for (const type of ["pathOfLegend", "challenge"]) {
+    assert.equal(classifyClashBattleMode({ type, gameMode: { id: 72000268 } }).key,
+      type === "pathOfLegend" ? "ranked" : "challenge");
+  }
+  assert.equal(classifyClashBattleMode({ type: "unknown", gameMode: { name: "CW_Battle_1v1" } }).key, "other");
+  assert.equal(classifyClashBattleMode({ type: "riverRacePvPish" }).key, "other");
+});
+
+test("preserves raw mode titles with explicit fallbacks for missing names", () => {
+  assert.equal(formatClashBattleMode({ type: "riverRacePvP", gameMode: { name: " CW_Battle_1v1 " } }), "CW_Battle_1v1");
+  assert.equal(formatClashBattleMode({ type: " challenge ", gameMode: { name: " " } }), "challenge");
+  assert.equal(formatClashBattleMode({ type: "PvP" }), "PvP");
+  assert.equal(formatClashBattleMode({ type: " ", gameMode: { name: "" } }), "Battle");
+  assert.equal(formatClashBattleMode(null), "Battle");
 });
 
 test("resolves the configured player from either battle side", () => {

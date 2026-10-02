@@ -2,7 +2,7 @@
 
 - Purpose: Configure, release, and verify the public Clash Royale player app.
 - Scope: Home app, `GET /clash-royale` on the existing Game Stats Worker, official API access, caching, and release checks.
-- Last verified: 2026-10-01
+- Last verified: 2026-10-02
 
 ## Data and credentials
 
@@ -101,16 +101,24 @@ and links to the fixed RoyaleAPI profile. Keep it after the final battle inside
 the bounded scroll region, hidden at the top of a full history and reachable
 at the bottom; never pin it outside that scroll area.
 
-Match badges use verified type/ID mappings with explicit labels. Battle context
-(such as Ranked or Challenge) takes precedence over a shared mode ID. Require
-the known PvP/Ladder combination for Ladder; unknown modes remain Other even
-when their raw names contain a familiar word. Do not classify modes using
-substring guesses. Other exposes the actual raw mode on hover and keyboard
-focus in a separate row that preserves the battle title’s width. Avoid a
-duplicate native tooltip when the inline hint is present. Ladder uses
-`rgb(73, 212, 214)` with dark text; keep result and mode
-labels centered. The battle title includes the player name before “vs.” and
-preserves all participants on the correct sides.
+Match badges use exact type/ID mappings with explicit labels. Battle context
+(such as Ranked, Challenge, or Clan War) takes precedence over a shared mode
+ID. Clan War includes `boatBattle`, `riverRacePvP`, `riverRaceDuel`, and
+`riverRaceDuelColosseum`; dedicated mode IDs include `72000266`, `72000267`,
+and `72000268`. Require the known PvP/Ladder combination for Ladder; unknown
+modes remain Other even when their raw names contain a familiar word. Do not
+classify modes using substring guesses.
+
+Every match badge exposes its actual `gameMode.name` on hover and keyboard
+focus, falling back to `type`, then `Battle` when both are empty. Use a single
+body-level tooltip, matching Solitaire's 12px pointer offset and 4px viewport
+inset. Keep it out of layout and pointer hit testing; long raw titles wrap
+within the viewport. Escape dismisses it until a fresh hover or focus, and
+scrolling, resizing, window blur, page visibility changes, refresh rendering,
+and app closure clear it. Avoid duplicate native title tooltips. Result and
+mode badges have equal 26px heights and centered text on both axes. Ladder
+uses `rgb(73, 212, 214)` with dark text. The battle title includes the player
+name before “vs.” and preserves all participants on the correct sides.
 
 ## Validation and release
 

@@ -233,8 +233,9 @@ export const parseClashBattleTime = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const formatMode = (battle) =>
-  String(battle?.gameMode?.name ?? battle?.type ?? "Battle").trim() || "Battle";
+export const formatClashBattleMode = (battle) =>
+  String(battle?.gameMode?.name ?? "").trim() ||
+  String(battle?.type ?? "").trim() || "Battle";
 
 const CLASH_MODE_BY_ID = new Map([
   [72000007, Object.freeze({ key: "friendly", label: "Friendly" })],
@@ -244,10 +245,22 @@ const CLASH_MODE_BY_ID = new Map([
   [72000101, Object.freeze({ key: "clan-war", label: "Clan War" })],
   [72000102, Object.freeze({ key: "clan-war", label: "Clan War" })],
   [72000266, Object.freeze({ key: "clan-war", label: "Clan War" })],
+  [72000267, Object.freeze({ key: "clan-war", label: "Clan War" })],
+  [72000268, Object.freeze({ key: "clan-war", label: "Clan War" })],
+]);
+
+const CLASH_CLAN_WAR_TYPES = new Set([
+  "boatBattle",
+  "riverRacePvP",
+  "riverRaceDuel",
+  "riverRaceDuelColosseum",
 ]);
 
 export const classifyClashBattleMode = (battle) => {
   const type = String(battle?.type ?? "").trim();
+  if (CLASH_CLAN_WAR_TYPES.has(type)) {
+    return Object.freeze({ key: "clan-war", label: "Clan War" });
+  }
   if (type === "pathOfLegend") {
     return Object.freeze({ key: "ranked", label: "Ranked" });
   }
@@ -267,6 +280,70 @@ const createElement = (tagName, className, text) => {
   if (className) element.className = className;
   if (text !== undefined) element.textContent = text;
   return element;
+};
+
+let modeHint = null;
+let activeModeBadge = null;
+let dismissedModeBadge = null;
+
+const hideModeHint = () => {
+  modeHint?.classList.remove("is-visible");
+  activeModeBadge?.removeAttribute("aria-describedby");
+  activeModeBadge = null;
+};
+
+const showModeHint = (badge, text, pointer) => {
+  if (!modeHint) {
+    modeHint = createElement("span", "cr-mode-hint");
+    modeHint.id = "cr-mode-hint";
+    modeHint.setAttribute("role", "tooltip");
+    document.body.appendChild(modeHint);
+  }
+  if (activeModeBadge !== badge) hideModeHint();
+  activeModeBadge = badge;
+  modeHint.textContent = text;
+  modeHint.classList.add("is-visible");
+  badge.setAttribute("aria-describedby", modeHint.id);
+
+  // Match Solitaire's pointer offset and keep the hint within the viewport.
+  const offset = 12;
+  const edge = 4;
+  const anchor = pointer ?? badge.getBoundingClientRect();
+  const x = pointer ? anchor.clientX : anchor.left + anchor.width / 2;
+  const y = pointer ? anchor.clientY : anchor.bottom;
+  modeHint.style.left = `${x + offset}px`;
+  modeHint.style.top = `${y + offset}px`;
+  const bounds = modeHint.getBoundingClientRect();
+  const left = Math.min(x + offset, window.innerWidth - bounds.width - edge);
+  const top = Math.min(y + offset, window.innerHeight - bounds.height - edge);
+  modeHint.style.left = `${Math.max(edge, left)}px`;
+  modeHint.style.top = `${Math.max(edge, top)}px`;
+};
+
+const attachModeHint = (badge, text) => {
+  const showPointerHint = (event) => {
+    if (dismissedModeBadge !== badge && event.pointerType !== "touch") {
+      showModeHint(badge, text, event);
+    }
+  };
+  badge.tabIndex = 0;
+  badge.addEventListener("pointerenter", (event) => {
+    dismissedModeBadge = null;
+    showPointerHint(event);
+  });
+  badge.addEventListener("pointermove", showPointerHint);
+  badge.addEventListener("pointerleave", () => {
+    if (activeModeBadge !== badge) return;
+    if (document.activeElement === badge) showModeHint(badge, text);
+    else hideModeHint();
+  });
+  badge.addEventListener("focus", () => {
+    dismissedModeBadge = null;
+    showModeHint(badge, text);
+  });
+  badge.addEventListener("blur", () => {
+    if (activeModeBadge === badge) hideModeHint();
+  });
 };
 
 const createDecorativeIcon = (source, className) => {
@@ -519,6 +596,7 @@ const createBattleTime = (value) => {
 
 const renderBattles = (battles) => {
   if (!elements.battleLog) return;
+  hideModeHint();
   if (!battles.length) {
     renderEmptyItem(elements.battleLog, "No recent battles were returned.");
     if (elements.battleScroll) elements.battleScroll.scrollTop = 0;
@@ -540,15 +618,9 @@ const renderBattles = (battles) => {
       `cr-battle-mode is-${mode.key}`,
       mode.label
     );
-    const rawModeName = String(battle?.gameMode?.name ?? "").trim();
-    let modeHint = null;
-    if (mode.key === "other" && rawModeName) {
-      modeBadge.tabIndex = 0;
-      modeBadge.setAttribute("aria-label", `Other mode: ${rawModeName}`);
-      modeHint = createElement("span", "cr-mode-hint", rawModeName);
-    } else {
-      modeBadge.title = formatMode(battle);
-    }
+    const rawModeName = formatClashBattleMode(battle);
+    modeBadge.setAttribute("aria-label", `${mode.label} mode: ${rawModeName}`);
+    attachModeHint(modeBadge, rawModeName);
     details.appendChild(modeBadge);
     details.appendChild(
       createElement(
@@ -559,7 +631,6 @@ const renderBattles = (battles) => {
     );
     details.appendChild(createBattleTime(battle.battleTime));
     info.appendChild(details);
-    if (modeHint) info.appendChild(modeHint);
     summary.appendChild(info);
 
     const metrics = createElement("span", "cr-battle-metrics");
@@ -785,6 +856,7 @@ const load = (force = false) => {
 };
 
 const cancel = () => {
+  hideModeHint();
   const request = activeRequest;
   activeRequest = null;
   request?.controller.abort(new DOMException("Window closed", "AbortError"));
@@ -797,6 +869,16 @@ if (elements.refresh) {
 }
 
 if (typeof window !== "undefined") {
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !activeModeBadge) return;
+    dismissedModeBadge = activeModeBadge;
+    hideModeHint();
+    event.stopPropagation();
+  }, true);
+  window.addEventListener("resize", hideModeHint);
+  window.addEventListener("blur", hideModeHint);
+  document.addEventListener("scroll", hideModeHint, true);
+  document.addEventListener("visibilitychange", hideModeHint);
   window.ClashRoyaleApp = Object.freeze({ cancel, load });
   if (document.getElementById("clash-royale-window")?.getAttribute("aria-hidden") === "false") {
     load(false);

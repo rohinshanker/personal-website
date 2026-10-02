@@ -243,6 +243,18 @@
   white-space: nowrap;
 }
 
+.cr-battle-mode,
+.cr-result {
+  align-items: center;
+  box-sizing: border-box;
+  display: inline-flex;
+  height: 26px;
+  justify-content: center;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .cr-battle-mode {
   border: 1px solid #333;
   color: #fff;
@@ -283,32 +295,35 @@
   background: #666;
 }
 
-.cr-battle-mode.is-other[tabindex] {
+.cr-battle-mode[tabindex] {
   cursor: help;
 }
 
-.cr-battle-mode.is-other[tabindex]:focus-visible {
+.cr-battle-mode[tabindex]:focus-visible {
   outline: 1px dotted #fff;
   outline-offset: -3px;
 }
 
 .cr-mode-hint {
-  background: #ffffe1;
-  border: 1px solid #111;
+  background: #000;
+  border: 1px solid #fff;
   box-sizing: border-box;
-  color: #111;
+  box-shadow: 1px 1px 0 #000;
+  color: #fff;
   display: none;
+  font-size: 12px;
   font-weight: 400;
-  margin-top: 3px;
-  min-width: 0;
+  max-width: calc(100vw - 8px);
   overflow-wrap: anywhere;
-  padding: 2px 3px;
+  padding: 2px 5px;
+  pointer-events: none;
+  position: fixed;
   white-space: normal;
-  width: 100%;
+  width: max-content;
+  z-index: 10000;
 }
 
-.cr-battle-item:hover .cr-mode-hint,
-.cr-battle-info:focus-within > .cr-mode-hint {
+.cr-mode-hint.is-visible {
   display: block;
 }
 
