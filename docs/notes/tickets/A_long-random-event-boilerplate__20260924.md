@@ -1,10 +1,10 @@
-# O_long-random-event-boilerplate__20260924 — Open
+# A_long-random-event-boilerplate__20260924 — Active
 
 - Scope: Migrate the ~55 random events that hand-clone window show/close/visible/z-order logic onto the managed helpers that already exist, move each event's DOM wiring next to its implementation, and collapse the per-event CSS state rules onto the existing `.random-event-window` base class.
-- Status: open
+- Status: active
 - Opened: 2026-09-24
-- Updated: 2026-09-24
-- Current State: Opened from the 2026-09-24 whole-site audit. Nothing started. Tier: long, but naturally sliced: one event per commit, starting with events whose helper names no test asserts. Visual baselines will need regeneration for any event whose window geometry changes, so keep geometry values identical and only move where they live.
+- Updated: 2026-10-01
+- Current State: Active in Multica DEM-190, coordinated by agent-deck pw-close-tickets-2. Isolated implementer branch agent/claude-implementer/dem-190 starts from 62171073295d566f85bffe5def4e52e14a2f8516; integration target codex/study-and-random-events at /tmp/pw-close-tickets-2/integration. Lifecycle migration is underway; preserve geometry and validate against the coordinator’s 80-window computed-style baseline plus rendered event interactions. No push or publication authorized.
 - Verification: Per event: `npm test` (`tests/random-event-cooldown.test.mjs`, `tests/gears-nest.test.mjs`, `tests/random-event-debug-fixture.test.mjs`, plus the event's own tests), `node scripts/update-game-integrity.mjs` then `--check`, `npm run test:ui`, and a rendered trigger of that event through the Admin Controls event finder at 375×812 and 1440×900 checking open animation, close animation, focus, z-order over other windows, and viewport clamping. `npm run test:visual` at the end of each batch.
 - Cleanup: Record the managed-window contract (helper names, definition fields, CSS custom properties) in `docs/validation/system-alert-random-events.md` or a new `random-event-windows.md`, then delete this ticket and its index row.
 
