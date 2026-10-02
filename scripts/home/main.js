@@ -5771,13 +5771,26 @@ const isManagedRandomEventWindowVisible = (win) =>
       win.getAttribute("aria-hidden") === "false"
   );
 
+// Opens a random-event window through the one shared lifecycle. `isVisible`
+// replaces the default visibility test, `onFront` runs instead of opening when
+// the window is already visible, `beforeShow` prepares state once an open is
+// committed, `position` replaces viewport placement, and `afterShow` runs after
+// the opening animation starts. Returns true only when an open happened.
 const showManagedRandomEventWindow = (
   win,
-  { beforeShow, clampAfterMediaLoad = false } = {}
+  {
+    isVisible,
+    onFront,
+    beforeShow,
+    position,
+    afterShow,
+    clampAfterMediaLoad = false,
+  } = {}
 ) => {
   if (!win) return false;
-  if (isManagedRandomEventWindowVisible(win)) {
+  if (isVisible ? isVisible() : isManagedRandomEventWindowVisible(win)) {
     win.style.zIndex = String(topZ++);
+    if (onFront) onFront();
     return false;
   }
 
@@ -5785,22 +5798,37 @@ const showManagedRandomEventWindow = (
   loadDeferredMedia(win);
   win.classList.remove("is-hidden", "is-closing");
   win.setAttribute("aria-hidden", "false");
-  positionRandomEventWindowInViewport(win);
+  if (position) position(win);
+  else positionRandomEventWindowInViewport(win);
   win.style.zIndex = String(topZ++);
   restartWindowAnimation(win, "is-opening");
   if (clampAfterMediaLoad) clampRandomEventWindowAfterMediaLoad(win);
+  if (afterShow) afterShow();
   return true;
 };
 
-const closeManagedRandomEventWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
+// Starts the shared closing animation. `force` skips the `is-hidden` guard for
+// windows that track their own closing state, and `beforeClose` runs the event's
+// teardown only once a close is committed. Returns true when a close started.
+const closeManagedRandomEventWindow = (
+  win,
+  { force = false, beforeClose } = {}
+) => {
+  if (!win) return false;
+  if (!force && win.classList.contains("is-hidden")) return false;
+  if (beforeClose) beforeClose();
   win.setAttribute("aria-hidden", "true");
   restartWindowAnimation(win, "is-closing");
+  return true;
 };
 
+// Wires the shared open/close animation bookkeeping: swallow clicks so the
+// desktop does not see them, drop `is-opening` when the open animation ends, and
+// hide, unload and reset the window when the close animation ends.
+// `closingClasses` are cleared alongside `is-closing`.
 const bindManagedRandomEventWindowAnimation = (
   win,
-  { afterClose, unloadImages = true } = {}
+  { afterOpen, afterClose, closingClasses, unloadImages = true } = {}
 ) => {
   if (!win) return;
 
@@ -5812,13 +5840,14 @@ const bindManagedRandomEventWindowAnimation = (
     if (event.target !== win) return;
     if (event.animationName === "retro-window-open") {
       win.classList.remove("is-opening");
+      if (afterOpen) afterOpen();
       return;
     }
     if (event.animationName === "retro-window-close") {
-      win.classList.remove("is-closing");
+      win.classList.remove("is-closing", ...(closingClasses || []));
       win.classList.add("is-hidden");
-      if (afterClose) afterClose();
       if (unloadImages) unloadDeferredImages(win);
+      if (afterClose) afterClose();
     }
   });
 };
@@ -6039,12 +6068,7 @@ const respondToNekoStreamAlert = (shouldStartStream) => {
   return true;
 };
 
-const isRandomAlertVisible = () =>
-  Boolean(
-    randomAlertWindow &&
-      !randomAlertWindow.classList.contains("is-hidden") &&
-      randomAlertWindow.getAttribute("aria-hidden") === "false"
-  );
+const isRandomAlertVisible = () => isManagedRandomEventWindowVisible(randomAlertWindow);
 
 const resetRandomAlertSize = () => {
   if (!randomAlertWindow) return;
@@ -6062,9 +6086,7 @@ const positionRandomAlertWindow = () => {
 };
 
 const hideRandomAlert = () => {
-  if (!randomAlertWindow) return;
-  randomAlertWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(randomAlertWindow, "is-closing");
+  closeManagedRandomEventWindow(randomAlertWindow, { force: true });
 };
 
 const showRandomAlert = ({ showRemember = false } = {}) => {
@@ -6120,11 +6142,7 @@ const getVanishingPopupButtons = () =>
     : [];
 
 const isVanishingPopupVisible = () =>
-  Boolean(
-    vanishingPopupWindow &&
-      !vanishingPopupWindow.classList.contains("is-hidden") &&
-      vanishingPopupWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(vanishingPopupWindow);
 
 const resetVanishingPopup = () => {
   if (!vanishingPopupWindow) return;
@@ -6160,13 +6178,14 @@ const lockVanishingPopupSize = () => {
 };
 
 const closeVanishingPopup = () => {
-  if (!vanishingPopupWindow || vanishingPopupWindow.classList.contains("is-hidden")) return;
-  if (vanishingPopupCloseTimer) {
-    clearTimeout(vanishingPopupCloseTimer);
-    vanishingPopupCloseTimer = null;
-  }
-  vanishingPopupWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(vanishingPopupWindow, "is-closing");
+  closeManagedRandomEventWindow(vanishingPopupWindow, {
+    beforeClose: () => {
+      if (vanishingPopupCloseTimer) {
+        clearTimeout(vanishingPopupCloseTimer);
+        vanishingPopupCloseTimer = null;
+      }
+    },
+  });
 };
 
 const positionVanishingPopupExplosion = () => {
@@ -6232,14 +6251,9 @@ const getDodgingPopupButtons = () =>
     : [];
 
 const isDodgingPopupVisible = () =>
-  Boolean(
-    dodgingPopupWindow &&
-      !dodgingPopupWindow.classList.contains("is-hidden") &&
-      dodgingPopupWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(dodgingPopupWindow);
 
-const resetDodgingPopup = () => {
-  if (!dodgingPopupWindow) return;
+const clearDodgingPopupTimers = () => {
   if (dodgingPopupSlideTimer) {
     clearTimeout(dodgingPopupSlideTimer);
     dodgingPopupSlideTimer = null;
@@ -6248,6 +6262,11 @@ const resetDodgingPopup = () => {
     clearTimeout(dodgingPopupAutoCloseTimer);
     dodgingPopupAutoCloseTimer = null;
   }
+};
+
+const resetDodgingPopup = () => {
+  if (!dodgingPopupWindow) return;
+  clearDodgingPopupTimers();
   dodgingPopupAttempts = 0;
   dodgingPopupDirectAttempts = 0;
   dodgingPopupFinalDodgeComplete = false;
@@ -6321,17 +6340,9 @@ const dodgeDodgingPopup = ({ direct = false, force = false } = {}) => {
 };
 
 const closeDodgingPopup = () => {
-  if (!dodgingPopupWindow || dodgingPopupWindow.classList.contains("is-hidden")) return;
-  if (dodgingPopupSlideTimer) {
-    clearTimeout(dodgingPopupSlideTimer);
-    dodgingPopupSlideTimer = null;
-  }
-  if (dodgingPopupAutoCloseTimer) {
-    clearTimeout(dodgingPopupAutoCloseTimer);
-    dodgingPopupAutoCloseTimer = null;
-  }
-  dodgingPopupWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(dodgingPopupWindow, "is-closing");
+  closeManagedRandomEventWindow(dodgingPopupWindow, {
+    beforeClose: clearDodgingPopupTimers,
+  });
 };
 
 const scheduleDodgingPopupAutoClose = () => {
@@ -6374,11 +6385,7 @@ const showDodgingPopup = () => {
 };
 
 const isSelfLoveAlertVisible = () =>
-  Boolean(
-    selfLoveAlertWindow &&
-      !selfLoveAlertWindow.classList.contains("is-hidden") &&
-      selfLoveAlertWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(selfLoveAlertWindow);
 
 const positionSelfLoveAlertWindow = () => {
   positionRandomEventWindowInViewport(selfLoveAlertWindow);
@@ -6399,9 +6406,7 @@ const showSelfLoveAlert = () => {
 };
 
 const closeSelfLoveAlert = () => {
-  if (!selfLoveAlertWindow || selfLoveAlertWindow.classList.contains("is-hidden")) return;
-  selfLoveAlertWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(selfLoveAlertWindow, "is-closing");
+  closeManagedRandomEventWindow(selfLoveAlertWindow);
 };
 
 const flashSelfLoveYes = () => {
@@ -6414,12 +6419,7 @@ const flashSelfLoveYes = () => {
   }, 600);
 };
 
-const isRohinUpdateVisible = () =>
-  Boolean(
-    rohinUpdateWindow &&
-      !rohinUpdateWindow.classList.contains("is-hidden") &&
-      rohinUpdateWindow.getAttribute("aria-hidden") === "false"
-  );
+const isRohinUpdateVisible = () => isManagedRandomEventWindowVisible(rohinUpdateWindow);
 
 const positionRohinUpdateWindow = () => {
   positionRandomEventWindowInViewport(rohinUpdateWindow);
@@ -6440,9 +6440,7 @@ const showRohinUpdate = () => {
 };
 
 const closeRohinUpdate = () => {
-  if (!rohinUpdateWindow || rohinUpdateWindow.classList.contains("is-hidden")) return;
-  rohinUpdateWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(rohinUpdateWindow, "is-closing");
+  closeManagedRandomEventWindow(rohinUpdateWindow);
 };
 
 const isMcAfeeWindowVisible = (win) =>
@@ -6486,9 +6484,7 @@ const showMcAfeeWindow = (win) => {
 };
 
 const closeMcAfeeWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win);
 };
 
 const stopMcAfeeDownload = () => {
@@ -6615,9 +6611,8 @@ const removeWordErrorWindow = (win) => {
 };
 
 const closeWordErrorWindow = (win) => {
-  if (!win || win.classList.contains("is-closing")) return;
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  if (win?.classList.contains("is-closing")) return;
+  closeManagedRandomEventWindow(win, { force: true });
 };
 
 const closeWordErrorStack = (selectedWindow) => {
@@ -6770,12 +6765,7 @@ const showWordErrorStack = () => {
   });
 };
 
-const isRohinNoteVisible = () =>
-  Boolean(
-    rohinNoteWindow &&
-      !rohinNoteWindow.classList.contains("is-hidden") &&
-      rohinNoteWindow.getAttribute("aria-hidden") === "false"
-  );
+const isRohinNoteVisible = () => isManagedRandomEventWindowVisible(rohinNoteWindow);
 
 const positionRohinNoteWindow = () => {
   positionRandomEventWindowInViewport(rohinNoteWindow);
@@ -6796,17 +6786,10 @@ const showRohinNote = () => {
 };
 
 const closeRohinNote = () => {
-  if (!rohinNoteWindow || rohinNoteWindow.classList.contains("is-hidden")) return;
-  rohinNoteWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(rohinNoteWindow, "is-closing");
+  closeManagedRandomEventWindow(rohinNoteWindow);
 };
 
-const isEarthNoteVisible = () =>
-  Boolean(
-    earthNoteWindow &&
-      !earthNoteWindow.classList.contains("is-hidden") &&
-      earthNoteWindow.getAttribute("aria-hidden") === "false"
-  );
+const isEarthNoteVisible = () => isManagedRandomEventWindowVisible(earthNoteWindow);
 
 const positionEarthNoteWindow = () => {
   positionRandomEventWindowInViewport(earthNoteWindow);
@@ -6827,17 +6810,10 @@ const showEarthNote = () => {
 };
 
 const closeEarthNote = () => {
-  if (!earthNoteWindow || earthNoteWindow.classList.contains("is-hidden")) return;
-  earthNoteWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(earthNoteWindow, "is-closing");
+  closeManagedRandomEventWindow(earthNoteWindow);
 };
 
-const isHealthNoteVisible = () =>
-  Boolean(
-    healthNoteWindow &&
-      !healthNoteWindow.classList.contains("is-hidden") &&
-      healthNoteWindow.getAttribute("aria-hidden") === "false"
-  );
+const isHealthNoteVisible = () => isManagedRandomEventWindowVisible(healthNoteWindow);
 
 const positionHealthNoteWindow = () => {
   positionRandomEventWindowInViewport(healthNoteWindow);
@@ -6858,17 +6834,10 @@ const showHealthNote = () => {
 };
 
 const closeHealthNote = () => {
-  if (!healthNoteWindow || healthNoteWindow.classList.contains("is-hidden")) return;
-  healthNoteWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(healthNoteWindow, "is-closing");
+  closeManagedRandomEventWindow(healthNoteWindow);
 };
 
-const isLoveNoteVisible = () =>
-  Boolean(
-    loveNoteWindow &&
-      !loveNoteWindow.classList.contains("is-hidden") &&
-      loveNoteWindow.getAttribute("aria-hidden") === "false"
-  );
+const isLoveNoteVisible = () => isManagedRandomEventWindowVisible(loveNoteWindow);
 
 const positionLoveNoteWindow = () => {
   positionRandomEventWindowInViewport(loveNoteWindow);
@@ -6889,17 +6858,10 @@ const showLoveNote = () => {
 };
 
 const closeLoveNote = () => {
-  if (!loveNoteWindow || loveNoteWindow.classList.contains("is-hidden")) return;
-  loveNoteWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(loveNoteWindow, "is-closing");
+  closeManagedRandomEventWindow(loveNoteWindow);
 };
 
-const isNoSmokingVisible = () =>
-  Boolean(
-    noSmokingWindow &&
-      !noSmokingWindow.classList.contains("is-hidden") &&
-      noSmokingWindow.getAttribute("aria-hidden") === "false"
-  );
+const isNoSmokingVisible = () => isManagedRandomEventWindowVisible(noSmokingWindow);
 
 const showNoSmokingWindow = () => {
   if (!noSmokingWindow) return;
@@ -6917,17 +6879,11 @@ const showNoSmokingWindow = () => {
 };
 
 const closeNoSmokingWindow = () => {
-  if (!noSmokingWindow || noSmokingWindow.classList.contains("is-hidden")) return;
-  noSmokingWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(noSmokingWindow, "is-closing");
+  closeManagedRandomEventWindow(noSmokingWindow);
 };
 
 const isPossumSpringsVisible = () =>
-  Boolean(
-    possumSpringsWindow &&
-      !possumSpringsWindow.classList.contains("is-hidden") &&
-      possumSpringsWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(possumSpringsWindow);
 
 const positionPossumSpringsWindow = () => {
   positionRandomEventWindowInViewport(possumSpringsWindow);
@@ -6949,17 +6905,10 @@ const showPossumSpringsWindow = () => {
 };
 
 const closePossumSpringsWindow = () => {
-  if (!possumSpringsWindow || possumSpringsWindow.classList.contains("is-hidden")) return;
-  possumSpringsWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(possumSpringsWindow, "is-closing");
+  closeManagedRandomEventWindow(possumSpringsWindow);
 };
 
-const isWingedLightVisible = () =>
-  Boolean(
-    wingedLightWindow &&
-      !wingedLightWindow.classList.contains("is-hidden") &&
-      wingedLightWindow.getAttribute("aria-hidden") === "false"
-  );
+const isWingedLightVisible = () => isManagedRandomEventWindowVisible(wingedLightWindow);
 
 const positionWingedLightWindow = () => {
   positionRandomEventWindowInViewport(wingedLightWindow);
@@ -6981,9 +6930,7 @@ const showWingedLightWindow = () => {
 };
 
 const closeWingedLightWindow = () => {
-  if (!wingedLightWindow || wingedLightWindow.classList.contains("is-hidden")) return;
-  wingedLightWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(wingedLightWindow, "is-closing");
+  closeManagedRandomEventWindow(wingedLightWindow);
 };
 
 const removeWingedLightCollectOverlay = () => {
@@ -7040,12 +6987,7 @@ const collectWingedLight = () => {
   triggerWingedLightCollectEffect();
 };
 
-const isManaFloodVisible = () =>
-  Boolean(
-    manaFloodWindow &&
-      !manaFloodWindow.classList.contains("is-hidden") &&
-      manaFloodWindow.getAttribute("aria-hidden") === "false"
-  );
+const isManaFloodVisible = () => isManagedRandomEventWindowVisible(manaFloodWindow);
 
 const positionManaFloodWindow = () => {
   positionRandomEventWindowInViewport(manaFloodWindow);
@@ -7066,17 +7008,11 @@ const showManaFlood = () => {
 };
 
 const closeManaFlood = () => {
-  if (!manaFloodWindow || manaFloodWindow.classList.contains("is-hidden")) return;
-  manaFloodWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(manaFloodWindow, "is-closing");
+  closeManagedRandomEventWindow(manaFloodWindow);
 };
 
 const isMimicWarningVisible = () =>
-  Boolean(
-    mimicWarningWindow &&
-      !mimicWarningWindow.classList.contains("is-hidden") &&
-      mimicWarningWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(mimicWarningWindow);
 
 const positionMimicWarningWindow = () => {
   positionRandomEventWindowInViewport(mimicWarningWindow);
@@ -7097,9 +7033,7 @@ const showMimicWarning = () => {
 };
 
 const closeMimicWarning = () => {
-  if (!mimicWarningWindow || mimicWarningWindow.classList.contains("is-hidden")) return;
-  mimicWarningWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(mimicWarningWindow, "is-closing");
+  closeManagedRandomEventWindow(mimicWarningWindow);
 };
 
 const SKILL_CHECK_ROLL_DURATION_MS = 1100;
@@ -7123,10 +7057,7 @@ const SKILL_CHECK_DIGIT_SOURCES = Object.freeze({
   " ": "assets/minesweeper_assets/digital_digits/digital_blank.png",
 });
 
-const isSkillCheckWindowVisible = (win) =>
-  Boolean(
-    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
-  );
+const isSkillCheckWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isSkillCheckVisible = () =>
   isSkillCheckWindowVisible(skillCheckWindow) ||
@@ -7235,14 +7166,8 @@ const showSkillCheckWindow = () => {
 
 const closeSkillCheckWindow = () => {
   clearSkillCheckRollTimers();
-  if (skillCheckWindow && !skillCheckWindow.classList.contains("is-hidden")) {
-    skillCheckWindow.setAttribute("aria-hidden", "true");
-    restartWindowAnimation(skillCheckWindow, "is-closing");
-  }
-  if (skillCheckResultWindow && !skillCheckResultWindow.classList.contains("is-hidden")) {
-    skillCheckResultWindow.setAttribute("aria-hidden", "true");
-    restartWindowAnimation(skillCheckResultWindow, "is-closing");
-  }
+  closeManagedRandomEventWindow(skillCheckWindow);
+  closeManagedRandomEventWindow(skillCheckResultWindow);
 };
 
 const DISTRESS_ALIGNMENT_TOLERANCE = 3.2;
@@ -7256,10 +7181,7 @@ const DISTRESS_NOISE_SAMPLE_STEP = 1;
 const DISTRESS_STATIC_DOTS = 390;
 const DISTRESS_GRAIN_LINES = 58;
 
-const isDistressWindowVisible = (win) =>
-  Boolean(
-    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
-  );
+const isDistressWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isDistressSignalVisible = () =>
   isDistressWindowVisible(distressSignalWindow) ||
@@ -8554,13 +8476,13 @@ const showDistressSignalWindow = () => {
 };
 
 const closeDistressWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  if (win === distressSignalWindow) {
-    clearDistressPowerTimer();
-    stopDistressNoiseAnimation();
-  }
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win, {
+    beforeClose: () => {
+      if (win !== distressSignalWindow) return;
+      clearDistressPowerTimer();
+      stopDistressNoiseAnimation();
+    },
+  });
 };
 
 const closeDistressSignalEvent = () => {
@@ -8579,12 +8501,7 @@ const getLocalDateKey = (date = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
-const isFelizJuevesVisible = () =>
-  Boolean(
-    felizJuevesWindow &&
-      !felizJuevesWindow.classList.contains("is-hidden") &&
-      felizJuevesWindow.getAttribute("aria-hidden") === "false"
-  );
+const isFelizJuevesVisible = () => isManagedRandomEventWindowVisible(felizJuevesWindow);
 
 const hasShownFelizJuevesToday = (dateKey) => {
   try {
@@ -8618,9 +8535,7 @@ const showFelizJuevesWindow = () => {
 };
 
 const closeFelizJuevesWindow = () => {
-  if (!felizJuevesWindow || felizJuevesWindow.classList.contains("is-hidden")) return;
-  felizJuevesWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(felizJuevesWindow, "is-closing");
+  closeManagedRandomEventWindow(felizJuevesWindow);
 };
 
 const flashFelizJuevesChoice = () => {
@@ -8654,12 +8569,7 @@ const maybeShowFelizJueves = () => {
   return true;
 };
 
-const isNazarVisible = () =>
-  Boolean(
-    nazarWindow &&
-      !nazarWindow.classList.contains("is-hidden") &&
-      nazarWindow.getAttribute("aria-hidden") === "false"
-  );
+const isNazarVisible = () => isManagedRandomEventWindowVisible(nazarWindow);
 
 const positionNazarWindow = () => {
   positionRandomEventWindowInViewport(nazarWindow);
@@ -8680,17 +8590,10 @@ const showNazarWindow = () => {
 };
 
 const closeNazarWindow = () => {
-  if (!nazarWindow || nazarWindow.classList.contains("is-hidden")) return;
-  nazarWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(nazarWindow, "is-closing");
+  closeManagedRandomEventWindow(nazarWindow);
 };
 
-const isSiteGraceVisible = () =>
-  Boolean(
-    siteGraceWindow &&
-      !siteGraceWindow.classList.contains("is-hidden") &&
-      siteGraceWindow.getAttribute("aria-hidden") === "false"
-  );
+const isSiteGraceVisible = () => isManagedRandomEventWindowVisible(siteGraceWindow);
 
 const positionSiteGraceWindow = () => {
   positionRandomEventWindowInViewport(siteGraceWindow);
@@ -8711,9 +8614,7 @@ const showSiteGraceWindow = () => {
 };
 
 const closeSiteGraceWindow = () => {
-  if (!siteGraceWindow || siteGraceWindow.classList.contains("is-hidden")) return;
-  siteGraceWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(siteGraceWindow, "is-closing");
+  closeManagedRandomEventWindow(siteGraceWindow);
 };
 
 const showLostGraceOverlay = () => {
@@ -8736,10 +8637,7 @@ const touchSiteGrace = () => {
   showLostGraceOverlay();
 };
 
-const isStalkerWindowVisible = (win) =>
-  Boolean(
-    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
-  );
+const isStalkerWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isStalkerVisible = () =>
   isStalkerWindowVisible(stalkerWindow) || isStalkerWindowVisible(stalkerResultWindow);
@@ -8773,19 +8671,14 @@ const showStalkerWindow = (win = stalkerWindow, anchorWindow = null) => {
 };
 
 const closeStalkerWindow = (win = stalkerWindow) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win);
 };
 
 const showStalkerResultWindow = (anchorWindow = null) => {
   showStalkerWindow(stalkerResultWindow, anchorWindow);
 };
 
-const isNanaEncounterWindowVisible = (win) =>
-  Boolean(
-    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
-  );
+const isNanaEncounterWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isNanaEncounterVisible = () =>
   isNanaEncounterWindowVisible(nanaEncounterWindow) ||
@@ -8840,9 +8733,7 @@ const showNanaAcceptWindow = (anchorWindow = null) => {
 };
 
 const closeNanaEncounterWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win);
 };
 
 const acceptNanaEncounter = () => {
@@ -8853,10 +8744,7 @@ const acceptNanaEncounter = () => {
   }, 180);
 };
 
-const isServalEncounterWindowVisible = (win) =>
-  Boolean(
-    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
-  );
+const isServalEncounterWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isServalEncounterVisible = () =>
   isServalEncounterWindowVisible(servalEncounterWindow) ||
@@ -8904,9 +8792,7 @@ const showServalPizzaWindow = (anchorWindow = null) => {
 };
 
 const closeServalEncounterWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win);
 };
 
 const offerServalPizza = () => {
@@ -8917,10 +8803,7 @@ const offerServalPizza = () => {
   }, 180);
 };
 
-const isCaracalEncounterWindowVisible = (win) =>
-  Boolean(
-    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
-  );
+const isCaracalEncounterWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isCaracalEncounterVisible = () =>
   isCaracalEncounterWindowVisible(caracalEncounterWindow) ||
@@ -8974,9 +8857,7 @@ const showCaracalResultWindow = (resultKey, anchorWindow = null) => {
 };
 
 const closeCaracalEncounterWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win);
 };
 
 const chooseCaracalEncounterResult = (resultKey) => {
@@ -8987,10 +8868,7 @@ const chooseCaracalEncounterResult = (resultKey) => {
   }, 180);
 };
 
-const isShoebillEncounterWindowVisible = (win) =>
-  Boolean(
-    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
-  );
+const isShoebillEncounterWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isShoebillEncounterVisible = () =>
   isShoebillEncounterWindowVisible(shoebillEncounterWindow) ||
@@ -9038,9 +8916,7 @@ const showShoebillBowWindow = (anchorWindow = null) => {
 };
 
 const closeShoebillEncounterWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win);
 };
 
 const bowToShoebill = () => {
@@ -9058,10 +8934,7 @@ let midnightGospelTimerActive = false;
 let midnightGospelComplete = false;
 let midnightGospelInteractionLock = null;
 
-const isMidnightGospelWindowVisible = (win) =>
-  Boolean(
-    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
-  );
+const isMidnightGospelWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isMidnightGospelVisible = () =>
   isMidnightGospelWindowVisible(midnightGospelInviteWindow) ||
@@ -9174,12 +9047,11 @@ const showMidnightGospelMeditationWindow = (anchorWindow = null) => {
 };
 
 const closeMidnightGospelWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  if (win === midnightGospelMeditationWindow) {
-    stopMidnightGospelTimer();
-  }
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win, {
+    beforeClose: () => {
+      if (win === midnightGospelMeditationWindow) stopMidnightGospelTimer();
+    },
+  });
 };
 
 const acceptMidnightGospelInvite = () => {
@@ -10180,10 +10052,7 @@ const moveGearsNestReloadCursor = (event) => {
   gearsNestReloadCursor.style.top = `${event.clientY - rect.top}px`;
 };
 
-const isInstrumentalityWindowVisible = (win) =>
-  Boolean(
-    win && !win.classList.contains("is-hidden") && win.getAttribute("aria-hidden") === "false"
-  );
+const isInstrumentalityWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isInstrumentalityVisible = () =>
   isInstrumentalityWindowVisible(instrumentalityWindow) ||
@@ -10208,9 +10077,7 @@ const showInstrumentalityWindow = (win) => {
 };
 
 const closeInstrumentalityWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win);
 };
 
 const showInstrumentalityPrompt = () => {
@@ -10226,12 +10093,7 @@ const rejectInstrumentality = () => {
   showInstrumentalityCongrats();
 };
 
-const isRedToolVisible = () =>
-  Boolean(
-    redToolWindow &&
-      !redToolWindow.classList.contains("is-hidden") &&
-      redToolWindow.getAttribute("aria-hidden") === "false"
-  );
+const isRedToolVisible = () => isManagedRandomEventWindowVisible(redToolWindow);
 
 const positionRedToolWindow = () => {
   positionRandomEventWindowInViewport(redToolWindow);
@@ -10384,10 +10246,9 @@ const showRedToolWindow = () => {
 };
 
 const closeRedToolWindow = () => {
-  if (!redToolWindow || redToolWindow.classList.contains("is-hidden")) return;
-  resetRedToolTyping();
-  redToolWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(redToolWindow, "is-closing");
+  closeManagedRandomEventWindow(redToolWindow, {
+    beforeClose: resetRedToolTyping,
+  });
 };
 
 const FATE_START_PROGRESS = 56;
@@ -10633,12 +10494,7 @@ const startFateLightningStrike = () => {
   fateLightningFrame = requestAnimationFrame(render);
 };
 
-const isFateVisible = () =>
-  Boolean(
-    fateWindow &&
-      !fateWindow.classList.contains("is-hidden") &&
-      fateWindow.getAttribute("aria-hidden") === "false"
-  );
+const isFateVisible = () => isManagedRandomEventWindowVisible(fateWindow);
 
 const positionFateWindow = () => {
   positionRandomEventWindowInViewport(fateWindow);
@@ -10784,8 +10640,7 @@ const finishFateEvent = (success) => {
     fateResolveTimer = null;
     if (!fateWindow) return;
     fateState = "transitioning";
-    fateWindow.setAttribute("aria-hidden", "true");
-    restartWindowAnimation(fateWindow, "is-closing");
+    closeManagedRandomEventWindow(fateWindow, { force: true });
     fateResultOpenTimer = setTimeout(() => {
       fateResultOpenTimer = null;
       openFateResultWindow(success);
@@ -10845,11 +10700,12 @@ const showFateWindow = () => {
 };
 
 const closeFateWindow = () => {
-  if (!fateWindow || fateWindow.classList.contains("is-hidden")) return;
-  clearFateTimers();
-  fateState = "idle";
-  fateWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(fateWindow, "is-closing");
+  closeManagedRandomEventWindow(fateWindow, {
+    beforeClose: () => {
+      clearFateTimers();
+      fateState = "idle";
+    },
+  });
 };
 
 const isDeathNoteVisible = () => isManagedRandomEventWindowVisible(deathNoteWindow);
@@ -12543,13 +12399,12 @@ const reopenLancerBattleFinalPrompt = () => {
 };
 
 const transitionLancerBattleWinToFinalPrompt = () => {
-  if (!lancerBattleWindow || lancerBattleWindow.classList.contains("is-hidden")) {
-    showLancerBattleFinalPrompt(true);
-    return;
-  }
-  lancerBattleOpenFinalAfterClose = true;
-  lancerBattleWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(lancerBattleWindow, "is-closing");
+  const closing = closeManagedRandomEventWindow(lancerBattleWindow, {
+    beforeClose: () => {
+      lancerBattleOpenFinalAfterClose = true;
+    },
+  });
+  if (!closing) showLancerBattleFinalPrompt(true);
 };
 
 const queueLancerBattleResultCompletion = (success) => {
@@ -12732,25 +12587,21 @@ const showLancerBattleWindow = () => {
 };
 
 const closeLancerBattleWindow = () => {
-  if (!lancerBattleWindow || lancerBattleWindow.classList.contains("is-hidden")) return;
-  lancerBattleOpenFinalAfterClose = false;
-  clearLancerBattleTimers();
-  clearLancerBattleVideo();
-  clearLancerBattleResultMedia();
-  lancerBattleState = LANCER_BATTLE_STAGES.idle;
-  lancerBattleWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(lancerBattleWindow, "is-closing");
+  closeManagedRandomEventWindow(lancerBattleWindow, {
+    beforeClose: () => {
+      lancerBattleOpenFinalAfterClose = false;
+      clearLancerBattleTimers();
+      clearLancerBattleVideo();
+      clearLancerBattleResultMedia();
+      lancerBattleState = LANCER_BATTLE_STAGES.idle;
+    },
+  });
 };
 
 const brandBurnsRandomInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
-const isBrandBurnsWindowVisible = (win) =>
-  Boolean(
-    win &&
-      !win.classList.contains("is-hidden") &&
-      win.getAttribute("aria-hidden") === "false"
-  );
+const isBrandBurnsWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isBrandBurnsMainWindowVisible = () =>
   isBrandBurnsWindowVisible(brandBurnsWindow);
@@ -13160,12 +13011,9 @@ const removeBrandBurnsPuckWindow = () => {
 const closeBrandBurnsPuckWindow = () => {
   if (!brandBurnsPuckWindow) return;
   clearBrandBurnsPuckCooldown();
-  if (brandBurnsPuckWindow.classList.contains("is-hidden")) {
+  if (!closeManagedRandomEventWindow(brandBurnsPuckWindow)) {
     removeBrandBurnsPuckWindow();
-    return;
   }
-  brandBurnsPuckWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(brandBurnsPuckWindow, "is-closing");
 };
 
 const createBrandBurnsPuckWindow = () => {
@@ -13421,8 +13269,7 @@ const closeBrandBurnsBlockWindow = () => {
     return;
   }
   const closingWindow = brandBurnsBlockWindow;
-  brandBurnsBlockWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(brandBurnsBlockWindow, "is-closing");
+  closeManagedRandomEventWindow(brandBurnsBlockWindow, { force: true });
   setTimeout(() => {
     if (brandBurnsBlockWindow === closingWindow && closingWindow.classList.contains("is-closing")) {
       removeBrandBurnsBlockWindow();
@@ -13677,11 +13524,15 @@ const removeBrandBurnsEnemyWindow = (win) => {
 };
 
 const closeBrandBurnsEnemyWindow = (win) => {
-  if (!win || win.classList.contains("is-closing")) return;
-  if (win.brandBurnsState) clearBrandBurnsEnemyAttackTimer(win.brandBurnsState);
-  if (win.brandBurnsState) clearBrandBurnsEnemyHitEffect(win.brandBurnsState);
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  if (win?.classList.contains("is-closing")) return;
+  closeManagedRandomEventWindow(win, {
+    force: true,
+    beforeClose: () => {
+      if (!win.brandBurnsState) return;
+      clearBrandBurnsEnemyAttackTimer(win.brandBurnsState);
+      clearBrandBurnsEnemyHitEffect(win.brandBurnsState);
+    },
+  });
 };
 
 const closeBrandBurnsEnemyWindows = ({ stagger = false } = {}) => {
@@ -14007,17 +13858,10 @@ const closeBrandBurnsWindow = () => {
   brandBurnsStage = "idle";
   brandBurnsPreserveEnemyWindowsOnMainClose = shouldStaggerEnemyClose;
   closeBrandBurnsEnemyWindows({ stagger: shouldStaggerEnemyClose });
-  if (!brandBurnsWindow || brandBurnsWindow.classList.contains("is-hidden")) return;
-  brandBurnsWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(brandBurnsWindow, "is-closing");
+  closeManagedRandomEventWindow(brandBurnsWindow);
 };
 
-const isBehelitVisible = () =>
-  Boolean(
-    behelitWindow &&
-      !behelitWindow.classList.contains("is-hidden") &&
-      behelitWindow.getAttribute("aria-hidden") === "false"
-  );
+const isBehelitVisible = () => isManagedRandomEventWindowVisible(behelitWindow);
 
 const positionBehelitWindow = () => {
   positionRandomEventWindowInViewport(behelitWindow);
@@ -14040,17 +13884,10 @@ const showBehelitWindow = () => {
 };
 
 const closeBehelitWindow = () => {
-  if (!behelitWindow || behelitWindow.classList.contains("is-hidden")) return;
-  behelitWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(behelitWindow, "is-closing");
+  closeManagedRandomEventWindow(behelitWindow);
 };
 
-const isJohnPorkVisible = () =>
-  Boolean(
-    johnPorkWindow &&
-      !johnPorkWindow.classList.contains("is-hidden") &&
-      johnPorkWindow.getAttribute("aria-hidden") === "false"
-  );
+const isJohnPorkVisible = () => isManagedRandomEventWindowVisible(johnPorkWindow);
 
 const updateJohnPorkStatus = () => {
   if (!johnPorkStatus) return;
@@ -14095,18 +13932,13 @@ const showJohnPorkCall = () => {
 };
 
 const closeJohnPorkCall = () => {
-  if (!johnPorkWindow || johnPorkWindow.classList.contains("is-hidden")) return;
-  johnPorkWindow.setAttribute("aria-hidden", "true");
-  stopJohnPorkStatus();
-  restartWindowAnimation(johnPorkWindow, "is-closing");
+  closeManagedRandomEventWindow(johnPorkWindow, {
+    beforeClose: stopJohnPorkStatus,
+  });
 };
 
 const isAdvertisementVisible = () =>
-  Boolean(
-    advertisementWindow &&
-      !advertisementWindow.classList.contains("is-hidden") &&
-      advertisementWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(advertisementWindow);
 
 const positionAdvertisementWindow = () => {
   positionRandomEventWindowInViewport(advertisementWindow);
@@ -14127,17 +13959,10 @@ const showAdvertisementWindow = () => {
 };
 
 const closeAdvertisementWindow = () => {
-  if (!advertisementWindow || advertisementWindow.classList.contains("is-hidden")) return;
-  advertisementWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(advertisementWindow, "is-closing");
+  closeManagedRandomEventWindow(advertisementWindow);
 };
 
-const isSaulAdVisible = () =>
-  Boolean(
-    saulAdWindow &&
-      !saulAdWindow.classList.contains("is-hidden") &&
-      saulAdWindow.getAttribute("aria-hidden") === "false"
-  );
+const isSaulAdVisible = () => isManagedRandomEventWindowVisible(saulAdWindow);
 
 const showSaulAdWindow = () => {
   if (!saulAdWindow) return;
@@ -14160,17 +13985,11 @@ const showSaulAdWindow = () => {
 };
 
 const closeSaulAdWindow = () => {
-  if (!saulAdWindow || saulAdWindow.classList.contains("is-hidden")) return;
-  saulAdWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(saulAdWindow, "is-closing");
+  closeManagedRandomEventWindow(saulAdWindow);
 };
 
 const isKidnamedfingerVisible = () =>
-  Boolean(
-    kidnamedfingerWindow &&
-      !kidnamedfingerWindow.classList.contains("is-hidden") &&
-      kidnamedfingerWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(kidnamedfingerWindow);
 
 const showKidnamedfingerWindow = () => {
   if (!kidnamedfingerWindow) return;
@@ -14188,17 +14007,10 @@ const showKidnamedfingerWindow = () => {
 };
 
 const closeKidnamedfingerWindow = () => {
-  if (!kidnamedfingerWindow || kidnamedfingerWindow.classList.contains("is-hidden")) return;
-  kidnamedfingerWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(kidnamedfingerWindow, "is-closing");
+  closeManagedRandomEventWindow(kidnamedfingerWindow);
 };
 
-const isWalterWhiteVisible = () =>
-  Boolean(
-    walterWhiteWindow &&
-      !walterWhiteWindow.classList.contains("is-hidden") &&
-      walterWhiteWindow.getAttribute("aria-hidden") === "false"
-  );
+const isWalterWhiteVisible = () => isManagedRandomEventWindowVisible(walterWhiteWindow);
 
 const showWalterWhiteWindow = () => {
   if (!walterWhiteWindow) return;
@@ -14216,17 +14028,11 @@ const showWalterWhiteWindow = () => {
 };
 
 const closeWalterWhiteWindow = () => {
-  if (!walterWhiteWindow || walterWhiteWindow.classList.contains("is-hidden")) return;
-  walterWhiteWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(walterWhiteWindow, "is-closing");
+  closeManagedRandomEventWindow(walterWhiteWindow);
 };
 
 const isBountyHunterVisible = () =>
-  Boolean(
-    bountyHunterWindow &&
-      !bountyHunterWindow.classList.contains("is-hidden") &&
-      bountyHunterWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(bountyHunterWindow);
 
 const showBountyHunterWindow = () => {
   if (!bountyHunterWindow) return;
@@ -14244,9 +14050,7 @@ const showBountyHunterWindow = () => {
 };
 
 const closeBountyHunterWindow = () => {
-  if (!bountyHunterWindow || bountyHunterWindow.classList.contains("is-hidden")) return;
-  bountyHunterWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(bountyHunterWindow, "is-closing");
+  closeManagedRandomEventWindow(bountyHunterWindow);
 };
 
 const POKEMON_STARTERS = Object.freeze({
@@ -14284,11 +14088,7 @@ let pokemonStarterSelected = "";
 let pokemonStarterStage = "select";
 
 const isPokemonStarterVisible = () =>
-  Boolean(
-    pokemonStarterWindow &&
-      !pokemonStarterWindow.classList.contains("is-hidden") &&
-      pokemonStarterWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(pokemonStarterWindow);
 
 const setPokemonStarterElementHidden = (element, hidden) => {
   if (!element) return;
@@ -14525,10 +14325,9 @@ const showPokemonStarterWindow = () => {
 };
 
 const closePokemonStarterWindow = () => {
-  if (!pokemonStarterWindow || pokemonStarterWindow.classList.contains("is-hidden")) return;
-  clearPokemonStarterTyping();
-  pokemonStarterWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(pokemonStarterWindow, "is-closing");
+  closeManagedRandomEventWindow(pokemonStarterWindow, {
+    beforeClose: clearPokemonStarterTyping,
+  });
 };
 
 const choosePokemonStarter = (starterKey, choice) => {
@@ -14695,11 +14494,7 @@ let relicRecoveryDetailCloseTimer = 0;
 let relicRecoveryFlyTimer = 0;
 
 const isRelicRecoveryVisible = () =>
-  Boolean(
-    relicRecoveryWindow &&
-      !relicRecoveryWindow.classList.contains("is-hidden") &&
-      relicRecoveryWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(relicRecoveryWindow);
 
 const setRelicRecoveryElementHidden = (element, hidden) => {
   if (!element) return;
@@ -14960,12 +14755,9 @@ const showRelicRecoveryWindow = () => {
 };
 
 const closeRelicRecoveryWindow = () => {
-  if (!relicRecoveryWindow || relicRecoveryWindow.classList.contains("is-hidden")) {
-    return;
-  }
-  clearRelicRecoveryTyping();
-  relicRecoveryWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(relicRecoveryWindow, "is-closing");
+  closeManagedRandomEventWindow(relicRecoveryWindow, {
+    beforeClose: clearRelicRecoveryTyping,
+  });
 };
 
 const startRelicRecovery = () => {
@@ -15052,12 +14844,7 @@ let dstCraftState = {
   grass: 0,
 };
 
-const isDstWindowVisible = (win) =>
-  Boolean(
-    win &&
-      !win.classList.contains("is-hidden") &&
-      win.getAttribute("aria-hidden") === "false"
-  );
+const isDstWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
 const isDstNightVisible = () => isDstWindowVisible(dstNightWindow);
 const isDstCraftingVisible = () => isDstWindowVisible(dstCraftingWindow);
@@ -15229,29 +15016,24 @@ const showDstDarknessWindow = (anchorWindow = null) => {
 };
 
 const closeDstNightWindow = () => {
-  if (!dstNightWindow || dstNightWindow.classList.contains("is-hidden")) return;
-  dstNightWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(dstNightWindow, "is-closing");
+  closeManagedRandomEventWindow(dstNightWindow);
 };
 
 const closeDstCraftingWindow = () => {
-  if (!dstCraftingWindow || dstCraftingWindow.classList.contains("is-hidden")) return;
-  stopDstNightTimer();
-  clearDstDraggedResource();
-  dstCraftingWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(dstCraftingWindow, "is-closing");
+  closeManagedRandomEventWindow(dstCraftingWindow, {
+    beforeClose: () => {
+      stopDstNightTimer();
+      clearDstDraggedResource();
+    },
+  });
 };
 
 const closeDstSurviveWindow = () => {
-  if (!dstSurviveWindow || dstSurviveWindow.classList.contains("is-hidden")) return;
-  dstSurviveWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(dstSurviveWindow, "is-closing");
+  closeManagedRandomEventWindow(dstSurviveWindow);
 };
 
 const closeDstDarknessWindow = () => {
-  if (!dstDarknessWindow || dstDarknessWindow.classList.contains("is-hidden")) return;
-  dstDarknessWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(dstDarknessWindow, "is-closing");
+  closeManagedRandomEventWindow(dstDarknessWindow);
 };
 
 const failDstNightCrafting = () => {
@@ -15352,12 +15134,7 @@ const fillDstCraftSlot = (slot, resource) => {
   return true;
 };
 
-const isBidenBlastVisible = () =>
-  Boolean(
-    bidenBlastWindow &&
-      !bidenBlastWindow.classList.contains("is-hidden") &&
-      bidenBlastWindow.getAttribute("aria-hidden") === "false"
-  );
+const isBidenBlastVisible = () => isManagedRandomEventWindowVisible(bidenBlastWindow);
 
 const positionBidenBlastWindow = () => {
   positionRandomEventWindowInViewport(bidenBlastWindow);
@@ -15487,11 +15264,7 @@ const closeBidenBlastWindow = () => {
 };
 
 const isInfinityArmoryVisible = () =>
-  Boolean(
-    infinityArmoryWindow &&
-      !infinityArmoryWindow.classList.contains("is-hidden") &&
-      infinityArmoryWindow.getAttribute("aria-hidden") === "false"
-  );
+  isManagedRandomEventWindowVisible(infinityArmoryWindow);
 
 const clearInfinityArmoryCompletionTimer = () => {
   if (!infinityArmoryCompleteTimer) return;
@@ -15734,9 +15507,7 @@ const updateInfinityArmory = () => {
 const closeInfinityArmoryWindow = () => {
   clearInfinityArmoryCompletionTimer();
   clearInfinityArmorySelectedGem({ update: false });
-  if (!infinityArmoryWindow || infinityArmoryWindow.classList.contains("is-hidden")) return;
-  infinityArmoryWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(infinityArmoryWindow, "is-closing");
+  closeManagedRandomEventWindow(infinityArmoryWindow);
 };
 
 const scheduleInfinityArmoryCompletionCheck = () => {
@@ -16355,10 +16126,11 @@ const showVirusEventWindow = (win, anchor = null, { animate = true } = {}) => {
 };
 
 const closeVirusEventWindow = (win) => {
-  if (!win || win.classList.contains("is-hidden")) return;
-  if (win === virusWindow) clearVirusStrikeEffect();
-  win.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(win, "is-closing");
+  closeManagedRandomEventWindow(win, {
+    beforeClose: () => {
+      if (win === virusWindow) clearVirusStrikeEffect();
+    },
+  });
 };
 
 const showVirusWindow = () => {
@@ -23634,10 +23406,12 @@ const openRandomEventWindow = (calendarEvent, eventKey) => {
 };
 
 const closeRandomEventWindow = () => {
-  if (!randomEventWindow) return;
-  activeRandomEventKey = "";
-  randomEventWindow.setAttribute("aria-hidden", "true");
-  restartWindowAnimation(randomEventWindow, "is-closing");
+  closeManagedRandomEventWindow(randomEventWindow, {
+    force: true,
+    beforeClose: () => {
+      activeRandomEventKey = "";
+    },
+  });
 };
 
 const appendCalendarCell = (text, className = "calendar-day") => {
