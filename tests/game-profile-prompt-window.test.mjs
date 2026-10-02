@@ -96,7 +96,7 @@ test("Centered leaderboard profile drag retains its rendered position before cle
   const dragHandler = main.slice(dragListenerStart, dragListenerEnd);
   assert.match(
     dragHandler,
-    /const rect = win\.getBoundingClientRect\(\);[\s\S]*?if \(win\.id === "about-window" \|\| win\.id === "game-profile-dialog"\) \{[\s\S]*?win\.style\.left = `\$\{rect\.left\}px`;[\s\S]*?win\.style\.top = `\$\{rect\.top\}px`;[\s\S]*?\}[\s\S]*?win\.classList\.remove\("app-window--center"\);[\s\S]*?win\.style\.translate = "0 0";/,
+    /const rect = win\.getBoundingClientRect\(\);[\s\S]*?if \(win\.classList\.contains\("app-window--center"\)\) \{[\s\S]*?win\.style\.left = `\$\{rect\.left\}px`;[\s\S]*?win\.style\.top = `\$\{rect\.top\}px`;[\s\S]*?\}[\s\S]*?win\.classList\.remove\("app-window--center"\);[\s\S]*?win\.style\.translate = "0 0";/,
     "The profile dialog's rendered geometry must be pinned before its centering translate is removed."
   );
   assert.match(

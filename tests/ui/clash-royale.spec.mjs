@@ -415,6 +415,53 @@ for (const viewport of REQUIRED_VIEWPORTS) {
   });
 }
 
+for (const viewport of REQUIRED_VIEWPORTS) {
+  test(`first title-bar press preserves the window position at ${viewport.name}`, async ({ page }) => {
+    await page.route(API_URL, (route) => successResponse(route));
+    const win = await openClashRoyale(page, viewport);
+    const titleBar = win.locator(".title-bar");
+    const centered = await win.boundingBox();
+    for (let opening = 0; opening < 3; opening += 1) {
+      if (opening > 0) {
+        await win.locator('[data-close="clash-royale"]').click();
+        await expect(win).toBeHidden();
+        if (opening === 2) {
+          // Freeze the real opening animation while the title bar is visible.
+          await page.evaluate(() => {
+            document.querySelector('.taskbar-icon[data-app="clash-royale"]').click();
+            const animation = document.querySelector("#clash-royale-window")
+              .getAnimations().find((entry) => entry.animationName === "retro-window-open");
+            animation.pause();
+            animation.currentTime = 210;
+          });
+          await expect(win).toHaveClass(/is-opening/);
+        } else {
+          await page.locator('.taskbar-icon[data-app="clash-royale"]').click();
+          await expect(win).not.toHaveClass(/is-opening/);
+        }
+      }
+      const before = opening === 2 ? centered : await win.boundingBox();
+      const title = await titleBar.boundingBox();
+      const pointer = { x: title.x + 100, y: title.y + title.height / 2 };
+      await page.mouse.move(pointer.x, pointer.y);
+      await page.mouse.down();
+      expect(await win.boundingBox()).toEqual(before);
+      // Holding the bar without moving must preserve the original position too.
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      expect(await win.boundingBox()).toEqual(before);
+      await page.mouse.move(pointer.x + 8, pointer.y + 20);
+      await expect.poll(async () => (await win.boundingBox()).x).toBeCloseTo(before.x + 8, 0);
+      await expect.poll(async () => (await win.boundingBox()).y).toBeCloseTo(before.y + 20, 0);
+      await page.mouse.up();
+      const released = await win.boundingBox();
+      await page.mouse.down();
+      expect(await win.boundingBox()).toEqual(released);
+      await page.mouse.up();
+      expect(await win.boundingBox()).toEqual(released);
+    }
+  });
+}
+
 test("keeps window and named battle scrolling independent and keyboard accessible", async ({ page }) => {
   await page.route(API_URL, (route) =>
     successResponse(route, createPayload({ battles: createBattles() }))
@@ -557,6 +604,14 @@ for (const viewport of REQUIRED_VIEWPORTS) {
             dy: text.y + text.height / 2 - box.y - box.height / 2 };
         }),
       }));
+      const gaps = await row.evaluate((element) => {
+        const result = element.querySelector(".cr-result").getBoundingClientRect();
+        const mode = element.querySelector(".cr-battle-mode").getBoundingClientRect();
+        const title = element.querySelector(".cr-battle-opponent").getBoundingClientRect();
+        return { badges: mode.left - result.right, text: title.left - mode.right };
+      });
+      expect(gaps.badges).toBeCloseTo(gaps.text, 4);
+      expect(gaps.badges).toBe(viewport.width <= 640 ? 4 : 6);
       for (const geometry of before.badges) {
         expect(geometry.height).toBe(26);
         expect(Math.abs(geometry.dx)).toBeLessThanOrEqual(1);

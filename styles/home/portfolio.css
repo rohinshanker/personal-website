@@ -215,9 +215,10 @@
 }
 
 .cr-battle-summary {
+  --cr-battle-gap: 6px;
   display: grid;
-  gap: 6px;
-  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: var(--cr-battle-gap);
+  grid-template-columns: max-content minmax(0, 1fr) auto;
   align-items: center;
   font-size: 12px;
   min-height: 70px;
@@ -231,7 +232,7 @@
 
 .cr-battle-details {
   display: grid;
-  gap: 3px 7px;
+  gap: 3px var(--cr-battle-gap);
   grid-template-columns: auto minmax(0, 1fr);
   min-width: 0;
 }
@@ -782,8 +783,8 @@
   }
 
   .cr-battle-summary {
-    gap: 4px;
-    grid-template-columns: 48px minmax(0, 1fr);
+    --cr-battle-gap: 4px;
+    grid-template-columns: max-content minmax(0, 1fr);
   }
 
   .cr-battle-metrics {

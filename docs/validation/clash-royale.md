@@ -116,9 +116,18 @@ inset. Keep it out of layout and pointer hit testing; long raw titles wrap
 within the viewport. Escape dismisses it until a fresh hover or focus, and
 scrolling, resizing, window blur, page visibility changes, refresh rendering,
 and app closure clear it. Avoid duplicate native title tooltips. Result and
-mode badges have equal 26px heights and centered text on both axes. Ladder
+mode badges have equal 26px heights and centered text on both axes. Size the
+result column to its content and share one gap between result, mode, and battle
+text: 6px normally and 4px at widths up to 640px. Measure the visible gaps,
+since a fixed-width centered result column introduces extra space. Ladder
 uses `rgb(73, 212, 214)` with dark text. The battle title includes the player
 name before “vs.” and preserves all participants on the correct sides.
+
+On the first title-bar press, finish any opening animation before reading drag
+geometry, then retain centered windows' rendered left/top before clearing
+centering. Verify a stationary press, movement, release, a second press, and
+close/reopen, including a press during the opening animation: the window must
+not jump to the shared default position or retain an opening-scale offset.
 
 ## Validation and release
 

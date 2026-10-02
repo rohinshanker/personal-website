@@ -29584,6 +29584,10 @@ draggableWindows.forEach((win) => {
 
   titleBar.addEventListener("pointerdown", (event) => {
     if (event.target.closest(".title-bar-controls")) return;
+    // Drag from the final geometry even when the opening scale is still active.
+    for (const animation of win.getAnimations()) {
+      if (animation.animationName === "retro-window-open") animation.finish();
+    }
     const rect = win.getBoundingClientRect();
     const startX = event.clientX;
     const startY = event.clientY;
@@ -29592,7 +29596,7 @@ draggableWindows.forEach((win) => {
     const dragTitleBarGeometry = readWindowTitleBarClampGeometry(win, rect);
     let didDragWindow = false;
 
-    if (win.id === "about-window" || win.id === "game-profile-dialog") {
+    if (win.classList.contains("app-window--center")) {
       win.style.left = `${rect.left}px`;
       win.style.top = `${rect.top}px`;
     }
