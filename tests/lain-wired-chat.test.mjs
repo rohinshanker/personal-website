@@ -153,7 +153,7 @@ test("Lain and Red Tool remain normally probability-gated", async () => {
   );
   assert.match(
     main,
-    /bindManagedRandomEventWindowAnimation\(lainAlertWindow, \{\n  afterClose: resetLainAlert,\n\}\);/
+    /bindManagedRandomEventWindowAnimation\(lainAlertWindow, \{\s*afterClose: resetLainAlert,\s*\}\);/
   );
   assert.match(
     main,

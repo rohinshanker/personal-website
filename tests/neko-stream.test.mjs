@@ -222,7 +222,7 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
   assert.match(main, /}, NEKO_SLEEP_FRAME_INTERVAL_MS\);/);
   assert.match(
     main,
-    /nekoStreamAlertReducedMotionQuery\.addEventListener\(\n    "change",\n    handleNekoStreamAlertMotionPreferenceChange\n  \);[\s\S]*?nekoStreamAlertReducedMotionQuery\?\.addListener\?\.\(/
+    /nekoStreamAlertReducedMotionQuery\.addEventListener\(\s*"change",\s*handleNekoStreamAlertMotionPreferenceChange\s*\);[\s\S]*?nekoStreamAlertReducedMotionQuery\?\.addListener\?\.\(/
   );
   assert.match(
     main,

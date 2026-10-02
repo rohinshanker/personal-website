@@ -5356,6 +5356,7 @@ const createInfinityArmoryInventoryGems = (random = Math.random) => {
   return gems;
 };
 const randomEventDefinitions = [];
+const randomEventBindings = [];
 const randomEventPendingDefinitions = new Set();
 const randomEventKindMaxSince = {
   [RANDOM_EVENT_KIND_INTERACTIVE]: 0,
@@ -15606,7 +15607,19 @@ const registerRandomEvent = (definition) => {
     ...definition,
   };
   randomEventDefinitions.push(registeredDefinition);
+  if (registeredDefinition.bind) {
+    randomEventBindings.push(registeredDefinition.bind);
+  }
   return registeredDefinition;
+};
+
+// Registration happens thousands of lines before the desktop wires itself up,
+// and a few events add document-level listeners whose order against the rest of
+// the page is observable, so the queued `bind()` callbacks run from the one call
+// site below instead of during registration.
+const bindRegisteredRandomEvents = () => {
+  randomEventBindings.forEach((bind) => bind());
+  randomEventBindings.length = 0;
 };
 
 const randomEventKind = (definition) =>
@@ -16320,6 +16333,30 @@ registerRandomEvent({
   run: () => {
     showNekoStreamAlert();
   },
+  bind: () => {
+    bindRandomEventButton(nekoStreamAlertYes, () => respondToNekoStreamAlert(true));
+    bindRandomEventButton(nekoStreamAlertNo, () => respondToNekoStreamAlert(false));
+    bindManagedRandomEventWindowAnimation(nekoStreamAlertWindow, {
+      afterClose: resetNekoStreamAlert,
+      unloadImages: false,
+    });
+    if (typeof nekoStreamAlertReducedMotionQuery?.addEventListener === "function") {
+      nekoStreamAlertReducedMotionQuery.addEventListener(
+        "change",
+        handleNekoStreamAlertMotionPreferenceChange
+      );
+    } else {
+      nekoStreamAlertReducedMotionQuery?.addListener?.(
+        handleNekoStreamAlertMotionPreferenceChange
+      );
+    }
+    nekoStreamAlertWindow?.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      respondToNekoStreamAlert(false);
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16329,6 +16366,47 @@ registerRandomEvent({
   canTrigger: () => !isRandomAlertVisible(),
   run: () => {
     showRandomAlert();
+  },
+  bind: () => {
+    bindManagedRandomEventWindowAnimation(randomAlertWindow, {
+      closingClasses: ["is-choice-flashing"],
+      unloadImages: false,
+    });
+
+    if (randomAlertMaximize) {
+      randomAlertMaximize.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!randomAlertWindow) return;
+        randomAlertWindow.classList.add("is-expanded");
+        randomAlertWindow.style.zIndex = String(topZ++);
+      });
+    }
+
+    if (randomAlertMinimize) {
+      randomAlertMinimize.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        resetRandomAlertSize();
+        if (randomAlertWindow) randomAlertWindow.style.zIndex = String(topZ++);
+      });
+    }
+
+    if (randomAlertClose) {
+      randomAlertClose.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        flashRandomAlertChoices();
+      });
+    }
+
+    [randomAlertYes, randomAlertNo].forEach((button) => {
+      if (!button) return;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        respondToRandomAlert();
+      });
+    });
   },
 });
 
@@ -16340,6 +16418,44 @@ registerRandomEvent({
   run: () => {
     showDodgingPopup();
   },
+  bind: () => {
+    getDodgingPopupButtons().forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        pressDodgingPopupButton(button);
+      });
+    });
+
+    if (dodgingPopupWindow) {
+      dodgingPopupWindow.addEventListener("pointerenter", (event) => {
+        if (event.pointerType !== "mouse") return;
+        dodgeDodgingPopup();
+      });
+
+      dodgingPopupWindow.addEventListener(
+        "click",
+        (event) => {
+          if (dodgingPopupWindow.classList.contains("is-dodging")) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return;
+          }
+          if (!dodgingPopupDodgeLimitReached()) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            dodgeDodgingPopup({ direct: true });
+          }
+        },
+        true
+      );
+
+      bindManagedRandomEventWindowAnimation(dodgingPopupWindow, {
+        closingClasses: ["is-dodging"],
+        unloadImages: false,
+      });
+    }
+  },
 });
 
 registerRandomEvent({
@@ -16349,6 +16465,33 @@ registerRandomEvent({
   canTrigger: () => !isVanishingPopupVisible(),
   run: () => {
     showVanishingPopup();
+  },
+  bind: () => {
+    [
+      vanishingPopupClose,
+      vanishingPopupMaximize,
+      vanishingPopupMinimize,
+      vanishingPopupYes,
+      vanishingPopupNo,
+    ].forEach((button) => {
+      if (!button) return;
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        hideVanishingPopupButton(button);
+      });
+    });
+
+    bindManagedRandomEventWindowAnimation(vanishingPopupWindow, {
+      closingClasses: ["is-exploding"],
+      unloadImages: false,
+      afterClose: () => {
+        if (!vanishingPopupExplosion) return;
+        vanishingPopupExplosion.classList.remove("is-active");
+        vanishingPopupExplosion.removeAttribute("src");
+        vanishingPopupExplosion.removeAttribute("style");
+      },
+    });
   },
 });
 
@@ -16360,6 +16503,37 @@ registerRandomEvent({
   run: () => {
     showSelfLoveAlert();
   },
+  bind: () => {
+    if (selfLoveAlertClose) {
+      selfLoveAlertClose.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        flashSelfLoveYes();
+      });
+    }
+
+    if (selfLoveAlertYes) {
+      selfLoveAlertYes.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeSelfLoveAlert();
+      });
+    }
+
+    [selfLoveAlertNo].forEach((button) => {
+      if (!button) return;
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        flashSelfLoveYes();
+      });
+    });
+
+    bindManagedRandomEventWindowAnimation(selfLoveAlertWindow, {
+      closingClasses: ["is-yes-flashing"],
+      unloadImages: false,
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16370,6 +16544,25 @@ registerRandomEvent({
   run: () => {
     showRohinUpdate();
   },
+  bind: () => {
+    if (rohinUpdateRun) {
+      rohinUpdateRun.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        window.location.href = "index.html";
+      });
+    }
+
+    if (rohinUpdateLater) {
+      rohinUpdateLater.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRohinUpdate();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(rohinUpdateWindow, { unloadImages: false });
+  },
 });
 
 registerRandomEvent({
@@ -16379,6 +16572,52 @@ registerRandomEvent({
   canTrigger: () => !isMcAfeeVisible(),
   run: () => {
     showMcAfeePrompt();
+  },
+  bind: () => {
+    if (mcAfeeUpdateRun) {
+      mcAfeeUpdateRun.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (mcAfeeUpdateLater) mcAfeeUpdateLater.disabled = true;
+        showMcAfeeDownload();
+      });
+    }
+
+    if (mcAfeeUpdateLater) {
+      mcAfeeUpdateLater.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeMcAfeeWindow(mcAfeePromptWindow);
+      });
+    }
+
+    if (mcAfeeComplete) {
+      mcAfeeComplete.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (mcAfeeComplete.disabled) return;
+        stopMcAfeeDownload();
+        closeMcAfeeWindow(mcAfeePromptWindow);
+        closeMcAfeeWindow(mcAfeeDownloadWindow);
+        showMcAfeeThanks();
+      });
+    }
+
+    if (mcAfeeThanksOk) {
+      mcAfeeThanksOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeMcAfeeWindow(mcAfeeThanksWindow);
+      });
+    }
+
+    [mcAfeePromptWindow, mcAfeeDownloadWindow, mcAfeeThanksWindow].forEach((win) => {
+      bindManagedRandomEventWindowAnimation(win, {
+        afterClose: () => {
+          if (win === mcAfeeDownloadWindow) stopMcAfeeDownload();
+        },
+      });
+    });
   },
 });
 
@@ -16400,6 +16639,17 @@ registerRandomEvent({
   run: () => {
     showRohinNote();
   },
+  bind: () => {
+    if (rohinNoteOk) {
+      rohinNoteOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRohinNote();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(rohinNoteWindow, { unloadImages: false });
+  },
 });
 
 registerRandomEvent({
@@ -16409,6 +16659,17 @@ registerRandomEvent({
   canTrigger: () => !isEarthNoteVisible(),
   run: () => {
     showEarthNote();
+  },
+  bind: () => {
+    if (earthNoteOk) {
+      earthNoteOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeEarthNote();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(earthNoteWindow, { unloadImages: false });
   },
 });
 
@@ -16420,6 +16681,17 @@ registerRandomEvent({
   run: () => {
     showHealthNote();
   },
+  bind: () => {
+    if (healthNoteOk) {
+      healthNoteOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeHealthNote();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(healthNoteWindow, { unloadImages: false });
+  },
 });
 
 registerRandomEvent({
@@ -16429,6 +16701,17 @@ registerRandomEvent({
   canTrigger: () => !isLoveNoteVisible(),
   run: () => {
     showLoveNote();
+  },
+  bind: () => {
+    if (loveNoteOk) {
+      loveNoteOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeLoveNote();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(loveNoteWindow, { unloadImages: false });
   },
 });
 
@@ -16440,6 +16723,17 @@ registerRandomEvent({
   run: () => {
     showNoSmokingWindow();
   },
+  bind: () => {
+    if (noSmokingOk) {
+      noSmokingOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeNoSmokingWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(noSmokingWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16449,6 +16743,17 @@ registerRandomEvent({
   canTrigger: () => !isPossumSpringsVisible(),
   run: () => {
     showPossumSpringsWindow();
+  },
+  bind: () => {
+    if (possumSpringsOk) {
+      possumSpringsOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closePossumSpringsWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(possumSpringsWindow);
   },
 });
 
@@ -16460,6 +16765,25 @@ registerRandomEvent({
   run: () => {
     showWingedLightWindow();
   },
+  bind: () => {
+    if (wingedLightCollect) {
+      wingedLightCollect.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        collectWingedLight();
+      });
+    }
+
+    if (wingedLightLater) {
+      wingedLightLater.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeWingedLightWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(wingedLightWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16469,6 +16793,17 @@ registerRandomEvent({
   canTrigger: () => !isManaFloodVisible(),
   run: () => {
     showManaFlood();
+  },
+  bind: () => {
+    if (manaFloodOk) {
+      manaFloodOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeManaFlood();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(manaFloodWindow, { unloadImages: false });
   },
 });
 
@@ -16480,6 +16815,17 @@ registerRandomEvent({
   run: () => {
     showMimicWarning();
   },
+  bind: () => {
+    if (mimicWarningOk) {
+      mimicWarningOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeMimicWarning();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(mimicWarningWindow, { unloadImages: false });
+  },
 });
 
 registerRandomEvent({
@@ -16489,6 +16835,40 @@ registerRandomEvent({
   canTrigger: () => !isSkillCheckVisible(),
   run: () => {
     showSkillCheckWindow();
+  },
+  bind: () => {
+    if (skillCheckRoll) {
+      skillCheckRoll.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        beginSkillCheckRoll();
+      });
+    }
+
+    if (skillCheckIgnore) {
+      skillCheckIgnore.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeSkillCheckWindow();
+      });
+    }
+
+    if (skillCheckResultOk) {
+      skillCheckResultOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeSkillCheckWindow();
+      });
+    }
+
+    [skillCheckWindow, skillCheckResultWindow].forEach((win) => {
+      bindManagedRandomEventWindowAnimation(win, {
+        afterClose: () => {
+          if (win === skillCheckWindow) resetSkillCheckWindow();
+        },
+        unloadImages: false,
+      });
+    });
   },
 });
 
@@ -16500,6 +16880,40 @@ registerRandomEvent({
   run: () => {
     showDistressSignalWindow();
   },
+  bind: () => {
+    if (distressPowerButton) {
+      distressPowerButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        startDistressPowerSequence();
+      });
+    }
+
+    if (distressSignalClose) {
+      distressSignalClose.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeDistressSignalEvent();
+      });
+    }
+
+    [distressFrequencyDial, distressPhaseDial].forEach((dial) => {
+      if (!dial) return;
+      dial.addEventListener("input", () => {
+        updateDistressTuning();
+      });
+    });
+
+    if (distressUploadOk) {
+      distressUploadOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeDistressSignalEvent();
+      });
+    }
+
+    [distressSignalWindow, distressUploadWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
+  },
 });
 
 registerRandomEvent({
@@ -16509,6 +16923,18 @@ registerRandomEvent({
   canTrigger: () => !isNazarVisible(),
   run: () => {
     showNazarWindow();
+  },
+  bind: () => {
+    [nazarClose, nazarYes, nazarNo].forEach((button) => {
+      if (!button) return;
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeNazarWindow();
+      });
+    });
+
+    bindManagedRandomEventWindowAnimation(nazarWindow);
   },
 });
 
@@ -16520,6 +16946,25 @@ registerRandomEvent({
   run: () => {
     showSiteGraceWindow();
   },
+  bind: () => {
+    if (siteGraceTouch) {
+      siteGraceTouch.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        touchSiteGrace();
+      });
+    }
+
+    if (siteGraceKeep) {
+      siteGraceKeep.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeSiteGraceWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(siteGraceWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16529,6 +16974,34 @@ registerRandomEvent({
   canTrigger: () => !isStalkerVisible(),
   run: () => {
     showStalkerWindow();
+  },
+  bind: () => {
+    if (stalkerYes) {
+      stalkerYes.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeStalkerWindow(stalkerWindow);
+        showStalkerResultWindow(stalkerWindow);
+      });
+    }
+
+    if (stalkerNo) {
+      stalkerNo.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeStalkerWindow(stalkerWindow);
+      });
+    }
+
+    if (stalkerResultOk) {
+      stalkerResultOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeStalkerWindow(stalkerResultWindow);
+      });
+    }
+
+    [stalkerWindow, stalkerResultWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
   },
 });
 
@@ -16540,6 +17013,33 @@ registerRandomEvent({
   run: () => {
     showNanaEncounterWindow();
   },
+  bind: () => {
+    if (nanaEncounterYes) {
+      nanaEncounterYes.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        acceptNanaEncounter();
+      });
+    }
+
+    if (nanaEncounterNo) {
+      nanaEncounterNo.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeNanaEncounterWindow(nanaEncounterWindow);
+      });
+    }
+
+    if (nanaAcceptOk) {
+      nanaAcceptOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeNanaEncounterWindow(nanaAcceptWindow);
+      });
+    }
+
+    [nanaEncounterWindow, nanaAcceptWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
+  },
 });
 
 registerRandomEvent({
@@ -16549,6 +17049,33 @@ registerRandomEvent({
   canTrigger: () => !isServalEncounterVisible(),
   run: () => {
     showServalEncounterWindow();
+  },
+  bind: () => {
+    if (servalEncounterIgnore) {
+      servalEncounterIgnore.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeServalEncounterWindow(servalEncounterWindow);
+      });
+    }
+
+    if (servalEncounterOfferPizza) {
+      servalEncounterOfferPizza.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        offerServalPizza();
+      });
+    }
+
+    if (servalPizzaCool) {
+      servalPizzaCool.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeServalEncounterWindow(servalPizzaWindow);
+      });
+    }
+
+    [servalEncounterWindow, servalPizzaWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
   },
 });
 
@@ -16560,6 +17087,33 @@ registerRandomEvent({
   run: () => {
     showCaracalEncounterWindow();
   },
+  bind: () => {
+    if (caracalEncounterPet) {
+      caracalEncounterPet.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        chooseCaracalEncounterResult("pet");
+      });
+    }
+
+    if (caracalEncounterIgnore) {
+      caracalEncounterIgnore.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        chooseCaracalEncounterResult("ignore");
+      });
+    }
+
+    if (caracalResultOk) {
+      caracalResultOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeCaracalEncounterWindow(caracalResultWindow);
+      });
+    }
+
+    [caracalEncounterWindow, caracalResultWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
+  },
 });
 
 registerRandomEvent({
@@ -16570,6 +17124,33 @@ registerRandomEvent({
   run: () => {
     showShoebillEncounterWindow();
   },
+  bind: () => {
+    if (shoebillEncounterBow) {
+      shoebillEncounterBow.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        bowToShoebill();
+      });
+    }
+
+    if (shoebillEncounterRunAway) {
+      shoebillEncounterRunAway.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeShoebillEncounterWindow(shoebillEncounterWindow);
+      });
+    }
+
+    if (shoebillBowOk) {
+      shoebillBowOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeShoebillEncounterWindow(shoebillBowWindow);
+      });
+    }
+
+    [shoebillEncounterWindow, shoebillBowWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
+  },
 });
 
 registerRandomEvent({
@@ -16579,6 +17160,41 @@ registerRandomEvent({
   canTrigger: () => !isMidnightGospelVisible(),
   run: () => {
     showMidnightGospelInviteWindow();
+  },
+  bind: () => {
+    if (midnightGospelYes) {
+      midnightGospelYes.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        acceptMidnightGospelInvite();
+      });
+    }
+
+    if (midnightGospelNo) {
+      midnightGospelNo.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeMidnightGospelWindow(midnightGospelInviteWindow);
+      });
+    }
+
+    if (midnightGospelBegin) {
+      midnightGospelBegin.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        startMidnightGospelTimer();
+      });
+    }
+
+    [midnightGospelInviteWindow, midnightGospelMeditationWindow].forEach((win) => {
+      bindManagedRandomEventWindowAnimation(win, {
+        afterClose: () => {
+          if (win === midnightGospelMeditationWindow) {
+            resetMidnightGospelMeditation();
+          }
+        },
+      });
+    });
   },
 });
 
@@ -16593,6 +17209,18 @@ registerRandomEvent({
   run: () => {
     showLainAlert();
   },
+  bind: () => {
+    bindRandomEventButton(lainAlertClose, closeLainAlert);
+    bindManagedRandomEventWindowAnimation(lainAlertWindow, {
+      afterClose: resetLainAlert,
+    });
+    lainAlertWindow?.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeLainAlert();
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16603,6 +17231,10 @@ registerRandomEvent({
   run: () => {
     showLelouchAlert();
   },
+  bind: () => {
+    bindRandomEventButton(lelouchAlertOk, closeLelouchAlert);
+    bindManagedRandomEventWindowAnimation(lelouchAlertWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16612,6 +17244,10 @@ registerRandomEvent({
   canTrigger: () => isBerserkSunriseTimeWindow() && !isBerserkSunriseVisible(),
   run: () => {
     showBerserkSunrise();
+  },
+  bind: () => {
+    bindRandomEventButton(berserkSunriseOk, closeBerserkSunrise);
+    bindManagedRandomEventWindowAnimation(berserkSunriseWindow);
   },
 });
 
@@ -16625,6 +17261,11 @@ registerRandomEvent({
   run: () => {
     showCalendarReminder();
   },
+  bind: () => {
+    bindRandomEventButton(calendarReminderShow, showCalendarFromReminder);
+    bindRandomEventButton(calendarReminderLater, closeCalendarReminder);
+    bindManagedRandomEventWindowAnimation(calendarReminderWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16634,6 +17275,24 @@ registerRandomEvent({
   canTrigger: () => !isGradescopeCurveVisible(),
   run: () => {
     showGradescopeCurve();
+  },
+  bind: () => {
+    bindRandomEventButton(gradescopeCurveYes, () => {
+      setGradescopeCurveMode("adjusting");
+    });
+    bindRandomEventButton(gradescopeCurveNo, closeGradescopeCurve);
+
+    if (gradescopeCurveSlider) {
+      gradescopeCurveSlider.addEventListener("input", () => {
+        updateGradescopeCurvePath();
+      });
+    }
+
+    bindRandomEventButton(gradescopeCurveSet, closeGradescopeCurve);
+    bindManagedRandomEventWindowAnimation(gradescopeCurveWindow, {
+      afterClose: resetGradescopeCurve,
+      unloadImages: false,
+    });
   },
 });
 
@@ -16645,6 +17304,25 @@ registerRandomEvent({
   run: () => {
     showGearsNest();
   },
+  bind: () => {
+    bindRandomEventButton(gearsNestEngage, startGearsNestCombat);
+    bindRandomEventButton(gearsNestRetreat, closeGearsNest);
+    bindRandomEventButton(gearsNestResultOk, closeGearsNest);
+    gearsNestCoverButtons.forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setGearsNestCover(Number(button.getAttribute("data-gears-nest-cover")));
+      });
+    });
+    gearsNestBattlefield?.addEventListener("pointermove", moveGearsNestReloadCursor);
+    gearsNestBattlefield?.addEventListener("pointerleave", stopGearsNestFiring);
+    document.addEventListener("pointerup", stopGearsNestFiring);
+    document.addEventListener("pointercancel", stopGearsNestFiring);
+    bindManagedRandomEventWindowAnimation(gearsNestWindow, {
+      afterClose: resetGearsNestPrompt,
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16654,6 +17332,33 @@ registerRandomEvent({
   canTrigger: () => !isInstrumentalityVisible(),
   run: () => {
     showInstrumentalityPrompt();
+  },
+  bind: () => {
+    if (instrumentalityYes) {
+      instrumentalityYes.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeInstrumentalityWindow(instrumentalityWindow);
+      });
+    }
+
+    if (instrumentalityNo) {
+      instrumentalityNo.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        rejectInstrumentality();
+      });
+    }
+
+    if (instrumentalityCongratsOk) {
+      instrumentalityCongratsOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeInstrumentalityWindow(instrumentalityCongratsWindow);
+      });
+    }
+
+    [instrumentalityWindow, instrumentalityCongratsWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
   },
 });
 
@@ -16668,6 +17373,33 @@ registerRandomEvent({
   run: () => {
     showRedToolWindow();
   },
+  bind: () => {
+    if (redToolClose) {
+      redToolClose.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRedToolWindow();
+      });
+    }
+
+    if (redToolInput) {
+      redToolInput.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        sendRedToolMessage();
+      });
+    }
+
+    if (redToolSend) {
+      redToolSend.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        sendRedToolMessage();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(redToolWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16677,6 +17409,19 @@ registerRandomEvent({
   canTrigger: () => !isDeathNoteVisible(),
   run: () => {
     showDeathNoteWindow();
+  },
+  bind: () => {
+    bindRandomEventButton(deathNoteClose, closeDeathNoteWindow);
+    bindRandomEventButton(deathNoteTitleClose, closeDeathNoteWindow);
+    bindManagedRandomEventWindowAnimation(deathNoteWindow, { unloadImages: false });
+    deathNoteEntry?.addEventListener("input", limitDeathNoteEntryToVisibleLines);
+    deathNoteWindow?.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+      if (!target?.closest(".death-note-lined-page")) return;
+      deathNoteEntry?.focus({ preventScroll: true });
+      const cursorPosition = deathNoteEntry?.value.length || 0;
+      deathNoteEntry?.setSelectionRange(cursorPosition, cursorPosition);
+    });
   },
 });
 
@@ -16688,6 +17433,11 @@ registerRandomEvent({
   run: () => {
     showCurrentPublicInfoWindow();
   },
+  bind: () => {
+    bindRandomEventButton(currentPublicInfoClose, closeCurrentPublicInfoWindow);
+    bindRandomEventButton(currentPublicInfoThanks, closeCurrentPublicInfoWindow);
+    bindManagedRandomEventWindowAnimation(currentPublicInfoWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16697,6 +17447,11 @@ registerRandomEvent({
   canTrigger: () => !isTrnaRequestVisible(),
   run: () => {
     showTrnaRequestWindow();
+  },
+  bind: () => {
+    bindRandomEventButton(trnaRequestYes, closeTrnaRequestWindow);
+    bindRandomEventButton(trnaRequestNo, closeTrnaRequestWindow);
+    bindManagedRandomEventWindowAnimation(trnaRequestWindow);
   },
 });
 
@@ -16708,6 +17463,13 @@ registerRandomEvent({
   run: () => {
     showSpellStackWindow();
   },
+  bind: () => {
+    bindRandomEventButton(spellStackYes, counterSpellOnStack);
+    bindRandomEventButton(spellStackNo, refuseSpellOnStackCounter);
+    bindManagedRandomEventWindowAnimation(spellStackWindow, {
+      afterClose: clearSpellStackLightning,
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16717,6 +17479,13 @@ registerRandomEvent({
   canTrigger: () => !isSootSpritesVisible(),
   run: () => {
     showSootSpritesWindow();
+  },
+  bind: () => {
+    bindRandomEventButton(sootSpritesYes, inspectSootSpritesGpu);
+    bindRandomEventButton(sootSpritesNo, closeSootSpritesWindow);
+    bindManagedRandomEventWindowAnimation(sootSpritesWindow, {
+      afterClose: releaseSootSpritesSwarm,
+    });
   },
 });
 
@@ -16728,6 +17497,14 @@ registerRandomEvent({
   run: () => {
     showNatarajaWindow();
   },
+  bind: () => {
+    bindRandomEventButton(natarajaYes, closeNatarajaWindow);
+    bindRandomEventButton(natarajaNo, closeNatarajaWindow);
+    bindManagedRandomEventWindowAnimation(natarajaWindow, {
+      afterClose: resetNatarajaVideo,
+      unloadImages: false,
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16737,6 +17514,13 @@ registerRandomEvent({
   canTrigger: () => !isNobleSteedVisible(),
   run: () => {
     showNobleSteedWindow();
+  },
+  bind: () => {
+    bindRandomEventButton(nobleSteedYes, acceptNobleSteedOffer);
+    bindRandomEventButton(nobleSteedNo, closeNobleSteedWindow);
+    bindRandomEventButton(nobleSteedResultOk, closeNobleSteedResultWindow);
+    bindManagedRandomEventWindowAnimation(nobleSteedWindow);
+    bindManagedRandomEventWindowAnimation(nobleSteedResultWindow);
   },
 });
 
@@ -16748,6 +17532,31 @@ registerRandomEvent({
   run: () => {
     showToxicJungleWindow();
   },
+  bind: () => {
+    bindRandomEventButton(toxicJungleStart, startToxicJungleCollection);
+    bindRandomEventButton(toxicJungleDecline, closeToxicJungleWindow);
+    if (toxicJungleSpores) {
+      toxicJungleSpores.addEventListener("click", (event) => {
+        const target =
+          event.target instanceof Element
+            ? event.target.closest("[data-toxic-jungle-spore]")
+            : null;
+        if (!target || !toxicJungleSpores.contains(target)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        collectToxicJungleSpore(target);
+      });
+    }
+    bindManagedRandomEventWindowAnimation(toxicJungleWindow, {
+      afterClose: resetToxicJungleEvent,
+    });
+    toxicJungleWindow?.addEventListener("click", (event) => {
+      if (toxicJungleStage !== TOXIC_JUNGLE_STAGE_COMPLETE) return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeToxicJungleWindow();
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16758,6 +17567,10 @@ registerRandomEvent({
   run: () => {
     runWallBreachSequence();
   },
+  bind: () => {
+    bindRandomEventButton(wallBreachSuitUp, closeWallBreachWindow);
+    bindManagedRandomEventWindowAnimation(wallBreachWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16767,6 +17580,41 @@ registerRandomEvent({
   canTrigger: () => fateState === "idle" && !isFateVisible(),
   run: () => {
     showFateWindow();
+  },
+  bind: () => {
+    if (fateStart) {
+      fateStart.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        startFateMinigame();
+      });
+    }
+
+    if (fateResist) {
+      fateResist.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        resistFate();
+      });
+    }
+
+    if (fateResultOk) {
+      fateResultOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeFateWindow();
+      });
+    }
+
+    bindRandomEventButton(fateTitleClose, closeFateWindow);
+
+    document.addEventListener("keydown", handleFateKeyMash);
+
+    bindManagedRandomEventWindowAnimation(fateWindow, {
+      afterClose: () => {
+        if (fateResultImage) fateResultImage.removeAttribute("src");
+      },
+    });
   },
 });
 
@@ -16779,6 +17627,24 @@ registerRandomEvent({
   run: () => {
     showLancerBattleWindow();
   },
+  bind: () => {
+    bindRandomEventButton(lancerBattleStart, startLancerBattle);
+    bindRandomEventButton(lancerBattlePush, pushLancerBattle);
+    bindRandomEventButton(lancerBattleTitleClose, closeLancerBattleWindow);
+    bindRandomEventButton(lancerBattleClose, closeLancerBattleWindow);
+    document.addEventListener("keydown", handleLancerBattleKeyMash);
+
+    bindManagedRandomEventWindowAnimation(lancerBattleWindow, {
+      closingClasses: ["is-clashing", "is-win", "is-loss", "is-final-alert"],
+      afterClose: () => {
+        clearLancerBattleResultMedia();
+        clearLancerBattleVideo();
+        if (!lancerBattleOpenFinalAfterClose) return;
+        lancerBattleOpenFinalAfterClose = false;
+        reopenLancerBattleFinalPrompt();
+      },
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16788,6 +17654,47 @@ registerRandomEvent({
   canTrigger: () => !isBrandBurnsVisible(),
   run: () => {
     showBrandBurnsWindow();
+  },
+  bind: () => {
+    if (brandBurnsFight) {
+      brandBurnsFight.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (brandBurnsOutcome) {
+          closeBrandBurnsWindow();
+          return;
+        }
+        if (brandBurnsStage === "prompt") {
+          startBrandBurnsFight();
+          return;
+        }
+        if (brandBurnsStage === "fight") {
+          startBrandBurnsBlock();
+        }
+      });
+    }
+
+    if (brandBurnsClose) {
+      brandBurnsClose.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeBrandBurnsWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(brandBurnsWindow, {
+      afterOpen: () => clampRandomEventWindowToViewport(brandBurnsWindow),
+      afterClose: () => {
+        // A staggered enemy close keeps those windows alive past the main close, so
+        // the full reset waits for them instead of tearing them down here.
+        if (brandBurnsPreserveEnemyWindowsOnMainClose) {
+          brandBurnsPreserveEnemyWindowsOnMainClose = false;
+        } else {
+          resetBrandBurnsWindow();
+        }
+        brandBurnsStage = "idle";
+      },
+    });
   },
 });
 
@@ -16799,6 +17706,17 @@ registerRandomEvent({
   run: () => {
     showBehelitWindow();
   },
+  bind: () => {
+    if (behelitOk) {
+      behelitOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeBehelitWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(behelitWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16808,6 +17726,20 @@ registerRandomEvent({
   canTrigger: () => !isJohnPorkVisible(),
   run: () => {
     showJohnPorkCall();
+  },
+  bind: () => {
+    [johnPorkClose, johnPorkAccept, johnPorkDecline].forEach((button) => {
+      if (!button) return;
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeJohnPorkCall();
+      });
+    });
+
+    bindManagedRandomEventWindowAnimation(johnPorkWindow, {
+      afterClose: stopJohnPorkStatus,
+    });
   },
 });
 
@@ -16819,6 +17751,17 @@ registerRandomEvent({
   run: () => {
     showBidenBlastWindow();
   },
+  bind: () => {
+    if (bidenBlastOk) {
+      bidenBlastOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeBidenBlastWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(bidenBlastWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16828,6 +17771,17 @@ registerRandomEvent({
   canTrigger: () => !isSaulAdVisible(),
   run: () => {
     showSaulAdWindow();
+  },
+  bind: () => {
+    if (saulAdClose) {
+      saulAdClose.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeSaulAdWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(saulAdWindow);
   },
 });
 
@@ -16839,6 +17793,17 @@ registerRandomEvent({
   run: () => {
     showKidnamedfingerWindow();
   },
+  bind: () => {
+    if (kidnamedfingerOk) {
+      kidnamedfingerOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeKidnamedfingerWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(kidnamedfingerWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16848,6 +17813,17 @@ registerRandomEvent({
   canTrigger: () => !isWalterWhiteVisible(),
   run: () => {
     showWalterWhiteWindow();
+  },
+  bind: () => {
+    if (walterWhiteOk) {
+      walterWhiteOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeWalterWhiteWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(walterWhiteWindow);
   },
 });
 
@@ -16859,6 +17835,17 @@ registerRandomEvent({
   run: () => {
     showBountyHunterWindow();
   },
+  bind: () => {
+    if (bountyHunterClose) {
+      bountyHunterClose.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeBountyHunterWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(bountyHunterWindow);
+  },
 });
 
 registerRandomEvent({
@@ -16868,6 +17855,77 @@ registerRandomEvent({
   canTrigger: () => !isPokemonStarterVisible(),
   run: () => {
     showPokemonStarterWindow();
+  },
+  bind: () => {
+    if (pokemonStarterClose) {
+      pokemonStarterClose.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closePokemonStarterWindow();
+      });
+    }
+
+    pokemonStarterChoices.forEach((choice) => {
+      const starterKey = choice.dataset.pokemonStarter;
+      choice.addEventListener("pointerenter", () => {
+        if (pokemonStarterStage !== "select") return;
+        setPokemonStarterInfo(starterKey, choice);
+      });
+      choice.addEventListener("focus", () => {
+        if (pokemonStarterStage !== "select") return;
+        setPokemonStarterInfo(starterKey, choice);
+      });
+      choice.addEventListener("pointerleave", () => {
+        if (pokemonStarterSelected || pokemonStarterStage !== "select") return;
+        setPokemonStarterElementHidden(pokemonStarterInfoCard, true);
+      });
+      choice.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (pokemonStarterStage !== "select") return;
+        choosePokemonStarter(starterKey, choice);
+      });
+    });
+
+    if (pokemonStarterConfirmYes) {
+      pokemonStarterConfirmYes.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        confirmPokemonStarterChoice();
+      });
+    }
+
+    if (pokemonStarterConfirmNo) {
+      pokemonStarterConfirmNo.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        cancelPokemonStarterChoice();
+      });
+    }
+
+    if (pokemonStarterDialogue) {
+      pokemonStarterDialogue.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (pokemonStarterStage === "chosen") {
+          closePokemonStarterWindow();
+        }
+      });
+    }
+
+    if (pokemonStarterPokeballStage) {
+      pokemonStarterPokeballStage.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (pokemonStarterStage === "chosen") {
+          closePokemonStarterWindow();
+        }
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(pokemonStarterWindow, {
+      afterClose: resetPokemonStarterEvent,
+    });
   },
 });
 
@@ -16879,6 +17937,81 @@ registerRandomEvent({
   run: () => {
     showRelicRecoveryWindow();
   },
+  bind: () => {
+    if (relicRecoveryStart) {
+      relicRecoveryStart.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        startRelicRecovery();
+      });
+    }
+
+    if (relicRecoveryDecline) {
+      relicRecoveryDecline.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRelicRecoveryWindow();
+      });
+    }
+
+    if (relicRecoveryContinue) {
+      relicRecoveryContinue.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (relicRecoveryStage === RELIC_RECOVERY_STAGE_COMPLETE) {
+          closeRelicRecoveryWindow();
+        }
+      });
+    }
+
+    if (relicRecoveryDetail) {
+      relicRecoveryDetail.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        finishRelicRecoveryDetail();
+      });
+
+      relicRecoveryDetail.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.stopPropagation();
+        finishRelicRecoveryDetail();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(relicRecoveryDetail, {
+      onClose: completeRelicRecoveryDetailClose,
+    });
+
+    if (relicRecoveryRelics) {
+      relicRecoveryRelics.addEventListener("click", (event) => {
+        const relicButton = event.target.closest("[data-relic-recovery-item]");
+        if (!relicButton || !relicRecoveryRelics.contains(relicButton)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        showRelicRecoveryDetail(relicButton.dataset.relicRecoveryItem);
+      });
+    }
+
+    if (relicRecoveryScene) {
+      relicRecoveryScene.addEventListener("click", (event) => {
+        if (relicRecoveryStage !== RELIC_RECOVERY_STAGE_DETAIL) return;
+        event.preventDefault();
+        event.stopPropagation();
+        finishRelicRecoveryDetail();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(relicRecoveryWindow, {
+      afterClose: () => {
+        if (relicRecoveryDetailImage) {
+          relicRecoveryDetailImage.removeAttribute("src");
+          relicRecoveryDetailImage.alt = "";
+        }
+        resetRelicRecoveryEvent();
+      },
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16888,6 +18021,130 @@ registerRandomEvent({
   canTrigger: () => !isDstCampfireEventVisible(),
   run: () => {
     showDstNightWindow();
+  },
+  bind: () => {
+    if (dstNightOk) {
+      dstNightOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        startDstNightCrafting();
+      });
+    }
+
+    if (dstCraftCampfire) {
+      dstCraftCampfire.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        completeDstNightCrafting();
+      });
+    }
+
+    document.addEventListener("pointermove", (event) => {
+      dstLastPointer = {
+        x: event.clientX,
+        y: event.clientY,
+      };
+      if (dstDraggedResource) {
+        positionDstCarryGhost(event.clientX, event.clientY);
+      }
+    });
+
+    [dstWoodSource, dstGrassSource].forEach((source) => {
+      if (!source) return;
+
+      source.addEventListener("dragstart", (event) => {
+        if (source.disabled) {
+          event.preventDefault();
+          return;
+        }
+        const resource = source.dataset.dstResource || "";
+        dstDraggedResource = resource;
+        setPointerHeldItemCursor("dst-resource", true);
+        updateDstCompatibleSlots(resource);
+        event.dataTransfer?.setData("text/plain", resource);
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "copy";
+        }
+      });
+
+      source.addEventListener("dragend", () => {
+        clearDstDraggedResource();
+      });
+
+      source.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (source.disabled) return;
+        clearDstDraggedResource();
+        carryDstResource(source.dataset.dstResource || "", event.clientX, event.clientY);
+        source.classList.add("is-selected");
+      });
+    });
+
+    dstCraftSlots?.forEach((slot) => {
+      slot.addEventListener("dragover", (event) => {
+        const resource = event.dataTransfer?.getData("text/plain") || dstDraggedResource;
+        if (!resource || slot.dataset.dstSlot !== resource || slot.dataset.dstFilled) return;
+        event.preventDefault();
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = "copy";
+        }
+        slot.classList.add("is-drag-over");
+      });
+
+      slot.addEventListener("dragleave", () => {
+        slot.classList.remove("is-drag-over");
+      });
+
+      slot.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const resource = event.dataTransfer?.getData("text/plain") || dstDraggedResource;
+        if (fillDstCraftSlot(slot, resource)) {
+          clearDstDraggedResource();
+        }
+      });
+
+      slot.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (fillDstCraftSlot(slot, dstDraggedResource)) {
+          clearDstDraggedResource();
+        }
+      });
+    });
+
+    if (dstSurviveOk) {
+      dstSurviveOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeDstSurviveWindow();
+      });
+    }
+
+    if (dstDarknessOk) {
+      dstDarknessOk.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeDstDarknessWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(dstNightWindow, {
+      afterClose: () => {
+        // Handing off to the crafting window is not the end of the chain, so the
+        // night state survives until nothing in the chain is open.
+        if (dstNightCraftingActive || isDstCraftingVisible()) return;
+        resetDstNightWindow();
+      },
+    });
+
+    bindManagedRandomEventWindowAnimation(dstCraftingWindow, {
+      afterClose: resetDstCraftingState,
+    });
+
+    bindManagedRandomEventWindowAnimation(dstSurviveWindow);
+
+    bindManagedRandomEventWindowAnimation(dstDarknessWindow);
   },
 });
 
@@ -16899,6 +18156,71 @@ registerRandomEvent({
   run: () => {
     showInfinityArmoryWindow();
   },
+  bind: () => {
+    if (infinityArmoryClose) {
+      infinityArmoryClose.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeInfinityArmoryWindow();
+      });
+    }
+
+    if (infinityArmoryUpgrade) {
+      infinityArmoryUpgrade.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        upgradeInfinityArmory();
+      });
+    }
+
+    infinityArmorySlots.forEach((slot) => {
+      slot.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        socketInfinityArmoryGem(slot.dataset.armorySlot);
+      });
+    });
+
+    if (infinityArmoryGemGrid) {
+      infinityArmoryGemGrid.addEventListener("click", (event) => {
+        const target = getInfinityArmoryEventTarget(event);
+        const gem = target?.closest("[data-armory-gem]");
+        if (!gem || !infinityArmoryGemGrid.contains(gem)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (infinityArmorySelectedGem) {
+          clearInfinityArmorySelectedGem({ status: "Gem returned to inventory." });
+          return;
+        }
+        selectInfinityArmoryGem(gem, event);
+      });
+    }
+
+    document.addEventListener("pointermove", moveInfinityArmoryCursorGem);
+    document.addEventListener("click", (event) => {
+      if (!infinityArmorySelectedGem) return;
+      const target = getInfinityArmoryEventTarget(event);
+      if (target && infinityArmoryWindow?.contains(target)) return;
+      clearInfinityArmorySelectedGem({ status: "Gem returned to inventory." });
+    });
+
+    if (infinityArmoryWindow) {
+      infinityArmoryWindow.addEventListener("click", (event) => {
+        const target = getInfinityArmoryEventTarget(event);
+        if (
+          infinityArmorySelectedGem &&
+          !target?.closest("[data-armory-slot], [data-armory-gem]")
+        ) {
+          clearInfinityArmorySelectedGem({ status: "Gem returned to inventory." });
+        }
+        event.stopPropagation();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(infinityArmoryWindow, {
+      afterOpen: () => clampRandomEventWindowToViewport(infinityArmoryWindow),
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16909,6 +18231,37 @@ registerRandomEvent({
   run: () => {
     showVirusWindow();
   },
+  bind: () => {
+    if (virusYes) {
+      virusYes.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        acceptVirusInstall();
+      });
+    }
+
+    if (virusNo) {
+      virusNo.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeVirusEventWindow(virusWindow);
+      });
+    }
+
+    if (virusRescueThanks) {
+      virusRescueThanks.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeVirusEventWindow(virusRescueWindow);
+      });
+    }
+
+    [virusWindow, virusRescueWindow].forEach((win) => {
+      bindManagedRandomEventWindowAnimation(win, {
+        afterOpen: () => clampRandomEventWindowToViewport(win),
+      });
+    });
+  },
 });
 
 registerRandomEvent({
@@ -16918,6 +18271,17 @@ registerRandomEvent({
   canTrigger: () => !isAdvertisementVisible(),
   run: () => {
     showAdvertisementWindow();
+  },
+  bind: () => {
+    if (advertisementNoThanks) {
+      advertisementNoThanks.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeAdvertisementWindow();
+      });
+    }
+
+    bindManagedRandomEventWindowAnimation(advertisementWindow);
   },
 });
 
@@ -22989,6 +24353,10 @@ calendarGrid.addEventListener("click", (event) => {
   }
 });
 
+bindRegisteredRandomEvents();
+
+// The calendar event window, Feliz Jueves and the shared system-alert shell are
+// not per-event definitions, so they stay wired here.
 [randomEventClose, randomEventOk].forEach((button) => {
   if (!button) return;
   button.addEventListener("click", (event) => {
@@ -22998,74 +24366,6 @@ calendarGrid.addEventListener("click", (event) => {
 });
 
 bindManagedRandomEventWindowAnimation(randomEventWindow);
-
-bindManagedRandomEventWindowAnimation(randomAlertWindow, {
-  closingClasses: ["is-choice-flashing"],
-  unloadImages: false,
-});
-
-[
-  vanishingPopupClose,
-  vanishingPopupMaximize,
-  vanishingPopupMinimize,
-  vanishingPopupYes,
-  vanishingPopupNo,
-].forEach((button) => {
-  if (!button) return;
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    hideVanishingPopupButton(button);
-  });
-});
-
-bindManagedRandomEventWindowAnimation(vanishingPopupWindow, {
-  closingClasses: ["is-exploding"],
-  unloadImages: false,
-  afterClose: () => {
-    if (!vanishingPopupExplosion) return;
-    vanishingPopupExplosion.classList.remove("is-active");
-    vanishingPopupExplosion.removeAttribute("src");
-    vanishingPopupExplosion.removeAttribute("style");
-  },
-});
-
-getDodgingPopupButtons().forEach((button) => {
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    pressDodgingPopupButton(button);
-  });
-});
-
-if (dodgingPopupWindow) {
-  dodgingPopupWindow.addEventListener("pointerenter", (event) => {
-    if (event.pointerType !== "mouse") return;
-    dodgeDodgingPopup();
-  });
-
-  dodgingPopupWindow.addEventListener(
-    "click",
-    (event) => {
-      if (dodgingPopupWindow.classList.contains("is-dodging")) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        return;
-      }
-      if (!dodgingPopupDodgeLimitReached()) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        dodgeDodgingPopup({ direct: true });
-      }
-    },
-    true
-  );
-
-  bindManagedRandomEventWindowAnimation(dodgingPopupWindow, {
-    closingClasses: ["is-dodging"],
-    unloadImages: false,
-  });
-}
 
 if (felizJuevesClose) {
   felizJuevesClose.addEventListener("click", (event) => {
@@ -23087,645 +24387,6 @@ bindManagedRandomEventWindowAnimation(felizJuevesWindow, {
   closingClasses: ["is-choice-flashing"],
 });
 
-if (randomAlertMaximize) {
-  randomAlertMaximize.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!randomAlertWindow) return;
-    randomAlertWindow.classList.add("is-expanded");
-    randomAlertWindow.style.zIndex = String(topZ++);
-  });
-}
-
-if (randomAlertMinimize) {
-  randomAlertMinimize.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    resetRandomAlertSize();
-    if (randomAlertWindow) randomAlertWindow.style.zIndex = String(topZ++);
-  });
-}
-
-if (randomAlertClose) {
-  randomAlertClose.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    flashRandomAlertChoices();
-  });
-}
-
-[randomAlertYes, randomAlertNo].forEach((button) => {
-  if (!button) return;
-  button.addEventListener("click", (event) => {
-    event.stopPropagation();
-    respondToRandomAlert();
-  });
-});
-
-if (selfLoveAlertClose) {
-  selfLoveAlertClose.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    flashSelfLoveYes();
-  });
-}
-
-if (selfLoveAlertYes) {
-  selfLoveAlertYes.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeSelfLoveAlert();
-  });
-}
-
-[selfLoveAlertNo].forEach((button) => {
-  if (!button) return;
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    flashSelfLoveYes();
-  });
-});
-
-bindManagedRandomEventWindowAnimation(selfLoveAlertWindow, {
-  closingClasses: ["is-yes-flashing"],
-  unloadImages: false,
-});
-
-if (rohinUpdateRun) {
-  rohinUpdateRun.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    window.location.href = "index.html";
-  });
-}
-
-if (rohinUpdateLater) {
-  rohinUpdateLater.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeRohinUpdate();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(rohinUpdateWindow, { unloadImages: false });
-
-if (mcAfeeUpdateRun) {
-  mcAfeeUpdateRun.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (mcAfeeUpdateLater) mcAfeeUpdateLater.disabled = true;
-    showMcAfeeDownload();
-  });
-}
-
-if (mcAfeeUpdateLater) {
-  mcAfeeUpdateLater.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeMcAfeeWindow(mcAfeePromptWindow);
-  });
-}
-
-if (mcAfeeComplete) {
-  mcAfeeComplete.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (mcAfeeComplete.disabled) return;
-    stopMcAfeeDownload();
-    closeMcAfeeWindow(mcAfeePromptWindow);
-    closeMcAfeeWindow(mcAfeeDownloadWindow);
-    showMcAfeeThanks();
-  });
-}
-
-if (mcAfeeThanksOk) {
-  mcAfeeThanksOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeMcAfeeWindow(mcAfeeThanksWindow);
-  });
-}
-
-[mcAfeePromptWindow, mcAfeeDownloadWindow, mcAfeeThanksWindow].forEach((win) => {
-  bindManagedRandomEventWindowAnimation(win, {
-    afterClose: () => {
-      if (win === mcAfeeDownloadWindow) stopMcAfeeDownload();
-    },
-  });
-});
-
-if (rohinNoteOk) {
-  rohinNoteOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeRohinNote();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(rohinNoteWindow, { unloadImages: false });
-
-if (earthNoteOk) {
-  earthNoteOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeEarthNote();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(earthNoteWindow, { unloadImages: false });
-
-if (healthNoteOk) {
-  healthNoteOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeHealthNote();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(healthNoteWindow, { unloadImages: false });
-
-if (loveNoteOk) {
-  loveNoteOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeLoveNote();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(loveNoteWindow, { unloadImages: false });
-
-if (noSmokingOk) {
-  noSmokingOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeNoSmokingWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(noSmokingWindow);
-
-if (possumSpringsOk) {
-  possumSpringsOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closePossumSpringsWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(possumSpringsWindow);
-
-if (wingedLightCollect) {
-  wingedLightCollect.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    collectWingedLight();
-  });
-}
-
-if (wingedLightLater) {
-  wingedLightLater.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeWingedLightWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(wingedLightWindow);
-
-if (manaFloodOk) {
-  manaFloodOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeManaFlood();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(manaFloodWindow, { unloadImages: false });
-
-if (mimicWarningOk) {
-  mimicWarningOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeMimicWarning();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(mimicWarningWindow, { unloadImages: false });
-
-if (skillCheckRoll) {
-  skillCheckRoll.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    beginSkillCheckRoll();
-  });
-}
-
-if (skillCheckIgnore) {
-  skillCheckIgnore.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeSkillCheckWindow();
-  });
-}
-
-if (skillCheckResultOk) {
-  skillCheckResultOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeSkillCheckWindow();
-  });
-}
-
-[skillCheckWindow, skillCheckResultWindow].forEach((win) => {
-  bindManagedRandomEventWindowAnimation(win, {
-    afterClose: () => {
-      if (win === skillCheckWindow) resetSkillCheckWindow();
-    },
-    unloadImages: false,
-  });
-});
-
-if (distressPowerButton) {
-  distressPowerButton.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    startDistressPowerSequence();
-  });
-}
-
-if (distressSignalClose) {
-  distressSignalClose.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeDistressSignalEvent();
-  });
-}
-
-[distressFrequencyDial, distressPhaseDial].forEach((dial) => {
-  if (!dial) return;
-  dial.addEventListener("input", () => {
-    updateDistressTuning();
-  });
-});
-
-if (distressUploadOk) {
-  distressUploadOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeDistressSignalEvent();
-  });
-}
-
-[distressSignalWindow, distressUploadWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
-
-[nazarClose, nazarYes, nazarNo].forEach((button) => {
-  if (!button) return;
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeNazarWindow();
-  });
-});
-
-bindManagedRandomEventWindowAnimation(nazarWindow);
-
-if (siteGraceTouch) {
-  siteGraceTouch.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    touchSiteGrace();
-  });
-}
-
-if (siteGraceKeep) {
-  siteGraceKeep.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeSiteGraceWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(siteGraceWindow);
-
-if (stalkerYes) {
-  stalkerYes.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeStalkerWindow(stalkerWindow);
-    showStalkerResultWindow(stalkerWindow);
-  });
-}
-
-if (stalkerNo) {
-  stalkerNo.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeStalkerWindow(stalkerWindow);
-  });
-}
-
-if (stalkerResultOk) {
-  stalkerResultOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeStalkerWindow(stalkerResultWindow);
-  });
-}
-
-[stalkerWindow, stalkerResultWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
-
-if (nanaEncounterYes) {
-  nanaEncounterYes.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    acceptNanaEncounter();
-  });
-}
-
-if (nanaEncounterNo) {
-  nanaEncounterNo.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeNanaEncounterWindow(nanaEncounterWindow);
-  });
-}
-
-if (nanaAcceptOk) {
-  nanaAcceptOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeNanaEncounterWindow(nanaAcceptWindow);
-  });
-}
-
-[nanaEncounterWindow, nanaAcceptWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
-
-if (servalEncounterIgnore) {
-  servalEncounterIgnore.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeServalEncounterWindow(servalEncounterWindow);
-  });
-}
-
-if (servalEncounterOfferPizza) {
-  servalEncounterOfferPizza.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    offerServalPizza();
-  });
-}
-
-if (servalPizzaCool) {
-  servalPizzaCool.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeServalEncounterWindow(servalPizzaWindow);
-  });
-}
-
-[servalEncounterWindow, servalPizzaWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
-
-if (caracalEncounterPet) {
-  caracalEncounterPet.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    chooseCaracalEncounterResult("pet");
-  });
-}
-
-if (caracalEncounterIgnore) {
-  caracalEncounterIgnore.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    chooseCaracalEncounterResult("ignore");
-  });
-}
-
-if (caracalResultOk) {
-  caracalResultOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeCaracalEncounterWindow(caracalResultWindow);
-  });
-}
-
-[caracalEncounterWindow, caracalResultWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
-
-if (shoebillEncounterBow) {
-  shoebillEncounterBow.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    bowToShoebill();
-  });
-}
-
-if (shoebillEncounterRunAway) {
-  shoebillEncounterRunAway.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeShoebillEncounterWindow(shoebillEncounterWindow);
-  });
-}
-
-if (shoebillBowOk) {
-  shoebillBowOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeShoebillEncounterWindow(shoebillBowWindow);
-  });
-}
-
-[shoebillEncounterWindow, shoebillBowWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
-
-if (midnightGospelYes) {
-  midnightGospelYes.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    acceptMidnightGospelInvite();
-  });
-}
-
-if (midnightGospelNo) {
-  midnightGospelNo.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeMidnightGospelWindow(midnightGospelInviteWindow);
-  });
-}
-
-if (midnightGospelBegin) {
-  midnightGospelBegin.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    startMidnightGospelTimer();
-  });
-}
-
-[midnightGospelInviteWindow, midnightGospelMeditationWindow].forEach((win) => {
-  bindManagedRandomEventWindowAnimation(win, {
-    afterClose: () => {
-      if (win === midnightGospelMeditationWindow) {
-        resetMidnightGospelMeditation();
-      }
-    },
-  });
-});
-
-bindRandomEventButton(lainAlertClose, closeLainAlert);
-bindManagedRandomEventWindowAnimation(lainAlertWindow, {
-  afterClose: resetLainAlert,
-});
-lainAlertWindow?.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") return;
-  event.preventDefault();
-  event.stopPropagation();
-  closeLainAlert();
-});
-
-bindRandomEventButton(lelouchAlertOk, closeLelouchAlert);
-bindManagedRandomEventWindowAnimation(lelouchAlertWindow);
-
-bindRandomEventButton(berserkSunriseOk, closeBerserkSunrise);
-bindManagedRandomEventWindowAnimation(berserkSunriseWindow);
-
-bindRandomEventButton(calendarReminderShow, showCalendarFromReminder);
-bindRandomEventButton(calendarReminderLater, closeCalendarReminder);
-bindManagedRandomEventWindowAnimation(calendarReminderWindow);
-
-bindRandomEventButton(gradescopeCurveYes, () => {
-  setGradescopeCurveMode("adjusting");
-});
-bindRandomEventButton(gradescopeCurveNo, closeGradescopeCurve);
-
-if (gradescopeCurveSlider) {
-  gradescopeCurveSlider.addEventListener("input", () => {
-    updateGradescopeCurvePath();
-  });
-}
-
-bindRandomEventButton(gradescopeCurveSet, closeGradescopeCurve);
-bindManagedRandomEventWindowAnimation(gradescopeCurveWindow, {
-  afterClose: resetGradescopeCurve,
-  unloadImages: false,
-});
-
-bindRandomEventButton(gearsNestEngage, startGearsNestCombat);
-bindRandomEventButton(gearsNestRetreat, closeGearsNest);
-bindRandomEventButton(gearsNestResultOk, closeGearsNest);
-gearsNestCoverButtons.forEach((button) => {
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setGearsNestCover(Number(button.getAttribute("data-gears-nest-cover")));
-  });
-});
-gearsNestBattlefield?.addEventListener("pointermove", moveGearsNestReloadCursor);
-gearsNestBattlefield?.addEventListener("pointerleave", stopGearsNestFiring);
-document.addEventListener("pointerup", stopGearsNestFiring);
-document.addEventListener("pointercancel", stopGearsNestFiring);
-bindManagedRandomEventWindowAnimation(gearsNestWindow, {
-  afterClose: resetGearsNestPrompt,
-});
-
-if (instrumentalityYes) {
-  instrumentalityYes.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeInstrumentalityWindow(instrumentalityWindow);
-  });
-}
-
-if (instrumentalityNo) {
-  instrumentalityNo.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    rejectInstrumentality();
-  });
-}
-
-if (instrumentalityCongratsOk) {
-  instrumentalityCongratsOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeInstrumentalityWindow(instrumentalityCongratsWindow);
-  });
-}
-
-[instrumentalityWindow, instrumentalityCongratsWindow].forEach((win) => bindManagedRandomEventWindowAnimation(win));
-
-if (redToolClose) {
-  redToolClose.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeRedToolWindow();
-  });
-}
-
-if (redToolInput) {
-  redToolInput.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    sendRedToolMessage();
-  });
-}
-
-if (redToolSend) {
-  redToolSend.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    sendRedToolMessage();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(redToolWindow);
-
-bindRandomEventButton(deathNoteClose, closeDeathNoteWindow);
-bindRandomEventButton(deathNoteTitleClose, closeDeathNoteWindow);
-bindManagedRandomEventWindowAnimation(deathNoteWindow, { unloadImages: false });
-deathNoteEntry?.addEventListener("input", limitDeathNoteEntryToVisibleLines);
-deathNoteWindow?.addEventListener("click", (event) => {
-  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-  if (!target?.closest(".death-note-lined-page")) return;
-  deathNoteEntry?.focus({ preventScroll: true });
-  const cursorPosition = deathNoteEntry?.value.length || 0;
-  deathNoteEntry?.setSelectionRange(cursorPosition, cursorPosition);
-});
-
-bindRandomEventButton(currentPublicInfoClose, closeCurrentPublicInfoWindow);
-bindRandomEventButton(currentPublicInfoThanks, closeCurrentPublicInfoWindow);
-bindManagedRandomEventWindowAnimation(currentPublicInfoWindow);
-
-bindRandomEventButton(trnaRequestYes, closeTrnaRequestWindow);
-bindRandomEventButton(trnaRequestNo, closeTrnaRequestWindow);
-bindManagedRandomEventWindowAnimation(trnaRequestWindow);
-
-bindRandomEventButton(spellStackYes, counterSpellOnStack);
-bindRandomEventButton(spellStackNo, refuseSpellOnStackCounter);
-bindManagedRandomEventWindowAnimation(spellStackWindow, {
-  afterClose: clearSpellStackLightning,
-});
-
-bindRandomEventButton(sootSpritesYes, inspectSootSpritesGpu);
-bindRandomEventButton(sootSpritesNo, closeSootSpritesWindow);
-bindManagedRandomEventWindowAnimation(sootSpritesWindow, {
-  afterClose: releaseSootSpritesSwarm,
-});
-
-bindRandomEventButton(natarajaYes, closeNatarajaWindow);
-bindRandomEventButton(natarajaNo, closeNatarajaWindow);
-bindManagedRandomEventWindowAnimation(natarajaWindow, {
-  afterClose: resetNatarajaVideo,
-  unloadImages: false,
-});
-
-bindRandomEventButton(nobleSteedYes, acceptNobleSteedOffer);
-bindRandomEventButton(nobleSteedNo, closeNobleSteedWindow);
-bindRandomEventButton(nobleSteedResultOk, closeNobleSteedResultWindow);
-bindManagedRandomEventWindowAnimation(nobleSteedWindow);
-bindManagedRandomEventWindowAnimation(nobleSteedResultWindow);
-
 bindManagedRandomEventWindowAnimation(debugSystemAlertWindow, {
   afterClose: resetDebugSystemAlert,
   unloadImages: false,
@@ -23734,591 +24395,6 @@ debugSystemAlertWindow?.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   event.preventDefault();
   closeDebugSystemAlert();
-});
-
-bindRandomEventButton(nekoStreamAlertYes, () => respondToNekoStreamAlert(true));
-bindRandomEventButton(nekoStreamAlertNo, () => respondToNekoStreamAlert(false));
-bindManagedRandomEventWindowAnimation(nekoStreamAlertWindow, {
-  afterClose: resetNekoStreamAlert,
-  unloadImages: false,
-});
-if (typeof nekoStreamAlertReducedMotionQuery?.addEventListener === "function") {
-  nekoStreamAlertReducedMotionQuery.addEventListener(
-    "change",
-    handleNekoStreamAlertMotionPreferenceChange
-  );
-} else {
-  nekoStreamAlertReducedMotionQuery?.addListener?.(
-    handleNekoStreamAlertMotionPreferenceChange
-  );
-}
-nekoStreamAlertWindow?.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") return;
-  event.preventDefault();
-  event.stopPropagation();
-  respondToNekoStreamAlert(false);
-});
-
-bindRandomEventButton(toxicJungleStart, startToxicJungleCollection);
-bindRandomEventButton(toxicJungleDecline, closeToxicJungleWindow);
-if (toxicJungleSpores) {
-  toxicJungleSpores.addEventListener("click", (event) => {
-    const target =
-      event.target instanceof Element
-        ? event.target.closest("[data-toxic-jungle-spore]")
-        : null;
-    if (!target || !toxicJungleSpores.contains(target)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    collectToxicJungleSpore(target);
-  });
-}
-bindManagedRandomEventWindowAnimation(toxicJungleWindow, {
-  afterClose: resetToxicJungleEvent,
-});
-toxicJungleWindow?.addEventListener("click", (event) => {
-  if (toxicJungleStage !== TOXIC_JUNGLE_STAGE_COMPLETE) return;
-  event.preventDefault();
-  event.stopPropagation();
-  closeToxicJungleWindow();
-});
-
-bindRandomEventButton(wallBreachSuitUp, closeWallBreachWindow);
-bindManagedRandomEventWindowAnimation(wallBreachWindow);
-
-if (fateStart) {
-  fateStart.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    startFateMinigame();
-  });
-}
-
-if (fateResist) {
-  fateResist.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    resistFate();
-  });
-}
-
-if (fateResultOk) {
-  fateResultOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeFateWindow();
-  });
-}
-
-bindRandomEventButton(fateTitleClose, closeFateWindow);
-
-document.addEventListener("keydown", handleFateKeyMash);
-
-bindManagedRandomEventWindowAnimation(fateWindow, {
-  afterClose: () => {
-    if (fateResultImage) fateResultImage.removeAttribute("src");
-  },
-});
-
-bindRandomEventButton(lancerBattleStart, startLancerBattle);
-bindRandomEventButton(lancerBattlePush, pushLancerBattle);
-bindRandomEventButton(lancerBattleTitleClose, closeLancerBattleWindow);
-bindRandomEventButton(lancerBattleClose, closeLancerBattleWindow);
-document.addEventListener("keydown", handleLancerBattleKeyMash);
-
-bindManagedRandomEventWindowAnimation(lancerBattleWindow, {
-  closingClasses: ["is-clashing", "is-win", "is-loss", "is-final-alert"],
-  afterClose: () => {
-    clearLancerBattleResultMedia();
-    clearLancerBattleVideo();
-    if (!lancerBattleOpenFinalAfterClose) return;
-    lancerBattleOpenFinalAfterClose = false;
-    reopenLancerBattleFinalPrompt();
-  },
-});
-
-if (brandBurnsFight) {
-  brandBurnsFight.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (brandBurnsOutcome) {
-      closeBrandBurnsWindow();
-      return;
-    }
-    if (brandBurnsStage === "prompt") {
-      startBrandBurnsFight();
-      return;
-    }
-    if (brandBurnsStage === "fight") {
-      startBrandBurnsBlock();
-    }
-  });
-}
-
-if (brandBurnsClose) {
-  brandBurnsClose.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeBrandBurnsWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(brandBurnsWindow, {
-  afterOpen: () => clampRandomEventWindowToViewport(brandBurnsWindow),
-  afterClose: () => {
-    // A staggered enemy close keeps those windows alive past the main close, so
-    // the full reset waits for them instead of tearing them down here.
-    if (brandBurnsPreserveEnemyWindowsOnMainClose) {
-      brandBurnsPreserveEnemyWindowsOnMainClose = false;
-    } else {
-      resetBrandBurnsWindow();
-    }
-    brandBurnsStage = "idle";
-  },
-});
-
-if (behelitOk) {
-  behelitOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeBehelitWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(behelitWindow);
-
-[johnPorkClose, johnPorkAccept, johnPorkDecline].forEach((button) => {
-  if (!button) return;
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeJohnPorkCall();
-  });
-});
-
-bindManagedRandomEventWindowAnimation(johnPorkWindow, {
-  afterClose: stopJohnPorkStatus,
-});
-
-if (advertisementNoThanks) {
-  advertisementNoThanks.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeAdvertisementWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(advertisementWindow);
-
-if (saulAdClose) {
-  saulAdClose.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeSaulAdWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(saulAdWindow);
-
-if (kidnamedfingerOk) {
-  kidnamedfingerOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeKidnamedfingerWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(kidnamedfingerWindow);
-
-if (walterWhiteOk) {
-  walterWhiteOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeWalterWhiteWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(walterWhiteWindow);
-
-if (bountyHunterClose) {
-  bountyHunterClose.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeBountyHunterWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(bountyHunterWindow);
-
-if (pokemonStarterClose) {
-  pokemonStarterClose.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closePokemonStarterWindow();
-  });
-}
-
-pokemonStarterChoices.forEach((choice) => {
-  const starterKey = choice.dataset.pokemonStarter;
-  choice.addEventListener("pointerenter", () => {
-    if (pokemonStarterStage !== "select") return;
-    setPokemonStarterInfo(starterKey, choice);
-  });
-  choice.addEventListener("focus", () => {
-    if (pokemonStarterStage !== "select") return;
-    setPokemonStarterInfo(starterKey, choice);
-  });
-  choice.addEventListener("pointerleave", () => {
-    if (pokemonStarterSelected || pokemonStarterStage !== "select") return;
-    setPokemonStarterElementHidden(pokemonStarterInfoCard, true);
-  });
-  choice.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (pokemonStarterStage !== "select") return;
-    choosePokemonStarter(starterKey, choice);
-  });
-});
-
-if (pokemonStarterConfirmYes) {
-  pokemonStarterConfirmYes.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    confirmPokemonStarterChoice();
-  });
-}
-
-if (pokemonStarterConfirmNo) {
-  pokemonStarterConfirmNo.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    cancelPokemonStarterChoice();
-  });
-}
-
-if (pokemonStarterDialogue) {
-  pokemonStarterDialogue.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (pokemonStarterStage === "chosen") {
-      closePokemonStarterWindow();
-    }
-  });
-}
-
-if (pokemonStarterPokeballStage) {
-  pokemonStarterPokeballStage.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (pokemonStarterStage === "chosen") {
-      closePokemonStarterWindow();
-    }
-  });
-}
-
-bindManagedRandomEventWindowAnimation(pokemonStarterWindow, {
-  afterClose: resetPokemonStarterEvent,
-});
-
-if (relicRecoveryStart) {
-  relicRecoveryStart.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    startRelicRecovery();
-  });
-}
-
-if (relicRecoveryDecline) {
-  relicRecoveryDecline.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeRelicRecoveryWindow();
-  });
-}
-
-if (relicRecoveryContinue) {
-  relicRecoveryContinue.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (relicRecoveryStage === RELIC_RECOVERY_STAGE_COMPLETE) {
-      closeRelicRecoveryWindow();
-    }
-  });
-}
-
-if (relicRecoveryDetail) {
-  relicRecoveryDetail.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    finishRelicRecoveryDetail();
-  });
-
-  relicRecoveryDetail.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    event.stopPropagation();
-    finishRelicRecoveryDetail();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(relicRecoveryDetail, {
-  onClose: completeRelicRecoveryDetailClose,
-});
-
-if (relicRecoveryRelics) {
-  relicRecoveryRelics.addEventListener("click", (event) => {
-    const relicButton = event.target.closest("[data-relic-recovery-item]");
-    if (!relicButton || !relicRecoveryRelics.contains(relicButton)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    showRelicRecoveryDetail(relicButton.dataset.relicRecoveryItem);
-  });
-}
-
-if (relicRecoveryScene) {
-  relicRecoveryScene.addEventListener("click", (event) => {
-    if (relicRecoveryStage !== RELIC_RECOVERY_STAGE_DETAIL) return;
-    event.preventDefault();
-    event.stopPropagation();
-    finishRelicRecoveryDetail();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(relicRecoveryWindow, {
-  afterClose: () => {
-    if (relicRecoveryDetailImage) {
-      relicRecoveryDetailImage.removeAttribute("src");
-      relicRecoveryDetailImage.alt = "";
-    }
-    resetRelicRecoveryEvent();
-  },
-});
-
-if (dstNightOk) {
-  dstNightOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    startDstNightCrafting();
-  });
-}
-
-if (dstCraftCampfire) {
-  dstCraftCampfire.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    completeDstNightCrafting();
-  });
-}
-
-document.addEventListener("pointermove", (event) => {
-  dstLastPointer = {
-    x: event.clientX,
-    y: event.clientY,
-  };
-  if (dstDraggedResource) {
-    positionDstCarryGhost(event.clientX, event.clientY);
-  }
-});
-
-[dstWoodSource, dstGrassSource].forEach((source) => {
-  if (!source) return;
-
-  source.addEventListener("dragstart", (event) => {
-    if (source.disabled) {
-      event.preventDefault();
-      return;
-    }
-    const resource = source.dataset.dstResource || "";
-    dstDraggedResource = resource;
-    setPointerHeldItemCursor("dst-resource", true);
-    updateDstCompatibleSlots(resource);
-    event.dataTransfer?.setData("text/plain", resource);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = "copy";
-    }
-  });
-
-  source.addEventListener("dragend", () => {
-    clearDstDraggedResource();
-  });
-
-  source.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (source.disabled) return;
-    clearDstDraggedResource();
-    carryDstResource(source.dataset.dstResource || "", event.clientX, event.clientY);
-    source.classList.add("is-selected");
-  });
-});
-
-dstCraftSlots?.forEach((slot) => {
-  slot.addEventListener("dragover", (event) => {
-    const resource = event.dataTransfer?.getData("text/plain") || dstDraggedResource;
-    if (!resource || slot.dataset.dstSlot !== resource || slot.dataset.dstFilled) return;
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = "copy";
-    }
-    slot.classList.add("is-drag-over");
-  });
-
-  slot.addEventListener("dragleave", () => {
-    slot.classList.remove("is-drag-over");
-  });
-
-  slot.addEventListener("drop", (event) => {
-    event.preventDefault();
-    const resource = event.dataTransfer?.getData("text/plain") || dstDraggedResource;
-    if (fillDstCraftSlot(slot, resource)) {
-      clearDstDraggedResource();
-    }
-  });
-
-  slot.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (fillDstCraftSlot(slot, dstDraggedResource)) {
-      clearDstDraggedResource();
-    }
-  });
-});
-
-if (dstSurviveOk) {
-  dstSurviveOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeDstSurviveWindow();
-  });
-}
-
-if (dstDarknessOk) {
-  dstDarknessOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeDstDarknessWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(dstNightWindow, {
-  afterClose: () => {
-    // Handing off to the crafting window is not the end of the chain, so the
-    // night state survives until nothing in the chain is open.
-    if (dstNightCraftingActive || isDstCraftingVisible()) return;
-    resetDstNightWindow();
-  },
-});
-
-bindManagedRandomEventWindowAnimation(dstCraftingWindow, {
-  afterClose: resetDstCraftingState,
-});
-
-bindManagedRandomEventWindowAnimation(dstSurviveWindow);
-
-bindManagedRandomEventWindowAnimation(dstDarknessWindow);
-
-if (bidenBlastOk) {
-  bidenBlastOk.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeBidenBlastWindow();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(bidenBlastWindow);
-
-if (infinityArmoryClose) {
-  infinityArmoryClose.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeInfinityArmoryWindow();
-  });
-}
-
-if (infinityArmoryUpgrade) {
-  infinityArmoryUpgrade.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    upgradeInfinityArmory();
-  });
-}
-
-infinityArmorySlots.forEach((slot) => {
-  slot.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    socketInfinityArmoryGem(slot.dataset.armorySlot);
-  });
-});
-
-if (infinityArmoryGemGrid) {
-  infinityArmoryGemGrid.addEventListener("click", (event) => {
-    const target = getInfinityArmoryEventTarget(event);
-    const gem = target?.closest("[data-armory-gem]");
-    if (!gem || !infinityArmoryGemGrid.contains(gem)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (infinityArmorySelectedGem) {
-      clearInfinityArmorySelectedGem({ status: "Gem returned to inventory." });
-      return;
-    }
-    selectInfinityArmoryGem(gem, event);
-  });
-}
-
-document.addEventListener("pointermove", moveInfinityArmoryCursorGem);
-document.addEventListener("click", (event) => {
-  if (!infinityArmorySelectedGem) return;
-  const target = getInfinityArmoryEventTarget(event);
-  if (target && infinityArmoryWindow?.contains(target)) return;
-  clearInfinityArmorySelectedGem({ status: "Gem returned to inventory." });
-});
-
-if (infinityArmoryWindow) {
-  infinityArmoryWindow.addEventListener("click", (event) => {
-    const target = getInfinityArmoryEventTarget(event);
-    if (
-      infinityArmorySelectedGem &&
-      !target?.closest("[data-armory-slot], [data-armory-gem]")
-    ) {
-      clearInfinityArmorySelectedGem({ status: "Gem returned to inventory." });
-    }
-    event.stopPropagation();
-  });
-}
-
-bindManagedRandomEventWindowAnimation(infinityArmoryWindow, {
-  afterOpen: () => clampRandomEventWindowToViewport(infinityArmoryWindow),
-});
-
-if (virusYes) {
-  virusYes.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    acceptVirusInstall();
-  });
-}
-
-if (virusNo) {
-  virusNo.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeVirusEventWindow(virusWindow);
-  });
-}
-
-if (virusRescueThanks) {
-  virusRescueThanks.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeVirusEventWindow(virusRescueWindow);
-  });
-}
-
-[virusWindow, virusRescueWindow].forEach((win) => {
-  bindManagedRandomEventWindowAnimation(win, {
-    afterOpen: () => clampRandomEventWindowToViewport(win),
-  });
 });
 
 document.addEventListener("click", (event) => {
