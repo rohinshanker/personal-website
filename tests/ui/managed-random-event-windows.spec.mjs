@@ -11,7 +11,8 @@
  * are wired.
  */
 
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
@@ -122,44 +123,88 @@ const openAdminEvents = async (page) => {
 const finishAnimation = (win, animationName) =>
   win.dispatchEvent("animationend", { animationName });
 
+/**
+ * Records each shared animation as it starts, so the assertions read what the
+ * window actually ran instead of sampling a computed style that a real 180ms
+ * animation may already have finished.
+ *
+ * @param {import("@playwright/test").Page} page
+ */
+const recordWindowAnimations = (page) =>
+  page.evaluate(() => {
+    document.querySelectorAll(".random-event-window").forEach((element) => {
+      element.managedAnimations = [];
+      element.addEventListener("animationstart", (event) => {
+        if (event.target !== element) return;
+        const style = getComputedStyle(element);
+        element.managedAnimations.push({
+          name: event.animationName,
+          duration: style.animationDuration,
+          pointerEvents: style.pointerEvents,
+          zIndex: Number(element.style.zIndex),
+        });
+      });
+    });
+  });
+
+const readAnimation = async (win, name, label) => {
+  await expect
+    .poll(
+      () =>
+        win.evaluate(
+          (element, wanted) =>
+            (element.managedAnimations || []).some((entry) => entry.name === wanted),
+          name
+        ),
+      { message: `${label} ran ${name}` }
+    )
+    .toBe(true);
+  return win.evaluate(
+    (element, wanted) =>
+      (element.managedAnimations || []).find((entry) => entry.name === wanted),
+    name
+  );
+};
+
+/** Measuring geometry mid-animation would read the open animation's scale. */
+const settleAnimation = (win, label) =>
+  expect
+    .poll(() => win.evaluate((element) => getComputedStyle(element).animationName), {
+      message: `${label} finished animating`,
+    })
+    .toBe("none");
+
 for (const viewport of VIEWPORTS) {
   test(`managed event windows open, stack, clamp and close at ${viewport.name}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await preparePage(page);
+    await recordWindowAnimations(page);
     const adminWindow = await openAdminEvents(page);
     const eventList = page.locator("#admin-event-list");
     const triggerNow = page.locator("#admin-trigger-now");
 
     for (const event of EVENTS) {
-      await eventList.selectOption(event.id);
-      await triggerNow.click();
-
       const win = page.locator(
         `#${event.windowId}:not([data-admin-event-preview-window])`
       );
+      await win.evaluate((element) => {
+        element.managedAnimations = [];
+      });
 
-      // Opening: the shared helper sets aria-hidden, the opening class and the
-      // one open animation, and raises the window above its trigger.
+      await eventList.selectOption(event.id);
+      await triggerNow.click();
+
+      // Opening: the shared helper sets aria-hidden, runs the one open
+      // animation, and raises the window above its trigger.
       await expect(win, `${event.id} opens`).toBeVisible();
       await expect(win).toHaveAttribute("aria-hidden", "false");
-      await expect(win).toHaveClass(/is-opening/);
-      const opening = await win.evaluate((element) => {
-        const style = getComputedStyle(element);
-        return {
-          animationName: style.animationName,
-          animationDuration: style.animationDuration,
-          zIndex: Number(element.style.zIndex),
-        };
-      });
-      expect(opening.animationName, `${event.id} open animation`).toBe(
-        "retro-window-open"
-      );
+      const opening = await readAnimation(win, "retro-window-open", event.id);
       expect(
         SHARED_OPEN_DURATIONS,
         `${event.id} keeps a shared open duration`
-      ).toContain(opening.animationDuration);
+      ).toContain(opening.duration);
       const adminZ = await adminWindow.evaluate((element) =>
         Number(getComputedStyle(element).zIndex)
       );
@@ -168,8 +213,8 @@ for (const viewport of VIEWPORTS) {
         `${event.id} stacks above the window that triggered it`
       ).toBeGreaterThan(adminZ);
 
-      await finishAnimation(win, "retro-window-open");
       await expect(win).not.toHaveClass(/is-opening/);
+      await settleAnimation(win, event.id);
 
       // Clamping: the window has to sit inside the desktop, above the taskbar.
       const box = await win.boundingBox();
@@ -198,27 +243,15 @@ for (const viewport of VIEWPORTS) {
       // and the shared close path hides the window after the animation.
       await win.locator(event.close).click();
       await expect(win).toHaveAttribute("aria-hidden", "true");
-      await expect(win).toHaveClass(/is-closing/);
-      const closing = await win.evaluate((element) => {
-        const style = getComputedStyle(element);
-        return {
-          animationName: style.animationName,
-          animationDuration: style.animationDuration,
-          pointerEvents: style.pointerEvents,
-        };
-      });
-      expect(closing.animationName, `${event.id} close animation`).toBe(
-        "retro-window-close"
-      );
+      const closing = await readAnimation(win, "retro-window-close", event.id);
       expect(
         SHARED_CLOSE_DURATIONS,
         `${event.id} keeps a shared close duration`
-      ).toContain(closing.animationDuration);
+      ).toContain(closing.duration);
       expect(closing.pointerEvents, `${event.id} is inert while closing`).toBe(
         "none"
       );
 
-      await finishAnimation(win, "retro-window-close");
       await expect(win, `${event.id} closes`).toBeHidden();
       await expect(win).toHaveClass(/is-hidden/);
     }
@@ -311,3 +344,83 @@ test("a chained event hands its position to the window that replaces it", async 
   await finishAnimation(accept, "retro-window-close");
   await expect(accept).toBeHidden();
 });
+
+
+for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
+  test(`dynamic Word windows cascade and remove themselves at ${viewport.name}`, async ({ page }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await preparePage(page);
+    await openAdminEvents(page);
+    await page.locator("#admin-event-list").selectOption("microsoft-word-license-stack");
+    await page.locator("#admin-trigger-now").click();
+    const windows = page.locator("body > .word-error-stack-window");
+    await expect(windows).toHaveCount(10);
+    await expect(windows.last()).toBeVisible();
+    await expect(windows.last()).not.toHaveClass(/is-opening/);
+    for (const win of await windows.all()) {
+      await expect(win).toHaveClass(/random-event-window/);
+      const box = await win.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height - TASKBAR_CLEARANCE + 1);
+    }
+    await page.screenshot({ path: testInfo.outputPath(`word-stack-${viewport.name}.png`) });
+    await windows.last().getByRole("button", { name: "Close", exact: true }).click();
+    await expect(windows).toHaveCount(0);
+    // A completed removal must release the event so its next trigger works.
+    await page.locator("#admin-trigger-now").click();
+    await expect(windows).toHaveCount(10);
+    await expect(windows.last()).toBeVisible();
+    await windows.last().getByRole("button", { name: "Close", exact: true }).click();
+    await expect(windows).toHaveCount(0);
+  });
+
+  test(`dynamic Brand windows retain custom durations and removal at ${viewport.name}`, async ({ page }, testInfo) => {
+    await page.setViewportSize(viewport);
+    const source = await readIsolatedMainSource();
+    // The event starts through the real control. This narrow probe reaches the
+    // health-dependent Puck branch and exits combat without waiting for a loss.
+    const instrumented = source.replace(/\}\)\(\);\s*$/, `
+      window.__managedWindowProbe = {
+        showPuck: showBrandBurnsPuckWindow,
+        close: closeBrandBurnsWindow,
+      };
+    })();`);
+    await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
+      route.fulfill({ contentType: "application/javascript", body: instrumented })
+    );
+    await preparePage(page);
+    await openAdminEvents(page);
+    await page.locator("#admin-event-list").selectOption("brand-burns");
+    await page.locator("#admin-trigger-now").click();
+    const main = page.locator("#brand-burns-window:not([data-admin-event-preview-window])");
+    await expect(main).toBeVisible();
+    const action = main.locator("#brand-burns-fight");
+    await expect(action).toBeFocused();
+    await action.press("Enter");
+    const enemies = page.locator("body > .brand-apostle-window");
+    await expect(enemies.first()).toBeVisible();
+    await action.press("Enter");
+    const block = page.locator("body > .brand-block-window");
+    await expect(block).toBeVisible();
+    await page.evaluate(() => window.__managedWindowProbe.showPuck());
+    const puck = page.locator("body > .brand-puck-window");
+    await expect(puck).toBeVisible();
+    for (const win of [enemies.first(), block, puck]) {
+      await expect(win).toHaveClass(/random-event-window/);
+      await expect(win).not.toHaveClass(/is-opening/);
+      expect(await win.evaluate((element) =>
+        getComputedStyle(element).getPropertyValue("--event-window-open-duration").trim()
+      )).toBe("220ms");
+      const box = await win.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+    }
+    await page.screenshot({ path: testInfo.outputPath(`brand-windows-${viewport.name}.png`) });
+    await page.evaluate(() => window.__managedWindowProbe.close());
+    await expect(main).toBeHidden();
+    await expect(enemies).toHaveCount(0);
+    await expect(block).toHaveCount(0);
+    await expect(puck).toHaveCount(0);
+  });
+}

@@ -157,7 +157,7 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
   );
   assert.match(
     home,
-    /scripts\/home\/admin-controls\.js\?v=shared-cross-route-20260930/
+    /scripts\/home\/admin-controls\.js\?v=managed-event-windows-20261001/
   );
   assert.ok(
     home.indexOf("scripts/home/admin-controls.js") >
