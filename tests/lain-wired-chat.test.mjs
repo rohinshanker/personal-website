@@ -28,12 +28,12 @@ test("Lain is a single-message Wired chat with a permanently disabled reply comp
   const markup = sliceBetween(
     home,
     'id="lain-alert-window"',
-    '<div\n      class="window lelouch-alert-window'
+    '<div\n      class="window random-event-window lelouch-alert-window'
   );
 
   assert.match(
     markup,
-    /class="window event-chat-window lain-alert-window is-hidden"/
+    /class="window random-event-window event-chat-window lain-alert-window is-hidden"/
   );
   assert.match(markup, /role="dialog"/);
   assert.match(markup, /aria-hidden="true"/);
@@ -109,7 +109,7 @@ test("Lain shares the Red Tool shell without inheriting its cropped image or fix
 
   assert.match(
     css,
-    /\.event-chat-window \{[\s\S]*?width: min\(430px, calc\(100vw - 32px\)\);/
+    /\.event-chat-window \{[\s\S]*?--event-window-width: 430px;/
   );
   assert.match(css, /\.event-chat-window \.window-body \{[\s\S]*?gap: 8px;/);
   assert.match(
@@ -176,7 +176,7 @@ test("Wired chat assets and cache-busted stylesheet references are present", asy
     ...derivatives.map((derivative) => stat(new URL(derivative, root))),
   ]);
   const stylesheet =
-    "styles/home/random-events.css?v=loop-video-fallback-wait-20260929";
+    "styles/home/random-events.css?v=managed-event-windows-20261001";
 
   lainAssets.forEach((asset, position) => {
     assert.ok(asset.isFile() && asset.size > 0, `${derivatives[position]} is a nonempty file`);

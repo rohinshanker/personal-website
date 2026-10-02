@@ -6595,7 +6595,7 @@ const closeWordErrorStack = (selectedWindow) => {
 
 const createWordErrorWindow = (index, layout) => {
   const win = document.createElement("div");
-  win.className = "window word-error-stack-window is-hidden";
+  win.className = "window random-event-window word-error-stack-window is-hidden";
   win.setAttribute("aria-hidden", "true");
   win.style.left = `${Math.round(layout.startLeft + index * layout.step)}px`;
   win.style.top = `${Math.round(layout.startTop + index * layout.step)}px`;
@@ -12644,7 +12644,7 @@ const closeBrandBurnsPuckWindow = () => {
 
 const createBrandBurnsPuckWindow = () => {
   const win = document.createElement("div");
-  win.className = "window brand-puck-window is-hidden";
+  win.className = "window random-event-window brand-puck-window is-hidden";
   win.setAttribute("aria-hidden", "true");
 
   const titleBar = document.createElement("div");
@@ -12917,7 +12917,7 @@ const animateBrandBurnsBlockProgress = (startedAt) => {
 
 const createBrandBurnsBlockWindow = () => {
   const win = document.createElement("div");
-  win.className = "window brand-block-window is-hidden";
+  win.className = "window random-event-window brand-block-window is-hidden";
   win.setAttribute("aria-hidden", "true");
 
   const titleBar = document.createElement("div");
@@ -13237,7 +13237,7 @@ const createBrandBurnsEnemyWindow = (definition) => {
   };
 
   const win = document.createElement("div");
-  win.className = "window brand-apostle-window is-hidden";
+  win.className = "window random-event-window brand-apostle-window is-hidden";
   win.setAttribute("aria-hidden", "true");
   win.dataset.brandBurnsEnemy = definition.id;
 

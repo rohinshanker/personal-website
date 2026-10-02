@@ -9,7 +9,7 @@ test("Don't Starve darkness result sends Charlie's regards", async () => {
 
   assert.match(
     home,
-    /<div class="window dst-darkness-window[\s\S]*?<p>You don't survive the night\. Charlie sends her regards\.<\/p>/
+    /<div class="window random-event-window dst-darkness-window[\s\S]*?<p>You don't survive the night\. Charlie sends her regards\.<\/p>/
   );
   assert.doesNotMatch(home, /Maxwell sends his regards/);
 });

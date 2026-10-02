@@ -1,12 +1,31 @@
+/*
+ * Managed random-event windows.
+ *
+ * Every event window carries `random-event-window` and expresses what makes it
+ * different as a custom property, so the geometry, the hidden state and the
+ * open/close animations are declared once here instead of per event:
+ *
+ *   --event-window-width            content width before clamping (360px)
+ *   --event-window-max-width        viewport clamp (calc(100vw - 32px))
+ *   --event-window-z               stacking order (120)
+ *   --event-window-open-duration   open animation length (260ms)
+ *   --event-window-close-duration  close animation length (180ms)
+ *
+ * `showManagedRandomEventWindow` writes inline left/top/translate once a window
+ * is placed, so the centred values below only apply before the first open.
+ */
 .random-event-window {
   display: block;
   left: 50%;
-  max-width: calc(100vw - 32px);
+  max-width: var(--event-window-max-width, calc(100vw - 32px));
   position: fixed;
   top: 50%;
   translate: -50% -50%;
-  width: min(360px, calc(100vw - 32px));
-  z-index: 120;
+  width: min(
+    var(--event-window-width, 360px),
+    var(--event-window-max-width, calc(100vw - 32px))
+  );
+  z-index: var(--event-window-z, 120);
 }
 
 .random-event-window.is-hidden {
@@ -14,22 +33,25 @@
 }
 
 .random-event-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
+  animation: retro-window-open var(--event-window-open-duration, 260ms)
+    steps(7, end) both;
 }
 
 .random-event-window.is-closing {
   pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  animation: retro-window-close var(--event-window-close-duration, 180ms)
+    steps(7, end) both;
 }
 
-.random-event-window .window-body {
+/* The calendar-driven image window; the other events style their own bodies. */
+.random-event-image-window .window-body {
   align-items: center;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.random-event-window img {
+.random-event-image-window img {
   display: block;
   max-height: min(56vh, 360px);
   max-width: 100%;
@@ -42,27 +64,7 @@
 }
 
 .feliz-jueves-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(360px, calc(100vw - 32px));
-  z-index: 150;
-}
-
-.feliz-jueves-window.is-hidden {
-  display: none;
-}
-
-.feliz-jueves-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.feliz-jueves-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-z: 150;
 }
 
 .feliz-jueves-window .window-body {
@@ -98,19 +100,6 @@
   translate: -50% -50%;
   width: min(340px, calc(100vw - 32px));
   z-index: 140;
-}
-
-.random-alert-window.is-hidden {
-  display: none;
-}
-
-.random-alert-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.random-alert-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .random-alert-window.is-expanded {
@@ -268,27 +257,7 @@
 }
 
 .self-love-alert-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(360px, calc(100vw - 32px));
-  z-index: 144;
-}
-
-.self-love-alert-window.is-hidden {
-  display: none;
-}
-
-.self-love-alert-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.self-love-alert-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-z: 144;
 }
 
 .self-love-alert-window .window-body {
@@ -302,27 +271,8 @@
 }
 
 .rohin-update-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(420px, calc(100vw - 32px));
-  z-index: 145;
-}
-
-.rohin-update-window.is-hidden {
-  display: none;
-}
-
-.rohin-update-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.rohin-update-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 420px;
+  --event-window-z: 145;
 }
 
 .rohin-update-window .window-body {
@@ -377,28 +327,9 @@
 }
 
 .mcafee-window {
-  display: block;
-  left: 50%;
+  --event-window-width: 380px;
+  --event-window-z: 146;
   max-height: calc(100vh - 76px);
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(380px, calc(100vw - 32px));
-  z-index: 146;
-}
-
-.mcafee-window.is-hidden {
-  display: none;
-}
-
-.mcafee-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.mcafee-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .mcafee-window .window-body {
@@ -446,25 +377,10 @@
 }
 
 .word-error-stack-window {
-  display: block;
-  max-width: calc(100vw - 24px);
-  position: fixed;
+  --event-window-max-width: calc(100vw - 24px);
+  --event-window-width: 360px;
+  --event-window-z: 147;
   translate: 0 0;
-  width: min(360px, calc(100vw - 24px));
-  z-index: 147;
-}
-
-.word-error-stack-window.is-hidden {
-  display: none;
-}
-
-.word-error-stack-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.word-error-stack-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .word-error-stack-window .window-body {
@@ -502,27 +418,7 @@
 }
 
 .rohin-note-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(360px, calc(100vw - 32px));
-  z-index: 143;
-}
-
-.rohin-note-window.is-hidden {
-  display: none;
-}
-
-.rohin-note-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.rohin-note-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-z: 143;
 }
 
 .rohin-note-window .window-body {
@@ -559,27 +455,8 @@
 }
 
 .no-smoking-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(320px, calc(100vw - 32px));
-  z-index: 143;
-}
-
-.no-smoking-window.is-hidden {
-  display: none;
-}
-
-.no-smoking-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.no-smoking-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 320px;
+  --event-window-z: 143;
 }
 
 .no-smoking-window .window-body {
@@ -617,27 +494,8 @@
 }
 
 .possum-springs-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(390px, calc(100vw - 32px));
-  z-index: 142;
-}
-
-.possum-springs-window.is-hidden {
-  display: none;
-}
-
-.possum-springs-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.possum-springs-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 390px;
+  --event-window-z: 142;
 }
 
 .possum-springs-window .title-bar {
@@ -708,21 +566,12 @@
 }
 
 .winged-light-window {
-  box-shadow:
-    0 0 16px 6px rgba(255, 255, 255, 0.74),
-    0 0 38px 16px rgba(255, 255, 255, 0.5),
-    0 0 64px 26px rgba(255, 255, 255, 0.28);
-  display: block;
+  --event-window-width: 390px;
+  --event-window-z: 150;
+  box-shadow: 0 0 16px 6px rgba(255, 255, 255, 0.74), 0 0 38px 16px rgba(255, 255, 255, 0.5), 0 0 64px 26px rgba(255, 255, 255, 0.28);
   color: #000;
   isolation: isolate;
-  left: 50%;
-  max-width: calc(100vw - 32px);
   overflow: visible;
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(390px, calc(100vw - 32px));
-  z-index: 150;
 }
 
 .winged-light-window::before {
@@ -732,19 +581,6 @@
   pointer-events: none;
   position: absolute;
   z-index: 4;
-}
-
-.winged-light-window.is-hidden {
-  display: none;
-}
-
-.winged-light-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.winged-light-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .winged-light-window .window-body {
@@ -1033,34 +869,8 @@
 
 .skill-check-window,
 .skill-check-result-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(370px, calc(100vw - 32px));
-  z-index: 143;
-}
-
-.skill-check-window.is-hidden,
-.skill-check-result-window.is-hidden {
-  display: none;
-}
-
-.skill-check-window.is-opening,
-.skill-check-result-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.skill-check-window.is-closing,
-.skill-check-result-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
-}
-
-.skill-check-window {
-  position: fixed;
+  --event-window-width: 370px;
+  --event-window-z: 143;
 }
 
 .skill-check-window .window-body,
@@ -1147,34 +957,12 @@
 
 .distress-signal-window,
 .distress-upload-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(470px, calc(100vw - 32px));
-  z-index: 143;
+  --event-window-width: 470px;
+  --event-window-z: 143;
 }
 
 .distress-upload-window {
-  width: min(380px, calc(100vw - 32px));
-}
-
-.distress-signal-window.is-hidden,
-.distress-upload-window.is-hidden {
-  display: none;
-}
-
-.distress-signal-window.is-opening,
-.distress-upload-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.distress-signal-window.is-closing,
-.distress-upload-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 380px;
 }
 
 .distress-signal-window .window-body,
@@ -1458,27 +1246,7 @@
 }
 
 .nazar-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(360px, calc(100vw - 32px));
-  z-index: 142;
-}
-
-.nazar-window.is-hidden {
-  display: none;
-}
-
-.nazar-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.nazar-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-z: 142;
 }
 
 .nazar-window .window-body {
@@ -1517,27 +1285,8 @@
 }
 
 .site-grace-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(390px, calc(100vw - 32px));
-  z-index: 141;
-}
-
-.site-grace-window.is-hidden {
-  display: none;
-}
-
-.site-grace-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.site-grace-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 390px;
+  --event-window-z: 141;
 }
 
 .site-grace-window .window-body {
@@ -1571,27 +1320,8 @@
 }
 
 .stalker-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(400px, calc(100vw - 32px));
-  z-index: 141;
-}
-
-.stalker-window.is-hidden {
-  display: none;
-}
-
-.stalker-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.stalker-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 400px;
+  --event-window-z: 141;
 }
 
 .stalker-window .window-body {
@@ -1644,36 +1374,14 @@
 
 .nana-encounter-window,
 .nana-accept-window {
-  display: block;
-  left: 50%;
+  --event-window-width: 390px;
+  --event-window-z: 141;
   max-height: calc(100vh - 76px);
-  max-width: calc(100vw - 32px);
   overflow: hidden;
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(390px, calc(100vw - 32px));
-  z-index: 141;
 }
 
 .nana-accept-window {
-  width: min(310px, calc(100vw - 32px));
-}
-
-.nana-encounter-window.is-hidden,
-.nana-accept-window.is-hidden {
-  display: none;
-}
-
-.nana-encounter-window.is-opening,
-.nana-accept-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.nana-encounter-window.is-closing,
-.nana-accept-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 310px;
 }
 
 .nana-encounter-window .window-body,
@@ -1764,36 +1472,13 @@
 
 .serval-encounter-window,
 .serval-pizza-window {
-  display: block;
-  left: 50%;
+  --event-window-z: 141;
   max-height: calc(100vh - 76px);
-  max-width: calc(100vw - 32px);
   overflow: hidden;
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(360px, calc(100vw - 32px));
-  z-index: 141;
 }
 
 .serval-pizza-window {
-  width: min(340px, calc(100vw - 32px));
-}
-
-.serval-encounter-window.is-hidden,
-.serval-pizza-window.is-hidden {
-  display: none;
-}
-
-.serval-encounter-window.is-opening,
-.serval-pizza-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.serval-encounter-window.is-closing,
-.serval-pizza-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 340px;
 }
 
 .serval-encounter-window .window-body,
@@ -1861,36 +1546,14 @@
 
 .caracal-encounter-window,
 .caracal-result-window {
-  display: block;
-  left: 50%;
+  --event-window-width: 372px;
+  --event-window-z: 141;
   max-height: calc(100vh - 76px);
-  max-width: calc(100vw - 32px);
   overflow: hidden;
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(372px, calc(100vw - 32px));
-  z-index: 141;
 }
 
 .caracal-result-window {
-  width: min(370px, calc(100vw - 32px));
-}
-
-.caracal-encounter-window.is-hidden,
-.caracal-result-window.is-hidden {
-  display: none;
-}
-
-.caracal-encounter-window.is-opening,
-.caracal-result-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.caracal-encounter-window.is-closing,
-.caracal-result-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 370px;
 }
 
 .caracal-encounter-window .window-body,
@@ -1963,34 +1626,11 @@
 
 .shoebill-encounter-window,
 .shoebill-bow-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(360px, calc(100vw - 32px));
-  z-index: 136;
+  --event-window-z: 136;
 }
 
 .shoebill-bow-window {
-  width: min(380px, calc(100vw - 32px));
-}
-
-.shoebill-encounter-window.is-hidden,
-.shoebill-bow-window.is-hidden {
-  display: none;
-}
-
-.shoebill-encounter-window.is-opening,
-.shoebill-bow-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.shoebill-encounter-window.is-closing,
-.shoebill-bow-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 380px;
 }
 
 .shoebill-encounter-window .window-body,
@@ -2058,34 +1698,12 @@
 
 .midnight-gospel-invite-window,
 .midnight-gospel-meditation-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(380px, calc(100vw - 32px));
-  z-index: 136;
+  --event-window-width: 380px;
+  --event-window-z: 136;
 }
 
 .midnight-gospel-meditation-window {
-  width: min(620px, calc(100vw - 32px));
-}
-
-.midnight-gospel-invite-window.is-hidden,
-.midnight-gospel-meditation-window.is-hidden {
-  display: none;
-}
-
-.midnight-gospel-invite-window.is-opening,
-.midnight-gospel-meditation-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.midnight-gospel-invite-window.is-closing,
-.midnight-gospel-meditation-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 620px;
 }
 
 .midnight-gospel-invite-window .window-body,
@@ -2307,36 +1925,8 @@ body.is-midnight-gospel-locked * {
 .berserk-sunrise-window,
 .calendar-reminder-window,
 .gradescope-curve-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(380px, calc(100vw - 32px));
-  z-index: 139;
-}
-
-.lelouch-alert-window.is-hidden,
-.berserk-sunrise-window.is-hidden,
-.calendar-reminder-window.is-hidden,
-.gradescope-curve-window.is-hidden {
-  display: none;
-}
-
-.lelouch-alert-window.is-opening,
-.berserk-sunrise-window.is-opening,
-.calendar-reminder-window.is-opening,
-.gradescope-curve-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.lelouch-alert-window.is-closing,
-.berserk-sunrise-window.is-closing,
-.calendar-reminder-window.is-closing,
-.gradescope-curve-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 380px;
+  --event-window-z: 139;
 }
 
 .lelouch-alert-window .window-body,
@@ -2498,27 +2088,9 @@ body.is-midnight-gospel-locked * {
 }
 
 .gears-nest-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 24px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(780px, calc(100vw - 24px));
-  z-index: 139;
-}
-
-.gears-nest-window.is-hidden {
-  display: none;
-}
-
-.gears-nest-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.gears-nest-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-max-width: calc(100vw - 24px);
+  --event-window-width: 780px;
+  --event-window-z: 139;
 }
 
 .gears-nest-window > .window-body {
@@ -3303,30 +2875,8 @@ button.gears-nest-enemy:not(:disabled) {
 
 .instrumentality-window,
 .instrumentality-congrats-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(380px, calc(100vw - 32px));
-  z-index: 139;
-}
-
-.instrumentality-window.is-hidden,
-.instrumentality-congrats-window.is-hidden {
-  display: none;
-}
-
-.instrumentality-window.is-opening,
-.instrumentality-congrats-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.instrumentality-window.is-closing,
-.instrumentality-congrats-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 380px;
+  --event-window-z: 139;
 }
 
 .instrumentality-window .window-body,
@@ -3381,27 +2931,8 @@ button.gears-nest-enemy:not(:disabled) {
 }
 
 .event-chat-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(430px, calc(100vw - 32px));
-  z-index: 139;
-}
-
-.event-chat-window.is-hidden {
-  display: none;
-}
-
-.event-chat-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.event-chat-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 430px;
+  --event-window-z: 139;
 }
 
 .event-chat-window .window-body {
@@ -3623,27 +3154,8 @@ button.gears-nest-enemy:not(:disabled) {
 }
 
 .death-note-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(620px, calc(100vw - 32px));
-  z-index: 140;
-}
-
-.death-note-window.is-hidden {
-  display: none;
-}
-
-.death-note-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.death-note-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 620px;
+  --event-window-z: 140;
 }
 
 .death-note-window .window-body {
@@ -3812,27 +3324,9 @@ html.is-wall-breach-shaking body {
 }
 
 .current-public-info-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 24px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(494px, calc(100vw - 24px));
-  z-index: 142;
-}
-
-.current-public-info-window.is-hidden {
-  display: none;
-}
-
-.current-public-info-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.current-public-info-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-max-width: calc(100vw - 24px);
+  --event-window-width: 494px;
+  --event-window-z: 142;
 }
 
 .current-public-info-window .window-body {
@@ -4266,27 +3760,9 @@ html.is-wall-breach-shaking body {
 }
 
 .nataraja-window {
-  display: block;
-  left: 50%;
-  max-width: calc(75vw - 18px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(322.5px, calc(75vw - 18px));
-  z-index: 142;
-}
-
-.nataraja-window.is-hidden {
-  display: none;
-}
-
-.nataraja-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.nataraja-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-max-width: calc(75vw - 18px);
+  --event-window-width: 322.5px;
+  --event-window-z: 142;
 }
 
 .nataraja-window .window-body {
@@ -4343,29 +3819,10 @@ html.is-wall-breach-shaking body {
 }
 
 .fate-window {
-  display: block;
+  --event-window-width: 390px;
+  --event-window-z: 142;
   isolation: isolate;
-  left: 50%;
-  max-width: calc(100vw - 32px);
   overflow: visible;
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(390px, calc(100vw - 32px));
-  z-index: 142;
-}
-
-.fate-window.is-hidden {
-  display: none;
-}
-
-.fate-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.fate-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .fate-window.is-resisting {
@@ -4500,29 +3957,10 @@ html.is-wall-breach-shaking body {
 }
 
 .lancer-battle-window {
-  display: block;
+  --event-window-width: 560px;
+  --event-window-z: 142;
   isolation: isolate;
-  left: 50%;
-  max-width: calc(100vw - 32px);
   overflow: visible;
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(560px, calc(100vw - 32px));
-  z-index: 142;
-}
-
-.lancer-battle-window.is-hidden {
-  display: none;
-}
-
-.lancer-battle-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.lancer-battle-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .lancer-battle-window.is-final-alert {
@@ -4691,28 +4129,9 @@ html.is-wall-breach-shaking body {
 }
 
 .brand-burns-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
+  --event-window-width: 420px;
+  --event-window-z: 143;
   overflow: visible;
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(420px, calc(100vw - 32px));
-  z-index: 143;
-}
-
-.brand-burns-window.is-hidden {
-  display: none;
-}
-
-.brand-burns-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.brand-burns-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .brand-burns-window.is-hit {
@@ -4963,27 +4382,10 @@ html.is-wall-breach-shaking body {
 }
 
 .brand-puck-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(210px, calc(100vw - 32px));
-  z-index: 146;
-}
-
-.brand-puck-window.is-hidden {
-  display: none;
-}
-
-.brand-puck-window.is-opening {
-  animation: retro-window-open 220ms steps(7, end) both;
-}
-
-.brand-puck-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 160ms steps(7, end) both;
+  --event-window-close-duration: 160ms;
+  --event-window-open-duration: 220ms;
+  --event-window-width: 210px;
+  --event-window-z: 146;
 }
 
 .brand-puck-body {
@@ -5023,27 +4425,10 @@ html.is-wall-breach-shaking body {
 }
 
 .brand-block-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(232px, calc(100vw - 32px));
-  z-index: 148;
-}
-
-.brand-block-window.is-hidden {
-  display: none;
-}
-
-.brand-block-window.is-opening {
-  animation: retro-window-open 220ms steps(7, end) both;
-}
-
-.brand-block-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 160ms steps(7, end) both;
+  --event-window-close-duration: 160ms;
+  --event-window-open-duration: 220ms;
+  --event-window-width: 232px;
+  --event-window-z: 148;
 }
 
 .brand-block-body {
@@ -5076,28 +4461,11 @@ html.is-wall-breach-shaking body {
 }
 
 .brand-apostle-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
+  --event-window-close-duration: 160ms;
+  --event-window-open-duration: 220ms;
+  --event-window-width: 318px;
+  --event-window-z: 147;
   overflow: visible;
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(318px, calc(100vw - 32px));
-  z-index: 147;
-}
-
-.brand-apostle-window.is-hidden {
-  display: none;
-}
-
-.brand-apostle-window.is-opening {
-  animation: retro-window-open 220ms steps(7, end) both;
-}
-
-.brand-apostle-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 160ms steps(7, end) both;
 }
 
 .brand-apostle-window.is-hit {
@@ -5255,27 +4623,8 @@ html.is-wall-breach-shaking body {
 }
 
 .behelit-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(390px, calc(100vw - 32px));
-  z-index: 141;
-}
-
-.behelit-window.is-hidden {
-  display: none;
-}
-
-.behelit-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.behelit-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 390px;
+  --event-window-z: 141;
 }
 
 .behelit-window .window-body {
@@ -5309,27 +4658,8 @@ html.is-wall-breach-shaking body {
 }
 
 .john-pork-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(280px, calc(100vw - 32px));
-  z-index: 138;
-}
-
-.john-pork-window.is-hidden {
-  display: none;
-}
-
-.john-pork-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.john-pork-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 280px;
+  --event-window-z: 138;
 }
 
 .john-pork-window .window-body {
@@ -5452,27 +4782,8 @@ html.is-wall-breach-shaking body {
 }
 
 .advertisement-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(520px, calc(100vw - 32px));
-  z-index: 136;
-}
-
-.advertisement-window.is-hidden {
-  display: none;
-}
-
-.advertisement-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.advertisement-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 520px;
+  --event-window-z: 136;
 }
 
 .advertisement-window .window-body {
@@ -5523,27 +4834,8 @@ html.is-wall-breach-shaking body {
 }
 
 .saul-ad-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(430px, calc(100vw - 32px));
-  z-index: 136;
-}
-
-.saul-ad-window.is-hidden {
-  display: none;
-}
-
-.saul-ad-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.saul-ad-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 430px;
+  --event-window-z: 136;
 }
 
 .saul-ad-window .window-body {
@@ -5563,27 +4855,8 @@ html.is-wall-breach-shaking body {
 }
 
 .kidnamedfinger-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(390px, calc(100vw - 32px));
-  z-index: 136;
-}
-
-.kidnamedfinger-window.is-hidden {
-  display: none;
-}
-
-.kidnamedfinger-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.kidnamedfinger-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 390px;
+  --event-window-z: 136;
 }
 
 .kidnamedfinger-window .window-body {
@@ -5614,27 +4887,8 @@ html.is-wall-breach-shaking body {
 }
 
 .walter-white-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(390px, calc(100vw - 32px));
-  z-index: 136;
-}
-
-.walter-white-window.is-hidden {
-  display: none;
-}
-
-.walter-white-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.walter-white-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 390px;
+  --event-window-z: 136;
 }
 
 .walter-white-window .window-body {
@@ -5665,27 +4919,7 @@ html.is-wall-breach-shaking body {
 }
 
 .bounty-hunter-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(360px, calc(100vw - 32px));
-  z-index: 136;
-}
-
-.bounty-hunter-window.is-hidden {
-  display: none;
-}
-
-.bounty-hunter-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.bounty-hunter-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-z: 136;
 }
 
 .bounty-hunter-window .window-body {
@@ -5705,27 +4939,8 @@ html.is-wall-breach-shaking body {
 }
 
 .pokemon-starter-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(720px, calc(100vw - 32px));
-  z-index: 137;
-}
-
-.pokemon-starter-window.is-hidden {
-  display: none;
-}
-
-.pokemon-starter-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.pokemon-starter-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
+  --event-window-width: 720px;
+  --event-window-z: 137;
 }
 
 .pokemon-starter-window .window-body {
@@ -6187,31 +5402,13 @@ html.is-wall-breach-shaking body {
 }
 
 .relic-recovery-window {
+  --event-window-z: 137;
   --relic-recovery-fit-scale: 1;
-  display: block;
-  left: 50%;
   max-width: none;
   overflow: visible;
-  position: fixed;
-  top: 50%;
   transform: scale(var(--relic-recovery-fit-scale));
   transform-origin: center center;
-  translate: -50% -50%;
   width: 820px;
-  z-index: 137;
-}
-
-.relic-recovery-window.is-hidden {
-  display: none;
-}
-
-.relic-recovery-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.relic-recovery-window.is-closing {
-  animation: retro-window-close 180ms steps(7, end) both;
-  pointer-events: none;
 }
 
 .relic-recovery-window .window-body {
@@ -6554,28 +5751,9 @@ html.is-wall-breach-shaking body {
 }
 
 .toxic-jungle-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
+  --event-window-width: 820px;
+  --event-window-z: 138;
   overflow: visible;
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(820px, calc(100vw - 32px));
-  z-index: 138;
-}
-
-.toxic-jungle-window.is-hidden {
-  display: none;
-}
-
-.toxic-jungle-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.toxic-jungle-window.is-closing {
-  animation: retro-window-close 180ms steps(7, end) both;
-  pointer-events: none;
 }
 
 .toxic-jungle-window.is-complete,
@@ -6855,56 +6033,24 @@ html.is-wall-breach-shaking body {
 .dst-crafting-window,
 .dst-survive-window,
 .dst-darkness-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  z-index: 136;
+  --event-window-z: 136;
 }
 
 .dst-night-window {
-  width: min(340px, calc(100vw - 32px));
+  --event-window-width: 340px;
 }
 
 .dst-crafting-window {
-  width: min(310px, calc(100vw - 32px));
-}
-
-.dst-survive-window {
-  width: min(360px, calc(100vw - 32px));
+  --event-window-width: 310px;
 }
 
 .dst-darkness-window {
-  width: min(390px, calc(100vw - 32px));
+  --event-window-width: 390px;
 }
 
 .dst-crafting-window,
 .dst-survive-window {
   background: #2d2419;
-}
-
-.dst-night-window.is-hidden,
-.dst-crafting-window.is-hidden,
-.dst-survive-window.is-hidden,
-.dst-darkness-window.is-hidden {
-  display: none;
-}
-
-.dst-night-window.is-opening,
-.dst-crafting-window.is-opening,
-.dst-survive-window.is-opening,
-.dst-darkness-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.dst-night-window.is-closing,
-.dst-crafting-window.is-closing,
-.dst-survive-window.is-closing,
-.dst-darkness-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .dst-night-window .window-body {
@@ -7216,18 +6362,8 @@ html.is-wall-breach-shaking body {
 }
 
 .biden-blast-window {
-  display: block;
-  left: 50%;
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(380px, calc(100vw - 32px));
-  z-index: 134;
-}
-
-.biden-blast-window.is-hidden {
-  display: none;
+  --event-window-width: 380px;
+  --event-window-z: 134;
 }
 
 .biden-blast-window.is-opening {
@@ -7286,31 +6422,9 @@ html.is-wall-breach-shaking body {
 
 .virus-window,
 .virus-rescue-window {
-  display: block;
-  left: 50%;
+  --event-window-width: 380px;
+  --event-window-z: 148;
   max-height: calc(100vh - 76px);
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(380px, calc(100vw - 32px));
-  z-index: 148;
-}
-
-.virus-window.is-hidden,
-.virus-rescue-window.is-hidden {
-  display: none;
-}
-
-.virus-window.is-opening,
-.virus-rescue-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.virus-window.is-closing,
-.virus-rescue-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .virus-window.is-exploding {
@@ -7446,28 +6560,9 @@ html.is-wall-breach-shaking body {
 }
 
 .infinity-armory-window {
-  display: block;
-  left: 50%;
+  --event-window-width: 540px;
+  --event-window-z: 149;
   max-height: calc(100vh - 76px);
-  max-width: calc(100vw - 32px);
-  position: fixed;
-  top: 50%;
-  translate: -50% -50%;
-  width: min(540px, calc(100vw - 32px));
-  z-index: 149;
-}
-
-.infinity-armory-window.is-hidden {
-  display: none;
-}
-
-.infinity-armory-window.is-opening {
-  animation: retro-window-open 260ms steps(7, end) both;
-}
-
-.infinity-armory-window.is-closing {
-  pointer-events: none;
-  animation: retro-window-close 180ms steps(7, end) both;
 }
 
 .infinity-armory-window .window-body {

@@ -463,7 +463,7 @@ test("current publicly available information event uses local AOT assets outside
   );
   assert.match(
     getCssBlock(".current-public-info-window"),
-    /width: min\(494px, calc\(100vw - 24px\)\);/
+    /--event-window-max-width: calc\(100vw - 24px\);[\s\S]*?--event-window-width: 494px;/
   );
   assert.match(getCssBlock(".current-public-info-window .window-body"), /padding: 4px;/);
   const imageStyles = getCssBlock(".current-public-info-window img");
@@ -569,7 +569,7 @@ test("spare a trna event is a probability-gated alert with a local ribosome icon
   assert.match(registration, /showTrnaRequestWindow\(\);/);
   assert.match(
     homeSource,
-    /class="window random-alert-window trna-request-window is-hidden"[\s\S]*id="trna-request-window"/
+    /class="window random-event-window random-alert-window trna-request-window is-hidden"[\s\S]*id="trna-request-window"/
   );
   assert.match(windowMarkup, /Spare a tRNA\?/);
   assert.match(
@@ -607,7 +607,7 @@ test("spell on the stack event is probability-gated with counter and damage effe
   assert.match(registration, /showSpellStackWindow\(\);/);
   assert.match(
     homeSource,
-    /class="window random-alert-window spell-stack-window is-hidden"[\s\S]*id="spell-stack-window"/
+    /class="window random-event-window random-alert-window spell-stack-window is-hidden"[\s\S]*id="spell-stack-window"/
   );
   assert.match(windowMarkup, /<div class="title-bar-text">Spell on the Stack<\/div>/);
   assert.match(windowMarkup, /id="spell-stack-lightning-canvas"/);
@@ -666,7 +666,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(registration, /showSootSpritesWindow\(\);/);
   assert.match(
     homeSource,
-    /class="window random-alert-window soot-sprites-window is-hidden"[\s\S]*id="soot-sprites-window"/
+    /class="window random-event-window random-alert-window soot-sprites-window is-hidden"[\s\S]*id="soot-sprites-window"/
   );
   assert.match(windowMarkup, /<div class="title-bar-text">System Alert<\/div>/);
   assert.match(windowMarkup, /src="assets\/app-icons\/ico\/hardware\.ico"/);
@@ -975,7 +975,7 @@ test("nataraja event is probability-gated and loops local video with offer butto
   assert.match(mainSource, /afterClose: resetNatarajaVideo,/);
   assert.match(
     getCssBlock(".nataraja-window"),
-    /max-width: calc\(75vw - 18px\);[\s\S]*?width: min\(322\.5px, calc\(75vw - 18px\)\);/
+    /--event-window-max-width: calc\(75vw - 18px\);[\s\S]*?--event-window-width: 322\.5px;/
   );
   assert.match(
     getCssBlock(".nataraja-window .window-body"),
@@ -1010,7 +1010,7 @@ test("noble steed event delays then shows a same-place result alert", async () =
   assert.match(mainSource, /"noble-steed": \(\) => \[[\s\S]*?nobleSteedWindow,[\s\S]*?nobleSteedResultWindow,[\s\S]*?"assets\/random%20events\/horse\.jpeg"/);
   assert.match(
     homeSource,
-    /class="window random-alert-window noble-steed-window is-hidden"[\s\S]*?id="noble-steed-window"/
+    /class="window random-event-window random-alert-window noble-steed-window is-hidden"[\s\S]*?id="noble-steed-window"/
   );
   assert.match(windowMarkup, /<div class="title-bar-text">Noble Steed<\/div>/);
   assert.match(windowMarkup, /data-src="assets\/random%20events\/horse\.jpeg"/);
@@ -1020,7 +1020,7 @@ test("noble steed event delays then shows a same-place result alert", async () =
   assert.match(windowMarkup, /id="noble-steed-no">No<\/button>/);
   assert.match(
     homeSource,
-    /class="window random-alert-window noble-steed-result-window is-hidden"[\s\S]*?id="noble-steed-result-window"/
+    /class="window random-event-window random-alert-window noble-steed-result-window is-hidden"[\s\S]*?id="noble-steed-result-window"/
   );
   assert.match(resultWindowMarkup, /<div class="title-bar-text">System Alert<\/div>/);
   assert.match(resultWindowMarkup, /src="assets\/app-icons\/ico\/globe_map\.ico"/);
@@ -1041,7 +1041,7 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
   const registrationStart = mainSource.indexOf('id: "toxic-jungle"');
   const registrationEnd = mainSource.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="toxic-jungle-window"');
-  const windowEnd = homeSource.indexOf('<div class="window fate-window', windowStart);
+  const windowEnd = homeSource.indexOf('<div class="window random-event-window fate-window', windowStart);
 
   assert.notEqual(registrationStart, -1, "Missing Toxic Jungle registration");
   assert.notEqual(registrationEnd, -1, "Missing Toxic Jungle registration end");
@@ -1058,7 +1058,7 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
   assert.match(mainSource, /"toxic-jungle": \(\) => \[[\s\S]*?toxicJungleWindow,[\s\S]*?Object\.values\(TOXIC_JUNGLE_ASSETS\)/);
   assert.match(mainSource, /background: "assets\/random%20events\/toxic-jungle\.webp"/);
   assert.match(mainSource, /nausicaa: "assets\/random%20events\/nausicaa\.jpg"/);
-  assert.match(homeSource, /class="window toxic-jungle-window is-hidden"[\s\S]*?id="toxic-jungle-window"/);
+  assert.match(homeSource, /class="window random-event-window toxic-jungle-window is-hidden"[\s\S]*?id="toxic-jungle-window"/);
   assert.match(windowMarkup, /<div class="title-bar-text">Toxic Jungle<\/div>/);
   assert.match(windowMarkup, /class="toxic-jungle-dialog pokemon-dialogue"/);
   assert.match(windowMarkup, /class="toxic-jungle-nausicaa pokemon-dialogue-portrait"/);
@@ -1123,7 +1123,7 @@ test("resist causality window has title close and mobile-visible imagery", async
   const registrationStart = mainSource.indexOf('id: "resist-your-fate"');
   const registrationEnd = mainSource.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="fate-window"');
-  const windowEnd = homeSource.indexOf('<div class="window lancer-battle-window', windowStart);
+  const windowEnd = homeSource.indexOf('<div class="window random-event-window lancer-battle-window', windowStart);
 
   assert.notEqual(registrationStart, -1, "Missing Resist Causality registration");
   assert.notEqual(registrationEnd, -1, "Missing Resist Causality registration end");
@@ -1165,7 +1165,7 @@ test("wall breach event shakes, flashes, and opens a probability-gated popup", a
   assert.match(mainSource, /"wall-breach": \(\) => \[wallBreachWindow\]/);
   assert.match(
     homeSource,
-    /class="window random-alert-window wall-breach-window is-hidden"[\s\S]*id="wall-breach-window"/
+    /class="window random-event-window random-alert-window wall-breach-window is-hidden"[\s\S]*id="wall-breach-window"/
   );
   assert.match(homeSource, /class="random-alert-message wall-breach-message"/);
   assert.match(homeSource, /class="random-alert-actions wall-breach-actions"/);
@@ -1309,7 +1309,7 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=loop-video-fallback-wait-20260929/);
+    assert.match(source, /random-events\.css\?v=managed-event-windows-20261001/);
     assert.match(source, /cursors\.css\?v=cache-token-parity-20260927/);
     assert.match(source, /minesweeper\.css\?v=minesweeper-grid-rows-20260909/);
     assert.match(source, /game-stats\.css\?v=html-semantics-20260927/);

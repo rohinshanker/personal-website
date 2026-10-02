@@ -118,7 +118,7 @@
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=clash-royale-inlays-20261001" />
     <link rel="stylesheet" href="styles/home/study-resources.css?v=study-row-hover-20261001" />
-    <link rel="stylesheet" href="styles/home/random-events.css?v=loop-video-fallback-wait-20260929" />
+    <link rel="stylesheet" href="styles/home/random-events.css?v=managed-event-windows-20261001" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cache-token-parity-20260927" />
     <link rel="stylesheet" href="styles/home/admin-controls.css?v=repo-hygiene-20260927" />
     <script
@@ -4157,7 +4157,7 @@
       </div>
     </div>
 
-    <div class="window random-event-window is-hidden" id="random-event-window" aria-hidden="true">
+    <div class="window random-event-window random-event-image-window is-hidden" id="random-event-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text" id="random-event-title">April 20</div>
         <div class="title-bar-controls">
@@ -4170,7 +4170,7 @@
       </div>
     </div>
 
-    <div class="window feliz-jueves-window is-hidden" id="feliz-jueves-window" aria-hidden="true">
+    <div class="window random-event-window feliz-jueves-window is-hidden" id="feliz-jueves-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Feliz Jueves</div>
         <div class="title-bar-controls">
@@ -4192,7 +4192,7 @@
       </div>
     </div>
 
-    <div class="window random-alert-window is-hidden" id="random-alert-window" aria-hidden="true">
+    <div class="window random-event-window random-alert-window is-hidden" id="random-alert-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">System Alert</div>
         <div class="title-bar-controls">
@@ -4218,7 +4218,7 @@
     </div>
 
     <div
-      class="window random-alert-window debug-system-alert-window is-hidden"
+      class="window random-event-window random-alert-window debug-system-alert-window is-hidden"
       id="debug-system-alert-window"
       role="alertdialog"
       aria-modal="false"
@@ -4252,7 +4252,7 @@
     </div>
 
     <div
-      class="window random-alert-window neko-stream-alert-window is-hidden"
+      class="window random-event-window random-alert-window neko-stream-alert-window is-hidden"
       id="neko-stream-alert-window"
       role="alertdialog"
       aria-modal="false"
@@ -4282,7 +4282,7 @@
     </div>
 
     <div
-      class="window random-alert-window vanishing-popup-window is-hidden"
+      class="window random-event-window random-alert-window vanishing-popup-window is-hidden"
       id="vanishing-popup-window"
       aria-hidden="true"
     >
@@ -4343,7 +4343,7 @@
     />
 
     <div
-      class="window random-alert-window dodging-popup-window is-hidden"
+      class="window random-event-window random-alert-window dodging-popup-window is-hidden"
       id="dodging-popup-window"
       aria-hidden="true"
     >
@@ -4385,7 +4385,7 @@
     </div>
 
     <div
-      class="window self-love-alert-window is-hidden"
+      class="window random-event-window self-love-alert-window is-hidden"
       id="self-love-alert-window"
       aria-hidden="true"
     >
@@ -4407,7 +4407,7 @@
       </div>
     </div>
 
-    <div class="window rohin-update-window is-hidden" id="rohin-update-window" aria-hidden="true">
+    <div class="window random-event-window rohin-update-window is-hidden" id="rohin-update-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">System Alert</div>
       </div>
@@ -4439,7 +4439,7 @@
       </div>
     </div>
 
-    <div class="window mcafee-window is-hidden" id="mcafee-prompt-window" aria-hidden="true">
+    <div class="window random-event-window mcafee-window is-hidden" id="mcafee-prompt-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">McAfee Antivirus</div>
       </div>
@@ -4459,7 +4459,7 @@
       </div>
     </div>
 
-    <div class="window mcafee-window is-hidden" id="mcafee-download-window" aria-hidden="true">
+    <div class="window random-event-window mcafee-window is-hidden" id="mcafee-download-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">McAfee Antivirus</div>
       </div>
@@ -4482,7 +4482,7 @@
       </div>
     </div>
 
-    <div class="window mcafee-window is-hidden" id="mcafee-thanks-window" aria-hidden="true">
+    <div class="window random-event-window mcafee-window is-hidden" id="mcafee-thanks-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">McAfee Antivirus</div>
       </div>
@@ -4501,7 +4501,7 @@
       </div>
     </div>
 
-    <div class="window rohin-note-window is-hidden" id="rohin-note-window" aria-hidden="true">
+    <div class="window random-event-window rohin-note-window is-hidden" id="rohin-note-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Note</div>
       </div>
@@ -4516,7 +4516,7 @@
       </div>
     </div>
 
-    <div class="window rohin-note-window is-hidden" id="earth-note-window" aria-hidden="true">
+    <div class="window random-event-window rohin-note-window is-hidden" id="earth-note-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Note</div>
       </div>
@@ -4531,7 +4531,7 @@
       </div>
     </div>
 
-    <div class="window rohin-note-window is-hidden" id="health-note-window" aria-hidden="true">
+    <div class="window random-event-window rohin-note-window is-hidden" id="health-note-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Note</div>
       </div>
@@ -4546,7 +4546,7 @@
       </div>
     </div>
 
-    <div class="window rohin-note-window is-hidden" id="love-note-window" aria-hidden="true">
+    <div class="window random-event-window rohin-note-window is-hidden" id="love-note-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Note</div>
       </div>
@@ -4561,7 +4561,7 @@
       </div>
     </div>
 
-    <div class="window no-smoking-window is-hidden" id="no-smoking-window" aria-hidden="true">
+    <div class="window random-event-window no-smoking-window is-hidden" id="no-smoking-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">System Alert</div>
       </div>
@@ -4580,7 +4580,7 @@
       </div>
     </div>
 
-    <div class="window possum-springs-window is-hidden" id="possum-springs-window" aria-hidden="true">
+    <div class="window random-event-window possum-springs-window is-hidden" id="possum-springs-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Possum Springs Bulletin</div>
       </div>
@@ -4603,7 +4603,7 @@
       </div>
     </div>
 
-    <div class="window winged-light-window is-hidden" id="winged-light-window" aria-hidden="true">
+    <div class="window random-event-window winged-light-window is-hidden" id="winged-light-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Winged Light</div>
       </div>
@@ -4624,7 +4624,7 @@
       </div>
     </div>
 
-    <div class="window rohin-note-window is-hidden" id="mana-flood-window" aria-hidden="true">
+    <div class="window random-event-window rohin-note-window is-hidden" id="mana-flood-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Mana Flood</div>
       </div>
@@ -4639,7 +4639,7 @@
       </div>
     </div>
 
-    <div class="window rohin-note-window is-hidden" id="mimic-warning-window" aria-hidden="true">
+    <div class="window random-event-window rohin-note-window is-hidden" id="mimic-warning-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Mimic Warning</div>
       </div>
@@ -4654,7 +4654,7 @@
       </div>
     </div>
 
-    <div class="window skill-check-window is-hidden" id="skill-check-window" aria-hidden="true">
+    <div class="window random-event-window skill-check-window is-hidden" id="skill-check-window" aria-hidden="true">
       <div class="skill-check-lock-screen" aria-hidden="true"></div>
       <div class="title-bar">
         <div class="title-bar-text">A Sudden Skill Check</div>
@@ -4692,7 +4692,7 @@
     </div>
 
     <div
-      class="window skill-check-result-window is-hidden"
+      class="window random-event-window skill-check-result-window is-hidden"
       id="skill-check-result-window"
       aria-hidden="true"
     >
@@ -4710,7 +4710,7 @@
       </div>
     </div>
 
-    <div class="window distress-signal-window is-hidden" id="distress-signal-window" aria-hidden="true">
+    <div class="window random-event-window distress-signal-window is-hidden" id="distress-signal-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Distress Signal</div>
         <div class="title-bar-controls">
@@ -4772,7 +4772,7 @@
       </div>
     </div>
 
-    <div class="window distress-upload-window is-hidden" id="distress-upload-window" aria-hidden="true">
+    <div class="window random-event-window distress-upload-window is-hidden" id="distress-upload-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">System Alert</div>
       </div>
@@ -4787,7 +4787,7 @@
       </div>
     </div>
 
-    <div class="window nazar-window is-hidden" id="nazar-window" aria-hidden="true">
+    <div class="window random-event-window nazar-window is-hidden" id="nazar-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Evil Eye</div>
         <div class="title-bar-controls">
@@ -4811,7 +4811,7 @@
       </div>
     </div>
 
-    <div class="window site-grace-window is-hidden" id="site-grace-window" aria-hidden="true">
+    <div class="window random-event-window site-grace-window is-hidden" id="site-grace-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Site of Grace</div>
       </div>
@@ -4830,7 +4830,7 @@
       </div>
     </div>
 
-    <div class="window stalker-window is-hidden" id="stalker-window" aria-hidden="true">
+    <div class="window random-event-window stalker-window is-hidden" id="stalker-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">The Zone</div>
       </div>
@@ -4849,7 +4849,7 @@
       </div>
     </div>
 
-    <div class="window stalker-window is-hidden" id="stalker-result-window" aria-hidden="true">
+    <div class="window random-event-window stalker-window is-hidden" id="stalker-result-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">The Zone</div>
       </div>
@@ -4865,7 +4865,7 @@
     </div>
 
     <div
-      class="window nana-encounter-window is-hidden"
+      class="window random-event-window nana-encounter-window is-hidden"
       id="nana-encounter-window"
       aria-hidden="true"
     >
@@ -4895,7 +4895,7 @@
       </div>
     </div>
 
-    <div class="window nana-accept-window is-hidden" id="nana-accept-window" aria-hidden="true">
+    <div class="window random-event-window nana-accept-window is-hidden" id="nana-accept-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Random Encounter</div>
       </div>
@@ -4924,7 +4924,7 @@
     </div>
 
     <div
-      class="window serval-encounter-window is-hidden"
+      class="window random-event-window serval-encounter-window is-hidden"
       id="serval-encounter-window"
       aria-hidden="true"
     >
@@ -4949,7 +4949,7 @@
     </div>
 
     <div
-      class="window serval-pizza-window is-hidden"
+      class="window random-event-window serval-pizza-window is-hidden"
       id="serval-pizza-window"
       aria-hidden="true"
     >
@@ -4979,7 +4979,7 @@
     </div>
 
     <div
-      class="window caracal-encounter-window is-hidden"
+      class="window random-event-window caracal-encounter-window is-hidden"
       id="caracal-encounter-window"
       aria-hidden="true"
     >
@@ -5004,7 +5004,7 @@
     </div>
 
     <div
-      class="window caracal-result-window is-hidden"
+      class="window random-event-window caracal-result-window is-hidden"
       id="caracal-result-window"
       aria-hidden="true"
     >
@@ -5027,7 +5027,7 @@
     </div>
 
     <div
-      class="window shoebill-encounter-window is-hidden"
+      class="window random-event-window shoebill-encounter-window is-hidden"
       id="shoebill-encounter-window"
       aria-hidden="true"
     >
@@ -5054,7 +5054,7 @@
     </div>
 
     <div
-      class="window shoebill-bow-window is-hidden"
+      class="window random-event-window shoebill-bow-window is-hidden"
       id="shoebill-bow-window"
       aria-hidden="true"
     >
@@ -5076,7 +5076,7 @@
     </div>
 
     <div
-      class="window midnight-gospel-invite-window is-hidden"
+      class="window random-event-window midnight-gospel-invite-window is-hidden"
       id="midnight-gospel-invite-window"
       aria-hidden="true"
     >
@@ -5103,7 +5103,7 @@
     </div>
 
     <div
-      class="window midnight-gospel-meditation-window is-hidden"
+      class="window random-event-window midnight-gospel-meditation-window is-hidden"
       id="midnight-gospel-meditation-window"
       aria-hidden="true"
     >
@@ -5207,7 +5207,7 @@
       </div>
     </div>
 
-    <div class="window john-pork-window is-hidden" id="john-pork-window" aria-hidden="true">
+    <div class="window random-event-window john-pork-window is-hidden" id="john-pork-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Incoming Call</div>
         <div class="title-bar-controls">
@@ -5240,7 +5240,7 @@
       </div>
     </div>
 
-    <div class="window advertisement-window is-hidden" id="advertisement-window" aria-hidden="true">
+    <div class="window random-event-window advertisement-window is-hidden" id="advertisement-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Advertisement</div>
       </div>
@@ -5280,7 +5280,7 @@
       </div>
     </div>
 
-    <div class="window saul-ad-window is-hidden" id="saul-ad-window" aria-hidden="true">
+    <div class="window random-event-window saul-ad-window is-hidden" id="saul-ad-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Advertisement</div>
         <div class="title-bar-controls">
@@ -5298,7 +5298,7 @@
       </div>
     </div>
 
-    <div class="window kidnamedfinger-window is-hidden" id="kidnamedfinger-window" aria-hidden="true">
+    <div class="window random-event-window kidnamedfinger-window is-hidden" id="kidnamedfinger-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">System Announcement</div>
       </div>
@@ -5315,7 +5315,7 @@
       </div>
     </div>
 
-    <div class="window walter-white-window is-hidden" id="walter-white-window" aria-hidden="true">
+    <div class="window random-event-window walter-white-window is-hidden" id="walter-white-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Public Service Announcement</div>
       </div>
@@ -5332,7 +5332,7 @@
       </div>
     </div>
 
-    <div class="window bounty-hunter-window is-hidden" id="bounty-hunter-window" aria-hidden="true">
+    <div class="window random-event-window bounty-hunter-window is-hidden" id="bounty-hunter-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Bounty Hunter Announcement</div>
         <div class="title-bar-controls">
@@ -5349,7 +5349,7 @@
       </div>
     </div>
 
-    <div class="window pokemon-starter-window is-hidden" id="pokemon-starter-window" aria-hidden="true">
+    <div class="window random-event-window pokemon-starter-window is-hidden" id="pokemon-starter-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Select Your Starter Pokémon</div>
         <div class="title-bar-controls">
@@ -5462,7 +5462,7 @@
     </div>
 
     <div
-      class="window relic-recovery-window is-hidden"
+      class="window random-event-window relic-recovery-window is-hidden"
       id="relic-recovery-window"
       aria-hidden="true"
     >
@@ -5535,7 +5535,7 @@
       </div>
     </div>
 
-    <div class="window dst-night-window is-hidden" id="dst-night-window" aria-hidden="true">
+    <div class="window random-event-window dst-night-window is-hidden" id="dst-night-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">The Sun Begins to Set...</div>
       </div>
@@ -5549,7 +5549,7 @@
       </div>
     </div>
 
-    <div class="window dst-crafting-window is-hidden" id="dst-crafting-window" aria-hidden="true">
+    <div class="window random-event-window dst-crafting-window is-hidden" id="dst-crafting-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Craft Campfire</div>
       </div>
@@ -5609,7 +5609,7 @@
       </div>
     </div>
 
-    <div class="window dst-survive-window is-hidden" id="dst-survive-window" aria-hidden="true">
+    <div class="window random-event-window dst-survive-window is-hidden" id="dst-survive-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Campfire</div>
       </div>
@@ -5636,7 +5636,7 @@
       </div>
     </div>
 
-    <div class="window dst-darkness-window is-hidden" id="dst-darkness-window" aria-hidden="true">
+    <div class="window random-event-window dst-darkness-window is-hidden" id="dst-darkness-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">A Grim Fate...</div>
       </div>
@@ -5656,7 +5656,7 @@
       </div>
     </div>
 
-    <div class="window biden-blast-window is-hidden" id="biden-blast-window" aria-hidden="true">
+    <div class="window random-event-window biden-blast-window is-hidden" id="biden-blast-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Biden Blast</div>
       </div>
@@ -5673,7 +5673,7 @@
       </div>
     </div>
 
-    <div class="window infinity-armory-window is-hidden" id="infinity-armory-window" aria-hidden="true">
+    <div class="window random-event-window infinity-armory-window is-hidden" id="infinity-armory-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Armory</div>
         <div class="title-bar-controls">
@@ -5942,7 +5942,7 @@
       </div>
     </div>
 
-    <div class="window virus-window is-hidden" id="virus-window" aria-hidden="true">
+    <div class="window random-event-window virus-window is-hidden" id="virus-window" aria-hidden="true">
       <div class="virus-lightning-field" aria-hidden="true">
         <canvas class="virus-border-lightning-canvas" id="virus-border-lightning-canvas"></canvas>
       </div>
@@ -5964,7 +5964,7 @@
       </div>
     </div>
 
-    <div class="window virus-rescue-window is-hidden" id="virus-rescue-window" aria-hidden="true">
+    <div class="window random-event-window virus-rescue-window is-hidden" id="virus-rescue-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">McAfee Antivirus</div>
       </div>
@@ -6003,7 +6003,7 @@
     </div>
 
     <div
-      class="window event-chat-window lain-alert-window is-hidden"
+      class="window random-event-window event-chat-window lain-alert-window is-hidden"
       id="lain-alert-window"
       role="dialog"
       aria-hidden="true"
@@ -6072,7 +6072,7 @@
     </div>
 
     <div
-      class="window lelouch-alert-window is-hidden"
+      class="window random-event-window lelouch-alert-window is-hidden"
       id="lelouch-alert-window"
       aria-hidden="true"
     >
@@ -6093,7 +6093,7 @@
     </div>
 
     <div
-      class="window berserk-sunrise-window is-hidden"
+      class="window random-event-window berserk-sunrise-window is-hidden"
       id="berserk-sunrise-window"
       aria-hidden="true"
     >
@@ -6112,7 +6112,7 @@
     </div>
 
     <div
-      class="window calendar-reminder-window is-hidden"
+      class="window random-event-window calendar-reminder-window is-hidden"
       id="calendar-reminder-window"
       aria-hidden="true"
     >
@@ -6136,7 +6136,7 @@
     </div>
 
     <div
-      class="window gradescope-curve-window is-hidden"
+      class="window random-event-window gradescope-curve-window is-hidden"
       id="gradescope-curve-window"
       aria-hidden="true"
     >
@@ -6190,7 +6190,7 @@
     </div>
 
     <div
-      class="window gears-nest-window is-hidden"
+      class="window random-event-window gears-nest-window is-hidden"
       id="gears-nest-window"
       aria-hidden="true"
     >
@@ -6346,7 +6346,7 @@
     </div>
 
     <div
-      class="window instrumentality-window is-hidden"
+      class="window random-event-window instrumentality-window is-hidden"
       id="instrumentality-window"
       aria-hidden="true"
     >
@@ -6366,7 +6366,7 @@
     </div>
 
     <div
-      class="window instrumentality-congrats-window is-hidden"
+      class="window random-event-window instrumentality-congrats-window is-hidden"
       id="instrumentality-congrats-window"
       aria-hidden="true"
     >
@@ -6384,7 +6384,7 @@
     </div>
 
     <div
-      class="window event-chat-window red-tool-window is-hidden"
+      class="window random-event-window event-chat-window red-tool-window is-hidden"
       id="red-tool-window"
       aria-hidden="true"
     >
@@ -6435,7 +6435,7 @@
       </div>
     </div>
 
-    <div class="window death-note-window is-hidden" id="death-note-window" aria-hidden="true">
+    <div class="window random-event-window death-note-window is-hidden" id="death-note-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Death Note</div>
         <div class="title-bar-controls">
@@ -6469,7 +6469,7 @@
     </div>
 
     <div
-      class="window random-alert-window wall-breach-window is-hidden"
+      class="window random-event-window random-alert-window wall-breach-window is-hidden"
       id="wall-breach-window"
       aria-hidden="true"
     >
@@ -6493,7 +6493,7 @@
     </div>
 
     <div
-      class="window current-public-info-window is-hidden"
+      class="window random-event-window current-public-info-window is-hidden"
       id="current-public-info-window"
       aria-hidden="true"
     >
@@ -6519,7 +6519,7 @@
     </div>
 
     <div
-      class="window random-alert-window trna-request-window is-hidden"
+      class="window random-event-window random-alert-window trna-request-window is-hidden"
       id="trna-request-window"
       aria-hidden="true"
     >
@@ -6544,7 +6544,7 @@
     </div>
 
     <div
-      class="window random-alert-window spell-stack-window is-hidden"
+      class="window random-event-window random-alert-window spell-stack-window is-hidden"
       id="spell-stack-window"
       aria-hidden="true"
     >
@@ -6577,7 +6577,7 @@
     </div>
 
     <div
-      class="window random-alert-window soot-sprites-window is-hidden"
+      class="window random-event-window random-alert-window soot-sprites-window is-hidden"
       id="soot-sprites-window"
       aria-hidden="true"
     >
@@ -6596,7 +6596,7 @@
       </div>
     </div>
 
-    <div class="window nataraja-window is-hidden" id="nataraja-window" aria-hidden="true">
+    <div class="window random-event-window nataraja-window is-hidden" id="nataraja-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Nataraja</div>
       </div>
@@ -6622,7 +6622,7 @@
     </div>
 
     <div
-      class="window random-alert-window noble-steed-window is-hidden"
+      class="window random-event-window random-alert-window noble-steed-window is-hidden"
       id="noble-steed-window"
       aria-hidden="true"
     >
@@ -6646,7 +6646,7 @@
     </div>
 
     <div
-      class="window random-alert-window noble-steed-result-window is-hidden"
+      class="window random-event-window random-alert-window noble-steed-result-window is-hidden"
       id="noble-steed-result-window"
       aria-hidden="true"
     >
@@ -6665,7 +6665,7 @@
     </div>
 
     <div
-      class="window toxic-jungle-window is-hidden"
+      class="window random-event-window toxic-jungle-window is-hidden"
       id="toxic-jungle-window"
       aria-hidden="true"
     >
@@ -6719,7 +6719,7 @@
       </div>
     </div>
 
-    <div class="window fate-window is-hidden" id="fate-window" aria-hidden="true">
+    <div class="window random-event-window fate-window is-hidden" id="fate-window" aria-hidden="true">
       <div class="fate-lightning-field" aria-hidden="true">
         <canvas class="fate-lightning-canvas" id="fate-lightning-canvas"></canvas>
       </div>
@@ -6793,7 +6793,7 @@
       </div>
     </div>
 
-    <div class="window lancer-battle-window is-hidden" id="lancer-battle-window" aria-hidden="true">
+    <div class="window random-event-window lancer-battle-window is-hidden" id="lancer-battle-window" aria-hidden="true">
       <div class="lancer-battle-lightning-field" aria-hidden="true">
         <canvas class="lancer-battle-lightning-canvas" id="lancer-battle-lightning-canvas"></canvas>
       </div>
@@ -6872,7 +6872,7 @@
       </div>
     </div>
 
-    <div class="window brand-burns-window is-hidden" id="brand-burns-window" aria-hidden="true">
+    <div class="window random-event-window brand-burns-window is-hidden" id="brand-burns-window" aria-hidden="true">
       <div class="brand-burns-lightning-field" aria-hidden="true">
         <canvas class="brand-burns-lightning-canvas"></canvas>
       </div>
@@ -6963,7 +6963,7 @@
       </div>
     </div>
 
-    <div class="window behelit-window is-hidden" id="behelit-window" aria-hidden="true">
+    <div class="window random-event-window behelit-window is-hidden" id="behelit-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Behelit Found</div>
       </div>
