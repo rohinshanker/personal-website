@@ -216,6 +216,7 @@ test("registrations defer bindings, preserve order and drain exactly once", () =
     const STANDARD_RANDOM_EVENT_PROBABILITIES = { default: 0.1 };
     const randomEventDefinitions = [];
     const randomEventBindings = [];
+    const watchRandomEventViewportMedia = () => {};
     ${extract("registerRandomEvent")}
     ${extract("bindRegisteredRandomEvents")}
     this.api = { registerRandomEvent, bindRegisteredRandomEvents, randomEventDefinitions };

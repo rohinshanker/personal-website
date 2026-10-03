@@ -38,6 +38,7 @@ test("event media watchers attach after feature windows have registered", async 
   const win = { querySelectorAll: () => [image] };
   const context = vm.createContext({
     randomEventBindings: [],
+    randomEventWatchedImages: new WeakSet(),
     windows: [],
     randomEventViewportWindows: () => context.windows,
     clamped: [],
@@ -55,6 +56,9 @@ test("event media watchers attach after feature windows have registered", async 
   assert.equal(context.randomEventBindings.length, 0);
   assert.equal(listeners.length, 1);
   assert.equal(listeners[0].event, "load");
+  vm.runInContext("bindRegisteredRandomEvents();", context);
+  assert.equal(bindingCalls, 1);
+  assert.equal(listeners.length, 1);
   listeners[0].callback();
   assert.deepEqual(context.clamped, [win]);
 });

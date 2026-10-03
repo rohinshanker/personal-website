@@ -323,9 +323,13 @@ const clampVisibleRandomEventWindows = () => {
   randomEventViewportWindows().forEach((win) => clampRandomEventWindowToViewport(win));
 };
 
+const randomEventWatchedImages = new WeakSet();
+
 const watchRandomEventViewportMedia = () => {
   randomEventViewportWindows().forEach((win) => {
     win.querySelectorAll("img").forEach((image) => {
+      if (randomEventWatchedImages.has(image)) return;
+      randomEventWatchedImages.add(image);
       image.addEventListener("load", () => clampRandomEventWindowToViewport(win));
     });
   });

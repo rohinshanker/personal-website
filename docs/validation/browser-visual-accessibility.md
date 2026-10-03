@@ -94,7 +94,11 @@ runs `npm ci` from the lockfile. The volume is removed with the container.
 Parallel worktrees therefore share neither host dependencies nor a writable
 installation cache.
 
-Docker must be running. Set `UI_VISUAL_PLATFORM` only when deliberately
+Docker must be running. On this Mac, use the existing headless Colima VM:
+check `colima status`, start it with `colima start --activate=false` if stopped,
+then run `DOCKER_CONTEXT=colima npm run test:visual`. This selects the test
+runtime without opening Docker Desktop or changing the global Docker context.
+Set `UI_VISUAL_PLATFORM` only when deliberately
 regenerating the whole set for a different platform.
 
 `tests/visual-baseline-runner.test.mjs` covers the wrapper's failure paths —
