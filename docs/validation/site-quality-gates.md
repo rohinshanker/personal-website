@@ -35,6 +35,12 @@ retain only the event IDs it explicitly exercises through the helper's
 `except` option. Keep the helper's production-ID contract test aligned with
 the real event registry whenever a debug flag changes.
 
+For a deterministic natural-event test, isolate its registered candidate instead
+of relying on family registration order. Drive the real activity notification or
+UI trigger so probability, cooldown, gameplay, and scheduling guards still run;
+do not duplicate those decisions in a test bridge. Restore a temporarily narrowed
+registry after synchronous selection.
+
 After changing repository context, run:
 
 ```bash

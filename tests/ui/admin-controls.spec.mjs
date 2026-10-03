@@ -1129,6 +1129,14 @@ test("Promo random mode boosts a natural carousel trigger through the safe sched
     promoWeights.deferredImageDialog
   );
   await page.evaluate(() => {
+    // Pick a representative candidate without depending on family load order.
+    // The real carousel activity still passes through every scheduler guard.
+    const definitions = window.homeEventRuntime.randomEventDefinitions;
+    const compactAlert = definitions.find(
+      (definition) => definition.id === "debug-system-alert-ram-prices"
+    );
+    if (!compactAlert) throw new Error("The compact system alert must be registered.");
+    definitions.splice(0, definitions.length, compactAlert);
     Math.random = () => 0;
   });
 

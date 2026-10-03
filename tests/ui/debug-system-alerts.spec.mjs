@@ -67,17 +67,18 @@ window.__debugSystemAlertsRuntimeTest = Object.freeze({
     return window.homeActivity.notifyActivity(name);
   },
   triggerAlert(id, name = "startButton") {
-    const definition = randomEventDefinitions.find(
+    const definitions = randomEventDefinitions.slice();
+    const definition = definitions.find(
       (candidate) => candidate.id === "debug-system-alert-" + id
     );
     if (!definition) return false;
-    const triggerProbability = randomEventTriggerProbability(name, definition);
-    if (Math.random() >= triggerProbability) return false;
-    return scheduleRandomEventRun(definition, {
-      triggerName: name,
-      detail: {},
-      debug: false,
-    });
+    // Isolate the candidate while exercising the complete activity scheduler.
+    randomEventDefinitions.splice(0, randomEventDefinitions.length, definition);
+    try {
+      return window.homeActivity.notifyActivity(name);
+    } finally {
+      randomEventDefinitions.splice(0, randomEventDefinitions.length, ...definitions);
+    }
   },
   startCooldown() {
     recordRandomEventTrigger();

@@ -2,7 +2,7 @@
 
 - Purpose: Run and maintain browser screenshot baselines and WCAG scans.
 - Scope: Browser test projects, isolated containers, fixtures, and known accessibility limitations.
-- Last verified: 2026-10-01
+- Last verified: 2026-10-03
 
 ## Playwright projects
 
