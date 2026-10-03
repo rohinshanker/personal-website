@@ -13,7 +13,7 @@ A visitor controls the browser, JavaScript, local storage, request bodies, and
 client clocks. A public build hash identifies a release; it cannot attest that
 the visitor ran those bytes. Changing hash algorithms, adding a browser-held
 signing key, obfuscating code, or reporting a client checksum does not establish
-honest gameplay. Subresource integrity can detect changed downloaded assets for
+honest gameplay. [Subresource integrity](https://www.w3.org/TR/sri/) can detect changed downloaded assets for
 an enforcing browser, but a player controls their own browser.
 
 The current Worker validates signed, stored, single-use sessions, configuration,

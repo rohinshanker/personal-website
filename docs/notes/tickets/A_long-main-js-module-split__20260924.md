@@ -36,5 +36,6 @@
 
 - Use feature-local DOM lookups; keep shared shell elements in `core/dom.js`.
 - Complete the module split, update tests and release metadata, and preserve current behavior and ordered classic-script loading.
-- Build hashes follow extracted completion code and its dependencies as release/cache compatibility metadata. They cannot attest to untampered gameplay; coordinator is assessing server-side validation alternatives in parallel.
+- Build hashes follow extracted completion code and its dependencies as release/cache compatibility metadata. They cannot attest to untampered gameplay.
+- Keep this implementation focused on the module split. Record the proposed server-side replay and timing contract in `docs/validation/leaderboard-result-verification.md`; do not implement it in this change.
 - Random-event consolidation has landed. Refresh stale line ranges and verify the earlier helper-deduplication dependency from current source before extracting.
