@@ -5,7 +5,9 @@ import {
   isolateAllProductionDebug,
   PRODUCTION_DEBUG_SCRIPT_KEY,
   PRODUCTION_PER_EVENT_DEBUG_IDS,
+  routeProductionDebugFlags,
 } from "./ui/helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./ui/helpers/home-script-routes.mjs";
 import {
   RANDOM_EVENT_SCRIPT_KEYS,
   readHomeScript,
@@ -52,6 +54,35 @@ test("the browser fixture isolates every production debug event unless explicitl
       new RegExp(`Unknown production debug event exception: ${unknownId}`)
     );
   }
+});
+
+test("the browser fixture routes the owning event script and rejects stale transforms", async () => {
+  let routeHandler;
+  let routePattern;
+  const page = {
+    async route(pattern, handler) {
+      routePattern = pattern;
+      routeHandler = handler;
+    },
+  };
+
+  await routeProductionDebugFlags(page);
+  assert.match("/scripts/home/events/prompts.js?v=test", routePattern);
+  assert.doesNotMatch("/scripts/home/main.js?v=test", routePattern);
+
+  let fulfillment;
+  await routeHandler({
+    fulfill(options) {
+      fulfillment = options;
+    },
+  });
+  assert.equal(fulfillment.contentType, "application/javascript");
+  assert.doesNotMatch(fulfillment.body, /id: "[^"]+",\n  debug: true,/);
+
+  await assert.rejects(
+    routeHomeScript(page, PRODUCTION_DEBUG_SCRIPT_KEY, (source) => source),
+    /browser fixture did not transform scripts\/home\/events\/prompts\.js/
+  );
 });
 
 /** One event's `registerRandomEvent({ … })` block. */

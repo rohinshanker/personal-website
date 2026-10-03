@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   REVIEW_VIEWPORTS,
   openHomeDesktop,
@@ -22,10 +22,10 @@ const PLACED = "4";
 
 /** Reports board geography and seeds notes through the production setter. */
 const installNotesBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+  await routeHomeScript(page, "sudoku", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__sudokuNotesTest = Object.freeze({
   // An editable empty cell, one editable empty peer in each of its row,
   // column, and box, and one editable empty cell sharing none of them.
@@ -76,12 +76,7 @@ window.__sudokuNotesTest = Object.freeze({
     ),
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Sudoku notes test bridge.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({ contentType: "application/javascript", body: instrumentedSource })
+    )
   );
 };
 

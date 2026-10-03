@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   FROZEN_INSTANT,
   REVIEW_VIEWPORTS,
@@ -30,10 +30,10 @@ const VALUE_HIGHLIGHT = "rgba(0, 176, 255, 0.4)";
  * @param {import("@playwright/test").Page} page
  */
 const installBoardBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+  await routeHomeScript(page, "sudoku", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__sudokuBoardControlsTest = Object.freeze({
   editableIndexesFor: (digit) =>
     sudokuCells()
@@ -97,12 +97,7 @@ window.__sudokuBoardControlsTest = Object.freeze({
   },
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Sudoku board-controls test bridge.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({ contentType: "application/javascript", body: instrumentedSource })
+    )
   );
 };
 

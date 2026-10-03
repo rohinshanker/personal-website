@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   FROZEN_INSTANT,
   REVIEW_VIEWPORTS,
@@ -23,10 +23,10 @@ const CONFLICT_TINT = "rgba(255, 150, 22, 0.44)";
 
 /** Reports board facts the spec needs; every behaviour is driven through the UI. */
 const installConflictBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+  await routeHomeScript(page, "sudoku", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__sudokuConflictTest = Object.freeze({
   // An empty cell plus a given in the same row, and the given's digit.
   rowPair: () => {
@@ -68,12 +68,7 @@ window.__sudokuConflictTest = Object.freeze({
   }),
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Sudoku conflict-mode test bridge.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({ contentType: "application/javascript", body: instrumentedSource })
+    )
   );
 };
 

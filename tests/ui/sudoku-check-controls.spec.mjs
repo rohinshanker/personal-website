@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(120_000);
 
@@ -108,11 +109,12 @@ const installApi = async (page) => {
   return { eventRequests, sessionRequests };
 };
 
-const installMainBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+const installSudokuBridge = async (page) => {
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "sudoku", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__sudokuCheckControlsTest = Object.freeze({
   freezeTimerAt: (elapsedSeconds) => {
     if (sudokuState.timerId) clearInterval(sudokuState.timerId);
@@ -191,16 +193,7 @@ window.__sudokuCheckControlsTest = Object.freeze({
   }),
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Sudoku check-controls test bridge.");
-  }
-
-  await page.route("**/scripts/home/main.js*", (route) =>
-    route.fulfill({
-      body: instrumentedSource,
-      contentType: "application/javascript",
-    })
+    )
   );
 };
 
@@ -254,7 +247,7 @@ const preparePage = async (
     { profileKey: PROFILE_STORAGE_KEY, savedProfile: profile }
   );
   await installBackendConfig(page);
-  await installMainBridge(page);
+  await installSudokuBridge(page);
   const api = await installApi(page);
 
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });

@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   installDelayedSudokuGeneratorReplies,
   openHomeDesktop,
@@ -22,10 +22,10 @@ const GENERATION_TIMEOUT_MS = 60_000;
 const NON_BLOCKING_MS = 50;
 
 const installGenerationBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+  await routeHomeScript(page, "sudoku", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__sudokuGenerationTest = Object.freeze({
   readPuzzle: () => ({
     difficulty: sudokuState.difficulty,
@@ -45,12 +45,7 @@ window.__sudokuGenerationTest = Object.freeze({
   }),
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Sudoku generation test bridge.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({ contentType: "application/javascript", body: instrumentedSource })
+    )
   );
 };
 
@@ -87,7 +82,7 @@ test("the boot loader offers Play on a real puzzle carved in the worker", async 
   await openHomeDesktop(page, DESKTOP);
 
   // The worker source is prefetched with a version token like every other
-  // shipped asset, and main.js reads its URL from that one declaration.
+  // shipped asset, and the Sudoku feature reads its URL from that declaration.
   const source = page.locator("#sudoku-generator-source");
   await expect(source).toHaveAttribute("as", "worker");
   expect(await source.getAttribute("href")).toMatch(

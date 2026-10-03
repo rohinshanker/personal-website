@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
-import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(240_000);
 
@@ -30,20 +29,6 @@ const disableRemoteGameStats = (page) =>
       body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
     })
   );
-
-const isolateDebugRandomEvents = async (page) => {
-  const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
-  const isolatedSource = isolateAllProductionDebug(mainSource);
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: isolatedSource,
-    })
-  );
-};
 
 const preparePage = async (page, { administratorAccess = false } = {}) => {
   const consoleErrors = [];
@@ -81,7 +66,7 @@ const preparePage = async (page, { administratorAccess = false } = {}) => {
   );
   await page.emulateMedia({ reducedMotion: "reduce" });
   await disableRemoteGameStats(page);
-  await isolateDebugRandomEvents(page);
+  await routeProductionDebugFlags(page);
   return { consoleErrors, consoleWarnings, runtimeErrors };
 };
 

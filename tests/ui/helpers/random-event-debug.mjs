@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-
-import { homeScriptUrl } from "../../helpers/home-scripts.mjs";
+import { routeHomeScript } from "./home-script-routes.mjs";
 
 export const PRODUCTION_PER_EVENT_DEBUG_IDS = Object.freeze([
   "neko-stream-system-alert",
@@ -53,7 +51,8 @@ export const isolateAllProductionDebug = (source, { except = [] } = {}) => {
 /** The script the per-event debug flags live in. */
 export const PRODUCTION_DEBUG_SCRIPT_KEY = "eventPrompts";
 
-export const readIsolatedMainSource = async ({ except = [] } = {}) => {
-  const source = await readFile(homeScriptUrl(PRODUCTION_DEBUG_SCRIPT_KEY), "utf8");
-  return isolateAllProductionDebug(source, { except });
-};
+/** Routes only the production module that owns the per-event debug flags. */
+export const routeProductionDebugFlags = (page, { except = [] } = {}) =>
+  routeHomeScript(page, PRODUCTION_DEBUG_SCRIPT_KEY, (source) =>
+    isolateAllProductionDebug(source, { except })
+  );

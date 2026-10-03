@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   REVIEW_VIEWPORTS,
   openHomeDesktop,
@@ -19,10 +19,10 @@ const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 /** Exposes board facts and a bulk placement helper, as the sibling specs do. */
 const installKeypadBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+  await routeHomeScript(page, "sudoku", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__sudokuKeypadTest = Object.freeze({
   editableIndexesFor: (digit) =>
     sudokuCells()
@@ -50,12 +50,7 @@ window.__sudokuKeypadTest = Object.freeze({
   },
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Sudoku keypad test bridge.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({ contentType: "application/javascript", body: instrumentedSource })
+    )
   );
 };
 

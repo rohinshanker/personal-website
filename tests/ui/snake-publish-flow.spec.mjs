@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 const API_BASE_URL = "https://game-stats-snake-publish.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -58,11 +59,12 @@ const installBackendConfig = async (page) => {
   );
 };
 
-const installMainBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+const installSnakeBridge = async (page) => {
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "snake", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__snakePublishFlowTest = Object.freeze({
   finishRun: () => {
     clearSnakeCountdown();
@@ -104,15 +106,7 @@ window.__snakePublishFlowTest = Object.freeze({
   },
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Snake publish test bridge.");
-  }
-  await page.route("**/scripts/home/main.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: instrumentedSource,
-    })
+    )
   );
 };
 
@@ -365,7 +359,7 @@ const preparePage = async (
     }
   );
   await installBackendConfig(page);
-  await installMainBridge(page);
+  await installSnakeBridge(page);
   const api = await installApi(page, { eventDelayMs, rejectEvent, retryEventOnce });
 
   await page.goto("/home.html");

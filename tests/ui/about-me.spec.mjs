@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
-import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
@@ -92,20 +91,6 @@ const disableRemoteGameStats = async (page) => {
   );
 };
 
-const isolateDebugRandomEvents = async (page) => {
-  const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
-  const isolatedSource = isolateAllProductionDebug(mainSource);
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: isolatedSource,
-    })
-  );
-};
-
 const prepareAboutPage = async (page, { reducedMotion = "reduce" } = {}) => {
   await page.emulateMedia({ reducedMotion });
   await page.clock.setFixedTime(new Date("2026-07-27T12:00:00Z"));
@@ -114,7 +99,7 @@ const prepareAboutPage = async (page, { reducedMotion = "reduce" } = {}) => {
     localStorage.clear();
     sessionStorage.clear();
   });
-  await isolateDebugRandomEvents(page);
+  await routeProductionDebugFlags(page);
   await disableRemoteGameStats(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
 };

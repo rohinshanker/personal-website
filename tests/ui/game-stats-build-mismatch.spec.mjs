@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 const API_BASE_URL = "https://game-stats-build-mismatch.test";
 const BUILD_VERSION = `sha256-${"c".repeat(64)}`;
@@ -22,19 +23,21 @@ const viewports = Object.freeze([
   { name: "wide", width: 1440, height: 900 },
 ]);
 
-const installMainBridge = async (page) => {
-  const mainSource = (await readIsolatedMainSource())
-    .replace(
-      "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 60;",
-      "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 3;"
-    )
-    .replace(
-      "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 2000;",
-      "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 100;"
-    );
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+const installGameStatsBridge = async (page) => {
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "gameStats", (source) => {
+    const configuredSource = source
+      .replace(
+        "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 60;",
+        "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 3;"
+      )
+      .replace(
+        "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 2000;",
+        "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 100;"
+      );
+    const instrumentedSource = configuredSource.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__gameStatsBuildMismatchTest = Object.freeze({
   startSolitaireSession: () => startGameStatsSession("solitaire", {}),
   readSolitaireWins: () => gameStatsLocalState.totals.solitaire.wins,
@@ -46,16 +49,9 @@ window.__gameStatsBuildMismatchTest = Object.freeze({
   },
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the build-mismatch test bridge.");
-  }
-  await page.route("**/scripts/home/main.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: instrumentedSource,
-    })
-  );
+    );
+    return instrumentedSource;
+  });
 };
 
 const installBackendConfig = (page) =>
@@ -188,7 +184,7 @@ for (const viewport of viewports) {
     const runtimeErrors = collectRuntimeErrors(page);
     await page.setViewportSize(viewport);
     await installBackendConfig(page);
-    await installMainBridge(page);
+    await installGameStatsBridge(page);
     const api = await installApi(page);
     const { sessionKey, statsWindow } = await preparePage(page);
     const status = statsWindow.locator("[data-game-stats-sync-status]");

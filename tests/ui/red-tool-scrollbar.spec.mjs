@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
-import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
@@ -18,20 +17,6 @@ const disableRemoteGameStats = (page) =>
       body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
     })
   );
-
-const isolateDebugRandomEvents = async (page) => {
-  const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
-  const isolatedSource = isolateAllProductionDebug(mainSource);
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: isolatedSource,
-    })
-  );
-};
 
 const appendOverflowingConversation = (page) =>
   page.locator("#red-tool-chat-log").evaluate((log) => {
@@ -118,7 +103,7 @@ test("Red Tool chat remains scrollable and contained across viewports", async ({
     Math.random = () => 0.999999;
   });
   await disableRemoteGameStats(page);
-  await isolateDebugRandomEvents(page);
+  await routeProductionDebugFlags(page);
   await page.goto("/home.html", { waitUntil: "load" });
   await page.locator('#about-window [data-close="about"]').click();
   await expect(page.locator("#about-window")).toBeHidden();

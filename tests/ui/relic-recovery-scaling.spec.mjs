@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(240_000);
 
@@ -41,10 +42,11 @@ const disableRemoteGameStats = async (page) => {
 };
 
 const installRelicRecoveryTestBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "eventRelicRecovery", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__relicRecoveryTest = Object.freeze({
   open() {
     showRelicRecoveryWindow();
@@ -86,15 +88,7 @@ window.__relicRecoveryTest = Object.freeze({
   },
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Relic Recovery test bridge.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: instrumentedSource,
-    })
+    )
   );
 };
 

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
@@ -21,10 +22,11 @@ const disableRemoteGameStats = async (page) => {
 };
 
 const installCurrentPublicInfoTestBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "eventNotes", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__currentPublicInfoTest = Object.freeze({
   open() {
     showCurrentPublicInfoWindow();
@@ -32,15 +34,7 @@ window.__currentPublicInfoTest = Object.freeze({
   },
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Current Public Information test bridge.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: instrumentedSource,
-    })
+    )
   );
 };
 

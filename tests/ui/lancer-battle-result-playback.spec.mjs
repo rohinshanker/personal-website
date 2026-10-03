@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(120_000);
 
@@ -10,19 +11,15 @@ const viewports = Object.freeze([
   { name: "wide desktop", width: 1440, height: 900 },
 ]);
 
-const testHookMarker = "window.rohinAdminOrchestrator = Object.freeze({";
-
-const createTestMainSource = async () => {
-  const mainSource = await readIsolatedMainSource();
-  const markerCount = mainSource.split(testHookMarker).length - 1;
-  if (markerCount !== 1) {
-    throw new Error(`Expected one Admin orchestrator marker; found ${markerCount}.`);
-  }
-  return mainSource.replace(
-    testHookMarker,
-    `window.__lancerBattleResultPlaybackTest = Object.freeze({
+const installLancerBattleBridge = async (page) => {
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "eventLancerBattle", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
+window.__lancerBattleResultPlaybackTest = Object.freeze({
   getState: () => ({
-    activeWindowId: activeWindow?.id || "",
+    activeWindowId: window.homeWindows.getActiveWindow()?.id || "",
     resultTimerActive: Boolean(lancerBattleResultTimer),
     state: lancerBattleState,
   }),
@@ -30,11 +27,11 @@ const createTestMainSource = async () => {
     if (!isLancerBattleVisible()) showLancerBattleWindow();
     showLancerBattleResult(Boolean(success));
     lancerBattleResultVideo.loop = true;
-    bringWindowToFront(lancerBattleWindow);
+    window.homeWindows.bringWindowToFront(lancerBattleWindow);
   },
 });
-
-${testHookMarker}`
+})();`
+    )
   );
 };
 
@@ -54,10 +51,7 @@ const preparePage = async (page) => {
   });
   page.on("pageerror", (error) => runtimeErrors.push(error.message));
 
-  const mainSource = await createTestMainSource();
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({ contentType: "application/javascript", body: mainSource })
-  );
+  await installLancerBattleBridge(page);
   await disableRemoteGameStats(page);
   await page.addInitScript(() => {
     localStorage.clear();

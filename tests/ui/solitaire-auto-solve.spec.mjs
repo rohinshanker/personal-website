@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { openApp, openHomeDesktop } from "./helpers/rendered-site.mjs";
 
 const viewports = Object.freeze([
@@ -11,21 +11,22 @@ const viewports = Object.freeze([
 const suits = ["spades", "clubs", "diamonds", "hearts"];
 
 /**
- * Serves main.js with a test bridge and, optionally, a faster cadence so a
- * full 52-card run finishes in a few seconds instead of eleven.
+ * Serves the Solitaire feature with a test bridge and, optionally, a faster
+ * cadence so a full 52-card run finishes in a few seconds instead of eleven.
  */
-const installMainBridge = async (page, { fast = true } = {}) => {
-  let source = await readIsolatedMainSource();
-  if (fast) {
-    const timed = source
-      .replace("firstIntervalMs: 1000,", "firstIntervalMs: 80,")
-      .replace("minIntervalMs: 120,", "minIntervalMs: 24,");
-    if (timed === source) throw new Error("Unable to speed up the auto-solve cadence.");
-    source = timed;
-  }
-  const instrumented = source.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+const installSolitaireBridge = async (page, { fast = true } = {}) => {
+  await routeHomeScript(page, "solitaire", (originalSource) => {
+    let source = originalSource;
+    if (fast) {
+      const timed = source
+        .replace("firstIntervalMs: 1000,", "firstIntervalMs: 80,")
+        .replace("minIntervalMs: 120,", "minIntervalMs: 24,");
+      if (timed === source) throw new Error("Unable to speed up the auto-solve cadence.");
+      source = timed;
+    }
+    const instrumented = source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__solitaireAutoSolveTest = Object.freeze({
   stageRevealedGame: ({ presentation = null } = {}) => {
     solCancelAutoSolve();
@@ -70,11 +71,9 @@ window.__solitaireAutoSolveTest = Object.freeze({
 });
 })();
 `
-  );
-  if (instrumented === source) throw new Error("Unable to install the auto-solve bridge.");
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({ contentType: "application/javascript", body: instrumented })
-  );
+    );
+    return instrumented;
+  });
 };
 
 const snapshot = (page) => page.evaluate(() => window.__solitaireAutoSolveTest.snapshot());
@@ -262,7 +261,7 @@ const glowState = (page) =>
 test("the check appears only while a visible card fits a foundation and undoes as one step", async ({
   page,
 }) => {
-  await installMainBridge(page);
+  await installSolitaireBridge(page);
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await openApp(page, "solitaire");
   await page.evaluate(() => window.__solitaireAutoSolveTest.stagePartialGame());
@@ -308,7 +307,7 @@ test("the check appears only while a visible card fits a foundation and undoes a
 test("the Admin game-win preset stages a solvable board and the check plays the win", async ({
   page,
 }) => {
-  await installMainBridge(page);
+  await installSolitaireBridge(page);
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await stagePresentation(page);
   await expectStagedBoard(page);
@@ -353,7 +352,7 @@ test("the Admin game-win preset stages a solvable board and the check plays the 
 });
 
 test("the preset honours the visual-effects switch without skipping the video", async ({ page }) => {
-  await installMainBridge(page);
+  await installSolitaireBridge(page);
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await stagePresentation(page, { visualEffects: false });
   await page.locator("#sol-auto-solve").click();
@@ -364,7 +363,7 @@ test("the preset honours the visual-effects switch without skipping the video", 
 test("a regular deal that the run would finish shows the gold glow and records the win", async ({
   page,
 }) => {
-  await installMainBridge(page);
+  await installSolitaireBridge(page);
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await openApp(page, "solitaire");
   await page.evaluate(() => window.__solitaireAutoSolveTest.stageRevealedGame());
@@ -384,7 +383,7 @@ test("a regular deal that the run would finish shows the gold glow and records t
 });
 
 test("a staged board with buried waste cards auto-solves through the waste", async ({ page }) => {
-  await installMainBridge(page);
+  await installSolitaireBridge(page);
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await openApp(page, "solitaire");
   await page.evaluate(() =>
@@ -405,7 +404,7 @@ test("a staged board with buried waste cards auto-solves through the waste", asy
 test("closing Solitaire cancels a run in progress and the check returns on reopen", async ({
   page,
 }) => {
-  await installMainBridge(page, { fast: false });
+  await installSolitaireBridge(page, { fast: false });
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await stagePresentation(page);
   await page.locator("#sol-auto-solve").click();
@@ -430,7 +429,7 @@ test("closing Solitaire cancels a run in progress and the check returns on reope
 test("the first card leaves after a beat and the cadence is one per second at the start", async ({
   page,
 }) => {
-  await installMainBridge(page, { fast: false });
+  await installSolitaireBridge(page, { fast: false });
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await stagePresentation(page);
   await watchImpacts(page);
@@ -454,7 +453,7 @@ test("the first card leaves after a beat and the cadence is one per second at th
 
 for (const viewport of viewports) {
   test(`the staged board and check control fit at ${viewport.name}`, async ({ page }) => {
-    await installMainBridge(page);
+    await installSolitaireBridge(page);
     await openHomeDesktop(page, viewport);
     await stagePresentation(page);
     await expectStagedBoard(page);

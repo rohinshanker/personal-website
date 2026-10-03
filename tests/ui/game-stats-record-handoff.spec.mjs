@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 const profile = Object.freeze({
   id: "player-record-handoff-test",
@@ -18,24 +19,17 @@ const disableRemoteGameStats = async (page) => {
 };
 
 const installRecordTestBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "gameStats", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__gameStatsRecordHandoffTest = Object.freeze({
   recordEvent: (event, options = {}) =>
     recordGameStatsEvent(event, "", options),
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Game Stats record test bridge.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: instrumentedSource,
-    })
+    )
   );
 };
 

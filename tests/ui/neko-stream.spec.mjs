@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
-
-import { homeScriptUrl } from "../helpers/home-scripts.mjs";
 
 test.setTimeout(120_000);
 
@@ -22,16 +20,10 @@ const disableRemoteGameStats = (page) =>
   );
 
 const installNekoStreamBridge = async (page) => {
-  const mainSource = await readFile(
-    homeScriptUrl("neko"),
-    "utf8"
-  );
-  const isolatedSource = isolateAllProductionDebug(mainSource, {
-    except: ["neko-stream-system-alert"],
-  });
-  const instrumentedSource = isolatedSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+  await routeHomeScript(page, "neko", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 const createNekoStreamTestPlan = (specs) =>
   specs.map((spec, index) => {
     const entrySide = spec.entrySide === "right" ? "right" : "left";
@@ -101,36 +93,8 @@ const readNekoStreamTestSnapshot = () => ({
   })).sort((first, second) => first.id - second.id),
 });
 
-const nekoStreamAlertDefinition = randomEventDefinitions.find(
-  (definition) => definition.id === "neko-stream-system-alert"
-);
-
-const readNekoStreamAlertTestSnapshot = () => ({
-  debug: nekoStreamAlertDefinition?.debug === true,
-  iconFrame: nekoStreamAlertIconFrame,
-  iconTimerActive: nekoStreamAlertIconTimerId !== null,
-  pendingDefinition: randomEventPendingDefinitions.has(nekoStreamAlertDefinition),
-  responsePending: nekoStreamAlertResponsePending,
-  visible: isNekoStreamAlertVisible(),
-});
-
-window.__nekoStreamTest = Object.freeze({
-  alertSnapshot: readNekoStreamAlertTestSnapshot,
-  openAlert: () => showNekoStreamAlert(),
-  preloadAlert: () =>
-    preloadRandomEventAssets(nekoStreamAlertDefinition, {
-      triggerName: "startButton",
-      detail: {},
-      debug: true,
-    }),
+window.__nekoStreamFeatureTest = Object.freeze({
   preloadStream: () => preloadNekoRunAssets(),
-  scheduleAlert: () =>
-    scheduleRandomEventRun(nekoStreamAlertDefinition, {
-      triggerName: "startButton",
-      detail: {},
-      debug: true,
-    }),
-  triggerAlert: (triggerName = "startButton") => notifyActivity(triggerName),
   snapshot: readNekoStreamTestSnapshot,
   start: (specs) => {
     startNekoStream(createNekoStreamTestPlan(specs));
@@ -142,15 +106,59 @@ window.__nekoStreamTest = Object.freeze({
   },
 });
 })();`
+    )
   );
-  if (instrumentedSource === isolatedSource) {
-    throw new Error("Unable to install the Neko stream test bridge.");
-  }
-  await page.route("**/scripts/home/main.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: instrumentedSource,
-    })
+  await routeHomeScript(page, "eventRuntime", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
+const getNekoStreamRuntimeTestDefinition = () =>
+  randomEventDefinitions.find(
+    (definition) => definition.id === "neko-stream-system-alert"
+  );
+window.__nekoStreamRuntimeTest = Object.freeze({
+  preloadAlert: () =>
+    preloadRandomEventAssets(getNekoStreamRuntimeTestDefinition(), {
+      triggerName: "startButton",
+      detail: {},
+      debug: true,
+    }),
+  scheduleAlert: () =>
+    scheduleRandomEventRun(getNekoStreamRuntimeTestDefinition(), {
+      triggerName: "startButton",
+      detail: {},
+      debug: true,
+    }),
+  triggerAlert: (triggerName = "startButton") =>
+    window.homeActivity.notifyActivity(triggerName),
+});
+})();`
+    )
+  );
+  await routeHomeScript(page, "eventPrompts", (source) =>
+    isolateAllProductionDebug(source, {
+      except: ["neko-stream-system-alert"],
+    }).replace(
+      /\n\}\)\(\);\s*$/,
+      `
+const nekoStreamPromptTestDefinition = window.homeEventRuntime.randomEventDefinitions.find(
+  (definition) => definition.id === "neko-stream-system-alert"
+);
+window.__nekoStreamPromptTest = Object.freeze({
+  alertSnapshot: () => ({
+    debug: nekoStreamPromptTestDefinition?.debug === true,
+    iconFrame: nekoStreamAlertIconFrame,
+    iconTimerActive: nekoStreamAlertIconTimerId !== null,
+    pendingDefinition: window.homeEventRuntime.randomEventPendingDefinitions.has(
+      nekoStreamPromptTestDefinition
+    ),
+    responsePending: nekoStreamAlertResponsePending,
+    visible: isNekoStreamAlertVisible(),
+  }),
+  openAlert: () => showNekoStreamAlert(),
+});
+})();`
+    )
   );
 };
 
@@ -190,7 +198,15 @@ const preparePage = async (
   await disableRemoteGameStats(page);
   await installNekoStreamBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
-  expect(await page.evaluate(() => Boolean(window.__nekoStreamTest))).toBe(true);
+  expect(
+    await page.evaluate(() =>
+      Boolean(
+        window.__nekoStreamFeatureTest &&
+        window.__nekoStreamPromptTest &&
+        window.__nekoStreamRuntimeTest
+      )
+    )
+  ).toBe(true);
 
   const aboutWindow = page.locator("#about-window");
   const aboutClose = aboutWindow.locator('[data-close="about"]');
@@ -205,11 +221,11 @@ const preparePage = async (
 };
 
 const readSnapshot = (page) =>
-  page.evaluate(() => window.__nekoStreamTest.snapshot());
+  page.evaluate(() => window.__nekoStreamFeatureTest.snapshot());
 
 const startStream = async (page, specs) => {
   const initialSnapshot = await page.evaluate(
-    (streamSpecs) => window.__nekoStreamTest.start(streamSpecs),
+    (streamSpecs) => window.__nekoStreamFeatureTest.start(streamSpecs),
     specs
   );
   if (initialSnapshot.plannedCount > 0) {
@@ -224,10 +240,10 @@ const startStream = async (page, specs) => {
 };
 
 const stopStream = (page) =>
-  page.evaluate(() => window.__nekoStreamTest.stop());
+  page.evaluate(() => window.__nekoStreamFeatureTest.stop());
 
 const readAlertSnapshot = (page) =>
-  page.evaluate(() => window.__nekoStreamTest.alertSnapshot());
+  page.evaluate(() => window.__nekoStreamPromptTest.alertSnapshot());
 
 const dispatchWindowAnimationEnd = (locator, animationName) =>
   locator.evaluate((element, name) => {
@@ -373,17 +389,17 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
   const sentinel = page.locator("#taskbar-clock-button");
   const initialStream = await readSnapshot(page);
 
-  await page.evaluate(() => window.__nekoStreamTest.preloadAlert());
+  await page.evaluate(() => window.__nekoStreamRuntimeTest.preloadAlert());
   expect((await readAlertSnapshot(page)).debug).toBe(true);
   expect(
-    await page.evaluate(() => window.__nekoStreamTest.triggerAlert("windowOpen"))
+    await page.evaluate(() => window.__nekoStreamRuntimeTest.triggerAlert("windowOpen"))
   ).toBe(false);
   expect((await readAlertSnapshot(page)).pendingDefinition).toBe(false);
   await sentinel.focus();
   expect(
     await page.evaluate(() => [
-      window.__nekoStreamTest.triggerAlert(),
-      window.__nekoStreamTest.triggerAlert(),
+      window.__nekoStreamRuntimeTest.triggerAlert(),
+      window.__nekoStreamRuntimeTest.triggerAlert(),
     ])
   ).toEqual([true, false]);
   expect((await readAlertSnapshot(page)).pendingDefinition).toBe(true);
@@ -420,7 +436,7 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
   await finishNekoStreamAlertClose(page);
   await expect(sentinel).toBeFocused();
 
-  expect(await page.evaluate(() => window.__nekoStreamTest.openAlert())).toBe(true);
+  expect(await page.evaluate(() => window.__nekoStreamPromptTest.openAlert())).toBe(true);
   await page.clock.runFor(17);
   await expect(yes).toBeFocused();
   await yes.press("Escape");
@@ -430,7 +446,7 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
   await finishNekoStreamAlertClose(page);
   await expect(sentinel).toBeFocused();
 
-  expect(await page.evaluate(() => window.__nekoStreamTest.openAlert())).toBe(true);
+  expect(await page.evaluate(() => window.__nekoStreamPromptTest.openAlert())).toBe(true);
   expect((await readAlertSnapshot(page)).iconTimerActive).toBe(true);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(alert).not.toHaveClass(/is-opening/);
@@ -450,7 +466,7 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
   await expect(sentinel).toBeFocused();
 
   await page.emulateMedia({ reducedMotion: "reduce" });
-  expect(await page.evaluate(() => window.__nekoStreamTest.openAlert())).toBe(true);
+  expect(await page.evaluate(() => window.__nekoStreamPromptTest.openAlert())).toBe(true);
   await expect(alert).not.toHaveClass(/is-opening/);
   expect(
     await alert.evaluate((element) => getComputedStyle(element).animationName)
@@ -467,7 +483,7 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
     await test.step(`prompt-${viewport.name}`, async () => {
       await page.setViewportSize(viewport);
       await sentinel.focus();
-      expect(await page.evaluate(() => window.__nekoStreamTest.openAlert())).toBe(true);
+      expect(await page.evaluate(() => window.__nekoStreamPromptTest.openAlert())).toBe(true);
       await page.clock.runFor(17);
       await dispatchWindowAnimationEnd(alert, "retro-window-open");
       await expect(yes).toBeFocused();
@@ -516,10 +532,10 @@ test("Yes closes the prompt and starts exactly one complete forty-cat stream", a
   const alert = page.locator("#neko-stream-alert-window");
   const yes = page.locator("#neko-stream-alert-yes");
   const sentinel = page.locator("#taskbar-clock-button");
-  await page.evaluate(() => window.__nekoStreamTest.preloadStream());
+  await page.evaluate(() => window.__nekoStreamFeatureTest.preloadStream());
   await sentinel.focus();
   const before = await readSnapshot(page);
-  expect(await page.evaluate(() => window.__nekoStreamTest.openAlert())).toBe(true);
+  expect(await page.evaluate(() => window.__nekoStreamPromptTest.openAlert())).toBe(true);
   await page.clock.runFor(17);
   await expect(yes).toBeFocused();
 

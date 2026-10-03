@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures.mjs";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(190_000);
 
@@ -283,40 +284,64 @@ for (const viewport of viewports) {
 // same callbacks without that warm-up too, so a missing show-path loader fails.
 for (const viewport of viewports) {
   test(`event show callbacks decode cold media at ${viewport.name}`, async ({ page }, testInfo) => {
-    const source = await readIsolatedMainSource();
-    const instrumented = source.replace(/\n\}\)\(\);\s*$/, `
-window.__deferredMediaTest = Object.freeze({
+    await routeHomeScript(page, "adminOrchestrator", (source) =>
+      source.replace(/\n\}\)\(\);\s*$/, `
+window.__deferredMediaAdminTest = Object.freeze({
   windowId: (id) => getAdminRandomEventPreviewSource(
     randomEventDefinitions.find((definition) => definition.id === id)
   )?.id,
-  showChained: (id) => ({
-    "skill-check-result-window": () => showSkillCheckResultWindow(20),
-    "distress-upload-window": showDistressUploadWindow,
-    "stalker-result-window": showStalkerResultWindow,
-    "midnight-gospel-meditation-window": showMidnightGospelMeditationWindow,
-    "noble-steed-result-window": showNobleSteedResultWindow,
-    "serval-pizza-window": showServalPizzaWindow,
-    "dst-survive-window": showDstSurviveWindow,
-  })[id](),
+});
+})();`)
+    );
+    await routeHomeScript(page, "eventRuntime", (source) =>
+      source.replace(/\n\}\)\(\);\s*$/, `
+window.__deferredMediaRuntimeTest = Object.freeze({
   show: (id) => randomEventDefinitions.find((definition) => definition.id === id).run({
     triggerName: "adminControls", detail: { source: "media-test" }, admin: true,
   }),
 });
-})();
-`);
-    expect(instrumented).not.toBe(source);
-    await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-      route.fulfill({ contentType: "application/javascript", body: instrumented })
+})();`)
+    );
+    await routeHomeScript(page, "eventSkillCheck", (source) =>
+      source.replace(/\n\}\)\(\);\s*$/, `
+window.__deferredMediaSkillCheckTest = () => showSkillCheckResultWindow(20);
+})();`)
+    );
+    await routeHomeScript(page, "eventDistressSignal", (source) =>
+      source.replace(/\n\}\)\(\);\s*$/, `
+window.__deferredMediaDistressTest = showDistressUploadWindow;
+})();`)
+    );
+    await routeHomeScript(page, "eventCreatures", (source) =>
+      source.replace(/\n\}\)\(\);\s*$/, `
+window.__deferredMediaCreaturesTest = Object.freeze({
+  showStalker: showStalkerResultWindow,
+  showServal: showServalPizzaWindow,
+});
+})();`)
+    );
+    await routeHomeScript(page, "eventPrompts", (source) =>
+      isolateAllProductionDebug(source).replace(/\n\}\)\(\);\s*$/, `
+window.__deferredMediaPromptsTest = Object.freeze({
+  showMeditation: showMidnightGospelMeditationWindow,
+  showNobleSteed: showNobleSteedResultWindow,
+});
+})();`)
+    );
+    await routeHomeScript(page, "eventDstNight", (source) =>
+      source.replace(/\n\}\)\(\);\s*$/, `
+window.__deferredMediaDstTest = showDstSurviveWindow;
+})();`)
     );
     const diagnostics = await preparePage(page, viewport);
     for (const eventId of realTriggerEventIds) {
-      const windowId = await page.evaluate((id) => window.__deferredMediaTest.windowId(id), eventId);
+      const windowId = await page.evaluate((id) => window.__deferredMediaAdminTest.windowId(id), eventId);
       expect(windowId).toBeTruthy();
       const liveWindow = page.locator(`#${windowId}:not([data-admin-event-preview-window])`);
       await expect(liveWindow).toBeHidden();
       expect(await liveWindow.locator("[data-src]:not([src])").count(),
         `${eventId} starts with cold media`).toBeGreaterThan(0);
-      await page.evaluate((id) => window.__deferredMediaTest.show(id), eventId);
+      await page.evaluate((id) => window.__deferredMediaRuntimeTest.show(id), eventId);
       await expectDecodedImages(liveWindow, `cold event ${eventId}`, { expectPlaying: true });
       if (eventId === "rohin-os-note" || eventId === "lain-system-alert") {
         const screenshotPath = testInfo.outputPath(`${eventId}-${viewport.name}.png`);
@@ -336,7 +361,15 @@ window.__deferredMediaTest = Object.freeze({
       await expect(liveWindow).toBeHidden();
       expect(await liveWindow.locator("[data-src]:not([src])").count(),
         `${windowId} starts with cold media`).toBeGreaterThan(0);
-      await page.evaluate((id) => window.__deferredMediaTest.showChained(id), windowId);
+      await page.evaluate((id) => ({
+        "skill-check-result-window": window.__deferredMediaSkillCheckTest,
+        "distress-upload-window": window.__deferredMediaDistressTest,
+        "stalker-result-window": window.__deferredMediaCreaturesTest.showStalker,
+        "midnight-gospel-meditation-window": window.__deferredMediaPromptsTest.showMeditation,
+        "noble-steed-result-window": window.__deferredMediaPromptsTest.showNobleSteed,
+        "serval-pizza-window": window.__deferredMediaCreaturesTest.showServal,
+        "dst-survive-window": window.__deferredMediaDstTest,
+      })[id](), windowId);
       await expectDecodedImages(liveWindow, `cold chained window ${windowId}`, {
         expectPlaying: true,
       });

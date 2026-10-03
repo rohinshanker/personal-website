@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 const API_BASE_URL = "https://game-stats-solitaire-publish.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -70,14 +71,25 @@ const installBackendConfig = async (page) => {
   );
 };
 
-const installMainBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+const installSolitaireBridge = async (page) => {
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "gameStats", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
+window.__solitairePublishGameStatsTest = Object.freeze({
+  syncQueued: () => syncQueuedGameStats(),
+});
+})();`
+    )
+  );
+  await routeHomeScript(page, "solitaire", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__solitairePublishFlowTest = Object.freeze({
   triggerWin: async () => {
-    await syncQueuedGameStats();
+    await window.__solitairePublishGameStatsTest.syncQueued();
     if (!solState.statsSession) {
       throw new Error("Solitaire gameplay did not start a verified stats session.");
     }
@@ -93,15 +105,7 @@ window.__solitairePublishFlowTest = Object.freeze({
   },
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Solitaire publish test bridge.");
-  }
-  await page.route("**/scripts/home/main.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: instrumentedSource,
-    })
+    )
   );
 };
 
@@ -507,7 +511,7 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
     }
   );
   await installBackendConfig(page);
-  await installMainBridge(page);
+  await installSolitaireBridge(page);
   const api = await installApi(page);
 
   await page.goto("/home.html");
@@ -698,7 +702,7 @@ test("an active Administrator win stays advanced through stale stats and exact-e
     }
   );
   await installBackendConfig(page);
-  await installMainBridge(page);
+  await installSolitaireBridge(page);
   const api = await installAdministratorStaleStatsApi(page);
 
   await page.goto("/home.html");
@@ -883,7 +887,7 @@ for (const viewport of victoryViewports) {
       }
     );
     await installBackendConfig(page);
-    await installMainBridge(page);
+    await installSolitaireBridge(page);
     const api = await installApi(page);
 
     await page.goto("/home.html");
@@ -1058,7 +1062,7 @@ for (const viewport of viewports) {
       }
     );
     await installBackendConfig(page);
-    await installMainBridge(page);
+    await installSolitaireBridge(page);
     const api = await installAdministratorReauthenticationApi(page);
 
     await page.goto("/home.html");
@@ -1295,7 +1299,7 @@ const prepareSignedInAdministrator = async (page, viewport) => {
     }
   );
   await installBackendConfig(page);
-  await installMainBridge(page);
+  await installSolitaireBridge(page);
 };
 
 /**

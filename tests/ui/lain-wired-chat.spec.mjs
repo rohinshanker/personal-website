@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
-import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
@@ -22,23 +22,6 @@ const disableRemoteGameStats = (page) =>
       body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
     })
   );
-
-const routeMainSource = async (page, transform) => {
-  const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
-  const routedSource = transform(mainSource);
-  if (routedSource === mainSource) {
-    throw new Error("The Lain browser fixture did not transform main.js.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: routedSource,
-    })
-  );
-};
 
 const dispatchCloseAnimationEnd = (locator) =>
   locator.dispatchEvent("animationend", { animationName: "retro-window-close" });
@@ -127,9 +110,7 @@ test("The Wired message is read-only, focused, and contained across viewports", 
     Math.random = () => 0.999999;
   });
   await disableRemoteGameStats(page);
-  await routeMainSource(page, (source) =>
-    isolateAllProductionDebug(source)
-  );
+  await routeProductionDebugFlags(page);
   await page.goto("/home.html", { waitUntil: "load" });
   await page.locator('#about-window [data-close="about"]').click();
   await expect(page.locator("#about-window")).toBeHidden();
@@ -294,9 +275,9 @@ test("Lain and Red Tool stay normal through a live cooldown and remain explicitl
     Math.random = () => 0;
   });
   await disableRemoteGameStats(page);
-  await routeMainSource(page, (source) => {
-    const isolatedSource = isolateAllProductionDebug(source);
-    const instrumentedSource = isolatedSource.replace(
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "eventRuntime", (source) =>
+    source.replace(
       /\n\}\)\(\);\s*$/,
       `
 window.__wiredNormalTest = Object.freeze({
@@ -305,16 +286,12 @@ window.__wiredNormalTest = Object.freeze({
     return randomEventTriggerCooldownUntil;
   },
   trigger() {
-    return notifyActivity("pageReload");
+    return window.homeActivity.notifyActivity("pageReload");
   },
 });
 })();`
-    );
-    if (instrumentedSource === isolatedSource) {
-      throw new Error("Unable to install the Wired normal scheduler bridge.");
-    }
-    return instrumentedSource;
-  });
+    )
+  );
   await page.goto("/home.html", { waitUntil: "load" });
 
   const cooldownUntil = await page.evaluate(() =>

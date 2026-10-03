@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { isolateProductionPerEventDebug } from "./helpers/random-event-debug.mjs";
-
-import { homeScriptUrl } from "../helpers/home-scripts.mjs";
 
 test.setTimeout(300_000);
 
@@ -26,19 +24,11 @@ const disableRemoteGameStats = async (page) => {
 };
 
 const installDebugAlertTestBridge = async (page) => {
-  const mainSource = await readFile(
-    homeScriptUrl("eventRuntime"),
-    "utf8"
-  );
-  const isolatedSource = isolateProductionPerEventDebug(mainSource);
-  const zeroDelaySource = isolatedSource.replace(
-    "const RANDOM_EVENT_DELAY_MAX_MS = 2000;",
-    "const RANDOM_EVENT_DELAY_MAX_MS = 0;"
-  );
-  const instrumentedSource = zeroDelaySource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
-window.__debugSystemAlertsTest = Object.freeze({
+  await routeHomeScript(page, "eventPrompts", (source) =>
+    isolateProductionPerEventDebug(source).replace(
+      /\n\}\)\(\);\s*$/,
+      `
+window.__debugSystemAlertsPromptTest = Object.freeze({
   alerts: SYSTEM_ALERTS.map((alert) => ({
     ...alert,
     buttons: alert.buttons.map((button) => ({ ...button })),
@@ -60,11 +50,34 @@ window.__debugSystemAlertsTest = Object.freeze({
     const alert = window.rohinSystemAlerts.normalizeDefinitions([input])[0];
     return showDebugSystemAlert(alert);
   },
+});
+})();`
+    )
+  );
+  await routeHomeScript(page, "eventRuntime", (source) => {
+    const zeroDelaySource = source.replace(
+      "const RANDOM_EVENT_DELAY_MAX_MS = 2000;",
+      "const RANDOM_EVENT_DELAY_MAX_MS = 0;"
+    );
+    return zeroDelaySource.replace(
+      /\n\}\)\(\);\s*$/,
+      `
+window.__debugSystemAlertsRuntimeTest = Object.freeze({
   trigger(name = "startButton") {
-    return notifyActivity(name);
+    return window.homeActivity.notifyActivity(name);
   },
-  triggerFelizJuevesFallback() {
-    return maybeShowFelizJueves();
+  triggerAlert(id, name = "startButton") {
+    const definition = randomEventDefinitions.find(
+      (candidate) => candidate.id === "debug-system-alert-" + id
+    );
+    if (!definition) return false;
+    const triggerProbability = randomEventTriggerProbability(name, definition);
+    if (Math.random() >= triggerProbability) return false;
+    return scheduleRandomEventRun(definition, {
+      triggerName: name,
+      detail: {},
+      debug: false,
+    });
   },
   startCooldown() {
     recordRandomEventTrigger();
@@ -73,20 +86,8 @@ window.__debugSystemAlertsTest = Object.freeze({
   cooldownUntil: () => randomEventTriggerCooldownUntil,
 });
 })();`
-  );
-  if (
-    isolatedSource === mainSource ||
-    zeroDelaySource === isolatedSource ||
-    instrumentedSource === zeroDelaySource
-  ) {
-    throw new Error("Unable to install the debug system alert test bridge.");
-  }
-  await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: instrumentedSource,
-    })
-  );
+    );
+  });
 };
 
 const dispatchAnimationEnd = async (locator, animationName) => {
@@ -227,9 +228,14 @@ test("all production system alerts schedule and render through the shared shell"
   await disableRemoteGameStats(page);
   await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => Boolean(window.__debugSystemAlertsTest));
+  await page.waitForFunction(() =>
+    Boolean(
+      window.__debugSystemAlertsPromptTest &&
+      window.__debugSystemAlertsRuntimeTest
+    )
+  );
 
-  const alerts = await page.evaluate(() => window.__debugSystemAlertsTest.alerts);
+  const alerts = await page.evaluate(() => window.__debugSystemAlertsPromptTest.alerts);
   expect(alerts).toHaveLength(30);
   expect(alerts.filter(({ buttonAlignment }) => buttonAlignment === "right")).toHaveLength(
     30
@@ -243,13 +249,18 @@ test("all production system alerts schedule and render through the shared shell"
 
   await sentinel.focus();
   expect(
-    await page.evaluate(() => window.__debugSystemAlertsTest.trigger("startButton"))
+    await page.evaluate(() =>
+      window.__debugSystemAlertsRuntimeTest.triggerAlert("ram-prices", "startButton")
+    )
   ).toBe(false);
   await expect(win).toBeHidden();
 
   const normallyScheduled = await page.evaluate(() => {
     Math.random = () => 0;
-    return window.__debugSystemAlertsTest.trigger("startButton");
+    return window.__debugSystemAlertsRuntimeTest.triggerAlert(
+      "ram-prices",
+      "startButton"
+    );
   });
   expect(normallyScheduled).toBe(true);
   await expect(win).toBeVisible();
@@ -277,7 +288,7 @@ test("all production system alerts schedule and render through the shared shell"
         await sentinel.focus();
         expect(
           await page.evaluate(
-            (id) => window.__debugSystemAlertsTest.open(id),
+            (id) => window.__debugSystemAlertsPromptTest.open(id),
             alert.id
           )
         ).toBe(true);
@@ -385,7 +396,12 @@ test("normalized alert configurations render every alignment and content stress 
   await disableRemoteGameStats(page);
   await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => Boolean(window.__debugSystemAlertsTest));
+  await page.waitForFunction(() =>
+    Boolean(
+      window.__debugSystemAlertsPromptTest &&
+      window.__debugSystemAlertsRuntimeTest
+    )
+  );
 
   const rawCases = [
     {
@@ -427,7 +443,7 @@ test("normalized alert configurations render every alignment and content stress 
     },
   ];
   const cases = await page.evaluate((inputs) =>
-    inputs.map((input) => window.__debugSystemAlertsTest.normalize(input)), rawCases
+    inputs.map((input) => window.__debugSystemAlertsPromptTest.normalize(input)), rawCases
   );
   expect(cases[0]).toMatchObject({
     title: "System Alert",
@@ -444,7 +460,7 @@ test("normalized alert configurations render every alignment and content stress 
         await sentinel.focus();
         expect(
           await page.evaluate(
-            (input) => window.__debugSystemAlertsTest.openSynthetic(input),
+            (input) => window.__debugSystemAlertsPromptTest.openSynthetic(input),
             rawCases[caseIndex]
           )
         ).toBe(true);
@@ -503,11 +519,11 @@ test("normalized alert configurations render every alignment and content stress 
   }
 
   await sentinel.focus();
-  expect(await page.evaluate(() => window.__debugSystemAlertsTest.open("ram-prices"))).toBe(
+  expect(await page.evaluate(() => window.__debugSystemAlertsPromptTest.open("ram-prices"))).toBe(
     true
   );
   await expect(systemAlertButtons(page).first()).toBeFocused();
-  expect(await page.evaluate(() => window.__debugSystemAlertsTest.open("photos"))).toBe(
+  expect(await page.evaluate(() => window.__debugSystemAlertsPromptTest.open("photos"))).toBe(
     false
   );
   await expect(win).toHaveAttribute("data-alert-id", "ram-prices");
@@ -515,7 +531,7 @@ test("normalized alert configurations render every alignment and content stress 
   await closeAlert(page, { useEscape: true });
   await expect(sentinel).toBeFocused();
 
-  expect(await page.evaluate(() => window.__debugSystemAlertsTest.open("ram-prices"))).toBe(
+  expect(await page.evaluate(() => window.__debugSystemAlertsPromptTest.open("ram-prices"))).toBe(
     true
   );
   await expect(systemAlertButtons(page).first()).toBeFocused();
@@ -547,7 +563,12 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
   await disableRemoteGameStats(page);
   await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => Boolean(window.__debugSystemAlertsTest));
+  await page.waitForFunction(() =>
+    Boolean(
+      window.__debugSystemAlertsPromptTest &&
+      window.__debugSystemAlertsRuntimeTest
+    )
+  );
 
   const win = page.locator("#debug-system-alert-window");
   const sentinel = page.locator("#taskbar-clock-button");
@@ -555,18 +576,18 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
   const seededCooldown = await page.evaluate(() => {
     return {
       now: Date.now(),
-      until: window.__debugSystemAlertsTest.startCooldown(),
+      until: window.__debugSystemAlertsRuntimeTest.startCooldown(),
     };
   });
   expect(seededCooldown.until - seededCooldown.now).toBe(7500);
 
   await sentinel.focus();
   expect(
-    await page.evaluate(() => window.__debugSystemAlertsTest.trigger("pageReload"))
+    await page.evaluate(() => window.__debugSystemAlertsRuntimeTest.trigger("pageReload"))
   ).toBe(false);
   await expect(win).toBeHidden();
   expect(
-    await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
+    await page.evaluate(() => window.__debugSystemAlertsRuntimeTest.cooldownUntil())
   ).toBe(seededCooldown.until);
 
   const reminders = [
@@ -619,7 +640,7 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
       const metrics = await measureAlert(page);
       await expectAlertActionAlignment(page, metrics, reminder.buttonAlignment);
       expect(
-        await page.evaluate(() => window.__debugSystemAlertsTest.cooldownUntil())
+        await page.evaluate(() => window.__debugSystemAlertsRuntimeTest.cooldownUntil())
       ).toBe(seededCooldown.until);
       await dispatchAnimationEnd(win, "retro-window-open");
       await closeAlert(page, { useEscape: reminder.useEscape });

@@ -12,7 +12,7 @@
  */
 
 import { expect, test } from "./deterministic.mjs";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 
 test.setTimeout(180_000);
 
@@ -27,7 +27,7 @@ const administratorProfile = Object.freeze({
 });
 
 /**
- * `RANDOM_EVENT_TASKBAR_CLEARANCE` in `scripts/home/main.js`: the strip above
+ * `RANDOM_EVENT_TASKBAR_CLEARANCE` in the event runtime: the strip above
  * the taskbar that a clamped event window must not cross.
  */
 const TASKBAR_CLEARANCE = 64;
@@ -377,17 +377,15 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
 
   test(`dynamic Brand windows retain custom durations and removal at ${viewport.name}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
-    const source = await readIsolatedMainSource();
     // The event starts through the real control. This narrow probe reaches the
     // health-dependent Puck branch and exits combat without waiting for a loss.
-    const instrumented = source.replace(/\}\)\(\);\s*$/, `
-      window.__managedWindowProbe = {
-        showPuck: showBrandBurnsPuckWindow,
-        close: closeBrandBurnsWindow,
-      };
-    })();`);
-    await page.route(/\/scripts\/home\/main\.js(?:\?.*)?$/, (route) =>
-      route.fulfill({ contentType: "application/javascript", body: instrumented })
+    await routeHomeScript(page, "eventBrandBurns", (source) =>
+      source.replace(/\}\)\(\);\s*$/, `
+        window.__managedWindowProbe = {
+          showPuck: showBrandBurnsPuckWindow,
+          close: closeBrandBurnsWindow,
+        };
+      })();`)
     );
     await preparePage(page);
     await openAdminEvents(page);

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { readIsolatedMainSource } from "./helpers/random-event-debug.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(300_000);
 
@@ -97,11 +98,12 @@ const installBackendConfig = async (page) => {
   );
 };
 
-const installMainBridge = async (page) => {
-  const mainSource = await readIsolatedMainSource();
-  const instrumentedSource = mainSource.replace(
-    /\n\}\)\(\);\s*$/,
-    `
+const installSudokuBridge = async (page) => {
+  await routeProductionDebugFlags(page);
+  await routeHomeScript(page, "sudoku", (source) =>
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__sudokuPublishFlowTest = Object.freeze({
   readLifecycle: () => ({
     difficulty: sudokuState.difficulty,
@@ -161,15 +163,7 @@ window.__sudokuPublishFlowTest = Object.freeze({
   },
 });
 })();`
-  );
-  if (instrumentedSource === mainSource) {
-    throw new Error("Unable to install the Sudoku publish test bridge.");
-  }
-  await page.route("**/scripts/home/main.js*", (route) =>
-    route.fulfill({
-      body: instrumentedSource,
-      contentType: "application/javascript",
-    })
+    )
   );
 };
 
@@ -501,7 +495,7 @@ const preparePage = async (page, viewport, scenario) => {
     }
   );
   await installBackendConfig(page);
-  await installMainBridge(page);
+  await installSudokuBridge(page);
   const api = await installApi(page, scenario);
 
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
@@ -861,7 +855,7 @@ test("a restored unsolved Sudoku puzzle publishes through a fresh verified sessi
     }
   );
   await installBackendConfig(page);
-  await installMainBridge(page);
+  await installSudokuBridge(page);
   const api = await installApi(page, scenario);
 
   const openSudokuAndPlay = async () => {
@@ -1015,7 +1009,7 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
   );
   // Routes registered on the context serve both tabs and share one API log.
   await installBackendConfig(context);
-  await installMainBridge(context);
+  await installSudokuBridge(context);
   const api = await installApi(context, scenario);
 
   const openTab = async () => {
