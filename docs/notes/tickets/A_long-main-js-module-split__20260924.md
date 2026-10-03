@@ -1,10 +1,10 @@
-# O_long-main-js-module-split__20260924 — Open
+# A_long-main-js-module-split__20260924 — Active
 
 - Scope: Split the 32,299-line `scripts/home/main.js` IIFE into per-feature classic scripts along its natural seams, shrink `core/dom.js` from a 525-entry eager lookup table to shared shell elements, and re-point the 44 source-text tests that read `main.js` by path.
-- Status: open
+- Status: active
 - Opened: 2026-09-24
-- Updated: 2026-09-24
-- Current State: Opened from the 2026-09-24 whole-site audit. Nothing started. Tier: long. Depends on the decision "per-feature DOM lookups vs one table" in `O_decide-architecture-and-testing__20260924.md`; do `O_small-main-js-helper-dedupe__20260924.md` first so helpers land in one shared file.
+- Updated: 2026-10-03
+- Current State: Active on owner instruction 2026-10-03: complete the feature-script split with feature-local DOM lookups. Tier: long. Depends on the decision "per-feature DOM lookups vs one table" in `O_decide-architecture-and-testing__20260924.md`; do `O_small-main-js-helper-dedupe__20260924.md` first so helpers land in one shared file.
 - Verification: After each extracted region: `node --check` on every changed file; `npm test` with the affected test files' `readFileSync` paths updated; `node scripts/update-game-integrity.mjs` then `--check` (the build hash covers `main.js` and `core/dom.js`; decide whether extracted files join the hashed set); `npm run test:ui`; `npm run test:visual`; rendered pass of `/home.html` at 375×812, 768×1024, 1280×800, 1440×900 with no console errors and the extracted feature exercised end to end.
 - Cleanup: Record the final file map and the "one region per commit" procedure in `docs/validation/site-quality-gates.md`, refresh the numbers in `docs/validation/test-suite.md` (it still says 36 files / 30,752 lines; today 44 files read the file and it is 32,299 lines), then delete this ticket and its index row.
 
@@ -31,3 +31,10 @@
 3. Replace the `activateVisibleContent` forward reference with an explicit registration.
 4. Each extraction updates: the `home.html` script tag list and cache tokens, `index.html` warm-up list, the integrity hashed-file set if the region determines game completion, and the affected tests' file paths (Minesweeper 87+58+4 assertions across `tests/minesweeper-*.test.mjs`, Solitaire 52+35+8+6, Sudoku 42+36+17; `tests/solitaire-winnable-deals.test.mjs:17-30` builds the solver with `new Function` from source slices between the sentinels `const solSuitOrder =`/`const solRankNames =` and `const solBuildDeck =`/`const solCloneCards =`, so keep those declarations adjacent).
 5. Keep classic scripts; no bundler exists and `defer` preserves order if the load-order decision lands on deferring.
+
+## Owner decisions (2026-10-03)
+
+- Use feature-local DOM lookups; keep shared shell elements in `core/dom.js`.
+- Complete the module split, update tests and release metadata, and preserve current behavior and ordered classic-script loading.
+- Build hashes follow extracted completion code and its dependencies as release/cache compatibility metadata. They cannot attest to untampered gameplay; coordinator is assessing server-side validation alternatives in parallel.
+- Random-event consolidation has landed. Refresh stale line ranges and verify the earlier helper-deduplication dependency from current source before extracting.
