@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "./fixtures.mjs";
 
+import { homeScriptUrl } from "../helpers/home-scripts.mjs";
+
 const API_BASE_URL = "https://personal-site-game-stats.rohinshankerme.workers.dev";
 const TEST_SEED = 2;
 const viewports = [
@@ -14,7 +16,7 @@ const viewports = [
 ];
 
 const mainSource = await readFile(
-  new URL("../../scripts/home/main.js", import.meta.url),
+  homeScriptUrl("solitaire"),
   "utf8"
 );
 const sourceSection = (start, end) => {

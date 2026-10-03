@@ -2,14 +2,19 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  readHomeScript,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 test("game stats use the Cloudflare backend instead of static export data", async () => {
   const [homeSource, indexSource, domSource, mainSource, cssSource] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows", "minesweeper", "snake", "sudoku", "solitaire"),
+    readHomeScriptText("gameStats", "windows", "minesweeper", "snake", "sudoku", "solitaire"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
   ]);
 
@@ -32,7 +37,7 @@ test("game stats use the Cloudflare backend instead of static export data", asyn
     homeSource.indexOf("scripts/home/game-stats-backend.js") <
       homeSource.indexOf("scripts/home/main.js")
   );
-  assert.match(domSource, /gameStatsWindows: all\("\[data-game-stats-window\]"\)/);
+  assert.match(domSource, /const gameStatsWindows = all\("\[data-game-stats-window\]"\)/);
   assert.doesNotMatch(domSource, /gameStatsExport|gameStatsPendingCount/);
   assert.match(cssSource, /\.game-stats-sync-status/);
   assert.doesNotMatch(cssSource, /\.game-stats-toolbar/);
@@ -48,7 +53,7 @@ test("game stats use the Cloudflare backend instead of static export data", asyn
   assert.match(mainSource, /const updateGameStatsPlayerNameMarquees/);
   assert.match(
     mainSource,
-    /const dispatchWindowResize = \(\) =>[\s\S]*?scheduleGameStatsPlayerNameMarquees\(\)[\s\S]*?window\.addEventListener\("resize", dispatchWindowResize\)/
+    /registerViewportObserver\(\{[\s\S]*?scheduleGameStatsPlayerNameMarquees\(\)[\s\S]*?window\.addEventListener\("resize", dispatchWindowResize\)/
   );
   assert.match(mainSource, /const getGameStatsWindowParts = \(game\)/);
   assert.match(mainSource, /const renderGameStatsWindows = \(\)/);
@@ -62,7 +67,7 @@ test("game stats use the Cloudflare backend instead of static export data", asyn
 test("Game Stats keeps one independently managed window for every game", async () => {
   const [homeSource, mainSource] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows", "minesweeper", "snake", "sudoku", "solitaire"),
   ]);
 
   for (const game of ["minesweeper", "solitaire", "snake", "sudoku"]) {
@@ -102,13 +107,20 @@ test("Game Stats keeps one independently managed window for every game", async (
   );
   assert.match(
     mainSource,
-    /const dispatchWindowResize = \(\) =>[\s\S]*?positionVisibleGameStatsWindows\(\)[\s\S]*?window\.addEventListener\("resize", dispatchWindowResize\)/
+    /registerViewportObserver\(\{[\s\S]*?positionVisibleGameStatsWindows\(\)[\s\S]*?window\.addEventListener\("resize", dispatchWindowResize\)/
   );
   assert.match(mainSource, /if \(!wasVisible\) positionNewGameStatsWindow\(game, windowParts\?\.windowElement\)/);
 });
 
 test("each supported game opens a verified session before emitting a completion event", async () => {
-  const mainSource = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const mainSource = await readHomeScriptText(
+    "gameStats",
+    "windows",
+    "minesweeper",
+    "snake",
+    "sudoku",
+    "solitaire"
+  );
   const recordEventSource = mainSource.slice(
     mainSource.indexOf("const recordGameStatsEvent ="),
     mainSource.indexOf("\n\nconst formatGameStatsCounter")
@@ -154,7 +166,7 @@ test("each supported game opens a verified session before emitting a completion 
 
 test("a new personal record presses the matching trophy twice before opening stats", async () => {
   const [mainSource, styleSource] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows", "minesweeper", "snake", "sudoku", "solitaire"),
     readFile(new URL("style.css", root), "utf8"),
   ]);
 

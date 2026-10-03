@@ -11,10 +11,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  RANDOM_EVENT_SCRIPT_KEYS,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
-const [mainSource, homeSource, eventStyles] = await Promise.all([
-  readFile(new URL("scripts/home/main.js", root), "utf8"),
+const [eventSources, homeSource, eventStyles] = await Promise.all([
+  readHomeScriptText("windows", ...RANDOM_EVENT_SCRIPT_KEYS, "boot"),
   readFile(new URL("home.html", root), "utf8"),
   readFile(new URL("styles/home/random-events.css", root), "utf8"),
 ]);
@@ -25,31 +30,31 @@ const SHOW_HELPER = "const showManagedRandomEventWindow = (";
 const registrationBlocks = () => {
   const blocks = [];
   const marker = /^(?: {2})?registerRandomEvent\(\{$/gm;
-  for (const match of mainSource.matchAll(marker)) {
-    const open = mainSource.indexOf("{", match.index);
+  for (const match of eventSources.matchAll(marker)) {
+    const open = eventSources.indexOf("{", match.index);
     let depth = 0;
     let index = open;
-    while (index < mainSource.length) {
-      if (mainSource[index] === "{") depth += 1;
-      else if (mainSource[index] === "}") {
+    while (index < eventSources.length) {
+      if (eventSources[index] === "{") depth += 1;
+      else if (eventSources[index] === "}") {
         depth -= 1;
         if (depth === 0) break;
       }
       index += 1;
     }
-    blocks.push(mainSource.slice(open, index + 1));
+    blocks.push(eventSources.slice(open, index + 1));
   }
   return blocks;
 };
 
 test("the show sequence is written once", () => {
-  const showSequence = [...mainSource.matchAll(/classList\.remove\("is-hidden", "is-closing"/g)];
+  const showSequence = [...eventSources.matchAll(/classList\.remove\("is-hidden", "is-closing"/g)];
   assert.equal(
     showSequence.length,
     1,
     "Open a random-event window with showManagedRandomEventWindow instead of clearing is-hidden by hand."
   );
-  const helperStart = mainSource.indexOf(SHOW_HELPER);
+  const helperStart = eventSources.indexOf(SHOW_HELPER);
   assert.notEqual(helperStart, -1, "Missing showManagedRandomEventWindow");
   assert.ok(
     showSequence[0].index > helperStart,
@@ -57,7 +62,7 @@ test("the show sequence is written once", () => {
   );
 
   // `setWindowOpen` owns the app windows and is deliberately separate.
-  const closers = [...mainSource.matchAll(/restartWindowAnimation\([^,]+, "is-closing"\)/g)];
+  const closers = [...eventSources.matchAll(/restartWindowAnimation\([^,]+, "is-closing"\)/g)];
   assert.equal(
     closers.length,
     2,
@@ -66,8 +71,8 @@ test("the show sequence is written once", () => {
 });
 
 test("the open and close animations are bound once", () => {
-  const listeners = [...mainSource.matchAll(/addEventListener\("animationend"/g)];
-  const managed = [...mainSource.matchAll(/bindManagedRandomEventWindowAnimation\(/g)];
+  const listeners = [...eventSources.matchAll(/addEventListener\("animationend"/g)];
+  const managed = [...eventSources.matchAll(/bindManagedRandomEventWindowAnimation\(/g)];
   assert.ok(
     managed.length > 60,
     `Expected every event window to use the shared binder; found ${managed.length} calls.`
@@ -111,21 +116,21 @@ test("every event definition keeps its DOM wiring in bind()", () => {
 
 test("registerRandomEvent queues bind() for one wiring pass", () => {
   assert.match(
-    mainSource,
+    eventSources,
     /if \(registeredDefinition\.bind\) \{\s*randomEventBindings\.push\(registeredDefinition\.bind\);\s*\}/
   );
   assert.match(
-    mainSource,
+    eventSources,
     /const bindRegisteredRandomEvents = \(\) => \{\s*randomEventBindings\.forEach\(\(bind\) => bind\(\)\);\s*randomEventBindings\.length = 0;\s*\};/
   );
   assert.equal(
-    [...mainSource.matchAll(/^bindRegisteredRandomEvents\(\);$/gm)].length,
+    [...eventSources.matchAll(/^bindRegisteredRandomEvents\(\);$/gm)].length,
     1,
     "The queued binds run from exactly one call site."
   );
   // Registration happens thousands of lines earlier; wiring must not run there.
-  const registerIndex = mainSource.indexOf("const registerRandomEvent = (definition)");
-  const bindCallIndex = mainSource.indexOf("\nbindRegisteredRandomEvents();");
+  const registerIndex = eventSources.indexOf("const registerRandomEvent = (definition)");
+  const bindCallIndex = eventSources.indexOf("\nbindRegisteredRandomEvents();");
   assert.ok(bindCallIndex > registerIndex, "The wiring pass runs after registration");
 });
 
@@ -147,7 +152,7 @@ test("every event window carries the managed base class", () => {
   ["word-error-stack-window", "brand-puck-window", "brand-block-window", "brand-apostle-window"]
     .forEach((name) => {
       assert.match(
-        mainSource,
+        eventSources,
         new RegExp(`win\\.className = "window random-event-window ${name} is-hidden";`),
         `${name} is created without the managed base class`
       );

@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const readAvatarSource = async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("neko");
   const start = source.indexOf("const ROHIN_NEKO_AVATAR_INITIAL_DELAY_MIN_MS");
   const end = source.indexOf("const NEKO_TASKBAR_WAKE_ICON", start);
   assert.ok(start >= 0 && end > start, "Rohin Neko avatar implementation must exist");

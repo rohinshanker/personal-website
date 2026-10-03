@@ -2,9 +2,16 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { RANDOM_EVENT_SCRIPT_KEYS, readHomeScriptText } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 const home = await readFile(new URL("home.html", root), "utf8");
-const main = await readFile(new URL("scripts/home/main.js", root), "utf8");
+const main = await readHomeScriptText(
+  "activation",
+  "windows",
+  "gallery",
+  ...RANDOM_EVENT_SCRIPT_KEYS
+);
 
 const appWindows = new Map([
   ["study-resources", { deferred: 1 }],

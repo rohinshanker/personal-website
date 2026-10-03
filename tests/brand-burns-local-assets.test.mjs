@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { access, readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  readHomeScript,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 const apostleIds = Object.freeze([
   "femto",
@@ -17,9 +22,9 @@ const apostleIds = Object.freeze([
 ]);
 
 test("Brand Burns bundles every Apostle image for localhost rendering", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("eventBrandBurns", "eventRuntime");
   const start = source.indexOf("const BRAND_BURNS_FEMTO =");
-  const end = source.indexOf("const INFINITY_ARMORY_STARTING_GOLD", start);
+  const end = source.indexOf("\nlet brandBurnsStage =", start);
   assert.notEqual(start, -1, "Brand Burns should define Femto");
   assert.notEqual(end, -1, "Brand Burns Apostle definitions should be bounded");
   const definitions = source.slice(start, end);

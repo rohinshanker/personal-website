@@ -2,8 +2,20 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
-const readMain = () => readFile(new URL("scripts/home/main.js", root), "utf8");
+const readMain = () => readHomeScriptText(
+    "windows",
+    "neko",
+    "sudoku",
+    "calendar",
+    "gallery",
+    "lifeCounter",
+    "eventDistressSignal"
+  );
 
 const extractBetween = (source, startMarker, endMarker) => {
   const start = source.indexOf(startMarker);

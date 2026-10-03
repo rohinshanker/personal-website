@@ -4,10 +4,16 @@ import test from "node:test";
 
 import {
   GAME_BUILD_VERSION_PATTERN,
+  GAME_SEED_SOURCE_FILES,
   INTEGRITY_CACHE_ASSET_PATHS,
   digestGameCompletionSources,
 } from "../scripts/lib/game-build.mjs";
 import { parseJsonc } from "../scripts/lib/jsonc.mjs";
+
+import {
+  loadHomeContractGraph,
+  loadTimeClosure,
+} from "./helpers/home-contracts.mjs";
 import {
   GAME_COMPLETION_SOURCE_FILES,
   MAX_GAME_BUILD_COMPATIBILITY_VERSIONS,
@@ -61,11 +67,16 @@ test("game build metadata matches the completion source and Worker configuration
     "ADMIN_SESSION_SIGNING_SECRET",
     "CLASH_ROYALE_API_KEY",
   ]);
-  assert.deepEqual(GAME_COMPLETION_SOURCE_FILES, [
-    "scripts/home/main.js",
-    "scripts/home/core/dom.js",
+  // The manifest is the load-time dependency closure of the game scripts and
+  // the Game Stats client, plus the Sudoku worker that decides a solved board.
+  // Deriving the expectation means a new shared script cannot drift out of the
+  // digest while still being able to change when a game completes.
+  const { dependencies } = await loadHomeContractGraph();
+  const expectedSources = [
+    ...loadTimeClosure(dependencies, GAME_SEED_SOURCE_FILES),
     "scripts/home/sudoku-generator.worker.js",
-  ]);
+  ].sort();
+  assert.deepEqual([...GAME_COMPLETION_SOURCE_FILES].sort(), expectedSources);
   for (const entryPoint of [home, index]) {
     for (const assetPath of INTEGRITY_CACHE_ASSET_PATHS) {
       assert.match(entryPoint, new RegExp(`${assetPath.replaceAll(".", "\\.")}\\?v=${cacheToken}`));

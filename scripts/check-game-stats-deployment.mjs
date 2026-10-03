@@ -294,10 +294,17 @@ const fetchLiveIntegritySnapshot = async (
   }
 ) => {
   const siteRootUrl = new URL("/", liveConfig.configUrl);
-  // Releases before the generator worker hashed these two files only.
-  // Accept that manifest only during a transition to a different browser build,
-  // and only when its fetched bytes reproduce the advertised build hash.
-  const legacySourceFiles = ["scripts/home/main.js", "scripts/home/core/dom.js"];
+  // The manifest the live release hashed before the Home scripts were split:
+  // the monolith, the shared DOM table and the Sudoku worker. Accept it only
+  // during a transition to a different browser build, and only when its
+  // fetched bytes reproduce the advertised build hash. A live site whose
+  // config still names a hash from that manifest is otherwise indistinguishable
+  // from a stale deploy.
+  const legacySourceFiles = [
+    "scripts/home/main.js",
+    "scripts/home/core/dom.js",
+    "scripts/home/sudoku-generator.worker.js",
+  ];
   const assets = new Map();
   const loadAssets = async (paths) => {
     await Promise.all(paths.filter((path) => !assets.has(path)).map(async (path) => {
@@ -312,10 +319,16 @@ const fetchLiveIntegritySnapshot = async (
   let sourceBuildVersion;
   let cacheAssetPaths = INTEGRITY_CACHE_ASSET_PATHS;
   if (allowLegacyManifest) {
-    await loadAssets([...legacySourceFiles, ...INTEGRITY_ENTRY_FILES]);
-    sourceBuildVersion = await digestGameCompletionSources(
-      (path) => assets.get(path), legacySourceFiles
-    );
+    try {
+      await loadAssets([...legacySourceFiles, ...INTEGRITY_ENTRY_FILES]);
+      sourceBuildVersion = await digestGameCompletionSources(
+        (path) => assets.get(path), legacySourceFiles
+      );
+    } catch {
+      // A legacy source the live site no longer serves just rules that
+      // manifest out; the current one is checked below.
+      sourceBuildVersion = undefined;
+    }
   }
   if (sourceBuildVersion === liveConfig.buildVersion) {
     cacheAssetPaths = ["scripts/home/game-stats-backend.js", ...legacySourceFiles];

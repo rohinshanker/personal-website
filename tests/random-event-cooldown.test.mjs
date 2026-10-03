@@ -3,7 +3,28 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import {
+  RANDOM_EVENT_SCRIPT_KEYS,
+  readHomeScript,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
+
+/** A shared helper's own source, so the harness runs production code. */
+const sharedHelper = (source, name) => {
+  const declaration = `const ${name} = `;
+  const start = source.indexOf(declaration);
+  assert.notEqual(start, -1, `${name} should exist in the shared helpers`);
+  let depth = 0;
+  for (let index = start + declaration.length; index < source.length; index += 1) {
+    const character = source[index];
+    if ("([{".includes(character)) depth += 1;
+    else if (")]}".includes(character)) depth -= 1;
+    else if (character === ";" && depth === 0) return source.slice(start, index + 1);
+  }
+  assert.fail(`${name} should be bounded`);
+};
 
 const getRandomEventRegistrationBlocks = (source) => {
   const registrationStart = "registerRandomEvent({";
@@ -54,7 +75,7 @@ const getRandomEventRegistrationBlocks = (source) => {
 
 test("all 30 system alerts register normally and only Neko uses debug mode", async () => {
   const [source, systemAlertSource] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator"),
     readFile(new URL("scripts/home/system-alerts.js", root), "utf8"),
   ]);
   const registrations = getRandomEventRegistrationBlocks(source);
@@ -195,7 +216,8 @@ const createCooldownRuntime = (source) => {
   };
   const context = vm.createContext({ Map, Math: math, Number });
   vm.runInContext(
-    `${source.slice(start, end)}\n` +
+    `${sharedHelper(source, "chooseWeightedRandomEvent")}\n` +
+      `${source.slice(start, end)}\n` +
       "globalThis.randomEventCooldown = { isRandomEventTriggerOnCooldown, recordRandomEventTrigger, isRandomEventOnLockdown, recordRandomEventSelection, chooseRandomEventOutsideLockdown };",
     context
   );
@@ -214,7 +236,7 @@ const createPromoRandomRuntime = (source) => {
 
   const context = vm.createContext({ Math, Number });
   vm.runInContext(
-    "const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));\n" +
+    `${sharedHelper(source, "clampNumber")}\n` +
       `${source.slice(start, end)}\n` +
       "globalThis.promoRandom = { promoRandomEventTriggerProbability, promoRandomEventCompactnessWeight };",
     context
@@ -228,37 +250,15 @@ const createGameplayLockRuntime = (source) => {
   assert.notEqual(start, -1, "The gameplay lock helper should exist");
   assert.notEqual(end, -1, "The gameplay lock helper should be bounded");
 
-  const context = vm.createContext({});
+  const context = vm.createContext({ Boolean });
   vm.runInContext(
     `
-      let brandVisible = false;
-      let brandBurnsStage = "idle";
-      let fateVisible = false;
-      let fateState = "idle";
-      let lancerVisible = false;
-      const LANCER_BATTLE_STAGES = { active: "active" };
-      let lancerBattleState = "idle";
-      let gearsVisible = false;
-      let gearsNestState = { active: false, completed: false };
-      let toxicVisible = false;
-      const TOXIC_JUNGLE_STAGE_ACTIVE = "active";
-      let toxicJungleStage = "prompt";
-      const isBrandBurnsVisible = () => brandVisible;
-      const isFateVisible = () => fateVisible;
-      const isLancerBattleVisible = () => lancerVisible;
-      const isGearsNestVisible = () => gearsVisible;
-      const isToxicJungleVisible = () => toxicVisible;
+      const randomEventDefinitions = [];
       ${source.slice(start, end)}
       globalThis.randomEventGameplayLock = {
         isActive: isRandomEventGameplayLockActive,
-        setBrand: (visible, stage) => { brandVisible = visible; brandBurnsStage = stage; },
-        setFate: (visible, state) => { fateVisible = visible; fateState = state; },
-        setLancer: (visible, state) => { lancerVisible = visible; lancerBattleState = state; },
-        setGears: (visible, active, completed) => {
-          gearsVisible = visible;
-          gearsNestState = { active, completed };
-        },
-        setToxic: (visible, stage) => { toxicVisible = visible; toxicJungleStage = stage; },
+        register: (definition) => randomEventDefinitions.push(definition),
+        clear: () => randomEventDefinitions.splice(0, randomEventDefinitions.length),
       };
     `,
     context
@@ -325,7 +325,7 @@ const createAdminRandomChoiceRuntime = (source) => {
 };
 
 test("accepted normal random-event triggers use the global seven-and-a-half-second cooldown", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const cooldown = createCooldownRuntime(source);
 
   cooldown.recordRandomEventTrigger(1000);
@@ -336,7 +336,7 @@ test("accepted normal random-event triggers use the global seven-and-a-half-seco
 });
 
 test("random-event selections remain locked until exactly two minutes have elapsed", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const cooldown = createCooldownRuntime(source);
   const event = { id: "alpha" };
 
@@ -347,7 +347,7 @@ test("random-event selections remain locked until exactly two minutes have elaps
 });
 
 test("a locked weighted draw is discarded and resampled from the remaining events", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const cooldown = createCooldownRuntime(source);
   const locked = { definition: { id: "locked" }, triggerProbability: 0.9 };
   const available = { definition: { id: "available" }, triggerProbability: 0.1 };
@@ -358,7 +358,7 @@ test("a locked weighted draw is discarded and resampled from the remaining event
 });
 
 test("selection terminates cleanly when every candidate is on lockdown", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const cooldown = createCooldownRuntime(source);
   const first = { definition: { id: "first" }, triggerProbability: 0.5 };
   const second = { definition: { id: "second" }, triggerProbability: 0.5 };
@@ -370,7 +370,7 @@ test("selection terminates cleanly when every candidate is on lockdown", async (
 });
 
 test("the lockdown applies to interactive, non-interactive, and debug event definitions", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const cooldown = createCooldownRuntime(source);
   const interactive = { id: "interactive", kind: "interactive" };
   const nonInteractiveDebug = {
@@ -386,7 +386,7 @@ test("the lockdown applies to interactive, non-interactive, and debug event defi
 });
 
 test("unlocked events retain their weighted selection behavior", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const cooldown = createCooldownRuntime(source);
   const first = { definition: { id: "first" }, triggerProbability: 0.9 };
   const second = { definition: { id: "second" }, triggerProbability: 0.1 };
@@ -396,7 +396,7 @@ test("unlocked events retain their weighted selection behavior", async () => {
 });
 
 test("promo mode raises trigger probability and favors smaller physical footprints", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const promo = createPromoRandomRuntime(source);
 
   assert.equal(promo.promoRandomEventTriggerProbability(0), 0.7);
@@ -428,7 +428,7 @@ test("promo mode raises trigger probability and favors smaller physical footprin
 
   assert.match(
     source,
-    /selectionWeight: isPromoRandomEventModeActive\(\)[\s\S]*?getAdminRandomEventCompactnessWeight\(definition\)/
+    /selectionWeight: isPromoRandomEventModeActive\(\)[\s\S]*?randomEventCompactnessWeightProvider\(definition\)/
   );
   assert.match(source, /Math\.random\(\) >= maxTriggerProbability/);
   assert.match(source, /const getAdminRandomEventCompactnessWeight = \(definition\) =>/);
@@ -440,7 +440,7 @@ test("promo mode raises trigger probability and favors smaller physical footprin
 });
 
 test("Admin Random uniformly selects and records through the shared repeat window", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const runtime = createAdminRandomChoiceRuntime(source);
   const pending = { id: "pending" };
   const blockedByTrigger = { id: "trigger-blocked", canTrigger: () => false };
@@ -499,42 +499,50 @@ test("Admin Random uniformly selects and records through the shared repeat windo
   );
 });
 
-test("active combat and click-collection gameplay blocks random events until it ends", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+test("an event that reports a gameplay lock blocks every other event", async () => {
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const lock = createGameplayLockRuntime(source);
 
-  assert.equal(lock.isActive(), false);
+  assert.equal(lock.isActive(), false, "nothing is locked with no events registered");
 
-  lock.setBrand(true, "fight");
-  assert.equal(lock.isActive(), true);
-  lock.setBrand(true, "idle");
-  assert.equal(lock.isActive(), false);
+  let midFight = false;
+  lock.register({ id: "scheduled-only" });
+  lock.register({ id: "mid-fight", isGameplayLocked: () => midFight });
+  assert.equal(lock.isActive(), false, "a registered event that is idle does not lock");
 
-  lock.setFate(true, "active");
-  assert.equal(lock.isActive(), true);
-  lock.setFate(true, "success");
-  assert.equal(lock.isActive(), false);
+  midFight = true;
+  assert.equal(lock.isActive(), true, "an event reporting a lock blocks the rest");
 
-  lock.setLancer(true, "active");
-  assert.equal(lock.isActive(), true);
-  lock.setLancer(true, "resolving");
-  assert.equal(lock.isActive(), false);
-
-  lock.setGears(true, true, false);
-  assert.equal(lock.isActive(), true);
-  lock.setGears(true, false, true);
-  assert.equal(lock.isActive(), false);
-  lock.setGears(false, true, false);
-  assert.equal(lock.isActive(), false);
-
-  lock.setToxic(true, "active");
-  assert.equal(lock.isActive(), true);
-  lock.setToxic(true, "complete");
-  assert.equal(lock.isActive(), false);
+  midFight = false;
+  assert.equal(lock.isActive(), false, "the lock lifts when the event says so");
 });
 
+test("every event that holds the visitor mid-activity reports the lock", async () => {
+  // Each condition is the one the monolith checked centrally; the event that
+  // owns the state now declares it, so losing one shows up here.
+  const conditions = [
+    ["eventBrandBurns", /isGameplayLocked: \(\) =>\s*isBrandBurnsVisible\(\) && brandBurnsStage === "fight"/],
+    ["eventFate", /isGameplayLocked: \(\) =>\s*isFateVisible\(\) && fateState === "active"/],
+    [
+      "eventLancerBattle",
+      /isGameplayLocked: \(\) =>\s*isLancerBattleVisible\(\) && lancerBattleState === LANCER_BATTLE_STAGES\.active/,
+    ],
+    [
+      "eventGearsNest",
+      /isGameplayLocked: \(\) =>\s*isGearsNestVisible\(\) && gearsNestState\.active && !gearsNestState\.completed/,
+    ],
+    [
+      "eventToxicJungle",
+      /isGameplayLocked: \(\) =>\s*isToxicJungleVisible\(\) && toxicJungleStage === TOXIC_JUNGLE_STAGE_ACTIVE/,
+    ],
+  ];
+
+  for (const [key, pattern] of conditions) {
+    assert.match(await readHomeScript(key), pattern, `${key} must report its gameplay lock`);
+  }
+});
 test("the scheduler isolates developer events and only cools down normal accepted events", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const scheduler = source.match(
     /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
   );
@@ -575,7 +583,7 @@ test("the scheduler isolates developer events and only cools down normal accepte
   );
   assert.match(
     trigger[1],
-    /const selected = chooseRandomEventOutsideLockdown\(eligibleEvents\);[\s\S]*?if \(!selected\) \{[\s\S]*?return maybeShowFelizJueves\(\);/
+    /const selected = chooseRandomEventOutsideLockdown\(eligibleEvents\);[\s\S]*?if \(!selected\) \{[\s\S]*?return runRandomEventFallback\(triggerName\);/
   );
 
   assert.match(
@@ -589,7 +597,7 @@ test("the scheduler isolates developer events and only cools down normal accepte
 });
 
 test("debug scheduling bypasses only the global cooldown", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const scheduler = source.match(
     /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
   );
@@ -677,7 +685,7 @@ test("debug scheduling bypasses only the global cooldown", async () => {
 });
 
 test("developer mode uses raw flags and takes precedence over global debug", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const effectiveDebugHelper = source.match(
     /const randomEventDebugEnabled = \(definition\) =>\n  RANDOM_EVENT_GLOBAL_DEBUG \|\| Boolean\(definition\.debug\);/
   );
@@ -743,7 +751,7 @@ test("developer mode uses raw flags and takes precedence over global debug", asy
 });
 
 test("a queued event does not appear after a gameplay lock begins", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const scheduler = source.match(
     /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
   );

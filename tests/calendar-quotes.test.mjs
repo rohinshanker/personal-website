@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-const mainSource = await readFile(new URL("../scripts/home/main.js", import.meta.url), "utf8");
+import { homeScriptUrl } from "./helpers/home-scripts.mjs";
+
+const mainSource = await readFile(homeScriptUrl("calendar"), "utf8");
 const quotesStart = mainSource.indexOf("const calendarQuotes = {");
 const quotesEnd = mainSource.indexOf("\n\nconst calendarEvents = {", quotesStart);
 

@@ -2,13 +2,30 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  RANDOM_EVENT_SCRIPT_KEYS,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
-const [mainSource, eventStyles, homeSource, indexSource, domSource, cursorModeSource] = await Promise.all([
-  readFile(new URL("scripts/home/main.js", root), "utf8"),
+const [eventSources, eventStyles, homeSource, indexSource, domSource, cursorModeSource] = await Promise.all([
+  readHomeScriptText(
+    "windows",
+    "cursor",
+    "calendar",
+    "minesweeper",
+    ...RANDOM_EVENT_SCRIPT_KEYS
+  ),
   readFile(new URL("styles/home/random-events.css", root), "utf8"),
   readFile(new URL("home.html", root), "utf8"),
   readFile(new URL("index.html", root), "utf8"),
-  readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
+  readHomeScriptText(
+    "windows",
+    "cursor",
+    "calendar",
+    "minesweeper",
+    ...RANDOM_EVENT_SCRIPT_KEYS
+  ),
   readFile(new URL("scripts/home/core/cursor-mode.js", root), "utf8"),
 ]);
 const baseStyles = await readFile(new URL("styles/home/base.css", root), "utf8");
@@ -32,12 +49,12 @@ const getBaseCssBlock = (selector) => {
 
 test("enemy health is reduced by ten percent from the prior scaling", () => {
   assert.match(
-    mainSource,
+    eventSources,
     /const GEARS_NEST_ENEMY_HEALTH_MULTIPLIER = 3 \* 0\.9;/
   );
-  const templates = mainSource.slice(
-    mainSource.indexOf("const GEARS_NEST_ENEMY_TEMPLATES"),
-    mainSource.indexOf("const applyGearsNestEnemyCoverSlot")
+  const templates = eventSources.slice(
+    eventSources.indexOf("const GEARS_NEST_ENEMY_TEMPLATES"),
+    eventSources.indexOf("const applyGearsNestEnemyCoverSlot")
   );
   const baseHealth = [...templates.matchAll(/baseHealth: (\d+)/g)].map((match) =>
     Number(match[1])
@@ -57,12 +74,12 @@ test("nest character assets are local for localhost reliability", async () => {
 
   for (const asset of expectedAssets) {
     const escapedAsset = asset.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    assert.match(mainSource, new RegExp(escapedAsset));
+    assert.match(eventSources, new RegExp(escapedAsset));
     await access(new URL(asset.replaceAll("%20", " "), root));
   }
 
   assert.doesNotMatch(
-    mainSource,
+    eventSources,
     /static\.wikia\.nocookie\.net\/gearsofwar\/images\/(?:5\/50|a\/a8|3\/3f|b\/b6)/
   );
   assert.doesNotMatch(
@@ -74,27 +91,27 @@ test("nest character assets are local for localhost reliability", async () => {
 });
 
 test("nest event is not registered in debug mode", () => {
-  const registrationStart = mainSource.indexOf('id: "gears-nest-clear"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "gears-nest-clear"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   assert.notEqual(registrationStart, -1, "Missing gears nest registration");
   assert.notEqual(registrationEnd, -1, "Missing gears nest registration end");
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
 });
 
 test("blade lock event is not registered in debug mode", () => {
-  const registrationStart = mainSource.indexOf('id: "lancer-battle"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "lancer-battle"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   assert.notEqual(registrationStart, -1, "Missing lancer battle registration");
   assert.notEqual(registrationEnd, -1, "Missing lancer battle registration end");
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
 });
 
 test("castle gate event and its exclusive God King asset are fully retired", async () => {
-  for (const source of [mainSource, domSource, homeSource, eventStyles]) {
+  for (const source of [eventSources, domSource, homeSource, eventStyles]) {
     assert.doesNotMatch(source, /castle-gate|godking|god king/i);
   }
 
@@ -114,9 +131,9 @@ test("blade lock event has a title-bar close control during setup and clash", ()
   assert.match(markup, /aria-label="Close"/);
   assert.match(markup, /id="lancer-battle-ready-stage"[\s\S]*id="lancer-battle-start"/);
   assert.match(markup, /id="lancer-battle-clash-stage"[\s\S]*id="lancer-battle-push"/);
-  assert.match(domSource, /lancerBattleTitleClose: byId\("lancer-battle-title-close"\)/);
+  assert.match(domSource, /const lancerBattleTitleClose = byId\("lancer-battle-title-close"\)/);
   assert.match(
-    mainSource,
+    eventSources,
     /bindRandomEventButton\(lancerBattleTitleClose, closeLancerBattleWindow\);/
   );
 });
@@ -135,30 +152,30 @@ test("blade lock result clips keep playing through inside and outside clicks", (
     /\.lancer-battle-result-video \{\s*pointer-events: none;\s*\}/
   );
   assert.match(
-    mainSource,
+    eventSources,
     /const shouldKeepLancerBattleResultMediaPlaying = \(win\) =>\s*win === lancerBattleWindow &&\s*\(lancerBattleState === LANCER_BATTLE_STAGES\.win \|\|\s*lancerBattleState === LANCER_BATTLE_STAGES\.loss\);/
   );
 
-  const clickAwayStart = mainSource.lastIndexOf(
+  const clickAwayStart = eventSources.lastIndexOf(
     'document.addEventListener(\n  "pointerdown",\n  (event) => {\n    if (!activeWindow'
   );
-  const clickAwayEnd = mainSource.indexOf(
+  const clickAwayEnd = eventSources.indexOf(
     "\n\nconst pauseActiveWindowMedia",
     clickAwayStart
   );
   assert.notEqual(clickAwayStart, -1, "Missing active-window click-away handler.");
   assert.notEqual(clickAwayEnd, -1, "Missing click-away handler boundary.");
-  const clickAwayHandler = mainSource.slice(clickAwayStart, clickAwayEnd);
+  const clickAwayHandler = eventSources.slice(clickAwayStart, clickAwayEnd);
   assert.match(
     clickAwayHandler,
-    /if \(!shouldKeepLancerBattleResultMediaPlaying\(activeWindow\)\) \{\s*pauseMediaPlayback\(activeWindow\);\s*\}/
+    /if \(!shouldKeepActiveWindowMediaPlaying\(activeWindow\)\) \{\s*pauseMediaPlayback\(activeWindow\);\s*\}/
   );
   assert.match(
     clickAwayHandler,
-    /clearActiveAppDwell\(\);\s*activeWindow = null;/
+    /activeWindowObservers\.forEach\(\(observer\) => observer\.onDeactivate\?\.\(\)\);\s*activeWindow = null;/
   );
   assert.match(
-    mainSource,
+    eventSources,
     /const pauseActiveWindowMedia = \(\) => \{[\s\S]*?pauseMediaPlayback\(activeWindow\);[\s\S]*?activeWindow = null;/
   );
 });
@@ -200,28 +217,28 @@ test("relic recovery event defines local relic assets and wiki descriptions", as
   ];
 
   for (const [name, description, filename] of expectedRelics) {
-    assert.match(mainSource, new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(eventSources, new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(
-      mainSource,
+      eventSources,
       new RegExp(description.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
     );
     const asset = `assets/random events/relic-recovery/${filename}`;
     assert.match(
-      mainSource,
+      eventSources,
       new RegExp(asset.replaceAll(" ", "%20").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
     );
     await access(new URL(asset, root));
   }
 
-  assert.match(mainSource, /made-in-abyss-background\.webp/);
-  assert.match(mainSource, /nanachi-icon\.webp/);
+  assert.match(eventSources, /made-in-abyss-background\.webp/);
+  assert.match(eventSources, /nanachi-icon\.webp/);
 });
 
 test("relic recovery event has prompt, hotbar, detail flow, and normal gating", () => {
-  const registrationStart = mainSource.indexOf('id: "relic-recovery"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "relic-recovery"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   assert.notEqual(registrationStart, -1, "Missing relic recovery registration");
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
@@ -229,12 +246,12 @@ test("relic recovery event has prompt, hotbar, detail flow, and normal gating", 
   assert.match(homeSource, /Let's collect some relics!/);
   assert.match(homeSource, /Sounds good!/);
   assert.match(homeSource, /Maybe another time\./);
-  assert.match(mainSource, /Thanks for all the help\. See you in Layer 2!/);
-  assert.match(mainSource, /RELIC_RECOVERY_STAGE_PROMPT/);
-  assert.match(mainSource, /RELIC_RECOVERY_STAGE_ACTIVE/);
-  assert.match(mainSource, /RELIC_RECOVERY_STAGE_DETAIL/);
-  assert.match(mainSource, /RELIC_RECOVERY_STAGE_COMPLETE/);
-  assert.match(mainSource, /relicRecoveryCollectedIds\.add\(relicId\)/);
+  assert.match(eventSources, /Thanks for all the help\. See you in Layer 2!/);
+  assert.match(eventSources, /RELIC_RECOVERY_STAGE_PROMPT/);
+  assert.match(eventSources, /RELIC_RECOVERY_STAGE_ACTIVE/);
+  assert.match(eventSources, /RELIC_RECOVERY_STAGE_DETAIL/);
+  assert.match(eventSources, /RELIC_RECOVERY_STAGE_COMPLETE/);
+  assert.match(eventSources, /relicRecoveryCollectedIds\.add\(relicId\)/);
   assert.match(homeSource, /\[Press anywhere to continue\]/);
   assert.match(getCssBlock(".relic-recovery-hotbar"), /grid-template-columns: repeat\(8,/);
   assert.match(getCssBlock(".relic-recovery-slot"), /aspect-ratio: 1;/);
@@ -259,36 +276,36 @@ test("relic recovery scales one canonical composition to its viewport", () => {
   assert.match(tooltipStyles, /width: 240px;/);
   assert.doesNotMatch(relicStyles, /@media/);
 
-  assert.match(mainSource, /const updateRelicRecoveryViewportFit = \(\) =>/);
+  assert.match(eventSources, /const updateRelicRecoveryViewportFit = \(\) =>/);
   assert.match(
-    mainSource,
+    eventSources,
     /availableWidth \/ relicRecoveryWindow\.offsetWidth,[\s\S]*availableHeight \/ relicRecoveryWindow\.offsetHeight/
   );
   assert.match(
-    mainSource,
+    eventSources,
     /relicRecoveryWindow\.style\.setProperty\(\s*RELIC_RECOVERY_FIT_SCALE_PROPERTY/
   );
   assert.match(
-    mainSource,
-    /pokemonStarterWindow,\s*relicRecoveryWindow,\s*dstNightWindow/
+    eventSources,
+    /registerRandomEventWindows\(\(\) => \[\s*pokemonStarterWindow,/
   );
   assert.match(
-    mainSource,
+    eventSources,
     /position: \(win\) => \{[^}]*updateRelicRecoveryViewportFit\(\);\s*positionRandomEventWindowInViewport\(win\);/
   );
   assert.match(
-    mainSource,
-    /const dispatchWindowResize = \(\) => \{[\s\S]*updateRelicRecoveryViewportFit\(\);\s*clampVisibleRandomEventWindows\(\);[\s\S]*window\.addEventListener\("resize", dispatchWindowResize\);/
+    eventSources,
+    /onFrame: \(\) => updateRelicRecoveryViewportFit\(\),/
   );
 });
 
 test("relic recovery detail popup uses exact window animations", () => {
-  assert.match(mainSource, /let relicRecoveryDetailCloseTimer = 0;/);
-  assert.match(mainSource, /relicRecoveryDetail\?\.classList\.add\("is-opening"\);/);
-  assert.match(mainSource, /relicRecoveryDetail\?\.classList\.add\("is-closing"\);/);
-  assert.match(mainSource, /completeRelicRecoveryDetailClose/);
-  assert.match(mainSource, /event\.animationName === "retro-window-open"/);
-  assert.match(mainSource, /event\.animationName === "retro-window-close"/);
+  assert.match(eventSources, /let relicRecoveryDetailCloseTimer = 0;/);
+  assert.match(eventSources, /relicRecoveryDetail\?\.classList\.add\("is-opening"\);/);
+  assert.match(eventSources, /relicRecoveryDetail\?\.classList\.add\("is-closing"\);/);
+  assert.match(eventSources, /completeRelicRecoveryDetailClose/);
+  assert.match(eventSources, /event\.animationName === "retro-window-open"/);
+  assert.match(eventSources, /event\.animationName === "retro-window-close"/);
   assert.match(
     getCssBlock(".relic-recovery-detail.is-opening"),
     /animation: retro-window-open 260ms steps\(7, end\) both;/
@@ -310,27 +327,27 @@ test("relic recovery detail popup uses exact window animations", () => {
 });
 
 test("relic recovery keeps the relic visible while it flies to the hotbar", () => {
-  assert.match(mainSource, /let relicRecoveryFlyTimer = 0;/);
-  assert.match(mainSource, /let relicRecoveryFlyingId = "";/);
-  assert.match(mainSource, /const animateRelicRecoveryToHotbar = \(item\) =>/);
-  assert.match(mainSource, /flyer\.className = "relic-recovery-flyer";/);
+  assert.match(eventSources, /let relicRecoveryFlyTimer = 0;/);
+  assert.match(eventSources, /let relicRecoveryFlyingId = "";/);
+  assert.match(eventSources, /const animateRelicRecoveryToHotbar = \(item\) =>/);
+  assert.match(eventSources, /flyer\.className = "relic-recovery-flyer";/);
   assert.match(
-    mainSource,
+    eventSources,
     /item\.id !== relicRecoveryPendingId &&\s*item\.id !== relicRecoveryFlyingId/
   );
-  assert.match(mainSource, /relicRecoveryFlyingId = item\.id;\s*renderRelicRecovery\(\);/);
+  assert.match(eventSources, /relicRecoveryFlyingId = item\.id;\s*renderRelicRecovery\(\);/);
   assert.match(
-    mainSource,
+    eventSources,
     /querySelector\(\s*`\[data-relic-recovery-slot="\$\{item\.id\}"\]`/
   );
-  assert.match(mainSource, /flyer\.style\.setProperty\("--fly-start-x"/);
-  assert.match(mainSource, /flyer\.style\.setProperty\(\s*"--fly-end-x"/);
-  assert.match(mainSource, /flyer\.style\.setProperty\(\s*"--fly-mid-x"/);
-  assert.match(mainSource, /const sceneWidth = sceneRect\.width \/ fitScale;/);
-  assert.match(mainSource, /const targetCenterX =[\s\S]*\/ fitScale;/);
-  assert.match(mainSource, /flyer\.style\.setProperty\("--fly-end-x", `\$\{targetCenterX\}px`\);/);
-  assert.match(mainSource, /animateRelicRecoveryToHotbar\(item\);/);
-  assert.match(mainSource, /const completeRelicRecoveryCollection = \(relicId\) =>/);
+  assert.match(eventSources, /flyer\.style\.setProperty\("--fly-start-x"/);
+  assert.match(eventSources, /flyer\.style\.setProperty\(\s*"--fly-end-x"/);
+  assert.match(eventSources, /flyer\.style\.setProperty\(\s*"--fly-mid-x"/);
+  assert.match(eventSources, /const sceneWidth = sceneRect\.width \/ fitScale;/);
+  assert.match(eventSources, /const targetCenterX =[\s\S]*\/ fitScale;/);
+  assert.match(eventSources, /flyer\.style\.setProperty\("--fly-end-x", `\$\{targetCenterX\}px`\);/);
+  assert.match(eventSources, /animateRelicRecoveryToHotbar\(item\);/);
+  assert.match(eventSources, /const completeRelicRecoveryCollection = \(relicId\) =>/);
   assert.match(
     getCssBlock(".relic-recovery-flyer"),
     /animation: relic-recovery-fly-to-hotbar 680ms/
@@ -353,12 +370,12 @@ test("relic recovery reuses pokemon dialogue styling and typewriter effects", ()
   assert.match(getCssBlock(".pokemon-dialogue"), /background: #f8f8f8;/);
   assert.match(getCssBlock(".pokemon-dialogue"), /border: 3px solid #202020;/);
   assert.match(getCssBlock(".pokemon-dialogue-text"), /font-size: 15px;/);
-  assert.match(mainSource, /const POKEMON_DIALOGUE_TYPEWRITER_MS = 24;/);
-  assert.match(mainSource, /const setPokemonStyleSegmentedDialogue = /);
-  assert.match(mainSource, /setPokemonStyleSegmentedDialogue\(relicRecoveryDialogText/);
-  assert.match(mainSource, /has-pokemon-dialogue-arrow/);
-  assert.match(mainSource, /relicRecoveryNotableSegment\("relics", "pokemon-starter-type-color--grass"\)/);
-  assert.match(mainSource, /relicRecoveryNotableSegment\("Layer 2", "pokemon-starter-type-color--water"\)/);
+  assert.match(eventSources, /const POKEMON_DIALOGUE_TYPEWRITER_MS = 24;/);
+  assert.match(eventSources, /const setPokemonStyleSegmentedDialogue = /);
+  assert.match(eventSources, /setPokemonStyleSegmentedDialogue\(relicRecoveryDialogText/);
+  assert.match(eventSources, /has-pokemon-dialogue-arrow/);
+  assert.match(eventSources, /relicRecoveryNotableSegment\("relics", "pokemon-starter-type-color--grass"\)/);
+  assert.match(eventSources, /relicRecoveryNotableSegment\("Layer 2", "pokemon-starter-type-color--water"\)/);
 
   const relicDialogBlock = getCssBlock(".relic-recovery-dialog");
   assert.doesNotMatch(relicDialogBlock, /background:/);
@@ -367,13 +384,13 @@ test("relic recovery reuses pokemon dialogue styling and typewriter effects", ()
 });
 
 test("relic recovery hotbar uses silhouettes and collected tooltips", () => {
-  assert.match(mainSource, /slot\.classList\.toggle\("is-collected", collected\);/);
-  assert.match(mainSource, /slot\.dataset\.relicTooltipName = item\.name;/);
-  assert.match(mainSource, /slot\.dataset\.relicTooltipDescription = item\.description;/);
-  assert.match(mainSource, /image\.setAttribute\("aria-hidden", String\(!collected\)\);/);
-  assert.match(mainSource, /tooltip\.className = "relic-recovery-tooltip";/);
-  assert.match(mainSource, /tooltipName\.style\.color = item\.color;/);
-  assert.equal([...mainSource.matchAll(/\n    color: "#[0-9a-f]{6}",/g)].length, 8);
+  assert.match(eventSources, /slot\.classList\.toggle\("is-collected", collected\);/);
+  assert.match(eventSources, /slot\.dataset\.relicTooltipName = item\.name;/);
+  assert.match(eventSources, /slot\.dataset\.relicTooltipDescription = item\.description;/);
+  assert.match(eventSources, /image\.setAttribute\("aria-hidden", String\(!collected\)\);/);
+  assert.match(eventSources, /tooltip\.className = "relic-recovery-tooltip";/);
+  assert.match(eventSources, /tooltipName\.style\.color = item\.color;/);
+  assert.equal([...eventSources.matchAll(/\n    color: "#[0-9a-f]{6}",/g)].length, 8);
   assert.match(getCssBlock(".relic-recovery-item"), /cursor: var\(--cursor-select, pointer\) !important;/);
   assert.match(getCssBlock(".relic-recovery-dialog"), /z-index: 7;/);
   assert.match(getCssBlock(".relic-recovery-hotbar"), /z-index: 8;/);
@@ -391,10 +408,10 @@ test("relic recovery hotbar uses silhouettes and collected tooltips", () => {
 });
 
 test("relic recovery positions relics with depth scaling", () => {
-  const itemBlockStart = mainSource.indexOf("const RELIC_RECOVERY_ITEMS = Object.freeze");
-  const itemBlockEnd = mainSource.indexOf("const RELIC_RECOVERY_STAGE_PROMPT", itemBlockStart);
+  const itemBlockStart = eventSources.indexOf("const RELIC_RECOVERY_ITEMS = Object.freeze");
+  const itemBlockEnd = eventSources.indexOf("const RELIC_RECOVERY_STAGE_PROMPT", itemBlockStart);
   assert.notEqual(itemBlockStart, -1, "Missing relic recovery items");
-  const itemBlock = mainSource.slice(itemBlockStart, itemBlockEnd);
+  const itemBlock = eventSources.slice(itemBlockStart, itemBlockEnd);
 
   const xs = [...itemBlock.matchAll(/\n    x: (\d+),/g)].map((match) => Number(match[1]));
   const ys = [...itemBlock.matchAll(/\n    y: (\d+),/g)].map((match) => Number(match[1]));
@@ -433,10 +450,10 @@ test("current publicly available information event uses local AOT assets outside
     "final-season.webp",
     "ova.webp",
   ];
-  const registrationStart = mainSource.indexOf(
+  const registrationStart = eventSources.indexOf(
     'id: "current-publicly-available-information"'
   );
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="current-public-info-window"');
   const windowEnd = homeSource.indexOf('id="trna-request-window"', windowStart);
 
@@ -444,7 +461,7 @@ test("current publicly available information event uses local AOT assets outside
   assert.notEqual(windowStart, -1, "Missing CP info window");
   assert.notEqual(windowEnd, -1, "Missing CP info window end");
 
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
@@ -455,10 +472,10 @@ test("current publicly available information event uses local AOT assets outside
   assert.match(windowMarkup, /id="current-public-info-thanks"/);
   assert.match(windowMarkup, /Thanks for sharing\.\.\./);
   assert.equal((windowMarkup.match(/<button/g) || []).length, 2);
-  assert.match(mainSource, /selectCurrentPublicInfoImage/);
-  assert.match(mainSource, /bindRandomEventButton\(currentPublicInfoThanks, closeCurrentPublicInfoWindow\);/);
+  assert.match(eventSources, /selectCurrentPublicInfoImage/);
+  assert.match(eventSources, /bindRandomEventButton\(currentPublicInfoThanks, closeCurrentPublicInfoWindow\);/);
   assert.match(
-    mainSource,
+    eventSources,
     /Math\.floor\(Math\.random\(\) \* CURRENT_PUBLIC_INFO_ASSETS\.length\)/
   );
   assert.match(
@@ -486,7 +503,7 @@ test("current publicly available information event uses local AOT assets outside
   for (const filename of expectedAssets) {
     const asset = `assets/random events/current-publicly-available-information/${filename}`;
     assert.match(
-      mainSource,
+      eventSources,
       new RegExp(asset.replaceAll(" ", "%20").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
     );
     await access(new URL(asset, root));
@@ -537,10 +554,10 @@ test("latest event cursor affordances use custom cursor variables", async () => 
   assert.match(cursorModeSource, /window\.addEventListener\("pageshow", syncStoredMode\);/);
   assert.match(cursorModeSource, /const subscribeBodyMutations = \(listener\) => \{/);
   assert.match(cursorModeSource, /return loadingRuntime\.subscribeBodyMutations\(listener\);/);
-  assert.match(mainSource, /cursorRuntime\.subscribe\(syncCursorModeButtons\);/);
-  assert.match(mainSource, /cursorRuntime\.start\(\);/);
-  assert.match(mainSource, /cursorRuntime\.setMode\(button\.getAttribute\("data-cursor-mode"\)/);
-  assert.doesNotMatch(mainSource, /is-custom-cursor-refreshing/);
+  assert.match(eventSources, /cursorRuntime\.subscribe\(syncCursorModeButtons\);/);
+  assert.match(eventSources, /cursorRuntime\.start\(\);/);
+  assert.match(eventSources, /cursorRuntime\.setMode\(button\.getAttribute\("data-cursor-mode"\)/);
+  assert.doesNotMatch(eventSources, /is-custom-cursor-refreshing/);
   assert.doesNotMatch(homeSource, /custom-cursor-overlay\.js/);
   assert.doesNotMatch(indexSource, /custom-cursor-overlay\.js/);
   await access(new URL("assets/cursor-assets/generated-png/normal-light.png", root));
@@ -550,8 +567,8 @@ test("latest event cursor affordances use custom cursor variables", async () => 
 });
 
 test("spare a trna event is a probability-gated alert with a local ribosome icon", async () => {
-  const registrationStart = mainSource.indexOf('id: "spare-a-trna"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "spare-a-trna"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="trna-request-window"');
   const windowEnd = homeSource.indexOf('id="nataraja-window"', windowStart);
 
@@ -560,7 +577,7 @@ test("spare a trna event is a probability-gated alert with a local ribosome icon
   assert.notEqual(windowStart, -1, "Missing tRNA request window");
   assert.notEqual(windowEnd, -1, "Missing tRNA request window end");
 
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
@@ -580,16 +597,16 @@ test("spare a trna event is a probability-gated alert with a local ribosome icon
   assert.match(windowMarkup, /alt="Clip art ribosome"/);
   assert.match(windowMarkup, /id="trna-request-yes">Yes<\/button>/);
   assert.match(windowMarkup, /id="trna-request-no">No<\/button>/);
-  assert.match(mainSource, /"spare-a-trna": \(\) => \[trnaRequestWindow\]/);
-  assert.match(mainSource, /bindRandomEventButton\(trnaRequestYes, closeTrnaRequestWindow\);/);
-  assert.match(mainSource, /bindRandomEventButton\(trnaRequestNo, closeTrnaRequestWindow\);/);
+  assert.match(eventSources, /preloadTargets: \(\) => \[trnaRequestWindow\]/);
+  assert.match(eventSources, /bindRandomEventButton\(trnaRequestYes, closeTrnaRequestWindow\);/);
+  assert.match(eventSources, /bindRandomEventButton\(trnaRequestNo, closeTrnaRequestWindow\);/);
   assert.match(getCssBlock(".trna-request-icon"), /image-rendering: auto;/);
   await access(new URL("assets/random events/ribosome-icon.svg", root));
 });
 
 test("spell on the stack event is probability-gated with counter and damage effects", async () => {
-  const registrationStart = mainSource.indexOf('id: "spell-on-the-stack"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "spell-on-the-stack"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="spell-stack-window"');
   const windowEnd = homeSource.indexOf('id="nataraja-window"', windowStart);
 
@@ -598,7 +615,7 @@ test("spell on the stack event is probability-gated with counter and damage effe
   assert.notEqual(windowStart, -1, "Missing Spell on the Stack window");
   assert.notEqual(windowEnd, -1, "Missing Spell on the Stack window end");
 
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
@@ -622,15 +639,15 @@ test("spell on the stack event is probability-gated with counter and damage effe
   );
   assert.match(windowMarkup, /id="spell-stack-yes">Yes<\/button>/);
   assert.match(windowMarkup, /id="spell-stack-no">No<\/button>/);
-  assert.match(mainSource, /"spell-on-the-stack": \(\) => \[spellStackWindow\]/);
-  assert.match(mainSource, /bindRandomEventButton\(spellStackYes, counterSpellOnStack\);/);
-  assert.match(mainSource, /bindRandomEventButton\(spellStackNo, refuseSpellOnStackCounter\);/);
-  assert.match(mainSource, /triggerSpellStackCounterFlash/);
+  assert.match(eventSources, /preloadTargets: \(\) => \[spellStackWindow\]/);
+  assert.match(eventSources, /bindRandomEventButton\(spellStackYes, counterSpellOnStack\);/);
+  assert.match(eventSources, /bindRandomEventButton\(spellStackNo, refuseSpellOnStackCounter\);/);
+  assert.match(eventSources, /triggerSpellStackCounterFlash/);
   assert.match(
-    mainSource,
+    eventSources,
     /const refuseSpellOnStackCounter = \(\) => \{[\s\S]*?triggerSpellStackLightning\(\);[\s\S]*?closeManagedRandomEventWindow\(spellStackWindow\);[\s\S]*?\};/
   );
-  assert.match(mainSource, /drawLightningBorderFrame\(spellStackLightningCanvas, alpha, RED_LIGHTNING_PALETTE\);/);
+  assert.match(eventSources, /drawLightningBorderFrame\(spellStackLightningCanvas, alpha, RED_LIGHTNING_PALETTE\);/);
   assert.match(getCssBlock(".spell-stack-window"), /--event-window-width: 420px;/);
   assert.match(getCssBlock(".spell-stack-image-frame"), /max-height: min\(58vh, 520px\);/);
   assert.match(getCssBlock(".spell-stack-image-frame"), /--spell-stack-image-inset: 20px;/);
@@ -647,8 +664,8 @@ test("spell on the stack event is probability-gated with counter and damage effe
 });
 
 test("soot sprites event is probability-gated GPU alert with animated swarm", async () => {
-  const registrationStart = mainSource.indexOf('id: "soot-sprites"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "soot-sprites"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="soot-sprites-window"');
   const windowEnd = homeSource.indexOf('id="nataraja-window"', windowStart);
 
@@ -657,7 +674,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.notEqual(windowStart, -1, "Missing soot sprites window");
   assert.notEqual(windowEnd, -1, "Missing soot sprites window end");
 
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
@@ -676,155 +693,155 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   );
   assert.match(windowMarkup, /id="soot-sprites-yes">Yes<\/button>/);
   assert.match(windowMarkup, /id="soot-sprites-no">No<\/button>/);
-  assert.match(mainSource, /"soot-sprites": \(\) => \[sootSpritesWindow\]/);
-  assert.match(mainSource, /bindRandomEventButton\(sootSpritesYes, inspectSootSpritesGpu\);/);
-  assert.match(mainSource, /bindRandomEventButton\(sootSpritesNo, closeSootSpritesWindow\);/);
-  assert.match(mainSource, /const SOOT_SPRITES_DESKTOP_COUNT = 32;/);
-  assert.match(mainSource, /const SOOT_SPRITES_MOBILE_COUNT = 20;/);
-  assert.match(mainSource, /const SOOT_SPRITES_CLEANUP_MS = 27000;/);
-  assert.match(mainSource, /const SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS = 1000;/);
-  assert.doesNotMatch(mainSource, /SOOT_SPRITES_WINDOW_CLOSE_DURATION_MS/);
-  assert.doesNotMatch(mainSource, /SOOT_SPRITES_HOVER_DURATION_MS/);
-  assert.match(mainSource, /const SOOT_SPRITES_SPAWN_CLEARANCE = 64;/);
-  assert.match(mainSource, /const SOOT_SPRITES_FALL_SAMPLE_COUNT = 12;/);
-  assert.match(mainSource, /const SOOT_SPRITES_DIRECTION_SWITCH_CHANCE = 0\.55;/);
-  assert.match(mainSource, /const SOOT_SPRITES_DIRECTION_SWITCH_MIN_DELAY_MS = 1000;/);
-  assert.match(mainSource, /const SOOT_SPRITES_DIRECTION_SWITCH_MAX_DELAY_MS = 3000;/);
-  assert.match(mainSource, /const SOOT_SPRITES_MIN_PATH_SPEED = 0\.22;/);
-  assert.match(mainSource, /const SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE = 2\.2;/);
-  assert.match(mainSource, /const SOOT_SPRITES_GROUND_RUN_CANDY_MULTIPLIER = 2;/);
-  assert.doesNotMatch(mainSource, /SOOT_SPRITES_FALL_ACCELERATION_EXPONENT/);
-  assert.match(mainSource, /const SOOT_CANDY_LANDING_PROGRESS = 0\.72;/);
-  assert.match(mainSource, /const SOOT_CANDY_HOLD_AFTER_LANDING_MS = 4000;/);
-  assert.match(mainSource, /const SOOT_CANDY_FADE_DURATION_MS = 1200;/);
-  assert.match(mainSource, /const SOOT_SPRITES_CANDY_COLORS = Object\.freeze\(\[/);
-  assert.match(mainSource, /"#c9f7c2"/);
-  assert.match(mainSource, /"#ffc6dc"/);
-  assert.match(mainSource, /"#fff2a6"/);
-  assert.match(mainSource, /"#fffaf0"/);
-  assert.match(mainSource, /"#bde7ff"/);
-  assert.match(mainSource, /const randomSootCandyColor = \(\) =>/);
-  assert.match(mainSource, /const getSootSpriteParabolaPoint = \(trajectory, progress\) =>/);
-  assert.match(mainSource, /const createSootSpriteFallSamples = \(trajectory\) =>/);
-  assert.match(mainSource, /const getSootSpriteFallPointAtDistance = \(trajectory, distance\) =>/);
-  assert.match(mainSource, /const getSootSpriteTimelineOffset = \(trajectory, distance\) =>/);
-  assert.match(mainSource, /const createSootSpritePathKeyframes = \(trajectory\) =>/);
-  assert.match(mainSource, /\.\.\.trajectory\.runSegments\.map\(\(segment\) =>/);
-  assert.match(mainSource, /const animateSootSpriteElement = \(sprite, trajectory\) =>/);
-  assert.match(mainSource, /sprite\.animate\(createSootSpritePathKeyframes\(trajectory\)/);
-  assert.match(mainSource, /landingProgress: fallDuration \/ totalPathDuration,/);
-  assert.match(mainSource, /const elapsedTime = clampedProgress \* trajectory\.duration;/);
-  assert.match(mainSource, /const getSootSpriteRunExitX = \(size, direction\) =>/);
-  assert.match(mainSource, /const isSootSpriteOnScreenAtX = \(x, size\) =>/);
-  assert.match(mainSource, /const createSootSpriteRunSegment = \(\{/);
-  assert.match(mainSource, /const applySootSpriteRunSegmentTiming = \(\{/);
-  assert.match(mainSource, /const getSootSpritesToolbarTop = \(\) =>/);
+  assert.match(eventSources, /preloadTargets: \(\) => \[sootSpritesWindow\]/);
+  assert.match(eventSources, /bindRandomEventButton\(sootSpritesYes, inspectSootSpritesGpu\);/);
+  assert.match(eventSources, /bindRandomEventButton\(sootSpritesNo, closeSootSpritesWindow\);/);
+  assert.match(eventSources, /const SOOT_SPRITES_DESKTOP_COUNT = 32;/);
+  assert.match(eventSources, /const SOOT_SPRITES_MOBILE_COUNT = 20;/);
+  assert.match(eventSources, /const SOOT_SPRITES_CLEANUP_MS = 27000;/);
+  assert.match(eventSources, /const SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS = 1000;/);
+  assert.doesNotMatch(eventSources, /SOOT_SPRITES_WINDOW_CLOSE_DURATION_MS/);
+  assert.doesNotMatch(eventSources, /SOOT_SPRITES_HOVER_DURATION_MS/);
+  assert.match(eventSources, /const SOOT_SPRITES_SPAWN_CLEARANCE = 64;/);
+  assert.match(eventSources, /const SOOT_SPRITES_FALL_SAMPLE_COUNT = 12;/);
+  assert.match(eventSources, /const SOOT_SPRITES_DIRECTION_SWITCH_CHANCE = 0\.55;/);
+  assert.match(eventSources, /const SOOT_SPRITES_DIRECTION_SWITCH_MIN_DELAY_MS = 1000;/);
+  assert.match(eventSources, /const SOOT_SPRITES_DIRECTION_SWITCH_MAX_DELAY_MS = 3000;/);
+  assert.match(eventSources, /const SOOT_SPRITES_MIN_PATH_SPEED = 0\.22;/);
+  assert.match(eventSources, /const SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE = 2\.2;/);
+  assert.match(eventSources, /const SOOT_SPRITES_GROUND_RUN_CANDY_MULTIPLIER = 2;/);
+  assert.doesNotMatch(eventSources, /SOOT_SPRITES_FALL_ACCELERATION_EXPONENT/);
+  assert.match(eventSources, /const SOOT_CANDY_LANDING_PROGRESS = 0\.72;/);
+  assert.match(eventSources, /const SOOT_CANDY_HOLD_AFTER_LANDING_MS = 4000;/);
+  assert.match(eventSources, /const SOOT_CANDY_FADE_DURATION_MS = 1200;/);
+  assert.match(eventSources, /const SOOT_SPRITES_CANDY_COLORS = Object\.freeze\(\[/);
+  assert.match(eventSources, /"#c9f7c2"/);
+  assert.match(eventSources, /"#ffc6dc"/);
+  assert.match(eventSources, /"#fff2a6"/);
+  assert.match(eventSources, /"#fffaf0"/);
+  assert.match(eventSources, /"#bde7ff"/);
+  assert.match(eventSources, /const randomSootCandyColor = \(\) =>/);
+  assert.match(eventSources, /const getSootSpriteParabolaPoint = \(trajectory, progress\) =>/);
+  assert.match(eventSources, /const createSootSpriteFallSamples = \(trajectory\) =>/);
+  assert.match(eventSources, /const getSootSpriteFallPointAtDistance = \(trajectory, distance\) =>/);
+  assert.match(eventSources, /const getSootSpriteTimelineOffset = \(trajectory, distance\) =>/);
+  assert.match(eventSources, /const createSootSpritePathKeyframes = \(trajectory\) =>/);
+  assert.match(eventSources, /\.\.\.trajectory\.runSegments\.map\(\(segment\) =>/);
+  assert.match(eventSources, /const animateSootSpriteElement = \(sprite, trajectory\) =>/);
+  assert.match(eventSources, /sprite\.animate\(createSootSpritePathKeyframes\(trajectory\)/);
+  assert.match(eventSources, /landingProgress: fallDuration \/ totalPathDuration,/);
+  assert.match(eventSources, /const elapsedTime = clampedProgress \* trajectory\.duration;/);
+  assert.match(eventSources, /const getSootSpriteRunExitX = \(size, direction\) =>/);
+  assert.match(eventSources, /const isSootSpriteOnScreenAtX = \(x, size\) =>/);
+  assert.match(eventSources, /const createSootSpriteRunSegment = \(\{/);
+  assert.match(eventSources, /const applySootSpriteRunSegmentTiming = \(\{/);
+  assert.match(eventSources, /const getSootSpritesToolbarTop = \(\) =>/);
   assert.match(
-    mainSource,
+    eventSources,
     /clampNumber\(toolbarTop - spriteSize, 0, window\.innerHeight - spriteSize\)/
   );
-  assert.match(mainSource, /const getSootCandyLandingY = \(candySize\) =>/);
+  assert.match(eventSources, /const getSootCandyLandingY = \(candySize\) =>/);
   assert.match(
-    mainSource,
+    eventSources,
     /clampNumber\(toolbarTop - candySize, 0, window\.innerHeight - candySize\)/
   );
-  assert.match(mainSource, /const getSootCandyGravityPoint = \(trajectory, progress\) =>/);
-  assert.match(mainSource, /const createSootCandyTrajectory = \(\{/);
-  assert.match(mainSource, /const landingY = getSootCandyLandingY\(size\);/);
-  assert.match(mainSource, /const setSootCandyTrajectoryProperties = \(candy, trajectory\) =>/);
-  assert.match(mainSource, /const setSootCandySpinProperties = \(candy, spin\) =>/);
-  assert.match(mainSource, /const setSootCandyTimingProperties = \(candy, \{ delay, fallDuration \}\) =>/);
+  assert.match(eventSources, /const getSootCandyGravityPoint = \(trajectory, progress\) =>/);
+  assert.match(eventSources, /const createSootCandyTrajectory = \(\{/);
+  assert.match(eventSources, /const landingY = getSootCandyLandingY\(size\);/);
+  assert.match(eventSources, /const setSootCandyTrajectoryProperties = \(candy, trajectory\) =>/);
+  assert.match(eventSources, /const setSootCandySpinProperties = \(candy, spin\) =>/);
+  assert.match(eventSources, /const setSootCandyTimingProperties = \(candy, \{ delay, fallDuration \}\) =>/);
   assert.match(
-    mainSource,
+    eventSources,
     /const landingDelay =[\s\S]*?delay \+ fallDuration \* SOOT_CANDY_LANDING_PROGRESS;/
   );
   assert.match(
-    mainSource,
+    eventSources,
     /const fadeDelay = landingDelay \+ SOOT_CANDY_HOLD_AFTER_LANDING_MS;/
   );
-  assert.match(mainSource, /"--candy-hold-duration"[\s\S]*?SOOT_CANDY_HOLD_AFTER_LANDING_MS/);
-  assert.match(mainSource, /"--candy-fade-duration"[\s\S]*?SOOT_CANDY_FADE_DURATION_MS/);
-  assert.match(mainSource, /"--candy-fade-delay", `\$\{fadeDelay\}ms`/);
-  assert.match(mainSource, /const createSootSpriteSpawnGrid = \(launchRect, spriteCount\) =>/);
+  assert.match(eventSources, /"--candy-hold-duration"[\s\S]*?SOOT_CANDY_HOLD_AFTER_LANDING_MS/);
+  assert.match(eventSources, /"--candy-fade-duration"[\s\S]*?SOOT_CANDY_FADE_DURATION_MS/);
+  assert.match(eventSources, /"--candy-fade-delay", `\$\{fadeDelay\}ms`/);
+  assert.match(eventSources, /const createSootSpriteSpawnGrid = \(launchRect, spriteCount\) =>/);
   assert.match(
-    mainSource,
+    eventSources,
     /const columns = clampNumber\([\s\S]*?Math\.round\(Math\.sqrt\(spriteCount \* aspectRatio\)\)[\s\S]*?1,[\s\S]*?spriteCount/
   );
-  assert.match(mainSource, /const rows = Math\.ceil\(spriteCount \/ columns\);/);
-  assert.match(mainSource, /return Array\.from\(\{ length: spriteCount \}, \(_, index\) =>/);
-  assert.match(mainSource, /const createSootSpriteTrajectory = \(launchRect, \{ startPoint \} = \{\}\) =>/);
-  assert.match(mainSource, /const size = Math\.round\(randomSootSpriteValue\(24, 40\)\);/);
-  assert.match(mainSource, /startPoint\.x - size \/ 2/);
-  assert.match(mainSource, /startPoint\.y - size \/ 2/);
-  assert.doesNotMatch(mainSource, /launchRect\.bottom \+ randomSootSpriteValue\(8, 24\)/);
-  assert.match(mainSource, /groundY - minimumFallDistance/);
-  assert.match(mainSource, /const initialRunDirection = Math\.random\(\) < 0\.5 \? -1 : 1;/);
+  assert.match(eventSources, /const rows = Math\.ceil\(spriteCount \/ columns\);/);
+  assert.match(eventSources, /return Array\.from\(\{ length: spriteCount \}, \(_, index\) =>/);
+  assert.match(eventSources, /const createSootSpriteTrajectory = \(launchRect, \{ startPoint \} = \{\}\) =>/);
+  assert.match(eventSources, /const size = Math\.round\(randomSootSpriteValue\(24, 40\)\);/);
+  assert.match(eventSources, /startPoint\.x - size \/ 2/);
+  assert.match(eventSources, /startPoint\.y - size \/ 2/);
+  assert.doesNotMatch(eventSources, /launchRect\.bottom \+ randomSootSpriteValue\(8, 24\)/);
+  assert.match(eventSources, /groundY - minimumFallDistance/);
+  assert.match(eventSources, /const initialRunDirection = Math\.random\(\) < 0\.5 \? -1 : 1;/);
   assert.match(
-    mainSource,
+    eventSources,
     /const directionSwitchDelay = randomSootSpriteValue\([\s\S]*?SOOT_SPRITES_DIRECTION_SWITCH_MIN_DELAY_MS,[\s\S]*?SOOT_SPRITES_DIRECTION_SWITCH_MAX_DELAY_MS[\s\S]*?\);/
   );
-  assert.match(mainSource, /const directionSwitchRoll = Math\.random\(\);/);
-  assert.match(mainSource, /directionSwitchRoll < SOOT_SPRITES_DIRECTION_SWITCH_CHANCE/);
-  assert.match(mainSource, /isSootSpriteOnScreenAtX\(switchX, size\)/);
+  assert.match(eventSources, /const directionSwitchRoll = Math\.random\(\);/);
+  assert.match(eventSources, /directionSwitchRoll < SOOT_SPRITES_DIRECTION_SWITCH_CHANCE/);
+  assert.match(eventSources, /isSootSpriteOnScreenAtX\(switchX, size\)/);
   assert.match(
-    mainSource,
+    eventSources,
     /const directionSwitchSpeedMultiplier = shouldSwitchDirection[\s\S]*?\? randomSootSpriteValue\(1, 2\)[\s\S]*?: 1;/
   );
-  assert.match(mainSource, /const speedMultiplier = index === 0 \? 1 : switchSpeedMultiplier;/);
-  assert.match(mainSource, /const speed = pathSpeed \* speedMultiplier;/);
-  assert.match(mainSource, /duration = segment\.length \/ speed/);
-  assert.match(mainSource, /directionSwitchSpeedMultiplier,/);
-  assert.match(mainSource, /didSwitchDirection: shouldSwitchDirection,/);
-  assert.match(mainSource, /duration: totalPathDuration,/);
-  assert.match(mainSource, /totalPathDuration,/);
-  assert.match(mainSource, /const getSootSpriteTrajectoryPoint = \(trajectory, progress\) =>/);
-  assert.match(mainSource, /trajectory\.runSegments\.find\(\(candidate\) => elapsedTime <= candidate\.endTime\)/);
-  const sootMotionStart = mainSource.indexOf("const getSootSpriteParabolaPoint");
-  const sootMotionEnd = mainSource.indexOf("const getSootCandyGravityPoint", sootMotionStart);
+  assert.match(eventSources, /const speedMultiplier = index === 0 \? 1 : switchSpeedMultiplier;/);
+  assert.match(eventSources, /const speed = pathSpeed \* speedMultiplier;/);
+  assert.match(eventSources, /duration = segment\.length \/ speed/);
+  assert.match(eventSources, /directionSwitchSpeedMultiplier,/);
+  assert.match(eventSources, /didSwitchDirection: shouldSwitchDirection,/);
+  assert.match(eventSources, /duration: totalPathDuration,/);
+  assert.match(eventSources, /totalPathDuration,/);
+  assert.match(eventSources, /const getSootSpriteTrajectoryPoint = \(trajectory, progress\) =>/);
+  assert.match(eventSources, /trajectory\.runSegments\.find\(\(candidate\) => elapsedTime <= candidate\.endTime\)/);
+  const sootMotionStart = eventSources.indexOf("const getSootSpriteParabolaPoint");
+  const sootMotionEnd = eventSources.indexOf("const getSootCandyGravityPoint", sootMotionStart);
   assert.notEqual(sootMotionStart, -1, "Missing soot sprite motion helpers");
   assert.notEqual(sootMotionEnd, -1, "Missing soot sprite motion helper boundary");
-  const sootMotionHelpers = mainSource.slice(sootMotionStart, sootMotionEnd);
+  const sootMotionHelpers = eventSources.slice(sootMotionStart, sootMotionEnd);
   assert.doesNotMatch(sootMotionHelpers, /Math\.pow\(/);
-  assert.match(mainSource, /const fallQuarter = getSootSpriteFallPointAtDistance\(/);
-  assert.match(mainSource, /fallLength \* 0\.25/);
-  assert.match(mainSource, /fallLength \* 0\.5/);
-  assert.match(mainSource, /fallLength \* 0\.75/);
-  assert.match(mainSource, /createSootSpriteElement\(index, trajectory, \{ paused: true \}\)/);
-  assert.match(mainSource, /createSootCandyElement\(launchRect\)/);
-  assert.match(mainSource, /const size = Math\.round\(randomSootSpriteValue\(8, 14\)\);/);
-  assert.match(mainSource, /const size = Math\.round\(randomSootSpriteValue\(6, 11\)\);/);
-  assert.match(mainSource, /createSootPuffElement\(launchRect, index % 5 === 0\)/);
-  assert.match(mainSource, /const size = randomSootSpriteValue\(large \? 192 : 84, large \? 380 : 208\);/);
-  assert.match(mainSource, /"--puff-duration", `\$\{randomSootSpriteValue\(5400, 7600\)\}ms`/);
-  assert.match(mainSource, /const size = randomSootSpriteValue\(76, 196\);/);
-  assert.match(mainSource, /"--puff-duration", `\$\{randomSootSpriteValue\(5300, 7300\)\}ms`/);
-  assert.match(mainSource, /createSootTrailPuffElement\(trajectories\[index % trajectories\.length\], index, progress\)/);
-  assert.match(mainSource, /const getSootSpriteAirTrailProgress = \(trajectory\) =>/);
-  assert.match(mainSource, /const getSootSpriteGroundRunProgress = \(trajectory\) =>/);
-  assert.match(mainSource, /const airTrailCandyCount = Math\.round\([\s\S]*?SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE/);
-  assert.match(mainSource, /const groundRunCandyCount = Math\.round\([\s\S]*?SOOT_SPRITES_GROUND_RUN_CANDY_MULTIPLIER/);
-  assert.match(mainSource, /createSootTrailCandyElement\(trajectory, getSootSpriteGroundRunProgress\(trajectory\)\)/);
-  assert.match(mainSource, /const trailPuffCount = Math\.round\(spriteCount \* 1\.4\);/);
-  assert.match(mainSource, /const candyCount = Math\.round\(spriteCount \* 1\.28\);/);
-  assert.match(mainSource, /const puffCount = Math\.round\(spriteCount \* 0\.48\);/);
-  assert.match(mainSource, /getSootSpritesGroundY\(size\)/);
-  assert.match(mainSource, /document\.querySelector\("\.taskbar-apps"\)/);
-  assert.match(mainSource, /document\.querySelector\("\.taskbar"\)/);
-  assert.match(mainSource, /setSootSpritesWindowLoading\(true\);/);
-  assert.match(mainSource, /const getSootSpritesStagedZIndex = \(\) =>/);
-  assert.match(mainSource, /const reserveSootSpritesSpawnLane = \(\) =>/);
-  assert.match(mainSource, /toolbarTop - sootSpritesWindow\.offsetHeight - SOOT_SPRITES_SPAWN_CLEARANCE/);
-  assert.match(mainSource, /if \(didOpen\) reserveSootSpritesSpawnLane\(\);/);
-  assert.match(mainSource, /overlay\.style\.zIndex = String\(getSootSpritesStagedZIndex\(\)\);/);
+  assert.match(eventSources, /const fallQuarter = getSootSpriteFallPointAtDistance\(/);
+  assert.match(eventSources, /fallLength \* 0\.25/);
+  assert.match(eventSources, /fallLength \* 0\.5/);
+  assert.match(eventSources, /fallLength \* 0\.75/);
+  assert.match(eventSources, /createSootSpriteElement\(index, trajectory, \{ paused: true \}\)/);
+  assert.match(eventSources, /createSootCandyElement\(launchRect\)/);
+  assert.match(eventSources, /const size = Math\.round\(randomSootSpriteValue\(8, 14\)\);/);
+  assert.match(eventSources, /const size = Math\.round\(randomSootSpriteValue\(6, 11\)\);/);
+  assert.match(eventSources, /createSootPuffElement\(launchRect, index % 5 === 0\)/);
+  assert.match(eventSources, /const size = randomSootSpriteValue\(large \? 192 : 84, large \? 380 : 208\);/);
+  assert.match(eventSources, /"--puff-duration", `\$\{randomSootSpriteValue\(5400, 7600\)\}ms`/);
+  assert.match(eventSources, /const size = randomSootSpriteValue\(76, 196\);/);
+  assert.match(eventSources, /"--puff-duration", `\$\{randomSootSpriteValue\(5300, 7300\)\}ms`/);
+  assert.match(eventSources, /createSootTrailPuffElement\(trajectories\[index % trajectories\.length\], index, progress\)/);
+  assert.match(eventSources, /const getSootSpriteAirTrailProgress = \(trajectory\) =>/);
+  assert.match(eventSources, /const getSootSpriteGroundRunProgress = \(trajectory\) =>/);
+  assert.match(eventSources, /const airTrailCandyCount = Math\.round\([\s\S]*?SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE/);
+  assert.match(eventSources, /const groundRunCandyCount = Math\.round\([\s\S]*?SOOT_SPRITES_GROUND_RUN_CANDY_MULTIPLIER/);
+  assert.match(eventSources, /createSootTrailCandyElement\(trajectory, getSootSpriteGroundRunProgress\(trajectory\)\)/);
+  assert.match(eventSources, /const trailPuffCount = Math\.round\(spriteCount \* 1\.4\);/);
+  assert.match(eventSources, /const candyCount = Math\.round\(spriteCount \* 1\.28\);/);
+  assert.match(eventSources, /const puffCount = Math\.round\(spriteCount \* 0\.48\);/);
+  assert.match(eventSources, /getSootSpritesGroundY\(size\)/);
+  assert.match(eventSources, /document\.querySelector\("\.taskbar-apps"\)/);
+  assert.match(eventSources, /document\.querySelector\("\.taskbar"\)/);
+  assert.match(eventSources, /setSootSpritesWindowLoading\(true\);/);
+  assert.match(eventSources, /const getSootSpritesStagedZIndex = \(\) =>/);
+  assert.match(eventSources, /const reserveSootSpritesSpawnLane = \(\) =>/);
+  assert.match(eventSources, /toolbarTop - sootSpritesWindow\.offsetHeight - SOOT_SPRITES_SPAWN_CLEARANCE/);
+  assert.match(eventSources, /if \(didOpen\) reserveSootSpritesSpawnLane\(\);/);
+  assert.match(eventSources, /overlay\.style\.zIndex = String\(getSootSpritesStagedZIndex\(\)\);/);
   assert.match(
-    mainSource,
+    eventSources,
     /showSootSpritesSwarm\(launchRect\);[\s\S]*?window\.requestAnimationFrame\(\(\) => \{[\s\S]*?window\.setTimeout\(\(\) => \{[\s\S]*?closeManagedRandomEventWindow\(sootSpritesWindow\);[\s\S]*?\}, SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS\);/
   );
-  assert.match(mainSource, /const releaseSootSpritesSwarm = \(\) => \{[\s\S]*?overlay\.classList\.remove\("is-staged"\);[\s\S]*?sootSpriteMotionAnimations\.get\(sprite\)\?\.play\(\);/);
-  assert.match(mainSource, /bindManagedRandomEventWindowAnimation\(sootSpritesWindow, \{[\s\S]*?afterClose: releaseSootSpritesSwarm,/);
-  assert.match(mainSource, /motion\.pause\(\);[\s\S]*?sootSpriteMotionAnimations\.set\(sprite, motion\);/);
+  assert.match(eventSources, /const releaseSootSpritesSwarm = \(\) => \{[\s\S]*?overlay\.classList\.remove\("is-staged"\);[\s\S]*?sootSpriteMotionAnimations\.get\(sprite\)\?\.play\(\);/);
+  assert.match(eventSources, /bindManagedRandomEventWindowAnimation\(sootSpritesWindow, \{[\s\S]*?afterClose: releaseSootSpritesSwarm,/);
+  assert.match(eventSources, /motion\.pause\(\);[\s\S]*?sootSpriteMotionAnimations\.set\(sprite, motion\);/);
   assert.doesNotMatch(
-    mainSource,
+    eventSources,
     /const inspectSootSpritesGpu = \(\) => \{[\s\S]*?const launchRect = getSootSpritesLaunchRect\(\);[\s\S]*?closeManagedRandomEventWindow\(sootSpritesWindow\);[\s\S]*?showSootSpritesSwarm/
   );
   assert.match(getCssBlock(".soot-sprites-window"), /--event-window-width: 372px;/);
@@ -837,17 +854,17 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
     /\.soot-sprites-window\.is-loading-sprites,[\s\S]*?\.soot-sprites-window\.is-loading-sprites \* \{[\s\S]*?--cursor-busy/
   );
   assert.match(
-    mainSource,
+    eventSources,
     /const hasCustomCursorLoadingIndicator = \(\) =>[\s\S]*?sootSpritesWindow\?\.classList\.contains\("is-loading-sprites"\)[\s\S]*?isSootSpritesVisible\(\)/
   );
-  const cursorWatcherStart = mainSource.indexOf("const initCustomCursorLoadingWatcher");
-  const cursorWatcherEnd = mainSource.indexOf(
+  const cursorWatcherStart = eventSources.indexOf("const initCustomCursorLoadingWatcher");
+  const cursorWatcherEnd = eventSources.indexOf(
     "runAfterHomeActivation(initCustomCursorLoadingWatcher);",
     cursorWatcherStart
   );
   assert.notEqual(cursorWatcherStart, -1, "Missing custom cursor loading watcher");
   assert.notEqual(cursorWatcherEnd, -1, "Missing custom cursor loading watcher boundary");
-  const cursorLoadingWatcher = mainSource.slice(cursorWatcherStart, cursorWatcherEnd);
+  const cursorLoadingWatcher = eventSources.slice(cursorWatcherStart, cursorWatcherEnd);
   assert.match(cursorLoadingWatcher, /RohinCursorRuntime\.observeLoading/);
   assert.match(cursorLoadingWatcher, /isLoading:\s*hasCustomCursorLoadingIndicator/);
   assert.doesNotMatch(cursorLoadingWatcher, /pointermove|mousemove|createElement/);
@@ -940,8 +957,8 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
 });
 
 test("nataraja event is probability-gated and loops local video with offer buttons", async () => {
-  const registrationStart = mainSource.indexOf('id: "nataraja"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "nataraja"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="nataraja-window"');
   const windowEnd = homeSource.indexOf('id="noble-steed-window"', windowStart);
 
@@ -950,7 +967,7 @@ test("nataraja event is probability-gated and loops local video with offer butto
   assert.notEqual(windowStart, -1, "Missing Nataraja window");
   assert.notEqual(windowEnd, -1, "Missing Nataraja window end");
 
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
@@ -968,11 +985,11 @@ test("nataraja event is probability-gated and loops local video with offer butto
   assert.match(windowMarkup, /Leave an offering\?/);
   assert.match(windowMarkup, /id="nataraja-yes">Yes<\/button>/);
   assert.match(windowMarkup, /id="nataraja-no">No<\/button>/);
-  assert.match(mainSource, /nataraja: \(\) => \[natarajaWindow, "assets\/random%20events\/nataraja\.mp4"\]/);
-  assert.match(mainSource, /natarajaVideo\.play\(\)\.catch\(\(\) => undefined\);/);
-  assert.match(mainSource, /bindRandomEventButton\(natarajaYes, closeNatarajaWindow\);/);
-  assert.match(mainSource, /bindRandomEventButton\(natarajaNo, closeNatarajaWindow\);/);
-  assert.match(mainSource, /afterClose: resetNatarajaVideo,/);
+  assert.match(eventSources, /preloadTargets: \(\) => \[natarajaWindow, "assets\/random%20events\/nataraja\.mp4"\]/);
+  assert.match(eventSources, /natarajaVideo\.play\(\)\.catch\(\(\) => undefined\);/);
+  assert.match(eventSources, /bindRandomEventButton\(natarajaYes, closeNatarajaWindow\);/);
+  assert.match(eventSources, /bindRandomEventButton\(natarajaNo, closeNatarajaWindow\);/);
+  assert.match(eventSources, /afterClose: resetNatarajaVideo,/);
   assert.match(
     getCssBlock(".nataraja-window"),
     /--event-window-max-width: calc\(75vw - 18px\);[\s\S]*?--event-window-width: 322\.5px;/
@@ -987,8 +1004,8 @@ test("nataraja event is probability-gated and loops local video with offer butto
 });
 
 test("noble steed event delays then shows a same-place result alert", async () => {
-  const registrationStart = mainSource.indexOf('id: "noble-steed"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "noble-steed"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="noble-steed-window"');
   const resultWindowStart = homeSource.indexOf('id="noble-steed-result-window"');
   const windowEnd = homeSource.indexOf('id="toxic-jungle-window"', resultWindowStart);
@@ -999,7 +1016,7 @@ test("noble steed event delays then shows a same-place result alert", async () =
   assert.notEqual(resultWindowStart, -1, "Missing Noble Steed result window");
   assert.notEqual(windowEnd, -1, "Missing Noble Steed result window end");
 
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, resultWindowStart);
   const resultWindowMarkup = homeSource.slice(resultWindowStart, windowEnd);
 
@@ -1007,7 +1024,7 @@ test("noble steed event delays then shows a same-place result alert", async () =
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /isVisible: isNobleSteedVisible,/);
   assert.match(registration, /showNobleSteedWindow\(\);/);
-  assert.match(mainSource, /"noble-steed": \(\) => \[[\s\S]*?nobleSteedWindow,[\s\S]*?nobleSteedResultWindow,[\s\S]*?"assets\/random%20events\/horse\.jpeg"/);
+  assert.match(eventSources, /preloadTargets: \(\) => \[[\s\S]*?nobleSteedWindow,[\s\S]*?nobleSteedResultWindow,[\s\S]*?"assets\/random%20events\/horse\.jpeg"/);
   assert.match(
     homeSource,
     /class="window random-event-window random-alert-window noble-steed-window is-hidden"[\s\S]*?id="noble-steed-window"/
@@ -1026,20 +1043,20 @@ test("noble steed event delays then shows a same-place result alert", async () =
   assert.match(resultWindowMarkup, /src="assets\/app-icons\/ico\/globe_map\.ico"/);
   assert.match(resultWindowMarkup, /The horse does not drink any water\./);
   assert.match(resultWindowMarkup, /id="noble-steed-result-ok">OK<\/button>/);
-  assert.match(mainSource, /bindRandomEventButton\(nobleSteedYes, acceptNobleSteedOffer\);/);
-  assert.match(mainSource, /bindRandomEventButton\(nobleSteedNo, closeNobleSteedWindow\);/);
-  assert.match(mainSource, /bindRandomEventButton\(nobleSteedResultOk, closeNobleSteedResultWindow\);/);
-  assert.match(mainSource, /nobleSteedResultPosition = getRandomEventWindowPosition\(nobleSteedWindow\);/);
-  assert.match(mainSource, /nobleSteedResultTimer = window\.setTimeout\(showNobleSteedResultWindow, 2000\);/);
-  assert.match(mainSource, /setRandomEventWindowPosition\(\s*nobleSteedResultWindow,[\s\S]*?nobleSteedResultPosition\.left,[\s\S]*?nobleSteedResultPosition\.top/);
-  assert.match(mainSource, /const closeNobleSteedWindow = \(\) => \{[\s\S]*?closeManagedRandomEventWindow\(nobleSteedWindow\);[\s\S]*?\};/);
+  assert.match(eventSources, /bindRandomEventButton\(nobleSteedYes, acceptNobleSteedOffer\);/);
+  assert.match(eventSources, /bindRandomEventButton\(nobleSteedNo, closeNobleSteedWindow\);/);
+  assert.match(eventSources, /bindRandomEventButton\(nobleSteedResultOk, closeNobleSteedResultWindow\);/);
+  assert.match(eventSources, /nobleSteedResultPosition = getRandomEventWindowPosition\(nobleSteedWindow\);/);
+  assert.match(eventSources, /nobleSteedResultTimer = window\.setTimeout\(showNobleSteedResultWindow, 2000\);/);
+  assert.match(eventSources, /setRandomEventWindowPosition\(\s*nobleSteedResultWindow,[\s\S]*?nobleSteedResultPosition\.left,[\s\S]*?nobleSteedResultPosition\.top/);
+  assert.match(eventSources, /const closeNobleSteedWindow = \(\) => \{[\s\S]*?closeManagedRandomEventWindow\(nobleSteedWindow\);[\s\S]*?\};/);
   await access(new URL("assets/random events/horse.jpeg", root));
   await access(new URL("assets/app-icons/ico/globe_map.ico", root));
 });
 
 test("toxic jungle event is probability-gated spore collection with pokemon dialogue", async () => {
-  const registrationStart = mainSource.indexOf('id: "toxic-jungle"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "toxic-jungle"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="toxic-jungle-window"');
   const windowEnd = homeSource.indexOf('<div class="window random-event-window fate-window', windowStart);
 
@@ -1048,16 +1065,16 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
   assert.notEqual(windowStart, -1, "Missing Toxic Jungle window");
   assert.notEqual(windowEnd, -1, "Missing Toxic Jungle window end");
 
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /isVisible: isToxicJungleVisible,/);
   assert.match(registration, /showToxicJungleWindow\(\);/);
-  assert.match(mainSource, /"toxic-jungle": \(\) => \[[\s\S]*?toxicJungleWindow,[\s\S]*?Object\.values\(TOXIC_JUNGLE_ASSETS\)/);
-  assert.match(mainSource, /background: "assets\/random%20events\/toxic-jungle\.webp"/);
-  assert.match(mainSource, /nausicaa: "assets\/random%20events\/nausicaa\.jpg"/);
+  assert.match(eventSources, /preloadTargets: \(\) => \[[\s\S]*?toxicJungleWindow,[\s\S]*?Object\.values\(TOXIC_JUNGLE_ASSETS\)/);
+  assert.match(eventSources, /background: "assets\/random%20events\/toxic-jungle\.webp"/);
+  assert.match(eventSources, /nausicaa: "assets\/random%20events\/nausicaa\.jpg"/);
   assert.match(homeSource, /class="window random-event-window toxic-jungle-window is-hidden"[\s\S]*?id="toxic-jungle-window"/);
   assert.match(windowMarkup, /<div class="title-bar-text">Toxic Jungle<\/div>/);
   assert.match(windowMarkup, /class="toxic-jungle-dialog pokemon-dialogue"/);
@@ -1071,26 +1088,26 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
   assert.doesNotMatch(windowMarkup, />\s*Next\s*<\/button>/);
   assert.match(windowMarkup, /id="toxic-jungle-spores"/);
   assert.match(windowMarkup, /id="toxic-jungle-counters"/);
-  assert.match(mainSource, /const TOXIC_JUNGLE_SPORE_TARGET = 10;/);
-  assert.match(mainSource, /id: "blue"[\s\S]*?id: "red"[\s\S]*?id: "white"/);
-  assert.match(mainSource, /Math\.max\(width \+ 72, 420\)/);
-  assert.match(mainSource, /button\.style\.setProperty\("--spore-delay", "0s"\);/);
-  assert.match(mainSource, /sporeCore\.className = "toxic-jungle-spore-core";/);
-  assert.doesNotMatch(mainSource, /clearToxicJungleSporesByType/);
-  assert.match(mainSource, /toxicJungleCounts\[type\.id\] = Math\.min\(/);
-  assert.match(mainSource, /isToxicJungleComplete\(\)/);
-  assert.match(mainSource, /setToxicJungleDialog\(TOXIC_JUNGLE_COMPLETE_MESSAGE\)/);
-  assert.match(mainSource, /Thanks for the help! Watch your back out there\./);
-  assert.match(mainSource, /bindRandomEventButton\(toxicJungleStart, startToxicJungleCollection\);/);
-  assert.match(mainSource, /bindRandomEventButton\(toxicJungleDecline, closeToxicJungleWindow\);/);
-  assert.doesNotMatch(mainSource, /toxicJungleContinue/);
-  assert.match(mainSource, /toxicJungleWindow\?\.classList\.add\("is-complete"\);/);
-  assert.match(mainSource, /toxicJungleDialogActions\?\.classList\.add\("is-hidden"\);/);
+  assert.match(eventSources, /const TOXIC_JUNGLE_SPORE_TARGET = 10;/);
+  assert.match(eventSources, /id: "blue"[\s\S]*?id: "red"[\s\S]*?id: "white"/);
+  assert.match(eventSources, /Math\.max\(width \+ 72, 420\)/);
+  assert.match(eventSources, /button\.style\.setProperty\("--spore-delay", "0s"\);/);
+  assert.match(eventSources, /sporeCore\.className = "toxic-jungle-spore-core";/);
+  assert.doesNotMatch(eventSources, /clearToxicJungleSporesByType/);
+  assert.match(eventSources, /toxicJungleCounts\[type\.id\] = Math\.min\(/);
+  assert.match(eventSources, /isToxicJungleComplete\(\)/);
+  assert.match(eventSources, /setToxicJungleDialog\(TOXIC_JUNGLE_COMPLETE_MESSAGE\)/);
+  assert.match(eventSources, /Thanks for the help! Watch your back out there\./);
+  assert.match(eventSources, /bindRandomEventButton\(toxicJungleStart, startToxicJungleCollection\);/);
+  assert.match(eventSources, /bindRandomEventButton\(toxicJungleDecline, closeToxicJungleWindow\);/);
+  assert.doesNotMatch(eventSources, /toxicJungleContinue/);
+  assert.match(eventSources, /toxicJungleWindow\?\.classList\.add\("is-complete"\);/);
+  assert.match(eventSources, /toxicJungleDialogActions\?\.classList\.add\("is-hidden"\);/);
   assert.match(
-    mainSource,
+    eventSources,
     /toxicJungleWindow\?\.addEventListener\("click", \(event\) => \{[\s\S]*?toxicJungleStage !== TOXIC_JUNGLE_STAGE_COMPLETE[\s\S]*?closeToxicJungleWindow\(\);[\s\S]*?\}\);/
   );
-  assert.match(mainSource, /closest\("\[data-toxic-jungle-spore\]"\)/);
+  assert.match(eventSources, /closest\("\[data-toxic-jungle-spore\]"\)/);
   assert.match(getCssBlock(".toxic-jungle-scene"), /toxic-jungle\.webp/);
   assert.match(getCssBlock(".toxic-jungle-spore"), /cursor: var\(--cursor-select, pointer\) !important;/);
   assert.match(getCssBlock(".toxic-jungle-spore"), /left: -44px;/);
@@ -1120,8 +1137,8 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
 });
 
 test("resist causality window has title close and mobile-visible imagery", async () => {
-  const registrationStart = mainSource.indexOf('id: "resist-your-fate"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "resist-your-fate"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   const windowStart = homeSource.indexOf('id="fate-window"');
   const windowEnd = homeSource.indexOf('<div class="window random-event-window lancer-battle-window', windowStart);
 
@@ -1130,14 +1147,14 @@ test("resist causality window has title close and mobile-visible imagery", async
   assert.notEqual(windowStart, -1, "Missing Resist Causality window");
   assert.notEqual(windowEnd, -1, "Missing Resist Causality window end");
 
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
   const windowMarkup = homeSource.slice(windowStart, windowEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(windowMarkup, /id="fate-title-close"/);
   assert.match(windowMarkup, /aria-label="Close"/);
-  assert.match(domSource, /fateTitleClose: doc\.getElementById\("fate-title-close"\)/);
-  assert.match(mainSource, /bindRandomEventButton\(fateTitleClose, closeFateWindow\);/);
+  assert.match(domSource, /const fateTitleClose = byId\("fate-title-close"\)/);
+  assert.match(eventSources, /bindRandomEventButton\(fateTitleClose, closeFateWindow\);/);
   assert.match(getCssBlock(".fate-photo-frame"), /max-width: 100%;/);
   assert.match(getCssBlock(".fate-photo-slot"), /height: clamp\(118px, 40vh, 320px\);/);
   assert.match(getCssBlock(".fate-photo-slot"), /min-height: 104px;/);
@@ -1149,20 +1166,20 @@ test("resist causality window has title close and mobile-visible imagery", async
 });
 
 test("wall breach event shakes, flashes, and opens a probability-gated popup", async () => {
-  const registrationStart = mainSource.indexOf('id: "wall-breach"');
-  const registrationEnd = mainSource.indexOf("});", registrationStart);
+  const registrationStart = eventSources.indexOf('id: "wall-breach"');
+  const registrationEnd = eventSources.indexOf("});", registrationStart);
   assert.notEqual(registrationStart, -1, "Missing wall breach registration");
-  const registration = mainSource.slice(registrationStart, registrationEnd);
+  const registration = eventSources.slice(registrationStart, registrationEnd);
 
   assert.doesNotMatch(registration, /debug: true,/);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(registration, /runWallBreachSequence\(\)/);
-  assert.match(mainSource, /const WALL_BREACH_SHAKE_INTERVAL_MS = 1500;/);
-  assert.match(mainSource, /const WALL_BREACH_FLASH_DURATION_MS = 760;/);
-  assert.match(mainSource, /for \(let count = 0; count < 3; count \+= 1\)/);
-  assert.match(mainSource, /await triggerWallBreachFlash\(\);/);
-  assert.match(mainSource, /showWallBreachWindow\(\);/);
-  assert.match(mainSource, /"wall-breach": \(\) => \[wallBreachWindow\]/);
+  assert.match(eventSources, /const WALL_BREACH_SHAKE_INTERVAL_MS = 1500;/);
+  assert.match(eventSources, /const WALL_BREACH_FLASH_DURATION_MS = 760;/);
+  assert.match(eventSources, /for \(let count = 0; count < 3; count \+= 1\)/);
+  assert.match(eventSources, /await triggerWallBreachFlash\(\);/);
+  assert.match(eventSources, /showWallBreachWindow\(\);/);
+  assert.match(eventSources, /preloadTargets: \(\) => \[wallBreachWindow\]/);
   assert.match(
     homeSource,
     /class="window random-event-window random-alert-window wall-breach-window is-hidden"[\s\S]*id="wall-breach-window"/
@@ -1179,20 +1196,20 @@ test("wall breach event shakes, flashes, and opens a probability-gated popup", a
 });
 
 test("July 5 calendar event opens the standard random event image window", async () => {
-  const eventStart = mainSource.indexOf('"6-5": {');
-  const eventEnd = mainSource.indexOf("},", eventStart);
+  const eventStart = eventSources.indexOf('"6-5": {');
+  const eventEnd = eventSources.indexOf("},", eventStart);
   assert.notEqual(eventStart, -1, "Missing July 5 calendar event");
-  const calendarEvent = mainSource.slice(eventStart, eventEnd);
+  const calendarEvent = eventSources.slice(eventStart, eventEnd);
 
   assert.match(calendarEvent, /title: "July 5th"/);
   assert.match(calendarEvent, /image: "assets\/random%20events\/jul5\.png"/);
   assert.match(
-    mainSource,
+    eventSources,
     /`calendar-day\$\{isToday \? " is-today" : ""\}\$\{calendarEvent \? " is-event-day" : ""\}`/
   );
-  assert.match(mainSource, /openRandomEventWindow\(calendarEvent, eventKey\);/);
+  assert.match(eventSources, /openRandomEventWindow\(calendarEvent, eventKey\);/);
   assert.match(
-    mainSource,
+    eventSources,
     /showManagedRandomEventWindow\(randomEventWindow, \{ isVisible: \(\) => false \}\);/
   );
   assert.match(homeSource, /id="random-event-window"/);
@@ -1201,17 +1218,17 @@ test("July 5 calendar event opens the standard random event image window", async
 });
 
 test("player attack damage is increased by ten percent and stays readable", () => {
-  assert.match(mainSource, /const GEARS_NEST_PLAYER_ATTACK_MULTIPLIER = 1\.1;/);
+  assert.match(eventSources, /const GEARS_NEST_PLAYER_ATTACK_MULTIPLIER = 1\.1;/);
   assert.match(
-    mainSource,
+    eventSources,
     /const GEARS_NEST_DRONE_DAMAGE = 3\.5 \* GEARS_NEST_PLAYER_ATTACK_MULTIPLIER;/
   );
   assert.match(
-    mainSource,
+    eventSources,
     /const GEARS_NEST_BOOMER_DAMAGE = 4 \* GEARS_NEST_PLAYER_ATTACK_MULTIPLIER;/
   );
   assert.match(
-    mainSource,
+    eventSources,
     /Number\(\(enemy\.health - damage\)\.toFixed\(2\)\)/
   );
   assert.equal(3.5 * 1.1, 3.8500000000000005);
@@ -1226,7 +1243,7 @@ test("enemy health meters are positioned above the sprites", () => {
 });
 
 test("cover warnings accelerate throughout the projectile fuse", () => {
-  assert.match(mainSource, /y: target\.y - 12,/);
+  assert.match(eventSources, /y: target\.y - 12,/);
   assert.match(
     getCssBlock(".gears-nest-hazard"),
     /animation: gears-nest-hazard-countdown var\(--flight-ms\) steps\(1, end\) both;/
@@ -1266,24 +1283,24 @@ test("grenade projectile travels in one continuous arc", () => {
 
 test("every projectile resolution creates and cleans up a pixel explosion", () => {
   assert.match(
-    mainSource,
+    eventSources,
     /explosion: "assets\/random%20events\/pixel-explosion\.gif"/
   );
-  assert.match(mainSource, /y: target\.y - 6,/);
-  assert.match(mainSource, /gearsNestState\.explosions\.push\(explosion\);/);
+  assert.match(eventSources, /y: target\.y - 6,/);
+  assert.match(eventSources, /gearsNestState\.explosions\.push\(explosion\);/);
   assert.match(
-    mainSource,
+    eventSources,
     /candidate\.id !== explosion\.id[\s\S]*GEARS_NEST_EXPLOSION_DURATION_MS/
   );
   assert.match(getCssBlock(".gears-nest-explosion"), /image-rendering: pixelated;/);
 });
 
 test("boomer only uses rocket hazards for enemy attacks", () => {
-  const attackStart = mainSource.indexOf("const chooseGearsNestEnemyAttack = () => {");
-  const attackEnd = mainSource.indexOf("const startGearsNestEnemyAttacks", attackStart);
+  const attackStart = eventSources.indexOf("const chooseGearsNestEnemyAttack = () => {");
+  const attackEnd = eventSources.indexOf("const startGearsNestEnemyAttacks", attackStart);
   assert.notEqual(attackStart, -1, "Missing chooseGearsNestEnemyAttack");
   assert.notEqual(attackEnd, -1, "Missing startGearsNestEnemyAttacks");
-  const attackSource = mainSource.slice(attackStart, attackEnd);
+  const attackSource = eventSources.slice(attackStart, attackEnd);
 
   assert.match(
     attackSource,
@@ -1304,7 +1321,7 @@ test("failed combat tips only the player sprite", () => {
     ".gears-nest-window.is-failed .gears-nest-player img"
   );
   assert.match(failedBlock, /rotate\(88deg\)/);
-  assert.match(mainSource, /classList\.toggle\("is-failed", outcome === "failed"\)/);
+  assert.match(eventSources, /classList\.toggle\("is-failed", outcome === "failed"\)/);
 });
 
 test("HTML entry points use the updated cache key", () => {
@@ -1316,6 +1333,6 @@ test("HTML entry points use the updated cache key", () => {
     assert.match(source, /style\.css\?v=html-semantics-20260927/);
     assert.match(source, /core\/dom\.js\?v=game-build-[a-f0-9]{64}/);
     assert.match(source, /game-stats-backend\.js\?v=game-build-[a-f0-9]{64}/);
-    assert.match(source, /main\.js\?v=game-build-[a-f0-9]{64}/);
+    assert.match(source, /features\/minesweeper\.js\?v=game-build-[a-f0-9]{64}/);
   }
 });

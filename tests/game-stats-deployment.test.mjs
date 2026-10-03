@@ -44,6 +44,8 @@ const createReleaseSourceFiles = (label) =>
     ])
   );
 const RELEASE_SOURCE_FILES = createReleaseSourceFiles("release");
+/** A completion source to corrupt when a stale live asset must be detected. */
+const SAMPLE_COMPLETION_SOURCE = GAME_COMPLETION_SOURCE_FILES[0];
 const calculateReleaseBuildVersion = (sourceFiles = RELEASE_SOURCE_FILES) => {
   const digest = createHash("sha256");
   for (const relativePath of GAME_COMPLETION_SOURCE_FILES) {
@@ -792,7 +794,10 @@ test("Worker transition rejects a retargeted API and an unsynchronized Worker", 
 
 test("release check rejects a stale live completion source and fetches assets uncached", async () => {
   const staleSources = new Map(RELEASE_SOURCE_FILES);
-  staleSources.set("scripts/home/main.js", Buffer.from("// stale scripts/home/main.js\n"));
+  staleSources.set(
+    SAMPLE_COMPLETION_SOURCE,
+    Buffer.from(`// stale ${SAMPLE_COMPLETION_SOURCE}\n`)
+  );
   const staleSourceBuildVersion = calculateReleaseBuildVersion(staleSources);
   const assetCalls = [];
   let cacheBustSequence = 0;
@@ -871,7 +876,7 @@ test("release check rejects stale cache-token references in either live HTML ent
           error.message,
           new RegExp(
             `${entryPath.replace(".", "\\.")} is missing cache reference ` +
-              `scripts/home/main\\.js\\?v=${cacheToken}`
+              `${INTEGRITY_CACHE_ASSET_PATHS[0].replaceAll(".", "\\.")}\\?v=${cacheToken}`
           )
         );
         return true;
@@ -930,7 +935,7 @@ test("release check reports every live integrity asset failure shape", async () 
           if (pathname.endsWith("/health")) {
             return createReleaseDependencyResponse(url);
           }
-          if (pathname.endsWith("/scripts/home/main.js")) {
+          if (pathname.endsWith(`/${SAMPLE_COMPLETION_SOURCE}`)) {
             return response();
           }
           return createReleaseDependencyResponse(url);
@@ -1769,9 +1774,11 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
 });
 
 test("transition verifies pre-generator bytes and cache references without weakening final parity", async () => {
+  // The manifest the live release hashed before the Home scripts were split.
   const legacySources = new Map([
     ["scripts/home/main.js", Buffer.from("// legacy main")],
     ["scripts/home/core/dom.js", Buffer.from("// legacy dom")],
+    ["scripts/home/sudoku-generator.worker.js", Buffer.from("// legacy worker")],
   ]);
   const digest = createHash("sha256");
   for (const [path, bytes] of legacySources) {
@@ -1794,11 +1801,16 @@ test("transition verifies pre-generator bytes and cache references without weake
       if (url.includes("game-stats-backend.js")) {
         return createConfigResponse(createConfig({ buildVersion: legacyBuild }));
       }
-      if (url.includes("sudoku-generator.worker.js")) {
+      // A current-manifest source the legacy site never published, so falling
+      // through to today's manifest surfaces a missing asset rather than a
+      // silent pass.
+      if (url.includes("scripts/home/core/activation.js")) {
         return createAssetResponse("Not found", { ok: false, status: 404 });
       }
       const sourceFiles = new Map(legacySources);
-      if (corruptSources) sourceFiles.set("scripts/home/main.js", Buffer.from("changed"));
+      if (corruptSources) {
+        sourceFiles.set("scripts/home/main.js", Buffer.from("changed"));
+      }
       return createReleaseDependencyResponse(url, {
         sourceFiles,
         homeSource: corruptEntry ? "" : legacyEntry,

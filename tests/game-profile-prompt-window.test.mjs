@@ -2,14 +2,16 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 test("Leaderboard profile prompt opens as a draggable window with a shared skip close path", async () => {
   const [home, index, main, dom, styles] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows"),
+    readHomeScript("gameStats"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
   ]);
 
@@ -24,12 +26,12 @@ test("Leaderboard profile prompt opens as a draggable window with a shared skip 
   assert.match(home, /id="game-profile-cancel">Skip Leaderboard</);
   assert.doesNotMatch(home, /id="game-profile-dialog"[^>]*data-no-drag/);
   assert.match(home, /game-stats\.css\?v=html-semantics-20260927/);
-  assert.match(home, /main\.js\?v=game-build-[a-f0-9]{64}/);
+  assert.match(home, /features\/game-stats\.js\?v=game-build-[a-f0-9]{64}/);
   assert.match(index, /game-stats\.css\?v=html-semantics-20260927/);
-  assert.match(index, /main\.js\?v=game-build-[a-f0-9]{64}/);
+  assert.match(index, /features\/game-stats\.js\?v=game-build-[a-f0-9]{64}/);
 
-  assert.match(dom, /gameProfileDialog: byId\("game-profile-dialog"\),/);
-  assert.match(dom, /gameProfileClose: byId\("game-profile-close"\),/);
+  assert.match(dom, /const gameProfileDialog = byId\("game-profile-dialog"\);/);
+  assert.match(dom, /const gameProfileClose = byId\("game-profile-close"\);/);
   assert.match(
     styles,
     /\.game-profile-dialog \{[\s\S]*?left: 50%;[\s\S]*?position: absolute;[\s\S]*?top: 50%;[\s\S]*?translate: -50% -50%;/
@@ -71,7 +73,7 @@ test("Leaderboard profile prompt opens as a draggable window with a shared skip 
 
 test("Centered leaderboard profile drag retains its rendered position before clearing its translate", async () => {
   const [main, styles] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
   ]);
 

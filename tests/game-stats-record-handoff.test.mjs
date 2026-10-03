@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const createData = () => ({
@@ -64,7 +66,7 @@ const createEvent = (game, metric, category = "") => {
 };
 
 const loadRecordPredicate = async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const start = source.indexOf("const getGameStatsLeaderboardSpec =");
   const end = source.indexOf("\n\nconst gameStatsEventQualifiesForData", start);
   assert.ok(start >= 0 && end > start, "record predicate source must be extractable");
@@ -80,7 +82,7 @@ const loadRecordPredicate = async () => {
 };
 
 const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true } = {}) => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const failureStart = source.indexOf("const reportGameStatsSessionFailure =");
   const failureEnd = source.indexOf("\n\nconst startGameStatsSession =", failureStart);
   const start = source.indexOf("const recordGameStatsEvent =");
@@ -294,7 +296,7 @@ test("Solitaire and invalid metrics never trigger the record handoff", async () 
 });
 
 test("overlapping records serialize their leaderboard handoffs without dropping either", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const start = source.indexOf("const playGameStatsRecordHandoff =");
   const end = source.indexOf("\n\nconst getGameStatsSyncStateDefinition", start);
   assert.ok(start >= 0 && end > start, "handoff source must be extractable");

@@ -2,13 +2,15 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScriptText } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 test("Minesweeper has exclusive flag and question-mark placement controls", async () => {
   const [home, index, main, styles] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("minesweeper", "windows", "snake"),
     readFile(new URL("styles/home/apps/minesweeper.css", root), "utf8"),
   ]);
 
@@ -31,9 +33,9 @@ test("Minesweeper has exclusive flag and question-mark placement controls", asyn
   assert.match(home, /id="ms-flag-mode"[\s\S]*?hidden/);
   assert.match(home, /id="ms-question-mode"[\s\S]*?hidden/);
   assert.match(home, /minesweeper\.css\?v=minesweeper-grid-rows-20260909/);
-  assert.match(home, /main\.js\?v=game-build-[a-f0-9]{64}/);
+  assert.match(home, /features\/minesweeper\.js\?v=game-build-[a-f0-9]{64}/);
   assert.match(index, /minesweeper\.css\?v=minesweeper-grid-rows-20260909/);
-  assert.match(index, /main\.js\?v=game-build-[a-f0-9]{64}/);
+  assert.match(index, /features\/minesweeper\.js\?v=game-build-[a-f0-9]{64}/);
   assert.match(
     home,
     /id="ms-grid"[\s\S]*?aria-keyshortcuts="S D F"/
@@ -161,7 +163,7 @@ test("Minesweeper has exclusive flag and question-mark placement controls", asyn
   assert.match(msKeyboardHandler, /event\.repeat/);
   assert.match(msKeyboardHandler, /event\.ctrlKey/);
   assert.match(msKeyboardHandler, /msControlsMode\?\.value !== "keyboard"/);
-  assert.match(msKeyboardHandler, /activeWindow !== msWindow/);
+  assert.match(msKeyboardHandler, /getActiveWindow\(\) !== msWindow/);
   assert.doesNotMatch(msKeyboardHandler, /activeElement|focusedCell/);
   assert.match(msKeyboardHandler, /msHandleLeftClick\(index\)/);
   assert.match(msKeyboardHandler, /msToggleMark\(index, action\)/);
@@ -171,7 +173,7 @@ test("Minesweeper has exclusive flag and question-mark placement controls", asyn
   );
   assert.match(
     main,
-    /msHelp\.addEventListener\("click", \(\) => \{[\s\S]*?comingSoonFocusReturns\.set\(controlsWindow, msHelp\)[\s\S]*?setWindowOpen\("minesweeper-controls", true\);[\s\S]*?DIALOG_INITIAL_FOCUS_SELECTOR[\s\S]*?focus\(\{ preventScroll: true \}\)/
+    /msHelp\.addEventListener\("click", \(\) => \{[\s\S]*?setWindowFocusReturn\(controlsWindow, msHelp\)[\s\S]*?setWindowOpen\("minesweeper-controls", true\);[\s\S]*?DIALOG_INITIAL_FOCUS_SELECTOR[\s\S]*?focus\(\{ preventScroll: true \}\)/
   );
   assert.match(
     main,
@@ -183,11 +185,11 @@ test("Minesweeper has exclusive flag and question-mark placement controls", asyn
   );
   assert.match(
     main,
-    /appId === "minesweeper-controls" && isWindowVisible\(msWindow\)[\s\S]*?bringWindowToFront\(msWindow\)/
+    /registerWindowLifecycle\("minesweeper-controls", \{[\s\S]*?isWindowVisible\(msWindow\)[\s\S]*?bringWindowToFront\(msWindow\)/
   );
   assert.match(
     main,
-    /const snakeWindow = getAppWindow\("snake"\);[\s\S]*?activeWindow !== snakeWindow[\s\S]*?!isWindowVisible\(snakeWindow\)/
+    /const snakeWindow = getAppWindow\("snake"\);[\s\S]*?getActiveWindow\(\) !== snakeWindow[\s\S]*?!isWindowVisible\(snakeWindow\)/
   );
   assert.match(
     main,

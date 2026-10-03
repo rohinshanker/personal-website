@@ -3,6 +3,10 @@ import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import {
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 const adminScriptPath = "scripts/home/admin-controls.js";
 const administratorSessionPath = "scripts/home/core/administrator-session.js";
@@ -36,7 +40,13 @@ const sourceBetween = (source, startMarker, endMarker) => {
 const readAdminSources = async () => {
   const [home, main, admin, session, styles, validation] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText(
+      "gameStats",
+      "windows",
+      "eventRuntime",
+      "adminOrchestrator",
+      "solitaire"
+    ),
     readFile(new URL(adminScriptPath, root), "utf8"),
     readFile(new URL(administratorSessionPath, root), "utf8"),
     readFile(new URL(adminStylePath, root), "utf8"),
@@ -216,7 +226,7 @@ test("Admin launch access requires an active Administrator session proof", async
   const accessSource = sourceBetween(
     main,
     'const ADMIN_CONTROLS_APP_ID = "admin-controls";',
-    "\nlet gameStatsProfilePromptResolve"
+    "\nlet topZ ="
   );
   const administratorProfile = {
     id: "player-rohin-neko",
@@ -256,6 +266,7 @@ test("Admin launch access requires an active Administrator session proof", async
         `${sessionWiringSource}\n` +
         `let gameStatsProfile = ${JSON.stringify(profile)};\n` +
         `${accessSource}\n` +
+        "registerAdminControlsAccess(hasActiveGameStatsAdministratorProof);\n" +
         `const adminTarget = resolveAdminControlsLaunchAppId("admin-controls");\n` +
         `globalThis.result = {\n` +
         `  access: adminTarget === ADMIN_CONTROLS_APP_ID,\n` +
@@ -268,6 +279,11 @@ test("Admin launch access requires an active Administrator session proof", async
     return { ...structuredClone(context.result), removals };
   };
 
+  assert.match(
+    main,
+    /registerAdminControlsAccess\(hasActiveGameStatsAdministratorAccess\);/,
+    "the window manager must be told how to check for a live session"
+  );
   assert.deepEqual(
     runAccessCase({ profile: administratorProfile, proof: validProof }),
     {
@@ -764,7 +780,7 @@ test("runtime orchestration integrates the complete event registry without publi
   assert.match(eventRuntime, /chooseRandomEventOutsideLockdown\(eligibleEvents\)/);
   assert.match(eventRuntime, /recordRandomEventSelection\(selected\.definition\)/);
   assert.match(eventRuntime, /triggerProbability:\s*1/);
-  assert.doesNotMatch(eventRuntime, /scheduleRandomEventRun|triggerRandomEvents/);
+  assert.doesNotMatch(eventRuntime, /scheduleRandomEventRun|notifyActivity/);
 
   for (const preset of ["game-win", "dialog", "notification", "desktop-activity"]) {
     assert.match(presetRuntime, new RegExp(`presetId === "${preset}"`));
@@ -773,7 +789,7 @@ test("runtime orchestration integrates the complete event registry without publi
   assert.match(gameWinRuntime, /solStagePresentationWin\(\{ visualEffects \}\)/);
   assert.doesNotMatch(
     gameWinRuntime,
-    /recordGame|publish|queue|sync|submit|triggerRandomEvents|fetch/i,
+    /recordGame|publish|queue|sync|submit|notifyActivity|fetch/i,
     "The promotional win must remain visual-only."
   );
 
@@ -787,7 +803,7 @@ test("runtime orchestration integrates the complete event registry without publi
   assert.match(stagingRuntime, /solState\.statsSession = ""/);
   assert.doesNotMatch(
     stagingRuntime,
-    /recordGame|publish|queue|sync|submit|triggerRandomEvents|fetch/i,
+    /recordGame|publish|queue|sync|submit|notifyActivity|fetch/i,
     "Staging the promotional board must remain visual-only."
   );
 
@@ -805,14 +821,14 @@ test("runtime orchestration integrates the complete event registry without publi
   assert.match(presentationBranch, /solPlayVictoryVideo\(\);\s*return;/);
   assert.doesNotMatch(
     presentationBranch,
-    /recordGame|publish|queue|sync|submit|triggerRandomEvents|fetch/i,
+    /recordGame|publish|queue|sync|submit|notifyActivity|fetch/i,
     "The presentation victory must remain visual-only."
   );
 
   const publicRuntime = sourceBetween(
     main,
     "window.rohinAdminOrchestrator = Object.freeze({",
-    "runAfterHomeActivation(scheduleCalendarRefresh)"
+    "setRandomEventCompactnessWeightProvider("
   );
   for (const method of [
     "closeWindow",

@@ -3,8 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
-const readMain = () => readFile(new URL("scripts/home/main.js", root), "utf8");
+const readMain = () => readHomeScript("minesweeper");
 
 const extractFunction = (source, name) => {
   const start = source.indexOf(`const ${name} = () => `);
@@ -71,7 +73,7 @@ const createTimerHarness = async ({ difficulty = { value: "beginner" } } = {}) =
     msStartConfetti: () => context.calls.push("confetti"),
     msShowAchievement: () => context.calls.push("achievement"),
     msRenderAll: () => context.calls.push("render"),
-    triggerRandomEvents: (name) => context.calls.push(`event:${name}`),
+    notifyActivity: (name) => context.calls.push(`event:${name}`),
   };
   vm.createContext(context);
   vm.runInContext(

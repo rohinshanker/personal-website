@@ -3,6 +3,11 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import {
+  readHomeScript,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const readSources = async () => {
@@ -11,8 +16,8 @@ const readSources = async () => {
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("styles/home/base.css", root), "utf8"),
     readFile(new URL("styles/home/random-events.css", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("neko", "windows", "eventRuntime", "eventPrompts"),
+    readHomeScriptText("neko", "windows", "eventRuntime", "eventPrompts"),
   ]);
   return { dom, home, index, main, randomEventStyles, styles };
 };
@@ -123,10 +128,10 @@ test("Neko launchers expose one accessible context command above a non-interacti
     /id="neko-context-menu"[\s\S]*?role="menu"[\s\S]*?id="neko-stream-command"[\s\S]*?role="menuitem"[\s\S]*?\/nekostream/
   );
   assert.match(home, /class="neko-stream-layer" id="neko-stream-layer" aria-hidden="true"/);
-  assert.match(dom, /nekoLaunchers: all\('\[data-app="neko"\]'\)/);
-  assert.match(dom, /nekoContextMenu: byId\("neko-context-menu"\)/);
-  assert.match(dom, /nekoStreamCommand: byId\("neko-stream-command"\)/);
-  assert.match(dom, /nekoStreamLayer: byId\("neko-stream-layer"\)/);
+  assert.match(dom, /const nekoLaunchers = all\('\[data-app="neko"\]'\)/);
+  assert.match(dom, /const nekoContextMenu = byId\("neko-context-menu"\)/);
+  assert.match(dom, /const nekoStreamCommand = byId\("neko-stream-command"\)/);
+  assert.match(dom, /const nekoStreamLayer = byId\("neko-stream-layer"\)/);
 
   assert.match(
     styles,
@@ -178,7 +183,7 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
     "nekoStreamAlertYes",
     "nekoStreamAlertNo",
   ]) {
-    assert.match(dom, new RegExp(`${binding}:`));
+    assert.match(dom, new RegExp(`const ${binding} = `));
     assert.match(main, new RegExp(`\\b${binding}\\b`));
   }
 
@@ -205,8 +210,8 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
 
   assert.match(registration, /id: "neko-stream-system-alert"/);
   assert.match(registration, /debug: true/);
-  assert.doesNotMatch(registration, /\bprobability:/);
-  assert.doesNotMatch(registration, /\bprobabilities:/);
+  assert.doesNotMatch(registration, /const probability = /);
+  assert.doesNotMatch(registration, /const probabilities = /);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE/);
   assert.match(registration, /isVisible: isNekoStreamAlertVisible/);
   assert.match(
@@ -218,7 +223,11 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
     /preloadTargets: \(\) => \[[\s\S]*?nekoStreamAlertWindow,[\s\S]*?NEKO_SPRITES\.sleep1,[\s\S]*?NEKO_SPRITES\.sleep2,/
   );
   assert.match(registration, /run: \(\) => \{\n    showNekoStreamAlert\(\);/);
-  assert.match(main, /randomAlertWindow,\n    debugSystemAlertWindow,\n    nekoStreamAlertWindow,/);
+  assert.match(
+    main,
+    /registerRandomEventWindows\(\(\) => \[[\s\S]*?nekoStreamAlertWindow,/,
+    "the alert window is registered for viewport clamping"
+  );
   assert.match(main, /}, NEKO_SLEEP_FRAME_INTERVAL_MS\);/);
   assert.match(
     main,

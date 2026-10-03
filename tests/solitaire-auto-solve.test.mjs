@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 const [mainSource, homeSource, styleSource] = await Promise.all([
-  readFile(new URL("scripts/home/main.js", root), "utf8"),
+  readHomeScript("solitaire"),
   readFile(new URL("home.html", root), "utf8"),
   readFile(new URL("styles/home/apps/solitaire.css", root), "utf8"),
 ]);
@@ -399,7 +401,7 @@ test("the runtime blocks input while solving, lands each card before the next, a
   assert.match(impact, /composite: "add"/);
 
   assert.match(mainSource, /solBoard\.addEventListener\("click", \(event\) => \{\n    if \(solAutoSolveRun\) return;/);
-  assert.match(mainSource, /if \(appId === "solitaire"\) \{\n    solCancelAutoSolve\(\);/);
+  assert.match(mainSource, /registerWindowLifecycle\("solitaire", \{\n  onClose: \(\) => \{\n    solCancelAutoSolve\(\);/);
   assert.match(mainSource, /const solNewGame = \(\) => \{[\s\S]*?solCancelAutoSolve\(\);\n  solState\.presentation = null;/);
   assert.match(mainSource, /if \(solAutoSolve\) \{\n  solAutoSolve\.addEventListener\("click", \(\) => \{\n    solStartAutoSolve\(\);/);
 });

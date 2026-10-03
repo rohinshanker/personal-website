@@ -3,11 +3,13 @@ import { access, readFile } from "node:fs/promises";
 import vm from "node:vm";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 test("global leaderboard aggregates fill their black digit strips without overflowing", async () => {
   const [main, styles, unlitDigit] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScript("gameStats"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
     readFile(
       new URL(

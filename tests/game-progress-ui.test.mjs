@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 test("Game Progress is available from the desktop and taskbar with the joystick icon", async () => {
@@ -36,7 +38,7 @@ test("Game Progress provides a profile and one local-progress panel per game", a
 
 test("Game Progress uses compact, top-aligned profile and game layouts", async () => {
   const [source, styles] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScript("gameStats"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
   ]);
 
@@ -60,7 +62,7 @@ test("Game Progress profile launches every global leaderboard from a white icon 
   const [home, styles, source] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScript("gameStats"),
   ]);
   const profileStart = home.indexOf(
     '<section class="viewer-content game-progress-content" data-view="game-progress-profile">'

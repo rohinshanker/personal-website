@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  readHomeScript,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const sliceBetween = (source, startMarker, endMarker) => {
@@ -130,8 +135,8 @@ test("Lain shares the Red Tool shell without inheriting its cropped image or fix
 
 test("Lain and Red Tool remain normally probability-gated", async () => {
   const [main, dom] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
+    readHomeScriptText("eventRuntime", "eventNotes", "eventRedTool", "eventPrompts"),
+    readHomeScriptText("eventNotes", "eventRedTool"),
   ]);
   const lainRegistration = registrationFor(main, "lain-system-alert");
   const redToolRegistration = registrationFor(main, "red-tool");
@@ -144,7 +149,7 @@ test("Lain and Red Tool remain normally probability-gated", async () => {
   assert.match(redToolRegistration, /showRedToolWindow\(\);/);
   assert.match(
     dom,
-    /lainAlertClose: doc\.getElementById\("lain-alert-close"\)/
+    /const lainAlertClose = byId\("lain-alert-close"\)/
   );
   assert.match(main, /bindRandomEventButton\(lainAlertClose, closeLainAlert\);/);
   assert.match(

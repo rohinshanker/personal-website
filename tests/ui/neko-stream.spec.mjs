@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
 
+import { homeScriptUrl } from "../helpers/home-scripts.mjs";
+
 test.setTimeout(120_000);
 
 const viewports = Object.freeze([
@@ -21,7 +23,7 @@ const disableRemoteGameStats = (page) =>
 
 const installNekoStreamBridge = async (page) => {
   const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
+    homeScriptUrl("neko"),
     "utf8"
   );
   const isolatedSource = isolateAllProductionDebug(mainSource, {
@@ -128,7 +130,7 @@ window.__nekoStreamTest = Object.freeze({
       detail: {},
       debug: true,
     }),
-  triggerAlert: (triggerName = "startButton") => triggerRandomEvents(triggerName),
+  triggerAlert: (triggerName = "startButton") => notifyActivity(triggerName),
   snapshot: readNekoStreamTestSnapshot,
   start: (specs) => {
     startNekoStream(createNekoStreamTestPlan(specs));

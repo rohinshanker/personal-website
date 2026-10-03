@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 const requiredAdministratorSecrets = Object.freeze([
   "ADMIN_USERNAME",
@@ -12,8 +14,8 @@ const requiredAdministratorSecrets = Object.freeze([
 test("Administrator access is hidden in Cursor Settings and dialogs are wired with accessible form controls", async () => {
   const [home, dom, main, session, styles] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows", "sudoku"),
+    readHomeScriptText("gameStats", "windows", "sudoku"),
     readFile(new URL("scripts/home/core/administrator-session.js", root), "utf8"),
     readFile(new URL("styles/home/cursors.css", root), "utf8"),
   ]);
@@ -25,7 +27,7 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
   );
   assert.doesNotMatch(
     home,
-    /class="taskbar-icon[^\"]*taskbar-administrator-button[^\"]*"[^>]*data-app="administrator"/,
+    /class="taskbar-icon[^"]*taskbar-administrator-button[^"]*"[^>]*data-app="administrator"/,
     "Administrator access must not appear in the app dock."
   );
   assert.match(
@@ -53,12 +55,12 @@ test("Administrator access is hidden in Cursor Settings and dialogs are wired wi
   assert.match(home, /id="administrator-alert-close"/);
 
   for (const reference of [
-    'administratorWindow: doc.getElementById("administrator-window"),',
-    'administratorSignInForm: doc.getElementById("administrator-sign-in-form"),',
-    'administratorUsername: doc.getElementById("administrator-username"),',
-    'administratorPassword: doc.getElementById("administrator-password"),',
-    'administratorAlertWindow: doc.getElementById("administrator-alert-window"),',
-    'administratorAlertClose: doc.getElementById("administrator-alert-close"),',
+    'const administratorWindow = byId("administrator-window");',
+    'const administratorSignInForm = byId("administrator-sign-in-form");',
+    'const administratorUsername = byId("administrator-username");',
+    'const administratorPassword = byId("administrator-password");',
+    'const administratorAlertWindow = byId("administrator-alert-window");',
+    'const administratorAlertClose = byId("administrator-alert-close");',
   ]) {
     assert.ok(dom.includes(reference), `Missing Administrator DOM reference: ${reference}`);
   }
@@ -136,7 +138,7 @@ test("Administrator credentials remain server-only and the protected profile has
   const [home, index, main, session, frontendConfig, workerConfig] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows", "sudoku"),
     readFile(new URL("scripts/home/core/administrator-session.js", root), "utf8"),
     readFile(new URL("scripts/home/game-stats-backend.js", root), "utf8"),
     readFile(new URL("workers/game-stats/wrangler.jsonc", root), "utf8"),
@@ -201,8 +203,13 @@ test("Administrator credentials remain server-only and the protected profile has
   assert.match(main, /windowStack\.style\.removeProperty\("z-index"\)/);
   assert.match(
     main,
-    /sudokuSolvePopup\?\.classList\.contains\("is-visible"\)[\s\S]*?gameStatsAuthenticationDeferredForCompletion = true;[\s\S]*?return;/,
-    "Administrator sign-in must wait until Sudoku's active completion modal is dismissed."
+    /if \(isGameStatsCompletionDialogOpen\(\)\) \{[\s\S]*?gameStatsAuthenticationDeferredForCompletion = true;[\s\S]*?return;/,
+    "Administrator sign-in must wait while a game's completion dialog holds the screen."
+  );
+  assert.match(
+    main,
+    /isCompletionDialogOpen: \(\) =>[\s\S]*?sudokuSolvePopup\?\.classList\.contains\("is-visible"\)/,
+    "Sudoku must report its own active completion modal."
   );
   assert.match(
     main,

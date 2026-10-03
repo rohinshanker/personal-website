@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 test("Minesweeper stats use the reusable leaderboard template in three fixed columns", async () => {
   const [main, styles] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScript("gameStats"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
   ]);
   const leaderboardTemplate = main.match(

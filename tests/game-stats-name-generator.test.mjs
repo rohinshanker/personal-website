@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const getNameGeneratorSource = (source) => {
@@ -135,7 +137,7 @@ const isSkyGrammarName = (name) => {
 };
 
 test("the profile name generator uses the live Sky COTL grammar and caches it per page", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const { calls, runtime } = createNameGeneratorRuntime(source, [textResponse(skyGeneratorDefinition)]);
 
   assert.equal(isSkyGrammarName(await runtime.fetchGeneratedName()), true);
@@ -158,7 +160,7 @@ test("the profile name generator uses the live Sky COTL grammar and caches it pe
 });
 
 test("the profile name generator rejects unavailable, malformed, and failed Sky API responses", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const { runtime } = createNameGeneratorRuntime(source, [
     textResponse("", true),
     textResponse("unavailable", false),
@@ -171,7 +173,7 @@ test("the profile name generator rejects unavailable, malformed, and failed Sky 
 });
 
 test("a failed roll keeps API Error inside the name field and allows saving", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const runtime = {
     Date: { now: () => 50_000 },
     Math,
@@ -218,7 +220,7 @@ test("a failed roll keeps API Error inside the name field and allows saving", as
 });
 
 test("icon selection replaces API Error only and keeps successful names unchanged", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const runtime = {
     document: {
       createElement: () => ({
@@ -314,7 +316,7 @@ test("icon selection replaces API Error only and keeps successful names unchange
 });
 
 test("a user reroll has a fixed three-second cooldown and blocks duplicate fetches", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   let now = 50_000;
   const createOption = () => ({
     classList: { toggle: () => {} },
@@ -374,7 +376,7 @@ test("a user reroll has a fixed three-second cooldown and blocks duplicate fetch
 });
 
 test("name suggestions preserve the selected favorite while replacing the five-choice dropdown", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   let now = 50_000;
   const createOption = () => ({
     classList: { toggle: () => {} },
@@ -457,10 +459,10 @@ test("name suggestions preserve the selected favorite while replacing the five-c
 
 test("profile rolling uses five Sky API choices in a persistent Windows-style picker", async () => {
   const [source, home, css, dom] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScript("gameStats"),
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
+    readHomeScript("gameStats"),
   ]);
 
   assert.match(source, /let gameStatsNameRollInFlight = false;/);
@@ -503,9 +505,9 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   );
   assert.doesNotMatch(home, /Names via/);
   assert.doesNotMatch(home, /Sky-style names|fantasynamegenerators\.com|lukewh\.com/);
-  assert.match(dom, /gameProfileNamePicker: byId\("game-profile-name-picker"\),/);
-  assert.match(dom, /gameProfileNameToggle: byId\("game-profile-name-toggle"\),/);
-  assert.match(dom, /gameProfileNameOptions: byId\("game-profile-name-options"\),/);
+  assert.match(dom, /const gameProfileNamePicker = byId\("game-profile-name-picker"\);/);
+  assert.match(dom, /const gameProfileNameToggle = byId\("game-profile-name-toggle"\);/);
+  assert.match(dom, /const gameProfileNameOptions = byId\("game-profile-name-options"\);/);
   assert.match(css, /\.game-profile-generated-name/);
   assert.match(css, /\.game-profile-generated-name[\s\S]*background: #fff;/);
   assert.match(css, /\.game-profile-generated-name[\s\S]*color: #000;/);
@@ -526,7 +528,7 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
 });
 
 test("the profile icon gallery does not truncate the manifest", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
 
   assert.doesNotMatch(source, /GAME_STATS_ICON_MANIFEST[\s\S]{0,220}\.slice\(0, 180\)/);
   assert.match(

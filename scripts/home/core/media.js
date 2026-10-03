@@ -629,7 +629,7 @@ const preloadMediaSourcesAfter = (element, sources, options) =>
     return preloadMediaSourcesInOrder(sources, options);
   });
 
-window.homeMedia = {
+window.homeMedia = Object.freeze({
   createLoadingIndicator,
   isVideoSource,
   setLoading,
@@ -645,5 +645,5 @@ window.homeMedia = {
   preloadMediaSource,
   preloadMediaSourcesAfter,
   preloadMediaSourcesInOrder,
-};
+});
 })();

@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 test("Solitaire Victory Royale media is 40% smaller and anchored to the board top", async () => {
   const [home, main, styles] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScript("solitaire"),
     readFile(new URL("styles/home/apps/solitaire.css", root), "utf8"),
   ]);
 

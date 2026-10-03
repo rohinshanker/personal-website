@@ -2,13 +2,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScriptText } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 const [script, styles, home, index, main, cursorRuntime] = await Promise.all([
   readFile(new URL("scripts/home/text-selection-cursor.js", root), "utf8"),
   readFile(new URL("styles/home/cursors.css", root), "utf8"),
   readFile(new URL("home.html", root), "utf8"),
   readFile(new URL("index.html", root), "utf8"),
-  readFile(new URL("scripts/home/main.js", root), "utf8"),
+  readHomeScriptText("windows", "sudoku", "calendar"),
   readFile(new URL("scripts/home/core/cursor-mode.js", root), "utf8"),
 ]);
 

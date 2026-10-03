@@ -3,13 +3,15 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const readSudokuSources = async () => {
   const [home, dom, main, styles] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScript("sudoku"),
+    readHomeScript("sudoku"),
     readFile(new URL("styles/home/apps/sudoku.css", root), "utf8"),
   ]);
   return { home, dom, main, styles };
@@ -86,7 +88,7 @@ test("Sudoku exposes three checks, no reveal control, and an accessible Errors w
     "sudokuErrorsCancel",
     "sudokuErrorsConfirm",
   ]) {
-    assert.match(dom, new RegExp(`\\b${binding}:`));
+    assert.match(dom, new RegExp(`const ${binding} = `));
     assert.match(main, new RegExp(`\\b${binding}\\b`));
   }
   assert.match(
@@ -114,7 +116,7 @@ test("Sudoku persists the quota and warning while legacy assists fail closed", a
   const freshPuzzleSource = sourceBetween(
     main,
     "const adoptSudokuPuzzle = (difficulty, generated) => {",
-    "\n\nconst getLifeCounterWindow ="
+    "\nconst loadSudokuDifficulty ="
   );
   const historySource = sourceBetween(
     main,
@@ -360,7 +362,7 @@ const createSudokuCheckContext = (main) => {
       "const createGameStatsEvent = (event) => ({ ...event });",
       "const recordGameStatsEvent = (event, session, metadata) => { observations.records.push({ event, session, metadata }); };",
       "const triggerSudokuVictoryEffects = () => {};",
-      "const triggerRandomEvents = () => {};",
+      "const notifyActivity = () => {};",
       "const refreshSudokuFullBoardPrompt = () => { observations.promptRefreshes += 1; };",
       checkSource,
       "globalThis.checkForTest = checkSudokuBoard;",
@@ -508,6 +510,11 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
     [
       constantsSource,
       "const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));",
+      'const padTwoDigits = (value) => String(value).padStart(2, "0");',
+      'const formatElapsedTime = (seconds, placeholder = "\u2014") =>',
+      "  Number.isFinite(seconds)",
+      '    ? `${padTwoDigits(Math.floor(Math.max(0, Math.floor(seconds)) / 60))}:${padTwoDigits(Math.max(0, Math.floor(seconds)) % 60)}`',
+      "    : placeholder;",
       "const sudokuGrid = null;",
       "let sudokuCellElements = [];",
       "let sudokuState = { puzzleId: '', puzzle: '' };",

@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const createAttackRuntime = (source) => {
@@ -46,7 +48,7 @@ const createAttackRuntime = (source) => {
 };
 
 test("Gears Nest hazards are slightly more frequent and lone Boomers halve rocket cooldown", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("eventGearsNest");
   const runtime = createAttackRuntime(source);
   const boomer = { id: "boomer", type: "boomer", health: 1 };
   const drone = { id: "drone", type: "drone", health: 1 };

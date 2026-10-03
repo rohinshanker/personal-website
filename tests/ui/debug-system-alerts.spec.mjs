@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { isolateProductionPerEventDebug } from "./helpers/random-event-debug.mjs";
 
+import { homeScriptUrl } from "../helpers/home-scripts.mjs";
+
 test.setTimeout(300_000);
 
 const viewports = [
@@ -25,7 +27,7 @@ const disableRemoteGameStats = async (page) => {
 
 const installDebugAlertTestBridge = async (page) => {
   const mainSource = await readFile(
-    new URL("../../scripts/home/main.js", import.meta.url),
+    homeScriptUrl("eventRuntime"),
     "utf8"
   );
   const isolatedSource = isolateProductionPerEventDebug(mainSource);
@@ -59,7 +61,7 @@ window.__debugSystemAlertsTest = Object.freeze({
     return showDebugSystemAlert(alert);
   },
   trigger(name = "startButton") {
-    return triggerRandomEvents(name);
+    return notifyActivity(name);
   },
   triggerFelizJuevesFallback() {
     return maybeShowFelizJueves();

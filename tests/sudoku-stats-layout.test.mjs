@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 test("Sudoku uses six shared leaderboard panels in three columns and two rows", async () => {
   const [main, styles] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScript("gameStats"),
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
   ]);
   const globalRows = main.match(
@@ -71,7 +73,7 @@ test("Sudoku uses six shared leaderboard panels in three columns and two rows", 
   assert.match(renderer[1], /metricFormatter: formatGameStatsSudokuLeaderboardTime/);
   assert.match(
     main,
-    /GAME_STATS_SUDOKU_PLACEHOLDER_TIME = "99:99"[\s\S]*?const formatGameStatsSudokuLeaderboardTime = \(seconds\) =>[\s\S]*?formatSudokuTime\(seconds, GAME_STATS_SUDOKU_PLACEHOLDER_TIME\)/
+    /GAME_STATS_SUDOKU_PLACEHOLDER_TIME = "99:99"[\s\S]*?const formatGameStatsSudokuLeaderboardTime = \(seconds\) =>[\s\S]*?formatElapsedTime\(seconds, GAME_STATS_SUDOKU_PLACEHOLDER_TIME\)/
   );
   assert.match(renderer[1], /gameStatsGlobalState\.leaderboards\.sudoku\[difficulty\]/);
   assert.match(renderer[1], /leaderboard\.appendMetric/);

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const count = (source, pattern) => Array.from(source.matchAll(pattern)).length;
@@ -65,8 +67,8 @@ test("Video Editor and Image Tools have desktop and taskbar launchers with their
 test("Video Editor owns an accessible new-tab confirmation prompt", async () => {
   const [home, main, dom, randomEventStyles] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
+    readHomeScript("windows"),
+    readHomeScript("windows"),
     readFile(new URL("styles/home/random-events.css", root), "utf8"),
   ]);
   const section = windowSection(home, "video-editor");
@@ -115,7 +117,7 @@ test("Video Editor owns an accessible new-tab confirmation prompt", async () => 
   );
   assert.match(
     main,
-    /triggerRandomEvents\("newTabLink", \{ href: prompt\.path, source: prompt\.source \}\)/
+    /notifyActivity\("newTabLink", \{ href: prompt\.path, source: prompt\.source \}\)/
   );
   assert.match(main, /closeAppWindow\(appId\)/);
   assert.match(main, /FOCUS_RETURN_WINDOW_SELECTOR[\s\S]*?data-launch-prompt-window/);

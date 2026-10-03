@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const readGifDimensions = (gif) => ({
@@ -64,7 +66,7 @@ const readGifDurationCentiseconds = (gif) => {
 
 test("gallery image loads use a local hourglass overlay instead of stale or empty media", async () => {
   const [main, media, styles, home, index, rawGif, paddedGif] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScript("gallery"),
     readFile(new URL("scripts/home/core/media.js", root), "utf8"),
     readFile(new URL("styles/home/portfolio.css", root), "utf8"),
     readFile(new URL("home.html", root), "utf8"),
@@ -82,7 +84,7 @@ test("gallery image loads use a local hourglass overlay instead of stale or empt
   assert.match(main, /image\.addEventListener\("load", finish, \{ once: true \}\)/);
   assert.match(main, /image\.addEventListener\("error", finish, \{ once: true \}\)/);
   assert.match(main, /if \(image\.complete\) queueMicrotask\(finish\)/);
-  assert.match(main, /window\.homeGallery = \{[\s\S]*?loadImage: loadGalleryImage/);
+  assert.match(main, /window\.homeGallery = Object\.freeze\(\{[\s\S]*?loadImage: loadGalleryImage/);
   assert.match(main, /const setGalleryImageSource[\s\S]*?loadGalleryImage\(image, src\)/);
   assert.match(
     main,
@@ -112,7 +114,11 @@ test("gallery image loads use a local hourglass overlay instead of stale or empt
   );
 
   for (const source of [home, index]) {
-    assert.match(source, /shared-cross-route-20260930/);
+    assert.match(
+      source,
+      /scripts\/home\/core\/media\.js\?v=game-build-[a-f0-9]{64}/,
+      "the shared media script carries the generated build token"
+    );
   }
 
   assert.deepEqual(readGifDimensions(rawGif), { width: 258, height: 272 });

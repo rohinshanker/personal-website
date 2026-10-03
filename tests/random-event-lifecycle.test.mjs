@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { test } from "node:test";
 
+import { readHomeScriptText } from "./helpers/home-scripts.mjs";
+
 // Execute the production helpers with a small DOM double so each lifecycle
 // branch can be checked without depending on browser animation timing.
-const source = readFileSync(
-  new URL("../scripts/home/main.js", import.meta.url), "utf8"
-);
+const source = await readHomeScriptText("windows", "activation", "eventRuntime");
 const extract = (name) => {
   const match = source.match(new RegExp(`const ${name} = [\\s\\S]*?\\n(?:};|  \\);)`));
   assert.ok(match, name);
@@ -31,7 +30,7 @@ const context = vm.createContext({
   clampRandomEventWindowAfterMediaLoad: () => events.push("clamp"),
 });
 vm.runInContext(
-  "let topZ = 100;\n" + names.map(extract).join("\n") +
+  "let topZ = 100;\nconst nextWindowZIndex = () => topZ++;\n" + names.map(extract).join("\n") +
     "\nthis.api = {" + names.join(",") + "};",
   context
 );

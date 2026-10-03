@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const extractSource = (source, startMarker, endMarker) => {
@@ -44,7 +46,7 @@ const createSubmission = (id, proofRejections = 0) => ({
  * `eventResponses` answers one `/events` request in order.
  */
 const loadSyncHarness = async ({ submissions, eventResponses, proof }) => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const syncSource = extractSource(
     source,
     "const refreshGameStatsGlobalState =",
@@ -288,7 +290,7 @@ test("a renewed proof publishes the queued protected result", async () => {
 });
 
 test("stored proof rejection counts survive queue normalization", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const context = vm.createContext({});
   vm.runInContext(
     [

@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 
+import { homeScriptUrl } from "../../helpers/home-scripts.mjs";
+
 export const PRODUCTION_PER_EVENT_DEBUG_IDS = Object.freeze([
   "neko-stream-system-alert",
 ]);
@@ -30,7 +32,7 @@ export const isolateProductionPerEventDebug = (
 
 export const isolateAllProductionDebug = (source, { except = [] } = {}) => {
   const dataDrivenStart = "SYSTEM_ALERTS.forEach((alert) => {";
-  const dataDrivenEnd = "\n});\n\nregisterRandomEvent({\n  id: \"neko-stream-system-alert\",";
+  const dataDrivenEnd = "\n  });\n});";
   const dataDrivenStartIndex = source.indexOf(dataDrivenStart);
   const dataDrivenEndIndex = source.indexOf(dataDrivenEnd, dataDrivenStartIndex);
   const dataDrivenRegistration = source.slice(
@@ -48,10 +50,10 @@ export const isolateAllProductionDebug = (source, { except = [] } = {}) => {
   return isolateProductionPerEventDebug(source, { except });
 };
 
+/** The script the per-event debug flags live in. */
+export const PRODUCTION_DEBUG_SCRIPT_KEY = "eventPrompts";
+
 export const readIsolatedMainSource = async ({ except = [] } = {}) => {
-  const mainSource = await readFile(
-    new URL("../../../scripts/home/main.js", import.meta.url),
-    "utf8"
-  );
-  return isolateAllProductionDebug(mainSource, { except });
+  const source = await readFile(homeScriptUrl(PRODUCTION_DEBUG_SCRIPT_KEY), "utf8");
+  return isolateAllProductionDebug(source, { except });
 };

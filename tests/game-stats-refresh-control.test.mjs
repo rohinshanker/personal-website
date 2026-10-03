@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 const supportedGames = ["minesweeper", "solitaire", "snake", "sudoku"];
 
@@ -50,12 +52,12 @@ test("every Game Stats window has an independently accessible refresh row", asyn
 });
 
 test("Game Stats exposes refresh controls and statuses to application code", async () => {
-  const domSource = await readFile(new URL("scripts/home/core/dom.js", root), "utf8");
-  const mainSource = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const domSource = await readHomeScript("gameStats");
+  const mainSource = await readHomeScript("gameStats");
 
   assert.match(
     domSource,
-    /gameStatsRefreshButtons: all\("\[data-game-stats-refresh\]"\)/
+    /const gameStatsRefreshButtons = all\("\[data-game-stats-refresh\]"\)/
   );
   assert.match(
     mainSource,

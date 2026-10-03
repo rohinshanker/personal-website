@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const extractSource = (source, startMarker, endMarker) => {
@@ -24,7 +26,7 @@ const waitFor = async (predicate, message) => {
 };
 
 test("empty and normalized stats cover every player rank, record, and global Top 3", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const dataSource = extractSource(
     source,
     "const createGameStatsEmptyMinesweeperWins =",
@@ -224,7 +226,7 @@ test("empty and normalized stats cover every player rank, record, and global Top
 });
 
 test("confirmed events keep every total current until the server acknowledges their ids", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const incrementSource = extractSource(
     source,
     "const incrementGameStatsTotals =",
@@ -406,7 +408,7 @@ test("confirmed events keep every total current until the server acknowledges th
 });
 
 test("a saved profile is attached to a non-leaderboard Solitaire win without client-only fields", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const eventProfileSource = extractSource(
     source,
     "const normalizeGameStatsEventProfile =",
@@ -490,7 +492,7 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
 });
 
 test("queue sync strips profile metadata, removes legacy entries, refreshes, and preserves warnings", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const eventProfileSource = extractSource(
     source,
     "const normalizeGameStatsEventProfile =",
@@ -617,7 +619,7 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
 });
 
 test("an overlapping sync coalesces and discards a response for the prior profile", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScript("gameStats");
   const syncSource = extractSource(
     source,
     "const refreshGameStatsGlobalState =",

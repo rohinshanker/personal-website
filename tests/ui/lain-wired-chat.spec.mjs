@@ -305,7 +305,7 @@ window.__wiredNormalTest = Object.freeze({
     return randomEventTriggerCooldownUntil;
   },
   trigger() {
-    return triggerRandomEvents("pageReload");
+    return notifyActivity("pageReload");
   },
 });
 })();`

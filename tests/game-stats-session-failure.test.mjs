@@ -3,9 +3,11 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
-const readMainSource = () => readFile(new URL("scripts/home/main.js", root), "utf8");
+const readMainSource = () => readHomeScript("gameStats");
 
 const extractSource = (source, startMarker, endMarker) => {
   const start = source.indexOf(startMarker);

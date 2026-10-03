@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 test("Minesweeper preloads every revealed-cell number when its window opens", async () => {
-  const main = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const main = await readHomeScript("minesweeper");
 
   assert.match(
     main,
@@ -21,7 +23,7 @@ test("Minesweeper preloads every revealed-cell number when its window opens", as
   );
   assert.match(
     main,
-    /if \(open\) \{\s*if \(appId === "minesweeper"\) \{\s*void preloadMinesweeperNumberAssets\(\);/
+    /registerWindowLifecycle\("minesweeper", \{\s*beforeOpen: \(\) => \{\s*void preloadMinesweeperNumberAssets\(\);/
   );
 
   await Promise.all(

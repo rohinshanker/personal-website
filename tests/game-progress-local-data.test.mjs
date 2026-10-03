@@ -2,10 +2,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  readHomeScript,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const readResetFunction = async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("gameStats", "windows", "snake", "sudoku");
   const match = source.match(
     /const resetGameProgressLocalData = \(\) => \{([\s\S]*?)\n\};\n\nconst renderGameStatsWindow/
   );
@@ -15,7 +20,7 @@ const readResetFunction = async () => {
 
 test("Game Progress keeps a saved profile immutable and gives new profiles ten rerolls", async () => {
   const [source, home] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows", "snake", "sudoku"),
     readFile(new URL("home.html", root), "utf8"),
   ]);
 
@@ -35,15 +40,15 @@ test("Game Progress keeps a saved profile immutable and gives new profiles ten r
 
 test("Game Progress changes only the icon of a saved profile", async () => {
   const [source, home, dom] = await Promise.all([
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows", "snake", "sudoku"),
     readFile(new URL("home.html", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
+    readHomeScriptText("gameStats", "windows", "snake", "sudoku"),
   ]);
 
   assert.match(home, /id="game-profile-name-controls"/);
   assert.match(home, /id="game-profile-name-credit"/);
-  assert.match(dom, /gameProfileNameControls: byId\("game-profile-name-controls"\),/);
-  assert.match(dom, /gameProfileNameCredit: byId\("game-profile-name-credit"\),/);
+  assert.match(dom, /const gameProfileNameControls = byId\("game-profile-name-controls"\);/);
+  assert.match(dom, /const gameProfileNameCredit = byId\("game-profile-name-credit"\);/);
   assert.match(
     source,
     /const saveGameStatsProfileIcon = \(icon\) => \{[\s\S]*?\{ \.\.\.gameStatsProfile, icon \}/
@@ -71,8 +76,17 @@ test("Game Progress reset clears only local aggregate, profile, and Snake record
   assert.match(resetSource, /gameStatsLocalState = createEmptyGameStatsData\(\);/);
   assert.match(resetSource, /saveGameStatsLocalState\(\);/);
   assert.match(resetSource, /clearGameStatsProfile\(\);/);
-  assert.match(resetSource, /snakeState\.highScores = \{\};/);
-  assert.match(resetSource, /localStorage\.removeItem\(SNAKE_HIGH_SCORE_KEY\);/);
+  // Each game wipes its own records; the reset only asks them to.
+  assert.match(
+    resetSource,
+    /gameStatsLocalSources\.forEach\(\(source\) => source\.resetLocalData\?\.\(\)\);/
+  );
+  const snake = await readHomeScript("snake");
+  assert.match(
+    snake,
+    /registerGameStatsLocalSource\("snake", \{[\s\S]*?snakeState\.highScores = \{\};/
+  );
+  assert.match(snake, /localStorage\.removeItem\(SNAKE_HIGH_SCORE_KEY\);/);
   assert.match(resetSource, /Published and queued leaderboard results remain available/);
   assert.doesNotMatch(resetSource, /gameStatsSubmissionQueue\s*=/);
   assert.doesNotMatch(resetSource, /GAME_STATS_SYNC_QUEUE_STORAGE_KEY/);
@@ -80,7 +94,7 @@ test("Game Progress reset clears only local aggregate, profile, and Snake record
 });
 
 test("Game Progress renders lifetime totals for its profile and every supported game", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("gameStats", "windows", "snake", "sudoku");
 
   for (const contentId of [
     "game-progress-profile-content",
@@ -109,20 +123,20 @@ test("Game Progress renders lifetime totals for its profile and every supported 
   }
   assert.match(
     source,
-    /if \(appId === "game-progress"\) \{\s*renderGameProgressWindow\(\);\s*void syncQueuedGameStats\(\);/
+    /registerWindowLifecycle\("game-progress", \{[\s\S]*?onOpen: \(\) => \{\s*renderGameProgressWindow\(\);\s*void syncQueuedGameStats\(\);/
   );
   assert.match(
     source,
-    /restartWindowAnimation\(win, "is-opening"\);\s*if \(appId === "game-progress"\) scheduleGameStatsWindowViewportClamp\(win\);/
+    /restartWindowAnimation\(win, "is-opening"\);\s*windowLifecycle\(appId\)\.onOpened\?\.\(win\);/
   );
   assert.match(
     source,
-    /if \(windowEl\.id === "game-progress-window"\) \{\s*scheduleGameStatsWindowViewportClamp\(windowEl\);/
+    /onOpened: \(win\) => scheduleGameStatsWindowViewportClamp\(win\),\s*onTabChange: \(win\) => scheduleGameStatsWindowViewportClamp\(win\),/
   );
 });
 
 test("Snake Game Progress keeps each board size's games and high score together", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("gameStats", "windows", "snake", "sudoku");
   const match = source.match(
     /const renderGameProgressSnake = \(\) => \{([\s\S]*?)\n\};\n\nconst renderGameProgressSudoku/
   );
@@ -132,12 +146,16 @@ test("Snake Game Progress keeps each board size's games and high score together"
   assert.match(snakeProgressSource, /"game-progress-snake-total"/);
   assert.match(snakeProgressSource, /game-progress-snake-board-stats/);
   assert.match(snakeProgressSource, /playerTotals\.snake\.gamesPlayed\[size\]/);
-  assert.match(snakeProgressSource, /snakeState\.highScores\[size\]/);
+  assert.match(snakeProgressSource, /readGameStatsLocalRecord\("snake", size\)/);
+  assert.match(
+    await readHomeScript("snake"),
+    /readLocalRecord: \(size\) => snakeState\.highScores\[size\]/
+  );
   assert.match(snakeProgressSource, /content\.replaceChildren\(totalGames, boardStats\);/);
 });
 
 test("Sudoku Game Progress keeps compact win columns and a local no-hints best time", async () => {
-  const source = await readFile(new URL("scripts/home/main.js", root), "utf8");
+  const source = await readHomeScriptText("gameStats", "windows", "snake", "sudoku");
   const match = source.match(
     /const renderGameProgressSudoku = \(\) => \{([\s\S]*?)\n\};\n\nconst renderGameProgressWindow/
   );

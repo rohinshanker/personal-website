@@ -3,6 +3,8 @@ import { access, readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 
 const socialLinks = [
@@ -244,8 +246,8 @@ test("About carousel assets stay optimized for sequential preloading", async () 
 test("About Me date, degree marquee, and carousel stay data driven", async () => {
   const [html, dom, source] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("about", "desktop", "gallery"),
+    readHomeScriptText("about", "desktop", "gallery"),
   ]);
 
   const dateStart = source.indexOf("const aboutDateOrdinalSuffix =");
@@ -294,7 +296,7 @@ test("About Me date, degree marquee, and carousel stay data driven", async () =>
   assert.match(source, /new ResizeObserver\(queueAboutDegreeRefresh\)/);
   assert.match(source, /document\.fonts\?\.ready\.then\(queueAboutDegreeRefresh\);/);
   const carouselStart = source.indexOf("const ABOUT_CAROUSEL_ITEMS = Object.freeze([");
-  const carouselEnd = source.indexOf("\n]);\nlet aboutCarouselIndex", carouselStart);
+  const carouselEnd = source.indexOf("\n]);\n\nlet aboutCarouselIndex", carouselStart);
   assert.notEqual(carouselStart, -1, "About carousel data must exist");
   assert.notEqual(carouselEnd, -1, "About carousel data must remain independently bounded");
   const carouselSource = source.slice(carouselStart, carouselEnd);
@@ -324,7 +326,7 @@ test("About Me date, degree marquee, and carousel stay data driven", async () =>
     "aboutCarouselCounter",
     "aboutCarouselNext",
   ]) {
-    assert.match(dom, new RegExp(`${binding}:`));
+    assert.match(dom, new RegExp(`const ${binding} = `));
     assert.match(source, new RegExp(`\\b${binding}\\b`));
   }
 });

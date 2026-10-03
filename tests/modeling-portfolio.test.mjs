@@ -3,6 +3,8 @@ import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 const DATA_VERSION = "modeling-portfolio-digitals-20260926";
@@ -173,13 +175,16 @@ test("the Home Modeling window matches the shared data in order, titles, dates, 
 });
 
 test("Home derives its modeling galleries from the shared data instead of duplicating it", async () => {
-  const [home, main] = await Promise.all([read("home.html"), read("scripts/home/main.js")]);
+  const [home, main] = await Promise.all([
+    read("home.html"),
+    readHomeScript("gallery"),
+  ]);
 
   const dataTag = `scripts/home/modeling-portfolio.js?v=${DATA_VERSION}`;
   assert.ok(home.includes(`<script src="${dataTag}"></script>`), "Home loads the shared data");
   assert.ok(
-    home.indexOf(dataTag) < home.indexOf("scripts/home/main.js?v="),
-    "the shared data loads before main.js"
+    home.indexOf(dataTag) < home.indexOf("scripts/home/features/gallery.js?v="),
+    "the shared data loads before the gallery that reads it"
   );
   assert.match(main, /const modelingPortfolio = window\.rohinModelingPortfolio/);
   assert.match(main, /const modelingLinkIconPaths = modelingPortfolio\.linkIcons/);
@@ -190,7 +195,10 @@ test("Home derives its modeling galleries from the shared data instead of duplic
 });
 
 test("Home shows the Modeling launch prompt every time the Modeling window opens", async () => {
-  const [home, main] = await Promise.all([read("home.html"), read("scripts/home/main.js")]);
+  const [home, main] = await Promise.all([
+    read("home.html"),
+    readHomeScriptText("windows", "gallery"),
+  ]);
   const start = home.indexOf('data-app-window="modeling-launch"');
   assert.notEqual(start, -1, "the prompt window exists");
   const section = home.slice(start, home.indexOf('data-app-window="', start + 1));

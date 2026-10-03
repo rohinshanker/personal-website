@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const mainSourceUrl = new URL("../scripts/home/main.js", import.meta.url);
+import { homeScriptUrl } from "./helpers/home-scripts.mjs";
+
+const mainSourceUrl = homeScriptUrl("sudoku");
 
 const readMainSource = () => readFile(mainSourceUrl, "utf8");
 
@@ -35,7 +37,7 @@ test("Sudoku records at most one completion for each generated puzzle", async ()
     "\n\nconst checkSudokuBoard = () => {"
   );
   assert.match(recordSource, /recordGameStatsEvent\(/);
-  assert.match(recordSource, /triggerRandomEvents\("gameWin", \{ game: "sudoku" \}\);/);
+  assert.match(recordSource, /notifyActivity\("gameWin", \{ game: "sudoku" \}\);/);
   assert.doesNotMatch(recordSource, /completionRecorded/);
 
   const storageSyncSource = sourceBetween(
@@ -111,7 +113,7 @@ test("only fresh Sudoku puzzle creation clears the completion latch", async () =
   const loadSource = sourceBetween(
     source,
     "const adoptSudokuPuzzle = (difficulty, generated) => {",
-    "\n\nconst getLifeCounterWindow ="
+    "\nconst loadSudokuDifficulty ="
   );
   const falseInitializers = source.match(/completionRecorded:\s*false/g) || [];
 

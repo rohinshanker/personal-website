@@ -16,6 +16,7 @@ const BACKEND_CONFIG_PATH = new URL("home/game-stats-backend.js", import.meta.ur
 const HOME_ENTRY_PATH = new URL("../home.html", import.meta.url);
 const INDEX_ENTRY_PATH = new URL("../index.html", import.meta.url);
 const VIDEO_EDITOR_ENTRY_PATH = new URL("../video-editor/index.html", import.meta.url);
+const MODELING_ENTRY_PATH = new URL("../modeling/index.html", import.meta.url);
 const WRANGLER_CONFIG_PATH = new URL("../workers/game-stats/wrangler.jsonc", import.meta.url);
 const WRANGLER_CONFIG_EXAMPLE_PATH = new URL(
   "../workers/game-stats/wrangler.jsonc.example",
@@ -24,8 +25,16 @@ const WRANGLER_CONFIG_EXAMPLE_PATH = new URL(
 
 export { GAME_COMPLETION_SOURCE_FILES, MAX_GAME_BUILD_COMPATIBILITY_VERSIONS };
 
-/** The Video Editor loads only the generated backend config. */
-const VIDEO_EDITOR_CACHE_ASSET_PATHS = Object.freeze(["scripts/home/game-stats-backend.js"]);
+/**
+ * The other public routes load a few of the same shared scripts, so they carry
+ * the same generated token. A route that loaded a stale copy of one would mix
+ * build versions inside one browser session.
+ */
+const VIDEO_EDITOR_CACHE_ASSET_PATHS = Object.freeze([
+  "scripts/home/game-stats-backend.js",
+  "scripts/home/core/administrator-session.js",
+]);
+const MODELING_CACHE_ASSET_PATHS = Object.freeze(["scripts/home/core/media.js"]);
 
 const toRepositoryUrl = (relativePath) => new URL(relativePath, `file://${REPOSITORY_ROOT}`);
 
@@ -114,10 +123,11 @@ export const updateGameIntegrity = async ({ check = false } = {}) => {
     buildVersion
   );
   const cacheToken = createIntegrityCacheToken(buildVersion);
-  const [homeEntry, indexEntry, videoEditorEntry] = await Promise.all([
+  const [homeEntry, indexEntry, videoEditorEntry, modelingEntry] = await Promise.all([
     readFile(HOME_ENTRY_PATH, "utf8"),
     readFile(INDEX_ENTRY_PATH, "utf8"),
     readFile(VIDEO_EDITOR_ENTRY_PATH, "utf8"),
+    readFile(MODELING_ENTRY_PATH, "utf8"),
   ]);
 
   const expectedFiles = [
@@ -130,6 +140,14 @@ export const updateGameIntegrity = async ({ check = false } = {}) => {
         videoEditorEntry,
         cacheToken,
         VIDEO_EDITOR_CACHE_ASSET_PATHS
+      ),
+    ],
+    [
+      MODELING_ENTRY_PATH,
+      updateIntegrityCacheReferences(
+        modelingEntry,
+        cacheToken,
+        MODELING_CACHE_ASSET_PATHS
       ),
     ],
     [WRANGLER_CONFIG_PATH, wranglerConfig],

@@ -3,6 +3,11 @@ import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
+import {
+  readHomeScript,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+
 const root = new URL("../", import.meta.url);
 const defaultButton = Object.freeze({
   id: "ok",
@@ -502,8 +507,8 @@ test("system alerts use one accessible shell and one dynamic renderer", async ()
   const [html, css, dom, source] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("styles/home/random-events.css", root), "utf8"),
-    readFile(new URL("scripts/home/core/dom.js", root), "utf8"),
-    readFile(new URL("scripts/home/main.js", root), "utf8"),
+    readHomeScriptText("eventRuntime", "eventPrompts"),
+    readHomeScriptText("eventRuntime", "eventPrompts"),
   ]);
 
   assert.equal(html.match(/id="debug-system-alert-window"/g)?.length, 1);
@@ -533,7 +538,7 @@ test("system alerts use one accessible shell and one dynamic renderer", async ()
   assert.match(css, /\.debug-system-alert-message p \{\n  overflow-wrap: anywhere;/);
   assert.match(css, /\.debug-system-alert-message p \{[\s\S]*?white-space: pre-line;/);
 
-  assert.match(dom, /debugSystemAlertWindow:/);
+  assert.match(dom, /const debugSystemAlertWindow = byId\(/);
   assert.match(source, /\bdebugSystemAlertWindow\b/);
   for (const elementId of [
     "debug-system-alert-title",
