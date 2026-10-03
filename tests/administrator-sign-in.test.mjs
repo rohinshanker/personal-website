@@ -213,8 +213,13 @@ test("Administrator credentials remain server-only and the protected profile has
   );
   assert.match(
     main,
-    /const hideSudokuSolvePopup = \(\) => \{[\s\S]*?if \(gameStatsAuthenticationDeferredForCompletion\) \{[\s\S]*?requestGameStatsAdministratorAuthentication\(\);/,
+    /const hideSudokuSolvePopup = \(\) => \{[\s\S]*?resumeGameStatsAuthenticationAfterCompletion\(\);/,
     "Dismissing the Sudoku completion modal must resume deferred Administrator sign-in."
+  );
+  assert.match(
+    main,
+    /const resumeGameStatsAuthenticationAfterCompletion = \(\) => \{\s*if \(!gameStatsAuthenticationDeferredForCompletion\) return;\s*gameStatsAuthenticationDeferredForCompletion = false;\s*requestGameStatsAdministratorAuthentication\(\);/,
+    "The owning module must consume the current deferred-authentication flag."
   );
   for (const secretName of requiredAdministratorSecrets) {
     assert.match(workerConfig, new RegExp(`"${secretName}"`));

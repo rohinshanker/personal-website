@@ -1815,7 +1815,6 @@ window.homeEventPrompts = Object.freeze({
   isDebugSystemAlertVisible,
   isMcAfeeWindowVisible,
   mcAfeeDownloadWindow,
-  mcAfeeProgressTimer,
   mcAfeePromptWindow,
   mcAfeeThanksWindow,
   midnightGospelInviteWindow,

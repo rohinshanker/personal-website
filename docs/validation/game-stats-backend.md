@@ -2,7 +2,7 @@
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 - Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-10-01
+- Last verified: 2026-10-03
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -23,7 +23,7 @@ or high-stakes game.
   can fill its 32-entry history and evict the actual live build; retain the live
   build explicitly before running the transition gate.
 - During a transition to a different browser build, the integrity check also
-  recognizes the pre-generator two-file manifest only if its fetched bytes
+  recognizes the pre-split three-file and pre-generator two-file manifests only if their fetched bytes
   reproduce the advertised hash and its HTML cache references match. Final
   parity always requires the complete current manifest, including the generator.
 - When Worker source changes, record the new Cloudflare Worker version ID from
@@ -89,8 +89,10 @@ dual-stack networks, and privacy relays change it between game start,
 sign-in, and publish, and a visitor can already request a session from any
 address. Ordinary public profile IDs also do not prove account ownership.
 Treat these as moderation-grade public stats. A competitive system would
-require authenticated profiles plus authoritative server-side game simulation
-or a server-validated deterministic seed and input replay.
+require authoritative server-side game simulation or a server-validated
+deterministic seed and input replay. The proposed protocol, timing boundary,
+and remaining limitations are in
+[leaderboard-result-verification.md](leaderboard-result-verification.md).
 
 Never turn CORS, a public hash, a client-only CAPTCHA result, or an event ID
 into an authentication mechanism. CORS only controls cooperative browsers;
@@ -184,14 +186,10 @@ production Worker configuration.
 
 ## Build-Version Integrity Workflow
 
-`scripts/update-game-integrity.mjs` computes SHA-256 over the files that make
-completion decisions:
-
-```text
-scripts/home/main.js
-scripts/home/core/dom.js
-scripts/home/sudoku-generator.worker.js
-```
+`scripts/update-game-integrity.mjs` computes SHA-256 over the completion-source
+manifest in `scripts/lib/game-build.mjs`: the four game scripts and Game Stats,
+their transitive Home contracts, and the Sudoku generator worker. Manifest
+closure tests prevent an extracted dependency from silently dropping out.
 
 It writes the same public `buildVersion` to all three release artifacts:
 
@@ -199,8 +197,8 @@ It writes the same public `buildVersion` to all three release artifacts:
 - `workers/game-stats/wrangler.jsonc`
 - `workers/game-stats/wrangler.jsonc.example`
 
-It also derives the cache key for `scripts/home/game-stats-backend.js`,
-`scripts/home/core/dom.js`, and `scripts/home/main.js` in both HTML entry
+It also derives the cache key for `scripts/home/game-stats-backend.js` and every
+declared completion source in both HTML entry
 points from that build version. This prevents a browser from pairing a cached
 completion script or generated browser config with a newly deployed Worker.
 Before replacing `GAME_BUILD_VERSION`, the updater moves the outgoing value to
@@ -217,7 +215,7 @@ per day a cached browser stays accepted for roughly 32 / N days. The limit lives
 `scripts/lib/game-build.mjs` and again in the Worker source; raise both
 together if the release cadence needs a longer grace window.
 
-After **every** change to either listed source file, run:
+After **every** change to a declared completion source, run:
 
 ```bash
 node scripts/update-game-integrity.mjs
@@ -343,9 +341,9 @@ writes to D1.
 
 The release gate additionally requires the checked-in API URL and SHA-256 to
 equal the deployed browser config and Worker health. It also fetches the live
-`scripts/home/main.js` and `scripts/home/core/dom.js` bytes without caches,
+declared completion-source bytes without caches,
 recomputes the updater's ordered `relative path + NUL + bytes + NUL` digest,
-and verifies that both live HTML entry points reference all three integrity
+and verifies that both live HTML entry points reference every declared integrity
 assets with the corresponding `game-build-...` cache token:
 
 ```bash
@@ -432,13 +430,12 @@ latest failed **Game Stats Worker release** run or use `workflow_dispatch` on
 `main`. The release is complete only when the transition check, Pages deploy,
 and final live parity check all pass.
 
-The completion sources are `scripts/home/main.js`, `scripts/home/core/dom.js`,
-and `scripts/home/sudoku-generator.worker.js`. The generator worker is one of
-them because the solution it returns is what decides whether a Sudoku board is
+The completion-source manifest is `scripts/lib/game-build.mjs`. The generator
+worker is included because the solution it returns decides whether a Sudoku board is
 correct and complete, so a release that changes only the worker changes what
-counts as a win. If gameplay-completion logic moves to another file, first add
-that file to `GAME_COMPLETION_SOURCE_FILES` in `scripts/lib/game-build.mjs`,
-add it to `INTEGRITY_CACHE_ASSET_PATHS` when an entry point references it,
+counts as a win. If gameplay-completion logic moves to another file, update
+the game seeds and their transitive contract closure in `GAME_COMPLETION_SOURCE_FILES`;
+`INTEGRITY_CACHE_ASSET_PATHS` derives the corresponding cache assets. Then
 update its test, run the updater, and deploy the static site and Worker as one
 release. `tests/game-stats-integrity.test.mjs` mutates each declared source in
 turn and requires the build version to move, so a source that the digest does
@@ -1088,7 +1085,7 @@ Never display the replacement in source, a shell command, a note, or a test.
 - Rotate the Turnstile secret in the Cloudflare Turnstile dashboard, update
   `TURNSTILE_SECRET_KEY` in the Worker immediately, deploy, and verify one
   real widget flow. Rotate the sitekey only if the widget itself is replaced.
-- A change to either hashed browser completion source is not a secret rotation:
+- A change to a declared browser completion source is not a secret rotation:
   it requires `node scripts/update-game-integrity.mjs`, a matching Worker
   deploy, and a matching static-site publish. A Worker-only change that leaves
   `GAME_BUILD_VERSION` untouched requires Worker verification and deployment,

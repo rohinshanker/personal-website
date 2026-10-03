@@ -2,7 +2,7 @@
 
 - Purpose: Define the repository's automated-test coverage contract and the prioritized hardening backlog.
 - Scope: Source and contract tests, browser UI tests, the Game Stats Worker and D1 boundary, generated artifacts, repository security checks, and CI wiring.
-- Last verified: 2026-10-01
+- Last verified: 2026-10-03
 
 ## Priority scale
 
@@ -14,6 +14,21 @@
 - **P2:** Material hardening or maintainability work for the next test-quality
   pass.
 - **P3:** Cleanup that should follow stronger replacement coverage.
+
+## Current Home test structure
+
+The repository has 84 Node test files and 64 browser spec files. Home source
+assertions name their owning scripts through `tests/helpers/home-scripts.mjs`.
+Contract checks verify script membership, exports, and dependency order; focused
+state tests execute deferred-authentication and media-registration behavior.
+The unmodified-script boot regression checks all four review viewports and the
+PDF launcher bindings, independent of source-rewriting fixtures. Browser fixtures
+instrument each actual owner through `routeHomeScript`; they never serve a
+feature or synthetic combined runtime as `main.js`.
+
+Run the full Node, UI, accessibility, and pinned-container visual gates for a
+change across these module boundaries. The historical inventory below remains
+an audit reference, not the current test count or current coverage claim.
 
 ## 2026-07-31 inventory
 
@@ -105,14 +120,12 @@ baselines live under `tests/ui/__screenshots__/`; regenerate them only through
 
 Do not report the Node coverage aggregate as repository-wide coverage. The
 reviewed run reported 95.92% lines, 88.13% branches, and 97.59% functions only
-for modules loaded by Node. It omitted the 30,752-line
-`scripts/home/main.js`, `scripts/home/admin-controls.js`, and
-`scripts/home/core/media.js`.
+for modules loaded by Node. Browser IIFEs in `scripts/home/features/`,
+`scripts/home/events/`, the Home core, and `admin-controls.js` still require
+rendered coverage; moving them into separate files does not change that boundary.
 
-This omission matters because 36 source-test files and 162 cases read
-`scripts/home/main.js` without attributing execution coverage to it. Across the
-Node suite, 1,580 of 2,576 assertion call sites (61.3%) are `match` or
-`doesNotMatch` checks. Static checks remain appropriate for wiring, generated
+Source tests read their owners through `tests/helpers/home-scripts.mjs`, rather
+than scanning the boot entry. Static checks remain appropriate for wiring, generated
 references, forbidden secrets, and other literal contracts; they are not proof
 that a state machine or user flow executes correctly.
 

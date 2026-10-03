@@ -1356,7 +1356,6 @@ window.homeEventRuntime = Object.freeze({
   STANDARD_RANDOM_EVENT_PROBABILITY,
   SYSTEM_ALERTS,
   activeAppDwellWindow,
-  activeRandomEventKey,
   animateWindowExplode,
   bindManagedRandomEventWindowAnimation,
   bindRandomEventButton,

@@ -300,10 +300,13 @@ const fetchLiveIntegritySnapshot = async (
   // fetched bytes reproduce the advertised build hash. A live site whose
   // config still names a hash from that manifest is otherwise indistinguishable
   // from a stale deploy.
-  const legacySourceFiles = [
-    "scripts/home/main.js",
-    "scripts/home/core/dom.js",
-    "scripts/home/sudoku-generator.worker.js",
+  const legacyManifests = [
+    [
+      "scripts/home/main.js",
+      "scripts/home/core/dom.js",
+      "scripts/home/sudoku-generator.worker.js",
+    ],
+    ["scripts/home/main.js", "scripts/home/core/dom.js"],
   ];
   const assets = new Map();
   const loadAssets = async (paths) => {
@@ -318,21 +321,26 @@ const fetchLiveIntegritySnapshot = async (
   };
   let sourceBuildVersion;
   let cacheAssetPaths = INTEGRITY_CACHE_ASSET_PATHS;
+  let matchedLegacyManifest = false;
   if (allowLegacyManifest) {
-    try {
-      await loadAssets([...legacySourceFiles, ...INTEGRITY_ENTRY_FILES]);
-      sourceBuildVersion = await digestGameCompletionSources(
-        (path) => assets.get(path), legacySourceFiles
-      );
-    } catch {
-      // A legacy source the live site no longer serves just rules that
-      // manifest out; the current one is checked below.
-      sourceBuildVersion = undefined;
+    for (const sourceFiles of legacyManifests) {
+      try {
+        await loadAssets([...sourceFiles, ...INTEGRITY_ENTRY_FILES]);
+        sourceBuildVersion = await digestGameCompletionSources(
+          (path) => assets.get(path), sourceFiles
+        );
+      } catch {
+        // A source the live site no longer serves rules this manifest out.
+        continue;
+      }
+      if (sourceBuildVersion === liveConfig.buildVersion) {
+        cacheAssetPaths = ["scripts/home/game-stats-backend.js", ...sourceFiles];
+        matchedLegacyManifest = true;
+        break;
+      }
     }
   }
-  if (sourceBuildVersion === liveConfig.buildVersion) {
-    cacheAssetPaths = ["scripts/home/game-stats-backend.js", ...legacySourceFiles];
-  } else {
+  if (!matchedLegacyManifest) {
     await loadAssets([...GAME_COMPLETION_SOURCE_FILES, ...INTEGRITY_ENTRY_FILES]);
     sourceBuildVersion = await digestGameCompletionSources((path) => assets.get(path));
   }

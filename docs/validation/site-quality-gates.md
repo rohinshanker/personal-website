@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-09-29
+- Last verified: 2026-10-03
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -26,10 +26,11 @@ random-event changes, also run
 `node --test tests/gears-nest.test.mjs tests/random-event-cooldown.test.mjs`.
 
 Production per-event debug flags are live site behavior. Ordinary Playwright
-specs must import `tests/ui/fixtures.mjs`, which routes `scripts/home/main.js`
-through the shared debug isolator. A spec that custom-routes `main.js` must use
-`isolateAllProductionDebug` or `readIsolatedMainSource` from
-`tests/ui/helpers/random-event-debug.mjs`. Focused debug-event coverage may
+specs must import `tests/ui/fixtures.mjs`, which routes `scripts/home/events/prompts.js`
+through the shared debug isolator in `tests/ui/helpers/random-event-debug.mjs`.
+Use `routeHomeScript` from `tests/ui/helpers/home-script-routes.mjs` to instrument
+the feature that owns a test bridge, and isolate production debug flags separately.
+Focused debug-event coverage may
 retain only the event IDs it explicitly exercises through the helper's
 `except` option. Keep the helper's production-ID contract test aligned with
 the real event registry whenever a debug flag changes.
@@ -42,9 +43,7 @@ node --test tests/context-system.test.mjs
 
 ## Generated artifacts
 
-After changing files that determine game completion
-(`scripts/home/main.js`, `scripts/home/core/dom.js`, or
-`scripts/home/sudoku-generator.worker.js`), regenerate and then
+After changing a completion source declared in `scripts/lib/game-build.mjs`, regenerate and then
 verify the public Game Stats build version:
 
 ```bash
@@ -86,6 +85,44 @@ flags, and the looping-video contract live in
 
 Every generator resolves the repository root from `import.meta.url`, so each of
 these commands behaves the same from any working directory.
+
+## Home feature modules
+
+`home.html` loads ordered classic scripts, each with its own IIFE. The entry
+page warms the same assets. There is no runtime concatenation or bundler.
+
+| Path | Ownership |
+| --- | --- |
+| `scripts/home/core/dom.js` | Lookup helpers and seven shared desktop-shell lookups. Feature elements stay with their owners. |
+| `scripts/home/core/windows.js` | Window positioning, focus, dragging, close wiring, and registered lifecycle, content, placement, media, and viewport hooks. |
+| `scripts/home/core/activation.js`, `activity.js` | Prerender activation/deferred media and feature activity notifications. |
+| `scripts/home/core/util.js`, `pointer-cursor.js`, `static-noise.js` | Shared formatting, digit assets, cursor, and visual helpers. |
+| `scripts/home/features/` | About, desktop, Gallery, Study, Game Stats, four games, Life Counter, Neko, Calendar, and Cursor. |
+| `scripts/home/events/runtime.js` | Event registration, scheduling, managed-window lifecycle, viewport geometry, and activity routing. |
+| Other `scripts/home/events/` files | Event-family state, DOM, assets, handlers, and registered behavior. |
+| `scripts/home/admin/orchestrator.js` | Local promotional orchestration; `admin-controls.js` owns its dashboard. |
+| `scripts/home/main.js` | Final boot, clocks, unload, event binding, and visibility handling. |
+
+Publish an explicit frozen `window.homeX` contract and destructure dependencies
+from their owners. A changing value needs a getter or an operation on its owner;
+destructuring a primitive captures its initial value. Feature callbacks register
+with the shared runtime instead of forcing a reverse dependency. Event media
+watchers bind after all event families register; final viewport clamping runs
+after feature-specific size adjustments.
+
+For a future extraction, move one owning region per commit with its DOM and
+handlers. Update script order, entry warm-up, tests, and cache references together.
+Use `tests/helpers/home-scripts.mjs` for source paths. Run module-contract and
+load-order checks, then an unmodified-feature-script browser boot before repairing
+text assertions. Namespace checks alone cannot catch missing free references,
+lost callbacks, or copied state. Exercise open/close, focus, resize, and relevant
+game or event transitions before moving the next region.
+
+The game-build manifest seeds the four games and Game Stats and includes their
+transitive Home contracts plus the Sudoku worker. Its tests enforce that closure.
+Changes to other Home scripts require synchronized version tokens in both HTML
+entry points. The public digest identifies a release and cache version; it does
+not verify gameplay. See [leaderboard-result-verification.md](leaderboard-result-verification.md).
 
 ## Rendered UI
 

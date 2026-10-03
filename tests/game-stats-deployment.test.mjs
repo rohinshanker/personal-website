@@ -1773,13 +1773,15 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.match(validationGuide, /Wrangler's `--strict`/);
 });
 
-test("transition verifies pre-generator bytes and cache references without weakening final parity", async () => {
+for (const includeGenerator of [true, false]) {
+test(`transition verifies legacy ${includeGenerator ? "three-file" : "two-file"} bytes and cache references without weakening final parity`, async () => {
   // The manifest the live release hashed before the Home scripts were split.
   const legacySources = new Map([
     ["scripts/home/main.js", Buffer.from("// legacy main")],
     ["scripts/home/core/dom.js", Buffer.from("// legacy dom")],
     ["scripts/home/sudoku-generator.worker.js", Buffer.from("// legacy worker")],
   ]);
+  if (!includeGenerator) legacySources.delete("scripts/home/sudoku-generator.worker.js");
   const digest = createHash("sha256");
   for (const [path, bytes] of legacySources) {
     digest.update(path).update("\0").update(bytes).update("\0");
@@ -1836,3 +1838,4 @@ test("transition verifies pre-generator bytes and cache references without weake
   corruptSources = true;
   await assert.rejects(checkGameStatsWorkerTransition(options), /status 404/);
 });
+}
