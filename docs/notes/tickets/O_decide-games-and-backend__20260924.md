@@ -4,7 +4,7 @@
 - Status: open
 - Opened: 2026-09-24
 - Updated: 2026-10-04
-- Current State: Items 2, 7, and 8 decided and shipped on 2026-09-28; item 9 shipped on 2026-09-30. Item 10 is decided and being implemented in the active test-suite ticket. The rest await owner answers. Tier: needs user judgment. Once answered, each item moves into the small or long ticket named beside it.
+- Current State: Items 2, 7, and 8 decided and shipped on 2026-09-28; item 9 shipped on 2026-09-30. Item 10 shipped with a successful gated release; the test-suite ticket retains the remote CI stability observation. The rest await owner answers. Tier: needs user judgment. Once answered, each item moves into the small or long ticket named beside it.
 - Verification: Record each answer inline (`Decision:` line under the item) and the date; the implementing ticket carries the test plan.
 - Cleanup: When every item has a decision and an owning ticket, delete this ticket and its index row.
 
@@ -25,4 +25,4 @@
    - Decision (2026-09-30, shipped): remove only indexes proven phased out and unnecessary for production queries. Migration 0004 replaces four category indexes used by the new production query plans and removes the obsolete broad game/type and player indexes; Sudoku identity and security-expiry indexes remain. Ordinary reads cache for five seconds; manual Refresh and successful publication fetch fresh results. The SQL, acknowledgment, cache, and validation contracts are in [game-stats-backend.md](../../validation/game-stats-backend.md).
 10. **Deploy gating on the browser suite.** The Worker and Pages deploy on `verify` alone; a push that breaks `home.html` deploys while Browser UI is still running or failing (happened at eccfd37: release succeeded 21:37, UI failed 22:19). Options: make the UI job a `needs` of `deploy-worker` (adds ~20 min to every release until the suite is sharded), or `workflow_run` gating, or accept the risk. Recommendation: gate after sharding lands. → `A_long-test-suite-hardening__20260924.md`.
 
-   - Decision (2026-10-04): gate both Worker and Pages deployment on browser tests after sharding, preserving Worker-before-Pages ordering; owned by `A_long-test-suite-hardening__20260924.md`.
+   - Decision (2026-10-04, shipped): gate both Worker and Pages deployment on browser tests after sharding, preserving Worker-before-Pages ordering; owned by `A_long-test-suite-hardening__20260924.md`.

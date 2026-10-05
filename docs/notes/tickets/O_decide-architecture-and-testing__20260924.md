@@ -4,7 +4,7 @@
 - Status: open
 - Opened: 2026-09-24
 - Updated: 2026-10-04
-- Current State: Items 1, 7, and 9 are decided and shipped locally. Item 8 is decided and being implemented in the active test-suite ticket. The remaining items await owner answers. Tier: needs user judgment. The long tickets that depend on these are named beside each item.
+- Current State: Items 1, 7, 8, and 9 are decided and shipped. The test-suite ticket retains the remote CI stability observation. The remaining items await owner answers. Tier: needs user judgment. The long tickets that depend on these are named beside each item.
 - Verification: Record each answer inline (`Decision:` line under the item) with the date; the implementing ticket carries the test plan.
 - Cleanup: When every item has a decision and an owning ticket, delete this ticket and its index row.
 
@@ -20,7 +20,7 @@
 7. **PR-trigger policy.** Browser UI and Secret guard run on both `push` and `pull_request`; the last 30 runs are all pushes to `main`, so no double runs today, but a PR branch would run both. Options: `push: branches: [main]` plus `pull_request`, or keep. Recommendation: restrict. → small.
    - Decision (2026-09-28): restricted. `secret-guard.yml` and `ui-layout.yml` now match the release workflow; `tests/game-stats-deployment.test.mjs` asserts every workflow's `push` trigger is `branches: [main]`, and the rule is in `site-quality-gates.md`.
 8. **Which textual test files become behaviour tests.** The selected files contain source checks that should exercise production behavior. Decide per file whether the contract is a meaningful literal invariant to retain or behavior to execute. Recommendation: convert `game-stats.test.mjs`, `administrator-sign-in.test.mjs`, `minesweeper-*`, `solitaire-victory-layout`; keep the copy-text files (`dont-starve-copy`, `death-note-visible-lines`) as literal guards.
-   - Decision (2026-10-04): convert the recommended group under `A_long-test-suite-hardening__20260924.md`; retain meaningful literal copy, asset, wiring, and generated-reference checks.
+   - Decision (2026-10-04, shipped): convert the recommended group under `A_long-test-suite-hardening__20260924.md`; retain meaningful literal copy, asset, wiring, and generated-reference checks.
 9. **Extracted modules and the game build hash.**
    - Decision (2026-10-03): completed the release manifest covering all four games, Game Stats, their transitive Home contracts, and the Sudoku worker. Preserve the live build in the compatibility window. A public hash identifies release/cache compatibility and does not prove honest gameplay. The owner kept this change focused on the module split; the proposed server replay, timing, and provenance design is recorded in [leaderboard-result-verification.md](../../validation/leaderboard-result-verification.md).
    - Implementation of that separate verification design is tracked in [O_server-verified-leaderboard-results__20261003.md](O_server-verified-leaderboard-results__20261003.md).
