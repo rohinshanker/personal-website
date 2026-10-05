@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-10-04
+- Last verified: 2026-10-05
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -26,7 +26,7 @@ random-event changes, also run
 `node --test tests/gears-nest.test.mjs tests/random-event-cooldown.test.mjs`.
 
 Production per-event debug flags are live site behavior. Ordinary Playwright
-specs must import `tests/ui/fixtures.mjs`, which routes `scripts/home/events/prompts.js`
+specs must import `tests/ui/deterministic.mjs`, which routes `scripts/home/events/prompts.js`
 through the shared debug isolator in `tests/ui/helpers/random-event-debug.mjs`.
 Use `routeHomeScript` from `tests/ui/helpers/home-script-routes.mjs` to instrument
 the feature that owns a test bridge, and isolate production debug flags separately.
@@ -100,9 +100,9 @@ page warms the same assets. There is no runtime concatenation or bundler.
 | Path | Ownership |
 | --- | --- |
 | `scripts/home/core/dom.js` | Lookup helpers and seven shared desktop-shell lookups. Feature elements stay with their owners. |
-| `scripts/home/core/windows.js` | Window positioning, focus, dragging, close wiring, and registered lifecycle, content, placement, media, and viewport hooks. |
+| `scripts/home/core/windows.js` | Window positioning, focus, dragging, close wiring, and registered lifecycle, content, placement, media, viewport hooks, and active-window game keyboard dispatch. |
 | `scripts/home/core/activation.js`, `activity.js` | Prerender activation/deferred media and feature activity notifications. |
-| `scripts/home/core/util.js`, `pointer-cursor.js`, `static-noise.js` | Shared formatting, digit assets, cursor, and visual helpers. |
+| `scripts/home/core/util.js`, `pointer-cursor.js`, `static-noise.js` | Shared formatting, safe storage, banners, cancellable loaders, page activity, digit assets, cursor, and visual helpers. |
 | `scripts/home/features/` | About, desktop, Gallery, Study, Game Stats, four games, Life Counter, Neko, Calendar, and Cursor. |
 | `scripts/home/events/runtime.js` | Event registration, scheduling, managed-window lifecycle, viewport geometry, and activity routing. |
 | Other `scripts/home/events/` files | Event-family state, DOM, assets, handlers, and registered behavior. |

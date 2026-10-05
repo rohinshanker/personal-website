@@ -1047,6 +1047,52 @@
 
         <article
           class="review-card"
+          data-review-state="session-expired"
+          data-action="refresh"
+          data-busy="false"
+          data-custom-cursor="off"
+        >
+          <div class="card-heading">
+            <h2>Expired game session</h2>
+            <span class="state-code">session-expired</span>
+          </div>
+          <div class="retro-window">
+            <div class="title-bar">
+              <span>Minesweeper Stats</span>
+              <span class="title-controls"><span class="title-button">×</span></span>
+            </div>
+            <div class="window-body">
+              <div class="sync-row">
+                <p class="sync-status">
+                  Saved on this device. This game's online session expired, so
+                  this result can't be published. Start a new game to publish a
+                  new result.
+                </p>
+                <button
+                  class="refresh-button"
+                  type="button"
+                  aria-label="Refresh Minesweeper stats"
+                  aria-busy="false"
+                >
+                  <img
+                    src="../../../assets/solitaire-cards/undo-button.png"
+                    alt=""
+                  />
+                  <span class="button-loading-dots" aria-hidden="true"
+                    ><span></span><span></span><span></span
+                  ></span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="state-facts">
+            <span><b class="fact-key">Result</b> Saved locally</span>
+            <span><b class="fact-key">Published</b> No</span>
+          </div>
+        </article>
+
+        <article
+          class="review-card"
           data-review-state="ready-verification-rejected"
           data-action="refresh"
           data-busy="false"

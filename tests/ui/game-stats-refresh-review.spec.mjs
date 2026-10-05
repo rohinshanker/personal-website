@@ -94,6 +94,16 @@ const reviewStates = Object.freeze([
     disabled: false,
   },
   {
+    id: "session-expired",
+    message:
+      "Saved on this device. This game's online session expired, so this result can't be published. Start a new game to publish a new result.",
+    action: "refresh",
+    busy: false,
+    cursor: "off",
+    label: "Refresh Minesweeper stats",
+    disabled: false,
+  },
+  {
     id: "ready-verification-rejected",
     message:
       "Local stats are saved, but a result could not pass server verification.",
@@ -241,7 +251,7 @@ for (const viewport of [
       "/docs/validation/assets/game-stats-refresh-review.html"
     );
     await expect(page.locator("h1")).toBeVisible();
-    await expect(page.locator("[data-review-state]")).toHaveCount(16);
+    await expect(page.locator("[data-review-state]")).toHaveCount(17);
     await expect
       .poll(() =>
         page.evaluate(() => ({

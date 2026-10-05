@@ -2,7 +2,7 @@
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 - Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-10-03
+- Last verified: 2026-10-05
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -56,6 +56,33 @@ from Wrangler's successful deployment output. A `workers.dev` URL is normally
 `https://personal-site-game-stats.<workers-dev-subdomain>.workers.dev`, not
 `<account>.workers.dev`; a custom route is also valid. The verified URL above
 is the current endpoint for this site.
+
+## Game session lifetime and reuse
+
+New sessions are limited to 120 per IP-hash per one-hour window. Their lifetime
+is six hours; expiry is inclusive. Browser reuse is limited to unconsumed,
+unexpired sessions for the same game and normalized configuration, including
+pending creation requests. Reuse retains the original server-issued timestamp:
+later attempts inherit time from abandoned attempts for the minimum-duration
+checks. Those checks bound session age, not an independently verified attempt
+clock. The six-hour TTL still bounds reuse; server-verified attempt timing is a
+separate contract in [leaderboard-result-verification.md](leaderboard-result-verification.md).
+Recorded Snake losses consume their proofs because they submit a `gamePlayed` result.
+
+A result reserves its proof before waiting for profile selection. Resetting or
+starting another game cannot abort, reuse or replace that result's proof.
+Changed configurations replace only the unclaimed reusable request. Failed or
+expired slots require a fresh session when a new attempt begins. The browser
+keeps at most one reusable slot per game; queued results own detached proofs.
+
+Expired completions stay local and show the explicit expiry notice in the
+per-game Stats window. The browser neither renews at completion nor sends an
+already-expired proof. Expiry during a failed publication request is classified
+separately from authentication or generic verification rejection. Server
+minimum-duration, signed-proof and single-use checks remain unchanged. See
+[shared-game-layer.md](shared-game-layer.md) and
+[game-stats-refresh-control.md](game-stats-refresh-control.md) for hooks and
+repeatable browser checks.
 
 ## Security Model And Its Limit
 

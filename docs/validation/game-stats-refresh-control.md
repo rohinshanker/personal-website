@@ -2,7 +2,7 @@
 
 - Purpose: Review and regression-test the shared Game Stats refresh, publishing, and Administrator-authentication control.
 - Scope: The status/action row in the Minesweeper, Solitaire, Snake, and Sudoku stats windows.
-- Last verified: 2026-09-30
+- Last verified: 2026-10-05
 
 [Open the complete, responsive Game Stats state review](assets/game-stats-refresh-review.html).
 It shows every exact status/action state, animated and reduced-motion loading
@@ -45,8 +45,17 @@ and uses the bundled Solitaire undo icon.
 | --- | --- | --- |
 | Queued result has no verified session | `Local stats are saved. A result without a verified game session cannot be published.` | Refresh remains available. |
 | Server verification rejects a result | `Local stats are saved, but a result could not pass server verification.` | Refresh remains available. |
+| Session expired before completion or queued publication | `Saved on this device. This game's online session expired, so this result can't be published. Start a new game to publish a new result.` | Refresh remains available; no replacement session or expired event POST. |
 | Game began without a verified session | `Local stats are saved. This result started without a verified game session.` | Refresh remains available. |
 | Administrator sign-in resets local progress | `Local progress was reset. Published and queued leaderboard results remain available.` | Refresh remains available. |
+
+Expiry uses the separate `session-expired` state. Automatic fetching/ready
+updates preserve the notice. A transient automatic failure shows its request
+error, then restores the expiry notice after recovery. Manual Refresh or a new
+publication clears the saved notice. The existing win screen and local
+aggregates remain; no renewal button or extra modal is added. An expired queued
+proof is removed from the publication queue after classification; its locally
+saved result remains.
 
 Canceling Administrator sign-in restores the initiating refresh button when it
 is still visible, otherwise focus moves to another visible refresh action or
@@ -90,7 +99,8 @@ node --test tests/game-stats-refresh-control.test.mjs \
 npx playwright test tests/ui/game-stats-refresh-control.spec.mjs \
   tests/ui/administrator-sign-in.spec.mjs \
   tests/ui/game-stats-refresh-review.spec.mjs \
-  tests/ui/solitaire-publish-flow.spec.mjs
+  tests/ui/solitaire-publish-flow.spec.mjs \
+  tests/ui/game-stats-session-policy.spec.mjs
 ```
 
 The rendered suite covers 375×812 and 1280×800, exact copy, animated/busy

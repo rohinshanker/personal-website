@@ -2,7 +2,11 @@
 
 - Purpose: Generate random Solitaire deals and verify winning paths with a bounded runtime search.
 - Scope: Solitaire deal generation, draw-one unlimited-redeal rules, solver verification, browser interaction, and game-build integrity.
-- Last verified: 2026-10-04
+- Last verified: 2026-10-05
+
+The board is initialized once in the window's `beforeOpen` hook so placement
+measures the populated board. Reopen preserves it; reset deals again. Incremental
+rendering and solve-plan cache contracts are in [shared-game-layer.md](shared-game-layer.md).
 
 ## Guarantee
 
