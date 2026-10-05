@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { homeScriptPath, homeScriptUrl } from "../../helpers/home-scripts.mjs";
+import { servedFile } from "./rendered-site.mjs";
 
 /**
  * Serves one Home script with a transform applied, so a browser test can
@@ -17,8 +18,7 @@ export async function routeHomeScript(page, key, transform) {
       `The browser fixture did not transform ${homeScriptPath(key)}; the code it instruments has moved.`
     );
   }
-  const path = homeScriptPath(key).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  await page.route(new RegExp(`/${path}(?:\\?.*)?$`), (route) =>
+  await page.route(servedFile(homeScriptPath(key)), (route) =>
     route.fulfill({ contentType: "application/javascript", body: routed })
   );
   return routed;

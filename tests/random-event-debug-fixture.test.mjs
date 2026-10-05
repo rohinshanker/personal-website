@@ -8,6 +8,7 @@ import {
   routeProductionDebugFlags,
 } from "./ui/helpers/random-event-debug.mjs";
 import { routeHomeScript } from "./ui/helpers/home-script-routes.mjs";
+import { TEST_SERVER_ORIGIN } from "./ui/helpers/rendered-site.mjs";
 import {
   RANDOM_EVENT_SCRIPT_KEYS,
   readHomeScript,
@@ -58,17 +59,21 @@ test("the browser fixture isolates every production debug event unless explicitl
 
 test("the browser fixture routes the owning event script and rejects stale transforms", async () => {
   let routeHandler;
-  let routePattern;
+  let routesUrl;
   const page = {
-    async route(pattern, handler) {
-      routePattern = pattern;
+    async route(matcher, handler) {
+      routesUrl = (url) => matcher(new URL(url));
       routeHandler = handler;
     },
   };
 
   await routeProductionDebugFlags(page);
-  assert.match("/scripts/home/events/prompts.js?v=test", routePattern);
-  assert.doesNotMatch("/scripts/home/main.js?v=test", routePattern);
+  assert.ok(routesUrl(`${TEST_SERVER_ORIGIN}/scripts/home/events/prompts.js?v=test`));
+  assert.ok(!routesUrl(`${TEST_SERVER_ORIGIN}/scripts/home/main.js?v=test`));
+  assert.ok(
+    !routesUrl("https://assets.example.invalid/scripts/home/events/prompts.js?v=test"),
+    "The fixture must not answer for the script's path on another host"
+  );
 
   let fulfillment;
   await routeHandler({

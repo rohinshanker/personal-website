@@ -1,7 +1,9 @@
 import { expect, test } from "./deterministic.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { consumeDiagnostics, installGameStatsBackend, settleFrames } from "./helpers/rendered-site.mjs";
 
 const API_BASE_URL = "https://game-stats-refresh.test";
+const SIGN_IN_URL = `${API_BASE_URL}/administrator/sign-in`;
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const GAME_STATS_SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
@@ -23,6 +25,12 @@ const REJECTED_EVENT = Object.freeze({
   consoleErrors: ["status of 403 (Forbidden)"],
   errorResponses: [`403 ${API_BASE_URL}/events`],
 });
+
+/**
+ * The line in the sign-in submit handler that drops an answer belonging to an
+ * attempt the visitor has since dismissed.
+ */
+const STALE_ATTEMPT_GUARD = "if (signInAttemptId !== administratorSignInAttemptId) return;";
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
@@ -152,19 +160,18 @@ const installApiHarness = async (
         });
         return;
       }
-      try {
-        await route.fulfill({
-          contentType: "application/json",
-          body: JSON.stringify({
-            ok: true,
-            profile: ADMINISTRATOR_PROFILE,
-            proof: ADMINISTRATOR_PROOF,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      } catch {
-        // Closing the sign-in window intentionally aborts an in-flight request.
-      }
+      const answered = route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          profile: ADMINISTRATOR_PROFILE,
+          proof: ADMINISTRATOR_PROOF,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        }),
+      });
+      // Only a held answer can outlive its request: closing the sign-in window
+      // aborts the fetch, and there is then nothing left to answer.
+      await (gate ? answered.catch(() => undefined) : answered);
       gate?.settled.resolve();
       return;
     }
@@ -198,8 +205,9 @@ const installApiHarness = async (
     holdNextSignIn() {
       const gate = {
         release: createDeferred(),
-        // Resolves once the harness has finished answering, whether the page
-        // took the response or had already abandoned the request.
+        // Resolves once the harness has finished answering. It says nothing
+        // about whether the page was still listening; the request's own
+        // outcome does.
         settled: createDeferred(),
         started: createDeferred(),
       };
@@ -745,37 +753,69 @@ test("Administrator request failure stays retryable and restores refresh focus",
   });
 });
 
-test("closing Administrator sign-in invalidates a delayed successful response", async ({
-  diagnostics,
-  page,
-}) => {
-  await page.setViewportSize(viewports[1]);
-  await installBackendConfig(page);
-  const api = await installApiHarness(page, {
-    requireAdministratorProof: true,
-  });
-  const delayedSignIn = api.holdNextSignIn();
-  const rejectedEvent = api.holdNextEvent();
-  const originalProfile = {
-    id: "player-before-delayed-admin",
-    name: "Existing Player",
-    icon: "assets/app-icons/ico/user_card.ico",
-    rerollCount: 0,
-  };
-  const originalStats = {
+/** Progress a visitor already has, which a discarded sign-in must leave alone. */
+const createSavedProgress = () => ({
+  gameStats: {
     generatedAt: new Date().toISOString(),
     totals: {
       minesweeper: {
         wins: { beginner: 4, intermediate: 0, expert: 0 },
       },
     },
-  };
-  const originalSnakeHighScores = { 16: 99 };
+  },
+  profile: {
+    id: "player-before-delayed-admin",
+    name: "Existing Player",
+    icon: "assets/app-icons/ico/user_card.ico",
+    rerollCount: 0,
+  },
+  snakeHighScores: { 16: 99 },
+});
+
+/** Everything a completed Administrator sign-in writes to browser storage. */
+const readPersistedState = (page) =>
+  page.evaluate(
+    ({
+      administratorProofStorageKey,
+      gameStatsStorageKey,
+      profileStorageKey,
+      queueStorageKey,
+      snakeHighScoreKey,
+    }) => ({
+      gameStats: JSON.parse(localStorage.getItem(gameStatsStorageKey) || "null"),
+      profile: JSON.parse(localStorage.getItem(profileStorageKey) || "null"),
+      proof: sessionStorage.getItem(administratorProofStorageKey),
+      queue: JSON.parse(localStorage.getItem(queueStorageKey) || "null"),
+      snakeHighScores: JSON.parse(localStorage.getItem(snakeHighScoreKey) || "null"),
+    }),
+    {
+      administratorProofStorageKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
+      gameStatsStorageKey: GAME_STATS_STORAGE_KEY,
+      profileStorageKey: PROFILE_STORAGE_KEY,
+      queueStorageKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+      snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
+    }
+  );
+
+/**
+ * Opens Home with a rejected Administrator publish, so the sign-in window is
+ * up and the stats window is waiting on it, then submits credentials.
+ *
+ * @param {import("@playwright/test").Page} page
+ * @param {(api: object) => unknown} beforeLoad setup that must precede navigation.
+ */
+const submitAdministratorSignIn = async (page, beforeLoad) => {
+  await page.setViewportSize(viewports[1]);
+  await installBackendConfig(page);
+  const api = await installApiHarness(page, {
+    requireAdministratorProof: true,
+  });
+  const rejectedEvent = api.holdNextEvent();
+  const saved = createSavedProgress();
+  await beforeLoad(api);
   await preparePage(page, {
-    gameStats: originalStats,
-    profile: originalProfile,
+    ...saved,
     queue: [createQueuedSubmission(ADMINISTRATOR_PROFILE)],
-    snakeHighScores: originalSnakeHighScores,
   });
   await rejectedEvent.started.promise;
   rejectedEvent.release.resolve();
@@ -795,50 +835,170 @@ test("closing Administrator sign-in invalidates a delayed successful response", 
   await page.locator("#administrator-username").fill("test-only-administrator");
   await page.locator("#administrator-password").fill("test-only-password");
   await submit.click();
-  await delayedSignIn.started.promise;
-  await expect(submit).toBeDisabled();
+  return { administratorWindow, api, saved, stats, submit };
+};
 
+const dismissAdministratorSignIn = async (administratorWindow) => {
   await administratorWindow.getByRole("button", { name: "Close" }).click();
   await expect(administratorWindow).toBeHidden();
+};
+
+/** The visitor's own progress is intact and no Administrator proof is held. */
+const expectProgressUntouched = (persisted, saved) => {
+  expect(persisted.profile).toEqual(saved.profile);
+  expect(persisted.gameStats.totals.minesweeper.wins.beginner).toBe(4);
+  expect(persisted.snakeHighScores).toEqual(saved.snakeHighScores);
+  expect(persisted.queue).toHaveLength(1);
+  expect(persisted.proof).toBeNull();
+};
+
+/** The stats window is back to asking for a sign-in it has not received. */
+const expectAuthenticationStillRequired = async (page, { stats, submit }) => {
+  await expect(page.locator("#administrator-alert-window")).toBeHidden();
+  await expect(submit).toBeEnabled();
+  await expectSyncState(stats, {
+    busy: false,
+    buttonDisabled: false,
+    buttonLabel: "Sign in as Administrator to sync Minesweeper stats",
+    message: "Sign in as Administrator to publish your verified Rohin result.",
+  });
+  await expect(stats.button).toHaveAttribute("data-game-stats-action", "authenticate");
+};
+
+test("closing Administrator sign-in cancels the request in flight", async ({
+  diagnostics,
+  page,
+}) => {
+  let delayedSignIn;
+  const signIn = await submitAdministratorSignIn(page, (api) => {
+    delayedSignIn = api.holdNextSignIn();
+  });
+  await delayedSignIn.started.promise;
+  await expect(signIn.submit).toBeDisabled();
+
+  const cancelled = page.waitForEvent("requestfailed", (request) => request.url() === SIGN_IN_URL);
+  await dismissAdministratorSignIn(signIn.administratorWindow);
+  // The Worker had not answered, so the page never sees a response at all.
+  // The answer that does arrive after dismissal is the next case.
+  const abandoned = await cancelled;
+  expect(abandoned.failure().errorText).toBe("net::ERR_ABORTED");
+  expect(await abandoned.response()).toBeNull();
   delayedSignIn.release.resolve();
-  // The late success is answered and the page has finished reacting to it, so
-  // what follows proves the response was discarded rather than merely late.
   await delayedSignIn.settled.promise;
   await settleFrames(page);
 
-  const stateAfterLateSuccess = await page.evaluate(
-    ({
-      administratorProofStorageKey,
-      gameStatsStorageKey,
-      profileStorageKey,
-      snakeHighScoreKey,
-    }) => ({
-      gameStats: JSON.parse(localStorage.getItem(gameStatsStorageKey) || "null"),
-      profile: JSON.parse(localStorage.getItem(profileStorageKey) || "null"),
-      proof: sessionStorage.getItem(administratorProofStorageKey),
-      snakeHighScores: JSON.parse(
-        localStorage.getItem(snakeHighScoreKey) || "null"
-      ),
-    }),
-    {
-      administratorProofStorageKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
-      gameStatsStorageKey: GAME_STATS_STORAGE_KEY,
-      profileStorageKey: PROFILE_STORAGE_KEY,
-      snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
-    }
-  );
-  expect(stateAfterLateSuccess.profile).toEqual(originalProfile);
-  expect(stateAfterLateSuccess.gameStats.totals.minesweeper.wins.beginner).toBe(4);
-  expect(stateAfterLateSuccess.snakeHighScores).toEqual(originalSnakeHighScores);
-  expect(stateAfterLateSuccess.proof).toBeNull();
-  await expect(page.locator("#administrator-alert-window")).toBeHidden();
-  await expect(submit).toBeEnabled();
-  await expect(stats.status).toHaveText(
-    "Sign in as Administrator to publish your verified Rohin result."
-  );
+  expectProgressUntouched(await readPersistedState(page), signIn.saved);
+  await expectAuthenticationStillRequired(page, signIn);
 
-  await stats.button.click();
-  await expect(administratorWindow).toBeVisible();
-  await expect(submit).toBeEnabled();
+  await signIn.stats.button.click();
+  await expect(signIn.administratorWindow).toBeVisible();
+  await expect(signIn.submit).toBeEnabled();
+  expect(signIn.api.signInRequests).toHaveLength(1);
+  consumeDiagnostics(diagnostics, REJECTED_EVENT);
+});
+
+/**
+ * Parks the page's decoded Administrator sign-in answer. The fetch has already
+ * resolved with its real status and the body has been read and parsed; only
+ * the hand-over of the parsed payload waits. `deliver()` releases it and
+ * resolves a task later, once everything the payload wakes has run.
+ *
+ * @param {import("@playwright/test").Page} page
+ */
+const holdDecodedSignIn = (page) =>
+  page.addInitScript((signInUrl) => {
+    const nativeJson = Response.prototype.json;
+    const received = Promise.withResolvers();
+    const released = Promise.withResolvers();
+    const delivered = Promise.withResolvers();
+    Response.prototype.json = function heldJson() {
+      const decoded = nativeJson.call(this);
+      if (this.url !== signInUrl) return decoded;
+      return decoded.then(async (body) => {
+        received.resolve({ body, ok: this.ok, status: this.status });
+        await released.promise;
+        setTimeout(delivered.resolve, 0);
+        return body;
+      });
+    };
+    window.heldSignIn = {
+      received: received.promise,
+      deliver: () => {
+        released.resolve();
+        return delivered.promise;
+      },
+    };
+  }, SIGN_IN_URL);
+
+/**
+ * Lets the Worker answer a sign-in successfully, dismisses the window while the
+ * page is still holding the decoded answer, and only then hands it over.
+ *
+ * @param {import("@playwright/test").Page} page
+ */
+const deliverSignInAfterDismissal = async (page) => {
+  const answered = page.waitForResponse(SIGN_IN_URL);
+  const signIn = await submitAdministratorSignIn(page, () => holdDecodedSignIn(page));
+  const response = await answered;
+  // Receipt: the Worker's 200 reached the page whole and was parsed there.
+  expect(response.status()).toBe(200);
+  await response.finished();
+  expect(response.request().failure()).toBeNull();
+  expect(await page.evaluate(() => window.heldSignIn.received)).toEqual({
+    body: {
+      ok: true,
+      profile: ADMINISTRATOR_PROFILE,
+      proof: ADMINISTRATOR_PROOF,
+      expiresAt: expect.any(String),
+    },
+    ok: true,
+    status: 200,
+  });
+  await expect(signIn.submit).toBeDisabled();
+
+  await dismissAdministratorSignIn(signIn.administratorWindow);
+  const beforeDelivery = await readPersistedState(page);
+  expectProgressUntouched(beforeDelivery, signIn.saved);
+  await page.evaluate(() => window.heldSignIn.deliver());
+  await settleFrames(page);
+  return { ...signIn, beforeDelivery };
+};
+
+test("a successful Administrator answer that lands after dismissal is discarded", async ({
+  diagnostics,
+  page,
+}) => {
+  const signIn = await deliverSignInAfterDismissal(page);
+
+  expect(await readPersistedState(page)).toEqual(signIn.beforeDelivery);
+  await expect(signIn.administratorWindow).toBeHidden();
+  await expectAuthenticationStillRequired(page, signIn);
+  expect(signIn.api.signInRequests).toHaveLength(1);
+  // The protected result was offered once, without a proof, and never again.
+  expect(signIn.api.eventRequests.map((request) => request.authorization)).toEqual([""]);
+  consumeDiagnostics(diagnostics, REJECTED_EVENT);
+});
+
+test("without the stale-attempt guard the same late answer is adopted", async ({
+  diagnostics,
+  page,
+}) => {
+  // Served from memory only. The case above differs from this one by nothing
+  // but the guard, so this is the proof that it reaches the guard at all.
+  await routeHomeScript(page, "gameStats", (source) => {
+    expect(source.split(STALE_ATTEMPT_GUARD)).toHaveLength(2);
+    return source.replace(STALE_ATTEMPT_GUARD, "");
+  });
+  const signIn = await deliverSignInAfterDismissal(page);
+
+  await expect(page.locator("#administrator-alert-window")).toBeVisible();
+  await expect
+    .poll(() => signIn.api.eventRequests.map((request) => request.authorization))
+    .toEqual(["", `Bearer ${ADMINISTRATOR_PROOF}`]);
+  await expect(signIn.stats.status).toHaveText("Global stats are up to date.");
+  const adopted = await readPersistedState(page);
+  expect(adopted.proof).toContain(ADMINISTRATOR_PROOF);
+  expect(adopted.profile).toMatchObject({ id: ADMINISTRATOR_PROFILE.id });
+  expect(adopted.queue).toEqual([]);
   consumeDiagnostics(diagnostics, REJECTED_EVENT);
 });

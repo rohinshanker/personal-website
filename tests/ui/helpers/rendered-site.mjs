@@ -1,10 +1,33 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+
+import { resolveUiTestBaseUrl } from "../server-config.mjs";
 
 /**
  * Shared setup for renders that must look identical on every run: a pinned
  * clock, an offline Game Stats backend, suppressed random events, and clean
  * browser storage.
  */
+
+/**
+ * The one origin the suite serves this checkout on, from the same setting the
+ * Playwright configuration reads.
+ */
+export const TEST_SERVER_ORIGIN = new URL(resolveUiTestBaseUrl()).origin;
+
+/**
+ * Matches one file the test server serves, whatever cache token follows it.
+ * Every local mock is pinned this way, so the same path on any other host is
+ * not answered by the mock and falls through to the hermetic block.
+ *
+ * @param {string} path repository-relative, for example `scripts/home/main.js`.
+ * @returns {(url: URL) => boolean}
+ */
+export const servedFile = (path) => (url) =>
+  url.origin === TEST_SERVER_ORIGIN && url.pathname === `/${path}`;
+
+/** Matches any test-server file whose path fits `pattern`. */
+const servedPath = (pattern) => (url) =>
+  url.origin === TEST_SERVER_ORIGIN && pattern.test(url.pathname);
 
 /** Wednesday, so the Thursday-only Feliz Jueves event never registers. */
 export const FROZEN_INSTANT = new Date("2026-03-04T12:00:00.000Z");
@@ -16,6 +39,8 @@ export const FROZEN_INSTANT = new Date("2026-03-04T12:00:00.000Z");
  */
 export const DETERMINISTIC_RANDOM_DRAW = 0.999999;
 
+const SUDOKU_WORKER_PATH = "scripts/home/sudoku-generator.worker.js";
+
 /**
  * The Sudoku generator runs in its own worker, which an init script cannot
  * reach: a worker gets a fresh realm with its own Math. Without this the
@@ -23,11 +48,21 @@ export const DETERMINISTIC_RANDOM_DRAW = 0.999999;
  * draw pinned that the page uses.
  */
 export const readDeterministicSudokuWorkerSource = async () => {
-  const source = await readFile(
-    new URL("../../../scripts/home/sudoku-generator.worker.js", import.meta.url),
-    "utf8"
-  );
+  const source = await readFile(new URL(`../../../${SUDOKU_WORKER_PATH}`, import.meta.url), "utf8");
   return `Math.random = () => ${DETERMINISTIC_RANDOM_DRAW};\n${source}`;
+};
+
+/**
+ * Serves the Sudoku generator worker with its draw pinned. The shared fixture
+ * installs this on the browser context.
+ *
+ * @param {import("@playwright/test").Page | import("@playwright/test").BrowserContext} target
+ */
+export const installDeterministicSudokuWorker = async (target) => {
+  const source = await readDeterministicSudokuWorkerSource();
+  await target.route(servedFile(SUDOKU_WORKER_PATH), (route) =>
+    route.fulfill({ contentType: "application/javascript", body: source })
+  );
 };
 
 /**
@@ -40,7 +75,7 @@ export const readDeterministicSudokuWorkerSource = async () => {
  */
 export const installDelayedSudokuGeneratorReplies = async (page, delayMs) => {
   const source = await readDeterministicSudokuWorkerSource();
-  await page.route(/\/scripts\/home\/sudoku-generator\.worker\.js(?:\?.*)?$/, (route) =>
+  await page.route(servedFile(SUDOKU_WORKER_PATH), (route) =>
     route.fulfill({
       contentType: "application/javascript",
       body:
@@ -81,12 +116,12 @@ export const breakpointPair = (label, { below, above, height = 900 }) =>
     Object.freeze({ name: `above ${label}`, width: above, height }),
   ]);
 
+const GAME_STATS_BACKEND_PATH = "scripts/home/game-stats-backend.js";
+
 const generatedBackendSource = await readFile(
-  new URL("../../../scripts/home/game-stats-backend.js", import.meta.url),
+  new URL(`../../../${GAME_STATS_BACKEND_PATH}`, import.meta.url),
   "utf8"
 );
-
-const GAME_STATS_BACKEND_ROUTE = /\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/;
 
 /** The build version the generated config carries. */
 export const PRODUCTION_BUILD_VERSION =
@@ -113,7 +148,7 @@ export const installGameStatsBackend = async (
   const source = generatedBackendSource
     .replace(/apiBaseUrl:\s*"[^"]*"/, `apiBaseUrl: ${JSON.stringify(apiBaseUrl)}`)
     .replace(/buildVersion:\s*"[^"]*"/, `buildVersion: ${JSON.stringify(buildVersion)}`);
-  await target.route(GAME_STATS_BACKEND_ROUTE, (route) =>
+  await target.route(servedFile(GAME_STATS_BACKEND_PATH), (route) =>
     route.fulfill({ contentType: "application/javascript", body: source })
   );
 };
@@ -128,70 +163,72 @@ const stubVideo = await readFile(
 );
 
 /**
- * Everything a page is allowed to reach. The UI suite serves the checkout over
- * loopback, so any other origin is either the live Game Stats Worker or a
- * third-party asset, and neither belongs in a hermetic test.
- */
-const LOOPBACK_REQUEST = /^https?:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?(?:\/|$)/;
-
-/**
- * The files that can make a browser load something from another origin: the
- * two shipped pages, the modeling route, and the feature scripts that build
- * gallery sources from a base URL.
- */
-const EMBEDDING_SOURCES = Object.freeze([
-  "index.html",
-  "home.html",
-  "modeling/index.html",
-  "modeling/script.js",
-  ...(await readdir(new URL("../../../scripts/home/features/", import.meta.url)))
-    .filter((name) => name.endsWith(".js"))
-    .map((name) => `scripts/home/features/${name}`),
-]);
-
-/** `src`, `data-src`, and `poster` are the attributes a browser fetches. */
-const LOADED_ATTRIBUTE_URL = /(?:\bdata-src|\bsrc|\bposter)\s*=\s*"(https?:\/\/[^"]+)"/g;
-
-/** An absolute URL in a script is a gallery source or the base one is built from. */
-const SCRIPT_LITERAL_URL = /["'`](https?:\/\/[^"'`\s${}]+)/g;
-
-const readEmbeddedRemoteRoots = async () => {
-  const roots = new Set();
-  await Promise.all(
-    EMBEDDING_SOURCES.map(async (path) => {
-      const source = await readFile(new URL(`../../../${path}`, import.meta.url), "utf8");
-      const pattern = path.endsWith(".js") ? SCRIPT_LITERAL_URL : LOADED_ATTRIBUTE_URL;
-      for (const [, url] of source.matchAll(pattern)) {
-        // Markup escapes the query separator; the browser asks for the decoded form.
-        roots.add(url.replaceAll("&amp;", "&").split("#")[0]);
-      }
-    })
-  );
-  return Object.freeze([...roots]);
-};
-
-/**
- * Every remote address the shipped source can ask a browser to load, read out
- * of that source rather than listed by hand, so a new embed is covered the day
- * it lands and nothing else ever is. Gallery sources are built by appending to
- * a base URL the script declares, so each entry is matched as a path root.
- */
-const EMBEDDED_REMOTE_ROOTS = await readEmbeddedRemoteRoots();
-
-const isEmbeddedRemoteUrl = (url) =>
-  EMBEDDED_REMOTE_ROOTS.some((root) => url.split("#")[0].startsWith(root));
-
-/**
- * Home embeds portfolio photos, clips, and an iframe from origins the suite
- * does not control. Answering the ones the source names keeps the layout they
- * size while the test stays offline; the request never leaves the machine
- * either way, and an address the source does not name is not answered at all.
+ * A local stand-in for each kind of remote embed: enough for the element to
+ * load and keep the layout it sizes while the test stays offline.
  */
 const OFFLINE_STUB = Object.freeze({
   image: Object.freeze({ body: ONE_PIXEL_PNG, contentType: "image/png" }),
   media: Object.freeze({ body: stubVideo, contentType: "video/mp4" }),
   document: Object.freeze({ body: "<!doctype html><title>stub</title>", contentType: "text/html" }),
 });
+
+/**
+ * Every remote address the shipped pages embed, as origin, then exact path,
+ * then the kind of request the embedding element makes. Written by hand from
+ * the Home markup and the gallery and calendar sources. Nothing is approved by
+ * prefix, origin, or resource type, so a new embed is blocked and reported
+ * until it is added here on purpose.
+ */
+export const KNOWN_REMOTE_EMBEDS = Object.freeze({
+  "https://rohinshanker.github.io": Object.freeze({
+    "/pulse-oximeter/site-assets/demo-photo.jpg": "image",
+    "/pulse-oximeter/site-assets/breadboard-1.jpg": "image",
+    "/pulse-oximeter/site-assets/breadboard-2.jpg": "image",
+    "/pulse-oximeter/site-assets/breadboard-3.jpg": "image",
+    "/pulse-oximeter/course%20resources/pulse%20ox%20slides.pdf": "document",
+    "/EE-122-simulation/analysis/plots/common_links/throughput_by_category_algorithm.png": "image",
+    "/EE-122-simulation/analysis/plots/delay/throughput_vs_delay_ms.png": "image",
+    "/EE-122-simulation/analysis/plots/loss/retransmits_per_second_vs_loss_pct.png": "image",
+    "/EE-122-simulation/analysis/plots/summary/utilization_by_condition_heatmap.png": "image",
+    "/EE-122-simulation/project-resources/extended-abstract.pdf": "document",
+    "/EE-122-simulation/project-resources/ee122-presentation.pdf": "document",
+    "/drone-navigation-project/assets/docs/EECS%20C106A%20Final%20Project%20-%20Group%2044%20-%20Google%20Slides.pdf":
+      "document",
+    "/drone-navigation-project/assets/videos/mujocosimulator.mp4": "media",
+    "/drone-navigation-project/assets/videos/livedemo.mp4": "media",
+  }),
+  "https://www.youtube.com": Object.freeze({ "/embed/rduOw_oshqM": "document" }),
+  "https://imgix.bustle.com": Object.freeze({
+    "/inverse/8d/d9/86/e4/92b5/4dec/b80e/3402288d9a18/giphy-9gif.gif": "media",
+  }),
+  "https://media.giphy.com": Object.freeze({
+    "/media/v1.Y2lkPTc5MGI3NjExMDVnNmphdHYxbTJoMDJjNXNmZHg3eW5pcHF1MDNkMWVjOGw3dmpocyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Ph5WvQ9jJKJGOVLpgD/giphy.gif":
+      "image",
+  }),
+  "https://media3.giphy.com": Object.freeze({
+    "/media/v1.Y2lkPTc5MGI3NjExZjRoeGk1ZW51MGxuYjd1aDQxb3RlMmZodTBnOWlsYTA1cTFuZGZoOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XGLBlMvhA0PO9MEDmv/giphy.gif":
+      "image",
+  }),
+  "https://media4.giphy.com": Object.freeze({
+    "/media/v1.Y2lkPTc5MGI3NjExbXRreml3ZDZodnJwZmVkYmIyaHY4bjBoOHkyc2ozdDR0cTJjZHpnOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/fJzFpWBj82lk1tW5RY/giphy.gif":
+      "image",
+  }),
+});
+
+/**
+ * The local stub that answers a request, or `undefined` when the request is
+ * not a known embed loaded the way the page embeds it. The query string and
+ * fragment only tune the remote player, so they do not take part in the match.
+ *
+ * @param {string} url the address the browser asked for.
+ * @param {string} resourceType Playwright's `request.resourceType()`.
+ * @returns {{body: string | Buffer, contentType: string} | undefined}
+ */
+export const remoteEmbedStub = (url, resourceType) => {
+  const { origin, pathname } = new URL(url);
+  const kind = KNOWN_REMOTE_EMBEDS[origin]?.[pathname];
+  return kind === resourceType ? OFFLINE_STUB[kind] : undefined;
+};
 
 /**
  * The Sky name generator definition Home downloads to seed leaderboard profile
@@ -242,6 +279,30 @@ consonants
   y
   z ^0.5`;
 
+/** The one download Home makes for profile names: the Sky generator's lists. */
+const SKY_NAME_GENERATOR_URL = new URL(
+  "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true"
+);
+
+const sortedQuery = (url) => {
+  const query = new URLSearchParams(url.search);
+  query.sort();
+  return query.toString();
+};
+
+/**
+ * True only for the Sky generator download itself: that origin, that path, and
+ * those parameters in any order. Another generator, or a neighbouring path on
+ * the same host, is a different request and is not answered for it.
+ *
+ * @param {URL} url
+ * @returns {boolean}
+ */
+export const isSkyNameGeneratorRequest = (url) =>
+  url.origin === SKY_NAME_GENERATOR_URL.origin &&
+  url.pathname === SKY_NAME_GENERATOR_URL.pathname &&
+  sortedQuery(url) === sortedQuery(SKY_NAME_GENERATOR_URL);
+
 /**
  * Answers the Sky name generator download with a definition the page can parse.
  *
@@ -249,18 +310,17 @@ consonants
  * @param {string} [definition]
  */
 export const installSkyNameGenerator = (target, definition = SKY_NAME_GENERATOR_DEFINITION) =>
-  target.route(/https:\/\/perchance\.org\/api\/downloadGenerator/, (route) =>
+  target.route(isSkyNameGeneratorRequest, (route) =>
     route.fulfill({ body: definition, contentType: "text/plain" })
   );
 
 /**
- * Severs the browser context from the network. A remote address the shipped
- * source embeds is answered with a local stub of the same kind; every other
- * outbound request — the live Game Stats Worker above all — is aborted, which
+ * Severs the browser context from everything but the test server. A known
+ * remote embed is answered with a local stub of its kind; every other request
+ * that would leave the test server — the live Game Stats Worker above all, but
+ * equally an unlisted image or another loopback port — is aborted, which
  * surfaces in the diagnostics record as a failed request and fails the test.
- * Stubbing by resource type alone would quietly succeed for an accidental new
- * remote image, so the allowlist decides first and the type only chooses the
- * body. A spec that needs a specific external response routes that URL itself.
+ * A spec that needs a specific external response routes that URL itself.
  *
  * Registered before any other route, so every later route — context or page,
  * fixture or spec — takes precedence over it.
@@ -269,11 +329,9 @@ export const installSkyNameGenerator = (target, definition = SKY_NAME_GENERATOR_
  */
 export const installHermeticNetwork = (context) =>
   context.route(
-    (url) => !LOOPBACK_REQUEST.test(url.href),
+    (url) => url.origin !== TEST_SERVER_ORIGIN,
     (route, request) => {
-      const stub = isEmbeddedRemoteUrl(request.url())
-        ? OFFLINE_STUB[request.resourceType()]
-        : undefined;
+      const stub = remoteEmbedStub(request.url(), request.resourceType());
       return stub ? route.fulfill(stub) : route.abort("blockedbyclient");
     }
   );
@@ -286,10 +344,10 @@ export const installHermeticNetwork = (context) =>
  * @param {import("@playwright/test").Page | import("@playwright/test").BrowserContext} target
  */
 export const installStubbedModelingMedia = async (target) => {
-  await target.route(/\/assets\/modeling\/.*\.(?:mp4|mov|webm)(?:\?.*)?$/i, (route) =>
+  await target.route(servedPath(/^\/assets\/modeling\/.*\.(?:mp4|mov|webm)$/i), (route) =>
     route.fulfill({ body: stubVideo, contentType: "video/mp4" })
   );
-  await target.route(/\/assets\/modeling\/.*\.(?:jpe?g|png)(?:\?.*)?$/i, (route) =>
+  await target.route(servedPath(/^\/assets\/modeling\/.*\.(?:jpe?g|png)$/i), (route) =>
     route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" })
   );
 };
@@ -302,34 +360,35 @@ export const installStubbedModelingMedia = async (target) => {
 const PAGE_CANCELLED = "net::ERR_ABORTED";
 
 /**
- * Attaches the listeners once per page, so a spec that navigates repeatedly
- * does not accumulate duplicates. Pass an existing record to fold another page
- * — a popup, say — into the same collections.
+ * Records what every page in the context reports, from before the first one
+ * navigates. The listeners sit on the context because a page only receives a
+ * network event once Playwright has announced that page, and a popup's first
+ * navigation is answered or refused before then. One listener per channel also
+ * records each event once, however many pages are open or times they navigate.
  *
- * @param {import("@playwright/test").Page} page
- * @param {{consoleErrors: string[], runtimeErrors: string[], requestFailures: string[], errorResponses: string[]}} [into]
+ * @param {import("@playwright/test").BrowserContext} context
  * @returns {{consoleErrors: string[], runtimeErrors: string[], requestFailures: string[], errorResponses: string[]}}
- *   live-updating collections of everything the page reported.
+ *   live-updating collections of everything the context's pages reported.
  */
-export const collectRuntimeDiagnostics = (page, into) => {
-  const diagnostics = into ?? {
+export const collectRuntimeDiagnostics = (context) => {
+  const diagnostics = {
     consoleErrors: [],
     runtimeErrors: [],
     requestFailures: [],
     errorResponses: [],
   };
-  page.on("console", (message) => {
+  context.on("console", (message) => {
     if (message.type() === "error") diagnostics.consoleErrors.push(message.text());
   });
-  page.on("pageerror", (error) => diagnostics.runtimeErrors.push(error.message));
-  page.on("requestfailed", (request) => {
+  context.on("weberror", (webError) => diagnostics.runtimeErrors.push(webError.error().message));
+  context.on("requestfailed", (request) => {
     const errorText = request.failure()?.errorText ?? "unknown";
     if (errorText === PAGE_CANCELLED) return;
     diagnostics.requestFailures.push(
       `${request.method()} ${request.url()} (${errorText})`
     );
   });
-  page.on("response", (response) => {
+  context.on("response", (response) => {
     if (response.status() < 400) return;
     diagnostics.errorResponses.push(`${response.status()} ${response.url()}`);
   });
