@@ -11,11 +11,11 @@ import {
 
 const installSolitaireVictoryBridge = async (page) => {
   await page.addInitScript(() => {
-    HTMLMediaElement.prototype.play = function playForTest() {
-      Object.defineProperty(this, "paused", { configurable: true, value: false });
-      return Promise.resolve();
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function playMutedForTest() {
+      this.muted = true;
+      return play.call(this);
     };
-    HTMLMediaElement.prototype.pause = function pauseForTest() {};
   });
   await routeHomeScript(page, "solitaire", (source) =>
     source.replace(
@@ -24,16 +24,19 @@ const installSolitaireVictoryBridge = async (page) => {
 window.__selectedGameBehavior = Object.freeze({
   presentSolitaireVictory: () => {
     solState.presentation = { visualEffects: false };
+    solState.stock = [];
+    solState.waste = [];
+    solState.tableau = solState.tableau.map(() => []);
     solSuitOrder.forEach((suit) => {
       solState.foundations[suit] = Array.from({ length: 13 }, (_, index) => ({
+        id: suit + "-" + (index + 1),
         suit,
         rank: index + 1,
         faceUp: true,
       }));
     });
+    solRender();
     solCheckWin();
-    solVictoryCanvas?.classList.add("is-hidden");
-    solVictoryVideo?.classList.add("is-visible-fallback");
     return { won: solState.won };
   },
 });
@@ -120,6 +123,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await minesweeper.locator('[data-game-stats-open="minesweeper"]').click();
     const stats = page.locator("#game-stats-window-minesweeper");
     await expect(stats).toBeVisible();
+    await expect(stats).not.toHaveClass(/is-opening/);
     const statsGeometry = await stats.evaluate(containedGeometry);
     expect(statsGeometry.documentOverflows).toBe(false);
     expect(statsGeometry.left).toBeGreaterThanOrEqual(0);
@@ -143,6 +147,25 @@ for (const viewport of REVIEW_VIEWPORTS) {
     const fallbackVideo = overlay.locator("#sol-victory-video");
     await expect(overlay).toHaveClass(/is-showing/);
     await expect(overlay).toHaveAttribute("aria-hidden", "false");
+    await expect.poll(() => fallbackVideo.evaluate((video) => video.readyState)).toBeGreaterThanOrEqual(2);
+    await fallbackVideo.evaluate(async (video) => {
+      video.pause();
+      await new Promise((resolve) => {
+        video.addEventListener("seeked", resolve, { once: true });
+        video.currentTime = 2;
+      });
+    });
+    const canvas = overlay.locator("#sol-victory-canvas");
+    await expect(canvas).toBeVisible();
+    await expect.poll(() => canvas.evaluate((element) => {
+      if (!element.width || !element.height) return false;
+      const pixels = element.getContext("2d").getImageData(0, 0, element.width, element.height).data;
+      return pixels.some((value, index) => index % 4 === 3 && value > 0);
+    })).toBe(true);
+    // Exercise the explicit video fallback's geometry as well as the real
+    // canvas frame; the decoded, paused clip provides a stable visible frame.
+    await canvas.evaluate((element) => element.classList.add("is-hidden"));
+    await fallbackVideo.evaluate((element) => element.classList.add("is-visible-fallback"));
     await expect(fallbackVideo).toBeVisible();
     await settleRender(page);
     const victoryGeometry = await solitaire.evaluate((windowElement) => {
@@ -173,6 +196,11 @@ for (const viewport of REVIEW_VIEWPORTS) {
     expect(victoryGeometry.mediaHeight).toBeLessThanOrEqual(
       victoryGeometry.viewportHeight * 0.27 + 1
     );
+
+    await canvas.evaluate((element) => element.classList.remove("is-hidden"));
+    await fallbackVideo.evaluate((element) => element.classList.remove("is-visible-fallback"));
+    await expect(canvas).toBeVisible();
+    await settleRender(page);
 
     const screenshotPath = testInfo.outputPath(
       `selected-game-behavior-${viewport.width}x${viewport.height}.png`
