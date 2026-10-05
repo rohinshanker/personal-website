@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-10-03
+- Last verified: 2026-10-04
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -148,19 +148,24 @@ All three workflows in `.github/workflows/` hold to one standard, and
 `tests/game-stats-deployment.test.mjs` fails the suite when a new or edited
 workflow departs from it:
 
-- Every `uses:` reference is pinned to a full 40-character commit SHA, with a
+- External `uses:` references are pinned to a full 40-character commit SHA, with a
   comment directly above naming the action and its released version. All three
-  files share one `actions/checkout` pin and one `actions/setup-node` pin.
+  files share one `actions/checkout` pin and one `actions/setup-node` pin. The
+  local reusable browser workflow is loaded from the caller's exact commit.
 - `permissions` defaults to `contents: read`; a job widens it only for itself.
 - Every workflow declares a `concurrency` group keyed on `github.ref` with
-  `cancel-in-progress: true`, and every job sets `timeout-minutes`.
+  `cancel-in-progress: true`. Every executable job sets `timeout-minutes`; a
+  reusable-workflow caller inherits its callee's bounded jobs.
 - Every checkout sets `persist-credentials: false`, and every `setup-node` runs
   Node 24.
 - `pull_request_target` appears nowhere.
-- Triggers are `pull_request` plus `push` restricted to `main`, so a pull
-  request branch runs each gate once rather than on both events.
+- Entry workflows use `pull_request` plus `push` restricted to `main`. The
+  browser workflow uses only `workflow_call` and is called once by the release
+  workflow, so a pull request branch runs each gate once.
 
-Each gate runs once per push. The secret scan belongs to `secret-guard.yml` as
+Both Worker and Pages deployment wait for fast Node, full slow Node, all three
+no-retry browser shards, and pinned visual checks. Preserve Worker-before-Pages
+release ordering. Each gate runs once per push. The secret scan belongs to `secret-guard.yml` as
 the script plus gitleaks; `tests/no-secrets.test.mjs` re-scans the same tree and
 so stays in `npm test` alone. The Chromium download is cached on
 `package-lock.json`, which pins the Playwright version; because that cache holds

@@ -2,7 +2,7 @@
 
 - Purpose: Run and maintain browser screenshot baselines and WCAG scans.
 - Scope: Browser test projects, isolated containers, fixtures, and known accessibility limitations.
-- Last verified: 2026-10-03
+- Last verified: 2026-10-04
 
 ## Playwright projects
 
@@ -23,6 +23,20 @@ then run the full `ui` project plus `npm run test:visual` before handing off.
 `tests/ui/helpers/rendered-site.mjs` supplies the deterministic setup every new
 spec should reuse: a fixed clock, an offline Game Stats backend, suppressed
 random events, cleared storage, and a decoded-render wait.
+
+## CI release gate
+
+`ui-layout.yml` is a reusable workflow called once by the release workflow at
+its own commit. Three UI shards run with two workers each and zero retries;
+all shards continue after a peer fails so their diagnostics remain available.
+The visual job uses the pinned ARM container. Both Worker and Pages releases
+wait for browser/visual success as well as the fast and full slow Node tiers.
+
+CI uploads per-shard traces, failure media, and HTML reports. Reproduce a shard
+with `npm run test:ui -- --shard=1/3 --workers=2`, changing the shard number and
+giving concurrent local runs separate ports/output directories. The four
+expected-failure diagnostic probes are deliberate tests of the failure gate,
+not application failures.
 
 ## Server port and artifact directory
 
@@ -195,7 +209,7 @@ violation:
 
 ## Runtime diagnostics
 
-`tests/ui/deterministic.mjs` is the fixture the new specs import. It attaches
+`tests/ui/deterministic.mjs` is the fixture every spec imports. It attaches
 console, `pageerror`, `requestfailed`, and response listeners once per page and
 **fails the test afterwards** if anything was reported — collecting diagnostics
 without asserting on them lets a silent page error pass a green suite.

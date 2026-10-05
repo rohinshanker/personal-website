@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-24
 - Updated: 2026-10-04
-- Current State: Selected for the next long-form task. Preparation is active on canonical `main` at `08a5b00`; implementation has not started. Owner chose browser-test gating for both site and Worker deployment and the recommended behavior-test conversion group (Game Stats, Administrator sign-in, Minesweeper, Solitaire victory). The Home module split has landed, so use the actual owning scripts and current fixtures rather than the historical `main.js` locations below. PR triggers and Node 24 alignment are already fixed; the separate linter decision does not block this ticket.
+- Current State: Selected for the next long-form task. Implementation is active on canonical `main`; CI/fast-tier slice committed as `0257815`. Owner chose browser-test gating for both site and Worker deployment and the recommended behavior-test conversion group (Game Stats, Administrator sign-in, Minesweeper, Solitaire victory). The Home module split has landed, so use the actual owning scripts and current fixtures rather than the historical `main.js` locations below. PR triggers and Node 24 alignment are already fixed; the separate linter decision does not block this ticket.
 - Verification: `npm test` under 10 s locally with the slow tier moved to `npm run test:slow`; Browser UI workflow green with `retries: 0` on three consecutive `main` pushes; `tests/game-stats-deployment.test.mjs` workflow assertions updated; a test that asserts every `tests/ui/*.spec.mjs` imports the shared fixture rather than `@playwright/test` directly.
 - Cleanup: Rewrite the inventory, snapshot, and backlog sections of `docs/validation/test-suite.md` and the CI section of `docs/validation/browser-visual-accessibility.md`, then delete this ticket and its index row.
 
@@ -14,6 +14,8 @@
 - Decision (2026-10-04): Convert Game Stats, Administrator sign-in, Minesweeper, and Solitaire victory behavior checks. Keep meaningful copy, asset, wiring, and generated-reference invariants as literal checks. The separate linter decision remains outside scope.
 - Preserve the complete 500-deal corpus in `test:slow` and CI; keep bounded representative coverage in the fast suite.
 - Baseline at `08a5b00`: `npm test` passed 569/569 in 67.872 seconds. Current inventory: 84 Node files, 64 browser specs; 18 direct Playwright imports, 29 base-fixture imports, 17 diagnostic-fixture imports, 25 explicit waits, and 144 screenshot calls. These supersede the historical counts below.
+- Coordination: DEM-213 owns selected Node behavior conversions and new game browser specs; DEM-214 owns existing browser specs and shared fixtures; DEM-215 reviews `f941bac..0257815` read-only. Writers use separate project-linked worktrees; the interactive session owns integration and documentation.
+- Current validation: fast suite 570/570 in 3.419 s; intact slow corpus 4/4 in 70.388 s; workflow contracts 45/45; unmodified Home boot and diagnostic probes 11/11 with two workers. Integrity and global ticket-context checks pass. Full integrated browser, visual, and review gates remain required. Three consecutive remote `main` pushes have not been observed.
 - Reassess the historical backlog against current code. The Home script split, script-owner fixture routing, cache-token parity guard, Node 24, and main-only push triggers already landed; do not repeat completed work.
 
 ## Backlog status as of 2026-09-24 (`docs/validation/test-suite.md` items)
