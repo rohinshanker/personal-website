@@ -85,25 +85,25 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await expect.poll(() => fallbackVideo.evaluate((video) => video.readyState)).toBeGreaterThanOrEqual(2);
     // The static test server does not support range seeking. Wait for an
     // actually presented frame while playing, then pause that decoded frame.
-    const presentedTime = await fallbackVideo.evaluate(async (video) => {
+    await fallbackVideo.evaluate(async (video) => {
       video.currentTime = 0;
-      const frame = new Promise((resolve) => {
-        const observe = (_time, metadata) => {
-          if (metadata.mediaTime >= 2) {
-            video.pause();
-            window.__selectedGameBehavior.drawVictoryFrame();
-            resolve(metadata.mediaTime);
-          } else {
-            video.requestVideoFrameCallback(observe);
-          }
-        };
-        video.requestVideoFrameCallback(observe);
-      });
+      const observe = (_time, metadata) => {
+        video.dataset.presentedTime = String(metadata.mediaTime);
+        if (metadata.mediaTime >= 2) {
+          video.pause();
+          window.__selectedGameBehavior.drawVictoryFrame();
+        } else {
+          video.requestVideoFrameCallback(observe);
+        }
+      };
+      video.requestVideoFrameCallback(observe);
       await video.play();
-      return frame;
     });
-    expect(presentedTime).toBeGreaterThanOrEqual(2);
-    expect(presentedTime).toBeLessThan(3);
+    await expect.poll(
+      () => fallbackVideo.evaluate((video) => Number(video.dataset.presentedTime ?? -1)),
+      { message: "Victory clip must present and pause a decoded frame after two seconds" }
+    ).toBeGreaterThanOrEqual(2);
+    expect(await fallbackVideo.evaluate((video) => Number(video.dataset.presentedTime))).toBeLessThan(3);
     const canvas = overlay.locator("#sol-victory-canvas");
     await expect(canvas).toBeVisible();
     await expect.poll(() => canvas.evaluate((element) => {
