@@ -62,7 +62,7 @@ const expectPromptInsideViewport = async (page, viewport) => {
 
 test("opening Modeling shows the new-tab prompt above the window at every review viewport", async ({
   page,
-}, testInfo) => {
+}) => {
   for (const viewport of REVIEW_VIEWPORTS) {
     await test.step(viewport.name, async () => {
       await openHome(page, viewport);
@@ -82,9 +82,6 @@ test("opening Modeling shows the new-tab prompt above the window at every review
       await expect(page.locator("#modeling-launch-error")).toBeHidden();
       expect(await zIndex(prompt(page))).toBeGreaterThan(await zIndex(modelingWindow(page)));
       await expectPromptInsideViewport(page, viewport);
-      await page.screenshot({
-        path: testInfo.outputPath(`modeling-launch-${viewport.name}.png`),
-      });
 
       await no(page).press("Enter");
       await expect(prompt(page)).toBeHidden();

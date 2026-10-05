@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { settleFrames } from "./helpers/rendered-site.mjs";
 
 test.setTimeout(180_000);
 
@@ -82,15 +82,6 @@ const expectedCarouselImages = [
   },
 ];
 
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
-
 const prepareAboutPage = async (page, { reducedMotion = "reduce" } = {}) => {
   await page.emulateMedia({ reducedMotion });
   await page.clock.setFixedTime(new Date("2026-07-27T12:00:00Z"));
@@ -99,8 +90,6 @@ const prepareAboutPage = async (page, { reducedMotion = "reduce" } = {}) => {
     localStorage.clear();
     sessionStorage.clear();
   });
-  await routeProductionDebugFlags(page);
-  await disableRemoteGameStats(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
 };
 
@@ -346,14 +335,7 @@ const aboutMetrics = (page) =>
     };
   });
 
-test("About Me is complete, scrollable, and responsive", async ({ page }, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
+test("About Me is complete, scrollable, and responsive", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await prepareAboutPage(page);
 
@@ -427,9 +409,6 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
     });
 
   const baselineCarousel = await readCarouselGeometry();
-  await page.locator(".about-carousel").screenshot({
-    path: testInfo.outputPath("about-carousel-01.png"),
-  });
   for (let index = 1; index < expectedCarouselImages.length; index += 1) {
     const item = expectedCarouselImages[index];
     await page.locator("#about-carousel-next").click();
@@ -472,11 +451,6 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
     expect(geometry.objectFit).toBe("contain");
     expect(geometry.naturalWidth).toBeGreaterThan(0);
     expect(geometry.naturalHeight).toBeGreaterThan(0);
-    await page.locator(".about-carousel").screenshot({
-      path: testInfo.outputPath(
-        `about-carousel-${String(index + 1).padStart(2, "0")}.png`
-      ),
-    });
   }
 
   await page.locator("#about-carousel-next").click();
@@ -539,9 +513,6 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
   await expect
     .poll(() => degreeList.evaluate((element) => element.scrollTop))
     .toBeGreaterThan(0);
-  await page.locator(".about-intro-grid").screenshot({
-    path: testInfo.outputPath("about-degree-icons-bottom.png"),
-  });
   await degreeList.evaluate((element) => {
     element.scrollTop = 0;
   });
@@ -655,7 +626,6 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
   expect(settledSocialsBounds.bottom).toBeLessThanOrEqual(
     settledSocialsBounds.taskbarTop
   );
-  await page.screenshot({ path: testInfo.outputPath("about-socials-window-open.png") });
   await socialsWindow.getByRole("button", { name: "Close" }).click();
   await expect(socialsWindow).toBeHidden();
 
@@ -849,21 +819,12 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
         .poll(() => aboutBody.evaluate((element) => element.scrollTop))
         .toBeLessThanOrEqual(10);
       await expect(page.locator(".about-title")).toBeInViewport();
-      await page.screenshot({
-        path: testInfo.outputPath(`about-me-${viewport.name}-top.png`),
-      });
-      await page.locator(".about-socials-section").screenshot({
-        path: testInfo.outputPath(`about-social-grid-${viewport.name}.png`),
-      });
 
       await aboutBody.focus();
       await aboutBody.press("End");
       await expect.poll(() => aboutBody.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
       await expect(page.locator(".about-signoff")).toBeInViewport();
 
-      await page.screenshot({
-        path: testInfo.outputPath(`about-me-${viewport.name}.png`),
-      });
       await page.evaluate(() => {
         document.activeElement?.blur();
         document.querySelector("#about-window .about-body").scrollTop = 0;
@@ -871,20 +832,11 @@ test("About Me is complete, scrollable, and responsive", async ({ page }, testIn
     });
   }
 
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });
 
 test("About Me keeps its Close button reachable in compact phone viewports", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
+}) => {
   const compactViewports = [
     { width: 320, height: 568, name: "small-mobile" },
     { width: 375, height: 500, name: "short-mobile" },
@@ -940,9 +892,6 @@ test("About Me keeps its Close button reachable in compact phone viewports", asy
       }
 
       if (viewport.name === "small-mobile" || viewport.name === "short-landscape") {
-        await page.screenshot({
-          path: testInfo.outputPath(`about-compact-${viewport.name}-top.png`),
-        });
       }
 
       await aboutBody.focus();
@@ -955,9 +904,6 @@ test("About Me keeps its Close button reachable in compact phone viewports", asy
       expect(bottomMetrics.closeHitTarget).toBe(true);
 
       if (viewport.name === "small-mobile" || viewport.name === "short-landscape") {
-        await page.screenshot({
-          path: testInfo.outputPath(`about-compact-${viewport.name}-bottom.png`),
-        });
       }
 
       await closeButton.click();
@@ -972,20 +918,11 @@ test("About Me keeps its Close button reachable in compact phone viewports", asy
     });
   }
 
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });
 
 test("About degree marquee moves only overflowing field lines with one-second endpoint dwells", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await prepareAboutPage(page, { reducedMotion: "no-preference" });
 
@@ -1026,7 +963,9 @@ test("About degree marquee moves only overflowing field lines with one-second en
     const pausedTime = await track.evaluate(
       (element) => Number(element.getAnimations()[0].currentTime)
     );
-    await page.waitForTimeout(120);
+    // A running animation advances every frame, so several frames is the
+    // window in which a pause that did not hold would show itself.
+    await settleFrames(page, 10);
     const stillPausedTime = await track.evaluate(
       (element) => Number(element.getAnimations()[0].currentTime)
     );
@@ -1079,9 +1018,6 @@ test("About degree marquee moves only overflowing field lines with one-second en
   expect(timing.translations[2]).toBeCloseTo(-timing.distance, 3);
   expect(timing.translations[3]).toBeCloseTo(-timing.distance, 3);
   expect(timing.translations[4]).toBeCloseTo(0, 3);
-  await page.locator(".about-degree-card").nth(1).screenshot({
-    path: testInfo.outputPath("about-degree-marquee-end.png"),
-  });
 
   await eecsField.focus();
   await expect.poll(() => eecsTrack.evaluate((track) => track.getAnimations().length)).toBe(0);
@@ -1124,20 +1060,11 @@ test("About degree marquee moves only overflowing field lines with one-second en
     "Certificate",
   ]);
 
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });
 
 test("About Education list keeps a stable gutter and a whole heading at every rest", async ({
   page,
 }) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
   await prepareAboutPage(page);
   const degreeList = page.locator(".about-degrees-list");
 
@@ -1238,18 +1165,9 @@ test("About Education list keeps a stable gutter and a whole heading at every re
     expect(sweep.positions[0].pinnedText).toBe("Yale University (2026-2027)");
   }
 
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });
 
 test("About degree cards scroll without growing past the photo", async ({ page }) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
   await page.setViewportSize({ width: 1280, height: 800 });
   await prepareAboutPage(page);
 
@@ -1295,6 +1213,4 @@ test("About degree cards scroll without growing past the photo", async ({ page }
     });
   });
   expect(horizontallyContained).toBe(true);
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });

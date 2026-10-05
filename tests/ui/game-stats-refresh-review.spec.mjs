@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 
 const reviewStates = Object.freeze([
   {
@@ -235,7 +235,7 @@ for (const viewport of [
 ]) {
   test(`review page has no horizontal overflow at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await page.setViewportSize(viewport);
     await page.goto(
       "/docs/validation/assets/game-stats-refresh-review.html"
@@ -255,10 +255,6 @@ for (const viewport of [
         }))
       )
       .toEqual({ body: true, cards: true, document: true });
-    await page.screenshot({
-      fullPage: true,
-      path: testInfo.outputPath(`${viewport.name}-state-review.png`),
-    });
   });
 }
 

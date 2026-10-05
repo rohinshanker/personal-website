@@ -78,7 +78,7 @@ const readBadges = (page) =>
 for (const viewport of REVIEW_VIEWPORTS) {
   test(`the keypad reports every digit's remaining placements at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await installKeypadBridge(page);
     await openHomeDesktop(page, viewport);
     const win = await openSudokuBoard(page);
@@ -112,12 +112,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
     );
     expect(geometry.every((entry) => entry.contained && entry.digitVisible)).toBe(true);
 
-    await page.screenshot({
-      path: testInfo.outputPath(
-        `sudoku-keypad-counts-${viewport.width}x${viewport.height}.png`
-      ),
-      fullPage: true,
-    });
 
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)

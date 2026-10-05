@@ -1,15 +1,13 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
 
-import { installOfflineGameStats, REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
+import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
-// This deliberately uses the shipped feature scripts. Source-rewriting fixtures
-// can otherwise make a missing dependency or handler invisible to the suite.
+// This deliberately boots the shipped feature scripts. The shared fixture
+// rewrites only the per-event debug flags, so a missing dependency or handler
+// still surfaces here rather than being hidden behind a replacement script.
 for (const viewport of REVIEW_VIEWPORTS) {
-  test(`Home feature scripts boot and close windows at ${viewport.name}`, async ({ page }, testInfo) => {
-    const errors = [];
-    page.on("pageerror", (error) => errors.push(error.message));
+  test(`Home feature scripts boot and close windows at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
-    await installOfflineGameStats(page);
     await page.goto("/home.html");
     await expect(page.locator("#taskbar-clock")).not.toHaveText("--:--");
     expect(await page.evaluate(() => [
@@ -17,7 +15,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
       "homeSudoku", "homeEventRuntime", "homeCalendar", "rohinAdminOrchestrator",
     ].every((key) => Boolean(window[key])))).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath("home.png") });
 
     const about = page.locator('[data-app-window="about"]');
     await about.locator('[data-close="about"]').click();
@@ -27,14 +24,10 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await expect(minesweeper).not.toHaveClass(/is-hidden/);
     await minesweeper.locator('[data-close="minesweeper"]').click();
     await expect(minesweeper).toHaveClass(/is-hidden/);
-    expect(errors).toEqual([]);
   });
 }
 
 test("all project and writing PDF launcher bindings survive extraction", async ({ page }) => {
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await installOfflineGameStats(page);
   await page.goto("/home.html");
   for (const [buttonId, appId] of [
     ["open-frontiers-pdf", "mec-pdf"],
@@ -52,5 +45,4 @@ test("all project and writing PDF launcher bindings survive extraction", async (
     await win.locator(`[data-close="${appId}"]`).click();
     await expect(win).toHaveClass(/is-hidden/);
   }
-  expect(errors).toEqual([]);
 });

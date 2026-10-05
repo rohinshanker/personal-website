@@ -1,9 +1,11 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   FROZEN_INSTANT,
+  installGameStatsBackend,
+  PRODUCTION_BUILD_VERSION,
   REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
@@ -21,23 +23,7 @@ const profile = Object.freeze({
   rerollCount: 0,
 });
 
-const backendSource = await readFile(
-  new URL("../../scripts/home/game-stats-backend.js", import.meta.url),
-  "utf8"
-);
-const buildVersion = backendSource.match(/buildVersion:\s*"(sha256-[a-f0-9]{64})"/)?.[1];
-if (!buildVersion) throw new Error("Unable to read the generated game build version.");
-
-const installBackend = (page) =>
-  page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      body: backendSource.replace(
-        /apiBaseUrl:\s*"[^"]*"/,
-        `apiBaseUrl: ${JSON.stringify(API_BASE_URL)}`
-      ),
-      contentType: "application/javascript",
-    })
-  );
+const buildVersion = PRODUCTION_BUILD_VERSION;
 
 const installMinesweeperBridge = (page) =>
   routeHomeScript(page, "minesweeper", (source) =>
@@ -291,7 +277,7 @@ const preparePage = async (page, viewport) => {
       statsKey: STATS_STORAGE_KEY,
     }
   );
-  await installBackend(page);
+  await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
   await installMinesweeperBridge(page);
   const api = await installApi(page);
   await page.goto("/home.html", { waitUntil: "load" });

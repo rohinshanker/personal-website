@@ -1,4 +1,5 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { settleFrames } from "./helpers/rendered-site.mjs";
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR42mNk+M/wHwAF/gL+q0g9QAAAAABJRU5ErkJggg==",
@@ -61,7 +62,9 @@ test("Pathfinder warms every later carousel image in display order while the fir
 
   await expect.poll(() => requests).toEqual([pathfinderSources[0]]);
   await expect(app.locator("#pathfinder-counter")).toHaveText("1 of 4");
-  await page.waitForTimeout(100);
+  // The page has finished reacting to the open, so an eager prefetch of the
+  // rest of the gallery would already be in the log.
+  await settleFrames(page);
   expect(requests).toEqual([pathfinderSources[0]]);
 
   for (let index = 0; index < pathfinderSources.length; index += 1) {
@@ -140,7 +143,9 @@ test("Modeling warms mixed video and image carousel media in display order", asy
   const distinct = () => Array.from(new Set(requests));
 
   await expect.poll(distinct).toEqual([standStillSources[0]]);
-  await page.waitForTimeout(100);
+  // The page has finished reacting to the selection, so an eager prefetch of
+  // the rest of the shoot would already be in the log.
+  await settleFrames(page);
   expect(distinct()).toEqual([standStillSources[0]]);
 
   for (let index = 0; index < standStillSources.length; index += 1) {

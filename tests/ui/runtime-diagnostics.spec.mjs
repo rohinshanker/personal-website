@@ -55,6 +55,79 @@ test("intentional request cancellation does not fail a healthy render", async ({
   expect(diagnostics.requestFailures).toEqual([]);
 });
 
+test("an unknown remote image is blocked rather than quietly stubbed", async ({
+  page,
+  diagnostics,
+}) => {
+  await openHomeDesktop(page, DESKTOP);
+  // The fixture stubs the remote media the shipped source embeds. An address
+  // the source never names is a new outbound request, and stubbing it by
+  // resource type would hide that.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const image = new Image();
+        image.addEventListener("error", resolve, { once: true });
+        image.addEventListener("load", resolve, { once: true });
+        image.src = "https://images.example.invalid/unlisted.png";
+      })
+  );
+  await expect.poll(() => diagnostics.requestFailures.length).toBe(1);
+  expect(diagnostics.requestFailures[0]).toContain("images.example.invalid/unlisted.png");
+  expect(diagnostics.requestFailures[0]).toContain("BLOCKED_BY_CLIENT");
+  diagnostics.consoleErrors.length = 0;
+  test.fail(true, "The fixture must reject the unlisted remote image.");
+});
+
+test("an unknown remote document is blocked rather than quietly stubbed", async ({
+  page,
+  diagnostics,
+}) => {
+  await openHomeDesktop(page, DESKTOP);
+  await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const frame = document.createElement("iframe");
+        frame.addEventListener("load", resolve, { once: true });
+        frame.addEventListener("error", resolve, { once: true });
+        frame.src = "https://embeds.example.invalid/player";
+        document.body.append(frame);
+      })
+  );
+  await expect.poll(() => diagnostics.requestFailures.length).toBe(1);
+  expect(diagnostics.requestFailures[0]).toContain("embeds.example.invalid/player");
+  diagnostics.consoleErrors.length = 0;
+  test.fail(true, "The fixture must reject the unlisted remote document.");
+});
+
+test("a popup page reports into the same diagnostics record", async ({
+  context,
+  page,
+  diagnostics,
+}) => {
+  await openHomeDesktop(page, DESKTOP);
+  const popup = await context.newPage();
+  await popup.goto("/home.html", { waitUntil: "domcontentloaded" });
+  await popup.evaluate(() => console.error("injected popup failure"));
+  await expect.poll(() => diagnostics.consoleErrors).toEqual(["injected popup failure"]);
+  test.fail(true, "The fixture must reject a console error raised in a popup.");
+});
+
+test("a popup page is held to the same hermetic boundary", async ({
+  context,
+  page,
+  diagnostics,
+}) => {
+  await openHomeDesktop(page, DESKTOP);
+  const popup = await context.newPage();
+  await popup.goto("/home.html", { waitUntil: "domcontentloaded" });
+  await popup.evaluate(() => fetch("https://api.example.invalid/stats").catch(() => undefined));
+  await expect.poll(() => diagnostics.requestFailures.length).toBe(1);
+  expect(diagnostics.requestFailures[0]).toContain("api.example.invalid/stats");
+  diagnostics.consoleErrors.length = 0;
+  test.fail(true, "A popup must not be able to reach the network either.");
+});
+
 test("repeated navigation attaches diagnostic listeners only once", async ({ page, diagnostics }) => {
   await openHomeDesktop(page, DESKTOP);
   await openHomeDesktop(page, DESKTOP);

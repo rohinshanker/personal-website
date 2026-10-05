@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 const profile = Object.freeze({
   id: "player-record-handoff-test",
@@ -9,17 +8,7 @@ const profile = Object.freeze({
   rerollCount: 0,
 });
 
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
-
 const installRecordTestBridge = async (page) => {
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "gameStats", (source) =>
     source.replace(
       /\n\}\)\(\);\s*$/,
@@ -56,14 +45,7 @@ const closeStats = async (page, game) => {
 
 test("personal records open only the matching non-Solitaire leaderboard", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript((savedProfile) => {
@@ -71,7 +53,6 @@ test("personal records open only the matching non-Solitaire leaderboard", async 
     localStorage.clear();
     localStorage.setItem("personalSitePlayerProfileV1", JSON.stringify(savedProfile));
   }, profile);
-  await disableRemoteGameStats(page);
   await installRecordTestBridge(page);
   await page.goto("/home.html");
 
@@ -238,10 +219,4 @@ test("personal records open only the matching non-Solitaire leaderboard", async 
   }));
   expect(layout).toEqual({ documentOverflows: false, visibleStatsWindows: 0 });
 
-  await page.screenshot({
-    path: testInfo.outputPath("record-handoff-final-state.png"),
-    fullPage: true,
-  });
-  expect(consoleErrors).toEqual([]);
-  expect(runtimeErrors).toEqual([]);
 });

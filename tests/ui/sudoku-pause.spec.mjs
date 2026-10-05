@@ -93,7 +93,7 @@ const seedBoard = async (page, win) => {
 for (const viewport of REVIEW_VIEWPORTS) {
   test(`a paused board hides its numbers behind one play button at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await openHomeDesktop(page, viewport);
     const win = await openSudokuBoard(page);
     await seedBoard(page, win);
@@ -129,12 +129,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
     // The aquarium keeps swimming behind the wash: pausing stops the clock.
     await expect(win.locator("#sudoku-aquarium-layer")).toBeVisible();
 
-    await page.screenshot({
-      path: testInfo.outputPath(
-        `sudoku-paused-${viewport.width}x${viewport.height}.png`
-      ),
-      fullPage: true,
-    });
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
     ).toBe(false);

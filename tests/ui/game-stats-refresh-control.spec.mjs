@@ -1,4 +1,5 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { consumeDiagnostics, installGameStatsBackend, settleFrames } from "./helpers/rendered-site.mjs";
 
 const API_BASE_URL = "https://game-stats-refresh.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -17,6 +18,12 @@ const PLAYER_PROFILE = Object.freeze({
   name: "Refresh Tester",
   icon: "assets/app-icons/ico/user_card.ico",
 });
+/** The publish the Worker refuses until an Administrator proof arrives. */
+const REJECTED_EVENT = Object.freeze({
+  consoleErrors: ["status of 403 (Forbidden)"],
+  errorResponses: [`403 ${API_BASE_URL}/events`],
+});
+
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
   { name: "desktop", width: 1280, height: 800 },
@@ -50,17 +57,11 @@ const createQueuedSubmission = (profile = PLAYER_PROFILE) => ({
   },
 });
 
-const installBackendConfig = async (page, { configured = true } = {}) => {
-  await page.route("**/scripts/home/game-stats-backend.js*", async (route) => {
-    await route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({
-        apiBaseUrl: ${JSON.stringify(configured ? API_BASE_URL : "")},
-        buildVersion: ${JSON.stringify(configured ? `sha256-${"c".repeat(64)}` : "")}
-      });`,
-    });
+const installBackendConfig = (page, { configured = true } = {}) =>
+  installGameStatsBackend(page, {
+    apiBaseUrl: configured ? API_BASE_URL : "",
+    buildVersion: configured ? `sha256-${"c".repeat(64)}` : "",
   });
-};
 
 const installApiHarness = async (
   page,
@@ -164,6 +165,7 @@ const installApiHarness = async (
       } catch {
         // Closing the sign-in window intentionally aborts an in-flight request.
       }
+      gate?.settled.resolve();
       return;
     }
 
@@ -194,7 +196,13 @@ const installApiHarness = async (
       return gate;
     },
     holdNextSignIn() {
-      const gate = { release: createDeferred(), started: createDeferred() };
+      const gate = {
+        release: createDeferred(),
+        // Resolves once the harness has finished answering, whether the page
+        // took the response or had already abandoned the request.
+        settled: createDeferred(),
+        started: createDeferred(),
+      };
       signInGates.push(gate);
       return gate;
     },
@@ -210,16 +218,6 @@ const installApiHarness = async (
       return behavior;
     },
   };
-};
-
-const collectRuntimeErrors = (page) => {
-  const pageErrors = [];
-  const consoleErrors = [];
-  page.on("pageerror", (error) => pageErrors.push(String(error)));
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  return { consoleErrors, pageErrors };
 };
 
 const preparePage = async (
@@ -367,20 +365,11 @@ const expectNoHorizontalOverflow = async (parts) => {
     });
 };
 
-const expectNoUnexpectedRuntimeErrors = (runtime, allowedConsolePattern = null) => {
-  expect(runtime.pageErrors).toEqual([]);
-  const unexpectedConsoleErrors = allowedConsolePattern
-    ? runtime.consoleErrors.filter((message) => !allowedConsolePattern.test(message))
-    : runtime.consoleErrors;
-  expect(unexpectedConsoleErrors).toEqual([]);
-};
-
 for (const viewport of viewports) {
   test(`initial automatic sync, ready, and manual refresh at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await page.setViewportSize(viewport);
-    const runtime = collectRuntimeErrors(page);
     await installBackendConfig(page);
     const api = await installApiHarness(page);
     const initialGate = api.holdNextStats();
@@ -422,9 +411,6 @@ for (const viewport of viewports) {
     await expect(page.locator("body")).toHaveClass(/is-custom-cursor-loading/);
     expect(api.statsRequests).toHaveLength(baselineRequestCount + 1);
     await expectNoHorizontalOverflow(stats);
-    await page.screenshot({
-      path: testInfo.outputPath(`${viewport.name}-manual-fetching.png`),
-    });
 
     manualGate.release.resolve();
     await expectSyncState(stats, {
@@ -435,18 +421,13 @@ for (const viewport of viewports) {
     });
     await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
     await expectNoHorizontalOverflow(stats);
-    await page.screenshot({
-      path: testInfo.outputPath(`${viewport.name}-ready.png`),
-    });
-    expectNoUnexpectedRuntimeErrors(runtime);
   });
 }
 
 test("queued results publish before fetching and clear from local storage", async ({
   page,
-}, testInfo) => {
+}) => {
   await page.setViewportSize(viewports[1]);
-  const runtime = collectRuntimeErrors(page);
   await installBackendConfig(page);
   const api = await installApiHarness(page);
   const eventGate = api.holdNextEvent();
@@ -467,7 +448,6 @@ test("queued results publish before fetching and clear from local storage", asyn
   );
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   await expectNoHorizontalOverflow(stats);
-  await page.screenshot({ path: testInfo.outputPath("publishing-queued-result.png") });
 
   eventGate.release.resolve();
   await expectSyncState(stats, {
@@ -482,14 +462,12 @@ test("queued results publish before fetching and clear from local storage", asyn
       page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), GAME_STATS_SYNC_QUEUE_STORAGE_KEY)
     )
     .toEqual([]);
-  expectNoUnexpectedRuntimeErrors(runtime);
 });
 
 test("visible game windows share one coalesced manual refresh", async ({
   page,
-}, testInfo) => {
+}) => {
   await page.setViewportSize(viewports[1]);
-  const runtime = collectRuntimeErrors(page);
   await installBackendConfig(page);
   const api = await installApiHarness(page);
   await preparePage(page);
@@ -534,7 +512,6 @@ test("visible game windows share one coalesced manual refresh", async ({
   });
   expect(api.statsRequests).toHaveLength(baselineRequestCount + 1);
   await expect(page.locator("body")).toHaveClass(/is-custom-cursor-loading/);
-  await page.screenshot({ path: testInfo.outputPath("shared-manual-refresh.png") });
 
   manualGate.release.resolve();
   await expect(minesweeper.status).toHaveText("Global stats are up to date.");
@@ -542,14 +519,12 @@ test("visible game windows share one coalesced manual refresh", async ({
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   await expectNoHorizontalOverflow(minesweeper);
   await expectNoHorizontalOverflow(solitaire);
-  expectNoUnexpectedRuntimeErrors(runtime);
 });
 
 test("manual request timeout restores retry with exact failure copy", async ({
   page,
-}, testInfo) => {
+}) => {
   await page.setViewportSize(viewports[1]);
-  const runtime = collectRuntimeErrors(page);
   await installBackendConfig(page);
   const api = await installApiHarness(page);
   await preparePage(page, { apiTimeoutMs: 1000 });
@@ -577,16 +552,13 @@ test("manual request timeout restores retry with exact failure copy", async ({
   expect(api.statsRequests).toHaveLength(baselineRequestCount + 1);
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   await expectNoHorizontalOverflow(stats);
-  await page.screenshot({ path: testInfo.outputPath("request-timeout-failed.png") });
-  expectNoUnexpectedRuntimeErrors(runtime, /ERR_ABORTED|ERR_FAILED|game-stats-refresh\.test/);
 });
 
 for (const viewport of viewports) {
   test(`unconfigured backend disables refresh at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await page.setViewportSize(viewport);
-    const runtime = collectRuntimeErrors(page);
     await installBackendConfig(page, { configured: false });
     await preparePage(page);
     const stats = await openStatsWindow(page, "minesweeper");
@@ -599,18 +571,14 @@ for (const viewport of viewports) {
         "Automatic global tracking is not configured yet; local stats stay on this device.",
     });
     await expectNoHorizontalOverflow(stats);
-    await page.screenshot({
-      path: testInfo.outputPath(`${viewport.name}-unconfigured.png`),
-    });
-    expectNoUnexpectedRuntimeErrors(runtime);
   });
 }
 
 test("required authentication opens automatically, cancel restores focus, and sign-in resumes publish", async ({
+  diagnostics,
   page,
-}, testInfo) => {
+}) => {
   await page.setViewportSize(viewports[1]);
-  const runtime = collectRuntimeErrors(page);
   await installBackendConfig(page);
   const api = await installApiHarness(page, {
     requireAdministratorProof: true,
@@ -638,9 +606,6 @@ test("required authentication opens automatically, cancel restores focus, and si
       )
     )
     .toBe(1);
-  await page.screenshot({
-    path: testInfo.outputPath("administrator-sign-in-opened-automatically.png"),
-  });
 
   const stats = await openStatsWindow(page, "minesweeper", {
     programmatic: true,
@@ -656,7 +621,6 @@ test("required authentication opens automatically, cancel restores focus, and si
     "Waiting for authentication..."
   );
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
-  await page.screenshot({ path: testInfo.outputPath("waiting-for-authentication.png") });
 
   await administratorWindow.getByRole("button", { name: "Close" }).click();
   await expect(administratorWindow).toBeHidden();
@@ -696,17 +660,14 @@ test("required authentication opens automatically, cancel restores focus, and si
     { username: "test-only-administrator", password: "test-only-password" },
   ]);
   await expectNoHorizontalOverflow(stats);
-  await page.screenshot({
-    path: testInfo.outputPath("administrator-sign-in-resumed.png"),
-  });
-  expectNoUnexpectedRuntimeErrors(runtime, /403 \(Forbidden\)/);
+  consumeDiagnostics(diagnostics, REJECTED_EVENT);
 });
 
 test("Administrator request failure stays retryable and restores refresh focus", async ({
+  diagnostics,
   page,
-}, testInfo) => {
+}) => {
   await page.setViewportSize(viewports[1]);
-  const runtime = collectRuntimeErrors(page);
   await installBackendConfig(page);
   const api = await installApiHarness(page, {
     requireAdministratorProof: true,
@@ -758,9 +719,6 @@ test("Administrator request failure stays retryable and restores refresh focus",
   await expect(page.locator("#administrator-alert-window")).toBeHidden();
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   await expectNoHorizontalOverflow(stats);
-  await page.screenshot({
-    path: testInfo.outputPath("administrator-request-failed.png"),
-  });
 
   await stats.button.click();
   await expect(administratorWindow).toBeVisible();
@@ -772,23 +730,26 @@ test("Administrator request failure stays retryable and restores refresh focus",
     buttonLabel: "Game stats refresh unavailable for Minesweeper",
     message: "Waiting for authentication...",
   });
-  await page.screenshot({
-    path: testInfo.outputPath("administrator-request-retry-open.png"),
-  });
   expect(api.signInRequests).toEqual([
     { username: "test-only-administrator", password: "test-only-password" },
   ]);
-  expectNoUnexpectedRuntimeErrors(
-    runtime,
-    /403 \(Forbidden\)|503 \(Service Unavailable\)/
-  );
+  consumeDiagnostics(diagnostics, {
+    consoleErrors: [
+      ...REJECTED_EVENT.consoleErrors,
+      "status of 503 (Service Unavailable)",
+    ],
+    errorResponses: [
+      ...REJECTED_EVENT.errorResponses,
+      `503 ${API_BASE_URL}/administrator/sign-in`,
+    ],
+  });
 });
 
 test("closing Administrator sign-in invalidates a delayed successful response", async ({
+  diagnostics,
   page,
-}, testInfo) => {
+}) => {
   await page.setViewportSize(viewports[1]);
-  const runtime = collectRuntimeErrors(page);
   await installBackendConfig(page);
   const api = await installApiHarness(page, {
     requireAdministratorProof: true,
@@ -840,7 +801,10 @@ test("closing Administrator sign-in invalidates a delayed successful response", 
   await administratorWindow.getByRole("button", { name: "Close" }).click();
   await expect(administratorWindow).toBeHidden();
   delayedSignIn.release.resolve();
-  await page.waitForTimeout(250);
+  // The late success is answered and the page has finished reacting to it, so
+  // what follows proves the response was discarded rather than merely late.
+  await delayedSignIn.settled.promise;
+  await settleFrames(page);
 
   const stateAfterLateSuccess = await page.evaluate(
     ({
@@ -876,11 +840,5 @@ test("closing Administrator sign-in invalidates a delayed successful response", 
   await stats.button.click();
   await expect(administratorWindow).toBeVisible();
   await expect(submit).toBeEnabled();
-  await page.screenshot({
-    path: testInfo.outputPath("delayed-sign-in-cancelled-and-reopened.png"),
-  });
-  expectNoUnexpectedRuntimeErrors(
-    runtime,
-    /403 \(Forbidden\)|ERR_ABORTED|ERR_FAILED|game-stats-refresh\.test/
-  );
+  consumeDiagnostics(diagnostics, REJECTED_EVENT);
 });

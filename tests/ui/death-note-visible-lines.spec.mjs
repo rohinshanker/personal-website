@@ -1,36 +1,20 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORT, breakpointPair } from "./helpers/rendered-site.mjs";
 
 const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "below stacked breakpoint", width: 559, height: 900 },
-  { name: "above stacked breakpoint", width: 561, height: 900 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide desktop", width: 1440, height: 900 },
+  REVIEW_VIEWPORT.mobile,
+  ...breakpointPair("the stacked breakpoint", { below: 559, above: 561, height: 900 }),
+  REVIEW_VIEWPORT.tablet,
+  REVIEW_VIEWPORT.desktop,
+  REVIEW_VIEWPORT.wide,
 ]);
 
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
-
 for (const viewport of viewports) {
-  test(`Death Note keeps writing within its visible lines at ${viewport.name}`, async ({ page }, testInfo) => {
-    const consoleErrors = [];
-    const runtimeErrors = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
-    page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  test(`Death Note keeps writing within its visible lines at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
     });
-    await disableRemoteGameStats(page);
     await page.goto("/home.html");
 
     const notebook = page.locator("#death-note-window");
@@ -73,14 +57,8 @@ for (const viewport of viewports) {
     expect(metricsAfter.scrollTop).toBe(0);
     expect(metricsAfter.overflow).toBe("hidden");
     expect(metricsAfter.documentOverflows).toBe(false);
-    await page.screenshot({
-      path: testInfo.outputPath(`death-note-visible-lines-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
 
     await notebook.getByRole("button", { name: "Close Notebook" }).click();
     await expect(notebook).toHaveClass(/is-hidden/);
-    expect(consoleErrors).toEqual([]);
-    expect(runtimeErrors).toEqual([]);
   });
 }

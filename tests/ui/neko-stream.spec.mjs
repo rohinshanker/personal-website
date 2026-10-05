@@ -1,23 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(120_000);
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
-
-const disableRemoteGameStats = (page) =>
-  page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: 'window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });',
-    })
-  );
+const viewports = REVIEW_VIEWPORTS;
 
 const installNekoStreamBridge = async (page) => {
   await routeHomeScript(page, "neko", (source) =>
@@ -162,28 +150,10 @@ window.__nekoStreamPromptTest = Object.freeze({
   );
 };
 
-const collectRuntimeErrors = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  const requestFailures = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  page.on("requestfailed", (request) => {
-    requestFailures.push({
-      error: request.failure()?.errorText || "unknown failure",
-      url: request.url(),
-    });
-  });
-  return { consoleErrors, pageErrors, requestFailures };
-};
-
 const preparePage = async (
   page,
   { clock = false, reducedMotion = "no-preference", viewport = viewports[2] } = {}
 ) => {
-  const runtimeErrors = collectRuntimeErrors(page);
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion });
   if (clock) {
@@ -195,7 +165,6 @@ const preparePage = async (
     localStorage.clear();
     sessionStorage.clear();
   });
-  await disableRemoteGameStats(page);
   await installNekoStreamBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   expect(
@@ -217,7 +186,6 @@ const preparePage = async (
     });
     await expect(aboutWindow).toBeHidden();
   }
-  return runtimeErrors;
 };
 
 const readSnapshot = (page) =>
@@ -323,19 +291,6 @@ const expectMenuContained = (geometry) => {
   expect(geometry.menu.bottom).toBeLessThanOrEqual(geometry.taskbarTop - 5.5);
 };
 
-const expectNoRuntimeErrors = (runtimeErrors) => {
-  const unexpectedRequestFailures = runtimeErrors.requestFailures.filter(
-    ({ error, url }) =>
-      !(
-        error === "net::ERR_ABORTED" &&
-        /\/assets\/neko-assets\/sprites\/[a-z0-9]+\.png(?:\?|$)/.test(url)
-      )
-  );
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
-  expect(unexpectedRequestFailures).toEqual([]);
-};
-
 const readNekoPoseMetrics = (page) =>
   page.evaluate(async () => {
     const taskbarTop = document.querySelector(".taskbar").getBoundingClientRect().top;
@@ -381,7 +336,7 @@ const expectNekoPoseAligned = ({ opaqueBottom, previousRowBottom, spriteName }, 
 test("the forced debug event shows an animated accessible prompt and No or Escape never starts a stream", async ({
   page,
 }, testInfo) => {
-  const runtimeErrors = await preparePage(page, { clock: true });
+  await preparePage(page, { clock: true });
   const alert = page.locator("#neko-stream-alert-window");
   const icon = page.locator("#neko-stream-alert-icon");
   const yes = page.getByRole("button", { name: "Yes", exact: true });
@@ -513,22 +468,18 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
         body: semanticSnapshot,
         contentType: "text/yaml",
       });
-      await page.screenshot({
-        path: testInfo.outputPath(`neko-stream-alert-${viewport.name}.png`),
-      });
       await no.click();
       await finishNekoStreamAlertClose(page);
       await expect(sentinel).toBeFocused();
     });
   }
 
-  expectNoRuntimeErrors(runtimeErrors);
 });
 
 test("Yes closes the prompt and starts exactly one complete forty-cat stream", async ({
   page,
 }) => {
-  const runtimeErrors = await preparePage(page, { clock: true });
+  await preparePage(page, { clock: true });
   const alert = page.locator("#neko-stream-alert-window");
   const yes = page.locator("#neko-stream-alert-yes");
   const sentinel = page.locator("#taskbar-clock-button");
@@ -563,13 +514,12 @@ test("Yes closes the prompt and starts exactly one complete forty-cat stream", a
   expect(after.spawnedCount).toBe(40);
   expect(after.pendingSpawnCount).toBe(0);
   await stopStream(page);
-  expectNoRuntimeErrors(runtimeErrors);
 });
 
 test("both Neko launchers provide the bounded /nekostream menu without changing left-click behavior", async ({
   page,
 }) => {
-  const runtimeErrors = await preparePage(page, {
+  await preparePage(page, {
     clock: true,
     reducedMotion: "reduce",
   });
@@ -657,13 +607,12 @@ test("both Neko launchers provide the bounded /nekostream menu without changing 
   await desktopLauncher.click();
   await expect(menu).toBeHidden();
   await expect(page.locator(".desktop-neko-cat")).toHaveCount(1);
-  expectNoRuntimeErrors(runtimeErrors);
 });
 
 test("the real /nekostream command schedules and spawns its complete default wave", async ({
   page,
 }) => {
-  const runtimeErrors = await preparePage(page, { clock: true });
+  await preparePage(page, { clock: true });
   const desktopLauncher = page.locator('.desktop-icon[data-app="neko"]');
   const command = page.getByRole("menuitem", { name: "/nekostream" });
   await desktopLauncher.dispatchEvent("contextmenu", {
@@ -708,13 +657,12 @@ test("the real /nekostream command schedules and spawns its complete default wav
     expect(speedMultiplier).toBeLessThanOrEqual(1.7);
   });
   await stopStream(page);
-  expectNoRuntimeErrors(runtimeErrors);
 });
 
 test("one shared runtime spawns forty cats, preserves canonical speed, completes each action once, and cleans up", async ({
   page,
 }) => {
-  const runtimeErrors = await preparePage(page, { clock: true });
+  await preparePage(page, { clock: true });
   const wave = Array.from({ length: 40 }, (_, index) => ({
     entrySide: index % 2 === 0 ? "left" : "right",
     initialSpeedMultiplier: 0.8,
@@ -894,13 +842,12 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
   expect(snapshot.pendingSpawnCount).toBe(0);
   expect(snapshot.layerChildCount).toBe(0);
   expect(snapshot.animationFrameActive).toBe(false);
-  expectNoRuntimeErrors(runtimeErrors);
 });
 
 test("each stream action honors its planned long duration and completes exactly once", async ({
   page,
 }) => {
-  const runtimeErrors = await preparePage(page, {
+  await preparePage(page, {
     clock: true,
     viewport: { width: 375, height: 812 },
   });
@@ -1061,13 +1008,12 @@ test("each stream action honors its planned long duration and completes exactly 
   expect(snapshot.cats).toHaveLength(0);
   expect(snapshot.layerChildCount).toBe(0);
   expect(snapshot.animationFrameActive).toBe(false);
-  expectNoRuntimeErrors(runtimeErrors);
 });
 
 test("the taskbar stream and menu remain layered, contained, and usable at every target viewport", async ({
   page,
 }, testInfo) => {
-  const runtimeErrors = await preparePage(page, { clock: true });
+  await preparePage(page, { clock: true });
 
   for (const viewport of viewports) {
     await test.step(viewport.name, async () => {
@@ -1147,9 +1093,6 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
         expectNekoPoseAligned(pose, runningPoseMetrics.taskbarTop)
       );
 
-      await page.screenshot({
-        path: testInfo.outputPath(`neko-stream-${viewport.name}.png`),
-      });
       await page.getByRole("menuitem", { name: "/nekostream" }).press("Escape");
       await stopStream(page);
 
@@ -1228,19 +1171,7 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
       actionPoseMetrics.poses.forEach((pose) =>
         expectNekoPoseAligned(pose, actionPoseMetrics.taskbarTop)
       );
-      await page.screenshot({
-        path: testInfo.outputPath(`neko-stream-actions-${viewport.name}.png`),
-      });
       const stripTop = Math.max(0, actionMetrics.taskbarTop - 64);
-      await page.screenshot({
-        clip: {
-          height: Math.min(64, viewport.height - stripTop),
-          width: viewport.width,
-          x: 0,
-          y: stripTop,
-        },
-        path: testInfo.outputPath(`neko-stream-actions-strip-${viewport.name}.png`),
-      });
 
       if (viewport.name === "mobile") {
         await page.setViewportSize({ width: 844, height: 390 });
@@ -1248,13 +1179,9 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
         resizedLaneMetrics.poses.forEach((pose) =>
           expectNekoPoseAligned(pose, resizedLaneMetrics.taskbarTop)
         );
-        await page.screenshot({
-          path: testInfo.outputPath("neko-stream-mobile-landscape.png"),
-        });
       }
       await stopStream(page);
     });
   }
 
-  expectNoRuntimeErrors(runtimeErrors);
 });

@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, settleFrames } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(300_000);
 
@@ -40,12 +40,7 @@ const profile = Object.freeze({
   rerollCount: 0,
 });
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 
 const isPlayerStatsPath = (path, playerId) => {
   const url = new URL(path, API_BASE_URL);
@@ -99,7 +94,6 @@ const installBackendConfig = async (page) => {
 };
 
 const installSudokuBridge = async (page) => {
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "sudoku", (source) =>
     source.replace(
       /\n\}\)\(\);\s*$/,
@@ -364,39 +358,6 @@ const installApi = async (page, scenario) => {
   };
 };
 
-const collectRuntimeErrors = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  const requestFailures = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  page.on("requestfailed", (request) => {
-    requestFailures.push({
-      errorText: request.failure()?.errorText || "unknown failure",
-      method: request.method(),
-      url: request.url(),
-    });
-  });
-  return { consoleErrors, pageErrors, requestFailures };
-};
-
-const expectNoUnexpectedRuntimeErrors = (runtimeErrors) => {
-  const unexpectedRequestFailures = runtimeErrors.requestFailures.filter(
-    ({ errorText, method, url }) =>
-      !(
-        errorText === "net::ERR_ABORTED" &&
-        method === "GET" &&
-        /\/assets\/neko-assets\/sprites\/sleep[12]\.png(?:\?|$)/.test(url)
-      )
-  );
-
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
-  expect(unexpectedRequestFailures).toEqual([]);
-};
-
 const prepareTerminalBoard = async (page, elapsedSeconds) => {
   const terminal = await page.evaluate(
     (seconds) => window.__sudokuPublishFlowTest.prepareOneCellShort(seconds),
@@ -470,7 +431,6 @@ const confirmErrorsAndRevealMistake = async (page, sudokuWindow) => {
 };
 
 const preparePage = async (page, viewport, scenario) => {
-  const runtimeErrors = collectRuntimeErrors(page);
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(
@@ -581,7 +541,7 @@ const preparePage = async (page, viewport, scenario) => {
     "Global stats are up to date."
   );
 
-  return { api, runtimeErrors, statsWindow, sudokuWindow, terminal };
+  return { api, statsWindow, sudokuWindow, terminal };
 };
 
 const expectPublishedRequestContract = (api, scenario) => {
@@ -793,7 +753,7 @@ for (const viewport of viewports) {
     test(`a verified Sudoku ${scenario.label} completion publishes at ${viewport.name}`, async ({
       page,
     }, testInfo) => {
-      const { api, runtimeErrors, statsWindow } = await preparePage(
+      const { api, statsWindow } = await preparePage(
         page,
         viewport,
         scenario
@@ -821,7 +781,6 @@ for (const viewport of viewports) {
         { path: screenshotPath, contentType: "image/png" }
       );
 
-      expectNoUnexpectedRuntimeErrors(runtimeErrors);
     });
   }
 }
@@ -830,7 +789,6 @@ test("a restored unsolved Sudoku puzzle publishes through a fresh verified sessi
   page,
 }) => {
   const scenario = scenarios[0];
-  const runtimeErrors = collectRuntimeErrors(page);
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(
@@ -980,7 +938,6 @@ test("a restored unsolved Sudoku puzzle publishes through a fresh verified sessi
   const stored = await readStoredStats(page);
   expect(stored.stats.eventIds).toHaveLength(1);
   expect(stored.stats.totals.sudoku.wins.easy).toEqual({ noHints: 1, withHints: 0 });
-  expectNoUnexpectedRuntimeErrors(runtimeErrors);
 });
 
 test("one restored puzzle open in two tabs publishes once", async ({ context }) => {
@@ -989,6 +946,10 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
   await context.addInitScript(
     ({ initializationKey: marker, profileKey, queueKey, savedProfile, statsKey, sudokuKey }) => {
       Math.random = () => 0.999999;
+      // A context init script also runs on the opaque about:blank each new
+      // tab starts at, where reading storage throws. Only the served
+      // document has anything to seed.
+      if (location.origin === "null") return;
       if (localStorage.getItem(marker) === "1") return;
       localStorage.clear();
       sessionStorage.clear();
@@ -1014,7 +975,6 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
 
   const openTab = async () => {
     const page = await context.newPage();
-    const runtimeErrors = collectRuntimeErrors(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/home.html", { waitUntil: "domcontentloaded" });
@@ -1029,7 +989,7 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
     await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/, {
       timeout: PUBLISH_TIMEOUT_MS,
     });
-    return { page, runtimeErrors, sudokuWindow };
+    return { page, sudokuWindow };
   };
 
   const first = await openTab();
@@ -1084,9 +1044,6 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
     .toBe(true);
 
   await finishTerminalBoard(second.sudokuWindow, terminal);
-  await second.page.waitForTimeout(1_000);
-  expect(api.eventRequests).toHaveLength(1);
-  expect(api.sessionRequests).toHaveLength(2);
   await expect
     .poll(
       () =>
@@ -1100,17 +1057,20 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
       { timeout: PUBLISH_TIMEOUT_MS }
     )
     .toEqual({ completionRecorded: true, solved: true });
+  // The second tab has finished reacting, so a second publish would already
+  // have been recorded if the latch had failed.
+  await settleFrames(second.page);
+  expect(api.eventRequests).toHaveLength(1);
+  expect(api.sessionRequests).toHaveLength(2);
   const stored = await readStoredStats(second.page);
   expect(stored.stats.totals.sudoku.wins.easy).toEqual({ noHints: 1, withHints: 0 });
-  expectNoUnexpectedRuntimeErrors(first.runtimeErrors);
-  expectNoUnexpectedRuntimeErrors(second.runtimeErrors);
 });
 
 test("a solved Sudoku puzzle records once after undo, reload, and New Game", async ({
   page,
 }) => {
   const scenario = scenarios[0];
-  const { api, runtimeErrors, statsWindow, sudokuWindow, terminal } = await preparePage(
+  const { api, statsWindow, sudokuWindow, terminal } = await preparePage(
     page,
     { width: 1280, height: 800 },
     scenario
@@ -1202,7 +1162,14 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
 
   const restoredTerminal = await prepareTerminalBoard(page, 135);
   await finishTerminalBoard(sudokuWindow, restoredTerminal);
-  await page.waitForTimeout(500);
+  // The restored puzzle was already recorded, so the only proof available is
+  // that the settled page added nothing.
+  await expect
+    .poll(() => readStoredStats(page).then(({ queue }) => queue), {
+      timeout: PUBLISH_TIMEOUT_MS,
+    })
+    .toEqual([]);
+  await settleFrames(page);
   expect(api.sessionRequests).toHaveLength(1);
   expect(api.eventRequests).toHaveLength(1);
   stored = await readStoredStats(page);
@@ -1303,5 +1270,4 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
     "Your no-hints record: #2, Sudoku Publisher, 120 seconds"
   );
   await expectStatsWindowContained(page, statsWindow);
-  expectNoUnexpectedRuntimeErrors(runtimeErrors);
 });

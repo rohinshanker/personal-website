@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
@@ -12,17 +11,7 @@ const viewports = [
   { width: 1440, height: 900, name: "wide" },
 ];
 
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
-
 const installCurrentPublicInfoTestBridge = async (page) => {
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "eventNotes", (source) =>
     source.replace(
       /\n\}\)\(\);\s*$/,
@@ -100,21 +89,13 @@ const closeAndFinishAnimation = async (page, button) => {
 
 test("Current Public Information uses the Saul advertisement image inset and keeps its button below", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
     Math.random = () => 0;
     localStorage.clear();
   });
-  await disableRemoteGameStats(page);
   await installCurrentPublicInfoTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => Boolean(window.__currentPublicInfoTest));
@@ -179,9 +160,6 @@ test("Current Public Information uses the Saul advertisement image inset and kee
       expect(metrics.win.right).toBeLessThanOrEqual(viewport.width - 11.5);
       expect(metrics.win.bottom).toBeLessThanOrEqual(metrics.taskbar.top - 7.5);
 
-      await win.screenshot({
-        path: testInfo.outputPath(`current-public-info-${viewport.name}.png`),
-      });
       await closeAndFinishAnimation(page, thanks);
     });
   }
@@ -191,7 +169,5 @@ test("Current Public Information uses the Saul advertisement image inset and kee
   await expect(win).toBeVisible();
   await closeAndFinishAnimation(page, titleClose);
 
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
   await page.close({ runBeforeUnload: false });
 });

@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(180_000);
 
@@ -14,14 +13,6 @@ const viewports = Object.freeze([
   { name: "desktop", width: 1280, height: 800 },
   { name: "wide", width: 1440, height: 900 },
 ]);
-
-const disableRemoteGameStats = (page) =>
-  page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
 
 const dispatchCloseAnimationEnd = (locator) =>
   locator.dispatchEvent("animationend", { animationName: "retro-window-close" });
@@ -93,15 +84,7 @@ const measureLainWindow = (page) =>
 
 test("The Wired message is read-only, focused, and contained across viewports", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  const requestFailures = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-  page.on("requestfailed", (request) => requestFailures.push(request.url()));
+}) => {
 
   await page.setViewportSize(viewports[0]);
   await page.addInitScript(() => {
@@ -109,8 +92,6 @@ test("The Wired message is read-only, focused, and contained across viewports", 
     sessionStorage.clear();
     Math.random = () => 0.999999;
   });
-  await disableRemoteGameStats(page);
-  await routeProductionDebugFlags(page);
   await page.goto("/home.html", { waitUntil: "load" });
   await page.locator('#about-window [data-close="about"]').click();
   await expect(page.locator("#about-window")).toBeHidden();
@@ -231,12 +212,6 @@ test("The Wired message is read-only, focused, and contained across viewports", 
         viewport.name === "short-landscape" ||
         viewport.name === "desktop"
       ) {
-        await page.screenshot({
-          path: testInfo.outputPath(
-            `lain-wired-${viewport.width}x${viewport.height}.png`
-          ),
-          fullPage: true,
-        });
       }
 
       if (index % 2 === 0) {
@@ -254,28 +229,17 @@ test("The Wired message is read-only, focused, and contained across viewports", 
     });
   }
 
-  expect(consoleErrors).toEqual([]);
-  expect(runtimeErrors).toEqual([]);
-  expect(requestFailures).toEqual([]);
 });
 
 test("Lain and Red Tool stay normal through a live cooldown and remain explicitly triggerable", async ({
   page,
 }) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.addInitScript(() => {
     localStorage.clear();
     sessionStorage.clear();
     Math.random = () => 0;
   });
-  await disableRemoteGameStats(page);
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "eventRuntime", (source) =>
     source.replace(
       /\n\}\)\(\);\s*$/,
@@ -344,6 +308,4 @@ window.__wiredNormalTest = Object.freeze({
   await page.locator("#red-tool-close").press("Enter");
   await dispatchCloseAnimationEnd(redToolWindow);
   await expect(redToolWindow).toBeHidden();
-  expect(consoleErrors).toEqual([]);
-  expect(runtimeErrors).toEqual([]);
 });

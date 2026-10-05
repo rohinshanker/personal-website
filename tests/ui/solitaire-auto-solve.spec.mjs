@@ -1,13 +1,8 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { openApp, openHomeDesktop } from "./helpers/rendered-site.mjs";
+import { FROZEN_INSTANT, REVIEW_VIEWPORTS, openApp, openHomeDesktop } from "./helpers/rendered-site.mjs";
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 const suits = ["spades", "clubs", "diamonds", "hearts"];
 
 /**
@@ -426,28 +421,45 @@ test("closing Solitaire cancels a run in progress and the check returns on reope
   await expect(page.locator("#sol-tableau .sol-card")).not.toHaveCount(0);
 });
 
-test("the first card leaves after a beat and the cadence is one per second at the start", async ({
+/**
+ * `solAutoSolveTiming` in `scripts/home/features/solitaire.js`, resolved.
+ *
+ * Step 0 runs at its 1,000 ms interval and lands after `liftShare + snapShare`
+ * of it; the next step starts when that interval is up, and its own interval is
+ * `accelerationFactor` shorter. Asserting the exact instants costs nothing once
+ * the page clock is paused, and the old tolerance window around them was the
+ * suite's most reliable flake.
+ */
+const FIRST_LANDING_MS = 850;
+const SECOND_LANDING_GAP_MS = 881;
+
+const impactCount = (page) => page.evaluate(() => window.__solitaireImpacts.length);
+
+test("the first card leaves after a beat and the cadence accelerates from one per second", async ({
   page,
 }) => {
+  await page.clock.install({ time: FROZEN_INSTANT });
   await installSolitaireBridge(page, { fast: false });
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await stagePresentation(page);
+  // From here the run advances only when this test says so, so each landing is
+  // asserted at its exact instant rather than inside a tolerance window.
+  const staged = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(new Date(staged + 1_000));
   await watchImpacts(page);
+
   await page.locator("#sol-auto-solve").click();
-  await expect
-    .poll(() => page.evaluate(() => window.__solitaireImpacts.length), { timeout: 8_000 })
-    .toBeGreaterThanOrEqual(2);
-  // Landings are stamped by the page when the flash appears, measured from
-  // the page's own click timestamp, so test-runner latency never counts.
-  const { firstLanding, secondLanding } = await page.evaluate(() => {
-    const [first, second] = window.__solitaireImpacts;
-    const clickedAt = window.__solitaireAutoSolveClickedAt;
-    return { firstLanding: first.at - clickedAt, secondLanding: second.at - clickedAt };
-  });
-  expect(firstLanding).toBeGreaterThanOrEqual(800);
-  expect(firstLanding).toBeLessThan(1_500);
-  expect(secondLanding - firstLanding).toBeGreaterThanOrEqual(700);
-  expect(secondLanding - firstLanding).toBeLessThan(1_300);
+  expect(await impactCount(page), "the first card is still in flight").toBe(0);
+  await page.clock.runFor(FIRST_LANDING_MS - 1);
+  expect(await impactCount(page), "the first card lands on its beat, not before").toBe(0);
+  await page.clock.runFor(1);
+  expect(await impactCount(page)).toBe(1);
+
+  await page.clock.runFor(SECOND_LANDING_GAP_MS - 1);
+  expect(await impactCount(page), "the second card keeps the accelerated beat").toBe(1);
+  await page.clock.runFor(1);
+  expect(await impactCount(page)).toBe(2);
+
   await page.locator('[data-close="solitaire"]').click();
 });
 

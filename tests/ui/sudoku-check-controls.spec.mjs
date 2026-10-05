@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(120_000);
 
@@ -17,23 +17,10 @@ const profile = Object.freeze({
   icon: "assets/app-icons/ico/user_card.ico",
   rerollCount: 0,
 });
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 
 const installBackendConfig = (page) =>
-  page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      body: `window.rohinGameStatsBackend = Object.freeze({
-        apiBaseUrl: ${JSON.stringify(API_BASE_URL)},
-        buildVersion: ${JSON.stringify(BUILD_VERSION)}
-      });`,
-      contentType: "application/javascript",
-    })
-  );
+  installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL, buildVersion: BUILD_VERSION });
 
 const installApi = async (page) => {
   const eventRequests = [];
@@ -110,7 +97,6 @@ const installApi = async (page) => {
 };
 
 const installSudokuBridge = async (page) => {
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "sudoku", (source) =>
     source.replace(
       /\n\}\)\(\);\s*$/,
@@ -197,44 +183,11 @@ window.__sudokuCheckControlsTest = Object.freeze({
   );
 };
 
-const collectRuntimeErrors = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  const requestFailures = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  page.on("requestfailed", (request) => {
-    requestFailures.push({
-      errorText: request.failure()?.errorText || "unknown failure",
-      method: request.method(),
-      url: request.url(),
-    });
-  });
-  return { consoleErrors, pageErrors, requestFailures };
-};
-
-const expectNoUnexpectedRuntimeErrors = (runtimeErrors) => {
-  const unexpectedRequestFailures = runtimeErrors.requestFailures.filter(
-    ({ errorText, method, url }) =>
-      !(
-        errorText === "net::ERR_ABORTED" &&
-        method === "GET" &&
-        /\/assets\/neko-assets\/sprites\/sleep[12]\.png(?:\?|$)/.test(url)
-      )
-  );
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
-  expect(unexpectedRequestFailures).toEqual([]);
-};
-
 const preparePage = async (
   page,
   viewport = viewports[2],
   { reducedMotion = "reduce" } = {}
 ) => {
-  const runtimeErrors = collectRuntimeErrors(page);
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion });
   await page.addInitScript(
@@ -283,7 +236,7 @@ const preparePage = async (
     .poll(() => api.sessionRequests.length, { timeout: 10_000 })
     .toBeGreaterThanOrEqual(1);
 
-  return { api, runtimeErrors, sudokuWindow };
+  return { api, sudokuWindow };
 };
 
 const readState = (page) =>
@@ -486,7 +439,7 @@ for (const viewport of [viewports[0], viewports[3]]) {
   test(`a full unsolved board prompts the Check button on the ${viewport.name} viewport`, async ({
     page,
   }, testInfo) => {
-    const { runtimeErrors, sudokuWindow } = await preparePage(page, viewport, {
+    const { sudokuWindow } = await preparePage(page, viewport, {
       reducedMotion: "no-preference",
     });
     const checkButton = sudokuWindow.locator("#sudoku-check");
@@ -573,12 +526,11 @@ for (const viewport of [viewports[0], viewports[3]]) {
     await checkButton.click();
     await expect(status).toHaveText("Solved");
     await expect(checkButton).not.toHaveClass(/is-board-full/);
-    expectNoUnexpectedRuntimeErrors(runtimeErrors);
   });
 }
 
 test("reduced motion keeps the Check glow without the press", async ({ page }) => {
-  const { runtimeErrors, sudokuWindow } = await preparePage(page);
+  const { sudokuWindow } = await preparePage(page);
   const checkButton = sudokuWindow.locator("#sudoku-check");
 
   await page.evaluate(() =>
@@ -588,13 +540,12 @@ test("reduced motion keeps the Check glow without the press", async ({ page }) =
   const prompt = await readCheckPrompt(checkButton);
   expect(prompt.presses).toEqual([]);
   expect(prompt.boxShadow).toContain(PROMPT_GOLD);
-  expectNoUnexpectedRuntimeErrors(runtimeErrors);
 });
 
 test("Errors confirmation is repeatable, puzzle-scoped, and disqualifies only after a visible error", async ({
   page,
 }) => {
-  const { runtimeErrors, sudokuWindow } = await preparePage(page);
+  const { sudokuWindow } = await preparePage(page);
   const errorsButton = sudokuWindow.locator('[data-sudoku-hint="errors"]');
   const offButton = sudokuWindow.locator('[data-sudoku-hint="off"]');
   const prompt = sudokuWindow.locator("#sudoku-errors-prompt");
@@ -673,13 +624,12 @@ test("Errors confirmation is repeatable, puzzle-scoped, and disqualifies only af
   await errorsButton.click();
   await expectWarningPrompt(sudokuWindow);
   await prompt.locator("#sudoku-errors-cancel").click();
-  expectNoUnexpectedRuntimeErrors(runtimeErrors);
 });
 
 test("a check that finds no mistake is free before and after the quota is spent", async ({
   page,
 }) => {
-  const { runtimeErrors, sudokuWindow } = await preparePage(page);
+  const { sudokuWindow } = await preparePage(page);
   const checkButton = sudokuWindow.locator("#sudoku-check");
   const counter = sudokuWindow.locator("#sudoku-leaderboard-checks");
   const status = sudokuWindow.locator("#sudoku-status");
@@ -723,13 +673,12 @@ test("a check that finds no mistake is free before and after the quota is spent"
   await expect(status).toHaveText("No checks remaining");
   await expect(counter).toHaveText(CHECK_COUNTER_TEXT(3));
   await expect(cell).not.toHaveClass(/is-invalid/);
-  expectNoUnexpectedRuntimeErrors(runtimeErrors);
 });
 
 test("three diagnostic checks are allowed and a completed board remains submittable", async ({
   page,
 }) => {
-  const { api, runtimeErrors, sudokuWindow } = await preparePage(page);
+  const { api, sudokuWindow } = await preparePage(page);
   const checkButton = sudokuWindow.locator("#sudoku-check");
   const counter = sudokuWindow.locator("#sudoku-leaderboard-checks");
   const { cell } = await enterIncorrectDigit(page, sudokuWindow);
@@ -780,14 +729,13 @@ test("three diagnostic checks are allowed and a completed board remains submitta
     metricKind: "seconds",
     type: "win",
   });
-  expectNoUnexpectedRuntimeErrors(runtimeErrors);
 });
 
 for (const viewport of viewports) {
   test(`the stable status bar and Errors prompt fit the ${viewport.name} viewport`, async ({
     page,
   }, testInfo) => {
-    const { runtimeErrors, sudokuWindow } = await preparePage(page, viewport);
+    const { sudokuWindow } = await preparePage(page, viewport);
     const counter = sudokuWindow.locator("#sudoku-leaderboard-checks");
     await expect(counter).toHaveText(CHECK_COUNTER_TEXT(0));
     await expect(sudokuWindow.locator('[data-sudoku-hint="reveal"]')).toHaveCount(0);
@@ -834,6 +782,5 @@ for (const viewport of viewports) {
 
     await page.keyboard.press("Escape");
     await expect(prompt).toBeHidden();
-    expectNoUnexpectedRuntimeErrors(runtimeErrors);
   });
 }

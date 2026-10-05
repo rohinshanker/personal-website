@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 
 test.setTimeout(180_000);
 
@@ -9,15 +9,6 @@ const viewports = [
   { width: 1280, height: 800, name: "desktop" },
   { width: 1440, height: 900, name: "wide" },
 ];
-
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
 
 const measureGallery = (gallery) =>
   gallery.evaluate((frame) => {
@@ -100,19 +91,13 @@ const expectSharedInsetGeometry = (metrics, { loading = false } = {}) => {
 
 test("shared carousel inset keeps Modeling media and loaders clear of the frame", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
+}) => {
   let releaseFirstImage;
   let firstImageRequests = 0;
   const firstImageGate = new Promise((resolve) => {
     releaseFirstImage = resolve;
   });
 
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
   await page.route(
     /\/assets\/modeling\/fast-sonder-lb2-may2025\/1\.jpg(?:\?.*)?$/i,
     async (route) => {
@@ -127,7 +112,6 @@ test("shared carousel inset keeps Modeling media and loaders clear of the frame"
     Math.random = () => 0.999999;
     localStorage.clear();
   });
-  await disableRemoteGameStats(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.locator('.taskbar-icon[data-app="modeling"]').click();
   await page
@@ -148,9 +132,6 @@ test("shared carousel inset keeps Modeling media and loaders clear of the frame"
   await expect(scroll).toHaveAttribute("aria-busy", "true");
   await expect(scroll.locator(":scope > .gallery-loading-indicator")).toBeVisible();
   expectSharedInsetGeometry(await measureGallery(gallery), { loading: true });
-  await gallery.screenshot({
-    path: testInfo.outputPath("shared-carousel-modeling-loading.png"),
-  });
 
   releaseFirstImage();
   await expect
@@ -182,14 +163,9 @@ test("shared carousel inset keeps Modeling media and loaders clear of the frame"
       expect(second.media.width).toBeCloseTo(first.media.width, 1);
       expect(second.media.height).toBeCloseTo(first.media.height, 1);
 
-      await gallery.screenshot({
-        path: testInfo.outputPath(`shared-carousel-modeling-${viewport.name}.png`),
-      });
       await previous.evaluate((button) => button.click());
       await expect(counter).toHaveText("1 of 12");
     });
   }
 
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });

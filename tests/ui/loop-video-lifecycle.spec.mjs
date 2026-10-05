@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { FROZEN_INSTANT, openHomeDesktop } from "./helpers/rendered-site.mjs";
+import { FROZEN_INSTANT, openHomeDesktop, settleFrames } from "./helpers/rendered-site.mjs";
 
 /**
  * The playback lifecycle of `video[data-loop-video]`, which
@@ -11,11 +11,12 @@ import { FROZEN_INSTANT, openHomeDesktop } from "./helpers/rendered-site.mjs";
 const viewport = Object.freeze({ width: 1440, height: 900 });
 
 /**
- * Long enough for several frames of the slowest loop the site ships (50/3 fps, a
- * 60 ms frame) to pass if one were playing. A wait is inherent to "never
- * advanced": there is no event to await for something that must not happen.
+ * A playing element advances on every animation frame, so ten frames is well
+ * past the point where a loop that claims to be stopped would have moved. The
+ * cases also assert `played`, which records every range the element ever ran
+ * and so no amount of waiting can flatter.
  */
-const OBSERVATION_MS = 500;
+const OBSERVATION_FRAMES = 10;
 
 /**
  * `LOOP_VIDEO_FALLBACK_MS` in `scripts/home/core/media.js`: how long a visible
@@ -81,7 +82,7 @@ test("a preloaded result window that never opened keeps its loop video at the fi
   expect(before.autoplay, "playback belongs to the helper, not the element").toBe(false);
   expect(before.paused).toBe(true);
 
-  await page.waitForTimeout(OBSERVATION_MS);
+  await settleFrames(page, OBSERVATION_FRAMES);
 
   const after = await readPlayback(video);
   expect(after.paused).toBe(true);
@@ -113,7 +114,7 @@ test("a hidden page pauses a playing loop video without waiting for an animation
   expect(pausedSynchronously).toBe(true);
 
   const stopped = await video.evaluate((element) => element.currentTime);
-  await page.waitForTimeout(OBSERVATION_MS);
+  await settleFrames(page, OBSERVATION_FRAMES);
   expect(await video.evaluate((element) => element.currentTime)).toBe(stopped);
 });
 
@@ -140,7 +141,7 @@ test("pagehide pauses a playing loop video synchronously", async ({ page }) => {
 
   // A sync frame queued before the hide must not undo the pause.
   const stopped = await video.evaluate((element) => element.currentTime);
-  await page.waitForTimeout(OBSERVATION_MS);
+  await settleFrames(page, OBSERVATION_FRAMES);
   expect(await video.evaluate((element) => element.paused)).toBe(true);
   expect(await video.evaluate((element) => element.currentTime)).toBe(stopped);
 });
@@ -209,7 +210,7 @@ test("a window cloned after boot pauses its loop video when it is hidden", async
   await expect.poll(() => cloned.evaluate((element) => element.paused)).toBe(true);
 
   const stopped = await cloned.evaluate((element) => element.currentTime);
-  await page.waitForTimeout(OBSERVATION_MS);
+  await settleFrames(page, OBSERVATION_FRAMES);
   expect(await cloned.evaluate((element) => element.currentTime)).toBe(stopped);
 });
 
@@ -236,7 +237,7 @@ test("every Admin Controls event preview that clones a loop video stays inert", 
   });
   expect(previewedEvents.length, "some preview clones a loop video").toBeGreaterThan(0);
 
-  await page.waitForTimeout(OBSERVATION_MS);
+  await settleFrames(page, OBSERVATION_FRAMES);
 
   const states = await page
     .locator("#loop-video-lifecycle-previews video[data-loop-video]")
@@ -275,7 +276,7 @@ test("readiness that arrives after pagehide does not restart a loop video", asyn
   expect(hidden.pausedAfterReadiness, "late readiness cannot undo the hide").toBe(true);
 
   const stopped = await video.evaluate((element) => element.currentTime);
-  await page.waitForTimeout(OBSERVATION_MS);
+  await settleFrames(page, OBSERVATION_FRAMES);
   expect(await video.evaluate((element) => element.paused)).toBe(true);
   expect(await video.evaluate((element) => element.currentTime)).toBe(stopped);
 
@@ -317,7 +318,7 @@ test("a clone whose sources already resolved is registered and pauses when hidde
   await expect.poll(() => cloned.evaluate((element) => element.paused)).toBe(true);
 
   const stopped = await cloned.evaluate((element) => element.currentTime);
-  await page.waitForTimeout(OBSERVATION_MS);
+  await settleFrames(page, OBSERVATION_FRAMES);
   expect(await cloned.evaluate((element) => element.currentTime)).toBe(stopped);
 });
 

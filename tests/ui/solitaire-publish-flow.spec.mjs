@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, consumeDiagnostics, settleRender } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 const API_BASE_URL = "https://game-stats-solitaire-publish.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -22,12 +22,7 @@ const administratorProfile = Object.freeze({
   rerollCount: 0,
 });
 const administratorProof = `${"d".repeat(32)}.${"e".repeat(32)}`;
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 const victoryViewports = Object.freeze([
   viewports[0],
   { name: "compact-breakpoint", width: 640, height: 900 },
@@ -72,7 +67,6 @@ const installBackendConfig = async (page) => {
 };
 
 const installSolitaireBridge = async (page) => {
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "gameStats", (source) =>
     source.replace(
       /\n\}\)\(\);\s*$/,
@@ -478,20 +472,9 @@ const installAdministratorStaleStatsApi = async (page) => {
   };
 };
 
-const collectRuntimeErrors = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  return { consoleErrors, pageErrors };
-};
-
 test("a verified Solitaire win publishes and refreshes the global leaderboard", async ({
   page,
-}, testInfo) => {
-  const runtimeErrors = collectRuntimeErrors(page);
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(
@@ -662,18 +645,11 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   expect(layout.left).toBeGreaterThanOrEqual(0);
   expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth);
 
-  await page.screenshot({
-    fullPage: true,
-    path: testInfo.outputPath("desktop-solitaire-publish-success.png"),
-  });
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
 });
 
 test("an active Administrator win stays advanced through stale stats and exact-event reconciliation", async ({
   page,
-}, testInfo) => {
-  const runtimeErrors = collectRuntimeErrors(page);
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(
@@ -795,10 +771,6 @@ test("an active Administrator win stays advanced through stale stats and exact-e
   await expect(
     leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 3"]')
   ).toBeVisible();
-  await page.screenshot({
-    fullPage: true,
-    path: testInfo.outputPath("administrator-win-stale-stats.png"),
-  });
 
   api.useAuthoritativeStats();
   await expect(refreshButton).toBeEnabled();
@@ -847,19 +819,12 @@ test("an active Administrator win stays advanced through stale stats and exact-e
   );
   expect(stored.proof.proof).toBe(administratorProof);
   expect(stored.queue).toEqual([]);
-  await page.screenshot({
-    fullPage: true,
-    path: testInfo.outputPath("administrator-win-authoritative-stats.png"),
-  });
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
 });
 
 for (const viewport of victoryViewports) {
   test(`Victory Royale animation is 40% smaller at the board top at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
-    const runtimeErrors = collectRuntimeErrors(page);
+  }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.addInitScript(
@@ -916,7 +881,8 @@ for (const viewport of victoryViewports) {
       .poll(() => canvas.evaluate((element) => element.width))
       .toBeGreaterThan(0);
     await expect(canvas).toBeVisible();
-    await page.waitForTimeout(500);
+    // Measure the overlay only once its fonts, images, and layout have settled.
+    await settleRender(page);
 
     const geometry = await page.evaluate(() => {
       const boardElement = document.querySelector("#sol-board");
@@ -1010,33 +976,23 @@ for (const viewport of victoryViewports) {
       expect(Math.abs(fallback.width - expectedWidth)).toBeLessThanOrEqual(1);
       expect(Math.abs(fallback.centerDelta)).toBeLessThanOrEqual(1);
       expect(Math.abs(fallback.topGap - 16)).toBeLessThanOrEqual(1);
-      await page.screenshot({
-        fullPage: true,
-        path: testInfo.outputPath("victory-royale-desktop-fallback.png"),
-      });
       await video.evaluate((element) =>
         element.classList.remove("is-visible-fallback")
       );
       await canvas.evaluate((element) => element.classList.remove("is-hidden"));
     }
 
-    await page.screenshot({
-      fullPage: true,
-      path: testInfo.outputPath(`victory-royale-${viewport.name}.png`),
-    });
     await solitaireWindow.locator("#sol-reset").click();
     await expect(overlay).toBeHidden();
     await expect(overlay).toHaveAttribute("aria-hidden", "true");
-    expect(runtimeErrors.consoleErrors).toEqual([]);
-    expect(runtimeErrors.pageErrors).toEqual([]);
   });
 }
 
 for (const viewport of viewports) {
   test(`an expired Administrator session opens sign-in after a completed Solitaire game at ${viewport.name}`, async ({
+    diagnostics,
     page,
-  }, testInfo) => {
-    const runtimeErrors = collectRuntimeErrors(page);
+  }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.addInitScript(
@@ -1118,12 +1074,6 @@ for (const viewport of viewports) {
     expect(pendingState.documentOverflows).toBe(false);
     expect(pendingState.proof).toBeNull();
     expect(pendingState.queue).toHaveLength(1);
-    await page.screenshot({
-      path: testInfo.outputPath(
-        `administrator-reauth-after-solitaire-${viewport.name}.png`
-      ),
-      fullPage: true,
-    });
 
     await page.locator("#administrator-username").fill("test-only-administrator");
     await page.locator("#administrator-password").fill("test-only-password");
@@ -1166,12 +1116,16 @@ for (const viewport of viewports) {
     await expect(page.locator("#administrator-alert-window")).toBeHidden();
     await expect(page.locator(".window-stack")).toHaveCSS("z-index", "2");
 
-    expect(runtimeErrors.pageErrors).toEqual([]);
-    expect(
-      runtimeErrors.consoleErrors.filter(
-        (message) => !/403 \(Forbidden\)/.test(message)
-      )
-    ).toEqual([]);
+    // The rejected publish is the behaviour under test; the fixture still
+    // fails on anything the page reported beyond these exact entries.
+    consumeDiagnostics(diagnostics, {
+      consoleErrors: [
+        "status of 403 (Forbidden)",
+      ],
+      errorResponses: [
+        `403 ${API_BASE_URL}/events`,
+      ],
+    });
   });
 }
 
@@ -1344,9 +1298,9 @@ const REJECTED_RESULT_STATUS =
 
 for (const viewport of rejectionViewports) {
   test(`a rejected Administrator game session keeps the proof and never reopens sign-in at ${viewport.name}`, async ({
+    diagnostics,
     page,
-  }, testInfo) => {
-    const runtimeErrors = collectRuntimeErrors(page);
+  }) => {
     await prepareSignedInAdministrator(page, viewport);
     const api = await installAdministratorRejectionApi(page, () => ({
       status: 403,
@@ -1378,20 +1332,22 @@ for (const viewport of rejectionViewports) {
     }));
     expect(layout.bodyOverflows).toBe(false);
     expect(layout.documentOverflows).toBe(false);
-    await page.screenshot({
-      fullPage: true,
-      path: testInfo.outputPath(`administrator-session-rejected-${viewport.name}.png`),
+    // The rejected publish is the behaviour under test; the fixture still
+    // fails on anything the page reported beyond these exact entries.
+    consumeDiagnostics(diagnostics, {
+      consoleErrors: [
+        "status of 403 (Forbidden)",
+      ],
+      errorResponses: [
+        `403 ${API_BASE_URL}/events`,
+      ],
     });
-    expect(runtimeErrors.pageErrors).toEqual([]);
-    expect(
-      runtimeErrors.consoleErrors.filter((message) => !/403 \(Forbidden\)/.test(message))
-    ).toEqual([]);
   });
 
   test(`a persistently rejected Administrator proof renews sign-in once and then stops at ${viewport.name}`, async ({
+    diagnostics,
     page,
-  }, testInfo) => {
-    const runtimeErrors = collectRuntimeErrors(page);
+  }) => {
     await prepareSignedInAdministrator(page, viewport);
     const api = await installAdministratorRejectionApi(page, () => ({
       status: 403,
@@ -1416,10 +1372,6 @@ for (const viewport of rejectionViewports) {
     expect(stored.proof).toBeNull();
     expect(stored.queue).toHaveLength(1);
     expect(stored.queue[0].proofRejections).toBe(1);
-    await page.screenshot({
-      fullPage: true,
-      path: testInfo.outputPath(`administrator-proof-rejected-signin-${viewport.name}.png`),
-    });
 
     await page.locator("#administrator-username").fill("test-only-administrator");
     await page.locator("#administrator-password").fill("test-only-password");
@@ -1447,13 +1399,17 @@ for (const viewport of rejectionViewports) {
     );
     await expect(statsWindow.locator("[data-game-stats-refresh]")).toBeEnabled();
     await expect(administratorWindow).toBeHidden();
-    await page.screenshot({
-      fullPage: true,
-      path: testInfo.outputPath(`administrator-proof-rejected-final-${viewport.name}.png`),
+    // The rejected publish is the behaviour under test; the fixture still
+    // fails on anything the page reported beyond these exact entries.
+    consumeDiagnostics(diagnostics, {
+      consoleErrors: [
+        "status of 403 (Forbidden)",
+        "status of 403 (Forbidden)",
+      ],
+      errorResponses: [
+        `403 ${API_BASE_URL}/events`,
+        `403 ${API_BASE_URL}/events`,
+      ],
     });
-    expect(runtimeErrors.pageErrors).toEqual([]);
-    expect(
-      runtimeErrors.consoleErrors.filter((message) => !/403 \(Forbidden\)/.test(message))
-    ).toEqual([]);
   });
 }

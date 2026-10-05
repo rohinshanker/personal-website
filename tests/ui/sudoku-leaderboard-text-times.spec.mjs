@@ -1,9 +1,11 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
-const workerStatsUrl =
-  /https:\/\/personal-site-game-stats\.rohinshankerme\.workers\.dev\/stats(?:\?|$)/;
+/** A backend only this spec serves, so no route can resolve to the live Worker. */
+const API_BASE_URL = "https://game-stats-sudoku-times.test";
+const workerStatsUrl = new RegExp(`^${API_BASE_URL}/stats(?:\\?|$)`);
 
 const profile = Object.freeze({
   id: "player-sudoku-test",
@@ -61,14 +63,10 @@ const globalState = Object.freeze({
   },
 });
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 
 const openSudokuStats = async (page) => {
+  await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
   await page.route(workerStatsUrl, (route) =>
     route.fulfill({ body: JSON.stringify(globalState), contentType: "application/json" })
   );
@@ -97,7 +95,7 @@ const openSudokuStats = async (page) => {
 };
 
 for (const viewport of viewports) {
-  test(`Sudoku leaderboard uses real times and 99:99 placeholders at ${viewport.name}`, async ({ page }, testInfo) => {
+  test(`Sudoku leaderboard uses real times and 99:99 placeholders at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     const stats = await openSudokuStats(page);
     const easyLeaderboard = stats.locator(".game-stats-sudoku-leaderboard").first();
@@ -152,9 +150,5 @@ for (const viewport of viewports) {
     });
     expect(layout.documentOverflows).toBe(false);
     expect(layout.metricRight).toBeLessThanOrEqual(layout.rowRight);
-    await page.screenshot({
-      path: testInfo.outputPath("sudoku-placeholder-times.png"),
-      fullPage: true,
-    });
   });
 }

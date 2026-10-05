@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
@@ -12,24 +12,6 @@ const viewports = Object.freeze([
 ]);
 
 const preparePage = async (page, viewport) => {
-  const diagnostics = {
-    consoleErrors: [],
-    runtimeErrors: [],
-    requestFailures: [],
-  };
-  page.on("console", (message) => {
-    if (message.type() === "error") diagnostics.consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => diagnostics.runtimeErrors.push(error.message));
-  page.on("requestfailed", (request) => {
-    diagnostics.requestFailures.push(`${request.method()} ${request.url()}`);
-  });
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
   await page.setViewportSize(viewport);
   await page.addInitScript(() => {
     localStorage.clear();
@@ -39,14 +21,13 @@ const preparePage = async (page, viewport) => {
   await page.goto("/home.html", { waitUntil: "load" });
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
-  return diagnostics;
 };
 
 for (const [index, viewport] of viewports.entries()) {
   test(`Nataraja media is 25% smaller and its window follows at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
-    const diagnostics = await preparePage(page, viewport);
+  }) => {
+    await preparePage(page, viewport);
     const result = await page.evaluate(() =>
       window.rohinAdminOrchestrator.runEvent("nataraja", {
         source: "nataraja-layout-test",
@@ -145,10 +126,6 @@ for (const [index, viewport] of viewports.entries()) {
     expect(metrics.videoLoop).toBe(true);
     expect(metrics.videoMuted).toBe(true);
 
-    await page.screenshot({
-      path: testInfo.outputPath(`nataraja-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
 
     const closeButton = index % 2 === 0 ? yes : no;
     await closeButton.focus();
@@ -159,8 +136,5 @@ for (const [index, viewport] of viewports.entries()) {
     await expect.poll(() => video.evaluate((element) => element.paused)).toBe(true);
     await expect.poll(() => video.evaluate((element) => element.currentTime)).toBe(0);
 
-    expect(diagnostics.consoleErrors).toEqual([]);
-    expect(diagnostics.runtimeErrors).toEqual([]);
-    expect(diagnostics.requestFailures).toEqual([]);
   });
 }

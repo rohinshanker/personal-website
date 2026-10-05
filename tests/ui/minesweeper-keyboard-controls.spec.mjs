@@ -1,35 +1,12 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
-const VIEWPORTS = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const VIEWPORTS = REVIEW_VIEWPORTS;
 
-const configureOfflineGameStats = (page) =>
-  page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: 'window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "" });',
-    })
-  );
-
-const collectRuntimeErrors = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  return { consoleErrors, pageErrors };
-};
 
 const prepareMinesweeper = async (page, viewport = VIEWPORTS[2]) => {
-  const runtimeErrors = collectRuntimeErrors(page);
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await configureOfflineGameStats(page);
   await page.addInitScript(() => {
     Math.random = () => 0.5;
     localStorage.clear();
@@ -46,7 +23,7 @@ const prepareMinesweeper = async (page, viewport = VIEWPORTS[2]) => {
 
   const app = page.locator('[data-app-window="minesweeper"]');
   await expect(app).toBeVisible();
-  return { app, runtimeErrors };
+  return app;
 };
 
 const expectCellCovered = async (cell) => {
@@ -56,7 +33,7 @@ const expectCellCovered = async (cell) => {
 test("Help opens a compact Keyboard Controls window with a Wikipedia action", async ({
   page,
 }) => {
-  const { app, runtimeErrors } = await prepareMinesweeper(page, VIEWPORTS[0]);
+  const app = await prepareMinesweeper(page, VIEWPORTS[0]);
   await app.getByRole("button", { name: "Help" }).click();
 
   const controlsWindow = page.locator('[data-app-window="minesweeper-controls"]');
@@ -131,13 +108,11 @@ test("Help opens a compact Keyboard Controls window with a Wikipedia action", as
   await app.getByRole("button", { name: "Close" }).click();
   await expect(app).toBeHidden();
   await expect(controlsWindow).toBeHidden();
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
 });
 
 for (const viewport of VIEWPORTS) {
   test(`S, D, and F control the hovered square at ${viewport.name}`, async ({ page }) => {
-    const { app, runtimeErrors } = await prepareMinesweeper(page, viewport);
+    const app = await prepareMinesweeper(page, viewport);
     const grid = app.locator("#ms-grid");
     const target = grid.locator(".ms-cell").nth(40);
 
@@ -191,13 +166,11 @@ for (const viewport of VIEWPORTS) {
       footerContained: true,
       documentOverflows: false,
     });
-    expect(runtimeErrors.consoleErrors).toEqual([]);
-    expect(runtimeErrors.pageErrors).toEqual([]);
   });
 }
 
 test("keyboard controls always target the hovered square, never focus", async ({ page }) => {
-  const { app, runtimeErrors } = await prepareMinesweeper(page);
+  const app = await prepareMinesweeper(page);
   const cells = app.locator(".ms-cell");
   const focusedCell = cells.nth(20);
   const hoveredCell = cells.nth(21);
@@ -253,12 +226,10 @@ test("keyboard controls always target the hovered square, never focus", async ({
   await controlsMode.selectOption("keyboard");
   await expect(controlsMode).toHaveValue("keyboard");
   await expect(app.locator("#ms-grid")).toHaveAttribute("aria-keyshortcuts", "S D F");
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
 });
 
 test("the mode menu switches mobile controls and keyboard input exactly", async ({ page }) => {
-  const { app, runtimeErrors } = await prepareMinesweeper(page, VIEWPORTS[0]);
+  const app = await prepareMinesweeper(page, VIEWPORTS[0]);
   const controlsMode = app.locator("#ms-controls-mode");
   const flagMode = app.locator("#ms-flag-mode");
   const questionMode = app.locator("#ms-question-mode");
@@ -306,12 +277,10 @@ test("the mode menu switches mobile controls and keyboard input exactly", async 
   await page.keyboard.press("f");
   await expect(cell).toHaveClass(/is-revealed/);
 
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
 });
 
 test("shortcuts survive grid rebuilds and stop after the game ends", async ({ page }) => {
-  const { app, runtimeErrors } = await prepareMinesweeper(page);
+  const app = await prepareMinesweeper(page);
   let cell = app.locator(".ms-cell").nth(40);
 
   await cell.hover();
@@ -351,12 +320,10 @@ test("shortcuts survive grid rebuilds and stop after the game ends", async ({ pa
   await page.keyboard.press("f");
   await expect(coveredCell).toHaveAttribute("class", before);
 
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
 });
 
 test("Minesweeper receives S and D when Snake is open behind it", async ({ page }) => {
-  const { app, runtimeErrors } = await prepareMinesweeper(page);
+  const app = await prepareMinesweeper(page);
   const snakeButton = page
     .getByRole("toolbar", { name: "Taskbar" })
     .getByRole("button", { name: "Snake" });
@@ -401,6 +368,4 @@ test("Minesweeper receives S and D when Snake is open behind it", async ({ page 
   await page.keyboard.press("f");
   await expect(restoredTarget).toHaveClass(/is-flagged/);
 
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
 });

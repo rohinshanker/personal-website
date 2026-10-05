@@ -1,15 +1,11 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(190_000);
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 
 const apiBaseUrl = "https://game-stats.test";
 const administratorProof = `${"a".repeat(32)}.${"b".repeat(32)}`;
@@ -85,12 +81,10 @@ const chainedWindowIds = Object.freeze([
 ]);
 
 const configureAdministratorApi = async (page) => {
-  await page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "${apiBaseUrl}", buildVersion: "sha256-${"a".repeat(64)}" });`,
-    })
-  );
+  await installGameStatsBackend(page, {
+    apiBaseUrl,
+    buildVersion: `sha256-${"a".repeat(64)}`,
+  });
   await page.route(`${apiBaseUrl}/**`, async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -114,18 +108,7 @@ const configureAdministratorApi = async (page) => {
   });
 };
 
-const collectDiagnostics = (page) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-  return { consoleErrors, runtimeErrors };
-};
-
 const preparePage = async (page, viewport) => {
-  const diagnostics = collectDiagnostics(page);
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
@@ -140,7 +123,6 @@ const preparePage = async (page, viewport) => {
     windowElement.classList.add("is-hidden");
     windowElement.setAttribute("aria-hidden", "true");
   });
-  return diagnostics;
 };
 
 const expectDecodedImages = async (root, label, { expectPlaying = false } = {}) => {
@@ -202,7 +184,7 @@ const openDesktopApp = async (page, { appId, windowId }) => {
 
 for (const viewport of viewports) {
   test(`hidden-window images decode when opened at ${viewport.name}`, async ({ page }) => {
-    const diagnostics = await preparePage(page, viewport);
+    await preparePage(page, viewport);
 
     const adminLauncher = page.locator('.desktop-icon[data-app="admin-controls"]');
     await adminLauncher.evaluate((button) => button.click());
@@ -275,8 +257,6 @@ for (const viewport of viewports) {
       await expect(liveWindow).toBeHidden();
     }
 
-    expect(diagnostics.consoleErrors).toEqual([]);
-    expect(diagnostics.runtimeErrors).toEqual([]);
   });
 }
 
@@ -333,7 +313,7 @@ window.__deferredMediaPromptsTest = Object.freeze({
 window.__deferredMediaDstTest = showDstSurviveWindow;
 })();`)
     );
-    const diagnostics = await preparePage(page, viewport);
+    await preparePage(page, viewport);
     for (const eventId of realTriggerEventIds) {
       const windowId = await page.evaluate((id) => window.__deferredMediaAdminTest.windowId(id), eventId);
       expect(windowId).toBeTruthy();
@@ -392,7 +372,5 @@ window.__deferredMediaDstTest = showDstSurviveWindow;
         )
         .toBe(0);
     }
-    expect(diagnostics.consoleErrors).toEqual([]);
-    expect(diagnostics.runtimeErrors).toEqual([]);
   });
 }

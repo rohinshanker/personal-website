@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
+import { REVIEW_VIEWPORTS, consumeDiagnostics, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 
 const API_BASE_URL = "https://game-stats-build-mismatch.test";
 const BUILD_VERSION = `sha256-${"c".repeat(64)}`;
@@ -16,15 +16,9 @@ const profile = Object.freeze({
 const releaseWaitingMessage =
   "Game stats are finishing an update. This game's result will publish automatically when the update is ready.";
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 
 const installGameStatsBridge = async (page) => {
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "gameStats", (source) => {
     const configuredSource = source
       .replace(
@@ -55,15 +49,7 @@ window.__gameStatsBuildMismatchTest = Object.freeze({
 };
 
 const installBackendConfig = (page) =>
-  page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({
-        apiBaseUrl: ${JSON.stringify(API_BASE_URL)},
-        buildVersion: ${JSON.stringify(BUILD_VERSION)}
-      });`,
-    })
-  );
+  installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL, buildVersion: BUILD_VERSION });
 
 const installApi = async (page) => {
   const sessionRequests = [];
@@ -141,16 +127,6 @@ const installApi = async (page) => {
   };
 };
 
-const collectRuntimeErrors = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  return { consoleErrors, pageErrors };
-};
-
 const preparePage = async (page) => {
   await page.addInitScript(
     ({ profileKey, savedProfile }) => {
@@ -179,9 +155,9 @@ const preparePage = async (page) => {
 
 for (const viewport of viewports) {
   test(`a temporary Solitaire build mismatch retries and publishes at ${viewport.name}`, async ({
+    diagnostics,
     page,
-  }, testInfo) => {
-    const runtimeErrors = collectRuntimeErrors(page);
+  }) => {
     await page.setViewportSize(viewport);
     await installBackendConfig(page);
     await installGameStatsBridge(page);
@@ -210,10 +186,6 @@ for (const viewport of viewports) {
     await expect(status).toHaveAttribute("role", "status");
     await expect(refreshButton).toBeDisabled();
     await expect(refreshButton).toHaveAttribute("data-game-stats-action", "none");
-    await page.screenshot({
-      fullPage: true,
-      path: testInfo.outputPath(`${viewport.name}-release-waiting.png`),
-    });
 
     api.releaseCompatibleSession();
     await expect(status).toHaveText("Global stats are up to date.");
@@ -296,14 +268,14 @@ for (const viewport of viewports) {
     expect(layout.windowRight).toBeLessThanOrEqual(layout.viewportWidth);
     expect(layout.windowTop).toBeGreaterThanOrEqual(0);
 
-    await page.screenshot({
-      fullPage: true,
-      path: testInfo.outputPath(`${viewport.name}-published.png`),
+    // The stale-build rejection is the behaviour under test; nothing else may
+    // have gone wrong, which the fixture asserts on what is left.
+    consumeDiagnostics(diagnostics, {
+      consoleErrors: [
+        "Failed to load resource: the server responded with a status of 409 (Conflict)",
+      ],
+      errorResponses: [`409 ${API_BASE_URL}/sessions`],
     });
-    expect(runtimeErrors.consoleErrors).toEqual([
-      "Failed to load resource: the server responded with a status of 409 (Conflict)",
-    ]);
-    expect(runtimeErrors.pageErrors).toEqual([]);
 
   });
 }

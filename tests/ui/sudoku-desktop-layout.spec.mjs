@@ -72,7 +72,7 @@ const readSudokuLayout = (page) =>
   });
 
 for (const viewport of [DESKTOP, { width: 768, height: 1024 }, { width: 1440, height: 900 }, { width: 681, height: 900 }]) {
-  test(`Sudoku places its controls beside the board at ${viewport.width}px`, async ({ page }, testInfo) => {
+  test(`Sudoku places its controls beside the board at ${viewport.width}px`, async ({ page }) => {
     await openHomeDesktop(page, viewport);
     await openSudokuBoard(page);
 
@@ -122,10 +122,6 @@ for (const viewport of [DESKTOP, { width: 768, height: 1024 }, { width: 1440, he
     expect(layout.documentOverflows).toBe(false);
     expect(layout.window.right).toBeLessThanOrEqual(viewport.width);
 
-    await page.screenshot({
-      path: testInfo.outputPath(`sudoku-desktop-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
   });
 
 }
@@ -133,7 +129,7 @@ for (const viewport of [DESKTOP, { width: 768, height: 1024 }, { width: 1440, he
 for (const viewport of [MOBILE, { width: 680, height: 900 }]) {
   test(`Sudoku stacks aligned controls under the board at ${viewport.width}px`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await openHomeDesktop(page, viewport);
     await openSudokuBoard(page);
 
@@ -180,10 +176,6 @@ for (const viewport of [MOBILE, { width: 680, height: 900 }]) {
       layout.actions.right - redo.right, 0
     );
 
-    await page.screenshot({
-      path: testInfo.outputPath(`sudoku-mobile-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
   });
 
 }

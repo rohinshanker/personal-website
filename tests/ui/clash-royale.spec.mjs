@@ -2,6 +2,9 @@ import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
 import {
   DETERMINISTIC_RANDOM_DRAW,
   FROZEN_INSTANT,
+  REVIEW_VIEWPORT,
+  breakpointPair,
+  installGameStatsBackend,
   settleRender,
 } from "./helpers/rendered-site.mjs";
 import { expect, test } from "./deterministic.mjs";
@@ -11,12 +14,11 @@ const API_URL = `${API_BASE_URL}/clash-royale`;
 const BUILD_VERSION =
   "sha256-781e9e3fe27f372dd47374c6a25a1012956d78dbfebd7c55067d2d06b6e9e1c6";
 const REQUIRED_VIEWPORTS = Object.freeze([
-  Object.freeze({ name: "mobile", width: 375, height: 812 }),
-  Object.freeze({ name: "below-breakpoint", width: 639, height: 900 }),
-  Object.freeze({ name: "above-breakpoint", width: 641, height: 900 }),
-  Object.freeze({ name: "tablet", width: 768, height: 1024 }),
-  Object.freeze({ name: "desktop", width: 1280, height: 800 }),
-  Object.freeze({ name: "wide", width: 1440, height: 900 }),
+  REVIEW_VIEWPORT.mobile,
+  ...breakpointPair("the Clash Royale layout breakpoint", { below: 639, above: 641, height: 900 }),
+  REVIEW_VIEWPORT.tablet,
+  REVIEW_VIEWPORT.desktop,
+  REVIEW_VIEWPORT.wide,
 ]);
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -145,12 +147,7 @@ const createPayload = ({
 });
 
 const installBackendConfig = (page) =>
-  page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "${API_BASE_URL}", buildVersion: "${BUILD_VERSION}" });`,
-    })
-  );
+  installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL, buildVersion: BUILD_VERSION });
 
 const openClashRoyale = async (page, viewport) => {
   await page.clock.setFixedTime(FROZEN_INSTANT);
@@ -653,7 +650,6 @@ for (const viewport of REQUIRED_VIEWPORTS) {
     }
     const warBadge = rows.nth(2).locator(".cr-battle-mode");
     await warBadge.hover();
-    await page.screenshot({ path: testInfo.outputPath(`clash-match-hints-${viewport.name}.png`) });
     expect(await scanForViolations(page, testInfo, `clash-match-hints-${viewport.name}`)).toEqual([]);
     expect(await page.locator("#cr-battle-scroll").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   });

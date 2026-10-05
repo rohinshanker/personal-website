@@ -1,14 +1,7 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { consumeDiagnostics, settleFrames } from "./helpers/rendered-site.mjs";
 
 const CELL_NUMBER_ASSET = /\/assets\/minesweeper_assets\/cell_numbers\/cell_([1-8])\.png$/;
-
-const configureOfflineGameStats = (page) =>
-  page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: 'window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "" });',
-    })
-  );
 
 const openMinesweeper = async (page) => {
   const aboutClose = page.locator('#about-window [data-close="about"]');
@@ -23,17 +16,16 @@ const openMinesweeper = async (page) => {
 };
 
 test("opening Minesweeper finishes every number asset before grid input", async ({ page }) => {
-  const consoleErrors = [];
+  // The fixture already fails the test on any console error, page error, or
+  // failed request. Warnings are not errors, so the preload's silence about
+  // them is asserted here.
   const consoleWarnings = [];
-  const runtimeErrors = [];
   const requestedNumbers = [];
   const finishedNumbers = [];
 
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
     if (message.type() === "warning") consoleWarnings.push(message.text());
   });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
   page.on("request", (request) => {
     const match = new URL(request.url()).pathname.match(CELL_NUMBER_ASSET);
     if (match) requestedNumbers.push(match[1]);
@@ -43,7 +35,6 @@ test("opening Minesweeper finishes every number asset before grid input", async 
     if (match) finishedNumbers.push(match[1]);
   });
 
-  await configureOfflineGameStats(page);
   await page.addInitScript(() => {
     Math.random = () => 0.999999;
   });
@@ -65,7 +56,6 @@ test("opening Minesweeper finishes every number asset before grid input", async 
     "7",
     "8",
   ]);
-  await page.waitForTimeout(3500);
   expect(
     consoleWarnings.filter(
       (message) => !message.includes("Unrecognized feature: 'web-share'.")
@@ -75,21 +65,24 @@ test("opening Minesweeper finishes every number asset before grid input", async 
   await app.getByRole("button", { name: "Close" }).click();
   await expect(app).toBeHidden();
   await openMinesweeper(page);
-  await page.waitForTimeout(250);
+  // A reopen must reuse the warm cache rather than fetch the set again, so the
+  // settled page is the evidence: no request was added.
+  await settleFrames(page);
   const requestCountBeforeInput = requestedNumbers.length;
   expect(requestCountBeforeInput).toBe(8);
 
   await app.locator(".ms-cell").first().click();
-  await page.waitForTimeout(250);
+  await expect(app.locator(".ms-cell[data-number]").first()).toBeVisible();
+  await settleFrames(page);
   expect(requestedNumbers).toHaveLength(requestCountBeforeInput);
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });
 
-test("reopening Minesweeper retries a failed number preload", async ({ page }) => {
+test("reopening Minesweeper retries a failed number preload", async ({
+  diagnostics,
+  page,
+}) => {
   let cellEightAttempts = 0;
 
-  await configureOfflineGameStats(page);
   await page.route("**/assets/minesweeper_assets/cell_numbers/cell_8.png", (route) => {
     cellEightAttempts += 1;
     if (cellEightAttempts === 1) {
@@ -133,4 +126,11 @@ test("reopening Minesweeper retries a failed number preload", async ({ page }) =
   await expect
     .poll(() => page.evaluate(() => window.__cellEightPreloadInsertions))
     .toBe(2);
+
+  // The aborted first preload is the behaviour under test; the fixture still
+  // fails on anything the page reported beyond this exact pair.
+  consumeDiagnostics(diagnostics, {
+    consoleErrors: ["Failed to load resource: net::ERR_FAILED"],
+    requestFailures: [/cell_numbers\/cell_8\.png \(net::ERR_FAILED\)/],
+  });
 });

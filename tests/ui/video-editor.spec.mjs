@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
+import { consumeDiagnostics, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
@@ -16,6 +17,19 @@ const cursorModeStorageKey = "rohin-os-cursor-mode";
 const cursorTextHoverClass = "is-custom-cursor-text-hover";
 const cursorTextSelectingClass = "is-custom-cursor-text-selecting";
 const administratorApiBaseUrl = "https://game-stats.test";
+const administratorBuildVersion = `sha256-${"a".repeat(64)}`;
+
+/**
+ * Points the editor at this spec's sign-in endpoint. The gate renders its
+ * "unavailable" copy without a configured backend, so every editor load needs
+ * this even when the test never signs in; the hermetic fixture still blocks
+ * any request to an endpoint the test did not route.
+ */
+const installAdministratorBackend = (page) =>
+  installGameStatsBackend(page, {
+    apiBaseUrl: administratorApiBaseUrl,
+    buildVersion: administratorBuildVersion,
+  });
 const administratorProof = `${"a".repeat(32)}.${"b".repeat(32)}`;
 const administratorCredentials = Object.freeze({
   username: "test-only-administrator",
@@ -103,55 +117,6 @@ const generatedAudioSync = () => ({
   mimeType: "audio/wav",
   buffer: createAudioSyncWavBuffer(),
 });
-
-const monitorRuntime = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  const failedLocalResources = [];
-  let pageOrigin = null;
-
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  page.on("requestfailed", (request) => {
-    if (request.failure()?.errorText === "net::ERR_ABORTED") return;
-    if (pageOrigin && request.url().startsWith(pageOrigin)) {
-      failedLocalResources.push(
-        `${request.method()} ${request.url()} ${request.failure()?.errorText || "failed"}`
-      );
-    }
-  });
-  page.on("response", (response) => {
-    if (
-      pageOrigin &&
-      response.url().startsWith(pageOrigin) &&
-      response.status() >= 400
-    ) {
-      failedLocalResources.push(`${response.status()} ${response.url()}`);
-    }
-  });
-
-  return {
-    setOrigin(url) {
-      pageOrigin = new URL(url).origin;
-    },
-    expectClean({ allowedConsoleErrors = [] } = {}) {
-      const unexpectedConsoleErrors = consoleErrors.filter(
-        (message) => !allowedConsoleErrors.some((pattern) => pattern.test(message))
-      );
-      expect(unexpectedConsoleErrors, "unexpected browser console errors").toEqual([]);
-      for (const pattern of allowedConsoleErrors) {
-        expect(
-          consoleErrors.some((message) => pattern.test(message)),
-          `expected browser console diagnostic ${pattern}`
-        ).toBe(true);
-      }
-      expect(pageErrors, "uncaught page errors").toEqual([]);
-      expect(failedLocalResources, "failed local resources").toEqual([]);
-    },
-  };
-};
 
 const cursorOf = (locator) =>
   locator.evaluate((element) => getComputedStyle(element).cursor);
@@ -276,12 +241,7 @@ const configureAdministratorApi = async (
   { responses = ["success"], expiresAtForAttempt } = {}
 ) => {
   const requests = [];
-  await page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "${administratorApiBaseUrl}", buildVersion: "sha256-${"a".repeat(64)}" });`,
-    })
-  );
+  await installAdministratorBackend(page);
   await page.route(`${administratorApiBaseUrl}/administrator/sign-in`, async (route) => {
     const request = route.request();
     const credentials = JSON.parse(request.postData() || "{}");
@@ -330,6 +290,7 @@ const loadEditor = async (
   viewport = { width: 1280, height: 800 },
   { administratorAccess = "valid" } = {}
 ) => {
+  await installAdministratorBackend(page);
   if (administratorAccess === "valid") await seedAdministratorAccess(page);
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -521,10 +482,8 @@ const readRulerMetrics = (page) =>
 
 test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 }, { administratorAccess: "none" });
-  runtime.setOrigin(page.url());
 
   const overlay = page.getByTestId("video-editor-auth-overlay");
   const dialog = page.getByRole("dialog", { name: "Sign In" });
@@ -629,24 +588,15 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
   await expect(page.locator("#effect-panel-audio-sync-cut")).toBeHidden();
   await expect(page.locator("#effect-panel-audio")).toBeHidden();
 
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-auth-required-desktop.png"),
-  });
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(dialog).toBeVisible();
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-auth-required-wide.png"),
-  });
 
-  runtime.expectClean();
 });
 
 test("shows only Desktop Required below 1024px even without authentication", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 375, height: 812 }, { administratorAccess: "none" });
-  runtime.setOrigin(page.url());
 
   for (const viewport of [
     { width: 375, height: 812, name: "mobile" },
@@ -670,21 +620,15 @@ test("shows only Desktop Required below 1024px even without authentication", asy
         page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]')
       ).toBeHidden();
       await expect(page.locator('[data-effect-tab-target][data-effect="audio"]')).toBeHidden();
-      await page.screenshot({
-        path: testInfo.outputPath(`video-editor-unauthenticated-${viewport.name}.png`),
-      });
     });
   }
 
-  runtime.expectClean();
 });
 
 test("loads the shared cursor resources and synchronizes saved light and dark modes", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
   await expectAuthenticated(page);
 
   expect(
@@ -714,16 +658,10 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
     page.locator("#import-media-button"),
     "generated-png/select-dark.png"
   );
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-cursors-dark-desktop.png"),
-  });
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.getByTestId("video-editor")).toBeVisible();
   await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
   await expectNoPageOverflow(page);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-cursors-dark-wide.png"),
-  });
   await page.setViewportSize({ width: 1280, height: 800 });
 
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -784,35 +722,22 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
     "generated-png/normal-dark.png"
   );
   await expectNoPageOverflow(page);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-cursors-dark-mobile.png"),
-  });
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(page.getByTestId("desktop-required")).toBeVisible();
   await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
   await expectNoPageOverflow(page);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-cursors-dark-tablet.png"),
-  });
 
   await peer.close();
-  runtime.expectClean();
 });
 
 test("uses working cursors while authentication keeps the editor inert", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   let releaseSignIn;
   const signInGate = new Promise((resolve) => {
     releaseSignIn = resolve;
   });
-  await page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "${administratorApiBaseUrl}", buildVersion: "sha256-${"a".repeat(64)}" });`,
-    })
-  );
+  await installAdministratorBackend(page);
   await page.route(`${administratorApiBaseUrl}/administrator/sign-in`, async (route) => {
     await signInGate;
     await route.fulfill({
@@ -835,7 +760,6 @@ test("uses working cursors while authentication keeps the editor inert", async (
     { width: 1280, height: 800 },
     { administratorAccess: "none" }
   );
-  runtime.setOrigin(page.url());
   const editor = page.getByTestId("video-editor");
   const form = page.getByTestId("video-editor-auth-form");
   await expect(editor).toHaveAttribute("inert", "");
@@ -859,11 +783,6 @@ test("uses working cursors while authentication keeps the editor inert", async (
     "Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-"
   );
   await expect(editor).toHaveAttribute("inert", "");
-  await page.screenshot({
-    path: testInfo.outputPath(
-      "video-editor-auth-working-cursor-reduced-motion.png"
-    ),
-  });
 
   releaseSignIn();
   await expectAuthenticated(page);
@@ -871,15 +790,12 @@ test("uses working cursors while authentication keeps the editor inert", async (
   await expect(page.locator("body")).not.toHaveClass(
     /is-custom-cursor-loading-frame-/
   );
-  runtime.expectClean();
 });
 
 test("keeps semantic cursors through text selection, resizing, and native dragging", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
   await expectAuthenticated(page);
 
   const selectableCopy = page.locator("#media-empty-state small");
@@ -1135,20 +1051,14 @@ test("keeps semantic cursors through text selection, resizing, and native draggi
   await expect(page.locator("body")).not.toHaveClass(/is-holding-pointer-item/);
 
   await expectNoPageOverflow(page);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-semantic-custom-cursors.png"),
-  });
-  runtime.expectClean();
 });
 
 test("stores a one-hour server proof and reuses it after reload", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   const signInStartedAt = Date.now();
   const requests = await configureAdministratorApi(page);
   await loadEditor(page, { width: 1280, height: 800 }, { administratorAccess: "none" });
-  runtime.setOrigin(page.url());
 
   await signIn(page);
   await expectAuthenticated(page);
@@ -1166,26 +1076,21 @@ test("stores a one-hour server proof and reuses it after reload", async ({
   expect(Date.parse(storedProof?.expiresAt)).toBeLessThanOrEqual(
     Date.now() + hourInMilliseconds + 1_000
   );
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-authenticated.png"),
-  });
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expectAuthenticated(page);
   expect(requests).toHaveLength(1);
   await expect(page.getByTestId("media-bin")).toContainText("No media imported");
-  runtime.expectClean();
 });
 
 test("keeps the gate after invalid credentials and a network failure", async ({
+  diagnostics,
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   const requests = await configureAdministratorApi(page, {
     responses: ["invalid", "network-error"],
   });
   await loadEditor(page, { width: 1280, height: 800 }, { administratorAccess: "none" });
-  runtime.setOrigin(page.url());
   const overlay = page.getByTestId("video-editor-auth-overlay");
   const editor = page.getByTestId("video-editor");
   const authStatus = page.getByTestId("video-editor-auth-status");
@@ -1200,9 +1105,6 @@ test("keeps the gate after invalid credentials and a network failure", async ({
   expect(
     await page.evaluate((proofStorageKey) => sessionStorage.getItem(proofStorageKey), administratorProofStorageKey)
   ).toBeNull();
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-auth-invalid.png"),
-  });
 
   await signIn(page);
   await expect(overlay).toBeVisible();
@@ -1213,22 +1115,19 @@ test("keeps the gate after invalid credentials and a network failure", async ({
     { credentials: administratorCredentials, method: "POST" },
     { credentials: administratorCredentials, method: "POST" },
   ]);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-auth-network-error.png"),
-  });
 
-  runtime.expectClean({
-    allowedConsoleErrors: [
-      /401 \(Unauthorized\)/,
-      /net::ERR_CONNECTION_FAILED/,
-    ],
+  // The rejected credentials and the dropped connection are the behaviour
+  // under test; the fixture still fails on anything else the page reported.
+  consumeDiagnostics(diagnostics, {
+    consoleErrors: [/401 \(Unauthorized\)/, /net::ERR_CONNECTION_FAILED/],
+    errorResponses: [`401 ${administratorApiBaseUrl}/administrator/sign-in`],
+    requestFailures: [/ERR_CONNECTION_FAILED/],
   });
 });
 
 test("expires or deauthenticates without discarding the project and restores it after reauthentication", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await page.clock.install({ time: new Date(authClockStart) });
   const requests = await configureAdministratorApi(page, {
     responses: ["success", "success"],
@@ -1236,7 +1135,6 @@ test("expires or deauthenticates without discarding the project and restores it 
       new Date(authClockStart + attempt * hourInMilliseconds).toISOString(),
   });
   await loadEditor(page, { width: 1280, height: 800 }, { administratorAccess: "none" });
-  runtime.setOrigin(page.url());
 
   await signIn(page);
   await expectAuthenticated(page);
@@ -1280,17 +1178,11 @@ test("expires or deauthenticates without discarding the project and restores it 
       effectCount: document.querySelectorAll("[data-effect-item-id]").length,
     }))
   ).toEqual({ mediaCount: 1, clipCount: 1, effectCount: 1 });
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-auth-expired-project-preserved.png"),
-  });
 
   await signIn(page);
   await expectAuthenticated(page);
   expect(requests).toHaveLength(2);
   expect(await readProjectSnapshot(page)).toEqual(projectBeforeExpiry);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-auth-reauthenticated-project.png"),
-  });
 
   await page.evaluate(
     (proofStorageKey) => sessionStorage.removeItem(proofStorageKey),
@@ -1303,27 +1195,18 @@ test("expires or deauthenticates without discarding the project and restores it 
     /session ended.*Sign in again to continue using the Video Editor/i
   );
   expect(await readProjectSnapshot(page)).toEqual(projectBeforeExpiry);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-auth-storage-deauthenticated.png"),
-  });
 
   await signIn(page);
   await expectAuthenticated(page);
   expect(requests).toHaveLength(3);
   expect(await readProjectSnapshot(page)).toEqual(projectBeforeExpiry);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-auth-reauthenticated-after-storage-removal.png"),
-  });
 
-  runtime.expectClean();
 });
 
 test("updates the preview frame presets and contains imported video", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1440, height: 900 });
-  runtime.setOrigin(page.url());
 
   const preset = page.locator("#video-editor-frame-preset");
   const stage = page.getByTestId("preview-stage");
@@ -1364,9 +1247,6 @@ test("updates the preview frame presets and contains imported video", async ({
   );
   expect(emptyFlexibleLayout[0].width).toBeCloseTo(emptyFlexibleLayout[1].width, 0);
   expect(emptyFlexibleLayout[0].height).toBeCloseTo(emptyFlexibleLayout[1].height, 0);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-frame-flexible-na.png"),
-  });
 
   for (const [value, width, height] of [
     ["9:16", 9, 16],
@@ -1445,19 +1325,13 @@ test("updates the preview frame presets and contains imported video", async ({
     importedFlexibleLayout[1].height,
     0
   );
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-frame-contained-video.png"),
-  });
 
-  runtime.expectClean();
 });
 
 test("shows documented platform-specific UI guidelines only for fixed 9:16 frames", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
 
   const controls = page.getByRole("group", { name: "UI Guidelines" });
   const platform = page.locator("#video-editor-guidelines-platform");
@@ -1494,9 +1368,6 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
   await info.focus();
   await expect(info).toBeFocused();
   await expect(tooltip).toBeVisible();
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-guidelines-info-tooltip.png"),
-  });
   await platform.focus();
   await expect(tooltip).toBeHidden();
   await expect(overlay).toBeHidden();
@@ -1578,9 +1449,6 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
       return Boolean(hit?.closest("#video-editor-social-guidelines-overlay"));
     })
   ).toBe(false);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-guidelines-instagram-reels.png"),
-  });
 
   await platform.focus();
   await expect(platform).toBeFocused();
@@ -1608,9 +1476,6 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
   expect((await readGeometry()).safeClipPath).toBe(
     "polygon(5% 13%, 95% 13%, 95% 40%, 81% 40%, 81% 68%, 5% 68%)"
   );
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-guidelines-tiktok.png"),
-  });
 
   for (const unsupportedPreset of ["16:9", "4:5", "custom", "none"]) {
     await test.step(`guidelines pause for ${unsupportedPreset}`, async () => {
@@ -1638,9 +1503,6 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
           () => document.documentElement.scrollWidth > document.documentElement.clientWidth
         )
       ).toBe(false);
-      await page.screenshot({
-        path: testInfo.outputPath(`video-editor-guidelines-${viewport.name}.png`),
-      });
     });
   }
 
@@ -1651,15 +1513,12 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
   await expect(overlay).toHaveAttribute("aria-hidden", "true");
   await expect(status).toContainText(/UI guidelines.*hidden/i);
 
-  runtime.expectClean();
 });
 
 test("keeps small pixel-font labels readable without glyph clipping", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1024, height: 800 });
-  runtime.setOrigin(page.url());
   await expectAuthenticated(page);
   await page.evaluate(() => document.fonts.ready);
   expect(
@@ -1700,22 +1559,16 @@ test("keeps small pixel-font labels readable without glyph clipping", async ({
     }
 
     await expectNoPageOverflow(page);
-    await page.screenshot({
-      path: testInfo.outputPath(`video-editor-readable-small-type-${viewport.name}.png`),
-    });
     await platform.selectOption("none");
     await preset.selectOption("none");
   }
 
-  runtime.expectClean();
 });
 
 test("loads local Pixelarticons and preserves semantic action-button states", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
 
   const play = page.locator("#play-pause-button");
   const playbackIcon = play.locator("img");
@@ -1805,18 +1658,12 @@ test("loads local Pixelarticons and preserves semantic action-button states", as
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     )
   ).toBe(false);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-pixelarticon-controls.png"),
-  });
-  runtime.expectClean();
 });
 
 test("switches workspace layouts automatically for 9:16 and preserves manual choices", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
 
   const composeBody = page.locator(".compose-panel__body");
   const preset = page.locator("#video-editor-frame-preset");
@@ -1871,9 +1718,6 @@ test("switches workspace layouts automatically for 9:16 and preserves manual cho
   );
   await expectPreviewAspect(stage, 9, 16);
   const sideBySidePortrait = await readPreviewGeometry();
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-portrait-side-by-side-1280x800.png"),
-  });
 
   await standard.click();
   await expect(composeBody).toHaveAttribute(
@@ -1890,9 +1734,6 @@ test("switches workspace layouts automatically for 9:16 and preserves manual cho
   expect(sideBySidePortrait.stageArea).toBeGreaterThan(standardPortrait.stageArea * 1.5);
   expect(sideBySidePortrait.height).toBeGreaterThan(standardPortrait.height * 1.25);
   expect(sideBySidePortrait.fill).toBeGreaterThan(standardPortrait.fill + 0.2);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-portrait-standard-1280x800.png"),
-  });
 
   await sideBySide.focus();
   await sideBySide.press("Space");
@@ -1934,19 +1775,13 @@ test("switches workspace layouts automatically for 9:16 and preserves manual cho
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     )
   ).toBe(false);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-portrait-side-by-side-1440x900.png"),
-  });
 
-  runtime.expectClean();
 });
 
 test("resizes the preview and timeline with pointer and keyboard controls", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
 
   const separator = page.getByRole("separator", {
     name: "Resize preview and timeline",
@@ -2051,9 +1886,6 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
     `Preview area set to ${pointerValue} percent.`
   );
   await expect(separator).toBeFocused();
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-preview-timeline-splitter.png"),
-  });
 
   await page.getByRole("button", { name: "Side by side", exact: true }).click();
   await expect(separator).toHaveAttribute("aria-orientation", "vertical");
@@ -2169,19 +2001,13 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   await expect(
     mediaSeparator.locator(".video-editor-side-separator__grip")
   ).toHaveCSS("outline-style", "dotted");
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-preview-timeline-splitter-side-by-side.png"),
-  });
 
-  runtime.expectClean();
 });
 
 test("aligns range clicks and renders bounded major and minor ruler ticks", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
 
   const playhead = page.getByTestId("playhead-scrubber");
   const timelineTrack = page.getByTestId("timeline-tier-video-1");
@@ -2234,19 +2060,14 @@ test("aligns range clicks and renders bounded major and minor ruler ticks", asyn
       expect(majorTicks[0].label.left).toBeGreaterThanOrEqual(ruler.left);
       expect(majorTicks.at(-1).time).toBe(30);
       expect(majorTicks.at(-1).label.right).toBeLessThanOrEqual(ruler.right + 0.5);
-      await page.screenshot({
-        path: testInfo.outputPath(`video-editor-ruler-scale-${targetScale}.png`),
-      });
     });
   }
 
-  runtime.expectClean();
 });
 
 test("switches exactly at the desktop breakpoint and starts with an empty project", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   const viewports = [
     { width: 375, height: 812, name: "mobile" },
     { width: 768, height: 1024, name: "tablet" },
@@ -2257,7 +2078,6 @@ test("switches exactly at the desktop breakpoint and starts with an empty projec
   ];
 
   await loadEditor(page, viewports[0]);
-  runtime.setOrigin(page.url());
 
   for (const viewport of viewports) {
     await test.step(viewport.name, async () => {
@@ -2283,9 +2103,6 @@ test("switches exactly at the desktop breakpoint and starts with an empty projec
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
       );
       expect(hasHorizontalOverflow).toBe(false);
-      await page.screenshot({
-        path: testInfo.outputPath(`video-editor-${viewport.name}.png`),
-      });
     });
   }
 
@@ -2310,15 +2127,12 @@ test("switches exactly at the desktop breakpoint and starts with an empty projec
   await expect(page.getByRole("tabpanel", { name: "Effect editor home" })).toBeVisible();
   await expect(page.locator("#editor-status")).toContainText("Empty project ready");
 
-  runtime.expectClean();
 });
 
 test("imports local video and generated audio, validates tier drops, and composes the preview", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page);
-  runtime.setOrigin(page.url());
   await importMedia(page, [videoAsset, generatedAudio()]);
 
   const mediaBin = page.getByTestId("media-bin");
@@ -2381,29 +2195,28 @@ test("imports local video and generated audio, validates tier drops, and compose
     "aria-pressed",
     "true"
   );
-  await page.waitForTimeout(250);
-  const playingTime = Number(await page.getByTestId("playhead-scrubber").inputValue());
-  expect(playingTime).toBeGreaterThan(0.75);
+  // Playback is the assertion: poll the scrubber until it has actually moved
+  // past where the playhead was parked.
+  await expect
+    .poll(() => page.getByTestId("playhead-scrubber").inputValue().then(Number))
+    .toBeGreaterThan(0.75);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(page.getByRole("button", { name: "Play", exact: true })).toHaveAttribute(
     "aria-pressed",
     "false"
   );
 
-  await page.screenshot({ path: testInfo.outputPath("video-editor-imported-media.png") });
-  runtime.expectClean();
 });
 
 test("keeps imported media, the analysis worker, and the observers across a back/forward restoration", async ({
   page,
-}, testInfo) => {
+}) => {
   test.slow();
   // The default test browser cannot be restored from the real back/forward
   // cache: its automation delegate reports BackForwardCacheDisabledForDelegate
   // (a launch without `--disable-back-forward-cache` can), so `page.goBack()`
   // reloads the document here. The lifecycle events are therefore dispatched
   // with `persisted: true`, which is the state a restored page reports.
-  const runtime = monitorRuntime(page);
   await page.addInitScript(() => {
     const teardown = { disconnectedObservers: 0, revokedObjectUrls: [], terminatedWorkers: 0 };
     window.__lifecycleTeardown = teardown;
@@ -2424,7 +2237,6 @@ test("keeps imported media, the analysis worker, and the observers across a back
     };
   });
   await loadEditor(page);
-  runtime.setOrigin(page.url());
 
   const readTeardown = () => page.evaluate(() => window.__lifecycleTeardown);
   const dispatchPageTransition = (type, persisted) =>
@@ -2486,10 +2298,6 @@ test("keeps imported media, the analysis worker, and the observers across a back
     await page.evaluate(async (source) => (await fetch(source)).ok, previewSource),
     "the restored page's blob URL must still resolve"
   ).toBe(true);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-restored-media.png"),
-  });
-  runtime.expectClean();
 
   // A discarded document still releases everything: the guard narrows the
   // teardown, it does not remove it.
@@ -2503,9 +2311,7 @@ test("keeps imported media, the analysis worker, and the observers across a back
 test("snaps and reorders clips, adds typed tiers, and supports keyboard editing and scale", async ({
   page,
 }) => {
-  const runtime = monitorRuntime(page);
   await loadEditor(page);
-  runtime.setOrigin(page.url());
   await importMedia(page, [videoAsset]);
 
   const addVideo = page
@@ -2639,15 +2445,12 @@ test("snaps and reorders clips, adds typed tiers, and supports keyboard editing 
     `${videoName} deleted from the timeline`
   );
 
-  runtime.expectClean();
 });
 
 test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect bars", async ({
   page,
 }) => {
-  const runtime = monitorRuntime(page);
   await loadEditor(page);
-  runtime.setOrigin(page.url());
 
   const launchEffect = (type) =>
     page.locator(`[data-effect-tab-target][data-effect="${type}"]`);
@@ -2824,15 +2627,12 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
     "Closed Captions effect deleted from the timeline"
   );
 
-  runtime.expectClean();
 });
 
 test("renders semantic 98.css effect tabs with restrained close controls and marquee overflow", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
 
   const effects = [
     {
@@ -3002,19 +2802,13 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
   await expect(titleTrack).toHaveCSS("animation-name", "none");
   await expect(titleTrack).toHaveCSS("transform", "none");
   await expect(titleTrack).toHaveText(longTitle);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-effect-tabs-overflow-reduced-motion.png"),
-  });
 
-  runtime.expectClean();
 });
 
 test("resizes both side panels independently while preserving the center workspace", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
 
   const editor = page.getByTestId("video-editor");
   const mediaSeparator = page.locator("#video-editor-media-compose-separator");
@@ -3131,9 +2925,6 @@ test("resizes both side panels independently while preserving the center workspa
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     )
   ).toBe(false);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-side-panel-separators.png"),
-  });
 
   await page.setViewportSize({ width: 1024, height: 800 });
   await expect
@@ -3162,19 +2953,13 @@ test("resizes both side panels independently while preserving the center workspa
   expect(
     await composePanel.evaluate((element) => element.getBoundingClientRect().width)
   ).toBeGreaterThanOrEqual(420);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-side-panel-separators-1024x800.png"),
-  });
 
-  runtime.expectClean();
 });
 
 test("contains long names, a busy timeline, and every effect tab at the minimum desktop width", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await loadEditor(page, { width: 1024, height: 800 });
-  runtime.setOrigin(page.url());
 
   const longName = `${"local-session-video-editor-".repeat(6)}timeline-tone.wav`;
   await importMedia(page, [
@@ -3210,19 +2995,13 @@ test("contains long names, a busy timeline, and every effect tab at the minimum 
     longNameContained: true,
     timelineScrollable: true,
   });
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-content-stress-1024x800.png"),
-  });
-  runtime.expectClean();
 });
 
 test("analyzes a local Audio timeline clip and keeps accessible guideposts mapped to edits", async ({
   page,
-}, testInfo) => {
+}) => {
   test.slow();
-  const runtime = monitorRuntime(page);
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
 
   await page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]').click();
   let panel = page.getByRole("tabpanel", { name: "Audio-Sync Cut" });
@@ -3387,23 +3166,17 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     )
   ).toBe(false);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-audio-sync-analysis.png"),
-  });
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("#media-count")).toHaveText("0 items");
   await expect(audioSyncRuleCards(page)).toHaveCount(0);
-  runtime.expectClean();
 });
 
 test("applies Audio-Sync flash, effect, and atomic video-cut actions at guideposts", async ({
   page,
-}, testInfo) => {
+}) => {
   test.slow();
-  const runtime = monitorRuntime(page);
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
   await addAudioSyncClip(page);
   const panel = await analyzeAudioSyncClip(page);
   await panel.getByRole("button", { name: "Mids", exact: true }).click();
@@ -3487,19 +3260,13 @@ test("applies Audio-Sync flash, effect, and atomic video-cut actions at guidepos
   }
   await expect(page.locator("#editor-status")).toContainText(/split|cut/i);
 
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-audio-sync-actions.png"),
-  });
-  runtime.expectClean();
 });
 
 test("fills the first complete guide interval and rejects invalid Audio-Sync fills atomically", async ({
   page,
 }) => {
   test.slow();
-  const runtime = monitorRuntime(page);
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
   await addAudioSyncClip(page);
   const panel = await analyzeAudioSyncClip(page);
   await panel.getByRole("button", { name: "Mids", exact: true }).click();
@@ -3562,18 +3329,15 @@ test("fills the first complete guide interval and rejects invalid Audio-Sync fil
   await lowRule.locator('[data-guidepost-action="fill"]').click();
   await expect(page.locator("#editor-status")).toContainText(/too short|source.*short/i);
   expect(await readProjectSnapshot(page)).toEqual(snapshotBeforeShortSource);
-  runtime.expectClean();
 });
 
 test("uses rights-safe YouTube discovery and inserts trimmed local and procedural audio", async ({
   page,
-}, testInfo) => {
-  const runtime = monitorRuntime(page);
+}) => {
   await page.context().route("https://www.youtube.com/**", (route) =>
     route.fulfill({ contentType: "text/html", body: "<!doctype html><title>YouTube results</title>" })
   );
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
   await page.evaluate(() => {
     const originalPlay = HTMLMediaElement.prototype.play;
     window.__videoEditorPlayCalls = [];
@@ -3711,14 +3475,10 @@ test("uses rights-safe YouTube discovery and inserts trimmed local and procedura
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     )
   ).toBe(false);
-  await page.screenshot({ path: testInfo.outputPath("video-editor-audio-tools.png") });
-  runtime.expectClean();
 });
 
 test("retains a usable Audio-Sync error state when local decoding fails", async ({ page }) => {
-  const runtime = monitorRuntime(page);
   await loadEditor(page, { width: 1280, height: 800 });
-  runtime.setOrigin(page.url());
   await addAudioSyncClip(page);
   await page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]').click();
   await page.getByLabel("Audio timeline clip", { exact: true }).selectOption({ index: 1 });
@@ -3740,5 +3500,4 @@ test("retains a usable Audio-Sync error state when local decoding fails", async 
   await expect(page.getByRole("button", { name: "Analyze source" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Generate guideposts" })).toBeDisabled();
   await expect(audioSyncRuleCards(page)).toHaveCount(0);
-  runtime.expectClean();
 });

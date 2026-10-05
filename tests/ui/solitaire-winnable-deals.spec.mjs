@@ -1,18 +1,19 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 
 import { homeScriptUrl } from "../helpers/home-scripts.mjs";
+import { REVIEW_VIEWPORT, breakpointPair, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 
-const API_BASE_URL = "https://personal-site-game-stats.rohinshankerme.workers.dev";
+/** A backend only this spec serves, so no route can resolve to the live Worker. */
+const API_BASE_URL = "https://game-stats-solitaire-deals.test";
 const TEST_SEED = 2;
 const viewports = [
-  { name: "mobile", width: 375, height: 812 },
-  { name: "mobile-boundary", width: 640, height: 900 },
-  { name: "desktop-boundary", width: 641, height: 900 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
+  REVIEW_VIEWPORT.mobile,
+  ...breakpointPair("the Solitaire board breakpoint", { below: 640, above: 641, height: 900 }),
+  REVIEW_VIEWPORT.tablet,
+  REVIEW_VIEWPORT.desktop,
+  REVIEW_VIEWPORT.wide,
 ];
 
 const mainSource = await readFile(
@@ -58,19 +59,10 @@ const buildDomDeal = (tableauIds) => {
   return { stock: cards.filter((card) => !tableauIdSet.has(card.id)), tableau };
 };
 
-const collectRuntimeErrors = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  return { consoleErrors, pageErrors };
-};
-
 const installGameStatsApi = async (page) => {
   const sessionRequests = [];
   const eventRequests = [];
+  await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
   await page.route(`${API_BASE_URL}/**`, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -165,7 +157,6 @@ const expectStandardInitialBoard = async (page) => {
 for (const viewport of viewports) {
   test(`a solver-checked Solitaire deal renders correctly at ${viewport.name}`, async ({ page }) => {
     test.setTimeout(60_000);
-    const runtimeErrors = collectRuntimeErrors(page);
     await installSeed(page);
     await openSolitaire(page, viewport);
     await expectStandardInitialBoard(page);
@@ -191,13 +182,11 @@ for (const viewport of viewports) {
     expect(rulesGeometry.top).toBeGreaterThanOrEqual(0);
     expect(rulesGeometry.right).toBeLessThanOrEqual(rulesGeometry.viewportWidth + 1);
     expect(rulesGeometry.bottom).toBeLessThanOrEqual(rulesGeometry.viewportHeight + 1);
-    expect(runtimeErrors).toEqual({ consoleErrors: [], pageErrors: [] });
   });
 }
 
 test("a generated Solitaire deal wins through the public controls", async ({ page }) => {
   test.setTimeout(60_000);
-  const runtimeErrors = collectRuntimeErrors(page);
   await installSeed(page, true);
   const api = await openSolitaire(page, { width: 1280, height: 800 });
   await expectStandardInitialBoard(page);
@@ -305,5 +294,4 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
   await page.locator("#sol-reset").evaluate((button) => button.click());
   await expectStandardInitialBoard(page);
   await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute("aria-hidden", "true");
-  expect(runtimeErrors).toEqual({ consoleErrors: [], pageErrors: [] });
 });

@@ -1,20 +1,7 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide desktop", width: 1440, height: 900 },
-]);
-
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
+const viewports = REVIEW_VIEWPORTS;
 
 const digitSources = async (total) =>
   total.locator("img").evaluateAll((images) =>
@@ -30,18 +17,11 @@ const expectedSources = (digits) =>
   );
 
 for (const viewport of viewports) {
-  test(`Counter uses unlit leading digits at ${viewport.name}`, async ({ page }, testInfo) => {
-    const consoleErrors = [];
-    const runtimeErrors = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
-    page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  test(`Counter uses unlit leading digits at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
     });
-    await disableRemoteGameStats(page);
     await page.goto("/home.html");
     await page.locator('.taskbar-icon[data-app="life-counter"]').click();
 
@@ -76,11 +56,5 @@ for (const viewport of viewports) {
     expect(layout.documentOverflows).toBe(false);
     expect(layout.right).toBeLessThanOrEqual(viewport.width);
     expect(layout.visibleDigitCount).toBe(5);
-    await page.screenshot({
-      path: testInfo.outputPath(`life-counter-unlit-digits-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
-    expect(consoleErrors).toEqual([]);
-    expect(runtimeErrors).toEqual([]);
   });
 }

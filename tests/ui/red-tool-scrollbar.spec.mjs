@@ -1,22 +1,9 @@
-import { expect, test } from "@playwright/test";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
 test.setTimeout(180_000);
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
-
-const disableRemoteGameStats = (page) =>
-  page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
+const viewports = REVIEW_VIEWPORTS;
 
 const appendOverflowingConversation = (page) =>
   page.locator("#red-tool-chat-log").evaluate((log) => {
@@ -86,15 +73,7 @@ const measure = (page) =>
 
 test("Red Tool chat remains scrollable and contained across viewports", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  const requestFailures = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-  page.on("requestfailed", (request) => requestFailures.push(request.url()));
+}) => {
 
   await page.setViewportSize(viewports[0]);
   await page.addInitScript(() => {
@@ -102,8 +81,6 @@ test("Red Tool chat remains scrollable and contained across viewports", async ({
     sessionStorage.clear();
     Math.random = () => 0.999999;
   });
-  await disableRemoteGameStats(page);
-  await routeProductionDebugFlags(page);
   await page.goto("/home.html", { waitUntil: "load" });
   await page.locator('#about-window [data-close="about"]').click();
   await expect(page.locator("#about-window")).toBeHidden();
@@ -164,14 +141,7 @@ test("Red Tool chat remains scrollable and contained across viewports", async ({
       await chat.evaluate((element) => {
         element.scrollTop = 0;
       });
-      await chat.screenshot({
-        path: testInfo.outputPath(`red-tool-chat-${viewport.width}x${viewport.height}.png`),
-      });
       if (viewport.name === "mobile" || viewport.name === "desktop") {
-        await page.screenshot({
-          path: testInfo.outputPath(`red-tool-window-${viewport.width}x${viewport.height}.png`),
-          fullPage: true,
-        });
       }
 
       await close.focus();
@@ -182,7 +152,4 @@ test("Red Tool chat remains scrollable and contained across viewports", async ({
     });
   }
 
-  expect(consoleErrors).toEqual([]);
-  expect(runtimeErrors).toEqual([]);
-  expect(requestFailures).toEqual([]);
 });

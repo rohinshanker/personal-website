@@ -3,11 +3,10 @@ import {
   scanForViolations,
 } from "./helpers/accessibility-contracts.mjs";
 
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 
 const API_BASE_URL = "https://game-stats.test";
-const CONFIG_SCRIPT_URL =
-  /\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/;
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
@@ -27,12 +26,7 @@ const SUDOKU_DIFFICULTIES = Object.freeze([
   "master",
   "extreme",
 ]);
-const VIEWPORTS = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide desktop", width: 1440, height: 900 },
-]);
+const VIEWPORTS = REVIEW_VIEWPORTS;
 
 const PLAYERS = Object.freeze(
   Array.from({ length: 12 }, (_, index) =>
@@ -433,20 +427,12 @@ const installMockBackend = async (
   { profile, emptyPayload = false } = {}
 ) => {
   const requestedPlayerIds = [];
-  const runtimeErrors = [];
-  const consoleErrors = [];
 
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+
+  await installGameStatsBackend(page, {
+    apiBaseUrl: API_BASE_URL,
+    buildVersion: `sha256-${"d".repeat(64)}`,
   });
-
-  await page.route(CONFIG_SCRIPT_URL, (route) =>
-    route.fulfill({
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "${API_BASE_URL}", buildVersion: "sha256-${"d".repeat(64)}" });`,
-      contentType: "application/javascript",
-    })
-  );
   await page.route(`${API_BASE_URL}/**`, (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -497,7 +483,7 @@ const installMockBackend = async (
     }
   );
 
-  return { consoleErrors, requestedPlayerIds, runtimeErrors };
+  return { requestedPlayerIds };
 };
 
 const dismissAboutWindow = async (page) => {
@@ -835,12 +821,6 @@ for (const viewport of VIEWPORTS) {
       if (game === "snake") await expectRankedSnake(stats);
       if (game === "sudoku") {
         await expectRankedSudoku(stats);
-        await page.screenshot({
-          path: testInfo.outputPath(
-            `ranked-sudoku-${viewport.width}x${viewport.height}.png`
-          ),
-          fullPage: true,
-        });
       }
       expect(await scanForViolations(page, testInfo, `ranked-stats-${game}`))
         .toEqual(game === "solitaire" ? SOLITAIRE_NESTED_INTERACTIVE : []);
@@ -853,8 +833,6 @@ for (const viewport of VIEWPORTS) {
     expect(new Set(diagnostics.requestedPlayerIds)).toEqual(
       new Set([RANKED_PROFILE.id])
     );
-    expect(diagnostics.runtimeErrors).toEqual([]);
-    expect(diagnostics.consoleErrors).toEqual([]);
   });
 
   test(`unplayed player stays unranked without changing Top 3 at ${viewport.name}`, async ({
@@ -880,13 +858,11 @@ for (const viewport of VIEWPORTS) {
     expect(new Set(diagnostics.requestedPlayerIds)).toEqual(
       new Set([UNPLAYED_PROFILE.id])
     );
-    expect(diagnostics.runtimeErrors).toEqual([]);
-    expect(diagnostics.consoleErrors).toEqual([]);
   });
 
   test(`empty Sudoku slots use 99:99 at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await page.setViewportSize(viewport);
     const diagnostics = await installMockBackend(page, {
       profile: EMPTY_WORLD_PROFILE,
@@ -914,16 +890,8 @@ for (const viewport of VIEWPORTS) {
       Array.from({ length: SUDOKU_DIFFICULTIES.length * 4 }, () => "99:99")
     );
     await assertNoHorizontalOverflow(page, stats);
-    await page.screenshot({
-      path: testInfo.outputPath(
-        `empty-sudoku-${viewport.width}x${viewport.height}.png`
-      ),
-      fullPage: true,
-    });
     await closeStatsWindow(page, "sudoku", app, stats);
 
     expect(diagnostics.requestedPlayerIds).toContain(EMPTY_WORLD_PROFILE.id);
-    expect(diagnostics.runtimeErrors).toEqual([]);
-    expect(diagnostics.consoleErrors).toEqual([]);
   });
 }

@@ -1,14 +1,9 @@
-import { expect, test } from "@playwright/test";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
 test.setTimeout(240_000);
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 const hoverClass = "is-custom-cursor-text-hover";
 const selectingClass = "is-custom-cursor-text-selecting";
 const allowedConsoleWarning = /^Unrecognized feature: 'web-share'\.$/;
@@ -22,23 +17,13 @@ const administratorProfile = Object.freeze({
 });
 const administratorProof = `${"a".repeat(32)}.${"b".repeat(32)}`;
 
-const disableRemoteGameStats = (page) =>
-  page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-
 const preparePage = async (page, { administratorAccess = false } = {}) => {
-  const consoleErrors = [];
+  // The fixture already fails the test on console errors and page exceptions.
+  // Warnings are neither, so this spec keeps its own narrow collector.
   const consoleWarnings = [];
-  const runtimeErrors = [];
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
     if (message.type() === "warning") consoleWarnings.push(message.text());
   });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
 
   await page.addInitScript(
     ({ access, profile, profileKey, proof, proofKey }) => {
@@ -65,17 +50,13 @@ const preparePage = async (page, { administratorAccess = false } = {}) => {
     }
   );
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await disableRemoteGameStats(page);
-  await routeProductionDebugFlags(page);
-  return { consoleErrors, consoleWarnings, runtimeErrors };
+  return consoleWarnings;
 };
 
-const assertDiagnostics = ({ consoleErrors, consoleWarnings, runtimeErrors }) => {
-  expect(consoleErrors).toEqual([]);
+const expectNoUnexpectedWarnings = (consoleWarnings) => {
   expect(
     consoleWarnings.filter((message) => !allowedConsoleWarning.test(message))
   ).toEqual([]);
-  expect(runtimeErrors).toEqual([]);
 };
 
 const cursorOf = (locator) =>
@@ -235,8 +216,8 @@ const expectRetainedSelectionPreservesHomeCursors = async (page, theme) => {
 
 test("selectable text follows real cursor behavior on both routes and the viewport matrix", async ({
   page,
-}, testInfo) => {
-  const diagnostics = await preparePage(page);
+}) => {
+  const consoleWarnings = await preparePage(page);
 
   await page.goto("/index.html", { waitUntil: "load" });
   const loaderCopy = page.locator("#loader-copy");
@@ -280,9 +261,6 @@ test("selectable text follows real cursor behavior on both routes and the viewpo
 
       await expectNoPageOverflow(page);
       await expectIndexSemantics(page);
-      await page.screenshot({
-        path: testInfo.outputPath(`index-text-selection-light-${viewport.name}.png`),
-      });
 
       await page.mouse.move(points.start.x, points.start.y);
       await expectHoverTarget(page, loaderCopy);
@@ -302,9 +280,6 @@ test("selectable text follows real cursor behavior on both routes and the viewpo
       await expectRetainedSelectionPreservesHomeCursors(page, "light");
       await expectNoPageOverflow(page);
       await expectHomeSemantics(page);
-      await page.screenshot({
-        path: testInfo.outputPath(`home-text-selection-light-${viewport.name}.png`),
-      });
     });
   }
 
@@ -327,65 +302,61 @@ test("selectable text follows real cursor behavior on both routes and the viewpo
       await expectRetainedSelectionPreservesHomeCursors(page, "dark");
       await expectNoPageOverflow(page);
       await expectHomeSemantics(page);
-      await page.screenshot({
-        path: testInfo.outputPath(`home-text-selection-dark-${viewport.name}.png`),
-      });
     });
   }
 
-  assertDiagnostics(diagnostics);
+  expectNoUnexpectedWarnings(consoleWarnings);
 });
 
-test("touch input and cancellation cannot leave sticky text cursor state", async ({ browser }) => {
-  const context = await browser.newContext({
-    hasTouch: true,
-    isMobile: true,
-    viewport: { width: 375, height: 812 },
-  });
-  const page = await context.newPage();
-  const diagnostics = await preparePage(page);
-  await page.goto("/home.html", { waitUntil: "load" });
+// A real touch page has to come from the shared fixture's context, so the
+// hermetic routes and the diagnostic listeners cover it like every other page.
+test.describe("real touch input", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 375, height: 812 } });
 
-  const paragraph = page.locator("#about-window .about-website-section p");
-  const { start } = await textDragPoints(paragraph);
-  await page.touchscreen.tap(start.x, start.y);
-  await expectRootSelectionState(page, false);
-  await expectNoHoverTarget(page);
+  test("touch input and cancellation cannot leave sticky text cursor state", async ({ page }) => {
+    const consoleWarnings = await preparePage(page);
+    await page.goto("/home.html", { waitUntil: "load" });
 
-  await paragraph.dispatchEvent("pointerdown", {
-    button: 0,
-    isPrimary: true,
-    pointerId: 73,
-    pointerType: "touch",
-  });
-  await paragraph.dispatchEvent("selectstart");
-  await paragraph.dispatchEvent("pointermove", {
-    button: 0,
-    isPrimary: true,
-    pointerId: 73,
-    pointerType: "touch",
-  });
-  await paragraph.dispatchEvent("pointercancel", {
-    button: 0,
-    isPrimary: true,
-    pointerId: 73,
-    pointerType: "touch",
-  });
-  await expectRootSelectionState(page, false);
-  await expectNoHoverTarget(page);
+    const paragraph = page.locator("#about-window .about-website-section p");
+    const { start } = await textDragPoints(paragraph);
+    await page.touchscreen.tap(start.x, start.y);
+    await expectRootSelectionState(page, false);
+    await expectNoHoverTarget(page);
 
-  expect(await selectText(paragraph)).toBeTruthy();
-  await page.touchscreen.tap(2, 2);
-  await expectRootSelectionState(page, false);
-  await expectNoHoverTarget(page);
-  await expectNoPageOverflow(page);
-  await expectHomeSemantics(page);
-  assertDiagnostics(diagnostics);
-  await context.close();
+    await paragraph.dispatchEvent("pointerdown", {
+      button: 0,
+      isPrimary: true,
+      pointerId: 73,
+      pointerType: "touch",
+    });
+    await paragraph.dispatchEvent("selectstart");
+    await paragraph.dispatchEvent("pointermove", {
+      button: 0,
+      isPrimary: true,
+      pointerId: 73,
+      pointerType: "touch",
+    });
+    await paragraph.dispatchEvent("pointercancel", {
+      button: 0,
+      isPrimary: true,
+      pointerId: 73,
+      pointerType: "touch",
+    });
+    await expectRootSelectionState(page, false);
+    await expectNoHoverTarget(page);
+
+    expect(await selectText(paragraph)).toBeTruthy();
+    await page.touchscreen.tap(2, 2);
+    await expectRootSelectionState(page, false);
+    await expectNoHoverTarget(page);
+    await expectNoPageOverflow(page);
+    await expectHomeSemantics(page);
+    expectNoUnexpectedWarnings(consoleWarnings);
+  });
 });
 
 test("Admin Pick on Screen uses precision and restores the prior cursor", async ({ page }) => {
-  const diagnostics = await preparePage(page, { administratorAccess: true });
+  const consoleWarnings = await preparePage(page, { administratorAccess: true });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/home.html", { waitUntil: "load" });
 
@@ -410,5 +381,5 @@ test("Admin Pick on Screen uses precision and restores the prior cursor", async 
   expect(await cursorOf(target)).toBe(cursorBefore);
   await expect(adminWindow).toBeVisible();
   await expectNoPageOverflow(page);
-  assertDiagnostics(diagnostics);
+  expectNoUnexpectedWarnings(consoleWarnings);
 });

@@ -107,7 +107,7 @@ const openSeededBoard = async (page, viewport) => {
 for (const viewport of REVIEW_VIEWPORTS) {
   test(`notes naming the selected value light up at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     const { scenario, seeded, win } = await openSeededBoard(page, viewport);
 
     // Nothing is selected yet, so no pencil mark is singled out.
@@ -155,12 +155,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
     expect(painted.litCount).toBe(seeded.length);
     expect(painted.litAreWritten).toBe(true);
 
-    await page.screenshot({
-      path: testInfo.outputPath(
-        `sudoku-note-highlight-${viewport.width}x${viewport.height}.png`
-      ),
-      fullPage: true,
-    });
 
     // Selecting a cell with no value puts every pencil mark back on the level.
     await cellAt(win, scenario.target).click();

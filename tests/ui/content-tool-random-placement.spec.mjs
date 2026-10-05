@@ -1,5 +1,5 @@
 import { writeFile } from "node:fs/promises";
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 
 test.setTimeout(120_000);
 
@@ -35,15 +35,6 @@ const apps = [
   },
 ];
 
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
-
 const loadHome = async (page) => {
   await page.addInitScript(() => {
     Math.random = () => 0.61;
@@ -51,18 +42,7 @@ const loadHome = async (page) => {
     sessionStorage.clear();
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await disableRemoteGameStats(page);
   await page.goto(homeUrl, { waitUntil: "domcontentloaded" });
-};
-
-const collectRuntimeErrors = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  return { consoleErrors, pageErrors };
 };
 
 const finishOpenAnimation = async (win) => {
@@ -162,7 +142,6 @@ const saveTextEvidence = async (testInfo, filename, body) => {
 test("content-tool random placement is contained and accessible across the viewport matrix", async ({
   page,
 }, testInfo) => {
-  const runtime = collectRuntimeErrors(page);
   await loadHome(page);
 
   for (const viewport of viewports) {
@@ -211,20 +190,14 @@ test("content-tool random placement is contained and accessible across the viewp
           expect(await getNativeButtonStyle(action)).toEqual(nativeButtonStyles);
         }
 
-        await page.screenshot({
-          path: testInfo.outputPath(`${app.appId}-${viewport.name}.png`),
-        });
         await closeWithEscape({ ...opened, app });
       }
     });
   }
 
-  expect(runtime.consoleErrors).toEqual([]);
-  expect(runtime.pageErrors).toEqual([]);
 });
 
 test("each closed-to-open launch resamples a fresh bounded position", async ({ page }, testInfo) => {
-  const runtime = collectRuntimeErrors(page);
   const viewport = { width: 1280, height: 800 };
   await loadHome(page);
   await page.setViewportSize(viewport);
@@ -233,18 +206,12 @@ test("each closed-to-open launch resamples a fresh bounded position", async ({ p
   for (const app of apps) {
     const first = await openApp(page, app, 0.61);
     const firstPosition = await expectWindowContained(first.win, viewport);
-    await page.screenshot({
-      path: testInfo.outputPath(`${app.appId}-first-position.png`),
-    });
     await closeWithEscape({ ...first, app });
 
     const second = await openApp(page, app, 0.999999);
     const secondPosition = await expectWindowContained(second.win, viewport);
     expect(secondPosition.left - firstPosition.left).toBeGreaterThan(100);
     expect(secondPosition.top - firstPosition.top).toBeGreaterThan(100);
-    await page.screenshot({
-      path: testInfo.outputPath(`${app.appId}-second-position.png`),
-    });
     await saveTextEvidence(
       testInfo,
       `${app.appId}-resampled-position-metrics.json`,
@@ -253,14 +220,11 @@ test("each closed-to-open launch resamples a fresh bounded position", async ({ p
     await closeWithEscape({ ...second, app });
   }
 
-  expect(runtime.consoleErrors).toEqual([]);
-  expect(runtime.pageErrors).toEqual([]);
 });
 
 test("resize and drag release clamp each complete content-tool window above the taskbar", async ({
   page,
-}, testInfo) => {
-  const runtime = collectRuntimeErrors(page);
+}) => {
   await loadHome(page);
   await closeAboutWindow(page);
 
@@ -272,9 +236,6 @@ test("resize and drag release clamp each complete content-tool window above the 
     await page.setViewportSize(compactViewport);
     await settleViewport(page);
     await expectWindowContained(opened.win, compactViewport);
-    await page.screenshot({
-      path: testInfo.outputPath(`${app.appId}-compact-resize.png`),
-    });
 
     const desktopViewport = { width: 1280, height: 800 };
     await page.setViewportSize(desktopViewport);
@@ -289,20 +250,14 @@ test("resize and drag release clamp each complete content-tool window above the 
     });
     await page.mouse.up();
     await expectWindowContained(opened.win, desktopViewport);
-    await page.screenshot({
-      path: testInfo.outputPath(`${app.appId}-drag-release.png`),
-    });
     await closeWithEscape({ ...opened, app });
   }
 
-  expect(runtime.consoleErrors).toEqual([]);
-  expect(runtime.pageErrors).toEqual([]);
 });
 
 test("simultaneous content-tool windows avoid overlap and dismiss in focus order", async ({
   page,
-}, testInfo) => {
-  const runtime = collectRuntimeErrors(page);
+}) => {
   const viewport = { width: 1280, height: 800 };
   await loadHome(page);
   await page.setViewportSize(viewport);
@@ -332,7 +287,6 @@ test("simultaneous content-tool windows avoid overlap and dismiss in focus order
     return width * height;
   });
   expect(overlapArea).toBe(0);
-  await page.screenshot({ path: testInfo.outputPath("simultaneous-non-overlap.png") });
 
   await closeWithEscape({ ...image, app: apps[1] });
   await expect(video.win).toBeVisible();
@@ -340,12 +294,9 @@ test("simultaneous content-tool windows avoid overlap and dismiss in focus order
   await finishCloseAnimation(video.win);
   await expect(video.launcher).toBeFocused();
 
-  expect(runtime.consoleErrors).toEqual([]);
-  expect(runtime.pageErrors).toEqual([]);
 });
 
 test("the unauthenticated Admin stand-in remains centered", async ({ page }, testInfo) => {
-  const runtime = collectRuntimeErrors(page);
   const viewport = { width: 1280, height: 800 };
   await loadHome(page);
   await page.setViewportSize(viewport);
@@ -364,11 +315,8 @@ test("the unauthenticated Admin stand-in remains centered", async ({ page }, tes
   const metrics = await getWindowMetrics(win);
   expect(Math.abs(metrics.centerX - viewport.width / 2)).toBeLessThan(1);
   await saveTextEvidence(testInfo, "admin-stand-in-aria.yml", await win.ariaSnapshot());
-  await page.screenshot({ path: testInfo.outputPath("admin-stand-in-centered.png") });
 
   await win.locator("#admin-controls-stand-in-ok").press("Escape");
   await finishCloseAnimation(win);
   await expect(launcher).toBeFocused();
-  expect(runtime.consoleErrors).toEqual([]);
-  expect(runtime.pageErrors).toEqual([]);
 });

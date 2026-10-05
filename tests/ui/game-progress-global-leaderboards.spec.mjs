@@ -1,12 +1,12 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORT, breakpointPair } from "./helpers/rendered-site.mjs";
 
 const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "narrow breakpoint", width: 639, height: 900 },
-  { name: "wide breakpoint", width: 641, height: 900 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide desktop", width: 1440, height: 900 },
+  REVIEW_VIEWPORT.mobile,
+  ...breakpointPair("the leaderboard column breakpoint", { below: 639, above: 641, height: 900 }),
+  REVIEW_VIEWPORT.tablet,
+  REVIEW_VIEWPORT.desktop,
+  REVIEW_VIEWPORT.wide,
 ]);
 
 const games = Object.freeze([
@@ -24,31 +24,14 @@ const games = Object.freeze([
   { icon: "assets/app-icons/ico/calendar2.ico", label: "Sudoku", slug: "sudoku" },
 ]);
 
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
-
 for (const viewport of viewports) {
   test(`Game Progress global leaderboard launchers work at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
-    const consoleErrors = [];
-    const runtimeErrors = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
-    page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
+  }) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
     });
-    await disableRemoteGameStats(page);
     await page.goto("/home.html");
     await page.locator('.taskbar-icon[data-app="game-progress"]').click();
 
@@ -90,10 +73,6 @@ for (const viewport of viewports) {
     expect(layout.documentOverflows).toBe(false);
     expect(layout.panelOverflows).toBe(false);
 
-    await page.screenshot({
-      path: testInfo.outputPath(`global-leaderboards-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
 
     for (const game of games) {
       const launcher = app.getByRole("button", {
@@ -129,7 +108,5 @@ for (const viewport of viewports) {
 
     await app.locator('.selector-item[data-view="game-progress-minesweeper"]').click();
     await expect(panel).toBeHidden();
-    expect(consoleErrors).toEqual([]);
-    expect(runtimeErrors).toEqual([]);
   });
 }

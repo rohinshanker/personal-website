@@ -1,4 +1,5 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, consumeDiagnostics, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -18,22 +19,15 @@ const ADMINISTRATOR_EVENT_PROFILE = Object.freeze({
   icon: ADMINISTRATOR_PROFILE.icon,
 });
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide desktop", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 
 const API_BASE_URL = "https://game-stats.test";
 const administratorProof = `${"a".repeat(32)}.${"b".repeat(32)}`;
 
 const configureAdministratorApi = async (page, signInStatus, { onEvent } = {}) => {
-  await page.route("**/scripts/home/game-stats-backend.js*", async (route) => {
-    await route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "${API_BASE_URL}", buildVersion: "sha256-${"a".repeat(64)}" });`,
-    });
+  await installGameStatsBackend(page, {
+    apiBaseUrl: API_BASE_URL,
+    buildVersion: `sha256-${"a".repeat(64)}`,
   });
   await page.route(`${API_BASE_URL}/**`, async (route) => {
     const request = route.request();
@@ -177,7 +171,7 @@ const openAdministratorWindow = async (page) => {
 };
 
 for (const viewport of viewports) {
-  test(`Administrator sign-in succeeds without overflow at ${viewport.name}`, async ({ page }, testInfo) => {
+  test(`Administrator sign-in succeeds without overflow at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await preparePage(page, "success");
     const signInWindow = await openAdministratorWindow(page);
@@ -204,9 +198,6 @@ for (const viewport of viewports) {
       letterSpacing: "1px",
       lineHeight: "normal",
     });
-    await page.screenshot({
-      path: testInfo.outputPath("administrator-password-mask.png"),
-    });
     await page.locator("#administrator-sign-in").click();
 
     await expect(signInWindow).toBeHidden();
@@ -231,7 +222,6 @@ for (const viewport of viewports) {
     });
     expect(alertPosition.centerX).toBeCloseTo(alertPosition.viewportWidth / 2, 1);
     expect(alertPosition.centerY).toBeCloseTo(alertPosition.viewportHeight / 2, 1);
-    await page.screenshot({ path: testInfo.outputPath("administrator-access-alert.png") });
 
     await page.locator("#administrator-alert-close").click();
     await expect(alertWindow).toBeHidden();
@@ -372,7 +362,10 @@ test("Administrator launch keeps focus when replacing an open access notice", as
   await expect(runTab).toBeFocused();
 });
 
-test("Administrator failure closes the sign-in window and never grants access", async ({ page }) => {
+test("Administrator failure closes the sign-in window and never grants access", async ({
+  diagnostics,
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await preparePage(page, "failure");
   const signInWindow = await openAdministratorWindow(page);
@@ -397,11 +390,17 @@ test("Administrator failure closes the sign-in window and never grants access", 
   await adminLauncher.click();
   await expect(page.locator("#admin-controls-stand-in-window")).toBeVisible();
   await expect(page.locator("#admin-controls-window")).toBeHidden();
+  // The rejected credentials are the behaviour under test; the fixture still
+  // fails on anything the page reported beyond this exact pair.
+  consumeDiagnostics(diagnostics, {
+    consoleErrors: ["status of 401 (Unauthorized)"],
+    errorResponses: [`401 ${API_BASE_URL}/administrator/sign-in`],
+  });
 });
 
 test("Administrator sign-in stays fully visible when an open desktop window resizes to mobile", async ({
   page,
-}, testInfo) => {
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await preparePage(page, "success");
   const signInWindow = await openAdministratorWindow(page);
@@ -444,7 +443,4 @@ test("Administrator sign-in stays fully visible when an open desktop window resi
   expect(geometry.bottom).toBeLessThanOrEqual(geometry.viewportHeight);
   expect(geometry.documentOverflows).toBe(false);
   await expect(page.locator("#administrator-username")).toBeFocused();
-  await page.screenshot({
-    path: testInfo.outputPath("administrator-resized-desktop-to-mobile.png"),
-  });
 });

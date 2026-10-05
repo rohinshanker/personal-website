@@ -85,7 +85,7 @@ const expectStripAt = async (page, shoot, index) => {
 
 test("renders the header and every shoot in order without overflow at each review viewport", async ({
   page,
-}, testInfo) => {
+}) => {
   for (const viewport of REVIEW_VIEWPORTS) {
     await test.step(viewport.name, async () => {
       await openPortfolio(page, viewport);
@@ -157,10 +157,6 @@ test("renders the header and every shoot in order without overflow at each revie
         expect(linksBox.bottom).toBeLessThanOrEqual(creditsBox.top);
       }
 
-      await page.screenshot({
-        path: testInfo.outputPath(`modeling-${viewport.name}.png`),
-        fullPage: false,
-      });
     });
   }
 });

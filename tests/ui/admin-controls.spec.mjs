@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 
 test.setTimeout(150_000);
 
@@ -46,25 +46,13 @@ const viewports = [
   { name: "wide", width: 1440, height: 900 },
 ];
 
-const disableRemoteGameStats = (page) =>
-  page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: 'window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });',
-    })
-  );
-
 const preparePage = async (
   page,
   { administratorAccess = "valid", spyOnOrchestratedEvents = false } = {}
 ) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
+  // The fixture already fails the test on console errors, page exceptions and
+  // failed requests. A write to any backend is this spec's own concern.
   const mutatingRequests = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
   page.on("request", (request) => {
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method())) {
       mutatingRequests.push(`${request.method()} ${request.url()}`);
@@ -122,10 +110,9 @@ const preparePage = async (
     spy: spyOnOrchestratedEvents,
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await disableRemoteGameStats(page);
   await page.goto(homeUrl, { waitUntil: "domcontentloaded" });
 
-  return { consoleErrors, mutatingRequests, runtimeErrors };
+  return { mutatingRequests };
 };
 
 const finishWindowAnimation = async (win, animationName) => {
@@ -185,9 +172,9 @@ const closeManagedWindow = async (win, button) => {
 
 test("Admin launchers show only the stand-in without an active Administrator session", async ({
   page,
-}, testInfo) => {
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  const diagnostics = await preparePage(page, { administratorAccess: "none" });
+  const { mutatingRequests } = await preparePage(page, { administratorAccess: "none" });
   await page.locator("#about-window").evaluate((element) => {
     element.classList.remove("is-opening", "is-closing");
     element.classList.add("is-hidden");
@@ -267,9 +254,6 @@ test("Admin launchers show only the stand-in without an active Administrator ses
       await expect(page.locator("#debug-system-alert-window")).toBeHidden();
       await expect(page.locator("#neko-stream-alert-window")).toBeHidden();
 
-      await page.screenshot({
-        path: testInfo.outputPath(`admin-stand-in-${viewport.name}.png`),
-      });
 
       if (index % 2 === 0) {
         await ok.click();
@@ -283,16 +267,14 @@ test("Admin launchers show only the stand-in without an active Administrator ses
     });
   }
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("an expired Administrator proof is purged and cannot expose Admin Controls", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  const diagnostics = await preparePage(page, { administratorAccess: "expired" });
+  const { mutatingRequests } = await preparePage(page, { administratorAccess: "expired" });
   const launcher = page.locator('.taskbar-icon[data-app="admin-controls"]');
   await launcher.scrollIntoViewIfNeeded();
   await launcher.click();
@@ -303,9 +285,7 @@ test("an expired Administrator proof is purged and cannot expose Admin Controls"
     await page.evaluate((proofKey) => sessionStorage.getItem(proofKey),
       administratorProofStorageKey)
   ).toBeNull();
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 /**
@@ -336,7 +316,7 @@ test("Admin observation and the media patch wait for the window to open", async 
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await watchPageObservation(page);
-  const diagnostics = await preparePage(page);
+  const { mutatingRequests } = await preparePage(page);
   await expect(page.locator("#admin-controls-window")).toBeHidden();
 
   const beforeOpen = await readPageObservation(page);
@@ -355,9 +335,7 @@ test("Admin observation and the media patch wait for the window to open", async 
     "Reopening must reuse the observer rather than attach another."
   );
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("a restored Admin session that mutes media observes the page without opening", async ({
@@ -374,7 +352,7 @@ test("a restored Admin session that mutes media observes the page without openin
     },
     { key: storageKey, state: { version: 1, audio: false } }
   );
-  const diagnostics = await preparePage(page);
+  const { mutatingRequests } = await preparePage(page);
 
   await expect(page.locator("#admin-controls-window")).toBeHidden();
   await expect(page.locator("body")).toHaveClass(/is-admin-audio-off/);
@@ -382,15 +360,13 @@ test("a restored Admin session that mutes media observes the page without openin
   expect(observation.mediaPlayPatched).toBe(true);
   expect(observation.bodySubtreeObservers).toBeGreaterThan(0);
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("Admin Controls stays contained, scrollable, and keyboard accessible", async ({
   page,
-}, testInfo) => {
-  const diagnostics = await preparePage(page);
+}) => {
+  const { mutatingRequests } = await preparePage(page);
   const launcher = page.locator('.taskbar-icon[data-app="admin-controls"]');
   const desktopLauncher = page.locator('.desktop-icon[data-app="admin-controls"]');
   const launcherIcon = launcher.locator("img");
@@ -566,9 +542,6 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
       expect(metrics.panelShadow).toBe(metrics.raisedControlShadow);
 
       if (["mobile", "short-landscape", "wide"].includes(viewport.name)) {
-        await page.screenshot({
-          path: testInfo.outputPath(`admin-controls-${viewport.name}.png`),
-        });
       }
 
       if (viewport.name === "mobile") {
@@ -609,22 +582,17 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
       }
 
       if (["short-mobile", "mobile", "desktop", "wide"].includes(viewport.name)) {
-        await page.screenshot({
-          path: testInfo.outputPath(`admin-launchers-${viewport.name}.png`),
-        });
       }
     });
   }
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("direct events and fixed seeded controls run locally without duplicate natural events", async ({
   page,
 }) => {
-  const diagnostics = await preparePage(page);
+  const { mutatingRequests } = await preparePage(page);
   await page.setViewportSize({ width: 1280, height: 800 });
   expect(
     await page.locator("#admin-event-preview").evaluate((preview) => preview.shadowRoot === null)
@@ -862,10 +830,13 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   const videoDialog = page.locator('[data-app-window="video-editor"]');
   await expect(videoDialog).toBeVisible();
   await expect(behelit).toBeVisible();
-  await page.waitForTimeout(2_100);
+  // The seeded one-shot clearing is the observable the binding owes; waiting on
+  // it is what proves the natural-event runtime has finished reacting. The
+  // debug popups are suppressed at the source, which debug-fixture.spec.mjs
+  // proves against a running clock.
+  await expect(target).not.toHaveAttribute("data-admin-seeded", /.+/);
   await expect(page.locator("#neko-stream-alert-window")).toBeHidden();
   await expect(page.locator("#debug-system-alert-window")).toBeHidden();
-  await expect(target).not.toHaveAttribute("data-admin-seeded", /.+/);
 
   await closeManagedWindow(behelit, behelit.locator("#behelit-ok"));
   await closeManagedWindow(
@@ -884,13 +855,11 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   expect(() => JSON.parse(storage.local)).not.toThrow();
   expect(storage.session).toBeNull();
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("event previews preserve an initialized first-window state", async ({ page }) => {
-  const diagnostics = await preparePage(page);
+  const { mutatingRequests } = await preparePage(page);
   await page.setViewportSize({ width: 1280, height: 800 });
   await openAdmin(page);
   await selectAdminTab(page, "events");
@@ -994,15 +963,13 @@ test("event previews preserve an initialized first-window state", async ({ page 
   expect(await eventPreview.locator("link[rel=stylesheet]").count()).toBe(3);
   await expect(eventPreview.getByRole("button")).toHaveCount(0);
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("Random delegates to the repeat-safe runtime and can be added as an operator cue", async ({
   page,
 }) => {
-  const diagnostics = await preparePage(page, { spyOnOrchestratedEvents: true });
+  const { mutatingRequests } = await preparePage(page, { spyOnOrchestratedEvents: true });
   await page.setViewportSize({ width: 1280, height: 800 });
   await openAdmin(page);
 
@@ -1019,13 +986,11 @@ test("Random delegates to the repeat-safe runtime and can be added as an operato
     "__random__",
   ]);
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("Capture quick-start drives a stable Modeling carousel promo binding", async ({ page }) => {
-  const diagnostics = await preparePage(page, { spyOnOrchestratedEvents: true });
+  const { mutatingRequests } = await preparePage(page, { spyOnOrchestratedEvents: true });
   await page.setViewportSize({ width: 1280, height: 800 });
 
   const modelingLauncher = page.locator('.taskbar-icon[data-app="modeling"]');
@@ -1091,15 +1056,13 @@ test("Capture quick-start drives a stable Modeling carousel promo binding", asyn
     "behelit-found",
   ]);
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("Promo random mode boosts a natural carousel trigger through the safe scheduler", async ({
   page,
 }) => {
-  const diagnostics = await preparePage(page);
+  const { mutatingRequests } = await preparePage(page);
   await page.setViewportSize({ width: 1280, height: 800 });
 
   await page.locator('.taskbar-icon[data-app="modeling"]').click();
@@ -1162,13 +1125,11 @@ test("Promo random mode boosts a natural carousel trigger through the safe sched
       '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
     )
   );
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("deterministic sequence bindings and capture settings survive reload", async ({ page }) => {
-  const diagnostics = await preparePage(page, { spyOnOrchestratedEvents: true });
+  const { mutatingRequests } = await preparePage(page, { spyOnOrchestratedEvents: true });
   await page.setViewportSize({ width: 1280, height: 800 });
   await openAdmin(page);
 
@@ -1280,9 +1241,7 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
   expect(stored.local).toBeTruthy();
   expect(stored.session).toBeNull();
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("capture aids, presets, privacy, media switches, and start-stop controls reflect real state", async ({
@@ -1290,7 +1249,7 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
 }) => {
   // The game-win preset now plays a real 52-card auto-solve at production cadence.
   test.setTimeout(90_000);
-  const diagnostics = await preparePage(page);
+  const { mutatingRequests } = await preparePage(page);
   await page.setViewportSize({ width: 1280, height: 800 });
   await openAdmin(page);
 
@@ -1408,13 +1367,11 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
   expect(impactSounds).toHaveLength(52);
   expect(impactSounds.every((media) => media.muted)).toBe(true);
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 test("picker convenience and Reset Scene preserve local Admin settings", async ({ page }) => {
-  const diagnostics = await preparePage(page);
+  const { mutatingRequests } = await preparePage(page);
   await page.setViewportSize({ width: 1280, height: 800 });
 
   const privateValues = {
@@ -1500,16 +1457,14 @@ test("picker convenience and Reset Scene preserve local Admin settings", async (
   await expect(page.locator("#admin-intensity")).toHaveValue("high");
   await expect(page.locator("#admin-privacy")).toBeChecked();
 
-  expect(diagnostics.consoleErrors).toEqual([]);
-  expect(diagnostics.runtimeErrors).toEqual([]);
-  expect(diagnostics.mutatingRequests).toEqual([]);
+  expect(mutatingRequests).toEqual([]);
 });
 
 for (const reason of ["expiry", "storage removal"]) {
   test(`an open Admin window returns to its gate after ${reason} without resetting settings`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.clock.install();
-    const diagnostics = await preparePage(page);
+    const { mutatingRequests } = await preparePage(page);
     const { win } = await openAdmin(page);
     await selectAdminTab(page, "capture");
     await page.locator("#admin-intensity").selectOption("high");
@@ -1529,8 +1484,6 @@ for (const reason of ["expiry", "storage removal"]) {
     await expect(page.locator('.taskbar-icon[data-app="admin-controls"]')).toBeFocused();
     expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBe(savedSettings);
     expect(await page.evaluate((key) => sessionStorage.getItem(key), administratorProofStorageKey)).toBeNull();
-    expect(diagnostics.consoleErrors).toEqual([]);
-    expect(diagnostics.runtimeErrors).toEqual([]);
-    expect(diagnostics.mutatingRequests).toEqual([]);
+    expect(mutatingRequests).toEqual([]);
   });
 }

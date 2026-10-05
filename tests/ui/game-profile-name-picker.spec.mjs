@@ -1,65 +1,18 @@
-import { expect, test } from "./fixtures.mjs";
-import { DETERMINISTIC_RANDOM_DRAW } from "./helpers/rendered-site.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { DETERMINISTIC_RANDOM_DRAW, REVIEW_VIEWPORT, breakpointPair } from "./helpers/rendered-site.mjs";
 
-const skyGeneratorDefinition = `title = Sky Name Generator
-
-names
-  [vowels][consonants][vowels][consonants]
-  [consonants][vowels][consonants][vowels]
-  [vowels][consonants][vowels][consonants][vowels]
-  [consonants][vowels][consonants][vowels][consonants]
-  [vowels][consonants][vowels][consonants][vowels][consonants]
-  [consonants][vowels][consonants][vowels][consonants][vowels]
-  [vowels][consonants][vowels][consonants][vowels][consonants][vowels]
-  [consonants][vowels][consonants][vowels][consonants][vowels][consonants]
-  [vowels][consonants][vowels][consonants][vowels][consonants][vowels][consonants]
-  [consonants][vowels][consonants][vowels][consonants][vowels][consonants][vowels]
-
-vowels
-  a
-  e
-  i
-  o
-  u
-
-consonants
-  b
-  c
-  d
-  f
-  g
-  h ^0.5
-  j
-  k
-  l
-  m
-  n
-  p
-  q ^0.5
-  r
-  s
-  t
-  v
-  w ^0.5
-  x ^0.5
-  y
-  z ^0.5`;
 
 const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "compact breakpoint", width: 560, height: 900 },
-  { name: "above compact breakpoint", width: 561, height: 900 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide desktop", width: 1440, height: 900 },
+  REVIEW_VIEWPORT.mobile,
+  ...breakpointPair("the compact breakpoint", { below: 560, above: 561, height: 900 }),
+  REVIEW_VIEWPORT.tablet,
+  REVIEW_VIEWPORT.desktop,
+  REVIEW_VIEWPORT.wide,
 ]);
 
 const prepareNamePicker = async (page) => {
   // Keep unrelated random alerts out of the picker; names use Web Crypto.
   await page.addInitScript((draw) => { Math.random = () => draw; }, DETERMINISTIC_RANDOM_DRAW);
-  await page.route(/https:\/\/perchance\.org\/api\/downloadGenerator/, (route) =>
-    route.fulfill({ body: skyGeneratorDefinition, contentType: "text/plain" })
-  );
   await page.goto("/home.html");
   const aboutWindowClose = page.locator('#about-window [data-close="about"]');
   if (await aboutWindowClose.isVisible()) {

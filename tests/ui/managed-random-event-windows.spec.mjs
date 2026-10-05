@@ -12,6 +12,7 @@
  */
 
 import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 
 test.setTimeout(180_000);
@@ -39,12 +40,7 @@ const TASKBAR_CLEARANCE = 64;
 const SHARED_OPEN_DURATIONS = Object.freeze(["0.26s", "0.22s"]);
 const SHARED_CLOSE_DURATIONS = Object.freeze(["0.18s", "0.16s"]);
 
-const VIEWPORTS = [
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-];
+const VIEWPORTS = REVIEW_VIEWPORTS;
 
 /**
  * One case per migrated lifecycle shape:
@@ -93,12 +89,6 @@ const preparePage = async (page) => {
     proof: `${"a".repeat(32)}.${"b".repeat(32)}`,
     proofKey: administratorProofStorageKey,
   });
-  await page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: 'window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });',
-    })
-  );
   await page.goto(homeUrl, { waitUntil: "domcontentloaded" });
   await page.locator("#about-window").evaluate((element) => {
     element.classList.remove("is-opening", "is-closing");
@@ -347,7 +337,7 @@ test("a chained event hands its position to the window that replaces it", async 
 
 
 for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
-  test(`dynamic Word windows cascade and remove themselves at ${viewport.name}`, async ({ page }, testInfo) => {
+  test(`dynamic Word windows cascade and remove themselves at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await preparePage(page);
     await openAdminEvents(page);
@@ -364,7 +354,6 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
       expect(box.y + box.height).toBeLessThanOrEqual(viewport.height - TASKBAR_CLEARANCE + 1);
     }
-    await page.screenshot({ path: testInfo.outputPath(`word-stack-${viewport.name}.png`) });
     await windows.last().getByRole("button", { name: "Close", exact: true }).click();
     await expect(windows).toHaveCount(0);
     // A completed removal must release the event so its next trigger works.
@@ -375,7 +364,7 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
     await expect(windows).toHaveCount(0);
   });
 
-  test(`dynamic Brand windows retain custom durations and removal at ${viewport.name}`, async ({ page }, testInfo) => {
+  test(`dynamic Brand windows retain custom durations and removal at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     // The event starts through the real control. This narrow probe reaches the
     // health-dependent Puck branch and exits combat without waiting for a loss.
@@ -414,7 +403,6 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
     }
-    await page.screenshot({ path: testInfo.outputPath(`brand-windows-${viewport.name}.png`) });
     await page.evaluate(() => window.__managedWindowProbe.close());
     await expect(main).toBeHidden();
     await expect(enemies).toHaveCount(0);

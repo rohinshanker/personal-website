@@ -1,4 +1,5 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORT, breakpointPair } from "./helpers/rendered-site.mjs";
 
 const MONTH_NAMES = Object.freeze([
   "January",
@@ -16,12 +17,11 @@ const MONTH_NAMES = Object.freeze([
 ]);
 
 const VIEWPORTS = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "below-calendar-breakpoint", width: 680, height: 800 },
-  { name: "above-calendar-breakpoint", width: 681, height: 800 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
+  REVIEW_VIEWPORT.mobile,
+  ...breakpointPair("the calendar breakpoint", { below: 680, above: 681, height: 800 }),
+  REVIEW_VIEWPORT.tablet,
+  REVIEW_VIEWPORT.desktop,
+  REVIEW_VIEWPORT.wide,
 ]);
 
 const QUOTES = Object.freeze([
@@ -42,24 +42,6 @@ const QUOTES = Object.freeze([
 ]);
 
 const preparePage = async (page, viewport) => {
-  const diagnostics = {
-    consoleErrors: [],
-    runtimeErrors: [],
-    requestFailures: [],
-  };
-  page.on("console", (message) => {
-    if (message.type() === "error") diagnostics.consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => diagnostics.runtimeErrors.push(error.message));
-  page.on("requestfailed", (request) => {
-    diagnostics.requestFailures.push(request.method() + " " + request.url());
-  });
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: 'window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });',
-    })
-  );
   await page.setViewportSize(viewport);
   await page.addInitScript(() => {
     localStorage.clear();
@@ -69,7 +51,6 @@ const preparePage = async (page, viewport) => {
   await page.goto("/home.html", { waitUntil: "load" });
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
-  return diagnostics;
 };
 
 const navigateForwardToMonth = async (page, month) => {
@@ -123,8 +104,8 @@ const measureCalendarQuote = (page) =>
 for (const viewport of VIEWPORTS) {
   test("September and October quotes remain readable at " + viewport.name, async ({
     page,
-  }, testInfo) => {
-    const diagnostics = await preparePage(page, viewport);
+  }) => {
+    await preparePage(page, viewport);
     const calendar = page.locator("#calendar-popout");
     const quote = page.locator("#clock-quote");
     const close = page.locator("#calendar-close");
@@ -158,12 +139,6 @@ for (const viewport of VIEWPORTS) {
       expect(metrics.quoteFontSize).toBeCloseTo(11, 1);
       expect(metrics.quoteOverflowsHorizontally).toBe(false);
 
-      await page.screenshot({
-        path: testInfo.outputPath(
-          "calendar-" + expected.monthName.toLowerCase() + "-" + viewport.width + "x" + viewport.height + ".png"
-        ),
-        fullPage: true,
-      });
     }
 
     await close.focus();
@@ -172,8 +147,5 @@ for (const viewport of VIEWPORTS) {
     await expect(calendar).toHaveAttribute("aria-hidden", "true");
     await expect(calendar).toBeHidden();
 
-    expect(diagnostics.consoleErrors).toEqual([]);
-    expect(diagnostics.runtimeErrors).toEqual([]);
-    expect(diagnostics.requestFailures).toEqual([]);
   });
 }

@@ -1,4 +1,5 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
 test.setTimeout(120_000);
 
@@ -7,21 +8,7 @@ const videoWindowSelector = '[data-app-window="video-editor"]';
 const blockedMessage =
   "The new tab was blocked. Allow pop-ups for this site, then choose Yes again.";
 
-const viewports = [
-  { width: 375, height: 812, name: "mobile" },
-  { width: 768, height: 1024, name: "tablet" },
-  { width: 1280, height: 800, name: "desktop" },
-  { width: 1440, height: 900, name: "wide" },
-];
-
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
+const viewports = REVIEW_VIEWPORTS;
 
 const loadHome = async (page) => {
   await page.addInitScript(() => {
@@ -30,7 +17,6 @@ const loadHome = async (page) => {
     sessionStorage.clear();
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await disableRemoteGameStats(page);
   await page.goto(homeUrl, { waitUntil: "domcontentloaded" });
 };
 
@@ -79,13 +65,7 @@ const expectPromptInsideViewport = async (win, viewport) => {
 
 test("Video Editor launcher renders a responsive, keyboard-friendly Yes/No prompt", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+}) => {
   await loadHome(page);
 
   for (const viewport of viewports) {
@@ -115,9 +95,6 @@ test("Video Editor launcher renders a responsive, keyboard-friendly Yes/No promp
       await expect(error).toBeHidden();
       await expectPromptInsideViewport(win, viewport);
 
-      await page.screenshot({
-        path: testInfo.outputPath(`video-editor-launch-${viewport.name}.png`),
-      });
 
       await no.press("Enter");
       await expect(win).toHaveAttribute("aria-hidden", "true");
@@ -126,8 +103,6 @@ test("Video Editor launcher renders a responsive, keyboard-friendly Yes/No promp
     });
   }
 
-  expect(consoleErrors).toEqual([]);
-  expect(runtimeErrors).toEqual([]);
 });
 
 test("Video Editor Yes opens a secure new tab and restores the exact launcher", async ({
@@ -153,13 +128,7 @@ test("Video Editor Yes opens a secure new tab and restores the exact launcher", 
   await expect(launcher).toBeFocused();
 });
 
-test("Video Editor blocked and failed popups stay actionable", async ({ page }, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+test("Video Editor blocked and failed popups stay actionable", async ({ page }) => {
   await loadHome(page);
   const viewport = { width: 375, height: 812 };
   await page.setViewportSize(viewport);
@@ -178,9 +147,6 @@ test("Video Editor blocked and failed popups stay actionable", async ({ page }, 
   await expect(firstError).toHaveAttribute("role", "alert");
   await expect(firstYes).toBeFocused();
   await expectPromptInsideViewport(first.win, viewport);
-  await page.screenshot({
-    path: testInfo.outputPath("video-editor-launch-popup-blocked.png"),
-  });
   await first.win.locator("#video-editor-launch-no").click();
   await finishCloseAnimation(first.win);
   await expect(first.launcher).toBeFocused();
@@ -221,8 +187,6 @@ test("Video Editor blocked and failed popups stay actionable", async ({ page }, 
   await finishCloseAnimation(third.win);
   await expect(third.launcher).toBeFocused();
 
-  expect(consoleErrors).toEqual([]);
-  expect(runtimeErrors).toEqual([]);
 });
 
 test("Video Editor Escape and title close dismiss to their exact launchers", async ({

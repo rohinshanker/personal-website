@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
+import { settleFrames } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(240_000);
 
@@ -32,17 +32,7 @@ const rectKeys = [
   "slot",
 ];
 
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
-
 const installRelicRecoveryTestBridge = async (page) => {
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "eventRelicRecovery", (source) =>
     source.replace(
       /\n\}\)\(\);\s*$/,
@@ -99,7 +89,6 @@ const setupPage = async (page, viewport) => {
     Math.random = () => 0.999999;
     localStorage.clear();
   });
-  await disableRemoteGameStats(page);
   await installRelicRecoveryTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => Boolean(window.__relicRecoveryTest));
@@ -217,14 +206,7 @@ const finishDetailAndFreezeFlyer = async (page) => {
 
 test("Relic Recovery remains proportional and functional across viewports", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
+}) => {
   await setupPage(page, { width: 1440, height: 900 });
   const baseline = await measurePrompt(page);
   expect(baseline.scale).toBe(1);
@@ -232,7 +214,8 @@ test("Relic Recovery remains proportional and functional across viewports", asyn
   for (const viewport of viewports) {
     await test.step(viewport.name, async () => {
       await page.setViewportSize(viewport);
-      await page.waitForTimeout(420);
+      // Home rescales open windows on an animation frame after a resize.
+      await settleFrames(page);
       const metrics = await measurePrompt(page);
       const expectedScale = Math.min(
         1,
@@ -263,7 +246,8 @@ test("Relic Recovery remains proportional and functional across viewports", asyn
   for (const viewport of fullStateViewports) {
     await test.step(`${viewport.name} interactions`, async () => {
       await page.setViewportSize(viewport);
-      await page.waitForTimeout(420);
+      // Home rescales open windows on an animation frame after a resize.
+      await settleFrames(page);
       await page.evaluate(() => window.__relicRecoveryTest.reset());
       const start = page.locator("#relic-recovery-start");
       await start.focus();
@@ -338,9 +322,6 @@ test("Relic Recovery remains proportional and functional across viewports", asyn
       const metrics = await measurePrompt(page);
       expectWindowContained(metrics, viewport);
       if (viewport.name === "mobile" || viewport.name === "short") {
-        await page.screenshot({
-          path: testInfo.outputPath(`relic-recovery-${viewport.name}.png`),
-        });
       }
     });
   }
@@ -350,6 +331,4 @@ test("Relic Recovery remains proportional and functional across viewports", asyn
   await expect(windowElement).toHaveAttribute("aria-hidden", "true");
   await dispatchAnimationEnd(windowElement, "retro-window-close");
   await expect(windowElement).toBeHidden();
-  expect(consoleErrors).toEqual([]);
-  expect(runtimeErrors).toEqual([]);
 });

@@ -1,18 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(120_000);
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide desktop", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 
 const installLancerBattleBridge = async (page) => {
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "eventLancerBattle", (source) =>
     source.replace(
       /\n\}\)\(\);\s*$/,
@@ -35,24 +29,8 @@ window.__lancerBattleResultPlaybackTest = Object.freeze({
   );
 };
 
-const disableRemoteGameStats = (page) =>
-  page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: 'window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });',
-    })
-  );
-
 const preparePage = async (page) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
   await installLancerBattleBridge(page);
-  await disableRemoteGameStats(page);
   await page.addInitScript(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -66,8 +44,6 @@ const preparePage = async (page) => {
   await expect
     .poll(() => page.evaluate(() => Boolean(window.__lancerBattleResultPlaybackTest)))
     .toBe(true);
-
-  return { consoleErrors, runtimeErrors };
 };
 
 const readPlayback = (video, expectedState) =>
@@ -130,9 +106,9 @@ for (const viewport of viewports) {
   ]) {
     test(`Lancer Duel ${outcome.label} clip ignores clicks at ${viewport.name}`, async ({
       page,
-    }, testInfo) => {
+    }) => {
       await page.setViewportSize(viewport);
-      const diagnostics = await preparePage(page);
+      await preparePage(page);
       await page.evaluate((success) => {
         window.__lancerBattleResultPlaybackTest.showResult(success);
       }, outcome.success);
@@ -224,12 +200,6 @@ for (const viewport of viewports) {
         )
       ).toBe("");
 
-      await page.screenshot({
-        path: testInfo.outputPath(
-          `lancer-result-${outcome.state}-${viewport.width}x${viewport.height}.png`
-        ),
-        fullPage: true,
-      });
 
       if (viewport.name === "desktop") {
         const clipDurationMs = outcome.success ? 7_000 : 3_500;
@@ -269,8 +239,6 @@ for (const viewport of viewports) {
       }
       await expect(win).toBeHidden();
 
-      expect(diagnostics.consoleErrors).toEqual([]);
-      expect(diagnostics.runtimeErrors).toEqual([]);
     });
   }
 }

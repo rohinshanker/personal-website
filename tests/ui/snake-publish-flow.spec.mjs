@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, consumeDiagnostics } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
 
 const API_BASE_URL = "https://game-stats-snake-publish.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -16,12 +16,7 @@ const profile = Object.freeze({
   icon: "assets/app-icons/ico/user_card.ico",
   rerollCount: 0,
 });
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 
 const isPlayerStatsPath = (path, playerId) => {
   const url = new URL(path, API_BASE_URL);
@@ -60,7 +55,6 @@ const installBackendConfig = async (page) => {
 };
 
 const installSnakeBridge = async (page) => {
-  await routeProductionDebugFlags(page);
   await routeHomeScript(page, "snake", (source) =>
     source.replace(
       /\n\}\)\(\);\s*$/,
@@ -322,22 +316,11 @@ const installApi = async (
   };
 };
 
-const collectRuntimeErrors = (page) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  return { consoleErrors, pageErrors };
-};
-
 const preparePage = async (
   page,
   viewport,
   { eventDelayMs = 0, rejectEvent = false, retryEventOnce = false } = {}
 ) => {
-  const runtimeErrors = collectRuntimeErrors(page);
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(
@@ -393,7 +376,6 @@ const preparePage = async (
 
   return {
     api,
-    runtimeErrors,
     snakeWindow,
     statsWindow: page.locator("#game-stats-window-snake"),
   };
@@ -487,7 +469,7 @@ for (const viewport of viewports) {
   test(`a verified Snake run publishes and refreshes global stats at ${viewport.name}`, async ({
     page,
   }, testInfo) => {
-    const { api, runtimeErrors, statsWindow } = await preparePage(page, viewport);
+    const { api, statsWindow } = await preparePage(page, viewport);
     const status = statsWindow.locator("[data-game-stats-sync-status]");
     const panel10 = statsWindow.locator('[aria-labelledby="game-stats-snake-10"]');
     const globalRows10 = panel10.locator(
@@ -573,15 +555,13 @@ for (const viewport of viewports) {
       path: screenshotPath,
       contentType: "image/png",
     });
-    expect(runtimeErrors.consoleErrors).toEqual([]);
-    expect(runtimeErrors.pageErrors).toEqual([]);
   });
 }
 
 test("a delayed eligible Snake result still completes inside the browser timeout", async ({
   page,
-}, testInfo) => {
-  const { api, runtimeErrors, statsWindow } = await preparePage(
+}) => {
+  const { api, statsWindow } = await preparePage(
     page,
     { width: 1280, height: 800 },
     { eventDelayMs: 3_500 }
@@ -592,18 +572,13 @@ test("a delayed eligible Snake result still completes inside the browser timeout
   await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
   expectPublishedRequestContract(api);
   expectLocalSnakeResult(await readStoredStats(page));
-  await page.screenshot({
-    fullPage: true,
-    path: testInfo.outputPath("desktop-snake-publish-delayed-success.png"),
-  });
-  expect(runtimeErrors.consoleErrors).toEqual([]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
 });
 
 test("a 425 Snake result remains queued and publishes on manual retry", async ({
+  diagnostics,
   page,
-}, testInfo) => {
-  const { api, runtimeErrors, statsWindow } = await preparePage(
+}) => {
+  const { api, statsWindow } = await preparePage(
     page,
     { width: 1280, height: 800 },
     { retryEventOnce: true }
@@ -617,10 +592,6 @@ test("a 425 Snake result remains queued and publishes on manual retry", async ({
   expect(waiting.stats.totals.snake.gamesPlayed[10]).toBe(1);
   expect(api.eventRequests).toHaveLength(1);
 
-  await page.screenshot({
-    fullPage: true,
-    path: testInfo.outputPath("desktop-snake-publish-425-waiting.png"),
-  });
   await expect.poll(() => Date.now() >= api.getRetryEligibleAt()).toBe(true);
   await statsWindow.locator('[data-game-stats-refresh="snake"]').click();
   await expect.poll(() => api.eventRequests.length).toBe(2);
@@ -629,15 +600,19 @@ test("a 425 Snake result remains queued and publishes on manual retry", async ({
   expect(api.eventRequests[1]).toEqual(api.eventRequests[0]);
   expectLocalSnakeResult(await readStoredStats(page));
   expect(api.statsRequests.some(({ refreshed }) => refreshed)).toBe(true);
-  expect(runtimeErrors.consoleErrors).toHaveLength(1);
-  expect(runtimeErrors.consoleErrors[0]).toMatch(/status of 425/);
-  expect(runtimeErrors.pageErrors).toEqual([]);
+  // The 425 that forces the retry is the behaviour under test; the fixture
+  // still fails on anything else the page reported.
+  consumeDiagnostics(diagnostics, {
+    consoleErrors: [/status of 425 \(Too Early\)/],
+    errorResponses: [`425 ${API_BASE_URL}/events`],
+  });
 });
 
 test("a rejected Snake result stays local and never fabricates global stats", async ({
+  diagnostics,
   page,
 }, testInfo) => {
-  const { api, runtimeErrors, statsWindow } = await preparePage(
+  const { api, statsWindow } = await preparePage(
     page,
     { width: 1280, height: 800 },
     { rejectEvent: true }
@@ -677,8 +652,12 @@ test("a rejected Snake result stays local and never fabricates global stats", as
     path: screenshotPath,
     contentType: "image/png",
   });
-  expect(runtimeErrors.consoleErrors).toEqual([
-    "Failed to load resource: the server responded with a status of 400 (Bad Request)",
-  ]);
-  expect(runtimeErrors.pageErrors).toEqual([]);
+  // The server rejection is the behaviour under test; the fixture still fails
+  // on anything else the page reported.
+  consumeDiagnostics(diagnostics, {
+    consoleErrors: [
+      "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+    ],
+    errorResponses: [`400 ${API_BASE_URL}/events`],
+  });
 });

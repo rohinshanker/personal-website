@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
@@ -6,15 +6,6 @@ const viewports = Object.freeze([
   { name: "two-column boundary", width: 481, height: 812 },
   { name: "desktop", width: 1280, height: 800 },
 ]);
-
-const configureOfflineGameStats = async (page) => {
-  await page.route("**/scripts/home/game-stats-backend.js*", async (route) => {
-    await route.fulfill({
-      contentType: "application/javascript",
-      body: 'window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "" });',
-    });
-  });
-};
 
 const openMinesweeper = async (page) => {
   await page.getByRole("toolbar", { name: "Taskbar" }).getByRole("button", { name: "Minesweeper" }).click();
@@ -45,7 +36,6 @@ const expectTopPanelAlignment = async (app) => {
 for (const viewport of viewports) {
   test(`control mode menu is exact and resets at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
-    await configureOfflineGameStats(page);
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
     });

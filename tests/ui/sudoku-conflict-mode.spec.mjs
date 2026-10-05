@@ -3,7 +3,6 @@ import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   FROZEN_INSTANT,
   REVIEW_VIEWPORTS,
-  installOfflineGameStats,
   openHomeDesktop,
   openSudokuBoard,
   settleRender,
@@ -85,7 +84,7 @@ const hint = (win, mode) => win.locator(`[data-sudoku-hint="${mode}"]`);
 for (const viewport of REVIEW_VIEWPORTS) {
   test(`Conflicts marks duplicates and keeps its controls readable at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await installConflictBridge(page);
     await openHomeDesktop(page, viewport);
     const win = await openSudokuBoard(page);
@@ -139,10 +138,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
       await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
     ).toBe(false);
 
-    await page.screenshot({
-      path: testInfo.outputPath(`sudoku-conflicts-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
 
     // Clearing the duplicate releases both marks. Entering a digit advances
     // the selection, so the cell has to be picked up again.
@@ -219,7 +214,6 @@ const RELOAD_MARKER = "sudoku-conflict-mode-initialized";
 
 test("Conflicts survives a reload with the rest of the saved puzzle", async ({ page }) => {
   await installConflictBridge(page);
-  await installOfflineGameStats(page);
   await page.clock.setFixedTime(FROZEN_INSTANT);
   await page.setViewportSize(DESKTOP);
   // The shared helper clears storage on every navigation, which a reload

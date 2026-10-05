@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { settleFrames } from "./helpers/rendered-site.mjs";
 
 const TEST_VIDEO = await readFile(
   new URL(
@@ -36,10 +37,17 @@ const manuallyPlay = async (video) => {
   await expect.poll(() => video.evaluate((element) => element.paused)).toBe(false);
 };
 
-const expectPausedFor = async (video, duration = 500) => {
+/**
+ * A playing element advances its time on every frame, so a handful of frames is
+ * the window in which one that claims to be paused would have given itself away.
+ * It replaces a wall-clock pause, which only ever proved the runner slept.
+ */
+const STILLNESS_FRAMES = 10;
+
+const expectPausedFor = async (video, frames = STILLNESS_FRAMES) => {
   await expect.poll(() => video.evaluate((element) => element.paused)).toBe(true);
   const startTime = await video.evaluate((element) => element.currentTime);
-  await video.page().waitForTimeout(duration);
+  await settleFrames(video.page(), frames);
   const endState = await video.evaluate((element) => ({
     currentTime: element.currentTime,
     paused: element.paused,
@@ -142,7 +150,7 @@ test("manual Modeling videos remain paused when hidden and when revisited", asyn
     .click();
   const video = runwayPanel.locator("video");
   await expect(video).toHaveCount(1);
-  await expectPausedFor(video, 100);
+  await expectPausedFor(video, 4);
   await manuallyPlay(video);
 
   await app
@@ -174,7 +182,7 @@ test("Projects video carousels pause on slide, tab, and window changes", async (
   await ekgPanel.getByRole("button", { name: "Next item" }).click();
   const ekgVideo = ekgPanel.locator("#ekg-project-video");
   await expect(ekgVideo).toBeVisible();
-  await expectPausedFor(ekgVideo, 100);
+  await expectPausedFor(ekgVideo, 4);
   await manuallyPlay(ekgVideo);
 
   await ekgPanel.getByRole("button", { name: "Next item" }).click();
@@ -194,7 +202,7 @@ test("Projects video carousels pause on slide, tab, and window changes", async (
   await app.locator('.selector-item[data-view="projects-drone-navigation"]').click();
   const droneVideo = dronePanel.locator("#drone-project-video");
   await expect(droneVideo).toBeVisible();
-  await expectPausedFor(droneVideo, 100);
+  await expectPausedFor(droneVideo, 4);
   await manuallyPlay(droneVideo);
 
   await dronePanel.getByRole("button", { name: "Next item" }).click();

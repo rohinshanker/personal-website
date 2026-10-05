@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { isolateProductionPerEventDebug } from "./helpers/random-event-debug.mjs";
 
@@ -13,15 +13,6 @@ const viewports = [
   { width: 1280, height: 800, name: "desktop" },
   { width: 1440, height: 900, name: "large-desktop" },
 ];
-
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
 
 const installDebugAlertTestBridge = async (page) => {
   await routeHomeScript(page, "eventPrompts", (source) =>
@@ -212,21 +203,13 @@ const expectAlertActionAlignment = async (page, metrics, alignment) => {
 
 test("all production system alerts schedule and render through the shared shell", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
     Math.random = () => 0.999999;
     localStorage.clear();
   });
-  await disableRemoteGameStats(page);
   await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() =>
@@ -361,11 +344,6 @@ test("all production system alerts schedule and render through the shared shell"
           alert.id === "social-media" ||
           alert.id === "photos"
         ) {
-          await page.screenshot({
-            path: testInfo.outputPath(
-              `debug-system-alert-${viewport.name}-${alert.id}.png`
-            ),
-          });
         }
 
         await closeAlert(page, { useEscape: alert.id === "always-watching" });
@@ -374,27 +352,17 @@ test("all production system alerts schedule and render through the shared shell"
     });
   }
 
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });
 
 test("normalized alert configurations render every alignment and content stress case", async ({
   page,
-}, testInfo) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
     Math.random = () => 0.999999;
     localStorage.clear();
   });
-  await disableRemoteGameStats(page);
   await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() =>
@@ -502,11 +470,6 @@ test("normalized alert configurations render every alignment and content stress 
           (viewport.name === "short-mobile" || viewport.name === "large-desktop") &&
           alert.id === "synthetic-long-content"
         ) {
-          await page.screenshot({
-            path: testInfo.outputPath(
-              `system-alert-${viewport.name}-${alert.id}.png`
-            ),
-          });
         }
 
         const lastButtonId = alert.buttons.at(-1).id;
@@ -540,20 +503,11 @@ test("normalized alert configurations render every alignment and content stress 
   await closeAlert(page);
   await expect(sentinel).toBeFocused();
 
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });
 
 test("reminder alerts respect cooldown and remain directly Admin-triggerable", async ({
   page,
 }) => {
-  const consoleErrors = [];
-  const runtimeErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => runtimeErrors.push(error.message));
-
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.clock.setFixedTime(new Date("2026-07-30T12:00:00Z"));
@@ -561,7 +515,6 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
     Math.random = () => 0.999999;
     localStorage.clear();
   });
-  await disableRemoteGameStats(page);
   await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() =>
@@ -649,6 +602,4 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
     });
   }
 
-  expect(runtimeErrors).toEqual([]);
-  expect(consoleErrors).toEqual([]);
 });

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./deterministic.mjs";
 
 const description = "My personal website. Best enjoyed on desktop…";
 

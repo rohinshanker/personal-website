@@ -1,4 +1,5 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, consumeDiagnostics } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
 
 const API_BASE_URL = "https://game-progress-overall-totals.test";
@@ -10,12 +11,7 @@ const PROFILE = Object.freeze({
   icon: "assets/app-icons/ico/user_card.ico",
   rerollCount: 0,
 });
-const VIEWPORTS = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide", width: 1440, height: 900 },
-]);
+const VIEWPORTS = REVIEW_VIEWPORTS;
 
 const isPlayerStatsRequest = (request, playerId) => {
   const [method, path] = request.split(" ");
@@ -118,13 +114,7 @@ const createStatsPayload = (solitaireWins) => ({
 for (const viewport of VIEWPORTS) {
   test(`Game Progress shows lifetime totals and refreshes on open at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
-    const consoleErrors = [];
-    const pageErrors = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
-    page.on("pageerror", (error) => pageErrors.push(error.message));
+  }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.addInitScript(
@@ -200,18 +190,13 @@ for (const viewport of VIEWPORTS) {
       expect(layout.top).toBeGreaterThanOrEqual(0);
       expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth);
       expect(layout.bottom).toBeLessThanOrEqual(layout.viewportHeight);
-      await page.screenshot({
-        path: testInfo.outputPath(`${state.tab}-${viewport.width}x${viewport.height}.png`),
-        fullPage: true,
-      });
     }
 
-    expect(consoleErrors).toEqual([]);
-    expect(pageErrors).toEqual([]);
   });
 }
 
 test("Game Progress retains confirmed totals through a failed refresh and later converges", async ({
+  diagnostics,
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -265,4 +250,10 @@ test("Game Progress retains confirmed totals through a failed refresh and later 
   await expect.poll(() => requestCount).toBe(3);
   await app.locator('.selector-item[data-view="game-progress-solitaire"]').click();
   await expect(readStat(app, "#game-progress-solitaire-content", "Wins")).toHaveText("12");
+  // The refresh failure is the behaviour under test; the fixture still fails
+  // on anything the page reported beyond this exact pair.
+  consumeDiagnostics(diagnostics, {
+    consoleErrors: ["status of 503 (Service Unavailable)"],
+    errorResponses: [`503 ${API_BASE_URL}/stats`],
+  });
 });

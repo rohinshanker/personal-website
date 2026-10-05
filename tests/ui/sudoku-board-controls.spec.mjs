@@ -3,7 +3,6 @@ import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   FROZEN_INSTANT,
   REVIEW_VIEWPORTS,
-  installOfflineGameStats,
   openApp,
   openHomeDesktop,
   openSudokuBoard,
@@ -123,7 +122,7 @@ const placeAllButOne = async (page, digit) => {
 for (const viewport of REVIEW_VIEWPORTS) {
   test(`exhausted digits grey out and matching values highlight at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await installBoardBridge(page);
     await openHomeDesktop(page, viewport);
     const win = await openSudokuBoard(page);
@@ -185,10 +184,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
       otherHasTint: false,
     });
 
-    await page.screenshot({
-      path: testInfo.outputPath(`sudoku-board-controls-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
 
     // Clearing the ninth placement reopens the keypad and drops the highlight.
     await page.keyboard.press("Backspace");
@@ -204,7 +199,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
 
 test("N toggles notes only in the active Sudoku window and the button hints at it", async ({
   page,
-}, testInfo) => {
+}) => {
   await installBoardBridge(page);
   await openHomeDesktop(page, DESKTOP);
   const win = await openSudokuBoard(page);
@@ -275,10 +270,6 @@ test("N toggles notes only in the active Sudoku window and the button hints at i
   const afterMove = await readTooltip();
   expectTracking(afterMove, moved);
   expect(afterMove.top).not.toBe(atStart.top);
-  await page.screenshot({
-    path: testInfo.outputPath("sudoku-note-hint-1280x800.png"),
-    fullPage: true,
-  });
 
   await page.mouse.move(box.x + box.width + 40, box.y - 40);
   await expect(tooltip).toBeHidden();
@@ -387,7 +378,6 @@ test("digits typed while a panel button holds focus edit the selected cell", asy
  * locally without opening the profile prompt.
  */
 const openHomeDesktopWithProfile = async (page, viewport) => {
-  await installOfflineGameStats(page);
   await page.clock.setFixedTime(FROZEN_INSTANT);
   await page.setViewportSize(viewport);
   await page.addInitScript(() => {

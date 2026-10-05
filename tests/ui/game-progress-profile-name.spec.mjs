@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 
 test.setTimeout(120_000);
 
@@ -96,15 +96,6 @@ for (const viewport of viewports) {
   });
 }
 
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
-
 const readIconPickerScrollState = (page) =>
   page.evaluate(() => {
     const gallery = document.querySelector("#game-profile-icon-gallery");
@@ -140,13 +131,7 @@ const expectIconPickerScrollStateUnchanged = (before, after) => {
 };
 
 for (const viewport of viewports) {
-  test(`Game Progress changes only the icon at ${viewport.name}`, async ({ page }, testInfo) => {
-    const consoleErrors = [];
-    const runtimeErrors = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
-    page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  test(`Game Progress changes only the icon at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(
       ({ profile, storageKey }) => {
@@ -155,7 +140,6 @@ for (const viewport of viewports) {
       },
       { profile: PROFILE, storageKey: PROFILE_STORAGE_KEY }
     );
-    await disableRemoteGameStats(page);
     await page.goto("/home.html");
     await page.locator('.taskbar-icon[data-app="game-progress"]').click();
 
@@ -173,10 +157,6 @@ for (const viewport of viewports) {
     await expect(dialog.locator("#game-profile-name")).toBeHidden();
     await expect(dialog.locator("#game-profile-reroll")).toBeHidden();
     await expect(dialog.locator("#game-profile-icon-search")).toBeFocused();
-    await page.screenshot({
-      path: testInfo.outputPath(`game-progress-icon-picker-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
@@ -311,12 +291,6 @@ for (const viewport of viewports) {
       window.__profileIconSelectionNode = element;
     });
 
-    await page.screenshot({
-      path: testInfo.outputPath(
-        `game-progress-icon-picker-scrolled-${viewport.width}x${viewport.height}.png`
-      ),
-      fullPage: true,
-    });
 
     const beforePointerSelection = await readIconPickerScrollState(page);
     const pointerBounds = await pointerOption.boundingBox();
@@ -369,7 +343,5 @@ for (const viewport of viewports) {
       PROFILE_STORAGE_KEY
     );
     expect(storedProfile).toMatchObject({ id: PROFILE.id, name: PROFILE.name, icon: nextIcon });
-    expect(consoleErrors).toEqual([]);
-    expect(runtimeErrors).toEqual([]);
   });
 }

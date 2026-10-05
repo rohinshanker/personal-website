@@ -1,36 +1,20 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORT, breakpointPair } from "./helpers/rendered-site.mjs";
 
 const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "below Gears Nest layout breakpoint", width: 619, height: 900 },
-  { name: "above Gears Nest layout breakpoint", width: 621, height: 900 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide desktop", width: 1440, height: 900 },
+  REVIEW_VIEWPORT.mobile,
+  ...breakpointPair("the Gears Nest layout breakpoint", { below: 619, above: 621, height: 900 }),
+  REVIEW_VIEWPORT.tablet,
+  REVIEW_VIEWPORT.desktop,
+  REVIEW_VIEWPORT.wide,
 ]);
 
-const disableRemoteGameStats = async (page) => {
-  await page.route(/\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: `window.rohinGameStatsBackend = Object.freeze({ apiBaseUrl: "", buildVersion: "test" });`,
-    })
-  );
-};
-
 for (const viewport of viewports) {
-  test(`Gears Nest renders the more frequent rocket warning at ${viewport.name}`, async ({ page }, testInfo) => {
-    const consoleErrors = [];
-    const runtimeErrors = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
-    page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  test(`Gears Nest renders the more frequent rocket warning at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
     });
-    await disableRemoteGameStats(page);
     await page.goto("/home.html");
 
     const app = page.locator("#gears-nest-window");
@@ -63,11 +47,5 @@ for (const viewport of viewports) {
     expect(layout.right).toBeLessThanOrEqual(viewport.width);
     expect(layout.top).toBeGreaterThanOrEqual(0);
     expect(layout.bottom).toBeLessThanOrEqual(viewport.height);
-    await page.screenshot({
-      path: testInfo.outputPath(`gears-nest-hazard-cadence-${viewport.width}x${viewport.height}.png`),
-      fullPage: true,
-    });
-    expect(consoleErrors).toEqual([]);
-    expect(runtimeErrors).toEqual([]);
   });
 }

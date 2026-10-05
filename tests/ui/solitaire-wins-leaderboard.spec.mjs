@@ -1,9 +1,11 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
+import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
-const workerStatsUrl =
-  /https:\/\/personal-site-game-stats\.rohinshankerme\.workers\.dev\/stats(?:\?|$)/;
+/** A backend only this spec serves, so no route can resolve to the live Worker. */
+const API_BASE_URL = "https://game-stats-solitaire-wins.test";
+const workerStatsUrl = new RegExp(`^${API_BASE_URL}/stats(?:\\?|$)`);
 
 const profile = Object.freeze({
   id: "player-solitaire-test",
@@ -126,12 +128,7 @@ const emptyGlobalState = Object.freeze({
   playerRecords: { solitaire: null },
 });
 
-const viewports = Object.freeze([
-  { name: "mobile", width: 375, height: 812 },
-  { name: "tablet", width: 768, height: 1024 },
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "wide desktop", width: 1440, height: 900 },
-]);
+const viewports = REVIEW_VIEWPORTS;
 
 const openSolitaireStats = async (
   page,
@@ -139,6 +136,7 @@ const openSolitaireStats = async (
   savedLocalState = localState,
   savedProfile = profile
 ) => {
+  await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
   await page.route(workerStatsUrl, (route) =>
     route.fulfill({ body: JSON.stringify(statsState), contentType: "application/json" })
   );
@@ -236,7 +234,7 @@ for (const viewport of viewports) {
 
   test(`Solitaire leaves a zero-win player unranked at ${viewport.name}`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await page.setViewportSize(viewport);
     const stats = await openSolitaireStats(page, emptyGlobalState, zeroWinsLocalState);
     const localRow = stats.locator(".game-stats-solitaire-local-wins-row");
@@ -259,10 +257,6 @@ for (const viewport of viewports) {
     expect(layout.documentOverflows).toBe(false);
     expect(layout.rowRight).toBeLessThanOrEqual(layout.viewportWidth);
 
-    await page.screenshot({
-      path: testInfo.outputPath("solitaire-zero-wins-unranked.png"),
-      fullPage: true,
-    });
   });
 }
 

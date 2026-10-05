@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 
 const viewports = Object.freeze([
   { name: "mobile", width: 375, height: 812 },
@@ -19,15 +19,7 @@ const apostleSources = Object.freeze([
 
 for (const viewport of viewports) {
   test(`Brand Burns Apostle art loads locally at ${viewport.name}`, async ({ page }) => {
-    const consoleErrors = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
     await page.setViewportSize(viewport);
-    await page.route(
-      /https:\/\/personal-site-game-stats\.rohinshankerme\.workers\.dev\/stats(?:\?|$)/,
-      (route) => route.fulfill({ body: "{}", contentType: "application/json" })
-    );
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
     });
@@ -60,6 +52,5 @@ for (const viewport of viewports) {
     );
     expect(imageResults).toHaveLength(apostleSources.length);
     expect(imageResults.every((image) => image.width > 0 && image.height > 0)).toBe(true);
-    expect(consoleErrors).toEqual([]);
   });
 }
