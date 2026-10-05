@@ -9,9 +9,10 @@ import { plain, sourceBetween } from "./helpers/source-runtime.mjs";
 const root = new URL("../", import.meta.url);
 
 test("Game Stats keeps the Worker wiring and one independently managed window per game", async () => {
-  const [homeSource, indexSource] = await Promise.all([
+  const [homeSource, indexSource, gameStatsSource] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
+    readHomeScript("gameStats"),
   ]);
 
   for (const game of ["minesweeper", "solitaire", "snake", "sudoku"]) {
@@ -34,68 +35,55 @@ test("Game Stats keeps the Worker wiring and one independently managed window pe
     homeSource.indexOf("scripts/home/game-stats-backend.js") <
       homeSource.indexOf("scripts/home/main.js")
   );
+  assert.match(
+    gameStatsSource,
+    /registerViewportObserver\(\{[\s\S]*?onFrame: \(\) => \{[\s\S]*?positionVisibleGameStatsWindows\(\);/
+  );
 });
 
-test("the production record flow saves locally before its verified session and queues once", async () => {
+test("the production viewport pass positions every visible Game Stats window", async () => {
   const source = await readHomeScript("gameStats");
   const context = vm.createContext({});
   vm.runInContext(
     [
-      'let gameStatsProfile = { id: "player-1", name: "Player", icon: "player.ico" };',
-      "let gameStatsLocalResetGeneration = 0;",
-      "const gameStatsLocalState = {};",
-      "const gameStatsGlobalState = {};",
-      'let gameStatsSyncState = "ready";',
       "const calls = [];",
-      "let resolveSession;",
-      "const sessionPromise = new Promise((resolve) => { resolveSession = resolve; });",
-      "const normalizeGameStatsEvent = (event) => event ? { ...event } : null;",
-      "const normalizeGameStatsEventProfile = (profile) => ({ ...profile });",
-      "const gameStatsEventBeatsPersonalRecord = () => true;",
-      "const gameStatsEventQualifiesForLeaderboard = () => true;",
-      "const requestGameStatsProfile = async () => gameStatsProfile;",
-      "const applyGameStatsEventToData = () => { calls.push('apply'); return true; };",
-      "const updateGameStatsSudokuBestTime = () => calls.push('best-time');",
-      "const saveGameStatsLocalState = () => calls.push('save');",
-      "const playGameStatsRecordHandoff = async () => calls.push('handoff');",
-      "const getGameStatsSession = () => sessionPromise;",
-      "const queueGameStatsSubmission = (event, session) => calls.push(['queue', event.id, session.id]);",
-      "const setGameStatsSyncState = (state) => { gameStatsSyncState = state; calls.push(['state', state]); };",
-      "const syncQueuedGameStats = () => calls.push('sync');",
-      "const reportGameStatsSessionFailure = () => calls.push('session-failure');",
+      "const makeWindow = (name, width, height, titleBarHeight, classes = []) => { const classNames = new Set(classes); return { name, offsetWidth: width, offsetHeight: height, classList: { contains: (value) => classNames.has(value), replace(values) { classNames.clear(); values.forEach((value) => classNames.add(value)); } }, querySelector: () => ({ offsetHeight: titleBarHeight }) }; };",
+      "const windowsByGame = new Map([['minesweeper', makeWindow('minesweeper', 200, 100, 20)], ['solitaire', makeWindow('solitaire', 220, 110, 30)], ['snake', makeWindow('snake', 210, 120, 25, ['is-hidden'])], ['sudoku', makeWindow('sudoku', 190, 90, 22, ['is-closing'])]]);",
+      "const GAME_STATS_SUPPORTED_GAMES = [...windowsByGame.keys()];",
+      "const getGameStatsWindowParts = (game) => ({ windowElement: windowsByGame.get(game) });",
+      "const clampWindowFullyIntoViewport = (windowElement) => calls.push(['clamp', windowElement.name]);",
+      "const setWindowTitleBarClampedPosition = (windowElement, left, top) => calls.push(['position', windowElement.name, left, top]);",
+      "const window = { innerWidth: 600 };",
       sourceBetween(
         source,
-        "const recordGameStatsEvent =",
-        "\n\nconst formatGameStatsCounter"
+        "const positionVisibleGameStatsWindows =",
+        "\n\nconst openGameStatsWindow"
       ),
-      "globalThis.record = recordGameStatsEvent;",
-      "globalThis.finishSession = () => resolveSession({ session: { id: 'session-1' } });",
-      "globalThis.read = () => ({ calls, gameStatsSyncState });",
+      "globalThis.position = positionVisibleGameStatsWindows;",
+      "globalThis.setWidth = (value) => { window.innerWidth = value; };",
+      "globalThis.setClasses = (game, values) => windowsByGame.get(game).classList.replace(values);",
+      "globalThis.clearCalls = () => { calls.length = 0; };",
+      "globalThis.readCalls = () => calls;",
     ].join("\n"),
     context
   );
 
-  const pending = context.record({
-    id: "event-1",
-    game: "minesweeper",
-    type: "win",
-    difficulty: "beginner",
-    metric: 7,
-  }, "pending-session");
-  await Promise.resolve();
-  assert.deepEqual(plain(context.read().calls), ["apply", "save", "handoff"]);
+  context.position();
+  assert.deepEqual(plain(context.readCalls()), [
+    ["position", "minesweeper", 24, 24],
+    ["position", "solitaire", 356, 24],
+  ]);
 
-  context.finishSession();
-  await pending;
-  assert.deepEqual(plain(context.read()), {
-    calls: [
-      "apply",
-      "save",
-      "handoff",
-      ["queue", "event-1", "session-1"],
-      ["state", "publishing"],
-      "sync",
-    ],
-    gameStatsSyncState: "publishing",
-  });
+  context.clearCalls();
+  context.setWidth(400);
+  context.position();
+  assert.deepEqual(plain(context.readCalls()), [
+    ["position", "minesweeper", 24, 24],
+    ["position", "solitaire", 24, 58],
+  ]);
+
+  context.clearCalls();
+  context.setClasses("solitaire", ["is-hidden"]);
+  context.position();
+  assert.deepEqual(plain(context.readCalls()), [["clamp", "minesweeper"]]);
 });

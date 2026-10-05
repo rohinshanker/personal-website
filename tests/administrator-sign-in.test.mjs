@@ -35,6 +35,7 @@ test("Administrator sign-in remains hidden, accessible, and free of server secre
   assert.match(home, /src="scripts\/home\/core\/administrator-session\.js\?v=[^"]+"/);
   assert.doesNotMatch(home, /Game Progress profile updated to rohin \^\.\^\./);
   assert.doesNotMatch(session, /\blocalStorage\b/);
+  assert.doesNotMatch(gameStats, /ROHIN_NEKO_PROFILE_SHORTCUT/);
 
   for (const secretName of requiredAdministratorSecrets) {
     assert.doesNotMatch(browserSources, new RegExp(secretName));
@@ -55,7 +56,7 @@ const loadCompletionHarness = async ({ administratorProfile = false, adopt = tru
       "const isGameStatsAdministratorProfile = (profile) => profile?.id === 'admin';",
       "const resetGameProgressLocalData = () => calls.push('reset');",
       "const saveGameStatsProfile = (profile) => { calls.push('save-profile'); gameStatsProfile = profile; return profile; };",
-      `const gameStatsAdministratorSession = { adopt: () => ${adopt} };`,
+      `const gameStatsAdministratorSession = { adopt: () => { calls.push('adopt'); return ${adopt}; } };`,
       "const renderGameStatsWindows = () => calls.push('render');",
       "const gameStatsAvatarAnimator = { start: () => calls.push('avatar') };",
       "const setGameStatsSyncState = (state) => { gameStatsSyncState = state; calls.push(['state', state]); };",
@@ -80,6 +81,7 @@ test("the production success transition adopts proof, resets ordinary data, and 
     calls: [
       "reset",
       "save-profile",
+      "adopt",
       "render",
       "avatar",
       ["state", "ready"],
@@ -95,6 +97,7 @@ test("the production success transition preserves an existing Administrator prof
   const context = await loadCompletionHarness({ administratorProfile: true });
   assert.equal(context.complete({ proof: "proof", expiresAt: "later" }), true);
   assert.deepEqual(plain(context.read().calls), [
+    "adopt",
     "render",
     "avatar",
     ["state", "ready"],
@@ -102,9 +105,20 @@ test("the production success transition preserves an existing Administrator prof
   ]);
 });
 
-test("a rejected proof cannot render or synchronize Administrator state", async () => {
+test("a rejected proof cannot render or synchronize an existing Administrator profile", async () => {
   const context = await loadCompletionHarness({ administratorProfile: true, adopt: false });
   assert.equal(context.complete({ proof: "bad", expiresAt: "later" }), false);
-  assert.deepEqual(plain(context.read().calls), []);
+  assert.deepEqual(plain(context.read().calls), ["adopt"]);
   assert.equal(context.read().gameStatsSyncState, "auth-waiting");
+});
+
+test("ordinary profile replacement precedes proof adoption even when adoption rejects", async () => {
+  const context = await loadCompletionHarness({ adopt: false });
+  assert.equal(context.complete({ proof: "bad", expiresAt: "later" }), false);
+  assert.deepEqual(plain(context.read()), {
+    calls: ["reset", "save-profile", "adopt"],
+    gameStatsAuthenticationReturnFocus: {},
+    gameStatsProfile: { id: "admin" },
+    gameStatsSyncState: "auth-waiting",
+  });
 });

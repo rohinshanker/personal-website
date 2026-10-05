@@ -10,6 +10,10 @@ const root = new URL("../", import.meta.url);
 
 test("the production preload function requests all eight number assets with retention", async () => {
   const source = await readHomeScript("minesweeper");
+  assert.match(
+    source,
+    /registerWindowLifecycle\("minesweeper", \{\s*beforeOpen: \(\) => \{\s*void preloadMinesweeperNumberAssets\(\);/
+  );
   const context = vm.createContext({});
   vm.runInContext(
     [

@@ -9,6 +9,6 @@ export const sourceBetween = (source, startMarker, endMarker) => {
   return source.slice(start, end);
 };
 
-/** Converts values created in a VM realm into ordinary assertion-friendly data. */
+/** Converts values created in a VM realm without dropping undefined-valued keys. */
 export const plain = (value) =>
-  value == null ? value : JSON.parse(JSON.stringify(value));
+  value == null ? value : structuredClone(value);
