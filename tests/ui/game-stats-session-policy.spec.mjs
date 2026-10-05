@@ -275,6 +275,21 @@ for (const viewport of REVIEW_VIEWPORTS) {
       path: testInfo.outputPath(`expired-session-${viewport.name}.png`),
       fullPage: true,
     });
+    await statsWindow.locator('[data-close="game-stats-sudoku"]').click();
+    await expect(statsWindow).toBeHidden();
+    await page.evaluate(() => window.__gameStatsSessionPolicyTest.sync());
+    await gameProgress.locator("#game-progress-reset-local").click();
+    expect(await page.evaluate(() => window.__gameStatsSessionPolicyTest.readState())).toEqual({
+      sessionKey: replacementKey,
+      wins: 0,
+    });
+    await gameProgress
+      .getByRole("button", { name: "Open Sudoku global leaderboard" })
+      .click();
+    await expect(statsWindow).toBeVisible();
+    await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
+    await page.evaluate(() => window.__gameStatsSessionPolicyTest.sync());
+    await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
     await refresh.click();
     await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
   });

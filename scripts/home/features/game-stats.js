@@ -3370,6 +3370,7 @@ const renderGameProgressWindow = () => {
 
 const resetGameProgressLocalData = () => {
   gameStatsLocalResetGeneration += 1;
+  gameStatsExpiredResultNoticePending = false;
   if (gameStatsDraftProfile) resolveGameStatsProfilePrompt(null);
 
   gameStatsLocalState = createEmptyGameStatsData();

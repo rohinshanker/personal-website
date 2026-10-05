@@ -576,6 +576,48 @@ test("expired-result feedback returns after automatic failures and clears on man
   assert.equal(context.readForTest().gameStatsSyncState, "ready");
 });
 
+test("local reset clears the expiry notice without disturbing busy or build-mismatch states", async () => {
+  const source = await readMainSource();
+  const stateSource = extractSource(source, "const getGameStatsSyncStateDefinition =", "\n\nconst isGameStatsSyncBusy =");
+  const resetSource = extractSource(source, "const resetGameProgressLocalData =", "\n\nconst renderGameStatsSyncStatus =");
+  for (const state of ["session-expired", "fetching", "auth-waiting", "build-mismatch"]) {
+    const context = vm.createContext({});
+    vm.runInContext([
+      "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, 'session-expired': { message: 'expired' } };",
+      `let gameStatsSyncState = ${JSON.stringify(state)};`,
+      "let gameStatsExpiredResultNoticePending = true;",
+      "let gameStatsSyncMessage = '';",
+      "let gameStatsReleaseWaitCount = 0;",
+      "let gameStatsManualRefreshInProgress = false;",
+      `const gameStatsSyncPromise = ${state === "fetching" ? "{}" : "null"};`,
+      "let gameStatsLocalResetGeneration = 0;",
+      "const gameStatsDraftProfile = null;",
+      "let gameStatsLocalState = { wins: 1 };",
+      "const gameStatsLocalSources = [];",
+      "const createEmptyGameStatsData = () => ({ wins: 0 });",
+      "const saveGameStatsLocalState = () => {};",
+      "const clearGameStatsProfile = () => {};",
+      "const renderGameStatsWindows = () => {};",
+      stateSource,
+      resetSource,
+      "globalThis.resetForTest = resetGameProgressLocalData;",
+      "globalThis.readyForTest = () => setGameStatsSyncState('ready');",
+      "globalThis.readForTest = () => ({ gameStatsSyncState, gameStatsSyncMessage, gameStatsExpiredResultNoticePending, gameStatsLocalState, gameStatsLocalResetGeneration });",
+    ].join("\n"), context);
+    context.resetForTest();
+    const reset = plainObject(context.readForTest());
+    assert.equal(reset.gameStatsExpiredResultNoticePending, false);
+    assert.deepEqual(reset.gameStatsLocalState, { wins: 0 });
+    assert.equal(reset.gameStatsLocalResetGeneration, 1);
+    assert.equal(reset.gameStatsSyncState, state === "session-expired" ? "ready" : state);
+    if (state === "session-expired") {
+      assert.equal(reset.gameStatsSyncMessage, "Local progress was reset. Published and queued leaderboard results remain available.");
+    }
+    context.readyForTest();
+    assert.equal(context.readForTest().gameStatsSyncState, state === "build-mismatch" ? state : "ready");
+  }
+});
+
 test("game-bound hooks own ensure, drop, and synchronous record reservation", async () => {
   const source = await readMainSource();
   const hookSource = extractSource(

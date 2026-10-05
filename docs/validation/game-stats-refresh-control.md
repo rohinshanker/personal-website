@@ -51,9 +51,9 @@ and uses the bundled Solitaire undo icon.
 
 Expiry uses the separate `session-expired` state. Automatic fetching/ready
 updates preserve the notice. A transient automatic failure shows its request
-error, then restores the expiry notice after recovery. Manual Refresh or a new
-publication clears the saved notice. The existing win screen and local
-aggregates remain; no renewal button or extra modal is added. An expired queued
+error, then restores the expiry notice after recovery. Manual Refresh, a new
+publication, or Reset Local Stats clears the saved notice. The existing win
+screen and local aggregates remain; no renewal button or extra modal is added. An expired queued
 proof is removed from the publication queue after classification; its locally
 saved result remains.
 
