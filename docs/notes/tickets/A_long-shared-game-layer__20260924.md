@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-24
 - Updated: 2026-10-05
-- Current State: Owner selected this ticket and requested individual policy decisions. Current-source scoping is underway; helper reconnaissance is assigned read-only to Multica DEM-219. No implementation changes yet. Pending choices: Minesweeper close/timing, session budget and reuse, expired-game publication.
+- Current State: Current-source scoping completed (DEM-219); baseline fast suite passes 593/593. Solitaire initialization/rendering implementation is assigned to DEM-220 in its own worktree. Owner decisions are recorded below; shared helper/session implementation is next.
 - Verification: Full fast and slow Node suites; syntax, secrets, generated assets, integrity and local deployment checks; full browser/accessibility and pinned visual gates; all four games' publishing flows with the offline Worker fixture; rendered Home/game states at 375×812, 768×1024, 1280×800 and 1440×900; independent review of the exact implementation patch.
 - Cleanup: Preserve reusable helper, keyboard, rendering and session contracts in the applicable indexed validation guides. Resolve and delete this ticket and its queue row after acceptance; retain no task history or transient test output.
 
@@ -26,3 +26,9 @@
 2. Solitaire first-open initialization, incremental rendering and solve-plan caching, with behavior and browser regression coverage.
 3. Shared utilities, per-game controllers, active-window keyboard dispatch, session hooks and owner-selected policies, after the helper contracts and policy answers are available.
 4. Integration, generated metadata, full validation, rendered inspection, exact-patch cross-provider review and documentation cleanup.
+
+## Owner decisions (2026-10-05)
+
+- Minesweeper: discard the game on close and start fresh on reopen; retain the existing real elapsed-time rule.
+- Sessions: reuse unconsumed, unexpired sessions only for the same game/configuration across abandoned attempts or losses without submissions; raise new-session budget from 24 to 120 per IP per hour. A result awaiting profile selection, queueing or publication must reserve its session immediately so a newer attempt cannot reuse it. Submitted Snake results consume their sessions.
+- Expiry: preserve the six-hour lifetime. Save expired results locally and explain expiry distinctly. Do not renew at completion, relax minimum-duration checks or falsely report a generic verification failure.
