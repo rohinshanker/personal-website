@@ -5,6 +5,8 @@ import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   REVIEW_VIEWPORTS,
   installGameStatsBackend,
+  openApp,
+  settleRender,
 } from "./helpers/rendered-site.mjs";
 
 const API_BASE_URL = "https://game-stats-session-policy.test";
@@ -178,9 +180,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
 
     const aboutClose = page.locator('#about-window [data-close="about"]');
     if (await aboutClose.isVisible()) await aboutClose.click();
-    await page.locator('.taskbar-icon[data-app="game-progress"]').click();
-    const gameProgress = page.locator("#game-progress-window");
-    await expect(gameProgress).toBeVisible();
+    const gameProgress = await openApp(page, "game-progress");
     for (const game of ["minesweeper", "solitaire", "snake"]) {
       const label = `${game[0].toUpperCase()}${game.slice(1)}`;
       await gameProgress
@@ -188,6 +188,8 @@ for (const viewport of REVIEW_VIEWPORTS) {
         .click();
       const candidateWindow = page.locator(`#game-stats-window-${game}`);
       await expect(candidateWindow).toBeVisible();
+      await expect(candidateWindow).not.toHaveClass(/\bis-opening\b/);
+      await settleRender(page);
       await expect(candidateWindow.locator("[data-game-stats-sync-status]")).toHaveText(
         EXPIRED_MESSAGE
       );
