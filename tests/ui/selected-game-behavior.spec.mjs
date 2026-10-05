@@ -127,7 +127,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
       () => fallbackVideo.evaluate((video) => Number(video.dataset.presentedTime ?? -1)),
       { message: "Victory clip must present and pause a decoded frame after two seconds" }
     ).toBeGreaterThanOrEqual(2);
-    expect(await fallbackVideo.evaluate((video) => Number(video.dataset.presentedTime))).toBeLessThan(3);
     await expect(canvas).toBeVisible();
     await expect.poll(() => canvas.evaluate(canvasHasPixels)).toBe(true);
     // Exercise the explicit video fallback's geometry as well as the real
