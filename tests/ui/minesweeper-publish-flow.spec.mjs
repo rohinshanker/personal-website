@@ -375,6 +375,18 @@ for (const viewport of REVIEW_VIEWPORTS) {
     expect(statsLayout.top).toBeGreaterThanOrEqual(0);
     expect(statsLayout.bottom).toBeLessThanOrEqual(statsLayout.viewportHeight);
 
+    const columns = statsWindow.locator(".game-stats-minesweeper-columns > *");
+    await expect(columns).toHaveCount(3);
+    const columnBounds = await columns.evaluateAll((elements) => elements.map((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { left: bounds.left, right: bounds.right, top: bounds.top, width: bounds.width };
+    }));
+    columnBounds.forEach((bounds, index) => {
+      expect(bounds.width).toBeGreaterThan(0);
+      expect(bounds.top).toBeCloseTo(columnBounds[0].top, 0);
+      if (index) expect(columnBounds[index - 1].right).toBeLessThanOrEqual(bounds.left);
+    });
+
     const publishedScreenshotPath = testInfo.outputPath(
       `minesweeper-published-stats-${viewport.width}x${viewport.height}.png`
     );

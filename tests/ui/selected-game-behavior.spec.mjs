@@ -9,7 +9,7 @@ import {
   settleRender,
 } from "./helpers/rendered-site.mjs";
 
-const installSolitaireVictoryBridge = async (page) => {
+const installGameBehaviorBridges = async (page) => {
   await page.addInitScript(() => {
     const play = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function playMutedForTest() {
@@ -39,21 +39,41 @@ window.__selectedGameBehavior = Object.freeze({
     solCheckWin();
     return { won: solState.won };
   },
-  drawVictoryFrame: () => solDrawVictoryFrame(),
 });
 })();`
     )
   );
+  await routeHomeScript(page, "minesweeper", (source) =>
+    source.replace(/\n\}\)\(\);\s*$/, `
+window.__selectedMinesweeperFace = (face) => msSetFace(face);
+})();`)
+  );
+};
+
+const canvasHasPixels = (element) => {
+  if (!element.width || !element.height) return false;
+  const pixels = element.getContext("2d").getImageData(0, 0, element.width, element.height).data;
+  return pixels.some((value, index) => index % 4 === 3 && value > 0);
 };
 
 for (const viewport of REVIEW_VIEWPORTS) {
   test(`victory media and mobile mark positions at ${viewport.name}`, async ({
     page,
   }, testInfo) => {
-    await installSolitaireVictoryBridge(page);
+    await installGameBehaviorBridges(page);
     await openHomeDesktop(page, viewport);
 
     const minesweeper = await openApp(page, "minesweeper");
+    const reset = minesweeper.locator("#ms-reset");
+    for (const face of ["smile", "ooh", "pressed", "lose", "win"]) {
+      await page.evaluate((value) => window.__selectedMinesweeperFace(value), face);
+      await expect(reset).toHaveAttribute("data-face", face);
+      expect(await reset.evaluate((button) => {
+        const styles = getComputedStyle(button, "::before");
+        return { x: styles.backgroundPositionX, y: styles.backgroundPositionY };
+      })).toEqual({ x: face === "smile" ? "calc(50% - 1px)" : "50%", y: "50%" });
+    }
+    await page.evaluate(() => window.__selectedMinesweeperFace("smile"));
     const topPanel = minesweeper.locator(".ms-top-panel");
     const controls = minesweeper.getByRole("combobox", { name: "Control mode" });
     const flag = minesweeper.locator("#ms-flag-mode");
@@ -80,9 +100,14 @@ for (const viewport of REVIEW_VIEWPORTS) {
     });
     const overlay = solitaire.locator("#sol-victory-video-overlay");
     const fallbackVideo = overlay.locator("#sol-victory-video");
+    const canvas = overlay.locator("#sol-victory-canvas");
     await expect(overlay).toHaveClass(/is-showing/);
     await expect(overlay).toHaveAttribute("aria-hidden", "false");
     await expect.poll(() => fallbackVideo.evaluate((video) => video.readyState)).toBeGreaterThanOrEqual(2);
+    await expect(canvas).toBeVisible();
+    await expect.poll(() => canvas.evaluate(canvasHasPixels), {
+      message: "Production victory drawing must render decoded pixels during playback",
+    }).toBe(true);
     // The static test server does not support range seeking. Wait for an
     // actually presented frame while playing, then pause that decoded frame.
     await fallbackVideo.evaluate(async (video) => {
@@ -91,7 +116,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
         video.dataset.presentedTime = String(metadata.mediaTime);
         if (metadata.mediaTime >= 2) {
           video.pause();
-          window.__selectedGameBehavior.drawVictoryFrame();
         } else {
           video.requestVideoFrameCallback(observe);
         }
@@ -104,13 +128,8 @@ for (const viewport of REVIEW_VIEWPORTS) {
       { message: "Victory clip must present and pause a decoded frame after two seconds" }
     ).toBeGreaterThanOrEqual(2);
     expect(await fallbackVideo.evaluate((video) => Number(video.dataset.presentedTime))).toBeLessThan(3);
-    const canvas = overlay.locator("#sol-victory-canvas");
     await expect(canvas).toBeVisible();
-    await expect.poll(() => canvas.evaluate((element) => {
-      if (!element.width || !element.height) return false;
-      const pixels = element.getContext("2d").getImageData(0, 0, element.width, element.height).data;
-      return pixels.some((value, index) => index % 4 === 3 && value > 0);
-    })).toBe(true);
+    await expect.poll(() => canvas.evaluate(canvasHasPixels)).toBe(true);
     // Exercise the explicit video fallback's geometry as well as the real
     // canvas frame; the decoded, paused clip provides a stable visible frame.
     await canvas.evaluate((element) => element.classList.add("is-hidden"));
