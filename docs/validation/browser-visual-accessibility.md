@@ -34,7 +34,7 @@ wait for browser/visual success as well as the fast and full slow Node tiers.
 
 CI uploads per-shard traces, failure media, and HTML reports. Reproduce a shard
 with `npm run test:ui -- --shard=1/3 --workers=2`, changing the shard number and
-giving concurrent local runs separate ports/output directories. The four
+giving concurrent local runs separate ports/output directories. The
 expected-failure diagnostic probes are deliberate tests of the failure gate,
 not application failures.
 

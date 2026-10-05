@@ -3,8 +3,8 @@
 - Scope: Owner decisions surfaced by the 2026-09-24 audit for the games and the Game Stats Worker. Each item lists the options and a recommendation; nothing is implemented until the owner picks.
 - Status: open
 - Opened: 2026-09-24
-- Updated: 2026-09-30
-- Current State: Items 2, 7, and 8 decided and shipped on 2026-09-28; item 9 shipped on 2026-09-30. The rest await owner answers. Tier: needs user judgment. Once answered, each item moves into the small or long ticket named beside it.
+- Updated: 2026-10-04
+- Current State: Items 2, 7, and 8 decided and shipped on 2026-09-28; item 9 shipped on 2026-09-30. Item 10 is decided and being implemented in the active test-suite ticket. The rest await owner answers. Tier: needs user judgment. Once answered, each item moves into the small or long ticket named beside it.
 - Verification: Record each answer inline (`Decision:` line under the item) and the date; the implementing ticket carries the test plan.
 - Cleanup: When every item has a decision and an owning ticket, delete this ticket and its index row.
 
