@@ -1,4 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
+import { openApp } from "./helpers/rendered-site.mjs";
 
 test.setTimeout(180_000);
 
@@ -113,7 +114,7 @@ test("shared carousel inset keeps Modeling media and loaders clear of the frame"
     localStorage.clear();
   });
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
-  await page.locator('.taskbar-icon[data-app="modeling"]').click();
+  await openApp(page, "modeling");
   await page
     .locator('.selector-item[data-view="modeling-fast-sonder-lookbook-shoot-2"]')
     .click();

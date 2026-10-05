@@ -1902,12 +1902,17 @@ const getGameStatsSyncStateDefinition = () =>
 const setGameStatsSyncState = (state, { message = "" } = {}) => {
   if (!GAME_STATS_SYNC_STATES[state]) return;
   if (gameStatsSyncState === "build-mismatch" && state !== "build-mismatch") return;
-  if (
-    gameStatsSyncState === "session-expired" &&
-    !gameStatsManualRefreshInProgress &&
-    ["fetching", "ready"].includes(state)
-  ) {
-    return;
+  if (state === "session-expired") {
+    gameStatsExpiredResultNoticePending = true;
+  } else if (gameStatsManualRefreshInProgress || state === "publishing") {
+    gameStatsExpiredResultNoticePending = false;
+  }
+  if (gameStatsExpiredResultNoticePending && !gameStatsManualRefreshInProgress) {
+    if (state === "fetching" && gameStatsSyncState === "session-expired") return;
+    if (state === "ready") {
+      state = "session-expired";
+      message = "";
+    }
   }
   if (
     gameStatsReleaseWaitCount > 0 &&
@@ -2115,6 +2120,15 @@ const runGameStatsSyncPass = async () => {
       }
     } catch (error) {
       const status = Number(error?.status);
+      const proofRejected =
+        submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
+        status === 403 &&
+        sentAdministratorProof &&
+        error?.code === GAME_STATS_ADMINISTRATOR_AUTHORIZATION_ERROR_CODE;
+      if (proofRejected) {
+        submission.proofRejections = (submission.proofRejections || 0) + 1;
+        clearGameStatsAdministratorProof();
+      }
       if (isGameStatsSessionExpired(submission.session)) {
         expiredCount += 1;
         continue;
@@ -2123,13 +2137,6 @@ const runGameStatsSyncPass = async () => {
         submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
         status === 403
       ) {
-        const proofRejected =
-          sentAdministratorProof &&
-          error?.code === GAME_STATS_ADMINISTRATOR_AUTHORIZATION_ERROR_CODE;
-        if (proofRejected) {
-          submission.proofRejections = (submission.proofRejections || 0) + 1;
-          clearGameStatsAdministratorProof();
-        }
         if (
           !sentAdministratorProof ||
           (proofRejected &&
@@ -3674,6 +3681,7 @@ let gameStatsSyncPromise = null;
 let gameStatsManualRefreshInProgress = false;
 
 let gameStatsSyncState = "initial";
+let gameStatsExpiredResultNoticePending = false;
 
 let gameStatsSyncMessage = "";
 

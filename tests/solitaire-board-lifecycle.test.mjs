@@ -394,3 +394,36 @@ test("a bridge that replaces the board wholesale still gets a fresh plan", () =>
   assert.equal(harness.autoSolve.getAttribute("aria-label"), "Auto-solve and win the game");
   assert.equal(harness.plans(), 2);
 });
+
+
+test("completed boards ignore stock input until Reset, as do active auto-solves", async () => {
+  const source = await readHomeScript("solitaire");
+  let click;
+  let draws = 0;
+  const state = { won: true };
+  const context = vm.createContext({
+    solState: state,
+    solAutoSolveRun: null,
+    solLastCardClick: null,
+    solDraw: () => { draws += 1; },
+    solBoard: {
+      contains: () => true,
+      addEventListener: (type, handler) => { click = handler; },
+    },
+  });
+  vm.runInContext(sourceBetween(
+    source,
+    '  solBoard.addEventListener("click", (event) => {',
+    '  solBoard.addEventListener("keydown", (event) => {'
+  ), context);
+  const event = { target: { closest: () => ({}) } };
+  click(event);
+  assert.equal(draws, 0);
+  state.won = false;
+  context.solAutoSolveRun = {};
+  click(event);
+  assert.equal(draws, 0);
+  context.solAutoSolveRun = null;
+  click(event);
+  assert.equal(draws, 1);
+});

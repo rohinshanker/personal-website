@@ -224,7 +224,7 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
 
   await stock.focus();
   await page.keyboard.press("Space");
-  await expect.poll(() => api.sessionRequests.length).toBe(2);
+  await expect.poll(() => api.sessionRequests.length).toBe(1);
   expect(
     await page
       .locator("#sol-moves img")
@@ -289,9 +289,11 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
   await expect(page.locator("[data-sol-foundation] [data-sol-card-id$='-13']")).toHaveCount(4);
   await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute("aria-hidden", "false");
   await expect.poll(() => api.eventRequests.length).toBe(1);
-  expect(api.eventRequests[0].session).toEqual({ id: "session-solitaire-winnable-2",
-    token: "session-solitaire-winnable-token-2" });
+  expect(api.eventRequests[0].session).toEqual({ id: "session-solitaire-winnable-1",
+    token: "session-solitaire-winnable-token-1" });
   await page.locator("#sol-reset").evaluate((button) => button.click());
   await expectStandardInitialBoard(page);
   await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute("aria-hidden", "true");
+  await stock.click();
+  await expect.poll(() => api.sessionRequests.length).toBe(2);
 });

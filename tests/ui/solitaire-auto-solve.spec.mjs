@@ -1,6 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { FROZEN_INSTANT, REVIEW_VIEWPORTS, openApp, openHomeDesktop } from "./helpers/rendered-site.mjs";
+import { FROZEN_INSTANT, REVIEW_VIEWPORTS, installGameStatsBackend, openApp, openHomeDesktop, settleFrames } from "./helpers/rendered-site.mjs";
 
 const viewports = REVIEW_VIEWPORTS;
 const suits = ["spades", "clubs", "diamonds", "hearts"];
@@ -355,13 +355,34 @@ test("the preset honours the visual-effects switch without skipping the video", 
   await expect(page.locator("#sol-fireworks")).not.toHaveClass(/is-showing/);
 });
 
-test("a regular deal that the run would finish shows the gold glow and records the win", async ({
+test("a regular deal records one win and stays terminal until Reset", async ({
   page,
 }) => {
   await installSolitaireBridge(page);
+  const apiBaseUrl = "https://solitaire-terminal.test";
+  const sessions = [];
+  const events = [];
+  await installGameStatsBackend(page, { apiBaseUrl });
+  await page.route(`${apiBaseUrl}/**`, async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    let body = { generatedAt: new Date().toISOString(), totals: {}, leaderboards: {} };
+    if (pathname === "/sessions") {
+      sessions.push(JSON.parse(route.request().postData()));
+      body = {
+        id: `solitaire-terminal-session-${sessions.length}`,
+        token: "solitaire-terminal-session-token",
+        expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      };
+    } else if (pathname === "/events") {
+      events.push(JSON.parse(route.request().postData()));
+      body = { ok: true, applied: true };
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  });
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await openApp(page, "solitaire");
   await page.evaluate(() => window.__solitaireAutoSolveTest.stageRevealedGame());
+  await expect.poll(() => sessions.length).toBe(1);
   await expect(page.locator("#sol-auto-solve")).toBeVisible();
   await expect(page.locator("#sol-reset")).toBeHidden();
   const glow = await glowState(page);
@@ -370,11 +391,41 @@ test("a regular deal that the run would finish shows the gold glow and records t
   expect(glow.glow).toContain("rgb(255, 213, 74)");
   expect(glow.animation).toBe("sol-auto-solve-glow");
   expect((await snapshot(page)).presentation).toBeNull();
+  expect((await snapshot(page)).statsSession).not.toBe("");
 
   await page.locator("#sol-auto-solve").click();
   await expect(page.locator("#sol-auto-solve")).toHaveClass(/is-completing/);
   await expectFinishedWin(page, { moves: 92 });
-  expect((await snapshot(page)).statsSession).not.toBe("");
+  expect((await snapshot(page)).statsSession).toBe("");
+  await expect(page.locator("#game-profile-prompt")).toBeVisible();
+  const clickCompletedBoard = async () => {
+    await page.evaluate(() => {
+      const foundation = document.querySelector('[data-sol-foundation="spades"]');
+      foundation.querySelector("button").click();
+      document.querySelector('[data-sol-col="0"]').click();
+      document.querySelector('[data-sol-col="0"] button')?.click();
+      foundation.click();
+      document.getElementById("sol-undo").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await settleFrames(page);
+    expect((await snapshot(page)).foundations).toEqual([13, 13, 13, 13]);
+    expect((await snapshot(page)).won).toBe(true);
+    await expect(page.locator("#sol-tableau .sol-card")).toHaveCount(0);
+    expect(sessions).toHaveLength(1);
+  };
+  await clickCompletedBoard();
+  expect(events).toEqual([]);
+  await page.locator("#game-profile-cancel").click();
+  await expect.poll(() => page.evaluate(() =>
+    JSON.parse(localStorage.getItem("personalSiteGameStatsV1") || "null")?.totals.solitaire.wins
+  )).toBe(1);
+  await expect.poll(() => events.length).toBe(1);
+  await clickCompletedBoard();
+  expect(events).toHaveLength(1);
+  await page.locator("#sol-reset").click();
+  expect((await snapshot(page)).won).toBe(false);
+  await page.locator("#sol-stock").click();
+  await expect.poll(() => sessions.length).toBe(2);
 });
 
 test("a staged board with buried waste cards auto-solves through the waste", async ({ page }) => {

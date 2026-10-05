@@ -394,7 +394,7 @@ test("the runtime blocks input while solving, lands each card before the next, a
   assert.match(impact, /solPrefersReducedMotion\(\)/);
   assert.match(impact, /composite: "add"/);
 
-  assert.match(mainSource, /solBoard\.addEventListener\("click", \(event\) => \{\n    if \(solAutoSolveRun\) return;/);
+  assert.match(mainSource, /solBoard\.addEventListener\("click", \(event\) => \{\n    if \(solAutoSolveRun \|\| solState\.won\) return;/);
   // The window lifecycle hooks run in solitaire-board-lifecycle.test.mjs.
   assert.match(mainSource, /const solNewGame = \(\) => \{[\s\S]*?solCancelAutoSolve\(\);\n  solState\.presentation = null;/);
   assert.match(mainSource, /if \(solAutoSolve\) \{\n  solAutoSolve\.addEventListener\("click", \(\) => \{\n    solStartAutoSolve\(\);/);

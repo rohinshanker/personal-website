@@ -205,6 +205,32 @@ test("a session that expires during an event rejection reports expiry, not verif
   assert.notEqual(state.gameStatsSyncMessage, REJECTED_MESSAGE);
 });
 
+test("an expired session clears a rejected Administrator proof without asking to renew it", async () => {
+  const submission = createSubmission("event-expired-with-rejected-proof");
+  const expiresAtMs = Date.parse(submission.session.expiresAt);
+  const context = await loadSyncHarness({
+    submissions: [submission],
+    eventResponses: [
+      {
+        status: 403,
+        body: { ok: false, code: "administrator-authorization", error: "Rejected proof" },
+        advanceTo: expiresAtMs,
+      },
+    ],
+    proof: "valid.proof",
+  });
+
+  await context.syncForTest();
+  const state = jsonClone(context.readForTest());
+  assert.equal(state.eventRequests.length, 1);
+  assert.equal(state.administratorProof, null);
+  assert.equal(state.proofClears, 1);
+  assert.equal(state.authenticationRequests, 0);
+  assert.deepEqual(state.gameStatsSubmissionQueue, []);
+  assert.equal(state.gameStatsSyncState, "session-expired");
+  assert.notEqual(state.gameStatsSyncMessage, REJECTED_MESSAGE);
+});
+
 const REJECTED_MESSAGE =
   "Local stats are saved, but a result could not pass server verification.";
 

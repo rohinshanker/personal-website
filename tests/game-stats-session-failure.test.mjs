@@ -495,6 +495,8 @@ test("build mismatch is sticky until its reload action replaces the page", async
     [
       "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, 'build-mismatch': { message: 'reload' } };",
       "let gameStatsSyncState = 'ready';",
+      "let gameStatsManualRefreshInProgress = false;",
+      "let gameStatsExpiredResultNoticePending = false;",
       "let gameStatsSyncMessage = '';",
       "let gameStatsReleaseWaitCount = 0;",
       "let renderCalls = 0;",
@@ -521,7 +523,7 @@ test("build mismatch is sticky until its reload action replaces the page", async
   });
 });
 
-test("expired-result feedback survives automatic fetch and ready passes", async () => {
+test("expired-result feedback returns after automatic failures and clears on manual refresh or new publication", async () => {
   const source = await readMainSource();
   const stateSource = extractSource(
     source,
@@ -531,8 +533,9 @@ test("expired-result feedback survives automatic fetch and ready passes", async 
   const context = vm.createContext({});
   vm.runInContext(
     [
-      "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, fetching: { message: 'fetching' }, 'session-expired': { message: 'expired' } };",
+      "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, fetching: { message: 'fetching' }, publishing: { message: 'publishing' }, 'request-failed': { message: 'failed' }, 'session-expired': { message: 'expired' } };",
       "let gameStatsSyncState = 'session-expired';",
+      "let gameStatsExpiredResultNoticePending = true;",
       "let gameStatsSyncMessage = 'expired';",
       "let gameStatsReleaseWaitCount = 0;",
       "let gameStatsManualRefreshInProgress = false;",
@@ -551,6 +554,14 @@ test("expired-result feedback survives automatic fetch and ready passes", async 
     gameStatsSyncState: "session-expired",
     gameStatsSyncMessage: "expired",
   });
+  context.setForTest("request-failed");
+  assert.equal(context.readForTest().gameStatsSyncState, "request-failed");
+  context.setForTest("fetching");
+  context.setForTest("ready");
+  assert.deepEqual(plainObject(context.readForTest()), {
+    gameStatsSyncState: "session-expired",
+    gameStatsSyncMessage: "expired",
+  });
   context.setManualForTest(true);
   context.setForTest("fetching");
   context.setForTest("ready");
@@ -558,6 +569,11 @@ test("expired-result feedback survives automatic fetch and ready passes", async 
     gameStatsSyncState: "ready",
     gameStatsSyncMessage: "ready",
   });
+  context.setManualForTest(false);
+  context.setForTest("session-expired");
+  context.setForTest("publishing");
+  context.setForTest("ready");
+  assert.equal(context.readForTest().gameStatsSyncState, "ready");
 });
 
 test("game-bound hooks own ensure, drop, and synchronous record reservation", async () => {

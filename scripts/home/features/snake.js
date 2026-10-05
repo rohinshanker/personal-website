@@ -280,7 +280,7 @@ const snakeProgressLoader = createProgressLoader({
     const catchupJump =
       Math.max(0, timeProgress - progress) * (0.45 + Math.random() * 0.5);
     const jitterCap = timeProgress + 14 + Math.random() * 18;
-    return Math.min(jitterCap, progress + naturalJump + catchupJump);
+    return Math.max(progress + 1, Math.min(jitterCap, progress + naturalJump + catchupJump));
   },
   nextDelay: ({ elapsedMs, durationMs }) =>
     Math.min(110 + Math.random() * 290, Math.max(0, durationMs - elapsedMs)),

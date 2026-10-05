@@ -1852,7 +1852,7 @@ const solAutoMoveCardToFoundation = (zone, pile, index) => {
 
 if (solBoard) {
   solBoard.addEventListener("click", (event) => {
-    if (solAutoSolveRun) return;
+    if (solAutoSolveRun || solState.won) return;
     const stockHit = event.target.closest("[data-sol-stock]");
     if (stockHit && solBoard.contains(stockHit)) {
       solLastCardClick = null;
@@ -1948,6 +1948,7 @@ if (solAutoSolve) {
 
 if (solUndo) {
   solUndo.addEventListener("click", () => {
+    if (solState.won) return;
     const snapshot = solHistory.pop();
     if (!snapshot) return;
     solRestoreSnapshot(snapshot);

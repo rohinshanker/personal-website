@@ -827,7 +827,7 @@ const setSudokuStatus = (message) => {
 
 const startSudokuTimer = () => {
   if (sudokuState.solved || sudokuState.timerId) return;
-  if (sudokuState.statsSessionEligible) {
+  if (sudokuState.statsSessionEligible && !sudokuState.completionRecorded) {
     sudokuStats.ensureSession({
       difficulty: sudokuState.difficulty,
     });

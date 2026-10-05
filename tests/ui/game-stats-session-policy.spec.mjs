@@ -54,6 +54,7 @@ const installApi = async (page) => {
   const sessionRequests = [];
   const pendingSessionRoutes = [];
   const statsRequests = [];
+  let statsReadFails = false;
 
   await page.route(`${API_BASE_URL}/**`, async (route) => {
     const request = route.request();
@@ -76,7 +77,7 @@ const installApi = async (page) => {
       statsRequests.push(url.pathname + url.search);
       await route.fulfill({
         contentType: "application/json",
-        body: JSON.stringify({
+        body: statsReadFails ? "{" : JSON.stringify({
           generatedAt: new Date().toISOString(),
           totals: {},
           leaderboards: {},
@@ -97,6 +98,7 @@ const installApi = async (page) => {
     eventRequests,
     sessionRequests,
     statsRequests,
+    setStatsReadFailure: (fails) => { statsReadFails = fails; },
     async releaseSessions() {
       await Promise.all(
         pendingSessionRoutes.splice(0).map((route, index) =>
@@ -192,6 +194,26 @@ for (const viewport of REVIEW_VIEWPORTS) {
       await expect(
         candidateWindow.locator(`[data-game-stats-refresh="${game}"]`)
       ).toHaveAttribute("data-game-stats-action", "refresh");
+      const layout = await candidateWindow.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        const status = element.querySelector("[data-game-stats-sync-status]");
+        return {
+          documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
+          statusOverflows: status.scrollWidth > status.clientWidth,
+          windowFits:
+            bounds.top >= 0 && bounds.left >= 0 &&
+            bounds.right <= window.innerWidth && bounds.bottom <= window.innerHeight,
+        };
+      });
+      expect(layout).toEqual({
+        documentOverflows: false,
+        statusOverflows: false,
+        windowFits: true,
+      });
+      await page.screenshot({
+        path: testInfo.outputPath(`expired-session-${game}-${viewport.name}.png`),
+        fullPage: true,
+      });
       await candidateWindow.locator(`[data-close="game-stats-${game}"]`).click();
       await expect(candidateWindow).toBeHidden();
     }
@@ -207,6 +229,13 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await expect(status).toHaveAttribute("data-game-stats-sync-state", "session-expired");
     await expect(refresh).toBeEnabled();
     await expect(refresh).toHaveAttribute("data-game-stats-action", "refresh");
+    api.setStatsReadFailure(true);
+    await page.evaluate(() => window.__gameStatsSessionPolicyTest.sync());
+    await expect(status).toHaveAttribute("data-game-stats-sync-state", "request-failed");
+    api.setStatsReadFailure(false);
+    await page.evaluate(() => window.__gameStatsSessionPolicyTest.sync());
+    await expect(status).toHaveText(EXPIRED_MESSAGE);
+    await expect(status).toHaveAttribute("data-game-stats-sync-state", "session-expired");
 
     const layout = await statsWindow.evaluate((element) => {
       const bounds = element.getBoundingClientRect();
@@ -244,5 +273,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
       path: testInfo.outputPath(`expired-session-${viewport.name}.png`),
       fullPage: true,
     });
+    await refresh.click();
+    await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
   });
 }
