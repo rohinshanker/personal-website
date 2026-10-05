@@ -56,6 +56,14 @@ All specs import `tests/ui/deterministic.mjs`; shared support belongs in
 behavior is actually asserted. The source-import contract prevents new specs
 from bypassing the shared diagnostics and isolation.
 
+The fixture installs the generated Game Stats configuration with an empty API
+base URL, pinned Sudoku worker randomness, production debug flags, and the
+local Sky generator response on the browser context. Popup pages inherit these
+routes. Backend scenarios opt in with
+`installGameStatsBackend(target, { apiBaseUrl, buildVersion })`; its default
+build version comes from the generated configuration. Do not duplicate the
+configuration reader or hard-code a historical build hash in a scenario.
+
 Preserve intentional backend-mock scenarios while preventing accidental
 production calls. A test must supply its own local/mock publishing responses;
 a configured production URL is not a test backend. Assert console, page,
@@ -123,11 +131,12 @@ a deployed-build mismatch is release state, not a unit-test failure.
 To reproduce an individual CI shard locally, assign a unique port/output path:
 
 ```bash
-UI_TEST_PORT=4281 UI_TEST_OUTPUT_DIR=test-results/shard-1 \
+CI=1 UI_TEST_PORT=4281 UI_TEST_OUTPUT_DIR=test-results/shard-1 \
+  PLAYWRIGHT_HTML_REPORT=test-results/shard-1/report \
   npm run test:ui -- --shard=1/3 --workers=2
 ```
 
-Run shards 2/3 and 3/3 with their own ports/output paths when running concurrently.
+Run shards 2/3 and 3/3 with their own ports, output paths, and HTML report directories when running concurrently.
 For UI changes, inspect screenshots and semantic state from the actual routes
 at the four review sizes and relevant breakpoints. Check keyboard/focus,
 overflow, hidden controls, console errors, exceptions, and failed requests.
