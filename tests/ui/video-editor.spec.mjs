@@ -685,10 +685,10 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
   );
 
   const cursorResources = [
-    "/styles/home/cursors.css?v=cache-token-parity-20260927",
-    "/scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930",
-    "/scripts/home/text-selection-cursor.js?v=generic-cursor-guards-20260930",
-    "/video-editor/cursor.js?v=shared-cursor-runtime-20260930",
+    "/styles/home/cursors.css",
+    "/scripts/home/core/cursor-mode.js",
+    "/scripts/home/text-selection-cursor.js",
+    "/video-editor/cursor.js",
     ...["light", "dark"].flatMap((mode) =>
       [
         "normal",

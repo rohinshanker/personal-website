@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-24
 - Updated: 2026-10-04
-- Current State: Local implementation and independent review are in progress on canonical `main`. Fast/slow tiers and gated reusable CI are implemented. Selected behavior conversions are integrated; review repairs and shared-fixture migration remain in progress. Nothing has been pushed or deployed.
+- Current State: Local implementation and independent review are in progress on canonical `main`. Fast/slow tiers and gated reusable CI are implemented. Selected behavior conversions and the shared-fixture migration are integrated. Node, CI, and selected rendered behavior passed independent review; focused fixture coverage repairs and final integrated gates remain. Nothing has been pushed or deployed.
 - Verification: Fast Node under ten seconds; intact 500-seed slow corpus; all browser shards with two workers and zero retries; pinned visual/accessibility/diagnostic gates; exact-patch independent review; three consecutive successful remote `main` browser runs. Remote stability proof remains unobserved.
 - Cleanup: Keep only reusable contracts in `docs/validation/test-suite.md` and `browser-visual-accessibility.md`. Resolve and delete this ticket/index row after acceptance; do not retain test logs or completion histories.
 
@@ -19,16 +19,15 @@
 
 ## Remaining work
 
-1. DEM-214: shared hermetic context, automatic diagnostics including popups, narrow explicit remote embed stubs, shared viewport/backend helpers, no fixed waits, and finite full-suite repair pass. Owner: Claude implementer; original run `01a10969-b4b3-7666-aa60-39a98285c6a5`.
-2. DEM-217: repair selected Node coverage from DEM-216's mutation-based review. Owner: Codex implementer; run `01a10990-1b6f-7869-920e-7961b184e8b5`. Cover flag-count/guard transitions, both presentation-win modes, faithful VM normalization, preload/layout wiring and retained security invariants.
-3. Coordinator: integrate exact owned patches, inspect all four new flow/victory renders and semantic snapshots, run final shards and pinned visual gate, confirm review repairs, update fixture guidance, and record final acceptance state.
-4. Observe three consecutive successful remote `main` runs after authorized publication; leave this ticket active until that condition is met.
+1. DEM-214: specialist repairs first-navigation popup diagnostics, explicit external embed allowlisting, and a mutation-sensitive successful stale sign-in response test. Baseline `c12e349`; original writer and queued supplements are cancelled. Codex reviewer confirms the exact repaired patch.
+2. Coordinator: run final three browser shards, pinned visual gate and fast Node timing; update fixture guidance and record concrete local acceptance.
+3. Observe three consecutive successful remote `main` runs after authorized publication; leave this ticket active until that condition is met.
 
 ## Validation so far
 
 - Baseline `08a5b00`: fast command included slow corpus, 569/569 in 67.872 seconds.
 - Split fast tier: 570/570 in 3.419 seconds; preserved slow corpus 4/4 in 70.388 seconds.
 - Workflow contracts and diagnostics smoke passed; integrity and local deployment compatibility checks passed with unchanged game-build hash.
-- Source conversion review caught coverage regressions and redundant browser assertions; repairs are required before acceptance. Initial conversions are not treated as complete merely because they pass.
-- `b3ef0e1`: four victory/mobile-mark browser cases passed with real presented video frames; all four screenshots show the readable victory banner. No range seek is assumed from the static test server.
-- Full integrated browser, visual, final Node timing, and exact repair reviews remain pending. Logs/artifacts live only in ignored test-result directories and temporary files.
+- Selected source behavior, deployment graph, and rendered game coverage passed independent review after finite repairs. Eight selected browser cases pass with two workers and zero retries; disabling production victory canvas drawing fails the bounded pixel gate.
+- Shared migration is integrated. Independent review identified first-navigation popup diagnostics and stale successful sign-in response false negatives; specialist repair is active.
+- Full integrated browser, pinned visual, final Node timing, and exact fixture repair review remain pending. Logs/artifacts live only in ignored test-result directories and temporary files.
