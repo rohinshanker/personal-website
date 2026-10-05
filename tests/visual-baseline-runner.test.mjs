@@ -184,6 +184,8 @@ test("CI runs both the browser project and the visual baselines", async () => {
   const artifact = jobs.ui.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
   assert.equal(artifact.with.name, "ui-artifacts-${{ matrix.shard }}");
   assert.match(artifact.with.path, /playwright-report/);
+  const visualArtifact = jobs.visual.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+  assert.match(visualArtifact.with.path, /playwright-report/);
   assert.ok(
     runsOf(jobs.visual).includes("npm run test:visual"),
     "the visual baselines must be an actual CI gate"

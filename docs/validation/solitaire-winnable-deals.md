@@ -2,7 +2,7 @@
 
 - Purpose: Generate random Solitaire deals and verify winning paths with a bounded runtime search.
 - Scope: Solitaire deal generation, draw-one unlimited-redeal rules, solver verification, browser interaction, and game-build integrity.
-- Last verified: 2026-09-10
+- Last verified: 2026-10-04
 
 ## Guarantee
 
@@ -33,10 +33,13 @@ Run the source proof and real-control browser replay:
 
 ```bash
 node --test tests/solitaire-winnable-deals.test.mjs
+npm run test:slow
 npx playwright test tests/ui/solitaire-winnable-deals.spec.mjs
 ```
 
-The Node suite covers constant random boundaries and 500 seeded streams. It
+The fast Node file covers a representative verified deal, independent replay,
+determinism, and bounded fallback. The required slow tier covers constant
+random boundaries and all 500 seeded streams. Together they
 verifies all 52 canonical cards, standard tableau and stock shape, determinism,
 diversity, random-looking columns, first-shuffle and capped acceptance floors,
 the bounded unverified fallback, and every certified move with an independent
@@ -54,12 +57,13 @@ For repository-wide validation, run:
 
 ```bash
 npm test
+npm run test:slow
 npm run test:ui
 ```
 
 ## Release Integrity
 
-The generator remains in `scripts/home/main.js`, which is protected by the
+The generator lives in `scripts/home/features/solitaire.js`, protected by the
 game-build digest. After any deal or gameplay-rule change, regenerate and
 verify the public browser and Worker metadata:
 

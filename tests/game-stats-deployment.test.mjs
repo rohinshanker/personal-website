@@ -1401,6 +1401,7 @@ test("every workflow shares one hardening standard", async () => {
       if (job.uses) {
         assert.equal(job.uses, "./.github/workflows/ui-layout.yml");
         assert.equal(jobName, "browser");
+        assert.equal(job.secrets, undefined, "browser tests must not inherit release secrets");
         continue;
       }
       assert.ok(

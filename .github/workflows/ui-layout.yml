@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: browser-ui-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -90,5 +90,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: visual-baseline-diffs
-          path: test-results/
+          path: |
+            test-results/
+            playwright-report/
           if-no-files-found: ignore

@@ -21,7 +21,7 @@ jobs:
   slow:
     name: Verify full Solitaire deal corpus
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Check out release candidate
         # actions/checkout v6.0.2
