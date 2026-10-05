@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-24
 - Updated: 2026-10-04
-- Current State: Local implementation and independent review are in progress on canonical `main`. Fast/slow tiers and gated reusable CI are implemented. Selected behavior conversions and the shared-fixture migration are integrated. Node, CI, and selected rendered behavior passed independent review; focused fixture coverage repairs and final integrated gates remain. Nothing has been pushed or deployed.
+- Current State: Local implementation and independent review are complete on canonical `main`. All local gates pass. Fast/slow tiers, gated three-shard CI, selected behavior conversions, and shared hermetic fixtures are integrated. Publication and the three-run remote stability proof remain pending.
 - Verification: Fast Node under ten seconds; intact 500-seed slow corpus; all browser shards with two workers and zero retries; pinned visual/accessibility/diagnostic gates; exact-patch independent review; three consecutive successful remote `main` browser runs. Remote stability proof remains unobserved.
 - Cleanup: Keep only reusable contracts in `docs/validation/test-suite.md` and `browser-visual-accessibility.md`. Resolve and delete this ticket/index row after acceptance; do not retain test logs or completion histories.
 
@@ -19,15 +19,15 @@
 
 ## Remaining work
 
-1. DEM-214: specialist repairs first-navigation popup diagnostics, explicit external embed allowlisting, and a mutation-sensitive successful stale sign-in response test. Baseline `c12e349`; original writer and queued supplements are cancelled. Codex reviewer confirms the exact repaired patch.
-2. Coordinator: run final three browser shards, pinned visual gate and fast Node timing; update fixture guidance and record concrete local acceptance.
-3. Observe three consecutive successful remote `main` runs after authorized publication; leave this ticket active until that condition is met.
+1. Obtain the owner's publication choice for the concrete reviewed patch. Pushing `main` triggers the gated Worker and Pages production release.
+2. Observe three consecutive successful remote `main` runs after authorized publication. Do not manufacture unrelated pushes for this signal; keep the ticket active until it is observed.
 
-## Validation so far
+## Local acceptance
 
-- Baseline `08a5b00`: fast command included slow corpus, 569/569 in 67.872 seconds.
-- Split fast tier: 570/570 in 3.419 seconds; preserved slow corpus 4/4 in 70.388 seconds.
-- Workflow contracts and diagnostics smoke passed; integrity and local deployment compatibility checks passed with unchanged game-build hash.
-- Selected source behavior, deployment graph, and rendered game coverage passed independent review after finite repairs. Eight selected browser cases pass with two workers and zero retries; disabling production victory canvas drawing fails the bounded pixel gate.
-- Shared migration is integrated. Independent review identified first-navigation popup diagnostics and stale successful sign-in response false negatives; specialist repair is active.
-- Full integrated browser, pinned visual, final Node timing, and exact fixture repair review remain pending. Logs/artifacts live only in ignored test-result directories and temporary files.
+- Baseline fast command: 569/569 in 67.872 seconds. Final fast tier: 593/593 in 3.095 seconds.
+- Preserved 500-seed slow corpus: 4/4 in 70.388 seconds; corpus, helper, and production Solitaire source are unchanged since that validation.
+- Final browser shards: 164/164, 164/164, and 163/163, two workers each, zero retries; 491 unique cases with no overlap or omissions. Each shard produced its HTML report. Accessibility and automatic diagnostics are included.
+- Final pinned visual gate: 9/9 in 20.1 seconds without baseline changes when run after the shards. A concurrent run timed out in three load/settling cases; traces showed slow local delivery, and the isolated run resolved the environment contention.
+- Exact-patch cross-provider review approved CI, selected source behavior, native victory canvas/face/stats geometry, backend-helper integration, and the final fixture repair. Removing diagnostics collection/enforcement and the stale-response guard is detected by executable probes.
+- Syntax, secret scanning, generated icons/resources/media, integrity, local deployment compatibility, whitespace, and ticket/index checks pass. Production game-build hash remains unchanged.
+- Three successful remote main runs remain unobserved. Raw logs and review artifacts are temporary/ignored; reusable contracts are in the validation guides.

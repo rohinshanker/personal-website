@@ -66,10 +66,21 @@ configuration reader or hard-code a historical build hash in a scenario.
 
 Preserve intentional backend-mock scenarios while preventing accidental
 production calls. A test must supply its own local/mock publishing responses;
-a configured production URL is not a test backend. Assert console, page,
-request-delivery, and HTTP errors during teardown, including popup pages.
-Expected synthetic failures need exact assertions and narrow cleanup. Do not
-filter a whole endpoint, origin, or error category to obtain green tests.
+a configured production URL is not a test backend. Attach diagnostics to the browser context before any page navigates, then
+assert console, runtime, delivery, and HTTP errors during teardown. This includes
+a popup's first navigation; attaching listeners after its `page` event misses
+those early network failures. Only exact `net::ERR_ABORTED` cancellation is
+excluded. Expected synthetic failures need exact assertions and narrow cleanup
+with `consumeDiagnostics`; every unconsumed entry still fails teardown.
+
+Default local mocks use `servedFile(path)` and answer only on
+`TEST_SERVER_ORIGIN`, derived from the same configuration as Playwright. A matching
+path on another host or port must be blocked. `KNOWN_REMOTE_EMBEDS` lists exact
+remote origins, paths, and request kinds; adding a URL to product source does not
+automatically approve it. The Sky generator stand-in matches its exact endpoint
+and generator query. A later explicit scenario route can supply its controlled
+response. Do not filter a whole endpoint, origin, or error category to obtain
+green tests.
 
 Negative diagnostic probes assert the exact captured failure before calling
 `test.fail()`. The expected failure must come from automatic teardown. If the
@@ -143,6 +154,12 @@ CI=1 UI_TEST_PORT=4281 UI_TEST_OUTPUT_DIR=test-results/shard-1 \
 ```
 
 Run shards 2/3 and 3/3 with their own ports, output paths, and HTML report directories when running concurrently.
+
+Run the pinned visual container after the local UI shards finish. Concurrent
+host browser shards can slow the container's local asset delivery enough to hit
+navigation or image-settling timeouts. Preserve traces and rerun in isolation to
+test resource contention before changing timeouts or baselines. CI jobs use
+separate runners.
 For UI changes, inspect screenshots and semantic state from the actual routes
 at the four review sizes and relevant breakpoints. Check keyboard/focus,
 overflow, hidden controls, console errors, exceptions, and failed requests.
