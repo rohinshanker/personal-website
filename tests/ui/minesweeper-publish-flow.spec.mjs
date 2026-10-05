@@ -41,10 +41,19 @@ const installBackend = (page) =>
 
 const installMinesweeperBridge = (page) =>
   routeHomeScript(page, "minesweeper", (source) =>
-    source.replace(
+    // Keep the board shuffle varied without enabling unrelated random events
+    // in other Home controllers. Only this controller gets a seeded Math.
+    source.replace("(() => {", `(() => {
+const Math = Object.create(window.Math);
+let testRandomState = 0x2135f447;
+Math.random = () => {
+  testRandomState = (window.Math.imul(testRandomState, 1664525) + 1013904223) >>> 0;
+  return testRandomState / 0x1_0000_0000;
+};`).replace(
       /\n\}\)\(\);\s*$/,
       `
 const installTestBoard = ({ cells, cols, mines, rows }) => {
+  msNewGame(msDifficulty?.value || "beginner");
   msStopTimer();
   msState.cols = cols;
   msState.rows = rows;
@@ -69,7 +78,9 @@ const installTestBoard = ({ cells, cols, mines, rows }) => {
     (cell) => cell.revealed && !cell.mine
   ).length;
   msBuildGrid();
+  msUpdateBoardAlignment();
   msRenderAll();
+  msUpdateCounters();
 };
 
 window.__minesweeperPublishFlow = Object.freeze({
@@ -268,11 +279,7 @@ const preparePage = async (page, viewport) => {
     ({ profileKey, queueKey, statsKey, savedProfile }) => {
       localStorage.clear();
       sessionStorage.clear();
-      let randomState = 0x2135f447;
-      Math.random = () => {
-        randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
-        return randomState / 0x1_0000_0000;
-      };
+      Math.random = () => 0.999999;
       localStorage.setItem(profileKey, JSON.stringify(savedProfile));
       localStorage.removeItem(queueKey);
       localStorage.removeItem(statsKey);
@@ -416,12 +423,8 @@ for (const viewport of REVIEW_VIEWPORTS) {
       skippedFlag: true,
     });
     expect(api.events).toHaveLength(1);
-
-    const visibleRandomWindow = page.locator(".random-event-window:visible");
-    if (await visibleRandomWindow.count()) {
-      const dismissButton = visibleRandomWindow.first().getByRole("button", { name: "OK" });
-      if (await dismissButton.count()) await dismissButton.click();
-    }
+    await expect(minesweeper.locator("#ms-lose-banner")).not.toBeVisible();
+    await expect(minesweeper.locator("#ms-reset")).toHaveAttribute("data-face", "smile");
 
     await settleRender(page);
     const layout = await minesweeper.evaluate((windowElement) => {
@@ -444,6 +447,14 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await testInfo.attach(`minesweeper-rule-paths-${viewport.name}`, {
       contentType: "image/png",
       path: screenshotPath,
+    });
+    const ruleSemanticsPath = testInfo.outputPath(
+      `minesweeper-rule-semantics-${viewport.width}x${viewport.height}.yml`
+    );
+    await writeFile(ruleSemanticsPath, await page.locator("body").ariaSnapshot());
+    await testInfo.attach(`minesweeper-rule-semantics-${viewport.name}`, {
+      contentType: "text/yaml",
+      path: ruleSemanticsPath,
     });
   });
 }
