@@ -89,7 +89,7 @@ const generatedBackendSource = await readFile(
 const GAME_STATS_BACKEND_ROUTE = /\/scripts\/home\/game-stats-backend\.js(?:\?.*)?$/;
 
 /** The build version the generated config carries. */
-const PRODUCTION_BUILD_VERSION =
+export const PRODUCTION_BUILD_VERSION =
   generatedBackendSource.match(/buildVersion:\s*"([^"]*)"/)[1];
 
 /**
