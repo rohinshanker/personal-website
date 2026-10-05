@@ -26,6 +26,9 @@ const {
   clampNumber,
   formatElapsedTime,
   prefersReducedMotion,
+  readJsonStorage,
+  removeStorage,
+  writeJsonStorage,
 } = window.homeUtil;
 
 const administratorWindow = byId("administrator-window");
@@ -710,22 +713,11 @@ function normalizeGameStatsEvent(rawEvent) {
   return null;
 }
 
-const loadGameStatsLocalState = () => {
-  try {
-    return normalizeGameStatsData(
-      JSON.parse(localStorage.getItem(GAME_STATS_STORAGE_KEY) || "null") || {}
-    );
-  } catch {
-    return createEmptyGameStatsData();
-  }
-};
+const loadGameStatsLocalState = () =>
+  normalizeGameStatsData(readJsonStorage(() => localStorage, GAME_STATS_STORAGE_KEY, {}) || {});
 
 const saveGameStatsLocalState = () => {
-  try {
-    localStorage.setItem(GAME_STATS_STORAGE_KEY, JSON.stringify(gameStatsLocalState));
-  } catch {
-    // Game stats are best-effort when local storage is unavailable.
-  }
+  writeJsonStorage(() => localStorage, GAME_STATS_STORAGE_KEY, gameStatsLocalState);
 };
 
 const normalizeGameStatsSession = (rawSession, { allowExpired = false } = {}) => {
@@ -759,27 +751,16 @@ const normalizeGameStatsSubmission = (rawSubmission) => {
 };
 
 const loadGameStatsSubmissionQueue = () => {
-  try {
-    const stored = JSON.parse(localStorage.getItem(GAME_STATS_SYNC_QUEUE_STORAGE_KEY) || "[]");
-    if (!Array.isArray(stored)) return [];
-    return stored
-      .map(normalizeGameStatsSubmission)
-      .filter(Boolean)
-      .slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
-  } catch {
-    return [];
-  }
+  const stored = readJsonStorage(() => localStorage, GAME_STATS_SYNC_QUEUE_STORAGE_KEY, []);
+  if (!Array.isArray(stored)) return [];
+  return stored
+    .map(normalizeGameStatsSubmission)
+    .filter(Boolean)
+    .slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
 };
 
 const saveGameStatsSubmissionQueue = () => {
-  try {
-    localStorage.setItem(
-      GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
-      JSON.stringify(gameStatsSubmissionQueue)
-    );
-  } catch {
-    // Sync retries are best-effort when local storage is unavailable.
-  }
+  writeJsonStorage(() => localStorage, GAME_STATS_SYNC_QUEUE_STORAGE_KEY, gameStatsSubmissionQueue);
 };
 
 const isGameStatsBackendConfigured = () =>
@@ -1027,15 +1008,8 @@ const getGameStatsSession = (sessionKey) => {
   return entry.sessionRequest;
 };
 
-const loadGameStatsProfile = () => {
-  try {
-    return normalizeGameStatsProfile(
-      JSON.parse(localStorage.getItem(GAME_STATS_PROFILE_STORAGE_KEY) || "null")
-    );
-  } catch {
-    return null;
-  }
-};
+const loadGameStatsProfile = () =>
+  normalizeGameStatsProfile(readJsonStorage(() => localStorage, GAME_STATS_PROFILE_STORAGE_KEY));
 
 const clearGameStatsGlobalPlayerScope = () => {
   if (!gameStatsGlobalState) return;
@@ -1052,11 +1026,7 @@ const saveGameStatsProfile = (profile) => {
   if (!normalizedProfile) return null;
   clearGameStatsGlobalPlayerScope();
   gameStatsProfile = normalizedProfile;
-  try {
-    localStorage.setItem(GAME_STATS_PROFILE_STORAGE_KEY, JSON.stringify(gameStatsProfile));
-  } catch {
-    // Profile identity is best-effort when local storage is unavailable.
-  }
+  writeJsonStorage(() => localStorage, GAME_STATS_PROFILE_STORAGE_KEY, gameStatsProfile);
   return gameStatsProfile;
 };
 
@@ -1065,11 +1035,7 @@ const saveGameStatsProfileIcon = (icon) => {
   const nextProfile = normalizeGameStatsProfile({ ...gameStatsProfile, icon });
   if (!nextProfile) return null;
   gameStatsProfile = nextProfile;
-  try {
-    localStorage.setItem(GAME_STATS_PROFILE_STORAGE_KEY, JSON.stringify(gameStatsProfile));
-  } catch {
-    // Profile identity is best-effort when local storage is unavailable.
-  }
+  writeJsonStorage(() => localStorage, GAME_STATS_PROFILE_STORAGE_KEY, gameStatsProfile);
   return gameStatsProfile;
 };
 
@@ -1078,11 +1044,7 @@ const clearGameStatsProfile = () => {
   clearGameStatsGlobalPlayerScope();
   clearGameStatsAdministratorProof();
   gameStatsAvatarAnimator.stop?.();
-  try {
-    localStorage.removeItem(GAME_STATS_PROFILE_STORAGE_KEY);
-  } catch {
-    // Profile identity is best-effort when local storage is unavailable.
-  }
+  removeStorage(() => localStorage, GAME_STATS_PROFILE_STORAGE_KEY);
 };
 
 const createGameStatsLeaderboardEntry = (event) => ({

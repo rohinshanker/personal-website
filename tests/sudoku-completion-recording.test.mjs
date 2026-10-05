@@ -36,7 +36,7 @@ test("Sudoku records at most one completion for each generated puzzle", async ()
     "const recordSudokuCompletion = () => {",
     "\n\nconst checkSudokuBoard = () => {"
   );
-  assert.match(recordSource, /recordGameStatsEvent\(/);
+  assert.match(recordSource, /sudokuStats\.recordEvent\(/);
   assert.match(recordSource, /notifyActivity\("gameWin", \{ game: "sudoku" \}\);/);
   assert.doesNotMatch(recordSource, /completionRecorded/);
 
@@ -103,7 +103,7 @@ test("Sudoku persists the completion latch and gates restored publication on it"
   );
   assert.match(
     restoreSource,
-    /sudokuState\.statsSession = "";\s+sudokuState\.statsSessionEligible = !sudokuState\.completionRecorded;/,
+    /sudokuStats\.dropSession\(\);\s+sudokuState\.statsSessionEligible = !sudokuState\.completionRecorded;/,
     "a restored unsolved puzzle must request a fresh verified session; a recorded one must not"
   );
 });

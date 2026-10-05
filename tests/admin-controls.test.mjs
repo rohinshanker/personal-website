@@ -800,7 +800,7 @@ test("runtime orchestration integrates the complete event registry without publi
   );
   assert.match(stagingRuntime, /solState\.presentation = \{ visualEffects: Boolean\(visualEffects\) \}/);
   assert.match(stagingRuntime, /solState\.tableau = solBuildPresentationTableau\(\)/);
-  assert.match(stagingRuntime, /solState\.statsSession = ""/);
+  assert.match(stagingRuntime, /solStats\.dropSession\(\)/);
   assert.doesNotMatch(
     stagingRuntime,
     /recordGame|publish|queue|sync|submit|notifyActivity|fetch/i,
@@ -815,7 +815,7 @@ test("runtime orchestration integrates the complete event registry without publi
   const presentationBranch = sourceBetween(
     victoryRuntime,
     "if (solState.presentation) {",
-    "solStartFireworks();\n  solShowAchievement();\n  solPlayVictoryVideo();\n  recordGameStatsEvent("
+    "solStartFireworks();\n  solShowAchievement();\n  solPlayVictoryVideo();\n  solStats.recordEvent("
   );
   assert.match(presentationBranch, /if \(solState\.presentation\.visualEffects\) \{[\s\S]*?solStartFireworks\(\);[\s\S]*?solShowAchievement\(\);/);
   assert.match(presentationBranch, /solPlayVictoryVideo\(\);\s*return;/);

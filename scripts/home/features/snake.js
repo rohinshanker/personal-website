@@ -23,10 +23,8 @@ const {
   setWindowOpen,
 } = window.homeWindows;
 const {
-  createGameStatsEvent,
-  recordGameStatsEvent,
+  createGameStatsHooks,
   registerGameStatsLocalSource,
-  startGameStatsSession,
 } = window.homeGameStats;
 const {
   notifyActivity,
@@ -171,6 +169,8 @@ let snakeState = {
   noiseFrame: null,
   loading: false,
 };
+
+const snakeStats = createGameStatsHooks("snake", () => snakeState);
 
 let snakePointerPauseSuppressUntil = 0;
 
@@ -821,7 +821,7 @@ const resetSnakeGame = () => {
   snakeState.running = false;
   snakeState.hasStarted = false;
   snakeState.gameOver = false;
-  snakeState.statsSession = "";
+  snakeStats.dropSession();
   snakeState.recordAtStart = null;
   snakeState.apples = [];
   snakeState.collectionPulses = [];
@@ -838,14 +838,12 @@ const endSnakeGame = () => {
   snakeState.running = false;
   snakeState.gameOver = true;
   if (snakeState.hasStarted) {
-    recordGameStatsEvent(
-      createGameStatsEvent({
-        game: "snake",
+    snakeStats.recordEvent(
+      {
         type: "gamePlayed",
         boardSize: String(snakeState.gridSize),
         metric: snakeState.score,
-      }),
-      snakeState.statsSession,
+      },
       { snakePreviousHighScore: snakeState.recordAtStart }
     );
   }
@@ -940,7 +938,7 @@ const startSnakeGame = () => {
     snakeState.recordAtStart = Number.isFinite(storedHighScore)
       ? storedHighScore
       : null;
-    snakeState.statsSession = startGameStatsSession("snake", {
+    snakeStats.ensureSession({
       boardSize: String(snakeState.gridSize),
     });
   }

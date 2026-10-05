@@ -144,7 +144,7 @@ test("Sudoku persists the quota and warning while legacy assists fail closed", a
   );
   assert.match(
     restoreSource,
-    /sudokuState\.statsSession = "";\s+sudokuState\.statsSessionEligible = !sudokuState\.completionRecorded;/,
+    /sudokuStats\.dropSession\(\);\s+sudokuState\.statsSessionEligible = !sudokuState\.completionRecorded;/,
     "A restored puzzle publishes only while its completion latch is still open."
   );
 
@@ -360,7 +360,7 @@ const createSudokuCheckContext = (main) => {
       "const pauseSudokuTimer = () => {};",
       "const currentSudokuElapsedSeconds = () => 42;",
       "const createGameStatsEvent = (event) => ({ ...event });",
-      "const recordGameStatsEvent = (event, session, metadata) => { observations.records.push({ event, session, metadata }); };",
+      "const sudokuStats = { recordEvent: (event, metadata) => { observations.records.push({ event: { ...event, game: 'sudoku' }, session: sudokuState.statsSession, metadata }); } };",
       "const triggerSudokuVictoryEffects = () => {};",
       "const notifyActivity = () => {};",
       "const refreshSudokuFullBoardPrompt = () => { observations.promptRefreshes += 1; };",
@@ -518,6 +518,7 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
       "const sudokuGrid = null;",
       "let sudokuCellElements = [];",
       "let sudokuState = { puzzleId: '', puzzle: '' };",
+      "const sudokuStats = { dropSession: () => { sudokuState.statsSession = ''; } };",
       "const storage = new Map();",
       "const localStorage = {",
       "  getItem: (key) => (storage.has(key) ? storage.get(key) : null),",

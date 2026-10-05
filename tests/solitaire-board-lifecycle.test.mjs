@@ -115,6 +115,7 @@ const createOpenHarness = () => {
          };
        };`,
       "const solBuildPresentationTableau = () => [['staged']];",
+      "const solStats = { dropSession: () => { solState.statsSession = ''; } };",
       "const solCancelAutoSolve = () => calls.push('cancel');",
       "const solHideVictoryVideo = () => calls.push('hide-video');",
       "const solRender = () => { renders += 1; };",

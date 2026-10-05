@@ -22,12 +22,10 @@ const {
   runAfterHomeActivation,
 } = window.homeActivation;
 const {
-  createGameStatsEvent,
+  createGameStatsHooks,
   resumeGameStatsAuthenticationAfterCompletion,
-  recordGameStatsEvent,
   registerGameStatsLocalSource,
   requestGameStatsAdministratorAuthentication,
-  startGameStatsSession,
 } = window.homeGameStats;
 const {
   clampWindowFullyIntoViewport,
@@ -270,6 +268,8 @@ let sudokuState = {
   redoStack: [],
   selectedIndex: -1,
 };
+
+const sudokuStats = createGameStatsHooks("sudoku", () => sudokuState);
 
 let sudokuCellElements = [];
 
@@ -786,7 +786,7 @@ const restoreSudokuSavedState = () => {
       savedState.usedHint ||
       savedState.usedReveal
   );
-  sudokuState.statsSession = "";
+  sudokuStats.dropSession();
   sudokuState.statsSessionEligible = !sudokuState.completionRecorded;
   sudokuState.hintMode = normalizeSudokuHintMode(savedState.hintMode);
   sudokuState.noteMode = Boolean(savedState.noteMode);
@@ -827,8 +827,8 @@ const setSudokuStatus = (message) => {
 
 const startSudokuTimer = () => {
   if (sudokuState.solved || sudokuState.timerId) return;
-  if (sudokuState.statsSessionEligible && !sudokuState.statsSession) {
-    sudokuState.statsSession = startGameStatsSession("sudoku", {
+  if (sudokuState.statsSessionEligible) {
+    sudokuStats.ensureSession({
       difficulty: sudokuState.difficulty,
     });
   }
@@ -2174,9 +2174,8 @@ const recordSudokuCompletion = () => {
   const elapsedSeconds = currentSudokuElapsedSeconds();
   const hintBucket =
     sudokuState.usedHint || sudokuState.usedReveal ? "withHints" : "noHints";
-  recordGameStatsEvent(
-    createGameStatsEvent({
-      game: "sudoku",
+  sudokuStats.recordEvent(
+    {
       type: "win",
       difficulty: sudokuState.difficulty,
       hintBucket,
@@ -2184,8 +2183,7 @@ const recordSudokuCompletion = () => {
       puzzle: sudokuState.puzzle,
       metric: elapsedSeconds,
       metricKind: "seconds",
-    }),
-    sudokuState.statsSession,
+    },
     {
       sudokuNoHintsSeconds: hintBucket === "noHints" ? elapsedSeconds : null,
     }

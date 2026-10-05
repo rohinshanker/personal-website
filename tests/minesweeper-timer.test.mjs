@@ -66,9 +66,16 @@ const createTimerHarness = async ({ difficulty = { value: "beginner" } } = {}) =
     msUpdateCounters: () => {
       context.counterUpdates += 1;
     },
-    startGameStatsSession: (game, detail) => `${game}:${detail.difficulty}`,
-    createGameStatsEvent: (event) => event,
-    recordGameStatsEvent: (event, session) => context.recorded.push({ event, session }),
+    msStats: {
+      ensureSession: (detail) => {
+        context.msState.statsSession ||= `minesweeper:${detail.difficulty}`;
+        return context.msState.statsSession;
+      },
+      recordEvent: (event) => {
+        context.recorded.push({ event: { ...event, game: "minesweeper" }, session: context.msState.statsSession });
+        context.msState.statsSession = "";
+      },
+    },
     msSetFace: (face) => context.calls.push(`face:${face}`),
     msStartConfetti: () => context.calls.push("confetti"),
     msShowAchievement: () => context.calls.push("achievement"),

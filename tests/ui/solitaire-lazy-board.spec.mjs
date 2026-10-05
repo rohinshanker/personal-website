@@ -29,17 +29,16 @@ const installLazyBoardBridge = async (page) => {
       return addEventListener.call(this, type, listener, options);
     };
   });
+  await routeHomeScript(page, "gameStats", (source) => {
+    const marker = "const startGameStatsSession = (game, rawConfig) => {";
+    if (!source.includes(marker)) throw new Error("Unable to count game sessions.");
+    return source.replace(marker, `${marker}
+  if (game === "solitaire") {
+    window.__solStatsSessionsStarted = (window.__solStatsSessionsStarted || 0) + 1;
+  }`);
+  });
   await routeHomeScript(page, "solitaire", (originalSource) => {
-    let source = originalSource.replace(
-      "  startGameStatsSession,\n} = window.homeGameStats;",
-      `  startGameStatsSession: solStartGameStatsSessionUnderTest,
-} = window.homeGameStats;
-let solStatsSessionsStarted = 0;
-const startGameStatsSession = (...args) => {
-  solStatsSessionsStarted += 1;
-  return solStartGameStatsSessionUnderTest(...args);
-};`
-    );
+    let source = originalSource;
     source = source.replace(
       "const solBuildWinnableDeal = (random = Math.random) => {",
       `let solDealsGenerated = 0;
@@ -56,7 +55,7 @@ const solBuildWinnableDeal = (random = Math.random) => {
 window.__solitaireLazyBoardTest = Object.freeze({
   snapshot: () => ({
     deals: solDealsGenerated,
-    sessions: solStatsSessionsStarted,
+    sessions: window.__solStatsSessionsStarted || 0,
     renders: solRendersRun,
     boardReady: solBoardReady,
     statsSession: solState.statsSession,

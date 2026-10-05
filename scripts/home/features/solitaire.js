@@ -3,11 +3,10 @@ const {
   loadDeferredMedia,
 } = window.homeActivation;
 const {
-  createGameStatsEvent,
-  recordGameStatsEvent,
-  startGameStatsSession,
+  createGameStatsHooks,
 } = window.homeGameStats;
 const {
+  flashBanner,
   prefersReducedMotion,
 } = window.homeUtil;
 const {
@@ -110,6 +109,8 @@ const solState = {
   statsSession: "",
   presentation: null,
 };
+
+const solStats = createGameStatsHooks("solitaire", solState);
 
 const solHistory = [];
 
@@ -781,10 +782,7 @@ const solBuildPresentationTableau = () => {
 };
 
 const solShowAchievement = () => {
-  if (!solAchievement) return;
-  solAchievement.classList.remove("is-showing");
-  void solAchievement.offsetWidth;
-  solAchievement.classList.add("is-showing");
+  flashBanner(solAchievement);
 };
 
 const solHideVictoryVideo = () => {
@@ -1013,14 +1011,10 @@ const solTriggerVictoryEffects = () => {
   solStartFireworks();
   solShowAchievement();
   solPlayVictoryVideo();
-  recordGameStatsEvent(
-    createGameStatsEvent({
-      game: "solitaire",
-      type: "win",
-      metric: solState.moves,
-    }),
-    solState.statsSession
-  );
+  solStats.recordEvent({
+    type: "win",
+    metric: solState.moves,
+  });
   notifyActivity("gameWin", { game: "solitaire" });
 };
 
@@ -1780,7 +1774,7 @@ const solNewGame = () => {
   solState.selected = null;
   solState.moves = 0;
   solState.won = false;
-  solState.statsSession = "";
+  solStats.dropSession();
   solHistory.length = 0;
   solLastCardClick = null;
   solHideVictoryVideo();
@@ -1809,7 +1803,7 @@ const solStagePresentationWin = ({ visualEffects = true } = {}) => {
   solState.selected = null;
   solState.moves = 0;
   solState.won = false;
-  solState.statsSession = "";
+  solStats.dropSession();
   solHistory.length = 0;
   solLastCardClick = null;
   solHideVictoryVideo();
@@ -1818,12 +1812,7 @@ const solStagePresentationWin = ({ visualEffects = true } = {}) => {
   solRender();
 };
 
-/**
- * The board is dealt on the first real open rather than at startup: a
- * solver-checked deal is the most expensive thing this feature does, and a
- * visitor who never opens Solitaire should never pay for it. A staged Admin
- * presentation counts as a board, so opening the window never replaces one.
- */
+/** Deals once before first open; staged Admin boards already count as ready. */
 const solEnsureBoard = () => {
   if (solBoardReady) return false;
   solNewGame();
@@ -1941,12 +1930,6 @@ if (solBoard) {
   });
 }
 
-if (solAchievement) {
-  solAchievement.addEventListener("animationend", () => {
-    solAchievement.classList.remove("is-showing");
-  });
-}
-
 if (solHelp) {
   solHelp.addEventListener("click", () => {
     setWindowOpen("solitaire-rules", true);
@@ -1994,9 +1977,7 @@ if (solRulesHelp) {
 }
 
 registerWindowLifecycle("solitaire", {
-  // Before the window is shown, not after: the manager measures the window to
-  // place it, so the board has to hold its cards by then or the first open
-  // would be positioned as if Solitaire were empty.
+  // Populate the board before the window manager measures it for placement.
   beforeOpen: () => {
     solEnsureBoard();
   },
@@ -2007,8 +1988,7 @@ registerWindowLifecycle("solitaire", {
 });
 
 const ensureSolitaireStatsSession = () => {
-  if (solState.statsSession) return;
-  solState.statsSession = startGameStatsSession("solitaire", {});
+  solStats.ensureSession({});
 };
 
 window.homeSolitaire = Object.freeze({

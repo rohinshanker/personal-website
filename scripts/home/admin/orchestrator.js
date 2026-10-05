@@ -424,9 +424,9 @@ const runAdminScenePreset = async (
 
   suppressAdminNaturalTriggersForCurrentTask();
   if (presetId === "game-win") {
+    solStagePresentationWin({ visualEffects });
     setWindowOpen("solitaire", true);
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    solStagePresentationWin({ visualEffects });
     return adminRandomEventResult(
       true,
       "Staged a local Solitaire win. Press the check button to auto-solve."

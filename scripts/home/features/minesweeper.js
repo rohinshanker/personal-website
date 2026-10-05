@@ -5,9 +5,7 @@ const {
 } = window.homeMedia;
 const {
   GAME_STATS_DIFFICULTIES,
-  createGameStatsEvent,
-  recordGameStatsEvent,
-  startGameStatsSession,
+  createGameStatsHooks,
 } = window.homeGameStats;
 const {
   clampNumber,
@@ -134,6 +132,8 @@ const msState = {
   markMode: null,
   statsSession: "",
 };
+
+const msStats = createGameStatsHooks("minesweeper", msState);
 
 const msConfettiCanvas = document.getElementById("ms-confetti");
 
@@ -319,7 +319,7 @@ const msStopTimer = () => {
 
 const msStartTimer = () => {
   msStopTimer();
-  msState.statsSession = startGameStatsSession("minesweeper", {
+  msStats.ensureSession({
     difficulty: msDifficulty?.value || "beginner",
   });
   msState.timerSync = msReadTimerClocks();
@@ -420,15 +420,11 @@ const msCheckWin = () => {
     });
     msState.flagCount = msState.mines;
     msRenderAll();
-    recordGameStatsEvent(
-      createGameStatsEvent({
-        game: "minesweeper",
-        type: "win",
-        difficulty: msDifficulty?.value || "beginner",
-        metric: msState.elapsed,
-      }),
-      msState.statsSession
-    );
+    msStats.recordEvent({
+      type: "win",
+      difficulty: msDifficulty?.value || "beginner",
+      metric: msState.elapsed,
+    });
     notifyActivity("gameWin", { game: "minesweeper" });
   }
 };
@@ -545,7 +541,7 @@ const msNewGame = (difficulty) => {
   msState.elapsed = 0;
   msState.flagCount = 0;
   msState.revealedSafeCount = 0;
-  msState.statsSession = "";
+  msStats.dropSession();
   msSetFace("smile");
   msStopTimer();
   if (msLoseBanner) msLoseBanner.classList.remove("is-visible");

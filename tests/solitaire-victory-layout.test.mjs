@@ -36,7 +36,7 @@ const createVictoryHarness = async ({
       "const solShowAchievement = () => calls.push('achievement');",
       "const solPlayVictoryVideo = () => calls.push('video');",
       "const createGameStatsEvent = (event) => event;",
-      "const recordGameStatsEvent = (event, session) => calls.push(['record', event, session]);",
+      "const solStats = { recordEvent: (event) => calls.push(['record', { ...event, game: 'solitaire' }, solState.statsSession]) };",
       "const notifyActivity = (name, detail) => calls.push(['activity', name, detail]);",
       sourceBetween(source, "const solTriggerVictoryEffects =", "\n\nconst solCreateSlotMark"),
       sourceBetween(source, "const solCheckWin =", "\n\nconst solPrefersReducedMotion"),
@@ -55,6 +55,7 @@ const createPresentationStageHarness = async () => {
     [
       "const calls = [];",
       "const solState = {};",
+      "const solStats = { dropSession: () => { solState.statsSession = ''; } };",
       "const solHistory = [{}];",
       "let solLastCardClick = {};",
       "let solBoardReady = false;",
