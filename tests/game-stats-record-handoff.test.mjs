@@ -109,6 +109,7 @@ const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true }
       "let handoffCalls = 0;",
       "let queueCalls = 0;",
       "let syncCalls = 0;",
+      "let getSessionCalls = 0;",
       "let queuedSession = null;",
       "let resolveSession;",
       "let resolveProfile;",
@@ -123,7 +124,7 @@ const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true }
       "const updateGameStatsSudokuBestTime = () => {};",
       "const saveGameStatsLocalState = () => { saveCalls += 1; };",
       "const playGameStatsRecordHandoff = async () => { handoffCalls += 1; };",
-      "const getGameStatsSession = () => pendingSession;",
+      "const getGameStatsSession = () => { getSessionCalls += 1; return pendingSession; };",
       "const queueGameStatsSubmission = (_event, session) => { queueCalls += 1; queuedSession = session; };",
       'let gameStatsSyncState = "ready";',
       'let gameStatsSyncMessage = "";',
@@ -133,6 +134,7 @@ const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true }
       source.slice(start, end),
       "globalThis.recordForTest = recordGameStatsEvent;",
       "globalThis.readFlowState = () => ({ applyCalls, saveCalls, handoffCalls, queueCalls, syncCalls, queuedSession, gameStatsSyncState, gameStatsSyncMessage });",
+      "globalThis.readGetSessionCalls = () => getSessionCalls;",
       'globalThis.resolveSessionForTest = () => resolveSession({ session: { id: "session-current", token: "session-current-token", expiresAt: new Date(Date.now() + 60_000).toISOString() }, status: 201 });',
       "globalThis.resolveSessionFailureForTest = (status, reason = '') => resolveSession({ session: null, status, ...(reason ? { reason } : {}) });",
       'globalThis.cancelProfileForTest = () => { gameStatsLocalResetGeneration += 1; resolveProfile({ id: "player-current", name: "Current", icon: "assets/app-icons/ico/user_card.ico" }); };',
@@ -383,6 +385,22 @@ test("a record handoff starts after local save without waiting for its session",
   );
 });
 
+test("a result reserves its session before a deferred profile choice", async () => {
+  const context = await loadRecordFlowHarness({ savedProfile: false });
+  const recordPromise = context.recordForTest({
+    id: "event-deferred-profile",
+    game: "minesweeper",
+    type: "win",
+    metric: 40,
+  });
+
+  assert.equal(context.readGetSessionCalls(), 1);
+  assert.equal(context.readFlowState().applyCalls, 0);
+  context.cancelProfileForTest();
+  await recordPromise;
+  assert.equal(context.readFlowState().applyCalls, 0);
+});
+
 test("session creation failures remain local and report their exact failure branch", async () => {
   const cases = [
     {
@@ -441,6 +459,14 @@ test("session creation failures remain local and report their exact failure bran
       expectedMessage:
         "Local stats are saved. This result started without a verified game session.",
     },
+    {
+      name: "expired session",
+      sessionKey: "solitaire-session",
+      status: 201,
+      expired: true,
+      expectedState: "session-expired",
+      expectedMessage: "",
+    },
   ];
 
   for (const failureCase of cases) {
@@ -454,7 +480,14 @@ test("session creation failures remain local and report their exact failure bran
       },
       failureCase.sessionKey
     );
-    context.resolveSessionFailureForTest(failureCase.status, failureCase.reason);
+    if (failureCase.expired) {
+      vm.runInContext(
+        "resolveSession({ session: { id: 'session-expired', token: 'session-expired-token', expiresAt: new Date(0).toISOString() }, status: 201 });",
+        context
+      );
+    } else {
+      context.resolveSessionFailureForTest(failureCase.status, failureCase.reason);
+    }
     await recordPromise;
     const state = context.readFlowState();
 

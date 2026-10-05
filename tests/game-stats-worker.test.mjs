@@ -5,6 +5,11 @@ import worker, {
   normalizeGameStatsEvent,
   purgeExpiredGameStatsRows,
 } from "../workers/game-stats/src/index.mjs";
+import {
+  MAX_EVENTS_PER_WINDOW,
+  MAX_SESSIONS_PER_WINDOW,
+  SESSION_TTL_MS,
+} from "../workers/game-stats/src/constants.mjs";
 import { createGameStatsDataFromEvents } from "./helpers/game-stats-reference.mjs";
 import { SqliteD1Database, applyGameStatsMigrations } from "./helpers/sqlite-d1.mjs";
 
@@ -2758,7 +2763,10 @@ test("publishes a Snake result whose client IP changed after its session was iss
 
 test("rate-limits session creation with an HMAC-derived bucket", async () => {
   const env = createEnv();
-  for (let index = 0; index < 24; index += 1) {
+  assert.equal(MAX_SESSIONS_PER_WINDOW, 120);
+  assert.equal(MAX_EVENTS_PER_WINDOW, 24);
+  assert.equal(SESSION_TTL_MS, 6 * 60 * 60 * 1000);
+  for (let index = 0; index < MAX_SESSIONS_PER_WINDOW; index += 1) {
     const response = await worker.fetch(
       jsonRequest("/sessions", {
         game: "solitaire",

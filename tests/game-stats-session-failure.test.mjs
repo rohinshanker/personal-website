@@ -130,6 +130,8 @@ const loadSessionHarness = async () => {
       "globalThis.readRequestsForTest = () => requests.map((request) => ({ ...request }));",
       "globalThis.readSessionSignalsForTest = () => sessionSignals.map((signal) => Boolean(signal?.aborted));",
       "globalThis.readStateChangesForTest = () => stateChanges.map((change) => ({ ...change }));",
+      "globalThis.readSessionEntriesForTest = () => [...gameStatsSessions.entries()].map(([game, entry]) => ({ game, configKey: entry.configKey, sessionKey: entry.sessionKey, result: entry.result }));",
+      "globalThis.setNowForTest = (now) => { Date.now = () => now; };",
     ].join("\n"),
     context
   );
@@ -164,7 +166,7 @@ test("session creation returns a one-use session result without changing valid b
   assert.deepEqual(plainObject(context.readStateChangesForTest()), []);
 });
 
-test("starting a new session aborts and replaces the prior session for that game", async () => {
+test("same-config resets reuse one pending or resolved unexpired session", async () => {
   const context = await loadSessionHarness();
   const session = {
     id: "session-latest",
@@ -176,15 +178,74 @@ test("starting a new session aborts and replaces the prior session for that game
   const firstKey = context.startForTest("solitaire", {});
   const secondKey = context.startForTest("solitaire", {});
 
-  assert.deepEqual(plainObject(context.readSessionSignalsForTest()), [true, false]);
+  assert.equal(secondKey, firstKey);
+  assert.deepEqual(plainObject(context.readSessionSignalsForTest()), [false]);
   assert.deepEqual(plainObject(await context.getForTest(firstKey)), {
-    session: null,
-    status: 0,
-  });
-  assert.deepEqual(plainObject(await context.getForTest(secondKey)), {
     session,
     status: 201,
   });
+  assert.deepEqual(plainObject(await context.getForTest(secondKey)), {
+    session: null,
+    status: 0,
+  });
+  assert.equal(context.readRequestsForTest().length, 1);
+});
+
+test("changed configs replace only an unclaimed request and different games stay independent", async () => {
+  const context = await loadSessionHarness();
+  const firstKey = context.startForTest("sudoku", { difficulty: " easy " });
+  const reusedKey = context.startForTest("sudoku", { difficulty: "easy" });
+  const changedKey = context.startForTest("sudoku", { difficulty: "hard" });
+  const otherGameKey = context.startForTest("snake", { boardSize: "16" });
+
+  assert.equal(reusedKey, firstKey);
+  assert.notEqual(changedKey, firstKey);
+  assert.match(otherGameKey, /^snake-/);
+  assert.deepEqual(plainObject(context.readSessionSignalsForTest()), [true, false, false]);
+  assert.deepEqual(
+    plainObject(context.readRequestsForTest()).map(({ body }) => ({
+      game: body.game,
+      config: body.config,
+    })),
+    [
+      { game: "sudoku", config: { difficulty: "easy" } },
+      { game: "sudoku", config: { difficulty: "hard" } },
+      { game: "snake", config: { boardSize: "16" } },
+    ]
+  );
+});
+
+test("resolved failure and expiry boundaries replace the reusable slot without growing it", async () => {
+  const failedContext = await loadSessionHarness();
+  failedContext.setBehaviorForTest({ kind: "network-error", status: 0, payload: null });
+  const failedKey = failedContext.startForTest("solitaire", {});
+  await new Promise((resolve) => setImmediate(resolve));
+  const replacementKey = failedContext.startForTest("solitaire", {});
+  assert.notEqual(replacementKey, failedKey);
+  assert.equal(failedContext.readSessionEntriesForTest().length, 1);
+
+  const expiredContext = await loadSessionHarness();
+  const expiresAtMs = Date.now() + 60_000;
+  expiredContext.setNowForTest(expiresAtMs - 10_000);
+  expiredContext.setBehaviorForTest({
+    kind: "success",
+    status: 201,
+    payload: {
+      id: "session-short-lived",
+      token: "session-short-lived-token",
+      expiresAt: new Date(expiresAtMs).toISOString(),
+    },
+  });
+  const expiringKey = expiredContext.startForTest("solitaire", {});
+  await new Promise((resolve) => setImmediate(resolve));
+  const [resolvedEntry] = plainObject(expiredContext.readSessionEntriesForTest());
+  assert.equal(resolvedEntry.sessionKey, expiringKey);
+  assert.equal(resolvedEntry.result.session.id, "session-short-lived");
+  assert.equal(expiredContext.startForTest("solitaire", {}), expiringKey);
+  expiredContext.setNowForTest(expiresAtMs);
+  const afterExpiryKey = expiredContext.startForTest("solitaire", {});
+  assert.notEqual(afterExpiryKey, expiringKey);
+  assert.equal(expiredContext.readSessionEntriesForTest().length, 1);
 });
 
 test("session creation exhausts build retries before reporting an unavailable session", async () => {
@@ -386,6 +447,42 @@ test("submission queue rejects null sessions and persists valid sessions", async
   });
 });
 
+test("stored queued submissions retain expired proofs for expiry classification", async () => {
+  const source = await readMainSource();
+  const normalizationSource = extractSource(
+    source,
+    "const normalizeGameStatsSession =",
+    "\n\nconst loadGameStatsSubmissionQueue"
+  );
+  const context = vm.createContext({});
+  vm.runInContext(
+    [
+      "const normalizeGameStatsEvent = (event) => event ? { ...event } : null;",
+      normalizationSource,
+      "globalThis.normalizeForTest = normalizeGameStatsSubmission;",
+    ].join("\n"),
+    context
+  );
+
+  const expiredSubmission = context.normalizeForTest({
+    event: { id: "event-expired-stored" },
+    session: {
+      id: "session-expired-stored",
+      token: "session-expired-stored-token",
+      expiresAt: new Date(0).toISOString(),
+    },
+  });
+  assert.deepEqual(plainObject(expiredSubmission), {
+    event: { id: "event-expired-stored" },
+    session: {
+      id: "session-expired-stored",
+      token: "session-expired-stored-token",
+      expiresAt: new Date(0).toISOString(),
+    },
+    proofRejections: 0,
+  });
+});
+
 test("build mismatch is sticky until its reload action replaces the page", async () => {
   const source = await readMainSource();
   const stateSource = extractSource(
@@ -421,5 +518,102 @@ test("build mismatch is sticky until its reload action replaces the page", async
     gameStatsSyncState: "build-mismatch",
     gameStatsSyncMessage: "reload",
     renderCalls: 1,
+  });
+});
+
+test("expired-result feedback survives automatic fetch and ready passes", async () => {
+  const source = await readMainSource();
+  const stateSource = extractSource(
+    source,
+    "const getGameStatsSyncStateDefinition =",
+    "\n\nconst isGameStatsSyncBusy ="
+  );
+  const context = vm.createContext({});
+  vm.runInContext(
+    [
+      "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, fetching: { message: 'fetching' }, 'session-expired': { message: 'expired' } };",
+      "let gameStatsSyncState = 'session-expired';",
+      "let gameStatsSyncMessage = 'expired';",
+      "let gameStatsReleaseWaitCount = 0;",
+      "let gameStatsManualRefreshInProgress = false;",
+      "const renderGameStatsWindows = () => {};",
+      stateSource,
+      "globalThis.setForTest = setGameStatsSyncState;",
+      "globalThis.setManualForTest = (manual) => { gameStatsManualRefreshInProgress = manual; };",
+      "globalThis.readForTest = () => ({ gameStatsSyncState, gameStatsSyncMessage });",
+    ].join("\n"),
+    context
+  );
+
+  context.setForTest("fetching");
+  context.setForTest("ready");
+  assert.deepEqual(plainObject(context.readForTest()), {
+    gameStatsSyncState: "session-expired",
+    gameStatsSyncMessage: "expired",
+  });
+  context.setManualForTest(true);
+  context.setForTest("fetching");
+  context.setForTest("ready");
+  assert.deepEqual(plainObject(context.readForTest()), {
+    gameStatsSyncState: "ready",
+    gameStatsSyncMessage: "ready",
+  });
+});
+
+test("game-bound hooks own ensure, drop, and synchronous record reservation", async () => {
+  const source = await readMainSource();
+  const hookSource = extractSource(
+    source,
+    "const createGameStatsHooks =",
+    "\n\nwindow.homeGameStats"
+  );
+  const context = vm.createContext({});
+  vm.runInContext(
+    [
+      'const GAME_STATS_SUPPORTED_GAMES = ["minesweeper", "solitaire", "snake", "sudoku"];',
+      'const state = { statsSession: "" };',
+      "let currentState = state;",
+      "const starts = [];",
+      "const records = [];",
+      "const startGameStatsSession = (game, config) => { const key = `${game}-session-${starts.length + 1}`; starts.push({ game, config, key }); return key; };",
+      "const createGameStatsEvent = (payload) => ({ id: 'event-hook', ...payload });",
+      "const recordGameStatsEvent = (event, sessionKey, options) => { records.push({ event, sessionKey, options, stateSession: state.statsSession }); return Promise.resolve('recorded'); };",
+      hookSource,
+      'globalThis.hooks = createGameStatsHooks("sudoku", state);',
+      "globalThis.readForTest = () => ({ state, starts, records });",
+      "globalThis.createInvalidForTest = () => createGameStatsHooks('unknown', state);",
+      'globalThis.getterHooks = createGameStatsHooks("sudoku", () => currentState);',
+      "globalThis.replaceStateForTest = () => { currentState = { statsSession: '' }; return currentState; };",
+      "globalThis.readGetterStateForTest = () => ({ oldState: state, currentState });",
+    ].join("\n"),
+    context
+  );
+
+  const firstKey = context.hooks.ensureSession({ difficulty: "easy" });
+  assert.equal(context.hooks.ensureSession({ difficulty: "hard" }), firstKey);
+  context.hooks.dropSession();
+  const secondKey = context.hooks.ensureSession({ difficulty: "hard" });
+  assert.notEqual(secondKey, firstKey);
+  const recordPromise = context.hooks.recordEvent(
+    { game: "snake", type: "win", difficulty: "hard" },
+    { sudokuNoHintsSeconds: 99 }
+  );
+  const recorded = plainObject(context.readForTest());
+  assert.equal(recorded.state.statsSession, "");
+  assert.equal(recorded.records[0].stateSession, "");
+  assert.equal(recorded.records[0].sessionKey, secondKey);
+  assert.equal(recorded.records[0].event.game, "sudoku");
+  assert.deepEqual(recorded.records[0].options, { sudokuNoHintsSeconds: 99 });
+  assert.equal(await recordPromise, "recorded");
+  assert.throws(() => context.createInvalidForTest(), /Unsupported game stats hook/);
+
+  const getterFirstKey = context.getterHooks.ensureSession({ difficulty: "easy" });
+  context.replaceStateForTest();
+  const getterSecondKey = context.getterHooks.ensureSession({ difficulty: "hard" });
+  assert.notEqual(getterSecondKey, getterFirstKey);
+  context.getterHooks.dropSession();
+  assert.deepEqual(plainObject(context.readGetterStateForTest()), {
+    oldState: { statsSession: getterFirstKey },
+    currentState: { statsSession: "" },
   });
 });

@@ -87,6 +87,7 @@ const loadSyncHarness = async ({ submissions, eventResponses, proof }) => {
       '  if (path === "/events") {',
       "    eventRequests.push({ authorization: options.headers.Authorization || '', body: JSON.parse(options.body) });",
       "    const scripted = eventResponses.shift() || { status: 201, body: { ok: true, applied: true } };",
+      "    if (Number.isFinite(scripted.advanceTo)) Date.now = () => scripted.advanceTo;",
       "    return { ok: scripted.status < 400, status: scripted.status, json: async () => scripted.body };",
       "  }",
       "  return { ok: true, status: 200, json: async () => ({ totals: {} }) };",
@@ -96,6 +97,7 @@ const loadSyncHarness = async ({ submissions, eventResponses, proof }) => {
       "const reconcileConfirmedGameStatsEvents = (data) => data;",
       "const markGameStatsEventConfirmed = (event) => { confirmedEvents.push(event.id); };",
       "const saveGameStatsSubmissionQueue = () => {};",
+      "const isGameStatsSessionExpired = (session) => new Date(session?.expiresAt || '').getTime() <= Date.now();",
       "const renderGameStatsWindows = () => {};",
       "const setGameStatsSyncState = (state, { message = '' } = {}) => {",
       "  gameStatsSyncState = state;",
@@ -157,6 +159,50 @@ test("a result the Worker stored under its own id is still confirmed", async () 
 
   assert.deepEqual(state.confirmedEvents, ["event-duplicate-winner"]);
   assert.deepEqual(state.gameStatsSubmissionQueue, []);
+});
+
+test("an expired queued result is reported separately while valid queued work publishes", async () => {
+  const expired = createSubmission("event-expired");
+  expired.session.expiresAt = new Date(0).toISOString();
+  const valid = createSubmission("event-valid");
+  const context = await loadSyncHarness({
+    submissions: [expired, valid],
+    eventResponses: [
+      { status: 201, body: { ok: true, applied: true, eventId: "event-valid" } },
+    ],
+    proof: "valid.proof",
+  });
+
+  await context.syncForTest();
+  const state = jsonClone(context.readForTest());
+
+  assert.deepEqual(state.eventRequests.map(({ body }) => body.event.id), ["event-valid"]);
+  assert.deepEqual(state.confirmedEvents, ["event-valid"]);
+  assert.deepEqual(state.gameStatsSubmissionQueue, []);
+  assert.equal(state.gameStatsSyncState, "session-expired");
+});
+
+test("a session that expires during an event rejection reports expiry, not verification failure", async () => {
+  const submission = createSubmission("event-expired-in-flight");
+  const expiresAtMs = Date.parse(submission.session.expiresAt);
+  const context = await loadSyncHarness({
+    submissions: [submission],
+    eventResponses: [
+      {
+        status: 403,
+        body: { ok: false, error: "Stored game session does not match this result" },
+        advanceTo: expiresAtMs,
+      },
+    ],
+    proof: "valid.proof",
+  });
+
+  await context.syncForTest();
+  const state = jsonClone(context.readForTest());
+  assert.equal(state.eventRequests.length, 1);
+  assert.deepEqual(state.gameStatsSubmissionQueue, []);
+  assert.equal(state.gameStatsSyncState, "session-expired");
+  assert.notEqual(state.gameStatsSyncMessage, REJECTED_MESSAGE);
 });
 
 const REJECTED_MESSAGE =

@@ -221,6 +221,13 @@ const GAME_STATS_SYNC_STATES = Object.freeze({
     busy: true,
     disabled: true,
   }),
+  "session-expired": Object.freeze({
+    message:
+      "Saved on this device. This game's online session expired, so this result can't be published. Start a new game to publish a new result.",
+    action: "refresh",
+    busy: false,
+    disabled: false,
+  }),
   unconfigured: Object.freeze({
     message:
       "Automatic global tracking is not configured yet; local stats stay on this device.",
@@ -721,7 +728,7 @@ const saveGameStatsLocalState = () => {
   }
 };
 
-const normalizeGameStatsSession = (rawSession) => {
+const normalizeGameStatsSession = (rawSession, { allowExpired = false } = {}) => {
   if (!rawSession || typeof rawSession !== "object") return null;
   const id = String(rawSession.id || rawSession.sessionId || "").trim();
   const token = String(rawSession.token || rawSession.sessionToken || "").trim();
@@ -731,7 +738,7 @@ const normalizeGameStatsSession = (rawSession) => {
     !/^[A-Za-z0-9._~+\/-]{8,256}$/.test(id) ||
     !/^[A-Za-z0-9._~+=\/-]{8,2048}$/.test(token) ||
     !Number.isFinite(expiresAtMs) ||
-    expiresAtMs <= Date.now()
+    (!allowExpired && expiresAtMs <= Date.now())
   ) {
     return null;
   }
@@ -745,7 +752,7 @@ const normalizeGameStatsSubmission = (rawSubmission) => {
   const proofRejections = rawSubmission.proofRejections;
   return {
     event,
-    session: normalizeGameStatsSession(rawSubmission.session),
+    session: normalizeGameStatsSession(rawSubmission.session, { allowExpired: true }),
     proofRejections:
       Number.isSafeInteger(proofRejections) && proofRejections > 0 ? proofRejections : 0,
   };
@@ -887,11 +894,53 @@ const reportGameStatsSessionFailure = (
   setGameStatsSyncState("request-failed", { message });
 };
 
-const startGameStatsSession = (game, config) => {
+const normalizeGameStatsSessionConfig = (game, rawConfig) => {
+  const config =
+    rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig)
+      ? rawConfig
+      : {};
+  if (game === "minesweeper" || game === "sudoku") {
+    return {
+      difficulty:
+        typeof config.difficulty === "string" ? config.difficulty.trim() : "",
+    };
+  }
+  if (game === "snake") {
+    return {
+      boardSize: typeof config.boardSize === "string" ? config.boardSize.trim() : "",
+    };
+  }
+  return {};
+};
+
+const isGameStatsSessionExpired = (session) =>
+  !Number.isFinite(new Date(session?.expiresAt || "").getTime()) ||
+  new Date(session.expiresAt).getTime() <= Date.now();
+
+const startGameStatsSession = (game, rawConfig) => {
+  const config = normalizeGameStatsSessionConfig(game, rawConfig);
+  const configKey = JSON.stringify(config);
+  const existingEntry = gameStatsSessions.get(game);
+  if (
+    existingEntry?.configKey === configKey &&
+    (!existingEntry.result ||
+      (existingEntry.result.session &&
+        !isGameStatsSessionExpired(existingEntry.result.session)))
+  ) {
+    return existingEntry.sessionKey;
+  }
+
+  existingEntry?.controller?.abort();
   const sessionKey = `${game}-${Date.now().toString(36)}-${(gameStatsSessionSequence += 1)}`;
   const controller = typeof AbortController === "function" ? new AbortController() : null;
-  gameStatsSessions.get(game)?.controller?.abort();
-  const sessionRequest = (async () => {
+  const entry = {
+    configKey,
+    controller,
+    result: null,
+    sessionKey,
+    sessionRequest: null,
+  };
+  entry.sessionRequest = (async () => {
     if (!isGameStatsBackendConfigured()) {
       const failure = { session: null, status: 0, reason: "unconfigured" };
       reportGameStatsSessionFailure(failure);
@@ -958,24 +1007,24 @@ const startGameStatsSession = (game, config) => {
       }
     }
     throw new Error("Game stats session retry loop exhausted unexpectedly");
-  })();
-  gameStatsSessions.set(game, { controller, sessionKey, sessionRequest });
+  })().then((result) => {
+    entry.result = result;
+    return result;
+  });
+  gameStatsSessions.set(game, entry);
   return sessionKey;
 };
 
-const getGameStatsSession = async (sessionKey) => {
+const getGameStatsSession = (sessionKey) => {
   const gameEntry = [...gameStatsSessions.entries()].find(
     ([, entry]) => entry.sessionKey === sessionKey
   );
   if (!sessionKey || !gameEntry) {
-    return { session: null, status: 0 };
+    return Promise.resolve({ session: null, status: 0 });
   }
   const [game, entry] = gameEntry;
-  try {
-    return await entry.sessionRequest;
-  } finally {
-    if (gameStatsSessions.get(game) === entry) gameStatsSessions.delete(game);
-  }
+  if (gameStatsSessions.get(game) === entry) gameStatsSessions.delete(game);
+  return entry.sessionRequest;
 };
 
 const loadGameStatsProfile = () => {
@@ -1892,6 +1941,13 @@ const setGameStatsSyncState = (state, { message = "" } = {}) => {
   if (!GAME_STATS_SYNC_STATES[state]) return;
   if (gameStatsSyncState === "build-mismatch" && state !== "build-mismatch") return;
   if (
+    gameStatsSyncState === "session-expired" &&
+    !gameStatsManualRefreshInProgress &&
+    ["fetching", "ready"].includes(state)
+  ) {
+    return;
+  }
+  if (
     gameStatsReleaseWaitCount > 0 &&
     state !== "release-waiting" &&
     state !== "build-mismatch"
@@ -2038,6 +2094,7 @@ const refreshGameStatsGlobalState = async ({ announce = true, fresh = false } = 
 };
 
 const runGameStatsSyncPass = async () => {
+  let expiredCount = 0;
   let rejectedCount = 0;
   let waitingForAdministratorAuthorizationCount = 0;
   let waitingForSessionCount = 0;
@@ -2052,8 +2109,8 @@ const runGameStatsSyncPass = async () => {
       waitingForSessionCount += 1;
       continue;
     }
-    if (new Date(submission.session.expiresAt).getTime() <= Date.now()) {
-      rejectedCount += 1;
+    if (isGameStatsSessionExpired(submission.session)) {
+      expiredCount += 1;
       continue;
     }
     if (
@@ -2096,6 +2153,10 @@ const runGameStatsSyncPass = async () => {
       }
     } catch (error) {
       const status = Number(error?.status);
+      if (isGameStatsSessionExpired(submission.session)) {
+        expiredCount += 1;
+        continue;
+      }
       if (
         submission.event.profile?.id === GAME_STATS_ROHIN_NEKO_PROFILE.id &&
         status === 403
@@ -2155,6 +2216,8 @@ const runGameStatsSyncPass = async () => {
     });
   } else if (waitingForAdministratorAuthorizationCount) {
     setGameStatsSyncState("auth-required");
+  } else if (expiredCount) {
+    setGameStatsSyncState("session-expired");
   } else if (rejectedCount) {
     setGameStatsSyncState("ready", {
       message: "Local stats are saved, but a result could not pass server verification.",
@@ -2214,6 +2277,7 @@ const recordGameStatsEvent = async (
 ) => {
   const event = normalizeGameStatsEvent(rawEvent);
   if (!event) return;
+  const sessionResultPromise = getGameStatsSession(sessionKey);
   const recordOptions = { snakePreviousHighScore };
   const mayBeatPersonalRecord = gameStatsEventBeatsPersonalRecord(
     gameStatsLocalState,
@@ -2252,7 +2316,7 @@ const recordGameStatsEvent = async (
   const recordHandoffPromise = beatPersonalRecord
     ? playGameStatsRecordHandoff(event.game)
     : null;
-  const sessionResult = await getGameStatsSession(sessionKey);
+  const sessionResult = await sessionResultPromise;
   const session = sessionResult?.session || null;
   if (!session) {
     if (sessionKey) {
@@ -2262,6 +2326,11 @@ const recordGameStatsEvent = async (
         message: "Local stats are saved. This result started without a verified game session.",
       });
     }
+    if (recordHandoffPromise) await recordHandoffPromise;
+    return;
+  }
+  if (isGameStatsSessionExpired(session)) {
+    setGameStatsSyncState("session-expired");
     if (recordHandoffPromise) await recordHandoffPromise;
     return;
   }
@@ -4040,6 +4109,51 @@ const resumeGameStatsAuthenticationAfterCompletion = () => {
   requestGameStatsAdministratorAuthentication();
 };
 
+const createGameStatsHooks = (game, stateOrGetter) => {
+  if (!GAME_STATS_SUPPORTED_GAMES.includes(game)) {
+    throw new TypeError("Unsupported game stats hook");
+  }
+  if (
+    typeof stateOrGetter !== "function" &&
+    (!stateOrGetter ||
+      typeof stateOrGetter !== "object" ||
+      typeof stateOrGetter.statsSession !== "string")
+  ) {
+    throw new TypeError("Game stats hooks require a mutable statsSession string");
+  }
+  const getState = () => {
+    const state =
+      typeof stateOrGetter === "function" ? stateOrGetter() : stateOrGetter;
+    if (!state || typeof state !== "object" || typeof state.statsSession !== "string") {
+      throw new TypeError("Game stats hooks require a mutable statsSession string");
+    }
+    return state;
+  };
+  return Object.freeze({
+    ensureSession(config) {
+      const state = getState();
+      if (!state.statsSession) {
+        state.statsSession = startGameStatsSession(game, config);
+      }
+      return state.statsSession;
+    },
+    dropSession() {
+      const state = getState();
+      state.statsSession = "";
+    },
+    recordEvent(payload, options = {}) {
+      const state = getState();
+      const sessionKey = state.statsSession;
+      state.statsSession = "";
+      return recordGameStatsEvent(
+        createGameStatsEvent({ ...payload, game }),
+        sessionKey,
+        options
+      );
+    },
+  });
+};
+
 window.homeGameStats = Object.freeze({
   getGameStatsProfile,
   isGameStatsManualRefreshInProgress,
@@ -4054,6 +4168,7 @@ window.homeGameStats = Object.freeze({
   cancelGameStatsAuthenticationWait,
   clampVisibleAdministratorWindow,
   createGameStatsEvent,
+  createGameStatsHooks,
   isGameStatsSyncBusy,
   positionVisibleGameStatsWindows,
   recordGameStatsEvent,
