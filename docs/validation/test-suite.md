@@ -71,6 +71,12 @@ request-delivery, and HTTP errors during teardown, including popup pages.
 Expected synthetic failures need exact assertions and narrow cleanup. Do not
 filter a whole endpoint, origin, or error category to obtain green tests.
 
+Negative diagnostic probes assert the exact captured failure before calling
+`test.fail()`. The expected failure must come from automatic teardown. If the
+collector stops observing the error, the body assertion must remain an ordinary
+failure; if enforcement is removed, the probe must become an unexpected pass.
+Marking the whole probe as expected to fail can conceal either regression.
+
 Advance controlled timer behavior with Playwright Clock. Use visibility,
 classes, animation completion, request completion, or state polling for async
 UI work. Avoid `waitForTimeout` and elapsed wall-clock cadence limits. A frozen
