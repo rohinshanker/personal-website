@@ -18,7 +18,7 @@ Neither replay validation nor online hidden-state enforcement proves a human pla
 
 ## Implementation scope
 
-1. Extract deterministic rule engines from `scripts/home/features/{minesweeper,solitaire,snake,sudoku}.js`, keeping DOM, animation, audio, timers, and storage in the feature controllers. Coordinate reusable engine/session work with [O_long-shared-game-layer__20260924.md](O_long-shared-game-layer__20260924.md); this ticket does not include its unrelated rendering or lazy-loading work.
+1. Extract deterministic rule engines from `scripts/home/features/{minesweeper,solitaire,snake,sudoku}.js`, keeping DOM, animation, audio, timers, and storage in the feature controllers. Coordinate reusable engine/session work with [A_long-shared-game-layer__20260924.md](A_long-shared-game-layer__20260924.md); this ticket does not include its unrelated rendering or lazy-loading work.
 2. Extend the existing Game Stats Worker and signed-session protocol to issue the game identity, rules version, initial state or seed, configuration, issue time, and expiry. Bind the replay to this stored state and signature. Define replay/rules versions independently from cosmetic frontend build hashes.
 3. Record ordered inputs and verify every transition. Derive the terminal result and score/move/assistance metrics on the server. Bound request size, input count, ticks, and verifier work before execution.
 4. Preserve authentication, Administrator authorization, rate limits, expiry, and duplicate idempotency. Consume a session and store its derived result atomically; never grant verified provenance to presentation-only Admin presets.
