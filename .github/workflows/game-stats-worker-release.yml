@@ -14,6 +14,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  browser:
+    name: Verify rendered browser behavior and visual baselines
+    uses: ./.github/workflows/ui-layout.yml
+
+  slow:
+    name: Verify full Solitaire deal corpus
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out release candidate
+        # actions/checkout v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        # actions/setup-node v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install site dependencies
+        run: npm ci
+      - name: Run full slow-tier tests
+        run: npm run test:slow
+
   verify:
     name: Verify release candidate
     runs-on: ubuntu-latest
@@ -54,7 +79,7 @@ jobs:
 
   deploy-worker:
     name: Deploy compatible Worker transition
-    needs: verify
+    needs: [verify, slow, browser]
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')

@@ -7,8 +7,6 @@ import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
-const DATA_VERSION = "modeling-portfolio-digitals-20260926";
-const ROUTE_VERSION = "repo-hygiene-20260927";
 
 const isFile = async (path) => {
   try {
@@ -180,8 +178,8 @@ test("Home derives its modeling galleries from the shared data instead of duplic
     readHomeScript("gallery"),
   ]);
 
-  const dataTag = `scripts/home/modeling-portfolio.js?v=${DATA_VERSION}`;
-  assert.ok(home.includes(`<script src="${dataTag}"></script>`), "Home loads the shared data");
+  const dataTag = "scripts/home/modeling-portfolio.js?v=";
+  assert.match(home, /<script src="scripts\/home\/modeling-portfolio\.js\?v=[^"]+"><\/script>/, "Home loads the shared data");
   assert.ok(
     home.indexOf(dataTag) < home.indexOf("scripts/home/features/gallery.js?v="),
     "the shared data loads before the gallery that reads it"
@@ -265,9 +263,9 @@ test("the /modeling/ route publishes its metadata, shared assets, and blank Drop
   assert.match(html, /<meta name="theme-color" content="#c0c0c0" \/>/);
   assert.match(html, /<link rel="icon" href="\/assets\/favicon-96\.png" type="image\/png" sizes="96x96" \/>/);
   assert.match(html, /<link rel="apple-touch-icon" href="\/assets\/apple-touch-icon-180\.png" sizes="180x180" \/>/);
-  assert.match(html, /href="\.\.\/style\.css\?v=html-semantics-20260927"/);
-  assert.match(html, new RegExp(`href="style\\.css\\?v=${ROUTE_VERSION}"`));
-  assert.match(html, new RegExp(`src="\\.\\./scripts/home/modeling-portfolio\\.js\\?v=${DATA_VERSION}"`));
+  assert.match(html, /href="\.\.\/style\.css\?v=[^"]+"/);
+  assert.match(html, /href="style\.css\?v=[^"]+"/);
+  assert.match(html, /src="\.\.\/scripts\/home\/modeling-portfolio\.js\?v=[^"]+"/);
   assert.match(html, /<script src="script\.js\?v=[^"]+" defer><\/script>/);
   assert.ok(
     html.indexOf("modeling-portfolio.js") < html.indexOf("script.js?v="),

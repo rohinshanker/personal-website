@@ -16,9 +16,11 @@ export default defineConfig({
   testDir: "./tests/ui",
   outputDir: resolveUiTestOutputDir(),
   timeout: 30_000,
+  fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? "github" : "list",
+  retries: 0,
+  workers: process.env.CI ? 2 : undefined,
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   // The architecture is part of the path: a run on another platform reports a
   // missing baseline instead of an unexplainable pixel diff.
   snapshotPathTemplate: `{testDir}/__screenshots__/{platform}-${process.arch}/{projectName}/{arg}{ext}`,

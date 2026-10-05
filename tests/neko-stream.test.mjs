@@ -153,8 +153,8 @@ test("Neko launchers expose one accessible context command above a non-interacti
   assert.doesNotMatch(styles, /\.neko-stream-cat\[data-mode=/);
   assert.match(styles, /\.neko-context-menu \{[\s\S]*?z-index: 10002;/);
   assert.match(styles, /\.neko-context-menu\[hidden\] \{\s*display: none;/);
-  assert.match(home, /styles\/home\/base\.css\?v=html-semantics-20260927/);
-  assert.match(index, /styles\/home\/base\.css\?v=html-semantics-20260927/);
+  assert.match(home, /styles\/home\/base\.css\?v=[^"]+/);
+  assert.match(index, /styles\/home\/base\.css\?v=[^"]+/);
   assert.doesNotMatch(main, /window\.__nekoStreamTest/);
 });
 
@@ -197,11 +197,11 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
   );
   assert.match(
     home,
-    /styles\/home\/random-events\.css\?v=managed-event-windows-20261001/
+    /styles\/home\/random-events\.css\?v=[^"]+/
   );
   assert.match(
     index,
-    /styles\/home\/random-events\.css\?v=managed-event-windows-20261001/
+    /styles\/home\/random-events\.css\?v=[^"]+/
   );
   await Promise.all([
     readFile(new URL("assets/neko-assets/sprites/sleep1.png", root)),

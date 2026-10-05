@@ -1378,6 +1378,10 @@ test("every workflow shares one hardening standard", async () => {
     const pins = readActionPins(source);
     assert.ok(pins.length > 0, `${fileName} must use at least one action`);
     for (const { reference, comment } of pins) {
+      if (reference === "./.github/workflows/ui-layout.yml") {
+        assert.equal(fileName, "game-stats-worker-release.yml");
+        continue;
+      }
       const [action, commitSha = ""] = reference.split("@");
       assert.match(
         commitSha,
@@ -1394,6 +1398,11 @@ test("every workflow shares one hardening standard", async () => {
     }
 
     for (const [jobName, job] of Object.entries(definition.jobs)) {
+      if (job.uses) {
+        assert.equal(job.uses, "./.github/workflows/ui-layout.yml");
+        assert.equal(jobName, "browser");
+        continue;
+      }
       assert.ok(
         Number.isInteger(job["timeout-minutes"]),
         `${fileName} job ${jobName} must bound its runtime`
@@ -1427,8 +1436,12 @@ test("every workflow runs pushes only from main so a PR branch runs once", async
     const definition = parse(
       await readFile(new URL(`.github/workflows/${file}`, root), "utf8")
     );
-    assert.deepEqual(definition.on.push, { branches: ["main"] }, file);
-    assert.equal(definition.on.pull_request, null, file);
+    if (file === "ui-layout.yml") {
+      assert.deepEqual(definition.on, { workflow_call: null });
+    } else {
+      assert.deepEqual(definition.on.push, { branches: ["main"] }, file);
+      assert.equal(definition.on.pull_request, null, file);
+    }
   }
 });
 
@@ -1567,9 +1580,11 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     "cancel-in-progress": true,
   });
   assert.deepEqual(Object.keys(workflowDefinition.jobs).sort(), [
+    "browser",
     "deploy-pages",
     "deploy-worker",
     "package-pages",
+    "slow",
     "verify",
   ]);
 
@@ -1591,7 +1606,13 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.match(verifySource, /npm --prefix workers\/game-stats run deploy:check/);
   assert.doesNotMatch(verifySource, /run deploy --/);
 
-  assert.equal(deployWorker.needs, "verify");
+  assert.deepEqual(deployWorker.needs, ["verify", "slow", "browser"]);
+  assert.equal(workflowDefinition.jobs.browser.uses, "./.github/workflows/ui-layout.yml");
+  assert.deepEqual(
+    workflowDefinition.jobs.slow.steps.filter((step) => step.run).map((step) => step.run),
+    ["npm ci", "npm run test:slow"]
+  );
+  assert.equal(packageJson.scripts["test:slow"], "node --test tests/slow/*.test.mjs");
   assert.match(deployWorker.if, /github\.ref == 'refs\/heads\/main'/);
   assert.match(deployWorker.if, /github\.event_name == 'push'/);
   assert.match(deployWorker.if, /github\.event_name == 'workflow_dispatch'/);

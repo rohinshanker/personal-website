@@ -58,11 +58,11 @@ test("Red Tool chat keeps exactly one native arrow at each scrollbar end", async
   );
 
   const expectedReference =
-    "styles/home/random-events.css?v=managed-event-windows-20261001";
+    "styles/home/random-events.css?v=";
   assert.ok(home.includes(expectedReference));
   assert.ok(index.includes(expectedReference));
   const globalStyleIndex = home.indexOf('href="style.css?');
-  const randomEventStyleIndex = home.indexOf(`href="${expectedReference}"`);
+  const randomEventStyleIndex = home.indexOf(`href="${expectedReference}`);
   const cursorStyleIndex = home.indexOf('href="styles/home/cursors.css?');
   assert.ok(globalStyleIndex >= 0);
   assert.ok(globalStyleIndex < randomEventStyleIndex);

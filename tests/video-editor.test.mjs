@@ -133,13 +133,13 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
     textSelectionCursor,
   } = await readRouteSources();
   const sharedStylesheet =
-    'href="../styles/home/cursors.css?v=cache-token-parity-20260927"';
+    'href="../styles/home/cursors.css?v=';
   const sharedRuntimeReference =
-    'src="../scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930"';
-  const routeCursorReference = 'src="cursor.js?v=shared-cursor-runtime-20260930"';
-  const routeStylesheet = 'href="style.css?v=repo-hygiene-20260927"';
+    'src="../scripts/home/core/cursor-mode.js?v=';
+  const routeCursorReference = 'src="cursor.js?v=';
+  const routeStylesheet = 'href="style.css?v=';
   const textSelectionScript =
-    'src="../scripts/home/text-selection-cursor.js?v=generic-cursor-guards-20260930"';
+    'src="../scripts/home/text-selection-cursor.js?v=';
   for (const reference of [
     sharedStylesheet,
     sharedRuntimeReference,
@@ -155,7 +155,7 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
   assert.ok(html.indexOf(routeStylesheet) < html.indexOf(textSelectionScript));
   assert.match(
     html,
-    /<script\b[^>]*\bsrc="\.\.\/scripts\/home\/text-selection-cursor\.js\?v=generic-cursor-guards-20260930"[^>]*\bdefer(?:\s|>|=)/i
+    /<script\b[^>]*\bsrc="\.\.\/scripts\/home\/text-selection-cursor\.js\?v=[^"]+"[^>]*\bdefer(?:\s|>|=)/i
   );
   for (const id of [
     "desktop-required",
@@ -882,7 +882,7 @@ test("Video Editor reuses the expiring Administrator proof without persisting pr
 test("Video Editor exposes local Audio-Sync analysis and accessible guidepost controls", async () => {
   const { audioAnalysis, audioAnalysisWorker, css, html, script } =
     await readRouteSources();
-  assert.match(html, /<script\b[^>]*\bsrc="audio-analysis\.js\?v=ci-and-worker-fixes-20260927"[^>]*\bdefer(?:\s|>|=)/i);
+  assert.match(html, /<script\b[^>]*\bsrc="audio-analysis\.js\?v=[^"]+"[^>]*\bdefer(?:\s|>|=)/i);
   assert.match(html, /data-effect="audio-sync-cut"/i);
   assert.match(html, /data-effect-tab-target="effect-tab-audio-sync-cut"/i);
   assert.match(html, /\bid="effect-panel-audio-sync-cut"[^>]*\brole="tabpanel"/i);

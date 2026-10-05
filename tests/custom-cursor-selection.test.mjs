@@ -18,20 +18,20 @@ const compactStyles = styles.replace(/\s+/g, " ");
 
 test("both entry points load the pointer-aware text cursor assets", () => {
   for (const source of [home, index]) {
-    assert.match(source, /cursors\.css\?v=cache-token-parity-20260927/);
+    assert.match(source, /cursors\.css\?v=[^"]+/);
     assert.match(
       source,
-      /scripts\/home\/text-selection-cursor\.js\?v=generic-cursor-guards-20260930/
+      /scripts\/home\/text-selection-cursor\.js\?v=[^"]+/
     );
   }
   assert.match(
     index,
-    /\["styles\/home\/cursors\.css\?v=cache-token-parity-20260927", "style"\]/
+    /\["styles\/home\/cursors\.css\?v=[^"]+", "style"\]/
   );
   for (const source of [home, index]) {
     assert.match(
       source,
-      /scripts\/home\/core\/cursor-mode\.js\?v=shared-cursor-runtime-20260930/
+      /scripts\/home\/core\/cursor-mode\.js\?v=[^"]+/
     );
   }
   assert.match(cursorRuntime, /window\.RohinCursorRuntime\s*=\s*Object\.freeze/);

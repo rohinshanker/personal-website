@@ -177,7 +177,13 @@ test("CI runs both the browser project and the visual baselines", async () => {
   }
 
   const runsOf = (job) => job.steps.map((step) => step.run).filter(Boolean);
-  assert.ok(runsOf(jobs.ui).includes("npm run test:ui"));
+  assert.deepEqual(workflow.on, { workflow_call: null });
+  assert.equal(jobs.ui.strategy["fail-fast"], false);
+  assert.deepEqual(jobs.ui.strategy.matrix.shard, [1, 2, 3]);
+  assert.ok(runsOf(jobs.ui).includes("npm run test:ui -- --shard=${{ matrix.shard }}/3 --workers=2"));
+  const artifact = jobs.ui.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+  assert.equal(artifact.with.name, "ui-artifacts-${{ matrix.shard }}");
+  assert.match(artifact.with.path, /playwright-report/);
   assert.ok(
     runsOf(jobs.visual).includes("npm run test:visual"),
     "the visual baselines must be an actual CI gate"

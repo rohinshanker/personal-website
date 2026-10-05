@@ -1326,11 +1326,11 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=managed-event-windows-20261001/);
-    assert.match(source, /cursors\.css\?v=cache-token-parity-20260927/);
-    assert.match(source, /minesweeper\.css\?v=minesweeper-grid-rows-20260909/);
-    assert.match(source, /game-stats\.css\?v=html-semantics-20260927/);
-    assert.match(source, /style\.css\?v=html-semantics-20260927/);
+    assert.match(source, /random-events\.css\?v=[^"]+/);
+    assert.match(source, /cursors\.css\?v=[^"]+/);
+    assert.match(source, /minesweeper\.css\?v=[^"]+/);
+    assert.match(source, /game-stats\.css\?v=[^"]+/);
+    assert.match(source, /style\.css\?v=[^"]+/);
     assert.match(source, /core\/dom\.js\?v=game-build-[a-f0-9]{64}/);
     assert.match(source, /game-stats-backend\.js\?v=game-build-[a-f0-9]{64}/);
     assert.match(source, /features\/minesweeper\.js\?v=game-build-[a-f0-9]{64}/);

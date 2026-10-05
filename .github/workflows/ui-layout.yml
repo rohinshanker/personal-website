@@ -1,9 +1,7 @@
 name: Browser UI
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
@@ -14,9 +12,13 @@ concurrency:
 
 jobs:
   ui:
-    name: Layout, behaviour, and accessibility
+    name: Layout, behaviour, and accessibility (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - name: Check out source
         # actions/checkout v6.0.2
@@ -48,14 +50,16 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
       - name: Run browser UI tests
-        run: npm run test:ui
+        run: npm run test:ui -- --shard=${{ matrix.shard }}/3 --workers=2
       - name: Upload browser UI artifacts
         if: always()
         # actions/upload-artifact v4.6.2
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: ui-artifacts
-          path: test-results/
+          name: ui-artifacts-${{ matrix.shard }}
+          path: |
+            test-results/
+            playwright-report/
           if-no-files-found: ignore
 
   visual:

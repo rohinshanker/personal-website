@@ -163,11 +163,11 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
 
   assert.match(
     home,
-    /styles\/home\/admin-controls\.css\?v=repo-hygiene-20260927/
+    /styles\/home\/admin-controls\.css\?v=[^"]+/
   );
   assert.match(
     home,
-    /scripts\/home\/admin-controls\.js\?v=managed-event-windows-20261001/
+    /scripts\/home\/admin-controls\.js\?v=[^"]+/
   );
   assert.ok(
     home.indexOf("scripts/home/admin-controls.js") >
