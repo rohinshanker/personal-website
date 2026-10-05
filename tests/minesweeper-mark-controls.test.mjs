@@ -84,6 +84,9 @@ test("production control-mode functions expose only the selected input mode", as
   context.api.msSetMarkMode("question");
   assert.equal(context.read().flag.ariaPressed, "false");
   assert.equal(context.read().question.ariaPressed, "true");
+  context.api.msSetMarkMode("unsupported");
+  assert.equal(context.read().markMode, null);
+  assert.equal(context.read().question.ariaPressed, "false");
 
   context.api.msSetControlsMode("mouse");
   assert.equal(context.read().controlsMode, "mouse");
@@ -156,14 +159,24 @@ test("production mark functions keep per-cell states and flag arithmetic consist
   context.api.msToggleFlag(2);
   assert.equal(context.read().cells[2].question, false);
   assert.equal(context.read().flagCount, 1);
-  assert.equal(context.read().renders, 9);
-  assert.equal(context.read().counterUpdates, 9);
+  context.api.msToggleMark(0, "question");
+  assert.equal(context.read().cells[0].question, true);
+  context.api.msToggleMark(0, "question");
+  assert.equal(context.read().cells[0].question, false);
+  assert.equal(context.read().flagCount, 1);
+  assert.equal(context.read().renders, 11);
+  assert.equal(context.read().counterUpdates, 11);
 });
 
 test("production mark guards leave revealed and game-over cells unchanged", async () => {
   const context = await createHarness();
+  const initialState = plain(context.read());
+  context.api.msToggleFlag(-1);
+  context.api.msToggleMark(-1, "question");
+  assert.deepEqual(plain(context.read()), initialState);
   context.seedCell(0, { revealed: true });
   context.api.msToggleMark(0, "flag");
+  context.api.msToggleFlag(0);
   assert.deepEqual(plain(context.read().cells[0]), {
     revealed: true,
     flagged: false,
@@ -174,6 +187,7 @@ test("production mark guards leave revealed and game-over cells unchanged", asyn
   context.setFlagCount(1);
   context.setGameOver(true);
   context.api.msToggleFlag(1);
+  context.api.msToggleMark(1, "question");
   assert.deepEqual(plain(context.read().cells[1]), {
     revealed: false,
     flagged: true,

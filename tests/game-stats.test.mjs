@@ -48,9 +48,9 @@ test("the production viewport pass positions every visible Game Stats window", a
     [
       "const calls = [];",
       "const makeWindow = (name, width, height, titleBarHeight, classes = []) => { const classNames = new Set(classes); return { name, offsetWidth: width, offsetHeight: height, classList: { contains: (value) => classNames.has(value), replace(values) { classNames.clear(); values.forEach((value) => classNames.add(value)); } }, querySelector: () => ({ offsetHeight: titleBarHeight }) }; };",
-      "const windowsByGame = new Map([['minesweeper', makeWindow('minesweeper', 200, 100, 20)], ['solitaire', makeWindow('solitaire', 220, 110, 30)], ['snake', makeWindow('snake', 210, 120, 25, ['is-hidden'])], ['sudoku', makeWindow('sudoku', 190, 90, 22, ['is-closing'])]]);",
+      "const windowsByGame = new Map([['minesweeper', makeWindow('minesweeper', 200, 100, 20)], ['solitaire', makeWindow('solitaire', 220, 110, 30)], ['snake', makeWindow('snake', 210, 120, 25, ['is-hidden'])], ['sudoku', makeWindow('sudoku', 190, 90, 0, ['is-closing'])]]);",
       "const GAME_STATS_SUPPORTED_GAMES = [...windowsByGame.keys()];",
-      "const getGameStatsWindowParts = (game) => ({ windowElement: windowsByGame.get(game) });",
+      "const getGameStatsWindowParts = (game) => windowsByGame.has(game) ? { windowElement: windowsByGame.get(game) } : null;",
       "const clampWindowFullyIntoViewport = (windowElement) => calls.push(['clamp', windowElement.name]);",
       "const setWindowTitleBarClampedPosition = (windowElement, left, top) => calls.push(['position', windowElement.name, left, top]);",
       "const window = { innerWidth: 600 };",
@@ -62,6 +62,7 @@ test("the production viewport pass positions every visible Game Stats window", a
       "globalThis.position = positionVisibleGameStatsWindows;",
       "globalThis.setWidth = (value) => { window.innerWidth = value; };",
       "globalThis.setClasses = (game, values) => windowsByGame.get(game).classList.replace(values);",
+      "globalThis.removeWindow = (game) => windowsByGame.delete(game);",
       "globalThis.clearCalls = () => { calls.length = 0; };",
       "globalThis.readCalls = () => calls;",
     ].join("\n"),
@@ -83,7 +84,36 @@ test("the production viewport pass positions every visible Game Stats window", a
   ]);
 
   context.clearCalls();
+  context.setWidth(600);
+  context.setClasses("snake", []);
+  context.setClasses("sudoku", []);
+  context.position();
+  assert.deepEqual(plain(context.readCalls()), [
+    ["position", "minesweeper", 24, 24],
+    ["position", "solitaire", 356, 24],
+    ["position", "snake", 24, 160],
+    ["position", "sudoku", 386, 130],
+  ]);
+
+  context.clearCalls();
+  context.setWidth(400);
+  context.position();
+  assert.deepEqual(plain(context.readCalls()), [
+    ["position", "minesweeper", 24, 24],
+    ["position", "solitaire", 24, 58],
+    ["position", "snake", 24, 82],
+    ["position", "sudoku", 24, 108],
+  ]);
+
+  context.clearCalls();
+  context.setClasses("snake", ["is-hidden"]);
+  context.setClasses("sudoku", ["is-closing"]);
   context.setClasses("solitaire", ["is-hidden"]);
   context.position();
   assert.deepEqual(plain(context.readCalls()), [["clamp", "minesweeper"]]);
+
+  context.clearCalls();
+  context.removeWindow("minesweeper");
+  context.position();
+  assert.deepEqual(plain(context.readCalls()), []);
 });
