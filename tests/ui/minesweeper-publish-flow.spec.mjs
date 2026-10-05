@@ -423,7 +423,8 @@ for (const viewport of REVIEW_VIEWPORTS) {
       skippedFlag: true,
     });
     expect(api.events).toHaveLength(1);
-    await expect(minesweeper.locator("#ms-lose-banner")).not.toBeVisible();
+    await expect(minesweeper.locator("#ms-lose-banner")).not.toHaveClass(/is-visible/);
+    await expect(minesweeper.locator("#ms-lose-banner")).toHaveCSS("opacity", "0");
     await expect(minesweeper.locator("#ms-reset")).toHaveAttribute("data-face", "smile");
 
     await settleRender(page);

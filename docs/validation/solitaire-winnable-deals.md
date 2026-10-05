@@ -40,7 +40,7 @@ npx playwright test tests/ui/solitaire-winnable-deals.spec.mjs
 The fast Node file covers a representative verified deal, independent replay,
 determinism, and bounded fallback. The required slow tier covers constant
 random boundaries and all 500 seeded streams. Together they
-verifies all 52 canonical cards, standard tableau and stock shape, determinism,
+verify all 52 canonical cards, standard tableau and stock shape, determinism,
 diversity, random-looking columns, first-shuffle and capped acceptance floors,
 the bounded unverified fallback, and every certified move with an independent
 draw-one/redeal rules simulator.
