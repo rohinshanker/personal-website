@@ -140,8 +140,16 @@ Keep transient reports under ignored `test-results/`, `playwright-report/`, or
   duplicates can make a generic descendant measure the wrong geometry.
 - Wait for opening/closing animations to finish before exact rectangle checks.
   If production branches on `animationName`, use a matching `AnimationEvent`.
+- Check computed opacity for elements that fade while staying in the layout.
+  [Playwright visibility](https://playwright.dev/docs/actionability#visible)
+  treats `opacity: 0` as visible; a bounding-box assertion does not prove that
+  the visitor can see an element.
 - Wait for non-zero decoded sprite dimensions before canvas sampling. Image
   completion alone does not guarantee a carousel's loading state has settled.
+- The Python test server does not serve byte ranges. For a later video frame,
+  wait for presented playback progress and pause it; do not assume assigning
+  `currentTime` successfully seeks. Assert actual canvas pixels before keeping
+  a decoded-media screenshot.
 - Read timer-sensitive state atomically under a paused clock; polling followed
   by a separate read can race with a scheduled mutation.
 - Classify failures as product, test, data, or environment problems. Preserve
