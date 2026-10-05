@@ -29,7 +29,7 @@ test("small-window expansion and loading progress preserve their upper bounds", 
   const expansion = extractBetween(main, "const expandSmallWindow", "const getAppWindow");
   const sudokuLoading = extractBetween(
     main,
-    "const tickSudokuLoadingSequence",
+    "const sudokuProgressLoader",
     "const startSudokuBootSequence"
   );
   const distressLoading = extractBetween(
@@ -48,7 +48,7 @@ test("small-window expansion and loading progress preserve their upper bounds", 
   );
   assert.match(
     sudokuLoading,
-    /Math\.min\(\s*98,\s*Math\.max\(\s*sudokuState\.loadingProgress \+ 1,\s*sudokuState\.loadingProgress \+ jump \+ catchup\s*\)\s*\)/
+    /progressCap: 98,[\s\S]*?return Math\.max\(progress \+ 1, progress \+ jump \+ catchup\);/
   );
   assert.match(
     distressLoading,

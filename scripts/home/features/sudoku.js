@@ -7,9 +7,15 @@ const {
 const {
   afterFrames,
   clampNumber,
+  createProgressLoader,
   debounceTimer,
+  flashBanner,
   formatElapsedTime,
+  isPageActive,
+  readJsonStorage,
   reducedMotionQuery,
+  removeStorage,
+  writeJsonStorage,
 } = window.homeUtil;
 const {
   isHomeActivationReady,
@@ -25,9 +31,9 @@ const {
 } = window.homeGameStats;
 const {
   clampWindowFullyIntoViewport,
-  getActiveWindow,
   getAppWindow,
   isWindowVisible,
+  registerActiveWindowKeyHandler,
   registerViewportObserver,
   registerWindowLifecycle,
 } = window.homeWindows;
@@ -711,11 +717,7 @@ const flushSudokuSave = () => {
     clearTimeout(sudokuSaveTimerId);
     sudokuSaveTimerId = null;
   }
-  try {
-    localStorage.setItem(SUDOKU_STORAGE_KEY, JSON.stringify(createSudokuSavePayload()));
-  } catch (error) {
-    // Local storage can be disabled in some browsing modes.
-  }
+  writeJsonStorage(() => localStorage, SUDOKU_STORAGE_KEY, createSudokuSavePayload());
 };
 
 const scheduleSudokuSave = () => {
@@ -735,12 +737,7 @@ const scheduleSudokuSave = () => {
 };
 
 const restoreSudokuSavedState = () => {
-  let savedState = null;
-  try {
-    savedState = JSON.parse(localStorage.getItem(SUDOKU_STORAGE_KEY) || "null");
-  } catch (error) {
-    savedState = null;
-  }
+  const savedState = readJsonStorage(() => localStorage, SUDOKU_STORAGE_KEY, null);
   if (!savedState || ![1, 2, 3].includes(savedState.version)) return false;
 
   const difficulty = normalizeSudokuDifficulty(savedState.difficulty);
@@ -872,16 +869,12 @@ const isSudokuWindowVisible = () => {
 
 const isSudokuReducedMotion = () => Boolean(sudokuReducedMotionMedia?.matches);
 
-const isSudokuPageActive = () =>
-  typeof document.hasFocus === "function" ? document.hasFocus() : true;
-
 const isSudokuAquariumActive = () =>
   Boolean(
     sudokuAquariumLayer &&
       sudokuState.playing &&
       isSudokuWindowVisible() &&
-      !document.hidden &&
-      isSudokuPageActive() &&
+      isPageActive(document) &&
       !isSudokuReducedMotion()
   );
 
@@ -900,9 +893,7 @@ const setSudokuLoadingProgress = (progress) => {
 };
 
 const clearSudokuLoadingTimer = () => {
-  if (!sudokuState.loadingTimerId) return;
-  clearTimeout(sudokuState.loadingTimerId);
-  sudokuState.loadingTimerId = null;
+  sudokuProgressLoader.cancel();
 };
 
 const clearSudokuTransitionTimer = () => {
@@ -1193,74 +1184,56 @@ const setSudokuBootState = (state) => {
 };
 
 const finishSudokuLoadingSequence = () => {
-  clearSudokuLoadingTimer();
   sudokuState.loadingStartedAt = 0;
-  setSudokuLoadingProgress(100);
   setSudokuBootState("ready");
   requestAnimationFrame(() => {
     if (sudokuPlay && isSudokuWindowVisible()) sudokuPlay.focus();
   });
 };
 
-const tickSudokuLoadingSequence = () => {
-  if (!isSudokuWindowVisible() || sudokuState.playing) {
-    clearSudokuLoadingTimer();
-    return;
-  }
-
-  // The meter runs for at least its floor, then holds at 98 until a real
-  // puzzle exists. Play is offered on readiness, never on a timer alone.
-  const elapsed = performance.now() - sudokuState.loadingStartedAt;
-  if (elapsed >= sudokuState.loadingDuration && sudokuPuzzleReady) {
-    finishSudokuLoadingSequence();
-    return;
-  }
-
-  const targetProgress = (elapsed / sudokuState.loadingDuration) * 100;
-  const jump = 3 + Math.random() * 14;
-  const catchup = Math.max(0, targetProgress - sudokuState.loadingProgress) * 0.58;
-  setSudokuLoadingProgress(
-    Math.min(
-      98,
-      Math.max(
-        sudokuState.loadingProgress + 1,
-        sudokuState.loadingProgress + jump + catchup
-      )
-    )
-  );
-
-  const remainingMs =
-    sudokuState.loadingDuration - (performance.now() - sudokuState.loadingStartedAt);
-  sudokuState.loadingTimerId = window.setTimeout(
-    tickSudokuLoadingSequence,
-    remainingMs > 0
-      ? Math.min(90 + Math.random() * 210, remainingMs)
-      : SUDOKU_LOAD_READY_POLL_MS
-  );
-};
+// The meter runs for at least its floor, then holds at 98 until a real puzzle
+// exists. Play is offered on readiness, never on a timer alone.
+const sudokuProgressLoader = createProgressLoader({
+  progressCap: 98,
+  isReady: () => sudokuPuzzleReady,
+  shouldContinue: () => isSudokuWindowVisible() && !sudokuState.playing,
+  nextProgress: ({ elapsedMs, durationMs, progress }) => {
+    const targetProgress = (elapsedMs / durationMs) * 100;
+    const jump = 3 + Math.random() * 14;
+    const catchup = Math.max(0, targetProgress - progress) * 0.58;
+    return Math.max(progress + 1, progress + jump + catchup);
+  },
+  nextDelay: ({ elapsedMs, durationMs, waitingForReady }) =>
+    waitingForReady
+      ? SUDOKU_LOAD_READY_POLL_MS
+      : Math.min(90 + Math.random() * 210, Math.max(0, durationMs - elapsedMs)),
+  onProgress: setSudokuLoadingProgress,
+  onReady: finishSudokuLoadingSequence,
+  onTimerChange: (timerId) => {
+    sudokuState.loadingTimerId = timerId;
+  },
+});
 
 const startSudokuBootSequence = () => {
   if (!sudokuApp) return;
   pauseSudokuTimer();
   hideSudokuErrorsPrompt({ restoreFocus: false });
   hideSudokuSolvePopup();
-  clearSudokuLoadingTimer();
   clearSudokuTransitionTimer();
   clearSudokuPlayBurst();
   sudokuState.playing = false;
   setSudokuPaused(false);
-  sudokuState.loadingStartedAt = performance.now();
   sudokuState.loadingDuration = SUDOKU_LOAD_MIN_MS;
   // Opening Sudoku is what starts the generator: the first puzzle if there is
   // none, and otherwise a spare so the next New Game is instant.
   if (sudokuPuzzleReady) topUpSudokuPuzzlePool(sudokuState.difficulty);
   else loadSudokuDifficulty(sudokuState.difficulty);
-  setSudokuLoadingProgress(0);
   setSudokuBootState("loading");
-  sudokuState.loadingTimerId = window.setTimeout(
-    tickSudokuLoadingSequence,
-    120 + Math.random() * 180
-  );
+  const loading = sudokuProgressLoader.start({
+    duration: sudokuState.loadingDuration,
+    initialDelay: 120 + Math.random() * 180,
+  });
+  sudokuState.loadingStartedAt = loading.startedAt;
 };
 
 const clearSudokuBootSequence = ({ resetView = true } = {}) => {
@@ -1965,10 +1938,7 @@ const setSudokuNoteMode = (enabled) => {
 };
 
 const showSudokuAchievement = () => {
-  if (!sudokuAchievement) return;
-  sudokuAchievement.classList.remove("is-showing");
-  void sudokuAchievement.offsetWidth;
-  sudokuAchievement.classList.add("is-showing");
+  flashBanner(sudokuAchievement);
 };
 
 const triggerSudokuVictoryEffects = () => {
@@ -2048,7 +2018,6 @@ const handleSudokuUndoRedoShortcut = (event) => {
   const isRedoKey = event.key === "y" || event.key === "Y";
   if (
     isSudokuBoardLocked() ||
-    !isSudokuWindowVisible() ||
     (!event.metaKey && !event.ctrlKey) ||
     event.altKey
   ) {
@@ -2097,14 +2066,7 @@ const showSudokuNoteTooltip = (event) => {
 };
 
 const isSudokuKeyboardActive = () => {
-  const win = getAppWindow("sudoku");
-  return Boolean(
-    win &&
-      getActiveWindow() === win &&
-      isWindowVisible(win) &&
-      sudokuState.playing &&
-      !isSudokuBoardLocked()
-  );
+  return Boolean(sudokuState.playing && !isSudokuBoardLocked());
 };
 
 // Window-level keys: N toggles notes anywhere in the active Sudoku window,
@@ -2113,7 +2075,6 @@ const isSudokuKeyboardActive = () => {
 // marks those events as handled before they reach the document.
 const handleSudokuWindowKeydown = (event) => {
   if (
-    event.defaultPrevented ||
     event.isComposing ||
     event.ctrlKey ||
     event.metaKey ||
@@ -2524,9 +2485,9 @@ if (sudokuGrid) {
   sudokuGrid.addEventListener("keydown", handleSudokuGridKeydown);
 }
 
-document.addEventListener("keydown", handleSudokuUndoRedoShortcut);
+registerActiveWindowKeyHandler("sudoku", handleSudokuUndoRedoShortcut);
 
-document.addEventListener("keydown", handleSudokuWindowKeydown);
+registerActiveWindowKeyHandler("sudoku", handleSudokuWindowKeydown);
 
 window.addEventListener("storage", syncSudokuCompletionFromStorage);
 
@@ -2609,20 +2570,15 @@ registerGameStatsLocalSource("sudoku", {
     sudokuState.hintMode = "off";
     sudokuState.noteMode = false;
     loadSudokuDifficulty("easy");
+    removeStorage(() => localStorage, SUDOKU_STORAGE_KEY);
+    // Completion claims retain their cross-tab merge policy and storage path.
     try {
-      localStorage.removeItem(SUDOKU_STORAGE_KEY);
       localStorage.removeItem(SUDOKU_COMPLETION_CLAIMS_KEY);
     } catch {
       // The fresh in-memory puzzle still replaces the previous player's game.
     }
   },
 });
-
-if (sudokuAchievement) {
-  sudokuAchievement.addEventListener("animationend", () => {
-    sudokuAchievement.classList.remove("is-showing");
-  });
-}
 
 window.homeSudoku = Object.freeze({
   SUDOKU_COMPLETION_CLAIMS_KEY,

@@ -6,13 +6,18 @@ const {
 } = window.homeDom;
 const {
   clampNumber,
+  createProgressLoader,
   debounceTimer,
+  isPageActive,
+  readJsonStorage,
   reducedMotionQuery,
+  removeStorage,
+  writeJsonStorage,
 } = window.homeUtil;
 const {
-  getActiveWindow,
   getAppWindow,
   isWindowVisible,
+  registerActiveWindowKeyHandler,
   registerViewportObserver,
   registerWindowLifecycle,
   setWindowOpen,
@@ -175,8 +180,6 @@ let snakeGridCacheKey = "";
 
 let snakeHighScoreSaveTimer = null;
 
-let snakeLoadingTimer = null;
-
 let snakeLoadingStartedAt = 0;
 
 let snakeLoadingDuration = 0;
@@ -208,14 +211,10 @@ const isSnakeWindowVisible = () => {
 
 const isSnakeReducedMotion = () => Boolean(snakeReducedMotionMedia?.matches);
 
-const isSnakePageActive = () =>
-  typeof document.hasFocus === "function" ? document.hasFocus() : true;
-
 const canAnimateSnake = () =>
   Boolean(
     isSnakeWindowVisible() &&
-      !document.hidden &&
-      isSnakePageActive() &&
+      isPageActive(document) &&
       !isSnakeReducedMotion()
   );
 
@@ -250,12 +249,6 @@ const setSnakeLoadingProgress = (progress) => {
   }
 };
 
-const clearSnakeLoadingTimer = () => {
-  if (!snakeLoadingTimer) return;
-  clearTimeout(snakeLoadingTimer);
-  snakeLoadingTimer = null;
-};
-
 const setSnakeLoadingVisible = (visible) => {
   const win = getAppWindow("snake");
   snakeState.loading = visible;
@@ -266,52 +259,34 @@ const setSnakeLoadingVisible = (visible) => {
 };
 
 const clearSnakeLoadingSequence = () => {
-  clearSnakeLoadingTimer();
+  snakeProgressLoader.cancel();
   setSnakeLoadingVisible(false);
   setSnakeLoadingProgress(0);
 };
 
 const finishSnakeLoadingSequence = () => {
-  clearSnakeLoadingTimer();
-  setSnakeLoadingProgress(100);
   setSnakeLoadingVisible(false);
   if (!isSnakeWindowVisible()) return;
   requestSnakeRender();
   if (snakeCanvas) snakeCanvas.focus();
 };
 
-const tickSnakeLoadingSequence = () => {
-  if (!snakeState.loading || !isSnakeWindowVisible()) {
-    clearSnakeLoadingSequence();
-    return;
-  }
-
-  const elapsed = performance.now() - snakeLoadingStartedAt;
-  if (elapsed >= snakeLoadingDuration) {
-    finishSnakeLoadingSequence();
-    return;
-  }
-
-  const timeProgress = (elapsed / snakeLoadingDuration) * 100;
-  const naturalJump = 4 + Math.random() * 18;
-  const catchupJump = Math.max(0, timeProgress - snakeLoadingProgress) * (0.45 + Math.random() * 0.5);
-  const jitterCap = timeProgress + 14 + Math.random() * 18;
-  const nextProgress = Math.min(
-    96,
-    jitterCap,
-    snakeLoadingProgress + naturalJump + catchupJump
-  );
-  setSnakeLoadingProgress(Math.max(snakeLoadingProgress + 1, nextProgress));
-
-  const remainingMs = Math.max(
-    0,
-    snakeLoadingDuration - (performance.now() - snakeLoadingStartedAt)
-  );
-  snakeLoadingTimer = window.setTimeout(
-    tickSnakeLoadingSequence,
-    Math.min(110 + Math.random() * 290, remainingMs)
-  );
-};
+const snakeProgressLoader = createProgressLoader({
+  progressCap: 96,
+  shouldContinue: () => snakeState.loading && isSnakeWindowVisible(),
+  nextProgress: ({ elapsedMs, durationMs, progress }) => {
+    const timeProgress = (elapsedMs / durationMs) * 100;
+    const naturalJump = 4 + Math.random() * 18;
+    const catchupJump =
+      Math.max(0, timeProgress - progress) * (0.45 + Math.random() * 0.5);
+    const jitterCap = timeProgress + 14 + Math.random() * 18;
+    return Math.min(jitterCap, progress + naturalJump + catchupJump);
+  },
+  nextDelay: ({ elapsedMs, durationMs }) =>
+    Math.min(110 + Math.random() * 290, Math.max(0, durationMs - elapsedMs)),
+  onProgress: setSnakeLoadingProgress,
+  onReady: finishSnakeLoadingSequence,
+});
 
 const startSnakeLoadingSequence = () => {
   const win = getAppWindow("snake");
@@ -319,25 +294,19 @@ const startSnakeLoadingSequence = () => {
   pauseSnakeGame();
   stopSnakeNoiseAnimation();
   clearSnakeCountdown();
-  clearSnakeLoadingTimer();
   setSnakeLoadingVisible(true);
-  setSnakeLoadingProgress(0);
-  snakeLoadingStartedAt = performance.now();
   snakeLoadingDuration =
     SNAKE_LOAD_MIN_MS + Math.random() * (SNAKE_LOAD_MAX_MS - SNAKE_LOAD_MIN_MS);
-  snakeLoadingTimer = window.setTimeout(
-    tickSnakeLoadingSequence,
-    120 + Math.random() * 220
-  );
+  const loading = snakeProgressLoader.start({
+    duration: snakeLoadingDuration,
+    initialDelay: 120 + Math.random() * 220,
+  });
+  snakeLoadingStartedAt = loading.startedAt;
 };
 
 const loadSnakeHighScores = () => {
-  try {
-    const stored = JSON.parse(localStorage.getItem(SNAKE_HIGH_SCORE_KEY) || "{}");
-    return stored && typeof stored === "object" ? stored : {};
-  } catch {
-    return {};
-  }
+  const stored = readJsonStorage(() => localStorage, SNAKE_HIGH_SCORE_KEY, {});
+  return stored && typeof stored === "object" ? stored : {};
 };
 
 const saveSnakeHighScores = () => {
@@ -345,11 +314,7 @@ const saveSnakeHighScores = () => {
     clearTimeout(snakeHighScoreSaveTimer);
     snakeHighScoreSaveTimer = null;
   }
-  try {
-    localStorage.setItem(SNAKE_HIGH_SCORE_KEY, JSON.stringify(snakeState.highScores));
-  } catch {
-    // High scores are best-effort when storage is unavailable.
-  }
+  writeJsonStorage(() => localStorage, SNAKE_HIGH_SCORE_KEY, snakeState.highScores);
 };
 
 const scheduleSnakeHighScoreSave = () => {
@@ -361,35 +326,24 @@ const scheduleSnakeHighScoreSave = () => {
 };
 
 const loadSnakeSettings = () => {
-  try {
-    const stored = JSON.parse(localStorage.getItem(SNAKE_SETTINGS_KEY) || "null");
-    if (!stored || typeof stored !== "object") return null;
-    const gridSize = Number(stored.gridSize);
-    return {
-      gridSize: [10, 16, 20, 24].includes(gridSize)
-        ? gridSize
-        : SNAKE_DEFAULT_GRID_SIZE,
-      color: SNAKE_COLOR_THEMES[stored.color] ? stored.color : "green",
-      appleColor: SNAKE_COLOR_THEMES[stored.appleColor] ? stored.appleColor : "red",
-    };
-  } catch {
-    return null;
-  }
+  const stored = readJsonStorage(() => localStorage, SNAKE_SETTINGS_KEY, null);
+  if (!stored || typeof stored !== "object") return null;
+  const gridSize = Number(stored.gridSize);
+  return {
+    gridSize: [10, 16, 20, 24].includes(gridSize)
+      ? gridSize
+      : SNAKE_DEFAULT_GRID_SIZE,
+    color: SNAKE_COLOR_THEMES[stored.color] ? stored.color : "green",
+    appleColor: SNAKE_COLOR_THEMES[stored.appleColor] ? stored.appleColor : "red",
+  };
 };
 
 const saveSnakeSettings = () => {
-  try {
-    localStorage.setItem(
-      SNAKE_SETTINGS_KEY,
-      JSON.stringify({
-        gridSize: snakeState.gridSize,
-        color: snakeState.color,
-        appleColor: snakeState.appleColor,
-      })
-    );
-  } catch {
-    // Settings are best-effort when storage is unavailable.
-  }
+  writeJsonStorage(() => localStorage, SNAKE_SETTINGS_KEY, {
+    gridSize: snakeState.gridSize,
+    color: snakeState.color,
+    appleColor: snakeState.appleColor,
+  });
 };
 
 const getSnakeHighScore = () => {
@@ -960,7 +914,7 @@ const snakeStep = () => {
 
 const finishSnakeCountdown = () => {
   clearSnakeCountdown();
-  if (!isSnakeWindowVisible() || document.hidden || !isSnakePageActive()) {
+  if (!isSnakeWindowVisible() || !isPageActive(document)) {
     updateSnakeHud();
     requestSnakeRender();
     return;
@@ -1130,15 +1084,7 @@ snakeDirectionButtons.forEach((button) => {
   });
 });
 
-document.addEventListener("keydown", (event) => {
-  const snakeWindow = getAppWindow("snake");
-  if (
-    !snakeWindow ||
-    getActiveWindow() !== snakeWindow ||
-    !isWindowVisible(snakeWindow)
-  ) {
-    return;
-  }
+registerActiveWindowKeyHandler("snake", (event) => {
   const target =
     event.target instanceof Element ? event.target : event.target?.parentElement;
   if (target?.matches("input, textarea, select")) return;
@@ -1242,7 +1188,7 @@ const handleSnakeActivityChange = () => {
     stopSnakeNoiseAnimation();
     return;
   }
-  if (document.hidden || !isSnakePageActive()) {
+  if (!isPageActive(document)) {
     stopSnakeNoiseAnimation();
     if (snakeState.running || snakeState.countdownTimer) {
       pauseSnakeGame();
@@ -1299,11 +1245,7 @@ registerGameStatsLocalSource("snake", {
       snakeHighScoreSaveTimer = null;
     }
     snakeState.highScores = {};
-    try {
-      localStorage.removeItem(SNAKE_HIGH_SCORE_KEY);
-    } catch {
-      // Local Snake records are best-effort when storage is unavailable.
-    }
+    removeStorage(() => localStorage, SNAKE_HIGH_SCORE_KEY);
     updateSnakeHud();
   },
 });

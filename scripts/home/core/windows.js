@@ -14,6 +14,7 @@ const {
 } = window.homeDom;
 const {
   clampNumber,
+  isPageActive,
 } = window.homeUtil;
 const {
   setPointerHeldItemCursor,
@@ -193,6 +194,28 @@ const isWindowVisible = (win) =>
       !win.classList.contains("is-hidden") &&
       !win.classList.contains("is-closing")
   );
+
+const activeWindowKeyHandlers = new Map();
+
+/** Registers an ordered keyboard handler for one active app window. */
+const registerActiveWindowKeyHandler = (appId, handler) => {
+  if (!activeWindowKeyHandlers.has(appId)) activeWindowKeyHandlers.set(appId, []);
+  activeWindowKeyHandlers.get(appId).push(handler);
+};
+
+const dispatchActiveWindowKeydown = (event) => {
+  if (event.defaultPrevented || !isPageActive(document)) return;
+  const win = getActiveWindow();
+  if (!isWindowVisible(win)) return;
+  const appId = win.getAttribute("data-app-window");
+  const handlers = activeWindowKeyHandlers.get(appId);
+  if (!handlers) return;
+  for (const handler of handlers) {
+    if (handler(event, win) || event.defaultPrevented) break;
+  }
+};
+
+document.addEventListener("keydown", dispatchActiveWindowKeydown);
 
 const pauseMediaPlayback = (root) => {
   if (!root) return;
@@ -1011,8 +1034,7 @@ const restoreSuspendedActiveWindow = () => {
   if (
     activeWindow ||
     !suspendedActiveWindow ||
-    document.hidden ||
-    (typeof document.hasFocus === "function" && !document.hasFocus())
+    !isPageActive(document)
   ) {
     return;
   }
@@ -1202,6 +1224,7 @@ window.homeWindows = Object.freeze({
   playActiveAutoplayVideos,
   playMediaElement,
   registerActiveWindowObserver,
+  registerActiveWindowKeyHandler,
   registerAdminControlsAccess,
   registerCloseAllHook,
   registerContentActivator,

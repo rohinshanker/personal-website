@@ -86,7 +86,7 @@ test("Game Progress reset clears only local aggregate, profile, and Snake record
     snake,
     /registerGameStatsLocalSource\("snake", \{[\s\S]*?snakeState\.highScores = \{\};/
   );
-  assert.match(snake, /localStorage\.removeItem\(SNAKE_HIGH_SCORE_KEY\);/);
+  assert.match(snake, /removeStorage\(\(\) => localStorage, SNAKE_HIGH_SCORE_KEY\);/);
   assert.match(resetSource, /Published and queued leaderboard results remain available/);
   assert.doesNotMatch(resetSource, /gameStatsSubmissionQueue\s*=/);
   assert.doesNotMatch(resetSource, /GAME_STATS_SYNC_QUEUE_STORAGE_KEY/);

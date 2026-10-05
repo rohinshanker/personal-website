@@ -24,6 +24,180 @@ const debounceTimer = (timerId, callback, delayMs) => {
   return window.setTimeout(callback, delayMs);
 };
 
+const resolveStorage = (storage) =>
+  typeof storage === "function" ? storage() : storage;
+
+/** Reads JSON without letting blocked storage access or malformed data escape. */
+const readJsonStorage = (storage, key, fallbackValue = null) => {
+  try {
+    const serialized = resolveStorage(storage).getItem(key);
+    return serialized === null ? fallbackValue : JSON.parse(serialized);
+  } catch {
+    return fallbackValue;
+  }
+};
+
+/** Writes JSON when storage and serialization are available. */
+const writeJsonStorage = (storage, key, value) => {
+  try {
+    resolveStorage(storage).setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** Removes a storage entry, reporting whether the operation was available. */
+const removeStorage = (storage, key) => {
+  try {
+    resolveStorage(storage).removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const bannerAnimationCleanups = new WeakMap();
+
+/** Restarts a banner animation and leaves no stale animationend listener. */
+const flashBanner = (element, className = "is-showing") => {
+  if (!element) return false;
+  const previousCleanup = bannerAnimationCleanups.get(element);
+  if (previousCleanup) element.removeEventListener("animationend", previousCleanup);
+  element.classList.remove(className);
+  void element.offsetWidth;
+  const cleanup = (event) => {
+    if (event.target !== element) return;
+    element.classList.remove(className);
+    element.removeEventListener("animationend", cleanup);
+    if (bannerAnimationCleanups.get(element) === cleanup) {
+      bannerAnimationCleanups.delete(element);
+    }
+  };
+  bannerAnimationCleanups.set(element, cleanup);
+  element.addEventListener("animationend", cleanup);
+  element.classList.add(className);
+  return true;
+};
+
+/** Whether a document is visible and, when supported, owns page focus. */
+const isPageActive = (pageDocument = document) =>
+  Boolean(
+    pageDocument &&
+      !pageDocument.hidden &&
+      (typeof pageDocument.hasFocus !== "function" || pageDocument.hasFocus())
+  );
+
+/**
+ * A cancellable progress scheduler. Games supply their own progress curve,
+ * readiness rule, duration, and UI callbacks; the helper only owns timing.
+ */
+const createProgressLoader = ({
+  progressCap,
+  isReady = () => true,
+  shouldContinue = () => true,
+  nextProgress,
+  nextDelay,
+  onProgress,
+  onReady,
+  onTimerChange = () => {},
+  now = () => performance.now(),
+  setTimer = (callback, delayMs) => window.setTimeout(callback, delayMs),
+  clearTimer = (timerId) => window.clearTimeout(timerId),
+}) => {
+  let timerId = null;
+  let startedAt = 0;
+  let durationMs = 0;
+  let progress = 0;
+  let running = false;
+  let generation = 0;
+
+  const setLoaderTimer = (callback, delayMs) => {
+    timerId = setTimer(callback, Math.max(0, delayMs));
+    onTimerChange(timerId);
+  };
+
+  const clearLoaderTimer = () => {
+    if (timerId !== null) clearTimer(timerId);
+    timerId = null;
+    onTimerChange(null);
+  };
+
+  const cancel = () => {
+    generation += 1;
+    running = false;
+    clearLoaderTimer();
+  };
+
+  const updateProgress = (value) => {
+    progress = clampNumber(value, 0, progressCap);
+    onProgress(progress);
+  };
+
+  const tick = (ownedGeneration) => {
+    if (!running || ownedGeneration !== generation) return;
+    timerId = null;
+    onTimerChange(null);
+    if (!running || ownedGeneration !== generation) return;
+    const continues = shouldContinue();
+    if (!running || ownedGeneration !== generation) return;
+    if (!continues) {
+      cancel();
+      return;
+    }
+
+    const elapsedMs = Math.max(0, now() - startedAt);
+    const ready = elapsedMs >= durationMs && isReady();
+    if (!running || ownedGeneration !== generation) return;
+    if (ready) {
+      running = false;
+      progress = 100;
+      onProgress(progress);
+      if (ownedGeneration !== generation) return;
+      onReady();
+      return;
+    }
+
+    const proposedProgress = nextProgress({
+      elapsedMs,
+      durationMs,
+      progress,
+      progressCap,
+    });
+    if (!running || ownedGeneration !== generation) return;
+    updateProgress(Math.max(progress, proposedProgress));
+    if (!running || ownedGeneration !== generation) return;
+    const delayMs = nextDelay({
+      elapsedMs,
+      durationMs,
+      progress,
+      progressCap,
+      waitingForReady: elapsedMs >= durationMs,
+    });
+    if (!running || ownedGeneration !== generation) return;
+    setLoaderTimer(() => tick(ownedGeneration), delayMs);
+  };
+
+  const start = ({ duration, initialDelay = 0, initialProgress = 0 } = {}) => {
+    cancel();
+    generation += 1;
+    const ownedGeneration = generation;
+    durationMs = Math.max(0, Number(duration) || 0);
+    startedAt = now();
+    running = true;
+    updateProgress(initialProgress);
+    if (!running || ownedGeneration !== generation) {
+      return { durationMs, startedAt };
+    }
+    setLoaderTimer(() => tick(ownedGeneration), initialDelay);
+    return { durationMs, startedAt };
+  };
+
+  const snapshot = () => ({ durationMs, progress, running, startedAt, timerId });
+
+  return Object.freeze({ cancel, snapshot, start });
+};
+
 const afterFrames = (frameCount, callback) => {
   if (frameCount <= 0) {
     callback();
@@ -86,12 +260,18 @@ window.homeUtil = Object.freeze({
   afterFrames,
   chooseWeightedRandomEvent,
   clampNumber,
+  createProgressLoader,
   debounceTimer,
+  flashBanner,
   formatElapsedTime,
   getLocalDateKey,
+  isPageActive,
   padTwoDigits,
   prefersReducedMotion,
+  readJsonStorage,
   reducedMotionQuery,
+  removeStorage,
   shuffle,
+  writeJsonStorage,
 });
 })();

@@ -11,14 +11,15 @@ const {
 } = window.homeGameStats;
 const {
   clampNumber,
+  flashBanner,
   padTwoDigits,
 } = window.homeUtil;
 const {
   DIALOG_INITIAL_FOCUS_SELECTOR,
   bringWindowToFront,
-  getActiveWindow,
   getAppWindow,
   isWindowVisible,
+  registerActiveWindowKeyHandler,
   registerViewportObserver,
   registerWindowLifecycle,
   setWindowFocusReturn,
@@ -192,10 +193,7 @@ const msStartConfetti = () => {
 };
 
 const msShowAchievement = () => {
-  if (!msAchievement) return;
-  msAchievement.classList.remove("is-showing");
-  void msAchievement.offsetWidth;
-  msAchievement.classList.add("is-showing");
+  flashBanner(msAchievement);
 };
 
 const msIndex = (x, y) => y * msState.cols + x;
@@ -636,23 +634,18 @@ const msKeyboardTargetIndex = () => {
   return index;
 };
 
-document.addEventListener("keydown", (event) => {
+registerActiveWindowKeyHandler("minesweeper", (event) => {
   const action = MS_KEYBOARD_ACTIONS[event.key.toLowerCase()];
   if (!action) return;
   if (
-    event.defaultPrevented ||
     event.repeat ||
     event.isComposing ||
     event.ctrlKey ||
     event.metaKey ||
     event.altKey ||
-    document.hidden ||
     msState.gameOver ||
     msControlsMode?.value !== "keyboard" ||
-    !msWindow ||
-    getActiveWindow() !== msWindow ||
-    !isWindowVisible(msWindow) ||
-    (typeof document.hasFocus === "function" && !document.hasFocus())
+    !msWindow
   ) {
     return;
   }
@@ -742,12 +735,6 @@ if (msReset) {
     msSetMarkMode(mode);
   });
 });
-
-if (msAchievement) {
-  msAchievement.addEventListener("animationend", () => {
-    msAchievement.classList.remove("is-showing");
-  });
-}
 
 if (msControlsHelp) {
   msControlsHelp.addEventListener("click", () => {
