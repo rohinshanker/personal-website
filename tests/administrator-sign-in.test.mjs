@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
 
-import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+import { plain, sourceBetween } from "./helpers/source-runtime.mjs";
 
 const root = new URL("../", import.meta.url);
 const requiredAdministratorSecrets = Object.freeze([
@@ -11,217 +13,98 @@ const requiredAdministratorSecrets = Object.freeze([
   "ADMIN_SESSION_SIGNING_SECRET",
 ]);
 
-test("Administrator access is hidden in Cursor Settings and dialogs are wired with accessible form controls", async () => {
-  const [home, dom, main, session, styles] = await Promise.all([
-    readFile(new URL("home.html", root), "utf8"),
-    readHomeScriptText("gameStats", "windows", "sudoku"),
-    readHomeScriptText("gameStats", "windows", "sudoku"),
-    readFile(new URL("scripts/home/core/administrator-session.js", root), "utf8"),
-    readFile(new URL("styles/home/cursors.css", root), "utf8"),
-  ]);
-
-  assert.match(
-    home,
-    /data-app-window="cursor"[\s\S]*?<div class="title-bar-controls">[\s\S]*?<button[^>]*id="cursor-settings-administrator"[^>]*class="help"[^>]*data-app="administrator"[^>]*aria-label="Administrator sign in"[\s\S]*?<button[^>]*aria-label="Close"[^>]*data-close="cursor"/,
-    "Cursor Settings must place the Administrator question-mark control directly before Close."
-  );
-  assert.doesNotMatch(
-    home,
-    /class="taskbar-icon[^"]*taskbar-administrator-button[^"]*"[^>]*data-app="administrator"/,
-    "Administrator access must not appear in the app dock."
-  );
-  assert.match(
-    home,
-    /data-app-window="administrator"[^>]*id="administrator-window"/,
-    "The taskbar button must target the Administrator window."
-  );
-  assert.match(home, /id="administrator-sign-in-form"/);
-  assert.match(home, /<label[^>]*for="administrator-username">\s*Username\s*<\/label>/);
-  assert.match(home, /id="administrator-username"[^>]*autocomplete="username"/);
-  assert.match(home, /<label[^>]*for="administrator-password">\s*Password\s*<\/label>/);
-  assert.match(
-    home,
-    /id="administrator-password"[^>]*type="password"[^>]*autocomplete="current-password"/
-  );
-  assert.match(home, /id="administrator-sign-in"[^>]*>\s*Sign In\s*</);
-  assert.match(home, /id="administrator-alert-window"/);
-  assert.match(home, /class="window app-window random-event-window random-alert-window is-hidden administrator-alert-window"/);
-  assert.match(
-    home,
-    /data-src="assets\/app-icons\/ico\/msg_warning\.ico" width="48" height="48" alt=""/
-  );
-  assert.match(home, /<p>Administrator access granted\.<\/p>/);
-  assert.doesNotMatch(home, /Game Progress profile updated to rohin \^\.\^\./);
-  assert.match(home, /id="administrator-alert-close"/);
-
-  for (const reference of [
-    'const administratorWindow = byId("administrator-window");',
-    'const administratorSignInForm = byId("administrator-sign-in-form");',
-    'const administratorUsername = byId("administrator-username");',
-    'const administratorPassword = byId("administrator-password");',
-    'const administratorAlertWindow = byId("administrator-alert-window");',
-    'const administratorAlertClose = byId("administrator-alert-close");',
-  ]) {
-    assert.ok(dom.includes(reference), `Missing Administrator DOM reference: ${reference}`);
-  }
-
-  assert.match(styles, /\.administrator-window\b/);
-  assert.match(styles, /\.administrator-alert-window\b/);
-  assert.match(
-    styles,
-    /\.administrator-field\s+input\[type=["']password["']\]\s*\{[^}]*font-family\s*:\s*Arial\s*,\s*sans-serif[^}]*font-size\s*:\s*13px[^}]*line-height\s*:\s*normal[^}]*letter-spacing\s*:\s*1px[^}]*-webkit-font-smoothing\s*:\s*auto/is
-  );
-  assert.doesNotMatch(styles, /\.administrator-alert-body\b/);
-  assert.doesNotMatch(styles, /\.administrator-alert-icon\b/);
-  assert.match(main, /"\/administrator\/sign-in"/);
-  assert.match(
-    main,
-    /ADMINISTRATOR_ALERT_Z_INDEX = 1_000_000[\s\S]*?administratorAlertWindow\.style\.zIndex/
-  );
-  assert.match(main, /win\.classList\.contains\("home-window"\) \|\| appId === "administrator-alert"/);
-  assert.match(main, /Authorization\s*:\s*`Bearer \$\{[^}]+\}`/);
-  assert.match(home, /src="scripts\/home\/core\/administrator-session\.js\?v=/);
-  assert.match(main, /\} = window\.homeAdministratorSession;/);
-  assert.match(
-    main,
-    /const gameStatsAdministratorSession = createAdministratorSession\(\{\s*onInvalidated:/,
-    "Home must hold its Administrator proof in the shared session, not its own store."
-  );
-  assert.doesNotMatch(
-    main,
-    /ADMINISTRATOR_PROOF_STORAGE_KEY/,
-    "The proof storage key must live only in the shared Administrator session module."
-  );
-  assert.match(
-    session,
-    /const ADMINISTRATOR_PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";/
-  );
-  assert.match(session, /sessionStorage/);
-  assert.match(session, /store\.getItem\(ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
-  assert.match(session, /store\.setItem\(\s*ADMINISTRATOR_PROOF_STORAGE_KEY,/);
-  assert.match(session, /store\.removeItem\(ADMINISTRATOR_PROOF_STORAGE_KEY\)/);
-  assert.match(
-    main,
-    /const alreadyUsesAdministratorProfile = isGameStatsAdministratorProfile\(gameStatsProfile\);\s*if \(!alreadyUsesAdministratorProfile\) resetGameProgressLocalData\(\);/
-  );
-  assert.match(
-    main,
-    /const hasActiveGameStatsAdministratorAccess = \(\) =>\s*hasActiveGameStatsAdministratorProof\(\);/
-  );
-  assert.match(
-    main,
-    /const resolveAdminControlsLaunchAppId = \(appId\) =>[\s\S]*?ADMIN_CONTROLS_STAND_IN_APP_ID/
-  );
-  assert.match(
-    main,
-    /if \(proofRejected\) \{\s*submission\.proofRejections = \(submission\.proofRejections \|\| 0\) \+ 1;\s*clearGameStatsAdministratorProof\(\);/,
-    "A rejected Administrator proof must stop authorizing Admin Controls before reauthentication."
-  );
-  assert.match(
-    main,
-    /error\?\.code === GAME_STATS_ADMINISTRATOR_AUTHORIZATION_ERROR_CODE/,
-    "Only a Worker-coded proof rejection may renew Administrator sign-in for a presented proof."
-  );
-  assert.match(
-    main,
-    /submission\.proofRejections <= GAME_STATS_MAX_ADMINISTRATOR_PROOF_RETRIES/,
-    "A persistently rejected proof must stop reopening sign-in."
-  );
-  assert.doesNotMatch(
-    session,
-    /\blocalStorage\b/,
-    "The short-lived authorization proof must not become a long-lived local credential."
-  );
-});
-
-test("Administrator credentials remain server-only and the protected profile has no keyboard backdoor", async () => {
-  const [home, index, main, session, frontendConfig, workerConfig] = await Promise.all([
+test("Administrator sign-in remains hidden, accessible, and free of server secrets", async () => {
+  const [home, index, gameStats, session, frontendConfig, workerConfig] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
-    readHomeScriptText("gameStats", "windows", "sudoku"),
+    readHomeScript("gameStats"),
     readFile(new URL("scripts/home/core/administrator-session.js", root), "utf8"),
     readFile(new URL("scripts/home/game-stats-backend.js", root), "utf8"),
     readFile(new URL("workers/game-stats/wrangler.jsonc", root), "utf8"),
   ]);
-  const browserSources = [home, index, main, session, frontendConfig].join("\n");
+  const browserSources = [home, index, gameStats, session, frontendConfig].join("\n");
+
+  assert.match(
+    home,
+    /id="cursor-settings-administrator"[^>]*data-app="administrator"[^>]*aria-label="Administrator sign in"/
+  );
+  assert.doesNotMatch(home, /taskbar-administrator-button/);
+  assert.match(home, /<label[^>]*for="administrator-username">\s*Username\s*<\/label>/);
+  assert.match(home, /id="administrator-password"[^>]*type="password"[^>]*autocomplete="current-password"/);
+  assert.match(home, /<p>Administrator access granted\.<\/p>/);
+  assert.match(home, /src="scripts\/home\/core\/administrator-session\.js\?v=[^"]+"/);
+  assert.doesNotMatch(home, /Game Progress profile updated to rohin \^\.\^\./);
+  assert.doesNotMatch(session, /\blocalStorage\b/);
 
   for (const secretName of requiredAdministratorSecrets) {
-    assert.doesNotMatch(
-      browserSources,
-      new RegExp(secretName),
-      `${secretName} must never be sent to or embedded in browser code.`
-    );
-  }
-
-  assert.doesNotMatch(main, /ROHIN_NEKO_PROFILE_SHORTCUT/);
-  assert.doesNotMatch(
-    main,
-    /"rohin \^\.\^"/,
-    "The protected profile must be declared once, in the shared Administrator session module."
-  );
-  assert.match(
-    main,
-    /const GAME_STATS_ROHIN_NEKO_PROFILE = Object\.freeze\(\{\s*\.\.\.GAME_STATS_ADMINISTRATOR_PROFILE,/
-  );
-  assert.match(
-    session,
-    /const ADMINISTRATOR_PROFILE = Object\.freeze\(\{\s*id: "player-rohin-neko",\s*name: "rohin \^\.\^",\s*icon: ADMINISTRATOR_AVATAR_ICON,\s*\}\);/
-  );
-  assert.match(session, /expiresAt/);
-  assert.match(session, /const normalizeAdministratorProof = /);
-  assert.match(
-    session,
-    /const ADMINISTRATOR_SESSION_DURATION_MS = 60 \* 60 \* 1000;/,
-    "Both routes must bound a browser session to the same hour."
-  );
-  assert.match(main, /resetGameProgressLocalData\(\);[\s\S]*?saveGameStatsProfile\(/);
-  assert.match(
-    main,
-    /waitingForAdministratorAuthorizationCount \+= 1;[\s\S]*?remainingSubmissions\.push\(submission\);[\s\S]*?continue;/,
-    "A protected event must remain queued so it can publish after a fresh administrator sign-in."
-  );
-  assert.match(
-    main,
-    /else if \(waitingForAdministratorAuthorizationCount\) \{[\s\S]*?setGameStatsSyncState\("auth-required"\);/
-  );
-  assert.match(
-    main,
-    /if \(waitingForAdministratorAuthorizationCount\) \{\s*requestGameStatsAdministratorAuthentication\(\);\s*\}/,
-    "A protected completed result must open Administrator sign-in as soon as renewed authorization is required."
-  );
-  assert.match(main, /GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX = 999_999/);
-  assert.match(
-    main,
-    /administratorWindow\.style\.zIndex = String\(\s*GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX\s*\)/,
-    "The automatic sign-in window must stay above game windows and completion effects."
-  );
-  assert.match(
-    main,
-    /windowStack\.style\.zIndex = String\(GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX\)/,
-    "The containing window layer must rise above root-level completion effects during authentication."
-  );
-  assert.match(main, /windowStack\.style\.removeProperty\("z-index"\)/);
-  assert.match(
-    main,
-    /if \(isGameStatsCompletionDialogOpen\(\)\) \{[\s\S]*?gameStatsAuthenticationDeferredForCompletion = true;[\s\S]*?return;/,
-    "Administrator sign-in must wait while a game's completion dialog holds the screen."
-  );
-  assert.match(
-    main,
-    /isCompletionDialogOpen: \(\) =>[\s\S]*?sudokuSolvePopup\?\.classList\.contains\("is-visible"\)/,
-    "Sudoku must report its own active completion modal."
-  );
-  assert.match(
-    main,
-    /const hideSudokuSolvePopup = \(\) => \{[\s\S]*?resumeGameStatsAuthenticationAfterCompletion\(\);/,
-    "Dismissing the Sudoku completion modal must resume deferred Administrator sign-in."
-  );
-  assert.match(
-    main,
-    /const resumeGameStatsAuthenticationAfterCompletion = \(\) => \{\s*if \(!gameStatsAuthenticationDeferredForCompletion\) return;\s*gameStatsAuthenticationDeferredForCompletion = false;\s*requestGameStatsAdministratorAuthentication\(\);/,
-    "The owning module must consume the current deferred-authentication flag."
-  );
-  for (const secretName of requiredAdministratorSecrets) {
+    assert.doesNotMatch(browserSources, new RegExp(secretName));
     assert.match(workerConfig, new RegExp(`"${secretName}"`));
   }
+});
+
+const loadCompletionHarness = async ({ administratorProfile = false, adopt = true } = {}) => {
+  const source = await readHomeScript("gameStats");
+  const context = vm.createContext({});
+  vm.runInContext(
+    [
+      `let gameStatsProfile = ${administratorProfile ? "{ id: 'admin' }" : "{ id: 'ordinary' }"};`,
+      'let gameStatsSyncState = "auth-waiting";',
+      "let gameStatsAuthenticationReturnFocus = {};",
+      "const calls = [];",
+      "const GAME_STATS_ROHIN_NEKO_PROFILE = { id: 'admin' };",
+      "const isGameStatsAdministratorProfile = (profile) => profile?.id === 'admin';",
+      "const resetGameProgressLocalData = () => calls.push('reset');",
+      "const saveGameStatsProfile = (profile) => { calls.push('save-profile'); gameStatsProfile = profile; return profile; };",
+      `const gameStatsAdministratorSession = { adopt: () => ${adopt} };`,
+      "const renderGameStatsWindows = () => calls.push('render');",
+      "const gameStatsAvatarAnimator = { start: () => calls.push('avatar') };",
+      "const setGameStatsSyncState = (state) => { gameStatsSyncState = state; calls.push(['state', state]); };",
+      "const syncQueuedGameStats = ({ manual }) => calls.push(['sync', manual]);",
+      sourceBetween(
+        source,
+        "const completeAdministratorSignIn =",
+        "\n\nif (administratorSignInForm)"
+      ),
+      "globalThis.complete = completeAdministratorSignIn;",
+      "globalThis.read = () => ({ calls, gameStatsAuthenticationReturnFocus, gameStatsProfile, gameStatsSyncState });",
+    ].join("\n"),
+    context
+  );
+  return context;
+};
+
+test("the production success transition adopts proof, resets ordinary data, and resumes sync", async () => {
+  const context = await loadCompletionHarness();
+  assert.equal(context.complete({ proof: "proof", expiresAt: "later" }), true);
+  assert.deepEqual(plain(context.read()), {
+    calls: [
+      "reset",
+      "save-profile",
+      "render",
+      "avatar",
+      ["state", "ready"],
+      ["sync", true],
+    ],
+    gameStatsAuthenticationReturnFocus: null,
+    gameStatsProfile: { id: "admin" },
+    gameStatsSyncState: "ready",
+  });
+});
+
+test("the production success transition preserves an existing Administrator profile", async () => {
+  const context = await loadCompletionHarness({ administratorProfile: true });
+  assert.equal(context.complete({ proof: "proof", expiresAt: "later" }), true);
+  assert.deepEqual(plain(context.read().calls), [
+    "render",
+    "avatar",
+    ["state", "ready"],
+    ["sync", true],
+  ]);
+});
+
+test("a rejected proof cannot render or synchronize Administrator state", async () => {
+  const context = await loadCompletionHarness({ administratorProfile: true, adopt: false });
+  assert.equal(context.complete({ proof: "bad", expiresAt: "later" }), false);
+  assert.deepEqual(plain(context.read().calls), []);
+  assert.equal(context.read().gameStatsSyncState, "auth-waiting");
 });

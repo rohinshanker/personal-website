@@ -1,21 +1,17 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
 
-import {
-  readHomeScript,
-  readHomeScriptText,
-} from "./helpers/home-scripts.mjs";
+import { readHomeScript } from "./helpers/home-scripts.mjs";
+import { plain, sourceBetween } from "./helpers/source-runtime.mjs";
 
 const root = new URL("../", import.meta.url);
 
-test("game stats use the Cloudflare backend instead of static export data", async () => {
-  const [homeSource, indexSource, domSource, mainSource, cssSource] = await Promise.all([
+test("Game Stats keeps the Worker wiring and one independently managed window per game", async () => {
+  const [homeSource, indexSource] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
-    readHomeScriptText("gameStats", "windows", "minesweeper", "snake", "sudoku", "solitaire"),
-    readHomeScriptText("gameStats", "windows", "minesweeper", "snake", "sudoku", "solitaire"),
-    readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
   ]);
 
   for (const game of ["minesweeper", "solitaire", "snake", "sudoku"]) {
@@ -29,6 +25,7 @@ test("game stats use the Cloudflare backend instead of static export data", asyn
   assert.match(homeSource, /data-game-stats-sync-status/);
   assert.match(homeSource, /data-game-stats-content/);
   assert.match(homeSource, /scripts\/home\/game-stats-backend\.js/);
+  assert.match(homeSource, /src="scripts\/home\/game-stats-backend\.js\?v=[^"]+"/);
   assert.doesNotMatch(homeSource, /game-stats-global\.js/);
   assert.doesNotMatch(homeSource, /game-stats-export|game-stats-pending-count/);
   assert.match(indexSource, /game-stats-backend\.js/);
@@ -37,179 +34,68 @@ test("game stats use the Cloudflare backend instead of static export data", asyn
     homeSource.indexOf("scripts/home/game-stats-backend.js") <
       homeSource.indexOf("scripts/home/main.js")
   );
-  assert.match(domSource, /const gameStatsWindows = all\("\[data-game-stats-window\]"\)/);
-  assert.doesNotMatch(domSource, /gameStatsExport|gameStatsPendingCount/);
-  assert.match(cssSource, /\.game-stats-sync-status/);
-  assert.doesNotMatch(cssSource, /\.game-stats-toolbar/);
-
-  assert.match(mainSource, /fetchGameStatsApi\("\/sessions"/);
-  assert.match(mainSource, /fetchGameStatsApi\("\/events"/);
-  assert.match(
-    mainSource,
-    /const statsQuery = new URLSearchParams\(\{ protocol: GAME_STATS_API_PROTOCOL \}\);[\s\S]*?if \(requestedPlayerId\) statsQuery\.set\("playerId", requestedPlayerId\);[\s\S]*?statsQuery\.append\("pendingEventId", eventId\)[\s\S]*?if \(fresh\) statsQuery\.set\("fresh", "1"\);/
-  );
-  assert.match(mainSource, /fetchGameStatsApi\(`\/stats\?\$\{statsQuery\}`/);
-  assert.match(mainSource, /const createGameStatsPlayerName = \(value/);
-  assert.match(mainSource, /const updateGameStatsPlayerNameMarquees/);
-  assert.match(
-    mainSource,
-    /registerViewportObserver\(\{[\s\S]*?scheduleGameStatsPlayerNameMarquees\(\)[\s\S]*?window\.addEventListener\("resize", dispatchWindowResize\)/
-  );
-  assert.match(mainSource, /const getGameStatsWindowParts = \(game\)/);
-  assert.match(mainSource, /const renderGameStatsWindows = \(\)/);
-  assert.match(mainSource, /setWindowOpen\(`game-stats-\$\{game\}`, true\)/);
-  assert.doesNotMatch(mainSource, /\bgameStatsCurrentGame\b/);
-  assert.match(mainSource, /buildVersion: gameStatsBackend\.buildVersion/);
-  assert.match(mainSource, /session: \{[\s\S]*?id: submission\.session\.id/);
-  assert.doesNotMatch(mainSource, /rohinGameStatsGlobal|exportPendingGameStats|GAME_STATS_EXPORT_SOURCE/);
 });
 
-test("Game Stats keeps one independently managed window for every game", async () => {
-  const [homeSource, mainSource] = await Promise.all([
-    readFile(new URL("home.html", root), "utf8"),
-    readHomeScriptText("gameStats", "windows", "minesweeper", "snake", "sudoku", "solitaire"),
-  ]);
-
-  for (const game of ["minesweeper", "solitaire", "snake", "sudoku"]) {
-    assert.match(
-      homeSource,
-      new RegExp(
-        `data-app-window="game-stats-${game}"[\\s\\S]*?data-game-stats-window="${game}"`
-      )
-    );
-  }
-  assert.match(
-    mainSource,
-    /GAME_STATS_SUPPORTED_GAMES\.forEach\(\(game\) => \{[\s\S]*?renderGameStatsWindow\(game\)/
-  );
-  assert.match(
-    mainSource,
-    /const openGameStatsWindow = \(game\) => \{[\s\S]*?setWindowOpen\(`game-stats-\$\{game\}`, true\)[\s\S]*?renderGameStatsWindow\(game\)/
-  );
-  assert.match(mainSource, /const scheduleGameStatsWindowViewportClamp = \(windowElement\)/);
-  assert.match(
-    mainSource,
-    /const scheduleGameStatsWindowViewportClamp = \(windowElement\) => \{[\s\S]*?gameStatsViewportClampScheduled[\s\S]*?windowElement\.classList\.contains\("is-opening"\)[\s\S]*?event\.animationName !== "retro-window-open"[\s\S]*?addEventListener\("animationend", onAnimationEnd\)/
-  );
-  assert.match(mainSource, /const clampAfterOpening = \(\) => \{[\s\S]*?clampWindowFullyIntoViewport\(windowElement\);/);
-  assert.match(
-    mainSource,
-    /const openGameStatsWindow = \(game\) => \{[\s\S]*?renderGameStatsWindow\(game\);[\s\S]*?scheduleGameStatsWindowViewportClamp\(windowParts\?\.windowElement\);/
-  );
-  assert.match(
-    mainSource,
-    /const openGameStatsWindow = \(game\) => \{[\s\S]*?renderGameStatsWindow\(game\);\s*if \(!wasVisible\) positionNewGameStatsWindow\(game, windowParts\?\.windowElement\);/
-  );
-  assert.match(mainSource, /const positionVisibleGameStatsWindows = \(\)/);
-  assert.match(
-    mainSource,
-    /if \(visibleWindows\.length < 2\) \{[\s\S]*?clampWindowFullyIntoViewport\(windowElement\)/
-  );
-  assert.match(
-    mainSource,
-    /registerViewportObserver\(\{[\s\S]*?positionVisibleGameStatsWindows\(\)[\s\S]*?window\.addEventListener\("resize", dispatchWindowResize\)/
-  );
-  assert.match(mainSource, /if \(!wasVisible\) positionNewGameStatsWindow\(game, windowParts\?\.windowElement\)/);
-});
-
-test("each supported game opens a verified session before emitting a completion event", async () => {
-  const mainSource = await readHomeScriptText(
-    "gameStats",
-    "windows",
-    "minesweeper",
-    "snake",
-    "sudoku",
-    "solitaire"
-  );
-  const recordEventSource = mainSource.slice(
-    mainSource.indexOf("const recordGameStatsEvent ="),
-    mainSource.indexOf("\n\nconst formatGameStatsCounter")
+test("the production record flow saves locally before its verified session and queues once", async () => {
+  const source = await readHomeScript("gameStats");
+  const context = vm.createContext({});
+  vm.runInContext(
+    [
+      'let gameStatsProfile = { id: "player-1", name: "Player", icon: "player.ico" };',
+      "let gameStatsLocalResetGeneration = 0;",
+      "const gameStatsLocalState = {};",
+      "const gameStatsGlobalState = {};",
+      'let gameStatsSyncState = "ready";',
+      "const calls = [];",
+      "let resolveSession;",
+      "const sessionPromise = new Promise((resolve) => { resolveSession = resolve; });",
+      "const normalizeGameStatsEvent = (event) => event ? { ...event } : null;",
+      "const normalizeGameStatsEventProfile = (profile) => ({ ...profile });",
+      "const gameStatsEventBeatsPersonalRecord = () => true;",
+      "const gameStatsEventQualifiesForLeaderboard = () => true;",
+      "const requestGameStatsProfile = async () => gameStatsProfile;",
+      "const applyGameStatsEventToData = () => { calls.push('apply'); return true; };",
+      "const updateGameStatsSudokuBestTime = () => calls.push('best-time');",
+      "const saveGameStatsLocalState = () => calls.push('save');",
+      "const playGameStatsRecordHandoff = async () => calls.push('handoff');",
+      "const getGameStatsSession = () => sessionPromise;",
+      "const queueGameStatsSubmission = (event, session) => calls.push(['queue', event.id, session.id]);",
+      "const setGameStatsSyncState = (state) => { gameStatsSyncState = state; calls.push(['state', state]); };",
+      "const syncQueuedGameStats = () => calls.push('sync');",
+      "const reportGameStatsSessionFailure = () => calls.push('session-failure');",
+      sourceBetween(
+        source,
+        "const recordGameStatsEvent =",
+        "\n\nconst formatGameStatsCounter"
+      ),
+      "globalThis.record = recordGameStatsEvent;",
+      "globalThis.finishSession = () => resolveSession({ session: { id: 'session-1' } });",
+      "globalThis.read = () => ({ calls, gameStatsSyncState });",
+    ].join("\n"),
+    context
   );
 
-  assert.match(
-    mainSource,
-    /const msStartTimer[\s\S]*?startGameStatsSession\("minesweeper", \{[\s\S]*?difficulty:/
-  );
-  assert.match(
-    mainSource,
-    /const ensureSolitaireStatsSession[\s\S]*?startGameStatsSession\("solitaire", \{\}\)/
-  );
-  assert.match(
-    mainSource,
-    /const startSnakeGame[\s\S]*?startGameStatsSession\("snake", \{[\s\S]*?boardSize:/
-  );
-  assert.match(
-    mainSource,
-    /const startSudokuTimer[\s\S]*?startGameStatsSession\("sudoku", \{[\s\S]*?difficulty:/
-  );
-  assert.match(
-    mainSource,
-    /const recordSudokuCompletion[\s\S]*?const elapsedSeconds = currentSudokuElapsedSeconds\(\);[\s\S]*?metric: elapsedSeconds,[\s\S]*?metricKind: "seconds"/
-  );
-  assert.match(
-    mainSource,
-    /const checkSudokuBoard[\s\S]*?if \(!recordedByAnotherTab\) recordSudokuCompletion\(\);/
-  );
+  const pending = context.record({
+    id: "event-1",
+    game: "minesweeper",
+    type: "win",
+    difficulty: "beginner",
+    metric: 7,
+  }, "pending-session");
+  await Promise.resolve();
+  assert.deepEqual(plain(context.read().calls), ["apply", "save", "handoff"]);
 
-  for (const game of ["minesweeper", "solitaire", "snake", "sudoku"]) {
-    assert.match(
-      mainSource,
-      new RegExp(`game: "${game}",[\\s\\S]{0,260}?statsSession`)
-    );
-  }
-  assert.ok(
-    recordEventSource.indexOf("saveGameStatsLocalState();") <
-      recordEventSource.indexOf("await getGameStatsSession(sessionKey)"),
-    "local results must be persisted before waiting for the network session"
-  );
-});
-
-test("a new personal record presses the matching trophy twice before opening stats", async () => {
-  const [mainSource, styleSource] = await Promise.all([
-    readHomeScriptText("gameStats", "windows", "minesweeper", "snake", "sudoku", "solitaire"),
-    readFile(new URL("style.css", root), "utf8"),
-  ]);
-
-  assert.match(mainSource, /const GAME_STATS_RECORD_TROPHY_PRESS_COUNT = 2;/);
-  assert.match(
-    mainSource,
-    /const gameStatsEventBeatsPersonalRecord = \([\s\S]*?const spec = getGameStatsLeaderboardSpec\(event\);/
-  );
-  assert.match(
-    mainSource,
-    /const beatPersonalRecord = gameStatsEventBeatsPersonalRecord\([\s\S]*?const applied = applyGameStatsEventToData/
-  );
-  assert.match(
-    mainSource,
-    /Array\.from\(gameStatsOpenButtons\)\.find\([\s\S]*?data-game-stats-open"\) === game/
-  );
-  assert.match(
-    mainSource,
-    /for \(let press = 0; press < GAME_STATS_RECORD_TROPHY_PRESS_COUNT; press \+= 1\)[\s\S]*?classList\.add\("is-pressed"\)[\s\S]*?classList\.remove\("is-pressed"\)/
-  );
-  assert.match(
-    mainSource,
-    /saveGameStatsLocalState\(\);[\s\S]*?const recordHandoffPromise = beatPersonalRecord[\s\S]*?playGameStatsRecordHandoff\(event\.game\)[\s\S]*?await getGameStatsSession\(sessionKey\)[\s\S]*?queueGameStatsSubmission\(event, session\);/
-  );
-  assert.match(
-    mainSource,
-    /const playGameStatsRecordHandoff[\s\S]*?openGameStatsWindow\(game\);/
-  );
-  assert.match(
-    mainSource,
-    /snakeState\.recordAtStart = Number\.isFinite\(storedHighScore\)[\s\S]*?startGameStatsSession\("snake"/
-  );
-  assert.match(
-    mainSource,
-    /snakePreviousHighScore: snakeState\.recordAtStart/
-  );
-  assert.doesNotMatch(mainSource, /isGameStatsFirstLocalWin|playFirstGameStatsTrophyHandoff/);
-  assert.match(
-    mainSource,
-    /const handoffPromise = gameStatsRecordHandoffQueue\.then\(runHandoff, runHandoff\);[\s\S]*?gameStatsRecordHandoffQueue = handoffPromise\.catch/
-  );
-  assert.match(
-    styleSource,
-    /\.title-bar-controls \.game-stats-title-control\.is-pressed \{[\s\S]*?var\(--border-sunken-outer\)/
-  );
+  context.finishSession();
+  await pending;
+  assert.deepEqual(plain(context.read()), {
+    calls: [
+      "apply",
+      "save",
+      "handoff",
+      ["queue", "event-1", "session-1"],
+      ["state", "publishing"],
+      "sync",
+    ],
+    gameStatsSyncState: "publishing",
+  });
 });

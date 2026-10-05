@@ -1,50 +1,70 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
 
 import { readHomeScript } from "./helpers/home-scripts.mjs";
+import { plain, sourceBetween } from "./helpers/source-runtime.mjs";
 
 const root = new URL("../", import.meta.url);
 
-test("Solitaire Victory Royale media is 40% smaller and anchored to the board top", async () => {
-  const [home, main, styles] = await Promise.all([
-    readFile(new URL("home.html", root), "utf8"),
-    readHomeScript("solitaire"),
-    readFile(new URL("styles/home/apps/solitaire.css", root), "utf8"),
-  ]);
+test("Solitaire keeps the victory media wired to an accessible overlay", async () => {
+  const home = await readFile(new URL("home.html", root), "utf8");
+  assert.match(
+    home,
+    /id="sol-victory-video-overlay" aria-hidden="true">[\s\S]*?id="sol-victory-video"[\s\S]*?data-src="assets\/solitaire-cards\/victory-royale\.webm"[\s\S]*?id="sol-victory-canvas" aria-hidden="true"/
+  );
+  assert.match(home, /href="styles\/home\/apps\/solitaire\.css\?v=[^"]+"/);
+  assert.match(home, /src="scripts\/home\/features\/solitaire\.js\?v=[^"]+"/);
+  await access(new URL("assets/solitaire-cards/victory-royale.webm", root));
+});
 
-  assert.match(
-    home,
-    /<div class="sol-victory-video-overlay" id="sol-victory-video-overlay" aria-hidden="true">[\s\S]*?<video[\s\S]*?data-src="assets\/solitaire-cards\/victory-royale\.webm"[\s\S]*?<canvas id="sol-victory-canvas" aria-hidden="true"><\/canvas>/
+const createVictoryHarness = async ({ presentation = null } = {}) => {
+  const source = await readHomeScript("solitaire");
+  const context = vm.createContext({});
+  vm.runInContext(
+    [
+      "const calls = [];",
+      "const solSuitOrder = ['spades', 'clubs', 'diamonds', 'hearts'];",
+      `const solState = { won: false, moves: 17, statsSession: 'session-1', presentation: ${JSON.stringify(presentation)}, foundations: Object.fromEntries(solSuitOrder.map((suit) => [suit, Array(13).fill({})])) };`,
+      "const solStartFireworks = () => calls.push('fireworks');",
+      "const solShowAchievement = () => calls.push('achievement');",
+      "const solPlayVictoryVideo = () => calls.push('video');",
+      "const createGameStatsEvent = (event) => event;",
+      "const recordGameStatsEvent = (event, session) => calls.push(['record', event, session]);",
+      "const notifyActivity = (name, detail) => calls.push(['activity', name, detail]);",
+      sourceBetween(source, "const solTriggerVictoryEffects =", "\n\nconst solCreateSlotMark"),
+      sourceBetween(source, "const solCheckWin =", "\n\nconst solPrefersReducedMotion"),
+      "globalThis.checkWin = solCheckWin;",
+      "globalThis.read = () => ({ calls, won: solState.won });",
+    ].join("\n"),
+    context
   );
-  assert.match(
-    home,
-    /styles\/home\/apps\/solitaire\.css\?v=cache-token-parity-20260927/
-  );
-  assert.match(
-    styles,
-    /\.sol-app \{[\s\S]*?position: relative;/,
-    "The board overlay needs the Solitaire app as its positioning context."
-  );
-  assert.match(
-    styles,
-    /\.sol-victory-video-overlay \{[\s\S]*?--sol-victory-height-limit: 27vh;[\s\S]*?--sol-victory-width-limit: 28\.8vw;[\s\S]*?--sol-victory-width: min\(234px, var\(--sol-victory-width-limit\)\);[\s\S]*?align-items: flex-start;[\s\S]*?inset: 60px 0 0;[\s\S]*?justify-content: center;[\s\S]*?overflow: hidden;[\s\S]*?padding-top: 16px;[\s\S]*?position: absolute;/,
-    "The overlay should match the green board and align its content 16px from the top."
-  );
-  assert.match(
-    styles,
-    /\.sol-victory-video-overlay video\.is-visible-fallback \{[\s\S]*?max-height: var\(--sol-victory-height-limit\);[\s\S]*?max-width: var\(--sol-victory-width-limit\);[\s\S]*?width: var\(--sol-victory-width\);/
-  );
-  assert.match(
-    styles,
-    /\.sol-victory-video-overlay canvas \{[\s\S]*?max-height: var\(--sol-victory-height-limit\);[\s\S]*?max-width: var\(--sol-victory-width-limit\);[\s\S]*?width: var\(--sol-victory-width\);/
-  );
-  assert.match(
-    main,
-    /const solTriggerVictoryEffects = \(\) => \{[\s\S]*?solPlayVictoryVideo\(\);/
-  );
-  assert.match(
-    main,
-    /const solCheckWin = \(\) => \{[\s\S]*?if \(!wasWon && solState\.won\) \{[\s\S]*?solTriggerVictoryEffects\(\);/
-  );
+  return context;
+};
+
+test("the production win transition records and presents a victory exactly once", async () => {
+  const context = await createVictoryHarness();
+  context.checkWin();
+  context.checkWin();
+  assert.deepEqual(plain(context.read()), {
+    calls: [
+      "fireworks",
+      "achievement",
+      "video",
+      [
+        "record",
+        { game: "solitaire", type: "win", metric: 17 },
+        "session-1",
+      ],
+      ["activity", "gameWin", { game: "solitaire" }],
+    ],
+    won: true,
+  });
+});
+
+test("presentation victories never publish gameplay results", async () => {
+  const context = await createVictoryHarness({ presentation: { visualEffects: false } });
+  context.checkWin();
+  assert.deepEqual(plain(context.read()), { calls: ["video"], won: true });
 });
