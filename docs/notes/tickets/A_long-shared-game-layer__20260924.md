@@ -14,11 +14,13 @@
 - Use current `scripts/home/core/` and `scripts/home/features/` owners and explicit frozen `homeX` contracts. The old audit's `main.js` line numbers are obsolete.
 - Already implemented: bounded Game Stats session map and Minesweeper's elapsed-time clock. Preserve the larger nonnegative advance of monotonic and wall clocks, the 999-second cap, and settlement before recording a win.
 - Keep Snake's simulation clock separate. Share Minesweeper/Sudoku stopwatch mechanics only where their existing elapsed/pause/persistence semantics remain explicit.
+- Current-source design: keep the Minesweeper and Sudoku stopwatch implementations separate. Their clock and persistence rules differ materially; a shared adapter would add complexity without removing compatible duplication.
 - Keep Sudoku's worker generation, restored-puzzle identity/eligibility, assistance categories and publishing rules.
 - Policy changes require the owner's answers recorded here and in the games/backend decision ticket. Do not silently relax Worker eligibility or turn an expired/offline result into verified play with an end-of-game replacement session. Server replay/ranking provenance belongs to the separate verification ticket.
 - Keep first-open Solitaire deal generation, normal reset, staged Admin presentation, auto-solve cancellation/animation, undo and winnability intact. Stable columns/cards and cached solve availability must update after every real state change without leaking tooltip/listener nodes.
 - Reuse the repository's actual browser fixture (`tests/ui/deterministic.mjs`), script-routing helpers and existing tooling. No new dependencies or broad snapshot updates.
 - Writers use separate worktrees and disjoint paths. The coordinator owns ticket/index edits, generated integrity/cache metadata and integration. Workers do not push or reroute their assignments.
+- Stats hooks must resolve a supplied state getter on every operation: Sudoku replaces its whole state object when adopting/restoring a puzzle. Other game states can use a direct object. Claim a result's session synchronously before awaiting profile selection.
 
 ## Implementation streams
 
@@ -32,4 +34,4 @@
 - Minesweeper: discard the game on close and start fresh on reopen; retain the existing real elapsed-time rule.
 - Sessions: reuse unconsumed, unexpired sessions only for the same game/configuration across abandoned attempts or losses without submissions; raise new-session budget from 24 to 120 per IP per hour. A result awaiting profile selection, queueing or publication must reserve its session immediately so a newer attempt cannot reuse it. Submitted Snake results consume their sessions.
 - Expiry: preserve the six-hour lifetime. Save expired results locally and explain expiry distinctly. Do not renew at completion, relax minimum-duration checks or falsely report a generic verification failure.
-- Owner requested an explanation and later visual review of the expired-completion feedback. Use the existing Game Progress publishing-status row, preserving the win screen and local totals: “Saved on this device. This game’s online session expired, so this result can’t be published. Start a new game to publish a new result.” No extra modal or end-of-game renewal action. Capture the actual implemented message at the required viewport sizes for review.
+- Owner requested an explanation and later visual review of the expired-completion feedback. Use the existing per-game Stats/leaderboard publishing-status row beside Refresh, accessible from Game Progress, preserving the win screen and local totals: “Saved on this device. This game’s online session expired, so this result can’t be published. Start a new game to publish a new result.” No extra modal or end-of-game renewal action. Capture the actual implemented message at the required viewport sizes for review.
