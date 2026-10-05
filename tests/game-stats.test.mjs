@@ -47,7 +47,7 @@ test("the production viewport pass positions every visible Game Stats window", a
   vm.runInContext(
     [
       "const calls = [];",
-      "const makeWindow = (name, width, height, titleBarHeight, classes = []) => { const classNames = new Set(classes); return { name, offsetWidth: width, offsetHeight: height, classList: { contains: (value) => classNames.has(value), replace(values) { classNames.clear(); values.forEach((value) => classNames.add(value)); } }, querySelector: () => ({ offsetHeight: titleBarHeight }) }; };",
+      "const makeWindow = (name, width, height, titleBarHeight, classes = []) => { const classNames = new Set(classes); return { name, offsetWidth: width, offsetHeight: height, classList: { contains: (value) => classNames.has(value), replace(values) { classNames.clear(); values.forEach((value) => classNames.add(value)); } }, querySelector: (selector) => selector === '.title-bar' ? { offsetHeight: titleBarHeight } : null }; };",
       "const windowsByGame = new Map([['minesweeper', makeWindow('minesweeper', 200, 100, 20)], ['solitaire', makeWindow('solitaire', 220, 110, 30)], ['snake', makeWindow('snake', 210, 120, 25, ['is-hidden'])], ['sudoku', makeWindow('sudoku', 190, 90, 0, ['is-closing'])]]);",
       "const GAME_STATS_SUPPORTED_GAMES = [...windowsByGame.keys()];",
       "const getGameStatsWindowParts = (game) => windowsByGame.has(game) ? { windowElement: windowsByGame.get(game) } : null;",

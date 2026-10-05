@@ -170,6 +170,7 @@ test("CI runs both the browser project and the visual baselines", async () => {
   const jobs = workflow.jobs;
 
   assert.deepEqual(Object.keys(jobs).sort(), ["ui", "visual"]);
+  assert.equal(workflow.concurrency.group, "browser-ui-${{ github.ref }}");
   assert.equal(workflow.concurrency["cancel-in-progress"], true);
 
   for (const job of Object.values(jobs)) {
