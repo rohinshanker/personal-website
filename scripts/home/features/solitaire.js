@@ -140,6 +140,8 @@ let solAutoSolveRun = null;
 
 let solWindowImpact = null;
 
+let solBoardReady = false;
+
 const solSprite = {
   cardHeight: 22,
   imageHeight: 114,
@@ -725,8 +727,40 @@ const solPlanAutoSolve = (state) => {
   return { moves, completes: solFoundationCardCount(trial) === 52 };
 };
 
+/**
+ * Everything a plan depends on: which cards are visible, in what order, and how
+ * far each foundation has come. Building it is far cheaper than replanning, and
+ * reading the live cards is what makes the cache safe — a direct `solState`
+ * edit, an undo restore or a test bridge invalidates it without announcing
+ * itself, because the signature it produces no longer matches.
+ */
+const solAutoSolveSignature = (state) => {
+  const pile = (cards) =>
+    cards.map((card) => `${card.id}${card.faceUp ? ">" : "<"}`).join(",");
+  return [
+    state.won ? "won" : "live",
+    state.stock.length,
+    solSuitOrder.map((suit) => state.foundations[suit].length).join(","),
+    pile(state.waste),
+    ...state.tableau.map(pile),
+  ].join("|");
+};
+
+let solAutoSolvePlanCache = null;
+
+/** `solPlanAutoSolve`, recomputed only when the board can have changed. */
+const solCachedAutoSolvePlan = (state) => {
+  const signature = solAutoSolveSignature(state);
+  if (solAutoSolvePlanCache?.signature === signature) {
+    return solAutoSolvePlanCache.plan;
+  }
+  const plan = solPlanAutoSolve(state);
+  solAutoSolvePlanCache = { signature, plan };
+  return plan;
+};
+
 const solCanAutoSolve = (state) =>
-  !state.won && solPlanAutoSolve(state).moves.length > 0;
+  !state.won && solCachedAutoSolvePlan(state).moves.length > 0;
 
 const solPresentationRunSuits = [
   ["spades", "hearts"],
@@ -997,6 +1031,61 @@ const solCreateSlotMark = (text) => {
   return mark;
 };
 
+/** One reusable mark per slot, so an empty pile keeps its node across renders. */
+const solSlotMarks = new Map();
+
+const solSlotMark = (key, text) => {
+  const existing = solSlotMarks.get(key);
+  if (existing) {
+    if (existing.textContent !== text) existing.textContent = text;
+    return existing;
+  }
+  const mark = solCreateSlotMark(text);
+  solSlotMarks.set(key, mark);
+  return mark;
+};
+
+/** Writes an attribute only when it changes, so an unchanged node stays quiet. */
+const solSetAttribute = (element, name, value) => {
+  if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+};
+
+const solSetText = (element, text) => {
+  if (element.textContent !== text) element.textContent = text;
+};
+
+/**
+ * Makes `nodes` the children of `parent`, in order, by moving the nodes that
+ * are already there instead of rebuilding them. Cards, columns and slot marks
+ * therefore keep their identity — and with it their listeners, focus and
+ * running animations — wherever the data behind them is unchanged.
+ */
+const solSyncChildren = (parent, nodes) => {
+  let cursor = parent.firstChild;
+  nodes.forEach((node) => {
+    if (cursor === node) {
+      cursor = cursor.nextSibling;
+      return;
+    }
+    parent.insertBefore(node, cursor);
+  });
+  while (cursor) {
+    const next = cursor.nextSibling;
+    parent.removeChild(cursor);
+    cursor = next;
+  }
+};
+
+/** The card nodes a container already holds, keyed by the card each one shows. */
+const solCardElementsById = (parent) => {
+  const elements = new Map();
+  Array.from(parent.children).forEach((child) => {
+    const id = child.getAttribute("data-sol-card-id");
+    if (id) elements.set(id, child);
+  });
+  return elements;
+};
+
 const solSelectionMatches = (zone, pile, index) => {
   const selected = solState.selected;
   return (
@@ -1013,52 +1102,70 @@ const solIsSelectedCard = (card) =>
       solState.selected.cards.some((selectedCard) => selectedCard.id === card.id)
   );
 
-const solCreateCardElement = (card, zone, pile, index) => {
+const solCreateCardElement = (card) => {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "sol-card";
   button.setAttribute("data-sol-card-id", card.id);
-  button.setAttribute("data-sol-zone", zone);
-  button.setAttribute("data-sol-pile", String(pile));
-  button.setAttribute("data-sol-index", String(index));
-
-  if (!card.faceUp) {
-    button.classList.add("is-face-down");
-    solApplyCardSprite(button, solSprite.backCol, solSprite.backRow);
-    button.setAttribute("aria-label", "Face-down card");
-    return button;
-  }
-
-  if (solIsSelectedCard(card)) {
-    button.classList.add("is-selected");
-  }
-
-  solApplyCardSprite(button, card.rank - 1, solSuitOrder.indexOf(card.suit));
-  button.setAttribute("aria-label", solCardName(card));
-
   return button;
 };
 
-const solCreateStockBack = () => {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "sol-card is-face-down";
-  button.setAttribute("data-sol-stock", "");
-  button.setAttribute("aria-label", `Stock, ${solState.stock.length} cards`);
-  solApplyCardSprite(button, solSprite.backCol, solSprite.backRow);
+/** Brings one card node up to date in place, leaving nothing stale behind. */
+const solUpdateCardElement = (button, card, zone, pile, index) => {
+  solSetAttribute(button, "data-sol-zone", zone);
+  solSetAttribute(button, "data-sol-pile", String(pile));
+  solSetAttribute(button, "data-sol-index", String(index));
+  // A cancelled run leaves its lifted source card on the board, so the classes
+  // a run adds are cleared here rather than by rebuilding the column.
+  button.classList.remove("is-auto-solve-lifted");
+  button.classList.toggle("is-face-down", !card.faceUp);
+
+  if (!card.faceUp) {
+    button.classList.remove("is-selected");
+    solApplyCardSprite(button, solSprite.backCol, solSprite.backRow);
+    solSetAttribute(button, "aria-label", "Face-down card");
+    return button;
+  }
+
+  button.classList.toggle("is-selected", solIsSelectedCard(card));
+  solApplyCardSprite(button, card.rank - 1, solSuitOrder.indexOf(card.suit));
+  solSetAttribute(button, "aria-label", solCardName(card));
   return button;
+};
+
+/** Reuses the node already showing `card` in this container, or makes one. */
+const solCardElement = (existing, card, zone, pile, index) =>
+  solUpdateCardElement(
+    existing.get(card.id) || solCreateCardElement(card),
+    card,
+    zone,
+    pile,
+    index
+  );
+
+let solStockBack = null;
+
+const solStockBackElement = () => {
+  if (solStockBack) return solStockBack;
+  solStockBack = document.createElement("button");
+  solStockBack.type = "button";
+  solStockBack.className = "sol-card is-face-down";
+  solStockBack.setAttribute("data-sol-stock", "");
+  solApplyCardSprite(solStockBack, solSprite.backCol, solSprite.backRow);
+  return solStockBack;
 };
 
 const solRenderFoundationSlot = (slot, suit) => {
   const pile = solState.foundations[suit] || [];
   const topCard = pile[pile.length - 1];
-  slot.innerHTML = "";
-  if (topCard) {
-    slot.appendChild(solCreateCardElement(topCard, "foundation", suit, pile.length - 1));
-  } else {
-    slot.appendChild(solCreateSlotMark(solSuitData[suit].symbol));
-  }
-  slot.setAttribute(
+  const existing = solCardElementsById(slot);
+  solSyncChildren(slot, [
+    topCard
+      ? solCardElement(existing, topCard, "foundation", suit, pile.length - 1)
+      : solSlotMark(`foundation-${suit}`, solSuitData[suit].symbol),
+  ]);
+  solSetAttribute(
+    slot,
     "aria-label",
     topCard
       ? `${solSuitData[suit].label} foundation, ${solCardName(topCard)}`
@@ -1066,99 +1173,138 @@ const solRenderFoundationSlot = (slot, suit) => {
   );
 };
 
+const solStockLabel = () => {
+  if (solState.stock.length) return `Stock, ${solState.stock.length} cards`;
+  return solState.waste.length ? "Restock waste" : "Empty stock";
+};
+
+const solRenderStock = () => {
+  const label = solStockLabel();
+  if (solState.stock.length) {
+    const back = solStockBackElement();
+    solSetAttribute(back, "aria-label", label);
+    solSyncChildren(solStock, [back]);
+  } else {
+    solSyncChildren(
+      solStock,
+      solState.waste.length ? [solSlotMark("stock", "↻")] : []
+    );
+  }
+  solSetAttribute(solStock, "aria-label", label);
+};
+
+const solRenderWaste = () => {
+  const topCard = solState.waste[solState.waste.length - 1];
+  const existing = solCardElementsById(solWaste);
+  solSyncChildren(solWaste, [
+    topCard
+      ? solCardElement(existing, topCard, "waste", "waste", solState.waste.length - 1)
+      : solSlotMark("waste", "W"),
+  ]);
+  solSetAttribute(
+    solWaste,
+    "aria-label",
+    topCard ? `Waste, ${solCardName(topCard)}` : "Waste"
+  );
+};
+
+/**
+ * Each column, its empty slot and its tooltip are built once and then reused.
+ * The tooltip in particular has to outlive a render: it lives on the body so it
+ * can escape the board's overflow, so rebuilding it per render would add
+ * another body node and another set of pointer listeners every time the board
+ * changed.
+ */
+const solTableauColumns = [];
+
+const solTableauColumn = (colIndex) => {
+  const existing = solTableauColumns[colIndex];
+  if (existing) return existing;
+
+  const columnEl = document.createElement("div");
+  columnEl.className = "sol-tableau-col";
+  columnEl.setAttribute("data-sol-col", String(colIndex));
+  columnEl.setAttribute("role", "button");
+  columnEl.setAttribute("tabindex", "0");
+
+  const emptySlot = document.createElement("div");
+  emptySlot.className = "sol-slot";
+  emptySlot.setAttribute("aria-hidden", "true");
+
+  const tooltip = document.createElement("span");
+  tooltip.className = "sol-tableau-tooltip";
+  tooltip.setAttribute("role", "tooltip");
+  document.body.appendChild(tooltip);
+  solAttachTableauTooltip(columnEl, tooltip);
+
+  const column = { columnEl, emptySlot, tooltip };
+  solTableauColumns[colIndex] = column;
+  return column;
+};
+
+const solRenderTableauColumn = (cards, colIndex) => {
+  const { columnEl, emptySlot, tooltip } = solTableauColumn(colIndex);
+  const existing = solCardElementsById(columnEl);
+  solSyncChildren(
+    columnEl,
+    cards.length
+      ? cards.map((card, cardIndex) =>
+          solCardElement(existing, card, "tableau", colIndex, cardIndex))
+      : [emptySlot]
+  );
+
+  const bottomCard = cards.find((card) => card.faceUp);
+  if (bottomCard) {
+    solSetText(tooltip, `Bottom: ${solCardShortName(bottomCard)}`);
+    solSetAttribute(
+      columnEl,
+      "aria-label",
+      `Tableau column ${colIndex + 1}, bottom card ${solCardName(bottomCard)}`
+    );
+  } else {
+    solSetText(tooltip, "");
+    if (solActiveTableauTooltip === tooltip) solHideTableauTooltip();
+    solSetAttribute(columnEl, "aria-label", `Tableau column ${colIndex + 1}`);
+  }
+
+  return columnEl;
+};
+
 const solRender = () => {
   if (!solBoard || !solStock || !solWaste || !solTableau) return;
 
-  solStock.innerHTML = "";
-  if (solState.stock.length) {
-    solStock.appendChild(solCreateStockBack());
-    solStock.setAttribute("aria-label", `Stock, ${solState.stock.length} cards`);
-  } else {
-    if (solState.waste.length) solStock.appendChild(solCreateSlotMark("↻"));
-    solStock.setAttribute(
-      "aria-label",
-      solState.waste.length ? "Restock waste" : "Empty stock"
-    );
-  }
-
-  solWaste.innerHTML = "";
-  const wasteTop = solState.waste[solState.waste.length - 1];
-  if (wasteTop) {
-    solWaste.appendChild(
-      solCreateCardElement(wasteTop, "waste", "waste", solState.waste.length - 1)
-    );
-  } else {
-    solWaste.appendChild(solCreateSlotMark("W"));
-  }
-  solWaste.setAttribute("aria-label", wasteTop ? `Waste, ${solCardName(wasteTop)}` : "Waste");
-
+  solRenderStock();
+  solRenderWaste();
   solFoundationSlots.forEach((slot) => {
     solRenderFoundationSlot(slot, slot.getAttribute("data-sol-foundation"));
   });
-
-  solHideTableauTooltip();
-  document.querySelectorAll(".sol-tableau-tooltip").forEach((tooltip) => {
-    tooltip.remove();
-  });
-  solTableau.innerHTML = "";
-  solState.tableau.forEach((column, colIndex) => {
-    const columnEl = document.createElement("div");
-    columnEl.className = "sol-tableau-col";
-    columnEl.setAttribute("data-sol-col", String(colIndex));
-    columnEl.setAttribute("role", "button");
-    columnEl.setAttribute("tabindex", "0");
-    columnEl.setAttribute("aria-label", `Tableau column ${colIndex + 1}`);
-
-    if (!column.length) {
-      const emptySlot = document.createElement("div");
-      emptySlot.className = "sol-slot";
-      emptySlot.setAttribute("aria-hidden", "true");
-      columnEl.appendChild(emptySlot);
-    } else {
-      column.forEach((card, cardIndex) => {
-        columnEl.appendChild(
-          solCreateCardElement(card, "tableau", colIndex, cardIndex)
-        );
-      });
-
-      const bottomCard = column.find((card) => card.faceUp);
-      if (bottomCard) {
-        const tooltip = document.createElement("span");
-        tooltip.className = "sol-tableau-tooltip";
-        tooltip.setAttribute("role", "tooltip");
-        tooltip.textContent = `Bottom: ${solCardShortName(bottomCard)}`;
-        document.body.appendChild(tooltip);
-        solAttachTableauTooltip(columnEl, tooltip);
-        columnEl.setAttribute(
-          "aria-label",
-          `Tableau column ${colIndex + 1}, bottom card ${solCardName(bottomCard)}`
-        );
-      }
-    }
-
-    solTableau.appendChild(columnEl);
-  });
+  solSyncChildren(
+    solTableau,
+    solState.tableau.map((column, colIndex) => solRenderTableauColumn(column, colIndex))
+  );
 
   if (solMoves) {
     setSevenSegmentCounter(solMoves, formatSevenSegmentCounter(solState.moves));
   }
-  if (solStatus) solStatus.textContent = "";
+  if (solStatus) solSetText(solStatus, "");
   solRenderToolbar();
 };
 
 const solRenderToolbar = () => {
   const solving = Boolean(solAutoSolveRun);
-  const plan = solving || solState.won ? null : solPlanAutoSolve(solState);
-  const showAutoSolve = solving || Boolean(plan?.moves.length);
-  const completes = solving ? solAutoSolveRun.completes : Boolean(plan?.completes);
+  const showAutoSolve = solving || solCanAutoSolve(solState);
+  const completes =
+    showAutoSolve &&
+    (solving ? solAutoSolveRun.completes : solCachedAutoSolvePlan(solState).completes);
   if (solReset) solReset.hidden = showAutoSolve;
   if (solAutoSolve) {
     solAutoSolve.hidden = !showAutoSolve;
     solAutoSolve.disabled = solving;
-    solAutoSolve.classList.toggle("is-completing", showAutoSolve && completes);
-    solAutoSolve.setAttribute(
+    solAutoSolve.classList.toggle("is-completing", completes);
+    solSetAttribute(
+      solAutoSolve,
       "aria-label",
-      showAutoSolve && completes ? "Auto-solve and win the game" : "Auto-solve visible cards"
+      completes ? "Auto-solve and win the game" : "Auto-solve visible cards"
     );
   }
   if (solUndo) solUndo.disabled = solving || solState.won || solHistory.length === 0;
@@ -1417,7 +1563,7 @@ const solCancelAutoSolve = () => {
 
 const solStartAutoSolve = () => {
   if (!solBoard || solAutoSolveRun || solState.won) return false;
-  const plan = solPlanAutoSolve(solState);
+  const plan = solCachedAutoSolvePlan(solState);
   if (!plan.moves.length) return false;
   solState.selected = null;
   solLastCardClick = null;
@@ -1638,6 +1784,7 @@ const solNewGame = () => {
   solHistory.length = 0;
   solLastCardClick = null;
   solHideVictoryVideo();
+  solBoardReady = true;
 
   solRender();
 };
@@ -1666,8 +1813,21 @@ const solStagePresentationWin = ({ visualEffects = true } = {}) => {
   solHistory.length = 0;
   solLastCardClick = null;
   solHideVictoryVideo();
+  solBoardReady = true;
 
   solRender();
+};
+
+/**
+ * The board is dealt on the first real open rather than at startup: a
+ * solver-checked deal is the most expensive thing this feature does, and a
+ * visitor who never opens Solitaire should never pay for it. A staged Admin
+ * presentation counts as a board, so opening the window never replaces one.
+ */
+const solEnsureBoard = () => {
+  if (solBoardReady) return false;
+  solNewGame();
+  return true;
 };
 
 const solAutoMoveCardToFoundation = (zone, pile, index) => {
@@ -1833,9 +1993,13 @@ if (solRulesHelp) {
   });
 }
 
-solNewGame();
-
 registerWindowLifecycle("solitaire", {
+  // Before the window is shown, not after: the manager measures the window to
+  // place it, so the board has to hold its cards by then or the first open
+  // would be positioned as if Solitaire were empty.
+  beforeOpen: () => {
+    solEnsureBoard();
+  },
   onClose: () => {
     solCancelAutoSolve();
     solHideVictoryVideo();

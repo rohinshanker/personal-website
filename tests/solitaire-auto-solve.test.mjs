@@ -345,14 +345,8 @@ test("the toolbar swaps Reset for the check icon and the board hosts the flight 
 
 test("the runtime blocks input while solving, lands each card before the next, and wins last", () => {
   assert.doesNotMatch(mainSource, /solAutoSolveOffered|solIsFullyRevealed/, "The preview gate is gone.");
-  const toolbar = sourceSection("const solRenderToolbar = () => {", "const solCheckWin = () => {");
-  assert.match(toolbar, /const plan = solving \|\| solState\.won \? null : solPlanAutoSolve\(solState\)/);
-  assert.match(toolbar, /const showAutoSolve = solving \|\| Boolean\(plan\?\.moves\.length\)/);
-  assert.match(toolbar, /solReset\.hidden = showAutoSolve/);
-  assert.match(toolbar, /classList\.toggle\("is-completing", showAutoSolve && completes\)/);
-  assert.match(toolbar, /solAutoSolve\.hidden = !showAutoSolve/);
-  assert.match(toolbar, /solAutoSolve\.disabled = solving/);
-  assert.match(toolbar, /solUndo\.disabled = solving \|\| solState\.won \|\| solHistory\.length === 0/);
+  // The toolbar swap itself runs in solitaire-board-lifecycle.test.mjs, which
+  // drives the production control through every state instead of reading it.
 
   const start = sourceSection("const solStartAutoSolve = () => {", "const solFlipSourceTopCard = ");
   assert.match(start, /if \(!plan\.moves\.length\) return false/);
@@ -401,7 +395,7 @@ test("the runtime blocks input while solving, lands each card before the next, a
   assert.match(impact, /composite: "add"/);
 
   assert.match(mainSource, /solBoard\.addEventListener\("click", \(event\) => \{\n    if \(solAutoSolveRun\) return;/);
-  assert.match(mainSource, /registerWindowLifecycle\("solitaire", \{\n  onClose: \(\) => \{\n    solCancelAutoSolve\(\);/);
+  // The window lifecycle hooks run in solitaire-board-lifecycle.test.mjs.
   assert.match(mainSource, /const solNewGame = \(\) => \{[\s\S]*?solCancelAutoSolve\(\);\n  solState\.presentation = null;/);
   assert.match(mainSource, /if \(solAutoSolve\) \{\n  solAutoSolve\.addEventListener\("click", \(\) => \{\n    solStartAutoSolve\(\);/);
 });

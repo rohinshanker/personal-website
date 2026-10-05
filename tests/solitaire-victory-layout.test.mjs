@@ -57,6 +57,7 @@ const createPresentationStageHarness = async () => {
       "const solState = {};",
       "const solHistory = [{}];",
       "let solLastCardClick = {};",
+      "let solBoardReady = false;",
       "const solCancelAutoSolve = () => calls.push('cancel');",
       "const solBuildPresentationTableau = () => ['staged'];",
       "const solHideVictoryVideo = () => calls.push('hide-video');",
@@ -67,7 +68,7 @@ const createPresentationStageHarness = async () => {
         "\n\nconst solAutoMoveCardToFoundation"
       ),
       "globalThis.stage = solStagePresentationWin;",
-      "globalThis.read = () => ({ calls, historyLength: solHistory.length, lastCardClick: solLastCardClick, state: solState });",
+      "globalThis.read = () => ({ boardReady: solBoardReady, calls, historyLength: solHistory.length, lastCardClick: solLastCardClick, state: solState });",
     ].join("\n"),
     context
   );
@@ -116,6 +117,7 @@ test("presentation staging enables visual effects by default and accepts an expl
   const defaultContext = await createPresentationStageHarness();
   defaultContext.stage();
   assert.deepEqual(plain(defaultContext.read()), {
+    boardReady: true,
     calls: ["cancel", "hide-video", "render"],
     historyLength: 0,
     lastCardClick: null,
