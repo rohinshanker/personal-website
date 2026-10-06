@@ -416,7 +416,7 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
   );
   const recordEventSource = extractSource(
     source,
-    "const recordGameStatsEvent =",
+    "const gameStatsCanonicalMetricGroups =",
     "\n\nconst formatGameStatsCounter"
   );
   const context = vm.createContext({});

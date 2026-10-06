@@ -30,6 +30,9 @@ const {
   removeStorage,
   writeJsonStorage,
 } = window.homeUtil;
+const {
+  createGameSession,
+} = window.homeGameSession;
 
 const administratorWindow = byId("administrator-window");
 const administratorSignInForm = byId("administrator-sign-in-form");
@@ -742,9 +745,11 @@ const normalizeGameStatsSubmission = (rawSubmission) => {
   const event = normalizeGameStatsEvent(rawSubmission.event);
   if (!event) return null;
   const proofRejections = rawSubmission.proofRejections;
+  const completion = normalizeGameStatsSession(rawSubmission.completion, { allowExpired: true });
   return {
     event,
     session: normalizeGameStatsSession(rawSubmission.session, { allowExpired: true }),
+    ...(completion ? { completion } : {}),
     proofRejections:
       Number.isSafeInteger(proofRejections) && proofRejections > 0 ? proofRejections : 0,
   };
@@ -1852,9 +1857,11 @@ const createGameProgressProfile = async () => {
   return profile;
 };
 
-const queueGameStatsSubmission = (event, session) => {
-  if (!session) return false;
-  gameStatsSubmissionQueue.push({ event, session, proofRejections: 0 });
+const queueGameStatsSubmission = (event, session, completion = null) => {
+  if (!session && !completion) return false;
+  gameStatsSubmissionQueue.push({
+    event, session, ...(completion ? { completion } : {}), proofRejections: 0,
+  });
   if (gameStatsSubmissionQueue.length > GAME_STATS_MAX_SYNC_QUEUE_LENGTH) {
     gameStatsSubmissionQueue = gameStatsSubmissionQueue.slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
   }
@@ -2072,11 +2079,12 @@ const runGameStatsSyncPass = async () => {
   setGameStatsSyncState(hasQueuedSubmissions ? "publishing" : "fetching");
 
   for (const submission of gameStatsSubmissionQueue) {
-    if (!submission.session) {
+    const publicationProof = submission.completion || submission.session;
+    if (!publicationProof) {
       waitingForSessionCount += 1;
       continue;
     }
-    if (isGameStatsSessionExpired(submission.session)) {
+    if (isGameStatsSessionExpired(publicationProof)) {
       expiredCount += 1;
       continue;
     }
@@ -2100,10 +2108,9 @@ const runGameStatsSyncPass = async () => {
             ...submission.event,
             profile: normalizeGameStatsEventProfile(submission.event.profile),
           },
-          session: {
-            id: submission.session.id,
-            token: submission.session.token,
-          },
+          ...(submission.completion
+            ? { completion: { id: publicationProof.id, token: publicationProof.token } }
+            : { session: { id: publicationProof.id, token: publicationProof.token } }),
         }),
       });
       const acknowledgement = await readGameStatsApiJson(response);
@@ -2129,7 +2136,7 @@ const runGameStatsSyncPass = async () => {
         submission.proofRejections = (submission.proofRejections || 0) + 1;
         clearGameStatsAdministratorProof();
       }
-      if (isGameStatsSessionExpired(submission.session)) {
+      if (isGameStatsSessionExpired(publicationProof)) {
         expiredCount += 1;
         continue;
       }
@@ -2239,14 +2246,108 @@ const syncQueuedGameStats = ({ manual = false } = {}) => {
   return gameStatsSyncPromise;
 };
 
+const gameStatsCanonicalMetricGroups = new Map();
+
+const getGameStatsMetricCategory = (data, event) => {
+  const field = event.game === "snake" ? event.boardSize : event.difficulty;
+  const entries = event.game === "solitaire"
+    ? data.leaderboards.solitaire : data.leaderboards[event.game][field];
+  return {
+    key: `${event.game}:${field || ""}`,
+    direction: event.game === "snake" ? "desc" : "asc",
+    limit: event.game === "snake" || event.game === "solitaire" ? 5 : 3,
+    entries,
+    record: event.game === "solitaire" ? null : data.playerRecords[event.game][field],
+    setEntries(value) {
+      if (event.game === "solitaire") data.leaderboards.solitaire = value;
+      else data.leaderboards[event.game][field] = value;
+    },
+    setRecord(value) {
+      if (event.game !== "solitaire") data.playerRecords[event.game][field] = value;
+    },
+  };
+};
+
+/** Retains the pre-result best while concurrent server clocks are reconciled. */
+const beginGameStatsMetricCorrection = (event, pending) => {
+  if (!pending && !gameStatsCanonicalMetricGroups.size) return null;
+  if (gameStatsLocalState.eventIds.includes(event.id)) return null;
+  const category = getGameStatsMetricCategory(gameStatsLocalState, event);
+  let group = gameStatsCanonicalMetricGroups.get(category.key);
+  if (!group && !pending) return null;
+  if (!group || group.generation !== gameStatsLocalResetGeneration) {
+    group = {
+      generation: gameStatsLocalResetGeneration,
+      entries: category.entries.slice(), record: category.record,
+      bestTime: event.game === "sudoku" ? gameStatsLocalState.totals.sudoku.bestTimes[event.difficulty] : null,
+      events: new Map(),
+    };
+    gameStatsCanonicalMetricGroups.set(category.key, group);
+  }
+  group.events.set(event.id, { event: { ...event }, settled: !pending });
+  return { group, key: category.key };
+};
+
+const finishGameStatsMetricCorrection = (correction, event) => {
+  if (!correction) return;
+  const { group, key } = correction;
+  if (group.generation !== gameStatsLocalResetGeneration) {
+    if (gameStatsCanonicalMetricGroups.get(key) === group) gameStatsCanonicalMetricGroups.delete(key);
+    return;
+  }
+  const update = group.events.get(event.id);
+  update.event = { ...event };
+  update.settled = true;
+  const category = getGameStatsMetricCategory(gameStatsLocalState, event);
+  const pendingIds = new Set(group.events.keys());
+  const candidates = [...group.entries, ...category.entries.filter((entry) => !pendingIds.has(entry.eventId))];
+  const players = new Map();
+  for (const entry of candidates) {
+    const existing = players.get(entry.playerId);
+    if (!existing || compareGameStatsLeaderboardEntries(category.direction, entry, existing) < 0) {
+      players.set(entry.playerId, entry);
+    }
+  }
+  let entries = Array.from(players.values()).sort((first, second) =>
+    compareGameStatsLeaderboardEntries(category.direction, first, second)
+  ).slice(0, category.limit);
+  let record = category.record && !pendingIds.has(category.record.eventId)
+    ? category.record : group.record;
+  let bestTime = group.bestTime;
+  for (const item of group.events.values()) {
+    const candidate = item.event;
+    if (candidate.game === "sudoku" && candidate.hintBucket !== "noHints") continue;
+    entries = upsertGameStatsLeaderboardEntry(entries, candidate, category.limit, category.direction);
+    record = updateGameStatsPlayerRecord(record, candidate, category.direction);
+    if (candidate.game === "sudoku") {
+      bestTime = bestTime === null ? candidate.metric : Math.min(bestTime, candidate.metric);
+    }
+  }
+  category.setEntries(entries);
+  category.setRecord(record);
+  if (event.game === "sudoku") gameStatsLocalState.totals.sudoku.bestTimes[event.difficulty] = bestTime;
+  if (Array.from(group.events.values()).every((item) => item.settled)) {
+    gameStatsCanonicalMetricGroups.delete(key);
+  }
+  saveGameStatsLocalState();
+};
+
 const recordGameStatsEvent = async (
   rawEvent,
   sessionKey = "",
-  { sudokuNoHintsSeconds = null, snakePreviousHighScore = undefined } = {}
+  {
+    sudokuNoHintsSeconds = null, snakePreviousHighScore = undefined,
+    completionPromise = null, onCanonicalMetric = null,
+  } = {}
 ) => {
   const event = normalizeGameStatsEvent(rawEvent);
   if (!event) return;
-  const sessionResultPromise = getGameStatsSession(sessionKey);
+  const sessionResultPromise = completionPromise
+    ? completionPromise.then(
+        (completion) => ({ completion }),
+        (error) => ({ reason: error?.code || "request-failed", status: Number(error?.status) || 0 })
+      )
+    : getGameStatsSession(sessionKey);
   const recordOptions = { snakePreviousHighScore };
   const mayBeatPersonalRecord = gameStatsEventBeatsPersonalRecord(
     gameStatsLocalState,
@@ -2272,6 +2373,12 @@ const recordGameStatsEvent = async (
     event,
     recordOptions
   );
+  const priorRecordData = completionPromise ? JSON.parse(JSON.stringify({
+    leaderboards: gameStatsLocalState.leaderboards,
+    playerRecords: gameStatsLocalState.playerRecords,
+    totals: { sudoku: { bestTimes: gameStatsLocalState.totals.sudoku.bestTimes } },
+  })) : null;
+  const metricCorrection = beginGameStatsMetricCorrection(event, Boolean(completionPromise));
   const applied = applyGameStatsEventToData(gameStatsLocalState, event);
   if (!applied) return;
   if (event.game === "sudoku" && event.hintBucket === "noHints") {
@@ -2282,13 +2389,49 @@ const recordGameStatsEvent = async (
     );
   }
   saveGameStatsLocalState();
-  const recordHandoffPromise = beatPersonalRecord
+  let recordHandoffPromise = beatPersonalRecord && !completionPromise
     ? playGameStatsRecordHandoff(event.game)
     : null;
   const sessionResult = await sessionResultPromise;
+  const completion = sessionResult?.completion || null;
   const session = sessionResult?.session || null;
-  if (!session) {
-    if (sessionKey) {
+  if (completion) {
+    const canonical = normalizeGameStatsEvent({ ...completion.event, profile: event.profile });
+    if (!canonical || canonical.id !== event.id || canonical.game !== event.game ||
+        canonical.type !== event.type || canonical.difficulty !== event.difficulty ||
+        canonical.boardSize !== event.boardSize || canonical.hintBucket !== event.hintBucket) {
+      finishGameStatsMetricCorrection(metricCorrection, event);
+      setGameStatsSyncState("ready", {
+        message: "Local stats are saved, but a result could not pass server verification.",
+      });
+      if (recordHandoffPromise) await recordHandoffPromise;
+      return;
+    }
+    Object.assign(event, canonical);
+    finishGameStatsMetricCorrection(metricCorrection, event);
+    onCanonicalMetric?.({
+      metric: event.metric, metricKind: event.metricKind, elapsedMs: completion.elapsedMs,
+      updateLocalStats: resetGeneration === gameStatsLocalResetGeneration,
+    });
+  } else {
+    finishGameStatsMetricCorrection(metricCorrection, event);
+  }
+  if (completionPromise && resetGeneration === gameStatsLocalResetGeneration &&
+      gameStatsEventBeatsPersonalRecord(priorRecordData, gameStatsGlobalState, event, recordOptions)) {
+    recordHandoffPromise = playGameStatsRecordHandoff(event.game);
+  }
+  if (!session && !completion) {
+    if (sessionResult?.reason === "session-expired") {
+      setGameStatsSyncState("session-expired");
+    } else if (sessionResult?.reason === "replay-limit") {
+      setGameStatsSyncState("ready", {
+        message: "Saved on this device. This game's replay exceeds verification limits, so this result can't be published.",
+      });
+    } else if (completionPromise) {
+      setGameStatsSyncState("ready", {
+        message: "Local stats are saved, but this game's result could not be verified for publication.",
+      });
+    } else if (sessionKey) {
       reportGameStatsSessionFailure(sessionResult, { localSaved: true });
     } else {
       setGameStatsSyncState("ready", {
@@ -2298,12 +2441,12 @@ const recordGameStatsEvent = async (
     if (recordHandoffPromise) await recordHandoffPromise;
     return;
   }
-  if (isGameStatsSessionExpired(session)) {
+  if (isGameStatsSessionExpired(completion || session)) {
     setGameStatsSyncState("session-expired");
     if (recordHandoffPromise) await recordHandoffPromise;
     return;
   }
-  queueGameStatsSubmission(event, session);
+  queueGameStatsSubmission(event, session, completion);
   if (gameStatsSyncState !== "auth-waiting") {
     setGameStatsSyncState("publishing", {
       message: "Publishing saved results...",
@@ -4100,7 +4243,38 @@ const createGameStatsHooks = (game, stateOrGetter) => {
     }
     return state;
   };
+  let issuedSession = null;
+  const issued = () => {
+    if (!issuedSession) {
+      issuedSession = createGameSession({
+        game,
+        getState,
+        buildVersion: gameStatsBackend.buildVersion,
+        request: async (path, payload, requestOptions = {}) => {
+          if (!isGameStatsBackendConfigured()) {
+            throw Object.assign(new Error("Game tracking is not configured"), { code: "unconfigured" });
+          }
+          const response = await fetchGameStatsApi(path, {
+            method: "POST", body: JSON.stringify(payload), ...requestOptions,
+          });
+          return readGameStatsApiJson(response);
+        },
+        reportFailure: (error) => {
+          if (error?.code === "session-expired") setGameStatsSyncState("session-expired");
+          else reportGameStatsSessionFailure({ reason: error?.code || "request-failed", status: Number(error?.status) || 0 });
+        },
+      });
+    }
+    return issuedSession;
+  };
   return Object.freeze({
+    issueGame: (config, options) => issued().issueGame(normalizeGameStatsSessionConfig(game, config), options),
+    recordInput: (action) => issuedSession?.recordInput(action) || false,
+    pauseGame: () => issuedSession?.pauseGame() || Promise.resolve(null),
+    resumeGame: () => issuedSession?.resumeGame() || Promise.resolve(null),
+    exportGame: () => issuedSession?.exportGame() || null,
+    restoreGame: (saved) => issued().restoreGame(saved),
+    hasIssuedGame: () => issuedSession?.hasIssuedGame() || false,
     ensureSession(config) {
       const state = getState();
       if (!state.statsSession) {
@@ -4109,17 +4283,22 @@ const createGameStatsHooks = (game, stateOrGetter) => {
       return state.statsSession;
     },
     dropSession() {
+      issuedSession?.dropSession();
       const state = getState();
       state.statsSession = "";
     },
     recordEvent(payload, options = {}) {
       const state = getState();
+      const claim = issuedSession?.claimCompletion() || null;
       const sessionKey = state.statsSession;
       state.statsSession = "";
+      const event = createGameStatsEvent({ ...payload, game });
       return recordGameStatsEvent(
-        createGameStatsEvent({ ...payload, game }),
+        event,
         sessionKey,
-        options
+        claim
+          ? { ...options, completionPromise: claim.finish(event.id, { terminalTick: options.terminalTick }) }
+          : options
       );
     },
   });

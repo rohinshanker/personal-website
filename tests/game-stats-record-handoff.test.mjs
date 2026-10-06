@@ -85,7 +85,7 @@ const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true }
   const source = await readHomeScript("gameStats");
   const failureStart = source.indexOf("const reportGameStatsSessionFailure =");
   const failureEnd = source.indexOf("\n\nconst startGameStatsSession =", failureStart);
-  const start = source.indexOf("const recordGameStatsEvent =");
+  const start = source.indexOf("const gameStatsCanonicalMetricGroups =");
   const end = source.indexOf("\n\nconst formatGameStatsCounter", start);
   assert.ok(
     failureStart >= 0 && failureEnd > failureStart,

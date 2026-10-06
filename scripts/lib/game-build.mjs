@@ -54,6 +54,8 @@ export const GAME_COMPLETION_SOURCE_FILES = Object.freeze([
   "scripts/home/features/snake.js",
   "scripts/home/features/solitaire.js",
   "scripts/home/features/sudoku.js",
+  "scripts/home/games/rules.js",
+  "scripts/home/games/session.js",
   "scripts/home/sudoku-generator.worker.js",
 ]);
 
