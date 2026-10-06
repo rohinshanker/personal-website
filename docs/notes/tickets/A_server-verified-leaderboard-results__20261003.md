@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-10-03
 - Updated: 2026-10-06
-- Current State: Activated on codex/server-verified-games, based on the completed shared-game-layer commit 877085d. Read-only protocol/engine discovery is underway. Owner questions are pending for pause timing, completion replay versus server-owned hidden state, and separate versus combined legacy rankings; do not implement policy-dependent behavior until answered. No production change or deployment has been made.
+- Current State: Activated on codex/server-verified-games, based on the completed shared-game-layer commit 877085d. Read-only protocol/engine discovery is underway. Owner decisions are recorded below. The implementation should preserve current timer semantics, verify replays at completion, and keep a single leaderboard without visible verification differentiation. No production change or deployment has been made.
 - Verification: Test shared engines in browser and Worker environments; legal and illegal transitions for all four games; altered state/configuration/version and fabricated metrics; bounded verification work; replay reuse, expiry, concurrency, idempotency and atomic failure; assistance, timing, offline/resume and legacy provenance. Run the full Node, Worker, browser/accessibility, integrity, and pinned-Colima visual gates; inspect publishing states at 375×812, 768×1024, 1280×800, and 1440×900.
 - Cleanup: Distill the implemented rules/replay, timing, provenance, migration, and release contracts into indexed validation guides. Resolve and remove this ticket and its queue row after acceptance; retain no task history.
 
@@ -41,3 +41,9 @@ Neither replay validation nor online hidden-state enforcement proves a human pla
 - Build on the locally completed shared game layer without changing its legacy session reuse, original timestamp, 120/hour budget, six-hour expiry or local-only expired-result decisions. Verified game proofs must bind the actual issued game identity; do not reuse a proof across different issued initial states.
 - Preserve historical records and existing profile/Administrator authentication. Treat legacy results as legacy; never infer verification provenance from a public build hash.
 - Use existing testing and browser tooling; keep writer worktrees isolated and keep the coordinator responsible for integration, generated metadata and ticket/index updates. No pushes or deployments are authorized by this pass.
+
+## Owner decisions (2026-10-06)
+
+- Timing: published time should reflect what the player sees, retaining existing timer behavior where possible. Preserve Minesweeper elapsed-time semantics and Sudoku pause semantics; align the final displayed and published values. Server-observed start/finish and pause/resume evidence must enforce timing eligibility; do not silently trust client clocks or switch Sudoku rankings to all wall time.
+- Verification boundary: check bounded replays at completion. Do not require server-owned hidden state or online reveals during ordinary moves. Explicitly retain the limitation that legal replays can be produced by modified browsers or external solvers.
+- Ranking migration: one combined leaderboard, with no badges, separate views or other visible verification differentiation. Preserve historical records and store provenance internally; never relabel historical records as replay-checked.
