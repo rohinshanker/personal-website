@@ -83,10 +83,11 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
     game: "minesweeper",
     config: { difficulty: "beginner" },
     buildVersion,
-    firstCell: { row: 0, column: 0 },
+    firstCell: 0,
   });
   assert.equal(issuedResponse.status, 201, await issuedResponse.clone().text());
   const issued = await issuedResponse.json();
+  assert.equal(issued.limits.continuations, 256);
   const emptyHash = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode("[]")
@@ -128,7 +129,7 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
   assert.equal(finished.status, 202, await finished.clone().text());
   let continuationCount = 0;
   while (finished.status === 202) {
-    assert.ok(continuationCount < 1_024, "continuation loop stayed bounded");
+    assert.ok(continuationCount < 256, "continuation loop stayed within the signed job cap");
     const { progress } = await finished.json();
     requestStartedAt = performance.now();
     finished = await post(runtime, `/sessions/${issued.id}/finish/continue`, {
@@ -174,7 +175,7 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
     FROM verified_completion_progress
     ORDER BY revision
   `).all();
-  assert.ok(progressRows.results.length <= 1_025);
+  assert.ok(progressRows.results.length <= 257);
   for (let index = 1; index < progressRows.results.length; index += 1) {
     assert.ok(
       Number(progressRows.results[index].input_cursor) -

@@ -100,6 +100,8 @@ CREATE TABLE verified_completion_jobs (
   progress_token TEXT NOT NULL,
   checkpoint_digest TEXT NOT NULL,
   request_count INTEGER NOT NULL DEFAULT 0 CHECK (request_count >= 0),
+  continuation_limit INTEGER NOT NULL
+    CHECK (continuation_limit BETWEEN 1 AND 256),
   resume_count INTEGER NOT NULL CHECK (resume_count > 0),
   elapsed_ms INTEGER NOT NULL CHECK (elapsed_ms >= 0),
   finished_at TEXT NOT NULL,

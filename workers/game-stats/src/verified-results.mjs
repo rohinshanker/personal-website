@@ -45,6 +45,10 @@ const VERSION_FIELDS = Object.freeze({
   replayVersion: commonRules.REPLAY_VERSION,
   generatorVersion: commonRules.GENERATOR_VERSION,
 });
+const limitsFor = (game) => Object.freeze({
+  ...commonRules.GAME_RULE_LIMITS[game],
+  continuations: MAX_VERIFICATION_JOB_CONTINUATIONS,
+});
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
 const SESSION_ID_PATTERN = /^[A-Za-z0-9-]{8,80}$/;
 const textEncoder = new TextEncoder();
@@ -171,10 +175,10 @@ const INSERT_COMPLETION_JOB_SQL = `
 INSERT INTO verified_completion_jobs (
   id, session_id, event_id, request_digest, transcript_digest, transcript_json,
   rules_version, replay_version, timing_revision, terminal_tick, input_count,
-  progress_token, checkpoint_digest, resume_count, elapsed_ms, finished_at,
+  progress_token, checkpoint_digest, continuation_limit, resume_count, elapsed_ms, finished_at,
   expires_at, updated_at
 )
-SELECT ?, id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, expires_at, ?
+SELECT ?, id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, expires_at, ?
 FROM game_stat_sessions
 WHERE id = ? AND finish_job_id = ? AND timing_phase = 'finishing'
 `;
@@ -191,7 +195,7 @@ SELECT id, session_id, event_id, request_digest, transcript_digest, transcript_j
   rules_version, replay_version, timing_revision, timing_verified_revision,
   terminal_tick, input_count, input_cursor, tick_cursor,
   state_json, work_used, progress_revision, progress_token, checkpoint_digest,
-  request_count, resume_count, elapsed_ms, finished_at, expires_at, stage,
+  request_count, continuation_limit, resume_count, elapsed_ms, finished_at, expires_at, stage,
   completion_id, updated_at
 FROM verified_completion_jobs
 WHERE session_id = ?
@@ -254,7 +258,8 @@ SET timing_verified_revision = ?, input_cursor = ?, tick_cursor = ?,
   state_json = ?, work_used = ?, progress_revision = ?, progress_token = ?,
   checkpoint_digest = ?, request_count = request_count + 1, stage = ?, updated_at = ?
 WHERE id = ? AND stage = ? AND progress_revision = ? AND progress_token = ?
-  AND checkpoint_digest = ? AND request_count < ? AND completion_id IS NULL
+  AND checkpoint_digest = ? AND request_count < continuation_limit
+  AND completion_id IS NULL
 `;
 const INSERT_REPLAY_CHUNK_SQL = `
 INSERT INTO verified_completion_replay_chunks (
@@ -270,7 +275,7 @@ SET stage = 'completed', completion_id = ?, request_count = request_count + 1,
   updated_at = ?
 WHERE id = ? AND stage = 'finalize' AND progress_revision = ?
   AND progress_token = ? AND checkpoint_digest = ?
-  AND request_count < ? AND completion_id IS NULL
+  AND request_count < continuation_limit AND completion_id IS NULL
 `;
 
 const getChanges = (result) => Number(result?.meta?.changes ?? result?.changes ?? 0);
@@ -305,7 +310,8 @@ const parseJsonColumn = (value, label) => {
 const resolveEngine = (game, dependencies) => {
   const engine = dependencies.gameEngines?.[game] || globalThis[ENGINE_GLOBALS[game]];
   if (!engine || typeof engine.initial !== "function" ||
-      typeof engine.transition !== "function" || typeof engine.result !== "function") {
+      typeof engine.transition !== "function" || typeof engine.result !== "function" ||
+      (game === "snake" && typeof engine.step !== "function")) {
     throw new HttpError(503, `Verified ${game} rules are unavailable`);
   }
   return engine;
@@ -358,11 +364,10 @@ const normalizeFirstCell = (game, value) => {
   if (game !== "minesweeper") {
     throw new HttpError(400, "firstCell is only valid for Minesweeper");
   }
-  assertAllowedKeys(value, ["row", "column"], "firstCell");
-  if (!Number.isSafeInteger(value.row) || !Number.isSafeInteger(value.column)) {
+  if (!Number.isSafeInteger(value)) {
     throw new HttpError(400, "Invalid Minesweeper firstCell");
   }
-  return { row: value.row, column: value.column };
+  return value;
 };
 
 export const createVerifiedSession = async (
@@ -438,7 +443,7 @@ export const createVerifiedSession = async (
     initialCommitment,
     initial,
     timing: Object.freeze({ revision: 0, phase: "ready", elapsedMs: 0 }),
-    limits: commonRules.GAME_RULE_LIMITS[game],
+    limits: limitsFor(game),
   });
 };
 
@@ -693,7 +698,7 @@ export const restoreVerifiedSession = async (request, env, sessionId, rawPayload
     initialCommitment: session.initial_commitment,
     initial,
     timing: timingResponse(session),
-    limits: commonRules.GAME_RULE_LIMITS[session.game],
+    limits: limitsFor(session.game),
   });
 };
 
@@ -847,6 +852,7 @@ const progressTokenPayload = (job) => ({
   transcriptDigest: job.transcript_digest,
   rulesVersion: Number(job.rules_version),
   replayVersion: Number(job.replay_version),
+  continuationLimit: Number(job.continuation_limit),
   revision: Number(job.progress_revision),
   inputCursor: Number(job.input_cursor),
   tickCursor: Number(job.tick_cursor),
@@ -903,6 +909,7 @@ const verifyProgressProof = async (env, job, rawToken) => {
     proof.transcriptDigest !== job.transcript_digest ||
     proof.rulesVersion !== Number(job.rules_version) ||
     proof.replayVersion !== Number(job.replay_version) ||
+    proof.continuationLimit !== Number(job.continuation_limit) ||
     !Number.isSafeInteger(proof.revision) || proof.revision < 0 ||
     !Number.isSafeInteger(proof.inputCursor) || proof.inputCursor < 0 ||
     !Number.isSafeInteger(proof.tickCursor) || proof.tickCursor < 0 ||
@@ -1038,6 +1045,7 @@ export const finishVerifiedSession = async (
     transcript_digest: transcriptDigest,
     rules_version: VERSION_FIELDS.rulesVersion,
     replay_version: VERSION_FIELDS.replayVersion,
+    continuation_limit: MAX_VERIFICATION_JOB_CONTINUATIONS,
     progress_revision: 0,
     input_cursor: 0,
     tick_cursor: 0,
@@ -1081,6 +1089,7 @@ export const finishVerifiedSession = async (
     payload.inputs.length,
     initialCheckpoint.progress_token,
     initialCheckpoint.checkpoint_digest,
+    MAX_VERIFICATION_JOB_CONTINUATIONS,
     resumeCount,
     elapsedMs,
     finishedAt,
@@ -1155,7 +1164,7 @@ const canonicalPrefixAt = async (database, jobId, inputCursor) => {
   return prefix;
 };
 
-const transitionOne = (engine, state, input, remainingBatchWork) => {
+const transitionOne = (engine, state, input, remainingBatchWork, step = false) => {
   let actionWork = 0;
   const candidate = structuredClone(state);
   const budget = {
@@ -1171,7 +1180,9 @@ const transitionOne = (engine, state, input, remainingBatchWork) => {
       actionWork += units;
     },
   };
-  const transitioned = engine.transition(candidate, input, budget);
+  const transitioned = step
+    ? engine.step(candidate, budget)
+    : engine.transition(candidate, input, budget);
   return { state: transitioned, work: actionWork };
 };
 
@@ -1199,8 +1210,7 @@ const commitCheckpoint = async (env, database, job, checkpoint) => {
       job.stage,
       job.progress_revision,
       job.progress_token,
-      job.checkpoint_digest,
-      MAX_VERIFICATION_JOB_CONTINUATIONS
+      job.checkpoint_digest
     ),
   ];
   if (checkpoint.canonical_chunk) {
@@ -1247,7 +1257,7 @@ const commitCheckpoint = async (env, database, job, checkpoint) => {
 
 const finalizeJob = async (env, database, session, job, dependencies) => {
   const engine = resolveEngine(session.game, dependencies);
-  const state = engine.initial(parseJsonColumn(job.state_json, "verification checkpoint"));
+  const state = parseJsonColumn(job.state_json, "verification checkpoint");
   let result;
   try {
     result = engine.result(state);
@@ -1326,8 +1336,7 @@ const finalizeJob = async (env, database, session, job, dependencies) => {
         job.id,
         job.progress_revision,
         job.progress_token,
-        job.checkpoint_digest,
-        MAX_VERIFICATION_JOB_CONTINUATIONS
+        job.checkpoint_digest
       ),
     ]);
   } catch (error) {
@@ -1412,7 +1421,14 @@ export const continueVerifiedSession = async (
   if (Date.parse(job.expires_at) <= nowDate(dependencies).getTime()) {
     throw new HttpError(409, "Game session has expired during verification");
   }
-  if (Number(job.request_count) >= MAX_VERIFICATION_JOB_CONTINUATIONS) {
+  if (
+    !Number.isSafeInteger(Number(job.continuation_limit)) ||
+    Number(job.continuation_limit) < 1 ||
+    Number(job.continuation_limit) > MAX_VERIFICATION_JOB_CONTINUATIONS
+  ) {
+    throw new HttpError(409, "Verification job has an invalid continuation limit");
+  }
+  if (Number(job.request_count) >= Number(job.continuation_limit)) {
     throw new HttpError(413, "Verification continuation limit exceeded");
   }
   const session = await loadVerifiedSession(env, sessionId);
@@ -1482,7 +1498,7 @@ export const continueVerifiedSession = async (
   const engine = resolveEngine(session.game, dependencies);
   let state;
   if (job.state_json) {
-    state = engine.initial(parseJsonColumn(job.state_json, "verification checkpoint"));
+    state = parseJsonColumn(job.state_json, "verification checkpoint");
   } else {
     const initial = parseJsonColumn(session.initial_json, "initial game state");
     if (await digestCanonical(initial) !== session.initial_commitment) {
@@ -1527,7 +1543,7 @@ export const continueVerifiedSession = async (
         input = nextInput;
         consumesInput = true;
       } else if (tickCursor < Number(job.terminal_tick)) {
-        input = Object.freeze({ op: "step", tick: tickCursor });
+        input = null;
       } else {
         if (nextInput) throw new HttpError(400, "Snake input occurs after terminal tick");
         break;
@@ -1555,7 +1571,8 @@ export const continueVerifiedSession = async (
         engine,
         state,
         input,
-        MAX_VERIFICATION_BATCH_WORK - batchWork
+        MAX_VERIFICATION_BATCH_WORK - batchWork,
+        !consumesInput
       );
     } catch (error) {
       if (error instanceof BatchWorkExhausted) break;

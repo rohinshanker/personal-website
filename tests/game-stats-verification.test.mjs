@@ -38,7 +38,7 @@ const checkedAction = (input, expectedOperation = "advance") => {
 const progressEngine = (game) => ({
   generate(config, { firstCell, budget }) {
     budget.spend();
-    return { game, config, firstCell: firstCell || null, progress: 0, target: 2, moves: 0 };
+    return { game, config, firstCell: firstCell ?? null, progress: 0, target: 2, moves: 0 };
   },
   initial(raw) {
     if (!raw || raw.game !== game || raw.target !== 2) throw new Error("invalid fixture initial");
@@ -69,8 +69,12 @@ const snakeEngine = {
   },
   transition(state, input, budget) {
     budget.spend();
-    if (input.op === "step") state.steps += 1;
-    else if (input.op !== "direction") throw new Error("illegal fixture snake action");
+    if (input.op !== "direction") throw new Error("illegal fixture snake action");
+    return state;
+  },
+  step(state, budget) {
+    budget.spend();
+    state.steps += 1;
     return state;
   },
   result(state) {
@@ -174,7 +178,7 @@ const issue = async (harness, game = "minesweeper", config = { difficulty: "begi
     game,
     config,
     buildVersion,
-    ...(game === "minesweeper" ? { firstCell: { row: 0, column: 0 } } : {}),
+    ...(game === "minesweeper" ? { firstCell: 0 } : {}),
   }));
   assert.equal(response.status, 201, await response.clone().text());
   return response.json();
@@ -229,7 +233,8 @@ test("protocol 2 issues a committed game, derives its result, and publishes by r
 
   assert.equal(session.resultProtocol, 2);
   assert.equal(session.gameId, session.id);
-  assert.equal(session.initial.firstCell.row, 0);
+  assert.equal(session.initial.firstCell, 0);
+  assert.equal(session.limits.continuations, 256);
   assert.match(session.initialCommitment, /^[a-f0-9]{64}$/);
   assert.equal(session.initialCommitment, await digestCanonical(session.initial));
   assert.deepEqual(session.timing, { revision: 0, phase: "ready", elapsedMs: 0 });
@@ -240,12 +245,13 @@ test("protocol 2 issues a committed game, derives its result, and publishes by r
   const initialFinish = await harness.dispatch(`/sessions/${session.id}/finish`, body);
   assert.equal(initialFinish.status, 202);
   const frozenJob = harness.database.sqlite.prepare(`
-    SELECT finished_at, elapsed_ms, input_cursor, stage
+    SELECT finished_at, elapsed_ms, input_cursor, continuation_limit, stage
     FROM verified_completion_jobs WHERE session_id = ?
   `).get(session.id);
   assert.equal(frozenJob.finished_at, new Date(harness.currentTime()).toISOString());
   assert.equal(frozenJob.elapsed_ms, 2_500);
   assert.equal(frozenJob.input_cursor, 0);
+  assert.equal(frozenJob.continuation_limit, 256);
   assert.equal(frozenJob.stage, "replay");
   const timingAfterFinish = await harness.dispatch(`/sessions/${session.id}/timing`, {
     session: { id: session.id, token: session.token },
@@ -418,6 +424,7 @@ test("restore returns the original issuance only for an acknowledged ready or pa
   assert.equal(readyDescriptor.expiresAt, session.expiresAt);
   assert.deepEqual(readyDescriptor.initial, session.initial);
   assert.deepEqual(readyDescriptor.timing, session.timing);
+  assert.equal(readyDescriptor.limits.continuations, 256);
 
   assert.equal((await resumeGame(harness, session)).status, 200);
   harness.advance(1_500);
@@ -717,6 +724,55 @@ test("progress is scoped, immutable, expiring, and exact-retry idempotent", asyn
   assert.equal(harness.database.sqlite.prepare(
     "SELECT expires_at FROM verified_completion_jobs WHERE session_id = ?"
   ).get(expiring.id).expires_at, originalExpiry);
+});
+
+test("firstCell is flattened and continuation limits are stored, signed, and enforced", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const objectCell = await harness.dispatch("/sessions", versioned({
+    game: "minesweeper",
+    config: { difficulty: "beginner" },
+    buildVersion,
+    firstCell: { row: 0, column: 0 },
+  }));
+  assert.equal(objectCell.status, 400);
+
+  const signed = await issue(harness);
+  assert.equal((await resumeGame(harness, signed)).status, 200);
+  harness.advance(2_000);
+  const signedStart = await harness.dispatch(
+    `/sessions/${signed.id}/finish`,
+    finishBody(signed, { eventId: "event-signed-continuation-limit" })
+  );
+  const signedProgress = (await signedStart.json()).progress;
+  harness.database.sqlite.prepare(`
+    UPDATE verified_completion_jobs SET continuation_limit = 255 WHERE session_id = ?
+  `).run(signed.id);
+  const changedLimit = await harness.dispatch(`/sessions/${signed.id}/finish/continue`, {
+    session: { id: signed.id, token: signed.token },
+    progress: signedProgress,
+  });
+  assert.equal(changedLimit.status, 403);
+
+  const capped = await issue(harness);
+  assert.equal((await resumeGame(harness, capped)).status, 200);
+  harness.advance(2_000);
+  const cappedStart = await harness.dispatch(
+    `/sessions/${capped.id}/finish`,
+    finishBody(capped, { eventId: "event-capped-continuations" })
+  );
+  const cappedProgress = (await cappedStart.json()).progress;
+  harness.database.sqlite.prepare(`
+    UPDATE verified_completion_jobs SET request_count = continuation_limit WHERE session_id = ?
+  `).run(capped.id);
+  const exhausted = await harness.dispatch(`/sessions/${capped.id}/finish/continue`, {
+    session: { id: capped.id, token: capped.token },
+    progress: cappedProgress,
+  });
+  assert.equal(exhausted.status, 413);
+  assert.throws(() => harness.database.sqlite.prepare(`
+    UPDATE verified_completion_jobs SET continuation_limit = 257 WHERE session_id = ?
+  `).run(capped.id), /CHECK constraint failed/);
 });
 
 test("job and checkpoint failures roll back without partial progress", async (t) => {
