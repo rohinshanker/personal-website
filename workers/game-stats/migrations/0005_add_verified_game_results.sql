@@ -20,13 +20,19 @@ ALTER TABLE game_stat_sessions ADD COLUMN initial_commitment TEXT;
 ALTER TABLE game_stat_sessions ADD COLUMN scope_digest TEXT;
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_revision INTEGER NOT NULL DEFAULT 0
-  CHECK (timing_revision >= 0);
+  CHECK (timing_revision BETWEEN 0 AND 8192);
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_phase TEXT NOT NULL DEFAULT 'legacy'
   CHECK (timing_phase IN ('legacy', 'ready', 'running', 'paused', 'finishing', 'finished'));
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_elapsed_ms INTEGER NOT NULL DEFAULT 0
   CHECK (timing_elapsed_ms >= 0);
+ALTER TABLE game_stat_sessions
+  ADD COLUMN timing_countdown_ms INTEGER NOT NULL DEFAULT 0
+  CHECK (timing_countdown_ms >= 0);
+ALTER TABLE game_stat_sessions
+  ADD COLUMN timing_resume_count INTEGER NOT NULL DEFAULT 0
+  CHECK (timing_resume_count BETWEEN 0 AND 8192);
 ALTER TABLE game_stat_sessions ADD COLUMN timing_updated_at TEXT;
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_input_count INTEGER NOT NULL DEFAULT 0
@@ -42,13 +48,15 @@ CREATE UNIQUE INDEX game_stat_sessions_completion_idx
 
 CREATE TABLE verified_timing_transitions (
   session_id TEXT NOT NULL,
-  revision INTEGER NOT NULL CHECK (revision > 0),
+  revision INTEGER NOT NULL CHECK (revision BETWEEN 1 AND 8192),
   operation TEXT NOT NULL CHECK (operation IN ('pause', 'resume')),
   request_digest TEXT NOT NULL,
   input_count INTEGER NOT NULL CHECK (input_count >= 0),
   input_hash TEXT NOT NULL,
   phase TEXT NOT NULL CHECK (phase IN ('running', 'paused')),
   elapsed_ms INTEGER NOT NULL CHECK (elapsed_ms >= 0),
+  countdown_ms INTEGER NOT NULL CHECK (countdown_ms >= 0),
+  resume_count INTEGER NOT NULL CHECK (resume_count BETWEEN 0 AND 8192),
   observed_at TEXT NOT NULL,
   PRIMARY KEY (session_id, revision)
 ) STRICT;
@@ -69,7 +77,7 @@ CREATE TABLE verified_game_completions (
   puzzle_key TEXT,
   initial_commitment TEXT NOT NULL,
   replay_digest TEXT NOT NULL,
-  timing_revision INTEGER NOT NULL CHECK (timing_revision >= 0),
+  timing_revision INTEGER NOT NULL CHECK (timing_revision BETWEEN 0 AND 8192),
   elapsed_ms INTEGER NOT NULL CHECK (elapsed_ms >= 0),
   finished_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
@@ -86,7 +94,7 @@ CREATE TABLE verified_completion_jobs (
   transcript_json TEXT NOT NULL,
   rules_version INTEGER NOT NULL,
   replay_version INTEGER NOT NULL,
-  timing_revision INTEGER NOT NULL CHECK (timing_revision >= 0),
+  timing_revision INTEGER NOT NULL CHECK (timing_revision BETWEEN 0 AND 8192),
   timing_verified_revision INTEGER NOT NULL DEFAULT 0
     CHECK (timing_verified_revision >= 0),
   terminal_tick INTEGER,
@@ -103,6 +111,7 @@ CREATE TABLE verified_completion_jobs (
   continuation_limit INTEGER NOT NULL
     CHECK (continuation_limit BETWEEN 1 AND 8192),
   resume_count INTEGER NOT NULL CHECK (resume_count > 0),
+  countdown_ms INTEGER NOT NULL CHECK (countdown_ms >= 0),
   elapsed_ms INTEGER NOT NULL CHECK (elapsed_ms >= 0),
   finished_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
@@ -112,7 +121,8 @@ CREATE TABLE verified_completion_jobs (
   updated_at TEXT NOT NULL,
   CHECK (json_valid(transcript_json)),
   CHECK (json_type(transcript_json, '$.inputs') = 'array'),
-  CHECK (json_array_length(transcript_json, '$.inputs') = input_count)
+  CHECK (json_array_length(transcript_json, '$.inputs') = input_count),
+  CHECK (timing_verified_revision <= timing_revision)
 ) STRICT;
 
 CREATE TABLE verified_completion_progress (

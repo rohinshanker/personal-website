@@ -14,6 +14,7 @@ import {
   MAX_VERIFICATION_CHECKPOINT_BYTES,
   MAX_VERIFICATION_CONTINUATIONS_PER_WINDOW,
   MAX_VERIFICATION_JOB_CONTINUATIONS,
+  MAX_VERIFIED_TIMING_REVISIONS,
   SNAKE_RESUME_COUNTDOWN_MS,
   SNAKE_TICK_MS,
   getGameStatsDatabase,
@@ -48,6 +49,7 @@ const VERSION_FIELDS = Object.freeze({
 const limitsFor = (game) => Object.freeze({
   ...commonRules.GAME_RULE_LIMITS[game],
   continuations: MAX_VERIFICATION_JOB_CONTINUATIONS,
+  timingRevisions: MAX_VERIFIED_TIMING_REVISIONS,
 });
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
 const SESSION_ID_PATTERN = /^[A-Za-z0-9-]{8,80}$/;
@@ -70,32 +72,31 @@ INSERT INTO game_stat_sessions (
   id, game, config_json, build_version, ip_hash, issued_at, expires_at,
   result_protocol, rules_version, replay_version, generator_version,
   initial_json, initial_commitment, scope_digest, timing_revision,
-  timing_phase, timing_elapsed_ms, timing_updated_at, timing_input_count,
-  timing_input_hash
-) VALUES (?, ?, ?, ?, ?, ?, ?, 2, ?, ?, ?, ?, ?, ?, 0, 'ready', 0, ?, 0, ?)
+  timing_phase, timing_elapsed_ms, timing_countdown_ms, timing_resume_count,
+  timing_updated_at, timing_input_count, timing_input_hash
+) VALUES (?, ?, ?, ?, ?, ?, ?, 2, ?, ?, ?, ?, ?, ?, 0, 'ready', 0, 0, 0, ?, 0, ?)
 `;
 const SELECT_VERIFIED_SESSION_SQL = `
 SELECT id, game, config_json, build_version, ip_hash, issued_at, expires_at,
   consumed_at, result_protocol, rules_version, replay_version,
   generator_version, initial_json, initial_commitment, scope_digest,
-  timing_revision, timing_phase, timing_elapsed_ms, timing_updated_at,
-  timing_input_count, timing_input_hash, timing_request_digest, completion_id,
-  finish_job_id
+  timing_revision, timing_phase, timing_elapsed_ms, timing_countdown_ms,
+  timing_resume_count, timing_updated_at, timing_input_count, timing_input_hash,
+  timing_request_digest, completion_id, finish_job_id
 FROM game_stat_sessions
 WHERE id = ?
 `;
-const SELECT_TIMING_TRANSITIONS_SQL = `
+const SELECT_TIMING_TRANSITION_SQL = `
 SELECT revision, operation, request_digest, input_count, input_hash, phase,
-  elapsed_ms, observed_at
+  elapsed_ms, countdown_ms, resume_count, observed_at
 FROM verified_timing_transitions
-WHERE session_id = ?
-ORDER BY revision
+WHERE session_id = ? AND revision = ?
 `;
 const UPDATE_TIMING_SQL = `
 UPDATE game_stat_sessions
 SET timing_revision = ?, timing_phase = ?, timing_elapsed_ms = ?,
-  timing_updated_at = ?, timing_input_count = ?, timing_input_hash = ?,
-  timing_request_digest = ?
+  timing_countdown_ms = ?, timing_resume_count = ?, timing_updated_at = ?,
+  timing_input_count = ?, timing_input_hash = ?, timing_request_digest = ?
 WHERE id = ? AND result_protocol = 2 AND consumed_at IS NULL
   AND expires_at > ? AND timing_revision = ? AND timing_phase = ?
   AND timing_input_count <= ?
@@ -103,9 +104,9 @@ WHERE id = ? AND result_protocol = 2 AND consumed_at IS NULL
 const INSERT_TIMING_TRANSITION_SQL = `
 INSERT INTO verified_timing_transitions (
   session_id, revision, operation, request_digest, input_count, input_hash,
-  phase, elapsed_ms, observed_at
+  phase, elapsed_ms, countdown_ms, resume_count, observed_at
 )
-SELECT id, ?, ?, ?, ?, ?, ?, ?, ?
+SELECT id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 FROM game_stat_sessions
 WHERE id = ? AND timing_revision = ? AND timing_request_digest = ?
 `;
@@ -170,21 +171,23 @@ SELECT completion_id FROM game_events WHERE id = ?
 const START_FINISHING_SQL = `
 UPDATE game_stat_sessions
 SET timing_phase = 'finishing', timing_elapsed_ms = ?, timing_updated_at = ?,
-  finish_job_id = ?
+  timing_countdown_ms = ?, finish_job_id = ?
 WHERE id = ? AND result_protocol = 2 AND consumed_at IS NULL
   AND completion_id IS NULL AND finish_job_id IS NULL AND expires_at > ?
   AND rules_version = ? AND replay_version = ? AND generator_version = ?
   AND initial_commitment = ? AND scope_digest = ?
   AND timing_revision = ? AND timing_phase = ? AND timing_input_count = ?
+  AND timing_countdown_ms = ? AND timing_resume_count = ?
 `;
 const INSERT_COMPLETION_JOB_SQL = `
 INSERT INTO verified_completion_jobs (
   id, session_id, event_id, request_digest, transcript_digest, transcript_json,
   rules_version, replay_version, timing_revision, terminal_tick, input_count,
-  progress_token, checkpoint_digest, continuation_limit, resume_count, elapsed_ms, finished_at,
-  expires_at, updated_at
+  progress_token, checkpoint_digest, continuation_limit, resume_count,
+  countdown_ms, elapsed_ms, finished_at, expires_at, updated_at
 )
-SELECT ?, id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, expires_at, ?
+SELECT ?, id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, timing_resume_count,
+  timing_countdown_ms, timing_elapsed_ms, ?, expires_at, ?
 FROM game_stat_sessions
 WHERE id = ? AND finish_job_id = ? AND timing_phase = 'finishing'
 `;
@@ -201,7 +204,8 @@ SELECT id, session_id, event_id, request_digest, transcript_digest, transcript_j
   rules_version, replay_version, timing_revision, timing_verified_revision,
   terminal_tick, input_count, input_cursor, tick_cursor,
   state_json, work_used, progress_revision, progress_token, checkpoint_digest,
-  request_count, continuation_limit, resume_count, elapsed_ms, finished_at, expires_at, stage,
+  request_count, continuation_limit, resume_count, countdown_ms, elapsed_ms,
+  finished_at, expires_at, stage,
   completion_id, updated_at
 FROM verified_completion_jobs
 WHERE session_id = ?
@@ -237,11 +241,6 @@ FROM (
   WHERE job_id = ? AND end_cursor <= ?
   ORDER BY start_cursor
 )
-`;
-const SELECT_RESUME_COUNT_SQL = `
-SELECT COUNT(*) AS count
-FROM verified_timing_transitions
-WHERE session_id = ? AND operation = 'resume' AND revision <= ?
 `;
 const SELECT_JOB_INPUTS_SQL = `
 WITH RECURSIVE indexes(value) AS (
@@ -532,6 +531,9 @@ const readTimingRequest = (rawPayload) => {
     throw new HttpError(400, "Invalid session proof");
   }
   commonRules.assertInteger(rawPayload.expectedRevision, 0, 1_000_000, "timing revision");
+  if (rawPayload.expectedRevision >= MAX_VERIFIED_TIMING_REVISIONS) {
+    throw replayLimitError("Game timing revision limit exceeded");
+  }
   commonRules.assertInteger(rawPayload.inputCount, 0, 16_384, "timing input count");
   if (!["pause", "resume"].includes(rawPayload.operation)) {
     throw new HttpError(400, "Invalid timing operation");
@@ -572,8 +574,11 @@ export const updateVerifiedTiming = async (
   const requestDigest = await digestCanonical(digestPayload);
   const nextRevision = payload.expectedRevision + 1;
   const database = getGameStatsDatabase(env);
-  const prior = await database.prepare(SELECT_TIMING_TRANSITIONS_SQL).bind(sessionId).all();
-  const existing = (prior.results || []).find((row) => Number(row.revision) === nextRevision);
+  const findExisting = () => database
+    .prepare(SELECT_TIMING_TRANSITION_SQL)
+    .bind(sessionId, nextRevision)
+    .first();
+  const existing = await findExisting();
   if (existing) {
     if (existing.request_digest !== requestDigest) {
       throw new HttpError(409, "Timing revision already has different evidence");
@@ -594,20 +599,35 @@ export const updateVerifiedTiming = async (
   if (!resumeAllowed && !pauseAllowed) {
     throw new HttpError(409, "Timing operation is not valid in the current phase");
   }
+  if (payload.operation === "resume" && (
+    payload.inputCount !== Number(session.timing_input_count) ||
+    payload.inputHash !== session.timing_input_hash
+  )) {
+    throw new HttpError(409, "Resume must preserve the acknowledged replay prefix");
+  }
   if (payload.inputCount < Number(session.timing_input_count)) {
     throw new HttpError(400, "Replay prefix cannot move backwards");
   }
   const observedAt = nowDate(dependencies);
-  const elapsedMs = Number(session.timing_elapsed_ms) + (
-    payload.operation === "pause"
-      ? Math.max(0, observedAt.getTime() - Date.parse(session.timing_updated_at))
+  const activeIntervalMs = payload.operation === "pause"
+    ? Math.max(0, observedAt.getTime() - Date.parse(session.timing_updated_at))
+    : 0;
+  const elapsedMs = Number(session.timing_elapsed_ms) + activeIntervalMs;
+  const countdownMs = Number(session.timing_countdown_ms) + (
+    session.game === "snake" && payload.operation === "pause"
+      ? Math.min(SNAKE_RESUME_COUNTDOWN_MS, activeIntervalMs)
       : 0
+  );
+  const resumeCount = Number(session.timing_resume_count) + (
+    payload.operation === "resume" ? 1 : 0
   );
   const statements = [
     database.prepare(UPDATE_TIMING_SQL).bind(
       nextRevision,
       nextPhase,
       elapsedMs,
+      countdownMs,
+      resumeCount,
       observedAt.toISOString(),
       payload.inputCount,
       payload.inputHash,
@@ -626,6 +646,8 @@ export const updateVerifiedTiming = async (
       payload.inputHash,
       nextPhase,
       elapsedMs,
+      countdownMs,
+      resumeCount,
       observedAt.toISOString(),
       sessionId,
       nextRevision,
@@ -636,14 +658,12 @@ export const updateVerifiedTiming = async (
   try {
     results = await database.batch(statements);
   } catch (error) {
-    const rows = await database.prepare(SELECT_TIMING_TRANSITIONS_SQL).bind(sessionId).all();
-    const duplicate = (rows.results || []).find((row) => Number(row.revision) === nextRevision);
+    const duplicate = await findExisting();
     if (duplicate?.request_digest === requestDigest) return timingResponse(duplicate);
     throw error;
   }
   if (results.some((result) => getChanges(result) !== 1)) {
-    const rows = await database.prepare(SELECT_TIMING_TRANSITIONS_SQL).bind(sessionId).all();
-    const duplicate = (rows.results || []).find((row) => Number(row.revision) === nextRevision);
+    const duplicate = await findExisting();
     if (duplicate?.request_digest === requestDigest) return timingResponse(duplicate);
     throw new HttpError(409, "Timing state changed concurrently");
   }
@@ -1033,22 +1053,22 @@ export const finishVerifiedSession = async (
     "verification-attempts",
     MAX_VERIFICATION_ATTEMPTS_PER_WINDOW
   );
-  const elapsedMs = Number(session.timing_elapsed_ms) + (
-    finishFromPaused
-      ? 0
-      : Math.max(0, finished.getTime() - Date.parse(session.timing_updated_at))
+  const activeIntervalMs = finishFromPaused
+    ? 0
+    : Math.max(0, finished.getTime() - Date.parse(session.timing_updated_at));
+  const elapsedMs = Number(session.timing_elapsed_ms) + activeIntervalMs;
+  const countdownMs = Number(session.timing_countdown_ms) + (
+    session.game === "snake"
+      ? Math.min(SNAKE_RESUME_COUNTDOWN_MS, activeIntervalMs)
+      : 0
   );
-  const resumeCount = Number((await database
-    .prepare(SELECT_RESUME_COUNT_SQL)
-    .bind(sessionId, payload.timingRevision)
-    .first())?.count || 0);
+  const resumeCount = Number(session.timing_resume_count);
   if (resumeCount < 1) throw new HttpError(409, "Timing evidence is incomplete");
   if (session.game === "snake") {
     if (!Number.isSafeInteger(payload.terminalTick)) {
       throw new HttpError(400, "Snake completion requires a terminal tick");
     }
-    const requiredMs =
-      SNAKE_RESUME_COUNTDOWN_MS * resumeCount + payload.terminalTick * SNAKE_TICK_MS;
+    const requiredMs = countdownMs + payload.terminalTick * SNAKE_TICK_MS;
     if (elapsedMs < requiredMs) throw new HttpError(425, "Snake replay completed too quickly");
   } else if (payload.terminalTick !== undefined) {
     throw new HttpError(400, "Terminal ticks are only valid for Snake");
@@ -1082,6 +1102,7 @@ export const finishVerifiedSession = async (
   const startParams = [
     elapsedMs,
     finishedAt,
+    countdownMs,
     jobId,
     sessionId,
     finishedAt,
@@ -1093,6 +1114,8 @@ export const finishVerifiedSession = async (
     payload.timingRevision,
     finishTimingPhase,
     session.timing_input_count,
+    session.timing_countdown_ms,
+    resumeCount,
   ];
   const jobParams = [
     jobId,
@@ -1108,8 +1131,6 @@ export const finishVerifiedSession = async (
     initialCheckpoint.progress_token,
     initialCheckpoint.checkpoint_digest,
     MAX_VERIFICATION_JOB_CONTINUATIONS,
-    resumeCount,
-    elapsedMs,
     finishedAt,
     finishedAt,
     sessionId,

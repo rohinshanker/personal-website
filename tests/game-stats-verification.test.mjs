@@ -14,6 +14,7 @@ import {
   digestCanonical,
   replayPrefixHash,
 } from "../workers/game-stats/src/verified-results.mjs";
+import { MAX_VERIFIED_TIMING_REVISIONS } from "../workers/game-stats/src/constants.mjs";
 import { SqliteD1Database, applyGameStatsMigrations } from "./helpers/sqlite-d1.mjs";
 
 const migrationPaths = [
@@ -244,6 +245,7 @@ test("protocol 2 issues a committed game, derives its result, and publishes by r
   assert.equal(session.gameId, session.id);
   assert.equal(session.initial.firstCell, 0);
   assert.equal(session.limits.continuations, 8192);
+  assert.equal(session.limits.timingRevisions, MAX_VERIFIED_TIMING_REVISIONS);
   assert.match(session.initialCommitment, /^[a-f0-9]{64}$/);
   assert.equal(session.initialCommitment, await digestCanonical(session.initial));
   assert.deepEqual(session.timing, { revision: 0, phase: "ready", elapsedMs: 0 });
@@ -441,6 +443,61 @@ test("pause and resume bind every acknowledged replay prefix and exclude paused 
   assert.equal(result.completion.event.metric, 3);
   assert.equal(result.completion.event.puzzleId, session.id);
   assert.equal(result.completion.event.hintBucket, "noHints");
+});
+
+test("resume cannot admit inputs outside a server-observed active interval", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const firstInput = [{ seq: 1, op: "advance", amount: 1 }];
+  const allInputs = [...firstInput, { seq: 2, op: "advance", amount: 1 }];
+
+  const ready = await issue(harness, "sudoku", { difficulty: "easy" });
+  const preStart = await resumeGame(harness, ready, 0, firstInput);
+  assert.equal(preStart.status, 409);
+  assert.match((await preStart.json()).error, /acknowledged replay prefix/);
+  assert.deepEqual({ ...harness.database.sqlite.prepare(`
+    SELECT timing_revision, timing_phase, timing_elapsed_ms
+    FROM game_stat_sessions WHERE id = ?
+  `).get(ready.id) }, {
+    timing_revision: 0,
+    timing_phase: "ready",
+    timing_elapsed_ms: 0,
+  });
+
+  const paused = await issue(harness, "sudoku", { difficulty: "easy" });
+  assert.equal((await resumeGame(harness, paused)).status, 200);
+  harness.advance(500);
+  const firstHash = await replayPrefixHash(firstInput, 1);
+  assert.equal((await harness.dispatch(`/sessions/${paused.id}/timing`, {
+    session: { id: paused.id, token: paused.token },
+    expectedRevision: 1,
+    operation: "pause",
+    inputCount: 1,
+    inputHash: firstHash,
+  })).status, 200);
+
+  const extended = await resumeGame(harness, paused, 2, allInputs);
+  assert.equal(extended.status, 409);
+  const mutated = [{ seq: 1, op: "advance", amount: 2 }];
+  const changed = await resumeGame(harness, paused, 2, mutated);
+  assert.equal(changed.status, 409);
+  assert.deepEqual({ ...harness.database.sqlite.prepare(`
+    SELECT timing_revision, timing_phase, timing_elapsed_ms, timing_input_count,
+      timing_input_hash
+    FROM game_stat_sessions WHERE id = ?
+  `).get(paused.id) }, {
+    timing_revision: 2,
+    timing_phase: "paused",
+    timing_elapsed_ms: 500,
+    timing_input_count: 1,
+    timing_input_hash: firstHash,
+  });
+
+  const resumed = await resumeGame(harness, paused, 2, firstInput);
+  assert.equal(resumed.status, 200);
+  const retry = await resumeGame(harness, paused, 2, firstInput);
+  assert.equal(retry.status, 200);
+  assert.deepEqual(await retry.json(), await resumed.clone().json());
 });
 
 test("Sudoku uses the engine assistance enum and keeps uncapped canonical seconds", async (t) => {
@@ -960,9 +1017,11 @@ test("replay validation rejects ordering, truncation, expiry, cross-session reus
   assert.match(expiredError.error, /expired/);
 });
 
-test("Snake terminal ticks require enough server-observed running time", async (t) => {
+test("Snake charges each observed active interval only for its actual countdown time", async (t) => {
   const harness = createHarness();
   t.after(() => harness.database.close());
+
+  // A single uninterrupted countdown still requires the full 900ms plus every tick.
   const session = await issue(harness, "snake", { boardSize: "10" });
   assert.equal((await resumeGame(harness, session)).status, 200);
   const body = finishBody(session, {
@@ -970,19 +1029,21 @@ test("Snake terminal ticks require enough server-observed running time", async (
     inputs: [],
     terminalTick: 2,
   });
+  harness.advance(900 + 2 * 118 - 1);
   const tooFast = await harness.dispatch(`/sessions/${session.id}/finish`, body);
   assert.equal(tooFast.status, 425);
-  harness.advance(1_200);
+  harness.advance(1);
   const finished = await finishGame(harness, session, body);
   assert.equal(finished.status, 200, await finished.clone().text());
   const completion = (await finished.json()).completion;
   assert.equal(completion.event.metric, 2);
   assert.equal(completion.event.metricKind, "score");
 
+  // A pause may abandon a countdown early. Charge the observed 100ms, not 900ms.
   const resumed = await issue(harness, "snake", { boardSize: "10" });
   const emptyHash = await replayPrefixHash([], 0);
   assert.equal((await resumeGame(harness, resumed)).status, 200);
-  harness.advance(500);
+  harness.advance(100);
   assert.equal((await harness.dispatch(`/sessions/${resumed.id}/timing`, {
     session: { id: resumed.id, token: resumed.token },
     expectedRevision: 1,
@@ -990,20 +1051,99 @@ test("Snake terminal ticks require enough server-observed running time", async (
     inputCount: 0,
     inputHash: emptyHash,
   })).status, 200);
+  assert.deepEqual({ ...harness.database.sqlite.prepare(`
+    SELECT timing_elapsed_ms, timing_countdown_ms, timing_resume_count
+    FROM game_stat_sessions WHERE id = ?
+  `).get(resumed.id) }, {
+    timing_elapsed_ms: 100,
+    timing_countdown_ms: 100,
+    timing_resume_count: 1,
+  });
   assert.equal((await resumeGame(harness, resumed, 2)).status, 200);
-  harness.advance(1_500);
+  harness.advance(900 + 2 * 118);
   const resumedBody = finishBody(resumed, {
     eventId: "event-snake-resume-countdown",
     inputs: [],
     terminalTick: 2,
     timingRevision: 3,
   });
-  assert.equal((await harness.dispatch(
-    `/sessions/${resumed.id}/finish`,
-    resumedBody
-  )).status, 425);
-  harness.advance(36);
   assert.equal((await finishGame(harness, resumed, resumedBody)).status, 200);
+  assert.deepEqual({ ...harness.database.sqlite.prepare(`
+    SELECT resume_count, countdown_ms, elapsed_ms
+    FROM verified_completion_jobs WHERE session_id = ?
+  `).get(resumed.id) }, {
+    resume_count: 2,
+    countdown_ms: 1_000,
+    elapsed_ms: 1_236,
+  });
+
+  // Ordinary resumptions that each reach 900ms retain the full countdown charge.
+  const full = await issue(harness, "snake", { boardSize: "10" });
+  assert.equal((await resumeGame(harness, full)).status, 200);
+  harness.advance(900);
+  assert.equal((await harness.dispatch(`/sessions/${full.id}/timing`, {
+    session: { id: full.id, token: full.token },
+    expectedRevision: 1,
+    operation: "pause",
+    inputCount: 0,
+    inputHash: emptyHash,
+  })).status, 200);
+  assert.equal((await resumeGame(harness, full, 2)).status, 200);
+  harness.advance(900 + 2 * 118 - 1);
+  const fullBody = finishBody(full, {
+    eventId: "event-snake-full-resume-countdown",
+    inputs: [],
+    terminalTick: 2,
+    timingRevision: 3,
+  });
+  assert.equal((await harness.dispatch(`/sessions/${full.id}/finish`, fullBody)).status, 425);
+  harness.advance(1);
+  assert.equal((await finishGame(harness, full, fullBody)).status, 200);
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT countdown_ms FROM verified_completion_jobs WHERE session_id = ?
+  `).get(full.id).countdown_ms, 1_800);
+});
+
+test("timing history is finite and exact retries use its keyed revision", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const session = await issue(harness, "snake", { boardSize: "10" });
+  assert.equal(session.limits.timingRevisions, MAX_VERIFIED_TIMING_REVISIONS);
+  assert.equal((await resumeGame(harness, session)).status, 200);
+  assert.equal((await resumeGame(harness, session)).status, 200);
+
+  const plan = harness.database.sqlite.prepare(`
+    EXPLAIN QUERY PLAN
+    SELECT revision FROM verified_timing_transitions
+    WHERE session_id = ? AND revision = ?
+  `).all(session.id, 1);
+  assert.match(plan.map((row) => row.detail).join(" "), /session_id=\? AND revision=\?/);
+
+  const capped = await issue(harness, "snake", { boardSize: "10" });
+  harness.database.sqlite.prepare(`
+    UPDATE game_stat_sessions SET timing_revision = ? WHERE id = ?
+  `).run(MAX_VERIFIED_TIMING_REVISIONS, capped.id);
+  const exhausted = await resumeGame(
+    harness,
+    capped,
+    MAX_VERIFIED_TIMING_REVISIONS
+  );
+  await assertErrorCode(exhausted, 413, "replay-limit");
+  assert.throws(() => harness.database.sqlite.prepare(`
+    UPDATE game_stat_sessions SET timing_revision = ? WHERE id = ?
+  `).run(MAX_VERIFIED_TIMING_REVISIONS + 1, capped.id), /CHECK constraint failed/);
+  const emptyHash = await replayPrefixHash([], 0);
+  assert.throws(() => harness.database.sqlite.prepare(`
+    INSERT INTO verified_timing_transitions (
+      session_id, revision, operation, request_digest, input_count, input_hash,
+      phase, elapsed_ms, countdown_ms, resume_count, observed_at
+    ) VALUES (?, ?, 'resume', 'digest', 0, ?, 'running', 0, 0, 1, ?)
+  `).run(
+    capped.id,
+    MAX_VERIFIED_TIMING_REVISIONS + 1,
+    emptyHash,
+    new Date().toISOString()
+  ), /CHECK constraint failed/);
 });
 
 test("progress is scoped, immutable, expiring, and exact-retry idempotent", async (t) => {

@@ -98,6 +98,23 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
     inputHash: emptyHash,
   });
   assert.equal(resumed.status, 200, await resumed.clone().text());
+  now += 100;
+  const paused = await post(`/sessions/${issued.id}/timing`, {
+    session: { id: issued.id, token: issued.token },
+    operation: "pause",
+    expectedRevision: 1,
+    inputCount: 0,
+    inputHash: emptyHash,
+  });
+  assert.equal(paused.status, 200, await paused.clone().text());
+  const restarted = await post(`/sessions/${issued.id}/timing`, {
+    session: { id: issued.id, token: issued.token },
+    operation: "resume",
+    expectedRevision: 2,
+    inputCount: 0,
+    inputHash: emptyHash,
+  });
+  assert.equal(restarted.status, 200, await restarted.clone().text());
 
   const state = globalThis.homeSnakeRules.initial(issued.initial);
   const inputs = [];
@@ -141,16 +158,19 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
     gameId: issued.id,
     rulesVersion: 1,
     replayVersion: 1,
-    timingRevision: 1,
+    timingRevision: 3,
     inputs,
     terminalTick: state.tick,
   };
   assert.ok(new TextEncoder().encode(JSON.stringify(finishBody)).byteLength < 256 * 1024);
   let response = await post(`/sessions/${issued.id}/finish`, finishBody);
   const frozen = await database.prepare(`
-    SELECT elapsed_ms, finished_at FROM verified_completion_jobs WHERE session_id = ?
+    SELECT elapsed_ms, countdown_ms, resume_count, finished_at
+    FROM verified_completion_jobs WHERE session_id = ?
   `).bind(issued.id).first();
-  assert.equal(Number(frozen.elapsed_ms), 900 + state.tick * 118);
+  assert.equal(Number(frozen.elapsed_ms), 100 + 900 + state.tick * 118);
+  assert.equal(Number(frozen.countdown_ms), 1_000);
+  assert.equal(Number(frozen.resume_count), 2);
   const wallSamples = [];
   let continuationCount = 0;
   while (response.status === 202) {

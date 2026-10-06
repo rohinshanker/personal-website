@@ -88,6 +88,7 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
   assert.equal(issuedResponse.status, 201, await issuedResponse.clone().text());
   const issued = await issuedResponse.json();
   assert.equal(issued.limits.continuations, 8192);
+  assert.equal(issued.limits.timingRevisions, 8192);
   const emptyHash = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode("[]")
