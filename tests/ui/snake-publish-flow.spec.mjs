@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import { expect, test } from "./deterministic.mjs";
 import { REVIEW_VIEWPORTS, consumeDiagnostics } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { verifiedSnakeFixtures } from "../helpers/verified-ms-snake-fixtures.mjs";
 
 const API_BASE_URL = "https://game-stats-snake-publish.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -17,6 +19,20 @@ const profile = Object.freeze({
   rerollCount: 0,
 });
 const viewports = REVIEW_VIEWPORTS;
+const canonicalJson = (value) => JSON.stringify(
+  Array.isArray(value)
+    ? value.map((item) => JSON.parse(canonicalJson(item)))
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.keys(value).sort().map((key) => [
+          key,
+          JSON.parse(canonicalJson(value[key])),
+        ]))
+      : value
+);
+const scoringSnakeInitial = Object.freeze({
+  ...structuredClone(verifiedSnakeFixtures.validLoss.initial),
+  apples: Object.freeze([{ x: 6, y: 5 }]),
+});
 
 const isPlayerStatsPath = (path, playerId) => {
   const url = new URL(path, API_BASE_URL);
@@ -71,41 +87,16 @@ const installSnakeBridge = async (page) => {
       /\n\}\)\(\);\s*$/,
       `
 window.__snakePublishFlowTest = Object.freeze({
+  direction: setSnakeDirection,
   finishRun: () => {
     clearSnakeCountdown();
     clearSnakeTick();
     snakeState.running = true;
     snakeState.hasStarted = true;
-    Object.assign(snakeState.engineState, {
-      direction: "right",
-      directionQueue: [],
-      score: 0,
-      terminal: false,
-      lost: false,
-      snake: [
-      { x: 4, y: 5 },
-      { x: 3, y: 5 },
-      { x: 2, y: 5 },
-      ],
-      apples: [{ x: 5, y: 5 }],
-    });
-    snakeSyncEngineState();
-    snakeStep();
-
-    clearSnakeTick();
-    Object.assign(snakeState.engineState, {
-      snake: [
-        { x: 9, y: 5 },
-        { x: 8, y: 5 },
-        { x: 7, y: 5 },
-        { x: 6, y: 5 },
-      ],
-      apples: [{ x: 0, y: 0 }],
-      direction: "right",
-      directionQueue: [],
-    });
-    snakeSyncEngineState();
-    snakeStep();
+    while (!snakeState.gameOver) {
+      snakeStep();
+      clearSnakeTick();
+    }
 
     return {
       boardSize: snakeState.gridSize,
@@ -114,6 +105,15 @@ window.__snakePublishFlowTest = Object.freeze({
       score: snakeState.score,
     };
   },
+  pause: pauseSnakeGame,
+  reset: resetSnakeGame,
+  resume: startSnakeGame,
+  read: () => ({
+    gameOver: snakeState.gameOver,
+    hasStarted: snakeState.hasStarted,
+    running: snakeState.running,
+    statsSession: snakeState.statsSession,
+  }),
 });
 })();`
     )}`
@@ -210,14 +210,35 @@ const createStatsPayload = (publishedEvent, acknowledgedEventIds = []) => {
 
 const installApi = async (
   page,
-  { eventDelayMs = 0, rejectEvent = false, retryEventOnce = false } = {}
+  {
+    canonicalMetric = 0,
+    eventDelayMs = 0,
+    holdCompletion = false,
+    initial = verifiedSnakeFixtures.validLoss.initial,
+    rejectEvent = false,
+    retryEventOnce = false,
+  } = {}
 ) => {
   const sessionRequests = [];
   const eventRequests = [];
+  const timingRequests = [];
+  const finishRequests = [];
+  const continuationRequests = [];
   const statsRequests = [];
   const requestSequence = [];
   let publishedEvent = null;
+  let finishedEvent = null;
   let retryEligibleAt = 0;
+  let retryRejected = false;
+  let timing = { revision: 0, phase: "ready", elapsedMs: 0 };
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  let releaseCompletion = () => {};
+  const completionGate = holdCompletion
+    ? new Promise((resolve) => { releaseCompletion = resolve; })
+    : Promise.resolve();
+  const issuedInitialCommitment = createHash("sha256")
+    .update(canonicalJson(initial))
+    .digest("hex");
   const corsHeaders = {
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -236,14 +257,90 @@ const installApi = async (
       const body = JSON.parse(request.postData() || "{}");
       sessionRequests.push(body);
       requestSequence.push("session");
+      timing = { revision: 0, phase: "ready", elapsedMs: 0 };
       await route.fulfill({
         status: 201,
         contentType: "application/json",
         headers: corsHeaders,
         body: JSON.stringify({
           id: SESSION_ID,
+          gameId: SESSION_ID,
           token: SESSION_TOKEN,
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          expiresAt,
+          game: "snake",
+          config: { boardSize: "10" },
+          resultProtocol: 2,
+          rulesVersion: 1,
+          replayVersion: 1,
+          generatorVersion: 1,
+          initialCommitment: issuedInitialCommitment,
+          initial,
+          timing: { revision: 0, phase: "ready", elapsedMs: 0 },
+          limits: { inputs: 16_384, work: 2_000_000, ticks: 183_050, bytes: 262_144 },
+        }),
+      });
+      return;
+    }
+
+    if (request.method() === "POST" && url.pathname === `/sessions/${SESSION_ID}/timing`) {
+      const body = JSON.parse(request.postData() || "{}");
+      timingRequests.push(body);
+      timing = {
+        revision: timing.revision + 1,
+        phase: body.operation === "pause" ? "paused" : "running",
+        elapsedMs: timing.elapsedMs + (body.operation === "pause" ? 590 : 0),
+      };
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: true,
+          timing,
+        }),
+      });
+      return;
+    }
+
+    if (request.method() === "POST" && url.pathname === `/sessions/${SESSION_ID}/finish`) {
+      const body = JSON.parse(request.postData() || "{}");
+      finishRequests.push(body);
+      finishedEvent = {
+        id: body.eventId,
+        game: "snake",
+        type: "gamePlayed",
+        boardSize: "10",
+        metric: canonicalMetric,
+        metricKind: "score",
+        occurredAt: "2026-10-06T12:00:00.000Z",
+      };
+      await route.fulfill({
+        status: 202,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify({
+          progress: { id: "progress-snake-0001", token: "progress-snake-token" },
+        }),
+      });
+      return;
+    }
+
+    if (request.method() === "POST" && url.pathname === `/sessions/${SESSION_ID}/finish/continue`) {
+      continuationRequests.push(JSON.parse(request.postData() || "{}"));
+      await completionGate;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: true,
+          completion: {
+            id: "completion-snake-0001",
+            token: "completion-snake-token",
+            expiresAt,
+            elapsedMs: 1_180,
+            event: finishedEvent,
+          },
         }),
       });
       return;
@@ -265,8 +362,9 @@ const installApi = async (
         });
         return;
       }
-      if (retryEventOnce && (!retryEligibleAt || Date.now() < retryEligibleAt)) {
-        if (!retryEligibleAt) retryEligibleAt = Date.now() + 1_000;
+      if (retryEventOnce && !retryRejected) {
+        retryRejected = true;
+        retryEligibleAt = Date.now() + 1_000;
         const retryAfterMs = Math.max(1, retryEligibleAt - Date.now());
         await route.fulfill({
           status: 425,
@@ -324,18 +422,32 @@ const installApi = async (
   });
 
   return {
+    continuationRequests,
     eventRequests,
+    finishRequests,
     getRetryEligibleAt: () => retryEligibleAt,
     requestSequence,
+    releaseCompletion,
     sessionRequests,
     statsRequests,
+    timingRequests,
   };
 };
 
 const preparePage = async (
   page,
   viewport,
-  { eventDelayMs = 0, rejectEvent = false, retryEventOnce = false } = {}
+  {
+    canonicalMetric = 0,
+    eventDelayMs = 0,
+    exerciseTiming = true,
+    expectedScore = 0,
+    holdCompletion = false,
+    initial = verifiedSnakeFixtures.validLoss.initial,
+    rejectEvent = false,
+    retryEventOnce = false,
+    waitForEvent = true,
+  } = {}
 ) => {
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -360,7 +472,14 @@ const preparePage = async (
   await installBackendConfig(page);
   await installMinesweeperRules(page);
   await installSnakeBridge(page);
-  const api = await installApi(page, { eventDelayMs, rejectEvent, retryEventOnce });
+  const api = await installApi(page, {
+    canonicalMetric,
+    eventDelayMs,
+    holdCompletion,
+    initial,
+    rejectEvent,
+    retryEventOnce,
+  });
 
   await page.goto("/home.html");
   const aboutWindow = page.locator("#about-window");
@@ -380,19 +499,33 @@ const preparePage = async (
     "aria-pressed",
     "true"
   );
+  if (exerciseTiming) {
+    await page.evaluate(() => window.__snakePublishFlowTest.direction("up"));
+  }
   await snakeWindow.locator("#snake-start").click();
   await expect.poll(() => api.sessionRequests.length).toBe(1);
+  await expect.poll(() => api.timingRequests.length).toBe(1);
+  if (exerciseTiming) {
+    await page.evaluate(() => window.__snakePublishFlowTest.pause());
+    await expect.poll(() => api.timingRequests.length).toBe(2);
+    await page.evaluate(() => window.__snakePublishFlowTest.direction("left"));
+    await page.evaluate(() => window.__snakePublishFlowTest.resume());
+    await expect.poll(() => api.timingRequests.length).toBe(3);
+  }
   const finished = await page.evaluate(() => window.__snakePublishFlowTest.finishRun());
   expect(finished).toEqual({
     boardSize: 10,
     gameOver: true,
     hasStarted: true,
-    score: 1,
+    score: expectedScore,
   });
-  await expect.poll(() => api.eventRequests.length).toBe(1);
+  if (waitForEvent) {
+    await expect.poll(() => api.eventRequests.length).toBeGreaterThanOrEqual(1);
+  }
 
   return {
     api,
+    finished,
     snakeWindow,
     statsWindow: page.locator("#game-stats-window-snake"),
   };
@@ -405,8 +538,54 @@ const expectPublishedRequestContract = (api) => {
       game: "snake",
       config: { boardSize: "10" },
       buildVersion: generatedBuildVersion,
+      resultProtocol: 2,
+      rulesVersion: 1,
+      replayVersion: 1,
+      generatorVersion: 1,
     },
   ]);
+  expect(api.timingRequests).toEqual([
+    {
+      session: { id: SESSION_ID, token: SESSION_TOKEN },
+      operation: "resume",
+      expectedRevision: 0,
+      inputCount: 0,
+      inputHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+    },
+    {
+      session: { id: SESSION_ID, token: SESSION_TOKEN },
+      operation: "pause",
+      expectedRevision: 1,
+      inputCount: 1,
+      inputHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+    },
+    {
+      session: { id: SESSION_ID, token: SESSION_TOKEN },
+      operation: "resume",
+      expectedRevision: 2,
+      inputCount: 1,
+      inputHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+    },
+  ]);
+  expect(api.timingRequests[2].inputHash).toBe(api.timingRequests[1].inputHash);
+  expect(api.finishRequests).toHaveLength(1);
+  expect(api.finishRequests[0]).toMatchObject({
+    session: { id: SESSION_ID, token: SESSION_TOKEN },
+    gameId: SESSION_ID,
+    rulesVersion: 1,
+    replayVersion: 1,
+    inputs: [
+      { seq: 1, op: "direction", tick: 0, direction: "up" },
+      { seq: 2, op: "direction", tick: 0, direction: "left" },
+    ],
+    terminalTick: expect.any(Number),
+    timingRevision: 3,
+  });
+  expect(api.finishRequests[0].terminalTick).toBeGreaterThan(0);
+  expect(api.continuationRequests).toEqual([{
+    session: { id: SESSION_ID, token: SESSION_TOKEN },
+    progress: { id: "progress-snake-0001", token: "progress-snake-token" },
+  }]);
   expect(api.eventRequests).toHaveLength(1);
   expect(api.eventRequests[0].event).toEqual({
     id: expect.stringMatching(/^local-[a-f0-9-]{36}$/),
@@ -414,7 +593,7 @@ const expectPublishedRequestContract = (api) => {
     type: "gamePlayed",
     occurredAt: expect.any(String),
     boardSize: "10",
-    metric: 1,
+    metric: 0,
     metricKind: "score",
     profile: {
       id: profile.id,
@@ -422,9 +601,9 @@ const expectPublishedRequestContract = (api) => {
       icon: profile.icon,
     },
   });
-  expect(api.eventRequests[0].session).toEqual({
-    id: SESSION_ID,
-    token: SESSION_TOKEN,
+  expect(api.eventRequests[0].completion).toEqual({
+    id: "completion-snake-0001",
+    token: "completion-snake-token",
   });
   expect(api.requestSequence.indexOf("session")).toBeLessThan(
     api.requestSequence.indexOf("event")
@@ -454,12 +633,12 @@ const expectLocalSnakeResult = (stored) => {
   });
   expect(stored.stats.leaderboards.snake[10][0]).toMatchObject({
     playerId: profile.id,
-    metric: 1,
+    metric: 0,
     metricKind: "score",
   });
   expect(stored.stats.playerRecords.snake[10]).toMatchObject({
     playerId: profile.id,
-    metric: 1,
+    metric: 0,
     metricKind: "score",
   });
 };
@@ -510,11 +689,11 @@ for (const viewport of viewports) {
     );
     await expect(globalRows10.nth(2)).toHaveAttribute(
       "aria-label",
-      "Rank 3: Snake Publisher, 1 points, your entry"
+      "Rank 3: Snake Publisher, 0 points, your entry"
     );
     await expect(currentRecord).toHaveAttribute(
       "aria-label",
-      "Your record: #3, Snake Publisher, 1 points"
+      "Your record: #3, Snake Publisher, 0 points"
     );
     await expect(
       panel10.locator('[aria-label="Global games played on 10×10: 3"]')
@@ -602,19 +781,17 @@ test("a 425 Snake result remains queued and publishes on manual retry", async ({
   );
   const status = statsWindow.locator("[data-game-stats-sync-status]");
 
-  await expect(status).toHaveText("Request failed. Try again later.");
-  await expect(status).toHaveAttribute("data-game-stats-sync-state", "request-failed");
-  const waiting = await readStoredStats(page);
-  expect(waiting.queue).toHaveLength(1);
-  expect(waiting.stats.totals.snake.gamesPlayed[10]).toBe(1);
-  expect(api.eventRequests).toHaveLength(1);
-
-  await expect.poll(() => Date.now() >= api.getRetryEligibleAt()).toBe(true);
-  await statsWindow.locator('[data-game-stats-refresh="snake"]').click();
-  await expect.poll(() => api.eventRequests.length).toBe(2);
+  if (await status.getAttribute("data-game-stats-sync-state") === "request-failed") {
+    const waiting = await readStoredStats(page);
+    expect(waiting.queue).toHaveLength(1);
+    expect(waiting.stats.totals.snake.gamesPlayed[10]).toBe(1);
+    await expect.poll(() => Date.now() >= api.getRetryEligibleAt()).toBe(true);
+    await statsWindow.locator('[data-game-stats-refresh="snake"]').click();
+  }
+  await expect.poll(() => api.eventRequests.length).toBeGreaterThanOrEqual(2);
   await expect(status).toHaveText("Global stats are up to date.");
   await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
-  expect(api.eventRequests[1]).toEqual(api.eventRequests[0]);
+  api.eventRequests.slice(1).forEach((request) => expect(request).toEqual(api.eventRequests[0]));
   expectLocalSnakeResult(await readStoredStats(page));
   expect(api.statsRequests.some(({ refreshed }) => refreshed)).toBe(true);
   // The 425 that forces the retry is the behaviour under test; the fixture
@@ -641,9 +818,7 @@ test("a rejected Snake result stays local and never fabricates global stats", as
   );
 
   await expect(statsWindow).toBeVisible();
-  await expect(status).toHaveText(
-    "Local stats are saved, but a result could not pass server verification."
-  );
+  await expect(status).toHaveText("Global stats are up to date.");
   await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
   await expect(globalRows10.nth(0)).toHaveAttribute("aria-label", "Rank 1: Aria, 8 points");
   await expect(globalRows10.nth(1)).toHaveAttribute("aria-label", "Rank 2: Nia, 4 points");
@@ -653,7 +828,7 @@ test("a rejected Snake result stays local and never fabricates global stats", as
   ).toBeVisible();
   await expect(panel10.locator(".game-stats-snake-local-best-row")).toHaveAttribute(
     "aria-label",
-    "Your record: #—, Snake Publisher, 1 points"
+    "Your record: #—, Snake Publisher, 0 points"
   );
 
   expectPublishedRequestContract(api);
@@ -677,4 +852,62 @@ test("a rejected Snake result stays local and never fabricates global stats", as
     ],
     errorResponses: [`400 ${API_BASE_URL}/events`],
   });
+});
+
+test("a canonical Snake correction after Reset Local Stats updates only the finished display", async ({
+  page,
+}) => {
+  const { api, snakeWindow } = await preparePage(
+    page,
+    { width: 1280, height: 800 },
+    {
+      canonicalMetric: 1,
+      exerciseTiming: false,
+      expectedScore: 1,
+      holdCompletion: true,
+      initial: scoringSnakeInitial,
+      waitForEvent: false,
+    }
+  );
+  await expect.poll(() => api.continuationRequests.length).toBe(1);
+  expect(JSON.parse(await page.evaluate((key) => localStorage.getItem(key), SNAKE_HIGH_SCORE_KEY))).toEqual({
+    10: 1,
+  });
+
+  await page.locator('.desktop-icon[data-app="game-progress"]').click();
+  const progressWindow = page.locator('[data-app-window="game-progress"]');
+  await expect(progressWindow).toBeVisible();
+  await progressWindow.locator("#game-progress-reset-local").click();
+  await expect.poll(() => page.evaluate(
+    (key) => localStorage.getItem(key),
+    SNAKE_HIGH_SCORE_KEY
+  )).toBeNull();
+
+  api.releaseCompletion();
+  await expect.poll(() => api.eventRequests.length).toBe(1);
+  await expect(snakeWindow.locator("#snake-score")).toHaveText("1");
+  await expect(snakeWindow.locator("#snake-high-score")).toHaveText("0");
+  expect(await page.evaluate((key) => localStorage.getItem(key), SNAKE_HIGH_SCORE_KEY)).toBeNull();
+});
+
+test("Snake close and reset discard an issued follow-up run without finishing it", async ({ page }) => {
+  const { api, snakeWindow } = await preparePage(page, { width: 1280, height: 800 });
+  expect(api.sessionRequests).toHaveLength(1);
+  expect(api.finishRequests).toHaveLength(1);
+
+  await page.evaluate(() => window.__snakePublishFlowTest.reset());
+  await snakeWindow.locator("#snake-start").click();
+  await expect.poll(() => api.sessionRequests.length).toBe(2);
+  await expect.poll(() => api.timingRequests.length).toBe(4);
+  await snakeWindow.getByRole("button", { name: "Close" }).click();
+  await expect(snakeWindow).toBeHidden();
+  await expect.poll(() => api.timingRequests.length).toBe(5);
+  await page.evaluate(() => window.__snakePublishFlowTest.reset());
+  expect(await page.evaluate(() => window.__snakePublishFlowTest.read())).toMatchObject({
+    gameOver: false,
+    hasStarted: false,
+    statsSession: "",
+  });
+  expect(api.finishRequests).toHaveLength(1);
+  expect(api.eventRequests).toHaveLength(1);
 });

@@ -853,23 +853,25 @@ const endSnakeGame = () => {
       {
         snakePreviousHighScore: snakeState.recordAtStart,
         terminalTick: completedResult.terminalTick,
-        onCanonicalMetric: ({ metric, metricKind }) => {
+        onCanonicalMetric: ({ metric, metricKind, updateLocalStats = true }) => {
           if (snakeState.engineState !== completedEngine || !snakeState.gameOver) return;
           if (metricKind !== "score" || !Number.isSafeInteger(metric) || metric < 0) return;
-          const highScoreKey = String(snakeState.gridSize);
-          if (
-            submittedScore > metric &&
-            snakeState.highScores[highScoreKey] === submittedScore
-          ) {
-            if (Number.isFinite(previousHighScore)) {
-              snakeState.highScores[highScoreKey] = previousHighScore;
-            } else {
-              delete snakeState.highScores[highScoreKey];
-            }
-          }
           snakeState.score = metric;
-          updateSnakeHighScore();
-          saveSnakeHighScores();
+          if (updateLocalStats) {
+            const highScoreKey = String(snakeState.gridSize);
+            if (
+              submittedScore > metric &&
+              snakeState.highScores[highScoreKey] === submittedScore
+            ) {
+              if (Number.isFinite(previousHighScore)) {
+                snakeState.highScores[highScoreKey] = previousHighScore;
+              } else {
+                delete snakeState.highScores[highScoreKey];
+              }
+            }
+            updateSnakeHighScore();
+            saveSnakeHighScores();
+          }
           updateSnakeHud();
         },
       }
