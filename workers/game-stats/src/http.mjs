@@ -77,14 +77,38 @@ export const jsonResponse = (request, env, body, status = 200, extraHeaders = {}
 
 const textDecoder = new TextDecoder();
 
-export const readJsonBody = async (request) => {
+export const readJsonBody = async (request, maximumBytes = MAX_EVENT_BODY_BYTES) => {
   const contentLength = Number(request.headers.get("Content-Length") || 0);
-  if (contentLength > MAX_EVENT_BODY_BYTES) {
+  if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1) {
+    throw new HttpError(500, "Invalid request body limit");
+  }
+  if (contentLength > maximumBytes) {
     throw new HttpError(413, "Request body is too large");
   }
-  const body = await request.arrayBuffer();
-  if (body.byteLength > MAX_EVENT_BODY_BYTES) {
-    throw new HttpError(413, "Request body is too large");
+  const chunks = [];
+  let receivedBytes = 0;
+  const reader = request.body?.getReader();
+  if (reader) {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        receivedBytes += value.byteLength;
+        if (receivedBytes > maximumBytes) {
+          await reader.cancel("Request body is too large");
+          throw new HttpError(413, "Request body is too large");
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+  const body = new Uint8Array(receivedBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
   }
   try {
     return JSON.parse(textDecoder.decode(body));

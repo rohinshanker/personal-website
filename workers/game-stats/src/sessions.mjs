@@ -33,6 +33,7 @@ import {
   verifySessionToken,
   verifyTurnstileIfRequired,
 } from "./security.mjs";
+import { createVerifiedSession } from "./verified-results.mjs";
 
 const INSERT_SESSION_SQL = `
 INSERT INTO game_stat_sessions (
@@ -40,7 +41,8 @@ INSERT INTO game_stat_sessions (
 ) VALUES (?, ?, ?, ?, ?, ?, ?)
 `;
 const SELECT_SESSION_SQL = `
-SELECT id, game, config_json, build_version, ip_hash, issued_at, expires_at, consumed_at
+SELECT id, game, config_json, build_version, ip_hash, issued_at, expires_at, consumed_at,
+  result_protocol
 FROM game_stat_sessions
 WHERE id = ?
 `;
@@ -52,7 +54,7 @@ WHERE id = ? AND consumed_at IS NULL AND expires_at > ?
 
 export const getChanges = (result) => Number(result?.meta?.changes ?? result?.changes ?? 0);
 
-const normalizeSessionConfig = (game, rawConfig) => {
+export const normalizeSessionConfig = (game, rawConfig) => {
   if (game === "minesweeper") {
     assertAllowedKeys(rawConfig, ["difficulty"], "Minesweeper session config");
     if (typeof rawConfig.difficulty !== "string") {
@@ -150,10 +152,13 @@ const requireSessionEligibility = async (event, sessionIssuedAt) => {
   });
 };
 
-export const createSession = async (request, env, rawPayload) => {
+export const createSession = async (request, env, rawPayload, dependencies = {}) => {
   assertAllowedKeys(
     rawPayload,
-    ["game", "config", "buildVersion", "turnstileToken"],
+    [
+      "game", "config", "buildVersion", "turnstileToken", "resultProtocol",
+      "rulesVersion", "replayVersion", "generatorVersion", "firstCell",
+    ],
     "session request"
   );
   const security = requireSecurityConfig(env);
@@ -169,6 +174,22 @@ export const createSession = async (request, env, rawPayload) => {
     throw new HttpError(409, "Game build version is not compatible");
   }
   const config = normalizeSessionConfig(game, rawPayload.config);
+  const resultProtocol = rawPayload.resultProtocol === undefined
+    ? 1
+    : rawPayload.resultProtocol;
+  if (resultProtocol === 2) {
+    return createVerifiedSession(request, env, rawPayload, config, dependencies);
+  }
+  if (resultProtocol !== 1) throw new HttpError(409, "Unsupported result protocol");
+  if (["rulesVersion", "replayVersion", "generatorVersion", "firstCell"].some(
+    (field) => rawPayload[field] !== undefined
+  )) {
+    throw new HttpError(400, "Verified game fields require resultProtocol 2");
+  }
+  const legacyCutoff = Date.parse(String(env.LEGACY_RESULT_ISSUANCE_CUTOFF || ""));
+  if (!Number.isFinite(legacyCutoff) || Date.now() >= legacyCutoff) {
+    throw new HttpError(409, "Legacy result sessions are closed; resultProtocol 2 is required");
+  }
   await verifyTurnstileIfRequired(request, env, rawPayload);
   const ipHash = await hmacDigest(security.ipHashSecret, getClientIp(request));
   await enforceRateLimit(env, ipHash, "sessions", MAX_SESSIONS_PER_WINDOW);
@@ -213,6 +234,7 @@ export const validateSession = async (request, env, event, rawSession) => {
   const ipHash = await hmacDigest(security.ipHashSecret, getClientIp(request));
   if (
     tokenPayload.id !== sessionId ||
+    tokenPayload.resultProtocol === 2 ||
     tokenPayload.game !== event.game ||
     typeof tokenPayload.ipHash !== "string" ||
     !isPlainObject(tokenPayload.config)
@@ -222,6 +244,7 @@ export const validateSession = async (request, env, event, rawSession) => {
   const session = await getGameStatsDatabase(env).prepare(SELECT_SESSION_SQL).bind(sessionId).first();
   if (!session) throw new HttpError(409, "Game session is no longer on record");
   if (
+    Number(session.result_protocol || 1) !== 1 ||
     session.game !== event.game ||
     session.build_version !== tokenPayload.buildVersion ||
     session.ip_hash !== tokenPayload.ipHash ||

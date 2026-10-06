@@ -12,16 +12,24 @@ class SqliteD1Statement {
     return new SqliteD1Statement(this.database, this.sql, params);
   }
 
-  async all() {
+  allSync() {
     return { results: this.database.sqlite.prepare(this.sql).all(...this.params) };
   }
 
-  async first(columnName) {
+  async all() {
+    return this.allSync();
+  }
+
+  firstSync(columnName) {
     const row = this.database.sqlite.prepare(this.sql).get(...this.params) ?? null;
     return columnName && row ? row[columnName] : row;
   }
 
-  async run() {
+  async first(columnName) {
+    return this.firstSync(columnName);
+  }
+
+  runSync() {
     const result = this.database.sqlite.prepare(this.sql).run(...this.params);
     return {
       meta: {
@@ -30,11 +38,15 @@ class SqliteD1Statement {
       },
     };
   }
+
+  async run() {
+    return this.runSync();
+  }
 }
 
 export class SqliteD1Database {
-  constructor() {
-    this.sqlite = new DatabaseSync(":memory:");
+  constructor(location = ":memory:") {
+    this.sqlite = new DatabaseSync(location);
   }
 
   prepare(sql) {
@@ -47,9 +59,9 @@ export class SqliteD1Database {
       const results = [];
       for (const statement of statements) {
         if (/^\s*(?:WITH|SELECT|PRAGMA|EXPLAIN)\b/i.test(statement.sql)) {
-          results.push(await statement.all());
+          results.push(statement.allSync());
         } else {
-          results.push(await statement.run());
+          results.push(statement.runSync());
         }
       }
       this.sqlite.exec("COMMIT");

@@ -1,6 +1,7 @@
 import { selectAggregatedGameStats } from "./aggregate.mjs";
 import { handleClashRoyaleRequest } from "./clash-royale.mjs";
 import {
+  MAX_REPLAY_BODY_BYTES,
   STATS_API_PROTOCOL,
   getGameStatsDatabase,
 } from "./constants.mjs";
@@ -37,16 +38,31 @@ import {
   getChanges,
   validateSession,
 } from "./sessions.mjs";
+import {
+  finishVerifiedSession,
+  publishVerifiedCompletion,
+  restoreVerifiedSession,
+  updateVerifiedTiming,
+} from "./verified-results.mjs";
 
 const HEALTH_CHECK_SQL = `
 SELECT COUNT(*) AS table_count
 FROM sqlite_master
 WHERE type = 'table'
-  AND name IN ('game_events', 'game_stat_sessions', 'game_stats_rate_limits')
+  AND name IN (
+    'game_events', 'game_stat_sessions', 'game_stats_rate_limits',
+    'verified_timing_transitions', 'verified_game_completions'
+  )
 `;
 const DELETE_EXPIRED_SESSIONS_SQL = `
 DELETE FROM game_stat_sessions
 WHERE expires_at <= ?
+`;
+const DELETE_EXPIRED_TIMING_TRANSITIONS_SQL = `
+DELETE FROM verified_timing_transitions
+WHERE session_id IN (
+  SELECT id FROM game_stat_sessions WHERE expires_at <= ?
+)
 `;
 const DELETE_EXPIRED_RATE_LIMITS_SQL = `
 DELETE FROM game_stats_rate_limits
@@ -83,17 +99,57 @@ const handleGetStats = async (request, env, context) => {
 
 const handleGetHealth = async (request, env) => {
   const health = await getGameStatsDatabase(env).prepare(HEALTH_CHECK_SQL).first();
-  if (Number(health?.table_count) !== 3) {
+  if (Number(health?.table_count) !== 5) {
     throw new HttpError(500, "D1 health check failed");
   }
   const { buildVersion, acceptedBuildVersions } = requireSecurityConfig(env);
   return jsonResponse(request, env, { ok: true, buildVersion, acceptedBuildVersions });
 };
 
-const handlePostSession = async (request, env) => {
+const handlePostSession = async (request, env, dependencies) => {
   assertBrowserOriginAllowed(request, env);
-  const session = await createSession(request, env, await readJsonBody(request));
+  const session = await createSession(
+    request,
+    env,
+    await readJsonBody(request),
+    dependencies.verification || {}
+  );
   return jsonResponse(request, env, { ok: true, ...session }, 201);
+};
+
+const handlePostTiming = async (request, env, sessionId, dependencies) => {
+  assertBrowserOriginAllowed(request, env);
+  const timing = await updateVerifiedTiming(
+    request,
+    env,
+    sessionId,
+    await readJsonBody(request),
+    dependencies.verification || {}
+  );
+  return jsonResponse(request, env, { ok: true, timing });
+};
+
+const handlePostFinish = async (request, env, sessionId, dependencies) => {
+  assertBrowserOriginAllowed(request, env);
+  const result = await finishVerifiedSession(
+    request,
+    env,
+    sessionId,
+    await readJsonBody(request, MAX_REPLAY_BODY_BYTES),
+    dependencies.verification || {}
+  );
+  return jsonResponse(request, env, { ok: true, ...result });
+};
+
+const handlePostRestore = async (request, env, sessionId) => {
+  assertBrowserOriginAllowed(request, env);
+  const descriptor = await restoreVerifiedSession(
+    request,
+    env,
+    sessionId,
+    await readJsonBody(request)
+  );
+  return jsonResponse(request, env, { ok: true, ...descriptor });
 };
 
 const handlePostAdministratorSignIn = async (request, env) => {
@@ -105,9 +161,21 @@ const handlePostAdministratorSignIn = async (request, env) => {
 const handlePostEvent = async (request, env) => {
   assertBrowserOriginAllowed(request, env);
   const payload = await readJsonBody(request);
-  assertAllowedKeys(payload, ["event", "session"], "event request");
+  assertAllowedKeys(payload, ["event", "session", "completion"], "event request");
+  if (Boolean(payload.session) === Boolean(payload.completion)) {
+    throw new HttpError(400, "Event request requires exactly one result proof");
+  }
   const event = normalizeGameStatsEvent(payload.event);
   await validateAdministratorEventProof(request, env, event);
+  if (payload.completion) {
+    const { applied, eventId } = await publishVerifiedCompletion(
+      request,
+      env,
+      payload.event,
+      payload.completion
+    );
+    return jsonResponse(request, env, { ok: true, applied, eventId }, applied ? 201 : 200);
+  }
   const existing = await selectExistingEvent(env, event.id);
   if (existing) {
     assertStoredEventMatches(existing, event);
@@ -155,7 +223,19 @@ export const handleRequest = async (request, env, context, dependencies = {}) =>
       return await handleGetStats(request, env, context);
     }
     if (url.pathname === "/sessions" && request.method === "POST") {
-      return await handlePostSession(request, env);
+      return await handlePostSession(request, env, dependencies);
+    }
+    const timingMatch = /^\/sessions\/([A-Za-z0-9-]{8,80})\/timing$/.exec(url.pathname);
+    if (timingMatch && request.method === "POST") {
+      return await handlePostTiming(request, env, timingMatch[1], dependencies);
+    }
+    const finishMatch = /^\/sessions\/([A-Za-z0-9-]{8,80})\/finish$/.exec(url.pathname);
+    if (finishMatch && request.method === "POST") {
+      return await handlePostFinish(request, env, finishMatch[1], dependencies);
+    }
+    const restoreMatch = /^\/sessions\/([A-Za-z0-9-]{8,80})\/restore$/.exec(url.pathname);
+    if (restoreMatch && request.method === "POST") {
+      return await handlePostRestore(request, env, restoreMatch[1]);
     }
     if (url.pathname === "/administrator/sign-in" && request.method === "POST") {
       return await handlePostAdministratorSignIn(request, env);
@@ -163,7 +243,10 @@ export const handleRequest = async (request, env, context, dependencies = {}) =>
     if (url.pathname === "/events" && request.method === "POST") {
       return await handlePostEvent(request, env);
     }
-    if (["/stats", "/sessions", "/events", "/administrator/sign-in"].includes(url.pathname)) {
+    if (
+      ["/stats", "/sessions", "/events", "/administrator/sign-in"].includes(url.pathname) ||
+      timingMatch || finishMatch || restoreMatch
+    ) {
       throw new HttpError(405, "Method is not allowed");
     }
     throw new HttpError(404, "Route not found");
@@ -176,12 +259,14 @@ export const purgeExpiredGameStatsRows = async (env) => {
   const database = getGameStatsDatabase(env);
   if (!database) throw new Error("D1 database binding is not configured");
   const purgedAt = new Date().toISOString();
-  const [expiredSessions, expiredRateLimits] = await database.batch([
+  const [expiredTimingTransitions, expiredSessions, expiredRateLimits] = await database.batch([
+    database.prepare(DELETE_EXPIRED_TIMING_TRANSITIONS_SQL).bind(purgedAt),
     database.prepare(DELETE_EXPIRED_SESSIONS_SQL).bind(purgedAt),
     database.prepare(DELETE_EXPIRED_RATE_LIMITS_SQL).bind(purgedAt),
   ]);
   return Object.freeze({
     purgedAt,
+    expiredTimingTransitions: getChanges(expiredTimingTransitions),
     expiredSessions: getChanges(expiredSessions),
     expiredRateLimitBuckets: getChanges(expiredRateLimits),
   });

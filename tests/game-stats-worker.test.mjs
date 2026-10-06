@@ -18,6 +18,7 @@ const gameStatsMigrationPaths = [
   "0002_add_game_stat_security.sql",
   "0003_add_sudoku_puzzle_identity.sql",
   "0004_optimize_stats_aggregation.sql",
+  "0005_add_verified_game_results.sql",
 ].map((name) => new URL(`../workers/game-stats/migrations/${name}`, import.meta.url).pathname);
 
 const projectEventRow = (sql, row) => {
@@ -134,6 +135,9 @@ class MockD1Statement {
     if (this.sql.includes("DELETE FROM game_stat_sessions")) {
       return { meta: { changes: this.database.deleteExpired("sessions", this.params[0]) } };
     }
+    if (this.sql.includes("DELETE FROM verified_timing_transitions")) {
+      return { meta: { changes: 0 } };
+    }
     if (this.sql.includes("DELETE FROM game_stats_rate_limits")) {
       return {
         meta: { changes: this.database.deleteExpired("rateLimits", this.params[0]) },
@@ -201,7 +205,7 @@ class MockD1Database {
     this.failNextEventInsert = false;
     this.failNextSessionConsume = false;
     this.failHealthCheck = false;
-    this.healthTableCount = 3;
+    this.healthTableCount = 5;
     this.batchTail = Promise.resolve();
   }
 
@@ -299,6 +303,9 @@ const createEnv = (overrides = {}) => ({
   ADMIN_PASSWORD: "test-administrator-password",
   ADMIN_SESSION_SIGNING_SECRET: "test-administrator-session-signing-secret",
   GAME_BUILD_VERSION: buildVersion,
+  // Legacy behavior is exercised only as an explicit compatibility fixture.
+  // Production defaults closed when this server-controlled cutoff is absent.
+  LEGACY_RESULT_ISSUANCE_CUTOFF: "2999-01-01T00:00:00.000Z",
   ...overrides,
 });
 
