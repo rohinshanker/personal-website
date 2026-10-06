@@ -234,7 +234,7 @@ test("protocol 2 issues a committed game, derives its result, and publishes by r
   assert.equal(session.resultProtocol, 2);
   assert.equal(session.gameId, session.id);
   assert.equal(session.initial.firstCell, 0);
-  assert.equal(session.limits.continuations, 256);
+  assert.equal(session.limits.continuations, 8192);
   assert.match(session.initialCommitment, /^[a-f0-9]{64}$/);
   assert.equal(session.initialCommitment, await digestCanonical(session.initial));
   assert.deepEqual(session.timing, { revision: 0, phase: "ready", elapsedMs: 0 });
@@ -251,7 +251,7 @@ test("protocol 2 issues a committed game, derives its result, and publishes by r
   assert.equal(frozenJob.finished_at, new Date(harness.currentTime()).toISOString());
   assert.equal(frozenJob.elapsed_ms, 2_500);
   assert.equal(frozenJob.input_cursor, 0);
-  assert.equal(frozenJob.continuation_limit, 256);
+  assert.equal(frozenJob.continuation_limit, 8192);
   assert.equal(frozenJob.stage, "replay");
   const timingAfterFinish = await harness.dispatch(`/sessions/${session.id}/timing`, {
     session: { id: session.id, token: session.token },
@@ -424,7 +424,7 @@ test("restore returns the original issuance only for an acknowledged ready or pa
   assert.equal(readyDescriptor.expiresAt, session.expiresAt);
   assert.deepEqual(readyDescriptor.initial, session.initial);
   assert.deepEqual(readyDescriptor.timing, session.timing);
-  assert.equal(readyDescriptor.limits.continuations, 256);
+  assert.equal(readyDescriptor.limits.continuations, 8192);
 
   assert.equal((await resumeGame(harness, session)).status, 200);
   harness.advance(1_500);
@@ -746,7 +746,7 @@ test("firstCell is flattened and continuation limits are stored, signed, and enf
   );
   const signedProgress = (await signedStart.json()).progress;
   harness.database.sqlite.prepare(`
-    UPDATE verified_completion_jobs SET continuation_limit = 255 WHERE session_id = ?
+    UPDATE verified_completion_jobs SET continuation_limit = 8191 WHERE session_id = ?
   `).run(signed.id);
   const changedLimit = await harness.dispatch(`/sessions/${signed.id}/finish/continue`, {
     session: { id: signed.id, token: signed.token },
@@ -771,7 +771,7 @@ test("firstCell is flattened and continuation limits are stored, signed, and enf
   });
   assert.equal(exhausted.status, 413);
   assert.throws(() => harness.database.sqlite.prepare(`
-    UPDATE verified_completion_jobs SET continuation_limit = 257 WHERE session_id = ?
+    UPDATE verified_completion_jobs SET continuation_limit = 8193 WHERE session_id = ?
   `).run(capped.id), /CHECK constraint failed/);
 });
 
