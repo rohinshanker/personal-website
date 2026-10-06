@@ -33,6 +33,19 @@ const {
   clearNoiseCanvas,
   drawNoiseCanvas,
 } = window.homeStaticNoise;
+const {
+  SNAKE_COUNTDOWN_MS: SNAKE_RESUME_COUNTDOWN_MS,
+  SNAKE_TICK_MS,
+} = window.homeGameRules;
+const {
+  DIRECTIONS: SNAKE_DIRECTIONS,
+  directionsOppose: snakeDirectionsOppose,
+  generate: generateSnake,
+  initial: initialSnake,
+  result: snakeResult,
+  step: stepSnake,
+  transition: transitionSnake,
+} = window.homeSnakeRules;
 
 const snakeLoadingPanel = byId("snake-loading-panel");
 const snakeLoadingMeter = one(".snake-loading-meter");
@@ -59,8 +72,6 @@ const SNAKE_SETTINGS_KEY = "personalSiteSnakeSettingsV1";
 
 const SNAKE_HIGH_SCORE_SAVE_DEBOUNCE_MS = 350;
 
-const SNAKE_APPLE_SCORE_INTERVAL = 10;
-
 const SNAKE_LOAD_MIN_MS = 1000;
 
 const SNAKE_LOAD_MAX_MS = 4000;
@@ -73,19 +84,11 @@ const SNAKE_COLLECTION_PULSE_MS = 820;
 
 const SNAKE_COLLECTION_PULSE_CELL_RADIUS = 2.5;
 
-const SNAKE_TICK_MS = 118;
-
-const SNAKE_DIRECTION_QUEUE_MAX = 2;
-
-const SNAKE_RESUME_COUNTDOWN_MS = 900;
-
 const SNAKE_RENDER_INTERVAL_MS = 1000 / 24;
 
 const SNAKE_NOISE_INTERVAL_MS = 1000 / 16;
 
 const SNAKE_POINTER_PAUSE_SUPPRESSION_MS = 250;
-
-const SNAKE_RANDOM_APPLE_ATTEMPTS = 96;
 
 const SNAKE_COLOR_THEMES = Object.freeze({
   green: {
@@ -120,13 +123,6 @@ const SNAKE_COLOR_THEMES = Object.freeze({
     sweepRing: "rgba(101, 183, 255, 0.16)",
     pulse: (alpha) => `rgba(101, 183, 255, ${alpha})`,
   },
-});
-
-const SNAKE_DIRECTIONS = Object.freeze({
-  up: { x: 0, y: -1 },
-  down: { x: 0, y: 1 },
-  left: { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
 });
 
 const SNAKE_KEY_DIRECTIONS = Object.freeze({
@@ -168,6 +164,11 @@ let snakeState = {
   countdownDuration: 0,
   noiseFrame: null,
   loading: false,
+  engineState: null,
+  issuePending: false,
+  runRevision: 0,
+  bufferedDirections: [],
+  timingPromise: null,
 };
 
 const snakeStats = createGameStatsHooks("snake", () => snakeState);
@@ -500,51 +501,59 @@ const rebuildSnakeOccupiedCells = () => {
   );
 };
 
-const getSnakeAppleTargetCount = () =>
-  Math.max(1, Math.floor(snakeState.score / SNAKE_APPLE_SCORE_INTERVAL) + 1);
+const snakeRandomSeed = () => Math.floor(Math.random() * 0x1_0000_0000) >>> 0;
 
-const isSnakeAppleCellOpen = (x, y, appleCells) => {
-  const cellKey = getSnakeCellKey(x, y);
-  return !snakeState.occupiedCells.has(cellKey) && !appleCells.has(cellKey);
-};
-
-const getSnakeRandomApple = (existingApples = snakeState.apples) => {
-  const appleCells = new Set(
-    existingApples.map((apple) => getSnakeCellKey(apple.x, apple.y))
+const snakeSyncEngineState = () => {
+  const engine = snakeState.engineState;
+  if (!engine) return;
+  const previousApples = new Map(
+    snakeState.apples.map((apple) => [`${apple.x},${apple.y}`, apple])
   );
-  const totalCells = snakeState.gridSize * snakeState.gridSize;
-  const maxAttempts = Math.min(SNAKE_RANDOM_APPLE_ATTEMPTS, totalCells);
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const x = Math.floor(Math.random() * snakeState.gridSize);
-    const y = Math.floor(Math.random() * snakeState.gridSize);
-    if (isSnakeAppleCellOpen(x, y, appleCells)) {
-      return { x, y, sweepOffset: Math.random() };
-    }
-  }
-
-  const startCell = Math.floor(Math.random() * totalCells);
-  for (let offset = 0; offset < totalCells; offset += 1) {
-    const cellIndex = (startCell + offset) % totalCells;
-    const x = cellIndex % snakeState.gridSize;
-    const y = Math.floor(cellIndex / snakeState.gridSize);
-    if (isSnakeAppleCellOpen(x, y, appleCells)) {
-      return { x, y, sweepOffset: Math.random() };
-    }
-  }
-  return null;
+  snakeState.gridSize = Number(engine.configuration.boardSize);
+  snakeState.snake = engine.snake.map(({ x, y }) => ({ x, y }));
+  snakeState.apples = engine.apples.map(({ x, y }) => ({
+    x,
+    y,
+    sweepOffset: previousApples.get(`${x},${y}`)?.sweepOffset ?? Math.random(),
+  }));
+  snakeState.direction = engine.direction;
+  snakeState.directionQueue = engine.directionQueue.slice();
+  snakeState.nextDirection =
+    engine.directionQueue[engine.directionQueue.length - 1] || engine.direction;
+  snakeState.score = engine.score;
+  snakeState.gameOver = engine.terminal;
+  rebuildSnakeOccupiedCells();
 };
 
-const refillSnakeApples = () => {
-  const maxApples = Math.max(0, snakeState.gridSize * snakeState.gridSize - snakeState.snake.length);
-  const targetCount = Math.min(getSnakeAppleTargetCount(), maxApples);
-  while (snakeState.apples.length < targetCount) {
-    const apple = getSnakeRandomApple();
-    if (!apple) break;
-    snakeState.apples.push(apple);
+const snakeGenerateLocalState = () => initialSnake(generateSnake(
+  { boardSize: String(snakeState.gridSize) },
+  { seed: snakeRandomSeed() }
+));
+
+const snakeInstallEngineState = (engineState) => {
+  snakeState.engineState = engineState;
+  snakeSyncEngineState();
+};
+
+const snakeRecordDirection = (direction) => {
+  const engine = snakeState.engineState;
+  if (!engine) return false;
+  try {
+    transitionSnake(engine, {
+      seq: engine.nextSeq,
+      op: "direction",
+      tick: engine.tick,
+      direction,
+    });
+  } catch (error) {
+    if (error?.code === "illegal-action") return false;
+    throw error;
   }
-  if (snakeState.apples.length > targetCount) {
-    snakeState.apples = snakeState.apples.slice(0, targetCount);
+  if (typeof snakeStats.recordInput === "function") {
+    snakeStats.recordInput({ op: "direction", tick: engine.tick, direction });
   }
+  snakeSyncEngineState();
+  return true;
 };
 
 const drawSnakeGame = () => {
@@ -782,38 +791,30 @@ const clearSnakeTick = () => {
   snakeState.tickTimer = null;
 };
 
-const snakeDirectionsOppose = (firstDirection, secondDirection) => {
-  const first = SNAKE_DIRECTIONS[firstDirection];
-  const second = SNAKE_DIRECTIONS[secondDirection];
-  return Boolean(first && second && first.x + second.x === 0 && first.y + second.y === 0);
-};
-
 const setSnakeDirection = (direction) => {
   if (!SNAKE_DIRECTIONS[direction]) return;
-  const queuedBase =
-    snakeState.directionQueue[snakeState.directionQueue.length - 1] ||
-    snakeState.nextDirection ||
-    snakeState.direction;
-  if (direction === queuedBase || snakeDirectionsOppose(queuedBase, direction)) return;
   if (!snakeState.running && !snakeState.countdownTimer) {
+    const engineQueue = snakeState.engineState?.directionQueue || [];
+    const base =
+      snakeState.bufferedDirections.at(-1) ||
+      engineQueue.at(-1) ||
+      snakeState.engineState?.direction ||
+      "right";
+    if (
+      engineQueue.length + snakeState.bufferedDirections.length >= 2 ||
+      direction === base ||
+      snakeDirectionsOppose(base, direction)
+    ) return;
+    snakeState.bufferedDirections.push(direction);
     snakeState.nextDirection = direction;
     return;
   }
-  if (snakeState.directionQueue.length >= SNAKE_DIRECTION_QUEUE_MAX) return;
-  snakeState.directionQueue.push(direction);
-  snakeState.nextDirection = direction;
+  snakeRecordDirection(direction);
 };
 
 const resetSnakeGame = () => {
   clearSnakeTick();
   clearSnakeCountdown();
-  const centerY = Math.floor(snakeState.gridSize / 2);
-  const startX = Math.max(3, Math.floor(snakeState.gridSize / 2));
-  snakeState.snake = [
-    { x: startX, y: centerY },
-    { x: startX - 1, y: centerY },
-    { x: startX - 2, y: centerY },
-  ];
   snakeState.direction = "right";
   snakeState.nextDirection = "right";
   snakeState.directionQueue = [];
@@ -821,12 +822,13 @@ const resetSnakeGame = () => {
   snakeState.running = false;
   snakeState.hasStarted = false;
   snakeState.gameOver = false;
+  snakeState.issuePending = false;
+  snakeState.bufferedDirections = [];
+  snakeState.runRevision += 1;
   snakeStats.dropSession();
   snakeState.recordAtStart = null;
-  snakeState.apples = [];
   snakeState.collectionPulses = [];
-  rebuildSnakeOccupiedCells();
-  refillSnakeApples();
+  snakeInstallEngineState(snakeGenerateLocalState());
   updateSnakeHud();
   requestSnakeRender();
 };
@@ -838,13 +840,39 @@ const endSnakeGame = () => {
   snakeState.running = false;
   snakeState.gameOver = true;
   if (snakeState.hasStarted) {
+    const completedEngine = snakeState.engineState;
+    const completedResult = snakeResult(completedEngine);
+    const submittedScore = snakeState.score;
+    const previousHighScore = snakeState.recordAtStart;
     snakeStats.recordEvent(
       {
         type: "gamePlayed",
         boardSize: String(snakeState.gridSize),
         metric: snakeState.score,
       },
-      { snakePreviousHighScore: snakeState.recordAtStart }
+      {
+        snakePreviousHighScore: snakeState.recordAtStart,
+        terminalTick: completedResult.terminalTick,
+        onCanonicalMetric: ({ metric, metricKind }) => {
+          if (snakeState.engineState !== completedEngine || !snakeState.gameOver) return;
+          if (metricKind !== "score" || !Number.isSafeInteger(metric) || metric < 0) return;
+          const highScoreKey = String(snakeState.gridSize);
+          if (
+            submittedScore > metric &&
+            snakeState.highScores[highScoreKey] === submittedScore
+          ) {
+            if (Number.isFinite(previousHighScore)) {
+              snakeState.highScores[highScoreKey] = previousHighScore;
+            } else {
+              delete snakeState.highScores[highScoreKey];
+            }
+          }
+          snakeState.score = metric;
+          updateSnakeHighScore();
+          saveSnakeHighScores();
+          updateSnakeHud();
+        },
+      }
     );
   }
   saveSnakeHighScores();
@@ -855,54 +883,26 @@ const endSnakeGame = () => {
 
 const snakeStep = () => {
   if (!snakeState.running) return;
-  if (snakeState.directionQueue.length) {
-    snakeState.nextDirection = snakeState.directionQueue.shift();
-  }
-  snakeState.direction = snakeState.nextDirection;
-  const direction = SNAKE_DIRECTIONS[snakeState.direction];
-  const head = snakeState.snake[0];
-  const nextHead = {
-    x: head.x + direction.x,
-    y: head.y + direction.y,
-  };
-
-  const hitWall =
-    nextHead.x < 0 ||
-    nextHead.y < 0 ||
-    nextHead.x >= snakeState.gridSize ||
-    nextHead.y >= snakeState.gridSize;
-  const nextHeadKey = getSnakeCellKey(nextHead.x, nextHead.y);
-  const eatenAppleIndex = snakeState.apples.findIndex((apple) =>
-    snakeCellsMatch(nextHead, apple)
-  );
-  const tail = snakeState.snake[snakeState.snake.length - 1];
-  const movingIntoTail =
-    eatenAppleIndex === -1 && tail && snakeCellsMatch(nextHead, tail);
-  const hitSelf = snakeState.occupiedCells.has(nextHeadKey) && !movingIntoTail;
-  if (hitWall || hitSelf) {
-    endSnakeGame();
-    return;
-  }
-
-  if (eatenAppleIndex === -1) {
-    const removedTail = snakeState.snake.pop();
-    if (removedTail) {
-      snakeState.occupiedCells.delete(getSnakeCellKey(removedTail.x, removedTail.y));
+  const previousScore = snakeState.score;
+  const previousApples = snakeState.apples.slice();
+  stepSnake(snakeState.engineState);
+  snakeSyncEngineState();
+  if (snakeState.score > previousScore) {
+    const eatenApple = previousApples.find((apple) =>
+      !snakeState.apples.some((candidate) => snakeCellsMatch(candidate, apple))
+    );
+    updateSnakeHighScore();
+    if (eatenApple) {
+      snakeState.collectionPulses.push({
+        x: eatenApple.x,
+        y: eatenApple.y,
+        startedAt: performance.now(),
+      });
     }
   }
-  snakeState.snake.unshift(nextHead);
-  snakeState.occupiedCells.add(nextHeadKey);
-  if (eatenAppleIndex !== -1) {
-    const eatenApple = snakeState.apples[eatenAppleIndex];
-    snakeState.score += 1;
-    updateSnakeHighScore();
-    snakeState.collectionPulses.push({
-      x: eatenApple.x,
-      y: eatenApple.y,
-      startedAt: performance.now(),
-    });
-    snakeState.apples.splice(eatenAppleIndex, 1);
-    refillSnakeApples();
+  if (snakeState.gameOver) {
+    endSnakeGame();
+    return;
   }
 
   updateSnakeHud();
@@ -927,10 +927,12 @@ const finishSnakeCountdown = () => {
   requestSnakeRender();
 };
 
-const startSnakeGame = () => {
+const startSnakeGame = async () => {
   if (snakeState.loading) return;
   if (snakeState.gameOver) resetSnakeGame();
-  if (snakeState.running || snakeState.countdownTimer) return;
+  if (snakeState.running || snakeState.countdownTimer || snakeState.issuePending) return;
+  const runRevision = snakeState.runRevision;
+  snakeState.issuePending = true;
   if (!snakeState.hasStarted) {
     const storedHighScore = Number(
       snakeState.highScores[String(snakeState.gridSize)]
@@ -938,11 +940,62 @@ const startSnakeGame = () => {
     snakeState.recordAtStart = Number.isFinite(storedHighScore)
       ? storedHighScore
       : null;
-    snakeStats.ensureSession({
-      boardSize: String(snakeState.gridSize),
-    });
+    let descriptor = null;
+    try {
+      if (typeof snakeStats.issueGame === "function") {
+        descriptor = await snakeStats.issueGame({
+          boardSize: String(snakeState.gridSize),
+        });
+      } else {
+        snakeStats.ensureSession({ boardSize: String(snakeState.gridSize) });
+      }
+    } catch {
+      if (runRevision === snakeState.runRevision) snakeStats.dropSession();
+      descriptor = null;
+    }
+    if (runRevision !== snakeState.runRevision) {
+      return;
+    }
+    if (descriptor) {
+      try {
+        if (!descriptor.initial) throw new TypeError("Issued Snake state is missing");
+        const issuedState = initialSnake(descriptor.initial);
+        if (issuedState.configuration.boardSize !== String(snakeState.gridSize)) {
+          throw new TypeError("Issued Snake state does not match the requested board");
+        }
+        snakeInstallEngineState(issuedState);
+      } catch {
+        snakeStats.dropSession();
+        snakeInstallEngineState(snakeGenerateLocalState());
+      }
+    }
   }
   snakeState.hasStarted = true;
+  if (snakeState.timingPromise) {
+    await snakeState.timingPromise;
+    if (runRevision !== snakeState.runRevision) {
+      return;
+    }
+  }
+  if (typeof snakeStats.resumeGame === "function") {
+    let resumePromise;
+    try {
+      resumePromise = Promise.resolve(snakeStats.resumeGame()).catch(() => null);
+    } catch {
+      // Timing acknowledgement failures keep the run local-only.
+      resumePromise = Promise.resolve(null);
+    }
+    snakeState.timingPromise = resumePromise;
+    await resumePromise;
+    if (snakeState.timingPromise === resumePromise) snakeState.timingPromise = null;
+    if (runRevision !== snakeState.runRevision) {
+      return;
+    }
+  }
+  const pendingDirections = snakeState.bufferedDirections;
+  snakeState.bufferedDirections = [];
+  pendingDirections.forEach((direction) => snakeRecordDirection(direction));
+  snakeState.issuePending = false;
   snakeState.countdownStartedAt = performance.now();
   snakeState.countdownDuration = SNAKE_RESUME_COUNTDOWN_MS;
   snakeState.countdownTimer = window.setTimeout(
@@ -961,6 +1014,14 @@ const pauseSnakeGame = () => {
   snakeState.running = false;
   clearSnakeCountdown();
   clearSnakeTick();
+  if (typeof snakeStats.pauseGame === "function") {
+    try {
+      snakeState.timingPromise = Promise.resolve(snakeStats.pauseGame()).catch(() => null);
+    } catch {
+      // Timing acknowledgement failures keep the run local-only.
+      snakeState.timingPromise = null;
+    }
+  }
   updateSnakeHud();
   requestSnakeRender();
 };

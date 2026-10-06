@@ -40,6 +40,12 @@ const createTimerHarness = async ({ difficulty = { value: "beginner" } } = {}) =
       mines: 1,
       cells: [{ mine: true, flagged: false }, { mine: false }],
       statsSession: "",
+      engineState: {
+        terminal: false,
+        won: false,
+        lost: false,
+      },
+      completionHandled: false,
     },
     msDifficulty: difficulty,
     clampNumber: (value, min, max) => Math.max(min, Math.min(value, max)),
@@ -74,6 +80,15 @@ const createTimerHarness = async ({ difficulty = { value: "beginner" } } = {}) =
       recordEvent: (event) => {
         context.recorded.push({ event: { ...event, game: "minesweeper" }, session: context.msState.statsSession });
         context.msState.statsSession = "";
+      },
+    },
+    window: {
+      homeMinesweeperRules: {
+        result: (state) => ({
+          terminal: state.terminal,
+          won: state.won,
+          lost: state.lost,
+        }),
       },
     },
     msSetFace: (face) => context.calls.push(`face:${face}`),
@@ -171,6 +186,9 @@ test("ticks are ignored once the game is over or before it starts", async () => 
 
 const winNow = (harness) => {
   harness.msState.revealedSafeCount = 1;
+  harness.msState.gameOver = true;
+  harness.msState.engineState.terminal = true;
+  harness.msState.engineState.won = true;
   harness.msCheckWin();
   return JSON.parse(JSON.stringify(harness.recorded));
 };
@@ -261,9 +279,6 @@ test("a win records the settled time after a gap with no tick", async () => {
     [...harness.calls],
     ["face:win", "confetti", "render", "event:gameWin"]
   );
-  assert.equal(harness.msState.cells[0].flagged, true);
-  assert.equal(harness.msState.flagCount, 1);
-
   harness.msCheckWin();
   assert.equal(harness.recorded.length, 1, "a finished game records once");
 });

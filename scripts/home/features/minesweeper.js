@@ -26,11 +26,17 @@ const {
 const {
   notifyActivity,
 } = window.homeActivity;
+const {
+  CONFIGURATIONS: MINESWEEPER_RULE_CONFIGS,
+  generate: generateMinesweeper,
+  initial: initialMinesweeper,
+  transition: transitionMinesweeper,
+} = window.homeMinesweeperRules;
 
 const MINESWEEPER_CONFIGS = Object.freeze([
-  Object.freeze({ cols: 9, rows: 9, mines: 10 }),
-  Object.freeze({ cols: 16, rows: 16, mines: 40 }),
-  Object.freeze({ cols: 30, rows: 16, mines: 99 }),
+  MINESWEEPER_RULE_CONFIGS.beginner,
+  MINESWEEPER_RULE_CONFIGS.intermediate,
+  MINESWEEPER_RULE_CONFIGS.expert,
 ]);
 
 const MINESWEEPER_COUNTER_MAX = 999;
@@ -131,6 +137,11 @@ const msState = {
   revealedSafeCount: 0,
   markMode: null,
   statsSession: "",
+  engineState: null,
+  issuePending: false,
+  pendingInputs: [],
+  boardRevision: 0,
+  completionHandled: false,
 };
 
 const msStats = createGameStatsHooks("minesweeper", msState);
@@ -196,22 +207,104 @@ const msShowAchievement = () => {
   flashBanner(msAchievement);
 };
 
-const msIndex = (x, y) => y * msState.cols + x;
+const msRandomSeed = () => Math.floor(Math.random() * 0x1_0000_0000) >>> 0;
 
-const msNeighbors = (index) => {
-  const x = index % msState.cols;
-  const y = Math.floor(index / msState.cols);
-  const list = [];
-  for (let dy = -1; dy <= 1; dy += 1) {
-    for (let dx = -1; dx <= 1; dx += 1) {
-      if (dx === 0 && dy === 0) continue;
-      const nx = x + dx;
-      const ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= msState.cols || ny >= msState.rows) continue;
-      list.push(msIndex(nx, ny));
+const msSyncEngineState = () => {
+  const engine = msState.engineState;
+  if (!engine) return;
+  msState.cols = engine.configuration.cols;
+  msState.rows = engine.configuration.rows;
+  msState.mines = engine.configuration.mines;
+  msState.started = engine.started;
+  msState.gameOver = engine.terminal;
+  msState.flagCount = engine.flagCount;
+  msState.revealedSafeCount = engine.revealedSafeCount;
+  msState.cells = engine.cells.map((cell) => ({
+    mine: cell.mine,
+    adjacent: cell.adjacent,
+    revealed: cell.revealed,
+    flagged: cell.mark === "flag",
+    question: cell.mark === "question",
+    blown: cell.blown,
+    misflagged: cell.misflagged,
+  }));
+};
+
+const msApplyEngineInput = (input, { record = true } = {}) => {
+  if (!msState.engineState) return false;
+  transitionMinesweeper(msState.engineState, {
+    seq: msState.engineState.nextSeq,
+    ...input,
+  });
+  if (record && typeof msStats.recordInput === "function") msStats.recordInput(input);
+  msSyncEngineState();
+  return true;
+};
+
+const msGenerateLocalBoard = (firstCell) => initialMinesweeper(
+  generateMinesweeper(
+    { difficulty: msDifficulty?.value || "beginner" },
+    { seed: msRandomSeed(), firstCell }
+  )
+);
+
+const msPrepareBoard = async (firstCell) => {
+  if (msState.engineState) return true;
+  if (msState.issuePending) return false;
+  const boardRevision = msState.boardRevision;
+  msState.issuePending = true;
+  let descriptor = null;
+  try {
+    if (typeof msStats.issueGame === "function") {
+      descriptor = await msStats.issueGame(
+          { difficulty: msDifficulty?.value || "beginner" },
+          { firstCell }
+        );
+    } else {
+      msStats.ensureSession({ difficulty: msDifficulty?.value || "beginner" });
+    }
+  } catch {
+    if (boardRevision === msState.boardRevision) msStats.dropSession();
+    descriptor = null;
+  }
+  if (boardRevision !== msState.boardRevision) {
+    return false;
+  }
+  try {
+    if (descriptor) {
+      if (!descriptor.initial) throw new TypeError("Issued Minesweeper state is missing");
+      const issuedState = initialMinesweeper(descriptor.initial);
+      if (
+        issuedState.firstCell !== firstCell ||
+        issuedState.configuration.difficulty !== (msDifficulty?.value || "beginner")
+      ) {
+        throw new TypeError("Issued Minesweeper state does not match the requested board");
+      }
+      msState.engineState = issuedState;
+    } else {
+      msState.engineState = msGenerateLocalBoard(firstCell);
+    }
+  } catch {
+    msStats.dropSession();
+    msState.engineState = msGenerateLocalBoard(firstCell);
+  }
+  const pendingInputs = msState.pendingInputs;
+  msState.pendingInputs = [];
+  pendingInputs.forEach((input) => msApplyEngineInput(input));
+  if (typeof msStats.resumeGame === "function") {
+    try {
+      await msStats.resumeGame();
+    } catch {
+      // Timing acknowledgement failures keep the board local-only.
     }
   }
-  return list;
+  if (boardRevision !== msState.boardRevision) {
+    return false;
+  }
+  msState.issuePending = false;
+  msSyncEngineState();
+  msRenderAll();
+  return true;
 };
 
 const formatSevenSegmentCounter = (value) => {
@@ -319,9 +412,9 @@ const msStopTimer = () => {
 
 const msStartTimer = () => {
   msStopTimer();
-  msStats.ensureSession({
-    difficulty: msDifficulty?.value || "beginner",
-  });
+  if (typeof msStats.issueGame !== "function") {
+    msStats.ensureSession({ difficulty: msDifficulty?.value || "beginner" });
+  }
   msState.timerSync = msReadTimerClocks();
   msState.elapsedMs = 0;
   msState.timerId = setInterval(() => {
@@ -330,100 +423,58 @@ const msStartTimer = () => {
   }, MINESWEEPER_TIMER_INTERVAL_MS);
 };
 
-const msPlaceMines = (safeIndex) => {
-  const forbidden = new Set([safeIndex, ...msNeighbors(safeIndex)]);
-  const choices = [];
-  for (let i = 0; i < msState.cols * msState.rows; i += 1) {
-    if (!forbidden.has(i)) choices.push(i);
-  }
-  for (let i = choices.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [choices[i], choices[j]] = [choices[j], choices[i]];
-  }
-  for (let i = 0; i < msState.mines; i += 1) {
-    const idx = choices[i];
-    if (idx === undefined) break;
-    msState.cells[idx].mine = true;
-  }
-};
-
-const msComputeAdjacents = () => {
-  msState.cells.forEach((cell, index) => {
-    if (cell.mine) {
-      cell.adjacent = 0;
-      return;
-    }
-    const count = msNeighbors(index).filter((n) => msState.cells[n].mine).length;
-    cell.adjacent = count;
-  });
-};
-
 const msRevealCell = (index) => {
+  if (!msState.engineState || msState.gameOver) return;
   const cell = msState.cells[index];
   if (!cell || cell.revealed || cell.flagged) return;
-  cell.question = false;
-  cell.revealed = true;
-  if (cell.mine) {
-    cell.blown = true;
-    msState.gameOver = true;
-    msSetFace("lose");
-    msStopTimer();
-    if (msLoseBanner) msLoseBanner.classList.add("is-visible");
-    msRevealAllMines();
-    msRenderCell(index);
-    notifyActivity("gameLoss", { game: "minesweeper" });
-    return;
-  }
-  msState.revealedSafeCount += 1;
-  msRenderCell(index);
-  if (cell.adjacent === 0) {
-    const queue = [index];
-    for (let cursor = 0; cursor < queue.length; cursor += 1) {
-      const current = queue[cursor];
-      msNeighbors(current).forEach((n) => {
-        const neighbor = msState.cells[n];
-        if (!neighbor || neighbor.revealed || neighbor.flagged) return;
-        neighbor.question = false;
-        neighbor.revealed = true;
-        msState.revealedSafeCount += 1;
-        msRenderCell(n);
-        if (neighbor.adjacent === 0) queue.push(n);
-      });
-    }
-  }
+  msApplyEngineInput({ op: "reveal", cell: index });
+  msRenderAll();
   msCheckWin();
 };
 
 const msRevealAllMines = () => {
-  msState.cells.forEach((cell) => {
-    if (cell.mine) {
-      cell.revealed = true;
-    } else if (cell.flagged) {
-      cell.misflagged = true;
-    }
-  });
+  msSyncEngineState();
   msRenderAll();
 };
 
 const msCheckWin = () => {
-  if (msState.gameOver) return;
-  if (msState.revealedSafeCount === msState.cells.length - msState.mines) {
-    msState.gameOver = true;
+  const result = msState.engineState
+    ? window.homeMinesweeperRules.result(msState.engineState)
+    : null;
+  if (!result?.terminal) return;
+  if (msState.completionHandled) return;
+  msState.completionHandled = true;
+  msStopTimer();
+  if (result.lost) {
+    msSetFace("lose");
+    if (msLoseBanner) msLoseBanner.classList.add("is-visible");
+    msRevealAllMines();
+    notifyActivity("gameLoss", { game: "minesweeper" });
+    return;
+  }
+  if (result.won) {
     msSetFace("win");
-    msStopTimer();
     msStartConfetti();
     if (msDifficulty && msDifficulty.value === "expert") {
       msShowAchievement();
     }
-    msState.cells.forEach((cell) => {
-      if (cell.mine) cell.flagged = true;
-    });
-    msState.flagCount = msState.mines;
     msRenderAll();
+    const completedEngine = msState.engineState;
     msStats.recordEvent({
       type: "win",
       difficulty: msDifficulty?.value || "beginner",
       metric: msState.elapsed,
+    }, {
+      onCanonicalMetric: ({ metric, metricKind, elapsedMs }) => {
+        if (msState.engineState !== completedEngine || !msState.gameOver) return;
+        const canonicalSeconds = metricKind === "seconds"
+          ? metric
+          : Math.floor(elapsedMs / MINESWEEPER_TIMER_INTERVAL_MS);
+        if (!Number.isSafeInteger(canonicalSeconds) || canonicalSeconds < 0) return;
+        msState.elapsed = Math.min(canonicalSeconds, MINESWEEPER_COUNTER_MAX);
+        msState.elapsedMs = msState.elapsed * MINESWEEPER_TIMER_INTERVAL_MS;
+        msUpdateCounters();
+      },
     });
     notifyActivity("gameWin", { game: "minesweeper" });
   }
@@ -541,6 +592,11 @@ const msNewGame = (difficulty) => {
   msState.elapsed = 0;
   msState.flagCount = 0;
   msState.revealedSafeCount = 0;
+  msState.engineState = null;
+  msState.issuePending = false;
+  msState.pendingInputs = [];
+  msState.boardRevision += 1;
+  msState.completionHandled = false;
   msStats.dropSession();
   msSetFace("smile");
   msStopTimer();
@@ -550,8 +606,8 @@ const msNewGame = (difficulty) => {
   msUpdateCounters();
 };
 
-const msHandleLeftClick = (index) => {
-  if (msState.gameOver) return;
+const msHandleLeftClick = async (index) => {
+  if (msState.gameOver || msState.issuePending) return;
   const cell = msState.cells[index];
   if (!cell) return;
   if (msState.markMode) {
@@ -563,9 +619,8 @@ const msHandleLeftClick = (index) => {
     return;
   }
   if (!msState.started) {
-    msPlaceMines(index);
-    msComputeAdjacents();
-    msState.started = true;
+    const prepared = await msPrepareBoard(index);
+    if (!prepared || msState.gameOver) return;
     msStartTimer();
   }
   msRevealCell(index);
@@ -573,18 +628,27 @@ const msHandleLeftClick = (index) => {
 
 const msToggleFlag = (index) => {
   const cell = msState.cells[index];
-  if (!cell || cell.revealed || msState.gameOver) return;
-  const wasFlagged = cell.flagged;
-  if (!cell.flagged && !cell.question) {
-    cell.flagged = true;
-  } else if (cell.flagged) {
-    cell.flagged = false;
-    cell.question = true;
-  } else if (cell.question) {
-    cell.question = false;
+  if (!cell || cell.revealed || msState.gameOver || msState.issuePending) return;
+  const mark = cell.flagged ? "question" : cell.question ? "none" : "flag";
+  msSetCellMark(index, mark);
+};
+
+const msSetCellMark = (index, mark) => {
+  const cell = msState.cells[index];
+  const alreadyMarked =
+    cell?.flagged === (mark === "flag") && cell?.question === (mark === "question");
+  if (!cell || cell.revealed || msState.gameOver || msState.issuePending || alreadyMarked) {
+    return;
   }
-  if (cell.flagged !== wasFlagged) {
-    msState.flagCount += cell.flagged ? 1 : -1;
+  const input = { op: "mark", cell: index, mark };
+  if (msState.engineState) {
+    msApplyEngineInput(input);
+  } else {
+    msState.pendingInputs.push(input);
+    const wasFlagged = cell.flagged;
+    cell.flagged = mark === "flag";
+    cell.question = mark === "question";
+    if (cell.flagged !== wasFlagged) msState.flagCount += cell.flagged ? 1 : -1;
   }
   msRenderCell(index);
   msUpdateCounters();
@@ -592,33 +656,32 @@ const msToggleFlag = (index) => {
 
 const msToggleMark = (index, mode) => {
   const cell = msState.cells[index];
-  if (!cell || cell.revealed || msState.gameOver) return;
-  const wasFlagged = cell.flagged;
+  if (!cell || cell.revealed || msState.gameOver || msState.issuePending) return;
+  let mark;
   if (mode === "flag") {
-    cell.flagged = !cell.flagged;
-    cell.question = false;
+    mark = cell.flagged ? "none" : "flag";
   } else if (mode === "question") {
-    cell.question = !cell.question;
-    cell.flagged = false;
+    mark = cell.question ? "none" : "question";
   } else {
     return;
   }
-  if (cell.flagged !== wasFlagged) {
-    msState.flagCount += cell.flagged ? 1 : -1;
-  }
-  msRenderCell(index);
-  msUpdateCounters();
+  msSetCellMark(index, mark);
 };
 
 const msChord = (index) => {
   const cell = msState.cells[index];
-  if (!cell || !cell.revealed || cell.adjacent === 0 || msState.gameOver) return;
-  const neighbors = msNeighbors(index);
-  const flaggedCount = neighbors.filter((n) => msState.cells[n].flagged).length;
-  if (flaggedCount !== cell.adjacent) return;
-  neighbors.forEach((n) => {
-    if (!msState.cells[n].flagged) msRevealCell(n);
-  });
+  if (
+    !cell || !cell.revealed || cell.adjacent === 0 ||
+    msState.gameOver || msState.issuePending
+  ) return;
+  try {
+    msApplyEngineInput({ op: "chord", cell: index });
+  } catch (error) {
+    if (error?.code === "illegal-action") return;
+    throw error;
+  }
+  msRenderAll();
+  msCheckWin();
 };
 
 const msKeyboardTargetIndex = () => {

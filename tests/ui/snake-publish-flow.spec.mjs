@@ -31,6 +31,17 @@ const generatedBackendSource = await readFile(
   new URL("../../scripts/home/game-stats-backend.js", import.meta.url),
   "utf8"
 );
+const snakeRulesSource = await readFile(
+  new URL("../../scripts/home/games/snake.js", import.meta.url),
+  "utf8"
+);
+const minesweeperRulesSource = await readFile(
+  new URL("../../scripts/home/games/minesweeper.js", import.meta.url),
+  "utf8"
+);
+
+const installMinesweeperRules = (page) =>
+  routeHomeScript(page, "minesweeper", (source) => `${minesweeperRulesSource}\n${source}`);
 const generatedBuildVersion = generatedBackendSource.match(
   /buildVersion:\s*"(sha256-[a-f0-9]{64})"/
 )?.[1];
@@ -56,7 +67,7 @@ const installBackendConfig = async (page) => {
 
 const installSnakeBridge = async (page) => {
   await routeHomeScript(page, "snake", (source) =>
-    source.replace(
+    `${snakeRulesSource}\n${source.replace(
       /\n\}\)\(\);\s*$/,
       `
 window.__snakePublishFlowTest = Object.freeze({
@@ -65,30 +76,35 @@ window.__snakePublishFlowTest = Object.freeze({
     clearSnakeTick();
     snakeState.running = true;
     snakeState.hasStarted = true;
-    snakeState.direction = "right";
-    snakeState.nextDirection = "right";
-    snakeState.directionQueue = [];
-    snakeState.snake = [
+    Object.assign(snakeState.engineState, {
+      direction: "right",
+      directionQueue: [],
+      score: 0,
+      terminal: false,
+      lost: false,
+      snake: [
       { x: 4, y: 5 },
       { x: 3, y: 5 },
       { x: 2, y: 5 },
-    ];
-    snakeState.apples = [{ x: 5, y: 5, sweepOffset: 0 }];
-    rebuildSnakeOccupiedCells();
+      ],
+      apples: [{ x: 5, y: 5 }],
+    });
+    snakeSyncEngineState();
     snakeStep();
 
     clearSnakeTick();
-    snakeState.snake = [
-      { x: 9, y: 5 },
-      { x: 8, y: 5 },
-      { x: 7, y: 5 },
-      { x: 6, y: 5 },
-    ];
-    snakeState.apples = [{ x: 0, y: 0, sweepOffset: 0 }];
-    snakeState.direction = "right";
-    snakeState.nextDirection = "right";
-    snakeState.directionQueue = [];
-    rebuildSnakeOccupiedCells();
+    Object.assign(snakeState.engineState, {
+      snake: [
+        { x: 9, y: 5 },
+        { x: 8, y: 5 },
+        { x: 7, y: 5 },
+        { x: 6, y: 5 },
+      ],
+      apples: [{ x: 0, y: 0 }],
+      direction: "right",
+      directionQueue: [],
+    });
+    snakeSyncEngineState();
     snakeStep();
 
     return {
@@ -100,7 +116,7 @@ window.__snakePublishFlowTest = Object.freeze({
   },
 });
 })();`
-    )
+    )}`
   );
 };
 
@@ -342,6 +358,7 @@ const preparePage = async (
     }
   );
   await installBackendConfig(page);
+  await installMinesweeperRules(page);
   await installSnakeBridge(page);
   const api = await installApi(page, { eventDelayMs, rejectEvent, retryEventOnce });
 

@@ -20,7 +20,7 @@ const createHarness = async () => {
       "const gridAttributes = new Map([['aria-keyshortcuts', 'S D F']]);",
       "const msGrid = { getAttribute: (name) => gridAttributes.has(name) ? gridAttributes.get(name) : null, setAttribute: (name, value) => gridAttributes.set(name, String(value)), removeAttribute: (name) => gridAttributes.delete(name) };",
       "const makeCell = () => ({ revealed: false, flagged: false, question: false });",
-      "const msState = { markMode: null, gameOver: false, flagCount: 0, cells: [makeCell(), makeCell(), makeCell()] };",
+      "const msState = { markMode: null, gameOver: false, flagCount: 0, engineState: null, pendingInputs: [], cells: [makeCell(), makeCell(), makeCell()] };",
       "let renders = 0; let counterUpdates = 0;",
       "const msRenderCell = () => { renders += 1; };",
       "const msUpdateCounters = () => { counterUpdates += 1; };",

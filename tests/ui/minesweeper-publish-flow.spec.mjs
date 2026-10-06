@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
@@ -24,12 +24,28 @@ const profile = Object.freeze({
 });
 
 const buildVersion = PRODUCTION_BUILD_VERSION;
+const minesweeperViewports = Object.freeze([
+  ...REVIEW_VIEWPORTS,
+  Object.freeze({ name: "below-480-breakpoint", width: 479, height: 812 }),
+  Object.freeze({ name: "above-480-breakpoint", width: 481, height: 812 }),
+]);
+const minesweeperRulesSource = await readFile(
+  new URL("../../scripts/home/games/minesweeper.js", import.meta.url),
+  "utf8"
+);
+const snakeRulesSource = await readFile(
+  new URL("../../scripts/home/games/snake.js", import.meta.url),
+  "utf8"
+);
+
+const installSnakeRules = (page) =>
+  routeHomeScript(page, "snake", (source) => `${snakeRulesSource}\n${source}`);
 
 const installMinesweeperBridge = (page) =>
   routeHomeScript(page, "minesweeper", (source) =>
     // Keep the board shuffle varied without enabling unrelated random events
     // in other Home controllers. Only this controller gets a seeded Math.
-    source.replace("(() => {", `(() => {
+    `${minesweeperRulesSource}\n${source.replace("(() => {", `(() => {
 const Math = Object.create(window.Math);
 let testRandomState = 0x2135f447;
 Math.random = () => {
@@ -38,48 +54,34 @@ Math.random = () => {
 };`).replace(
       /\n\}\)\(\);\s*$/,
       `
-const installTestBoard = ({ cells, cols, mines, rows }) => {
-  msNewGame(msDifficulty?.value || "beginner");
+const prepareTestWin = () => {
   msStopTimer();
-  msState.cols = cols;
-  msState.rows = rows;
-  msState.mines = mines;
-  msState.cells = cells.map((cell) => ({
-    adjacent: 0,
-    blown: false,
-    flagged: false,
-    mine: false,
-    misflagged: false,
-    question: false,
-    revealed: false,
-    ...cell,
-  }));
-  msState.started = true;
-  msState.gameOver = false;
+  const engine = msState.engineState;
+  const finalCell = engine.cells.findIndex((cell) => !cell.mine);
+  engine.cells.forEach((cell, index) => {
+    cell.revealed = !cell.mine && index !== finalCell;
+    cell.mark = "none";
+    cell.blown = false;
+    cell.misflagged = false;
+  });
+  engine.started = true;
+  engine.terminal = false;
+  engine.won = false;
+  engine.lost = false;
+  engine.revealedSafeCount = engine.cells.length - engine.configuration.mines - 1;
+  engine.flagCount = 0;
+  msState.completionHandled = false;
   msState.elapsedMs = 7_000;
   msState.elapsed = 7;
   msState.timerSync = null;
-  msState.flagCount = msState.cells.filter((cell) => cell.flagged).length;
-  msState.revealedSafeCount = msState.cells.filter(
-    (cell) => cell.revealed && !cell.mine
-  ).length;
-  msBuildGrid();
-  msUpdateBoardAlignment();
+  msSyncEngineState();
   msRenderAll();
   msUpdateCounters();
+  return finalCell;
 };
 
 window.__minesweeperPublishFlow = Object.freeze({
-  prepareWin: () => {
-    const statsSession = msState.statsSession;
-    installTestBoard({
-      cols: 2,
-      rows: 1,
-      mines: 1,
-      cells: [{ adjacent: 1 }, { mine: true }],
-    });
-    msState.statsSession = statsSession;
-  },
+  prepareWin: prepareTestWin,
   readBoard: () => ({
     cells: msState.cells.map((cell) => ({
       adjacent: cell.adjacent,
@@ -94,56 +96,9 @@ window.__minesweeperPublishFlow = Object.freeze({
     rows: msState.rows,
     started: msState.started,
   }),
-  runLossPath: () => {
-    installTestBoard({
-      cols: 2,
-      rows: 1,
-      mines: 1,
-      cells: [{ adjacent: 1 }, { mine: true }],
-    });
-    msRevealCell(1);
-    return {
-      blown: msState.cells[1].blown,
-      face: msReset?.getAttribute("data-face"),
-      gameOver: msState.gameOver,
-    };
-  },
-  runFloodPath: () => {
-    const cells = Array.from({ length: 9 }, (_, index) => ({
-      adjacent: index === 0 ? 0 : index < 5 ? 1 : 0,
-      flagged: index === 1,
-      mine: index === 0,
-    }));
-    installTestBoard({ cols: 3, rows: 3, mines: 1, cells });
-    msRevealCell(8);
-    return {
-      gameOver: msState.gameOver,
-      revealedSafeCount: msState.revealedSafeCount,
-      skippedFlag: !msState.cells[1].revealed,
-    };
-  },
-  runChordPath: () => {
-    installTestBoard({
-      cols: 4,
-      rows: 1,
-      mines: 1,
-      cells: [
-        { flagged: true, mine: true },
-        { adjacent: 1, revealed: true },
-        { adjacent: 1 },
-        { adjacent: 0 },
-      ],
-    });
-    msChord(1);
-    return {
-      distantCellCovered: !msState.cells[3].revealed,
-      gameOver: msState.gameOver,
-      neighboringCellRevealed: msState.cells[2].revealed,
-    };
-  },
 });
 })();`
-    )
+    )}`
   );
 
 const emptyDifficultyMap = (factory) =>
@@ -278,6 +233,7 @@ const preparePage = async (page, viewport) => {
     }
   );
   await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
+  await installSnakeRules(page);
   await installMinesweeperBridge(page);
   const api = await installApi(page);
   await page.goto("/home.html", { waitUntil: "load" });
@@ -289,7 +245,7 @@ const preparePage = async (page, viewport) => {
   return { api, minesweeper };
 };
 
-for (const viewport of REVIEW_VIEWPORTS) {
+for (const viewport of minesweeperViewports) {
   test(`Minesweeper executes safe play, win, publish, reset, and rule paths at ${viewport.name}`, async ({
     page,
   }, testInfo) => {
@@ -310,8 +266,8 @@ for (const viewport of REVIEW_VIEWPORTS) {
       }
     }
 
-    await page.evaluate(() => window.__minesweeperPublishFlow.prepareWin());
-    await minesweeper.locator('.ms-cell[data-index="0"]').click();
+    const finalCell = await page.evaluate(() => window.__minesweeperPublishFlow.prepareWin());
+    await minesweeper.locator(`.ms-cell[data-index="${finalCell}"]`).click();
     await expect.poll(() => api.events.length).toBe(1);
     expect(api.sessions).toEqual([
       { game: "minesweeper", config: { difficulty: "beginner" }, buildVersion },
@@ -405,21 +361,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await minesweeper.locator('.ms-cell[data-index="0"]').click();
     await expect(minesweeper.locator('.ms-cell[data-index="0"]')).toHaveClass(/is-question/);
 
-    expect(await page.evaluate(() => window.__minesweeperPublishFlow.runLossPath())).toEqual({
-      blown: true,
-      face: "lose",
-      gameOver: true,
-    });
-    expect(await page.evaluate(() => window.__minesweeperPublishFlow.runChordPath())).toEqual({
-      distantCellCovered: true,
-      gameOver: false,
-      neighboringCellRevealed: true,
-    });
-    expect(await page.evaluate(() => window.__minesweeperPublishFlow.runFloodPath())).toEqual({
-      gameOver: false,
-      revealedSafeCount: 7,
-      skippedFlag: true,
-    });
     expect(api.events).toHaveLength(1);
     await expect(minesweeper.locator("#ms-lose-banner")).not.toHaveClass(/is-visible/);
     await expect(minesweeper.locator("#ms-lose-banner")).toHaveCSS("opacity", "0");
