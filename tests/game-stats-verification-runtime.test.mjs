@@ -119,23 +119,75 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
   };
   const encodedBytes = new TextEncoder().encode(JSON.stringify(finishPayload)).byteLength;
   assert.ok(encodedBytes < 256 * 1024, `fixture body is ${encodedBytes} bytes`);
+  const requestWallTimes = [];
+  const replayWallTimes = [];
   const startedAt = performance.now();
-  const finished = await post(runtime, `/sessions/${issued.id}/finish`, finishPayload);
+  let requestStartedAt = performance.now();
+  let finished = await post(runtime, `/sessions/${issued.id}/finish`, finishPayload);
+  requestWallTimes.push(performance.now() - requestStartedAt);
+  assert.equal(finished.status, 202, await finished.clone().text());
+  let continuationCount = 0;
+  while (finished.status === 202) {
+    assert.ok(continuationCount < 1_024, "continuation loop stayed bounded");
+    const { progress } = await finished.json();
+    requestStartedAt = performance.now();
+    finished = await post(runtime, `/sessions/${issued.id}/finish/continue`, {
+      session: { id: issued.id, token: issued.token },
+      progress,
+    });
+    requestWallTimes.push(performance.now() - requestStartedAt);
+    const replayWallMs = Number(finished.headers.get("X-Test-Replay-Wall-Ms"));
+    if (Number.isFinite(replayWallMs) && replayWallMs > 0) {
+      replayWallTimes.push(replayWallMs);
+    }
+    continuationCount += 1;
+  }
   const elapsedMs = performance.now() - startedAt;
   assert.equal(finished.status, 200, await finished.clone().text());
   const result = await finished.json();
   assert.equal(result.completion.event.id, finishPayload.eventId);
   assert.equal(result.completion.event.metricKind, "seconds");
-  assert.ok(elapsedMs < 5_000, `near-limit replay took ${elapsedMs.toFixed(1)} ms`);
+  assert.ok(elapsedMs < 15_000, `near-limit replay took ${elapsedMs.toFixed(1)} ms`);
+  const sortedWallTimes = requestWallTimes.toSorted((a, b) => a - b);
+  const p95WallMs = sortedWallTimes[Math.floor(sortedWallTimes.length * 0.95)];
+  const maximumWallMs = sortedWallTimes.at(-1);
+  const maximumReplayWallMs = Math.max(...replayWallTimes);
+  assert.ok(
+    maximumReplayWallMs < 10,
+    `bounded synchronous replay work took ${maximumReplayWallMs.toFixed(1)} ms`
+  );
   t.diagnostic(
-    `verified ${inputs.length} inputs / 1,600,000 charged work / ` +
-      `${encodedBytes} request bytes in ${elapsedMs.toFixed(1)} ms under workerd`
+    `verified ${inputs.length} inputs / 1,600,000 charged engine work / ` +
+      `${encodedBytes} request bytes over ${continuationCount} bounded continuations ` +
+      `in ${elapsedMs.toFixed(1)} ms total workerd wall time; ` +
+      `p95 ${p95WallMs.toFixed(1)} ms / max ${maximumWallMs.toFixed(1)} ms per request ` +
+      `(wall time, not production CPU time); max synchronous replay segment ` +
+      `${maximumReplayWallMs.toFixed(1)} ms`
   );
 
   const completionCount = await database.prepare(
     "SELECT COUNT(*) AS count FROM verified_game_completions"
   ).first("count");
   assert.equal(Number(completionCount), 1);
+  const progressRows = await database.prepare(`
+    SELECT revision, input_cursor
+    FROM verified_completion_progress
+    ORDER BY revision
+  `).all();
+  assert.ok(progressRows.results.length <= 1_025);
+  for (let index = 1; index < progressRows.results.length; index += 1) {
+    assert.ok(
+      Number(progressRows.results[index].input_cursor) -
+        Number(progressRows.results[index - 1].input_cursor) <= 32,
+      "a continuation advanced no more than the production action bound"
+    );
+  }
+  const replayChunkBounds = await database.prepare(`
+    SELECT COUNT(*) AS count, MAX(LENGTH(canonical_inputs)) AS maximum_bytes
+    FROM verified_completion_replay_chunks
+  `).first();
+  assert.equal(Number(replayChunkBounds.count), 250);
+  assert.ok(Number(replayChunkBounds.maximum_bytes) < 64 * 1024);
 
   const oversized = await post(runtime, `/sessions/${issued.id}/finish`, {
     padding: "x".repeat(256 * 1024),

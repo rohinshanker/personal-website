@@ -30,11 +30,19 @@ const minesweeper = Object.freeze({
 });
 
 export default {
-  fetch(request, env, context) {
-    return handleRequest(request, env, context, {
+  async fetch(request, env, context) {
+    let replayWallMs = null;
+    const response = await handleRequest(request, env, context, {
       verification: {
         gameEngines: { minesweeper },
+        onVerificationBatch({ wallMs }) {
+          replayWallMs = wallMs;
+        },
       },
     });
+    if (replayWallMs !== null) {
+      response.headers.set("X-Test-Replay-Wall-Ms", String(replayWallMs));
+    }
+    return response;
   },
 };

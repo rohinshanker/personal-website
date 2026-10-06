@@ -77,7 +77,11 @@ export const jsonResponse = (request, env, body, status = 200, extraHeaders = {}
 
 const textDecoder = new TextDecoder();
 
-export const readJsonBody = async (request, maximumBytes = MAX_EVENT_BODY_BYTES) => {
+export const readJsonBodyWithMetadata = async (
+  request,
+  maximumBytes = MAX_EVENT_BODY_BYTES,
+  bodyReceivedAt = Date.now
+) => {
   const contentLength = Number(request.headers.get("Content-Length") || 0);
   if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1) {
     throw new HttpError(500, "Invalid request body limit");
@@ -104,18 +108,25 @@ export const readJsonBody = async (request, maximumBytes = MAX_EVENT_BODY_BYTES)
       reader.releaseLock();
     }
   }
+  // Freeze request timing at the stream boundary, before allocation, decoding,
+  // JSON parsing, canonicalization, database access, or replay work.
+  const receivedAt = new Date(bodyReceivedAt()).toISOString();
   const body = new Uint8Array(receivedBytes);
   let offset = 0;
   for (const chunk of chunks) {
     body.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  const text = textDecoder.decode(body);
   try {
-    return JSON.parse(textDecoder.decode(body));
+    return Object.freeze({ value: JSON.parse(text), text, receivedAt });
   } catch {
     throw new HttpError(400, "Request body must be valid JSON");
   }
 };
+
+export const readJsonBody = async (request, maximumBytes = MAX_EVENT_BODY_BYTES) =>
+  (await readJsonBodyWithMetadata(request, maximumBytes)).value;
 
 const normalizeEventId = (value) => {
   const id = String(value || "").trim();

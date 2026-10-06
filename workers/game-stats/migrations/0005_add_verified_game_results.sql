@@ -23,7 +23,7 @@ ALTER TABLE game_stat_sessions
   CHECK (timing_revision >= 0);
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_phase TEXT NOT NULL DEFAULT 'legacy'
-  CHECK (timing_phase IN ('legacy', 'ready', 'running', 'paused', 'finished'));
+  CHECK (timing_phase IN ('legacy', 'ready', 'running', 'paused', 'finishing', 'finished'));
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_elapsed_ms INTEGER NOT NULL DEFAULT 0
   CHECK (timing_elapsed_ms >= 0);
@@ -34,6 +34,7 @@ ALTER TABLE game_stat_sessions
 ALTER TABLE game_stat_sessions ADD COLUMN timing_input_hash TEXT;
 ALTER TABLE game_stat_sessions ADD COLUMN timing_request_digest TEXT;
 ALTER TABLE game_stat_sessions ADD COLUMN completion_id TEXT;
+ALTER TABLE game_stat_sessions ADD COLUMN finish_job_id TEXT;
 
 CREATE UNIQUE INDEX game_stat_sessions_completion_idx
   ON game_stat_sessions (completion_id)
@@ -76,14 +77,86 @@ CREATE TABLE verified_game_completions (
   publication_digest TEXT
 ) STRICT;
 
+CREATE TABLE verified_completion_jobs (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL UNIQUE,
+  event_id TEXT NOT NULL UNIQUE,
+  request_digest TEXT NOT NULL,
+  transcript_digest TEXT NOT NULL,
+  transcript_json TEXT NOT NULL,
+  rules_version INTEGER NOT NULL,
+  replay_version INTEGER NOT NULL,
+  timing_revision INTEGER NOT NULL CHECK (timing_revision >= 0),
+  timing_verified_revision INTEGER NOT NULL DEFAULT 0
+    CHECK (timing_verified_revision >= 0),
+  terminal_tick INTEGER,
+  input_count INTEGER NOT NULL CHECK (input_count >= 0),
+  input_cursor INTEGER NOT NULL DEFAULT 0
+    CHECK (input_cursor >= 0 AND input_cursor <= input_count),
+  tick_cursor INTEGER NOT NULL DEFAULT 0 CHECK (tick_cursor >= 0),
+  state_json TEXT,
+  work_used INTEGER NOT NULL DEFAULT 0 CHECK (work_used >= 0),
+  progress_revision INTEGER NOT NULL DEFAULT 0 CHECK (progress_revision >= 0),
+  progress_token TEXT NOT NULL,
+  checkpoint_digest TEXT NOT NULL,
+  request_count INTEGER NOT NULL DEFAULT 0 CHECK (request_count >= 0),
+  resume_count INTEGER NOT NULL CHECK (resume_count > 0),
+  elapsed_ms INTEGER NOT NULL CHECK (elapsed_ms >= 0),
+  finished_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  stage TEXT NOT NULL DEFAULT 'replay'
+    CHECK (stage IN ('replay', 'finalize', 'completed')),
+  completion_id TEXT UNIQUE,
+  updated_at TEXT NOT NULL,
+  CHECK (json_valid(transcript_json)),
+  CHECK (json_type(transcript_json, '$.inputs') = 'array'),
+  CHECK (json_array_length(transcript_json, '$.inputs') = input_count)
+) STRICT;
+
+CREATE TABLE verified_completion_progress (
+  job_id TEXT NOT NULL,
+  revision INTEGER NOT NULL CHECK (revision >= 0),
+  token TEXT NOT NULL UNIQUE,
+  input_cursor INTEGER NOT NULL CHECK (input_cursor >= 0),
+  tick_cursor INTEGER NOT NULL CHECK (tick_cursor >= 0),
+  checkpoint_digest TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (job_id, revision)
+) STRICT;
+
+CREATE TABLE verified_completion_replay_chunks (
+  job_id TEXT NOT NULL,
+  start_cursor INTEGER NOT NULL CHECK (start_cursor >= 0),
+  end_cursor INTEGER NOT NULL CHECK (end_cursor > start_cursor),
+  canonical_inputs TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (job_id, start_cursor),
+  UNIQUE (job_id, end_cursor)
+) STRICT;
+
+CREATE INDEX verified_completion_jobs_expiry_idx
+  ON verified_completion_jobs (expires_at);
+
 CREATE INDEX verified_game_completions_finished_idx
   ON verified_game_completions (finished_at);
 
 CREATE TRIGGER verified_completion_event_identity_guard
 BEFORE INSERT ON verified_game_completions
 WHEN EXISTS (SELECT 1 FROM game_events WHERE id = NEW.event_id)
+  OR EXISTS (
+    SELECT 1 FROM verified_completion_jobs
+    WHERE event_id = NEW.event_id AND session_id <> NEW.session_id
+  )
 BEGIN
   SELECT RAISE(ABORT, 'verified completion event id already exists');
+END;
+
+CREATE TRIGGER verified_job_event_identity_guard
+BEFORE INSERT ON verified_completion_jobs
+WHEN EXISTS (SELECT 1 FROM game_events WHERE id = NEW.event_id)
+  OR EXISTS (SELECT 1 FROM verified_game_completions WHERE event_id = NEW.event_id)
+BEGIN
+  SELECT RAISE(ABORT, 'verified job event id already exists');
 END;
 
 CREATE TRIGGER game_event_verified_identity_guard
@@ -93,6 +166,12 @@ WHEN EXISTS (
   FROM verified_game_completions
   WHERE event_id = NEW.id
     AND (NEW.completion_id IS NULL OR id <> NEW.completion_id)
+)
+OR EXISTS (
+  SELECT 1
+  FROM verified_completion_jobs
+  WHERE event_id = NEW.id
+    AND completion_id IS NULL
 )
 BEGIN
   SELECT RAISE(ABORT, 'game event id is reserved by a verified completion');

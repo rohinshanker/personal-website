@@ -20,6 +20,7 @@ import {
   errorResponse,
   jsonResponse,
   readJsonBody,
+  readJsonBodyWithMetadata,
   readStatsCache,
   readStatsRequest,
   statsCacheKey,
@@ -39,6 +40,7 @@ import {
   validateSession,
 } from "./sessions.mjs";
 import {
+  continueVerifiedSession,
   finishVerifiedSession,
   publishVerifiedCompletion,
   restoreVerifiedSession,
@@ -51,7 +53,9 @@ FROM sqlite_master
 WHERE type = 'table'
   AND name IN (
     'game_events', 'game_stat_sessions', 'game_stats_rate_limits',
-    'verified_timing_transitions', 'verified_game_completions'
+    'verified_timing_transitions', 'verified_game_completions',
+    'verified_completion_jobs', 'verified_completion_progress',
+    'verified_completion_replay_chunks'
   )
 `;
 const DELETE_EXPIRED_SESSIONS_SQL = `
@@ -63,6 +67,22 @@ DELETE FROM verified_timing_transitions
 WHERE session_id IN (
   SELECT id FROM game_stat_sessions WHERE expires_at <= ?
 )
+`;
+const DELETE_EXPIRED_COMPLETION_PROGRESS_SQL = `
+DELETE FROM verified_completion_progress
+WHERE job_id IN (
+  SELECT id FROM verified_completion_jobs WHERE expires_at <= ?
+)
+`;
+const DELETE_EXPIRED_COMPLETION_REPLAY_CHUNKS_SQL = `
+DELETE FROM verified_completion_replay_chunks
+WHERE job_id IN (
+  SELECT id FROM verified_completion_jobs WHERE expires_at <= ?
+)
+`;
+const DELETE_EXPIRED_COMPLETION_JOBS_SQL = `
+DELETE FROM verified_completion_jobs
+WHERE expires_at <= ?
 `;
 const DELETE_EXPIRED_RATE_LIMITS_SQL = `
 DELETE FROM game_stats_rate_limits
@@ -99,7 +119,7 @@ const handleGetStats = async (request, env, context) => {
 
 const handleGetHealth = async (request, env) => {
   const health = await getGameStatsDatabase(env).prepare(HEALTH_CHECK_SQL).first();
-  if (Number(health?.table_count) !== 5) {
+  if (Number(health?.table_count) !== 8) {
     throw new HttpError(500, "D1 health check failed");
   }
   const { buildVersion, acceptedBuildVersions } = requireSecurityConfig(env);
@@ -131,14 +151,33 @@ const handlePostTiming = async (request, env, sessionId, dependencies) => {
 
 const handlePostFinish = async (request, env, sessionId, dependencies) => {
   assertBrowserOriginAllowed(request, env);
+  const verification = dependencies.verification || {};
+  const body = await readJsonBodyWithMetadata(
+    request,
+    MAX_REPLAY_BODY_BYTES,
+    verification.now || Date.now
+  );
   const result = await finishVerifiedSession(
     request,
     env,
     sessionId,
-    await readJsonBody(request, MAX_REPLAY_BODY_BYTES),
+    body.value,
+    verification,
+    { transcriptJson: body.text, finishedAt: body.receivedAt }
+  );
+  return jsonResponse(request, env, { ok: true, ...result }, result.progress ? 202 : 200);
+};
+
+const handlePostFinishContinue = async (request, env, sessionId, dependencies) => {
+  assertBrowserOriginAllowed(request, env);
+  const result = await continueVerifiedSession(
+    request,
+    env,
+    sessionId,
+    await readJsonBody(request),
     dependencies.verification || {}
   );
-  return jsonResponse(request, env, { ok: true, ...result });
+  return jsonResponse(request, env, { ok: true, ...result }, result.progress ? 202 : 200);
 };
 
 const handlePostRestore = async (request, env, sessionId) => {
@@ -233,6 +272,16 @@ export const handleRequest = async (request, env, context, dependencies = {}) =>
     if (finishMatch && request.method === "POST") {
       return await handlePostFinish(request, env, finishMatch[1], dependencies);
     }
+    const finishContinueMatch =
+      /^\/sessions\/([A-Za-z0-9-]{8,80})\/finish\/continue$/.exec(url.pathname);
+    if (finishContinueMatch && request.method === "POST") {
+      return await handlePostFinishContinue(
+        request,
+        env,
+        finishContinueMatch[1],
+        dependencies
+      );
+    }
     const restoreMatch = /^\/sessions\/([A-Za-z0-9-]{8,80})\/restore$/.exec(url.pathname);
     if (restoreMatch && request.method === "POST") {
       return await handlePostRestore(request, env, restoreMatch[1]);
@@ -245,7 +294,7 @@ export const handleRequest = async (request, env, context, dependencies = {}) =>
     }
     if (
       ["/stats", "/sessions", "/events", "/administrator/sign-in"].includes(url.pathname) ||
-      timingMatch || finishMatch || restoreMatch
+      timingMatch || finishMatch || finishContinueMatch || restoreMatch
     ) {
       throw new HttpError(405, "Method is not allowed");
     }
@@ -259,14 +308,27 @@ export const purgeExpiredGameStatsRows = async (env) => {
   const database = getGameStatsDatabase(env);
   if (!database) throw new Error("D1 database binding is not configured");
   const purgedAt = new Date().toISOString();
-  const [expiredTimingTransitions, expiredSessions, expiredRateLimits] = await database.batch([
+  const [
+    expiredTimingTransitions,
+    expiredCompletionReplayChunks,
+    expiredCompletionProgress,
+    expiredCompletionJobs,
+    expiredSessions,
+    expiredRateLimits,
+  ] = await database.batch([
     database.prepare(DELETE_EXPIRED_TIMING_TRANSITIONS_SQL).bind(purgedAt),
+    database.prepare(DELETE_EXPIRED_COMPLETION_REPLAY_CHUNKS_SQL).bind(purgedAt),
+    database.prepare(DELETE_EXPIRED_COMPLETION_PROGRESS_SQL).bind(purgedAt),
+    database.prepare(DELETE_EXPIRED_COMPLETION_JOBS_SQL).bind(purgedAt),
     database.prepare(DELETE_EXPIRED_SESSIONS_SQL).bind(purgedAt),
     database.prepare(DELETE_EXPIRED_RATE_LIMITS_SQL).bind(purgedAt),
   ]);
   return Object.freeze({
     purgedAt,
     expiredTimingTransitions: getChanges(expiredTimingTransitions),
+    expiredCompletionReplayChunks: getChanges(expiredCompletionReplayChunks),
+    expiredCompletionProgress: getChanges(expiredCompletionProgress),
+    expiredCompletionJobs: getChanges(expiredCompletionJobs),
     expiredSessions: getChanges(expiredSessions),
     expiredRateLimitBuckets: getChanges(expiredRateLimits),
   });

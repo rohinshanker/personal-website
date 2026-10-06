@@ -138,6 +138,15 @@ class MockD1Statement {
     if (this.sql.includes("DELETE FROM verified_timing_transitions")) {
       return { meta: { changes: 0 } };
     }
+    if (this.sql.includes("DELETE FROM verified_completion_progress")) {
+      return { meta: { changes: 0 } };
+    }
+    if (this.sql.includes("DELETE FROM verified_completion_replay_chunks")) {
+      return { meta: { changes: 0 } };
+    }
+    if (this.sql.includes("DELETE FROM verified_completion_jobs")) {
+      return { meta: { changes: 0 } };
+    }
     if (this.sql.includes("DELETE FROM game_stats_rate_limits")) {
       return {
         meta: { changes: this.database.deleteExpired("rateLimits", this.params[0]) },
@@ -205,7 +214,7 @@ class MockD1Database {
     this.failNextEventInsert = false;
     this.failNextSessionConsume = false;
     this.failHealthCheck = false;
-    this.healthTableCount = 5;
+    this.healthTableCount = 8;
     this.batchTail = Promise.resolve();
   }
 
