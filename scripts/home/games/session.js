@@ -47,8 +47,8 @@ const normalizeIssuedGame = (raw, game, config) => {
     work: assertInteger(limits.work, 1, GAME_RULE_LIMITS[game].work, "work limit"),
     ticks: assertInteger(limits.ticks, 0, GAME_RULE_LIMITS[game].ticks, "tick limit"),
     bytes: assertInteger(limits.bytes, 1, GAME_RULE_LIMITS[game].bytes, "body limit"),
-    continuations: limits.continuations === undefined ? 256 :
-      assertInteger(limits.continuations, 1, 256, "continuation limit"),
+    continuations: limits.continuations === undefined ? 8192 :
+      assertInteger(limits.continuations, 1, 8192, "continuation limit"),
   };
   return descriptor;
 };

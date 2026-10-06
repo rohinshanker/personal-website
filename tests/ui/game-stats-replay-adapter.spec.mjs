@@ -109,7 +109,7 @@ const installApi = async (page) => {
 };
 
 for (const viewport of REVIEW_VIEWPORTS) {
-  test(`replay completion starts before profile selection and stays local first at ${viewport.name}`, async ({ page }) => {
+  test(`replay completion starts before profile selection and stays local first at ${viewport.name}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(() => { localStorage.clear(); Math.random = () => 0.999999; });
     await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL, buildVersion: BUILD_VERSION });
@@ -126,6 +126,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await expect.poll(() => api.finishes.length).toBe(1);
     await expect.poll(api.hasContinuation).toBe(true);
     expect(api.published).toHaveLength(0);
+    await page.screenshot({ path: testInfo.outputPath(`replay-profile-pending-${viewport.name}.png`) });
     expect(api.finishes[0].inputs).toEqual([{ index: 1, op: "edit", value: "2", seq: 1 }]);
     const firstKey = await page.evaluate(() => window.__gameStatsReplayAdapterTest.read().key);
     expect(firstKey).toBe("");
@@ -149,5 +150,6 @@ for (const viewport of REVIEW_VIEWPORTS) {
     expect(final.best).toBe(32);
     expect(final.key).toBeTruthy();
     expect(final.metrics).toEqual([{ metric: 32, metricKind: "seconds", elapsedMs: 32500, updateLocalStats: true }]);
+    await page.screenshot({ path: testInfo.outputPath(`replay-result-complete-${viewport.name}.png`) });
   });
 }
