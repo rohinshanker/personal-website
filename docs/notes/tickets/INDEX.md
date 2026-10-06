@@ -2,7 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| O | 2026-10-03 | [O_server-verified-leaderboard-results__20261003.md](O_server-verified-leaderboard-results__20261003.md) | Proposed server-issued games and bounded replay verification for all four leaderboards. Implementation not started; decide trusted timing, hidden-information enforcement, and legacy/verified ranking presentation. |
+| A | 2026-10-06 | [A_server-verified-leaderboard-results__20261003.md](A_server-verified-leaderboard-results__20261003.md) | Protocol/engine discovery underway on codex/server-verified-games, based on 877085d. Awaiting owner: pause timing, hidden-state boundary and legacy ranking presentation. |
 | O | 2026-09-29 | [O_soot-sprite-redesign__20260929.md](O_soot-sprite-redesign__20260929.md) | Redraw the soot sprite from the Ghibli films: four original candidates on a review page, owner picks one, then ship it. Nothing started. |
 | O | 2026-10-05 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Awaiting owner: Snake game-over noise animation and publication queue retry/overflow feedback. |
 | O | 2026-10-01 | [O_decide-content-and-assets__20260924.md](O_decide-content-and-assets__20260924.md) | Remaining audit decisions: Study Resources stub, 26 MB unreferenced calendar photos, originals and working files, background quality, shoot markup from data, pdf-window templating, renames, 98.css trim. Awaiting owner. |

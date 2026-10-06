@@ -1,10 +1,10 @@
-# O_server-verified-leaderboard-results__20261003 — Open
+# A_server-verified-leaderboard-results__20261003 — Active
 
 - Scope: Verify Minesweeper, Solitaire, Snake, and Sudoku results on the server using issued initial state, bounded input replays, server-derived metrics, and explicit result provenance.
-- Status: open
+- Status: active
 - Opened: 2026-10-03
-- Updated: 2026-10-03
-- Current State: Proposed design is recorded in [leaderboard-result-verification.md](../../validation/leaderboard-result-verification.md); implementation has not started. The current Worker validates signed sessions and bounded submissions but does not replay gameplay. Public build hashes remain release/cache metadata. Tier: long; resolve the ranking and hidden-information policy before implementation.
+- Updated: 2026-10-06
+- Current State: Activated on codex/server-verified-games, based on the completed shared-game-layer commit 877085d. Read-only protocol/engine discovery is underway. Owner questions are pending for pause timing, completion replay versus server-owned hidden state, and separate versus combined legacy rankings; do not implement policy-dependent behavior until answered. No production change or deployment has been made.
 - Verification: Test shared engines in browser and Worker environments; legal and illegal transitions for all four games; altered state/configuration/version and fabricated metrics; bounded verification work; replay reuse, expiry, concurrency, idempotency and atomic failure; assistance, timing, offline/resume and legacy provenance. Run the full Node, Worker, browser/accessibility, integrity, and pinned-Colima visual gates; inspect publishing states at 375×812, 768×1024, 1280×800, and 1440×900.
 - Cleanup: Distill the implemented rules/replay, timing, provenance, migration, and release contracts into indexed validation guides. Resolve and remove this ticket and its queue row after acceptance; retain no task history.
 
@@ -34,3 +34,10 @@ Neither replay validation nor online hidden-state enforcement proves a human pla
 - Reject altered issued state, mismatched configurations/rules versions, fabricated metrics, malformed/reordered/truncated/oversized replays, reused sessions, and invalid timing evidence.
 - Real SQLite transaction tests cover concurrent duplicates and failure atomicity; Worker-runtime integration covers request and execution limits. Browser/server fixtures produce identical engine states and results.
 - Render local-only, verified, rejected, expired, resumed, legacy, and offline publishing states. Verify ordinary gameplay, keyboard/focus behavior, and existing local statistics remain usable.
+
+## Execution constraints
+
+- Canonical checkout: `/Users/Rohin/Desktop/coding_stuff/personal-website`; branch `codex/server-verified-games`; exact starting commit `877085d`. Coordinator: agent-deck session `ac3d79cf-1791158960`.
+- Build on the locally completed shared game layer without changing its legacy session reuse, original timestamp, 120/hour budget, six-hour expiry or local-only expired-result decisions. Verified game proofs must bind the actual issued game identity; do not reuse a proof across different issued initial states.
+- Preserve historical records and existing profile/Administrator authentication. Treat legacy results as legacy; never infer verification provenance from a public build hash.
+- Use existing testing and browser tooling; keep writer worktrees isolated and keep the coordinator responsible for integration, generated metadata and ticket/index updates. No pushes or deployments are authorized by this pass.
