@@ -164,3 +164,11 @@ test("an invalid event still handles its already-started completion rejection", 
   assert.equal(context.read().saves, 0);
   assert.equal(context.read().submissions.length, 0);
 });
+
+test("an invalid legacy event leaves its reserved reusable session untouched", async () => {
+  const context = load();
+  // The harness throws on any legacy lookup, so this also checks consumption.
+  await context.record(null, null);
+  assert.equal(context.read().saves, 0);
+  assert.equal(context.read().submissions.length, 0);
+});

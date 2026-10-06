@@ -2350,14 +2350,15 @@ const recordGameStatsEvent = async (
     completionPromise = null, onCanonicalMetric = null,
   } = {}
 ) => {
-  const sessionResultPromise = completionPromise
+  const completionResultPromise = completionPromise
     ? completionPromise.then(
         (completion) => ({ completion }),
         (error) => ({ reason: error?.code || "request-failed", status: Number(error?.status) || 0 })
       )
-    : getGameStatsSession(sessionKey);
+    : null;
   const event = normalizeGameStatsEvent(rawEvent);
   if (!event) return;
+  const sessionResultPromise = completionResultPromise || getGameStatsSession(sessionKey);
   const recordOptions = { snakePreviousHighScore };
   const mayBeatPersonalRecord = gameStatsEventBeatsPersonalRecord(
     gameStatsLocalState,
