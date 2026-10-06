@@ -64,7 +64,16 @@ Neither replay validation nor online hidden-state enforcement proves a human pla
 ## Independent streams
 
 1. DEM-246: read-only architecture audit, complete; owner choices incorporated. No repository code changed.
-2. Stream A: Minesweeper/Snake rule engines, controllers and game-specific tests.
-3. Stream B: Solitaire/Sudoku rule engines, controllers, Sudoku generator/catalog and game-specific tests.
-4. Stream C: Worker protocol/timing/provenance/migrations, bounded verification, real SQL/concurrency and Worker-runtime tests.
+2. DEM-247 / `/private/tmp/pw-verified-ms-snake-20261006`, branch `codex/verified-ms-snake`, baseline `fe7d00a`: Stream A: Minesweeper/Snake rule engines, controllers and game-specific tests.
+3. DEM-248 / `/private/tmp/pw-verified-sol-sudoku-20261006`, branch `codex/verified-sol-sudoku`, baseline `fe7d00a`: Stream B: Solitaire/Sudoku rule engines, controllers, Sudoku generator/catalog and game-specific tests.
+4. DEM-249 / `/private/tmp/pw-verified-worker-20261006`, branch `codex/verified-worker`, baseline `fe7d00a`: Stream C: Worker protocol/timing/provenance/migrations, bounded verification, real SQL/concurrency and Worker-runtime tests.
 5. Coordinator: common rules/session adapter, integration and load order, exact-patch reviews, rendered states and full quality gates.
+
+## Wire-field precision
+
+- SHA-256 commitments use lowercase64-character hexadecimal strings, with no sha256- prefix. Initial commitment hashes canonicalJson(initial); each timing boundary hashes canonicalJson(inputsPrefix).
+- Timing request body: `{session:{id,token},operation:"pause"|"resume",expectedRevision,inputCount,inputHash}`. Response includes `{ok:true,timing:{revision,phase,elapsedMs}}`. Initial phase ready; first resume starts time. MS does not permit a subtracting pause. Buffered pre-start/paused Snake direction inputs flush after resume acknowledgment; the paused prefix itself stays immutable.
+- Restore endpoint POST `/sessions/:id/restore` accepts `{session:{id,token},inputCount,inputHash}` and returns the authoritative original descriptor/timing. It validates the committed paused prefix and original expiry; it never issues a new game. A missing acknowledged pause cannot be backdated from client storage.
+- Finish body: `{eventId,session:{id,token},gameId,rulesVersion,replayVersion,inputs,terminalTick?,timingRevision}`. Response: `{ok:true,completion:{id,token,expiresAt,event,elapsedMs}}`, where event contains the authoritative ID/game/configuration/outcome/metric/metricKind/occurredAt and any game-specific assistance/puzzle fields, excluding profile. Timing freezes before profile selection, not at later publication.
+- Publication body: `{event,completion:{id,token}}`; event adds the selected profile to authoritative fields. Validate these fields against the stored immutable completion; a replay receipt cannot be used by the old session-only event path.
+- Keychain-backed settings check is pending owner approval. Only the coordinator may perform that specific read after approval; workers stay credential-free/local.
