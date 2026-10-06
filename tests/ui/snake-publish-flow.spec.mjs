@@ -818,7 +818,7 @@ test("a rejected Snake result stays local and never fabricates global stats", as
   );
 
   await expect(statsWindow).toBeVisible();
-  await expect(status).toHaveText("Global stats are up to date.");
+  await expect(status).toHaveText("Local stats are saved, but a result could not pass server verification.");
   await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
   await expect(globalRows10.nth(0)).toHaveAttribute("aria-label", "Rank 1: Aria, 8 points");
   await expect(globalRows10.nth(1)).toHaveAttribute("aria-label", "Rank 2: Nia, 4 points");
