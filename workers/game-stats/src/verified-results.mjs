@@ -169,7 +169,7 @@ WHERE id = ? AND result_protocol = 2 AND consumed_at IS NULL
   AND completion_id IS NULL AND finish_job_id IS NULL AND expires_at > ?
   AND rules_version = ? AND replay_version = ? AND generator_version = ?
   AND initial_commitment = ? AND scope_digest = ?
-  AND timing_revision = ? AND timing_phase = 'running'
+  AND timing_revision = ? AND timing_phase = ? AND timing_input_count = ?
 `;
 const INSERT_COMPLETION_JOB_SQL = `
 INSERT INTO verified_completion_jobs (
@@ -1004,8 +1004,12 @@ export const finishVerifiedSession = async (
   if (session.consumed_at || session.completion_id) {
     throw new HttpError(409, "Game session was already used");
   }
-  if (session.timing_phase !== "running" ||
-      Number(session.timing_revision) !== payload.timingRevision) {
+  const finishTimingPhase = session.timing_phase;
+  const finishFromPaused = finishTimingPhase === "paused";
+  if (!["running", "paused"].includes(finishTimingPhase) ||
+      (finishFromPaused && session.game === "minesweeper") ||
+      Number(session.timing_revision) !== payload.timingRevision ||
+      (finishFromPaused && Number(session.timing_input_count) !== payload.inputs.length)) {
     throw new HttpError(409, "Timing evidence is incomplete");
   }
   if (payload.inputs.length > commonRules.GAME_RULE_LIMITS[session.game].inputs) {
@@ -1018,9 +1022,10 @@ export const finishVerifiedSession = async (
     "verification-attempts",
     MAX_VERIFICATION_ATTEMPTS_PER_WINDOW
   );
-  const elapsedMs = Number(session.timing_elapsed_ms) + Math.max(
-    0,
-    finished.getTime() - Date.parse(session.timing_updated_at)
+  const elapsedMs = Number(session.timing_elapsed_ms) + (
+    finishFromPaused
+      ? 0
+      : Math.max(0, finished.getTime() - Date.parse(session.timing_updated_at))
   );
   const resumeCount = Number((await database
     .prepare(SELECT_RESUME_COUNT_SQL)
@@ -1075,6 +1080,8 @@ export const finishVerifiedSession = async (
     session.initial_commitment,
     session.scope_digest,
     payload.timingRevision,
+    finishTimingPhase,
+    session.timing_input_count,
   ];
   const jobParams = [
     jobId,
@@ -1473,13 +1480,19 @@ export const continueVerifiedSession = async (
       if (prefixHash !== timing.input_hash) {
         throw new HttpError(400, "Replay does not match acknowledged timing evidence");
       }
+      const timingVerifiedRevision = nextTimingRevision;
+      const replayDone = Number(job.input_cursor) === Number(job.input_count) &&
+        (session.game !== "snake" ||
+          Number(job.tick_cursor) === Number(job.terminal_tick));
       return commitCheckpoint(env, database, job, {
-        timing_verified_revision: nextTimingRevision,
+        timing_verified_revision: timingVerifiedRevision,
         input_cursor: Number(job.input_cursor),
         tick_cursor: Number(job.tick_cursor),
         state_json: job.state_json,
         work_used: Number(job.work_used),
-        stage: job.stage,
+        stage: replayDone && timingVerifiedRevision === Number(job.timing_revision)
+          ? "finalize"
+          : job.stage,
       });
     }
   }

@@ -408,6 +408,231 @@ test("pause and resume bind every acknowledged replay prefix and exclude paused 
   assert.equal(result.completion.event.hintBucket, "noHints");
 });
 
+test("an acknowledged paused terminal prefix finishes at its frozen elapsed boundary", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const session = await issue(harness, "sudoku", { difficulty: "easy" });
+  const inputs = [
+    { seq: 1, op: "advance", amount: 1 },
+    { seq: 2, op: "advance", amount: 1 },
+  ];
+  assert.equal((await resumeGame(harness, session)).status, 200);
+  harness.advance(1_200);
+  const pause = await harness.dispatch(`/sessions/${session.id}/timing`, {
+    session: { id: session.id, token: session.token },
+    expectedRevision: 1,
+    operation: "pause",
+    inputCount: inputs.length,
+    inputHash: await replayPrefixHash(inputs, inputs.length),
+  });
+  assert.equal(pause.status, 200, await pause.clone().text());
+  assert.deepEqual((await pause.json()).timing, {
+    revision: 2,
+    phase: "paused",
+    elapsedMs: 1_200,
+  });
+
+  harness.advance(10_000);
+  const body = finishBody(session, {
+    eventId: "event-paused-terminal-prefix",
+    inputs,
+    timingRevision: 2,
+  });
+  const started = await harness.dispatch(`/sessions/${session.id}/finish`, body);
+  assert.equal(started.status, 202, await started.clone().text());
+  const resumeAfterFinish = await harness.dispatch(`/sessions/${session.id}/timing`, {
+    session: { id: session.id, token: session.token },
+    expectedRevision: 2,
+    operation: "resume",
+    inputCount: inputs.length,
+    inputHash: await replayPrefixHash(inputs, inputs.length),
+  });
+  assert.equal(resumeAfterFinish.status, 409);
+  const frozen = harness.database.sqlite.prepare(`
+    SELECT elapsed_ms, finished_at, expires_at
+    FROM verified_completion_jobs WHERE session_id = ?
+  `).get(session.id);
+  assert.equal(frozen.elapsed_ms, 1_200);
+  assert.equal(frozen.finished_at, new Date(harness.currentTime()).toISOString());
+  assert.equal(frozen.expires_at, session.expiresAt);
+
+  const finished = await finishGame(harness, session, body);
+  assert.equal(finished.status, 200, await finished.clone().text());
+  const { completion } = await finished.json();
+  assert.equal(completion.elapsedMs, 1_200);
+  assert.equal(completion.expiresAt, session.expiresAt);
+  assert.equal(completion.event.occurredAt, frozen.finished_at);
+  assert.deepEqual({ ...harness.database.sqlite.prepare(`
+    SELECT timing_verified_revision, stage FROM verified_completion_jobs WHERE session_id = ?
+  `).get(session.id) }, { timing_verified_revision: 2, stage: "completed" });
+});
+
+test("paused finish rejects extra inputs and a mutated committed terminal prefix", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const inputs = [
+    { seq: 1, op: "advance", amount: 1 },
+    { seq: 2, op: "advance", amount: 1 },
+  ];
+  const pauseAtTerminal = async (session) => {
+    assert.equal((await resumeGame(harness, session)).status, 200);
+    harness.advance(1_000);
+    const response = await harness.dispatch(`/sessions/${session.id}/timing`, {
+      session: { id: session.id, token: session.token },
+      expectedRevision: 1,
+      operation: "pause",
+      inputCount: inputs.length,
+      inputHash: await replayPrefixHash(inputs, inputs.length),
+    });
+    assert.equal(response.status, 200, await response.clone().text());
+  };
+
+  const minesweeper = await issue(harness);
+  assert.equal((await resumeGame(harness, minesweeper)).status, 200);
+  const minesweeperPause = await harness.dispatch(`/sessions/${minesweeper.id}/timing`, {
+    session: { id: minesweeper.id, token: minesweeper.token },
+    expectedRevision: 1,
+    operation: "pause",
+    inputCount: 0,
+    inputHash: await replayPrefixHash([], 0),
+  });
+  assert.equal(minesweeperPause.status, 409);
+
+  const extraSession = await issue(harness, "sudoku", { difficulty: "easy" });
+  await pauseAtTerminal(extraSession);
+  const extra = await harness.dispatch(`/sessions/${extraSession.id}/finish`, finishBody(
+    extraSession,
+    {
+      eventId: "event-paused-extra-input",
+      inputs: [...inputs, { seq: 3, op: "advance", amount: 1 }],
+      timingRevision: 2,
+    }
+  ));
+  assert.equal(extra.status, 409);
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT COUNT(*) AS count FROM verified_completion_jobs WHERE session_id = ?
+  `).get(extraSession.id).count, 0);
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT timing_phase FROM game_stat_sessions WHERE id = ?
+  `).get(extraSession.id).timing_phase, "paused");
+
+  const mutatedSession = await issue(harness, "sudoku", { difficulty: "easy" });
+  await pauseAtTerminal(mutatedSession);
+  const mutatedInputs = [inputs[0], { ...inputs[1], padding: "changed" }];
+  const mutatedBody = finishBody(mutatedSession, {
+    eventId: "event-paused-mutated-prefix",
+    inputs: mutatedInputs,
+    timingRevision: 2,
+  });
+  const mutated = await finishGame(harness, mutatedSession, mutatedBody);
+  assert.equal(mutated.status, 400);
+  assert.match((await mutated.json()).error, /acknowledged timing evidence/);
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT COUNT(*) AS count FROM verified_game_completions WHERE session_id = ?
+  `).get(mutatedSession.id).count, 0);
+});
+
+test("paused finish and resume race to one atomic timing transition", async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "verified-paused-finish-race-"));
+  const databasePath = join(directory, "stats.sqlite");
+  const firstDatabase = new SqliteD1Database(databasePath);
+  applyGameStatsMigrations(firstDatabase, migrationPaths);
+  const secondDatabase = new SqliteD1Database(databasePath);
+  const first = createHarness({
+    database: firstDatabase,
+    env: createEnv(firstDatabase),
+    migrate: false,
+  });
+  let sequence = 500;
+  const second = {
+    database: secondDatabase,
+    env: createEnv(secondDatabase),
+    dependencies: {
+      gameEngines,
+      generateIssuedInitial,
+      now: () => first.currentTime(),
+      randomUUID: () => `verified-id-${++sequence}`,
+    },
+  };
+  t.after(() => {
+    firstDatabase.close();
+    secondDatabase.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  const session = await issue(first, "sudoku", { difficulty: "easy" });
+  const inputs = [
+    { seq: 1, op: "advance", amount: 1 },
+    { seq: 2, op: "advance", amount: 1 },
+  ];
+  const inputHash = await replayPrefixHash(inputs, inputs.length);
+  assert.equal((await resumeGame(first, session)).status, 200);
+  first.advance(1_000);
+  assert.equal((await first.dispatch(`/sessions/${session.id}/timing`, {
+    session: { id: session.id, token: session.token },
+    expectedRevision: 1,
+    operation: "pause",
+    inputCount: inputs.length,
+    inputHash,
+  })).status, 200);
+
+  const dispatchWith = async (harness, path, payload) => {
+    const originalNow = Date.now;
+    Date.now = () => first.currentTime();
+    try {
+      return await handleRequest(
+        request(path, payload),
+        harness.env,
+        undefined,
+        { verification: harness.dependencies }
+      );
+    } finally {
+      Date.now = originalNow;
+    }
+  };
+  const [resume, finish] = await Promise.all([
+    dispatchWith(first, `/sessions/${session.id}/timing`, {
+      session: { id: session.id, token: session.token },
+      expectedRevision: 2,
+      operation: "resume",
+      inputCount: inputs.length,
+      inputHash,
+    }),
+    dispatchWith(second, `/sessions/${session.id}/finish`, finishBody(session, {
+      eventId: "event-paused-resume-race",
+      inputs,
+      timingRevision: 2,
+    })),
+  ]);
+  const statuses = [resume.status, finish.status];
+  assert.equal(statuses.filter((status) => status === 409).length, 1);
+  assert.equal(statuses.filter((status) => status === 200 || status === 202).length, 1);
+
+  const stored = firstDatabase.sqlite.prepare(`
+    SELECT timing_revision, timing_phase, timing_input_count, finish_job_id, expires_at
+    FROM game_stat_sessions WHERE id = ?
+  `).get(session.id);
+  assert.equal(stored.timing_input_count, inputs.length);
+  assert.equal(stored.expires_at, session.expiresAt);
+  const jobs = firstDatabase.sqlite.prepare(`
+    SELECT COUNT(*) AS count FROM verified_completion_jobs WHERE session_id = ?
+  `).get(session.id).count;
+  if (finish.status === 202) {
+    assert.equal(resume.status, 409);
+    assert.equal(stored.timing_revision, 2);
+    assert.equal(stored.timing_phase, "finishing");
+    assert.ok(stored.finish_job_id);
+    assert.equal(jobs, 1);
+  } else {
+    assert.equal(resume.status, 200);
+    assert.equal(finish.status, 409);
+    assert.equal(stored.timing_revision, 3);
+    assert.equal(stored.timing_phase, "running");
+    assert.equal(stored.finish_job_id, null);
+    assert.equal(jobs, 0);
+  }
+});
+
 test("restore returns the original issuance only for an acknowledged ready or paused prefix", async (t) => {
   const harness = createHarness();
   t.after(() => harness.database.close());
