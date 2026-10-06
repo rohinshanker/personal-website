@@ -733,13 +733,21 @@ const puzzleKeyParts = (puzzleKey) => {
     : {};
 };
 
+export const canonicalSudokuHintBucket = (result) => {
+  const hintBucket = result?.assistance;
+  if (!["noHints", "withHints"].includes(hintBucket)) {
+    throw new HttpError(400, "Invalid Sudoku assistance result");
+  }
+  return hintBucket;
+};
+
 const canonicalEventFor = (eventId, session, result, elapsedMs, finishedAt) => {
   assertTerminalResult(session.game, result);
   const config = parseJsonColumn(session.config_json, "session configuration");
   const seconds = Math.max(1, Math.floor(elapsedMs / 1000));
   if (session.game === "minesweeper") return {
     id: eventId, game: session.game, type: "win", difficulty: config.difficulty,
-    metric: seconds, metricKind: "seconds", occurredAt: finishedAt,
+    metric: Math.min(999, seconds), metricKind: "seconds", occurredAt: finishedAt,
   };
   if (session.game === "solitaire") {
     commonRules.assertInteger(result.moves, 1, 99_999, "Solitaire moves");
@@ -757,16 +765,11 @@ const canonicalEventFor = (eventId, session, result, elapsedMs, finishedAt) => {
     };
   }
   const initial = parseJsonColumn(session.initial_json, "initial game state");
-  const assistance = Number(result.assistance ?? result.assistanceCount ?? 0);
-  const hintBucket = result.hintBucket || (assistance > 0 ? "withHints" : "noHints");
-  if (!["noHints", "withHints"].includes(hintBucket)) {
-    throw new HttpError(400, "Invalid Sudoku assistance result");
-  }
+  const hintBucket = canonicalSudokuHintBucket(result);
   return {
     id: eventId, game: session.game, type: "win", difficulty: config.difficulty, hintBucket,
-    ...(initial.puzzleId && initial.puzzle
-      ? { puzzleId: initial.puzzleId, puzzle: initial.puzzle }
-      : {}),
+    puzzleId: session.id,
+    puzzle: initial.puzzle,
     metric: seconds, metricKind: "seconds", occurredAt: finishedAt,
   };
 };

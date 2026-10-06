@@ -10,6 +10,7 @@ import {
 } from "../workers/game-stats/src/router.mjs";
 import {
   VERSION_FIELDS,
+  canonicalSudokuHintBucket,
   digestCanonical,
   replayPrefixHash,
 } from "../workers/game-stats/src/verified-results.mjs";
@@ -56,7 +57,8 @@ const progressEngine = (game) => ({
       terminal: state.progress === state.target,
       won: state.progress === state.target,
       moves: state.moves,
-      assistance: 0,
+      assistance: game === "sudoku" ? "noHints" : 0,
+      assistanceCount: 0,
     };
   },
 });
@@ -95,7 +97,7 @@ const generateIssuedInitial = (game, config) => ({
   progress: 0,
   target: 2,
   moves: 0,
-  ...(game === "sudoku" ? { puzzleId: `fixture-${config.difficulty}`, puzzle } : {}),
+  ...(game === "sudoku" ? { puzzle } : {}),
 });
 
 const createEnv = (database, overrides = {}) => ({
@@ -351,6 +353,32 @@ test("protocol 2 issues a committed game, derives its result, and publishes by r
   assert.equal(conflictingRetry.status, 409);
 });
 
+test("Minesweeper caps its canonical metric while preserving and publishing true elapsed time", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const session = await issue(harness);
+  assert.equal((await resumeGame(harness, session)).status, 200);
+  harness.advance(1_005_500);
+  const finished = await finishGame(
+    harness,
+    session,
+    finishBody(session, { eventId: "event-minesweeper-capped" })
+  );
+  assert.equal(finished.status, 200, await finished.clone().text());
+  const { completion } = await finished.json();
+  assert.equal(completion.elapsedMs, 1_005_500);
+  assert.equal(completion.event.metric, 999);
+
+  const published = await harness.dispatch("/events", {
+    event: { ...completion.event, profile },
+    completion: { id: completion.id, token: completion.token },
+  });
+  assert.equal(published.status, 201, await published.clone().text());
+  assert.equal(harness.database.sqlite.prepare(
+    "SELECT metric FROM game_events WHERE id = ?"
+  ).get(completion.event.id).metric, 999);
+});
+
 test("pause and resume bind every acknowledged replay prefix and exclude paused time", async (t) => {
   const harness = createHarness();
   t.after(() => harness.database.close());
@@ -411,8 +439,76 @@ test("pause and resume bind every acknowledged replay prefix and exclude paused 
   const result = await finished.json();
   assert.equal(result.completion.elapsedMs, 3_000);
   assert.equal(result.completion.event.metric, 3);
-  assert.equal(result.completion.event.puzzleId, "fixture-easy");
+  assert.equal(result.completion.event.puzzleId, session.id);
   assert.equal(result.completion.event.hintBucket, "noHints");
+});
+
+test("Sudoku uses the engine assistance enum and keeps uncapped canonical seconds", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  assert.equal(canonicalSudokuHintBucket({
+    assistance: "noHints",
+    assistanceCount: 2,
+  }), "noHints");
+  assert.equal(canonicalSudokuHintBucket({
+    assistance: "withHints",
+    assistanceCount: 0,
+  }), "withHints");
+  assert.throws(
+    () => canonicalSudokuHintBucket({ assistance: "sometimes" }),
+    (error) => error.status === 400
+  );
+
+  const scenarios = [
+    { bucket: "noHints", assistanceCount: 2, elapsedMs: 1_005_500 },
+    { bucket: "withHints", assistanceCount: 0, elapsedMs: 2_500 },
+  ];
+  for (const [index, scenario] of scenarios.entries()) {
+    const baseEngine = progressEngine("sudoku");
+    harness.dependencies.gameEngines = {
+      ...gameEngines,
+      sudoku: {
+        ...baseEngine,
+        result(state) {
+          return {
+            ...baseEngine.result(state),
+            assistance: scenario.bucket,
+            assistanceCount: scenario.assistanceCount,
+            puzzleId: "forged-result-puzzle",
+            puzzle: "2".repeat(81),
+          };
+        },
+      },
+    };
+    const session = await issue(harness, "sudoku", { difficulty: "easy" });
+    assert.equal((await resumeGame(harness, session)).status, 200);
+    harness.advance(scenario.elapsedMs);
+    const finished = await finishGame(
+      harness,
+      session,
+      finishBody(session, { eventId: `event-sudoku-${scenario.bucket.toLowerCase()}` })
+    );
+    assert.equal(finished.status, 200, await finished.clone().text());
+    const { completion } = await finished.json();
+    assert.equal(completion.elapsedMs, scenario.elapsedMs);
+    assert.equal(completion.event.metric, Math.floor(scenario.elapsedMs / 1000));
+    assert.equal(completion.event.hintBucket, scenario.bucket);
+    assert.equal(completion.event.puzzleId, session.id);
+    assert.equal(completion.event.puzzle, puzzle);
+
+    const published = await harness.dispatch("/events", {
+      event: { ...completion.event, profile: { ...profile, id: `${profile.id}-${index}` } },
+      completion: { id: completion.id, token: completion.token },
+    });
+    assert.equal(published.status, 201, await published.clone().text());
+    assert.deepEqual({ ...harness.database.sqlite.prepare(`
+      SELECT hint_bucket, puzzle_key, metric FROM game_events WHERE id = ?
+    `).get(completion.event.id) }, {
+      hint_bucket: scenario.bucket,
+      puzzle_key: `${session.id}:${puzzle}`,
+      metric: Math.floor(scenario.elapsedMs / 1000),
+    });
+  }
 });
 
 test("an expired completion receipt exposes a stable route error code", async (t) => {
@@ -1282,7 +1378,8 @@ test("independent SQLite connections converge on one immutable completion", asyn
     dispatchWith(second, `/sessions/${conflictingSession.id}/finish`, secondVariant),
   ]);
   assert.deepEqual(variants.map(({ status }) => status).sort(), [202, 409]);
-  assert.equal((await finishGame(first, conflictingSession, firstVariant)).status, 200);
+  const winningVariant = variants[0].status === 202 ? firstVariant : secondVariant;
+  assert.equal((await finishGame(first, conflictingSession, winningVariant)).status, 200);
   assert.equal(firstDatabase.sqlite.prepare(
     "SELECT COUNT(*) AS count FROM verified_game_completions"
   ).get().count, 2);
