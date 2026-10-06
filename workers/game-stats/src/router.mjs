@@ -126,6 +126,17 @@ const handleGetHealth = async (request, env) => {
   return jsonResponse(request, env, { ok: true, buildVersion, acceptedBuildVersions });
 };
 
+const readReplayRequest = async (read) => {
+  try {
+    return await read();
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 413) {
+      throw new HttpError(413, error.message, { code: "replay-limit" });
+    }
+    throw error;
+  }
+};
+
 const handlePostSession = async (request, env, dependencies) => {
   assertBrowserOriginAllowed(request, env);
   const session = await createSession(
@@ -152,10 +163,12 @@ const handlePostTiming = async (request, env, sessionId, dependencies) => {
 const handlePostFinish = async (request, env, sessionId, dependencies) => {
   assertBrowserOriginAllowed(request, env);
   const verification = dependencies.verification || {};
-  const body = await readJsonBodyWithMetadata(
-    request,
-    MAX_REPLAY_BODY_BYTES,
-    verification.now || Date.now
+  const body = await readReplayRequest(
+    () => readJsonBodyWithMetadata(
+      request,
+      MAX_REPLAY_BODY_BYTES,
+      verification.now || Date.now
+    )
   );
   const result = await finishVerifiedSession(
     request,
@@ -174,7 +187,7 @@ const handlePostFinishContinue = async (request, env, sessionId, dependencies) =
     request,
     env,
     sessionId,
-    await readJsonBody(request),
+    await readReplayRequest(() => readJsonBody(request)),
     dependencies.verification || {}
   );
   return jsonResponse(request, env, { ok: true, ...result }, result.progress ? 202 : 200);

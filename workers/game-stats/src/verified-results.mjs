@@ -51,6 +51,12 @@ const limitsFor = (game) => Object.freeze({
 });
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
 const SESSION_ID_PATTERN = /^[A-Za-z0-9-]{8,80}$/;
+const REPLAY_LIMIT_CODE = "replay-limit";
+const SESSION_EXPIRED_CODE = "session-expired";
+const replayLimitError = (message) =>
+  new HttpError(413, message, { code: REPLAY_LIMIT_CODE });
+const sessionExpiredError = (message) =>
+  new HttpError(409, message, { code: SESSION_EXPIRED_CODE });
 const textEncoder = new TextEncoder();
 const ENGINE_GLOBALS = Object.freeze({
   minesweeper: "homeMinesweeperRules",
@@ -505,7 +511,7 @@ const validateVerifiedProof = async (
     throw new HttpError(403, "Session proof does not match this issued game");
   }
   if (requireUnexpired && Date.parse(session.expires_at) <= Date.now()) {
-    throw new HttpError(409, "Game session has expired");
+    throw sessionExpiredError("Game session has expired");
   }
   return { config, initial };
 };
@@ -704,7 +710,9 @@ export const restoreVerifiedSession = async (request, env, sessionId, rawPayload
 
 const translateRuleError = (error) => {
   if (error instanceof commonRules.GameRuleError) {
-    throw new HttpError(error.code === "replay-limit" ? 413 : 400, error.message);
+    throw new HttpError(error.code === REPLAY_LIMIT_CODE ? 413 : 400, error.message, {
+      code: error.code,
+    });
   }
   throw error;
 };
@@ -999,7 +1007,7 @@ export const finishVerifiedSession = async (
     { requireUnexpired: false, verifyInitial: false }
   );
   if (Date.parse(session.expires_at) <= finished.getTime()) {
-    throw new HttpError(409, "Game session has expired");
+    throw sessionExpiredError("Game session has expired");
   }
   if (session.consumed_at || session.completion_id) {
     throw new HttpError(409, "Game session was already used");
@@ -1013,7 +1021,7 @@ export const finishVerifiedSession = async (
     throw new HttpError(409, "Timing evidence is incomplete");
   }
   if (payload.inputs.length > commonRules.GAME_RULE_LIMITS[session.game].inputs) {
-    throw new HttpError(413, "Game replay input limit exceeded");
+    throw replayLimitError("Game replay input limit exceeded");
   }
   const ipHash = await hmacDigest(requireSecurityConfig(env).ipHashSecret, getClientIp(request));
   await enforceRateLimit(
@@ -1166,7 +1174,7 @@ const canonicalPrefixAt = async (database, jobId, inputCursor) => {
     .bind(jobId, inputCursor)
     .first())?.canonical_prefix || "");
   if (textEncoder.encode(prefix).byteLength > MAX_REPLAY_BODY_BYTES) {
-    throw new HttpError(413, "Replay prefix exceeds the verification byte limit");
+    throw replayLimitError("Replay prefix exceeds the verification byte limit");
   }
   return prefix;
 };
@@ -1426,7 +1434,7 @@ export const continueVerifiedSession = async (
     throw new HttpError(409, "Verification job uses an unsupported version");
   }
   if (Date.parse(job.expires_at) <= nowDate(dependencies).getTime()) {
-    throw new HttpError(409, "Game session has expired during verification");
+    throw sessionExpiredError("Game session has expired during verification");
   }
   if (
     !Number.isSafeInteger(Number(job.continuation_limit)) ||
@@ -1436,7 +1444,7 @@ export const continueVerifiedSession = async (
     throw new HttpError(409, "Verification job has an invalid continuation limit");
   }
   if (Number(job.request_count) >= Number(job.continuation_limit)) {
-    throw new HttpError(413, "Verification continuation limit exceeded");
+    throw replayLimitError("Verification continuation limit exceeded");
   }
   const session = await loadVerifiedSession(env, sessionId);
   await validateVerifiedProof(
@@ -1529,7 +1537,7 @@ export const continueVerifiedSession = async (
     String(job.state_json || session.initial_json)
   ).byteLength;
   if (checkpointBytes > MAX_VERIFICATION_CHECKPOINT_BYTES) {
-    throw new HttpError(413, "Verification checkpoint is too large");
+    throw replayLimitError("Verification checkpoint is too large");
   }
   const nextBoundary = nextTimingRevision <= Number(job.timing_revision)
     ? Number((await database
@@ -1568,14 +1576,14 @@ export const continueVerifiedSession = async (
     }
     if ((operations + 1) * checkpointBytes > MAX_VERIFICATION_BATCH_CLONE_BYTES) {
       if (operations === 0) {
-        throw new HttpError(413, "One replay action requires too much checkpoint cloning");
+        throw replayLimitError("One replay action requires too much checkpoint cloning");
       }
       break;
     }
     const canonicalInput = consumesInput ? commonRules.canonicalJson(input) : "";
     const canonicalInputBytes = textEncoder.encode(canonicalInput).byteLength;
     if (canonicalInputBytes > MAX_VERIFICATION_ACTION_BYTES) {
-      throw new HttpError(413, "One replay action is too large");
+      throw replayLimitError("One replay action is too large");
     }
     if (canonicalBytes + canonicalInputBytes > MAX_VERIFICATION_BATCH_CANONICAL_BYTES) break;
     let transitioned;
@@ -1602,7 +1610,7 @@ export const continueVerifiedSession = async (
       tickCursor += 1;
     }
     if (Number(job.work_used) + batchWork > commonRules.GAME_RULE_LIMITS[session.game].work) {
-      throw new HttpError(413, "Game verification work limit exceeded");
+      throw replayLimitError("Game verification work limit exceeded");
     }
   }
   if (operations === 0) {
@@ -1610,7 +1618,7 @@ export const continueVerifiedSession = async (
   }
   const stateJson = commonRules.canonicalJson(state);
   if (textEncoder.encode(stateJson).byteLength > MAX_VERIFICATION_CHECKPOINT_BYTES) {
-    throw new HttpError(413, "Verification checkpoint is too large");
+    throw replayLimitError("Verification checkpoint is too large");
   }
   if (replayStartedAt) {
     dependencies.onVerificationBatch(Object.freeze({
@@ -1698,7 +1706,7 @@ export const publishVerifiedCompletion = async (
     throw new HttpError(409, "Verified completion was published with different identity");
   }
   if (Date.parse(completion.expires_at) <= Date.now()) {
-    throw new HttpError(409, "Completion receipt has expired");
+    throw sessionExpiredError("Completion receipt has expired");
   }
   const existing = await selectExistingEvent(env, event.id);
   if (existing) throw new HttpError(409, "Event id already exists with a different result");

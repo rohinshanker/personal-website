@@ -194,4 +194,9 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
     padding: "x".repeat(256 * 1024),
   });
   assert.equal(oversized.status, 413);
+  assert.deepEqual(await oversized.json(), {
+    ok: false,
+    error: "Request body is too large",
+    code: "replay-limit",
+  });
 });

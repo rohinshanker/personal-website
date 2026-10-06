@@ -226,6 +226,13 @@ const profile = {
   icon: "assets/app-icons/ico/user_card.ico",
 };
 
+const assertErrorCode = async (response, status, code) => {
+  assert.equal(response.status, status, await response.clone().text());
+  const body = await response.json();
+  assert.equal(body.code, code);
+  return body;
+};
+
 test("protocol 2 issues a committed game, derives its result, and publishes by receipt", async (t) => {
   const harness = createHarness();
   t.after(() => harness.database.close());
@@ -406,6 +413,29 @@ test("pause and resume bind every acknowledged replay prefix and exclude paused 
   assert.equal(result.completion.event.metric, 3);
   assert.equal(result.completion.event.puzzleId, "fixture-easy");
   assert.equal(result.completion.event.hintBucket, "noHints");
+});
+
+test("an expired completion receipt exposes a stable route error code", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const session = await issue(harness);
+  assert.equal((await resumeGame(harness, session)).status, 200);
+  harness.advance(2_000);
+  const finished = await finishGame(
+    harness,
+    session,
+    finishBody(session, { eventId: "event-expired-receipt" })
+  );
+  assert.equal(finished.status, 200, await finished.clone().text());
+  const { completion } = await finished.json();
+  harness.advance(7 * 60 * 60 * 1000);
+
+  const expired = await harness.dispatch("/events", {
+    event: { ...completion.event, profile },
+    completion: { id: completion.id, token: completion.token },
+  });
+  const error = await assertErrorCode(expired, 409, "session-expired");
+  assert.match(error.error, /expired/);
 });
 
 test("an acknowledged paused terminal prefix finishes at its frozen elapsed boundary", async (t) => {
@@ -794,6 +824,26 @@ test("replay validation rejects ordering, truncation, expiry, cross-session reus
   );
   assert.equal(badVersion.status, 409);
 
+  const inputLimitSession = await readySession();
+  const inputLimit = await harness.dispatch(
+    `/sessions/${inputLimitSession.id}/finish`,
+    finishBody(inputLimitSession, {
+      eventId: "event-input-limit-0001",
+      inputs: null,
+    })
+  );
+  await assertErrorCode(inputLimit, 413, "replay-limit");
+
+  const invalidRuleSession = await readySession();
+  const invalidRule = await harness.dispatch(
+    `/sessions/${invalidRuleSession.id}/finish`,
+    finishBody(invalidRuleSession, {
+      eventId: "event-invalid-rule-0001",
+      timingRevision: -1,
+    })
+  );
+  await assertErrorCode(invalidRule, 400, "invalid-input");
+
   const other = await readySession();
   const reused = await harness.dispatch(
     `/sessions/${other.id}/finish`,
@@ -810,8 +860,8 @@ test("replay validation rejects ordering, truncation, expiry, cross-session reus
     `/sessions/${expiredSession.id}/finish`,
     finishBody(expiredSession, { eventId: "event-expired-0001" })
   );
-  assert.equal(expired.status, 409);
-  assert.match((await expired.json()).error, /expired/);
+  const expiredError = await assertErrorCode(expired, 409, "session-expired");
+  assert.match(expiredError.error, /expired/);
 });
 
 test("Snake terminal ticks require enough server-observed running time", async (t) => {
@@ -945,7 +995,7 @@ test("progress is scoped, immutable, expiring, and exact-retry idempotent", asyn
     session: { id: expiring.id, token: expiring.token },
     progress: expiringProgress,
   });
-  assert.equal(expired.status, 409);
+  await assertErrorCode(expired, 409, "session-expired");
   assert.equal(harness.database.sqlite.prepare(
     "SELECT expires_at FROM verified_completion_jobs WHERE session_id = ?"
   ).get(expiring.id).expires_at, originalExpiry);
@@ -994,7 +1044,7 @@ test("firstCell is flattened and continuation limits are stored, signed, and enf
     session: { id: capped.id, token: capped.token },
     progress: cappedProgress,
   });
-  assert.equal(exhausted.status, 413);
+  await assertErrorCode(exhausted, 413, "replay-limit");
   assert.throws(() => harness.database.sqlite.prepare(`
     UPDATE verified_completion_jobs SET continuation_limit = 8193 WHERE session_id = ?
   `).run(capped.id), /CHECK constraint failed/);
@@ -1056,7 +1106,7 @@ test("one action above a preparation or work envelope is rejected atomically", a
       { seq: 2, op: "advance", amount: 1 },
     ],
   }));
-  assert.equal(largeAction.status, 413);
+  await assertErrorCode(largeAction, 413, "replay-limit");
   assert.equal(harness.database.sqlite.prepare(`
     SELECT input_cursor FROM verified_completion_jobs WHERE session_id = ?
   `).get(largeSession.id).input_cursor, 0);
@@ -1080,10 +1130,38 @@ test("one action above a preparation or work envelope is rejected atomically", a
     costlySession,
     finishBody(costlySession, { eventId: "event-costly-action" })
   );
-  assert.equal(costlyAction.status, 413);
+  await assertErrorCode(costlyAction, 413, "replay-limit");
   assert.equal(harness.database.sqlite.prepare(`
     SELECT input_cursor FROM verified_completion_jobs WHERE session_id = ?
   `).get(costlySession.id).input_cursor, 0);
+
+  const checkpointEngine = progressEngine("minesweeper");
+  harness.dependencies.gameEngines = {
+    ...gameEngines,
+    minesweeper: {
+      ...checkpointEngine,
+      transition(state, input, budget) {
+        const transitioned = checkpointEngine.transition(state, input, budget);
+        transitioned.padding = "x".repeat(257 * 1024);
+        return transitioned;
+      },
+    },
+  };
+  const checkpointSession = await issue(harness);
+  assert.equal((await resumeGame(harness, checkpointSession)).status, 200);
+  harness.advance(2_000);
+  const checkpoint = await finishGame(
+    harness,
+    checkpointSession,
+    finishBody(checkpointSession, {
+      eventId: "event-large-checkpoint",
+      inputs: [{ seq: 1, op: "advance", amount: 1 }],
+    })
+  );
+  await assertErrorCode(checkpoint, 413, "replay-limit");
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT input_cursor FROM verified_completion_jobs WHERE session_id = ?
+  `).get(checkpointSession.id).input_cursor, 0);
 });
 
 test("a failed completion insert rolls back session consumption in real SQLite", async (t) => {
@@ -1250,7 +1328,7 @@ test("finish bodies are rejected by byte count before JSON allocation", async (t
     undefined,
     { verification: harness.dependencies }
   );
-  assert.equal(response.status, 413);
+  await assertErrorCode(response, 413, "replay-limit");
 });
 
 test("migration leaves every historical event explicitly legacy", () => {
