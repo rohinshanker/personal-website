@@ -24,6 +24,7 @@ export const HOME_SCRIPTS = Object.freeze({
   about: "scripts/home/features/about.js",
   gallery: "scripts/home/features/gallery.js",
   study: "scripts/home/features/study.js",
+  gameRules: "scripts/home/games/rules.js",
   gameStats: "scripts/home/features/game-stats.js",
   snake: "scripts/home/features/snake.js",
   minesweeper: "scripts/home/features/minesweeper.js",
