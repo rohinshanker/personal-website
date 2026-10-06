@@ -2,7 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| A | 2026-10-06 | [A_server-verified-leaderboard-results__20261003.md](A_server-verified-leaderboard-results__20261003.md) | Protocol/engine discovery underway on codex/server-verified-games, based on 877085d. Owner chose current timer behavior, completion replays and one combined leaderboard without verification badges. Common rules implemented; three isolated implementation streams DEM-247/248/249 running, with root handling the browser adapter. |
+| A | 2026-10-06 | [A_server-verified-leaderboard-results__20261003.md](A_server-verified-leaderboard-results__20261003.md) | MS/Snake and shared client integrated;671 fast tests pass after review repairs. Adapter/failure browser checks16/16 and updated completion renders4/4 pass; independent re-review pending. Solitaire/Sudoku/catalog active; Worker continuation and receipt integration pending. No deployment. |
 | O | 2026-09-29 | [O_soot-sprite-redesign__20260929.md](O_soot-sprite-redesign__20260929.md) | Redraw the soot sprite from the Ghibli films: four original candidates on a review page, owner picks one, then ship it. Nothing started. |
 | O | 2026-10-05 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Awaiting owner: Snake game-over noise animation and publication queue retry/overflow feedback. |
 | O | 2026-10-01 | [O_decide-content-and-assets__20260924.md](O_decide-content-and-assets__20260924.md) | Remaining audit decisions: Study Resources stub, 26 MB unreferenced calendar photos, originals and working files, background quality, shoot markup from data, pdf-window templating, renames, 98.css trim. Awaiting owner. |

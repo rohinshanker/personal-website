@@ -497,6 +497,7 @@ test("build mismatch is sticky until its reload action replaces the page", async
       "let gameStatsSyncState = 'ready';",
       "let gameStatsManualRefreshInProgress = false;",
       "let gameStatsExpiredResultNoticePending = false;",
+      "let gameStatsLocalResultNotice = null;",
       "let gameStatsSyncMessage = '';",
       "let gameStatsReleaseWaitCount = 0;",
       "let renderCalls = 0;",
@@ -523,7 +524,7 @@ test("build mismatch is sticky until its reload action replaces the page", async
   });
 });
 
-test("expired-result feedback returns after automatic failures and clears on manual refresh or new publication", async () => {
+test("local-only result feedback survives automatic reads and clears on manual refresh or new publication", async () => {
   const source = await readMainSource();
   const stateSource = extractSource(
     source,
@@ -536,6 +537,7 @@ test("expired-result feedback returns after automatic failures and clears on man
       "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, fetching: { message: 'fetching' }, publishing: { message: 'publishing' }, 'request-failed': { message: 'failed' }, 'session-expired': { message: 'expired' } };",
       "let gameStatsSyncState = 'session-expired';",
       "let gameStatsExpiredResultNoticePending = true;",
+      "let gameStatsLocalResultNotice = null;",
       "let gameStatsSyncMessage = 'expired';",
       "let gameStatsReleaseWaitCount = 0;",
       "let gameStatsManualRefreshInProgress = false;",
@@ -574,6 +576,28 @@ test("expired-result feedback returns after automatic failures and clears on man
   context.setForTest("publishing");
   context.setForTest("ready");
   assert.equal(context.readForTest().gameStatsSyncState, "ready");
+  for (const state of ["ready", "request-failed"]) {
+    context.setForTest(state, { message: "Saved locally; publishing failed", localResult: true });
+    context.setForTest("fetching");
+    context.setForTest("ready");
+    assert.deepEqual(plainObject(context.readForTest()), {
+      gameStatsSyncState: state,
+      gameStatsSyncMessage: "Saved locally; publishing failed",
+    });
+    context.setForTest("request-failed");
+    context.setForTest("fetching");
+    context.setForTest("ready");
+    assert.equal(context.readForTest().gameStatsSyncMessage, "Saved locally; publishing failed");
+    context.setManualForTest(true);
+    context.setForTest("fetching");
+    context.setForTest("ready");
+    context.setManualForTest(false);
+    assert.equal(context.readForTest().gameStatsSyncMessage, "ready");
+    context.setForTest(state, { message: "Saved locally", localResult: true });
+    context.setForTest("publishing");
+    context.setForTest("ready");
+    assert.equal(context.readForTest().gameStatsSyncMessage, "ready");
+  }
 });
 
 test("local reset clears the expiry notice without disturbing busy or build-mismatch states", async () => {
@@ -586,6 +610,7 @@ test("local reset clears the expiry notice without disturbing busy or build-mism
       "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, 'session-expired': { message: 'expired' } };",
       `let gameStatsSyncState = ${JSON.stringify(state)};`,
       "let gameStatsExpiredResultNoticePending = true;",
+      "let gameStatsLocalResultNotice = null;",
       "let gameStatsSyncMessage = '';",
       "let gameStatsReleaseWaitCount = 0;",
       "let gameStatsManualRefreshInProgress = false;",

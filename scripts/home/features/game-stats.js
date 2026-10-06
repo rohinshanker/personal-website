@@ -877,7 +877,7 @@ const reportGameStatsSessionFailure = (
         : `${prefix}${subject} verified game session request failed${
             status ? ` (HTTP ${status})` : ""
           }. Start a new game and try again.`;
-  setGameStatsSyncState("request-failed", { message });
+  setGameStatsSyncState("request-failed", { message, localResult: localSaved });
 };
 
 const normalizeGameStatsSessionConfig = (game, rawConfig) => {
@@ -1906,13 +1906,22 @@ const playGameStatsRecordHandoff = (game) => {
 const getGameStatsSyncStateDefinition = () =>
   GAME_STATS_SYNC_STATES[gameStatsSyncState] || GAME_STATS_SYNC_STATES.initial;
 
-const setGameStatsSyncState = (state, { message = "" } = {}) => {
+const setGameStatsSyncState = (state, { message = "", localResult = false } = {}) => {
   if (!GAME_STATS_SYNC_STATES[state]) return;
   if (gameStatsSyncState === "build-mismatch" && state !== "build-mismatch") return;
   if (state === "session-expired") {
     gameStatsExpiredResultNoticePending = true;
+    gameStatsLocalResultNotice = null;
+  } else if (localResult) {
+    gameStatsLocalResultNotice = { state, message };
+    gameStatsExpiredResultNoticePending = false;
   } else if (gameStatsManualRefreshInProgress || state === "publishing") {
     gameStatsExpiredResultNoticePending = false;
+    gameStatsLocalResultNotice = null;
+  }
+  if (gameStatsLocalResultNotice && !gameStatsManualRefreshInProgress) {
+    if (state === "fetching" && gameStatsSyncState === gameStatsLocalResultNotice.state) return;
+    if (state === "ready") ({ state, message } = gameStatsLocalResultNotice);
   }
   if (gameStatsExpiredResultNoticePending && !gameStatsManualRefreshInProgress) {
     if (state === "fetching" && gameStatsSyncState === "session-expired") return;
@@ -2197,6 +2206,7 @@ const runGameStatsSyncPass = async () => {
   } else if (rejectedCount) {
     setGameStatsSyncState("ready", {
       message: "Local stats are saved, but a result could not pass server verification.",
+      localResult: true,
     });
   } else if (gameStatsSubmissionQueue.length) {
     setGameStatsSyncState("request-failed");
@@ -2340,14 +2350,14 @@ const recordGameStatsEvent = async (
     completionPromise = null, onCanonicalMetric = null,
   } = {}
 ) => {
-  const event = normalizeGameStatsEvent(rawEvent);
-  if (!event) return;
   const sessionResultPromise = completionPromise
     ? completionPromise.then(
         (completion) => ({ completion }),
         (error) => ({ reason: error?.code || "request-failed", status: Number(error?.status) || 0 })
       )
     : getGameStatsSession(sessionKey);
+  const event = normalizeGameStatsEvent(rawEvent);
+  if (!event) return;
   const recordOptions = { snakePreviousHighScore };
   const mayBeatPersonalRecord = gameStatsEventBeatsPersonalRecord(
     gameStatsLocalState,
@@ -2403,6 +2413,7 @@ const recordGameStatsEvent = async (
       finishGameStatsMetricCorrection(metricCorrection, event);
       setGameStatsSyncState("ready", {
         message: "Local stats are saved, but a result could not pass server verification.",
+        localResult: true,
       });
       if (recordHandoffPromise) await recordHandoffPromise;
       return;
@@ -2426,16 +2437,21 @@ const recordGameStatsEvent = async (
     } else if (sessionResult?.reason === "replay-limit") {
       setGameStatsSyncState("ready", {
         message: "Saved on this device. This game's replay exceeds verification limits, so this result can't be published.",
+        localResult: true,
       });
+    } else if (completionPromise && [401, 403, 429].includes(sessionResult?.status)) {
+      reportGameStatsSessionFailure(sessionResult, { localSaved: true });
     } else if (completionPromise) {
       setGameStatsSyncState("ready", {
         message: "Local stats are saved, but this game's result could not be verified for publication.",
+        localResult: true,
       });
     } else if (sessionKey) {
       reportGameStatsSessionFailure(sessionResult, { localSaved: true });
     } else {
       setGameStatsSyncState("ready", {
         message: "Local stats are saved. This result started without a verified game session.",
+        localResult: true,
       });
     }
     if (recordHandoffPromise) await recordHandoffPromise;
@@ -3514,6 +3530,7 @@ const renderGameProgressWindow = () => {
 const resetGameProgressLocalData = () => {
   gameStatsLocalResetGeneration += 1;
   gameStatsExpiredResultNoticePending = false;
+  gameStatsLocalResultNotice = null;
   if (gameStatsDraftProfile) resolveGameStatsProfilePrompt(null);
 
   gameStatsLocalState = createEmptyGameStatsData();
@@ -3826,6 +3843,7 @@ let gameStatsManualRefreshInProgress = false;
 
 let gameStatsSyncState = "initial";
 let gameStatsExpiredResultNoticePending = false;
+let gameStatsLocalResultNotice = null;
 
 let gameStatsSyncMessage = "";
 
@@ -4223,6 +4241,52 @@ const resumeGameStatsAuthenticationAfterCompletion = () => {
   requestGameStatsAdministratorAuthentication();
 };
 
+const requestIssuedGameStatsApi = async (path, payload, requestOptions = {}) => {
+  if (!isGameStatsBackendConfigured()) {
+    throw Object.assign(new Error("Game tracking is not configured"), { code: "unconfigured" });
+  }
+  let waiting = false;
+  try {
+    for (let attempt = 0; ; attempt += 1) {
+      if (requestOptions.signal?.aborted) throw new DOMException("Game issuance canceled", "AbortError");
+      try {
+        const response = await fetchGameStatsApi(path, {
+          method: "POST", body: JSON.stringify(payload), ...requestOptions,
+        });
+        return await readGameStatsApiJson(response);
+      } catch (error) {
+        if (path !== "/sessions" || Number(error?.status) !== 409 ||
+            attempt >= GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS || requestOptions.signal?.aborted) {
+          throw error;
+        }
+        if (!waiting) {
+          waiting = true;
+          gameStatsReleaseWaitCount += 1;
+        }
+        setGameStatsSyncState("release-waiting");
+        await new Promise((resolve) => {
+          const signal = requestOptions.signal;
+          const finish = () => {
+            window.clearTimeout(timer);
+            signal?.removeEventListener("abort", finish);
+            resolve();
+          };
+          const timer = window.setTimeout(finish, GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS);
+          signal?.addEventListener("abort", finish, { once: true });
+          if (signal?.aborted) finish();
+        });
+      }
+    }
+  } finally {
+    if (waiting) {
+      gameStatsReleaseWaitCount = Math.max(0, gameStatsReleaseWaitCount - 1);
+      if (gameStatsReleaseWaitCount === 0 && gameStatsSyncState === "release-waiting") {
+        setGameStatsSyncState("ready");
+      }
+    }
+  }
+};
+
 const createGameStatsHooks = (game, stateOrGetter) => {
   if (!GAME_STATS_SUPPORTED_GAMES.includes(game)) {
     throw new TypeError("Unsupported game stats hook");
@@ -4250,15 +4314,7 @@ const createGameStatsHooks = (game, stateOrGetter) => {
         game,
         getState,
         buildVersion: gameStatsBackend.buildVersion,
-        request: async (path, payload, requestOptions = {}) => {
-          if (!isGameStatsBackendConfigured()) {
-            throw Object.assign(new Error("Game tracking is not configured"), { code: "unconfigured" });
-          }
-          const response = await fetchGameStatsApi(path, {
-            method: "POST", body: JSON.stringify(payload), ...requestOptions,
-          });
-          return readGameStatsApiJson(response);
-        },
+        request: requestIssuedGameStatsApi,
         reportFailure: (error) => {
           if (error?.code === "session-expired") setGameStatsSyncState("session-expired");
           else reportGameStatsSessionFailure({ reason: error?.code || "request-failed", status: Number(error?.status) || 0 });

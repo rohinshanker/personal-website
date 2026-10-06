@@ -47,7 +47,7 @@ const normalizeIssuedGame = (raw, game, config) => {
     work: assertInteger(limits.work, 1, GAME_RULE_LIMITS[game].work, "work limit"),
     ticks: assertInteger(limits.ticks, 0, GAME_RULE_LIMITS[game].ticks, "tick limit"),
     bytes: assertInteger(limits.bytes, 1, GAME_RULE_LIMITS[game].bytes, "body limit"),
-    continuations: limits.continuations === undefined ? 8192 :
+    continuations: limits.continuations === undefined ? 1 :
       assertInteger(limits.continuations, 1, 8192, "continuation limit"),
   };
   return descriptor;
@@ -85,7 +85,7 @@ const createGameSession = ({ game, getState, request, buildVersion, reportFailur
       key: `${game}-issued-${++sequence}`,
       descriptor: null, inputs: [], bufferedInputs: [], eligible: true,
       controller: new AbortController(), pending: null, timingQueue: Promise.resolve(),
-      error: null, claimed: false,
+      error: null, claimed: false, pausedInputCount: null,
     };
     current = entry;
     state.statsSession = entry.key;
@@ -114,17 +114,20 @@ const createGameSession = ({ game, getState, request, buildVersion, reportFailur
           ...(firstCell === undefined ? {} : { firstCell }),
         };
         const response = await request("/sessions", payload, { signal: entry.controller.signal });
-        if (!active(entry)) return null;
+        if (!active(entry) && !entry.claimed) return null;
         const descriptor = normalizeIssuedGame(response, game, normalizedConfig);
         if (await replayHash(descriptor.initial) !== descriptor.initialCommitment) {
           throw new GameRuleError("invalid-response", "Issued game commitment does not match");
         }
-        if (!active(entry)) return null;
+        if (!active(entry) && !entry.claimed) return null;
         if (expired({ descriptor })) throw new GameRuleError("session-expired", "Game session expired");
         entry.descriptor = descriptor;
+        if (entry.bufferedInputs.length > descriptor.limits.inputs) {
+          throw new GameRuleError("replay-limit", "Game replay input limit exceeded");
+        }
         return cloneState({ ...descriptor, sessionKey: entry.key });
       } catch (error) {
-        if (active(entry)) fail(entry, error);
+        if (active(entry) || entry.claimed) fail(entry, error);
         return null;
       }
     })();
@@ -133,13 +136,18 @@ const createGameSession = ({ game, getState, request, buildVersion, reportFailur
 
   const recordInput = (action) => {
     const entry = current;
-    if (!entry || !active(entry) || !entry.eligible || !entry.descriptor) return false;
+    if (!entry || !entry.eligible) return false;
+    if (!active(entry)) {
+      fail(entry, new GameRuleError("session-unavailable", "Game state lost its issued session"));
+      return false;
+    }
     const input = cloneState(action);
     if (!input || Array.isArray(input) || typeof input.op !== "string" || "seq" in input) {
       throw new GameRuleError("invalid-input", "Replay actions require an operation without a sequence");
     }
-    if (entry.descriptor.timing.phase !== "running") {
-      if (entry.inputs.length + entry.bufferedInputs.length >= entry.descriptor.limits.inputs) {
+    if (!entry.descriptor || entry.descriptor.timing.phase !== "running") {
+      const maximum = entry.descriptor?.limits.inputs || GAME_RULE_LIMITS[game].inputs;
+      if (entry.inputs.length + entry.bufferedInputs.length >= maximum) {
         fail(entry, new GameRuleError("replay-limit", "Game replay input limit exceeded"));
         return false;
       }
@@ -155,20 +163,24 @@ const createGameSession = ({ game, getState, request, buildVersion, reportFailur
     entry.timingQueue = entry.timingQueue.then(async () => {
       await entry.pending;
       if (!entry.descriptor || !entry.eligible || (!active(entry) && !entry.claimed)) return null;
+      // A completion owns the terminal prefix; an unsent pause must not replace it.
+      if (operation === "pause" && entry.claimed) return null;
       try {
         if (expired(entry)) throw new GameRuleError("session-expired", "Game session expired");
         const timing = entry.descriptor.timing;
         if ((operation === "pause" && timing.phase !== "running") ||
             (operation === "resume" && timing.phase === "running")) return cloneState(timing);
+        const inputCount = entry.inputs.length;
         const response = await request(`/sessions/${entry.descriptor.id}/timing`, {
           session: proof(entry), operation, expectedRevision: timing.revision,
-          inputCount: entry.inputs.length, inputHash: await replayHash(entry.inputs),
+          inputCount, inputHash: await replayHash(entry.inputs),
         }, { signal: entry.controller.signal, keepalive: operation === "pause" });
         const next = normalizeIssuedTiming(response.timing);
         if (next.revision <= timing.revision || next.phase !== (operation === "pause" ? "paused" : "running")) {
           throw new GameRuleError("invalid-response", "Game timing acknowledgment is out of order");
         }
         entry.descriptor.timing = next;
+        entry.pausedInputCount = operation === "pause" ? inputCount : null;
         if (operation === "resume") {
           for (const input of entry.bufferedInputs.splice(0)) if (!append(entry, input)) break;
         }
@@ -220,6 +232,7 @@ const createGameSession = ({ game, getState, request, buildVersion, reportFailur
         }
         entry.descriptor = descriptor;
         entry.inputs = inputs;
+        entry.pausedInputCount = descriptor.timing.phase === "paused" ? inputs.length : null;
         const bufferedInputs = saved.bufferedInputs || [];
         if (!Array.isArray(bufferedInputs) || bufferedInputs.some((input) =>
           !input || Array.isArray(input) || typeof input.op !== "string" || "seq" in input
@@ -264,7 +277,9 @@ const createGameSession = ({ game, getState, request, buildVersion, reportFailur
             throw entry.error || new GameRuleError("session-unavailable", "No issued game is available");
           }
           if (expired(entry)) throw new GameRuleError("session-expired", "Game session expired");
-          if (entry.descriptor.timing.phase !== "running" || entry.bufferedInputs.length) {
+          const timingPhase = entry.descriptor.timing.phase;
+          const terminalPause = timingPhase === "paused" && entry.pausedInputCount === entry.inputs.length;
+          if ((timingPhase !== "running" && !terminalPause) || entry.bufferedInputs.length) {
             throw new GameRuleError("timing-unavailable", "Game timing was not acknowledged");
           }
           const payload = {

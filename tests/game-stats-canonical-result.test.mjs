@@ -48,12 +48,13 @@ const load = () => {
     "const queueGameStatsSubmission = (event, session, completion) => submissions.push({ event: { ...event }, session, completion });",
     "const isGameStatsSessionExpired = (proof) => Date.parse(proof.expiresAt) <= Date.now();",
     "const setGameStatsSyncState = (state, {message=''}={}) => { gameStatsSyncState=state; gameStatsSyncMessage=message; };",
+    "const reportGameStatsSessionFailure = (result, {localSaved}={}) => setGameStatsSyncState(`http-${result.status}`, {message:localSaved ? 'Saved locally' : ''});",
     "const syncQueuedGameStats = () => {};",
     extract("function compareGameStatsLeaderboardEntries", "\n\nconst createGameStatsEventId"),
     extract("const createGameStatsLeaderboardEntry =", "\n\nconst applyConfirmedGameStatsEventToTotals"),
     extract("const updateGameStatsSudokuBestTime =", "\n\nconst gameStatsEventQualifiesForData"),
     extract("const gameStatsCanonicalMetricGroups =", "\n\nconst formatGameStatsCounter"),
-    "globalThis.record = (event, completionPromise) => recordGameStatsEvent(event, '', { completionPromise, sudokuNoHintsSeconds:event.metric, onCanonicalMetric: (result) => callbacks.push(result) });",
+    "globalThis.record = (event, completionPromise) => recordGameStatsEvent(event, '', { completionPromise, sudokuNoHintsSeconds:event?.metric, onCanonicalMetric: (result) => callbacks.push(result) });",
     "globalThis.read = () => ({data:gameStatsLocalState, saves, handoffs, submissions, callbacks, gameStatsSyncState, gameStatsSyncMessage, corrections:gameStatsCanonicalMetricGroups.size});",
     "globalThis.reset = () => { gameStatsLocalResetGeneration += 1; gameStatsLocalState.eventIds=[]; gameStatsLocalState.totals.sudoku.wins.easy.noHints=0; gameStatsLocalState.totals.sudoku.bestTimes.easy=null; gameStatsLocalState.leaderboards.sudoku.easy=[]; gameStatsLocalState.playerRecords.sudoku.easy=null; };",
   ].join("\n"), context);
@@ -141,4 +142,25 @@ test("a receipt with different game assertions is not published", async () => {
   assert.equal(context.read().submissions.length, 0);
   assert.equal(context.read().data.totals.sudoku.wins.easy.noHints, 1);
   assert.match(context.read().gameStatsSyncMessage, /could not pass server verification/);
+});
+
+test("completion authentication and rate-limit errors retain specific local-save feedback", async () => {
+  for (const status of [401, 403, 429]) {
+    const context = load();
+    await context.record(event("event-auth-rejected", 18), Promise.reject(Object.assign(new Error("Rejected"), { status })));
+    assert.equal(context.read().data.totals.sudoku.wins.easy.noHints, 1);
+    assert.equal(context.read().submissions.length, 0);
+    assert.equal(context.read().gameStatsSyncState, `http-${status}`);
+    assert.equal(context.read().gameStatsSyncMessage, "Saved locally");
+  }
+});
+
+test("an invalid event still handles its already-started completion rejection", async () => {
+  const context = load();
+  const pending = deferred();
+  await context.record(null, pending.promise);
+  pending.reject(new Error("Completion failed after event validation"));
+  await new Promise(setImmediate);
+  assert.equal(context.read().saves, 0);
+  assert.equal(context.read().submissions.length, 0);
 });

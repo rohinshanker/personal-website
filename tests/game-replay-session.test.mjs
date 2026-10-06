@@ -235,7 +235,9 @@ test("finishing rejects a substituted completion identity or expiry", async () =
 
 test("bounded completion continuations preserve the original proof and one final result", async () => {
   let chunks = 0;
-  const pending = await harness({ intercept: (path, body) => {
+  const pending = await harness({
+    descriptor: await makeDescriptor({ limits: { ...rules.GAME_RULE_LIMITS.sudoku, continuations: 2 } }),
+    intercept: (path, body) => {
     if (path.endsWith("/finish")) return { progress: { id: "progress-replay-001", token: "progress-synthetic-001" } };
     if (path.endsWith("/finish/continue")) {
       assert.deepEqual(body.session, { id: "session-replay-001", token: "synthetic-session-proof" });
@@ -269,4 +271,92 @@ test("malformed and nonterminating continuation receipts cannot run without boun
     await assert.rejects(fixture.session.claimCompletion().finish("event-never-finished"));
     assert.equal(fixture.requests.filter(({ path }) => path.endsWith("/finish/continue")).length <= 2, true);
   }
+});
+
+test("inputs during issuance survive the initial start and a pending completion claim", async () => {
+  const issuance = deferred();
+  const fixture = await harness({ intercept: (path) => path === "/sessions" ? issuance.promise : undefined });
+  const issuing = fixture.session.issueGame(config);
+  assert.equal(fixture.session.recordInput({ op: "edit", index: 1, value: "2" }), true);
+  assert.equal(fixture.session.recordInput({ op: "edit", index: 2, value: "3" }), true);
+  const starting = fixture.session.resumeGame();
+  const completed = fixture.session.claimCompletion().finish("event-early-inputs");
+  issuance.resolve(fixture.issued);
+  assert.ok(await issuing);
+  await starting;
+  await completed;
+  assert.deepEqual(fixture.requests.find(({ path }) => path.endsWith("/finish")).payload.inputs, [
+    { op: "edit", index: 1, value: "2", seq: 1 },
+    { op: "edit", index: 2, value: "3", seq: 2 },
+  ]);
+});
+
+test("early input limits and a lost state key invalidate the entire replay", async () => {
+  const issuance = deferred();
+  const fixture = await harness({
+    descriptor: await makeDescriptor({ limits: { ...rules.GAME_RULE_LIMITS.sudoku, inputs: 1 } }),
+    intercept: (path) => path === "/sessions" ? issuance.promise : undefined,
+  });
+  const issuing = fixture.session.issueGame(config);
+  fixture.session.recordInput({ op: "edit" });
+  fixture.session.recordInput({ op: "undo" });
+  issuance.resolve(fixture.issued);
+  assert.equal(await issuing, null);
+  assert.equal(fixture.errors[0].code, "replay-limit");
+  assert.equal(fixture.session.hasIssuedGame(), false);
+  const swapped = await harness();
+  await swapped.session.issueGame(config);
+  const key = swapped.state.statsSession;
+  swapped.state.statsSession = "";
+  assert.equal(swapped.session.recordInput({ op: "edit" }), false);
+  swapped.state.statsSession = key;
+  assert.equal(swapped.session.hasIssuedGame(), false);
+});
+
+test("claiming skips an unsent pause without losing the terminal completion", async () => {
+  const fixture = await harness();
+  await fixture.session.issueGame(config); await fixture.session.resumeGame();
+  fixture.session.recordInput({ op: "edit" });
+  const pausing = fixture.session.pauseGame();
+  const completed = fixture.session.claimCompletion().finish("event-pause-claimed");
+  assert.equal(await pausing, null);
+  await completed;
+  assert.equal(fixture.requests.filter(({ path }) => path.endsWith("/timing")).length, 1);
+});
+
+test("an in-flight pause can finish only its exact acknowledged terminal prefix", async () => {
+  for (const additionalInput of [false, true]) {
+    const pause = deferred(); const sent = deferred();
+    const fixture = await harness({ intercept: (path, payload) => {
+      if (path.endsWith("/timing") && payload.operation === "pause") {
+        sent.resolve();
+        return pause.promise;
+      }
+      return undefined;
+    } });
+    await fixture.session.issueGame(config); await fixture.session.resumeGame();
+    fixture.session.recordInput({ op: "edit" });
+    const pausing = fixture.session.pauseGame();
+    await sent.promise;
+    if (additionalInput) fixture.session.recordInput({ op: "undo" });
+    const completed = fixture.session.claimCompletion().finish("event-paused-prefix");
+    pause.resolve({ timing: { revision: 2, phase: "paused", elapsedMs: 2500 } });
+    await pausing;
+    if (additionalInput) {
+      await assert.rejects(completed, /not acknowledged/);
+      assert.equal(fixture.requests.some(({ path }) => path.endsWith("/finish")), false);
+    } else {
+      await completed;
+      assert.equal(fixture.requests.find(({ path }) => path.endsWith("/finish")).payload.timingRevision, 2);
+    }
+  }
+});
+
+test("running saves cannot invent a past pause and missing continuation limits are conservative", async () => {
+  const fixture = await harness();
+  await fixture.session.issueGame(config); await fixture.session.resumeGame();
+  const saved = fixture.session.exportGame();
+  assert.equal(await fixture.session.restoreGame(saved), null);
+  assert.equal(fixture.errors[0].code, "invalid-response");
+  assert.equal(normalizeIssuedGame(fixture.issued, "sudoku", config).limits.continuations, 1);
 });
