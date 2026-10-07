@@ -41,9 +41,10 @@ export const isolateProductionRandomEventPolicies = (source, { except = [] } = {
     dataDrivenStartIndex < 0 ||
     dataDrivenEndIndex < 0 ||
     !dataDrivenRegistration.includes('id: `debug-system-alert-${alert.id}`') ||
-    dataDrivenRegistration.includes("debug: true,")
+    dataDrivenRegistration.includes("debug: true,") ||
+    dataDrivenRegistration.includes("forceOnStart: true,")
   ) {
-    throw new Error("Unable to isolate the data-driven debug alert family.");
+    throw new Error("Unable to isolate the data-driven random-event policy family.");
   }
   return isolateProductionForcedStart(source, { except });
 };

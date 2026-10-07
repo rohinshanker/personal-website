@@ -558,7 +558,10 @@ test("the scheduler isolates forced events and only cools down normal accepted e
 
   assert.ok(scheduler, "The scheduler should remain a dedicated helper");
   assert.match(scheduler[1], /const debug = Boolean\(context\.debug\);/);
-  assert.match(scheduler[1], /const forceOnStart = Boolean\(context\.forceOnStart\);/);
+  assert.match(
+    scheduler[1],
+    /const forceOnStart =\n    Boolean\(context\.forceOnStart\) && context\.triggerName === "startButton";/
+  );
   assert.match(scheduler[1], /const bypassGlobalLimits = debug \|\| forceOnStart;/);
   assert.match(scheduler[1], /if \(isRandomEventGameplayLockActive\(\)\) return false;/);
   assert.match(
@@ -611,7 +614,7 @@ test("the scheduler isolates forced events and only cools down normal accepted e
   );
 });
 
-test("forced-Start and debug scheduling bypass global limits but preserve safety guards", async () => {
+test("only Start-bound force contexts and debug scheduling bypass global limits", async () => {
   const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const scheduler = source.match(
     /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
@@ -663,6 +666,11 @@ test("forced-Start and debug scheduling bypass global limits but preserve safety
   const runtime = context.randomEventScheduler;
   const first = { id: "first", run: () => {} };
   const second = { id: "second", debug: true, run: () => {} };
+  const nonStartForced = {
+    id: "non-start-forced",
+    forceOnStart: true,
+    run: () => {},
+  };
   const forcedStart = { id: "forced-start", forceOnStart: true, run: () => {} };
 
   assert.equal(runtime.schedule(first, { triggerName: "gameWin" }), false);
@@ -702,7 +710,32 @@ test("forced-Start and debug scheduling bypass global limits but preserve safety
   assert.equal(runtime.getSelectionCount(), 2);
   assert.equal(runtime.getTriggerCount(), 1);
 
+  runtime.setCanSchedule(true);
+  assert.equal(
+    runtime.schedule(nonStartForced, {
+      triggerName: "windowOpen",
+      forceOnStart: true,
+    }),
+    false
+  );
+  assert.equal(runtime.getPendingCount(), 2);
+  assert.equal(runtime.getSelectionCount(), 2);
+  assert.equal(runtime.getTriggerCount(), 1);
+
+  runtime.setCooldownActive(false);
   runtime.setCanSchedule(false);
+  assert.equal(
+    runtime.schedule(nonStartForced, {
+      triggerName: "windowOpen",
+      forceOnStart: true,
+    }),
+    false
+  );
+  assert.equal(runtime.getPendingCount(), 2);
+  assert.equal(runtime.getSelectionCount(), 2);
+  assert.equal(runtime.getTriggerCount(), 1);
+
+  runtime.setCooldownActive(true);
   assert.equal(
     runtime.schedule(forcedStart, {
       triggerName: "startButton",

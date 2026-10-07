@@ -57,6 +57,23 @@ test("the browser fixture isolates every forced-Start policy unless explicitly r
   }
 });
 
+test("the browser fixture rejects armed policies in the data-driven alert family", async () => {
+  const source = await readHomeScript(PRODUCTION_RANDOM_EVENT_POLICY_SCRIPT_KEY);
+  const familyMarker = 'id: `debug-system-alert-${alert.id}`,';
+
+  for (const armedPolicy of ["debug: true,", "forceOnStart: true,"]) {
+    const armedSource = source.replace(
+      familyMarker,
+      `${familyMarker}\n      ${armedPolicy}`
+    );
+    assert.notEqual(armedSource, source, "The data-driven family marker must exist");
+    assert.throws(
+      () => isolateProductionRandomEventPolicies(armedSource),
+      /Unable to isolate the data-driven random-event policy family/
+    );
+  }
+});
+
 test("the browser fixture routes the owning event script and rejects stale transforms", async () => {
   let routeHandler;
   let routesUrl;

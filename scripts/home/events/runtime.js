@@ -872,7 +872,8 @@ const isRandomEventGameplayLockActive = () =>
 
 const scheduleRandomEventRun = (definition, context) => {
   const debug = Boolean(context.debug);
-  const forceOnStart = Boolean(context.forceOnStart);
+  const forceOnStart =
+    Boolean(context.forceOnStart) && context.triggerName === "startButton";
   const bypassGlobalLimits = debug || forceOnStart;
   if (isRandomEventGameplayLockActive()) return false;
   if (randomEventPendingDefinitions.has(definition)) return false;
