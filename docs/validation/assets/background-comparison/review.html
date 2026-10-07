@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home Background Comparison</title>
+    <link rel="stylesheet" href="../../../../style.css?v=html-semantics-20260927" />
+    <style>
+      body { margin: 16px; background: #c0c0c0; }
+      main { max-width: 1480px; margin: auto; }
+      h1 { font-size: 20px; }
+      .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+      fieldset { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; }
+      label { display: inline-flex; align-items: center; gap: 4px; }
+      .preview { margin: 16px 0 0; overflow: auto; max-height: 75vh; border: 2px inset; }
+      .preview img { display: block; max-width: none; }
+      .status { margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <main class="window">
+      <div class="title-bar"><div class="title-bar-text">Background Comparison</div></div>
+      <div class="window-body">
+        <h1>Compare the Home background</h1>
+        <p>Current JPEG: 2200 × 1446, 352,363 bytes. Smaller WebP: 1600 × 1052, 49,350 bytes — 86% smaller.</p>
+        <p>These are real Home renders with the same layout. Switch images to compare edges, sky and grass at full size. The current background remains in use until you choose.</p>
+        <div class="controls">
+          <label for="viewport">Screen size
+            <select id="viewport">
+              <option value="mobile">Phone · 375 × 812</option>
+              <option value="tablet">Tablet · 768 × 1024</option>
+              <option value="desktop" selected>Desktop · 1280 × 800</option>
+              <option value="wide">Wide · 1440 × 900</option>
+            </select>
+          </label>
+          <fieldset>
+            <legend>Background</legend>
+            <div><input type="radio" id="variant-current" name="variant" value="current" checked /><label for="variant-current">Current JPEG</label></div>
+            <div><input type="radio" id="variant-webp" name="variant" value="webp" /><label for="variant-webp">Smaller WebP</label></div>
+          </fieldset>
+        </div>
+        <p class="status" id="status" role="status">Desktop · Current JPEG</p>
+        <figure class="preview" aria-label="Home at actual render size">
+          <img id="preview" src="home-desktop-current.png" width="1280" height="800" alt="Home desktop with the current JPEG background" />
+        </figure>
+      </div>
+    </main>
+    <script>
+      const sizes = { mobile: [375, 812], tablet: [768, 1024], desktop: [1280, 800], wide: [1440, 900] };
+      const selector = document.getElementById("viewport");
+      const preview = document.getElementById("preview");
+      const updatePreview = () => {
+        const viewport = selector.value;
+        const variant = document.querySelector('input[name="variant"]:checked').value;
+        const label = variant === "current" ? "Current JPEG" : "Smaller WebP";
+        preview.src = `home-${viewport}-${variant}.png`;
+        [preview.width, preview.height] = sizes[viewport];
+        preview.alt = `Home at ${sizes[viewport].join(" × ")} with ${label.toLowerCase()}`;
+        document.getElementById("status").textContent = `${selector.selectedOptions[0].textContent} · ${label}`;
+      };
+      selector.addEventListener("change", updatePreview);
+      document.querySelectorAll('input[name="variant"]').forEach((input) => input.addEventListener("change", updatePreview));
+    </script>
+  </body>
+</html>

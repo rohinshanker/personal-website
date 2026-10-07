@@ -3,7 +3,7 @@
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
 | O | 2026-10-07 | [O_review-archived-calendar-photos__20261006.md](O_review-archived-calendar-photos__20261006.md) | All 18 photos are archived byte-for-byte and linked for owner review; record per-file choices before deletion. |
-| O | 2026-10-06 | [O_background-image-comparison__20261006.md](O_background-image-comparison__20261006.md) | Prepare smaller WebP/real Home comparison; owner chooses before a background quality change ships. |
+| O | 2026-10-07 | [O_background-image-comparison__20261006.md](O_background-image-comparison__20261006.md) | Real four-size comparison ready: 49 KB WebP versus 352 KB JPEG. Await explicit owner visual choice before shipping/closure. |
 | O | 2026-10-07 | [O_long-on-demand-home-loading__20261006.md](O_long-on-demand-home-loading__20261006.md) | Owner-approved next long ticket: Playwright/Chrome-trace baseline, ordered Home/hidden-event loading, on-demand Admin resources with a loading cursor. Ready after between-ticket fixes; leaderboard handoff is complete. |
 | O | 2026-10-06 | [O_long-window-dialog-semantics__20261006.md](O_long-window-dialog-semantics__20261006.md) | Owner-approved shared dialog roles/title labels; queued behind the loading ticket. |
 | O | 2026-10-06 | [O_long-modeling-shoot-markup__20261006.md](O_long-modeling-shoot-markup__20261006.md) | Generate Home modeling titles/credits from shared shoot data; preserve crawlable text and visuals. Queued. |

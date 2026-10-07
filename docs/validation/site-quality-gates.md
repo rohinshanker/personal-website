@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-10-05
+- Last verified: 2026-10-07
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -20,8 +20,8 @@ git diff --check
 ```
 
 `npm run syntax:check` runs `node --check` over every `scripts/` JavaScript and
-MJS file and every top-level `video-editor/` one; the release workflow runs the
-same script. For
+MJS file and every top-level `video-editor/` and `modeling/` one; the release workflow runs the
+same script. An invalid modeling-file probe must fail the gate; the clean tree must pass. For
 random-event changes, also run
 `node --test tests/gears-nest.test.mjs tests/random-event-cooldown.test.mjs`.
 
