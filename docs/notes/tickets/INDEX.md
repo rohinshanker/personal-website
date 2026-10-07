@@ -8,7 +8,7 @@
 | O | 2026-10-06 | [O_long-window-dialog-semantics__20261006.md](O_long-window-dialog-semantics__20261006.md) | Owner-approved shared dialog roles/title labels; queued behind the loading ticket. |
 | O | 2026-10-06 | [O_long-modeling-shoot-markup__20261006.md](O_long-modeling-shoot-markup__20261006.md) | Generate Home modeling titles/credits from shared shoot data; preserve crawlable text and visuals. Queued. |
 | O | 2026-10-06 | [O_long-descriptive-asset-paths__20261006.md](O_long-descriptive-asset-paths__20261006.md) | Owner requested informative asset path names for AI efficiency; migrate references, manifests and source paths together after preservation. |
-| O | 2026-10-06 | [O_pdf-window-template__20261006.md](O_pdf-window-template__20261006.md) | Assess net code reduction; template the eight PDF windows only if smaller, otherwise leave them. |
+| A | 2026-10-07 | [A_pdf-window-template__20261006.md](A_pdf-window-template__20261006.md) | Complete prototype saves 1.3 KB / 59 lines; implement readable shared PDF windows before core DOM capture. |
 | A | 2026-10-07 | [A_modeling-custom-cursors__20261006.md](A_modeling-custom-cursors__20261006.md) | Scoped Claude implementation in a separate worktree; reuse Home cursor runtime and validate real modeling states. |
 | O | 2026-10-06 | [O_game-publication-retry-feedback__20261006.md](O_game-publication-retry-feedback__20261006.md) | Approved one delayed retry and visible overflow count. Keep final visual evidence and remain open until owner approval. |
 | A | 2026-10-07 | [A_neko-start-trigger-setting__20261007.md](A_neko-start-trigger-setting__20261007.md) | Scoped Codex implementation in a separate worktree; preserve forced Start scheduling and all guards. |
