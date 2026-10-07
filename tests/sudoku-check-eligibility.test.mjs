@@ -50,6 +50,7 @@ const createSudokuEngineRealm = async (extra = [], tail = []) => {
       "const SUDOKU_DIGITS = '123456789';",
       "const recordedInputs = [];",
       "let sudokuGame = null;",
+      "let sudokuAppliedMoves = 0;",
       "let sudokuState = {};",
       "const recordedEvents = [];",
       `const sudokuStats = {
@@ -608,6 +609,7 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
       "const sudokuGrid = null;",
       "let sudokuCellElements = [];",
       "let sudokuGame = null;",
+      "let sudokuAppliedMoves = 0;",
       "let sudokuState = { puzzleId: '', puzzle: '' };",
       "const restoreCalls = [];",
       `const sudokuStats = {
@@ -797,9 +799,45 @@ test("a restored puzzle keeps verified provenance only for the board the server 
   );
   assert.match(
     issuedSource,
-    /if \(sudokuGame\.moves \|\| sudokuGame\.undo\.length \|\| sudokuState\.solved\) \{\s+\/\/[\s\S]*?sudokuStats\.dropSession\(\);\s+return;/,
-    "Entries made before issuance must drop the proof, not ignore it."
+    /if \(sudokuAppliedMoves \|\| sudokuState\.solved\) \{\s+\/\/[\s\S]*?sudokuStats\.dropSession\(\);\s+return;/,
+    "Anything played before issuance must drop the proof, not ignore it."
   );
+  // The board cannot answer whether it was played on: accepting the Errors
+  // warning, switching Notes or Conflicts on, and an entry that was undone all
+  // leave `moves` and the undo stack at zero, while every one of them is already
+  // recorded in the replay the server will verify.
+  assert.doesNotMatch(
+    issuedSource,
+    /sudokuGame\.moves \|\| sudokuGame\.undo\.length/,
+    "A guard that reads the board misses every change the board does not show."
+  );
+  const moveSource = sourceBetween(
+    main,
+    "const applySudokuMove = (action) => {",
+    "\n\n/**\n * Brings the engine's idea"
+  );
+  assert.match(
+    moveSource,
+    /sudokuAppliedMoves \+= 1;\s+sudokuStats\.recordInput\(action\);/,
+    "Every recorded change has to be counted, or the guard reads a stale zero."
+  );
+  // Cleared only where the board is replaced by one the proof does account for.
+  assert.match(
+    issuedSource,
+    /sudokuGame = sudokuRules\.initial\(descriptor\.initial\);\s+sudokuAppliedMoves = 0;/
+  );
+  assert.match(
+    restoreSource,
+    /sudokuGame = sudokuRules\.initial\(restoredBoard\);\s+sudokuAppliedMoves = 0;/
+  );
+  assert.match(restoreSource, /sudokuGame = restored;\s+sudokuAppliedMoves = 0;/);
+  const adoptSource = sourceBetween(
+    main,
+    "const adoptSudokuPuzzle = (difficulty, generated) => {",
+    "\n\n/**\n * New Game and the difficulty buttons never block."
+  );
+  assert.match(adoptSource, /sudokuAppliedMoves = 0;/);
+  assert.match(adoptSource, /requestIssuedSudokuPuzzle\(\);/);
 
   // The server's elapsed time reconciles the display without rewriting cleared
   // local data.

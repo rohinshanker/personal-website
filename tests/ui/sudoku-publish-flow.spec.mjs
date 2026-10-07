@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "./deterministic.mjs";
 import { REVIEW_VIEWPORTS, settleFrames } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
@@ -77,6 +78,12 @@ const generatedBuildVersion = generatedBackendSource.match(
 if (!generatedBuildVersion) {
   throw new Error("Unable to read the generated game build version.");
 }
+const generatedResultProtocol = Number(
+  generatedBackendSource.match(/resultProtocol:\s*(\d+)/)?.[1]
+);
+if (!generatedResultProtocol) {
+  throw new Error("Unable to read the generated result protocol.");
+}
 
 const installBackendConfig = async (page) => {
   const mockedBackendSource = generatedBackendSource.replace(
@@ -106,6 +113,13 @@ window.__sudokuPublishFlowTest = Object.freeze({
     playing: sudokuState.playing,
     statsSessionEligible: sudokuState.statsSessionEligible,
     timerRunning: Boolean(sudokuState.timerId),
+  }),
+  readBoard: () => ({
+    hintMode: sudokuState.hintMode,
+    noteMode: sudokuState.noteMode,
+    puzzle: sudokuState.puzzle,
+    puzzleId: sudokuState.puzzleId,
+    values: sudokuState.values.map((value) => value || "0").join(""),
   }),
   readIncorrectEntry: () => {
     const cells = sudokuCells();
@@ -452,7 +466,12 @@ const confirmErrorsAndRevealMistake = async (page, sudokuWindow) => {
   await expect(sudokuWindow.locator("#sudoku-mistakes")).toHaveText("Mistakes: 1");
 };
 
-const preparePage = async (page, viewport, scenario) => {
+/**
+ * Brings up the desktop against the mocked backend, stopping just short of
+ * opening Sudoku. `afterRoutes` runs once the API mock is registered, so a test
+ * can add a route that answers ahead of it and hold a request open.
+ */
+const bootHome = async (page, viewport, scenario, { afterRoutes } = {}) => {
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(
@@ -479,6 +498,7 @@ const preparePage = async (page, viewport, scenario) => {
   await installBackendConfig(page);
   await installSudokuBridge(page);
   const api = await installApi(page, scenario);
+  if (afterRoutes) await afterRoutes(api);
 
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   const aboutWindow = page.locator("#about-window");
@@ -493,7 +513,13 @@ const preparePage = async (page, viewport, scenario) => {
   await expect(page.evaluate(() => window.rohinGameStatsBackend)).resolves.toEqual({
     apiBaseUrl: API_BASE_URL,
     buildVersion: generatedBuildVersion,
+    resultProtocol: generatedResultProtocol,
   });
+  return api;
+};
+
+const preparePage = async (page, viewport, scenario) => {
+  const api = await bootHome(page, viewport, scenario);
 
   await page.locator('.desktop-icon[data-app="sudoku"]').click();
   const sudokuWindow = page.locator('[data-app-window="sudoku"]');
@@ -1363,4 +1389,329 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
     "Your no-hints record: #2, Sudoku Publisher, 120 seconds"
   );
   await expectStatsWindowContained(page, statsWindow);
+});
+
+/**
+ * Opens Sudoku and starts play while issuance is still outstanding, so the
+ * controls a player can reach before the server answers are reachable here too.
+ */
+const startHeldSudokuGame = async (page, held) => {
+  await page.locator('.desktop-icon[data-app="sudoku"]').click();
+  const sudokuWindow = page.locator('[data-app-window="sudoku"]');
+  await expect(sudokuWindow).toBeVisible();
+  const playButton = sudokuWindow.locator("#sudoku-play");
+  await expect(playButton).toBeEnabled({ timeout: PUBLISH_TIMEOUT_MS });
+  // The board is asked for as soon as it is adopted, so the request is already
+  // waiting on the gate before anything is played.
+  await expect.poll(() => held.requests, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
+  await playButton.click();
+  await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/, {
+    timeout: PUBLISH_TIMEOUT_MS,
+  });
+  return sudokuWindow;
+};
+
+const acceptSudokuErrorsWarning = async (sudokuWindow) => {
+  const errorsHint = sudokuWindow.locator('[data-sudoku-hint="errors"]');
+  await errorsHint.click();
+  const errorsPrompt = sudokuWindow.locator("#sudoku-errors-prompt");
+  await expect(errorsPrompt).toBeVisible();
+  await errorsPrompt.locator("#sudoku-errors-confirm").click();
+  await expect(errorsPrompt).toBeHidden();
+  await expect(errorsHint).toHaveAttribute("aria-pressed", "true");
+};
+
+/**
+ * Holds issuance open behind a gate the test releases, answering ahead of the
+ * API mock and handing the request on once the board underneath has been played.
+ */
+const holdSudokuIssuance = (page) => {
+  const held = { requests: 0, release: () => {} };
+  const gate = new Promise((resolve) => {
+    held.release = resolve;
+  });
+  held.install = async () => {
+    await page.route(`${API_BASE_URL}/sessions`, async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.fallback();
+        return;
+      }
+      held.requests += 1;
+      await gate;
+      await route.fallback();
+    });
+  };
+  return held;
+};
+
+/**
+ * The changes a player can make while issuance is outstanding that the board
+ * itself cannot show afterwards. Each one is recorded as an input against the
+ * local board, so none of them may be carried over to the board the server
+ * issued — and `moves` and the undo stack are back to empty for every one of
+ * them by the time the descriptor lands.
+ */
+const heldSudokuInteractions = Object.freeze([
+  Object.freeze({
+    label: "the Errors warning is accepted",
+    solves: true,
+    run: (page, sudokuWindow) => acceptSudokuErrorsWarning(sudokuWindow),
+    expectKept: async (sudokuWindow) => {
+      await expect(sudokuWindow.locator('[data-sudoku-hint="errors"]')).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+      await expect(sudokuWindow.locator('[data-sudoku-hint="off"]')).toHaveAttribute(
+        "aria-pressed",
+        "false"
+      );
+    },
+  }),
+  Object.freeze({
+    label: "Conflicts is switched on",
+    solves: false,
+    run: async (page, sudokuWindow) => {
+      await sudokuWindow.locator('[data-sudoku-hint="conflicts"]').click();
+      await expect(
+        sudokuWindow.locator('[data-sudoku-hint="conflicts"]')
+      ).toHaveAttribute("aria-pressed", "true");
+    },
+    expectKept: (sudokuWindow) =>
+      expect(sudokuWindow.locator('[data-sudoku-hint="conflicts"]')).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      ),
+  }),
+  Object.freeze({
+    label: "Notes is switched on",
+    solves: false,
+    run: async (page, sudokuWindow) => {
+      await sudokuWindow.locator("#sudoku-note-toggle").click();
+      await expect(sudokuWindow.locator("#sudoku-note-toggle")).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+    },
+    expectKept: (sudokuWindow) =>
+      expect(sudokuWindow.locator("#sudoku-note-toggle")).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      ),
+  }),
+  Object.freeze({
+    label: "an entry is made and undone",
+    solves: false,
+    run: async (page, sudokuWindow) => {
+      const entry = await page.evaluate(() =>
+        window.__sudokuPublishFlowTest.readIncorrectEntry()
+      );
+      const cell = sudokuWindow.locator(
+        `.sudoku-cell[data-sudoku-index="${entry.index}"]`
+      );
+      await cell.click();
+      await sudokuWindow.locator(`[data-sudoku-number="${entry.solutionDigit}"]`).click();
+      await expect(cell).toHaveAttribute("data-sudoku-value", entry.solutionDigit);
+      await sudokuWindow.locator("#sudoku-undo").click();
+      // Back to the board it started from, which is exactly why the board cannot
+      // be asked whether anything happened.
+      await expect(cell).toHaveAttribute("data-sudoku-value", "");
+    },
+    expectKept: (sudokuWindow) =>
+      expect(sudokuWindow.locator("#sudoku-undo")).toBeVisible(),
+  }),
+]);
+
+heldSudokuInteractions.forEach((interaction) => {
+  test(`late Sudoku issuance keeps the played board when ${interaction.label}`, async ({
+    page,
+  }) => {
+    const scenario = scenarios[0];
+    const held = holdSudokuIssuance(page);
+    const api = await bootHome(page, viewports[2], scenario, {
+      afterRoutes: held.install,
+    });
+
+    const sudokuWindow = await startHeldSudokuGame(page, held);
+    await interaction.run(page, sudokuWindow);
+    const playedBoard = await page.evaluate(() =>
+      window.__sudokuPublishFlowTest.readBoard()
+    );
+
+    held.release();
+    await expect
+      .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
+      .toBe(1);
+    await expect
+      .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
+        timeout: PUBLISH_TIMEOUT_MS,
+      })
+      .toEqual({
+        difficulty: "easy",
+        // The proof the server issued never applied to this board, so it is let
+        // go rather than attached to a puzzle it does not describe.
+        hasStatsSession: false,
+        playing: true,
+        statsSessionEligible: true,
+        timerRunning: true,
+      });
+
+    const issued = api.verified.boardFor("sudoku");
+    expect(issued.initial.puzzle).not.toBe(playedBoard.puzzle);
+    // The board the player is on is the board that stays, down to the cell they
+    // were on; the issued puzzle is not swapped in underneath them.
+    expect(await page.evaluate(() => window.__sudokuPublishFlowTest.readBoard())).toEqual(
+      playedBoard
+    );
+    await interaction.expectKept(sudokuWindow);
+    await settleFrames(page);
+
+    if (!interaction.solves) return;
+    // Nothing is replayed to the server for an attempt whose proof was let go,
+    // so there is no second warning to reject and no publish to verify.
+    const terminal = await prepareTerminalBoard(page, scenario.elapsedSeconds);
+    await finishTerminalBoard(sudokuWindow, terminal);
+    await expect
+      .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readBoard()), {
+        timeout: PUBLISH_TIMEOUT_MS,
+      })
+      .toEqual({ ...playedBoard, values: expect.stringMatching(/^[1-9]{81}$/) });
+    expect(api.verified.finishes).toEqual([]);
+    expect(api.verified.replayFor("sudoku")).toEqual([]);
+    expect(api.sessionRequests).toHaveLength(1);
+  });
+});
+
+test("late Sudoku issuance on a pristine board is adopted and publishes", async ({
+  page,
+}) => {
+  const scenario = scenarios[0];
+  const held = holdSudokuIssuance(page);
+  const api = await bootHome(page, viewports[2], scenario, {
+    afterRoutes: held.install,
+  });
+
+  const sudokuWindow = await startHeldSudokuGame(page, held);
+  held.release();
+  await expect
+    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+
+  // Nothing was played while the server was answering, so this really is the
+  // board it issued and the proof belongs to it.
+  const issued = api.verified.boardFor("sudoku");
+  await expect
+    .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readBoard()), {
+      timeout: PUBLISH_TIMEOUT_MS,
+    })
+    .toEqual({
+      hintMode: "off",
+      noteMode: false,
+      puzzle: issued.initial.puzzle,
+      puzzleId: issued.id,
+      values: issued.initial.puzzle,
+    });
+  await expect
+    .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
+      timeout: PUBLISH_TIMEOUT_MS,
+    })
+    .toEqual({
+      difficulty: "easy",
+      hasStatsSession: true,
+      playing: true,
+      statsSessionEligible: true,
+      timerRunning: true,
+    });
+
+  const terminal = await prepareTerminalBoard(page, scenario.elapsedSeconds);
+  await finishTerminalBoard(sudokuWindow, terminal);
+  await expect
+    .poll(() => api.verified.finishes.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+  await expect
+    .poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+  expectPublishedRequestContract(api, scenario);
+
+  // The replay the server verified has to be the one game it was issued for,
+  // with no repeated warning in it: a second confirmation would be a move the
+  // rules reject, and the result would never verify.
+  const replay = api.verified.replayFor("sudoku");
+  expect(replay.filter(({ op }) => op === "confirmErrors")).toEqual([]);
+  const verified = await page.evaluate(
+    ({ initial, inputs }) => {
+      const state = window.homeSudokuRules.initial(initial);
+      try {
+        for (const input of inputs) {
+          window.homeSudokuRules.transition(
+            state,
+            input,
+            window.homeGameRules.createBudget(2_000_000)
+          );
+        }
+        return { result: window.homeSudokuRules.result(state) };
+      } catch (error) {
+        return { code: error.code, message: error.message };
+      }
+    },
+    { initial: issued.initial, inputs: replay }
+  );
+  // The published bucket is the verifier's own assistance verdict on the replay,
+  // not a claim the page made about itself.
+  expect(verified).toEqual({
+    result: expect.objectContaining({
+      assistance: scenario.hintBucket,
+      assistanceCount: 0,
+      lost: false,
+      terminal: true,
+      won: true,
+    }),
+  });
+  await settleFrames(page);
+});
+
+viewports.forEach((viewport) => {
+  test(`a board kept through late Sudoku issuance renders at ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    const scenario = scenarios[0];
+    const held = holdSudokuIssuance(page);
+    const api = await bootHome(page, viewport, scenario, { afterRoutes: held.install });
+
+    const sudokuWindow = await startHeldSudokuGame(page, held);
+    await acceptSudokuErrorsWarning(sudokuWindow);
+    held.release();
+    await expect
+      .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
+      .toBe(1);
+    await expect
+      .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
+        timeout: PUBLISH_TIMEOUT_MS,
+      })
+      .toEqual({
+        difficulty: "easy",
+        hasStatsSession: false,
+        playing: true,
+        statsSessionEligible: true,
+        timerRunning: true,
+      });
+    await settleFrames(page);
+
+    // The warning the player accepted is still the one showing, on the board they
+    // accepted it on, and the puzzle is playable rather than half-replaced.
+    await expect(sudokuWindow.locator('[data-sudoku-hint="errors"]')).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/);
+    await expect(sudokuWindow.locator("#sudoku-errors-prompt")).toBeHidden();
+    const accessibility = await new AxeBuilder({ page })
+      .include('[data-app-window="sudoku"]')
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(accessibility.violations).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath(`sudoku-late-issuance-${viewport.name}.png`),
+      fullPage: true,
+    });
+  });
 });

@@ -282,6 +282,19 @@ const sudokuStats = createGameStatsHooks("sudoku", () => sudokuState);
  */
 let sudokuGame = null;
 
+/**
+ * Logical changes applied to the board on screen that no attached proof covers.
+ *
+ * Whether the board has been played on cannot be read off the board itself.
+ * `moves` counts entries and pencil marks only, so accepting the Errors warning,
+ * changing the hint mode or turning notes on all leave it at zero, and an entry
+ * that was undone leaves it back at zero — yet every one of those is recorded as
+ * an input and will be replayed by the verifier. So the count is kept here, at
+ * the one place every applied change passes through, and it is cleared only when
+ * the board is replaced by one the proof does account for.
+ */
+let sudokuAppliedMoves = 0;
+
 let sudokuCellElements = [];
 
 // The boot loader holds until a real puzzle exists, and the newest request
@@ -724,6 +737,7 @@ const applySudokuMove = (action) => {
   if (!sudokuGame || !sudokuRules.canApply(sudokuGame, action)) return false;
   const before = { values: sudokuGame.values, notes: sudokuGame.notes.slice() };
   sudokuRules.transition(sudokuGame, action, createBudget(SUDOKU_MOVE_WORK));
+  sudokuAppliedMoves += 1;
   sudokuStats.recordInput(action);
   projectSudokuGame();
   refreshChangedSudokuCells(before);
@@ -900,6 +914,7 @@ const adoptRestoredSudokuGame = (savedState) => {
     checksUsed: sudokuState.checksUsed,
   };
   sudokuGame = sudokuRules.initial(restoredBoard);
+  sudokuAppliedMoves = 0;
   // A save can claim to be finished, and an old one can claim it of a board that
   // plainly is not. The claim is taken only where the grid supports it; the
   // completion latch is kept either way, so a save can never publish twice.
@@ -958,6 +973,7 @@ const adoptIssuedSudokuReplay = (descriptor, savedReplay) => {
   // The frontend session key the adapter returned stays on the live state: the
   // board is replaced here, never the object that owns the key.
   sudokuGame = restored;
+  sudokuAppliedMoves = 0;
   renderSudoku();
   scheduleSudokuSave();
   return true;
@@ -2471,14 +2487,17 @@ const requestIssuedSudokuPuzzle = () => {
   Promise.resolve(pending).then((descriptor) => {
     // A newer request owns the session now; this one was already detached.
     if (!descriptor || token !== sudokuIssueToken) return;
-    if (sudokuGame.moves || sudokuGame.undo.length || sudokuState.solved) {
-      // Entries arrived before the server answered, so the puzzle on screen is
-      // not the one it issued. The proof is dropped rather than left attached to
-      // a board it never applied to, and the attempt stays local.
+    if (sudokuAppliedMoves || sudokuState.solved) {
+      // Something was played before the server answered, so the puzzle on screen
+      // is not the one it issued and the recorded replay belongs to this board,
+      // not to that one. The board the player is on is kept exactly as it is and
+      // the proof it never applied to is dropped. Clearing the replay instead
+      // would leave this board wearing a proof of a puzzle it never was.
       sudokuStats.dropSession();
       return;
     }
     sudokuGame = sudokuRules.initial(descriptor.initial);
+    sudokuAppliedMoves = 0;
     sudokuState.puzzleId = descriptor.gameId || sudokuState.puzzleId;
     renderSudoku();
     scheduleSudokuSave();
@@ -2534,6 +2553,7 @@ const adoptSudokuPuzzle = (difficulty, generated) => {
     solution: generated.solution,
     noteMode: previousNoteMode,
   });
+  sudokuAppliedMoves = 0;
   sudokuPuzzleReady = true;
   renderSudoku();
   requestIssuedSudokuPuzzle();
