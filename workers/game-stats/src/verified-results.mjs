@@ -1,4 +1,9 @@
 import "../../../scripts/home/games/rules.js";
+import "../../../scripts/home/games/minesweeper.js";
+import "../../../scripts/home/games/snake.js";
+import "../../../scripts/home/games/solitaire.js";
+import "../../../scripts/home/games/sudoku.js";
+import { generateIssuedInitial as generateCatalogInitial } from "./issued-game-catalog.mjs";
 
 import {
   MAX_EVENTS_PER_WINDOW,
@@ -352,7 +357,7 @@ const generateInitial = async (game, config, firstCell, seed, dependencies) => {
   let rawInitial;
   if (game === "solitaire" || game === "sudoku") {
     const generateIssuedInitial = dependencies.generateIssuedInitial ||
-      globalThis.generateIssuedInitial;
+      generateCatalogInitial;
     if (typeof generateIssuedInitial !== "function") {
       throw new HttpError(503, "Issued game catalog is unavailable");
     }

@@ -27,6 +27,8 @@ export const HOME_SCRIPTS = Object.freeze({
   gameRules: "scripts/home/games/rules.js",
   minesweeperRules: "scripts/home/games/minesweeper.js",
   snakeRules: "scripts/home/games/snake.js",
+  solitaireRules: "scripts/home/games/solitaire.js",
+  sudokuRules: "scripts/home/games/sudoku.js",
   gameSession: "scripts/home/games/session.js",
   gameStats: "scripts/home/features/game-stats.js",
   snake: "scripts/home/features/snake.js",

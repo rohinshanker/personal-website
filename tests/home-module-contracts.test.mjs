@@ -9,6 +9,19 @@ import {
   loadHomeContractGraph,
 } from "./helpers/home-contracts.mjs";
 
+test("whole-contract rule aliases remain part of the load dependency graph", () => {
+  assert.deepEqual(contractImports(`
+const { initial, transition } = window.homeSnakeRules;
+const solRules = window.homeSolitaireRules;
+const sudokuRules = window.homeSudokuRules;
+const ordinaryValue = window.innerWidth;
+`), [
+    { contract: "homeSnakeRules", names: ["initial", "transition"] },
+    { contract: "homeSolitaireRules", names: [] },
+    { contract: "homeSudokuRules", names: [] },
+  ]);
+});
+
 /**
  * The Home page loads ordered classic scripts, so a module can only read a
  * contract that an earlier script already published. These tests derive the

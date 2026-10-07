@@ -5,13 +5,16 @@ import { listHomeScriptFiles, repositoryRoot } from "./home-scripts.mjs";
 /**
  * The Home page's load-time dependency graph, read from the scripts themselves.
  *
- * Each script publishes one frozen contract on `window` and destructures the
- * contracts it needs at the top, so the graph is exactly what those two shapes
+ * Each script publishes one frozen contract on `window` and reads the
+ * contracts it needs at the top, so the graph is exactly what those shapes
  * say. Deriving it here means no test has to keep a hand-written copy.
  */
 
 const CONTRACT_NAME = "(?:home[A-Za-z]*|rohinAdminOrchestrator)";
 const CONTRACT_IMPORT = new RegExp(`\\}\\s*=\\s*window\\.(${CONTRACT_NAME})\\s*;`, "g");
+const CONTRACT_ALIAS = new RegExp(
+  `\\bconst\\s+[A-Za-z_$][\\w$]*\\s*=\\s*window\\.(${CONTRACT_NAME})\\s*;`, "g"
+);
 const CONTRACT_PUBLISH = new RegExp(
   `window\\.(${CONTRACT_NAME})\\s*=\\s*Object\\.freeze\\(\\{([\\s\\S]*?)\\n\\}\\)\\s*;`,
   "g"
@@ -28,7 +31,7 @@ export function blockNames(block) {
     .filter((name) => /^[A-Za-z_$][\w$]*$/.test(name));
 }
 
-/** Every `const { … } = window.<contract>;` block in one script. */
+/** Destructured members and whole-contract aliases in one script. */
 export function contractImports(source) {
   const imports = [];
   for (const match of source.matchAll(CONTRACT_IMPORT)) {
@@ -38,6 +41,9 @@ export function contractImports(source) {
       contract: match[1],
       names: blockNames(source.slice(open + 1, match.index)),
     });
+  }
+  for (const match of source.matchAll(CONTRACT_ALIAS)) {
+    imports.push({ contract: match[1], names: [] });
   }
   return imports;
 }

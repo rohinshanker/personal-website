@@ -147,6 +147,10 @@ class MockD1Statement {
     if (this.sql.includes("DELETE FROM verified_completion_jobs")) {
       return { meta: { changes: 0 } };
     }
+    if (this.sql.includes("DELETE FROM verified_game_completions")) {
+      // This legacy fixture contains no verified completion receipts.
+      return { meta: { changes: 0 } };
+    }
     if (this.sql.includes("DELETE FROM game_stats_rate_limits")) {
       return {
         meta: { changes: this.database.deleteExpired("rateLimits", this.params[0]) },
@@ -3387,6 +3391,7 @@ test("the scheduled purge deletes only expired sessions and rate-limit buckets",
 
   assert.equal(summary.expiredSessions, 1);
   assert.equal(summary.expiredRateLimitBuckets, 1);
+  assert.equal(summary.expiredUnpublishedCompletions, 0);
   assert.match(summary.purgedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.deepEqual(Array.from(database.sessions.keys()), ["live-session"]);
   assert.deepEqual(Array.from(database.rateLimits.keys()), ["events:live"]);
@@ -3394,6 +3399,7 @@ test("the scheduled purge deletes only expired sessions and rate-limit buckets",
   const repeated = await purgeExpiredGameStatsRows(env);
   assert.equal(repeated.expiredSessions, 0);
   assert.equal(repeated.expiredRateLimitBuckets, 0);
+  assert.equal(repeated.expiredUnpublishedCompletions, 0);
 });
 
 test("the scheduled purge keeps a consumed session until it expires", async () => {
@@ -3403,11 +3409,15 @@ test("the scheduled purge keeps a consumed session until it expires", async () =
   const stored = env.personal_site_game_stats.sessions.get(session.id);
   stored.consumed_at = new Date().toISOString();
 
-  assert.equal((await purgeExpiredGameStatsRows(env)).expiredSessions, 0);
+  const retained = await purgeExpiredGameStatsRows(env);
+  assert.equal(retained.expiredSessions, 0);
+  assert.equal(retained.expiredUnpublishedCompletions, 0);
   assert.ok(env.personal_site_game_stats.sessions.has(session.id));
 
   stored.expires_at = new Date(Date.now() - 1_000).toISOString();
-  assert.equal((await purgeExpiredGameStatsRows(env)).expiredSessions, 1);
+  const purged = await purgeExpiredGameStatsRows(env);
+  assert.equal(purged.expiredSessions, 1);
+  assert.equal(purged.expiredUnpublishedCompletions, 0);
   assert.equal(env.personal_site_game_stats.sessions.size, 0);
 });
 
@@ -3430,7 +3440,7 @@ test("the cron entry point purges through the Worker export and logs its summary
   assert.equal(env.personal_site_game_stats.sessions.size, 0);
   assert.match(
     log.mock.calls.at(-1).arguments[0],
-    /Purged 1 expired game sessions and 0 rate-limit buckets at /
+    /Purged 1 expired game sessions and 0 unpublished completions and 0 rate-limit buckets at /
   );
 });
 
