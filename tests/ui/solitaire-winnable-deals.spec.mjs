@@ -4,6 +4,7 @@ import { expect, test } from "./deterministic.mjs";
 
 import { homeScriptUrl } from "../helpers/home-scripts.mjs";
 import { REVIEW_VIEWPORT, breakpointPair, installGameStatsBackend } from "./helpers/rendered-site.mjs";
+import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 
 /** A backend only this spec serves, so no route can resolve to the live Worker. */
 const API_BASE_URL = "https://game-stats-solitaire-deals.test";
@@ -59,11 +60,20 @@ const buildDomDeal = (tableauIds) => {
   return { stock: cards.filter((card) => !tableauIdSet.has(card.id)), tableau };
 };
 
+/** The move count the server reports for the finished deal in this spec. */
+const SERVER_MOVE_COUNT = 211;
+
 const installGameStatsApi = async (page) => {
-  const sessionRequests = [];
   const eventRequests = [];
+  // Playing an issued deal to the end asks the server to verify its replay, so
+  // the verified-session half of the protocol is answered accurately.
+  const verified = createIssuedGameResponder({
+    games: ["solitaire"],
+    receipts: { solitaire: { type: "win", metricKind: "moves", metric: SERVER_MOVE_COUNT } },
+  });
   await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
   await page.route(`${API_BASE_URL}/**`, async (route) => {
+    if (await verified.handle(route)) return;
     const request = route.request();
     const url = new URL(request.url());
     const headers = {
@@ -76,8 +86,7 @@ const installGameStatsApi = async (page) => {
       return;
     }
     if (url.pathname === "/sessions") {
-      sessionRequests.push(JSON.parse(request.postData() || "{}"));
-      const sequence = sessionRequests.length;
+      const sequence = 1;
       await route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -104,7 +113,7 @@ const installGameStatsApi = async (page) => {
         playerTotals: {}, leaderboards: {}, playerRanks: {}, playerRecords: {} }),
     });
   });
-  return { eventRequests, sessionRequests };
+  return { eventRequests, sessionRequests: verified.issued, verified };
 };
 
 const installSeed = async (page, includeProfile = false) => {
@@ -197,10 +206,11 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
   await expect(page.locator("#sol-tableau .sol-tableau-col").first()).toHaveAccessibleName(/Tableau column 1, bottom card .+/);
   await expect(page.locator('#sol-tableau [data-sol-zone="tableau"]:not(.is-face-down)').first()).toHaveAccessibleName(/.+ of .+/);
 
+  await expect.poll(() => api.sessionRequests.length).toBe(1);
   await stock.focus();
   await expect(stock).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect.poll(() => api.sessionRequests.length).toBe(1);
+  expect(api.sessionRequests).toHaveLength(1);
   expect(await page.locator("#sol-moves img").evaluateAll((images) => images.map((img) => img.alt))).toEqual(["0", "0", "1"]);
   await expect(page.locator("#sol-undo")).toBeEnabled();
   await page.locator('#sol-tableau [data-sol-zone="tableau"]:not(.is-face-down)').first().click();
@@ -220,11 +230,12 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
   await expectStandardInitialBoard(page);
   expect(await page.locator("#sol-moves img").evaluateAll((images) => images.map((img) => img.alt))).toEqual(["0", "0", "0"]);
   await expect(page.locator("#sol-tableau .sol-card.is-selected")).toHaveCount(0);
-  expect(api.sessionRequests).toHaveLength(1);
+  // Reset is a new board, so it is issued one of its own.
+  await expect.poll(() => api.sessionRequests.length).toBe(2);
 
   await stock.focus();
   await page.keyboard.press("Space");
-  await expect.poll(() => api.sessionRequests.length).toBe(1);
+  expect(api.sessionRequests).toHaveLength(2);
   expect(
     await page
       .locator("#sol-moves img")
@@ -280,20 +291,33 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
   expect(result.stockActions).toBeGreaterThan(0);
   const totalMoves = result.solutionMoves + result.stockActions;
   expect(totalMoves).toBeLessThanOrEqual(375);
-  const renderedMoves = Number(
-    (await page.locator("#sol-moves img").evaluateAll((images) =>
-      images.map((image) => image.alt).join("")
-    ))
-  );
-  expect(renderedMoves).toBe(totalMoves);
+  // Every action the board played reached the replay the server verified — the
+  // solve itself, and the draw and undo that preceded it, because they were part
+  // of the same game. That ordered list is the move count, so the counter is
+  // asserted against the server's reply rather than raced against it.
+  const replay = api.verified.replayFor("solitaire");
+  expect(replay.slice(0, 2).map(({ op }) => op)).toEqual(["draw", "undo"]);
+  expect(replay).toHaveLength(totalMoves + 2);
+  expect(replay.map(({ seq }) => seq)).toEqual(replay.map((unused, index) => index + 1));
   await expect(page.locator("[data-sol-foundation] [data-sol-card-id$='-13']")).toHaveCount(4);
   await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute("aria-hidden", "false");
   await expect.poll(() => api.eventRequests.length).toBe(1);
-  expect(api.eventRequests[0].session).toEqual({ id: "session-solitaire-winnable-1",
-    token: "session-solitaire-winnable-token-1" });
+  // Once the receipt arrives, the count the server derived is the one on screen.
+  await expect
+    .poll(() =>
+      page
+        .locator("#sol-moves img")
+        .evaluateAll((images) => Number(images.map((image) => image.alt).join("")))
+    )
+    .toBe(SERVER_MOVE_COUNT);
+  expect(api.eventRequests[0].completion).toMatchObject({
+    id: `completion-${api.verified.finishes[0].id}`,
+    token: "synthetic-completion-proof",
+  });
   await page.locator("#sol-reset").evaluate((button) => button.click());
   await expectStandardInitialBoard(page);
   await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute("aria-hidden", "true");
+  await expect.poll(() => api.sessionRequests.length).toBe(3);
   await stock.click();
-  await expect.poll(() => api.sessionRequests.length).toBe(2);
+  expect(api.verified.finishes).toHaveLength(1);
 });

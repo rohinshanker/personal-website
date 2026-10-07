@@ -1,6 +1,10 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { FROZEN_INSTANT, REVIEW_VIEWPORTS, installGameStatsBackend, openApp, openHomeDesktop, settleFrames } from "./helpers/rendered-site.mjs";
+import {
+  createIssuedGameResponder,
+  revealedSolitaireInitial,
+} from "./helpers/verified-game-session.mjs";
 
 const viewports = REVIEW_VIEWPORTS;
 const suits = ["spades", "clubs", "diamonds", "hearts"];
@@ -36,7 +40,6 @@ window.__solitaireAutoSolveTest = Object.freeze({
     solState.moves = 40;
     solState.won = false;
     solAdoptStagedBoard();
-    if (!presentation) ensureSolitaireStatsSession();
     solRender();
   },
   stagePartialGame: () => {
@@ -52,7 +55,6 @@ window.__solitaireAutoSolveTest = Object.freeze({
     solState.moves = 10;
     solState.won = false;
     solAdoptStagedBoard();
-    ensureSolitaireStatsSession();
     solRender();
   },
   snapshot: () => ({
@@ -360,20 +362,21 @@ test("a regular deal records one win and stays terminal until Reset", async ({
 }) => {
   await installSolitaireBridge(page);
   const apiBaseUrl = "https://solitaire-terminal.test";
-  const sessions = [];
   const events = [];
+  // The deal the server issues is already a winnable board, so the run that
+  // finishes it is played on issued state rather than on one staged locally: a
+  // staged board carries no proof, and this test is about recording a win.
+  const verified = createIssuedGameResponder({
+    games: ["solitaire"],
+    initials: { solitaire: revealedSolitaireInitial() },
+    receipts: { solitaire: { type: "win", metricKind: "moves", metric: 52 } },
+  });
   await installGameStatsBackend(page, { apiBaseUrl });
   await page.route(`${apiBaseUrl}/**`, async (route) => {
+    if (await verified.handle(route)) return;
     const pathname = new URL(route.request().url()).pathname;
     let body = { generatedAt: new Date().toISOString(), totals: {}, leaderboards: {} };
-    if (pathname === "/sessions") {
-      sessions.push(JSON.parse(route.request().postData()));
-      body = {
-        id: `solitaire-terminal-session-${sessions.length}`,
-        token: "solitaire-terminal-session-token",
-        expiresAt: new Date(Date.now() + 600_000).toISOString(),
-      };
-    } else if (pathname === "/events") {
+    if (pathname === "/events") {
       events.push(JSON.parse(route.request().postData()));
       body = { ok: true, applied: true };
     }
@@ -381,8 +384,7 @@ test("a regular deal records one win and stays terminal until Reset", async ({
   });
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await openApp(page, "solitaire");
-  await page.evaluate(() => window.__solitaireAutoSolveTest.stageRevealedGame());
-  await expect.poll(() => sessions.length).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.homeSolitaire.solState.stock.length)).toBe(0);
   await expect(page.locator("#sol-auto-solve")).toBeVisible();
   await expect(page.locator("#sol-reset")).toBeHidden();
   const glow = await glowState(page);
@@ -395,7 +397,7 @@ test("a regular deal records one win and stays terminal until Reset", async ({
 
   await page.locator("#sol-auto-solve").click();
   await expect(page.locator("#sol-auto-solve")).toHaveClass(/is-completing/);
-  await expectFinishedWin(page, { moves: 92 });
+  await expectFinishedWin(page, { moves: 52 });
   expect((await snapshot(page)).statsSession).toBe("");
   await expect(page.locator("#game-profile-prompt")).toBeVisible();
   const clickCompletedBoard = async () => {
@@ -411,7 +413,10 @@ test("a regular deal records one win and stays terminal until Reset", async ({
     expect((await snapshot(page)).foundations).toEqual([13, 13, 13, 13]);
     expect((await snapshot(page)).won).toBe(true);
     await expect(page.locator("#sol-tableau .sol-card")).toHaveCount(0);
-    expect(sessions).toHaveLength(1);
+    // A completed board asks for nothing more: no second issuance, and the
+    // claimed finish it already submitted is not retargeted.
+    expect(verified.issued).toHaveLength(1);
+    expect(verified.finishes).toHaveLength(1);
   };
   await clickCompletedBoard();
   expect(events).toEqual([]);
@@ -424,8 +429,12 @@ test("a regular deal records one win and stays terminal until Reset", async ({
   expect(events).toHaveLength(1);
   await page.locator("#sol-reset").click();
   expect((await snapshot(page)).won).toBe(false);
+  // Reset is a new board, so it asks for a board of its own; the finish the
+  // previous deal already claimed is untouched by it.
+  await expect.poll(() => verified.issued.length).toBe(2);
+  expect(verified.finishes).toHaveLength(1);
   await page.locator("#sol-stock").click();
-  await expect.poll(() => sessions.length).toBe(2);
+  expect(events).toHaveLength(1);
 });
 
 test("a staged board with buried waste cards auto-solves through the waste", async ({ page }) => {

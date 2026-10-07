@@ -1,5 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
 import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
+import { installIssuedGameIssuance } from "./helpers/verified-game-session.mjs";
 
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
@@ -137,6 +138,9 @@ const openSolitaireStats = async (
   savedProfile = profile
 ) => {
   await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
+  // Opening Solitaire asks the server for a board. This spec is about how wins
+  // rank, so the request is answered accurately rather than left to fail.
+  await installIssuedGameIssuance(page, { apiBaseUrl: API_BASE_URL, games: ["solitaire"] });
   await page.route(workerStatsUrl, (route) =>
     route.fulfill({ body: JSON.stringify(statsState), contentType: "application/json" })
   );

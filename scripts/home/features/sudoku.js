@@ -855,8 +855,17 @@ const restoreSudokuSavedState = () => {
 };
 
 /**
+ * Replaying a restored session can touch every cell once per recorded input.
+ */
+const SUDOKU_RESTORE_WORK = 2_000_000;
+
+/**
  * Rebuilds the engine state for a restored puzzle, and keeps its verified
- * identity only when the restored issuance really is this puzzle. An arbitrary
+ * identity only when the server really will restore that issued game.
+ *
+ * Restoring is a request, so it settles later: the puzzle is playable from the
+ * save immediately, and the issued board is adopted only once the server has
+ * agreed, and only while this is still the puzzle on screen. An arbitrary
  * offline save stays completely playable; it simply cannot acquire provenance it
  * never had, which is the whole point of binding a result to an issued board.
  */
@@ -883,16 +892,60 @@ const adoptRestoredSudokuGame = (savedState) => {
   if (sudokuState.solved && outcome.complete && outcome.valid) {
     sudokuGame = sudokuRules.initial({ ...restoredBoard, solved: true });
   }
-  const restored = sudokuStats.restoreGame(savedState.verified);
-  if (
-    restored &&
-    (restored.initial?.puzzle !== sudokuState.puzzle ||
-      restored.initial?.solution !== sudokuState.solution ||
-      restored.config?.difficulty !== sudokuState.difficulty)
-  ) {
-    sudokuStats.dropSession();
-  }
   projectSudokuGame();
+
+  // A puzzle that has already been recorded cannot publish again, so there is
+  // nothing for a restored session to carry.
+  if (!sudokuState.statsSessionEligible) return;
+  const pending = sudokuStats.restoreGame(savedState.verified);
+  if (!pending) return;
+  const owned = { game: sudokuGame, puzzleId: sudokuState.puzzleId };
+  Promise.resolve(pending).then((descriptor) => {
+    // A new puzzle since the request went out owns the session now.
+    if (sudokuGame !== owned.game || sudokuState.puzzleId !== owned.puzzleId) return;
+    if (!adoptIssuedSudokuReplay(descriptor, savedState.verified?.bufferedInputs)) {
+      sudokuStats.dropSession();
+    }
+  }, () => {
+    if (sudokuGame === owned.game && sudokuState.puzzleId === owned.puzzleId) {
+      sudokuStats.dropSession();
+    }
+  });
+};
+
+/**
+ * Replays the restored session's recorded inputs over the board the server
+ * issued, so the puzzle on screen is the one the verifier derives its result
+ * from rather than a save that merely resembles it. Anything the server did not
+ * agree to restore — a running autosave with no acknowledged pause, an expired
+ * session, a board it never issued — leaves the attempt local-only.
+ */
+const adoptIssuedSudokuReplay = (descriptor, savedReplay) => {
+  // The restored session has to be this puzzle's: a board the server issued for
+  // some other puzzle is not a proof of this one.
+  if (!descriptor || descriptor.initial?.puzzle !== sudokuState.puzzle) return false;
+  if (descriptor.initial.solution !== sudokuState.solution) return false;
+  let restored;
+  try {
+    restored = sudokuRules.initial(descriptor.initial);
+    const budget = createBudget(SUDOKU_RESTORE_WORK);
+    const replay = [...(descriptor.inputs || []), ...(savedReplay || [])];
+    replay.forEach((input) => sudokuRules.transition(restored, input, budget));
+  } catch (error) {
+    return false;
+  }
+  // The replay has to land on the board the save shows. If it does not, the two
+  // are not the same game, and the player's board is what stays: a proof that
+  // reproduces something else must not quietly replace what they were playing.
+  const saved = sudokuState.values.map((value) => value || "0").join("");
+  if (restored.values !== saved) return false;
+  if (restored.notes.join("|") !== sudokuState.notes.join("|")) return false;
+  // The frontend session key the adapter returned stays on the live state: the
+  // board is replaced here, never the object that owns the key.
+  sudokuGame = restored;
+  renderSudoku();
+  scheduleSudokuSave();
+  return true;
 };
 
 const updateSudokuTimeDisplay = () => {
@@ -924,16 +977,15 @@ const setSudokuStatus = (message) => {
 
 const startSudokuTimer = () => {
   if (sudokuState.solved || sudokuState.timerId) return;
-  if (sudokuState.statsSessionEligible && !sudokuState.completionRecorded) {
-    sudokuStats.ensureSession({
-      difficulty: sudokuState.difficulty,
-    });
-  }
   sudokuState.timerStartedAt = Date.now();
   sudokuState.timerId = window.setInterval(
     updateSudokuTimeDisplay,
     SUDOKU_TIMER_INTERVAL_MS
   );
+  // Ranked time has to be the time on screen, so the server is told where this
+  // clock starts. Until it has acknowledged that, recorded inputs are only
+  // buffered and no result can be submitted.
+  sudokuStats.resumeGame();
   updateSudokuTimeDisplay();
 };
 
@@ -943,6 +995,9 @@ const pauseSudokuTimer = () => {
   clearInterval(sudokuState.timerId);
   sudokuState.timerId = null;
   sudokuState.timerStartedAt = 0;
+  // The same boundary, from the other side: a stopped clock is a pause the
+  // server has to acknowledge, or the time it excludes cannot be trusted.
+  sudokuStats.pauseGame();
   updateSudokuTimeDisplay();
   scheduleSudokuSave();
 };
@@ -1224,18 +1279,16 @@ const setSudokuPaused = (paused) => {
   if (sudokuPauseOverlay) {
     sudokuPauseOverlay.setAttribute("aria-hidden", String(!sudokuPaused));
   }
-  // Ranked time excludes the pause, so the server has to see where it began and
-  // ended. An acknowledgement that never arrives leaves the puzzle perfectly
-  // playable; it just cannot produce a trusted time.
+  // The clock's own start and stop are what the server is told about, so pausing
+  // and resuming carry the boundary through `pauseSudokuTimer` and
+  // `startSudokuTimer` rather than reporting it twice.
   if (sudokuPaused) {
     sudokuStatusBeforePause = sudokuStatus?.textContent || "";
     pauseSudokuTimer();
-    sudokuStats.pauseGame();
     setSudokuStatus("Paused");
     if (isSudokuWindowVisible()) sudokuResume?.focus();
     return;
   }
-  sudokuStats.resumeGame();
   setSudokuStatus(sudokuStatusBeforePause || (sudokuState.solved ? "Solved" : "Ready"));
   sudokuStatusBeforePause = "";
   if (!isSudokuWindowVisible() || !sudokuState.playing) return;
@@ -2227,14 +2280,16 @@ const recordSudokuCompletion = () => {
        * board that has since been replaced or reset is left alone: this metric
        * belongs to the puzzle it was derived from.
        */
-      onCanonicalMetric: ({ metric, metricKind }) => {
+      onCanonicalMetric: ({ metric, metricKind, updateLocalStats = true }) => {
         if (sudokuGame !== finished || !sudokuState.solved) return;
         if (metricKind !== "seconds") return;
         if (!Number.isSafeInteger(metric) || metric < 0) return;
         sudokuState.elapsedSeconds = metric;
         sudokuState.timerStartedAt = 0;
         updateSudokuTimeDisplay();
-        flushSudokuSave();
+        // Local statistics cleared since the finish stay cleared: the clock on
+        // screen is this board's business, the saved puzzle is not.
+        if (updateLocalStats) flushSudokuSave();
       },
     }
   );
@@ -2393,8 +2448,15 @@ const requestIssuedSudokuPuzzle = () => {
   const pending = sudokuStats.issueGame({ difficulty: sudokuState.difficulty });
   if (!pending) return;
   Promise.resolve(pending).then((descriptor) => {
+    // A newer request owns the session now; this one was already detached.
     if (!descriptor || token !== sudokuIssueToken) return;
-    if (sudokuGame.moves || sudokuGame.undo.length || sudokuState.solved) return;
+    if (sudokuGame.moves || sudokuGame.undo.length || sudokuState.solved) {
+      // Entries arrived before the server answered, so the puzzle on screen is
+      // not the one it issued. The proof is dropped rather than left attached to
+      // a board it never applied to, and the attempt stays local.
+      sudokuStats.dropSession();
+      return;
+    }
     sudokuGame = sudokuRules.initial(descriptor.initial);
     sudokuState.puzzleId = descriptor.gameId || sudokuState.puzzleId;
     renderSudoku();

@@ -706,6 +706,9 @@ const solProjectEngineGame = () => {
  * board the server did not issue cannot produce a verified result.
  */
 const solAdoptStagedBoard = () => {
+  // A board written straight onto the cards is not the one the server issued, so
+  // whatever proof was outstanding stops applying to it.
+  solStats.dropSession();
   solGame = solRules.fromBoard(solState);
   solAdoptEngineGame();
 };
@@ -726,7 +729,6 @@ const solPlay = (action, { render = true } = {}) => {
   const game = solEngineGame();
   if (!solRules.canApply(game, action)) return false;
   const wasWon = game.won;
-  if (!solState.presentation) ensureSolitaireStatsSession();
   solRules.transition(game, action, createBudget(SOLITAIRE_MOVE_WORK));
   if (!solState.presentation) solStats.recordInput(action);
   solProjectEngineGame();
@@ -1000,6 +1002,9 @@ const solFinishedMetricOptions = (finished) => ({
   onCanonicalMetric: ({ metric }) => {
     if (solGame !== finished || !solState.won) return;
     if (!Number.isSafeInteger(metric) || metric < 0) return;
+    // Only the finished board's own counter moves. Solitaire keeps no cached
+    // totals of its own, so there is nothing here for cleared local statistics
+    // to be resurrected from.
     finished.moves = metric;
     solProjectEngineGame();
     if (solMoves) {
@@ -1728,12 +1733,21 @@ const solRequestIssuedBoard = () => {
   const pending = solStats.issueGame({});
   if (!pending) return;
   Promise.resolve(pending).then((descriptor) => {
+    // A newer deal owns the session now; this one was already detached.
     if (!descriptor || token !== solIssueToken) return;
-    if (solState.presentation || solAutoSolveRun) return;
-    if (solGame.moves || solGame.undo.length) return;
+    if (solState.presentation || solAutoSolveRun || solGame.moves || solGame.undo.length) {
+      // Play began before the server answered, so the deal on screen is not the
+      // one it issued. The proof is dropped rather than left attached to a board
+      // it never applied to, and the attempt stays local.
+      solStats.dropSession();
+      return;
+    }
     solGame = solRules.initial(descriptor.initial);
     solAdoptEngineGame();
     solRender();
+    // The server observes the start of the deal. Until it has, every recorded
+    // move is only buffered, and a finish cannot be submitted at all.
+    solStats.resumeGame();
   }, () => {
     // An attempt that could not be issued is still playable; it simply stays
     // local, exactly as it does with no backend configured at all.
@@ -1954,10 +1968,6 @@ registerWindowLifecycle("solitaire", {
     solHideVictoryVideo();
   },
 });
-
-const ensureSolitaireStatsSession = () => {
-  solStats.ensureSession({});
-};
 
 window.homeSolitaire = Object.freeze({
   SOLITAIRE_RANDOM_EVENT_CLICK_TRIGGER_INTERVAL,

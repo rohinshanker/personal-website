@@ -142,6 +142,7 @@ const createOpenHarness = () => {
       `const solStats = {
          dropSession: () => { solState.statsSession = ''; },
          hasIssuedGame: () => Boolean(solState.statsSession) && issuedAlready,
+         resumeGame: () => { calls.push('resume'); return Promise.resolve(null); },
          issueGame: (config) => {
            issueCalls.push(config);
            return new Promise((resolve) => { issueResolvers.push(resolve); });
@@ -158,7 +159,7 @@ const createOpenHarness = () => {
       sourceBetween(
         source,
         'registerWindowLifecycle("solitaire", {',
-        "\n\nconst ensureSolitaireStatsSession"
+        "\n\nwindow.homeSolitaire = Object.freeze({"
       ),
       `globalThis.harness = {
          state: solState,

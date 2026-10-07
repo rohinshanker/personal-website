@@ -721,7 +721,7 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
   assert.equal(plainObject(context.readForTest()).solved, true);
 });
 
-test("a restored puzzle keeps verified provenance only for the board that was issued", async () => {
+test("a restored puzzle keeps verified provenance only for the board the server restores", async () => {
   const { main } = await readSudokuSources();
   const restoreSource = sourceBetween(
     main,
@@ -739,24 +739,80 @@ test("a restored puzzle keeps verified provenance only for the board that was is
     /verified: sudokuStats\.exportGame\(\),/,
     "The issued game and its recorded inputs have to survive a reload."
   );
+
+  // Restoring is a request. Treating it as a value was the defect: the saved
+  // descriptor is the server's to confirm, and it confirms it later.
   assert.match(
     restoreSource,
-    /const restored = sudokuStats\.restoreGame\(savedState\.verified\);/
+    /const pending = sudokuStats\.restoreGame\(savedState\.verified\);/
+  );
+  assert.match(restoreSource, /Promise\.resolve\(pending\)\.then\(/);
+  assert.doesNotMatch(
+    restoreSource,
+    /const restored = sudokuStats\.restoreGame/,
+    "A promise must never be compared against a descriptor."
   );
   assert.match(
     restoreSource,
-    /restored\.initial\?\.puzzle !== sudokuState\.puzzle/,
-    "A restored issuance counts only when it is this very puzzle."
+    /if \(sudokuGame !== owned\.game \|\| sudokuState\.puzzleId !== owned\.puzzleId\) return;/,
+    "A puzzle replaced while the request was out owns the session now."
   );
   assert.match(
     restoreSource,
-    /restored\.config\?\.difficulty !== sudokuState\.difficulty/
+    /if \(!adoptIssuedSudokuReplay\(descriptor, savedState\.verified\?\.bufferedInputs\)\) \{\s+sudokuStats\.dropSession\(\);/,
+    "A restoration the server refuses has to leave the attempt local-only."
+  );
+  // The replay has to land on the board the save shows, or the two are not the
+  // same game and the player's board is what stays.
+  assert.match(restoreSource, /if \(restored\.values !== saved\) return false;/);
+  assert.match(
+    restoreSource,
+    /if \(restored\.notes\.join\("\|"\) !== sudokuState\.notes\.join\("\|"\)\) return false;/
   );
   assert.match(
     restoreSource,
-    /sudokuStats\.dropSession\(\);/,
-    "A mismatch has to abandon the attempt rather than inherit its provenance."
+    /if \(!sudokuState\.statsSessionEligible\) return;/,
+    "A puzzle already recorded has nothing to restore."
   );
+  // The board is rebuilt from the issued state and the replay, not from the save.
+  assert.match(
+    restoreSource,
+    /descriptor\.initial\?\.puzzle !== sudokuState\.puzzle/
+  );
+  assert.match(
+    restoreSource,
+    /restored = sudokuRules\.initial\(descriptor\.initial\);/
+  );
+  assert.match(
+    restoreSource,
+    /\[\.\.\.\(descriptor\.inputs \|\| \[\]\), \.\.\.\(savedReplay \|\| \[\]\)\]/,
+    "Both the acknowledged prefix and the buffered actions belong to the board."
+  );
+
+  // A board the server never issued cannot keep a proof it was handed.
+  const issuedSource = sourceBetween(
+    main,
+    "const requestIssuedSudokuPuzzle = () => {",
+    "\n\nconst adoptSudokuPuzzle ="
+  );
+  assert.match(
+    issuedSource,
+    /if \(sudokuGame\.moves \|\| sudokuGame\.undo\.length \|\| sudokuState\.solved\) \{\s+\/\/[\s\S]*?sudokuStats\.dropSession\(\);\s+return;/,
+    "Entries made before issuance must drop the proof, not ignore it."
+  );
+
+  // The server's elapsed time reconciles the display without rewriting cleared
+  // local data.
+  const completionSource = sourceBetween(
+    main,
+    "const recordSudokuCompletion = () => {",
+    "\n\nconst checkSudokuBoard ="
+  );
+  assert.match(
+    completionSource,
+    /onCanonicalMetric: \(\{ metric, metricKind, updateLocalStats = true \}\) => \{/
+  );
+  assert.match(completionSource, /if \(updateLocalStats\) flushSudokuSave\(\);/);
 });
 
 test("a check that reveals no mistake is free and stays free once the quota is spent", async () => {

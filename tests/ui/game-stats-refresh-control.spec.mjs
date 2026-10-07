@@ -1,6 +1,7 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { consumeDiagnostics, installGameStatsBackend, settleFrames } from "./helpers/rendered-site.mjs";
+import { installIssuedGameIssuance } from "./helpers/verified-game-session.mjs";
 
 const API_BASE_URL = "https://game-stats-refresh.test";
 const SIGN_IN_URL = `${API_BASE_URL}/administrator/sign-in`;
@@ -181,6 +182,13 @@ const installApiHarness = async (
       contentType: "application/json",
       body: JSON.stringify({ ok: false, error: "Unexpected test route" }),
     });
+  });
+
+  // Registered after the catch-all above, so it answers first: opening a game
+  // asks the server for a board, and this spec is about the refresh control.
+  await installIssuedGameIssuance(page, {
+    apiBaseUrl: API_BASE_URL,
+    games: ["solitaire", "sudoku"],
   });
 
   return {

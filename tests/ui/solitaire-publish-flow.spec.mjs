@@ -2,6 +2,10 @@ import { expect, test } from "./deterministic.mjs";
 import { REVIEW_VIEWPORTS, consumeDiagnostics, settleRender } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import {
+  createIssuedGameResponder,
+  nearWinSolitaireInitial,
+} from "./helpers/verified-game-session.mjs";
 
 const API_BASE_URL = "https://game-stats-solitaire-publish.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -87,27 +91,11 @@ window.__solitairePublishFlowTest = Object.freeze({
     if (!solState.statsSession) {
       throw new Error("Solitaire gameplay did not start a verified stats session.");
     }
-    // A finished deal, staged as a real one: the rule engine derives the move
-    // count that gets published, so a board it would reject could not produce it.
-    solState.moves = 80;
-    solState.won = false;
-    solState.stock = [];
-    solState.waste = [];
-    solState.tableau = Array.from({ length: 7 }, () => []);
-    solState.foundations = Object.fromEntries(
-      solSuitOrder.map((suit) => [
-        suit,
-        Array.from({ length: 13 }, (unused, index) => ({
-          id: suit + "-" + (index + 1),
-          suit,
-          rank: index + 1,
-          faceUp: true,
-        })),
-      ])
-    );
-    solAdoptStagedBoard();
-    solCheckWin(false);
-    solRender();
+    // The issued board is one move from home, so the win is that move. A board
+    // staged beneath the rules would carry no proof and could not publish.
+    const column = solState.tableau.findIndex((cards) => cards.length === 1);
+    if (column < 0) throw new Error("The issued board is not one move from a win.");
+    solAutoMoveCardToFoundation("tableau", column, 0);
   },
 });
 })();`
@@ -132,6 +120,18 @@ const createLeaderboardEntry = ({
   occurredAt,
 });
 
+/**
+ * The verified-session half of the protocol, answered accurately. Publishing a
+ * Solitaire win now means the server verifies its replay and returns the metric
+ * it derived, so the receipt carries the same move count the board reports.
+ */
+const verifiedSolitaireResponder = () =>
+  createIssuedGameResponder({
+    games: ["solitaire"],
+    initials: { solitaire: nearWinSolitaireInitial() },
+    receipts: { solitaire: { type: "win", metricKind: "moves", metric: 80 } },
+  });
+
 const installApi = async (page) => {
   const sessionRequests = [];
   const eventRequests = [];
@@ -143,7 +143,9 @@ const installApi = async (page) => {
     "Access-Control-Allow-Origin": "*",
   };
 
+  const verified = verifiedSolitaireResponder();
   await page.route(`${API_BASE_URL}/**`, async (route) => {
+    if (await verified.handle(route)) return;
     const request = route.request();
     const url = new URL(request.url());
     if (request.method() === "OPTIONS") {
@@ -239,7 +241,7 @@ const installApi = async (page) => {
     });
   });
 
-  return { eventRequests, sessionRequests, statsRequests };
+  return { eventRequests, sessionRequests: verified.issued, statsRequests, verified };
 };
 
 const installAdministratorReauthenticationApi = async (page) => {
@@ -252,7 +254,9 @@ const installAdministratorReauthenticationApi = async (page) => {
     "Access-Control-Allow-Origin": "*",
   };
 
+  const verified = verifiedSolitaireResponder();
   await page.route(`${API_BASE_URL}/**`, async (route) => {
+    if (await verified.handle(route)) return;
     const request = route.request();
     const url = new URL(request.url());
     if (request.method() === "OPTIONS") {
@@ -338,7 +342,7 @@ const installAdministratorReauthenticationApi = async (page) => {
     });
   });
 
-  return { eventRequests, sessionRequests, signInRequests };
+  return { eventRequests, sessionRequests: verified.issued, signInRequests, verified };
 };
 
 const installAdministratorStaleStatsApi = async (page) => {
@@ -398,7 +402,9 @@ const installAdministratorStaleStatsApi = async (page) => {
     };
   };
 
+  const verified = verifiedSolitaireResponder();
   await page.route(`${API_BASE_URL}/**`, async (route) => {
+    if (await verified.handle(route)) return;
     const request = route.request();
     const url = new URL(request.url());
     if (request.method() === "OPTIONS") {
@@ -476,11 +482,12 @@ const installAdministratorStaleStatsApi = async (page) => {
 
   return {
     eventRequests,
-    sessionRequests,
+    sessionRequests: verified.issued,
     statsRequests,
     useAuthoritativeStats: () => {
       authoritativeStats = true;
     },
+    verified,
   };
 };
 
@@ -528,11 +535,13 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   await page.locator('.desktop-icon[data-app="solitaire"]').click();
   const solitaireWindow = page.locator('[data-app-window="solitaire"]');
   await expect(solitaireWindow).toBeVisible();
-  expect(api.sessionRequests).toEqual([]);
+  // The deal is issued when the board is dealt, because a verified result has
+  // to bind the board the server chose.
+  await expect.poll(() => api.sessionRequests.length).toBe(1);
   expect(api.eventRequests).toEqual([]);
 
   await solitaireWindow.locator("#sol-stock").click();
-  await expect.poll(() => api.sessionRequests.length).toBe(1);
+  expect(api.sessionRequests).toHaveLength(1);
   expect(api.eventRequests).toEqual([]);
 
   await page.evaluate(() => window.__solitairePublishFlowTest.triggerWin());
@@ -584,8 +593,18 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   ).toBeVisible();
 
   expect(generatedBuildVersion).toMatch(/^sha256-[a-f0-9]{64}$/);
+  // One issuance, carrying the protocol and version fields the Worker binds the
+  // replay to.
   expect(api.sessionRequests).toEqual([
-    { game: "solitaire", config: {}, buildVersion: generatedBuildVersion },
+    {
+      game: "solitaire",
+      config: {},
+      buildVersion: generatedBuildVersion,
+      resultProtocol: 2,
+      rulesVersion: 1,
+      replayVersion: 1,
+      generatorVersion: 1,
+    },
   ]);
   expect(api.eventRequests).toHaveLength(1);
   expect(api.eventRequests[0].event).toMatchObject({
@@ -599,10 +618,13 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
       icon: profile.icon,
     },
   });
-  expect(api.eventRequests[0].session).toEqual({
-    id: "session-solitaire-publish-0001",
-    token: "session-solitaire-publish-token",
+  // A verified result is published against the completion receipt the server
+  // returned for its replay, not against a session proof alone.
+  expect(api.eventRequests[0].completion).toMatchObject({
+    id: `completion-${api.verified.finishes[0].id}`,
+    token: "synthetic-completion-proof",
   });
+  expect(api.verified.replayFor("solitaire").length).toBeGreaterThan(0);
   expect(api.statsRequests.some(({ refreshed }) => !refreshed)).toBe(true);
   expect(api.statsRequests.some(({ refreshed }) => refreshed)).toBe(true);
   expect(api.statsRequests.every(({ path }) => isPlayerStatsPath(path, profile.id))).toBe(true);
@@ -811,7 +833,15 @@ test("an active Administrator win stays advanced through stale stats and exact-e
   ).toBeVisible();
   expect(api.eventRequests).toHaveLength(1);
   expect(api.sessionRequests).toEqual([
-    { game: "solitaire", config: {}, buildVersion: generatedBuildVersion },
+    {
+      game: "solitaire",
+      config: {},
+      buildVersion: generatedBuildVersion,
+      resultProtocol: 2,
+      rulesVersion: 1,
+      replayVersion: 1,
+      generatorVersion: 1,
+    },
   ]);
   expect(
     api.statsRequests.every(({ path }) =>
@@ -1156,7 +1186,9 @@ const installAdministratorRejectionApi = async (page, respond) => {
     "Access-Control-Allow-Origin": "*",
   };
 
+  const verified = verifiedSolitaireResponder();
   await page.route(`${API_BASE_URL}/**`, async (route) => {
+    if (await verified.handle(route)) return;
     const request = route.request();
     const url = new URL(request.url());
     if (request.method() === "OPTIONS") {

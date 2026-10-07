@@ -5,6 +5,7 @@ import {
 
 import { expect, test } from "./deterministic.mjs";
 import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
+import { installIssuedGameIssuance } from "./helpers/verified-game-session.mjs";
 
 const API_BASE_URL = "https://game-stats.test";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
@@ -466,6 +467,13 @@ const installMockBackend = async (
       contentType: "application/json",
       headers: corsHeaders,
     });
+  });
+  // Registered after the catch-all above, so it answers first: opening a game
+  // asks the server for a board, and this spec is about global stats rather than
+  // verified play. The request is answered accurately rather than left to fail.
+  await installIssuedGameIssuance(page, {
+    apiBaseUrl: API_BASE_URL,
+    games: ["solitaire", "sudoku"],
   });
   await page.addInitScript(
     ({ profileKey, queueKey, savedProfile, statsKey }) => {

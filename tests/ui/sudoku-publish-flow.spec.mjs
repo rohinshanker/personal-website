@@ -2,6 +2,7 @@ import { expect, test } from "./deterministic.mjs";
 import { REVIEW_VIEWPORTS, settleFrames } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 
 test.setTimeout(300_000);
 
@@ -27,7 +28,7 @@ const BASELINE_WITH_HINTS_WINS = 1;
  * board is the 81-character puzzle string it was solved from.
  */
 const SUDOKU_PUZZLE_ID_PATTERN = expect.stringMatching(
-  /^generated-(?:easy|medium|hard|expert|master|extreme)-[a-z0-9]+-[a-z0-9]{1,6}$/
+  /^(?:generated-(?:easy|medium|hard|expert|master|extreme)-[a-z0-9]+-[a-z0-9]{1,6}|session-sudoku-verified-[0-9]+)$/
 );
 const SUDOKU_PUZZLE_PATTERN = expect.stringMatching(/^[0-9]{81}$/);
 
@@ -270,8 +271,23 @@ const createStatsPayload = (publishedEvents, acknowledgedEventIds = []) => {
 const installApi = async (page, scenario) => {
   const eventRequests = [];
   const requestSequence = [];
-  const sessionRequests = [];
   const sessionProofs = [];
+  // Completing a puzzle asks the server to verify its replay, so the
+  // verified-session half of the protocol is answered accurately and the metric
+  // it returns is the one this scenario expects to see published.
+  const verified = createIssuedGameResponder({
+    games: ["sudoku"],
+    elapsedMs: scenario.elapsedSeconds * 1000,
+    receipts: {
+      sudoku: {
+        type: "win",
+        difficulty: "easy",
+        hintBucket: scenario.hintBucket,
+        metricKind: "seconds",
+        metric: scenario.elapsedSeconds,
+      },
+    },
+  });
   const statsRequests = [];
   const publishedEvents = [];
   const corsHeaders = {
@@ -290,8 +306,11 @@ const installApi = async (page, scenario) => {
     }
 
     if (request.method() === "POST" && url.pathname === "/sessions") {
-      sessionRequests.push(JSON.parse(request.postData() || "{}"));
       requestSequence.push("session");
+    }
+    if (await verified.handle(route)) return;
+
+    if (request.method() === "POST" && url.pathname === "/sessions") {
       const sequence = String(sessionRequests.length).padStart(4, "0");
       const proof = {
         id: `session-sudoku-${scenario.hintBucket.toLowerCase()}-${sequence}`,
@@ -355,8 +374,9 @@ const installApi = async (page, scenario) => {
     eventRequests,
     requestSequence,
     sessionProofs,
-    sessionRequests,
+    sessionRequests: verified.issued,
     statsRequests,
+    verified,
   };
 };
 
@@ -480,7 +500,12 @@ const preparePage = async (page, viewport, scenario) => {
   await expect(sudokuWindow).toBeVisible();
   const playButton = sudokuWindow.locator("#sudoku-play");
   await expect(playButton).toBeEnabled({ timeout: PUBLISH_TIMEOUT_MS });
-  expect(api.sessionRequests).toEqual([]);
+  // The board is asked for when it is adopted, which is before Play: a verified
+  // result has to bind the puzzle the server chose, so it cannot wait for the
+  // first entry. Nothing is published yet.
+  await expect
+    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
   expect(api.eventRequests).toEqual([]);
 
   await playButton.click();
@@ -553,6 +578,10 @@ const expectPublishedRequestContract = (api, scenario) => {
       game: "sudoku",
       config: { difficulty: "easy" },
       buildVersion: generatedBuildVersion,
+      resultProtocol: 2,
+      rulesVersion: 1,
+      replayVersion: 1,
+      generatorVersion: 1,
     },
   ]);
   expect(api.eventRequests).toHaveLength(1);
@@ -574,9 +603,11 @@ const expectPublishedRequestContract = (api, scenario) => {
         icon: profile.icon,
       },
     },
-    session: {
-      id: api.sessionProofs[0].id,
-      token: api.sessionProofs[0].token,
+    // A verified result is published against the completion receipt the server
+    // returned for its replay, not against a session proof alone.
+    completion: {
+      id: `completion-${api.verified.finishes[0].id}`,
+      token: "synthetic-completion-proof",
     },
   });
 
@@ -787,7 +818,7 @@ for (const viewport of viewports) {
   }
 }
 
-test("a restored unsolved Sudoku puzzle publishes through a fresh verified session", async ({
+test("a restored unsolved Sudoku puzzle publishes through its restored verified session", async ({
   page,
 }) => {
   const scenario = scenarios[0];
@@ -871,6 +902,27 @@ test("a restored unsolved Sudoku puzzle publishes through a fresh verified sessi
     });
   expect(api.eventRequests).toEqual([]);
 
+  // Ranked time excludes the pause, so the server has to have acknowledged one
+  // before a reload can be restored into it. A running autosave is still
+  // perfectly playable afterwards; it simply carries no verified session.
+  await sudokuWindow.locator("#sudoku-pause").click();
+  await expect(sudokuWindow.locator("#sudoku-resume")).toBeVisible();
+  await expect
+    .poll(() => api.verified.timing.filter(({ operation }) => operation === "pause").length, {
+      timeout: PUBLISH_TIMEOUT_MS,
+    })
+    .toBe(1);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (sudokuKey) =>
+          Boolean(JSON.parse(localStorage.getItem(sudokuKey) || "null")?.verified),
+        SUDOKU_STORAGE_KEY
+      ),
+      { timeout: PUBLISH_TIMEOUT_MS }
+    )
+    .toBe(true);
+
   const statsRequestCountBeforeReload = api.statsRequests.length;
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect
@@ -878,7 +930,8 @@ test("a restored unsolved Sudoku puzzle publishes through a fresh verified sessi
     .toBeGreaterThan(statsRequestCountBeforeReload);
   sudokuWindow = await openSudokuAndPlay();
 
-  // The restored puzzle is unsolved, so resuming play opens a new session.
+  // The puzzle resumes on the board the server issued, with the replay it
+  // acknowledged: a restoration, not a second issuance.
   await expect
     .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
       timeout: PUBLISH_TIMEOUT_MS,
@@ -891,8 +944,9 @@ test("a restored unsolved Sudoku puzzle publishes through a fresh verified sessi
       timerRunning: true,
     });
   await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(2);
+    .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+  expect(api.sessionRequests).toHaveLength(1);
   await expect(
     sudokuWindow.locator(`.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`)
   ).toHaveAttribute("data-sudoku-value", "");
@@ -919,7 +973,10 @@ test("a restored unsolved Sudoku puzzle publishes through a fresh verified sessi
         icon: profile.icon,
       },
     },
-    session: api.sessionProofs[1],
+    completion: {
+      id: `completion-${api.verified.finishes[0].id}`,
+      token: "synthetic-completion-proof",
+    },
   });
   // The restored elapsed time carries through into the published result.
   expect(api.eventRequests[0].event.metric).toBeGreaterThanOrEqual(100);
@@ -1017,17 +1074,33 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
     )
     .toBe(80);
 
-  // The second tab restores the same unfinished puzzle and gets its own session.
+  // The save a second tab can restore from is one the server acknowledged a
+  // pause for, so the first tab pauses before handing the puzzle over.
+  await first.sudokuWindow.locator("#sudoku-pause").click();
+  await expect(first.sudokuWindow.locator("#sudoku-resume")).toBeVisible();
+  await expect
+    .poll(() => api.verified.timing.filter(({ operation }) => operation === "pause").length, {
+      timeout: PUBLISH_TIMEOUT_MS,
+    })
+    .toBe(1);
+
+  // The second tab restores the same unfinished puzzle rather than being issued
+  // another: one board, one proof, however many tabs are looking at it.
   const second = await openTab();
   await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(2);
+    .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+  expect(api.sessionRequests).toHaveLength(1);
   await expect(
     second.sudokuWindow.locator(`.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`)
   ).toHaveAttribute("data-sudoku-value", "");
   expect(
     await second.page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle())
   ).toMatchObject({ hasStatsSession: true, statsSessionEligible: true });
+
+  // The first tab was paused to hand the save over; it resumes to finish.
+  await first.sudokuWindow.locator("#sudoku-resume").click();
+  await expect(first.sudokuWindow.locator("#sudoku-resume")).toBeHidden();
 
   await finishTerminalBoard(first.sudokuWindow, terminal);
   await expect
@@ -1063,7 +1136,10 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
   // have been recorded if the latch had failed.
   await settleFrames(second.page);
   expect(api.eventRequests).toHaveLength(1);
-  expect(api.sessionRequests).toHaveLength(2);
+  // One board was issued and restored once; both tabs were looking at the same
+  // proof, so neither could publish a second result for it.
+  expect(api.sessionRequests).toHaveLength(1);
+  expect(api.verified.restores).toHaveLength(1);
   const stored = await readStoredStats(second.page);
   expect(stored.stats.totals.sudoku.wins.easy).toEqual({ noHints: 1, withHints: 0 });
 });
@@ -1187,6 +1263,8 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
   await expect
     .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
     .toBe(2);
+  // The second board runs a different clock, and the server is what reports it.
+  api.verified.setMetric("sudoku", 150);
   const nextTerminal = await prepareTerminalBoard(page, 150);
   await finishTerminalBoard(sudokuWindow, nextTerminal);
   await expect
@@ -1202,16 +1280,26 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
     )
     .toEqual([]);
 
+  // Two boards, each issued with the protocol and version fields the Worker
+  // binds its replay to.
   expect(api.sessionRequests).toEqual([
     {
       game: "sudoku",
       config: { difficulty: "easy" },
       buildVersion: generatedBuildVersion,
+      resultProtocol: 2,
+      rulesVersion: 1,
+      replayVersion: 1,
+      generatorVersion: 1,
     },
     {
       game: "sudoku",
       config: { difficulty: "easy" },
       buildVersion: generatedBuildVersion,
+      resultProtocol: 2,
+      rulesVersion: 1,
+      replayVersion: 1,
+      generatorVersion: 1,
     },
   ]);
   expect(api.eventRequests[1]).toEqual({
@@ -1232,7 +1320,10 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
         icon: profile.icon,
       },
     },
-    session: api.sessionProofs[1],
+    completion: {
+      id: `completion-${api.verified.finishes[1].id}`,
+      token: "synthetic-completion-proof",
+    },
   });
   expect(api.eventRequests[1].event.id).not.toBe(api.eventRequests[0].event.id);
   // The identity the Worker deduplicates on follows the board, so a New Game

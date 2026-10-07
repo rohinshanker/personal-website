@@ -1,5 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
 import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
+import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 
 test.setTimeout(120_000);
@@ -24,7 +25,22 @@ const installBackendConfig = (page) =>
 
 const installApi = async (page) => {
   const eventRequests = [];
-  const sessionRequests = [];
+  // Completing a puzzle now asks the server to verify its replay, so the
+  // verified-session half of the protocol is answered accurately and the
+  // published metric is the one the receipt carries.
+  const verified = createIssuedGameResponder({
+    games: ["sudoku"],
+    elapsedMs: 75_000,
+    receipts: {
+      sudoku: {
+        type: "win",
+        difficulty: "easy",
+        hintBucket: "noHints",
+        metricKind: "seconds",
+        metric: 75,
+      },
+    },
+  });
   let sessionSequence = 0;
   const corsHeaders = {
     "Access-Control-Allow-Headers": "Content-Type",
@@ -33,6 +49,7 @@ const installApi = async (page) => {
   };
 
   await page.route(`${API_BASE_URL}/**`, async (route) => {
+    if (await verified.handle(route)) return;
     const request = route.request();
     const url = new URL(request.url());
 
@@ -42,7 +59,6 @@ const installApi = async (page) => {
     }
 
     if (request.method() === "POST" && url.pathname === "/sessions") {
-      sessionRequests.push(JSON.parse(request.postData() || "{}"));
       sessionSequence += 1;
       await route.fulfill({
         status: 201,
@@ -93,7 +109,7 @@ const installApi = async (page) => {
     });
   });
 
-  return { eventRequests, sessionRequests };
+  return { eventRequests, sessionRequests: verified.issued, verified };
 };
 
 const installSudokuBridge = async (page) => {

@@ -190,8 +190,11 @@ test("the first open deals once and a reopen hands back the same board nodes", a
   expect(opened.deals).toBe(1);
   expect(opened.renders).toBe(1);
   expect(opened.boardReady).toBe(true);
-  expect(opened.sessions).toBe(0, "Opening the window is not gameplay.");
-  expect(opened.statsSession).toBe("");
+  // A verified result has to bind the board the server issued, so a dealt board
+  // owns an issued session from the start. What it never does is mint one of the
+  // old unverified sessions.
+  expect(opened.sessions).toBe(0, "No legacy session is started for a new deal.");
+  expect(opened.statsSession).toMatch(/^solitaire-issued-/);
   expect(opened.columns).toEqual([1, 2, 3, 4, 5, 6, 7]);
   await expectDealtBoard(page);
 
@@ -253,6 +256,7 @@ test("Reset deals a new board, keeps the columns, and clears the old selection",
   await installLazyBoardBridge(page);
   await openHomeDesktop(page, DESKTOP);
   await openApp(page, "solitaire");
+  const afterOpenSession = (await snapshot(page)).statsSession;
 
   // The auto-solve check takes Reset's place while the dealt Ace is exposed, so
   // play it out first; the board it leaves offers Reset again.
@@ -273,7 +277,12 @@ test("Reset deals a new board, keeps the columns, and clears the old selection",
   expect(afterReset.deals).toBe(2, "Reset generates another winnable board.");
   expect(afterReset.moves).toBe(0);
   expect(afterReset.foundations).toEqual([0, 0, 0, 0]);
-  expect(afterReset.statsSession).toBe("", "A new deal starts a new session later, not now.");
+  expect(afterReset.statsSession).toMatch(
+    /^solitaire-issued-/,
+    "Reset is a new board, so it owns a new issued session of its own."
+  );
+  expect(afterReset.statsSession).not.toBe(afterOpenSession);
+  expect(afterReset.sessions).toBe(0, "No legacy session is started for a reset.");
   await expectDealtBoard(page);
   await expect(page.locator("#sol-tableau .sol-card.is-selected")).toHaveCount(0);
   await expect(page.locator("#sol-undo")).toBeDisabled();
@@ -320,7 +329,10 @@ test("selecting, moving and undoing keep every unchanged card node in place", as
   expect(stamps["col:0:spades-1"]).toBe(undefined, "The card left column 1.");
   expect(stamps["col:1:spades-3"]).toBe("col:1:spades-3", "Untouched columns are untouched.");
   await expect(page.locator("#sol-tableau .sol-card.is-selected")).toHaveCount(0);
-  expect((await snapshot(page)).sessions).toBe(1, "A real move opens the session.");
+  // A move no longer opens one of the old unverified sessions; the board has
+  // owned its issued session since it was dealt.
+  expect((await snapshot(page)).sessions).toBe(0);
+  expect((await snapshot(page)).statsSession).toMatch(/^solitaire-issued-/);
 
   await page.locator("#sol-stock").click();
   await expect(page.locator("#sol-waste")).toHaveAttribute("aria-label", "Waste, King of Hearts");

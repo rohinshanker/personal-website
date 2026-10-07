@@ -138,30 +138,40 @@ test("only fresh Sudoku puzzle creation clears the completion latch", async () =
 });
 
 
-test("resuming a recorded or ineligible puzzle never requests another stats session", async () => {
+test("starting the clock reports its boundary and never opens an unverified session", async () => {
   const source = await readMainSource();
   const timer = sourceBetween(source, "const startSudokuTimer =", "const pauseSudokuTimer =");
-  for (const [eligible, recorded, expectedSessions] of [
-    [true, false, 1],
-    [true, true, 0],
-    [false, false, 0],
-    [false, true, 0],
+
+  // A result is verified against the board the server issued, so there is no
+  // session left for the clock to open: the only thing it reports is where the
+  // clock started, which is what makes the published time trustworthy.
+  assert.doesNotMatch(
+    source,
+    /ensureSession/,
+    "The controller must not fall back to an unverified session."
+  );
+
+  for (const [eligible, recorded] of [
+    [true, false],
+    [true, true],
+    [false, false],
+    [false, true],
   ]) {
-    const sessions = [];
+    const resumes = [];
     const state = {
       difficulty: "easy", solved: false, timerId: null,
       statsSessionEligible: eligible, completionRecorded: recorded,
     };
     const context = vm.createContext({
       sudokuState: state,
-      sudokuStats: { ensureSession: (config) => sessions.push(config) },
+      sudokuStats: { resumeGame: () => resumes.push(true) },
       Date: { now: () => 100 },
       window: { setInterval: () => 17 },
       SUDOKU_TIMER_INTERVAL_MS: 1_000,
       updateSudokuTimeDisplay: () => {},
     });
     vm.runInContext(`${timer}\nstartSudokuTimer();`, context);
-    assert.equal(sessions.length, expectedSessions);
+    assert.deepEqual(resumes, [true]);
     assert.equal(state.timerId, 17);
     assert.equal(state.timerStartedAt, 100);
   }
