@@ -1831,28 +1831,39 @@ test("does not trust a Snake scheduler that resolves before eligibility", async 
   assert.equal(env.personal_site_game_stats.events.size, 0);
 });
 
-test("uses a bounded Node timer fallback for an inline Snake eligibility wait", async () => {
+test("uses a bounded Node timer fallback for an inline Snake eligibility wait", async (context) => {
   const env = createEnv();
   const session = await createSession(env, "snake", { boardSize: "10" });
-  await ageSessionForCompletion(env, session, 4_900);
+  await withMockedNow(Date.now(), async ({ advance }) => {
+    await ageSessionForCompletion(env, session, 4_900);
+    const scheduledDelays = [];
+    context.mock.method(globalThis, "setTimeout", (callback, delayMs) => {
+      scheduledDelays.push(delayMs);
+      queueMicrotask(() => {
+        advance(delayMs);
+        callback();
+      });
+    });
 
-  const response = await withScheduler(undefined, () =>
-    postEvent(
-      env,
-      event({
-        id: "event-snake-node-wait",
-        game: "snake",
-        type: "gamePlayed",
-        boardSize: "10",
-        metric: 0,
-        metricKind: "score",
-      }),
-      session
-    )
-  );
+    const response = await withScheduler(undefined, () =>
+      postEvent(
+        env,
+        event({
+          id: "event-snake-node-wait",
+          game: "snake",
+          type: "gamePlayed",
+          boardSize: "10",
+          metric: 0,
+          metricKind: "score",
+        }),
+        session
+      )
+    );
 
-  assert.equal(response.status, 201);
-  assert.equal((await readJson(response)).applied, true);
+    assert.deepEqual(scheduledDelays, [100]);
+    assert.equal(response.status, 201);
+    assert.equal((await readJson(response)).applied, true);
+  });
 });
 
 test("returns a bounded 425 for an implausibly early Snake score and accepts a later retry", async () => {
