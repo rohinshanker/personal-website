@@ -320,6 +320,21 @@ const normalizeSudokuDigit = (value) =>
   Array.from(String(value || "")).find((char) => SUDOKU_DIGITS.includes(char)) ||
   "";
 
+/**
+ * What a control may ask for: exactly one digit, or the empty string meaning
+ * clear. Anything else is `null`, and the caller refuses it.
+ *
+ * `normalizeSudokuDigit` above reads one character out of a saved grid, where
+ * reaching past a stray character is the right thing to do. An input is not a
+ * saved grid: trimming "89" down to "8" would accept a value the player never
+ * chose and hand the rules a move that looks legal, so the two are kept apart.
+ */
+const sudokuDigitInput = (value) => {
+  if (value === "") return "";
+  if (typeof value !== "string" || value.length !== 1) return null;
+  return SUDOKU_DIGITS.includes(value) ? value : null;
+};
+
 const normalizeSudokuDifficulty = (difficulty) =>
   SUDOKU_PUZZLES[difficulty] ? difficulty : "easy";
 
@@ -1951,7 +1966,10 @@ const updateSudokuCellValue = (
   { clearEmptyNotes = false, autoAdvance = false } = {}
 ) => {
   if (!input || isSudokuCellReadOnly(input)) return;
-  const digit = normalizeSudokuDigit(value);
+  const digit = sudokuDigitInput(value);
+  // A value that is neither one digit nor a clear is refused outright, rather
+  // than trimmed into one or mistaken for the other.
+  if (digit === null) return;
   // Clearing is its own move: on an empty cell the keypad wipes its pencil marks
   // instead, which is why only that path asks for it.
   if (!digit && !clearEmptyNotes && !getSudokuCellValue(input)) return;
@@ -1966,6 +1984,9 @@ const updateSudokuCellValue = (
 
 const toggleSudokuNote = (cell, index, digit) => {
   if (!cell || isSudokuCellReadOnly(cell)) return;
+  // One pencil mark per toggle. A multi-character value would set several at
+  // once, so it is refused here as well as by the rules.
+  if (!sudokuDigitInput(digit)) return;
   syncSudokuSelection();
   if (!applySudokuMove({ op: "toggleNote", index, digit })) return;
   afterSudokuEdit();

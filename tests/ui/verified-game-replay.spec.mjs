@@ -413,6 +413,70 @@ test("a new Sudoku puzzle cannot abort or retarget the finish the last one claim
   expect(api.published[0].event.puzzleId).toBe(board.gameId);
 });
 
+test("a malformed digit from the keypad reaches neither the board nor the replay", async ({
+  page,
+}) => {
+  const board = sudokuBoard();
+  const api = await openVerifiedPage(page, viewports[2], { boards: { sudoku: board } });
+  const win = await openSudokuBoard(page);
+  await expect.poll(() => api.issued.length).toBe(1);
+
+  const entries = sudokuEntries(board);
+  const last = entries.at(-1);
+  await win
+    .locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`)
+    .click();
+  await page.keyboard.type(entries.slice(0, -1).map((entry) => entry.digit).join(""));
+  await settleRender(page);
+
+  const recordedBefore = api.replayFor("sudoku").length;
+  const lastCell = win.locator(
+    `#sudoku-grid .sudoku-cell[data-sudoku-index="${last.index}"]`
+  );
+  await lastCell.click();
+
+  // A control asking for two digits at once. The keypad reads its value at click
+  // time, so this is the production path with a malformed value in it — not a
+  // patched script. Two characters in one cell used to grow the grid past
+  // eighty-one cells, where nothing scored the overflow, and the board read as
+  // finished. DEM-258 review finding 1.
+  // The last cell's own digit is the one the keypad still offers, every other
+  // having been placed nine times already.
+  const forged = `${last.digit}${last.digit}`;
+  const keypad = win.locator(`[data-sudoku-number="${last.digit}"]`);
+  await expect(keypad).toBeEnabled();
+  await keypad.evaluate((button, value) => {
+    button.dataset.sudokuNumber = value;
+  }, forged);
+  await win.locator(`[data-sudoku-number="${forged}"]`).click();
+  await settleRender(page);
+
+  await expect(lastCell).toHaveAttribute("data-sudoku-value", "");
+  expect(
+    await page.evaluate(() => document.querySelectorAll("#sudoku-grid .sudoku-cell").length)
+  ).toBe(81);
+  expect(api.replayFor("sudoku")).toHaveLength(recordedBefore);
+  await win.locator("#sudoku-check").click();
+  await settleRender(page);
+  expect(api.finishes).toHaveLength(0);
+  expect(api.published).toHaveLength(0);
+  await expect(win.locator("#sudoku-solve-popup")).toBeHidden();
+
+  // The same board, finished honestly, still verifies and publishes.
+  await win.locator(`[data-sudoku-number="${forged}"]`).evaluate((button, value) => {
+    button.dataset.sudokuNumber = value;
+  }, last.digit);
+  await lastCell.click();
+  await page.keyboard.type(last.digit);
+  await win.locator("#sudoku-check").click();
+  await expect(win.locator("#sudoku-solve-popup")).toBeVisible();
+  await expect.poll(() => api.finishes.length, { timeout: 20_000 }).toBe(1);
+  const replay = api.replayFor("sudoku");
+  expect(replay.filter(({ op }) => op === "setValue")).toHaveLength(entries.length);
+  expect(replay.every(({ value }) => value === undefined || value.length === 1)).toBe(true);
+  await expect.poll(() => api.published.length, { timeout: 20_000 }).toBe(1);
+});
+
 test("a Sudoku puzzle reloaded after an acknowledged pause keeps its replay", async ({
   page,
 }) => {

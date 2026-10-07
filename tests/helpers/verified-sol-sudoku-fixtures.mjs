@@ -297,6 +297,11 @@ const fillSudoku = (wrong = {}) =>
 
 const WRONG_AT_ONE = String((Number(SUDOKU_SOLUTION[1]) % 9) + 1);
 
+/** The last cell a player fills, which is where a grown grid hides. */
+const LAST_BLANK_INDEX = Array.from({ length: 81 }, (unused, index) => index)
+  .filter((index) => SUDOKU_PUZZLE[index] === "0")
+  .at(-1);
+
 export const buildSudokuFixtures = async () => {
   const initial = sudokuInitial();
   const solvedReplay = sequence([...fillSudoku(), { op: "check" }]);
@@ -380,6 +385,36 @@ export const buildSudokuFixtures = async () => {
       name: "a digit outside one to nine",
       initial,
       replay: sequence([{ op: "setValue", index: 1, value: "0" }]),
+    },
+    // A membership test on the digit string answers true for "", for "89" and
+    // for the whole alphabet, and a multi-character value written into the grid
+    // pushes it past eighty-one cells — where nothing scores it. Each of these
+    // is one digit's worth of the same mistake.
+    ...["", "89", "123456789", "1 ", " 1", "١"].map((value) => ({
+      name: `a cell value of ${JSON.stringify(value)}`,
+      initial,
+      replay: sequence([{ op: "setValue", index: 1, value }]),
+    })),
+    ...[1, null, true, ["1"], { digit: "1" }].map((value) => ({
+      name: `a cell value that is not a string: ${JSON.stringify(value) ?? String(value)}`,
+      initial,
+      replay: sequence([{ op: "setValue", index: 1, value }]),
+    })),
+    ...["", "89", "123456789"].map((digit) => ({
+      name: `a pencil mark of ${JSON.stringify(digit)}`,
+      initial,
+      replay: sequence([{ op: "toggleNote", index: 1, digit }]),
+    })),
+    {
+      // The review's own proof: every blank but the last answered honestly, and
+      // two characters into the last one. It used to finish, win and publish.
+      name: "a win forged by writing two digits into the final cell",
+      initial,
+      replay: sequence([
+        ...fillSudoku().filter(({ index }) => index !== LAST_BLANK_INDEX),
+        { op: "setValue", index: LAST_BLANK_INDEX, value: SUDOKU_SOLUTION.slice(79, 81) },
+        { op: "check" },
+      ]),
     },
     {
       name: "a pencil mark on a filled cell",

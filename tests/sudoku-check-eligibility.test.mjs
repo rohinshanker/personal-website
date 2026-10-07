@@ -815,6 +815,78 @@ test("a restored puzzle keeps verified provenance only for the board the server 
   assert.match(completionSource, /if \(updateLocalStats\) flushSudokuSave\(\);/);
 });
 
+test("the production entry refuses a malformed digit rather than trimming it", async () => {
+  const { main } = await readSudokuSources();
+
+  // The save file's normaliser reads one character out of a stored grid, where
+  // reaching past a stray character is right. An input is not a stored grid, so
+  // the two tests are kept apart and the entry one is exact.
+  const entrySource = sourceBetween(
+    main,
+    "const sudokuDigitInput = (value) => {",
+    "\n\nconst normalizeSudokuDifficulty"
+  );
+  assert.match(entrySource, /value\.length !== 1/);
+  const editSource = sourceBetween(
+    main,
+    "const updateSudokuCellValue = (",
+    "\n\nconst toggleSudokuNote ="
+  );
+  assert.match(editSource, /const digit = sudokuDigitInput\(value\);/);
+  assert.match(editSource, /if \(digit === null\) return;/);
+  assert.doesNotMatch(
+    editSource,
+    /normalizeSudokuDigit/,
+    "Trimming an input would accept a value the player never chose."
+  );
+  assert.match(
+    sourceBetween(main, "const toggleSudokuNote = (", "\n\nconst applySudokuDigitToCell ="),
+    /if \(!sudokuDigitInput\(digit\)\) return;/
+  );
+
+  const context = await createSudokuEngineRealm([
+    "const isSudokuCellReadOnly = (cell) => Boolean(cell && cell.readOnly);",
+    "const getSudokuCellValue = (cell) => sudokuState.values[cell.index] || '';",
+    "const getSudokuCellNotes = (index) => sudokuState.notes[index] || '';",
+    "const afterSudokuEdit = () => { edits += 1; };",
+    "const focusNextSudokuEditableCell = () => {};",
+    "let edits = 0;",
+  ], [
+    sourceBetween(main, "const sudokuDigitInput = (value) => {", "\n\nconst normalizeSudokuDifficulty"),
+    sourceBetween(main, "const updateSudokuCellValue = (", "\n\nconst applySudokuDigitToCell ="),
+    "globalThis.cellFor = (index) => ({ index, readOnly: false });",
+    "globalThis.editFor = (index, value) => updateSudokuCellValue(cellFor(index), index, value);",
+    "globalThis.clearFor = (index) => updateSudokuCellValue(cellFor(index), index, '', { clearEmptyNotes: true });",
+    "globalThis.noteFor = (index, digit) => toggleSudokuNote(cellFor(index), index, digit);",
+    "globalThis.editsForTest = () => edits;",
+  ]);
+  context.startForTest();
+  const blank = Array.from({ length: 81 }, (unused, index) => index).find(
+    (index) => PUZZLE[index] === "0"
+  );
+
+  for (const value of ["89", "123456789", "0", " 1", 1, null, ["1"]]) {
+    context.editFor(blank, value);
+    context.noteFor(blank, value);
+  }
+  const untouched = plainObject(context.stateForTest());
+  assert.equal(untouched.values[blank], "", "No malformed value reached the board");
+  assert.equal(untouched.notes[blank], "");
+  assert.equal(context.editsForTest(), 0, "Nothing was treated as an edit");
+  assert.equal(context.gameForTest().values.length, 81);
+
+  // One digit, a pencil mark and a clear all still work.
+  context.editFor(blank, SOLUTION[blank]);
+  assert.equal(plainObject(context.stateForTest()).values[blank], SOLUTION[blank]);
+  context.clearFor(blank);
+  assert.equal(plainObject(context.stateForTest()).values[blank], "");
+  context.noteFor(blank, "6");
+  assert.equal(plainObject(context.stateForTest()).notes[blank], "6");
+  context.clearFor(blank);
+  assert.equal(plainObject(context.stateForTest()).notes[blank], "");
+  assert.equal(context.gameForTest().values.length, 81);
+});
+
 test("a check that reveals no mistake is free and stays free once the quota is spent", async () => {
   const { main } = await readSudokuSources();
   const context = await createSudokuCheckContext(main);

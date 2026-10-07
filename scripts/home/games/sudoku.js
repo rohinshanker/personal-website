@@ -57,6 +57,22 @@ const fail = (message, code = "invalid-move") => {
   throw new GameRuleError(code, message);
 };
 
+/**
+ * Exactly one digit, one to nine.
+ *
+ * `DIGITS.includes(value)` is substring matching, so it answers true for "",
+ * for "89" and for the whole alphabet: a two-character value would be written
+ * straight into the grid, pushing it past eighty-one cells, and the cell beyond
+ * the board is never scored. The length is therefore part of the test, and a
+ * malformed value is refused rather than trimmed to the digit inside it.
+ */
+const assertDigit = (value, label) => {
+  if (typeof value !== "string" || value.length !== 1 || !DIGITS.includes(value)) {
+    fail(`Invalid ${label}`, "invalid-input");
+  }
+  return value;
+};
+
 const assertGrid = (value, label) => {
   if (typeof value !== "string" || value.length !== CELL_COUNT ||
       !Array.from(value).every((digit) => digit === BLANK || DIGITS.includes(digit))) {
@@ -110,14 +126,21 @@ const normalizeNoteList = (raw, puzzle) => {
     puzzle[index] === BLANK ? normalizeNotes(list[index]) : "");
 };
 
-const withDigit = (grid, index, digit) =>
-  `${grid.slice(0, index)}${digit}${grid.slice(index + 1)}`;
+const withDigit = (grid, index, digit) => {
+  const next = `${grid.slice(0, index)}${digit}${grid.slice(index + 1)}`;
+  // The board is eighty-one cells and stays eighty-one cells. Nothing below
+  // reads past that, so a grid of any other length could carry a value no rule
+  // ever checked.
+  if (next.length !== CELL_COUNT) fail("A Sudoku board holds 81 cells", "invalid-input");
+  return next;
+};
 
 /**
  * Every entry that disagrees with the solution. Givens are never counted: they
  * cannot be edited, so they cannot be wrong.
  */
 const evaluate = (state) => {
+  assertGrid(state.values, "board");
   const wrong = [];
   for (let index = 0; index < CELL_COUNT; index += 1) {
     const value = state.values[index];
@@ -291,9 +314,7 @@ const OPERATIONS = Object.freeze({
     cost: () => PEERS[0].length + UNIT_SIZE,
     check(state, action) {
       const index = assertEditable(state, action);
-      if (typeof action.value !== "string" || !DIGITS.includes(action.value)) {
-        fail("A cell holds one digit", "invalid-input");
-      }
+      assertDigit(action.value, "cell digit");
       if (state.values[index] === action.value) fail("That digit is already there");
     },
     apply(state, action) {
@@ -334,9 +355,7 @@ const OPERATIONS = Object.freeze({
     cost: () => UNIT_SIZE,
     check(state, action) {
       const index = assertEditable(state, action);
-      if (typeof action.digit !== "string" || !DIGITS.includes(action.digit)) {
-        fail("A pencil mark is one digit", "invalid-input");
-      }
+      assertDigit(action.digit, "pencil mark");
       if (state.values[index] !== BLANK) fail("A filled cell holds no pencil marks");
     },
     apply(state, action) {
@@ -472,16 +491,20 @@ const canApply = (state, action) => {
   }
 };
 
-const result = (state) => ({
-  terminal: state.solved,
-  won: state.solved,
-  lost: false,
-  score: state.moves,
-  moves: state.moves,
-  assistance: state.usedHint || state.usedReveal ? "withHints" : "noHints",
-  assistanceCount: state.checksUsed,
-  configuration: { difficulty: state.difficulty },
-});
+/** A result is only ever derived from a board of the one shape a board has. */
+const result = (state) => {
+  assertGrid(state.values, "board");
+  return {
+    terminal: state.solved,
+    won: state.solved,
+    lost: false,
+    score: state.moves,
+    moves: state.moves,
+    assistance: state.usedHint || state.usedReveal ? "withHints" : "noHints",
+    assistanceCount: state.checksUsed,
+    configuration: { difficulty: state.difficulty },
+  };
+};
 
 /**
  * Relabels the digits and permutes the bands, stacks, rows and columns of a
@@ -528,6 +551,7 @@ window.homeSudokuRules = Object.freeze({
   MAX_UNDO_STATES,
   PEERS,
   assertConfig,
+  assertDigit,
   canApply,
   conflictIndexes,
   evaluate,

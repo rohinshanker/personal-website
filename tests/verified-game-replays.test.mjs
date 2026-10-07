@@ -228,6 +228,77 @@ test("sudoku: placing a digit retires the pencil marks it rules out, as one move
   );
 });
 
+test("a played digit is exactly one digit, and the board stays eighty-one cells", () => {
+  const { sudoku, rules, into } = engines;
+  const { initial: issued } = fixtures.sudoku.valid[0];
+  const budget = () => rules.createBudget(2_000_000);
+
+  // `DIGITS.includes(value)` is substring matching: it answers true for the
+  // empty string, for "89" and for the whole alphabet. A value of more than one
+  // character written into the grid pushed it past eighty-one cells, and the
+  // cell beyond the board was never scored — so a board that read as complete
+  // and correct could be assembled out of one extra character.
+  // DEM-258 review finding 1, reproduced here as the thing that must not work.
+  const blanks = Array.from({ length: sudoku.CELL_COUNT }, (unused, index) => index)
+    .filter((index) => issued.puzzle[index] === "0");
+  const lastBlank = blanks.at(-1);
+  const forged = sudoku.initial(into(issued));
+  let seq = 0;
+  const play = (state, action) =>
+    sudoku.transition(state, into({ ...action, seq: (seq += 1) }), budget());
+
+  blanks.slice(0, -1).forEach((index) => {
+    play(forged, { op: "setValue", index, value: issued.solution[index] });
+  });
+  assert.equal(forged.values.length, sudoku.CELL_COUNT);
+  assert.throws(
+    () => play(forged, {
+      op: "setValue",
+      index: lastBlank,
+      value: issued.solution.slice(lastBlank - 1, lastBlank + 1),
+    }),
+    (error) => error.code === "invalid-input",
+    "Two characters into the final cell must be refused"
+  );
+  assert.equal(forged.values.length, sudoku.CELL_COUNT, "A refused move changes nothing");
+  assert.equal(plainValue(sudoku.evaluate(forged)).complete, false);
+  assert.equal(plainValue(sudoku.result(forged)).won, false);
+
+  // Honest play on the very same board still finishes.
+  play(forged, { op: "setValue", index: lastBlank, value: issued.solution[lastBlank] });
+  play(forged, { op: "check" });
+  assert.equal(plainValue(sudoku.result(forged)).won, true);
+
+  // Every value-taking operation shares one test, and it is exact.
+  const fresh = sudoku.initial(into(issued));
+  const firstBlank = blanks[0];
+  for (const value of ["", "89", "123456789", "0", " 1", "1 ", "\u0661", 1, null, true]) {
+    assert.throws(
+      () => sudoku.transition(fresh, into({ seq: 1, op: "setValue", index: firstBlank, value }), budget()),
+      (error) => error.code === "invalid-input",
+      `setValue ${JSON.stringify(value) ?? String(value)}`
+    );
+    assert.throws(
+      () => sudoku.transition(fresh, into({ seq: 1, op: "toggleNote", index: firstBlank, digit: value }), budget()),
+      (error) => error.code === "invalid-input",
+      `toggleNote ${JSON.stringify(value) ?? String(value)}`
+    );
+  }
+  assert.equal(sudoku.assertDigit("7", "digit"), "7");
+  assert.equal(fresh.values, issued.puzzle, "None of them touched the board");
+  assert.deepEqual(plainValue(fresh.notes).filter(Boolean), []);
+
+  // A clear is its own operation and still works, on a value and on marks.
+  play(fresh, { op: "setValue", index: firstBlank, value: issued.solution[firstBlank] });
+  play(fresh, { op: "clear", index: firstBlank });
+  assert.equal(fresh.values[firstBlank], "0");
+  play(fresh, { op: "toggleNote", index: firstBlank, digit: "4" });
+  assert.equal(fresh.notes[firstBlank], "4");
+  play(fresh, { op: "clear", index: firstBlank });
+  assert.equal(fresh.notes[firstBlank], "");
+  assert.equal(fresh.values.length, sudoku.CELL_COUNT);
+});
+
 test("both engines publish one frozen portable contract in either runtime", async () => {
   for (const [game, contract] of [["solitaire", "homeSolitaireRules"], ["sudoku", "homeSudokuRules"]]) {
     const engine = game === "solitaire" ? engines.solitaire : engines.sudoku;
