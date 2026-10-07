@@ -2,7 +2,7 @@
 
 - Purpose: Keep compatible game mechanics in small shared helpers while preserving each game's policies.
 - Scope: Home games, utility and window contracts, Game Stats hooks, the verified-session adapter, and Solitaire rendering.
-- Last verified: 2026-10-06
+- Last verified: 2026-10-07
 
 ## Ownership
 

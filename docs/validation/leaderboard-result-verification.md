@@ -2,7 +2,7 @@
 
 - Purpose: Preserve server verification of legal game replays and the controlled release contract.
 - Scope: Shared engines, issued games, timing, completion receipts, provenance, restore, execution bounds, and validation.
-- Last verified: 2026-10-06
+- Last verified: 2026-10-07
 
 This guide covers result protocol 2. The legacy signed-session path and deployment
 runbook are in [game-stats-backend.md](game-stats-backend.md). Check the live
@@ -103,8 +103,11 @@ in [game-stats-refresh-control.md](game-stats-refresh-control.md).
 and returns the original descriptor only for an unconsumed, unexpired ready or
 server-acknowledged paused session at the exact stored prefix. It never issues a
 replacement game. The controller rebuilds the original initial state and replay
-and verifies that values/notes match the saved board before adopting it; a stale
-restore response cannot replace a newer puzzle.
+and verifies that values/notes match the saved board before adopting it. Every
+applied logical change while the request is pending also invalidates adoption,
+even if cells still match. Keep the player's complete current board, release the
+unadopted proof, and persist the local-only save. A stale response cannot detach
+a newer puzzle's proof.
 
 Running autosaves without an acknowledged pause, expired proofs, arbitrary
 local saves, and offline games remain playable and locally recorded. They
