@@ -1,10 +1,10 @@
-# O_long-on-demand-home-loading__20261006 — Open
+# A_long-on-demand-home-loading__20261006 — Active
 
 - Scope: Measure Home loading, preserve ordered initialization while deferring scripts, load hidden-event CSS later, and load Admin Controls resources only when needed with a loading cursor.
-- Status: open
+- Status: active
 - Opened: 2026-10-06
 - Updated: 2026-10-07
-- Current State: Owner approved measured loading and on-demand Admin resources with a loading cursor. Selected as the next long ticket after between-ticket fixes. The leaderboard implementation is closed at `f77f42a` and its coordinator released the clean checkout. Coordinator: Agent Deck `1c881e50-1791344233`; canonical repository: `/Users/Rohin/Desktop/coding_stuff/personal-website`; branch: `codex/home-loading-followup`. Owner decisions are now integrated here.
+- Current State: Owner approved measured loading and on-demand Admin resources with a loading cursor. Quick fixes are committed and accepted; controlled baseline measurement and dependency mapping are now underway. The leaderboard implementation is closed at `f77f42a` and its coordinator released the clean checkout. Coordinator: Agent Deck `1c881e50-1791344233`; canonical repository: `/Users/Rohin/Desktop/coding_stuff/personal-website`; branch: `codex/home-loading-followup`. Owner decisions are now integrated here.
 - Verification: Measure the unchanged baseline first using the existing repository Playwright tooling and Chrome traces; compare the final patch under the same conditions. Exercise cold/warm/slow/failing loads, duplicate launches, auth expiry/rejection, activation and event loading at 375×812, 768×1024, 1280×800 and 1440×900. Run relevant behavior/UI/accessibility checks, the full affected browser gate, pinned visual baselines, syntax, generated integrity, secrets and ticket checks. Review the exact patch independently and inspect renders.
 - Cleanup: Distill reusable loading/activation/resource-lifetime guidance into the relevant indexed validation guides. Resolve and remove this ticket/index row after acceptance; retain no one-off performance/test logs in permanent documentation.
 

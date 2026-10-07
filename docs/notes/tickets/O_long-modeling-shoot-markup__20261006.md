@@ -13,3 +13,5 @@
 - Use `scripts/home/modeling-portfolio.js` as the existing source of truth. Preserve full-quality images and the independently committed Arthaus photo.
 - Prefer the smallest rendering/build mechanism that preserves the current visible and crawlable content; measure net source reduction including the helper/data/configuration.
 - Preserve existing carousel/viewer media lifetimes, focus, first-use initialization and route parity. No push or deployment is authorized.
+
+- Preserve full-quality modeling photos `fast-sonder-lb2-may2025/5.png` and `fast-reverie-rnwy-apr2024/05-runway-photo.png`; owner explicitly retained them.

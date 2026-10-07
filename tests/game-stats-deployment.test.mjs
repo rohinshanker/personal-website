@@ -1544,7 +1544,7 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     "node scripts/check-game-stats-worker-secrets.mjs"
   );
   assert.match(packageJson.scripts["syntax:check"], /find scripts -type f/);
-  assert.match(packageJson.scripts["syntax:check"], /find video-editor -maxdepth 1/);
+  assert.match(packageJson.scripts["syntax:check"], /find video-editor modeling -maxdepth 1/);
   assert.match(packageJson.scripts["syntax:check"], /xargs -0 -n1 node --check/);
   assert.equal(
     workerPackageJson.scripts["deployment:check"],
