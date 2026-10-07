@@ -1496,16 +1496,26 @@ test("one action above a preparation or work envelope is rejected atomically", a
     SELECT input_cursor FROM verified_completion_jobs WHERE session_id = ?
   `).get(largeSession.id).input_cursor, 0);
 
-  const costlyEngine = progressEngine("minesweeper");
+  const costlyTarget = 34;
+  const costlyEngine = {
+    generate(config, { firstCell, budget }) {
+      budget.spend();
+      return { config, firstCell, progress: 0, target: costlyTarget };
+    },
+    initial(raw) { return clone(raw); },
+    transition(state, input, budget) {
+      checkedAction(input);
+      state.progress += 1;
+      budget.spend(input.seq === 33 ? 20_001 : 1);
+      return state;
+    },
+    result(state) {
+      return { terminal: state.progress === costlyTarget, won: state.progress === costlyTarget };
+    },
+  };
   harness.dependencies.gameEngines = {
     ...gameEngines,
-    minesweeper: {
-      ...costlyEngine,
-      transition(state, input, budget) {
-        budget.spend(20_001);
-        return costlyEngine.transition(state, input, budget);
-      },
-    },
+    minesweeper: costlyEngine,
   };
   const costlySession = await issue(harness);
   assert.equal((await resumeGame(harness, costlySession)).status, 200);
@@ -1513,12 +1523,21 @@ test("one action above a preparation or work envelope is rejected atomically", a
   const costlyAction = await finishGame(
     harness,
     costlySession,
-    finishBody(costlySession, { eventId: "event-costly-action" })
+    finishBody(costlySession, {
+      eventId: "event-costly-action",
+      inputs: Array.from({ length: costlyTarget }, (_, index) => ({
+        seq: index + 1,
+        op: "advance",
+        amount: 1,
+      })),
+    })
   );
   await assertErrorCode(costlyAction, 413, "replay-limit");
-  assert.equal(harness.database.sqlite.prepare(`
-    SELECT input_cursor FROM verified_completion_jobs WHERE session_id = ?
-  `).get(costlySession.id).input_cursor, 0);
+  const costlyCheckpoint = harness.database.sqlite.prepare(`
+    SELECT input_cursor, state_json FROM verified_completion_jobs WHERE session_id = ?
+  `).get(costlySession.id);
+  assert.equal(costlyCheckpoint.input_cursor, 32);
+  assert.equal(JSON.parse(costlyCheckpoint.state_json).progress, 32);
 
   const checkpointEngine = progressEngine("minesweeper");
   harness.dependencies.gameEngines = {
@@ -1656,7 +1675,14 @@ test("runtime probes exclude awaited gaps and report every synchronous stage", a
     0, 2,
     1_000, 1_003,
     2_000, 2_004,
-    3_000, 3_005,
+    3_000,
+    3_001, 3_002,
+    3_002, 3_004,
+    3_004, 3_007,
+    3_007, 3_008,
+    3_008, 3_010,
+    3_010, 3_013,
+    3_014,
     4_000, 4_006,
   ];
   let observed;
@@ -1671,9 +1697,12 @@ test("runtime probes exclude awaited gaps and report every synchronous stage", a
     operations: 2,
     work: 2,
     preparationWallMs: 9,
-    replayWallMs: 5,
+    replayWallMs: 14,
+    cloneWallMs: 4,
+    transitionWallMs: 6,
+    inputCanonicalWallMs: 2,
     serializationWallMs: 6,
-    synchronousWallMs: 20,
+    synchronousWallMs: 29,
   });
   assert.equal(stamps.length, 0);
 });

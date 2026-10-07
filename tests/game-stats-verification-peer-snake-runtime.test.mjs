@@ -185,7 +185,10 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
     terminalTick: state.tick,
   };
   assert.ok(new TextEncoder().encode(JSON.stringify(finishBody)).byteLength < 256 * 1024);
+  const requestWallSamples = [];
+  let requestStartedAt = performance.now();
   let response = await post(`/sessions/${issued.id}/finish`, finishBody);
+  requestWallSamples.push(performance.now() - requestStartedAt);
   const frozen = await database.prepare(`
     SELECT elapsed_ms, countdown_ms, resume_count, finished_at
     FROM verified_completion_jobs WHERE session_id = ?
@@ -197,13 +200,18 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   let continuationCount = 0;
   while (response.status === 202) {
     const { progress } = await response.json();
+    requestStartedAt = performance.now();
     response = await post(`/sessions/${issued.id}/finish/continue`, {
       session: { id: issued.id, token: issued.token },
       progress,
     });
+    requestWallSamples.push(performance.now() - requestStartedAt);
     const stageHeaders = {
       preparation: "X-Test-Replay-Preparation-Wall-Ms",
       replay: "X-Test-Replay-Wall-Ms",
+      clone: "X-Test-Replay-Clone-Wall-Ms",
+      transition: "X-Test-Replay-Transition-Wall-Ms",
+      inputCanonical: "X-Test-Replay-Input-Canonical-Wall-Ms",
       serialization: "X-Test-Replay-Serialization-Wall-Ms",
       synchronous: "X-Test-Replay-Synchronous-Wall-Ms",
     };
@@ -230,7 +238,13 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
     SELECT request_count FROM verified_completion_jobs WHERE session_id = ?
   `).bind(issued.id).first()).request_count), continuationCount);
   assert.ok(stageSamples.length > 0);
-  const maximum = (key) => Math.max(...stageSamples.map((sample) => sample[key]));
+  const percentile95 = (values) => values.toSorted((left, right) => left - right)[
+    Math.floor(values.length * 0.95)
+  ];
+  const stageValues = (key) => stageSamples.map((sample) => sample[key]);
+  const maximum = (key) => Math.max(...stageValues(key));
+  const stageSummary = (key) =>
+    `${percentile95(stageValues(key)).toFixed(1)}/${maximum(key).toFixed(1)}ms`;
   const maximumSynchronousWallMs = maximum("synchronous");
   assert.ok(
     maximumSynchronousWallMs < 10,
@@ -239,9 +253,12 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   t.diagnostic(
     `real Snake ${state.tick} ticks / ${inputs.length} directions over ` +
       `${continuationCount} continuations; worst supported work ${maximumWork}; ` +
-      `max synchronous stages prepare ${maximum("preparation").toFixed(1)}ms / ` +
-      `replay ${maximum("replay").toFixed(1)}ms / ` +
-      `serialize ${maximum("serialization").toFixed(1)}ms / ` +
-      `combined ${maximumSynchronousWallMs.toFixed(1)}ms`
+      `p95/max request wall ${percentile95(requestWallSamples).toFixed(1)}/` +
+      `${Math.max(...requestWallSamples).toFixed(1)}ms; p95/max synchronous stages ` +
+      `prepare ${stageSummary("preparation")} / replay ${stageSummary("replay")} / ` +
+      `clone ${stageSummary("clone")} / transition ${stageSummary("transition")} / ` +
+      `input canonical ${stageSummary("inputCanonical")} / ` +
+      `serialize ${stageSummary("serialization")} / combined ${stageSummary("synchronous")}; ` +
+      `local wall only, not production CPU`
   );
 });

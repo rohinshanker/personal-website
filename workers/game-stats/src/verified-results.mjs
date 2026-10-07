@@ -1264,9 +1264,25 @@ const canonicalPrefixAt = async (database, jobId, inputCursor) => {
   return prefix;
 };
 
-const transitionOne = (engine, state, input, remainingBatchWork, step = false) => {
+// Replay checkpoints are private canonical JSON. A native JSON round-trip is
+// materially cheaper than structuredClone for these large plain game states,
+// while still giving each action an isolated candidate that can be discarded.
+const cloneReplayState = (state) => JSON.parse(JSON.stringify(state));
+
+const transitionOne = (
+  engine,
+  state,
+  input,
+  remainingBatchWork,
+  step = false,
+  observedStages = null
+) => {
   let actionWork = 0;
-  const candidate = structuredClone(state);
+  const cloneStartedAt = observedStages ? observedStages.now() : 0;
+  const candidate = cloneReplayState(state);
+  if (observedStages) {
+    observedStages.cloneWallMs += observedStages.now() - cloneStartedAt;
+  }
   const budget = {
     spend(units = 1) {
       commonRules.assertInteger(units, 0, 10_000_000, "work charge");
@@ -1280,9 +1296,17 @@ const transitionOne = (engine, state, input, remainingBatchWork, step = false) =
       actionWork += units;
     },
   };
-  const transitioned = step
-    ? engine.step(candidate, budget)
-    : engine.transition(candidate, input, budget);
+  const transitionStartedAt = observedStages ? observedStages.now() : 0;
+  let transitioned;
+  try {
+    transitioned = step
+      ? engine.step(candidate, budget)
+      : engine.transition(candidate, input, budget);
+  } finally {
+    if (observedStages) {
+      observedStages.transitionWallMs += observedStages.now() - transitionStartedAt;
+    }
+  }
   return { state: transitioned, work: actionWork };
 };
 
@@ -1624,6 +1648,11 @@ export const continueVerifiedSession = async (
     .all()).results || [];
   const observesStages = typeof dependencies.onVerificationBatch === "function";
   const performanceNow = dependencies.performanceNow || (() => performance.now());
+  const observedStages = observesStages ? {
+    now: performanceNow,
+    cloneWallMs: 0,
+    transitionWallMs: 0,
+  } : null;
   let preparationWallMs = 0;
   const engine = resolveEngine(session.game, dependencies);
   let state;
@@ -1650,6 +1679,7 @@ export const continueVerifiedSession = async (
   let batchWork = 0;
   let canonicalBytes = 0;
   let operations = 0;
+  let inputCanonicalWallMs = 0;
   const checkpointBytes = textEncoder.encode(
     String(job.state_json || session.initial_json)
   ).byteLength;
@@ -1696,8 +1726,12 @@ export const continueVerifiedSession = async (
       }
       break;
     }
+    const inputCanonicalStartedAt = observesStages ? performanceNow() : 0;
     const canonicalInput = consumesInput ? commonRules.canonicalJson(input) : "";
     const canonicalInputBytes = textEncoder.encode(canonicalInput).byteLength;
+    if (observesStages) {
+      inputCanonicalWallMs += performanceNow() - inputCanonicalStartedAt;
+    }
     if (canonicalInputBytes > MAX_VERIFICATION_ACTION_BYTES) {
       throw replayLimitError("One replay action is too large");
     }
@@ -1709,7 +1743,8 @@ export const continueVerifiedSession = async (
         state,
         input,
         MAX_VERIFICATION_BATCH_WORK - batchWork,
-        !consumesInput
+        !consumesInput,
+        observedStages
       );
     } catch (error) {
       if (error instanceof BatchWorkExhausted) break;
@@ -1753,6 +1788,9 @@ export const continueVerifiedSession = async (
       work: batchWork,
       preparationWallMs,
       replayWallMs,
+      cloneWallMs: observedStages.cloneWallMs,
+      transitionWallMs: observedStages.transitionWallMs,
+      inputCanonicalWallMs,
       serializationWallMs,
       synchronousWallMs: preparationWallMs + replayWallMs + serializationWallMs,
     }));

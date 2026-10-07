@@ -22,6 +22,15 @@ export default {
         String(replayStages.preparationWallMs)
       );
       response.headers.set("X-Test-Replay-Wall-Ms", String(replayStages.replayWallMs));
+      response.headers.set("X-Test-Replay-Clone-Wall-Ms", String(replayStages.cloneWallMs));
+      response.headers.set(
+        "X-Test-Replay-Transition-Wall-Ms",
+        String(replayStages.transitionWallMs)
+      );
+      response.headers.set(
+        "X-Test-Replay-Input-Canonical-Wall-Ms",
+        String(replayStages.inputCanonicalWallMs)
+      );
       response.headers.set(
         "X-Test-Replay-Serialization-Wall-Ms",
         String(replayStages.serializationWallMs)

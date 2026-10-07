@@ -125,6 +125,9 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
   const synchronousWallTimes = [];
   const preparationWallTimes = [];
   const replayWallTimes = [];
+  const cloneWallTimes = [];
+  const transitionWallTimes = [];
+  const inputCanonicalWallTimes = [];
   const serializationWallTimes = [];
   const startedAt = performance.now();
   let requestStartedAt = performance.now();
@@ -144,6 +147,9 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
     const samples = [
       [preparationWallTimes, "X-Test-Replay-Preparation-Wall-Ms"],
       [replayWallTimes, "X-Test-Replay-Wall-Ms"],
+      [cloneWallTimes, "X-Test-Replay-Clone-Wall-Ms"],
+      [transitionWallTimes, "X-Test-Replay-Transition-Wall-Ms"],
+      [inputCanonicalWallTimes, "X-Test-Replay-Input-Canonical-Wall-Ms"],
       [serializationWallTimes, "X-Test-Replay-Serialization-Wall-Ms"],
       [synchronousWallTimes, "X-Test-Replay-Synchronous-Wall-Ms"],
     ];
@@ -177,6 +183,9 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
       `(wall time, not production CPU time); max synchronous stages ` +
       `prepare ${Math.max(...preparationWallTimes).toFixed(1)} ms / ` +
       `replay ${Math.max(...replayWallTimes).toFixed(1)} ms / ` +
+      `clone ${Math.max(...cloneWallTimes).toFixed(1)} ms / ` +
+      `transition ${Math.max(...transitionWallTimes).toFixed(1)} ms / ` +
+      `input canonical ${Math.max(...inputCanonicalWallTimes).toFixed(1)} ms / ` +
       `serialize ${Math.max(...serializationWallTimes).toFixed(1)} ms / ` +
       `combined ${maximumSynchronousWallMs.toFixed(1)} ms`
   );
