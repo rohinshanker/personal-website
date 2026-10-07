@@ -438,7 +438,7 @@
       "data-lightbox": true,
     });
     const backdrop = element("div", "lightbox__backdrop", { "data-lightbox-close": true });
-    const windowElement = element("div", "window lightbox__window");
+    const windowElement = element("div", "window lightbox__window", { "data-no-drag": true });
     const titleBar = element("div", "title-bar");
     const title = element("div", "title-bar-text lightbox__title", { id: "lightbox-title" });
     const titleControls = element("div", "title-bar-controls");
@@ -633,6 +633,7 @@
       id,
       "aria-labelledby": `${id}-title`,
       "data-shoot": shoot.id,
+      "data-no-drag": true,
     });
 
     const titleBar = element("div", "title-bar");

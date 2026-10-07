@@ -253,7 +253,6 @@ summary:focus-visible {
   box-shadow: var(--border-raised-outer), var(--border-raised-inner);
   color: var(--button-shadow);
   text-shadow: 1px 1px 0 var(--button-highlight);
-  cursor: default;
 }
 
 .portfolio-link--pending .portfolio-link__icon {
@@ -301,7 +300,6 @@ summary:focus-visible {
   padding: 0 12px;
   background: var(--surface);
   box-shadow: var(--border-raised-outer), var(--border-raised-inner);
-  cursor: pointer;
   list-style: none;
   user-select: none;
 }
@@ -514,7 +512,6 @@ details[open] > .shoot__credits-summary::before {
   box-shadow: none;
   color: inherit;
   text-shadow: none;
-  cursor: zoom-in;
 }
 
 .carousel__photo:active {

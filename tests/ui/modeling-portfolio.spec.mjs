@@ -403,6 +403,10 @@ test("an empty Dropbox slot keeps its disabled placeholder and note", async ({ p
 
   const highlights = page.getByRole("button", { name: "Dropbox Highlights" });
   await expect(highlights).toBeDisabled();
+  // The shared cursor system reads the disabled slot the same way Home does.
+  expect(await highlights.evaluate((element) => getComputedStyle(element).cursor)).toContain(
+    "generated-png/unavailable-light.png"
+  );
   await expect(highlights).toHaveAccessibleDescription("Link coming soon");
   await expect(page.locator("#portfolio-highlights-note")).toBeVisible();
   await expect(page.getByRole("link", { name: "Dropbox Digitals" })).toHaveAttribute(

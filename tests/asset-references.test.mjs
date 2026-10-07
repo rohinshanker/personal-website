@@ -15,6 +15,7 @@ const SHIPPED_SOURCES = [
   "modeling/index.html",
   "modeling/style.css",
   "modeling/script.js",
+  "modeling/cursor.js",
   "video-editor/index.html",
   "video-editor/style.css",
   "video-editor/script.js",

@@ -76,6 +76,12 @@ test("shared browser modules load before their route consumers and retain matchi
     assert.ok(home.indexOf(reference) < home.indexOf('src="scripts/home/main.js?'), `${module} before Home`);
     const consumer = module === "cursor-mode" ? "cursor.js" : "script.js";
     assert.ok(editor.indexOf(path) < editor.indexOf(`src="${consumer}?`), `${module} before editor`);
+    if (module !== "cursor-mode") continue;
+    assert.equal(onlyReference(modeling, path, "/modeling/"), reference, "modeling matches Home");
+    assert.ok(
+      modeling.indexOf(path) < modeling.indexOf('src="cursor.js?'),
+      "cursor-mode before the modeling adapter"
+    );
   }
   assert.ok(home.indexOf('src="scripts/home/core/media.js?') < home.indexOf('src="scripts/home/main.js?'));
   assert.ok(modeling.indexOf('src="../scripts/home/core/media.js?') < modeling.indexOf('src="script.js?'));

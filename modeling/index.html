@@ -32,15 +32,30 @@
     <meta name="twitter:image" content="https://rohin.shanker.me/assets/optimized/bio-pic-720.jpg" />
     <meta name="theme-color" content="#c0c0c0" />
     <link rel="stylesheet" href="../style.css?v=html-semantics-20260927" />
+    <link
+      rel="stylesheet"
+      href="../styles/home/cursors.css?v=cache-token-parity-20260927"
+    />
+    <script src="../scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930"></script>
+    <script src="cursor.js?v=modeling-custom-cursors-20261007"></script>
     <link rel="stylesheet" href="style.css?v=repo-hygiene-20260927" />
     <script src="../scripts/home/modeling-portfolio.js?v=modeling-arthaus-photo-20261006"></script>
+    <script
+      src="../scripts/home/text-selection-cursor.js?v=generic-cursor-guards-20260930"
+      defer
+    ></script>
     <script src="../scripts/home/core/media.js?v=game-build-8ad6ff38c9cd24444a660569988213a5306a25aa8bc87b5922b15469d4b1cf46" defer></script>
     <script src="script.js?v=shared-cross-route-20260930" defer></script>
   </head>
   <body class="modeling-page">
     <a class="skip-link" href="#shoots">Skip to the shoots</a>
 
-    <header class="window portfolio-header" id="top" aria-labelledby="portfolio-title">
+    <header
+      class="window portfolio-header"
+      id="top"
+      aria-labelledby="portfolio-title"
+      data-no-drag
+    >
       <div class="title-bar">
         <div class="title-bar-text">
           <img
@@ -147,7 +162,7 @@
 
     <main class="portfolio-shoots" id="shoots" data-portfolio-shoots aria-label="Shoots">
       <noscript>
-        <div class="window portfolio-noscript">
+        <div class="window portfolio-noscript" data-no-drag>
           <div class="title-bar"><div class="title-bar-text">JavaScript required</div></div>
           <div class="window-body">
             <p>The galleries need JavaScript. Enable it and reload to see the shoots.</p>
