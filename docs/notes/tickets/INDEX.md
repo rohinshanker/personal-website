@@ -2,7 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| A | 2026-10-07 | [A_legacy-client-release-window__20261007.md](A_legacy-client-release-window__20261007.md) | All 577 browser cases pass. Free-plan CPU configuration repair is validated; await complete controlled release and live parity before closure. |
+| A | 2026-10-07 | [A_legacy-client-release-window__20261007.md](A_legacy-client-release-window__20261007.md) | Worker deployed and still accepts live browser. Scoped historical 15-file manifest repair DEM-288 must pass before Pages publication and final parity. |
 | O | 2026-10-07 | [O_review-archived-calendar-photos__20261006.md](O_review-archived-calendar-photos__20261006.md) | All 18 photos are archived byte-for-byte and linked for owner review; record per-file choices before deletion. |
 | O | 2026-10-07 | [O_background-image-comparison__20261006.md](O_background-image-comparison__20261006.md) | Real four-size comparison ready: 49 KB WebP versus 352 KB JPEG. Await explicit owner visual choice before shipping/closure. |
 | O | 2026-10-06 | [O_long-window-dialog-semantics__20261006.md](O_long-window-dialog-semantics__20261006.md) | Owner-approved shared dialog roles/title labels; queued. |
@@ -12,7 +12,7 @@
 | O | 2026-10-07 | [O_biome-quality-checks__20261007.md](O_biome-quality-checks__20261007.md) | Add pinned Biome checks for authored code locally and in CI; assess baseline scope before scheduling implementation. |
 | O | 2026-10-07 | [O_soot-sprite-redesign__20260929.md](O_soot-sprite-redesign__20260929.md) | Four candidates remain queued; owner picks before shipping, then personally reviews the finished event. Keep open through final visual approval. |
 | O | 2026-10-06 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Both choices answered: keep Snake noise, add retry/overflow feedback in its implementation ticket with required owner visual approval. |
-| A | 2026-10-07 | [A_long-test-suite-hardening__20260924.md](A_long-test-suite-hardening__20260924.md) | Browser gate blocked an Admin focus regression; accepted repair is on main. Observe three consecutive successful remote main runs after that failure before closing. |
+| A | 2026-10-07 | [A_long-test-suite-hardening__20260924.md](A_long-test-suite-hardening__20260924.md) | Two consecutive post-repair main browser matrices passed. Await the third and a complete gated release; no unrelated pushes for the stability signal. |
 | O | 2026-10-06 | [O_google-search-console-refresh__20260827.md](O_google-search-console-refresh__20260827.md) | Owner confirmed Search Console steps are not done; remain pending. |
 | O | 2026-10-06 | [O_admin-controls__20260731.md](O_admin-controls__20260731.md) | Owner has not manually reviewed the workflow; remain open for required owner visual acceptance. |
 | O | 2026-10-06 | [O_image-tools__20260731.md](O_image-tools__20260731.md) | Parked at the owner's request; no feature scope or implementation scheduled. |

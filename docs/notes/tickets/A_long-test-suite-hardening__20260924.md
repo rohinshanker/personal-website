@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-24
 - Updated: 2026-10-07
-- Current State: Implementation is published to `main` and independently reviewed. Browser gates blocked the Admin expiry focus regression and an expired-session fixture race. Both repairs are independently accepted and integrated; the complete controlled release must pass. The consecutive-success stability sequence remains pending after these failed runs.
+- Current State: Implementation is published to `main` and independently reviewed. After the focus/fixture failures were repaired, remote main browser runs 37650317064 and 37652900402 each passed all 577 cases plus pinned visuals. Their later deployment failures concerned Free-plan configuration and historical-manifest validation, not browser stability. One further consecutive successful browser run and completion of the controlled release remain before closure.
 - Verification: Fast Node under ten seconds; intact 500-seed slow corpus; all browser shards with two workers and zero retries; pinned visual/accessibility/diagnostic gates; exact-patch independent review; three consecutive successful remote `main` browser runs. Remote stability proof remains unobserved.
 - Cleanup: Keep only reusable contracts in `docs/validation/test-suite.md` and `browser-visual-accessibility.md`. Resolve and delete this ticket/index row after acceptance; do not retain test logs or completion histories.
 
@@ -19,7 +19,7 @@
 
 ## Remaining work
 
-1. Observe three consecutive successful remote `main` runs after the latest failed browser run. Do not manufacture unrelated pushes for this signal; keep the ticket active until it is observed.
+1. Observe the third consecutive successful remote `main` browser run after the latest browser failure, then confirm the gated release succeeds. Two browser matrices are confirmed at [37650317064](https://github.com/rohinshanker/personal-website/actions/runs/37650317064) and [37652900402](https://github.com/rohinshanker/personal-website/actions/runs/37652900402). Do not manufacture unrelated pushes for this signal.
 
 ## Acceptance
 
