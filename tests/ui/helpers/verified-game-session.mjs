@@ -147,7 +147,8 @@ export const issuedDescriptor = (game, config, seed, { id, expiresAt, initial } 
  *
  * @param {{games?: string[], configs?: Record<string, object>,
  *          initials?: Record<string, object>, receipts?: Record<string, object>,
- *          elapsedMs?: number}} options
+ *          elapsedMs?: number, finishFailure?: {status: number, code: string},
+ *          beforeCompletion?: (() => Promise<void>) | null}} options
  */
 export const createIssuedGameResponder = ({
   games = ["solitaire", "sudoku"],
@@ -155,6 +156,8 @@ export const createIssuedGameResponder = ({
   initials = {},
   receipts = {},
   elapsedMs = 32_000,
+  finishFailure = null,
+  beforeCompletion = null,
 } = {}) => {
   const issued = [];
   const timing = [];
@@ -307,12 +310,20 @@ export const createIssuedGameResponder = ({
 
       if (pathname.endsWith("/finish/continue")) {
         continuations.push({ id, request: body });
+        if (beforeCompletion) await beforeCompletion();
         await json(receiptFor(finishes.at(-1)));
         return true;
       }
 
       if (pathname.endsWith("/finish")) {
         finishes.push({ id, request: body });
+        if (finishFailure) {
+          await json(
+            { ok: false, error: "Verification failed", code: finishFailure.code },
+            finishFailure.status
+          );
+          return true;
+        }
         await json({
           progress: { id: `progress-${finishes.length}`, token: "synthetic-progress-proof" },
         });

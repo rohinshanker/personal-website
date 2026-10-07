@@ -32,6 +32,9 @@ const snakeConfig = inRealm({ boardSize: "10" });
 const snakeInitial = context.homeSnakeRules.generate(snakeConfig, inRealm({ seed: 0x2475a4e }));
 const snakeState = context.homeSnakeRules.initial(snakeInitial);
 while (!snakeState.terminal) context.homeSnakeRules.step(snakeState);
+const scoringSnakeInitial = context.homeSnakeRules.generate(snakeConfig, inRealm({ seed: 33 }));
+const scoringSnakeState = context.homeSnakeRules.initial(scoringSnakeInitial);
+while (!scoringSnakeState.terminal) context.homeSnakeRules.step(scoringSnakeState);
 
 export const verifiedMinesweeperFixtures = Object.freeze({
   validWin: Object.freeze({
@@ -66,6 +69,13 @@ export const verifiedSnakeFixtures = Object.freeze({
     replay: Object.freeze([]),
     terminalTick: snakeState.tick,
     result: plain(context.homeSnakeRules.result(snakeState)),
+  }),
+  scoringLoss: Object.freeze({
+    config: plain(snakeConfig),
+    initial: plain(scoringSnakeInitial),
+    replay: Object.freeze([]),
+    terminalTick: scoringSnakeState.tick,
+    result: plain(context.homeSnakeRules.result(scoringSnakeState)),
   }),
   invalid: Object.freeze({
     oppositeDirection: plain([{

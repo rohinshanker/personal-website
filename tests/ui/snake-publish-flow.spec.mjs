@@ -1,8 +1,12 @@
-import { createHash } from "node:crypto";
 import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, consumeDiagnostics } from "./helpers/rendered-site.mjs";
-import { readFile } from "node:fs/promises";
-import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import {
+  PRODUCTION_BUILD_VERSION,
+  REVIEW_VIEWPORTS,
+  consumeDiagnostics,
+  installGameStatsBackend,
+  settleRender,
+} from "./helpers/rendered-site.mjs";
+import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 import { verifiedSnakeFixtures } from "../helpers/verified-ms-snake-fixtures.mjs";
 
 const API_BASE_URL = "https://game-stats-snake-publish.test";
@@ -10,8 +14,6 @@ const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const GAME_STATS_SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const SNAKE_HIGH_SCORE_KEY = "personalSiteSnakeHighScores";
-const SESSION_ID = "session-snake-publish-0001";
-const SESSION_TOKEN = "session-snake-publish-token";
 const profile = Object.freeze({
   id: "player-snake-publish",
   name: "Snake Publisher",
@@ -19,20 +21,7 @@ const profile = Object.freeze({
   rerollCount: 0,
 });
 const viewports = REVIEW_VIEWPORTS;
-const canonicalJson = (value) => JSON.stringify(
-  Array.isArray(value)
-    ? value.map((item) => JSON.parse(canonicalJson(item)))
-    : value && typeof value === "object"
-      ? Object.fromEntries(Object.keys(value).sort().map((key) => [
-          key,
-          JSON.parse(canonicalJson(value[key])),
-        ]))
-      : value
-);
-const scoringSnakeInitial = Object.freeze({
-  ...structuredClone(verifiedSnakeFixtures.validLoss.initial),
-  apples: Object.freeze([{ x: 6, y: 5 }]),
-});
+const scoringSnakeInitial = verifiedSnakeFixtures.scoringLoss.initial;
 
 const isPlayerStatsPath = (path, playerId) => {
   const url = new URL(path, API_BASE_URL);
@@ -40,83 +29,6 @@ const isPlayerStatsPath = (path, playerId) => {
     url.pathname === "/stats" &&
     url.searchParams.get("protocol") === "2" &&
     url.searchParams.get("playerId") === playerId
-  );
-};
-
-const generatedBackendSource = await readFile(
-  new URL("../../scripts/home/game-stats-backend.js", import.meta.url),
-  "utf8"
-);
-const snakeRulesSource = await readFile(
-  new URL("../../scripts/home/games/snake.js", import.meta.url),
-  "utf8"
-);
-const minesweeperRulesSource = await readFile(
-  new URL("../../scripts/home/games/minesweeper.js", import.meta.url),
-  "utf8"
-);
-
-const installMinesweeperRules = (page) =>
-  routeHomeScript(page, "minesweeper", (source) => `${minesweeperRulesSource}\n${source}`);
-const generatedBuildVersion = generatedBackendSource.match(
-  /buildVersion:\s*"(sha256-[a-f0-9]{64})"/
-)?.[1];
-if (!generatedBuildVersion) {
-  throw new Error("Unable to read the generated game build version.");
-}
-
-const installBackendConfig = async (page) => {
-  const mockedBackendSource = generatedBackendSource.replace(
-    /apiBaseUrl:\s*"[^"]*"/,
-    `apiBaseUrl: ${JSON.stringify(API_BASE_URL)}`
-  );
-  if (mockedBackendSource === generatedBackendSource) {
-    throw new Error("Unable to install the Snake publish backend config.");
-  }
-  await page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: mockedBackendSource,
-    })
-  );
-};
-
-const installSnakeBridge = async (page) => {
-  await routeHomeScript(page, "snake", (source) =>
-    `${snakeRulesSource}\n${source.replace(
-      /\n\}\)\(\);\s*$/,
-      `
-window.__snakePublishFlowTest = Object.freeze({
-  direction: setSnakeDirection,
-  finishRun: () => {
-    clearSnakeCountdown();
-    clearSnakeTick();
-    snakeState.running = true;
-    snakeState.hasStarted = true;
-    while (!snakeState.gameOver) {
-      snakeStep();
-      clearSnakeTick();
-    }
-
-    return {
-      boardSize: snakeState.gridSize,
-      gameOver: snakeState.gameOver,
-      hasStarted: snakeState.hasStarted,
-      score: snakeState.score,
-    };
-  },
-  pause: pauseSnakeGame,
-  reset: resetSnakeGame,
-  resume: startSnakeGame,
-  read: () => ({
-    gameOver: snakeState.gameOver,
-    hasStarted: snakeState.hasStarted,
-    running: snakeState.running,
-    statsSession: snakeState.statsSession,
-  }),
-});
-})();`
-    )}`
   );
 };
 
@@ -213,32 +125,38 @@ const installApi = async (
   {
     canonicalMetric = 0,
     eventDelayMs = 0,
+    finishFailure = null,
     holdCompletion = false,
     initial = verifiedSnakeFixtures.validLoss.initial,
     rejectEvent = false,
     retryEventOnce = false,
   } = {}
 ) => {
-  const sessionRequests = [];
   const eventRequests = [];
-  const timingRequests = [];
-  const finishRequests = [];
-  const continuationRequests = [];
   const statsRequests = [];
   const requestSequence = [];
   let publishedEvent = null;
-  let finishedEvent = null;
   let retryEligibleAt = 0;
   let retryRejected = false;
-  let timing = { revision: 0, phase: "ready", elapsedMs: 0 };
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   let releaseCompletion = () => {};
   const completionGate = holdCompletion
     ? new Promise((resolve) => { releaseCompletion = resolve; })
     : Promise.resolve();
-  const issuedInitialCommitment = createHash("sha256")
-    .update(canonicalJson(initial))
-    .digest("hex");
+  const verified = createIssuedGameResponder({
+    games: ["snake"],
+    initials: { snake: initial },
+    receipts: {
+      snake: {
+        type: "gamePlayed",
+        boardSize: "10",
+        metric: canonicalMetric,
+        metricKind: "score",
+      },
+    },
+    elapsedMs: 1_180,
+    finishFailure,
+    beforeCompletion: holdCompletion ? () => completionGate : null,
+  });
   const corsHeaders = {
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -248,101 +166,12 @@ const installApi = async (
   await page.route(`${API_BASE_URL}/**`, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
+    if (request.method() === "POST" && url.pathname === "/sessions") {
+      requestSequence.push("session");
+    }
+    if (await verified.handle(route)) return;
     if (request.method() === "OPTIONS") {
       await route.fulfill({ status: 204, headers: corsHeaders });
-      return;
-    }
-
-    if (request.method() === "POST" && url.pathname === "/sessions") {
-      const body = JSON.parse(request.postData() || "{}");
-      sessionRequests.push(body);
-      requestSequence.push("session");
-      timing = { revision: 0, phase: "ready", elapsedMs: 0 };
-      await route.fulfill({
-        status: 201,
-        contentType: "application/json",
-        headers: corsHeaders,
-        body: JSON.stringify({
-          id: SESSION_ID,
-          gameId: SESSION_ID,
-          token: SESSION_TOKEN,
-          expiresAt,
-          game: "snake",
-          config: { boardSize: "10" },
-          resultProtocol: 2,
-          rulesVersion: 1,
-          replayVersion: 1,
-          generatorVersion: 1,
-          initialCommitment: issuedInitialCommitment,
-          initial,
-          timing: { revision: 0, phase: "ready", elapsedMs: 0 },
-          limits: { inputs: 16_384, work: 2_000_000, ticks: 183_050, bytes: 262_144 },
-        }),
-      });
-      return;
-    }
-
-    if (request.method() === "POST" && url.pathname === `/sessions/${SESSION_ID}/timing`) {
-      const body = JSON.parse(request.postData() || "{}");
-      timingRequests.push(body);
-      timing = {
-        revision: timing.revision + 1,
-        phase: body.operation === "pause" ? "paused" : "running",
-        elapsedMs: timing.elapsedMs + (body.operation === "pause" ? 590 : 0),
-      };
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        headers: corsHeaders,
-        body: JSON.stringify({
-          ok: true,
-          timing,
-        }),
-      });
-      return;
-    }
-
-    if (request.method() === "POST" && url.pathname === `/sessions/${SESSION_ID}/finish`) {
-      const body = JSON.parse(request.postData() || "{}");
-      finishRequests.push(body);
-      finishedEvent = {
-        id: body.eventId,
-        game: "snake",
-        type: "gamePlayed",
-        boardSize: "10",
-        metric: canonicalMetric,
-        metricKind: "score",
-        occurredAt: "2026-10-06T12:00:00.000Z",
-      };
-      await route.fulfill({
-        status: 202,
-        contentType: "application/json",
-        headers: corsHeaders,
-        body: JSON.stringify({
-          progress: { id: "progress-snake-0001", token: "progress-snake-token" },
-        }),
-      });
-      return;
-    }
-
-    if (request.method() === "POST" && url.pathname === `/sessions/${SESSION_ID}/finish/continue`) {
-      continuationRequests.push(JSON.parse(request.postData() || "{}"));
-      await completionGate;
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        headers: corsHeaders,
-        body: JSON.stringify({
-          ok: true,
-          completion: {
-            id: "completion-snake-0001",
-            token: "completion-snake-token",
-            expiresAt,
-            elapsedMs: 1_180,
-            event: finishedEvent,
-          },
-        }),
-      });
       return;
     }
 
@@ -422,15 +251,12 @@ const installApi = async (
   });
 
   return {
-    continuationRequests,
     eventRequests,
-    finishRequests,
     getRetryEligibleAt: () => retryEligibleAt,
     requestSequence,
     releaseCompletion,
-    sessionRequests,
     statsRequests,
-    timingRequests,
+    verified,
   };
 };
 
@@ -442,6 +268,7 @@ const preparePage = async (
     eventDelayMs = 0,
     exerciseTiming = true,
     expectedScore = 0,
+    finishFailure = null,
     holdCompletion = false,
     initial = verifiedSnakeFixtures.validLoss.initial,
     rejectEvent = false,
@@ -469,19 +296,18 @@ const preparePage = async (
       statsKey: GAME_STATS_STORAGE_KEY,
     }
   );
-  await installBackendConfig(page);
-  await installMinesweeperRules(page);
-  await installSnakeBridge(page);
+  await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
   const api = await installApi(page, {
     canonicalMetric,
     eventDelayMs,
+    finishFailure,
     holdCompletion,
     initial,
     rejectEvent,
     retryEventOnce,
   });
 
-  await page.goto("/home.html");
+  await page.goto("/home.html", { waitUntil: "load" });
   const aboutWindow = page.locator("#about-window");
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) {
@@ -500,78 +326,78 @@ const preparePage = async (
     "true"
   );
   if (exerciseTiming) {
-    await page.evaluate(() => window.__snakePublishFlowTest.direction("up"));
+    await snakeWindow.locator("#snake-canvas").focus();
+    await page.keyboard.press("ArrowUp");
+  } else {
+    await snakeWindow.locator("#snake-start").click();
   }
-  await snakeWindow.locator("#snake-start").click();
-  await expect.poll(() => api.sessionRequests.length).toBe(1);
-  await expect.poll(() => api.timingRequests.length).toBe(1);
+  await expect.poll(() => api.verified.issued.length).toBe(1);
+  await expect.poll(() => api.verified.timing.length).toBe(1);
   if (exerciseTiming) {
-    await page.evaluate(() => window.__snakePublishFlowTest.pause());
-    await expect.poll(() => api.timingRequests.length).toBe(2);
-    await page.evaluate(() => window.__snakePublishFlowTest.direction("left"));
-    await page.evaluate(() => window.__snakePublishFlowTest.resume());
-    await expect.poll(() => api.timingRequests.length).toBe(3);
+    await snakeWindow.locator("#snake-start").click();
+    await expect.poll(() => api.verified.timing.length).toBe(2);
+    await snakeWindow.locator("#snake-canvas").focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect.poll(() => api.verified.timing.length).toBe(3);
   }
-  const finished = await page.evaluate(() => window.__snakePublishFlowTest.finishRun());
-  expect(finished).toEqual({
-    boardSize: 10,
-    gameOver: true,
-    hasStarted: true,
-    score: expectedScore,
+  await expect(snakeWindow.locator("#snake-status")).toHaveText("Signal lost", {
+    timeout: 8_000,
   });
+  await expect(snakeWindow.locator("#snake-score")).toHaveText(String(expectedScore));
   if (waitForEvent) {
     await expect.poll(() => api.eventRequests.length).toBeGreaterThanOrEqual(1);
   }
 
   return {
     api,
-    finished,
     snakeWindow,
     statsWindow: page.locator("#game-stats-window-snake"),
   };
 };
 
 const expectPublishedRequestContract = (api) => {
-  expect(generatedBuildVersion).toMatch(/^sha256-[a-f0-9]{64}$/);
-  expect(api.sessionRequests).toEqual([
+  const descriptor = api.verified.boardFor("snake");
+  expect(Date.parse(descriptor.expiresAt) - Date.now()).toBeGreaterThan(5 * 60 * 60 * 1000);
+  expect(Date.parse(descriptor.expiresAt) - Date.now()).toBeLessThanOrEqual(6 * 60 * 60 * 1000);
+  expect(api.verified.issued).toEqual([
     {
       game: "snake",
       config: { boardSize: "10" },
-      buildVersion: generatedBuildVersion,
+      buildVersion: PRODUCTION_BUILD_VERSION,
       resultProtocol: 2,
       rulesVersion: 1,
       replayVersion: 1,
       generatorVersion: 1,
     },
   ]);
-  expect(api.timingRequests).toEqual([
+  expect(api.verified.timing.map(({ request }) => request)).toEqual([
     {
-      session: { id: SESSION_ID, token: SESSION_TOKEN },
+      session: { id: descriptor.id, token: descriptor.token },
       operation: "resume",
       expectedRevision: 0,
       inputCount: 0,
       inputHash: expect.stringMatching(/^[a-f0-9]{64}$/),
     },
     {
-      session: { id: SESSION_ID, token: SESSION_TOKEN },
+      session: { id: descriptor.id, token: descriptor.token },
       operation: "pause",
       expectedRevision: 1,
       inputCount: 1,
       inputHash: expect.stringMatching(/^[a-f0-9]{64}$/),
     },
     {
-      session: { id: SESSION_ID, token: SESSION_TOKEN },
+      session: { id: descriptor.id, token: descriptor.token },
       operation: "resume",
       expectedRevision: 2,
       inputCount: 1,
       inputHash: expect.stringMatching(/^[a-f0-9]{64}$/),
     },
   ]);
-  expect(api.timingRequests[2].inputHash).toBe(api.timingRequests[1].inputHash);
-  expect(api.finishRequests).toHaveLength(1);
-  expect(api.finishRequests[0]).toMatchObject({
-    session: { id: SESSION_ID, token: SESSION_TOKEN },
-    gameId: SESSION_ID,
+  expect(api.verified.timing[2].request.inputHash).toBe(api.verified.timing[1].request.inputHash);
+  expect(api.verified.finishes).toHaveLength(1);
+  expect(api.verified.finishes[0].request).toMatchObject({
+    session: { id: descriptor.id, token: descriptor.token },
+    gameId: descriptor.id,
     rulesVersion: 1,
     replayVersion: 1,
     inputs: [
@@ -581,10 +407,10 @@ const expectPublishedRequestContract = (api) => {
     terminalTick: expect.any(Number),
     timingRevision: 3,
   });
-  expect(api.finishRequests[0].terminalTick).toBeGreaterThan(0);
-  expect(api.continuationRequests).toEqual([{
-    session: { id: SESSION_ID, token: SESSION_TOKEN },
-    progress: { id: "progress-snake-0001", token: "progress-snake-token" },
+  expect(api.verified.finishes[0].request.terminalTick).toBeGreaterThan(0);
+  expect(api.verified.continuations.map(({ request }) => request)).toEqual([{
+    session: { id: descriptor.id, token: descriptor.token },
+    progress: { id: "progress-1", token: "synthetic-progress-proof" },
   }]);
   expect(api.eventRequests).toHaveLength(1);
   expect(api.eventRequests[0].event).toEqual({
@@ -602,8 +428,8 @@ const expectPublishedRequestContract = (api) => {
     },
   });
   expect(api.eventRequests[0].completion).toEqual({
-    id: "completion-snake-0001",
-    token: "completion-snake-token",
+    id: `completion-${descriptor.id}`,
+    token: "synthetic-completion-proof",
   });
   expect(api.requestSequence.indexOf("session")).toBeLessThan(
     api.requestSequence.indexOf("event")
@@ -854,6 +680,51 @@ test("a rejected Snake result stays local and never fabricates global stats", as
   });
 });
 
+for (const viewport of viewports) {
+  test(`an expired Snake completion stays local at ${viewport.name}`, async ({
+    diagnostics,
+    page,
+  }, testInfo) => {
+    const { api, statsWindow } = await preparePage(
+      page,
+      viewport,
+      {
+        exerciseTiming: false,
+        finishFailure: { status: 409, code: "session-expired" },
+        waitForEvent: false,
+      }
+    );
+    const status = statsWindow.locator("[data-game-stats-sync-status]");
+
+    await expect(statsWindow).toBeVisible();
+    await expect(status).toHaveAttribute("data-game-stats-sync-state", "session-expired");
+    await expect(status).toHaveText(
+      "Saved on this device. This game's online session expired, so this result can't be published. Start a new game to publish a new result."
+    );
+    expect(api.verified.issued).toHaveLength(1);
+    expect(api.verified.timing).toHaveLength(1);
+    expect(api.verified.finishes).toHaveLength(1);
+    expect(api.verified.continuations).toHaveLength(0);
+    expect(api.eventRequests).toHaveLength(0);
+    expectLocalSnakeResult(await readStoredStats(page));
+    await settleRender(page);
+    await expectStatsWindowContained(page, statsWindow);
+
+    const screenshotPath = testInfo.outputPath(
+      `snake-expired-local-${viewport.width}x${viewport.height}.png`
+    );
+    await page.screenshot({ fullPage: true, path: screenshotPath });
+    await testInfo.attach(`snake-expired-local-${viewport.name}`, {
+      path: screenshotPath,
+      contentType: "image/png",
+    });
+    consumeDiagnostics(diagnostics, {
+      consoleErrors: [/status of 409 \(Conflict\)/],
+      errorResponses: [new RegExp(`409 ${API_BASE_URL}/sessions/[^/]+/finish$`)],
+    });
+  });
+}
+
 test("a canonical Snake correction after Reset Local Stats updates only the finished display", async ({
   page,
 }) => {
@@ -869,7 +740,7 @@ test("a canonical Snake correction after Reset Local Stats updates only the fini
       waitForEvent: false,
     }
   );
-  await expect.poll(() => api.continuationRequests.length).toBe(1);
+  await expect.poll(() => api.verified.continuations.length).toBe(1);
   expect(JSON.parse(await page.evaluate((key) => localStorage.getItem(key), SNAKE_HIGH_SCORE_KEY))).toEqual({
     10: 1,
   });
@@ -892,22 +763,21 @@ test("a canonical Snake correction after Reset Local Stats updates only the fini
 
 test("Snake close and reset discard an issued follow-up run without finishing it", async ({ page }) => {
   const { api, snakeWindow } = await preparePage(page, { width: 1280, height: 800 });
-  expect(api.sessionRequests).toHaveLength(1);
-  expect(api.finishRequests).toHaveLength(1);
+  expect(api.verified.issued).toHaveLength(1);
+  expect(api.verified.finishes).toHaveLength(1);
 
-  await page.evaluate(() => window.__snakePublishFlowTest.reset());
+  await snakeWindow.locator("#snake-reset").click();
   await snakeWindow.locator("#snake-start").click();
-  await expect.poll(() => api.sessionRequests.length).toBe(2);
-  await expect.poll(() => api.timingRequests.length).toBe(4);
+  await expect.poll(() => api.verified.issued.length).toBe(2);
+  await expect.poll(() => api.verified.timing.length).toBe(4);
   await snakeWindow.getByRole("button", { name: "Close" }).click();
   await expect(snakeWindow).toBeHidden();
-  await expect.poll(() => api.timingRequests.length).toBe(5);
-  await page.evaluate(() => window.__snakePublishFlowTest.reset());
-  expect(await page.evaluate(() => window.__snakePublishFlowTest.read())).toMatchObject({
-    gameOver: false,
-    hasStarted: false,
-    statsSession: "",
-  });
-  expect(api.finishRequests).toHaveLength(1);
+  await expect.poll(() => api.verified.timing.length).toBe(5);
+  await page.locator('.desktop-icon[data-app="snake"]').click();
+  await expect(snakeWindow).toBeVisible();
+  await snakeWindow.locator("#snake-reset").click();
+  await expect(snakeWindow.locator("#snake-status")).toHaveText("Ready");
+  await expect(snakeWindow.locator("#snake-score")).toHaveText("0");
+  expect(api.verified.finishes).toHaveLength(1);
   expect(api.eventRequests).toHaveLength(1);
 });

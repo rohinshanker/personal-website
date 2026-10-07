@@ -1,9 +1,8 @@
-import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 
 import { expect, test } from "./deterministic.mjs";
-import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { verifiedMinesweeperFixtures } from "../helpers/verified-ms-snake-fixtures.mjs";
+import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 import {
   FROZEN_INSTANT,
   installGameStatsBackend,
@@ -16,8 +15,6 @@ const API_BASE_URL = "https://game-stats-minesweeper-publish.test";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
-const SESSION_ID = "session-minesweeper-publish-0001";
-const SESSION_TOKEN = "session-minesweeper-publish-token";
 const profile = Object.freeze({
   id: "player-minesweeper-publish",
   name: "Minesweeper Publisher",
@@ -26,82 +23,11 @@ const profile = Object.freeze({
 });
 
 const buildVersion = PRODUCTION_BUILD_VERSION;
-const canonicalJson = (value) => JSON.stringify(
-  Array.isArray(value)
-    ? value.map((item) => JSON.parse(canonicalJson(item)))
-    : value && typeof value === "object"
-      ? Object.fromEntries(Object.keys(value).sort().map((key) => [
-          key,
-          JSON.parse(canonicalJson(value[key])),
-        ]))
-      : value
-);
-const initialCommitment = createHash("sha256")
-  .update(canonicalJson(verifiedMinesweeperFixtures.validWin.initial))
-  .digest("hex");
 const minesweeperViewports = Object.freeze([
   ...REVIEW_VIEWPORTS,
   Object.freeze({ name: "below-480-breakpoint", width: 479, height: 812 }),
   Object.freeze({ name: "above-480-breakpoint", width: 481, height: 812 }),
 ]);
-const minesweeperRulesSource = await readFile(
-  new URL("../../scripts/home/games/minesweeper.js", import.meta.url),
-  "utf8"
-);
-const snakeRulesSource = await readFile(
-  new URL("../../scripts/home/games/snake.js", import.meta.url),
-  "utf8"
-);
-
-const installSnakeRules = (page) =>
-  routeHomeScript(page, "snake", (source) => `${snakeRulesSource}\n${source}`);
-
-const installMinesweeperBridge = (page) =>
-  routeHomeScript(page, "minesweeper", (source) =>
-    // Keep the board shuffle varied without enabling unrelated random events
-    // in other Home controllers. Only this controller gets a seeded Math.
-    `${minesweeperRulesSource}\n${source.replace("(() => {", `(() => {
-const Math = Object.create(window.Math);
-let testRandomState = 0x2135f447;
-Math.random = () => {
-  testRandomState = (window.Math.imul(testRandomState, 1664525) + 1013904223) >>> 0;
-  return testRandomState / 0x1_0000_0000;
-};`).replace(
-      /\n\}\)\(\);\s*$/,
-      `
-const finishTestWin = () => {
-  msStopTimer();
-  msState.elapsedMs = 7_000;
-  msState.elapsed = 7;
-  msState.timerSync = null;
-  for (let index = 0; index < msState.cells.length && !msState.gameOver; index += 1) {
-    if (!msState.cells[index].mine && !msState.cells[index].revealed) msRevealCell(index);
-  }
-  return { gameOver: msState.gameOver, won: msState.engineState?.won };
-};
-
-window.__minesweeperPublishFlow = Object.freeze({
-  finishWin: finishTestWin,
-  readBoard: () => ({
-    cells: msState.cells.map((cell) => ({
-      adjacent: cell.adjacent,
-      blown: cell.blown,
-      flagged: cell.flagged,
-      mine: cell.mine,
-      question: cell.question,
-      revealed: cell.revealed,
-    })),
-    cols: msState.cols,
-    gameOver: msState.gameOver,
-    rows: msState.rows,
-    started: msState.started,
-    statsSession: msState.statsSession,
-  }),
-});
-})();`
-    )}`
-  );
-
 const emptyDifficultyMap = (factory) =>
   Object.fromEntries(["beginner", "intermediate", "expert"].map((difficulty) => [difficulty, factory()]));
 
@@ -147,106 +73,33 @@ const createStatsPayload = (publishedEvent, acknowledgedEventIds = []) => {
 };
 
 const installApi = async (page) => {
-  const sessions = [];
-  const timingRequests = [];
-  const finishRequests = [];
-  const continuationRequests = [];
+  const verified = createIssuedGameResponder({
+    games: ["minesweeper"],
+    initials: { minesweeper: verifiedMinesweeperFixtures.validWin.initial },
+    receipts: {
+      minesweeper: {
+        type: "win",
+        difficulty: "beginner",
+        metric: 7,
+        metricKind: "seconds",
+      },
+    },
+    elapsedMs: 7_000,
+  });
   const events = [];
   const statsRequests = [];
   let publishedEvent = null;
-  let finishedEvent = null;
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   const corsHeaders = {
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Origin": "*",
   };
   await page.route(`${API_BASE_URL}/**`, async (route) => {
+    if (await verified.handle(route)) return;
     const request = route.request();
     const url = new URL(request.url());
     if (request.method() === "OPTIONS") {
       await route.fulfill({ status: 204, headers: corsHeaders });
-      return;
-    }
-    if (request.method() === "POST" && url.pathname === "/sessions") {
-      const body = JSON.parse(request.postData() || "{}");
-      sessions.push(body);
-      await route.fulfill({
-        status: 201,
-        contentType: "application/json",
-        headers: corsHeaders,
-        body: JSON.stringify({
-          id: SESSION_ID,
-          gameId: SESSION_ID,
-          token: SESSION_TOKEN,
-          expiresAt,
-          game: "minesweeper",
-          config: { difficulty: "beginner" },
-          resultProtocol: 2,
-          rulesVersion: 1,
-          replayVersion: 1,
-          generatorVersion: 1,
-          initialCommitment,
-          initial: verifiedMinesweeperFixtures.validWin.initial,
-          timing: { revision: 0, phase: "ready", elapsedMs: 0 },
-          limits: { inputs: 16_384, work: 2_000_000, ticks: 0, bytes: 262_144 },
-        }),
-      });
-      return;
-    }
-    if (request.method() === "POST" && url.pathname === `/sessions/${SESSION_ID}/timing`) {
-      const body = JSON.parse(request.postData() || "{}");
-      timingRequests.push(body);
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        headers: corsHeaders,
-        body: JSON.stringify({
-          ok: true,
-          timing: { revision: 1, phase: "running", elapsedMs: 0 },
-        }),
-      });
-      return;
-    }
-    if (request.method() === "POST" && url.pathname === `/sessions/${SESSION_ID}/finish`) {
-      const body = JSON.parse(request.postData() || "{}");
-      finishRequests.push(body);
-      finishedEvent = {
-        id: body.eventId,
-        game: "minesweeper",
-        type: "win",
-        difficulty: "beginner",
-        metric: 7,
-        metricKind: "seconds",
-        occurredAt: "2026-10-06T12:00:00.000Z",
-      };
-      await route.fulfill({
-        status: 202,
-        contentType: "application/json",
-        headers: corsHeaders,
-        body: JSON.stringify({
-          progress: { id: "progress-minesweeper-0001", token: "progress-minesweeper-token" },
-        }),
-      });
-      return;
-    }
-    if (request.method() === "POST" && url.pathname === `/sessions/${SESSION_ID}/finish/continue`) {
-      continuationRequests.push(JSON.parse(request.postData() || "{}"));
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        headers: corsHeaders,
-        body: JSON.stringify({
-          ok: true,
-          completion: {
-            id: "completion-minesweeper-0001",
-            token: "completion-minesweeper-token",
-            expiresAt,
-            elapsedMs: 7_000,
-            event: finishedEvent,
-          },
-        }),
-      });
       return;
     }
     if (request.method() === "POST" && url.pathname === "/events") {
@@ -282,7 +135,7 @@ const installApi = async (page) => {
       body: JSON.stringify({ ok: false }),
     });
   });
-  return { continuationRequests, events, finishRequests, sessions, statsRequests, timingRequests };
+  return { events, statsRequests, verified };
 };
 
 const preparePage = async (page, viewport) => {
@@ -306,8 +159,6 @@ const preparePage = async (page, viewport) => {
     }
   );
   await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
-  await installSnakeRules(page);
-  await installMinesweeperBridge(page);
   const api = await installApi(page);
   await page.goto("/home.html", { waitUntil: "load" });
   const aboutClose = page.locator('#about-window [data-close="about"]');
@@ -318,6 +169,15 @@ const preparePage = async (page, viewport) => {
   return { api, minesweeper };
 };
 
+const playMinesweeperReplay = async (minesweeper, replay, startAt = 0) => {
+  for (const action of replay.slice(startAt)) {
+    if (action.op !== "reveal") throw new Error(`Unsupported Minesweeper fixture action ${action.op}`);
+    const cell = minesweeper.locator(`.ms-cell[data-index="${action.cell}"]`);
+    if (!(await cell.isVisible())) throw new Error(`Missing Minesweeper cell ${action.cell}`);
+    await cell.click();
+  }
+};
+
 for (const viewport of minesweeperViewports) {
   test(`Minesweeper executes safe play, win, publish, reset, and rule paths at ${viewport.name}`, async ({
     page,
@@ -325,26 +185,25 @@ for (const viewport of minesweeperViewports) {
     const { api, minesweeper } = await preparePage(page, viewport);
     const firstIndex = 0;
     await minesweeper.locator(`.ms-cell[data-index="${firstIndex}"]`).click();
-    await expect.poll(() => api.sessions.length).toBe(1);
-    const firstBoard = await page.evaluate(() => window.__minesweeperPublishFlow.readBoard());
-    expect(firstBoard.gameOver).toBe(false);
+    await expect.poll(() => api.verified.issued.length).toBe(1);
+    await expect(minesweeper.locator(`.ms-cell[data-index="${firstIndex}"]`)).toHaveClass(/is-revealed/);
     expect(api.events).toHaveLength(0);
-    expect(firstBoard.cells[firstIndex].mine).toBe(false);
-    const safeRow = Math.floor(firstIndex / firstBoard.cols);
-    const safeColumn = firstIndex % firstBoard.cols;
+    const issued = api.verified.boardFor("minesweeper");
+    expect(issued.initial).toEqual(verifiedMinesweeperFixtures.validWin.initial);
+    expect(Date.parse(issued.expiresAt) - Date.now()).toBeGreaterThan(5 * 60 * 60 * 1000);
+    const safeRow = Math.floor(firstIndex / 9);
+    const safeColumn = firstIndex % 9;
     for (let row = safeRow - 1; row <= safeRow + 1; row += 1) {
       for (let column = safeColumn - 1; column <= safeColumn + 1; column += 1) {
-        if (row < 0 || column < 0 || row >= firstBoard.rows || column >= firstBoard.cols) continue;
-        expect(firstBoard.cells[row * firstBoard.cols + column].mine).toBe(false);
+        if (row < 0 || column < 0 || row >= 9 || column >= 9) continue;
+        expect(issued.initial.mineCells).not.toContain(row * 9 + column);
       }
     }
 
-    expect(await page.evaluate(() => window.__minesweeperPublishFlow.finishWin())).toEqual({
-      gameOver: true,
-      won: true,
-    });
+    await playMinesweeperReplay(minesweeper, verifiedMinesweeperFixtures.validWin.replay, 1);
+    await expect(minesweeper.locator("#ms-reset")).toHaveAttribute("data-face", "win");
     await expect.poll(() => api.events.length).toBe(1);
-    expect(api.sessions).toEqual([
+    expect(api.verified.issued).toEqual([
       {
         game: "minesweeper",
         config: { difficulty: "beginner" },
@@ -356,26 +215,28 @@ for (const viewport of minesweeperViewports) {
         firstCell: 0,
       },
     ]);
-    expect(api.timingRequests).toEqual([{
-      session: { id: SESSION_ID, token: SESSION_TOKEN },
+    expect(api.verified.timing).toHaveLength(1);
+    expect(api.verified.timing[0].request).toEqual({
+      session: { id: issued.id, token: issued.token },
       operation: "resume",
       expectedRevision: 0,
       inputCount: 0,
       inputHash: expect.stringMatching(/^[a-f0-9]{64}$/),
-    }]);
-    expect(api.finishRequests).toHaveLength(1);
-    expect(api.finishRequests[0]).toMatchObject({
-      session: { id: SESSION_ID, token: SESSION_TOKEN },
-      gameId: SESSION_ID,
+    });
+    expect(api.verified.finishes).toHaveLength(1);
+    expect(api.verified.finishes[0].request).toMatchObject({
+      session: { id: issued.id, token: issued.token },
+      gameId: issued.id,
       rulesVersion: 1,
       replayVersion: 1,
       inputs: verifiedMinesweeperFixtures.validWin.replay,
       timingRevision: 1,
     });
-    expect(api.continuationRequests).toEqual([{
-      session: { id: SESSION_ID, token: SESSION_TOKEN },
-      progress: { id: "progress-minesweeper-0001", token: "progress-minesweeper-token" },
-    }]);
+    expect(api.verified.continuations).toHaveLength(1);
+    expect(api.verified.continuations[0].request).toEqual({
+      session: { id: issued.id, token: issued.token },
+      progress: { id: "progress-1", token: "synthetic-progress-proof" },
+    });
     expect(api.events[0]).toEqual({
       event: {
         id: expect.stringMatching(/^local-[a-f0-9-]{36}$/),
@@ -388,8 +249,8 @@ for (const viewport of minesweeperViewports) {
         profile: { id: profile.id, name: profile.name, icon: profile.icon },
       },
       completion: {
-        id: "completion-minesweeper-0001",
-        token: "completion-minesweeper-token",
+        id: `completion-${issued.id}`,
+        token: "synthetic-completion-proof",
       },
     });
     const statsWindow = page.locator("#game-stats-window-minesweeper");
@@ -455,29 +316,23 @@ for (const viewport of minesweeperViewports) {
 
     await statsWindow.getByRole("button", { name: "Close" }).click();
     await minesweeper.locator("#ms-reset").click();
-    const resetBoard = await page.evaluate(() => window.__minesweeperPublishFlow.readBoard());
-    expect(resetBoard.gameOver).toBe(false);
-    expect(resetBoard.started).toBe(false);
+    await expect(minesweeper.locator("#ms-reset")).toHaveAttribute("data-face", "smile");
+    await expect(minesweeper.locator(".ms-cell.is-revealed")).toHaveCount(0);
     expect(api.events).toHaveLength(1);
 
     await minesweeper.locator('.ms-cell[data-index="1"]').click({ button: "right" });
     await minesweeper.locator('.ms-cell[data-index="0"]').click();
-    await expect.poll(() => api.sessions.length).toBe(2);
-    await expect.poll(() => api.timingRequests.length).toBe(2);
-    expect(api.finishRequests).toHaveLength(1);
-    expect(api.timingRequests[1]).toMatchObject({
+    await expect.poll(() => api.verified.issued.length).toBe(2);
+    await expect.poll(() => api.verified.timing.length).toBe(2);
+    expect(api.verified.finishes).toHaveLength(1);
+    expect(api.verified.timing[1]).toMatchObject({
       operation: "resume",
-      inputCount: 0,
+      request: { inputCount: 0 },
     });
 
     await minesweeper.getByRole("button", { name: "Close" }).click();
     await expect(minesweeper).toBeHidden();
-    expect(await page.evaluate(() => window.__minesweeperPublishFlow.readBoard())).toMatchObject({
-      gameOver: false,
-      started: false,
-      statsSession: "",
-    });
-    expect(api.finishRequests).toHaveLength(1);
+    expect(api.verified.finishes).toHaveLength(1);
     await page.getByRole("toolbar", { name: "Taskbar" })
       .getByRole("button", { name: "Minesweeper" }).click();
     await expect(minesweeper).toBeVisible();
@@ -549,25 +404,29 @@ test("Minesweeper falls back locally when verified issuance is unavailable", asy
   );
   // The deterministic fixture's default backend has no API URL. This still
   // exercises the real issueGame adapter before the controller falls back.
-  await installSnakeRules(page);
-  await installMinesweeperBridge(page);
   await page.goto("/home.html", { waitUntil: "load" });
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
   await page.getByRole("toolbar", { name: "Taskbar" })
     .getByRole("button", { name: "Minesweeper" }).click();
   const minesweeper = page.locator('[data-app-window="minesweeper"]');
+  const localInitial = await page.evaluate(() => window.homeMinesweeperRules.generate(
+    { difficulty: "beginner" },
+    { seed: Math.floor(0.999999 * 0x1_0000_0000) >>> 0, firstCell: 0 }
+  ));
   await minesweeper.locator('.ms-cell[data-index="1"]').click({ button: "right" });
   await minesweeper.locator('.ms-cell[data-index="0"]').click();
-  await expect.poll(() => page.evaluate(
-    () => window.__minesweeperPublishFlow.readBoard().started
-  )).toBe(true);
+  await expect(minesweeper.locator('.ms-cell[data-index="0"]')).toHaveClass(/is-revealed/);
   await minesweeper.locator('.ms-cell[data-index="1"]').click({ button: "right" });
   await minesweeper.locator('.ms-cell[data-index="1"]').click({ button: "right" });
-  expect(await page.evaluate(() => window.__minesweeperPublishFlow.finishWin())).toEqual({
-    gameOver: true,
-    won: true,
-  });
+  for (let cell = 0; cell < 81; cell += 1) {
+    if (localInitial.mineCells.includes(cell)) continue;
+    const target = minesweeper.locator(`.ms-cell[data-index="${cell}"]`);
+    if (!(await target.evaluate((element) => element.classList.contains("is-revealed")))) {
+      await target.click();
+    }
+  }
+  await expect(minesweeper.locator("#ms-reset")).toHaveAttribute("data-face", "win");
   const statsWindow = page.locator("#game-stats-window-minesweeper");
   await expect(statsWindow).toBeVisible();
   await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(

@@ -47,6 +47,12 @@ test("exported Snake fixtures reproduce a terminal tick and reject replay assert
     context.homeSnakeRules.step(state);
   }
   assert.deepEqual(plain(context.homeSnakeRules.result(state)), fixture.result);
+
+  const scoring = verifiedSnakeFixtures.scoringLoss;
+  const scoringState = context.homeSnakeRules.initial(inRealm(scoring.initial));
+  while (scoringState.tick < scoring.terminalTick) context.homeSnakeRules.step(scoringState);
+  assert.deepEqual(plain(context.homeSnakeRules.result(scoringState)), scoring.result);
+  assert.equal(scoring.result.score, 1);
   assert.throws(() => {
     const invalid = context.homeSnakeRules.initial(inRealm(fixture.initial));
     context.homeSnakeRules.transition(
