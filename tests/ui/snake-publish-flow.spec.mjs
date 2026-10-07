@@ -1,4 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
+import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
 import {
   PRODUCTION_BUILD_VERSION,
   REVIEW_VIEWPORTS,
@@ -143,7 +144,10 @@ const installApi = async (
     ? new Promise((resolve) => { releaseCompletion = resolve; })
     : Promise.resolve();
   const verified = createIssuedGameResponder({
-    games: ["snake"],
+    // Reset Local Stats also refreshes Sudoku's ready board. Answer that
+    // independent issuance with the same real descriptor responder so this
+    // Snake fixture never turns another controller's valid request into a 404.
+    games: ["snake", "sudoku"],
     initials: { snake: initial },
     receipts: {
       snake: {
@@ -566,6 +570,11 @@ for (const viewport of viewports) {
     await refreshButton.focus();
     await expect(refreshButton).toBeFocused();
     await expectStatsWindowContained(page, statsWindow);
+    expect(await scanForViolations(
+      page,
+      testInfo,
+      `snake-published-${viewport.name}`
+    )).toEqual([]);
     const screenshotPath = testInfo.outputPath(
       `snake-publish-success-${viewport.width}x${viewport.height}.png`
     );
@@ -709,6 +718,11 @@ for (const viewport of viewports) {
     expectLocalSnakeResult(await readStoredStats(page));
     await settleRender(page);
     await expectStatsWindowContained(page, statsWindow);
+    expect(await scanForViolations(
+      page,
+      testInfo,
+      `snake-expired-local-${viewport.name}`
+    )).toEqual([]);
 
     const screenshotPath = testInfo.outputPath(
       `snake-expired-local-${viewport.width}x${viewport.height}.png`
@@ -775,6 +789,9 @@ test("Snake close and reset discard an issued follow-up run without finishing it
   await expect.poll(() => api.verified.timing.length).toBe(5);
   await page.locator('.desktop-icon[data-app="snake"]').click();
   await expect(snakeWindow).toBeVisible();
+  await expect(page.locator("#snake-loading-panel")).toHaveAttribute("aria-hidden", "true", {
+    timeout: 6_000,
+  });
   await snakeWindow.locator("#snake-reset").click();
   await expect(snakeWindow.locator("#snake-status")).toHaveText("Ready");
   await expect(snakeWindow.locator("#snake-score")).toHaveText("0");

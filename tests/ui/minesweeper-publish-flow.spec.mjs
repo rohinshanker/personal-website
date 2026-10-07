@@ -2,6 +2,7 @@ import { writeFile } from "node:fs/promises";
 
 import { expect, test } from "./deterministic.mjs";
 import { verifiedMinesweeperFixtures } from "../helpers/verified-ms-snake-fixtures.mjs";
+import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
 import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 import {
   FROZEN_INSTANT,
@@ -266,6 +267,11 @@ for (const viewport of minesweeperViewports) {
     ).toBe(true);
 
     await settleRender(page);
+    expect(await scanForViolations(
+      page,
+      testInfo,
+      `minesweeper-published-${viewport.name}`
+    )).toEqual([]);
     const statsLayout = await statsWindow.evaluate((windowElement) => {
       const bounds = windowElement.getBoundingClientRect();
       const body = windowElement.querySelector(".window-body");
