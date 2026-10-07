@@ -15,6 +15,7 @@ const {
   registerActiveWindowObserver,
   registerWindowPlacement,
   restartWindowAnimation,
+  wasAdminControlsResetReload,
 } = window.homeWindows;
 const {
   isHomeActivationReady,
@@ -1248,9 +1249,7 @@ window.addEventListener("load", () => {
     }
 
     try {
-      const adminResetReload = Boolean(
-        window.rohinAdminControlsController?.wasResetReload?.()
-      );
+      const adminResetReload = wasAdminControlsResetReload();
       if (
         isReload &&
         !adminResetReload &&

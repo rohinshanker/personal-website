@@ -51,6 +51,10 @@ The base owns fixed placement, stacking, width defaults, hidden state and the
 opening/closing rules. Override geometry with `--event-window-width`,
 `--event-window-max-width`, and `--event-window-z`; override timing with
 `--event-window-open-duration` and `--event-window-close-duration`.
+Static event overlays outside a `random-event-window` must keep their initial
+hidden rule in the eager base stylesheet when they can otherwise paint fallback
+content before lazy event CSS arrives. Keep their active presentation in the
+event stylesheet.
 
 Keep body and image presentation scoped to the event. The original generic
 image window uses `random-event-image-window`; its centered body and constrained

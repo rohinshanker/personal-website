@@ -8,9 +8,15 @@ const proof = `${"a".repeat(32)}.${"b".repeat(32)}`;
 
 const prepareHome = async (
   page,
-  { authorized = false, storedAdminState = null } = {}
+  { authorized = false, prerendered = false, storedAdminState = null } = {}
 ) => {
-  await page.addInitScript(({ authorized, proof, proofKey, storedAdminState }) => {
+  await page.addInitScript(({
+    authorized,
+    prerendered,
+    proof,
+    proofKey,
+    storedAdminState,
+  }) => {
     localStorage.clear();
     sessionStorage.clear();
     if (storedAdminState) {
@@ -23,7 +29,23 @@ const prepareHome = async (
       }));
     }
     Math.random = () => 0.999999;
-  }, { authorized, proof, proofKey, storedAdminState });
+    if (prerendered) {
+      window.__homeTestPrerendering = true;
+      window.__homeTestVisibilityState = "hidden";
+      Object.defineProperty(document, "prerendering", {
+        configurable: true,
+        get: () => window.__homeTestPrerendering,
+      });
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => window.__homeTestVisibilityState,
+      });
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        get: () => window.__homeTestVisibilityState === "hidden",
+      });
+    }
+  }, { authorized, prerendered, proof, proofKey, storedAdminState });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
 };
@@ -69,6 +91,184 @@ test("Admin resources stay cold for default and unauthorized restored sessions",
   )));
   expect(await adminResources()).toEqual([]);
   await expect(page.locator("body")).not.toHaveClass(/is-admin-audio-off|is-admin-privacy-mode/);
+});
+
+test("the closed Home desktop hides static event overlays without requesting event CSS", async ({
+  page,
+}) => {
+  await prepareHome(page);
+  const about = page.locator("#about-window");
+  await page.locator('#about-window [data-close="about"]').click();
+  await finishAnimation(about, "retro-window-close");
+
+  await expect(about).toBeHidden();
+  await expect(page.locator("#lost-grace-overlay")).toBeHidden();
+  expect(await page.locator("#lost-grace-overlay").evaluate((element) => ({
+    ariaHidden: element.getAttribute("aria-hidden"),
+    display: getComputedStyle(element).display,
+    imageSource: element.querySelector("img")?.getAttribute("src") || null,
+    resourceState: window.homeResources.resourceState("random-event-styles"),
+  }))).toEqual({
+    ariaHidden: "true",
+    display: "none",
+    imageSource: null,
+    resourceState: "idle",
+  });
+  await expect(page.locator("#self-love-alert-window .random-alert-message p"))
+    .toHaveCSS("margin", "0px");
+});
+
+test("authorized restore waits for the eager Home runtime before loading Admin resources", async ({
+  page,
+}) => {
+  const notes = await deferredRoute(page, "**/scripts/home/events/notes.js?*");
+  const requested = [];
+  page.on("request", (request) => requested.push(new URL(request.url()).pathname));
+  await page.addInitScript(({ proof, proofKey }) => {
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem("personalSiteAdminControlsV1", JSON.stringify({
+      version: 1,
+      audio: false,
+      privacy: true,
+    }));
+    sessionStorage.setItem(proofKey, JSON.stringify({
+      proof,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    }));
+    Math.random = () => 0.999999;
+  }, { proof, proofKey });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
+  try {
+    await page.goto("/home.html", { waitUntil: "commit" });
+    await notes.seen;
+    await page.waitForFunction(() => Boolean(window.homeEventRuntime));
+    expect(await page.evaluate(() => ({
+      bootReady: window.homeActivation.isHomeEagerRuntimeReady(),
+      notesReady: Boolean(window.homeEventNotes),
+    }))).toEqual({ bootReady: false, notesReady: false });
+    expect(requested.filter((path) =>
+      path.includes("admin-controls") || path.includes("admin/orchestrator")
+    )).toEqual([]);
+
+    notes.release();
+    await page.waitForFunction(() => Boolean(window.rohinAdminControlsController));
+    expect(await page.evaluate(() => ({
+      bootReady: window.homeActivation.isHomeEagerRuntimeReady(),
+      notesReady: Boolean(window.homeEventNotes),
+      state: window.rohinAdminControlsController.getState(),
+    }))).toMatchObject({
+      bootReady: true,
+      notesReady: true,
+      state: { audio: false, privacy: true },
+    });
+    await expect(page.locator("#admin-controls-window")).toBeHidden();
+    await expect(page.locator("body")).toHaveClass(/is-admin-audio-off/);
+    await expect(page.locator("body")).toHaveClass(/is-admin-privacy-mode/);
+  } finally {
+    notes.release();
+  }
+});
+
+test("authorized restore resumes after prerender activation without opening Admin", async ({
+  page,
+}) => {
+  await prepareHome(page, {
+    authorized: true,
+    prerendered: true,
+    storedAdminState: { version: 1, audio: false, visualEffects: false },
+  });
+
+  await page.waitForFunction(() => window.homeActivation.isHomeEagerRuntimeReady());
+  expect(await page.evaluate(() => ({
+    activated: window.homeActivation.isHomeActivationReady(),
+    controller: Boolean(window.rohinAdminControlsController),
+  }))).toEqual({ activated: false, controller: false });
+
+  await page.evaluate(() => {
+    window.__homeTestPrerendering = false;
+    window.__homeTestVisibilityState = "visible";
+    document.dispatchEvent(new Event("prerenderingchange"));
+  });
+  await page.waitForFunction(() => Boolean(window.rohinAdminControlsController));
+  await expect(page.locator("#admin-controls-window")).toBeHidden();
+  await expect(page.locator("body")).toHaveClass(/is-admin-audio-off/);
+  await expect(page.locator("body")).toHaveClass(/is-admin-vfx-off/);
+});
+
+test("reset reload suppression survives failed Admin restore and expired access", async ({
+  diagnostics,
+  page,
+}) => {
+  let adminStyleAttempts = 0;
+  await page.route("**/styles/home/admin-controls.css?*", async (route) => {
+    adminStyleAttempts += 1;
+    await route.abort("failed");
+  });
+  await page.addInitScript(() => {
+    Math.random = () => 0;
+  });
+  await page.clock.install();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/home.html", { waitUntil: "domcontentloaded" });
+
+  await page.evaluate(({ proof, proofKey }) => {
+    localStorage.setItem("personalSiteAdminControlsV1", JSON.stringify({
+      version: 1,
+      audio: false,
+    }));
+    sessionStorage.setItem(proofKey, JSON.stringify({
+      proof,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    }));
+    sessionStorage.setItem("personalSiteAdminControlsResetPendingV1", "1");
+  }, { proof, proofKey });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect.poll(() => adminStyleAttempts).toBe(1);
+  await page.waitForLoadState("load");
+  await page.clock.fastForward(450);
+  expect(await page.evaluate(() => ({
+    controller: Boolean(window.rohinAdminControlsController),
+    marker: sessionStorage.getItem("personalSiteAdminControlsResetPendingV1"),
+    resetReload: window.homeWindows.wasAdminControlsResetReload(),
+    visibleEvents: [...document.querySelectorAll(".random-event-window")]
+      .filter((element) => getComputedStyle(element).display !== "none").length,
+  }))).toEqual({
+    controller: false,
+    marker: null,
+    resetReload: true,
+    visibleEvents: 0,
+  });
+  consumeDiagnostics(diagnostics, {
+    consoleErrors: ["Failed to load resource: net::ERR_FAILED"],
+    requestFailures: [/styles\/home\/admin-controls\.css.*\(net::ERR_FAILED\)/],
+  });
+
+  await page.evaluate(({ proof, proofKey }) => {
+    localStorage.removeItem("personalSiteAdminControlsV1");
+    sessionStorage.setItem(proofKey, JSON.stringify({
+      proof,
+      expiresAt: new Date(Date.now() - 1000).toISOString(),
+    }));
+    sessionStorage.setItem("personalSiteAdminControlsResetPendingV1", "1");
+  }, { proof, proofKey });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load");
+  await page.clock.fastForward(450);
+  expect(adminStyleAttempts).toBe(1);
+  expect(await page.evaluate(() => ({
+    controller: Boolean(window.rohinAdminControlsController),
+    marker: sessionStorage.getItem("personalSiteAdminControlsResetPendingV1"),
+    resetReload: window.homeWindows.wasAdminControlsResetReload(),
+    visibleEvents: [...document.querySelectorAll(".random-event-window")]
+      .filter((element) => getComputedStyle(element).display !== "none").length,
+  }))).toEqual({
+    controller: false,
+    marker: null,
+    resetReload: true,
+    visibleEvents: 0,
+  });
 });
 
 test("authorized Admin loading deduplicates, cancels cleanly, and retries", async ({ page }) => {
@@ -160,6 +360,58 @@ test("Admin load failure shows retry feedback and never opens stale or expired a
   await expect(page.locator("#admin-controls-window")).toBeHidden();
   await expect(page.locator("body")).not.toHaveClass(/is-admin-resources-loading/);
 });
+
+for (const lazyScript of [
+  {
+    key: "admin-orchestrator",
+    pattern: "**/scripts/home/admin/orchestrator.js?*",
+  },
+  {
+    key: "admin-controls",
+    pattern: "**/scripts/home/admin-controls.js?*",
+  },
+]) {
+  test(`${lazyScript.key} must publish its runtime before Admin marks it loaded`, async ({
+    page,
+  }) => {
+    let attempts = 0;
+    await page.route(lazyScript.pattern, async (route) => {
+      attempts += 1;
+      if (attempts === 1) {
+        await route.fulfill({
+          contentType: "text/javascript",
+          body: "window.__adminIncompleteScriptExecuted = true;",
+        });
+        return;
+      }
+      await route.continue();
+    });
+    await prepareHome(page, { authorized: true });
+
+    const standIn = page.locator("#admin-controls-stand-in-window");
+    await page.locator('.taskbar-icon[data-app="admin-controls"]').click();
+    await expect(standIn).toHaveAccessibleDescription(
+      "Admin Controls could not load. Choose Retry to try again."
+    );
+    expect(await page.evaluate((key) => ({
+      incompleteExecuted: window.__adminIncompleteScriptExecuted === true,
+      state: window.homeResources.resourceState(key),
+      controller: Boolean(window.rohinAdminControlsController),
+    }), lazyScript.key)).toEqual({
+      incompleteExecuted: true,
+      state: "idle",
+      controller: false,
+    });
+
+    await page.locator("#admin-controls-stand-in-ok").click();
+    await expect(page.locator("#admin-controls-window")).toBeVisible();
+    expect(attempts).toBe(2);
+    expect(await page.evaluate(() => ({
+      controller: Boolean(window.rohinAdminControlsController),
+      orchestrator: Boolean(window.rohinAdminOrchestrator),
+    }))).toEqual({ controller: true, orchestrator: true });
+  });
+}
 
 test("page exit cancels pending Admin initialization and restores the cursor", async ({ page }) => {
   const adminStyles = await deferredRoute(page, "**/styles/home/admin-controls.css?*");

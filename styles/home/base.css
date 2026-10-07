@@ -331,6 +331,15 @@ body {
   pointer-events: none;
 }
 
+/*
+ * This static overlay sits outside a managed event window. Keep its initial
+ * hidden state eager so its deferred image alt text cannot paint before the
+ * random-event stylesheet arrives.
+ */
+.lost-grace-overlay {
+  display: none;
+}
+
 .random-alert-window {
   --event-window-width: 340px;
   --event-window-z: 140;
@@ -372,7 +381,7 @@ body {
   width: 48px;
 }
 
-.random-alert-window .random-alert-message p {
+.window-body .random-alert-message p {
   margin: 0;
 }
 

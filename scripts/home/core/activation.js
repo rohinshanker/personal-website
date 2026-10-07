@@ -58,6 +58,16 @@ const whenHomeActivated = homeActivationReady
       resolveHomeActivated = resolve;
     });
 
+let homeEagerRuntimeReady = false;
+
+let resolveHomeEagerRuntimeReady = null;
+
+const whenHomeEagerRuntimeReady = new Promise((resolve) => {
+  resolveHomeEagerRuntimeReady = resolve;
+});
+
+const whenHomeReady = Promise.all([whenHomeActivated, whenHomeEagerRuntimeReady]);
+
 const isHomeActivationReady = () => homeActivationReady;
 
 const recordHomeActivation = (source) => {
@@ -129,6 +139,26 @@ const runAfterHomeActivation = (callback) => {
   whenHomeActivated.then(run);
 };
 
+const isHomeEagerRuntimeReady = () => homeEagerRuntimeReady;
+
+const markHomeEagerRuntimeReady = () => {
+  if (homeEagerRuntimeReady) return;
+  homeEagerRuntimeReady = true;
+  resolveHomeEagerRuntimeReady();
+  resolveHomeEagerRuntimeReady = null;
+};
+
+const runAfterHomeReady = (callback) => {
+  const run = () => {
+    runHomeActivationCallback(callback);
+  };
+  if (isHomeActivationReady() && isHomeEagerRuntimeReady()) {
+    run();
+    return;
+  }
+  whenHomeReady.then(run);
+};
+
 const loadDeferredMedia = (root, visibleOnly = false) => {
   if (!root) return;
   if (!isHomeActivationReady()) {
@@ -165,11 +195,16 @@ window.homeActivation = Object.freeze({
   homePerfLog,
   homePerfNow,
   isHomeActivationReady,
+  isHomeEagerRuntimeReady,
   loadDeferredMedia,
+  markHomeEagerRuntimeReady,
   preloadDeferredMedia,
   preloadDeferredMediaInOrder,
   runAfterHomeActivation,
+  runAfterHomeReady,
   unloadDeferredImages,
   whenHomeActivated,
+  whenHomeEagerRuntimeReady,
+  whenHomeReady,
 });
 })();

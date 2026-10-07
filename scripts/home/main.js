@@ -2,6 +2,7 @@
 const {
   homePerfLog,
   homePerfNow,
+  markHomeEagerRuntimeReady,
   runAfterHomeActivation,
 } = window.homeActivation;
 const {
@@ -85,4 +86,6 @@ document.addEventListener("visibilitychange", () => {
     restoreSuspendedActiveWindow();
   }
 });
+
+markHomeEagerRuntimeReady();
 })();

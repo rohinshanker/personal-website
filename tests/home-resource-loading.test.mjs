@@ -8,7 +8,7 @@ const source = await readFile(
   "utf8"
 );
 
-const loadResourceRuntime = ({ failOnce = new Set() } = {}) => {
+const loadResourceRuntime = ({ failOnce = new Set(), incompleteOnce = new Set() } = {}) => {
   const attempts = new Map();
   const appended = [];
 
@@ -35,6 +35,19 @@ const loadResourceRuntime = ({ failOnce = new Set() } = {}) => {
         attempts.set(key, (attempts.get(key) || 0) + 1);
         queueMicrotask(() => {
           const shouldFail = failOnce.has(key) && attempts.get(key) === 1;
+          const shouldStayIncomplete =
+            incompleteOnce.has(key) && attempts.get(key) === 1;
+          if (!shouldFail && !shouldStayIncomplete && key === "admin-orchestrator") {
+            window.rohinAdminOrchestrator = {
+              listEvents() {},
+              resetScene() {},
+              runEvent() {},
+            };
+          }
+          if (!shouldFail && !shouldStayIncomplete && key === "admin-controls") {
+            window.rohinAdminControls = {};
+            window.rohinAdminControlsController = { getState() {} };
+          }
           element.dispatchEvent(new Event(shouldFail ? "error" : "load"));
         });
       },
@@ -99,6 +112,20 @@ test("a failed Admin resource is removed and retries without duplicating loaded 
   assert.equal(attempts.get("admin-styles"), 2);
   assert.equal(attempts.get("admin-orchestrator"), 1);
   assert.equal(attempts.get("admin-controls"), 1);
+});
+
+test("an Admin script that loads without publishing its runtime is removed and retries", async () => {
+  const { attempts, resources } = loadResourceRuntime({
+    incompleteOnce: new Set(["admin-controls"]),
+  });
+
+  await assert.rejects(resources.loadAdminResources(), /admin-controls/);
+  assert.equal(resources.resourceState("admin-controls"), "idle");
+  await resources.loadAdminResources();
+
+  assert.equal(attempts.get("admin-orchestrator"), 1);
+  assert.equal(attempts.get("admin-controls"), 2);
+  assert.equal(resources.resourceState("admin-controls"), "loaded");
 });
 
 test("cancelling a pending Admin load prevents later scripts and leaves a retry usable", async () => {

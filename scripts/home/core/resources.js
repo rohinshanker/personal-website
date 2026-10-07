@@ -1,20 +1,20 @@
 (() => {
   const HOME_RESOURCE_URLS = Object.freeze({
     randomEventStyles:
-      "styles/home/random-events.css?v=on-demand-home-loading-20261007",
+      "styles/home/random-events.css?v=home-loading-repair-20261007",
     adminStyles:
       "styles/home/admin-controls.css?v=on-demand-home-loading-20261007",
     adminOrchestrator:
       "scripts/home/admin/orchestrator.js?v=on-demand-home-loading-20261007",
     adminControls:
-      "scripts/home/admin-controls.js?v=on-demand-home-loading-20261007",
+      "scripts/home/admin-controls.js?v=home-loading-repair-20261007",
   });
 
   const resourceStates = new Map();
 
   const resourceState = (key) => resourceStates.get(key)?.status || "idle";
 
-  const startResourceLoad = (key, createElement) => {
+  const startResourceLoad = (key, createElement, validate = () => true) => {
     const current = resourceStates.get(key);
     if (current?.status === "loaded" || current?.status === "loading") {
       return current.promise;
@@ -23,6 +23,10 @@
     const element = createElement();
     const promise = new Promise((resolve, reject) => {
       const finish = () => {
+        if (!validate()) {
+          fail();
+          return;
+        }
         resourceStates.set(key, {
           element,
           promise: Promise.resolve(element),
@@ -53,14 +57,25 @@
       return link;
     });
 
-  const loadClassicScript = (key, src) =>
+  const loadClassicScript = (key, src, validate) =>
     startResourceLoad(key, () => {
       const script = document.createElement("script");
       script.async = false;
       script.src = src;
       script.dataset.homeResource = key;
       return script;
-    });
+    }, validate);
+
+  const adminOrchestratorReady = () =>
+    ["listEvents", "resetScene", "runEvent"].every(
+      (name) => typeof window.rohinAdminOrchestrator?.[name] === "function"
+    );
+
+  const adminControllerReady = () =>
+    Boolean(
+      window.rohinAdminControls &&
+      typeof window.rohinAdminControlsController?.getState === "function"
+    );
 
   const loadRandomEventStyles = () =>
     loadStylesheet("random-event-styles", HOME_RESOURCE_URLS.randomEventStyles);
@@ -85,11 +100,19 @@
     ])
       .then(() => {
         assertAdminResourceRequestActive(generation);
-        return loadClassicScript("admin-orchestrator", HOME_RESOURCE_URLS.adminOrchestrator);
+        return loadClassicScript(
+          "admin-orchestrator",
+          HOME_RESOURCE_URLS.adminOrchestrator,
+          adminOrchestratorReady
+        );
       })
       .then(() => {
         assertAdminResourceRequestActive(generation);
-        return loadClassicScript("admin-controls", HOME_RESOURCE_URLS.adminControls);
+        return loadClassicScript(
+          "admin-controls",
+          HOME_RESOURCE_URLS.adminControls,
+          adminControllerReady
+        );
       })
       .catch((error) => {
         if (adminResourcesPromise === request) adminResourcesPromise = null;

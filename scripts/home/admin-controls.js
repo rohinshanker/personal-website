@@ -48,8 +48,8 @@ const ACTION_TARGET_PATTERN = /^action:([a-f0-9]{8}):(\d{1,2})$/;
 const GITHUB_TARGET_PATTERN = /^github:(\d{1,2})$/;
 const EVENT_PREVIEW_STYLESHEETS = Object.freeze([
   "style.css?v=html-semantics-20260927",
-  "styles/home/base.css?v=on-demand-home-loading-20261007",
-  "styles/home/random-events.css?v=on-demand-home-loading-20261007",
+  "styles/home/base.css?v=home-loading-repair-20261007",
+  "styles/home/random-events.css?v=home-loading-repair-20261007",
 ]);
 const EVENT_PREVIEW_STAGE_STYLES = `
   :host {
@@ -248,7 +248,14 @@ const createSeededSequence = (seed, eventIds, length = SEQUENCE_LENGTH) => {
   return sequence;
 };
 
-const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => {
+const create = ({
+  runtime,
+  storage,
+  resetStorage,
+  wasResetReload,
+  doc,
+  browserWindow,
+} = {}) => {
   const orchestrator = runtime || window.rohinAdminOrchestrator;
   const pageWindow = browserWindow || window;
   const documentRef = doc || pageWindow.document;
@@ -320,12 +327,14 @@ const create = ({ runtime, storage, resetStorage, doc, browserWindow } = {}) => 
     state = cloneDefaults();
   }
 
-  let resetReload = false;
-  try {
-    resetReload = transientStorage.getItem(RESET_PENDING_KEY) === "1";
-    if (resetReload) transientStorage.removeItem(RESET_PENDING_KEY);
-  } catch (error) {
-    resetReload = false;
+  let resetReload = wasResetReload === true;
+  if (typeof wasResetReload !== "boolean") {
+    try {
+      resetReload = transientStorage.getItem(RESET_PENDING_KEY) === "1";
+      if (resetReload) transientStorage.removeItem(RESET_PENDING_KEY);
+    } catch (error) {
+      resetReload = false;
+    }
   }
 
   const rawEvents = Array.isArray(orchestrator.listEvents?.())
@@ -1839,6 +1848,7 @@ const mount = () => {
   if (window.rohinAdminControlsController) return;
   window.rohinAdminControlsController = namespace.create({
     runtime: window.rohinAdminOrchestrator,
+    wasResetReload: window.homeWindows.wasAdminControlsResetReload(),
   });
 };
 

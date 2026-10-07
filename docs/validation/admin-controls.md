@@ -32,8 +32,11 @@
   local orchestration should not persist.
 - Admin configuration is stored only in versioned browser `localStorage` under
   `personalSiteAdminControlsV1`. The reset-reload handshake uses the transient
-  `personalSiteAdminControlsResetPendingV1` session key; no Admin state is sent
-  to a server.
+  `personalSiteAdminControlsResetPendingV1` session key. The eager window runtime
+  consumes that marker independently of the optional Admin controller, so reset
+  reloads suppress ordinary reload events even with expired access or failed
+  lazy resources. The marker alone must not request Admin CSS or scripts; no
+  Admin state is sent to a server.
 - Generated sequence names are normalized, deduplicated, limited to the 50 most
   recently used names, and exposed through the deletable saved-seed menu.
 - Stored bindings use stable semantic target keys (`id:`, `app:`, `start`, or a
@@ -102,7 +105,8 @@ It covers valid, missing, malformed, and expired proof routing; the real mocked
 sign-in handoff; the inaccessible notice and full-window states; all four tabs;
 local persistence; the saved-seed menu and deletion; deterministic sequences;
 repeat-safe Random selection; the persisted Promo random mode and compact-window
-weighting; direct and seeded events; the stable Modeling Next target; the target
+weighting; reset suppression without a controller; eager-runtime and prerender
+readiness; direct and seeded events; the stable Modeling Next target; the target
 picker; expanded/collapsed quick-start help; scene reset; presets; capture
 controls; media; privacy fixtures; both launcher paths and ordering; focus
 restoration; overflow; console errors; runtime errors; and mutating network

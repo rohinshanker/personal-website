@@ -265,6 +265,7 @@ test("Admin launch access requires an active Administrator session proof", async
       `${session}\n` +
         "const { createAdministratorSession, isAdministratorProfile: isGameStatsAdministratorProfile } =\n" +
         "  window.homeAdministratorSession;\n" +
+        "const runAfterHomeReady = () => {};\n" +
         `${sessionWiringSource}\n` +
         `let gameStatsProfile = ${JSON.stringify(profile)};\n` +
         `${accessSource}\n` +
@@ -727,6 +728,11 @@ test("Admin settings use strict versioned local state with a deterministic publi
   assert.match(admin, /localStateStorage\.setItem\(STORAGE_KEY,/);
   assert.match(admin, /const transientStorage = resetStorage \|\| pageWindow\.sessionStorage/);
   assert.match(admin, /transientStorage\.getItem\(RESET_PENDING_KEY\)/);
+  assert.match(admin, /typeof wasResetReload !== "boolean"/);
+  assert.match(
+    admin,
+    /wasResetReload:\s*window\.homeWindows\.wasAdminControlsResetReload\(\)/
+  );
   assert.doesNotMatch(
     admin,
     /transientStorage\.(?:getItem|setItem|removeItem)\(STORAGE_KEY/,

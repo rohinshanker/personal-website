@@ -1033,7 +1033,7 @@ test("suppresses duplicate refreshes and reuses the snapshot after reopening", a
   expect(requestCount).toBe(2);
 });
 
-test("preserves deferred script order while an app module finishes downloading", async ({ page }) => {
+test("an app opened during eager boot initializes when its module finishes downloading", async ({ page }) => {
   let releaseModule;
   const moduleReady = new Promise((resolve) => { releaseModule = resolve; });
   await page.route(/\/scripts\/home\/clash-royale\.js(?:\?.*)?$/, async (route) => {
@@ -1043,9 +1043,12 @@ test("preserves deferred script order while an app module finishes downloading",
   await page.route(API_URL, (route) => successResponse(route));
   try {
     await page.goto("/home.html", { waitUntil: "commit" });
-    await expect
-      .poll(() => page.evaluate(() => Boolean(window.ClashRoyaleApp)))
-      .toBe(false);
+    await page.waitForFunction(() => window.homeActivation?.isHomeEagerRuntimeReady());
+    expect(await page.evaluate(() => Boolean(window.ClashRoyaleApp))).toBe(false);
+    await page.locator('#about-window [data-close="about"]').click({ noWaitAfter: true });
+    await page.locator('.taskbar-icon[data-app="clash-royale"]').click({ noWaitAfter: true });
+    await expect(page.locator("#clash-royale-window")).toBeVisible();
+
     releaseModule();
     await page.waitForFunction(() => Boolean(window.ClashRoyaleApp));
     await expect(page.locator("#cr-history-footer a")).toHaveText("Royale API");
@@ -1053,9 +1056,6 @@ test("preserves deferred script order while an app module finishes downloading",
       "id",
       "cr-battle-scroll"
     );
-    await page.locator('#about-window [data-close="about"]').click({ noWaitAfter: true });
-    await page.locator('.taskbar-icon[data-app="clash-royale"]').click({ noWaitAfter: true });
-    await expect(page.locator("#clash-royale-window")).toBeVisible();
     await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
   } finally {
     releaseModule();

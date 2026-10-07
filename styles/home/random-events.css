@@ -1758,7 +1758,6 @@ body.is-midnight-gospel-locked * {
 .lost-grace-overlay {
   align-items: center;
   background: transparent;
-  display: none;
   inset: 0;
   justify-content: center;
   pointer-events: none;

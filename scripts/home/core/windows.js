@@ -3,6 +3,7 @@ const {
   isHomeActivationReady,
   loadDeferredMedia,
   runAfterHomeActivation,
+  runAfterHomeReady,
 } = window.homeActivation;
 const {
   appButtons,
@@ -95,6 +96,22 @@ const ADMIN_CONTROLS_STORAGE_KEY = "personalSiteAdminControlsV1";
 
 const ADMIN_CONTROLS_RESET_PENDING_KEY = "personalSiteAdminControlsResetPendingV1";
 
+let adminControlsResetReload = null;
+
+const wasAdminControlsResetReload = () => {
+  if (adminControlsResetReload !== null) return adminControlsResetReload;
+  try {
+    adminControlsResetReload =
+      sessionStorage.getItem(ADMIN_CONTROLS_RESET_PENDING_KEY) === "1";
+    if (adminControlsResetReload) {
+      sessionStorage.removeItem(ADMIN_CONTROLS_RESET_PENDING_KEY);
+    }
+  } catch (error) {
+    adminControlsResetReload = false;
+  }
+  return adminControlsResetReload;
+};
+
 const isAdminControlsAppId = (appId) =>
   appId === ADMIN_CONTROLS_APP_ID || appId === ADMIN_CONTROLS_STAND_IN_APP_ID;
 
@@ -104,7 +121,6 @@ let adminControlsAccessCheck = () => false;
 
 const hasPersistedAdminControlsBehavior = () => {
   try {
-    if (sessionStorage.getItem(ADMIN_CONTROLS_RESET_PENDING_KEY) === "1") return true;
     const state = JSON.parse(localStorage.getItem(ADMIN_CONTROLS_STORAGE_KEY) || "null");
     if (!state || state.version !== 1 || Array.isArray(state)) return false;
     const hasBinding = Array.isArray(state.bindings) && state.bindings.some((binding) =>
@@ -131,7 +147,6 @@ const hasPersistedAdminControlsBehavior = () => {
 
 const restorePersistedAdminControlsBehavior = async () => {
   while (
-    !document.hidden &&
     adminControlsAccessCheck() &&
     hasPersistedAdminControlsBehavior() &&
     !adminControlsResourcesReady()
@@ -148,18 +163,12 @@ const restorePersistedAdminControlsBehavior = async () => {
 let adminControlsRestoreScheduled = false;
 
 const schedulePersistedAdminControlsRestore = () => {
-  if (typeof document === "undefined") return;
   if (adminControlsRestoreScheduled) return;
   adminControlsRestoreScheduled = true;
-  const restore = () => {
+  runAfterHomeReady(() => {
     adminControlsRestoreScheduled = false;
     void restorePersistedAdminControlsBehavior();
-  };
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", restore, { once: true });
-  } else {
-    queueMicrotask(restore);
-  }
+  });
 };
 
 const registerAdminControlsAccess = (check) => {
@@ -1457,5 +1466,6 @@ window.homeWindows = Object.freeze({
   setWindowFocusReturn,
   setWindowOpen,
   setWindowTitleBarClampedPosition,
+  wasAdminControlsResetReload,
 });
 })();

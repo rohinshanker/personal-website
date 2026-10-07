@@ -15,8 +15,10 @@
   concurrent callers must share that promise, a failed element must be removed,
   and the next call must be able to retry.
 - `styles/home/base.css` keeps the shared alert/window chrome, hidden state, and
-  opening/closing rules needed before an on-demand stylesheet arrives. Event-only
-  presentation stays in `styles/home/random-events.css`.
+  opening/closing rules needed before an on-demand stylesheet arrives. Static
+  non-window overlays also keep any initial hiding needed to prevent fallback
+  text or media from painting; `#lost-grace-overlay` is the reference case.
+  Event-only presentation stays in `styles/home/random-events.css`.
 - Do not add random-event CSS, Administrator CSS, or Administrator scripts to the
   initial Home markup or `index.html` warm-up list. A warm-up change must match
   the actual eager Home graph.
@@ -43,12 +45,22 @@ scheduled events.
 - An authorized launch loads event CSS and Administrator CSS together, then the
   classic scripts strictly in `admin/orchestrator.js` → `admin-controls.js`
   order. Duplicate desktop or taskbar launches share that work and initialize
-  the controller once.
+  the controller once. A script `load` event is not sufficient: the loader must
+  validate the orchestrator methods and mounted controller namespace, discard an
+  incomplete script, and leave Retry able to request it again.
 - A valid restored Administrator session also loads those resources, without
   opening a window or moving focus, when persisted state has live behavior to
   apply: muted audio, disabled effects, privacy mode, a frame guide/safe area,
-  promo random mode, a valid seeded binding, or a pending Reset Scene reload.
-  Default state and unauthorized or expired sessions stay cold.
+  promo random mode, or a valid seeded binding. Default state and unauthorized
+  or expired sessions stay cold. Restoration waits for both prerender activation
+  and the final eager Home boot marker, so the lazy controller cannot race an
+  event family that has not published its runtime yet.
+- A pending Reset Scene marker is cheap bootstrap state, not a reason to load
+  Administrator resources. The eager window runtime consumes it once, caches
+  the result for the optional controller, and suppresses the ordinary reload
+  event even when access is missing/expired or an unrelated active-state restore
+  fails to download. Direct `rohinAdminControls.create()` calls still consume
+  their supplied `resetStorage` when no shared result is passed.
 - While work is pending, the stand-in says `Loading Admin Controls…`, its action
   is `Cancel`, and the existing loading cursor is active. Failure changes the
   same stand-in to a usable `Retry` state. Success opens the full window and
@@ -86,5 +98,6 @@ checks in [site-quality-gates.md](site-quality-gates.md). Render and inspect Hom
 the Administrator denial/loading/error/full-window states, and a cold random
 event at 375×812, 768×1024, 1280×800, and 1440×900. Include slow/failing loads,
 duplicate launches, cancellation, retry, proof invalidation, focus restoration,
-page exit, runtime diagnostics, and accessibility in browser coverage. Keep
+page exit, reset reloads, delayed eager scripts, prerender activation, runtime
+diagnostics, and accessibility in browser coverage. Keep
 screenshots and traces as temporary task evidence rather than committing them.
