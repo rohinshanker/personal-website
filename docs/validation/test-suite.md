@@ -2,7 +2,7 @@
 
 - Purpose: Define test coverage, isolation, timing, and release acceptance contracts.
 - Scope: Node behavior and source contracts, browser UI, Game Stats and Clash Royale Workers, generated artifacts, security, and CI.
-- Last verified: 2026-10-04
+- Last verified: 2026-10-07
 
 ## Test tiers
 
@@ -92,6 +92,15 @@ Advance controlled timer behavior with Playwright Clock. Use visibility,
 classes, animation completion, request completion, or state polling for async
 UI work. Avoid `waitForTimeout` and elapsed wall-clock cadence limits. A frozen
 `Date` does not pause intervals or finish image decoding.
+
+Before advancing time past a mocked session expiry, await and assert the browser's
+normalized session state. Completing `route.fulfill()` confirms transport handling;
+it does not establish that the application has consumed and validated the response.
+
+For Node eligibility tests, advance the existing controlled clock from a mocked
+timer callback and assert the scheduled delay. A real timer can wake before the
+exact wall-clock deadline; sleeping for that delay does not establish eligibility.
+Keep the production timing rules unchanged and restore timer mocks after each test.
 
 Keep screenshots for reviewed visual baselines or documented review evidence.
 Automatic failure screenshots and traces cover routine failure diagnosis.

@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-24
 - Updated: 2026-10-07
-- Current State: Implementation is published to `main`, with independent reviews complete and all local gates passing. The first two remote browser runs and gated Worker/Pages releases passed, including live compatibility and parity checks. No further code review is outstanding. The three-run remote stability proof remains pending.
+- Current State: Implementation is published to `main` and independently reviewed. Browser gates blocked the Admin expiry focus regression and an expired-session fixture race. Both repairs are independently accepted and integrated; the complete controlled release must pass. The consecutive-success stability sequence remains pending after these failed runs.
 - Verification: Fast Node under ten seconds; intact 500-seed slow corpus; all browser shards with two workers and zero retries; pinned visual/accessibility/diagnostic gates; exact-patch independent review; three consecutive successful remote `main` browser runs. Remote stability proof remains unobserved.
 - Cleanup: Keep only reusable contracts in `docs/validation/test-suite.md` and `browser-visual-accessibility.md`. Resolve and delete this ticket/index row after acceptance; do not retain test logs or completion histories.
 
@@ -19,7 +19,7 @@
 
 ## Remaining work
 
-1. Observe three consecutive successful remote `main` runs. Two successful runs are confirmed below. Do not manufacture unrelated pushes for this signal; keep the ticket active until it is observed.
+1. Observe three consecutive successful remote `main` runs after the latest failed browser run. Do not manufacture unrelated pushes for this signal; keep the ticket active until it is observed.
 
 ## Acceptance
 
@@ -31,4 +31,4 @@
 - Syntax, secret scanning, generated icons/resources/media, integrity, local deployment compatibility, whitespace, and ticket/index checks pass. Production game-build hash remains unchanged.
 - The [first remote main run](https://github.com/rohinshanker/personal-website/actions/runs/37257403491) passed at published commit `f4f68cd`: source, slow corpus, all three browser shards, pinned visuals, Worker transition, Pages release, and live parity checks. Secret guard also passed. Three consecutive successful remote main runs remain unobserved. Raw logs and review artifacts are temporary/ignored; reusable contracts are in the validation guides.
 
-- The [second remote main run](https://github.com/rohinshanker/personal-website/actions/runs/37258647848) passed at published commit `0c678778`: all browser/visual, Worker and Pages gates passed. Latest remote main evidence is still two qualifying consecutive successful releases; keep open for the third.
+- The [second remote main run](https://github.com/rohinshanker/personal-website/actions/runs/37258647848) passed at published commit `0c678778`: all browser/visual, Worker and Pages gates passed. These earlier successes do not establish the required consecutive sequence after the later failed browser run.
