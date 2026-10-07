@@ -2,7 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| A | 2026-10-06 | [A_server-verified-leaderboard-results__20261003.md](A_server-verified-leaderboard-results__20261003.md) | All four engines integrated; client/Worker/rollout reviews accepted. Controller confirmation, MS/Snake publication fixtures, docs and final combined gates active. No deployment. |
+| A | 2026-10-06 | [A_server-verified-leaderboard-results__20261003.md](A_server-verified-leaderboard-results__20261003.md) | Paused by owner; all workers stopped. Root local gates pass; two Sudoku review findings, WIP publication fixtures/docs and full browser gate remain. No deployment. |
 | O | 2026-09-29 | [O_soot-sprite-redesign__20260929.md](O_soot-sprite-redesign__20260929.md) | Redraw the soot sprite from the Ghibli films: four original candidates on a review page, owner picks one, then ship it. Nothing started. |
 | O | 2026-10-05 | [O_decide-games-and-backend__20260924.md](O_decide-games-and-backend__20260924.md) | Awaiting owner: Snake game-over noise animation and publication queue retry/overflow feedback. |
 | O | 2026-10-01 | [O_decide-content-and-assets__20260924.md](O_decide-content-and-assets__20260924.md) | Remaining audit decisions: Study Resources stub, 26 MB unreferenced calendar photos, originals and working files, background quality, shoot markup from data, pdf-window templating, renames, 98.css trim. Awaiting owner. |
