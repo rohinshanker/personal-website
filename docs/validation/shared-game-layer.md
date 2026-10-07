@@ -1,8 +1,8 @@
 # Shared Game Layer
 
 - Purpose: Keep compatible game mechanics in small shared helpers while preserving each game's policies.
-- Scope: Home games, utility and window contracts, Game Stats hooks, and Solitaire rendering.
-- Last verified: 2026-10-05
+- Scope: Home games, utility and window contracts, Game Stats hooks, the verified-session adapter, and Solitaire rendering.
+- Last verified: 2026-10-06
 
 ## Ownership
 
@@ -35,12 +35,13 @@ and resets on close. Snake and Sudoku retain their pause policies.
 ## Statistics hooks
 
 `homeGameStats.createGameStatsHooks(game, stateOrGetter)` owns the mutable
-`statsSession` string. `ensureSession(config)` requests or reuses an eligible
-session; `dropSession()` detaches the abandoned attempt; `recordEvent(payload,
-options)` clears the attempt's key and claims its proof synchronously before any
-profile-selection wait. The shared Game Stats map retains at most one reusable
-slot per game. Submitted or queued results never share that slot with a new
-attempt.
+`statsSession` string. `dropSession()` detaches the abandoned attempt;
+`recordEvent(payload, options)` clears the attempt's key and claims its proof
+synchronously before any profile-selection wait. The shared Game Stats map
+retains at most one reusable slot per game. Submitted or queued results never
+share that slot with a new attempt. `ensureSession(config)` is the legacy
+(`resultProtocol` 1) path; verified game controllers call `issueGame`
+instead — see [leaderboard-result-verification.md](leaderboard-result-verification.md).
 
 Use a state getter when a controller replaces its state object; Sudoku must use
 `() => sudokuState`. The hooks resolve the getter for every operation. Game
@@ -48,6 +49,40 @@ controllers still own eligibility, metrics, completion latches, presentation
 suppression, and activity notifications. See [game-stats-backend.md](game-stats-backend.md)
 for session limits and expiry, and [game-stats-refresh-control.md](game-stats-refresh-control.md)
 for exact feedback.
+
+### Verified-session adapter
+
+For result protocol 2, each hook factory also
+lazily builds one `createGameSession` adapter
+(`scripts/home/games/session.js`), exposed on the same frozen hooks object:
+
+- `issueGame(config, {firstCell}={})` — requests a new issued game (`POST
+  /sessions`), detaching any prior attempt first. Returns the normalized
+  descriptor (or rejects); a new board always needs a new issuance.
+- `recordInput(action)` — appends one replay action (`{op, ...}`, no `seq`;
+  the adapter assigns it). Buffers inputs made before the server has
+  acknowledged `"running"` timing and flushes them in order once it has.
+- `pauseGame()` / `resumeGame()` — async timing acknowledgment
+  (`POST /sessions/:id/timing`); resolve to the new `{revision, phase,
+  elapsedMs}` or `null` on failure.
+- `exportGame()` / `restoreGame(saved)` — serialize or resume an in-progress
+  issuance across a page reload. `restoreGame` only reattaches the original
+  session (same id/token/expiry/initial) when the server still holds it
+  `"ready"` or `"paused"` at the saved input prefix; otherwise it resolves to
+  `null` and the save stays local-only.
+- `hasIssuedGame()` — true only while this controller still owns an eligible,
+  unclaimed issuance.
+
+`recordEvent` calls the adapter's internal `claimCompletion()` synchronously to
+detach the completed attempt before profile selection and drive its finish through
+bounded continuations. This method is internal to the adapter, not a public hook.
+
+`recordEvent`'s `options.onCanonicalMetric({metric, metricKind, elapsedMs,
+updateLocalStats})` fires once a claimed completion's receipt is authoritative
+and reconciles the finished board's displayed/cached metric to the server's
+derived value. A replaced board is left alone. `updateLocalStats` is false when local statistics
+were reset after the finish; an owned final display may update, but cleared
+records remain cleared.
 
 ## Solitaire board lifetime
 

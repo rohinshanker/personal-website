@@ -2,7 +2,7 @@
 
 - Purpose: Review and regression-test the shared Game Stats refresh, publishing, and Administrator-authentication control.
 - Scope: The status/action row in the Minesweeper, Solitaire, Snake, and Sudoku stats windows.
-- Last verified: 2026-10-05
+- Last verified: 2026-10-06
 
 [Open the complete, responsive Game Stats state review](assets/game-stats-refresh-review.html).
 It shows every exact status/action state, animated and reduced-motion loading
@@ -44,13 +44,16 @@ and uses the bundled Solitaire undo icon.
 | Situation | Exact status copy | Network action |
 | --- | --- | --- |
 | Queued result has no verified session | `Local stats are saved. A result without a verified game session cannot be published.` | Refresh remains available. |
+| Completion replay exceeds a verification limit | `Saved on this device. This game's replay exceeds verification limits, so this result can't be published.` | Refresh remains available; no partial publication or renewal. |
+| Completion verification fails | `Local stats are saved, but this game's result could not be verified for publication.` | Refresh remains available; result stays local. |
 | Server verification rejects a result | `Local stats are saved, but a result could not pass server verification.` | Refresh remains available. |
 | Session expired before completion or queued publication | `Saved on this device. This game's online session expired, so this result can't be published. Start a new game to publish a new result.` | Refresh remains available; no replacement session or expired event POST. |
 | Game began without a verified session | `Local stats are saved. This result started without a verified game session.` | Refresh remains available. |
 | Administrator sign-in resets local progress | `Local progress was reset. Published and queued leaderboard results remain available.` | Refresh remains available. |
 
 Expiry uses the separate `session-expired` state. Automatic fetching/ready
-updates preserve the notice. A transient automatic failure shows its request
+updates preserve local-only notices for expiry, replay limits, and verification
+failures. A transient automatic failure shows its request
 error, then restores the expiry notice after recovery. Manual Refresh, a new
 publication, or Reset Local Stats clears the saved notice. The existing win
 screen and local aggregates remain; no renewal button or extra modal is added. An expired queued

@@ -2,7 +2,7 @@
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 - Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-10-05
+- Last verified: 2026-10-06
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -14,6 +14,14 @@ statistics and leaderboards; it is not a trustworthy record for a competitive
 or high-stakes game.
 
 ## Production release contract
+
+Before a legacy-to-verified rollout, the `predeploy` script compares live client
+protocol metadata with the candidate. If the live client is legacy, the operator
+must select a future UTC `LEGACY_RESULT_ISSUANCE_CUTOFF`; empty closes new legacy
+issuance. Existing proofs retain their original expiry. Protocol-2 metadata alone
+does not show that every cached legacy tab has drained. Alternate configs,
+environments, static-first releases, and rollbacks need operator coordination.
+
 
 - A push to `main` must run source and browser verification, perform a strict
   Worker dry-run, deploy the rolling-compatible Worker, pass the transition
@@ -57,9 +65,12 @@ from Wrangler's successful deployment output. A `workers.dev` URL is normally
 `<account>.workers.dev`; a custom route is also valid. The verified URL above
 is the current endpoint for this site.
 
-## Game session lifetime and reuse
+## Legacy game session lifetime and reuse
 
-New sessions are limited to 120 per IP-hash per one-hour window. Their lifetime
+The session-creation budget for both protocols is 120 per IP-hash per hour.
+The reuse rules in this section apply to legacy (`resultProtocol: 1`) proofs;
+verified boards require fresh issued state and the replay/timing contract in
+[leaderboard-result-verification.md](leaderboard-result-verification.md). Their lifetime
 is six hours; expiry is inclusive. Browser reuse is limited to unconsumed,
 unexpired sessions for the same game and normalized configuration, including
 pending creation requests. Reuse retains the original server-issued timestamp:
@@ -84,10 +95,10 @@ minimum-duration, signed-proof and single-use checks remain unchanged. See
 [game-stats-refresh-control.md](game-stats-refresh-control.md) for hooks and
 repeatable browser checks.
 
-## Security Model And Its Limit
+## Legacy security boundary
 
 ```text
-game completion
+game session start
   -> generated public build version
   -> POST /sessions (validated game/config/version + optional Turnstile)
   -> short-lived, server-HMAC-signed single-use session
@@ -115,11 +126,10 @@ deliberately not bound to the request address, because mobile carriers,
 dual-stack networks, and privacy relays change it between game start,
 sign-in, and publish, and a visitor can already request a session from any
 address. Ordinary public profile IDs also do not prove account ownership.
-Treat these as moderation-grade public stats. A competitive system would
-require authoritative server-side game simulation or a server-validated
-deterministic seed and input replay. The proposed protocol, timing boundary,
-and remaining limitations are in
-[leaderboard-result-verification.md](leaderboard-result-verification.md).
+The replay protocol validates the issued state and every logical transition,
+then derives metrics on the server. Its timing, restore, and verification
+limitations are in [leaderboard-result-verification.md](leaderboard-result-verification.md).
+Legal replays still do not establish human play or exclude external solving.
 
 Never turn CORS, a public hash, a client-only CAPTCHA result, or an event ID
 into an authentication mechanism. CORS only controls cooperative browsers;
@@ -477,6 +487,17 @@ additive, tracked D1 state for one-time sessions and expiring rate-limit
 records. Never edit a migration that has reached remote D1; add the next
 numbered migration instead.
 
+Migration `0005_add_verified_game_results.sql` adds the issued-session timing
+columns and the `verified_timing_transitions`, `verified_game_completions`,
+`verified_completion_jobs`, `verified_completion_progress`, and
+`verified_completion_replay_chunks` tables for the replay-verification
+protocol in [leaderboard-result-verification.md](leaderboard-result-verification.md).
+Apply it before deploying code that queries these tables/columns. Inspect the
+actual migration ledger before changing it: an unapplied local migration may
+be amended, but any applied migration is immutable and needs a new numbered
+follow-up. `/health` table-count success does not validate every column. Never
+reset historical events to repair schema or configuration drift.
+
 From the repository root, validate locally and then inspect remote state:
 
 ```bash
@@ -567,11 +588,17 @@ The contract:
 - One atomic batch deletes `game_stat_sessions` and `game_stats_rate_limits`
   rows whose `expires_at` is at or before the purge time. Expiry is inclusive
   because a session whose `expires_at` equals now already fails validation.
+  The protocol-2 purge also removes expired timing transitions, jobs, progress
+  checkpoints, replay chunks, and unpublished completion receipts. Migration
+  0005 must be applied before this handler can run. Published completion
+  receipts remain available for idempotent publication retries.
 - A consumed session is kept until it expires. Deleting it early would turn a
-  replayed result into "no longer on record" instead of "already used".
+  replayed result into "no longer on record" instead of "already used". The
+  same holds for an unpublished verified completion: it is swept only once
+  its own `expires_at` passes, never on consumption.
 - The purge deletes no `game_events` row. Published results are permanent; only
   the short-lived security tables are swept.
-- Each run logs the two counts and the purge timestamp. Cloudflare's scheduled
+- Each run logs the session, rate-limit, verified-state purge counts and timestamp. Cloudflare's scheduled
   invocation log is where to confirm the cron fired.
 - First deployed with the purge handler as Worker version
   `6d26f54b-b328-46df-a0ab-6c01e3db9ac4` (release run 36366610966,
@@ -598,7 +625,13 @@ Cron Triggers view before changing code.
 
 ## Hardened API Contract
 
-The Worker exposes these routes:
+Result protocol 2 adds `POST /sessions/:id/timing`, `POST /sessions/:id/finish`,
+`POST /sessions/:id/finish/continue`, and `POST /sessions/:id/restore`;
+`POST /events` receives the canonical event plus a completion receipt. See
+[leaderboard-result-verification.md](leaderboard-result-verification.md) for
+that contract. The session-proof write behavior below is the legacy
+(`resultProtocol: 1`) path; health, stats, profiles, and Administrator auth are
+shared by both protocols.
 
 | Route | Purpose | Write behavior |
 | --- | --- | --- |
@@ -665,10 +698,10 @@ difficulty total, but only a finite `noHints` time may enter a leaderboard,
 requested-player rank, or personal record. The browser also keeps a persisted
 per-puzzle completion latch: undo, redo, notes, or cell edits after a solve
 must not record the same generated puzzle again. Only generating a fresh
-puzzle may reset that latch and request a fresh single-use session. A puzzle
-restored from local storage remains local-only because its original in-memory
-session proof is unavailable; do not make restored client-controlled puzzle
-state globally eligible by starting a new session for it.
+puzzle may reset that latch and request a fresh single-use session. A legacy puzzle restored without its in-memory proof remains local-only.
+Protocol 2 can restore the original unexpired, ready/acknowledged-paused proof
+and replay; a running or arbitrary save cannot become globally eligible by
+starting a fresh session for it.
 
 Ingress metrics must be JSON safe integers. Minesweeper and Sudoku times and
 Solitaire moves start at one; Snake scores start at zero; every game retains
@@ -687,7 +720,7 @@ The metric is a client measurement, not a tamper-proof one. This paragraph
 covers the metric alone: the event timestamp still comes from the device
 clock, so a clock change during a game can put the result outside its session
 or event-date window and the Worker then rejects it. Invalid stored legacy rows are skipped individually so one
-old or corrupt value cannot take all public stats offline. For Snake, retain a
+old or corrupt value cannot take all public stats offline. For legacy Snake, retain a
 five-second minimum and the score-aware floor `900 + score × 118` milliseconds.
 When a genuine quick result needs no more than five additional seconds, use
 the Workers Scheduler wait and recheck the clock before the atomic D1 write.
