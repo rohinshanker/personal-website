@@ -518,6 +518,15 @@ const bootHome = async (page, viewport, scenario, { afterRoutes } = {}) => {
   return api;
 };
 
+const waitForIssuedSudokuBoard = async (page, api) => {
+  await expect.poll(async () => {
+    const issued = api.verified.boardFor("sudoku");
+    if (!issued) return false;
+    const board = await page.evaluate(() => window.__sudokuPublishFlowTest.readBoard());
+    return board.puzzleId === issued.id;
+  }, { timeout: PUBLISH_TIMEOUT_MS }).toBe(true);
+};
+
 const preparePage = async (page, viewport, scenario) => {
   const api = await bootHome(page, viewport, scenario);
 
@@ -533,6 +542,7 @@ const preparePage = async (page, viewport, scenario) => {
     .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
     .toBe(1);
   expect(api.eventRequests).toEqual([]);
+  await waitForIssuedSudokuBoard(page, api);
 
   await playButton.click();
   await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/, {
@@ -1311,6 +1321,7 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
     .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
     .toBe(2);
   // The second board runs a different clock, and the server is what reports it.
+  await waitForIssuedSudokuBoard(page, api);
   api.verified.setMetric("sudoku", 150);
   const nextTerminal = await prepareTerminalBoard(page, 150);
   await finishTerminalBoard(sudokuWindow, nextTerminal);
