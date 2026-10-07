@@ -9,7 +9,8 @@ const workerRequire = createRequire(workerPackageUrl);
 const miniflareUrl = pathToFileURL(workerRequire.resolve("miniflare"));
 const { Miniflare, NoOpLog } = await import(miniflareUrl.href);
 
-const workerDirectory = fileURLToPath(new URL("../workers/game-stats/", import.meta.url));
+// The production entry also imports portable engines from the site's scripts.
+const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const workerEntrypoint = fileURLToPath(
   new URL("../workers/game-stats/src/index.mjs", import.meta.url)
 );
@@ -65,7 +66,7 @@ const battles = Array.from({ length: 21 }, (_, index) => ({
 const createRuntime = (outboundService) =>
   new Miniflare({
     modules: true,
-    modulesRoot: workerDirectory,
+    modulesRoot: repositoryRoot,
     scriptPath: workerEntrypoint,
     compatibilityDate: "2026-07-21",
     bindings: {
