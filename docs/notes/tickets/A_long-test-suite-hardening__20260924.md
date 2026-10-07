@@ -3,8 +3,8 @@
 - Scope: Split the statistical Node corpus, shard browser CI without retries, gate both deployments on browser success, consolidate browser isolation/diagnostics, remove timing waits and redundant artifacts, and convert the selected source checks to behavior tests.
 - Status: active
 - Opened: 2026-09-24
-- Updated: 2026-10-04
-- Current State: Implementation is published to `main`, with independent reviews complete and all local gates passing. The first remote browser run and gated Worker/Pages release passed, including live compatibility and parity checks. No further code review is outstanding. The three-run remote stability proof remains pending.
+- Updated: 2026-10-07
+- Current State: Implementation is published to `main`, with independent reviews complete and all local gates passing. The first two remote browser runs and gated Worker/Pages releases passed, including live compatibility and parity checks. No further code review is outstanding. The three-run remote stability proof remains pending.
 - Verification: Fast Node under ten seconds; intact 500-seed slow corpus; all browser shards with two workers and zero retries; pinned visual/accessibility/diagnostic gates; exact-patch independent review; three consecutive successful remote `main` browser runs. Remote stability proof remains unobserved.
 - Cleanup: Keep only reusable contracts in `docs/validation/test-suite.md` and `browser-visual-accessibility.md`. Resolve and delete this ticket/index row after acceptance; do not retain test logs or completion histories.
 
@@ -19,7 +19,7 @@
 
 ## Remaining work
 
-1. Observe three consecutive successful remote `main` runs. The first successful run is confirmed below. Do not manufacture unrelated pushes for this signal; keep the ticket active until it is observed.
+1. Observe three consecutive successful remote `main` runs. Two successful runs are confirmed below. Do not manufacture unrelated pushes for this signal; keep the ticket active until it is observed.
 
 ## Acceptance
 
@@ -30,3 +30,5 @@
 - Exact-patch cross-provider review approved CI, selected source behavior, native victory canvas/face/stats geometry, backend-helper integration, and the final fixture repair. Removing diagnostics collection/enforcement and the stale-response guard is detected by executable probes.
 - Syntax, secret scanning, generated icons/resources/media, integrity, local deployment compatibility, whitespace, and ticket/index checks pass. Production game-build hash remains unchanged.
 - The [first remote main run](https://github.com/rohinshanker/personal-website/actions/runs/37257403491) passed at published commit `f4f68cd`: source, slow corpus, all three browser shards, pinned visuals, Worker transition, Pages release, and live parity checks. Secret guard also passed. Three consecutive successful remote main runs remain unobserved. Raw logs and review artifacts are temporary/ignored; reusable contracts are in the validation guides.
+
+- The [second remote main run](https://github.com/rohinshanker/personal-website/actions/runs/37258647848) passed at published commit `0c678778`: all browser/visual, Worker and Pages gates passed. Latest remote main evidence is still two qualifying consecutive successful releases; keep open for the third.
