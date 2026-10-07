@@ -193,4 +193,8 @@ concurrency, rollback, original-proof restore, and offline/presentation behavior
 Use real SQLite and workerd with production engines, plus browser/server fixture
 parity. Inspect Home publishing/game states at 375×812, 768×1024, 1280×800, and
 1440×900; include rejected, expired, limit, successful, and resumed states.
+Successful publication fixtures must await the browser-adopted game ID, then
+the acknowledged refreshed read and drained queue. Observing a session or event
+request alone does not establish that the response has settled. Hold issuance
+and restore requests explicitly to test logical ownership across async replies.
 Run the full repository quality gates before release.
