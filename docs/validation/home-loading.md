@@ -17,7 +17,8 @@
 - `styles/home/base.css` keeps the shared alert/window chrome, hidden state, and
   opening/closing rules needed before an on-demand stylesheet arrives. Static
   non-window overlays also keep any initial hiding needed to prevent fallback
-  text or media from painting; `#lost-grace-overlay` is the reference case.
+  text or media from painting; `#lost-grace-overlay` and
+  `#vanishing-popup-explosion` are the two current cases.
   Event-only presentation stays in `styles/home/random-events.css`.
 - Do not add random-event CSS, Administrator CSS, or Administrator scripts to the
   initial Home markup or `index.html` warm-up list. A warm-up change must match

@@ -48,7 +48,7 @@ const ACTION_TARGET_PATTERN = /^action:([a-f0-9]{8}):(\d{1,2})$/;
 const GITHUB_TARGET_PATTERN = /^github:(\d{1,2})$/;
 const EVENT_PREVIEW_STYLESHEETS = Object.freeze([
   "style.css?v=html-semantics-20260927",
-  "styles/home/base.css?v=home-loading-repair-20261007",
+  "styles/home/base.css?v=home-loading-ghost-repair-20261007",
   "styles/home/random-events.css?v=home-loading-repair-20261007",
 ]);
 const EVENT_PREVIEW_STAGE_STYLES = `

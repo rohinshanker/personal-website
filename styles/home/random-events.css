@@ -101,7 +101,6 @@
 }
 
 .vanishing-popup-explosion {
-  display: none;
   image-rendering: pixelated;
   max-height: min(282px, 80vh);
   max-width: min(200px, 80vw);

@@ -94,10 +94,39 @@ test("Admin resources stay cold for default and unauthorized restored sessions",
 });
 
 test("the closed Home desktop hides static event overlays without requesting event CSS", async ({
+  diagnostics,
   page,
 }) => {
+  let attempts = 0;
+  let releaseDelayedStyles;
+  let reportDelayedStyles;
+  const delayedStylesReleased = new Promise((resolve) => {
+    releaseDelayedStyles = resolve;
+  });
+  const delayedStylesRequested = new Promise((resolve) => {
+    reportDelayedStyles = resolve;
+  });
+  await page.route("**/styles/home/random-events.css?*", async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await route.abort("failed");
+      return;
+    }
+    reportDelayedStyles();
+    await delayedStylesReleased;
+    await route.continue();
+  });
+  await page.clock.install();
   await prepareHome(page);
   const about = page.locator("#about-window");
+  const explosion = page.locator("#vanishing-popup-explosion");
+  const vanishingWindow = page.locator("#vanishing-popup-window");
+  const preloadVanishingEvent = () => page.evaluate(async () => {
+    const definition = window.homeEventRuntime.randomEventDefinitions.find(
+      ({ id }) => id === "vanishing-popup-alert"
+    );
+    await window.homeEventRuntime.preloadRandomEventAssets(definition, {});
+  });
   await page.locator('#about-window [data-close="about"]').click();
   await finishAnimation(about, "retro-window-close");
 
@@ -114,6 +143,61 @@ test("the closed Home desktop hides static event overlays without requesting eve
     imageSource: null,
     resourceState: "idle",
   });
+  await preloadVanishingEvent();
+  await expect.poll(() => page.evaluate(() =>
+    window.homeResources.resourceState("random-event-styles")
+  )).toBe("idle");
+  await expect(vanishingWindow).toBeHidden();
+  await expect(explosion).toBeHidden();
+  expect(await explosion.evaluate((element) => ({
+    display: getComputedStyle(element).display,
+    height: element.getBoundingClientRect().height,
+    imageSource: element.getAttribute("src"),
+    width: element.getBoundingClientRect().width,
+  }))).toEqual({
+    display: "none",
+    height: 0,
+    imageSource: "assets/random%20events/pixel-explosion.gif",
+    width: 0,
+  });
+  consumeDiagnostics(diagnostics, {
+    consoleErrors: ["Failed to load resource: net::ERR_FAILED"],
+    requestFailures: [/styles\/home\/random-events\.css.*\(net::ERR_FAILED\)/],
+  });
+
+  const delayedPreload = preloadVanishingEvent();
+  await delayedStylesRequested;
+  expect(await page.evaluate(() =>
+    window.homeResources.resourceState("random-event-styles")
+  )).toBe("loading");
+  await expect(vanishingWindow).toBeHidden();
+  await expect(explosion).toBeHidden();
+  releaseDelayedStyles();
+  await delayedPreload;
+  expect(await page.evaluate(() =>
+    window.homeResources.resourceState("random-event-styles")
+  )).toBe("loaded");
+
+  await page.evaluate(() => {
+    const definition = window.homeEventRuntime.randomEventDefinitions.find(
+      ({ id }) => id === "vanishing-popup-alert"
+    );
+    definition.run();
+  });
+  await expect(vanishingWindow).toBeVisible();
+  await expect(explosion).toBeHidden();
+  await vanishingWindow.locator("[data-vanishing-popup-button]").evaluateAll((buttons) => {
+    buttons.forEach((button) => button.click());
+  });
+  await expect(vanishingWindow).toHaveClass(/is-exploding/);
+  await expect(explosion).toBeVisible();
+  await expect(explosion).toHaveClass(/is-active/);
+  await page.clock.fastForward(1800);
+  await finishAnimation(vanishingWindow, "retro-window-close");
+  await expect(vanishingWindow).toBeHidden();
+  await expect(explosion).toBeHidden();
+  expect(await explosion.getAttribute("src")).toBeNull();
+  expect(attempts).toBe(2);
   await expect(page.locator("#self-love-alert-window .random-alert-message p"))
     .toHaveCSS("margin", "0px");
 });
@@ -380,6 +464,7 @@ for (const lazyScript of [
       if (attempts === 1) {
         await route.fulfill({
           contentType: "text/javascript",
+          headers: { "cache-control": "no-store" },
           body: "window.__adminIncompleteScriptExecuted = true;",
         });
         return;

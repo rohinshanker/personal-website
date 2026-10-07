@@ -7,7 +7,7 @@
     adminOrchestrator:
       "scripts/home/admin/orchestrator.js?v=on-demand-home-loading-20261007",
     adminControls:
-      "scripts/home/admin-controls.js?v=home-loading-repair-20261007",
+      "scripts/home/admin-controls.js?v=home-loading-ghost-repair-20261007",
   });
 
   const resourceStates = new Map();

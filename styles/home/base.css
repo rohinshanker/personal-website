@@ -332,11 +332,12 @@ body {
 }
 
 /*
- * This static overlay sits outside a managed event window. Keep its initial
- * hidden state eager so its deferred image alt text cannot paint before the
- * random-event stylesheet arrives.
+ * These static overlays sit outside managed event windows. Keep their initial
+ * hidden state eager so deferred fallback text or media cannot paint before
+ * the random-event stylesheet arrives.
  */
-.lost-grace-overlay {
+.lost-grace-overlay,
+.vanishing-popup-explosion {
   display: none;
 }
 
