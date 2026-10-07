@@ -884,6 +884,20 @@ const restoreSudokuSavedState = () => {
 };
 
 /**
+ * Lets go of a proof the board on screen never adopted, and persists the save
+ * that says so.
+ *
+ * The board, its modes, its latches and its selection are left exactly as they
+ * are: the attempt simply carries on as the ordinary offline puzzle it now is.
+ * The recorded replay is never cleared to make this board pass for the one the
+ * proof describes, and no new proof is minted to cover it.
+ */
+const releaseUnadoptedSudokuProof = () => {
+  sudokuStats.dropSession();
+  scheduleSudokuSave();
+};
+
+/**
  * Replaying a restored session can touch every cell once per recorded input.
  */
 const SUDOKU_RESTORE_WORK = 2_000_000;
@@ -929,17 +943,30 @@ const adoptRestoredSudokuGame = (savedState) => {
   if (!sudokuState.statsSessionEligible) return;
   const pending = sudokuStats.restoreGame(savedState.verified);
   if (!pending) return;
-  const owned = { game: sudokuGame, puzzleId: sudokuState.puzzleId };
+  // Logical changes are applied to the board in place, so neither the board
+  // object nor the puzzle id moves when a mode is switched or a warning is
+  // accepted: the count of applied changes is what sees it. Without it, a reply
+  // that arrived after the player turned Notes on replaced their board with one
+  // rebuilt from the old replay, because the cells still matched.
+  const owned = {
+    game: sudokuGame,
+    puzzleId: sudokuState.puzzleId,
+    appliedMoves: sudokuAppliedMoves,
+  };
+  const ownsBoard = () =>
+    sudokuGame === owned.game && sudokuState.puzzleId === owned.puzzleId;
   Promise.resolve(pending).then((descriptor) => {
-    // A new puzzle since the request went out owns the session now.
-    if (sudokuGame !== owned.game || sudokuState.puzzleId !== owned.puzzleId) return;
-    if (!adoptIssuedSudokuReplay(descriptor, savedState.verified?.bufferedInputs)) {
-      sudokuStats.dropSession();
+    // A new puzzle since the request went out owns the session now, and its proof
+    // is not this stale reply's to let go of.
+    if (!ownsBoard()) return;
+    if (
+      sudokuAppliedMoves !== owned.appliedMoves ||
+      !adoptIssuedSudokuReplay(descriptor, savedState.verified?.bufferedInputs)
+    ) {
+      releaseUnadoptedSudokuProof();
     }
   }, () => {
-    if (sudokuGame === owned.game && sudokuState.puzzleId === owned.puzzleId) {
-      sudokuStats.dropSession();
-    }
+    if (ownsBoard()) releaseUnadoptedSudokuProof();
   });
 };
 
@@ -2494,7 +2521,7 @@ const requestIssuedSudokuPuzzle = () => {
       // not to that one. The board the player is on is kept exactly as it is and
       // the proof it never applied to is dropped. Clearing the replay instead
       // would leave this board wearing a proof of a puzzle it never was.
-      sudokuStats.dropSession();
+      releaseUnadoptedSudokuProof();
       return;
     }
     sudokuGame = sudokuRules.initial(descriptor.initial);

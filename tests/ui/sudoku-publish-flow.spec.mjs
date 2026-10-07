@@ -844,11 +844,13 @@ for (const viewport of viewports) {
   }
 }
 
-test("a restored unsolved Sudoku puzzle publishes through its restored verified session", async ({
-  page,
-}) => {
-  const scenario = scenarios[0];
-  await page.setViewportSize({ width: 1280, height: 800 });
+/**
+ * Plays an issued puzzle to one cell short, then pauses until the server has
+ * acknowledged the pause and the proof is in the save — the only state a reload
+ * can be restored into. Leaves the page ready to reload.
+ */
+const prepareRestorableSudokuPause = async (page, scenario, viewport = viewports[2]) => {
+  await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(
     ({ initializationKey, profileKey, queueKey, savedProfile, statsKey, sudokuKey }) => {
@@ -949,12 +951,31 @@ test("a restored unsolved Sudoku puzzle publishes through its restored verified 
     )
     .toBe(true);
 
+  // The identity the restore has to come back with: a restored puzzle is the
+  // same puzzle, not a new one that resembles it.
+  const { puzzleId } = await page.evaluate(
+    (sudokuKey) => JSON.parse(localStorage.getItem(sudokuKey)),
+    SUDOKU_STORAGE_KEY
+  );
+  expect(puzzleId).toEqual(SUDOKU_PUZZLE_ID_PATTERN);
+  return { api, openSudokuAndPlay, puzzleId, sudokuWindow, terminal };
+};
+
+test("a restored unsolved Sudoku puzzle publishes through its restored verified session", async ({
+  page,
+}) => {
+  const scenario = scenarios[0];
+  const { api, openSudokuAndPlay, terminal } = await prepareRestorableSudokuPause(
+    page,
+    scenario
+  );
+
   const statsRequestCountBeforeReload = api.statsRequests.length;
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect
     .poll(() => api.statsRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
     .toBeGreaterThan(statsRequestCountBeforeReload);
-  sudokuWindow = await openSudokuAndPlay();
+  const sudokuWindow = await openSudokuAndPlay();
 
   // The puzzle resumes on the board the server issued, with the replay it
   // acknowledged: a restoration, not a second issuance.
@@ -1630,6 +1651,24 @@ test("late Sudoku issuance on a pristine board is adopted and publishes", async 
   await expect
     .poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
     .toBe(1);
+  // Publishing is not finished when /events returns: the contract below covers
+  // the refreshed read that follows it, so wait for that read and for the queue
+  // it drains rather than asserting into a half-settled sequence.
+  await expect
+    .poll(() => api.statsRequests.some(({ refreshed }) => refreshed), {
+      timeout: PUBLISH_TIMEOUT_MS,
+    })
+    .toBe(true);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]"),
+          GAME_STATS_SYNC_QUEUE_STORAGE_KEY
+        ),
+      { timeout: PUBLISH_TIMEOUT_MS }
+    )
+    .toEqual([]);
   expectPublishedRequestContract(api, scenario);
 
   // The replay the server verified has to be the one game it was issued for,
@@ -1803,5 +1842,272 @@ test("a carried note mode survives late issuance as a recorded action", async ({
   );
   expect(verified).toEqual({
     result: expect.objectContaining({ terminal: true, won: true }),
+  });
+});
+
+/**
+ * Holds the restore reply for the one issued session, answering ahead of the API
+ * mock so the test can play on the restored board while the server is still
+ * deciding whether it will restore it.
+ */
+const holdSudokuRestore = (page) => {
+  const held = { requests: 0, release: () => {} };
+  const gate = new Promise((resolve) => {
+    held.release = resolve;
+  });
+  held.install = async () => {
+    await page.route(`${API_BASE_URL}/sessions/*/restore`, async (route) => {
+      held.requests += 1;
+      await gate;
+      await route.fallback();
+    });
+  };
+  return held;
+};
+
+/** Everything a player can see of the board, for a before-and-after comparison. */
+const readSudokuSurface = (sudokuWindow) =>
+  sudokuWindow.evaluate((element) => ({
+    errors: element
+      .querySelector('[data-sudoku-hint="errors"]')
+      .getAttribute("aria-pressed"),
+    mistakes: element.querySelector("#sudoku-mistakes").textContent,
+    notes: element.querySelector("#sudoku-note-toggle").getAttribute("aria-pressed"),
+    selected: [...element.querySelectorAll(".sudoku-cell")].findIndex((cell) =>
+      cell.classList.contains("is-selected")
+    ),
+    values: [...element.querySelectorAll(".sudoku-cell")]
+      .map((cell) => cell.dataset.sudokuValue || "0")
+      .join(""),
+  }));
+
+const readSudokuSave = (page) =>
+  page.evaluate((sudokuKey) => {
+    const saved = JSON.parse(localStorage.getItem(sudokuKey) || "null");
+    return saved
+      ? {
+          errorsConfirmed: saved.errorsConfirmed,
+          hintMode: saved.hintMode,
+          noteMode: saved.noteMode,
+          puzzleId: saved.puzzleId,
+          values: saved.values,
+          verified: saved.verified,
+        }
+      : null;
+  }, SUDOKU_STORAGE_KEY);
+
+/**
+ * Changes made while the restore reply is outstanding. None of them moves the
+ * board object or the puzzle id, and the last one leaves the cells and the modes
+ * exactly as they were — so only the count of applied changes can tell that the
+ * old replay no longer describes this board.
+ */
+const heldRestoreInteractions = Object.freeze([
+  Object.freeze({
+    label: "Notes is switched on",
+    savedModes: { errorsConfirmed: false, hintMode: "off", noteMode: true },
+    run: async (page, sudokuWindow) => {
+      await sudokuWindow.locator("#sudoku-note-toggle").click();
+      await expect(sudokuWindow.locator("#sudoku-note-toggle")).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+    },
+  }),
+  Object.freeze({
+    label: "the Errors warning is accepted",
+    savedModes: { errorsConfirmed: true, hintMode: "errors", noteMode: false },
+    run: (page, sudokuWindow) => acceptSudokuErrorsWarning(sudokuWindow),
+  }),
+  Object.freeze({
+    label: "Notes is switched on and back off",
+    savedModes: { errorsConfirmed: false, hintMode: "off", noteMode: false },
+    run: async (page, sudokuWindow) => {
+      const noteToggle = sudokuWindow.locator("#sudoku-note-toggle");
+      await noteToggle.click();
+      await expect(noteToggle).toHaveAttribute("aria-pressed", "true");
+      await noteToggle.click();
+      // Nothing on the board changed in the end, and two actions were still
+      // recorded against it that the restored replay does not contain.
+      await expect(noteToggle).toHaveAttribute("aria-pressed", "false");
+    },
+  }),
+]);
+
+heldRestoreInteractions.forEach((interaction) => {
+  test(`a held restore keeps the played board when ${interaction.label}`, async ({
+    page,
+  }) => {
+    const scenario = scenarios[0];
+    const { api, openSudokuAndPlay, puzzleId } = await prepareRestorableSudokuPause(
+      page,
+      scenario
+    );
+
+    const held = holdSudokuRestore(page);
+    await held.install();
+    await page.reload({ waitUntil: "domcontentloaded" });
+    const sudokuWindow = await openSudokuAndPlay();
+    await expect.poll(() => held.requests, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
+
+    await interaction.run(page, sudokuWindow);
+    const before = await readSudokuSurface(sudokuWindow);
+
+    held.release();
+    await expect
+      .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
+      .toBe(1);
+    await expect
+      .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
+        timeout: PUBLISH_TIMEOUT_MS,
+      })
+      .toEqual({
+        difficulty: "easy",
+        // The restored proof describes the board as it was before the reload, so
+        // it is let go rather than used to replace the board in front of the
+        // player. The puzzle stays playable and the clock keeps running.
+        hasStatsSession: false,
+        playing: true,
+        statsSessionEligible: true,
+        timerRunning: true,
+      });
+    await settleFrames(page);
+    expect(await readSudokuSurface(sudokuWindow)).toEqual(before);
+
+    // The save now says what is true: an ordinary offline puzzle, with the modes
+    // the player set, and no proof attached to it.
+    await expect
+      .poll(() => readSudokuSave(page), { timeout: PUBLISH_TIMEOUT_MS })
+      .toEqual({
+        ...interaction.savedModes,
+        puzzleId,
+        values: before.values,
+        verified: null,
+      });
+    // No new proof was minted to cover the board, and no replay was submitted.
+    expect(api.sessionRequests).toHaveLength(1);
+    expect(api.verified.finishes).toEqual([]);
+    expect(api.eventRequests).toEqual([]);
+  });
+});
+
+test("a stale restore reply does not detach a newer puzzle's proof", async ({ page }) => {
+  const scenario = scenarios[0];
+  const { api, openSudokuAndPlay } = await prepareRestorableSudokuPause(page, scenario);
+
+  const held = holdSudokuRestore(page);
+  await held.install();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const sudokuWindow = await openSudokuAndPlay();
+  await expect.poll(() => held.requests, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
+
+  // A new puzzle owns the session before the old reply lands.
+  await sudokuWindow.locator("#sudoku-new").click();
+  await expect
+    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(2);
+  const issued = api.verified.boardFor("sudoku");
+  await expect
+    .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readBoard()), {
+      timeout: PUBLISH_TIMEOUT_MS,
+    })
+    .toEqual({
+      hintMode: "off",
+      noteMode: false,
+      puzzle: issued.initial.puzzle,
+      puzzleId: issued.id,
+      values: issued.initial.puzzle,
+    });
+
+  held.release();
+  await expect
+    .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+  await settleFrames(page);
+
+  // The reply belonged to the puzzle that was replaced, so it has nothing to let
+  // go of: the proof the new puzzle is holding is not its to detach.
+  await expect
+    .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
+      timeout: PUBLISH_TIMEOUT_MS,
+    })
+    .toEqual({
+      difficulty: "easy",
+      hasStatsSession: true,
+      playing: true,
+      statsSessionEligible: true,
+      timerRunning: true,
+    });
+  const terminal = await prepareTerminalBoard(page, scenario.elapsedSeconds);
+  await finishTerminalBoard(sudokuWindow, terminal);
+  await expect
+    .poll(() => api.verified.finishes.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+  await expect
+    .poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+  expect(api.eventRequests[0].completion).toEqual({
+    id: `completion-${api.verified.finishes[0].id}`,
+    token: "synthetic-completion-proof",
+  });
+});
+
+viewports.forEach((viewport) => {
+  test(`a board kept through a held Sudoku restore renders at ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    const scenario = scenarios[0];
+    const { api, openSudokuAndPlay } = await prepareRestorableSudokuPause(
+      page,
+      scenario,
+      viewport
+    );
+
+    const held = holdSudokuRestore(page);
+    await held.install();
+    await page.reload({ waitUntil: "domcontentloaded" });
+    const sudokuWindow = await openSudokuAndPlay();
+    await expect.poll(() => held.requests, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
+    await acceptSudokuErrorsWarning(sudokuWindow);
+    const before = await readSudokuSurface(sudokuWindow);
+    await page.screenshot({
+      path: testInfo.outputPath(`sudoku-held-restore-${viewport.name}-before.png`),
+      fullPage: true,
+    });
+
+    held.release();
+    await expect
+      .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
+      .toBe(1);
+    await expect
+      .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
+        timeout: PUBLISH_TIMEOUT_MS,
+      })
+      .toEqual({
+        difficulty: "easy",
+        hasStatsSession: false,
+        playing: true,
+        statsSessionEligible: true,
+        timerRunning: true,
+      });
+    await settleFrames(page);
+
+    // The warning the player accepted is still showing, on their own board.
+    expect(await readSudokuSurface(sudokuWindow)).toEqual(before);
+    await expect(sudokuWindow.locator('[data-sudoku-hint="errors"]')).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/);
+    await expect(sudokuWindow.locator("#sudoku-errors-prompt")).toBeHidden();
+    const accessibility = await new AxeBuilder({ page })
+      .include('[data-app-window="sudoku"]')
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(accessibility.violations).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath(`sudoku-held-restore-${viewport.name}-after.png`),
+      fullPage: true,
+    });
   });
 });

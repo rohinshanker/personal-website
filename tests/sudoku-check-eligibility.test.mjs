@@ -756,13 +756,33 @@ test("a restored puzzle keeps verified provenance only for the board the server 
   );
   assert.match(
     restoreSource,
-    /if \(sudokuGame !== owned\.game \|\| sudokuState\.puzzleId !== owned\.puzzleId\) return;/,
+    /sudokuGame === owned\.game && sudokuState\.puzzleId === owned\.puzzleId;/,
     "A puzzle replaced while the request was out owns the session now."
   );
+  assert.match(restoreSource, /if \(!ownsBoard\(\)\) return;/);
+  // Logical changes are applied in place, so neither the board object nor the
+  // puzzle id moves when a mode is switched: only the count of applied changes
+  // sees it, and a reply that lands afterwards must not replace the board.
+  assert.match(restoreSource, /appliedMoves: sudokuAppliedMoves,/);
   assert.match(
     restoreSource,
-    /if \(!adoptIssuedSudokuReplay\(descriptor, savedState\.verified\?\.bufferedInputs\)\) \{\s+sudokuStats\.dropSession\(\);/,
-    "A restoration the server refuses has to leave the attempt local-only."
+    /if \(\s+sudokuAppliedMoves !== owned\.appliedMoves \|\|\s+!adoptIssuedSudokuReplay\(descriptor, savedState\.verified\?\.bufferedInputs\)\s+\) \{\s+releaseUnadoptedSudokuProof\(\);/,
+    "A restoration the server refuses, or one that no longer describes the board, has to leave the attempt local-only."
+  );
+  assert.match(restoreSource, /if \(ownsBoard\(\)\) releaseUnadoptedSudokuProof\(\);/);
+
+  // Letting a proof go is also a fact about the save, or the next reload would
+  // try to restore a proof this board never adopted.
+  const releaseSource = sourceBetween(
+    main,
+    "const releaseUnadoptedSudokuProof = () => {",
+    "\n\n/**\n * Replaying a restored session"
+  );
+  assert.match(releaseSource, /sudokuStats\.dropSession\(\);\s+scheduleSudokuSave\(\);/);
+  assert.doesNotMatch(
+    releaseSource,
+    /sudokuGame|sudokuState\.(values|notes|hintMode|noteMode|errorsConfirmed)/,
+    "The board, its modes and its latches are the player's; only the proof goes."
   );
   // The replay has to land on the board the save shows, or the two are not the
   // same game and the player's board is what stays.
@@ -799,7 +819,7 @@ test("a restored puzzle keeps verified provenance only for the board the server 
   );
   assert.match(
     issuedSource,
-    /if \(sudokuAppliedMoves \|\| sudokuState\.solved\) \{\s+\/\/[\s\S]*?sudokuStats\.dropSession\(\);\s+return;/,
+    /if \(sudokuAppliedMoves \|\| sudokuState\.solved\) \{\s+\/\/[\s\S]*?releaseUnadoptedSudokuProof\(\);\s+return;/,
     "Anything played before issuance must drop the proof, not ignore it."
   );
   // The board cannot answer whether it was played on: accepting the Errors
