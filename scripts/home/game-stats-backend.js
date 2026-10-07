@@ -3,6 +3,6 @@
 // resultProtocol mirrors scripts/home/games/rules.js and is not a verification proof.
 window.rohinGameStatsBackend = Object.freeze({
   apiBaseUrl: "https://personal-site-game-stats.rohinshankerme.workers.dev",
-  buildVersion: "sha256-4a930bcbcc64e0a78c1ec7d02b32332d1ce490b95bc9599666521f500f4979f1",
+  buildVersion: "sha256-8ad6ff38c9cd24444a660569988213a5306a25aa8bc87b5922b15469d4b1cf46",
   resultProtocol: 2,
 });
