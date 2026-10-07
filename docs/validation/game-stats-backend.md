@@ -31,9 +31,16 @@ environments, static-first releases, and rollbacks need operator coordination.
   can fill its 32-entry history and evict the actual live build; retain the live
   build explicitly before running the transition gate.
 - During a transition to a different browser build, the integrity check also
-  recognizes the pre-split three-file and pre-generator two-file manifests only if their fetched bytes
-  reproduce the advertised hash and its HTML cache references match. Final
+  recognizes the manifests earlier releases published: the modular fifteen-file
+  manifest from before `core/resources.js` and `scripts/home/games/*` were
+  extracted, the pre-split three-file manifest, and the pre-generator two-file
+  manifest. Each is accepted only if its fetched bytes reproduce the advertised
+  hash and both HTML entries carry that manifest's full cache references. Final
   parity always requires the complete current manifest, including the generator.
+- Record each published manifest in `check-game-stats-deployment.mjs` as the
+  exact ordered list that release digested. Never derive one by subtracting from
+  the current manifest: that list keeps growing, so a derived historical
+  contract would silently change with it and could accept a stale deploy.
 - When Worker source changes, record the new Cloudflare Worker version ID from
   the successful release job. Build-hash parity alone covers browser completion
   sources and cannot prove that a particular Worker source revision is active.

@@ -283,6 +283,49 @@ const fetchLiveAsset = async (
   );
 };
 
+/**
+ * The completion-source manifests earlier releases published and hashed,
+ * newest first. A live site still advertising one of them is accepted only
+ * during a transition to a different browser build, and only when its fetched
+ * bytes reproduce the advertised build hash and its entry pages carry that
+ * manifest's full cache references. Without those proofs a live config naming
+ * an unreproducible hash is indistinguishable from a stale deploy.
+ *
+ * Each entry records verbatim the exact ordered list that release digested. It
+ * is deliberately not derived from `GAME_COMPLETION_SOURCE_FILES`, because that
+ * list keeps evolving and a published historical contract must not move with
+ * it. Final release parity still requires today's full manifest.
+ */
+const HISTORICAL_COMPLETION_SOURCE_MANIFESTS = Object.freeze([
+  // The modular Home scripts before `core/resources.js` and
+  // `scripts/home/games/*` were extracted.
+  Object.freeze([
+    "scripts/home/core/activation.js",
+    "scripts/home/core/activity.js",
+    "scripts/home/core/administrator-session.js",
+    "scripts/home/core/dom.js",
+    "scripts/home/core/media.js",
+    "scripts/home/core/pointer-cursor.js",
+    "scripts/home/core/static-noise.js",
+    "scripts/home/core/util.js",
+    "scripts/home/core/windows.js",
+    "scripts/home/features/game-stats.js",
+    "scripts/home/features/minesweeper.js",
+    "scripts/home/features/snake.js",
+    "scripts/home/features/solitaire.js",
+    "scripts/home/features/sudoku.js",
+    "scripts/home/sudoku-generator.worker.js",
+  ]),
+  // The monolith, the shared DOM table and the Sudoku worker.
+  Object.freeze([
+    "scripts/home/main.js",
+    "scripts/home/core/dom.js",
+    "scripts/home/sudoku-generator.worker.js",
+  ]),
+  // The monolith and the shared DOM table.
+  Object.freeze(["scripts/home/main.js", "scripts/home/core/dom.js"]),
+]);
+
 const fetchLiveIntegritySnapshot = async (
   liveConfig,
   {
@@ -294,20 +337,6 @@ const fetchLiveIntegritySnapshot = async (
   }
 ) => {
   const siteRootUrl = new URL("/", liveConfig.configUrl);
-  // The manifest the live release hashed before the Home scripts were split:
-  // the monolith, the shared DOM table and the Sudoku worker. Accept it only
-  // during a transition to a different browser build, and only when its
-  // fetched bytes reproduce the advertised build hash. A live site whose
-  // config still names a hash from that manifest is otherwise indistinguishable
-  // from a stale deploy.
-  const legacyManifests = [
-    [
-      "scripts/home/main.js",
-      "scripts/home/core/dom.js",
-      "scripts/home/sudoku-generator.worker.js",
-    ],
-    ["scripts/home/main.js", "scripts/home/core/dom.js"],
-  ];
   const assets = new Map();
   const loadAssets = async (paths) => {
     await Promise.all(paths.filter((path) => !assets.has(path)).map(async (path) => {
@@ -321,9 +350,9 @@ const fetchLiveIntegritySnapshot = async (
   };
   let sourceBuildVersion;
   let cacheAssetPaths = INTEGRITY_CACHE_ASSET_PATHS;
-  let matchedLegacyManifest = false;
+  let matchedHistoricalManifest = false;
   if (allowLegacyManifest) {
-    for (const sourceFiles of legacyManifests) {
+    for (const sourceFiles of HISTORICAL_COMPLETION_SOURCE_MANIFESTS) {
       try {
         await loadAssets([...sourceFiles, ...INTEGRITY_ENTRY_FILES]);
         sourceBuildVersion = await digestGameCompletionSources(
@@ -335,12 +364,12 @@ const fetchLiveIntegritySnapshot = async (
       }
       if (sourceBuildVersion === liveConfig.buildVersion) {
         cacheAssetPaths = ["scripts/home/game-stats-backend.js", ...sourceFiles];
-        matchedLegacyManifest = true;
+        matchedHistoricalManifest = true;
         break;
       }
     }
   }
-  if (!matchedLegacyManifest) {
+  if (!matchedHistoricalManifest) {
     await loadAssets([...GAME_COMPLETION_SOURCE_FILES, ...INTEGRITY_ENTRY_FILES]);
     sourceBuildVersion = await digestGameCompletionSources((path) => assets.get(path));
   }

@@ -1795,21 +1795,73 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.match(validationGuide, /Wrangler's `--strict`/);
 });
 
-for (const includeGenerator of [true, false]) {
-test(`transition verifies legacy ${includeGenerator ? "three-file" : "two-file"} bytes and cache references without weakening final parity`, async () => {
-  // The manifest the live release hashed before the Home scripts were split.
-  const legacySources = new Map([
-    ["scripts/home/main.js", Buffer.from("// legacy main")],
-    ["scripts/home/core/dom.js", Buffer.from("// legacy dom")],
-    ["scripts/home/sudoku-generator.worker.js", Buffer.from("// legacy worker")],
-  ]);
-  if (!includeGenerator) legacySources.delete("scripts/home/sudoku-generator.worker.js");
+/**
+ * The live sites a Worker transition must still verify. Each `manifest` is the
+ * exact ordered completion-source list that release digested, written out
+ * verbatim rather than derived from today's list, so extending
+ * `GAME_COMPLETION_SOURCE_FILES` cannot silently redefine a published contract.
+ * `alsoServed` holds paths that release served outside its hashed manifest.
+ */
+const PUBLISHED_LIVE_MANIFESTS = [
+  {
+    label: "modular fifteen-file",
+    manifest: [
+      "scripts/home/core/activation.js",
+      "scripts/home/core/activity.js",
+      "scripts/home/core/administrator-session.js",
+      "scripts/home/core/dom.js",
+      "scripts/home/core/media.js",
+      "scripts/home/core/pointer-cursor.js",
+      "scripts/home/core/static-noise.js",
+      "scripts/home/core/util.js",
+      "scripts/home/core/windows.js",
+      "scripts/home/features/game-stats.js",
+      "scripts/home/features/minesweeper.js",
+      "scripts/home/features/snake.js",
+      "scripts/home/features/solitaire.js",
+      "scripts/home/features/sudoku.js",
+      "scripts/home/sudoku-generator.worker.js",
+    ],
+    // The split release still served the retired monolith, so matching a
+    // manifest cannot rest on an earlier one simply 404ing.
+    alsoServed: ["scripts/home/main.js"],
+  },
+  {
+    label: "monolith three-file",
+    manifest: [
+      "scripts/home/main.js",
+      "scripts/home/core/dom.js",
+      "scripts/home/sudoku-generator.worker.js",
+    ],
+    alsoServed: [],
+  },
+  {
+    label: "monolith two-file",
+    manifest: ["scripts/home/main.js", "scripts/home/core/dom.js"],
+    alsoServed: [],
+  },
+];
+
+for (const { label, manifest, alsoServed } of PUBLISHED_LIVE_MANIFESTS) {
+test(`transition verifies published ${label} bytes and cache references without weakening final parity`, async () => {
+  const liveBytes = new Map(
+    [...manifest, ...alsoServed].map((path) => [
+      path,
+      Buffer.from(`// published ${path}\n`),
+    ])
+  );
+  // Today's manifest names sources this release never published, so falling
+  // through to it surfaces a missing asset rather than a silent pass.
+  const unpublished = GAME_COMPLETION_SOURCE_FILES.filter(
+    (path) => !liveBytes.has(path)
+  );
+  assert.ok(unpublished.length > 0);
   const digest = createHash("sha256");
-  for (const [path, bytes] of legacySources) {
-    digest.update(path).update("\0").update(bytes).update("\0");
+  for (const path of manifest) {
+    digest.update(path).update("\0").update(liveBytes.get(path)).update("\0");
   }
   const legacyBuild = `sha256-${digest.digest("hex")}`;
-  const legacyEntry = ["scripts/home/game-stats-backend.js", ...legacySources.keys()]
+  const legacyEntry = ["scripts/home/game-stats-backend.js", ...manifest]
     .map((path) => `<script src="${path}?v=game-build-${legacyBuild.slice(7)}"></script>`)
     .join("\n");
   let corruptSources = false;
@@ -1825,15 +1877,18 @@ test(`transition verifies legacy ${includeGenerator ? "three-file" : "two-file"}
       if (url.includes("game-stats-backend.js")) {
         return createConfigResponse(createConfig({ buildVersion: legacyBuild }));
       }
-      // A current-manifest source the legacy site never published, so falling
-      // through to today's manifest surfaces a missing asset rather than a
-      // silent pass.
-      if (url.includes("scripts/home/core/activation.js")) {
+      const pathname = new URL(url).pathname;
+      const path = pathname.replace(/^\//, "");
+      if (
+        !pathname.endsWith("/health") &&
+        !INTEGRITY_ENTRY_FILES.includes(path) &&
+        !liveBytes.has(path)
+      ) {
         return createAssetResponse("Not found", { ok: false, status: 404 });
       }
-      const sourceFiles = new Map(legacySources);
+      const sourceFiles = new Map(liveBytes);
       if (corruptSources) {
-        sourceFiles.set("scripts/home/main.js", Buffer.from("changed"));
+        sourceFiles.set(manifest[0], Buffer.from("changed"));
       }
       return createReleaseDependencyResponse(url, {
         sourceFiles,
@@ -1847,6 +1902,8 @@ test(`transition verifies legacy ${includeGenerator ? "three-file" : "two-file"}
   const result = await checkGameStatsWorkerTransition(options);
   assert.equal(result.sourceBuildVersion, legacyBuild);
   await assert.rejects(checkGameStatsRelease(options), /deployed browser/);
+  // Final parity still requires today's full manifest even when the live build
+  // already equals the checked-in one.
   await assert.rejects(checkGameStatsWorkerTransition({
     ...options,
     readFileImpl: async () => createConfig({ buildVersion: legacyBuild }),
@@ -1854,6 +1911,18 @@ test(`transition verifies legacy ${includeGenerator ? "three-file" : "two-file"}
       ? createHealthResponse({ ok: true, buildVersion: legacyBuild })
       : options.fetchImpl(url),
   }), /status 404/);
+  // Reproducing a published hash never substitutes for the Worker's
+  // acceptance window.
+  await assert.rejects(checkGameStatsWorkerTransition({
+    ...options,
+    fetchImpl: async (url) => url.includes("/health")
+      ? createHealthResponse({
+          ok: true,
+          buildVersion: RELEASE_BUILD_VERSION,
+          acceptedBuildVersions: [RELEASE_BUILD_VERSION],
+        })
+      : options.fetchImpl(url),
+  }), /is not accepted by the Worker/);
   corruptEntry = true;
   await assert.rejects(checkGameStatsWorkerTransition(options), /missing cache reference/);
   corruptEntry = false;
