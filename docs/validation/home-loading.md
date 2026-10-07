@@ -102,3 +102,23 @@ duplicate launches, cancellation, retry, proof invalidation, focus restoration,
 page exit, reset reloads, delayed eager scripts, prerender activation, runtime
 diagnostics, and accessibility in browser coverage. Keep
 screenshots and traces as temporary task evidence rather than committing them.
+
+## Controlled load measurements
+
+Use the repository's installed Playwright Chromium and a local server owned by
+the measurement. Compare baseline and final source with the same browser,
+viewport, reduced-motion setting, storage, random draw, CPU and network limits,
+and settling interval. Collect at least three fresh-context cold measurements,
+three same-context warm reloads after priming, and three throttled cold loads.
+Record the exact source commit and environment with each temporary capture.
+
+Avoid Playwright routes in this measurement: [routing disables the HTTP
+cache](https://playwright.dev/docs/api/class-browsercontext#browser-context-route).
+Use a [CDP session](https://playwright.dev/docs/api/class-browsercontext#browser-context-new-cdp-session)
+for cache controls, throttling, external-request blocking, and Chrome traces.
+Record FCP, the last observed LCP after a consistent settling interval,
+DOMContentLoaded, load, the Home paint marker, local request count and encoded
+bytes. Inspect the actual render and trace; exclude blocked external requests
+from local transfer totals. Keep one-off JSON, traces and screenshots as
+temporary evidence. These are laboratory comparisons, not field Core Web
+Vitals or a Lighthouse score.
