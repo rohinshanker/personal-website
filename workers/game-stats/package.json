@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --local",
+    "predeploy": "node ../../scripts/check-game-stats-rollout.mjs",
     "deploy": "wrangler deploy",
     "deploy:check": "wrangler deploy --dry-run --config wrangler.jsonc --strict",
     "integrity:update": "node ../../scripts/update-game-integrity.mjs",
