@@ -1,6 +1,6 @@
 import { expect, test as base } from "@playwright/test";
 
-import { routeProductionDebugFlags } from "./helpers/random-event-debug.mjs";
+import { routeProductionRandomEventPolicies } from "./helpers/random-event-debug.mjs";
 import {
   assertNoRuntimeDiagnostics,
   collectRuntimeDiagnostics,
@@ -17,7 +17,7 @@ export { expect };
  *
  * It owns the hermetic boundary so no spec has to rebuild it: the browser
  * context can reach nothing but the configured test server, Game Stats is
- * offline, production debug popups are suppressed, and the Sudoku generator
+ * offline, production forced-Start events are isolated, and the Sudoku generator
  * worker draws the same number every run. Each local mock answers only for the
  * test server's own file, and everything is installed on the context rather
  * than the page, so a popup the page opens is held to the same rules.
@@ -38,7 +38,7 @@ export const test = base.extend({
     // The generator worker is a realm of its own, so it is pinned here rather
     // than by the page's init script.
     await installDeterministicSudokuWorker(context);
-    await routeProductionDebugFlags(context);
+    await routeProductionRandomEventPolicies(context);
     await installGameStatsBackend(context);
     await installSkyNameGenerator(context);
     await use(context);

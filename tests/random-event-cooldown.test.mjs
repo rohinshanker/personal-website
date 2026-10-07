@@ -73,7 +73,7 @@ const getRandomEventRegistrationBlocks = (source) => {
   }
 };
 
-test("all 30 system alerts register normally and only Neko uses debug mode", async () => {
+test("all 30 system alerts register normally and only Neko forces a Start run", async () => {
   const [source, systemAlertSource] = await Promise.all([
     readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator"),
     readFile(new URL("scripts/home/system-alerts.js", root), "utf8"),
@@ -127,7 +127,7 @@ test("all 30 system alerts register normally and only Neko uses debug mode", asy
   assert.doesNotMatch(source, /const RANDOM_EVENT_DEVELOPER_MODE = true;/);
   assert.match(
     source,
-    /const registerRandomEvent = \(definition\) => \{[\s\S]*?debug: false,[\s\S]*?probability: STANDARD_RANDOM_EVENT_PROBABILITY,[\s\S]*?probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,[\s\S]*?\.\.\.definition,[\s\S]*?randomEventDefinitions\.push\(registeredDefinition\);[\s\S]*?return registeredDefinition;\n\};/
+    /const registerRandomEvent = \(definition\) => \{[\s\S]*?debug: false,[\s\S]*?forceOnStart: false,[\s\S]*?probability: STANDARD_RANDOM_EVENT_PROBABILITY,[\s\S]*?probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,[\s\S]*?\.\.\.definition,[\s\S]*?randomEventDefinitions\.push\(registeredDefinition\);[\s\S]*?return registeredDefinition;\n\};/
   );
   assert.match(source, /randomEventDefinitions\.forEach\(\(definition\) => \{/);
   assert.ok(registrations.length > 0, "The normal random-event registry must remain populated");
@@ -140,29 +140,31 @@ test("all 30 system alerts register normally and only Neko uses debug mode", asy
     standardRegistrations.length + 1,
     "Only the data-driven system-alert family may omit a literal id"
   );
+  assert.equal(source.match(/\bdebug\s*:\s*true\b/g)?.length ?? 0, 0);
   assert.equal(
-    source.match(/\bdebug\s*:\s*true\b/g)?.length ?? 0,
+    source.match(/\bforceOnStart\s*:\s*true\b/g)?.length ?? 0,
     1,
-    "Only the requested Neko event may bypass probability and the global cooldown"
+    "Only the requested Neko event may force a Start-triggered run"
   );
   assert.doesNotMatch(systemAlertSource, /\bdebug\s*:/);
-  const expectedDebugIds = new Set([
+  const expectedForcedStartIds = new Set([
     "neko-stream-system-alert",
   ]);
-  const actualDebugIds = new Set();
+  const actualForcedStartIds = new Set();
   const registeredIds = standardRegistrations.map((registration) => {
     const id = registration.match(/\bid:\s*"([^"]+)"/);
     assert.ok(id, "Every registered random event must retain an id");
     assert.match(registration, /\brun:\s*\(/, `Event ${id[1]} must remain runnable`);
-    if (expectedDebugIds.has(id[1])) {
-      assert.match(registration, /\bdebug\s*:\s*true\b/, id[1]);
-      actualDebugIds.add(id[1]);
-    } else {
+    if (expectedForcedStartIds.has(id[1])) {
+      assert.match(registration, /\bforceOnStart\s*:\s*true\b/, id[1]);
       assert.doesNotMatch(registration, /\bdebug\s*:\s*true\b/, id[1]);
+      actualForcedStartIds.add(id[1]);
+    } else {
+      assert.doesNotMatch(registration, /\bforceOnStart\s*:\s*true\b/, id[1]);
     }
     return id[1];
   });
-  assert.deepEqual(actualDebugIds, expectedDebugIds);
+  assert.deepEqual(actualForcedStartIds, expectedForcedStartIds);
   assert.match(
     standardRegistrations.find((registration) =>
       /\bid:\s*"lain-system-alert"/.test(registration)
@@ -369,7 +371,7 @@ test("selection terminates cleanly when every candidate is on lockdown", async (
   assert.equal(cooldown.chooseRandomEventOutsideLockdown([first, second], 1), null);
 });
 
-test("the lockdown applies to interactive, non-interactive, and debug event definitions", async () => {
+test("the lockdown applies to interactive, debug, and forced-Start event definitions", async () => {
   const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const cooldown = createCooldownRuntime(source);
   const interactive = { id: "interactive", kind: "interactive" };
@@ -378,11 +380,18 @@ test("the lockdown applies to interactive, non-interactive, and debug event defi
     kind: "non-interactive",
     debug: true,
   };
+  const forcedStart = {
+    id: "forced-start",
+    kind: "interactive",
+    forceOnStart: true,
+  };
 
   cooldown.recordRandomEventSelection(interactive, 0);
   cooldown.recordRandomEventSelection(nonInteractiveDebug, 0);
+  cooldown.recordRandomEventSelection(forcedStart, 0);
   assert.equal(cooldown.isRandomEventOnLockdown(interactive, 1), true);
   assert.equal(cooldown.isRandomEventOnLockdown(nonInteractiveDebug, 1), true);
+  assert.equal(cooldown.isRandomEventOnLockdown(forcedStart, 1), true);
 });
 
 test("unlocked events retain their weighted selection behavior", async () => {
@@ -541,7 +550,7 @@ test("every event that holds the visitor mid-activity reports the lock", async (
     assert.match(await readHomeScript(key), pattern, `${key} must report its gameplay lock`);
   }
 });
-test("the scheduler isolates developer events and only cools down normal accepted events", async () => {
+test("the scheduler isolates forced events and only cools down normal accepted events", async () => {
   const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const scheduler = source.match(
     /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
@@ -549,19 +558,25 @@ test("the scheduler isolates developer events and only cools down normal accepte
 
   assert.ok(scheduler, "The scheduler should remain a dedicated helper");
   assert.match(scheduler[1], /const debug = Boolean\(context\.debug\);/);
+  assert.match(scheduler[1], /const forceOnStart = Boolean\(context\.forceOnStart\);/);
+  assert.match(scheduler[1], /const bypassGlobalLimits = debug \|\| forceOnStart;/);
   assert.match(scheduler[1], /if \(isRandomEventGameplayLockActive\(\)\) return false;/);
   assert.match(
     scheduler[1],
-    /if \(!debug && isRandomEventTriggerOnCooldown\(\)\) return false;/
+    /if \(!bypassGlobalLimits && isRandomEventTriggerOnCooldown\(\)\) return false;/
   );
   assert.match(scheduler[1], /if \(isRandomEventOnLockdown\(definition\)\) return false;/);
   assert.match(
     scheduler[1],
-    /randomEventPendingDefinitions\.add\(definition\);\n  recordRandomEventSelection\(definition\);\n  if \(!debug\) recordRandomEventTrigger\(\);\n  const delayRequest/
+    /randomEventPendingDefinitions\.add\(definition\);\n  recordRandomEventSelection\(definition\);\n  if \(!bypassGlobalLimits\) recordRandomEventTrigger\(\);\n  const delayRequest/
   );
   assert.match(
     scheduler[1],
     /Promise\.all\(\[delayRequest, preloadRequest\]\)\.then\(\(\) => \{\n    randomEventPendingDefinitions\.delete\(definition\);\n    if \(isRandomEventGameplayLockActive\(\)\) return;/
+  );
+  assert.match(
+    scheduler[1],
+    /definition\.canTrigger\(\{ triggerName, detail, debug, forceOnStart \}\)/
   );
   assert.doesNotMatch(source, /RANDOM_EVENT_REPEAT_DAMPEN|interactiveRandomEventRepeat|recordInteractiveRandomEventRun/);
 
@@ -575,11 +590,11 @@ test("the scheduler isolates developer events and only cools down normal accepte
   );
   assert.match(
     trigger[1],
-    /const debugEventPending = Array\.from\(randomEventPendingDefinitions\)\.some\(\n    randomEventDebugEnabled\n  \);[\s\S]*?if \(!randomEventDeveloperModeAllows\(definition\)\) return;\n    const debug = randomEventDebugEnabled\(definition\);\n    if \(debugEventPending && debug\) return;\n    if \(triggerOnCooldown && !debug\) return;/
+    /const forcedEventPending = Array\.from\(randomEventPendingDefinitions\)\.some\([\s\S]*?randomEventDebugEnabled\(definition\) \|\|[\s\S]*?randomEventForceOnStartEnabled\(definition\)[\s\S]*?const forceOnStart = randomEventForceOnStartEnabled\(definition\);[\s\S]*?const bypassGlobalLimits =[\s\S]*?debug \|\| \(forceOnStart && triggerName === "startButton"\);[\s\S]*?if \(forcedEventPending && \(debug \|\| forceOnStart\)\) return;[\s\S]*?if \(triggerOnCooldown && !bypassGlobalLimits\) return;/
   );
   assert.match(
     trigger[1],
-    /if \(forceDebugRun\) \{[\s\S]*?forcedDebugEvents\.push\([\s\S]*?triggerProbability: 1,[\s\S]*?const selectedDebug = chooseRandomEventOutsideLockdown\(forcedDebugEvents\);[\s\S]*?scheduleRandomEventRun\(selectedDebug\.definition,/
+    /const forceRun =[\s\S]*?forceOnStart && triggerName === "startButton"[\s\S]*?if \(forceRun\) \{[\s\S]*?forcedEvents\.push\([\s\S]*?triggerProbability: 1,[\s\S]*?const selectedForced = chooseRandomEventOutsideLockdown\(forcedEvents\);[\s\S]*?scheduleRandomEventRun\(selectedForced\.definition,/
   );
   assert.match(
     trigger[1],
@@ -596,7 +611,7 @@ test("the scheduler isolates developer events and only cools down normal accepte
   );
 });
 
-test("debug scheduling bypasses only the global cooldown", async () => {
+test("forced-Start and debug scheduling bypass global limits but preserve safety guards", async () => {
   const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const scheduler = source.match(
     /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
@@ -620,7 +635,10 @@ test("debug scheduling bypasses only the global cooldown", async () => {
         triggerCount += 1;
       };
       const isRandomEventOnLockdown = () => lockdownActive;
-      const randomEventDefinitionCanSchedule = () => canSchedule;
+      const randomEventDefinitionCanSchedule = (
+        definition,
+        { debug = false, forceOnStart = false } = {}
+      ) => debug || forceOnStart || canSchedule;
       const recordRandomEventSelection = () => { selectionCount += 1; };
       const randomEventDelayMs = () => 0;
       const preloadRandomEventAssets = () => new Promise(() => {});
@@ -645,6 +663,7 @@ test("debug scheduling bypasses only the global cooldown", async () => {
   const runtime = context.randomEventScheduler;
   const first = { id: "first", run: () => {} };
   const second = { id: "second", debug: true, run: () => {} };
+  const forcedStart = { id: "forced-start", forceOnStart: true, run: () => {} };
 
   assert.equal(runtime.schedule(first, { triggerName: "gameWin" }), false);
   assert.equal(runtime.getCooldownActive(), false);
@@ -682,6 +701,34 @@ test("debug scheduling bypasses only the global cooldown", async () => {
   assert.equal(runtime.getPendingCount(), 2);
   assert.equal(runtime.getSelectionCount(), 2);
   assert.equal(runtime.getTriggerCount(), 1);
+
+  runtime.setCanSchedule(false);
+  assert.equal(
+    runtime.schedule(forcedStart, {
+      triggerName: "startButton",
+      forceOnStart: true,
+    }),
+    true
+  );
+  assert.equal(runtime.getPendingCount(), 3);
+  assert.equal(runtime.getSelectionCount(), 3);
+  assert.equal(runtime.getTriggerCount(), 1);
+
+  const lockedForcedStart = {
+    id: "locked-forced-start",
+    forceOnStart: true,
+    run: () => {},
+  };
+  runtime.setLockdownActive(true);
+  assert.equal(
+    runtime.schedule(lockedForcedStart, {
+      triggerName: "startButton",
+      forceOnStart: true,
+    }),
+    false
+  );
+  assert.equal(runtime.getPendingCount(), 3);
+  assert.equal(runtime.getSelectionCount(), 3);
 });
 
 test("developer mode uses raw flags and takes precedence over global debug", async () => {

@@ -1,7 +1,7 @@
 import { expect, test } from "./deterministic.mjs";
 import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
+import { isolateProductionRandomEventPolicies } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(190_000);
 
@@ -301,7 +301,7 @@ window.__deferredMediaCreaturesTest = Object.freeze({
 })();`)
     );
     await routeHomeScript(page, "eventPrompts", (source) =>
-      isolateAllProductionDebug(source).replace(/\n\}\)\(\);\s*$/, `
+      isolateProductionRandomEventPolicies(source).replace(/\n\}\)\(\);\s*$/, `
 window.__deferredMediaPromptsTest = Object.freeze({
   showMeditation: showMidnightGospelMeditationWindow,
   showNobleSteed: showNobleSteedResultWindow,

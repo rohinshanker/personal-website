@@ -1296,11 +1296,12 @@ const closeBidenBlastWindow = () => {
 
 registerRandomEvent({
   id: "neko-stream-system-alert",
-  debug: true,
+  forceOnStart: true,
   kind: RANDOM_EVENT_KIND_INTERACTIVE,
   isVisible: isNekoStreamAlertVisible,
-  canTrigger: ({ triggerName, debug } = {}) =>
-    !isNekoStreamAlertVisible() && (!debug || triggerName === "startButton"),
+  canTrigger: ({ triggerName, forceOnStart } = {}) =>
+    !isNekoStreamAlertVisible() &&
+    (!forceOnStart || triggerName === "startButton"),
   preloadTargets: () => [
     nekoStreamAlertWindow,
     NEKO_SPRITES.sleep1,

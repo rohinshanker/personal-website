@@ -1,7 +1,10 @@
+import { writeFile } from "node:fs/promises";
+import AxeBuilder from "@axe-core/playwright";
+
 import { expect, test } from "./deterministic.mjs";
 import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { isolateAllProductionDebug } from "./helpers/random-event-debug.mjs";
+import { isolateProductionRandomEventPolicies } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(120_000);
 
@@ -105,17 +108,36 @@ const getNekoStreamRuntimeTestDefinition = () =>
     (definition) => definition.id === "neko-stream-system-alert"
   );
 window.__nekoStreamRuntimeTest = Object.freeze({
+  occupyGlobalLimits: () => {
+    recordRandomEventTrigger();
+    const capacityDefinition = randomEventDefinitions.find(
+      (definition) =>
+        definition.id !== "neko-stream-system-alert" &&
+        randomEventKind(definition) === RANDOM_EVENT_KIND_INTERACTIVE &&
+        !randomEventDebugEnabled(definition) &&
+        !randomEventForceOnStartEnabled(definition)
+    );
+    if (!capacityDefinition) throw new Error("Missing interactive capacity fixture.");
+    randomEventPendingDefinitions.add(capacityDefinition);
+    return capacityDefinition.id;
+  },
+  releaseGlobalLimits: (eventId) => {
+    const capacityDefinition = randomEventDefinitions.find(
+      (definition) => definition.id === eventId
+    );
+    if (capacityDefinition) randomEventPendingDefinitions.delete(capacityDefinition);
+  },
   preloadAlert: () =>
     preloadRandomEventAssets(getNekoStreamRuntimeTestDefinition(), {
       triggerName: "startButton",
       detail: {},
-      debug: true,
+      forceOnStart: true,
     }),
   scheduleAlert: () =>
     scheduleRandomEventRun(getNekoStreamRuntimeTestDefinition(), {
       triggerName: "startButton",
       detail: {},
-      debug: true,
+      forceOnStart: true,
     }),
   triggerAlert: (triggerName = "startButton") =>
     window.homeActivity.notifyActivity(triggerName),
@@ -124,7 +146,7 @@ window.__nekoStreamRuntimeTest = Object.freeze({
     )
   );
   await routeHomeScript(page, "eventPrompts", (source) =>
-    isolateAllProductionDebug(source, {
+    isolateProductionRandomEventPolicies(source, {
       except: ["neko-stream-system-alert"],
     }).replace(
       /\n\}\)\(\);\s*$/,
@@ -135,6 +157,7 @@ const nekoStreamPromptTestDefinition = window.homeEventRuntime.randomEventDefini
 window.__nekoStreamPromptTest = Object.freeze({
   alertSnapshot: () => ({
     debug: nekoStreamPromptTestDefinition?.debug === true,
+    forceOnStart: nekoStreamPromptTestDefinition?.forceOnStart === true,
     iconFrame: nekoStreamAlertIconFrame,
     iconTimerActive: nekoStreamAlertIconTimerId !== null,
     pendingDefinition: window.homeEventRuntime.randomEventPendingDefinitions.has(
@@ -333,7 +356,7 @@ const expectNekoPoseAligned = ({ opaqueBottom, previousRowBottom, spriteName }, 
   expect(Math.abs(opaqueBottom - taskbarTop)).toBeLessThanOrEqual(0.25);
 };
 
-test("the forced debug event shows an animated accessible prompt and No or Escape never starts a stream", async ({
+test("the forced-Start event shows an animated accessible prompt and No or Escape never starts a stream", async ({
   page,
 }, testInfo) => {
   await preparePage(page, { clock: true });
@@ -345,11 +368,15 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
   const initialStream = await readSnapshot(page);
 
   await page.evaluate(() => window.__nekoStreamRuntimeTest.preloadAlert());
-  expect((await readAlertSnapshot(page)).debug).toBe(true);
+  expect((await readAlertSnapshot(page)).debug).toBe(false);
+  expect((await readAlertSnapshot(page)).forceOnStart).toBe(true);
   expect(
     await page.evaluate(() => window.__nekoStreamRuntimeTest.triggerAlert("windowOpen"))
   ).toBe(false);
   expect((await readAlertSnapshot(page)).pendingDefinition).toBe(false);
+  const capacityEventId = await page.evaluate(() =>
+    window.__nekoStreamRuntimeTest.occupyGlobalLimits()
+  );
   await sentinel.focus();
   expect(
     await page.evaluate(() => [
@@ -357,6 +384,9 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
       window.__nekoStreamRuntimeTest.triggerAlert(),
     ])
   ).toEqual([true, false]);
+  await page.evaluate((eventId) => {
+    window.__nekoStreamRuntimeTest.releaseGlobalLimits(eventId);
+  }, capacityEventId);
   expect((await readAlertSnapshot(page)).pendingDefinition).toBe(true);
   await page.clock.runFor(1_999);
   await expect(alert).toBeHidden();
@@ -429,6 +459,14 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
   await page.clock.runFor(1_700);
   await expect(icon).toHaveAttribute("src", /sleep1\.png$/);
   expect((await readAlertSnapshot(page)).iconTimerActive).toBe(false);
+  const reducedMotionScreenshotPath = testInfo.outputPath(
+    "neko-stream-alert-reduced-motion.png"
+  );
+  await page.screenshot({ path: reducedMotionScreenshotPath, animations: "disabled" });
+  await testInfo.attach("neko-stream-alert-reduced-motion", {
+    path: reducedMotionScreenshotPath,
+    contentType: "image/png",
+  });
   await no.click();
   await expect(alert).toBeHidden();
   await expect(sentinel).toBeFocused();
@@ -464,9 +502,21 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
       const semanticSnapshot = await alert.ariaSnapshot();
       expect(semanticSnapshot).toContain("System Alert");
       expect(semanticSnapshot).toContain("Trigger /nekostream?");
+      const semanticSnapshotPath = testInfo.outputPath(
+        `neko-stream-alert-${viewport.name}.aria.yml`
+      );
+      await writeFile(semanticSnapshotPath, semanticSnapshot, "utf8");
       await testInfo.attach(`neko-stream-alert-${viewport.name}.aria.yml`, {
-        body: semanticSnapshot,
+        path: semanticSnapshotPath,
         contentType: "text/yaml",
+      });
+      const screenshotPath = testInfo.outputPath(
+        `neko-stream-alert-${viewport.name}.png`
+      );
+      await page.screenshot({ path: screenshotPath, animations: "disabled" });
+      await testInfo.attach(`neko-stream-alert-${viewport.name}`, {
+        path: screenshotPath,
+        contentType: "image/png",
       });
       await no.click();
       await finishNekoStreamAlertClose(page);
@@ -474,6 +524,26 @@ test("the forced debug event shows an animated accessible prompt and No or Escap
     });
   }
 
+});
+
+test("the open Neko stream alert has no WCAG A or AA violations", async ({
+  page,
+}) => {
+  await preparePage(page);
+  const alert = page.locator("#neko-stream-alert-window");
+  const no = page.locator("#neko-stream-alert-no");
+
+  expect(await page.evaluate(() => window.__nekoStreamPromptTest.openAlert())).toBe(true);
+  await expect(alert).toBeVisible();
+  await dispatchWindowAnimationEnd(alert, "retro-window-open");
+  const accessibility = await new AxeBuilder({ page })
+    .include("#neko-stream-alert-window")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+
+  await no.click();
+  await finishNekoStreamAlertClose(page);
 });
 
 test("Yes closes the prompt and starts exactly one complete forty-cat stream", async ({
@@ -1047,8 +1117,12 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
         .getByRole("menu", { name: "Neko commands" })
         .ariaSnapshot();
       expect(menuSnapshot).toContain("/nekostream");
+      const menuSnapshotPath = testInfo.outputPath(
+        `neko-stream-menu-${viewport.name}.aria.yml`
+      );
+      await writeFile(menuSnapshotPath, menuSnapshot, "utf8");
       await testInfo.attach(`neko-stream-menu-${viewport.name}.aria.yml`, {
-        body: menuSnapshot,
+        path: menuSnapshotPath,
         contentType: "text/yaml",
       });
 
@@ -1092,6 +1166,14 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
       runningPoseMetrics.poses.forEach((pose) =>
         expectNekoPoseAligned(pose, runningPoseMetrics.taskbarTop)
       );
+      const streamScreenshotPath = testInfo.outputPath(
+        `neko-stream-forty-cats-${viewport.name}.png`
+      );
+      await page.screenshot({ path: streamScreenshotPath, animations: "disabled" });
+      await testInfo.attach(`neko-stream-forty-cats-${viewport.name}`, {
+        path: streamScreenshotPath,
+        contentType: "image/png",
+      });
 
       await page.getByRole("menuitem", { name: "/nekostream" }).press("Escape");
       await stopStream(page);

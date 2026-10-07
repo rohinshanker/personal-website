@@ -93,7 +93,7 @@ test("the shared fixture installs the whole hermetic boundary", async () => {
     "installDeterministicSudokuWorker(context)",
     "installGameStatsBackend(context)",
     "installSkyNameGenerator(context)",
-    "routeProductionDebugFlags(context)",
+    "routeProductionRandomEventPolicies(context)",
   ]) {
     assert.ok(
       source.includes(`await ${call}`),

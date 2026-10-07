@@ -158,7 +158,7 @@ test("Neko launchers expose one accessible context command above a non-interacti
   assert.doesNotMatch(main, /window\.__nekoStreamTest/);
 });
 
-test("the debug random-event registry exposes one guarded animated Neko stream alert", async () => {
+test("the forced-Start registry exposes one guarded animated Neko stream alert", async () => {
   const { dom, home, index, main, randomEventStyles } = await readSources();
   const registration = extractBetween(
     main,
@@ -209,14 +209,15 @@ test("the debug random-event registry exposes one guarded animated Neko stream a
   ]);
 
   assert.match(registration, /id: "neko-stream-system-alert"/);
-  assert.match(registration, /debug: true/);
+  assert.match(registration, /forceOnStart: true/);
+  assert.doesNotMatch(registration, /debug: true/);
   assert.doesNotMatch(registration, /const probability = /);
   assert.doesNotMatch(registration, /const probabilities = /);
   assert.match(registration, /kind: RANDOM_EVENT_KIND_INTERACTIVE/);
   assert.match(registration, /isVisible: isNekoStreamAlertVisible/);
   assert.match(
     registration,
-    /canTrigger: \(\{ triggerName, debug \} = \{\}\) =>\n    !isNekoStreamAlertVisible\(\) && \(!debug \|\| triggerName === "startButton"\)/
+    /canTrigger: \(\{ triggerName, forceOnStart \} = \{\}\) =>\n    !isNekoStreamAlertVisible\(\) &&\n    \(!forceOnStart \|\| triggerName === "startButton"\)/
   );
   assert.match(
     registration,

@@ -809,6 +809,18 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await expect(behelit).toBeVisible();
   await closeManagedWindow(behelit, behelit.locator("#behelit-ok"));
 
+  await eventList.selectOption("neko-stream-system-alert");
+  await page.locator("#admin-trigger-now").click();
+  const nekoStreamAlert = page.locator(
+    "#neko-stream-alert-window:not([data-admin-event-preview-window])"
+  );
+  await expect(nekoStreamAlert).toBeVisible();
+  await expect(nekoStreamAlert).toHaveAccessibleDescription("Trigger /nekostream?");
+  await closeManagedWindow(
+    nekoStreamAlert,
+    nekoStreamAlert.locator("#neko-stream-alert-no")
+  );
+
   await selectAdminTab(page, "bindings");
   await page.locator("#admin-binding-target").selectOption("app:video-editor:taskbar");
   await page.locator("#admin-binding-event").selectOption("behelit-found");
@@ -832,10 +844,12 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await expect(behelit).toBeVisible();
   // The seeded one-shot clearing is the observable the binding owes; waiting on
   // it is what proves the natural-event runtime has finished reacting. The
-  // debug popups are suppressed at the source, which debug-fixture.spec.mjs
+  // forced control-triggered popups are isolated at the source, which debug-fixture.spec.mjs
   // proves against a running clock.
   await expect(target).not.toHaveAttribute("data-admin-seeded", /.+/);
-  await expect(page.locator("#neko-stream-alert-window")).toBeHidden();
+  await expect(
+    page.locator("#neko-stream-alert-window:not([data-admin-event-preview-window])")
+  ).toBeHidden();
   await expect(page.locator("#debug-system-alert-window")).toBeHidden();
 
   await closeManagedWindow(behelit, behelit.locator("#behelit-ok"));

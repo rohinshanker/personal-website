@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  isolateAllProductionDebug,
-  PRODUCTION_DEBUG_SCRIPT_KEY,
-  PRODUCTION_PER_EVENT_DEBUG_IDS,
-  routeProductionDebugFlags,
+  isolateProductionRandomEventPolicies,
+  PRODUCTION_FORCED_START_EVENT_IDS,
+  PRODUCTION_RANDOM_EVENT_POLICY_SCRIPT_KEY,
+  routeProductionRandomEventPolicies,
 } from "./ui/helpers/random-event-debug.mjs";
 import { routeHomeScript } from "./ui/helpers/home-script-routes.mjs";
 import { TEST_SERVER_ORIGIN } from "./ui/helpers/rendered-site.mjs";
@@ -16,43 +16,43 @@ import {
 } from "./helpers/home-scripts.mjs";
 
 /**
- * A browser test cannot leave a production debug event armed: those fire on
- * sight and would open a window in the middle of an unrelated assertion. The
- * fixture disarms them in the script that declares them, and these checks keep
- * its list of debug events equal to what the event scripts actually ship.
+ * Browser tests isolate production policies that force events from common
+ * controls, so unrelated Start-button interactions cannot open a window in the
+ * middle of an assertion. Feature tests retain the policy explicitly.
  */
 
-test("only the known production debug events ship armed", async () => {
+test("only the known production events force-run from Start", async () => {
   const everyEvent = await readHomeScriptText(...RANDOM_EVENT_SCRIPT_KEYS);
-  const armedIds = [...everyEvent.matchAll(/id: "([^"]+)",\n  debug: true,/g)].map(
+  const forcedIds = [...everyEvent.matchAll(/id: "([^"]+)",\n  forceOnStart: true,/g)].map(
     (match) => match[1]
   );
 
   assert.deepEqual(
-    armedIds,
-    [...PRODUCTION_PER_EVENT_DEBUG_IDS],
-    "PRODUCTION_PER_EVENT_DEBUG_IDS must list every event that ships with debug on"
+    forcedIds,
+    [...PRODUCTION_FORCED_START_EVENT_IDS],
+    "PRODUCTION_FORCED_START_EVENT_IDS must list every forced-Start event"
   );
+  assert.doesNotMatch(everyEvent, /id: "[^"]+",\n  debug: true,/);
 });
 
-test("the browser fixture isolates every production debug event unless explicitly retained", async () => {
-  const source = await readHomeScript(PRODUCTION_DEBUG_SCRIPT_KEY);
+test("the browser fixture isolates every forced-Start policy unless explicitly retained", async () => {
+  const source = await readHomeScript(PRODUCTION_RANDOM_EVENT_POLICY_SCRIPT_KEY);
 
-  const isolated = isolateAllProductionDebug(source);
-  assert.doesNotMatch(isolated, /id: "[^"]+",\n  debug: true,/);
+  const isolated = isolateProductionRandomEventPolicies(source);
+  assert.doesNotMatch(isolated, /id: "[^"]+",\n  forceOnStart: true,/);
   assert.doesNotMatch(isolated, /debug: alert\.debug === true,/);
 
-  const retained = isolateAllProductionDebug(source, {
+  const retained = isolateProductionRandomEventPolicies(source, {
     except: ["neko-stream-system-alert"],
   });
-  assert.match(retained, /id: "neko-stream-system-alert",\n  debug: true,/);
+  assert.match(retained, /id: "neko-stream-system-alert",\n  forceOnStart: true,/);
 
   // An event that never ships armed cannot be asked for, so a stale exception
   // in a fixture fails loudly instead of quietly doing nothing.
   for (const unknownId of ["red-tool", "lain-system-alert"]) {
     assert.throws(
-      () => isolateAllProductionDebug(source, { except: [unknownId] }),
-      new RegExp(`Unknown production debug event exception: ${unknownId}`)
+      () => isolateProductionRandomEventPolicies(source, { except: [unknownId] }),
+      new RegExp(`Unknown production forced-Start event exception: ${unknownId}`)
     );
   }
 });
@@ -67,7 +67,7 @@ test("the browser fixture routes the owning event script and rejects stale trans
     },
   };
 
-  await routeProductionDebugFlags(page);
+  await routeProductionRandomEventPolicies(page);
   assert.ok(routesUrl(`${TEST_SERVER_ORIGIN}/scripts/home/events/prompts.js?v=test`));
   assert.ok(!routesUrl(`${TEST_SERVER_ORIGIN}/scripts/home/main.js?v=test`));
   assert.ok(
@@ -82,10 +82,10 @@ test("the browser fixture routes the owning event script and rejects stale trans
     },
   });
   assert.equal(fulfillment.contentType, "application/javascript");
-  assert.doesNotMatch(fulfillment.body, /id: "[^"]+",\n  debug: true,/);
+  assert.doesNotMatch(fulfillment.body, /id: "[^"]+",\n  forceOnStart: true,/);
 
   await assert.rejects(
-    routeHomeScript(page, PRODUCTION_DEBUG_SCRIPT_KEY, (source) => source),
+    routeHomeScript(page, PRODUCTION_RANDOM_EVENT_POLICY_SCRIPT_KEY, (source) => source),
     /browser fixture did not transform scripts\/home\/events\/prompts\.js/
   );
 });

@@ -1,6 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { isolateProductionPerEventDebug } from "./helpers/random-event-debug.mjs";
+import { isolateProductionForcedStart } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(300_000);
 
@@ -16,7 +16,7 @@ const viewports = [
 
 const installDebugAlertTestBridge = async (page) => {
   await routeHomeScript(page, "eventPrompts", (source) =>
-    isolateProductionPerEventDebug(source).replace(
+    isolateProductionForcedStart(source).replace(
       /\n\}\)\(\);\s*$/,
       `
 window.__debugSystemAlertsPromptTest = Object.freeze({

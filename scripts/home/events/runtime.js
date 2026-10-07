@@ -535,6 +535,7 @@ const animateWindowExplode = (win, onComplete) => {
 const registerRandomEvent = (definition) => {
   const registeredDefinition = {
     debug: false,
+    forceOnStart: false,
     probability: STANDARD_RANDOM_EVENT_PROBABILITY,
     probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,
     ...definition,
@@ -607,9 +608,9 @@ const randomEventKindCanSchedule = (kind, { consumeRelease = false } = {}) => {
 
 const randomEventDefinitionCanSchedule = (
   definition,
-  { consumeRelease = false, debug = false } = {}
+  { consumeRelease = false, debug = false, forceOnStart = false } = {}
 ) => {
-  if (debug) return true;
+  if (debug || forceOnStart) return true;
   return randomEventKindCanSchedule(randomEventKind(definition), {
     consumeRelease,
   });
@@ -617,6 +618,9 @@ const randomEventDefinitionCanSchedule = (
 
 const randomEventDebugEnabled = (definition) =>
   RANDOM_EVENT_GLOBAL_DEBUG || Boolean(definition.debug);
+
+const randomEventForceOnStartEnabled = (definition) =>
+  Boolean(definition.forceOnStart);
 
 const randomEventDeveloperModeAllows = (definition) =>
   !RANDOM_EVENT_DEVELOPER_MODE || Boolean(definition.debug);
@@ -868,21 +872,24 @@ const isRandomEventGameplayLockActive = () =>
 
 const scheduleRandomEventRun = (definition, context) => {
   const debug = Boolean(context.debug);
+  const forceOnStart = Boolean(context.forceOnStart);
+  const bypassGlobalLimits = debug || forceOnStart;
   if (isRandomEventGameplayLockActive()) return false;
   if (randomEventPendingDefinitions.has(definition)) return false;
-  if (!debug && isRandomEventTriggerOnCooldown()) return false;
+  if (!bypassGlobalLimits && isRandomEventTriggerOnCooldown()) return false;
   if (isRandomEventOnLockdown(definition)) return false;
   if (
     !randomEventDefinitionCanSchedule(definition, {
       consumeRelease: true,
       debug,
+      forceOnStart,
     })
   ) {
     return false;
   }
   randomEventPendingDefinitions.add(definition);
   recordRandomEventSelection(definition);
-  if (!debug) recordRandomEventTrigger();
+  if (!bypassGlobalLimits) recordRandomEventTrigger();
   const delayRequest = new Promise((resolve) => {
     window.setTimeout(resolve, randomEventDelayMs());
   });
@@ -894,7 +901,7 @@ const scheduleRandomEventRun = (definition, context) => {
     const { triggerName, detail } = context;
     if (
       definition.canTrigger &&
-      !definition.canTrigger({ triggerName, detail, debug })
+      !definition.canTrigger({ triggerName, detail, debug, forceOnStart })
     ) {
       return;
     }
@@ -908,31 +915,45 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
   if (shouldPauseNaturalRandomEvents()) return false;
   if (isRandomEventGameplayLockActive()) return false;
   const triggerOnCooldown = isRandomEventTriggerOnCooldown();
-  const debugEventPending = Array.from(randomEventPendingDefinitions).some(
-    randomEventDebugEnabled
+  const forcedEventPending = Array.from(randomEventPendingDefinitions).some(
+    (definition) =>
+      randomEventDebugEnabled(definition) ||
+      randomEventForceOnStartEnabled(definition)
   );
   const eligibleEvents = [];
-  const forcedDebugEvents = [];
+  const forcedEvents = [];
 
   randomEventDefinitions.forEach((definition) => {
     if (randomEventPendingDefinitions.has(definition)) return;
     if (!randomEventDeveloperModeAllows(definition)) return;
     const debug = randomEventDebugEnabled(definition);
-    if (debugEventPending && debug) return;
-    if (triggerOnCooldown && !debug) return;
-    const forceDebugRun =
-      debug && !RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS.has(triggerName);
+    const forceOnStart = randomEventForceOnStartEnabled(definition);
+    const bypassGlobalLimits =
+      debug || (forceOnStart && triggerName === "startButton");
+    if (forcedEventPending && (debug || forceOnStart)) return;
+    if (triggerOnCooldown && !bypassGlobalLimits) return;
+    const forceRun =
+      (forceOnStart && triggerName === "startButton") ||
+      (debug && !RANDOM_EVENT_PROBABILITY_GATED_DEBUG_TRIGGERS.has(triggerName));
     if (
       definition.canTrigger &&
-      !definition.canTrigger({ triggerName, detail, debug })
+      !definition.canTrigger({ triggerName, detail, debug, forceOnStart })
     ) {
       return;
     }
-    if (!randomEventDefinitionCanSchedule(definition, { debug })) return;
-    if (forceDebugRun) {
-      forcedDebugEvents.push({
+    if (
+      !randomEventDefinitionCanSchedule(definition, {
+        debug,
+        forceOnStart: forceOnStart && triggerName === "startButton",
+      })
+    ) {
+      return;
+    }
+    if (forceRun) {
+      forcedEvents.push({
         definition,
         debug,
+        forceOnStart,
         triggerProbability: 1,
       });
       return;
@@ -941,6 +962,7 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
     eligibleEvents.push({
       definition,
       debug,
+      forceOnStart,
       triggerProbability,
       selectionWeight: isPromoRandomEventModeActive()
         ? triggerProbability * randomEventCompactnessWeightProvider(definition)
@@ -948,13 +970,14 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
     });
   });
 
-  const selectedDebug = chooseRandomEventOutsideLockdown(forcedDebugEvents);
+  const selectedForced = chooseRandomEventOutsideLockdown(forcedEvents);
   if (
-    selectedDebug &&
-    scheduleRandomEventRun(selectedDebug.definition, {
+    selectedForced &&
+    scheduleRandomEventRun(selectedForced.definition, {
       triggerName,
       detail,
-      debug: selectedDebug.debug,
+      debug: selectedForced.debug,
+      forceOnStart: selectedForced.forceOnStart,
     })
   ) {
     return true;
@@ -982,6 +1005,7 @@ const triggerRandomEvents = (triggerName, detail = {}) => {
       triggerName,
       detail,
       debug: selected.debug,
+      forceOnStart: selected.forceOnStart,
     })
   ) {
     return true;
@@ -1390,6 +1414,7 @@ window.homeEventRuntime = Object.freeze({
   randomEventDefinitionIsVisible,
   randomEventDefinitions,
   randomEventDeveloperModeAllows,
+  randomEventForceOnStartEnabled,
   randomEventKind,
   randomEventKindCanSchedule,
   randomEventPendingDefinitions,
