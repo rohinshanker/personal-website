@@ -9,12 +9,14 @@ const MAX_REPLAY_BODY_BYTES = 256 * 1024;
 const SESSION_LIFETIME_MS = 6 * 60 * 60 * 1000;
 const SNAKE_TICK_MS = 118;
 const SNAKE_COUNTDOWN_MS = 900;
+const MAX_WORK_BUDGET = 120_000_000;
 const GAME_RULE_LIMITS = Object.freeze(Object.fromEntries(
   ["minesweeper", "solitaire", "snake", "sudoku"].map((game) => [
     game,
     Object.freeze({
       inputs: 16_384,
-      work: 2_000_000,
+      // Six hours on a 576-cell Snake board, including refills, costs <107M.
+      work: game === "snake" ? MAX_WORK_BUDGET : 2_000_000,
       ticks: game === "snake" ? Math.floor(SESSION_LIFETIME_MS / SNAKE_TICK_MS) : 0,
       bytes: MAX_REPLAY_BODY_BYTES,
     }),
@@ -49,7 +51,7 @@ const assertObject = (value, allowedKeys, label = "object") => {
 
 /** Each engine charges primitive work against a request-owned budget. */
 const createBudget = (limit) => ({
-  remaining: assertInteger(limit, 0, 10_000_000, "work budget"),
+  remaining: assertInteger(limit, 0, MAX_WORK_BUDGET, "work budget"),
   spend(units = 1) {
     assertInteger(units, 0, 10_000_000, "work charge");
     if (units > this.remaining) {

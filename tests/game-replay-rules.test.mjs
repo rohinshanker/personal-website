@@ -42,10 +42,14 @@ test("work budgets charge exactly, reject invalid charges, and never overspend",
   assert.equal(budget.remaining, 0);
   assert.throws(() => budget.spend(), (error) => error.code === "replay-limit");
   assert.equal(budget.remaining, 0);
-  for (const invalid of [-1, 1.5, "1", 10_000_001]) {
+  for (const invalid of [-1, 1.5, "1", Infinity, NaN]) {
     assert.throws(() => rules.createBudget(invalid));
     assert.throws(() => budget.spend(invalid));
   }
+  assert.throws(() => rules.createBudget(120_000_001));
+  const largest = rules.createBudget(120_000_000);
+  assert.throws(() => largest.spend(10_000_001));
+  assert.equal(largest.remaining, 120_000_000);
 });
 
 test("seeded randomness and shuffles are reproducible without changing source arrays", () => {
