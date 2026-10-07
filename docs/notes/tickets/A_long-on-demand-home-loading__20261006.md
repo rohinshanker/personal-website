@@ -14,7 +14,7 @@
 
 - Preserve dependencies and first-use activation; a deferred chain must remain ordered. Measure before claiming performance gains.
 - Styles must be ready before a hidden event/app appears. Avoid unstyled flashes and preserve preloading, media cleanup and reduced-motion behavior.
-- A missing/expired/rejected Administrator proof keeps the full Admin dashboard inaccessible. Load only the resources needed for an authorized launch.
+- A missing/expired/rejected Administrator proof keeps the full Admin dashboard inaccessible. Load only the resources needed for authorized use, including an existing active restored Admin session; default stored settings alone are not a need.
 - Use the existing custom loading cursor while Admin resources are pending; restore it on success, failure, cancellation and page exit. Prevent duplicate loads/initializations and provide a usable retry/error state.
 - Use existing components and testing infrastructure. Do not add dependencies merely for inspection.
 - Preserve the unpublished verified-games implementation and published compatibility history when regenerating build tokens. Commit only local changes; no push, deployment or rollout deadline is authorized by this ticket.
@@ -27,3 +27,5 @@
 - Slow cold (150 ms latency, 1.6 Mbps down, 750 Kbps up, 4× CPU): median FCP/LCP 4,340 ms, DOMContentLoaded 15,826 ms, load 22,053 ms; about 3.97 MB. Admin scripts/styles and hidden-event stylesheet are requested initially.
 - Temporary evidence/harness: `.playwright-cli/pw-home-loading-20261007/`, including Chrome slow-cold trace, network/timing JSON, and inspected wide Home PNG/semantic snapshot. Compare the final patch with this same harness/conditions; do not retain one-off result logs as permanent validation docs.
 - Read-only Multica map DEM-276 confirms classic-script order, optional absent Admin controller, and shared event show/style and auth/window launch seams. Coordinator owns measurement and integration; one scoped implementer will own a separate worktree.
+
+- Implementation boundary (coordinator, 2026-10-07): preserve authorized restored active capture settings, promo mode and seeded bindings without requiring a dashboard launch. Those settings are an existing need for runtime resources; detect the narrow active-state case and keep ordinary/default/unauthorized visits free of Admin downloads. Restored loading must not open the dashboard or steal focus. Preserve reset-reload suppression with cheap bootstrap state. This refines the launch-only seam, not the owner’s on-demand requirement.
