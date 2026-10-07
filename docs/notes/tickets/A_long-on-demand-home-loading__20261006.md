@@ -19,3 +19,11 @@
 - Use existing components and testing infrastructure. Do not add dependencies merely for inspection.
 - Preserve the unpublished verified-games implementation and published compatibility history when regenerating build tokens. Commit only local changes; no push, deployment or rollout deadline is authorized by this ticket.
 - The separately pending Admin promotional-workflow review cannot be silently treated as owner acceptance. Loading/access behavior can be implemented and verified independently.
+
+## Controlled baseline
+
+- Baseline source: `59024ae`; Chromium 149.0.7827.55; local Python HTTP server, 1440×900, reduced motion, deterministic random draw; external requests blocked through CDP. No Playwright routes (which disable HTTP caching). Three fresh-context measurements per profile, 700 ms settling after load. Warm measurements prime the same context before reloading.
+- Cold median: FCP/LCP 84 ms, DOMContentLoaded 395 ms, load 409 ms, 3,969,541 local encoded bytes. Warm median: FCP/LCP 316 ms, DOMContentLoaded 601 ms, load 602 ms, 280 encoded bytes. These are laboratory observations, not field Core Web Vitals.
+- Slow cold (150 ms latency, 1.6 Mbps down, 750 Kbps up, 4× CPU): median FCP/LCP 4,340 ms, DOMContentLoaded 15,826 ms, load 22,053 ms; about 3.97 MB. Admin scripts/styles and hidden-event stylesheet are requested initially.
+- Temporary evidence/harness: `.playwright-cli/pw-home-loading-20261007/`, including Chrome slow-cold trace, network/timing JSON, and inspected wide Home PNG/semantic snapshot. Compare the final patch with this same harness/conditions; do not retain one-off result logs as permanent validation docs.
+- Read-only Multica map DEM-276 confirms classic-script order, optional absent Admin controller, and shared event show/style and auth/window launch seams. Coordinator owns measurement and integration; one scoped implementer will own a separate worktree.
