@@ -85,6 +85,28 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   assert.equal(issuedResponse.status, 201, await issuedResponse.clone().text());
   const issued = await issuedResponse.json();
   assert.equal(issued.limits.continuations, 8192);
+  assert.equal(issued.limits.timingRevisions, 900);
+  const replayBatchCeiling = Math.ceil(
+    (issued.limits.ticks + issued.limits.inputs) / 32
+  );
+  assert.ok(replayBatchCeiling + 2 * issued.limits.timingRevisions + 1 <= 8192);
+  const workCeilings = globalThis.homeSnakeRules.BOARD_SIZES.map((boardSize) => {
+    const cells = boardSize ** 2;
+    const maximumGrowth = cells - 3;
+    const maximumRefills = maximumGrowth + Math.floor(
+      maximumGrowth / globalThis.homeSnakeRules.APPLE_SCORE_INTERVAL
+    ) + 1;
+    const refillWork = maximumRefills * (2 * cells + 1);
+    return {
+      boardSize,
+      work: issued.limits.ticks * cells + refillWork + issued.limits.inputs,
+    };
+  });
+  const maximumWork = Math.max(...workCeilings.map(({ work }) => work));
+  assert.ok(
+    issued.limits.work >= maximumWork,
+    `Snake work limit ${issued.limits.work} is below the ${maximumWork} worst-case ceiling`
+  );
 
   const emptyHash = Array.from(
     new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("[]"))),
@@ -171,7 +193,7 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   assert.equal(Number(frozen.elapsed_ms), 100 + 900 + state.tick * 118);
   assert.equal(Number(frozen.countdown_ms), 1_000);
   assert.equal(Number(frozen.resume_count), 2);
-  const wallSamples = [];
+  const stageSamples = [];
   let continuationCount = 0;
   while (response.status === 202) {
     const { progress } = await response.json();
@@ -179,8 +201,19 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
       session: { id: issued.id, token: issued.token },
       progress,
     });
-    const replayWallMs = Number(response.headers.get("X-Test-Replay-Wall-Ms"));
-    if (Number.isFinite(replayWallMs) && replayWallMs > 0) wallSamples.push(replayWallMs);
+    const stageHeaders = {
+      preparation: "X-Test-Replay-Preparation-Wall-Ms",
+      replay: "X-Test-Replay-Wall-Ms",
+      serialization: "X-Test-Replay-Serialization-Wall-Ms",
+      synchronous: "X-Test-Replay-Synchronous-Wall-Ms",
+    };
+    const stages = Object.fromEntries(Object.entries(stageHeaders).map(([key, header]) => {
+      const rawValue = response.headers.get(header);
+      return [key, rawValue === null ? null : Number(rawValue)];
+    }));
+    if (Object.values(stages).every((value) => Number.isFinite(value) && value >= 0)) {
+      stageSamples.push(stages);
+    }
     continuationCount += 1;
     assert.ok(continuationCount < 8192);
   }
@@ -196,14 +229,19 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   assert.equal(Number((await database.prepare(`
     SELECT request_count FROM verified_completion_jobs WHERE session_id = ?
   `).bind(issued.id).first()).request_count), continuationCount);
-  const maximumReplayWallMs = Math.max(...wallSamples);
+  assert.ok(stageSamples.length > 0);
+  const maximum = (key) => Math.max(...stageSamples.map((sample) => sample[key]));
+  const maximumSynchronousWallMs = maximum("synchronous");
   assert.ok(
-    maximumReplayWallMs < 10,
-    `real Snake synchronous replay segment took ${maximumReplayWallMs.toFixed(1)}ms`
+    maximumSynchronousWallMs < 10,
+    `real Snake synchronous stages took ${maximumSynchronousWallMs.toFixed(1)}ms`
   );
   t.diagnostic(
     `real Snake ${state.tick} ticks / ${inputs.length} directions over ` +
-      `${continuationCount} continuations; max synchronous replay segment ` +
-      `${maximumReplayWallMs.toFixed(1)}ms`
+      `${continuationCount} continuations; worst supported work ${maximumWork}; ` +
+      `max synchronous stages prepare ${maximum("preparation").toFixed(1)}ms / ` +
+      `replay ${maximum("replay").toFixed(1)}ms / ` +
+      `serialize ${maximum("serialization").toFixed(1)}ms / ` +
+      `combined ${maximumSynchronousWallMs.toFixed(1)}ms`
   );
 });

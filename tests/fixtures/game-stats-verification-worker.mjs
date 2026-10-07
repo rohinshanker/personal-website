@@ -31,17 +31,29 @@ const minesweeper = Object.freeze({
 
 export default {
   async fetch(request, env, context) {
-    let replayWallMs = null;
+    let replayStages = null;
     const response = await handleRequest(request, env, context, {
       verification: {
         gameEngines: { minesweeper },
-        onVerificationBatch({ wallMs }) {
-          replayWallMs = wallMs;
+        onVerificationBatch(stages) {
+          replayStages = stages;
         },
       },
     });
-    if (replayWallMs !== null) {
-      response.headers.set("X-Test-Replay-Wall-Ms", String(replayWallMs));
+    if (replayStages) {
+      response.headers.set(
+        "X-Test-Replay-Preparation-Wall-Ms",
+        String(replayStages.preparationWallMs)
+      );
+      response.headers.set("X-Test-Replay-Wall-Ms", String(replayStages.replayWallMs));
+      response.headers.set(
+        "X-Test-Replay-Serialization-Wall-Ms",
+        String(replayStages.serializationWallMs)
+      );
+      response.headers.set(
+        "X-Test-Replay-Synchronous-Wall-Ms",
+        String(replayStages.synchronousWallMs)
+      );
     }
     return response;
   },

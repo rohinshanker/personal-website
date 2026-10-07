@@ -66,6 +66,7 @@ const ENGINE_GLOBALS = Object.freeze({
   snake: "homeSnakeRules",
   sudoku: "homeSudokuRules",
 });
+const SUDOKU_PUZZLE_PATTERN = /^[0-9]{81}$/;
 
 const INSERT_VERIFIED_SESSION_SQL = `
 INSERT INTO game_stat_sessions (
@@ -206,7 +207,7 @@ SELECT id, session_id, event_id, request_digest, transcript_digest, transcript_j
   state_json, work_used, progress_revision, progress_token, checkpoint_digest,
   request_count, continuation_limit, resume_count, countdown_ms, elapsed_ms,
   finished_at, expires_at, stage,
-  completion_id, updated_at
+  failure_code, failure_message, failed_at, completion_id, updated_at
 FROM verified_completion_jobs
 WHERE session_id = ?
 `;
@@ -234,13 +235,10 @@ FROM verified_timing_transitions
 WHERE session_id = ? AND revision = ?
 `;
 const SELECT_CANONICAL_PREFIX_SQL = `
-SELECT COALESCE(GROUP_CONCAT(canonical_inputs, ','), '') AS canonical_prefix
-FROM (
-  SELECT canonical_inputs
-  FROM verified_completion_replay_chunks
-  WHERE job_id = ? AND end_cursor <= ?
-  ORDER BY start_cursor
-)
+SELECT start_cursor, end_cursor, canonical_inputs
+FROM verified_completion_replay_chunks
+WHERE job_id = ? AND end_cursor <= ?
+ORDER BY start_cursor ASC
 `;
 const SELECT_JOB_INPUTS_SQL = `
 WITH RECURSIVE indexes(value) AS (
@@ -273,6 +271,19 @@ INSERT INTO verified_completion_replay_chunks (
 SELECT id, ?, ?, ?, ?
 FROM verified_completion_jobs
 WHERE id = ? AND progress_revision = ? AND progress_token = ?
+  AND ? = COALESCE((
+    SELECT MAX(end_cursor)
+    FROM verified_completion_replay_chunks
+    WHERE job_id = ?
+  ), 0)
+`;
+const FAIL_COMPLETION_JOB_SQL = `
+UPDATE verified_completion_jobs
+SET stage = 'failed', failure_code = ?, failure_message = ?, failed_at = ?,
+  request_count = request_count + 1, updated_at = ?
+WHERE id = ? AND stage = 'replay' AND progress_revision = ?
+  AND progress_token = ? AND checkpoint_digest = ?
+  AND request_count < continuation_limit AND completion_id IS NULL
 `;
 const COMPLETE_JOB_SQL = `
 UPDATE verified_completion_jobs
@@ -322,6 +333,19 @@ const resolveEngine = (game, dependencies) => {
   return engine;
 };
 
+const assertIssuedInitialIdentity = (game, initial) => {
+  if (game !== "sudoku") return;
+  const puzzle = initial?.puzzle;
+  if (
+    typeof puzzle !== "string" ||
+    !SUDOKU_PUZZLE_PATTERN.test(puzzle) ||
+    !puzzle.includes("0") ||
+    !/[1-9]/.test(puzzle)
+  ) {
+    throw new HttpError(400, "Issued Sudoku puzzle identity is invalid");
+  }
+};
+
 const generateInitial = async (game, config, firstCell, seed, dependencies) => {
   const engine = resolveEngine(game, dependencies);
   const budget = commonRules.createBudget(commonRules.GAME_RULE_LIMITS[game].work);
@@ -339,6 +363,7 @@ const generateInitial = async (game, config, firstCell, seed, dependencies) => {
     }
     rawInitial = engine.generate(config, { seed, firstCell, budget });
   }
+  assertIssuedInitialIdentity(game, rawInitial);
   engine.initial(rawInitial);
   return commonRules.cloneState(rawInitial);
 };
@@ -785,6 +810,7 @@ const canonicalEventFor = (eventId, session, result, elapsedMs, finishedAt) => {
     };
   }
   const initial = parseJsonColumn(session.initial_json, "initial game state");
+  assertIssuedInitialIdentity(session.game, initial);
   const hintBucket = canonicalSudokuHintBucket(result);
   return {
     id: eventId, game: session.game, type: "win", difficulty: config.difficulty, hintBucket,
@@ -920,12 +946,21 @@ const getCompletionForJob = async (database, job) => {
   return database.prepare(SELECT_COMPLETION_SQL).bind(job.completion_id).first();
 };
 
+const throwStoredJobFailure = (job) => {
+  if (job.stage !== "failed") return;
+  if (job.failure_code !== REPLAY_LIMIT_CODE || typeof job.failure_message !== "string") {
+    throw new HttpError(500, "Stored verification failure is invalid");
+  }
+  throw replayLimitError(job.failure_message);
+};
+
 const priorJobResponse = async (database, job, requestDigest) => {
   if (job.request_digest !== requestDigest) {
     throw new HttpError(409, "Game session is already bound to a different transcript");
   }
   const completion = await getCompletionForJob(database, job);
   if (completion) return completionResponse(completion);
+  throwStoredJobFailure(job);
   return progressResponse(job.id, job.progress_token);
 };
 
@@ -1193,10 +1228,31 @@ const replayInputAt = (rows, cursor) => {
 };
 
 const canonicalPrefixAt = async (database, jobId, inputCursor) => {
-  const prefix = String((await database
+  const rows = (await database
     .prepare(SELECT_CANONICAL_PREFIX_SQL)
     .bind(jobId, inputCursor)
-    .first())?.canonical_prefix || "");
+    .all()).results || [];
+  let expectedStart = 0;
+  const chunks = [];
+  for (const row of rows) {
+    const start = Number(row.start_cursor);
+    const end = Number(row.end_cursor);
+    if (
+      start !== expectedStart ||
+      !Number.isSafeInteger(end) ||
+      end <= start ||
+      end > inputCursor ||
+      typeof row.canonical_inputs !== "string"
+    ) {
+      throw new HttpError(409, "Stored replay chunks are not contiguous");
+    }
+    chunks.push(row.canonical_inputs);
+    expectedStart = end;
+  }
+  if (expectedStart !== inputCursor) {
+    throw new HttpError(409, "Stored replay chunks do not cover the verified prefix");
+  }
+  const prefix = chunks.join(",");
   if (textEncoder.encode(prefix).byteLength > MAX_REPLAY_BODY_BYTES) {
     throw replayLimitError("Replay prefix exceeds the verification byte limit");
   }
@@ -1260,7 +1316,9 @@ const commitCheckpoint = async (env, database, job, checkpoint) => {
       updatedAt,
       job.id,
       checkpoint.progress_revision,
-      checkpoint.progress_token
+      checkpoint.progress_token,
+      job.input_cursor,
+      job.id
     ));
   }
   statements.push(database.prepare(INSERT_PROGRESS_SQL).bind(
@@ -1292,6 +1350,26 @@ const commitCheckpoint = async (env, database, job, checkpoint) => {
     throw new HttpError(409, "Verification progress changed concurrently");
   }
   return progressResponse(job.id, checkpoint.progress_token);
+};
+
+const failVerificationJob = async (database, job, message, dependencies) => {
+  const failedAt = nowDate(dependencies).toISOString();
+  const result = await database.prepare(FAIL_COMPLETION_JOB_SQL).bind(
+    REPLAY_LIMIT_CODE,
+    message,
+    failedAt,
+    failedAt,
+    job.id,
+    job.progress_revision,
+    job.progress_token,
+    job.checkpoint_digest
+  ).run();
+  if (getChanges(result) !== 1) {
+    const latest = await database.prepare(SELECT_COMPLETION_JOB_BY_ID_SQL).bind(job.id).first();
+    if (latest?.stage === "failed") throwStoredJobFailure(latest);
+    throw new HttpError(409, "Verification progress changed concurrently");
+  }
+  throw replayLimitError(message);
 };
 
 const finalizeJob = async (env, database, session, job, dependencies) => {
@@ -1460,6 +1538,7 @@ export const continueVerifiedSession = async (
   if (Date.parse(job.expires_at) <= nowDate(dependencies).getTime()) {
     throw sessionExpiredError("Game session has expired during verification");
   }
+  throwStoredJobFailure(job);
   if (
     !Number.isSafeInteger(Number(job.continuation_limit)) ||
     Number(job.continuation_limit) < 1 ||
@@ -1497,19 +1576,20 @@ export const continueVerifiedSession = async (
   if (job.stage !== "replay") throw new HttpError(409, "Invalid verification job state");
 
   const nextTimingRevision = Number(job.timing_verified_revision) + 1;
+  let nextTimingBoundary = null;
   if (nextTimingRevision <= Number(job.timing_revision)) {
-    const timing = await database
+    nextTimingBoundary = await database
       .prepare(SELECT_TIMING_REVISION_SQL)
       .bind(sessionId, nextTimingRevision)
       .first();
-    if (!timing) throw new HttpError(409, "Timing evidence is incomplete");
-    if (Number(timing.input_count) < Number(job.input_cursor)) {
+    if (!nextTimingBoundary) throw new HttpError(409, "Timing evidence is incomplete");
+    if (Number(nextTimingBoundary.input_count) < Number(job.input_cursor)) {
       throw new HttpError(400, "Replay passed unverified timing evidence");
     }
-    if (Number(timing.input_count) === Number(job.input_cursor)) {
+    if (Number(nextTimingBoundary.input_count) === Number(job.input_cursor)) {
       const canonicalPrefix = await canonicalPrefixAt(database, job.id, job.input_cursor);
       const prefixHash = await digestText(`[${canonicalPrefix}]`);
-      if (prefixHash !== timing.input_hash) {
+      if (prefixHash !== nextTimingBoundary.input_hash) {
         throw new HttpError(400, "Replay does not match acknowledged timing evidence");
       }
       const timingVerifiedRevision = nextTimingRevision;
@@ -1537,20 +1617,28 @@ export const continueVerifiedSession = async (
     .prepare(SELECT_JOB_INPUTS_SQL)
     .bind(job.input_cursor, inputLimit, job.id, inputLimit)
     .all()).results || [];
-  const replayStartedAt = typeof dependencies.onVerificationBatch === "function"
-    ? performance.now()
-    : 0;
+  const observesStages = typeof dependencies.onVerificationBatch === "function";
+  const performanceNow = dependencies.performanceNow || (() => performance.now());
+  let preparationWallMs = 0;
   const engine = resolveEngine(session.game, dependencies);
   let state;
   if (job.state_json) {
+    const preparationStartedAt = observesStages ? performanceNow() : 0;
     state = parseJsonColumn(job.state_json, "verification checkpoint");
+    if (observesStages) preparationWallMs += performanceNow() - preparationStartedAt;
   } else {
+    const preparationStartedAt = observesStages ? performanceNow() : 0;
     const initial = parseJsonColumn(session.initial_json, "initial game state");
-    if (await digestCanonical(initial) !== session.initial_commitment) {
+    const canonicalInitial = commonRules.canonicalJson(initial);
+    if (observesStages) preparationWallMs += performanceNow() - preparationStartedAt;
+    if (await digestText(canonicalInitial) !== session.initial_commitment) {
       throw new HttpError(403, "Stored initial game state commitment changed");
     }
+    const initializationStartedAt = observesStages ? performanceNow() : 0;
     state = engine.initial(initial);
+    if (observesStages) preparationWallMs += performanceNow() - initializationStartedAt;
   }
+  const preparationStartedAt = observesStages ? performanceNow() : 0;
   let inputCursor = Number(job.input_cursor);
   let tickCursor = Number(job.tick_cursor);
   const canonicalInputs = [];
@@ -1563,13 +1651,12 @@ export const continueVerifiedSession = async (
   if (checkpointBytes > MAX_VERIFICATION_CHECKPOINT_BYTES) {
     throw replayLimitError("Verification checkpoint is too large");
   }
-  const nextBoundary = nextTimingRevision <= Number(job.timing_revision)
-    ? Number((await database
-      .prepare(SELECT_TIMING_REVISION_SQL)
-      .bind(sessionId, nextTimingRevision)
-      .first()).input_count)
+  const nextBoundary = nextTimingBoundary
+    ? Number(nextTimingBoundary.input_count)
     : Number(job.input_count);
+  if (observesStages) preparationWallMs += performanceNow() - preparationStartedAt;
 
+  const replayStartedAt = observesStages ? performanceNow() : 0;
   while (operations < MAX_VERIFICATION_BATCH_OPERATIONS) {
     if (inputCursor === nextBoundary && nextTimingRevision <= Number(job.timing_revision)) break;
     let input;
@@ -1634,21 +1721,35 @@ export const continueVerifiedSession = async (
       tickCursor += 1;
     }
     if (Number(job.work_used) + batchWork > commonRules.GAME_RULE_LIMITS[session.game].work) {
-      throw replayLimitError("Game verification work limit exceeded");
+      return failVerificationJob(
+        database,
+        job,
+        "Game verification work limit exceeded",
+        dependencies
+      );
     }
   }
+  const replayWallMs = observesStages ? performanceNow() - replayStartedAt : 0;
   if (operations === 0) {
     throw new HttpError(400, "Replay cannot advance verification progress");
   }
+  const serializationStartedAt = observesStages ? performanceNow() : 0;
   const stateJson = commonRules.canonicalJson(state);
   if (textEncoder.encode(stateJson).byteLength > MAX_VERIFICATION_CHECKPOINT_BYTES) {
     throw replayLimitError("Verification checkpoint is too large");
   }
-  if (replayStartedAt) {
+  const canonicalChunk = canonicalInputs.join(",");
+  const serializationWallMs = observesStages
+    ? performanceNow() - serializationStartedAt
+    : 0;
+  if (observesStages) {
     dependencies.onVerificationBatch(Object.freeze({
       operations,
       work: batchWork,
-      wallMs: performance.now() - replayStartedAt,
+      preparationWallMs,
+      replayWallMs,
+      serializationWallMs,
+      synchronousWallMs: preparationWallMs + replayWallMs + serializationWallMs,
     }));
   }
   const replayDone = inputCursor === Number(job.input_count) &&
@@ -1658,7 +1759,7 @@ export const continueVerifiedSession = async (
     timing_verified_revision: Number(job.timing_verified_revision),
     input_cursor: inputCursor,
     tick_cursor: tickCursor,
-    canonical_chunk: canonicalInputs.join(","),
+    canonical_chunk: canonicalChunk,
     state_json: stateJson,
     work_used: Number(job.work_used) + batchWork,
     stage: replayDone && timingDone ? "finalize" : "replay",
@@ -1685,9 +1786,7 @@ const publicationMatches = async (env, completion, event, digest) => {
 
 const assertCanonicalAssertions = (completion, event) => {
   const canonical = completionToCanonicalEvent(completion);
-  const asserted = Object.fromEntries(
-    Object.keys(canonical).map((key) => [key, event[key]])
-  );
+  const { profile: _profile, ...asserted } = event;
   if (commonRules.canonicalJson(canonical) !== commonRules.canonicalJson(asserted)) {
     throw new HttpError(400, "Published result does not match the verified completion");
   }

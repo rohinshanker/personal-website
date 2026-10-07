@@ -20,7 +20,7 @@ ALTER TABLE game_stat_sessions ADD COLUMN initial_commitment TEXT;
 ALTER TABLE game_stat_sessions ADD COLUMN scope_digest TEXT;
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_revision INTEGER NOT NULL DEFAULT 0
-  CHECK (timing_revision BETWEEN 0 AND 8192);
+  CHECK (timing_revision BETWEEN 0 AND 900);
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_phase TEXT NOT NULL DEFAULT 'legacy'
   CHECK (timing_phase IN ('legacy', 'ready', 'running', 'paused', 'finishing', 'finished'));
@@ -32,7 +32,7 @@ ALTER TABLE game_stat_sessions
   CHECK (timing_countdown_ms >= 0);
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_resume_count INTEGER NOT NULL DEFAULT 0
-  CHECK (timing_resume_count BETWEEN 0 AND 8192);
+  CHECK (timing_resume_count BETWEEN 0 AND 900);
 ALTER TABLE game_stat_sessions ADD COLUMN timing_updated_at TEXT;
 ALTER TABLE game_stat_sessions
   ADD COLUMN timing_input_count INTEGER NOT NULL DEFAULT 0
@@ -48,7 +48,7 @@ CREATE UNIQUE INDEX game_stat_sessions_completion_idx
 
 CREATE TABLE verified_timing_transitions (
   session_id TEXT NOT NULL,
-  revision INTEGER NOT NULL CHECK (revision BETWEEN 1 AND 8192),
+  revision INTEGER NOT NULL CHECK (revision BETWEEN 1 AND 900),
   operation TEXT NOT NULL CHECK (operation IN ('pause', 'resume')),
   request_digest TEXT NOT NULL,
   input_count INTEGER NOT NULL CHECK (input_count >= 0),
@@ -56,7 +56,7 @@ CREATE TABLE verified_timing_transitions (
   phase TEXT NOT NULL CHECK (phase IN ('running', 'paused')),
   elapsed_ms INTEGER NOT NULL CHECK (elapsed_ms >= 0),
   countdown_ms INTEGER NOT NULL CHECK (countdown_ms >= 0),
-  resume_count INTEGER NOT NULL CHECK (resume_count BETWEEN 0 AND 8192),
+  resume_count INTEGER NOT NULL CHECK (resume_count BETWEEN 0 AND 900),
   observed_at TEXT NOT NULL,
   PRIMARY KEY (session_id, revision)
 ) STRICT;
@@ -77,7 +77,7 @@ CREATE TABLE verified_game_completions (
   puzzle_key TEXT,
   initial_commitment TEXT NOT NULL,
   replay_digest TEXT NOT NULL,
-  timing_revision INTEGER NOT NULL CHECK (timing_revision BETWEEN 0 AND 8192),
+  timing_revision INTEGER NOT NULL CHECK (timing_revision BETWEEN 0 AND 900),
   elapsed_ms INTEGER NOT NULL CHECK (elapsed_ms >= 0),
   finished_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
@@ -94,7 +94,7 @@ CREATE TABLE verified_completion_jobs (
   transcript_json TEXT NOT NULL,
   rules_version INTEGER NOT NULL,
   replay_version INTEGER NOT NULL,
-  timing_revision INTEGER NOT NULL CHECK (timing_revision BETWEEN 0 AND 8192),
+  timing_revision INTEGER NOT NULL CHECK (timing_revision BETWEEN 0 AND 900),
   timing_verified_revision INTEGER NOT NULL DEFAULT 0
     CHECK (timing_verified_revision >= 0),
   terminal_tick INTEGER,
@@ -116,13 +116,23 @@ CREATE TABLE verified_completion_jobs (
   finished_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
   stage TEXT NOT NULL DEFAULT 'replay'
-    CHECK (stage IN ('replay', 'finalize', 'completed')),
+    CHECK (stage IN ('replay', 'finalize', 'completed', 'failed')),
+  failure_code TEXT CHECK (failure_code IS NULL OR failure_code = 'replay-limit'),
+  failure_message TEXT,
+  failed_at TEXT,
   completion_id TEXT UNIQUE,
   updated_at TEXT NOT NULL,
   CHECK (json_valid(transcript_json)),
   CHECK (json_type(transcript_json, '$.inputs') = 'array'),
   CHECK (json_array_length(transcript_json, '$.inputs') = input_count),
-  CHECK (timing_verified_revision <= timing_revision)
+  CHECK (timing_verified_revision <= timing_revision),
+  CHECK (
+    (stage = 'failed' AND failure_code IS NOT NULL AND
+      failure_message IS NOT NULL AND failed_at IS NOT NULL)
+    OR
+    (stage <> 'failed' AND failure_code IS NULL AND
+      failure_message IS NULL AND failed_at IS NULL)
+  )
 ) STRICT;
 
 CREATE TABLE verified_completion_progress (
@@ -145,6 +155,17 @@ CREATE TABLE verified_completion_replay_chunks (
   PRIMARY KEY (job_id, start_cursor),
   UNIQUE (job_id, end_cursor)
 ) STRICT;
+
+CREATE TRIGGER verified_replay_chunk_contiguity_guard
+BEFORE INSERT ON verified_completion_replay_chunks
+WHEN NEW.start_cursor <> COALESCE((
+  SELECT MAX(end_cursor)
+  FROM verified_completion_replay_chunks
+  WHERE job_id = NEW.job_id
+), 0)
+BEGIN
+  SELECT RAISE(ABORT, 'verified replay chunks must be contiguous');
+END;
 
 CREATE INDEX verified_completion_jobs_expiry_idx
   ON verified_completion_jobs (expires_at);

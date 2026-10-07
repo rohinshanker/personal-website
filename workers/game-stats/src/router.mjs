@@ -84,6 +84,10 @@ const DELETE_EXPIRED_COMPLETION_JOBS_SQL = `
 DELETE FROM verified_completion_jobs
 WHERE expires_at <= ?
 `;
+const DELETE_EXPIRED_UNPUBLISHED_COMPLETIONS_SQL = `
+DELETE FROM verified_game_completions
+WHERE expires_at <= ? AND published_event_id IS NULL
+`;
 const DELETE_EXPIRED_RATE_LIMITS_SQL = `
 DELETE FROM game_stats_rate_limits
 WHERE expires_at <= ?
@@ -326,6 +330,7 @@ export const purgeExpiredGameStatsRows = async (env) => {
     expiredCompletionReplayChunks,
     expiredCompletionProgress,
     expiredCompletionJobs,
+    expiredUnpublishedCompletions,
     expiredSessions,
     expiredRateLimits,
   ] = await database.batch([
@@ -333,6 +338,7 @@ export const purgeExpiredGameStatsRows = async (env) => {
     database.prepare(DELETE_EXPIRED_COMPLETION_REPLAY_CHUNKS_SQL).bind(purgedAt),
     database.prepare(DELETE_EXPIRED_COMPLETION_PROGRESS_SQL).bind(purgedAt),
     database.prepare(DELETE_EXPIRED_COMPLETION_JOBS_SQL).bind(purgedAt),
+    database.prepare(DELETE_EXPIRED_UNPUBLISHED_COMPLETIONS_SQL).bind(purgedAt),
     database.prepare(DELETE_EXPIRED_SESSIONS_SQL).bind(purgedAt),
     database.prepare(DELETE_EXPIRED_RATE_LIMITS_SQL).bind(purgedAt),
   ]);
@@ -342,6 +348,7 @@ export const purgeExpiredGameStatsRows = async (env) => {
     expiredCompletionReplayChunks: getChanges(expiredCompletionReplayChunks),
     expiredCompletionProgress: getChanges(expiredCompletionProgress),
     expiredCompletionJobs: getChanges(expiredCompletionJobs),
+    expiredUnpublishedCompletions: getChanges(expiredUnpublishedCompletions),
     expiredSessions: getChanges(expiredSessions),
     expiredRateLimitBuckets: getChanges(expiredRateLimits),
   });
@@ -351,6 +358,7 @@ export const scheduled = async (_controller, env) => {
   const summary = await purgeExpiredGameStatsRows(env);
   console.log(
     `Purged ${summary.expiredSessions} expired game sessions and ` +
+      `${summary.expiredUnpublishedCompletions} unpublished completions and ` +
       `${summary.expiredRateLimitBuckets} rate-limit buckets at ${summary.purgedAt}.`
   );
 };

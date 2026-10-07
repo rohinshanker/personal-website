@@ -39,7 +39,10 @@ export const MAX_EVENTS_PER_WINDOW = 24;
 export const MAX_VERIFICATION_ATTEMPTS_PER_WINDOW = 240;
 export const MAX_VERIFICATION_CONTINUATIONS_PER_WINDOW = 8192;
 export const MAX_VERIFICATION_JOB_CONTINUATIONS = 8192;
-export const MAX_VERIFIED_TIMING_REVISIONS = 8192;
+// Worst-case Snake ticks + inputs take 6,233 32-operation batches. A timing
+// boundary can split one batch and needs its own authenticated checkpoint, so
+// 900 revisions plus finalization keep the whole job within 8,192 requests.
+export const MAX_VERIFIED_TIMING_REVISIONS = 900;
 export const MAX_VERIFICATION_BATCH_OPERATIONS = 32;
 export const MAX_VERIFICATION_BATCH_WORK = 40_000;
 export const MAX_VERIFICATION_ACTION_WORK = 20_000;

@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   handleRequest,
   purgeExpiredGameStatsRows,
+  scheduled,
 } from "../workers/game-stats/src/router.mjs";
 import {
   VERSION_FIELDS,
@@ -14,7 +15,12 @@ import {
   digestCanonical,
   replayPrefixHash,
 } from "../workers/game-stats/src/verified-results.mjs";
-import { MAX_VERIFIED_TIMING_REVISIONS } from "../workers/game-stats/src/constants.mjs";
+import {
+  MAX_VERIFICATION_BATCH_OPERATIONS,
+  MAX_VERIFICATION_JOB_CONTINUATIONS,
+  MAX_VERIFIED_TIMING_REVISIONS,
+} from "../workers/game-stats/src/constants.mjs";
+import { createSessionToken } from "../workers/game-stats/src/security.mjs";
 import { SqliteD1Database, applyGameStatsMigrations } from "./helpers/sqlite-d1.mjs";
 
 const migrationPaths = [
@@ -27,7 +33,7 @@ const migrationPaths = [
 
 const origin = "https://rohin.shanker.me";
 const buildVersion = `sha256-${"a".repeat(64)}`;
-const puzzle = "1".repeat(81);
+const puzzle = `1${"0".repeat(80)}`;
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const checkedAction = (input, expectedOperation = "advance") => {
@@ -291,6 +297,17 @@ test("protocol 2 issues a committed game, derives its result, and publishes by r
   assert.equal(fabricated.status, 400);
   assert.match((await fabricated.json()).error, /does not match/);
 
+  const extraIdentity = await harness.dispatch("/events", {
+    event: {
+      ...result.completion.event,
+      puzzleId: "extra-puzzle-identity",
+      puzzle,
+      profile,
+    },
+    completion: receipt,
+  });
+  assert.equal(extraIdentity.status, 400);
+
   const event = {
     ...result.completion.event,
     profile,
@@ -496,7 +513,7 @@ test("resume cannot admit inputs outside a server-observed active interval", asy
   const resumed = await resumeGame(harness, paused, 2, firstInput);
   assert.equal(resumed.status, 200);
   const retry = await resumeGame(harness, paused, 2, firstInput);
-  assert.equal(retry.status, 200);
+  assert.equal(retry.status, 200, await retry.clone().text());
   assert.deepEqual(await retry.json(), await resumed.clone().json());
 });
 
@@ -553,6 +570,24 @@ test("Sudoku uses the engine assistance enum and keeps uncapped canonical second
     assert.equal(completion.event.puzzleId, session.id);
     assert.equal(completion.event.puzzle, puzzle);
 
+    const { puzzleId: _puzzleId, puzzle: _puzzle, ...withoutIdentity } = completion.event;
+    const identityCases = [
+      withoutIdentity,
+      { ...completion.event, puzzleId: `${session.id}-mutated` },
+      { ...completion.event, puzzle: `2${puzzle.slice(1)}` },
+    ];
+    for (const [identityIndex, assertedEvent] of identityCases.entries()) {
+      const rejected = await harness.dispatch("/events", {
+        event: {
+          ...assertedEvent,
+          profile: { ...profile, id: `${profile.id}-${index}-bad-${identityIndex}` },
+        },
+        completion: { id: completion.id, token: completion.token },
+      });
+      assert.equal(rejected.status, 400);
+      assert.match((await rejected.json()).error, /does not match/);
+    }
+
     const published = await harness.dispatch("/events", {
       event: { ...completion.event, profile: { ...profile, id: `${profile.id}-${index}` } },
       completion: { id: completion.id, token: completion.token },
@@ -566,6 +601,38 @@ test("Sudoku uses the engine assistance enum and keeps uncapped canonical second
       metric: Math.floor(scenario.elapsedMs / 1000),
     });
   }
+});
+
+test("Sudoku issuance requires an 81-digit playable puzzle with givens", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const invalidPuzzles = [
+    undefined,
+    "0".repeat(80),
+    "0".repeat(81),
+    "1".repeat(81),
+    `x${"0".repeat(80)}`,
+  ];
+  for (const [index, invalidPuzzle] of invalidPuzzles.entries()) {
+    harness.dependencies.generateIssuedInitial = () => ({
+      game: "sudoku",
+      config: { difficulty: "easy" },
+      progress: 0,
+      target: 2,
+      moves: 0,
+      ...(invalidPuzzle === undefined ? {} : { puzzle: invalidPuzzle }),
+    });
+    const response = await harness.dispatch("/sessions", versioned({
+      game: "sudoku",
+      config: { difficulty: "easy" },
+      buildVersion,
+    }), { ip: `203.0.113.${50 + index}` });
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /puzzle identity/);
+  }
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT COUNT(*) AS count FROM game_stat_sessions WHERE result_protocol = 2
+  `).get().count, 0);
 });
 
 test("an expired completion receipt exposes a stable route error code", async (t) => {
@@ -589,6 +656,81 @@ test("an expired completion receipt exposes a stable route error code", async (t
   });
   const error = await assertErrorCode(expired, 409, "session-expired");
   assert.match(error.error, /expired/);
+});
+
+test("scheduled cleanup purges only expired unpublished completion receipts", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const complete = async (eventId) => {
+    const session = await issue(harness);
+    assert.equal((await resumeGame(harness, session)).status, 200);
+    harness.advance(2_000);
+    const finished = await finishGame(harness, session, finishBody(session, { eventId }));
+    assert.equal(finished.status, 200);
+    return { session, completion: (await finished.json()).completion };
+  };
+  const published = await complete("event-cron-published");
+  const publishedEvent = { ...published.completion.event, profile };
+  assert.equal((await harness.dispatch("/events", {
+    event: publishedEvent,
+    completion: {
+      id: published.completion.id,
+      token: published.completion.token,
+    },
+  })).status, 201);
+  const unpublished = await complete("event-cron-unpublished");
+
+  const expiredAt = "2000-01-01T00:00:00.000Z";
+  harness.database.sqlite.prepare("UPDATE game_stat_sessions SET expires_at = ?").run(expiredAt);
+  harness.database.sqlite.prepare("UPDATE verified_completion_jobs SET expires_at = ?").run(expiredAt);
+  harness.database.sqlite.prepare("UPDATE verified_game_completions SET expires_at = ?").run(expiredAt);
+  published.completion.token = await createSessionToken(
+    harness.env.EVENT_SIGNING_SECRET,
+    {
+      version: 1,
+      scope: "verified-completion",
+      id: published.completion.id,
+      sessionId: published.session.id,
+      requestDigest: harness.database.sqlite.prepare(`
+        SELECT request_digest FROM verified_game_completions WHERE id = ?
+      `).get(published.completion.id).request_digest,
+      game: published.completion.event.game,
+      finishedAt: published.completion.event.occurredAt,
+      expiresAt: expiredAt,
+    }
+  );
+  harness.database.sqlite.prepare(`
+    UPDATE verified_game_completions SET receipt_token = ? WHERE id = ?
+  `).run(published.completion.token, published.completion.id);
+  const messages = [];
+  const originalLog = console.log;
+  console.log = (message) => messages.push(message);
+  try {
+    await scheduled({}, harness.env);
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT COUNT(*) AS count FROM verified_game_completions WHERE id = ?
+  `).get(unpublished.completion.id).count, 0);
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT COUNT(*) AS count FROM verified_game_completions WHERE id = ?
+  `).get(published.completion.id).count, 1);
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT COUNT(*) AS count FROM game_events WHERE completion_id = ?
+  `).get(published.completion.id).count, 1);
+  assert.match(messages.join("\n"), /1 unpublished completions/);
+
+  const retry = await harness.dispatch("/events", {
+    event: publishedEvent,
+    completion: {
+      id: published.completion.id,
+      token: published.completion.token,
+    },
+  });
+  assert.equal(retry.status, 200, await retry.clone().text());
+  assert.equal((await retry.json()).applied, false);
 });
 
 test("an acknowledged paused terminal prefix finishes at its frozen elapsed boundary", async (t) => {
@@ -1109,6 +1251,13 @@ test("timing history is finite and exact retries use its keyed revision", async 
   t.after(() => harness.database.close());
   const session = await issue(harness, "snake", { boardSize: "10" });
   assert.equal(session.limits.timingRevisions, MAX_VERIFIED_TIMING_REVISIONS);
+  const worstReplayBatches = Math.ceil(
+    (session.limits.ticks + session.limits.inputs) / MAX_VERIFICATION_BATCH_OPERATIONS
+  );
+  assert.ok(
+    worstReplayBatches + 2 * MAX_VERIFIED_TIMING_REVISIONS + 1 <=
+      MAX_VERIFICATION_JOB_CONTINUATIONS
+  );
   assert.equal((await resumeGame(harness, session)).status, 200);
   assert.equal((await resumeGame(harness, session)).status, 200);
 
@@ -1398,6 +1547,223 @@ test("one action above a preparation or work envelope is rejected atomically", a
   assert.equal(harness.database.sqlite.prepare(`
     SELECT input_cursor FROM verified_completion_jobs WHERE session_id = ?
   `).get(checkpointSession.id).input_cursor, 0);
+});
+
+test("cumulative work exhaustion becomes an immutable terminal job failure", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const target = 500;
+  harness.dependencies.gameEngines = {
+    ...gameEngines,
+    minesweeper: {
+      generate(config, { firstCell, budget }) {
+        budget.spend();
+        return { config, firstCell, progress: 0, target };
+      },
+      initial(raw) { return clone(raw); },
+      transition(state, input, budget) {
+        budget.spend(5_000);
+        checkedAction(input);
+        state.progress += 1;
+        return state;
+      },
+      result(state) {
+        return { terminal: state.progress === target, won: state.progress === target };
+      },
+    },
+  };
+  const session = await issue(harness);
+  assert.equal((await resumeGame(harness, session)).status, 200);
+  harness.advance(2_000);
+  const body = finishBody(session, {
+    eventId: "event-cumulative-work-limit",
+    inputs: Array.from({ length: target }, (_, index) => ({
+      seq: index + 1,
+      op: "advance",
+      amount: 1,
+    })),
+  });
+  let response = await harness.dispatch(`/sessions/${session.id}/finish`, body);
+  let lastProgress;
+  let continuations = 0;
+  while (response.status === 202) {
+    lastProgress = (await response.json()).progress;
+    response = await harness.dispatch(`/sessions/${session.id}/finish/continue`, {
+      session: { id: session.id, token: session.token },
+      progress: lastProgress,
+    });
+    continuations += 1;
+    assert.ok(continuations < 100);
+  }
+  const failure = await assertErrorCode(response, 413, "replay-limit");
+  assert.equal(failure.error, "Game verification work limit exceeded");
+  assert.deepEqual({ ...harness.database.sqlite.prepare(`
+    SELECT stage, input_cursor, work_used, failure_code, failure_message,
+      completion_id, expires_at
+    FROM verified_completion_jobs WHERE session_id = ?
+  `).get(session.id) }, {
+    stage: "failed",
+    input_cursor: 400,
+    work_used: 2_000_000,
+    failure_code: "replay-limit",
+    failure_message: "Game verification work limit exceeded",
+    completion_id: null,
+    expires_at: session.expiresAt,
+  });
+
+  const retry = await harness.dispatch(`/sessions/${session.id}/finish/continue`, {
+    session: { id: session.id, token: session.token },
+    progress: lastProgress,
+  });
+  assert.deepEqual(await retry.json(), failure);
+  assert.equal(retry.status, 413);
+  const finishRetry = await harness.dispatch(`/sessions/${session.id}/finish`, body);
+  assert.equal(finishRetry.status, 413);
+  assert.deepEqual(await finishRetry.json(), failure);
+  assert.equal(harness.database.sqlite.prepare(`
+    SELECT COUNT(*) AS count FROM verified_game_completions WHERE session_id = ?
+  `).get(session.id).count, 0);
+  assert.deepEqual({ ...harness.database.sqlite.prepare(`
+    SELECT timing_phase, finish_job_id, consumed_at, completion_id, expires_at
+    FROM game_stat_sessions WHERE id = ?
+  `).get(session.id) }, {
+    timing_phase: "finishing",
+    finish_job_id: lastProgress.id,
+    consumed_at: null,
+    completion_id: null,
+    expires_at: session.expiresAt,
+  });
+});
+
+test("runtime probes exclude awaited gaps and report every synchronous stage", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const session = await issue(harness);
+  assert.equal((await resumeGame(harness, session)).status, 200);
+  harness.advance(2_000);
+  const started = await harness.dispatch(
+    `/sessions/${session.id}/finish`,
+    finishBody(session, { eventId: "event-stage-clock-boundaries" })
+  );
+  const firstProgress = (await started.json()).progress;
+  const timingChecked = await harness.dispatch(`/sessions/${session.id}/finish/continue`, {
+    session: { id: session.id, token: session.token },
+    progress: firstProgress,
+  });
+  const replayProgress = (await timingChecked.json()).progress;
+
+  const stamps = [
+    0, 2,
+    1_000, 1_003,
+    2_000, 2_004,
+    3_000, 3_005,
+    4_000, 4_006,
+  ];
+  let observed;
+  harness.dependencies.performanceNow = () => stamps.shift();
+  harness.dependencies.onVerificationBatch = (sample) => { observed = sample; };
+  const replayed = await harness.dispatch(`/sessions/${session.id}/finish/continue`, {
+    session: { id: session.id, token: session.token },
+    progress: replayProgress,
+  });
+  assert.equal(replayed.status, 202);
+  assert.deepEqual(observed, {
+    operations: 2,
+    work: 2,
+    preparationWallMs: 9,
+    replayWallMs: 5,
+    serializationWallMs: 6,
+    synchronousWallMs: 20,
+  });
+  assert.equal(stamps.length, 0);
+});
+
+test("canonical replay chunks reject gaps, overlaps, and out-of-order insertion", async (t) => {
+  const harness = createHarness();
+  t.after(() => harness.database.close());
+  const target = 70;
+  harness.dependencies.gameEngines = {
+    ...gameEngines,
+    minesweeper: {
+      generate(config, { firstCell, budget }) {
+        budget.spend();
+        return { config, firstCell, progress: 0, target };
+      },
+      initial(raw) { return clone(raw); },
+      transition(state, input, budget) {
+        budget.spend();
+        checkedAction(input);
+        state.progress += 1;
+        return state;
+      },
+      result(state) {
+        return { terminal: state.progress === target, won: state.progress === target };
+      },
+    },
+  };
+  const session = await issue(harness);
+  assert.equal((await resumeGame(harness, session)).status, 200);
+  harness.advance(2_000);
+  const inputs = Array.from({ length: target }, (_, index) => ({
+    seq: index + 1,
+    op: "advance",
+    amount: 1,
+  }));
+  let response = await harness.dispatch(
+    `/sessions/${session.id}/finish`,
+    finishBody(session, { eventId: "event-chunk-contiguity", inputs })
+  );
+  let finalizeProgress;
+  for (let count = 0; count < 20; count += 1) {
+    assert.equal(response.status, 202);
+    const { progress } = await response.json();
+    const stage = harness.database.sqlite.prepare(`
+      SELECT stage FROM verified_completion_jobs WHERE session_id = ?
+    `).get(session.id).stage;
+    if (stage === "finalize") {
+      finalizeProgress = progress;
+      break;
+    }
+    response = await harness.dispatch(`/sessions/${session.id}/finish/continue`, {
+      session: { id: session.id, token: session.token },
+      progress,
+    });
+  }
+  assert.ok(finalizeProgress);
+  const jobId = finalizeProgress.id;
+  assert.deepEqual(harness.database.sqlite.prepare(`
+    SELECT start_cursor, end_cursor
+    FROM verified_completion_replay_chunks
+    WHERE job_id = ? ORDER BY start_cursor
+  `).all(jobId).map((row) => ({ ...row })), [
+    { start_cursor: 0, end_cursor: 32 },
+    { start_cursor: 32, end_cursor: 64 },
+    { start_cursor: 64, end_cursor: 70 },
+  ]);
+
+  const insertChunk = (start, end) => harness.database.sqlite.prepare(`
+    INSERT INTO verified_completion_replay_chunks (
+      job_id, start_cursor, end_cursor, canonical_inputs, created_at
+    ) VALUES (?, ?, ?, '{}', ?)
+  `).run(jobId, start, end, new Date().toISOString());
+  assert.throws(() => insertChunk(72, 73), /must be contiguous/);
+  assert.throws(() => insertChunk(69, 71), /must be contiguous/);
+
+  harness.database.sqlite.prepare(`
+    UPDATE verified_completion_replay_chunks
+    SET start_cursor = 33 WHERE job_id = ? AND start_cursor = 32
+  `).run(jobId);
+  const corrupted = await harness.dispatch(`/sessions/${session.id}/finish/continue`, {
+    session: { id: session.id, token: session.token },
+    progress: finalizeProgress,
+  });
+  assert.equal(corrupted.status, 409);
+  assert.match((await corrupted.json()).error, /not contiguous/);
+
+  harness.database.sqlite.prepare(`
+    DELETE FROM verified_completion_replay_chunks WHERE job_id = ?
+  `).run(jobId);
+  assert.throws(() => insertChunk(32, 64), /must be contiguous/);
 });
 
 test("a failed completion insert rolls back session consumption in real SQLite", async (t) => {

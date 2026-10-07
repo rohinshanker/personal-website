@@ -88,7 +88,7 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
   assert.equal(issuedResponse.status, 201, await issuedResponse.clone().text());
   const issued = await issuedResponse.json();
   assert.equal(issued.limits.continuations, 8192);
-  assert.equal(issued.limits.timingRevisions, 8192);
+  assert.equal(issued.limits.timingRevisions, 900);
   const emptyHash = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode("[]")
@@ -122,7 +122,10 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
   const encodedBytes = new TextEncoder().encode(JSON.stringify(finishPayload)).byteLength;
   assert.ok(encodedBytes < 256 * 1024, `fixture body is ${encodedBytes} bytes`);
   const requestWallTimes = [];
+  const synchronousWallTimes = [];
+  const preparationWallTimes = [];
   const replayWallTimes = [];
+  const serializationWallTimes = [];
   const startedAt = performance.now();
   let requestStartedAt = performance.now();
   let finished = await post(runtime, `/sessions/${issued.id}/finish`, finishPayload);
@@ -138,9 +141,16 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
       progress,
     });
     requestWallTimes.push(performance.now() - requestStartedAt);
-    const replayWallMs = Number(finished.headers.get("X-Test-Replay-Wall-Ms"));
-    if (Number.isFinite(replayWallMs) && replayWallMs > 0) {
-      replayWallTimes.push(replayWallMs);
+    const samples = [
+      [preparationWallTimes, "X-Test-Replay-Preparation-Wall-Ms"],
+      [replayWallTimes, "X-Test-Replay-Wall-Ms"],
+      [serializationWallTimes, "X-Test-Replay-Serialization-Wall-Ms"],
+      [synchronousWallTimes, "X-Test-Replay-Synchronous-Wall-Ms"],
+    ];
+    for (const [target, header] of samples) {
+      const rawValue = finished.headers.get(header);
+      const value = Number(rawValue);
+      if (rawValue !== null && Number.isFinite(value) && value >= 0) target.push(value);
     }
     continuationCount += 1;
   }
@@ -150,21 +160,25 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
   assert.equal(result.completion.event.id, finishPayload.eventId);
   assert.equal(result.completion.event.metricKind, "seconds");
   assert.ok(elapsedMs < 15_000, `near-limit replay took ${elapsedMs.toFixed(1)} ms`);
+  assert.ok(synchronousWallTimes.length > 0);
   const sortedWallTimes = requestWallTimes.toSorted((a, b) => a - b);
   const p95WallMs = sortedWallTimes[Math.floor(sortedWallTimes.length * 0.95)];
   const maximumWallMs = sortedWallTimes.at(-1);
-  const maximumReplayWallMs = Math.max(...replayWallTimes);
+  const maximumSynchronousWallMs = Math.max(...synchronousWallTimes);
   assert.ok(
-    maximumReplayWallMs < 10,
-    `bounded synchronous replay work took ${maximumReplayWallMs.toFixed(1)} ms`
+    maximumSynchronousWallMs < 10,
+    `bounded synchronous replay stages took ${maximumSynchronousWallMs.toFixed(1)} ms`
   );
   t.diagnostic(
     `verified ${inputs.length} inputs / 1,600,000 charged engine work / ` +
       `${encodedBytes} request bytes over ${continuationCount} bounded continuations ` +
       `in ${elapsedMs.toFixed(1)} ms total workerd wall time; ` +
       `p95 ${p95WallMs.toFixed(1)} ms / max ${maximumWallMs.toFixed(1)} ms per request ` +
-      `(wall time, not production CPU time); max synchronous replay segment ` +
-      `${maximumReplayWallMs.toFixed(1)} ms`
+      `(wall time, not production CPU time); max synchronous stages ` +
+      `prepare ${Math.max(...preparationWallTimes).toFixed(1)} ms / ` +
+      `replay ${Math.max(...replayWallTimes).toFixed(1)} ms / ` +
+      `serialize ${Math.max(...serializationWallTimes).toFixed(1)} ms / ` +
+      `combined ${maximumSynchronousWallMs.toFixed(1)} ms`
   );
 
   const completionCount = await database.prepare(
