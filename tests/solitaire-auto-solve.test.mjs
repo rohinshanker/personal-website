@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
 
 import { readHomeScript } from "./helpers/home-scripts.mjs";
+import { plain } from "./helpers/source-runtime.mjs";
 
 const root = new URL("../", import.meta.url);
 const [mainSource, homeSource, styleSource] = await Promise.all([
@@ -19,17 +21,32 @@ const sourceSection = (start, end) => {
   return mainSource.slice(startIndex, endIndex);
 };
 
+/**
+ * The rule engine decides which card may go to a foundation, so the plan itself
+ * is read from the engine. The controller still owns the cadence, the signature
+ * and the cache in front of it, and those come from the controller's own source.
+ */
+const engineContext = vm.createContext({});
+for (const key of ["gameRules", "gameSolitaireRules"]) {
+  vm.runInContext(
+    await readFile(new URL(`scripts/home/games/${key === "gameRules" ? "rules" : "solitaire"}.js`, root), "utf8"),
+    engineContext
+  );
+}
+const solRules = engineContext.homeSolitaireRules;
+
+const solPlanAutoSolve = (state) => plain(solRules.planAutoSolveBoard(state));
+const solNextAutoSolveMove = (state) => plain(solRules.boardFoundationMove(state));
+
 const {
   solAutoSolveIntervalMs,
   solAutoSolvePhaseMs,
   solAutoSolveTiming,
   solBuildPresentationTableau,
   solCanAutoSolve,
-  solNextAutoSolveMove,
-  solPlanAutoSolve,
-} = new Function(`
+} = new Function("solRules", `
   ${sourceSection("const solSuitOrder =", "const solRankNames =")}
-  ${sourceSection("const solCloneCards =", "const solSnapshot =")}
+  ${sourceSection("const solCloneCards =", "const solAutoSolveTiming =")}
   ${sourceSection("const solAutoSolveTiming =", "const solShowAchievement =")}
   return {
     solAutoSolveIntervalMs,
@@ -37,10 +54,8 @@ const {
     solAutoSolveTiming,
     solBuildPresentationTableau,
     solCanAutoSolve,
-    solNextAutoSolveMove,
-    solPlanAutoSolve,
   };
-`)();
+`)(solRules);
 
 const suits = ["spades", "clubs", "diamonds", "hearts"];
 const color = (card) =>
@@ -348,9 +363,13 @@ test("the runtime blocks input while solving, lands each card before the next, a
   // The toolbar swap itself runs in solitaire-board-lifecycle.test.mjs, which
   // drives the production control through every state instead of reading it.
 
-  const start = sourceSection("const solStartAutoSolve = () => {", "const solFlipSourceTopCard = ");
+  const start = sourceSection("const solStartAutoSolve = () => {", "const solIsPackedTableauStack = ");
   assert.match(start, /if \(!plan\.moves\.length\) return false/);
-  assert.match(start, /solPushUndo\(\);/, "One undo step reverts the whole run.");
+  assert.match(
+    start,
+    /if \(!solPlay\(\{ op: "autoRunStart" \}, \{ render: false \}\)\) return false/,
+    "The engine opens the run, so one undo step reverts the whole animation."
+  );
   assert.match(start, /completes: plan\.completes/);
 
   const step = sourceSection("const solRunAutoSolveStep = (run) => {", "const solCancelAutoSolve = () => {");
@@ -364,9 +383,13 @@ test("the runtime blocks input while solving, lands each card before the next, a
   assert.match(incremental, /cardEl\.remove\(\);\s*solRenderFoundationSlot\(slot, move\.suit\);/);
   assert.doesNotMatch(incremental.split("cardEl.remove()")[1], /solRender\(\)/, "The common landing must not rebuild the board.");
 
-  const landing = sourceSection("const solLandAutoSolveCard = ", "const solFinishAutoSolve = ");
-  assert.match(landing, /const \{ flipped \} = solApplyAutoSolveMove\(solState, move\)/);
-  assert.match(landing, /solState\.moves \+= 1/);
+  const landing = sourceSection("const solLandAutoSolveCard = ", "/\*\* Closes the engine's run");
+  assert.match(landing, /const flipped = solMoveUncoversCard\(move\)/);
+  assert.match(
+    landing,
+    /solPlay\(move\.action, \{ render: false \}\)/,
+    "Each landed card is an ordinary engine move, so it enters the replay."
+  );
   assert.match(landing, /solRenderLanding\(move, card, flipped\)/);
   assert.match(landing, /solFlashFoundation\(move\.suit\)/);
   assert.match(landing, /solPlayImpactSound\(\)/);
@@ -388,7 +411,12 @@ test("the runtime blocks input while solving, lands each card before the next, a
   assert.match(mainSource, /solPrepareImpactSound\(\);\n  solAutoSolveRun = \{ step: 0/);
 
   const finish = sourceSection("const solFinishAutoSolve = ", "const solRunAutoSolveStep = ");
-  assert.match(finish, /solCheckWin\(\);/);
+  assert.match(finish, /solEndAutoRun\(\);\n  solCheckWin\(\);/);
+  assert.match(
+    sourceSection("const solCancelAutoSolve = ", "const solStartAutoSolve = "),
+    /solEndAutoRun\(\);/,
+    "An abandoned run closes in the engine too, or the next move is refused."
+  );
 
   const impact = sourceSection("const solImpactWindow = ", "const solLandAutoSolveCard = ");
   assert.match(impact, /solPrefersReducedMotion\(\)/);

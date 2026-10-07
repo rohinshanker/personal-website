@@ -53,10 +53,18 @@ const createToolbarHarness = () => {
       "const solReset = reset;",
       "const solAutoSolve = autoSolve;",
       "const solUndo = undo;",
-      "const solHistory = [];",
       "let solAutoSolveRun = null;",
       "let plannedResult = { moves: [], completes: false };",
-      "const solPlanAutoSolve = () => { plans += 1; return plannedResult; };",
+      "let solGame = { undo: [] };",
+      'let solGameSignature = "";',
+      "const SOLITAIRE_MOVE_WORK = 1024;",
+      "const createBudget = () => ({ spend: () => {} });",
+      "const solStats = { dropSession: () => {} };",
+      `const solRules = {
+         planAutoSolveBoard: () => { plans += 1; return plannedResult; },
+         fromBoard: () => solGame,
+         toBoard: () => solState,
+       };`,
       `const solState = {
          stock: [],
          waste: [],
@@ -68,10 +76,10 @@ const createToolbarHarness = () => {
        };`,
       sourceBetween(source, "const solSetAttribute =", "\nconst solSetText"),
       sourceBetween(source, "const solAutoSolveSignature =", "\n\nconst solPresentationRunSuits"),
-      sourceBetween(source, "const solRenderToolbar = () => {", "\n\nconst solCheckWin = () => {"),
+      sourceBetween(source, "const solRenderToolbar = () => {", "\n\n/**\n * Announces a victory"),
       `globalThis.harness = {
          state: solState,
-         history: solHistory,
+         history: solGame.undo,
          plan: (plan) => { plannedResult = plan; },
          run: (run) => { solAutoSolveRun = run; },
          renderToolbar: () => solRenderToolbar(),
@@ -97,14 +105,30 @@ const createToolbarHarness = () => {
  * only the deal generator and the renderer stubbed out.
  */
 const createOpenHarness = () => {
-  const context = vm.createContext({ deals: 0, renders: 0, calls: [], hooks: null });
+  const context = vm.createContext({
+    deals: 0, renders: 0, calls: [], hooks: null, issued: [], issueCalls: [],
+  });
   vm.runInContext(
     [
       `const solSuitOrder = ${JSON.stringify(SUITS)};`,
       "let solBoardReady = false;",
       "let solLastCardClick = { key: 'stale', time: 1 };",
-      "const solHistory = [{ snapshot: true }];",
+      "let solAutoSolveRun = null;",
+      "let solGame = null;",
+      'let solGameSignature = "";',
+      "const SOLITAIRE_MOVE_WORK = 1024;",
+      "const createBudget = () => ({ spend: () => {} });",
       "const solState = { presentation: { visualEffects: true }, statsSession: 'stale-session' };",
+      // The rules are stood in for here so the harness can deal one-card boards:
+      // what this test watches is the order the controller does things in, and
+      // tests/solitaire-rules.test.mjs holds the engine itself to account.
+      `const solRules = {
+         fromBoard: (board) => ({ board, moves: 0, undo: [] }),
+         toBoard: (game) => game.board,
+         initial: (raw) => { issued.push(raw); return { board: raw, moves: 0, undo: [] }; },
+       };`,
+      "const ensureSolitaireStatsSession = () => calls.push('ensure-session');",
+      "const solCheckWin = () => {};",
       `const solBuildWinnableDeal = () => {
          deals += 1;
          return {
@@ -115,12 +139,22 @@ const createOpenHarness = () => {
          };
        };`,
       "const solBuildPresentationTableau = () => [['staged']];",
-      "const solStats = { dropSession: () => { solState.statsSession = ''; } };",
+      `const solStats = {
+         dropSession: () => { solState.statsSession = ''; },
+         hasIssuedGame: () => Boolean(solState.statsSession) && issuedAlready,
+         issueGame: (config) => {
+           issueCalls.push(config);
+           return new Promise((resolve) => { issueResolvers.push(resolve); });
+         },
+       };`,
+      "let issuedAlready = false;",
+      "const issueResolvers = [];",
       "const solCancelAutoSolve = () => calls.push('cancel');",
       "const solHideVictoryVideo = () => calls.push('hide-video');",
       "const solRender = () => { renders += 1; };",
       "const registerWindowLifecycle = (appId, lifecycle) => { hooks = { appId, lifecycle }; };",
-      sourceBetween(source, "const solNewGame = () => {", "\n\nconst solAutoMoveCardToFoundation"),
+      sourceBetween(source, "const solAutoSolveSignature =", "\n\nconst solPresentationRunSuits"),
+      sourceBetween(source, "/** Invalidated by every new board", "\n\n/**\n * The double-click shortcut"),
       sourceBetween(
         source,
         'registerWindowLifecycle("solitaire", {',
@@ -128,11 +162,13 @@ const createOpenHarness = () => {
       ),
       `globalThis.harness = {
          state: solState,
-         history: solHistory,
          ensureBoard: () => solEnsureBoard(),
          stagePresentation: (options) => solStagePresentationWin(options),
          newGame: () => solNewGame(),
          ready: () => solBoardReady,
+         undoDepth: () => solGame.undo.length,
+         resolveIssued: (index, descriptor) => issueResolvers[index](descriptor),
+         play: () => { solGame.moves += 1; },
        };`,
     ].join("\n"),
     context
@@ -143,6 +179,8 @@ const createOpenHarness = () => {
     deals: () => context.deals,
     renders: () => context.renders,
     calls: () => context.calls,
+    issued: () => context.issued,
+    issueCalls: () => context.issueCalls,
   };
 };
 
@@ -201,7 +239,7 @@ test("the first open deals once, later opens keep the board, and Reset redeals",
   assert.deepEqual(plain(firstStock), [{ id: "dealt-stock-1" }]);
   assert.equal(harness.state.presentation, null, "A real deal clears any staged board.");
   assert.equal(harness.state.statsSession, "", "A fresh deal carries no stats session.");
-  assert.equal(harness.history.length, 0, "A fresh deal cannot be undone into the old one.");
+  assert.equal(harness.undoDepth(), 0, "A fresh deal cannot be undone into the old one.");
   assert.equal(harness.renders(), 1);
 
   assert.equal(harness.ensureBoard(), false, "Reopening must not touch the board.");
@@ -229,6 +267,57 @@ test("a presentation staged before the first open survives that open", () => {
   assert.deepEqual(plain(harness.state.tableau), [["staged"]]);
   assert.deepEqual(plain(harness.state.presentation), { visualEffects: false });
   assert.equal(harness.state.statsSession, "", "A staged board stays unpublishable.");
+});
+
+test("a new board asks for verified issuance and adopts it while untouched", async () => {
+  const harness = createOpenHarness();
+
+  harness.newGame();
+  assert.deepEqual(plain(harness.issueCalls()), [{}], "Dealing is what asks for a board.");
+  assert.deepEqual(plain(harness.state.stock), [{ id: "dealt-stock-1" }]);
+
+  harness.resolveIssued(0, { initial: { stock: ["issued"], tableau: [] } });
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(
+    plain(harness.issued()),
+    [{ stock: ["issued"], tableau: [] }],
+    "The descriptor's initial state goes through the engine, not around it."
+  );
+  assert.deepEqual(plain(harness.state.stock), ["issued"], "The issued board takes over.");
+  assert.equal(harness.state.selected, null, "Adopting a board drops the old selection.");
+});
+
+test("a board that has been played on keeps itself and stays local", async () => {
+  const harness = createOpenHarness();
+
+  harness.newGame();
+  harness.play();
+  harness.resolveIssued(0, { initial: { stock: ["issued"], tableau: [] } });
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(plain(harness.issued()), [], "A played board is never replaced.");
+  assert.deepEqual(plain(harness.state.stock), [{ id: "dealt-stock-1" }]);
+});
+
+test("an issuance overtaken by a later deal is discarded", async () => {
+  const harness = createOpenHarness();
+
+  harness.newGame();
+  harness.newGame();
+  harness.resolveIssued(0, { initial: { stock: ["stale"], tableau: [] } });
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(plain(harness.issued()), [], "The superseded board cannot land.");
+  assert.deepEqual(plain(harness.state.stock), [{ id: "dealt-stock-2" }]);
+});
+
+test("a staged presentation board never asks for a verified board", () => {
+  const harness = createOpenHarness();
+
+  harness.stagePresentation({ visualEffects: true });
+  assert.deepEqual(plain(harness.issueCalls()), [], "A promotional board is not a game.");
+  assert.equal(harness.state.statsSession, "");
 });
 
 test("the toolbar offers the run only while a visible card fits a foundation", () => {

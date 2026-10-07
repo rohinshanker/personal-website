@@ -87,15 +87,27 @@ window.__solitairePublishFlowTest = Object.freeze({
     if (!solState.statsSession) {
       throw new Error("Solitaire gameplay did not start a verified stats session.");
     }
+    // A finished deal, staged as a real one: the rule engine derives the move
+    // count that gets published, so a board it would reject could not produce it.
     solState.moves = 80;
     solState.won = false;
+    solState.stock = [];
+    solState.waste = [];
+    solState.tableau = Array.from({ length: 7 }, () => []);
     solState.foundations = Object.fromEntries(
-      solSuitOrder.map((suit) => [suit, Array.from({ length: 13 }, () => ({}))])
+      solSuitOrder.map((suit) => [
+        suit,
+        Array.from({ length: 13 }, (unused, index) => ({
+          id: suit + "-" + (index + 1),
+          suit,
+          rank: index + 1,
+          faceUp: true,
+        })),
+      ])
     );
-    solCheckWin();
-    // The real move path renders after the win check; the placeholder
-    // foundation cards cannot render, so refresh only the toolbar swap.
-    solRenderToolbar();
+    solAdoptStagedBoard();
+    solCheckWin(false);
+    solRender();
   },
 });
 })();`

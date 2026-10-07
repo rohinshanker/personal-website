@@ -40,13 +40,15 @@ window.__sudokuKeypadTest = Object.freeze({
     });
     return counts;
   },
+  // Through the real edit path: the rule engine owns the board, so a fixture
+  // that wrote values straight into it would be staging a board the rules never
+  // accepted — exactly what verification exists to refuse.
   placeDigit: (digit, indexes) => {
     const cells = sudokuCells();
     indexes.forEach((index) => {
-      setSudokuCellValue(cells[index], index, digit);
+      sudokuState.selectedIndex = index;
+      updateSudokuCellValue(cells[index], index, digit);
     });
-    updateSudokuBoardHighlights();
-    updateSudokuNumberButtons();
   },
 });
 })();`

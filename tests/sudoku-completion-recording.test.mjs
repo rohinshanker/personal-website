@@ -27,8 +27,18 @@ test("Sudoku records at most one completion for each generated puzzle", async ()
 
   assert.match(
     checkSource,
-    /if \(!sudokuState\.solved\) \{\s+sudokuState\.solved = true;\s+if \(!sudokuState\.completionRecorded\) \{\s+sudokuState\.completionRecorded = true;\s+const recordedByAnotherTab = isSudokuCompletionRecordedInStorage\(\);\s+claimSudokuCompletion\(\);\s+flushSudokuSave\(\);\s+if \(!recordedByAnotherTab\) recordSudokuCompletion\(\);\s+\}\s+scheduleSudokuSave\(\);/,
+    /if \(!sudokuState\.completionRecorded\) \{\s+sudokuState\.completionRecorded = true;\s+const recordedByAnotherTab = isSudokuCompletionRecordedInStorage\(\);\s+claimSudokuCompletion\(\);\s+flushSudokuSave\(\);\s+if \(!recordedByAnotherTab\) recordSudokuCompletion\(\);\s+\}\s+scheduleSudokuSave\(\);/,
     "the latch must flip and flush to storage before the record handoff, and a completion another tab already recorded must stay local"
+  );
+  assert.match(
+    checkSource,
+    /if \(sudokuState\.solved\) \{\s+showSudokuSolvePopup\(\);\s+refreshSudokuFullBoardPrompt\(\);\s+return;/,
+    "a finished board is terminal: Check reopens its dialog and submits nothing"
+  );
+  assert.match(
+    checkSource,
+    /if \(!applySudokuMove\(\{ op: "check" \}\)\) return;/,
+    "the rule engine spends the allowance and decides the board is finished"
   );
   assert.doesNotMatch(checkSource, /recordGameStatsEvent\(/);
 
@@ -70,7 +80,7 @@ test("Sudoku records at most one completion for each generated puzzle", async ()
 
   const editableLifecycleSource = sourceBetween(
     source,
-    "const applySudokuHistoryEntry = (entry) => {",
+    "/** Shows the board the engine restored, after an undo or a redo. */",
     "\n\n// Every tab shares one saved puzzle."
   );
   assert.doesNotMatch(

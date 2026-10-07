@@ -60,13 +60,15 @@ window.__sudokuNotesTest = Object.freeze({
     }
     return null;
   },
+  // One pencil mark at a time, through the real toggle: the rule engine owns the
+  // notes, so writing them straight into the board would stage a state the rules
+  // never produced.
   seedNotes: (indexes, notes) => {
     const cells = sudokuCells();
     indexes.forEach((index) => {
-      setSudokuCellNotes(cells[index], index, notes);
+      sudokuState.selectedIndex = index;
+      notes.split("").forEach((digit) => toggleSudokuNote(cells[index], index, digit));
     });
-    updateSudokuBoardHighlights();
-    updateSudokuNumberButtons();
   },
   readNotes: (indexes) => indexes.map((index) => sudokuState.notes[index]),
   valueAt: (index) => sudokuState.values[index],

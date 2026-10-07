@@ -36,12 +36,22 @@ const createVictoryHarness = async ({
       "const solShowAchievement = () => calls.push('achievement');",
       "const solPlayVictoryVideo = () => calls.push('video');",
       "const createGameStatsEvent = (event) => event;",
-      "const solStats = { recordEvent: (event) => calls.push(['record', { ...event, game: 'solitaire' }, solState.statsSession]) };",
+      "const recorded = [];",
+      "const solStats = { recordEvent: (event, options) => { recorded.push(options); calls.push(['record', { ...event, game: 'solitaire' }, solState.statsSession]); } };",
       "const notifyActivity = (name, detail) => calls.push(['activity', name, detail]);",
-      sourceBetween(source, "const solTriggerVictoryEffects =", "\n\nconst solCreateSlotMark"),
+      // The engine owns the move count now, so the harness supplies one.
+      "let solGame = { moves: 17 };",
+      "const solRules = { result: (game) => ({ moves: game.moves }) };",
+      "const solMoves = { text: '' };",
+      "const formatSevenSegmentCounter = (value) => String(value);",
+      "const setSevenSegmentCounter = (element, text) => { element.text = text; };",
+      "const solProjectEngineGame = () => { solState.moves = solGame.moves; };",
+      sourceBetween(source, "/**\n * The server derives the move count", "\n\nconst solCreateSlotMark"),
       sourceBetween(source, "const solCheckWin =", "\n\nconst solPrefersReducedMotion"),
       "globalThis.checkWin = solCheckWin;",
       "globalThis.read = () => ({ calls, won: solState.won });",
+      "globalThis.official = (metric) => { recorded.at(-1).onCanonicalMetric({ metric }); return { counter: solMoves.text, moves: solState.moves }; };",
+      "globalThis.replaceBoard = () => { solGame = { moves: 99 }; };",
     ].join("\n"),
     context
   );
@@ -56,7 +66,7 @@ const createPresentationStageHarness = async () => {
       "const calls = [];",
       "const solState = {};",
       "const solStats = { dropSession: () => { solState.statsSession = ''; } };",
-      "const solHistory = [{}];",
+      "const solAdoptStagedBoard = () => calls.push('adopt');",
       "let solLastCardClick = {};",
       "let solBoardReady = false;",
       "const solCancelAutoSolve = () => calls.push('cancel');",
@@ -66,10 +76,10 @@ const createPresentationStageHarness = async () => {
       sourceBetween(
         source,
         "const solStagePresentationWin =",
-        "\n\nconst solAutoMoveCardToFoundation"
+        "\n\n/** Deals once before first open"
       ),
       "globalThis.stage = solStagePresentationWin;",
-      "globalThis.read = () => ({ boardReady: solBoardReady, calls, historyLength: solHistory.length, lastCardClick: solLastCardClick, state: solState });",
+      "globalThis.read = () => ({ boardReady: solBoardReady, calls, lastCardClick: solLastCardClick, state: solState });",
     ].join("\n"),
     context
   );
@@ -102,6 +112,18 @@ test("the production win transition records and presents a victory exactly once"
   });
 });
 
+test("the server's move count replaces the finished board's own, and only that board's", async () => {
+  const context = await createVictoryHarness();
+  context.checkWin();
+  assert.deepEqual(plain(context.official(23)), { counter: "23", moves: 23 });
+
+  // A reset, a redeal or an undone win all leave a different board on screen.
+  const stale = await createVictoryHarness();
+  stale.checkWin();
+  stale.replaceBoard();
+  assert.deepEqual(plain(stale.official(23)), { counter: "", moves: 17 });
+});
+
 test("presentation victories never publish gameplay with either effects setting", async () => {
   for (const [visualEffects, expectedCalls] of [
     [true, ["fireworks", "achievement", "video"]],
@@ -119,8 +141,7 @@ test("presentation staging enables visual effects by default and accepts an expl
   defaultContext.stage();
   assert.deepEqual(plain(defaultContext.read()), {
     boardReady: true,
-    calls: ["cancel", "hide-video", "render"],
-    historyLength: 0,
+    calls: ["cancel", "adopt", "hide-video", "render"],
     lastCardClick: null,
     state: {
       presentation: { visualEffects: true },

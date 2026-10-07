@@ -35,7 +35,7 @@ window.__solitaireAutoSolveTest = Object.freeze({
     solState.selected = null;
     solState.moves = 40;
     solState.won = false;
-    solHistory.length = 0;
+    solAdoptStagedBoard();
     if (!presentation) ensureSolitaireStatsSession();
     solRender();
   },
@@ -51,7 +51,7 @@ window.__solitaireAutoSolveTest = Object.freeze({
     solState.selected = null;
     solState.moves = 10;
     solState.won = false;
-    solHistory.length = 0;
+    solAdoptStagedBoard();
     ensureSolitaireStatsSession();
     solRender();
   },

@@ -128,19 +128,18 @@ window.__sudokuCheckControlsTest = Object.freeze({
     }
     return { incorrectDigit, index, solutionDigit };
   },
+  // Filled through the real edit path, so the board is one the rules produced.
+  // Completing it is not the same as submitting it: only a Check does that.
   prepareCompletedBoard: () => {
     const cells = sudokuCells();
     let editableCellCount = 0;
     cells.forEach((cell, index) => {
       if (isSudokuCellReadOnly(cell)) return;
       editableCellCount += 1;
-      setSudokuCellNotes(cell, index, "");
-      setSudokuCellValue(cell, index, sudokuState.solution[index]);
-      syncSudokuCellFeedback(cell, index);
+      sudokuState.selectedIndex = index;
+      updateSudokuCellValue(cell, index, sudokuState.solution[index]);
     });
     clearSudokuHighlights();
-    sudokuState.mistakes = 0;
-    sudokuState.solved = false;
     setSudokuStatus("Ready");
     return { editableCellCount };
   },
@@ -149,18 +148,16 @@ window.__sudokuCheckControlsTest = Object.freeze({
     let lastIndex = -1;
     cells.forEach((cell, index) => {
       if (isSudokuCellReadOnly(cell)) return;
-      updateSudokuCellValue(cell, index, sudokuState.solution[index], {
-        recordHistory: false,
-      });
+      sudokuState.selectedIndex = index;
+      updateSudokuCellValue(cell, index, sudokuState.solution[index]);
       lastIndex = index;
     });
     if (lastIndex < 0) throw new Error("Sudoku puzzle has no editable cell.");
     const wrongDigit = SUDOKU_DIGITS.split("").find(
       (digit) => digit !== sudokuState.solution[lastIndex]
     );
-    updateSudokuCellValue(cells[lastIndex], lastIndex, wrongDigit, {
-      recordHistory: false,
-    });
+    sudokuState.selectedIndex = lastIndex;
+    updateSudokuCellValue(cells[lastIndex], lastIndex, wrongDigit);
     return { lastIndex, wrongDigit };
   },
   clearCellAt: (index) => {

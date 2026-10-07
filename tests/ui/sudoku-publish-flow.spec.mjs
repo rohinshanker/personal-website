@@ -134,15 +134,17 @@ window.__sudokuPublishFlowTest = Object.freeze({
       throw new Error("Sudoku puzzle has no editable completion cell.");
     }
 
+    // Through the real edit path, so the board is one the rules produced. The
+    // last cell is emptied rather than skipped: a restored puzzle arrives
+    // already complete, and the completion this leaves for the test to drive has
+    // to be a real one.
     editableIndexes.forEach((index) => {
-      const cell = cells[index];
-      setSudokuCellNotes(cell, index, "");
-      setSudokuCellValue(
-        cell,
-        index,
-        index === finalIndex ? "" : sudokuState.solution[index]
-      );
-      syncSudokuCellFeedback(cell, index);
+      sudokuState.selectedIndex = index;
+      if (index === finalIndex) {
+        updateSudokuCellValue(cells[index], index, "", { clearEmptyNotes: true });
+        return;
+      }
+      updateSudokuCellValue(cells[index], index, sudokuState.solution[index]);
     });
     sudokuState.elapsedSeconds = Math.max(1, Math.trunc(Number(elapsedSeconds) || 0));
     sudokuState.timerStartedAt = 0;

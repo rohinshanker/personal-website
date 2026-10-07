@@ -44,6 +44,10 @@ const {
 const {
   notifyActivity,
 } = window.homeActivity;
+const {
+  createBudget,
+} = window.homeGameRules;
+const sudokuRules = window.homeSudokuRules;
 
 const sudokuWindow = one('[data-app-window="sudoku"]');
 const sudokuApp = one(".sudoku-app");
@@ -264,12 +268,19 @@ let sudokuState = {
   noteMode: false,
   values: createSudokuEmptyValues(),
   notes: createSudokuEmptyNotes(),
-  undoStack: [],
-  redoStack: [],
   selectedIndex: -1,
 };
 
 const sudokuStats = createGameStatsHooks("sudoku", () => sudokuState);
+
+/**
+ * The rule engine's view of the puzzle on screen. `sudokuState` is what the grid
+ * is drawn from and what the save file carries; this is what decides whether an
+ * edit is allowed, what a Check costs, and when the board is finished, so the
+ * puzzle a player solves and the puzzle a verifier replays are the same puzzle.
+ * It also carries the bounded undo and redo stacks.
+ */
+let sudokuGame = null;
 
 let sudokuCellElements = [];
 
@@ -641,36 +652,78 @@ const serializeSudokuValues = (values = sudokuState.values) =>
     .map((value) => value || "0")
     .join("");
 
-const createSudokuHistoryEntry = () => ({
-  values: normalizeSudokuValues(sudokuState.values, sudokuState.puzzle),
-  notes: normalizeSudokuNotesList(sudokuState.notes, sudokuState.puzzle),
-  selectedIndex: normalizeSudokuSelectedIndex(sudokuState.selectedIndex),
-});
-
-const areSudokuHistoryEntriesEqual = (first, second) =>
-  Boolean(
-    first &&
-      second &&
-      first.selectedIndex === second.selectedIndex &&
-      first.values.join("") === second.values.join("") &&
-      first.notes.join("|") === second.notes.join("|")
-  );
-
-const updateSudokuHistoryButtons = () => {
-  if (sudokuUndo) sudokuUndo.disabled = sudokuState.undoStack.length === 0;
-  if (sudokuRedo) sudokuRedo.disabled = sudokuState.redoStack.length === 0;
+/**
+ * Writes the engine's puzzle onto the state the grid and the save file read.
+ * Every latch the engine owns — the check count, the assistance flag, the
+ * accepted Errors warning — comes back through here, so the display can never
+ * claim an allowance the rules did not spend.
+ */
+const projectSudokuGame = () => {
+  sudokuState.difficulty = sudokuGame.difficulty;
+  sudokuState.puzzle = sudokuGame.puzzle;
+  sudokuState.solution = sudokuGame.solution;
+  sudokuState.values = Array.from(sudokuGame.values, (digit) =>
+    digit === "0" ? "" : digit);
+  sudokuState.notes = sudokuGame.notes.slice();
+  sudokuState.selectedIndex = sudokuGame.selectedIndex;
+  sudokuState.hintMode = sudokuGame.hintMode;
+  sudokuState.noteMode = sudokuGame.noteMode;
+  sudokuState.mistakes = sudokuGame.mistakes;
+  sudokuState.checksUsed = sudokuGame.checksUsed;
+  sudokuState.usedHint = sudokuGame.usedHint;
+  sudokuState.usedReveal = sudokuGame.usedReveal;
+  sudokuState.errorsConfirmed = sudokuGame.errorsConfirmed;
+  sudokuState.solved = sudokuGame.solved;
 };
 
-const pushSudokuUndoState = () => {
-  const entry = createSudokuHistoryEntry();
-  const lastEntry = sudokuState.undoStack[sudokuState.undoStack.length - 1];
-  if (areSudokuHistoryEntriesEqual(entry, lastEntry)) return;
-  sudokuState.undoStack.push(entry);
-  if (sudokuState.undoStack.length > SUDOKU_MAX_UNDO_STATES) {
-    sudokuState.undoStack.shift();
+/** Redraws only the cells whose value or pencil marks the move actually changed. */
+const refreshChangedSudokuCells = (before) => {
+  const cells = sudokuCells();
+  for (let index = 0; index < SUDOKU_CELL_COUNT; index += 1) {
+    if (before.values[index] === sudokuGame.values[index] &&
+        before.notes[index] === sudokuGame.notes[index]) {
+      continue;
+    }
+    const cell = cells[index];
+    if (!cell) continue;
+    refreshSudokuCellDisplay(cell, index);
+    syncSudokuCellFeedback(cell, index);
   }
-  sudokuState.redoStack = [];
-  updateSudokuHistoryButtons();
+};
+
+const updateSudokuHistoryButtons = () => {
+  if (sudokuUndo) sudokuUndo.disabled = !sudokuGame?.undo.length;
+  if (sudokuRedo) sudokuRedo.disabled = !sudokuGame?.redo.length;
+};
+
+/** One edit costs a few dozen primitive steps; this is generous. */
+const SUDOKU_MOVE_WORK = 2048;
+
+/**
+ * Plays one move. The engine decides whether it is allowed and applies it, and
+ * the recorded input is what a verifier replays, so nothing can reach the board
+ * without entering the replay. Returns false when the move was not available —
+ * a given, a digit already there, an exhausted allowance.
+ */
+const applySudokuMove = (action) => {
+  if (!sudokuGame || !sudokuRules.canApply(sudokuGame, action)) return false;
+  const before = { values: sudokuGame.values, notes: sudokuGame.notes.slice() };
+  sudokuRules.transition(sudokuGame, action, createBudget(SUDOKU_MOVE_WORK));
+  sudokuStats.recordInput(action);
+  projectSudokuGame();
+  refreshChangedSudokuCells(before);
+  return true;
+};
+
+/**
+ * Brings the engine's idea of the selected cell up to date, immediately before a
+ * move needs it. Selecting a cell is not itself a move, so a player who clicks
+ * around the grid without typing records nothing; but an undo restores the cell
+ * the edit was made in, which means the engine has to know it by then.
+ */
+const syncSudokuSelection = () => {
+  if (!sudokuGame || sudokuGame.selectedIndex === sudokuState.selectedIndex) return;
+  applySudokuMove({ op: "select", index: normalizeSudokuSelectedIndex(sudokuState.selectedIndex) });
 };
 
 const formatSudokuTime = formatElapsedTime;
@@ -701,6 +754,10 @@ const createSudokuSavePayload = () => ({
   errorsConfirmed: sudokuState.errorsConfirmed,
   solved: sudokuState.solved,
   completionRecorded: sudokuState.completionRecorded,
+  // The issued game and the inputs recorded against it, so a puzzle resumed in a
+  // later session can still publish a verified result. A save without this block
+  // is an ordinary offline puzzle and stays one.
+  verified: sudokuStats.exportGame(),
 });
 
 const flushSudokuSave = () => {
@@ -792,10 +849,50 @@ const restoreSudokuSavedState = () => {
   sudokuState.noteMode = Boolean(savedState.noteMode);
   sudokuState.values = normalizeSudokuValues(savedState.values, puzzle);
   sudokuState.notes = normalizeSudokuNotesList(savedState.notes, puzzle);
-  sudokuState.undoStack = [];
-  sudokuState.redoStack = [];
   sudokuState.selectedIndex = normalizeSudokuSelectedIndex(savedState.selectedIndex);
+  adoptRestoredSudokuGame(savedState);
   return true;
+};
+
+/**
+ * Rebuilds the engine state for a restored puzzle, and keeps its verified
+ * identity only when the restored issuance really is this puzzle. An arbitrary
+ * offline save stays completely playable; it simply cannot acquire provenance it
+ * never had, which is the whole point of binding a result to an issued board.
+ */
+const adoptRestoredSudokuGame = (savedState) => {
+  const restoredBoard = {
+    difficulty: sudokuState.difficulty,
+    puzzle: sudokuState.puzzle,
+    solution: sudokuState.solution,
+    values: sudokuState.values.map((value) => value || "0").join(""),
+    notes: sudokuState.notes,
+    selectedIndex: sudokuState.selectedIndex,
+    hintMode: sudokuState.hintMode,
+    noteMode: sudokuState.noteMode,
+    errorsConfirmed: sudokuState.errorsConfirmed,
+    usedHint: sudokuState.usedHint,
+    usedReveal: sudokuState.usedReveal,
+    checksUsed: sudokuState.checksUsed,
+  };
+  sudokuGame = sudokuRules.initial(restoredBoard);
+  // A save can claim to be finished, and an old one can claim it of a board that
+  // plainly is not. The claim is taken only where the grid supports it; the
+  // completion latch is kept either way, so a save can never publish twice.
+  const outcome = sudokuRules.evaluate(sudokuGame);
+  if (sudokuState.solved && outcome.complete && outcome.valid) {
+    sudokuGame = sudokuRules.initial({ ...restoredBoard, solved: true });
+  }
+  const restored = sudokuStats.restoreGame(savedState.verified);
+  if (
+    restored &&
+    (restored.initial?.puzzle !== sudokuState.puzzle ||
+      restored.initial?.solution !== sudokuState.solution ||
+      restored.config?.difficulty !== sudokuState.difficulty)
+  ) {
+    sudokuStats.dropSession();
+  }
+  projectSudokuGame();
 };
 
 const updateSudokuTimeDisplay = () => {
@@ -1127,13 +1224,18 @@ const setSudokuPaused = (paused) => {
   if (sudokuPauseOverlay) {
     sudokuPauseOverlay.setAttribute("aria-hidden", String(!sudokuPaused));
   }
+  // Ranked time excludes the pause, so the server has to see where it began and
+  // ended. An acknowledgement that never arrives leaves the puzzle perfectly
+  // playable; it just cannot produce a trusted time.
   if (sudokuPaused) {
     sudokuStatusBeforePause = sudokuStatus?.textContent || "";
     pauseSudokuTimer();
+    sudokuStats.pauseGame();
     setSudokuStatus("Paused");
     if (isSudokuWindowVisible()) sudokuResume?.focus();
     return;
   }
+  sudokuStats.resumeGame();
   setSudokuStatus(sudokuStatusBeforePause || (sudokuState.solved ? "Solved" : "Ready"));
   sudokuStatusBeforePause = "";
   if (!isSudokuWindowVisible() || !sudokuState.playing) return;
@@ -1682,13 +1784,10 @@ const refreshAllSudokuCells = () => {
 
 const validateSudokuBoard = ({ mark = false } = {}) => {
   const cells = sudokuCells();
-  const values = normalizeSudokuValues(sudokuState.values, sudokuState.puzzle);
-  const mistakeIndexes = new Set();
-
-  values.forEach((value, index) => {
-    if (!value || isSudokuGivenAt(sudokuState.puzzle, index)) return;
-    if (value !== sudokuState.solution[index]) mistakeIndexes.add(index);
-  });
+  const outcome = sudokuGame
+    ? sudokuRules.evaluate(sudokuGame)
+    : { complete: false, mistakes: 0, valid: true, wrong: [] };
+  const mistakeIndexes = new Set(outcome.wrong);
 
   if (mark) {
     cells.forEach((cell, index) => {
@@ -1702,45 +1801,21 @@ const validateSudokuBoard = ({ mark = false } = {}) => {
   }
 
   return {
-    complete: values.every(Boolean),
-    mistakes: mistakeIndexes.size,
-    valid: mistakeIndexes.size === 0,
+    complete: outcome.complete,
+    mistakes: outcome.mistakes,
+    valid: outcome.valid,
   };
 };
 
 /**
- * Every index holding a value that repeats inside its own row, column, or
- * box. Givens are included: a player entry that collides with one is a
- * conflict on both sides, and a given is already on screen.
- *
- * This reads the board and nothing else. It never consults the solution, so
- * a marked cell says only "these two cannot both stand", never which of them
- * is wrong.
+ * Every index holding a value that repeats inside its own row, column, or box,
+ * givens included. The engine computes it from the board and nothing else: it
+ * never consults the solution, so a wrong value that shares no unit with another
+ * is left unmarked, and a marked pair says only that both cannot stand, never
+ * which of them is wrong.
  */
-const findSudokuConflictIndexes = () => {
-  const values = normalizeSudokuValues(sudokuState.values, sudokuState.puzzle);
-  const units = new Map();
-  values.forEach((value, index) => {
-    if (!value) return;
-    const row = Math.floor(index / 9);
-    const column = index % 9;
-    const keys = [
-      `row ${row} ${value}`,
-      `column ${column} ${value}`,
-      `box ${sudokuBoxIndex(row, column)} ${value}`,
-    ];
-    keys.forEach((key) => {
-      const members = units.get(key);
-      if (members) members.push(index);
-      else units.set(key, [index]);
-    });
-  });
-  const conflicts = new Set();
-  units.forEach((members) => {
-    if (members.length > 1) members.forEach((index) => conflicts.add(index));
-  });
-  return conflicts;
-};
+const findSudokuConflictIndexes = () =>
+  new Set(sudokuGame ? sudokuRules.conflictIndexes(sudokuGame) : []);
 
 let sudokuConflictCache = { elements: null, states: [] };
 
@@ -1759,32 +1834,27 @@ const refreshSudokuConflictMarks = () => {
   }
 };
 
+/**
+ * Paints the current hint mode. The engine already decided what the mode means —
+ * including whether marking a wrong value tripped the irreversible assistance
+ * latch — so this reads those decisions and never makes them.
+ */
 const refreshSudokuHintFeedback = () => {
   refreshSudokuConflictMarks();
   if (sudokuState.hintMode !== "errors") {
     clearSudokuHighlights();
-    sudokuState.mistakes = 0;
     updateSudokuMistakesDisplay();
     return validateSudokuBoard();
   }
   const result = validateSudokuBoard({ mark: true });
-  sudokuState.mistakes = result.mistakes;
-  if (result.mistakes > 0 && !sudokuState.usedHint) {
-    sudokuState.usedHint = true;
-    scheduleSudokuSave();
-  }
   updateSudokuMistakesDisplay();
   return result;
 };
 
-const applySudokuHistoryEntry = (entry) => {
-  if (!entry) return;
+/** Shows the board the engine restored, after an undo or a redo. */
+const showRestoredSudokuBoard = () => {
   hideSudokuSolvePopup();
   clearSudokuSolvedWave();
-  sudokuState.values = normalizeSudokuValues(entry.values, sudokuState.puzzle);
-  sudokuState.notes = normalizeSudokuNotesList(entry.notes, sudokuState.puzzle);
-  sudokuState.selectedIndex = normalizeSudokuSelectedIndex(entry.selectedIndex);
-  sudokuState.solved = false;
   refreshAllSudokuCells();
   refreshSudokuHintFeedback();
   updateSudokuBoardHighlights();
@@ -1797,91 +1867,55 @@ const applySudokuHistoryEntry = (entry) => {
 };
 
 const undoSudokuMove = () => {
-  if (!sudokuState.undoStack.length) return;
-  const currentEntry = createSudokuHistoryEntry();
-  const previousEntry = sudokuState.undoStack.pop();
-  sudokuState.redoStack.push(currentEntry);
-  applySudokuHistoryEntry(previousEntry);
+  if (applySudokuMove({ op: "undo" })) showRestoredSudokuBoard();
 };
 
 const redoSudokuMove = () => {
-  if (!sudokuState.redoStack.length) return;
-  const currentEntry = createSudokuHistoryEntry();
-  const nextEntry = sudokuState.redoStack.pop();
-  sudokuState.undoStack.push(currentEntry);
-  applySudokuHistoryEntry(nextEntry);
+  if (applySudokuMove({ op: "redo" })) showRestoredSudokuBoard();
 };
 
 /**
- * Placing a digit rules it out of its row, column, and box, so the pencil
- * mark is stale the moment the value lands. Retiring it is part of the same
- * move: the undo entry already taken covers the placement and every note it
- * cleared, so one undo puts them all back.
+ * The shared tail of every edit. The engine has already applied the move and
+ * retired the pencil marks the new digit rules out — one undo puts the value and
+ * all of them back together — so this is the board reacting to that.
  */
-const clearSudokuPeerNotes = (index, digit) => {
-  if (!SUDOKU_DIGITS.includes(digit)) return;
-  const cells = sudokuCells();
-  SUDOKU_PEER_INDEXES[index].forEach((peer) => {
-    const notes = getSudokuCellNotes(peer);
-    if (!notes.includes(digit)) return;
-    setSudokuCellNotes(
-      cells[peer],
-      peer,
-      notes.split("").filter((noteDigit) => noteDigit !== digit).join("")
-    );
-  });
+const afterSudokuEdit = () => {
+  hideSudokuSolvePopup();
+  clearSudokuSolvedWave();
+  if (sudokuState.playing) startSudokuTimer();
+  refreshSudokuHintFeedback();
+  updateSudokuBoardHighlights();
+  updateSudokuNumberButtons();
+  updateSudokuHistoryButtons();
+  setSudokuStatus("Ready");
+  scheduleSudokuSave();
 };
 
 const updateSudokuCellValue = (
   input,
   index,
   value,
-  { clearEmptyNotes = false, recordHistory = true, autoAdvance = false } = {}
+  { clearEmptyNotes = false, autoAdvance = false } = {}
 ) => {
   if (!input || isSudokuCellReadOnly(input)) return;
   const digit = normalizeSudokuDigit(value);
-  const previousValue = getSudokuCellValue(input);
-  const willClearNotes =
-    !digit && !previousValue && clearEmptyNotes && Boolean(getSudokuCellNotes(index));
-  if (digit === previousValue && !willClearNotes) return;
-
-  if (recordHistory) pushSudokuUndoState();
-  hideSudokuSolvePopup();
-  clearSudokuSolvedWave();
-  if (sudokuState.playing) startSudokuTimer();
-  if (willClearNotes) sudokuState.notes[index] = "";
-  setSudokuCellValue(input, index, digit);
-  clearSudokuPeerNotes(index, digit);
-  syncSudokuCellFeedback(input, index);
-  refreshSudokuHintFeedback();
-  updateSudokuBoardHighlights();
-  updateSudokuNumberButtons();
-  updateSudokuHistoryButtons();
-  sudokuState.solved = false;
-  setSudokuStatus("Ready");
-  scheduleSudokuSave();
+  // Clearing is its own move: on an empty cell the keypad wipes its pencil marks
+  // instead, which is why only that path asks for it.
+  if (!digit && !clearEmptyNotes && !getSudokuCellValue(input)) return;
+  syncSudokuSelection();
+  const applied = digit
+    ? applySudokuMove({ op: "setValue", index, value: digit })
+    : applySudokuMove({ op: "clear", index });
+  if (!applied) return;
+  afterSudokuEdit();
   if (autoAdvance && digit) focusNextSudokuEditableCell(index);
 };
 
-const toggleSudokuNote = (cell, index, digit, { recordHistory = true } = {}) => {
-  if (!cell || isSudokuCellReadOnly(cell) || !SUDOKU_DIGITS.includes(digit)) return;
-  if (getSudokuCellValue(cell)) return;
-  const notes = getSudokuCellNotes(index);
-  const nextNotes = notes.includes(digit)
-    ? notes.replace(digit, "")
-    : normalizeSudokuNotes(`${notes}${digit}`);
-  if (nextNotes === notes) return;
-
-  if (recordHistory) pushSudokuUndoState();
-  hideSudokuSolvePopup();
-  clearSudokuSolvedWave();
-  if (sudokuState.playing) startSudokuTimer();
-  setSudokuCellNotes(cell, index, nextNotes);
-  updateSudokuNumberButtons();
-  updateSudokuHistoryButtons();
-  sudokuState.solved = false;
-  setSudokuStatus("Ready");
-  scheduleSudokuSave();
+const toggleSudokuNote = (cell, index, digit) => {
+  if (!cell || isSudokuCellReadOnly(cell)) return;
+  syncSudokuSelection();
+  if (!applySudokuMove({ op: "toggleNote", index, digit })) return;
+  afterSudokuEdit();
 };
 
 const applySudokuDigitToCell = (cell, index, value) => {
@@ -1917,7 +1951,7 @@ const setSudokuHintMode = (mode) => {
     showSudokuErrorsPrompt();
     return;
   }
-  sudokuState.hintMode = normalizeSudokuHintMode(mode);
+  if (!applySudokuMove({ op: "setHintMode", mode: normalizeSudokuHintMode(mode) })) return;
   updateSudokuHintButtons();
   refreshSudokuHintFeedback();
   setSudokuStatus("Ready");
@@ -1925,13 +1959,13 @@ const setSudokuHintMode = (mode) => {
 };
 
 const confirmSudokuErrors = () => {
-  sudokuState.errorsConfirmed = true;
+  applySudokuMove({ op: "confirmErrors" });
   hideSudokuErrorsPrompt();
   setSudokuHintMode("errors");
 };
 
 const setSudokuNoteMode = (enabled) => {
-  sudokuState.noteMode = Boolean(enabled);
+  if (!applySudokuMove({ op: "setNoteMode", enabled: Boolean(enabled) })) return;
   updateSudokuNoteToggle();
   updateSudokuNumberButtons();
   scheduleSudokuSave();
@@ -2172,8 +2206,8 @@ const syncSudokuCompletionFromStorage = (event) => {
 
 const recordSudokuCompletion = () => {
   const elapsedSeconds = currentSudokuElapsedSeconds();
-  const hintBucket =
-    sudokuState.usedHint || sudokuState.usedReveal ? "withHints" : "noHints";
+  const finished = sudokuGame;
+  const hintBucket = sudokuRules.result(finished).assistance;
   sudokuStats.recordEvent(
     {
       type: "win",
@@ -2186,6 +2220,22 @@ const recordSudokuCompletion = () => {
     },
     {
       sudokuNoHintsSeconds: hintBucket === "noHints" ? elapsedSeconds : null,
+      /**
+       * The server observes the start and the finish, so its elapsed time is the
+       * one that gets published — and the clock on screen is brought into line
+       * with it, rather than leaving the player looking at a different number. A
+       * board that has since been replaced or reset is left alone: this metric
+       * belongs to the puzzle it was derived from.
+       */
+      onCanonicalMetric: ({ metric, metricKind }) => {
+        if (sudokuGame !== finished || !sudokuState.solved) return;
+        if (metricKind !== "seconds") return;
+        if (!Number.isSafeInteger(metric) || metric < 0) return;
+        sudokuState.elapsedSeconds = metric;
+        sudokuState.timerStartedAt = 0;
+        updateSudokuTimeDisplay();
+        flushSudokuSave();
+      },
     }
   );
   triggerSudokuVictoryEffects();
@@ -2193,48 +2243,51 @@ const recordSudokuCompletion = () => {
 };
 
 const checkSudokuBoard = () => {
-  const result = validateSudokuBoard();
-  if (!result.complete || !result.valid) {
-    // Only a check that reveals a mistake spends an allowance, so an exhausted
-    // quota blocks a check that would mark errors and nothing else.
-    if (!result.valid && sudokuState.checksUsed >= SUDOKU_MAX_LEADERBOARD_CHECKS) {
+  // A finished board is terminal. Check puts the solved dialog back up and
+  // nothing else: the result it produced has already been claimed.
+  if (sudokuState.solved) {
+    showSudokuSolvePopup();
+    refreshSudokuFullBoardPrompt();
+    return;
+  }
+
+  const outcome = validateSudokuBoard();
+  if (!applySudokuMove({ op: "check" })) return;
+
+  if (!outcome.complete || !outcome.valid) {
+    // Three mistake-revealing checks are all a puzzle gets. The engine answers a
+    // fourth by leaving the mistake count at zero, so nothing is revealed here.
+    if (!outcome.valid && !sudokuState.mistakes) {
       clearSudokuHighlights();
-      sudokuState.mistakes = 0;
       setSudokuStatus("No checks remaining");
       scheduleSudokuSave();
       return;
     }
 
-    const diagnosticResult = validateSudokuBoard({ mark: true });
-    sudokuState.mistakes = diagnosticResult.mistakes;
-    if (!diagnosticResult.valid) {
-      sudokuState.checksUsed += 1;
-      setSudokuStatus("System alert");
-    } else {
+    validateSudokuBoard({ mark: true });
+    if (outcome.valid) {
       triggerSudokuCheckBubbleBurst();
       setSudokuStatus("Ready");
+    } else {
+      setSudokuStatus("System alert");
     }
     scheduleSudokuSave();
     return;
   }
 
-  sudokuState.mistakes = 0;
   setSudokuStatus("Solved");
   triggerSudokuFullBubbleBurst();
   triggerSudokuSolvedTileWave();
   showSudokuSolvePopup();
   pauseSudokuTimer();
-  if (!sudokuState.solved) {
-    sudokuState.solved = true;
-    if (!sudokuState.completionRecorded) {
-      sudokuState.completionRecorded = true;
-      const recordedByAnotherTab = isSudokuCompletionRecordedInStorage();
-      claimSudokuCompletion();
-      flushSudokuSave();
-      if (!recordedByAnotherTab) recordSudokuCompletion();
-    }
-    scheduleSudokuSave();
+  if (!sudokuState.completionRecorded) {
+    sudokuState.completionRecorded = true;
+    const recordedByAnotherTab = isSudokuCompletionRecordedInStorage();
+    claimSudokuCompletion();
+    flushSudokuSave();
+    if (!recordedByAnotherTab) recordSudokuCompletion();
   }
+  scheduleSudokuSave();
   refreshSudokuFullBoardPrompt();
 };
 
@@ -2243,11 +2296,10 @@ const renderSudoku = () => {
   sudokuGrid.replaceChildren();
   sudokuCellElements = [];
   sudokuGrid.setAttribute("role", "grid");
-  const puzzle = sudokuState.puzzle.padEnd(SUDOKU_CELL_COUNT, "0").slice(0, SUDOKU_CELL_COUNT);
-  sudokuState.puzzle = puzzle;
-  sudokuState.solution = sudokuState.solution.padEnd(SUDOKU_CELL_COUNT, "0").slice(0, SUDOKU_CELL_COUNT);
-  sudokuState.values = normalizeSudokuValues(sudokuState.values, puzzle);
-  sudokuState.notes = normalizeSudokuNotesList(sudokuState.notes, puzzle);
+  // The engine holds the authoritative board, so drawing reads it rather than
+  // re-deriving one: the grid cannot show an entry the rules never accepted.
+  if (sudokuGame) projectSudokuGame();
+  const puzzle = sudokuState.puzzle;
 
   // A grid must expose its cells through rows. `.sudoku-row` is
   // `display: contents` so the board keeps its single 9x9 CSS grid.
@@ -2325,6 +2377,34 @@ const setSudokuGeneratingState = (isGenerating) => {
   if (isGenerating) setSudokuStatus(SUDOKU_GENERATING_STATUS);
 };
 
+/** Invalidated by every new puzzle, so a stale issuance cannot land on one. */
+let sudokuIssueToken = 0;
+
+/**
+ * Asks for the server's puzzle for this difficulty. A verified result has to bind
+ * the board the server issued, so the issued puzzle replaces the generated one —
+ * but only while the grid is still untouched. Once an entry has been made the
+ * puzzle on screen is the player's own, and the attempt stays local rather than
+ * having the board change underneath them.
+ */
+const requestIssuedSudokuPuzzle = () => {
+  if (sudokuStats.hasIssuedGame()) return;
+  const token = (sudokuIssueToken += 1);
+  const pending = sudokuStats.issueGame({ difficulty: sudokuState.difficulty });
+  if (!pending) return;
+  Promise.resolve(pending).then((descriptor) => {
+    if (!descriptor || token !== sudokuIssueToken) return;
+    if (sudokuGame.moves || sudokuGame.undo.length || sudokuState.solved) return;
+    sudokuGame = sudokuRules.initial(descriptor.initial);
+    sudokuState.puzzleId = descriptor.gameId || sudokuState.puzzleId;
+    renderSudoku();
+    scheduleSudokuSave();
+  }, () => {
+    // A puzzle that could not be issued is still playable; it simply stays local,
+    // exactly as it does with no backend configured at all.
+  });
+};
+
 const adoptSudokuPuzzle = (difficulty, generated) => {
   const wasPlaying = sudokuState.playing;
   const previousNoteMode = sudokuState.noteMode;
@@ -2363,12 +2443,17 @@ const adoptSudokuPuzzle = (difficulty, generated) => {
     noteMode: previousNoteMode,
     values: normalizeSudokuValues("", generated.puzzle),
     notes: createSudokuEmptyNotes(),
-    undoStack: [],
-    redoStack: [],
     selectedIndex: -1,
   };
+  sudokuGame = sudokuRules.initial({
+    difficulty,
+    puzzle: generated.puzzle,
+    solution: generated.solution,
+    noteMode: previousNoteMode,
+  });
   sudokuPuzzleReady = true;
   renderSudoku();
+  requestIssuedSudokuPuzzle();
   setSudokuGeneratingState(false);
   resetSudokuTimer();
   scheduleSudokuSave();

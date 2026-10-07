@@ -26,6 +26,99 @@ const sourceBetween = (source, startMarker, endMarker) => {
 
 const plainObject = (value) => JSON.parse(JSON.stringify(value));
 
+/** The one puzzle these tests solve, taken from the difficulty Sudoku ships. */
+const PUZZLE = "402030000795020003001705400100004005609000000248507310900108500800050071017043092";
+const SOLUTION = "462831957795426183381795426173984265659312748248567319926178534834259671517643892";
+
+/**
+ * A realm holding the real rule engine and the controller glue in front of it.
+ * The eligibility rules — what a Check costs, when the assistance latch trips,
+ * what Conflicts may read — now live in the engine, so these tests drive the
+ * engine itself rather than a stand-in that could agree with the wrong answer.
+ */
+const createSudokuEngineRealm = async (extra = [], tail = []) => {
+  const context = vm.createContext({});
+  for (const path of ["scripts/home/games/rules.js", "scripts/home/games/sudoku.js"]) {
+    vm.runInContext(await readFile(new URL(path, root), "utf8"), context);
+  }
+  const main = await readHomeScript("sudoku");
+  vm.runInContext(
+    [
+      "const sudokuRules = homeSudokuRules;",
+      "const createBudget = homeGameRules.createBudget;",
+      "const SUDOKU_CELL_COUNT = 81;",
+      "const SUDOKU_DIGITS = '123456789';",
+      "const recordedInputs = [];",
+      "let sudokuGame = null;",
+      "let sudokuState = {};",
+      "const recordedEvents = [];",
+      `const sudokuStats = {
+         recordInput: (action) => recordedInputs.push(action),
+         recordEvent: (event, options) => recordedEvents.push({ event, options }),
+       };`,
+      "const normalizeSudokuSelectedIndex = (index) =>",
+      "  Number.isInteger(Number(index)) && Number(index) >= 0 && Number(index) < 81 ? Number(index) : -1;",
+      "const sudokuCells = () => [];",
+      "const refreshSudokuCellDisplay = () => {};",
+      "const syncSudokuCellFeedback = () => {};",
+      "const sudokuUndo = null;",
+      "const sudokuRedo = null;",
+      ...extra,
+      sourceBetween(
+        main,
+        "/**\n * Writes the engine's puzzle onto the state",
+        "\n\nconst formatSudokuTime ="
+      ),
+      `globalThis.startForTest = (overrides = {}) => {
+         sudokuGame = sudokuRules.initial({
+           difficulty: "easy", puzzle: ${JSON.stringify(PUZZLE)},
+           solution: ${JSON.stringify(SOLUTION)}, ...overrides,
+         });
+         projectSudokuGame();
+       };`,
+      "globalThis.playForTest = (action) => applySudokuMove(JSON.parse(JSON.stringify(action)));",
+      `globalThis.conflictsForTest = (puzzle, solution, values) =>
+         sudokuRules.conflictIndexes(sudokuRules.initial({
+           difficulty: "easy", puzzle, solution, values,
+         }));`,
+      "globalThis.engineForTest = () => sudokuRules;",
+      "globalThis.gameForTest = () => sudokuGame;",
+      "globalThis.inputsForTest = () => recordedInputs;",
+      "globalThis.stateForTest = () => sudokuState;",
+      ...tail,
+    ].join("\n"),
+    context
+  );
+  return context;
+};
+
+/**
+ * Enters `digit` at `index`, or the solution's digit when none is given. A given
+ * cell or a digit that happens to be the right one would make the move a no-op,
+ * which is exactly the kind of silently weakened fixture worth failing on.
+ */
+const enter = (context, index, digit) => {
+  assert.equal(PUZZLE[index], "0", `Cell ${index} is a given and cannot be entered`);
+  const value = digit || SOLUTION[index];
+  assert.equal(
+    context.playForTest({ op: "setValue", index, value }),
+    true,
+    `Entering ${value} at ${index} changed nothing`
+  );
+};
+
+/** Fills every blank correctly except the indexes listed, which go wrong. */
+const fillBoard = (context, wrongIndexes = []) => {
+  for (let index = 0; index < 81; index += 1) {
+    if (PUZZLE[index] !== "0") continue;
+    const correct = SOLUTION[index];
+    const digit = wrongIndexes.includes(index)
+      ? String((Number(correct) % 9) + 1)
+      : correct;
+    enter(context, index, digit);
+  }
+};
+
 // Rendered Sudoku layout geometry lives in tests/ui/sudoku-desktop-layout.spec.mjs.
 // The cache-busting reference is a literal contract, so it stays a source test.
 test("Every entry point loads the current Sudoku stylesheet build", async () => {
@@ -118,11 +211,7 @@ test("Sudoku persists the quota and warning while legacy assists fail closed", a
     "const adoptSudokuPuzzle = (difficulty, generated) => {",
     "\nconst loadSudokuDifficulty ="
   );
-  const historySource = sourceBetween(
-    main,
-    "const createSudokuHistoryEntry = () => ({",
-    "\n\nconst areSudokuHistoryEntriesEqual ="
-  );
+
 
   assert.match(saveSource, /version: 3,/);
   for (const field of ["usedHint", "usedReveal", "checksUsed", "errorsConfirmed"]) {
@@ -158,20 +247,29 @@ test("Sudoku persists the quota and warning while legacy assists fail closed", a
     assert.match(freshPuzzleSource, initializer);
   }
   assert.doesNotMatch(freshPuzzleSource, /previousHintMode/);
-  assert.doesNotMatch(
-    historySource,
-    /checksUsed|errorsConfirmed|usedHint|usedReveal/,
-    "Undo and redo must not restore checks or reverse leaderboard disqualification."
+
+  // Undo history holds the board and nothing else, so it cannot hand back a
+  // spent allowance or reverse a leaderboard disqualification.
+  const context = await createSudokuEngineRealm();
+  context.startForTest({ errorsConfirmed: true, hintMode: "errors", checksUsed: 1 });
+  enter(context, 1, "1");
+  const latched = plainObject(context.stateForTest());
+  assert.equal(latched.usedHint, true);
+  assert.equal(latched.checksUsed, 1);
+  assert.deepEqual(
+    Object.keys(plainObject(context.gameForTest().undo[0])).sort(),
+    ["notes", "selectedIndex", "values"]
   );
+  context.playForTest({ op: "undo" });
+  context.playForTest({ op: "redo" });
+  const afterHistory = plainObject(context.stateForTest());
+  assert.equal(afterHistory.usedHint, true);
+  assert.equal(afterHistory.checksUsed, 1);
+  assert.equal(afterHistory.errorsConfirmed, true);
 });
 
 test("Errors mode only latches assistance after a visible mistake", async () => {
   const { main } = await readSudokuSources();
-  const feedbackSource = sourceBetween(
-    main,
-    "const refreshSudokuHintFeedback = () => {",
-    "\n\nconst applySudokuHistoryEntry ="
-  );
   const hintModeSource = sourceBetween(
     main,
     "const setSudokuHintMode = (mode) => {",
@@ -182,6 +280,11 @@ test("Errors mode only latches assistance after a visible mistake", async () => 
     "const confirmSudokuErrors = () => {",
     "\n\nconst setSudokuNoteMode ="
   );
+  const feedbackSource = sourceBetween(
+    main,
+    "const refreshSudokuHintFeedback = () => {",
+    "\n\n/** Shows the board the engine restored"
+  );
 
   assert.doesNotMatch(
     hintModeSource,
@@ -189,200 +292,187 @@ test("Errors mode only latches assistance after a visible mistake", async () => 
     "Accepting or enabling Errors alone must not disqualify the puzzle."
   );
   assert.match(
-    confirmationSource,
-    /sudokuState\.errorsConfirmed = true;\s+hideSudokuErrorsPrompt\(\);\s+setSudokuHintMode\("errors"\);/
+    hintModeSource,
+    /if \(mode === "errors" && !sudokuState\.errorsConfirmed\)/,
+    "Only Errors may demand the disqualifying confirmation."
   );
   assert.doesNotMatch(confirmationSource, /usedHint\s*=\s*true/);
+  assert.doesNotMatch(
+    main,
+    /sudokuState\.usedHint = true/,
+    "The latch belongs to the rule engine, so the controller cannot set it at all."
+  );
+  assert.doesNotMatch(
+    feedbackSource,
+    /usedHint|checksUsed|mistakes =/,
+    "Painting the hint mode must not decide anything the rules own."
+  );
+
+  const context = await createSudokuEngineRealm();
+
+  // Errors mode is refused outright until its warning has been accepted.
+  context.startForTest();
+  assert.equal(context.playForTest({ op: "setHintMode", mode: "errors" }), false);
+  assert.equal(context.playForTest({ op: "confirmErrors" }), true);
+  assert.equal(context.playForTest({ op: "setHintMode", mode: "errors" }), true);
+  assert.equal(context.stateForTest().usedHint, false, "Accepting alone is not assistance.");
+  assert.equal(context.stateForTest().mistakes, 0);
+
+  // A correct entry marks nothing, so the latch stays open.
+  enter(context, 2 * 9 + 0);
+  assert.equal(context.stateForTest().usedHint, false);
+  assert.equal(context.stateForTest().mistakes, 0);
+
+  // The first visibly marked wrong value trips it, irreversibly.
+  enter(context, 0 * 9 + 1, "1");
+  assert.equal(context.stateForTest().mistakes, 1);
+  assert.equal(context.stateForTest().usedHint, true);
+
+  context.playForTest({ op: "clear", index: 0 * 9 + 1 });
+  assert.equal(context.stateForTest().mistakes, 0, "The mark goes with the value.");
+  assert.equal(context.stateForTest().usedHint, true, "Correcting it cannot take it back.");
+
+  context.playForTest({ op: "setHintMode", mode: "off" });
+  assert.equal(context.stateForTest().usedHint, true, "Nor can turning the mode off.");
+  assert.equal(context.stateForTest().mistakes, 0, "Off hides the hidden mistake total.");
+
+  context.playForTest({ op: "undo" });
+  assert.equal(context.stateForTest().usedHint, true, "Nor can an undo.");
   assert.equal(
-    [...main.matchAll(/sudokuState\.usedHint = true;/g)].length,
-    1,
-    "Only visible Errors feedback may latch the current puzzle as assisted."
+    context.engineForTest().result(context.gameForTest()).assistance,
+    "withHints",
+    "A latched puzzle leaves the no-hints bucket for good."
   );
-
-  const context = vm.createContext({});
-  vm.runInContext(
-    [
-      "let sudokuState = { hintMode: 'errors', mistakes: 0, usedHint: false };",
-      "let result = { complete: false, valid: true, mistakes: 0 };",
-      "let markedCalls = 0;",
-      "let saveCalls = 0;",
-      "let conflictRefreshes = 0;",
-      "const refreshSudokuConflictMarks = () => { conflictRefreshes += 1; };",
-      "const clearSudokuHighlights = () => {};",
-      "const updateSudokuMistakesDisplay = () => {};",
-      "const scheduleSudokuSave = () => { saveCalls += 1; };",
-      "const validateSudokuBoard = ({ mark = false } = {}) => { if (mark) markedCalls += 1; return { ...result }; };",
-      feedbackSource,
-      "globalThis.refreshForTest = refreshSudokuHintFeedback;",
-      "globalThis.setResultForTest = (next) => { result = { ...next }; };",
-      "globalThis.readForTest = () => ({ ...sudokuState, markedCalls, saveCalls, conflictRefreshes });",
-    ].join("\n"),
-    context
-  );
-
-  context.refreshForTest();
-  assert.deepEqual(plainObject(context.readForTest()), {
-    hintMode: "errors",
-    mistakes: 0,
-    usedHint: false,
-    markedCalls: 1,
-    saveCalls: 0,
-    conflictRefreshes: 1,
-  });
-
-  context.setResultForTest({ complete: false, valid: false, mistakes: 1 });
-  context.refreshForTest();
-  assert.deepEqual(plainObject(context.readForTest()), {
-    hintMode: "errors",
-    mistakes: 1,
-    usedHint: true,
-    markedCalls: 2,
-    saveCalls: 1,
-    conflictRefreshes: 2,
-  });
-
-  context.setResultForTest({ complete: false, valid: true, mistakes: 0 });
-  context.refreshForTest();
-  assert.deepEqual(plainObject(context.readForTest()), {
-    hintMode: "errors",
-    mistakes: 0,
-    usedHint: true,
-    markedCalls: 3,
-    saveCalls: 1,
-    conflictRefreshes: 3,
-  });
 });
 
 test("Conflict mode reads the board alone and stays leaderboard eligible", async () => {
   const { main, styles } = await readSudokuSources();
   const conflictSource = sourceBetween(
     main,
-    "const findSudokuConflictIndexes = () => {",
+    "const findSudokuConflictIndexes = () =>",
     "\n\nlet sudokuConflictCache ="
   );
   const marksSource = sourceBetween(
     main,
     "const refreshSudokuConflictMarks = () => {",
-    "\n\nconst refreshSudokuHintFeedback ="
-  );
-  const hintModeSource = sourceBetween(
-    main,
-    "const setSudokuHintMode = (mode) => {",
-    "\n\nconst setSudokuNoteMode ="
+    "\n\n/**\n * Paints the current hint mode."
   );
 
-  // Nothing on the conflict path may reach for the solution, the check
-  // quota, the mistake count, or the assistance latch.
+  // Nothing on the conflict path may reach for the solution, the check quota,
+  // the mistake count, or the assistance latch.
   for (const source of [conflictSource, marksSource]) {
     assert.doesNotMatch(source, /solution|usedHint|usedReveal|checksUsed|mistakes/);
   }
-  assert.match(
-    hintModeSource,
-    /if \(mode === "errors" && !sudokuState\.errorsConfirmed\)/,
-    "Only Errors may demand the disqualifying confirmation."
-  );
   assert.match(styles, /\.sudoku-grid \.sudoku-cell\.is-conflict \{/);
 
-  const context = vm.createContext({});
-  vm.runInContext(
-    [
-      "let sudokuState = { values: [], puzzle: '' };",
-      "const normalizeSudokuValues = (values) => values.slice();",
-      "const sudokuBoxIndex = (row, column) => Math.floor(row / 3) * 3 + Math.floor(column / 3);",
-      conflictSource,
-      "globalThis.conflictsFor = (values) => {",
-      "  sudokuState.values = values;",
-      "  return [...findSudokuConflictIndexes()].sort((a, b) => a - b);",
-      "};",
-    ].join("\n"),
-    context
-  );
-
-  const empty = Array.from({ length: 81 }, () => "");
-  const withValues = (entries) => {
-    const values = empty.slice();
+  const context = await createSudokuEngineRealm();
+  const conflictsFor = (entries) => {
+    const values = Array.from(PUZZLE, () => "0");
     Object.entries(entries).forEach(([index, value]) => {
       values[Number(index)] = value;
     });
-    return values;
+    // A blank puzzle keeps the fixture honest: every value below is the player's,
+    // so nothing here can be excused as a given.
+    return plainObject(context.conflictsForTest(
+      `${"0".repeat(80)}${SOLUTION[80]}`,
+      SOLUTION,
+      `${values.slice(0, 80).join("")}${SOLUTION[80]}`
+    )).filter((index) => index !== 80);
   };
 
-  const conflictsFor = (values) => plainObject(context.conflictsFor(values));
-
-  assert.deepEqual(conflictsFor(empty), []);
+  assert.deepEqual(conflictsFor({}), []);
   // Row 0, then column 3, then box 0.
-  assert.deepEqual(conflictsFor(withValues({ 0: "4", 5: "4" })), [0, 5]);
-  assert.deepEqual(conflictsFor(withValues({ 3: "7", 30: "7" })), [3, 30]);
-  assert.deepEqual(conflictsFor(withValues({ 0: "9", 10: "9" })), [0, 10]);
+  assert.deepEqual(conflictsFor({ 0: "4", 5: "4" }), [0, 5]);
+  assert.deepEqual(conflictsFor({ 3: "7", 30: "7" }), [3, 30]);
+  assert.deepEqual(conflictsFor({ 0: "9", 10: "9" }), [0, 10]);
   // Every member of an over-filled unit is marked, on any number of axes.
-  assert.deepEqual(conflictsFor(withValues({ 0: "2", 1: "2", 9: "2" })), [0, 1, 9]);
-  // A value that shares no unit is never a conflict, however wrong it is:
-  // the mode cannot tell, because it never looks at the solution.
-  assert.deepEqual(conflictsFor(withValues({ 0: "1", 40: "1" })), []);
+  assert.deepEqual(conflictsFor({ 0: "2", 1: "2", 9: "2" }), [0, 1, 9]);
+  // A value that shares no unit is never a conflict, however wrong it is: the
+  // mode cannot tell, because it never looks at the solution.
+  assert.deepEqual(conflictsFor({ 0: "1", 40: "1" }), []);
+
+  // Marking conflicts costs nothing and latches nothing.
+  context.startForTest();
+  assert.equal(context.playForTest({ op: "setHintMode", mode: "conflicts" }), true);
+  enter(context, 1, "4");
+  const state = context.stateForTest();
+  assert.equal(state.checksUsed, 0);
+  assert.equal(state.usedHint, false);
+  assert.equal(state.mistakes, 0, "Conflicts leaves the mistake count alone.");
+  assert.equal(
+    context.engineForTest().result(context.gameForTest()).assistance,
+    "noHints",
+    "A run that only used Conflicts stays eligible for the no-hints bucket."
+  );
 });
 
-// Both check tests run the real checkSudokuBoard against the same stubs.
-const createSudokuCheckContext = (main) => {
-  const checkSource = sourceBetween(
-    main,
-    "const normalizeSudokuCompletionClaims = (claims) =>",
-    "\n\nconst renderSudoku ="
-  );
-  const context = vm.createContext({});
-  vm.runInContext(
-    [
-      "const SUDOKU_MAX_LEADERBOARD_CHECKS = 3;",
-      "const SUDOKU_COMPLETION_CLAIMS_KEY = 'sudoku-claims-test';",
-      "const SUDOKU_MAX_COMPLETION_CLAIMS = 12;",
-      "let storedClaims = null;",
-      "const localStorage = {",
-      "  getItem: (key) => (key === SUDOKU_COMPLETION_CLAIMS_KEY && storedClaims ? JSON.stringify(storedClaims) : null),",
-      "  setItem: (key, value) => { if (key === SUDOKU_COMPLETION_CLAIMS_KEY) { storedClaims = JSON.parse(value); observations.claimWrites += 1; } },",
-      "};",
-      "const flushSudokuSave = () => { observations.flushes += 1; };",
-      "let sudokuState = {",
-      "  checksUsed: 0, mistakes: 0, usedHint: false, usedReveal: false, puzzleId: 'puzzle-a', puzzle: '1'.repeat(81),",
-      "  solved: false, completionRecorded: false, difficulty: 'easy', statsSession: 'verified-session'",
-      "};",
-      "let result = { complete: false, valid: false, mistakes: 1 };",
-      "const observations = { markedCalls: 0, unmarkedCalls: 0, clears: 0, statuses: [], saves: 0, flushes: 0, claimWrites: 0, promptRefreshes: 0, bursts: 0, records: [] };",
-      "const validateSudokuBoard = ({ mark = false } = {}) => {",
-      "  if (mark) observations.markedCalls += 1; else observations.unmarkedCalls += 1;",
-      "  return { ...result };",
-      "};",
-      "const clearSudokuHighlights = () => { observations.clears += 1; };",
-      "const setSudokuStatus = (status) => { observations.statuses.push(status); };",
-      "const scheduleSudokuSave = () => { observations.saves += 1; };",
-      "const triggerSudokuCheckBubbleBurst = () => { observations.bursts += 1; };",
-      "const triggerSudokuFullBubbleBurst = () => {};",
-      "const triggerSudokuSolvedTileWave = () => {};",
-      "const showSudokuSolvePopup = () => {};",
-      "const pauseSudokuTimer = () => {};",
-      "const currentSudokuElapsedSeconds = () => 42;",
-      "const createGameStatsEvent = (event) => ({ ...event });",
-      "const sudokuStats = { recordEvent: (event, metadata) => { observations.records.push({ event: { ...event, game: 'sudoku' }, session: sudokuState.statsSession, metadata }); } };",
-      "const triggerSudokuVictoryEffects = () => {};",
-      "const notifyActivity = () => {};",
-      "const refreshSudokuFullBoardPrompt = () => { observations.promptRefreshes += 1; };",
-      checkSource,
-      "globalThis.checkForTest = checkSudokuBoard;",
-      "globalThis.setResultForTest = (next) => { result = { ...next }; };",
-      "globalThis.setMistakesForTest = (mistakes) => { sudokuState.mistakes = mistakes; };",
-      "globalThis.setStoredClaimsForTest = (claims) => { storedClaims = claims; };",
-      "globalThis.readStoredClaimsForTest = () => storedClaims;",
-      "globalThis.syncStorageForTest = (event) => syncSudokuCompletionFromStorage(event);",
-      "globalThis.resetCompletionForTest = () => { sudokuState.solved = false; sudokuState.completionRecorded = false; };",
-      "globalThis.readForTest = () => ({ state: { ...sudokuState }, observations: { ...observations, statuses: [...observations.statuses], records: observations.records.map((record) => ({ ...record })) } });",
-    ].join("\n"),
-    context
-  );
+/**
+ * Both check tests run the real `checkSudokuBoard` over the real rule engine, so
+ * what a Check costs is decided by the rules rather than by a stand-in that could
+ * agree with the wrong answer. Only the board's surroundings are stubbed.
+ */
+const createSudokuCheckContext = async (main) => {
+  const context = await createSudokuEngineRealm([
+    "const SUDOKU_MAX_LEADERBOARD_CHECKS = 3;",
+    "const SUDOKU_COMPLETION_CLAIMS_KEY = 'sudoku-claims-test';",
+    "const SUDOKU_MAX_COMPLETION_CLAIMS = 12;",
+    "let storedClaims = null;",
+    `const localStorage = {
+       getItem: (key) => (key === SUDOKU_COMPLETION_CLAIMS_KEY && storedClaims ? JSON.stringify(storedClaims) : null),
+       setItem: (key, value) => { if (key === SUDOKU_COMPLETION_CLAIMS_KEY) { storedClaims = JSON.parse(value); observations.claimWrites += 1; } },
+     };`,
+    "const observations = { markedCalls: 0, unmarkedCalls: 0, clears: 0, statuses: [], saves: 0, flushes: 0, claimWrites: 0, promptRefreshes: 0, bursts: 0 };",
+    "const flushSudokuSave = () => { observations.flushes += 1; };",
+    `const validateSudokuBoard = ({ mark = false } = {}) => {
+       if (mark) observations.markedCalls += 1; else observations.unmarkedCalls += 1;
+       const outcome = sudokuRules.evaluate(sudokuGame);
+       return { complete: outcome.complete, mistakes: outcome.mistakes, valid: outcome.valid };
+     };`,
+    "const clearSudokuHighlights = () => { observations.clears += 1; };",
+    "const setSudokuStatus = (status) => { observations.statuses.push(status); };",
+    "const scheduleSudokuSave = () => { observations.saves += 1; };",
+    "const triggerSudokuCheckBubbleBurst = () => { observations.bursts += 1; };",
+    "const triggerSudokuFullBubbleBurst = () => {};",
+    "const triggerSudokuSolvedTileWave = () => {};",
+    "const showSudokuSolvePopup = () => {};",
+    "const pauseSudokuTimer = () => {};",
+    "const updateSudokuTimeDisplay = () => {};",
+    "const currentSudokuElapsedSeconds = () => 42;",
+    "const triggerSudokuVictoryEffects = () => {};",
+    "const notifyActivity = () => {};",
+    "const refreshSudokuFullBoardPrompt = () => { observations.promptRefreshes += 1; };",
+  ], [
+    sourceBetween(
+      main,
+      "const normalizeSudokuCompletionClaims = (claims) =>",
+      "\n\nconst renderSudoku ="
+    ),
+    "globalThis.checkForTest = () => checkSudokuBoard();",
+    "globalThis.setStoredClaimsForTest = (claims) => { storedClaims = claims; };",
+    "globalThis.readStoredClaimsForTest = () => storedClaims;",
+    "globalThis.syncStorageForTest = (event) => syncSudokuCompletionFromStorage(JSON.parse(JSON.stringify(event)));",
+    // A finished board is terminal, so re-running a completion means telling both
+    // the latch and the engine that this board is open again.
+    "globalThis.reopenForTest = () => { sudokuState.completionRecorded = false; sudokuGame.solved = false; sudokuState.solved = false; };",
+    "globalThis.recordsForTest = () => recordedEvents;",
+    "globalThis.readForTest = () => ({ state: { ...sudokuState }, observations: { ...observations, statuses: [...observations.statuses] } });",
+  ]);
+  context.startForTest();
+  Object.assign(context.stateForTest(), {
+    puzzleId: "puzzle-a",
+    difficulty: "easy",
+    completionRecorded: false,
+    statsSession: "verified-session",
+  });
   return context;
 };
 
 test("three diagnostic checks reveal feedback but an exhausted check does not", async () => {
   const { main } = await readSudokuSources();
-  const context = createSudokuCheckContext(main);
+  const context = await createSudokuCheckContext(main);
 
+  // One wrong entry, diagnosed three times.
+  enter(context, 1, "1");
   context.checkForTest();
   context.checkForTest();
   context.checkForTest();
@@ -393,42 +483,45 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
   assert.equal(snapshot.observations.unmarkedCalls, 3);
   assert.equal(snapshot.observations.markedCalls, 3);
 
-  context.setMistakesForTest(0);
-  context.setResultForTest({ complete: false, valid: false, mistakes: 4 });
+  // More mistakes, no allowance left to reveal them.
+  enter(context, 3, "1");
+  enter(context, 6, "1");
+  enter(context, 7, "1");
   context.checkForTest();
   snapshot = plainObject(context.readForTest());
   assert.equal(snapshot.state.checksUsed, 3);
   assert.equal(snapshot.state.mistakes, 0, "An exhausted check must not reveal the hidden error count.");
-  assert.equal(snapshot.observations.unmarkedCalls, 4);
   assert.equal(snapshot.observations.markedCalls, 3, "An exhausted check must not mark cells.");
   assert.equal(snapshot.observations.clears, 1);
   assert.equal(snapshot.observations.statuses.at(-1), "No checks remaining");
 
-  context.setResultForTest({ complete: true, valid: true, mistakes: 0 });
+  // A complete and correct board is a submission, not a diagnostic.
+  fillBoard(context);
   context.checkForTest();
   snapshot = plainObject(context.readForTest());
   assert.equal(snapshot.state.checksUsed, 3, "A winning submission must not consume a diagnostic check.");
   assert.equal(snapshot.state.solved, true);
   assert.equal(snapshot.state.completionRecorded, true);
-  assert.equal(snapshot.observations.unmarkedCalls, 5);
   assert.equal(snapshot.observations.markedCalls, 3);
-  assert.deepEqual(snapshot.observations.records, [
-    {
-      event: {
-        game: "sudoku",
-        type: "win",
-        difficulty: "easy",
-        hintBucket: "noHints",
-        // The puzzle identity the Worker deduplicates on.
-        puzzleId: "puzzle-a",
-        puzzle: "1".repeat(81),
-        metric: 42,
-        metricKind: "seconds",
-      },
-      session: "verified-session",
-      metadata: { sudokuNoHintsSeconds: 42 },
-    },
-  ]);
+
+  const records = context.recordsForTest();
+  assert.equal(records.length, 1);
+  assert.deepEqual(plainObject(records[0].event), {
+    type: "win",
+    difficulty: "easy",
+    hintBucket: "noHints",
+    // The puzzle identity the Worker deduplicates on.
+    puzzleId: "puzzle-a",
+    puzzle: PUZZLE,
+    metric: 42,
+    metricKind: "seconds",
+  });
+  assert.equal(records[0].options.sudokuNoHintsSeconds, 42);
+  assert.equal(
+    typeof records[0].options.onCanonicalMetric,
+    "function",
+    "The server's elapsed time has somewhere to land."
+  );
   assert.equal(
     snapshot.observations.flushes,
     1,
@@ -436,79 +529,76 @@ test("three diagnostic checks reveal feedback but an exhausted check does not", 
   );
   assert.deepEqual(
     plainObject(context.readStoredClaimsForTest()),
-    [{ puzzleId: "puzzle-a", puzzle: "1".repeat(81) }],
+    [{ puzzleId: "puzzle-a", puzzle: PUZZLE }],
     "A completion claims its puzzle in the append-only list."
   );
   assert.equal(snapshot.observations.claimWrites, 1);
 
+  // Pressing Check on a finished board reopens its dialog and submits nothing.
+  context.checkForTest();
+  assert.equal(context.recordsForTest().length, 1);
+
   // Another tab already claimed this exact puzzle: latch, but stay local.
-  context.resetCompletionForTest();
+  context.reopenForTest();
   context.checkForTest();
   snapshot = plainObject(context.readForTest());
   assert.equal(snapshot.state.solved, true);
   assert.equal(snapshot.state.completionRecorded, true);
-  assert.equal(snapshot.observations.records.length, 1, "A puzzle claimed elsewhere must not publish again.");
+  assert.equal(context.recordsForTest().length, 1, "A puzzle claimed elsewhere must not publish again.");
   assert.equal(snapshot.observations.claimWrites, 1, "An existing claim is not rewritten.");
   assert.equal(snapshot.observations.flushes, 2);
 
   // A claim for a different puzzle does not block this one.
-  context.resetCompletionForTest();
+  context.reopenForTest();
   context.setStoredClaimsForTest([{ puzzleId: "puzzle-b", puzzle: "2".repeat(81) }]);
   context.checkForTest();
-  snapshot = plainObject(context.readForTest());
-  assert.equal(snapshot.observations.records.length, 2);
+  assert.equal(context.recordsForTest().length, 2);
   assert.deepEqual(
     plainObject(context.readStoredClaimsForTest()),
     [
       { puzzleId: "puzzle-b", puzzle: "2".repeat(81) },
-      { puzzleId: "puzzle-a", puzzle: "1".repeat(81) },
+      { puzzleId: "puzzle-a", puzzle: PUZZLE },
     ]
   );
 
-  // The storage event's payload is adopted directly, even when the stored
-  // list has since been overwritten, so a stale save cannot re-arm the tab.
-  context.resetCompletionForTest();
+  // The storage event's payload is adopted directly, even when the stored list
+  // has since been overwritten, so a stale save cannot re-arm the tab.
+  context.reopenForTest();
   context.setStoredClaimsForTest(null);
   context.syncStorageForTest({
     key: "sudoku-claims-test",
-    newValue: JSON.stringify([{ puzzleId: "puzzle-a", puzzle: "1".repeat(81) }]),
+    newValue: JSON.stringify([{ puzzleId: "puzzle-a", puzzle: PUZZLE }]),
   });
-  snapshot = plainObject(context.readForTest());
-  assert.equal(snapshot.state.completionRecorded, true, "A claim carried by the event is adopted.");
+  assert.equal(
+    plainObject(context.readForTest()).state.completionRecorded,
+    true,
+    "A claim carried by the event is adopted."
+  );
   context.checkForTest();
-  snapshot = plainObject(context.readForTest());
-  assert.equal(snapshot.observations.records.length, 2, "An adopted claim keeps the completion local.");
+  assert.equal(context.recordsForTest().length, 2, "An adopted claim keeps the completion local.");
 
   // Unrelated keys and other puzzles' claims leave an open latch alone.
-  context.resetCompletionForTest();
+  context.reopenForTest();
   context.syncStorageForTest({ key: "somethingElse", newValue: "x" });
   context.syncStorageForTest({
     key: "sudoku-claims-test",
     newValue: JSON.stringify([{ puzzleId: "puzzle-c", puzzle: "3".repeat(81) }]),
   });
-  snapshot = plainObject(context.readForTest());
-  assert.equal(snapshot.state.completionRecorded, false);
+  assert.equal(plainObject(context.readForTest()).state.completionRecorded, false);
 });
 
 test("a restored puzzle honours completion claims made by other tabs", async () => {
-  const { main } = await readSudokuSources();
-  const constantsSource =
-    sourceBetween(main, "const SUDOKU_DIGITS = ", "const SUDOKU_FULL_DIGIT_MASK = ") +
-    "const SUDOKU_FULL_DIGIT_MASK = 0b1111111110;";
-  const claimsSource = sourceBetween(
-    main,
-    "const normalizeSudokuCompletionClaims = (claims) =>",
-    "\n\nconst recordSudokuCompletion = () => {"
-  );
-  const restoreSource = sourceBetween(
-    main,
-    "const sudokuCells = () =>",
-    "\n\nconst updateSudokuTimeDisplay ="
-  );
+  const main = await readHomeScript("sudoku");
   const context = vm.createContext({});
+  for (const path of ["scripts/home/games/rules.js", "scripts/home/games/sudoku.js"]) {
+    vm.runInContext(await readFile(new URL(path, root), "utf8"), context);
+  }
   vm.runInContext(
     [
-      constantsSource,
+      sourceBetween(main, "const SUDOKU_DIGITS = ", "const SUDOKU_FULL_DIGIT_MASK = ") +
+        "const SUDOKU_FULL_DIGIT_MASK = 0b1111111110;",
+      "const sudokuRules = homeSudokuRules;",
+      "const createBudget = homeGameRules.createBudget;",
       "const clampNumber = (value, min, max) => Math.max(min, Math.min(value, max));",
       'const padTwoDigits = (value) => String(value).padStart(2, "0");',
       'const formatElapsedTime = (seconds, placeholder = "\u2014") =>',
@@ -517,26 +607,50 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
       "    : placeholder;",
       "const sudokuGrid = null;",
       "let sudokuCellElements = [];",
+      "let sudokuGame = null;",
       "let sudokuState = { puzzleId: '', puzzle: '' };",
-      "const sudokuStats = { dropSession: () => { sudokuState.statsSession = ''; } };",
+      "const restoreCalls = [];",
+      `const sudokuStats = {
+         dropSession: () => { sudokuState.statsSession = ''; },
+         exportGame: () => null,
+         recordInput: () => {},
+         restoreGame: (saved) => { restoreCalls.push(saved); return restored; },
+       };`,
+      "let restored = null;",
+      "const refreshSudokuCellDisplay = () => {};",
+      "const syncSudokuCellFeedback = () => {};",
+      "const sudokuUndo = null;",
+      "const sudokuRedo = null;",
       "const storage = new Map();",
-      "const localStorage = {",
-      "  getItem: (key) => (storage.has(key) ? storage.get(key) : null),",
-      "  setItem: (key, value) => { storage.set(key, String(value)); },",
-      "};",
-      "const readJsonStorage = (getStorage, key, fallbackValue = null) => {",
-      "  try {",
-      "    const serialized = getStorage().getItem(key);",
-      "    return serialized === null ? fallbackValue : JSON.parse(serialized);",
-      "  } catch { return fallbackValue; }",
-      "};",
-      claimsSource,
-      restoreSource,
+      `const localStorage = {
+         getItem: (key) => (storage.has(key) ? storage.get(key) : null),
+         setItem: (key, value) => { storage.set(key, String(value)); },
+       };`,
+      `const readJsonStorage = (getStorage, key, fallbackValue = null) => {
+         try {
+           const serialized = getStorage().getItem(key);
+           return serialized === null ? fallbackValue : JSON.parse(serialized);
+         } catch { return fallbackValue; }
+       };`,
+      sourceBetween(
+        main,
+        "const normalizeSudokuCompletionClaims = (claims) =>",
+        "\n\nconst recordSudokuCompletion = () => {"
+      ),
+      sourceBetween(main, "const sudokuCells = () =>", "\n\nconst updateSudokuTimeDisplay ="),
       "globalThis.puzzles = SUDOKU_PUZZLES;",
       "globalThis.setSavedForTest = (saved) => { storage.set(SUDOKU_STORAGE_KEY, JSON.stringify(saved)); };",
       "globalThis.setClaimsForTest = (claims) => { storage.set(SUDOKU_COMPLETION_CLAIMS_KEY, JSON.stringify(claims)); };",
+      "globalThis.setRestoredForTest = (descriptor) => { restored = descriptor; };",
+      "globalThis.restoreCallsForTest = () => restoreCalls;",
       "globalThis.restoreForTest = () => restoreSudokuSavedState();",
-      "globalThis.readForTest = () => ({ completionRecorded: sudokuState.completionRecorded, statsSessionEligible: sudokuState.statsSessionEligible, puzzleId: sudokuState.puzzleId });",
+      `globalThis.readForTest = () => ({
+         completionRecorded: sudokuState.completionRecorded,
+         statsSessionEligible: sudokuState.statsSessionEligible,
+         puzzleId: sudokuState.puzzleId,
+         session: sudokuState.statsSession || "",
+         solved: sudokuState.solved,
+       });`,
     ].join("\n"),
     context
   );
@@ -563,6 +677,8 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
     completionRecorded: false,
     statsSessionEligible: true,
     puzzleId: `${easy.id}-tab`,
+    session: "",
+    solved: false,
   });
 
   // The same unfinished save, once another tab has claimed it, stays local.
@@ -572,6 +688,8 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
     completionRecorded: true,
     statsSessionEligible: false,
     puzzleId: `${easy.id}-tab`,
+    session: "",
+    solved: false,
   });
 
   // A claim for a different puzzle does not latch this one.
@@ -581,21 +699,69 @@ test("a restored puzzle honours completion claims made by other tabs", async () 
     completionRecorded: false,
     statsSessionEligible: true,
     puzzleId: `${medium.id}-tab`,
+    session: "",
+    solved: false,
   });
 
-  // Legacy solved saves remain latched with or without a claim.
+  // A save that claims to be solved with an empty grid keeps its latch, but the
+  // engine refuses the claim itself: the board is plainly unsolved.
   context.setSavedForTest(savedPuzzle(medium, { solved: true }));
   assert.equal(context.restoreForTest(), true);
   assert.deepEqual(plainObject(context.readForTest()), {
     completionRecorded: true,
     statsSessionEligible: false,
     puzzleId: `${medium.id}-tab`,
+    session: "",
+    solved: false,
   });
+
+  // A save whose grid really is finished restores as the finished board it is.
+  context.setSavedForTest(savedPuzzle(medium, { solved: true, values: medium.solution }));
+  assert.equal(context.restoreForTest(), true);
+  assert.equal(plainObject(context.readForTest()).solved, true);
+});
+
+test("a restored puzzle keeps verified provenance only for the board that was issued", async () => {
+  const { main } = await readSudokuSources();
+  const restoreSource = sourceBetween(
+    main,
+    "const adoptRestoredSudokuGame = (savedState) => {",
+    "\n\nconst updateSudokuTimeDisplay ="
+  );
+  const saveSource = sourceBetween(
+    main,
+    "const createSudokuSavePayload = () => ({",
+    "\n\nconst flushSudokuSave ="
+  );
+
+  assert.match(
+    saveSource,
+    /verified: sudokuStats\.exportGame\(\),/,
+    "The issued game and its recorded inputs have to survive a reload."
+  );
+  assert.match(
+    restoreSource,
+    /const restored = sudokuStats\.restoreGame\(savedState\.verified\);/
+  );
+  assert.match(
+    restoreSource,
+    /restored\.initial\?\.puzzle !== sudokuState\.puzzle/,
+    "A restored issuance counts only when it is this very puzzle."
+  );
+  assert.match(
+    restoreSource,
+    /restored\.config\?\.difficulty !== sudokuState\.difficulty/
+  );
+  assert.match(
+    restoreSource,
+    /sudokuStats\.dropSession\(\);/,
+    "A mismatch has to abandon the attempt rather than inherit its provenance."
+  );
 });
 
 test("a check that reveals no mistake is free and stays free once the quota is spent", async () => {
   const { main } = await readSudokuSources();
-  const context = createSudokuCheckContext(main);
+  const context = await createSudokuCheckContext(main);
   const readCheck = () => {
     const snapshot = plainObject(context.readForTest());
     return {
@@ -610,7 +776,7 @@ test("a check that reveals no mistake is free and stays free once the quota is s
   };
 
   // A clean but unfinished board: diagnosed, celebrated, and not counted.
-  context.setResultForTest({ complete: false, valid: true, mistakes: 0 });
+  enter(context, 1);
   context.checkForTest();
   context.checkForTest();
   assert.deepEqual(readCheck(), {
@@ -624,7 +790,8 @@ test("a check that reveals no mistake is free and stays free once the quota is s
   });
 
   // Only the mistake-revealing checks spend the allowance.
-  context.setResultForTest({ complete: false, valid: false, mistakes: 2 });
+  enter(context, 3, "1");
+  enter(context, 6, "1");
   context.checkForTest();
   context.checkForTest();
   context.checkForTest();
@@ -639,7 +806,8 @@ test("a check that reveals no mistake is free and stays free once the quota is s
   });
 
   // With the quota spent, a clean board still validates and stays free.
-  context.setResultForTest({ complete: false, valid: true, mistakes: 0 });
+  context.playForTest({ op: "clear", index: 3 });
+  context.playForTest({ op: "clear", index: 6 });
   context.checkForTest();
   assert.deepEqual(readCheck(), {
     bursts: 3,
@@ -652,7 +820,10 @@ test("a check that reveals no mistake is free and stays free once the quota is s
   });
 
   // A board with errors reports only the refusal and marks nothing.
-  context.setResultForTest({ complete: false, valid: false, mistakes: 4 });
+  enter(context, 3, "1");
+  enter(context, 6, "1");
+  enter(context, 7, "1");
+  enter(context, 8, "1");
   context.checkForTest();
   assert.deepEqual(readCheck(), {
     bursts: 3,

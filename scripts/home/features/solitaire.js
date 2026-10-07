@@ -20,6 +20,10 @@ const {
   formatSevenSegmentCounter,
   setSevenSegmentCounter,
 } = window.homeMinesweeper;
+const {
+  createBudget,
+} = window.homeGameRules;
+const solRules = window.homeSolitaireRules;
 
 const SOLITAIRE_MAX_UNDO_STATES = 100;
 
@@ -112,7 +116,27 @@ const solState = {
 
 const solStats = createGameStatsHooks("solitaire", solState);
 
-const solHistory = [];
+/**
+ * The rule engine's view of the board on screen. `solState` is what the cards
+ * are drawn from; this is what decides whether a move is legal and what applies
+ * it, so the board a player sees and the board a verifier replays are the same
+ * board. It also carries the bounded undo stack, which is why there is no
+ * separate history array any more.
+ */
+let solGame = null;
+
+/** The board `solGame` was last projected from. See `solEngineGame`. */
+let solGameSignature = "";
+
+/**
+ * The move count at that projection. The plan signature leaves it out on
+ * purpose — a move count alone can never change what the auto-solve run would
+ * play — so it is tracked here, where a staged board's own count matters.
+ */
+let solGameMoves = 0;
+
+/** One interactive move costs a handful of primitive steps; this is generous. */
+const SOLITAIRE_MOVE_WORK = 1024;
 
 const solFireworkColors = [
   "#ff004d",
@@ -606,40 +630,6 @@ const solBuildWinnableDeal = (random = Math.random) => {
 
 const solCloneCards = (cards) => cards.map((card) => ({ ...card }));
 
-const solSnapshot = () => ({
-  stock: solCloneCards(solState.stock),
-  waste: solCloneCards(solState.waste),
-  foundations: {
-    spades: solCloneCards(solState.foundations.spades),
-    clubs: solCloneCards(solState.foundations.clubs),
-    diamonds: solCloneCards(solState.foundations.diamonds),
-    hearts: solCloneCards(solState.foundations.hearts),
-  },
-  tableau: solState.tableau.map(solCloneCards),
-  moves: solState.moves,
-  won: solState.won,
-});
-
-const solPushUndo = () => {
-  solHistory.push(solSnapshot());
-  if (solHistory.length > SOLITAIRE_MAX_UNDO_STATES) solHistory.shift();
-};
-
-const solRestoreSnapshot = (snapshot) => {
-  solState.stock = solCloneCards(snapshot.stock);
-  solState.waste = solCloneCards(snapshot.waste);
-  solState.foundations = {
-    spades: solCloneCards(snapshot.foundations.spades),
-    clubs: solCloneCards(snapshot.foundations.clubs),
-    diamonds: solCloneCards(snapshot.foundations.diamonds),
-    hearts: solCloneCards(snapshot.foundations.hearts),
-  };
-  solState.tableau = snapshot.tableau.map(solCloneCards);
-  solState.selected = null;
-  solState.moves = snapshot.moves;
-  solState.won = snapshot.won;
-};
-
 const solAutoSolveTiming = Object.freeze({
   firstIntervalMs: 1000,
   accelerationFactor: 0.86,
@@ -659,103 +649,104 @@ const solAutoSolvePhaseMs = (intervalMs, timing = solAutoSolveTiming) => ({
   snapMs: Math.round(intervalMs * timing.snapShare),
 });
 
-const solFoundationCardCount = (state) =>
-  solSuitOrder.reduce((total, suit) => total + state.foundations[suit].length, 0);
-
-/** A visible card is an exposed tableau top or the top of the waste. */
-const solPlayableFoundationMove = (state, suit) => {
-  const rank = state.foundations[suit].length + 1;
-  if (rank > 13) return null;
-  const matches = (card) =>
-    Boolean(card) && card.faceUp && card.suit === suit && card.rank === rank;
-  const columnIndex = state.tableau.findIndex((column) =>
-    matches(column[column.length - 1])
-  );
-  if (columnIndex >= 0) {
-    return {
-      zone: "tableau",
-      pile: columnIndex,
-      index: state.tableau[columnIndex].length - 1,
-      suit,
-      rank,
-    };
-  }
-  const wasteIndex = state.waste.length - 1;
-  if (matches(state.waste[wasteIndex])) {
-    return { zone: "waste", pile: "waste", index: wasteIndex, suit, rank };
-  }
-  return null;
-};
-
-const solNextAutoSolveMove = (state) => {
-  let best = null;
-  solSuitOrder.forEach((suit) => {
-    const move = solPlayableFoundationMove(state, suit);
-    if (move && (!best || move.rank < best.rank)) best = move;
-  });
-  return best;
-};
-
-/** Moves the card and flips a newly exposed face-down tableau card. */
-const solApplyAutoSolveMove = (state, move) => {
-  const source = move.zone === "tableau" ? state.tableau[move.pile] : state.waste;
-  const [card] = source.splice(move.index, 1);
-  state.foundations[move.suit].push(card);
-  const exposed = move.zone === "tableau" ? source[source.length - 1] : null;
-  const flipped = Boolean(exposed && !exposed.faceUp);
-  if (flipped) exposed.faceUp = true;
-  return { card, flipped };
-};
-
 /**
- * Every foundation move the run will make, lowest rank first, until no visible
- * card fits. `completes` is true when that chain reaches all 52 cards.
- */
-const solPlanAutoSolve = (state) => {
-  const trial = {
-    stock: solCloneCards(state.stock),
-    waste: solCloneCards(state.waste),
-    foundations: Object.fromEntries(
-      solSuitOrder.map((suit) => [suit, solCloneCards(state.foundations[suit])])
-    ),
-    tableau: state.tableau.map(solCloneCards),
-  };
-  const moves = [];
-  for (let move = solNextAutoSolveMove(trial); move; move = solNextAutoSolveMove(trial)) {
-    solApplyAutoSolveMove(trial, move);
-    moves.push(move);
-  }
-  return { moves, completes: solFoundationCardCount(trial) === 52 };
-};
-
-/**
- * Everything a plan depends on: which cards are visible, in what order, and how
+ * Everything a plan depends on: which cards are where, face up or down, and how
  * far each foundation has come. Building it is far cheaper than replanning, and
- * reading the live cards is what makes the cache safe — a direct `solState`
- * edit, an undo restore or a test bridge invalidates it without announcing
- * itself, because the signature it produces no longer matches.
+ * reading the live cards is what makes both caches that use it safe — a direct
+ * `solState` edit, an undo restore or a test bridge invalidates them without
+ * announcing itself, because the signature it produces no longer matches.
  */
 const solAutoSolveSignature = (state) => {
   const pile = (cards) =>
-    cards.map((card) => `${card.id}${card.faceUp ? ">" : "<"}`).join(",");
+    (cards || []).map((card) => `${card.id}${card.faceUp ? ">" : "<"}`).join(",");
   return [
     state.won ? "won" : "live",
-    state.stock.length,
-    solSuitOrder.map((suit) => state.foundations[suit].length).join(","),
+    pile(state.stock),
+    solSuitOrder.map((suit) => (state.foundations?.[suit] || []).length).join(","),
     pile(state.waste),
-    ...state.tableau.map(pile),
+    ...(state.tableau || []).map(pile),
   ].join("|");
 };
 
+/**
+ * The engine state for the board on screen, rebuilt from the cards whenever
+ * something changed them without going through a move: an Admin preset, a
+ * staged fixture, a reset. A board the engine did not deal cannot carry
+ * verified provenance, so rebuilding also abandons the pending attempt.
+ */
+const solEngineGame = () => {
+  const signature = solAutoSolveSignature(solState);
+  if (solGame && solGameSignature === signature && solGameMoves === solState.moves) {
+    return solGame;
+  }
+  solGame = solRules.fromBoard(solState);
+  solGameSignature = signature;
+  solGameMoves = solGame.moves;
+  solStats.dropSession();
+  return solGame;
+};
+
+/** Writes the engine's board back onto the cards the renderer reads. */
+const solProjectEngineGame = () => {
+  const board = solRules.toBoard(solGame);
+  solState.stock = board.stock;
+  solState.waste = board.waste;
+  solState.foundations = board.foundations;
+  solState.tableau = board.tableau;
+  solState.moves = board.moves;
+  solState.won = board.won;
+  solGameSignature = solAutoSolveSignature(solState);
+  solGameMoves = board.moves;
+};
+
+/**
+ * Takes the board on screen as the engine's state. New Game, Reset and the Admin
+ * presentation boards all write the cards directly, so this is where such a board
+ * is validated — and where it loses any pending verified issuance, because a
+ * board the server did not issue cannot produce a verified result.
+ */
+const solAdoptStagedBoard = () => {
+  solGame = solRules.fromBoard(solState);
+  solAdoptEngineGame();
+};
+
+/** Shows whatever `solGame` now holds: a fresh board has no selection or plan. */
+const solAdoptEngineGame = () => {
+  solState.selected = null;
+  solAutoSolvePlanCache = null;
+  solProjectEngineGame();
+};
+
+/**
+ * Plays one move. The engine decides legality, applies it, and the recorded
+ * input is what a verifier replays, so nothing can reach the board without
+ * entering the replay. Returns false when the move was not available.
+ */
+const solPlay = (action, { render = true } = {}) => {
+  const game = solEngineGame();
+  if (!solRules.canApply(game, action)) return false;
+  const wasWon = game.won;
+  if (!solState.presentation) ensureSolitaireStatsSession();
+  solRules.transition(game, action, createBudget(SOLITAIRE_MOVE_WORK));
+  if (!solState.presentation) solStats.recordInput(action);
+  solProjectEngineGame();
+  solState.selected = null;
+  solCheckWin(wasWon);
+  if (render) solRender();
+  return true;
+};
+
+const solCanUndo = () => solEngineGame().undo.length > 0;
+
+/** `planAutoSolveBoard`, recomputed only when the board can have changed. */
 let solAutoSolvePlanCache = null;
 
-/** `solPlanAutoSolve`, recomputed only when the board can have changed. */
 const solCachedAutoSolvePlan = (state) => {
   const signature = solAutoSolveSignature(state);
   if (solAutoSolvePlanCache?.signature === signature) {
     return solAutoSolvePlanCache.plan;
   }
-  const plan = solPlanAutoSolve(state);
+  const plan = solRules.planAutoSolveBoard(state);
   solAutoSolvePlanCache = { signature, plan };
   return plan;
 };
@@ -999,6 +990,24 @@ const solStartFireworks = () => {
   }, SOLITAIRE_FIREWORK_DURATION_MS);
 };
 
+/**
+ * The server derives the move count from the replay, so the finished board's
+ * counter is reconciled to that number when it comes back. A board that has
+ * since been reset, undone or replaced is left alone: the official metric
+ * belongs to the deal it was derived from, not to whatever is on screen now.
+ */
+const solFinishedMetricOptions = (finished) => ({
+  onCanonicalMetric: ({ metric }) => {
+    if (solGame !== finished || !solState.won) return;
+    if (!Number.isSafeInteger(metric) || metric < 0) return;
+    finished.moves = metric;
+    solProjectEngineGame();
+    if (solMoves) {
+      setSevenSegmentCounter(solMoves, formatSevenSegmentCounter(solState.moves));
+    }
+  },
+});
+
 const solTriggerVictoryEffects = () => {
   if (solState.presentation) {
     if (solState.presentation.visualEffects) {
@@ -1013,8 +1022,8 @@ const solTriggerVictoryEffects = () => {
   solPlayVictoryVideo();
   solStats.recordEvent({
     type: "win",
-    metric: solState.moves,
-  });
+    metric: solRules.result(solGame).moves,
+  }, solFinishedMetricOptions(solGame));
   notifyActivity("gameWin", { game: "solitaire" });
 };
 
@@ -1301,15 +1310,19 @@ const solRenderToolbar = () => {
       completes ? "Auto-solve and win the game" : "Auto-solve visible cards"
     );
   }
-  if (solUndo) solUndo.disabled = solving || solState.won || solHistory.length === 0;
+  if (solUndo) solUndo.disabled = solving || solState.won || !solCanUndo();
 };
 
-const solCheckWin = () => {
+/**
+ * Announces a victory the moment one happens, and only then. The board on screen
+ * is written from the engine before this runs, so whether the deal was already
+ * won is something the caller knows and this cannot look up.
+ */
+const solCheckWin = (wasWon = solState.won) => {
   const foundationCount = solSuitOrder.reduce(
     (total, suit) => total + solState.foundations[suit].length,
     0
   );
-  const wasWon = solState.won;
   solState.won = foundationCount === 52;
   if (!wasWon && solState.won) {
     solTriggerVictoryEffects();
@@ -1485,28 +1498,42 @@ const solRenderLanding = (move, card, flipped) => {
   solRenderToolbar();
 };
 
+/** Whether landing `move` will turn over the card it uncovers. */
+const solMoveUncoversCard = (move) => {
+  if (move.zone !== "tableau") return false;
+  const column = solState.tableau[move.pile];
+  const below = column[column.length - 2];
+  return Boolean(below && !below.faceUp);
+};
+
 const solLandAutoSolveCard = (run, move, card, flight) => {
   run.flyer?.remove();
   run.flyer = null;
-  const { flipped } = solApplyAutoSolveMove(solState, move);
-  solState.moves += 1;
+  const flipped = solMoveUncoversCard(move);
+  solPlay(move.action, { render: false });
   solRenderLanding(move, card, flipped);
   solFlashFoundation(move.suit);
   solPlayImpactSound();
   solImpactWindow(flight.dx, flight.dy);
 };
 
+/** Closes the engine's run, so one undo snapshot covers the whole animation. */
+const solEndAutoRun = () => {
+  if (solGame?.autoRun) solPlay({ op: "autoRunEnd" }, { render: false });
+};
+
 const solFinishAutoSolve = (run) => {
   if (run !== solAutoSolveRun) return;
   solAutoSolveRun = null;
   solBoard.classList.remove("is-auto-solving");
+  solEndAutoRun();
   solCheckWin();
   solRender();
 };
 
 const solRunAutoSolveStep = (run) => {
   if (run !== solAutoSolveRun) return;
-  const move = solNextAutoSolveMove(solState);
+  const move = solRules.boardFoundationMove(solState);
   if (!move) {
     solFinishAutoSolve(run);
     return;
@@ -1546,6 +1573,7 @@ const solCancelAutoSolve = () => {
   if (!run) return;
   solAutoSolveRun = null;
   window.clearTimeout(run.timer);
+  solEndAutoRun();
   run.flyer?.remove();
   solBoard
     ?.querySelectorAll(".sol-flying-card, .sol-foundation-flash")
@@ -1562,8 +1590,7 @@ const solStartAutoSolve = () => {
   solState.selected = null;
   solLastCardClick = null;
   solHideTableauTooltip();
-  if (!solState.presentation) ensureSolitaireStatsSession();
-  solPushUndo();
+  if (!solPlay({ op: "autoRunStart" }, { render: false })) return false;
   solPrepareImpactSound();
   solAutoSolveRun = { step: 0, timer: null, flyer: null, completes: plan.completes };
   solBoard.classList.add("is-auto-solving");
@@ -1572,106 +1599,51 @@ const solStartAutoSolve = () => {
   return true;
 };
 
-const solFlipSourceTopCard = (selected) => {
-  if (!selected || selected.zone !== "tableau") return;
-  const column = solState.tableau[selected.pile];
-  const topCard = column[column.length - 1];
-  if (topCard && !topCard.faceUp) topCard.faceUp = true;
-};
+const solIsPackedTableauStack = (cards) =>
+  cards.length > 0 &&
+  cards.every((card) => card.faceUp) &&
+  solRules.isPackedRun(cards.map((card) => card.id));
 
-const solRemoveSelectedCards = () => {
+/** The engine action a selected pile-to-pile move stands for, or null. */
+const solSelectedTableauAction = (colIndex) => {
   const selected = solState.selected;
-  if (!selected) return [];
-
-  if (selected.zone === "waste") {
-    return solState.waste.splice(selected.index, 1);
-  }
-
-  if (selected.zone === "tableau") {
-    return solState.tableau[selected.pile].splice(selected.index);
-  }
-
+  if (!selected) return null;
+  if (selected.zone === "waste") return { op: "wasteToTableau", to: colIndex };
   if (selected.zone === "foundation") {
-    return solState.foundations[selected.pile].splice(selected.index, 1);
+    return { op: "foundationToTableau", suit: selected.pile, to: colIndex };
   }
-
-  return [];
+  if (selected.zone !== "tableau") return null;
+  const column = solState.tableau[selected.pile];
+  const faceDown = column.filter((card) => !card.faceUp).length;
+  return {
+    op: "tableauToTableau",
+    from: selected.pile,
+    index: selected.index - faceDown,
+    to: colIndex,
+  };
 };
 
-const solCompleteMove = (selected) => {
-  solFlipSourceTopCard(selected);
-  solState.selected = null;
-  ensureSolitaireStatsSession();
-  solState.moves += 1;
-  solCheckWin();
-  solRender();
-};
-
-const solIsPackedTableauStack = (cards) => {
-  if (!cards.length || cards.some((card) => !card.faceUp)) return false;
-
-  for (let i = 0; i < cards.length - 1; i += 1) {
-    const upper = cards[i];
-    const lower = cards[i + 1];
-    if (solCardColor(upper) === solCardColor(lower)) return false;
-    if (upper.rank !== lower.rank + 1) return false;
-  }
-
-  return true;
-};
-
-const solCanMoveToTableau = (cards, column) => {
-  const firstCard = cards[0];
-  if (!firstCard) return false;
-  if (!solIsPackedTableauStack(cards)) return false;
-  const targetCard = column[column.length - 1];
-
-  if (!targetCard) return firstCard.rank === 13;
-  if (!targetCard.faceUp) return false;
-
-  return (
-    solCardColor(firstCard) !== solCardColor(targetCard) &&
-    firstCard.rank + 1 === targetCard.rank
-  );
-};
-
-const solCanMoveToFoundation = (cards, suit) => {
-  if (!cards || cards.length !== 1) return false;
-  const card = cards[0];
-  if (card.suit !== suit) return false;
-
-  const foundation = solState.foundations[suit];
-  const topCard = foundation[foundation.length - 1];
-  if (!topCard) return card.rank === 1;
-  return card.rank === topCard.rank + 1;
+/** The engine action a selected single card moving to a foundation stands for. */
+const solSelectedFoundationAction = (suit) => {
+  const selected = solState.selected;
+  if (!selected || selected.cards.length !== 1) return null;
+  if (selected.cards[0].suit !== suit) return null;
+  if (selected.zone === "waste") return { op: "wasteToFoundation" };
+  if (selected.zone === "tableau") return { op: "tableauToFoundation", from: selected.pile };
+  return null;
 };
 
 const solMoveSelectedToTableau = (colIndex) => {
   const selected = solState.selected;
   if (!selected) return false;
   if (selected.zone === "tableau" && selected.pile === colIndex) return false;
-
-  const column = solState.tableau[colIndex];
-  if (!solCanMoveToTableau(selected.cards, column)) return false;
-
-  solPushUndo();
-  const movingCards = solRemoveSelectedCards();
-  column.push(...movingCards);
-  solCompleteMove(selected);
-  return true;
+  const action = solSelectedTableauAction(colIndex);
+  return Boolean(action) && solPlay(action);
 };
 
 const solMoveSelectedToFoundation = (suit) => {
-  const selected = solState.selected;
-  if (!selected) return false;
-  if (selected.zone === "foundation" && selected.pile === suit) return false;
-  if (!solCanMoveToFoundation(selected.cards, suit)) return false;
-
-  solPushUndo();
-  const movingCards = solRemoveSelectedCards();
-  solState.foundations[suit].push(...movingCards);
-  solCompleteMove(selected);
-  return true;
+  const action = solSelectedFoundationAction(suit);
+  return Boolean(action) && solPlay(action);
 };
 
 const solSelectWaste = () => {
@@ -1733,28 +1705,39 @@ const solSelectTableau = (colIndex, cardIndex) => {
   solRender();
 };
 
+/** One click draws, or redeals the waste once the stock has run out. */
 const solDraw = () => {
   solState.selected = null;
+  if (!solPlay({ op: "draw" }) && !solPlay({ op: "redeal" })) solRender();
+};
 
-  if (solState.stock.length) {
-    solPushUndo();
-    ensureSolitaireStatsSession();
-    const card = solState.stock.pop();
-    card.faceUp = true;
-    solState.waste.push(card);
-    solState.moves += 1;
-  } else if (solState.waste.length) {
-    solPushUndo();
-    ensureSolitaireStatsSession();
-    solState.stock = solState.waste.reverse().map((card) => {
-      card.faceUp = false;
-      return card;
-    });
-    solState.waste = [];
-    solState.moves += 1;
-  }
+/** Invalidated by every new board, so a stale issuance cannot land on it. */
+let solIssueToken = 0;
 
-  solRender();
+/**
+ * Asks for the server's board for this deal. A verified result has to bind the
+ * state the server issued, so the issued board replaces the local one — but only
+ * while nothing has been played on it. Once a move has been made the deal on
+ * screen is the player's own, and the attempt stays local rather than having the
+ * board change underneath them. Every column keeps its depth either way, so the
+ * window the manager has already measured never changes size.
+ */
+const solRequestIssuedBoard = () => {
+  if (solState.presentation || solStats.hasIssuedGame()) return;
+  const token = (solIssueToken += 1);
+  const pending = solStats.issueGame({});
+  if (!pending) return;
+  Promise.resolve(pending).then((descriptor) => {
+    if (!descriptor || token !== solIssueToken) return;
+    if (solState.presentation || solAutoSolveRun) return;
+    if (solGame.moves || solGame.undo.length) return;
+    solGame = solRules.initial(descriptor.initial);
+    solAdoptEngineGame();
+    solRender();
+  }, () => {
+    // An attempt that could not be issued is still playable; it simply stays
+    // local, exactly as it does with no backend configured at all.
+  });
 };
 
 const solNewGame = () => {
@@ -1775,18 +1758,20 @@ const solNewGame = () => {
   solState.moves = 0;
   solState.won = false;
   solStats.dropSession();
-  solHistory.length = 0;
+  solAdoptStagedBoard();
   solLastCardClick = null;
   solHideVictoryVideo();
   solBoardReady = true;
 
   solRender();
+  solRequestIssuedBoard();
 };
 
 /**
  * Stage a presentation-only board: four face-up King-to-Ace runs with nothing
  * left in the stock, so the auto-solve control is ready to play the win.
- * Presentation wins never publish statistics or trigger random events.
+ * Presentation wins never request a session, publish statistics, record a replay
+ * or trigger random events.
  */
 const solStagePresentationWin = ({ visualEffects = true } = {}) => {
   solCancelAutoSolve();
@@ -1804,7 +1789,7 @@ const solStagePresentationWin = ({ visualEffects = true } = {}) => {
   solState.moves = 0;
   solState.won = false;
   solStats.dropSession();
-  solHistory.length = 0;
+  solAdoptStagedBoard();
   solLastCardClick = null;
   solHideVictoryVideo();
   solBoardReady = true;
@@ -1819,35 +1804,20 @@ const solEnsureBoard = () => {
   return true;
 };
 
+/**
+ * The double-click shortcut: send a visible card straight to its foundation.
+ * Only the top of the waste or the top of a column can go, which is exactly
+ * what the engine will accept, so an impossible double click selects nothing.
+ */
 const solAutoMoveCardToFoundation = (zone, pile, index) => {
-  let card = null;
-
-  if (zone === "waste") {
-    const wasteIndex = solState.waste.length - 1;
-    if (index !== wasteIndex) return;
-    card = solState.waste[wasteIndex];
-    solState.selected = {
-      zone: "waste",
-      pile: "waste",
-      index: wasteIndex,
-      cards: [card],
-    };
-  } else if (zone === "tableau") {
-    const column = solState.tableau[pile];
-    if (index !== column.length - 1) return;
-    card = column[index];
-    if (!card || !card.faceUp) return;
-    solState.selected = {
-      zone: "tableau",
-      pile,
-      index,
-      cards: [card],
-    };
-  }
-
-  if (!card || !solMoveSelectedToFoundation(card.suit)) {
-    solRender();
-  }
+  const source = zone === "tableau" ? solState.tableau[pile] : solState.waste;
+  if (!source || index !== source.length - 1) return;
+  const card = source[index];
+  if (!card || !card.faceUp) return;
+  const action = zone === "tableau"
+    ? { op: "tableauToFoundation", from: pile }
+    : { op: "wasteToFoundation" };
+  if (!solPlay(action)) solRender();
 };
 
 if (solBoard) {
@@ -1949,11 +1919,8 @@ if (solAutoSolve) {
 if (solUndo) {
   solUndo.addEventListener("click", () => {
     if (solState.won) return;
-    const snapshot = solHistory.pop();
-    if (!snapshot) return;
-    solRestoreSnapshot(snapshot);
+    if (!solPlay({ op: "undo" })) return;
     if (!solState.won) solHideVictoryVideo();
-    solRender();
   });
 }
 

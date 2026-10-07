@@ -22,10 +22,10 @@ const SUDOKU_DIGITS = "123456789";
 const SUDOKU_CELL_COUNT = 81;
 const SUDOKU_FULL_DIGIT_MASK = 0b1111111110;
 
-const shuffle = (items) => {
+const shuffle = (items, random = Math.random) => {
   const shuffled = Array.from(items);
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const swapIndex = Math.floor(random() * (index + 1));
     [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
   }
   return shuffled;
@@ -45,15 +45,15 @@ const countSudokuMaskBits = (mask) => {
 };
 
 /** A filled grid, built by shuffling the bands, stacks, and digits of one pattern. */
-const createSudokuFullSolution = () => {
+const createSudokuFullSolution = (random = Math.random) => {
   const groups = [0, 1, 2];
-  const rows = shuffle(groups).flatMap((band) =>
-    shuffle(groups).map((row) => band * 3 + row)
+  const rows = shuffle(groups, random).flatMap((band) =>
+    shuffle(groups, random).map((row) => band * 3 + row)
   );
-  const columns = shuffle(groups).flatMap((stack) =>
-    shuffle(groups).map((column) => stack * 3 + column)
+  const columns = shuffle(groups, random).flatMap((stack) =>
+    shuffle(groups, random).map((column) => stack * 3 + column)
   );
-  const digits = shuffle(SUDOKU_DIGITS.split(""));
+  const digits = shuffle(SUDOKU_DIGITS.split(""), random);
   const pattern = (row, column) => (row * 3 + Math.floor(row / 3) + column) % 9;
 
   return rows
@@ -147,15 +147,15 @@ const countSudokuSolutions = (board, limit = 2) => {
  * has one answer. Several attempts are made because a single carve can stall
  * above the clue target; the sparsest attempt wins.
  */
-const createGeneratedSudokuPuzzle = (targetClues, maxAttempts) => {
+const createGeneratedSudokuPuzzle = (targetClues, maxAttempts, random = Math.random) => {
   let bestPuzzle = null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const solution = createSudokuFullSolution();
+    const solution = createSudokuFullSolution(random);
     const puzzleValues = solution.split("");
     let clueCount = SUDOKU_CELL_COUNT;
 
-    shuffle(Array.from({ length: SUDOKU_CELL_COUNT }, (unusedCell, index) => index)).forEach(
+    shuffle(Array.from({ length: SUDOKU_CELL_COUNT }, (unusedCell, index) => index), random).forEach(
       (index) => {
         if (clueCount <= targetClues) return;
         const removedValue = puzzleValues[index];
@@ -176,6 +176,19 @@ const createGeneratedSudokuPuzzle = (targetClues, maxAttempts) => {
 
   return bestPuzzle;
 };
+
+/*
+ * The generator is also the offline source for the issued-game catalog, which
+ * must produce the same puzzles every time it runs. Publishing the pure parts
+ * here lets scripts/build-issued-game-catalog.mjs drive this exact code with a
+ * seeded random function, instead of carrying a second carve-and-count
+ * implementation that could drift from the one players actually get.
+ */
+self.sudokuGenerator = Object.freeze({
+  countSudokuSolutions,
+  createGeneratedSudokuPuzzle,
+  createSudokuFullSolution,
+});
 
 self.addEventListener("message", (event) => {
   const { requestId, difficulty, targetClues, maxAttempts } = event.data || {};
