@@ -1,10 +1,10 @@
-# O_modeling-custom-cursors__20261006 — Open
+# A_modeling-custom-cursors__20261006 — Active
 
 - Scope: Use Home's existing custom cursor system on the public modeling portfolio route.
-- Status: open
+- Status: active
 - Opened: 2026-10-06
-- Updated: 2026-10-06
-- Current State: Owner chose Home custom cursors for content item 10. Queued as possible work between long tickets; implementation has not started.
+- Updated: 2026-10-07
+- Current State: Scoped Claude implementation in a separate worktree; reuse Home cursor runtime and validate real modeling states. Canonical branch `codex/home-loading-followup`; coordinator Agent Deck `1c881e50-1791344233`. Prior leaderboard ticket is closed at `f77f42a`.
 - Verification: Reuse the shared cursor preference and existing runtime/assets; inspect normal, link/button, text-selection and viewer interaction states with light/dark preference changes. Render `/modeling/` at four standard viewports, verify mobile/touch behavior, and run affected cursor/modeling/browser/accessibility, cache-token/integrity and context checks.
 - Cleanup: Add the route's reusable cursor contract to indexed custom-cursor/modeling guidance, then resolve and delete this ticket/index row after acceptance.
 

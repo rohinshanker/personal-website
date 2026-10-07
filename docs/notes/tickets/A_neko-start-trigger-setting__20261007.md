@@ -1,10 +1,10 @@
-# O_neko-start-trigger-setting__20261007 — Open
+# A_neko-start-trigger-setting__20261007 — Active
 
 - Scope: Rename the Neko alert's load-bearing production `debug` setting to describe its Start-triggered behavior, preserving scheduling and all visible behavior.
-- Status: open
+- Status: active
 - Opened: 2026-10-07
 - Updated: 2026-10-07
-- Current State: Owner approved the rename after the behavior was explained. Queued as possible work between the current leaderboard ticket and the next long loading ticket; no source edits have started.
+- Current State: Scoped Codex implementation in a separate worktree; preserve forced Start scheduling and all guards. Canonical branch `codex/home-loading-followup`; coordinator Agent Deck `1c881e50-1791344233`. Prior leaderboard ticket is closed at `f77f42a`.
 - Verification: Exercise forced Start scheduling, suppression on other natural triggers, cooldown/kind-capacity exceptions, per-event lockout, duplicate-pending/gameplay/visibility guards, delay and the manual stream launcher. Update and execute the debug-isolation helpers' behavioral tests, then render prompt/Yes/No/Escape/40-cat states at standard viewports and run affected Neko/event/browser/accessibility/integrity/context gates.
 - Cleanup: Preserve the setting/scheduling contract in indexed event/Neko guidance, then resolve and delete this ticket/index row after acceptance.
 
