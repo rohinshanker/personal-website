@@ -3,12 +3,16 @@
 - Scope: Deploy the updated homepage search metadata and favicon assets, then guide a site owner through Google Search Console's live test, indexing request, and follow-up verification over a call.
 - Status: open
 - Opened: 2026-08-27
-- Updated: 2026-09-21
+- Updated: 2026-10-06
 - Current State: Deployed and verified live on 2026-09-21: `https://rohin.shanker.me/` serves `My personal website. Best enjoyed on desktop…`, the `data-nosnippet` loader exclusion, and the `/assets/favicon-96.png` link with `sizes="96x96"`; both icon URLs return HTTP 200 with `image/png`. The remaining steps need the site owner's Search Console access on a call: live test, one indexing request, and the post-crawl check.
 - Verification: Complete the live-site checks, record the Search Console property and indexed Last crawl date, pass Test live URL, inspect the tested HTML/resources, submit one Request indexing action, and later confirm that Google's indexed Last crawl postdates the deployment. The exact result snippet and favicon are observations, not completion requirements, because Google does not guarantee either presentation.
 - Cleanup: After the post-deployment crawl is confirmed, resolve this ticket, retain only reusable updates in `docs/validation/search-preview-favicon.md`, remove this ticket from the live index, and delete the resolved ticket.
 
 ## Objective
+
+Owner questions presented 2026-10-06: have the live URL test and indexing request already been completed? If so, record the property, results and available Last crawl date below. Otherwise, does the owner have property access and want a guided session, or should the account steps remain pending? No passwords or tokens are requested.
+
+Owner answer (2026-10-06): the Search Console steps have not been done; keep them pending. No live-test/indexing/crawl evidence or guided-session request was supplied.
 
 Use a screen-shared call to show the site owner what changed, verify that Google can fetch the new homepage and favicon, request a new crawl once, and establish realistic follow-up expectations.
 

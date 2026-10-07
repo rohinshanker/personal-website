@@ -3,10 +3,17 @@
 - Scope: Gate the Admin Controls app behind the active Administrator session, then manually validate the promotional-content workflow and access behavior.
 - Status: open
 - Opened: 2026-07-31
-- Updated: 2026-08-03
+- Updated: 2026-10-06
 - Current State: The Admin Controls implementation and automated access-gate validation are complete. The ticket remains open for the requested manual acceptance pass: a current Administrator sign-in opens the full controls, while a missing, invalid, expired, or server-rejected sign-in proof opens the Program Manager “nothing to see here...” notice.
 - Verification: Automated on 2026-08-03: 225 source tests passed; the 7-test Admin Controls browser suite, 8-test Administrator sign-in browser suite, and shared content-tool popup regression passed. Authenticated and unauthenticated states were rendered at phone, tablet, laptop, and desktop sizes with no final console warnings or errors. Game integrity, icon-manifest, secret, and diff checks passed. Manual acceptance remains pending.
+- Owner Approval: Required before closing; owner confirmed on 2026-10-06 that the manual promotional-workflow review has not been done and should remain pending.
 - Cleanup: After manual acceptance, record only reusable guidance in `docs/validation/admin-controls.md`, then resolve and remove this ticket from the live queue.
+
+## Owner acceptance
+
+Owner question presented 2026-10-06: has the signed-in promotional workflow been manually reviewed and accepted? Record explicit acceptance, requested changes, a request for a guided review, or that acceptance remains pending. Automated access-gate results do not answer this workflow preference.
+
+Owner answer (2026-10-06): not reviewed yet; keep manual acceptance pending. The separate on-demand loading/cursor work is approved in the architecture/loading tickets.
 
 ## Mental Model
 
