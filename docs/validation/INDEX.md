@@ -2,6 +2,7 @@
 
 | Purpose | Scope | Last verified | Document |
 | --- | --- | --- | --- |
+| Preserve editable sources outside deployment while retaining runtime assets and notices. | Source archive, still-image/font regeneration inputs, byte identity, runtime Digital-7, font notices, reference audits and package exclusion. | 2026-10-07 | [source-assets.md](source-assets.md) |
 | Server-replay verification and controlled rollout of public game results. | Shared rule engines, issuance and prevalidated catalog, replay/timing/finish contract, restore, hidden-information and human-play limitations, provenance, controlled rollout, and tests. | 2026-10-07 | [leaderboard-result-verification.md](leaderboard-result-verification.md) |
 | Preserve shared random-event lifecycle, local binding and window styles. | Managed helpers, initialization order, media/focus cleanup, static and dynamic windows, cache tokens, and browser regression checks. | 2026-10-01 | [random-event-windows.md](random-event-windows.md) |
 | Preserve native row feedback and file-explorer behavior in Study Resources. | Tree and file hover, selection, focus, responsive layout, navigation, PDF actions, disabled controls, and rendered regression coverage. | 2026-10-01 | [study-resources.md](study-resources.md) |

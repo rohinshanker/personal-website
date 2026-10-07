@@ -1,0 +1,7 @@
+# Preserve archived originals and accompanying font notices byte-for-byte.
+docs/assets-src/** -text
+assets/fonts/converted/** -text
+
+# These two copies retain the upstream Digital-7 notice's CRLF/spacing.
+docs/assets-src/fonts/src/digital-7/readme.txt -whitespace
+assets/fonts/converted/digital-7/readme.txt -whitespace
