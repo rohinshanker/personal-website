@@ -25,15 +25,15 @@ same script. An invalid modeling-file probe must fail the gate; the clean tree m
 random-event changes, also run
 `node --test tests/gears-nest.test.mjs tests/random-event-cooldown.test.mjs`.
 
-Production per-event debug flags are live site behavior. Ordinary Playwright
+Production scheduling policies are live site behavior. Ordinary Playwright
 specs must import `tests/ui/deterministic.mjs`, which routes `scripts/home/events/prompts.js`
-through the shared debug isolator in `tests/ui/helpers/random-event-debug.mjs`.
+through the shared production-policy isolator in `tests/ui/helpers/random-event-debug.mjs`.
 Use `routeHomeScript` from `tests/ui/helpers/home-script-routes.mjs` to instrument
-the feature that owns a test bridge, and isolate production debug flags separately.
-Focused debug-event coverage may
+the feature that owns a test bridge, and isolate production scheduling policies separately.
+Focused forced-policy coverage may
 retain only the event IDs it explicitly exercises through the helper's
 `except` option. Keep the helper's production-ID contract test aligned with
-the real event registry whenever a debug flag changes.
+the real event registry whenever a scheduling policy changes.
 
 For a deterministic natural-event test, isolate its registered candidate instead
 of relying on family registration order. Drive the real activity notification or

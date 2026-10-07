@@ -2,7 +2,7 @@
 
 - Purpose: Keep random-event window lifecycle and event-local wiring consistent.
 - Scope: Home event visibility, animation, deferred media, focus, geometry, dynamic windows, binding order, and regression checks.
-- Last verified: 2026-10-01
+- Last verified: 2026-10-07
 
 ## Lifecycle contract
 
@@ -33,8 +33,8 @@ release visibility guards so the event can trigger again.
 ## Registration and binding
 
 Keep event-owned DOM listeners in its `registerRandomEvent` definition's
-`bind()` field, after `run()`. Preserve the `id` then `debug` field order used
-by the shared debug isolator. Registration queues bindings; the single late
+`bind()` field, after `run()`. Preserve the `id` then `forceOnStart` field order used
+by the production-policy isolator for the Neko registration. Real developer debug flags stay separate; the data-driven alert family must not contain an armed `debug` or `forceOnStart` policy. Registration queues bindings; the single late
 `bindRegisteredRandomEvents()` call runs them in registration order, then
 empties the queue. This preserves initialization and document-listener order.
 Do not invoke binding eagerly during registration.

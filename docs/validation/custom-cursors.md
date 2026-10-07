@@ -1,8 +1,8 @@
 # Custom Cursor Semantics
 
 - Purpose: Preserve native-style cursor meaning while using the Jeelh light and dark cursor packs.
-- Scope: Entry, Home, and Video Editor cursor tokens, selectable text, guarded controls, loading states, editor operations, and Admin target picking.
-- Last verified: 2026-09-30
+- Scope: Entry, Home, Modeling and Video Editor cursor tokens, selectable text, guarded controls, loading states, editor operations, and Admin target picking.
+- Last verified: 2026-10-07
 
 ## Behavior contract
 
@@ -30,11 +30,13 @@
 
 ## Shared runtime and guards
 
-Home and Video Editor load `scripts/home/core/cursor-mode.js` before their
+Home, Modeling and Video Editor load `scripts/home/core/cursor-mode.js` before their
 route scripts. The runtime owns the storage key, active-mode preloading, mode
 notifications, and the nine-frame/100 ms loading animation. Reduced motion
 holds one frame on both routes. Route adapters provide their own busy-state
 predicates; do not copy the animation or asset lists back into them.
+
+Modeling uses the same storage key, cursor assets, light/dark notifications and text-selection guards. Its fixed header, shoot windows and fullscreen viewer carry `data-no-drag`; their titles stay selectable. `modeling/cursor.js` observes only the fullscreen viewer's `aria-busy` state for the working cursor. Lazy carousel slides retain their own loading indicator, and viewer success, failure or dismissal must clear the busy state. Changed route script/styles and the cursor adapter require current cache tokens.
 `subscribeBodyMutations` shares the loading observer with Admin Controls, which
 subscribes on first open (or when saved privacy/audio settings require it).
 Admin filters for child-list changes and unsubscribes on a non-cached page exit;
@@ -57,6 +59,7 @@ Run:
 npm test
 npx playwright test tests/ui/custom-cursor-selection.spec.mjs
 npx playwright test tests/ui/video-editor.spec.mjs --grep "cursor"
+npx playwright test tests/ui/modeling-custom-cursors.spec.mjs tests/ui/modeling-portfolio.spec.mjs
 npx playwright test tests/ui/about-me.spec.mjs tests/ui/admin-controls.spec.mjs
 ```
 
