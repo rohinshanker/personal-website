@@ -22,9 +22,17 @@ const installSessionPolicyBridge = async (page) => {
 const sessionPolicyState = { statsSession: "" };
 const sessionPolicyHooks = createGameStatsHooks("sudoku", sessionPolicyState);
 const sessionPolicyDateNow = Date.now.bind(Date);
+const sessionPolicyRequests = new Map();
+const ensureSessionPolicySession = (difficulty) => {
+  const sessionKey = sessionPolicyHooks.ensureSession({ difficulty });
+  const entry = gameStatsSessions.get("sudoku");
+  if (entry?.sessionKey === sessionKey) {
+    sessionPolicyRequests.set(sessionKey, entry.sessionRequest);
+  }
+  return sessionKey;
+};
 window.__gameStatsSessionPolicyTest = Object.freeze({
-  ensureSession: (difficulty = "easy") =>
-    sessionPolicyHooks.ensureSession({ difficulty }),
+  ensureSession: (difficulty = "easy") => ensureSessionPolicySession(difficulty),
   dropSession: () => sessionPolicyHooks.dropSession(),
   expireSessions: () => {
     Date.now = () => sessionPolicyDateNow() + 7 * 60 * 60 * 1000;
@@ -45,6 +53,13 @@ window.__gameStatsSessionPolicyTest = Object.freeze({
       { sudokuNoHintsSeconds: 90 }
     ),
   sync: () => syncQueuedGameStats(),
+  waitForSessions: async (sessionKeys) =>
+    Promise.all(
+      sessionKeys.map(async (sessionKey) => {
+        const result = await sessionPolicyRequests.get(sessionKey);
+        return result?.session?.id || "";
+      })
+    ),
 });
 })();`
     )
@@ -160,6 +175,12 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await expect.poll(() => api.sessionRequests.length).toBe(2);
 
     await api.releaseSessions();
+    const adoptedSessionIds = await page.evaluate(
+      (sessionKeys) =>
+        window.__gameStatsSessionPolicyTest.waitForSessions(sessionKeys),
+      [firstKey, replacementKey]
+    );
+    expect(adoptedSessionIds).toEqual(["session-policy-1", "session-policy-2"]);
     await page.evaluate(() => window.__gameStatsSessionPolicyTest.expireSessions());
     const activeExpiredKey = await page.evaluate(() =>
       window.__gameStatsSessionPolicyTest.ensureSession("easy")
