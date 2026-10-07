@@ -68,6 +68,8 @@ jobs:
         run: npm test
       - name: Verify generated integrity metadata
         run: npm run game-stats:integrity:check
+      - name: Verify issued game catalog proofs and determinism
+        run: npm run game-stats:catalog:check
       - name: Verify generated app icon manifest
         run: npm run app-icons:check
       - name: Verify generated study resources manifest

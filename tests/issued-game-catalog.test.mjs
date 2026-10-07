@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { parse } from "yaml";
 
 import {
   SOLITAIRE_DECK_COUNT,
@@ -32,6 +34,14 @@ const plain = (value) => JSON.parse(JSON.stringify(value));
 const engines = await loadRuleEngines();
 const { countSudokuSolutions } = await loadSudokuGenerator();
 const clueTargets = await loadSudokuClueTargets();
+
+test("the required release gate verifies full catalog proofs and regeneration", async () => {
+  const packageConfig = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const workflow = parse(await readFile(new URL("../.github/workflows/game-stats-worker-release.yml", import.meta.url), "utf8"));
+  assert.equal(packageConfig.scripts["game-stats:catalog:check"], "node scripts/build-issued-game-catalog.mjs --check");
+  assert.ok(workflow.jobs.verify.steps.some(({ run }) => run === "npm run game-stats:catalog:check"));
+  assert.ok(workflow.jobs["deploy-worker"].needs.includes("verify"));
+});
 
 test("the catalog holds more prevalidated boards than the contract requires", () => {
   assert.ok(catalog.ISSUED_CATALOG_VERSION >= 1);
