@@ -174,9 +174,10 @@ test("Wired chat assets and cache-busted stylesheet references are present", asy
     "assets/optimized/random-events/lain-poster.jpg",
     "assets/optimized/random-events/lain.webp",
   ];
-  const [home, index, avatarAsset, ...lainAssets] = await Promise.all([
+  const [home, index, resources, avatarAsset, ...lainAssets] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
+    readHomeScript("resources"),
     stat(new URL("assets/app-icons/ico/user_computer.ico", root)),
     ...derivatives.map((derivative) => stat(new URL(derivative, root))),
   ]);
@@ -187,6 +188,7 @@ test("Wired chat assets and cache-busted stylesheet references are present", asy
     assert.ok(asset.isFile() && asset.size > 0, `${derivatives[position]} is a nonempty file`);
   });
   assert.ok(avatarAsset.isFile() && avatarAsset.size > 0);
-  assert.ok(home.includes(stylesheet));
-  assert.ok(index.includes(stylesheet));
+  assert.ok(resources.includes(stylesheet));
+  assert.ok(!home.includes(stylesheet));
+  assert.ok(!index.includes(stylesheet));
 });

@@ -50,6 +50,10 @@ const sources = new Map(
     ])
   )
 );
+const resourceLoader = await readFile(
+  new URL("scripts/home/core/resources.js", root),
+  "utf8"
+);
 const references = ENTRY_POINTS.flatMap((entryPoint) =>
   readAssetReferences(entryPoint, sources.get(entryPoint))
 );
@@ -92,4 +96,21 @@ test("the index.html warm-up list mirrors the home.html asset tags", () => {
     .map(({ reference }) => reference)
     .filter((reference) => !warmupSet.has(reference) && !indexReferences.has(reference));
   assert.deepEqual(unwarmed, []);
+});
+
+test("on-demand event and Admin resources stay tokened and outside entry warm-up", () => {
+  const onDemand = [
+    "styles/home/random-events.css",
+    "styles/home/admin-controls.css",
+    "scripts/home/admin/orchestrator.js",
+    "scripts/home/admin-controls.js",
+  ];
+  const warmup = readWarmupList(sources.get("index.html"));
+  const home = sources.get("home.html");
+  onDemand.forEach((path) => {
+    assert.match(resourceLoader, new RegExp(`${path.replaceAll("/", "\\/")}\\?v=[^\"]+`));
+    assert.equal(warmup.some((reference) => reference.startsWith(`${path}?`)), false);
+    assert.equal(home.includes(`href="${path}?`), false);
+    assert.equal(home.includes(`src="${path}?`), false);
+  });
 });

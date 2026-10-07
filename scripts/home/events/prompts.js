@@ -231,19 +231,20 @@ const showDebugSystemAlert = (alert) => {
     document.activeElement instanceof HTMLElement ? document.activeElement : null;
   let actionButtons = [];
   const didOpen = showManagedRandomEventWindow(debugSystemAlertWindow, {
+    afterShow: () => {
+      debugSystemAlertActiveId = alert.id;
+      debugSystemAlertFocusReturn = focusReturn;
+      if (debugSystemAlertReducedMotionQuery?.matches) {
+        debugSystemAlertWindow.classList.remove("is-opening");
+      }
+      requestAnimationFrame(() => actionButtons[0]?.focus({ preventScroll: true }));
+    },
     beforeShow: () => {
       actionButtons = renderDebugSystemAlert(alert);
     },
     clampAfterMediaLoad: true,
   });
   if (!didOpen) return false;
-
-  debugSystemAlertActiveId = alert.id;
-  debugSystemAlertFocusReturn = focusReturn;
-  if (debugSystemAlertReducedMotionQuery?.matches) {
-    debugSystemAlertWindow.classList.remove("is-opening");
-  }
-  requestAnimationFrame(() => actionButtons[0]?.focus({ preventScroll: true }));
   return true;
 };
 
@@ -340,6 +341,15 @@ const showNekoStreamAlert = () => {
   const focusReturn =
     document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const didOpen = showManagedRandomEventWindow(nekoStreamAlertWindow, {
+    afterShow: () => {
+      nekoStreamAlertFocusReturn = focusReturn;
+      nekoStreamAlertResponsePending = true;
+      startNekoStreamAlertIconAnimation();
+      if (prefersReducedNekoStreamAlertMotion()) {
+        nekoStreamAlertWindow.classList.remove("is-opening");
+      }
+      requestAnimationFrame(() => nekoStreamAlertYes?.focus({ preventScroll: true }));
+    },
     beforeShow: () => {
       stopNekoStreamAlertIconAnimation();
       nekoStreamAlertIconFrame = 0;
@@ -348,14 +358,6 @@ const showNekoStreamAlert = () => {
     clampAfterMediaLoad: true,
   });
   if (!didOpen) return false;
-
-  nekoStreamAlertFocusReturn = focusReturn;
-  nekoStreamAlertResponsePending = true;
-  startNekoStreamAlertIconAnimation();
-  if (prefersReducedNekoStreamAlertMotion()) {
-    nekoStreamAlertWindow.classList.remove("is-opening");
-  }
-  requestAnimationFrame(() => nekoStreamAlertYes?.focus({ preventScroll: true }));
   return true;
 };
 
@@ -1148,16 +1150,17 @@ const closeNobleSteedWindow = () => {
 
 const showNobleSteedResultWindow = () => {
   nobleSteedResultTimer = null;
-  const didOpen = showManagedRandomEventWindow(nobleSteedResultWindow, {
+  showManagedRandomEventWindow(nobleSteedResultWindow, {
+    afterShow: () => {
+      if (!nobleSteedResultPosition) return;
+      setRandomEventWindowPosition(
+        nobleSteedResultWindow,
+        nobleSteedResultPosition.left,
+        nobleSteedResultPosition.top
+      );
+    },
     clampAfterMediaLoad: true,
   });
-  if (didOpen && nobleSteedResultPosition) {
-    setRandomEventWindowPosition(
-      nobleSteedResultWindow,
-      nobleSteedResultPosition.left,
-      nobleSteedResultPosition.top
-    );
-  }
 };
 
 const acceptNobleSteedOffer = () => {

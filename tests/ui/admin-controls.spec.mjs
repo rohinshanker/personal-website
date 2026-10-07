@@ -117,6 +117,7 @@ const preparePage = async (
 
 const finishWindowAnimation = async (win, animationName) => {
   await win.dispatchEvent("animationend", { animationName });
+  await expect(win).not.toHaveClass(new RegExp(animationName === "retro-window-open" ? "is-opening" : "is-closing"));
 };
 
 const openAdmin = async (page) => {
@@ -268,6 +269,10 @@ test("Admin launchers show only the stand-in without an active Administrator ses
   }
 
   expect(mutatingRequests).toEqual([]);
+  expect(await page.evaluate(() => performance.getEntriesByType("resource")
+    .map((entry) => new URL(entry.name).pathname)
+    .filter((path) => path.includes("admin-controls") || path.includes("admin/orchestrator"))
+  )).toEqual([]);
 });
 
 test("an expired Administrator proof is purged and cannot expose Admin Controls", async ({

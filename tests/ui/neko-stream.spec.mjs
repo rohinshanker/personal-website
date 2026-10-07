@@ -360,6 +360,7 @@ test("the forced-Start event shows an animated accessible prompt and No or Escap
   page,
 }, testInfo) => {
   await preparePage(page, { clock: true });
+  await page.evaluate(() => window.homeResources.loadRandomEventStyles());
   const alert = page.locator("#neko-stream-alert-window");
   const icon = page.locator("#neko-stream-alert-icon");
   const yes = page.getByRole("button", { name: "Yes", exact: true });
@@ -557,7 +558,7 @@ test("Yes closes the prompt and starts exactly one complete forty-cat stream", a
   await sentinel.focus();
   const before = await readSnapshot(page);
   expect(await page.evaluate(() => window.__nekoStreamPromptTest.openAlert())).toBe(true);
-  await page.clock.runFor(17);
+  await page.clock.runFor(34);
   await expect(yes).toBeFocused();
 
   await yes.evaluate((button) => {

@@ -873,10 +873,10 @@ const releaseSootSpritesSwarm = () => {
 };
 
 const showSootSpritesWindow = () => {
-  const didOpen = showManagedRandomEventWindow(sootSpritesWindow, {
+  showManagedRandomEventWindow(sootSpritesWindow, {
+    afterShow: reserveSootSpritesSpawnLane,
     clampAfterMediaLoad: true,
   });
-  if (didOpen) reserveSootSpritesSpawnLane();
 };
 
 const closeSootSpritesWindow = () => {

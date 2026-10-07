@@ -218,6 +218,7 @@ test("all production system alerts schedule and render through the shared shell"
       window.__debugSystemAlertsRuntimeTest
     )
   );
+  await page.evaluate(() => window.homeResources.loadRandomEventStyles());
 
   const alerts = await page.evaluate(() => window.__debugSystemAlertsPromptTest.alerts);
   expect(alerts).toHaveLength(30);
@@ -523,6 +524,7 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
       window.__debugSystemAlertsRuntimeTest
     )
   );
+  await page.evaluate(() => window.homeResources.loadAdminResources());
 
   const win = page.locator("#debug-system-alert-window");
   const sentinel = page.locator("#taskbar-clock-button");

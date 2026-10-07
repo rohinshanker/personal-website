@@ -17,8 +17,9 @@ const onlyReference = (source, path, base) => {
 };
 
 test("shared route assets and preview styles retain identical cache versions", async () => {
-  const [home, landing, modeling, admin] = await Promise.all([
+  const [home, landing, modeling, admin, resources] = await Promise.all([
     read("home.html"), read("index.html"), read("modeling/index.html"), read("scripts/home/admin-controls.js"),
+    read("scripts/home/core/resources.js"),
   ]);
   for (const path of ["style.css", "scripts/home/modeling-portfolio.js", "scripts/home/core/media.js"]) {
     for (const [route, base] of [[landing, "/"], [modeling, "/modeling/"]]) {
@@ -30,7 +31,9 @@ test("shared route assets and preview styles retain identical cache versions", a
   const stylesheets = vm.runInNewContext(previewArray);
   assert.equal(stylesheets.length, 3);
   for (const stylesheet of stylesheets) {
-    assert.equal(stylesheet, onlyReference(home, stylesheet.split("?")[0]));
+    const path = stylesheet.split("?")[0];
+    const source = path === "styles/home/random-events.css" ? resources : home;
+    assert.equal(stylesheet, onlyReference(source, path));
   }
 });
 

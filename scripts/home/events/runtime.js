@@ -40,6 +40,10 @@ const {
 const {
   observeActivity,
 } = window.homeActivity;
+const {
+  loadRandomEventStyles,
+  resourceState,
+} = window.homeResources;
 
 const randomEventWindow = byId("random-event-window");
 const randomEventTitle = byId("random-event-title");
@@ -342,12 +346,9 @@ const isManagedRandomEventWindowVisible = (win) =>
       win.getAttribute("aria-hidden") === "false"
   );
 
-// Opens a random-event window through the one shared lifecycle. `isVisible`
-// replaces the default visibility test, `onFront` runs instead of opening when
-// the window is already visible, `beforeShow` prepares state once an open is
-// committed, `position` replaces viewport placement, and `afterShow` runs after
-// the opening animation starts. Returns true only when an open happened.
-const showManagedRandomEventWindow = (
+const randomEventStyleOpenRequests = new Map();
+
+const openManagedRandomEventWindow = (
   win,
   {
     isVisible,
@@ -360,7 +361,6 @@ const showManagedRandomEventWindow = (
     clampAfterMediaLoad = false,
   } = {}
 ) => {
-  if (!win) return false;
   if (isVisible ? isVisible() : isManagedRandomEventWindowVisible(win)) {
     win.style.zIndex = String(nextWindowZIndex());
     if (onFront) onFront();
@@ -380,6 +380,57 @@ const showManagedRandomEventWindow = (
   return true;
 };
 
+// Opens a random-event window through the one shared lifecycle. `isVisible`
+// replaces the default visibility test, `onFront` runs instead of opening when
+// the window is already visible, `beforeShow` prepares state once an open is
+// committed, `position` replaces viewport placement, and `afterShow` runs after
+// the opening animation starts. A cold call is accepted synchronously but does
+// not perform state, geometry, media, or animation work until styles are ready.
+const showManagedRandomEventWindow = (
+  win,
+  options = {}
+) => {
+  if (!win) return false;
+  const isVisible = options.isVisible
+    ? options.isVisible()
+    : isManagedRandomEventWindowVisible(win);
+  if (isVisible) {
+    win.style.zIndex = String(nextWindowZIndex());
+    options.onFront?.();
+    return false;
+  }
+
+  if (randomEventStyleOpenRequests.has(win)) return false;
+  if (resourceState("random-event-styles") === "loaded") {
+    return openManagedRandomEventWindow(win, options);
+  }
+
+  const request = { cancelled: false };
+  randomEventStyleOpenRequests.set(win, request);
+  loadRandomEventStyles()
+    .then(() => {
+      if (
+        request.cancelled ||
+        randomEventStyleOpenRequests.get(win) !== request ||
+        !win.isConnected ||
+        document.hidden
+      ) {
+        return;
+      }
+      randomEventStyleOpenRequests.delete(win);
+      openManagedRandomEventWindow(win, options);
+    })
+    .catch((error) => {
+      if (randomEventStyleOpenRequests.get(win) === request) {
+        randomEventStyleOpenRequests.delete(win);
+      }
+      if (!request.cancelled) {
+        console.warn("[Rohin OS] Random event styles could not load", error);
+      }
+    });
+  return true;
+};
+
 // Starts the shared closing animation. `force` skips the `is-hidden` guard for
 // windows that track their own closing state, and `beforeClose` runs the event's
 // teardown only once a close is committed. Returns true when a close started.
@@ -388,6 +439,12 @@ const closeManagedRandomEventWindow = (
   { force = false, beforeClose } = {}
 ) => {
   if (!win) return false;
+  const pendingStyleOpen = randomEventStyleOpenRequests.get(win);
+  if (pendingStyleOpen) {
+    pendingStyleOpen.cancelled = true;
+    randomEventStyleOpenRequests.delete(win);
+    return true;
+  }
   if (!force && win.classList.contains("is-hidden")) return false;
   if (beforeClose) beforeClose();
   win.setAttribute("aria-hidden", "true");
@@ -852,16 +909,25 @@ const preloadRandomEventAssets = (definition, context) => {
     targets = collectRandomEventPreloadTargets(
       getRandomEventPreloadTargets(definition, context)
     );
-    if (!targets.length) return Promise.resolve();
   } catch (error) {
     console.warn("[Rohin OS] Random event asset preload setup failed", definition.id, error);
     return Promise.resolve();
   }
 
-  return Promise.all(targets.map(preloadRandomEventTarget)).catch((error) => {
+  return Promise.all([
+    loadRandomEventStyles(),
+    ...targets.map(preloadRandomEventTarget),
+  ]).catch((error) => {
     console.warn("[Rohin OS] Random event asset preload failed", definition.id, error);
   });
 };
+
+window.addEventListener("pagehide", () => {
+  randomEventStyleOpenRequests.forEach((request) => {
+    request.cancelled = true;
+  });
+  randomEventStyleOpenRequests.clear();
+});
 
 // An event that has the visitor mid-fight blocks new ones. Each such event
 // reports its own state when it registers.

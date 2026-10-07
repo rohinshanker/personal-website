@@ -16,6 +16,7 @@ const names = [
   "restartWindowAnimation",
   "unloadDeferredImages",
   "isManagedRandomEventWindowVisible",
+  "openManagedRandomEventWindow",
   "showManagedRandomEventWindow",
   "closeManagedRandomEventWindow",
   "bindManagedRandomEventWindowAnimation",
@@ -30,7 +31,10 @@ const context = vm.createContext({
   clampRandomEventWindowAfterMediaLoad: () => events.push("clamp"),
 });
 vm.runInContext(
-  "let topZ = 100;\nconst nextWindowZIndex = () => topZ++;\n" + names.map(extract).join("\n") +
+  "let topZ = 100;\nconst nextWindowZIndex = () => topZ++;\n" +
+    "const randomEventStyleOpenRequests = new Map();\n" +
+    "const resourceState = () => 'loaded';\n" +
+    names.map(extract).join("\n") +
     "\nthis.api = {" + names.join(",") + "};",
   context
 );

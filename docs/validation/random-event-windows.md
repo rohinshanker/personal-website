@@ -12,7 +12,7 @@ ARIA, media, animation, or stacking operations into a new event:
 | Helper | Contract |
 | --- | --- |
 | `isManagedRandomEventWindowVisible(win)` | Requires a window without `is-hidden` and with `aria-hidden="false"`. |
-| `showManagedRandomEventWindow(win, options)` | Returns whether it opened. Loads deferred media, clears hidden/closing state, updates ARIA, places and raises the window, and starts its opening animation. An already visible window is raised without resetting it. |
+| `showManagedRandomEventWindow(win, options)` | Returns whether it accepted the open. On a cold call it first loads the shared event stylesheet; only after that succeeds does it load deferred media, clear hidden/closing state, update ARIA, place and raise the window, and start its opening animation. An already visible window is raised without resetting it. |
 | `closeManagedRandomEventWindow(win, options)` | Returns whether closing started. Runs teardown, sets hidden ARIA state, and starts the closing animation. Actual hiding waits for animation completion. |
 | `bindManagedRandomEventWindowAnimation(win, options)` | Stops click propagation, handles only the root's own open/close animations, clears animation classes, and hides/unloads a closed window. |
 | `bindRandomEventButton(button, action)` | Prevents the default action and desktop click propagation before invoking an event action. |
@@ -59,10 +59,12 @@ Brand's smaller windows retain their faster timing, and Biden Blast retains
 its custom animation opt-out. App dialogs using `random-alert-window` also
 carry the base class, so shared-shell changes need app-dialog regression checks.
 
-A stylesheet-token change must reach Home, the entry warm-up list and the
-Administrator preview stylesheet list. If `admin-controls.js` changes, bump
-its own token in Home and the warm-up list too. Regenerate game integrity after
-changing `main.js`; follow [site-quality-gates.md](site-quality-gates.md).
+A stylesheet-token change must reach the on-demand resource map and the
+Administrator preview stylesheet list. Event and Administrator styles must not
+return to the entry warm-up list. If `admin-controls.js` changes, bump its token
+in the on-demand resource map too. Regenerate game integrity after changing
+`main.js`; follow [home-loading.md](home-loading.md) and
+[site-quality-gates.md](site-quality-gates.md).
 
 ## Regression checks
 

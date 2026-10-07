@@ -18,14 +18,15 @@ import {
 
 const root = new URL("../", import.meta.url);
 
-const [eventSources, homeSource, eventStyles] = await Promise.all([
+const [eventSources, homeSource, baseStyles, eventStyles] = await Promise.all([
   readHomeScriptText("windows", ...RANDOM_EVENT_SCRIPT_KEYS, "boot"),
   readFile(new URL("home.html", root), "utf8"),
+  readFile(new URL("styles/home/base.css", root), "utf8"),
   readFile(new URL("styles/home/random-events.css", root), "utf8"),
 ]);
 
 /** The one block allowed to contain the raw show sequence. */
-const SHOW_HELPER = "const showManagedRandomEventWindow = (";
+const SHOW_HELPER = "const openManagedRandomEventWindow = (";
 
 const registrationBlocks = () => {
   const blocks = [];
@@ -160,14 +161,14 @@ test("every event window carries the managed base class", () => {
 });
 
 test("the window state rules are declared once", () => {
-  assert.match(eventStyles, /\.random-event-window\.is-hidden \{\s*display: none;\s*\}/);
+  assert.match(baseStyles, /\.random-event-window\.is-hidden \{\s*display: none;\s*\}/);
   assert.match(
-    eventStyles,
+    baseStyles,
     /\.random-event-window\.is-opening \{\s*animation: retro-window-open var\(--event-window-open-duration, 260ms\)\s*steps\(7, end\) both;\s*\}/
   );
   assert.match(
-    eventStyles,
-    /\.random-event-window\.is-closing \{\s*pointer-events: none;\s*animation: retro-window-close var\(--event-window-close-duration, 180ms\)\s*steps\(7, end\) both;\s*\}/
+    baseStyles,
+    /\.random-event-window\.is-closing \{\s*animation: retro-window-close var\(--event-window-close-duration, 180ms\)\s*steps\(7, end\) both;\s*pointer-events: none;\s*\}/
   );
 
   const duplicates = [...eventStyles.matchAll(/^\.([a-z0-9-]+-window)\.(is-hidden|is-opening|is-closing) \{\n([^}]*)\}/gm)]

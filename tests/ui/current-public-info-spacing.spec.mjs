@@ -99,6 +99,7 @@ test("Current Public Information uses the Saul advertisement image inset and kee
   await installCurrentPublicInfoTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => Boolean(window.__currentPublicInfoTest));
+  await page.evaluate(() => window.homeResources.loadRandomEventStyles());
 
   const win = page.locator("#current-public-info-window");
   const image = page.locator("#current-public-info-image");

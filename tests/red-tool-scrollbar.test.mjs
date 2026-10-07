@@ -5,9 +5,10 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("Red Tool chat keeps exactly one native arrow at each scrollbar end", async () => {
-  const [css, globalCss, home, index] = await Promise.all([
+  const [css, globalCss, resources, home, index] = await Promise.all([
     readFile(new URL("styles/home/random-events.css", root), "utf8"),
     readFile(new URL("style.css", root), "utf8"),
+    readFile(new URL("scripts/home/core/resources.js", root), "utf8"),
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
   ]);
@@ -59,12 +60,7 @@ test("Red Tool chat keeps exactly one native arrow at each scrollbar end", async
 
   const expectedReference =
     "styles/home/random-events.css?v=";
-  assert.ok(home.includes(expectedReference));
-  assert.ok(index.includes(expectedReference));
-  const globalStyleIndex = home.indexOf('href="style.css?');
-  const randomEventStyleIndex = home.indexOf(`href="${expectedReference}`);
-  const cursorStyleIndex = home.indexOf('href="styles/home/cursors.css?');
-  assert.ok(globalStyleIndex >= 0);
-  assert.ok(globalStyleIndex < randomEventStyleIndex);
-  assert.ok(randomEventStyleIndex < cursorStyleIndex);
+  assert.ok(resources.includes(expectedReference));
+  assert.ok(!home.includes(expectedReference));
+  assert.ok(!index.includes(expectedReference));
 });

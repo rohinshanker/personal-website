@@ -44,6 +44,7 @@ const preparePage = async (page) => {
   await expect
     .poll(() => page.evaluate(() => Boolean(window.__lancerBattleResultPlaybackTest)))
     .toBe(true);
+  await page.evaluate(() => window.homeResources.loadRandomEventStyles());
 };
 
 const readPlayback = (video, expectedState) =>

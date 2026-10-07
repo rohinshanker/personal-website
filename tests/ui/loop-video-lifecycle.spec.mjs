@@ -25,6 +25,11 @@ const OBSERVATION_FRAMES = 10;
  */
 const FALLBACK_BOUND_MS = 8000;
 
+const openEventHome = async (page) => {
+  await openHomeDesktop(page, viewport);
+  await page.evaluate(() => window.homeResources.loadAdminResources());
+};
+
 const loopVideo = (page, name) => page.locator(`video[data-loop-video="${name}"]`);
 
 /** The image `activateLoopVideoFallback` leaves behind in a video's place. */
@@ -64,7 +69,7 @@ const revealWindow = (page, windowId) =>
 test("a preloaded result window that never opened keeps its loop video at the first frame", async ({
   page,
 }) => {
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   await triggerEvent(page, "serval-pizza-encounter");
 
   // The encounter window is what opened. Its result window holds the loop video
@@ -93,7 +98,7 @@ test("a preloaded result window that never opened keeps its loop video at the fi
 test("a hidden page pauses a playing loop video without waiting for an animation frame", async ({
   page,
 }) => {
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   await triggerEvent(page, "dont-starve-campfire");
   await revealWindow(page, "#dst-survive-window");
 
@@ -119,7 +124,7 @@ test("a hidden page pauses a playing loop video without waiting for an animation
 });
 
 test("pagehide pauses a playing loop video synchronously", async ({ page }) => {
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   await triggerEvent(page, "dont-starve-campfire");
   await revealWindow(page, "#dst-survive-window");
 
@@ -149,7 +154,7 @@ test("pagehide pauses a playing loop video synchronously", async ({ page }) => {
 test("the advertisement draws its two stacked layers as one animated image", async ({
   page,
 }) => {
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   await triggerEvent(page, "evil-wizards-advertisement");
   await expect(page.locator("#advertisement-window")).toBeVisible();
 
@@ -188,7 +193,7 @@ test("the advertisement draws its two stacked layers as one animated image", asy
 });
 
 test("a window cloned after boot pauses its loop video when it is hidden", async ({ page }) => {
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
 
   // Owners are registered when their media is activated, not snapshotted at boot,
   // so a window that did not exist at boot is watched on the same terms.
@@ -217,7 +222,7 @@ test("a window cloned after boot pauses its loop video when it is hidden", async
 test("every Admin Controls event preview that clones a loop video stays inert", async ({
   page,
 }) => {
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
 
   // A preview is a clone, so it now registers an owner like any other window. It
   // must still show nothing but the poster frame.
@@ -252,7 +257,7 @@ test("every Admin Controls event preview that clones a loop video stays inert", 
 });
 
 test("readiness that arrives after pagehide does not restart a loop video", async ({ page }) => {
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   await triggerEvent(page, "dont-starve-campfire");
   await revealWindow(page, "#dst-survive-window");
 
@@ -288,7 +293,7 @@ test("readiness that arrives after pagehide does not restart a loop video", asyn
 test("a clone whose sources already resolved is registered and pauses when hidden", async ({
   page,
 }) => {
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   await triggerEvent(page, "dont-starve-campfire");
 
   // Preloading the original resolves its sources, so the clone below inherits a
@@ -340,7 +345,7 @@ test("a loop video whose sources never arrive falls back to its animated WebP", 
     await route.abort("aborted");
   });
 
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   // The window is opened directly: the event's own preloader awaits a decoded
   // frame, which a source that never arrives never delivers.
   await revealWindow(page, "#dst-survive-window");
@@ -368,7 +373,7 @@ test("a loop video that never reaches HAVE_FUTURE_DATA falls back to its animate
   page,
 }) => {
   await page.clock.install({ time: FROZEN_INSTANT });
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
 
   // A response that arrives but never buffers enough to start is the other half
   // of "unplayable": the element holds a decoded poster frame and stops there.
@@ -417,7 +422,7 @@ const hideWindow = (page, windowId) =>
 
 test("time spent hidden does not count towards the fallback wait", async ({ page }) => {
   await page.clock.install({ time: FROZEN_INSTANT });
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   // Real time must not creep between commands: the deadlines below are exact.
   await page.clock.pauseAt(FROZEN_INSTANT);
   await pinReadyState(page, "campfire", 1);
@@ -446,7 +451,7 @@ test("a suspended page cancels the fallback wait and a resumed page starts a ful
   page,
 }) => {
   await page.clock.install({ time: FROZEN_INSTANT });
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   // Real time must not creep between commands: the deadlines below are exact.
   await page.clock.pauseAt(FROZEN_INSTANT);
   await pinReadyState(page, "campfire", 1);
@@ -471,7 +476,7 @@ test("a loop video that was playable once keeps its video when it buffers later"
   page,
 }) => {
   await page.clock.install({ time: FROZEN_INSTANT });
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   // Real time must not creep between commands: the deadlines below are exact.
   await page.clock.pauseAt(FROZEN_INSTANT);
   await pinReadyState(page, "campfire", 1);
@@ -496,7 +501,7 @@ test("a loop video removed from the document before its wait ends is left alone"
   page,
 }) => {
   await page.clock.install({ time: FROZEN_INSTANT });
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   await page.clock.pauseAt(FROZEN_INSTANT);
   await pinReadyState(page, "campfire", 1);
 
@@ -530,7 +535,7 @@ test("a loop video whose sources cannot be decoded falls back to its animated We
     route.fulfill({ contentType: "video/webm", body: Buffer.from("not a video at all") })
   );
 
-  await openHomeDesktop(page, viewport);
+  await openEventHome(page);
   // Sources that fail fire `error` at the `<source>` elements, never at the
   // `<video>`, so the event's preloader would wait on a frame that never comes.
   await revealWindow(page, "#dst-survive-window");

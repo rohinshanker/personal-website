@@ -11,6 +11,7 @@ const {
   normalizeAdministratorSignInResponse,
 } = window.homeAdministratorSession;
 const {
+  cancelAdminControlsLaunch,
   clampWindowFullyIntoViewport,
   closeAppWindow,
   registerAdminControlsAccess,
@@ -832,8 +833,14 @@ const gameStatsSessions = new Map();
 
 const gameStatsAdministratorSession = createAdministratorSession({
   onInvalidated: () => {
+    const cancelledLaunch = cancelAdminControlsLaunch();
     const adminWindow = document.getElementById("admin-controls-window");
-    if (!adminWindow || adminWindow.getAttribute("aria-hidden") !== "false") return;
+    if (
+      !cancelledLaunch &&
+      (!adminWindow || adminWindow.getAttribute("aria-hidden") !== "false")
+    ) {
+      return;
+    }
     // Reuse launch denial so the gate receives keyboard focus after closing Admin.
     setWindowOpen("admin-controls", true);
     const gate = document.getElementById("admin-controls-stand-in-window");

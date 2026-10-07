@@ -108,14 +108,20 @@ const configureAdministratorApi = async (page) => {
   });
 };
 
-const preparePage = async (page, viewport) => {
+const preparePage = async (page, viewport, { administratorAccess = false } = {}) => {
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.addInitScript(() => {
+  await page.addInitScript(({ administratorAccess, administratorProof }) => {
     localStorage.clear();
     sessionStorage.clear();
+    if (administratorAccess) {
+      sessionStorage.setItem("personalSiteAdministratorProofV1", JSON.stringify({
+        proof: administratorProof,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }));
+    }
     Math.random = () => 0.999999;
-  });
+  }, { administratorAccess, administratorProof });
   await configureAdministratorApi(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.locator("#about-window").evaluate((windowElement) => {
@@ -313,7 +319,14 @@ window.__deferredMediaPromptsTest = Object.freeze({
 window.__deferredMediaDstTest = showDstSurviveWindow;
 })();`)
     );
-    await preparePage(page, viewport);
+    await preparePage(page, viewport, { administratorAccess: true });
+    const adminLauncher = page.locator('.taskbar-icon[data-app="admin-controls"]');
+    const adminWindow = page.locator("#admin-controls-window");
+    await adminLauncher.click();
+    await expect(adminWindow).toBeVisible();
+    await adminWindow.locator('[data-close="admin-controls"]').click();
+    await adminWindow.dispatchEvent("animationend", { animationName: "retro-window-close" });
+    await expect(adminWindow).toBeHidden();
     for (const eventId of realTriggerEventIds) {
       const windowId = await page.evaluate((id) => window.__deferredMediaAdminTest.windowId(id), eventId);
       expect(windowId).toBeTruthy();

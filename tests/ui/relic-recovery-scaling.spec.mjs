@@ -92,6 +92,7 @@ const setupPage = async (page, viewport) => {
   await installRelicRecoveryTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => Boolean(window.__relicRecoveryTest));
+  await page.evaluate(() => window.homeResources.loadRandomEventStyles());
   await page.addStyleTag({
     content: ".relic-recovery-flyer { animation: none !important; }",
   });

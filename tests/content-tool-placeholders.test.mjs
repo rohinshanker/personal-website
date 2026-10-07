@@ -65,11 +65,11 @@ test("Video Editor and Image Tools have desktop and taskbar launchers with their
 });
 
 test("Video Editor owns an accessible new-tab confirmation prompt", async () => {
-  const [home, main, dom, randomEventStyles] = await Promise.all([
+  const [home, main, dom, baseStyles] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readHomeScript("windows"),
     readHomeScript("windows"),
-    readFile(new URL("styles/home/random-events.css", root), "utf8"),
+    readFile(new URL("styles/home/base.css", root), "utf8"),
   ]);
   const section = windowSection(home, "video-editor");
 
@@ -131,14 +131,14 @@ test("Video Editor owns an accessible new-tab confirmation prompt", async () => 
   );
   assert.match(
     home,
-    /styles\/home\/random-events\.css\?v=[^"]+/
+    /styles\/home\/base\.css\?v=[^"]+/
   );
   assert.match(
-    randomEventStyles,
+    baseStyles,
     /\.launch-prompt-window \.window-body[\s\S]*?min-height:\s*0/
   );
   assert.match(
-    randomEventStyles,
+    baseStyles,
     /\.video-editor-launch-error\s*\{[\s\S]*?color:\s*#800000/
   );
 });

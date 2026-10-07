@@ -8,7 +8,7 @@ import {
 } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
-const [eventSources, eventStyles, homeSource, indexSource, domSource, cursorModeSource] = await Promise.all([
+const [eventSources, eventStyles, homeSource, indexSource, resourceSource, domSource, cursorModeSource] = await Promise.all([
   readHomeScriptText(
     "windows",
     "cursor",
@@ -19,6 +19,7 @@ const [eventSources, eventStyles, homeSource, indexSource, domSource, cursorMode
   readFile(new URL("styles/home/random-events.css", root), "utf8"),
   readFile(new URL("home.html", root), "utf8"),
   readFile(new URL("index.html", root), "utf8"),
+  readFile(new URL("scripts/home/core/resources.js", root), "utf8"),
   readHomeScriptText(
     "windows",
     "cursor",
@@ -831,7 +832,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(eventSources, /const getSootSpritesStagedZIndex = \(\) =>/);
   assert.match(eventSources, /const reserveSootSpritesSpawnLane = \(\) =>/);
   assert.match(eventSources, /toolbarTop - sootSpritesWindow\.offsetHeight - SOOT_SPRITES_SPAWN_CLEARANCE/);
-  assert.match(eventSources, /if \(didOpen\) reserveSootSpritesSpawnLane\(\);/);
+  assert.match(eventSources, /afterShow: reserveSootSpritesSpawnLane,/);
   assert.match(eventSources, /overlay\.style\.zIndex = String\(getSootSpritesStagedZIndex\(\)\);/);
   assert.match(
     eventSources,
@@ -1190,7 +1191,7 @@ test("wall breach event shakes, flashes, and opens a probability-gated popup", a
   assert.match(homeSource, /id="wall-breach-suit-up">Copy that!<\/button>/);
   assert.match(homeSource, /data-src="assets\/random%20events\/wall-maria-logo\.png"/);
   assert.match(getCssBlock(".wall-breach-flash"), /background: #fff;/);
-  assert.match(getCssBlock(".random-alert-message img"), /height: 48px;/);
+  assert.match(getBaseCssBlock(".random-alert-message img"), /height: 48px;/);
   assert.match(eventStyles, /@keyframes wall-breach-screen-shake/);
   await access(new URL("assets/random events/wall-maria-logo.png", root));
 });
@@ -1326,7 +1327,7 @@ test("failed combat tips only the player sprite", () => {
 
 test("HTML entry points use the updated cache key", () => {
   for (const source of [homeSource, indexSource]) {
-    assert.match(source, /random-events\.css\?v=[^"]+/);
+    assert.doesNotMatch(source, /random-events\.css\?v=[^"]+/);
     assert.match(source, /cursors\.css\?v=[^"]+/);
     assert.match(source, /minesweeper\.css\?v=[^"]+/);
     assert.match(source, /game-stats\.css\?v=[^"]+/);
@@ -1335,4 +1336,5 @@ test("HTML entry points use the updated cache key", () => {
     assert.match(source, /game-stats-backend\.js\?v=game-build-[a-f0-9]{64}/);
     assert.match(source, /features\/minesweeper\.js\?v=game-build-[a-f0-9]{64}/);
   }
+  assert.match(resourceSource, /random-events\.css\?v=[^"]+/);
 });

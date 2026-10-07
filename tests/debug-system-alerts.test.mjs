@@ -504,12 +504,14 @@ test("system alert normalization rejects every malformed authoring case", async 
 });
 
 test("system alerts use one accessible shell and one dynamic renderer", async () => {
-  const [html, css, dom, source] = await Promise.all([
+  const [html, baseCss, eventCss, dom, source] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
+    readFile(new URL("styles/home/base.css", root), "utf8"),
     readFile(new URL("styles/home/random-events.css", root), "utf8"),
     readHomeScriptText("eventRuntime", "eventPrompts"),
     readHomeScriptText("eventRuntime", "eventPrompts"),
   ]);
+  const css = `${baseCss}\n${eventCss}`;
 
   assert.equal(html.match(/id="debug-system-alert-window"/g)?.length, 1);
   assert.match(html, /role="alertdialog"/);

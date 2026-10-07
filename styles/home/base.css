@@ -298,6 +298,112 @@ body {
   animation: retro-window-close 180ms steps(7, end) both;
 }
 
+/*
+ * Shared alert geometry stays critical because authentication, coming-soon,
+ * and new-tab prompts use this chrome without loading the event stylesheet.
+ */
+.random-event-window {
+  display: block;
+  left: 50%;
+  max-width: var(--event-window-max-width, calc(100vw - 32px));
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(
+    var(--event-window-width, 360px),
+    var(--event-window-max-width, calc(100vw - 32px))
+  );
+  z-index: var(--event-window-z, 120);
+}
+
+.random-event-window.is-hidden {
+  display: none;
+}
+
+.random-event-window.is-opening {
+  animation: retro-window-open var(--event-window-open-duration, 260ms)
+    steps(7, end) both;
+}
+
+.random-event-window.is-closing {
+  animation: retro-window-close var(--event-window-close-duration, 180ms)
+    steps(7, end) both;
+  pointer-events: none;
+}
+
+.random-alert-window {
+  --event-window-width: 340px;
+  --event-window-z: 140;
+}
+
+.random-alert-window.is-expanded {
+  height: calc(100vh - 76px);
+  left: 12px;
+  max-width: none;
+  top: 12px;
+  translate: 0 0;
+  width: calc(100vw - 24px);
+}
+
+.random-alert-window .window-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.coming-soon-window .window-body,
+.launch-prompt-window .window-body {
+  min-height: 0;
+}
+
+.random-alert-window.is-expanded .window-body {
+  min-height: calc(100% - 34px);
+}
+
+.random-alert-message {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 50px 1fr;
+}
+
+.random-alert-message img {
+  height: 48px;
+  width: 48px;
+}
+
+.random-alert-window .random-alert-message p {
+  margin: 0;
+}
+
+.random-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.random-alert-actions button {
+  min-width: 74px;
+}
+
+.random-alert-actions[data-button-alignment="left"] {
+  justify-content: flex-start;
+}
+
+.random-alert-actions[data-button-alignment="center"] {
+  justify-content: center;
+}
+
+.random-alert-actions[data-button-alignment="right"] {
+  justify-content: flex-end;
+}
+
+.video-editor-launch-error {
+  color: #800000;
+  margin: 0;
+}
+
 @keyframes retro-window-open {
   0% {
     opacity: 0;

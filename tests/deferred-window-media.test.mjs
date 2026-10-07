@@ -113,7 +113,7 @@ const functionBody = (name) => {
 };
 
 test("managed event setup runs before deferred media activation", () => {
-  const body = functionBody("showManagedRandomEventWindow");
+  const body = functionBody("openManagedRandomEventWindow");
   // Match only live statements: a commented-out call must not satisfy this.
   const setupIndex = body.search(/^[ \t]*if \(beforeShow\) beforeShow\(\);/m);
   const loadIndex = body.search(/^[ \t]*loadDeferredMedia\(win\);/m);

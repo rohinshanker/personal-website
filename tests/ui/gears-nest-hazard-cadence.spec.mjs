@@ -16,6 +16,7 @@ for (const viewport of viewports) {
       Math.random = () => 0.999999;
     });
     await page.goto("/home.html");
+    await page.evaluate(() => window.homeResources.loadRandomEventStyles());
 
     const app = page.locator("#gears-nest-window");
     await app.evaluate((windowElement) => {

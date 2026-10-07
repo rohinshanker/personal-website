@@ -179,7 +179,7 @@ test("Home derives its modeling galleries from the shared data instead of duplic
   ]);
 
   const dataTag = "scripts/home/modeling-portfolio.js?v=";
-  assert.match(home, /<script src="scripts\/home\/modeling-portfolio\.js\?v=[^"]+"><\/script>/, "Home loads the shared data");
+  assert.match(home, /<script src="scripts\/home\/modeling-portfolio\.js\?v=[^"]+" defer><\/script>/, "Home loads the shared data");
   assert.ok(
     home.indexOf(dataTag) < home.indexOf("scripts/home/features/gallery.js?v="),
     "the shared data loads before the gallery that reads it"

@@ -2,7 +2,7 @@
 
 - Purpose: Validate the local-only promotional event orchestrator and recording helpers.
 - Scope: The Admin desktop and dock launchers, Admin Controls window, random-event runtime, seeded controls, scene presets, and capture aids on `home.html`.
-- Last verified: 2026-09-15
+- Last verified: 2026-10-07
 
 ## State and safety contract
 
@@ -18,7 +18,14 @@
 - The launch check is a presentation boundary in browser code. Server-protected
   game-stat actions continue to require Worker verification of the proof; the
   presence or visibility of the client-side window is not server authorization.
-- The proof is evaluated when the Admin window is opened. Expiration does not
+- The proof is evaluated before on-demand resources are requested and again
+  after those resources finish loading. The load order is event and Admin CSS,
+  then the classic orchestrator, then the classic controller. Concurrent
+  launches share one request; cancellation, failure, access invalidation, and
+  page exit restore the loading cursor and cannot expose the full dashboard.
+  See [home-loading.md](home-loading.md) for the retry and resource-lifetime
+  contract.
+- Expiration after the Admin window has opened does not
   interrupt a take already in progress or erase locally stored bindings and
   capture settings; those behaviors intentionally continue outside the window
   for recording. Clear Admin Data before leaving a shared browser when that

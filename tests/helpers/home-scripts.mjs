@@ -18,6 +18,7 @@ export const HOME_SCRIPTS = Object.freeze({
   pointerCursor: "scripts/home/core/pointer-cursor.js",
   activity: "scripts/home/core/activity.js",
   activation: "scripts/home/core/activation.js",
+  resources: "scripts/home/core/resources.js",
   windows: "scripts/home/core/windows.js",
 
   desktop: "scripts/home/features/desktop.js",

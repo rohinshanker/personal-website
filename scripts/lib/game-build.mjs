@@ -46,6 +46,7 @@ export const GAME_COMPLETION_SOURCE_FILES = Object.freeze([
   "scripts/home/core/dom.js",
   "scripts/home/core/media.js",
   "scripts/home/core/pointer-cursor.js",
+  "scripts/home/core/resources.js",
   "scripts/home/core/static-noise.js",
   "scripts/home/core/util.js",
   "scripts/home/core/windows.js",

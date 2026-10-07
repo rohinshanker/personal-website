@@ -76,6 +76,7 @@ window.__solitaireAutoSolveTest = Object.freeze({
 const snapshot = (page) => page.evaluate(() => window.__solitaireAutoSolveTest.snapshot());
 
 const stagePresentation = async (page, options = {}) => {
+  await page.evaluate(() => window.homeResources.loadAdminResources());
   const result = await page.evaluate(
     (presetOptions) => window.rohinAdminOrchestrator.runPreset("game-win", presetOptions),
     { intensity: "medium", visualEffects: true, ...options }

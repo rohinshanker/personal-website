@@ -57,7 +57,8 @@ initCursorSettingsApp();
 
 const hasCustomCursorLoadingIndicator = () =>
   Boolean(
-    (isGameStatsManualRefreshInProgress() && isGameStatsSyncBusy()) ||
+    document.body?.classList.contains("is-admin-resources-loading") ||
+      (isGameStatsManualRefreshInProgress() && isGameStatsSyncBusy()) ||
       (snakeState.loading && isSnakeWindowVisible()) ||
       (sudokuApp?.classList.contains("is-sudoku-loading") && isSudokuWindowVisible()) ||
       (sootSpritesWindow?.classList.contains("is-loading-sprites") &&

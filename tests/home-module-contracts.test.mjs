@@ -38,24 +38,53 @@ async function loadHomeGraph() {
 
   // Script order as the browser sees it. Attribute order varies, and one tag
   // spans several lines, so this matches the `src` itself.
-  const order = [...home.matchAll(/src="(scripts\/home\/[^"?]+)(?:\?[^"]*)?"/g)].map(
+  const eagerOrder = [...home.matchAll(/src="(scripts\/home\/[^"?]+)(?:\?[^"]*)?"/g)].map(
     (match) => match[1]
   );
+  const order = [
+    ...eagerOrder,
+    "scripts/home/admin/orchestrator.js",
+    "scripts/home/admin-controls.js",
+  ];
 
-  return { files, sources, order, publishedBy, home };
+  return { eagerOrder, files, sources, order, publishedBy, home };
 }
 
 test("every Home script is loaded by home.html exactly once", async () => {
-  const { files, order } = await loadHomeGraph();
+  const { eagerOrder, files } = await loadHomeGraph();
   const loadable = files.filter((file) => !file.endsWith(".worker.js"));
+  const lazy = new Set([
+    "scripts/home/admin/orchestrator.js",
+    "scripts/home/admin-controls.js",
+  ]);
 
   for (const file of loadable) {
-    const count = order.filter((src) => src === file).length;
-    assert.equal(count, 1, `${file} should be loaded once by home.html, saw ${count}`);
+    const count = eagerOrder.filter((src) => src === file).length;
+    assert.equal(
+      count,
+      lazy.has(file) ? 0 : 1,
+      file + " should have the expected eager Home load count, saw " + count
+    );
   }
-  for (const src of order) {
-    assert.ok(loadable.includes(src), `home.html loads ${src}, which is not a Home script`);
+  for (const src of eagerOrder) {
+    assert.ok(loadable.includes(src), "home.html loads " + src + ", which is not a Home script");
   }
+});
+
+test("Home classic scripts defer in dependency order and Admin stays ordered on demand", async () => {
+  const { home } = await loadHomeGraph();
+  const classicTags = [...home.matchAll(/<script\b([^>]*)\bsrc="scripts\/home\/[^"]+"([^>]*)><\/script>/g)]
+    .map((match) => match.slice(1).join(" "))
+    .filter((attributes) => !/\btype="module"/.test(attributes));
+  assert.ok(classicTags.length > 40);
+  classicTags.forEach((attributes) => assert.match(attributes, /\bdefer\b/));
+
+  const resources = await readHomeScript("resources");
+  assert.ok(
+    resources.indexOf("scripts/home/admin/orchestrator.js") <
+      resources.indexOf("scripts/home/admin-controls.js"),
+    "Admin orchestrator must load before its controller"
+  );
 });
 
 test("each imported contract name is published by its owner", async () => {

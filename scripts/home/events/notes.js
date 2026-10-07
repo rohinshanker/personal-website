@@ -416,11 +416,12 @@ const resetLainAlert = () => {
 const showLainAlert = () => {
   const focusReturn =
     document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  const didOpen = showManagedRandomEventWindow(lainAlertWindow);
-  if (!didOpen) return false;
-  lainAlertFocusReturn = focusReturn;
-  requestAnimationFrame(() => lainAlertClose?.focus({ preventScroll: true }));
-  return true;
+  return showManagedRandomEventWindow(lainAlertWindow, {
+    afterShow: () => {
+      lainAlertFocusReturn = focusReturn;
+      requestAnimationFrame(() => lainAlertClose?.focus({ preventScroll: true }));
+    },
+  });
 };
 
 const closeLainAlert = () => {
@@ -480,7 +481,12 @@ const limitDeathNoteEntryToVisibleLines = () => {
 };
 
 const showDeathNoteWindow = () => {
-  const didOpen = showManagedRandomEventWindow(deathNoteWindow, {
+  showManagedRandomEventWindow(deathNoteWindow, {
+    afterShow: () => {
+      requestAnimationFrame(() => {
+        deathNoteEntry?.focus({ preventScroll: true });
+      });
+    },
     beforeShow: () => {
       if (deathNoteEntry) {
         deathNoteEntry.value = "";
@@ -489,11 +495,6 @@ const showDeathNoteWindow = () => {
     },
     clampAfterMediaLoad: true,
   });
-  if (didOpen) {
-    requestAnimationFrame(() => {
-      deathNoteEntry?.focus({ preventScroll: true });
-    });
-  }
 };
 
 const closeDeathNoteWindow = () => {
@@ -562,10 +563,10 @@ const resetNatarajaVideo = () => {
 };
 
 const showNatarajaWindow = () => {
-  const didOpen = showManagedRandomEventWindow(natarajaWindow, {
+  showManagedRandomEventWindow(natarajaWindow, {
+    afterShow: () => requestAnimationFrame(playNatarajaVideo),
     clampAfterMediaLoad: true,
   });
-  if (didOpen) requestAnimationFrame(playNatarajaVideo);
 };
 
 const closeNatarajaWindow = () => {

@@ -93,6 +93,7 @@ test("The Wired message is read-only, focused, and contained across viewports", 
     Math.random = () => 0.999999;
   });
   await page.goto("/home.html", { waitUntil: "load" });
+  await page.evaluate(() => window.homeResources.loadAdminResources());
   await page.locator('#about-window [data-close="about"]').click();
   await expect(page.locator("#about-window")).toBeHidden();
 
@@ -257,6 +258,7 @@ window.__wiredNormalTest = Object.freeze({
     )
   );
   await page.goto("/home.html", { waitUntil: "load" });
+  await page.evaluate(() => window.homeResources.loadAdminResources());
 
   const cooldownUntil = await page.evaluate(() =>
     window.__wiredNormalTest.lockCooldown()

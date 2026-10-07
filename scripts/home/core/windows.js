@@ -22,6 +22,11 @@ const {
 const {
   notifyActivity,
 } = window.homeActivity;
+const {
+  cancelAdminResourceLoad,
+  loadAdminResources,
+  resourceState,
+} = window.homeResources;
 
 // Extension points. The window manager knows about windows, not about what
 // lives inside them: a feature registers what should happen to its own window
@@ -86,6 +91,10 @@ const ADMIN_CONTROLS_APP_ID = "admin-controls";
 
 const ADMIN_CONTROLS_STAND_IN_APP_ID = "admin-controls-stand-in";
 
+const ADMIN_CONTROLS_STORAGE_KEY = "personalSiteAdminControlsV1";
+
+const ADMIN_CONTROLS_RESET_PENDING_KEY = "personalSiteAdminControlsResetPendingV1";
+
 const isAdminControlsAppId = (appId) =>
   appId === ADMIN_CONTROLS_APP_ID || appId === ADMIN_CONTROLS_STAND_IN_APP_ID;
 
@@ -93,14 +102,129 @@ const isAdminControlsAppId = (appId) =>
 // instead. The session itself answers the check.
 let adminControlsAccessCheck = () => false;
 
+const hasPersistedAdminControlsBehavior = () => {
+  try {
+    if (sessionStorage.getItem(ADMIN_CONTROLS_RESET_PENDING_KEY) === "1") return true;
+    const state = JSON.parse(localStorage.getItem(ADMIN_CONTROLS_STORAGE_KEY) || "null");
+    if (!state || state.version !== 1 || Array.isArray(state)) return false;
+    const hasBinding = Array.isArray(state.bindings) && state.bindings.some((binding) =>
+      binding &&
+      typeof binding === "object" &&
+      typeof binding.target === "string" &&
+      Boolean(binding.target) &&
+      typeof binding.eventId === "string" &&
+      Boolean(binding.eventId)
+    );
+    return Boolean(
+      state.audio === false ||
+        state.visualEffects === false ||
+        state.privacy === true ||
+        state.promoRandomMode === true ||
+        state.safeArea === true ||
+        ["vertical", "square", "landscape"].includes(state.guide) ||
+        hasBinding
+    );
+  } catch (error) {
+    return false;
+  }
+};
+
+const restorePersistedAdminControlsBehavior = async () => {
+  while (
+    !document.hidden &&
+    adminControlsAccessCheck() &&
+    hasPersistedAdminControlsBehavior() &&
+    !adminControlsResourcesReady()
+  ) {
+    try {
+      await loadAdminResources();
+      return;
+    } catch (error) {
+      if (error?.code !== "home-resource-load-cancelled") return;
+    }
+  }
+};
+
+let adminControlsRestoreScheduled = false;
+
+const schedulePersistedAdminControlsRestore = () => {
+  if (typeof document === "undefined") return;
+  if (adminControlsRestoreScheduled) return;
+  adminControlsRestoreScheduled = true;
+  const restore = () => {
+    adminControlsRestoreScheduled = false;
+    void restorePersistedAdminControlsBehavior();
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", restore, { once: true });
+  } else {
+    queueMicrotask(restore);
+  }
+};
+
 const registerAdminControlsAccess = (check) => {
   adminControlsAccessCheck = check;
+  schedulePersistedAdminControlsRestore();
 };
 
 const resolveAdminControlsLaunchAppId = (appId) =>
   appId === ADMIN_CONTROLS_APP_ID && !adminControlsAccessCheck()
     ? ADMIN_CONTROLS_STAND_IN_APP_ID
     : appId;
+
+let adminControlsLaunchGeneration = 0;
+
+let adminControlsLaunchPending = false;
+
+let adminControlsLaunchFocusReturn = null;
+
+const adminControlsStandInWindow = () => getAppWindow(ADMIN_CONTROLS_STAND_IN_APP_ID);
+
+const adminControlsStandInMessage = () =>
+  document.getElementById("admin-controls-stand-in-message");
+
+const adminControlsStandInAction = () =>
+  document.getElementById("admin-controls-stand-in-ok");
+
+const configureAdminControlsStandIn = (state = "denied") => {
+  const win = adminControlsStandInWindow();
+  const message = adminControlsStandInMessage();
+  const action = adminControlsStandInAction();
+  if (!win || !message || !action) return;
+  win.dataset.adminResourceState = state;
+  action.disabled = false;
+  if (state === "loading") {
+    message.textContent = "Loading Admin Controls…";
+    action.textContent = "Cancel";
+    return;
+  }
+  if (state === "error") {
+    message.textContent = "Admin Controls could not load. Choose Retry to try again.";
+    action.textContent = "Retry";
+    return;
+  }
+  message.textContent = "nothing to see here...";
+  action.textContent = "OK";
+};
+
+const setAdminControlsResourceBusy = (isBusy) => {
+  adminControlsLaunchPending = isBusy;
+  document.body?.classList.toggle("is-admin-resources-loading", isBusy);
+};
+
+const cancelAdminControlsLaunch = () => {
+  if (!adminControlsLaunchPending) return false;
+  adminControlsLaunchGeneration += 1;
+  cancelAdminResourceLoad();
+  setAdminControlsResourceBusy(false);
+  configureAdminControlsStandIn("denied");
+  return true;
+};
+
+const adminControlsResourcesReady = () =>
+  ["random-event-styles", "admin-styles", "admin-orchestrator", "admin-controls"].every(
+    (key) => resourceState(key) === "loaded"
+  );
 
 let topZ = 10;
 
@@ -704,6 +828,7 @@ const setWindowOpen = (appId, open) => {
   if (open && appId === ADMIN_CONTROLS_APP_ID) {
     const resolvedAppId = resolveAdminControlsLaunchAppId(appId);
     if (resolvedAppId !== appId) {
+      configureAdminControlsStandIn("denied");
       if (!win.classList.contains("is-hidden")) {
         setWindowOpen(appId, false);
       }
@@ -852,6 +977,99 @@ const closeAllWindows = () => {
   closeAllHooks.forEach((hook) => hook());
 };
 
+const focusAdminControls = () => {
+  const target = document.querySelector(
+    '#admin-controls-window [role="tab"][aria-selected="true"], #admin-controls-window button'
+  );
+  target?.focus({ preventScroll: true });
+};
+
+const openLoadedAdminControls = (focusReturn) => {
+  if (!adminControlsAccessCheck()) return false;
+  const standInWindow = adminControlsStandInWindow();
+  if (standInWindow && !standInWindow.classList.contains("is-hidden")) {
+    setWindowOpen(ADMIN_CONTROLS_STAND_IN_APP_ID, false);
+    comingSoonFocusReturns.delete(standInWindow);
+  }
+  configureAdminControlsStandIn("denied");
+  const adminWindow = getAppWindow(ADMIN_CONTROLS_APP_ID);
+  if (adminWindow && focusReturn) comingSoonFocusReturns.set(adminWindow, focusReturn);
+  setWindowOpen(ADMIN_CONTROLS_APP_ID, true);
+  requestAnimationFrame(focusAdminControls);
+  return true;
+};
+
+const showAdminControlsStandIn = (focusReturn) => {
+  const win = adminControlsStandInWindow();
+  if (win && focusReturn) comingSoonFocusReturns.set(win, focusReturn);
+  setWindowOpen(ADMIN_CONTROLS_STAND_IN_APP_ID, true);
+  requestAnimationFrame(() => adminControlsStandInAction()?.focus({ preventScroll: true }));
+};
+
+const requestAdminControlsLaunch = async (focusReturn) => {
+  if (!adminControlsAccessCheck()) {
+    configureAdminControlsStandIn("denied");
+    showAdminControlsStandIn(focusReturn);
+    return;
+  }
+  if (adminControlsLaunchPending) {
+    if (focusReturn) adminControlsLaunchFocusReturn = focusReturn;
+    showAdminControlsStandIn(adminControlsLaunchFocusReturn);
+    return;
+  }
+  if (adminControlsResourcesReady()) {
+    openLoadedAdminControls(focusReturn);
+    return;
+  }
+
+  const generation = (adminControlsLaunchGeneration += 1);
+  adminControlsLaunchFocusReturn = focusReturn;
+  setAdminControlsResourceBusy(true);
+  configureAdminControlsStandIn("loading");
+  showAdminControlsStandIn(focusReturn);
+
+  try {
+    await loadAdminResources();
+  } catch (error) {
+    if (generation !== adminControlsLaunchGeneration) return;
+    setAdminControlsResourceBusy(false);
+    configureAdminControlsStandIn("error");
+    showAdminControlsStandIn(adminControlsLaunchFocusReturn);
+    return;
+  }
+
+  if (generation !== adminControlsLaunchGeneration) return;
+  setAdminControlsResourceBusy(false);
+  if (!adminControlsAccessCheck()) {
+    configureAdminControlsStandIn("denied");
+    showAdminControlsStandIn(adminControlsLaunchFocusReturn);
+    return;
+  }
+  openLoadedAdminControls(adminControlsLaunchFocusReturn);
+};
+
+const handleAdminControlsLauncher = (button) => {
+  const adminWindow = getAppWindow(ADMIN_CONTROLS_APP_ID);
+  if (isWindowVisible(adminWindow)) {
+    closeAppWindow(ADMIN_CONTROLS_APP_ID);
+    return;
+  }
+  if (!adminControlsAccessCheck()) {
+    configureAdminControlsStandIn("denied");
+    const standInWindow = adminControlsStandInWindow();
+    if (isWindowVisible(standInWindow)) closeAppWindow(ADMIN_CONTROLS_STAND_IN_APP_ID);
+    else showAdminControlsStandIn(button);
+    return;
+  }
+  void requestAdminControlsLaunch(button);
+};
+
+registerWindowLifecycle(ADMIN_CONTROLS_STAND_IN_APP_ID, {
+  beforeDismiss: cancelAdminControlsLaunch,
+});
+
+window.addEventListener("pagehide", cancelAdminControlsLaunch);
+
 initPortfolioCornerResize();
 
 appWindows.forEach((win) => {
@@ -939,18 +1157,11 @@ appButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
     const appId = button.getAttribute("data-app");
     if (windowLifecycle(appId).onLaunch?.(event)) return;
-    const launchAppId = resolveAdminControlsLaunchAppId(appId);
     if (appId === ADMIN_CONTROLS_APP_ID) {
-      const inactiveAppId =
-        launchAppId === ADMIN_CONTROLS_APP_ID
-          ? ADMIN_CONTROLS_STAND_IN_APP_ID
-          : ADMIN_CONTROLS_APP_ID;
-      const inactiveWindow = getAppWindow(inactiveAppId);
-      setWindowOpen(inactiveAppId, false);
-      if (inactiveAppId === ADMIN_CONTROLS_STAND_IN_APP_ID && inactiveWindow) {
-        comingSoonFocusReturns.delete(inactiveWindow);
-      }
+      handleAdminControlsLauncher(button);
+      return;
     }
+    const launchAppId = resolveAdminControlsLaunchAppId(appId);
     const win = getAppWindow(launchAppId);
     const opensFocusReturnWindow = Boolean(
       win?.matches(FOCUS_RETURN_WINDOW_SELECTOR) &&
@@ -1201,6 +1412,14 @@ draggableWindows.forEach((win) => {
 closeButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const appId = button.getAttribute("data-close");
+    if (
+      appId === ADMIN_CONTROLS_STAND_IN_APP_ID &&
+      button === adminControlsStandInAction() &&
+      adminControlsStandInWindow()?.dataset.adminResourceState === "error"
+    ) {
+      void requestAdminControlsLaunch(adminControlsLaunchFocusReturn);
+      return;
+    }
     closeAppWindow(appId);
   });
 });
@@ -1211,6 +1430,7 @@ window.homeWindows = Object.freeze({
   ADMIN_CONTROLS_STAND_IN_APP_ID,
   DIALOG_INITIAL_FOCUS_SELECTOR,
   activateVisibleContent,
+  cancelAdminControlsLaunch,
   clampWindowFullyIntoViewport,
   closeAppWindow,
   currentTopZIndex,

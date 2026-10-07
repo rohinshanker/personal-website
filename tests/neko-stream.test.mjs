@@ -11,15 +11,16 @@ import {
 const root = new URL("../", import.meta.url);
 
 const readSources = async () => {
-  const [home, index, styles, randomEventStyles, dom, main] = await Promise.all([
+  const [home, index, styles, randomEventStyles, resources, dom, main] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("styles/home/base.css", root), "utf8"),
     readFile(new URL("styles/home/random-events.css", root), "utf8"),
+    readHomeScript("resources"),
     readHomeScriptText("neko", "windows", "eventRuntime", "eventPrompts"),
     readHomeScriptText("neko", "windows", "eventRuntime", "eventPrompts"),
   ]);
-  return { dom, home, index, main, randomEventStyles, styles };
+  return { dom, home, index, main, randomEventStyles, resources, styles };
 };
 
 const extractBetween = (source, startMarker, endMarker) => {
@@ -159,7 +160,7 @@ test("Neko launchers expose one accessible context command above a non-interacti
 });
 
 test("the forced-Start registry exposes one guarded animated Neko stream alert", async () => {
-  const { dom, home, index, main, randomEventStyles } = await readSources();
+  const { dom, home, index, main, randomEventStyles, resources } = await readSources();
   const registration = extractBetween(
     main,
     'registerRandomEvent({\n  id: "neko-stream-system-alert"',
@@ -196,13 +197,11 @@ test("the forced-Start registry exposes one guarded animated Neko stream alert",
     /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.neko-stream-alert-window\.is-opening,[\s\S]*?\.neko-stream-alert-window\.is-closing \{\n    animation: none;/
   );
   assert.match(
-    home,
+    resources,
     /styles\/home\/random-events\.css\?v=[^"]+/
   );
-  assert.match(
-    index,
-    /styles\/home\/random-events\.css\?v=[^"]+/
-  );
+  assert.doesNotMatch(home, /styles\/home\/random-events\.css\?v=/);
+  assert.doesNotMatch(index, /styles\/home\/random-events\.css\?v=/);
   await Promise.all([
     readFile(new URL("assets/neko-assets/sprites/sleep1.png", root)),
     readFile(new URL("assets/neko-assets/sprites/sleep2.png", root)),

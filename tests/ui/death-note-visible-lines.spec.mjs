@@ -16,6 +16,7 @@ for (const viewport of viewports) {
       Math.random = () => 0.999999;
     });
     await page.goto("/home.html");
+    await page.evaluate(() => window.homeResources.loadRandomEventStyles());
 
     const notebook = page.locator("#death-note-window");
     await notebook.evaluate((windowElement) => {

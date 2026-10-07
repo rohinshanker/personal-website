@@ -19,6 +19,7 @@ const preparePage = async (page, viewport) => {
     Math.random = () => 0.999999;
   });
   await page.goto("/home.html", { waitUntil: "load" });
+  await page.evaluate(() => window.homeResources.loadAdminResources());
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
 };

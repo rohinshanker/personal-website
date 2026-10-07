@@ -11,6 +11,7 @@ const root = new URL("../", import.meta.url);
 const adminScriptPath = "scripts/home/admin-controls.js";
 const administratorSessionPath = "scripts/home/core/administrator-session.js";
 const adminStylePath = "styles/home/admin-controls.css";
+const resourceScriptPath = "scripts/home/core/resources.js";
 
 const PROOF_STORAGE_KEY = "personalSiteAdministratorProofV1";
 
@@ -38,7 +39,7 @@ const sourceBetween = (source, startMarker, endMarker) => {
 };
 
 const readAdminSources = async () => {
-  const [home, main, admin, session, styles, validation] = await Promise.all([
+  const [home, main, admin, resources, session, styles, validation] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
     readHomeScriptText(
       "gameStats",
@@ -48,11 +49,12 @@ const readAdminSources = async () => {
       "solitaire"
     ),
     readFile(new URL(adminScriptPath, root), "utf8"),
+    readFile(new URL(resourceScriptPath, root), "utf8"),
     readFile(new URL(administratorSessionPath, root), "utf8"),
     readFile(new URL(adminStylePath, root), "utf8"),
     readFile(new URL("docs/validation/admin-controls.md", root), "utf8"),
   ]);
-  return { admin, home, main, session, styles, validation };
+  return { admin, home, main, resources, session, styles, validation };
 };
 
 const loadAdminNamespace = (source) => {
@@ -116,7 +118,7 @@ const loadAdminNamespace = (source) => {
 };
 
 test("Admin is available on the desktop and immediately before GitHub in the dock", async () => {
-  const { home } = await readAdminSources();
+  const { home, resources } = await readAdminSources();
   const desktop = sourceBetween(home, '<div class="desktop"', '<main class="window-stack"');
   const taskbar = sourceBetween(home, '<div class="taskbar-apps"', "</div>");
   const desktopLauncher = tagWithAttribute(desktop, "data-app", "admin-controls");
@@ -162,16 +164,16 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
   assert.ok(styles.isFile() && styles.size > 0);
 
   assert.match(
-    home,
+    resources,
     /styles\/home\/admin-controls\.css\?v=[^"]+/
   );
   assert.match(
-    home,
+    resources,
     /scripts\/home\/admin-controls\.js\?v=[^"]+/
   );
   assert.ok(
-    home.indexOf("scripts/home/admin-controls.js") >
-      home.indexOf("scripts/home/main.js"),
+    resources.indexOf("scripts/home/admin-controls.js") >
+      resources.indexOf("scripts/home/admin/orchestrator.js"),
     "The controller must load after the runtime orchestrator."
   );
 });
@@ -206,7 +208,7 @@ test("Admin launch access requires an active Administrator session proof", async
   );
   assert.match(
     standInMarkup,
-    /id="admin-controls-stand-in-message">nothing to see here\.\.\.<\/p>/
+    /id="admin-controls-stand-in-message" aria-live="polite">nothing to see here\.\.\.<\/p>/
   );
   assert.match(
     standInMarkup,
@@ -328,11 +330,11 @@ test("Admin launch access requires an active Administrator session proof", async
   );
   assert.match(
     main,
-    /const launchAppId = resolveAdminControlsLaunchAppId\(appId\);[\s\S]*?toggleWindow\(launchAppId\);/
+    /if \(!adminControlsAccessCheck\(\)\) \{[\s\S]*?showAdminControlsStandIn\(focusReturn\)/
   );
   assert.match(
     main,
-    /inactiveAppId === ADMIN_CONTROLS_STAND_IN_APP_ID[\s\S]*?comingSoonFocusReturns\.delete\(inactiveWindow\)/
+    /await loadAdminResources\(\);[\s\S]*?if \(!adminControlsAccessCheck\(\)\)/
   );
   assert.equal(
     countMatches(main, /if \(!isAdminControlsAppId\(appId\)\) \{/g),
