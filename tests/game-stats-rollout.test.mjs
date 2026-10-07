@@ -13,6 +13,7 @@ import {
   checkGameStatsRollout,
   describeLegacyIssuance,
   fetchLiveGameStatsClientProtocol,
+  parseGeneratedBackendMembers,
   readGeneratedResultProtocol,
   readLegacyIssuanceCutoff,
   resolveLegacyIssuancePhase,
@@ -131,12 +132,17 @@ test("the generated result protocol is read as a written field, never evaluated"
 
   assert.throws(
     () => readGeneratedResultProtocol(createGeneratedConfig({ extra: "  resultProtocol: 1,\n" })),
-    /declare resultProtocol at most once/
+    /declares resultProtocol more than once/
   );
-  for (const malformed of ['"2"', "2.5", "two", "+2", "", "0x2"]) {
+  assert.throws(
+    () => readGeneratedResultProtocol(createGeneratedConfig({ resultProtocol: '"2"' })),
+    /resultProtocol must be a plain integer/,
+    "a string member is well-formed but is not a protocol"
+  );
+  for (const malformed of ["2.5", "two", "+2", "", "0x2"]) {
     assert.throws(
       () => readGeneratedResultProtocol(createGeneratedConfig({ resultProtocol: malformed })),
-      /resultProtocol must be a plain integer/,
+      /not a plain string or integer field/,
       `${malformed || "(empty)"} must be rejected rather than guessed`
     );
   }
@@ -170,9 +176,7 @@ test("the legacy cutoff must be declared, and empty is the closed default", asyn
   assert.deepEqual(
     await readLegacyIssuanceCutoff({
       configUrl: "file:///repo/wrangler.jsonc",
-      readFileImpl: createReader({
-        "file:///repo/wrangler.jsonc": withCutoff(` ${FUTURE} `),
-      }),
+      readFileImpl: createReader({ "file:///repo/wrangler.jsonc": withCutoff(FUTURE) }),
     }),
     { deadline: FUTURE, deadlineMs: Date.parse(FUTURE) }
   );
@@ -673,17 +677,15 @@ test("the generated backend config declares the shared rules' result protocol", 
   }
 });
 
-test("both Wrangler configurations declare the cutoff closed by default", async () => {
+test("both Wrangler configurations declare and document the cutoff", async () => {
   for (const relativePath of [
     "workers/game-stats/wrangler.jsonc",
     "workers/game-stats/wrangler.jsonc.example",
   ]) {
     const source = await readFile(new URL(relativePath, REPOSITORY_ROOT), "utf8");
-    const config = parseJsonc(source);
-    assert.equal(
-      config.vars[LEGACY_CUTOFF_VAR_NAME],
-      "",
-      `${relativePath} must ship the closed default`
+    assert.ok(
+      LEGACY_CUTOFF_VAR_NAME in parseJsonc(source).vars,
+      `${relativePath} must declare the knob a deployer sets`
     );
     assert.match(
       source,
@@ -691,6 +693,26 @@ test("both Wrangler configurations declare the cutoff closed by default", async 
       `${relativePath} must document the deadline a deployer sets`
     );
   }
+
+  // The template ships closed. The production file is whatever the operator has
+  // committed for the current release, so this only requires a value the gate
+  // and the Worker both accept — a deadline must not make the release's own
+  // `npm test` fail, and the assertion must not depend on the time of day.
+  assert.equal(
+    parseJsonc(
+      await readFile(
+        new URL("workers/game-stats/wrangler.jsonc.example", REPOSITORY_ROOT),
+        "utf8"
+      )
+    ).vars[LEGACY_CUTOFF_VAR_NAME],
+    "",
+    "the example must ship the closed default"
+  );
+  const configured = await readLegacyIssuanceCutoff({ configUrl: WRANGLER_CONFIG_URL });
+  assert.ok(
+    configured.deadline === null || Number.isFinite(configured.deadlineMs),
+    "the committed production cutoff must be empty or a real UTC instant"
+  );
   assert.equal(String(WRANGLER_CONFIG_URL).endsWith("workers/game-stats/wrangler.jsonc"), true);
 });
 
@@ -783,4 +805,165 @@ test("the default writers report through the console", async () => {
   assert.match(lines[0][1], /new legacy issuance closed \(no deadline declared\)\.$/);
   assert.match(lines[1][1], /^::error::Game stats rollout preflight failed: no deadline$/);
   assert.match(lines[2][1], /^Usage: node scripts\/check-game-stats-rollout\.mjs$/);
+});
+
+/**
+ * The Worker's own expression at `workers/game-stats/src/sessions.mjs`. The
+ * preflight may be stricter — it refuses to approve a value whose meaning is
+ * unclear — but it must never report a window the Worker would not honour.
+ */
+const workerLegacyPhase = (declared, now) => {
+  const legacyCutoff = Date.parse(String(declared || ""));
+  return !Number.isFinite(legacyCutoff) || now >= legacyCutoff ? "closed" : "open";
+};
+
+test("every cutoff the preflight approves means the same thing to the Worker", async () => {
+  const read = (declared) => ({
+    configUrl: "file:///repo/wrangler.jsonc",
+    readFileImpl: createReader({ "file:///repo/wrangler.jsonc": withCutoff(declared) }),
+  });
+  const accepted = ["", "   ", FUTURE, PAST, "2026-11-01T00:00:00.250Z"];
+  const rejected = [
+    // Date.parse accepts these, so trimming or reformatting them here would
+    // approve a window the Worker closes on the spot.
+    " 2026-11-01T00:00:00Z ",
+    "2026-11-01T00:00:00Z\n",
+    "\t2026-11-01T00:00:00Z",
+    "2026-11-01T00:00:00+00:00",
+    "2026-11-01",
+  ];
+
+  for (const declared of accepted) {
+    const cutoff = await readLegacyIssuanceCutoff(read(declared));
+    for (const now of [NOW, Date.parse(FUTURE), Date.parse(FUTURE) + 1]) {
+      assert.equal(
+        resolveLegacyIssuancePhase(cutoff, now).phase,
+        workerLegacyPhase(declared, now),
+        `${JSON.stringify(declared)} must mean the same at ${new Date(now).toISOString()}`
+      );
+    }
+  }
+  for (const declared of rejected) {
+    await assert.rejects(
+      readLegacyIssuanceCutoff(read(declared)),
+      /must be empty or a real UTC calendar instant/,
+      `${JSON.stringify(declared)} must not be normalized into an approval`
+    );
+  }
+
+  // The reviewed regression: the padded deadline read as open while the Worker
+  // failed to parse it at all and closed legacy issuance immediately.
+  const padded = " 2026-11-01T00:00:00Z ";
+  assert.equal(workerLegacyPhase(padded, NOW), "closed");
+  await assert.rejects(
+    checkGameStatsRollout(
+      rolloutOptions({
+        wrangler: withCutoff(padded),
+        fetchStub: createFetchStub(createGeneratedConfig({ resultProtocol: null })),
+      })
+    ),
+    /must be empty or a real UTC calendar instant/
+  );
+});
+
+test("a published config is parsed as generated members, never evaluated", async () => {
+  const generated = createFrontendConfig(
+    "https://worker.example.test",
+    BUILD_VERSION,
+    2
+  );
+  const members = parseGeneratedBackendMembers(generated);
+
+  assert.deepEqual(
+    [...members.keys()],
+    ["apiBaseUrl", "buildVersion", "resultProtocol"],
+    "the parser must accept exactly what the generator produces"
+  );
+  assert.equal(
+    JSON.parse(members.get("apiBaseUrl")),
+    "https://worker.example.test",
+    "a // inside the apiBaseUrl string is content, not a comment"
+  );
+  assert.equal(
+    readGeneratedResultProtocol(
+      generated.replace("https://worker.example.test", "http://host/a//b?q=1#x")
+    ),
+    2
+  );
+
+  // The three live-source variants the review reproduced against this parser.
+  assert.equal(
+    readGeneratedResultProtocol(generated.replace("  resultProtocol: 2,", "  // resultProtocol: 2,")),
+    undefined,
+    "a commented-out member is absent, which is the legacy client"
+  );
+  assert.throws(
+    () =>
+      readGeneratedResultProtocol(
+        generated.replace("  resultProtocol: 2,", '  resultProtocol: 2,\n  "resultProtocol": 1,')
+      ),
+    /not a plain string or integer field/,
+    "a quoted key must never override the declared member"
+  );
+  assert.throws(
+    () =>
+      readGeneratedResultProtocol(
+        generated.replace("  resultProtocol: 2,", "  resultProtocol: 2\n    + 1,")
+      ),
+    /not a plain string or integer field/,
+    "an expression is not a declared protocol"
+  );
+});
+
+test("anything outside the generated grammar fails the gate", async () => {
+  const generated = createFrontendConfig("https://worker.example.test", BUILD_VERSION, 2);
+
+  for (const [source, expected] of [
+    ["window.rohinGameStatsBackend = { apiBaseUrl: \"https://a.test\" };", /one frozen window\.rohinGameStatsBackend object literal/],
+    [generated.replace("Object.freeze({", "Object.seal({"), /one frozen window\.rohinGameStatsBackend object literal/],
+    [`${generated}window.somethingElse = 1;\n`, /one frozen window\.rohinGameStatsBackend object literal/],
+    [generated.replace("});", "}) || {};"), /one frozen window\.rohinGameStatsBackend object literal/],
+    [generated.replace("  resultProtocol: 2,", "  resultProtocol: 2,\n  resultProtocol: 1,"), /declares resultProtocol more than once/],
+    [generated.replace("  resultProtocol: 2,", "  rolloutExempt: 1,\n  resultProtocol: 2,"), /unknown member rolloutExempt/],
+    [generated.replace("  resultProtocol: 2,", "  resultProtocol: 0x2,"), /not a plain string or integer field/],
+    [generated.replace("  resultProtocol: 2,", "  resultProtocol: '2',"), /not a plain string or integer field/],
+    [generated.replace("  resultProtocol: 2,", "  resultProtocol: Number(2),"), /not a plain string or integer field/],
+    [generated.replace("  resultProtocol: 2,", "  resultProtocol: 2.0,"), /not a plain string or integer field/],
+    [generated.replace("  resultProtocol: 2,", "  ...spread,"), /not a plain string or integer field/],
+  ]) {
+    assert.throws(() => parseGeneratedBackendMembers(source), expected);
+  }
+  // A well-formed member carrying an unsupported value is the reader's call.
+  const unsupported = generated.replace("  resultProtocol: 2,", "  resultProtocol: 3,");
+  assert.equal(parseGeneratedBackendMembers(unsupported).get("resultProtocol"), "3");
+  assert.throws(
+    () => readGeneratedResultProtocol(unsupported),
+    /unsupported resultProtocol 3/
+  );
+  for (const invalid of [undefined, null, 2, Buffer.from(generated)]) {
+    assert.throws(() => parseGeneratedBackendMembers(invalid), TypeError);
+  }
+
+  // A rejected published config stops the deploy rather than reading as legacy.
+  await assert.rejects(
+    fetchLiveGameStatsClientProtocol(
+      liveOptions(createFetchStub(generated.replace("  resultProtocol: 2,", "  resultProtocol: 2\n    + 1,")))
+    ),
+    /Live game stats backend config is invalid/
+  );
+});
+
+test("the committed and generated configs parse under the restricted grammar", async () => {
+  const resultProtocol = await readCommonResultProtocol();
+  const committed = await readFile(LOCAL_BACKEND_CONFIG_URL, "utf8");
+  const members = parseGeneratedBackendMembers(committed);
+
+  assert.deepEqual(
+    [...members.keys()],
+    [...parseGeneratedBackendMembers(
+      createFrontendConfig("https://worker.example.test", BUILD_VERSION, resultProtocol)
+    ).keys()],
+    "the committed file and the generator must declare the same members"
+  );
+  assert.equal(readGeneratedResultProtocol(committed), resultProtocol);
 });

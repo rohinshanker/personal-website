@@ -8,7 +8,7 @@ import {
   resolveLiveGameStatsBackendConfigUrl,
 } from "./check-game-stats-deployment.mjs";
 import { assertFetchDependencies, fetchGuardedBody } from "./lib/http.mjs";
-import { parseJsonc } from "./lib/jsonc.mjs";
+import { parseJsonc, stripJsoncComments } from "./lib/jsonc.mjs";
 
 /**
  * The deploy-time gate for the first verified-result rollout.
@@ -68,11 +68,78 @@ const parseUtcDeadline = (deadline) => {
 };
 
 /**
- * The generated member as it is written, not as it evaluates: this source is
- * fetched from the public site, so it is read with a field pattern rather than
- * executed.
+ * The published config as it is written, not as it evaluates. The source is
+ * fetched from the public site, so it is never executed; it is parsed against
+ * the one shape `createFrontendConfig` emits.
+ *
+ * `stripJsoncComments` does the comment handling, which is why a commented-out
+ * member reads as absent and a `//` inside the `apiBaseUrl` string survives.
  */
-const RESULT_PROTOCOL_FIELD_PATTERN = /\bresultProtocol\s*:\s*([^,}\r\n]*)/g;
+const GENERATED_OBJECT_PATTERN =
+  /^window\.rohinGameStatsBackend\s*=\s*Object\.freeze\(\{([\s\S]*)\}\)\s*;$/;
+
+/**
+ * One member: a bare identifier key, a JSON string or plain integer value, and
+ * then a comma or the end of the object. A quoted key, an expression, or any
+ * other token fails to match, which is what keeps `resultProtocol: 2\n + 1,`
+ * and a second `"resultProtocol": 1,` from being read as a protocol.
+ */
+const GENERATED_MEMBER_PATTERN =
+  /^\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*:\s*("(?:[^"\\]|\\.)*"|\d+)\s*(?:,|(?=$))/;
+
+const GENERATED_MEMBER_NAMES = Object.freeze([
+  "apiBaseUrl",
+  "buildVersion",
+  "resultProtocol",
+]);
+
+/**
+ * Parses the generated object into its declared members. Anything outside the
+ * grammar is rejected rather than skipped, so an unparsable published config
+ * fails the gate instead of silently reading as a legacy client.
+ */
+export const parseGeneratedBackendMembers = (source) => {
+  if (typeof source !== "string") {
+    throw new TypeError(
+      "Generated game stats backend config source must be a string"
+    );
+  }
+  const body = GENERATED_OBJECT_PATTERN.exec(
+    stripJsoncComments(source).trim()
+  )?.[1];
+  if (body === undefined) {
+    throw new Error(
+      "Generated game stats backend config must be one frozen " +
+        "window.rohinGameStatsBackend object literal"
+    );
+  }
+
+  const members = new Map();
+  let remaining = body;
+  while (remaining.trim() !== "") {
+    const member = GENERATED_MEMBER_PATTERN.exec(remaining);
+    if (!member) {
+      throw new Error(
+        "Generated game stats backend config has a member that is not a " +
+          "plain string or integer field"
+      );
+    }
+    const [matched, name, value] = member;
+    if (!GENERATED_MEMBER_NAMES.includes(name)) {
+      throw new Error(
+        `Generated game stats backend config declares unknown member ${name}`
+      );
+    }
+    if (members.has(name)) {
+      throw new Error(
+        `Generated game stats backend config declares ${name} more than once`
+      );
+    }
+    members.set(name, value);
+    remaining = remaining.slice(matched.length);
+  }
+  return members;
+};
 
 let rolloutRequestSequence = 0;
 
@@ -86,20 +153,8 @@ const defaultCreateCacheBust = () =>
  * build metadata is stale.
  */
 export const readGeneratedResultProtocol = (source) => {
-  if (typeof source !== "string") {
-    throw new TypeError(
-      "Generated game stats backend config source must be a string"
-    );
-  }
-  const matches = [...source.matchAll(RESULT_PROTOCOL_FIELD_PATTERN)];
-  if (matches.length > 1) {
-    throw new Error(
-      "Generated game stats backend config must declare resultProtocol at most once"
-    );
-  }
-  if (matches.length === 0) return undefined;
-
-  const declared = matches[0][1].trim();
+  const declared = parseGeneratedBackendMembers(source).get("resultProtocol");
+  if (declared === undefined) return undefined;
   if (!/^\d+$/.test(declared)) {
     throw new Error(
       "Generated game stats backend config resultProtocol must be a plain integer"
@@ -158,18 +213,22 @@ export const readLegacyIssuanceCutoff = async ({
     );
   }
 
-  const deadline = declared.trim();
-  if (deadline === "") {
+  // Blank reads as the closed default because the Worker's own
+  // `Date.parse(String(value || ""))` cannot parse it either. Any other value
+  // is validated exactly as written: the Worker never trims, so padding that
+  // this check "fixed" would approve a window the Worker closes immediately.
+  if (declared.trim() === "") {
     return Object.freeze({ deadline: null, deadlineMs: null });
   }
-  const deadlineMs = parseUtcDeadline(deadline);
+  const deadlineMs = parseUtcDeadline(declared);
   if (deadlineMs === null) {
     throw new Error(
       `Wrangler configuration ${LEGACY_CUTOFF_VAR_NAME} must be empty or a real UTC ` +
-        `calendar instant in the form ${EXAMPLE_LEGACY_CUTOFF}`
+        `calendar instant in the form ${EXAMPLE_LEGACY_CUTOFF}, written exactly as ` +
+        `the Worker parses it, with no surrounding whitespace`
     );
   }
-  return Object.freeze({ deadline, deadlineMs });
+  return Object.freeze({ deadline: declared, deadlineMs });
 };
 
 /** `open` means the Worker still issues new legacy sessions at `now`. */
