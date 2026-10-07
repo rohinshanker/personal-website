@@ -839,6 +839,17 @@ test("a restored puzzle keeps verified provenance only for the board the server 
   assert.match(adoptSource, /sudokuAppliedMoves = 0;/);
   assert.match(adoptSource, /requestIssuedSudokuPuzzle\(\);/);
 
+  // New Game carries the pencil-mark preference, and an issued board always
+  // starts with it off, so the preference reaches that board as a move rather
+  // than as state the verifier never saw.
+  assert.match(adoptSource, /noteMode: previousNoteMode,/);
+  assert.match(issuedSource, /const carriedNoteMode = sudokuState\.noteMode;/);
+  assert.match(
+    issuedSource,
+    /if \(carriedNoteMode\) applySudokuMove\(\{ op: "setNoteMode", enabled: true \}\);/,
+    "A carried preference has to reach the issued board as a recorded action."
+  );
+
   // The server's elapsed time reconciles the display without rewriting cleared
   // local data.
   const completionSource = sourceBetween(

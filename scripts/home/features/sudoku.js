@@ -2482,6 +2482,7 @@ let sudokuIssueToken = 0;
 const requestIssuedSudokuPuzzle = () => {
   if (sudokuStats.hasIssuedGame()) return;
   const token = (sudokuIssueToken += 1);
+  const carriedNoteMode = sudokuState.noteMode;
   const pending = sudokuStats.issueGame({ difficulty: sudokuState.difficulty });
   if (!pending) return;
   Promise.resolve(pending).then((descriptor) => {
@@ -2499,6 +2500,14 @@ const requestIssuedSudokuPuzzle = () => {
     sudokuGame = sudokuRules.initial(descriptor.initial);
     sudokuAppliedMoves = 0;
     sudokuState.puzzleId = descriptor.gameId || sudokuState.puzzleId;
+    // New Game carries the pencil-mark preference across puzzles, and an issued
+    // board always starts with it off. It is turned back on as a move on the
+    // board the server issued, so the verifier derives the mode the player is
+    // in rather than being handed it: carrying it as unrecorded state would put
+    // the replay and the board on screen into different modes.
+    if (carriedNoteMode) applySudokuMove({ op: "setNoteMode", enabled: true });
+    // Everything applied so far is recorded against the board that was issued.
+    sudokuAppliedMoves = 0;
     renderSudoku();
     scheduleSudokuSave();
   }, () => {

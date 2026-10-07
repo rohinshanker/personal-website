@@ -1715,3 +1715,93 @@ viewports.forEach((viewport) => {
     });
   });
 });
+
+test("a carried note mode survives late issuance as a recorded action", async ({
+  page,
+}) => {
+  const scenario = scenarios[0];
+  const api = await bootHome(page, viewports[2], scenario);
+
+  await page.locator('.desktop-icon[data-app="sudoku"]').click();
+  const sudokuWindow = page.locator('[data-app-window="sudoku"]');
+  await expect(sudokuWindow).toBeVisible();
+  const playButton = sudokuWindow.locator("#sudoku-play");
+  await expect(playButton).toBeEnabled({ timeout: PUBLISH_TIMEOUT_MS });
+  await playButton.click();
+  await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/, {
+    timeout: PUBLISH_TIMEOUT_MS,
+  });
+  await expect
+    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+
+  const noteToggle = sudokuWindow.locator("#sudoku-note-toggle");
+  await noteToggle.click();
+  await expect(noteToggle).toHaveAttribute("aria-pressed", "true");
+
+  // New Game carries the preference onto the puzzle it generates, so the board
+  // the server then issues has to arrive at the same place.
+  const held = holdSudokuIssuance(page);
+  await held.install();
+  await sudokuWindow.locator("#sudoku-new").click();
+  await expect.poll(() => held.requests, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
+  await expect(noteToggle).toHaveAttribute("aria-pressed", "true");
+
+  held.release();
+  await expect
+    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(2);
+  const issued = api.verified.boardFor("sudoku");
+  await expect
+    .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readBoard()), {
+      timeout: PUBLISH_TIMEOUT_MS,
+    })
+    .toEqual({
+      hintMode: "off",
+      noteMode: true,
+      puzzle: issued.initial.puzzle,
+      puzzleId: issued.id,
+      values: issued.initial.puzzle,
+    });
+  await expect(noteToggle).toHaveAttribute("aria-pressed", "true");
+
+  // Entries go in as values again, through the same control a player uses.
+  await noteToggle.click();
+  await expect(noteToggle).toHaveAttribute("aria-pressed", "false");
+  const terminal = await prepareTerminalBoard(page, scenario.elapsedSeconds);
+  await finishTerminalBoard(sudokuWindow, terminal);
+  await expect
+    .poll(() => api.verified.finishes.length, { timeout: PUBLISH_TIMEOUT_MS })
+    .toBe(1);
+
+  // The preference is carried as an action on the issued board, so the verifier
+  // derives the same state the player sees rather than being handed it.
+  const replay = api.verified.replayFor("sudoku");
+  // Carrying it is the first thing the issued session records, ahead of any
+  // entry, which is what makes the rest of the replay land in the right mode.
+  expect(replay.filter(({ op }) => op === "setNoteMode")).toEqual([
+    { op: "setNoteMode", enabled: true, seq: 1 },
+    { op: "setNoteMode", enabled: false, seq: expect.any(Number) },
+  ]);
+  const verified = await page.evaluate(
+    ({ initial, inputs }) => {
+      const state = window.homeSudokuRules.initial(initial);
+      try {
+        for (const input of inputs) {
+          window.homeSudokuRules.transition(
+            state,
+            input,
+            window.homeGameRules.createBudget(2_000_000)
+          );
+        }
+        return { result: window.homeSudokuRules.result(state) };
+      } catch (error) {
+        return { code: error.code, message: error.message };
+      }
+    },
+    { initial: issued.initial, inputs: replay }
+  );
+  expect(verified).toEqual({
+    result: expect.objectContaining({ terminal: true, won: true }),
+  });
+});
