@@ -1497,6 +1497,13 @@ for (const reason of ["expiry", "storage removal"]) {
     await expect(win).toHaveAttribute("aria-hidden", "true");
     await expect(page.locator("#admin-controls-stand-in-window")).toBeVisible();
     await expect(page.locator("#admin-controls-stand-in-ok")).toBeFocused();
+    const accessibility = await new AxeBuilder({ page })
+      .include("#admin-controls-stand-in-window")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(accessibility.violations).toEqual([]);
+    await finishWindowAnimation(win, "retro-window-close");
+    await expect(page.locator("#admin-controls-stand-in-ok")).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.locator("#admin-controls-stand-in-window")).toHaveAttribute("aria-hidden", "true");
     await finishWindowAnimation(page.locator("#admin-controls-stand-in-window"), "retro-window-close");

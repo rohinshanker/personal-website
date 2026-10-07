@@ -83,6 +83,11 @@
   before the final GitHub shortcut.
 - An unauthorized launch focuses the notice's `OK` button. `OK`, title-bar Close,
   and Escape dismiss it and restore focus to the exact launcher that opened it.
+- When invalidation replaces an open dashboard with the notice, the dashboard's
+  delayed close completion must not override focus already placed in the notice.
+  Shared window close restoration runs only while focus remains in the closing
+  window (or has fallen back to the document body), preserving replacement and
+  intentional focus moves.
 - Tabs support click and arrow-key navigation. Escape cancels target picking or
   closes Admin Controls and restores focus to the launcher that opened it.
 - When another managed dialog is above Admin Controls, the first Escape closes

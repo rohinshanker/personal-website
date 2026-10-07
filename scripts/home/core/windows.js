@@ -1095,10 +1095,12 @@ appWindows.forEach((win) => {
       if (win.matches(FOCUS_RETURN_WINDOW_SELECTOR)) {
         const focusTarget = comingSoonFocusReturns.get(win);
         comingSoonFocusReturns.delete(win);
+        const activeFocus = document.activeElement;
         if (
           focusTarget?.isConnected &&
           !focusTarget.closest("[inert]") &&
-          typeof focusTarget.focus === "function"
+          typeof focusTarget.focus === "function" &&
+          (!activeFocus || activeFocus === document.body || win.contains(activeFocus))
         ) {
           focusTarget.focus({ preventScroll: true });
         }
