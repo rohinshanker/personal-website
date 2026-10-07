@@ -132,7 +132,7 @@ const shoots = [
     date: "September 2025",
     icon: "assets/modeling-icons/arthaus-logo.jpg",
     folder: "assets/modeling/arthaus-promo-shoot-sep25",
-    files: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"],
+    files: ["1.jpg", "sproul-hall-group.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"],
     links: brandLinks.arthaus,
     credits: [],
   },
