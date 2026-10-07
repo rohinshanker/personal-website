@@ -274,8 +274,8 @@ redeploy the Worker because its accepted `GAME_BUILD_VERSION` changed.
 
 ## Stats read, cache, and acknowledgment contract
 
-The SQL aggregation and protocol-2 source was verified in production as Worker
-version `a28081b4-d91f-4c93-8329-87b82353dd01`. Record a new version ID when
+The SQL aggregation and verified-result source was verified in production as Worker
+version `fa0a6445-67c8-436d-b0cc-0420a3e2f853`. Record a new version ID when
 Worker source changes; a later documentation-only deployment can have a new
 version ID with identical source.
 

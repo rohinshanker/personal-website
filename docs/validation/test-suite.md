@@ -128,9 +128,9 @@ checks, scoped permissions, and secret checks. Never add `always()` to a
 mutation job to bypass a failed dependency.
 
 Local workflow-contract tests verify configuration, not execution by GitHub.
-Confirm the changed release graph and no-retry suite in real Actions runs;
-three consecutive successful main runs provide the stability acceptance
-signal. Do not manufacture unrelated pushes to create that signal.
+Confirm the changed release graph in a successful Actions release. Three
+consecutive successful main browser matrices provide the stability acceptance
+signal for the no-retry suite. Do not manufacture unrelated pushes to create it.
 
 ## Repeatable validation
 
