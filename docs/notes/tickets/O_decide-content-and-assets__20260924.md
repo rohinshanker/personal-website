@@ -4,7 +4,7 @@
 - Status: open
 - Opened: 2026-09-24
 - Updated: 2026-10-06
-- Current State: Owner answers are recorded for every item. Approved work is assigned to preservation/review, background comparison, shared modeling markup, conditional PDF templating, descriptive asset paths and modeling-cursor tickets, queued behind the active leaderboard ticket. Study Resources, full-quality modeling photos, the cursor storage key and upstream 98.css stay as they are. Item 8 still requires measuring whether a template reduces code. Recheck the earlier asset inventory before moves using `node docs/validation/assets/audit-assets.mjs . > report.json`.
+- Current State: Owner answers are recorded for every item. Approved work is assigned to preservation/review, background comparison, shared modeling markup, retained static PDF markup, descriptive asset paths and modeling-cursor tickets, queued behind the active leaderboard ticket. Study Resources, full-quality modeling photos, the cursor storage key and upstream 98.css stay as they are. Item 8 is settled: retain static markup after complete-cost review. Recheck the earlier asset inventory before moves using `node docs/validation/assets/audit-assets.mjs . > report.json`.
 - Verification: Record each answer inline (`Decision:` line under the item) with the date; deletions happen by explicit filename with a listing shown first, never by variable-expanded glob.
 - Cleanup: When every item has a decision and an owning ticket, delete this ticket and its index row.
 
@@ -24,7 +24,7 @@
 7. **Modeling Home markup:** generate shoot titles/credits from `scripts/home/modeling-portfolio.js`, or keep static markup with parity tests? Recommendation: use the shared data; preserve meaningful crawlable text and rendered appearance. This is a long implementation if selected.
    - Decision (2026-10-06): owner chose the recommendation. Implement under [O_long-modeling-shoot-markup__20261006.md](O_long-modeling-shoot-markup__20261006.md).
 8. **Eight similar PDF windows:** keep crawlable static markup, or generate them from a shared template? Recommendation: keep the static markup.
-   - Decision (2026-10-06): generate from a shared template if it reduces code; otherwise leave as is. Assess the net source/configuration cost first under [A_pdf-window-template__20261006.md](A_pdf-window-template__20261006.md).
+   - Decision (2026-10-06): generate from a shared template if it reduces code; otherwise leave as is. Assessment complete: keep static markup because the complete readable implementation and coverage would be larger.
 9. **Asset path names:** keep folders with spaces and uppercase extensions with path checks, or rename them? Recommendation: keep names and retain path checks. A rename must update encoded/dynamic references and case-sensitive deployment checks together.
    - Decision (2026-10-06): rename with an informative title scheme for the AI workspace to save tokens/time. Implement a descriptive, consistent path scheme under [O_long-descriptive-asset-paths__20261006.md](O_long-descriptive-asset-paths__20261006.md), preserving identity and useful shoot ordering.
 10. **Modeling cursors:** keep native cursors on the mobile-oriented portfolio route, or add Home's custom cursors? The route still does not load the custom-cursor assets. Recommendation: keep native cursors.
