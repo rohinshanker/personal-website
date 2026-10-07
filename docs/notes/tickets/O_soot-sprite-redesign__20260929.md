@@ -3,8 +3,8 @@
 - Scope: Redraw the sprite in the `soot-sprites` random event so it reads as a Studio Ghibli susuwatari. Build four original candidates, present them side by side for the owner to pick, then ship the chosen one. Trajectories, timing, star candy, puffs, and the System Alert prompt stay as they are unless the chosen design needs a hook such as limbs on the ground run.
 - Status: open
 - Opened: 2026-09-29
-- Updated: 2026-10-06
-- Current State: Candidate preparation remains queued behind current leaderboard completion and the selected loading work. Stage 1 (candidates and review page) changes no shipped file; Stage 2 waits for the owner's pick. Owner explicitly said on 2026-10-06 to keep this ticket open after implementation for their own final review.
+- Updated: 2026-10-07
+- Current State: Candidate preparation remains queued. Stage 1 (candidates and review page) changes no shipped file; Stage 2 waits for the owner's pick. Owner explicitly said on 2026-10-06 to keep this ticket open after implementation for their own final review.
 - Verification: Stage 1: the review page renders all four candidates at 375×812 and 1440×900 with no console errors, and a contact sheet PNG is saved beside it. Stage 2: `node scripts/update-game-integrity.mjs` then `--check`; `npm test` with `tests/gears-nest.test.mjs` updated; `npm run test:ui` (`deferred-window-media.spec.mjs` opens this event); trigger the event through Admin Controls at 375×812, 768×1024, 1280×800, and 1440×900 plus reduced motion; a 32-sprite swarm under 4× CPU throttling shows no long task over 50 ms; `npm run test:visual`.
 - Owner Approval: Required both for candidate selection and final visual acceptance. Keep the ticket open and retain review artifacts after implementation until the owner reviews the completed event and explicitly approves closure.
 - Cleanup: After the chosen design ships and the owner approves final review, delete the review page, contact sheet and three unchosen candidates; record the sprite's look contract in `docs/validation/system-alert-random-events.md`; delete this ticket and its index row.

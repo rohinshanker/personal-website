@@ -4,7 +4,7 @@
 - Status: open
 - Opened: 2026-10-06
 - Updated: 2026-10-07
-- Current State: All 18 photos are preserved byte-for-byte in `docs/assets-src/calendar-pics/` and ready for owner review. Record individual keep/delete choices below; no deletion has been approved. Preservation validation is tracked in the active source-assets ticket.
+- Current State: All 18 photos are preserved byte-for-byte in `docs/assets-src/calendar-pics/` and ready for owner review. Record individual keep/delete choices below; no deletion has been approved. Preservation and regeneration guidance is in [source-assets.md](../../validation/source-assets.md).
 - Verification: Once archived, inspect the actual files and record explicit per-file keep/delete choices. Delete only individually approved paths after the preservation/move checks pass.
 - Owner Approval: Required; this is the owner's actual-file visual review. Keep the ticket open until explicit per-file decisions are recorded and implemented.
 - Cleanup: After the owner's choices are implemented and verified, resolve and delete this ticket/index row; retain only reusable source-preservation guidance.
