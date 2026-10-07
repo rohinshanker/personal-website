@@ -139,13 +139,17 @@ JSON clone assumes engines produce only JSON state; maintain that invariant
 when adding or changing engines, since JSON serialization can normalize invalid
 intermediate values instead of preserving them for later rejection.
 
-Design and configure for the Workers Free 10 ms CPU limit. Instrumented
-preparation/replay/serialization wall spans cover only parts of the invocation;
+Design for the Workers Free 10 ms CPU limit, enforced by the platform. Keep
+`limits.cpu_ms` absent in the production and example configs: custom CPU limits
+are paid-plan-only and Cloudflare rejects them on Free, even when set to 10 ms.
+See [Cloudflare CPU limits](https://developers.cloudflare.com/workers/platform/limits/#cpu-time).
+Instrumented preparation/replay/serialization wall spans cover only parts of the
+invocation;
 request parsing, crypto, commit, and finalization also cost CPU. They are not
 whole billed CPU, proof of compliance, or headroom. Record cold and warm maxima
 without comparing runs with different warmup as equivalent. Cloudflare enforces
 CPU limits only after deployment; qualify actual CPU and resource-limit outcomes
-through authorized production measurements. See [Cloudflare limits](https://developers.cloudflare.com/workers/wrangler/configuration/#limits).
+through authorized production measurements.
 
 ## Controlled rollout and integrity
 

@@ -2,7 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| A | 2026-10-07 | [A_legacy-client-release-window__20261007.md](A_legacy-client-release-window__20261007.md) | Deadline, focus repair and independently accepted expired-session fixture repair are integrated. Await the full controlled release and live parity before closure. |
+| A | 2026-10-07 | [A_legacy-client-release-window__20261007.md](A_legacy-client-release-window__20261007.md) | All 577 browser cases pass. Free-plan CPU configuration repair is validated; await complete controlled release and live parity before closure. |
 | O | 2026-10-07 | [O_review-archived-calendar-photos__20261006.md](O_review-archived-calendar-photos__20261006.md) | All 18 photos are archived byte-for-byte and linked for owner review; record per-file choices before deletion. |
 | O | 2026-10-07 | [O_background-image-comparison__20261006.md](O_background-image-comparison__20261006.md) | Real four-size comparison ready: 49 KB WebP versus 352 KB JPEG. Await explicit owner visual choice before shipping/closure. |
 | O | 2026-10-06 | [O_long-window-dialog-semantics__20261006.md](O_long-window-dialog-semantics__20261006.md) | Owner-approved shared dialog roles/title labels; queued. |

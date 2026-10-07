@@ -2,7 +2,7 @@
   "name": "personal-site-game-stats",
   "main": "src/index.mjs",
   "compatibility_date": "2026-07-21",
-  "limits": { "cpu_ms": 10 },
+  // Workers Free enforces 10 ms CPU; custom limits are paid-plan-only.
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
