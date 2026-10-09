@@ -2,7 +2,7 @@
 
 - Purpose: Keep random-event window lifecycle and event-local wiring consistent.
 - Scope: Home event visibility, animation, deferred media, focus, geometry, dynamic windows, binding order, and regression checks.
-- Last verified: 2026-10-07
+- Last verified: 2026-10-09
 
 ## Lifecycle contract
 
@@ -69,6 +69,32 @@ return to the entry warm-up list. If `admin-controls.js` changes, bump its token
 in the on-demand resource map too. Regenerate game integrity after changing
 `main.js`; follow [home-loading.md](home-loading.md) and
 [site-quality-gates.md](site-quality-gates.md).
+
+## Vanishing popup geometry
+
+The vanishing popup's frame controls disappear instead of minimizing,
+maximizing or closing it. Capture their feature-owned clicks before the shared
+toolbar listeners run; stopping propagation from a later bubble listener is
+too late to prevent shared sizing behavior.
+
+Every disappearing control keeps its layout box through `visibility: hidden`
+and cannot accept pointer or keyboard input. The explosion remains a fixed,
+pointer-transparent sibling above the popup. Its dimensions must never enter
+the popup's layout or change the popup's original bounding box.
+
+`tests/ui/vanishing-popup-layout.spec.mjs` measures the window and all five
+controls after each click, including both Yes/No orders, every possible final
+control, dragging, viewport-cap boundaries, motion preferences, the 1800 ms
+playback boundary and repeat-open reset. Preserve these geometry checks when
+changing shared toolbar handling or media placement.
+
+## Named interactive graph containers
+
+A labelled graph container with an adjustable slider uses a named `group`.
+Keep the slider exposed to accessibility tools and keyboard input; a generic
+container cannot carry the same accessible name, and an image role would hide
+interactive descendants. `gradescope-curve-accessibility.spec.mjs` checks
+prompt, adjustment and closed states with axe and real keyboard interaction.
 
 ## Regression checks
 
