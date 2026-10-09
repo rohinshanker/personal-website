@@ -1462,7 +1462,7 @@ registerRandomEvent({
         event.preventDefault();
         event.stopImmediatePropagation();
         hideVanishingPopupButton(button);
-      });
+      }, { capture: true });
     });
 
     bindManagedRandomEventWindowAnimation(vanishingPopupWindow, {

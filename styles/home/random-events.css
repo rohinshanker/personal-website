@@ -91,10 +91,6 @@
 }
 
 .vanishing-popup-window [data-vanishing-popup-button][hidden] {
-  display: none !important;
-}
-
-.vanishing-popup-window .title-bar-controls [data-vanishing-popup-button][hidden] {
   display: block !important;
   pointer-events: none;
   visibility: hidden;

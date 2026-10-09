@@ -1,7 +1,7 @@
 (() => {
   const HOME_RESOURCE_URLS = Object.freeze({
     randomEventStyles:
-      "styles/home/random-events.css?v=home-loading-repair-20261007",
+      "styles/home/random-events.css?v=vanishing-popup-layout-20261009",
     adminStyles:
       "styles/home/admin-controls.css?v=on-demand-home-loading-20261007",
     adminOrchestrator:
