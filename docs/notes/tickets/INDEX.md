@@ -4,7 +4,6 @@
 | --- | --- | --- | --- |
 | O | 2026-10-07 | [O_review-archived-calendar-photos__20261006.md](O_review-archived-calendar-photos__20261006.md) | All 18 photos are archived byte-for-byte and linked for owner review; record per-file choices before deletion. |
 | O | 2026-10-07 | [O_background-image-comparison__20261006.md](O_background-image-comparison__20261006.md) | Real four-size comparison ready: 49 KB WebP versus 352 KB JPEG. Await explicit owner visual choice before shipping/closure. |
-| O | 2026-10-06 | [O_long-window-dialog-semantics__20261006.md](O_long-window-dialog-semantics__20261006.md) | Owner-approved shared dialog roles/title labels; queued. |
 | O | 2026-10-06 | [O_long-modeling-shoot-markup__20261006.md](O_long-modeling-shoot-markup__20261006.md) | Generate Home modeling titles/credits from shared shoot data; preserve crawlable text and visuals. Queued. |
 | O | 2026-10-06 | [O_long-descriptive-asset-paths__20261006.md](O_long-descriptive-asset-paths__20261006.md) | Owner requested informative asset path names for AI efficiency; migrate references, manifests and source paths together after preservation. |
 | O | 2026-10-06 | [O_game-publication-retry-feedback__20261006.md](O_game-publication-retry-feedback__20261006.md) | Approved one delayed retry and visible overflow count. Keep final visual evidence and remain open until owner approval. |
