@@ -263,6 +263,48 @@ const FOCUS_RETURN_WINDOW_SELECTOR =
 const DIALOG_INITIAL_FOCUS_SELECTOR =
   "[data-dialog-initial-focus], [data-coming-soon-ok]";
 
+const WINDOW_DIALOG_ROLES = new Set(["dialog", "alertdialog"]);
+
+let generatedWindowTitleCount = 0;
+
+/** The window's own title text, ignoring titles of windows nested inside it. */
+const ownWindowTitle = (win) =>
+  Array.from(win.querySelectorAll(".title-bar-text")).find(
+    (title) => title.closest(".window") === win
+  ) || null;
+
+/** Keeps an existing title id; otherwise derives one from the window, unique in the document. */
+const ensureWindowTitleId = (win, title) => {
+  if (title.id) return title.id;
+  const owner = win.id || (win.dataset.appWindow ? `${win.dataset.appWindow}-window` : "");
+  let id = owner ? `${owner}-title` : "";
+  while (!id || document.getElementById(id)) {
+    generatedWindowTitleCount += 1;
+    id = `window-title-${generatedWindowTitleCount}`;
+  }
+  title.id = id;
+  return id;
+};
+
+/**
+ * Exposes a top-level window as a non-modal dialog named by its title bar.
+ * Explicit non-dialog roles, existing names, and existing `aria-modal` values
+ * are kept; nested and untitled windows are left alone. Returns whether the
+ * window carries dialog semantics afterwards.
+ */
+const applyWindowDialogSemantics = (win) => {
+  if (!(win instanceof Element) || win.parentElement?.closest(".window")) return false;
+  const role = win.getAttribute("role");
+  if (role && !WINDOW_DIALOG_ROLES.has(role)) return false;
+  if (!win.hasAttribute("aria-labelledby") && !win.hasAttribute("aria-label")) {
+    const title = ownWindowTitle(win);
+    if (!title) return false;
+    win.setAttribute("aria-labelledby", ensureWindowTitleId(win, title));
+  }
+  if (!role) win.setAttribute("role", "dialog");
+  return true;
+};
+
 const VIDEO_EDITOR_PATH = "/video-editor/";
 
 const MODELING_PORTFOLIO_PATH = "/modeling/";
@@ -1081,6 +1123,8 @@ window.addEventListener("pagehide", cancelAdminControlsLaunch);
 
 initPortfolioCornerResize();
 
+draggableWindows.forEach(applyWindowDialogSemantics);
+
 appWindows.forEach((win) => {
   win.addEventListener("animationend", (event) => {
     if (event.target !== win) return;
@@ -1441,6 +1485,7 @@ window.homeWindows = Object.freeze({
   ADMIN_CONTROLS_STAND_IN_APP_ID,
   DIALOG_INITIAL_FOCUS_SELECTOR,
   activateVisibleContent,
+  applyWindowDialogSemantics,
   cancelAdminControlsLaunch,
   clampWindowFullyIntoViewport,
   closeAppWindow,

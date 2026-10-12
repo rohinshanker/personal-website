@@ -209,6 +209,10 @@ for (const viewport of viewports) {
     await expect(alertWindow.locator(".random-alert-actions")).toHaveCSS("justify-content", "flex-end");
     await expect(alertWindow).not.toContainText("Game Progress profile updated to rohin ^.^.");
     await expect(alertWindow).toHaveCSS("z-index", "1000000");
+    // Raised, not modal: nothing blocks the desktop behind it.
+    await expect(alertWindow).toHaveAttribute("role", "dialog");
+    await expect(alertWindow).toHaveAttribute("aria-modal", "false");
+    await expect(alertWindow).toHaveAccessibleName("System Alert");
     await expect(page.locator("#administrator-alert-close")).toBeFocused();
 
     const alertPosition = await alertWindow.evaluate((element) => {

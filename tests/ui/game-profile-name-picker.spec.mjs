@@ -140,3 +140,25 @@ test("profile picker highlights, selects, rerolls, and retains the chosen favori
   await expect(combobox).toHaveValue(replacementName);
   await expect(listbox).toBeHidden();
 });
+
+test("profile dialog is non-modal because keyboard focus can still reach the desktop", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const { dialog } = await prepareNamePicker(page);
+  await expect(dialog).toHaveAttribute("aria-modal", "false");
+  await expect(dialog).toHaveAttribute("aria-labelledby", "game-profile-title");
+
+  // The backdrop blocks pointer input only; Tab leaves the dialog for the desktop.
+  let leftDialog = false;
+  for (let step = 0; step < 40 && !leftDialog; step += 1) {
+    await page.keyboard.press("Tab");
+    leftDialog = await page.evaluate(() => {
+      const active = document.activeElement;
+      return Boolean(
+        active &&
+          active !== document.body &&
+          !document.getElementById("game-profile-prompt").contains(active)
+      );
+    });
+  }
+  expect(leftDialog).toBe(true);
+});

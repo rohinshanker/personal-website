@@ -9,6 +9,7 @@ const {
   debounceTimer,
 } = window.homeUtil;
 const {
+  applyWindowDialogSemantics,
   isAdminControlsAppId,
   isWindowVisible,
   nextWindowZIndex,
@@ -371,6 +372,7 @@ const openManagedRandomEventWindow = (
   if (beforeShow) beforeShow();
   loadDeferredMedia(win);
   win.classList.remove("is-hidden", "is-closing", ...(clearClasses || []));
+  applyWindowDialogSemantics(win);
   win.setAttribute("aria-hidden", "false");
   if (position) position(win);
   else positionRandomEventWindowInViewport(win);

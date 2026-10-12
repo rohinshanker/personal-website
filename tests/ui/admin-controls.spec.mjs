@@ -680,6 +680,13 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   );
   await expect(eventPreview.getByRole("button")).toHaveCount(0);
   expect(await eventPreview.ariaSnapshot()).not.toContain("button");
+  // The live window is a named dialog; its decorative copy carries none of that.
+  await expect(page.locator("#dodging-popup-window:not([data-admin-event-preview-window])"))
+    .toHaveAttribute("role", "dialog");
+  for (const attribute of ["role", "aria-labelledby", "aria-modal"]) {
+    await expect(eventPreview.locator("#dodging-popup-window")).not.toHaveAttribute(attribute, /.*/);
+  }
+  await expect(eventPreview.getByRole("dialog", { includeHidden: true })).toHaveCount(0);
 
   await eventList.selectOption("mcafee-antivirus-update");
   await expect(eventPreview.locator("#mcafee-prompt-window")).toBeVisible();
@@ -688,6 +695,11 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await eventList.selectOption("debug-system-alert-seneca-announcement");
   await expect(eventPreview.locator("#debug-system-alert-title")).toHaveText(
     "System Announcement"
+  );
+  await expect(eventPreview.locator("#debug-system-alert-window")).not.toHaveAttribute("role", /.*/);
+  await expect(eventPreview.locator("#debug-system-alert-window")).not.toHaveAttribute(
+    "aria-labelledby",
+    /.*/
   );
   await expect(eventPreview.locator("#debug-system-alert-message")).toContainText(
     "someone else could be handed your days"

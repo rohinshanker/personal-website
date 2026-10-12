@@ -5,7 +5,7 @@
     adminStyles:
       "styles/home/admin-controls.css?v=on-demand-home-loading-20261007",
     adminOrchestrator:
-      "scripts/home/admin/orchestrator.js?v=on-demand-home-loading-20261007",
+      "scripts/home/admin/orchestrator.js?v=dialog-semantics-20261012",
     adminControls:
       "scripts/home/admin-controls.js?v=vanishing-popup-layout-20261009",
   });

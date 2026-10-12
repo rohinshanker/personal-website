@@ -146,6 +146,7 @@ const prepareAdminRandomEventPreview = (sourceWindow, eventId) => {
   preview.hidden = false;
   preview.inert = true;
   preview.setAttribute("aria-hidden", "true");
+  preview.removeAttribute("aria-labelledby");
   preview.removeAttribute("aria-modal");
   preview.removeAttribute("role");
   preview.setAttribute("data-admin-event-preview-window", eventId);

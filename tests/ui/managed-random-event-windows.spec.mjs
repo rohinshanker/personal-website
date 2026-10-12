@@ -190,6 +190,10 @@ for (const viewport of VIEWPORTS) {
       // animation, and raises the window above its trigger.
       await expect(win, `${event.id} opens`).toBeVisible();
       await expect(win).toHaveAttribute("aria-hidden", "false");
+      await expect(win, `${event.id} is a dialog`).toHaveAttribute("role", "dialog");
+      await expect(win).not.toHaveAttribute("aria-modal", "true");
+      const title = (await win.locator(".title-bar-text").first().textContent()).trim();
+      await expect(win, `${event.id} is named by its title`).toHaveAccessibleName(title);
       const opening = await readAnimation(win, "retro-window-open", event.id);
       expect(
         SHARED_OPEN_DURATIONS,
@@ -347,8 +351,15 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
     await expect(windows).toHaveCount(10);
     await expect(windows.last()).toBeVisible();
     await expect(windows.last()).not.toHaveClass(/is-opening/);
+    const readTitleIds = () =>
+      windows.evaluateAll((elements) => elements.map((element) => element.getAttribute("aria-labelledby")));
+    const firstTitleIds = await readTitleIds();
+    expect(new Set(firstTitleIds).size).toBe(10);
     for (const win of await windows.all()) {
       await expect(win).toHaveClass(/random-event-window/);
+      await expect(win).toHaveAttribute("role", "dialog");
+      await expect(win).not.toHaveAttribute("aria-modal", /.+/);
+      await expect(win).toHaveAccessibleName("Microsoft Word");
       const box = await win.boundingBox();
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
@@ -360,6 +371,13 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
     await page.locator("#admin-trigger-now").click();
     await expect(windows).toHaveCount(10);
     await expect(windows.last()).toBeVisible();
+    // Recreated windows take fresh ids that no earlier or current element holds.
+    const secondTitleIds = await readTitleIds();
+    expect(new Set([...firstTitleIds, ...secondTitleIds]).size).toBe(20);
+    for (const id of secondTitleIds) {
+      await expect(page.locator(`[id="${id}"]`)).toHaveCount(1);
+    }
+    await expect(page.getByRole("dialog", { name: "Microsoft Word" })).toHaveCount(10);
     await windows.last().getByRole("button", { name: "Close", exact: true }).click();
     await expect(windows).toHaveCount(0);
   });
@@ -395,6 +413,10 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
     await expect(puck).toBeVisible();
     for (const win of [enemies.first(), block, puck]) {
       await expect(win).toHaveClass(/random-event-window/);
+      await expect(win).toHaveAttribute("role", "dialog");
+      await expect(win).toHaveAttribute("aria-labelledby", /^window-title-\d+$/);
+      const title = (await win.locator(".title-bar-text").first().textContent()).trim();
+      await expect(win).toHaveAccessibleName(title);
       await expect(win).not.toHaveClass(/is-opening/);
       expect(await win.evaluate((element) =>
         getComputedStyle(element).getPropertyValue("--event-window-open-duration").trim()

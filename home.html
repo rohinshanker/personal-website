@@ -113,7 +113,7 @@
     <link rel="stylesheet" href="styles/home/apps/snake.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-mobile-actions-20260928" />
     <!-- The Sudoku generator runs in a worker; main.js reads its versioned URL from here. -->
-    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" as="worker" />
+    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" as="worker" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=clash-badge-spacing-20261002" />
@@ -124,7 +124,7 @@
       defer
     ></script>
     <script
-      src="scripts/home/core/resources.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812"
+      src="scripts/home/core/resources.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1"
       defer
     ></script>
   </head>
@@ -2354,7 +2354,7 @@
               </div>
             </dialog>
             <div class="sudoku-solve-popup" id="sudoku-solve-popup" aria-hidden="true">
-              <div class="sudoku-solve-dialog" role="dialog" aria-modal="true" aria-labelledby="sudoku-solve-title">
+              <div class="sudoku-solve-dialog" role="dialog" aria-modal="false" aria-labelledby="sudoku-solve-title">
                 <div class="title-bar">
                   <div class="title-bar-text" id="sudoku-solve-title">Sudoku</div>
                 </div>
@@ -3655,7 +3655,7 @@
         data-app-window="administrator-alert"
         id="administrator-alert-window"
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-labelledby="administrator-alert-title"
       >
         <div class="title-bar">
@@ -3892,7 +3892,7 @@
         class="window game-profile-dialog"
         id="game-profile-dialog"
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-labelledby="game-profile-title"
       >
         <div class="title-bar">
@@ -6991,40 +6991,40 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721" defer></script>
     <script src="scripts/home/system-alerts.js?v=repo-hygiene-20260927" defer></script>
-    <script src="scripts/home/core/dom.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/core/media.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/core/administrator-session.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
+    <script src="scripts/home/core/dom.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/core/media.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/core/administrator-session.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
     <script src="scripts/home/core/cursor-mode.js?v=shared-cursor-runtime-20260930" defer></script>
-    <script src="scripts/home/core/util.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/core/pointer-cursor.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/core/static-noise.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/core/activity.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/core/activation.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/core/windows.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
+    <script src="scripts/home/core/util.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/core/pointer-cursor.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/core/static-noise.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/core/activity.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/core/activation.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/core/windows.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
     <script src="scripts/home/modeling-portfolio.js?v=modeling-arthaus-photo-20261006" defer></script>
     <script src="scripts/home/features/about.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/desktop.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/gallery.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/study.js?v=home-feature-modules-20261003" defer></script>
-    <script src="scripts/home/games/rules.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/games/minesweeper.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/games/snake.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/games/solitaire.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/games/sudoku.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/games/session.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/features/game-stats.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/features/snake.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/features/minesweeper.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/features/solitaire.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
-    <script src="scripts/home/features/sudoku.js?v=game-build-410fdc1f8e89cbf480ed8b55f774499caffe1628494cfcbd7e75c6bd6ee42812" defer></script>
+    <script src="scripts/home/games/rules.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/games/minesweeper.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/games/snake.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/games/solitaire.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/games/sudoku.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/games/session.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/features/game-stats.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/features/snake.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/features/minesweeper.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/features/solitaire.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
+    <script src="scripts/home/features/sudoku.js?v=game-build-08c3460d7b85d08d094b3254133dc8629a09765462f2c8b1217a284ec1ca95a1" defer></script>
     <script src="scripts/home/features/life-counter.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/neko.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/lightning.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/dialogue.js?v=home-feature-modules-20261003" defer></script>
-    <script src="scripts/home/events/runtime.js?v=home-loading-repair-20261007" defer></script>
+    <script src="scripts/home/events/runtime.js?v=dialog-semantics-20261012" defer></script>
     <script src="scripts/home/events/notes.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/skill-check.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/creatures.js?v=home-feature-modules-20261003" defer></script>

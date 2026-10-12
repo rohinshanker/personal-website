@@ -2,7 +2,7 @@
 
 - Purpose: Run and maintain browser screenshot baselines and WCAG scans.
 - Scope: Browser test projects, isolated containers, fixtures, and known accessibility limitations.
-- Last verified: 2026-10-04
+- Last verified: 2026-10-12
 
 ## Playwright projects
 
@@ -190,6 +190,38 @@ progress-bar name checks cover the loading meters that axe would otherwise miss.
   announces at the right moment. Keep the suite's existing focus and keyboard
   assertions.
 - Windows behind authentication (Admin, Video Editor) are outside this matrix.
+
+### Window dialog semantics
+
+`applyWindowDialogSemantics` in `scripts/home/core/windows.js` runs over every
+static `.window` at boot and inside `openManagedRandomEventWindow`, which is
+how dynamic windows (Word, Brand) receive it before they are exposed. A
+top-level window becomes `role="dialog"` named by `aria-labelledby` on its own
+title-bar text. Contract:
+
+- Keep an explicit `alertdialog` role, an existing `aria-labelledby` or
+  `aria-label`, and an existing title id. Never rewrite an explicit
+  non-dialog role.
+- A derived title id is `<window id>-title` or `<data-app-window>-window-title`;
+  an anonymous or colliding window gets a fresh `window-title-<n>`, so a
+  recreated dynamic window never reuses or duplicates an id.
+- Leave nested windows (`#gears-nest-prompt`) and untitled windows alone: an
+  unnamed dialog is worse than none. Admin previews are inert decoration and
+  strip `role`, `aria-labelledby` and `aria-modal`.
+- The helper never sets `aria-modal`. Claim `aria-modal="true"` only where
+  background interaction is actually blocked, such as the `showModal()`
+  `#sudoku-errors-prompt`. A pointer-blocking backdrop alone (Leaderboard
+  Profile, Sudoku solved, Administrator alert) is not modal while Tab still
+  reaches the desktop; their specs prove that reachability.
+- The role adds no behavior: Escape, focus placement/restoration and stacking
+  stay with their existing owners.
+
+`tests/ui/window-dialog-semantics.spec.mjs` checks the boot inventory, every
+helper branch on real DOM, open/close/reopen, hidden-window Tab exclusion,
+keyboard dismissal and an axe scan. The managed-window Word and Brand cases
+check real dynamic titles and fresh ids across recreation, and the Admin
+Controls preview case checks that copies expose no dialog. Removing the boot
+call, the open-path call or the preview strip must fail those cases.
 
 ### Repairs this contract depends on
 

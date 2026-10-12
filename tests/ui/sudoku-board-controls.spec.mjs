@@ -440,7 +440,10 @@ test("keys pressed on the solved dialog leave the finished board alone", async (
   await expect(cellAt(win, target)).toHaveAttribute("data-sudoku-value", "2");
 
   // The dialog covers the board without trapping focus, so a cell can still
-  // take it. The grid's own key path and undo/redo stay inert all the same.
+  // take it, and it says so: it is not modal. The grid's own key path and
+  // undo/redo stay inert all the same.
+  const solveDialog = win.getByRole("dialog", { name: "Sudoku" });
+  await expect(solveDialog).toHaveAttribute("aria-modal", "false");
   await cellAt(win, target).focus();
   await expect(cellAt(win, target)).toBeFocused();
   for (const key of ["Backspace", "Delete", "0", "7", "n", "ArrowUp", "ArrowRight"]) {
