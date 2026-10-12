@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-10-07
+- Last verified: 2026-10-12
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -73,6 +73,15 @@ manifest:
 node scripts/build-study-resources-manifest.mjs
 npm run study-resources:check
 node --test tests/study-resources-manifest.test.mjs
+```
+
+After changing shoot data in `scripts/home/modeling-portfolio.js`, regenerate and
+verify the Home Modeling markup (see [modeling-portfolio.md](modeling-portfolio.md)):
+
+```bash
+node scripts/build-modeling-markup.mjs
+npm run modeling:check
+node --test tests/build-modeling-markup.test.mjs tests/modeling-portfolio.test.mjs
 ```
 
 After adding or re-encoding media under a directory the conversion pipeline

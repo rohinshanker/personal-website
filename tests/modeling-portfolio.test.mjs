@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
-import vm from "node:vm";
-
+import { loadModelingPortfolio } from "../scripts/build-modeling-markup.mjs";
 import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -17,17 +16,10 @@ const isFile = async (path) => {
   }
 };
 
-/** Evaluates the shared data script the same way a browser would. */
-const loadPortfolio = async () => {
-  const context = { window: {} };
-  vm.runInNewContext(await read("scripts/home/modeling-portfolio.js"), context);
-  // Values born in the sandbox realm carry its prototypes; a JSON round trip
-  // makes them plain objects that deep-equal comparisons accept.
-  return JSON.parse(JSON.stringify(context.window.rohinModelingPortfolio));
-};
+const loadPortfolio = async () => loadModelingPortfolio(await read("scripts/home/modeling-portfolio.js"));
 
-const decodeEntities = (value) =>
-  value.replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&#39;/g, "'");
+const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" };
+const decodeEntities = (value) => value.replace(/&(amp|lt|gt|quot|#39);/g, (_, name) => ENTITIES[name]);
 
 /** The Home Modeling window's selector rows, in document order. */
 const homeSelectorRows = (home) =>

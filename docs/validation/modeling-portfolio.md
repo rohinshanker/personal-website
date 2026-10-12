@@ -2,13 +2,15 @@
 
 - Purpose: Preserve the public `/modeling/` portfolio route, the shoot data it shares with Home, and the Home "Open in separate tab" prompt.
 - Scope: `modeling/index.html`, `modeling/style.css`, `modeling/script.js`, `scripts/home/modeling-portfolio.js`, the Home Modeling window and its `modeling-launch` prompt, release packaging, and the sitemap.
-- Last verified: 2026-09-30
+- Last verified: 2026-10-12
 
 ## Data contract
 
 - `scripts/home/modeling-portfolio.js` is the single source for every shoot: id, title, date, selector icon, asset folder, ordered files, autoplay, links, and credits. It publishes `window.rohinModelingPortfolio` and loads before `scripts/home/main.js` on Home and before `script.js` on the route.
-- Home keeps its static selector rows and viewer panels. `tests/modeling-portfolio.test.mjs` fails when their order, titles, dates, icons, or credit lines drift from the shared data, and when a listed file, icon, or link icon is missing from disk.
-- Add a shoot by inserting one entry in the shared data (newest first) and the matching Home selector row and viewer panel. Photos stay in `assets/modeling/<folder>/` at their original quality. A shoot whose `files` list is empty is unpublished: `/modeling/` skips it and Home must not carry a row or panel for it; listing its files publishes it, and the parity test then demands the Home markup.
+- Home's selector rows and viewer panels are static, crawlable HTML generated from the shared data by `node scripts/build-modeling-markup.mjs`. It rewrites only the lines between the `BEGIN generated modeling selector rows` / `modeling viewer panels` comments and their `END` comments in `home.html`, at each start marker's indentation; never edit those lines by hand. The first published shoot gets `is-active` and its panel stays visible; text is HTML-escaped and attributes also escape quotes.
+- Each published shoot needs a non-empty `id`, `title`, `date`, and `icon`, unique ids, and a `files` array; `credits` is optional. The generator fails naming the shoot and field, when nothing is published, and when a marker is missing, repeated, reversed, or shares its line with other text.
+- `npm run modeling:check` (release `verify` job) and `tests/build-modeling-markup.test.mjs` fail on stale Home markup. `tests/modeling-portfolio.test.mjs` independently parses Home and fails when order, titles, dates, icons, or credit lines drift from the data, and when a listed file, icon, or link icon is missing from disk.
+- Add a shoot by inserting one entry in the shared data (newest first), then run the generator. Photos stay in `assets/modeling/<folder>/` at their original quality. A shoot whose `files` list is empty is unpublished: `/modeling/` skips it and the generator omits its Home row and panel; listing its files publishes it.
 - When shoot data changes, update the shared script cache token together in `home.html`, the `index.html` preload list, and `modeling/index.html`. `tests/shared-literals.test.mjs` checks their parity.
 - `instagram` and `dropbox` live in the same file. An empty Dropbox URL renders a disabled Highlights or Digitals button with a "Link coming soon" note; a value renders a new-tab link in its place.
 
@@ -30,7 +32,8 @@
 ## Verification
 
 ```bash
-node --test tests/modeling-portfolio.test.mjs tests/content-tool-placeholders.test.mjs tests/media-priority.test.mjs
+npm run modeling:check
+node --test tests/build-modeling-markup.test.mjs tests/modeling-portfolio.test.mjs tests/content-tool-placeholders.test.mjs tests/media-priority.test.mjs
 npx playwright test --project=ui tests/ui/modeling-portfolio.spec.mjs tests/ui/modeling-launch-prompt.spec.mjs
 npx playwright test --project=ui tests/ui/accessibility.spec.mjs -g "modeling"
 npm run test:visual

@@ -146,6 +146,7 @@ node scripts/check-no-secrets.mjs
 npm run game-stats:integrity:check
 npm run app-icons:check
 npm run study-resources:check
+npm run modeling:check
 npm run media:check
 git diff --check
 ```

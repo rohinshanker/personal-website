@@ -1,6 +1,8 @@
 // Modeling shoot data shared by the Home Modeling window and the /modeling/ portfolio route.
 // Order is newest first; every path is relative to the repository root. A shoot with an empty
 // `files` list stays hidden on /modeling/ and has no Home row until its photos are listed.
+// Home's selector rows and viewer panels are generated from this file: after editing a shoot,
+// run `node scripts/build-modeling-markup.mjs`.
 (() => {
 const brandLinks = {
   standstill: [

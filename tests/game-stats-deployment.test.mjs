@@ -1537,6 +1537,7 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     packageJson.scripts["study-resources:check"],
     "node scripts/build-study-resources-manifest.mjs --check"
   );
+  assert.equal(packageJson.scripts["modeling:check"], "node scripts/build-modeling-markup.mjs --check");
   assert.equal(packageJson.scripts["media:optimize"], "node scripts/optimize-media.mjs");
   assert.equal(packageJson.scripts["media:check"], "node scripts/optimize-media.mjs --check");
   assert.equal(
@@ -1603,6 +1604,7 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.match(verifySource, /npm run game-stats:integrity:check/);
   assert.match(verifySource, /npm run app-icons:check/);
   assert.match(verifySource, /npm run study-resources:check/);
+  assert.match(verifySource, /npm run modeling:check/);
   assert.match(verifySource, /npm run media:check/);
   assert.match(verifySource, /npm --prefix workers\/game-stats run deploy:check/);
   assert.doesNotMatch(verifySource, /run deploy --/);
