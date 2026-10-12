@@ -100,6 +100,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
     const upload = page.locator("#distress-upload-window");
     await expect(upload).toBeVisible();
     await expect(upload.getByRole("button", { name: "OK" })).toBeFocused();
+    await expect(upload).not.toHaveClass(/is-opening/);
     await captureState(page, win, testInfo, `distress-locked-${viewport.name}`);
 
     await upload.getByRole("button", { name: "OK" }).click();

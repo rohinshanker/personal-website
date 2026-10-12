@@ -98,6 +98,13 @@ prompt, adjustment and closed states with axe and real keyboard interaction.
 
 ## Regression checks
 
+The Distress Signal receiver exposes its power as a named `progressbar`, with
+`aria-valuenow` derived from the same clamped value as the visible fill through
+charging, completion and reset. Its decorative minimap uses a named image role;
+adjacent text supplies bearing, range and signal strength.
+`distress-signal-accessibility.spec.mjs` checks those states at four viewports.
+Wait for the upload alert's opening animation to finish before capturing it.
+
 ```bash
 node --test tests/managed-random-event-windows.test.mjs \
   tests/random-event-lifecycle.test.mjs tests/random-event-cooldown.test.mjs \
