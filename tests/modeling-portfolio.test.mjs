@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile, stat } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { promisify } from "node:util";
 import { loadModelingPortfolio } from "../scripts/build-modeling-markup.mjs";
 import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
 
@@ -16,7 +20,8 @@ const isFile = async (path) => {
   }
 };
 
-const loadPortfolio = async () => loadModelingPortfolio(await read("scripts/home/modeling-portfolio.js"));
+const DATA_PATH = "scripts/home/modeling-portfolio.js";
+const loadPortfolio = async () => loadModelingPortfolio(await read(DATA_PATH));
 
 const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" };
 const decodeEntities = (value) => value.replace(/&(amp|lt|gt|quot|#39);/g, (_, name) => ENTITIES[name]);
@@ -47,6 +52,65 @@ const homeViewerPanels = (home) => {
     };
   }
   return panels;
+};
+
+/** Checks every shoot's identity, files, and optional links and credits against the disk. */
+const assertShootsComplete = async (portfolio) => {
+  const ids = portfolio.shoots.map((shoot) => shoot.id);
+  assert.equal(new Set(ids).size, ids.length, "shoot ids are unique");
+  for (const shoot of portfolio.shoots) {
+    assert.match(shoot.id, /^modeling-[a-z0-9-]+$/);
+    assert.ok(shoot.title.trim().length, `${shoot.id} needs a title`);
+    assert.match(shoot.date, /^[A-Z][a-z]+ \d{4}$/, `${shoot.id} date reads "Month YYYY"`);
+    assert.ok(await isFile(shoot.icon), `${shoot.id} icon ${shoot.icon} must exist`);
+    assert.ok(
+      (await stat(new URL(`${shoot.folder}/`, root))).isDirectory(),
+      `${shoot.id} folder ${shoot.folder} must exist even before its photos are listed`
+    );
+    for (const filename of shoot.files) {
+      assert.ok(await isFile(`${shoot.folder}/${filename}`), `${shoot.folder}/${filename} must exist`);
+    }
+    assert.equal(new Set(shoot.files).size, shoot.files.length, `${shoot.id} files are unique`);
+    for (const field of ["links", "credits"]) {
+      assert.ok(shoot[field] === undefined || Array.isArray(shoot[field]), `${shoot.id} ${field} is an optional list`);
+    }
+    for (const link of shoot.links ?? []) {
+      assert.match(link.href, /^https:\/\//, `${shoot.id} link ${link.label} uses https`);
+      assert.ok(link.label.trim().length, `${shoot.id} links carry labels`);
+      assert.ok(link.type in portfolio.linkIcons, `${shoot.id} link type ${link.type} has an icon`);
+    }
+    for (const line of shoot.credits ?? []) {
+      assert.ok(line.trim().length, `${shoot.id} credits have no blank lines`);
+    }
+  }
+};
+
+/** Parses Home independently of the generator and compares it with the shared data. */
+const assertHomeMatchesPortfolio = (portfolio, home) => {
+  const rows = homeSelectorRows(home);
+  const panels = homeViewerPanels(home);
+  const published = portfolio.shoots.filter((shoot) => shoot.files.length > 0);
+
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    published.map((shoot) => shoot.id),
+    "selector order matches the published shared order"
+  );
+  for (const shoot of portfolio.shoots) {
+    if (!shoot.files.length) {
+      assert.ok(!panels[shoot.id], `${shoot.id} is unpublished and must have no Home panel`);
+      continue;
+    }
+    const row = rows.find((candidate) => candidate.id === shoot.id);
+    assert.equal(row.title, shoot.title, `${shoot.id} selector title`);
+    assert.equal(row.date, shoot.date, `${shoot.id} selector date`);
+    assert.equal(row.icon, shoot.icon, `${shoot.id} selector icon`);
+    const panel = panels[shoot.id];
+    assert.ok(panel, `${shoot.id} has a viewer panel`);
+    assert.equal(panel.heading, shoot.title, `${shoot.id} viewer heading`);
+    assert.equal(panel.date, shoot.date, `${shoot.id} viewer date`);
+    assert.deepEqual(panel.credits, shoot.credits ?? [], `${shoot.id} viewer credits`);
+  }
 };
 
 test("the shared modeling data is complete and every referenced file exists", async () => {
@@ -108,60 +172,49 @@ test("the shared modeling data is complete and every referenced file exists", as
       credits: ["Talent: Rohin Shanker", "Photographer: Kehinde Sowemimo"],
     },
   ]);
-  const ids = portfolio.shoots.map((shoot) => shoot.id);
-  assert.equal(new Set(ids).size, ids.length, "shoot ids are unique");
-  for (const shoot of portfolio.shoots) {
-    assert.match(shoot.id, /^modeling-[a-z0-9-]+$/);
-    assert.ok(shoot.title.trim().length, `${shoot.id} needs a title`);
-    assert.match(shoot.date, /^[A-Z][a-z]+ \d{4}$/, `${shoot.id} date reads "Month YYYY"`);
-    assert.ok(await isFile(shoot.icon), `${shoot.id} icon ${shoot.icon} must exist`);
-    assert.ok(
-      (await stat(new URL(`${shoot.folder}/`, root))).isDirectory(),
-      `${shoot.id} folder ${shoot.folder} must exist even before its photos are listed`
-    );
-    for (const filename of shoot.files) {
-      assert.ok(await isFile(`${shoot.folder}/${filename}`), `${shoot.folder}/${filename} must exist`);
-    }
-    assert.equal(new Set(shoot.files).size, shoot.files.length, `${shoot.id} files are unique`);
-    for (const link of shoot.links) {
-      assert.match(link.href, /^https:\/\//, `${shoot.id} link ${link.label} uses https`);
-      assert.ok(link.label.trim().length, `${shoot.id} links carry labels`);
-      assert.ok(link.type in portfolio.linkIcons, `${shoot.id} link type ${link.type} has an icon`);
-    }
-    for (const line of shoot.credits) {
-      assert.ok(line.trim().length, `${shoot.id} credits have no blank lines`);
-    }
-  }
+  await assertShootsComplete(portfolio);
   assert.equal(portfolio.shoots.filter((shoot) => shoot.autoplay).length, 1);
   assert.equal(portfolio.shoots[2].id, "modeling-stand-still-drop");
 });
 
 test("the Home Modeling window matches the shared data in order, titles, dates, and credits", async () => {
   const [portfolio, home] = await Promise.all([loadPortfolio(), read("home.html")]);
-  const rows = homeSelectorRows(home);
-  const panels = homeViewerPanels(home);
-  const published = portfolio.shoots.filter((shoot) => shoot.files.length > 0);
+  assertHomeMatchesPortfolio(portfolio, home);
+});
 
-  assert.deepEqual(
-    rows.map((row) => row.id),
-    published.map((shoot) => shoot.id),
-    "selector order matches the published shared order"
-  );
-  for (const shoot of portfolio.shoots) {
-    if (!shoot.files.length) {
-      assert.ok(!panels[shoot.id], `${shoot.id} is unpublished and must have no Home panel`);
-      continue;
-    }
-    const row = rows.find((candidate) => candidate.id === shoot.id);
-    assert.equal(row.title, shoot.title, `${shoot.id} selector title`);
-    assert.equal(row.date, shoot.date, `${shoot.id} selector date`);
-    assert.equal(row.icon, shoot.icon, `${shoot.id} selector icon`);
-    const panel = panels[shoot.id];
-    assert.ok(panel, `${shoot.id} has a viewer panel`);
-    assert.equal(panel.heading, shoot.title, `${shoot.id} viewer heading`);
-    assert.equal(panel.date, shoot.date, `${shoot.id} viewer date`);
-    assert.deepEqual(panel.credits, shoot.credits, `${shoot.id} viewer credits`);
-  }
+test("a shoot that omits its optional links and credits passes generation, the check, and parity", async (t) => {
+  const copy = await mkdtemp(path.join(tmpdir(), "modeling-optional-"));
+  t.after(() => rm(copy, { recursive: true, force: true }));
+  await mkdir(path.join(copy, "scripts/home"), { recursive: true });
+  await copyFile(new URL("scripts/build-modeling-markup.mjs", root), path.join(copy, "scripts/build-modeling-markup.mjs"));
+  const run = (...args) =>
+    promisify(execFile)(process.execPath, ["scripts/build-modeling-markup.mjs", ...args], { cwd: copy });
+
+  const [source, home] = await Promise.all([read(DATA_PATH), read("home.html")]);
+  const entry = source.indexOf('id: "modeling-garb-garbage-runway",');
+  const edited =
+    source.slice(0, entry) +
+    source
+      .slice(entry)
+      .replace("    links: brandLinks.garb,\n", "")
+      .replace('    credits: ["Talent: Rohin Shanker", "Designer: Nora"],\n', "");
+  const portfolio = loadModelingPortfolio(edited);
+  const shoot = portfolio.shoots.find((candidate) => candidate.id === "modeling-garb-garbage-runway");
+  assert.ok(!("links" in shoot) && !("credits" in shoot), "the probe omits both optional lists");
+  await writeFile(path.join(copy, DATA_PATH), edited);
+  await writeFile(path.join(copy, "home.html"), home);
+
+  await assertShootsComplete(portfolio);
+  assert.throws(() => assertHomeMatchesPortfolio(portfolio, home), /modeling-garb-garbage-runway viewer credits/);
+  await assert.rejects(run("--check"), (error) => error.code === 1);
+
+  await run();
+  assert.equal((await run("--check")).stdout, "Home modeling markup is current.\n");
+  const generated = await readFile(path.join(copy, "home.html"), "utf8");
+  const removed = "              <p>Talent: Rohin Shanker</p>\n              <p>Designer: Nora</p>\n";
+  assert.equal(home.split(removed).length, 2);
+  assert.equal(generated, home.replace(removed, ""), "only the omitted credit lines leave Home");
+  assertHomeMatchesPortfolio(portfolio, generated);
 });
 
 test("Home derives its modeling galleries from the shared data instead of duplicating it", async () => {
