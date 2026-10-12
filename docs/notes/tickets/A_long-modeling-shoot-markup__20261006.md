@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-10-06
 - Updated: 2026-10-12
-- Current State: Implemented on `codex/modeling-shoot-markup-20261012` (baseline `e815f0c`); awaiting independent review and the coordinator's integrated full UI suite. Keep active until then.
+- Current State: Implemented on `codex/modeling-shoot-markup-20261012` (baseline `e815f0c`); reviewed with all local integration gates passed; awaiting final CI release.
 - Verification: Preserve shoot ordering, complete credits/links, accessible names and meaningful crawlable text. Test shared-data rendering and missing optional fields, navigate every shoot, and inspect Home and `/modeling/` at four standard viewports. Run affected behavior/browser/accessibility/visual, integrity and context checks and review the exact patch.
 - Cleanup: Distill the single-source rendering contract into the indexed modeling validation guide, then resolve and remove this ticket/index row.
 
