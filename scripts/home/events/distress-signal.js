@@ -31,6 +31,7 @@ const distressSignalWindow = byId("distress-signal-window");
 const distressSignalClose = byId("distress-signal-close");
 const distressRadioPanel = byId("distress-radio-panel");
 const distressPowerButton = byId("distress-power-button");
+const distressPowerProgress = byId("distress-power-progress");
 const distressPowerProgressBar = byId("distress-power-progress-bar");
 const distressSignalCanvas = byId("distress-signal-canvas");
 const distressFrequencyDial = byId("distress-frequency-dial");
@@ -173,9 +174,13 @@ const lockDistressNavigation = () => {
   );
 };
 
+// The fill and the announced value always come from the same clamped number.
 const setDistressPowerProgress = (progress) => {
-  if (!distressPowerProgressBar) return;
-  distressPowerProgressBar.style.width = `${clampNumber(progress, 0, 1) * 100}%`;
+  const percent = clampNumber(progress, 0, 1) * 100;
+  if (distressPowerProgressBar) distressPowerProgressBar.style.width = `${percent}%`;
+  if (distressPowerProgress) {
+    distressPowerProgress.setAttribute("aria-valuenow", String(Math.round(percent)));
+  }
 };
 
 const drawDistressPanelNoise = () => {

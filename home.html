@@ -4736,7 +4736,15 @@
         </div>
         <div class="distress-power-row">
           <button type="button" id="distress-power-button">Power</button>
-          <div class="distress-power-progress" aria-label="Receiver power progress">
+          <div
+            class="distress-power-progress"
+            id="distress-power-progress"
+            role="progressbar"
+            aria-label="Receiver power"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
             <div class="distress-power-progress-bar" id="distress-power-progress-bar"></div>
           </div>
         </div>
@@ -4751,7 +4759,7 @@
           </label>
         </div>
         <div class="distress-nav-panel is-off" id="distress-nav-panel">
-          <div class="distress-minimap" aria-label="Signal direction minimap">
+          <div class="distress-minimap" role="img" aria-label="Signal direction minimap">
             <div class="distress-minimap-sweep" aria-hidden="true"></div>
             <div class="distress-minimap-arrow" id="distress-minimap-arrow" aria-hidden="true"></div>
             <div class="distress-minimap-center" aria-hidden="true"></div>
@@ -7031,7 +7039,7 @@
     <script src="scripts/home/events/word-error.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/gradescope-curve.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/red-tool.js?v=home-feature-modules-20261003" defer></script>
-    <script src="scripts/home/events/distress-signal.js?v=home-feature-modules-20261003" defer></script>
+    <script src="scripts/home/events/distress-signal.js?v=distress-semantics-20261012" defer></script>
     <script src="scripts/home/events/gears-nest.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/fate.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/soot-sprites.js?v=home-feature-modules-20261003" defer></script>

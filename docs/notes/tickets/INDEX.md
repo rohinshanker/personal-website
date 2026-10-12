@@ -2,6 +2,7 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
+| A | 2026-10-12 | [A_distress-signal-accessibility__20261012.md](A_distress-signal-accessibility__20261012.md) | Distress Signal progressbar/minimap semantics repaired and committed; awaiting coordinator review, CI and release. |
 | O | 2026-10-12 | [O_modeling-measurements-us-eu__20261012.md](O_modeling-measurements-us-eu__20261012.md) | Add 32-inch inseam and 135-lb weight; replace in/cm with US/EU modes and matching shoe sizes. Queued. |
 | O | 2026-10-07 | [O_review-archived-calendar-photos__20261006.md](O_review-archived-calendar-photos__20261006.md) | All 18 photos are archived byte-for-byte and linked for owner review; record per-file choices before deletion. |
 | O | 2026-10-07 | [O_background-image-comparison__20261006.md](O_background-image-comparison__20261006.md) | Real four-size comparison ready: 49 KB WebP versus 352 KB JPEG. Await explicit owner visual choice before shipping/closure. |

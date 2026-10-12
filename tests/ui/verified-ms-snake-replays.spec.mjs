@@ -127,6 +127,12 @@ window.__verifiedSnakeController = Object.freeze({
 const preparePage = async (page, app) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
+  // Opening the app and playing are natural random-event triggers; a
+  // near-one draw keeps every probability gate closed so the scans see only
+  // the game under test.
+  await page.addInitScript(() => {
+    Math.random = () => 0.999999;
+  });
   await installStatsHookFixture(page);
   await installControllerFixtures(page);
   await page.goto("/home.html", { waitUntil: "load" });
