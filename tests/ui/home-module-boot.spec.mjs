@@ -5,6 +5,13 @@ import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 // This deliberately boots the shipped feature scripts. The shared fixture
 // rewrites only the per-event debug flags, so a missing dependency or handler
 // still surfaces here rather than being hidden behind a replacement script.
+test.beforeEach(async ({ page }) => {
+  // Keep natural event probability gates closed while testing app lifecycle.
+  await page.addInitScript(() => {
+    Math.random = () => 0.999999;
+  });
+});
+
 for (const viewport of REVIEW_VIEWPORTS) {
   test(`Home feature scripts boot and close windows at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);

@@ -70,14 +70,6 @@ const focusInHiddenWindow = (page) =>
     );
   });
 
-const finishOpening = (win) =>
-  win.evaluate((element) => {
-    if (!element.classList.contains("is-opening")) return undefined;
-    return new Promise((resolve) => {
-      element.addEventListener("animationend", resolve, { once: true });
-    });
-  });
-
 test("every top-level Home window is a uniquely titled non-modal dialog", async ({ page }) => {
   await openHomeDesktop(page, DESKTOP);
   const inventory = await readWindowInventory(page);
@@ -305,7 +297,10 @@ test("keyboard dismissal and focus restoration are unchanged", async ({ page }) 
 test("random-event windows gain dialog semantics on the shared open path", async ({ page }) => {
   await openHomeDesktop(page, DESKTOP);
   const opened = await page.evaluate(() => {
-    const { showManagedRandomEventWindow } = window.homeEventRuntime;
+    const {
+      bindManagedRandomEventWindowAnimation,
+      showManagedRandomEventWindow,
+    } = window.homeEventRuntime;
     const win = document.createElement("div");
     win.className = "window random-event-window is-hidden";
     win.setAttribute("aria-hidden", "true");
@@ -313,6 +308,7 @@ test("random-event windows gain dialog semantics on the shared open path", async
       '<div class="title-bar"><div class="title-bar-text">Dynamic Probe</div></div>' +
       '<div class="window-body"><button type="button">OK</button></div>';
     document.body.append(win);
+    bindManagedRandomEventWindowAnimation(win);
     const before = win.getAttribute("role");
     return { accepted: showManagedRandomEventWindow(win), before };
   });
@@ -322,7 +318,7 @@ test("random-event windows gain dialog semantics on the shared open path", async
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAttribute("aria-labelledby", /^window-title-\d+$/);
   await expect(dialog).not.toHaveAttribute("aria-modal", /.+/);
-  await finishOpening(dialog);
+  await expect(dialog).not.toHaveClass(/is-opening/);
   await dialog.evaluate((element) => element.remove());
 });
 

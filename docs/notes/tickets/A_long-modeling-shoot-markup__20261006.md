@@ -12,7 +12,7 @@
 
 - Use `scripts/home/modeling-portfolio.js` as the existing source of truth. Preserve full-quality images and the independently committed Arthaus photo.
 - Prefer the smallest rendering/build mechanism that preserves the current visible and crawlable content; measure net source reduction including the helper/data/configuration.
-- Preserve existing carousel/viewer media lifetimes, focus, first-use initialization and route parity. No push or deployment is authorized.
+- Preserve existing carousel/viewer media lifetimes, focus, first-use initialization and route parity. The owner requested publication to main on 2026-10-12; the coordinator owns the release.
 
 - Preserve full-quality modeling photos `fast-sonder-lb2-may2025/5.png` and `fast-reverie-rnwy-apr2024/05-runway-photo.png`; owner explicitly retained them.
 
@@ -36,3 +36,7 @@
 - Fix: the completeness and parity checks are now reusable helpers; `links`/`credits` must be arrays when present and are read as `[]` when omitted. The canonical data, present-field and file assertions are unchanged.
 - Regression: a temporary copy omits both lists from `modeling-garb-garbage-runway`; completeness passes, the old Home fails parity and `--check`, the build removes exactly the two credit lines, `--check` then passes, and parity accepts the result. Reverting either the parity or the loop normalization fails it.
 - Validation: `node --test tests/modeling-portfolio.test.mjs tests/build-modeling-markup.test.mjs` 15/15. `npm test` 804/805 while the coordinator's full browser suite ran on the same Mac; the single failure was the unrelated 10 ms synchronous-stage budget in `tests/game-stats-verification-runtime.test.mjs` (43.0 ms), which passed 1/1 rerun alone. `syntax:check`, `modeling:check`, the secret scan and `git diff --check` pass. No runtime, markup or UI file changed, so no browser suite was rerun.
+
+## Integration validation
+
+Integrated as 0c1fe5d and ab5933a with both review findings resolved. The full browser suite passed 597/597 in one run at three workers; combined source tests passed 805/805, the slow corpus passed 4/4, and 26 focused integration checks passed. The generated markup and media remain unchanged by the companion Distress Signal release repair. Final release and ticket cleanup are pending.

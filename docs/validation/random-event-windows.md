@@ -120,6 +120,9 @@ binding. The browser spec records animation starts before sampling their
 properties, waits for natural completion, and enforces runtime diagnostics.
 It checks four viewports, ordinary and interactive windows, focus, stacking,
 clamping, chained placement, and dynamic Word/Brand creation and removal.
+Synthetic managed windows must bind the shared animation lifecycle before
+opening. Wait for `is-opening` to clear instead of attaching a late one-shot
+`animationend` listener, which can miss an animation that already ended.
 
 Complement those checks with the existing event suites:
 

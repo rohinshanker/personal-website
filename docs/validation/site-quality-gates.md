@@ -34,6 +34,9 @@ Focused forced-policy coverage may
 retain only the event IDs it explicitly exercises through the helper's
 `except` option. Keep the helper's production-ID contract test aligned with
 the real event registry whenever a scheduling policy changes.
+App-only boot and replay tests also pin `Math.random` to `0.999999` before
+navigation to prevent natural random events from covering their controls.
+The forced-Start policy isolator does not disable those probability gates.
 
 For a deterministic natural-event test, isolate its registered candidate instead
 of relying on family registration order. Drive the real activity notification or
