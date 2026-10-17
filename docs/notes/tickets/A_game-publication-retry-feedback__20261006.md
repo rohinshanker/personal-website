@@ -1,10 +1,10 @@
-# O_game-publication-retry-feedback__20261006 — Open
+# A_game-publication-retry-feedback__20261006 — Active
 
 - Scope: Add one delayed retry for transient game-result publication failures and visible feedback for results dropped when the 100-result publication queue overflows.
-- Status: open
+- Status: active
 - Opened: 2026-10-06
-- Updated: 2026-10-06
-- Current State: Owner approved the recommendation in games/backend item 2 and explicitly required final visual approval. Queued as possible between-ticket work after the leaderboard coordinator releases the checkout; implementation has not started.
+- Updated: 2026-10-17
+- Current State: Owner approved the recommendation in games/backend item 2 and explicitly required final visual approval. Implementation started 2026-10-17 in session pw-fable-ticket-closing-2 on a worktree branch.
 - Verification: Test transient/permanent/auth/expired-proof distinctions, one-retry bounds, duplicate triggers, success/reset/page-exit cleanup, queue overflow accounting and storage failures. Render retry/failure/dropped-result states at all four standard viewports with clean diagnostics and accessible status feedback. Run affected behavior/browser/accessibility/integrity/context checks and inspect the final renders.
 - Owner Approval: Required before closing. Preserve a concrete final visual inspection page or screenshots showing retry/overflow feedback for the owner; passing automated checks and a committed patch do not close this ticket without explicit owner approval.
 - Cleanup: After owner approval, retain only reusable retry/overflow/status contracts in indexed Game Stats guides, then resolve and delete this ticket/index row. Keep review artifacts while approval is pending.

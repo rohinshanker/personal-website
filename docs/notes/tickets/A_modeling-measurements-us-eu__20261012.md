@@ -1,10 +1,10 @@
-# O_modeling-measurements-us-eu__20261012 — Open
+# A_modeling-measurements-us-eu__20261012 — Active
 
 - Scope: Add inseam and weight to the personal website's `/modeling/` Measurements section and replace the in/cm selector with US/EU modes.
-- Status: open
+- Status: active
 - Opened: 2026-10-12
-- Updated: 2026-10-12
-- Current State: Requested by the owner; queued for implementation. The current selector switches lengths only and displays both shoe sizes in either mode.
+- Updated: 2026-10-17
+- Current State: Implementation started 2026-10-17 in session pw-fable-ticket-closing. The current selector switches lengths only and displays both shoe sizes in either mode.
 - Verification: Ticket requirements checked against the existing measurement data and UI test; implementation and rendered validation are pending. Validate both modes, conversions, keyboard operation, selected state, and responsive layout using the existing modeling tests and the `ui-render-inspect-repair` skill.
 - Cleanup: Once implemented and verified, update the measurement contract in `docs/validation/modeling-portfolio.md` and its index entry as needed; resolve and remove this ticket and its live index row.
 

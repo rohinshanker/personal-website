@@ -1,10 +1,10 @@
-# O_biome-quality-checks__20261007 — Open
+# A_biome-quality-checks__20261007 — Active
 
 - Scope: Add pinned Biome checks for authored code to local validation and CI, reporting formatting/import-order issues and code diagnostics.
-- Status: open
+- Status: active
 - Opened: 2026-10-07
-- Updated: 2026-10-07
-- Current State: Owner approved Biome checks after their purpose was explained. Queued after the current leaderboard ticket; assess existing diagnostic/formatting scope before deciding whether this fits between-ticket work or needs a separate long pass.
+- Updated: 2026-10-17
+- Current State: Owner approved Biome checks after their purpose was explained. Scheduled 2026-10-17 for session pw-fable-ticket-closing-2 after its retry-feedback ticket; assess existing diagnostic/formatting scope before deciding whether this fits between-ticket work or needs a separate long pass.
 - Verification: Retrieve current official configuration/CLI guidance, pin the development dependency, inspect the baseline, configure the existing code style and explicit vendor/generated exclusions, and resolve actual failures. Verify the real local/CI commands fail on a representative violation and pass on the final authored tree; run affected syntax/behavior/browser/visual/integrity/context gates for any code normalization and review the exact patch.
 - Cleanup: Preserve only the reusable authored/generated/vendor scope and invocation contract in indexed quality-gate guidance, then resolve and delete this ticket/index row after acceptance.
 
