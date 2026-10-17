@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Soot Sprite Candidates</title>
+    <link rel="stylesheet" href="../../../style.css" />
+    <link rel="stylesheet" href="../../../styles/home/base.css" />
+    <link rel="stylesheet" href="../../../styles/home/random-events.css" />
+    <link rel="stylesheet" href="soot-sprite-candidates/soot-sprite-candidates.css" />
+    <style>
+      :root { --review-bg-image: url("../../../assets/optimized/background-2200.jpg"); }
+      body { display: block; min-height: 100vh; overflow: auto; padding: 16px 16px 72px; }
+      main { min-width: 0; }
+      .window { max-width: 100%; }
+      main { max-width: 1400px; margin: auto; }
+      h1 { font-size: 20px; margin: 0 0 8px; }
+      h2 { font-size: 16px; margin: 0; }
+      p { margin: 6px 0; }
+      .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 10px; }
+      fieldset { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
+      label { display: inline-flex; align-items: center; gap: 4px; }
+      table { border-collapse: collapse; margin-top: 8px; white-space: normal; max-width: 100%; }
+      th, td { border: 1px solid #808080; padding: 3px 8px; text-align: left; vertical-align: top; }
+      .status { margin-top: 8px; }
+      .candidate-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); margin-top: 16px; }
+      .candidate-grid .window { margin: 0; }
+      .candidate-still { align-items: center; background: #c0c0c0; box-shadow: var(--border-field); display: flex; height: 340px; justify-content: center; margin: 8px 0; }
+      .candidate-sizes { background: var(--review-bg-image) center / cover no-repeat; box-shadow: var(--border-field); display: flex; flex-wrap: wrap; gap: 24px 28px; align-items: flex-end; padding: 22px 18px 34px; }
+      .candidate-sizes figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+      .candidate-sizes figcaption { background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 11px; padding: 1px 4px; }
+      .candidate-sizes .row { display: flex; gap: 22px; align-items: flex-end; }
+      .candidate-sizes .soot-candidate--still { flex: none; }
+      .review-taskbar { justify-content: center; font-size: 12px; z-index: 5; }
+      .candidate-grid dl { margin: 0; }
+      .candidate-grid dt { font-weight: bold; }
+      .candidate-grid dd { margin: 0 0 4px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="window">
+        <div class="title-bar"><div class="title-bar-text">Soot Sprite Candidates</div></div>
+        <div class="window-body">
+          <h1>Pick a susuwatari</h1>
+          <p>
+            Four original candidate sprites for the <code>soot-sprites</code> random event. Each card shows a
+            256 px still, then the production 24 px and 40 px sizes on the desktop background. The
+            swarm below runs the real event code from <code>scripts/home/events/soot-sprites.js</code>:
+            trigger the alert, press Yes, and the 32 sprites fall, land on the taskbar edge and scatter
+            exactly as they do on Home, with the selected candidate drawn in place of the current body. Choose
+            “Current sprite” to run today's design for comparison.
+          </p>
+          <table>
+            <thead>
+              <tr><th>Id</th><th>Film</th><th>Technique</th><th>Distinguishing behaviour</th></tr>
+            </thead>
+            <tbody id="candidate-table"></tbody>
+          </table>
+          <div class="controls">
+            <fieldset>
+              <legend>Swarm candidate</legend>
+              <div><input type="radio" id="swarm-a" name="swarm-variant" value="a" checked /><label for="swarm-a">A</label></div>
+              <div><input type="radio" id="swarm-b" name="swarm-variant" value="b" /><label for="swarm-b">B</label></div>
+              <div><input type="radio" id="swarm-c" name="swarm-variant" value="c" /><label for="swarm-c">C</label></div>
+              <div><input type="radio" id="swarm-d" name="swarm-variant" value="d" /><label for="swarm-d">D</label></div>
+              <div><input type="radio" id="swarm-current" name="swarm-variant" value="current" /><label for="swarm-current">Current sprite</label></div>
+            </fieldset>
+            <button type="button" id="trigger-alert">Trigger the GPU alert</button>
+            <label><input type="checkbox" id="reduced-motion" /> Reduced motion</label>
+          </div>
+          <p class="status" id="status" role="status">No swarm yet. Trigger the alert and answer Yes.</p>
+        </div>
+      </section>
+
+      <div class="candidate-grid" id="contact-sheet"></div>
+    </main>
+
+    <div
+      class="window random-event-window random-alert-window soot-sprites-window is-hidden"
+      id="soot-sprites-window"
+      aria-hidden="true"
+      role="dialog"
+      aria-labelledby="soot-sprites-title"
+      style="position: fixed; z-index: 140; width: 372px; max-width: calc(100vw - 24px);"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text" id="soot-sprites-title">System Alert</div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message soot-sprites-message">
+          <img src="../../../assets/app-icons/ico/hardware.ico" width="48" height="48" alt="" />
+          <p>There seems to be something hiding in your GPU. Would you like to take a look?</p>
+        </div>
+        <div class="random-alert-actions soot-sprites-actions">
+          <button type="button" id="soot-sprites-yes">Yes</button>
+          <button type="button" id="soot-sprites-no">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="taskbar review-taskbar" aria-hidden="true">Taskbar stand-in: sprites land on and run along its top edge.</div>
+
+    <script src="soot-sprite-candidates/soot-sprite-renderers.js"></script>
+    <script src="soot-sprite-candidates/review-runtime-stubs.js"></script>
+    <script src="../../../scripts/home/events/soot-sprites.js"></script>
+    <script src="soot-sprite-candidates/review.js"></script>
+  </body>
+</html>
