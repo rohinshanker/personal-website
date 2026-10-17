@@ -2,7 +2,6 @@
 
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
-| A | 2026-10-17 | [A_modeling-measurements-us-eu__20261012.md](A_modeling-measurements-us-eu__20261012.md) | Active in session pw-fable-ticket-closing (main checkout) since 2026-10-17. |
 | O | 2026-10-07 | [O_review-archived-calendar-photos__20261006.md](O_review-archived-calendar-photos__20261006.md) | All 18 photos are archived byte-for-byte and linked for owner review; record per-file choices before deletion. |
 | O | 2026-10-07 | [O_background-image-comparison__20261006.md](O_background-image-comparison__20261006.md) | Real four-size comparison ready: 49 KB WebP versus 352 KB JPEG. Await explicit owner visual choice before shipping/closure. |
 | O | 2026-10-06 | [O_long-descriptive-asset-paths__20261006.md](O_long-descriptive-asset-paths__20261006.md) | Owner requested informative asset path names for AI efficiency; migrate references, manifests and source paths together after preservation. |

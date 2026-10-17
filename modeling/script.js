@@ -13,6 +13,7 @@
   const SWIPE_MIN_DISTANCE = 40;
   const TOP_LINK_SCROLL_THRESHOLD = 480;
   const INCH_IN_CM = 2.54;
+  const POUND_IN_KG = 0.45359237;
   const FOCUSABLE_SELECTOR =
     'a[href], button:not([disabled]), video[controls], [tabindex]:not([tabindex="-1"])';
 
@@ -168,10 +169,20 @@
     return `${item.feetInches ? Math.round(centimetres) : centimetres.toFixed(1)} cm`;
   };
 
-  const measurementText = (item, unit) =>
-    item.text ?? (unit === "cm" ? formatCentimetres(item) : formatInches(item));
+  const formatWeight = (item, region) =>
+    region === "eu" ? `${(item.pounds * POUND_IN_KG).toFixed(1)} kg` : `${item.pounds} lbs`;
 
-  /** Renders the comp-card list under the title and wires the in/cm toggle, inches first. */
+  /**
+   * Formats one measurement for the "us" or "eu" region. Every value derives from the source
+   * figure, so switching regions back and forth never accumulates rounding.
+   */
+  const measurementText = (item, region) => {
+    if (item.regional) return item.regional[region];
+    if (item.pounds !== undefined) return formatWeight(item, region);
+    return region === "eu" ? formatCentimetres(item) : formatInches(item);
+  };
+
+  /** Renders the comp-card list under the title and wires the US/EU toggle, US first. */
   const renderMeasurements = () => {
     const section = document.querySelector("[data-portfolio-measurements]");
     const list = section?.querySelector("[data-portfolio-measurements-list]");
@@ -191,19 +202,19 @@
       return value;
     });
     const buttons = Array.from(section.querySelectorAll("[data-unit]"));
-    const apply = (unit) => {
+    const apply = (region) => {
       values.forEach((value, index) => {
-        value.textContent = measurementText(items[index], unit);
+        value.textContent = measurementText(items[index], region);
       });
       buttons.forEach((button) => {
-        const active = button.dataset.unit === unit;
+        const active = button.dataset.unit === region;
         button.setAttribute("aria-pressed", String(active));
       });
     };
     buttons.forEach((button) => {
       button.addEventListener("click", () => apply(button.dataset.unit));
     });
-    apply("in");
+    apply("us");
   };
 
   /* ------------------------------------------------------------------ */

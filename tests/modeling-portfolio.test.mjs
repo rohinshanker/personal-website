@@ -125,12 +125,18 @@ test("the shared modeling data is complete and every referenced file exists", as
   }
   assert.deepEqual(portfolio.measurements, [
     { label: "Height", inches: 74, feetInches: true },
-    { label: "Shoe", text: "US 11/EU 45" },
+    { label: "Weight", pounds: 135 },
+    { label: "Shoe", regional: { us: "US 11", eu: "EU 45" } },
     { label: "Chest/Bust", inches: 33.5 },
     { label: "Waist", inches: 26.6 },
     { label: "Pant Waist", inches: 28.5 },
     { label: "Hips", inches: 34 },
+    { label: "Inseam", inches: 32 },
   ]);
+  for (const item of portfolio.measurements) {
+    const sources = ["inches", "pounds", "regional"].filter((key) => key in item);
+    assert.deepEqual(sources.length, 1, `${item.label} has exactly one source value`);
+  }
   for (const icon of Object.values(portfolio.linkIcons)) {
     assert.ok(await isFile(icon), `${icon} must exist`);
   }
@@ -330,9 +336,15 @@ test("the /modeling/ route publishes its metadata, shared assets, and blank Drop
     titleEnd < measurementsStart && measurementsStart < summaryStart,
     "the measurements block sits between the title and the summary"
   );
-  assert.match(html, /aria-label="Measurement units"[\s\S]*?data-unit="in" aria-pressed="true"[\s\S]*?data-unit="cm" aria-pressed="false"/);
+  assert.match(
+    html,
+    /aria-label="Measurement units"[\s\S]*?data-unit="us" aria-pressed="true">\s*US\s*<\/button>[\s\S]*?data-unit="eu" aria-pressed="false">\s*EU\s*<\/button>/
+  );
+  assert.doesNotMatch(html, /data-unit="(?:in|cm)"/);
   assert.match(html, /<dl class="portfolio-measurements__list" data-portfolio-measurements-list><\/dl>/);
   assert.match(script, /const INCH_IN_CM = 2\.54;/);
+  assert.match(script, /const POUND_IN_KG = 0\.45359237;/);
+  assert.match(script, /apply\("us"\);/);
   assert.match(script, /renderMeasurements\(\);/);
   assert.match(css, /\.unit-toggle__button\[aria-pressed="true"\] \{[\s\S]*?border-sunken-outer/);
   assert.match(html, /data-portfolio-instagram[\s\S]*?href="https:\/\/www\.instagram\.com\/rrohinss\/"[\s\S]*?target="_blank"[\s\S]*?rel="noreferrer"/);

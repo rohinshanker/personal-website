@@ -2,7 +2,7 @@
 
 - Purpose: Preserve the public `/modeling/` portfolio route, the shoot data it shares with Home, and the Home "Open in separate tab" prompt.
 - Scope: `modeling/index.html`, `modeling/style.css`, `modeling/script.js`, `scripts/home/modeling-portfolio.js`, the Home Modeling window and its `modeling-launch` prompt, release packaging, and the sitemap.
-- Last verified: 2026-10-12
+- Last verified: 2026-10-17
 
 ## Data contract
 
@@ -17,7 +17,7 @@
 ## Route contract
 
 - Canonical URL `https://rohin.shanker.me/modeling/`; the release workflow copies the `modeling` directory into the Pages artifact and `sitemap.xml` lists the route once.
-- Header: the `Rohin Shanker Modeling Portfolio` heading; directly beneath it a Measurements list (Height, Shoe, Chest/Bust, Waist, Pant Waist, Hips from the shared data) with an in/cm toggle whose pressed button is inches by default, where inch values convert at 2.54 and the shoe size reads the same in both units; then one sentence explaining fullscreen and download, an Instagram link showing the handle, the two Dropbox slots, a collapsed "Jump to a shoot" list linking to every shoot anchor, and a link back to `/`.
+- Header: the `Rohin Shanker Modeling Portfolio` heading; directly beneath it a Measurements list (Height, Weight, Shoe, Chest/Bust, Waist, Pant Waist, Hips, Inseam from the shared data) with a US/EU toggle (`aria-pressed` buttons named `US` and `EU`, US pressed by default). Each entry has exactly one source value: `inches` shows inches in US mode (Height as feet and inches) and centimetres at 2.54 in EU mode, rounded to one decimal except Height; `pounds` shows `135 lbs` in US mode and kilograms at 0.45359237 to one decimal in EU mode; `regional` carries explicit per-mode text (Shoe `US 11` / `EU 45`) and is never derived from a conversion. Every mode renders from the source figures, so round trips never accumulate rounding; then one sentence explaining fullscreen and download, an Instagram link showing the handle, the two Dropbox slots, a collapsed "Jump to a shoot" list linking to every shoot anchor, and a link back to `/`.
 - Each shoot is a 98.css window whose title bar holds the shoot icon, the `h2` title, and a text `Expand` control that opens the fullscreen viewer at the current slide. The body holds the date, the carousel, labelled link buttons, and a collapsed `Credits` disclosure; shoots without credits render no disclosure.
 - Below 900 pixels the body stacks date, carousel, links, credits. From 900 pixels the carousel occupies the left column and date, links, and credits the right column.
 - The carousel is a snap-scrolling strip with Previous, Next, a live "n of N" readout, and Left/Right arrow keys. Previous and Next wrap. The readout is a raised download link with the Windows download icon: the whole control saves the current photo or clip as `<shoot-anchor>-<n>-of-<N>.<ext>` through the `download` attribute, and its `href`, name, and label follow the current slide. Only the current slide and its neighbours carry a `src`; the rest keep `data-src` until a carousel is within half a viewport or a slide is within half a strip width. Loading shows the Home hourglass over the slot and sets `aria-busy`. Video slides keep native controls, never open the viewer on click, and the Stand Still clip autoplays muted only while current and near the viewport.
