@@ -605,7 +605,7 @@ test("a delayed eligible Snake result still completes inside the browser timeout
   expectLocalSnakeResult(await readStoredStats(page));
 });
 
-test("a 425 Snake result remains queued and publishes on manual retry", async ({
+test("a 425 Snake result remains queued and publishes without a manual retry", async ({
   diagnostics,
   page,
 }) => {
@@ -616,14 +616,11 @@ test("a 425 Snake result remains queued and publishes on manual retry", async ({
   );
   const status = statsWindow.locator("[data-game-stats-sync-status]");
 
-  if (await status.getAttribute("data-game-stats-sync-state") === "request-failed") {
-    const waiting = await readStoredStats(page);
-    expect(waiting.queue).toHaveLength(1);
-    expect(waiting.stats.totals.snake.gamesPlayed[10]).toBe(1);
-    await expect.poll(() => Date.now() >= api.getRetryEligibleAt()).toBe(true);
-    await statsWindow.locator('[data-game-stats-refresh="snake"]').click();
-  }
-  await expect.poll(() => api.eventRequests.length).toBeGreaterThanOrEqual(2);
+  // The Worker's early refusal keeps the result queued. The next attempt is
+  // automatic: the stats window opening runs a sync pass, and failing that
+  // the single delayed retry fires. Nothing is clicked.
+  expect(await readStoredStats(page).then((stored) => stored.queue.length)).toBeLessThanOrEqual(1);
+  await expect.poll(() => api.eventRequests.length, { timeout: 15_000 }).toBe(2);
   await expect(status).toHaveText("Global stats are up to date.");
   await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
   api.eventRequests.slice(1).forEach((request) => expect(request).toEqual(api.eventRequests[0]));

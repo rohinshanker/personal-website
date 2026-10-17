@@ -2,7 +2,7 @@
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 - Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-10-07
+- Last verified: 2026-10-17
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -733,7 +733,11 @@ When a genuine quick result needs no more than five additional seconds, use
 the Workers Scheduler wait and recheck the clock before the atomic D1 write.
 Longer remaining delays return `425` with bounded `Retry-After` metadata and
 must not consume the session, increment its event rate bucket, or insert an
-event. The browser keeps that submission queued for a later manual refresh.
+event. The browser keeps that submission queued and books its one automatic
+retry, waiting at least the body's `retryAfterMs` (see
+[game-stats-refresh-control.md](game-stats-refresh-control.md)); after that
+single retry only a manual refresh, a new result, or a later publication
+triggers another attempt.
 
 The administrator endpoint accepts exactly `{ "username", "password" }` and
 never returns a credential. It requires an explicit allowed `Origin` header,

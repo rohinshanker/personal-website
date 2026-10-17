@@ -948,6 +948,49 @@
 
         <article
           class="review-card"
+          data-review-state="retry-scheduled"
+          data-action="refresh"
+          data-busy="false"
+          data-custom-cursor="off"
+        >
+          <div class="card-heading">
+            <h2>Publishing failed · one automatic retry pending</h2>
+            <span class="state-code">retry-scheduled</span>
+          </div>
+          <div class="retro-window">
+            <div class="title-bar">
+              <span>Minesweeper Stats</span>
+              <span class="title-controls"><span class="title-button">×</span></span>
+            </div>
+            <div class="window-body">
+              <div class="sync-row">
+                <p class="sync-status">Publishing failed. Retrying once in a moment.</p>
+                <button
+                  class="refresh-button"
+                  type="button"
+                  aria-label="Refresh Minesweeper stats"
+                  aria-busy="false"
+                >
+                  <img
+                    src="../../../assets/solitaire-cards/undo-button.png"
+                    alt=""
+                  />
+                  <span class="button-loading-dots" aria-hidden="true"
+                    ><span></span><span></span><span></span
+                  ></span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="state-facts">
+            <span><b class="fact-key">Action</b> Refresh (cancels the timer)</span>
+            <span><b class="fact-key">Button</b> Enabled</span>
+            <span><b class="fact-key">Cursor</b> Standard</span>
+          </div>
+        </article>
+
+        <article
+          class="review-card"
           data-review-state="unconfigured"
           data-action="none"
           data-busy="false"
@@ -1223,6 +1266,90 @@
           <div class="state-facts">
             <span><b class="fact-key">Scope</b> This browser</span>
             <span><b class="fact-key">Global data</b> Preserved</span>
+          </div>
+        </article>
+
+        <article
+          class="review-card"
+          data-review-state="ready-dropped-results"
+          data-action="refresh"
+          data-busy="false"
+          data-custom-cursor="off"
+        >
+          <div class="card-heading">
+            <h2>Queue overflow · dropped-result count</h2>
+            <span class="state-code">ready + 3 dropped</span>
+          </div>
+          <div class="retro-window">
+            <div class="title-bar">
+              <span>Minesweeper Stats</span>
+              <span class="title-controls"><span class="title-button">×</span></span>
+            </div>
+            <div class="window-body">
+              <div class="sync-row">
+                <p class="sync-status">Global stats are up to date. 3 unpublished results were dropped because the publishing queue was full.</p>
+                <button
+                  class="refresh-button"
+                  type="button"
+                  aria-label="Refresh Minesweeper stats"
+                  aria-busy="false"
+                >
+                  <img
+                    src="../../../assets/solitaire-cards/undo-button.png"
+                    alt=""
+                  />
+                  <span class="button-loading-dots" aria-hidden="true"
+                    ><span></span><span></span><span></span
+                  ></span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="state-facts">
+            <span><b class="fact-key">Clears on</b> Refresh or Reset Local Stats</span>
+            <span><b class="fact-key">Survives</b> Reload, automatic reads, publication</span>
+          </div>
+        </article>
+
+        <article
+          class="review-card"
+          data-review-state="request-failed-dropped-result"
+          data-action="refresh"
+          data-busy="false"
+          data-custom-cursor="off"
+        >
+          <div class="card-heading">
+            <h2>Queue overflow · single dropped result after a failure</h2>
+            <span class="state-code">request-failed + 1 dropped</span>
+          </div>
+          <div class="retro-window">
+            <div class="title-bar">
+              <span>Minesweeper Stats</span>
+              <span class="title-controls"><span class="title-button">×</span></span>
+            </div>
+            <div class="window-body">
+              <div class="sync-row">
+                <p class="sync-status">Request failed. Try again later. 1 unpublished result was dropped because the publishing queue was full.</p>
+                <button
+                  class="refresh-button"
+                  type="button"
+                  aria-label="Refresh Minesweeper stats"
+                  aria-busy="false"
+                >
+                  <img
+                    src="../../../assets/solitaire-cards/undo-button.png"
+                    alt=""
+                  />
+                  <span class="button-loading-dots" aria-hidden="true"
+                    ><span></span><span></span><span></span
+                  ></span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="state-facts">
+            <span><b class="fact-key">Busy states</b> Hide the count behind the animated ellipsis</span>
+            <span><b class="fact-key">Grammar</b> Singular and plural forms</span>
           </div>
         </article>
       </section>
