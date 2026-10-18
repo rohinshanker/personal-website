@@ -1,12 +1,19 @@
 /* Review page logic: stills, size samples, and dressing the real swarm with a candidate look. */
 (() => {
-const { VARIANTS, VARIANT_DETAILS, applySootSpriteTimeline, createSeededRandom, renderSootSprite } =
-  window.sootSpriteCandidates;
+const {
+  NOMINAL_SIZE,
+  VARIANTS,
+  VARIANT_DETAILS,
+  applySootSpriteTimeline,
+  createSeededRandom,
+  renderSootSprite,
+  renderSootSprites,
+} = window.sootSpriteCandidates;
 const registration = window.sootSpriteReviewRuntime.getRegistration("soot-sprites");
 const status = document.getElementById("status");
 const reducedMotionToggle = document.getElementById("reduced-motion");
 const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-const STILL_SIZE = 256;
+const STILL_SCALE = 8;
 const SAMPLE_SIZES = [24, 40];
 const SAMPLES_PER_SIZE = 3;
 
@@ -27,7 +34,7 @@ const buildTable = () => {
   VARIANTS.forEach((variant) => {
     const details = VARIANT_DETAILS[variant];
     const row = document.createElement("tr");
-    [variant.toUpperCase(), details.film, details.technique, details.behaviour].forEach((text) => {
+    [variant.toUpperCase(), details.name, details.technique, details.behaviour].forEach((text) => {
       const cell = document.createElement("td");
       cell.textContent = text;
       row.append(cell);
@@ -36,8 +43,8 @@ const buildTable = () => {
   });
 };
 
-const createStill = (variant, size, seed) => {
-  const still = renderSootSprite(variant, size, { random: createSeededRandom(seed) });
+const createStill = (variant, size, seed, nominalSize = size) => {
+  const still = renderSootSprite(variant, size, { random: createSeededRandom(seed), nominalSize });
   still.classList.add("soot-candidate--still");
   return still;
 };
@@ -52,9 +59,9 @@ const buildCards = () => {
     card.innerHTML = `
       <div class="title-bar"><div class="title-bar-text">Candidate ${variant.toUpperCase()}</div></div>
       <div class="window-body">
-        <h2 id="candidate-${variant}-title">${variant.toUpperCase()} · ${details.film}</h2>
+        <h2 id="candidate-${variant}-title">${variant.toUpperCase()} · ${details.name}</h2>
         <dl>
-          <dt>Technique</dt><dd>${details.technique}</dd>
+          <dt>Cells, coat and eyes</dt><dd>${details.technique}</dd>
           <dt>Behaviour</dt><dd>${details.behaviour}</dd>
         </dl>
         <div class="candidate-still" data-still></div>
@@ -75,11 +82,12 @@ const buildCards = () => {
       sizes.append(figure);
     });
   });
-  // Limbs and hairs overflow the body by about 0.6 D, so stills are sized once every card is
-  // in the grid and shrink on narrow panels.
+  // The still is the 32 px production drawing magnified; the coat overflows the body by up to
+  // 0.6 D, so stills are sized once every card is in the grid and shrink on narrow panels.
   VARIANTS.forEach((variant, index) => {
     const panel = grid.querySelector(`[aria-labelledby="candidate-${variant}-title"] [data-still]`);
-    panel.append(createStill(variant, Math.min(STILL_SIZE, Math.floor(panel.clientWidth / 1.7)), 1000 + index));
+    const size = Math.min(NOMINAL_SIZE * STILL_SCALE, Math.floor(panel.clientWidth / 1.7));
+    panel.append(createStill(variant, size, 1000 + index, NOMINAL_SIZE));
   });
 };
 
@@ -125,8 +133,9 @@ const dressSwarm = (overlay) => {
   // Read every timeline before touching the DOM so the animation reads force one style pass.
   const timelines = sprites.map(readTimeline);
   const readMs = performance.now() - started;
-  const bodies = sprites.map((sprite) =>
-    renderSootSprite(variant, Number.parseFloat(sprite.style.getPropertyValue("--soot-size")))
+  const bodies = renderSootSprites(
+    variant,
+    sprites.map((sprite) => ({ size: Number.parseFloat(sprite.style.getPropertyValue("--soot-size")) }))
   );
   const renderMs = performance.now() - started - readMs;
   sprites.forEach((sprite, index) => {

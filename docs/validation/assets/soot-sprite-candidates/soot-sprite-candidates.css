@@ -1,10 +1,11 @@
 /*
- * Stage 1 candidate looks for the soot-sprite redesign review page. Nothing here ships.
- * Every dimension derives from --soot-candidate-size (the body diameter D).
+ * Second-round candidate looks for the soot-sprite redesign review page. Nothing here ships.
+ * A candidate body is a box of --soot-candidate-size holding one or more frame spans of
+ * --soot-candidate-frame, centred with --soot-candidate-inset so the coat overflows the body.
+ * Each frame shows its own slice of the swarm's shared pixel-art sheet.
  */
 
 .soot-candidate {
-  --soot-candidate-stroke: max(1px, calc(var(--soot-candidate-size) * 0.03));
   animation: soot-sprite-stare 720ms ease-in-out var(--soot-wobble-delay, 0ms) infinite alternate;
   display: block;
   height: 100%;
@@ -18,169 +19,17 @@
   width: var(--soot-candidate-size);
 }
 
-.soot-candidate__coat {
+.soot-candidate__frame {
+  background-image: var(--soot-candidate-image);
+  background-repeat: no-repeat;
+  background-size: var(--soot-candidate-sheet);
   display: block;
-  height: 100%;
-  left: 0;
-  overflow: visible;
+  height: var(--soot-candidate-frame);
+  image-rendering: pixelated;
+  left: var(--soot-candidate-inset);
   position: absolute;
-  top: 0;
-  transform-origin: 50% 50%;
-  width: 100%;
-}
-
-/* Eyes: 0.30 D discs centred 0.32 D apart and 0.06 D above the body centre. */
-.soot-candidate__eyes {
-  inset: 0;
-  position: absolute;
-  transform-origin: 50% 44%;
-}
-
-.soot-candidate__eye {
-  background: #fff;
-  border-radius: 50%;
-  height: 30%;
-  position: absolute;
-  top: 29%;
-  width: 30%;
-}
-
-.soot-candidate__eye--left {
-  left: 19%;
-}
-
-.soot-candidate__eye--right {
-  left: 51%;
-}
-
-/* Pupils: 0.10 D, both on one layer so a single transform turns the gaze. */
-.soot-candidate__pupils {
-  inset: 0;
-  position: absolute;
-}
-
-.soot-candidate__pupil {
-  background: #060606;
-  border-radius: 50%;
-  height: 10%;
-  position: absolute;
-  top: 39%;
-  width: 10%;
-}
-
-.soot-candidate__pupil--left {
-  left: 29%;
-}
-
-.soot-candidate__pupil--right {
-  left: 61%;
-}
-
-/* Limbs: 0.03 D strokes with round caps; arms 0.30 D from the shoulders, legs 0.28 D from the hips. */
-.soot-candidate__limb {
-  background: #060606;
-  border-radius: var(--soot-candidate-stroke);
-  position: absolute;
-}
-
-.soot-candidate__limb::before,
-.soot-candidate__limb::after {
-  background: #060606;
-  border-radius: var(--soot-candidate-stroke);
-  content: "";
-  position: absolute;
-}
-
-.soot-candidate__arm {
-  height: var(--soot-candidate-stroke);
-  top: calc(56% - var(--soot-candidate-stroke) / 2);
-  transform-origin: 0 50%;
-  width: 30%;
-}
-
-.soot-candidate__arm--left {
-  left: 6%;
-}
-
-.soot-candidate__arm--right {
-  left: 94%;
-}
-
-/* A two-prong hand at the end of each arm. */
-.soot-candidate__arm::before,
-.soot-candidate__arm::after {
-  height: var(--soot-candidate-stroke);
-  left: 100%;
-  top: 0;
-  transform-origin: 0 50%;
-  width: 24%;
-}
-
-.soot-candidate__arm::before {
-  transform: translateX(-20%) rotate(-48deg);
-}
-
-.soot-candidate__arm::after {
-  transform: translateX(-20%) rotate(36deg);
-}
-
-.soot-candidate__leg {
-  height: 28%;
-  left: calc(50% - var(--soot-candidate-stroke) / 2);
-  top: 92%;
-  transform-origin: 50% 0;
-  width: var(--soot-candidate-stroke);
-}
-
-.soot-candidate__leg--left {
-  margin-left: -14%;
-}
-
-.soot-candidate__leg--right {
-  margin-left: 14%;
-}
-
-/* A 0.10 D foot pointing outward from each leg. */
-.soot-candidate__leg::after {
-  height: var(--soot-candidate-stroke);
-  left: 0;
-  top: calc(100% - var(--soot-candidate-stroke));
-  width: calc(var(--soot-candidate-size) * 0.1);
-}
-
-/* The held star candy, drawn with the production candy's star outline. */
-.soot-candidate__candy {
-  background:
-    radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.85), transparent 28%),
-    var(--soot-candidate-candy);
-  clip-path: polygon(
-    50% 0%,
-    60% 26%,
-    88% 14%,
-    74% 40%,
-    100% 50%,
-    74% 60%,
-    88% 86%,
-    60% 74%,
-    50% 100%,
-    40% 74%,
-    12% 86%,
-    26% 60%,
-    0% 50%,
-    26% 40%,
-    12% 14%,
-    40% 26%
-  );
-  height: 26%;
-  left: 37%;
-  opacity: 0;
-  position: absolute;
-  top: -12%;
-  width: 26%;
-}
-
-.soot-candidate--still .soot-candidate__candy {
-  opacity: 1;
+  top: var(--soot-candidate-inset);
+  width: var(--soot-candidate-frame);
 }
 
 @media (prefers-reduced-motion: reduce) {

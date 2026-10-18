@@ -25,7 +25,7 @@
       .status { margin-top: 8px; }
       .candidate-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); margin-top: 16px; }
       .candidate-grid .window { margin: 0; }
-      .candidate-still { align-items: center; background: #c0c0c0; box-shadow: var(--border-field); display: flex; height: 340px; justify-content: center; margin: 8px 0; }
+      .candidate-still { align-items: center; background: #c0c0c0; box-shadow: var(--border-field); display: flex; height: 400px; justify-content: center; margin: 8px 0; overflow: hidden; }
       .candidate-sizes { background: var(--review-bg-image) center / cover no-repeat; box-shadow: var(--border-field); display: flex; flex-wrap: wrap; gap: 24px 28px; align-items: flex-end; padding: 22px 18px 34px; }
       .candidate-sizes figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 14px; }
       .candidate-sizes figcaption { background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 11px; padding: 1px 4px; }
@@ -44,26 +44,28 @@
         <div class="window-body">
           <h1>Pick a susuwatari</h1>
           <p>
-            Four original candidate sprites for the <code>soot-sprites</code> random event. Each card shows a
-            256 px still, then the production 24 px and 40 px sizes on the desktop background. The
-            swarm below runs the real event code from <code>scripts/home/events/soot-sprites.js</code>:
-            trigger the alert, press Yes, and the 32 sprites fall, land on the taskbar edge and scatter
-            exactly as they do on Home, with the selected candidate drawn in place of the current body. Choose
-            “Current sprite” to run today's design for comparison.
+            Second-round candidates for the <code>soot-sprites</code> random event: fuzzy, limbless,
+            black, pixel-art bodies after the film reference. Each card shows the production 32 px
+            drawing magnified eight times, then the production 24 px and 40 px sizes on the desktop
+            background. The swarm below runs the real event code from
+            <code>scripts/home/events/soot-sprites.js</code>: trigger the alert, press Yes, and the 32
+            sprites fall, land on the taskbar edge and scatter exactly as they do on Home, with the
+            selected candidate drawn in place of the current body. Choose “Current sprite” to run
+            today's design for comparison.
           </p>
           <table>
             <thead>
-              <tr><th>Id</th><th>Film</th><th>Technique</th><th>Distinguishing behaviour</th></tr>
+              <tr><th>Id</th><th>Name</th><th>Cells, coat and eyes</th><th>Distinguishing behaviour</th></tr>
             </thead>
             <tbody id="candidate-table"></tbody>
           </table>
           <div class="controls">
             <fieldset>
               <legend>Swarm candidate</legend>
-              <div><input type="radio" id="swarm-a" name="swarm-variant" value="a" checked /><label for="swarm-a">A</label></div>
-              <div><input type="radio" id="swarm-b" name="swarm-variant" value="b" /><label for="swarm-b">B</label></div>
-              <div><input type="radio" id="swarm-c" name="swarm-variant" value="c" /><label for="swarm-c">C</label></div>
-              <div><input type="radio" id="swarm-d" name="swarm-variant" value="d" /><label for="swarm-d">D</label></div>
+              <div><input type="radio" id="swarm-e" name="swarm-variant" value="e" checked /><label for="swarm-e">E</label></div>
+              <div><input type="radio" id="swarm-f" name="swarm-variant" value="f" /><label for="swarm-f">F</label></div>
+              <div><input type="radio" id="swarm-g" name="swarm-variant" value="g" /><label for="swarm-g">G</label></div>
+              <div><input type="radio" id="swarm-h" name="swarm-variant" value="h" /><label for="swarm-h">H</label></div>
               <div><input type="radio" id="swarm-current" name="swarm-variant" value="current" /><label for="swarm-current">Current sprite</label></div>
             </fieldset>
             <button type="button" id="trigger-alert">Trigger the GPU alert</button>
