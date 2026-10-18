@@ -48,7 +48,7 @@ const viewports = [
 
 const preparePage = async (
   page,
-  { administratorAccess = "valid", spyOnOrchestratedEvents = false } = {}
+  { administratorAccess = "valid", spyOnOrchestratedEvents = false } = {},
 ) => {
   // The fixture already fails the test on console errors, page exceptions and
   // failed requests. A write to any backend is this spec's own concern.
@@ -59,56 +59,59 @@ const preparePage = async (
     }
   });
 
-  await page.addInitScript(({ access, profile, profileKey, proof, proofKey, spy }) => {
-    const initializedKey = "admin-controls-playwright-initialized";
-    const firstInitialization = sessionStorage.getItem(initializedKey) !== "true";
-    if (firstInitialization) {
-      localStorage.clear();
-      sessionStorage.clear();
-      sessionStorage.setItem(initializedKey, "true");
-      if (access === "valid" || access === "expired") {
-        localStorage.setItem(profileKey, JSON.stringify(profile));
-        sessionStorage.setItem(
-          proofKey,
-          JSON.stringify({
-            proof,
-            expiresAt: new Date(
-              Date.now() + (access === "expired" ? -60_000 : 60 * 60_000)
-            ).toISOString(),
-          })
-        );
+  await page.addInitScript(
+    ({ access, profile, profileKey, proof, proofKey, spy }) => {
+      const initializedKey = "admin-controls-playwright-initialized";
+      const firstInitialization = sessionStorage.getItem(initializedKey) !== "true";
+      if (firstInitialization) {
+        localStorage.clear();
+        sessionStorage.clear();
+        sessionStorage.setItem(initializedKey, "true");
+        if (access === "valid" || access === "expired") {
+          localStorage.setItem(profileKey, JSON.stringify(profile));
+          sessionStorage.setItem(
+            proofKey,
+            JSON.stringify({
+              proof,
+              expiresAt: new Date(
+                Date.now() + (access === "expired" ? -60_000 : 60 * 60_000),
+              ).toISOString(),
+            }),
+          );
+        }
       }
-    }
-    Math.random = () => 0.999999;
+      Math.random = () => 0.999999;
 
-    if (!spy) return;
-    window.__adminOrchestratedEventCalls = [];
-    let runtime;
-    Object.defineProperty(window, "rohinAdminOrchestrator", {
-      configurable: true,
-      get: () => runtime,
-      set: (value) => {
-        runtime = Object.freeze({
-          ...value,
-          runEvent: async (eventId) => {
-            window.__adminOrchestratedEventCalls.push(eventId);
-            return { ok: true, message: `Triggered ${eventId}.` };
-          },
-          runRandomEvent: async () => {
-            window.__adminOrchestratedEventCalls.push("__random__");
-            return { ok: true, message: "Triggered a repeat-safe random event." };
-          },
-        });
-      },
-    });
-  }, {
-    access: administratorAccess,
-    profile: administratorProfile,
-    profileKey: profileStorageKey,
-    proof: administratorProof,
-    proofKey: administratorProofStorageKey,
-    spy: spyOnOrchestratedEvents,
-  });
+      if (!spy) return;
+      window.__adminOrchestratedEventCalls = [];
+      let runtime;
+      Object.defineProperty(window, "rohinAdminOrchestrator", {
+        configurable: true,
+        get: () => runtime,
+        set: (value) => {
+          runtime = Object.freeze({
+            ...value,
+            runEvent: async (eventId) => {
+              window.__adminOrchestratedEventCalls.push(eventId);
+              return { ok: true, message: `Triggered ${eventId}.` };
+            },
+            runRandomEvent: async () => {
+              window.__adminOrchestratedEventCalls.push("__random__");
+              return { ok: true, message: "Triggered a repeat-safe random event." };
+            },
+          });
+        },
+      });
+    },
+    {
+      access: administratorAccess,
+      profile: administratorProfile,
+      profileKey: profileStorageKey,
+      proof: administratorProof,
+      proofKey: administratorProofStorageKey,
+      spy: spyOnOrchestratedEvents,
+    },
+  );
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(homeUrl, { waitUntil: "domcontentloaded" });
 
@@ -117,7 +120,9 @@ const preparePage = async (
 
 const finishWindowAnimation = async (win, animationName) => {
   await win.dispatchEvent("animationend", { animationName });
-  await expect(win).not.toHaveClass(new RegExp(animationName === "retro-window-open" ? "is-opening" : "is-closing"));
+  await expect(win).not.toHaveClass(
+    new RegExp(animationName === "retro-window-open" ? "is-opening" : "is-closing"),
+  );
 };
 
 const openAdmin = async (page) => {
@@ -184,9 +189,7 @@ test("Admin launchers show only the stand-in without an active Administrator ses
 
   const fullAdmin = page.locator("#admin-controls-window");
   const standIn = page.locator("#admin-controls-stand-in-window");
-  const standInIcon = standIn.locator(
-    'img[src="assets/app-icons/ico/program_manager.ico"]'
-  );
+  const standInIcon = standIn.locator('img[src="assets/app-icons/ico/program_manager.ico"]');
   const ok = page.locator("#admin-controls-stand-in-ok");
   const launchers = {
     desktop: page.locator('.desktop-icon[data-app="admin-controls"]'),
@@ -213,19 +216,18 @@ test("Admin launchers show only the stand-in without an active Administrator ses
       await expect(standInIcon).toBeVisible();
       await expect(standInIcon).toHaveCSS("width", "48px");
       await expect(standInIcon).toHaveCSS("height", "48px");
-      expect(
-        await standInIcon.evaluate((image) => image.complete && image.naturalWidth > 0)
-      ).toBe(true);
+      expect(await standInIcon.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(
+        true,
+      );
       await expect(standIn.locator(".random-alert-actions")).toHaveCSS(
         "justify-content",
-        "flex-end"
+        "flex-end",
       );
 
       const metrics = await standIn.evaluate((element) => {
         const rect = element.getBoundingClientRect();
         const icon = element.querySelector("img").getBoundingClientRect();
-        const action = element.querySelector("#admin-controls-stand-in-ok")
-          .getBoundingClientRect();
+        const action = element.querySelector("#admin-controls-stand-in-ok").getBoundingClientRect();
         const taskbarTop = document.querySelector(".taskbar").getBoundingClientRect().top;
         return {
           actionBottom: action.bottom,
@@ -255,7 +257,6 @@ test("Admin launchers show only the stand-in without an active Administrator ses
       await expect(page.locator("#debug-system-alert-window")).toBeHidden();
       await expect(page.locator("#neko-stream-alert-window")).toBeHidden();
 
-
       if (index % 2 === 0) {
         await ok.click();
       } else {
@@ -269,10 +270,14 @@ test("Admin launchers show only the stand-in without an active Administrator ses
   }
 
   expect(mutatingRequests).toEqual([]);
-  expect(await page.evaluate(() => performance.getEntriesByType("resource")
-    .map((entry) => new URL(entry.name).pathname)
-    .filter((path) => path.includes("admin-controls") || path.includes("admin/orchestrator"))
-  )).toEqual([]);
+  expect(
+    await page.evaluate(() =>
+      performance
+        .getEntriesByType("resource")
+        .map((entry) => new URL(entry.name).pathname)
+        .filter((path) => path.includes("admin-controls") || path.includes("admin/orchestrator")),
+    ),
+  ).toEqual([]);
 });
 
 test("an expired Administrator proof is purged and cannot expose Admin Controls", async ({
@@ -287,8 +292,10 @@ test("an expired Administrator proof is purged and cannot expose Admin Controls"
   await expect(page.locator("#admin-controls-stand-in-window")).toBeVisible();
   await expect(page.locator("#admin-controls-window")).toBeHidden();
   expect(
-    await page.evaluate((proofKey) => sessionStorage.getItem(proofKey),
-      administratorProofStorageKey)
+    await page.evaluate(
+      (proofKey) => sessionStorage.getItem(proofKey),
+      administratorProofStorageKey,
+    ),
   ).toBeNull();
   expect(mutatingRequests).toEqual([]);
 });
@@ -312,13 +319,10 @@ const watchPageObservation = (page) =>
 const readPageObservation = (page) =>
   page.evaluate(() => ({
     bodySubtreeObservers: window.__bodySubtreeObservers,
-    mediaPlayPatched:
-      HTMLMediaElement.prototype.play.name === "adminControlledMediaPlay",
+    mediaPlayPatched: HTMLMediaElement.prototype.play.name === "adminControlledMediaPlay",
   }));
 
-test("Admin observation and the media patch wait for the window to open", async ({
-  page,
-}) => {
+test("Admin observation and the media patch wait for the window to open", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await watchPageObservation(page);
   const { mutatingRequests } = await preparePage(page);
@@ -337,7 +341,7 @@ test("Admin observation and the media patch wait for the window to open", async 
   const afterReopen = await readPageObservation(page);
   expect(afterReopen.bodySubtreeObservers).toBe(
     afterOpen.bodySubtreeObservers,
-    "Reopening must reuse the observer rather than attach another."
+    "Reopening must reuse the observer rather than attach another.",
   );
 
   expect(mutatingRequests).toEqual([]);
@@ -355,7 +359,7 @@ test("a restored Admin session that mutes media observes the page without openin
       sessionStorage.setItem(seedKey, "true");
       localStorage.setItem(key, JSON.stringify(state));
     },
-    { key: storageKey, state: { version: 1, audio: false } }
+    { key: storageKey, state: { version: 1, audio: false } },
   );
   const { mutatingRequests } = await preparePage(page);
 
@@ -368,16 +372,14 @@ test("a restored Admin session that mutes media observes the page without openin
   expect(mutatingRequests).toEqual([]);
 });
 
-test("Admin Controls stays contained, scrollable, and keyboard accessible", async ({
-  page,
-}) => {
+test("Admin Controls stays contained, scrollable, and keyboard accessible", async ({ page }) => {
   const { mutatingRequests } = await preparePage(page);
   const launcher = page.locator('.taskbar-icon[data-app="admin-controls"]');
   const desktopLauncher = page.locator('.desktop-icon[data-app="admin-controls"]');
   const launcherIcon = launcher.locator("img");
   const desktopLauncherIcon = desktopLauncher.locator("img");
-  const dockGithub = page.locator('.taskbar-icon[data-github-shortcut]');
-  const desktopGithub = page.locator('.desktop-icon[data-github-shortcut]');
+  const dockGithub = page.locator(".taskbar-icon[data-github-shortcut]");
+  const desktopGithub = page.locator(".desktop-icon[data-github-shortcut]");
 
   for (const candidate of [desktopLauncher, launcher]) {
     await expect(candidate).toHaveCount(1);
@@ -385,7 +387,7 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
     await expect(candidate).toHaveAttribute("aria-haspopup", "dialog");
     await expect(candidate).toHaveAttribute(
       "aria-controls",
-      "admin-controls-window admin-controls-stand-in-window"
+      "admin-controls-window admin-controls-stand-in-window",
     );
   }
   for (const icon of [desktopLauncherIcon, launcherIcon]) {
@@ -394,13 +396,13 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
   }
   expect(
     await launcher.evaluate((element) =>
-      element.nextElementSibling?.hasAttribute("data-github-shortcut")
-    )
+      element.nextElementSibling?.hasAttribute("data-github-shortcut"),
+    ),
   ).toBe(true);
   expect(
     await desktopLauncher.evaluate((element) =>
-      element.nextElementSibling?.hasAttribute("data-github-shortcut")
-    )
+      element.nextElementSibling?.hasAttribute("data-github-shortcut"),
+    ),
   ).toBe(true);
   expect(await dockGithub.evaluate((element) => element.nextElementSibling === null)).toBe(true);
   expect(await desktopGithub.evaluate((element) => element.nextElementSibling === null)).toBe(true);
@@ -448,7 +450,7 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
           panelClientWidth: panel.clientWidth,
           panelScrollWidth: panel.scrollWidth,
           previewCount: preview.shadowRoot.querySelectorAll(
-            '[data-admin-event-preview-window="dodging-popup-alert"]'
+            '[data-admin-event-preview-window="dodging-popup-alert"]',
           ).length,
           previewLeft: previewBounds.left,
           previewRight: previewBounds.right,
@@ -457,16 +459,10 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
         };
       });
       expect(previewMetrics.columnCount).toBe(viewport.width <= 480 ? 1 : 2);
-      expect(previewMetrics.panelScrollWidth).toBeLessThanOrEqual(
-        previewMetrics.panelClientWidth
-      );
+      expect(previewMetrics.panelScrollWidth).toBeLessThanOrEqual(previewMetrics.panelClientWidth);
       expect(previewMetrics.previewCount).toBe(1);
-      expect(previewMetrics.previewLeft).toBeGreaterThanOrEqual(
-        previewMetrics.panelLeft - 0.6
-      );
-      expect(previewMetrics.previewRight).toBeLessThanOrEqual(
-        previewMetrics.panelRight + 0.6
-      );
+      expect(previewMetrics.previewLeft).toBeGreaterThanOrEqual(previewMetrics.panelLeft - 0.6);
+      expect(previewMetrics.previewRight).toBeLessThanOrEqual(previewMetrics.panelRight + 0.6);
       await selectAdminTab(page, "capture");
       const seedInput = page.locator("#admin-sequence-seed");
       const seedMenu = page.locator("#admin-seed-menu");
@@ -488,8 +484,8 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
           panelLeft: panelBounds.left,
           panelRight: panelBounds.right,
           panelTop: panelBounds.top,
-          seedRowColumnCount: getComputedStyle(seedRow).gridTemplateColumns
-            .split(/\s+/)
+          seedRowColumnCount: getComputedStyle(seedRow)
+            .gridTemplateColumns.split(/\s+/)
             .filter(Boolean).length,
         };
       });
@@ -497,9 +493,7 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
       expect(seedMenuMetrics.menuLeft).toBeGreaterThanOrEqual(seedMenuMetrics.panelLeft - 0.6);
       expect(seedMenuMetrics.menuRight).toBeLessThanOrEqual(seedMenuMetrics.panelRight + 0.6);
       expect(seedMenuMetrics.menuTop).toBeGreaterThanOrEqual(seedMenuMetrics.panelTop - 0.6);
-      expect(seedMenuMetrics.menuBottom).toBeLessThanOrEqual(
-        seedMenuMetrics.panelBottom + 0.6
-      );
+      expect(seedMenuMetrics.menuBottom).toBeLessThanOrEqual(seedMenuMetrics.panelBottom + 0.6);
       expect(seedMenuMetrics.seedRowColumnCount).toBe(viewport.width <= 560 ? 1 : 2);
       await seedInput.press("Escape");
       await expect(seedMenu).toBeHidden();
@@ -523,7 +517,7 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
           panelRight: panelRect.right,
           panelShadow: getComputedStyle(panel).boxShadow,
           raisedControlShadow: getComputedStyle(
-            element.querySelector('[data-admin-preset="game-win"]')
+            element.querySelector('[data-admin-preset="game-win"]'),
           ).boxShadow,
           right: rect.right,
           tabsBottom: tabs.bottom,
@@ -567,7 +561,7 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
         return {
           admin: bounds(strip.querySelector('[data-app="admin-controls"]')),
           desktopAdmin: bounds(document.querySelector('.desktop-icon[data-app="admin-controls"]')),
-          desktopGithub: bounds(document.querySelector('.desktop-icon[data-github-shortcut]')),
+          desktopGithub: bounds(document.querySelector(".desktop-icon[data-github-shortcut]")),
           github: bounds(strip.querySelector("[data-github-shortcut]")),
           strip: bounds(strip),
           taskbarTop: document.querySelector(".taskbar").getBoundingClientRect().top,
@@ -576,10 +570,7 @@ test("Admin Controls stays contained, scrollable, and keyboard accessible", asyn
       expect(launcherMetrics.admin.left).toBeGreaterThanOrEqual(launcherMetrics.strip.left - 0.6);
       expect(launcherMetrics.github.right).toBeLessThanOrEqual(launcherMetrics.strip.right + 0.6);
       expect(launcherMetrics.admin.right).toBeLessThanOrEqual(launcherMetrics.github.left + 0.6);
-      for (const desktopIcon of [
-        launcherMetrics.desktopAdmin,
-        launcherMetrics.desktopGithub,
-      ]) {
+      for (const desktopIcon of [launcherMetrics.desktopAdmin, launcherMetrics.desktopGithub]) {
         expect(desktopIcon.left).toBeGreaterThanOrEqual(0);
         expect(desktopIcon.right).toBeLessThanOrEqual(viewport.width + 0.6);
         expect(desktopIcon.top).toBeGreaterThanOrEqual(0);
@@ -600,7 +591,7 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   const { mutatingRequests } = await preparePage(page);
   await page.setViewportSize({ width: 1280, height: 800 });
   expect(
-    await page.locator("#admin-event-preview").evaluate((preview) => preview.shadowRoot === null)
+    await page.locator("#admin-event-preview").evaluate((preview) => preview.shadowRoot === null),
   ).toBe(true);
   await openAdmin(page);
 
@@ -614,10 +605,10 @@ test("direct events and fixed seeded controls run locally without duplicate natu
         .listEvents()
         .filter(
           (event) =>
-            !(window.rohinAdminOrchestrator.createEventPreview(event.id) instanceof Element)
+            !(window.rohinAdminOrchestrator.createEventPreview(event.id) instanceof Element),
         )
-        .map((event) => event.id)
-    )
+        .map((event) => event.id),
+    ),
   ).toEqual([]);
   const eventLabels = await eventList.locator("option").allTextContents();
   expect(eventLabels[0]).toBe("Random");
@@ -630,12 +621,12 @@ test("direct events and fixed seeded controls run locally without duplicate natu
           window.rohinAdminOrchestrator
             .listEvents()
             .filter((eventDefinition) => eventDefinition.id === eventId).length,
-        ])
+        ]),
       ),
-    bulkSystemAlertEventIds
+    bulkSystemAlertEventIds,
   );
   expect(bulkSystemAlertCounts).toEqual(
-    Object.fromEntries(bulkSystemAlertEventIds.map((eventId) => [eventId, 1]))
+    Object.fromEntries(bulkSystemAlertEventIds.map((eventId) => [eventId, 1])),
   );
   for (const eventId of bulkSystemAlertEventIds) {
     await expect(eventList.locator(`option[value="${eventId}"]`)).toHaveCount(1);
@@ -646,12 +637,14 @@ test("direct events and fixed seeded controls run locally without duplicate natu
     "Annoying System Alert",
     "Annoying Vanishing Popup Alert",
   ]);
-  expect(eventLabels.indexOf(annoyingLabels.at(-1)) - eventLabels.indexOf(annoyingLabels[0])).toBe(2);
+  expect(eventLabels.indexOf(annoyingLabels.at(-1)) - eventLabels.indexOf(annoyingLabels[0])).toBe(
+    2,
+  );
 
   await eventList.selectOption("__random__");
   await expect(eventPreview).toHaveAttribute("aria-label", "First window preview: Random");
   await expect(eventPreview.locator(".admin-event-preview-empty")).toHaveText(
-    "An eligible event is chosen when Random is triggered."
+    "An eligible event is chosen when Random is triggered.",
   );
   await page.locator("#admin-add-cue").click();
   await selectAdminTab(page, "capture");
@@ -661,30 +654,34 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await eventList.selectOption("dodging-popup-alert");
   await expect(eventPreview).toHaveAttribute(
     "aria-label",
-    "First window preview: Annoying Dodging Popup Alert"
+    "First window preview: Annoying Dodging Popup Alert",
   );
   await expect(
-    eventPreview.locator('[data-admin-event-preview-window="dodging-popup-alert"]')
+    eventPreview.locator('[data-admin-event-preview-window="dodging-popup-alert"]'),
   ).toBeVisible();
   await expect(eventPreview.locator("#dodging-popup-window")).toContainText(
-    "Is this popup annoying?"
+    "Is this popup annoying?",
   );
   await expect(eventPreview.locator("#dodging-popup-window")).toHaveAttribute("inert", "");
   await expect(eventPreview.locator("#dodging-popup-window")).toHaveAttribute(
     "aria-hidden",
-    "true"
+    "true",
   );
   await expect(eventPreview.locator(".admin-event-preview-stage")).toHaveAttribute(
     "aria-hidden",
-    "true"
+    "true",
   );
   await expect(eventPreview.getByRole("button")).toHaveCount(0);
   expect(await eventPreview.ariaSnapshot()).not.toContain("button");
   // The live window is a named dialog; its decorative copy carries none of that.
-  await expect(page.locator("#dodging-popup-window:not([data-admin-event-preview-window])"))
-    .toHaveAttribute("role", "dialog");
+  await expect(
+    page.locator("#dodging-popup-window:not([data-admin-event-preview-window])"),
+  ).toHaveAttribute("role", "dialog");
   for (const attribute of ["role", "aria-labelledby", "aria-modal"]) {
-    await expect(eventPreview.locator("#dodging-popup-window")).not.toHaveAttribute(attribute, /.*/);
+    await expect(eventPreview.locator("#dodging-popup-window")).not.toHaveAttribute(
+      attribute,
+      /.*/,
+    );
   }
   await expect(eventPreview.getByRole("dialog", { includeHidden: true })).toHaveCount(0);
 
@@ -693,44 +690,36 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await expect(eventPreview.locator("#mcafee-download-window")).toHaveCount(0);
 
   await eventList.selectOption("debug-system-alert-seneca-announcement");
-  await expect(eventPreview.locator("#debug-system-alert-title")).toHaveText(
-    "System Announcement"
+  await expect(eventPreview.locator("#debug-system-alert-title")).toHaveText("System Announcement");
+  await expect(eventPreview.locator("#debug-system-alert-window")).not.toHaveAttribute(
+    "role",
+    /.*/,
   );
-  await expect(eventPreview.locator("#debug-system-alert-window")).not.toHaveAttribute("role", /.*/);
   await expect(eventPreview.locator("#debug-system-alert-window")).not.toHaveAttribute(
     "aria-labelledby",
-    /.*/
+    /.*/,
   );
   await expect(eventPreview.locator("#debug-system-alert-message")).toContainText(
-    "someone else could be handed your days"
+    "someone else could be handed your days",
   );
 
   await eventList.selectOption("debug-system-alert-power-cycle-reminder");
-  const systemAlertPreviewActions = eventPreview.locator(
-    "#debug-system-alert-actions"
-  );
-  await expect(systemAlertPreviewActions).toHaveAttribute(
-    "data-button-alignment",
-    "right"
-  );
+  const systemAlertPreviewActions = eventPreview.locator("#debug-system-alert-actions");
+  await expect(systemAlertPreviewActions).toHaveAttribute("data-button-alignment", "right");
   await expect(systemAlertPreviewActions).toHaveCSS("justify-content", "flex-end");
   const systemAlertPreviewOk = systemAlertPreviewActions.locator(
-    '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+    '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]',
   );
   await expect(systemAlertPreviewOk).toHaveCount(1);
   await expect(systemAlertPreviewOk).toHaveText("OK");
   const systemAlertPreviewAlignment = {
     actionsRight: await systemAlertPreviewActions.evaluate(
-      (actions) => actions.getBoundingClientRect().right
+      (actions) => actions.getBoundingClientRect().right,
     ),
-    okRight: await systemAlertPreviewOk.evaluate(
-      (ok) => ok.getBoundingClientRect().right
-    ),
+    okRight: await systemAlertPreviewOk.evaluate((ok) => ok.getBoundingClientRect().right),
   };
   expect(
-    Math.abs(
-      systemAlertPreviewAlignment.okRight - systemAlertPreviewAlignment.actionsRight
-    )
+    Math.abs(systemAlertPreviewAlignment.okRight - systemAlertPreviewAlignment.actionsRight),
   ).toBeLessThan(1);
 
   await eventList.selectOption("feliz-jueves");
@@ -742,41 +731,34 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await page.locator("#admin-event-search").fill("no matching event exists");
   await expect(eventList.locator("option")).toHaveCount(0);
   await expect(eventPreview.locator(".admin-event-preview-empty")).toHaveText(
-    "Choose an event to preview its first window."
+    "Choose an event to preview its first window.",
   );
   await expect(page.locator("#admin-trigger-now")).toBeDisabled();
   await expect(page.locator("#admin-add-cue")).toBeDisabled();
   await page.locator("#admin-event-search").fill("");
 
   await expect(eventList.locator('option[value="behelit-found"]')).toHaveCount(1);
-  const senecaOption = eventList.locator(
-    'option[value="debug-system-alert-seneca-announcement"]'
-  );
+  const senecaOption = eventList.locator('option[value="debug-system-alert-seneca-announcement"]');
   await expect(senecaOption).toHaveCount(1);
   await expect(senecaOption).toHaveText("System Announcement — Seneca");
 
   await eventList.selectOption("debug-system-alert-substack-reminder");
   await expect(eventPreview).toHaveAttribute(
     "aria-label",
-    "First window preview: System Alert — Substack Reminder"
+    "First window preview: System Alert — Substack Reminder",
   );
-  await expect(eventPreview.locator("#debug-system-alert-title")).toHaveText(
-    "System Alert"
-  );
+  await expect(eventPreview.locator("#debug-system-alert-title")).toHaveText("System Alert");
   await expect(eventPreview.locator("#debug-system-alert-message")).toHaveText(
-    "Don't forget to check out my substack!"
+    "Don't forget to check out my substack!",
   );
   await expect(eventPreview.locator("#debug-system-alert-icon")).toHaveAttribute(
     "src",
-    "assets/app-icons/ico/help_book_computer.ico"
+    "assets/app-icons/ico/help_book_computer.ico",
   );
   const substackPreviewActions = eventPreview.locator("#debug-system-alert-actions");
-  await expect(substackPreviewActions).toHaveAttribute(
-    "data-button-alignment",
-    "right"
-  );
+  await expect(substackPreviewActions).toHaveAttribute("data-button-alignment", "right");
   const substackPreviewOk = substackPreviewActions.locator(
-    '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+    '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]',
   );
   await expect(substackPreviewOk).toHaveCount(1);
   await expect(substackPreviewOk).toHaveText("OK");
@@ -784,24 +766,22 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   const triggerNow = page.locator("#admin-trigger-now");
   await triggerNow.click();
   const systemAlert = page.locator(
-    "#debug-system-alert-window:not([data-admin-event-preview-window])"
+    "#debug-system-alert-window:not([data-admin-event-preview-window])",
   );
   await expect(systemAlert).toBeVisible();
   await expect(systemAlert).toHaveAttribute("data-alert-id", "substack-reminder");
-  await expect(systemAlert.locator("#debug-system-alert-title")).toHaveText(
-    "System Alert"
-  );
+  await expect(systemAlert.locator("#debug-system-alert-title")).toHaveText("System Alert");
   await expect(systemAlert.locator("#debug-system-alert-message")).toHaveText(
-    "Don't forget to check out my substack!"
+    "Don't forget to check out my substack!",
   );
   await expect(systemAlert.locator("#debug-system-alert-icon")).toHaveAttribute(
     "src",
-    "assets/app-icons/ico/help_book_computer.ico"
+    "assets/app-icons/ico/help_book_computer.ico",
   );
   const substackLiveActions = systemAlert.locator("#debug-system-alert-actions");
   await expect(substackLiveActions).toHaveAttribute("data-button-alignment", "right");
   const substackLiveOk = substackLiveActions.locator(
-    '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
+    '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]',
   );
   await expect(substackLiveOk).toHaveCount(1);
   await expect(substackLiveOk).toHaveText("OK");
@@ -815,9 +795,7 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await expect(systemAlert).toHaveAttribute("data-alert-id", "seneca-announcement");
   await closeManagedWindow(
     systemAlert,
-    systemAlert.locator(
-      '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
-    )
+    systemAlert.locator('[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'),
   );
 
   await eventList.selectOption("behelit-found");
@@ -829,19 +807,19 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await eventList.selectOption("neko-stream-system-alert");
   await page.locator("#admin-trigger-now").click();
   const nekoStreamAlert = page.locator(
-    "#neko-stream-alert-window:not([data-admin-event-preview-window])"
+    "#neko-stream-alert-window:not([data-admin-event-preview-window])",
   );
   await expect(nekoStreamAlert).toBeVisible();
   await expect(nekoStreamAlert).toHaveAccessibleDescription("Trigger /nekostream?");
-  await closeManagedWindow(
-    nekoStreamAlert,
-    nekoStreamAlert.locator("#neko-stream-alert-no")
-  );
+  await closeManagedWindow(nekoStreamAlert, nekoStreamAlert.locator("#neko-stream-alert-no"));
 
   await selectAdminTab(page, "bindings");
   await page.locator("#admin-binding-target").selectOption("app:video-editor:taskbar");
   await page.locator("#admin-binding-event").selectOption("behelit-found");
-  await setLabeledToggle(page, "admin-binding-once", true);
+  // The defaults are the former "next click only": every click, once.
+  await expect(page.locator("#admin-binding-interval")).toHaveValue("1");
+  await expect(page.locator("#admin-binding-limit")).toHaveValue("1");
+  await expect(page.locator("#admin-binding-unlimited")).not.toBeChecked();
   await page.locator("#admin-save-binding").click();
   await expect(page.locator("#admin-seed-count")).toHaveText("1");
   await expect(page.locator("#admin-binding-list")).toContainText("Video Editor");
@@ -859,29 +837,38 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   const videoDialog = page.locator('[data-app-window="video-editor"]');
   await expect(videoDialog).toBeVisible();
   await expect(behelit).toBeVisible();
-  // The seeded one-shot clearing is the observable the binding owes; waiting on
-  // it is what proves the natural-event runtime has finished reacting. The
-  // forced control-triggered popups are isolated at the source, which debug-fixture.spec.mjs
-  // proves against a running clock.
-  await expect(target).not.toHaveAttribute("data-admin-seeded", /.+/);
+  // The persisted fire is the observable the binding owes; waiting on it is
+  // what proves the natural-event runtime has finished reacting. The forced
+  // control-triggered popups are isolated at the source, which
+  // debug-fixture.spec.mjs proves against a running clock.
+  await expect
+    .poll(() =>
+      page.evaluate((key) => JSON.parse(localStorage.getItem(key)).bindings[0].fires, storageKey),
+    )
+    .toBe(1);
   await expect(
-    page.locator("#neko-stream-alert-window:not([data-admin-event-preview-window])")
+    page.locator("#neko-stream-alert-window:not([data-admin-event-preview-window])"),
   ).toBeHidden();
   await expect(page.locator("#debug-system-alert-window")).toBeHidden();
 
   await closeManagedWindow(behelit, behelit.locator("#behelit-ok"));
-  await closeManagedWindow(
-    videoDialog,
-    videoDialog.locator("#video-editor-launch-no")
-  );
+  await closeManagedWindow(videoDialog, videoDialog.locator("#video-editor-launch-no"));
   await openAdmin(page);
   await selectAdminTab(page, "bindings");
-  await expect(page.locator("#admin-seed-count")).toHaveText("0");
+  // A spent one-shot stays listed, greyed out, until it is re-armed or removed.
+  await expect(page.locator("#admin-seed-count")).toHaveText("1");
+  await expect(
+    page.locator('#admin-binding-list [data-admin-binding-state="spent"]'),
+  ).toContainText("every click, spent (0 of 1 left)");
+  await expect(target).toHaveAttribute("data-admin-seed-state", "spent");
 
-  const storage = await page.evaluate((key) => ({
-    local: localStorage.getItem(key),
-    session: sessionStorage.getItem(key),
-  }), storageKey);
+  const storage = await page.evaluate(
+    (key) => ({
+      local: localStorage.getItem(key),
+      session: sessionStorage.getItem(key),
+    }),
+    storageKey,
+  );
   expect(storage.local).not.toBeNull();
   expect(() => JSON.parse(storage.local)).not.toThrow();
   expect(storage.session).toBeNull();
@@ -900,9 +887,7 @@ test("event previews preserve an initialized first-window state", async ({ page 
   await eventList.selectOption("infinity-blade-armory");
   await expect(eventPreview.locator("#infinity-armory-gems [role=gridcell]")).toHaveCount(25);
   await expect(eventPreview.locator("#infinity-armory-gems [data-armory-gem]")).toHaveCount(12);
-  await expect(eventPreview.locator("#infinity-armory-level")).toHaveText(
-    "Infinity Blade Lvl 1"
-  );
+  await expect(eventPreview.locator("#infinity-armory-level")).toHaveText("Infinity Blade Lvl 1");
   await expect(eventPreview.locator("#infinity-armory-gold")).toHaveText("12000");
 
   await eventList.selectOption("distress-signal");
@@ -917,7 +902,7 @@ test("event previews preserve an initialized first-window state", async ({ page 
   expect(previewDistressCanvasIsPainted).toBe(true);
   await page.locator("#admin-trigger-now").click();
   const liveDistressWindow = page.locator(
-    "#distress-signal-window:not([data-admin-event-preview-window])"
+    "#distress-signal-window:not([data-admin-event-preview-window])",
   );
   await expect(liveDistressWindow).toBeVisible();
   expect(
@@ -926,26 +911,26 @@ test("event previews preserve an initialized first-window state", async ({ page 
       blank.width = canvas.width;
       blank.height = canvas.height;
       return canvas.toDataURL() !== blank.toDataURL();
-    })
+    }),
   ).toBe(true);
   await liveDistressWindow.locator("#distress-signal-close").click();
 
   await eventList.selectOption("gradescope-curve");
   await expect(eventPreview.locator("#gradescope-curve-path")).toHaveAttribute(
     "d",
-    /M 20\.0 132\.0 L/
+    /M 20\.0 132\.0 L/,
   );
   await expect(eventPreview.locator("#gradescope-curve-prompt")).toBeVisible();
   await expect(eventPreview.locator("#gradescope-curve-adjust")).toBeHidden();
   const previewCurvePath = await eventPreview.locator("#gradescope-curve-path").getAttribute("d");
   await page.locator("#admin-trigger-now").click();
   const liveGradescopeWindow = page.locator(
-    "#gradescope-curve-window:not([data-admin-event-preview-window])"
+    "#gradescope-curve-window:not([data-admin-event-preview-window])",
   );
   await expect(liveGradescopeWindow).toBeVisible();
   await expect(liveGradescopeWindow.locator("#gradescope-curve-path")).toHaveAttribute(
     "d",
-    previewCurvePath
+    previewCurvePath,
   );
   await liveGradescopeWindow.locator("#gradescope-curve-no").click();
 
@@ -955,12 +940,10 @@ test("event previews preserve an initialized first-window state", async ({ page 
   await expect(eventPreview.locator("[data-gears-nest-cover-prop]")).toHaveCount(3);
   await expect(eventPreview.locator("#gears-nest-prompt")).toBeVisible();
   await expect(eventPreview.locator("#gears-nest-status")).toHaveText(
-    "Scourge Nest emerging. Engage to clear it."
+    "Scourge Nest emerging. Engage to clear it.",
   );
   await page.locator("#admin-trigger-now").click();
-  const liveGearsWindow = page.locator(
-    "#gears-nest-window:not([data-admin-event-preview-window])"
-  );
+  const liveGearsWindow = page.locator("#gears-nest-window:not([data-admin-event-preview-window])");
   await expect(liveGearsWindow).toBeVisible();
   await expect(liveGearsWindow.locator("[data-gears-nest-enemy]")).toHaveCount(5);
   await expect(liveGearsWindow.locator("[data-gears-nest-enemy-cover]")).toHaveCount(4);
@@ -971,13 +954,13 @@ test("event previews preserve an initialized first-window state", async ({ page 
   await expect(eventPreview.locator("[data-relic-recovery-item]")).toHaveCount(8);
   await expect(eventPreview.locator("[data-relic-recovery-slot]")).toHaveCount(8);
   await expect(eventPreview.locator("#relic-recovery-dialog-text")).toHaveText(
-    "Let's collect some relics!"
+    "Let's collect some relics!",
   );
   expect(await eventPreview.locator("link[rel=stylesheet]").count()).toBe(3);
 
   await page.locator("#admin-trigger-now").click();
   const liveRelicWindow = page.locator(
-    "#relic-recovery-window:not([data-admin-event-preview-window])"
+    "#relic-recovery-window:not([data-admin-event-preview-window])",
   );
   await expect(liveRelicWindow).toBeVisible();
   await liveRelicWindow.locator("#relic-recovery-start").click();
@@ -988,7 +971,7 @@ test("event previews preserve an initialized first-window state", async ({ page 
   await expect(eventPreview.locator("[data-relic-recovery-item]")).toHaveCount(8);
   await expect(eventPreview.locator("[data-relic-recovery-slot]")).toHaveCount(8);
   await expect(eventPreview.locator("#relic-recovery-dialog-text")).toHaveText(
-    "Let's collect some relics!"
+    "Let's collect some relics!",
   );
   await expect(eventPreview.locator("#relic-recovery-dialog")).toBeVisible();
   expect(await eventPreview.locator("link[rel=stylesheet]").count()).toBe(3);
@@ -1008,14 +991,12 @@ test("Random delegates to the repeat-safe runtime and can be added as an operato
   await page.locator("#admin-event-list").selectOption("__random__");
   await page.locator("#admin-trigger-now").click();
   await expect(page.locator("#admin-controls-status")).toHaveText(
-    "Triggered a repeat-safe random event."
+    "Triggered a repeat-safe random event.",
   );
   await page.locator("#admin-add-cue").click();
   await selectAdminTab(page, "capture");
   await expect(page.locator("#admin-shot-list")).toContainText("Random");
-  expect(await page.evaluate(() => window.__adminOrchestratedEventCalls)).toEqual([
-    "__random__",
-  ]);
+  expect(await page.evaluate(() => window.__adminOrchestratedEventCalls)).toEqual(["__random__"]);
 
   expect(mutatingRequests).toEqual([]);
 });
@@ -1031,7 +1012,7 @@ test("Capture quick-start drives a stable Modeling carousel promo binding", asyn
   await finishWindowAnimation(modelingWindow, "retro-window-open");
   await modelingWindow.locator('.selector-item[data-view="modeling-stand-still-drop"]').click();
   const modelingNext = modelingWindow.locator(
-    '[data-admin-target="modeling:modeling-stand-still-drop:next"]'
+    '[data-admin-target="modeling:modeling-stand-still-drop:next"]',
   );
   await expect(modelingNext).toBeVisible();
   await expect(modelingNext).toHaveText("Next");
@@ -1058,26 +1039,23 @@ test("Capture quick-start drives a stable Modeling carousel promo binding", asyn
   await quickStart.getByRole("button", { name: "Open Bindings" }).click();
   await expect(page.locator('[data-admin-tab="bindings"]')).toHaveAttribute(
     "aria-selected",
-    "true"
+    "true",
   );
   await expect(page.locator('[data-admin-tab="bindings"]')).toBeFocused();
   await selectAdminTab(page, "capture");
   await quickStart.getByRole("button", { name: "Open Run" }).click();
-  await expect(page.locator('[data-admin-tab="run"]')).toHaveAttribute(
-    "aria-selected",
-    "true"
-  );
+  await expect(page.locator('[data-admin-tab="run"]')).toHaveAttribute("aria-selected", "true");
   await expect(page.locator('[data-admin-tab="run"]')).toBeFocused();
   await selectAdminTab(page, "bindings");
 
   await page.locator("#admin-target-search").fill("Modeling");
   const stableTarget = "named:modeling:modeling-stand-still-drop:next";
   await expect(page.locator(`#admin-binding-target option[value="${stableTarget}"]`)).toHaveText(
-    "Modeling — Next item"
+    "Modeling — Next item",
   );
   await page.locator("#admin-binding-target").selectOption(stableTarget);
   await page.locator("#admin-binding-event").selectOption("behelit-found");
-  await setLabeledToggle(page, "admin-binding-repeat", true);
+  await setLabeledToggle(page, "admin-binding-unlimited", true);
   await page.locator("#admin-save-binding").click();
   await expect(page.locator("#admin-binding-list")).toContainText("Modeling — Next item");
 
@@ -1102,7 +1080,7 @@ test("Promo random mode boosts a natural carousel trigger through the safe sched
   await finishWindowAnimation(modelingWindow, "retro-window-open");
   await modelingWindow.locator('.selector-item[data-view="modeling-stand-still-drop"]').click();
   const modelingNext = modelingWindow.locator(
-    '[data-admin-target="modeling:modeling-stand-still-drop:next"]'
+    '[data-admin-target="modeling:modeling-stand-still-drop:next"]',
   );
   await expect(modelingNext).toBeVisible();
 
@@ -1112,22 +1090,19 @@ test("Promo random mode boosts a natural carousel trigger through the safe sched
   await closeAdmin(page);
   const promoWeights = await page.evaluate(() => ({
     compactAlert: window.rohinAdminOrchestrator.getPromoRandomEventWeight(
-      "debug-system-alert-ram-prices"
+      "debug-system-alert-ram-prices",
     ),
-    deferredImageDialog: window.rohinAdminOrchestrator.getPromoRandomEventWeight(
-      "saul-advertisement"
-    ),
+    deferredImageDialog:
+      window.rohinAdminOrchestrator.getPromoRandomEventWeight("saul-advertisement"),
   }));
   expect(promoWeights.deferredImageDialog).toBe(0.5);
-  expect(promoWeights.compactAlert).toBeGreaterThan(
-    promoWeights.deferredImageDialog
-  );
+  expect(promoWeights.compactAlert).toBeGreaterThan(promoWeights.deferredImageDialog);
   await page.evaluate(() => {
     // Pick a representative candidate without depending on family load order.
     // The real carousel activity still passes through every scheduler guard.
     const definitions = window.homeEventRuntime.randomEventDefinitions;
     const compactAlert = definitions.find(
-      (definition) => definition.id === "debug-system-alert-ram-prices"
+      (definition) => definition.id === "debug-system-alert-ram-prices",
     );
     if (!compactAlert) throw new Error("The compact system alert must be registered.");
     definitions.splice(0, definitions.length, compactAlert);
@@ -1139,22 +1114,16 @@ test("Promo random mode boosts a natural carousel trigger through the safe sched
   await expect(naturalEvent).toBeVisible();
   await expect(naturalEvent).toHaveAttribute("data-alert-id", "ram-prices");
   await expect(
-    naturalEvent.locator(
-      '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
-    )
+    naturalEvent.locator('[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'),
   ).toBeFocused();
   expect(
-    await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).promoRandomMode, storageKey)
+    await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).promoRandomMode, storageKey),
   ).toBe(true);
-  expect(
-    await page.locator("[data-admin-event-preview-window]").count()
-  ).toBe(0);
+  expect(await page.locator("[data-admin-event-preview-window]").count()).toBe(0);
 
   await closeManagedWindow(
     naturalEvent,
-    naturalEvent.locator(
-      '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
-    )
+    naturalEvent.locator('[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'),
   );
   expect(mutatingRequests).toEqual([]);
 });
@@ -1194,7 +1163,7 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
   await seedInput.click();
   for (const seedName of ["alternate-promo-take", "repeatable-promo-take", "promo-001"]) {
     await expect(
-      seedMenu.getByRole("button", { name: `Use saved seed ${seedName}` })
+      seedMenu.getByRole("button", { name: `Use saved seed ${seedName}` }),
     ).toBeVisible();
   }
   await seedMenu.getByRole("button", { name: "Use saved seed repeatable-promo-take" }).click();
@@ -1206,7 +1175,7 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
   await seedInput.click();
   await seedMenu.getByRole("button", { name: "Delete saved seed alternate-promo-take" }).click();
   await expect(
-    seedMenu.getByRole("button", { name: "Use saved seed alternate-promo-take" })
+    seedMenu.getByRole("button", { name: "Use saved seed alternate-promo-take" }),
   ).toHaveCount(0);
   expect(await preview.allTextContents()).toEqual(firstPreview);
   await seedInput.press("Escape");
@@ -1222,14 +1191,14 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
     window.rohinAdminControls.createSeededSequence(
       "repeatable-promo-take",
       window.rohinAdminOrchestrator.listEvents(),
-      2
-    )
+      2,
+    ),
   );
 
   await selectAdminTab(page, "bindings");
   await page.locator("#admin-binding-target").selectOption("app:image-tools:taskbar");
   await page.locator("#admin-binding-event").selectOption("__sequence__");
-  await setLabeledToggle(page, "admin-binding-repeat", true);
+  await setLabeledToggle(page, "admin-binding-unlimited", true);
   await page.locator("#admin-save-binding").click();
   await expect(page.locator("#admin-seed-count")).toHaveText("1");
 
@@ -1240,17 +1209,15 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
   await expect(page.locator("#admin-intensity")).toHaveValue("high");
   await expect(page.locator("#admin-promo-random-mode")).toBeChecked();
   expect(
-    await page.evaluate(() =>
-      window.rohinAdminControlsController.isPromoRandomModeEnabled()
-    )
+    await page.evaluate(() => window.rohinAdminControlsController.isPromoRandomModeEnabled()),
   ).toBe(true);
   expect(await page.locator("#admin-sequence-preview li").allTextContents()).toEqual(firstPreview);
   await seedInput.click();
   await expect(
-    seedMenu.getByRole("button", { name: "Use saved seed repeatable-promo-take" })
+    seedMenu.getByRole("button", { name: "Use saved seed repeatable-promo-take" }),
   ).toBeVisible();
   await expect(
-    seedMenu.getByRole("button", { name: "Use saved seed alternate-promo-take" })
+    seedMenu.getByRole("button", { name: "Use saved seed alternate-promo-take" }),
   ).toHaveCount(0);
   await seedInput.press("Escape");
   await selectAdminTab(page, "bindings");
@@ -1261,14 +1228,20 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
   await target.click();
   await finishWindowAnimation(page.locator('[data-app-window="image-tools"]'), "retro-window-open");
   await target.click();
-  await finishWindowAnimation(page.locator('[data-app-window="image-tools"]'), "retro-window-close");
+  await finishWindowAnimation(
+    page.locator('[data-app-window="image-tools"]'),
+    "retro-window-close",
+  );
   const calls = await page.evaluate(() => window.__adminOrchestratedEventCalls);
   expect(calls.slice(0, 2)).toEqual(expected);
 
-  const stored = await page.evaluate((key) => ({
-    local: JSON.parse(localStorage.getItem(key)),
-    session: sessionStorage.getItem(key),
-  }), storageKey);
+  const stored = await page.evaluate(
+    (key) => ({
+      local: JSON.parse(localStorage.getItem(key)),
+      session: sessionStorage.getItem(key),
+    }),
+    storageKey,
+  );
   expect(stored.local).toBeTruthy();
   expect(stored.session).toBeNull();
 
@@ -1294,9 +1267,9 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
 
   await setLabeledToggle(page, "admin-audio", false);
   expect(
-    await page.locator("audio, video").evaluateAll((media) =>
-      media.every((element) => element.muted)
-    )
+    await page
+      .locator("audio, video")
+      .evaluateAll((media) => media.every((element) => element.muted)),
   ).toBe(true);
   await setLabeledToggle(page, "admin-vfx", false);
   await expect(page.locator("body")).toHaveClass(/is-admin-vfx-off/);
@@ -1319,7 +1292,7 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
   await expect(page.locator("#admin-countdown-overlay")).toBeVisible();
   await expect(page.locator("#admin-stop-take")).toBeEnabled();
   await expect(page.locator('.taskbar-icon[data-app="admin-controls"]')).toHaveClass(
-    /is-admin-running/
+    /is-admin-running/,
   );
   await page.locator("#admin-stop-take").click();
   await expect(page.locator("#admin-countdown-overlay")).toBeHidden();
@@ -1340,10 +1313,7 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
   await expect(dialogPreset).toBeFocused();
 
   await page.keyboard.press("Escape");
-  await expect(page.locator("#admin-controls-window")).toHaveAttribute(
-    "aria-hidden",
-    "true"
-  );
+  await expect(page.locator("#admin-controls-window")).toHaveAttribute("aria-hidden", "true");
   await finishWindowAnimation(page.locator("#admin-controls-window"), "retro-window-close");
   await expect(page.locator('.taskbar-icon[data-app="admin-controls"]')).toBeFocused();
   await openAdmin(page);
@@ -1354,9 +1324,7 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
   await expect(notification).toBeVisible();
   await closeManagedWindow(
     notification,
-    notification.locator(
-      '[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'
-    )
+    notification.locator('[data-system-alert-button-id="ok"][data-system-alert-action="dismiss"]'),
   );
 
   await page.locator('[data-admin-preset="desktop-activity"]').click();
@@ -1380,20 +1348,15 @@ test("capture aids, presets, privacy, media switches, and start-stop controls re
   await expect(page.locator("#sol-tableau .sol-card.is-face-down")).toHaveCount(0);
   await expect(page.locator("#sol-auto-solve")).toBeVisible();
   await expect(page.locator("#sol-reset")).toBeHidden();
-  await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute(
-    "aria-hidden",
-    "true"
-  );
+  await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute("aria-hidden", "true");
   await page.locator("#sol-auto-solve").click();
-  await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute(
-    "aria-hidden",
-    "false",
-    { timeout: 25_000 }
-  );
+  await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute("aria-hidden", "false", {
+    timeout: 25_000,
+  });
   await expect(page.locator("[data-sol-foundation] .sol-card")).toHaveCount(4);
   expect(await page.locator("#sol-victory-video").evaluate((video) => video.muted)).toBe(true);
   const impactSounds = (await page.evaluate(() => window.__playedMedia)).filter((media) =>
-    /hero-parry\.mp3$/.test(media.src)
+    /hero-parry\.mp3$/.test(media.src),
   );
   expect(impactSounds).toHaveLength(52);
   expect(impactSounds.every((media) => media.muted)).toBe(true);
@@ -1451,15 +1414,17 @@ test("picker convenience and Reset Scene preserve local Admin settings", async (
   await expect(targetSelect).toHaveValue("app:image-tools:taskbar");
 
   await page.locator("#admin-binding-event").selectOption("behelit-found");
-  await setLabeledToggle(page, "admin-binding-repeat", true);
+  await setLabeledToggle(page, "admin-binding-unlimited", true);
   await page.locator("#admin-save-binding").click();
   await expect(page.locator("#admin-seed-count")).toHaveText("1");
   await expect(target).toHaveAttribute("data-admin-seeded", "behelit-found");
   await expect(target.locator(".admin-seed-badge")).toBeVisible();
 
   await selectAdminTab(page, "run");
-  await page.evaluate((key) => sessionStorage.setItem(key, "preserve-me"),
-    "admin-controls-unrelated-session-value");
+  await page.evaluate(
+    (key) => sessionStorage.setItem(key, "preserve-me"),
+    "admin-controls-unrelated-session-value",
+  );
   const stateBeforeReset = await page.evaluate((key) => localStorage.getItem(key), storageKey);
   expect(stateBeforeReset).not.toBeNull();
 
@@ -1467,15 +1432,18 @@ test("picker convenience and Reset Scene preserve local Admin settings", async (
     page.waitForNavigation({ waitUntil: "domcontentloaded" }),
     page.locator("#admin-reset-scene").click(),
   ]);
-  await page.waitForFunction(() =>
-    window.rohinAdminControlsController?.wasResetReload?.() === true
+  await page.waitForFunction(
+    () => window.rohinAdminControlsController?.wasResetReload?.() === true,
   );
 
-  const storageAfterReset = await page.evaluate(({ adminKey, pendingKey }) => ({
-    admin: localStorage.getItem(adminKey),
-    pending: sessionStorage.getItem(pendingKey),
-    unrelated: sessionStorage.getItem("admin-controls-unrelated-session-value"),
-  }), { adminKey: storageKey, pendingKey: resetPendingKey });
+  const storageAfterReset = await page.evaluate(
+    ({ adminKey, pendingKey }) => ({
+      admin: localStorage.getItem(adminKey),
+      pending: sessionStorage.getItem(pendingKey),
+      unrelated: sessionStorage.getItem("admin-controls-unrelated-session-value"),
+    }),
+    { adminKey: storageKey, pendingKey: resetPendingKey },
+  );
   expect(storageAfterReset.admin).toBe(stateBeforeReset);
   expect(storageAfterReset.pending).toBeNull();
   expect(storageAfterReset.unrelated).toBe("preserve-me");
@@ -1492,7 +1460,9 @@ test("picker convenience and Reset Scene preserve local Admin settings", async (
 });
 
 for (const reason of ["expiry", "storage removal"]) {
-  test(`an open Admin window returns to its gate after ${reason} without resetting settings`, async ({ page }) => {
+  test(`an open Admin window returns to its gate after ${reason} without resetting settings`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.clock.install();
     const { mutatingRequests } = await preparePage(page);
@@ -1517,11 +1487,173 @@ for (const reason of ["expiry", "storage removal"]) {
     await finishWindowAnimation(win, "retro-window-close");
     await expect(page.locator("#admin-controls-stand-in-ok")).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page.locator("#admin-controls-stand-in-window")).toHaveAttribute("aria-hidden", "true");
-    await finishWindowAnimation(page.locator("#admin-controls-stand-in-window"), "retro-window-close");
+    await expect(page.locator("#admin-controls-stand-in-window")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    await finishWindowAnimation(
+      page.locator("#admin-controls-stand-in-window"),
+      "retro-window-close",
+    );
     await expect(page.locator('.taskbar-icon[data-app="admin-controls"]')).toBeFocused();
     expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBe(savedSettings);
-    expect(await page.evaluate((key) => sessionStorage.getItem(key), administratorProofStorageKey)).toBeNull();
+    expect(
+      await page.evaluate((key) => sessionStorage.getItem(key), administratorProofStorageKey),
+    ).toBeNull();
     expect(mutatingRequests).toEqual([]);
   });
 }
+
+const seedCountsViewports = [
+  { name: "mobile", width: 375, height: 812 },
+  { name: "desktop", width: 1280, height: 800 },
+];
+
+for (const viewport of seedCountsViewports) {
+  test(`a seed firing every 2 clicks up to 2 times greys out and re-arms at ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    const { mutatingRequests } = await preparePage(page, { spyOnOrchestratedEvents: true });
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    const { win } = await openAdmin(page);
+    const panel = await selectAdminTab(page, "bindings");
+    const list = page.locator("#admin-binding-list");
+    const reset = page.locator("#admin-reset-bindings");
+    const limit = page.locator("#admin-binding-limit");
+    await expect(reset).toBeDisabled();
+
+    // Unlimited disables the limit field; unchecking restores it.
+    await setLabeledToggle(page, "admin-binding-unlimited", true);
+    await expect(limit).toBeDisabled();
+    await setLabeledToggle(page, "admin-binding-unlimited", false);
+    await expect(limit).toBeEnabled();
+
+    await page.locator("#admin-binding-target").selectOption("app:image-tools:taskbar");
+    await page.locator("#admin-binding-event").selectOption("behelit-found");
+    await page.locator("#admin-binding-interval").fill("2");
+    await limit.fill("2");
+    await page.locator("#admin-save-binding").click();
+    const row = list.locator("li").filter({ hasText: "Image Tools" });
+    await expect(row).toHaveAttribute("data-admin-binding-state", "armed");
+    await expect(row).toContainText("every 2 clicks, 2 of 2 left");
+    const target = page.locator('.taskbar-icon[data-app="image-tools"]');
+    await expect(target).toHaveAttribute("data-admin-seed-state", "armed");
+    await expect(target.locator(".admin-seed-badge")).toBeVisible();
+    await expect(target.locator(".admin-seed-badge")).not.toHaveClass(/is-spent/);
+    expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(
+      true,
+    );
+    await win.screenshot({ path: testInfo.outputPath(`bindings-armed-${viewport.name}.png`) });
+
+    await closeAdmin(page);
+    const imageTools = page.locator('[data-app-window="image-tools"]');
+    const calls = () => page.evaluate(() => window.__adminOrchestratedEventCalls.length);
+    const firesAfterClick = [];
+    for (let click = 1; click <= 6; click += 1) {
+      await target.scrollIntoViewIfNeeded();
+      await target.click();
+      await finishWindowAnimation(
+        imageTools,
+        click % 2 === 1 ? "retro-window-open" : "retro-window-close",
+      );
+      firesAfterClick.push(await calls());
+    }
+    // Fires on clicks 2 and 4; clicks 5 and 6 reach a spent seed.
+    expect(firesAfterClick).toEqual([0, 1, 1, 2, 2, 2]);
+
+    await openAdmin(page);
+    await selectAdminTab(page, "bindings");
+    await expect(row).toHaveAttribute("data-admin-binding-state", "spent");
+    await expect(row).toHaveClass(/is-spent/);
+    await expect(row).toContainText("every 2 clicks, spent (0 of 2 left)");
+    await expect(target).toHaveAttribute("data-admin-seed-state", "spent");
+    await expect(target.locator(".admin-seed-badge")).toHaveClass(/is-spent/);
+    await expect(target).toHaveAccessibleDescription(/Seed spent/);
+    await expect(row.locator(".admin-binding-name")).toHaveCSS("color", "rgb(128, 128, 128)");
+    await expect(reset).toBeEnabled();
+    await row.scrollIntoViewIfNeeded();
+    await win.screenshot({ path: testInfo.outputPath(`bindings-spent-${viewport.name}.png`) });
+    const taskbar = await page.locator(".taskbar").boundingBox();
+    const icon = await target.boundingBox();
+    await page.screenshot({
+      path: testInfo.outputPath(`badge-spent-${viewport.name}.png`),
+      clip: {
+        x: Math.max(0, icon.x - 60),
+        y: taskbar.y,
+        width: Math.min(viewport.width - Math.max(0, icon.x - 60), icon.width + 120),
+        height: taskbar.height,
+      },
+    });
+
+    await reset.click();
+    await expect(row).toHaveAttribute("data-admin-binding-state", "armed");
+    await expect(row).toContainText("every 2 clicks, 2 of 2 left");
+    await expect(target).toHaveAttribute("data-admin-seed-state", "armed");
+    await expect(reset).toBeDisabled();
+    await expect(page.locator("#admin-controls-announcer")).toHaveText("Every seed is re-armed.");
+    await win.screenshot({ path: testInfo.outputPath(`bindings-rearmed-${viewport.name}.png`) });
+
+    const stored = await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)).bindings,
+      storageKey,
+    );
+    expect(stored).toEqual([
+      {
+        target: "app:image-tools:taskbar",
+        label: expect.any(String),
+        eventId: "behelit-found",
+        interval: 2,
+        limit: 2,
+        clicks: 0,
+        fires: 0,
+      },
+    ]);
+
+    const results = await new AxeBuilder({ page })
+      .include("#admin-panel-bindings")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+    expect(mutatingRequests).toEqual([]);
+  });
+}
+
+test("legacy one-shot and repeat bindings migrate in place without losing their targets", async ({
+  page,
+}) => {
+  await preparePage(page);
+  // The fixture clears storage only on the first load, so a reload keeps
+  // these records written in the shape saved before intervals existed.
+  await page.evaluate((key) => {
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        version: 1,
+        bindings: [
+          {
+            target: "app:image-tools:taskbar",
+            label: "Image Tools",
+            eventId: "behelit-found",
+            mode: "once",
+          },
+          {
+            target: "app:video-editor:taskbar",
+            label: "Video Editor",
+            eventId: "__random__",
+            mode: "repeat",
+          },
+        ],
+      }),
+    );
+  }, storageKey);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openAdmin(page);
+  await selectAdminTab(page, "bindings");
+  const rows = page.locator("#admin-binding-list li");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("Image Tools");
+  await expect(rows.nth(0)).toContainText("every click, 1 of 1 left");
+  await expect(rows.nth(1)).toContainText("Video Editor");
+  await expect(rows.nth(1)).toContainText("every click, unlimited");
+});

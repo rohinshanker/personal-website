@@ -3,9 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-import {
-  readHomeScriptText,
-} from "./helpers/home-scripts.mjs";
+import { readHomeScriptText } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
 const adminScriptPath = "scripts/home/admin-controls.js";
@@ -22,9 +20,9 @@ const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const tagWithAttribute = (source, attribute, value) => {
   const escapedAttribute = escapeRegExp(attribute);
   const escapedValue = escapeRegExp(value);
-  return source.match(
-    new RegExp(`<[^>]+\\b${escapedAttribute}="${escapedValue}"[^>]*>`, "i")
-  )?.[0] || "";
+  return (
+    source.match(new RegExp(`<[^>]+\\b${escapedAttribute}="${escapedValue}"[^>]*>`, "i"))?.[0] || ""
+  );
 };
 
 const attributeValue = (tag, attribute) =>
@@ -41,13 +39,7 @@ const sourceBetween = (source, startMarker, endMarker) => {
 const readAdminSources = async () => {
   const [home, main, admin, resources, session, styles, validation] = await Promise.all([
     readFile(new URL("home.html", root), "utf8"),
-    readHomeScriptText(
-      "gameStats",
-      "windows",
-      "eventRuntime",
-      "adminOrchestrator",
-      "solitaire"
-    ),
+    readHomeScriptText("gameStats", "windows", "eventRuntime", "adminOrchestrator", "solitaire"),
     readFile(new URL(adminScriptPath, root), "utf8"),
     readFile(new URL(resourceScriptPath, root), "utf8"),
     readFile(new URL(administratorSessionPath, root), "utf8"),
@@ -136,7 +128,7 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
     assert.equal(attributeValue(launcher, "aria-haspopup"), "dialog");
     assert.equal(
       attributeValue(launcher, "aria-controls"),
-      "admin-controls-window admin-controls-stand-in-window"
+      "admin-controls-window admin-controls-stand-in-window",
     );
   }
 
@@ -152,7 +144,7 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
     assert.match(
       followingMarkup,
       /^<button class="(?:desktop-icon|taskbar-icon)" data-github-shortcut /,
-      "Admin must be immediately before GitHub on each launcher surface."
+      "Admin must be immediately before GitHub on each launcher surface.",
     );
   }
 
@@ -163,18 +155,12 @@ test("Admin is available on the desktop and immediately before GitHub in the doc
   assert.ok(script.isFile() && script.size > 0);
   assert.ok(styles.isFile() && styles.size > 0);
 
-  assert.match(
-    resources,
-    /styles\/home\/admin-controls\.css\?v=[^"]+/
-  );
-  assert.match(
-    resources,
-    /scripts\/home\/admin-controls\.js\?v=[^"]+/
-  );
+  assert.match(resources, /styles\/home\/admin-controls\.css\?v=[^"]+/);
+  assert.match(resources, /scripts\/home\/admin-controls\.js\?v=[^"]+/);
   assert.ok(
     resources.indexOf("scripts/home/admin-controls.js") >
       resources.indexOf("scripts/home/admin/orchestrator.js"),
-    "The controller must load after the runtime orchestrator."
+    "The controller must load after the runtime orchestrator.",
   );
 });
 
@@ -187,48 +173,42 @@ test("Admin launch access requires an active Administrator session proof", async
   assert.equal(attributeValue(standInTag, "role"), "alertdialog");
   assert.equal(attributeValue(standInTag, "aria-modal"), "false");
   assert.equal(attributeValue(standInTag, "aria-hidden"), "true");
-  assert.equal(
-    attributeValue(standInTag, "aria-labelledby"),
-    "admin-controls-stand-in-title"
-  );
-  assert.equal(
-    attributeValue(standInTag, "aria-describedby"),
-    "admin-controls-stand-in-message"
-  );
+  assert.equal(attributeValue(standInTag, "aria-labelledby"), "admin-controls-stand-in-title");
+  assert.equal(attributeValue(standInTag, "aria-describedby"), "admin-controls-stand-in-message");
 
   const standInMarkup = sourceBetween(
     home,
     standInTag,
-    '<div\n        class="window home-window app-window app-window--center admin-controls-window is-hidden"'
+    '<div\n        class="window home-window app-window app-window--center admin-controls-window is-hidden"',
   );
   assert.match(standInMarkup, /id="admin-controls-stand-in-title">Admin Controls<\/div>/);
   assert.match(
     standInMarkup,
-    /<img data-src="assets\/app-icons\/ico\/program_manager\.ico" width="48" height="48" alt="" \/>/
+    /<img data-src="assets\/app-icons\/ico\/program_manager\.ico" width="48" height="48" alt="" \/>/,
   );
   assert.match(
     standInMarkup,
-    /id="admin-controls-stand-in-message" aria-live="polite">nothing to see here\.\.\.<\/p>/
+    /id="admin-controls-stand-in-message" aria-live="polite">nothing to see here\.\.\.<\/p>/,
   );
   assert.match(
     standInMarkup,
-    /<button\s+type="button"\s+id="admin-controls-stand-in-ok"\s+data-coming-soon-ok\s+data-close="admin-controls-stand-in"\s*>OK<\/button>/
+    /<button\s+type="button"\s+id="admin-controls-stand-in-ok"\s+data-coming-soon-ok\s+data-close="admin-controls-stand-in"\s*>OK<\/button>/,
   );
   assert.doesNotMatch(
     tagWithAttribute(standInMarkup, "id", "admin-controls-stand-in-ok"),
     /\bclass=/,
-    "The stand-in must retain native 98.css button styling."
+    "The stand-in must retain native 98.css button styling.",
   );
 
   const sessionWiringSource = sourceBetween(
     main,
     "const gameStatsAdministratorSession = createAdministratorSession(",
-    "\n\nconst getAdministratorEventHeaders"
+    "\n\nconst getAdministratorEventHeaders",
   );
   const accessSource = sourceBetween(
     main,
     'const ADMIN_CONTROLS_APP_ID = "admin-controls";',
-    "\nlet topZ ="
+    "\nlet topZ =",
   );
   const administratorProfile = {
     id: "player-rohin-neko",
@@ -277,7 +257,7 @@ test("Admin launch access requires an active Administrator session proof", async
         `  otherTarget: resolveAdminControlsLaunchAppId("solitaire"),\n` +
         `  proof: gameStatsAdministratorSession.getProof(),\n` +
         `};`,
-      context
+      context,
     );
     return { ...structuredClone(context.result), removals };
   };
@@ -285,25 +265,19 @@ test("Admin launch access requires an active Administrator session proof", async
   assert.match(
     main,
     /registerAdminControlsAccess\(hasActiveGameStatsAdministratorAccess\);/,
-    "the window manager must be told how to check for a live session"
+    "the window manager must be told how to check for a live session",
   );
-  assert.deepEqual(
-    runAccessCase({ profile: administratorProfile, proof: validProof }),
-    {
-      access: true,
-      adminTarget: "admin-controls",
-      otherTarget: "solitaire",
-      proof: validProof,
-      removals: 0,
-    }
-  );
-  assert.equal(
-    runAccessCase({ profile: null, proof: validProof }).adminTarget,
-    "admin-controls"
-  );
+  assert.deepEqual(runAccessCase({ profile: administratorProfile, proof: validProof }), {
+    access: true,
+    adminTarget: "admin-controls",
+    otherTarget: "solitaire",
+    proof: validProof,
+    removals: 0,
+  });
+  assert.equal(runAccessCase({ profile: null, proof: validProof }).adminTarget, "admin-controls");
   assert.equal(
     runAccessCase({ profile: administratorProfile, proof: null }).adminTarget,
-    "admin-controls-stand-in"
+    "admin-controls-stand-in",
   );
   for (const invalidProof of [
     { proof: "too-short", expiresAt: validProof.expiresAt },
@@ -327,28 +301,25 @@ test("Admin launch access requires an active Administrator session proof", async
 
   assert.match(
     main,
-    /if \(open && appId === ADMIN_CONTROLS_APP_ID\) \{[\s\S]*?resolveAdminControlsLaunchAppId\(appId\)/
+    /if \(open && appId === ADMIN_CONTROLS_APP_ID\) \{[\s\S]*?resolveAdminControlsLaunchAppId\(appId\)/,
   );
   assert.match(
     main,
-    /if \(!adminControlsAccessCheck\(\)\) \{[\s\S]*?showAdminControlsStandIn\(focusReturn\)/
+    /if \(!adminControlsAccessCheck\(\)\) \{[\s\S]*?showAdminControlsStandIn\(focusReturn\)/,
   );
-  assert.match(
-    main,
-    /await loadAdminResources\(\);[\s\S]*?if \(!adminControlsAccessCheck\(\)\)/
-  );
+  assert.match(main, /await loadAdminResources\(\);[\s\S]*?if \(!adminControlsAccessCheck\(\)\)/);
   assert.equal(
     countMatches(main, /if \(!isAdminControlsAppId\(appId\)\) \{/g),
     2,
-    "Neither Admin window may emit natural window-open or window-close triggers."
+    "Neither Admin window may emit natural window-open or window-close triggers.",
   );
   assert.match(
     main,
-    /isAdminControlsAppId\(win\.getAttribute\("data-app-window"\)\) \|\|[\s\S]*?!isWindowVisible\(win\)/
+    /isAdminControlsAppId\(win\.getAttribute\("data-app-window"\)\) \|\|[\s\S]*?!isWindowVisible\(win\)/,
   );
   assert.match(
     main,
-    /didDragWindow &&\s*!isAdminControlsAppId\(win\.getAttribute\("data-app-window"\)\)/
+    /didDragWindow &&\s*!isAdminControlsAppId\(win\.getAttribute\("data-app-window"\)\)/,
   );
 });
 
@@ -365,10 +336,7 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
 
   const windowStart = home.indexOf(windowTag);
   const windowPreview = home.slice(windowStart, windowStart + 1_400);
-  assert.match(
-    windowPreview,
-    /id="admin-controls-title"[\s\S]*?<span>Admin Controls<\/span>/
-  );
+  assert.match(windowPreview, /id="admin-controls-title"[\s\S]*?<span>Admin Controls<\/span>/);
   assert.match(windowPreview, /program_manager\.ico/);
   assert.match(windowPreview, /aria-label="Close"[^>]*data-close="admin-controls"/);
 
@@ -393,10 +361,12 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
     "admin-binding-target",
     "admin-pick-target",
     "admin-binding-event",
-    "admin-binding-once",
-    "admin-binding-repeat",
+    "admin-binding-interval",
+    "admin-binding-limit",
+    "admin-binding-unlimited",
     "admin-save-binding",
     "admin-clear-bindings",
+    "admin-reset-bindings",
     "admin-binding-list",
     "admin-seed-picker",
     "admin-sequence-seed",
@@ -430,7 +400,7 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
     assert.equal(
       countMatches(home, new RegExp(`\\bid="${escapeRegExp(id)}"`, "g")),
       1,
-      `${id} must be unique.`
+      `${id} must be unique.`,
     );
   });
 
@@ -438,12 +408,12 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
     assert.equal(
       countMatches(home, new RegExp(`\\bdata-admin-tab="${tab}"`, "g")),
       1,
-      `Missing ${tab} tab.`
+      `Missing ${tab} tab.`,
     );
     assert.equal(
       countMatches(home, new RegExp(`\\bdata-admin-panel="${tab}"`, "g")),
       1,
-      `Missing ${tab} panel.`
+      `Missing ${tab} panel.`,
     );
   }
 
@@ -451,7 +421,7 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
     assert.equal(
       countMatches(home, new RegExp(`\\bdata-admin-preset="${preset}"`, "g")),
       1,
-      `Missing ${preset} scene preset.`
+      `Missing ${preset} scene preset.`,
     );
   }
 
@@ -481,7 +451,7 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
   assert.match(home, /data-admin-go-tab="run"/);
   assert.match(
     tagWithAttribute(home, "id", "admin-promo-random-mode"),
-    /aria-describedby="admin-promo-random-mode-help"/
+    /aria-describedby="admin-promo-random-mode-help"/,
   );
 
   const taskbarStart = home.indexOf('<div class="taskbar"');
@@ -505,12 +475,12 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
   assert.match(
     styles,
     /\.admin-controls-tabs\s*\{[^}]*margin:\s*0 0 -8px;/s,
-    "The outside tabs must share the panel's left and right edges."
+    "The outside tabs must share the panel's left and right edges.",
   );
   assert.match(
     styles,
     /\.admin-controls-panel\s*\{[^}]*box-shadow:\s*var\(--border-raised-outer\),\s*var\(--border-raised-inner\);/s,
-    "The controlled panel and its tabs must both use a raised surface."
+    "The controlled panel and its tabs must both use a raised surface.",
   );
   assert.match(styles, /\.admin-event-preview-viewport/);
   assert.match(admin, /\.admin-event-preview-stage/);
@@ -528,6 +498,11 @@ test("Admin settings use strict versioned local state with a deterministic publi
     "DEFAULT_STATE",
     "normalizeSeedNames",
     "normalizeState",
+    "normalizeBinding",
+    "isBindingSpent",
+    "recordBindingActivation",
+    "rearmBinding",
+    "describeBindingRule",
     "createSeededSequence",
     "create",
   ]) {
@@ -543,30 +518,28 @@ test("Admin settings use strict versioned local state with a deterministic publi
 
   const eventIds = ["zeta-event", "alpha-event", "beta-event", "alpha-event"];
   const firstSequence = api.createSeededSequence("promo-take-7", eventIds);
-  const repeatedSequence = api.createSeededSequence(
-    "promo-take-7",
-    [{ id: "beta-event" }, { id: "alpha-event" }, { id: "zeta-event" }]
-  );
+  const repeatedSequence = api.createSeededSequence("promo-take-7", [
+    { id: "beta-event" },
+    { id: "alpha-event" },
+    { id: "zeta-event" },
+  ]);
   const differentSequence = api.createSeededSequence("promo-take-8", eventIds);
   assert.equal(firstSequence.length, 24);
   assert.deepEqual(
     JSON.parse(JSON.stringify(firstSequence)),
     JSON.parse(JSON.stringify(repeatedSequence)),
-    "Equivalent event sets must yield the same take regardless of input order or duplicates."
+    "Equivalent event sets must yield the same take regardless of input order or duplicates.",
   );
   assert.notDeepEqual(
     JSON.parse(JSON.stringify(firstSequence)),
-    JSON.parse(JSON.stringify(differentSequence))
+    JSON.parse(JSON.stringify(differentSequence)),
   );
   firstSequence.forEach((eventId) => {
     assert.ok(["alpha-event", "beta-event", "zeta-event"].includes(eventId));
     assert.notEqual(eventId, api.RANDOM_EVENT_VALUE);
     assert.notEqual(eventId, "__sequence__");
   });
-  assert.deepEqual(
-    JSON.parse(JSON.stringify(api.createSeededSequence("empty", [], 8))),
-    []
-  );
+  assert.deepEqual(JSON.parse(JSON.stringify(api.createSeededSequence("empty", [], 8))), []);
 
   const defaults = JSON.parse(JSON.stringify(api.DEFAULT_STATE));
   assert.deepEqual(defaults, {
@@ -603,62 +576,57 @@ test("Admin settings use strict versioned local state with a deterministic publi
           selector: "body *",
           server: "https://example.test",
           unexpected: true,
-        })
-      )
+        }),
+      ),
     ),
     defaults,
-    "Unknown and sensitive fields must be discarded."
+    "Unknown and sensitive fields must be discarded.",
   );
 
-  const normalized = JSON.parse(JSON.stringify(api.normalizeState({
-    version: 1,
-    activeTab: "capture",
-    countdown: "5",
-    hideBeforeTrigger: false,
-    showCountdown: false,
-    bindings: [
-      {
-        target: "app:video-editor:taskbar",
-        label: "  Video   Editor  ",
-        eventId: "behelit-found",
-        mode: "repeat",
-      },
-      { target: "body *", label: "Unsafe selector", eventId: "behelit-found" },
-      { target: "start", label: "Start", eventId: "__random__", mode: "unknown" },
-      {
-        target: "named:modeling:modeling-stand-still-drop:next",
-        label: "Modeling — Next",
-        eventId: "behelit-found",
-        mode: "repeat",
-      },
-    ],
-    sequenceSeed: "  promo   take 42  ",
-    seedNames: [
-      "  promo   take 42  ",
-      "alternate-take",
-      "alternate-take",
-      "",
-      "x".repeat(70),
-    ],
-    sequence: ["zeta-event", "__random__", "body *", "alpha-event"],
-    sequenceCursor: "2",
-    frequency: "5",
-    duration: 60,
-    intensity: "high",
-    shotList: [
-      "  Opening   beat  ",
-      { label: "  Win   shot  ", eventId: "behelit-found" },
-    ],
-    cueCursor: "1",
-    guide: "vertical",
-    safeArea: true,
-    audio: false,
-    visualEffects: false,
-    privacy: true,
-    promoRandomMode: true,
-    pauseNatural: false,
-    credentials: { password: "discard-me" },
-  })));
+  const normalized = JSON.parse(
+    JSON.stringify(
+      api.normalizeState({
+        version: 1,
+        activeTab: "capture",
+        countdown: "5",
+        hideBeforeTrigger: false,
+        showCountdown: false,
+        bindings: [
+          {
+            target: "app:video-editor:taskbar",
+            label: "  Video   Editor  ",
+            eventId: "behelit-found",
+            mode: "repeat",
+          },
+          { target: "body *", label: "Unsafe selector", eventId: "behelit-found" },
+          { target: "start", label: "Start", eventId: "__random__", mode: "unknown" },
+          {
+            target: "named:modeling:modeling-stand-still-drop:next",
+            label: "Modeling — Next",
+            eventId: "behelit-found",
+            mode: "repeat",
+          },
+        ],
+        sequenceSeed: "  promo   take 42  ",
+        seedNames: ["  promo   take 42  ", "alternate-take", "alternate-take", "", "x".repeat(70)],
+        sequence: ["zeta-event", "__random__", "body *", "alpha-event"],
+        sequenceCursor: "2",
+        frequency: "5",
+        duration: 60,
+        intensity: "high",
+        shotList: ["  Opening   beat  ", { label: "  Win   shot  ", eventId: "behelit-found" }],
+        cueCursor: "1",
+        guide: "vertical",
+        safeArea: true,
+        audio: false,
+        visualEffects: false,
+        privacy: true,
+        promoRandomMode: true,
+        pauseNatural: false,
+        credentials: { password: "discard-me" },
+      }),
+    ),
+  );
   assert.deepEqual(normalized, {
     version: 1,
     activeTab: "capture",
@@ -670,14 +638,28 @@ test("Admin settings use strict versioned local state with a deterministic publi
         target: "app:video-editor:taskbar",
         label: "Video Editor",
         eventId: "behelit-found",
-        mode: "repeat",
+        interval: 1,
+        limit: null,
+        clicks: 0,
+        fires: 0,
       },
-      { target: "start", label: "Start", eventId: "__random__", mode: "once" },
+      {
+        target: "start",
+        label: "Start",
+        eventId: "__random__",
+        interval: 1,
+        limit: 1,
+        clicks: 0,
+        fires: 0,
+      },
       {
         target: "named:modeling:modeling-stand-still-drop:next",
         label: "Modeling — Next",
         eventId: "behelit-found",
-        mode: "repeat",
+        interval: 1,
+        limit: null,
+        clicks: 0,
+        fires: 0,
       },
     ],
     sequenceSeed: "promo take 42",
@@ -702,25 +684,37 @@ test("Admin settings use strict versioned local state with a deterministic publi
   });
 
   assert.deepEqual(
-    JSON.parse(JSON.stringify(api.normalizeSeedNames([
-      " first   take ",
-      null,
-      "first take",
-      ...Array.from({ length: 60 }, (_, index) => `take-${index}`),
-    ]))),
-    ["first take", ...Array.from({ length: 49 }, (_, index) => `take-${index}`)]
+    JSON.parse(
+      JSON.stringify(
+        api.normalizeSeedNames([
+          " first   take ",
+          null,
+          "first take",
+          ...Array.from({ length: 60 }, (_, index) => `take-${index}`),
+        ]),
+      ),
+    ),
+    ["first take", ...Array.from({ length: 49 }, (_, index) => `take-${index}`)],
   );
-  const migrated = JSON.parse(JSON.stringify(api.normalizeState({
-    ...defaults,
-    seedNames: undefined,
-    sequenceSeed: "legacy-take",
-    sequence: ["alpha-event"],
-  })));
+  const migrated = JSON.parse(
+    JSON.stringify(
+      api.normalizeState({
+        ...defaults,
+        seedNames: undefined,
+        sequenceSeed: "legacy-take",
+        sequence: ["alpha-event"],
+      }),
+    ),
+  );
   assert.deepEqual(migrated.seedNames, ["legacy-take"]);
-  const intentionallyEmpty = JSON.parse(JSON.stringify(api.normalizeState({
-    ...defaults,
-    seedNames: [],
-  })));
+  const intentionallyEmpty = JSON.parse(
+    JSON.stringify(
+      api.normalizeState({
+        ...defaults,
+        seedNames: [],
+      }),
+    ),
+  );
   assert.deepEqual(intentionallyEmpty.seedNames, []);
 
   assert.match(admin, /const localStateStorage = storage \|\| pageWindow\.localStorage/);
@@ -729,14 +723,11 @@ test("Admin settings use strict versioned local state with a deterministic publi
   assert.match(admin, /const transientStorage = resetStorage \|\| pageWindow\.sessionStorage/);
   assert.match(admin, /transientStorage\.getItem\(RESET_PENDING_KEY\)/);
   assert.match(admin, /typeof wasResetReload !== "boolean"/);
-  assert.match(
-    admin,
-    /wasResetReload:\s*window\.homeWindows\.wasAdminControlsResetReload\(\)/
-  );
+  assert.match(admin, /wasResetReload:\s*window\.homeWindows\.wasAdminControlsResetReload\(\)/);
   assert.doesNotMatch(
     admin,
     /transientStorage\.(?:getItem|setItem|removeItem)\(STORAGE_KEY/,
-    "Durable Admin state must not be stored in sessionStorage."
+    "Durable Admin state must not be stored in sessionStorage.",
   );
   assert.doesNotMatch(admin, /\bfetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket/);
   assert.doesNotMatch(admin, /password|credential|authorization|bearer/i);
@@ -749,17 +740,17 @@ test("runtime orchestration integrates the complete event registry without publi
   const eventRuntime = sourceBetween(
     main,
     "const listAdminRandomEvents = () =>",
-    "const ADMIN_DESKTOP_ACTIVITY_APPS"
+    "const ADMIN_DESKTOP_ACTIVITY_APPS",
   );
   const presetRuntime = sourceBetween(
     main,
     "const runAdminScenePreset = async",
-    "window.rohinAdminOrchestrator"
+    "window.rohinAdminOrchestrator",
   );
   const gameWinRuntime = sourceBetween(
     presetRuntime,
     'if (presetId === "game-win")',
-    'if (presetId === "dialog")'
+    'if (presetId === "dialog")',
   );
 
   assert.match(eventRuntime, /randomEventDefinitions\.map/);
@@ -773,14 +764,8 @@ test("runtime orchestration integrates the complete event registry without publi
   assert.match(eventRuntime, /drawDistressSignalPreview/);
   assert.match(eventRuntime, /setAttribute\("aria-hidden", "true"\)/);
   assert.match(eventRuntime, /data-admin-event-preview-window/);
-  assert.match(
-    main,
-    /"dodging-popup-alert":\s*"Annoying Dodging Popup Alert"/
-  );
-  assert.match(
-    main,
-    /"vanishing-popup-alert":\s*"Annoying Vanishing Popup Alert"/
-  );
+  assert.match(main, /"dodging-popup-alert":\s*"Annoying Dodging Popup Alert"/);
+  assert.match(main, /"vanishing-popup-alert":\s*"Annoying Vanishing Popup Alert"/);
   assert.match(eventRuntime, /randomEventDefinitions\.find/);
   assert.match(eventRuntime, /preloadRandomEventAssets/);
   assert.match(eventRuntime, /definition\.run/);
@@ -798,45 +783,51 @@ test("runtime orchestration integrates the complete event registry without publi
   assert.doesNotMatch(
     gameWinRuntime,
     /recordGame|publish|queue|sync|submit|notifyActivity|fetch/i,
-    "The promotional win must remain visual-only."
+    "The promotional win must remain visual-only.",
   );
 
   const stagingRuntime = sourceBetween(
     main,
     "const solStagePresentationWin = (",
-    "const solAutoMoveCardToFoundation = "
+    "const solAutoMoveCardToFoundation = ",
   );
-  assert.match(stagingRuntime, /solState\.presentation = \{ visualEffects: Boolean\(visualEffects\) \}/);
+  assert.match(
+    stagingRuntime,
+    /solState\.presentation = \{ visualEffects: Boolean\(visualEffects\) \}/,
+  );
   assert.match(stagingRuntime, /solState\.tableau = solBuildPresentationTableau\(\)/);
   assert.match(stagingRuntime, /solStats\.dropSession\(\)/);
   assert.doesNotMatch(
     stagingRuntime,
     /recordGame|publish|queue|sync|submit|notifyActivity|fetch/i,
-    "Staging the promotional board must remain visual-only."
+    "Staging the promotional board must remain visual-only.",
   );
 
   const victoryRuntime = sourceBetween(
     main,
     "const solTriggerVictoryEffects = () => {",
-    "const solCreateSlotMark = "
+    "const solCreateSlotMark = ",
   );
   const presentationBranch = sourceBetween(
     victoryRuntime,
     "if (solState.presentation) {",
-    "solStartFireworks();\n  solShowAchievement();\n  solPlayVictoryVideo();\n  solStats.recordEvent("
+    "solStartFireworks();\n  solShowAchievement();\n  solPlayVictoryVideo();\n  solStats.recordEvent(",
   );
-  assert.match(presentationBranch, /if \(solState\.presentation\.visualEffects\) \{[\s\S]*?solStartFireworks\(\);[\s\S]*?solShowAchievement\(\);/);
+  assert.match(
+    presentationBranch,
+    /if \(solState\.presentation\.visualEffects\) \{[\s\S]*?solStartFireworks\(\);[\s\S]*?solShowAchievement\(\);/,
+  );
   assert.match(presentationBranch, /solPlayVictoryVideo\(\);\s*return;/);
   assert.doesNotMatch(
     presentationBranch,
     /recordGame|publish|queue|sync|submit|notifyActivity|fetch/i,
-    "The presentation victory must remain visual-only."
+    "The presentation victory must remain visual-only.",
   );
 
   const publicRuntime = sourceBetween(
     main,
     "window.rohinAdminOrchestrator = Object.freeze({",
-    "setRandomEventCompactnessWeightProvider("
+    "setRandomEventCompactnessWeightProvider(",
   );
   for (const method of [
     "closeWindow",
@@ -854,7 +845,7 @@ test("runtime orchestration integrates the complete event registry without publi
   assert.match(main, /window\.rohinAdminControlsController\?\.handleDocumentClick/);
   assert.match(
     main,
-    /target\?\.closest\("#admin-controls-window, #admin-controls-stand-in-window"\)/
+    /target\?\.closest\("#admin-controls-window, #admin-controls-stand-in-window"\)/,
   );
 });
 
@@ -877,7 +868,7 @@ test("bindings, timing, capture aids, and reset are implemented as real controll
   assert.doesNotMatch(
     admin,
     /querySelector\(\s*(?:binding|saved|state)\.[a-z]*target/i,
-    "Persisted target values must not be executed as arbitrary selectors."
+    "Persisted target values must not be executed as arbitrary selectors.",
   );
 
   for (const feature of [
@@ -903,7 +894,7 @@ test("bindings, timing, capture aids, and reset are implemented as real controll
   assert.doesNotMatch(
     sourceBetween(admin, "const runEventChoice = async", "const hideCountdownOverlay"),
     /Math\.random/,
-    "Random Admin choices must use the site's shared repeat-avoidance runtime."
+    "Random Admin choices must use the site's shared repeat-avoidance runtime.",
   );
   assert.match(admin, /orchestrator\.runPreset/);
   assert.match(admin, /orchestrator\.resetScene/);
@@ -920,7 +911,7 @@ test("Admin validation ends with a complete repeatable promo-take runbook", asyn
     "Sequence seed",
     "Generate",
     "Next deterministic sequence cue",
-    "Every click",
+    "Unlimited",
     "Replay",
     "Reset Scene",
     "Start Take",
@@ -935,4 +926,154 @@ test("Admin validation ends with a complete repeatable promo-take runbook", asyn
   assert.match(section, /record/i);
   assert.match(section, /retake/i);
   assert.match(section, /not deterministic/i);
+});
+
+const plain = (value) => JSON.parse(JSON.stringify(value));
+
+test("seeded bindings normalize interval, limit and progress, and migrate legacy modes", async () => {
+  const { admin } = await readAdminSources();
+  const api = loadAdminNamespace(admin);
+  const base = { target: "start", label: "Start", eventId: "behelit-found" };
+
+  assert.deepEqual(plain(api.normalizeBinding({ ...base, mode: "once" })), {
+    ...base,
+    interval: 1,
+    limit: 1,
+    clicks: 0,
+    fires: 0,
+  });
+  assert.deepEqual(plain(api.normalizeBinding({ ...base, mode: "repeat" })), {
+    ...base,
+    interval: 1,
+    limit: null,
+    clicks: 0,
+    fires: 0,
+  });
+  assert.equal(api.normalizeBinding({ ...base }).limit, 1, "No mode or limit is the old one-shot.");
+  assert.equal(
+    api.normalizeBinding({ ...base, mode: "repeat", limit: 4 }).limit,
+    4,
+    "An explicit limit wins over a legacy mode.",
+  );
+
+  const stored = api.normalizeBinding({ ...base, interval: 3, limit: 5, clicks: 7, fires: 2 });
+  assert.deepEqual(plain(stored), { ...base, interval: 3, limit: 5, clicks: 7, fires: 2 });
+
+  const clamped = api.normalizeBinding({
+    ...base,
+    interval: 5000,
+    limit: 0,
+    clicks: -4,
+    fires: 9,
+  });
+  assert.equal(clamped.interval, 999);
+  assert.equal(clamped.limit, 1);
+  assert.equal(clamped.clicks, 0);
+  assert.equal(clamped.fires, 1, "Fires never exceed the limit.");
+  assert.equal(api.normalizeBinding({ ...base, interval: "2.5", limit: "x" }).interval, 1);
+  assert.equal(api.normalizeBinding({ ...base, limit: null, fires: 40 }).fires, 40);
+  assert.equal(api.normalizeBinding({ ...base, target: "body *" }), null);
+  assert.equal(api.normalizeBinding({ ...base, eventId: "" }), null);
+
+  const state = plain(
+    api.normalizeState({
+      version: 1,
+      bindings: [
+        { ...base, mode: "once" },
+        { ...base, target: "app:video-editor:taskbar", interval: 2, limit: 2, clicks: 3, fires: 1 },
+      ],
+    }),
+  );
+  assert.deepEqual(
+    state.bindings.map(({ target, interval, limit, clicks, fires }) => [
+      target,
+      interval,
+      limit,
+      clicks,
+      fires,
+    ]),
+    [
+      ["start", 1, 1, 0, 0],
+      ["app:video-editor:taskbar", 2, 2, 3, 1],
+    ],
+    "Progress persists with the bindings in the same version-1 state.",
+  );
+});
+
+test("a seed fires on every multiple of its interval until its limit is spent, then re-arms", async () => {
+  const { admin } = await readAdminSources();
+  const api = loadAdminNamespace(admin);
+  let binding = api.normalizeBinding({
+    target: "start",
+    label: "Start",
+    eventId: "behelit-found",
+    interval: 2,
+    limit: 2,
+  });
+  assert.equal(api.describeBindingRule(binding), "every 2 clicks, 2 of 2 left");
+
+  const fired = [];
+  for (let click = 1; click <= 6; click += 1) {
+    const activation = api.recordBindingActivation(binding);
+    binding = activation.binding;
+    if (activation.fired) fired.push(click);
+    assert.equal(activation.counted, click <= 4, `click ${click} counting`);
+  }
+  assert.deepEqual(fired, [2, 4], "Fires on clicks 2 and 4 only.");
+  assert.equal(binding.clicks, 4, "A spent seed stops counting.");
+  assert.equal(binding.fires, 2);
+  assert.equal(api.isBindingSpent(binding), true);
+  assert.equal(api.describeBindingRule(binding), "every 2 clicks, spent (0 of 2 left)");
+
+  const rearmed = api.rearmBinding(binding);
+  assert.equal(api.isBindingSpent(rearmed), false);
+  assert.deepEqual([rearmed.clicks, rearmed.fires, rearmed.interval, rearmed.limit], [0, 0, 2, 2]);
+  assert.equal(binding.fires, 2, "Re-arming returns a new record.");
+
+  let unlimited = api.normalizeBinding({
+    target: "start",
+    label: "Start",
+    eventId: "behelit-found",
+    interval: 1,
+    limit: null,
+  });
+  for (let click = 0; click < 25; click += 1) {
+    const activation = api.recordBindingActivation(unlimited);
+    assert.equal(activation.fired, true);
+    unlimited = activation.binding;
+  }
+  assert.equal(api.isBindingSpent(unlimited), false);
+  assert.equal(api.describeBindingRule(unlimited), "every click, unlimited");
+
+  const oneShot = api.normalizeBinding({
+    target: "start",
+    label: "Start",
+    eventId: "behelit-found",
+    mode: "once",
+  });
+  const first = api.recordBindingActivation(oneShot);
+  assert.equal(first.fired, true);
+  assert.equal(api.describeBindingRule(oneShot), "every click, 1 of 1 left");
+  assert.equal(api.recordBindingActivation(first.binding).fired, false);
+});
+
+test("seeded activations keep spent seeds listed and only Reset Seeds re-arms them", async () => {
+  const { admin, home } = await readAdminSources();
+  const activation = sourceBetween(
+    admin,
+    "const bindingIndex = state.bindings.findIndex",
+    'documentRef.addEventListener("keydown"',
+  );
+  assert.doesNotMatch(activation, /splice/, "A spent seed must stay in the list.");
+  assert.match(activation, /recordBindingActivation/);
+  assert.match(activation, /if \(!activation\.counted\) return null;/);
+  assert.match(activation, /persist\(\);/);
+  assert.match(admin, /state\.bindings = state\.bindings\.map\(rearmBinding\)/);
+  assert.match(admin, /data-admin-binding-state/);
+  assert.match(admin, /data-admin-seed-state/);
+  const reset = tagWithAttribute(home, "id", "admin-reset-bindings");
+  assert.match(reset, /disabled/);
+  assert.match(home, /<label for="admin-binding-interval">Fire every<\/label>/);
+  assert.match(home, /<label for="admin-binding-unlimited">Unlimited<\/label>/);
+  assert.doesNotMatch(home, /admin-binding-once|admin-binding-repeat/);
 });
