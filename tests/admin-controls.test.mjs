@@ -393,10 +393,12 @@ test("Admin Controls exposes the complete accessible capture workflow", async ()
     "admin-binding-target",
     "admin-pick-target",
     "admin-binding-event",
-    "admin-binding-once",
-    "admin-binding-repeat",
+    "admin-binding-interval",
+    "admin-binding-limit",
+    "admin-binding-unlimited",
     "admin-save-binding",
     "admin-clear-bindings",
+    "admin-reset-bindings",
     "admin-binding-list",
     "admin-seed-picker",
     "admin-sequence-seed",
@@ -528,6 +530,11 @@ test("Admin settings use strict versioned local state with a deterministic publi
     "DEFAULT_STATE",
     "normalizeSeedNames",
     "normalizeState",
+    "normalizeBinding",
+    "isBindingSpent",
+    "recordBindingActivation",
+    "rearmBinding",
+    "describeBindingRule",
     "createSeededSequence",
     "create",
   ]) {
@@ -670,14 +677,28 @@ test("Admin settings use strict versioned local state with a deterministic publi
         target: "app:video-editor:taskbar",
         label: "Video Editor",
         eventId: "behelit-found",
-        mode: "repeat",
+        interval: 1,
+        limit: null,
+        clicks: 0,
+        fires: 0,
       },
-      { target: "start", label: "Start", eventId: "__random__", mode: "once" },
+      {
+        target: "start",
+        label: "Start",
+        eventId: "__random__",
+        interval: 1,
+        limit: 1,
+        clicks: 0,
+        fires: 0,
+      },
       {
         target: "named:modeling:modeling-stand-still-drop:next",
         label: "Modeling — Next",
         eventId: "behelit-found",
-        mode: "repeat",
+        interval: 1,
+        limit: null,
+        clicks: 0,
+        fires: 0,
       },
     ],
     sequenceSeed: "promo take 42",
@@ -920,7 +941,7 @@ test("Admin validation ends with a complete repeatable promo-take runbook", asyn
     "Sequence seed",
     "Generate",
     "Next deterministic sequence cue",
-    "Every click",
+    "Unlimited",
     "Replay",
     "Reset Scene",
     "Start Take",
@@ -935,4 +956,141 @@ test("Admin validation ends with a complete repeatable promo-take runbook", asyn
   assert.match(section, /record/i);
   assert.match(section, /retake/i);
   assert.match(section, /not deterministic/i);
+});
+
+const plain = (value) => JSON.parse(JSON.stringify(value));
+
+test("seeded bindings normalize interval, limit and progress, and migrate legacy modes", async () => {
+  const { admin } = await readAdminSources();
+  const api = loadAdminNamespace(admin);
+  const base = { target: "start", label: "Start", eventId: "behelit-found" };
+
+  assert.deepEqual(plain(api.normalizeBinding({ ...base, mode: "once" })), {
+    ...base,
+    interval: 1,
+    limit: 1,
+    clicks: 0,
+    fires: 0,
+  });
+  assert.deepEqual(plain(api.normalizeBinding({ ...base, mode: "repeat" })), {
+    ...base,
+    interval: 1,
+    limit: null,
+    clicks: 0,
+    fires: 0,
+  });
+  assert.equal(api.normalizeBinding({ ...base }).limit, 1, "No mode or limit is the old one-shot.");
+  assert.equal(
+    api.normalizeBinding({ ...base, mode: "repeat", limit: 4 }).limit,
+    4,
+    "An explicit limit wins over a legacy mode."
+  );
+
+  const stored = api.normalizeBinding({ ...base, interval: 3, limit: 5, clicks: 7, fires: 2 });
+  assert.deepEqual(plain(stored), { ...base, interval: 3, limit: 5, clicks: 7, fires: 2 });
+
+  const clamped = api.normalizeBinding({
+    ...base,
+    interval: 5000,
+    limit: 0,
+    clicks: -4,
+    fires: 9,
+  });
+  assert.equal(clamped.interval, 999);
+  assert.equal(clamped.limit, 1);
+  assert.equal(clamped.clicks, 0);
+  assert.equal(clamped.fires, 1, "Fires never exceed the limit.");
+  assert.equal(api.normalizeBinding({ ...base, interval: "2.5", limit: "x" }).interval, 1);
+  assert.equal(api.normalizeBinding({ ...base, limit: null, fires: 40 }).fires, 40);
+  assert.equal(api.normalizeBinding({ ...base, target: "body *" }), null);
+  assert.equal(api.normalizeBinding({ ...base, eventId: "" }), null);
+
+  const state = plain(api.normalizeState({
+    version: 1,
+    bindings: [
+      { ...base, mode: "once" },
+      { ...base, target: "app:video-editor:taskbar", interval: 2, limit: 2, clicks: 3, fires: 1 },
+    ],
+  }));
+  assert.deepEqual(
+    state.bindings.map(({ target, interval, limit, clicks, fires }) => [target, interval, limit, clicks, fires]),
+    [
+      ["start", 1, 1, 0, 0],
+      ["app:video-editor:taskbar", 2, 2, 3, 1],
+    ],
+    "Progress persists with the bindings in the same version-1 state."
+  );
+});
+
+test("a seed fires on every multiple of its interval until its limit is spent, then re-arms", async () => {
+  const { admin } = await readAdminSources();
+  const api = loadAdminNamespace(admin);
+  let binding = api.normalizeBinding({
+    target: "start",
+    label: "Start",
+    eventId: "behelit-found",
+    interval: 2,
+    limit: 2,
+  });
+  assert.equal(api.describeBindingRule(binding), "every 2 clicks, 2 of 2 left");
+
+  const fired = [];
+  for (let click = 1; click <= 6; click += 1) {
+    const activation = api.recordBindingActivation(binding);
+    binding = activation.binding;
+    if (activation.fired) fired.push(click);
+    assert.equal(activation.counted, click <= 4, `click ${click} counting`);
+  }
+  assert.deepEqual(fired, [2, 4], "Fires on clicks 2 and 4 only.");
+  assert.equal(binding.clicks, 4, "A spent seed stops counting.");
+  assert.equal(binding.fires, 2);
+  assert.equal(api.isBindingSpent(binding), true);
+  assert.equal(api.describeBindingRule(binding), "every 2 clicks, spent (0 of 2 left)");
+
+  const rearmed = api.rearmBinding(binding);
+  assert.equal(api.isBindingSpent(rearmed), false);
+  assert.deepEqual([rearmed.clicks, rearmed.fires, rearmed.interval, rearmed.limit], [0, 0, 2, 2]);
+  assert.equal(binding.fires, 2, "Re-arming returns a new record.");
+
+  let unlimited = api.normalizeBinding({
+    target: "start",
+    label: "Start",
+    eventId: "behelit-found",
+    interval: 1,
+    limit: null,
+  });
+  for (let click = 0; click < 25; click += 1) {
+    const activation = api.recordBindingActivation(unlimited);
+    assert.equal(activation.fired, true);
+    unlimited = activation.binding;
+  }
+  assert.equal(api.isBindingSpent(unlimited), false);
+  assert.equal(api.describeBindingRule(unlimited), "every click, unlimited");
+
+  const oneShot = api.normalizeBinding({ target: "start", label: "Start", eventId: "behelit-found", mode: "once" });
+  const first = api.recordBindingActivation(oneShot);
+  assert.equal(first.fired, true);
+  assert.equal(api.describeBindingRule(oneShot), "every click, 1 of 1 left");
+  assert.equal(api.recordBindingActivation(first.binding).fired, false);
+});
+
+test("seeded activations keep spent seeds listed and only Reset Seeds re-arms them", async () => {
+  const { admin, home } = await readAdminSources();
+  const activation = sourceBetween(
+    admin,
+    "const bindingIndex = state.bindings.findIndex",
+    "documentRef.addEventListener(\"keydown\""
+  );
+  assert.doesNotMatch(activation, /splice/, "A spent seed must stay in the list.");
+  assert.match(activation, /recordBindingActivation/);
+  assert.match(activation, /if \(!activation\.counted\) return null;/);
+  assert.match(activation, /persist\(\);/);
+  assert.match(admin, /state\.bindings = state\.bindings\.map\(rearmBinding\)/);
+  assert.match(admin, /data-admin-binding-state/);
+  assert.match(admin, /data-admin-seed-state/);
+  const reset = tagWithAttribute(home, "id", "admin-reset-bindings");
+  assert.match(reset, /disabled/);
+  assert.match(home, /<label for="admin-binding-interval">Fire every<\/label>/);
+  assert.match(home, /<label for="admin-binding-unlimited">Unlimited<\/label>/);
+  assert.doesNotMatch(home, /admin-binding-once|admin-binding-repeat/);
 });

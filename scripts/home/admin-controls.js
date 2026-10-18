@@ -8,6 +8,8 @@ const SEQUENCE_EVENT_VALUE = "__sequence__";
 const STATE_VERSION = 1;
 const SEQUENCE_LENGTH = 24;
 const MAX_SEED_NAMES = 50;
+const MAX_BINDING_INTERVAL = 999;
+const MAX_BINDING_LIMIT = 999;
 
 const DEFAULT_STATE = Object.freeze({
   version: STATE_VERSION,
@@ -135,17 +137,72 @@ const normalizeEventChoice = (value) => {
   return EVENT_ID_PATTERN.test(eventId) ? eventId : "";
 };
 
+const boundedCount = (value, min, max, fallback) => {
+  const number = Number(value);
+  if (!Number.isInteger(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+};
+
+/**
+ * A seed fires its event on every `interval`-th click of its target and at
+ * most `limit` times (`null` is unlimited). `clicks` and `fires` are its
+ * progress; a seed whose fires reached its limit is spent and stays listed.
+ * Legacy records carry `mode`: "repeat" became every click without a limit,
+ * anything else the old one-shot (every click, once).
+ */
 const normalizeBinding = (value) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const target = normalizeTargetKey(value.target);
   const eventId = normalizeEventChoice(value.eventId);
   if (!target || !eventId) return null;
+  const legacyRepeat = value.mode === "repeat";
+  const interval = boundedCount(value.interval, 1, MAX_BINDING_INTERVAL, 1);
+  let limit;
+  if ("limit" in value) {
+    limit = value.limit === null ? null : boundedCount(value.limit, 1, MAX_BINDING_LIMIT, 1);
+  } else {
+    limit = legacyRepeat ? null : 1;
+  }
+  const fires = boundedCount(value.fires, 0, limit ?? Number.MAX_SAFE_INTEGER, 0);
+  const clicks = boundedCount(value.clicks, 0, Number.MAX_SAFE_INTEGER, 0);
   return {
     target,
     label: cleanText(value.label, 96) || "Site control",
     eventId,
-    mode: value.mode === "repeat" ? "repeat" : "once",
+    interval,
+    limit,
+    clicks,
+    fires,
   };
+};
+
+const isBindingSpent = (binding) => binding.limit !== null && binding.fires >= binding.limit;
+
+/**
+ * Counts one activation of a seeded control. The event fires on every
+ * multiple of the interval; only a fire uses up the limit. A spent seed
+ * neither counts nor fires.
+ */
+const recordBindingActivation = (binding) => {
+  if (isBindingSpent(binding)) return { binding, counted: false, fired: false };
+  const clicks = binding.clicks + 1;
+  const fired = clicks % binding.interval === 0;
+  return {
+    binding: { ...binding, clicks, fires: binding.fires + (fired ? 1 : 0) },
+    counted: true,
+    fired,
+  };
+};
+
+/** Re-arms a seed: progress returns to zero and the full limit is available again. */
+const rearmBinding = (binding) => ({ ...binding, clicks: 0, fires: 0 });
+
+/** Short rule text, e.g. "every 3 clicks, 2 of 5 left" or "every click, unlimited". */
+const describeBindingRule = (binding) => {
+  const cadence = binding.interval === 1 ? "every click" : `every ${binding.interval} clicks`;
+  if (binding.limit === null) return `${cadence}, unlimited`;
+  if (isBindingSpent(binding)) return `${cadence}, spent (0 of ${binding.limit} left)`;
+  return `${cadence}, ${binding.limit - binding.fires} of ${binding.limit} left`;
 };
 
 const normalizeCue = (value) => {
@@ -286,10 +343,12 @@ const create = ({
     bindingTarget: byId("admin-binding-target"),
     pickTarget: byId("admin-pick-target"),
     bindingEvent: byId("admin-binding-event"),
-    bindingOnce: byId("admin-binding-once"),
-    bindingRepeat: byId("admin-binding-repeat"),
+    bindingInterval: byId("admin-binding-interval"),
+    bindingLimit: byId("admin-binding-limit"),
+    bindingUnlimited: byId("admin-binding-unlimited"),
     saveBinding: byId("admin-save-binding"),
     clearBindings: byId("admin-clear-bindings"),
+    resetBindings: byId("admin-reset-bindings"),
     bindingList: byId("admin-binding-list"),
     sequenceSeed: byId("admin-sequence-seed"),
     seedPicker: byId("admin-seed-picker"),
@@ -640,6 +699,7 @@ const create = ({
 
   const removeSeedIndicator = (element, record) => {
     element.removeAttribute("data-admin-seeded");
+    element.removeAttribute("data-admin-seed-state");
     element.querySelectorAll(":scope > .admin-seed-badge, :scope > [data-admin-seed-description]")
       .forEach((indicator) => indicator.remove());
     if (record.describedBy === null) element.removeAttribute("aria-describedby");
@@ -679,7 +739,7 @@ const create = ({
       if (
         binding &&
         binding.eventId === record.eventId &&
-        binding.mode === record.mode &&
+        describeBindingRule(binding) === record.rule &&
         binding.target === record.target &&
         element.isConnected
       ) {
@@ -690,16 +750,18 @@ const create = ({
     });
     desired.forEach((binding, element) => {
       const descriptionId = `admin-seed-description-${hashString(binding.target).toString(16)}`;
+      const spent = isBindingSpent(binding);
+      const rule = describeBindingRule(binding);
       const badge = documentRef.createElement("span");
-      badge.className = "admin-seed-badge";
+      badge.className = spent ? "admin-seed-badge is-spent" : "admin-seed-badge";
       badge.setAttribute("aria-hidden", "true");
       const description = documentRef.createElement("span");
       description.className = "admin-visually-hidden";
       description.id = descriptionId;
       description.setAttribute("data-admin-seed-description", "");
-      description.textContent = `Seeded with ${eventLabel(binding.eventId)}; ${
-        binding.mode === "once" ? "next activation only" : "every activation"
-      }.`;
+      description.textContent = spent
+        ? `Seed spent: ${eventLabel(binding.eventId)} already fired ${binding.limit} of ${binding.limit} times. Reset Seeds re-arms it.`
+        : `Seeded with ${eventLabel(binding.eventId)}; ${rule}.`;
       const describedBy = element.getAttribute("aria-describedby");
       const addedPosition = pageWindow.getComputedStyle(element).position === "static";
       const inlinePosition = element.style.getPropertyValue("position");
@@ -711,10 +773,11 @@ const create = ({
         eventId: binding.eventId,
         inlinePosition,
         inlinePositionPriority,
-        mode: binding.mode,
+        rule,
         target: binding.target,
       });
       element.setAttribute("data-admin-seeded", binding.eventId);
+      element.setAttribute("data-admin-seed-state", spent ? "spent" : "armed");
       element.setAttribute(
         "aria-describedby",
         [describedBy, descriptionId].filter(Boolean).join(" ")
@@ -881,6 +944,11 @@ const create = ({
   const renderBindings = () => {
     if (!controls.bindingList) return;
     controls.seedCount.textContent = String(state.bindings.length);
+    if (controls.resetBindings) {
+      controls.resetBindings.disabled = !state.bindings.some(
+        (binding) => binding.clicks > 0 || binding.fires > 0
+      );
+    }
     if (!state.bindings.length) {
       const empty = documentRef.createElement("li");
       empty.className = "admin-empty-state";
@@ -891,11 +959,19 @@ const create = ({
     }
     controls.bindingList.replaceChildren(
       ...state.bindings.map((binding, index) => {
+        const spent = isBindingSpent(binding);
         const item = documentRef.createElement("li");
+        item.className = spent ? "admin-binding is-spent" : "admin-binding";
+        item.setAttribute("data-admin-binding-state", spent ? "spent" : "armed");
         const text = documentRef.createElement("span");
-        text.textContent = `${binding.label} → ${eventLabel(binding.eventId)} (${
-          binding.mode === "once" ? "once" : "repeat"
-        }) `;
+        text.className = "admin-binding-text";
+        const name = documentRef.createElement("span");
+        name.className = "admin-binding-name";
+        name.textContent = `${binding.label} → ${eventLabel(binding.eventId)}`;
+        const rule = documentRef.createElement("span");
+        rule.className = "admin-binding-rule";
+        rule.textContent = describeBindingRule(binding);
+        text.append(name, rule);
         const remove = documentRef.createElement("button");
         remove.type = "button";
         remove.textContent = "Remove";
@@ -1406,16 +1482,25 @@ const create = ({
       controls.bindingEvent.focus();
       return;
     }
-    const binding = {
+    const interval = boundedCount(controls.bindingInterval.value, 1, MAX_BINDING_INTERVAL, 1);
+    const limit = controls.bindingUnlimited.checked
+      ? null
+      : boundedCount(controls.bindingLimit.value, 1, MAX_BINDING_LIMIT, 1);
+    controls.bindingInterval.value = String(interval);
+    if (limit !== null) controls.bindingLimit.value = String(limit);
+    const binding = normalizeBinding({
       target,
       label: targetChoice.label,
       eventId,
-      mode: controls.bindingRepeat.checked ? "repeat" : "once",
-    };
+      interval,
+      limit,
+    });
     state.bindings = [...state.bindings.filter((candidate) => candidate.target !== target), binding];
     persist();
     renderBindings();
-    announce(`Seeded ${binding.label} with ${eventLabel(binding.eventId)}.`);
+    announce(
+      `Seeded ${binding.label} with ${eventLabel(binding.eventId)}, ${describeBindingRule(binding)}.`
+    );
   };
 
   const setLaunchersRunning = (running) => {
@@ -1471,6 +1556,17 @@ const create = ({
   });
   controls.saveBinding.addEventListener("click", saveBinding);
   controls.pickTarget.addEventListener("click", startPicking);
+  const syncLimitField = () => {
+    controls.bindingLimit.disabled = controls.bindingUnlimited.checked;
+  };
+  controls.bindingUnlimited.addEventListener("change", syncLimitField);
+  syncLimitField();
+  controls.resetBindings.addEventListener("click", () => {
+    state.bindings = state.bindings.map(rearmBinding);
+    persist();
+    renderBindings();
+    announce("Every seed is re-armed.");
+  });
   controls.clearBindings.addEventListener("click", () => {
     state.bindings = [];
     persist();
@@ -1714,14 +1810,19 @@ const create = ({
 
     const bindingIndex = state.bindings.findIndex((binding) => binding.target === targetKey);
     if (bindingIndex < 0) return null;
-    const binding = state.bindings[bindingIndex];
-    orchestrator.suppressNaturalTriggers?.();
-    if (binding.mode === "once") {
-      state.bindings.splice(bindingIndex, 1);
-      state.bindings = [...state.bindings];
-      persist();
-      renderBindings();
+    const activation = recordBindingActivation(state.bindings[bindingIndex]);
+    // A spent seed is an ordinary control again until Reset Seeds re-arms it.
+    if (!activation.counted) return null;
+    const binding = activation.binding;
+    state.bindings = state.bindings.map((candidate, index) =>
+      index === bindingIndex ? binding : candidate
+    );
+    persist();
+    renderBindings();
+    if (!activation.fired) {
+      return { type: "seed-count", target: binding.target, clicks: binding.clicks };
     }
+    orchestrator.suppressNaturalTriggers?.();
     void runEventChoice(binding.eventId, `admin-seeded-control:${binding.target}`);
     return { type: "seed", target: binding.target, eventId: binding.eventId };
   };
@@ -1838,6 +1939,11 @@ const namespace = Object.freeze({
   DEFAULT_STATE,
   normalizeSeedNames,
   normalizeState,
+  normalizeBinding,
+  isBindingSpent,
+  recordBindingActivation,
+  rearmBinding,
+  describeBindingRule,
   createSeededSequence,
   create,
 });

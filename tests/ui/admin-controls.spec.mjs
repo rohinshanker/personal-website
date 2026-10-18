@@ -841,7 +841,10 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   await selectAdminTab(page, "bindings");
   await page.locator("#admin-binding-target").selectOption("app:video-editor:taskbar");
   await page.locator("#admin-binding-event").selectOption("behelit-found");
-  await setLabeledToggle(page, "admin-binding-once", true);
+  // The defaults are the former "next click only": every click, once.
+  await expect(page.locator("#admin-binding-interval")).toHaveValue("1");
+  await expect(page.locator("#admin-binding-limit")).toHaveValue("1");
+  await expect(page.locator("#admin-binding-unlimited")).not.toBeChecked();
   await page.locator("#admin-save-binding").click();
   await expect(page.locator("#admin-seed-count")).toHaveText("1");
   await expect(page.locator("#admin-binding-list")).toContainText("Video Editor");
@@ -859,11 +862,13 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   const videoDialog = page.locator('[data-app-window="video-editor"]');
   await expect(videoDialog).toBeVisible();
   await expect(behelit).toBeVisible();
-  // The seeded one-shot clearing is the observable the binding owes; waiting on
-  // it is what proves the natural-event runtime has finished reacting. The
-  // forced control-triggered popups are isolated at the source, which debug-fixture.spec.mjs
-  // proves against a running clock.
-  await expect(target).not.toHaveAttribute("data-admin-seeded", /.+/);
+  // The persisted fire is the observable the binding owes; waiting on it is
+  // what proves the natural-event runtime has finished reacting. The forced
+  // control-triggered popups are isolated at the source, which
+  // debug-fixture.spec.mjs proves against a running clock.
+  await expect.poll(() =>
+    page.evaluate((key) => JSON.parse(localStorage.getItem(key)).bindings[0].fires, storageKey)
+  ).toBe(1);
   await expect(
     page.locator("#neko-stream-alert-window:not([data-admin-event-preview-window])")
   ).toBeHidden();
@@ -876,7 +881,12 @@ test("direct events and fixed seeded controls run locally without duplicate natu
   );
   await openAdmin(page);
   await selectAdminTab(page, "bindings");
-  await expect(page.locator("#admin-seed-count")).toHaveText("0");
+  // A spent one-shot stays listed, greyed out, until it is re-armed or removed.
+  await expect(page.locator("#admin-seed-count")).toHaveText("1");
+  await expect(page.locator('#admin-binding-list [data-admin-binding-state="spent"]')).toContainText(
+    "every click, spent (0 of 1 left)"
+  );
+  await expect(target).toHaveAttribute("data-admin-seed-state", "spent");
 
   const storage = await page.evaluate((key) => ({
     local: localStorage.getItem(key),
@@ -1077,7 +1087,7 @@ test("Capture quick-start drives a stable Modeling carousel promo binding", asyn
   );
   await page.locator("#admin-binding-target").selectOption(stableTarget);
   await page.locator("#admin-binding-event").selectOption("behelit-found");
-  await setLabeledToggle(page, "admin-binding-repeat", true);
+  await setLabeledToggle(page, "admin-binding-unlimited", true);
   await page.locator("#admin-save-binding").click();
   await expect(page.locator("#admin-binding-list")).toContainText("Modeling — Next item");
 
@@ -1229,7 +1239,7 @@ test("deterministic sequence bindings and capture settings survive reload", asyn
   await selectAdminTab(page, "bindings");
   await page.locator("#admin-binding-target").selectOption("app:image-tools:taskbar");
   await page.locator("#admin-binding-event").selectOption("__sequence__");
-  await setLabeledToggle(page, "admin-binding-repeat", true);
+  await setLabeledToggle(page, "admin-binding-unlimited", true);
   await page.locator("#admin-save-binding").click();
   await expect(page.locator("#admin-seed-count")).toHaveText("1");
 
@@ -1451,7 +1461,7 @@ test("picker convenience and Reset Scene preserve local Admin settings", async (
   await expect(targetSelect).toHaveValue("app:image-tools:taskbar");
 
   await page.locator("#admin-binding-event").selectOption("behelit-found");
-  await setLabeledToggle(page, "admin-binding-repeat", true);
+  await setLabeledToggle(page, "admin-binding-unlimited", true);
   await page.locator("#admin-save-binding").click();
   await expect(page.locator("#admin-seed-count")).toHaveText("1");
   await expect(target).toHaveAttribute("data-admin-seeded", "behelit-found");
@@ -1525,3 +1535,147 @@ for (const reason of ["expiry", "storage removal"]) {
     expect(mutatingRequests).toEqual([]);
   });
 }
+
+const seedCountsViewports = [
+  { name: "mobile", width: 375, height: 812 },
+  { name: "desktop", width: 1280, height: 800 },
+];
+
+for (const viewport of seedCountsViewports) {
+  test(`a seed firing every 2 clicks up to 2 times greys out and re-arms at ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    const { mutatingRequests } = await preparePage(page, { spyOnOrchestratedEvents: true });
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    const { win } = await openAdmin(page);
+    const panel = await selectAdminTab(page, "bindings");
+    const list = page.locator("#admin-binding-list");
+    const reset = page.locator("#admin-reset-bindings");
+    const limit = page.locator("#admin-binding-limit");
+    await expect(reset).toBeDisabled();
+
+    // Unlimited disables the limit field; unchecking restores it.
+    await setLabeledToggle(page, "admin-binding-unlimited", true);
+    await expect(limit).toBeDisabled();
+    await setLabeledToggle(page, "admin-binding-unlimited", false);
+    await expect(limit).toBeEnabled();
+
+    await page.locator("#admin-binding-target").selectOption("app:image-tools:taskbar");
+    await page.locator("#admin-binding-event").selectOption("behelit-found");
+    await page.locator("#admin-binding-interval").fill("2");
+    await limit.fill("2");
+    await page.locator("#admin-save-binding").click();
+    const row = list.locator("li").filter({ hasText: "Image Tools" });
+    await expect(row).toHaveAttribute("data-admin-binding-state", "armed");
+    await expect(row).toContainText("every 2 clicks, 2 of 2 left");
+    const target = page.locator('.taskbar-icon[data-app="image-tools"]');
+    await expect(target).toHaveAttribute("data-admin-seed-state", "armed");
+    await expect(target.locator(".admin-seed-badge")).toBeVisible();
+    await expect(target.locator(".admin-seed-badge")).not.toHaveClass(/is-spent/);
+    expect(
+      await panel.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)
+    ).toBe(true);
+    await win.screenshot({ path: testInfo.outputPath(`bindings-armed-${viewport.name}.png`) });
+
+    await closeAdmin(page);
+    const imageTools = page.locator('[data-app-window="image-tools"]');
+    const calls = () => page.evaluate(() => window.__adminOrchestratedEventCalls.length);
+    const firesAfterClick = [];
+    for (let click = 1; click <= 6; click += 1) {
+      await target.scrollIntoViewIfNeeded();
+      await target.click();
+      await finishWindowAnimation(
+        imageTools,
+        click % 2 === 1 ? "retro-window-open" : "retro-window-close"
+      );
+      firesAfterClick.push(await calls());
+    }
+    // Fires on clicks 2 and 4; clicks 5 and 6 reach a spent seed.
+    expect(firesAfterClick).toEqual([0, 1, 1, 2, 2, 2]);
+
+    await openAdmin(page);
+    await selectAdminTab(page, "bindings");
+    await expect(row).toHaveAttribute("data-admin-binding-state", "spent");
+    await expect(row).toHaveClass(/is-spent/);
+    await expect(row).toContainText("every 2 clicks, spent (0 of 2 left)");
+    await expect(target).toHaveAttribute("data-admin-seed-state", "spent");
+    await expect(target.locator(".admin-seed-badge")).toHaveClass(/is-spent/);
+    await expect(target).toHaveAccessibleDescription(/Seed spent/);
+    await expect(row.locator(".admin-binding-name")).toHaveCSS("color", "rgb(128, 128, 128)");
+    await expect(reset).toBeEnabled();
+    await row.scrollIntoViewIfNeeded();
+    await win.screenshot({ path: testInfo.outputPath(`bindings-spent-${viewport.name}.png`) });
+    const taskbar = await page.locator(".taskbar").boundingBox();
+    const icon = await target.boundingBox();
+    await page.screenshot({
+      path: testInfo.outputPath(`badge-spent-${viewport.name}.png`),
+      clip: {
+        x: Math.max(0, icon.x - 60),
+        y: taskbar.y,
+        width: Math.min(viewport.width - Math.max(0, icon.x - 60), icon.width + 120),
+        height: taskbar.height,
+      },
+    });
+
+    await reset.click();
+    await expect(row).toHaveAttribute("data-admin-binding-state", "armed");
+    await expect(row).toContainText("every 2 clicks, 2 of 2 left");
+    await expect(target).toHaveAttribute("data-admin-seed-state", "armed");
+    await expect(reset).toBeDisabled();
+    await expect(page.locator("#admin-controls-announcer")).toHaveText("Every seed is re-armed.");
+    await win.screenshot({ path: testInfo.outputPath(`bindings-rearmed-${viewport.name}.png`) });
+
+    const stored = await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)).bindings,
+      storageKey
+    );
+    expect(stored).toEqual([
+      {
+        target: "app:image-tools:taskbar",
+        label: expect.any(String),
+        eventId: "behelit-found",
+        interval: 2,
+        limit: 2,
+        clicks: 0,
+        fires: 0,
+      },
+    ]);
+
+    const results = await new AxeBuilder({ page })
+      .include("#admin-panel-bindings")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+    expect(mutatingRequests).toEqual([]);
+  });
+}
+
+test("legacy one-shot and repeat bindings migrate in place without losing their targets", async ({
+  page,
+}) => {
+  await preparePage(page);
+  // The fixture clears storage only on the first load, so a reload keeps
+  // these records written in the shape saved before intervals existed.
+  await page.evaluate((key) => {
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        version: 1,
+        bindings: [
+          { target: "app:image-tools:taskbar", label: "Image Tools", eventId: "behelit-found", mode: "once" },
+          { target: "app:video-editor:taskbar", label: "Video Editor", eventId: "__random__", mode: "repeat" },
+        ],
+      })
+    );
+  }, storageKey);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openAdmin(page);
+  await selectAdminTab(page, "bindings");
+  const rows = page.locator("#admin-binding-list li");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("Image Tools");
+  await expect(rows.nth(0)).toContainText("every click, 1 of 1 left");
+  await expect(rows.nth(1)).toContainText("Video Editor");
+  await expect(rows.nth(1)).toContainText("every click, unlimited");
+});
