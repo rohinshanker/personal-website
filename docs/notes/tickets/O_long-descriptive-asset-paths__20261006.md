@@ -12,6 +12,6 @@
 
 - Start with the audited `assets/random events/`, `assets/study resources/` and uppercase-extension inventory. Use readable descriptive directory/basename tokens and lowercase extensions; avoid unnecessary abbreviations and case-only collisions.
 - A useful shoot folder plus ordered photo number may already be more informative than invented descriptions. Rename opaque targets when their identity can be verified; preserve sequence and metadata semantics.
-- Preserve owner calendar-review identity after archiving and any accepted pending background/source locations. No deletion, push or deployment is authorized.
+- Preserve accepted source locations under `docs/assets-src/`. No deletion, push or deployment is authorized.
 
 - Keep `rohin-os-cursor-mode`, upstream 98.css, and the empty Study Resources app intact. The owner will add Study files later; no cursor-key migration or vendor-style trimming is authorized.

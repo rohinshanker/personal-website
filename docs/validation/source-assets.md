@@ -2,20 +2,20 @@
 
 - Purpose: Keep editable originals available without packaging unused source files into the public site.
 - Scope: `docs/assets-src/`, deployed derivatives/fonts, accompanying notices, regeneration references and the Pages package.
-- Last verified: 2026-10-07
+- Last verified: 2026-10-18
 
 ## Location contract
 
 `docs/assets-src/` preserves originals and working files with their useful directory context. Pages packages only `assets/`, `styles/`, the public routes, `scripts/home/` and the listed root files; it excludes `docs/`. Do not add an archive path to shipped HTML/CSS/JS. An archive file that becomes public needs an intentional runtime asset and updated references.
 
-Keep full-quality modeling media deployed. The live calendar uses `jan.jpg`, `mar-standstill.jpg` and `apr-sonder-lb2.jpg`; other archived calendar photos remain available for the owner's review and need explicit per-file decisions before deletion.
+Keep full-quality modeling media deployed. The live calendar uses `jan.jpg`, `mar-standstill.jpg` and `apr-sonder-lb2.jpg` under `assets/calendar-pics/`; the unused originals were deleted with the owner's per-file approval on 2026-10-18, so no calendar archive exists under `docs/assets-src/`.
 
 ## Regeneration inputs
 
 | Preserved source | Deployed output |
 | --- | --- |
 | `docs/assets-src/bio-pic.jpeg` | `assets/optimized/bio-pic-720.jpg` |
-| `docs/assets-src/background.jpg` | `assets/optimized/background-2200.jpg` |
+| `docs/assets-src/background.jpg` | `assets/optimized/background-2200.jpg`. The owner compared a 1600 px / 49 KB WebP against this 352 KB JPEG on real Home renders and chose to keep the JPEG (2026-10-18); do not re-propose a smaller or lossier background without a new owner request. |
 | `docs/assets-src/creative-work/lp-photo.png` | `assets/optimized/lp-photo-1600.jpg` |
 | `docs/assets-src/minesweeper_assets/YOU-LOSE.png` | `assets/optimized/minesweeper-you-lose-640.png` |
 | `docs/assets-src/modeling-icons/saturn-icon.png` and `saturn-icon-clear.png` | `assets/optimized/saturn-icon-96.png`; preserve its deployed transparency/crop when selecting a source variant. |
