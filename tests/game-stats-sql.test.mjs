@@ -7,7 +7,7 @@ import {
   selectAggregatedGameStats,
 } from "../workers/game-stats/src/aggregate.mjs";
 import worker from "../workers/game-stats/src/index.mjs";
-import { SqliteD1Database, applyGameStatsMigrations } from "./helpers/sqlite-d1.mjs";
+import { applyGameStatsMigrations, SqliteD1Database } from "./helpers/sqlite-d1.mjs";
 
 const migrationPaths = [1, 2, 3, 4].map(
   (number) =>

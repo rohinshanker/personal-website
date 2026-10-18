@@ -1,6 +1,6 @@
 import { selectAggregatedGameStats } from "./aggregate.mjs";
 import { handleClashRoyaleRequest } from "./clash-royale.mjs";
-import { MAX_REPLAY_BODY_BYTES, STATS_API_PROTOCOL, getGameStatsDatabase } from "./constants.mjs";
+import { getGameStatsDatabase, MAX_REPLAY_BODY_BYTES, STATS_API_PROTOCOL } from "./constants.mjs";
 import {
   assertAllowedKeys,
   assertStoredEventMatches,
@@ -9,11 +9,11 @@ import {
   selectExistingEvent,
 } from "./events.mjs";
 import {
-  HttpError,
   assertBrowserOriginAllowed,
   assertOriginAllowed,
   corsHeaders,
   errorResponse,
+  HttpError,
   jsonResponse,
   readJsonBody,
   readJsonBodyWithMetadata,

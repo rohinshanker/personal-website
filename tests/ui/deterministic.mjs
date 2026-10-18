@@ -1,4 +1,4 @@
-import { expect, test as base } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 
 import { routeProductionRandomEventPolicies } from "./helpers/random-event-debug.mjs";
 import {

@@ -3,21 +3,20 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  digestGameCompletionSources,
   GAME_BUILD_VERSION_PATTERN,
   GAME_SEED_SOURCE_FILES,
   INTEGRITY_CACHE_ASSET_PATHS,
-  digestGameCompletionSources,
 } from "../scripts/lib/game-build.mjs";
 import { parseJsonc } from "../scripts/lib/jsonc.mjs";
-
-import { loadHomeContractGraph, loadTimeClosure } from "./helpers/home-contracts.mjs";
 import {
+  calculateGameBuildVersion,
   GAME_COMPLETION_SOURCE_FILES,
   MAX_GAME_BUILD_COMPATIBILITY_VERSIONS,
-  calculateGameBuildVersion,
   updateGameIntegrity,
   updateWranglerBuildVersion,
 } from "../scripts/update-game-integrity.mjs";
+import { loadHomeContractGraph, loadTimeClosure } from "./helpers/home-contracts.mjs";
 
 test("game build metadata matches the completion source and Worker configuration", async () => {
   const buildVersion = await updateGameIntegrity({ check: true });

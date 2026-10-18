@@ -1,10 +1,10 @@
 import {
   GAME_STATS_DIFFICULTIES,
-  MAX_EVENT_FUTURE_MS,
   GAME_STATS_SNAKE_BOARD_SIZES,
   GAME_STATS_SUDOKU_DIFFICULTIES,
-  STATS_API_PROTOCOL,
   getGameStatsDatabase,
+  MAX_EVENT_FUTURE_MS,
+  STATS_API_PROTOCOL,
 } from "./constants.mjs";
 import { createEmptyGameStatsData } from "./data.mjs";
 

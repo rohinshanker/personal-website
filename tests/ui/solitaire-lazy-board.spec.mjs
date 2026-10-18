@@ -1,6 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { REVIEW_VIEWPORT, openApp, openHomeDesktop } from "./helpers/rendered-site.mjs";
+import { openApp, openHomeDesktop, REVIEW_VIEWPORT } from "./helpers/rendered-site.mjs";
 
 /**
  * Solitaire's board is dealt on the first open and then updated in place.

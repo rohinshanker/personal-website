@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
 import { readdirSync, statSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
 const root = new URL("../../", import.meta.url);
 

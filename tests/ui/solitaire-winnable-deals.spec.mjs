@@ -1,12 +1,10 @@
 import { readFile } from "node:fs/promises";
-
-import { expect, test } from "./deterministic.mjs";
-
 import { homeScriptUrl } from "../helpers/home-scripts.mjs";
+import { expect, test } from "./deterministic.mjs";
 import {
-  REVIEW_VIEWPORT,
   breakpointPair,
   installGameStatsBackend,
+  REVIEW_VIEWPORT,
 } from "./helpers/rendered-site.mjs";
 import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 

@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORT, breakpointPair } from "./helpers/rendered-site.mjs";
+import { breakpointPair, REVIEW_VIEWPORT } from "./helpers/rendered-site.mjs";
 
 const viewports = Object.freeze([
   REVIEW_VIEWPORT.mobile,

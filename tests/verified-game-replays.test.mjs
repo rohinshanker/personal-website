@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
+import { readProductionScript } from "./helpers/home-scripts.mjs";
 import {
   buildVerifiedGameFixtures,
   loadVerifiedGameEngines,
@@ -8,7 +8,6 @@ import {
   replayGame,
   sequence,
 } from "./helpers/verified-sol-sudoku-fixtures.mjs";
-import { readProductionScript } from "./helpers/home-scripts.mjs";
 
 /**
  * Verifying a result means replaying ordered inputs against the board the server

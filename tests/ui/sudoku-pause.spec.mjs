@@ -1,10 +1,10 @@
 import { expect, test } from "./deterministic.mjs";
 import {
   FROZEN_INSTANT,
-  REVIEW_VIEWPORTS,
   installDelayedSudokuGeneratorReplies,
   openHomeDesktop,
   openSudokuBoard,
+  REVIEW_VIEWPORTS,
 } from "./helpers/rendered-site.mjs";
 
 /**

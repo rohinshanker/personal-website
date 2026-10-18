@@ -3,7 +3,7 @@ import test from "node:test";
 
 import worker from "../workers/game-stats/src/index.mjs";
 import { digestCanonical, VERSION_FIELDS } from "../workers/game-stats/src/verified-results.mjs";
-import { SqliteD1Database, applyGameStatsMigrations } from "./helpers/sqlite-d1.mjs";
+import { applyGameStatsMigrations, SqliteD1Database } from "./helpers/sqlite-d1.mjs";
 
 const origin = "https://rohin.shanker.me";
 const buildVersion = `sha256-${"a".repeat(64)}`;

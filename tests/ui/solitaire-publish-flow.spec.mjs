@@ -1,7 +1,7 @@
-import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, consumeDiagnostics, settleRender } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
+import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { consumeDiagnostics, REVIEW_VIEWPORTS, settleRender } from "./helpers/rendered-site.mjs";
 import {
   createIssuedGameResponder,
   nearWinSolitaireInitial,

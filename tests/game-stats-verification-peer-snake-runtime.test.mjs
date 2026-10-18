@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 

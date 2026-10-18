@@ -1,9 +1,9 @@
-import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
 import { expect, test } from "./deterministic.mjs";
+import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
 import {
-  REVIEW_VIEWPORTS,
   openApp,
   openHomeDesktop,
+  REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
 

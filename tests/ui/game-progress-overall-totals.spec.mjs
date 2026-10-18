@@ -1,6 +1,6 @@
-import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, consumeDiagnostics } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
+import { expect, test } from "./deterministic.mjs";
+import { consumeDiagnostics, REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
 const API_BASE_URL = "https://game-progress-overall-totals.test";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";

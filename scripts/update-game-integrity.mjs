@@ -3,12 +3,12 @@ import { fileURLToPath } from "node:url";
 import { createContext, runInContext } from "node:vm";
 
 import {
+  createIntegrityCacheToken,
+  digestGameCompletionSources,
   GAME_BUILD_VERSION_PATTERN,
   GAME_COMPLETION_SOURCE_FILES,
   INTEGRITY_CACHE_ASSET_PATHS,
   MAX_GAME_BUILD_COMPATIBILITY_VERSIONS,
-  createIntegrityCacheToken,
-  digestGameCompletionSources,
 } from "./lib/game-build.mjs";
 import { parseJsonc, replaceJsoncStringMember } from "./lib/jsonc.mjs";
 

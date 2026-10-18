@@ -1,9 +1,7 @@
 import { writeFile } from "node:fs/promises";
-
-import { expect, test } from "./deterministic.mjs";
 import { verifiedMinesweeperFixtures } from "../helpers/verified-ms-snake-fixtures.mjs";
+import { expect, test } from "./deterministic.mjs";
 import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
-import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 import {
   FROZEN_INSTANT,
   installGameStatsBackend,
@@ -11,6 +9,7 @@ import {
   REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
+import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 
 const API_BASE_URL = "https://game-stats-minesweeper-publish.test";
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";

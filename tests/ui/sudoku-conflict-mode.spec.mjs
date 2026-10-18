@@ -2,9 +2,9 @@ import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   FROZEN_INSTANT,
-  REVIEW_VIEWPORTS,
   openHomeDesktop,
   openSudokuBoard,
+  REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
 

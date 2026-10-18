@@ -1,13 +1,12 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-
-import { readHomeScript, repositoryRoot } from "./helpers/home-scripts.mjs";
+import test from "node:test";
 import {
   contractImports,
   contractPublications,
   loadHomeContractGraph,
 } from "./helpers/home-contracts.mjs";
+import { readHomeScript, repositoryRoot } from "./helpers/home-scripts.mjs";
 
 test("whole-contract rule aliases remain part of the load dependency graph", () => {
   assert.deepEqual(

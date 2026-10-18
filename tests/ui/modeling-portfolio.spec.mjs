@@ -3,8 +3,8 @@ import vm from "node:vm";
 
 import { expect, test } from "./deterministic.mjs";
 import {
-  REVIEW_VIEWPORTS,
   installStubbedModelingMedia,
+  REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
 

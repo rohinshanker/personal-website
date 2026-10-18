@@ -1,5 +1,5 @@
-import { handleRequest } from "../../workers/game-stats/src/router.mjs";
 import { generateIssuedInitial } from "../../workers/game-stats/src/issued-game-catalog.mjs";
+import { handleRequest } from "../../workers/game-stats/src/router.mjs";
 
 // Test-only clock/seed control. Engines, catalog, signatures and SQL are real.
 export default {

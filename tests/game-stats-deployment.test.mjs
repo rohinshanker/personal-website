@@ -3,32 +3,31 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
-
 import {
-  GAME_COMPLETION_SOURCE_FILES,
-  INTEGRITY_CACHE_ASSET_PATHS,
-  INTEGRITY_ENTRY_FILES,
-} from "../scripts/lib/game-build.mjs";
-import {
-  DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
-  GAME_STATS_BACKEND_CONFIG_URL,
-  LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   checkGameStatsDeployment,
   checkGameStatsRelease,
   checkGameStatsStaticRelease,
   checkGameStatsWorkerTransition,
   checkLiveGameStatsDeployment,
+  DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   fetchGameStatsHealth,
   fetchLiveGameStatsBackendConfig,
+  GAME_STATS_BACKEND_CONFIG_URL,
+  LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   parseGameStatsBackendConfig,
-  runGameStatsDeploymentCli,
+  resolveLiveGameStatsBackendConfigUrl,
   runGameStatsDeploymentCheck,
+  runGameStatsDeploymentCli,
   runGameStatsReleaseCheck,
   runGameStatsStaticReleaseCheck,
   runGameStatsWorkerTransitionCheck,
-  resolveLiveGameStatsBackendConfigUrl,
   runLiveGameStatsDeploymentCheck,
 } from "../scripts/check-game-stats-deployment.mjs";
+import {
+  GAME_COMPLETION_SOURCE_FILES,
+  INTEGRITY_CACHE_ASSET_PATHS,
+  INTEGRITY_ENTRY_FILES,
+} from "../scripts/lib/game-build.mjs";
 
 const LOCAL_BUILD_VERSION = `sha256-${"a".repeat(64)}`;
 const REMOTE_BUILD_VERSION = `sha256-${"b".repeat(64)}`;

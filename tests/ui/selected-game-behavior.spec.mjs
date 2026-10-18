@@ -3,9 +3,9 @@ import { writeFile } from "node:fs/promises";
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
-  REVIEW_VIEWPORTS,
   openApp,
   openHomeDesktop,
+  REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
 

@@ -2,12 +2,12 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import {
+  createIntegrityCacheToken,
+  digestGameCompletionSources,
   GAME_BUILD_VERSION_PATTERN,
   GAME_COMPLETION_SOURCE_FILES,
   INTEGRITY_CACHE_ASSET_PATHS,
   INTEGRITY_ENTRY_FILES,
-  createIntegrityCacheToken,
-  digestGameCompletionSources,
 } from "./lib/game-build.mjs";
 import { assertFetchDependencies, assertPositiveInteger, fetchGuardedBody } from "./lib/http.mjs";
 

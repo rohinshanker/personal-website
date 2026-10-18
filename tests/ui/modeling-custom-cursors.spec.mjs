@@ -2,12 +2,12 @@ import { expect, test } from "./deterministic.mjs";
 import {
   DETERMINISTIC_RANDOM_DRAW,
   FROZEN_INSTANT,
-  REVIEW_VIEWPORT,
-  REVIEW_VIEWPORTS,
-  TEST_SERVER_ORIGIN,
   installStubbedModelingMedia,
   openHomeDesktop,
+  REVIEW_VIEWPORT,
+  REVIEW_VIEWPORTS,
   settleRender,
+  TEST_SERVER_ORIGIN,
 } from "./helpers/rendered-site.mjs";
 
 /**

@@ -3,25 +3,24 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-
-import {
-  handleRequest,
-  purgeExpiredGameStatsRows,
-  scheduled,
-} from "../workers/game-stats/src/router.mjs";
-import {
-  VERSION_FIELDS,
-  canonicalSudokuHintBucket,
-  digestCanonical,
-  replayPrefixHash,
-} from "../workers/game-stats/src/verified-results.mjs";
 import {
   MAX_VERIFICATION_BATCH_OPERATIONS,
   MAX_VERIFICATION_JOB_CONTINUATIONS,
   MAX_VERIFIED_TIMING_REVISIONS,
 } from "../workers/game-stats/src/constants.mjs";
+import {
+  handleRequest,
+  purgeExpiredGameStatsRows,
+  scheduled,
+} from "../workers/game-stats/src/router.mjs";
 import { createSessionToken } from "../workers/game-stats/src/security.mjs";
-import { SqliteD1Database, applyGameStatsMigrations } from "./helpers/sqlite-d1.mjs";
+import {
+  canonicalSudokuHintBucket,
+  digestCanonical,
+  replayPrefixHash,
+  VERSION_FIELDS,
+} from "../workers/game-stats/src/verified-results.mjs";
+import { applyGameStatsMigrations, SqliteD1Database } from "./helpers/sqlite-d1.mjs";
 
 const migrationPaths = [
   "0001_create_game_stats.sql",

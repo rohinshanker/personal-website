@@ -1,8 +1,8 @@
 import { expect, test } from "./deterministic.mjs";
 import {
+  breakpointPair,
   DETERMINISTIC_RANDOM_DRAW,
   REVIEW_VIEWPORT,
-  breakpointPair,
 } from "./helpers/rendered-site.mjs";
 
 const viewports = Object.freeze([

@@ -3,11 +3,11 @@ import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
-  KNOWN_REMOTE_EMBEDS,
-  TEST_SERVER_ORIGIN,
   isSkyNameGeneratorRequest,
+  KNOWN_REMOTE_EMBEDS,
   remoteEmbedStub,
   servedFile,
+  TEST_SERVER_ORIGIN,
 } from "./ui/helpers/rendered-site.mjs";
 import { resolveUiTestBaseUrl } from "./ui/server-config.mjs";
 

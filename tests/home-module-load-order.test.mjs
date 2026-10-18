@@ -1,9 +1,8 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-
-import { findForwardReferences } from "./helpers/js-load-order.mjs";
+import test from "node:test";
 import { listHomeScriptFiles, repositoryRoot } from "./helpers/home-scripts.mjs";
+import { findForwardReferences } from "./helpers/js-load-order.mjs";
 
 /**
  * Within one Home script, a statement that runs while the script loads may only

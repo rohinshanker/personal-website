@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  GITHUB_API_VERSION,
   checkCurrentMainRevision,
   fetchCurrentMainCommitSha,
+  GITHUB_API_VERSION,
   getMissingProductionCredentialNames,
   runCurrentMainRevisionCheck,
   runGameStatsReleaseContextCli,

@@ -4,14 +4,14 @@ import test from "node:test";
 import { parse } from "yaml";
 
 import {
-  SOLITAIRE_DECK_COUNT,
-  SOLITAIRE_SUIT_VARIANTS,
-  SUDOKU_PUZZLES_PER_DIFFICULTY,
   decodeDeal,
   encodeDeal,
   loadRuleEngines,
   loadSudokuClueTargets,
   loadSudokuGenerator,
+  SOLITAIRE_DECK_COUNT,
+  SOLITAIRE_SUIT_VARIANTS,
+  SUDOKU_PUZZLES_PER_DIFFICULTY,
   verifyIssuedGameCatalog,
 } from "../scripts/build-issued-game-catalog.mjs";
 import * as catalog from "../workers/game-stats/src/issued-game-catalog.mjs";

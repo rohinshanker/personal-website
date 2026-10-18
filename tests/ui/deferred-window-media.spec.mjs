@@ -1,7 +1,7 @@
 import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { isolateProductionRandomEventPolicies } from "./helpers/random-event-debug.mjs";
+import { installGameStatsBackend, REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
 test.setTimeout(190_000);
 

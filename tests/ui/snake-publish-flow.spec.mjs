@@ -1,14 +1,14 @@
+import { verifiedSnakeFixtures } from "../helpers/verified-ms-snake-fixtures.mjs";
 import { expect, test } from "./deterministic.mjs";
 import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
 import {
-  PRODUCTION_BUILD_VERSION,
-  REVIEW_VIEWPORTS,
   consumeDiagnostics,
   installGameStatsBackend,
+  PRODUCTION_BUILD_VERSION,
+  REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
 import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
-import { verifiedSnakeFixtures } from "../helpers/verified-ms-snake-fixtures.mjs";
 
 const API_BASE_URL = "https://game-stats-snake-publish.test";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";

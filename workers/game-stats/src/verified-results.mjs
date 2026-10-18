@@ -3,14 +3,14 @@ import "../../../scripts/home/games/minesweeper.js";
 import "../../../scripts/home/games/snake.js";
 import "../../../scripts/home/games/solitaire.js";
 import "../../../scripts/home/games/sudoku.js";
-import { generateIssuedInitial as generateCatalogInitial } from "./issued-game-catalog.mjs";
 
 import {
+  getGameStatsDatabase,
   MAX_EVENTS_PER_WINDOW,
   MAX_REPLAY_BODY_BYTES,
   MAX_SESSIONS_PER_WINDOW,
-  MAX_VERIFICATION_ACTION_WORK,
   MAX_VERIFICATION_ACTION_BYTES,
+  MAX_VERIFICATION_ACTION_WORK,
   MAX_VERIFICATION_ATTEMPTS_PER_WINDOW,
   MAX_VERIFICATION_BATCH_CANONICAL_BYTES,
   MAX_VERIFICATION_BATCH_CLONE_BYTES,
@@ -22,7 +22,6 @@ import {
   MAX_VERIFIED_TIMING_REVISIONS,
   SNAKE_RESUME_COUNTDOWN_MS,
   SNAKE_TICK_MS,
-  getGameStatsDatabase,
 } from "./constants.mjs";
 import {
   assertAllowedKeys,
@@ -34,6 +33,7 @@ import {
   selectExistingEvent,
 } from "./events.mjs";
 import { HttpError } from "./http.mjs";
+import { generateIssuedInitial as generateCatalogInitial } from "./issued-game-catalog.mjs";
 import {
   createSessionToken,
   enforceRateLimit,

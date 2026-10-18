@@ -2,6 +2,7 @@
 // Run: node initial-load.mjs /repo home.html
 import fs from "node:fs";
 import path from "node:path";
+
 const ROOT = path.resolve(process.argv[2]);
 const PAGE = process.argv[3];
 const html = fs.readFileSync(path.join(ROOT, PAGE), "utf8");

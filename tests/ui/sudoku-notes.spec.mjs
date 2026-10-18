@@ -1,6 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { REVIEW_VIEWPORTS, openHomeDesktop, openSudokuBoard } from "./helpers/rendered-site.mjs";
+import { openHomeDesktop, openSudokuBoard, REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
 /**
  * Rendered contract for the note assistance: pencil marks naming the selected

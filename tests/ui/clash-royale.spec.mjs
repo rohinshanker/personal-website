@@ -1,13 +1,13 @@
+import { expect, test } from "./deterministic.mjs";
 import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
 import {
+  breakpointPair,
   DETERMINISTIC_RANDOM_DRAW,
   FROZEN_INSTANT,
-  REVIEW_VIEWPORT,
-  breakpointPair,
   installGameStatsBackend,
+  REVIEW_VIEWPORT,
   settleRender,
 } from "./helpers/rendered-site.mjs";
-import { expect, test } from "./deterministic.mjs";
 
 const API_BASE_URL = "https://clash-royale-ui.test";
 const API_URL = `${API_BASE_URL}/clash-royale`;

@@ -1,9 +1,8 @@
+import { expect, test } from "./deterministic.mjs";
 import {
   SOLITAIRE_NESTED_INTERACTIVE,
   scanForViolations,
 } from "./helpers/accessibility-contracts.mjs";
-
-import { expect, test } from "./deterministic.mjs";
 import {
   installStubbedModelingMedia,
   openApp,

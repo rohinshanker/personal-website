@@ -1,7 +1,7 @@
-import { expect, test } from "./deterministic.mjs";
-import { consumeDiagnostics, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { expect, test } from "./deterministic.mjs";
+import { consumeDiagnostics, installGameStatsBackend } from "./helpers/rendered-site.mjs";
 
 test.setTimeout(120_000);
 

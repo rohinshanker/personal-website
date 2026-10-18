@@ -1,17 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
-import worker, {
-  normalizeGameStatsEvent,
-  purgeExpiredGameStatsRows,
-} from "../workers/game-stats/src/index.mjs";
 import {
   MAX_EVENTS_PER_WINDOW,
   MAX_SESSIONS_PER_WINDOW,
   SESSION_TTL_MS,
 } from "../workers/game-stats/src/constants.mjs";
+import worker, {
+  normalizeGameStatsEvent,
+  purgeExpiredGameStatsRows,
+} from "../workers/game-stats/src/index.mjs";
 import { createGameStatsDataFromEvents } from "./helpers/game-stats-reference.mjs";
-import { SqliteD1Database, applyGameStatsMigrations } from "./helpers/sqlite-d1.mjs";
+import { applyGameStatsMigrations, SqliteD1Database } from "./helpers/sqlite-d1.mjs";
 
 const gameStatsMigrationPaths = [
   "0001_create_game_stats.sql",

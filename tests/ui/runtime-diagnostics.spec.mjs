@@ -1,10 +1,10 @@
 import { expect, test } from "./deterministic.mjs";
 import {
-  SKY_NAME_GENERATOR_DEFINITION,
   consumeDiagnostics,
   installSkyNameGenerator,
   installStubbedModelingMedia,
   openHomeDesktop,
+  SKY_NAME_GENERATOR_DEFINITION,
 } from "./helpers/rendered-site.mjs";
 
 const DESKTOP = Object.freeze({ width: 1280, height: 800 });

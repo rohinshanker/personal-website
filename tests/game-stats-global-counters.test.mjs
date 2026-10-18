@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
-import vm from "node:vm";
 import test from "node:test";
+import vm from "node:vm";
 
 import { readHomeScript } from "./helpers/home-scripts.mjs";
 

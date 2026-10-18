@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 
 import { expect, test } from "./deterministic.mjs";
+import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   consumeDiagnostics,
   installGameStatsBackend,
@@ -9,7 +10,6 @@ import {
   REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
-import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 
 const API_BASE_URL = "https://game-stats-replay-adapter.test";
 const BUILD_VERSION = `sha256-${"a".repeat(64)}`;

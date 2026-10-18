@@ -1,19 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
+import {
+  RANDOM_EVENT_SCRIPT_KEYS,
+  readHomeScript,
+  readHomeScriptText,
+} from "./helpers/home-scripts.mjs";
+import { routeHomeScript } from "./ui/helpers/home-script-routes.mjs";
 import {
   isolateProductionRandomEventPolicies,
   PRODUCTION_FORCED_START_EVENT_IDS,
   PRODUCTION_RANDOM_EVENT_POLICY_SCRIPT_KEY,
   routeProductionRandomEventPolicies,
 } from "./ui/helpers/random-event-debug.mjs";
-import { routeHomeScript } from "./ui/helpers/home-script-routes.mjs";
 import { TEST_SERVER_ORIGIN } from "./ui/helpers/rendered-site.mjs";
-import {
-  RANDOM_EVENT_SCRIPT_KEYS,
-  readHomeScript,
-  readHomeScriptText,
-} from "./helpers/home-scripts.mjs";
 
 /**
  * Browser tests isolate production policies that force events from common

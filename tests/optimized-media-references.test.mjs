@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { MEDIA_MANIFEST, VIDEO_FORMATS, readRecord } from "../scripts/optimize-media.mjs";
+import { MEDIA_MANIFEST, readRecord, VIDEO_FORMATS } from "../scripts/optimize-media.mjs";
 
 const root = new URL("../", import.meta.url);
 const rootPath = path.resolve(fileURLToPath(root));

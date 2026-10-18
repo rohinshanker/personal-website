@@ -4,10 +4,10 @@ import {
   ADMINISTRATOR_RATE_LIMIT_WINDOW_MS,
   ADMINISTRATOR_SESSION_TTL_MS,
   GAME_BUILD_VERSION_PATTERN,
+  getGameStatsDatabase,
   MAX_ADMINISTRATOR_SIGN_INS_PER_WINDOW,
   MAX_GAME_BUILD_COMPATIBILITY_VERSIONS,
   RATE_LIMIT_WINDOW_MS,
-  getGameStatsDatabase,
 } from "./constants.mjs";
 import { assertAllowedKeys, isPlainObject } from "./events.mjs";
 import { HttpError } from "./http.mjs";

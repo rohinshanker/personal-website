@@ -1,8 +1,8 @@
 import { expect, test } from "./deterministic.mjs";
 import {
-  REVIEW_VIEWPORTS,
   installStubbedModelingMedia,
   openHomeDesktop,
+  REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
 

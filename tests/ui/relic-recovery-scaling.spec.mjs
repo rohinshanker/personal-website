@@ -1,6 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
-import { settleFrames } from "./helpers/rendered-site.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { settleFrames } from "./helpers/rendered-site.mjs";
 
 test.setTimeout(240_000);
 

@@ -9,9 +9,9 @@
  * open, close, focus, keyboard and stacking behaviour is unchanged.
  */
 
-import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
 import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, openApp, openHomeDesktop } from "./helpers/rendered-site.mjs";
+import { scanForViolations } from "./helpers/accessibility-contracts.mjs";
+import { openApp, openHomeDesktop, REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
 const DESKTOP = REVIEW_VIEWPORTS[2];
 

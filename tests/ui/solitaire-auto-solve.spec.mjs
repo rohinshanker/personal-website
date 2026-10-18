@@ -2,10 +2,10 @@ import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   FROZEN_INSTANT,
-  REVIEW_VIEWPORTS,
   installGameStatsBackend,
   openApp,
   openHomeDesktop,
+  REVIEW_VIEWPORTS,
   settleFrames,
 } from "./helpers/rendered-site.mjs";
 import {

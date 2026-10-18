@@ -1,8 +1,9 @@
 // audit-assets.mjs — read-only audit of assets/ references, duplicates, case mismatches.
 // Run: node audit-assets.mjs /path/to/personal-website > report.json
+
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
 
 const ROOT = path.resolve(process.argv[2] || ".");
 const SKIP_DIRS = new Set([

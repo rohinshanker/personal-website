@@ -1,4 +1,4 @@
-export { createEmptyGameStatsData, compareLeaderboardEntries } from "./data.mjs";
+export { compareLeaderboardEntries, createEmptyGameStatsData } from "./data.mjs";
 export { normalizeGameStatsEvent } from "./events.mjs";
 export { handleRequest, purgeExpiredGameStatsRows } from "./router.mjs";
 

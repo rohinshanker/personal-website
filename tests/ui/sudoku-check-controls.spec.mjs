@@ -1,7 +1,7 @@
 import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
-import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { installGameStatsBackend, REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
+import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 
 test.setTimeout(120_000);
 

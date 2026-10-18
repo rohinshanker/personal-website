@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
+import { installGameStatsBackend, REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 import { installIssuedGameIssuance } from "./helpers/verified-game-session.mjs";
 
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";

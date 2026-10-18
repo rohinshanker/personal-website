@@ -1,8 +1,8 @@
 import { expect, test } from "./deterministic.mjs";
 import {
-  REVIEW_VIEWPORTS,
   consumeDiagnostics,
   installGameStatsBackend,
+  REVIEW_VIEWPORTS,
 } from "./helpers/rendered-site.mjs";
 
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";

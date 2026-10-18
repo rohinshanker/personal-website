@@ -1,10 +1,9 @@
+import { expect, test } from "./deterministic.mjs";
 import {
   SOLITAIRE_NESTED_INTERACTIVE,
   scanForViolations,
 } from "./helpers/accessibility-contracts.mjs";
-
-import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, installGameStatsBackend } from "./helpers/rendered-site.mjs";
+import { installGameStatsBackend, REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 import { installIssuedGameIssuance } from "./helpers/verified-game-session.mjs";
 
 const API_BASE_URL = "https://game-stats.test";

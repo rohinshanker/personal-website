@@ -3,13 +3,13 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
+  consumeDiagnostics,
   DETERMINISTIC_RANDOM_DRAW,
   FROZEN_INSTANT,
-  REVIEW_VIEWPORTS,
-  consumeDiagnostics,
   installGameStatsBackend,
   openApp,
   openSudokuBoard,
+  REVIEW_VIEWPORTS,
   settleRender,
 } from "./helpers/rendered-site.mjs";
 import {

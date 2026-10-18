@@ -3,13 +3,13 @@ import {
   GAME_STATS_HINT_BUCKETS,
   GAME_STATS_SNAKE_BOARD_SIZES,
   GAME_STATS_SUDOKU_DIFFICULTIES,
+  getGameStatsDatabase,
   MAX_EVENT_AGE_MS,
   MAX_EVENT_FUTURE_MS,
   MAX_MINESWEEPER_SECONDS,
   MAX_SOLITAIRE_MOVES,
   MAX_SUDOKU_SECONDS,
   ROHIN_NEKO_AVATAR_ICON,
-  getGameStatsDatabase,
 } from "./constants.mjs";
 import { HttpError } from "./http.mjs";
 

@@ -6,25 +6,25 @@ import { promisify } from "node:util";
 
 import {
   CACHED_CLIENT_RESULT_PROTOCOL,
-  EXAMPLE_LEGACY_CUTOFF,
-  LEGACY_CUTOFF_VAR_NAME,
-  LOCAL_BACKEND_CONFIG_URL,
-  WRANGLER_CONFIG_URL,
   checkGameStatsRollout,
   describeLegacyIssuance,
+  EXAMPLE_LEGACY_CUTOFF,
   fetchLiveGameStatsClientProtocol,
+  LEGACY_CUTOFF_VAR_NAME,
+  LOCAL_BACKEND_CONFIG_URL,
   parseGeneratedBackendMembers,
   readGeneratedResultProtocol,
   readLegacyIssuanceCutoff,
   resolveLegacyIssuancePhase,
   runGameStatsRolloutCheck,
   runGameStatsRolloutCli,
+  WRANGLER_CONFIG_URL,
 } from "../scripts/check-game-stats-rollout.mjs";
+import { parseJsonc } from "../scripts/lib/jsonc.mjs";
 import {
   createFrontendConfig,
   readCommonResultProtocol,
 } from "../scripts/update-game-integrity.mjs";
-import { parseJsonc } from "../scripts/lib/jsonc.mjs";
 
 const REPOSITORY_ROOT = new URL("../", import.meta.url);
 const ROLLOUT_SCRIPT = new URL("../scripts/check-game-stats-rollout.mjs", import.meta.url);

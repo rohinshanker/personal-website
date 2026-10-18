@@ -1,8 +1,8 @@
+import { readFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, settleFrames } from "./helpers/rendered-site.mjs";
-import { readFile } from "node:fs/promises";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { REVIEW_VIEWPORTS, settleFrames } from "./helpers/rendered-site.mjs";
 import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 
 test.setTimeout(300_000);

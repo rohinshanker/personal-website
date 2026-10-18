@@ -1,9 +1,9 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
-  REVIEW_VIEWPORTS,
   consumeDiagnostics,
   installGameStatsBackend,
+  REVIEW_VIEWPORTS,
 } from "./helpers/rendered-site.mjs";
 import {
   createIssuedGameResponder,
