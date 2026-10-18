@@ -55,8 +55,7 @@ const cloneDeal = (deal) => ({
   foundations: Object.fromEntries(suits.map((suit) => [suit, []])),
 });
 
-const color = (card) =>
-  card.suit === "diamonds" || card.suit === "hearts" ? "red" : "black";
+const color = (card) => (card.suit === "diamonds" || card.suit === "hearts" ? "red" : "black");
 
 const assertPackedRun = (cards) => {
   assert.ok(cards.length > 0);
@@ -151,13 +150,16 @@ const replaySolution = (deal, solution) => {
   suits.forEach((suit) => {
     assert.deepEqual(
       state.foundations[suit].map((card) => card.rank),
-      Array.from({ length: 13 }, (_, index) => index + 1)
+      Array.from({ length: 13 }, (_, index) => index + 1),
     );
   });
 };
 
 const assertStandardDeal = (deal) => {
-  assert.deepEqual(deal.tableau.map((column) => column.length), [1, 2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(
+    deal.tableau.map((column) => column.length),
+    [1, 2, 3, 4, 5, 6, 7],
+  );
   assert.equal(deal.stock.length, 24);
   assert.ok(deal.stock.every((card) => !card.faceUp));
   deal.tableau.forEach((column) => {
@@ -168,20 +170,26 @@ const assertStandardDeal = (deal) => {
   assert.equal(allCards.length, 52);
   assert.equal(new Set(allCards.map((card) => card.id)).size, 52);
   assert.deepEqual(
-    allCards.map(({ id, rank, suit }) => ({ id, rank, suit })).sort((a, b) => a.id.localeCompare(b.id)),
-    suits.flatMap((suit) => Array.from({ length: 13 }, (_, index) => ({
-      id: `${suit}-${index + 1}`,
-      rank: index + 1,
-      suit,
-    }))).sort((a, b) => a.id.localeCompare(b.id))
+    allCards
+      .map(({ id, rank, suit }) => ({ id, rank, suit }))
+      .sort((a, b) => a.id.localeCompare(b.id)),
+    suits
+      .flatMap((suit) =>
+        Array.from({ length: 13 }, (_, index) => ({
+          id: `${suit}-${index + 1}`,
+          rank: index + 1,
+          suit,
+        })),
+      )
+      .sort((a, b) => a.id.localeCompare(b.id)),
   );
 };
 
-const serializeDeal = (deal) => JSON.stringify({
-  stock: deal.stock.map((card) => card.id),
-  tableau: deal.tableau.map((column) => column.map((card) => card.id)),
-});
-
+const serializeDeal = (deal) =>
+  JSON.stringify({
+    stock: deal.stock.map((card) => card.id),
+    tableau: deal.tableau.map((column) => column.map((card) => card.id)),
+  });
 
 export {
   assertStandardDeal,

@@ -1,13 +1,9 @@
 (() => {
   const HOME_RESOURCE_URLS = Object.freeze({
-    randomEventStyles:
-      "styles/home/random-events.css?v=vanishing-popup-layout-20261009",
-    adminStyles:
-      "styles/home/admin-controls.css?v=on-demand-home-loading-20261007",
-    adminOrchestrator:
-      "scripts/home/admin/orchestrator.js?v=dialog-semantics-20261012",
-    adminControls:
-      "scripts/home/admin-controls.js?v=vanishing-popup-layout-20261009",
+    randomEventStyles: "styles/home/random-events.css?v=vanishing-popup-layout-20261009",
+    adminStyles: "styles/home/admin-controls.css?v=on-demand-home-loading-20261007",
+    adminOrchestrator: "scripts/home/admin/orchestrator.js?v=dialog-semantics-20261012",
+    adminControls: "scripts/home/admin-controls.js?v=vanishing-popup-layout-20261009",
   });
 
   const resourceStates = new Map();
@@ -58,23 +54,27 @@
     });
 
   const loadClassicScript = (key, src, validate) =>
-    startResourceLoad(key, () => {
-      const script = document.createElement("script");
-      script.async = false;
-      script.src = src;
-      script.dataset.homeResource = key;
-      return script;
-    }, validate);
+    startResourceLoad(
+      key,
+      () => {
+        const script = document.createElement("script");
+        script.async = false;
+        script.src = src;
+        script.dataset.homeResource = key;
+        return script;
+      },
+      validate,
+    );
 
   const adminOrchestratorReady = () =>
     ["listEvents", "resetScene", "runEvent"].every(
-      (name) => typeof window.rohinAdminOrchestrator?.[name] === "function"
+      (name) => typeof window.rohinAdminOrchestrator?.[name] === "function",
     );
 
   const adminControllerReady = () =>
     Boolean(
       window.rohinAdminControls &&
-      typeof window.rohinAdminControlsController?.getState === "function"
+        typeof window.rohinAdminControlsController?.getState === "function",
     );
 
   const loadRandomEventStyles = () =>
@@ -103,7 +103,7 @@
         return loadClassicScript(
           "admin-orchestrator",
           HOME_RESOURCE_URLS.adminOrchestrator,
-          adminOrchestratorReady
+          adminOrchestratorReady,
         );
       })
       .then(() => {
@@ -111,7 +111,7 @@
         return loadClassicScript(
           "admin-controls",
           HOME_RESOURCE_URLS.adminControls,
-          adminControllerReady
+          adminControllerReady,
         );
       })
       .catch((error) => {
@@ -127,11 +127,11 @@
     adminResourcesPromise = null;
   };
 
-window.homeResources = Object.freeze({
+  window.homeResources = Object.freeze({
     HOME_RESOURCE_URLS,
     cancelAdminResourceLoad,
     loadAdminResources,
     loadRandomEventStyles,
     resourceState,
-});
+  });
 })();

@@ -76,7 +76,7 @@ const loadRecordPredicate = async () => {
       source.slice(start, end),
       "globalThis.beatsPersonalRecord = gameStatsEventBeatsPersonalRecord;",
     ].join("\n"),
-    context
+    context,
   );
   return context.beatsPersonalRecord;
 };
@@ -89,7 +89,7 @@ const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true }
   const end = source.indexOf("\n\nconst formatGameStatsCounter", start);
   assert.ok(
     failureStart >= 0 && failureEnd > failureStart,
-    "session failure reporter source must be extractable"
+    "session failure reporter source must be extractable",
   );
   assert.ok(start >= 0 && end > start, "record flow source must be extractable");
   const context = vm.createContext({});
@@ -139,7 +139,7 @@ const loadRecordFlowHarness = async ({ savedProfile = true, applyResult = true }
       "globalThis.resolveSessionFailureForTest = (status, reason = '') => resolveSession({ session: null, status, ...(reason ? { reason } : {}) });",
       'globalThis.cancelProfileForTest = () => { gameStatsLocalResetGeneration += 1; resolveProfile({ id: "player-current", name: "Current", icon: "assets/app-icons/ico/user_card.ico" }); };',
     ].join("\n"),
-    context
+    context,
   );
   return context;
 };
@@ -165,7 +165,7 @@ test("Minesweeper records are strict, per difficulty, and player-scoped", async 
   assert.equal(
     beatsPersonalRecord(localData, globalData, createEvent("minesweeper", 41, "beginner")),
     false,
-    "a result must beat the best known local and global record"
+    "a result must beat the best known local and global record",
   );
 
   localData.leaderboards.minesweeper.beginner = [];
@@ -174,7 +174,7 @@ test("Minesweeper records are strict, per difficulty, and player-scoped", async 
   assert.equal(
     beatsPersonalRecord(localData, globalData, createEvent("minesweeper", 999, "beginner")),
     true,
-    "other players and other difficulties must not suppress an empty record"
+    "other players and other difficulties must not suppress an empty record",
   );
 });
 
@@ -189,14 +189,14 @@ test("Snake records preserve the empty-score distinction and compare per board s
       snakePreviousHighScore: null,
     }),
     true,
-    "a first completed Snake game is a record even when its score is zero"
+    "a first completed Snake game is a record even when its score is zero",
   );
   assert.equal(
     beatsPersonalRecord(localData, globalData, emptyScore, {
       snakePreviousHighScore: 0,
     }),
     false,
-    "a stored zero is a real prior record, not an empty sentinel"
+    "a stored zero is a real prior record, not an empty sentinel",
   );
 
   for (const [metric, expected] of [
@@ -208,7 +208,7 @@ test("Snake records preserve the empty-score distinction and compare per board s
       beatsPersonalRecord(localData, globalData, createEvent("snake", metric, "10"), {
         snakePreviousHighScore: 9,
       }),
-      expected
+      expected,
     );
   }
 
@@ -218,13 +218,13 @@ test("Snake records preserve the empty-score distinction and compare per board s
     beatsPersonalRecord(localData, globalData, createEvent("snake", 11, "10"), {
       snakePreviousHighScore: 9,
     }),
-    false
+    false,
   );
   assert.equal(
     beatsPersonalRecord(localData, globalData, createEvent("snake", 13, "10"), {
       snakePreviousHighScore: 9,
     }),
-    true
+    true,
   );
 
   localData.playerRecords.snake["10"] = null;
@@ -234,7 +234,7 @@ test("Snake records preserve the empty-score distinction and compare per board s
     beatsPersonalRecord(localData, globalData, createEvent("snake", 1, "10"), {
       snakePreviousHighScore: null,
     }),
-    true
+    true,
   );
 });
 
@@ -258,11 +258,11 @@ test("Sudoku records are strict, no-hints only, and per difficulty", async () =>
   globalData.playerRecords.sudoku.easy = createRecord(130);
   assert.equal(
     beatsPersonalRecord(localData, globalData, createEvent("sudoku", 115, "easy")),
-    false
+    false,
   );
   assert.equal(
     beatsPersonalRecord(localData, globalData, createEvent("sudoku", 109, "easy")),
-    true
+    true,
   );
 
   localData.playerRecords.sudoku.easy = null;
@@ -274,7 +274,7 @@ test("Sudoku records are strict, no-hints only, and per difficulty", async () =>
       ...event,
       hintBucket: "withHints",
     }),
-    false
+    false,
   );
 });
 
@@ -283,17 +283,10 @@ test("Solitaire and invalid metrics never trigger the record handoff", async () 
   const localData = createData();
   const globalData = createData();
 
+  assert.equal(beatsPersonalRecord(localData, globalData, createEvent("solitaire", 1)), false);
   assert.equal(
-    beatsPersonalRecord(localData, globalData, createEvent("solitaire", 1)),
-    false
-  );
-  assert.equal(
-    beatsPersonalRecord(
-      localData,
-      globalData,
-      createEvent("minesweeper", Number.NaN, "beginner")
-    ),
-    false
+    beatsPersonalRecord(localData, globalData, createEvent("minesweeper", Number.NaN, "beginner")),
+    false,
   );
 });
 
@@ -320,17 +313,11 @@ test("overlapping records serialize their leaderboard handoffs without dropping 
       "globalThis.playForTest = playGameStatsRecordHandoff;",
       "globalThis.readOpenedGames = () => [...openedGames];",
     ].join("\n"),
-    context
+    context,
   );
 
-  await Promise.all([
-    context.playForTest("minesweeper"),
-    context.playForTest("snake"),
-  ]);
-  assert.deepEqual(
-    Array.from(context.readOpenedGames()),
-    ["minesweeper", "snake"]
-  );
+  await Promise.all([context.playForTest("minesweeper"), context.playForTest("snake")]);
+  assert.deepEqual(Array.from(context.readOpenedGames()), ["minesweeper", "snake"]);
 });
 
 test("a record handoff starts after local save without waiting for its session", async () => {
@@ -358,7 +345,7 @@ test("a record handoff starts after local save without waiting for its session",
       queuedSession: null,
       gameStatsSyncState: "ready",
       gameStatsSyncMessage: "",
-    }
+    },
   );
 
   context.resolveSessionForTest();
@@ -381,7 +368,7 @@ test("a record handoff starts after local save without waiting for its session",
       },
       gameStatsSyncState: "publishing",
       gameStatsSyncMessage: "Publishing saved results...",
-    }
+    },
   );
 });
 
@@ -478,12 +465,12 @@ test("session creation failures remain local and report their exact failure bran
         type: "win",
         metric: 80,
       },
-      failureCase.sessionKey
+      failureCase.sessionKey,
     );
     if (failureCase.expired) {
       vm.runInContext(
         "resolveSession({ session: { id: 'session-expired', token: 'session-expired-token', expiresAt: new Date(0).toISOString() }, status: 201 });",
-        context
+        context,
       );
     } else {
       context.resolveSessionFailureForTest(failureCase.status, failureCase.reason);
@@ -521,7 +508,7 @@ test("duplicate and reset-cancelled records never open a leaderboard", async () 
       queuedSession: null,
       gameStatsSyncState: "ready",
       gameStatsSyncMessage: "",
-    }
+    },
   );
 
   const cancelledContext = await loadRecordFlowHarness({ savedProfile: false });
@@ -544,6 +531,6 @@ test("duplicate and reset-cancelled records never open a leaderboard", async () 
       queuedSession: null,
       gameStatsSyncState: "ready",
       gameStatsSyncMessage: "",
-    }
+    },
   );
 });

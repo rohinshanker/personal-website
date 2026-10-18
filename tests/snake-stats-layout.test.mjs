@@ -12,16 +12,16 @@ test("Snake uses four shared leaderboard panels in two fixed columns", async () 
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
   ]);
   const globalRows = main.match(
-    /const appendSnakeGlobalLeaderboardRows = \(list, entries\) => \{([\s\S]*?)\n\};\n\nconst appendSnakePersonalRecord/
+    /const appendSnakeGlobalLeaderboardRows = \(list, entries\) => \{([\s\S]*?)\n\};\n\nconst appendSnakePersonalRecord/,
   );
   const personalRecord = main.match(
-    /const appendSnakePersonalRecord = \(panel, size\) => \{([\s\S]*?)\n\};\n\nconst appendSnakeTotalGames/
+    /const appendSnakePersonalRecord = \(panel, size\) => \{([\s\S]*?)\n\};\n\nconst appendSnakeTotalGames/,
   );
   const totalGames = main.match(
-    /const appendSnakeTotalGames = \(panel, size\) => \{([\s\S]*?)\n\};\n\nconst appendMinesweeperStat/
+    /const appendSnakeTotalGames = \(panel, size\) => \{([\s\S]*?)\n\};\n\nconst appendMinesweeperStat/,
   );
   const renderSnake = main.match(
-    /const renderGameStatsSnake = \(root\) => \{([\s\S]*?)\n\};\n\nconst renderGameStatsSudoku/
+    /const renderGameStatsSnake = \(root\) => \{([\s\S]*?)\n\};\n\nconst renderGameStatsSudoku/,
   );
 
   assert.ok(globalRows, "Snake should render fixed global leaderboard slots");
@@ -39,16 +39,16 @@ test("Snake uses four shared leaderboard panels in two fixed columns", async () 
   assert.match(globalRows[1], /currentPlayer: isCurrentPlayer/);
   assert.match(
     personalRecord[1],
-    /getGameStatsVerifiedPlayerRecord\([\s\S]*?gameStatsGlobalState\.playerRecords\.snake\[size\]/
+    /getGameStatsVerifiedPlayerRecord\([\s\S]*?gameStatsGlobalState\.playerRecords\.snake\[size\]/,
   );
   assert.match(
     personalRecord[1],
-    /getGameStatsLocalPlayerRecord\([\s\S]*?gameStatsLocalState\.leaderboards\.snake\[size\]\[0\]/
+    /getGameStatsLocalPlayerRecord\([\s\S]*?gameStatsLocalState\.leaderboards\.snake\[size\]\[0\]/,
   );
   assert.match(personalRecord[1], /const entry = verifiedEntry \|\| localEntry/);
   assert.match(
     personalRecord[1],
-    /const playerRank = verifiedEntry[\s\S]*?gameStatsGlobalState\.playerRanks\.snake\[size\][\s\S]*?createGameStatsEmptyPlayerRank/
+    /const playerRank = verifiedEntry[\s\S]*?gameStatsGlobalState\.playerRanks\.snake\[size\][\s\S]*?createGameStatsEmptyPlayerRank/,
   );
   assert.match(personalRecord[1], /const rankText = `#\$\{playerRank\.rank \?\? "—"\}`;/);
   assert.match(personalRecord[1], /label: "Your Record"/);
@@ -58,7 +58,10 @@ test("Snake uses four shared leaderboard panels in two fixed columns", async () 
   assert.match(totalGames[1], /Global games played on \$\{size\}×\$\{size\}/);
   assert.match(totalGames[1], /createGameStatsGlobalCounterValue\(/);
   assert.match(renderSnake[1], /"game-stats-snake-columns"/);
-  assert.match(renderSnake[1], /const boardSizesPerColumn = Math\.ceil\(GAME_STATS_SNAKE_BOARD_SIZES\.length \/ 2\);/);
+  assert.match(
+    renderSnake[1],
+    /const boardSizesPerColumn = Math\.ceil\(GAME_STATS_SNAKE_BOARD_SIZES\.length \/ 2\);/,
+  );
   assert.match(renderSnake[1], /columnIndex < 2/);
   assert.match(renderSnake[1], /"game-stats-snake-column"/);
   assert.match(renderSnake[1], /GAME_STATS_SNAKE_BOARD_SIZES\.slice\(/);
@@ -72,14 +75,11 @@ test("Snake uses four shared leaderboard panels in two fixed columns", async () 
   assert.doesNotMatch(renderSnake[1], /appendGameStatsSummary|appendGameStatsLeaderboard/);
   assert.match(
     styles,
-    /\.game-stats-snake-columns \{[\s\S]*?display: grid;[\s\S]*?gap: 8px;[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/
+    /\.game-stats-snake-columns \{[\s\S]*?display: grid;[\s\S]*?gap: 8px;[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
   );
   assert.match(
     styles,
-    /\.game-stats-snake-column \{[\s\S]*?align-content: start;[\s\S]*?display: grid;[\s\S]*?gap: 8px;[\s\S]*?min-width: 0;/
+    /\.game-stats-snake-column \{[\s\S]*?align-content: start;[\s\S]*?display: grid;[\s\S]*?gap: 8px;[\s\S]*?min-width: 0;/,
   );
-  assert.doesNotMatch(
-    styles,
-    /@media \(max-width: 560px\) \{[\s\S]*?\.game-stats-snake-columns/
-  );
+  assert.doesNotMatch(styles, /@media \(max-width: 560px\) \{[\s\S]*?\.game-stats-snake-columns/);
 });

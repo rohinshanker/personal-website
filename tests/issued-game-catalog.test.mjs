@@ -36,10 +36,22 @@ const { countSudokuSolutions } = await loadSudokuGenerator();
 const clueTargets = await loadSudokuClueTargets();
 
 test("the required release gate verifies full catalog proofs and regeneration", async () => {
-  const packageConfig = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
-  const workflow = parse(await readFile(new URL("../.github/workflows/game-stats-worker-release.yml", import.meta.url), "utf8"));
-  assert.equal(packageConfig.scripts["game-stats:catalog:check"], "node scripts/build-issued-game-catalog.mjs --check");
-  assert.ok(workflow.jobs.verify.steps.some(({ run }) => run === "npm run game-stats:catalog:check"));
+  const packageConfig = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  const workflow = parse(
+    await readFile(
+      new URL("../.github/workflows/game-stats-worker-release.yml", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.equal(
+    packageConfig.scripts["game-stats:catalog:check"],
+    "node scripts/build-issued-game-catalog.mjs --check",
+  );
+  assert.ok(
+    workflow.jobs.verify.steps.some(({ run }) => run === "npm run game-stats:catalog:check"),
+  );
   assert.ok(workflow.jobs["deploy-worker"].needs.includes("verify"));
 });
 
@@ -48,20 +60,20 @@ test("the catalog holds more prevalidated boards than the contract requires", ()
   assert.equal(catalog.ISSUED_SOLITAIRE_SUIT_VARIANTS, SOLITAIRE_SUIT_VARIANTS);
   assert.ok(
     catalog.issuedGameVariety("solitaire") >= 32,
-    "At least thirty-two Solitaire deals must be issuable."
+    "At least thirty-two Solitaire deals must be issuable.",
   );
   assert.equal(
     catalog.issuedGameVariety("solitaire"),
-    SOLITAIRE_DECK_COUNT * SOLITAIRE_SUIT_VARIANTS
+    SOLITAIRE_DECK_COUNT * SOLITAIRE_SUIT_VARIANTS,
   );
   for (const difficulty of engines.sudoku.DIFFICULTIES) {
     assert.ok(
       catalog.issuedGameVariety("sudoku", { difficulty }) >= 16,
-      `${difficulty} must offer at least sixteen puzzles.`
+      `${difficulty} must offer at least sixteen puzzles.`,
     );
     assert.equal(
       catalog.issuedGameVariety("sudoku", { difficulty }),
-      SUDOKU_PUZZLES_PER_DIFFICULTY
+      SUDOKU_PUZZLES_PER_DIFFICULTY,
     );
   }
   assert.equal(catalog.issuedGameVariety("minesweeper"), 0);
@@ -79,10 +91,13 @@ test("every issued Solitaire board is a complete deck the rule engine accepts", 
     assert.deepEqual(
       plain(state.tableau).map((pile) => pile.down.length + pile.up.length),
       [1, 2, 3, 4, 5, 6, 7],
-      `seed ${seed}`
+      `seed ${seed}`,
     );
     // Every column shows exactly its top card, which is the Klondike deal.
-    assert.ok(plain(state.tableau).every((pile) => pile.up.length === 1), `seed ${seed}`);
+    assert.ok(
+      plain(state.tableau).every((pile) => pile.up.length === 1),
+      `seed ${seed}`,
+    );
     seen.add(engines.rules.canonicalJson(engines.into(issued)));
   }
   assert.equal(seen.size, catalog.issuedGameVariety("solitaire"), "No deal repeats.");
@@ -98,7 +113,7 @@ test("the catalog's suit relabelling is the rule engine's own", () => {
       assert.equal(
         engines.rules.canonicalJson(engines.into(issued)),
         engines.rules.canonicalJson(engines.into(expected)),
-        `deck ${index} variant ${variant}`
+        `deck ${index} variant ${variant}`,
       );
     }
   }
@@ -132,7 +147,7 @@ test("every issued Sudoku puzzle has exactly one answer at its difficulty's clue
       assert.equal(
         countSudokuSolutions(issued.puzzle.split("").map(Number), 2),
         1,
-        `${difficulty} seed ${seed} must have exactly one answer`
+        `${difficulty} seed ${seed} must have exactly one answer`,
       );
       forDifficulty.add(issued.puzzle);
       everyPuzzle.add(issued.puzzle);
@@ -143,9 +158,9 @@ test("every issued Sudoku puzzle has exactly one answer at its difficulty's clue
     everyPuzzle.size,
     engines.sudoku.DIFFICULTIES.reduce(
       (total, difficulty) => total + catalog.issuedGameVariety("sudoku", { difficulty }),
-      0
+      0,
     ),
-    "Two difficulties must not share a puzzle."
+    "Two difficulties must not share a puzzle.",
   );
 });
 
@@ -154,7 +169,7 @@ test("issuance is a table lookup, and refuses anything it has no board for", () 
   assert.doesNotMatch(
     source,
     /while|countSudokuSolutions|solve|search/i,
-    "A request handler must never run the search that proved these boards."
+    "A request handler must never run the search that proved these boards.",
   );
 
   for (const game of ["minesweeper", "snake", "chess", "", null]) {
@@ -162,14 +177,14 @@ test("issuance is a table lookup, and refuses anything it has no board for", () 
   }
   assert.throws(
     () => catalog.generateIssuedInitial("sudoku", { difficulty: "fiendish" }, 0),
-    /Unknown Sudoku difficulty/
+    /Unknown Sudoku difficulty/,
   );
   assert.throws(() => catalog.generateIssuedInitial("sudoku", {}, 0), /Unknown Sudoku difficulty/);
   for (const seed of [-1, 1.5, "0", null, undefined, NaN, Number.MAX_SAFE_INTEGER + 2]) {
     assert.throws(
       () => catalog.generateIssuedInitial("solitaire", {}, seed),
       /Invalid issued game seed/,
-      String(seed)
+      String(seed),
     );
   }
 
@@ -177,11 +192,11 @@ test("issuance is a table lookup, and refuses anything it has no board for", () 
   // game keeps the one it was issued.
   assert.deepEqual(
     catalog.generateIssuedInitial("solitaire", {}, 7),
-    catalog.generateIssuedInitial("solitaire", {}, 7)
+    catalog.generateIssuedInitial("solitaire", {}, 7),
   );
   assert.deepEqual(
     catalog.generateIssuedInitial("sudoku", { difficulty: "hard" }, 3),
-    catalog.generateIssuedInitial("sudoku", { difficulty: "hard" }, 3)
+    catalog.generateIssuedInitial("sudoku", { difficulty: "hard" }, 3),
   );
 });
 
@@ -191,7 +206,7 @@ test("the generator's own gate agrees the shipped artifact is sound", async () =
   const stored = {
     solitaire: Array.from(
       { length: catalog.issuedGameVariety("solitaire") / SOLITAIRE_SUIT_VARIANTS },
-      (unused, index) => encodeDeal(catalog.generateIssuedInitial("solitaire", {}, index))
+      (unused, index) => encodeDeal(catalog.generateIssuedInitial("solitaire", {}, index)),
     ),
     sudoku: Object.fromEntries(
       engines.sudoku.DIFFICULTIES.map((difficulty) => [
@@ -201,9 +216,9 @@ test("the generator's own gate agrees the shipped artifact is sound", async () =
           (unused, seed) => {
             const issued = catalog.generateIssuedInitial("sudoku", { difficulty }, seed);
             return { puzzle: issued.puzzle, solution: issued.solution };
-          }
+          },
         ),
-      ])
+      ]),
     ),
   };
   assert.deepEqual(await verifyIssuedGameCatalog(engines, stored, catalog), []);

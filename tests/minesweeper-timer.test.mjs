@@ -78,7 +78,10 @@ const createTimerHarness = async ({ difficulty = { value: "beginner" } } = {}) =
         return context.msState.statsSession;
       },
       recordEvent: (event) => {
-        context.recorded.push({ event: { ...event, game: "minesweeper" }, session: context.msState.statsSession });
+        context.recorded.push({
+          event: { ...event, game: "minesweeper" },
+          session: context.msState.statsSession,
+        });
         context.msState.statsSession = "";
       },
     },
@@ -101,7 +104,7 @@ const createTimerHarness = async ({ difficulty = { value: "beginner" } } = {}) =
   vm.runInContext(
     `${TIMER_FUNCTIONS.map((name) => extractFunction(main, name)).join("\n")}
      Object.assign(this, { ${TIMER_FUNCTIONS.join(", ")} });`,
-    context
+    context,
   );
   return context;
 };
@@ -109,15 +112,12 @@ const createTimerHarness = async ({ difficulty = { value: "beginner" } } = {}) =
 test("Minesweeper accumulates elapsed time instead of counting ticks", async () => {
   const main = await readMain();
 
-  assert.match(
-    main,
-    /const msState = \{[\s\S]*?timerSync: null,\n  elapsedMs: 0,\n  elapsed: 0,/
-  );
+  assert.match(main, /const msState = \{[\s\S]*?timerSync: null,\n  elapsedMs: 0,\n  elapsed: 0,/);
   assert.doesNotMatch(main, /msState\.elapsed \+= 1/);
   assert.match(
     main,
     /msState\.gameOver = false;\n  msState\.timerSync = null;\n  msState\.elapsedMs = 0;\n  msState\.elapsed = 0;/,
-    "a new game clears the clocks before it stops the timer"
+    "a new game clears the clocks before it stops the timer",
   );
 });
 
@@ -132,10 +132,7 @@ test("the timer counts whole seconds, catches up after a gap, and caps at 999", 
   const harness = await createTimerHarness();
   harness.msStartTimer();
   assert.equal(harness.msState.statsSession, "minesweeper:beginner");
-  assert.deepEqual(
-    { ...harness.msState.timerSync },
-    { monotonic: 5_000, wall: 1_800_000_000_000 }
-  );
+  assert.deepEqual({ ...harness.msState.timerSync }, { monotonic: 5_000, wall: 1_800_000_000_000 });
   assert.equal(harness.msState.timerId, 7);
 
   harness.advance(999);
@@ -275,10 +272,7 @@ test("a win records the settled time after a gap with no tick", async () => {
   ]);
   assert.deepEqual([...harness.cleared], [7]);
   assert.equal(harness.msState.timerId, null);
-  assert.deepEqual(
-    [...harness.calls],
-    ["face:win", "confetti", "render", "event:gameWin"]
-  );
+  assert.deepEqual([...harness.calls], ["face:win", "confetti", "render", "event:gameWin"]);
   harness.msCheckWin();
   assert.equal(harness.recorded.length, 1, "a finished game records once");
 });

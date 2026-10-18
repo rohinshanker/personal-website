@@ -70,7 +70,9 @@
   align-items: center;
   background: #000;
   border-radius: 0;
-  box-shadow: inset 1px 1px 0 #222, inset -1px -1px 0 #555;
+  box-shadow:
+    inset 1px 1px 0 #222,
+    inset -1px -1px 0 #555;
   display: flex;
   gap: 0;
   justify-content: center;
@@ -215,7 +217,8 @@
   min-height: var(--ms-cell-size);
   border: none;
   padding: 0;
-  background: center / contain no-repeat url("../../../assets/minesweeper_assets/tiles/tile_covered.png");
+  background:
+    center / contain no-repeat url("../../../assets/minesweeper_assets/tiles/tile_covered.png");
   box-shadow: none;
   display: flex;
   align-items: center;

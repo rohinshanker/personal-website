@@ -7,10 +7,7 @@ import {
   renderStudyResourcesManifest,
 } from "../scripts/build-study-resources-manifest.mjs";
 
-const MANIFEST_URL = new URL(
-  "../assets/study resources/manifest.json",
-  import.meta.url
-);
+const MANIFEST_URL = new URL("../assets/study resources/manifest.json", import.meta.url);
 
 test("the tracked study resources manifest matches its PDF inventory", async () => {
   const manifest = buildStudyResourcesManifest();

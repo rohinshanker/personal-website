@@ -174,7 +174,7 @@ function continuesStatement(code, from) {
   if (";.,)]}(?:+-*/%&|=<>!".includes(code[index])) return true;
   return CONTINUATION_KEYWORDS.some(
     (keyword) =>
-      code.startsWith(keyword, index) && !/[\w$]/.test(code[index + keyword.length] || "")
+      code.startsWith(keyword, index) && !/[\w$]/.test(code[index + keyword.length] || ""),
   );
 }
 
@@ -225,7 +225,8 @@ export function topLevelStatements(code, topDepth) {
 function isBlockKeywordGroup(statement, parenStart) {
   const before = statement.slice(0, parenStart).trimEnd();
   return BLOCK_KEYWORDS.some(
-    (keyword) => before.endsWith(keyword) && !/[\w$]/.test(before[before.length - keyword.length - 1] || "")
+    (keyword) =>
+      before.endsWith(keyword) && !/[\w$]/.test(before[before.length - keyword.length - 1] || ""),
   );
 }
 

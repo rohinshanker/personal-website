@@ -10,10 +10,8 @@ const readPage = (path) => readFile(new URL(path, root), "utf8");
 
 const readJsonLd = (html) =>
   Array.from(
-    html.matchAll(
-      /<script\b[^>]*\btype="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi
-    ),
-    ([, source]) => JSON.parse(source)
+    html.matchAll(/<script\b[^>]*\btype="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi),
+    ([, source]) => JSON.parse(source),
   );
 
 test("homepage documents publish one consistent search description", async () => {
@@ -35,7 +33,7 @@ test("homepage documents publish one consistent search description", async () =>
     assert.match(
       html,
       /<link\b[^>]*\brel="canonical"[^>]*\bhref="https:\/\/rohin\.shanker\.me\/"[^>]*>/i,
-      page
+      page,
     );
   }
 });
@@ -50,7 +48,7 @@ test("homepage documents share one JSON-LD graph, social image, and theme color"
     assert.match(
       html,
       /<meta\b[^>]*\bname="viewport"[^>]*\bcontent="width=device-width, initial-scale=1, viewport-fit=cover"/i,
-      page
+      page,
     );
     for (const selector of [
       'property="og:image"[^>]*content="https://rohin\\.shanker\\.me/assets/optimized/bio-pic-720\\.jpg"',
@@ -64,7 +62,10 @@ test("homepage documents share one JSON-LD graph, social image, and theme color"
 
 test("both entry documents expose one visually hidden h1 and Home wraps its windows in main", async () => {
   const [index, home] = await Promise.all(pages.map(readPage));
-  for (const [page, html] of [["index.html", index], ["home.html", home]]) {
+  for (const [page, html] of [
+    ["index.html", index],
+    ["home.html", home],
+  ]) {
     assert.equal(html.match(/<h1\b/g)?.length, 1, page);
     assert.match(html, /<body>\s*<h1 class="visually-hidden">Rohin OS<\/h1>/, page);
   }
@@ -84,12 +85,12 @@ test("homepage documents publish the square favicon assets", async () => {
     assert.match(
       html,
       /<link\b(?=[^>]*\brel="icon")(?=[^>]*\bhref="\/assets\/favicon-96\.png")(?=[^>]*\btype="image\/png")(?=[^>]*\bsizes="96x96")[^>]*>/i,
-      page
+      page,
     );
     assert.match(
       html,
       /<link\b(?=[^>]*\brel="apple-touch-icon")(?=[^>]*\bhref="\/assets\/apple-touch-icon-180\.png")(?=[^>]*\bsizes="180x180")[^>]*>/i,
-      page
+      page,
     );
   }
 });
@@ -101,11 +102,7 @@ test("favicon files are square RGBA PNG images", async () => {
   ]) {
     const png = await readFile(new URL(path, root));
 
-    assert.deepEqual(
-      png.subarray(0, 8),
-      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-      path
-    );
+    assert.deepEqual(png.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), path);
     assert.equal(png.toString("ascii", 12, 16), "IHDR", path);
     assert.equal(png.readUInt32BE(16), expectedSize, path);
     assert.equal(png.readUInt32BE(20), expectedSize, path);
@@ -117,10 +114,7 @@ test("favicon files are square RGBA PNG images", async () => {
 test("the loading screen remains excluded from generated search snippets", async () => {
   const html = await readPage("index.html");
 
-  assert.match(
-    html,
-    /<div\b[^>]*\bclass="loader"[^>]*\bid="loader"[^>]*\bdata-nosnippet(?:\s|>)/i
-  );
+  assert.match(html, /<div\b[^>]*\bclass="loader"[^>]*\bid="loader"[^>]*\bdata-nosnippet(?:\s|>)/i);
   assert.match(html, />Downloading latest update of Rohin OS<\/div>/);
   assert.match(html, />This website is optimized for desktop\.[^<]*<\/p>/);
 });

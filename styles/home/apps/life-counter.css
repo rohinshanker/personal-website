@@ -199,13 +199,19 @@
   --life-counter-step-gap: 4px;
   --life-counter-step-size: 36px;
   --life-counter-step-grid-size: calc(
-    var(--life-counter-step-size) * 3 + var(--life-counter-step-gap) * 2
+    var(--life-counter-step-size) *
+    3 +
+    var(--life-counter-step-gap) *
+    2
   );
   --life-counter-adjust-size: calc(
-    (var(--life-counter-step-grid-size) - var(--life-counter-step-gap)) / 2
+    (var(--life-counter-step-grid-size) - var(--life-counter-step-gap)) /
+    2
   );
   --life-counter-control-width: calc(
-    var(--life-counter-step-grid-size) + 6px + var(--life-counter-adjust-size)
+    var(--life-counter-step-grid-size) +
+    6px +
+    var(--life-counter-adjust-size)
   );
   background: var(--surface);
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
@@ -268,7 +274,9 @@
 .life-counter-total {
   align-items: center;
   background: #020202;
-  box-shadow: inset 1px 1px 0 #111, inset -1px -1px 0 #777;
+  box-shadow:
+    inset 1px 1px 0 #111,
+    inset -1px -1px 0 #777;
   display: flex;
   gap: 2px;
   height: 54px;

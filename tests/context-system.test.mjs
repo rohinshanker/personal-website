@@ -8,14 +8,7 @@ const ticketsDirectory = new URL("docs/notes/tickets/", root);
 const validationDirectory = new URL("docs/validation/", root);
 const ticketName = /^([AO])_([a-z0-9]+(?:-[a-z0-9]+)*)__([0-9]{8})\.md$/;
 const ticketStatus = Object.freeze({ A: "active", O: "open" });
-const requiredTicketFields = [
-  "Scope",
-  "Status",
-  "Opened",
-  "Updated",
-  "Verification",
-  "Cleanup",
-];
+const requiredTicketFields = ["Scope", "Status", "Opened", "Updated", "Verification", "Cleanup"];
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const markdownFilenames = async (directory) =>
@@ -27,13 +20,16 @@ const markdownFilenames = async (directory) =>
 test("repository context uses only indexed open or active tickets", async () => {
   const noteEntries = await readdir(notesDirectory, { withFileTypes: true });
   assert.deepEqual(
-    noteEntries.map((entry) => entry.name).filter((name) => name !== ".DS_Store").sort(),
+    noteEntries
+      .map((entry) => entry.name)
+      .filter((name) => name !== ".DS_Store")
+      .sort(),
     ["tickets"],
-    "Retired task history must not remain in the root note directory"
+    "Retired task history must not remain in the root note directory",
   );
 
   const ticketFiles = (await markdownFilenames(ticketsDirectory)).filter(
-    (filename) => filename !== "INDEX.md"
+    (filename) => filename !== "INDEX.md",
   );
 
   for (const filename of ticketFiles) {
@@ -44,11 +40,25 @@ test("repository context uses only indexed open or active tickets", async () => 
     const content = await readFile(new URL(`docs/notes/tickets/${filename}`, root), "utf8");
     const expectedStatus = ticketStatus[state];
 
-    assert.match(content, new RegExp(`^# ${identifier} — ${expectedStatus[0].toUpperCase()}${expectedStatus.slice(1)}$`, "m"));
+    assert.match(
+      content,
+      new RegExp(
+        `^# ${identifier} — ${expectedStatus[0].toUpperCase()}${expectedStatus.slice(1)}$`,
+        "m",
+      ),
+    );
     for (const field of requiredTicketFields) {
-      assert.match(content, new RegExp(`^- ${field}:\\s+\\S`, "m"), `${filename} is missing ${field}`);
+      assert.match(
+        content,
+        new RegExp(`^- ${field}:\\s+\\S`, "m"),
+        `${filename} is missing ${field}`,
+      );
     }
-    assert.match(content, /^- Current (State|Outcome):\s+\S/m, `${filename} needs current state or outcome`);
+    assert.match(
+      content,
+      /^- Current (State|Outcome):\s+\S/m,
+      `${filename} needs current state or outcome`,
+    );
     assert.match(content, new RegExp(`^- Status:\\s+${expectedStatus}$`, "m"));
   }
 
@@ -57,19 +67,26 @@ test("repository context uses only indexed open or active tickets", async () => 
   for (const filename of ticketFiles) {
     assert.match(
       ticketIndex,
-      new RegExp(`^\\| ${filename[0]} \\| \\d{4}-\\d{2}-\\d{2} \\| \\[${escapeRegExp(filename)}\\]`, "m"),
-      `${filename} needs a queue row with status letter ${filename[0]}`
+      new RegExp(
+        `^\\| ${filename[0]} \\| \\d{4}-\\d{2}-\\d{2} \\| \\[${escapeRegExp(filename)}\\]`,
+        "m",
+      ),
+      `${filename} needs a queue row with status letter ${filename[0]}`,
     );
   }
   const indexedTickets = [...ticketIndex.matchAll(/\]\(([^)]+\.md)\)/g)]
     .map(([, filename]) => filename)
     .sort();
-  assert.deepEqual(indexedTickets, ticketFiles, "The live index must list every and only live tickets");
+  assert.deepEqual(
+    indexedTickets,
+    ticketFiles,
+    "The live index must list every and only live tickets",
+  );
 });
 
 test("validation documents are indexed and use the shared metadata", async () => {
   const validationFiles = (await markdownFilenames(validationDirectory)).filter(
-    (filename) => filename !== "INDEX.md"
+    (filename) => filename !== "INDEX.md",
   );
   const validationIndex = await readFile(new URL("docs/validation/INDEX.md", root), "utf8");
 
@@ -81,8 +98,10 @@ test("validation documents are indexed and use the shared metadata", async () =>
     assert.ok(lastVerified, `${filename} is missing Last verified`);
     assert.match(
       validationIndex,
-      new RegExp(`\\| ${lastVerified[1]} \\| \\[${escapeRegExp(filename)}\\]\\(${escapeRegExp(filename)}\\)`),
-      `${filename} index row must carry its Last verified date`
+      new RegExp(
+        `\\| ${lastVerified[1]} \\| \\[${escapeRegExp(filename)}\\]\\(${escapeRegExp(filename)}\\)`,
+      ),
+      `${filename} index row must carry its Last verified date`,
     );
   }
 });

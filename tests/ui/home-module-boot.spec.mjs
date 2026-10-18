@@ -17,23 +17,40 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await page.setViewportSize(viewport);
     await page.goto("/home.html");
     await expect(page.locator("#taskbar-clock")).not.toHaveText("--:--");
-    expect(await page.evaluate(() => [
-      "homeGameStats", "homeSnake", "homeMinesweeper", "homeSolitaire",
-      "homeSudoku", "homeEventRuntime", "homeCalendar", "homeResources",
-    ].every((key) => Boolean(window[key])))).toBe(true);
-    expect(await page.evaluate(() => ({
-      controller: Boolean(window.rohinAdminControlsController),
-      orchestrator: Boolean(window.rohinAdminOrchestrator),
-      onDemandRequests: performance.getEntriesByType("resource")
-        .map((entry) => new URL(entry.name).pathname)
-        .filter((path) => [
-          "/styles/home/random-events.css",
-          "/styles/home/admin-controls.css",
-          "/scripts/home/admin/orchestrator.js",
-          "/scripts/home/admin-controls.js",
-        ].includes(path)),
-    }))).toEqual({ controller: false, orchestrator: false, onDemandRequests: [] });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(
+      await page.evaluate(() =>
+        [
+          "homeGameStats",
+          "homeSnake",
+          "homeMinesweeper",
+          "homeSolitaire",
+          "homeSudoku",
+          "homeEventRuntime",
+          "homeCalendar",
+          "homeResources",
+        ].every((key) => Boolean(window[key])),
+      ),
+    ).toBe(true);
+    expect(
+      await page.evaluate(() => ({
+        controller: Boolean(window.rohinAdminControlsController),
+        orchestrator: Boolean(window.rohinAdminOrchestrator),
+        onDemandRequests: performance
+          .getEntriesByType("resource")
+          .map((entry) => new URL(entry.name).pathname)
+          .filter((path) =>
+            [
+              "/styles/home/random-events.css",
+              "/styles/home/admin-controls.css",
+              "/scripts/home/admin/orchestrator.js",
+              "/scripts/home/admin-controls.js",
+            ].includes(path),
+          ),
+      })),
+    ).toEqual({ controller: false, orchestrator: false, onDemandRequests: [] });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
 
     const about = page.locator('[data-app-window="about"]');
     await about.locator('[data-close="about"]').click();

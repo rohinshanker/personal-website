@@ -26,11 +26,14 @@ test("Administrator sign-in remains hidden, accessible, and free of server secre
 
   assert.match(
     home,
-    /id="cursor-settings-administrator"[^>]*data-app="administrator"[^>]*aria-label="Administrator sign in"/
+    /id="cursor-settings-administrator"[^>]*data-app="administrator"[^>]*aria-label="Administrator sign in"/,
   );
   assert.doesNotMatch(home, /taskbar-administrator-button/);
   assert.match(home, /<label[^>]*for="administrator-username">\s*Username\s*<\/label>/);
-  assert.match(home, /id="administrator-password"[^>]*type="password"[^>]*autocomplete="current-password"/);
+  assert.match(
+    home,
+    /id="administrator-password"[^>]*type="password"[^>]*autocomplete="current-password"/,
+  );
   assert.match(home, /<p>Administrator access granted\.<\/p>/);
   assert.match(home, /src="scripts\/home\/core\/administrator-session\.js\?v=[^"]+"/);
   assert.doesNotMatch(home, /Game Progress profile updated to rohin \^\.\^\./);
@@ -64,12 +67,12 @@ const loadCompletionHarness = async ({ administratorProfile = false, adopt = tru
       sourceBetween(
         source,
         "const completeAdministratorSignIn =",
-        "\n\nif (administratorSignInForm)"
+        "\n\nif (administratorSignInForm)",
       ),
       "globalThis.complete = completeAdministratorSignIn;",
       "globalThis.read = () => ({ calls, gameStatsAuthenticationReturnFocus, gameStatsProfile, gameStatsSyncState });",
     ].join("\n"),
-    context
+    context,
   );
   return context;
 };

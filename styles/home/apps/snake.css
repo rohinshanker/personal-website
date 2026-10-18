@@ -47,7 +47,9 @@
   background:
     linear-gradient(rgba(98, 255, 120, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(98, 255, 120, 0.035) 1px, transparent 1px);
-  background-size: 100% 3px, 10px 100%;
+  background-size:
+    100% 3px,
+    10px 100%;
   mix-blend-mode: screen;
   opacity: 0.68;
 }
@@ -57,7 +59,10 @@
     radial-gradient(circle at 12% 30%, rgba(220, 255, 220, 0.12), transparent 1px),
     radial-gradient(circle at 44% 72%, rgba(98, 255, 120, 0.12), transparent 1px),
     radial-gradient(circle at 78% 22%, rgba(220, 255, 220, 0.1), transparent 1px);
-  background-size: 7px 7px, 11px 11px, 15px 15px;
+  background-size:
+    7px 7px,
+    11px 11px,
+    15px 15px;
   opacity: 0.34;
 }
 
@@ -94,11 +99,7 @@
 .snake-loading-meter-fill {
   background:
     linear-gradient(90deg, rgba(98, 255, 120, 0.94), rgba(202, 255, 211, 0.98)),
-    repeating-linear-gradient(
-      90deg,
-      rgba(0, 0, 0, 0.2) 0 2px,
-      transparent 2px 5px
-    );
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0 2px, transparent 2px 5px);
   box-shadow:
     0 0 8px rgba(98, 255, 120, 0.52),
     inset 0 0 5px rgba(255, 255, 255, 0.18);
@@ -121,8 +122,7 @@
 .snake-screen {
   background:
     linear-gradient(rgba(98, 255, 120, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(98, 255, 120, 0.1) 1px, transparent 1px),
-    #020403;
+    linear-gradient(90deg, rgba(98, 255, 120, 0.1) 1px, transparent 1px), #020403;
   background-size: 16px 16px;
   border: 1px solid #1d3a24;
   box-sizing: border-box;
@@ -179,7 +179,9 @@
   background:
     linear-gradient(rgba(98, 255, 120, 0.07) 1px, transparent 1px),
     linear-gradient(90deg, rgba(98, 255, 120, 0.04) 1px, transparent 1px);
-  background-size: 100% 4px, 12px 100%;
+  background-size:
+    100% 4px,
+    12px 100%;
   mix-blend-mode: screen;
   opacity: 0.72;
   z-index: 0;
@@ -190,7 +192,10 @@
     radial-gradient(circle at 22% 18%, rgba(98, 255, 120, 0.14), transparent 1px),
     radial-gradient(circle at 72% 42%, rgba(98, 255, 120, 0.12), transparent 1px),
     radial-gradient(circle at 38% 78%, rgba(98, 255, 120, 0.1), transparent 1px);
-  background-size: 9px 9px, 13px 13px, 17px 17px;
+  background-size:
+    9px 9px,
+    13px 13px,
+    17px 17px;
   opacity: 0.3;
   z-index: 0;
 }
@@ -232,7 +237,9 @@
   background:
     linear-gradient(rgba(98, 255, 120, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(98, 255, 120, 0.035) 1px, transparent 1px);
-  background-size: 100% 3px, 10px 100%;
+  background-size:
+    100% 3px,
+    10px 100%;
   mix-blend-mode: screen;
   opacity: 0.66;
 }
@@ -242,7 +249,10 @@
     radial-gradient(circle at 12% 30%, rgba(220, 255, 220, 0.12), transparent 1px),
     radial-gradient(circle at 44% 72%, rgba(98, 255, 120, 0.12), transparent 1px),
     radial-gradient(circle at 78% 22%, rgba(220, 255, 220, 0.1), transparent 1px);
-  background-size: 7px 7px, 11px 11px, 15px 15px;
+  background-size:
+    7px 7px,
+    11px 11px,
+    15px 15px;
   opacity: 0.38;
 }
 
@@ -469,7 +479,9 @@
   background:
     linear-gradient(rgba(98, 255, 120, 0.07) 1px, transparent 1px),
     linear-gradient(90deg, rgba(98, 255, 120, 0.04) 1px, transparent 1px);
-  background-size: 100% 4px, 12px 100%;
+  background-size:
+    100% 4px,
+    12px 100%;
   mix-blend-mode: screen;
   opacity: 0.72;
 }
@@ -479,7 +491,10 @@
     radial-gradient(circle at 18% 18%, rgba(98, 255, 120, 0.13), transparent 1px),
     radial-gradient(circle at 68% 44%, rgba(98, 255, 120, 0.1), transparent 1px),
     radial-gradient(circle at 42% 80%, rgba(220, 255, 220, 0.1), transparent 1px);
-  background-size: 9px 9px, 13px 13px, 17px 17px;
+  background-size:
+    9px 9px,
+    13px 13px,
+    17px 17px;
   opacity: 0.3;
 }
 

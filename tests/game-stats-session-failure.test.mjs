@@ -23,12 +23,12 @@ test("backend configuration accepts only an HTTP endpoint with a canonical SHA-2
   const configSource = extractSource(
     source,
     "const normalizeGameStatsBackendConfig =",
-    "\n\nconst gameStatsBackend ="
+    "\n\nconst gameStatsBackend =",
   );
   const context = vm.createContext({ URL });
   vm.runInContext(
     `${configSource}\nglobalThis.normalizeForTest = normalizeGameStatsBackendConfig;`,
-    context
+    context,
   );
 
   const validBuild = `sha256-${"a".repeat(64)}`;
@@ -37,18 +37,18 @@ test("backend configuration accepts only an HTTP endpoint with a canonical SHA-2
       context.normalizeForTest({
         apiBaseUrl: " HTTPS://Stats.Example.Test:443/api/// ",
         buildVersion: ` ${validBuild} `,
-      })
+      }),
     ),
-    { apiBaseUrl: "https://stats.example.test/api", buildVersion: validBuild }
+    { apiBaseUrl: "https://stats.example.test/api", buildVersion: validBuild },
   );
   assert.deepEqual(
     plainObject(
       context.normalizeForTest({
         apiBaseUrl: " https://stats.example.test/// ",
         buildVersion: validBuild,
-      })
+      }),
     ),
-    { apiBaseUrl: "https://stats.example.test", buildVersion: validBuild }
+    { apiBaseUrl: "https://stats.example.test", buildVersion: validBuild },
   );
 
   for (const rawConfig of [
@@ -77,12 +77,12 @@ const loadSessionHarness = async () => {
   const normalizerSource = extractSource(
     source,
     "const normalizeGameStatsSession =",
-    "\n\nconst normalizeGameStatsSubmission ="
+    "\n\nconst normalizeGameStatsSubmission =",
   );
   const sessionSource = extractSource(
     source,
     "const reportGameStatsSessionFailure =",
-    "\n\nconst loadGameStatsProfile ="
+    "\n\nconst loadGameStatsProfile =",
   );
   const context = vm.createContext({});
   vm.runInContext(
@@ -133,7 +133,7 @@ const loadSessionHarness = async () => {
       "globalThis.readSessionEntriesForTest = () => [...gameStatsSessions.entries()].map(([game, entry]) => ({ game, configKey: entry.configKey, sessionKey: entry.sessionKey, result: entry.result }));",
       "globalThis.setNowForTest = (now) => { Date.now = () => now; };",
     ].join("\n"),
-    context
+    context,
   );
   return context;
 };
@@ -211,7 +211,7 @@ test("changed configs replace only an unclaimed request and different games stay
       { game: "sudoku", config: { difficulty: "easy" } },
       { game: "sudoku", config: { difficulty: "hard" } },
       { game: "snake", config: { boardSize: "16" } },
-    ]
+    ],
   );
 });
 
@@ -264,41 +264,47 @@ test("session creation exhausts build retries before reporting an unavailable se
       name: "session rate limit",
       behavior: { kind: "http-error", status: 429, payload: null },
       expectedResult: { session: null, status: 429 },
-      expectedChanges: [{
-        state: "request-failed",
-        message:
-          "The verified game session request was rate limited. Try again later.",
-      }],
+      expectedChanges: [
+        {
+          state: "request-failed",
+          message: "The verified game session request was rate limited. Try again later.",
+        },
+      ],
     },
     {
       name: "upstream rejection",
       behavior: { kind: "http-error", status: 503, payload: null },
       expectedResult: { session: null, status: 503 },
-      expectedChanges: [{
-        state: "request-failed",
-        message:
-          "The verified game session request failed (HTTP 503). Start a new game and try again.",
-      }],
+      expectedChanges: [
+        {
+          state: "request-failed",
+          message:
+            "The verified game session request failed (HTTP 503). Start a new game and try again.",
+        },
+      ],
     },
     {
       name: "network failure",
       behavior: { kind: "network-error", status: 0, payload: null },
       expectedResult: { session: null, status: 0 },
-      expectedChanges: [{
-        state: "request-failed",
-        message:
-          "The verified game session request failed. Start a new game and try again.",
-      }],
+      expectedChanges: [
+        {
+          state: "request-failed",
+          message: "The verified game session request failed. Start a new game and try again.",
+        },
+      ],
     },
     {
       name: "invalid success response",
       behavior: { kind: "success", status: 201, payload: {} },
       expectedResult: { session: null, status: 0, reason: "invalid-response" },
-      expectedChanges: [{
-        state: "request-failed",
-        message:
-          "The game server returned an invalid session response. Start a new game and try again.",
-      }],
+      expectedChanges: [
+        {
+          state: "request-failed",
+          message:
+            "The game server returned an invalid session response. Start a new game and try again.",
+        },
+      ],
     },
     {
       name: "session response missing its token",
@@ -311,11 +317,13 @@ test("session creation exhausts build retries before reporting an unavailable se
         },
       },
       expectedResult: { session: null, status: 0, reason: "invalid-response" },
-      expectedChanges: [{
-        state: "request-failed",
-        message:
-          "The game server returned an invalid session response. Start a new game and try again.",
-      }],
+      expectedChanges: [
+        {
+          state: "request-failed",
+          message:
+            "The game server returned an invalid session response. Start a new game and try again.",
+        },
+      ],
     },
     {
       name: "already-expired session response",
@@ -329,11 +337,13 @@ test("session creation exhausts build retries before reporting an unavailable se
         },
       },
       expectedResult: { session: null, status: 0, reason: "invalid-response" },
-      expectedChanges: [{
-        state: "request-failed",
-        message:
-          "The game server returned an invalid session response. Start a new game and try again.",
-      }],
+      expectedChanges: [
+        {
+          state: "request-failed",
+          message:
+            "The game server returned an invalid session response. Start a new game and try again.",
+        },
+      ],
     },
   ];
 
@@ -345,13 +355,13 @@ test("session creation exhausts build retries before reporting an unavailable se
     assert.deepEqual(
       plainObject(context.readStateChangesForTest()),
       sessionCase.expectedChanges,
-      sessionCase.name
+      sessionCase.name,
     );
     if (sessionCase.behavior.status === 429) {
       assert.equal(
         context.readRequestsForTest().length,
         1,
-        "A rate-limited session request must not retry immediately"
+        "A rate-limited session request must not retry immediately",
       );
     }
   }
@@ -359,7 +369,7 @@ test("session creation exhausts build retries before reporting an unavailable se
   const unconfiguredContext = await loadSessionHarness();
   unconfiguredContext.setConfiguredForTest(false);
   const result = await unconfiguredContext.getForTest(
-    unconfiguredContext.startForTest("solitaire", {})
+    unconfiguredContext.startForTest("solitaire", {}),
   );
   assert.deepEqual(plainObject(result), {
     session: null,
@@ -413,7 +423,7 @@ test("submission queue rejects null sessions and persists valid sessions", async
   const queueSource = extractSource(
     source,
     "const queueGameStatsSubmission =",
-    "\n\nconst waitForGameStatsTrophyState ="
+    "\n\nconst waitForGameStatsTrophyState =",
   );
   const context = vm.createContext({});
   vm.runInContext(
@@ -430,7 +440,7 @@ test("submission queue rejects null sessions and persists valid sessions", async
       "globalThis.queueForTest = queueGameStatsSubmission;",
       "globalThis.readForTest = () => ({ queue: gameStatsSubmissionQueue, saveCalls, restoreCalls, droppedCounts });",
     ].join("\n"),
-    context
+    context,
   );
 
   assert.equal(context.queueForTest({ id: "event-null" }, null), false);
@@ -442,10 +452,7 @@ test("submission queue rejects null sessions and persists valid sessions", async
   });
 
   for (const index of [1, 2, 3]) {
-    assert.equal(
-      context.queueForTest({ id: `event-${index}` }, { id: `session-${index}` }),
-      true
-    );
+    assert.equal(context.queueForTest({ id: `event-${index}` }, { id: `session-${index}` }), true);
   }
   assert.deepEqual(plainObject(context.readForTest()), {
     queue: [
@@ -464,7 +471,7 @@ test("stored queued submissions retain expired proofs for expiry classification"
   const normalizationSource = extractSource(
     source,
     "const normalizeGameStatsSession =",
-    "\n\nconst loadGameStatsSubmissionQueue"
+    "\n\nconst loadGameStatsSubmissionQueue",
   );
   const context = vm.createContext({});
   vm.runInContext(
@@ -473,7 +480,7 @@ test("stored queued submissions retain expired proofs for expiry classification"
       normalizationSource,
       "globalThis.normalizeForTest = normalizeGameStatsSubmission;",
     ].join("\n"),
-    context
+    context,
   );
 
   const expiredSubmission = context.normalizeForTest({
@@ -500,7 +507,7 @@ test("build mismatch is sticky until its reload action replaces the page", async
   const stateSource = extractSource(
     source,
     "const getGameStatsSyncStateDefinition =",
-    "\n\nconst isGameStatsSyncBusy ="
+    "\n\nconst isGameStatsSyncBusy =",
   );
   const context = vm.createContext({});
   vm.runInContext(
@@ -518,7 +525,7 @@ test("build mismatch is sticky until its reload action replaces the page", async
       "globalThis.setForTest = setGameStatsSyncState;",
       "globalThis.readForTest = () => ({ gameStatsSyncState, gameStatsSyncMessage, renderCalls });",
     ].join("\n"),
-    context
+    context,
   );
 
   context.setForTest("missing-state");
@@ -541,7 +548,7 @@ test("local-only result feedback survives automatic reads and clears on manual r
   const stateSource = extractSource(
     source,
     "const getGameStatsSyncStateDefinition =",
-    "\n\nconst isGameStatsSyncBusy ="
+    "\n\nconst isGameStatsSyncBusy =",
   );
   const context = vm.createContext({});
   vm.runInContext(
@@ -559,7 +566,7 @@ test("local-only result feedback survives automatic reads and clears on manual r
       "globalThis.setManualForTest = (manual) => { gameStatsManualRefreshInProgress = manual; };",
       "globalThis.readForTest = () => ({ gameStatsSyncState, gameStatsSyncMessage });",
     ].join("\n"),
-    context
+    context,
   );
 
   context.setForTest("fetching");
@@ -614,35 +621,46 @@ test("local-only result feedback survives automatic reads and clears on manual r
 
 test("local reset clears the expiry notice without disturbing busy or build-mismatch states", async () => {
   const source = await readMainSource();
-  const stateSource = extractSource(source, "const getGameStatsSyncStateDefinition =", "\n\nconst isGameStatsSyncBusy =");
-  const resetSource = extractSource(source, "const resetGameProgressLocalData =", "\n\nconst renderGameStatsSyncStatus =");
+  const stateSource = extractSource(
+    source,
+    "const getGameStatsSyncStateDefinition =",
+    "\n\nconst isGameStatsSyncBusy =",
+  );
+  const resetSource = extractSource(
+    source,
+    "const resetGameProgressLocalData =",
+    "\n\nconst renderGameStatsSyncStatus =",
+  );
   for (const state of ["session-expired", "fetching", "auth-waiting", "build-mismatch"]) {
     const context = vm.createContext({});
-    vm.runInContext([
-      "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, 'session-expired': { message: 'expired' } };",
-      `let gameStatsSyncState = ${JSON.stringify(state)};`,
-      "let gameStatsExpiredResultNoticePending = true;",
-      "let gameStatsLocalResultNotice = null;",
-      "let gameStatsSyncMessage = '';",
-      "let gameStatsReleaseWaitCount = 0;",
-      "let gameStatsManualRefreshInProgress = false;",
-      `const gameStatsSyncPromise = ${state === "fetching" ? "{}" : "null"};`,
-      "let gameStatsLocalResetGeneration = 0;",
-      "const gameStatsDraftProfile = null;",
-      "let gameStatsLocalState = { wins: 1 };",
-      "const gameStatsLocalSources = [];",
-      "const createEmptyGameStatsData = () => ({ wins: 0 });",
-      "const saveGameStatsLocalState = () => {};",
-      "const clearGameStatsProfile = () => {};",
-      "const renderGameStatsWindows = () => {};",
-      "let droppedClearCalls = 0;",
-      "const clearGameStatsDroppedResults = () => { droppedClearCalls += 1; };",
-      stateSource,
-      resetSource,
-      "globalThis.resetForTest = resetGameProgressLocalData;",
-      "globalThis.readyForTest = () => setGameStatsSyncState('ready');",
-      "globalThis.readForTest = () => ({ gameStatsSyncState, gameStatsSyncMessage, gameStatsExpiredResultNoticePending, gameStatsLocalState, gameStatsLocalResetGeneration, droppedClearCalls });",
-    ].join("\n"), context);
+    vm.runInContext(
+      [
+        "const GAME_STATS_SYNC_STATES = { ready: { message: 'ready' }, 'session-expired': { message: 'expired' } };",
+        `let gameStatsSyncState = ${JSON.stringify(state)};`,
+        "let gameStatsExpiredResultNoticePending = true;",
+        "let gameStatsLocalResultNotice = null;",
+        "let gameStatsSyncMessage = '';",
+        "let gameStatsReleaseWaitCount = 0;",
+        "let gameStatsManualRefreshInProgress = false;",
+        `const gameStatsSyncPromise = ${state === "fetching" ? "{}" : "null"};`,
+        "let gameStatsLocalResetGeneration = 0;",
+        "const gameStatsDraftProfile = null;",
+        "let gameStatsLocalState = { wins: 1 };",
+        "const gameStatsLocalSources = [];",
+        "const createEmptyGameStatsData = () => ({ wins: 0 });",
+        "const saveGameStatsLocalState = () => {};",
+        "const clearGameStatsProfile = () => {};",
+        "const renderGameStatsWindows = () => {};",
+        "let droppedClearCalls = 0;",
+        "const clearGameStatsDroppedResults = () => { droppedClearCalls += 1; };",
+        stateSource,
+        resetSource,
+        "globalThis.resetForTest = resetGameProgressLocalData;",
+        "globalThis.readyForTest = () => setGameStatsSyncState('ready');",
+        "globalThis.readForTest = () => ({ gameStatsSyncState, gameStatsSyncMessage, gameStatsExpiredResultNoticePending, gameStatsLocalState, gameStatsLocalResetGeneration, droppedClearCalls });",
+      ].join("\n"),
+      context,
+    );
     context.resetForTest();
     const reset = plainObject(context.readForTest());
     assert.equal(reset.droppedClearCalls, 1);
@@ -651,10 +669,16 @@ test("local reset clears the expiry notice without disturbing busy or build-mism
     assert.equal(reset.gameStatsLocalResetGeneration, 1);
     assert.equal(reset.gameStatsSyncState, state === "session-expired" ? "ready" : state);
     if (state === "session-expired") {
-      assert.equal(reset.gameStatsSyncMessage, "Local progress was reset. Published and queued leaderboard results remain available.");
+      assert.equal(
+        reset.gameStatsSyncMessage,
+        "Local progress was reset. Published and queued leaderboard results remain available.",
+      );
     }
     context.readyForTest();
-    assert.equal(context.readForTest().gameStatsSyncState, state === "build-mismatch" ? state : "ready");
+    assert.equal(
+      context.readForTest().gameStatsSyncState,
+      state === "build-mismatch" ? state : "ready",
+    );
   }
 });
 
@@ -663,7 +687,7 @@ test("game-bound hooks own ensure, drop, and synchronous record reservation", as
   const hookSource = extractSource(
     source,
     "const createGameStatsHooks =",
-    "\n\nwindow.homeGameStats"
+    "\n\nwindow.homeGameStats",
   );
   const context = vm.createContext({});
   vm.runInContext(
@@ -684,7 +708,7 @@ test("game-bound hooks own ensure, drop, and synchronous record reservation", as
       "globalThis.replaceStateForTest = () => { currentState = { statsSession: '' }; return currentState; };",
       "globalThis.readGetterStateForTest = () => ({ oldState: state, currentState });",
     ].join("\n"),
-    context
+    context,
   );
 
   const firstKey = context.hooks.ensureSession({ difficulty: "easy" });
@@ -694,7 +718,7 @@ test("game-bound hooks own ensure, drop, and synchronous record reservation", as
   assert.notEqual(secondKey, firstKey);
   const recordPromise = context.hooks.recordEvent(
     { game: "snake", type: "win", difficulty: "hard" },
-    { sudokuNoHintsSeconds: 99 }
+    { sudokuNoHintsSeconds: 99 },
   );
   const recorded = plainObject(context.readForTest());
   assert.equal(recorded.state.statsSession, "");

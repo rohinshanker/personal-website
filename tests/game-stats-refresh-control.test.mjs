@@ -16,10 +16,10 @@ test("every Game Stats window has an independently accessible refresh row", asyn
   assert.equal(
     (
       homeSource.match(
-        /class="game-stats-sync-status"[\s\S]*?data-game-stats-sync-status[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/g
+        /class="game-stats-sync-status"[\s\S]*?data-game-stats-sync-status[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/g,
       ) ?? []
     ).length,
-    4
+    4,
   );
 
   for (const game of supportedGames) {
@@ -31,23 +31,20 @@ test("every Game Stats window has an independently accessible refresh row", asyn
         `data-game-stats-refresh="${game}"[\\s\\S]*?` +
         `aria-label="Refresh ${label} stats"[\\s\\S]*?` +
         `aria-busy="false"[\\s\\S]*?` +
-        `assets/solitaire-cards/undo-button\\.png`
+        `assets/solitaire-cards/undo-button\\.png`,
     );
 
     assert.match(homeSource, windowPattern);
   }
 
-  assert.doesNotMatch(
-    homeSource,
-    /class="game-stats-sync-row"[^>]*(?:aria-live|role="status")/
-  );
+  assert.doesNotMatch(homeSource, /class="game-stats-sync-row"[^>]*(?:aria-live|role="status")/);
   assert.equal(
     (
       homeSource.match(
-        /<img[\s\S]*?assets\/solitaire-cards\/undo-button\.png[\s\S]*?alt=""[\s\S]*?width="14"[\s\S]*?height="14"/g
+        /<img[\s\S]*?assets\/solitaire-cards\/undo-button\.png[\s\S]*?alt=""[\s\S]*?width="14"[\s\S]*?height="14"/g,
       ) ?? []
     ).length,
-    4
+    4,
   );
 });
 
@@ -55,43 +52,37 @@ test("Game Stats exposes refresh controls and statuses to application code", asy
   const domSource = await readHomeScript("gameStats");
   const mainSource = await readHomeScript("gameStats");
 
-  assert.match(
-    domSource,
-    /const gameStatsRefreshButtons = all\("\[data-game-stats-refresh\]"\)/
-  );
+  assert.match(domSource, /const gameStatsRefreshButtons = all\("\[data-game-stats-refresh\]"\)/);
   assert.match(
     mainSource,
-    /syncStatus: windowElement\.querySelector\("\[data-game-stats-sync-status\]"\)/
+    /syncStatus: windowElement\.querySelector\("\[data-game-stats-sync-status\]"\)/,
   );
 });
 
 test("Game Stats refresh rows stay bounded and expose disabled and loading states", async () => {
-  const cssSource = await readFile(
-    new URL("styles/home/apps/game-stats.css", root),
-    "utf8"
-  );
+  const cssSource = await readFile(new URL("styles/home/apps/game-stats.css", root), "utf8");
 
   assert.match(
     cssSource,
-    /\.game-stats-sync-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+24px;[\s\S]*?min-width:\s*0;/
+    /\.game-stats-sync-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+24px;[\s\S]*?min-width:\s*0;/,
   );
   assert.match(
     cssSource,
-    /\.game-stats-sync-status\s*\{[\s\S]*?min-width:\s*0;[\s\S]*?overflow-wrap:\s*anywhere;[\s\S]*?white-space:\s*normal;/
+    /\.game-stats-sync-status\s*\{[\s\S]*?min-width:\s*0;[\s\S]*?overflow-wrap:\s*anywhere;[\s\S]*?white-space:\s*normal;/,
   );
   assert.match(
     cssSource,
-    /\.game-stats-refresh-button\s*\{[\s\S]*?height:\s*24px;[\s\S]*?min-width:\s*24px;[\s\S]*?width:\s*24px;/
+    /\.game-stats-refresh-button\s*\{[\s\S]*?height:\s*24px;[\s\S]*?min-width:\s*24px;[\s\S]*?width:\s*24px;/,
   );
   assert.match(
     cssSource,
-    /\.game-stats-refresh-button img\s*\{[\s\S]*?height:\s*14px;[\s\S]*?width:\s*14px;/
+    /\.game-stats-refresh-button img\s*\{[\s\S]*?height:\s*14px;[\s\S]*?width:\s*14px;/,
   );
   assert.match(cssSource, /\.game-stats-refresh-button:disabled/);
   assert.match(cssSource, /\.game-stats-refresh-button\[aria-busy="true"\]/);
   assert.match(cssSource, /@keyframes game-stats-refresh-dot/);
   assert.match(
     cssSource,
-    /@media \(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.game-stats-refresh-loading > span\s*\{[\s\S]*?animation:\s*none;/
+    /@media \(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.game-stats-refresh-loading > span\s*\{[\s\S]*?animation:\s*none;/,
   );
 });

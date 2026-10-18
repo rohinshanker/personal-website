@@ -33,11 +33,11 @@ test("Game Stats keeps the Worker wiring and one independently managed window pe
   assert.doesNotMatch(indexSource, /game-stats-global\.js/);
   assert.ok(
     homeSource.indexOf("scripts/home/game-stats-backend.js") <
-      homeSource.indexOf("scripts/home/main.js")
+      homeSource.indexOf("scripts/home/main.js"),
   );
   assert.match(
     gameStatsSource,
-    /registerViewportObserver\(\{[\s\S]*?onFrame: \(\) => \{[\s\S]*?positionVisibleGameStatsWindows\(\);/
+    /registerViewportObserver\(\{[\s\S]*?onFrame: \(\) => \{[\s\S]*?positionVisibleGameStatsWindows\(\);/,
   );
 });
 
@@ -57,7 +57,7 @@ test("the production viewport pass positions every visible Game Stats window", a
       sourceBetween(
         source,
         "const positionVisibleGameStatsWindows =",
-        "\n\nconst openGameStatsWindow"
+        "\n\nconst openGameStatsWindow",
       ),
       "globalThis.position = positionVisibleGameStatsWindows;",
       "globalThis.setWidth = (value) => { window.innerWidth = value; };",
@@ -66,7 +66,7 @@ test("the production viewport pass positions every visible Game Stats window", a
       "globalThis.clearCalls = () => { calls.length = 0; };",
       "globalThis.readCalls = () => calls;",
     ].join("\n"),
-    context
+    context,
   );
 
   context.position();

@@ -7,10 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import {
-  loadModelingPortfolio,
-  renderModelingHome,
-} from "../scripts/build-modeling-markup.mjs";
+import { loadModelingPortfolio, renderModelingHome } from "../scripts/build-modeling-markup.mjs";
 
 const root = new URL("../", import.meta.url);
 const read = (file) => readFile(new URL(file, root), "utf8");
@@ -56,10 +53,17 @@ const shoot = (overrides = {}) => ({
 });
 
 test("the tracked Home modeling markup is generated from the shared data", async () => {
-  const [source, home] = await Promise.all([read("scripts/home/modeling-portfolio.js"), read("home.html")]);
+  const [source, home] = await Promise.all([
+    read("scripts/home/modeling-portfolio.js"),
+    read("home.html"),
+  ]);
   const portfolio = loadModelingPortfolio(source);
 
-  assert.equal(renderModelingHome(home, portfolio), home, "run node scripts/build-modeling-markup.mjs");
+  assert.equal(
+    renderModelingHome(home, portfolio),
+    home,
+    "run node scripts/build-modeling-markup.mjs",
+  );
   for (const marker of [SELECTOR_START, SELECTOR_END, VIEWER_START, VIEWER_END]) {
     assert.equal(home.split(marker).length, 2, `home.html carries ${marker} once`);
   }
@@ -84,7 +88,10 @@ test("the check command rejects stale Home markup and the build repairs it", asy
 
   await assert.rejects(run(["--check"], copy), (error) => {
     assert.equal(error.code, 1);
-    assert.equal(error.stderr, "Home modeling markup is stale. Run: node scripts/build-modeling-markup.mjs\n");
+    assert.equal(
+      error.stderr,
+      "Home modeling markup is stale. Run: node scripts/build-modeling-markup.mjs\n",
+    );
     return true;
   });
   assert.equal(await readFile(path.join(copy, "home.html"), "utf8"), stale, "--check never writes");
@@ -95,22 +102,32 @@ test("the check command rejects stale Home markup and the build repairs it", asy
 test("rendering replaces only the marked regions, in data order, and is idempotent", () => {
   const portfolio = { shoots: [shoot(), shoot({ id: "modeling-two", title: "Two", credits: [] })] };
   const html = renderModelingHome(page(), portfolio);
-  const outsideRegions = (value) => value.replace(/(<!-- BEGIN [^\n]*\n)[\s\S]*?(?=[ \t]*<!-- END)/g, "$1");
+  const outsideRegions = (value) =>
+    value.replace(/(<!-- BEGIN [^\n]*\n)[\s\S]*?(?=[ \t]*<!-- END)/g, "$1");
 
   assert.equal(renderModelingHome(html, portfolio), html);
   assert.equal(outsideRegions(html), outsideRegions(page()));
   assert.doesNotMatch(html, /stale row/);
   assert.deepEqual(
     Array.from(html.matchAll(/ data-view="([^"]+)"/g), ([, id]) => id),
-    ["modeling-one", "modeling-two", "modeling-one", "modeling-two"]
+    ["modeling-one", "modeling-two", "modeling-one", "modeling-two"],
   );
   assert.deepEqual(
-    Array.from(html.matchAll(/class="(selector-item[^"]*|viewer-content[^"]*)"/g), ([, name]) => name),
-    ["selector-item is-active", "selector-item", "viewer-content", "viewer-content is-hidden"]
+    Array.from(
+      html.matchAll(/class="(selector-item[^"]*|viewer-content[^"]*)"/g),
+      ([, name]) => name,
+    ),
+    ["selector-item is-active", "selector-item", "viewer-content", "viewer-content is-hidden"],
   );
   assert.equal(html.match(/<p>Talent: One<\/p>/g).length, 1);
-  const viewerLines = html.slice(html.indexOf(VIEWER_START), html.indexOf(VIEWER_END)).split("\n").slice(1, -1);
-  assert.ok(viewerLines.every((line) => line.startsWith("    ")), "generated lines keep the marker indent");
+  const viewerLines = html
+    .slice(html.indexOf(VIEWER_START), html.indexOf(VIEWER_END))
+    .split("\n")
+    .slice(1, -1);
+  assert.ok(
+    viewerLines.every((line) => line.startsWith("    ")),
+    "generated lines keep the marker indent",
+  );
 });
 
 test("unpublished shoots are skipped and optional credits may be absent", () => {
@@ -138,7 +155,10 @@ test("text and attributes are escaped", () => {
     ],
   });
 
-  assert.match(html, /<span class="selector-title">Garb "Cirque" &lt;b&gt;&amp;&lt;\/b&gt;<\/span>/);
+  assert.match(
+    html,
+    /<span class="selector-title">Garb "Cirque" &lt;b&gt;&amp;&lt;\/b&gt;<\/span>/,
+  );
   assert.match(html, /<h3>Garb "Cirque" &lt;b&gt;&amp;&lt;\/b&gt;<\/h3>/);
   assert.match(html, /data-src="assets\/a&quot;b\.png"/);
   assert.match(html, /<p>Photo\/Video: A &amp; &lt;B&gt;<\/p>/);
@@ -158,26 +178,32 @@ test("malformed generated boundaries fail before Home is rewritten", () => {
   const render = (html) => () => renderModelingHome(html, { shoots: [shoot()] });
   const viewer = "modeling viewer panels";
 
-  assert.throws(render(page({ viewerStart: "" })), new RegExp(`missing the start marker for ${viewer}`));
-  assert.throws(render(page({ viewerEnd: "" })), new RegExp(`missing the end marker for ${viewer}`));
+  assert.throws(
+    render(page({ viewerStart: "" })),
+    new RegExp(`missing the start marker for ${viewer}`),
+  );
+  assert.throws(
+    render(page({ viewerEnd: "" })),
+    new RegExp(`missing the end marker for ${viewer}`),
+  );
   assert.throws(
     render(page({ viewerEnd: `${VIEWER_END}\n${VIEWER_END}` })),
-    new RegExp(`repeats a marker for ${viewer}`)
+    new RegExp(`repeats a marker for ${viewer}`),
   );
   assert.throws(
     render(page({ viewerStart: VIEWER_END, viewerEnd: VIEWER_START })),
-    new RegExp(`ends ${viewer} before it starts`)
+    new RegExp(`ends ${viewer} before it starts`),
   );
   assert.throws(
     render(page({ selectorStart: `<li>${SELECTOR_START}` })),
-    /keep each modeling selector rows marker on its own line/
+    /keep each modeling selector rows marker on its own line/,
   );
   assert.throws(
     render(page({ selectorEnd: `x ${SELECTOR_END}` })),
-    /keep each modeling selector rows marker on its own line/
+    /keep each modeling selector rows marker on its own line/,
   );
   assert.throws(
     render(page({ viewerStart: `${VIEWER_START} x` })),
-    /keep each modeling viewer panels marker on its own line/
+    /keep each modeling viewer panels marker on its own line/,
   );
 });

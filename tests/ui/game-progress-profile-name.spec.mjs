@@ -30,7 +30,7 @@ for (const viewport of viewports) {
         Math.random = () => 0.999999;
         localStorage.setItem(storageKey, JSON.stringify(profile));
       },
-      { profile: PROFILE, storageKey: PROFILE_STORAGE_KEY }
+      { profile: PROFILE, storageKey: PROFILE_STORAGE_KEY },
     );
     await page.goto("/home.html");
     await page.locator('.taskbar-icon[data-app="game-progress"]').click();
@@ -138,7 +138,7 @@ for (const viewport of viewports) {
         Math.random = () => 0.999999;
         localStorage.setItem(storageKey, JSON.stringify(profile));
       },
-      { profile: PROFILE, storageKey: PROFILE_STORAGE_KEY }
+      { profile: PROFILE, storageKey: PROFILE_STORAGE_KEY },
     );
     await page.goto("/home.html");
     await page.locator('.taskbar-icon[data-app="game-progress"]').click();
@@ -220,17 +220,15 @@ for (const viewport of viewports) {
     await pointerOption.evaluate((element) => {
       const galleryElement = element.parentElement;
       galleryElement.scrollTop +=
-        element.getBoundingClientRect().top -
-        galleryElement.getBoundingClientRect().top;
+        element.getBoundingClientRect().top - galleryElement.getBoundingClientRect().top;
       window.__profileIconSelectionNode = element;
     });
     await expect
       .poll(() =>
         pointerOption.evaluate(
           (element) =>
-            element.getBoundingClientRect().top -
-            element.parentElement.getBoundingClientRect().top
-        )
+            element.getBoundingClientRect().top - element.parentElement.getBoundingClientRect().top,
+        ),
       )
       .toBeCloseTo(0, 1);
 
@@ -245,7 +243,7 @@ for (const viewport of viewports) {
         borderHitIsOption: Boolean(
           document
             .elementFromPoint(sampleX, frameRect.top + 1)
-            ?.closest(".game-profile-icon-option")
+            ?.closest(".game-profile-icon-option"),
         ),
         innerHitIsTarget:
           document
@@ -273,7 +271,7 @@ for (const viewport of viewports) {
         borderHitIsOption: Boolean(
           document
             .elementFromPoint(sampleX, frameRect.top + 1)
-            ?.closest(".game-profile-icon-option")
+            ?.closest(".game-profile-icon-option"),
         ),
         innerHitIsTarget:
           document
@@ -286,18 +284,16 @@ for (const viewport of viewports) {
     await pointerOption.evaluate((element) => {
       const galleryElement = element.parentElement;
       galleryElement.scrollTop +=
-        element.getBoundingClientRect().top -
-        galleryElement.getBoundingClientRect().top;
+        element.getBoundingClientRect().top - galleryElement.getBoundingClientRect().top;
       window.__profileIconSelectionNode = element;
     });
-
 
     const beforePointerSelection = await readIconPickerScrollState(page);
     const pointerBounds = await pointerOption.boundingBox();
     expect(pointerBounds).not.toBeNull();
     await page.mouse.click(
       pointerBounds.x + pointerBounds.width / 2,
-      pointerBounds.y + pointerBounds.height / 2
+      pointerBounds.y + pointerBounds.height / 2,
     );
     await expect(pointerOption).toHaveAttribute("aria-selected", "true");
     await expect(pointerOption).toHaveClass(/is-selected/);
@@ -308,12 +304,12 @@ for (const viewport of viewports) {
       await page.evaluate(
         () =>
           window.__profileIconSelectionNode?.isConnected &&
-          window.__profileIconSelectionNode === document.activeElement
-      )
+          window.__profileIconSelectionNode === document.activeElement,
+      ),
     ).toBe(true);
     expectIconPickerScrollStateUnchanged(
       beforePointerSelection,
-      await readIconPickerScrollState(page)
+      await readIconPickerScrollState(page),
     );
 
     const nextIcon = await keyboardOption.locator("img").getAttribute("src");
@@ -327,7 +323,7 @@ for (const viewport of viewports) {
     await expect(gallery.locator('[aria-selected="true"]')).toHaveCount(1);
     expectIconPickerScrollStateUnchanged(
       beforeKeyboardSelection,
-      await readIconPickerScrollState(page)
+      await readIconPickerScrollState(page),
     );
 
     await dialog.getByRole("button", { name: "Save Icon" }).click();
@@ -336,11 +332,11 @@ for (const viewport of viewports) {
     await expect(app.locator(".game-progress-profile-name")).toHaveText(PROFILE.name);
     await expect(app.locator(".game-progress-profile-row .game-stats-player-icon")).toHaveAttribute(
       "src",
-      nextIcon
+      nextIcon,
     );
-    const storedProfile = await page.evaluate((storageKey) =>
-      JSON.parse(localStorage.getItem(storageKey) || "null"),
-      PROFILE_STORAGE_KEY
+    const storedProfile = await page.evaluate(
+      (storageKey) => JSON.parse(localStorage.getItem(storageKey) || "null"),
+      PROFILE_STORAGE_KEY,
     );
     expect(storedProfile).toMatchObject({ id: PROFILE.id, name: PROFILE.name, icon: nextIcon });
   });

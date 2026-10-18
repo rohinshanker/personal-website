@@ -17,8 +17,8 @@ window.__gameStatsRecordHandoffTest = Object.freeze({
   recordEvent: (event, options = {}) =>
     recordGameStatsEvent(event, "", options),
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
@@ -30,10 +30,10 @@ const recordEvent = async (page, payload, options = {}) => {
           occurredAt: new Date().toISOString(),
           ...eventPayload,
         },
-        recordOptions
+        recordOptions,
       );
     },
-    { eventPayload: payload, recordOptions: options }
+    { eventPayload: payload, recordOptions: options },
   );
 };
 
@@ -43,9 +43,7 @@ const closeStats = async (page, game) => {
   await expect(windowElement).toBeHidden();
 };
 
-test("personal records open only the matching non-Solitaire leaderboard", async ({
-  page,
-}) => {
+test("personal records open only the matching non-Solitaire leaderboard", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript((savedProfile) => {
@@ -105,7 +103,7 @@ test("personal records open only the matching non-Solitaire leaderboard", async 
       boardSize: "10",
       metric: 0,
     },
-    { snakePreviousHighScore: null }
+    { snakePreviousHighScore: null },
   );
   await expectOnlyStatsWindow("snake");
   await closeStats(page, "snake");
@@ -119,7 +117,7 @@ test("personal records open only the matching non-Solitaire leaderboard", async 
       boardSize: "10",
       metric: 0,
     },
-    { snakePreviousHighScore: 0 }
+    { snakePreviousHighScore: 0 },
   );
   await expect(statsWindow("snake")).toBeHidden();
 
@@ -132,7 +130,7 @@ test("personal records open only the matching non-Solitaire leaderboard", async 
       boardSize: "10",
       metric: 1,
     },
-    { snakePreviousHighScore: 0 }
+    { snakePreviousHighScore: 0 },
   );
   await expectOnlyStatsWindow("snake");
   await closeStats(page, "snake");
@@ -157,7 +155,7 @@ test("personal records open only the matching non-Solitaire leaderboard", async 
       hintBucket: "noHints",
       metric: 120,
     },
-    { sudokuNoHintsSeconds: 120 }
+    { sudokuNoHintsSeconds: 120 },
   );
   await expectOnlyStatsWindow("sudoku");
   await closeStats(page, "sudoku");
@@ -172,7 +170,7 @@ test("personal records open only the matching non-Solitaire leaderboard", async 
       hintBucket: "noHints",
       metric: 120,
     },
-    { sudokuNoHintsSeconds: 120 }
+    { sudokuNoHintsSeconds: 120 },
   );
   await expect(statsWindow("sudoku")).toBeHidden();
 
@@ -186,7 +184,7 @@ test("personal records open only the matching non-Solitaire leaderboard", async 
       hintBucket: "noHints",
       metric: 119,
     },
-    { sudokuNoHintsSeconds: 119 }
+    { sudokuNoHintsSeconds: 119 },
   );
   await expectOnlyStatsWindow("sudoku");
   await closeStats(page, "sudoku");
@@ -209,14 +207,10 @@ test("personal records open only the matching non-Solitaire leaderboard", async 
 
   const layout = await page.evaluate(() => ({
     documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
-    visibleStatsWindows: Array.from(
-      document.querySelectorAll("[data-game-stats-window]")
-    ).filter(
+    visibleStatsWindows: Array.from(document.querySelectorAll("[data-game-stats-window]")).filter(
       (element) =>
-        !element.classList.contains("is-hidden") &&
-        !element.classList.contains("is-closing")
+        !element.classList.contains("is-hidden") && !element.classList.contains("is-closing"),
     ).length,
   }));
   expect(layout).toEqual({ documentOverflows: false, visibleStatsWindows: 0 });
-
 });

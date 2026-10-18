@@ -3,7 +3,11 @@ import { readFile } from "node:fs/promises";
 import { expect, test } from "./deterministic.mjs";
 
 import { homeScriptUrl } from "../helpers/home-scripts.mjs";
-import { REVIEW_VIEWPORT, breakpointPair, installGameStatsBackend } from "./helpers/rendered-site.mjs";
+import {
+  REVIEW_VIEWPORT,
+  breakpointPair,
+  installGameStatsBackend,
+} from "./helpers/rendered-site.mjs";
 import { createIssuedGameResponder } from "./helpers/verified-game-session.mjs";
 
 /** A backend only this spec serves, so no route can resolve to the live Worker. */
@@ -17,10 +21,7 @@ const viewports = [
   REVIEW_VIEWPORT.wide,
 ];
 
-const mainSource = await readFile(
-  homeScriptUrl("solitaire"),
-  "utf8"
-);
+const mainSource = await readFile(homeScriptUrl("solitaire"), "utf8");
 const sourceSection = (start, end) => {
   const startIndex = mainSource.indexOf(start);
   const endIndex = mainSource.indexOf(end, startIndex);
@@ -50,13 +51,15 @@ const buildDomDeal = (tableauIds) => {
       suit,
       rank: index + 1,
       faceUp: false,
-    }))
+    })),
   );
   const cardsById = new Map(cards.map((card) => [card.id, card]));
-  const tableau = tableauIds.map((columnIds) => columnIds.map((id, index) => ({
-    ...cardsById.get(id),
-    faceUp: index === columnIds.length - 1,
-  })));
+  const tableau = tableauIds.map((columnIds) =>
+    columnIds.map((id, index) => ({
+      ...cardsById.get(id),
+      faceUp: index === columnIds.length - 1,
+    })),
+  );
   return { stock: cards.filter((card) => !tableauIdSet.has(card.id)), tableau };
 };
 
@@ -101,40 +104,56 @@ const installGameStatsApi = async (page) => {
     }
     if (url.pathname === "/events") {
       eventRequests.push(JSON.parse(request.postData() || "{}"));
-      await route.fulfill({ status: 201, contentType: "application/json", headers,
-        body: JSON.stringify({ ok: true, applied: true }) });
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        headers,
+        body: JSON.stringify({ ok: true, applied: true }),
+      });
       return;
     }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       headers,
-      body: JSON.stringify({ generatedAt: new Date().toISOString(), totals: {},
-        playerTotals: {}, leaderboards: {}, playerRanks: {}, playerRecords: {} }),
+      body: JSON.stringify({
+        generatedAt: new Date().toISOString(),
+        totals: {},
+        playerTotals: {},
+        leaderboards: {},
+        playerRanks: {},
+        playerRecords: {},
+      }),
     });
   });
   return { eventRequests, sessionRequests: verified.issued, verified };
 };
 
 const installSeed = async (page, includeProfile = false) => {
-  await page.addInitScript(({ seed, profile }) => {
-    let state = seed >>> 0;
-    Math.random = () => {
-      state += 0x6d2b79f5;
-      let value = state;
-      value = Math.imul(value ^ (value >>> 15), value | 1);
-      value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-      return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-    };
-    if (profile) {
-      localStorage.setItem("personalSitePlayerProfileV1", JSON.stringify({
-        id: "player-solitaire-winnable",
-        name: "Deal Verifier",
-        icon: "assets/app-icons/ico/user_card.ico",
-        rerollCount: 0,
-      }));
-    }
-  }, { seed: TEST_SEED, profile: includeProfile });
+  await page.addInitScript(
+    ({ seed, profile }) => {
+      let state = seed >>> 0;
+      Math.random = () => {
+        state += 0x6d2b79f5;
+        let value = state;
+        value = Math.imul(value ^ (value >>> 15), value | 1);
+        value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+        return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+      };
+      if (profile) {
+        localStorage.setItem(
+          "personalSitePlayerProfileV1",
+          JSON.stringify({
+            id: "player-solitaire-winnable",
+            name: "Deal Verifier",
+            icon: "assets/app-icons/ico/user_card.ico",
+            rerollCount: 0,
+          }),
+        );
+      }
+    },
+    { seed: TEST_SEED, profile: includeProfile },
+  );
 };
 
 const openSolitaire = async (page, viewport) => {
@@ -164,15 +183,21 @@ const expectStandardInitialBoard = async (page) => {
 };
 
 for (const viewport of viewports) {
-  test(`a solver-checked Solitaire deal renders correctly at ${viewport.name}`, async ({ page }) => {
+  test(`a solver-checked Solitaire deal renders correctly at ${viewport.name}`, async ({
+    page,
+  }) => {
     test.setTimeout(60_000);
     await installSeed(page);
     await openSolitaire(page, viewport);
     await expectStandardInitialBoard(page);
     const geometry = await page.locator(".sol-app").evaluate((app) => {
       const rect = app.getBoundingClientRect();
-      return { appOverflow: app.scrollWidth - app.clientWidth, left: rect.left,
-        right: rect.right, viewportWidth: window.innerWidth };
+      return {
+        appOverflow: app.scrollWidth - app.clientWidth,
+        left: rect.left,
+        right: rect.right,
+        viewportWidth: window.innerWidth,
+      };
     });
     expect(geometry.appOverflow).toBeLessThanOrEqual(1);
     expect(geometry.left).toBeGreaterThanOrEqual(0);
@@ -181,11 +206,21 @@ for (const viewport of viewports) {
     await page.locator("#sol-help").click();
     const rulesWindow = page.locator('[data-app-window="solitaire-rules"]');
     await expect(rulesWindow).toBeVisible();
-    await expect(rulesWindow.getByText("Every new deal is a random shuffle that a built-in solver has checked for at least one winning path with draw-one stock and unlimited redeals.")).toBeVisible();
+    await expect(
+      rulesWindow.getByText(
+        "Every new deal is a random shuffle that a built-in solver has checked for at least one winning path with draw-one stock and unlimited redeals.",
+      ),
+    ).toBeVisible();
     const rulesGeometry = await rulesWindow.evaluate((element) => {
       const rect = element.getBoundingClientRect();
-      return { bottom: rect.bottom, left: rect.left, right: rect.right, top: rect.top,
-        viewportHeight: window.innerHeight, viewportWidth: window.innerWidth };
+      return {
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        viewportHeight: window.innerHeight,
+        viewportWidth: window.innerWidth,
+      };
     });
     expect(rulesGeometry.left).toBeGreaterThanOrEqual(0);
     expect(rulesGeometry.top).toBeGreaterThanOrEqual(0);
@@ -202,16 +237,24 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
 
   const stock = page.locator("#sol-stock");
   await expect(stock).toHaveAccessibleName("Stock, 24 cards");
-  await expect(page.locator('[data-sol-foundation="spades"]')).toHaveAccessibleName("Spades foundation");
-  await expect(page.locator("#sol-tableau .sol-tableau-col").first()).toHaveAccessibleName(/Tableau column 1, bottom card .+/);
-  await expect(page.locator('#sol-tableau [data-sol-zone="tableau"]:not(.is-face-down)').first()).toHaveAccessibleName(/.+ of .+/);
+  await expect(page.locator('[data-sol-foundation="spades"]')).toHaveAccessibleName(
+    "Spades foundation",
+  );
+  await expect(page.locator("#sol-tableau .sol-tableau-col").first()).toHaveAccessibleName(
+    /Tableau column 1, bottom card .+/,
+  );
+  await expect(
+    page.locator('#sol-tableau [data-sol-zone="tableau"]:not(.is-face-down)').first(),
+  ).toHaveAccessibleName(/.+ of .+/);
 
   await expect.poll(() => api.sessionRequests.length).toBe(1);
   await stock.focus();
   await expect(stock).toBeFocused();
   await page.keyboard.press("Enter");
   expect(api.sessionRequests).toHaveLength(1);
-  expect(await page.locator("#sol-moves img").evaluateAll((images) => images.map((img) => img.alt))).toEqual(["0", "0", "1"]);
+  expect(
+    await page.locator("#sol-moves img").evaluateAll((images) => images.map((img) => img.alt)),
+  ).toEqual(["0", "0", "1"]);
   await expect(page.locator("#sol-undo")).toBeEnabled();
   await page.locator('#sol-tableau [data-sol-zone="tableau"]:not(.is-face-down)').first().click();
   await expect(page.locator("#sol-tableau .sol-card.is-selected")).toHaveCount(1);
@@ -228,7 +271,9 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
   await expect(reset).toBeFocused();
   await page.keyboard.press("Space");
   await expectStandardInitialBoard(page);
-  expect(await page.locator("#sol-moves img").evaluateAll((images) => images.map((img) => img.alt))).toEqual(["0", "0", "0"]);
+  expect(
+    await page.locator("#sol-moves img").evaluateAll((images) => images.map((img) => img.alt)),
+  ).toEqual(["0", "0", "0"]);
   await expect(page.locator("#sol-tableau .sol-card.is-selected")).toHaveCount(0);
   // Reset is a new board, so it is issued one of its own.
   await expect.poll(() => api.sessionRequests.length).toBe(2);
@@ -237,19 +282,20 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
   await page.keyboard.press("Space");
   expect(api.sessionRequests).toHaveLength(2);
   expect(
-    await page
-      .locator("#sol-moves img")
-      .evaluateAll((images) => images.map((img) => img.alt))
+    await page.locator("#sol-moves img").evaluateAll((images) => images.map((img) => img.alt)),
   ).toEqual(["0", "0", "1"]);
   const undo = page.locator("#sol-undo");
   await expect(undo).toBeEnabled();
   await undo.click();
   await expectStandardInitialBoard(page);
 
-  const replayTableau = await page.locator("#sol-tableau .sol-tableau-col").evaluateAll((columns) =>
-    columns.map((column) => [...column.querySelectorAll("[data-sol-card-id]")]
-      .map((card) => card.dataset.solCardId))
-  );
+  const replayTableau = await page
+    .locator("#sol-tableau .sol-tableau-col")
+    .evaluateAll((columns) =>
+      columns.map((column) =>
+        [...column.querySelectorAll("[data-sol-card-id]")].map((card) => card.dataset.solCardId),
+      ),
+    );
   const replayDeal = buildDomDeal(replayTableau);
   const replaySolution = findWinningMoves(replayDeal, 12_000);
   if (!replaySolution) throw new Error("Seeded browser deal did not verify");
@@ -258,7 +304,8 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
     let stockActions = 0;
     let foundationMoves = 0;
     let solutionMoves = 0;
-    const wasteCardId = () => document.querySelector("#sol-waste [data-sol-card-id]")?.dataset.solCardId;
+    const wasteCardId = () =>
+      document.querySelector("#sol-waste [data-sol-card-id]")?.dataset.solCardId;
     const reachStockCard = (cardId) => {
       let actions = 0;
       while (wasteCardId() !== cardId) {
@@ -270,15 +317,20 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
     };
     solution.forEach((move) => {
       if (move.from === "stock") reachStockCard(move.cardId);
-      const source = move.from === "stock"
-        ? document.querySelector(`#sol-waste [data-sol-card-id="${move.cardId}"]`)
-        : document.querySelector(`#sol-tableau [data-sol-pile="${move.column}"][data-sol-index="${move.index ?? ""}"]`) ||
-          document.querySelector(`#sol-tableau [data-sol-pile="${move.column}"]:last-child`);
+      const source =
+        move.from === "stock"
+          ? document.querySelector(`#sol-waste [data-sol-card-id="${move.cardId}"]`)
+          : document.querySelector(
+              `#sol-tableau [data-sol-pile="${move.column}"][data-sol-index="${move.index ?? ""}"]`,
+            ) || document.querySelector(`#sol-tableau [data-sol-pile="${move.column}"]:last-child`);
       if (!source) throw new Error(`Missing source for ${JSON.stringify(move)}`);
       source.click();
-      const target = move.type === "toFoundation"
-        ? document.querySelector(`[data-sol-foundation="${source.getAttribute("aria-label").split(" of ").at(-1).toLowerCase()}"]`)
-        : document.querySelector(`[data-sol-col="${move.toColumn ?? move.column}"]`);
+      const target =
+        move.type === "toFoundation"
+          ? document.querySelector(
+              `[data-sol-foundation="${source.getAttribute("aria-label").split(" of ").at(-1).toLowerCase()}"]`,
+            )
+          : document.querySelector(`[data-sol-col="${move.toColumn ?? move.column}"]`);
       if (!target) throw new Error(`Missing target for ${JSON.stringify(move)}`);
       target.click();
       solutionMoves += 1;
@@ -307,7 +359,7 @@ test("a generated Solitaire deal wins through the public controls", async ({ pag
     .poll(() =>
       page
         .locator("#sol-moves img")
-        .evaluateAll((images) => Number(images.map((image) => image.alt).join("")))
+        .evaluateAll((images) => Number(images.map((image) => image.alt).join(""))),
     )
     .toBe(SERVER_MOVE_COUNT);
   expect(api.eventRequests[0].completion).toMatchObject({

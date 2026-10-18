@@ -3,7 +3,6 @@ import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 
 const VIEWPORTS = REVIEW_VIEWPORTS;
 
-
 const prepareMinesweeper = async (page, viewport = VIEWPORTS[2]) => {
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -30,9 +29,7 @@ const expectCellCovered = async (cell) => {
   await expect(cell).not.toHaveClass(/is-revealed|is-flagged|is-question/);
 };
 
-test("Help opens a compact Keyboard Controls window with a Wikipedia action", async ({
-  page,
-}) => {
+test("Help opens a compact Keyboard Controls window with a Wikipedia action", async ({ page }) => {
   const app = await prepareMinesweeper(page, VIEWPORTS[0]);
   await app.getByRole("button", { name: "Help" }).click();
 
@@ -40,7 +37,7 @@ test("Help opens a compact Keyboard Controls window with a Wikipedia action", as
   await expect(controlsWindow).toBeVisible();
   await expect(controlsWindow).toHaveAccessibleName("Keyboard Controls");
   await expect(controlsWindow).toHaveAccessibleDescription(
-    "The current square is the square under your mouse pointer."
+    "The current square is the square under your mouse pointer.",
   );
   await expect(controlsWindow.getByText("Press S to click the current square.")).toBeVisible();
   await expect(controlsWindow.getByText("Press D to maybe the current square.")).toBeVisible();
@@ -50,9 +47,9 @@ test("Help opens a compact Keyboard Controls window with a Wikipedia action", as
     name: "Minesweeper Wikipedia",
   });
   await expect(wikipediaButton).toBeFocused();
-  expect(await wikipediaButton.evaluate((button) => getComputedStyle(button).backgroundImage)).toContain(
-    "help.svg"
-  );
+  expect(
+    await wikipediaButton.evaluate((button) => getComputedStyle(button).backgroundImage),
+  ).toContain("help.svg");
 
   const target = app.locator(".ms-cell").nth(70);
   await target.hover();
@@ -276,7 +273,6 @@ test("the mode menu switches mobile controls and keyboard input exactly", async 
   await page.keyboard.press("d");
   await page.keyboard.press("f");
   await expect(cell).toHaveClass(/is-revealed/);
-
 });
 
 test("shortcuts survive grid rebuilds and stop after the game ends", async ({ page }) => {
@@ -319,7 +315,6 @@ test("shortcuts survive grid rebuilds and stop after the game ends", async ({ pa
   await page.keyboard.press("d");
   await page.keyboard.press("f");
   await expect(coveredCell).toHaveAttribute("class", before);
-
 });
 
 test("Minesweeper receives S and D when Snake is open behind it", async ({ page }) => {
@@ -330,11 +325,9 @@ test("Minesweeper receives S and D when Snake is open behind it", async ({ page 
   await snakeButton.click();
   const snake = page.locator('[data-app-window="snake"]');
   await expect(snake).toBeVisible();
-  await expect(snake.locator("#snake-loading-panel")).toHaveAttribute(
-    "aria-hidden",
-    "true",
-    { timeout: 6_000 }
-  );
+  await expect(snake.locator("#snake-loading-panel")).toHaveAttribute("aria-hidden", "true", {
+    timeout: 6_000,
+  });
   await expect(snake.locator("#snake-status")).toHaveText("Ready");
 
   const target = app.locator(".ms-cell").nth(40);
@@ -367,5 +360,4 @@ test("Minesweeper receives S and D when Snake is open behind it", async ({ page 
   await restoredTarget.hover();
   await page.keyboard.press("f");
   await expect(restoredTarget).toHaveClass(/is-flagged/);
-
 });

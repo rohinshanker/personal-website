@@ -15,11 +15,11 @@ export async function routeHomeScript(page, key, transform) {
   const routed = transform(source);
   if (routed === source) {
     throw new Error(
-      `The browser fixture did not transform ${homeScriptPath(key)}; the code it instruments has moved.`
+      `The browser fixture did not transform ${homeScriptPath(key)}; the code it instruments has moved.`,
     );
   }
   await page.route(servedFile(homeScriptPath(key)), (route) =>
-    route.fulfill({ contentType: "application/javascript", body: routed })
+    route.fulfill({ contentType: "application/javascript", body: routed }),
   );
   return routed;
 }

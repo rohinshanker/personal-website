@@ -96,8 +96,8 @@ window.__nekoStreamFeatureTest = Object.freeze({
     return readNekoStreamTestSnapshot();
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
   await routeHomeScript(page, "eventRuntime", (source) =>
     source.replace(
@@ -142,8 +142,8 @@ window.__nekoStreamRuntimeTest = Object.freeze({
   triggerAlert: (triggerName = "startButton") =>
     window.homeActivity.notifyActivity(triggerName),
 });
-})();`
-    )
+})();`,
+    ),
   );
   await routeHomeScript(page, "eventPrompts", (source) =>
     isolateProductionRandomEventPolicies(source, {
@@ -168,14 +168,14 @@ window.__nekoStreamPromptTest = Object.freeze({
   }),
   openAlert: () => showNekoStreamAlert(),
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
 const preparePage = async (
   page,
-  { clock = false, reducedMotion = "no-preference", viewport = viewports[2] } = {}
+  { clock = false, reducedMotion = "no-preference", viewport = viewports[2] } = {},
 ) => {
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion });
@@ -194,10 +194,10 @@ const preparePage = async (
     await page.evaluate(() =>
       Boolean(
         window.__nekoStreamFeatureTest &&
-        window.__nekoStreamPromptTest &&
-        window.__nekoStreamRuntimeTest
-      )
-    )
+          window.__nekoStreamPromptTest &&
+          window.__nekoStreamRuntimeTest,
+      ),
+    ),
   ).toBe(true);
 
   const aboutWindow = page.locator("#about-window");
@@ -211,13 +211,12 @@ const preparePage = async (
   }
 };
 
-const readSnapshot = (page) =>
-  page.evaluate(() => window.__nekoStreamFeatureTest.snapshot());
+const readSnapshot = (page) => page.evaluate(() => window.__nekoStreamFeatureTest.snapshot());
 
 const startStream = async (page, specs) => {
   const initialSnapshot = await page.evaluate(
     (streamSpecs) => window.__nekoStreamFeatureTest.start(streamSpecs),
-    specs
+    specs,
   );
   if (initialSnapshot.plannedCount > 0) {
     await expect
@@ -230,8 +229,7 @@ const startStream = async (page, specs) => {
   return readSnapshot(page);
 };
 
-const stopStream = (page) =>
-  page.evaluate(() => window.__nekoStreamFeatureTest.stop());
+const stopStream = (page) => page.evaluate(() => window.__nekoStreamFeatureTest.stop());
 
 const readAlertSnapshot = (page) =>
   page.evaluate(() => window.__nekoStreamPromptTest.alertSnapshot());
@@ -371,19 +369,19 @@ test("the forced-Start event shows an animated accessible prompt and No or Escap
   await page.evaluate(() => window.__nekoStreamRuntimeTest.preloadAlert());
   expect((await readAlertSnapshot(page)).debug).toBe(false);
   expect((await readAlertSnapshot(page)).forceOnStart).toBe(true);
-  expect(
-    await page.evaluate(() => window.__nekoStreamRuntimeTest.triggerAlert("windowOpen"))
-  ).toBe(false);
+  expect(await page.evaluate(() => window.__nekoStreamRuntimeTest.triggerAlert("windowOpen"))).toBe(
+    false,
+  );
   expect((await readAlertSnapshot(page)).pendingDefinition).toBe(false);
   const capacityEventId = await page.evaluate(() =>
-    window.__nekoStreamRuntimeTest.occupyGlobalLimits()
+    window.__nekoStreamRuntimeTest.occupyGlobalLimits(),
   );
   await sentinel.focus();
   expect(
     await page.evaluate(() => [
       window.__nekoStreamRuntimeTest.triggerAlert(),
       window.__nekoStreamRuntimeTest.triggerAlert(),
-    ])
+    ]),
   ).toEqual([true, false]);
   await page.evaluate((eventId) => {
     window.__nekoStreamRuntimeTest.releaseGlobalLimits(eventId);
@@ -437,13 +435,9 @@ test("the forced-Start event shows an animated accessible prompt and No or Escap
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(alert).not.toHaveClass(/is-opening/);
   await expect(icon).toHaveAttribute("src", /sleep1\.png$/);
-  await expect
-    .poll(async () => (await readAlertSnapshot(page)).iconTimerActive)
-    .toBe(false);
+  await expect.poll(async () => (await readAlertSnapshot(page)).iconTimerActive).toBe(false);
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await expect
-    .poll(async () => (await readAlertSnapshot(page)).iconTimerActive)
-    .toBe(true);
+  await expect.poll(async () => (await readAlertSnapshot(page)).iconTimerActive).toBe(true);
   await no.click();
   await expect(alert).toHaveClass(/is-closing/);
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -454,15 +448,11 @@ test("the forced-Start event shows an animated accessible prompt and No or Escap
   await page.emulateMedia({ reducedMotion: "reduce" });
   expect(await page.evaluate(() => window.__nekoStreamPromptTest.openAlert())).toBe(true);
   await expect(alert).not.toHaveClass(/is-opening/);
-  expect(
-    await alert.evaluate((element) => getComputedStyle(element).animationName)
-  ).toBe("none");
+  expect(await alert.evaluate((element) => getComputedStyle(element).animationName)).toBe("none");
   await page.clock.runFor(1_700);
   await expect(icon).toHaveAttribute("src", /sleep1\.png$/);
   expect((await readAlertSnapshot(page)).iconTimerActive).toBe(false);
-  const reducedMotionScreenshotPath = testInfo.outputPath(
-    "neko-stream-alert-reduced-motion.png"
-  );
+  const reducedMotionScreenshotPath = testInfo.outputPath("neko-stream-alert-reduced-motion.png");
   await page.screenshot({ path: reducedMotionScreenshotPath, animations: "disabled" });
   await testInfo.attach("neko-stream-alert-reduced-motion", {
     path: reducedMotionScreenshotPath,
@@ -504,16 +494,14 @@ test("the forced-Start event shows an animated accessible prompt and No or Escap
       expect(semanticSnapshot).toContain("System Alert");
       expect(semanticSnapshot).toContain("Trigger /nekostream?");
       const semanticSnapshotPath = testInfo.outputPath(
-        `neko-stream-alert-${viewport.name}.aria.yml`
+        `neko-stream-alert-${viewport.name}.aria.yml`,
       );
       await writeFile(semanticSnapshotPath, semanticSnapshot, "utf8");
       await testInfo.attach(`neko-stream-alert-${viewport.name}.aria.yml`, {
         path: semanticSnapshotPath,
         contentType: "text/yaml",
       });
-      const screenshotPath = testInfo.outputPath(
-        `neko-stream-alert-${viewport.name}.png`
-      );
+      const screenshotPath = testInfo.outputPath(`neko-stream-alert-${viewport.name}.png`);
       await page.screenshot({ path: screenshotPath, animations: "disabled" });
       await testInfo.attach(`neko-stream-alert-${viewport.name}`, {
         path: screenshotPath,
@@ -524,12 +512,9 @@ test("the forced-Start event shows an animated accessible prompt and No or Escap
       await expect(sentinel).toBeFocused();
     });
   }
-
 });
 
-test("the open Neko stream alert has no WCAG A or AA violations", async ({
-  page,
-}) => {
+test("the open Neko stream alert has no WCAG A or AA violations", async ({ page }) => {
   await preparePage(page);
   const alert = page.locator("#neko-stream-alert-window");
   const no = page.locator("#neko-stream-alert-no");
@@ -547,9 +532,7 @@ test("the open Neko stream alert has no WCAG A or AA violations", async ({
   await finishNekoStreamAlertClose(page);
 });
 
-test("Yes closes the prompt and starts exactly one complete forty-cat stream", async ({
-  page,
-}) => {
+test("Yes closes the prompt and starts exactly one complete forty-cat stream", async ({ page }) => {
   await preparePage(page, { clock: true });
   const alert = page.locator("#neko-stream-alert-window");
   const yes = page.locator("#neko-stream-alert-yes");
@@ -655,9 +638,7 @@ test("both Neko launchers provide the bounded /nekostream menu without changing 
   await command.click();
   await expect(menu).toBeHidden();
   await expect(taskbarLauncher).toBeFocused();
-  await expect
-    .poll(async () => (await readSnapshot(page)).pendingSpawnCount)
-    .toBe(40);
+  await expect.poll(async () => (await readSnapshot(page)).pendingSpawnCount).toBe(40);
   const firstWave = await readSnapshot(page);
   expect(firstWave.plannedCount).toBe(40);
   expect(firstWave.pendingSpawnCount).toBe(40);
@@ -665,9 +646,7 @@ test("both Neko launchers provide the bounded /nekostream menu without changing 
 
   await taskbarLauncher.click({ button: "right" });
   await command.click();
-  await expect
-    .poll(async () => (await readSnapshot(page)).pendingSpawnCount)
-    .toBe(40);
+  await expect.poll(async () => (await readSnapshot(page)).pendingSpawnCount).toBe(40);
   const replacementWave = await readSnapshot(page);
   expect(replacementWave.generation).toBe(firstWave.generation + 1);
   expect(replacementWave.plannedCount).toBe(40);
@@ -694,9 +673,7 @@ test("the real /nekostream command schedules and spawns its complete default wav
     clientY: 128,
   });
   await expect(command).toBeFocused();
-  await expect
-    .poll(async () => (await readSnapshot(page)).assetsLoaded)
-    .toBe(true);
+  await expect.poll(async () => (await readSnapshot(page)).assetsLoaded).toBe(true);
 
   await page.evaluate(() => {
     let seed = 0x5eed1234;
@@ -720,7 +697,7 @@ test("the real /nekostream command schedules and spawns its complete default wav
   expect(snapshot.pendingSpawnCount).toBe(0);
   expect(snapshot.cats.length).toBeGreaterThan(0);
   expect(new Set(snapshot.cats.map(({ entrySide }) => entrySide))).toEqual(
-    new Set(["left", "right"])
+    new Set(["left", "right"]),
   );
   expect(snapshot.cats.some(({ actionName }) => actionName !== null)).toBe(true);
   snapshot.cats.forEach(({ speedMultiplier }) => {
@@ -752,7 +729,7 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
   expect(snapshot.pendingSpawnCount).toBe(0);
   expect(snapshot.cats).toHaveLength(40);
   expect(new Set(snapshot.cats.map(({ entrySide }) => entrySide))).toEqual(
-    new Set(["left", "right"])
+    new Set(["left", "right"]),
   );
   snapshot.cats.forEach(({ speedMultiplier }) => {
     expect(speedMultiplier).toBeGreaterThanOrEqual(0.8);
@@ -760,9 +737,7 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
   });
 
   await stopStream(page);
-  await startStream(page, [
-    { entrySide: "left", initialSpeedMultiplier: 1.2, spawnDelayMs: 0 },
-  ]);
+  await startStream(page, [{ entrySide: "left", initialSpeedMultiplier: 1.2, spawnDelayMs: 0 }]);
   await page.clock.runFor(34);
   const beforeMovement = (await readSnapshot(page)).cats[0];
   await page.clock.runFor(100);
@@ -777,19 +752,16 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
   expect(snapshot.animationFrameActive).toBe(false);
 
   await page.setViewportSize({ width: 375, height: 812 });
-  const actionWave = ["sit", "scratch", "clean", "yawn", "sleep"].map(
-    (actionName, index) => ({
-      actionName,
-      actionTriggerProgress: 0.2,
-      entrySide: index % 2 === 0 ? "left" : "right",
-      initialSpeedMultiplier: 1.7,
-      postActionDirection: index % 2 === 0 ? -1 : 1,
-      postActionSpeedMultiplier: 0.8 + index * 0.2,
-      actionDurationMs:
-        actionName === "sleep" ? 20_000 : actionName === "yawn" ? 3_000 : 10_000,
-      spawnDelayMs: 0,
-    })
-  );
+  const actionWave = ["sit", "scratch", "clean", "yawn", "sleep"].map((actionName, index) => ({
+    actionName,
+    actionTriggerProgress: 0.2,
+    entrySide: index % 2 === 0 ? "left" : "right",
+    initialSpeedMultiplier: 1.7,
+    postActionDirection: index % 2 === 0 ? -1 : 1,
+    postActionSpeedMultiplier: 0.8 + index * 0.2,
+    actionDurationMs: actionName === "sleep" ? 20_000 : actionName === "yawn" ? 3_000 : 10_000,
+    spawnDelayMs: 0,
+  }));
   await startStream(page, actionWave);
   await page.clock.runFor(700);
   snapshot = await readSnapshot(page);
@@ -807,37 +779,29 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
   });
   const actionLaneMetrics = await readNekoPoseMetrics(page);
   actionLaneMetrics.poses.forEach((pose) =>
-    expectNekoPoseAligned(pose, actionLaneMetrics.taskbarTop)
+    expectNekoPoseAligned(pose, actionLaneMetrics.taskbarTop),
   );
   const sleepingLaneMetrics = actionLaneMetrics.poses.find(
-    ({ actionName }) => actionName === "sleep"
+    ({ actionName }) => actionName === "sleep",
   );
   expect(sleepingLaneMetrics).toBeDefined();
-  expect(sleepingLaneMetrics.opaqueBottom).toBeGreaterThan(
-    actionLaneMetrics.taskbarTop
-  );
+  expect(sleepingLaneMetrics.opaqueBottom).toBeGreaterThan(actionLaneMetrics.taskbarTop);
   const stoppedPositions = new Map(snapshot.cats.map(({ id, x }) => [id, x]));
 
   await page.clock.runFor(200);
   snapshot = await readSnapshot(page);
   snapshot.cats.forEach(({ id, x }) => expect(x).toBeCloseTo(stoppedPositions.get(id), 5));
   expect(snapshot.cats.find(({ actionName }) => actionName === "sleep").sprite).toMatch(
-    /sleep1\.png$/
+    /sleep1\.png$/,
   );
-  expect(snapshot.cats.find(({ actionName }) => actionName === "clean").spriteName).toBe(
-    "awake"
-  );
-  expect(snapshot.cats.find(({ actionName }) => actionName === "yawn").spriteName).toBe(
-    "yawn1"
-  );
+  expect(snapshot.cats.find(({ actionName }) => actionName === "clean").spriteName).toBe("awake");
+  expect(snapshot.cats.find(({ actionName }) => actionName === "yawn").spriteName).toBe("yawn1");
 
-  const scratchSprite = snapshot.cats.find(
-    ({ actionName }) => actionName === "scratch"
-  ).sprite;
+  const scratchSprite = snapshot.cats.find(({ actionName }) => actionName === "scratch").sprite;
   await page.clock.runFor(100);
   snapshot = await readSnapshot(page);
   expect(snapshot.cats.find(({ actionName }) => actionName === "scratch").sprite).not.toBe(
-    scratchSprite
+    scratchSprite,
   );
 
   await page.clock.runFor(800);
@@ -849,35 +813,22 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
     "yawn",
     "sleep",
   ]);
-  expect(snapshot.cats.find(({ actionName }) => actionName === "clean").spriteName).toBe(
-    "wash1"
-  );
-  expect(snapshot.cats.find(({ actionName }) => actionName === "yawn").spriteName).toBe(
-    "yawn2"
-  );
+  expect(snapshot.cats.find(({ actionName }) => actionName === "clean").spriteName).toBe("wash1");
+  expect(snapshot.cats.find(({ actionName }) => actionName === "yawn").spriteName).toBe("yawn2");
   expect(snapshot.cats.find(({ actionName }) => actionName === "sleep").sprite).toMatch(
-    /sleep2\.png$/
+    /sleep2\.png$/,
   );
 
   const cleanCat = snapshot.cats.find(({ actionName }) => actionName === "clean");
   const cleanElapsedMs = snapshot.lastFrameTimestamp - cleanCat.actionStartedAt;
   await page.clock.runFor(Math.ceil(3_000 - cleanElapsedMs + 34));
   snapshot = await readSnapshot(page);
-  expect(snapshot.cats.find(({ actionName }) => actionName === "clean").spriteName).toBe(
-    "awake"
-  );
-  expect(snapshot.cats.find(({ actionName }) => actionName === "yawn").mode).toBe(
-    "running"
-  );
+  expect(snapshot.cats.find(({ actionName }) => actionName === "clean").spriteName).toBe("awake");
+  expect(snapshot.cats.find(({ actionName }) => actionName === "yawn").mode).toBe("running");
 
   await page.clock.runFor(4_000);
   snapshot = await readSnapshot(page);
-  expect(snapshot.cats.map(({ mode }) => mode)).toEqual([
-    "sit",
-    "scratch",
-    "clean",
-    "sleep",
-  ]);
+  expect(snapshot.cats.map(({ mode }) => mode)).toEqual(["sit", "scratch", "clean", "sleep"]);
   expect(snapshot.cats.map(({ actionCompleted }) => actionCompleted)).toEqual([
     false,
     false,
@@ -895,7 +846,7 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
   const firstDelayed = await startStream(page, delayedWave);
   const replacementDelayed = await startStream(
     page,
-    Array.from({ length: 40 }, (_, index) => ({ id: index, spawnDelayMs: 30_000 }))
+    Array.from({ length: 40 }, (_, index) => ({ id: index, spawnDelayMs: 30_000 })),
   );
   expect(firstDelayed.pendingSpawnCount).toBe(20);
   expect(replacementDelayed.generation).toBe(firstDelayed.generation + 1);
@@ -969,7 +920,7 @@ test("each stream action honors its planned long duration and completes exactly 
       const elapsedMs = snapshot.lastFrameTimestamp - cat.actionStartedAt;
       const beforeDeadlineMs = Math.max(
         0,
-        Math.floor(actionCase.actionDurationMs - elapsedMs - 20)
+        Math.floor(actionCase.actionDurationMs - elapsedMs - 20),
       );
       await page.clock.runFor(beforeDeadlineMs);
       cat = (await readSnapshot(page)).cats[0];
@@ -1014,20 +965,17 @@ test("each stream action honors its planned long duration and completes exactly 
   await page.clock.runFor(700);
   let snapshot = await readSnapshot(page);
   expect(snapshot.cats.map(({ mode }) => mode)).toEqual(["sit", "sit"]);
-  expect(snapshot.cats.map(({ postActionDirection }) => postActionDirection)).toEqual([
+  expect(snapshot.cats.map(({ postActionDirection }) => postActionDirection)).toEqual([null, null]);
+  expect(snapshot.cats.map(({ postActionSpeedMultiplier }) => postActionSpeedMultiplier)).toEqual([
     null,
     null,
   ]);
-  expect(
-    snapshot.cats.map(({ postActionSpeedMultiplier }) => postActionSpeedMultiplier)
-  ).toEqual([null, null]);
   await page.evaluate(() => {
     const completionRolls = [0, 0, 1, 1];
     let completionRollIndex = 0;
     Math.random = () => completionRolls[completionRollIndex++] ?? 1;
   });
-  const sampledActionElapsedMs =
-    snapshot.lastFrameTimestamp - snapshot.cats[0].actionStartedAt;
+  const sampledActionElapsedMs = snapshot.lastFrameTimestamp - snapshot.cats[0].actionStartedAt;
   await page.clock.runFor(Math.ceil(5_000 - sampledActionElapsedMs + 50));
   snapshot = await readSnapshot(page);
   expect(snapshot.cats.map(({ direction }) => direction)).toEqual([-1, 1]);
@@ -1107,20 +1055,16 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
               cancelable: true,
               clientX: coordinates.x,
               clientY: coordinates.y,
-            })
+            }),
           );
         },
-        { x: viewport.width - 1, y: viewport.height - 1 }
+        { x: viewport.width - 1, y: viewport.height - 1 },
       );
       await expect(page.getByRole("menuitem", { name: "/nekostream" })).toBeFocused();
       expectMenuContained(await readMenuGeometry(page));
-      const menuSnapshot = await page
-        .getByRole("menu", { name: "Neko commands" })
-        .ariaSnapshot();
+      const menuSnapshot = await page.getByRole("menu", { name: "Neko commands" }).ariaSnapshot();
       expect(menuSnapshot).toContain("/nekostream");
-      const menuSnapshotPath = testInfo.outputPath(
-        `neko-stream-menu-${viewport.name}.aria.yml`
-      );
+      const menuSnapshotPath = testInfo.outputPath(`neko-stream-menu-${viewport.name}.aria.yml`);
       await writeFile(menuSnapshotPath, menuSnapshot, "utf8");
       await testInfo.attach(`neko-stream-menu-${viewport.name}.aria.yml`, {
         path: menuSnapshotPath,
@@ -1141,7 +1085,7 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
             };
           }),
           catsAreDecorative: cats.every(
-            (cat) => cat.getAttribute("alt") === "" && cat.getAttribute("aria-hidden") === "true"
+            (cat) => cat.getAttribute("alt") === "" && cat.getAttribute("aria-hidden") === "true",
           ),
           imagesLoaded: cats.every((cat) => cat.complete && cat.naturalWidth > 0),
           layerPointerEvents: getComputedStyle(layer).pointerEvents,
@@ -1159,16 +1103,16 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
       expect(metrics.overflow).toBe(false);
       const runningPoseMetrics = await readNekoPoseMetrics(page);
       const runningSpriteNames = new Set(
-        runningPoseMetrics.poses.map(({ spriteName }) => spriteName)
+        runningPoseMetrics.poses.map(({ spriteName }) => spriteName),
       );
       for (const spriteName of ["left1", "left2", "right1", "right2"]) {
         expect(runningSpriteNames.has(spriteName)).toBe(true);
       }
       runningPoseMetrics.poses.forEach((pose) =>
-        expectNekoPoseAligned(pose, runningPoseMetrics.taskbarTop)
+        expectNekoPoseAligned(pose, runningPoseMetrics.taskbarTop),
       );
       const streamScreenshotPath = testInfo.outputPath(
-        `neko-stream-forty-cats-${viewport.name}.png`
+        `neko-stream-forty-cats-${viewport.name}.png`,
       );
       await page.screenshot({ path: streamScreenshotPath, animations: "disabled" });
       await testInfo.attach(`neko-stream-forty-cats-${viewport.name}`, {
@@ -1248,11 +1192,11 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
       });
       expect(actionMetrics.overflow).toBe(false);
       actionMetrics.catBottoms.forEach((bottom) =>
-        expect(bottom).toBeLessThanOrEqual(actionMetrics.taskbarTop + 5)
+        expect(bottom).toBeLessThanOrEqual(actionMetrics.taskbarTop + 5),
       );
       const actionPoseMetrics = await readNekoPoseMetrics(page);
       actionPoseMetrics.poses.forEach((pose) =>
-        expectNekoPoseAligned(pose, actionPoseMetrics.taskbarTop)
+        expectNekoPoseAligned(pose, actionPoseMetrics.taskbarTop),
       );
       const stripTop = Math.max(0, actionMetrics.taskbarTop - 64);
 
@@ -1260,11 +1204,10 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
         await page.setViewportSize({ width: 844, height: 390 });
         const resizedLaneMetrics = await readNekoPoseMetrics(page);
         resizedLaneMetrics.poses.forEach((pose) =>
-          expectNekoPoseAligned(pose, resizedLaneMetrics.taskbarTop)
+          expectNekoPoseAligned(pose, resizedLaneMetrics.taskbarTop),
         );
       }
       await stopStream(page);
     });
   }
-
 });

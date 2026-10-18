@@ -11,35 +11,36 @@ import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 const LOCKED_FREQUENCY = "80";
 const LOCKED_PHASE = "100";
 
-const showDistressSignal = (page) => page.evaluate(async () => {
-  const definition = window.homeEventRuntime.randomEventDefinitions.find(
-    ({ id }) => id === "distress-signal"
-  );
-  await window.homeEventRuntime.preloadRandomEventAssets(definition, {});
-  definition.run();
-});
+const showDistressSignal = (page) =>
+  page.evaluate(async () => {
+    const definition = window.homeEventRuntime.randomEventDefinitions.find(
+      ({ id }) => id === "distress-signal",
+    );
+    await window.homeEventRuntime.preloadRandomEventAssets(definition, {});
+    definition.run();
+  });
 
 /** The progressbar's announced value and the bar's rendered fill, in percent. */
-const readPowerProgress = (page) => page.evaluate(() => {
-  const track = document.querySelector("#distress-power-progress");
-  const bar = document.querySelector("#distress-power-progress-bar");
-  const { paddingLeft, paddingRight } = getComputedStyle(track);
-  const fillableWidth =
-    track.clientWidth - parseFloat(paddingLeft) - parseFloat(paddingRight);
-  return {
-    value: Number(track.getAttribute("aria-valuenow")),
-    fill: (bar.getBoundingClientRect().width / fillableWidth) * 100,
-  };
-});
+const readPowerProgress = (page) =>
+  page.evaluate(() => {
+    const track = document.querySelector("#distress-power-progress");
+    const bar = document.querySelector("#distress-power-progress-bar");
+    const { paddingLeft, paddingRight } = getComputedStyle(track);
+    const fillableWidth = track.clientWidth - parseFloat(paddingLeft) - parseFloat(paddingRight);
+    return {
+      value: Number(track.getAttribute("aria-valuenow")),
+      fill: (bar.getBoundingClientRect().width / fillableWidth) * 100,
+    };
+  });
 
 /** Records the rendered and semantic state for review beside the axe report. */
 const captureState = async (page, win, testInfo, label) => {
   await page.screenshot({ path: testInfo.outputPath(`${label}.png`), fullPage: true });
   await writeFile(testInfo.outputPath(`${label}.aria.yml`), await win.ariaSnapshot(), "utf8");
   expect(await scanForViolations(page, testInfo, label)).toEqual([]);
-  expect(await page.evaluate(() =>
-    document.documentElement.scrollWidth > window.innerWidth
-  )).toBe(false);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
+    false,
+  );
 };
 
 for (const viewport of REVIEW_VIEWPORTS) {
@@ -78,10 +79,12 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await expect(powerButton).toBeDisabled();
     await expect(status).toHaveText("Receiver warming up");
     let charging;
-    await expect.poll(async () => {
-      charging = await readPowerProgress(page);
-      return charging.value > 0 && charging.value < 100;
-    }).toBe(true);
+    await expect
+      .poll(async () => {
+        charging = await readPowerProgress(page);
+        return charging.value > 0 && charging.value < 100;
+      })
+      .toBe(true);
     expect(Math.abs(charging.fill - charging.value)).toBeLessThanOrEqual(1);
     await captureState(page, win, testInfo, `distress-charging-${viewport.name}`);
 

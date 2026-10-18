@@ -75,8 +75,7 @@ const reviewStates = Object.freeze([
   },
   {
     id: "unconfigured",
-    message:
-      "Automatic global tracking is not configured yet; local stats stay on this device.",
+    message: "Automatic global tracking is not configured yet; local stats stay on this device.",
     action: "none",
     busy: false,
     cursor: "off",
@@ -85,8 +84,7 @@ const reviewStates = Object.freeze([
   },
   {
     id: "ready-missing-verified-session",
-    message:
-      "Local stats are saved. A result without a verified game session cannot be published.",
+    message: "Local stats are saved. A result without a verified game session cannot be published.",
     action: "refresh",
     busy: false,
     cursor: "off",
@@ -105,8 +103,7 @@ const reviewStates = Object.freeze([
   },
   {
     id: "ready-verification-rejected",
-    message:
-      "Local stats are saved, but a result could not pass server verification.",
+    message: "Local stats are saved, but a result could not pass server verification.",
     action: "refresh",
     busy: false,
     cursor: "off",
@@ -115,8 +112,7 @@ const reviewStates = Object.freeze([
   },
   {
     id: "ready-started-without-session",
-    message:
-      "Local stats are saved. This result started without a verified game session.",
+    message: "Local stats are saved. This result started without a verified game session.",
     action: "refresh",
     busy: false,
     cursor: "off",
@@ -125,8 +121,7 @@ const reviewStates = Object.freeze([
   },
   {
     id: "ready-local-reset",
-    message:
-      "Local progress was reset. Published and queued leaderboard results remain available.",
+    message: "Local progress was reset. Published and queued leaderboard results remain available.",
     action: "refresh",
     busy: false,
     cursor: "off",
@@ -164,12 +159,8 @@ const reviewStates = Object.freeze([
   },
 ]);
 
-test("review page contains the complete exact status/action matrix", async ({
-  page,
-}) => {
-  await page.goto(
-    "/docs/validation/assets/game-stats-refresh-review.html"
-  );
+test("review page contains the complete exact status/action matrix", async ({ page }) => {
+  await page.goto("/docs/validation/assets/game-stats-refresh-review.html");
 
   for (const state of reviewStates) {
     const card = page.locator(`[data-review-state="${state.id}"]`);
@@ -191,36 +182,29 @@ test("review page contains the complete exact status/action matrix", async ({
   }
 
   await expect(page.locator(".animated-ellipsis")).toHaveCount(3);
-  await expect(
-    page.locator('.refresh-button[aria-busy="true"] .button-loading-dots')
-  ).toHaveCount(3);
+  await expect(page.locator('.refresh-button[aria-busy="true"] .button-loading-dots')).toHaveCount(
+    3,
+  );
   await expect
     .poll(() =>
-      page.locator(".refresh-button img").first().evaluate(
-        (image) => image.complete && image.naturalWidth > 0
-      )
+      page
+        .locator(".refresh-button img")
+        .first()
+        .evaluate((image) => image.complete && image.naturalWidth > 0),
     )
     .toBe(true);
 });
 
-test("review page captures success, rank, and Sudoku edge cases", async ({
-  page,
-}) => {
-  await page.goto(
-    "/docs/validation/assets/game-stats-refresh-review.html"
-  );
+test("review page captures success, rank, and Sudoku edge cases", async ({ page }) => {
+  await page.goto("/docs/validation/assets/game-stats-refresh-review.html");
 
-  const success = page.locator(
-    '[data-review-state="administrator-success"]'
-  );
+  const success = page.locator('[data-review-state="administrator-success"]');
   const popup = success.locator('[role="dialog"]');
-  await expect(popup.locator(".popup-message p")).toHaveText(
-    "Administrator access granted."
-  );
+  await expect(popup.locator(".popup-message p")).toHaveText("Administrator access granted.");
   await expect(popup.locator(".popup-message p")).toHaveCount(1);
   await expect(popup.locator(".popup-message img")).toHaveAttribute(
     "src",
-    "../../../assets/app-icons/ico/msg_warning.ico"
+    "../../../assets/app-icons/ico/msg_warning.ico",
   );
   await expect(popup.locator(".popup-actions button")).toHaveCount(1);
   await expect(popup.locator(".popup-actions button")).toHaveText("OK");
@@ -228,27 +212,19 @@ test("review page captures success, rank, and Sudoku edge cases", async ({
     .poll(async () => {
       const actions = await popup.locator(".popup-actions").boundingBox();
       const ok = await popup.locator(".popup-actions button").boundingBox();
-      return Boolean(
-        actions &&
-          ok &&
-          Math.abs(actions.x + actions.width - (ok.x + ok.width)) <= 1
-      );
+      return Boolean(actions && ok && Math.abs(actions.x + actions.width - (ok.x + ok.width)) <= 1);
     })
     .toBe(true);
   await expect
     .poll(() =>
-      popup.locator(".popup-message img").evaluate(
-        (image) => image.complete && image.naturalWidth > 0
-      )
+      popup
+        .locator(".popup-message img")
+        .evaluate((image) => image.complete && image.naturalWidth > 0),
     )
     .toBe(true);
 
-  const multiplayer = page.locator(
-    '[data-review-state="multiplayer-rank"]'
-  );
-  await expect(multiplayer.locator('[aria-label="Global Top 3"] .score-row')).toHaveCount(
-    3
-  );
+  const multiplayer = page.locator('[data-review-state="multiplayer-rank"]');
+  await expect(multiplayer.locator('[aria-label="Global Top 3"] .score-row')).toHaveCount(3);
   await expect(multiplayer).toContainText("Administrator");
   await expect(multiplayer).toContainText("#5");
   await expect(multiplayer).toContainText("#12");
@@ -272,26 +248,20 @@ for (const viewport of [
   { name: "desktop", width: 1280, height: 800 },
   { name: "wide", width: 1440, height: 900 },
 ]) {
-  test(`review page has no horizontal overflow at ${viewport.name}`, async ({
-    page,
-  }, testInfo) => {
+  test(`review page has no horizontal overflow at ${viewport.name}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
-    await page.goto(
-      "/docs/validation/assets/game-stats-refresh-review.html"
-    );
+    await page.goto("/docs/validation/assets/game-stats-refresh-review.html");
     await expect(page.locator("h1")).toBeVisible();
     await expect(page.locator("[data-review-state]")).toHaveCount(20);
     await expect
       .poll(() =>
         page.evaluate(() => ({
           body: document.body.scrollWidth <= document.body.clientWidth,
-          document:
-            document.documentElement.scrollWidth <=
-            document.documentElement.clientWidth,
+          document: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
           cards: Array.from(document.querySelectorAll("[data-review-state]")).every(
-            (card) => card.scrollWidth <= card.clientWidth
+            (card) => card.scrollWidth <= card.clientWidth,
           ),
-        }))
+        })),
       )
       .toEqual({ body: true, cards: true, document: true });
     await page.screenshot({
@@ -303,14 +273,13 @@ for (const viewport of [
 
 test("review dots become static under reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(
-    "/docs/validation/assets/game-stats-refresh-review.html"
-  );
+  await page.goto("/docs/validation/assets/game-stats-refresh-review.html");
   await expect
     .poll(() =>
-      page.locator(".animated-ellipsis span").first().evaluate(
-        (dot) => getComputedStyle(dot).animationName
-      )
+      page
+        .locator(".animated-ellipsis span")
+        .first()
+        .evaluate((dot) => getComputedStyle(dot).animationName),
     )
     .toBe("none");
 });

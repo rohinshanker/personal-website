@@ -73,7 +73,7 @@ test("Video Editor launcher renders a responsive, keyboard-friendly Yes/No promp
       await page.setViewportSize(viewport);
       const { launcher, win } = await openVideoPrompt(
         page,
-        '.taskbar-icon[data-app="video-editor"]'
+        '.taskbar-icon[data-app="video-editor"]',
       );
       const yes = win.locator("#video-editor-launch-yes");
       const no = win.locator("#video-editor-launch-no");
@@ -81,10 +81,7 @@ test("Video Editor launcher renders a responsive, keyboard-friendly Yes/No promp
 
       await expect(launcher).toHaveAccessibleName("Video Editor");
       await expect(launcher).toHaveAttribute("aria-haspopup", "dialog");
-      await expect(launcher).toHaveAttribute(
-        "aria-controls",
-        "video-editor-launch-window"
-      );
+      await expect(launcher).toHaveAttribute("aria-controls", "video-editor-launch-window");
       await expect(win).toHaveAttribute("role", "alertdialog");
       await expect(win).toHaveAttribute("aria-modal", "false");
       await expect(win).toHaveAttribute("aria-hidden", "false");
@@ -95,14 +92,12 @@ test("Video Editor launcher renders a responsive, keyboard-friendly Yes/No promp
       await expect(error).toBeHidden();
       await expectPromptInsideViewport(win, viewport);
 
-
       await no.press("Enter");
       await expect(win).toHaveAttribute("aria-hidden", "true");
       await finishCloseAnimation(win);
       await expect(launcher).toBeFocused();
     });
   }
-
 });
 
 test("Video Editor Yes opens a secure new tab and restores the exact launcher", async ({
@@ -110,10 +105,7 @@ test("Video Editor Yes opens a secure new tab and restores the exact launcher", 
 }) => {
   await loadHome(page);
   await page.setViewportSize({ width: 1280, height: 800 });
-  const { launcher, win } = await openVideoPrompt(
-    page,
-    '.desktop-icon[data-app="video-editor"]'
-  );
+  const { launcher, win } = await openVideoPrompt(page, '.desktop-icon[data-app="video-editor"]');
 
   const popupPromise = page.waitForEvent("popup");
   await win.locator("#video-editor-launch-yes").click();
@@ -159,9 +151,7 @@ test("Video Editor blocked and failed popups stay actionable", async ({ page }) 
   const second = await openVideoPrompt(page, '.desktop-icon[data-app="video-editor"]');
   await expect(second.win.locator("#video-editor-launch-error")).toBeHidden();
   await second.win.locator("#video-editor-launch-yes").click();
-  await expect(second.win.locator("#video-editor-launch-error")).toHaveText(
-    blockedMessage
-  );
+  await expect(second.win.locator("#video-editor-launch-error")).toHaveText(blockedMessage);
   await second.win.locator('[data-close="video-editor"]').first().click();
   await finishCloseAnimation(second.win);
   await expect(second.launcher).toBeFocused();
@@ -179,35 +169,24 @@ test("Video Editor blocked and failed popups stay actionable", async ({ page }) 
   });
   const third = await openVideoPrompt(page, '.taskbar-icon[data-app="video-editor"]');
   await third.win.locator("#video-editor-launch-yes").click();
-  await expect(third.win.locator("#video-editor-launch-error")).toHaveText(
-    blockedMessage
-  );
+  await expect(third.win.locator("#video-editor-launch-error")).toHaveText(blockedMessage);
   expect(await page.evaluate(() => window.videoEditorRejectedPopupClosed)).toBe(true);
   await third.win.locator("#video-editor-launch-no").click();
   await finishCloseAnimation(third.win);
   await expect(third.launcher).toBeFocused();
-
 });
 
-test("Video Editor Escape and title close dismiss to their exact launchers", async ({
-  page,
-}) => {
+test("Video Editor Escape and title close dismiss to their exact launchers", async ({ page }) => {
   await loadHome(page);
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  const escaped = await openVideoPrompt(
-    page,
-    '.desktop-icon[data-app="video-editor"]'
-  );
+  const escaped = await openVideoPrompt(page, '.desktop-icon[data-app="video-editor"]');
   await escaped.win.locator("#video-editor-launch-yes").press("Escape");
   await expect(escaped.win).toHaveAttribute("aria-hidden", "true");
   await finishCloseAnimation(escaped.win);
   await expect(escaped.launcher).toBeFocused();
 
-  const titleClosed = await openVideoPrompt(
-    page,
-    '.taskbar-icon[data-app="video-editor"]'
-  );
+  const titleClosed = await openVideoPrompt(page, '.taskbar-icon[data-app="video-editor"]');
   await titleClosed.win.locator('[data-close="video-editor"]').first().click();
   await finishCloseAnimation(titleClosed.win);
   await expect(titleClosed.launcher).toBeFocused();

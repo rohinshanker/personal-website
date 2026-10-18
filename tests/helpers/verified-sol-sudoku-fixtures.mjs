@@ -95,7 +95,7 @@ const revealedSolitaireBoard = () => {
     Array.from({ length: 13 }, (unused, offset) => {
       const rank = 13 - offset;
       return `${rank % 2 ? odd : even}-${rank}`;
-    })
+    }),
   );
   return {
     variant: "klondike-draw-one",
@@ -125,20 +125,26 @@ export const buildSolitaireFixtures = async (engines) => {
   const initial = await issuedSolitaire(0);
   const solve = await loadSolitaireSolver();
   const winningReplay = sequence(
-    proveWinnable(engines, initial, solve({
-      stock: initial.stock.map((id) => ({ id, faceUp: false, ...splitCard(id) })),
-      tableau: initial.tableau.map((pile) => [
-        ...pile.down.map((id) => ({ id, faceUp: false, ...splitCard(id) })),
-        ...pile.up.map((id) => ({ id, faceUp: true, ...splitCard(id) })),
-      ]),
-    }))
+    proveWinnable(
+      engines,
+      initial,
+      solve({
+        stock: initial.stock.map((id) => ({ id, faceUp: false, ...splitCard(id) })),
+        tableau: initial.tableau.map((pile) => [
+          ...pile.down.map((id) => ({ id, faceUp: false, ...splitCard(id) })),
+          ...pile.up.map((id) => ({ id, faceUp: true, ...splitCard(id) })),
+        ]),
+      }),
+    ),
   );
 
   const revealed = revealedSolitaireBoard();
   const autoSolveReplay = sequence([
     { op: "autoRunStart" },
     ...engines.solitaire
-      .planAutoSolveBoard(engines.into(engines.solitaire.toBoard(engines.solitaire.initial(engines.into(revealed)))))
+      .planAutoSolveBoard(
+        engines.into(engines.solitaire.toBoard(engines.solitaire.initial(engines.into(revealed)))),
+      )
       .moves.map((move) => plainValue(move.action)),
   ]);
 
@@ -175,7 +181,11 @@ export const buildSolitaireFixtures = async (engines) => {
   const invalid = [
     { name: "an unknown operation", initial, replay: sequence([{ op: "teleport" }]) },
     { name: "an action with an extra field", initial, replay: sequence([{ op: "draw", from: 0 }]) },
-    { name: "a redeal while the stock still holds cards", initial, replay: sequence([{ op: "redeal" }]) },
+    {
+      name: "a redeal while the stock still holds cards",
+      initial,
+      replay: sequence([{ op: "redeal" }]),
+    },
     { name: "an undo with nothing to undo", initial, replay: sequence([{ op: "undo" }]) },
     {
       name: "a tableau move the cards do not allow",
@@ -212,13 +222,19 @@ export const buildSolitaireFixtures = async (engines) => {
     {
       name: "a replay whose sequence numbers were reordered",
       initial,
-      replay: [{ seq: 2, op: "draw" }, { seq: 1, op: "draw" }],
+      replay: [
+        { seq: 2, op: "draw" },
+        { seq: 1, op: "draw" },
+      ],
       ordering: true,
     },
     {
       name: "a replay with a missing sequence number",
       initial,
-      replay: [{ seq: 1, op: "draw" }, { seq: 3, op: "draw" }],
+      replay: [
+        { seq: 1, op: "draw" },
+        { seq: 3, op: "draw" },
+      ],
       ordering: true,
     },
     {
@@ -356,7 +372,10 @@ export const buildSudokuFixtures = async () => {
       initial,
       // Editing a finished board takes the win back off it. Only publication is
       // final, so the rules let play continue and simply stop claiming a win.
-      replay: sequence([...solvedReplay.map(({ seq, ...action }) => action), { op: "clear", index: 1 }]),
+      replay: sequence([
+        ...solvedReplay.map(({ seq, ...action }) => action),
+        { op: "clear", index: 1 },
+      ]),
       expected: { won: false, terminal: false, assistance: "noHints" },
     },
     {
@@ -451,13 +470,31 @@ export const buildSudokuFixtures = async () => {
   ];
 
   const alteredInitials = [
-    { name: "a puzzle that disagrees with its solution", initial: sudokuInitial({ puzzle: `9${SUDOKU_PUZZLE.slice(1)}` }) },
-    { name: "an incomplete solution", initial: sudokuInitial({ solution: `0${SUDOKU_SOLUTION.slice(1)}` }) },
-    { name: "a puzzle with nothing left to solve", initial: sudokuInitial({ puzzle: SUDOKU_SOLUTION }) },
+    {
+      name: "a puzzle that disagrees with its solution",
+      initial: sudokuInitial({ puzzle: `9${SUDOKU_PUZZLE.slice(1)}` }),
+    },
+    {
+      name: "an incomplete solution",
+      initial: sudokuInitial({ solution: `0${SUDOKU_SOLUTION.slice(1)}` }),
+    },
+    {
+      name: "a puzzle with nothing left to solve",
+      initial: sudokuInitial({ puzzle: SUDOKU_SOLUTION }),
+    },
     { name: "an unknown difficulty", initial: sudokuInitial({ difficulty: "fiendish" }) },
-    { name: "a given overwritten in the issued values", initial: sudokuInitial({ values: `9${SUDOKU_PUZZLE.slice(1)}` }) },
-    { name: "an allowance beyond the three a puzzle gets", initial: sudokuInitial({ checksUsed: 4 }) },
-    { name: "Errors mode issued without its confirmation", initial: sudokuInitial({ hintMode: "errors" }) },
+    {
+      name: "a given overwritten in the issued values",
+      initial: sudokuInitial({ values: `9${SUDOKU_PUZZLE.slice(1)}` }),
+    },
+    {
+      name: "an allowance beyond the three a puzzle gets",
+      initial: sudokuInitial({ checksUsed: 4 }),
+    },
+    {
+      name: "Errors mode issued without its confirmation",
+      initial: sudokuInitial({ hintMode: "errors" }),
+    },
     { name: "a win claimed on an untouched puzzle", initial: sudokuInitial({ solved: true }) },
   ];
 

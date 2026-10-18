@@ -39,10 +39,8 @@ const GUIDEPOST_COLORS = Object.freeze([
 const SOUND_EFFECT_SAMPLE_RATE = 22050;
 const CLICK_SOUND_DURATION = 0.12;
 const TYPING_SOUND_DURATION = 1.2;
-const {
-  createAdministratorSession,
-  normalizeAdministratorSignInResponse,
-} = window.homeAdministratorSession;
+const { createAdministratorSession, normalizeAdministratorSignInResponse } =
+  window.homeAdministratorSession;
 const AUTHENTICATION_REQUEST_TIMEOUT_MS = 8_000;
 const AUTHENTICATED_STATE = "authenticated";
 const UNAUTHENTICATED_STATE = "unauthenticated";
@@ -133,12 +131,8 @@ const elements = {
   mediaCount: document.querySelector("#media-count"),
   mediaPanel: document.querySelector("#media-panel"),
   effectsPanel: document.querySelector("#effects-panel"),
-  mediaComposeSeparator: document.querySelector(
-    "#video-editor-media-compose-separator"
-  ),
-  composeEffectsSeparator: document.querySelector(
-    "#video-editor-compose-effects-separator"
-  ),
+  mediaComposeSeparator: document.querySelector("#video-editor-media-compose-separator"),
+  composeEffectsSeparator: document.querySelector("#video-editor-compose-effects-separator"),
   composeBody: document.querySelector(".compose-panel__body"),
   previewStage: document.querySelector("#preview-stage"),
   previewViewport: document.querySelector(".preview-stage-viewport"),
@@ -150,18 +144,12 @@ const elements = {
   frameCustomWidth: document.querySelector("#video-editor-frame-custom-width"),
   frameCustomHeight: document.querySelector("#video-editor-frame-custom-height"),
   workspaceLayoutControls: document.querySelector("#video-editor-workspace-layout"),
-  workspaceLayoutOptions: document.querySelectorAll(
-    "[data-video-editor-workspace-layout-option]"
-  ),
+  workspaceLayoutOptions: document.querySelectorAll("[data-video-editor-workspace-layout-option]"),
   guidelinesControls: document.querySelector("#video-editor-guidelines"),
   guidelinesPlatform: document.querySelector("#video-editor-guidelines-platform"),
-  guidelinesOverlay: document.querySelector(
-    "#video-editor-social-guidelines-overlay"
-  ),
+  guidelinesOverlay: document.querySelector("#video-editor-social-guidelines-overlay"),
   guidelineZones: document.querySelectorAll("[data-guideline-zone]"),
-  previewTimelineSeparator: document.querySelector(
-    "#video-editor-preview-timeline-separator"
-  ),
+  previewTimelineSeparator: document.querySelector("#video-editor-preview-timeline-separator"),
   audioMix: document.querySelector("#preview-audio-mix"),
   playButton: document.querySelector("#play-pause-button"),
   scrubber: document.querySelector("#playhead-scrubber"),
@@ -187,17 +175,13 @@ const elements = {
   audioSyncThreshold: document.querySelector("#audio-sync-threshold"),
   audioSyncThresholdOutput: document.querySelector("#audio-sync-threshold-output"),
   audioSyncDirection: document.querySelector("#audio-sync-direction"),
-  audioSyncRecommendations: document.querySelectorAll(
-    "[data-audio-sync-recommendation]"
-  ),
+  audioSyncRecommendations: document.querySelectorAll("[data-audio-sync-recommendation]"),
   audioSyncGenerate: document.querySelector("[data-audio-sync-generate]"),
   audioSyncRules: document.querySelector("#audio-sync-rules"),
   audioSyncRulesEmpty: document.querySelector("[data-audio-sync-rules-empty]"),
   audioSyncRuleTotal: document.querySelector("[data-audio-sync-rule-total]"),
   audioSyncRuleTemplate: document.querySelector("#audio-sync-rule-template"),
-  audioSyncGuidepostTemplate: document.querySelector(
-    "#audio-sync-guidepost-template"
-  ),
+  audioSyncGuidepostTemplate: document.querySelector("#audio-sync-guidepost-template"),
   audioYoutubeQuery: document.querySelector("#audio-effect-youtube-query"),
   audioYoutubeSearch: document.querySelector("[data-audio-youtube-search]"),
   audioLocalFile: document.querySelector("#audio-local-file"),
@@ -345,12 +329,9 @@ const normalizeAuthenticationBackend = (rawConfig) => {
   }
 };
 
-const authenticationApiBaseUrl = normalizeAuthenticationBackend(
-  window.rohinGameStatsBackend
-);
+const authenticationApiBaseUrl = normalizeAuthenticationBackend(window.rohinGameStatsBackend);
 
-const clamp = (value, minimum, maximum) =>
-  Math.min(Math.max(value, minimum), maximum);
+const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), maximum);
 
 const roundTime = (value) => Math.round(value * 100) / 100;
 
@@ -429,7 +410,7 @@ const applySocialGuidelines = (shouldAnnounce = false) => {
       announce("UI guidelines hidden.");
     } else if (!eligible) {
       announce(
-        `${platform.label} UI guidelines selected. Select Reel / TikTok (9:16) to display them.`
+        `${platform.label} UI guidelines selected. Select Reel / TikTok (9:16) to display them.`,
       );
     } else {
       announce(`${platform.label} UI guidelines shown.`);
@@ -446,9 +427,7 @@ const applyFrameSize = (shouldAnnounce = false) => {
   if (elements.previewStage) {
     elements.previewStage.dataset.framePreset = state.framePreset;
     elements.previewStage.dataset.frameWidth = isFlexibleFrame ? "auto" : String(frame.width);
-    elements.previewStage.dataset.frameHeight = isFlexibleFrame
-      ? "auto"
-      : String(frame.height);
+    elements.previewStage.dataset.frameHeight = isFlexibleFrame ? "auto" : String(frame.height);
     elements.previewStage.classList.toggle("is-frame-flexible", isFlexibleFrame);
     if (isFlexibleFrame) {
       elements.previewStage.style.removeProperty("--video-editor-frame-aspect-ratio");
@@ -457,22 +436,16 @@ const applyFrameSize = (shouldAnnounce = false) => {
     } else {
       elements.previewStage.style.setProperty(
         "--video-editor-frame-aspect-ratio",
-        `${frame.width} / ${frame.height}`
+        `${frame.width} / ${frame.height}`,
       );
-      elements.previewStage.style.setProperty(
-        "--video-editor-frame-width",
-        String(frame.width)
-      );
-      elements.previewStage.style.setProperty(
-        "--video-editor-frame-height",
-        String(frame.height)
-      );
+      elements.previewStage.style.setProperty("--video-editor-frame-width", String(frame.width));
+      elements.previewStage.style.setProperty("--video-editor-frame-height", String(frame.height));
     }
     elements.previewStage.setAttribute(
       "aria-label",
       isFlexibleFrame
         ? "Composed timeline preview, flexible frame (N/A)"
-        : `Composed timeline preview, ${frame.label}`
+        : `Composed timeline preview, ${frame.label}`,
     );
   }
   const guidelinesVisible = applySocialGuidelines(false);
@@ -526,8 +499,7 @@ const previewSplitBounds = () => {
   const bodyBounds = elements.composeBody.getBoundingClientRect();
   const bodyStyle = getComputedStyle(elements.composeBody);
   const axisSize = sideBySide ? bodyBounds.width : bodyBounds.height;
-  const gap =
-    Number.parseFloat(sideBySide ? bodyStyle.columnGap : bodyStyle.rowGap) || 0;
+  const gap = Number.parseFloat(sideBySide ? bodyStyle.columnGap : bodyStyle.rowGap) || 0;
   const separatorSize = sideBySide
     ? elements.previewTimelineSeparator?.offsetWidth || 9
     : elements.previewTimelineSeparator?.offsetHeight || 9;
@@ -542,25 +514,16 @@ const previewSplitBounds = () => {
   let previewMinimumPixels = SIDE_BY_SIDE_PREVIEW_MIN;
   if (!sideBySide) {
     previewMinimumPixels =
-      window.innerHeight <= 680
-        ? COMPACT_STANDARD_PREVIEW_MIN
-        : STANDARD_PREVIEW_MIN;
+      window.innerHeight <= 680 ? COMPACT_STANDARD_PREVIEW_MIN : STANDARD_PREVIEW_MIN;
   }
   const minimum = Math.min(
     PREVIEW_SPLIT_MAX,
-    Math.max(
-      PREVIEW_SPLIT_MIN,
-      Math.ceil((previewMinimumPixels / flexibleSize) * 100)
-    )
+    Math.max(PREVIEW_SPLIT_MIN, Math.ceil((previewMinimumPixels / flexibleSize) * 100)),
   );
-  const timelineMinimumPixels = sideBySide
-    ? SIDE_BY_SIDE_TIMELINE_MIN
-    : STANDARD_TIMELINE_MIN;
+  const timelineMinimumPixels = sideBySide ? SIDE_BY_SIDE_TIMELINE_MIN : STANDARD_TIMELINE_MIN;
   const maximum = Math.min(
     PREVIEW_SPLIT_MAX,
-    Math.floor(
-      ((flexibleSize - timelineMinimumPixels) / flexibleSize) * 100
-    )
+    Math.floor(((flexibleSize - timelineMinimumPixels) / flexibleSize) * 100),
   );
   return {
     flexibleSize,
@@ -569,20 +532,16 @@ const previewSplitBounds = () => {
   };
 };
 
-const setPreviewSplit = (
-  value,
-  shouldAnnounce = false,
-  bounds = previewSplitBounds()
-) => {
+const setPreviewSplit = (value, shouldAnnounce = false, bounds = previewSplitBounds()) => {
   state.previewSplit = Math.round(clamp(value, bounds.minimum, bounds.maximum));
   state.previewSplitByLayout[state.workspaceLayout] = state.previewSplit;
   elements.composeBody?.style.setProperty(
     "--video-editor-preview-split",
-    `${state.previewSplit}fr`
+    `${state.previewSplit}fr`,
   );
   elements.composeBody?.style.setProperty(
     "--video-editor-timeline-split",
-    `${100 - state.previewSplit}fr`
+    `${100 - state.previewSplit}fr`,
   );
   if (elements.previewTimelineSeparator) {
     elements.previewTimelineSeparator.setAttribute("aria-valuemin", String(bounds.minimum));
@@ -592,7 +551,7 @@ const setPreviewSplit = (
       "aria-valuetext",
       state.workspaceLayout === "side-by-side"
         ? `Preview width ${state.previewSplit}%, timeline width ${100 - state.previewSplit}%`
-        : `Preview height ${state.previewSplit}%, timeline height ${100 - state.previewSplit}%`
+        : `Preview height ${state.previewSplit}%, timeline height ${100 - state.previewSplit}%`,
     );
   }
   requestAnimationFrame(fitPreviewStage);
@@ -613,7 +572,7 @@ const setWorkspaceLayout = (layout, shouldAnnounce = false) => {
   if (elements.previewTimelineSeparator) {
     elements.previewTimelineSeparator.setAttribute(
       "aria-orientation",
-      layout === "side-by-side" ? "vertical" : "horizontal"
+      layout === "side-by-side" ? "vertical" : "horizontal",
     );
   }
   setPreviewSplit(state.previewSplit);
@@ -667,11 +626,7 @@ const bindPreviewTimelineSeparator = () => {
       }
       const pointerPosition = sideBySide ? moveEvent.clientX : moveEvent.clientY;
       const delta = ((pointerPosition - startPointerPosition) / availableSize) * 100;
-      const nextValue = clamp(
-        startValue + delta,
-        splitBounds.minimum,
-        splitBounds.maximum
-      );
+      const nextValue = clamp(startValue + delta, splitBounds.minimum, splitBounds.maximum);
       changed ||= Math.round(nextValue) !== state.previewSplit;
       setPreviewSplit(nextValue, false, splitBounds);
     };
@@ -710,8 +665,7 @@ const availablePanelWidth = () => {
   if (!elements.app || !elements.app.clientWidth) return 0;
   const style = getComputedStyle(elements.app);
   const horizontalPadding =
-    (Number.parseFloat(style.paddingLeft) || 0) +
-    (Number.parseFloat(style.paddingRight) || 0);
+    (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
   const gap = Number.parseFloat(style.columnGap) || 0;
   const separatorWidth =
     (elements.mediaComposeSeparator?.getBoundingClientRect().width || 0) +
@@ -721,8 +675,7 @@ const availablePanelWidth = () => {
 
 const sidePanelMaximum = (side) => {
   const details = sidePanelDetails(side);
-  const otherWidth =
-    side === "media" ? state.effectsPanelWidth : state.mediaPanelWidth;
+  const otherWidth = side === "media" ? state.effectsPanelWidth : state.mediaPanelWidth;
   const layoutMaximum = availablePanelWidth() - otherWidth - COMPOSE_PANEL_MIN;
   return Math.max(details.minimum, Math.min(details.maximum, layoutMaximum));
 };
@@ -741,7 +694,7 @@ const scheduleEffectTabTitleMarquees = () => {
         tab.style.setProperty("--effect-tab-title-scroll-distance", `${distance}px`);
         tab.style.setProperty(
           "--effect-tab-title-scroll-duration",
-          `${Math.min(10, Math.max(3, distance / 12)).toFixed(2)}s`
+          `${Math.min(10, Math.max(3, distance / 12)).toFixed(2)}s`,
         );
       } else {
         tab.style.removeProperty("--effect-tab-title-scroll-distance");
@@ -755,17 +708,14 @@ const updateSidePanelLayout = () => {
   if (!elements.app) return;
   for (const side of ["media", "effects"]) {
     const details = sidePanelDetails(side);
-    elements.app.style.setProperty(
-      details.cssProperty,
-      `${state[details.stateKey]}px`
-    );
+    elements.app.style.setProperty(details.cssProperty, `${state[details.stateKey]}px`);
     if (!details.separator) continue;
     details.separator.setAttribute("aria-valuemin", String(details.minimum));
     details.separator.setAttribute("aria-valuemax", String(sidePanelMaximum(side)));
     details.separator.setAttribute("aria-valuenow", String(state[details.stateKey]));
     details.separator.setAttribute(
       "aria-valuetext",
-      `${details.label} width ${state[details.stateKey]} pixels`
+      `${details.label} width ${state[details.stateKey]} pixels`,
     );
   }
   if (state.workspaceLayout === "side-by-side") {
@@ -779,35 +729,26 @@ const reconcileSidePanelWidths = () => {
   const available = availablePanelWidth();
   if (!available) return;
   state.mediaPanelWidth = Math.round(
-    clamp(state.mediaPanelWidth, MEDIA_PANEL_MIN, MEDIA_PANEL_MAX)
+    clamp(state.mediaPanelWidth, MEDIA_PANEL_MIN, MEDIA_PANEL_MAX),
   );
   state.effectsPanelWidth = Math.round(
-    clamp(state.effectsPanelWidth, EFFECTS_PANEL_MIN, EFFECTS_PANEL_MAX)
+    clamp(state.effectsPanelWidth, EFFECTS_PANEL_MIN, EFFECTS_PANEL_MAX),
   );
-  let excess =
-    state.mediaPanelWidth + state.effectsPanelWidth + COMPOSE_PANEL_MIN - available;
+  let excess = state.mediaPanelWidth + state.effectsPanelWidth + COMPOSE_PANEL_MIN - available;
   if (excess > 0) {
-    const effectsReduction = Math.min(
-      excess,
-      state.effectsPanelWidth - EFFECTS_PANEL_MIN
-    );
+    const effectsReduction = Math.min(excess, state.effectsPanelWidth - EFFECTS_PANEL_MIN);
     state.effectsPanelWidth -= effectsReduction;
     excess -= effectsReduction;
   }
   if (excess > 0) {
-    state.mediaPanelWidth -= Math.min(
-      excess,
-      state.mediaPanelWidth - MEDIA_PANEL_MIN
-    );
+    state.mediaPanelWidth -= Math.min(excess, state.mediaPanelWidth - MEDIA_PANEL_MIN);
   }
   updateSidePanelLayout();
 };
 
 const setSidePanelWidth = (side, value, shouldAnnounce = false) => {
   const details = sidePanelDetails(side);
-  state[details.stateKey] = Math.round(
-    clamp(value, details.minimum, sidePanelMaximum(side))
-  );
+  state[details.stateKey] = Math.round(clamp(value, details.minimum, sidePanelMaximum(side)));
   updateSidePanelLayout();
   if (shouldAnnounce) {
     announce(`${details.label} panel set to ${state[details.stateKey]} pixels.`);
@@ -872,28 +813,25 @@ const formatTime = (seconds) => {
   const safeSeconds = Math.max(0, Number.isFinite(seconds) ? seconds : 0);
   const minutes = Math.floor(safeSeconds / 60);
   const remainder = safeSeconds - minutes * 60;
-  return `${String(minutes).padStart(2, "0")}:${remainder
-    .toFixed(2)
-    .padStart(5, "0")}`;
+  return `${String(minutes).padStart(2, "0")}:${remainder.toFixed(2).padStart(5, "0")}`;
 };
 
 const announce = (message) => {
   if (elements.status) elements.status.textContent = message;
 };
 
-const mediaForClip = (clip) =>
-  state.media.find((item) => item.id === clip.mediaId) || null;
+const mediaForClip = (clip) => state.media.find((item) => item.id === clip.mediaId) || null;
 
 const clipDuration = (clip) => clip.sourceEnd - clip.sourceStart;
 
 const projectDuration = () => {
   const clipEnd = state.clips.reduce(
     (maximum, clip) => Math.max(maximum, clip.start + clipDuration(clip)),
-    0
+    0,
   );
   const effectEnd = state.effects.reduce(
     (maximum, effect) => Math.max(maximum, effect.start + effect.duration),
-    0
+    0,
   );
   return Math.max(DEFAULT_PROJECT_DURATION, Math.ceil(Math.max(clipEnd, effectEnd) + 2));
 };
@@ -902,7 +840,8 @@ const setDragData = (event, type, id) => {
   dragPayload = { type, id };
   event.dataTransfer?.setData(type, id);
   event.dataTransfer?.setData("text/plain", id);
-  if (event.dataTransfer) event.dataTransfer.effectAllowed = type === DRAG_TYPES.media ? "copy" : "move";
+  if (event.dataTransfer)
+    event.dataTransfer.effectAllowed = type === DRAG_TYPES.media ? "copy" : "move";
 };
 
 const getDragData = (event) => {
@@ -917,7 +856,7 @@ const clearDragStyles = () => {
   document
     .querySelectorAll(".is-drop-target, .is-drop-invalid, .is-drag-target")
     .forEach((item) =>
-      item.classList.remove("is-drop-target", "is-drop-invalid", "is-drag-target")
+      item.classList.remove("is-drop-target", "is-drop-invalid", "is-drag-target"),
     );
 };
 
@@ -990,7 +929,7 @@ const requireAuthentication = (reason = "initial") => {
   setAuthenticationBusy(false);
   setAuthenticationStatus(
     authenticationStatusForReason(reason),
-    authenticationApiBaseUrl ? "" : "error"
+    authenticationApiBaseUrl ? "" : "error",
   );
   focusAuthenticationForm();
 };
@@ -1020,7 +959,7 @@ const completeAuthentication = (proof, { initial = false } = {}) => {
   announce(
     initial
       ? "Authenticated session restored. Empty project ready."
-      : "Signed in. Your project is ready."
+      : "Signed in. Your project is ready.",
   );
   return true;
 };
@@ -1057,7 +996,7 @@ const submitAuthentication = async (event) => {
   authenticationController = new AbortController();
   const requestTimeout = window.setTimeout(
     () => authenticationController?.abort(),
-    AUTHENTICATION_REQUEST_TIMEOUT_MS
+    AUTHENTICATION_REQUEST_TIMEOUT_MS,
   );
   setAuthenticationBusy(true);
   setAuthenticationStatus("Signing in…");
@@ -1074,9 +1013,7 @@ const submitAuthentication = async (event) => {
       body: JSON.stringify({ username, password }),
       signal: authenticationController.signal,
     });
-    const proof = normalizeAdministratorSignInResponse(
-      await readAuthenticationResponse(response)
-    );
+    const proof = normalizeAdministratorSignInResponse(await readAuthenticationResponse(response));
     if (!proof) throw new Error("invalid-session-response");
     if (attempt !== authenticationAttempt) return;
     completeAuthentication(proof);
@@ -1115,11 +1052,9 @@ const trapAuthenticationFocus = (event) => {
     return;
   }
   if (event.key !== "Tab") return;
-  const focusable = [
-    elements.authUsername,
-    elements.authPassword,
-    elements.authSubmit,
-  ].filter((element) => element && !element.disabled);
+  const focusable = [elements.authUsername, elements.authPassword, elements.authSubmit].filter(
+    (element) => element && !element.disabled,
+  );
   if (!focusable.length) {
     event.preventDefault();
     return;
@@ -1194,7 +1129,7 @@ const readMediaDuration = (url, kind) =>
         if (Number.isFinite(duration) && duration > 0) resolve(duration);
         else reject(new Error("The file does not report a usable duration."));
       },
-      { once: true }
+      { once: true },
     );
     media.addEventListener(
       "error",
@@ -1203,7 +1138,7 @@ const readMediaDuration = (url, kind) =>
         release();
         reject(new Error("The browser could not read this media file."));
       },
-      { once: true }
+      { once: true },
     );
     media.src = url;
   });
@@ -1249,7 +1184,9 @@ const importFiles = async (fileList) => {
 
     renderMediaBin();
     if (imported && rejected) {
-      announce(`Imported ${imported} local ${imported === 1 ? "file" : "files"}; ${rejected} could not be read.`);
+      announce(
+        `Imported ${imported} local ${imported === 1 ? "file" : "files"}; ${rejected} could not be read.`,
+      );
     } else if (imported) {
       announce(`Imported ${imported} local ${imported === 1 ? "file" : "files"}.`);
     } else {
@@ -1283,10 +1220,12 @@ const renderMediaBin = () => {
     row.classList.toggle("is-selected", state.selectedMediaId === item.id);
     row.setAttribute("aria-label", `${item.name}, ${item.kind}, ${formatTime(item.duration)}`);
     fragment.querySelector("[data-media-name]").textContent = item.name;
-    fragment.querySelector("[data-media-meta]").textContent = `${item.kind} · ${formatTime(item.duration)}`;
-    fragment.querySelector(".media-item__icon").style.backgroundImage = `url("../assets/app-icons/ico/${
-      item.kind === "video" ? "camera3_vid.ico" : "loudspeaker_rays.ico"
-    }")`;
+    fragment.querySelector("[data-media-meta]").textContent =
+      `${item.kind} · ${formatTime(item.duration)}`;
+    fragment.querySelector(".media-item__icon").style.backgroundImage =
+      `url("../assets/app-icons/ico/${
+        item.kind === "video" ? "camera3_vid.ico" : "loudspeaker_rays.ico"
+      }")`;
     selectButton.title = item.name;
     selectButton.addEventListener("click", () => {
       state.selectedMediaId = item.id;
@@ -1332,8 +1271,8 @@ const findValidStart = (tierId, desiredStart, duration, excludeClipId = null) =>
   candidates.push(Math.max(gapStart, desired));
   return roundTime(
     candidates.reduce((closest, candidate) =>
-      Math.abs(candidate - desired) < Math.abs(closest - desired) ? candidate : closest
-    )
+      Math.abs(candidate - desired) < Math.abs(closest - desired) ? candidate : closest,
+    ),
   );
 };
 
@@ -1352,12 +1291,7 @@ const insertClipSegment = (
   desiredStart,
   sourceStart,
   sourceEnd,
-  {
-    announceChange = true,
-    focus = true,
-    minimumDuration = MIN_ITEM_DURATION,
-    snap = true,
-  } = {}
+  { announceChange = true, focus = true, minimumDuration = MIN_ITEM_DURATION, snap = true } = {},
 ) => {
   const tier = state.tiers.find((candidate) => candidate.id === tierId);
   if (!tier || tier.kind !== media.kind) {
@@ -1367,10 +1301,10 @@ const insertClipSegment = (
     return null;
   }
   const normalizedSourceStart = roundTime(
-    clamp(sourceStart, 0, Math.max(0, media.duration - minimumDuration))
+    clamp(sourceStart, 0, Math.max(0, media.duration - minimumDuration)),
   );
   const normalizedSourceEnd = roundTime(
-    clamp(sourceEnd, normalizedSourceStart + minimumDuration, media.duration)
+    clamp(sourceEnd, normalizedSourceStart + minimumDuration, media.duration),
   );
   const duration = normalizedSourceEnd - normalizedSourceStart;
   if (duration < minimumDuration) {
@@ -1396,23 +1330,21 @@ const insertClipSegment = (
     announce(
       `${media.name} added to ${tier.label} at ${formatTime(start)}${
         Math.abs(start - desiredStart) > 0.01 ? "; snapped to avoid an overlap" : ""
-      }.`
+      }.`,
     );
   }
   if (focus) {
     requestAnimationFrame(() =>
       document.querySelector(`[data-clip-id="${clip.id}"]`)?.focus({
         preventScroll: true,
-      })
+      }),
     );
   }
   return clip;
 };
 
 const addClip = (media, tierId, desiredStart) =>
-  Boolean(
-    insertClipSegment(media, tierId, desiredStart, 0, media.duration)
-  );
+  Boolean(insertClipSegment(media, tierId, desiredStart, 0, media.duration));
 
 const moveClip = (clipId, tierId, desiredStart) => {
   const clip = state.clips.find((candidate) => candidate.id === clipId);
@@ -1431,10 +1363,10 @@ const moveClip = (clipId, tierId, desiredStart) => {
   announce(
     `${media.name} moved to ${tier.label} at ${formatTime(start)}${
       Math.abs(start - desiredStart) > 0.01 ? "; snapped to avoid an overlap" : ""
-    }.`
+    }.`,
   );
   requestAnimationFrame(() =>
-    document.querySelector(`[data-clip-id="${clip.id}"]`)?.focus({ preventScroll: true })
+    document.querySelector(`[data-clip-id="${clip.id}"]`)?.focus({ preventScroll: true }),
   );
   return true;
 };
@@ -1467,38 +1399,31 @@ const trimClip = (clipId, edge, delta) => {
   const { previous, next } = previousAndNextClip(clip);
 
   if (edge === "start") {
-    const earliestTimelineStart = previous
-      ? previous.start + clipDuration(previous)
-      : 0;
+    const earliestTimelineStart = previous ? previous.start + clipDuration(previous) : 0;
     const earliestFromSource = clip.start - clip.sourceStart;
     const latestStart = clip.start + clipDuration(clip) - MIN_ITEM_DURATION;
     const requestedStart = clip.start + delta;
     const newStart = clamp(
       requestedStart,
       Math.max(earliestTimelineStart, earliestFromSource),
-      latestStart
+      latestStart,
     );
     const applied = newStart - clip.start;
     clip.start = roundTime(newStart);
     clip.sourceStart = roundTime(clip.sourceStart + applied);
   } else {
     const nextStart = next ? next.start : Number.POSITIVE_INFINITY;
-    const maximumDuration = Math.min(
-      media.duration - clip.sourceStart,
-      nextStart - clip.start
-    );
+    const maximumDuration = Math.min(media.duration - clip.sourceStart, nextStart - clip.start);
     const newDuration = clamp(clipDuration(clip) + delta, MIN_ITEM_DURATION, maximumDuration);
     clip.sourceEnd = roundTime(clip.sourceStart + newDuration);
   }
 
   renderTimeline();
-  announce(
-    `${media.name} ${edge} edge trimmed; clip duration ${formatTime(clipDuration(clip))}.`
-  );
+  announce(`${media.name} ${edge} edge trimmed; clip duration ${formatTime(clipDuration(clip))}.`);
   requestAnimationFrame(() =>
     document
       .querySelector(`[data-clip-id="${clip.id}"] [data-trim="${edge}"]`)
-      ?.focus({ preventScroll: true })
+      ?.focus({ preventScroll: true }),
   );
 };
 
@@ -1555,7 +1480,7 @@ const renderClip = (clip, track) => {
   item.style.width = `${Math.max(clipDuration(clip) * state.pixelsPerSecond, 34)}px`;
   item.setAttribute(
     "aria-label",
-    `${media.name}, ${formatTime(clipDuration(clip))}, starts ${formatTime(clip.start)}. Arrow keys move; Delete removes.`
+    `${media.name}, ${formatTime(clipDuration(clip))}, starts ${formatTime(clip.start)}. Arrow keys move; Delete removes.`,
   );
   item.setAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight ArrowUp ArrowDown Delete");
   item.title = media.name;
@@ -1587,7 +1512,7 @@ const renderClip = (clip, track) => {
       moveClip(
         clip.id,
         clip.tierId,
-        clip.start + (event.key === "ArrowLeft" ? -KEYBOARD_STEP : KEYBOARD_STEP)
+        clip.start + (event.key === "ArrowLeft" ? -KEYBOARD_STEP : KEYBOARD_STEP),
       );
     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
       event.preventDefault();
@@ -1610,7 +1535,9 @@ const renderClip = (clip, track) => {
 
 const timeForPointer = (event, track) => {
   const bounds = track.getBoundingClientRect();
-  return roundTime(clamp((event.clientX - bounds.left) / state.pixelsPerSecond, 0, projectDuration()));
+  return roundTime(
+    clamp((event.clientX - bounds.left) / state.pixelsPerSecond, 0, projectDuration()),
+  );
 };
 
 const bindTrack = (track, tier) => {
@@ -1624,10 +1551,11 @@ const bindTrack = (track, tier) => {
         : state.clips.find((clip) => clip.id === payload.id)?.kind;
     track.classList.toggle("is-drop-target", kind === tier.kind);
     track.classList.toggle("is-drop-invalid", kind !== tier.kind);
-    if (event.dataTransfer) event.dataTransfer.dropEffect = payload.type === DRAG_TYPES.media ? "copy" : "move";
+    if (event.dataTransfer)
+      event.dataTransfer.dropEffect = payload.type === DRAG_TYPES.media ? "copy" : "move";
   });
   track.addEventListener("dragleave", () =>
-    track.classList.remove("is-drop-target", "is-drop-invalid")
+    track.classList.remove("is-drop-target", "is-drop-invalid"),
   );
   track.addEventListener("drop", (event) => {
     event.preventDefault();
@@ -1660,11 +1588,15 @@ const bindTrack = (track, tier) => {
 
 const addTier = (kind) => {
   const count = state.tiers.filter((tier) => tier.kind === kind).length + 1;
-  const tier = { id: `${kind}-${count}`, kind, label: `${kind === "video" ? "Video" : "Audio"} ${count}` };
+  const tier = {
+    id: `${kind}-${count}`,
+    kind,
+    label: `${kind === "video" ? "Video" : "Audio"} ${count}`,
+  };
   if (kind === "video") {
     const lastVideo = state.tiers.reduce(
       (position, candidate, index) => (candidate.kind === "video" ? index : position),
-      -1
+      -1,
     );
     state.tiers.splice(lastVideo + 1, 0, tier);
   } else {
@@ -1673,7 +1605,7 @@ const addTier = (kind) => {
   renderTimeline();
   announce(`${tier.label} added.`);
   requestAnimationFrame(() =>
-    document.querySelector(`.timeline-track[data-tier-id="${tier.id}"]`)?.focus()
+    document.querySelector(`.timeline-track[data-tier-id="${tier.id}"]`)?.focus(),
   );
 };
 
@@ -1711,17 +1643,11 @@ const renderRuler = () => {
   const duration = projectDuration();
   const durationWidth = Math.ceil(duration * state.pixelsPerSecond);
   const contentWidth = durationWidth + TIMELINE_LABEL_RESERVE;
-  elements.timelineCanvas.style.setProperty(
-    "--timeline-content-width",
-    `${contentWidth}px`
-  );
-  elements.timelineCanvas.style.setProperty(
-    "--timeline-duration-width",
-    `${durationWidth}px`
-  );
+  elements.timelineCanvas.style.setProperty("--timeline-content-width", `${contentWidth}px`);
+  elements.timelineCanvas.style.setProperty("--timeline-duration-width", `${durationWidth}px`);
   elements.timelineCanvas.style.setProperty(
     "--timeline-second-width",
-    `${state.pixelsPerSecond}px`
+    `${state.pixelsPerSecond}px`,
   );
   elements.timelineRuler.replaceChildren();
   const labelInterval = state.pixelsPerSecond >= 48 ? 5 : 10;
@@ -1742,12 +1668,7 @@ const renderRuler = () => {
   }
 };
 
-const insertEffect = (
-  type,
-  start,
-  duration = EFFECT_DURATION,
-  metadata = {}
-) => {
+const insertEffect = (type, start, duration = EFFECT_DURATION, metadata = {}) => {
   const definition = EFFECTS[type];
   if (!definition?.timelineInsertable) return null;
   const effect = {
@@ -1769,7 +1690,7 @@ const addEffect = (type) => {
   renderTimeline();
   announce(`${definition.label} effect added at ${formatTime(effect.start)} for three seconds.`);
   requestAnimationFrame(() =>
-    document.querySelector(`[data-effect-item-id="${effect.id}"]`)?.focus({ preventScroll: true })
+    document.querySelector(`[data-effect-item-id="${effect.id}"]`)?.focus({ preventScroll: true }),
   );
 };
 
@@ -1781,7 +1702,7 @@ const moveEffect = (effectId, desiredStart) => {
   renderTimeline();
   announce(`${EFFECTS[effect.type].label} effect moved to ${formatTime(effect.start)}.`);
   requestAnimationFrame(() =>
-    document.querySelector(`[data-effect-item-id="${effect.id}"]`)?.focus({ preventScroll: true })
+    document.querySelector(`[data-effect-item-id="${effect.id}"]`)?.focus({ preventScroll: true }),
   );
 };
 
@@ -1789,7 +1710,11 @@ const resizeEffect = (effectId, edge, delta) => {
   const effect = state.effects.find((candidate) => candidate.id === effectId);
   if (!effect) return;
   if (edge === "start") {
-    const newStart = clamp(effect.start + delta, 0, effect.start + effect.duration - MIN_ITEM_DURATION);
+    const newStart = clamp(
+      effect.start + delta,
+      0,
+      effect.start + effect.duration - MIN_ITEM_DURATION,
+    );
     const applied = newStart - effect.start;
     effect.start = roundTime(newStart);
     effect.duration = roundTime(effect.duration - applied);
@@ -1801,7 +1726,7 @@ const resizeEffect = (effectId, edge, delta) => {
   requestAnimationFrame(() =>
     document
       .querySelector(`[data-effect-item-id="${effect.id}"] [data-resize-effect="${edge}"]`)
-      ?.focus({ preventScroll: true })
+      ?.focus({ preventScroll: true }),
   );
 };
 
@@ -1826,7 +1751,7 @@ const renderEffects = () => {
     item.style.width = `${Math.max(effect.duration * state.pixelsPerSecond, 52)}px`;
     item.setAttribute(
       "aria-label",
-      `${definition.label} effect, ${formatTime(effect.duration)}, starts ${formatTime(effect.start)}. Arrow keys move; Delete removes.`
+      `${definition.label} effect, ${formatTime(effect.duration)}, starts ${formatTime(effect.start)}. Arrow keys move; Delete removes.`,
     );
     item.setAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight Delete");
     fragment.querySelector("[data-effect-item-icon]").src = definition.icon;
@@ -1853,7 +1778,10 @@ const renderEffects = () => {
         deleteEffect(effect.id);
       } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         event.preventDefault();
-        moveEffect(effect.id, effect.start + (event.key === "ArrowLeft" ? -KEYBOARD_STEP : KEYBOARD_STEP));
+        moveEffect(
+          effect.id,
+          effect.start + (event.key === "ArrowLeft" ? -KEYBOARD_STEP : KEYBOARD_STEP),
+        );
       }
     });
     item.addEventListener("dragstart", (event) => {
@@ -1887,7 +1815,7 @@ const audioClipLabel = (clip) => {
 
 const setAudioLocalSource = (mediaId, { resetRange = true } = {}) => {
   const media = state.media.find(
-    (candidate) => candidate.id === mediaId && candidate.kind === "audio"
+    (candidate) => candidate.id === mediaId && candidate.kind === "audio",
   );
   state.audioLocal.mediaId = media?.id || null;
   if (resetRange) {
@@ -1906,9 +1834,7 @@ const setAudioLocalSource = (mediaId, { resetRange = true } = {}) => {
     elements.audioLocalEnd.value = String(state.audioLocal.sourceEnd);
   }
   if (elements.audioLocalStartOutput) {
-    elements.audioLocalStartOutput.textContent = formatTime(
-      state.audioLocal.sourceStart
-    );
+    elements.audioLocalStartOutput.textContent = formatTime(state.audioLocal.sourceStart);
   }
   if (elements.audioLocalEndOutput) {
     elements.audioLocalEndOutput.textContent = formatTime(state.audioLocal.sourceEnd);
@@ -1953,7 +1879,7 @@ const renderAudioToolSources = () => {
     elements.audioSyncSource,
     audioClips.map((clip) => ({ id: clip.id, label: audioClipLabel(clip) })),
     "Select an Audio timeline clip…",
-    state.audioSync.sourceClipId
+    state.audioSync.sourceClipId,
   );
   if (elements.audioSyncAnalyze) {
     elements.audioSyncAnalyze.disabled =
@@ -1972,7 +1898,7 @@ const renderAudioToolSources = () => {
       label: `${media.name} · ${formatTime(media.duration)}`,
     })),
     "No local audio selected",
-    state.audioLocal.mediaId
+    state.audioLocal.mediaId,
   );
   setAudioLocalSource(state.audioLocal.mediaId, {
     resetRange: state.audioLocal.mediaId !== priorMediaId,
@@ -1980,9 +1906,8 @@ const renderAudioToolSources = () => {
 };
 
 const selectedAudioSyncClip = () =>
-  state.clips.find(
-    (clip) => clip.id === state.audioSync.sourceClipId && clip.kind === "audio"
-  ) || null;
+  state.clips.find((clip) => clip.id === state.audioSync.sourceClipId && clip.kind === "audio") ||
+  null;
 
 const loudestAudioChannel = (audioBuffer) => {
   let selected = audioBuffer.getChannelData(0);
@@ -2006,7 +1931,9 @@ const waveFileSampleRate = (buffer) => {
   if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 28) return 0;
   const view = new DataView(buffer);
   const text = (offset, length) =>
-    Array.from({ length }, (_, index) => String.fromCharCode(view.getUint8(offset + index))).join("");
+    Array.from({ length }, (_, index) => String.fromCharCode(view.getUint8(offset + index))).join(
+      "",
+    );
   if (text(0, 4) !== "RIFF" || text(8, 4) !== "WAVE") return 0;
   for (let offset = 12; offset + 8 <= view.byteLength; ) {
     const chunk = text(offset, 4);
@@ -2089,7 +2016,7 @@ const analyzeSelectedAudioClip = async () => {
       analysis = await runAudioAnalysisWorker(
         loudestAudioChannel(audioBuffer),
         audioBuffer.sampleRate,
-        generation
+        generation,
       );
       if (declaredSampleRate) analysis.sourceSampleRate = declaredSampleRate;
       cacheAudioAnalysis(media.id, analysis);
@@ -2100,7 +2027,7 @@ const analyzeSelectedAudioClip = async () => {
     state.audioSync.status = "ready";
     setAudioSyncStatus(
       `Analyzed ${media.name}: ${formatTime(analysis.duration)} at ${analysis.sourceSampleRate} Hz.`,
-      "ready"
+      "ready",
     );
     if (elements.audioSyncGenerate) elements.audioSyncGenerate.disabled = false;
     elements.audioSyncRecommendations.forEach((button) => {
@@ -2113,7 +2040,7 @@ const analyzeSelectedAudioClip = async () => {
     state.audioSync.analysisMediaId = null;
     setAudioSyncStatus(
       String(error?.message || "The browser could not analyze this audio file."),
-      "error"
+      "error",
     );
     if (elements.audioSyncGenerate) elements.audioSyncGenerate.disabled = true;
   } finally {
@@ -2129,13 +2056,11 @@ const normalizedAudioSyncRange = () => {
   const rawMinimum = Number(elements.audioSyncFrequencyMin?.value);
   const rawMaximum = Number(elements.audioSyncFrequencyMax?.value);
   const minimum = clamp(Number.isFinite(rawMinimum) ? rawMinimum : 40, 20, nyquist);
-  const maximum = clamp(
-    Number.isFinite(rawMaximum) ? rawMaximum : 2000,
-    minimum,
-    nyquist
-  );
-  if (elements.audioSyncFrequencyMin) elements.audioSyncFrequencyMin.value = String(Math.round(minimum));
-  if (elements.audioSyncFrequencyMax) elements.audioSyncFrequencyMax.value = String(Math.round(maximum));
+  const maximum = clamp(Number.isFinite(rawMaximum) ? rawMaximum : 2000, minimum, nyquist);
+  if (elements.audioSyncFrequencyMin)
+    elements.audioSyncFrequencyMin.value = String(Math.round(minimum));
+  if (elements.audioSyncFrequencyMax)
+    elements.audioSyncFrequencyMax.value = String(Math.round(maximum));
   return { maximum, minimum };
 };
 
@@ -2185,9 +2110,10 @@ const frequencyX = (frequency, analysis, width) => {
   const minimum = Math.max(20, analysis.bandEdges[0]);
   const maximum = analysis.bandEdges.at(-1);
   return (
-    (Math.log(Math.max(minimum, frequency)) - Math.log(minimum)) /
-    (Math.log(maximum) - Math.log(minimum))
-  ) * width;
+    ((Math.log(Math.max(minimum, frequency)) - Math.log(minimum)) /
+      (Math.log(maximum) - Math.log(minimum))) *
+    width
+  );
 };
 
 const drawAudioSyncSpectrum = (container) => {
@@ -2228,12 +2154,12 @@ const renderAudioSyncGraphs = () => {
   const media = source ? mediaForClip(source) : null;
   elements.audioSyncWaveform?.setAttribute(
     "aria-label",
-    `Waveform for ${media?.name || "analyzed audio"}, ${formatTime(analysis.duration)}.`
+    `Waveform for ${media?.name || "analyzed audio"}, ${formatTime(analysis.duration)}.`,
   );
   const range = normalizedAudioSyncRange();
   elements.audioSyncSpectrum?.setAttribute(
     "aria-label",
-    `Frequency spectrum for ${media?.name || "analyzed audio"}; Fourier graph with selected range ${Math.round(range.minimum)} to ${Math.round(range.maximum)} hertz.`
+    `Frequency spectrum for ${media?.name || "analyzed audio"}; Fourier graph with selected range ${Math.round(range.minimum)} to ${Math.round(range.maximum)} hertz.`,
   );
   if (showWaveform) drawAudioSyncWaveform(elements.audioSyncWaveform);
   if (showSpectrum) drawAudioSyncSpectrum(elements.audioSyncSpectrum);
@@ -2241,7 +2167,7 @@ const renderAudioSyncGraphs = () => {
 
 const guidepostTimelineTime = (rule, guidepost) => {
   const clip = state.clips.find(
-    (candidate) => candidate.id === rule.sourceClipId && candidate.kind === "audio"
+    (candidate) => candidate.id === rule.sourceClipId && candidate.kind === "audio",
   );
   if (
     !clip ||
@@ -2273,9 +2199,11 @@ const nudgeGuidepost = (ruleId, guidepostId, delta) => {
   guidepost.sourceTime = roundTime(clamp(guidepost.sourceTime + delta, 0, analysis.duration));
   renderAudioSyncRules();
   renderAudioSyncGuideposts();
-  announce(`${rule.label} guidepost moved to ${formatTime(guidepostTimelineTime(rule, guidepost) ?? 0)}.`);
+  announce(
+    `${rule.label} guidepost moved to ${formatTime(guidepostTimelineTime(rule, guidepost) ?? 0)}.`,
+  );
   requestAnimationFrame(() =>
-    document.querySelector(`[data-guidepost-id="${guidepost.id}"]`)?.focus()
+    document.querySelector(`[data-guidepost-id="${guidepost.id}"]`)?.focus(),
   );
 };
 
@@ -2294,7 +2222,9 @@ const splitVideoClipsAtGuideposts = (rule) => {
   const originalClips = state.clips.filter((clip) => clip.kind === "video");
   for (const clip of originalClips) {
     const inside = boundaries.filter(
-      (time) => time > clip.start + MIN_ITEM_DURATION && time < clip.start + clipDuration(clip) - MIN_ITEM_DURATION
+      (time) =>
+        time > clip.start + MIN_ITEM_DURATION &&
+        time < clip.start + clipDuration(clip) - MIN_ITEM_DURATION,
     );
     if (!inside.length) continue;
     const originalEnd = clip.start + clipDuration(clip);
@@ -2313,7 +2243,11 @@ const splitVideoClipsAtGuideposts = (rule) => {
     }
   }
   renderTimeline();
-  announce(cuts ? `${rule.label} created ${cuts} video ${cuts === 1 ? "cut" : "cuts"}.` : `${rule.label} has no guideposts inside a video clip.`);
+  announce(
+    cuts
+      ? `${rule.label} created ${cuts} video ${cuts === 1 ? "cut" : "cuts"}.`
+      : `${rule.label} has no guideposts inside a video clip.`,
+  );
 };
 
 const tierHasRoom = (tierId, start, duration) =>
@@ -2321,7 +2255,7 @@ const tierHasRoom = (tierId, start, duration) =>
 
 const fillGuidepostGap = (rule) => {
   const media = state.media.find(
-    (candidate) => candidate.id === state.selectedMediaId && candidate.kind === "video"
+    (candidate) => candidate.id === state.selectedMediaId && candidate.kind === "video",
   );
   if (!media) {
     announce("Select a video in Import Media before filling a guidepost gap.");
@@ -2330,7 +2264,10 @@ const fillGuidepostGap = (rule) => {
   const guideposts = mappedGuideposts(rule);
   const interval = guideposts
     .slice(0, -1)
-    .map((guidepost, index) => ({ end: guideposts[index + 1].timelineTime, start: guidepost.timelineTime }))
+    .map((guidepost, index) => ({
+      end: guideposts[index + 1].timelineTime,
+      start: guidepost.timelineTime,
+    }))
     .find((candidate) => candidate.start >= state.playhead - 0.01);
   if (!interval) {
     announce(`${rule.label} has no complete guidepost gap at or after the playhead.`);
@@ -2342,7 +2279,8 @@ const fillGuidepostGap = (rule) => {
     return;
   }
   const tier = state.tiers.find(
-    (candidate) => candidate.kind === "video" && tierHasRoom(candidate.id, interval.start, duration)
+    (candidate) =>
+      candidate.kind === "video" && tierHasRoom(candidate.id, interval.start, duration),
   );
   if (!tier) {
     announce("The guidepost gap is occupied or overlaps clips on every Video tier.");
@@ -2352,7 +2290,8 @@ const fillGuidepostGap = (rule) => {
     announceChange: false,
     snap: false,
   });
-  if (clip) announce(`${media.name} filled ${rule.label}'s ${formatTime(duration)} gap on ${tier.label}.`);
+  if (clip)
+    announce(`${media.name} filled ${rule.label}'s ${formatTime(duration)} gap on ${tier.label}.`);
 };
 
 const addEffectsAtGuideposts = (rule, type) => {
@@ -2387,8 +2326,11 @@ const scheduleAudioSyncGraphs = () => {
 
 const renderAudioSyncRules = () => {
   if (!elements.audioSyncRules || !elements.audioSyncRuleTemplate) return;
-  elements.audioSyncRules.querySelectorAll("[data-audio-sync-rule-id]").forEach((item) => item.remove());
-  if (elements.audioSyncRulesEmpty) elements.audioSyncRulesEmpty.hidden = state.audioSync.rules.length > 0;
+  elements.audioSyncRules
+    .querySelectorAll("[data-audio-sync-rule-id]")
+    .forEach((item) => item.remove());
+  if (elements.audioSyncRulesEmpty)
+    elements.audioSyncRulesEmpty.hidden = state.audioSync.rules.length > 0;
   if (elements.audioSyncRuleTotal) {
     elements.audioSyncRuleTotal.textContent = `${state.audioSync.rules.length} ${state.audioSync.rules.length === 1 ? "rule" : "rules"}`;
   }
@@ -2402,7 +2344,8 @@ const renderAudioSyncRules = () => {
     item.style.setProperty("--guidepost-color", rule.color);
     color.value = rule.color;
     label.value = rule.label;
-    fragment.querySelector("[data-audio-sync-rule-count]").textContent = `${mapped.length} ${mapped.length === 1 ? "guidepost" : "guideposts"}`;
+    fragment.querySelector("[data-audio-sync-rule-count]").textContent =
+      `${mapped.length} ${mapped.length === 1 ? "guidepost" : "guideposts"}`;
     color.addEventListener("input", (event) => {
       rule.color = event.target.value;
       renderAudioSyncGuideposts();
@@ -2414,13 +2357,19 @@ const renderAudioSyncRules = () => {
       renderAudioSyncGuideposts();
       announce(`Guidepost rule renamed ${rule.label}.`);
     });
-    fragment.querySelector('[data-guidepost-action="cut"]').addEventListener("click", () => splitVideoClipsAtGuideposts(rule));
-    fragment.querySelector('[data-guidepost-action="fill"]').addEventListener("click", () => fillGuidepostGap(rule));
+    fragment
+      .querySelector('[data-guidepost-action="cut"]')
+      .addEventListener("click", () => splitVideoClipsAtGuideposts(rule));
+    fragment
+      .querySelector('[data-guidepost-action="fill"]')
+      .addEventListener("click", () => fillGuidepostGap(rule));
     const effectButton = fragment.querySelector('[data-guidepost-action="effect"]');
     const effectSelect = fragment.querySelector("[data-guidepost-effect-type]");
     effectSelect.disabled = false;
     effectButton.addEventListener("click", () => addEffectsAtGuideposts(rule, effectSelect.value));
-    fragment.querySelector("[data-delete-audio-sync-rule]").addEventListener("click", () => deleteAudioSyncRule(rule.id));
+    fragment
+      .querySelector("[data-delete-audio-sync-rule]")
+      .addEventListener("click", () => deleteAudioSyncRule(rule.id));
     const markerList = fragment.querySelector("[data-audio-sync-marker-list]");
     for (const guidepost of mapped) {
       const marker = document.createElement("button");
@@ -2431,7 +2380,10 @@ const renderAudioSyncRules = () => {
       marker.dataset.guidepostGroupId = rule.id;
       marker.setAttribute("role", "listitem");
       marker.setAttribute("aria-label", guidepostLabel(rule, guidepost));
-      marker.setAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight Shift+ArrowLeft Shift+ArrowRight Delete Enter");
+      marker.setAttribute(
+        "aria-keyshortcuts",
+        "ArrowLeft ArrowRight Shift+ArrowLeft Shift+ArrowRight Delete Enter",
+      );
       marker.textContent = `${formatTime(guidepost.timelineTime)} · ${guidepost.polarity}`;
       marker.style.borderLeft = `5px solid ${rule.color}`;
       marker.addEventListener("click", () => setPlayhead(guidepost.timelineTime, true));
@@ -2471,14 +2423,24 @@ const renderAudioSyncGuideposts = () => {
       marker.dataset.guidepostVisualId = guidepost.id;
       marker.dataset.guidepostTime = String(guidepost.timelineTime);
       marker.dataset.guidepostSourceTime = String(guidepost.sourceTime);
-      marker.style.setProperty("--guidepost-x", `${guidepost.timelineTime * state.pixelsPerSecond}px`);
+      marker.style.setProperty(
+        "--guidepost-x",
+        `${guidepost.timelineTime * state.pixelsPerSecond}px`,
+      );
       group.append(marker);
     }
     elements.audioSyncGuideLayer.append(group);
   }
 };
 
-const createAudioSyncRule = ({ detector = "band", direction, label, maximum, minimum, threshold } = {}) => {
+const createAudioSyncRule = ({
+  detector = "band",
+  direction,
+  label,
+  maximum,
+  minimum,
+  threshold,
+} = {}) => {
   const analysis = state.audioSync.analysis;
   const clip = selectedAudioSyncClip();
   const api = audioSyncApi();
@@ -2489,7 +2451,11 @@ const createAudioSyncRule = ({ detector = "band", direction, label, maximum, min
   const range = normalizedAudioSyncRange();
   const boundedMinimum = minimum ?? range.minimum;
   const boundedMaximum = maximum ?? range.maximum;
-  const series = selectedAudioSyncSeries({ detector, maximum: boundedMaximum, minimum: boundedMinimum });
+  const series = selectedAudioSyncSeries({
+    detector,
+    maximum: boundedMaximum,
+    minimum: boundedMinimum,
+  });
   const normalizedThreshold = threshold ?? Number(elements.audioSyncThreshold?.value || 65) / 100;
   const selectedDirection = direction || elements.audioSyncDirection?.value || "rising";
   const crossings = api.findThresholdCrossings(
@@ -2497,7 +2463,7 @@ const createAudioSyncRule = ({ detector = "band", direction, label, maximum, min
     series,
     normalizedThreshold,
     selectedDirection,
-    { minimumSpacing: detector === "onset" ? 0.28 : 0.18 }
+    { minimumSpacing: detector === "onset" ? 0.28 : 0.18 },
   );
   const rule = {
     color: GUIDEPOST_COLORS[(nextAudioSyncRuleId - 1) % GUIDEPOST_COLORS.length],
@@ -2510,7 +2476,9 @@ const createAudioSyncRule = ({ detector = "band", direction, label, maximum, min
       sourceTime: roundTime(crossing.time),
     })),
     id: `audio-sync-rule-${nextAudioSyncRuleId++}`,
-    label: label || `${Math.round(boundedMinimum)}–${Math.round(boundedMaximum)} Hz ${selectedDirection}`,
+    label:
+      label ||
+      `${Math.round(boundedMinimum)}–${Math.round(boundedMaximum)} Hz ${selectedDirection}`,
     maximum: boundedMaximum,
     mediaId: state.audioSync.analysisMediaId,
     minimum: boundedMinimum,
@@ -2520,7 +2488,10 @@ const createAudioSyncRule = ({ detector = "band", direction, label, maximum, min
   state.audioSync.rules.push(rule);
   renderAudioSyncRules();
   renderAudioSyncGuideposts();
-  setAudioSyncStatus(`${rule.label} created ${rule.guideposts.length} ${rule.guideposts.length === 1 ? "guidepost" : "guideposts"}.`, "ready");
+  setAudioSyncStatus(
+    `${rule.label} created ${rule.guideposts.length} ${rule.guideposts.length === 1 ? "guidepost" : "guideposts"}.`,
+    "ready",
+  );
   announce(`${rule.label} guidepost rule created with ${rule.guideposts.length} markers.`);
   return rule;
 };
@@ -2534,7 +2505,12 @@ const createRecommendedAudioSyncRule = (type) => {
     low: { label: "Recommended lows", maximum: Math.min(250, nyquist), minimum: 40 },
     mid: { label: "Recommended mids", maximum: Math.min(2000, nyquist), minimum: 250 },
     high: { label: "Recommended highs", maximum: Math.min(8000, nyquist), minimum: 2000 },
-    beats: { detector: "onset", label: "Recommended beats", maximum: Math.min(8000, nyquist), minimum: 40 },
+    beats: {
+      detector: "onset",
+      label: "Recommended beats",
+      maximum: Math.min(8000, nyquist),
+      minimum: 40,
+    },
   };
   const definition = definitions[type];
   if (!definition) return;
@@ -2548,12 +2524,12 @@ const createRecommendedAudioSyncRule = (type) => {
 
 const allMappedGuideposts = () =>
   state.audioSync.rules.flatMap((rule) =>
-    mappedGuideposts(rule).map((guidepost) => ({ ...guidepost, color: rule.color, rule }))
+    mappedGuideposts(rule).map((guidepost) => ({ ...guidepost, color: rule.color, rule })),
   );
 
 const videoActiveAtTime = (time) =>
   state.clips.some(
-    (clip) => clip.kind === "video" && time >= clip.start && time < clip.start + clipDuration(clip)
+    (clip) => clip.kind === "video" && time >= clip.start && time < clip.start + clipDuration(clip),
   );
 
 const flashGuidepost = (guidepost) => {
@@ -2574,7 +2550,7 @@ const flashGuidepost = (guidepost) => {
 const flashCrossedGuideposts = (from, to) => {
   if (to <= from) return;
   const crossed = allMappedGuideposts().filter(
-    (guidepost) => guidepost.timelineTime > from && guidepost.timelineTime <= to
+    (guidepost) => guidepost.timelineTime > from && guidepost.timelineTime <= to,
   );
   crossed.forEach(flashGuidepost);
 };
@@ -2599,7 +2575,9 @@ const openOfficialYoutubeSearch = (query, suffix = "") => {
     announce("YouTube search was blocked. Allow pop-ups and try again.");
     return false;
   }
-  announce("Official YouTube search opened in a new tab. Import audio you have rights to use as a local file.");
+  announce(
+    "Official YouTube search opened in a new tab. Import audio you have rights to use as a local file.",
+  );
   return true;
 };
 
@@ -2610,19 +2588,23 @@ const updateAudioLocalRange = () => {
   const end = clamp(Number(elements.audioLocalEnd?.value || media.duration), 0, media.duration);
   state.audioLocal.sourceStart = roundTime(start);
   state.audioLocal.sourceEnd = roundTime(end);
-  if (elements.audioLocalStart) elements.audioLocalStart.value = String(state.audioLocal.sourceStart);
+  if (elements.audioLocalStart)
+    elements.audioLocalStart.value = String(state.audioLocal.sourceStart);
   if (elements.audioLocalEnd) elements.audioLocalEnd.value = String(state.audioLocal.sourceEnd);
-  if (elements.audioLocalStartOutput) elements.audioLocalStartOutput.textContent = formatTime(state.audioLocal.sourceStart);
-  if (elements.audioLocalEndOutput) elements.audioLocalEndOutput.textContent = formatTime(state.audioLocal.sourceEnd);
+  if (elements.audioLocalStartOutput)
+    elements.audioLocalStartOutput.textContent = formatTime(state.audioLocal.sourceStart);
+  if (elements.audioLocalEndOutput)
+    elements.audioLocalEndOutput.textContent = formatTime(state.audioLocal.sourceEnd);
   const valid = state.audioLocal.sourceEnd > state.audioLocal.sourceStart;
   if (elements.audioLocalInsert) elements.audioLocalInsert.disabled = !valid;
-  if (valid && elements.audioLocalPreview) setMediaTime(elements.audioLocalPreview, state.audioLocal.sourceStart);
+  if (valid && elements.audioLocalPreview)
+    setMediaTime(elements.audioLocalPreview, state.audioLocal.sourceStart);
   return valid;
 };
 
 const insertLocalAudioSelection = () => {
   const media = state.media.find(
-    (candidate) => candidate.id === state.audioLocal.mediaId && candidate.kind === "audio"
+    (candidate) => candidate.id === state.audioLocal.mediaId && candidate.kind === "audio",
   );
   const tier = firstTierForKind("audio");
   if (!media || !tier || !updateAudioLocalRange()) {
@@ -2631,29 +2613,33 @@ const insertLocalAudioSelection = () => {
   }
   if (state.audioLocal.sourceEnd - state.audioLocal.sourceStart < MIN_ITEM_DURATION) {
     state.audioLocal.sourceEnd = roundTime(
-      Math.min(media.duration, state.audioLocal.sourceStart + MIN_ITEM_DURATION)
+      Math.min(media.duration, state.audioLocal.sourceStart + MIN_ITEM_DURATION),
     );
     if (state.audioLocal.sourceEnd - state.audioLocal.sourceStart < MIN_ITEM_DURATION) {
       state.audioLocal.sourceStart = roundTime(
-        Math.max(0, state.audioLocal.sourceEnd - MIN_ITEM_DURATION)
+        Math.max(0, state.audioLocal.sourceEnd - MIN_ITEM_DURATION),
       );
     }
-    if (elements.audioLocalStart) elements.audioLocalStart.value = String(state.audioLocal.sourceStart);
+    if (elements.audioLocalStart)
+      elements.audioLocalStart.value = String(state.audioLocal.sourceStart);
     if (elements.audioLocalEnd) elements.audioLocalEnd.value = String(state.audioLocal.sourceEnd);
-    if (elements.audioLocalStartOutput) elements.audioLocalStartOutput.textContent = formatTime(state.audioLocal.sourceStart);
-    if (elements.audioLocalEndOutput) elements.audioLocalEndOutput.textContent = formatTime(state.audioLocal.sourceEnd);
+    if (elements.audioLocalStartOutput)
+      elements.audioLocalStartOutput.textContent = formatTime(state.audioLocal.sourceStart);
+    if (elements.audioLocalEndOutput)
+      elements.audioLocalEndOutput.textContent = formatTime(state.audioLocal.sourceEnd);
   }
   insertClipSegment(
     media,
     tier.id,
     state.playhead,
     state.audioLocal.sourceStart,
-    state.audioLocal.sourceEnd
+    state.audioLocal.sourceEnd,
   );
 };
 
 const writeAscii = (view, offset, value) => {
-  for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
+  for (let index = 0; index < value.length; index += 1)
+    view.setUint8(offset + index, value.charCodeAt(index));
 };
 
 const encodeWaveFile = (samples, sampleRate) => {
@@ -2715,11 +2701,16 @@ const soundEffectDuration = () =>
 
 const createSoundEffectFile = () => {
   const duration = soundEffectDuration();
-  const samples = state.soundEffect.preset === "click" ? synthesizeClick() : synthesizeTyping(duration);
+  const samples =
+    state.soundEffect.preset === "click" ? synthesizeClick() : synthesizeTyping(duration);
   const label = state.soundEffect.preset === "click" ? "Click" : "Typing";
   return {
     duration,
-    file: new File([encodeWaveFile(samples, SOUND_EFFECT_SAMPLE_RATE)], `${label.toLowerCase()}-sound-effect.wav`, { type: "audio/wav" }),
+    file: new File(
+      [encodeWaveFile(samples, SOUND_EFFECT_SAMPLE_RATE)],
+      `${label.toLowerCase()}-sound-effect.wav`,
+      { type: "audio/wav" },
+    ),
     label,
   };
 };
@@ -2727,7 +2718,10 @@ const createSoundEffectFile = () => {
 const updateSoundEffectControls = () => {
   const typing = state.soundEffect.preset === "typing";
   elements.soundEffectPresets.forEach((button) => {
-    button.setAttribute("aria-pressed", String(button.dataset.soundEffectPreset === state.soundEffect.preset));
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.soundEffectPreset === state.soundEffect.preset),
+    );
   });
   if (elements.soundEffectLoop) {
     elements.soundEffectLoop.disabled = !typing;
@@ -2737,7 +2731,8 @@ const updateSoundEffectControls = () => {
     elements.soundEffectDuration.disabled = !typing || !state.soundEffect.loop;
     elements.soundEffectDuration.value = String(state.soundEffect.duration);
   }
-  if (elements.soundEffectPreview) elements.soundEffectPreview.textContent = `Preview ${typing ? "Typing" : "Click"}`;
+  if (elements.soundEffectPreview)
+    elements.soundEffectPreview.textContent = `Preview ${typing ? "Typing" : "Click"}`;
   if (elements.soundEffectStatus) {
     elements.soundEffectStatus.textContent = typing
       ? `Typing preset ready${state.soundEffect.loop ? `; loops for ${state.soundEffect.duration} seconds` : "; 1.2 seconds"}.`
@@ -2759,9 +2754,11 @@ const previewSoundEffect = () => {
   soundEffectPreviewPlayer = new Audio(soundEffectPreviewUrl);
   soundEffectPreviewPlayer.addEventListener("ended", stopSoundEffectPreview, { once: true });
   soundEffectPreviewPlayer.play().catch(() => {
-    if (elements.soundEffectStatus) elements.soundEffectStatus.textContent = "Preview could not start. Try again.";
+    if (elements.soundEffectStatus)
+      elements.soundEffectStatus.textContent = "Preview could not start. Try again.";
   });
-  if (elements.soundEffectStatus) elements.soundEffectStatus.textContent = `Previewing ${generated.label}, ${formatTime(generated.duration)}.`;
+  if (elements.soundEffectStatus)
+    elements.soundEffectStatus.textContent = `Previewing ${generated.label}, ${formatTime(generated.duration)}.`;
 };
 
 const insertSoundEffect = () => {
@@ -2785,7 +2782,8 @@ const insertSoundEffect = () => {
       minimumDuration: 0.01,
     });
   }
-  if (elements.soundEffectStatus) elements.soundEffectStatus.textContent = `${generated.label} inserted at the playhead.`;
+  if (elements.soundEffectStatus)
+    elements.soundEffectStatus.textContent = `${generated.label} inserted at the playhead.`;
 };
 
 const updateTimeDisplay = () => {
@@ -2793,7 +2791,7 @@ const updateTimeDisplay = () => {
   state.playhead = clamp(state.playhead, 0, duration);
   elements.timelineCanvas?.style.setProperty(
     "--playhead-x",
-    `${state.playhead * state.pixelsPerSecond}px`
+    `${state.playhead * state.pixelsPerSecond}px`,
   );
   if (elements.scrubber) {
     elements.scrubber.max = String(duration);
@@ -2808,7 +2806,7 @@ const activeClipsAtPlayhead = (kind) =>
     (clip) =>
       clip.kind === kind &&
       state.playhead >= clip.start &&
-      state.playhead < clip.start + clipDuration(clip)
+      state.playhead < clip.start + clipDuration(clip),
   );
 
 const setMediaTime = (mediaElement, time) => {
@@ -2829,7 +2827,7 @@ const syncPreview = () => {
   const activeVideoClips = activeClipsAtPlayhead("video");
   const videoTierOrder = state.tiers.filter((tier) => tier.kind === "video").map((tier) => tier.id);
   const topVideo = activeVideoClips.sort(
-    (left, right) => videoTierOrder.indexOf(right.tierId) - videoTierOrder.indexOf(left.tierId)
+    (left, right) => videoTierOrder.indexOf(right.tierId) - videoTierOrder.indexOf(left.tierId),
   )[0];
   const videoMedia = topVideo ? mediaForClip(topVideo) : null;
 
@@ -2841,10 +2839,7 @@ const syncPreview = () => {
     elements.previewVideo.hidden = false;
     elements.previewEmpty.hidden = true;
     elements.previewName.textContent = videoMedia.name;
-    setMediaTime(
-      elements.previewVideo,
-      topVideo.sourceStart + state.playhead - topVideo.start
-    );
+    setMediaTime(elements.previewVideo, topVideo.sourceStart + state.playhead - topVideo.start);
     if (state.playing) elements.previewVideo.play().catch(() => {});
     else elements.previewVideo.pause();
   } else {
@@ -2905,9 +2900,7 @@ const setPlaybackButtonState = (isPlaying) => {
   elements.playButton.setAttribute("aria-pressed", String(isPlaying));
   const icon = elements.playButton.querySelector("[data-transport-icon]");
   if (icon) {
-    icon.src = isPlaying
-      ? "../assets/pixelarticons/pause.svg"
-      : "../assets/pixelarticons/play.svg";
+    icon.src = isPlaying ? "../assets/pixelarticons/pause.svg" : "../assets/pixelarticons/play.svg";
   }
 };
 
@@ -3006,7 +2999,7 @@ const closeEffectTab = (type) => {
   }
   renderTabs();
   announce(
-    `${EFFECTS[type].label} effect editor closed. Choose it from Project Media to reopen it.`
+    `${EFFECTS[type].label} effect editor closed. Choose it from Project Media to reopen it.`,
   );
   requestAnimationFrame(() => focusTab(state.activeTab));
 };
@@ -3049,10 +3042,7 @@ const renderTabs = () => {
     wrapper.setAttribute("tabindex", isActive ? "0" : "-1");
     wrapper.setAttribute("aria-posinset", String(index + 2));
     wrapper.setAttribute("aria-setsize", String(state.openTabs.length + 1));
-    wrapper.setAttribute(
-      "aria-keyshortcuts",
-      "Control+ArrowLeft Control+ArrowRight Delete"
-    );
+    wrapper.setAttribute("aria-keyshortcuts", "Control+ArrowLeft Control+ArrowRight Delete");
     tabFace.href = `#effect-panel-${type}`;
     tabFace.dataset.effect = type;
     tabFace.title = definition.label;
@@ -3060,7 +3050,8 @@ const renderTabs = () => {
     const titleViewport = fragment.querySelector("[data-effect-tab-title-viewport]");
     titleViewport.title = definition.label;
     fragment.querySelector("[data-effect-tab-label]").textContent = definition.label;
-    fragment.querySelector("[data-close-effect-tab-label]").textContent = `Close ${definition.label} tab`;
+    fragment.querySelector("[data-close-effect-tab-label]").textContent =
+      `Close ${definition.label} tab`;
     close.setAttribute("aria-label", `Close ${definition.label} tab`);
     tabFace.addEventListener("click", (event) => {
       event.preventDefault();
@@ -3079,8 +3070,7 @@ const renderTabs = () => {
         const tabOrder = [null, ...state.openTabs];
         const currentIndex = index + 1;
         const nextIndex =
-          (currentIndex + (event.key === "ArrowLeft" ? -1 : 1) + tabOrder.length) %
-          tabOrder.length;
+          (currentIndex + (event.key === "ArrowLeft" ? -1 : 1) + tabOrder.length) % tabOrder.length;
         activateTab(tabOrder[nextIndex], true);
       } else if (event.key === "Home" || event.key === "End") {
         event.preventDefault();
@@ -3180,7 +3170,7 @@ const bindStaticControls = () => {
         ? ` ${guidelinesPlatform.label} UI guidelines shown.`
         : "";
       announce(
-        `Frame size set to Reel / TikTok (9:16). Workspace layout changed to Side by side.${guidelinesStatus}`
+        `Frame size set to Reel / TikTok (9:16). Workspace layout changed to Side by side.${guidelinesStatus}`,
       );
     }
     if (state.framePreset === "custom") elements.frameCustomWidth?.focus();
@@ -3197,8 +3187,7 @@ const bindStaticControls = () => {
   elements.defaultTab?.addEventListener("keydown", (event) => {
     if (!event.ctrlKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
       event.preventDefault();
-      const target =
-        event.key === "ArrowRight" ? state.openTabs[0] : state.openTabs.at(-1);
+      const target = event.key === "ArrowRight" ? state.openTabs[0] : state.openTabs.at(-1);
       activateTab(target ?? null, true);
     } else if (event.key === "Home" || event.key === "End") {
       event.preventDefault();
@@ -3214,12 +3203,8 @@ const bindStaticControls = () => {
   });
   elements.frameCustomWidth?.addEventListener("input", () => updateCustomFrameSize(true));
   elements.frameCustomHeight?.addEventListener("input", () => updateCustomFrameSize(true));
-  elements.frameCustomWidth?.addEventListener("change", () =>
-    updateCustomFrameSize(true, true)
-  );
-  elements.frameCustomHeight?.addEventListener("change", () =>
-    updateCustomFrameSize(true, true)
-  );
+  elements.frameCustomWidth?.addEventListener("change", () => updateCustomFrameSize(true, true));
+  elements.frameCustomHeight?.addEventListener("change", () => updateCustomFrameSize(true, true));
   bindPreviewTimelineSeparator();
   bindSidePanelSeparator("media");
   bindSidePanelSeparator("effects");
@@ -3237,8 +3222,10 @@ const bindStaticControls = () => {
         button.disabled = true;
       });
       setAudioSyncStatus(
-        clip ? `Analyze ${media.name} to create guideposts.` : "Choose an Audio timeline clip to begin.",
-        "idle"
+        clip
+          ? `Analyze ${media.name} to create guideposts.`
+          : "Choose an Audio timeline clip to begin.",
+        "idle",
       );
     }
     renderAudioSyncGraphs();
@@ -3260,7 +3247,7 @@ const bindStaticControls = () => {
   elements.audioSyncGenerate?.addEventListener("click", () => createAudioSyncRule());
   elements.audioSyncRecommendations.forEach((button) => {
     button.addEventListener("click", () =>
-      createRecommendedAudioSyncRule(button.dataset.audioSyncRecommendation)
+      createRecommendedAudioSyncRule(button.dataset.audioSyncRecommendation),
     );
   });
 
@@ -3291,7 +3278,7 @@ const bindStaticControls = () => {
     input?.addEventListener("change", () => {
       if (updateAudioLocalRange()) {
         announce(
-          `Audio selection set from ${formatTime(state.audioLocal.sourceStart)} to ${formatTime(state.audioLocal.sourceEnd)}.`
+          `Audio selection set from ${formatTime(state.audioLocal.sourceStart)} to ${formatTime(state.audioLocal.sourceEnd)}.`,
         );
       }
     });
@@ -3315,7 +3302,9 @@ const bindStaticControls = () => {
       state.soundEffect.preset = button.dataset.soundEffectPreset;
       if (state.soundEffect.preset !== "typing") state.soundEffect.loop = false;
       updateSoundEffectControls();
-      announce(`${state.soundEffect.preset === "click" ? "Click" : "Typing"} sound effect selected.`);
+      announce(
+        `${state.soundEffect.preset === "click" ? "Click" : "Typing"} sound effect selected.`,
+      );
     });
   });
   elements.soundEffectLoop?.addEventListener("change", (event) => {
@@ -3344,7 +3333,7 @@ const bindStaticControls = () => {
   }
   for (const eventName of ["dragleave", "dragend"]) {
     elements.dropZone?.addEventListener(eventName, () =>
-      elements.dropZone.classList.remove("is-drag-over")
+      elements.dropZone.classList.remove("is-drag-over"),
     );
   }
   elements.dropZone?.addEventListener("drop", (event) => {
@@ -3353,22 +3342,26 @@ const bindStaticControls = () => {
     importFiles(event.dataTransfer?.files);
   });
 
-  document.querySelectorAll("[data-add-tier]").forEach((button) =>
-    button.addEventListener("click", () => addTier(button.dataset.addTier))
-  );
-  document.querySelectorAll("[data-effect-tab-target]").forEach((button) =>
-    button.addEventListener("click", () => openEffectTab(button.dataset.effect))
-  );
-  document.querySelectorAll("[data-add-effect]").forEach((button) =>
-    button.addEventListener("click", () => addEffect(button.dataset.addEffect))
-  );
+  document
+    .querySelectorAll("[data-add-tier]")
+    .forEach((button) => button.addEventListener("click", () => addTier(button.dataset.addTier)));
+  document
+    .querySelectorAll("[data-effect-tab-target]")
+    .forEach((button) =>
+      button.addEventListener("click", () => openEffectTab(button.dataset.effect)),
+    );
+  document
+    .querySelectorAll("[data-add-effect]")
+    .forEach((button) =>
+      button.addEventListener("click", () => addEffect(button.dataset.addEffect)),
+    );
   elements.playButton?.addEventListener("click", togglePlayback);
   elements.scrubber?.addEventListener("input", (event) => {
     pausePlayback();
     setPlayhead(Number(event.target.value));
   });
   elements.scrubber?.addEventListener("change", () =>
-    announce(`Playhead moved to ${formatTime(state.playhead)}.`)
+    announce(`Playhead moved to ${formatTime(state.playhead)}.`),
   );
   elements.timelineScale?.addEventListener("input", (event) => {
     state.pixelsPerSecond = Number(event.target.value);
@@ -3376,7 +3369,7 @@ const bindStaticControls = () => {
     announce(`Timeline scale set to ${state.pixelsPerSecond} pixels per second.`);
   });
   elements.timelineRuler?.addEventListener("click", (event) =>
-    setPlayhead(timeForPointer(event, elements.timelineRuler), true)
+    setPlayhead(timeForPointer(event, elements.timelineRuler), true),
   );
   elements.timelineScroll?.addEventListener("keydown", (event) => {
     if (event.target !== elements.timelineScroll) return;
@@ -3384,7 +3377,7 @@ const bindStaticControls = () => {
       event.preventDefault();
       setPlayhead(
         state.playhead + (event.key === "ArrowLeft" ? -KEYBOARD_STEP : KEYBOARD_STEP),
-        true
+        true,
       );
     } else if (event.key === "Home" || event.key === "End") {
       event.preventDefault();
@@ -3399,7 +3392,7 @@ const bindStaticControls = () => {
     elements.effectsTrack.classList.add("is-drop-target");
   });
   elements.effectsTrack?.addEventListener("dragleave", () =>
-    elements.effectsTrack.classList.remove("is-drop-target")
+    elements.effectsTrack.classList.remove("is-drop-target"),
   );
   elements.effectsTrack?.addEventListener("drop", (event) => {
     event.preventDefault();

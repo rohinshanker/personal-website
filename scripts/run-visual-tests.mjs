@@ -43,8 +43,8 @@ const FORWARDED_ENV = Object.freeze([
  * from the command line is interpreted by the shell.
  */
 const CONTAINER_SCRIPT =
-  'set -e; ' +
-  'npm ci --no-audit --no-fund; ' +
+  "set -e; " +
+  "npm ci --no-audit --no-fund; " +
   'exec ./node_modules/.bin/playwright test --project=visual "$@"';
 
 /**
@@ -53,11 +53,10 @@ const CONTAINER_SCRIPT =
  *   be produced by a different browser build.
  */
 export const resolvePinnedImage = (lockfileText) => {
-  const version = JSON.parse(lockfileText).packages?.["node_modules/playwright-core"]
-    ?.version;
+  const version = JSON.parse(lockfileText).packages?.["node_modules/playwright-core"]?.version;
   if (!version) {
     throw new Error(
-      "package-lock.json does not pin node_modules/playwright-core; run `npm install` first."
+      "package-lock.json does not pin node_modules/playwright-core; run `npm install` first.",
     );
   }
   return `mcr.microsoft.com/playwright:v${version}-noble`;
@@ -72,9 +71,10 @@ export const resolvePinnedImage = (lockfileText) => {
 export const buildDockerArguments = ({ lockfileText, env, args }) => {
   // Rejects an artifact directory the host could not read back.
   resolveUiTestOutputDir(env);
-  const forwarded = FORWARDED_ENV.filter((name) => env[name] !== undefined).flatMap(
-    (name) => ["--env", `${name}=${env[name]}`]
-  );
+  const forwarded = FORWARDED_ENV.filter((name) => env[name] !== undefined).flatMap((name) => [
+    "--env",
+    `${name}=${env[name]}`,
+  ]);
   return [
     "run",
     "--rm",
@@ -98,8 +98,7 @@ export const buildDockerArguments = ({ lockfileText, env, args }) => {
   ];
 };
 
-const dockerIsRunning = () =>
-  spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
+const dockerIsRunning = () => spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
 
 const main = async () => {
   if (!dockerIsRunning()) {
@@ -107,15 +106,12 @@ const main = async () => {
       [
         "Visual baselines are generated and compared inside the pinned Playwright",
         "container, so Docker must be running. Start Docker and retry.",
-      ].join("\n")
+      ].join("\n"),
     );
     return 1;
   }
 
-  const lockfileText = await readFile(
-    new URL("../package-lock.json", import.meta.url),
-    "utf8"
-  );
+  const lockfileText = await readFile(new URL("../package-lock.json", import.meta.url), "utf8");
   const result = spawnSync(
     "docker",
     buildDockerArguments({
@@ -123,7 +119,7 @@ const main = async () => {
       env: process.env,
       args: process.argv.slice(2),
     }),
-    { stdio: "inherit", cwd: REPOSITORY_ROOT }
+    { stdio: "inherit", cwd: REPOSITORY_ROOT },
   );
   return result.status ?? 1;
 };

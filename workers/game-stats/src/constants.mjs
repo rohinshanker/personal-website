@@ -1,8 +1,4 @@
-export const GAME_STATS_DIFFICULTIES = Object.freeze([
-  "beginner",
-  "intermediate",
-  "expert",
-]);
+export const GAME_STATS_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
 export const GAME_STATS_SUDOKU_DIFFICULTIES = Object.freeze([
   "easy",
   "medium",

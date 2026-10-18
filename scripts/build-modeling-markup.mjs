@@ -88,7 +88,9 @@ const replaceRegion = (html, region, lines) => {
   const startIndex = html.indexOf(start);
   const endIndex = html.indexOf(end);
   if (startIndex < 0 || endIndex < 0) {
-    throw new Error(`home.html is missing the ${startIndex < 0 ? "start" : "end"} marker for ${region}.`);
+    throw new Error(
+      `home.html is missing the ${startIndex < 0 ? "start" : "end"} marker for ${region}.`,
+    );
   }
   if (html.indexOf(start, startIndex + 1) >= 0 || html.indexOf(end, endIndex + 1) >= 0) {
     throw new Error(`home.html repeats a marker for ${region}.`);
@@ -99,7 +101,11 @@ const replaceRegion = (html, region, lines) => {
   const indent = html.slice(lineStart, startIndex);
   const contentStart = startIndex + start.length + 1;
   const contentEnd = html.lastIndexOf("\n", endIndex) + 1;
-  if (/\S/.test(indent) || html[contentStart - 1] !== "\n" || /\S/.test(html.slice(contentEnd, endIndex))) {
+  if (
+    /\S/.test(indent) ||
+    html[contentStart - 1] !== "\n" ||
+    /\S/.test(html.slice(contentEnd, endIndex))
+  ) {
     throw new Error(`home.html must keep each ${region} marker on its own line.`);
   }
   const body = lines.map((line) => `${indent}${line}\n`).join("");
@@ -111,14 +117,17 @@ export const renderModelingHome = (html, portfolio) => {
   const regions = renderModelingRegions(portfolio);
   return Object.entries(MODELING_REGIONS).reduce(
     (current, [key, region]) => replaceRegion(current, region, regions[key]),
-    html
+    html,
   );
 };
 
 const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
-  const [source, home] = await Promise.all([readFile(DATA_URL, "utf8"), readFile(HOME_URL, "utf8")]);
+  const [source, home] = await Promise.all([
+    readFile(DATA_URL, "utf8"),
+    readFile(HOME_URL, "utf8"),
+  ]);
   const expected = renderModelingHome(home, loadModelingPortfolio(source));
 
   if (home === expected) {

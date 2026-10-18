@@ -44,8 +44,7 @@ const profile = (overrides = {}) => ({
       evolutionLevel: 1,
       iconUrls: {
         medium: "https://api-assets.clashroyale.com/cards/300/knight.png",
-        evolutionMedium:
-          "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
+        evolutionMedium: "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
       },
       ignoredCardField: "not exposed",
     }),
@@ -78,8 +77,7 @@ const battlelog = (overrides = {}) => [
             evolutionLevel: 2,
             iconUrls: {
               medium: "https://untrusted.example/card.png",
-              heroMedium:
-                "https://api-assets.clashroyale.com/cardheroes/300/mini-pekka.png",
+              heroMedium: "https://api-assets.clashroyale.com/cardheroes/300/mini-pekka.png",
             },
           }),
         ],
@@ -128,7 +126,8 @@ class MemoryCache {
   }
 }
 
-const successFetch = (calls, profileBody = profile(), battlesBody = battlelog()) =>
+const successFetch =
+  (calls, profileBody = profile(), battlesBody = battlelog()) =>
   async (url, init) => {
     calls.push({ url, init });
     const body = url === PLAYER_URL ? profileBody : battlesBody;
@@ -195,8 +194,7 @@ test("returns an allowlisted profile, current deck, and battle log", async () =>
         rarity: "common",
         variant: "evo",
         iconUrl: "https://api-assets.clashroyale.com/cards/300/knight.png",
-        variantIconUrl:
-          "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
+        variantIconUrl: "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
       },
     ],
   });
@@ -239,8 +237,7 @@ test("returns an allowlisted profile, current deck, and battle log", async () =>
             elixirCost: 4,
             rarity: "rare",
             variant: "hero",
-            variantIconUrl:
-              "https://api-assets.clashroyale.com/cardheroes/300/mini-pekka.png",
+            variantIconUrl: "https://api-assets.clashroyale.com/cardheroes/300/mini-pekka.png",
           },
         ],
       },
@@ -301,8 +298,7 @@ test("normalizes optional card cost, rarity, and equipped variant metadata", asy
       maxEvolutionLevel: 2,
       iconUrls: {
         medium: "https://api-assets.clashroyale.com/cards/300/base.png",
-        evolutionMedium:
-          "https://api-assets.clashroyale.com/cardevolutions/300/evo.png",
+        evolutionMedium: "https://api-assets.clashroyale.com/cardevolutions/300/evo.png",
         heroMedium: "https://api-assets.clashroyale.com/cardheroes/300/unused.png",
       },
     }),
@@ -314,8 +310,7 @@ test("normalizes optional card cost, rarity, and equipped variant metadata", asy
       evolutionLevel: 2,
       iconUrls: {
         medium: "https://api-assets.clashroyale.com/cards/300/base.svg",
-        evolutionMedium:
-          "https://api-assets.clashroyale.com/cardevolutions/300/unused.png",
+        evolutionMedium: "https://api-assets.clashroyale.com/cardevolutions/300/unused.png",
         heroMedium: "https://api-assets.clashroyale.com/cardheroes/300/hero.png",
       },
     }),
@@ -327,10 +322,8 @@ test("normalizes optional card cost, rarity, and equipped variant metadata", asy
       evolutionLevel: 3,
       iconUrls: {
         medium: "https://api-assets.clashroyale.com/not-a-card/base.png",
-        evolutionMedium:
-          "https://api-assets.clashroyale.com/cardevolutions/300/ambiguous.png",
-        heroMedium:
-          "https://api-assets.clashroyale.com/cardheroes/300/ambiguous.png",
+        evolutionMedium: "https://api-assets.clashroyale.com/cardevolutions/300/ambiguous.png",
+        heroMedium: "https://api-assets.clashroyale.com/cardheroes/300/ambiguous.png",
       },
     }),
     card({ id: 4, name: "Unknown Cost", elixirCost: null, rarity: null }),
@@ -341,8 +334,7 @@ test("normalizes optional card cost, rarity, and equipped variant metadata", asy
       rarity: "EPIC",
       iconUrls: {
         medium: "https://api-assets.clashroyale.com/cards/300/fallback.png",
-        evolutionMedium:
-          "https://api-assets.clashroyale.com/cardheroes/300/wrong-variant.png",
+        evolutionMedium: "https://api-assets.clashroyale.com/cardheroes/300/wrong-variant.png",
       },
     }),
     card({
@@ -432,7 +424,7 @@ test("serves a valid successful cache entry and refetches a corrupt one", async 
 
   cache.responses.set(
     "GET https://stats.example.test/clash-royale?schema=2",
-    Response.json({ ok: true, player: { tag: "#WRONG" }, battles: [] })
+    Response.json({ ok: true, player: { tag: "#WRONG" }, battles: [] }),
   );
   const missCalls = [];
   const miss = fetchRoute({ cache, fetchImpl: successFetch(missCalls) });
@@ -441,7 +433,7 @@ test("serves a valid successful cache entry and refetches a corrupt one", async 
 
   cache.responses.set(
     "GET https://stats.example.test/clash-royale?schema=2",
-    new Response("not-json")
+    new Response("not-json"),
   );
   const invalidJsonCalls = [];
   const invalidJson = fetchRoute({ cache, fetchImpl: successFetch(invalidJsonCalls) });
@@ -459,7 +451,7 @@ test("does not serve payloads from the legacy cache schema", async () => {
       battles: Array.from({ length: 10 }, () => battlelog()[0]),
       fetchedAt: new Date(FIXED_NOW).toISOString(),
       cacheTtlSeconds: 300,
-    })
+    }),
   );
   const calls = [];
   const route = fetchRoute({ cache, fetchImpl: successFetch(calls) });
@@ -467,8 +459,7 @@ test("does not serve payloads from the legacy cache schema", async () => {
   assert.equal((await json(await route.run())).player.name, "Rohin");
   assert.equal(calls.length, 2);
   await Promise.all(route.pending);
-  assert.equal(cache.puts[0].key,
-    "GET https://stats.example.test/clash-royale?schema=2");
+  assert.equal(cache.puts[0].key, "GET https://stats.example.test/clash-royale?schema=2");
 });
 
 test("ignores Cache API failures without taking the endpoint down", async () => {
@@ -535,7 +526,7 @@ test("allows only GET without query options and preserves CORS preflight", async
   const query = await route.run(request("/clash-royale?tag=%23OTHER"));
   const options = await route.run(
     request("/clash-royale", { method: "OPTIONS" }),
-    env({ CLASH_ROYALE_API_KEY: "" })
+    env({ CLASH_ROYALE_API_KEY: "" }),
   );
 
   assert.equal(post.status, 405);
@@ -600,11 +591,10 @@ test("cancels both unread bodies after an upstream status failure", async () => 
           if (label === PLAYER_URL) throw new Error("body already closed");
         },
       }),
-      { status }
+      { status },
     );
   const route = fetchRoute({
-    fetchImpl: async (url) =>
-      responseWithTrackedBody(url === PLAYER_URL ? 401 : 200, url),
+    fetchImpl: async (url) => responseWithTrackedBody(url === PLAYER_URL ? 401 : 200, url),
   });
 
   assert.equal((await route.run()).status, 502);
@@ -652,7 +642,9 @@ test("maps timeouts, transport failures, and other upstream statuses", async () 
     },
     {
       fetchImpl: async (url) =>
-        url === PLAYER_URL ? new Response("maintenance detail", { status: 503 }) : Response.json([]),
+        url === PLAYER_URL
+          ? new Response("maintenance detail", { status: 503 })
+          : Response.json([]),
       status: 502,
       code: "CLASH_ROYALE_UPSTREAM_ERROR",
     },
@@ -676,7 +668,7 @@ test("maps an abort during upstream body consumption to a timeout", async () => 
           start(controller) {
             controller.error(new DOMException("body timed out", "TimeoutError"));
           },
-        })
+        }),
       );
     },
   });
@@ -688,8 +680,7 @@ test("maps an abort during upstream body consumption to a timeout", async () => 
 
 test("rejects invalid, mismatched, and oversized upstream data", async () => {
   const invalidCases = [
-    async (url) =>
-      url === PLAYER_URL ? new Response("not-json") : Response.json([]),
+    async (url) => (url === PLAYER_URL ? new Response("not-json") : Response.json([])),
     successFetch([], profile({ tag: "#OTHER" })),
     successFetch([], profile({ name: "" })),
     successFetch([], profile({ currentDeck: {} })),
@@ -709,8 +700,7 @@ test("rejects invalid, mismatched, and oversized upstream data", async () => {
       url === PLAYER_URL
         ? new Response(`{"padding":"${"x".repeat(256 * 1024)}"}`)
         : Response.json([]),
-    async (url) =>
-      url === PLAYER_URL ? new Response(null) : Response.json([]),
+    async (url) => (url === PLAYER_URL ? new Response(null) : Response.json([])),
     async (url) =>
       url === PLAYER_URL
         ? new Response(
@@ -721,7 +711,7 @@ test("rejects invalid, mismatched, and oversized upstream data", async () => {
               cancel() {
                 throw new Error("stream already failed");
               },
-            })
+            }),
           )
         : Response.json([]),
   ];
@@ -750,7 +740,7 @@ test("omits unknown optional values while retaining exact participant tags", asy
           }),
         ],
         opponent: [participant("#9XYZ", "Opponent", Number.NaN)],
-      })
+      }),
     ),
   });
   const body = await json(await route.run());

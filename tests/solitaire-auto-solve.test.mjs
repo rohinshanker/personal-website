@@ -29,8 +29,11 @@ const sourceSection = (start, end) => {
 const engineContext = vm.createContext({});
 for (const key of ["gameRules", "gameSolitaireRules"]) {
   vm.runInContext(
-    await readFile(new URL(`scripts/home/games/${key === "gameRules" ? "rules" : "solitaire"}.js`, root), "utf8"),
-    engineContext
+    await readFile(
+      new URL(`scripts/home/games/${key === "gameRules" ? "rules" : "solitaire"}.js`, root),
+      "utf8",
+    ),
+    engineContext,
   );
 }
 const solRules = engineContext.homeSolitaireRules;
@@ -44,7 +47,9 @@ const {
   solAutoSolveTiming,
   solBuildPresentationTableau,
   solCanAutoSolve,
-} = new Function("solRules", `
+} = new Function(
+  "solRules",
+  `
   ${sourceSection("const solSuitOrder =", "const solRankNames =")}
   ${sourceSection("const solCloneCards =", "const solAutoSolveTiming =")}
   ${sourceSection("const solAutoSolveTiming =", "const solShowAchievement =")}
@@ -55,11 +60,11 @@ const {
     solBuildPresentationTableau,
     solCanAutoSolve,
   };
-`)(solRules);
+`,
+)(solRules);
 
 const suits = ["spades", "clubs", "diamonds", "hearts"];
-const color = (card) =>
-  card.suit === "diamonds" || card.suit === "hearts" ? "red" : "black";
+const color = (card) => (card.suit === "diamonds" || card.suit === "hearts" ? "red" : "black");
 const emptyFoundations = () => Object.fromEntries(suits.map((suit) => [suit, []]));
 const buildState = (overrides = {}) => ({
   stock: [],
@@ -73,7 +78,7 @@ const cloneState = (state) => ({
   stock: state.stock.map((card) => ({ ...card })),
   waste: state.waste.map((card) => ({ ...card })),
   foundations: Object.fromEntries(
-    suits.map((suit) => [suit, state.foundations[suit].map((card) => ({ ...card }))])
+    suits.map((suit) => [suit, state.foundations[suit].map((card) => ({ ...card }))]),
   ),
   tableau: state.tableau.map((column) => column.map((card) => ({ ...card }))),
   won: state.won,
@@ -108,7 +113,7 @@ const replayPlan = (initialState, plan) => {
     assert.equal(
       state.foundations[card.suit].length + 1,
       card.rank,
-      `Move ${step} must be the next foundation rank.`
+      `Move ${step} must be the next foundation rank.`,
     );
     source.splice(move.index, 1);
     state.foundations[card.suit].push(card);
@@ -136,7 +141,7 @@ const buildRevealedState = (random) => {
       suit,
       rank: index + 1,
       faceUp: true,
-    }))
+    })),
   );
   for (let i = cards.length - 1; i > 0; i -= 1) {
     const j = Math.floor(random() * (i + 1));
@@ -244,7 +249,7 @@ test("auto-solve is offered whenever a visible card fits a foundation", () => {
   assert.deepEqual(
     partial.moves.map((move) => `${move.zone}:${move.suit}-${move.rank}`),
     ["waste:spades-1", "tableau:spades-2"],
-    "The run plays the Ace, the exposed Two, then stops at the buried Hearts Ace."
+    "The run plays the Ace, the exposed Two, then stops at the buried Hearts Ace.",
   );
   replayPlan(drawn, partial.moves);
 
@@ -269,7 +274,7 @@ test("auto-solve is offered whenever a visible card fits a foundation", () => {
           rank: index + 1,
           faceUp: true,
         })),
-      ])
+      ]),
     ),
   });
   assert.equal(solCanAutoSolve(complete), false);
@@ -284,7 +289,7 @@ test("auto-solve is offered whenever a visible card fits a foundation", () => {
   assert.deepEqual(
     plan.moves.filter((move) => move.zone === "waste").map((move) => move.rank),
     [2, 1, 3],
-    "Only the top waste card is ever taken."
+    "Only the top waste card is ever taken.",
   );
   replayPlan(wasted, plan.moves);
 
@@ -321,74 +326,97 @@ test("random boards replay legally, flip surfaced cards, and stop only when noth
 test("the toolbar swaps Reset for the check icon and the board hosts the flight layers", () => {
   assert.match(
     homeSource,
-    /<button class="sol-reset" id="sol-reset" type="button" aria-label="Reset game" title="Reset game">[\s\S]*?<\/button>\s*<button class="sol-auto-solve" id="sol-auto-solve" type="button" aria-label="Auto-solve game" title="Auto-solve game" hidden>\s*<img data-src="assets\/app-icons\/ico\/check\.ico" width="22" height="22" alt="" \/>\s*<\/button>/
+    /<button class="sol-reset" id="sol-reset" type="button" aria-label="Reset game" title="Reset game">[\s\S]*?<\/button>\s*<button class="sol-auto-solve" id="sol-auto-solve" type="button" aria-label="Auto-solve game" title="Auto-solve game" hidden>\s*<img data-src="assets\/app-icons\/ico\/check\.ico" width="22" height="22" alt="" \/>\s*<\/button>/,
   );
   assert.match(homeSource, /solitaire\.css\?v=[^"]+/);
   assert.match(styleSource, /\.sol-reset,\n\.sol-undo,\n\.sol-auto-solve \{/);
-  assert.match(styleSource, /\.sol-reset\[hidden\],\n\.sol-auto-solve\[hidden\] \{\n  display: none;\n\}/);
+  assert.match(
+    styleSource,
+    /\.sol-reset\[hidden\],\n\.sol-auto-solve\[hidden\] \{\n  display: none;\n\}/,
+  );
   assert.match(
     styleSource,
     /\.sol-reset img,\n\.sol-undo img,\n\.sol-auto-solve img \{[\s\S]*?height: 22px;[\s\S]*?width: 22px;/,
-    "The check icon shares the Reset and Undo icon sizing and inset."
+    "The check icon shares the Reset and Undo icon sizing and inset.",
   );
   assert.match(styleSource, /\.sol-board \{[\s\S]*?position: relative;/);
-  assert.match(styleSource, /\.sol-board\.is-auto-solving \.sol-card,[\s\S]*?pointer-events: none;/);
   assert.match(
     styleSource,
-    /\.sol-card\.sol-flying-card \{[\s\S]*?box-shadow: none;[\s\S]*?position: absolute;/
+    /\.sol-board\.is-auto-solving \.sol-card,[\s\S]*?pointer-events: none;/,
+  );
+  assert.match(
+    styleSource,
+    /\.sol-card\.sol-flying-card \{[\s\S]*?box-shadow: none;[\s\S]*?position: absolute;/,
   );
   assert.match(
     styleSource,
     /\.sol-foundation-flash \{[\s\S]*?background: rgba\(255, 255, 255, 0\.96\);\s*border-radius: calc\(var\(--sol-card-w\) \/ 9\);/,
-    "The flash is a solid card-shaped box with the card's rounded corners."
+    "The flash is a solid card-shaped box with the card's rounded corners.",
   );
   assert.match(
     styleSource,
-    /\.sol-foundation-flash \{[\s\S]*?animation: sol-foundation-flash 210ms linear both;[\s\S]*?will-change: opacity;/
+    /\.sol-foundation-flash \{[\s\S]*?animation: sol-foundation-flash 210ms linear both;[\s\S]*?will-change: opacity;/,
   );
   assert.match(
     styleSource,
     /\.sol-auto-solve\.is-completing::after \{[\s\S]*?animation: sol-auto-solve-glow 1600ms ease-in-out infinite;[\s\S]*?box-shadow:\s*0 0 0 2px #ffd54a,\s*0 0 12px 5px rgba\(255, 196, 0, 0\.8\);/,
-    "The completion glow is a gold pseudo-element that pulses opacity only."
+    "The completion glow is a gold pseudo-element that pulses opacity only.",
   );
   assert.match(
     styleSource,
     /@keyframes sol-foundation-flash \{\s*0% \{\s*opacity: 0;\s*\}\s*33\.333% \{\s*opacity: 1;\s*\}\s*100% \{\s*opacity: 0;\s*\}\s*\}/,
-    "The flash peaks after one third and fades over the remaining two thirds."
+    "The flash peaks after one third and fades over the remaining two thirds.",
   );
 });
 
 test("the runtime blocks input while solving, lands each card before the next, and wins last", () => {
-  assert.doesNotMatch(mainSource, /solAutoSolveOffered|solIsFullyRevealed/, "The preview gate is gone.");
+  assert.doesNotMatch(
+    mainSource,
+    /solAutoSolveOffered|solIsFullyRevealed/,
+    "The preview gate is gone.",
+  );
   // The toolbar swap itself runs in solitaire-board-lifecycle.test.mjs, which
   // drives the production control through every state instead of reading it.
 
-  const start = sourceSection("const solStartAutoSolve = () => {", "const solIsPackedTableauStack = ");
+  const start = sourceSection(
+    "const solStartAutoSolve = () => {",
+    "const solIsPackedTableauStack = ",
+  );
   assert.match(start, /if \(!plan\.moves\.length\) return false/);
   assert.match(
     start,
     /if \(!solPlay\(\{ op: "autoRunStart" \}, \{ render: false \}\)\) return false/,
-    "The engine opens the run, so one undo step reverts the whole animation."
+    "The engine opens the run, so one undo step reverts the whole animation.",
   );
   assert.match(start, /completes: plan\.completes/);
 
-  const step = sourceSection("const solRunAutoSolveStep = (run) => {", "const solCancelAutoSolve = () => {");
+  const step = sourceSection(
+    "const solRunAutoSolveStep = (run) => {",
+    "const solCancelAutoSolve = () => {",
+  );
   assert.match(step, /solAutoSolveIntervalMs\(run\.step\)/);
   assert.match(step, /solAnimateFlight\(run\.flyer/);
   assert.match(step, /\}, liftMs \+ snapMs\);/);
   assert.match(step, /Math\.max\(0, intervalMs - liftMs - snapMs\)/);
 
   const incremental = sourceSection("const solRenderLanding = ", "const solLandAutoSolveCard = ");
-  assert.match(incremental, /if \(!column\?\.length \|\| flipped \|\| !cardEl \|\| !slot\) \{\n    solRender\(\);/);
+  assert.match(
+    incremental,
+    /if \(!column\?\.length \|\| flipped \|\| !cardEl \|\| !slot\) \{\n    solRender\(\);/,
+  );
   assert.match(incremental, /cardEl\.remove\(\);\s*solRenderFoundationSlot\(slot, move\.suit\);/);
-  assert.doesNotMatch(incremental.split("cardEl.remove()")[1], /solRender\(\)/, "The common landing must not rebuild the board.");
+  assert.doesNotMatch(
+    incremental.split("cardEl.remove()")[1],
+    /solRender\(\)/,
+    "The common landing must not rebuild the board.",
+  );
 
   const landing = sourceSection("const solLandAutoSolveCard = ", "/\*\* Closes the engine's run");
   assert.match(landing, /const flipped = solMoveUncoversCard\(move\)/);
   assert.match(
     landing,
     /solPlay\(move\.action, \{ render: false \}\)/,
-    "Each landed card is an ordinary engine move, so it enters the replay."
+    "Each landed card is an ordinary engine move, so it enters the replay.",
   );
   assert.match(landing, /solRenderLanding\(move, card, flipped\)/);
   assert.match(landing, /solFlashFoundation\(move\.suit\)/);
@@ -415,17 +443,26 @@ test("the runtime blocks input while solving, lands each card before the next, a
   assert.match(
     sourceSection("const solCancelAutoSolve = ", "const solStartAutoSolve = "),
     /solEndAutoRun\(\);/,
-    "An abandoned run closes in the engine too, or the next move is refused."
+    "An abandoned run closes in the engine too, or the next move is refused.",
   );
 
   const impact = sourceSection("const solImpactWindow = ", "const solLandAutoSolveCard = ");
   assert.match(impact, /solPrefersReducedMotion\(\)/);
   assert.match(impact, /composite: "add"/);
 
-  assert.match(mainSource, /solBoard\.addEventListener\("click", \(event\) => \{\n    if \(solAutoSolveRun \|\| solState\.won\) return;/);
+  assert.match(
+    mainSource,
+    /solBoard\.addEventListener\("click", \(event\) => \{\n    if \(solAutoSolveRun \|\| solState\.won\) return;/,
+  );
   // The window lifecycle hooks run in solitaire-board-lifecycle.test.mjs.
-  assert.match(mainSource, /const solNewGame = \(\) => \{[\s\S]*?solCancelAutoSolve\(\);\n  solState\.presentation = null;/);
-  assert.match(mainSource, /if \(solAutoSolve\) \{\n  solAutoSolve\.addEventListener\("click", \(\) => \{\n    solStartAutoSolve\(\);/);
+  assert.match(
+    mainSource,
+    /const solNewGame = \(\) => \{[\s\S]*?solCancelAutoSolve\(\);\n  solState\.presentation = null;/,
+  );
+  assert.match(
+    mainSource,
+    /if \(solAutoSolve\) \{\n  solAutoSolve\.addEventListener\("click", \(\) => \{\n    solStartAutoSolve\(\);/,
+  );
 });
 
 test("the impact sound asset ships with the game", async () => {

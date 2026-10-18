@@ -10,7 +10,9 @@ const viewports = Object.freeze([
 ]);
 
 for (const viewport of viewports) {
-  test(`Gears Nest renders the more frequent rocket warning at ${viewport.name}`, async ({ page }) => {
+  test(`Gears Nest renders the more frequent rocket warning at ${viewport.name}`, async ({
+    page,
+  }) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(() => {
       Math.random = () => 0.999999;

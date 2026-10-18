@@ -11,15 +11,24 @@ import { createEmptyGameStatsData } from "./data.mjs";
 // Match JavaScript String.trim() for trusted historical fields, including
 // line terminators and Unicode spaces that SQLite's default trim omits.
 const TRIM_CHARACTER_CODES = [
-  9, 10, 11, 12, 13, 32, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197,
-  8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288, 65279,
+  9, 10, 11, 12, 13, 32, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201,
+  8202, 8232, 8233, 8239, 8287, 12288, 65279,
 ];
 const trimmedColumns = Object.fromEntries(
-  ["id", "difficulty", "board_size", "hint_bucket", "metric_kind", "player_id",
-    "player_name", "player_icon", "occurred_at"].map((column) => [
+  [
+    "id",
+    "difficulty",
+    "board_size",
+    "hint_bucket",
+    "metric_kind",
+    "player_id",
+    "player_name",
+    "player_icon",
+    "occurred_at",
+  ].map((column) => [
     column,
     `trim(coalesce(${column}, ''), char(${TRIM_CHARACTER_CODES.join(", ")}))`,
-  ])
+  ]),
 );
 
 /*
@@ -414,10 +423,7 @@ export const createGameStatsDataFromSqlRows = ({
   return stats;
 };
 
-export const selectAggregatedGameStats = async (
-  env,
-  { protocol, playerId, pendingEventIds }
-) => {
+export const selectAggregatedGameStats = async (env, { protocol, playerId, pendingEventIds }) => {
   const database = getGameStatsDatabase(env);
   const cutoff = new Date(Date.now() + MAX_EVENT_FUTURE_MS).toISOString();
   const statements = [
@@ -431,7 +437,7 @@ export const selectAggregatedGameStats = async (
     statements.push(
       database
         .prepare(selectAcknowledgedIdsSql(pendingEventIds.length))
-        .bind(cutoff, ...pendingEventIds)
+        .bind(cutoff, ...pendingEventIds),
     );
   } else if (protocol !== STATS_API_PROTOCOL) {
     legacyIdsIndex = statements.length;

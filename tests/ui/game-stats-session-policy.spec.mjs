@@ -61,8 +61,8 @@ window.__gameStatsSessionPolicyTest = Object.freeze({
       })
     ),
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
@@ -94,13 +94,15 @@ const installApi = async (page) => {
       statsRequests.push(url.pathname + url.search);
       await route.fulfill({
         contentType: "application/json",
-        body: statsReadFails ? "{" : JSON.stringify({
-          generatedAt: new Date().toISOString(),
-          totals: {},
-          leaderboards: {},
-          playerRanks: {},
-          playerRecords: {},
-        }),
+        body: statsReadFails
+          ? "{"
+          : JSON.stringify({
+              generatedAt: new Date().toISOString(),
+              totals: {},
+              leaderboards: {},
+              playerRanks: {},
+              playerRecords: {},
+            }),
       });
       return;
     }
@@ -115,7 +117,9 @@ const installApi = async (page) => {
     eventRequests,
     sessionRequests,
     statsRequests,
-    setStatsReadFailure: (fails) => { statsReadFails = fails; },
+    setStatsReadFailure: (fails) => {
+      statsReadFails = fails;
+    },
     async releaseSessions() {
       await Promise.all(
         pendingSessionRoutes.splice(0).map((route, index) =>
@@ -128,8 +132,8 @@ const installApi = async (page) => {
               token: `session-policy-token-${index + 1}`,
               expiresAt: new Date(Date.now() + 60_000).toISOString(),
             }),
-          })
-        )
+          }),
+        ),
       );
     },
   };
@@ -153,37 +157,35 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await page.goto("/home.html");
 
     const firstKey = await page.evaluate(() =>
-      window.__gameStatsSessionPolicyTest.ensureSession("easy")
+      window.__gameStatsSessionPolicyTest.ensureSession("easy"),
     );
     await expect.poll(() => api.sessionRequests.length).toBe(1);
     await page.evaluate(() => window.__gameStatsSessionPolicyTest.dropSession());
     const reusedKey = await page.evaluate(() =>
-      window.__gameStatsSessionPolicyTest.ensureSession("easy")
+      window.__gameStatsSessionPolicyTest.ensureSession("easy"),
     );
     expect(reusedKey).toBe(firstKey);
     expect(api.sessionRequests).toHaveLength(1);
 
     await page.evaluate(() => {
-      window.__sessionPolicyRecordPromise =
-        window.__gameStatsSessionPolicyTest.recordWin();
+      window.__sessionPolicyRecordPromise = window.__gameStatsSessionPolicyTest.recordWin();
     });
     await expect(page.locator("#game-profile-prompt")).toBeVisible();
     const replacementKey = await page.evaluate(() =>
-      window.__gameStatsSessionPolicyTest.ensureSession("easy")
+      window.__gameStatsSessionPolicyTest.ensureSession("easy"),
     );
     expect(replacementKey).not.toBe(firstKey);
     await expect.poll(() => api.sessionRequests.length).toBe(2);
 
     await api.releaseSessions();
     const adoptedSessionIds = await page.evaluate(
-      (sessionKeys) =>
-        window.__gameStatsSessionPolicyTest.waitForSessions(sessionKeys),
-      [firstKey, replacementKey]
+      (sessionKeys) => window.__gameStatsSessionPolicyTest.waitForSessions(sessionKeys),
+      [firstKey, replacementKey],
     );
     expect(adoptedSessionIds).toEqual(["session-policy-1", "session-policy-2"]);
     await page.evaluate(() => window.__gameStatsSessionPolicyTest.expireSessions());
     const activeExpiredKey = await page.evaluate(() =>
-      window.__gameStatsSessionPolicyTest.ensureSession("easy")
+      window.__gameStatsSessionPolicyTest.ensureSession("easy"),
     );
     expect(activeExpiredKey).toBe(replacementKey);
     expect(api.sessionRequests).toHaveLength(2);
@@ -204,19 +206,18 @@ for (const viewport of REVIEW_VIEWPORTS) {
     const gameProgress = await openApp(page, "game-progress");
     for (const game of ["minesweeper", "solitaire", "snake"]) {
       const label = `${game[0].toUpperCase()}${game.slice(1)}`;
-      await gameProgress
-        .getByRole("button", { name: `Open ${label} global leaderboard` })
-        .click();
+      await gameProgress.getByRole("button", { name: `Open ${label} global leaderboard` }).click();
       const candidateWindow = page.locator(`#game-stats-window-${game}`);
       await expect(candidateWindow).toBeVisible();
       await expect(candidateWindow).not.toHaveClass(/\bis-opening\b/);
       await settleRender(page);
       await expect(candidateWindow.locator("[data-game-stats-sync-status]")).toHaveText(
-        EXPIRED_MESSAGE
+        EXPIRED_MESSAGE,
       );
-      await expect(
-        candidateWindow.locator(`[data-game-stats-refresh="${game}"]`)
-      ).toHaveAttribute("data-game-stats-action", "refresh");
+      await expect(candidateWindow.locator(`[data-game-stats-refresh="${game}"]`)).toHaveAttribute(
+        "data-game-stats-action",
+        "refresh",
+      );
       const layout = await candidateWindow.evaluate((element) => {
         const bounds = element.getBoundingClientRect();
         const status = element.querySelector("[data-game-stats-sync-status]");
@@ -224,8 +225,10 @@ for (const viewport of REVIEW_VIEWPORTS) {
           documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
           statusOverflows: status.scrollWidth > status.clientWidth,
           windowFits:
-            bounds.top >= 0 && bounds.left >= 0 &&
-            bounds.right <= window.innerWidth && bounds.bottom <= window.innerHeight,
+            bounds.top >= 0 &&
+            bounds.left >= 0 &&
+            bounds.right <= window.innerWidth &&
+            bounds.bottom <= window.innerHeight,
         };
       });
       expect(layout).toEqual({
@@ -240,9 +243,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
       await candidateWindow.locator(`[data-close="game-stats-${game}"]`).click();
       await expect(candidateWindow).toBeHidden();
     }
-    await gameProgress
-      .getByRole("button", { name: "Open Sudoku global leaderboard" })
-      .click();
+    await gameProgress.getByRole("button", { name: "Open Sudoku global leaderboard" }).click();
 
     const statsWindow = page.locator("#game-stats-window-sudoku");
     const status = statsWindow.locator("[data-game-stats-sync-status]");
@@ -282,15 +283,9 @@ for (const viewport of REVIEW_VIEWPORTS) {
     const accessibility = await new AxeBuilder({ page })
       .include("#game-stats-window-sudoku")
       .analyze();
-    const headingOrder = accessibility.violations.find(
-      ({ id }) => id === "heading-order"
-    );
-    expect(headingOrder?.nodes.map(({ target }) => target)).toEqual([
-      ["#game-stats-sudoku-easy"],
-    ]);
-    expect(
-      accessibility.violations.filter(({ id }) => id !== "heading-order")
-    ).toEqual([]);
+    const headingOrder = accessibility.violations.find(({ id }) => id === "heading-order");
+    expect(headingOrder?.nodes.map(({ target }) => target)).toEqual([["#game-stats-sudoku-easy"]]);
+    expect(accessibility.violations.filter(({ id }) => id !== "heading-order")).toEqual([]);
 
     await page.screenshot({
       path: testInfo.outputPath(`expired-session-${viewport.name}.png`),
@@ -304,9 +299,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
       sessionKey: replacementKey,
       wins: 0,
     });
-    await gameProgress
-      .getByRole("button", { name: "Open Sudoku global leaderboard" })
-      .click();
+    await gameProgress.getByRole("button", { name: "Open Sudoku global leaderboard" }).click();
     await expect(statsWindow).toBeVisible();
     await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
     await page.evaluate(() => window.__gameStatsSessionPolicyTest.sync());

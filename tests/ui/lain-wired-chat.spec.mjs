@@ -72,8 +72,7 @@ const measureLainWindow = (page) =>
         );
       })(),
       imageWithinWindow: isContained(image),
-      messageBeforeSystemAlert:
-        bounds(message).top < bounds(systemAlert).top,
+      messageBeforeSystemAlert: bounds(message).top < bounds(systemAlert).top,
       messageWithinWindow: isContained(message),
       systemAlertWithinWindow: isContained(systemAlert),
       taskbar: bounds(taskbar),
@@ -85,7 +84,6 @@ const measureLainWindow = (page) =>
 test("The Wired message is read-only, focused, and contained across viewports", async ({
   page,
 }) => {
-
   await page.setViewportSize(viewports[0]);
   await page.addInitScript(() => {
     localStorage.clear();
@@ -121,7 +119,7 @@ test("The Wired message is read-only, focused, and contained across viewports", 
       const result = await page.evaluate(() =>
         window.rohinAdminOrchestrator.runEvent("lain-system-alert", {
           source: "lain-wired-chat-test",
-        })
+        }),
       );
       expect(result).toEqual({
         ok: true,
@@ -133,7 +131,7 @@ test("The Wired message is read-only, focused, and contained across viewports", 
       });
       await expect(dialog).toBeVisible();
       await expect(dialog).toHaveAccessibleDescription(
-        "Admin: No matter where you go, everyone is connected."
+        "Admin: No matter where you go, everyone is connected.",
       );
       await expect(win).toHaveAttribute("aria-hidden", "false");
       await expect(win).not.toHaveClass(/is-opening/);
@@ -142,13 +140,11 @@ test("The Wired message is read-only, focused, and contained across viewports", 
       await expect
         .poll(() => image.evaluate((element) => element.currentSrc))
         .toMatch(/assets\/optimized\/random-events\/lain\.(?:webm|mp4)$/);
-      await expect(
-        chat.locator(".red-tool-message.lain-alert-message")
-      ).toHaveCount(1);
+      await expect(chat.locator(".red-tool-message.lain-alert-message")).toHaveCount(1);
       const systemAlert = chat.locator(".lain-alert-system-alert");
       const adminMessage = chat.locator(".lain-alert-message");
       const chatRows = chat.locator(
-        ":scope > .lain-alert-message, :scope > .lain-alert-system-alert"
+        ":scope > .lain-alert-message, :scope > .lain-alert-system-alert",
       );
       await expect(chatRows).toHaveCount(2);
       await expect(chatRows.nth(0)).toHaveClass(/lain-alert-message/);
@@ -156,19 +152,19 @@ test("The Wired message is read-only, focused, and contained across viewports", 
       await expect(systemAlert).toHaveCount(1);
       await expect(systemAlert.locator("img")).toHaveAttribute(
         "src",
-        "assets/app-icons/ico/msg_information.ico"
+        "assets/app-icons/ico/msg_information.ico",
       );
       await expect(systemAlert.locator("strong")).toHaveText("System Alert:");
       await expect(systemAlert.locator("p")).toHaveText(
-        "System Alert: You cannot send any messages in this chat."
+        "System Alert: You cannot send any messages in this chat.",
       );
       await expect(adminMessage.locator("strong")).toHaveText("Admin:");
       await expect(adminMessage.locator("p")).toHaveText(
-        "Admin: No matter where you go, everyone is connected."
+        "Admin: No matter where you go, everyone is connected.",
       );
       await expect(adminMessage.locator("img")).toHaveAttribute(
         "src",
-        "assets/app-icons/ico/user_computer.ico"
+        "assets/app-icons/ico/user_computer.ico",
       );
       const reply = dialog.getByRole("textbox", { name: "Reply unavailable" });
       const send = dialog.getByRole("button", { name: "Send" });
@@ -180,21 +176,15 @@ test("The Wired message is read-only, focused, and contained across viewports", 
       await expect(dialog.getByRole("button")).toHaveCount(2);
       await expect(dialog.getByText(/^(?:Reply|OK)$/i)).toHaveCount(0);
 
-      await expect
-        .poll(() => image.evaluate((element) => element.videoWidth))
-        .toBe(500);
-      await expect
-        .poll(() => image.evaluate((element) => element.paused))
-        .toBe(false);
+      await expect.poll(() => image.evaluate((element) => element.videoWidth)).toBe(500);
+      await expect.poll(() => image.evaluate((element) => element.paused)).toBe(false);
       const metrics = await measureLainWindow(page);
       expect(metrics.imageNaturalWidth).toBe(500);
       expect(metrics.imageNaturalHeight).toBe(352);
       expect(metrics.imageObjectFit).toBe("contain");
       expect(metrics.imageFramePadding).toBe(6);
       expect(metrics.imageWithinFrame).toBe(true);
-      expect(metrics.chatScrollHeight).toBeLessThanOrEqual(
-        metrics.chatClientHeight + 1
-      );
+      expect(metrics.chatScrollHeight).toBeLessThanOrEqual(metrics.chatClientHeight + 1);
       expect(metrics.chatWithinWindow).toBe(true);
       expect(metrics.closeWithinWindow).toBe(true);
       expect(metrics.imageWithinWindow).toBe(true);
@@ -229,7 +219,6 @@ test("The Wired message is read-only, focused, and contained across viewports", 
       await expect.poll(() => image.evaluate((element) => element.paused)).toBe(true);
     });
   }
-
 });
 
 test("Lain and Red Tool stay normal through a live cooldown and remain explicitly triggerable", async ({
@@ -254,15 +243,13 @@ window.__wiredNormalTest = Object.freeze({
     return window.homeActivity.notifyActivity("pageReload");
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
   await page.goto("/home.html", { waitUntil: "load" });
   await page.evaluate(() => window.homeResources.loadAdminResources());
 
-  const cooldownUntil = await page.evaluate(() =>
-    window.__wiredNormalTest.lockCooldown()
-  );
+  const cooldownUntil = await page.evaluate(() => window.__wiredNormalTest.lockCooldown());
   expect(cooldownUntil).toBeGreaterThan(Date.now());
   expect(await page.evaluate(() => window.__wiredNormalTest.trigger())).toBe(false);
 
@@ -273,8 +260,8 @@ window.__wiredNormalTest = Object.freeze({
     await page.evaluate(() =>
       window.rohinAdminOrchestrator.runEvent("lain-system-alert", {
         source: "lain-normal-mode-test",
-      })
-    )
+      }),
+    ),
   ).toEqual({ ok: true, message: "Triggered Lain System Alert." });
   await expect(lainWindow).toBeVisible();
   await expect(page.locator("#lain-alert-close")).toBeFocused();
@@ -290,8 +277,8 @@ window.__wiredNormalTest = Object.freeze({
     await page.evaluate(() =>
       window.rohinAdminOrchestrator.runEvent("red-tool", {
         source: "red-tool-normal-mode-test",
-      })
-    )
+      }),
+    ),
   ).toEqual({ ok: true, message: "Triggered Red Tool." });
   await expect(redToolWindow).toBeVisible();
   await expect(redToolInput).toBeFocused();
@@ -299,12 +286,10 @@ window.__wiredNormalTest = Object.freeze({
   await expect(page.locator("#red-tool-send")).toBeEnabled();
   await redToolInput.fill("Is anyone there?");
   await redToolInput.press("Enter");
-  await expect(
-    page.locator("#red-tool-chat-log .red-tool-message.is-local")
-  ).toHaveCount(1);
-  await expect(
-    page.locator("#red-tool-chat-log .red-tool-message.is-local p")
-  ).toHaveText("You: Is anyone there?");
+  await expect(page.locator("#red-tool-chat-log .red-tool-message.is-local")).toHaveCount(1);
+  await expect(page.locator("#red-tool-chat-log .red-tool-message.is-local p")).toHaveText(
+    "You: Is anyone there?",
+  );
   await expect(redToolInput).toBeDisabled();
 
   await page.locator("#red-tool-close").press("Enter");

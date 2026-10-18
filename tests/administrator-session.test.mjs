@@ -18,7 +18,7 @@ const plain = (value) => (value == null ? value : JSON.parse(JSON.stringify(valu
 
 const source = await readFile(
   new URL("../scripts/home/core/administrator-session.js", import.meta.url),
-  "utf8"
+  "utf8",
 );
 
 /** A clock the session reads through `Date`, so expiry is exercised without waiting. */
@@ -136,17 +136,16 @@ const liveProof = (clock, { lifetimeMs = 60_000, proof = VALID_PROOF } = {}) => 
   expiresAt: new Date(clock.now() + lifetimeMs).toISOString(),
 });
 
-const readStoredProof = (storage) =>
-  JSON.parse(storage.store.get(PROOF_STORAGE_KEY) || "null");
+const readStoredProof = (storage) => JSON.parse(storage.store.get(PROOF_STORAGE_KEY) || "null");
 
 test("a proof is accepted only while it is well formed and still live", () => {
   const { clock, namespace } = createHarness();
   const { normalizeAdministratorProof } = namespace;
 
-  assert.deepEqual(
-    plain(normalizeAdministratorProof(liveProof(clock))),
-    { proof: VALID_PROOF, expiresAt: new Date(clock.now() + 60_000).toISOString() }
-  );
+  assert.deepEqual(plain(normalizeAdministratorProof(liveProof(clock))), {
+    proof: VALID_PROOF,
+    expiresAt: new Date(clock.now() + 60_000).toISOString(),
+  });
 
   for (const rejected of [
     null,
@@ -162,9 +161,12 @@ test("a proof is accepted only while it is well formed and still live", () => {
   }
 
   assert.equal(
-    normalizeAdministratorProof({ proof: `${"Z-z_9.~+=/".repeat(2)}`, expiresAt: new Date(clock.now() + 60_000).toISOString() })?.proof,
+    normalizeAdministratorProof({
+      proof: `${"Z-z_9.~+=/".repeat(2)}`,
+      expiresAt: new Date(clock.now() + 60_000).toISOString(),
+    })?.proof,
     "Z-z_9.~+=/Z-z_9.~+=/",
-    "The unreserved characters the Worker encodes proofs with must all be accepted."
+    "The unreserved characters the Worker encodes proofs with must all be accepted.",
   );
 });
 
@@ -173,15 +175,13 @@ test("a browser session is bounded to one hour however long the Worker reports",
 
   assert.equal(namespace.ADMINISTRATOR_SESSION_DURATION_MS, HOUR_MS);
   assert.equal(
-    namespace.normalizeAdministratorProof(liveProof(clock, { lifetimeMs: 8 * HOUR_MS }))
-      .expiresAt,
-    new Date(clock.now() + HOUR_MS).toISOString()
+    namespace.normalizeAdministratorProof(liveProof(clock, { lifetimeMs: 8 * HOUR_MS })).expiresAt,
+    new Date(clock.now() + HOUR_MS).toISOString(),
   );
   assert.equal(
-    namespace.normalizeAdministratorProof(liveProof(clock, { lifetimeMs: 15 * 60_000 }))
-      .expiresAt,
+    namespace.normalizeAdministratorProof(liveProof(clock, { lifetimeMs: 15 * 60_000 })).expiresAt,
     new Date(clock.now() + 15 * 60_000).toISOString(),
-    "A shorter Worker expiry must win over the browser bound."
+    "A shorter Worker expiry must win over the browser bound.",
   );
 });
 
@@ -192,7 +192,7 @@ test("a sign-in response counts only with a live proof for the protected profile
 
   assert.deepEqual(
     plain(normalizeAdministratorSignInResponse({ ...proof, profile: ADMINISTRATOR_PROFILE })),
-    { proof: VALID_PROOF, expiresAt: proof.expiresAt }
+    { proof: VALID_PROOF, expiresAt: proof.expiresAt },
   );
   assert.equal(normalizeAdministratorSignInResponse({ ...proof }), null);
   for (const field of ["id", "name", "icon"]) {
@@ -202,7 +202,7 @@ test("a sign-in response counts only with a live proof for the protected profile
         profile: { ...ADMINISTRATOR_PROFILE, [field]: "someone-else" },
       }),
       null,
-      `A response for a different ${field} must not authorize the Administrator.`
+      `A response for a different ${field} must not authorize the Administrator.`,
     );
   }
   assert.equal(
@@ -211,7 +211,7 @@ test("a sign-in response counts only with a live proof for the protected profile
       expiresAt: new Date(clock.now() - 1).toISOString(),
       profile: ADMINISTRATOR_PROFILE,
     }),
-    null
+    null,
   );
 });
 
@@ -236,7 +236,7 @@ test("adopting a proof stores it and arms both the expiry and the storage watch"
   assert.deepEqual(
     plain(session.getProof()),
     adopted,
-    "A rejected proof must not end the session."
+    "A rejected proof must not end the session.",
   );
 });
 
@@ -277,7 +277,7 @@ test("a proof replaced in storage elsewhere deauthenticates this page", () => {
 
   storage.store.set(
     PROOF_STORAGE_KEY,
-    JSON.stringify(liveProof(clock, { proof: `${"c".repeat(32)}.${"d".repeat(32)}` }))
+    JSON.stringify(liveProof(clock, { proof: `${"c".repeat(32)}.${"d".repeat(32)}` })),
   );
   timers.tickIntervals();
 
@@ -305,7 +305,7 @@ test("restoring resumes a live stored session and drops a stale one", () => {
   assert.equal(
     stale.storage.store.has(PROOF_STORAGE_KEY),
     false,
-    "A stored proof that no longer normalizes must not linger."
+    "A stored proof that no longer normalizes must not linger.",
   );
   assert.deepEqual(stale.timers.counts(), { timeouts: 0, intervals: 0 });
 
@@ -362,7 +362,7 @@ test("a blocked session storage keeps the page usable without persisting anythin
   assert.deepEqual(
     invalidations,
     [],
-    "Storage that cannot be read must not be mistaken for a revoked session."
+    "Storage that cannot be read must not be mistaken for a revoked session.",
   );
   assert.equal(session.isActive(), true);
 });
@@ -415,7 +415,7 @@ test("the shared contract exposes one storage key, profile, and poll interval", 
   assert.equal(
     namespace.isAdministratorProfile({ ...ADMINISTRATOR_PROFILE, rerollCount: 0 }),
     true,
-    "Home's local reroll bookkeeping must not disqualify the protected profile."
+    "Home's local reroll bookkeeping must not disqualify the protected profile.",
   );
   assert.equal(Object.isFrozen(namespace), true);
   assert.equal(Object.isFrozen(namespace.ADMINISTRATOR_PROFILE), true);

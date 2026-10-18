@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
-import {
-  readHomeScript,
-  readHomeScriptText,
-} from "./helpers/home-scripts.mjs";
+import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
 
@@ -33,101 +30,86 @@ test("Lain is a single-message Wired chat with a permanently disabled reply comp
   const markup = sliceBetween(
     home,
     'id="lain-alert-window"',
-    '<div\n      class="window random-event-window lelouch-alert-window'
+    '<div\n      class="window random-event-window lelouch-alert-window',
   );
 
   assert.match(
     markup,
-    /class="window random-event-window event-chat-window lain-alert-window is-hidden"/
+    /class="window random-event-window event-chat-window lain-alert-window is-hidden"/,
   );
   assert.match(markup, /role="dialog"/);
   assert.match(markup, /aria-hidden="true"/);
   assert.match(markup, /aria-labelledby="lain-alert-title"/);
   assert.match(markup, /aria-describedby="lain-alert-message"/);
+  assert.match(markup, /id="lain-alert-title">The Wired: New Message<\/div>/);
+  assert.match(markup, /<button type="button" aria-label="Close" id="lain-alert-close"><\/button>/);
   assert.match(
     markup,
-    /id="lain-alert-title">The Wired: New Message<\/div>/
-  );
-  assert.match(
-    markup,
-    /<button type="button" aria-label="Close" id="lain-alert-close"><\/button>/
-  );
-  assert.match(
-    markup,
-    /class="red-tool-image lain-alert-image-frame">[\s\S]*?<video\n\s+class="lain-alert-image"[\s\S]*?data-loop-fallback="assets\/optimized\/random-events\/lain\.webp"[\s\S]*?<source data-src="assets\/optimized\/random-events\/lain\.webm" type="video\/webm" \/>\s*<source data-src="assets\/optimized\/random-events\/lain\.mp4" type="video\/mp4" \/>/
+    /class="red-tool-image lain-alert-image-frame">[\s\S]*?<video\n\s+class="lain-alert-image"[\s\S]*?data-loop-fallback="assets\/optimized\/random-events\/lain\.webp"[\s\S]*?<source data-src="assets\/optimized\/random-events\/lain\.webm" type="video\/webm" \/>\s*<source data-src="assets\/optimized\/random-events\/lain\.mp4" type="video\/mp4" \/>/,
   );
   assert.doesNotMatch(markup, /assets\/random%20events\/lain\.gif/);
   assert.match(
     markup,
-    /class="red-tool-chat-log lain-alert-chat-log"[\s\S]*?role="log"[\s\S]*?aria-label="Message history"/
+    /class="red-tool-chat-log lain-alert-chat-log"[\s\S]*?role="log"[\s\S]*?aria-label="Message history"/,
   );
   assert.equal(
     markup.match(/class="red-tool-system-alert lain-alert-system-alert"/g)?.length,
     1,
-    "The Wired chat must contain exactly one System Alert row"
+    "The Wired chat must contain exactly one System Alert row",
   );
   assert.match(
     markup,
-    /class="red-tool-system-alert lain-alert-system-alert">[\s\S]*?<img data-src="assets\/app-icons\/ico\/msg_information\.ico" width="18" height="18" alt="" \/>[\s\S]*?<strong class="red-tool-system-label">System Alert:<\/strong>\s*You cannot send any messages in this chat\./
+    /class="red-tool-system-alert lain-alert-system-alert">[\s\S]*?<img data-src="assets\/app-icons\/ico\/msg_information\.ico" width="18" height="18" alt="" \/>[\s\S]*?<strong class="red-tool-system-label">System Alert:<\/strong>\s*You cannot send any messages in this chat\./,
   );
   assert.ok(
     markup.indexOf('class="red-tool-message lain-alert-message"') <
       markup.indexOf('class="red-tool-system-alert lain-alert-system-alert"'),
-    "Admin's message must precede the System Alert"
+    "Admin's message must precede the System Alert",
   );
   assert.equal(
     markup.match(/class="red-tool-message lain-alert-message"/g)?.length,
     1,
-    "The Wired chat must contain exactly one message"
+    "The Wired chat must contain exactly one message",
   );
   assert.match(
     markup,
-    /<img data-src="assets\/app-icons\/ico\/user_computer\.ico" width="18" height="18" alt="" \/>/
+    /<img data-src="assets\/app-icons\/ico\/user_computer\.ico" width="18" height="18" alt="" \/>/,
   );
   assert.match(
     markup,
-    /<p id="lain-alert-message">\s*<strong>Admin:<\/strong> No matter where you go, everyone is connected\.\s*<\/p>/
+    /<p id="lain-alert-message">\s*<strong>Admin:<\/strong> No matter where you go, everyone is connected\.\s*<\/p>/,
   );
   assert.equal(
     markup.match(/<button\b/g)?.length,
     2,
-    "The Wired window must expose only Close and the disabled Send control"
+    "The Wired window must expose only Close and the disabled Send control",
   );
   assert.match(
     markup,
-    /<input[\s\S]*?id="lain-alert-input"[\s\S]*?aria-label="Reply unavailable"[\s\S]*?placeholder="Replies are disabled"[\s\S]*?disabled[\s\S]*?>/
+    /<input[\s\S]*?id="lain-alert-input"[\s\S]*?aria-label="Reply unavailable"[\s\S]*?placeholder="Replies are disabled"[\s\S]*?disabled[\s\S]*?>/,
   );
-  assert.match(
-    markup,
-    /<button type="button" id="lain-alert-send" disabled>Send<\/button>/
-  );
+  assert.match(markup, /<button type="button" id="lain-alert-send" disabled>Send<\/button>/);
   assert.doesNotMatch(markup, /<textarea\b|contenteditable/i);
   assert.doesNotMatch(markup, /red-tool-header/);
   assert.doesNotMatch(markup, />\s*(?:Reply|OK)\s*</i);
 });
 
 test("Lain shares the Red Tool shell without inheriting its cropped image or fixed chat height", async () => {
-  const css = await readFile(
-    new URL("styles/home/random-events.css", root),
-    "utf8"
-  );
+  const css = await readFile(new URL("styles/home/random-events.css", root), "utf8");
 
-  assert.match(
-    css,
-    /\.event-chat-window \{[\s\S]*?--event-window-width: 430px;/
-  );
+  assert.match(css, /\.event-chat-window \{[\s\S]*?--event-window-width: 430px;/);
   assert.match(css, /\.event-chat-window \.window-body \{[\s\S]*?gap: 8px;/);
   assert.match(
     css,
-    /\.lain-alert-image-frame \{[\s\S]*?aspect-ratio: 500 \/ 352;[\s\S]*?box-sizing: border-box;[\s\S]*?max-height: min\(35vh, 260px\);[\s\S]*?padding: 6px;/
+    /\.lain-alert-image-frame \{[\s\S]*?aspect-ratio: 500 \/ 352;[\s\S]*?box-sizing: border-box;[\s\S]*?max-height: min\(35vh, 260px\);[\s\S]*?padding: 6px;/,
   );
   assert.match(
     css,
-    /\.lain-alert-image \{[\s\S]*?height: 100%;[\s\S]*?object-fit: contain;[\s\S]*?width: 100%;/
+    /\.lain-alert-image \{[\s\S]*?height: 100%;[\s\S]*?object-fit: contain;[\s\S]*?width: 100%;/,
   );
   assert.match(
     css,
-    /\.lain-alert-chat-log \{[\s\S]*?height: auto;[\s\S]*?max-height: 150px;[\s\S]*?min-height: 52px;/
+    /\.lain-alert-chat-log \{[\s\S]*?height: auto;[\s\S]*?max-height: 150px;[\s\S]*?min-height: 52px;/,
   );
   assert.doesNotMatch(css, /\.lain-alert-window img\s*\{/);
   assert.doesNotMatch(css, /\.lain-alert-window button\s*\{/);
@@ -147,22 +129,19 @@ test("Lain and Red Tool remain normally probability-gated", async () => {
   assert.match(redToolRegistration, /debug: false,/);
   assert.match(redToolRegistration, /kind: RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(redToolRegistration, /showRedToolWindow\(\);/);
-  assert.match(
-    dom,
-    /const lainAlertClose = byId\("lain-alert-close"\)/
-  );
+  assert.match(dom, /const lainAlertClose = byId\("lain-alert-close"\)/);
   assert.match(main, /bindRandomEventButton\(lainAlertClose, closeLainAlert\);/);
   assert.match(
     main,
-    /const showLainAlert = \(\) => \{[\s\S]*?lainAlertFocusReturn = focusReturn;[\s\S]*?lainAlertClose\?\.focus\(\{ preventScroll: true \}\)\);[\s\S]*?return true;/
+    /const showLainAlert = \(\) => \{[\s\S]*?lainAlertFocusReturn = focusReturn;[\s\S]*?lainAlertClose\?\.focus\(\{ preventScroll: true \}\)\);[\s\S]*?return true;/,
   );
   assert.match(
     main,
-    /bindManagedRandomEventWindowAnimation\(lainAlertWindow, \{\s*afterClose: resetLainAlert,\s*\}\);/
+    /bindManagedRandomEventWindowAnimation\(lainAlertWindow, \{\s*afterClose: resetLainAlert,\s*\}\);/,
   );
   assert.match(
     main,
-    /lainAlertWindow\?\.addEventListener\("keydown", \(event\) => \{[\s\S]*?event\.key !== "Escape"[\s\S]*?closeLainAlert\(\);/
+    /lainAlertWindow\?\.addEventListener\("keydown", \(event\) => \{[\s\S]*?event\.key !== "Escape"[\s\S]*?closeLainAlert\(\);/,
   );
   assert.doesNotMatch(`${dom}\n${main}`, /lainAlertOk|lain-alert-ok/);
 });
@@ -181,8 +160,7 @@ test("Wired chat assets and cache-busted stylesheet references are present", asy
     stat(new URL("assets/app-icons/ico/user_computer.ico", root)),
     ...derivatives.map((derivative) => stat(new URL(derivative, root))),
   ]);
-  const stylesheet =
-    "styles/home/random-events.css?v=";
+  const stylesheet = "styles/home/random-events.css?v=";
 
   lainAssets.forEach((asset, position) => {
     assert.ok(asset.isFile() && asset.size > 0, `${derivatives[position]} is a nonempty file`);

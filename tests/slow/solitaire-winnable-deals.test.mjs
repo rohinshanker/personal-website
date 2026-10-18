@@ -16,13 +16,12 @@ import {
 
 // Keep the complete statistical corpus out of the fast suite. CI runs this
 // separate tier before either deployment can proceed.
-const seededDeals = Array.from({ length: 500 }, (_, seed) =>
-  buildDeal(seededRandom(seed))
-);
+const seededDeals = Array.from({ length: 500 }, (_, seed) => buildDeal(seededRandom(seed)));
 
 test("Solitaire creates complete standard random deals", () => {
-  [buildDeal(() => 0), buildDeal(() => 1 - Number.EPSILON), ...seededDeals]
-    .forEach(assertStandardDeal);
+  [buildDeal(() => 0), buildDeal(() => 1 - Number.EPSILON), ...seededDeals].forEach(
+    assertStandardDeal,
+  );
 });
 
 test("verified Solitaire solutions replay through independent rules", () => {
@@ -48,11 +47,14 @@ test("the bounded solver verifies enough uniformly shuffled deals", () => {
 test("Solitaire deal generation is deterministic, diverse, and random-looking", () => {
   assert.deepEqual(buildDeal(seededRandom(8675309)), buildDeal(seededRandom(8675309)));
   assert.ok(new Set(seededDeals.slice(0, 128).map(serializeDeal)).size >= 120);
-  const longColumns = seededDeals.slice(0, 200).flatMap((deal) =>
-    deal.tableau.filter((column) => column.length >= 3));
-  const sameSuitRuns = longColumns.filter((column) => column.every((card, index) =>
-    !index || (card.suit === column[0].suit && column[index - 1].rank === card.rank + 1)
-  ));
+  const longColumns = seededDeals
+    .slice(0, 200)
+    .flatMap((deal) => deal.tableau.filter((column) => column.length >= 3));
+  const sameSuitRuns = longColumns.filter((column) =>
+    column.every(
+      (card, index) =>
+        !index || (card.suit === column[0].suit && column[index - 1].rank === card.rank + 1),
+    ),
+  );
   assert.ok(sameSuitRuns.length / longColumns.length < 0.05);
 });
-

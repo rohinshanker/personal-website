@@ -51,15 +51,15 @@ test("Video Editor publishes canonical route metadata and the Windows desktop sh
   assert.match(html, /<title>[^<]*Video Editor[^<]*<\/title>/i);
   assert.match(
     html,
-    /<meta\b[^>]*\bname="description"[^>]*\bcontent="[^"]*video editor[^"]*"[^>]*>/i
+    /<meta\b[^>]*\bname="description"[^>]*\bcontent="[^"]*video editor[^"]*"[^>]*>/i,
   );
   assert.match(
     html,
-    /<link\b(?=[^>]*\brel="icon")(?=[^>]*\bhref="\/assets\/favicon-96\.png")(?=[^>]*\bsizes="96x96")[^>]*>/i
+    /<link\b(?=[^>]*\brel="icon")(?=[^>]*\bhref="\/assets\/favicon-96\.png")(?=[^>]*\bsizes="96x96")[^>]*>/i,
   );
   assert.match(
     html,
-    /<link\b(?=[^>]*\brel="apple-touch-icon")(?=[^>]*\bhref="\/assets\/apple-touch-icon-180\.png")[^>]*>/i
+    /<link\b(?=[^>]*\brel="apple-touch-icon")(?=[^>]*\bhref="\/assets\/apple-touch-icon-180\.png")[^>]*>/i,
   );
   for (const selector of [
     'property="og:url"[^>]*content="https://rohin\\.shanker\\.me/video-editor/"',
@@ -72,7 +72,7 @@ test("Video Editor publishes canonical route metadata and the Windows desktop sh
   }
   assert.match(
     html,
-    /<link\b[^>]*\brel="canonical"[^>]*\bhref="https:\/\/rohin\.shanker\.me\/video-editor\/"[^>]*>/i
+    /<link\b[^>]*\brel="canonical"[^>]*\bhref="https:\/\/rohin\.shanker\.me\/video-editor\/"[^>]*>/i,
   );
   assert.match(html, /<link\b[^>]*\bhref="(?:\.\/)?style\.css(?:\?[^"#]*)?"[^>]*>/i);
   assert.match(html, /<script\b[^>]*\bsrc="(?:\.\/)?script\.js(?:\?[^"#]*)?"[^>]*>/i);
@@ -106,40 +106,30 @@ test("Video Editor keeps pixel-font microcopy at its readable native size", asyn
       .find(
         (candidate) =>
           candidate.includes("font-size: var(--editor-pixel-small-font-size)") &&
-          candidate.includes("line-height: var(--editor-pixel-small-line-height)")
+          candidate.includes("line-height: var(--editor-pixel-small-line-height)"),
       );
     assert.ok(block, `${selector} must use the readable pixel-font size and line box.`);
   }
 
   const undersizedBlocks = Array.from(
     compactCss.matchAll(/([^{}]+)\{([^{}]*\bfont-size:\s*(?:9|10)px[^{}]*)\}/g),
-    ([, selector]) => selector.trim()
+    ([, selector]) => selector.trim(),
   );
   assert.deepEqual(
     undersizedBlocks,
     [".time-readout"],
-    "Only the scalable Courier timecode may remain below the 11px pixel-font floor."
+    "Only the scalable Courier timecode may remain below the 11px pixel-font floor.",
   );
 });
 
 test("Video Editor reuses the shared custom cursor theme and pointer semantics", async () => {
-  const {
-    css,
-    cursor,
-    html,
-    script,
-    sharedCursorCss,
-    sharedCursorRuntime,
-    textSelectionCursor,
-  } = await readRouteSources();
-  const sharedStylesheet =
-    'href="../styles/home/cursors.css?v=';
-  const sharedRuntimeReference =
-    'src="../scripts/home/core/cursor-mode.js?v=';
+  const { css, cursor, html, script, sharedCursorCss, sharedCursorRuntime, textSelectionCursor } =
+    await readRouteSources();
+  const sharedStylesheet = 'href="../styles/home/cursors.css?v=';
+  const sharedRuntimeReference = 'src="../scripts/home/core/cursor-mode.js?v=';
   const routeCursorReference = 'src="cursor.js?v=';
   const routeStylesheet = 'href="style.css?v=';
-  const textSelectionScript =
-    'src="../scripts/home/text-selection-cursor.js?v=';
+  const textSelectionScript = 'src="../scripts/home/text-selection-cursor.js?v=';
   for (const reference of [
     sharedStylesheet,
     sharedRuntimeReference,
@@ -155,7 +145,7 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
   assert.ok(html.indexOf(routeStylesheet) < html.indexOf(textSelectionScript));
   assert.match(
     html,
-    /<script\b[^>]*\bsrc="\.\.\/scripts\/home\/text-selection-cursor\.js\?v=[^"]+"[^>]*\bdefer(?:\s|>|=)/i
+    /<script\b[^>]*\bsrc="\.\.\/scripts\/home\/text-selection-cursor\.js\?v=[^"]+"[^>]*\bdefer(?:\s|>|=)/i,
   );
   for (const id of [
     "desktop-required",
@@ -167,13 +157,16 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
     assert.match(
       html,
       new RegExp(`<[^>]+(?=[^>]*\\bid="${id}")(?=[^>]*\\bdata-no-drag(?:\\s|>|=))[^>]*>`, "i"),
-      `${id} must opt out of shared draggable-title semantics.`
+      `${id} must opt out of shared draggable-title semantics.`,
     );
   }
 
   assert.match(sharedCursorRuntime, /STORAGE_KEY\s*=\s*"rohin-os-cursor-mode"/);
   assert.match(sharedCursorRuntime, /localStorage\.getItem\(STORAGE_KEY\)/);
-  assert.match(sharedCursorRuntime, /document\.documentElement\.classList\.toggle\(DARK_MODE_CLASS/);
+  assert.match(
+    sharedCursorRuntime,
+    /document\.documentElement\.classList\.toggle\(DARK_MODE_CLASS/,
+  );
   assert.match(sharedCursorRuntime, /document\.body\?\.classList\.toggle\(DARK_MODE_CLASS/);
   assert.match(sharedCursorRuntime, /addEventListener\("storage"/);
   assert.match(sharedCursorRuntime, /event\.key\s*!==\s*STORAGE_KEY/);
@@ -198,11 +191,11 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
   assert.match(script, /mediaImportsInFlight\s*\+=\s*1/);
   assert.match(
     script,
-    /finally\s*\{[\s\S]*?mediaImportsInFlight\s*=\s*Math\.max\(0,\s*mediaImportsInFlight\s*-\s*1\)[\s\S]*?if\s*\(mediaImportsInFlight\s*===\s*0\)/
+    /finally\s*\{[\s\S]*?mediaImportsInFlight\s*=\s*Math\.max\(0,\s*mediaImportsInFlight\s*-\s*1\)[\s\S]*?if\s*\(mediaImportsInFlight\s*===\s*0\)/,
   );
   assert.match(
     cursor,
-    /addEventListener\("dragstart"[\s\S]*?if\s*\(event\.defaultPrevented\)\s*return;/
+    /addEventListener\("dragstart"[\s\S]*?if\s*\(event\.defaultPrevented\)\s*return;/,
   );
 
   for (const cursorToken of [
@@ -220,37 +213,27 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
     assert.match(
       `${sharedCursorCss}\n${css}`,
       new RegExp(`--cursor-${cursorToken.replace("-", "-")}`),
-      `Missing the ${cursorToken} custom cursor token.`
+      `Missing the ${cursorToken} custom cursor token.`,
     );
   }
   assert.match(sharedCursorCss, /html\.is-cursor-dark-mode,\s*body\.is-cursor-dark-mode/);
-  assert.match(sharedCursorCss, /:where\(html, body, body \*\)[^{]*\{[^}]*--cursor-normal|:where\(html, body, body \*\)\s*\{[^}]*cursor\s*:\s*var\(--cursor-normal\)/is);
+  assert.match(
+    sharedCursorCss,
+    /:where\(html, body, body \*\)[^{]*\{[^}]*--cursor-normal|:where\(html, body, body \*\)\s*\{[^}]*cursor\s*:\s*var\(--cursor-normal\)/is,
+  );
   assert.match(textSelectionCursor, /is-custom-cursor-text-hover/);
   assert.match(textSelectionCursor, /is-custom-cursor-text-selecting/);
   assert.match(textSelectionCursor, /caretPositionFromPoint/);
   assert.match(textSelectionCursor, /event\.pointerType\s*!==\s*"mouse"/);
-  for (const guard of [
-    '[draggable="true"]',
-    '[role="separator"]',
-    "[data-custom-cursor-guard]",
-  ]) {
+  for (const guard of ['[draggable="true"]', '[role="separator"]', "[data-custom-cursor-guard]"]) {
     assert.ok(
       textSelectionCursor.includes(guard),
-      `Missing the shared selectable-text guard ${guard}.`
+      `Missing the shared selectable-text guard ${guard}.`,
     );
   }
-  assert.match(
-    html,
-    /\bid="timeline-ruler"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
-  );
-  assert.match(
-    html,
-    /\bclass="timeline-track"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
-  );
-  assert.match(
-    html,
-    /\bid="effects-track"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
-  );
+  assert.match(html, /\bid="timeline-ruler"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i);
+  assert.match(html, /\bclass="timeline-track"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i);
+  assert.match(html, /\bid="effects-track"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i);
 
   const compactCss = css.replace(/\s+/g, " ");
   for (const [selector, token] of [
@@ -271,10 +254,7 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
     const matchingBlock = Array.from(compactCss.matchAll(/[^{}]+\{[^{}]*}/g), ([block]) => block)
       .filter((block) => block.includes(selector))
       .find((block) => block.includes(`cursor: var(--cursor-${token}) !important`));
-    assert.ok(
-      matchingBlock,
-      `Missing the --cursor-${token} mapping for ${selector}.`
-    );
+    assert.ok(matchingBlock, `Missing the --cursor-${token} mapping for ${selector}.`);
   }
   for (const operationClass of [
     "is-holding-pointer-item",
@@ -296,9 +276,9 @@ test("Video Editor reuses the shared custom cursor theme and pointer semantics",
         "resize-ew",
         "resize-ns",
       ].map((name) =>
-        access(new URL(`assets/cursor-assets/generated-png/${name}-${mode}.png`, root))
-      )
-    )
+        access(new URL(`assets/cursor-assets/generated-png/${name}-${mode}.png`, root)),
+      ),
+    ),
   );
 });
 
@@ -312,12 +292,10 @@ test("Video Editor exposes fixed media, preview, and effects panels with stable 
   assert.equal(
     Array.from(html.matchAll(/\bdata-panel="[^"]+"/g)).length,
     3,
-    "The editor must expose exactly the three planned panels."
+    "The editor must expose exactly the three planned panels.",
   );
 
-  const mediaInput = html.match(
-    /<input\b[^>]*\bid="(?:media-input|media-file-input)"[^>]*>/i
-  )?.[0];
+  const mediaInput = html.match(/<input\b[^>]*\bid="(?:media-input|media-file-input)"[^>]*>/i)?.[0];
   assert.ok(mediaInput, "Missing the media file input.");
   assert.match(mediaInput, /\btype="file"/i);
   assert.match(mediaInput, /\bmultiple(?:\s|>|=)/i);
@@ -335,36 +313,31 @@ test("Video Editor exposes fixed media, preview, and effects panels with stable 
 test("Video Editor offers frame presets, custom dimensions, and contained preview media", async () => {
   const { css, html } = await readRouteSources();
   const frameSelect = html.match(
-    /<select\b[^>]*\bid="video-editor-frame-preset"[^>]*>[\s\S]*?<\/select>/i
+    /<select\b[^>]*\bid="video-editor-frame-preset"[^>]*>[\s\S]*?<\/select>/i,
   )?.[0];
   assert.ok(frameSelect, "Missing the frame preset selector.");
   const options = Array.from(
     frameSelect.matchAll(/<option\b[^>]*\bvalue="([^"]+)"[^>]*>([^<]+)<\/option>/gi),
-    ([, value, label]) => ({ value, label: label.trim() })
+    ([, value, label]) => ({ value, label: label.trim() }),
   );
   assert.deepEqual(
     options.map(({ value }) => value),
-    ["none", "9:16", "16:9", "1:1", "4:5", "4:3", "21:9", "3:2", "custom"]
+    ["none", "9:16", "16:9", "1:1", "4:5", "4:3", "21:9", "3:2", "custom"],
   );
   assert.equal(options[0].label, "N/A");
   assert.match(
     frameSelect,
-    /<option\b(?=[^>]*\bvalue="none")(?=[^>]*\bselected\b)[^>]*>N\/A<\/option>/i
+    /<option\b(?=[^>]*\bvalue="none")(?=[^>]*\bselected\b)[^>]*>N\/A<\/option>/i,
   );
   for (const { value, label } of options.slice(1, -1)) {
     assert.match(label, new RegExp(value.replace(":", "\\s*:\\s*")));
   }
   assert.equal(options.at(-1).label, "Custom");
 
-  assert.match(
-    html,
-    /\bid="video-editor-frame-custom-size"[^>]*\bhidden(?:\s|>|=)/i
-  );
-  const customWidth = html.match(
-    /<input\b[^>]*\bid="video-editor-frame-custom-width"[^>]*>/i
-  )?.[0];
+  assert.match(html, /\bid="video-editor-frame-custom-size"[^>]*\bhidden(?:\s|>|=)/i);
+  const customWidth = html.match(/<input\b[^>]*\bid="video-editor-frame-custom-width"[^>]*>/i)?.[0];
   const customHeight = html.match(
-    /<input\b[^>]*\bid="video-editor-frame-custom-height"[^>]*>/i
+    /<input\b[^>]*\bid="video-editor-frame-custom-height"[^>]*>/i,
   )?.[0];
   assert.ok(customWidth && customHeight, "Missing custom frame dimension inputs.");
   assert.match(customWidth, /\btype="number"/i);
@@ -377,7 +350,7 @@ test("Video Editor offers frame presets, custom dimensions, and contained previe
 test("Video Editor offers a single platform selector and documented UI guidelines", async () => {
   const { css, html, script } = await readRouteSources();
   const controls = html.match(
-    /<div\b[^>]*\bid="video-editor-guidelines"[^>]*>[\s\S]*?\bid="video-editor-guidelines-note"[\s\S]*?<\/div>\s*<\/div>/i
+    /<div\b[^>]*\bid="video-editor-guidelines"[^>]*>[\s\S]*?\bid="video-editor-guidelines-note"[\s\S]*?<\/div>\s*<\/div>/i,
   )?.[0];
   assert.ok(controls, "Missing the UI guideline controls.");
   assert.match(controls, /\bdata-video-editor-guidelines-controls(?:\s|>|=)/i);
@@ -386,7 +359,7 @@ test("Video Editor offers a single platform selector and documented UI guideline
   assert.doesNotMatch(controls, /\btype="checkbox"|video-editor-guidelines-toggle/i);
 
   const platform = controls.match(
-    /<select\b[^>]*\bid="video-editor-guidelines-platform"[^>]*>[\s\S]*?<\/select>/i
+    /<select\b[^>]*\bid="video-editor-guidelines-platform"[^>]*>[\s\S]*?<\/select>/i,
   )?.[0];
   assert.ok(platform, "Missing the social guideline platform selector.");
   assert.match(platform, /\bdata-video-editor-guidelines-platform(?:\s|>|=)/i);
@@ -395,19 +368,22 @@ test("Video Editor offers a single platform selector and documented UI guideline
   assert.match(platform, /\baria-controls="video-editor-social-guidelines-overlay"/i);
   assert.match(
     platform,
-    /<option\b(?=[^>]*\bvalue="none")(?=[^>]*\bselected\b)[^>]*>None<\/option>/i
+    /<option\b(?=[^>]*\bvalue="none")(?=[^>]*\bselected\b)[^>]*>None<\/option>/i,
   );
   assert.match(platform, /<option\b[^>]*\bvalue="instagram-reels"[^>]*>Instagram Reels<\/option>/i);
   assert.match(platform, /<option\b[^>]*\bvalue="tiktok"[^>]*>TikTok<\/option>/i);
 
   const infoButton = controls.match(
-    /<button\b[^>]*\bid="video-editor-guidelines-info"[^>]*>[\s\S]*?<\/button>/i
+    /<button\b[^>]*\bid="video-editor-guidelines-info"[^>]*>[\s\S]*?<\/button>/i,
   )?.[0];
   assert.ok(infoButton, "Missing the UI guideline information button.");
   assert.match(infoButton, /\btype="button"/i);
-  assert.match(infoButton, /\baria-(?:label|describedby)="[^"]*(?:UI guidelines|video-editor-guidelines-note)[^"]*"/i);
+  assert.match(
+    infoButton,
+    /\baria-(?:label|describedby)="[^"]*(?:UI guidelines|video-editor-guidelines-note)[^"]*"/i,
+  );
   const tooltip = controls.match(
-    /<(?:p|div|span)\b[^>]*\bid="video-editor-guidelines-note"[^>]*>[\s\S]*?<\/(?:p|div|span)>/i
+    /<(?:p|div|span)\b[^>]*\bid="video-editor-guidelines-note"[^>]*>[\s\S]*?<\/(?:p|div|span)>/i,
   )?.[0];
   assert.ok(tooltip, "Missing the UI guideline information tooltip.");
   assert.match(tooltip, /\brole="tooltip"/i);
@@ -417,15 +393,15 @@ test("Video Editor offers a single platform selector and documented UI guideline
   assert.match(tooltip, /UI varies/i);
   assert.match(
     css,
-    /\.video-editor-guidelines-controls__note\s*\{[^}]*(?:display\s*:\s*none|visibility\s*:\s*hidden)/is
+    /\.video-editor-guidelines-controls__note\s*\{[^}]*(?:display\s*:\s*none|visibility\s*:\s*hidden)/is,
   );
   assert.match(
     css,
-    /\.video-editor-guidelines-info:(?:hover|focus|focus-visible)\s*\+\s*\.video-editor-guidelines-controls__note/is
+    /\.video-editor-guidelines-info:(?:hover|focus|focus-visible)\s*\+\s*\.video-editor-guidelines-controls__note/is,
   );
 
   const overlay = html.match(
-    /<div\b[^>]*\bid="video-editor-social-guidelines-overlay"[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i
+    /<div\b[^>]*\bid="video-editor-social-guidelines-overlay"[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i,
   )?.[0];
   assert.ok(overlay, "Missing the social UI guideline preview overlay.");
   assert.match(overlay, /\bdata-video-editor-social-guidelines-overlay(?:\s|>|=)/i);
@@ -438,7 +414,7 @@ test("Video Editor offers a single platform selector and documented UI guideline
   ]) {
     assert.match(
       overlay,
-      new RegExp(`data-guideline-zone="${zone}"[\\s\\S]*?>\\s*${label}\\s*<`, "i")
+      new RegExp(`data-guideline-zone="${zone}"[\\s\\S]*?>\\s*${label}\\s*<`, "i"),
     );
   }
   assert.match(overlay, /\bdata-guideline-safe-area(?:\s|>|=)[\s\S]*>\s*Safe content area\s*</i);
@@ -446,19 +422,19 @@ test("Video Editor offers a single platform selector and documented UI guideline
   assert.match(css, /\.video-editor-social-guidelines\s*\{[^}]*pointer-events\s*:\s*none/is);
   assert.match(
     css,
-    /\.video-editor-social-guidelines\s*\{[^}]*--guideline-top-coverage\s*:\s*13\.5%[^}]*--guideline-right-start\s*:\s*40%[^}]*--guideline-right-end\s*:\s*89%[^}]*--guideline-right-edge\s*:\s*0%[^}]*--guideline-right-coverage\s*:\s*18%[^}]*--guideline-bottom-coverage\s*:\s*32%/is
+    /\.video-editor-social-guidelines\s*\{[^}]*--guideline-top-coverage\s*:\s*13\.5%[^}]*--guideline-right-start\s*:\s*40%[^}]*--guideline-right-end\s*:\s*89%[^}]*--guideline-right-edge\s*:\s*0%[^}]*--guideline-right-coverage\s*:\s*18%[^}]*--guideline-bottom-coverage\s*:\s*32%/is,
   );
   assert.match(
     css,
-    /--guideline-safe-polygon\s*:\s*polygon\(\s*5\.5%\s+14%,\s*94\.5%\s+14%,\s*94\.5%\s+39%,\s*80%\s+39%,\s*80%\s+65%,\s*5\.5%\s+65%\s*\)/is
+    /--guideline-safe-polygon\s*:\s*polygon\(\s*5\.5%\s+14%,\s*94\.5%\s+14%,\s*94\.5%\s+39%,\s*80%\s+39%,\s*80%\s+65%,\s*5\.5%\s+65%\s*\)/is,
   );
   assert.match(
     css,
-    /\[data-guideline-platform="tiktok"\]\s*\{[^}]*--guideline-top-coverage\s*:\s*13%[^}]*--guideline-right-start\s*:\s*41%[^}]*--guideline-right-end\s*:\s*90%[^}]*--guideline-right-edge\s*:\s*0%[^}]*--guideline-right-coverage\s*:\s*18%[^}]*--guideline-bottom-coverage\s*:\s*31%/is
+    /\[data-guideline-platform="tiktok"\]\s*\{[^}]*--guideline-top-coverage\s*:\s*13%[^}]*--guideline-right-start\s*:\s*41%[^}]*--guideline-right-end\s*:\s*90%[^}]*--guideline-right-edge\s*:\s*0%[^}]*--guideline-right-coverage\s*:\s*18%[^}]*--guideline-bottom-coverage\s*:\s*31%/is,
   );
   assert.match(
     css,
-    /\[data-guideline-platform="tiktok"\][\s\S]*?--guideline-safe-polygon\s*:\s*polygon\(\s*5%\s+13%,\s*95%\s+13%,\s*95%\s+40%,\s*81%\s+40%,\s*81%\s+68%,\s*5%\s+68%\s*\)/is
+    /\[data-guideline-platform="tiktok"\][\s\S]*?--guideline-safe-polygon\s*:\s*polygon\(\s*5%\s+13%,\s*95%\s+13%,\s*95%\s+40%,\s*81%\s+40%,\s*81%\s+68%,\s*5%\s+68%\s*\)/is,
   );
   assert.doesNotMatch(script, /guidelinesEnabled\s*:/);
   assert.match(script, /guidelinesPlatform:\s*"none"/);
@@ -480,10 +456,14 @@ test("Video Editor uses vendored base Pixelarticons for action controls", async 
     "delete.svg",
   ];
   const iconSources = await Promise.all(
-    iconNames.map((name) => readFile(new URL(`assets/pixelarticons/${name}`, root), "utf8"))
+    iconNames.map((name) => readFile(new URL(`assets/pixelarticons/${name}`, root), "utf8")),
   );
   for (const [index, source] of iconSources.entries()) {
-    assert.match(source, /<svg\b[^>]*\bviewBox="0 0 24 24"/i, `${iconNames[index]} is not the vendored base SVG.`);
+    assert.match(
+      source,
+      /<svg\b[^>]*\bviewBox="0 0 24 24"/i,
+      `${iconNames[index]} is not the vendored base SVG.`,
+    );
     assert.match(source, /\bfill="currentColor"/i);
     assert.doesNotMatch(source, /<script\b|<(?:image|use)\b[^>]*(?:href|src)=["']https?:/i);
   }
@@ -498,33 +478,34 @@ test("Video Editor uses vendored base Pixelarticons for action controls", async 
   assert.doesNotMatch(source, /https?:[^"'\s]*pixelarticons/i);
   assert.doesNotMatch(source, /[▶⏵►Ⅱ⏸⇩⬇ℹⓘ✕✖]/u);
   const dropZone = html.match(
-    /<(?:div|button)\b(?=[^>]*\bid="media-drop-zone")[^>]*>[\s\S]*?<\/(?:div|button)>/i
+    /<(?:div|button)\b(?=[^>]*\bid="media-drop-zone")[^>]*>[\s\S]*?<\/(?:div|button)>/i,
   )?.[0];
   const infoButton = html.match(
-    /<button\b(?=[^>]*\bid="video-editor-guidelines-info")[^>]*>[\s\S]*?<\/button>/i
+    /<button\b(?=[^>]*\bid="video-editor-guidelines-info")[^>]*>[\s\S]*?<\/button>/i,
   )?.[0];
   const closeButton = html.match(
-    /<button\b(?=[^>]*\bdata-close-effect-tab)[^>]*>[\s\S]*?<\/button>/i
+    /<button\b(?=[^>]*\bdata-close-effect-tab)[^>]*>[\s\S]*?<\/button>/i,
   )?.[0];
   assert.ok(dropZone && infoButton && closeButton);
   assert.match(dropZone, /pixelarticons\/download\.svg/i);
   assert.match(infoButton, /pixelarticons\/info-box\.svg/i);
   assert.match(closeButton, /pixelarticons\/close\.svg/i);
   const deleteButtons = Array.from(
-    html.matchAll(
-      /<button\b(?=[^>]*\bdata-delete-(?:clip|effect))[^>]*>[\s\S]*?<\/button>/gi
-    ),
-    (match) => match[0]
+    html.matchAll(/<button\b(?=[^>]*\bdata-delete-(?:clip|effect))[^>]*>[\s\S]*?<\/button>/gi),
+    (match) => match[0],
   );
   assert.equal(deleteButtons.length, 2);
   for (const button of deleteButtons) {
     assert.match(button, /pixelarticons\/delete\.svg/i);
     assert.doesNotMatch(button, /&times;|&#(?:215|xD7);|[×✕✖]/iu);
   }
-  assert.match(html, /\bid="play-pause-button"[^>]*\baria-label="Play"[^>]*\baria-pressed="false"/i);
   assert.match(
     html,
-    /\bid="play-pause-button"[\s\S]*?<img\b[^>]*\bsrc="\.\.\/assets\/pixelarticons\/play\.svg"[^>]*\balt=""/i
+    /\bid="play-pause-button"[^>]*\baria-label="Play"[^>]*\baria-pressed="false"/i,
+  );
+  assert.match(
+    html,
+    /\bid="play-pause-button"[\s\S]*?<img\b[^>]*\bsrc="\.\.\/assets\/pixelarticons\/play\.svg"[^>]*\balt=""/i,
   );
   assert.match(script, /pixelarticons\/play\.svg/);
   assert.match(script, /pixelarticons\/pause\.svg/);
@@ -536,10 +517,10 @@ test("Video Editor offers persistent Standard and Side by side workspace layouts
   const { css, html, script } = await readRouteSources();
   assert.match(
     html,
-    /\bclass="[^"]*compose-panel__body[^"]*"[^>]*\bdata-video-editor-workspace-layout="standard"/i
+    /\bclass="[^"]*compose-panel__body[^"]*"[^>]*\bdata-video-editor-workspace-layout="standard"/i,
   );
   const layoutControls = html.match(
-    /<div\b[^>]*\bid="video-editor-workspace-layout"[^>]*>[\s\S]*?<\/div>\s*<\/div>/i
+    /<div\b[^>]*\bid="video-editor-workspace-layout"[^>]*>[\s\S]*?<\/div>\s*<\/div>/i,
   )?.[0];
   assert.ok(layoutControls, "Missing workspace layout controls.");
   assert.match(layoutControls, /\bdata-video-editor-workspace-layout-controls(?:\s|>|=)/i);
@@ -552,45 +533,48 @@ test("Video Editor offers persistent Standard and Side by side workspace layouts
     const button = layoutControls.match(
       new RegExp(
         `<button\\b[^>]*data-video-editor-workspace-layout-option="${layout}"[^>]*>[\\s\\S]*?<\\/button>`,
-        "i"
-      )
+        "i",
+      ),
     )?.[0];
     assert.ok(button, `Missing the ${label} workspace layout button.`);
     assert.match(button, /\btype="button"/i);
     assert.match(button, new RegExp(`aria-pressed="${pressed}"`, "i"));
     assert.match(
       button,
-      /aria-controls="video-editor-preview-section video-editor-timeline-section"/i
+      /aria-controls="video-editor-preview-section video-editor-timeline-section"/i,
     );
     assert.match(button, new RegExp(`>\\s*${label}\\s*<`, "i"));
   }
 
   assert.match(
     css,
-    /\.compose-panel__body\[data-video-editor-workspace-layout="side-by-side"\]\s*\{[^}]*grid-template-columns/is
+    /\.compose-panel__body\[data-video-editor-workspace-layout="side-by-side"\]\s*\{[^}]*grid-template-columns/is,
   );
   assert.match(css, /\.video-editor-side-separator\s*\{[^}]*background\s*:\s*transparent/is);
   assert.match(css, /\.video-editor-side-separator\s*\{[^}]*box-shadow\s*:\s*none/is);
   assert.match(
     css,
-    /\.video-editor-preview-timeline-separator\s*\{[^}]*background\s*:\s*transparent/is
+    /\.video-editor-preview-timeline-separator\s*\{[^}]*background\s*:\s*transparent/is,
   );
-  assert.match(
-    css,
-    /\.video-editor-preview-timeline-separator\s*\{[^}]*box-shadow\s*:\s*none/is
-  );
+  assert.match(css, /\.video-editor-preview-timeline-separator\s*\{[^}]*box-shadow\s*:\s*none/is);
   assert.match(css, /\.video-editor-side-separator__grip\s*\{[^}]*repeating-linear-gradient/is);
   assert.match(
     css,
-    /\.video-editor-preview-timeline-separator__grip\s*\{[^}]*repeating-linear-gradient/is
+    /\.video-editor-preview-timeline-separator__grip\s*\{[^}]*repeating-linear-gradient/is,
   );
   assert.match(script, /workspaceLayout:\s*"standard"/);
   assert.match(
     script,
-    /previewSplitByLayout:\s*\{[\s\S]*standard:\s*DEFAULT_PREVIEW_SPLIT[\s\S]*"side-by-side":\s*DEFAULT_PREVIEW_SPLIT/
+    /previewSplitByLayout:\s*\{[\s\S]*standard:\s*DEFAULT_PREVIEW_SPLIT[\s\S]*"side-by-side":\s*DEFAULT_PREVIEW_SPLIT/,
   );
-  assert.match(script, /state\.previewSplitByLayout\[state\.workspaceLayout\]\s*=\s*state\.previewSplit/);
-  assert.match(script, /state\.framePreset\s*===\s*"9:16"\s*&&\s*state\.workspaceLayout\s*===\s*"standard"/);
+  assert.match(
+    script,
+    /state\.previewSplitByLayout\[state\.workspaceLayout\]\s*=\s*state\.previewSplit/,
+  );
+  assert.match(
+    script,
+    /state\.framePreset\s*===\s*"9:16"\s*&&\s*state\.workspaceLayout\s*===\s*"standard"/,
+  );
   assert.match(script, /Workspace layout changed to Side by side/);
   assert.match(script, /Workspace layout set to \$\{WORKSPACE_LAYOUTS\[layout\]\}/);
   assert.match(script, /layout === "side-by-side" \? "vertical" : "horizontal"/);
@@ -605,7 +589,7 @@ test("Video Editor exposes an accessible preview and timeline splitter", async (
   assert.match(html, /\bid="video-editor-preview-section"/i);
   assert.match(html, /\bid="video-editor-timeline-section"/i);
   const separator = html.match(
-    /<(?:div|button)\b[^>]*\bid="video-editor-preview-timeline-separator"[^>]*>/i
+    /<(?:div|button)\b[^>]*\bid="video-editor-preview-timeline-separator"[^>]*>/i,
   )?.[0];
   assert.ok(separator, "Missing the preview and timeline separator.");
   assert.match(separator, /\bdata-video-editor-preview-timeline-separator(?:\s|>|=)/i);
@@ -617,12 +601,15 @@ test("Video Editor exposes an accessible preview and timeline splitter", async (
   assert.match(separator, /\baria-valuenow="44"/i);
   assert.match(
     separator,
-    /\baria-controls="video-editor-preview-section video-editor-timeline-section"/i
+    /\baria-controls="video-editor-preview-section video-editor-timeline-section"/i,
   );
   assert.match(css, /--video-editor-preview-split\s*:\s*44fr/i);
   assert.match(css, /--video-editor-timeline-split\s*:\s*56fr/i);
   assert.match(script, /--video-editor-preview-split["']\s*,\s*`\$\{state\.previewSplit\}fr`/i);
-  assert.match(script, /--video-editor-timeline-split["']\s*,\s*`\$\{100\s*-\s*state\.previewSplit\}fr`/i);
+  assert.match(
+    script,
+    /--video-editor-timeline-split["']\s*,\s*`\$\{100\s*-\s*state\.previewSplit\}fr`/i,
+  );
   assert.match(script, /video-editor-preview-timeline-separator/);
   assert.match(script, /setPointerCapture|pointermove/);
   assert.match(script, /ArrowUp|ArrowDown/);
@@ -636,13 +623,10 @@ test("Video Editor renders differentiated, bounded timeline ruler ticks", async 
   assert.match(script, /dataset\.rulerTick|data-ruler-tick/);
   assert.match(script, /dataset\.timeSeconds|data-time-seconds/);
   assert.match(script, /timeline-ruler__label/);
+  assert.match(css, /\.timeline-ruler__tick\s*\{[^}]*height\s*:\s*50%/is);
   assert.match(
     css,
-    /\.timeline-ruler__tick\s*\{[^}]*height\s*:\s*50%/is
-  );
-  assert.match(
-    css,
-    /\.timeline-ruler__tick\[data-ruler-tick="major"\]\s*\{[^}]*height\s*:\s*100%/is
+    /\.timeline-ruler__tick\[data-ruler-tick="major"\]\s*\{[^}]*height\s*:\s*100%/is,
   );
   assert.match(script, /TIMELINE_LABEL_RESERVE\s*=\s*42/);
   assert.match(script, /durationWidth\s*\+\s*TIMELINE_LABEL_RESERVE/);
@@ -654,15 +638,15 @@ test("Video Editor aligns range hit areas with visible slider tracks", async () 
 
   assert.match(
     css,
-    /\.video-editor input\[type="range"\]\s*\{[^}]*--video-editor-range-thumb-width\s*:\s*11px/is
+    /\.video-editor input\[type="range"\]\s*\{[^}]*--video-editor-range-thumb-width\s*:\s*11px/is,
   );
   assert.match(
     css,
-    /calc\(100%\s*-\s*var\(--video-editor-range-thumb-width\)\)\s+4px\s+no-repeat/i
+    /calc\(100%\s*-\s*var\(--video-editor-range-thumb-width\)\)\s+4px\s+no-repeat/i,
   );
   assert.match(
     css,
-    /input\[type="range"\]::-(?:webkit-slider-runnable-track|moz-range-track)\s*\{/i
+    /input\[type="range"\]::-(?:webkit-slider-runnable-track|moz-range-track)\s*\{/i,
   );
 });
 
@@ -672,22 +656,22 @@ test("Video Editor uses semantic 98.css effect tabs with restrained close and ov
   assert.notEqual(effectsPanelId, -1, "Missing the Effect Editor panel.");
   const effectsPanel = html.slice(
     html.lastIndexOf("<section", effectsPanelId),
-    html.indexOf("<template id=\"media-item-template\"")
+    html.indexOf('<template id="media-item-template"'),
   );
   const effectsPanelChrome = effectsPanel.slice(
     0,
-    effectsPanel.indexOf('<div class="effect-editor-well sunken-panel"')
+    effectsPanel.indexOf('<div class="effect-editor-well sunken-panel"'),
   );
   assert.doesNotMatch(effectsPanelChrome, /class="[^"]*\btitle-bar\b[^"]*"/i);
   assert.doesNotMatch(effectsPanelChrome, /<[^>]+>\s*Tabs\s*<\/[^>]+>/i);
   assert.doesNotMatch(effectsPanelChrome, /\bid="reopen-effect-tab"/i);
   assert.match(effectsPanelChrome, /\bid="effects-panel-title"[^>]*>Effect Editor<\/h2>/i);
   const tabList = html.match(
-    /<menu\b[^>]*\bid="effect-tab-list"[^>]*\brole="tablist"[^>]*>[\s\S]*?<\/menu>/i
+    /<menu\b[^>]*\bid="effect-tab-list"[^>]*\brole="tablist"[^>]*>[\s\S]*?<\/menu>/i,
   )?.[0];
   assert.ok(tabList, "The dynamic effect tabs must use a 98.css menu tab list.");
   const defaultTab = tabList.match(
-    /<li\b(?=[^>]*\bid="effect-tab-default")(?=[^>]*\bdata-effect-default-tab)[^>]*>[\s\S]*?<\/li>/i
+    /<li\b(?=[^>]*\bid="effect-tab-default")(?=[^>]*\bdata-effect-default-tab)[^>]*>[\s\S]*?<\/li>/i,
   )?.[0];
   assert.ok(defaultTab, "Missing the permanent Effect editor home tab.");
   assert.match(defaultTab, /\brole="tab"/i);
@@ -701,25 +685,25 @@ test("Video Editor uses semantic 98.css effect tabs with restrained close and ov
   assert.doesNotMatch(defaultTab, /data-close-effect-tab|data-effect-tab-title-track/i);
   assert.match(
     effectsPanel,
-    /\bid="effect-editor-empty"[^>]*\brole="tabpanel"[^>]*\baria-labelledby="effect-tab-default"/i
+    /\bid="effect-editor-empty"[^>]*\brole="tabpanel"[^>]*\baria-labelledby="effect-tab-default"/i,
   );
 
   const tabTemplate = html.match(
-    /<template\b[^>]*\bid="effect-tab-template"[^>]*>[\s\S]*?<\/template>/i
+    /<template\b[^>]*\bid="effect-tab-template"[^>]*>[\s\S]*?<\/template>/i,
   )?.[0];
   assert.ok(tabTemplate, "Missing the dynamic effect tab template.");
   assert.match(tabTemplate, /<li\b[^>]*\bdata-effect-tab-wrapper(?:\s|>|=)[^>]*>/i);
   assert.match(tabTemplate, /<li\b[^>]*\brole="tab"[^>]*>/i);
   assert.match(tabTemplate, /<li\b[^>]*\baria-selected="false"[^>]*>/i);
   assert.match(tabTemplate, /<a\b[^>]*\bclass="effect-tab__face"[^>]*\bdata-effect-tab/i);
-  assert.match(
-    tabTemplate,
-    /<a\b[^>]*\bdata-effect-tab(?:\s|>|=)[^>]*\bdraggable="false"[^>]*>/i
-  );
+  assert.match(tabTemplate, /<a\b[^>]*\bdata-effect-tab(?:\s|>|=)[^>]*\bdraggable="false"[^>]*>/i);
   assert.match(tabTemplate, /\bdata-effect-tab-icon(?:\s|>|=)/i);
   assert.match(tabTemplate, /\bdata-effect-tab-title-viewport(?:\s|>|=)/i);
   assert.match(tabTemplate, /\bdata-effect-tab-title-track(?:\s|>|=)/i);
-  assert.match(tabTemplate, /<button\b[^>]*\bclass="effect-tab__close"[^>]*\bdata-close-effect-tab/i);
+  assert.match(
+    tabTemplate,
+    /<button\b[^>]*\bclass="effect-tab__close"[^>]*\bdata-close-effect-tab/i,
+  );
   assert.match(tabTemplate, /assets\/pixelarticons\/close\.svg/i);
   assert.doesNotMatch(tabTemplate, /&times;|&#215;|>\s*×\s*</i);
 
@@ -729,14 +713,14 @@ test("Video Editor uses semantic 98.css effect tabs with restrained close and ov
   assert.match(css, /\.effects-panel\s*>\s*\.window-body\s*\{[^}]*margin\s*:\s*0/is);
   assert.match(
     css,
-    /\.effect-tab-scroll\s*\{[^}]*padding-top\s*:\s*2px[^}]*overflow-x\s*:\s*auto[^}]*overflow-y\s*:\s*hidden/is
+    /\.effect-tab-scroll\s*\{[^}]*padding-top\s*:\s*2px[^}]*overflow-x\s*:\s*auto[^}]*overflow-y\s*:\s*hidden/is,
   );
   assert.doesNotMatch(
     css.match(/\.effect-tab-scroll\s*\{[^}]*}/is)?.[0] || "",
-    /contain\s*:\s*paint/i
+    /contain\s*:\s*paint/i,
   );
   const defaultTabCss = css.match(
-    /\.effect-tab-list\s*>\s*\.effect-tab\.effect-tab--default\s*\{[^}]*}/is
+    /\.effect-tab-list\s*>\s*\.effect-tab\.effect-tab--default\s*\{[^}]*}/is,
   )?.[0];
   assert.ok(defaultTabCss, "Missing the permanent home tab styles.");
   assert.match(defaultTabCss, /position\s*:\s*sticky/i);
@@ -747,14 +731,14 @@ test("Video Editor uses semantic 98.css effect tabs with restrained close and ov
   assert.match(defaultTabCss, /background\s*:\s*var\(--surface\)/i);
   assert.match(
     css,
-    /\.effect-tab__close:active\s*\{[^}]*box-shadow\s*:\s*var\(--border-sunken-outer\)[^}]*var\(--border-sunken-inner\)/is
+    /\.effect-tab__close:active\s*\{[^}]*box-shadow\s*:\s*var\(--border-sunken-outer\)[^}]*var\(--border-sunken-inner\)/is,
   );
   assert.match(css, /\.effect-tab\.is-title-overflowing[\s\S]*?\.effect-tab__title-track/);
   assert.match(css, /@keyframes\s+effect-tab-title-[\w-]*marquee/i);
   assert.match(css, /--effect-tab-title-scroll-distance/);
   assert.match(
     css,
-    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.effect-tab__title-track[\s\S]*?animation\s*:\s*none/is
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.effect-tab__title-track[\s\S]*?animation\s*:\s*none/is,
   );
   assert.match(script, /scrollWidth\s*-\s*[\w.]+clientWidth/);
   assert.match(script, /is-title-overflowing/);
@@ -766,10 +750,10 @@ test("Video Editor uses semantic 98.css effect tabs with restrained close and ov
 test("Video Editor exposes independently bounded side-panel separators", async () => {
   const { css, html, script } = await readRouteSources();
   const mediaSeparator = html.match(
-    /<[^>]+\bid="video-editor-media-compose-separator"[^>]*>/i
+    /<[^>]+\bid="video-editor-media-compose-separator"[^>]*>/i,
   )?.[0];
   const effectsSeparator = html.match(
-    /<[^>]+\bid="video-editor-compose-effects-separator"[^>]*>/i
+    /<[^>]+\bid="video-editor-compose-effects-separator"[^>]*>/i,
   )?.[0];
   assert.ok(mediaSeparator && effectsSeparator, "Missing the two side-panel separators.");
 
@@ -788,13 +772,16 @@ test("Video Editor exposes independently bounded side-panel separators", async (
 
   assert.match(css, /--video-editor-media-panel-width\s*:\s*260px/i);
   assert.match(css, /--video-editor-effects-panel-width\s*:\s*300px/i);
-  assert.match(css, /grid-template-columns:[^;]*--video-editor-media-panel-width[^;]*--video-editor-effects-panel-width/is);
+  assert.match(
+    css,
+    /grid-template-columns:[^;]*--video-editor-media-panel-width[^;]*--video-editor-effects-panel-width/is,
+  );
   assert.match(script, /SIDE_PANEL_KEYBOARD_STEP\s*=\s*16|PANEL_RESIZE_STEP\s*=\s*16/);
   assert.match(script, /label:\s*"Project Media"/);
   assert.match(script, /label:\s*"Effect Editor"/);
   assert.match(
     script,
-    /announce\(`\$\{details\.label\} panel set to \$\{state\[details\.stateKey\]\} pixels\.`\)/
+    /announce\(`\$\{details\.label\} panel set to \$\{state\[details\.stateKey\]\} pixels\.`\)/,
   );
   assert.match(script, /setPointerCapture|pointermove/);
   assert.match(script, /aria-valuemax/);
@@ -804,20 +791,15 @@ test("Video Editor exposes independently bounded side-panel separators", async (
 test("Video Editor starts behind a semantic, non-dismissible Administrator gate", async () => {
   const { css, html } = await readRouteSources();
 
+  assert.match(html, /<body\b[^>]*\bdata-video-editor-auth-state="unauthenticated"[^>]*>/i);
   assert.match(
     html,
-    /<body\b[^>]*\bdata-video-editor-auth-state="unauthenticated"[^>]*>/i
-  );
-  assert.match(
-    html,
-    /<main\b[^>]*\bid="video-editor-app"[^>]*\baria-hidden="true"[^>]*\binert(?:\s|>|=)/i
+    /<main\b[^>]*\bid="video-editor-app"[^>]*\baria-hidden="true"[^>]*\binert(?:\s|>|=)/i,
   );
   assert.match(html, /\bid="video-editor-auth-overlay"/i);
   assert.match(html, /\bdata-video-editor-auth-gate(?:\s|>|=)/i);
 
-  const dialog = html.match(
-    /<(?:section|div)\b[^>]*\bid="video-editor-auth-dialog"[^>]*>/i
-  )?.[0];
+  const dialog = html.match(/<(?:section|div)\b[^>]*\bid="video-editor-auth-dialog"[^>]*>/i)?.[0];
   assert.ok(dialog, "Missing the Video Editor authentication dialog.");
   assert.match(dialog, /\brole="dialog"/i);
   assert.match(dialog, /\baria-modal="true"/i);
@@ -832,22 +814,19 @@ test("Video Editor starts behind a semantic, non-dismissible Administrator gate"
   assert.doesNotMatch(
     html,
     /\b(?:data-close|aria-label)="[^"]*(?:close|cancel)[^"]*"[^>]*video-editor-auth/i,
-    "The required-access dialog must not expose a dismiss control."
+    "The required-access dialog must not expose a dismiss control.",
   );
 
   assert.match(css, /\.video-editor-auth-overlay\s*\{[^}]*position\s*:\s*fixed/is);
   assert.match(css, /\.video-editor-auth-overlay\s*\{[^}]*background\s*:\s*rgba\(/is);
   assert.match(
     css,
-    /\.video-editor-auth-field\s+input\[type=["']password["']\]\s*\{[^}]*font-family\s*:\s*Arial\s*,\s*sans-serif[^}]*font-size\s*:\s*13px[^}]*line-height\s*:\s*normal[^}]*letter-spacing\s*:\s*1px[^}]*-webkit-font-smoothing\s*:\s*auto/is
+    /\.video-editor-auth-field\s+input\[type=["']password["']\]\s*\{[^}]*font-family\s*:\s*Arial\s*,\s*sans-serif[^}]*font-size\s*:\s*13px[^}]*line-height\s*:\s*normal[^}]*letter-spacing\s*:\s*1px[^}]*-webkit-font-smoothing\s*:\s*auto/is,
   );
   const mobileRule = css.slice(
-    css.search(/@media[^\{]*(?:max-width\s*:\s*1023px|width\s*<\s*1024px)/i)
+    css.search(/@media[^\{]*(?:max-width\s*:\s*1023px|width\s*<\s*1024px)/i),
   );
-  assert.match(
-    mobileRule,
-    /\.video-editor-auth-overlay\s*\{[^}]*display\s*:\s*none/is
-  );
+  assert.match(mobileRule, /\.video-editor-auth-overlay\s*\{[^}]*display\s*:\s*none/is);
 });
 
 test("Video Editor reuses the expiring Administrator proof without persisting project data", async () => {
@@ -857,13 +836,13 @@ test("Video Editor reuses the expiring Administrator proof without persisting pr
   assert.match(
     html,
     /<script src="\.\.\/scripts\/home\/core\/administrator-session\.js\?v=[^"]+" defer><\/script>[\s\S]*?<script src="script\.js\?v=[^"]+" type="module">/,
-    "The shared session module must run before the editor module that consumes it."
+    "The shared session module must run before the editor module that consumes it.",
   );
-  assert.match(script, /\} = window\.homeAdministratorSession;/);
+  assert.match(script, /\} =\s*window\.homeAdministratorSession;/);
   assert.doesNotMatch(
     script,
     /personalSiteAdministratorProofV1|sessionStorage/,
-    "The editor must reach session storage only through the shared Administrator session."
+    "The editor must reach session storage only through the shared Administrator session.",
   );
   assert.match(administratorSession, /personalSiteAdministratorProofV1/);
   assert.match(administratorSession, /sessionStorage/);
@@ -880,8 +859,7 @@ test("Video Editor reuses the expiring Administrator proof without persisting pr
 });
 
 test("Video Editor exposes local Audio-Sync analysis and accessible guidepost controls", async () => {
-  const { audioAnalysis, audioAnalysisWorker, css, html, script } =
-    await readRouteSources();
+  const { audioAnalysis, audioAnalysisWorker, css, html, script } = await readRouteSources();
   assert.match(html, /<script\b[^>]*\bsrc="audio-analysis\.js\?v=[^"]+"[^>]*\bdefer(?:\s|>|=)/i);
   assert.match(html, /data-effect="audio-sync-cut"/i);
   assert.match(html, /data-effect-tab-target="effect-tab-audio-sync-cut"/i);
@@ -891,7 +869,7 @@ test("Video Editor exposes local Audio-Sync analysis and accessible guidepost co
   assert.match(html, /data-audio-sync-status[^>]*\brole="status"[^>]*\baria-live="polite"/i);
 
   const graphSelect = html.match(
-    /<select\b[^>]*\bid="audio-sync-graph-view"[^>]*>[\s\S]*?<\/select>/i
+    /<select\b[^>]*\bid="audio-sync-graph-view"[^>]*>[\s\S]*?<\/select>/i,
   )?.[0];
   assert.ok(graphSelect, "Missing the Audio-Sync graph selector.");
   assert.match(graphSelect, /<option\b[^>]*value="combined"[^>]*selected[^>]*>Combined<\/option>/i);
@@ -900,7 +878,7 @@ test("Video Editor exposes local Audio-Sync analysis and accessible guidepost co
   for (const graph of ["waveform", "spectrum"]) {
     assert.match(
       html,
-      new RegExp(`data-audio-sync-${graph}[\\s\\S]*?role="img"[\\s\\S]*?<canvas\\b`, "i")
+      new RegExp(`data-audio-sync-${graph}[\\s\\S]*?role="img"[\\s\\S]*?<canvas\\b`, "i"),
     );
   }
 
@@ -915,10 +893,10 @@ test("Video Editor exposes local Audio-Sync analysis and accessible guidepost co
   }
   assert.match(
     html,
-    /\bid="audio-sync-threshold"[^>]*\bmin="0"[^>]*\bmax="100"[^>]*\bstep="1"[^>]*\bvalue="65"/i
+    /\bid="audio-sync-threshold"[^>]*\bmin="0"[^>]*\bmax="100"[^>]*\bstep="1"[^>]*\bvalue="65"/i,
   );
   const direction = html.match(
-    /<select\b[^>]*\bid="audio-sync-direction"[^>]*>[\s\S]*?<\/select>/i
+    /<select\b[^>]*\bid="audio-sync-direction"[^>]*>[\s\S]*?<\/select>/i,
   )?.[0];
   assert.ok(direction, "Missing threshold-crossing direction selector.");
   for (const value of ["rising", "falling", "both"]) {
@@ -932,15 +910,15 @@ test("Video Editor exposes local Audio-Sync analysis and accessible guidepost co
   ]) {
     assert.match(
       html,
-      new RegExp(`data-audio-sync-recommendation="${value}"[^>]*>\\s*${label}\\s*<`, "i")
+      new RegExp(`data-audio-sync-recommendation="${value}"[^>]*>\\s*${label}\\s*<`, "i"),
     );
   }
 
   const ruleTemplate = html.match(
-    /<template\b[^>]*\bid="audio-sync-rule-template"[^>]*>[\s\S]*?<\/template>/i
+    /<template\b[^>]*\bid="audio-sync-rule-template"[^>]*>[\s\S]*?<\/template>/i,
   )?.[0];
   const guideTemplate = html.match(
-    /<template\b[^>]*\bid="audio-sync-guidepost-template"[^>]*>[\s\S]*?<\/template>/i
+    /<template\b[^>]*\bid="audio-sync-guidepost-template"[^>]*>[\s\S]*?<\/template>/i,
   )?.[0];
   assert.ok(ruleTemplate && guideTemplate, "Missing Audio-Sync rule or guidepost templates.");
   assert.match(ruleTemplate, /data-audio-sync-rule-id/);
@@ -958,7 +936,10 @@ test("Video Editor exposes local Audio-Sync analysis and accessible guidepost co
   assert.match(guideTemplate, /data-guidepost-visual-id/);
   assert.match(guideTemplate, /data-guidepost-source-time/);
   assert.match(html, /\bid="audio-sync-guide-layer"[^>]*\baria-hidden="true"/i);
-  assert.match(html, /\bid="audio-sync-flash"[^>]*\bdata-flash-active="false"[^>]*\baria-hidden="true"/i);
+  assert.match(
+    html,
+    /\bid="audio-sync-flash"[^>]*\bdata-flash-active="false"[^>]*\baria-hidden="true"/i,
+  );
   assert.match(css, /\.audio-sync-guide-layer\s*\{[^}]*pointer-events\s*:\s*none/is);
   assert.match(css, /\.audio-sync-flash\s*\{[^}]*pointer-events\s*:\s*none/is);
 
@@ -969,23 +950,26 @@ test("Video Editor exposes local Audio-Sync analysis and accessible guidepost co
   assert.match(
     script,
     /workerUrl\.search = new URL\(import\.meta\.url\)\.search;/,
-    "The worker must inherit the module's cache token."
+    "The worker must inherit the module's cache token.",
   );
   assert.match(
     audioAnalysisWorker,
     /importScripts\(`\.\/audio-analysis\.js\$\{self\.location\.search\}`\);/,
-    "The worker must forward its cache token to audio-analysis.js."
+    "The worker must forward its cache token to audio-analysis.js.",
   );
   assert.match(
     audioAnalysisWorker,
-    /importScripts\s*\(\s*`\.\/audio-analysis\.js\$\{self\.location\.search\}`\s*\)/
+    /importScripts\s*\(\s*`\.\/audio-analysis\.js\$\{self\.location\.search\}`\s*\)/,
   );
   assert.match(audioAnalysisWorker, /postMessage\s*\(/);
   assert.match(audioAnalysis, /createBandSeries/);
   assert.match(audioAnalysis, /createOnsetSeries/);
   assert.match(audioAnalysis, /findThresholdCrossings/);
   assert.match(audioAnalysis, /recommendThreshold/);
-  assert.doesNotMatch(`${audioAnalysis}\n${audioAnalysisWorker}`, /\bfetch\s*\(|XMLHttpRequest|WebSocket/);
+  assert.doesNotMatch(
+    `${audioAnalysis}\n${audioAnalysisWorker}`,
+    /\bfetch\s*\(|XMLHttpRequest|WebSocket/,
+  );
   assert.match(script, /data-audio-sync-marker-list|audioSyncMarkerList/i);
   assert.match(script, /data-guidepost-source-time|guidepostSourceTime/i);
   assert.match(script, /sourceTime\s*-\s*[^;\n]*sourceStart/i);
@@ -1005,7 +989,7 @@ test("Video Editor provides rights-safe local Audio and procedural sound-effect 
     "Search official YouTube for sound effects",
   ]) {
     const form = html.match(
-      new RegExp(`<form\\b[^>]*aria-label="${formLabel}"[^>]*>[\\s\\S]*?<\\/form>`, "i")
+      new RegExp(`<form\\b[^>]*aria-label="${formLabel}"[^>]*>[\\s\\S]*?<\\/form>`, "i"),
     )?.[0];
     assert.ok(form, `Missing ${formLabel}.`);
     assert.match(form, /action="https:\/\/www\.youtube\.com\/results"/i);
@@ -1018,7 +1002,7 @@ test("Video Editor provides rights-safe local Audio and procedural sound-effect 
   for (const id of ["audio-local-start", "audio-local-end"]) {
     assert.match(
       html,
-      new RegExp(`<input\\b[^>]*id="${id}"[^>]*type="number"[^>]*step="0\\.01"[^>]*disabled`, "i")
+      new RegExp(`<input\\b[^>]*id="${id}"[^>]*type="number"[^>]*step="0\\.01"[^>]*disabled`, "i"),
     );
   }
   assert.match(html, /\bid="audio-local-preview"[^>]*\bcontrols[^>]*\bhidden/i);
@@ -1030,14 +1014,14 @@ test("Video Editor provides rights-safe local Audio and procedural sound-effect 
   ]) {
     assert.match(
       html,
-      new RegExp(`data-sound-effect-preset="${preset}"[^>]*aria-pressed="${pressed}"`, "i")
+      new RegExp(`data-sound-effect-preset="${preset}"[^>]*aria-pressed="${pressed}"`, "i"),
     );
   }
   assert.match(html, /generated procedurally in this browser and remain local/i);
   assert.match(html, /\bid="sound-effect-loop"[^>]*\btype="checkbox"[^>]*\bdisabled/i);
   assert.match(
     html,
-    /\bid="sound-effect-duration"[^>]*\btype="number"[^>]*\bmin="1"[^>]*\bmax="30"[^>]*\bstep="0\.25"[^>]*\bvalue="3"[^>]*\bdisabled/i
+    /\bid="sound-effect-duration"[^>]*\btype="number"[^>]*\bmin="1"[^>]*\bmax="30"[^>]*\bstep="0\.25"[^>]*\bvalue="3"[^>]*\bdisabled/i,
   );
   assert.match(html, /data-sound-effect-preview/);
   assert.match(html, /data-sound-effect-insert/);
@@ -1063,7 +1047,7 @@ test("Video Editor keeps imported media browser-local and releases object URLs",
   assert.equal(
     Array.from(script.matchAll(/\bfetch\s*\(/g)).length,
     1,
-    "Only Administrator sign-in may use fetch."
+    "Only Administrator sign-in may use fetch.",
   );
   assert.match(script, /fetch\s*\([^)]*administrator\/sign-in/s);
   assert.doesNotMatch(script, /\b(?:XMLHttpRequest|WebSocket|EventSource|sendBeacon|FormData)\b/);
@@ -1094,7 +1078,7 @@ test("Video Editor defines the three labeled effect types with icons and three-s
   assert.match(source, /Add to timeline/i);
   assert.match(
     script,
-    /\bduration\s*:\s*3\b|\b(?:effect\w*duration|duration\w*effect)\w*\s*=\s*3\b/i
+    /\bduration\s*:\s*3\b|\b(?:effect\w*duration|duration\w*effect)\w*\s*=\s*3\b/i,
   );
 });
 
@@ -1102,20 +1086,16 @@ test("Video Editor swaps to a desktop-required message below 1024px", async () =
   const { css, html } = await readRouteSources();
 
   assert.match(html, /class="[^"]*\bdesktop-required(?:-message|-window)?\b[^"]*"/i);
-  assert.match(
-    html,
-    /desktop[^<]*(?:required|only|needs?)|(?:required|only|needs?)[^<]*desktop/i
-  );
+  assert.match(html, /desktop[^<]*(?:required|only|needs?)|(?:required|only|needs?)[^<]*desktop/i);
   assert.match(css, /@media[^\{]*(?:max-width\s*:\s*1023px|width\s*<\s*1024px)/i);
 
-  const responsiveRule = css.slice(css.search(/@media[^\{]*(?:max-width\s*:\s*1023px|width\s*<\s*1024px)/i));
-  assert.match(
-    responsiveRule,
-    /\.(?:editor-shell|video-editor)\s*\{[^}]*display\s*:\s*none\b/is
+  const responsiveRule = css.slice(
+    css.search(/@media[^\{]*(?:max-width\s*:\s*1023px|width\s*<\s*1024px)/i),
   );
+  assert.match(responsiveRule, /\.(?:editor-shell|video-editor)\s*\{[^}]*display\s*:\s*none\b/is);
   assert.match(
     responsiveRule,
-    /\.desktop-required(?:-message|-window)?\s*\{[^}]*display\s*:\s*(?!none\b)(?:block|flex|grid)\b/is
+    /\.desktop-required(?:-message|-window)?\s*\{[^}]*display\s*:\s*(?!none\b)(?:block|flex|grid)\b/is,
   );
 });
 
@@ -1125,21 +1105,19 @@ test("Video Editor makes no export or project-persistence surface", async () => 
 
   assert.doesNotMatch(
     html,
-    /<(?:button|a|input)\b[^>]*(?:export|download|save project|open project)/i
+    /<(?:button|a|input)\b[^>]*(?:export|download|save project|open project)/i,
   );
   assert.doesNotMatch(userFacingText, /\b(?:Export|Download|Save project|Open project)\b(?!ed)/i);
   assert.doesNotMatch(
     script,
-    /\b(?:localStorage|indexedDB|IDBDatabase|caches\.(?:open|match|put))\b/
+    /\b(?:localStorage|indexedDB|IDBDatabase|caches\.(?:open|match|put))\b/,
   );
   assert.doesNotMatch(script, /\b(?:exportProject|saveProject|loadProject|downloadProject)\b/);
 });
 
 test("the public sitemap includes the canonical Video Editor route exactly once", async () => {
   const sitemap = await readFile(new URL("sitemap.xml", root), "utf8");
-  const matches = sitemap.match(
-    /<loc>https:\/\/rohin\.shanker\.me\/video-editor\/<\/loc>/g
-  );
+  const matches = sitemap.match(/<loc>https:\/\/rohin\.shanker\.me\/video-editor\/<\/loc>/g);
 
   assert.equal(matches?.length, 1);
 });

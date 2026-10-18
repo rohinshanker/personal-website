@@ -34,7 +34,7 @@ const installStudyResource = async (page) => {
           },
         ],
       }),
-    })
+    }),
   );
 };
 
@@ -79,7 +79,7 @@ for (const viewport of VIEWPORTS) {
 
     await expect(disabledAction).toBeDisabled();
     const disabledBackground = await disabledAction.evaluate(
-      (element) => getComputedStyle(element).backgroundColor
+      (element) => getComputedStyle(element).backgroundColor,
     );
 
     const folderBefore = await readPaintAndRect(folder);
@@ -93,13 +93,13 @@ for (const viewport of VIEWPORTS) {
     expect(folderHover.rect.height).toBe(folderBefore.rect.height);
 
     const secondaryText = folder.locator(
-      ".study-file-type, .study-file-subitems, .study-file-storage"
+      ".study-file-type, .study-file-subitems, .study-file-storage",
     );
     await expect
       .poll(() =>
         secondaryText.evaluateAll((elements) =>
-          elements.map((element) => getComputedStyle(element).color)
-        )
+          elements.map((element) => getComputedStyle(element).color),
+        ),
       )
       .toEqual([WHITE, WHITE, WHITE]);
 
@@ -122,7 +122,9 @@ for (const viewport of VIEWPORTS) {
     expect(focused.outlineColor).toBe("rgb(0, 0, 0)");
 
     await folder.click();
-    const selectedFolder = win.locator('[data-study-file="pdf-yale-biomedical-engineering-study-guide-pdf"]');
+    const selectedFolder = win.locator(
+      '[data-study-file="pdf-yale-biomedical-engineering-study-guide-pdf"]',
+    );
     await expect(selectedFolder).toBeVisible();
     const selectedTreeItem = win.locator('[data-study-select="yale"]');
     await expect(selectedTreeItem).toHaveClass(/is-selected/);
@@ -133,13 +135,11 @@ for (const viewport of VIEWPORTS) {
     expect(selectedFocus.outlineColor).toBe(WHITE);
 
     await disabledAction.hover();
-    expect(await disabledAction.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
-      disabledBackground
-    );
+    expect(
+      await disabledAction.evaluate((element) => getComputedStyle(element).backgroundColor),
+    ).toBe(disabledBackground);
     await expect(disabledAction).toBeDisabled();
-    expect(await win.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
-      true
-    );
+    expect(await win.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   });
 }
 

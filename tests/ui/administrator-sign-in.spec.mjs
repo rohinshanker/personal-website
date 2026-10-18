@@ -1,5 +1,9 @@
 import { expect, test } from "./deterministic.mjs";
-import { REVIEW_VIEWPORTS, consumeDiagnostics, installGameStatsBackend } from "./helpers/rendered-site.mjs";
+import {
+  REVIEW_VIEWPORTS,
+  consumeDiagnostics,
+  installGameStatsBackend,
+} from "./helpers/rendered-site.mjs";
 
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const GAME_STATS_STORAGE_KEY = "personalSiteGameStatsV1";
@@ -67,9 +71,9 @@ const configureAdministratorApi = async (page, signInStatus, { onEvent } = {}) =
         body: JSON.parse(request.postData() || "{}"),
       };
       onEvent?.(publishedEvent);
-      const unknownProfileField = Object.keys(
-        publishedEvent.body.event?.profile || {}
-      ).find((field) => !["id", "name", "icon"].includes(field));
+      const unknownProfileField = Object.keys(publishedEvent.body.event?.profile || {}).find(
+        (field) => !["id", "name", "icon"].includes(field),
+      );
       if (unknownProfileField) {
         await route.fulfill({
           status: 400,
@@ -106,11 +110,11 @@ const preparePage = async (page, signInStatus, { seedLocalState = true, ...apiOp
             name: "Before Administrator",
             icon: "assets/app-icons/ico/user_card.ico",
             rerollCount: 0,
-          })
+          }),
         );
         localStorage.setItem(
           gameStatsStorageKey,
-          JSON.stringify({ totals: { minesweeper: { wins: { beginner: 4 } } } })
+          JSON.stringify({ totals: { minesweeper: { wins: { beginner: 4 } } } }),
         );
         localStorage.setItem(snakeHighScoreKey, JSON.stringify({ 16: 99 }));
         localStorage.setItem(
@@ -120,7 +124,7 @@ const preparePage = async (page, signInStatus, { seedLocalState = true, ...apiOp
             difficulty: "easy",
             values: "9".repeat(81),
             elapsedSeconds: 123,
-          })
+          }),
         );
       },
       {
@@ -128,7 +132,7 @@ const preparePage = async (page, signInStatus, { seedLocalState = true, ...apiOp
         gameStatsStorageKey: GAME_STATS_STORAGE_KEY,
         snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
         sudokuStorageKey: SUDOKU_STORAGE_KEY,
-      }
+      },
     );
   }
   await configureAdministratorApi(page, signInStatus, apiOptions);
@@ -190,7 +194,7 @@ for (const viewport of viewports) {
           letterSpacing: style.letterSpacing,
           lineHeight: style.lineHeight,
         };
-      })
+      }),
     ).toEqual({
       fontFamily: "Arial, sans-serif",
       fontSize: "13px",
@@ -205,8 +209,13 @@ for (const viewport of viewports) {
     await expect(alertWindow).toBeVisible();
     const alertMessage = alertWindow.locator(".random-alert-message");
     await expect(alertMessage).toHaveText("Administrator access granted.");
-    await expect(alertMessage.locator('img[src="assets/app-icons/ico/msg_warning.ico"]')).toBeVisible();
-    await expect(alertWindow.locator(".random-alert-actions")).toHaveCSS("justify-content", "flex-end");
+    await expect(
+      alertMessage.locator('img[src="assets/app-icons/ico/msg_warning.ico"]'),
+    ).toBeVisible();
+    await expect(alertWindow.locator(".random-alert-actions")).toHaveCSS(
+      "justify-content",
+      "flex-end",
+    );
     await expect(alertWindow).not.toContainText("Game Progress profile updated to rohin ^.^.");
     await expect(alertWindow).toHaveCSS("z-index", "1000000");
     // Raised, not modal: nothing blocks the desktop behind it.
@@ -251,7 +260,7 @@ for (const viewport of viewports) {
         snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
         sudokuStorageKey: SUDOKU_STORAGE_KEY,
         administratorProofStorageKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
-      }
+      },
     );
     expect(state.profile).toEqual(ADMINISTRATOR_PROFILE);
     expect(state.gameStats.totals.minesweeper.wins.beginner).toBe(0);
@@ -273,7 +282,9 @@ for (const viewport of viewports) {
   });
 }
 
-test("Administrator proof survives a refresh and publishes a verified Rohin result", async ({ page }) => {
+test("Administrator proof survives a refresh and publishes a verified Rohin result", async ({
+  page,
+}) => {
   const publishedEvents = [];
   await page.setViewportSize({ width: 1280, height: 800 });
   await preparePage(page, "success", {
@@ -308,10 +319,10 @@ test("Administrator proof survives a refresh and publishes a verified Rohin resu
               expiresAt: new Date(Date.now() + 60_000).toISOString(),
             },
           },
-        ])
+        ]),
       );
     },
-    { queueStorageKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY, profile: ADMINISTRATOR_PROFILE }
+    { queueStorageKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY, profile: ADMINISTRATOR_PROFILE },
   );
   await page.reload();
 
@@ -329,7 +340,7 @@ test("Administrator proof survives a refresh and publishes a verified Rohin resu
       profileStorageKey: PROFILE_STORAGE_KEY,
       queueStorageKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
       proofStorageKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
-    }
+    },
   );
   expect(state.profile).toEqual(ADMINISTRATOR_PROFILE);
   expect(state.queuedResults).toEqual([]);
@@ -383,7 +394,10 @@ test("Administrator failure closes the sign-in window and never grants access", 
   await expect(page.locator("#administrator-password")).toHaveValue("");
   await expect
     .poll(() =>
-      page.evaluate((profileStorageKey) => JSON.parse(localStorage.getItem(profileStorageKey)).name, PROFILE_STORAGE_KEY)
+      page.evaluate(
+        (profileStorageKey) => JSON.parse(localStorage.getItem(profileStorageKey)).name,
+        PROFILE_STORAGE_KEY,
+      ),
     )
     .toBe("Before Administrator");
 
@@ -415,13 +429,11 @@ test("Administrator sign-in stays fully visible when an open desktop window resi
       signInWindow.evaluate((element) => {
         const bounds = element.getBoundingClientRect();
         return {
-          horizontallyContained:
-            bounds.left >= 0 && bounds.right <= window.innerWidth,
-          verticallyContained:
-            bounds.top >= 0 && bounds.bottom <= window.innerHeight,
+          horizontallyContained: bounds.left >= 0 && bounds.right <= window.innerWidth,
+          verticallyContained: bounds.top >= 0 && bounds.bottom <= window.innerHeight,
           viewport: `${window.innerWidth}x${window.innerHeight}`,
         };
-      })
+      }),
     )
     .toEqual({
       horizontallyContained: true,

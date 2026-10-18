@@ -81,8 +81,9 @@ const collectReferences = async () => {
     for (const [match] of text.matchAll(ASSET_REFERENCE_PATTERN)) {
       // Template literals and documented `{placeholder}` patterns are runtime shapes, not files.
       if (match.includes("${") || match.includes("{")) continue;
-      const normalized = decodeReference(match.replace(/^(?:\.\.\/)+/, "").replace(/^\//, ""))
-        .replace(/[\s.;:]+$/, "");
+      const normalized = decodeReference(
+        match.replace(/^(?:\.\.\/)+/, "").replace(/^\//, ""),
+      ).replace(/[\s.;:]+$/, "");
       references.set(normalized, (references.get(normalized) ?? new Set()).add(source));
     }
   }

@@ -28,12 +28,14 @@ test("exported Minesweeper fixtures reproduce a win and expose rejected variants
 
   const truncatedState = context.homeMinesweeperRules.initial(inRealm(fixture.initial));
   verifiedMinesweeperFixtures.invalid.truncatedReplay.forEach((input) =>
-    context.homeMinesweeperRules.transition(truncatedState, inRealm(input))
+    context.homeMinesweeperRules.transition(truncatedState, inRealm(input)),
   );
   assert.equal(context.homeMinesweeperRules.result(truncatedState).terminal, false);
-  assert.throws(() => context.homeGameRules.assertReplay(
-    inRealm(verifiedMinesweeperFixtures.invalid.reorderedReplay)
-  ));
+  assert.throws(() =>
+    context.homeGameRules.assertReplay(
+      inRealm(verifiedMinesweeperFixtures.invalid.reorderedReplay),
+    ),
+  );
 });
 
 test("exported Snake fixtures reproduce a terminal tick and reject replay assertions", () => {
@@ -53,14 +55,17 @@ test("exported Snake fixtures reproduce a terminal tick and reject replay assert
   while (scoringState.tick < scoring.terminalTick) context.homeSnakeRules.step(scoringState);
   assert.deepEqual(plain(context.homeSnakeRules.result(scoringState)), scoring.result);
   assert.equal(scoring.result.score, 1);
-  assert.throws(() => {
-    const invalid = context.homeSnakeRules.initial(inRealm(fixture.initial));
-    context.homeSnakeRules.transition(
-      invalid,
-      inRealm(verifiedSnakeFixtures.invalid.oppositeDirection[0])
-    );
-  }, (error) => error.code === "illegal-action");
-  assert.throws(() => context.homeGameRules.assertReplay(
-    inRealm(verifiedSnakeFixtures.invalid.reorderedReplay)
-  ));
+  assert.throws(
+    () => {
+      const invalid = context.homeSnakeRules.initial(inRealm(fixture.initial));
+      context.homeSnakeRules.transition(
+        invalid,
+        inRealm(verifiedSnakeFixtures.invalid.oppositeDirection[0]),
+      );
+    },
+    (error) => error.code === "illegal-action",
+  );
+  assert.throws(() =>
+    context.homeGameRules.assertReplay(inRealm(verifiedSnakeFixtures.invalid.reorderedReplay)),
+  );
 });

@@ -3,10 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-import {
-  getAppIconNames,
-  renderAppIconManifest,
-} from "../scripts/build-app-icon-manifest.mjs";
+import { getAppIconNames, renderAppIconManifest } from "../scripts/build-app-icon-manifest.mjs";
 
 const manifestUrl = new URL("../scripts/home/app-icon-manifest.js", import.meta.url);
 

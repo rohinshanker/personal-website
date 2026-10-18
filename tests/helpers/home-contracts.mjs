@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-
-import { listHomeScriptFiles, repositoryRoot } from "./home-scripts.mjs";
+import { listHomeScriptFiles, readProductionScript, repositoryRoot } from "./home-scripts.mjs";
 
 /**
  * The Home page's load-time dependency graph, read from the scripts themselves.
@@ -13,11 +11,12 @@ import { listHomeScriptFiles, repositoryRoot } from "./home-scripts.mjs";
 const CONTRACT_NAME = "(?:home[A-Za-z]*|rohinAdminOrchestrator)";
 const CONTRACT_IMPORT = new RegExp(`\\}\\s*=\\s*window\\.(${CONTRACT_NAME})\\s*;`, "g");
 const CONTRACT_ALIAS = new RegExp(
-  `\\bconst\\s+[A-Za-z_$][\\w$]*\\s*=\\s*window\\.(${CONTRACT_NAME})\\s*;`, "g"
+  `\\bconst\\s+[A-Za-z_$][\\w$]*\\s*=\\s*window\\.(${CONTRACT_NAME})\\s*;`,
+  "g",
 );
 const CONTRACT_PUBLISH = new RegExp(
   `window\\.(${CONTRACT_NAME})\\s*=\\s*Object\\.freeze\\(\\{([\\s\\S]*?)\\n\\}\\)\\s*;`,
-  "g"
+  "g",
 );
 
 /** Names a destructuring or object-literal block binds, ignoring comments. */
@@ -80,11 +79,8 @@ export async function loadHomeContractGraph() {
   const files = listHomeScriptFiles();
   const sources = Object.fromEntries(
     await Promise.all(
-      files.map(async (file) => [
-        file,
-        await readFile(new URL(file, repositoryRoot), "utf8"),
-      ])
-    )
+      files.map(async (file) => [file, await readProductionScript(new URL(file, repositoryRoot))]),
+    ),
   );
 
   const publishedBy = new Map();

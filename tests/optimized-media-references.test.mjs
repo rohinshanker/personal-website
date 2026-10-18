@@ -31,7 +31,7 @@ const collectShippedFiles = async (relativePath) => {
   }
   const entries = await readdir(absolute, { withFileTypes: true });
   const nested = await Promise.all(
-    entries.map((entry) => collectShippedFiles(path.posix.join(relativePath, entry.name)))
+    entries.map((entry) => collectShippedFiles(path.posix.join(relativePath, entry.name))),
   );
   return nested.flat();
 };
@@ -40,8 +40,11 @@ const shippedSources = (await Promise.all(SHIPPED_ROOTS.map(collectShippedFiles)
 
 const shippedText = new Map(
   await Promise.all(
-    shippedSources.map(async (source) => [source, await readFile(path.join(rootPath, source), "utf8")])
-  )
+    shippedSources.map(async (source) => [
+      source,
+      await readFile(path.join(rootPath, source), "utf8"),
+    ]),
+  ),
 );
 
 /** Resolves a repository-relative path one segment at a time with exact-case listings. */
@@ -99,13 +102,13 @@ test("every referenced derivative exists with the exact case", async () => {
 test("every manifest derivative is referenced or is a video fallback of one that is", () => {
   const text = [...shippedText.values()].join("\n");
   const unreferenced = MEDIA_MANIFEST.flatMap((entry) =>
-    entry.derivatives.map((derivative) => derivative.path)
+    entry.derivatives.map((derivative) => derivative.path),
   ).filter((derivativePath) => !text.includes(derivativePath));
   assert.deepEqual(unreferenced, []);
 });
 
 const videoTags = [...shippedText.get("home.html").matchAll(/<video\b[\s\S]*?<\/video>/g)].map(
-  (match) => match[0]
+  (match) => match[0],
 );
 
 const attributeValue = (tag, name) =>
@@ -119,12 +122,12 @@ test("every looping event video declares the contract its playback depends on", 
   assert.equal(
     new Set(loopVideos.map((tag) => attributeValue(tag, "data-loop-fallback"))).size,
     4,
-    "the four large loops ship as video"
+    "the four large loops ship as video",
   );
   assert.equal(
     new Set(loopVideos.map((tag) => attributeValue(tag, "data-loop-video"))).size,
     4,
-    "every loop video carries a distinct name"
+    "every loop video carries a distinct name",
   );
 
   for (const tag of loopVideos) {
@@ -146,7 +149,7 @@ test("every looping event video declares the contract its playback depends on", 
     assert.deepEqual(
       sources.map((source) => attributeValue(source, "type")),
       ["video/webm", "video/mp4"],
-      `${name} offers WebM before MP4`
+      `${name} offers WebM before MP4`,
     );
     sources.forEach((source) => {
       assert.ok(attributeValue(source, "data-src"), `${name} defers every source`);
@@ -164,8 +167,8 @@ test("each looping video's declared box matches its encoded derivative", () => {
       entry.derivatives.map((derivative) => [
         derivative.path,
         { width: derivative.width, height: derivative.height },
-      ])
-    )
+      ]),
+    ),
   );
 
   for (const tag of videoTags.filter((candidate) => attributeValue(candidate, "data-loop-video"))) {
@@ -175,24 +178,26 @@ test("each looping video's declared box matches its encoded derivative", () => {
     assert.equal(
       `${attributeValue(tag, "width")}x${attributeValue(tag, "height")}`,
       `${encoded.width}x${encoded.height}`,
-      `${webm} renders at its encoded size, so loading shifts no layout`
+      `${webm} renders at its encoded size, so loading shifts no layout`,
     );
   }
 });
 
 test("the four video sources are exactly the ones with WebM, MP4 and a poster", () => {
   const withVideo = MEDIA_MANIFEST.filter((entry) =>
-    entry.derivatives.some((derivative) => VIDEO_FORMATS.includes(derivative.format))
+    entry.derivatives.some((derivative) => VIDEO_FORMATS.includes(derivative.format)),
   );
-  assert.deepEqual(
-    withVideo.map((entry) => path.basename(entry.source, ".gif")).sort(),
-    ["campfire", "lain", "radar", "servalpizza"]
-  );
+  assert.deepEqual(withVideo.map((entry) => path.basename(entry.source, ".gif")).sort(), [
+    "campfire",
+    "lain",
+    "radar",
+    "servalpizza",
+  ]);
   for (const entry of withVideo) {
     assert.deepEqual(
       entry.derivatives.map((derivative) => derivative.format),
       ["webp", "webm", "mp4", "poster"],
-      `${entry.source} ships an image fallback, both video formats and a poster`
+      `${entry.source} ships an image fallback, both video formats and a poster`,
     );
   }
 });

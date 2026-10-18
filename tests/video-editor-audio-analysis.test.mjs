@@ -5,7 +5,7 @@ import test from "node:test";
 
 const source = await readFile(
   new URL("../video-editor/audio-analysis.js", import.meta.url),
-  "utf8"
+  "utf8",
 );
 const workerScope = {};
 runInNewContext(source, {
@@ -61,24 +61,9 @@ test("Audio-Sync band rules find rising and falling edges near a known burst", (
   const result = analysis.analyze(input.samples, input.sampleRate, { maxFrames: 300 });
   const series = analysis.createBandSeries(result, 800, 1_200);
   const threshold = analysis.recommendThreshold(series, 0.7);
-  const rising = analysis.findThresholdCrossings(
-    result.frameTimes,
-    series,
-    threshold,
-    "rising"
-  );
-  const falling = analysis.findThresholdCrossings(
-    result.frameTimes,
-    series,
-    threshold,
-    "falling"
-  );
-  const both = analysis.findThresholdCrossings(
-    result.frameTimes,
-    series,
-    threshold,
-    "both"
-  );
+  const rising = analysis.findThresholdCrossings(result.frameTimes, series, threshold, "rising");
+  const falling = analysis.findThresholdCrossings(result.frameTimes, series, threshold, "falling");
+  const both = analysis.findThresholdCrossings(result.frameTimes, series, threshold, "both");
 
   assert.ok(rising.some((crossing) => Math.abs(crossing.time - 0.5) < 0.08));
   assert.ok(falling.some((crossing) => Math.abs(crossing.time - 0.75) < 0.08));
@@ -91,15 +76,15 @@ test("Audio-Sync onset and input guards handle silence and invalid analysis requ
   const result = analysis.analyze(silence, 16_000, { maxFrames: 200 });
   const onset = analysis.createOnsetSeries(result);
 
-  assert.deepEqual(Array.from(onset), Array.from({ length: result.frameCount }, () => 0));
-  assert.equal(
-    analysis.findThresholdCrossings(result.frameTimes, onset, 0.5, "both").length,
-    0
+  assert.deepEqual(
+    Array.from(onset),
+    Array.from({ length: result.frameCount }, () => 0),
   );
+  assert.equal(analysis.findThresholdCrossings(result.frameTimes, onset, 0.5, "both").length, 0);
   assert.throws(() => analysis.analyze(new Float32Array(), 16_000), TypeError);
   assert.throws(
     () => analysis.analyze(new Float32Array(1_024), 16_000, { fftSize: 300 }),
-    RangeError
+    RangeError,
   );
 });
 
@@ -109,14 +94,13 @@ test("the reused Fourier buffers leak no energy into later frames", () => {
   const series = analysis.createBandSeries(result, 800, 1_200);
   const peakWithin = (from, to) =>
     Array.from(result.frameTimes).reduce(
-      (peak, time, frame) =>
-        time >= from && time <= to ? Math.max(peak, series[frame]) : peak,
-      0
+      (peak, time, frame) => (time >= from && time <= to ? Math.max(peak, series[frame]) : peak),
+      0,
     );
 
   assert.ok(peakWithin(0.3, 0.45) > 0.9, "the burst must reach full band energy");
   assert.ok(
     peakWithin(0.9, 1.4) < 0.1,
-    "silence after the burst must not retain the previous frame's transform"
+    "silence after the burst must not retain the previous frame's transform",
   );
 });

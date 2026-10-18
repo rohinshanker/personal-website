@@ -44,16 +44,13 @@ window.__sudokuGenerationTest = Object.freeze({
     values: sudokuState.values.map((value) => value || "0").join(""),
   }),
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
 const bridge = (page, method, ...args) =>
-  page.evaluate(
-    ([name, params]) => window.__sudokuGenerationTest[name](...params),
-    [method, args]
-  );
+  page.evaluate(([name, params]) => window.__sudokuGenerationTest[name](...params), [method, args]);
 
 /** Clicks in page context and reports how long the main thread was held. */
 const timeClick = (page, selector) =>
@@ -75,9 +72,7 @@ const waitForGeneratedBoard = async (page, win, previousDifficulty) => {
   return bridge(page, "readPuzzle");
 };
 
-test("the boot loader offers Play on a real puzzle carved in the worker", async ({
-  page,
-}) => {
+test("the boot loader offers Play on a real puzzle carved in the worker", async ({ page }) => {
   await installGenerationBridge(page);
   await openHomeDesktop(page, DESKTOP);
 
@@ -86,7 +81,7 @@ test("the boot loader offers Play on a real puzzle carved in the worker", async 
   const source = page.locator("#sudoku-generator-source");
   await expect(source).toHaveAttribute("as", "worker");
   expect(await source.getAttribute("href")).toMatch(
-    new RegExp(`^${WORKER_SOURCE.replace(/[.]/g, "[.]")}[?]v=.+$`)
+    new RegExp(`^${WORKER_SOURCE.replace(/[.]/g, "[.]")}[?]v=.+$`),
   );
 
   // Fetching the file is not running it: nobody has carved a puzzle on a
@@ -104,7 +99,7 @@ test("the boot loader offers Play on a real puzzle carved in the worker", async 
   expect(state.solution).toMatch(/^[1-9]{81}$/);
   expect(state.puzzleId).toMatch(/^generated-easy-/);
   await expect(win.locator(".sudoku-cell.is-given")).toHaveCount(
-    state.puzzle.replace(/0/g, "").length
+    state.puzzle.replace(/0/g, "").length,
   );
 
   // One spare is kept warm for the difficulty in play, and no others.
@@ -114,9 +109,7 @@ test("the boot loader offers Play on a real puzzle carved in the worker", async 
   expect(await bridge(page, "pooledCountFor", "extreme")).toBe(0);
 });
 
-test("New Game and a cold difficulty both return without holding the thread", async ({
-  page,
-}) => {
+test("New Game and a cold difficulty both return without holding the thread", async ({ page }) => {
   await installGenerationBridge(page);
   await openHomeDesktop(page, DESKTOP);
   const win = await openSudokuBoard(page);
@@ -150,9 +143,7 @@ test("New Game and a cold difficulty both return without holding the thread", as
   // still returns at once; carving it on this thread is what used to freeze
   // the window for seconds.
   expect(await bridge(page, "pooledCountFor", "extreme")).toBe(0);
-  expect(
-    await timeClick(page, '[data-sudoku-difficulty="extreme"]')
-  ).toBeLessThan(NON_BLOCKING_MS);
+  expect(await timeClick(page, '[data-sudoku-difficulty="extreme"]')).toBeLessThan(NON_BLOCKING_MS);
 
   const extreme = await waitForGeneratedBoard(page, win, second.difficulty);
   expect(extreme.difficulty).toBe("extreme");
@@ -167,14 +158,13 @@ test("New Game and a cold difficulty both return without holding the thread", as
     .getAttribute("data-sudoku-index");
   await win.locator(`.sudoku-cell[data-sudoku-index="${extremeEditable}"]`).click();
   await page.keyboard.press("7");
-  await expect(
-    win.locator(`.sudoku-cell[data-sudoku-index="${extremeEditable}"]`)
-  ).toHaveAttribute("data-sudoku-value", "7");
+  await expect(win.locator(`.sudoku-cell[data-sudoku-index="${extremeEditable}"]`)).toHaveAttribute(
+    "data-sudoku-value",
+    "7",
+  );
 });
 
-test("a browser that cannot start the worker still gets a playable board", async ({
-  page,
-}) => {
+test("a browser that cannot start the worker still gets a playable board", async ({ page }) => {
   await installGenerationBridge(page);
   await page.addInitScript(() => {
     // Constructing a worker throws on some locked-down configurations.
@@ -196,7 +186,7 @@ test("a browser that cannot start the worker still gets a playable board", async
   // New Game is still instant and still leaves a playable board.
   expect(await timeClick(page, "#sudoku-new")).toBeLessThan(NON_BLOCKING_MS);
   expect((await bridge(page, "readPuzzle")).puzzle).toBe(
-    await bridge(page, "staticPuzzleFor", "easy")
+    await bridge(page, "staticPuzzleFor", "easy"),
   );
   const firstEditable = await win
     .locator(".sudoku-cell:not(.is-given)")
@@ -204,14 +194,13 @@ test("a browser that cannot start the worker still gets a playable board", async
     .getAttribute("data-sudoku-index");
   await win.locator(`.sudoku-cell[data-sudoku-index="${firstEditable}"]`).click();
   await page.keyboard.press("5");
-  await expect(
-    win.locator(`.sudoku-cell[data-sudoku-index="${firstEditable}"]`)
-  ).toHaveAttribute("data-sudoku-value", "5");
+  await expect(win.locator(`.sudoku-cell[data-sudoku-index="${firstEditable}"]`)).toHaveAttribute(
+    "data-sudoku-value",
+    "5",
+  );
 });
 
-test("every later request is served once the worker cannot start", async ({
-  page,
-}) => {
+test("every later request is served once the worker cannot start", async ({ page }) => {
   await installGenerationBridge(page);
   await page.addInitScript(() => {
     window.Worker = function BlockedWorker() {
@@ -226,9 +215,7 @@ test("every later request is served once the worker cannot start", async ({
   // one. It must still swap the board rather than leaving the previous puzzle
   // up behind a Generating status that never clears.
   expect(await bridge(page, "pooledCountFor", "hard")).toBe(0);
-  expect(
-    await timeClick(page, '[data-sudoku-difficulty="hard"]')
-  ).toBeLessThan(NON_BLOCKING_MS);
+  expect(await timeClick(page, '[data-sudoku-difficulty="hard"]')).toBeLessThan(NON_BLOCKING_MS);
 
   const hard = await bridge(page, "readPuzzle");
   expect(hard.difficulty).toBe("hard");
@@ -244,16 +231,14 @@ test("every later request is served once the worker cannot start", async ({
   for (let game = 0; game < 3; game += 1) {
     expect(await timeClick(page, "#sudoku-new")).toBeLessThan(NON_BLOCKING_MS);
     expect((await bridge(page, "readPuzzle")).puzzle).toBe(
-      await bridge(page, "staticPuzzleFor", "hard")
+      await bridge(page, "staticPuzzleFor", "hard"),
     );
     await expect(win.locator("#sudoku-grid")).toHaveAttribute("aria-busy", "false");
   }
 
-  expect(
-    await timeClick(page, '[data-sudoku-difficulty="extreme"]')
-  ).toBeLessThan(NON_BLOCKING_MS);
+  expect(await timeClick(page, '[data-sudoku-difficulty="extreme"]')).toBeLessThan(NON_BLOCKING_MS);
   expect((await bridge(page, "readPuzzle")).puzzle).toBe(
-    await bridge(page, "staticPuzzleFor", "extreme")
+    await bridge(page, "staticPuzzleFor", "extreme"),
   );
   await expect(win.locator("#sudoku-status")).toHaveText("Ready");
 
@@ -264,14 +249,13 @@ test("every later request is served once the worker cannot start", async ({
     .getAttribute("data-sudoku-index");
   await win.locator(`.sudoku-cell[data-sudoku-index="${editable}"]`).click();
   await page.keyboard.press("4");
-  await expect(
-    win.locator(`.sudoku-cell[data-sudoku-index="${editable}"]`)
-  ).toHaveAttribute("data-sudoku-value", "4");
+  await expect(win.locator(`.sudoku-cell[data-sudoku-index="${editable}"]`)).toHaveAttribute(
+    "data-sudoku-value",
+    "4",
+  );
 });
 
-test("impatient clicks on a cold difficulty stay one board's worth of work", async ({
-  page,
-}) => {
+test("impatient clicks on a cold difficulty stay one board's worth of work", async ({ page }) => {
   await installGenerationBridge(page);
   await installDelayedSudokuGeneratorReplies(page, 600);
   await openHomeDesktop(page, DESKTOP);

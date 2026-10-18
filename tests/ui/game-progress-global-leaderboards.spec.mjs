@@ -25,9 +25,7 @@ const games = Object.freeze([
 ]);
 
 for (const viewport of viewports) {
-  test(`Game Progress global leaderboard launchers work at ${viewport.name}`, async ({
-    page,
-  }) => {
+  test(`Game Progress global leaderboard launchers work at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
@@ -54,16 +52,15 @@ for (const viewport of viewports) {
       const buttons = Array.from(element.querySelectorAll("button"));
       return {
         backgroundColor: getComputedStyle(element).backgroundColor,
-        buttonsFit:
-          buttons.every((button) => {
-            const buttonRect = button.getBoundingClientRect();
-            return (
-              buttonRect.left >= rect.left &&
-              buttonRect.right <= rect.right &&
-              buttonRect.top >= rect.top &&
-              buttonRect.bottom <= rect.bottom
-            );
-          }),
+        buttonsFit: buttons.every((button) => {
+          const buttonRect = button.getBoundingClientRect();
+          return (
+            buttonRect.left >= rect.left &&
+            buttonRect.right <= rect.right &&
+            buttonRect.top >= rect.top &&
+            buttonRect.bottom <= rect.bottom
+          );
+        }),
         documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
         panelOverflows: element.scrollWidth > element.clientWidth,
       };
@@ -72,7 +69,6 @@ for (const viewport of viewports) {
     expect(layout.buttonsFit).toBe(true);
     expect(layout.documentOverflows).toBe(false);
     expect(layout.panelOverflows).toBe(false);
-
 
     for (const game of games) {
       const launcher = app.getByRole("button", {
@@ -83,9 +79,9 @@ for (const viewport of viewports) {
 
       const leaderboard = page.locator(`#game-stats-window-${game.slug}`);
       await expect(leaderboard).toBeVisible();
-      await expect(
-        leaderboard.locator("[data-game-stats-title]")
-      ).toContainText(`${game.label} Stats`);
+      await expect(leaderboard.locator("[data-game-stats-title]")).toContainText(
+        `${game.label} Stats`,
+      );
       for (const otherGame of games.filter((candidate) => candidate.slug !== game.slug)) {
         await expect(page.locator(`#game-stats-window-${otherGame.slug}`)).toBeHidden();
       }
@@ -101,9 +97,7 @@ for (const viewport of viewports) {
     await page.keyboard.press("Enter");
     const minesweeperLeaderboard = page.locator("#game-stats-window-minesweeper");
     await expect(minesweeperLeaderboard).toBeVisible();
-    await minesweeperLeaderboard
-      .locator('[data-close="game-stats-minesweeper"]')
-      .click();
+    await minesweeperLeaderboard.locator('[data-close="game-stats-minesweeper"]').click();
     await expect(minesweeperLeaderboard).toBeHidden();
 
     await app.locator('.selector-item[data-view="game-progress-minesweeper"]').click();

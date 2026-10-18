@@ -29,7 +29,7 @@ const prepareRohinProfilePage = async (page) => {
       Math.random = () => 0.999999;
       localStorage.setItem(profileStorageKey, JSON.stringify(profile));
     },
-    { profileStorageKey: PROFILE_STORAGE_KEY, profile: ROHIN_PROFILE }
+    { profileStorageKey: PROFILE_STORAGE_KEY, profile: ROHIN_PROFILE },
   );
   await page.goto("/home.html");
   const aboutClose = page.locator('#about-window [data-close="about"]');
@@ -60,15 +60,11 @@ test("Game Progress opens a sleeping Rohin Neko avatar at the roaming Neko nap c
   await expect(avatar).toHaveAttribute("src", /assets\/neko-assets\/sprites\/sleep1\.png$/);
 
   await page.clock.runFor(NAP_FRAME_SWITCH_MS - 1);
-  expect(await spriteOf(avatar), "the nap frame holds until its interval ends").toBe(
-    "sleep1.png"
-  );
+  expect(await spriteOf(avatar), "the nap frame holds until its interval ends").toBe("sleep1.png");
   await page.clock.runFor(1);
   expect(await spriteOf(avatar)).toBe("sleep2.png");
   await page.clock.runFor(NAP_FRAME_SWITCH_MS);
-  expect(await spriteOf(avatar), "the nap alternates rather than advancing").toBe(
-    "sleep1.png"
-  );
+  expect(await spriteOf(avatar), "the nap alternates rather than advancing").toBe("sleep1.png");
 });
 
 test("visible Rohin Neko icons animate independently with the canonical scratch frames", async ({
@@ -92,14 +88,8 @@ test("visible Rohin Neko icons animate independently with the canonical scratch 
 
   const sleepingAvatar = page.locator("#sleeping-rohin-neko");
   const awakeAvatar = page.locator("#awake-rohin-neko");
-  await expect(sleepingAvatar).toHaveAttribute(
-    "src",
-    /assets\/neko-assets\/sprites\/sleep1\.png$/
-  );
-  await expect(awakeAvatar).toHaveAttribute(
-    "src",
-    /assets\/neko-assets\/sprites\/yawn1\.png$/
-  );
+  await expect(sleepingAvatar).toHaveAttribute("src", /assets\/neko-assets\/sprites\/sleep1\.png$/);
+  await expect(awakeAvatar).toHaveAttribute("src", /assets\/neko-assets\/sprites\/yawn1\.png$/);
 
   // The awake avatar waits out its initial action delay; the sleeping one is
   // already napping. One run past both boundaries separates the two schedules.

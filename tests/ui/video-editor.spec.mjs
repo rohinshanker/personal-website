@@ -7,7 +7,7 @@ test.setTimeout(120_000);
 
 const editorUrl = process.env.PLAYWRIGHT_VIDEO_EDITOR_URL || "/video-editor/";
 const videoAsset = fileURLToPath(
-  new URL("../../assets/solitaire-cards/victory-royale.webm", import.meta.url)
+  new URL("../../assets/solitaire-cards/victory-royale.webm", import.meta.url),
 );
 const videoName = "victory-royale.webm";
 const audioName = "timeline-tone.wav";
@@ -60,9 +60,7 @@ const createPcmWavBuffer = ({ durationSeconds, sampleAt, sampleRate }) => {
   wav.writeUInt32LE(dataSize, 40);
 
   for (let sample = 0; sample < sampleCount; sample += 1) {
-    const value = Math.round(
-      Math.max(-1, Math.min(1, sampleAt(sample / sampleRate))) * 30_000
-    );
+    const value = Math.round(Math.max(-1, Math.min(1, sampleAt(sample / sampleRate))) * 30_000);
     wav.writeInt16LE(value, 44 + sample * bytesPerSample);
   }
 
@@ -118,13 +116,10 @@ const generatedAudioSync = () => ({
   buffer: createAudioSyncWavBuffer(),
 });
 
-const cursorOf = (locator) =>
-  locator.evaluate((element) => getComputedStyle(element).cursor);
+const cursorOf = (locator) => locator.evaluate((element) => getComputedStyle(element).cursor);
 
 const expectCursorImage = async (locator, imageName) => {
-  await expect
-    .poll(() => cursorOf(locator))
-    .toContain(`/assets/cursor-assets/${imageName}`);
+  await expect.poll(() => cursorOf(locator)).toContain(`/assets/cursor-assets/${imageName}`);
 };
 
 const textDragPoints = async (locator) => {
@@ -139,7 +134,7 @@ const textDragPoints = async (locator) => {
     const range = document.createRange();
     range.selectNodeContents(textNode);
     const rect = Array.from(range.getClientRects()).find(
-      (candidate) => candidate.width >= 20 && candidate.height > 0
+      (candidate) => candidate.width >= 20 && candidate.height > 0,
     );
     if (!rect) throw new Error("The cursor test target has no usable text line.");
     const inset = Math.min(5, Math.max(2, rect.width / 10));
@@ -158,8 +153,8 @@ const expectCursorSelectionState = async (page, active) => {
           body: document.body.classList.contains(className),
           root: document.documentElement.classList.contains(className),
         }),
-        cursorTextSelectingClass
-      )
+        cursorTextSelectingClass,
+      ),
     )
     .toEqual({ body: active, root: active });
 };
@@ -170,7 +165,7 @@ const expectNoPageOverflow = async (page) => {
       page.evaluate(() => ({
         horizontal: document.documentElement.scrollWidth > window.innerWidth,
         vertical: document.documentElement.scrollHeight > window.innerHeight,
-      }))
+      })),
     )
     .toEqual({ horizontal: false, vertical: false });
 };
@@ -230,15 +225,15 @@ const seedAdministratorAccess = (page) =>
         JSON.stringify({
           proof,
           expiresAt: new Date(Date.now() + 60 * 60 * 1_000).toISOString(),
-        })
+        }),
       );
     },
-    { proof: administratorProof, proofStorageKey: administratorProofStorageKey }
+    { proof: administratorProof, proofStorageKey: administratorProofStorageKey },
   );
 
 const configureAdministratorApi = async (
   page,
-  { responses = ["success"], expiresAtForAttempt } = {}
+  { responses = ["success"], expiresAtForAttempt } = {},
 ) => {
   const requests = [];
   await installAdministratorBackend(page);
@@ -288,7 +283,7 @@ const configureAdministratorApi = async (
 const loadEditor = async (
   page,
   viewport = { width: 1280, height: 800 },
-  { administratorAccess = "valid" } = {}
+  { administratorAccess = "valid" } = {},
 ) => {
   await installAdministratorBackend(page);
   if (administratorAccess === "valid") await seedAdministratorAccess(page);
@@ -307,13 +302,10 @@ const expectAuthenticated = async (page) => {
   await expect(page.getByTestId("video-editor-auth-overlay")).toBeHidden();
   await expect(page.locator("body")).toHaveAttribute(
     "data-video-editor-auth-state",
-    "authenticated"
+    "authenticated",
   );
   await expect(page.getByTestId("video-editor")).not.toHaveAttribute("inert", "");
-  await expect(page.getByTestId("video-editor")).not.toHaveAttribute(
-    "aria-hidden",
-    "true"
-  );
+  await expect(page.getByTestId("video-editor")).not.toHaveAttribute("aria-hidden", "true");
 };
 
 const importMedia = async (page, files) => {
@@ -325,16 +317,16 @@ const importMedia = async (page, files) => {
             mimeType: "video/webm",
             buffer: await readFile(file),
           }
-        : file
-    )
+        : file,
+    ),
   );
   await page.getByTestId("media-file-input").setInputFiles(uploadFiles);
   await expect(page.locator("#media-count")).toHaveText(
     `${files.length} ${files.length === 1 ? "item" : "items"}`,
-    { timeout: 20_000 }
+    { timeout: 20_000 },
   );
   await expect(page.locator("#editor-status")).toContainText(
-    `Imported ${files.length} local ${files.length === 1 ? "file" : "files"}`
+    `Imported ${files.length} local ${files.length === 1 ? "file" : "files"}`,
   );
 };
 
@@ -347,8 +339,7 @@ const setPlayhead = async (page, seconds) => {
   }, seconds);
 };
 
-const audioSyncRuleCards = (page) =>
-  page.locator("#audio-sync-rules [data-audio-sync-rule-id]");
+const audioSyncRuleCards = (page) => page.locator("#audio-sync-rules [data-audio-sync-rule-id]");
 
 const accessibleGuideposts = (rule) =>
   rule.locator("[data-audio-sync-marker-list] [data-guidepost-id]");
@@ -359,9 +350,7 @@ const addAudioSyncClip = async (page) => {
     .getByTestId("media-bin")
     .getByRole("button", { name: `Add ${audioSyncName} at the playhead` })
     .click();
-  const clip = page
-    .getByTestId("timeline-tier-audio-1")
-    .locator("article[data-clip-id]");
+  const clip = page.getByTestId("timeline-tier-audio-1").locator("article[data-clip-id]");
   await expect(clip).toHaveCount(1);
   return clip;
 };
@@ -377,10 +366,10 @@ const analyzeAudioSyncClip = async (page) => {
   await panel.getByRole("button", { name: "Analyze source" }).click();
   await expect(panel.locator("[data-audio-sync-status]")).toContainText(
     new RegExp(`Analyzed ${audioSyncName}: 00:06\\.00 at \\d+ Hz\\.`),
-    { timeout: 20_000 }
+    { timeout: 20_000 },
   );
   expect(Date.now() - startedAt, "six-second local analysis should remain responsive").toBeLessThan(
-    15_000
+    15_000,
   );
   return panel;
 };
@@ -413,9 +402,7 @@ const readProjectSnapshot = (page) =>
 const expectPreviewAspect = async (stage, width, height) => {
   await expect
     .poll(() =>
-      stage.evaluate((element) =>
-        getComputedStyle(element).aspectRatio.replaceAll(" ", "")
-      )
+      stage.evaluate((element) => getComputedStyle(element).aspectRatio.replaceAll(" ", "")),
     )
     .toBe(`${width}/${height}`);
   await expect
@@ -423,7 +410,7 @@ const expectPreviewAspect = async (stage, width, height) => {
       stage.evaluate((element, expectedRatio) => {
         const bounds = element.getBoundingClientRect();
         return Math.abs(bounds.width / bounds.height - expectedRatio);
-      }, width / height)
+      }, width / height),
     )
     .toBeLessThanOrEqual(0.002);
 };
@@ -437,9 +424,7 @@ const clickRangeAtValue = async (range, targetValue) => {
       max: Number(element.max),
       min: Number(element.min),
       step: Number(element.step) || 1,
-      thumbWidth: Number.parseFloat(
-        style.getPropertyValue("--video-editor-range-thumb-width")
-      ),
+      thumbWidth: Number.parseFloat(style.getPropertyValue("--video-editor-range-thumb-width")),
     };
   });
   const fraction = (targetValue - min) / (max - min);
@@ -472,9 +457,7 @@ const readRulerMetrics = (page) =>
           time: Number(tick.getAttribute("data-time-seconds")),
           height: tickBounds.height,
           left: tickBounds.left,
-          label: labelBounds
-            ? { left: labelBounds.left, right: labelBounds.right }
-            : null,
+          label: labelBounds ? { left: labelBounds.left, right: labelBounds.right } : null,
         };
       }),
     };
@@ -500,13 +483,11 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
   await expect(editor).toHaveAttribute("aria-hidden", "true");
   await expect(page.locator("body")).toHaveAttribute(
     "data-video-editor-auth-state",
-    "unauthenticated"
+    "unauthenticated",
   );
   await expect(overlay).toHaveCSS("background-color", "rgba(0, 0, 0, 0.32)");
   await expect(username).toBeFocused();
-  await expect(page.getByTestId("video-editor-auth-status")).toHaveText(
-    "Sign in to begin."
-  );
+  await expect(page.getByTestId("video-editor-auth-status")).toHaveText("Sign in to begin.");
   await expect(dialog.getByRole("button", { name: /close|cancel/i })).toHaveCount(0);
 
   await password.fill("mask-visual-test-value-1234");
@@ -521,7 +502,7 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
         letterSpacing: style.letterSpacing,
         lineHeight: style.lineHeight,
       };
-    })
+    }),
   ).toEqual({
     fontFamily: "Arial, sans-serif",
     fontSize: "13px",
@@ -538,14 +519,12 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
   await password.press("Escape");
   await expect(dialog).toBeVisible();
   await expect(username).toBeFocused();
-  await expect(page.getByTestId("video-editor-auth-status")).toHaveText(
-    "Sign in to begin."
-  );
+  await expect(page.getByTestId("video-editor-auth-status")).toHaveText("Sign in to begin.");
 
   await expect(
     page.getByRole("button", { name: "Choose Video or Audio…" }).click({
       timeout: 750,
-    })
+    }),
   ).rejects.toThrow();
   await expect(dialog).toBeVisible();
   await expect(page.locator("#media-count")).toHaveText("0 items");
@@ -560,14 +539,14 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
     await expect(separator).toHaveAttribute("aria-valuenow", valueBefore);
   }
   const sideBySideLayout = page.locator(
-    '[data-video-editor-workspace-layout-option="side-by-side"]'
+    '[data-video-editor-workspace-layout-option="side-by-side"]',
   );
   await expect(sideBySideLayout).toHaveAttribute("aria-pressed", "false");
   await expect(sideBySideLayout.click({ timeout: 750 })).rejects.toThrow();
   await expect(sideBySideLayout).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".compose-panel__body")).toHaveAttribute(
     "data-video-editor-workspace-layout",
-    "standard"
+    "standard",
   );
   const guidelinePlatform = page.locator("#video-editor-guidelines-platform");
   const guidelineInfo = page.locator("#video-editor-guidelines-info");
@@ -579,9 +558,7 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
   await expect(page.locator("#video-editor-guidelines-note")).toBeHidden();
   await expect(page.locator("#video-editor-social-guidelines-overlay")).toBeHidden();
   for (const tool of ["audio-sync-cut", "audio"]) {
-    const launcher = page.locator(
-      `[data-effect-tab-target][data-effect="${tool}"]`
-    );
+    const launcher = page.locator(`[data-effect-tab-target][data-effect="${tool}"]`);
     await expect(launcher).toBeVisible();
     await expect(launcher.click({ timeout: 750 })).rejects.toThrow();
   }
@@ -590,12 +567,9 @@ test("blocks the dimmed editor with a trapped, non-dismissible sign-in dialog", 
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(dialog).toBeVisible();
-
 });
 
-test("shows only Desktop Required below 1024px even without authentication", async ({
-  page,
-}) => {
+test("shows only Desktop Required below 1024px even without authentication", async ({ page }) => {
   await loadEditor(page, { width: 375, height: 812 }, { administratorAccess: "none" });
 
   for (const viewport of [
@@ -617,12 +591,11 @@ test("shows only Desktop Required below 1024px even without authentication", asy
       await expect(page.locator("#video-editor-guidelines")).toBeHidden();
       await expect(page.locator("#video-editor-social-guidelines-overlay")).toBeHidden();
       await expect(
-        page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]')
+        page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]'),
       ).toBeHidden();
       await expect(page.locator('[data-effect-tab-target][data-effect="audio"]')).toBeHidden();
     });
   }
-
 });
 
 test("loads the shared cursor resources and synchronizes saved light and dark modes", async ({
@@ -631,33 +604,19 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
   await loadEditor(page, { width: 1280, height: 800 });
   await expectAuthenticated(page);
 
-  expect(
-    await page.evaluate((key) => localStorage.getItem(key), cursorModeStorageKey)
-  ).toBeNull();
+  expect(await page.evaluate((key) => localStorage.getItem(key), cursorModeStorageKey)).toBeNull();
   await expect(page.locator("html")).not.toHaveClass(/is-cursor-dark-mode/);
   await expect(page.locator("body")).not.toHaveClass(/is-cursor-dark-mode/);
-  await expectCursorImage(
-    page.locator("body"),
-    "generated-png/normal-light.png"
-  );
-  await expectCursorImage(
-    page.locator("#import-media-button"),
-    "generated-png/select-light.png"
-  );
+  await expectCursorImage(page.locator("body"), "generated-png/normal-light.png");
+  await expectCursorImage(page.locator("#import-media-button"), "generated-png/select-light.png");
 
   const peer = await page.context().newPage();
   await peer.goto(editorUrl, { waitUntil: "domcontentloaded" });
   await peer.evaluate((key) => localStorage.setItem(key, "dark"), cursorModeStorageKey);
   await expect(page.locator("html")).toHaveClass(/is-cursor-dark-mode/);
   await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
-  await expectCursorImage(
-    page.locator("body"),
-    "generated-png/normal-dark.png"
-  );
-  await expectCursorImage(
-    page.locator("#import-media-button"),
-    "generated-png/select-dark.png"
-  );
+  await expectCursorImage(page.locator("body"), "generated-png/normal-dark.png");
+  await expectCursorImage(page.locator("#import-media-button"), "generated-png/select-dark.png");
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.getByTestId("video-editor")).toBeVisible();
   await expect(page.locator("body")).toHaveClass(/is-cursor-dark-mode/);
@@ -679,10 +638,7 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
   await peer.evaluate((key) => localStorage.setItem(key, "light"), cursorModeStorageKey);
   await expect(page.locator("html")).not.toHaveClass(/is-cursor-dark-mode/);
   await expect(page.locator("body")).not.toHaveClass(/is-cursor-dark-mode/);
-  await expectCursorImage(
-    page.locator("body"),
-    "generated-png/normal-light.png"
-  );
+  await expectCursorImage(page.locator("body"), "generated-png/normal-light.png");
 
   const cursorResources = [
     "/styles/home/cursors.css",
@@ -699,9 +655,7 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
         "precision",
         "resize-ew",
         "resize-ns",
-      ].map(
-        (name) => `/assets/cursor-assets/generated-png/${name}-${mode}.png`
-      )
+      ].map((name) => `/assets/cursor-assets/generated-png/${name}-${mode}.png`),
     ),
     "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.png",
     "/assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.png",
@@ -717,10 +671,7 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
   await expect(page.getByTestId("desktop-required")).toBeVisible();
   await expect(page.getByTestId("video-editor")).toBeHidden();
   await expect(page.getByTestId("video-editor-auth-overlay")).toBeHidden();
-  await expectCursorImage(
-    page.locator("body"),
-    "generated-png/normal-dark.png"
-  );
+  await expectCursorImage(page.locator("body"), "generated-png/normal-dark.png");
   await expectNoPageOverflow(page);
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(page.getByTestId("desktop-required")).toBeVisible();
@@ -730,9 +681,7 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
   await peer.close();
 });
 
-test("uses working cursors while authentication keeps the editor inert", async ({
-  page,
-}) => {
+test("uses working cursors while authentication keeps the editor inert", async ({ page }) => {
   let releaseSignIn;
   const signInGate = new Promise((resolve) => {
     releaseSignIn = resolve;
@@ -755,41 +704,30 @@ test("uses working cursors while authentication keeps the editor inert", async (
     });
   });
 
-  await loadEditor(
-    page,
-    { width: 1280, height: 800 },
-    { administratorAccess: "none" }
-  );
+  await loadEditor(page, { width: 1280, height: 800 }, { administratorAccess: "none" });
   const editor = page.getByTestId("video-editor");
   const form = page.getByTestId("video-editor-auth-form");
   await expect(editor).toHaveAttribute("inert", "");
-  await expectCursorImage(
-    page.getByLabel("Username"),
-    "generated-png/text-light.png"
-  );
+  await expectCursorImage(page.getByLabel("Username"), "generated-png/text-light.png");
   await signIn(page);
   await expect(form).toHaveAttribute("aria-busy", "true");
   await expect(page.locator("body")).toHaveClass(/is-custom-cursor-loading/);
   await expect(page.locator("body")).toHaveClass(/is-custom-cursor-loading-frame-1/);
-  await expect(page.locator("body")).not.toHaveClass(
-    /is-custom-cursor-loading-frame-[2-9]/
-  );
+  await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading-frame-[2-9]/);
   await expectCursorImage(
     form,
-    "Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-"
+    "Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-",
   );
   await expectCursorImage(
     page.locator("body"),
-    "Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-"
+    "Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-",
   );
   await expect(editor).toHaveAttribute("inert", "");
 
   releaseSignIn();
   await expectAuthenticated(page);
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
-  await expect(page.locator("body")).not.toHaveClass(
-    /is-custom-cursor-loading-frame-/
-  );
+  await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading-frame-/);
 });
 
 test("keeps semantic cursors through text selection, resizing, and native dragging", async ({
@@ -801,58 +739,35 @@ test("keeps semantic cursors through text selection, resizing, and native draggi
   const selectableCopy = page.locator("#media-empty-state small");
   const textPoints = await textDragPoints(selectableCopy);
   await page.mouse.move(textPoints.start.x, textPoints.start.y);
-  await expect(selectableCopy).toHaveClass(
-    new RegExp(`(?:^|\\s)${cursorTextHoverClass}(?:\\s|$)`)
-  );
-  await expectCursorImage(
-    selectableCopy,
-    "generated-png/text-light.png"
-  );
+  await expect(selectableCopy).toHaveClass(new RegExp(`(?:^|\\s)${cursorTextHoverClass}(?:\\s|$)`));
+  await expectCursorImage(selectableCopy, "generated-png/text-light.png");
   await page.mouse.down();
   await page.mouse.move(textPoints.end.x, textPoints.end.y, { steps: 8 });
   await expectCursorSelectionState(page, true);
   expect(await page.evaluate(() => window.getSelection()?.toString())).toBeTruthy();
-  await expectCursorImage(
-    page.locator("body"),
-    "generated-png/text-light.png"
-  );
+  await expectCursorImage(page.locator("body"), "generated-png/text-light.png");
   await page.mouse.up();
   await expectCursorSelectionState(page, false);
   await page.locator("#import-media-button").hover();
   await expect(selectableCopy).not.toHaveClass(
-    new RegExp(`(?:^|\\s)${cursorTextHoverClass}(?:\\s|$)`)
+    new RegExp(`(?:^|\\s)${cursorTextHoverClass}(?:\\s|$)`),
   );
 
-  await expectCursorImage(
-    page.locator("body"),
-    "generated-png/normal-light.png"
-  );
-  await expectCursorImage(
-    page.locator("#media-panel-title"),
-    "generated-png/normal-light.png"
-  );
-  await expectCursorImage(
-    page.locator("#import-media-button"),
-    "generated-png/select-light.png"
-  );
+  await expectCursorImage(page.locator("body"), "generated-png/normal-light.png");
+  await expectCursorImage(page.locator("#media-panel-title"), "generated-png/normal-light.png");
+  await expectCursorImage(page.locator("#import-media-button"), "generated-png/select-light.png");
   await expectCursorImage(
     page.locator("#video-editor-guidelines-info"),
-    "generated-png/help-light.png"
+    "generated-png/help-light.png",
   );
 
   await page.locator("#video-editor-frame-preset").selectOption("custom");
   await expectCursorImage(
     page.locator("#video-editor-frame-custom-width"),
-    "generated-png/text-light.png"
+    "generated-png/text-light.png",
   );
-  await expectCursorImage(
-    page.locator("#playhead-scrubber"),
-    "generated-png/precision-light.png"
-  );
-  await expectCursorImage(
-    page.locator("#timeline-ruler"),
-    "generated-png/precision-light.png"
-  );
+  await expectCursorImage(page.locator("#playhead-scrubber"), "generated-png/precision-light.png");
+  await expectCursorImage(page.locator("#timeline-ruler"), "generated-png/precision-light.png");
   const rulerLabel = page.locator("#timeline-ruler .timeline-ruler__label").first();
   const rulerLabelPoints = await textDragPoints(rulerLabel);
   await page.mouse.move(rulerLabelPoints.start.x, rulerLabelPoints.start.y);
@@ -860,49 +775,35 @@ test("keeps semantic cursors through text selection, resizing, and native draggi
     .poll(() =>
       page.evaluate(
         (className) => document.querySelectorAll(`.${className}`).length,
-        cursorTextHoverClass
-      )
+        cursorTextHoverClass,
+      ),
     )
     .toBe(0);
-  await expectCursorImage(
-    rulerLabel,
-    "generated-png/precision-light.png"
-  );
-  await expectCursorImage(
-    page.getByTestId("timeline-scale"),
-    "generated-png/select-light.png"
-  );
+  await expectCursorImage(rulerLabel, "generated-png/precision-light.png");
+  await expectCursorImage(page.getByTestId("timeline-scale"), "generated-png/select-light.png");
   await expectCursorImage(
     page.locator("#video-editor-media-compose-separator"),
-    "generated-png/resize-ew-light.png"
+    "generated-png/resize-ew-light.png",
   );
   await expectCursorImage(
     page.locator("#video-editor-preview-timeline-separator"),
-    "generated-png/resize-ns-light.png"
+    "generated-png/resize-ns-light.png",
   );
 
   await page.locator('[data-effect-tab-target][data-effect="audio-sync-cut"]').click();
   const analyze = page.getByRole("button", { name: "Analyze source" });
   await expect(analyze).toBeDisabled();
-  await expectCursorImage(
-    analyze,
-    "generated-png/unavailable-light.png"
-  );
+  await expectCursorImage(analyze, "generated-png/unavailable-light.png");
 
-  const standardLayout = page.locator(
-    '[data-video-editor-workspace-layout-option="standard"]'
-  );
+  const standardLayout = page.locator('[data-video-editor-workspace-layout-option="standard"]');
   const standardBounds = await standardLayout.boundingBox();
   expect(standardBounds).not.toBeNull();
   await page.mouse.move(
     standardBounds.x + standardBounds.width / 2,
-    standardBounds.y + standardBounds.height / 2
+    standardBounds.y + standardBounds.height / 2,
   );
   await page.mouse.down();
-  await expectCursorImage(
-    standardLayout,
-    "generated-png/move-light.png"
-  );
+  await expectCursorImage(standardLayout, "generated-png/move-light.png");
   await page.mouse.move(1, 1);
   await page.mouse.up();
 
@@ -911,17 +812,14 @@ test("keeps semantic cursors through text selection, resizing, and native draggi
   expect(mediaSeparatorBounds).not.toBeNull();
   await page.mouse.move(
     mediaSeparatorBounds.x + mediaSeparatorBounds.width / 2,
-    mediaSeparatorBounds.y + mediaSeparatorBounds.height / 2
+    mediaSeparatorBounds.y + mediaSeparatorBounds.height / 2,
   );
   await page.mouse.down();
   await page.mouse.move(mediaSeparatorBounds.x + 20, mediaSeparatorBounds.y + 20, {
     steps: 4,
   });
   await expect(page.locator("body")).toHaveClass(/is-video-editor-resizing-ew/);
-  await expectCursorImage(
-    page.locator("body"),
-    "generated-png/resize-ew-light.png"
-  );
+  await expectCursorImage(page.locator("body"), "generated-png/resize-ew-light.png");
   await page.mouse.up();
   await expect(page.locator("body")).not.toHaveClass(/is-video-editor-resizing-ew/);
 
@@ -930,29 +828,21 @@ test("keeps semantic cursors through text selection, resizing, and native draggi
   expect(previewSeparatorBounds).not.toBeNull();
   await page.mouse.move(
     previewSeparatorBounds.x + previewSeparatorBounds.width / 2,
-    previewSeparatorBounds.y + previewSeparatorBounds.height / 2
+    previewSeparatorBounds.y + previewSeparatorBounds.height / 2,
   );
   await page.mouse.down();
   await page.mouse.move(
     previewSeparatorBounds.x + previewSeparatorBounds.width / 2,
     previewSeparatorBounds.y + 16,
-    { steps: 4 }
+    { steps: 4 },
   );
   await expect(page.locator("body")).toHaveClass(/is-video-editor-resizing-ns/);
-  await expectCursorImage(
-    page.locator("body"),
-    "generated-png/resize-ns-light.png"
-  );
+  await expectCursorImage(page.locator("body"), "generated-png/resize-ns-light.png");
   await page.mouse.up();
   await expect(page.locator("body")).not.toHaveClass(/is-video-editor-resizing-ns/);
 
-  await page
-    .locator('[data-video-editor-workspace-layout-option="side-by-side"]')
-    .click();
-  await expectCursorImage(
-    previewSeparator,
-    "generated-png/resize-ew-light.png"
-  );
+  await page.locator('[data-video-editor-workspace-layout-option="side-by-side"]').click();
+  await expectCursorImage(previewSeparator, "generated-png/resize-ew-light.png");
 
   await page.evaluate(() => {
     window.__videoEditorImportCursorStates = [];
@@ -970,29 +860,17 @@ test("keeps semantic cursors through text selection, resizing, and native draggi
   });
   await importMedia(page, [generatedAudio()]);
   await expect
-    .poll(() =>
-      page.evaluate(() =>
-        window.__videoEditorImportCursorStates.map(({ busy }) => busy)
-      )
-    )
+    .poll(() => page.evaluate(() => window.__videoEditorImportCursorStates.map(({ busy }) => busy)))
     .toEqual([true, false]);
-  const importCursorStates = await page.evaluate(
-    () => window.__videoEditorImportCursorStates
-  );
+  const importCursorStates = await page.evaluate(() => window.__videoEditorImportCursorStates);
   expect(importCursorStates[0].bodyLoading).toBe(true);
   expect(importCursorStates[0].cursor).toContain(
-    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/"
+    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/",
   );
-  await expect(page.getByTestId("video-editor")).toHaveAttribute(
-    "aria-busy",
-    "false"
-  );
+  await expect(page.getByTestId("video-editor")).toHaveAttribute("aria-busy", "false");
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   const mediaItem = page.getByTestId("media-bin").locator('[data-media-id][draggable="true"]');
-  await expectCursorImage(
-    mediaItem,
-    "generated-png/move-light.png"
-  );
+  await expectCursorImage(mediaItem, "generated-png/move-light.png");
   const mediaName = mediaItem.locator("[data-media-name]");
   const mediaNamePoints = await textDragPoints(mediaName);
   await page.mouse.move(mediaNamePoints.start.x, mediaNamePoints.start.y);
@@ -1000,8 +878,8 @@ test("keeps semantic cursors through text selection, resizing, and native draggi
     .poll(() =>
       page.evaluate(
         (className) => document.querySelectorAll(`.${className}`).length,
-        cursorTextHoverClass
-      )
+        cursorTextHoverClass,
+      ),
     )
     .toBe(0);
   await page.locator('[data-effect-tab-target][data-effect="audio"]').click();
@@ -1038,43 +916,33 @@ test("keeps semantic cursors through text selection, resizing, and native draggi
     sourcePosition: { x: 12, y: 13 },
     targetPosition: { x: 12, y: 13 },
   });
-  const dragCursorStates = await page.evaluate(
-    () => window.__videoEditorDragCursorStates
-  );
-  const dragStartCursor = dragCursorStates.find(
-    ({ eventName }) => eventName === "dragstart"
-  );
+  const dragCursorStates = await page.evaluate(() => window.__videoEditorDragCursorStates);
+  const dragStartCursor = dragCursorStates.find(({ eventName }) => eventName === "dragstart");
   expect(dragStartCursor?.holding).toBe(true);
-  expect(dragStartCursor?.cursor).toContain(
-    "/assets/cursor-assets/generated-png/move-light.png"
-  );
+  expect(dragStartCursor?.cursor).toContain("/assets/cursor-assets/generated-png/move-light.png");
   await expect(page.locator("body")).not.toHaveClass(/is-holding-pointer-item/);
 
   await expectNoPageOverflow(page);
 });
 
-test("stores a one-hour server proof and reuses it after reload", async ({
-  page,
-}) => {
+test("stores a one-hour server proof and reuses it after reload", async ({ page }) => {
   const signInStartedAt = Date.now();
   const requests = await configureAdministratorApi(page);
   await loadEditor(page, { width: 1280, height: 800 }, { administratorAccess: "none" });
 
   await signIn(page);
   await expectAuthenticated(page);
-  expect(requests).toEqual([
-    { credentials: administratorCredentials, method: "POST" },
-  ]);
+  expect(requests).toEqual([{ credentials: administratorCredentials, method: "POST" }]);
   const storedProof = await page.evaluate((proofStorageKey) => {
     const value = sessionStorage.getItem(proofStorageKey);
     return value ? JSON.parse(value) : null;
   }, administratorProofStorageKey);
   expect(storedProof?.proof).toBe(administratorProof);
   expect(Date.parse(storedProof?.expiresAt)).toBeGreaterThanOrEqual(
-    signInStartedAt + hourInMilliseconds - 1_000
+    signInStartedAt + hourInMilliseconds - 1_000,
   );
   expect(Date.parse(storedProof?.expiresAt)).toBeLessThanOrEqual(
-    Date.now() + hourInMilliseconds + 1_000
+    Date.now() + hourInMilliseconds + 1_000,
   );
 
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -1103,7 +971,10 @@ test("keeps the gate after invalid credentials and a network failure", async ({
   await expect(page.getByRole("button", { name: "Sign In", exact: true })).toBeEnabled();
   await expect(page.getByLabel("Password")).toHaveValue("");
   expect(
-    await page.evaluate((proofStorageKey) => sessionStorage.getItem(proofStorageKey), administratorProofStorageKey)
+    await page.evaluate(
+      (proofStorageKey) => sessionStorage.getItem(proofStorageKey),
+      administratorProofStorageKey,
+    ),
   ).toBeNull();
 
   await signIn(page);
@@ -1163,20 +1034,23 @@ test("expires or deauthenticates without discarding the project and restores it 
   await expect(editor).toHaveAttribute("aria-hidden", "true");
   await expect(page.getByLabel("Username")).toBeFocused();
   await expect(page.getByTestId("video-editor-auth-status")).toContainText(
-    "Sign in again to continue using the Video Editor."
+    "Sign in again to continue using the Video Editor.",
   );
   expect(
-    await page.evaluate((proofStorageKey) => sessionStorage.getItem(proofStorageKey), administratorProofStorageKey)
+    await page.evaluate(
+      (proofStorageKey) => sessionStorage.getItem(proofStorageKey),
+      administratorProofStorageKey,
+    ),
   ).toBeNull();
   await expect(
-    page.getByRole("button", { name: "Choose Video or Audio…" }).click({ timeout: 750 })
+    page.getByRole("button", { name: "Choose Video or Audio…" }).click({ timeout: 750 }),
   ).rejects.toThrow();
   expect(
     await page.evaluate(() => ({
       mediaCount: document.querySelectorAll("#media-bin [data-media-id]").length,
       clipCount: document.querySelectorAll("article[data-clip-id]").length,
       effectCount: document.querySelectorAll("[data-effect-item-id]").length,
-    }))
+    })),
   ).toEqual({ mediaCount: 1, clipCount: 1, effectCount: 1 });
 
   await signIn(page);
@@ -1186,13 +1060,13 @@ test("expires or deauthenticates without discarding the project and restores it 
 
   await page.evaluate(
     (proofStorageKey) => sessionStorage.removeItem(proofStorageKey),
-    administratorProofStorageKey
+    administratorProofStorageKey,
   );
   await page.clock.fastForward(1_000);
   await expect(overlay).toBeVisible();
   await expect(editor).toHaveAttribute("inert", "");
   await expect(page.getByTestId("video-editor-auth-status")).toContainText(
-    /session ended.*Sign in again to continue using the Video Editor/i
+    /session ended.*Sign in again to continue using the Video Editor/i,
   );
   expect(await readProjectSnapshot(page)).toEqual(projectBeforeExpiry);
 
@@ -1200,20 +1074,19 @@ test("expires or deauthenticates without discarding the project and restores it 
   await expectAuthenticated(page);
   expect(requests).toHaveLength(3);
   expect(await readProjectSnapshot(page)).toEqual(projectBeforeExpiry);
-
 });
 
-test("updates the preview frame presets and contains imported video", async ({
-  page,
-}) => {
+test("updates the preview frame presets and contains imported video", async ({ page }) => {
   await loadEditor(page, { width: 1440, height: 900 });
 
   const preset = page.locator("#video-editor-frame-preset");
   const stage = page.getByTestId("preview-stage");
   const customSize = page.locator("#video-editor-frame-custom-size");
-  const optionValues = await preset.locator("option").evaluateAll((options) =>
-    options.map((option) => ({ text: option.textContent.trim(), value: option.value }))
-  );
+  const optionValues = await preset
+    .locator("option")
+    .evaluateAll((options) =>
+      options.map((option) => ({ text: option.textContent.trim(), value: option.value })),
+    );
   expect(optionValues.map(({ value }) => value)).toEqual([
     "none",
     "9:16",
@@ -1234,7 +1107,7 @@ test("updates the preview frame presets and contains imported video", async ({
   await expect(stage).toHaveAttribute("data-frame-height", "auto");
   await expect(stage).toHaveAttribute(
     "aria-label",
-    "Composed timeline preview, flexible frame (N/A)"
+    "Composed timeline preview, flexible frame (N/A)",
   );
   const flexibleViewport = page.locator("#video-editor-preview-stage-viewport");
   const emptyFlexibleLayout = await Promise.all(
@@ -1242,8 +1115,8 @@ test("updates the preview frame presets and contains imported video", async ({
       element.evaluate((node) => {
         const bounds = node.getBoundingClientRect();
         return { height: bounds.height, width: bounds.width };
-      })
-    )
+      }),
+    ),
   );
   expect(emptyFlexibleLayout[0].width).toBeCloseTo(emptyFlexibleLayout[1].width, 0);
   expect(emptyFlexibleLayout[0].height).toBeCloseTo(emptyFlexibleLayout[1].height, 0);
@@ -1283,7 +1156,7 @@ test("updates the preview frame presets and contains imported video", async ({
   await preset.selectOption("none");
   await expect(stage).toHaveAttribute(
     "aria-label",
-    "Composed timeline preview, flexible frame (N/A)"
+    "Composed timeline preview, flexible frame (N/A)",
   );
   await importMedia(page, [videoAsset]);
   await page
@@ -1314,18 +1187,11 @@ test("updates the preview frame presets and contains imported video", async ({
       element.evaluate((node) => {
         const bounds = node.getBoundingClientRect();
         return { height: bounds.height, width: bounds.width };
-      })
-    )
+      }),
+    ),
   );
-  expect(importedFlexibleLayout[0].width).toBeCloseTo(
-    importedFlexibleLayout[1].width,
-    0
-  );
-  expect(importedFlexibleLayout[0].height).toBeCloseTo(
-    importedFlexibleLayout[1].height,
-    0
-  );
-
+  expect(importedFlexibleLayout[0].width).toBeCloseTo(importedFlexibleLayout[1].width, 0);
+  expect(importedFlexibleLayout[0].height).toBeCloseTo(importedFlexibleLayout[1].height, 0);
 });
 
 test("shows documented platform-specific UI guidelines only for fixed 9:16 frames", async ({
@@ -1345,20 +1211,13 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
   await expect(controls.locator('input[type="checkbox"]')).toHaveCount(0);
   await expect(platform).toHaveValue("none");
   await expect(platform).toHaveAttribute("aria-describedby", "video-editor-guidelines-note");
-  await expect(platform).toHaveAttribute(
-    "aria-controls",
-    "video-editor-social-guidelines-overlay"
-  );
-  await expect(platform.locator("option")).toHaveText([
-    "None",
-    "Instagram Reels",
-    "TikTok",
-  ]);
+  await expect(platform).toHaveAttribute("aria-controls", "video-editor-social-guidelines-overlay");
+  await expect(platform.locator("option")).toHaveText(["None", "Instagram Reels", "TikTok"]);
   await expect(info).toHaveAttribute("aria-describedby", "video-editor-guidelines-note");
   await expect(tooltip).toHaveAttribute("role", "tooltip");
   await expect(tooltip).toBeHidden();
   await expect(tooltip).toContainText(
-    /rough.*iPhone 15 Pro screenshots.*updated.*August 2026.*UI varies/is
+    /rough.*iPhone 15 Pro screenshots.*updated.*August 2026.*UI varies/is,
   );
   await info.hover();
   await expect(tooltip).toBeVisible();
@@ -1399,8 +1258,7 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
   const readGeometry = () =>
     overlay.evaluate((element) => {
       const bounds = element.getBoundingClientRect();
-      const rectangle = (selector) =>
-        element.querySelector(selector).getBoundingClientRect();
+      const rectangle = (selector) => element.querySelector(selector).getBoundingClientRect();
       const top = rectangle('[data-guideline-zone="top"]');
       const right = rectangle('[data-guideline-zone="right"]');
       const bottom = rectangle('[data-guideline-zone="bottom"]');
@@ -1419,9 +1277,7 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
     });
   const expectGeometry = (actual, expected) => {
     for (const [name, value] of Object.entries(expected)) {
-      expect(Math.abs(actual[name] - value), `${name} guideline ratio`).toBeLessThanOrEqual(
-        0.015
-      );
+      expect(Math.abs(actual[name] - value), `${name} guideline ratio`).toBeLessThanOrEqual(0.015);
     }
   };
 
@@ -1436,7 +1292,7 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
     topRight: 0,
   });
   expect((await readGeometry()).safeClipPath).toBe(
-    "polygon(5.5% 14%, 94.5% 14%, 94.5% 39%, 80% 39%, 80% 65%, 5.5% 65%)"
+    "polygon(5.5% 14%, 94.5% 14%, 94.5% 39%, 80% 39%, 80% 65%, 5.5% 65%)",
   );
   expect(
     await overlay.evaluate((element) => {
@@ -1444,10 +1300,10 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
       const bounds = zone.getBoundingClientRect();
       const hit = document.elementFromPoint(
         bounds.left + bounds.width / 2,
-        bounds.top + bounds.height / 2
+        bounds.top + bounds.height / 2,
       );
       return Boolean(hit?.closest("#video-editor-social-guidelines-overlay"));
-    })
+    }),
   ).toBe(false);
 
   await platform.focus();
@@ -1474,7 +1330,7 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
     topRight: 0,
   });
   expect((await readGeometry()).safeClipPath).toBe(
-    "polygon(5% 13%, 95% 13%, 95% 40%, 81% 40%, 81% 68%, 5% 68%)"
+    "polygon(5% 13%, 95% 13%, 95% 40%, 81% 40%, 81% 68%, 5% 68%)",
   );
 
   for (const unsupportedPreset of ["16:9", "4:5", "custom", "none"]) {
@@ -1500,8 +1356,8 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
       await expect(overlay).toBeVisible();
       expect(
         await page.evaluate(
-          () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-        )
+          () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        ),
       ).toBe(false);
     });
   }
@@ -1512,18 +1368,15 @@ test("shows documented platform-specific UI guidelines only for fixed 9:16 frame
   await expect(overlay).toBeHidden();
   await expect(overlay).toHaveAttribute("aria-hidden", "true");
   await expect(status).toContainText(/UI guidelines.*hidden/i);
-
 });
 
-test("keeps small pixel-font labels readable without glyph clipping", async ({
-  page,
-}) => {
+test("keeps small pixel-font labels readable without glyph clipping", async ({ page }) => {
   await loadEditor(page, { width: 1024, height: 800 });
   await expectAuthenticated(page);
   await page.evaluate(() => document.fonts.ready);
-  expect(
-    await page.evaluate(() => document.fonts.check('11px "Pixelated MS Sans Serif"'))
-  ).toBe(true);
+  expect(await page.evaluate(() => document.fonts.check('11px "Pixelated MS Sans Serif"'))).toBe(
+    true,
+  );
 
   const info = page.getByRole("button", { name: /About UI guidelines/i });
   const tooltip = page.locator("#video-editor-guidelines-note");
@@ -1551,7 +1404,7 @@ test("keeps small pixel-font labels readable without glyph clipping", async ({
     await preset.selectOption("9:16");
     const guidelineLabels = page.locator(
       "#video-editor-social-guidelines-overlay [data-guideline-zone] > span, " +
-        "#video-editor-social-guidelines-overlay [data-guideline-safe-area] > span"
+        "#video-editor-social-guidelines-overlay [data-guideline-safe-area] > span",
     );
     await expect(guidelineLabels).toHaveCount(4);
     for (let index = 0; index < 4; index += 1) {
@@ -1562,12 +1415,9 @@ test("keeps small pixel-font labels readable without glyph clipping", async ({
     await platform.selectOption("none");
     await preset.selectOption("none");
   }
-
 });
 
-test("loads local Pixelarticons and preserves semantic action-button states", async ({
-  page,
-}) => {
+test("loads local Pixelarticons and preserves semantic action-button states", async ({ page }) => {
   await loadEditor(page, { width: 1280, height: 800 });
 
   const play = page.locator("#play-pause-button");
@@ -1589,11 +1439,11 @@ test("loads local Pixelarticons and preserves semantic action-button states", as
 
   await expect(page.locator("#media-drop-zone img")).toHaveAttribute(
     "src",
-    /assets\/pixelarticons\/download\.svg$/
+    /assets\/pixelarticons\/download\.svg$/,
   );
   await expect(page.locator("#video-editor-guidelines-info img")).toHaveAttribute(
     "src",
-    /assets\/pixelarticons\/info-box\.svg$/
+    /assets\/pixelarticons\/info-box\.svg$/,
   );
 
   await importMedia(page, [generatedAudio()]);
@@ -1606,14 +1456,14 @@ test("loads local Pixelarticons and preserves semantic action-button states", as
     .getByRole("button", { name: `Delete ${audioName}` });
   await expect(clipDelete.locator("img")).toHaveAttribute(
     "src",
-    /assets\/pixelarticons\/delete\.svg$/
+    /assets\/pixelarticons\/delete\.svg$/,
   );
 
   await page.locator('[data-effect-tab-target][data-effect="closed-captions"]').click();
   const closeTab = page.getByRole("button", { name: "Close Closed Captions tab" });
   await expect(closeTab.locator("img")).toHaveAttribute(
     "src",
-    /assets\/pixelarticons\/close\.svg$/
+    /assets\/pixelarticons\/close\.svg$/,
   );
   await page
     .getByRole("tabpanel", { name: "Closed Captions" })
@@ -1624,7 +1474,7 @@ test("loads local Pixelarticons and preserves semantic action-button states", as
     .getByRole("button", { name: "Delete Closed Captions effect" });
   await expect(effectDelete.locator("img")).toHaveAttribute(
     "src",
-    /assets\/pixelarticons\/delete\.svg$/
+    /assets\/pixelarticons\/delete\.svg$/,
   );
 
   const icons = page.locator('img[src*="/assets/pixelarticons/"]');
@@ -1633,15 +1483,15 @@ test("loads local Pixelarticons and preserves semantic action-button states", as
       alt: image.getAttribute("alt"),
       ariaHidden: image.getAttribute("aria-hidden"),
       src: image.src,
-    }))
+    })),
   );
   expect(iconStates.length).toBeGreaterThanOrEqual(6);
   for (const icon of iconStates) {
     expect(icon.alt).toBe("");
     expect(icon.ariaHidden).toBe("true");
   }
-  const iconUrls = ["play", "pause", "download", "info-box", "close", "delete"].map(
-    (name) => new URL(`/assets/pixelarticons/${name}.svg`, page.url()).toString()
+  const iconUrls = ["play", "pause", "download", "info-box", "close", "delete"].map((name) =>
+    new URL(`/assets/pixelarticons/${name}.svg`, page.url()).toString(),
   );
   for (const src of iconUrls) {
     const response = await page.request.get(src);
@@ -1649,14 +1499,16 @@ test("loads local Pixelarticons and preserves semantic action-button states", as
     expect(response.headers()["content-type"]).toContain("image/svg+xml");
   }
   expect(
-    await page.locator("button").evaluateAll((buttons) =>
-      buttons.some((button) => /[▶⏵►Ⅱ⏸⇩⬇ℹⓘ×✕✖]/u.test(button.textContent || ""))
-    )
+    await page
+      .locator("button")
+      .evaluateAll((buttons) =>
+        buttons.some((button) => /[▶⏵►Ⅱ⏸⇩⬇ℹⓘ×✕✖]/u.test(button.textContent || "")),
+      ),
   ).toBe(false);
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-    )
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    ),
   ).toBe(false);
 });
 
@@ -1677,13 +1529,10 @@ test("switches workspace layouts automatically for 9:16 and preserves manual cho
   for (const control of [standard, sideBySide]) {
     await expect(control).toHaveAttribute(
       "aria-controls",
-      "video-editor-preview-section video-editor-timeline-section"
+      "video-editor-preview-section video-editor-timeline-section",
     );
   }
-  await expect(composeBody).toHaveAttribute(
-    "data-video-editor-workspace-layout",
-    "standard"
-  );
+  await expect(composeBody).toHaveAttribute("data-video-editor-workspace-layout", "standard");
   await expect(standard).toHaveAttribute("aria-pressed", "true");
   await expect(sideBySide).toHaveAttribute("aria-pressed", "false");
 
@@ -1693,8 +1542,8 @@ test("switches workspace layouts automatically for 9:16 and preserves manual cho
         element.evaluate((node) => {
           const bounds = node.getBoundingClientRect();
           return { height: bounds.height, width: bounds.width };
-        })
-      )
+        }),
+      ),
     );
     const stageArea = stageBounds.width * stageBounds.height;
     const viewportArea = viewportBounds.width * viewportBounds.height;
@@ -1707,26 +1556,18 @@ test("switches workspace layouts automatically for 9:16 and preserves manual cho
   };
 
   await preset.selectOption("9:16");
-  await expect(composeBody).toHaveAttribute(
-    "data-video-editor-workspace-layout",
-    "side-by-side"
-  );
+  await expect(composeBody).toHaveAttribute("data-video-editor-workspace-layout", "side-by-side");
   await expect(sideBySide).toHaveAttribute("aria-pressed", "true");
   await expect(standard).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator("#editor-status")).toHaveText(
-    "Frame size set to Reel / TikTok (9:16). Workspace layout changed to Side by side."
+    "Frame size set to Reel / TikTok (9:16). Workspace layout changed to Side by side.",
   );
   await expectPreviewAspect(stage, 9, 16);
   const sideBySidePortrait = await readPreviewGeometry();
 
   await standard.click();
-  await expect(composeBody).toHaveAttribute(
-    "data-video-editor-workspace-layout",
-    "standard"
-  );
-  await expect(page.locator("#editor-status")).toHaveText(
-    "Workspace layout set to Standard."
-  );
+  await expect(composeBody).toHaveAttribute("data-video-editor-workspace-layout", "standard");
+  await expect(page.locator("#editor-status")).toHaveText("Workspace layout set to Standard.");
   await expect
     .poll(async () => (await readPreviewGeometry()).stageArea)
     .toBeLessThan(sideBySidePortrait.stageArea * 0.9);
@@ -1737,50 +1578,30 @@ test("switches workspace layouts automatically for 9:16 and preserves manual cho
 
   await sideBySide.focus();
   await sideBySide.press("Space");
-  await expect(composeBody).toHaveAttribute(
-    "data-video-editor-workspace-layout",
-    "side-by-side"
-  );
+  await expect(composeBody).toHaveAttribute("data-video-editor-workspace-layout", "side-by-side");
   await preset.selectOption("16:9");
-  await expect(composeBody).toHaveAttribute(
-    "data-video-editor-workspace-layout",
-    "side-by-side"
-  );
-  await expect(page.locator("#editor-status")).toHaveText(
-    "Frame size set to Widescreen (16:9)."
-  );
+  await expect(composeBody).toHaveAttribute("data-video-editor-workspace-layout", "side-by-side");
+  await expect(page.locator("#editor-status")).toHaveText("Frame size set to Widescreen (16:9).");
 
   await standard.focus();
   await standard.press("Enter");
-  await expect(composeBody).toHaveAttribute(
-    "data-video-editor-workspace-layout",
-    "standard"
-  );
+  await expect(composeBody).toHaveAttribute("data-video-editor-workspace-layout", "standard");
   await preset.selectOption("custom");
-  await expect(composeBody).toHaveAttribute(
-    "data-video-editor-workspace-layout",
-    "standard"
-  );
+  await expect(composeBody).toHaveAttribute("data-video-editor-workspace-layout", "standard");
   await expect(page.locator("#video-editor-frame-custom-size")).toBeVisible();
 
   await preset.selectOption("9:16");
-  await expect(composeBody).toHaveAttribute(
-    "data-video-editor-workspace-layout",
-    "side-by-side"
-  );
+  await expect(composeBody).toHaveAttribute("data-video-editor-workspace-layout", "side-by-side");
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(stage).toBeVisible();
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-    )
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    ),
   ).toBe(false);
-
 });
 
-test("resizes the preview and timeline with pointer and keyboard controls", async ({
-  page,
-}) => {
+test("resizes the preview and timeline with pointer and keyboard controls", async ({ page }) => {
   await loadEditor(page, { width: 1280, height: 800 });
 
   const separator = page.getByRole("separator", {
@@ -1792,7 +1613,7 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
   await expect(separator).toHaveAttribute(
     "aria-controls",
-    "video-editor-preview-section video-editor-timeline-section"
+    "video-editor-preview-section video-editor-timeline-section",
   );
   const standardMinimum = Number(await separator.getAttribute("aria-valuemin"));
   const standardMaximum = Number(await separator.getAttribute("aria-valuemax"));
@@ -1803,15 +1624,13 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   await expect(separator).toHaveAttribute("aria-valuenow", "44");
   await expect(separator).toHaveAttribute(
     "aria-valuetext",
-    "Preview height 44%, timeline height 56%"
+    "Preview height 44%, timeline height 56%",
   );
   await expect(composeBody).toHaveCSS("--video-editor-preview-split", "44fr");
   await expect(composeBody).toHaveCSS("--video-editor-timeline-split", "56fr");
   const standardRail = await separator.evaluate((element) => {
     const railStyle = getComputedStyle(element);
-    const grip = element.querySelector(
-      ".video-editor-preview-timeline-separator__grip"
-    );
+    const grip = element.querySelector(".video-editor-preview-timeline-separator__grip");
     const gripBounds = grip.getBoundingClientRect();
     return {
       backgroundColor: railStyle.backgroundColor,
@@ -1828,18 +1647,17 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
 
   await separator.focus();
   await expect(separator).toHaveCSS("outline-style", "none");
-  await expect(
-    separator.locator(".video-editor-preview-timeline-separator__grip")
-  ).toHaveCSS("outline-style", "dotted");
+  await expect(separator.locator(".video-editor-preview-timeline-separator__grip")).toHaveCSS(
+    "outline-style",
+    "dotted",
+  );
   await separator.press("ArrowUp");
   await expect(separator).toHaveAttribute("aria-valuenow", "39");
   await expect(composeBody).toHaveCSS("--video-editor-preview-split", "39fr");
   await expect(composeBody).toHaveCSS("--video-editor-timeline-split", "61fr");
   await separator.press("ArrowDown");
   await expect(separator).toHaveAttribute("aria-valuenow", "44");
-  await expect(page.locator("#editor-status")).toHaveText(
-    "Preview area set to 44 percent."
-  );
+  await expect(page.locator("#editor-status")).toHaveText("Preview area set to 44 percent.");
 
   await separator.press("Home");
   await expect(separator).toHaveAttribute("aria-valuenow", String(standardMinimum));
@@ -1862,28 +1680,22 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   expect(separatorBounds).not.toBeNull();
   await page.mouse.move(
     separatorBounds.x + separatorBounds.width / 2,
-    separatorBounds.y + separatorBounds.height / 2
+    separatorBounds.y + separatorBounds.height / 2,
   );
   await page.mouse.down();
   await page.mouse.move(
     separatorBounds.x + separatorBounds.width / 2,
     bodyBounds.y + bodyBounds.height * 0.6,
-    { steps: 5 }
+    { steps: 5 },
   );
   await page.mouse.up();
   const pointerValue = Number(await separator.getAttribute("aria-valuenow"));
   expect(pointerValue).toBeGreaterThanOrEqual(59);
   expect(pointerValue).toBeLessThanOrEqual(61);
-  await expect(composeBody).toHaveCSS(
-    "--video-editor-preview-split",
-    `${pointerValue}fr`
-  );
-  await expect(composeBody).toHaveCSS(
-    "--video-editor-timeline-split",
-    `${100 - pointerValue}fr`
-  );
+  await expect(composeBody).toHaveCSS("--video-editor-preview-split", `${pointerValue}fr`);
+  await expect(composeBody).toHaveCSS("--video-editor-timeline-split", `${100 - pointerValue}fr`);
   await expect(page.locator("#editor-status")).toHaveText(
-    `Preview area set to ${pointerValue} percent.`
+    `Preview area set to ${pointerValue} percent.`,
   );
   await expect(separator).toBeFocused();
 
@@ -1899,13 +1711,11 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   expect(sideMaximum).toBeLessThanOrEqual(75);
   await expect(separator).toHaveAttribute(
     "aria-valuetext",
-    `Preview width ${sideInitialValue}%, timeline width ${100 - sideInitialValue}%`
+    `Preview width ${sideInitialValue}%, timeline width ${100 - sideInitialValue}%`,
   );
   const sideRail = await separator.evaluate((element) => {
     const railStyle = getComputedStyle(element);
-    const grip = element.querySelector(
-      ".video-editor-preview-timeline-separator__grip"
-    );
+    const grip = element.querySelector(".video-editor-preview-timeline-separator__grip");
     const gripBounds = grip.getBoundingClientRect();
     return {
       backgroundColor: railStyle.backgroundColor,
@@ -1948,20 +1758,20 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   expect(sideSeparatorBounds).not.toBeNull();
   await page.mouse.move(
     sideSeparatorBounds.x + sideSeparatorBounds.width / 2,
-    sideSeparatorBounds.y + sideSeparatorBounds.height / 2
+    sideSeparatorBounds.y + sideSeparatorBounds.height / 2,
   );
   await page.mouse.down();
   await page.mouse.move(
     sideBodyBounds.x + sideBodyBounds.width * 0.6,
     sideSeparatorBounds.y + sideSeparatorBounds.height / 2,
-    { steps: 5 }
+    { steps: 5 },
   );
   await page.mouse.up();
   const sidePointerValue = Number(await separator.getAttribute("aria-valuenow"));
   expect(sidePointerValue).toBeGreaterThanOrEqual(59);
   expect(sidePointerValue).toBeLessThanOrEqual(61);
   await expect(page.locator("#editor-status")).toHaveText(
-    `Preview area set to ${sidePointerValue} percent.`
+    `Preview area set to ${sidePointerValue} percent.`,
   );
 
   await page.getByRole("button", { name: "Standard", exact: true }).click();
@@ -1994,19 +1804,14 @@ test("resizes the preview and timeline with pointer and keyboard controls", asyn
   await page.getByRole("button", { name: "Audio", exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(mediaSeparator).toBeFocused();
-  await expect(mediaSeparator).toHaveCSS(
+  await expect(mediaSeparator).toHaveCSS("outline-style", "none");
+  await expect(mediaSeparator.locator(".video-editor-side-separator__grip")).toHaveCSS(
     "outline-style",
-    "none"
+    "dotted",
   );
-  await expect(
-    mediaSeparator.locator(".video-editor-side-separator__grip")
-  ).toHaveCSS("outline-style", "dotted");
-
 });
 
-test("aligns range clicks and renders bounded major and minor ruler ticks", async ({
-  page,
-}) => {
+test("aligns range clicks and renders bounded major and minor ruler ticks", async ({ page }) => {
   await loadEditor(page, { width: 1280, height: 800 });
 
   const playhead = page.getByTestId("playhead-scrubber");
@@ -2016,7 +1821,7 @@ test("aligns range clicks and renders bounded major and minor ruler ticks", asyn
     await test.step(`playhead ${target}`, async () => {
       const actual = await clickRangeAtValue(playhead, target);
       await expect(page.locator("#current-time")).toHaveText(
-        `00:${actual.toFixed(2).padStart(5, "0")}`
+        `00:${actual.toFixed(2).padStart(5, "0")}`,
       );
       const alignment = await Promise.all([
         timelineTrack.evaluate((element) => element.getBoundingClientRect().left),
@@ -2031,7 +1836,7 @@ test("aligns range clicks and renders bounded major and minor ruler ticks", asyn
     await test.step(`scale ${target}`, async () => {
       const actual = await clickRangeAtValue(scale, target);
       await expect(page.locator("#editor-status")).toHaveText(
-        `Timeline scale set to ${actual} pixels per second.`
+        `Timeline scale set to ${actual} pixels per second.`,
       );
     });
   }
@@ -2062,7 +1867,6 @@ test("aligns range clicks and renders bounded major and minor ruler ticks", asyn
       expect(majorTicks.at(-1).label.right).toBeLessThanOrEqual(ruler.right + 0.5);
     });
   }
-
 });
 
 test("switches exactly at the desktop breakpoint and starts with an empty project", async ({
@@ -2100,7 +1904,7 @@ test("switches exactly at the desktop breakpoint and starts with an empty projec
       }
 
       const hasHorizontalOverflow = await page.evaluate(
-        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
       );
       expect(hasHorizontalOverflow).toBe(false);
     });
@@ -2108,16 +1912,10 @@ test("switches exactly at the desktop breakpoint and starts with an empty projec
 
   await expect(page.getByTestId("media-bin")).toContainText("No media imported");
   await expect(page.locator("#media-count")).toHaveText("0 items");
-  await expect(page.getByTestId("timeline-tier-video-1")).toContainText(
-    "Drop video clips here"
-  );
-  await expect(page.getByTestId("timeline-tier-audio-1")).toContainText(
-    "Drop audio clips here"
-  );
+  await expect(page.getByTestId("timeline-tier-video-1")).toContainText("Drop video clips here");
+  await expect(page.getByTestId("timeline-tier-audio-1")).toContainText("Drop audio clips here");
   await expect(page.getByTestId("effects-lane")).toContainText("Effects appear here");
-  await expect(page.locator("#preview-empty-state")).toContainText(
-    "Nothing at the playhead"
-  );
+  await expect(page.locator("#preview-empty-state")).toContainText("Nothing at the playhead");
   await expect(page.getByRole("button", { name: "Reopen closed tab" })).toHaveCount(0);
   const defaultEffectTab = page.getByRole("tab", { name: "Effect editor home" });
   await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(1);
@@ -2126,7 +1924,6 @@ test("switches exactly at the desktop breakpoint and starts with an empty projec
   await expect(defaultEffectTab).toHaveAttribute("draggable", "false");
   await expect(page.getByRole("tabpanel", { name: "Effect editor home" })).toBeVisible();
   await expect(page.locator("#editor-status")).toContainText("Empty project ready");
-
 });
 
 test("imports local video and generated audio, validates tier drops, and composes the preview", async ({
@@ -2141,18 +1938,14 @@ test("imports local video and generated audio, validates tier drops, and compose
   const videoTrack = page.getByTestId("timeline-tier-video-1");
   const audioTrack = page.getByTestId("timeline-tier-audio-1");
 
-  await expect(videoMedia).toHaveAccessibleName(
-    new RegExp(`${videoName}, video, 00:05\\.0`)
-  );
+  await expect(videoMedia).toHaveAccessibleName(new RegExp(`${videoName}, video, 00:05\\.0`));
   await expect(audioMedia).toHaveAccessibleName(`${audioName}, audio, 00:02.00`);
   await expect(mediaBin.getByRole("listitem")).toHaveCount(2);
 
-  await videoMedia
-    .getByRole("button", { name: `Add ${videoName} at the playhead` })
-    .click();
+  await videoMedia.getByRole("button", { name: `Add ${videoName} at the playhead` }).click();
   await expect(videoTrack.getByRole("listitem")).toHaveCount(1);
   await expect(page.locator("#editor-status")).toContainText(
-    `${videoName} added to Video 1 at 00:00.00`
+    `${videoName} added to Video 1 at 00:00.00`,
   );
   await expect(page.locator("#preview-video")).toBeVisible();
   await expect(page.locator("#preview-video")).toHaveAttribute("src", /^blob:/);
@@ -2160,7 +1953,7 @@ test("imports local video and generated audio, validates tier drops, and compose
 
   await audioMedia.dragTo(videoTrack);
   await expect(page.locator("#editor-status")).toContainText(
-    `${audioName} is audio; choose a audio tier`
+    `${audioName} is audio; choose a audio tier`,
   );
   await expect(videoTrack.getByRole("listitem")).toHaveCount(1);
   await expect(audioTrack.getByRole("listitem")).toHaveCount(0);
@@ -2168,9 +1961,7 @@ test("imports local video and generated audio, validates tier drops, and compose
   await audioMedia.dragTo(audioTrack);
   const audioClip = audioTrack.getByRole("listitem");
   await expect(audioClip).toHaveCount(1);
-  await expect(page.locator("#editor-status")).toContainText(
-    `${audioName} added to Audio 1`
-  );
+  await expect(page.locator("#editor-status")).toContainText(`${audioName} added to Audio 1`);
   const audioStart = await audioClip.getAttribute("aria-label").then((label) => {
     const match = label?.match(/starts 00:(\d{2}\.\d{2})/);
     expect(match, "audio clip exposes its timeline start").not.toBeNull();
@@ -2178,14 +1969,12 @@ test("imports local video and generated audio, validates tier drops, and compose
   });
 
   await setPlayhead(page, audioStart + 0.25);
-  await expect(page.locator('#preview-audio-mix audio[data-audio-clip-id]')).toHaveCount(1);
+  await expect(page.locator("#preview-audio-mix audio[data-audio-clip-id]")).toHaveCount(1);
   await expect(page.locator("#preview-clip-name")).toContainText(audioName);
 
   await setPlayhead(page, 0.75);
   await expect(page.locator("#current-time")).toHaveText("00:00.75");
-  await expect(page.locator("#editor-status")).toContainText(
-    "Playhead moved to 00:00.75"
-  );
+  await expect(page.locator("#editor-status")).toContainText("Playhead moved to 00:00.75");
   await expect(page.locator("#preview-video")).toBeVisible();
   await expect(page.locator("#preview-clip-name")).toHaveText(videoName);
 
@@ -2193,7 +1982,7 @@ test("imports local video and generated audio, validates tier drops, and compose
   await play.click();
   await expect(page.getByRole("button", { name: "Pause", exact: true })).toHaveAttribute(
     "aria-pressed",
-    "true"
+    "true",
   );
   // Playback is the assertion: poll the scrubber until it has actually moved
   // past where the playhead was parked.
@@ -2203,9 +1992,8 @@ test("imports local video and generated audio, validates tier drops, and compose
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(page.getByRole("button", { name: "Play", exact: true })).toHaveAttribute(
     "aria-pressed",
-    "false"
+    "false",
   );
-
 });
 
 test("keeps imported media, the analysis worker, and the observers across a back/forward restoration", async ({
@@ -2243,16 +2031,14 @@ test("keeps imported media, the analysis worker, and the observers across a back
     page.evaluate(
       ({ eventType, isPersisted }) =>
         window.dispatchEvent(new PageTransitionEvent(eventType, { persisted: isPersisted })),
-      { eventType: type, isPersisted: persisted }
+      { eventType: type, isPersisted: persisted },
     );
 
   const mediaBin = page.getByTestId("media-bin");
   await importMedia(page, [videoAsset, generatedAudioSync()]);
-  await mediaBin
-    .getByRole("button", { name: `Add ${audioSyncName} at the playhead` })
-    .click();
+  await mediaBin.getByRole("button", { name: `Add ${audioSyncName} at the playhead` }).click();
   await expect(
-    page.getByTestId("timeline-tier-audio-1").locator("article[data-clip-id]")
+    page.getByTestId("timeline-tier-audio-1").locator("article[data-clip-id]"),
   ).toHaveCount(1);
   // Analyzing once is what creates the analysis worker the handler used to kill.
   await analyzeAudioSyncClip(page);
@@ -2267,7 +2053,7 @@ test("keeps imported media, the analysis worker, and the observers across a back
 
   expect(
     await readTeardown(),
-    "a restored page must keep its blob URLs, analysis worker, and observers"
+    "a restored page must keep its blob URLs, analysis worker, and observers",
   ).toEqual({ disconnectedObservers: 0, revokedObjectUrls: [], terminatedWorkers: 0 });
   await expectAuthenticated(page);
   await expect(mediaBin.getByRole("listitem")).toHaveCount(2);
@@ -2289,14 +2075,14 @@ test("keeps imported media, the analysis worker, and the observers across a back
           errorCode: video.error?.code ?? null,
           hasMetadata: video.readyState >= HTMLMediaElement.HAVE_METADATA,
         })),
-      { timeout: 20_000 }
+      { timeout: 20_000 },
     )
     .toEqual({ errorCode: null, hasMetadata: true });
 
   const previewSource = await preview.getAttribute("src");
   expect(
     await page.evaluate(async (source) => (await fetch(source)).ok, previewSource),
-    "the restored page's blob URL must still resolve"
+    "the restored page's blob URL must still resolve",
   ).toBe(true);
 
   // A discarded document still releases everything: the guard narrows the
@@ -2322,16 +2108,14 @@ test("snaps and reorders clips, adds typed tiers, and supports keyboard editing 
 
   let videoOne = page.getByTestId("timeline-tier-video-1");
   await expect(videoOne.getByRole("listitem")).toHaveCount(2);
-  await expect(page.locator("#editor-status")).toContainText(
-    "snapped to avoid an overlap"
-  );
+  await expect(page.locator("#editor-status")).toContainText("snapped to avoid an overlap");
   await expect(videoOne.locator('[data-clip-id="clip-1"]')).toHaveAttribute(
     "aria-label",
-    /starts 00:00\.00/
+    /starts 00:00\.00/,
   );
   await expect(videoOne.locator('[data-clip-id="clip-2"]')).toHaveAttribute(
     "aria-label",
-    /starts 00:05\.0/
+    /starts 00:05\.0/,
   );
 
   const targetBounds = await videoOne.boundingBox();
@@ -2342,20 +2126,16 @@ test("snaps and reorders clips, adds typed tiers, and supports keyboard editing 
       y: targetBounds.height / 2,
     },
   });
-  await expect(page.locator("#editor-status")).toContainText(
-    `${videoName} moved to Video 1`
-  );
-  await expect(page.locator("#editor-status")).toContainText(
-    "snapped to avoid an overlap"
-  );
+  await expect(page.locator("#editor-status")).toContainText(`${videoName} moved to Video 1`);
+  await expect(page.locator("#editor-status")).toContainText("snapped to avoid an overlap");
   await expect(videoOne.locator('[data-clip-id="clip-1"]')).toHaveAttribute(
     "aria-label",
-    /starts 00:10\.0/
+    /starts 00:10\.0/,
   );
   expect(
-    await videoOne.locator("[data-clip-id]").evaluateAll((clips) =>
-      clips.map((clip) => clip.dataset.clipId)
-    )
+    await videoOne
+      .locator("[data-clip-id]")
+      .evaluateAll((clips) => clips.map((clip) => clip.dataset.clipId)),
   ).toEqual(["clip-2", "clip-1"]);
 
   await page.getByRole("button", { name: "Add video tier" }).click();
@@ -2368,7 +2148,9 @@ test("snaps and reorders clips, adds typed tiers, and supports keyboard editing 
   let clipOne = page.locator('article[data-clip-id="clip-1"]');
   await clipOne.focus();
   await clipOne.press("ArrowDown");
-  await expect(page.getByTestId("timeline-tier-video-2").locator('[data-clip-id="clip-1"]')).toBeVisible();
+  await expect(
+    page.getByTestId("timeline-tier-video-2").locator('[data-clip-id="clip-1"]'),
+  ).toBeVisible();
   await expect(page.locator("#editor-status")).toContainText("moved to Video 2");
 
   clipOne = page.getByTestId("timeline-tier-video-2").locator('[data-clip-id="clip-1"]');
@@ -2379,9 +2161,11 @@ test("snaps and reorders clips, adds typed tiers, and supports keyboard editing 
 
   await clipOne.dragTo(page.getByTestId("timeline-tier-audio-1"));
   await expect(page.locator("#editor-status")).toContainText(
-    `${videoName} cannot move to Audio 1; it accepts audio clips`
+    `${videoName} cannot move to Audio 1; it accepts audio clips`,
   );
-  await expect(page.getByTestId("timeline-tier-video-2").locator('[data-clip-id="clip-1"]')).toBeVisible();
+  await expect(
+    page.getByTestId("timeline-tier-video-2").locator('[data-clip-id="clip-1"]'),
+  ).toBeVisible();
 
   clipOne = page.getByTestId("timeline-tier-video-2").locator('[data-clip-id="clip-1"]');
   const pointerTrimBefore = await clipOne.getAttribute("aria-label");
@@ -2392,7 +2176,7 @@ test("snaps and reorders clips, adds typed tiers, and supports keyboard editing 
   expect(pointerTrimBounds).not.toBeNull();
   await page.mouse.move(
     pointerTrimBounds.x + pointerTrimBounds.width / 2,
-    pointerTrimBounds.y + pointerTrimBounds.height / 2
+    pointerTrimBounds.y + pointerTrimBounds.height / 2,
   );
   await page.mouse.down();
   await page.mouse.move(pointerTrimBounds.x - 32, pointerTrimBounds.y + 4, {
@@ -2413,28 +2197,26 @@ test("snaps and reorders clips, adds typed tiers, and supports keyboard editing 
   await expect(page.locator("#editor-status")).toContainText("start edge trimmed");
 
   const durationAfterStartTrim = await clipOne.getAttribute("aria-label");
-  await clipOne
-    .getByRole("button", { name: `Trim end of ${videoName}` })
-    .press("ArrowLeft");
+  await clipOne.getByRole("button", { name: `Trim end of ${videoName}` }).press("ArrowLeft");
   clipOne = page.getByTestId("timeline-tier-video-2").locator('[data-clip-id="clip-1"]');
   await expect(clipOne).not.toHaveAttribute("aria-label", durationAfterStartTrim);
   await expect(page.locator("#editor-status")).toContainText("end edge trimmed");
 
   videoOne = page.getByTestId("timeline-tier-video-1");
   const remainingClip = videoOne.locator('[data-clip-id="clip-2"]');
-  const widthBeforeScale = await remainingClip.evaluate((element) =>
-    element.getBoundingClientRect().width
+  const widthBeforeScale = await remainingClip.evaluate(
+    (element) => element.getBoundingClientRect().width,
   );
   await page.getByTestId("timeline-scale").evaluate((element) => {
     element.value = "160";
     element.dispatchEvent(new Event("input", { bubbles: true }));
   });
-  const widthAfterScale = await remainingClip.evaluate((element) =>
-    element.getBoundingClientRect().width
+  const widthAfterScale = await remainingClip.evaluate(
+    (element) => element.getBoundingClientRect().width,
   );
   expect(widthAfterScale).toBeGreaterThan(widthBeforeScale * 2);
   await expect(page.locator("#editor-status")).toContainText(
-    "Timeline scale set to 160 pixels per second"
+    "Timeline scale set to 160 pixels per second",
   );
 
   clipOne = page.getByTestId("timeline-tier-video-2").locator('[data-clip-id="clip-1"]');
@@ -2442,9 +2224,8 @@ test("snaps and reorders clips, adds typed tiers, and supports keyboard editing 
   await clipOne.press("Delete");
   await expect(page.locator('article[data-clip-id="clip-1"]')).toHaveCount(0);
   await expect(page.locator("#editor-status")).toContainText(
-    `${videoName} deleted from the timeline`
+    `${videoName} deleted from the timeline`,
   );
-
 });
 
 test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect bars", async ({
@@ -2452,8 +2233,7 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
 }) => {
   await loadEditor(page);
 
-  const launchEffect = (type) =>
-    page.locator(`[data-effect-tab-target][data-effect="${type}"]`);
+  const launchEffect = (type) => page.locator(`[data-effect-tab-target][data-effect="${type}"]`);
   const homeTab = page.getByRole("tab", { name: "Effect editor home" });
   await expect(homeTab).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tabpanel", { name: "Effect editor home" })).toBeVisible();
@@ -2465,22 +2245,14 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
   await expect(page.getByRole("tab", { name: "Transitions" })).toBeFocused();
   await expect(homeTab).toHaveAttribute("aria-selected", "false");
   await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(4);
-  expect(await tabLabels(page)).toEqual([
-    "Closed Captions",
-    "Windows 98",
-    "Transitions",
-  ]);
+  expect(await tabLabels(page)).toEqual(["Closed Captions", "Windows 98", "Transitions"]);
 
   await homeTab.focus();
   await homeTab.press("Delete");
   await homeTab.press("Control+ArrowRight");
   await expect(homeTab).toHaveCount(1);
   await expect(homeTab).toHaveAttribute("draggable", "false");
-  expect(await tabLabels(page)).toEqual([
-    "Closed Captions",
-    "Windows 98",
-    "Transitions",
-  ]);
+  expect(await tabLabels(page)).toEqual(["Closed Captions", "Windows 98", "Transitions"]);
   await homeTab.press("ArrowRight");
   await expect(page.getByRole("tab", { name: "Closed Captions" })).toBeFocused();
   await page.getByRole("tab", { name: "Closed Captions" }).press("ArrowLeft");
@@ -2494,12 +2266,8 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
   await expect(page.getByRole("tabpanel", { name: "Effect editor home" })).toBeVisible();
   await launchEffect("transitions").click();
 
-  const draggedTab = page.locator(
-    '[data-effect-tab-wrapper][data-effect="windows-98"]'
-  );
-  const dragTarget = page.locator(
-    '[data-effect-tab-wrapper][data-effect="closed-captions"]'
-  );
+  const draggedTab = page.locator('[data-effect-tab-wrapper][data-effect="windows-98"]');
+  const dragTarget = page.locator('[data-effect-tab-wrapper][data-effect="closed-captions"]');
   await page.locator(".effect-tab-scroll").evaluate((element) => {
     element.scrollLeft = 0;
   });
@@ -2507,26 +2275,16 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
     sourcePosition: { x: 12, y: 13 },
     targetPosition: { x: 12, y: 13 },
   });
-  expect(await tabLabels(page)).toEqual([
-    "Windows 98",
-    "Closed Captions",
-    "Transitions",
-  ]);
-  await expect(page.locator("#editor-status")).toContainText(
-    "Windows 98 tab moved to position 2"
-  );
+  expect(await tabLabels(page)).toEqual(["Windows 98", "Closed Captions", "Transitions"]);
+  await expect(page.locator("#editor-status")).toContainText("Windows 98 tab moved to position 2");
 
   await launchEffect("closed-captions").click();
   await expect(page.getByRole("tab", { name: "Closed Captions" })).toBeFocused();
   await expect(page.getByTestId("effect-tab-list").getByRole("tab")).toHaveCount(4);
   await page.getByRole("tab", { name: "Closed Captions" }).press("Control+ArrowRight");
-  expect(await tabLabels(page)).toEqual([
-    "Windows 98",
-    "Transitions",
-    "Closed Captions",
-  ]);
+  expect(await tabLabels(page)).toEqual(["Windows 98", "Transitions", "Closed Captions"]);
   await expect(page.locator("#editor-status")).toContainText(
-    "Closed Captions tab moved to position 4"
+    "Closed Captions tab moved to position 4",
   );
 
   await page.getByRole("tab", { name: "Closed Captions" }).press("Delete");
@@ -2534,21 +2292,13 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
   await expect(page.getByRole("button", { name: "Reopen closed tab" })).toHaveCount(0);
   await launchEffect("closed-captions").click();
   await expect(page.getByRole("tab", { name: "Closed Captions" })).toBeFocused();
-  expect(await tabLabels(page)).toEqual([
-    "Windows 98",
-    "Transitions",
-    "Closed Captions",
-  ]);
+  expect(await tabLabels(page)).toEqual(["Windows 98", "Transitions", "Closed Captions"]);
 
   await page.getByRole("button", { name: "Close Windows 98 tab" }).click();
   await expect(page.getByRole("tab", { name: "Windows 98" })).toHaveCount(0);
   await launchEffect("windows-98").click();
   await expect(page.getByRole("tab", { name: "Windows 98" })).toBeFocused();
-  expect(await tabLabels(page)).toEqual([
-    "Transitions",
-    "Closed Captions",
-    "Windows 98",
-  ]);
+  expect(await tabLabels(page)).toEqual(["Transitions", "Closed Captions", "Windows 98"]);
 
   await setPlayhead(page, 2);
   for (const name of ["Closed Captions", "Windows 98", "Transitions"]) {
@@ -2562,23 +2312,14 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
   const effectsLane = page.getByTestId("effects-lane");
   await expect(effectsLane.getByRole("listitem")).toHaveCount(3);
   await expect(
-    effectsLane.locator('[data-effect="closed-captions"] [data-effect-item-icon]')
-  ).toHaveAttribute(
-    "src",
-    /accessibility_window_speak\.ico$/
-  );
+    effectsLane.locator('[data-effect="closed-captions"] [data-effect-item-icon]'),
+  ).toHaveAttribute("src", /accessibility_window_speak\.ico$/);
   await expect(
-    effectsLane.locator('[data-effect="windows-98"] [data-effect-item-icon]')
-  ).toHaveAttribute(
-    "src",
-    /windows\.ico$/
-  );
+    effectsLane.locator('[data-effect="windows-98"] [data-effect-item-icon]'),
+  ).toHaveAttribute("src", /windows\.ico$/);
   await expect(
-    effectsLane.locator('[data-effect="transitions"] [data-effect-item-icon]')
-  ).toHaveAttribute(
-    "src",
-    /movie_maker\.ico$/
-  );
+    effectsLane.locator('[data-effect="transitions"] [data-effect-item-icon]'),
+  ).toHaveAttribute("src", /movie_maker\.ico$/);
 
   let captions = effectsLane.locator('[data-effect="closed-captions"]');
   await expect(captions).toHaveAccessibleName(/00:03\.00, starts 00:02\.00/);
@@ -2587,7 +2328,7 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
   captions = effectsLane.locator('[data-effect="closed-captions"]');
   await expect(captions).toHaveAccessibleName(/starts 00:02\.25/);
   await expect(page.locator("#editor-status")).toContainText(
-    "Closed Captions effect moved to 00:02.25"
+    "Closed Captions effect moved to 00:02.25",
   );
 
   await captions
@@ -2601,7 +2342,7 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
   captions = effectsLane.locator('[data-effect="closed-captions"]');
   await expect(captions).toHaveAccessibleName(/00:03\.00, starts 00:02\.50/);
   await expect(page.locator("#editor-status")).toContainText(
-    "Closed Captions effect resized to 00:03.00"
+    "Closed Captions effect resized to 00:03.00",
   );
 
   const effectBeforePointerMove = await captions.getAttribute("aria-label");
@@ -2615,18 +2356,15 @@ test("opens, focuses, reorders, closes, and reopens effect tabs and edits effect
   });
   captions = effectsLane.locator('[data-effect="closed-captions"]');
   await expect(captions).not.toHaveAttribute("aria-label", effectBeforePointerMove);
-  await expect(page.locator("#editor-status")).toContainText(
-    "Closed Captions effect moved to"
-  );
+  await expect(page.locator("#editor-status")).toContainText("Closed Captions effect moved to");
 
   await captions.focus();
   await captions.press("Delete");
   await expect(effectsLane.locator('[data-effect="closed-captions"]')).toHaveCount(0);
   await expect(effectsLane.getByRole("listitem")).toHaveCount(2);
   await expect(page.locator("#editor-status")).toContainText(
-    "Closed Captions effect deleted from the timeline"
+    "Closed Captions effect deleted from the timeline",
   );
-
 });
 
 test("renders semantic 98.css effect tabs with restrained close controls and marquee overflow", async ({
@@ -2662,7 +2400,7 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
   await expect(defaultTab.locator("[data-effect-tab-title-track]")).toHaveCount(0);
   await expect(defaultTab.locator("img")).toHaveAttribute(
     "src",
-    /directory_program_group_cool\.ico$/
+    /directory_program_group_cool\.ico$/,
   );
   await expect(page.getByRole("button", { name: "Reopen closed tab" })).toHaveCount(0);
   await expect(page.getByText("Tabs", { exact: true })).toHaveCount(0);
@@ -2671,19 +2409,16 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
   for (const { icon, label, type } of effects) {
     const tab = tabList.locator(`:scope > li[data-effect="${type}"]`);
     await expect(tab).toHaveAttribute("role", "tab");
-    await expect(tab.locator("[data-effect-tab-title-viewport]")).toHaveAttribute(
-      "title",
-      label
-    );
+    await expect(tab.locator("[data-effect-tab-title-viewport]")).toHaveAttribute("title", label);
     await expect(tab.locator("[data-effect-tab-label]")).toHaveText(label);
     await expect(tab.locator("[data-effect-tab-icon]")).toHaveAttribute(
       "src",
-      new RegExp(`${icon.replaceAll(".", "\\.")}$`)
+      new RegExp(`${icon.replaceAll(".", "\\.")}$`),
     );
     const close = tab.getByRole("button", { name: `Close ${label} tab` });
     await expect(close.locator('img[aria-hidden="true"]')).toHaveAttribute(
       "src",
-      /assets\/pixelarticons\/close\.svg$/
+      /assets\/pixelarticons\/close\.svg$/,
     );
   }
 
@@ -2705,8 +2440,7 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
       defaultOverflow: defaultStyle.overflow,
       defaultZIndex: Number(defaultStyle.zIndex),
       dynamicTabBehindDefault:
-        firstDynamicBounds.left < itemBounds.right &&
-        firstDynamicBounds.right > itemBounds.left,
+        firstDynamicBounds.left < itemBounds.right && firstDynamicBounds.right > itemBounds.left,
       homeLeftGap: itemBounds.left - scrollBounds.left,
       panelTopGap: scrollBounds.top - panelBounds.top,
       overflowX: style.overflowX,
@@ -2741,12 +2475,10 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
   expect(closeBounds).not.toBeNull();
   await page.mouse.move(
     closeBounds.x + closeBounds.width / 2,
-    closeBounds.y + closeBounds.height / 2
+    closeBounds.y + closeBounds.height / 2,
   );
   await page.mouse.down();
-  expect(await close.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe(
-    "none"
-  );
+  expect(await close.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe("none");
   await page.mouse.move(0, 0);
   await page.mouse.up();
   await expect(close).toHaveCSS("box-shadow", "none");
@@ -2769,8 +2501,8 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
       clientWidth: viewport.clientWidth,
       scrollDistance: Number.parseFloat(
         getComputedStyle(viewport.closest("[role=tab]")).getPropertyValue(
-          "--effect-tab-title-scroll-distance"
-        )
+          "--effect-tab-title-scroll-distance",
+        ),
       ),
       scrollWidth: track?.scrollWidth || 0,
       title: titledElement?.getAttribute("title") || viewport.getAttribute("title"),
@@ -2781,7 +2513,7 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
   expect(overflow.title).toBe(longTitle);
 
   await transitionsTab.evaluate((element) =>
-    element.style.setProperty("--effect-tab-title-scroll-duration", "0.8s")
+    element.style.setProperty("--effect-tab-title-scroll-duration", "0.8s"),
   );
   await transitionsTab.hover();
   await expect
@@ -2791,18 +2523,17 @@ test("renders semantic 98.css effect tabs with restrained close controls and mar
           const transform = getComputedStyle(element).transform;
           return transform === "none" ? 0 : new DOMMatrixReadOnly(transform).m41;
         }),
-      { timeout: 5_000 }
+      { timeout: 5_000 },
     )
     .toBeLessThan(-0.5);
   expect(await titleTrack.evaluate((element) => getComputedStyle(element).animationName)).not.toBe(
-    "none"
+    "none",
   );
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(titleTrack).toHaveCSS("animation-name", "none");
   await expect(titleTrack).toHaveCSS("transform", "none");
   await expect(titleTrack).toHaveText(longTitle);
-
 });
 
 test("resizes both side panels independently while preserving the center workspace", async ({
@@ -2824,9 +2555,7 @@ test("resizes both side panels independently while preserving the center workspa
     await expect(separator).toHaveAttribute("aria-orientation", "vertical");
     await expect(separator).toHaveAttribute("aria-controls", controls);
     await expect(separator).toHaveAttribute("aria-valuemin", minimum);
-    expect(Number(await separator.getAttribute("aria-valuemax"))).toBeLessThanOrEqual(
-      maximum
-    );
+    expect(Number(await separator.getAttribute("aria-valuemax"))).toBeLessThanOrEqual(maximum);
   }
   await expect(mediaSeparator).toHaveAttribute("aria-valuenow", "260");
   await expect(effectsSeparator).toHaveAttribute("aria-valuenow", "300");
@@ -2837,23 +2566,19 @@ test("resizes both side panels independently while preserving the center workspa
   await mediaSeparator.press("ArrowRight");
   await expect(mediaSeparator).toHaveAttribute("aria-valuenow", "276");
   await expect(effectsSeparator).toHaveAttribute("aria-valuenow", "300");
-  await expect(page.locator("#editor-status")).toHaveText(
-    "Project Media panel set to 276 pixels."
-  );
+  await expect(page.locator("#editor-status")).toHaveText("Project Media panel set to 276 pixels.");
   await effectsSeparator.focus();
   await effectsSeparator.press("ArrowLeft");
   await expect(effectsSeparator).toHaveAttribute("aria-valuenow", "316");
   await expect(mediaSeparator).toHaveAttribute("aria-valuenow", "276");
-  await expect(page.locator("#editor-status")).toHaveText(
-    "Effect Editor panel set to 316 pixels."
-  );
+  await expect(page.locator("#editor-status")).toHaveText("Effect Editor panel set to 316 pixels.");
 
   await mediaSeparator.press("Home");
   await expect(mediaSeparator).toHaveAttribute("aria-valuenow", "220");
   await mediaSeparator.press("End");
   await expect(mediaSeparator).toHaveAttribute(
     "aria-valuenow",
-    await mediaSeparator.getAttribute("aria-valuemax")
+    await mediaSeparator.getAttribute("aria-valuemax"),
   );
   await mediaSeparator.press("Home");
   await effectsSeparator.press("Home");
@@ -2861,7 +2586,7 @@ test("resizes both side panels independently while preserving the center workspa
   await effectsSeparator.press("End");
   await expect(effectsSeparator).toHaveAttribute(
     "aria-valuenow",
-    await effectsSeparator.getAttribute("aria-valuemax")
+    await effectsSeparator.getAttribute("aria-valuemax"),
   );
   await effectsSeparator.press("Home");
 
@@ -2869,13 +2594,13 @@ test("resizes both side panels independently while preserving the center workspa
   expect(mediaBounds).not.toBeNull();
   await page.mouse.move(
     mediaBounds.x + mediaBounds.width / 2,
-    mediaBounds.y + mediaBounds.height / 2
+    mediaBounds.y + mediaBounds.height / 2,
   );
   await page.mouse.down();
   await page.mouse.move(
     mediaBounds.x + mediaBounds.width / 2 + 32,
     mediaBounds.y + mediaBounds.height / 2,
-    { steps: 4 }
+    { steps: 4 },
   );
   await page.mouse.up();
   const mediaPointerValue = Number(await mediaSeparator.getAttribute("aria-valuenow"));
@@ -2887,24 +2612,21 @@ test("resizes both side panels independently while preserving the center workspa
   expect(effectsBounds).not.toBeNull();
   await page.mouse.move(
     effectsBounds.x + effectsBounds.width / 2,
-    effectsBounds.y + effectsBounds.height / 2
+    effectsBounds.y + effectsBounds.height / 2,
   );
   await page.mouse.down();
   await page.mouse.move(
     effectsBounds.x + effectsBounds.width / 2 - 32,
     effectsBounds.y + effectsBounds.height / 2,
-    { steps: 4 }
+    { steps: 4 },
   );
   await page.mouse.up();
   const effectsPointerValue = Number(await effectsSeparator.getAttribute("aria-valuenow"));
   expect(effectsPointerValue).toBeGreaterThanOrEqual(271);
   expect(effectsPointerValue).toBeLessThanOrEqual(273);
-  await expect(mediaSeparator).toHaveAttribute(
-    "aria-valuenow",
-    String(mediaPointerValue)
-  );
+  await expect(mediaSeparator).toHaveAttribute("aria-valuenow", String(mediaPointerValue));
   await expect(page.locator("#editor-status")).toHaveText(
-    `Effect Editor panel set to ${effectsPointerValue} pixels.`
+    `Effect Editor panel set to ${effectsPointerValue} pixels.`,
   );
 
   const layout = await Promise.all(
@@ -2912,8 +2634,8 @@ test("resizes both side panels independently while preserving the center workspa
       panel.evaluate((element) => {
         const bounds = element.getBoundingClientRect();
         return { height: bounds.height, width: bounds.width };
-      })
-    )
+      }),
+    ),
   );
   expect(layout[0].width).toBeCloseTo(mediaPointerValue, 0);
   expect(layout[1].width).toBeGreaterThanOrEqual(420);
@@ -2922,15 +2644,13 @@ test("resizes both side panels independently while preserving the center workspa
   await expect(page.locator("#video-editor-timeline-section")).toBeVisible();
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-    )
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    ),
   ).toBe(false);
 
   await page.setViewportSize({ width: 1024, height: 800 });
   await expect
-    .poll(() =>
-      composePanel.evaluate((element) => element.getBoundingClientRect().width)
-    )
+    .poll(() => composePanel.evaluate((element) => element.getBoundingClientRect().width))
     .toBeGreaterThanOrEqual(420);
   const dynamicMaximums = {
     effects: Number(await effectsSeparator.getAttribute("aria-valuemax")),
@@ -2943,17 +2663,16 @@ test("resizes both side panels independently while preserving the center workspa
   await mediaSeparator.press("End");
   await expect(mediaSeparator).toHaveAttribute(
     "aria-valuenow",
-    await mediaSeparator.getAttribute("aria-valuemax")
+    await mediaSeparator.getAttribute("aria-valuemax"),
   );
   await effectsSeparator.press("End");
   await expect(effectsSeparator).toHaveAttribute(
     "aria-valuenow",
-    await effectsSeparator.getAttribute("aria-valuemax")
+    await effectsSeparator.getAttribute("aria-valuemax"),
   );
   expect(
-    await composePanel.evaluate((element) => element.getBoundingClientRect().width)
+    await composePanel.evaluate((element) => element.getBoundingClientRect().width),
   ).toBeGreaterThanOrEqual(420);
-
 });
 
 test("contains long names, a busy timeline, and every effect tab at the minimum desktop width", async ({
@@ -2984,8 +2703,7 @@ test("contains long names, a busy timeline, and every effect tab at the minimum 
     const mediaName = document.querySelector("[data-media-name]");
     const timeline = document.querySelector("#timeline-scroll");
     return {
-      pageOverflow:
-        document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      pageOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       longNameContained: mediaName.scrollWidth >= mediaName.clientWidth,
       timelineScrollable: timeline.scrollWidth > timeline.clientWidth,
     };
@@ -3012,16 +2730,16 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
   await expect(panel.getByRole("button", { name: "Generate guideposts" })).toBeDisabled();
   await expect(page.locator("[data-audio-sync-waveform]")).toHaveAttribute(
     "aria-label",
-    /No audio has been analyzed/
+    /No audio has been analyzed/,
   );
   await expect(page.locator("[data-audio-sync-spectrum]")).toHaveAttribute(
     "aria-label",
-    /No audio has been analyzed/
+    /No audio has been analyzed/,
   );
   for (const graph of ["waveform", "spectrum"]) {
     await expect(page.locator(`[data-audio-sync-${graph}] canvas`)).toHaveCSS(
       "pointer-events",
-      "none"
+      "none",
     );
   }
 
@@ -3039,32 +2757,33 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
   });
   panel = await analyzeAudioSyncClip(page);
   const audioAnalysisCursorStates = await page.evaluate(
-    () => window.__videoEditorAudioAnalysisCursorStates
+    () => window.__videoEditorAudioAnalysisCursorStates,
   );
-  const analyzingCursor = audioAnalysisCursorStates.find(
-    ({ state }) => state === "analyzing"
-  );
+  const analyzingCursor = audioAnalysisCursorStates.find(({ state }) => state === "analyzing");
   expect(analyzingCursor?.bodyLoading).toBe(true);
   expect(analyzingCursor?.cursor).toContain(
-    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/"
+    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/",
   );
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   await expect(page.getByLabel("Graph view", { exact: true })).toHaveValue("combined");
   await expect(page.locator("[data-audio-sync-waveform]")).toHaveAttribute(
     "aria-label",
-    /Waveform (?:graph )?for audio-sync-bursts\.wav/
+    /Waveform (?:graph )?for audio-sync-bursts\.wav/,
   );
   await expect(page.locator("[data-audio-sync-spectrum]")).toHaveAttribute(
     "aria-label",
-    /frequency spectrum for audio-sync-bursts\.wav/i
+    /frequency spectrum for audio-sync-bursts\.wav/i,
   );
   for (const graph of ["waveform", "spectrum"]) {
     expect(
-      await page.locator(`[data-audio-sync-${graph}] canvas`).evaluate((canvas) =>
-        Array.from(canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data)
-          .some((channel, index) => index % 4 !== 3 && channel !== 0)
-      ),
-      `${graph} canvas should contain rendered analysis pixels`
+      await page
+        .locator(`[data-audio-sync-${graph}] canvas`)
+        .evaluate((canvas) =>
+          Array.from(
+            canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data,
+          ).some((channel, index) => index % 4 !== 3 && channel !== 0),
+        ),
+      `${graph} canvas should contain rendered analysis pixels`,
     ).toBe(true);
   }
   await page.getByLabel("Graph view", { exact: true }).selectOption("waveform");
@@ -3078,21 +2797,15 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
   await expect(page.getByLabel("Minimum Hz", { exact: true })).toHaveValue("40");
   await expect(page.getByLabel("Maximum Hz", { exact: true })).toHaveValue("2000");
   await expect(page.getByLabel("Threshold", { exact: true })).toHaveValue("65");
-  await expect(page.getByLabel("Crossing direction", { exact: true })).toHaveValue(
-    "rising"
-  );
+  await expect(page.getByLabel("Crossing direction", { exact: true })).toHaveValue("rising");
   await panel.getByRole("button", { name: "Mids", exact: true }).click();
   await expect(audioSyncRuleCards(page)).toHaveCount(1);
   const recommendedRule = audioSyncRuleCards(page).first();
-  await expect(recommendedRule.locator("[data-audio-sync-rule-label]")).toHaveValue(
-    /Mids/i
-  );
-  await expect
-    .poll(() => accessibleGuideposts(recommendedRule).count())
-    .toBeGreaterThanOrEqual(2);
+  await expect(recommendedRule.locator("[data-audio-sync-rule-label]")).toHaveValue(/Mids/i);
+  await expect.poll(() => accessibleGuideposts(recommendedRule).count()).toBeGreaterThanOrEqual(2);
   await expect(recommendedRule.locator('[data-guidepost-action="cut"]')).toHaveAttribute(
     "aria-pressed",
-    "false"
+    "false",
   );
 
   await page.getByLabel("Minimum Hz", { exact: true }).fill("2000");
@@ -3111,16 +2824,13 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
 
   const marker = accessibleGuideposts(recommendedRule).first();
   const visual = page.locator(
-    `[data-guidepost-visual-id="${await marker.getAttribute("data-guidepost-id")}"]`
+    `[data-guidepost-visual-id="${await marker.getAttribute("data-guidepost-id")}"]`,
   );
   await expect(visual).toHaveCount(1);
   const sourceTime = Number(await visual.getAttribute("data-guidepost-source-time"));
   const timelineTime = Number(await visual.getAttribute("data-guidepost-time"));
   expect(timelineTime).toBeCloseTo(sourceTime, 2);
-  await expect(marker).toHaveAttribute(
-    "aria-keyshortcuts",
-    /ArrowLeft.*ArrowRight.*Delete.*Enter/
-  );
+  await expect(marker).toHaveAttribute("aria-keyshortcuts", /ArrowLeft.*ArrowRight.*Delete.*Enter/);
 
   await audioClip.focus();
   await audioClip.press("ArrowRight");
@@ -3133,7 +2843,7 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
   await marker.press("ArrowRight");
   await expect(marker).toHaveAttribute(
     "data-guidepost-time",
-    String(Number((markerTimeBeforeNudge + 0.05).toFixed(2)))
+    String(Number((markerTimeBeforeNudge + 0.05).toFixed(2))),
   );
   await marker.press("Shift+ArrowLeft");
   await expect(page.locator("#editor-status")).toContainText(/guidepost.*moved/i);
@@ -3142,9 +2852,7 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
   await expect(page.getByTestId("playhead-scrubber")).toHaveValue(String(jumpedTime));
 
   const visibleBeforeTrim = await accessibleGuideposts(recommendedRule).count();
-  audioClip = page
-    .getByTestId("timeline-tier-audio-1")
-    .locator("article[data-clip-id]");
+  audioClip = page.getByTestId("timeline-tier-audio-1").locator("article[data-clip-id]");
   const trimStart = audioClip.getByRole("button", {
     name: `Trim start of ${audioSyncName}`,
   });
@@ -3163,8 +2871,8 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
 
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-    )
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    ),
   ).toBe(false);
 
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -3181,11 +2889,9 @@ test("applies Audio-Sync flash, effect, and atomic video-cut actions at guidepos
   const panel = await analyzeAudioSyncClip(page);
   await panel.getByRole("button", { name: "Mids", exact: true }).click();
   const rule = audioSyncRuleCards(page).first();
-  await expect
-    .poll(() => accessibleGuideposts(rule).count())
-    .toBeGreaterThanOrEqual(2);
+  await expect.poll(() => accessibleGuideposts(rule).count()).toBeGreaterThanOrEqual(2);
   const markerTimes = await accessibleGuideposts(rule).evaluateAll((markers) =>
-    markers.map((marker) => Number(marker.getAttribute("data-guidepost-time")))
+    markers.map((marker) => Number(marker.getAttribute("data-guidepost-time"))),
   );
 
   const flash = page.locator("#audio-sync-flash");
@@ -3224,7 +2930,7 @@ test("applies Audio-Sync flash, effect, and atomic video-cut actions at guidepos
     .locator('[data-effect-item-id][data-effect="windows-98"]');
   await expect(effects).toHaveCount(markerTimes.length);
   const effectRanges = await effects.evaluateAll((items) =>
-    items.map((item) => item.getAttribute("aria-label"))
+    items.map((item) => item.getAttribute("aria-label")),
   );
   for (const label of effectRanges) expect(label).toMatch(/00:03\.00/);
 
@@ -3245,21 +2951,18 @@ test("applies Audio-Sync flash, effect, and atomic video-cut actions at guidepos
   await expect(videoTrack.locator("article[data-clip-id]")).toHaveCount(1);
   const cutsInsideVideo = markerTimes.filter((time) => time > 0 && time < 5).length;
   await rule.locator('[data-guidepost-action="cut"]').click();
-  await expect(videoTrack.locator("article[data-clip-id]")).toHaveCount(
-    cutsInsideVideo + 1
-  );
+  await expect(videoTrack.locator("article[data-clip-id]")).toHaveCount(cutsInsideVideo + 1);
   const segments = await videoTrack.locator("article[data-clip-id]").evaluateAll((clips) =>
     clips.map((clip) => ({
       end: Number(clip.getAttribute("data-source-end")),
       start: Number(clip.getAttribute("data-source-start")),
-    }))
+    })),
   );
   expect(segments[0].start).toBe(0);
   for (let index = 1; index < segments.length; index += 1) {
     expect(segments[index - 1].end).toBeCloseTo(segments[index].start, 2);
   }
   await expect(page.locator("#editor-status")).toContainText(/split|cut/i);
-
 });
 
 test("fills the first complete guide interval and rejects invalid Audio-Sync fills atomically", async ({
@@ -3271,11 +2974,9 @@ test("fills the first complete guide interval and rejects invalid Audio-Sync fil
   const panel = await analyzeAudioSyncClip(page);
   await panel.getByRole("button", { name: "Mids", exact: true }).click();
   const midRule = audioSyncRuleCards(page).first();
-  await expect
-    .poll(() => accessibleGuideposts(midRule).count())
-    .toBeGreaterThanOrEqual(2);
+  await expect.poll(() => accessibleGuideposts(midRule).count()).toBeGreaterThanOrEqual(2);
   const midTimes = await accessibleGuideposts(midRule).evaluateAll((markers) =>
-    markers.map((marker) => Number(marker.getAttribute("data-guidepost-time")))
+    markers.map((marker) => Number(marker.getAttribute("data-guidepost-time"))),
   );
   const videoTrack = page.getByTestId("timeline-tier-video-1");
 
@@ -3291,9 +2992,7 @@ test("fills the first complete guide interval and rejects invalid Audio-Sync fil
   await expect(page.locator("#media-count")).toHaveText("2 items", {
     timeout: 20_000,
   });
-  await page
-    .locator('#media-bin [data-kind="video"] [data-select-media]')
-    .click();
+  await page.locator('#media-bin [data-kind="video"] [data-select-media]').click();
   await setPlayhead(page, 0);
   await midRule.locator('[data-guidepost-action="fill"]').click();
   const filledClip = videoTrack.locator("article[data-clip-id]");
@@ -3312,18 +3011,14 @@ test("fills the first complete guide interval and rejects invalid Audio-Sync fil
   const snapshotBeforeConflict = await readProjectSnapshot(page);
   await setPlayhead(page, 0);
   await midRule.locator('[data-guidepost-action="fill"]').click();
-  await expect(page.locator("#editor-status")).toContainText(
-    /empty interval|occupied|overlap/i
-  );
+  await expect(page.locator("#editor-status")).toContainText(/empty interval|occupied|overlap/i);
   expect(await readProjectSnapshot(page)).toEqual(snapshotBeforeConflict);
 
   await filledClip.focus();
   await filledClip.press("Delete");
   await panel.getByRole("button", { name: "Lows", exact: true }).click();
   const lowRule = audioSyncRuleCards(page).last();
-  await expect
-    .poll(() => accessibleGuideposts(lowRule).count())
-    .toBeGreaterThanOrEqual(2);
+  await expect.poll(() => accessibleGuideposts(lowRule).count()).toBeGreaterThanOrEqual(2);
   await setPlayhead(page, 0);
   const snapshotBeforeShortSource = await readProjectSnapshot(page);
   await lowRule.locator('[data-guidepost-action="fill"]').click();
@@ -3335,7 +3030,10 @@ test("uses rights-safe YouTube discovery and inserts trimmed local and procedura
   page,
 }) => {
   await page.context().route("https://www.youtube.com/**", (route) =>
-    route.fulfill({ contentType: "text/html", body: "<!doctype html><title>YouTube results</title>" })
+    route.fulfill({
+      contentType: "text/html",
+      body: "<!doctype html><title>YouTube results</title>",
+    }),
   );
   await loadEditor(page, { width: 1280, height: 800 });
   await page.evaluate(() => {
@@ -3373,7 +3071,7 @@ test("uses rights-safe YouTube discovery and inserts trimmed local and procedura
   await searchOfficialYouTube("Search official YouTube for music", "licensed synth loop");
   await searchOfficialYouTube(
     "Search official YouTube for sound effects",
-    "royalty free keyboard click"
+    "royalty free keyboard click",
   );
 
   const localFile = page.locator("#audio-local-file");
@@ -3472,8 +3170,8 @@ test("uses rights-safe YouTube discovery and inserts trimmed local and procedura
 
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-    )
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    ),
   ).toBe(false);
 });
 
@@ -3490,13 +3188,8 @@ test("retains a usable Audio-Sync error state when local decoding fails", async 
     });
   });
   await page.getByRole("button", { name: "Analyze source" }).click();
-  await expect(page.locator("[data-audio-sync-status]")).toHaveText(
-    "Synthetic decode failure."
-  );
-  await expect(page.locator("[data-audio-sync-status]")).toHaveAttribute(
-    "data-state",
-    "error"
-  );
+  await expect(page.locator("[data-audio-sync-status]")).toHaveText("Synthetic decode failure.");
+  await expect(page.locator("[data-audio-sync-status]")).toHaveAttribute("data-state", "error");
   await expect(page.getByRole("button", { name: "Analyze source" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Generate guideposts" })).toBeDisabled();
   await expect(audioSyncRuleCards(page)).toHaveCount(0);

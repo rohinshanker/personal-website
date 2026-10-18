@@ -22,8 +22,8 @@ window.__currentPublicInfoTest = Object.freeze({
     currentPublicInfoWindow.classList.remove("is-opening");
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
@@ -44,9 +44,7 @@ const measureCurrentPublicInfo = (page) =>
     const imageStyle = getComputedStyle(image);
     const body = document.querySelector("#current-public-info-window .window-body");
     const bodyStyle = getComputedStyle(body);
-    const saulBodyStyle = getComputedStyle(
-      document.querySelector("#saul-ad-window .window-body")
-    );
+    const saulBodyStyle = getComputedStyle(document.querySelector("#saul-ad-window .window-body"));
     const saulImageStyle = getComputedStyle(document.querySelector("#saul-ad-image"));
     return {
       actions: bounds(".current-public-info-actions"),
@@ -115,14 +113,14 @@ test("Current Public Information uses the Saul advertisement image inset and kee
       await page.evaluate(() => window.__currentPublicInfoTest.open());
       await expect(win).toBeVisible();
       await expect(win).toHaveAttribute("aria-hidden", "false");
-      await expect(
-        win.locator(".title-bar-text")
-      ).toHaveText("Current Publicly Available Information");
+      await expect(win.locator(".title-bar-text")).toHaveText(
+        "Current Publicly Available Information",
+      );
       await expect(thanks).toHaveText("Thanks for sharing...");
       await expect(titleClose).toHaveAccessibleName("Close");
       await expect(image).toHaveAttribute(
         "src",
-        "assets/random%20events/current-publicly-available-information/season-1.webp"
+        "assets/random%20events/current-publicly-available-information/season-1.webp",
       );
       await expect
         .poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0))
@@ -143,7 +141,7 @@ test("Current Public Information uses the Saul advertisement image inset and kee
       expect(metrics.image.bottom).toBeLessThanOrEqual(metrics.actions.top + 0.6);
       expect(metrics.button.top).toBeGreaterThanOrEqual(metrics.image.bottom + 7.5);
       expect(metrics.actions.bottom).toBeLessThanOrEqual(
-        metrics.body.bottom - metrics.bodyPaddingBottom + 0.6
+        metrics.body.bottom - metrics.bodyPaddingBottom + 0.6,
       );
       expect(metrics.button.left).toBeGreaterThanOrEqual(metrics.actions.left - 0.6);
       expect(metrics.button.right).toBeLessThanOrEqual(metrics.actions.right + 0.6);

@@ -60,35 +60,69 @@ const EVENTS = [
   { id: "behelit-found", windowId: "behelit-window", close: "#behelit-ok" },
   { id: "john-pork", windowId: "john-pork-window", close: "#john-pork-decline" },
   { id: "walter-white", windowId: "walter-white-window", close: "#walter-white-ok" },
-  { id: "mcafee-antivirus-update", windowId: "mcafee-prompt-window", close: "#mcafee-update-later" },
-  { id: "self-love-system-alert", windowId: "self-love-alert-window", close: "#self-love-alert-yes" },
-  { id: "red-tool", windowId: "red-tool-window", close: "#red-tool-close", focus: "#red-tool-input" },
-  { id: "resist-your-fate", windowId: "fate-window", close: "#fate-title-close", focus: "#fate-start" },
-  { id: "sudden-skill-check", windowId: "skill-check-window", close: "#skill-check-ignore", focus: "#skill-check-roll" },
-  { id: "pokemon-starter-selection", windowId: "pokemon-starter-window", close: "#pokemon-starter-close" },
-  { id: "infinity-blade-armory", windowId: "infinity-armory-window", close: "#infinity-armory-close" },
+  {
+    id: "mcafee-antivirus-update",
+    windowId: "mcafee-prompt-window",
+    close: "#mcafee-update-later",
+  },
+  {
+    id: "self-love-system-alert",
+    windowId: "self-love-alert-window",
+    close: "#self-love-alert-yes",
+  },
+  {
+    id: "red-tool",
+    windowId: "red-tool-window",
+    close: "#red-tool-close",
+    focus: "#red-tool-input",
+  },
+  {
+    id: "resist-your-fate",
+    windowId: "fate-window",
+    close: "#fate-title-close",
+    focus: "#fate-start",
+  },
+  {
+    id: "sudden-skill-check",
+    windowId: "skill-check-window",
+    close: "#skill-check-ignore",
+    focus: "#skill-check-roll",
+  },
+  {
+    id: "pokemon-starter-selection",
+    windowId: "pokemon-starter-window",
+    close: "#pokemon-starter-close",
+  },
+  {
+    id: "infinity-blade-armory",
+    windowId: "infinity-armory-window",
+    close: "#infinity-armory-close",
+  },
 ];
 
 const preparePage = async (page) => {
-  await page.addInitScript(({ profile, profileKey, proof, proofKey }) => {
-    localStorage.clear();
-    sessionStorage.clear();
-    localStorage.setItem(profileKey, JSON.stringify(profile));
-    sessionStorage.setItem(
-      proofKey,
-      JSON.stringify({
-        proof,
-        expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
-      })
-    );
-    // No event may fire on its own while the finder is driving them one by one.
-    Math.random = () => 0.999999;
-  }, {
-    profile: administratorProfile,
-    profileKey: profileStorageKey,
-    proof: `${"a".repeat(32)}.${"b".repeat(32)}`,
-    proofKey: administratorProofStorageKey,
-  });
+  await page.addInitScript(
+    ({ profile, profileKey, proof, proofKey }) => {
+      localStorage.clear();
+      sessionStorage.clear();
+      localStorage.setItem(profileKey, JSON.stringify(profile));
+      sessionStorage.setItem(
+        proofKey,
+        JSON.stringify({
+          proof,
+          expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+        }),
+      );
+      // No event may fire on its own while the finder is driving them one by one.
+      Math.random = () => 0.999999;
+    },
+    {
+      profile: administratorProfile,
+      profileKey: profileStorageKey,
+      proof: `${"a".repeat(32)}.${"b".repeat(32)}`,
+      proofKey: administratorProofStorageKey,
+    },
+  );
   await page.goto(homeUrl, { waitUntil: "domcontentloaded" });
   await page.locator("#about-window").evaluate((element) => {
     element.classList.remove("is-opening", "is-closing");
@@ -144,15 +178,14 @@ const readAnimation = async (win, name, label) => {
         win.evaluate(
           (element, wanted) =>
             (element.managedAnimations || []).some((entry) => entry.name === wanted),
-          name
+          name,
         ),
-      { message: `${label} ran ${name}` }
+      { message: `${label} ran ${name}` },
     )
     .toBe(true);
   return win.evaluate(
-    (element, wanted) =>
-      (element.managedAnimations || []).find((entry) => entry.name === wanted),
-    name
+    (element, wanted) => (element.managedAnimations || []).find((entry) => entry.name === wanted),
+    name,
   );
 };
 
@@ -176,9 +209,7 @@ for (const viewport of VIEWPORTS) {
     const triggerNow = page.locator("#admin-trigger-now");
 
     for (const event of EVENTS) {
-      const win = page.locator(
-        `#${event.windowId}:not([data-admin-event-preview-window])`
-      );
+      const win = page.locator(`#${event.windowId}:not([data-admin-event-preview-window])`);
       await win.evaluate((element) => {
         element.managedAnimations = [];
       });
@@ -195,16 +226,15 @@ for (const viewport of VIEWPORTS) {
       const title = (await win.locator(".title-bar-text").first().textContent()).trim();
       await expect(win, `${event.id} is named by its title`).toHaveAccessibleName(title);
       const opening = await readAnimation(win, "retro-window-open", event.id);
-      expect(
-        SHARED_OPEN_DURATIONS,
-        `${event.id} keeps a shared open duration`
-      ).toContain(opening.duration);
+      expect(SHARED_OPEN_DURATIONS, `${event.id} keeps a shared open duration`).toContain(
+        opening.duration,
+      );
       const adminZ = await adminWindow.evaluate((element) =>
-        Number(getComputedStyle(element).zIndex)
+        Number(getComputedStyle(element).zIndex),
       );
       expect(
         opening.zIndex,
-        `${event.id} stacks above the window that triggered it`
+        `${event.id} stacks above the window that triggered it`,
       ).toBeGreaterThan(adminZ);
 
       await expect(win).not.toHaveClass(/is-opening/);
@@ -215,21 +245,19 @@ for (const viewport of VIEWPORTS) {
       expect(box, `${event.id} has a box`).not.toBeNull();
       expect(box.x, `${event.id} left edge`).toBeGreaterThanOrEqual(0);
       expect(box.y, `${event.id} top edge`).toBeGreaterThanOrEqual(0);
-      expect(
-        box.x + box.width,
-        `${event.id} right edge stays in the viewport`
-      ).toBeLessThanOrEqual(viewport.width + 1);
-      expect(
-        box.y + box.height,
-        `${event.id} bottom edge clears the taskbar`
-      ).toBeLessThanOrEqual(viewport.height - TASKBAR_CLEARANCE + 1);
+      expect(box.x + box.width, `${event.id} right edge stays in the viewport`).toBeLessThanOrEqual(
+        viewport.width + 1,
+      );
+      expect(box.y + box.height, `${event.id} bottom edge clears the taskbar`).toBeLessThanOrEqual(
+        viewport.height - TASKBAR_CLEARANCE + 1,
+      );
 
       if (event.focus) {
         // Scope to the live window: the Administrator preview renders a clone
         // of the same markup, ids included.
         await expect(
           win.locator(event.focus),
-          `${event.id} moves focus into the window`
+          `${event.id} moves focus into the window`,
         ).toBeFocused();
       }
 
@@ -238,13 +266,10 @@ for (const viewport of VIEWPORTS) {
       await win.locator(event.close).click();
       await expect(win).toHaveAttribute("aria-hidden", "true");
       const closing = await readAnimation(win, "retro-window-close", event.id);
-      expect(
-        SHARED_CLOSE_DURATIONS,
-        `${event.id} keeps a shared close duration`
-      ).toContain(closing.duration);
-      expect(closing.pointerEvents, `${event.id} is inert while closing`).toBe(
-        "none"
+      expect(SHARED_CLOSE_DURATIONS, `${event.id} keeps a shared close duration`).toContain(
+        closing.duration,
       );
+      expect(closing.pointerEvents, `${event.id} is inert while closing`).toBe("none");
 
       await expect(win, `${event.id} closes`).toBeHidden();
       await expect(win).toHaveClass(/is-hidden/);
@@ -252,9 +277,7 @@ for (const viewport of VIEWPORTS) {
   });
 }
 
-test("open events stack in trigger order and refuse a second trigger", async ({
-  page,
-}) => {
+test("open events stack in trigger order and refuse a second trigger", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await preparePage(page);
   await openAdminEvents(page);
@@ -271,14 +294,12 @@ test("open events stack in trigger order and refuse a second trigger", async ({
 
   await eventList.selectOption("no-smoking-alert");
   await triggerNow.click();
-  const noSmoking = page.locator(
-    "#no-smoking-window:not([data-admin-event-preview-window])"
-  );
+  const noSmoking = page.locator("#no-smoking-window:not([data-admin-event-preview-window])");
   await expect(noSmoking).toBeVisible();
   await finishAnimation(noSmoking, "retro-window-open");
   expect(
     await noSmoking.evaluate((element) => Number(element.style.zIndex)),
-    "the second event opens above the first"
+    "the second event opens above the first",
   ).toBeGreaterThan(noteZ);
 
   // The migrated visibility predicates still report an open window, so the
@@ -290,7 +311,7 @@ test("open events stack in trigger order and refuse a second trigger", async ({
   await expect(note).not.toHaveClass(/is-opening/);
   expect(
     await note.evaluate((element) => Number(element.style.zIndex)),
-    "a declined trigger leaves the stacking order alone"
+    "a declined trigger leaves the stacking order alone",
   ).toBe(noteZ);
 
   await note.locator("#rohin-note-ok").click();
@@ -301,18 +322,14 @@ test("open events stack in trigger order and refuse a second trigger", async ({
   await expect(noSmoking).toBeHidden();
 });
 
-test("a chained event hands its position to the window that replaces it", async ({
-  page,
-}) => {
+test("a chained event hands its position to the window that replaces it", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await preparePage(page);
   await openAdminEvents(page);
   await page.locator("#admin-event-list").selectOption("nana-random-encounter");
   await page.locator("#admin-trigger-now").click();
 
-  const encounter = page.locator(
-    "#nana-encounter-window:not([data-admin-event-preview-window])"
-  );
+  const encounter = page.locator("#nana-encounter-window:not([data-admin-event-preview-window])");
   await expect(encounter).toBeVisible();
   await finishAnimation(encounter, "retro-window-open");
   const anchor = await encounter.evaluate((element) => ({
@@ -321,9 +338,7 @@ test("a chained event hands its position to the window that replaces it", async 
   }));
 
   await encounter.locator("#nana-encounter-yes").click();
-  const accept = page.locator(
-    "#nana-accept-window:not([data-admin-event-preview-window])"
-  );
+  const accept = page.locator("#nana-accept-window:not([data-admin-event-preview-window])");
   await expect(accept).toBeVisible();
   await finishAnimation(accept, "retro-window-open");
   expect(
@@ -331,7 +346,7 @@ test("a chained event hands its position to the window that replaces it", async 
       left: element.style.left,
       top: element.style.top,
     })),
-    "the follow-up window opens where the encounter sat"
+    "the follow-up window opens where the encounter sat",
   ).toEqual(anchor);
 
   await accept.locator("#nana-accept-ok").click();
@@ -339,9 +354,10 @@ test("a chained event hands its position to the window that replaces it", async 
   await expect(accept).toBeHidden();
 });
 
-
 for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
-  test(`dynamic Word windows cascade and remove themselves at ${viewport.name}`, async ({ page }) => {
+  test(`dynamic Word windows cascade and remove themselves at ${viewport.name}`, async ({
+    page,
+  }) => {
     await page.setViewportSize(viewport);
     await preparePage(page);
     await openAdminEvents(page);
@@ -352,7 +368,9 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
     await expect(windows.last()).toBeVisible();
     await expect(windows.last()).not.toHaveClass(/is-opening/);
     const readTitleIds = () =>
-      windows.evaluateAll((elements) => elements.map((element) => element.getAttribute("aria-labelledby")));
+      windows.evaluateAll((elements) =>
+        elements.map((element) => element.getAttribute("aria-labelledby")),
+      );
     const firstTitleIds = await readTitleIds();
     expect(new Set(firstTitleIds).size).toBe(10);
     for (const win of await windows.all()) {
@@ -382,17 +400,22 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
     await expect(windows).toHaveCount(0);
   });
 
-  test(`dynamic Brand windows retain custom durations and removal at ${viewport.name}`, async ({ page }) => {
+  test(`dynamic Brand windows retain custom durations and removal at ${viewport.name}`, async ({
+    page,
+  }) => {
     await page.setViewportSize(viewport);
     // The event starts through the real control. This narrow probe reaches the
     // health-dependent Puck branch and exits combat without waiting for a loss.
     await routeHomeScript(page, "eventBrandBurns", (source) =>
-      source.replace(/\}\)\(\);\s*$/, `
+      source.replace(
+        /\}\)\(\);\s*$/,
+        `
         window.__managedWindowProbe = {
           showPuck: showBrandBurnsPuckWindow,
           close: closeBrandBurnsWindow,
         };
-      })();`)
+      })();`,
+      ),
     );
     await preparePage(page);
     await openAdminEvents(page);
@@ -418,9 +441,11 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
       const title = (await win.locator(".title-bar-text").first().textContent()).trim();
       await expect(win).toHaveAccessibleName(title);
       await expect(win).not.toHaveClass(/is-opening/);
-      expect(await win.evaluate((element) =>
-        getComputedStyle(element).getPropertyValue("--event-window-open-duration").trim()
-      )).toBe("220ms");
+      expect(
+        await win.evaluate((element) =>
+          getComputedStyle(element).getPropertyValue("--event-window-open-duration").trim(),
+        ),
+      ).toBe("220ms");
       const box = await win.boundingBox();
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);

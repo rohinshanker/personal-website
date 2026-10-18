@@ -77,15 +77,15 @@
     const normalizedMode = normalizeMode(mode);
     const details = MODE_ASSET_DETAILS[normalizedMode];
     const generatedImages = CURSOR_IMAGE_NAMES.map(
-      (name) => `generated-png/${name}-${details.generatedSuffix}.png`
+      (name) => `generated-png/${name}-${details.generatedSuffix}.png`,
     );
     const workingFrames = Array.from(
       { length: LOADING_FRAME_COUNT },
       (_, index) =>
-        `${details.directory}/working-in-background-frames/${details.workingPrefix}${index + 1}.png`
+        `${details.directory}/working-in-background-frames/${details.workingPrefix}${index + 1}.png`,
     );
     const legacyCursors = LEGACY_CURSOR_NAMES.map(
-      (name) => `${details.directory}/${name}${details.legacySuffix}.cur`
+      (name) => `${details.directory}/${name}${details.legacySuffix}.cur`,
     );
     return [
       ...generatedImages,
@@ -109,8 +109,8 @@
 
     const preload = Promise.allSettled(
       cursorAssetPaths(normalizedMode).map((path) =>
-        window.fetch(new URL(path, cursorAssetRoot), { cache: "force-cache" })
-      )
+        window.fetch(new URL(path, cursorAssetRoot), { cache: "force-cache" }),
+      ),
     ).then(() => undefined);
     preloadedModes.set(normalizedMode, preload);
     return preload;
@@ -225,10 +225,7 @@
       if (loadingFrameTimer || loadingFrameClass) return;
       showNextLoadingFrame();
       if (reducedMotionQuery.matches) return;
-      loadingFrameTimer = window.setInterval(
-        showNextLoadingFrame,
-        LOADING_FRAME_DELAY_MS
-      );
+      loadingFrameTimer = window.setInterval(showNextLoadingFrame, LOADING_FRAME_DELAY_MS);
     };
 
     const syncLoadingState = () => {
@@ -301,7 +298,7 @@
     loadingRuntime.addSource(isLoading);
     if (observeBody) loadingRuntime.observeBody();
     observations.forEach(({ target, options, immediate }) =>
-      loadingRuntime.observe(target, options, immediate)
+      loadingRuntime.observe(target, options, immediate),
     );
     return loadingRuntime;
   };

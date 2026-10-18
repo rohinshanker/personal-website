@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  findSecretFindings,
-  scanRepositoryForSecrets,
-} from "../scripts/check-no-secrets.mjs";
+import { findSecretFindings, scanRepositoryForSecrets } from "../scripts/check-no-secrets.mjs";
 
 test("secret guard identifies credentials without exposing their values", () => {
   const githubToken = ["ghp_", "A".repeat(36)].join("");
@@ -14,7 +11,7 @@ test("secret guard identifies credentials without exposing their values", () => 
   const administratorSigningSecretName = ["ADMIN_", "SESSION_SIGNING_SECRET"].join("");
   const findings = findSecretFindings(
     "config.mjs",
-    `const token = "${githubToken}";\n${privateKeyHeader}\n${protectedName} = "live-value-that-is-long-enough";\n${administratorPasswordName} = "another-long-live-value";\n${administratorSigningSecretName} = "third-long-live-value";`
+    `const token = "${githubToken}";\n${privateKeyHeader}\n${protectedName} = "live-value-that-is-long-enough";\n${administratorPasswordName} = "another-long-live-value";\n${administratorSigningSecretName} = "third-long-live-value";`,
   );
 
   assert.deepEqual(findings, [
@@ -28,7 +25,7 @@ test("secret guard identifies credentials without exposing their values", () => 
 test("secret guard permits documented local-variable templates but rejects real secret file names", () => {
   assert.deepEqual(
     findSecretFindings(".dev.vars.example", "EXAMPLE_VALUE=replace-with-local-value"),
-    []
+    [],
   );
   assert.deepEqual(findSecretFindings(".dev.vars", ""), ["sensitive-file-name"]);
   assert.deepEqual(findSecretFindings("credentials.json", ""), ["sensitive-file-name"]);
@@ -44,16 +41,16 @@ test("secret guard rejects short Administrator identity literals without reporti
   const envStylePasswordName = ["ADMIN_", "PASSWORD"].join("");
   const findings = findSecretFindings(
     "config.mjs",
-    `const ${administratorUsernameName} = "u";\nconst ${administratorPasswordName} = "p";\nconst ${administratorPasswordHashName} = "h";\n${envStylePasswordName}=tiny`
+    `const ${administratorUsernameName} = "u";\nconst ${administratorPasswordName} = "p";\nconst ${administratorPasswordHashName} = "h";\n${envStylePasswordName}=tiny`,
   );
 
   assert.deepEqual(findings, ["hard-coded-admin-credential"]);
   assert.deepEqual(
     findSecretFindings(
       ".dev.vars.example",
-      `${administratorUsernameName}=replace-with-local-username\n${envStylePasswordName}=replace-with-local-password`
+      `${administratorUsernameName}=replace-with-local-username\n${envStylePasswordName}=replace-with-local-password`,
     ),
-    []
+    [],
   );
 });
 

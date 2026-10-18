@@ -37,7 +37,7 @@ if (isMainModule) {
     process.stdout.write("App icon manifest is current.\n");
   } else if (checkManifest) {
     process.stderr.write(
-      "App icon manifest is stale. Run: node scripts/build-app-icon-manifest.mjs\n"
+      "App icon manifest is stale. Run: node scripts/build-app-icon-manifest.mjs\n",
     );
     process.exitCode = 1;
   } else {

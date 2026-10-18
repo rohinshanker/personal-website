@@ -73,7 +73,7 @@ const openSudokuStats = async (page) => {
   // to fail: the board is real, and nothing here claims a verified result.
   await installIssuedGameIssuance(page, { apiBaseUrl: API_BASE_URL, games: ["sudoku"] });
   await page.route(workerStatsUrl, (route) =>
-    route.fulfill({ body: JSON.stringify(globalState), contentType: "application/json" })
+    route.fulfill({ body: JSON.stringify(globalState), contentType: "application/json" }),
   );
   await page.addInitScript(
     ({ state, statsKey, savedProfile, profileKey }) => {
@@ -86,7 +86,7 @@ const openSudokuStats = async (page) => {
       statsKey: GAME_STATS_STORAGE_KEY,
       savedProfile: profile,
       profileKey: PROFILE_STORAGE_KEY,
-    }
+    },
   );
   await page.goto("/home.html");
   const aboutClose = page.locator('#about-window [data-close="about"]');
@@ -100,22 +100,22 @@ const openSudokuStats = async (page) => {
 };
 
 for (const viewport of viewports) {
-  test(`Sudoku leaderboard uses real times and 99:99 placeholders at ${viewport.name}`, async ({ page }) => {
+  test(`Sudoku leaderboard uses real times and 99:99 placeholders at ${viewport.name}`, async ({
+    page,
+  }) => {
     await page.setViewportSize(viewport);
     const stats = await openSudokuStats(page);
     const easyLeaderboard = stats.locator(".game-stats-sudoku-leaderboard").first();
     const emptyLeaderboard = stats.locator(".game-stats-sudoku-leaderboard").nth(1);
     const globalRows = easyLeaderboard.locator(
-      ".game-stats-sudoku-row:not(.game-stats-sudoku-local-best-row)"
+      ".game-stats-sudoku-row:not(.game-stats-sudoku-local-best-row)",
     );
     const globalMetric = globalRows.first().locator(".game-stats-metric--text");
     const placeholderGlobalMetric = globalRows.nth(1).locator(".game-stats-metric--text");
     const localMetric = easyLeaderboard.locator(
-      ".game-stats-sudoku-local-best-row .game-stats-metric--text"
+      ".game-stats-sudoku-local-best-row .game-stats-metric--text",
     );
-    const placeholderLocalRow = emptyLeaderboard.locator(
-      ".game-stats-sudoku-local-best-row"
-    );
+    const placeholderLocalRow = emptyLeaderboard.locator(".game-stats-sudoku-local-best-row");
     const placeholderMetrics = stats
       .locator(".game-stats-sudoku-row .game-stats-metric--text")
       .filter({ hasText: "99:99" });
@@ -123,12 +123,12 @@ for (const viewport of viewports) {
     await expect(globalRows).toHaveCount(3);
     await expect(globalRows.first()).toHaveAttribute(
       "aria-label",
-      "Rank 1: Puzzle Ace, 21600 seconds"
+      "Rank 1: Puzzle Ace, 21600 seconds",
     );
     await expect(globalRows.nth(1)).toHaveAttribute("aria-label", "Rank 2: N/A, no recorded time");
     await expect(placeholderLocalRow).toHaveAttribute(
       "aria-label",
-      "Your no-hints record: #—, N/A, no record"
+      "Your no-hints record: #—, N/A, no record",
     );
     await expect(globalMetric).toHaveText("360:00");
     await expect(placeholderGlobalMetric).toHaveText("99:99");
@@ -137,12 +137,12 @@ for (const viewport of viewports) {
     await expect(placeholderMetrics).toHaveCount(22);
     await expect(stats.locator(".game-stats-sudoku-row .game-stats-digit-strip")).toHaveCount(0);
     await expect(
-      stats.locator(".game-stats-sudoku-total-games .game-stats-digit-strip").first()
+      stats.locator(".game-stats-sudoku-total-games .game-stats-digit-strip").first(),
     ).toBeVisible();
 
     const layout = await easyLeaderboard.evaluate((panel) => {
       const row = panel.querySelector(
-        ".game-stats-sudoku-row:not(.game-stats-sudoku-local-best-row)"
+        ".game-stats-sudoku-row:not(.game-stats-sudoku-local-best-row)",
       );
       const metric = row.querySelector(".game-stats-metric--text");
       const rowRect = row.getBoundingClientRect();

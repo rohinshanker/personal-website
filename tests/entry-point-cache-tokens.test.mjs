@@ -25,7 +25,7 @@ const readAssetReferences = (entryPoint, source) => {
       entryPoint,
       reference: `${assetPath}${token ? `?v=${token}` : ""}`,
       repositoryPath: path.posix.normalize(
-        path.posix.join(path.posix.dirname(entryPoint), assetPath)
+        path.posix.join(path.posix.dirname(entryPoint), assetPath),
       ),
       token: token ?? null,
     });
@@ -38,7 +38,7 @@ const readWarmupList = (indexSource) => {
   const end = indexSource.indexOf("];", start);
   assert.ok(start >= 0 && end > start, "index.html must define homeWarmupResources");
   return [...indexSource.slice(start, end).matchAll(WARMUP_ENTRY_PATTERN)].map(
-    ([, reference]) => reference
+    ([, reference]) => reference,
   );
 };
 
@@ -47,22 +47,19 @@ const sources = new Map(
     ENTRY_POINTS.map(async (entryPoint) => [
       entryPoint,
       await readFile(new URL(entryPoint, root), "utf8"),
-    ])
-  )
+    ]),
+  ),
 );
-const resourceLoader = await readFile(
-  new URL("scripts/home/core/resources.js", root),
-  "utf8"
-);
+const resourceLoader = await readFile(new URL("scripts/home/core/resources.js", root), "utf8");
 const references = ENTRY_POINTS.flatMap((entryPoint) =>
-  readAssetReferences(entryPoint, sources.get(entryPoint))
+  readAssetReferences(entryPoint, sources.get(entryPoint)),
 );
 
 test("every stylesheet and script reference carries a cache-busting token", () => {
   const untokened = references.filter(({ token }) => !token);
   assert.deepEqual(
     untokened.map(({ entryPoint, reference }) => `${entryPoint}: ${reference}`),
-    []
+    [],
   );
   assert.ok(references.length >= 30, "the entry points must reference their shared assets");
 });
@@ -84,12 +81,12 @@ test("the index.html warm-up list mirrors the home.html asset tags", () => {
   const warmup = readWarmupList(index);
   assert.ok(warmup.length > 0);
   const missingFromHome = warmup.filter(
-    (reference) => !home.includes(`href="${reference}"`) && !home.includes(`src="${reference}"`)
+    (reference) => !home.includes(`href="${reference}"`) && !home.includes(`src="${reference}"`),
   );
   assert.deepEqual(missingFromHome, []);
 
   const indexReferences = new Set(
-    readAssetReferences("index.html", index).map(({ reference }) => reference)
+    readAssetReferences("index.html", index).map(({ reference }) => reference),
   );
   const warmupSet = new Set(warmup);
   const unwarmed = readAssetReferences("home.html", home)
@@ -109,7 +106,10 @@ test("on-demand event and Admin resources stay tokened and outside entry warm-up
   const home = sources.get("home.html");
   onDemand.forEach((path) => {
     assert.match(resourceLoader, new RegExp(`${path.replaceAll("/", "\\/")}\\?v=[^\"]+`));
-    assert.equal(warmup.some((reference) => reference.startsWith(`${path}?`)), false);
+    assert.equal(
+      warmup.some((reference) => reference.startsWith(`${path}?`)),
+      false,
+    );
     assert.equal(home.includes(`href="${path}?`), false);
     assert.equal(home.includes(`src="${path}?`), false);
   });

@@ -12,51 +12,58 @@ import { SqliteD1Database, applyGameStatsMigrations } from "./helpers/sqlite-d1.
 const migrationPaths = [1, 2, 3, 4].map(
   (number) =>
     new URL(
-      `../workers/game-stats/migrations/${String(number).padStart(4, "0")}_${[
-        "create_game_stats",
-        "add_game_stat_security",
-        "add_sudoku_puzzle_identity",
-        "optimize_stats_aggregation",
-      ][number - 1]}.sql`,
-      import.meta.url
-    ).pathname
+      `../workers/game-stats/migrations/${String(number).padStart(4, "0")}_${
+        [
+          "create_game_stats",
+          "add_game_stat_security",
+          "add_sudoku_puzzle_identity",
+          "optimize_stats_aggregation",
+        ][number - 1]
+      }.sql`,
+      import.meta.url,
+    ).pathname,
 );
 
 const icon = "assets/app-icons/ico/user_card.ico";
 
-const insertEvent = (database, {
-  id,
-  game,
-  type,
-  difficulty = null,
-  boardSize = null,
-  hintBucket = null,
-  metric = null,
-  metricKind = null,
-  playerId = null,
-  playerName = null,
-  playerIcon = null,
-  occurredAt,
-}) => {
-  database.sqlite.prepare(`
+const insertEvent = (
+  database,
+  {
+    id,
+    game,
+    type,
+    difficulty = null,
+    boardSize = null,
+    hintBucket = null,
+    metric = null,
+    metricKind = null,
+    playerId = null,
+    playerName = null,
+    playerIcon = null,
+    occurredAt,
+  },
+) => {
+  database.sqlite
+    .prepare(`
     INSERT INTO game_events (
       id, game, type, difficulty, board_size, hint_bucket, metric, metric_kind,
       player_id, player_name, player_icon, occurred_at, puzzle_key
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
-  `).run(
-    id,
-    game,
-    type,
-    difficulty,
-    boardSize,
-    hintBucket,
-    metric,
-    metricKind,
-    playerId,
-    playerName,
-    playerIcon,
-    occurredAt
-  );
+  `)
+    .run(
+      id,
+      game,
+      type,
+      difficulty,
+      boardSize,
+      hintBucket,
+      metric,
+      metricKind,
+      playerId,
+      playerName,
+      playerIcon,
+      occurredAt,
+    );
 };
 
 const createDatabase = () => {
@@ -102,7 +109,8 @@ test("SQL aggregation ranks 12 players in every category without returning raw r
         metric: 50 + win,
         metricKind: "moves",
         playerId: player.id,
-        playerName: win === players.length - playerIndex - 1 ? `Latest ${playerIndex}` : player.name,
+        playerName:
+          win === players.length - playerIndex - 1 ? `Latest ${playerIndex}` : player.name,
         playerIcon: icon,
         occurredAt: at(),
       });
@@ -193,7 +201,7 @@ test("SQL aggregation ranks 12 players in every category without returning raw r
   assert.equal(stats.playerRecords.solitaire.name, "Latest 10");
   assert.deepEqual(
     stats.leaderboards.minesweeper.beginner.map(({ playerId }) => playerId),
-    players.slice(0, 3).map(({ id }) => id)
+    players.slice(0, 3).map(({ id }) => id),
   );
   assert.equal(JSON.stringify(stats).includes("sql-invalid-snake-metric"), false);
   assert.equal(JSON.stringify(stats).includes("sql-missing-sudoku-time"), false);
@@ -210,9 +218,7 @@ test("SQL aggregation ranks 12 players in every category without returning raw r
     ...Object.values(unplayed.playerRanks.sudoku),
   ];
   assert.equal(unplayedRanks.length, 14);
-  assert.ok(
-    unplayedRanks.every(({ rank, totalPlayers }) => rank === null && totalPlayers === 12)
-  );
+  assert.ok(unplayedRanks.every(({ rank, totalPlayers }) => rank === null && totalPlayers === 12));
 
   const legacy = await selectAggregatedGameStats(env, {
     protocol: "1",
@@ -294,7 +300,7 @@ test("SQL validation deduplicates normalized ids only after accepting a row", as
 
   const stats = await selectAggregatedGameStats(
     { personal_site_game_stats: database },
-    { protocol: "2", playerId: player.id, pendingEventIds: [] }
+    { protocol: "2", playerId: player.id, pendingEventIds: [] },
   );
   assert.equal(stats.totals.minesweeper.wins.beginner, 3);
   assert.equal(stats.playerTotals.minesweeper.wins.beginner, 2);
@@ -329,7 +335,9 @@ test("migration 0004 retains security and identity indexes and query plans use c
 
   const plans = [SELECT_STATS_TOTALS_SQL, SELECT_STATS_RANKINGS_SQL]
     .flatMap((sql) =>
-      database.sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(new Date(Date.now() + 60_000).toISOString(), "sql-player-00")
+      database.sqlite
+        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .all(new Date(Date.now() + 60_000).toISOString(), "sql-player-00"),
     )
     .map(({ detail }) => detail)
     .join("\n");
@@ -402,7 +410,7 @@ test("protocol 2 caches for five seconds while fresh and acknowledgment reads re
       new Request(`https://stats.example.test/stats?${search}`, {
         headers: { Origin: origin },
       }),
-      env
+      env,
     );
 
   const first = await fetchStats("protocol=2&playerId=cache-player-0001");
@@ -413,7 +421,7 @@ test("protocol 2 caches for five seconds while fresh and acknowledgment reads re
 
   const cached = await fetchStats(
     "protocol=2&playerId=cache-player-0001",
-    "https://preview.example"
+    "https://preview.example",
   );
   assert.equal(cached.status, 200);
   assert.equal(cached.headers.get("Access-Control-Allow-Origin"), "https://preview.example");
@@ -428,18 +436,16 @@ test("protocol 2 caches for five seconds while fresh and acknowledgment reads re
   assert.equal(batchCalls, 3, "a fresh read replaces the ordinary cache entry");
 
   const acknowledged = await fetchStats(
-    "protocol=2&playerId=cache-player-0001&pendingEventId=cache-event-0001"
+    "protocol=2&playerId=cache-player-0001&pendingEventId=cache-event-0001",
   );
   assert.equal(batchCalls, 4, "acknowledgment reads bypass the platform cache");
   assert.deepEqual((await acknowledged.json()).acknowledgedEventIds, ["cache-event-0001"]);
-  const afterAcknowledgment = await fetchStats(
-    "protocol=2&playerId=cache-player-0001"
-  );
+  const afterAcknowledgment = await fetchStats("protocol=2&playerId=cache-player-0001");
   assert.equal(batchCalls, 4, "an acknowledgment read refreshes the ordinary cache entry");
   assert.deepEqual(
     (await afterAcknowledgment.json()).acknowledgedEventIds,
     [],
-    "request-specific acknowledgments must not be stored in the shared entry"
+    "request-specific acknowledgments must not be stored in the shared entry",
   );
 
   const tooMany = new URLSearchParams({ protocol: "2" });
@@ -481,10 +487,9 @@ test("Cache API failures do not break stats reads", async (t) => {
     if (descriptor) Object.defineProperty(globalThis, "caches", descriptor);
     else delete globalThis.caches;
   });
-  const response = await worker.fetch(
-    new Request("https://stats.example.test/stats?protocol=2"),
-    { personal_site_game_stats: database }
-  );
+  const response = await worker.fetch(new Request("https://stats.example.test/stats?protocol=2"), {
+    personal_site_game_stats: database,
+  });
   assert.equal(response.status, 200);
   assert.equal((await response.json()).version, 2);
 });
@@ -508,17 +513,14 @@ test("failed SQL reads return an uncached error response", async (t) => {
     else delete globalThis.caches;
   });
 
-  const response = await worker.fetch(
-    new Request("https://stats.example.test/stats?protocol=2"),
-    {
-      personal_site_game_stats: {
-        prepare: () => ({ bind: () => ({}) }),
-        batch: async () => {
-          throw new Error("simulated SQL failure");
-        },
+  const response = await worker.fetch(new Request("https://stats.example.test/stats?protocol=2"), {
+    personal_site_game_stats: {
+      prepare: () => ({ bind: () => ({}) }),
+      batch: async () => {
+        throw new Error("simulated SQL failure");
       },
-    }
-  );
+    },
+  });
 
   assert.equal(response.status, 500);
   assert.equal(response.headers.get("Cache-Control"), "no-store");
@@ -529,13 +531,12 @@ test("failed SQL reads return an uncached error response", async (t) => {
   assert.equal(putCalls, 0);
 });
 
-
 test("SQL historical strings preserve JavaScript whitespace and UTF-16 name limits", async (t) => {
   const database = createDatabase();
   t.after(() => database.close());
   const spaces = [
-    9, 10, 11, 12, 13, 32, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197,
-    8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288, 65279,
+    9, 10, 11, 12, 13, 32, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201,
+    8202, 8232, 8233, 8239, 8287, 12288, 65279,
   ];
   const occurredAt = new Date(Date.now() - 60_000).toISOString();
   for (const [index, code] of spaces.entries()) {
@@ -544,37 +545,57 @@ test("SQL historical strings preserve JavaScript whitespace and UTF-16 name limi
     assert.equal(space.trim(), "");
     insertEvent(database, {
       id: wrap(`event-whitespace-${index}`),
-      game: "minesweeper", type: "win", difficulty: wrap("beginner"),
-      metric: 50 + index, metricKind: wrap("seconds"),
+      game: "minesweeper",
+      type: "win",
+      difficulty: wrap("beginner"),
+      metric: 50 + index,
+      metricKind: wrap("seconds"),
       playerId: wrap(`player-whitespace-${index}`),
-      playerName: wrap("😀".repeat(20)), playerIcon: wrap(icon), occurredAt,
+      playerName: wrap("😀".repeat(20)),
+      playerIcon: wrap(icon),
+      occurredAt,
     });
   }
   insertEvent(database, {
-    id: "event-whitespace-only-name", game: "minesweeper", type: "win",
-    difficulty: "beginner", metric: 1, metricKind: "seconds",
-    playerId: "player-whitespace-only-name", playerName: "\u00a0\u2028\ufeff",
-    playerIcon: icon, occurredAt,
+    id: "event-whitespace-only-name",
+    game: "minesweeper",
+    type: "win",
+    difficulty: "beginner",
+    metric: 1,
+    metricKind: "seconds",
+    playerId: "player-whitespace-only-name",
+    playerName: "\u00a0\u2028\ufeff",
+    playerIcon: icon,
+    occurredAt,
   });
   // U+0085 is not ECMAScript whitespace and must keep this id invalid.
   insertEvent(database, {
-    id: "\u0085event-not-js-whitespace", game: "minesweeper", type: "win",
-    difficulty: "beginner", metric: 1, metricKind: "seconds", occurredAt,
+    id: "\u0085event-not-js-whitespace",
+    game: "minesweeper",
+    type: "win",
+    difficulty: "beginner",
+    metric: 1,
+    metricKind: "seconds",
+    occurredAt,
   });
   const stats = await selectAggregatedGameStats(
     { personal_site_game_stats: database },
-    { protocol: "2", playerId: "player-whitespace-0", pendingEventIds: ["event-whitespace-0"] }
+    { protocol: "2", playerId: "player-whitespace-0", pendingEventIds: ["event-whitespace-0"] },
   );
   assert.equal(stats.totals.minesweeper.wins.beginner, spaces.length + 1);
   assert.equal(stats.playerTotals.minesweeper.wins.beginner, 1);
-  assert.deepEqual(stats.playerRanks.minesweeper.beginner, { rank: 1, totalPlayers: spaces.length });
+  assert.deepEqual(stats.playerRanks.minesweeper.beginner, {
+    rank: 1,
+    totalPlayers: spaces.length,
+  });
   assert.equal(stats.playerRecords.minesweeper.beginner.name, "😀".repeat(16));
   assert.equal(stats.playerRecords.minesweeper.beginner.icon, icon);
   assert.deepEqual(stats.acknowledgedEventIds, ["event-whitespace-0"]);
-  assert.deepEqual(stats.leaderboards.minesweeper.beginner.map(({ eventId }) => eventId),
-    ["event-whitespace-0", "event-whitespace-1", "event-whitespace-2"]);
+  assert.deepEqual(
+    stats.leaderboards.minesweeper.beginner.map(({ eventId }) => eventId),
+    ["event-whitespace-0", "event-whitespace-1", "event-whitespace-2"],
+  );
 });
-
 
 test("all stats statements share one future cutoff and reject SQLite relative dates", async (t) => {
   const database = createDatabase();
@@ -590,23 +611,39 @@ test("all stats statements share one future cutoff and reject SQLite relative da
     ["event-padded-date", "2026-01-01T00:00:00.000Z "],
   ]) {
     insertEvent(database, {
-      id, occurredAt, game: "minesweeper", type: "win", difficulty: "beginner",
-      metric: 10, metricKind: "seconds", playerId: "player-cutoff-check",
-      playerName: "Cutoff Check", playerIcon: icon,
+      id,
+      occurredAt,
+      game: "minesweeper",
+      type: "win",
+      difficulty: "beginner",
+      metric: 10,
+      metricKind: "seconds",
+      playerId: "player-cutoff-check",
+      playerName: "Cutoff Check",
+      playerIcon: icon,
     });
   }
   const originalBatch = database.batch.bind(database);
   database.batch = async (statements) => {
-    assert.deepEqual(statements.map(({ params }) => params[0]),
-      Array(statements.length).fill(new Date(now + 60_000).toISOString()));
+    assert.deepEqual(
+      statements.map(({ params }) => params[0]),
+      Array(statements.length).fill(new Date(now + 60_000).toISOString()),
+    );
     return originalBatch(statements);
   };
   const stats = await selectAggregatedGameStats(
     { personal_site_game_stats: database },
-    { protocol: "2", playerId: "player-cutoff-check", pendingEventIds: [
-      "event-cutoff-included", "event-cutoff-excluded", "event-relative-now", "event-relative-time",
-      "event-padded-date",
-    ] }
+    {
+      protocol: "2",
+      playerId: "player-cutoff-check",
+      pendingEventIds: [
+        "event-cutoff-included",
+        "event-cutoff-excluded",
+        "event-relative-now",
+        "event-relative-time",
+        "event-padded-date",
+      ],
+    },
   );
   assert.equal(clockReads, 1);
   assert.equal(stats.totals.minesweeper.wins.beginner, 1);

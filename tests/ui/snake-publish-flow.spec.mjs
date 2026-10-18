@@ -51,9 +51,7 @@ const createLeaderboardEntry = ({
 });
 
 const emptySnakeMap = (valueFactory) =>
-  Object.fromEntries(
-    ["10", "16", "20", "24"].map((size) => [size, valueFactory(size)])
-  );
+  Object.fromEntries(["10", "16", "20", "24"].map((size) => [size, valueFactory(size)]));
 
 const createStatsPayload = (publishedEvent, acknowledgedEventIds = []) => {
   const refreshed = Boolean(publishedEvent);
@@ -107,9 +105,7 @@ const createStatsPayload = (publishedEvent, acknowledgedEventIds = []) => {
     playerRanks: {
       snake: {
         ...emptySnakeMap(() => ({ rank: null, totalPlayers: 0 })),
-        10: refreshed
-          ? { rank: 3, totalPlayers: 3 }
-          : { rank: null, totalPlayers: 2 },
+        10: refreshed ? { rank: 3, totalPlayers: 3 } : { rank: null, totalPlayers: 2 },
       },
     },
     playerRecords: {
@@ -131,7 +127,7 @@ const installApi = async (
     initial = verifiedSnakeFixtures.validLoss.initial,
     rejectEvent = false,
     retryEventOnce = false,
-  } = {}
+  } = {},
 ) => {
   const eventRequests = [];
   const statsRequests = [];
@@ -141,7 +137,9 @@ const installApi = async (
   let retryRejected = false;
   let releaseCompletion = () => {};
   const completionGate = holdCompletion
-    ? new Promise((resolve) => { releaseCompletion = resolve; })
+    ? new Promise((resolve) => {
+        releaseCompletion = resolve;
+      })
     : Promise.resolve();
   const verified = createIssuedGameResponder({
     // Reset Local Stats also refreshes Sudoku's ready board. Answer that
@@ -233,8 +231,7 @@ const installApi = async (
       statsRequests.push({ path: url.pathname + url.search, refreshed });
       requestSequence.push(refreshed ? "stats-refreshed" : "stats-baseline");
       const acknowledgedEventIds =
-        publishedEvent &&
-        url.searchParams.getAll("pendingEventId").includes(publishedEvent.id)
+        publishedEvent && url.searchParams.getAll("pendingEventId").includes(publishedEvent.id)
           ? [publishedEvent.id]
           : [];
       await route.fulfill({
@@ -278,7 +275,7 @@ const preparePage = async (
     rejectEvent = false,
     retryEventOnce = false,
     waitForEvent = true,
-  } = {}
+  } = {},
 ) => {
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -298,7 +295,7 @@ const preparePage = async (
       savedProfile: profile,
       snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
       statsKey: GAME_STATS_STORAGE_KEY,
-    }
+    },
   );
   await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
   const api = await installApi(page, {
@@ -327,7 +324,7 @@ const preparePage = async (
   await snakeWindow.locator('[data-snake-board-size="10"]').click();
   await expect(snakeWindow.locator('[data-snake-board-size="10"]')).toHaveAttribute(
     "aria-pressed",
-    "true"
+    "true",
   );
   if (exerciseTiming) {
     await snakeWindow.locator("#snake-canvas").focus();
@@ -412,10 +409,12 @@ const expectPublishedRequestContract = (api) => {
     timingRevision: 3,
   });
   expect(api.verified.finishes[0].request.terminalTick).toBeGreaterThan(0);
-  expect(api.verified.continuations.map(({ request }) => request)).toEqual([{
-    session: { id: descriptor.id, token: descriptor.token },
-    progress: { id: "progress-1", token: "synthetic-progress-proof" },
-  }]);
+  expect(api.verified.continuations.map(({ request }) => request)).toEqual([
+    {
+      session: { id: descriptor.id, token: descriptor.token },
+      progress: { id: "progress-1", token: "synthetic-progress-proof" },
+    },
+  ]);
   expect(api.eventRequests).toHaveLength(1);
   expect(api.eventRequests[0].event).toEqual({
     id: expect.stringMatching(/^local-[a-f0-9-]{36}$/),
@@ -435,9 +434,7 @@ const expectPublishedRequestContract = (api) => {
     id: `completion-${descriptor.id}`,
     token: "synthetic-completion-proof",
   });
-  expect(api.requestSequence.indexOf("session")).toBeLessThan(
-    api.requestSequence.indexOf("event")
-  );
+  expect(api.requestSequence.indexOf("session")).toBeLessThan(api.requestSequence.indexOf("event"));
 };
 
 const readStoredStats = (page) =>
@@ -449,7 +446,7 @@ const readStoredStats = (page) =>
     {
       queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
       statsKey: GAME_STATS_STORAGE_KEY,
-    }
+    },
   );
 
 const expectLocalSnakeResult = (stored) => {
@@ -499,7 +496,7 @@ for (const viewport of viewports) {
     const status = statsWindow.locator("[data-game-stats-sync-status]");
     const panel10 = statsWindow.locator('[aria-labelledby="game-stats-snake-10"]');
     const globalRows10 = panel10.locator(
-      ".game-stats-leaderboard-template-list > .game-stats-snake-row"
+      ".game-stats-leaderboard-template-list > .game-stats-snake-row",
     );
     const currentRecord = panel10.locator(".game-stats-snake-local-best-row");
 
@@ -509,44 +506,34 @@ for (const viewport of viewports) {
     await expect(status).toHaveAttribute("role", "status");
     await expect(panel10.getByText("Global Top 3", { exact: true })).toBeVisible();
     await expect(globalRows10).toHaveCount(3);
-    await expect(globalRows10.nth(0)).toHaveAttribute(
-      "aria-label",
-      "Rank 1: Aria, 8 points"
-    );
-    await expect(globalRows10.nth(1)).toHaveAttribute(
-      "aria-label",
-      "Rank 2: Nia, 4 points"
-    );
+    await expect(globalRows10.nth(0)).toHaveAttribute("aria-label", "Rank 1: Aria, 8 points");
+    await expect(globalRows10.nth(1)).toHaveAttribute("aria-label", "Rank 2: Nia, 4 points");
     await expect(globalRows10.nth(2)).toHaveAttribute(
       "aria-label",
-      "Rank 3: Snake Publisher, 0 points, your entry"
+      "Rank 3: Snake Publisher, 0 points, your entry",
     );
     await expect(currentRecord).toHaveAttribute(
       "aria-label",
-      "Your record: #3, Snake Publisher, 0 points"
+      "Your record: #3, Snake Publisher, 0 points",
     );
-    await expect(
-      panel10.locator('[aria-label="Global games played on 10×10: 3"]')
-    ).toBeVisible();
+    await expect(panel10.locator('[aria-label="Global games played on 10×10: 3"]')).toBeVisible();
 
     for (const size of ["16", "20", "24"]) {
       const panel = statsWindow.locator(`[aria-labelledby="game-stats-snake-${size}"]`);
-      const rows = panel.locator(
-        ".game-stats-leaderboard-template-list > .game-stats-snake-row"
-      );
+      const rows = panel.locator(".game-stats-leaderboard-template-list > .game-stats-snake-row");
       await expect(
-        panel.locator(`[aria-label="Global games played on ${size}×${size}: 0"]`)
+        panel.locator(`[aria-label="Global games played on ${size}×${size}: 0"]`),
       ).toBeVisible();
       await expect(rows).toHaveCount(3);
       for (let index = 0; index < 3; index += 1) {
         await expect(rows.nth(index)).toHaveAttribute(
           "aria-label",
-          `Rank ${index + 1}: N/A, 0 points`
+          `Rank ${index + 1}: N/A, 0 points`,
         );
       }
       await expect(panel.locator(".game-stats-snake-local-best-row")).toHaveAttribute(
         "aria-label",
-        "Your record: #—, Snake Publisher, 0 points"
+        "Your record: #—, Snake Publisher, 0 points",
       );
     }
 
@@ -561,7 +548,7 @@ for (const viewport of viewports) {
           url.searchParams.get("fresh") === "1" &&
           url.searchParams.getAll("pendingEventId").includes(api.eventRequests[0].event.id)
         );
-      })
+      }),
     ).toBe(true);
     expectLocalSnakeResult(await readStoredStats(page));
 
@@ -570,13 +557,9 @@ for (const viewport of viewports) {
     await refreshButton.focus();
     await expect(refreshButton).toBeFocused();
     await expectStatsWindowContained(page, statsWindow);
-    expect(await scanForViolations(
-      page,
-      testInfo,
-      `snake-published-${viewport.name}`
-    )).toEqual([]);
+    expect(await scanForViolations(page, testInfo, `snake-published-${viewport.name}`)).toEqual([]);
     const screenshotPath = testInfo.outputPath(
-      `snake-publish-success-${viewport.width}x${viewport.height}.png`
+      `snake-publish-success-${viewport.width}x${viewport.height}.png`,
     );
     await page.screenshot({
       fullPage: true,
@@ -595,7 +578,7 @@ test("a delayed eligible Snake result still completes inside the browser timeout
   const { api, statsWindow } = await preparePage(
     page,
     { width: 1280, height: 800 },
-    { eventDelayMs: 3_500 }
+    { eventDelayMs: 3_500 },
   );
   const status = statsWindow.locator("[data-game-stats-sync-status]");
 
@@ -612,7 +595,7 @@ test("a 425 Snake result remains queued and publishes without a manual retry", a
   const { api, statsWindow } = await preparePage(
     page,
     { width: 1280, height: 800 },
-    { retryEventOnce: true }
+    { retryEventOnce: true },
   );
   const status = statsWindow.locator("[data-game-stats-sync-status]");
 
@@ -641,26 +624,26 @@ test("a rejected Snake result stays local and never fabricates global stats", as
   const { api, statsWindow } = await preparePage(
     page,
     { width: 1280, height: 800 },
-    { rejectEvent: true }
+    { rejectEvent: true },
   );
   const status = statsWindow.locator("[data-game-stats-sync-status]");
   const panel10 = statsWindow.locator('[aria-labelledby="game-stats-snake-10"]');
   const globalRows10 = panel10.locator(
-    ".game-stats-leaderboard-template-list > .game-stats-snake-row"
+    ".game-stats-leaderboard-template-list > .game-stats-snake-row",
   );
 
   await expect(statsWindow).toBeVisible();
-  await expect(status).toHaveText("Local stats are saved, but a result could not pass server verification.");
+  await expect(status).toHaveText(
+    "Local stats are saved, but a result could not pass server verification.",
+  );
   await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
   await expect(globalRows10.nth(0)).toHaveAttribute("aria-label", "Rank 1: Aria, 8 points");
   await expect(globalRows10.nth(1)).toHaveAttribute("aria-label", "Rank 2: Nia, 4 points");
   await expect(globalRows10.nth(2)).toHaveAttribute("aria-label", "Rank 3: N/A, 0 points");
-  await expect(
-    panel10.locator('[aria-label="Global games played on 10×10: 2"]')
-  ).toBeVisible();
+  await expect(panel10.locator('[aria-label="Global games played on 10×10: 2"]')).toBeVisible();
   await expect(panel10.locator(".game-stats-snake-local-best-row")).toHaveAttribute(
     "aria-label",
-    "Your record: #—, Snake Publisher, 0 points"
+    "Your record: #—, Snake Publisher, 0 points",
   );
 
   expectPublishedRequestContract(api);
@@ -691,21 +674,17 @@ for (const viewport of viewports) {
     diagnostics,
     page,
   }, testInfo) => {
-    const { api, statsWindow } = await preparePage(
-      page,
-      viewport,
-      {
-        exerciseTiming: false,
-        finishFailure: { status: 409, code: "session-expired" },
-        waitForEvent: false,
-      }
-    );
+    const { api, statsWindow } = await preparePage(page, viewport, {
+      exerciseTiming: false,
+      finishFailure: { status: 409, code: "session-expired" },
+      waitForEvent: false,
+    });
     const status = statsWindow.locator("[data-game-stats-sync-status]");
 
     await expect(statsWindow).toBeVisible();
     await expect(status).toHaveAttribute("data-game-stats-sync-state", "session-expired");
     await expect(status).toHaveText(
-      "Saved on this device. This game's online session expired, so this result can't be published. Start a new game to publish a new result."
+      "Saved on this device. This game's online session expired, so this result can't be published. Start a new game to publish a new result.",
     );
     expect(api.verified.issued).toHaveLength(1);
     expect(api.verified.timing).toHaveLength(1);
@@ -715,14 +694,12 @@ for (const viewport of viewports) {
     expectLocalSnakeResult(await readStoredStats(page));
     await settleRender(page);
     await expectStatsWindowContained(page, statsWindow);
-    expect(await scanForViolations(
-      page,
-      testInfo,
-      `snake-expired-local-${viewport.name}`
-    )).toEqual([]);
+    expect(await scanForViolations(page, testInfo, `snake-expired-local-${viewport.name}`)).toEqual(
+      [],
+    );
 
     const screenshotPath = testInfo.outputPath(
-      `snake-expired-local-${viewport.width}x${viewport.height}.png`
+      `snake-expired-local-${viewport.width}x${viewport.height}.png`,
     );
     await page.screenshot({ fullPage: true, path: screenshotPath });
     await testInfo.attach(`snake-expired-local-${viewport.name}`, {
@@ -749,10 +726,12 @@ test("a canonical Snake correction after Reset Local Stats updates only the fini
       holdCompletion: true,
       initial: scoringSnakeInitial,
       waitForEvent: false,
-    }
+    },
   );
   await expect.poll(() => api.verified.continuations.length).toBe(1);
-  expect(JSON.parse(await page.evaluate((key) => localStorage.getItem(key), SNAKE_HIGH_SCORE_KEY))).toEqual({
+  expect(
+    JSON.parse(await page.evaluate((key) => localStorage.getItem(key), SNAKE_HIGH_SCORE_KEY)),
+  ).toEqual({
     10: 1,
   });
 
@@ -760,10 +739,9 @@ test("a canonical Snake correction after Reset Local Stats updates only the fini
   const progressWindow = page.locator('[data-app-window="game-progress"]');
   await expect(progressWindow).toBeVisible();
   await progressWindow.locator("#game-progress-reset-local").click();
-  await expect.poll(() => page.evaluate(
-    (key) => localStorage.getItem(key),
-    SNAKE_HIGH_SCORE_KEY
-  )).toBeNull();
+  await expect
+    .poll(() => page.evaluate((key) => localStorage.getItem(key), SNAKE_HIGH_SCORE_KEY))
+    .toBeNull();
 
   api.releaseCompletion();
   await expect.poll(() => api.eventRequests.length).toBe(1);
@@ -772,7 +750,9 @@ test("a canonical Snake correction after Reset Local Stats updates only the fini
   expect(await page.evaluate((key) => localStorage.getItem(key), SNAKE_HIGH_SCORE_KEY)).toBeNull();
 });
 
-test("Snake close and reset discard an issued follow-up run without finishing it", async ({ page }) => {
+test("Snake close and reset discard an issued follow-up run without finishing it", async ({
+  page,
+}) => {
   const { api, snakeWindow } = await preparePage(page, { width: 1280, height: 800 });
   expect(api.verified.issued).toHaveLength(1);
   expect(api.verified.finishes).toHaveLength(1);

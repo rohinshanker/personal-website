@@ -34,20 +34,11 @@ const compactStyles = styles.replace(/\s+/g, " ");
 test("every custom-cursor route loads the pointer-aware text cursor assets", () => {
   for (const source of [home, index, modeling]) {
     assert.match(source, /cursors\.css\?v=[^"]+/);
-    assert.match(
-      source,
-      /scripts\/home\/text-selection-cursor\.js\?v=[^"]+/
-    );
+    assert.match(source, /scripts\/home\/text-selection-cursor\.js\?v=[^"]+/);
   }
-  assert.match(
-    index,
-    /\["styles\/home\/cursors\.css\?v=[^"]+", "style"\]/
-  );
+  assert.match(index, /\["styles\/home\/cursors\.css\?v=[^"]+", "style"\]/);
   for (const source of [home, index, modeling]) {
-    assert.match(
-      source,
-      /scripts\/home\/core\/cursor-mode\.js\?v=[^"]+/
-    );
+    assert.match(source, /scripts\/home\/core\/cursor-mode\.js\?v=[^"]+/);
   }
   assert.match(cursorRuntime, /window\.RohinCursorRuntime\s*=\s*Object\.freeze/);
 });
@@ -98,30 +89,21 @@ test("route-specific cursor surfaces opt in through generic guard attributes", (
     assert.equal(
       script.includes(routeSelector),
       false,
-      `Shared text-selection logic must not know ${routeSelector}.`
+      `Shared text-selection logic must not know ${routeSelector}.`,
     );
   }
 
+  assert.match(home, /\bid="sol-waste"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i);
+  assert.match(home, /\bid="sol-tableau"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i);
   assert.match(
     home,
-    /\bid="sol-waste"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
-  );
-  assert.match(
-    home,
-    /\bid="sol-tableau"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)/i
-  );
-  assert.match(
-    home,
-    /\bclass="title-bar"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)[^>]*>[\s\S]*?Date &amp; Time/i
+    /\bclass="title-bar"[^>]*\bdata-custom-cursor-guard(?:\s|>|=)[^>]*>[\s\S]*?Date &amp; Time/i,
   );
   assert.ok(
     (main.match(/setAttribute\("data-custom-cursor-guard", ""\)/g) || []).length >= 3,
-    "Dynamic Sudoku and calendar surfaces must carry generic cursor guards."
+    "Dynamic Sudoku and calendar surfaces must carry generic cursor guards.",
   );
-  assert.match(
-    main,
-    /toggleAttribute\("data-custom-cursor-guard", isResizeHover\)/
-  );
+  assert.match(main, /toggleAttribute\("data-custom-cursor-guard", isResizeHover\)/);
 });
 
 test("the modeling route adapts the shared cursor runtime instead of forking it", () => {
@@ -129,7 +111,7 @@ test("the modeling route adapts the shared cursor runtime instead of forking it"
   // 98.css title bars would advertise a drag the route cannot perform.
   assert.match(
     modeling,
-    /<header\b[^>]*\bclass="window portfolio-header"[\s\S]*?\bdata-no-drag\b[^>]*>/
+    /<header\b[^>]*\bclass="window portfolio-header"[\s\S]*?\bdata-no-drag\b[^>]*>/,
   );
   assert.match(modeling, /<div class="window portfolio-noscript" data-no-drag>/);
   assert.match(modelingScript, /"window lightbox__window", \{ "data-no-drag": true \}/);
@@ -139,10 +121,7 @@ test("the modeling route adapts the shared cursor runtime instead of forking it"
   // store, asset list, or loading animation on this route.
   assert.match(modelingCursor, /window\.RohinCursorRuntime/);
   assert.match(modelingCursor, /cursorRuntime\.start\(\)/);
-  assert.match(
-    modelingCursor,
-    /isLoading: \(\) => stage\.getAttribute\("aria-busy"\) === "true"/
-  );
+  assert.match(modelingCursor, /isLoading: \(\) => stage\.getAttribute\("aria-busy"\) === "true"/);
   assert.match(modelingCursor, /attributeFilter: \["aria-busy"\]/);
   for (const forked of [
     "rohin-os-cursor-mode",
@@ -155,7 +134,7 @@ test("the modeling route adapts the shared cursor runtime instead of forking it"
     assert.equal(
       modelingCursor.includes(forked),
       false,
-      `The modeling adapter must leave ${forked} to the shared runtime.`
+      `The modeling adapter must leave ${forked} to the shared runtime.`,
     );
   }
 
@@ -176,23 +155,23 @@ test("selection state is limited to an active primary-pointer gesture and always
     assert.match(
       script,
       new RegExp(`addEventListener\\(["']${eventName}["']`),
-      `Missing ${eventName} lifecycle handling`
+      `Missing ${eventName} lifecycle handling`,
     );
   }
   for (const eventName of ["blur", "pageshow", "scroll", "resize"]) {
     assert.match(
       script,
       new RegExp(`addEventListener\\(["']${eventName}["']`),
-      `Missing ${eventName} cleanup or hover resync handling`
+      `Missing ${eventName} cleanup or hover resync handling`,
     );
   }
   assert.match(
     script,
-    /document\.documentElement\.classList\.toggle\(TEXT_SELECTING_CURSOR_CLASS, isActive\)/
+    /document\.documentElement\.classList\.toggle\(TEXT_SELECTING_CURSOR_CLASS, isActive\)/,
   );
   assert.match(
     script,
-    /document\.body\.classList\.toggle\(TEXT_SELECTING_CURSOR_CLASS, isActive\)/
+    /document\.body\.classList\.toggle\(TEXT_SELECTING_CURSOR_CLASS, isActive\)/,
   );
   assert.doesNotMatch(script, /is-custom-cursor-text-selection/);
   assert.doesNotMatch(script, /addEventListener\(["']selectionchange["']/);
@@ -200,10 +179,7 @@ test("selection state is limited to an active primary-pointer gesture and always
 
 test("text hover and active selection styling do not remap unrelated cursor tokens", () => {
   assert.doesNotMatch(styles, /is-custom-cursor-text-selection/);
-  assert.doesNotMatch(
-    styles,
-    /--cursor-(?:normal|select|text-thin|help):\s*var\(--cursor-text\)/
-  );
+  assert.doesNotMatch(styles, /--cursor-(?:normal|select|text-thin|help):\s*var\(--cursor-text\)/);
   const textStateStart = compactStyles.indexOf(".is-custom-cursor-text-hover");
   const textStateEnd = compactStyles.indexOf("::-webkit-scrollbar", textStateStart);
   assert.notEqual(textStateStart, -1, "Missing selectable-text hover styling");
@@ -214,7 +190,7 @@ test("text hover and active selection styling do not remap unrelated cursor toke
   assert.match(textStateBlock, /cursor:\s*var\(--cursor-text\)\s*!important;/);
 
   const precisionStateStart = compactStyles.indexOf(
-    "body.is-admin-picking-target [data-admin-pickable]"
+    "body.is-admin-picking-target [data-admin-pickable]",
   );
   const precisionStateEnd = compactStyles.indexOf("button:disabled", precisionStateStart);
   assert.notEqual(precisionStateStart, -1, "Missing Admin picker precision styling");
@@ -223,18 +199,11 @@ test("text hover and active selection styling do not remap unrelated cursor toke
   for (const token of ["normal", "select", "text", "move", "help", "resize-ew"]) {
     assert.match(
       precisionStateBlock,
-      new RegExp(`--cursor-${token}:\\s*var\\(--cursor-precision\\)`)
+      new RegExp(`--cursor-${token}:\\s*var\\(--cursor-precision\\)`),
     );
   }
 
-  for (const token of [
-    "select",
-    "help",
-    "move",
-    "unavailable",
-    "resize-ew",
-    "resize-nwse",
-  ]) {
+  for (const token of ["select", "help", "move", "unavailable", "resize-ew", "resize-nwse"]) {
     assert.match(styles, new RegExp(`cursor:\\s*var\\(--cursor-${token}\\)\\s*!important`));
   }
 });

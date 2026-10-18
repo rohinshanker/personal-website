@@ -30,7 +30,7 @@ test("empty and normalized stats cover every player rank, record, and global Top
   const dataSource = extractSource(
     source,
     "const createGameStatsEmptyMinesweeperWins =",
-    "\n\nconst createGameStatsEventId"
+    "\n\nconst createGameStatsEventId",
   );
   const context = vm.createContext({ URLSearchParams });
 
@@ -46,7 +46,7 @@ test("empty and normalized stats cover every player rank, record, and global Top
       "globalThis.createEmptyGameStatsDataForTest = createEmptyGameStatsData;",
       "globalThis.normalizeGameStatsDataForTest = normalizeGameStatsData;",
     ].join("\n"),
-    context
+    context,
   );
 
   const minesweeperDifficulties = ["beginner", "intermediate", "expert"];
@@ -72,14 +72,19 @@ test("empty and normalized stats cover every player rank, record, and global Top
   const empty = jsonClone(context.createEmptyGameStatsDataForTest());
   const normalizedEmpty = jsonClone(context.normalizeGameStatsDataForTest({}));
   assert.equal(normalizedEmpty.acknowledgementsAvailable, false);
-  const legacyAcknowledgments = jsonClone(context.normalizeGameStatsDataForTest({
-    eventIds: ["event-legacy-confirmed", "event-legacy-confirmed", "invalid"],
-  }));
+  const legacyAcknowledgments = jsonClone(
+    context.normalizeGameStatsDataForTest({
+      eventIds: ["event-legacy-confirmed", "event-legacy-confirmed", "invalid"],
+    }),
+  );
   assert.equal(legacyAcknowledgments.acknowledgementsAvailable, true);
   assert.deepEqual(legacyAcknowledgments.acknowledgedEventIds, ["event-legacy-confirmed"]);
-  const modernAcknowledgments = jsonClone(context.normalizeGameStatsDataForTest({
-    eventIds: ["event-legacy-confirmed"], acknowledgedEventIds: [],
-  }));
+  const modernAcknowledgments = jsonClone(
+    context.normalizeGameStatsDataForTest({
+      eventIds: ["event-legacy-confirmed"],
+      acknowledgedEventIds: [],
+    }),
+  );
   assert.equal(modernAcknowledgments.acknowledgementsAvailable, true);
   assert.deepEqual(modernAcknowledgments.acknowledgedEventIds, []);
   for (const data of [empty, normalizedEmpty]) {
@@ -114,7 +119,7 @@ test("empty and normalized stats cover every player rank, record, and global Top
       solitaire: { wins: 12.9 },
       snake: {
         totalGamesPlayed: 17,
-        gamesPlayed: { "10": 4, "16": 5, "20": null, "24": -1 },
+        gamesPlayed: { 10: 4, 16: 5, 20: null, 24: -1 },
       },
       sudoku: {
         wins: {
@@ -128,60 +133,61 @@ test("empty and normalized stats cover every player rank, record, and global Top
         minesweeperDifficulties.map((difficulty) => [
           difficulty,
           ascendingTopFive(`minesweeper-${difficulty}`),
-        ])
+        ]),
       ),
       solitaire: descendingTopFive("solitaire"),
       snake: Object.fromEntries(
-        snakeBoardSizes.map((size) => [size, descendingTopFive(`snake-${size}`)])
+        snakeBoardSizes.map((size) => [size, descendingTopFive(`snake-${size}`)]),
       ),
       sudoku: Object.fromEntries(
         sudokuDifficulties.map((difficulty) => [
           difficulty,
           ascendingTopFive(`sudoku-${difficulty}`),
-        ])
+        ]),
       ),
     },
     playerRanks: {
       minesweeper: Object.fromEntries(
-        minesweeperDifficulties.map((difficulty) => [difficulty, playerRank])
+        minesweeperDifficulties.map((difficulty) => [difficulty, playerRank]),
       ),
       solitaire: playerRank,
       snake: Object.fromEntries(snakeBoardSizes.map((size) => [size, playerRank])),
-      sudoku: Object.fromEntries(
-        sudokuDifficulties.map((difficulty) => [difficulty, playerRank])
-      ),
+      sudoku: Object.fromEntries(sudokuDifficulties.map((difficulty) => [difficulty, playerRank])),
     },
     playerRecords: {
       minesweeper: Object.fromEntries(
         minesweeperDifficulties.map((difficulty, index) => [
           difficulty,
           createEntry(`current-minesweeper-${difficulty}`, 1, 90 + index, currentPlayerId),
-        ])
+        ]),
       ),
       solitaire: createEntry("current-solitaire", 1, 5, currentPlayerId),
       snake: Object.fromEntries(
         snakeBoardSizes.map((size, index) => [
           size,
           createEntry(`current-snake-${size}`, 1, 5 + index, currentPlayerId),
-        ])
+        ]),
       ),
       sudoku: Object.fromEntries(
         sudokuDifficulties.map((difficulty, index) => [
           difficulty,
           createEntry(`current-sudoku-${difficulty}`, 1, 90 + index, currentPlayerId),
-        ])
+        ]),
       ),
     },
   };
   const normalized = jsonClone(
     context.normalizeGameStatsDataForTest(rawData, {
       solitaireLeaderboardDirection: "desc",
-    })
+    }),
   );
 
   const assertIndependentTopThree = (entries) => {
     assert.equal(entries.length, 3);
-    assert.equal(entries.some((entry) => entry.playerId === currentPlayerId), false);
+    assert.equal(
+      entries.some((entry) => entry.playerId === currentPlayerId),
+      false,
+    );
   };
   assert.deepEqual(normalized.playerTotals.minesweeper.wins, {
     beginner: 9,
@@ -191,7 +197,7 @@ test("empty and normalized stats cover every player rank, record, and global Top
   assert.equal(normalized.playerTotals.solitaire.wins, 12);
   assert.deepEqual(normalized.playerTotals.snake, {
     totalGamesPlayed: 17,
-    gamesPlayed: { "10": 4, "16": 5, "20": 0, "24": 0 },
+    gamesPlayed: { 10: 4, 16: 5, 20: 0, 24: 0 },
   });
   assert.deepEqual(normalized.playerTotals.sudoku.wins.easy, {
     noHints: 3,
@@ -204,10 +210,7 @@ test("empty and normalized stats cover every player rank, record, and global Top
   for (const difficulty of minesweeperDifficulties) {
     assertIndependentTopThree(normalized.leaderboards.minesweeper[difficulty]);
     assert.deepEqual(normalized.playerRanks.minesweeper[difficulty], playerRank);
-    assert.equal(
-      normalized.playerRecords.minesweeper[difficulty].playerId,
-      currentPlayerId
-    );
+    assert.equal(normalized.playerRecords.minesweeper[difficulty].playerId, currentPlayerId);
   }
   assertIndependentTopThree(normalized.leaderboards.solitaire);
   assert.deepEqual(normalized.playerRanks.solitaire, playerRank);
@@ -230,12 +233,12 @@ test("confirmed events keep every total current until the server acknowledges th
   const incrementSource = extractSource(
     source,
     "const incrementGameStatsTotals =",
-    "\n\nconst applyGameStatsEventToData"
+    "\n\nconst applyGameStatsEventToData",
   );
   const confirmationSource = extractSource(
     source,
     "const applyConfirmedGameStatsEventToTotals =",
-    "\n\nconst updateGameStatsSudokuBestTime"
+    "\n\nconst updateGameStatsSudokuBestTime",
   );
   const context = vm.createContext({});
 
@@ -277,7 +280,7 @@ test("confirmed events keep every total current until the server acknowledges th
       "globalThis.createDataForTest = createData;",
       "globalThis.readState = () => ({ data: gameStatsGlobalState, confirmedIds: [...gameStatsConfirmedEvents.keys()] });",
     ].join("\n"),
-    context
+    context,
   );
 
   const currentProfile = {
@@ -316,7 +319,10 @@ test("confirmed events keep every total current until the server acknowledges th
   assert.equal(context.markConfirmed(events[1]), false);
 
   let state = jsonClone(context.readState());
-  assert.deepEqual(state.confirmedIds, events.map(({ id }) => id));
+  assert.deepEqual(
+    state.confirmedIds,
+    events.map(({ id }) => id),
+  );
   assert.deepEqual(state.data.totals, state.data.playerTotals);
   assert.equal(state.data.totals.minesweeper.wins.beginner, 1);
   assert.equal(state.data.totals.solitaire.wins, 1);
@@ -337,7 +343,7 @@ test("confirmed events keep every total current until the server acknowledges th
       difficulty: "beginner",
       profile: { ...currentProfile, id: "player-other" },
     },
-    { playerId: currentProfile.id, playerTotalsAvailable: true }
+    { playerId: currentProfile.id, playerTotalsAvailable: true },
   );
   assert.equal(unmatchedPlayer.totals.minesweeper.wins.beginner, 1);
   assert.equal(unmatchedPlayer.playerTotals.minesweeper.wins.beginner, 0);
@@ -359,7 +365,10 @@ test("confirmed events keep every total current until the server acknowledges th
   });
   assert.equal(stale.totals.solitaire.wins, 1);
   assert.equal(stale.playerTotals.solitaire.wins, 1);
-  assert.deepEqual(jsonClone(context.readState()).confirmedIds, events.map(({ id }) => id));
+  assert.deepEqual(
+    jsonClone(context.readState()).confirmedIds,
+    events.map(({ id }) => id),
+  );
 
   const partlyAcknowledged = context.createDataForTest();
   partlyAcknowledged.acknowledgementsAvailable = true;
@@ -373,10 +382,7 @@ test("confirmed events keep every total current until the server acknowledges th
     playerTotalsAvailable: true,
     requestedAcknowledgmentIds: events.map(({ id }) => id),
   });
-  assert.deepEqual(jsonClone(context.readState()).confirmedIds, [
-    events[2].id,
-    events[3].id,
-  ]);
+  assert.deepEqual(jsonClone(context.readState()).confirmedIds, [events[2].id, events[3].id]);
   assert.equal(partlyAcknowledged.totals.minesweeper.wins.beginner, 1);
   assert.equal(partlyAcknowledged.totals.solitaire.wins, 1);
   assert.equal(partlyAcknowledged.totals.snake.gamesPlayed["16"], 1);
@@ -400,11 +406,14 @@ test("confirmed events keep every total current until the server acknowledges th
   assert.equal(acknowledged.totals.snake.gamesPlayed["16"], 1);
   assert.equal(acknowledged.playerTotals.sudoku.wins.easy.noHints, 1);
   const overflowEvents = Array.from({ length: 40 }, (_, index) => ({
-    ...events[0], id: `event-confirmed-bound-${index}`,
+    ...events[0],
+    id: `event-confirmed-bound-${index}`,
   }));
   overflowEvents.forEach((event) => context.markConfirmed(event));
-  assert.deepEqual(jsonClone(context.readState()).confirmedIds,
-    overflowEvents.slice(-32).map(({ id }) => id));
+  assert.deepEqual(
+    jsonClone(context.readState()).confirmedIds,
+    overflowEvents.slice(-32).map(({ id }) => id),
+  );
 });
 
 test("a saved profile is attached to a non-leaderboard Solitaire win without client-only fields", async () => {
@@ -412,12 +421,12 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
   const eventProfileSource = extractSource(
     source,
     "const normalizeGameStatsEventProfile =",
-    "\n\nconst normalizeGameStatsLeaderboardEntries"
+    "\n\nconst normalizeGameStatsLeaderboardEntries",
   );
   const recordEventSource = extractSource(
     source,
     "const gameStatsCanonicalMetricGroups =",
-    "\n\nconst formatGameStatsCounter"
+    "\n\nconst formatGameStatsCounter",
   );
   const context = vm.createContext({});
 
@@ -456,7 +465,7 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
       'globalThis.resolveSessionForTest = () => resolveSession({ session: { id: "session-solitaire", token: "token-solitaire", expiresAt: new Date(Date.now() + 60_000).toISOString() }, status: 201 });',
       "globalThis.readRecordState = () => ({ appliedEvent, queuedSubmission, saveCalls, syncCalls });",
     ].join("\n"),
-    context
+    context,
   );
 
   const recordPromise = context.recordGameStatsEventForTest(
@@ -468,7 +477,7 @@ test("a saved profile is attached to a non-leaderboard Solitaire win without cli
       metric: 88,
       metricKind: "moves",
     },
-    "solitaire-session"
+    "solitaire-session",
   );
 
   const expectedProfile = {
@@ -497,12 +506,12 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
   const eventProfileSource = extractSource(
     source,
     "const normalizeGameStatsEventProfile =",
-    "\n\nconst normalizeGameStatsLeaderboardEntries"
+    "\n\nconst normalizeGameStatsLeaderboardEntries",
   );
   const syncSource = extractSource(
     source,
     "const refreshGameStatsGlobalState =",
-    "\n\nconst recordGameStatsEvent"
+    "\n\nconst recordGameStatsEvent",
   );
   const context = vm.createContext({ URLSearchParams });
 
@@ -569,7 +578,7 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
       "const fetchGameStatsApi = async (path, options) => {",
       '  if (path === "/events") {',
       "    eventRequests.push(JSON.parse(options.body));",
-      '    return { ok: true, status: 201, json: async () => ({ ok: true, applied: true }) };',
+      "    return { ok: true, status: 201, json: async () => ({ ok: true, applied: true }) };",
       "  }",
       "  statsPaths.push(path);",
       '  return { ok: true, status: 200, json: async () => ({ marker: "fresh-global-stats" }) };',
@@ -592,7 +601,7 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
       "globalThis.syncQueuedGameStatsForTest = syncQueuedGameStats;",
       "globalThis.readSyncState = () => ({ gameStatsSubmissionQueue, gameStatsGlobalState, gameStatsSyncMessage, gameStatsSyncState, gameStatsSyncInProgress, eventRequests, statsPaths, saveCalls, renderCalls });",
     ].join("\n"),
-    context
+    context,
   );
 
   await context.syncQueuedGameStatsForTest();
@@ -607,14 +616,12 @@ test("queue sync strips profile metadata, removes legacy entries, refreshes, and
     icon: "assets/app-icons/ico/user_card.ico",
   });
   assert.equal(state.eventRequests[0].event.profile.rerollCount, undefined);
-  assert.deepEqual(state.statsPaths, [
-    "/stats?protocol=2&playerId=player-saved-profile&fresh=1",
-  ]);
+  assert.deepEqual(state.statsPaths, ["/stats?protocol=2&playerId=player-saved-profile&fresh=1"]);
   assert.deepEqual(state.gameStatsGlobalState, { marker: "fresh-global-stats" });
   assert.equal(state.gameStatsSyncState, "ready");
   assert.equal(
     state.gameStatsSyncMessage,
-    "Local stats are saved. A result without a verified game session cannot be published."
+    "Local stats are saved. A result without a verified game session cannot be published.",
   );
   assert.equal(state.saveCalls, 1);
   assert.equal(state.renderCalls, 4);
@@ -625,7 +632,7 @@ test("an overlapping sync coalesces and discards a response for the prior profil
   const syncSource = extractSource(
     source,
     "const refreshGameStatsGlobalState =",
-    "\n\nconst recordGameStatsEvent"
+    "\n\nconst recordGameStatsEvent",
   );
   const context = vm.createContext({ URLSearchParams });
 
@@ -655,7 +662,7 @@ test("an overlapping sync coalesces and discards a response for the prior profil
       "    pendingStatsResponses.push(() => resolve({",
       "      ok: true,",
       "      status: 200,",
-      '      json: async () => ({ marker: `fresh-global-stats-${statsPaths.length}` }),',
+      "      json: async () => ({ marker: `fresh-global-stats-${statsPaths.length}` }),",
       "    }));",
       "  });",
       "};",
@@ -678,13 +685,13 @@ test("an overlapping sync coalesces and discards a response for the prior profil
       "globalThis.setPendingForTest = (ids) => { gameStatsConfirmedEvents.clear(); ids.forEach(id => gameStatsConfirmedEvents.set(id, {})); };",
       "globalThis.readSyncState = () => ({ gameStatsGlobalState, gameStatsSyncInProgress, gameStatsSyncRequested, statsPaths, pendingResponseCount: pendingStatsResponses.length, reconcileCalls, saveCalls, renderCalls });",
     ].join("\n"),
-    context
+    context,
   );
 
   const firstSync = context.syncQueuedGameStatsForTest();
   await waitFor(
     () => context.readSyncState().pendingResponseCount === 1,
-    "the first sync should wait for its global stats refresh"
+    "the first sync should wait for its global stats refresh",
   );
 
   const overlappingSync = context.syncQueuedGameStatsForTest();
@@ -698,7 +705,7 @@ test("an overlapping sync coalesces and discards a response for the prior profil
   context.resolveNextStatsResponse();
   await waitFor(
     () => context.readSyncState().statsPaths.length === 2,
-    "the overlapping request should start one coalesced sync rerun"
+    "the overlapping request should start one coalesced sync rerun",
   );
 
   state = jsonClone(context.readSyncState());
@@ -726,9 +733,12 @@ test("an overlapping sync coalesces and discards a response for the prior profil
   const overflowIds = Array.from({ length: 40 }, (_, index) => `event-request-bound-${index}`);
   context.setPendingForTest(overflowIds);
   const freshRead = context.refreshForTest({ fresh: true });
-  await waitFor(() => context.readSyncState().pendingResponseCount === 1,
-    "the bounded request should be awaiting its response");
-  const query = new URL(context.readSyncState().statsPaths.at(-1), "https://stats.test").searchParams;
+  await waitFor(
+    () => context.readSyncState().pendingResponseCount === 1,
+    "the bounded request should be awaiting its response",
+  );
+  const query = new URL(context.readSyncState().statsPaths.at(-1), "https://stats.test")
+    .searchParams;
   assert.deepEqual(query.getAll("pendingEventId"), overflowIds.slice(-32));
   assert.equal(query.get("fresh"), "1");
   context.resolveNextStatsResponse();

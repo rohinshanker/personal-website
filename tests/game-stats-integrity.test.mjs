@@ -10,10 +10,7 @@ import {
 } from "../scripts/lib/game-build.mjs";
 import { parseJsonc } from "../scripts/lib/jsonc.mjs";
 
-import {
-  loadHomeContractGraph,
-  loadTimeClosure,
-} from "./helpers/home-contracts.mjs";
+import { loadHomeContractGraph, loadTimeClosure } from "./helpers/home-contracts.mjs";
 import {
   GAME_COMPLETION_SOURCE_FILES,
   MAX_GAME_BUILD_COMPATIBILITY_VERSIONS,
@@ -26,10 +23,10 @@ test("game build metadata matches the completion source and Worker configuration
   const buildVersion = await updateGameIntegrity({ check: true });
   const frontendConfig = await readFile(
     new URL("../scripts/home/game-stats-backend.js", import.meta.url),
-    "utf8"
+    "utf8",
   );
   const wranglerConfig = parseJsonc(
-    await readFile(new URL("../workers/game-stats/wrangler.jsonc", import.meta.url), "utf8")
+    await readFile(new URL("../workers/game-stats/wrangler.jsonc", import.meta.url), "utf8"),
   );
   const [home, index, videoEditor] = await Promise.all([
     readFile(new URL("../home.html", import.meta.url), "utf8"),
@@ -42,19 +39,16 @@ test("game build metadata matches the completion source and Worker configuration
   assert.match(frontendConfig, new RegExp(`buildVersion: "${buildVersion}"`));
   assert.match(
     frontendConfig,
-    /apiBaseUrl: "https:\/\/personal-site-game-stats\.rohinshankerme\.workers\.dev"/
+    /apiBaseUrl: "https:\/\/personal-site-game-stats\.rohinshankerme\.workers\.dev"/,
   );
   assert.equal(wranglerConfig.vars.GAME_BUILD_VERSION, buildVersion);
-  const compatibilityVersions =
-    wranglerConfig.vars.GAME_BUILD_COMPATIBILITY_VERSIONS.split(",");
+  const compatibilityVersions = wranglerConfig.vars.GAME_BUILD_COMPATIBILITY_VERSIONS.split(",");
   assert.ok(compatibilityVersions.length > 0);
   for (const version of compatibilityVersions) {
     assert.match(version, GAME_BUILD_VERSION_PATTERN);
     assert.notEqual(version, buildVersion);
   }
-  assert.ok(
-    compatibilityVersions.length <= MAX_GAME_BUILD_COMPATIBILITY_VERSIONS
-  );
+  assert.ok(compatibilityVersions.length <= MAX_GAME_BUILD_COMPATIBILITY_VERSIONS);
   assert.equal(new Set(compatibilityVersions).size, compatibilityVersions.length);
   assert.equal(wranglerConfig.vars.ALLOWED_ORIGIN, "https://rohin.shanker.me");
   assert.equal(Object.hasOwn(wranglerConfig.vars, "LOCAL_ALLOWED_ORIGIN"), false);
@@ -84,18 +78,16 @@ test("game build metadata matches the completion source and Worker configuration
   }
   assert.match(
     videoEditor,
-    new RegExp(`src="\\.\\./scripts/home/game-stats-backend\\.js\\?v=${cacheToken}" defer`)
+    new RegExp(`src="\\.\\./scripts/home/game-stats-backend\\.js\\?v=${cacheToken}" defer`),
   );
 });
 
 test("both Wrangler configurations schedule the same expiry purge", async () => {
   const [config, exampleConfig] = await Promise.all(
-    [
-      "../workers/game-stats/wrangler.jsonc",
-      "../workers/game-stats/wrangler.jsonc.example",
-    ].map(async (relativePath) =>
-      parseJsonc(await readFile(new URL(relativePath, import.meta.url), "utf8"))
-    )
+    ["../workers/game-stats/wrangler.jsonc", "../workers/game-stats/wrangler.jsonc.example"].map(
+      async (relativePath) =>
+        parseJsonc(await readFile(new URL(relativePath, import.meta.url), "utf8")),
+    ),
   );
 
   assert.deepEqual(config.triggers.crons, ["0 * * * *"]);
@@ -106,20 +98,18 @@ test("both Wrangler configurations schedule the same expiry purge", async () => 
 test("the Worker's local build-identity copies match the shared script definitions", async () => {
   const workerSource = await readFile(
     new URL("../workers/game-stats/src/constants.mjs", import.meta.url),
-    "utf8"
+    "utf8",
   );
 
   assert.equal(
     workerSource.match(/^export const GAME_BUILD_VERSION_PATTERN = (.+);$/m)?.[1],
-    String(GAME_BUILD_VERSION_PATTERN)
+    String(GAME_BUILD_VERSION_PATTERN),
   );
   assert.equal(
     Number(
-      workerSource.match(
-        /^export const MAX_GAME_BUILD_COMPATIBILITY_VERSIONS = (\d+);$/m
-      )?.[1]
+      workerSource.match(/^export const MAX_GAME_BUILD_COMPATIBILITY_VERSIONS = (\d+);$/m)?.[1],
     ),
-    MAX_GAME_BUILD_COMPATIBILITY_VERSIONS
+    MAX_GAME_BUILD_COMPATIBILITY_VERSIONS,
   );
 });
 
@@ -136,8 +126,8 @@ test("changing any declared completion source changes the build version", async 
       GAME_COMPLETION_SOURCE_FILES.map(async (relativePath) => [
         relativePath,
         await readFile(new URL(`../${relativePath}`, import.meta.url)),
-      ])
-    )
+      ]),
+    ),
   );
   const readSource = (relativePath) => {
     const bytes = sources.get(relativePath);
@@ -151,31 +141,45 @@ test("changing any declared completion source changes the build version", async 
     const digest = await digestGameCompletionSources((relativePath) =>
       relativePath === mutated
         ? Buffer.concat([readSource(relativePath), Buffer.from("\n// mutated\n")])
-        : readSource(relativePath)
+        : readSource(relativePath),
     );
     assert.notEqual(digest, unchanged, `${mutated} must be inside the build digest`);
   }
 });
 
-
 test("build history retains the previous release, removes invalid duplicates, and evicts the oldest at its bound", () => {
   const version = (number) => `sha256-${number.toString(16).padStart(64, "0")}`;
-  const history = Array.from({ length: MAX_GAME_BUILD_COMPATIBILITY_VERSIONS }, (_, index) => version(index + 1));
+  const history = Array.from({ length: MAX_GAME_BUILD_COMPATIBILITY_VERSIONS }, (_, index) =>
+    version(index + 1),
+  );
   const previous = version(100);
   const next = version(101);
-  const source = JSON.stringify({ vars: {
-    GAME_BUILD_VERSION: previous,
-    GAME_BUILD_COMPATIBILITY_VERSIONS: [history[0], "invalid", previous, next, ...history].join(","),
-  }});
+  const source = JSON.stringify({
+    vars: {
+      GAME_BUILD_VERSION: previous,
+      GAME_BUILD_COMPATIBILITY_VERSIONS: [history[0], "invalid", previous, next, ...history].join(
+        ",",
+      ),
+    },
+  });
   const updated = parseJsonc(updateWranglerBuildVersion(source, next));
   assert.equal(updated.vars.GAME_BUILD_VERSION, next);
-  assert.deepEqual(updated.vars.GAME_BUILD_COMPATIBILITY_VERSIONS.split(","), [previous, ...history.slice(0, -1)]);
-  assert.equal(updateWranglerBuildVersion(JSON.stringify(updated), next), JSON.stringify(updated), "rechecking the same release is idempotent");
+  assert.deepEqual(updated.vars.GAME_BUILD_COMPATIBILITY_VERSIONS.split(","), [
+    previous,
+    ...history.slice(0, -1),
+  ]);
+  assert.equal(
+    updateWranglerBuildVersion(JSON.stringify(updated), next),
+    JSON.stringify(updated),
+    "rechecking the same release is idempotent",
+  );
 });
 
 test("build history starts empty when no valid prior release exists", () => {
   const next = `sha256-${"a".repeat(64)}`;
-  const source = JSON.stringify({ vars: { GAME_BUILD_VERSION: "", GAME_BUILD_COMPATIBILITY_VERSIONS: "" } });
+  const source = JSON.stringify({
+    vars: { GAME_BUILD_VERSION: "", GAME_BUILD_COMPATIBILITY_VERSIONS: "" },
+  });
   const updated = parseJsonc(updateWranglerBuildVersion(source, next));
   assert.equal(updated.vars.GAME_BUILD_VERSION, next);
   assert.equal(updated.vars.GAME_BUILD_COMPATIBILITY_VERSIONS, "");

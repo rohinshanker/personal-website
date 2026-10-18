@@ -1,10 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import {
-  REVIEW_VIEWPORTS,
-  openHomeDesktop,
-  openSudokuBoard,
-} from "./helpers/rendered-site.mjs";
+import { REVIEW_VIEWPORTS, openHomeDesktop, openSudokuBoard } from "./helpers/rendered-site.mjs";
 
 /**
  * Rendered contract for the keypad's remaining counts: every digit reports
@@ -51,30 +47,26 @@ window.__sudokuKeypadTest = Object.freeze({
     });
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
 const bridge = (page, method, ...args) =>
-  page.evaluate(
-    ([name, params]) => window.__sudokuKeypadTest[name](...params),
-    [method, args]
-  );
+  page.evaluate(([name, params]) => window.__sudokuKeypadTest[name](...params), [method, args]);
 
 const cellAt = (win, index) => win.locator(`.sudoku-cell[data-sudoku-index="${index}"]`);
 
 const keypad = (win, digit) => win.locator(`[data-sudoku-number="${digit}"]`);
 
-const badge = (win, digit) =>
-  keypad(win, digit).locator(".sudoku-number-remaining");
+const badge = (win, digit) => keypad(win, digit).locator(".sudoku-number-remaining");
 
 /** Every digit's badge text, in keypad order. */
 const readBadges = (page) =>
   page.evaluate(() =>
-    [...document.querySelectorAll('.sudoku-number-grid [data-sudoku-number]')]
+    [...document.querySelectorAll(".sudoku-number-grid [data-sudoku-number]")]
       .filter((button) => button.dataset.sudokuNumber !== "clear")
-      .map((button) => button.querySelector(".sudoku-number-remaining").textContent)
+      .map((button) => button.querySelector(".sudoku-number-remaining").textContent),
   );
 
 for (const viewport of REVIEW_VIEWPORTS) {
@@ -87,19 +79,15 @@ for (const viewport of REVIEW_VIEWPORTS) {
 
     // The badges open on the givens the puzzle shipped with.
     const placed = await bridge(page, "placedCounts");
-    expect(await readBadges(page)).toEqual(
-      DIGITS.map((digit) => String(9 - placed[digit]))
-    );
+    expect(await readBadges(page)).toEqual(DIGITS.map((digit) => String(9 - placed[digit])));
 
     // Each badge sits inside its own button and never spills out of it.
     const geometry = await page.evaluate(() =>
-      [...document.querySelectorAll('.sudoku-number-grid [data-sudoku-number]')]
+      [...document.querySelectorAll(".sudoku-number-grid [data-sudoku-number]")]
         .filter((button) => button.dataset.sudokuNumber !== "clear")
         .map((button) => {
           const outer = button.getBoundingClientRect();
-          const inner = button
-            .querySelector(".sudoku-number-remaining")
-            .getBoundingClientRect();
+          const inner = button.querySelector(".sudoku-number-remaining").getBoundingClientRect();
           return {
             contained:
               inner.left >= outer.left - 0.5 &&
@@ -107,16 +95,14 @@ for (const viewport of REVIEW_VIEWPORTS) {
               inner.top >= outer.top - 0.5 &&
               inner.bottom <= outer.bottom + 0.5,
             digitVisible:
-              button.querySelector(".sudoku-number-digit").getBoundingClientRect()
-                .width > 0,
+              button.querySelector(".sudoku-number-digit").getBoundingClientRect().width > 0,
           };
-        })
+        }),
     );
     expect(geometry.every((entry) => entry.contained && entry.digitVisible)).toBe(true);
 
-
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
     ).toBe(false);
   });
 }
@@ -137,10 +123,7 @@ test("a digit's badge counts down to nothing and comes back with the placement",
   await cellAt(win, indexes[0]).click();
   await keypad(win, digit).click();
   await expect(badge(win, digit)).toHaveText(String(before - 1));
-  await expect(keypad(win, digit)).toHaveAttribute(
-    "aria-label",
-    `${digit}, ${before - 1} left`
-  );
+  await expect(keypad(win, digit)).toHaveAttribute("aria-label", `${digit}, ${before - 1} left`);
 
   // The rest at once, down to the exhausted state.
   await bridge(page, "placeDigit", digit, indexes.slice(1));
@@ -152,7 +135,7 @@ test("a digit's badge counts down to nothing and comes back with the placement",
   // Other digits are unaffected.
   const after = await bridge(page, "placedCounts");
   expect(await readBadges(page)).toEqual(
-    DIGITS.map((other) => (9 - after[other] > 0 ? String(9 - after[other]) : ""))
+    DIGITS.map((other) => (9 - after[other] > 0 ? String(9 - after[other]) : "")),
   );
 
   // Clearing a placement brings the count and the button back.
@@ -170,15 +153,11 @@ test("a digit's badge counts down to nothing and comes back with the placement",
   // A new puzzle resets every badge to its own givens.
   await win.locator("#sudoku-new").click();
   const fresh = await bridge(page, "placedCounts");
-  expect(await readBadges(page)).toEqual(
-    DIGITS.map((other) => String(9 - fresh[other]))
-  );
+  expect(await readBadges(page)).toEqual(DIGITS.map((other) => String(9 - fresh[other])));
   await expect(keypad(win, digit)).toBeEnabled();
 });
 
-test("a wrong ninth placement still exhausts the digit and empties its badge", async ({
-  page,
-}) => {
+test("a wrong ninth placement still exhausts the digit and empties its badge", async ({ page }) => {
   await installKeypadBridge(page);
   await openHomeDesktop(page, DESKTOP);
   const win = await openSudokuBoard(page);

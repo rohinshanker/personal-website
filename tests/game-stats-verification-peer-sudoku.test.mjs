@@ -2,13 +2,11 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import test from "node:test";
 
-import { canonicalSudokuHintBucket } from
-  "../workers/game-stats/src/verified-results.mjs";
+import { canonicalSudokuHintBucket } from "../workers/game-stats/src/verified-results.mjs";
 
 const sudokuEngineUrl = new URL("../scripts/home/games/sudoku.js", import.meta.url);
 const hasPeerSudokuEngine = existsSync(sudokuEngineUrl);
-const puzzle =
-  "402030000795020003001705400100004005609000000248507310900108500800050071017043092";
+const puzzle = "402030000795020003001705400100004005609000000248507310900108500800050071017043092";
 const solution =
   "462831957795426183381795426173984265659312748248567319926178534834259671517643892";
 

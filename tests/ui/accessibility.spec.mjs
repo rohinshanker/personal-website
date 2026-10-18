@@ -47,7 +47,7 @@ const readProgressBarNames = (page) =>
         id: element.id || element.className,
         name: (element.getAttribute("aria-label") ?? "").trim() || referenced,
       };
-    })
+    }),
   );
 
 test.describe("entry route accessibility", () => {
@@ -65,9 +65,7 @@ test.describe("entry route accessibility", () => {
     });
   }
 
-  test("the entry alert dialog is free of WCAG A/AA violations", async ({
-    page,
-  }, testInfo) => {
+  test("the entry alert dialog is free of WCAG A/AA violations", async ({ page }, testInfo) => {
     await openDeterministicRoute(page, "/", DESKTOP);
     await page.locator("#cancel-button").click();
     await expect(page.locator("#alert-overlay")).toHaveAttribute("aria-hidden", "false");
@@ -133,8 +131,7 @@ test.describe("home route accessibility", () => {
     },
     {
       app: "solitaire",
-      settle: (page) =>
-        expect(page.locator("#sol-tableau .sol-card").first()).toBeVisible(),
+      settle: (page) => expect(page.locator("#sol-tableau .sol-card").first()).toBeVisible(),
       expected: SOLITAIRE_NESTED_INTERACTIVE,
     },
     {

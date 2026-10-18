@@ -13,11 +13,11 @@ test("only the uneven smile face receives the one-pixel centering offset", async
 
   assert.match(
     styles,
-    /\.ms-reset\[data-face="smile"\]::before \{[\s\S]*?background-position: calc\(50% - 1px\) center;/
+    /\.ms-reset\[data-face="smile"\]::before \{[\s\S]*?background-position: calc\(50% - 1px\) center;/,
   );
   assert.doesNotMatch(
     styles,
-    /\.ms-reset\[data-face="(?:ooh|pressed|lose|win)"\]::before \{[\s\S]*?background-position:/
+    /\.ms-reset\[data-face="(?:ooh|pressed|lose|win)"\]::before \{[\s\S]*?background-position:/,
   );
 });
 
@@ -32,7 +32,7 @@ test("the production face setter exposes every game state through the reset cont
       "globalThis.setFace = msSetFace;",
       "globalThis.readFace = () => attributes.get('data-face');",
     ].join("\n"),
-    context
+    context,
   );
 
   for (const face of ["smile", "ooh", "pressed", "lose", "win"]) {

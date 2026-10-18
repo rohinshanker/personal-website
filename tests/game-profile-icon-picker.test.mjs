@@ -11,20 +11,14 @@ test("profile icon gallery keeps only one vertical arrow at each scrollbar end",
 
   assert.match(
     css,
-    /\.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:start:increment,[\s\S]*?vertical:end:decrement[\s\S]*?display: none;/
+    /\.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:start:increment,[\s\S]*?vertical:end:decrement[\s\S]*?display: none;/,
   );
   assert.match(
     css,
-    /\.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:start:decrement,[\s\S]*?vertical:end:increment[\s\S]*?display: block;/
+    /\.game-profile-icon-gallery::-webkit-scrollbar-button:vertical:start:decrement,[\s\S]*?vertical:end:increment[\s\S]*?display: block;/,
   );
-  assert.match(
-    css,
-    /vertical:start:decrement \{[\s\S]*?button-up\.svg/
-  );
-  assert.match(
-    css,
-    /vertical:end:increment \{[\s\S]*?button-down\.svg/
-  );
+  assert.match(css, /vertical:start:decrement \{[\s\S]*?button-up\.svg/);
+  assert.match(css, /vertical:end:increment \{[\s\S]*?button-down\.svg/);
 });
 
 test("profile icon gallery separates its fixed frame and updates selection in place", async () => {
@@ -37,11 +31,11 @@ test("profile icon gallery separates its fixed frame and updates selection in pl
 
   assert.match(
     home,
-    /<div class="game-profile-icon-gallery-frame">\s*<div class="game-profile-icon-gallery" id="game-profile-icon-gallery" role="listbox" aria-label="Player icons"><\/div>\s*<\/div>/
+    /<div class="game-profile-icon-gallery-frame">\s*<div class="game-profile-icon-gallery" id="game-profile-icon-gallery" role="listbox" aria-label="Player icons"><\/div>\s*<\/div>/,
   );
   assert.match(
     css,
-    /\.game-profile-icon-gallery-frame \{[\s\S]*?box-shadow: var\(--border-sunken-outer\), var\(--border-sunken-inner\);[\s\S]*?overflow: hidden;[\s\S]*?padding: 2px;/
+    /\.game-profile-icon-gallery-frame \{[\s\S]*?box-shadow: var\(--border-sunken-outer\), var\(--border-sunken-inner\);[\s\S]*?overflow: hidden;[\s\S]*?padding: 2px;/,
   );
   const galleryRule = css.match(/\.game-profile-icon-gallery \{[\s\S]*?\n\}/)?.[0];
   assert.ok(galleryRule, "Missing icon gallery rule.");
@@ -51,10 +45,7 @@ test("profile icon gallery separates its fixed frame and updates selection in pl
   assert.doesNotMatch(galleryRule, /box-shadow:/);
 
   for (const entryPoint of [home, index]) {
-    assert.match(
-      entryPoint,
-      /styles\/home\/apps\/game-stats\.css\?v=[^"]+/
-    );
+    assert.match(entryPoint, /styles\/home\/apps\/game-stats\.css\?v=[^"]+/);
   }
 
   const pickerStart = main.indexOf("const updateGameProfileIconOptionSelection =");
@@ -63,10 +54,10 @@ test("profile icon gallery separates its fixed frame and updates selection in pl
   const picker = main.slice(pickerStart, pickerEnd);
   assert.match(
     picker,
-    /querySelectorAll\("\.game-profile-icon-option"\)[\s\S]*?option\.classList\.toggle\("is-selected", selected\);[\s\S]*?option\.setAttribute\("aria-selected", String\(selected\)\);/
+    /querySelectorAll\("\.game-profile-icon-option"\)[\s\S]*?option\.classList\.toggle\("is-selected", selected\);[\s\S]*?option\.setAttribute\("aria-selected", String\(selected\)\);/,
   );
   const clickHandler = picker.match(
-    /button\.addEventListener\("click", \(\) => \{[\s\S]*?\n    \}\);/
+    /button\.addEventListener\("click", \(\) => \{[\s\S]*?\n    \}\);/,
   )?.[0];
   assert.ok(clickHandler, "Missing icon selection handler.");
   assert.match(clickHandler, /updateGameProfileIconOptionSelection\(button\);/);

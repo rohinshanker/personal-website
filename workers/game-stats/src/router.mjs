@@ -1,10 +1,6 @@
 import { selectAggregatedGameStats } from "./aggregate.mjs";
 import { handleClashRoyaleRequest } from "./clash-royale.mjs";
-import {
-  MAX_REPLAY_BODY_BYTES,
-  STATS_API_PROTOCOL,
-  getGameStatsDatabase,
-} from "./constants.mjs";
+import { MAX_REPLAY_BODY_BYTES, STATS_API_PROTOCOL, getGameStatsDatabase } from "./constants.mjs";
 import {
   assertAllowedKeys,
   assertStoredEventMatches,
@@ -101,10 +97,7 @@ const handleOptions = (request, env) => {
 const handleGetStats = async (request, env, context) => {
   const statsRequest = readStatsRequest(request);
   const modern = statsRequest.protocol === STATS_API_PROTOCOL;
-  const cacheReadable =
-    modern &&
-    !statsRequest.fresh &&
-    statsRequest.pendingEventIds.length === 0;
+  const cacheReadable = modern && !statsRequest.fresh && statsRequest.pendingEventIds.length === 0;
   const cacheKey = modern ? statsCacheKey(request, statsRequest) : null;
   if (cacheReadable) {
     const cachedBody = await readStatsCache(cacheKey);
@@ -147,7 +140,7 @@ const handlePostSession = async (request, env, dependencies) => {
     request,
     env,
     await readJsonBody(request),
-    dependencies.verification || {}
+    dependencies.verification || {},
   );
   return jsonResponse(request, env, { ok: true, ...session }, 201);
 };
@@ -159,7 +152,7 @@ const handlePostTiming = async (request, env, sessionId, dependencies) => {
     env,
     sessionId,
     await readJsonBody(request),
-    dependencies.verification || {}
+    dependencies.verification || {},
   );
   return jsonResponse(request, env, { ok: true, timing });
 };
@@ -167,21 +160,13 @@ const handlePostTiming = async (request, env, sessionId, dependencies) => {
 const handlePostFinish = async (request, env, sessionId, dependencies) => {
   assertBrowserOriginAllowed(request, env);
   const verification = dependencies.verification || {};
-  const body = await readReplayRequest(
-    () => readJsonBodyWithMetadata(
-      request,
-      MAX_REPLAY_BODY_BYTES,
-      verification.now || Date.now
-    )
+  const body = await readReplayRequest(() =>
+    readJsonBodyWithMetadata(request, MAX_REPLAY_BODY_BYTES, verification.now || Date.now),
   );
-  const result = await finishVerifiedSession(
-    request,
-    env,
-    sessionId,
-    body.value,
-    verification,
-    { transcriptJson: body.text, finishedAt: body.receivedAt }
-  );
+  const result = await finishVerifiedSession(request, env, sessionId, body.value, verification, {
+    transcriptJson: body.text,
+    finishedAt: body.receivedAt,
+  });
   return jsonResponse(request, env, { ok: true, ...result }, result.progress ? 202 : 200);
 };
 
@@ -192,7 +177,7 @@ const handlePostFinishContinue = async (request, env, sessionId, dependencies) =
     env,
     sessionId,
     await readReplayRequest(() => readJsonBody(request)),
-    dependencies.verification || {}
+    dependencies.verification || {},
   );
   return jsonResponse(request, env, { ok: true, ...result }, result.progress ? 202 : 200);
 };
@@ -203,7 +188,7 @@ const handlePostRestore = async (request, env, sessionId) => {
     request,
     env,
     sessionId,
-    await readJsonBody(request)
+    await readJsonBody(request),
   );
   return jsonResponse(request, env, { ok: true, ...descriptor });
 };
@@ -228,7 +213,7 @@ const handlePostEvent = async (request, env) => {
       request,
       env,
       payload.event,
-      payload.completion
+      payload.completion,
     );
     return jsonResponse(request, env, { ok: true, applied, eventId }, applied ? 201 : 200);
   }
@@ -259,12 +244,7 @@ export const handleRequest = async (request, env, context, dependencies = {}) =>
     if (url.pathname === "/clash-royale") {
       if (request.method === "OPTIONS") return handleOptions(request, env);
       if (request.method === "GET") {
-        return await handleClashRoyaleRequest(
-          request,
-          env,
-          context,
-          dependencies.clashRoyale
-        );
+        return await handleClashRoyaleRequest(request, env, context, dependencies.clashRoyale);
       }
       throw new HttpError(405, "Method is not allowed");
     }
@@ -289,15 +269,11 @@ export const handleRequest = async (request, env, context, dependencies = {}) =>
     if (finishMatch && request.method === "POST") {
       return await handlePostFinish(request, env, finishMatch[1], dependencies);
     }
-    const finishContinueMatch =
-      /^\/sessions\/([A-Za-z0-9-]{8,80})\/finish\/continue$/.exec(url.pathname);
+    const finishContinueMatch = /^\/sessions\/([A-Za-z0-9-]{8,80})\/finish\/continue$/.exec(
+      url.pathname,
+    );
     if (finishContinueMatch && request.method === "POST") {
-      return await handlePostFinishContinue(
-        request,
-        env,
-        finishContinueMatch[1],
-        dependencies
-      );
+      return await handlePostFinishContinue(request, env, finishContinueMatch[1], dependencies);
     }
     const restoreMatch = /^\/sessions\/([A-Za-z0-9-]{8,80})\/restore$/.exec(url.pathname);
     if (restoreMatch && request.method === "POST") {
@@ -311,7 +287,10 @@ export const handleRequest = async (request, env, context, dependencies = {}) =>
     }
     if (
       ["/stats", "/sessions", "/events", "/administrator/sign-in"].includes(url.pathname) ||
-      timingMatch || finishMatch || finishContinueMatch || restoreMatch
+      timingMatch ||
+      finishMatch ||
+      finishContinueMatch ||
+      restoreMatch
     ) {
       throw new HttpError(405, "Method is not allowed");
     }
@@ -359,6 +338,6 @@ export const scheduled = async (_controller, env) => {
   console.log(
     `Purged ${summary.expiredSessions} expired game sessions and ` +
       `${summary.expiredUnpublishedCompletions} unpublished completions and ` +
-      `${summary.expiredRateLimitBuckets} rate-limit buckets at ${summary.purgedAt}.`
+      `${summary.expiredRateLimitBuckets} rate-limit buckets at ${summary.purgedAt}.`,
   );
 };

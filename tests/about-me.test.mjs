@@ -8,12 +8,7 @@ import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
 const root = new URL("../", import.meta.url);
 
 const socialLinks = [
-  [
-    "LinkedIn",
-    "@rohin-shanker",
-    "https://www.linkedin.com/in/rohin-shanker/",
-    "users_green.ico",
-  ],
+  ["LinkedIn", "@rohin-shanker", "https://www.linkedin.com/in/rohin-shanker/", "users_green.ico"],
   ["Instagram", "@rrohinss", "https://www.instagram.com/rohin.personal", "camera.ico"],
   [
     "Substack",
@@ -31,45 +26,27 @@ const socialLinks = [
 ];
 
 const aboutCarouselItems = [
-  [
-    "assets/optimized/bio-pic-720.jpg",
-    "Portrait of Rohin Shanker in front of red rock formations",
-  ],
-  [
-    "assets/about-carousel/2.jpg",
-    "Rohin Shanker seated for the Fast Sonder Lookbook Shoot 2",
-  ],
+  ["assets/optimized/bio-pic-720.jpg", "Portrait of Rohin Shanker in front of red rock formations"],
+  ["assets/about-carousel/2.jpg", "Rohin Shanker seated for the Fast Sonder Lookbook Shoot 2"],
   ["assets/about-carousel/3.jpg", "Rohin Shanker making a pie with a friend"],
-  [
-    "assets/about-carousel/4.jpg",
-    "Rohin Shanker walking in the Club Rambutan runway show",
-  ],
+  ["assets/about-carousel/4.jpg", "Rohin Shanker walking in the Club Rambutan runway show"],
   [
     "assets/about-carousel/5.jpg",
     "Rohin Shanker celebrating graduation with friends at UC Berkeley",
   ],
-  [
-    "assets/about-carousel/6.jpg",
-    "Rohin Shanker backstage at the Garb Sub-urban runway show",
-  ],
-  [
-    "assets/about-carousel/7.jpg",
-    "Rohin Shanker with a friend at a music festival",
-  ],
-  [
-    "assets/about-carousel/8.jpg",
-    "Rohin Shanker resting beside climbing pads",
-  ],
-  [
-    "assets/about-carousel/9.jpg",
-    "Rohin Shanker modeling in the Garb Means Business shoot",
-  ],
+  ["assets/about-carousel/6.jpg", "Rohin Shanker backstage at the Garb Sub-urban runway show"],
+  ["assets/about-carousel/7.jpg", "Rohin Shanker with a friend at a music festival"],
+  ["assets/about-carousel/8.jpg", "Rohin Shanker resting beside climbing pads"],
+  ["assets/about-carousel/9.jpg", "Rohin Shanker modeling in the Garb Means Business shoot"],
 ];
 
 test("About Me provides the requested page structure and dated article", async () => {
   const html = await readFile(new URL("home.html", root), "utf8");
   const aboutStart = html.indexOf('id="about-window"');
-  const aboutEnd = html.indexOf('\n      <div class="window app-window is-hidden portfolio-window"', aboutStart);
+  const aboutEnd = html.indexOf(
+    '\n      <div class="window app-window is-hidden portfolio-window"',
+    aboutStart,
+  );
   assert.notEqual(aboutStart, -1, "The About Me window must exist");
   assert.notEqual(aboutEnd, -1, "The About Me window must remain independently bounded");
   const about = html.slice(aboutStart, aboutEnd);
@@ -88,84 +65,78 @@ test("About Me provides the requested page structure and dated article", async (
   assert.equal(
     websiteSection.match(/<p>/g)?.length,
     1,
-    "About this Website must contain one paragraph"
+    "About this Website must contain one paragraph",
   );
   assert.match(
     websiteSection,
-    /Welcome to my personal website! I wanted to make something unique &amp; playful[\s\S]*?that would give me a reason to come back to often \(and hopefully you too!\) while[\s\S]*?also keeping record of a few things I’m proud of in one place\. Be sure to check[\s\S]*?out the games, all of them have leaderboards and save your progress! Enjoy your[\s\S]*?stay :\)[\s\S]*?<br \/>[\s\S]*?—Rohin/
+    /Welcome to my personal website! I wanted to make something unique &amp; playful[\s\S]*?that would give me a reason to come back to often \(and hopefully you too!\) while[\s\S]*?also keeping record of a few things I’m proud of in one place\. Be sure to check[\s\S]*?out the games, all of them have leaderboards and save your progress! Enjoy your[\s\S]*?stay :\)[\s\S]*?<br \/>[\s\S]*?—Rohin/,
   );
   assert.equal(
     about.match(/class="about-degree-card"/g)?.length,
     4,
-    "Berkeley and Yale must expose three plus one degrees"
+    "Berkeley and Yale must expose three plus one degrees",
   );
   const yaleHeading = about.indexOf("Yale University (2026-2027)");
-  const berkeleyHeading = about.indexOf(
-    "University of California, Berkeley (2022-2026)"
-  );
+  const berkeleyHeading = about.indexOf("University of California, Berkeley (2022-2026)");
   assert.ok(yaleHeading > -1, "Yale must include its requested years");
   assert.ok(berkeleyHeading > yaleHeading, "Yale must appear before Berkeley");
   for (const [fullLabel, shortLabel, field] of [
     ["Master of Science", "M.S.", "Biomedical Engineering"],
-    [
-      "Bachelor of Science",
-      "B.S.",
-      "Electrical Engineering &amp; Computer Science (EECS)",
-    ],
+    ["Bachelor of Science", "B.S.", "Electrical Engineering &amp; Computer Science (EECS)"],
     ["Bachelor of Science", "B.S.", "Bioengineering"],
     ["Certificate", "Cert.", "Entrepreneurship &amp; Technology (SCET)"],
   ]) {
     assert.match(
       about,
       new RegExp(
-        `class="about-degree-type"[\\s\\S]*?data-full-label="${fullLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?data-short-label="${shortLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?class="about-degree-field"[\\s\\S]*?class="about-degree-field-track">${field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}<`
-      )
+        `class="about-degree-type"[\\s\\S]*?data-full-label="${fullLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?data-short-label="${shortLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?class="about-degree-field"[\\s\\S]*?class="about-degree-field-track">${field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}<`,
+      ),
     );
   }
   const berkeleySectionEnd = about.indexOf("</section>", berkeleyHeading);
   const berkeleySection = about.slice(berkeleyHeading, berkeleySectionEnd);
   assert.deepEqual(
-    [
-      ...berkeleySection.matchAll(
-        /class="about-degree-field-track">([^<]+)</g
-      ),
-    ].map(([, label]) => label),
+    [...berkeleySection.matchAll(/class="about-degree-field-track">([^<]+)</g)].map(
+      ([, label]) => label,
+    ),
     [
       "Electrical Engineering &amp; Computer Science (EECS)",
       "Bioengineering",
       "Entrepreneurship &amp; Technology (SCET)",
     ],
-    "Berkeley degrees must place EECS before Bioengineering"
+    "Berkeley degrees must place EECS before Bioengineering",
   );
   assert.match(about, /aria-label="Academic degrees"/);
   assert.equal(
     about.match(/data-about-degree-field/g)?.length,
     4,
-    "Every degree field must support measured overflow behavior"
+    "Every degree field must support measured overflow behavior",
   );
   assert.equal(about.match(/class="about-degree-field-track"/g)?.length, 4);
   assert.doesNotMatch(
     about,
     /class="about-degree-field-track" aria-hidden="true"/,
-    "Degree field text must stay in the accessibility tree"
+    "Degree field text must stay in the accessibility tree",
   );
   assert.doesNotMatch(
     about,
     /class="about-degree-field"[\s\S]{0,200}?aria-label=/,
-    "aria-label is prohibited on the plain span that wraps the degree field"
+    "aria-label is prohibited on the plain span that wraps the degree field",
   );
   assert.doesNotMatch(about, /about-degree-title/);
   assert.deepEqual(
-    [...about.matchAll(/<li class="about-degree-card">\s*<img src="([^"]+)" width="32" height="32" alt=""/g)].map(
-      ([, source]) => source
-    ),
+    [
+      ...about.matchAll(
+        /<li class="about-degree-card">\s*<img src="([^"]+)" width="32" height="32" alt=""/g,
+      ),
+    ].map(([, source]) => source),
     [
       "assets/app-icons/ico/certificate_gear.ico",
       "assets/app-icons/ico/certificate.ico",
       "assets/app-icons/ico/certificate.ico",
       "assets/app-icons/ico/certificate_seal.ico",
     ],
-    "Degree types must use their requested certificate icon variants"
+    "Degree types must use their requested certificate icon variants",
   );
   assert.match(about, /<h3 id="about-article-heading">About Me<\/h3>/);
   assert.match(about, /<option value="30-07-2026">30\/07\/2026<\/option>/);
@@ -173,29 +144,29 @@ test("About Me provides the requested page structure and dated article", async (
     about.match(/<article class="about-article-copy"[\s\S]*?<\/article>/)?.[0].match(/<p(?:>|\s)/g)
       ?.length,
     8,
-    "The dated article must retain all seven prose paragraphs and its quoted paragraph"
+    "The dated article must retain all seven prose paragraphs and its quoted paragraph",
   );
   assert.match(about, /My name is Rohin! I am a creative and aspiring polymath/);
   assert.match(about, /doesn’t really make me <em>me<\/em>/);
   assert.match(about, /class="about-article-quote"/);
   assert.match(
     about,
-    /<strong[\s\S]*?>When a tree is growing, it’s tender and pliant\.[\s\S]*?never win\.<\/strong/
+    /<strong[\s\S]*?>When a tree is growing, it’s tender and pliant\.[\s\S]*?never win\.<\/strong/,
   );
   assert.match(about, /class="about-article-quote-source">—Andrei Tarkovsky<\/footer>/);
   assert.match(about, /more importantly <em>you<\/em> should take charge/);
   assert.match(about, /<p>Yours Truly,<\/p>\s*<p>Rohin Shanker<\/p>/);
   assert.match(
     about,
-    /class="about-signature"[\s\S]*?src="assets\/about-signature\.png"[\s\S]*?width="1404"[\s\S]*?height="648"[\s\S]*?alt="Rohin S\. Shanker handwritten signature"/
+    /class="about-signature"[\s\S]*?src="assets\/about-signature\.png"[\s\S]*?width="1404"[\s\S]*?height="648"[\s\S]*?alt="Rohin S\. Shanker handwritten signature"/,
   );
   assert.match(
     about,
-    /class="about-social-link about-social-launcher"[\s\S]*?type="button"[\s\S]*?data-app="socials"[\s\S]*?aria-controls="socials-window"[\s\S]*?aria-haspopup="dialog"[\s\S]*?connected_world\.ico[\s\S]*?<span class="socials-name">Socials<\/span>[\s\S]*?<span class="socials-username">See All<\/span>/
+    /class="about-social-link about-social-launcher"[\s\S]*?type="button"[\s\S]*?data-app="socials"[\s\S]*?aria-controls="socials-window"[\s\S]*?aria-haspopup="dialog"[\s\S]*?connected_world\.ico[\s\S]*?<span class="socials-name">Socials<\/span>[\s\S]*?<span class="socials-username">See All<\/span>/,
   );
   assert.match(
     html,
-    /id="socials-window"[\s\S]*?data-app-window="socials"[\s\S]*?role="dialog"[\s\S]*?aria-modal="false"[\s\S]*?aria-labelledby="socials-window-title"[\s\S]*?id="socials-window-title">Socials<\/div>/
+    /id="socials-window"[\s\S]*?data-app-window="socials"[\s\S]*?role="dialog"[\s\S]*?aria-modal="false"[\s\S]*?aria-labelledby="socials-window-title"[\s\S]*?id="socials-window-title">Socials<\/div>/,
   );
   assert.doesNotMatch(about, /Coming soon\./);
 });
@@ -208,8 +179,8 @@ test("About Me links every requested social profile with safe external navigatio
     assert.match(
       html,
       new RegExp(
-        `class="about-social-link"[\\s\\S]*?href="${escapedHref}"[\\s\\S]*?target="_blank"[\\s\\S]*?rel="noopener noreferrer"[\\s\\S]*?${icon.replace(".", "\\.")}[\\s\\S]*?<span class="socials-name">${label}<\\/span>[\\s\\S]*?<span class="socials-username">${username}<\\/span>`
-      )
+        `class="about-social-link"[\\s\\S]*?href="${escapedHref}"[\\s\\S]*?target="_blank"[\\s\\S]*?rel="noopener noreferrer"[\\s\\S]*?${icon.replace(".", "\\.")}[\\s\\S]*?<span class="socials-name">${label}<\\/span>[\\s\\S]*?<span class="socials-username">${username}<\\/span>`,
+      ),
     );
   }
 
@@ -226,19 +197,19 @@ test("About Me links every requested social profile with safe external navigatio
       "assets/app-icons/ico/gears.ico",
       "assets/app-icons/ico/connected_world.ico",
       "assets/about-signature.png",
-    ].map((asset) => access(new URL(asset, root)))
+    ].map((asset) => access(new URL(asset, root))),
   );
 });
 
 test("About carousel assets stay optimized for sequential preloading", async () => {
   const assetStats = await Promise.all(
-    aboutCarouselItems.map(([asset]) => stat(new URL(asset, root)))
+    aboutCarouselItems.map(([asset]) => stat(new URL(asset, root))),
   );
   const totalBytes = assetStats.reduce((total, asset) => total + asset.size, 0);
 
   assert.ok(
     assetStats.every((asset) => asset.size <= 250 * 1024),
-    "Every carousel image must remain at or below 250 KiB"
+    "Every carousel image must remain at or below 250 KiB",
   );
   assert.ok(totalBytes <= 1.5 * 1024 * 1024, "The nine-image carousel must stay below 1.5 MiB");
 });
@@ -259,19 +230,22 @@ test("About Me date, degree marquee, and carousel stay data driven", async () =>
     "const padTwoDigits = (value) => String(value).padStart(2, '0');\n" +
       `${source.slice(dateStart, dateEnd)}\n` +
       "globalThis.aboutDate = { label: aboutDateLabel, value: aboutDateValue };",
-    context
+    context,
   );
 
-  assert.equal(
-    context.aboutDate.label(new Date(2026, 6, 27, 12)),
-    "Monday the 27th, July 2026"
-  );
+  assert.equal(context.aboutDate.label(new Date(2026, 6, 27, 12)), "Monday the 27th, July 2026");
   assert.equal(context.aboutDate.label(new Date(2026, 7, 1, 12)), "Saturday the 1st, August 2026");
   assert.equal(context.aboutDate.label(new Date(2026, 7, 2, 12)), "Sunday the 2nd, August 2026");
   assert.equal(context.aboutDate.label(new Date(2026, 7, 3, 12)), "Monday the 3rd, August 2026");
   assert.equal(context.aboutDate.label(new Date(2026, 7, 11, 12)), "Tuesday the 11th, August 2026");
-  assert.equal(context.aboutDate.label(new Date(2026, 7, 12, 12)), "Wednesday the 12th, August 2026");
-  assert.equal(context.aboutDate.label(new Date(2026, 7, 13, 12)), "Thursday the 13th, August 2026");
+  assert.equal(
+    context.aboutDate.label(new Date(2026, 7, 12, 12)),
+    "Wednesday the 12th, August 2026",
+  );
+  assert.equal(
+    context.aboutDate.label(new Date(2026, 7, 13, 12)),
+    "Thursday the 13th, August 2026",
+  );
   assert.equal(context.aboutDate.value(new Date(2026, 6, 7, 12)), "2026-07-07");
 
   assert.match(source, /updateAboutCurrentDate\(now\);/);
@@ -287,11 +261,11 @@ test("About Me date, degree marquee, and carousel stay data driven", async () =>
   assert.match(source, /iterations: Infinity/);
   assert.match(
     source,
-    /field\.addEventListener\("mouseenter", \(\) => aboutDegreeAnimations\.get\(field\)\?\.pause\(\)\);/
+    /field\.addEventListener\("mouseenter", \(\) => aboutDegreeAnimations\.get\(field\)\?\.pause\(\)\);/,
   );
   assert.match(
     source,
-    /field\.addEventListener\("mouseleave", \(\) => aboutDegreeAnimations\.get\(field\)\?\.play\(\)\);/
+    /field\.addEventListener\("mouseleave", \(\) => aboutDegreeAnimations\.get\(field\)\?\.play\(\)\);/,
   );
   assert.match(source, /new ResizeObserver\(queueAboutDegreeRefresh\)/);
   assert.match(source, /document\.fonts\?\.ready\.then\(queueAboutDegreeRefresh\);/);
@@ -303,7 +277,7 @@ test("About Me date, degree marquee, and carousel stay data driven", async () =>
   assert.equal(
     carouselSource.match(/Object\.freeze\(\{/g)?.length,
     aboutCarouselItems.length,
-    "The carousel must contain all nine requested photos"
+    "The carousel must contain all nine requested photos",
   );
   let previousSourceIndex = -1;
   for (const [asset, alt] of aboutCarouselItems) {
@@ -314,7 +288,10 @@ test("About Me date, degree marquee, and carousel stay data driven", async () =>
     previousSourceIndex = sourceIndex;
   }
   assert.match(source, /const navigationDisabled = ABOUT_CAROUSEL_ITEMS\.length < 2;/);
-  assert.match(source, /bindGalleryNavigation\(\n  aboutCarouselPrev,[\s\S]*?updateAboutCarousel\n\);/);
+  assert.match(
+    source,
+    /bindGalleryNavigation\(\n  aboutCarouselPrev,[\s\S]*?updateAboutCarousel,?\n\);/,
+  );
   assert.doesNotMatch(html, /id="about-carousel-prev" disabled/);
   assert.doesNotMatch(html, /id="about-carousel-next" disabled/);
   assert.match(html, /id="about-carousel-counter" aria-live="polite">\s*1 of 9/);
@@ -338,30 +315,25 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
     readFile(new URL("index.html", root), "utf8"),
   ]);
 
-  const homePortfolioToken = homeHtml.match(
-    /href="styles\/home\/portfolio\.css\?v=([^"]+)"/
-  )?.[1];
+  const homePortfolioToken = homeHtml.match(/href="styles\/home\/portfolio\.css\?v=([^"]+)"/)?.[1];
   const warmupPortfolioToken = indexHtml.match(
-    /\["styles\/home\/portfolio\.css\?v=([^"]+)", "style"\]/
+    /\["styles\/home\/portfolio\.css\?v=([^"]+)", "style"\]/,
   )?.[1];
   assert.equal(homePortfolioToken, "clash-badge-spacing-20261002");
   assert.equal(warmupPortfolioToken, homePortfolioToken);
 
   assert.match(
     css,
-    /#about-window \{[\s\S]*?max-height: calc\(100vh - 76px\);[\s\S]*?width: min\(calc\(100vw - 24px\), 720px\);/
+    /#about-window \{[\s\S]*?max-height: calc\(100vh - 76px\);[\s\S]*?width: min\(calc\(100vw - 24px\), 720px\);/,
+  );
+  assert.match(css, /\.about-intro-grid \{[\s\S]*?grid-template-columns: 332px minmax\(0, 1fr\);/);
+  assert.match(
+    css,
+    /#about-window \.about-body \{[\s\S]*?height: min\(79vh, 750px\);[\s\S]*?max-height: calc\(100vh - 116px\);[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: auto;/,
   );
   assert.match(
     css,
-    /\.about-intro-grid \{[\s\S]*?grid-template-columns: 332px minmax\(0, 1fr\);/
-  );
-  assert.match(
-    css,
-    /#about-window \.about-body \{[\s\S]*?height: min\(79vh, 750px\);[\s\S]*?max-height: calc\(100vh - 116px\);[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: auto;/
-  );
-  assert.match(
-    css,
-    /@media \(max-width: 640px\), \(max-height: 500px\) \{[\s\S]*?#about-window \.about-body \{[\s\S]*?height: min\(65vh, 640px\);[\s\S]*?height: min\(65dvh, 640px\);[\s\S]*?max-height: calc\(100dvh - 140px\);[\s\S]*?min-height: min\(220px, calc\(100dvh - 140px\)\);/
+    /@media \(max-width: 640px\), \(max-height: 500px\) \{[\s\S]*?#about-window \.about-body \{[\s\S]*?height: min\(65vh, 640px\);[\s\S]*?height: min\(65dvh, 640px\);[\s\S]*?max-height: calc\(100dvh - 140px\);[\s\S]*?min-height: min\(220px, calc\(100dvh - 140px\)\);/,
   );
   for (const fallbackPair of [
     /max-height: calc\(100vh - 76px\);\n    max-height: calc\(100dvh - 76px\);/,
@@ -374,108 +346,105 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   }
   assert.match(
     css,
-    /\.about-page \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);[\s\S]*?padding: 2px;[\s\S]*?padding-inline-end: 10px;/
+    /\.about-page \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);[\s\S]*?padding: 2px;[\s\S]*?padding-inline-end: 10px;/,
   );
   assert.match(
     css,
-    /\.about-intro-grid \{[\s\S]*?align-items: start;[\s\S]*?grid-template-columns: 332px minmax\(0, 1fr\);/
+    /\.about-intro-grid \{[\s\S]*?align-items: start;[\s\S]*?grid-template-columns: 332px minmax\(0, 1fr\);/,
   );
   assert.match(
     css,
-    /\.about-carousel-section \{[\s\S]*?align-self: start;[\s\S]*?width: min\(100%, 350px\);/
+    /\.about-carousel-section \{[\s\S]*?align-self: start;[\s\S]*?width: min\(100%, 350px\);/,
   );
   assert.match(css, /#about-window \.about-carousel \{\n  margin: 0;\n\}/);
   assert.match(
     css,
-    /#about-window \.about-carousel-media \{[\s\S]*?aspect-ratio: 720 \/ 669;[\s\S]*?height: auto;[\s\S]*?max-height: none;[\s\S]*?overflow: hidden;/
+    /#about-window \.about-carousel-media \{[\s\S]*?aspect-ratio: 720 \/ 669;[\s\S]*?height: auto;[\s\S]*?max-height: none;[\s\S]*?overflow: hidden;/,
   );
   assert.doesNotMatch(css, /#about-window \.about-carousel-media \{[^}]*padding:/);
   assert.match(
     css,
-    /\.gallery-scroll \{[\s\S]*?--gallery-content-inset: 2px;[\s\S]*?padding: var\(--gallery-content-inset\);/
+    /\.gallery-scroll \{[\s\S]*?--gallery-content-inset: 2px;[\s\S]*?padding: var\(--gallery-content-inset\);/,
   );
   assert.match(
     css,
-    /#about-window \.about-carousel-media \.about-photo \{[\s\S]*?height: 100%;[\s\S]*?max-height: 100%;[\s\S]*?max-width: 100%;[\s\S]*?object-fit: contain;[\s\S]*?object-position: center;[\s\S]*?width: 100%;/
+    /#about-window \.about-carousel-media \.about-photo \{[\s\S]*?height: 100%;[\s\S]*?max-height: 100%;[\s\S]*?max-width: 100%;[\s\S]*?object-fit: contain;[\s\S]*?object-position: center;[\s\S]*?width: 100%;/,
   );
   assert.match(
     css,
-    /\.about-overview-panel \{[\s\S]*?align-self: start;[\s\S]*?grid-template-rows: auto minmax\(0, 1fr\);[\s\S]*?overflow: hidden;/
+    /\.about-overview-panel \{[\s\S]*?align-self: start;[\s\S]*?grid-template-rows: auto minmax\(0, 1fr\);[\s\S]*?overflow: hidden;/,
   );
   assert.match(
     css,
-    /\.about-degrees-list \{[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: auto;[\s\S]*?scroll-padding-block-start: 2px;[\s\S]*?scroll-snap-type: y mandatory;[\s\S]*?scrollbar-gutter: stable;/
+    /\.about-degrees-list \{[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: auto;[\s\S]*?scroll-padding-block-start: 2px;[\s\S]*?scroll-snap-type: y mandatory;[\s\S]*?scrollbar-gutter: stable;/,
   );
   assert.match(
     css,
-    /\.about-institution > h4 \{[\s\S]*?margin-bottom: 0;[\s\S]*?position: sticky;[\s\S]*?scroll-snap-align: start;[\s\S]*?top: 0;/
+    /\.about-institution > h4 \{[\s\S]*?margin-bottom: 0;[\s\S]*?position: sticky;[\s\S]*?scroll-snap-align: start;[\s\S]*?top: 0;/,
   );
   assert.match(
     css,
-    /\.about-degree-card \{[\s\S]*?scroll-margin-block-start: var\(--about-degree-heading-clearance\);[\s\S]*?scroll-snap-align: start;/
+    /\.about-degree-card \{[\s\S]*?scroll-margin-block-start: var\(--about-degree-heading-clearance\);[\s\S]*?scroll-snap-align: start;/,
   );
   assert.match(
     css,
-    /@media \(max-width: 744px\) \{[\s\S]*?\.about-institution > h4 \{[\s\S]*?position: static;/
+    /@media \(max-width: 744px\) \{[\s\S]*?\.about-institution > h4 \{[\s\S]*?position: static;/,
   );
   assert.match(
     css,
-    /\.about-degree-card \{[\s\S]*?column-gap: 4px;[\s\S]*?grid-template-columns: 32px minmax\(0, 1fr\);[\s\S]*?min-height: 48px;[\s\S]*?padding: 4px 4px 4px 6px;/
+    /\.about-degree-card \{[\s\S]*?column-gap: 4px;[\s\S]*?grid-template-columns: 32px minmax\(0, 1fr\);[\s\S]*?min-height: 48px;[\s\S]*?padding: 4px 4px 4px 6px;/,
   );
+  assert.match(css, /\.about-degree-card img \{[\s\S]*?height: 32px;[\s\S]*?width: 32px;/);
   assert.match(
     css,
-    /\.about-degree-card img \{[\s\S]*?height: 32px;[\s\S]*?width: 32px;/
-  );
-  assert.match(
-    css,
-    /\.about-degree-copy \{[\s\S]*?display: grid;[\s\S]*?gap: 0;[\s\S]*?grid-template-rows: auto auto;[\s\S]*?line-height: 1\.2;[\s\S]*?min-width: 0;/
+    /\.about-degree-copy \{[\s\S]*?display: grid;[\s\S]*?gap: 0;[\s\S]*?grid-template-rows: auto auto;[\s\S]*?line-height: 1\.2;[\s\S]*?min-width: 0;/,
   );
   assert.match(css, /\.about-degree-type \{[\s\S]*?font-weight: bold;[\s\S]*?overflow: hidden;/);
   assert.match(
     css,
-    /\.about-degree-field \{[\s\S]*?font-weight: normal;[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: hidden;/
+    /\.about-degree-field \{[\s\S]*?font-weight: normal;[\s\S]*?overflow-x: hidden;[\s\S]*?overflow-y: hidden;/,
   );
   assert.match(css, /\.about-degree-field-track \{[\s\S]*?width: max-content;/);
   assert.match(
     css,
-    /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.about-degree-field\.is-overflowing \{[\s\S]*?overflow-x: auto;/
+    /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.about-degree-field\.is-overflowing \{[\s\S]*?overflow-x: auto;/,
   );
   assert.match(
     css,
-    /\.about-social-links \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/
+    /\.about-social-links \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/,
   );
   assert.match(
     css,
-    /@media \(max-width: 340px\) \{[\s\S]*?\.about-social-links \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/
+    /@media \(max-width: 340px\) \{[\s\S]*?\.about-social-links \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
   );
   assert.match(
     css,
-    /\.about-social-link \{[\s\S]*?justify-content: flex-start;[\s\S]*?min-height: 54px;[\s\S]*?padding: 4px 6px;[\s\S]*?text-align: left;/
+    /\.about-social-link \{[\s\S]*?justify-content: flex-start;[\s\S]*?min-height: 54px;[\s\S]*?padding: 4px 6px;[\s\S]*?text-align: left;/,
   );
   assert.match(css, /\.about-social-copy \{[\s\S]*?min-width: 0;/);
   assert.match(
     css,
-    /\.about-social-link:hover,\n\.about-social-link:focus-visible \{\n  background: var\(--dialog-blue\);\n  color: #fff;/
+    /\.about-social-link:hover,\n\.about-social-link:focus-visible \{\n  background: var\(--dialog-blue\);\n  color: #fff;/,
   );
   assert.match(
     css,
-    /\.about-article-copy \{[\s\S]*?box-sizing: border-box;[\s\S]*?margin-inline: auto;[\s\S]*?width: 75%;/
+    /\.about-article-copy \{[\s\S]*?box-sizing: border-box;[\s\S]*?margin-inline: auto;[\s\S]*?width: 75%;/,
   );
   assert.match(
     css,
-    /\.about-article-quote \{[\s\S]*?border-inline-start: 4px solid var\(--dialog-blue\);[\s\S]*?box-sizing: border-box;[\s\S]*?margin: 20px 0;[\s\S]*?padding: 0;[\s\S]*?padding-inline-start: 20px;/
+    /\.about-article-quote \{[\s\S]*?border-inline-start: 4px solid var\(--dialog-blue\);[\s\S]*?box-sizing: border-box;[\s\S]*?margin: 20px 0;[\s\S]*?padding: 0;[\s\S]*?padding-inline-start: 20px;/,
   );
   assert.doesNotMatch(css, /\.about-article-quote > \*/);
   assert.doesNotMatch(
     css.match(/\.about-signature-slot \{[^}]+\}/)?.[0] ?? "",
-    /background|box-shadow/
+    /background|box-shadow/,
   );
   assert.match(
     css,
-    /\.about-signature \{[\s\S]*?display: block;[\s\S]*?height: auto;[\s\S]*?max-width: 100%;[\s\S]*?width: 100%;/
+    /\.about-signature \{[\s\S]*?display: block;[\s\S]*?height: auto;[\s\S]*?max-width: 100%;[\s\S]*?width: 100%;/,
   );
   assert.match(
     css,
-    /@media \(max-width: 744px\) \{[\s\S]*?\.about-article-copy \{[\s\S]*?width: 100%;[\s\S]*?\.about-intro-grid \{\n    grid-template-columns: minmax\(0, 1fr\);/
+    /@media \(max-width: 744px\) \{[\s\S]*?\.about-article-copy \{[\s\S]*?width: 100%;[\s\S]*?\.about-intro-grid \{\n    grid-template-columns: minmax\(0, 1fr\);/,
   );
 });

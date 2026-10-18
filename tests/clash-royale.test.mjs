@@ -34,7 +34,7 @@ test("normalizes Clash Royale tags for participant matching", () => {
 test("accepts only card PNGs from the official HTTPS asset host", () => {
   assert.equal(
     normalizeClashCardIconUrl("https://api-assets.clashroyale.com/cards/300.png"),
-    "https://api-assets.clashroyale.com/cards/300.png"
+    "https://api-assets.clashroyale.com/cards/300.png",
   );
   for (const value of [
     "http://api-assets.clashroyale.com/cards/300.png",
@@ -62,10 +62,7 @@ test("calculates average elixir only when every cost is factual", () => {
   assert.equal(calculateAverageElixir([{ elixirCost: 0 }, { elixirCost: 4 }]), 2);
   assert.equal(calculateAverageElixir([{ elixirCost: 3 }, {}]), null);
   assert.equal(calculateAverageElixir([{ elixirCost: 3.5 }, { elixirCost: 4 }]), null);
-  assert.equal(
-    calculateAverageElixir([{ id: 28000006, elixirCost: 1 }, { elixirCost: 4 }]),
-    null
-  );
+  assert.equal(calculateAverageElixir([{ id: 28000006, elixirCost: 1 }, { elixirCost: 4 }]), null);
   assert.equal(isVariableClashElixirCard({ id: 28000006 }), true);
   assert.equal(isVariableClashElixirCard({ id: 28000007 }), false);
   assert.equal(calculateAverageElixir([]), null);
@@ -90,23 +87,24 @@ test("classifies only reviewed battle mode IDs and exact types", () => {
   });
   assert.deepEqual(
     classifyClashBattleMode({ gameMode: { id: 72000529, name: "RR_FourCard_Friendly" } }),
-    { key: "other", label: "Other" }
+    { key: "other", label: "Other" },
   );
   assert.deepEqual(
     classifyClashBattleMode({ type: "unknown", gameMode: { id: 72000006, name: "Ladder" } }),
-    { key: "other", label: "Other" }
+    { key: "other", label: "Other" },
   );
-  assert.deepEqual(
-    classifyClashBattleMode({ type: "pathOfLegend", gameMode: { id: 72000007 } }),
-    { key: "ranked", label: "Ranked" }
-  );
+  assert.deepEqual(classifyClashBattleMode({ type: "pathOfLegend", gameMode: { id: 72000007 } }), {
+    key: "ranked",
+    label: "Ranked",
+  });
 });
 
 test("classifies Clan War context across shared and dedicated mode IDs", () => {
   for (const type of ["boatBattle", "riverRacePvP", "riverRaceDuel", "riverRaceDuelColosseum"]) {
     for (const id of [undefined, 72000060, 72000266, 72000267, 72000268]) {
       assert.deepEqual(classifyClashBattleMode({ type, gameMode: { id } }), {
-        key: "clan-war", label: "Clan War",
+        key: "clan-war",
+        label: "Clan War",
       });
     }
   }
@@ -114,16 +112,27 @@ test("classifies Clan War context across shared and dedicated mode IDs", () => {
     assert.equal(classifyClashBattleMode({ gameMode: { id } }).key, "clan-war");
   }
   for (const type of ["pathOfLegend", "challenge"]) {
-    assert.equal(classifyClashBattleMode({ type, gameMode: { id: 72000268 } }).key,
-      type === "pathOfLegend" ? "ranked" : "challenge");
+    assert.equal(
+      classifyClashBattleMode({ type, gameMode: { id: 72000268 } }).key,
+      type === "pathOfLegend" ? "ranked" : "challenge",
+    );
   }
-  assert.equal(classifyClashBattleMode({ type: "unknown", gameMode: { name: "CW_Battle_1v1" } }).key, "other");
+  assert.equal(
+    classifyClashBattleMode({ type: "unknown", gameMode: { name: "CW_Battle_1v1" } }).key,
+    "other",
+  );
   assert.equal(classifyClashBattleMode({ type: "riverRacePvPish" }).key, "other");
 });
 
 test("preserves raw mode titles with explicit fallbacks for missing names", () => {
-  assert.equal(formatClashBattleMode({ type: "riverRacePvP", gameMode: { name: " CW_Battle_1v1 " } }), "CW_Battle_1v1");
-  assert.equal(formatClashBattleMode({ type: " challenge ", gameMode: { name: " " } }), "challenge");
+  assert.equal(
+    formatClashBattleMode({ type: "riverRacePvP", gameMode: { name: " CW_Battle_1v1 " } }),
+    "CW_Battle_1v1",
+  );
+  assert.equal(
+    formatClashBattleMode({ type: " challenge ", gameMode: { name: " " } }),
+    "challenge",
+  );
   assert.equal(formatClashBattleMode({ type: "PvP" }), "PvP");
   assert.equal(formatClashBattleMode({ type: " ", gameMode: { name: "" } }), "Battle");
   assert.equal(formatClashBattleMode(null), "Battle");
@@ -132,7 +141,7 @@ test("preserves raw mode titles with explicit fallbacks for missing names", () =
 test("resolves the configured player from either battle side", () => {
   const fromTeam = resolveClashBattle(
     { team: [{ ...PLAYER, crowns: 2 }], opponent: [{ ...OPPONENT, crowns: 1 }] },
-    PLAYER.tag
+    PLAYER.tag,
   );
   assert.equal(fromTeam.player.name, "Rohin");
   assert.equal(fromTeam.opponent.name, "Opponent");
@@ -142,7 +151,7 @@ test("resolves the configured player from either battle side", () => {
 
   const fromOpponent = resolveClashBattle(
     { team: [{ ...OPPONENT, crowns: 3 }], opponent: [{ ...PLAYER, crowns: 1 }] },
-    PLAYER.tag
+    PLAYER.tag,
   );
   assert.equal(fromOpponent.player.name, "Rohin");
   assert.equal(fromOpponent.opponent.name, "Opponent");
@@ -152,7 +161,7 @@ test("resolves the configured player from either battle side", () => {
 test("does not fabricate a result when crowns are missing", () => {
   const battle = resolveClashBattle(
     { team: [PLAYER], opponent: [{ ...OPPONENT, crowns: 0 }] },
-    PLAYER.tag
+    PLAYER.tag,
   );
   assert.equal(battle.hasCrowns, false);
   assert.equal(battle.outcome, "unknown");
@@ -213,15 +222,15 @@ test("summarizes only battles with factual crown results", () => {
   const battles = [
     resolveClashBattle(
       { team: [{ ...PLAYER, crowns: 3 }], opponent: [{ ...OPPONENT, crowns: 1 }] },
-      PLAYER.tag
+      PLAYER.tag,
     ),
     resolveClashBattle(
       { team: [{ ...PLAYER, crowns: 0 }], opponent: [{ ...OPPONENT, crowns: 2 }] },
-      PLAYER.tag
+      PLAYER.tag,
     ),
     resolveClashBattle(
       { team: [{ ...PLAYER, crowns: 1 }], opponent: [{ ...OPPONENT, crowns: 1 }] },
-      PLAYER.tag
+      PLAYER.tag,
     ),
     resolveClashBattle({ team: [PLAYER], opponent: [OPPONENT] }, PLAYER.tag),
   ];
@@ -244,7 +253,7 @@ test("rejects success payloads without a usable player identity or timestamp", (
       battles: [],
       fetchedAt: null,
       cacheTtlSeconds: 300,
-    })
+    }),
   );
   assert.throws(() =>
     prepareClashSnapshot({
@@ -253,7 +262,7 @@ test("rejects success payloads without a usable player identity or timestamp", (
       battles: [],
       fetchedAt: "2026-10-01T12:00:00.000Z",
       cacheTtlSeconds: 300,
-    })
+    }),
   );
   assert.throws(() =>
     prepareClashSnapshot({
@@ -262,7 +271,7 @@ test("rejects success payloads without a usable player identity or timestamp", (
       battles: null,
       fetchedAt: "2026-10-01T12:00:00.000Z",
       cacheTtlSeconds: 300,
-    })
+    }),
   );
   assert.throws(() =>
     prepareClashSnapshot({
@@ -271,13 +280,13 @@ test("rejects success payloads without a usable player identity or timestamp", (
       battles: [],
       fetchedAt: "2026-10-01T12:00:00.000Z",
       cacheTtlSeconds: 600,
-    })
+    }),
   );
   assert.throws(() =>
     prepareClashSnapshot({
       ok: false,
       player: PLAYER,
       fetchedAt: "2026-10-01T12:00:00.000Z",
-    })
+    }),
   );
 });

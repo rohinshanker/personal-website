@@ -66,16 +66,13 @@ window.__sudokuConflictTest = Object.freeze({
     usedReveal: sudokuState.usedReveal,
   }),
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
 const bridge = (page, method, ...args) =>
-  page.evaluate(
-    ([name, params]) => window.__sudokuConflictTest[name](...params),
-    [method, args]
-  );
+  page.evaluate(([name, params]) => window.__sudokuConflictTest[name](...params), [method, args]);
 
 const cellAt = (win, index) => win.locator(`.sudoku-cell[data-sudoku-index="${index}"]`);
 
@@ -107,10 +104,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await expect(win.locator(".sudoku-cell.is-conflict")).toHaveCount(2);
     await expect(cellAt(win, pair.target)).toHaveClass(/is-conflict/);
     await expect(cellAt(win, pair.peer)).toHaveClass(/is-conflict/);
-    await expect(cellAt(win, pair.target)).toHaveAttribute(
-      "aria-label",
-      /Conflict\.$/
-    );
+    await expect(cellAt(win, pair.target)).toHaveAttribute("aria-label", /Conflict\.$/);
 
     const marker = await cellAt(win, pair.target).evaluate((cell) => {
       const style = getComputedStyle(cell);
@@ -131,13 +125,12 @@ for (const viewport of REVIEW_VIEWPORTS) {
       const button = hint(win, mode);
       await expect(button).toBeVisible();
       expect(
-        await button.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)
+        await button.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
       ).toBe(true);
     }
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
     ).toBe(false);
-
 
     // Clearing the duplicate releases both marks. Entering a digit advances
     // the selection, so the cell has to be picked up again.
@@ -166,7 +159,7 @@ test("Conflicts costs no check, no confirmation, and no eligibility", async ({ p
   // A duplicate is not a mistake report: the counters and latches stand still.
   await expect(win.locator("#sudoku-mistakes")).toHaveText("Mistakes: 0");
   await expect(win.locator("#sudoku-leaderboard-checks")).toHaveText(
-    "0/3 allowed checks used to place on leaderboard"
+    "0/3 allowed checks used to place on leaderboard",
   );
   await expect(win.locator("#sudoku-status")).toHaveText("Ready");
   expect(await bridge(page, "readEligibility")).toEqual({
@@ -242,9 +235,9 @@ test("Conflicts survives a reload with the rest of the saved puzzle", async ({ p
       JSON.parse(localStorage.getItem("personalSiteSudokuStateV1") || "{}").hintMode ===
         "conflicts" &&
       String(
-        JSON.parse(localStorage.getItem("personalSiteSudokuStateV1") || "{}").values || ""
+        JSON.parse(localStorage.getItem("personalSiteSudokuStateV1") || "{}").values || "",
       ).includes(digit),
-    pair.digit
+    pair.digit,
   );
 
   await page.reload({ waitUntil: "load" });

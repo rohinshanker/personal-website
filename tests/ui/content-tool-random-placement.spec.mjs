@@ -57,7 +57,7 @@ const finishCloseAnimation = async (win) => {
 
 const settleViewport = async (page) => {
   await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
 };
 
@@ -173,16 +173,10 @@ test("content-tool random placement is contained and accessible across the viewp
         const ariaSnapshot = await opened.win.ariaSnapshot();
         expect(ariaSnapshot).toContain(`\"${app.label}\"`);
         expect(ariaSnapshot).toContain(app.description);
-        await saveTextEvidence(
-          testInfo,
-          `${app.appId}-${viewport.name}-aria.yml`,
-          ariaSnapshot
-        );
+        await saveTextEvidence(testInfo, `${app.appId}-${viewport.name}-aria.yml`, ariaSnapshot);
 
         const nativeButtonStyles = await getNativeButtonStyle(
-          page.locator(
-            '#debug-system-alert-actions [data-system-alert-button-id="ok"]'
-          )
+          page.locator('#debug-system-alert-actions [data-system-alert-button-id="ok"]'),
         );
         for (const selector of app.actionSelectors) {
           const action = opened.win.locator(selector);
@@ -194,10 +188,11 @@ test("content-tool random placement is contained and accessible across the viewp
       }
     });
   }
-
 });
 
-test("each closed-to-open launch resamples a fresh bounded position", async ({ page }, testInfo) => {
+test("each closed-to-open launch resamples a fresh bounded position", async ({
+  page,
+}, testInfo) => {
   const viewport = { width: 1280, height: 800 };
   await loadHome(page);
   await page.setViewportSize(viewport);
@@ -215,11 +210,10 @@ test("each closed-to-open launch resamples a fresh bounded position", async ({ p
     await saveTextEvidence(
       testInfo,
       `${app.appId}-resampled-position-metrics.json`,
-      `${JSON.stringify({ firstPosition, secondPosition }, null, 2)}\n`
+      `${JSON.stringify({ firstPosition, secondPosition }, null, 2)}\n`,
     );
     await closeWithEscape({ ...second, app });
   }
-
 });
 
 test("resize and drag release clamp each complete content-tool window above the taskbar", async ({
@@ -252,7 +246,6 @@ test("resize and drag release clamp each complete content-tool window above the 
     await expectWindowContained(opened.win, desktopViewport);
     await closeWithEscape({ ...opened, app });
   }
-
 });
 
 test("simultaneous content-tool windows avoid overlap and dismiss in focus order", async ({
@@ -278,11 +271,11 @@ test("simultaneous content-tool windows avoid overlap and dismiss in focus order
       .getBoundingClientRect();
     const width = Math.max(
       0,
-      Math.min(videoRect.right, imageRect.right) - Math.max(videoRect.left, imageRect.left)
+      Math.min(videoRect.right, imageRect.right) - Math.max(videoRect.left, imageRect.left),
     );
     const height = Math.max(
       0,
-      Math.min(videoRect.bottom, imageRect.bottom) - Math.max(videoRect.top, imageRect.top)
+      Math.min(videoRect.bottom, imageRect.bottom) - Math.max(videoRect.top, imageRect.top),
     );
     return width * height;
   });
@@ -293,7 +286,6 @@ test("simultaneous content-tool windows avoid overlap and dismiss in focus order
   await video.win.locator("#video-editor-launch-no").click();
   await finishCloseAnimation(video.win);
   await expect(video.launcher).toBeFocused();
-
 });
 
 test("the unauthenticated Admin stand-in remains centered", async ({ page }, testInfo) => {

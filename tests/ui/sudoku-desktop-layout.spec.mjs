@@ -57,11 +57,9 @@ const readSudokuLayout = (page) =>
         };
       }),
       actions: find(".sudoku-control-panel .sudoku-actions"),
-      actionButtons: ["new", "pause", "redo", "undo", "check"].map((id) =>
-        find(`#sudoku-${id}`)
-      ),
+      actionButtons: ["new", "pause", "redo", "undo", "check"].map((id) => find(`#sudoku-${id}`)),
       actionOrder: [...win.querySelectorAll(".sudoku-control-panel .sudoku-actions button")].map(
-        (button) => button.id
+        (button) => button.id,
       ),
       statusBar: find(".sudoku-statusbar"),
       mistakes: find("#sudoku-mistakes"),
@@ -71,7 +69,12 @@ const readSudokuLayout = (page) =>
     };
   });
 
-for (const viewport of [DESKTOP, { width: 768, height: 1024 }, { width: 1440, height: 900 }, { width: 681, height: 900 }]) {
+for (const viewport of [
+  DESKTOP,
+  { width: 768, height: 1024 },
+  { width: 1440, height: 900 },
+  { width: 681, height: 900 },
+]) {
   test(`Sudoku places its controls beside the board at ${viewport.width}px`, async ({ page }) => {
     await openHomeDesktop(page, viewport);
     await openSudokuBoard(page);
@@ -94,10 +97,7 @@ for (const viewport of [DESKTOP, { width: 768, height: 1024 }, { width: 1440, he
 
     // The action row is pinned to the bottom of the control panel column.
     expect(layout.actions.top).toBeGreaterThan(sectionTops.at(-1));
-    expect(layout.panel.bottom - layout.actions.bottom).toBeCloseTo(
-      layout.panelInsetBottom,
-      0
-    );
+    expect(layout.panel.bottom - layout.actions.bottom).toBeCloseTo(layout.panelInsetBottom, 0);
     expect(layout.actions.left).toBeGreaterThanOrEqual(layout.board.right);
     expect(layout.actionOrder).toEqual([
       "sudoku-new",
@@ -112,7 +112,10 @@ for (const viewport of [DESKTOP, { width: 768, height: 1024 }, { width: 1440, he
     expect(redo.top).toBeCloseTo(undo.top, 0);
     expect(redo.top).toBeGreaterThanOrEqual(newGame.bottom);
     expect(check.top).toBeGreaterThanOrEqual(redo.bottom);
-    for (const [left, right] of [[newGame, pause], [redo, undo]]) {
+    for (const [left, right] of [
+      [newGame, pause],
+      [redo, undo],
+    ]) {
       expect(left.left).toBeCloseTo(layout.hints.left, 0);
       expect(right.right).toBeCloseTo(layout.hints.right, 0);
       expect(left.width).toBeCloseTo(right.width, 0);
@@ -121,9 +124,7 @@ for (const viewport of [DESKTOP, { width: 768, height: 1024 }, { width: 1440, he
 
     expect(layout.documentOverflows).toBe(false);
     expect(layout.window.right).toBeLessThanOrEqual(viewport.width);
-
   });
-
 }
 
 for (const viewport of [MOBILE, { width: 680, height: 900 }]) {
@@ -142,10 +143,7 @@ for (const viewport of [MOBILE, { width: 680, height: 900 }]) {
     expect(layout.sections).toHaveLength(3);
     expect(layout.sections[0].left).toBeLessThan(layout.sections[1].left);
     expect(layout.actions.left).toBeCloseTo(layout.sections[0].left, 0);
-    expect(layout.actions.right).toBeCloseTo(
-      layout.sections[1].left + layout.sections[1].width,
-      0
-    );
+    expect(layout.actions.right).toBeCloseTo(layout.sections[1].left + layout.sections[1].width, 0);
 
     expect(layout.documentOverflows).toBe(false);
     expect(layout.window.left).toBeGreaterThanOrEqual(0);
@@ -155,7 +153,8 @@ for (const viewport of [MOBILE, { width: 680, height: 900 }]) {
     expect(layout.frame.width).toBeCloseTo(layout.panel.width, 0);
     expect(layout.frame.left).toBeCloseTo(layout.panel.left, 0);
     expect(layout.frame.left - layout.aquarium.left).toBeCloseTo(
-      layout.aquarium.right - layout.frame.right, 0
+      layout.aquarium.right - layout.frame.right,
+      0,
     );
     expect(layout.grid.left).toBeGreaterThan(layout.frame.left);
     expect(layout.grid.right).toBeLessThan(layout.frame.right);
@@ -172,12 +171,8 @@ for (const viewport of [MOBILE, { width: 680, height: 900 }]) {
     expect(undo.top).toBeCloseTo(redo.top, 0);
     expect(undo.top).toBeGreaterThanOrEqual(check.bottom);
     expect(undo.right).toBeLessThan(redo.left);
-    expect(undo.left - layout.actions.left).toBeCloseTo(
-      layout.actions.right - redo.right, 0
-    );
-
+    expect(undo.left - layout.actions.left).toBeCloseTo(layout.actions.right - redo.right, 0);
   });
-
 }
 
 test("the Sudoku status bar holds the timer in place while its neighbours change", async ({
@@ -188,7 +183,7 @@ test("the Sudoku status bar holds the timer in place while its neighbours change
 
   const before = await readSudokuLayout(page);
   await expect(page.locator("#sudoku-leaderboard-checks")).toHaveText(
-    "0/3 allowed checks used to place on leaderboard"
+    "0/3 allowed checks used to place on leaderboard",
   );
   // The checks row owns a full-width track under the other status items.
   expect(before.checks.top).toBeGreaterThanOrEqual(before.time.bottom - 1);

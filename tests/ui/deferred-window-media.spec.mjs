@@ -111,17 +111,23 @@ const configureAdministratorApi = async (page) => {
 const preparePage = async (page, viewport, { administratorAccess = false } = {}) => {
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.addInitScript(({ administratorAccess, administratorProof }) => {
-    localStorage.clear();
-    sessionStorage.clear();
-    if (administratorAccess) {
-      sessionStorage.setItem("personalSiteAdministratorProofV1", JSON.stringify({
-        proof: administratorProof,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      }));
-    }
-    Math.random = () => 0.999999;
-  }, { administratorAccess, administratorProof });
+  await page.addInitScript(
+    ({ administratorAccess, administratorProof }) => {
+      localStorage.clear();
+      sessionStorage.clear();
+      if (administratorAccess) {
+        sessionStorage.setItem(
+          "personalSiteAdministratorProofV1",
+          JSON.stringify({
+            proof: administratorProof,
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          }),
+        );
+      }
+      Math.random = () => 0.999999;
+    },
+    { administratorAccess, administratorProof },
+  );
   await configureAdministratorApi(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.locator("#about-window").evaluate((windowElement) => {
@@ -148,9 +154,11 @@ const expectDecodedImages = async (root, label, { expectPlaying = false } = {}) 
           images.evaluateAll((elements) =>
             elements
               .filter((image) => image.naturalWidth <= 0)
-              .map((image) => image.currentSrc || image.getAttribute("src") || image.dataset.src || "")
+              .map(
+                (image) => image.currentSrc || image.getAttribute("src") || image.dataset.src || "",
+              ),
           ),
-        { message: `${label} images decode`, timeout: 10_000 }
+        { message: `${label} images decode`, timeout: 10_000 },
       )
       .toEqual([]);
   }
@@ -163,9 +171,9 @@ const expectDecodedImages = async (root, label, { expectPlaying = false } = {}) 
         videos.evaluateAll((elements) =>
           elements
             .filter((video) => video.readyState < 2)
-            .map((video) => video.currentSrc || video.dataset.loopVideo || "")
+            .map((video) => video.currentSrc || video.dataset.loopVideo || ""),
         ),
-      { message: `${label} videos decode a frame`, timeout: 15_000 }
+      { message: `${label} videos decode a frame`, timeout: 15_000 },
     )
     .toEqual([]);
   if (!expectPlaying) return;
@@ -173,9 +181,9 @@ const expectDecodedImages = async (root, label, { expectPlaying = false } = {}) 
     .poll(
       () =>
         videos.evaluateAll((elements) =>
-          elements.filter((video) => video.paused).map((video) => video.dataset.loopVideo || "")
+          elements.filter((video) => video.paused).map((video) => video.dataset.loopVideo || ""),
         ),
-      { message: `${label} loops play while visible`, timeout: 15_000 }
+      { message: `${label} loops play while visible`, timeout: 15_000 },
     )
     .toEqual([]);
 };
@@ -203,7 +211,9 @@ for (const viewport of viewports) {
       await openDesktopApp(page, app);
     }
 
-    await page.locator('.desktop-icon[data-app="minesweeper"]').evaluate((button) => button.click());
+    await page
+      .locator('.desktop-icon[data-app="minesweeper"]')
+      .evaluate((button) => button.click());
     const minesweeper = page.locator('[data-app-window="minesweeper"]');
     await expect(minesweeper).toBeVisible();
     await minesweeper.getByRole("button", { name: "Help" }).click();
@@ -240,16 +250,14 @@ for (const viewport of viewports) {
       await eventList.selectOption(eventId);
       await expectDecodedImages(
         eventPreview.locator(`[data-admin-event-preview-window="${eventId}"]`),
-        `event preview ${eventId}`
+        `event preview ${eventId}`,
       );
     }
 
     const triggerNow = adminWindow.locator("#admin-trigger-now");
     for (const eventId of realTriggerEventIds) {
       await eventList.selectOption(eventId);
-      const previewWindow = eventPreview.locator(
-        `[data-admin-event-preview-window="${eventId}"]`
-      );
+      const previewWindow = eventPreview.locator(`[data-admin-event-preview-window="${eventId}"]`);
       const windowId = await previewWindow.getAttribute("id");
       expect(windowId, `${eventId} preview carries the window id`).toBeTruthy();
       await triggerNow.click();
@@ -262,7 +270,6 @@ for (const viewport of viewports) {
       });
       await expect(liveWindow).toBeHidden();
     }
-
   });
 }
 
@@ -271,53 +278,74 @@ for (const viewport of viewports) {
 for (const viewport of viewports) {
   test(`event show callbacks decode cold media at ${viewport.name}`, async ({ page }, testInfo) => {
     await routeHomeScript(page, "adminOrchestrator", (source) =>
-      source.replace(/\n\}\)\(\);\s*$/, `
+      source.replace(
+        /\n\}\)\(\);\s*$/,
+        `
 window.__deferredMediaAdminTest = Object.freeze({
   windowId: (id) => getAdminRandomEventPreviewSource(
     randomEventDefinitions.find((definition) => definition.id === id)
   )?.id,
 });
-})();`)
+})();`,
+      ),
     );
     await routeHomeScript(page, "eventRuntime", (source) =>
-      source.replace(/\n\}\)\(\);\s*$/, `
+      source.replace(
+        /\n\}\)\(\);\s*$/,
+        `
 window.__deferredMediaRuntimeTest = Object.freeze({
   show: (id) => randomEventDefinitions.find((definition) => definition.id === id).run({
     triggerName: "adminControls", detail: { source: "media-test" }, admin: true,
   }),
 });
-})();`)
+})();`,
+      ),
     );
     await routeHomeScript(page, "eventSkillCheck", (source) =>
-      source.replace(/\n\}\)\(\);\s*$/, `
+      source.replace(
+        /\n\}\)\(\);\s*$/,
+        `
 window.__deferredMediaSkillCheckTest = () => showSkillCheckResultWindow(20);
-})();`)
+})();`,
+      ),
     );
     await routeHomeScript(page, "eventDistressSignal", (source) =>
-      source.replace(/\n\}\)\(\);\s*$/, `
+      source.replace(
+        /\n\}\)\(\);\s*$/,
+        `
 window.__deferredMediaDistressTest = showDistressUploadWindow;
-})();`)
+})();`,
+      ),
     );
     await routeHomeScript(page, "eventCreatures", (source) =>
-      source.replace(/\n\}\)\(\);\s*$/, `
+      source.replace(
+        /\n\}\)\(\);\s*$/,
+        `
 window.__deferredMediaCreaturesTest = Object.freeze({
   showStalker: showStalkerResultWindow,
   showServal: showServalPizzaWindow,
 });
-})();`)
+})();`,
+      ),
     );
     await routeHomeScript(page, "eventPrompts", (source) =>
-      isolateProductionRandomEventPolicies(source).replace(/\n\}\)\(\);\s*$/, `
+      isolateProductionRandomEventPolicies(source).replace(
+        /\n\}\)\(\);\s*$/,
+        `
 window.__deferredMediaPromptsTest = Object.freeze({
   showMeditation: showMidnightGospelMeditationWindow,
   showNobleSteed: showNobleSteedResultWindow,
 });
-})();`)
+})();`,
+      ),
     );
     await routeHomeScript(page, "eventDstNight", (source) =>
-      source.replace(/\n\}\)\(\);\s*$/, `
+      source.replace(
+        /\n\}\)\(\);\s*$/,
+        `
 window.__deferredMediaDstTest = showDstSurviveWindow;
-})();`)
+})();`,
+      ),
     );
     await preparePage(page, viewport, { administratorAccess: true });
     const adminLauncher = page.locator('.taskbar-icon[data-app="admin-controls"]');
@@ -328,19 +356,25 @@ window.__deferredMediaDstTest = showDstSurviveWindow;
     await adminWindow.dispatchEvent("animationend", { animationName: "retro-window-close" });
     await expect(adminWindow).toBeHidden();
     for (const eventId of realTriggerEventIds) {
-      const windowId = await page.evaluate((id) => window.__deferredMediaAdminTest.windowId(id), eventId);
+      const windowId = await page.evaluate(
+        (id) => window.__deferredMediaAdminTest.windowId(id),
+        eventId,
+      );
       expect(windowId).toBeTruthy();
       const liveWindow = page.locator(`#${windowId}:not([data-admin-event-preview-window])`);
       await expect(liveWindow).toBeHidden();
-      expect(await liveWindow.locator("[data-src]:not([src])").count(),
-        `${eventId} starts with cold media`).toBeGreaterThan(0);
+      expect(
+        await liveWindow.locator("[data-src]:not([src])").count(),
+        `${eventId} starts with cold media`,
+      ).toBeGreaterThan(0);
       await page.evaluate((id) => window.__deferredMediaRuntimeTest.show(id), eventId);
       await expectDecodedImages(liveWindow, `cold event ${eventId}`, { expectPlaying: true });
       if (eventId === "rohin-os-note" || eventId === "lain-system-alert") {
         const screenshotPath = testInfo.outputPath(`${eventId}-${viewport.name}.png`);
         await page.screenshot({ path: screenshotPath, animations: "disabled" });
         await testInfo.attach(`${eventId}-${viewport.name}`, {
-          path: screenshotPath, contentType: "image/png",
+          path: screenshotPath,
+          contentType: "image/png",
         });
       }
       await liveWindow.evaluate((element) => {
@@ -352,17 +386,23 @@ window.__deferredMediaDstTest = showDstSurviveWindow;
     for (const windowId of chainedWindowIds) {
       const liveWindow = page.locator(`#${windowId}:not([data-admin-event-preview-window])`);
       await expect(liveWindow).toBeHidden();
-      expect(await liveWindow.locator("[data-src]:not([src])").count(),
-        `${windowId} starts with cold media`).toBeGreaterThan(0);
-      await page.evaluate((id) => ({
-        "skill-check-result-window": window.__deferredMediaSkillCheckTest,
-        "distress-upload-window": window.__deferredMediaDistressTest,
-        "stalker-result-window": window.__deferredMediaCreaturesTest.showStalker,
-        "midnight-gospel-meditation-window": window.__deferredMediaPromptsTest.showMeditation,
-        "noble-steed-result-window": window.__deferredMediaPromptsTest.showNobleSteed,
-        "serval-pizza-window": window.__deferredMediaCreaturesTest.showServal,
-        "dst-survive-window": window.__deferredMediaDstTest,
-      })[id](), windowId);
+      expect(
+        await liveWindow.locator("[data-src]:not([src])").count(),
+        `${windowId} starts with cold media`,
+      ).toBeGreaterThan(0);
+      await page.evaluate(
+        (id) =>
+          ({
+            "skill-check-result-window": window.__deferredMediaSkillCheckTest,
+            "distress-upload-window": window.__deferredMediaDistressTest,
+            "stalker-result-window": window.__deferredMediaCreaturesTest.showStalker,
+            "midnight-gospel-meditation-window": window.__deferredMediaPromptsTest.showMeditation,
+            "noble-steed-result-window": window.__deferredMediaPromptsTest.showNobleSteed,
+            "serval-pizza-window": window.__deferredMediaCreaturesTest.showServal,
+            "dst-survive-window": window.__deferredMediaDstTest,
+          })[id](),
+        windowId,
+      );
       await expectDecodedImages(liveWindow, `cold chained window ${windowId}`, {
         expectPlaying: true,
       });
@@ -381,7 +421,7 @@ window.__deferredMediaDstTest = showDstSurviveWindow;
         .poll(() =>
           liveWindow
             .locator("video[data-loop-video]")
-            .evaluateAll((videos) => videos.filter((video) => !video.paused).length)
+            .evaluateAll((videos) => videos.filter((video) => !video.paused).length),
         )
         .toBe(0);
     }

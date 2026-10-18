@@ -22,9 +22,7 @@ test("the forward-reference scan sees eager reads and ignores deferred ones", ()
     "const LATER = [1];",
     "})();",
   ].join("\n");
-  assert.deepEqual(findForwardReferences(eager), [
-    "2 reads LATER, declared at line 4",
-  ]);
+  assert.deepEqual(findForwardReferences(eager), ["2 reads LATER, declared at line 4"]);
 
   const declaredFirst = [
     "(() => {",
@@ -49,9 +47,7 @@ test("the forward-reference scan sees eager reads and ignores deferred ones", ()
     "const LATER = 1;",
     "})();",
   ].join("\n");
-  assert.deepEqual(findForwardReferences(mixed), [
-    "2 reads LATER, declared at line 4",
-  ]);
+  assert.deepEqual(findForwardReferences(mixed), ["2 reads LATER, declared at line 4"]);
 
   // The scan also covers the one Home script that is an ES module.
   assert.deepEqual(findForwardReferences("const first = SECOND;\nconst SECOND = 2;\n"), [
@@ -72,6 +68,6 @@ test("no Home script reads a top-level binding before it is declared", async () 
   assert.deepEqual(
     problems,
     [],
-    `a statement that runs at load time read a binding declared later:\n  ${problems.join("\n  ")}`
+    `a statement that runs at load time read a binding declared later:\n  ${problems.join("\n  ")}`,
   );
 });

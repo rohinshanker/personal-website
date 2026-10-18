@@ -51,7 +51,9 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
       stats.totals.minesweeper.wins[event.difficulty] += 1;
       if (isRequested) stats.playerTotals.minesweeper.wins[event.difficulty] += 1;
       rankings.minesweeper[event.difficulty] = upsertEntry(
-        rankings.minesweeper[event.difficulty], event, "asc"
+        rankings.minesweeper[event.difficulty],
+        event,
+        "asc",
       );
     } else if (event.game === "solitaire") {
       stats.totals.solitaire.wins += 1;
@@ -61,7 +63,8 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
         const eventTime = new Date(event.occurredAt).getTime();
         const previousTime = new Date(previous?.occurredAt || 0).getTime();
         const latest =
-          !previous || eventTime > previousTime ||
+          !previous ||
+          eventTime > previousTime ||
           (eventTime === previousTime && event.id.localeCompare(previous.eventId) > 0);
         rankings.solitaire.set(event.profile.id, {
           eventId: latest ? event.id : previous.eventId,
@@ -80,9 +83,7 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
         stats.playerTotals.snake.totalGamesPlayed += 1;
         stats.playerTotals.snake.gamesPlayed[event.boardSize] += 1;
       }
-      rankings.snake[event.boardSize] = upsertEntry(
-        rankings.snake[event.boardSize], event, "desc"
-      );
+      rankings.snake[event.boardSize] = upsertEntry(rankings.snake[event.boardSize], event, "desc");
     } else if (event.game === "sudoku") {
       stats.totals.sudoku.wins[event.difficulty][event.hintBucket] += 1;
       if (isRequested) {
@@ -90,7 +91,9 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
       }
       if (event.hintBucket === "noHints" && Number.isFinite(event.metric)) {
         rankings.sudoku[event.difficulty] = upsertEntry(
-          rankings.sudoku[event.difficulty], event, "asc"
+          rankings.sudoku[event.difficulty],
+          event,
+          "asc",
         );
       }
     }
@@ -105,34 +108,58 @@ export const createGameStatsDataFromEvents = (rawEvents, requestedPlayerId = "")
   for (const difficulty of GAME_STATS_DIFFICULTIES) {
     finish(
       rankings.minesweeper[difficulty],
-      (value) => { stats.leaderboards.minesweeper[difficulty] = value; },
-      (value) => { stats.playerRanks.minesweeper[difficulty] = value; },
-      (value) => { stats.playerRecords.minesweeper[difficulty] = value; }
+      (value) => {
+        stats.leaderboards.minesweeper[difficulty] = value;
+      },
+      (value) => {
+        stats.playerRanks.minesweeper[difficulty] = value;
+      },
+      (value) => {
+        stats.playerRecords.minesweeper[difficulty] = value;
+      },
     );
   }
   const solitaire = [...rankings.solitaire.values()].sort((first, second) =>
-    compareLeaderboardEntries("desc", first, second)
+    compareLeaderboardEntries("desc", first, second),
   );
   finish(
     solitaire,
-    (value) => { stats.leaderboards.solitaire = value; },
-    (value) => { stats.playerRanks.solitaire = value; },
-    (value) => { stats.playerRecords.solitaire = value; }
+    (value) => {
+      stats.leaderboards.solitaire = value;
+    },
+    (value) => {
+      stats.playerRanks.solitaire = value;
+    },
+    (value) => {
+      stats.playerRecords.solitaire = value;
+    },
   );
   for (const size of GAME_STATS_SNAKE_BOARD_SIZES) {
     finish(
       rankings.snake[size],
-      (value) => { stats.leaderboards.snake[size] = value; },
-      (value) => { stats.playerRanks.snake[size] = value; },
-      (value) => { stats.playerRecords.snake[size] = value; }
+      (value) => {
+        stats.leaderboards.snake[size] = value;
+      },
+      (value) => {
+        stats.playerRanks.snake[size] = value;
+      },
+      (value) => {
+        stats.playerRecords.snake[size] = value;
+      },
     );
   }
   for (const difficulty of GAME_STATS_SUDOKU_DIFFICULTIES) {
     finish(
       rankings.sudoku[difficulty],
-      (value) => { stats.leaderboards.sudoku[difficulty] = value; },
-      (value) => { stats.playerRanks.sudoku[difficulty] = value; },
-      (value) => { stats.playerRecords.sudoku[difficulty] = value; }
+      (value) => {
+        stats.leaderboards.sudoku[difficulty] = value;
+      },
+      (value) => {
+        stats.playerRanks.sudoku[difficulty] = value;
+      },
+      (value) => {
+        stats.playerRecords.sudoku[difficulty] = value;
+      },
     );
   }
   return stats;

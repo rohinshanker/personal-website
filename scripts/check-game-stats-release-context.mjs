@@ -14,8 +14,7 @@ const COMMIT_SHA_PATTERN = /^[a-f0-9]{40}$/;
 const GITHUB_REPOSITORY_PATTERN =
   /^([A-Za-z0-9](?:[A-Za-z0-9_.-]*[A-Za-z0-9])?)\/([A-Za-z0-9_.-]+)$/;
 
-const normalizeEnvironmentValue = (value) =>
-  typeof value === "string" ? value.trim() : "";
+const normalizeEnvironmentValue = (value) => (typeof value === "string" ? value.trim() : "");
 
 const parseGitHubRepository = (repository) => {
   const normalizedRepository = normalizeEnvironmentValue(repository);
@@ -34,11 +33,9 @@ const parseCommitSha = (value, label) => {
   return commitSha;
 };
 
-export const getMissingProductionCredentialNames = (
-  environment = process.env
-) =>
+export const getMissingProductionCredentialNames = (environment = process.env) =>
   PRODUCTION_CREDENTIAL_NAMES.filter(
-    (credentialName) => !normalizeEnvironmentValue(environment?.[credentialName])
+    (credentialName) => !normalizeEnvironmentValue(environment?.[credentialName]),
   );
 
 export const runProductionCredentialCheck = ({
@@ -72,8 +69,7 @@ export const fetchCurrentMainCommitSha = async ({
     timeoutLabel: "GitHub request timeout",
   });
 
-  const url =
-    `https://api.github.com/repos/${owner}/${repositoryName}/git/ref/heads/main`;
+  const url = `https://api.github.com/repos/${owner}/${repositoryName}/git/ref/heads/main`;
   const payload = await fetchGuardedBody(url, {
     fetchImpl,
     timeoutMs,
@@ -91,8 +87,7 @@ export const fetchCurrentMainCommitSha = async ({
     messages: {
       requestFailed: "Unable to read refs/heads/main from GitHub",
       invalidResponse: "GitHub returned an invalid refs/heads/main response",
-      statusFailed: (status) =>
-        `GitHub refs/heads/main request failed with status ${status}`,
+      statusFailed: (status) => `GitHub refs/heads/main request failed with status ${status}`,
       bodyUnreadable: "GitHub refs/heads/main response was not valid JSON",
     },
   });
@@ -106,19 +101,14 @@ export const checkCurrentMainRevision = async ({
   fetchCurrentMainCommitShaImpl = fetchCurrentMainCommitSha,
   ...fetchOptions
 } = {}) => {
-  const expectedCommitSha = parseCommitSha(
-    workflowCommitSha,
-    "Workflow revision"
-  );
+  const expectedCommitSha = parseCommitSha(workflowCommitSha, "Workflow revision");
   const currentMainCommitSha = await fetchCurrentMainCommitShaImpl({
     repository,
     token,
     ...fetchOptions,
   });
   if (currentMainCommitSha !== expectedCommitSha) {
-    throw new Error(
-      "Workflow revision is stale: refs/heads/main moved after this run started"
-    );
+    throw new Error("Workflow revision is stale: refs/heads/main moved after this run started");
   }
   return { commitSha: expectedCommitSha };
 };
@@ -152,8 +142,7 @@ export const runGameStatsReleaseContextCli = async ({
     return runCurrentMainCheckImpl();
   }
   writeError(
-    "Usage: node scripts/check-game-stats-release-context.mjs " +
-      "[--credentials|--current-main]"
+    "Usage: node scripts/check-game-stats-release-context.mjs " + "[--credentials|--current-main]",
   );
   return 1;
 };

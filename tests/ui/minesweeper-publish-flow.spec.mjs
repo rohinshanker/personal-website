@@ -30,7 +30,9 @@ const minesweeperViewports = Object.freeze([
   Object.freeze({ name: "above-480-breakpoint", width: 481, height: 812 }),
 ]);
 const emptyDifficultyMap = (factory) =>
-  Object.fromEntries(["beginner", "intermediate", "expert"].map((difficulty) => [difficulty, factory()]));
+  Object.fromEntries(
+    ["beginner", "intermediate", "expert"].map((difficulty) => [difficulty, factory()]),
+  );
 
 const createStatsPayload = (publishedEvent, acknowledgedEventIds = []) => {
   const entry = publishedEvent
@@ -157,14 +159,17 @@ const preparePage = async (page, viewport) => {
       queueKey: QUEUE_STORAGE_KEY,
       savedProfile: profile,
       statsKey: STATS_STORAGE_KEY,
-    }
+    },
   );
   await installGameStatsBackend(page, { apiBaseUrl: API_BASE_URL });
   const api = await installApi(page);
   await page.goto("/home.html", { waitUntil: "load" });
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
-  await page.getByRole("toolbar", { name: "Taskbar" }).getByRole("button", { name: "Minesweeper" }).click();
+  await page
+    .getByRole("toolbar", { name: "Taskbar" })
+    .getByRole("button", { name: "Minesweeper" })
+    .click();
   const minesweeper = page.locator('[data-app-window="minesweeper"]');
   await expect(minesweeper).toBeVisible();
   return { api, minesweeper };
@@ -172,7 +177,8 @@ const preparePage = async (page, viewport) => {
 
 const playMinesweeperReplay = async (minesweeper, replay, startAt = 0) => {
   for (const action of replay.slice(startAt)) {
-    if (action.op !== "reveal") throw new Error(`Unsupported Minesweeper fixture action ${action.op}`);
+    if (action.op !== "reveal")
+      throw new Error(`Unsupported Minesweeper fixture action ${action.op}`);
     const cell = minesweeper.locator(`.ms-cell[data-index="${action.cell}"]`);
     if (!(await cell.isVisible())) throw new Error(`Missing Minesweeper cell ${action.cell}`);
     await cell.click();
@@ -187,7 +193,9 @@ for (const viewport of minesweeperViewports) {
     const firstIndex = 0;
     await minesweeper.locator(`.ms-cell[data-index="${firstIndex}"]`).click();
     await expect.poll(() => api.verified.issued.length).toBe(1);
-    await expect(minesweeper.locator(`.ms-cell[data-index="${firstIndex}"]`)).toHaveClass(/is-revealed/);
+    await expect(minesweeper.locator(`.ms-cell[data-index="${firstIndex}"]`)).toHaveClass(
+      /is-revealed/,
+    );
     expect(api.events).toHaveLength(0);
     const issued = api.verified.boardFor("minesweeper");
     expect(issued.initial).toEqual(verifiedMinesweeperFixtures.validWin.initial);
@@ -258,20 +266,20 @@ for (const viewport of minesweeperViewports) {
     await expect(statsWindow).toBeVisible();
     await expect(statsWindow).not.toHaveClass(/is-opening/);
     await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
-      "Global stats are up to date."
+      "Global stats are up to date.",
     );
     expect(
       api.statsRequests.some((path) =>
-        new URL(path, API_BASE_URL).searchParams.getAll("pendingEventId").includes(api.events[0].event.id)
-      )
+        new URL(path, API_BASE_URL).searchParams
+          .getAll("pendingEventId")
+          .includes(api.events[0].event.id),
+      ),
     ).toBe(true);
 
     await settleRender(page);
-    expect(await scanForViolations(
-      page,
-      testInfo,
-      `minesweeper-published-${viewport.name}`
-    )).toEqual([]);
+    expect(
+      await scanForViolations(page, testInfo, `minesweeper-published-${viewport.name}`),
+    ).toEqual([]);
     const statsLayout = await statsWindow.evaluate((windowElement) => {
       const bounds = windowElement.getBoundingClientRect();
       const body = windowElement.querySelector(".window-body");
@@ -293,10 +301,12 @@ for (const viewport of minesweeperViewports) {
 
     const columns = statsWindow.locator(".game-stats-minesweeper-columns > *");
     await expect(columns).toHaveCount(3);
-    const columnBounds = await columns.evaluateAll((elements) => elements.map((element) => {
-      const bounds = element.getBoundingClientRect();
-      return { left: bounds.left, right: bounds.right, top: bounds.top, width: bounds.width };
-    }));
+    const columnBounds = await columns.evaluateAll((elements) =>
+      elements.map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return { left: bounds.left, right: bounds.right, top: bounds.top, width: bounds.width };
+      }),
+    );
     columnBounds.forEach((bounds, index) => {
       expect(bounds.width).toBeGreaterThan(0);
       expect(bounds.top).toBeCloseTo(columnBounds[0].top, 0);
@@ -304,7 +314,7 @@ for (const viewport of minesweeperViewports) {
     });
 
     const publishedScreenshotPath = testInfo.outputPath(
-      `minesweeper-published-stats-${viewport.width}x${viewport.height}.png`
+      `minesweeper-published-stats-${viewport.width}x${viewport.height}.png`,
     );
     await page.screenshot({ fullPage: true, path: publishedScreenshotPath });
     await testInfo.attach(`minesweeper-published-stats-${viewport.name}`, {
@@ -312,7 +322,7 @@ for (const viewport of minesweeperViewports) {
       path: publishedScreenshotPath,
     });
     const semanticSnapshotPath = testInfo.outputPath(
-      `minesweeper-published-semantics-${viewport.width}x${viewport.height}.yml`
+      `minesweeper-published-semantics-${viewport.width}x${viewport.height}.yml`,
     );
     await writeFile(semanticSnapshotPath, await page.locator("body").ariaSnapshot());
     await testInfo.attach(`minesweeper-published-semantics-${viewport.name}`, {
@@ -339,8 +349,10 @@ for (const viewport of minesweeperViewports) {
     await minesweeper.getByRole("button", { name: "Close" }).click();
     await expect(minesweeper).toBeHidden();
     expect(api.verified.finishes).toHaveLength(1);
-    await page.getByRole("toolbar", { name: "Taskbar" })
-      .getByRole("button", { name: "Minesweeper" }).click();
+    await page
+      .getByRole("toolbar", { name: "Taskbar" })
+      .getByRole("button", { name: "Minesweeper" })
+      .click();
     await expect(minesweeper).toBeVisible();
 
     await minesweeper.getByRole("combobox", { name: "Control mode" }).selectOption("mobile");
@@ -371,7 +383,7 @@ for (const viewport of minesweeperViewports) {
     expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth);
 
     const screenshotPath = testInfo.outputPath(
-      `minesweeper-rule-paths-${viewport.width}x${viewport.height}.png`
+      `minesweeper-rule-paths-${viewport.width}x${viewport.height}.png`,
     );
     await page.screenshot({ fullPage: true, path: screenshotPath });
     await testInfo.attach(`minesweeper-rule-paths-${viewport.name}`, {
@@ -379,7 +391,7 @@ for (const viewport of minesweeperViewports) {
       path: screenshotPath,
     });
     const ruleSemanticsPath = testInfo.outputPath(
-      `minesweeper-rule-semantics-${viewport.width}x${viewport.height}.yml`
+      `minesweeper-rule-semantics-${viewport.width}x${viewport.height}.yml`,
     );
     await writeFile(ruleSemanticsPath, await page.locator("body").ariaSnapshot());
     await testInfo.attach(`minesweeper-rule-semantics-${viewport.name}`, {
@@ -406,20 +418,24 @@ test("Minesweeper falls back locally when verified issuance is unavailable", asy
       queueKey: QUEUE_STORAGE_KEY,
       savedProfile: profile,
       statsKey: STATS_STORAGE_KEY,
-    }
+    },
   );
   // The deterministic fixture's default backend has no API URL. This still
   // exercises the real issueGame adapter before the controller falls back.
   await page.goto("/home.html", { waitUntil: "load" });
   const aboutClose = page.locator('#about-window [data-close="about"]');
   if (await aboutClose.isVisible()) await aboutClose.click();
-  await page.getByRole("toolbar", { name: "Taskbar" })
-    .getByRole("button", { name: "Minesweeper" }).click();
+  await page
+    .getByRole("toolbar", { name: "Taskbar" })
+    .getByRole("button", { name: "Minesweeper" })
+    .click();
   const minesweeper = page.locator('[data-app-window="minesweeper"]');
-  const localInitial = await page.evaluate(() => window.homeMinesweeperRules.generate(
-    { difficulty: "beginner" },
-    { seed: Math.floor(0.999999 * 0x1_0000_0000) >>> 0, firstCell: 0 }
-  ));
+  const localInitial = await page.evaluate(() =>
+    window.homeMinesweeperRules.generate(
+      { difficulty: "beginner" },
+      { seed: Math.floor(0.999999 * 0x1_0000_0000) >>> 0, firstCell: 0 },
+    ),
+  );
   await minesweeper.locator('.ms-cell[data-index="1"]').click({ button: "right" });
   await minesweeper.locator('.ms-cell[data-index="0"]').click();
   await expect(minesweeper.locator('.ms-cell[data-index="0"]')).toHaveClass(/is-revealed/);
@@ -436,8 +452,11 @@ test("Minesweeper falls back locally when verified issuance is unavailable", asy
   const statsWindow = page.locator("#game-stats-window-minesweeper");
   await expect(statsWindow).toBeVisible();
   await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
-    "Automatic global tracking is not configured yet; local stats stay on this device."
+    "Automatic global tracking is not configured yet; local stats stay on this device.",
   );
-  const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "null"), STATS_STORAGE_KEY);
+  const stored = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key) || "null"),
+    STATS_STORAGE_KEY,
+  );
   expect(stored.totals.minesweeper.wins.beginner).toBe(1);
 });

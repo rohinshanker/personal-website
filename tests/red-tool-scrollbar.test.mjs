@@ -15,34 +15,32 @@ test("Red Tool chat keeps exactly one native arrow at each scrollbar end", async
 
   assert.match(
     css,
-    /\.red-tool-chat-log \{[\s\S]*?height: 150px;[\s\S]*?overflow-y: auto;[\s\S]*?scrollbar-gutter: stable;/
+    /\.red-tool-chat-log \{[\s\S]*?height: 150px;[\s\S]*?overflow-y: auto;[\s\S]*?scrollbar-gutter: stable;/,
   );
   assert.match(
     css,
-    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:start:increment,\n\.red-tool-chat-log::-webkit-scrollbar-button:vertical:end:decrement \{\n  display: none;\n  height: 0;\n\}/
+    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:start:increment,\n\.red-tool-chat-log::-webkit-scrollbar-button:vertical:end:decrement \{\n  display: none;\n  height: 0;\n\}/,
   );
   assert.match(
     css,
-    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:start:decrement,\n\.red-tool-chat-log::-webkit-scrollbar-button:vertical:end:increment \{\n  display: block;\n  height: 17px;\n\}/
+    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:start:decrement,\n\.red-tool-chat-log::-webkit-scrollbar-button:vertical:end:increment \{\n  display: block;\n  height: 17px;\n\}/,
   );
   assert.match(
     css,
-    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:start:decrement \{\n  background-image: url\("\.\.\/\.\.\/assets\/icon\/button-up\.svg"\);\n\}/
+    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:start:decrement \{\n  background-image: url\("\.\.\/\.\.\/assets\/icon\/button-up\.svg"\);\n\}/,
   );
   assert.match(
     css,
-    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:end:increment \{\n  background-image: url\("\.\.\/\.\.\/assets\/icon\/button-down\.svg"\);\n\}/
+    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:end:increment \{\n  background-image: url\("\.\.\/\.\.\/assets\/icon\/button-down\.svg"\);\n\}/,
   );
   assert.doesNotMatch(
     css,
-    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:(?:start|end) \{/
+    /\.red-tool-chat-log::-webkit-scrollbar-button:vertical:(?:start|end) \{/,
   );
   assert.deepEqual(
-    [
-      ...css.matchAll(
-        /\.red-tool-chat-log::-webkit-scrollbar-button[^,{\n]*/g
-      ),
-    ].map((match) => match[0].trim()),
+    [...css.matchAll(/\.red-tool-chat-log::-webkit-scrollbar-button[^,{\n]*/g)].map((match) =>
+      match[0].trim(),
+    ),
     [
       ".red-tool-chat-log::-webkit-scrollbar-button:vertical:start:increment",
       ".red-tool-chat-log::-webkit-scrollbar-button:vertical:end:decrement",
@@ -51,15 +49,14 @@ test("Red Tool chat keeps exactly one native arrow at each scrollbar end", async
       ".red-tool-chat-log::-webkit-scrollbar-button:vertical:start:decrement",
       ".red-tool-chat-log::-webkit-scrollbar-button:vertical:end:increment",
     ],
-    "Red Tool must define only the two hidden mirrored slots and two conventional arrow slots"
+    "Red Tool must define only the two hidden mirrored slots and two conventional arrow slots",
   );
   assert.match(
     globalCss,
-    /::-webkit-scrollbar-button:vertical:start:decrement,[\s\S]*?::-webkit-scrollbar-button:vertical:end:increment \{\n  display: block;/
+    /::-webkit-scrollbar-button:vertical:start:decrement,[\s\S]*?::-webkit-scrollbar-button:vertical:end:increment \{\n  display: block;/,
   );
 
-  const expectedReference =
-    "styles/home/random-events.css?v=";
+  const expectedReference = "styles/home/random-events.css?v=";
   assert.ok(resources.includes(expectedReference));
   assert.ok(!home.includes(expectedReference));
   assert.ok(!index.includes(expectedReference));

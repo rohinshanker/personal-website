@@ -5,8 +5,7 @@ import {
   GAME_STATS_SUDOKU_DIFFICULTIES,
 } from "./constants.mjs";
 
-const keyed = (keys, valueOf) =>
-  Object.fromEntries(keys.map((key) => [key, valueOf(key)]));
+const keyed = (keys, valueOf) => Object.fromEntries(keys.map((key) => [key, valueOf(key)]));
 
 export const createEmptyPlayerTotals = () => ({
   minesweeper: { wins: keyed(GAME_STATS_DIFFICULTIES, () => 0) },
@@ -16,9 +15,7 @@ export const createEmptyPlayerTotals = () => ({
     gamesPlayed: keyed(GAME_STATS_SNAKE_BOARD_SIZES, () => 0),
   },
   sudoku: {
-    wins: keyed(GAME_STATS_SUDOKU_DIFFICULTIES, () =>
-      keyed(GAME_STATS_HINT_BUCKETS, () => 0)
-    ),
+    wins: keyed(GAME_STATS_SUDOKU_DIFFICULTIES, () => keyed(GAME_STATS_HINT_BUCKETS, () => 0)),
   },
 });
 
@@ -50,9 +47,7 @@ export const createEmptyGameStatsData = ({ legacy = true } = {}) => ({
 
 export const compareLeaderboardEntries = (direction, first, second) => {
   if (first.metric !== second.metric) {
-    return direction === "desc"
-      ? second.metric - first.metric
-      : first.metric - second.metric;
+    return direction === "desc" ? second.metric - first.metric : first.metric - second.metric;
   }
   const firstTime = new Date(first.occurredAt).getTime();
   const secondTime = new Date(second.occurredAt).getTime();

@@ -30,12 +30,11 @@ const installStatsHookFixture = async (page) => {
         gameCalls.issued.push({ config, options });
         gameCalls.inputs = [];
         gameCalls.hasIssued = true;
-        const rules = game === "minesweeper"
-          ? window.homeMinesweeperRules
-          : window.homeSnakeRules;
-        const generated = game === "minesweeper"
-          ? rules.generate(config, { seed: 0x24724724, firstCell: options.firstCell })
-          : rules.generate(config, { seed: 0x2475a4e });
+        const rules = game === "minesweeper" ? window.homeMinesweeperRules : window.homeSnakeRules;
+        const generated =
+          game === "minesweeper"
+            ? rules.generate(config, { seed: 0x24724724, firstCell: options.firstCell })
+            : rules.generate(config, { seed: 0x2475a4e });
         return { initial: generated };
       },
       recordInput(input) {
@@ -75,11 +74,18 @@ const installStatsHookFixture = async (page) => {
 };
 
 const installControllerFixtures = async (page) => {
-  await routeHomeScript(page, "minesweeper", (source) =>
-    `${minesweeperRulesSource}\n${source.replace(
-      'const msStats = createGameStatsHooks("minesweeper", msState);',
-      'const msStats = window.__verifiedGameHooks.hooksFor("minesweeper");'
-    ).replace(/\n\}\)\(\);\s*$/, `
+  await routeHomeScript(
+    page,
+    "minesweeper",
+    (source) =>
+      `${minesweeperRulesSource}\n${source
+        .replace(
+          'const msStats = createGameStatsHooks("minesweeper", msState);',
+          'const msStats = window.__verifiedGameHooks.hooksFor("minesweeper");',
+        )
+        .replace(
+          /\n\}\)\(\);\s*$/,
+          `
 window.__verifiedMinesweeperController = Object.freeze({
   finish: () => {
     for (let index = 0; index < msState.cells.length && !msState.gameOver; index += 1) {
@@ -93,13 +99,21 @@ window.__verifiedMinesweeperController = Object.freeze({
     started: msState.started,
   }),
 });
-})();`)}`
+})();`,
+        )}`,
   );
-  await routeHomeScript(page, "snake", (source) =>
-    `${snakeRulesSource}\n${source.replace(
-      'const snakeStats = createGameStatsHooks("snake", () => snakeState);',
-      'const snakeStats = window.__verifiedGameHooks.hooksFor("snake");'
-    ).replace(/\n\}\)\(\);\s*$/, `
+  await routeHomeScript(
+    page,
+    "snake",
+    (source) =>
+      `${snakeRulesSource}\n${source
+        .replace(
+          'const snakeStats = createGameStatsHooks("snake", () => snakeState);',
+          'const snakeStats = window.__verifiedGameHooks.hooksFor("snake");',
+        )
+        .replace(
+          /\n\}\)\(\);\s*$/,
+          `
 window.__verifiedSnakeController = Object.freeze({
   direction: setSnakeDirection,
   finish: () => {
@@ -120,7 +134,8 @@ window.__verifiedSnakeController = Object.freeze({
   pause: pauseSnakeGame,
   resume: startSnakeGame,
 });
-})();`)}`
+})();`,
+        )}`,
   );
 };
 
@@ -156,21 +171,21 @@ test("Minesweeper binds issuance to the first reveal and records an exact winnin
   expect(before.state).toEqual({ gameOver: false, hasEngine: false, started: false });
 
   await minesweeper.locator('.ms-cell[data-index="40"]').click();
-  await expect.poll(() => page.evaluate(
-    () => window.__verifiedGameHooks.calls.minesweeper.inputs.length
-  )).toBeGreaterThan(0);
+  await expect
+    .poll(() => page.evaluate(() => window.__verifiedGameHooks.calls.minesweeper.inputs.length))
+    .toBeGreaterThan(0);
   const issued = await page.evaluate(() => window.__verifiedGameHooks.calls.minesweeper.issued);
-  expect(issued).toEqual([{
-    config: { difficulty: "beginner" },
-    options: { firstCell: 40 },
-  }]);
+  expect(issued).toEqual([
+    {
+      config: { difficulty: "beginner" },
+      options: { firstCell: 40 },
+    },
+  ]);
   const firstInput = await page.evaluate(
-    () => window.__verifiedGameHooks.calls.minesweeper.inputs[0]
+    () => window.__verifiedGameHooks.calls.minesweeper.inputs[0],
   );
   expect(firstInput).toEqual({ seq: 1, op: "reveal", cell: 40 });
-  expect(await page.evaluate(
-    () => window.__verifiedGameHooks.calls.minesweeper.resumes
-  )).toBe(1);
+  expect(await page.evaluate(() => window.__verifiedGameHooks.calls.minesweeper.resumes)).toBe(1);
 
   expect(await page.evaluate(() => window.__verifiedMinesweeperController.finish())).toEqual({
     gameOver: true,
@@ -178,7 +193,7 @@ test("Minesweeper binds issuance to the first reveal and records an exact winnin
   });
   const completed = await page.evaluate(() => window.__verifiedGameHooks.calls.minesweeper);
   expect(completed.inputs.map((input) => input.seq)).toEqual(
-    completed.inputs.map((_, index) => index + 1)
+    completed.inputs.map((_, index) => index + 1),
   );
   expect(completed.events).toHaveLength(1);
   expect(completed.events[0].payload).toMatchObject({
@@ -187,18 +202,18 @@ test("Minesweeper binds issuance to the first reveal and records an exact winnin
   });
 
   await minesweeper.locator("#ms-reset").click();
-  expect(await page.evaluate(() => window.__verifiedGameHooks.calls.minesweeper.issued.length)).toBe(1);
+  expect(
+    await page.evaluate(() => window.__verifiedGameHooks.calls.minesweeper.issued.length),
+  ).toBe(1);
   await minesweeper.locator('.ms-cell[data-index="1"]').click({ button: "right" });
   await minesweeper.locator('.ms-cell[data-index="0"]').click();
-  await expect.poll(() => page.evaluate(
-    () => window.__verifiedGameHooks.calls.minesweeper.issued.length
-  )).toBe(2);
-  await expect.poll(() => page.evaluate(
-    () => window.__verifiedGameHooks.calls.minesweeper.inputs.length
-  )).toBe(2);
-  expect(await page.evaluate(
-    () => window.__verifiedGameHooks.calls.minesweeper.inputs
-  )).toEqual([
+  await expect
+    .poll(() => page.evaluate(() => window.__verifiedGameHooks.calls.minesweeper.issued.length))
+    .toBe(2);
+  await expect
+    .poll(() => page.evaluate(() => window.__verifiedGameHooks.calls.minesweeper.inputs.length))
+    .toBe(2);
+  expect(await page.evaluate(() => window.__verifiedGameHooks.calls.minesweeper.inputs)).toEqual([
     { seq: 1, op: "mark", cell: 1, mark: "flag" },
     { seq: 2, op: "reveal", cell: 0 },
   ]);
@@ -214,31 +229,31 @@ test("Snake records tick-indexed directions, pause timing, and verifier-generate
   });
   await snake.locator('[data-snake-board-size="10"]').click();
   await snake.locator("#snake-start").click();
-  await expect.poll(() => page.evaluate(
-    () => window.__verifiedGameHooks.calls.snake.resumes
-  )).toBe(1);
+  await expect
+    .poll(() => page.evaluate(() => window.__verifiedGameHooks.calls.snake.resumes))
+    .toBe(1);
   await page.evaluate(() => window.__verifiedSnakeController.direction("up"));
   await page.evaluate(() => window.__verifiedSnakeController.pause());
-  await expect.poll(() => page.evaluate(
-    () => window.__verifiedGameHooks.calls.snake.pauses
-  )).toBe(1);
+  await expect
+    .poll(() => page.evaluate(() => window.__verifiedGameHooks.calls.snake.pauses))
+    .toBe(1);
   await page.evaluate(() => window.__verifiedSnakeController.direction("left"));
-  expect(await page.evaluate(
-    () => window.__verifiedGameHooks.calls.snake.inputs.length
-  )).toBe(1);
+  expect(await page.evaluate(() => window.__verifiedGameHooks.calls.snake.inputs.length)).toBe(1);
   await page.evaluate(() => window.__verifiedSnakeController.resume());
-  await expect.poll(() => page.evaluate(
-    () => window.__verifiedGameHooks.calls.snake.resumes
-  )).toBe(2);
+  await expect
+    .poll(() => page.evaluate(() => window.__verifiedGameHooks.calls.snake.resumes))
+    .toBe(2);
 
   const finished = await page.evaluate(() => window.__verifiedSnakeController.finish());
   expect(finished.gameOver).toBe(true);
   expect(finished.terminalTick).toBeGreaterThan(0);
   const calls = await page.evaluate(() => window.__verifiedGameHooks.calls.snake);
-  expect(calls.issued).toEqual([{
-    config: { boardSize: "10" },
-    options: {},
-  }]);
+  expect(calls.issued).toEqual([
+    {
+      config: { boardSize: "10" },
+      options: {},
+    },
+  ]);
   expect(calls.inputs).toEqual([
     { seq: 1, op: "direction", tick: 0, direction: "up" },
     { seq: 2, op: "direction", tick: 0, direction: "left" },

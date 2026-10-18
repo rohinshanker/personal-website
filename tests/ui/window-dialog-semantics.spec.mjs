@@ -27,8 +27,8 @@ const EXPLICIT_ALERT_DIALOGS = Object.freeze([
 
 /** Title ids the helper derives at boot, pinned so they stay stable across releases. */
 const DERIVED_TITLE_IDS = Object.freeze({
-  "[data-app-window=\"windows\"]": "windows-window-title",
-  "[data-app-window=\"credits\"]": "credits-window-title",
+  '[data-app-window="windows"]': "windows-window-title",
+  '[data-app-window="credits"]': "credits-window-title",
   "#game-stats-window-sudoku": "game-stats-window-sudoku-title",
   "#rohin-note-window": "rohin-note-window-title",
   "#calendar-popout": "calendar-popout-title",
@@ -42,7 +42,7 @@ const readWindowInventory = (page) =>
       const labels = ids.map((id) =>
         document.querySelectorAll(`#${CSS.escape(id)}`).length === 1
           ? document.getElementById(id)
-          : null
+          : null,
       );
       return {
         key: win.id || win.dataset.appWindow || win.className,
@@ -55,7 +55,7 @@ const readWindowInventory = (page) =>
           : null,
         labelsInside: labels.every((label) => label && win.contains(label)),
       };
-    })
+    }),
   );
 
 /** Whether focus currently sits inside a window the visitor cannot see. */
@@ -66,7 +66,7 @@ const focusInHiddenWindow = (page) =>
       win &&
         (win.classList.contains("is-hidden") ||
           win.closest("[aria-hidden='true']") ||
-          getComputedStyle(win).display === "none")
+          getComputedStyle(win).display === "none"),
     );
   });
 
@@ -83,7 +83,10 @@ test("every top-level Home window is a uniquely titled non-modal dialog", async 
     expect(win.modal, `${win.key} leaves the desktop operable`).not.toBe("true");
   }
   expect(
-    topLevel.filter((win) => win.role === "alertdialog").map((win) => win.key).sort()
+    topLevel
+      .filter((win) => win.role === "alertdialog")
+      .map((win) => win.key)
+      .sort(),
   ).toEqual([...EXPLICIT_ALERT_DIALOGS]);
 
   // A nested window is chrome inside its owner's dialog; its markup keeps its own semantics.
@@ -99,20 +102,26 @@ test("every top-level Home window is a uniquely titled non-modal dialog", async 
   }
 
   // Existing labels, roles and modality are untouched.
-  await expect(page.locator("#about-window")).toHaveAttribute("aria-labelledby", "about-window-title");
+  await expect(page.locator("#about-window")).toHaveAttribute(
+    "aria-labelledby",
+    "about-window-title",
+  );
   await expect(page.locator("#about-window")).toHaveAttribute("aria-modal", "false");
-  await expect(page.locator("#lain-alert-window")).toHaveAttribute("aria-labelledby", "lain-alert-title");
+  await expect(page.locator("#lain-alert-window")).toHaveAttribute(
+    "aria-labelledby",
+    "lain-alert-title",
+  );
   await expect(page.locator("#fate-window")).toHaveAttribute("aria-labelledby", "fate-title");
   await expect(page.locator("#gears-nest-prompt")).toHaveAttribute(
     "aria-labelledby",
-    "gears-nest-prompt-title"
+    "gears-nest-prompt-title",
   );
   await expect(page.locator("#sudoku-errors-prompt")).toHaveAttribute("aria-modal", "true");
   await expect(page.locator("#game-profile-dialog")).toHaveAttribute("aria-modal", "false");
   await expect(page.locator("#administrator-alert-window")).toHaveAttribute("aria-modal", "false");
   await expect(page.locator("#sudoku-solve-popup [role='dialog']")).toHaveAttribute(
     "aria-modal",
-    "false"
+    "false",
   );
 });
 
@@ -135,37 +144,39 @@ test("the shared helper covers every naming and exclusion branch", async ({ page
         ["role", "aria-labelledby", "aria-label", "aria-modal"].map((name) => [
           name,
           win.getAttribute(name),
-        ])
+        ]),
       );
     const titleId = (win) => win.querySelector(".title-bar-text")?.id || "";
 
     const derived = make(
-      '<div class="window" id="semantic-probe"><div class="title-bar"><div class="title-bar-text">Probe</div></div></div>'
+      '<div class="window" id="semantic-probe"><div class="title-bar"><div class="title-bar-text">Probe</div></div></div>',
     );
     const app = make(
-      '<div class="window" data-app-window="semantic-app"><div class="title-bar"><div class="title-bar-text">App</div></div></div>'
+      '<div class="window" data-app-window="semantic-app"><div class="title-bar"><div class="title-bar-text">App</div></div></div>',
     );
     const kept = make(
-      '<div class="window"><div class="title-bar"><div class="title-bar-text" id="semantic-kept">Kept</div></div></div>'
+      '<div class="window"><div class="title-bar"><div class="title-bar-text" id="semantic-kept">Kept</div></div></div>',
     );
     const collision = make(
-      '<div class="window" id="windows-window"><div class="title-bar"><div class="title-bar-text">Clash</div></div></div>'
+      '<div class="window" id="windows-window"><div class="title-bar"><div class="title-bar-text">Clash</div></div></div>',
     );
     const anonymous = [0, 1].map(() =>
-      make('<div class="window"><div class="title-bar"><div class="title-bar-text">Anon</div></div></div>')
+      make(
+        '<div class="window"><div class="title-bar"><div class="title-bar-text">Anon</div></div></div>',
+      ),
     );
     const labelled = make(
-      '<div class="window" aria-label="Named"><div class="title-bar"><div class="title-bar-text">Ignored</div></div></div>'
+      '<div class="window" aria-label="Named"><div class="title-bar"><div class="title-bar-text">Ignored</div></div></div>',
     );
     const alert = make(
-      '<div class="window" role="alertdialog" aria-modal="true"><div class="title-bar"><div class="title-bar-text">Alert</div></div></div>'
+      '<div class="window" role="alertdialog" aria-modal="true"><div class="title-bar"><div class="title-bar-text">Alert</div></div></div>',
     );
     const region = make(
-      '<section class="window" role="region" aria-label="Region"><div class="title-bar"><div class="title-bar-text">Region</div></div></section>'
+      '<section class="window" role="region" aria-label="Region"><div class="title-bar"><div class="title-bar-text">Region</div></div></section>',
     );
     const untitled = make('<div class="window"><div class="window-body">No title</div></div>');
     const outer = make(
-      '<div class="window"><div class="window-body"><div class="window" id="semantic-inner"><div class="title-bar"><div class="title-bar-text">Inner</div></div></div></div></div>'
+      '<div class="window"><div class="window-body"><div class="window" id="semantic-inner"><div class="title-bar"><div class="title-bar-text">Inner</div></div></div></div></div>',
     );
     const inner = outer.querySelector("#semantic-inner");
 
@@ -191,11 +202,19 @@ test("the shared helper covers every naming and exclusion branch", async ({ page
   expect(results.invalid).toEqual([false, false, false]);
   expect(results.derived).toEqual([
     true,
-    { role: "dialog", "aria-labelledby": "semantic-probe-title", "aria-label": null, "aria-modal": null },
+    {
+      role: "dialog",
+      "aria-labelledby": "semantic-probe-title",
+      "aria-label": null,
+      "aria-modal": null,
+    },
     "semantic-probe-title",
   ]);
   expect(results.repeat).toEqual([true, results.derived[1]]);
-  expect(results.app[1]).toMatchObject({ role: "dialog", "aria-labelledby": "semantic-app-window-title" });
+  expect(results.app[1]).toMatchObject({
+    role: "dialog",
+    "aria-labelledby": "semantic-app-window-title",
+  });
   expect(results.kept[1]).toMatchObject({ role: "dialog", "aria-labelledby": "semantic-kept" });
 
   // `windows-window-title` already names Projects, so the probe gets a fresh id.
@@ -242,7 +261,9 @@ for (const viewport of REVIEW_VIEWPORTS) {
 
     for (let step = 0; step < 30; step += 1) {
       await page.keyboard.press("Tab");
-      expect(await focusInHiddenWindow(page), `Tab ${step} stays out of hidden windows`).toBe(false);
+      expect(await focusInHiddenWindow(page), `Tab ${step} stays out of hidden windows`).toBe(
+        false,
+      );
     }
 
     const projectsWindow = await openApp(page, "windows");
@@ -255,7 +276,9 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await expect(projects).toBeVisible();
     await expect(credits).toBeVisible();
     const [projectsZ, creditsZ] = await Promise.all(
-      [projectsWindow, creditsWindow].map((win) => win.evaluate((element) => Number(element.style.zIndex)))
+      [projectsWindow, creditsWindow].map((win) =>
+        win.evaluate((element) => Number(element.style.zIndex)),
+      ),
     );
     expect(creditsZ).toBeGreaterThan(projectsZ);
 
@@ -297,10 +320,8 @@ test("keyboard dismissal and focus restoration are unchanged", async ({ page }) 
 test("random-event windows gain dialog semantics on the shared open path", async ({ page }) => {
   await openHomeDesktop(page, DESKTOP);
   const opened = await page.evaluate(() => {
-    const {
-      bindManagedRandomEventWindowAnimation,
-      showManagedRandomEventWindow,
-    } = window.homeEventRuntime;
+    const { bindManagedRandomEventWindowAnimation, showManagedRandomEventWindow } =
+      window.homeEventRuntime;
     const win = document.createElement("div");
     win.className = "window random-event-window is-hidden";
     win.setAttribute("aria-hidden", "true");
@@ -322,7 +343,9 @@ test("random-event windows gain dialog semantics on the shared open path", async
   await dialog.evaluate((element) => element.remove());
 });
 
-test("newly named windows and the calendar popout pass the WCAG scan", async ({ page }, testInfo) => {
+test("newly named windows and the calendar popout pass the WCAG scan", async ({
+  page,
+}, testInfo) => {
   await openHomeDesktop(page, DESKTOP);
   for (const app of ["study-resources", "cursor", "life-counter"]) {
     await openApp(page, app);

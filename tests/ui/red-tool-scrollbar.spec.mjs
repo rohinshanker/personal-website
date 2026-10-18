@@ -23,8 +23,8 @@ const appendOverflowingConversation = (page) =>
       message.append(
         speaker,
         document.createTextNode(
-          `Conversation message ${index} with enough copy to exercise the chat scrollbar.`
-        )
+          `Conversation message ${index} with enough copy to exercise the chat scrollbar.`,
+        ),
       );
       row.append(avatar, message);
       log.append(row);
@@ -71,10 +71,7 @@ const measure = (page) =>
     };
   });
 
-test("Red Tool chat remains scrollable and contained across viewports", async ({
-  page,
-}) => {
-
+test("Red Tool chat remains scrollable and contained across viewports", async ({ page }) => {
   await page.setViewportSize(viewports[0]);
   await page.addInitScript(() => {
     localStorage.clear();
@@ -97,7 +94,7 @@ test("Red Tool chat remains scrollable and contained across viewports", async ({
       const result = await page.evaluate(() =>
         window.rohinAdminOrchestrator.runEvent("red-tool", {
           source: "red-tool-scrollbar-test",
-        })
+        }),
       );
       expect(result).toEqual({ ok: true, message: "Triggered Red Tool." });
       await expect(win).toBeVisible();
@@ -152,5 +149,4 @@ test("Red Tool chat remains scrollable and contained across viewports", async ({
       await expect(win).toBeHidden();
     });
   }
-
 });

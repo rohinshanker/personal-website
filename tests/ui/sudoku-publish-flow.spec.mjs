@@ -29,7 +29,7 @@ const BASELINE_WITH_HINTS_WINS = 1;
  * board is the 81-character puzzle string it was solved from.
  */
 const SUDOKU_PUZZLE_ID_PATTERN = expect.stringMatching(
-  /^(?:generated-(?:easy|medium|hard|expert|master|extreme)-[a-z0-9]+-[a-z0-9]{1,6}|session-sudoku-verified-[0-9]+)$/
+  /^(?:generated-(?:easy|medium|hard|expert|master|extreme)-[a-z0-9]+-[a-z0-9]{1,6}|session-sudoku-verified-[0-9]+)$/,
 );
 const SUDOKU_PUZZLE_PATTERN = expect.stringMatching(/^[0-9]{81}$/);
 
@@ -70,16 +70,16 @@ const scenarios = Object.freeze([
 
 const generatedBackendSource = await readFile(
   new URL("../../scripts/home/game-stats-backend.js", import.meta.url),
-  "utf8"
+  "utf8",
 );
 const generatedBuildVersion = generatedBackendSource.match(
-  /buildVersion:\s*"(sha256-[a-f0-9]{64})"/
+  /buildVersion:\s*"(sha256-[a-f0-9]{64})"/,
 )?.[1];
 if (!generatedBuildVersion) {
   throw new Error("Unable to read the generated game build version.");
 }
 const generatedResultProtocol = Number(
-  generatedBackendSource.match(/resultProtocol:\s*(\d+)/)?.[1]
+  generatedBackendSource.match(/resultProtocol:\s*(\d+)/)?.[1],
 );
 if (!generatedResultProtocol) {
   throw new Error("Unable to read the generated result protocol.");
@@ -88,7 +88,7 @@ if (!generatedResultProtocol) {
 const installBackendConfig = async (page) => {
   const mockedBackendSource = generatedBackendSource.replace(
     /apiBaseUrl:\s*"[^"]*"/,
-    `apiBaseUrl: ${JSON.stringify(API_BASE_URL)}`
+    `apiBaseUrl: ${JSON.stringify(API_BASE_URL)}`,
   );
   if (mockedBackendSource === generatedBackendSource) {
     throw new Error("Unable to install the Sudoku publish backend config.");
@@ -97,7 +97,7 @@ const installBackendConfig = async (page) => {
     route.fulfill({
       body: mockedBackendSource,
       contentType: "application/javascript",
-    })
+    }),
   );
 };
 
@@ -173,14 +173,14 @@ window.__sudokuPublishFlowTest = Object.freeze({
     };
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
 const emptySudokuMap = (valueFactory) =>
   Object.fromEntries(
-    SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, valueFactory(difficulty)])
+    SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, valueFactory(difficulty)]),
   );
 
 const createLeaderboardEntry = ({
@@ -208,7 +208,7 @@ const baselineEntries = Object.freeze([
       name: "Aria",
       metric: 90,
       occurredAt: "2026-07-01T00:00:00.000Z",
-    })
+    }),
   ),
   Object.freeze(
     createLeaderboardEntry({
@@ -217,7 +217,7 @@ const baselineEntries = Object.freeze([
       name: "Nia",
       metric: 180,
       occurredAt: "2026-07-02T00:00:00.000Z",
-    })
+    }),
   ),
 ]);
 
@@ -367,8 +367,8 @@ const installApi = async (page, scenario) => {
         body: JSON.stringify(
           createStatsPayload(
             publishedEvents,
-            publishedEvents.map(({ id }) => id).filter((id) => pendingEventIds.has(id))
-          )
+            publishedEvents.map(({ id }) => id).filter((id) => pendingEventIds.has(id)),
+          ),
         ),
         contentType: "application/json",
         headers: corsHeaders,
@@ -397,7 +397,7 @@ const installApi = async (page, scenario) => {
 const prepareTerminalBoard = async (page, elapsedSeconds) => {
   const terminal = await page.evaluate(
     (seconds) => window.__sudokuPublishFlowTest.prepareOneCellShort(seconds),
-    elapsedSeconds
+    elapsedSeconds,
   );
   expect(terminal).toEqual({
     difficulty: "easy",
@@ -410,7 +410,7 @@ const prepareTerminalBoard = async (page, elapsedSeconds) => {
 
 const finishTerminalBoard = async (sudokuWindow, terminal) => {
   const finalCell = sudokuWindow.locator(
-    `.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`
+    `.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`,
   );
   await finalCell.click();
   await sudokuWindow.locator(`[data-sudoku-number="${terminal.finalDigit}"]`).click();
@@ -430,7 +430,7 @@ const confirmErrorsAndRevealMistake = async (page, sudokuWindow) => {
   await expect(errorsPrompt).toBeVisible();
   await expect(errorsPrompt).toHaveAttribute("role", "alertdialog");
   await expect(errorsPrompt.locator("#sudoku-errors-prompt-message")).toHaveText(
-    "Are you sure you would like to have errors revealed? Doing so will disqualify you from the leaderboard."
+    "Are you sure you would like to have errors revealed? Doing so will disqualify you from the leaderboard.",
   );
   await expect(errorsPrompt.locator(".sudoku-solve-ball")).toBeVisible();
   await expect(cancelButton).toHaveText("Cancel");
@@ -442,7 +442,7 @@ const confirmErrorsAndRevealMistake = async (page, sudokuWindow) => {
   await expect(errorsHint).toHaveAttribute("aria-pressed", "true");
 
   const incorrectEntry = await page.evaluate(() =>
-    window.__sudokuPublishFlowTest.readIncorrectEntry()
+    window.__sudokuPublishFlowTest.readIncorrectEntry(),
   );
   expect(incorrectEntry).toEqual({
     incorrectDigit: expect.stringMatching(/^[1-9]$/),
@@ -452,16 +452,11 @@ const confirmErrorsAndRevealMistake = async (page, sudokuWindow) => {
   expect(incorrectEntry.incorrectDigit).not.toBe(incorrectEntry.solutionDigit);
 
   const incorrectCell = sudokuWindow.locator(
-    `.sudoku-cell[data-sudoku-index="${incorrectEntry.index}"]`
+    `.sudoku-cell[data-sudoku-index="${incorrectEntry.index}"]`,
   );
   await incorrectCell.click();
-  await sudokuWindow
-    .locator(`[data-sudoku-number="${incorrectEntry.incorrectDigit}"]`)
-    .click();
-  await expect(incorrectCell).toHaveAttribute(
-    "data-sudoku-value",
-    incorrectEntry.incorrectDigit
-  );
+  await sudokuWindow.locator(`[data-sudoku-number="${incorrectEntry.incorrectDigit}"]`).click();
+  await expect(incorrectCell).toHaveAttribute("data-sudoku-value", incorrectEntry.incorrectDigit);
   await expect(incorrectCell).toHaveClass(/is-invalid/);
   await expect(sudokuWindow.locator("#sudoku-mistakes")).toHaveText("Mistakes: 1");
 };
@@ -493,7 +488,7 @@ const bootHome = async (page, viewport, scenario, { afterRoutes } = {}) => {
       savedProfile: profile,
       statsKey: GAME_STATS_STORAGE_KEY,
       sudokuKey: SUDOKU_STORAGE_KEY,
-    }
+    },
   );
   await installBackendConfig(page);
   await installSudokuBridge(page);
@@ -519,12 +514,17 @@ const bootHome = async (page, viewport, scenario, { afterRoutes } = {}) => {
 };
 
 const waitForIssuedSudokuBoard = async (page, api) => {
-  await expect.poll(async () => {
-    const issued = api.verified.boardFor("sudoku");
-    if (!issued) return false;
-    const board = await page.evaluate(() => window.__sudokuPublishFlowTest.readBoard());
-    return board.puzzleId === issued.id;
-  }, { timeout: PUBLISH_TIMEOUT_MS }).toBe(true);
+  await expect
+    .poll(
+      async () => {
+        const issued = api.verified.boardFor("sudoku");
+        if (!issued) return false;
+        const board = await page.evaluate(() => window.__sudokuPublishFlowTest.readBoard());
+        return board.puzzleId === issued.id;
+      },
+      { timeout: PUBLISH_TIMEOUT_MS },
+    )
+    .toBe(true);
 };
 
 const preparePage = async (page, viewport, scenario) => {
@@ -538,9 +538,7 @@ const preparePage = async (page, viewport, scenario) => {
   // The board is asked for when it is adopted, which is before Play: a verified
   // result has to bind the puzzle the server chose, so it cannot wait for the
   // first entry. Nothing is published yet.
-  await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   expect(api.eventRequests).toEqual([]);
   await waitForIssuedSudokuBoard(page, api);
 
@@ -548,9 +546,7 @@ const preparePage = async (page, viewport, scenario) => {
   await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/, {
     timeout: PUBLISH_TIMEOUT_MS,
   });
-  await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   await expect
     .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
       timeout: PUBLISH_TIMEOUT_MS,
@@ -568,15 +564,13 @@ const preparePage = async (page, viewport, scenario) => {
   } else {
     await expect(sudokuWindow.locator('[data-sudoku-hint="off"]')).toHaveAttribute(
       "aria-pressed",
-      "true"
+      "true",
     );
   }
 
   const terminal = await prepareTerminalBoard(page, scenario.elapsedSeconds);
   await finishTerminalBoard(sudokuWindow, terminal);
-  await expect
-    .poll(() => api.requestSequence, { timeout: PUBLISH_TIMEOUT_MS })
-    .toContain("event");
+  await expect.poll(() => api.requestSequence, { timeout: PUBLISH_TIMEOUT_MS }).toContain("event");
   expect(api.eventRequests).toHaveLength(1);
   await expect
     .poll(() => api.statsRequests.some(({ refreshed }) => refreshed), {
@@ -584,12 +578,13 @@ const preparePage = async (page, viewport, scenario) => {
     })
     .toBe(true);
   await expect
-    .poll(() =>
-      page.evaluate(
-        (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]"),
-        GAME_STATS_SYNC_QUEUE_STORAGE_KEY
-      ),
-      { timeout: PUBLISH_TIMEOUT_MS }
+    .poll(
+      () =>
+        page.evaluate(
+          (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]"),
+          GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+        ),
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toEqual([]);
 
@@ -601,7 +596,7 @@ const preparePage = async (page, viewport, scenario) => {
   }
   await expect(statsWindow).toBeVisible();
   await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
-    "Global stats are up to date."
+    "Global stats are up to date.",
   );
 
   return { api, statsWindow, sudokuWindow, terminal };
@@ -649,12 +644,8 @@ const expectPublishedRequestContract = (api, scenario) => {
 
   const sessionIndex = api.requestSequence.indexOf("session");
   const eventIndex = api.requestSequence.indexOf("event");
-  expect(api.requestSequence.filter((request) => request === "session")).toEqual([
-    "session",
-  ]);
-  expect(api.requestSequence.filter((request) => request === "event")).toEqual([
-    "event",
-  ]);
+  expect(api.requestSequence.filter((request) => request === "session")).toEqual(["session"]);
+  expect(api.requestSequence.filter((request) => request === "event")).toEqual(["event"]);
   expect(sessionIndex).toBeGreaterThanOrEqual(0);
   expect(eventIndex).toBeGreaterThan(sessionIndex);
   expect(api.requestSequence.slice(eventIndex + 1)).toContain("stats-refreshed");
@@ -668,7 +659,7 @@ const expectPublishedRequestContract = (api, scenario) => {
         url.searchParams.get("fresh") === "1" &&
         url.searchParams.getAll("pendingEventId").includes(api.eventRequests[0].event.id)
       );
-    })
+    }),
   ).toBe(true);
 };
 
@@ -681,7 +672,7 @@ const readStoredStats = (page) =>
     {
       queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
       statsKey: GAME_STATS_STORAGE_KEY,
-    }
+    },
   );
 
 const expectLocalSudokuResult = (stored, scenario) => {
@@ -692,7 +683,7 @@ const expectLocalSudokuResult = (stored, scenario) => {
     withHints: scenario.hintBucket === "withHints" ? 1 : 0,
   });
   expect(stored.stats.totals.sudoku.bestTimes.easy).toBe(
-    scenario.hintBucket === "noHints" ? scenario.elapsedSeconds : null
+    scenario.hintBucket === "noHints" ? scenario.elapsedSeconds : null,
   );
 
   const localLeaderboard = stored.stats.leaderboards.sudoku.easy;
@@ -732,9 +723,7 @@ const expectGlobalSudokuResult = async (statsWindow, scenario) => {
   const panels = statsWindow.locator(".game-stats-sudoku-leaderboard");
   await expect(panels).toHaveCount(SUDOKU_DIFFICULTIES.length);
   const easyPanel = statsWindow.locator('[aria-labelledby="game-stats-sudoku-easy"]');
-  const rows = easyPanel.locator(
-    ".game-stats-leaderboard-template-list > .game-stats-sudoku-row"
-  );
+  const rows = easyPanel.locator(".game-stats-leaderboard-template-list > .game-stats-sudoku-row");
   const personalRecord = easyPanel.locator(".game-stats-sudoku-local-best-row");
 
   await expect(easyPanel.getByText("No-Hints Top 3", { exact: true })).toBeVisible();
@@ -743,53 +732,34 @@ const expectGlobalSudokuResult = async (statsWindow, scenario) => {
   if (scenario.hintBucket === "noHints") {
     await expect(rows.nth(1)).toHaveAttribute(
       "aria-label",
-      "Rank 2: Sudoku Publisher, 120 seconds, your entry"
+      "Rank 2: Sudoku Publisher, 120 seconds, your entry",
     );
-    await expect(rows.nth(2)).toHaveAttribute(
-      "aria-label",
-      "Rank 3: Nia, 180 seconds"
-    );
+    await expect(rows.nth(2)).toHaveAttribute("aria-label", "Rank 3: Nia, 180 seconds");
     await expect(personalRecord).toHaveAttribute(
       "aria-label",
-      "Your no-hints record: #2, Sudoku Publisher, 120 seconds"
+      "Your no-hints record: #2, Sudoku Publisher, 120 seconds",
     );
     await expect(personalRecord.locator(".game-stats-metric--text")).toHaveText("02:00");
   } else {
-    await expect(rows.nth(1)).toHaveAttribute(
-      "aria-label",
-      "Rank 2: Nia, 180 seconds"
-    );
-    await expect(rows.nth(2)).toHaveAttribute(
-      "aria-label",
-      "Rank 3: N/A, no recorded time"
-    );
-    await expect(rows.locator(".game-stats-metric--text")).toHaveText([
-      "01:30",
-      "03:00",
-      "99:99",
-    ]);
+    await expect(rows.nth(1)).toHaveAttribute("aria-label", "Rank 2: Nia, 180 seconds");
+    await expect(rows.nth(2)).toHaveAttribute("aria-label", "Rank 3: N/A, no recorded time");
+    await expect(rows.locator(".game-stats-metric--text")).toHaveText(["01:30", "03:00", "99:99"]);
     await expect(personalRecord).toHaveAttribute(
       "aria-label",
-      "Your no-hints record: #—, N/A, no record"
+      "Your no-hints record: #—, N/A, no record",
     );
     await expect(personalRecord.locator(".game-stats-metric--text")).toHaveText("99:99");
   }
 
   await expect(
-    easyPanel.locator(
-      '[aria-label="Total verified Sudoku completions on Easy: 4"]'
-    )
+    easyPanel.locator('[aria-label="Total verified Sudoku completions on Easy: 4"]'),
   ).toBeVisible();
 
   for (const difficulty of SUDOKU_DIFFICULTIES.slice(1)) {
     const label = `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`;
-    const panel = statsWindow.locator(
-      `[aria-labelledby="game-stats-sudoku-${difficulty}"]`
-    );
+    const panel = statsWindow.locator(`[aria-labelledby="game-stats-sudoku-${difficulty}"]`);
     await expect(
-      panel.locator(
-        `[aria-label="Total verified Sudoku completions on ${label}: 0"]`
-      )
+      panel.locator(`[aria-label="Total verified Sudoku completions on ${label}: 0"]`),
     ).toBeVisible();
   }
 };
@@ -813,7 +783,7 @@ const expectStatsWindowContained = async (page, statsWindow) => {
   expect(layout.left).toBeGreaterThanOrEqual(0);
   expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth);
   expect(await page.evaluate(() => document.body.scrollWidth)).toBeLessThanOrEqual(
-    layout.viewportWidth
+    layout.viewportWidth,
   );
 };
 
@@ -822,11 +792,7 @@ for (const viewport of viewports) {
     test(`a verified Sudoku ${scenario.label} completion publishes at ${viewport.name}`, async ({
       page,
     }, testInfo) => {
-      const { api, statsWindow } = await preparePage(
-        page,
-        viewport,
-        scenario
-      );
+      const { api, statsWindow } = await preparePage(page, viewport, scenario);
       const status = statsWindow.locator("[data-game-stats-sync-status]");
 
       await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
@@ -842,14 +808,13 @@ for (const viewport of viewports) {
       await expectStatsWindowContained(page, statsWindow);
 
       const screenshotPath = testInfo.outputPath(
-        `sudoku-publish-${scenario.hintBucket}-${viewport.width}x${viewport.height}.png`
+        `sudoku-publish-${scenario.hintBucket}-${viewport.width}x${viewport.height}.png`,
       );
       await page.screenshot({ fullPage: true, path: screenshotPath });
-      await testInfo.attach(
-        `sudoku-publish-${scenario.hintBucket}-${viewport.name}`,
-        { path: screenshotPath, contentType: "image/png" }
-      );
-
+      await testInfo.attach(`sudoku-publish-${scenario.hintBucket}-${viewport.name}`, {
+        path: screenshotPath,
+        contentType: "image/png",
+      });
     });
   }
 }
@@ -881,7 +846,7 @@ const prepareRestorableSudokuPause = async (page, scenario, viewport = viewports
       savedProfile: profile,
       statsKey: GAME_STATS_STORAGE_KEY,
       sudokuKey: SUDOKU_STORAGE_KEY,
-    }
+    },
   );
   await installBackendConfig(page);
   await installSudokuBridge(page);
@@ -907,15 +872,11 @@ const prepareRestorableSudokuPause = async (page, scenario, viewport = viewports
     .poll(() => api.statsRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
     .toBeGreaterThanOrEqual(1);
   let sudokuWindow = await openSudokuAndPlay();
-  await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
 
   // Play most of the puzzle, then let the progress persist before leaving.
   const terminal = await prepareTerminalBoard(page, 100);
-  await sudokuWindow
-    .locator(`.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`)
-    .click();
+  await sudokuWindow.locator(`.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`).click();
   await expect
     .poll(
       () =>
@@ -930,7 +891,7 @@ const prepareRestorableSudokuPause = async (page, scenario, viewport = viewports
               }
             : null;
         }, SUDOKU_STORAGE_KEY),
-      { timeout: PUBLISH_TIMEOUT_MS }
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toEqual({
       completionRecorded: false,
@@ -951,13 +912,13 @@ const prepareRestorableSudokuPause = async (page, scenario, viewport = viewports
     })
     .toBe(1);
   await expect
-    .poll(() =>
-      page.evaluate(
-        (sudokuKey) =>
-          Boolean(JSON.parse(localStorage.getItem(sudokuKey) || "null")?.verified),
-        SUDOKU_STORAGE_KEY
-      ),
-      { timeout: PUBLISH_TIMEOUT_MS }
+    .poll(
+      () =>
+        page.evaluate(
+          (sudokuKey) => Boolean(JSON.parse(localStorage.getItem(sudokuKey) || "null")?.verified),
+          SUDOKU_STORAGE_KEY,
+        ),
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toBe(true);
 
@@ -965,7 +926,7 @@ const prepareRestorableSudokuPause = async (page, scenario, viewport = viewports
   // same puzzle, not a new one that resembles it.
   const { puzzleId } = await page.evaluate(
     (sudokuKey) => JSON.parse(localStorage.getItem(sudokuKey)),
-    SUDOKU_STORAGE_KEY
+    SUDOKU_STORAGE_KEY,
   );
   expect(puzzleId).toEqual(SUDOKU_PUZZLE_ID_PATTERN);
   return { api, openSudokuAndPlay, puzzleId, sudokuWindow, terminal };
@@ -975,10 +936,7 @@ test("a restored unsolved Sudoku puzzle publishes through its restored verified 
   page,
 }) => {
   const scenario = scenarios[0];
-  const { api, openSudokuAndPlay, terminal } = await prepareRestorableSudokuPause(
-    page,
-    scenario
-  );
+  const { api, openSudokuAndPlay, terminal } = await prepareRestorableSudokuPause(page, scenario);
 
   const statsRequestCountBeforeReload = api.statsRequests.length;
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -1000,18 +958,14 @@ test("a restored unsolved Sudoku puzzle publishes through its restored verified 
       statsSessionEligible: true,
       timerRunning: true,
     });
-  await expect
-    .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   expect(api.sessionRequests).toHaveLength(1);
   await expect(
-    sudokuWindow.locator(`.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`)
+    sudokuWindow.locator(`.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`),
   ).toHaveAttribute("data-sudoku-value", "");
 
   await finishTerminalBoard(sudokuWindow, terminal);
-  await expect
-    .poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   expect(api.eventRequests[0]).toEqual({
     event: {
       id: expect.stringMatching(/^local-[a-f0-9-]{36}$/),
@@ -1043,12 +997,13 @@ test("a restored unsolved Sudoku puzzle publishes through its restored verified 
     })
     .toBe(true);
   await expect
-    .poll(() =>
-      page.evaluate(
-        (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]"),
-        GAME_STATS_SYNC_QUEUE_STORAGE_KEY
-      ),
-      { timeout: PUBLISH_TIMEOUT_MS }
+    .poll(
+      () =>
+        page.evaluate(
+          (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]"),
+          GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+        ),
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toEqual([]);
   const stored = await readStoredStats(page);
@@ -1082,7 +1037,7 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
       savedProfile: profile,
       statsKey: GAME_STATS_STORAGE_KEY,
       sudokuKey: SUDOKU_STORAGE_KEY,
-    }
+    },
   );
   // Routes registered on the context serve both tabs and share one API log.
   await installBackendConfig(context);
@@ -1109,9 +1064,7 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
   };
 
   const first = await openTab();
-  await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   const terminal = await prepareTerminalBoard(first.page, 100);
   await first.sudokuWindow
     .locator(`.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`)
@@ -1121,13 +1074,11 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
       () =>
         first.page.evaluate(
           (sudokuKey) =>
-            JSON.parse(localStorage.getItem(sudokuKey) || "null")?.values.replace(
-              /[^1-9]/g,
-              ""
-            ).length,
-          SUDOKU_STORAGE_KEY
+            JSON.parse(localStorage.getItem(sudokuKey) || "null")?.values.replace(/[^1-9]/g, "")
+              .length,
+          SUDOKU_STORAGE_KEY,
         ),
-      { timeout: PUBLISH_TIMEOUT_MS }
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toBe(80);
 
@@ -1144,15 +1095,13 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
   // The second tab restores the same unfinished puzzle rather than being issued
   // another: one board, one proof, however many tabs are looking at it.
   const second = await openTab();
-  await expect
-    .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   expect(api.sessionRequests).toHaveLength(1);
   await expect(
-    second.sudokuWindow.locator(`.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`)
+    second.sudokuWindow.locator(`.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`),
   ).toHaveAttribute("data-sudoku-value", "");
   expect(
-    await second.page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle())
+    await second.page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()),
   ).toMatchObject({ hasStatsSession: true, statsSessionEligible: true });
 
   // The first tab was paused to hand the save over; it resumes to finish.
@@ -1160,18 +1109,16 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
   await expect(first.sudokuWindow.locator("#sudoku-resume")).toBeHidden();
 
   await finishTerminalBoard(first.sudokuWindow, terminal);
-  await expect
-    .poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   // The latch reached storage before the handoff, so the other tab already knows.
   await expect
     .poll(
       () =>
         second.page.evaluate(
           (sudokuKey) => JSON.parse(localStorage.getItem(sudokuKey) || "null")?.completionRecorded,
-          SUDOKU_STORAGE_KEY
+          SUDOKU_STORAGE_KEY,
         ),
-      { timeout: PUBLISH_TIMEOUT_MS }
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toBe(true);
 
@@ -1179,14 +1126,13 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
   await expect
     .poll(
       () =>
-        second.page.evaluate(
-          (sudokuKey) => {
-            const saved = JSON.parse(localStorage.getItem(sudokuKey) || "null");
-            return saved ? { completionRecorded: saved.completionRecorded, solved: saved.solved } : null;
-          },
-          SUDOKU_STORAGE_KEY
-        ),
-      { timeout: PUBLISH_TIMEOUT_MS }
+        second.page.evaluate((sudokuKey) => {
+          const saved = JSON.parse(localStorage.getItem(sudokuKey) || "null");
+          return saved
+            ? { completionRecorded: saved.completionRecorded, solved: saved.solved }
+            : null;
+        }, SUDOKU_STORAGE_KEY),
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toEqual({ completionRecorded: true, solved: true });
   // The second tab has finished reacting, so a second publish would already
@@ -1201,14 +1147,12 @@ test("one restored puzzle open in two tabs publishes once", async ({ context }) 
   expect(stored.stats.totals.sudoku.wins.easy).toEqual({ noHints: 1, withHints: 0 });
 });
 
-test("a solved Sudoku puzzle records once after undo, reload, and New Game", async ({
-  page,
-}) => {
+test("a solved Sudoku puzzle records once after undo, reload, and New Game", async ({ page }) => {
   const scenario = scenarios[0];
   const { api, statsWindow, sudokuWindow, terminal } = await preparePage(
     page,
     { width: 1280, height: 800 },
-    scenario
+    scenario,
   );
   const closeStats = statsWindow.locator('[data-close="game-stats-sudoku"]');
   await closeStats.click();
@@ -1217,7 +1161,7 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
   if (await solveOk.isVisible()) await solveOk.click();
 
   const finalCell = sudokuWindow.locator(
-    `.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`
+    `.sudoku-cell[data-sudoku-index="${terminal.finalIndex}"]`,
   );
   await sudokuWindow.locator("#sudoku-undo").click();
   await expect(finalCell).toHaveAttribute("data-sudoku-value", "");
@@ -1237,17 +1181,18 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
   });
 
   await expect
-    .poll(() =>
-      page.evaluate((sudokuKey) => {
-        const saved = JSON.parse(localStorage.getItem(sudokuKey) || "null");
-        return saved
-          ? {
-              completionRecorded: saved.completionRecorded,
-              solved: saved.solved,
-            }
-          : null;
-      }, SUDOKU_STORAGE_KEY),
-      { timeout: PUBLISH_TIMEOUT_MS }
+    .poll(
+      () =>
+        page.evaluate((sudokuKey) => {
+          const saved = JSON.parse(localStorage.getItem(sudokuKey) || "null");
+          return saved
+            ? {
+                completionRecorded: saved.completionRecorded,
+                solved: saved.solved,
+              }
+            : null;
+        }, SUDOKU_STORAGE_KEY),
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toEqual({ completionRecorded: true, solved: true });
 
@@ -1266,8 +1211,8 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
       {
         initializationKey: TEST_INITIALIZATION_MARKER,
         sudokuKey: SUDOKU_STORAGE_KEY,
-      }
-    )
+      },
+    ),
   ).resolves.toEqual({
     completionRecorded: true,
     initializationMarker: "1",
@@ -1317,24 +1262,21 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
 
   if (await solveOk.isVisible()) await solveOk.click();
   await sudokuWindow.locator("#sudoku-new").click();
-  await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(2);
+  await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(2);
   // The second board runs a different clock, and the server is what reports it.
   await waitForIssuedSudokuBoard(page, api);
   api.verified.setMetric("sudoku", 150);
   const nextTerminal = await prepareTerminalBoard(page, 150);
   await finishTerminalBoard(sudokuWindow, nextTerminal);
+  await expect.poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(2);
   await expect
-    .poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(2);
-  await expect
-    .poll(() =>
-      page.evaluate(
-        (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]"),
-        GAME_STATS_SYNC_QUEUE_STORAGE_KEY
-      ),
-      { timeout: PUBLISH_TIMEOUT_MS }
+    .poll(
+      () =>
+        page.evaluate(
+          (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]"),
+          GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+        ),
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toEqual([]);
 
@@ -1386,11 +1328,10 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
   expect(api.eventRequests[1].event.id).not.toBe(api.eventRequests[0].event.id);
   // The identity the Worker deduplicates on follows the board, so a New Game
   // publishes a different puzzle rather than a second win for the first one.
-  expect(api.eventRequests[1].event.puzzleId).not.toBe(
-    api.eventRequests[0].event.puzzleId
-  );
-  expect(api.requestSequence.filter((request) => request === "session" || request === "event"))
-    .toEqual(["session", "event", "session", "event"]);
+  expect(api.eventRequests[1].event.puzzleId).not.toBe(api.eventRequests[0].event.puzzleId);
+  expect(
+    api.requestSequence.filter((request) => request === "session" || request === "event"),
+  ).toEqual(["session", "event", "session", "event"]);
 
   stored = await readStoredStats(page);
   expect(stored.queue).toEqual([]);
@@ -1408,17 +1349,15 @@ test("a solved Sudoku puzzle records once after undo, reload, and New Game", asy
     await sudokuWindow.locator('[data-game-stats-open="sudoku"]').click();
   }
   await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
-    "Global stats are up to date."
+    "Global stats are up to date.",
   );
   const easyPanel = statsWindow.locator('[aria-labelledby="game-stats-sudoku-easy"]');
   await expect(
-    easyPanel.locator(
-      '[aria-label="Total verified Sudoku completions on Easy: 5"]'
-    )
+    easyPanel.locator('[aria-label="Total verified Sudoku completions on Easy: 5"]'),
   ).toBeVisible();
   await expect(easyPanel.locator(".game-stats-sudoku-local-best-row")).toHaveAttribute(
     "aria-label",
-    "Your no-hints record: #2, Sudoku Publisher, 120 seconds"
+    "Your no-hints record: #2, Sudoku Publisher, 120 seconds",
   );
   await expectStatsWindowContained(page, statsWindow);
 });
@@ -1491,11 +1430,11 @@ const heldSudokuInteractions = Object.freeze([
     expectKept: async (sudokuWindow) => {
       await expect(sudokuWindow.locator('[data-sudoku-hint="errors"]')).toHaveAttribute(
         "aria-pressed",
-        "true"
+        "true",
       );
       await expect(sudokuWindow.locator('[data-sudoku-hint="off"]')).toHaveAttribute(
         "aria-pressed",
-        "false"
+        "false",
       );
     },
   }),
@@ -1504,14 +1443,15 @@ const heldSudokuInteractions = Object.freeze([
     solves: false,
     run: async (page, sudokuWindow) => {
       await sudokuWindow.locator('[data-sudoku-hint="conflicts"]').click();
-      await expect(
-        sudokuWindow.locator('[data-sudoku-hint="conflicts"]')
-      ).toHaveAttribute("aria-pressed", "true");
+      await expect(sudokuWindow.locator('[data-sudoku-hint="conflicts"]')).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
     },
     expectKept: (sudokuWindow) =>
       expect(sudokuWindow.locator('[data-sudoku-hint="conflicts"]')).toHaveAttribute(
         "aria-pressed",
-        "true"
+        "true",
       ),
   }),
   Object.freeze({
@@ -1521,25 +1461,18 @@ const heldSudokuInteractions = Object.freeze([
       await sudokuWindow.locator("#sudoku-note-toggle").click();
       await expect(sudokuWindow.locator("#sudoku-note-toggle")).toHaveAttribute(
         "aria-pressed",
-        "true"
+        "true",
       );
     },
     expectKept: (sudokuWindow) =>
-      expect(sudokuWindow.locator("#sudoku-note-toggle")).toHaveAttribute(
-        "aria-pressed",
-        "true"
-      ),
+      expect(sudokuWindow.locator("#sudoku-note-toggle")).toHaveAttribute("aria-pressed", "true"),
   }),
   Object.freeze({
     label: "an entry is made and undone",
     solves: false,
     run: async (page, sudokuWindow) => {
-      const entry = await page.evaluate(() =>
-        window.__sudokuPublishFlowTest.readIncorrectEntry()
-      );
-      const cell = sudokuWindow.locator(
-        `.sudoku-cell[data-sudoku-index="${entry.index}"]`
-      );
+      const entry = await page.evaluate(() => window.__sudokuPublishFlowTest.readIncorrectEntry());
+      const cell = sudokuWindow.locator(`.sudoku-cell[data-sudoku-index="${entry.index}"]`);
       await cell.click();
       await sudokuWindow.locator(`[data-sudoku-number="${entry.solutionDigit}"]`).click();
       await expect(cell).toHaveAttribute("data-sudoku-value", entry.solutionDigit);
@@ -1548,8 +1481,7 @@ const heldSudokuInteractions = Object.freeze([
       // be asked whether anything happened.
       await expect(cell).toHaveAttribute("data-sudoku-value", "");
     },
-    expectKept: (sudokuWindow) =>
-      expect(sudokuWindow.locator("#sudoku-undo")).toBeVisible(),
+    expectKept: (sudokuWindow) => expect(sudokuWindow.locator("#sudoku-undo")).toBeVisible(),
   }),
 ]);
 
@@ -1565,14 +1497,10 @@ heldSudokuInteractions.forEach((interaction) => {
 
     const sudokuWindow = await startHeldSudokuGame(page, held);
     await interaction.run(page, sudokuWindow);
-    const playedBoard = await page.evaluate(() =>
-      window.__sudokuPublishFlowTest.readBoard()
-    );
+    const playedBoard = await page.evaluate(() => window.__sudokuPublishFlowTest.readBoard());
 
     held.release();
-    await expect
-      .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-      .toBe(1);
+    await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
     await expect
       .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
         timeout: PUBLISH_TIMEOUT_MS,
@@ -1592,7 +1520,7 @@ heldSudokuInteractions.forEach((interaction) => {
     // The board the player is on is the board that stays, down to the cell they
     // were on; the issued puzzle is not swapped in underneath them.
     expect(await page.evaluate(() => window.__sudokuPublishFlowTest.readBoard())).toEqual(
-      playedBoard
+      playedBoard,
     );
     await interaction.expectKept(sudokuWindow);
     await settleFrames(page);
@@ -1613,9 +1541,7 @@ heldSudokuInteractions.forEach((interaction) => {
   });
 });
 
-test("late Sudoku issuance on a pristine board is adopted and publishes", async ({
-  page,
-}) => {
+test("late Sudoku issuance on a pristine board is adopted and publishes", async ({ page }) => {
   const scenario = scenarios[0];
   const held = holdSudokuIssuance(page);
   const api = await bootHome(page, viewports[2], scenario, {
@@ -1624,9 +1550,7 @@ test("late Sudoku issuance on a pristine board is adopted and publishes", async 
 
   const sudokuWindow = await startHeldSudokuGame(page, held);
   held.release();
-  await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
 
   // Nothing was played while the server was answering, so this really is the
   // board it issued and the proof belongs to it.
@@ -1656,12 +1580,8 @@ test("late Sudoku issuance on a pristine board is adopted and publishes", async 
 
   const terminal = await prepareTerminalBoard(page, scenario.elapsedSeconds);
   await finishTerminalBoard(sudokuWindow, terminal);
-  await expect
-    .poll(() => api.verified.finishes.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
-  await expect
-    .poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.verified.finishes.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
+  await expect.poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   // Publishing is not finished when /events returns: the contract below covers
   // the refreshed read that follows it, so wait for that read and for the queue
   // it drains rather than asserting into a half-settled sequence.
@@ -1675,9 +1595,9 @@ test("late Sudoku issuance on a pristine board is adopted and publishes", async 
       () =>
         page.evaluate(
           (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]"),
-          GAME_STATS_SYNC_QUEUE_STORAGE_KEY
+          GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
         ),
-      { timeout: PUBLISH_TIMEOUT_MS }
+      { timeout: PUBLISH_TIMEOUT_MS },
     )
     .toEqual([]);
   expectPublishedRequestContract(api, scenario);
@@ -1695,7 +1615,7 @@ test("late Sudoku issuance on a pristine board is adopted and publishes", async 
           window.homeSudokuRules.transition(
             state,
             input,
-            window.homeGameRules.createBudget(2_000_000)
+            window.homeGameRules.createBudget(2_000_000),
           );
         }
         return { result: window.homeSudokuRules.result(state) };
@@ -1703,7 +1623,7 @@ test("late Sudoku issuance on a pristine board is adopted and publishes", async 
         return { code: error.code, message: error.message };
       }
     },
-    { initial: issued.initial, inputs: replay }
+    { initial: issued.initial, inputs: replay },
   );
   // The published bucket is the verifier's own assistance verdict on the replay,
   // not a claim the page made about itself.
@@ -1730,9 +1650,7 @@ viewports.forEach((viewport) => {
     const sudokuWindow = await startHeldSudokuGame(page, held);
     await acceptSudokuErrorsWarning(sudokuWindow);
     held.release();
-    await expect
-      .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-      .toBe(1);
+    await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
     await expect
       .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
         timeout: PUBLISH_TIMEOUT_MS,
@@ -1750,7 +1668,7 @@ viewports.forEach((viewport) => {
     // accepted it on, and the puzzle is playable rather than half-replaced.
     await expect(sudokuWindow.locator('[data-sudoku-hint="errors"]')).toHaveAttribute(
       "aria-pressed",
-      "true"
+      "true",
     );
     await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/);
     await expect(sudokuWindow.locator("#sudoku-errors-prompt")).toBeHidden();
@@ -1766,9 +1684,7 @@ viewports.forEach((viewport) => {
   });
 });
 
-test("a carried note mode survives late issuance as a recorded action", async ({
-  page,
-}) => {
+test("a carried note mode survives late issuance as a recorded action", async ({ page }) => {
   const scenario = scenarios[0];
   const api = await bootHome(page, viewports[2], scenario);
 
@@ -1781,9 +1697,7 @@ test("a carried note mode survives late issuance as a recorded action", async ({
   await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/, {
     timeout: PUBLISH_TIMEOUT_MS,
   });
-  await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
 
   const noteToggle = sudokuWindow.locator("#sudoku-note-toggle");
   await noteToggle.click();
@@ -1798,9 +1712,7 @@ test("a carried note mode survives late issuance as a recorded action", async ({
   await expect(noteToggle).toHaveAttribute("aria-pressed", "true");
 
   held.release();
-  await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(2);
+  await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(2);
   const issued = api.verified.boardFor("sudoku");
   await expect
     .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readBoard()), {
@@ -1820,9 +1732,7 @@ test("a carried note mode survives late issuance as a recorded action", async ({
   await expect(noteToggle).toHaveAttribute("aria-pressed", "false");
   const terminal = await prepareTerminalBoard(page, scenario.elapsedSeconds);
   await finishTerminalBoard(sudokuWindow, terminal);
-  await expect
-    .poll(() => api.verified.finishes.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.verified.finishes.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
 
   // The preference is carried as an action on the issued board, so the verifier
   // derives the same state the player sees rather than being handed it.
@@ -1841,7 +1751,7 @@ test("a carried note mode survives late issuance as a recorded action", async ({
           window.homeSudokuRules.transition(
             state,
             input,
-            window.homeGameRules.createBudget(2_000_000)
+            window.homeGameRules.createBudget(2_000_000),
           );
         }
         return { result: window.homeSudokuRules.result(state) };
@@ -1849,7 +1759,7 @@ test("a carried note mode survives late issuance as a recorded action", async ({
         return { code: error.code, message: error.message };
       }
     },
-    { initial: issued.initial, inputs: replay }
+    { initial: issued.initial, inputs: replay },
   );
   expect(verified).toEqual({
     result: expect.objectContaining({ terminal: true, won: true }),
@@ -1879,13 +1789,11 @@ const holdSudokuRestore = (page) => {
 /** Everything a player can see of the board, for a before-and-after comparison. */
 const readSudokuSurface = (sudokuWindow) =>
   sudokuWindow.evaluate((element) => ({
-    errors: element
-      .querySelector('[data-sudoku-hint="errors"]')
-      .getAttribute("aria-pressed"),
+    errors: element.querySelector('[data-sudoku-hint="errors"]').getAttribute("aria-pressed"),
     mistakes: element.querySelector("#sudoku-mistakes").textContent,
     notes: element.querySelector("#sudoku-note-toggle").getAttribute("aria-pressed"),
     selected: [...element.querySelectorAll(".sudoku-cell")].findIndex((cell) =>
-      cell.classList.contains("is-selected")
+      cell.classList.contains("is-selected"),
     ),
     values: [...element.querySelectorAll(".sudoku-cell")]
       .map((cell) => cell.dataset.sudokuValue || "0")
@@ -1921,7 +1829,7 @@ const heldRestoreInteractions = Object.freeze([
       await sudokuWindow.locator("#sudoku-note-toggle").click();
       await expect(sudokuWindow.locator("#sudoku-note-toggle")).toHaveAttribute(
         "aria-pressed",
-        "true"
+        "true",
       );
     },
   }),
@@ -1946,14 +1854,9 @@ const heldRestoreInteractions = Object.freeze([
 ]);
 
 heldRestoreInteractions.forEach((interaction) => {
-  test(`a held restore keeps the played board when ${interaction.label}`, async ({
-    page,
-  }) => {
+  test(`a held restore keeps the played board when ${interaction.label}`, async ({ page }) => {
     const scenario = scenarios[0];
-    const { api, openSudokuAndPlay, puzzleId } = await prepareRestorableSudokuPause(
-      page,
-      scenario
-    );
+    const { api, openSudokuAndPlay, puzzleId } = await prepareRestorableSudokuPause(page, scenario);
 
     const held = holdSudokuRestore(page);
     await held.install();
@@ -1965,9 +1868,7 @@ heldRestoreInteractions.forEach((interaction) => {
     const before = await readSudokuSurface(sudokuWindow);
 
     held.release();
-    await expect
-      .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
-      .toBe(1);
+    await expect.poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
     await expect
       .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
         timeout: PUBLISH_TIMEOUT_MS,
@@ -2014,9 +1915,7 @@ test("a stale restore reply does not detach a newer puzzle's proof", async ({ pa
 
   // A new puzzle owns the session before the old reply lands.
   await sudokuWindow.locator("#sudoku-new").click();
-  await expect
-    .poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(2);
+  await expect.poll(() => api.sessionRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(2);
   const issued = api.verified.boardFor("sudoku");
   await expect
     .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readBoard()), {
@@ -2031,9 +1930,7 @@ test("a stale restore reply does not detach a newer puzzle's proof", async ({ pa
     });
 
   held.release();
-  await expect
-    .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   await settleFrames(page);
 
   // The reply belonged to the puzzle that was replaced, so it has nothing to let
@@ -2051,12 +1948,8 @@ test("a stale restore reply does not detach a newer puzzle's proof", async ({ pa
     });
   const terminal = await prepareTerminalBoard(page, scenario.elapsedSeconds);
   await finishTerminalBoard(sudokuWindow, terminal);
-  await expect
-    .poll(() => api.verified.finishes.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
-  await expect
-    .poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS })
-    .toBe(1);
+  await expect.poll(() => api.verified.finishes.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
+  await expect.poll(() => api.eventRequests.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
   expect(api.eventRequests[0].completion).toEqual({
     id: `completion-${api.verified.finishes[0].id}`,
     token: "synthetic-completion-proof",
@@ -2068,11 +1961,7 @@ viewports.forEach((viewport) => {
     page,
   }, testInfo) => {
     const scenario = scenarios[0];
-    const { api, openSudokuAndPlay } = await prepareRestorableSudokuPause(
-      page,
-      scenario,
-      viewport
-    );
+    const { api, openSudokuAndPlay } = await prepareRestorableSudokuPause(page, scenario, viewport);
 
     const held = holdSudokuRestore(page);
     await held.install();
@@ -2087,9 +1976,7 @@ viewports.forEach((viewport) => {
     });
 
     held.release();
-    await expect
-      .poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS })
-      .toBe(1);
+    await expect.poll(() => api.verified.restores.length, { timeout: PUBLISH_TIMEOUT_MS }).toBe(1);
     await expect
       .poll(() => page.evaluate(() => window.__sudokuPublishFlowTest.readLifecycle()), {
         timeout: PUBLISH_TIMEOUT_MS,
@@ -2107,7 +1994,7 @@ viewports.forEach((viewport) => {
     expect(await readSudokuSurface(sudokuWindow)).toEqual(before);
     await expect(sudokuWindow.locator('[data-sudoku-hint="errors"]')).toHaveAttribute(
       "aria-pressed",
-      "true"
+      "true",
     );
     await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/);
     await expect(sudokuWindow.locator("#sudoku-errors-prompt")).toBeHidden();

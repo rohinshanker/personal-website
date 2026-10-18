@@ -12,7 +12,7 @@ const { Miniflare, NoOpLog } = await import(miniflareUrl.href);
 // The production entry also imports portable engines from the site's scripts.
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const workerEntrypoint = fileURLToPath(
-  new URL("../workers/game-stats/src/index.mjs", import.meta.url)
+  new URL("../workers/game-stats/src/index.mjs", import.meta.url),
 );
 const playerUrl = "https://proxy.royaleapi.dev/v1/players/%2328CYYU08P";
 const battlelogUrl = `${playerUrl}/battlelog`;
@@ -33,8 +33,7 @@ const profile = {
       evolutionLevel: 1,
       iconUrls: {
         medium: "https://api-assets.clashroyale.com/cards/300/knight.png",
-        evolutionMedium:
-          "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
+        evolutionMedium: "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
       },
     },
   ],
@@ -42,25 +41,28 @@ const profile = {
 const battles = Array.from({ length: 21 }, (_, index) => ({
   battleTime: `20261001T${String(index).padStart(2, "0")}0000.000Z`,
   team: [{ tag: "#28CYYU08P", name: "Runtime Player", crowns: 1, cards: [] }],
-  opponent: [{
-    tag: "#9XYZ",
-    name: "Opponent",
-    crowns: 0,
-    cards: [{
-      id: 26000018,
-      name: "Mini P.E.K.K.A",
-      level: 14,
-      maxLevel: 14,
-      elixirCost: 4,
-      rarity: "RARE",
-      evolutionLevel: 2,
-      iconUrls: {
-        medium: "https://api-assets.clashroyale.com/cards/300/mini-pekka.png",
-        heroMedium:
-          "https://api-assets.clashroyale.com/cardheroes/300/mini-pekka.png",
-      },
-    }],
-  }],
+  opponent: [
+    {
+      tag: "#9XYZ",
+      name: "Opponent",
+      crowns: 0,
+      cards: [
+        {
+          id: 26000018,
+          name: "Mini P.E.K.K.A",
+          level: 14,
+          maxLevel: 14,
+          elixirCost: 4,
+          rarity: "RARE",
+          evolutionLevel: 2,
+          iconUrls: {
+            medium: "https://api-assets.clashroyale.com/cards/300/mini-pekka.png",
+            heroMedium: "https://api-assets.clashroyale.com/cardheroes/300/mini-pekka.png",
+          },
+        },
+      ],
+    },
+  ],
 }));
 
 const createRuntime = (outboundService) =>
@@ -114,22 +116,18 @@ test("workerd executes the real Worker, mocked upstream, and Cache API", async (
         elixirCost: 3,
         rarity: "common",
         variant: "evo",
-        variantIconUrl:
-          "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
-      }
+        variantIconUrl: "https://api-assets.clashroyale.com/cardevolutions/300/knight.png",
+      },
     );
     assert.equal(firstBody.battles[0].opponent[0].cards[0].variant, "hero");
-    assert.equal(
-      first.headers.get("Access-Control-Allow-Origin"),
-      "https://rohin.shanker.me"
-    );
+    assert.equal(first.headers.get("Access-Control-Allow-Origin"), "https://rohin.shanker.me");
     assert.deepEqual(
       outboundRequests.map(({ url }) => url).sort(),
-      [playerUrl, battlelogUrl].sort()
+      [playerUrl, battlelogUrl].sort(),
     );
     assert.deepEqual(
       outboundRequests.map(({ authorization }) => authorization),
-      [`Bearer ${syntheticApiKey}`, `Bearer ${syntheticApiKey}`]
+      [`Bearer ${syntheticApiKey}`, `Bearer ${syntheticApiKey}`],
     );
     const cache = (await runtime.getCaches()).default;
     let cached;

@@ -21,7 +21,10 @@ const loadUtil = async () => {
 
 test("JSON storage helpers contain access, parse, serialization, and mutation failures", async () => {
   const { readJsonStorage, removeStorage, writeJsonStorage } = await loadUtil();
-  const values = new Map([["valid", '{"score":7}'], ["broken", "{"]]);
+  const values = new Map([
+    ["valid", '{"score":7}'],
+    ["broken", "{"],
+  ]);
   const storage = {
     getItem: (key) => (values.has(key) ? values.get(key) : null),
     removeItem: (key) => values.delete(key),
@@ -29,20 +32,58 @@ test("JSON storage helpers contain access, parse, serialization, and mutation fa
   };
 
   assert.deepEqual({ ...readJsonStorage(() => storage, "valid", {}) }, { score: 7 });
-  assert.equal(readJsonStorage(() => storage, "missing", "fallback"), "fallback");
-  assert.equal(readJsonStorage(() => storage, "broken", "fallback"), "fallback");
-  assert.equal(readJsonStorage(() => { throw new Error("blocked"); }, "valid", 4), 4);
+  assert.equal(
+    readJsonStorage(() => storage, "missing", "fallback"),
+    "fallback",
+  );
+  assert.equal(
+    readJsonStorage(() => storage, "broken", "fallback"),
+    "fallback",
+  );
+  assert.equal(
+    readJsonStorage(
+      () => {
+        throw new Error("blocked");
+      },
+      "valid",
+      4,
+    ),
+    4,
+  );
 
-  assert.equal(writeJsonStorage(() => storage, "written", { ready: true }), true);
+  assert.equal(
+    writeJsonStorage(() => storage, "written", { ready: true }),
+    true,
+  );
   assert.equal(values.get("written"), '{"ready":true}');
   const cyclic = {};
   cyclic.self = cyclic;
-  assert.equal(writeJsonStorage(() => storage, "cyclic", cyclic), false);
-  assert.equal(writeJsonStorage(() => { throw new Error("blocked"); }, "x", 1), false);
+  assert.equal(
+    writeJsonStorage(() => storage, "cyclic", cyclic),
+    false,
+  );
+  assert.equal(
+    writeJsonStorage(
+      () => {
+        throw new Error("blocked");
+      },
+      "x",
+      1,
+    ),
+    false,
+  );
 
-  assert.equal(removeStorage(() => storage, "written"), true);
+  assert.equal(
+    removeStorage(() => storage, "written"),
+    true,
+  );
   assert.equal(values.has("written"), false);
-  assert.equal(removeStorage(() => { throw new Error("blocked"); }, "x"), false);
+  assert.equal(
+    removeStorage(() => {
+      throw new Error("blocked");
+    }, "x"),
+    false,
+  );
 });
 
 test("flashBanner restarts once and ignores descendant animation events", async () => {
@@ -133,10 +174,13 @@ test("createProgressLoader caps intermediate progress, waits for readiness, and 
     },
   });
 
-  assert.deepEqual({ ...loader.start({ duration: 100, initialDelay: 10 }) }, {
-    durationMs: 100,
-    startedAt: 0,
-  });
+  assert.deepEqual(
+    { ...loader.start({ duration: 100, initialDelay: 10 }) },
+    {
+      durationMs: 100,
+      startedAt: 0,
+    },
+  );
   assert.deepEqual(progress, [0]);
   assert.equal(timers.get(1).delay, 10);
 
@@ -154,13 +198,16 @@ test("createProgressLoader caps intermediate progress, waits for readiness, and 
   assert.deepEqual(progress, [0, 80, 80, 100]);
   assert.equal(completions, 1);
   assert.deepEqual(callbacks.slice(-2), ["progress:100", "ready"]);
-  assert.deepEqual({ ...loader.snapshot() }, {
-    durationMs: 100,
-    progress: 100,
-    running: false,
-    startedAt: 0,
-    timerId: null,
-  });
+  assert.deepEqual(
+    { ...loader.snapshot() },
+    {
+      durationMs: 100,
+      progress: 100,
+      running: false,
+      startedAt: 0,
+      timerId: null,
+    },
+  );
   assert.ok(timerChanges.includes(null));
   assert.deepEqual(cleared, []);
 });
@@ -279,7 +326,7 @@ test("the active-window dispatcher applies common guards once and preserves hand
   });
   vm.runInContext(
     `${source.slice(start, end)}\nObject.assign(globalThis, { registerActiveWindowKeyHandler });`,
-    context
+    context,
   );
   const calls = [];
   context.registerActiveWindowKeyHandler("sudoku", (event) => {

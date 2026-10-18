@@ -23,7 +23,7 @@ test("Video Editor and Image Tools have desktop and taskbar launchers with their
   const taskbar = home.slice(taskbarStart, taskbarEnd);
   const desktop = home.slice(
     home.indexOf('<div class="desktop"'),
-    home.indexOf('<main class="window-stack"')
+    home.indexOf('<main class="window-stack"'),
   );
 
   const launchers = [
@@ -49,13 +49,13 @@ test("Video Editor and Image Tools have desktop and taskbar launchers with their
       assert.equal(
         count(markup, new RegExp(`data-app="${launcher.appId}"`, "g")),
         1,
-        `${launcher.label} must have exactly one ${location} launcher.`
+        `${launcher.label} must have exactly one ${location} launcher.`,
       );
       assert.match(
         markup,
         new RegExp(
-          `data-app="${launcher.appId}"[\\s\\S]*?aria-label="${launcher.label}"[\\s\\S]*?aria-haspopup="dialog"[\\s\\S]*?aria-controls="${launcher.controls}"[\\s\\S]*?src="${launcher.icon.replaceAll("/", "\\/")}"`
-        )
+          `data-app="${launcher.appId}"[\\s\\S]*?aria-label="${launcher.label}"[\\s\\S]*?aria-haspopup="dialog"[\\s\\S]*?aria-controls="${launcher.controls}"[\\s\\S]*?src="${launcher.icon.replaceAll("/", "\\/")}"`,
+        ),
       );
     }
     assert.match(desktop, new RegExp(`>${launcher.label}<\\/span>`));
@@ -83,29 +83,29 @@ test("Video Editor owns an accessible new-tab confirmation prompt", async () => 
   assert.match(section, />Video Editor<\/div>/);
   assert.match(
     section,
-    /data-src="assets\/app-icons\/ico\/camera3_vid\.ico" width="48" height="48" alt=""/
+    /data-src="assets\/app-icons\/ico\/camera3_vid\.ico" width="48" height="48" alt=""/,
   );
   assert.match(section, />Open video editor in new tab\?<\/p>/);
   assert.doesNotMatch(section, />Coming soon<\/p>/);
   assert.match(
     section,
-    /id="video-editor-launch-yes"[\s\S]*?data-launch-prompt-open[\s\S]*?data-dialog-initial-focus[\s\S]*?>Yes<\/button>/
+    /id="video-editor-launch-yes"[\s\S]*?data-launch-prompt-open[\s\S]*?data-dialog-initial-focus[\s\S]*?>Yes<\/button>/,
   );
   assert.match(
     section,
-    /id="video-editor-launch-no"[\s\S]*?data-close="video-editor"[\s\S]*?>No<\/button>/
+    /id="video-editor-launch-no"[\s\S]*?data-close="video-editor"[\s\S]*?>No<\/button>/,
   );
   assert.equal(count(section, /data-close="video-editor"/g), 2);
   assert.match(
     section,
-    /id="video-editor-launch-error"[\s\S]*?data-launch-prompt-error[\s\S]*?role="alert"[\s\S]*?aria-live="assertive"[\s\S]*?hidden/
+    /id="video-editor-launch-error"[\s\S]*?data-launch-prompt-error[\s\S]*?role="alert"[\s\S]*?aria-live="assertive"[\s\S]*?hidden/,
   );
 
   // The prompt is wired through its data attributes, not a dedicated registry entry.
   assert.doesNotMatch(dom, /videoEditorLaunch/);
   assert.match(
     main,
-    /NEW_TAB_LAUNCH_PROMPTS = Object\.freeze\(\{[\s\S]*?"video-editor": Object\.freeze\(\{ path: VIDEO_EDITOR_PATH, source: "video-editor-launcher" \}\)/
+    /NEW_TAB_LAUNCH_PROMPTS = Object\.freeze\(\{[\s\S]*?"video-editor": Object\.freeze\(\{ path: VIDEO_EDITOR_PATH, source: "video-editor-launcher" \}\)/,
   );
   assert.match(main, /window\.open\(prompt\.path, "_blank"\)/);
   assert.match(main, /openedWindow\.opener = null/);
@@ -113,34 +113,25 @@ test("Video Editor owns an accessible new-tab confirmation prompt", async () => 
   assert.match(main, /Allow pop-ups for this site, then choose Yes again/);
   assert.match(
     main,
-    /querySelectorAll\("\[data-launch-prompt-open\]"\)[\s\S]*?openLaunchPromptInNewTab\(appId\)/
+    /querySelectorAll\("\[data-launch-prompt-open\]"\)[\s\S]*?openLaunchPromptInNewTab\(appId\)/,
   );
   assert.match(
     main,
-    /notifyActivity\("newTabLink", \{ href: prompt\.path, source: prompt\.source \}\)/
+    /notifyActivity\("newTabLink", \{ href: prompt\.path, source: prompt\.source \}\)/,
   );
   assert.match(main, /closeAppWindow\(appId\)/);
   assert.match(main, /FOCUS_RETURN_WINDOW_SELECTOR[\s\S]*?data-launch-prompt-window/);
   assert.match(
     main,
-    /event\.key !== "Escape"[\s\S]*?closeAppWindow\(openFocusReturnWindow\.getAttribute\("data-app-window"\)\)/
+    /event\.key !== "Escape"[\s\S]*?closeAppWindow\(openFocusReturnWindow\.getAttribute\("data-app-window"\)\)/,
   );
   assert.match(
     main,
-    /comingSoonFocusReturns\.get\(win\)[\s\S]*?focusTarget\.focus\(\{ preventScroll: true \}\)/
+    /comingSoonFocusReturns\.get\(win\)[\s\S]*?focusTarget\.focus\(\{ preventScroll: true \}\)/,
   );
-  assert.match(
-    home,
-    /styles\/home\/base\.css\?v=[^"]+/
-  );
-  assert.match(
-    baseStyles,
-    /\.launch-prompt-window \.window-body[\s\S]*?min-height:\s*0/
-  );
-  assert.match(
-    baseStyles,
-    /\.video-editor-launch-error\s*\{[\s\S]*?color:\s*#800000/
-  );
+  assert.match(home, /styles\/home\/base\.css\?v=[^"]+/);
+  assert.match(baseStyles, /\.launch-prompt-window \.window-body[\s\S]*?min-height:\s*0/);
+  assert.match(baseStyles, /\.video-editor-launch-error\s*\{[\s\S]*?color:\s*#800000/);
 });
 
 test("Image Tools keeps its accessible Coming soon alert unchanged", async () => {
@@ -156,23 +147,20 @@ test("Image Tools keeps its accessible Coming soon alert unchanged", async () =>
   assert.match(section, />Image Tools<\/div>/);
   assert.match(
     section,
-    /data-src="assets\/app-icons\/ico\/pcx_alt\.ico" width="48" height="48" alt=""/
+    /data-src="assets\/app-icons\/ico\/pcx_alt\.ico" width="48" height="48" alt=""/,
   );
   assert.match(section, />Coming soon<\/p>/);
   assert.equal(count(section, /data-close="image-tools"/g), 2);
-  assert.match(
-    section,
-    /data-coming-soon-ok[\s\S]*?data-close="image-tools"[\s\S]*?>OK<\/button>/
-  );
+  assert.match(section, /data-coming-soon-ok[\s\S]*?data-close="image-tools"[\s\S]*?>OK<\/button>/);
 
   assert.equal(
     count(home, /\bdata-random-viewport-position\b/g),
     2,
-    "Only the two content-tool dialogs should opt into random placement."
+    "Only the two content-tool dialogs should opt into random placement.",
   );
   assert.doesNotMatch(
     windowSection(home, "admin-controls-stand-in"),
-    /data-random-viewport-position/
+    /data-random-viewport-position/,
   );
 });
 
@@ -180,9 +168,7 @@ test("the Image Tools future-work ticket remains open", async () => {
   const ticketPaths = ["O_image-tools__20260731.md"];
   const [index, ...tickets] = await Promise.all([
     readFile(new URL("docs/notes/tickets/INDEX.md", root), "utf8"),
-    ...ticketPaths.map((path) =>
-      readFile(new URL(`docs/notes/tickets/${path}`, root), "utf8")
-    ),
+    ...ticketPaths.map((path) => readFile(new URL(`docs/notes/tickets/${path}`, root), "utf8")),
   ]);
 
   ticketPaths.forEach((path, indexPosition) => {
@@ -193,7 +179,7 @@ test("the Image Tools future-work ticket remains open", async () => {
     assert.equal(
       count(index, new RegExp(`\\[${escapedPath}\\]\\(${escapedPath}\\)`, "g")),
       1,
-      `${path} must have exactly one live-ticket index row.`
+      `${path} must have exactly one live-ticket index row.`,
     );
   });
 

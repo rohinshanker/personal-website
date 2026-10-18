@@ -19,7 +19,7 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   );
   const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
   const fixtureEntrypoint = fileURLToPath(
-    new URL("./fixtures/game-stats-verification-peer-snake-worker.mjs", import.meta.url)
+    new URL("./fixtures/game-stats-verification-peer-snake-worker.mjs", import.meta.url),
   );
   const runtime = new Miniflare({
     modules: true,
@@ -49,7 +49,7 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
     const sql = readFileSync(migration, "utf8").replace(/^\s*--.*$/gm, "");
     const triggers = Array.from(
       sql.matchAll(/CREATE TRIGGER[\s\S]*?\nEND;/gi),
-      (match) => match[0]
+      (match) => match[0],
     );
     const statements = sql
       .replace(/CREATE TRIGGER[\s\S]*?\nEND;/gi, "")
@@ -63,16 +63,17 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
 
   let now = Date.now();
   const buildVersion = `sha256-${"d".repeat(64)}`;
-  const post = (path, body) => runtime.dispatchFetch(`https://stats.example.test${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Origin: "https://rohin.shanker.me",
-      "CF-Connecting-IP": "203.0.113.94",
-      "X-Test-Now": String(now),
-    },
-    body: JSON.stringify(body),
-  });
+  const post = (path, body) =>
+    runtime.dispatchFetch(`https://stats.example.test${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://rohin.shanker.me",
+        "CF-Connecting-IP": "203.0.113.94",
+        "X-Test-Now": String(now),
+      },
+      body: JSON.stringify(body),
+    });
   const issuedResponse = await post("/sessions", {
     resultProtocol: 2,
     rulesVersion: 1,
@@ -86,16 +87,15 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   const issued = await issuedResponse.json();
   assert.equal(issued.limits.continuations, 8192);
   assert.equal(issued.limits.timingRevisions, 900);
-  const replayBatchCeiling = Math.ceil(
-    (issued.limits.ticks + issued.limits.inputs) / 32
-  );
+  const replayBatchCeiling = Math.ceil((issued.limits.ticks + issued.limits.inputs) / 32);
   assert.ok(replayBatchCeiling + 2 * issued.limits.timingRevisions + 1 <= 8192);
   const workCeilings = globalThis.homeSnakeRules.BOARD_SIZES.map((boardSize) => {
     const cells = boardSize ** 2;
     const maximumGrowth = cells - 3;
-    const maximumRefills = maximumGrowth + Math.floor(
-      maximumGrowth / globalThis.homeSnakeRules.APPLE_SCORE_INTERVAL
-    ) + 1;
+    const maximumRefills =
+      maximumGrowth +
+      Math.floor(maximumGrowth / globalThis.homeSnakeRules.APPLE_SCORE_INTERVAL) +
+      1;
     const refillWork = maximumRefills * (2 * cells + 1);
     return {
       boardSize,
@@ -105,12 +105,12 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   const maximumWork = Math.max(...workCeilings.map(({ work }) => work));
   assert.ok(
     issued.limits.work >= maximumWork,
-    `Snake work limit ${issued.limits.work} is below the ${maximumWork} worst-case ceiling`
+    `Snake work limit ${issued.limits.work} is below the ${maximumWork} worst-case ceiling`,
   );
 
   const emptyHash = Array.from(
     new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("[]"))),
-    (byte) => byte.toString(16).padStart(2, "0")
+    (byte) => byte.toString(16).padStart(2, "0"),
   ).join("");
   const resumed = await post(`/sessions/${issued.id}/timing`, {
     session: { id: issued.id, token: issued.token },
@@ -144,10 +144,12 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   const hitsWall = () => {
     const { x, y } = state.snake[0];
     const boardSize = Number(state.configuration.boardSize);
-    return (state.direction === "down" && y === boardSize - 1) ||
+    return (
+      (state.direction === "down" && y === boardSize - 1) ||
       (state.direction === "left" && x === 0) ||
       (state.direction === "up" && y === 0) ||
-      (state.direction === "right" && x === boardSize - 1);
+      (state.direction === "right" && x === boardSize - 1)
+    );
   };
   const turn = (direction) => {
     const input = {
@@ -189,10 +191,13 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   let requestStartedAt = performance.now();
   let response = await post(`/sessions/${issued.id}/finish`, finishBody);
   requestWallSamples.push(performance.now() - requestStartedAt);
-  const frozen = await database.prepare(`
+  const frozen = await database
+    .prepare(`
     SELECT elapsed_ms, countdown_ms, resume_count, finished_at
     FROM verified_completion_jobs WHERE session_id = ?
-  `).bind(issued.id).first();
+  `)
+    .bind(issued.id)
+    .first();
   assert.equal(Number(frozen.elapsed_ms), 100 + 900 + state.tick * 118);
   assert.equal(Number(frozen.countdown_ms), 1_000);
   assert.equal(Number(frozen.resume_count), 2);
@@ -215,10 +220,12 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
       serialization: "X-Test-Replay-Serialization-Wall-Ms",
       synchronous: "X-Test-Replay-Synchronous-Wall-Ms",
     };
-    const stages = Object.fromEntries(Object.entries(stageHeaders).map(([key, header]) => {
-      const rawValue = response.headers.get(header);
-      return [key, rawValue === null ? null : Number(rawValue)];
-    }));
+    const stages = Object.fromEntries(
+      Object.entries(stageHeaders).map(([key, header]) => {
+        const rawValue = response.headers.get(header);
+        return [key, rawValue === null ? null : Number(rawValue)];
+      }),
+    );
     if (Object.values(stages).every((value) => Number.isFinite(value) && value >= 0)) {
       stageSamples.push(stages);
     }
@@ -231,16 +238,25 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   assert.equal(
     completion.elapsedMs,
     Number(frozen.elapsed_ms),
-    "continuation wall delay must not change frozen game time"
+    "continuation wall delay must not change frozen game time",
   );
   assert.equal(completion.event.occurredAt, frozen.finished_at);
-  assert.equal(Number((await database.prepare(`
+  assert.equal(
+    Number(
+      (
+        await database
+          .prepare(`
     SELECT request_count FROM verified_completion_jobs WHERE session_id = ?
-  `).bind(issued.id).first()).request_count), continuationCount);
+  `)
+          .bind(issued.id)
+          .first()
+      ).request_count,
+    ),
+    continuationCount,
+  );
   assert.ok(stageSamples.length > 0);
-  const percentile95 = (values) => values.toSorted((left, right) => left - right)[
-    Math.floor(values.length * 0.95)
-  ];
+  const percentile95 = (values) =>
+    values.toSorted((left, right) => left - right)[Math.floor(values.length * 0.95)];
   const stageValues = (key) => stageSamples.map((sample) => sample[key]);
   const maximum = (key) => Math.max(...stageValues(key));
   const stageSummary = (key) =>
@@ -248,7 +264,7 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
   const maximumSynchronousWallMs = maximum("synchronous");
   assert.ok(
     maximumSynchronousWallMs < 10,
-    `real Snake synchronous stages took ${maximumSynchronousWallMs.toFixed(1)}ms`
+    `real Snake synchronous stages took ${maximumSynchronousWallMs.toFixed(1)}ms`,
   );
   t.diagnostic(
     `real Snake ${state.tick} ticks / ${inputs.length} directions over ` +
@@ -259,6 +275,6 @@ test("real Snake engine completes a long replay beyond 256 bounded requests", {
       `clone ${stageSummary("clone")} / transition ${stageSummary("transition")} / ` +
       `input canonical ${stageSummary("inputCanonical")} / ` +
       `serialize ${stageSummary("serialization")} / combined ${stageSummary("synchronous")}; ` +
-      `local wall only, not production CPU`
+      `local wall only, not production CPU`,
   );
 });

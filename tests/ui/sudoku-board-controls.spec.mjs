@@ -95,15 +95,15 @@ window.__sudokuBoardControlsTest = Object.freeze({
     return [...touched].sort();
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
 const bridge = (page, method, ...args) =>
   page.evaluate(
     ([name, params]) => window.__sudokuBoardControlsTest[name](...params),
-    [method, args]
+    [method, args],
   );
 
 const cellAt = (win, index) => win.locator(`.sudoku-cell[data-sudoku-index="${index}"]`);
@@ -167,11 +167,11 @@ for (const viewport of REVIEW_VIEWPORTS) {
           sameHaveTint: same.every((cell) => background(cell).includes(tint)),
           selectedHasTint: background(selected).includes(tint),
           otherHasTint: cells.some(
-            (cell) => cell.dataset.sudokuValue !== value && background(cell).includes(tint)
+            (cell) => cell.dataset.sudokuValue !== value && background(cell).includes(tint),
           ),
         };
       },
-      { selectedIndex: lastIndex, tint: VALUE_HIGHLIGHT, value: digit }
+      { selectedIndex: lastIndex, tint: VALUE_HIGHLIGHT, value: digit },
     );
     expect(highlight).toEqual({
       matchingCount: 9,
@@ -184,16 +184,15 @@ for (const viewport of REVIEW_VIEWPORTS) {
       otherHasTint: false,
     });
 
-
     // Clearing the ninth placement reopens the keypad and drops the highlight.
     await page.keyboard.press("Backspace");
     await expect(cellAt(win, lastIndex)).toHaveAttribute("data-sudoku-value", "");
     await expect(button).toBeEnabled();
     await expect(button).not.toHaveClass(/is-exhausted/);
     await expect(win.locator(".sudoku-cell.is-same-value")).toHaveCount(0);
-    expect(
-      await win.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
-    ).toBe(false);
+    expect(await win.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
+      false,
+    );
   });
 }
 
@@ -251,8 +250,14 @@ test("N toggles notes only in the active Sudoku window and the button hints at i
     });
   // Sits 12px below and right of the pointer, pulled back from the viewport edge.
   const expectTracking = (placement, pointer) => {
-    const left = Math.max(4, Math.min(pointer.x + 12, placement.viewportWidth - placement.width - 4));
-    const top = Math.max(4, Math.min(pointer.y + 12, placement.viewportHeight - placement.height - 4));
+    const left = Math.max(
+      4,
+      Math.min(pointer.x + 12, placement.viewportWidth - placement.width - 4),
+    );
+    const top = Math.max(
+      4,
+      Math.min(pointer.y + 12, placement.viewportHeight - placement.height - 4),
+    );
     expect(placement.left).toBeCloseTo(left, 0);
     expect(placement.top).toBeCloseTo(top, 0);
   };
@@ -323,9 +328,7 @@ test("highlight and keypad refreshes skip the cells and buttons that did not cha
   expect(await bridge(page, "measureRefresh", "keypad")).toEqual([]);
 });
 
-test("digits typed while a panel button holds focus edit the selected cell", async ({
-  page,
-}) => {
+test("digits typed while a panel button holds focus edit the selected cell", async ({ page }) => {
   await installBoardBridge(page);
   await openHomeDesktop(page, DESKTOP);
   const win = await openSudokuBoard(page);
@@ -391,7 +394,7 @@ const openHomeDesktopWithProfile = async (page, viewport) => {
         name: "Board Controls Tester",
         icon: "assets/app-icons/ico/user_card.ico",
         rerollCount: 0,
-      })
+      }),
     );
   });
   await page.goto("/home.html", { waitUntil: "load" });

@@ -1,15 +1,12 @@
 (() => {
   const DEFAULT_TITLE = "System Alert";
   const DEFAULT_BUTTON_ALIGNMENT = "right";
-  const DEFAULT_BUTTONS = Object.freeze([
-    Object.freeze({ label: "OK", action: "dismiss" }),
-  ]);
+  const DEFAULT_BUTTONS = Object.freeze([Object.freeze({ label: "OK", action: "dismiss" })]);
   const SUPPORTED_BUTTON_ALIGNMENTS = new Set(["left", "center", "right"]);
   const SUPPORTED_BUTTON_ACTIONS = new Set(["dismiss"]);
   const SYSTEM_ALERT_ID_PATTERN = /^(?=.{1,96}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
   const SYSTEM_ALERT_BUTTON_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-  const SYSTEM_ALERT_ICON_PATTERN =
-    /^assets\/app-icons\/ico\/([A-Za-z0-9_.-]+\.ico)$/;
+  const SYSTEM_ALERT_ICON_PATTERN = /^assets\/app-icons\/ico\/([A-Za-z0-9_.-]+\.ico)$/;
 
   const readRequiredText = (value, label) => {
     if (typeof value !== "string" || !value.trim()) {
@@ -26,23 +23,19 @@
 
   const normalizeButton = (button, alertId, index, usedButtonIds) => {
     if (!button || typeof button !== "object" || Array.isArray(button)) {
-      throw new TypeError(
-        `System alert ${alertId} button ${index + 1} must be an object`
-      );
+      throw new TypeError(`System alert ${alertId} button ${index + 1} must be an object`);
     }
     const label = readRequiredText(
       button.label,
-      `System alert ${alertId} button ${index + 1} label`
+      `System alert ${alertId} button ${index + 1} label`,
     );
-    const id = button.id === undefined
-      ? createButtonId(label)
-      : readRequiredText(
-          button.id,
-          `System alert ${alertId} button ${index + 1} id`
-        );
+    const id =
+      button.id === undefined
+        ? createButtonId(label)
+        : readRequiredText(button.id, `System alert ${alertId} button ${index + 1} id`);
     if (!SYSTEM_ALERT_BUTTON_ID_PATTERN.test(id)) {
       throw new Error(
-        `System alert ${alertId} button ${index + 1} id must be lowercase kebab-case`
+        `System alert ${alertId} button ${index + 1} id must be lowercase kebab-case`,
       );
     }
     if (usedButtonIds.has(id)) {
@@ -52,7 +45,7 @@
 
     const action = readRequiredText(
       button.action,
-      `System alert ${alertId} button ${index + 1} action`
+      `System alert ${alertId} button ${index + 1} action`,
     );
     if (!SUPPORTED_BUTTON_ACTIONS.has(action)) {
       throw new Error(`System alert ${alertId} has unsupported button action ${action}`);
@@ -67,7 +60,7 @@
     const id = readRequiredText(definition.id, `System alert ${index + 1} id`);
     if (!SYSTEM_ALERT_ID_PATTERN.test(id)) {
       throw new Error(
-        `System alert ${id} id must be lowercase kebab-case with at most 96 characters`
+        `System alert ${id} id must be lowercase kebab-case with at most 96 characters`,
       );
     }
     if (usedAlertIds.has(id)) {
@@ -81,39 +74,35 @@
       throw new Error(`System alert ${id} icon must reference an existing local ICO asset`);
     }
 
-    const title = definition.title === undefined
-      ? DEFAULT_TITLE
-      : readRequiredText(definition.title, `System alert ${id} title`);
-    const label = definition.label === undefined
-      ? `System Alert — ${id
-        .split("-")
-        .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
-        .join(" ")}`
-      : readRequiredText(definition.label, `System alert ${id} label`);
+    const title =
+      definition.title === undefined
+        ? DEFAULT_TITLE
+        : readRequiredText(definition.title, `System alert ${id} title`);
+    const label =
+      definition.label === undefined
+        ? `System Alert — ${id
+            .split("-")
+            .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+            .join(" ")}`
+        : readRequiredText(definition.label, `System alert ${id} label`);
     const body = readRequiredText(definition.body, `System alert ${id} body`);
-    const buttonAlignment = definition.buttonAlignment === undefined
-      ? DEFAULT_BUTTON_ALIGNMENT
-      : readRequiredText(
-          definition.buttonAlignment,
-          `System alert ${id} buttonAlignment`
-        );
+    const buttonAlignment =
+      definition.buttonAlignment === undefined
+        ? DEFAULT_BUTTON_ALIGNMENT
+        : readRequiredText(definition.buttonAlignment, `System alert ${id} buttonAlignment`);
     if (!SUPPORTED_BUTTON_ALIGNMENTS.has(buttonAlignment)) {
-      throw new Error(
-        `System alert ${id} has unsupported button alignment ${buttonAlignment}`
-      );
+      throw new Error(`System alert ${id} has unsupported button alignment ${buttonAlignment}`);
     }
 
-    const buttonInputs = definition.buttons === undefined
-      ? DEFAULT_BUTTONS
-      : definition.buttons;
+    const buttonInputs = definition.buttons === undefined ? DEFAULT_BUTTONS : definition.buttons;
     if (!Array.isArray(buttonInputs) || buttonInputs.length === 0) {
       throw new TypeError(`System alert ${id} buttons must be a non-empty array`);
     }
     const usedButtonIds = new Set();
     const buttons = Object.freeze(
       buttonInputs.map((button, buttonIndex) =>
-        normalizeButton(button, id, buttonIndex, usedButtonIds)
-      )
+        normalizeButton(button, id, buttonIndex, usedButtonIds),
+      ),
     );
 
     return Object.freeze({
@@ -129,7 +118,7 @@
 
   const normalizeDefinitions = (
     definitions,
-    { iconFileNames = window.rohinAppIconManifest } = {}
+    { iconFileNames = window.rohinAppIconManifest } = {},
   ) => {
     if (!Array.isArray(definitions)) {
       throw new TypeError("System alert definitions must be an array");
@@ -141,8 +130,8 @@
     const knownIconFileNames = new Set(iconFileNames);
     return Object.freeze(
       definitions.map((definition, index) =>
-        normalizeDefinition(definition, index, usedAlertIds, knownIconFileNames)
-      )
+        normalizeDefinition(definition, index, usedAlertIds, knownIconFileNames),
+      ),
     );
   };
 
@@ -226,14 +215,12 @@
     Object.freeze({
       id: "deodorant-reminder",
       icon: "assets/app-icons/ico/user_computer_pair.ico",
-      body:
-        "Be sure to shower and wear deodorant! Or don't. I'm just a website, who am I to tell you?",
+      body: "Be sure to shower and wear deodorant! Or don't. I'm just a website, who am I to tell you?",
     }),
     Object.freeze({
       id: "power-cycle-reminder",
       icon: "assets/app-icons/ico/shell_window1.ico",
-      body:
-        "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
+      body: "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
     }),
     Object.freeze({
       id: "substack-reminder",
@@ -248,8 +235,7 @@
     Object.freeze({
       id: "browser-infected",
       icon: "assets/app-icons/ico/msie1.ico",
-      body:
-        "Attention!!! Multiple viruses have been detected on your computer. I think.",
+      body: "Attention!!! Multiple viruses have been detected on your computer. I think.",
     }),
     Object.freeze({
       id: "operation-unsupported",
@@ -294,14 +280,12 @@
     Object.freeze({
       id: "social-media",
       icon: "assets/app-icons/ico/installer_generic_old.ico",
-      body:
-        "Social media promotes inflammatory content to maintain your attention and make the most ad revenue off of you.",
+      body: "Social media promotes inflammatory content to maintain your attention and make the most ad revenue off of you.",
     }),
     Object.freeze({
       id: "language",
       icon: "assets/app-icons/ico/charmap.ico",
-      body:
-        "Learn another language! There are few better things you can spend your time doing.",
+      body: "Learn another language! There are few better things you can spend your time doing.",
     }),
     Object.freeze({
       id: "radio-waves",

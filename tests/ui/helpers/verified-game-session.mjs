@@ -27,8 +27,10 @@ export const installGameRuleEngines = async (page) => {
 const canonicalJson = (value) => {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value && typeof value === "object") {
-    return `{${Object.keys(value).sort().map((key) =>
-      `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .join(",")}}`;
   }
   return JSON.stringify(value);
 };
@@ -53,7 +55,7 @@ export const revealedSolitaireInitial = () => {
     Array.from({ length: 13 }, (unused, offset) => {
       const rank = 13 - offset;
       return `${rank % 2 ? odd : even}-${rank}`;
-    })
+    }),
   );
   return {
     variant: "klondike-draw-one",
@@ -176,12 +178,10 @@ export const createIssuedGameResponder = ({
   // fixture that did so would be testing something the Worker never does.
   const descriptorFor = (game, config) => {
     sequence += 1;
-    const descriptor = issuedDescriptor(
-      game,
-      config,
-      sequence,
-      { id: `session-${game}-verified-${sequence}`, initial: initials[game] }
-    );
+    const descriptor = issuedDescriptor(game, config, sequence, {
+      id: `session-${game}-verified-${sequence}`,
+      initial: initials[game],
+    });
     boards.set(descriptor.id, descriptor);
     latest.set(game, descriptor);
     gameOf.set(descriptor.id, game);
@@ -193,7 +193,8 @@ export const createIssuedGameResponder = ({
 
   const receiptFor = (finish) => {
     const game = gameOf.get(finish.id);
-    const template = receipts[game] ||
+    const template =
+      receipts[game] ||
       (game === "sudoku"
         ? {
             type: "win",
@@ -205,7 +206,7 @@ export const createIssuedGameResponder = ({
     const { metric: templateMetric, ...event } = template;
     const metric = metrics.has(game)
       ? metrics.get(game)
-      : templateMetric ?? Math.round(elapsedMs / 1000);
+      : (templateMetric ?? Math.round(elapsedMs / 1000));
     return {
       completion: {
         id: `completion-${finish.id}`,
@@ -320,7 +321,7 @@ export const createIssuedGameResponder = ({
         if (finishFailure) {
           await json(
             { ok: false, error: "Verification failed", code: finishFailure.code },
-            finishFailure.status
+            finishFailure.status,
           );
           return true;
         }
@@ -349,17 +350,25 @@ export const createIssuedGameResponder = ({
  * @param {{apiBaseUrl: string, games?: string[]}} options
  * @returns {Promise<{issued: Array<{game: string}>, timing: Array<{operation: string}>}>}
  */
-export const installIssuedGameIssuance = async (page, { apiBaseUrl, games = ["solitaire", "sudoku"] }) => {
+export const installIssuedGameIssuance = async (
+  page,
+  { apiBaseUrl, games = ["solitaire", "sudoku"] },
+) => {
   const issued = [];
   const timing = [];
   const phases = new Map();
   const boards = Object.fromEntries(
     games.map((game) => [
       game,
-      issuedDescriptor(game, game === "sudoku" ? { difficulty: "easy" } : { variant: "klondike-draw-one" }, 0, {
-        id: `session-${game}-quiet`,
-      }),
-    ])
+      issuedDescriptor(
+        game,
+        game === "sudoku" ? { difficulty: "easy" } : { variant: "klondike-draw-one" },
+        0,
+        {
+          id: `session-${game}-quiet`,
+        },
+      ),
+    ]),
   );
 
   await page.route(`${apiBaseUrl}/sessions`, async (route) => {
@@ -418,13 +427,10 @@ export const installIssuedGameIssuance = async (page, { apiBaseUrl, games = ["so
  *          restore?: "accept" | "refuse",
  *          finishFailure?: {status: number, code: string}, elapsedMs?: number}} options
  */
-export const installIssuedGameApi = async (page, {
-  boards = {},
-  receipts = {},
-  restore = "accept",
-  finishFailure = null,
-  elapsedMs = 32_000,
-} = {}) => {
+export const installIssuedGameApi = async (
+  page,
+  { boards = {}, receipts = {}, restore = "accept", finishFailure = null, elapsedMs = 32_000 } = {},
+) => {
   const issued = [];
   const timing = [];
   const restores = [];
@@ -434,9 +440,7 @@ export const installIssuedGameApi = async (page, {
   /** game -> the descriptor last issued for it, so timing can advance it. */
   const live = new Map();
   /** session id -> game, because a finish identifies its session and not its game. */
-  const gameOf = new Map(
-    Object.entries(boards).map(([game, descriptor]) => [descriptor.id, game])
-  );
+  const gameOf = new Map(Object.entries(boards).map(([game, descriptor]) => [descriptor.id, game]));
   let paused = restore === "accept";
 
   await page.route(`${ISSUED_API_BASE_URL}/**`, async (route) => {
@@ -461,7 +465,7 @@ export const installIssuedGameApi = async (page, {
 
     if (path.endsWith("/timing")) {
       const descriptor = live.get(
-        [...live.keys()].find((game) => live.get(game).id === path.split("/")[2])
+        [...live.keys()].find((game) => live.get(game).id === path.split("/")[2]),
       );
       if (!descriptor) {
         await json({ ok: false, error: "Unknown session", code: "not-found" }, 404);
@@ -486,7 +490,8 @@ export const installIssuedGameApi = async (page, {
         await json({ ok: false, error: "Timing cannot be restored", code: "invalid-timing" }, 409);
         return;
       }
-      const descriptor = [...live.values()].find((entry) => entry.id === path.split("/")[2]) ||
+      const descriptor =
+        [...live.values()].find((entry) => entry.id === path.split("/")[2]) ||
         Object.values(boards).find((entry) => entry.id === path.split("/")[2]);
       if (!descriptor) {
         await json({ ok: false, error: "Unknown session", code: "not-found" }, 404);
@@ -511,7 +516,7 @@ export const installIssuedGameApi = async (page, {
       if (finishFailure) {
         await json(
           { ok: false, error: "Verification failed", code: finishFailure.code },
-          finishFailure.status
+          finishFailure.status,
         );
         return;
       }

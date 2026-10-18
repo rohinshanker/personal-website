@@ -10,7 +10,9 @@ const viewports = Object.freeze([
 ]);
 
 for (const viewport of viewports) {
-  test(`Death Note keeps writing within its visible lines at ${viewport.name}`, async ({ page }) => {
+  test(`Death Note keeps writing within its visible lines at ${viewport.name}`, async ({
+    page,
+  }) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
@@ -36,7 +38,7 @@ for (const viewport of viewports) {
     });
     const attemptedLines = Array.from(
       { length: metricsBefore.visibleLineCount + 4 },
-      (_, index) => `Name ${index + 1}`
+      (_, index) => `Name ${index + 1}`,
     );
     await entry.fill(attemptedLines.join("\n"));
 

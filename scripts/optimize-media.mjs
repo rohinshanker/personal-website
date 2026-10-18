@@ -31,26 +31,58 @@ const DERIVATIVE_DIRECTORY = "assets/optimized/random-events";
  */
 const webpFlags = ({ quality, lossless = false }) =>
   Object.freeze(
-    lossless ? ["-q", "75", "-m", "6"] : ["-lossy", "-q", String(quality), "-m", "6", "-mixed"]
+    lossless ? ["-q", "75", "-m", "6"] : ["-lossy", "-q", String(quality), "-m", "6", "-mixed"],
   );
 
 const EVEN_DIMENSIONS = "scale=trunc(iw/2)*2:trunc(ih/2)*2";
 
 const WEBM_FLAGS = Object.freeze([
-  "-c:v", "libvpx-vp9", "-crf", "34", "-b:v", "0", "-row-mt", "1",
-  "-pix_fmt", "yuv420p", "-an", "-vf", EVEN_DIMENSIONS,
+  "-c:v",
+  "libvpx-vp9",
+  "-crf",
+  "34",
+  "-b:v",
+  "0",
+  "-row-mt",
+  "1",
+  "-pix_fmt",
+  "yuv420p",
+  "-an",
+  "-vf",
+  EVEN_DIMENSIONS,
 ]);
 
 const MP4_FLAGS = Object.freeze([
-  "-c:v", "libx264", "-crf", "28", "-preset", "slow", "-profile:v", "main",
-  "-pix_fmt", "yuv420p", "-an", "-movflags", "+faststart", "-vf", EVEN_DIMENSIONS,
+  "-c:v",
+  "libx264",
+  "-crf",
+  "28",
+  "-preset",
+  "slow",
+  "-profile:v",
+  "main",
+  "-pix_fmt",
+  "yuv420p",
+  "-an",
+  "-movflags",
+  "+faststart",
+  "-vf",
+  EVEN_DIMENSIONS,
 ]);
 
 // The Homebrew ffmpeg build carries no WebP encoder, and these four first frames
 // are opaque video stills, so the poster ships as JPEG.
 const POSTER_FLAGS = Object.freeze([
-  "-frames:v", "1", "-c:v", "mjpeg", "-q:v", "4", "-pix_fmt", "yuvj420p",
-  "-vf", EVEN_DIMENSIONS,
+  "-frames:v",
+  "1",
+  "-c:v",
+  "mjpeg",
+  "-q:v",
+  "4",
+  "-pix_fmt",
+  "yuvj420p",
+  "-vf",
+  EVEN_DIMENSIONS,
 ]);
 
 /**
@@ -107,7 +139,7 @@ const manifestEntry = ({ name, webp, video }) =>
         },
       ]
         .filter(Boolean)
-        .map((derivative) => Object.freeze(derivative))
+        .map((derivative) => Object.freeze(derivative)),
     ),
   });
 
@@ -136,8 +168,14 @@ export const encoderCommand = (derivative, { input, output }) => {
 };
 
 const PROBE_ARGS = Object.freeze([
-  "-v", "error", "-select_streams", "v:0",
-  "-show_entries", "stream=width,height", "-of", "csv=p=0",
+  "-v",
+  "error",
+  "-select_streams",
+  "v:0",
+  "-show_entries",
+  "stream=width,height",
+  "-of",
+  "csv=p=0",
 ]);
 
 /** Parses `width,height` out of the ffprobe CSV line, ignoring trailing empty fields. */
@@ -244,7 +282,7 @@ export const oversizedSources = ({
     walkFiles(path.join(root, directory))
       .filter((filePath) => COVERED_EXTENSIONS.includes(path.extname(filePath).toLowerCase()))
       .filter((filePath) => fs.statSync(filePath).size >= SIZE_THRESHOLD_BYTES)
-      .map((filePath) => path.relative(root, filePath).split(path.sep).join("/"))
+      .map((filePath) => path.relative(root, filePath).split(path.sep).join("/")),
   );
 
 /**
@@ -253,10 +291,7 @@ export const oversizedSources = ({
  * or when the generated record no longer matches the manifest and the files on
  * disk.
  */
-export const checkOptimizedMedia = ({
-  root = REPOSITORY_ROOT,
-  manifest = MEDIA_MANIFEST,
-} = {}) => {
+export const checkOptimizedMedia = ({ root = REPOSITORY_ROOT, manifest = MEDIA_MANIFEST } = {}) => {
   const problems = [];
   const manifestSources = new Set(manifest.map((entry) => entry.source));
 
@@ -285,18 +320,20 @@ export const checkOptimizedMedia = ({
     }
     if (sourceStat && recordedEntry.sourceBytes !== sourceStat.size) {
       problems.push(
-        `${entry.source} changed since its derivatives were recorded; run: node scripts/optimize-media.mjs`
+        `${entry.source} changed since its derivatives were recorded; run: node scripts/optimize-media.mjs`,
       );
     }
     for (const derivative of entry.derivatives) {
       const recorded = recordedDerivative(record, entry.source, derivative.path);
       if (!recorded) {
-        problems.push(`${derivative.path} has no record entry; run: node scripts/optimize-media.mjs`);
+        problems.push(
+          `${derivative.path} has no record entry; run: node scripts/optimize-media.mjs`,
+        );
         continue;
       }
       if (recorded.format !== derivative.format || !sameFlags(recorded.flags, derivative.flags)) {
         problems.push(
-          `${derivative.path} was recorded from different encoder flags; run: node scripts/optimize-media.mjs`
+          `${derivative.path} was recorded from different encoder flags; run: node scripts/optimize-media.mjs`,
         );
       }
       const derivativeStat = statOrNull(path.join(root, derivative.path));
@@ -304,7 +341,7 @@ export const checkOptimizedMedia = ({
         problems.push(`${derivative.path} is missing; run: node scripts/optimize-media.mjs`);
       } else if (derivativeStat.size !== recorded.bytes) {
         problems.push(
-          `${derivative.path} is ${derivativeStat.size} bytes but was recorded as ${recorded.bytes}; run: node scripts/optimize-media.mjs`
+          `${derivative.path} is ${derivativeStat.size} bytes but was recorded as ${recorded.bytes}; run: node scripts/optimize-media.mjs`,
         );
       }
     }
@@ -321,7 +358,9 @@ export const checkOptimizedMedia = ({
 
 /** Finds an executable on PATH without shelling out. */
 export const resolveBinaryFromPath = (binary, environment = process.env) => {
-  const searchPaths = String(environment.PATH ?? "").split(path.delimiter).filter(Boolean);
+  const searchPaths = String(environment.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean);
   for (const searchPath of searchPaths) {
     const candidate = path.join(searchPath, binary);
     try {
@@ -345,7 +384,7 @@ const requireBinary = (binary, resolveBinary, cache) => {
   const resolved = resolveBinary(binary);
   if (!resolved) {
     throw new Error(
-      `optimize-media needs "${binary}" on PATH. Install it (brew install ffmpeg webp) and rerun.`
+      `optimize-media needs "${binary}" on PATH. Install it (brew install ffmpeg webp) and rerun.`,
     );
   }
   cache.set(binary, resolved);
@@ -416,7 +455,7 @@ export const optimizeMedia = ({
       const result = runCommand(resolved, args);
       if (result.status !== 0) {
         throw new Error(
-          `${binary} failed for ${step.derivative.path} (exit ${result.status}): ${result.stderr.trim()}`
+          `${binary} failed for ${step.derivative.path} (exit ${result.status}): ${result.stderr.trim()}`,
         );
       }
       encoded.push(step.derivative.path);
@@ -474,9 +513,7 @@ export const runOptimizeMediaCli = ({
   }
 
   const { encoded, skipped } = optimizeMedia({ root, log: (line) => stdout(`${line}\n`) });
-  stdout(
-    `Encoded ${encoded.length} derivative(s), skipped ${skipped.length} already current.\n`
-  );
+  stdout(`Encoded ${encoded.length} derivative(s), skipped ${skipped.length} already current.\n`);
   return 0;
 };
 

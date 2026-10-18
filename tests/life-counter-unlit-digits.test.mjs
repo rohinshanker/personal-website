@@ -12,11 +12,11 @@ test("Counter pads unused display slots with unlit digital assets", async () => 
 
   assert.match(
     utilities,
-    /const DIGITAL_DIGIT_SOURCES = \{[\s\S]*?" ": "assets\/minesweeper_assets\/digital_digits\/digital_unlit\.png",/
+    /const DIGITAL_DIGIT_SOURCES = \{[\s\S]*?" ": "assets\/minesweeper_assets\/digital_digits\/digital_unlit\.png",/,
   );
   assert.match(
     source,
-    /const formatLifeCounterDigits = \(value\) => \{[\s\S]*?return `-\$\{String\(Math\.abs\(normalized\)\)\.padStart\(4, " "\)\}`;[\s\S]*?return String\(normalized\)\.padStart\(5, " "\);/
+    /const formatLifeCounterDigits = \(value\) => \{[\s\S]*?return `-\$\{String\(Math\.abs\(normalized\)\)\.padStart\(4, " "\)\}`;[\s\S]*?return String\(normalized\)\.padStart\(5, " "\);/,
   );
   assert.doesNotMatch(source, /String\(normalized\)\.padStart\(5, "0"\)/);
 });

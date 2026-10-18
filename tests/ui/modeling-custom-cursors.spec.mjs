@@ -29,16 +29,17 @@ const cursorToken = (locator) =>
   locator.evaluate(
     (element) =>
       getComputedStyle(element).cursor.match(/generated-png\/([a-z-]+)-(?:light|dark)\.png/)?.[1] ??
-      getComputedStyle(element).cursor
+      getComputedStyle(element).cursor,
   );
 
 const cursorPack = (locator) =>
   locator.evaluate(
-    (element) => getComputedStyle(element).cursor.match(/-(light|dark)\.png/)?.[1] ?? null
+    (element) => getComputedStyle(element).cursor.match(/-(light|dark)\.png/)?.[1] ?? null,
   );
 
 const isModelingPhoto = (url) =>
-  url.origin === TEST_SERVER_ORIGIN && /^\/assets\/modeling\/.+\.(?:jpe?g|png)$/i.test(url.pathname);
+  url.origin === TEST_SERVER_ORIGIN &&
+  /^\/assets\/modeling\/.+\.(?:jpe?g|png)$/i.test(url.pathname);
 
 /**
  * Holds every modeling photo until the returned callback runs, so a loading
@@ -80,7 +81,7 @@ const openModeling = async (page, viewport, { cursorMode, settle = true, prepare
       if (mode) localStorage.setItem(key, mode);
       Math.random = () => draw;
     },
-    { draw: DETERMINISTIC_RANDOM_DRAW, key: CURSOR_MODE_KEY, mode: cursorMode ?? null }
+    { draw: DETERMINISTIC_RANDOM_DRAW, key: CURSOR_MODE_KEY, mode: cursorMode ?? null },
   );
   await page.goto("/modeling/", { waitUntil: settle ? "load" : "domcontentloaded" });
   await expect(page.locator("section.shoot").first()).toBeVisible();
@@ -98,7 +99,7 @@ const textPoint = async (locator) => {
     const range = document.createRange();
     range.selectNodeContents(textNode);
     const rect = Array.from(range.getClientRects()).find(
-      (candidate) => candidate.width >= 24 && candidate.height > 0
+      (candidate) => candidate.width >= 24 && candidate.height > 0,
     );
     if (!rect) throw new Error("The hover target has no usable text line.");
     return { x: rect.left + 5, y: rect.top + rect.height / 2 };
@@ -106,20 +107,15 @@ const textPoint = async (locator) => {
 };
 
 const hoverCount = (page) =>
-  page.evaluate(
-    (className) => document.querySelectorAll(`.${className}`).length,
-    HOVER_CLASS
-  );
+  page.evaluate((className) => document.querySelectorAll(`.${className}`).length, HOVER_CLASS);
 
 const expectHorizontalFit = async (page) => {
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
-  ).toBe(false);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
+    false,
+  );
 };
 
-test("the route resolves the shared cursor tokens at every review viewport", async ({
-  page,
-}) => {
+test("the route resolves the shared cursor tokens at every review viewport", async ({ page }) => {
   await openModeling(page, REVIEW_VIEWPORT.desktop);
 
   for (const viewport of REVIEW_VIEWPORTS) {
@@ -140,9 +136,7 @@ test("the route resolves the shared cursor tokens at every review viewport", asy
       // These windows are fixed page sections, so their title bars must not
       // advertise a drag the route cannot perform.
       expect(await cursorToken(page.locator(".portfolio-header > .title-bar"))).toBe("normal");
-      expect(await cursorToken(page.locator("section.shoot > .title-bar").first())).toBe(
-        "normal"
-      );
+      expect(await cursorToken(page.locator("section.shoot > .title-bar").first())).toBe("normal");
 
       // Real selectable copy takes the I-beam, and only the hovered host.
       const summary = page.locator(".portfolio-summary");
@@ -223,9 +217,7 @@ test("the fullscreen viewer shows the working cursor only while its own media lo
   await expect(stage).toHaveAttribute("aria-busy", "true");
   await expect(page.locator("body")).toHaveClass(new RegExp(LOADING_CLASS));
   // Reduced motion holds the animation on its first frame.
-  expect(await cursorToken(page.locator("body"))).toContain(
-    "working-in-background-light-1.png"
-  );
+  expect(await cursorToken(page.locator("body"))).toContain("working-in-background-light-1.png");
 
   // The viewer chrome keeps its own semantics once the wait is over.
   releasePhotos();

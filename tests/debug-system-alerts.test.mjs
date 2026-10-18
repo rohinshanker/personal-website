@@ -3,10 +3,7 @@ import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-import {
-  readHomeScript,
-  readHomeScriptText,
-} from "./helpers/home-scripts.mjs";
+import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
 const defaultButton = Object.freeze({
@@ -100,14 +97,12 @@ const expectedAlerts = [
   expectedAlert({
     id: "deodorant-reminder",
     icon: "assets/app-icons/ico/user_computer_pair.ico",
-    body:
-      "Be sure to shower and wear deodorant! Or don't. I'm just a website, who am I to tell you?",
+    body: "Be sure to shower and wear deodorant! Or don't. I'm just a website, who am I to tell you?",
   }),
   expectedAlert({
     id: "power-cycle-reminder",
     icon: "assets/app-icons/ico/shell_window1.ico",
-    body:
-      "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
+    body: "It is important to turn off your computer periodically. Leaving it on for long amounts of time will make it stressed out and sad!",
   }),
   expectedAlert({
     id: "substack-reminder",
@@ -122,8 +117,7 @@ const expectedAlerts = [
   expectedAlert({
     id: "browser-infected",
     icon: "assets/app-icons/ico/msie1.ico",
-    body:
-      "Attention!!! Multiple viruses have been detected on your computer. I think.",
+    body: "Attention!!! Multiple viruses have been detected on your computer. I think.",
   }),
   expectedAlert({
     id: "operation-unsupported",
@@ -168,14 +162,12 @@ const expectedAlerts = [
   expectedAlert({
     id: "social-media",
     icon: "assets/app-icons/ico/installer_generic_old.ico",
-    body:
-      "Social media promotes inflammatory content to maintain your attention and make the most ad revenue off of you.",
+    body: "Social media promotes inflammatory content to maintain your attention and make the most ad revenue off of you.",
   }),
   expectedAlert({
     id: "language",
     icon: "assets/app-icons/ico/charmap.ico",
-    body:
-      "Learn another language! There are few better things you can spend your time doing.",
+    body: "Learn another language! There are few better things you can spend your time doing.",
   }),
   expectedAlert({
     id: "radio-waves",
@@ -199,12 +191,8 @@ const expectedAlerts = [
   }),
 ];
 
-const legacyAlertIds = Object.freeze(
-  expectedAlerts.slice(0, 13).map(({ id }) => id)
-);
-const addedAlertIds = Object.freeze(
-  expectedAlerts.slice(13).map(({ id }) => id)
-);
+const legacyAlertIds = Object.freeze(expectedAlerts.slice(0, 13).map(({ id }) => id));
+const addedAlertIds = Object.freeze(expectedAlerts.slice(13).map(({ id }) => id));
 
 const readSystemAlertRuntime = async () => {
   const [manifestSource, systemAlertSource] = await Promise.all([
@@ -235,8 +223,14 @@ test("system alerts preserve all 30 exact definitions and their local icons", as
 
   assert.equal(alerts.length, 30);
   assert.deepEqual(alerts, expectedAlerts);
-  assert.deepEqual(alerts.slice(0, 13).map(({ id }) => id), legacyAlertIds);
-  assert.deepEqual(alerts.slice(13).map(({ id }) => id), addedAlertIds);
+  assert.deepEqual(
+    alerts.slice(0, 13).map(({ id }) => id),
+    legacyAlertIds,
+  );
+  assert.deepEqual(
+    alerts.slice(13).map(({ id }) => id),
+    addedAlertIds,
+  );
   assert.equal(addedAlertIds.length, 17);
   assert.equal(new Set(alerts.map(({ id }) => id)).size, alerts.length);
   assert.match(source, /Copy\/paste this object into SYSTEM_ALERT_INPUTS/);
@@ -246,7 +240,7 @@ test("system alerts preserve all 30 exact definitions and their local icons", as
       const iconFileName = icon.split("/").at(-1);
       assert.ok(iconFileNames.includes(iconFileName), `${icon} must be in the manifest`);
       await access(new URL(icon, root));
-    })
+    }),
   );
 });
 
@@ -271,7 +265,7 @@ test("system alert normalization supplies defaults and deeply freezes output", a
         buttonAlignment: "left",
       },
     ],
-    { iconFileNames: ["msg_information.ico", "msg_error.ico"] }
+    { iconFileNames: ["msg_information.ico", "msg_error.ico"] },
   );
 
   assert.deepEqual(structuredClone(definitions), [
@@ -304,7 +298,7 @@ test("system alert normalization supplies defaults and deeply freezes output", a
           buttonAlignment,
         },
       ],
-      { iconFileNames: ["msg_information.ico"] }
+      { iconFileNames: ["msg_information.ico"] },
     );
     assert.equal(definition.buttonAlignment, buttonAlignment);
   }
@@ -318,8 +312,7 @@ test("system alert normalization rejects every malformed authoring case", async 
     icon: "assets/app-icons/ico/msg_information.ico",
     body: "Valid body",
   });
-  const normalize = (definitions) =>
-    normalizeDefinitions(definitions, { iconFileNames });
+  const normalize = (definitions) => normalizeDefinitions(definitions, { iconFileNames });
 
   const invalidCases = [
     ["non-array definitions", () => normalize({}), /definitions must be an array/],
@@ -519,22 +512,19 @@ test("system alerts use one accessible shell and one dynamic renderer", async ()
   assert.match(html, /aria-describedby="debug-system-alert-message"/);
   assert.match(html, /data-system-alert-button-id="ok"/);
   assert.match(html, /data-system-alert-action="dismiss"/);
-  assert.match(
-    html,
-    /app-icon-manifest\.js[\s\S]*system-alerts\.js[\s\S]*main\.js/
-  );
+  assert.match(html, /app-icon-manifest\.js[\s\S]*system-alerts\.js[\s\S]*main\.js/);
 
   assert.match(
     css,
-    /\.random-alert-actions\[data-button-alignment="left"\] \{\n  justify-content: flex-start;/
+    /\.random-alert-actions\[data-button-alignment="left"\] \{\n  justify-content: flex-start;/,
   );
   assert.match(
     css,
-    /\.random-alert-actions\[data-button-alignment="center"\] \{\n  justify-content: center;/
+    /\.random-alert-actions\[data-button-alignment="center"\] \{\n  justify-content: center;/,
   );
   assert.match(
     css,
-    /\.random-alert-actions\[data-button-alignment="right"\] \{\n  justify-content: flex-end;/
+    /\.random-alert-actions\[data-button-alignment="right"\] \{\n  justify-content: flex-end;/,
   );
   assert.match(css, /\.random-alert-actions \{[\s\S]*?flex-wrap: wrap;/);
   assert.match(css, /\.debug-system-alert-message p \{\n  overflow-wrap: anywhere;/);
@@ -567,7 +557,7 @@ test("system alerts use one accessible shell and one dynamic renderer", async ()
   assert.match(source, /actionButtons\[0\]\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(
     source,
-    /const configureDebugSystemAlertPreview = \(preview, alert\) => \{\n  renderDebugSystemAlert\(alert, \{ root: preview, interactive: false \}\);\n\};/
+    /const configureDebugSystemAlertPreview = \(preview, alert\) => \{\n  renderDebugSystemAlert\(alert, \{ root: preview, interactive: false \}\);\n\};/,
   );
   assert.match(source, /showManagedRandomEventWindow\(debugSystemAlertWindow/);
   assert.match(source, /closeManagedRandomEventWindow\(debugSystemAlertWindow\)/);

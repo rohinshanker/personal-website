@@ -10,8 +10,7 @@ const BUILD_VERSION = `sha256-${"d".repeat(64)}`;
 const PROFILE_STORAGE_KEY = "personalSitePlayerProfileV1";
 const WARNING_TEXT =
   "Are you sure you would like to have errors revealed? Doing so will disqualify you from the leaderboard.";
-const CHECK_COUNTER_TEXT = (count) =>
-  `${count}/3 allowed checks used to place on leaderboard`;
+const CHECK_COUNTER_TEXT = (count) => `${count}/3 allowed checks used to place on leaderboard`;
 const profile = Object.freeze({
   id: "player-sudoku-check-controls",
   name: "Sudoku Controls Tester",
@@ -191,16 +190,12 @@ window.__sudokuCheckControlsTest = Object.freeze({
     usedHint: sudokuState.usedHint,
   }),
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
-const preparePage = async (
-  page,
-  viewport = viewports[2],
-  { reducedMotion = "reduce" } = {}
-) => {
+const preparePage = async (page, viewport = viewports[2], { reducedMotion = "reduce" } = {}) => {
   await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion });
   await page.addInitScript(
@@ -210,7 +205,7 @@ const preparePage = async (
       sessionStorage.clear();
       localStorage.setItem(profileKey, JSON.stringify(savedProfile));
     },
-    { profileKey: PROFILE_STORAGE_KEY, savedProfile: profile }
+    { profileKey: PROFILE_STORAGE_KEY, savedProfile: profile },
   );
   await installBackendConfig(page);
   await installSudokuBridge(page);
@@ -230,20 +225,15 @@ const preparePage = async (
   const playButton = sudokuWindow.locator("#sudoku-play");
   await expect(playButton).toBeEnabled({ timeout: 10_000 });
   await playButton.click();
-  await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(
-    /is-sudoku-playing/,
-    { timeout: 10_000 }
-  );
+  await expect(sudokuWindow.locator(".sudoku-app")).toHaveClass(/is-sudoku-playing/, {
+    timeout: 10_000,
+  });
   await sudokuWindow.locator(".sudoku-game-content").evaluate(async (element) => {
-    await Promise.allSettled(
-      element.getAnimations().map((animation) => animation.finished)
-    );
-    await new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve))
-    );
+    await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
   await expect(sudokuWindow.locator("#sudoku-leaderboard-checks")).toHaveText(
-    CHECK_COUNTER_TEXT(0)
+    CHECK_COUNTER_TEXT(0),
   );
   await expect
     .poll(() => api.sessionRequests.length, { timeout: 10_000 })
@@ -252,21 +242,16 @@ const preparePage = async (
   return { api, sudokuWindow };
 };
 
-const readState = (page) =>
-  page.evaluate(() => window.__sudokuCheckControlsTest.readState());
+const readState = (page) => page.evaluate(() => window.__sudokuCheckControlsTest.readState());
 
 const readIncorrectEntry = (page) =>
   page.evaluate(() => window.__sudokuCheckControlsTest.readIncorrectEntry());
 
 const enterIncorrectDigit = async (page, sudokuWindow) => {
   const entry = await readIncorrectEntry(page);
-  const cell = sudokuWindow.locator(
-    `.sudoku-cell[data-sudoku-index="${entry.index}"]`
-  );
+  const cell = sudokuWindow.locator(`.sudoku-cell[data-sudoku-index="${entry.index}"]`);
   await cell.click();
-  await sudokuWindow
-    .locator(`[data-sudoku-number="${entry.incorrectDigit}"]`)
-    .click();
+  await sudokuWindow.locator(`[data-sudoku-number="${entry.incorrectDigit}"]`).click();
   await expect(cell).toHaveAttribute("data-sudoku-value", entry.incorrectDigit);
   return { cell, entry };
 };
@@ -275,9 +260,7 @@ const expectWarningPrompt = async (sudokuWindow) => {
   const prompt = sudokuWindow.locator("#sudoku-errors-prompt");
   await expect(prompt).toBeVisible();
   await expect(prompt).toHaveAttribute("role", "alertdialog");
-  await expect(prompt.locator("#sudoku-errors-prompt-message")).toHaveText(
-    WARNING_TEXT
-  );
+  await expect(prompt.locator("#sudoku-errors-prompt-message")).toHaveText(WARNING_TEXT);
   const sphere = prompt.locator(".sudoku-solve-ball");
   await expect(sphere).toBeVisible();
   await expect(sphere).toHaveAttribute("aria-hidden", "true");
@@ -310,7 +293,7 @@ const readStatusbarGeometry = (sudokuWindow) =>
             y: rect.y,
           },
         ];
-      })
+      }),
     );
   });
 
@@ -320,7 +303,7 @@ const expectGeometryToMatch = (actual, expected) => {
     for (const [dimension, expectedValue] of Object.entries(expectedRect)) {
       expect(
         actual[selector][dimension],
-        `${selector} ${dimension} changed when the timer text grew`
+        `${selector} ${dimension} changed when the timer text grew`,
       ).toBeCloseTo(expectedValue, 1);
     }
   }
@@ -350,12 +333,8 @@ const expectViewportContainment = async (page, sudokuWindow, prompt = null) => {
     });
     expect(rect.left, `${label} left edge`).toBeGreaterThanOrEqual(-1);
     expect(rect.top, `${label} top edge`).toBeGreaterThanOrEqual(-1);
-    expect(rect.right, `${label} right edge`).toBeLessThanOrEqual(
-      rect.viewportWidth + 1
-    );
-    expect(rect.bottom, `${label} bottom edge`).toBeLessThanOrEqual(
-      rect.viewportHeight + 1
-    );
+    expect(rect.right, `${label} right edge`).toBeLessThanOrEqual(rect.viewportWidth + 1);
+    expect(rect.bottom, `${label} bottom edge`).toBeLessThanOrEqual(rect.viewportHeight + 1);
   };
 
   await expectContained(sudokuWindow, "Sudoku window");
@@ -371,11 +350,9 @@ const expectViewportContainment = async (page, sudokuWindow, prompt = null) => {
       statusbarScrollWidth: statusbar?.scrollWidth || 0,
     };
   });
-  expect(internalOverflow.appScrollWidth).toBeLessThanOrEqual(
-    internalOverflow.appClientWidth
-  );
+  expect(internalOverflow.appScrollWidth).toBeLessThanOrEqual(internalOverflow.appClientWidth);
   expect(internalOverflow.statusbarScrollWidth).toBeLessThanOrEqual(
-    internalOverflow.statusbarClientWidth
+    internalOverflow.statusbarClientWidth,
   );
 };
 
@@ -399,9 +376,7 @@ const readCheckPressFrames = (checkButton) =>
   checkButton.evaluate((element) => {
     const animation = element
       .getAnimations()
-      .find(
-        (candidate) => candidate.animationName === "sudoku-check-prompt-press"
-      );
+      .find((candidate) => candidate.animationName === "sudoku-check-prompt-press");
     if (!animation) throw new Error("The Check press animation is not running.");
     animation.pause();
     const frameAt = (time) => {
@@ -427,9 +402,7 @@ const fillBoardAndHoldPrompt = (page) =>
     getComputedStyle(element).boxShadow;
     const animation = element
       .getAnimations()
-      .find(
-        (candidate) => candidate.animationName === "sudoku-check-prompt-press"
-      );
+      .find((candidate) => candidate.animationName === "sudoku-check-prompt-press");
     if (!animation) throw new Error("The Check press animation did not start.");
     animation.pause();
     return filled;
@@ -442,9 +415,7 @@ const resumeCheckPrompt = (checkButton) =>
 
 const settleCheckPrompt = (checkButton) =>
   checkButton.evaluate(async (element) => {
-    await Promise.allSettled(
-      element.getAnimations().map((animation) => animation.finished)
-    );
+    await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
     return getComputedStyle(element).boxShadow;
   });
 
@@ -458,26 +429,18 @@ for (const viewport of [viewports[0], viewports[3]]) {
     const checkButton = sudokuWindow.locator("#sudoku-check");
     const counter = sudokuWindow.locator("#sudoku-leaderboard-checks");
     const status = sudokuWindow.locator("#sudoku-status");
-    const selectedKeypad = sudokuWindow.locator(
-      '[data-sudoku-number].is-selected'
-    );
+    const selectedKeypad = sudokuWindow.locator("[data-sudoku-number].is-selected");
 
     await expect(checkButton).not.toHaveClass(/is-board-full/);
-    expect((await readCheckPrompt(checkButton)).boxShadow).not.toContain(
-      PROMPT_GOLD
-    );
+    expect((await readCheckPrompt(checkButton)).boxShadow).not.toContain(PROMPT_GOLD);
 
-    const focusBeforePrompt = await page.evaluate(
-      () => document.activeElement?.id || ""
-    );
+    const focusBeforePrompt = await page.evaluate(() => document.activeElement?.id || "");
     const keypadBeforePrompt = await selectedKeypad.count();
     const filled = await fillBoardAndHoldPrompt(page);
 
     await expect(checkButton).toHaveClass(/is-board-full/);
     const prompt = await readCheckPrompt(checkButton);
-    expect(prompt.presses).toEqual([
-      { iterations: 2, name: "sudoku-check-prompt-press" },
-    ]);
+    expect(prompt.presses).toEqual([{ iterations: 2, name: "sudoku-check-prompt-press" }]);
     expect(prompt.boxShadow).toContain(PROMPT_GOLD);
 
     const frames = await readCheckPressFrames(checkButton);
@@ -490,9 +453,7 @@ for (const viewport of [viewports[0], viewports[3]]) {
     }
 
     // The prompt is visual only.
-    expect(await page.evaluate(() => document.activeElement?.id || "")).toBe(
-      focusBeforePrompt
-    );
+    expect(await page.evaluate(() => document.activeElement?.id || "")).toBe(focusBeforePrompt);
     await expect(status).toHaveText("Ready");
     await expect(counter).toHaveText(CHECK_COUNTER_TEXT(0));
     expect(await selectedKeypad.count()).toBe(keypadBeforePrompt);
@@ -507,7 +468,7 @@ for (const viewport of [viewports[0], viewports[3]]) {
     await expect(checkButton).toHaveClass(/is-board-full/);
 
     const promptScreenshot = testInfo.outputPath(
-      `sudoku-check-prompt-${viewport.width}x${viewport.height}.png`
+      `sudoku-check-prompt-${viewport.width}x${viewport.height}.png`,
     );
     await page.screenshot({ fullPage: true, path: promptScreenshot });
     await testInfo.attach(`sudoku-check-prompt-${viewport.name}`, {
@@ -518,12 +479,10 @@ for (const viewport of [viewports[0], viewports[3]]) {
     // Clearing a cell ends it, and refilling replays the press.
     await page.evaluate(
       (index) => window.__sudokuCheckControlsTest.clearCellAt(index),
-      filled.lastIndex
+      filled.lastIndex,
     );
     await expect(checkButton).not.toHaveClass(/is-board-full/);
-    expect((await readCheckPrompt(checkButton)).boxShadow).not.toContain(
-      PROMPT_GOLD
-    );
+    expect((await readCheckPrompt(checkButton)).boxShadow).not.toContain(PROMPT_GOLD);
 
     await fillBoardAndHoldPrompt(page);
     await expect(checkButton).toHaveClass(/is-board-full/);
@@ -533,9 +492,7 @@ for (const viewport of [viewports[0], viewports[3]]) {
     await resumeCheckPrompt(checkButton);
 
     // Solving the board ends it.
-    await page.evaluate(() =>
-      window.__sudokuCheckControlsTest.prepareCompletedBoard()
-    );
+    await page.evaluate(() => window.__sudokuCheckControlsTest.prepareCompletedBoard());
     await checkButton.click();
     await expect(status).toHaveText("Solved");
     await expect(checkButton).not.toHaveClass(/is-board-full/);
@@ -546,9 +503,7 @@ test("reduced motion keeps the Check glow without the press", async ({ page }) =
   const { sudokuWindow } = await preparePage(page);
   const checkButton = sudokuWindow.locator("#sudoku-check");
 
-  await page.evaluate(() =>
-    window.__sudokuCheckControlsTest.fillBoardWithMistake()
-  );
+  await page.evaluate(() => window.__sudokuCheckControlsTest.fillBoardWithMistake());
   await expect(checkButton).toHaveClass(/is-board-full/);
   const prompt = await readCheckPrompt(checkButton);
   expect(prompt.presses).toEqual([]);
@@ -564,9 +519,7 @@ test("Errors confirmation is repeatable, puzzle-scoped, and disqualifies only af
   const prompt = sudokuWindow.locator("#sudoku-errors-prompt");
 
   await expect(sudokuWindow.locator('[data-sudoku-hint="reveal"]')).toHaveCount(0);
-  await expect(
-    sudokuWindow.getByRole("button", { name: "Reveal", exact: true })
-  ).toHaveCount(0);
+  await expect(sudokuWindow.getByRole("button", { name: "Reveal", exact: true })).toHaveCount(0);
   await expect(offButton).toHaveAttribute("aria-pressed", "true");
 
   await errorsButton.click();
@@ -618,13 +571,13 @@ test("Errors confirmation is repeatable, puzzle-scoped, and disqualifies only af
 
   await sudokuWindow.locator("#sudoku-check").click();
   await expect(sudokuWindow.locator("#sudoku-leaderboard-checks")).toHaveText(
-    CHECK_COUNTER_TEXT(1)
+    CHECK_COUNTER_TEXT(1),
   );
   await sudokuWindow.locator("#sudoku-new").click();
   await expect(offButton).toHaveAttribute("aria-pressed", "true");
   await expect(errorsButton).toHaveAttribute("aria-pressed", "false");
   await expect(sudokuWindow.locator("#sudoku-leaderboard-checks")).toHaveText(
-    CHECK_COUNTER_TEXT(0)
+    CHECK_COUNTER_TEXT(0),
   );
   expect(await readState(page)).toMatchObject({
     checksUsed: 0,
@@ -709,9 +662,7 @@ test("three diagnostic checks are allowed and a completed board remains submitta
 
   await checkButton.click();
   await expect(counter).toHaveText(CHECK_COUNTER_TEXT(3));
-  await expect(sudokuWindow.locator("#sudoku-status")).toHaveText(
-    "No checks remaining"
-  );
+  await expect(sudokuWindow.locator("#sudoku-status")).toHaveText("No checks remaining");
   await expect(sudokuWindow.locator("#sudoku-mistakes")).toHaveText("Mistakes: 0");
   await expect(cell).not.toHaveClass(/is-invalid/);
   expect(await readState(page)).toMatchObject({
@@ -721,7 +672,7 @@ test("three diagnostic checks are allowed and a completed board remains submitta
   });
 
   const completion = await page.evaluate(() =>
-    window.__sudokuCheckControlsTest.prepareCompletedBoard()
+    window.__sudokuCheckControlsTest.prepareCompletedBoard(),
   );
   expect(completion.editableCellCount).toBeGreaterThan(0);
   await page.evaluate(() => window.__sudokuCheckControlsTest.freezeTimerAt(75));
@@ -761,9 +712,8 @@ for (const viewport of viewports) {
     let baselineGeometry = null;
     for (const timerCase of timerCases) {
       await page.evaluate(
-        (elapsedSeconds) =>
-          window.__sudokuCheckControlsTest.freezeTimerAt(elapsedSeconds),
-        timerCase.elapsedSeconds
+        (elapsedSeconds) => window.__sudokuCheckControlsTest.freezeTimerAt(elapsedSeconds),
+        timerCase.elapsedSeconds,
       );
       await expect(sudokuWindow.locator("#sudoku-time")).toHaveText(timerCase.text);
       const geometry = await readStatusbarGeometry(sudokuWindow);
@@ -773,7 +723,7 @@ for (const viewport of viewports) {
 
     await expectViewportContainment(page, sudokuWindow);
     const layoutScreenshot = testInfo.outputPath(
-      `sudoku-check-controls-layout-${viewport.width}x${viewport.height}.png`
+      `sudoku-check-controls-layout-${viewport.width}x${viewport.height}.png`,
     );
     await page.screenshot({ fullPage: true, path: layoutScreenshot });
     await testInfo.attach(`sudoku-check-controls-layout-${viewport.name}`, {
@@ -785,7 +735,7 @@ for (const viewport of viewports) {
     const prompt = await expectWarningPrompt(sudokuWindow);
     await expectViewportContainment(page, sudokuWindow, prompt);
     const promptScreenshot = testInfo.outputPath(
-      `sudoku-check-controls-prompt-${viewport.width}x${viewport.height}.png`
+      `sudoku-check-controls-prompt-${viewport.width}x${viewport.height}.png`,
     );
     await page.screenshot({ fullPage: true, path: promptScreenshot });
     await testInfo.attach(`sudoku-check-controls-prompt-${viewport.name}`, {

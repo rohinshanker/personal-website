@@ -49,8 +49,7 @@ export const buildStudyResourcesManifest = () => ({
   files: walk(STUDY_ROOT),
 });
 
-export const renderStudyResourcesManifest = (manifest) =>
-  `${JSON.stringify(manifest, null, 2)}\n`;
+export const renderStudyResourcesManifest = (manifest) => `${JSON.stringify(manifest, null, 2)}\n`;
 
 const readCurrentManifest = () => {
   try {
@@ -70,11 +69,11 @@ if (isMainModule) {
 
   if (readCurrentManifest() === expectedManifest) {
     process.stdout.write(
-      `Study resources manifest is current with ${manifest.files.length} PDF entries.\n`
+      `Study resources manifest is current with ${manifest.files.length} PDF entries.\n`,
     );
   } else if (checkManifest) {
     process.stderr.write(
-      "Study resources manifest is stale. Run: node scripts/build-study-resources-manifest.mjs\n"
+      "Study resources manifest is stale. Run: node scripts/build-study-resources-manifest.mjs\n",
     );
     process.exitCode = 1;
   } else {
@@ -83,8 +82,8 @@ if (isMainModule) {
     process.stdout.write(
       `Wrote ${manifest.files.length} PDF entries to ${path.relative(
         REPOSITORY_ROOT,
-        MANIFEST_PATH
-      )}.\n`
+        MANIFEST_PATH,
+      )}.\n`,
     );
   }
 }

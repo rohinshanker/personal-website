@@ -14,7 +14,8 @@ const createHarness = () => {
   return {
     context,
     rules: context.homeSnakeRules,
-    inRealm: (value) => vm.runInContext(`JSON.parse(${JSON.stringify(JSON.stringify(value))})`, context),
+    inRealm: (value) =>
+      vm.runInContext(`JSON.parse(${JSON.stringify(JSON.stringify(value))})`, context),
   };
 };
 
@@ -26,7 +27,10 @@ test("Snake publishes a frozen deterministic initial state without cosmetic rand
   const second = rules.generate(inRealm({ boardSize: "16" }), inRealm({ seed: 0xabcdef01 }));
   assert.deepEqual(plain(first), plain(second));
   assert.equal(first.apples.length, 1);
-  assert.equal(first.snake.some((segment) => rules.cellsMatch(segment, first.apples[0])), false);
+  assert.equal(
+    first.snake.some((segment) => rules.cellsMatch(segment, first.apples[0])),
+    false,
+  );
   assert.equal("sweepOffset" in first.apples[0], false);
   assert.equal(snakeSource.includes("Math.random"), false);
   assert.doesNotMatch(snakeSource, /\b(?:document|localStorage|fetch|setTimeout)\b/);
@@ -34,7 +38,10 @@ test("Snake publishes a frozen deterministic initial state without cosmetic rand
   vm.runInContext(`${commonSource}\n${snakeSource}`, browser);
   assert.equal(Object.isFrozen(browser.window.homeSnakeRules), true);
   for (const boardSize of ["10", "16", "20", "24"]) {
-    assert.equal(rules.generate(inRealm({ boardSize }), inRealm({ seed: 1 })).configuration.boardSize, boardSize);
+    assert.equal(
+      rules.generate(inRealm({ boardSize }), inRealm({ seed: 1 })).configuration.boardSize,
+      boardSize,
+    );
   }
 });
 
@@ -56,17 +63,24 @@ test("Snake validates and independently clones issued state", () => {
 
 test("Snake keeps the two-command queue and indexes directions by completed tick", () => {
   const { rules, inRealm } = createHarness();
-  const direct = (state, direction) => rules.transition(state, inRealm({
-    seq: state.nextSeq,
-    op: "direction",
-    tick: state.tick,
-    direction,
-  }));
+  const direct = (state, direction) =>
+    rules.transition(
+      state,
+      inRealm({
+        seq: state.nextSeq,
+        op: "direction",
+        tick: state.tick,
+        direction,
+      }),
+    );
   const state = rules.initial(rules.generate(inRealm({ boardSize: "10" }), inRealm({ seed: 9 })));
   direct(state, "up");
   direct(state, "left");
   assert.deepEqual(plain(state.directionQueue), ["up", "left"]);
-  assert.throws(() => direct(state, "down"), (error) => error.code === "illegal-action");
+  assert.throws(
+    () => direct(state, "down"),
+    (error) => error.code === "illegal-action",
+  );
   rules.step(state);
   assert.equal(state.tick, 1);
   assert.equal(state.direction, "up");
@@ -75,15 +89,22 @@ test("Snake keeps the two-command queue and indexes directions by completed tick
   assert.equal(state.tick, 2);
   assert.equal(state.direction, "left");
   assert.throws(
-    () => rules.transition(state, inRealm({
-      seq: state.nextSeq,
-      op: "direction",
-      tick: 1,
-      direction: "down",
-    })),
-    /Invalid Snake direction/
+    () =>
+      rules.transition(
+        state,
+        inRealm({
+          seq: state.nextSeq,
+          op: "direction",
+          tick: 1,
+          direction: "down",
+        }),
+      ),
+    /Invalid Snake direction/,
   );
-  assert.throws(() => direct(state, "right"), (error) => error.code === "illegal-action");
+  assert.throws(
+    () => direct(state, "right"),
+    (error) => error.code === "illegal-action",
+  );
 });
 
 test("Snake eats reproducible apples, grows, and derives the terminal collision result", () => {
@@ -108,7 +129,10 @@ test("Snake eats reproducible apples, grows, and derives the terminal collision 
     configuration: { boardSize: "10" },
     terminalTick: state.tick,
   });
-  assert.throws(() => rules.step(state), (error) => error.code === "terminal");
+  assert.throws(
+    () => rules.step(state),
+    (error) => error.code === "terminal",
+  );
 });
 
 test("Snake permits moving into a tail cell that vacates on the same tick", () => {
@@ -132,34 +156,51 @@ test("Snake rejects malformed replay actions and enforces work budgets", () => {
   const { context, rules, inRealm } = createHarness();
   const raw = rules.generate(inRealm({ boardSize: "10" }), inRealm({ seed: 3 }));
   const state = rules.initial(raw);
-  assert.throws(() => rules.transition(state, inRealm({ seq: 1, op: "step", tick: 0, direction: "up" })));
-  assert.throws(() => rules.transition(state, inRealm({ seq: 2, op: "direction", tick: 0, direction: "up" })));
-  assert.throws(() => rules.transition(state, inRealm({ seq: 1, op: "direction", tick: 0, direction: "up", extra: 1 })));
-  assert.throws(
-    () => rules.generate(
-      inRealm({ boardSize: "24" }),
-      { seed: 3, budget: context.homeGameRules.createBudget(1) }
+  assert.throws(() =>
+    rules.transition(state, inRealm({ seq: 1, op: "step", tick: 0, direction: "up" })),
+  );
+  assert.throws(() =>
+    rules.transition(state, inRealm({ seq: 2, op: "direction", tick: 0, direction: "up" })),
+  );
+  assert.throws(() =>
+    rules.transition(
+      state,
+      inRealm({ seq: 1, op: "direction", tick: 0, direction: "up", extra: 1 }),
     ),
-    (error) => error.code === "replay-limit"
+  );
+  assert.throws(
+    () =>
+      rules.generate(inRealm({ boardSize: "24" }), {
+        seed: 3,
+        budget: context.homeGameRules.createBudget(1),
+      }),
+    (error) => error.code === "replay-limit",
   );
   assert.throws(
     () => rules.step(state, context.homeGameRules.createBudget(0)),
-    (error) => error.code === "replay-limit"
+    (error) => error.code === "replay-limit",
   );
   const inputLimited = rules.initial(raw);
   inputLimited.nextSeq = context.homeGameRules.GAME_RULE_LIMITS.snake.inputs + 1;
   assert.throws(
-    () => rules.transition(inputLimited, inRealm({
-      seq: inputLimited.nextSeq,
-      op: "direction",
-      tick: 0,
-      direction: "up",
-    })),
-    (error) => error.code === "replay-limit"
+    () =>
+      rules.transition(
+        inputLimited,
+        inRealm({
+          seq: inputLimited.nextSeq,
+          op: "direction",
+          tick: 0,
+          direction: "up",
+        }),
+      ),
+    (error) => error.code === "replay-limit",
   );
   const tickLimited = rules.initial(raw);
   tickLimited.tick = context.homeGameRules.GAME_RULE_LIMITS.snake.ticks;
-  assert.throws(() => rules.step(tickLimited), (error) => error.code === "replay-limit");
+  assert.throws(
+    () => rules.step(tickLimited),
+    (error) => error.code === "replay-limit",
+  );
 });
 
 test("Snake work allowance covers the supported six-hour board and long grown-body loops", () => {
@@ -179,9 +220,13 @@ test("Snake work allowance covers the supported six-hour board and long grown-bo
   for (let y = 1; y < width; y += 1) cycle.push({ x: width - 1, y });
   for (let x = width - 2; x >= 0; x -= 1) cycle.push({ x, y: width - 1 });
   for (let y = width - 2; y > 0; y -= 1) cycle.push({ x: 0, y });
-  const state = rules.initial(rules.generate(inRealm({ boardSize: String(width) }), inRealm({ seed: 17 })));
+  const state = rules.initial(
+    rules.generate(inRealm({ boardSize: String(width) }), inRealm({ seed: 17 })),
+  );
   // A representative grown-body checkpoint, with apples inside its loop.
-  state.snake = inRealm(Array.from({ length: 60 }, (_, index) => cycle[(cycle.length - index) % cycle.length]));
+  state.snake = inRealm(
+    Array.from({ length: 60 }, (_, index) => cycle[(cycle.length - index) % cycle.length]),
+  );
   state.apples = inRealm(Array.from({ length: 6 }, (_, index) => ({ x: 3 + index, y: 3 })));
   state.score = state.snake.length - 3;
   const budget = context.homeGameRules.createBudget(limits.work);
@@ -189,10 +234,20 @@ test("Snake work allowance covers the supported six-hour board and long grown-bo
   for (let tick = 0; tick < 40_000; tick += 1) {
     const next = (cursor + 1) % cycle.length;
     const delta = { x: cycle[next].x - cycle[cursor].x, y: cycle[next].y - cycle[cursor].y };
-    const direction = Object.keys(rules.DIRECTIONS).find((name) => rules.cellsMatch(rules.DIRECTIONS[name], delta));
-    if (direction !== state.direction) rules.transition(state, inRealm({
-      seq: state.nextSeq, op: "direction", tick: state.tick, direction,
-    }), budget);
+    const direction = Object.keys(rules.DIRECTIONS).find((name) =>
+      rules.cellsMatch(rules.DIRECTIONS[name], delta),
+    );
+    if (direction !== state.direction)
+      rules.transition(
+        state,
+        inRealm({
+          seq: state.nextSeq,
+          op: "direction",
+          tick: state.tick,
+          direction,
+        }),
+        budget,
+      );
     rules.step(state, budget);
     cursor = next;
   }

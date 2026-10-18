@@ -8,7 +8,10 @@ const viewports = Object.freeze([
 ]);
 
 const openMinesweeper = async (page) => {
-  await page.getByRole("toolbar", { name: "Taskbar" }).getByRole("button", { name: "Minesweeper" }).click();
+  await page
+    .getByRole("toolbar", { name: "Taskbar" })
+    .getByRole("button", { name: "Minesweeper" })
+    .click();
   const app = page.locator('[data-app-window="minesweeper"]');
   await expect(app).toBeVisible();
   return app;
@@ -93,18 +96,15 @@ for (const viewport of viewports) {
     await expect(flag).toBeHidden();
     await expect(question).toBeHidden();
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
 
     await page.reload({ waitUntil: "domcontentloaded" });
     const reloadedApp = await openMinesweeper(page);
     await expect(reloadedApp.getByRole("combobox", { name: "Control mode" })).toHaveValue(
-      "keyboard"
+      "keyboard",
     );
-    await expect(reloadedApp.locator("#ms-grid")).toHaveAttribute(
-      "aria-keyshortcuts",
-      "S D F"
-    );
+    await expect(reloadedApp.locator("#ms-grid")).toHaveAttribute("aria-keyshortcuts", "S D F");
     await expect(reloadedApp.locator("#ms-flag-mode")).toBeHidden();
     await expect(reloadedApp.locator("#ms-question-mode")).toBeHidden();
   });

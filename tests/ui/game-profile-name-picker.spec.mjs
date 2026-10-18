@@ -1,6 +1,9 @@
 import { expect, test } from "./deterministic.mjs";
-import { DETERMINISTIC_RANDOM_DRAW, REVIEW_VIEWPORT, breakpointPair } from "./helpers/rendered-site.mjs";
-
+import {
+  DETERMINISTIC_RANDOM_DRAW,
+  REVIEW_VIEWPORT,
+  breakpointPair,
+} from "./helpers/rendered-site.mjs";
 
 const viewports = Object.freeze([
   REVIEW_VIEWPORT.mobile,
@@ -12,7 +15,9 @@ const viewports = Object.freeze([
 
 const prepareNamePicker = async (page) => {
   // Keep unrelated random alerts out of the picker; names use Web Crypto.
-  await page.addInitScript((draw) => { Math.random = () => draw; }, DETERMINISTIC_RANDOM_DRAW);
+  await page.addInitScript((draw) => {
+    Math.random = () => draw;
+  }, DETERMINISTIC_RANDOM_DRAW);
   await page.goto("/home.html");
   const aboutWindowClose = page.locator('#about-window [data-close="about"]');
   if (await aboutWindowClose.isVisible()) {
@@ -29,7 +34,7 @@ const prepareNamePicker = async (page) => {
   await expect(listbox).toBeVisible();
   await expect(listbox.getByRole("option")).toHaveCount(5);
   await expect(dialog.locator(".game-profile-name-credit")).toHaveText(
-    "via Sky Name Generator on Perchance"
+    "via Sky Name Generator on Perchance",
   );
 
   return { combobox, dialog, listbox };
@@ -62,10 +67,7 @@ for (const viewport of viewports) {
         toggle,
         toggleOwnsCenter:
           document
-            .elementFromPoint(
-              toggle.left + toggle.width / 2,
-              toggle.top + toggle.height / 2
-            )
+            .elementFromPoint(toggle.left + toggle.width / 2, toggle.top + toggle.height / 2)
             ?.closest("#game-profile-name-toggle") === toggleElement,
       };
     });
@@ -85,7 +87,9 @@ for (const viewport of viewports) {
   });
 }
 
-test("profile picker highlights, selects, rerolls, and retains the chosen favorite", async ({ page }) => {
+test("profile picker highlights, selects, rerolls, and retains the chosen favorite", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const { combobox, dialog, listbox } = await prepareNamePicker(page);
   const option = listbox.getByRole("option").nth(1);
@@ -111,10 +115,7 @@ test("profile picker highlights, selects, rerolls, and retains the chosen favori
   await expect(listbox).toBeVisible();
   await expect(listbox.getByRole("option", { selected: true })).toHaveText(selectedName);
   await combobox.press("ArrowDown");
-  await expect(combobox).toHaveAttribute(
-    "aria-activedescendant",
-    "game-profile-name-option-2"
-  );
+  await expect(combobox).toHaveAttribute("aria-activedescendant", "game-profile-name-option-2");
   await combobox.press("Enter");
   const favoriteName = await combobox.inputValue();
   await expect(favoriteName).not.toBe(selectedName);
@@ -132,7 +133,9 @@ test("profile picker highlights, selects, rerolls, and retains the chosen favori
   await expect(listbox.getByRole("option")).toHaveCount(5);
   await expect(listbox.getByRole("option", { selected: true })).toHaveCount(0);
   await expect(listbox.locator(".is-active")).toHaveCount(0);
-  await expect(dialog.getByRole("button", { name: /Reroll available in 3 seconds/ })).toBeDisabled();
+  await expect(
+    dialog.getByRole("button", { name: /Reroll available in 3 seconds/ }),
+  ).toBeDisabled();
 
   const replacement = listbox.getByRole("option").nth(2);
   const replacementName = await replacement.textContent();
@@ -141,7 +144,9 @@ test("profile picker highlights, selects, rerolls, and retains the chosen favori
   await expect(listbox).toBeHidden();
 });
 
-test("profile dialog is non-modal because keyboard focus can still reach the desktop", async ({ page }) => {
+test("profile dialog is non-modal because keyboard focus can still reach the desktop", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const { dialog } = await prepareNamePicker(page);
   await expect(dialog).toHaveAttribute("aria-modal", "false");
@@ -156,7 +161,7 @@ test("profile dialog is non-modal because keyboard focus can still reach the des
       return Boolean(
         active &&
           active !== document.body &&
-          !document.getElementById("game-profile-prompt").contains(active)
+          !document.getElementById("game-profile-prompt").contains(active),
       );
     });
   }

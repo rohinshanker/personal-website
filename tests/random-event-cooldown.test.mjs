@@ -79,20 +79,15 @@ test("all 30 system alerts register normally and only Neko forces a Start run", 
     readFile(new URL("scripts/home/system-alerts.js", root), "utf8"),
   ]);
   const registrations = getRandomEventRegistrationBlocks(source);
-  const alertConfigStart = systemAlertSource.indexOf(
-    "const SYSTEM_ALERT_INPUTS = Object.freeze(["
-  );
+  const alertConfigStart = systemAlertSource.indexOf("const SYSTEM_ALERT_INPUTS = Object.freeze([");
   const alertConfigEnd = systemAlertSource.indexOf(
     "\n  ]);\n\n  const definitions =",
-    alertConfigStart
+    alertConfigStart,
   );
   assert.notEqual(alertConfigStart, -1, "The shared system-alert inputs must exist");
   assert.notEqual(alertConfigEnd, -1, "The shared system-alert inputs must be bounded");
   const alertConfig = systemAlertSource.slice(alertConfigStart, alertConfigEnd);
-  const alertIds = Array.from(
-    alertConfig.matchAll(/^\s+id: "([^"]+)",/gm),
-    (match) => match[1]
-  );
+  const alertIds = Array.from(alertConfig.matchAll(/^\s+id: "([^"]+)",/gm), (match) => match[1]);
   const addedAlertIds = [
     "substack-reminder",
     "goldfish",
@@ -122,34 +117,32 @@ test("all 30 system alerts register normally and only Neko forces a Start run", 
   assert.equal(
     source.match(/const RANDOM_EVENT_DEVELOPER_MODE = false;/g)?.length,
     1,
-    "Random event developer mode must have one commit-safe disabled toggle"
+    "Random event developer mode must have one commit-safe disabled toggle",
   );
   assert.doesNotMatch(source, /const RANDOM_EVENT_DEVELOPER_MODE = true;/);
   assert.match(
     source,
-    /const registerRandomEvent = \(definition\) => \{[\s\S]*?debug: false,[\s\S]*?forceOnStart: false,[\s\S]*?probability: STANDARD_RANDOM_EVENT_PROBABILITY,[\s\S]*?probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,[\s\S]*?\.\.\.definition,[\s\S]*?randomEventDefinitions\.push\(registeredDefinition\);[\s\S]*?return registeredDefinition;\n\};/
+    /const registerRandomEvent = \(definition\) => \{[\s\S]*?debug: false,[\s\S]*?forceOnStart: false,[\s\S]*?probability: STANDARD_RANDOM_EVENT_PROBABILITY,[\s\S]*?probabilities: STANDARD_RANDOM_EVENT_PROBABILITIES,[\s\S]*?\.\.\.definition,[\s\S]*?randomEventDefinitions\.push\(registeredDefinition\);[\s\S]*?return registeredDefinition;\n\};/,
   );
   assert.match(source, /randomEventDefinitions\.forEach\(\(definition\) => \{/);
   assert.ok(registrations.length > 0, "The normal random-event registry must remain populated");
 
   const standardRegistrations = registrations.filter((registration) =>
-    /\bid:\s*"[^"]+"/.test(registration)
+    /\bid:\s*"[^"]+"/.test(registration),
   );
   assert.equal(
     registrations.length,
     standardRegistrations.length + 1,
-    "Only the data-driven system-alert family may omit a literal id"
+    "Only the data-driven system-alert family may omit a literal id",
   );
   assert.equal(source.match(/\bdebug\s*:\s*true\b/g)?.length ?? 0, 0);
   assert.equal(
     source.match(/\bforceOnStart\s*:\s*true\b/g)?.length ?? 0,
     1,
-    "Only the requested Neko event may force a Start-triggered run"
+    "Only the requested Neko event may force a Start-triggered run",
   );
   assert.doesNotMatch(systemAlertSource, /\bdebug\s*:/);
-  const expectedForcedStartIds = new Set([
-    "neko-stream-system-alert",
-  ]);
+  const expectedForcedStartIds = new Set(["neko-stream-system-alert"]);
   const actualForcedStartIds = new Set();
   const registeredIds = standardRegistrations.map((registration) => {
     const id = registration.match(/\bid:\s*"([^"]+)"/);
@@ -166,41 +159,36 @@ test("all 30 system alerts register normally and only Neko forces a Start run", 
   });
   assert.deepEqual(actualForcedStartIds, expectedForcedStartIds);
   assert.match(
-    standardRegistrations.find((registration) =>
-      /\bid:\s*"lain-system-alert"/.test(registration)
-    ),
+    standardRegistrations.find((registration) => /\bid:\s*"lain-system-alert"/.test(registration)),
     /\bdebug\s*:\s*false\b/,
-    "Lain must remain on its normal probability-gated path"
+    "Lain must remain on its normal probability-gated path",
   );
   assert.match(
     standardRegistrations.find((registration) => /\bid:\s*"red-tool"/.test(registration)),
     /\bdebug\s*:\s*false\b/,
-    "Red Tool must remain on its normal probability-gated path"
+    "Red Tool must remain on its normal probability-gated path",
   );
   const generatedSystemAlertIds = alertIds.map((id) => `debug-system-alert-${id}`);
   assert.equal(generatedSystemAlertIds.length, 30);
   assert.equal(
     new Set([...registeredIds, ...generatedSystemAlertIds]).size,
     registeredIds.length + generatedSystemAlertIds.length,
-    "Literal and generated event ids must remain unique"
+    "Literal and generated event ids must remain unique",
   );
   const systemAlertRegistration = registrations.find((registration) =>
-    /id: `debug-system-alert-\$\{alert\.id\}`/.test(registration)
+    /id: `debug-system-alert-\$\{alert\.id\}`/.test(registration),
   );
   assert.ok(systemAlertRegistration, "The common system-alert registration must exist");
   assert.doesNotMatch(systemAlertRegistration, /\b(?:debug|probability|probabilities):/);
   assert.match(systemAlertRegistration, /\bkind:\s*RANDOM_EVENT_KIND_INTERACTIVE,/);
   assert.match(systemAlertRegistration, /\bisVisible:\s*isDebugSystemAlertVisible,/);
-  assert.match(
-    systemAlertRegistration,
-    /\bcanTrigger:\s*\(\) => !isDebugSystemAlertVisible\(\),/
-  );
+  assert.match(systemAlertRegistration, /\bcanTrigger:\s*\(\) => !isDebugSystemAlertVisible\(\),/);
   assert.match(systemAlertRegistration, /\bpreloadTargets:\s*\(\) => \[alert\.icon\],/);
   assert.match(systemAlertRegistration, /\brun:\s*\(\) => showDebugSystemAlert\(alert\),/);
   assert.match(systemAlertRegistration, /\bsystemAlert:\s*alert,/);
   assert.match(
     source,
-    /SYSTEM_ALERTS\.forEach\(\(alert\) => \{[\s\S]*?id: `debug-system-alert-\$\{alert\.id\}`,[\s\S]*?kind: RANDOM_EVENT_KIND_INTERACTIVE,/
+    /SYSTEM_ALERTS\.forEach\(\(alert\) => \{[\s\S]*?id: `debug-system-alert-\$\{alert\.id\}`,[\s\S]*?kind: RANDOM_EVENT_KIND_INTERACTIVE,/,
   );
 });
 
@@ -221,7 +209,7 @@ const createCooldownRuntime = (source) => {
     `${sharedHelper(source, "chooseWeightedRandomEvent")}\n` +
       `${source.slice(start, end)}\n` +
       "globalThis.randomEventCooldown = { isRandomEventTriggerOnCooldown, recordRandomEventTrigger, isRandomEventOnLockdown, recordRandomEventSelection, chooseRandomEventOutsideLockdown };",
-    context
+    context,
   );
 
   return {
@@ -241,7 +229,7 @@ const createPromoRandomRuntime = (source) => {
     `${sharedHelper(source, "clampNumber")}\n` +
       `${source.slice(start, end)}\n` +
       "globalThis.promoRandom = { promoRandomEventTriggerProbability, promoRandomEventCompactnessWeight };",
-    context
+    context,
   );
   return context.promoRandom;
 };
@@ -263,7 +251,7 @@ const createGameplayLockRuntime = (source) => {
         clear: () => randomEventDefinitions.splice(0, randomEventDefinitions.length),
       };
     `,
-    context
+    context,
   );
   return context.randomEventGameplayLock;
 };
@@ -321,7 +309,7 @@ const createAdminRandomChoiceRuntime = (source) => {
         getRunCalls: () => runCalls,
       };
     `,
-    context
+    context,
   );
   return context.adminRandomChoice;
 };
@@ -437,14 +425,14 @@ test("promo mode raises trigger probability and favors smaller physical footprin
 
   assert.match(
     source,
-    /selectionWeight: isPromoRandomEventModeActive\(\)[\s\S]*?randomEventCompactnessWeightProvider\(definition\)/
+    /selectionWeight: isPromoRandomEventModeActive\(\)[\s\S]*?randomEventCompactnessWeightProvider\(definition\)/,
   );
   assert.match(source, /Math\.random\(\) >= maxTriggerProbability/);
   assert.match(source, /const getAdminRandomEventCompactnessWeight = \(definition\) =>/);
   assert.match(source, /querySelectorAll\("img\[data-src\], video\[data-src\]"\)/);
   assert.match(
     source,
-    /unresolvedMediaEventIds\.has\(eventId\)[\s\S]*?PROMO_RANDOM_EVENT_COMPACTNESS_MIN/
+    /unresolvedMediaEventIds\.has\(eventId\)[\s\S]*?PROMO_RANDOM_EVENT_COMPACTNESS_MIN/,
   );
 });
 
@@ -466,21 +454,18 @@ test("Admin Random uniformly selects and records through the shared repeat windo
   ]);
   runtime.markPending(pending);
 
-  assert.deepEqual(
-    JSON.parse(JSON.stringify(await runtime.run({ source: "first-click" }))),
-    { ok: true, message: "Triggered first." }
-  );
-  assert.deepEqual(
-    JSON.parse(JSON.stringify(await runtime.run({ source: "second-click" }))),
-    { ok: true, message: "Triggered second." }
-  );
-  assert.deepEqual(
-    JSON.parse(JSON.stringify(await runtime.run({ source: "third-click" }))),
-    {
-      ok: false,
-      message: "No eligible event is available outside the recent-repeat window.",
-    }
-  );
+  assert.deepEqual(JSON.parse(JSON.stringify(await runtime.run({ source: "first-click" }))), {
+    ok: true,
+    message: "Triggered first.",
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(await runtime.run({ source: "second-click" }))), {
+    ok: true,
+    message: "Triggered second.",
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(await runtime.run({ source: "third-click" }))), {
+    ok: false,
+    message: "No eligible event is available outside the recent-repeat window.",
+  });
   assert.deepEqual(JSON.parse(JSON.stringify(runtime.getCandidateSnapshots())), [
     [
       { id: "first", triggerProbability: 1 },
@@ -502,10 +487,10 @@ test("Admin Random uniformly selects and records through the shared repeat windo
   ]);
 
   runtime.setGameplayLocked(true);
-  assert.deepEqual(
-    JSON.parse(JSON.stringify(await runtime.run())),
-    { ok: false, message: "Finish the active gameplay event first." }
-  );
+  assert.deepEqual(JSON.parse(JSON.stringify(await runtime.run())), {
+    ok: false,
+    message: "Finish the active gameplay event first.",
+  });
 });
 
 test("an event that reports a gameplay lock blocks every other event", async () => {
@@ -530,7 +515,10 @@ test("every event that holds the visitor mid-activity reports the lock", async (
   // Each condition is the one the monolith checked centrally; the event that
   // owns the state now declares it, so losing one shows up here.
   const conditions = [
-    ["eventBrandBurns", /isGameplayLocked: \(\) =>\s*isBrandBurnsVisible\(\) && brandBurnsStage === "fight"/],
+    [
+      "eventBrandBurns",
+      /isGameplayLocked: \(\) =>\s*isBrandBurnsVisible\(\) && brandBurnsStage === "fight"/,
+    ],
     ["eventFate", /isGameplayLocked: \(\) =>\s*isFateVisible\(\) && fateState === "active"/],
     [
       "eventLancerBattle",
@@ -553,71 +541,74 @@ test("every event that holds the visitor mid-activity reports the lock", async (
 test("the scheduler isolates forced events and only cools down normal accepted events", async () => {
   const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const scheduler = source.match(
-    /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
+    /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/,
   );
 
   assert.ok(scheduler, "The scheduler should remain a dedicated helper");
   assert.match(scheduler[1], /const debug = Boolean\(context\.debug\);/);
   assert.match(
     scheduler[1],
-    /const forceOnStart =\n    Boolean\(context\.forceOnStart\) && context\.triggerName === "startButton";/
+    /const forceOnStart =\s*Boolean\(context\.forceOnStart\) && context\.triggerName === "startButton";/,
   );
   assert.match(scheduler[1], /const bypassGlobalLimits = debug \|\| forceOnStart;/);
   assert.match(scheduler[1], /if \(isRandomEventGameplayLockActive\(\)\) return false;/);
   assert.match(
     scheduler[1],
-    /if \(!bypassGlobalLimits && isRandomEventTriggerOnCooldown\(\)\) return false;/
+    /if \(!bypassGlobalLimits && isRandomEventTriggerOnCooldown\(\)\) return false;/,
   );
   assert.match(scheduler[1], /if \(isRandomEventOnLockdown\(definition\)\) return false;/);
   assert.match(
     scheduler[1],
-    /randomEventPendingDefinitions\.add\(definition\);\n  recordRandomEventSelection\(definition\);\n  if \(!bypassGlobalLimits\) recordRandomEventTrigger\(\);\n  const delayRequest/
+    /randomEventPendingDefinitions\.add\(definition\);\n  recordRandomEventSelection\(definition\);\n  if \(!bypassGlobalLimits\) recordRandomEventTrigger\(\);\n  const delayRequest/,
   );
   assert.match(
     scheduler[1],
-    /Promise\.all\(\[delayRequest, preloadRequest\]\)\.then\(\(\) => \{\n    randomEventPendingDefinitions\.delete\(definition\);\n    if \(isRandomEventGameplayLockActive\(\)\) return;/
+    /Promise\.all\(\[delayRequest, preloadRequest\]\)\.then\(\(\) => \{\n    randomEventPendingDefinitions\.delete\(definition\);\n    if \(isRandomEventGameplayLockActive\(\)\) return;/,
   );
   assert.match(
     scheduler[1],
-    /definition\.canTrigger\(\{ triggerName, detail, debug, forceOnStart \}\)/
+    /definition\.canTrigger\(\{ triggerName, detail, debug, forceOnStart \}\)/,
   );
-  assert.doesNotMatch(source, /RANDOM_EVENT_REPEAT_DAMPEN|interactiveRandomEventRepeat|recordInteractiveRandomEventRun/);
+  assert.doesNotMatch(
+    source,
+    /RANDOM_EVENT_REPEAT_DAMPEN|interactiveRandomEventRepeat|recordInteractiveRandomEventRun/,
+  );
 
   const trigger = source.match(
-    /const triggerRandomEvents = \(triggerName, detail = \{\}\) => \{([\s\S]*?)\n\};\n\nconst recordGeneralRandomEventClick/
+    /const triggerRandomEvents = \(triggerName, detail = \{\}\) => \{([\s\S]*?)\n\};\n\nconst recordGeneralRandomEventClick/,
   );
   assert.ok(trigger, "The trigger should remain a dedicated helper");
   assert.match(
     trigger[1],
-    /if \(!isHomeActivationReady\(\)\) return false;\n  if \(shouldPauseNaturalRandomEvents\(\)\) return false;\n  if \(isRandomEventGameplayLockActive\(\)\) return false;\n  const triggerOnCooldown = isRandomEventTriggerOnCooldown\(\);/
+    /if \(!isHomeActivationReady\(\)\) return false;\n  if \(shouldPauseNaturalRandomEvents\(\)\) return false;\n  if \(isRandomEventGameplayLockActive\(\)\) return false;\n  const triggerOnCooldown = isRandomEventTriggerOnCooldown\(\);/,
   );
   assert.match(
     trigger[1],
-    /const forcedEventPending = Array\.from\(randomEventPendingDefinitions\)\.some\([\s\S]*?randomEventDebugEnabled\(definition\) \|\|[\s\S]*?randomEventForceOnStartEnabled\(definition\)[\s\S]*?const forceOnStart = randomEventForceOnStartEnabled\(definition\);[\s\S]*?const bypassGlobalLimits =[\s\S]*?debug \|\| \(forceOnStart && triggerName === "startButton"\);[\s\S]*?if \(forcedEventPending && \(debug \|\| forceOnStart\)\) return;[\s\S]*?if \(triggerOnCooldown && !bypassGlobalLimits\) return;/
+    /const forcedEventPending = Array\.from\(randomEventPendingDefinitions\)\.some\([\s\S]*?randomEventDebugEnabled\(definition\) \|\|[\s\S]*?randomEventForceOnStartEnabled\(definition\)[\s\S]*?const forceOnStart = randomEventForceOnStartEnabled\(definition\);[\s\S]*?const bypassGlobalLimits =[\s\S]*?debug \|\| \(forceOnStart && triggerName === "startButton"\);[\s\S]*?if \(forcedEventPending && \(debug \|\| forceOnStart\)\) return;[\s\S]*?if \(triggerOnCooldown && !bypassGlobalLimits\) return;/,
   );
   assert.match(
     trigger[1],
-    /const forceRun =[\s\S]*?forceOnStart && triggerName === "startButton"[\s\S]*?if \(forceRun\) \{[\s\S]*?forcedEvents\.push\([\s\S]*?triggerProbability: 1,[\s\S]*?const selectedForced = chooseRandomEventOutsideLockdown\(forcedEvents\);[\s\S]*?scheduleRandomEventRun\(selectedForced\.definition,/
+    /const forceRun =[\s\S]*?forceOnStart && triggerName === "startButton"[\s\S]*?if \(forceRun\) \{[\s\S]*?forcedEvents\.push\([\s\S]*?triggerProbability: 1,[\s\S]*?const selectedForced = chooseRandomEventOutsideLockdown\(forcedEvents\);[\s\S]*?scheduleRandomEventRun\(selectedForced\.definition,/,
   );
   assert.match(
     trigger[1],
-    /const selected = chooseRandomEventOutsideLockdown\(eligibleEvents\);[\s\S]*?if \(!selected\) \{[\s\S]*?return runRandomEventFallback\(triggerName\);/
+    /const selected = chooseRandomEventOutsideLockdown\(eligibleEvents\);[\s\S]*?if \(!selected\) \{[\s\S]*?return runRandomEventFallback\(triggerName\);/,
   );
 
   assert.match(
     source,
-    /const maybeShowFelizJueves = \(\) => \{\n  if \(RANDOM_EVENT_DEVELOPER_MODE\) return false;\n  if \(isRandomEventGameplayLockActive\(\)\) return false;[\s\S]*?if \(isRandomEventTriggerOnCooldown\(\)\) return false;[\s\S]*?markFelizJuevesShown\(dateKey\);\n  recordRandomEventTrigger\(\);\n  showFelizJuevesWindow\(\);/
+    /const maybeShowFelizJueves = \(\) => \{\n  if \(RANDOM_EVENT_DEVELOPER_MODE\) return false;\n  if \(isRandomEventGameplayLockActive\(\)\) return false;[\s\S]*?if \(isRandomEventTriggerOnCooldown\(\)\) return false;[\s\S]*?markFelizJuevesShown\(dateKey\);\n  recordRandomEventTrigger\(\);\n  showFelizJuevesWindow\(\);/,
   );
   assert.match(
     source,
-    /const randomEventDeveloperModeAllows = \(definition\) =>\n  !RANDOM_EVENT_DEVELOPER_MODE \|\| Boolean\(definition\.debug\);/
+    /const randomEventDeveloperModeAllows = \(definition\) =>\n  !RANDOM_EVENT_DEVELOPER_MODE \|\| Boolean\(definition\.debug\);/,
   );
 });
 
 test("only Start-bound force contexts and debug scheduling bypass global limits", async () => {
   const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const scheduler = source.match(
-    /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
+    /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/,
   );
   assert.ok(scheduler, "The scheduler should remain independently executable");
 
@@ -660,7 +651,7 @@ test("only Start-bound force contexts and debug scheduling bypass global limits"
         setLockdownActive: (value) => { lockdownActive = value; },
       };
     `,
-    context
+    context,
   );
 
   const runtime = context.randomEventScheduler;
@@ -690,22 +681,13 @@ test("only Start-bound force contexts and debug scheduling bypass global limits"
   assert.equal(runtime.getSelectionCount(), 1);
 
   runtime.setGameplayLockActive(true);
-  assert.equal(
-    runtime.schedule(second, { triggerName: "windowOpen", debug: true }),
-    false
-  );
+  assert.equal(runtime.schedule(second, { triggerName: "windowOpen", debug: true }), false);
   runtime.setGameplayLockActive(false);
   runtime.setLockdownActive(true);
-  assert.equal(
-    runtime.schedule(second, { triggerName: "windowOpen", debug: true }),
-    false
-  );
+  assert.equal(runtime.schedule(second, { triggerName: "windowOpen", debug: true }), false);
   runtime.setLockdownActive(false);
   runtime.setCooldownActive(true);
-  assert.equal(
-    runtime.schedule(second, { triggerName: "windowOpen", debug: true }),
-    true
-  );
+  assert.equal(runtime.schedule(second, { triggerName: "windowOpen", debug: true }), true);
   assert.equal(runtime.getPendingCount(), 2);
   assert.equal(runtime.getSelectionCount(), 2);
   assert.equal(runtime.getTriggerCount(), 1);
@@ -716,7 +698,7 @@ test("only Start-bound force contexts and debug scheduling bypass global limits"
       triggerName: "windowOpen",
       forceOnStart: true,
     }),
-    false
+    false,
   );
   assert.equal(runtime.getPendingCount(), 2);
   assert.equal(runtime.getSelectionCount(), 2);
@@ -729,7 +711,7 @@ test("only Start-bound force contexts and debug scheduling bypass global limits"
       triggerName: "windowOpen",
       forceOnStart: true,
     }),
-    false
+    false,
   );
   assert.equal(runtime.getPendingCount(), 2);
   assert.equal(runtime.getSelectionCount(), 2);
@@ -741,7 +723,7 @@ test("only Start-bound force contexts and debug scheduling bypass global limits"
       triggerName: "startButton",
       forceOnStart: true,
     }),
-    true
+    true,
   );
   assert.equal(runtime.getPendingCount(), 3);
   assert.equal(runtime.getSelectionCount(), 3);
@@ -758,7 +740,7 @@ test("only Start-bound force contexts and debug scheduling bypass global limits"
       triggerName: "startButton",
       forceOnStart: true,
     }),
-    false
+    false,
   );
   assert.equal(runtime.getPendingCount(), 3);
   assert.equal(runtime.getSelectionCount(), 3);
@@ -767,10 +749,10 @@ test("only Start-bound force contexts and debug scheduling bypass global limits"
 test("developer mode uses raw flags and takes precedence over global debug", async () => {
   const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const effectiveDebugHelper = source.match(
-    /const randomEventDebugEnabled = \(definition\) =>\n  RANDOM_EVENT_GLOBAL_DEBUG \|\| Boolean\(definition\.debug\);/
+    /const randomEventDebugEnabled = \(definition\) =>\n  RANDOM_EVENT_GLOBAL_DEBUG \|\| Boolean\(definition\.debug\);/,
   );
   const developerModeHelper = source.match(
-    /const randomEventDeveloperModeAllows = \(definition\) =>\n  !RANDOM_EVENT_DEVELOPER_MODE \|\| Boolean\(definition\.debug\);/
+    /const randomEventDeveloperModeAllows = \(definition\) =>\n  !RANDOM_EVENT_DEVELOPER_MODE \|\| Boolean\(definition\.debug\);/,
   );
   assert.ok(effectiveDebugHelper, "Effective debug state should remain a dedicated helper");
   assert.ok(developerModeHelper, "The developer-mode filter should remain a dedicated helper");
@@ -783,8 +765,8 @@ test("developer mode uses raw flags and takes precedence over global debug", asy
           `const RANDOM_EVENT_GLOBAL_DEBUG = ${globalDebug};\n` +
           `${effectiveDebugHelper[0]}\n${developerModeHelper[0]}\n` +
           `JSON.stringify({ allowed: randomEventDeveloperModeAllows(definition), debug: randomEventDebugEnabled(definition) });`,
-        context
-      )
+        context,
+      ),
     );
   };
 
@@ -794,7 +776,7 @@ test("developer mode uses raw flags and takes precedence over global debug", asy
       globalDebug: false,
       definition: { debug: false },
     }),
-    { allowed: true, debug: false }
+    { allowed: true, debug: false },
   );
   assert.deepEqual(
     evaluate({
@@ -802,7 +784,7 @@ test("developer mode uses raw flags and takes precedence over global debug", asy
       globalDebug: false,
       definition: { debug: true },
     }),
-    { allowed: true, debug: true }
+    { allowed: true, debug: true },
   );
   assert.deepEqual(
     evaluate({
@@ -810,7 +792,7 @@ test("developer mode uses raw flags and takes precedence over global debug", asy
       globalDebug: true,
       definition: { debug: false },
     }),
-    { allowed: true, debug: true }
+    { allowed: true, debug: true },
   );
   assert.deepEqual(
     evaluate({
@@ -818,7 +800,7 @@ test("developer mode uses raw flags and takes precedence over global debug", asy
       globalDebug: true,
       definition: { debug: false },
     }),
-    { allowed: false, debug: true }
+    { allowed: false, debug: true },
   );
   assert.deepEqual(
     evaluate({
@@ -826,14 +808,14 @@ test("developer mode uses raw flags and takes precedence over global debug", asy
       globalDebug: false,
       definition: { debug: true },
     }),
-    { allowed: true, debug: true }
+    { allowed: true, debug: true },
   );
 });
 
 test("a queued event does not appear after a gameplay lock begins", async () => {
   const source = await readHomeScriptText("util", ...RANDOM_EVENT_SCRIPT_KEYS, "adminOrchestrator");
   const scheduler = source.match(
-    /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/
+    /const scheduleRandomEventRun = \(definition, context\) => \{([\s\S]*?)\n\};\n\nconst triggerRandomEvents/,
   );
   assert.ok(scheduler, "The scheduler should remain independently executable");
 
@@ -863,12 +845,17 @@ test("a queued event does not appear after a gameplay lock begins", async () => 
         getPendingCount: () => randomEventPendingDefinitions.size,
       };
     `,
-    context
+    context,
   );
 
   const runtime = context.randomEventSchedulerRace;
   let firstRuns = 0;
-  const first = { id: "first", run: () => { firstRuns += 1; } };
+  const first = {
+    id: "first",
+    run: () => {
+      firstRuns += 1;
+    },
+  };
 
   assert.equal(runtime.schedule(first, { triggerName: "generalClicks" }), true);
   runtime.setGameplayLockActive(true);
@@ -880,7 +867,12 @@ test("a queued event does not appear after a gameplay lock begins", async () => 
 
   runtime.setGameplayLockActive(false);
   let secondRuns = 0;
-  const second = { id: "second", run: () => { secondRuns += 1; } };
+  const second = {
+    id: "second",
+    run: () => {
+      secondRuns += 1;
+    },
+  };
   assert.equal(runtime.schedule(second, { triggerName: "generalClicks" }), true);
   runtime.resolvePreload();
   await Promise.resolve();

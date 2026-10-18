@@ -10,16 +10,19 @@ import {
 } from "./helpers/home-contracts.mjs";
 
 test("whole-contract rule aliases remain part of the load dependency graph", () => {
-  assert.deepEqual(contractImports(`
+  assert.deepEqual(
+    contractImports(`
 const { initial, transition } = window.homeSnakeRules;
 const solRules = window.homeSolitaireRules;
 const sudokuRules = window.homeSudokuRules;
 const ordinaryValue = window.innerWidth;
-`), [
-    { contract: "homeSnakeRules", names: ["initial", "transition"] },
-    { contract: "homeSolitaireRules", names: [] },
-    { contract: "homeSudokuRules", names: [] },
-  ]);
+`),
+    [
+      { contract: "homeSnakeRules", names: ["initial", "transition"] },
+      { contract: "homeSolitaireRules", names: [] },
+      { contract: "homeSudokuRules", names: [] },
+    ],
+  );
 });
 
 /**
@@ -39,7 +42,7 @@ async function loadHomeGraph() {
   // Script order as the browser sees it. Attribute order varies, and one tag
   // spans several lines, so this matches the `src` itself.
   const eagerOrder = [...home.matchAll(/src="(scripts\/home\/[^"?]+)(?:\?[^"]*)?"/g)].map(
-    (match) => match[1]
+    (match) => match[1],
   );
   const order = [
     ...eagerOrder,
@@ -53,17 +56,14 @@ async function loadHomeGraph() {
 test("every Home script is loaded by home.html exactly once", async () => {
   const { eagerOrder, files } = await loadHomeGraph();
   const loadable = files.filter((file) => !file.endsWith(".worker.js"));
-  const lazy = new Set([
-    "scripts/home/admin/orchestrator.js",
-    "scripts/home/admin-controls.js",
-  ]);
+  const lazy = new Set(["scripts/home/admin/orchestrator.js", "scripts/home/admin-controls.js"]);
 
   for (const file of loadable) {
     const count = eagerOrder.filter((src) => src === file).length;
     assert.equal(
       count,
       lazy.has(file) ? 0 : 1,
-      file + " should have the expected eager Home load count, saw " + count
+      file + " should have the expected eager Home load count, saw " + count,
     );
   }
   for (const src of eagerOrder) {
@@ -73,7 +73,9 @@ test("every Home script is loaded by home.html exactly once", async () => {
 
 test("Home classic scripts defer in dependency order and Admin stays ordered on demand", async () => {
   const { home } = await loadHomeGraph();
-  const classicTags = [...home.matchAll(/<script\b([^>]*)\bsrc="scripts\/home\/[^"]+"([^>]*)><\/script>/g)]
+  const classicTags = [
+    ...home.matchAll(/<script\b([^>]*)\bsrc="scripts\/home\/[^"]+"([^>]*)><\/script>/g),
+  ]
     .map((match) => match.slice(1).join(" "))
     .filter((attributes) => !/\btype="module"/.test(attributes));
   assert.ok(classicTags.length > 40);
@@ -83,7 +85,7 @@ test("Home classic scripts defer in dependency order and Admin stays ordered on 
   assert.ok(
     resources.indexOf("scripts/home/admin/orchestrator.js") <
       resources.indexOf("scripts/home/admin-controls.js"),
-    "Admin orchestrator must load before its controller"
+    "Admin orchestrator must load before its controller",
   );
 });
 
@@ -97,7 +99,7 @@ test("each imported contract name is published by its owner", async () => {
       for (const name of names) {
         assert.ok(
           owner.names.has(name),
-          `${file} imports ${name} from window.${contract}, but ${owner.file} does not publish it`
+          `${file} imports ${name} from window.${contract}, but ${owner.file} does not publish it`,
         );
       }
     }
@@ -115,7 +117,7 @@ test("a contract is published before any script that reads it", async () => {
       if (!owner || !position.has(owner.file)) continue;
       assert.ok(
         position.get(owner.file) < position.get(file),
-        `${file} reads window.${contract} at load time, so ${owner.file} must come earlier in home.html`
+        `${file} reads window.${contract} at load time, so ${owner.file} must come earlier in home.html`,
       );
     }
   }
@@ -129,10 +131,9 @@ test("no Home script publishes a name it does not declare", async () => {
     for (const { contract, shorthand } of contractPublications(source)) {
       const before = source.slice(0, source.indexOf(`window.${contract} =`));
       for (const name of shorthand) {
-        const declared = new RegExp(
-          `(?:const|let|var|function|class)\\s+${name}\\b`,
-          "m"
-        ).test(before);
+        const declared = new RegExp(`(?:const|let|var|function|class)\\s+${name}\\b`, "m").test(
+          before,
+        );
         assert.ok(declared, `${file} publishes ${name} without declaring it`);
       }
     }
@@ -145,12 +146,12 @@ test("main.js stays a boot entry rather than a feature module", async () => {
 
   assert.ok(
     lines < 160,
-    `scripts/home/main.js should stay a small boot entry; it is ${lines} lines`
+    `scripts/home/main.js should stay a small boot entry; it is ${lines} lines`,
   );
   assert.ok(
     !/Object\.freeze\(\{[\s\S]*\}\)\s*;/.test(source.replace(/window\.home[A-Za-z]*\s*=\s*/, "")) ||
       !/window\.homeBoot/.test(source),
-    "the boot entry should not publish a contract of its own"
+    "the boot entry should not publish a contract of its own",
   );
 });
 
@@ -160,6 +161,6 @@ test("the eager shared-shell table stays small", async () => {
 
   assert.ok(
     entries <= 16,
-    `core/dom.js should only hold shared shell elements and lookup helpers; it has ${entries} entries`
+    `core/dom.js should only hold shared shell elements and lookup helpers; it has ${entries} entries`,
   );
 });

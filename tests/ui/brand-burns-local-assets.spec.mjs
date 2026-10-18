@@ -28,27 +28,26 @@ for (const viewport of viewports) {
     const aboutClose = page.locator('#about-window [data-close="about"]');
     if (await aboutClose.isVisible()) await aboutClose.click();
 
-    const imageResults = await page.evaluate((sources) =>
-      Promise.all(
-        sources.map(
-          (src) =>
-            new Promise((resolve) => {
-              const image = new Image();
-              image.addEventListener(
-                "load",
-                () => resolve({ src, width: image.naturalWidth, height: image.naturalHeight }),
-                { once: true }
-              );
-              image.addEventListener(
-                "error",
-                () => resolve({ src, width: 0, height: 0 }),
-                { once: true }
-              );
-              image.src = src;
-            })
-        )
-      ),
-      apostleSources
+    const imageResults = await page.evaluate(
+      (sources) =>
+        Promise.all(
+          sources.map(
+            (src) =>
+              new Promise((resolve) => {
+                const image = new Image();
+                image.addEventListener(
+                  "load",
+                  () => resolve({ src, width: image.naturalWidth, height: image.naturalHeight }),
+                  { once: true },
+                );
+                image.addEventListener("error", () => resolve({ src, width: 0, height: 0 }), {
+                  once: true,
+                });
+                image.src = src;
+              }),
+          ),
+        ),
+      apostleSources,
     );
     expect(imageResults).toHaveLength(apostleSources.length);
     expect(imageResults.every((image) => image.width > 0 && image.height > 0)).toBe(true);

@@ -33,14 +33,12 @@ test.beforeAll(() => {
         `Visual baselines are generated on linux; this host is ${process.platform}.`,
         "Run `npm run test:visual` (or `npm run test:visual:update`) instead, which",
         "runs this project inside the pinned Playwright container.",
-      ].join("\n")
+      ].join("\n"),
     );
   }
 });
 
-test("the entry loader matches its reference render at desktop and mobile", async ({
-  page,
-}) => {
+test("the entry loader matches its reference render at desktop and mobile", async ({ page }) => {
   for (const [name, viewport] of Object.entries({ desktop: DESKTOP, mobile: MOBILE })) {
     await openDeterministicRoute(page, "/", viewport);
     await expect(page.locator("#proceed-button")).toBeEnabled({ timeout: 20_000 });
@@ -61,9 +59,7 @@ test("the entry alert dialog matches its reference render", async ({ page }) => 
   await expect(dialog).toHaveScreenshot("entry-alert-dialog.png");
 });
 
-test("the Home desktop matches its reference render at desktop and mobile", async ({
-  page,
-}) => {
+test("the Home desktop matches its reference render at desktop and mobile", async ({ page }) => {
   // The Neko launcher breathes by swapping sprites on a `setInterval`, and a
   // fixed Date alone does not pause that timer. Masking keeps its position and
   // size under comparison while leaving the alternating frame out.

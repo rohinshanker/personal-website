@@ -36,7 +36,7 @@ const preparePage = async (page, { administratorAccess = false } = {}) => {
           JSON.stringify({
             proof,
             expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
-          })
+          }),
         );
       }
       Math.random = () => 0.999999;
@@ -47,23 +47,19 @@ const preparePage = async (page, { administratorAccess = false } = {}) => {
       profileKey: profileStorageKey,
       proof: administratorProof,
       proofKey: administratorProofStorageKey,
-    }
+    },
   );
   await page.emulateMedia({ reducedMotion: "reduce" });
   return consoleWarnings;
 };
 
 const expectNoUnexpectedWarnings = (consoleWarnings) => {
-  expect(
-    consoleWarnings.filter((message) => !allowedConsoleWarning.test(message))
-  ).toEqual([]);
+  expect(consoleWarnings.filter((message) => !allowedConsoleWarning.test(message))).toEqual([]);
 };
 
-const cursorOf = (locator) =>
-  locator.evaluate((element) => getComputedStyle(element).cursor);
+const cursorOf = (locator) => locator.evaluate((element) => getComputedStyle(element).cursor);
 
-const clearSelection = (page) =>
-  page.evaluate(() => window.getSelection()?.removeAllRanges());
+const clearSelection = (page) => page.evaluate(() => window.getSelection()?.removeAllRanges());
 
 const selectText = (locator, characterCount = 18) =>
   locator.evaluate((element, requestedCharacterCount) => {
@@ -98,7 +94,7 @@ const textDragPoints = async (locator) => {
     const range = document.createRange();
     range.selectNodeContents(textNode);
     const rect = Array.from(range.getClientRects()).find(
-      (candidate) => candidate.width >= 24 && candidate.height > 0
+      (candidate) => candidate.width >= 24 && candidate.height > 0,
     );
     if (!rect) throw new Error("The drag target has no usable text line.");
     const inset = Math.min(5, Math.max(2, rect.width / 10));
@@ -117,8 +113,8 @@ const expectRootSelectionState = async (page, active) => {
           body: document.body.classList.contains(className),
           root: document.documentElement.classList.contains(className),
         }),
-        selectingClass
-      )
+        selectingClass,
+      ),
     )
     .toEqual({ body: active, root: active });
 };
@@ -127,7 +123,7 @@ const expectHoverTarget = async (page, locator) => {
   await expect(locator).toHaveClass(new RegExp(`(?:^|\\s)${hoverClass}(?:\\s|$)`));
   await expect
     .poll(() =>
-      page.evaluate((className) => document.querySelectorAll(`.${className}`).length, hoverClass)
+      page.evaluate((className) => document.querySelectorAll(`.${className}`).length, hoverClass),
     )
     .toBe(1);
 };
@@ -135,7 +131,7 @@ const expectHoverTarget = async (page, locator) => {
 const expectNoHoverTarget = async (page) => {
   await expect
     .poll(() =>
-      page.evaluate((className) => document.querySelectorAll(`.${className}`).length, hoverClass)
+      page.evaluate((className) => document.querySelectorAll(`.${className}`).length, hoverClass),
     )
     .toBe(0);
 };
@@ -185,7 +181,7 @@ const expectHomeSemantics = async (page) => {
   await expect(page.getByRole("dialog", { name: "About Me" })).toBeVisible();
   await expect(page.locator("#about-window .about-body")).toHaveAttribute(
     "aria-label",
-    "About Rohin Shanker"
+    "About Rohin Shanker",
   );
   await expect(page.getByRole("button", { name: "Next" }).first()).toBeVisible();
 };

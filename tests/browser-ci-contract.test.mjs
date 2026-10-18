@@ -3,15 +3,23 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const readConfig = (ci) => {
-  const result = spawnSync(process.execPath, ["--input-type=module", "-e", `
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `
     const { default: config } = await import("./playwright.config.mjs");
     const { retries, workers, fullyParallel, reporter } = config;
     process.stdout.write(JSON.stringify({ retries, workers, fullyParallel, reporter }));
-  `], {
-    cwd: new URL("../", import.meta.url),
-    env: { ...process.env, CI: ci ? "1" : "" },
-    encoding: "utf8",
-  });
+  `,
+    ],
+    {
+      cwd: new URL("../", import.meta.url),
+      env: { ...process.env, CI: ci ? "1" : "" },
+      encoding: "utf8",
+    },
+  );
   assert.equal(result.status, 0, result.stderr);
   return JSON.parse(result.stdout);
 };

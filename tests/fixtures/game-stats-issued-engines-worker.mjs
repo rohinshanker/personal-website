@@ -9,10 +9,13 @@ export default {
       verification: {
         now: () => Number(request.headers.get("X-Test-Now")),
         generateIssuedInitial: (game, config) => generateIssuedInitial(game, config, 0),
-        onVerificationBatch: (sample) => { stages = sample; },
+        onVerificationBatch: (sample) => {
+          stages = sample;
+        },
       },
     });
-    if (stages) response.headers.set("X-Test-Synchronous-Stages-Wall-Ms", String(stages.synchronousWallMs));
+    if (stages)
+      response.headers.set("X-Test-Synchronous-Stages-Wall-Ms", String(stages.synchronousWallMs));
     return response;
   },
 };

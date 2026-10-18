@@ -6,36 +6,27 @@ for (const route of ["/", "/home.html"]) {
   test(`${route} publishes its search preview and favicon metadata`, async ({ page }) => {
     await page.goto(route);
 
-    await expect(page.locator('meta[name="description"]')).toHaveAttribute(
-      "content",
-      description
-    );
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", description);
     await expect(page.locator('meta[property="og:description"]')).toHaveAttribute(
       "content",
-      description
+      description,
     );
     await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute(
       "content",
-      description
+      description,
     );
     await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
       "href",
-      "/assets/favicon-96.png"
+      "/assets/favicon-96.png",
     );
     await expect(page.locator('link[rel="icon"]')).toHaveAttribute("sizes", "96x96");
   });
 }
 
-test("favicon assets load as square images with transparent padding", async ({
-  page,
-  request,
-}) => {
+test("favicon assets load as square images with transparent padding", async ({ page, request }) => {
   await page.goto("/");
 
-  for (const path of [
-    "/assets/favicon-96.png",
-    "/assets/apple-touch-icon-180.png",
-  ]) {
+  for (const path of ["/assets/favicon-96.png", "/assets/apple-touch-icon-180.png"]) {
     const response = await request.get(path);
     expect(response.ok()).toBe(true);
     expect(response.headers()["content-type"]).toContain("image/png");

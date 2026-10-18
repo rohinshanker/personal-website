@@ -45,10 +45,10 @@ const isPlayerStatsPath = (path, playerId) => {
 
 const generatedBackendSource = await readFile(
   new URL("../../scripts/home/game-stats-backend.js", import.meta.url),
-  "utf8"
+  "utf8",
 );
 const generatedBuildVersion = generatedBackendSource.match(
-  /buildVersion:\s*"(sha256-[a-f0-9]{64})"/
+  /buildVersion:\s*"(sha256-[a-f0-9]{64})"/,
 )?.[1];
 if (!generatedBuildVersion) {
   throw new Error("Unable to read the generated game build version.");
@@ -57,7 +57,7 @@ if (!generatedBuildVersion) {
 const installBackendConfig = async (page) => {
   const mockedBackendSource = generatedBackendSource.replace(
     /apiBaseUrl:\s*"[^"]*"/,
-    `apiBaseUrl: ${JSON.stringify(API_BASE_URL)}`
+    `apiBaseUrl: ${JSON.stringify(API_BASE_URL)}`,
   );
   if (mockedBackendSource === generatedBackendSource) {
     throw new Error("Unable to install the Solitaire publish backend config.");
@@ -66,7 +66,7 @@ const installBackendConfig = async (page) => {
     route.fulfill({
       contentType: "application/javascript",
       body: mockedBackendSource,
-    })
+    }),
   );
 };
 
@@ -78,8 +78,8 @@ const installSolitaireBridge = async (page) => {
 window.__solitairePublishGameStatsTest = Object.freeze({
   syncQueued: () => syncQueuedGameStats(),
 });
-})();`
-    )
+})();`,
+    ),
   );
   await routeHomeScript(page, "solitaire", (source) =>
     source.replace(
@@ -98,8 +98,8 @@ window.__solitairePublishFlowTest = Object.freeze({
     solAutoMoveCardToFoundation("tableau", column, 0);
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
@@ -189,9 +189,7 @@ const installApi = async (page) => {
         playerId: profile.id,
         name: profile.name,
         metric: refreshed ? 5 : 4,
-        occurredAt: refreshed
-          ? publishedEvent.occurredAt
-          : "2026-06-30T00:00:00.000Z",
+        occurredAt: refreshed ? publishedEvent.occurredAt : "2026-06-30T00:00:00.000Z",
       });
       const leaderboards = [
         createLeaderboardEntry({
@@ -293,16 +291,13 @@ const installAdministratorReauthenticationApi = async (page) => {
         body: JSON.stringify(
           authorized
             ? { ok: true, applied: true }
-            : { ok: false, error: "Administrator proof required" }
+            : { ok: false, error: "Administrator proof required" },
         ),
       });
       return;
     }
 
-    if (
-      request.method() === "POST" &&
-      url.pathname === "/administrator/sign-in"
-    ) {
+    if (request.method() === "POST" && url.pathname === "/administrator/sign-in") {
       signInRequests.push(JSON.parse(request.postData() || "{}"));
       await route.fulfill({
         status: 200,
@@ -362,16 +357,12 @@ const installAdministratorStaleStatsApi = async (page) => {
     const includesPublishedEvent = authoritativeStats && Boolean(publishedEvent);
     const administratorWins = includesPublishedEvent ? 2 : 1;
     const administratorEntry = createLeaderboardEntry({
-      eventId: includesPublishedEvent
-        ? publishedEvent.id
-        : historicalAdministratorEventId,
+      eventId: includesPublishedEvent ? publishedEvent.id : historicalAdministratorEventId,
       playerId: administratorProfile.id,
       name: administratorProfile.name,
       icon: administratorProfile.icon,
       metric: administratorWins,
-      occurredAt: includesPublishedEvent
-        ? publishedEvent.occurredAt
-        : "2026-07-01T00:00:00.000Z",
+      occurredAt: includesPublishedEvent ? publishedEvent.occurredAt : "2026-07-01T00:00:00.000Z",
     });
     const eventIds = [
       "solitaire-global-aria-history-0001",
@@ -443,7 +434,7 @@ const installAdministratorStaleStatsApi = async (page) => {
         body: JSON.stringify(
           authorized
             ? { ok: true, applied: true, eventId: publishedEvent.id }
-            : { ok: false, error: "Administrator proof required" }
+            : { ok: false, error: "Administrator proof required" },
         ),
       });
       return;
@@ -452,7 +443,7 @@ const installAdministratorStaleStatsApi = async (page) => {
     if (request.method() === "GET" && url.pathname === "/stats") {
       const stats = createStats();
       const acknowledgedEventIds = stats.eventIds.filter((eventId) =>
-        url.searchParams.getAll("pendingEventId").includes(eventId)
+        url.searchParams.getAll("pendingEventId").includes(eventId),
       );
       delete stats.eventIds;
       stats.version = 2;
@@ -510,7 +501,7 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
       queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
       savedProfile: profile,
       statsKey: GAME_STATS_STORAGE_KEY,
-    }
+    },
   );
   await installBackendConfig(page);
   await installSolitaireBridge(page);
@@ -522,14 +513,12 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   await expect.poll(() => api.statsRequests.length).toBeGreaterThan(0);
   await page.locator('.taskbar-icon[data-app="game-progress"]').click();
   const gameProgressWindow = page.locator("#game-progress-window");
-  await gameProgressWindow
-    .locator('.selector-item[data-view="game-progress-solitaire"]')
-    .click();
+  await gameProgressWindow.locator('.selector-item[data-view="game-progress-solitaire"]').click();
   await expect(
     gameProgressWindow
       .locator("#game-progress-solitaire-content .game-stats-inlay")
       .filter({ hasText: "Wins" })
-      .locator(".game-stats-value")
+      .locator(".game-stats-value"),
   ).toHaveText("4");
   await gameProgressWindow.locator('[data-close="game-progress"]').click();
   await page.locator('.desktop-icon[data-app="solitaire"]').click();
@@ -551,45 +540,41 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
     .toBeGreaterThan(0);
 
   await page.locator('.taskbar-icon[data-app="game-progress"]').click();
-  await gameProgressWindow
-    .locator('.selector-item[data-view="game-progress-solitaire"]')
-    .click();
+  await gameProgressWindow.locator('.selector-item[data-view="game-progress-solitaire"]').click();
   await expect(
     gameProgressWindow
       .locator("#game-progress-solitaire-content .game-stats-inlay")
       .filter({ hasText: "Wins" })
-      .locator(".game-stats-value")
+      .locator(".game-stats-value"),
   ).toHaveText("5");
   await gameProgressWindow.locator('[data-close="game-progress"]').click();
 
-  await page
-    .locator('[data-app-window="solitaire"] [data-game-stats-open="solitaire"]')
-    .click();
+  await page.locator('[data-app-window="solitaire"] [data-game-stats-open="solitaire"]').click();
 
   const statsWindow = page.locator("#game-stats-window-solitaire");
   const leaderboard = statsWindow.locator(".game-stats-solitaire-column");
   const globalRows = leaderboard.locator(
-    ".game-stats-solitaire-row:not(.game-stats-solitaire-local-wins-row)"
+    ".game-stats-solitaire-row:not(.game-stats-solitaire-local-wins-row)",
   );
   const currentRecord = leaderboard.locator(".game-stats-solitaire-local-wins-row");
   await expect(statsWindow).toBeVisible();
   await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
-    "Global stats are up to date."
+    "Global stats are up to date.",
   );
   await expect(leaderboard.getByText("Global Top 3", { exact: true })).toBeVisible();
   await expect(globalRows).toHaveCount(3);
   await expect(globalRows.nth(0)).toHaveAttribute(
     "aria-label",
-    "Rank 1: Solitaire Publisher, 5 wins, your entry"
+    "Rank 1: Solitaire Publisher, 5 wins, your entry",
   );
   await expect(globalRows.nth(1)).toHaveAttribute("aria-label", "Rank 2: Aria, 2 wins");
   await expect(globalRows.nth(2)).toHaveAttribute("aria-label", "Rank 3: Nia, 0 wins");
   await expect(currentRecord).toHaveAttribute(
     "aria-label",
-    "Your Solitaire record: #1, Solitaire Publisher, 5 wins"
+    "Your Solitaire record: #1, Solitaire Publisher, 5 wins",
   );
   await expect(
-    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 7"]')
+    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 7"]'),
   ).toBeVisible();
 
   expect(generatedBuildVersion).toMatch(/^sha256-[a-f0-9]{64}$/);
@@ -635,7 +620,7 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
         url.searchParams.get("fresh") === "1" &&
         url.searchParams.getAll("pendingEventId").includes(api.eventRequests[0].event.id)
       );
-    })
+    }),
   ).toBe(true);
 
   const stored = await page.evaluate(
@@ -646,21 +631,19 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
     {
       queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
       statsKey: GAME_STATS_STORAGE_KEY,
-    }
+    },
   );
   expect(stored.queue).toEqual([]);
   expect(stored.stats.totals.solitaire.wins).toBe(1);
 
   await page.reload();
   await page.locator('.taskbar-icon[data-app="game-progress"]').click();
-  await gameProgressWindow
-    .locator('.selector-item[data-view="game-progress-solitaire"]')
-    .click();
+  await gameProgressWindow.locator('.selector-item[data-view="game-progress-solitaire"]').click();
   await expect(
     gameProgressWindow
       .locator("#game-progress-solitaire-content .game-stats-inlay")
       .filter({ hasText: "Wins" })
-      .locator(".game-stats-value")
+      .locator(".game-stats-value"),
   ).toHaveText("5");
 
   const layout = await statsWindow.evaluate((windowElement) => {
@@ -678,7 +661,6 @@ test("a verified Solitaire win publishes and refreshes the global leaderboard", 
   expect(layout.documentOverflows).toBe(false);
   expect(layout.left).toBeGreaterThanOrEqual(0);
   expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth);
-
 });
 
 test("an active Administrator win stays advanced through stale stats and exact-event reconciliation", async ({
@@ -699,7 +681,7 @@ test("an active Administrator win stays advanced through stale stats and exact-e
         JSON.stringify({
           proof,
           expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        })
+        }),
       );
     },
     {
@@ -709,7 +691,7 @@ test("an active Administrator win stays advanced through stale stats and exact-e
       queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
       savedProfile: administratorProfile,
       statsKey: GAME_STATS_STORAGE_KEY,
-    }
+    },
   );
   await installBackendConfig(page);
   await installSolitaireBridge(page);
@@ -722,9 +704,7 @@ test("an active Administrator win stays advanced through stale stats and exact-e
 
   const gameProgressWindow = page.locator("#game-progress-window");
   await page.locator('.taskbar-icon[data-app="game-progress"]').click();
-  await gameProgressWindow
-    .locator('.selector-item[data-view="game-progress-solitaire"]')
-    .click();
+  await gameProgressWindow.locator('.selector-item[data-view="game-progress-solitaire"]').click();
 
   const solitaireWindow = page.locator('[data-app-window="solitaire"]');
   await page.locator('.desktop-icon[data-app="solitaire"]').click();
@@ -734,7 +714,7 @@ test("an active Administrator win stays advanced through stale stats and exact-e
   const statsWindow = page.locator("#game-stats-window-solitaire");
   const leaderboard = statsWindow.locator(".game-stats-solitaire-column");
   const globalRows = leaderboard.locator(
-    ".game-stats-solitaire-row:not(.game-stats-solitaire-local-wins-row)"
+    ".game-stats-solitaire-row:not(.game-stats-solitaire-local-wins-row)",
   );
   const administratorLeaderboardRow = globalRows.filter({
     hasText: administratorProfile.name,
@@ -751,14 +731,14 @@ test("an active Administrator win stays advanced through stale stats and exact-e
   await expect(progressWins).toHaveText("1");
   await expect(currentRecord).toHaveAttribute(
     "aria-label",
-    "Your Solitaire record: #2, rohin ^.^, 1 win"
+    "Your Solitaire record: #2, rohin ^.^, 1 win",
   );
   await expect(administratorLeaderboardRow).toHaveAttribute(
     "aria-label",
-    "Rank 2: rohin ^.^, 1 win, your entry"
+    "Rank 2: rohin ^.^, 1 win, your entry",
   );
   await expect(
-    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 2"]')
+    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 2"]'),
   ).toBeVisible();
 
   await solitaireWindow.locator("#sol-stock").evaluate((stock) => stock.click());
@@ -768,9 +748,8 @@ test("an active Administrator win stays advanced through stale stats and exact-e
   await expect
     .poll(
       () =>
-        api.statsRequests.filter(
-          ({ authoritative, published }) => published && !authoritative
-        ).length
+        api.statsRequests.filter(({ authoritative, published }) => published && !authoritative)
+          .length,
     )
     .toBeGreaterThan(0);
 
@@ -789,21 +768,21 @@ test("an active Administrator win stays advanced through stale stats and exact-e
   });
   expect(
     api.statsRequests.some(({ acknowledgedEventIds }) =>
-      acknowledgedEventIds.includes(publishedEvent.id)
-    )
+      acknowledgedEventIds.includes(publishedEvent.id),
+    ),
   ).toBe(false);
 
   await expect(progressWins).toHaveText("2");
   await expect(currentRecord).toHaveAttribute(
     "aria-label",
-    "Your Solitaire record: #1, rohin ^.^, 2 wins"
+    "Your Solitaire record: #1, rohin ^.^, 2 wins",
   );
   await expect(administratorLeaderboardRow).toHaveAttribute(
     "aria-label",
-    "Rank 1: rohin ^.^, 2 wins, your entry"
+    "Rank 1: rohin ^.^, 2 wins, your entry",
   );
   await expect(
-    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 3"]')
+    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 3"]'),
   ).toBeVisible();
 
   api.useAuthoritativeStats();
@@ -814,22 +793,22 @@ test("an active Administrator win stays advanced through stale stats and exact-e
       () =>
         api.statsRequests.filter(
           ({ authoritative, acknowledgedEventIds }) =>
-            authoritative && acknowledgedEventIds.includes(publishedEvent.id)
-        ).length
+            authoritative && acknowledgedEventIds.includes(publishedEvent.id),
+        ).length,
     )
     .toBeGreaterThan(0);
 
   await expect(progressWins).toHaveText("2");
   await expect(currentRecord).toHaveAttribute(
     "aria-label",
-    "Your Solitaire record: #1, rohin ^.^, 2 wins"
+    "Your Solitaire record: #1, rohin ^.^, 2 wins",
   );
   await expect(administratorLeaderboardRow).toHaveAttribute(
     "aria-label",
-    "Rank 1: rohin ^.^, 2 wins, your entry"
+    "Rank 1: rohin ^.^, 2 wins, your entry",
   );
   await expect(
-    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 3"]')
+    leaderboard.locator('.game-stats-solitaire-global-wins [aria-label="Global wins: 3"]'),
   ).toBeVisible();
   expect(api.eventRequests).toHaveLength(1);
   expect(api.sessionRequests).toEqual([
@@ -844,9 +823,7 @@ test("an active Administrator win stays advanced through stale stats and exact-e
     },
   ]);
   expect(
-    api.statsRequests.every(({ path }) =>
-      isPlayerStatsPath(path, administratorProfile.id)
-    )
+    api.statsRequests.every(({ path }) => isPlayerStatsPath(path, administratorProfile.id)),
   ).toBe(true);
 
   const stored = await page.evaluate(
@@ -857,7 +834,7 @@ test("an active Administrator win stays advanced through stale stats and exact-e
     {
       proofKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
       queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
-    }
+    },
   );
   expect(stored.proof.proof).toBe(administratorProof);
   expect(stored.queue).toEqual([]);
@@ -891,7 +868,7 @@ for (const viewport of victoryViewports) {
         queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
         savedProfile: profile,
         statsKey: GAME_STATS_STORAGE_KEY,
-      }
+      },
     );
     await installBackendConfig(page);
     await installSolitaireBridge(page);
@@ -907,9 +884,7 @@ for (const viewport of victoryViewports) {
     const canvas = page.locator("#sol-victory-canvas");
     const video = page.locator("#sol-victory-video");
     await expect(solitaireWindow).toBeVisible();
-    const boardScrollWidthBefore = await board.evaluate(
-      (element) => element.scrollWidth
-    );
+    const boardScrollWidthBefore = await board.evaluate((element) => element.scrollWidth);
 
     await solitaireWindow.locator("#sol-stock").click();
     await expect.poll(() => api.sessionRequests.length).toBe(1);
@@ -919,9 +894,7 @@ for (const viewport of victoryViewports) {
     await expect
       .poll(() => video.evaluate((element) => element.readyState))
       .toBeGreaterThanOrEqual(2);
-    await expect
-      .poll(() => canvas.evaluate((element) => element.width))
-      .toBeGreaterThan(0);
+    await expect.poll(() => canvas.evaluate((element) => element.width)).toBeGreaterThan(0);
     await expect(canvas).toBeVisible();
     // Measure the overlay only once its fonts, images, and layout have settled.
     await settleRender(page);
@@ -951,10 +924,9 @@ for (const viewport of victoryViewports) {
           top: canvasBounds.top,
           width: canvasBounds.width,
         },
-        documentOverflows:
-          document.documentElement.scrollWidth > window.innerWidth,
+        documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
         focusableOverlayChildren: overlayElement.querySelectorAll(
-          "a[href], button, input, select, textarea, [tabindex]:not([tabindex='-1'])"
+          "a[href], button, input, select, textarea, [tabindex]:not([tabindex='-1'])",
         ).length,
         overlay: {
           height: overlayBounds.height,
@@ -966,51 +938,29 @@ for (const viewport of victoryViewports) {
       };
     });
     const expectedWidth = Math.min(234, viewport.width * 0.288);
-    expect(Math.abs(geometry.canvas.width - expectedWidth)).toBeLessThanOrEqual(
-      1
-    );
-    expect(
-      Math.abs(geometry.canvas.centerX - geometry.board.centerX)
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(geometry.canvas.top - geometry.board.top - 16)
-    ).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.canvas.width - expectedWidth)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.canvas.centerX - geometry.board.centerX)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.canvas.top - geometry.board.top - 16)).toBeLessThanOrEqual(1);
     expect(geometry.canvas.left).toBeGreaterThanOrEqual(geometry.board.left);
     expect(geometry.canvas.right).toBeLessThanOrEqual(geometry.board.right);
     expect(geometry.canvas.bottom).toBeLessThanOrEqual(geometry.board.bottom);
-    expect(
-      Math.abs(geometry.overlay.left - geometry.board.left)
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(geometry.overlay.top - geometry.board.top)
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(geometry.overlay.width - geometry.board.width)
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(geometry.overlay.height - geometry.board.height)
-    ).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.overlay.left - geometry.board.left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.overlay.top - geometry.board.top)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.overlay.width - geometry.board.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.overlay.height - geometry.board.height)).toBeLessThanOrEqual(1);
     expect(geometry.overlay.pointerEvents).toBe("none");
     expect(geometry.focusableOverlayChildren).toBe(0);
     expect(geometry.documentOverflows).toBe(false);
-    expect(await board.evaluate((element) => element.scrollWidth)).toBe(
-      boardScrollWidthBefore
-    );
+    expect(await board.evaluate((element) => element.scrollWidth)).toBe(boardScrollWidthBefore);
 
     if (viewport.name === "desktop") {
       await canvas.evaluate((element) => element.classList.add("is-hidden"));
-      await video.evaluate((element) =>
-        element.classList.add("is-visible-fallback")
-      );
+      await video.evaluate((element) => element.classList.add("is-visible-fallback"));
       const fallback = await video.evaluate((element) => {
-        const boardBounds = document
-          .querySelector("#sol-board")
-          .getBoundingClientRect();
+        const boardBounds = document.querySelector("#sol-board").getBoundingClientRect();
         const bounds = element.getBoundingClientRect();
         return {
-          centerDelta:
-            bounds.left + bounds.width / 2 -
-            (boardBounds.left + boardBounds.width / 2),
+          centerDelta: bounds.left + bounds.width / 2 - (boardBounds.left + boardBounds.width / 2),
           topGap: bounds.top - boardBounds.top,
           width: bounds.width,
         };
@@ -1018,9 +968,7 @@ for (const viewport of victoryViewports) {
       expect(Math.abs(fallback.width - expectedWidth)).toBeLessThanOrEqual(1);
       expect(Math.abs(fallback.centerDelta)).toBeLessThanOrEqual(1);
       expect(Math.abs(fallback.topGap - 16)).toBeLessThanOrEqual(1);
-      await video.evaluate((element) =>
-        element.classList.remove("is-visible-fallback")
-      );
+      await video.evaluate((element) => element.classList.remove("is-visible-fallback"));
       await canvas.evaluate((element) => element.classList.remove("is-hidden"));
     }
 
@@ -1057,7 +1005,7 @@ for (const viewport of viewports) {
         queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
         savedProfile: administratorProfile,
         statsKey: GAME_STATS_STORAGE_KEY,
-      }
+      },
     );
     await installBackendConfig(page);
     await installSolitaireBridge(page);
@@ -1096,12 +1044,8 @@ for (const viewport of viewports) {
     });
     expect(administratorBounds.left).toBeGreaterThanOrEqual(0);
     expect(administratorBounds.top).toBeGreaterThanOrEqual(0);
-    expect(administratorBounds.right).toBeLessThanOrEqual(
-      administratorBounds.viewportWidth
-    );
-    expect(administratorBounds.bottom).toBeLessThanOrEqual(
-      administratorBounds.viewportHeight
-    );
+    expect(administratorBounds.right).toBeLessThanOrEqual(administratorBounds.viewportWidth);
+    expect(administratorBounds.bottom).toBeLessThanOrEqual(administratorBounds.viewportHeight);
     const pendingState = await page.evaluate(
       ({ proofKey, queueKey }) => ({
         documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
@@ -1111,7 +1055,7 @@ for (const viewport of viewports) {
       {
         proofKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
         queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
-      }
+      },
     );
     expect(pendingState.documentOverflows).toBe(false);
     expect(pendingState.proof).toBeNull();
@@ -1121,16 +1065,13 @@ for (const viewport of viewports) {
     await page.locator("#administrator-password").fill("test-only-password");
     await page.locator("#administrator-sign-in").click();
     await expect(page.locator("#administrator-alert-window")).toBeVisible();
-    await expect(page.locator("#administrator-alert-window")).toHaveCSS(
-      "z-index",
-      "1000000"
-    );
+    await expect(page.locator("#administrator-alert-window")).toHaveCSS("z-index", "1000000");
     await expect
       .poll(
         () =>
           api.eventRequests.filter(
-            ({ authorization }) => authorization === `Bearer ${administratorProof}`
-          ).length
+            ({ authorization }) => authorization === `Bearer ${administratorProof}`,
+          ).length,
       )
       .toBe(1);
     expect(api.signInRequests).toEqual([
@@ -1140,18 +1081,17 @@ for (const viewport of viewports) {
       .poll(() =>
         page.evaluate(
           (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]"),
-          GAME_STATS_SYNC_QUEUE_STORAGE_KEY
-        )
+          GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+        ),
       )
       .toEqual([]);
     await expect
       .poll(() =>
         page.evaluate(
           (statsKey) =>
-            JSON.parse(localStorage.getItem(statsKey) || "null")?.totals?.solitaire
-              ?.wins,
-          GAME_STATS_STORAGE_KEY
-        )
+            JSON.parse(localStorage.getItem(statsKey) || "null")?.totals?.solitaire?.wins,
+          GAME_STATS_STORAGE_KEY,
+        ),
       )
       .toBe(1);
     await page.locator("#administrator-alert-close").click();
@@ -1161,12 +1101,8 @@ for (const viewport of viewports) {
     // The rejected publish is the behaviour under test; the fixture still
     // fails on anything the page reported beyond these exact entries.
     consumeDiagnostics(diagnostics, {
-      consoleErrors: [
-        "status of 403 (Forbidden)",
-      ],
-      errorResponses: [
-        `403 ${API_BASE_URL}/events`,
-      ],
+      consoleErrors: ["status of 403 (Forbidden)"],
+      errorResponses: [`403 ${API_BASE_URL}/events`],
     });
   });
 }
@@ -1276,7 +1212,7 @@ const prepareSignedInAdministrator = async (page, viewport) => {
           now.getFullYear(),
           String(now.getMonth() + 1).padStart(2, "0"),
           String(now.getDate()).padStart(2, "0"),
-        ].join("-")
+        ].join("-"),
       );
       localStorage.setItem(profileKey, JSON.stringify(savedProfile));
       localStorage.removeItem(queueKey);
@@ -1294,7 +1230,7 @@ const prepareSignedInAdministrator = async (page, viewport) => {
       queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
       savedProfile: administratorProfile,
       statsKey: GAME_STATS_STORAGE_KEY,
-    }
+    },
   );
   await installBackendConfig(page);
   await installSolitaireBridge(page);
@@ -1326,14 +1262,13 @@ const readStoredPublishState = (page) =>
     ({ proofKey, queueKey, statsKey }) => ({
       proof: JSON.parse(sessionStorage.getItem(proofKey) || "null")?.proof || null,
       queue: JSON.parse(localStorage.getItem(queueKey) || "[]"),
-      solitaireWins: JSON.parse(localStorage.getItem(statsKey) || "null")?.totals?.solitaire
-        ?.wins,
+      solitaireWins: JSON.parse(localStorage.getItem(statsKey) || "null")?.totals?.solitaire?.wins,
     }),
     {
       proofKey: ADMINISTRATOR_PROOF_STORAGE_KEY,
       queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
       statsKey: GAME_STATS_STORAGE_KEY,
-    }
+    },
   );
 
 const rejectionViewports = Object.freeze([viewports[0], viewports[2]]);
@@ -1356,7 +1291,7 @@ for (const viewport of rejectionViewports) {
     expect(api.eventRequests[0].authorization).toBe(`Bearer ${administratorProof}`);
 
     await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
-      REJECTED_RESULT_STATUS
+      REJECTED_RESULT_STATUS,
     );
     await expect(page.locator("#administrator-window")).toBeHidden();
     expect(api.signInRequests).toEqual([]);
@@ -1379,12 +1314,8 @@ for (const viewport of rejectionViewports) {
     // The rejected publish is the behaviour under test; the fixture still
     // fails on anything the page reported beyond these exact entries.
     consumeDiagnostics(diagnostics, {
-      consoleErrors: [
-        "status of 403 (Forbidden)",
-      ],
-      errorResponses: [
-        `403 ${API_BASE_URL}/events`,
-      ],
+      consoleErrors: ["status of 403 (Forbidden)"],
+      errorResponses: [`403 ${API_BASE_URL}/events`],
     });
   });
 
@@ -1410,7 +1341,7 @@ for (const viewport of rejectionViewports) {
     await expect(administratorWindow).toBeVisible();
     await expect(administratorWindow).not.toHaveClass(/is-opening/);
     await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
-      "Waiting for authentication..."
+      "Waiting for authentication...",
     );
     let stored = await readStoredPublishState(page);
     expect(stored.proof).toBeNull();
@@ -1423,14 +1354,12 @@ for (const viewport of rejectionViewports) {
     await expect(page.locator("#administrator-alert-window")).toBeVisible();
     await expect.poll(() => api.eventRequests.length).toBe(2);
     expect(api.eventRequests[1].authorization).toBe(
-      `Bearer ${"f".repeat(32)}.${"1".padStart(32, "0")}`
+      `Bearer ${"f".repeat(32)}.${"1".padStart(32, "0")}`,
     );
     await page.locator("#administrator-alert-close").click();
     await expect(page.locator("#administrator-alert-window")).toBeHidden();
 
-    await expect
-      .poll(async () => (await readStoredPublishState(page)).queue)
-      .toEqual([]);
+    await expect.poll(async () => (await readStoredPublishState(page)).queue).toEqual([]);
     await expect(administratorWindow).toBeHidden();
     expect(api.signInRequests).toHaveLength(1);
     expect(api.eventRequests).toHaveLength(2);
@@ -1439,21 +1368,15 @@ for (const viewport of rejectionViewports) {
     expect(stored.solitaireWins).toBe(1);
 
     await expect(statsWindow.locator("[data-game-stats-sync-status]")).toHaveText(
-      REJECTED_RESULT_STATUS
+      REJECTED_RESULT_STATUS,
     );
     await expect(statsWindow.locator("[data-game-stats-refresh]")).toBeEnabled();
     await expect(administratorWindow).toBeHidden();
     // The rejected publish is the behaviour under test; the fixture still
     // fails on anything the page reported beyond these exact entries.
     consumeDiagnostics(diagnostics, {
-      consoleErrors: [
-        "status of 403 (Forbidden)",
-        "status of 403 (Forbidden)",
-      ],
-      errorResponses: [
-        `403 ${API_BASE_URL}/events`,
-        `403 ${API_BASE_URL}/events`,
-      ],
+      consoleErrors: ["status of 403 (Forbidden)", "status of 403 (Forbidden)"],
+      errorResponses: [`403 ${API_BASE_URL}/events`, `403 ${API_BASE_URL}/events`],
     });
   });
 }

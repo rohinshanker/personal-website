@@ -15,7 +15,7 @@ const DESKTOP = REVIEW_VIEWPORTS.find((viewport) => viewport.name === "desktop")
 
 const portfolioSource = await readFile(
   new URL("../../scripts/home/modeling-portfolio.js", import.meta.url),
-  "utf8"
+  "utf8",
 );
 const portfolio = (() => {
   const context = { window: {} };
@@ -41,7 +41,7 @@ const LAST = PUBLISHED[PUBLISHED.length - 1];
 const openPortfolio = async (
   page,
   viewport,
-  { path = "/modeling/", prepare, waitUntil = "load", settle = true } = {}
+  { path = "/modeling/", prepare, waitUntil = "load", settle = true } = {},
 ) => {
   await installStubbedModelingMedia(page);
   if (prepare) await prepare(page);
@@ -77,8 +77,8 @@ const expectStripAt = async (page, shoot, index) => {
     .poll(() =>
       strip(page, shoot).evaluate(
         (element, target) => Math.abs(element.scrollLeft - target * element.clientWidth) < 2,
-        index
-      )
+        index,
+      ),
     )
     .toBe(true);
 };
@@ -91,7 +91,7 @@ test("renders the header and every shoot in order without overflow at each revie
       await openPortfolio(page, viewport);
 
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-        "Rohin Shanker Modeling Portfolio"
+        "Rohin Shanker Modeling Portfolio",
       );
       const instagram = page.locator("[data-portfolio-instagram]");
       await expect(instagram).toHaveAttribute("href", portfolio.instagram.href);
@@ -109,9 +109,7 @@ test("renders the header and every shoot in order without overflow at each revie
       await expect(page.locator(".portfolio-link__note")).toHaveCount(0);
 
       const nav = page.getByRole("navigation", { name: "Shoots" });
-      await expect(nav.locator("summary")).toHaveText(
-        `Jump to a shoot (${PUBLISHED.length})`
-      );
+      await expect(nav.locator("summary")).toHaveText(`Jump to a shoot (${PUBLISHED.length})`);
       await expect(nav.locator("details")).not.toHaveAttribute("open", "");
       await nav.locator("summary").click();
       const navLinks = nav.getByRole("link");
@@ -124,22 +122,22 @@ test("renders the header and every shoot in order without overflow at each revie
       const headings = page.locator("section.shoot h2");
       await expect(headings).toHaveText(PUBLISHED.map((shoot) => shoot.title));
       await expect(page.locator("section.shoot .shoot__date")).toHaveText(
-        PUBLISHED.map((shoot) => shoot.date)
+        PUBLISHED.map((shoot) => shoot.date),
       );
       for (const shoot of [FIRST, STAND_STILL, CIRQUE, LAST]) {
         await expect(section(page, shoot)).toHaveAttribute("id", anchorId(shoot.id));
         await expect(section(page, shoot).locator("[data-carousel-slide]")).toHaveCount(
-          shoot.files.length
+          shoot.files.length,
         );
         await expect(counter(page, shoot)).toHaveText(`1 of ${shoot.files.length}`);
         await expect(section(page, shoot).locator(".shoot__link")).toHaveText(
-          shoot.links.map((link) => link.label)
+          shoot.links.map((link) => link.label),
         );
       }
 
       expect(await documentOverflows(page)).toBe(false);
       const widths = await sections.evaluateAll((elements) =>
-        elements.map((element) => element.getBoundingClientRect().width)
+        elements.map((element) => element.getBoundingClientRect().width),
       );
       expect(Math.max(...widths)).toBeLessThanOrEqual(viewport.width);
 
@@ -156,7 +154,6 @@ test("renders the header and every shoot in order without overflow at each revie
         expect(carouselBox.bottom).toBeLessThanOrEqual(linksBox.top);
         expect(linksBox.bottom).toBeLessThanOrEqual(creditsBox.top);
       }
-
     });
   }
 });
@@ -217,7 +214,7 @@ test("shows the Home hourglass over a photo until it finishes loading", async ({
         await route.fulfill({
           body: Buffer.from(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR42mNk+M/wHwAF/gL+q0g9QAAAAABJRU5ErkJggg==",
-            "base64"
+            "base64",
           ),
           contentType: "image/png",
         });
@@ -230,7 +227,7 @@ test("shows the Home hourglass over a photo until it finishes loading", async ({
   await expect(indicator).toBeVisible();
   await expect(indicator.locator("img")).toHaveAttribute(
     "src",
-    /windows98-hourglass(?:-padded)?-2x\.gif$/
+    /windows98-hourglass(?:-padded)?-2x\.gif$/,
   );
   await expect(first).toHaveAttribute("aria-busy", "true");
 
@@ -276,7 +273,7 @@ test("opens photos fullscreen, keeps the scroll position, traps focus, and resto
   await expect(viewer.locator(".lightbox__image")).toHaveAttribute("src", /\/1\.jpg$/);
   await expect(viewer.locator(".lightbox__image")).toHaveAttribute(
     "alt",
-    `${CIRQUE.title}, photo 1 of 5`
+    `${CIRQUE.title}, photo 1 of 5`,
   );
   const close = viewer.getByRole("button", { name: "Close fullscreen view" });
   await expect(close).toBeFocused();
@@ -396,8 +393,11 @@ test("an empty Dropbox slot keeps its disabled placeholder and note", async ({ p
   await page.route(/\/scripts\/home\/modeling-portfolio\.js(?:\?.*)?$/, (route) =>
     route.fulfill({
       contentType: "application/javascript",
-      body: portfolioSource.replace(`highlights: "${portfolio.dropbox.highlights}"`, 'highlights: ""'),
-    })
+      body: portfolioSource.replace(
+        `highlights: "${portfolio.dropbox.highlights}"`,
+        'highlights: ""',
+      ),
+    }),
   );
   await openPortfolio(page, DESKTOP);
 
@@ -405,13 +405,13 @@ test("an empty Dropbox slot keeps its disabled placeholder and note", async ({ p
   await expect(highlights).toBeDisabled();
   // The shared cursor system reads the disabled slot the same way Home does.
   expect(await highlights.evaluate((element) => getComputedStyle(element).cursor)).toContain(
-    "generated-png/unavailable-light.png"
+    "generated-png/unavailable-light.png",
   );
   await expect(highlights).toHaveAccessibleDescription("Link coming soon");
   await expect(page.locator("#portfolio-highlights-note")).toBeVisible();
   await expect(page.getByRole("link", { name: "Dropbox Digitals" })).toHaveAttribute(
     "href",
-    portfolio.dropbox.digitals
+    portfolio.dropbox.digitals,
   );
   await expect(page.locator(".portfolio-link__note")).toHaveCount(1);
 });
@@ -419,9 +419,7 @@ test("an empty Dropbox slot keeps its disabled placeholder and note", async ({ p
 test("deep links and the jump list land on their shoot", async ({ page }) => {
   const vampire = shootById("modeling-vampire-shoot");
   await openPortfolio(page, MOBILE, { path: `/modeling/#${anchorId(vampire.id)}` });
-  await expect
-    .poll(async () => (await box(section(page, vampire))).top)
-    .toBeLessThanOrEqual(24);
+  await expect.poll(async () => (await box(section(page, vampire))).top).toBeLessThanOrEqual(24);
 
   await page.evaluate(() => window.scrollTo(0, 0));
   const nav = page.getByRole("navigation", { name: "Shoots" });
@@ -458,7 +456,6 @@ test("the mobile viewer fills the screen with reachable controls", async ({ page
   expect(await documentOverflows(page)).toBe(false);
 });
 
-
 test("the n of N control downloads the current photo from the carousel and the viewer", async ({
   page,
 }) => {
@@ -494,7 +491,6 @@ test("the n of N control downloads the current photo from the carousel and the v
   await expect(viewer).toBeVisible();
 });
 
-
 test("lists measurements under the title and switches between US and EU values", async ({
   page,
 }) => {
@@ -503,8 +499,17 @@ test("lists measurements under the title and switches between US and EU values",
   const us = section.getByRole("button", { name: "US", exact: true });
   const eu = section.getByRole("button", { name: "EU", exact: true });
   const values = section.locator("dd");
-  const usValues = ['6\'2"', "135 lbs", "US 11", '33.5"', '26.6"', '28.5"', '34"', '32"'];
-  const euValues = ["188 cm", "61.2 kg", "EU 45", "85.1 cm", "67.6 cm", "72.4 cm", "86.4 cm", "81.3 cm"];
+  const usValues = ["6'2\"", "135 lbs", "US 11", '33.5"', '26.6"', '28.5"', '34"', '32"'];
+  const euValues = [
+    "188 cm",
+    "61.2 kg",
+    "EU 45",
+    "85.1 cm",
+    "67.6 cm",
+    "72.4 cm",
+    "86.4 cm",
+    "81.3 cm",
+  ];
 
   const title = await box(page.getByRole("heading", { level: 1 }));
   const block = await box(section);
@@ -513,10 +518,9 @@ test("lists measurements under the title and switches between US and EU values",
   expect(block.bottom).toBeLessThanOrEqual(summary.top);
 
   await expect(section.getByRole("heading", { level: 2 })).toHaveText("Measurements");
-  await expect(section.getByRole("group", { name: "Measurement units" }).getByRole("button")).toHaveText([
-    "US",
-    "EU",
-  ]);
+  await expect(
+    section.getByRole("group", { name: "Measurement units" }).getByRole("button"),
+  ).toHaveText(["US", "EU"]);
   await expect(section.locator("dt")).toHaveText([
     "Height",
     "Weight",
@@ -531,7 +535,7 @@ test("lists measurements under the title and switches between US and EU values",
   await expect(us).toHaveAttribute("aria-pressed", "true");
   await expect(eu).toHaveAttribute("aria-pressed", "false");
   expect(await us.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe(
-    await eu.evaluate((element) => getComputedStyle(element).boxShadow)
+    await eu.evaluate((element) => getComputedStyle(element).boxShadow),
   );
 
   await eu.click();

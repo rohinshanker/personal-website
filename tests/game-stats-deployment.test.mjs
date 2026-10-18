@@ -41,7 +41,7 @@ const createReleaseSourceFiles = (label) =>
     GAME_COMPLETION_SOURCE_FILES.map((relativePath) => [
       relativePath,
       Buffer.from(`// ${label} ${relativePath}\n`),
-    ])
+    ]),
   );
 const RELEASE_SOURCE_FILES = createReleaseSourceFiles("release");
 /** A completion source to corrupt when a stale live asset must be detected. */
@@ -58,9 +58,7 @@ const calculateReleaseBuildVersion = (sourceFiles = RELEASE_SOURCE_FILES) => {
 };
 const RELEASE_BUILD_VERSION = calculateReleaseBuildVersion();
 const PREVIOUS_RELEASE_SOURCE_FILES = createReleaseSourceFiles("previous release");
-const PREVIOUS_RELEASE_BUILD_VERSION = calculateReleaseBuildVersion(
-  PREVIOUS_RELEASE_SOURCE_FILES
-);
+const PREVIOUS_RELEASE_BUILD_VERSION = calculateReleaseBuildVersion(PREVIOUS_RELEASE_SOURCE_FILES);
 
 const createConfig = ({
   apiBaseUrl = "https://worker.example.test",
@@ -76,7 +74,7 @@ const createHealthResponse = (
     buildVersion: LOCAL_BUILD_VERSION,
     acceptedBuildVersions: [LOCAL_BUILD_VERSION],
   },
-  { ok = true, status = 200 } = {}
+  { ok = true, status = 200 } = {},
 ) => {
   const normalizedPayload =
     payload &&
@@ -92,10 +90,7 @@ const createHealthResponse = (
   };
 };
 
-const createConfigResponse = (
-  source = createConfig(),
-  { ok = true, status = 200 } = {}
-) => ({
+const createConfigResponse = (source = createConfig(), { ok = true, status = 200 } = {}) => ({
   ok,
   status,
   text: async () => source,
@@ -106,15 +101,14 @@ const createAssetResponse = (source, { ok = true, status = 200 } = {}) => {
   return {
     ok,
     status,
-    arrayBuffer: async () =>
-      body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength),
+    arrayBuffer: async () => body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength),
   };
 };
 
 const createIntegrityEntry = (buildVersion = RELEASE_BUILD_VERSION) => {
   const cacheToken = `game-build-${buildVersion.replace(/^sha256-/, "")}`;
   return INTEGRITY_CACHE_ASSET_PATHS.map(
-    (assetPath) => `<script src="${assetPath}?v=${cacheToken}"></script>`
+    (assetPath) => `<script src="${assetPath}?v=${cacheToken}"></script>`,
   ).join("\n");
 };
 
@@ -127,7 +121,7 @@ const createReleaseDependencyResponse = (
     workerAcceptedBuildVersions = [workerBuildVersion],
     homeSource = createIntegrityEntry(entryBuildVersion),
     indexSource = createIntegrityEntry(entryBuildVersion),
-  } = {}
+  } = {},
 ) => {
   const pathname = new URL(url).pathname;
   if (sourceFiles.has(pathname.replace(/^\//, ""))) {
@@ -148,12 +142,12 @@ const createReleaseDependencyResponse = (
 test("parses and normalizes the generated browser backend config", () => {
   assert.deepEqual(
     parseGameStatsBackendConfig(
-      createConfig({ apiBaseUrl: " https://worker.example.test/api/// " })
+      createConfig({ apiBaseUrl: " https://worker.example.test/api/// " }),
     ),
     {
       apiBaseUrl: "https://worker.example.test/api",
       buildVersion: LOCAL_BUILD_VERSION,
-    }
+    },
   );
 });
 
@@ -162,22 +156,20 @@ test("rejects missing, duplicate, and non-string generated config fields", () =>
   assert.throws(
     () =>
       parseGameStatsBackendConfig(
-        `window.x = { apiBaseUrl: "\\q", buildVersion: ${JSON.stringify(
-          LOCAL_BUILD_VERSION
-        )} };`
+        `window.x = { apiBaseUrl: "\\q", buildVersion: ${JSON.stringify(LOCAL_BUILD_VERSION)} };`,
       ),
-    /invalid apiBaseUrl/
+    /invalid apiBaseUrl/,
   );
   assert.throws(
     () => parseGameStatsBackendConfig('window.x = { buildVersion: "value" };'),
-    /exactly one apiBaseUrl/
+    /exactly one apiBaseUrl/,
   );
   assert.throws(
     () =>
       parseGameStatsBackendConfig(
-        `${createConfig()}\nwindow.x = { buildVersion: ${JSON.stringify(LOCAL_BUILD_VERSION)} };`
+        `${createConfig()}\nwindow.x = { buildVersion: ${JSON.stringify(LOCAL_BUILD_VERSION)} };`,
       ),
-    /exactly one buildVersion/
+    /exactly one buildVersion/,
   );
 });
 
@@ -192,15 +184,10 @@ test("rejects unsafe API URLs and malformed browser build versions", () => {
   ]) {
     assert.throws(() => parseGameStatsBackendConfig(createConfig({ apiBaseUrl })));
   }
-  for (const buildVersion of [
-    "",
-    "sha256-short",
-    `sha256-${"A".repeat(64)}`,
-    "not-a-hash",
-  ]) {
+  for (const buildVersion of ["", "sha256-short", `sha256-${"A".repeat(64)}`, "not-a-hash"]) {
     assert.throws(
       () => parseGameStatsBackendConfig(createConfig({ buildVersion })),
-      /lowercase SHA-256/
+      /lowercase SHA-256/,
     );
   }
 });
@@ -241,16 +228,16 @@ test("fetches a no-store Worker health response through injected dependencies", 
 test("validates health-check dependencies and timeout bounds", async () => {
   await assert.rejects(
     fetchGameStatsHealth("https://worker.example.test", { fetchImpl: null }),
-    /fetch implementation is required/
+    /fetch implementation is required/,
   );
   await assert.rejects(
     fetchGameStatsHealth("https://worker.example.test", { createTimeoutSignal: null }),
-    /timeout signal factory is required/
+    /timeout signal factory is required/,
   );
   for (const timeoutMs of [0, -1, 1.5, Number.NaN]) {
     await assert.rejects(
       fetchGameStatsHealth("https://worker.example.test", { timeoutMs }),
-      /timeout must be a positive integer/
+      /timeout must be a positive integer/,
     );
   }
 });
@@ -267,21 +254,21 @@ test("reports network, response, status, JSON, and health payload failures", asy
       assert.match(error.message, /Unable to fetch game stats Worker health/);
       assert.equal(error.cause, networkError);
       return true;
-    }
+    },
   );
   for (const response of [null, {}, { ok: true, json: "not-a-function" }]) {
     await assert.rejects(
       fetchGameStatsHealth("https://worker.example.test", {
         fetchImpl: async () => response,
       }),
-      /invalid response/
+      /invalid response/,
     );
   }
   await assert.rejects(
     fetchGameStatsHealth("https://worker.example.test", {
       fetchImpl: async () => createHealthResponse({}, { ok: false, status: 503 }),
     }),
-    /status 503/
+    /status 503/,
   );
   await assert.rejects(
     fetchGameStatsHealth("https://worker.example.test", {
@@ -290,7 +277,7 @@ test("reports network, response, status, JSON, and health payload failures", asy
         json: async () => ({}),
       }),
     }),
-    /status unknown/
+    /status unknown/,
   );
   const jsonError = new Error("invalid JSON");
   await assert.rejects(
@@ -307,14 +294,14 @@ test("reports network, response, status, JSON, and health payload failures", asy
       assert.match(error.message, /did not return valid JSON/);
       assert.equal(error.cause, jsonError);
       return true;
-    }
+    },
   );
   for (const payload of [null, [], {}, { ok: false, buildVersion: LOCAL_BUILD_VERSION }]) {
     await assert.rejects(
       fetchGameStatsHealth("https://worker.example.test", {
         fetchImpl: async () => createHealthResponse(payload),
       }),
-      /payload is not healthy/
+      /payload is not healthy/,
     );
   }
   for (const buildVersion of [null, "sha256-short", `sha256-${"C".repeat(64)}`]) {
@@ -322,7 +309,7 @@ test("reports network, response, status, JSON, and health payload failures", asy
       fetchGameStatsHealth("https://worker.example.test", {
         fetchImpl: async () => createHealthResponse({ ok: true, buildVersion }),
       }),
-      /invalid buildVersion/
+      /invalid buildVersion/,
     );
   }
   for (const acceptedBuildVersions of [
@@ -341,7 +328,7 @@ test("reports network, response, status, JSON, and health payload failures", asy
             acceptedBuildVersions,
           }),
       }),
-      /invalid acceptedBuildVersions/
+      /invalid acceptedBuildVersions/,
     );
   }
 });
@@ -391,19 +378,19 @@ test("fetches and parses the deployed browser config without using caches", asyn
 test("validates live config dependencies, URL, response, and generated source", async () => {
   await assert.rejects(
     fetchLiveGameStatsBackendConfig({ fetchImpl: null }),
-    /fetch implementation is required/
+    /fetch implementation is required/,
   );
   await assert.rejects(
     fetchLiveGameStatsBackendConfig({ timeoutMs: 0 }),
-    /timeout must be a positive integer/
+    /timeout must be a positive integer/,
   );
   await assert.rejects(
     fetchLiveGameStatsBackendConfig({ createTimeoutSignal: null }),
-    /timeout signal factory is required/
+    /timeout signal factory is required/,
   );
   await assert.rejects(
     fetchLiveGameStatsBackendConfig({ createCacheBust: null }),
-    /cache-bust factory is required/
+    /cache-bust factory is required/,
   );
   for (const configUrl of [
     "not-a-url",
@@ -419,25 +406,25 @@ test("validates live config dependencies, URL, response, and generated source", 
         throw new Error("offline");
       },
     }),
-    /Unable to fetch the live game stats backend config/
+    /Unable to fetch the live game stats backend config/,
   );
   for (const response of [null, {}, { ok: true, text: "not-a-function" }]) {
     await assert.rejects(
       fetchLiveGameStatsBackendConfig({ fetchImpl: async () => response }),
-      /invalid response/
+      /invalid response/,
     );
   }
   await assert.rejects(
     fetchLiveGameStatsBackendConfig({
       fetchImpl: async () => createConfigResponse("", { ok: false, status: 404 }),
     }),
-    /status 404/
+    /status 404/,
   );
   await assert.rejects(
     fetchLiveGameStatsBackendConfig({
       fetchImpl: async () => ({ ok: false, text: async () => "" }),
     }),
-    /status unknown/
+    /status unknown/,
   );
   const readError = new Error("body unavailable");
   await assert.rejects(
@@ -454,13 +441,13 @@ test("validates live config dependencies, URL, response, and generated source", 
       assert.match(error.message, /Unable to read the live/);
       assert.equal(error.cause, readError);
       return true;
-    }
+    },
   );
   await assert.rejects(
     fetchLiveGameStatsBackendConfig({
       fetchImpl: async () => createConfigResponse("window.invalid = true;"),
     }),
-    /config is invalid/
+    /config is invalid/,
   );
 });
 
@@ -482,16 +469,11 @@ test("compares the generated browser hash with Worker health", async () => {
     healthUrl: "https://worker.example.test/health",
     buildVersion: LOCAL_BUILD_VERSION,
   });
-  assert.deepEqual(readCalls, [
-    [new URL("file:///test/game-stats-backend.js"), "utf8"],
-  ]);
+  assert.deepEqual(readCalls, [[new URL("file:///test/game-stats-backend.js"), "utf8"]]);
 });
 
 test("rejects missing readers, read failures, and browser/Worker hash mismatches", async () => {
-  await assert.rejects(
-    checkGameStatsDeployment({ readFileImpl: null }),
-    /file reader is required/
-  );
+  await assert.rejects(checkGameStatsDeployment({ readFileImpl: null }), /file reader is required/);
   const readError = new Error("unreadable");
   await assert.rejects(
     checkGameStatsDeployment({
@@ -503,15 +485,14 @@ test("rejects missing readers, read failures, and browser/Worker hash mismatches
       assert.match(error.message, /Unable to read the generated/);
       assert.equal(error.cause, readError);
       return true;
-    }
+    },
   );
   await assert.rejects(
     checkGameStatsDeployment({
       readFileImpl: async () => createConfig(),
-      fetchImpl: async () =>
-        createHealthResponse({ ok: true, buildVersion: REMOTE_BUILD_VERSION }),
+      fetchImpl: async () => createHealthResponse({ ok: true, buildVersion: REMOTE_BUILD_VERSION }),
     }),
-    new RegExp(`browser ${LOCAL_BUILD_VERSION}, Worker ${REMOTE_BUILD_VERSION}`)
+    new RegExp(`browser ${LOCAL_BUILD_VERSION}, Worker ${REMOTE_BUILD_VERSION}`),
   );
 });
 
@@ -519,8 +500,7 @@ test("uses the checked-in generated config by default", async () => {
   const source = await readFile(GAME_STATS_BACKEND_CONFIG_URL, "utf8");
   const expected = parseGameStatsBackendConfig(source);
   const result = await checkGameStatsDeployment({
-    fetchImpl: async () =>
-      createHealthResponse({ ok: true, buildVersion: expected.buildVersion }),
+    fetchImpl: async () => createHealthResponse({ ok: true, buildVersion: expected.buildVersion }),
   });
 
   assert.equal(result.apiBaseUrl, expected.apiBaseUrl);
@@ -560,7 +540,7 @@ test("compares the cache-busted deployed browser config with its Worker", async 
           ? createConfigResponse()
           : createHealthResponse({ ok: true, buildVersion: REMOTE_BUILD_VERSION }),
     }),
-    new RegExp(`browser ${LOCAL_BUILD_VERSION}, Worker ${REMOTE_BUILD_VERSION}`)
+    new RegExp(`browser ${LOCAL_BUILD_VERSION}, Worker ${REMOTE_BUILD_VERSION}`),
   );
 });
 
@@ -582,9 +562,8 @@ test("release check polls until checked-in, deployed browser, and Worker config 
         liveFetches += 1;
         return createConfigResponse(
           createConfig({
-            buildVersion:
-              liveFetches === 1 ? REMOTE_BUILD_VERSION : RELEASE_BUILD_VERSION,
-          })
+            buildVersion: liveFetches === 1 ? REMOTE_BUILD_VERSION : RELEASE_BUILD_VERSION,
+          }),
         );
       }
       return createReleaseDependencyResponse(url);
@@ -622,7 +601,7 @@ test("release check rejects stale live config even when local config and Worker 
             createConfig({
               apiBaseUrl: "https://old-worker.example.test",
               buildVersion: REMOTE_BUILD_VERSION,
-            })
+            }),
           );
         }
         healthFetches += 1;
@@ -634,7 +613,7 @@ test("release check rejects stale live config even when local config and Worker 
       assert.match(error.message, /deployed browser API https:\/\/old-worker\.example\.test/);
       assert.match(error.message, new RegExp(`deployed browser ${REMOTE_BUILD_VERSION}`));
       return true;
-    }
+    },
   );
   assert.equal(liveFetches, 2);
   assert.equal(healthFetches, 2);
@@ -658,12 +637,9 @@ test("static release gate polls for browser convergence without requesting Worke
         return createConfigResponse(
           createConfig({
             apiBaseUrl:
-              liveFetches === 1
-                ? "https://old-worker.example.test"
-                : "https://worker.example.test",
-            buildVersion:
-              liveFetches === 1 ? REMOTE_BUILD_VERSION : RELEASE_BUILD_VERSION,
-          })
+              liveFetches === 1 ? "https://old-worker.example.test" : "https://worker.example.test",
+            buildVersion: liveFetches === 1 ? REMOTE_BUILD_VERSION : RELEASE_BUILD_VERSION,
+          }),
         );
       }
       if (pathname.endsWith("/health")) {
@@ -687,8 +663,7 @@ test("static release gate polls for browser convergence without requesting Worke
 });
 
 test("Worker transition accepts the coherent live build before Pages publication", async () => {
-  const readCandidate = async () =>
-    createConfig({ buildVersion: RELEASE_BUILD_VERSION });
+  const readCandidate = async () => createConfig({ buildVersion: RELEASE_BUILD_VERSION });
   const transitionOptions = {
     liveConfigUrl: "https://site.example.test/game-stats-backend.js",
     readFileImpl: readCandidate,
@@ -701,9 +676,7 @@ test("Worker transition accepts the coherent live build before Pages publication
   };
   const fetchTransition = (acceptedBuildVersions) => async (url) => {
     if (url.includes("game-stats-backend.js")) {
-      return createConfigResponse(
-        createConfig({ buildVersion: PREVIOUS_RELEASE_BUILD_VERSION })
-      );
+      return createConfigResponse(createConfig({ buildVersion: PREVIOUS_RELEASE_BUILD_VERSION }));
     }
     return createReleaseDependencyResponse(url, {
       sourceFiles: PREVIOUS_RELEASE_SOURCE_FILES,
@@ -716,10 +689,7 @@ test("Worker transition accepts the coherent live build before Pages publication
   assert.deepEqual(
     await checkGameStatsWorkerTransition({
       ...transitionOptions,
-      fetchImpl: fetchTransition([
-        RELEASE_BUILD_VERSION,
-        PREVIOUS_RELEASE_BUILD_VERSION,
-      ]),
+      fetchImpl: fetchTransition([RELEASE_BUILD_VERSION, PREVIOUS_RELEASE_BUILD_VERSION]),
     }),
     {
       configUrl: "https://site.example.test/game-stats-backend.js",
@@ -728,7 +698,7 @@ test("Worker transition accepts the coherent live build before Pages publication
       buildVersion: RELEASE_BUILD_VERSION,
       sourceBuildVersion: PREVIOUS_RELEASE_BUILD_VERSION,
       attempts: 1,
-    }
+    },
   );
 
   await assert.rejects(
@@ -736,9 +706,7 @@ test("Worker transition accepts the coherent live build before Pages publication
       ...transitionOptions,
       fetchImpl: fetchTransition([RELEASE_BUILD_VERSION]),
     }),
-    new RegExp(
-      `deployed browser ${PREVIOUS_RELEASE_BUILD_VERSION} is not accepted by the Worker`
-    )
+    new RegExp(`deployed browser ${PREVIOUS_RELEASE_BUILD_VERSION} is not accepted by the Worker`),
   );
 });
 
@@ -763,13 +731,13 @@ test("Worker transition rejects a retargeted API and an unsynchronized Worker", 
             createConfig({
               apiBaseUrl: "https://other-worker.example.test",
               buildVersion: RELEASE_BUILD_VERSION,
-            })
+            }),
           );
         }
         return createReleaseDependencyResponse(url);
       },
     }),
-    /checked-in API https:\/\/worker\.example\.test, deployed browser API https:\/\/other-worker\.example\.test/
+    /checked-in API https:\/\/worker\.example\.test, deployed browser API https:\/\/other-worker\.example\.test/,
   );
 
   await assert.rejects(
@@ -777,9 +745,7 @@ test("Worker transition rejects a retargeted API and an unsynchronized Worker", 
       ...transitionOptions,
       fetchImpl: async (url) => {
         if (url.includes("game-stats-backend.js")) {
-          return createConfigResponse(
-            createConfig({ buildVersion: RELEASE_BUILD_VERSION })
-          );
+          return createConfigResponse(createConfig({ buildVersion: RELEASE_BUILD_VERSION }));
         }
         return createReleaseDependencyResponse(url, {
           workerBuildVersion: PREVIOUS_RELEASE_BUILD_VERSION,
@@ -787,17 +753,14 @@ test("Worker transition rejects a retargeted API and an unsynchronized Worker", 
       },
     }),
     new RegExp(
-      `checked-in browser ${RELEASE_BUILD_VERSION}, Worker ${PREVIOUS_RELEASE_BUILD_VERSION}`
-    )
+      `checked-in browser ${RELEASE_BUILD_VERSION}, Worker ${PREVIOUS_RELEASE_BUILD_VERSION}`,
+    ),
   );
 });
 
 test("release check rejects a stale live completion source and fetches assets uncached", async () => {
   const staleSources = new Map(RELEASE_SOURCE_FILES);
-  staleSources.set(
-    SAMPLE_COMPLETION_SOURCE,
-    Buffer.from(`// stale ${SAMPLE_COMPLETION_SOURCE}\n`)
-  );
+  staleSources.set(SAMPLE_COMPLETION_SOURCE, Buffer.from(`// stale ${SAMPLE_COMPLETION_SOURCE}\n`));
   const staleSourceBuildVersion = calculateReleaseBuildVersion(staleSources);
   const assetCalls = [];
   let cacheBustSequence = 0;
@@ -814,9 +777,7 @@ test("release check rejects a stale live completion source and fetches assets un
       fetchImpl: async (url, options) => {
         const pathname = new URL(url).pathname;
         if (pathname.endsWith("game-stats-backend.js")) {
-          return createConfigResponse(
-            createConfig({ buildVersion: RELEASE_BUILD_VERSION })
-          );
+          return createConfigResponse(createConfig({ buildVersion: RELEASE_BUILD_VERSION }));
         }
         if (pathname.endsWith("/health")) {
           throw new Error("Static release gate must not request Worker health");
@@ -827,17 +788,14 @@ test("release check rejects a stale live completion source and fetches assets un
     }),
     (error) => {
       assert.match(error.message, new RegExp(`browser config ${RELEASE_BUILD_VERSION}`));
-      assert.match(
-        error.message,
-        new RegExp(`completion sources ${staleSourceBuildVersion}`)
-      );
+      assert.match(error.message, new RegExp(`completion sources ${staleSourceBuildVersion}`));
       return true;
-    }
+    },
   );
 
   assert.equal(
     assetCalls.length,
-    GAME_COMPLETION_SOURCE_FILES.length + INTEGRITY_ENTRY_FILES.length
+    GAME_COMPLETION_SOURCE_FILES.length + INTEGRITY_ENTRY_FILES.length,
   );
   for (const [url, options] of assetCalls) {
     assert.match(url, /game_stats_deployment_check=integrity-/);
@@ -860,9 +818,7 @@ test("release check rejects stale cache-token references in either live HTML ent
         fetchImpl: async (url) => {
           const pathname = new URL(url).pathname;
           if (pathname.endsWith("game-stats-backend.js")) {
-            return createConfigResponse(
-              createConfig({ buildVersion: RELEASE_BUILD_VERSION })
-            );
+            return createConfigResponse(createConfig({ buildVersion: RELEASE_BUILD_VERSION }));
           }
           return createReleaseDependencyResponse(url, {
             ...(entryPath === "home.html" ? { homeSource: staleEntry } : {}),
@@ -876,11 +832,11 @@ test("release check rejects stale cache-token references in either live HTML ent
           error.message,
           new RegExp(
             `${entryPath.replace(".", "\\.")} is missing cache reference ` +
-              `${INTEGRITY_CACHE_ASSET_PATHS[0].replaceAll(".", "\\.")}\\?v=${cacheToken}`
-          )
+              `${INTEGRITY_CACHE_ASSET_PATHS[0].replaceAll(".", "\\.")}\\?v=${cacheToken}`,
+          ),
         );
         return true;
-      }
+      },
     );
   }
 });
@@ -928,9 +884,7 @@ test("release check reports every live integrity asset failure shape", async () 
         fetchImpl: async (url) => {
           const pathname = new URL(url).pathname;
           if (pathname.endsWith("game-stats-backend.js")) {
-            return createConfigResponse(
-              createConfig({ buildVersion: RELEASE_BUILD_VERSION })
-            );
+            return createConfigResponse(createConfig({ buildVersion: RELEASE_BUILD_VERSION }));
           }
           if (pathname.endsWith("/health")) {
             return createReleaseDependencyResponse(url);
@@ -941,7 +895,7 @@ test("release check reports every live integrity asset failure shape", async () 
           return createReleaseDependencyResponse(url);
         },
       }),
-      expected
+      expected,
     );
   }
 });
@@ -950,26 +904,22 @@ test("release check validates polling dependencies and remains time bounded", as
   const baseOptions = { readFileImpl: async () => createConfig() };
   await assert.rejects(
     checkGameStatsRelease({ ...baseOptions, readFileImpl: null }),
-    /file reader is required/
+    /file reader is required/,
   );
   await assert.rejects(
     checkGameStatsRelease({ ...baseOptions, sleepImpl: null }),
-    /sleep implementation is required/
+    /sleep implementation is required/,
   );
   await assert.rejects(
     checkGameStatsRelease({ ...baseOptions, nowImpl: null }),
-    /clock implementation is required/
+    /clock implementation is required/,
   );
-  for (const options of [
-    { timeoutMs: 0 },
-    { convergenceTimeoutMs: 0 },
-    { pollIntervalMs: 0 },
-  ]) {
+  for (const options of [{ timeoutMs: 0 }, { convergenceTimeoutMs: 0 }, { pollIntervalMs: 0 }]) {
     await assert.rejects(checkGameStatsRelease({ ...baseOptions, ...options }), /positive integer/);
   }
   await assert.rejects(
     checkGameStatsRelease({ ...baseOptions, nowImpl: () => Number.NaN }),
-    /clock returned an invalid time/
+    /clock returned an invalid time/,
   );
 
   let time = 0;
@@ -990,7 +940,7 @@ test("release check validates polling dependencies and remains time bounded", as
           : createHealthResponse();
       },
     }),
-    /did not converge within 10ms after 2 attempts/
+    /did not converge within 10ms after 2 attempts/,
   );
   assert.equal(time, 5);
   assert.equal(fetches, 4);
@@ -1008,7 +958,7 @@ test("release check reports local reads, Worker skew, transient failures, and in
       assert.match(error.message, /Unable to read the generated/);
       assert.equal(error.cause, readError);
       return true;
-    }
+    },
   );
 
   await assert.rejects(
@@ -1022,7 +972,7 @@ test("release check reports local reads, Worker skew, transient failures, and in
           ? createConfigResponse()
           : createHealthResponse({ ok: true, buildVersion: REMOTE_BUILD_VERSION }),
     }),
-    new RegExp(`Worker ${REMOTE_BUILD_VERSION}`)
+    new RegExp(`Worker ${REMOTE_BUILD_VERSION}`),
   );
 
   await assert.rejects(
@@ -1036,7 +986,7 @@ test("release check reports local reads, Worker skew, transient failures, and in
       },
       fetchImpl: async () => createHealthResponse(),
     }),
-    /cache-bust failure/
+    /cache-bust failure/,
   );
 
   let clockReads = 0;
@@ -1047,7 +997,7 @@ test("release check reports local reads, Worker skew, transient failures, and in
       pollIntervalMs: 5,
       nowImpl: () => (++clockReads === 2 ? Number.NaN : 0),
     }),
-    /clock returned an invalid time/
+    /clock returned an invalid time/,
   );
 
   clockReads = 0;
@@ -1062,7 +1012,7 @@ test("release check reports local reads, Worker skew, transient failures, and in
           ? createConfigResponse(createConfig({ buildVersion: REMOTE_BUILD_VERSION }))
           : createHealthResponse(),
     }),
-    /clock returned an invalid time/
+    /clock returned an invalid time/,
   );
 });
 
@@ -1080,7 +1030,7 @@ test("release check stops at its deadline and default sleeper permits convergenc
           ? createConfigResponse(createConfig({ buildVersion: REMOTE_BUILD_VERSION }))
           : createHealthResponse(),
     }),
-    /after 1 attempt:/
+    /after 1 attempt:/,
   );
 
   const expiringClockValues = [0, 0, 10];
@@ -1096,7 +1046,7 @@ test("release check stops at its deadline and default sleeper permits convergenc
           ? createConfigResponse(createConfig({ buildVersion: REMOTE_BUILD_VERSION }))
           : createHealthResponse(),
     }),
-    /after 1 attempt:/
+    /after 1 attempt:/,
   );
 
   const scheduledSleeps = [];
@@ -1116,9 +1066,8 @@ test("release check stops at its deadline and default sleeper permits convergenc
         liveFetches += 1;
         return createConfigResponse(
           createConfig({
-            buildVersion:
-              liveFetches === 1 ? REMOTE_BUILD_VERSION : RELEASE_BUILD_VERSION,
-          })
+            buildVersion: liveFetches === 1 ? REMOTE_BUILD_VERSION : RELEASE_BUILD_VERSION,
+          }),
         );
       }
       return createReleaseDependencyResponse(url);
@@ -1137,7 +1086,7 @@ test("CLI runner reports success and every failure shape without exiting directl
       writeOutput: (message) => output.push(message),
       writeError: (message) => errors.push(message),
     }),
-    0
+    0,
   );
   assert.deepEqual(output, [`Verified game stats deployment parity: ${LOCAL_BUILD_VERSION}`]);
   assert.deepEqual(errors, []);
@@ -1150,7 +1099,7 @@ test("CLI runner reports success and every failure shape without exiting directl
       writeOutput: (message) => output.push(message),
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
   assert.equal(
     await runGameStatsDeploymentCheck({
@@ -1160,7 +1109,7 @@ test("CLI runner reports success and every failure shape without exiting directl
       writeOutput: (message) => output.push(message),
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
   assert.deepEqual(errors, [
     "Game stats deployment parity check failed: mismatch",
@@ -1178,7 +1127,7 @@ test("CLI runner writes through its default console reporters", async (context) 
     await runGameStatsDeploymentCheck({
       checkImpl: async () => ({ buildVersion: LOCAL_BUILD_VERSION }),
     }),
-    0
+    0,
   );
   assert.equal(
     await runGameStatsDeploymentCheck({
@@ -1186,12 +1135,10 @@ test("CLI runner writes through its default console reporters", async (context) 
         throw new Error("console failure");
       },
     }),
-    1
+    1,
   );
   assert.deepEqual(output, [`Verified game stats deployment parity: ${LOCAL_BUILD_VERSION}`]);
-  assert.deepEqual(errors, [
-    "Game stats deployment parity check failed: console failure",
-  ]);
+  assert.deepEqual(errors, ["Game stats deployment parity check failed: console failure"]);
 });
 
 test("CLI dispatches every deployment and release parity check", async () => {
@@ -1220,14 +1167,8 @@ test("CLI dispatches every deployment and release parity check", async () => {
   };
   assert.equal(await runGameStatsDeploymentCli({ args: [], ...runners }), 10);
   assert.equal(await runGameStatsDeploymentCli({ args: ["--live"], ...runners }), 20);
-  assert.equal(
-    await runGameStatsDeploymentCli({ args: ["--static-release"], ...runners }),
-    30
-  );
-  assert.equal(
-    await runGameStatsDeploymentCli({ args: ["--worker-transition"], ...runners }),
-    35
-  );
+  assert.equal(await runGameStatsDeploymentCli({ args: ["--static-release"], ...runners }), 30);
+  assert.equal(await runGameStatsDeploymentCli({ args: ["--worker-transition"], ...runners }), 35);
   assert.equal(await runGameStatsDeploymentCli({ args: ["--release"], ...runners }), 40);
 
   const errors = [];
@@ -1237,15 +1178,9 @@ test("CLI dispatches every deployment and release parity check", async () => {
       ...runners,
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
-  assert.deepEqual(calls, [
-    "local",
-    "live",
-    "static-release",
-    "worker-transition",
-    "release",
-  ]);
+  assert.deepEqual(calls, ["local", "live", "static-release", "worker-transition", "release"]);
   assert.deepEqual(errors, [
     "Usage: node scripts/check-game-stats-deployment.mjs " +
       "[--live|--static-release|--worker-transition|--release]",
@@ -1270,28 +1205,28 @@ test("specialized CLI runners retain injectable check behavior", async () => {
       checkImpl: async () => ({ buildVersion: LOCAL_BUILD_VERSION }),
       writeOutput: (message) => output.push(message),
     }),
-    0
+    0,
   );
   assert.equal(
     await runGameStatsStaticReleaseCheck({
       checkImpl: async () => ({ buildVersion: RELEASE_BUILD_VERSION }),
       writeOutput: (message) => output.push(message),
     }),
-    0
+    0,
   );
   assert.equal(
     await runGameStatsWorkerTransitionCheck({
       checkImpl: async () => ({ buildVersion: LOCAL_BUILD_VERSION }),
       writeOutput: (message) => output.push(message),
     }),
-    0
+    0,
   );
   assert.equal(
     await runGameStatsReleaseCheck({
       checkImpl: async () => ({ buildVersion: REMOTE_BUILD_VERSION }),
       writeOutput: (message) => output.push(message),
     }),
-    0
+    0,
   );
   assert.deepEqual(output, [
     `Verified game stats deployment parity: ${LOCAL_BUILD_VERSION}`,
@@ -1304,29 +1239,29 @@ test("specialized CLI runners retain injectable check behavior", async () => {
 test("the live config URL defaults to production and honours its env override", () => {
   assert.equal(
     DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
-    "https://rohin.shanker.me/scripts/home/game-stats-backend.js"
+    "https://rohin.shanker.me/scripts/home/game-stats-backend.js",
   );
   assert.equal(
     LIVE_GAME_STATS_BACKEND_CONFIG_URL.toString(),
-    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   );
 
   assert.equal(
     resolveLiveGameStatsBackendConfigUrl({}).toString(),
-    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   );
   assert.equal(
     resolveLiveGameStatsBackendConfigUrl({
       GAME_STATS_LIVE_CONFIG_URL: "   ",
     }).toString(),
-    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+    DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   );
   assert.equal(
     resolveLiveGameStatsBackendConfigUrl({
       GAME_STATS_LIVE_CONFIG_URL:
         "  https://staging.example.test/scripts/home/game-stats-backend.js  ",
     }).toString(),
-    "https://staging.example.test/scripts/home/game-stats-backend.js"
+    "https://staging.example.test/scripts/home/game-stats-backend.js",
   );
 });
 
@@ -1354,8 +1289,8 @@ test("every workflow shares one hardening standard", async () => {
       WORKFLOW_FILES.map(async (fileName) => [
         fileName,
         await readFile(new URL(`.github/workflows/${fileName}`, root), "utf8"),
-      ])
-    )
+      ]),
+    ),
   );
   const checkoutReferences = new Set();
   const setupNodeReferences = new Set();
@@ -1365,12 +1300,12 @@ test("every workflow shares one hardening standard", async () => {
     assert.deepEqual(
       definition.permissions,
       { contents: "read" },
-      `${fileName} must default to read-only repository permissions`
+      `${fileName} must default to read-only repository permissions`,
     );
     assert.equal(
       definition.concurrency["cancel-in-progress"],
       true,
-      `${fileName} must cancel superseded runs`
+      `${fileName} must cancel superseded runs`,
     );
     assert.match(definition.concurrency.group, /\$\{\{ github\.ref \}\}/);
     assert.doesNotMatch(source, /pull_request_target/);
@@ -1386,12 +1321,12 @@ test("every workflow shares one hardening standard", async () => {
       assert.match(
         commitSha,
         /^[0-9a-f]{40}$/,
-        `${fileName} must pin ${reference} to a full commit SHA`
+        `${fileName} must pin ${reference} to a full commit SHA`,
       );
       assert.match(
         comment,
         new RegExp(`^# ${escapeRegExp(action)} v\\d`),
-        `${fileName} must name the released version of ${action}`
+        `${fileName} must name the released version of ${action}`,
       );
       if (action === "actions/checkout") checkoutReferences.add(reference);
       if (action === "actions/setup-node") setupNodeReferences.add(reference);
@@ -1406,21 +1341,21 @@ test("every workflow shares one hardening standard", async () => {
       }
       assert.ok(
         Number.isInteger(job["timeout-minutes"]),
-        `${fileName} job ${jobName} must bound its runtime`
+        `${fileName} job ${jobName} must bound its runtime`,
       );
       for (const step of job.steps) {
         if (step.uses?.startsWith("actions/checkout@")) {
           assert.equal(
             step.with?.["persist-credentials"],
             false,
-            `${fileName} job ${jobName} must not persist Git credentials`
+            `${fileName} job ${jobName} must not persist Git credentials`,
           );
         }
         if (step.uses?.startsWith("actions/setup-node@")) {
           assert.equal(
             step.with?.["node-version"],
             24,
-            `${fileName} job ${jobName} must run the supported Node version`
+            `${fileName} job ${jobName} must run the supported Node version`,
           );
         }
       }
@@ -1434,9 +1369,7 @@ test("every workflow shares one hardening standard", async () => {
 test("every workflow runs pushes only from main so a PR branch runs once", async () => {
   const root = new URL("../", import.meta.url);
   for (const file of WORKFLOW_FILES) {
-    const definition = parse(
-      await readFile(new URL(`.github/workflows/${file}`, root), "utf8")
-    );
+    const definition = parse(await readFile(new URL(`.github/workflows/${file}`, root), "utf8"));
     if (file === "ui-layout.yml") {
       assert.deepEqual(definition.on, { workflow_call: null });
     } else {
@@ -1458,20 +1391,20 @@ test("secret scanning and browser installs each run once per push", async () => 
   const guardSteps = secretGuardDefinition.jobs["repository-guard"].steps;
   assert.deepEqual(
     guardSteps.filter((step) => step.run).map((step) => step.run),
-    ["node scripts/check-no-secrets.mjs"]
+    ["node scripts/check-no-secrets.mjs"],
   );
   const secretGuardRuns = Object.values(secretGuardDefinition.jobs).flatMap((job) =>
-    job.steps.filter((step) => step.run).map((step) => step.run)
+    job.steps.filter((step) => step.run).map((step) => step.run),
   );
   assert.deepEqual(
     secretGuardRuns.filter((run) => run.includes("node --test")),
     [],
-    "the guard must leave the re-scanning unit test to `npm test`"
+    "the guard must leave the re-scanning unit test to `npm test`",
   );
   assert.ok(
     secretGuardDefinition.jobs.gitleaks.steps.some((step) =>
-      step.uses?.startsWith("gitleaks/gitleaks-action@")
-    )
+      step.uses?.startsWith("gitleaks/gitleaks-action@"),
+    ),
   );
 
   const uiSteps = uiDefinition.jobs.ui.steps;
@@ -1480,23 +1413,17 @@ test("secret scanning and browser installs each run once per push", async () => 
   assert.match(cacheStep.with.key, /hashFiles\('package-lock\.json'\)/);
   assert.ok(cacheStep.id, "the browser cache step must expose its cache-hit output");
 
-  const installStep = uiSteps.find((step) =>
-    step.run === "npx playwright install --with-deps chromium"
+  const installStep = uiSteps.find(
+    (step) => step.run === "npx playwright install --with-deps chromium",
   );
-  assert.equal(
-    installStep.if,
-    `steps.${cacheStep.id}.outputs.cache-hit != 'true'`
+  assert.equal(installStep.if, `steps.${cacheStep.id}.outputs.cache-hit != 'true'`);
+  const dependencyStep = uiSteps.find(
+    (step) => step.run === "npx playwright install-deps chromium",
   );
-  const dependencyStep = uiSteps.find((step) =>
-    step.run === "npx playwright install-deps chromium"
-  );
-  assert.equal(
-    dependencyStep.if,
-    `steps.${cacheStep.id}.outputs.cache-hit == 'true'`
-  );
+  assert.equal(dependencyStep.if, `steps.${cacheStep.id}.outputs.cache-hit == 'true'`);
   assert.ok(
     uiSteps.indexOf(cacheStep) < uiSteps.indexOf(installStep),
-    "the cache must be restored before the browser install decision"
+    "the cache must be restored before the browser install decision",
   );
 });
 
@@ -1511,61 +1438,64 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
 
   assert.equal(
     packageJson.scripts["game-stats:deployment:check"],
-    "node scripts/check-game-stats-deployment.mjs --live"
+    "node scripts/check-game-stats-deployment.mjs --live",
   );
   assert.equal(
     packageJson.scripts["game-stats:static-release:check"],
-    "node scripts/check-game-stats-deployment.mjs --static-release"
+    "node scripts/check-game-stats-deployment.mjs --static-release",
   );
   assert.equal(
     packageJson.scripts["game-stats:worker-transition:check"],
-    "node scripts/check-game-stats-deployment.mjs --worker-transition"
+    "node scripts/check-game-stats-deployment.mjs --worker-transition",
   );
   assert.equal(
     packageJson.scripts["game-stats:release:check"],
-    "node scripts/check-game-stats-deployment.mjs --release"
+    "node scripts/check-game-stats-deployment.mjs --release",
   );
   assert.equal(
     packageJson.scripts["game-stats:integrity:check"],
-    "node scripts/update-game-integrity.mjs --check"
+    "node scripts/update-game-integrity.mjs --check",
   );
   assert.equal(
     packageJson.scripts["app-icons:check"],
-    "node scripts/build-app-icon-manifest.mjs --check"
+    "node scripts/build-app-icon-manifest.mjs --check",
   );
   assert.equal(
     packageJson.scripts["study-resources:check"],
-    "node scripts/build-study-resources-manifest.mjs --check"
+    "node scripts/build-study-resources-manifest.mjs --check",
   );
-  assert.equal(packageJson.scripts["modeling:check"], "node scripts/build-modeling-markup.mjs --check");
+  assert.equal(
+    packageJson.scripts["modeling:check"],
+    "node scripts/build-modeling-markup.mjs --check",
+  );
   assert.equal(packageJson.scripts["media:optimize"], "node scripts/optimize-media.mjs");
   assert.equal(packageJson.scripts["media:check"], "node scripts/optimize-media.mjs --check");
   assert.equal(
     packageJson.scripts["game-stats:worker-secrets:check"],
-    "node scripts/check-game-stats-worker-secrets.mjs"
+    "node scripts/check-game-stats-worker-secrets.mjs",
   );
   assert.match(packageJson.scripts["syntax:check"], /find scripts -type f/);
   assert.match(packageJson.scripts["syntax:check"], /find video-editor modeling -maxdepth 1/);
   assert.match(packageJson.scripts["syntax:check"], /xargs -0 -n1 node --check/);
   assert.equal(
     workerPackageJson.scripts["deployment:check"],
-    "node ../../scripts/check-game-stats-deployment.mjs --live"
+    "node ../../scripts/check-game-stats-deployment.mjs --live",
   );
   assert.equal(
     workerPackageJson.scripts["static-release:check"],
-    "node ../../scripts/check-game-stats-deployment.mjs --static-release"
+    "node ../../scripts/check-game-stats-deployment.mjs --static-release",
   );
   assert.equal(
     workerPackageJson.scripts["worker-transition:check"],
-    "node ../../scripts/check-game-stats-deployment.mjs --worker-transition"
+    "node ../../scripts/check-game-stats-deployment.mjs --worker-transition",
   );
   assert.equal(
     workerPackageJson.scripts["release:check"],
-    "node ../../scripts/check-game-stats-deployment.mjs --release"
+    "node ../../scripts/check-game-stats-deployment.mjs --release",
   );
   assert.equal(
     workerPackageJson.scripts["deploy:check"],
-    "wrangler deploy --dry-run --config wrangler.jsonc --strict"
+    "wrangler deploy --dry-run --config wrangler.jsonc --strict",
   );
   const workflowDefinition = parse(workflow);
   assert.deepEqual(Object.keys(workflowDefinition.on).sort(), [
@@ -1613,7 +1543,7 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.equal(workflowDefinition.jobs.browser.uses, "./.github/workflows/ui-layout.yml");
   assert.deepEqual(
     workflowDefinition.jobs.slow.steps.filter((step) => step.run).map((step) => step.run),
-    ["npm ci", "npm run test:slow"]
+    ["npm ci", "npm run test:slow"],
   );
   assert.equal(packageJson.scripts["test:slow"], "node --test tests/slow/*.test.mjs");
   assert.match(deployWorker.if, /github\.ref == 'refs\/heads\/main'/);
@@ -1638,65 +1568,44 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   });
 
   for (const job of [verify, deployWorker, packagePages, deployPages]) {
-    const checkoutStep = job.steps.find((step) =>
-      step.uses?.startsWith("actions/checkout@")
-    );
-    const setupNodeStep = job.steps.find((step) =>
-      step.uses?.startsWith("actions/setup-node@")
-    );
-    assert.equal(
-      checkoutStep.uses,
-      "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"
-    );
+    const checkoutStep = job.steps.find((step) => step.uses?.startsWith("actions/checkout@"));
+    const setupNodeStep = job.steps.find((step) => step.uses?.startsWith("actions/setup-node@"));
+    assert.equal(checkoutStep.uses, "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd");
     assert.equal(checkoutStep.with["persist-credentials"], false);
-    assert.equal(
-      setupNodeStep.uses,
-      "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"
-    );
+    assert.equal(setupNodeStep.uses, "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e");
   }
 
-  const workerStepByName = Object.fromEntries(
-    deployWorker.steps.map((step) => [step.name, step])
-  );
+  const workerStepByName = Object.fromEntries(deployWorker.steps.map((step) => [step.name, step]));
   assert.deepEqual(workerStepByName["Require production credentials"].env, {
     CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
     CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
   });
   assert.equal(
     workerStepByName["Require production credentials"].run,
-    "node scripts/check-game-stats-release-context.mjs --credentials"
+    "node scripts/check-game-stats-release-context.mjs --credentials",
   );
-  assert.deepEqual(
-    workerStepByName["Reject a superseded workflow revision"].env,
-    {
+  assert.deepEqual(workerStepByName["Reject a superseded workflow revision"].env, {
     GITHUB_TOKEN: "${{ github.token }}",
-    }
-  );
+  });
   assert.equal(
     workerStepByName["Reject a superseded workflow revision"].run,
-    "node scripts/check-game-stats-release-context.mjs --current-main"
+    "node scripts/check-game-stats-release-context.mjs --current-main",
   );
-  assert.deepEqual(
-    workerStepByName["Deploy rollout-compatible Worker configuration"].env,
-    {
-      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
-      CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
-    }
-  );
-  assert.deepEqual(
-    workerStepByName["Require every secret the Worker configuration declares"].env,
-    {
-      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
-      CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
-    }
-  );
+  assert.deepEqual(workerStepByName["Deploy rollout-compatible Worker configuration"].env, {
+    CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+    CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+  });
+  assert.deepEqual(workerStepByName["Require every secret the Worker configuration declares"].env, {
+    CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+    CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+  });
   assert.equal(
     workerStepByName["Require every secret the Worker configuration declares"].run,
-    "npm run game-stats:worker-secrets:check"
+    "npm run game-stats:worker-secrets:check",
   );
   assert.equal(
     workerStepByName["Deploy rollout-compatible Worker configuration"].run,
-    "npm --prefix workers/game-stats run deploy -- --config wrangler.jsonc --strict"
+    "npm --prefix workers/game-stats run deploy -- --config wrangler.jsonc --strict",
   );
   // The schema the deployed Worker expects must already be in D1 when it
   // starts serving, so migrations are applied with production credentials
@@ -1707,79 +1616,67 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   });
   assert.equal(
     workerStepByName["Apply pending D1 migrations"].run,
-    "npm --prefix workers/game-stats run migrate:remote"
+    "npm --prefix workers/game-stats run migrate:remote",
   );
   assert.equal(
-    workerStepByName[
-      "Verify live browser remains accepted by the candidate Worker"
-    ].run,
-    "npm run game-stats:worker-transition:check"
+    workerStepByName["Verify live browser remains accepted by the candidate Worker"].run,
+    "npm run game-stats:worker-transition:check",
   );
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action|pull_request_target/);
 
   const workerStepNames = deployWorker.steps.map((step) => step.name);
   assert.ok(
     workerStepNames.indexOf("Require production credentials") <
-      workerStepNames.indexOf("Reject a superseded workflow revision")
+      workerStepNames.indexOf("Reject a superseded workflow revision"),
   );
   assert.ok(
     workerStepNames.indexOf("Reject a superseded workflow revision") <
-      workerStepNames.indexOf(
-        "Require every secret the Worker configuration declares"
-      )
+      workerStepNames.indexOf("Require every secret the Worker configuration declares"),
   );
   assert.ok(
-    workerStepNames.indexOf(
-      "Require every secret the Worker configuration declares"
-    ) < workerStepNames.indexOf("Apply pending D1 migrations")
+    workerStepNames.indexOf("Require every secret the Worker configuration declares") <
+      workerStepNames.indexOf("Apply pending D1 migrations"),
   );
   assert.ok(
     workerStepNames.indexOf("Apply pending D1 migrations") <
-      workerStepNames.indexOf("Deploy rollout-compatible Worker configuration")
+      workerStepNames.indexOf("Deploy rollout-compatible Worker configuration"),
   );
   assert.ok(
     workerStepNames.indexOf("Deploy rollout-compatible Worker configuration") <
-      workerStepNames.indexOf(
-        "Verify live browser remains accepted by the candidate Worker"
-      )
+      workerStepNames.indexOf("Verify live browser remains accepted by the candidate Worker"),
   );
 
   const pagesPackageStepByName = Object.fromEntries(
-    packagePages.steps.map((step) => [step.name, step])
+    packagePages.steps.map((step) => [step.name, step]),
   );
   assert.equal(
     pagesPackageStepByName["Configure GitHub Pages"].uses,
-    "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b"
+    "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b",
   );
   assert.match(
     pagesPackageStepByName["Assemble public site artifact"].run,
-    /cp -R assets styles video-editor/
+    /cp -R assets styles video-editor/,
   );
+  assert.match(pagesPackageStepByName["Assemble public site artifact"].run, /cp -R scripts\/home/);
   assert.match(
     pagesPackageStepByName["Assemble public site artifact"].run,
-    /cp -R scripts\/home/
-  );
-  assert.match(
-    pagesPackageStepByName["Assemble public site artifact"].run,
-    /cp CNAME home\.html index\.html robots\.txt sitemap\.xml style\.css/
+    /cp CNAME home\.html index\.html robots\.txt sitemap\.xml style\.css/,
   );
   assert.equal(
     pagesPackageStepByName["Upload GitHub Pages artifact"].uses,
-    "actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b"
+    "actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b",
   );
 
   const pagesDeployStepByName = Object.fromEntries(
-    deployPages.steps.map((step) => [step.name, step])
+    deployPages.steps.map((step) => [step.name, step]),
   );
   assert.equal(
     pagesDeployStepByName["Deploy verified GitHub Pages artifact"].uses,
-    "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e"
+    "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
   );
   assert.equal(
-    pagesDeployStepByName[
-      "Verify checked-in/deployed browser/Worker release parity"
-    ].run,
-    "npm run game-stats:release:check"
+    pagesDeployStepByName["Verify checked-in/deployed browser/Worker release parity"].run,
+    "npm run game-stats:release:check",
   );
   assert.doesNotMatch(workflow, /Wait for checked-in browser release/);
   assert.match(validationGuide, /npm run game-stats:deployment:check/);
@@ -1845,90 +1742,93 @@ const PUBLISHED_LIVE_MANIFESTS = [
 ];
 
 for (const { label, manifest, alsoServed } of PUBLISHED_LIVE_MANIFESTS) {
-test(`transition verifies published ${label} bytes and cache references without weakening final parity`, async () => {
-  const liveBytes = new Map(
-    [...manifest, ...alsoServed].map((path) => [
-      path,
-      Buffer.from(`// published ${path}\n`),
-    ])
-  );
-  // Today's manifest names sources this release never published, so falling
-  // through to it surfaces a missing asset rather than a silent pass.
-  const unpublished = GAME_COMPLETION_SOURCE_FILES.filter(
-    (path) => !liveBytes.has(path)
-  );
-  assert.ok(unpublished.length > 0);
-  const digest = createHash("sha256");
-  for (const path of manifest) {
-    digest.update(path).update("\0").update(liveBytes.get(path)).update("\0");
-  }
-  const legacyBuild = `sha256-${digest.digest("hex")}`;
-  const legacyEntry = ["scripts/home/game-stats-backend.js", ...manifest]
-    .map((path) => `<script src="${path}?v=game-build-${legacyBuild.slice(7)}"></script>`)
-    .join("\n");
-  let corruptSources = false;
-  let corruptEntry = false;
-  const options = {
-    readFileImpl: async () => createConfig({ buildVersion: RELEASE_BUILD_VERSION }),
-    liveConfigUrl: "https://site.example.test/game-stats-backend.js",
-    convergenceTimeoutMs: 1,
-    pollIntervalMs: 1,
-    nowImpl: () => 0,
-    sleepImpl: async () => {},
-    fetchImpl: async (url) => {
-      if (url.includes("game-stats-backend.js")) {
-        return createConfigResponse(createConfig({ buildVersion: legacyBuild }));
-      }
-      const pathname = new URL(url).pathname;
-      const path = pathname.replace(/^\//, "");
-      if (
-        !pathname.endsWith("/health") &&
-        !INTEGRITY_ENTRY_FILES.includes(path) &&
-        !liveBytes.has(path)
-      ) {
-        return createAssetResponse("Not found", { ok: false, status: 404 });
-      }
-      const sourceFiles = new Map(liveBytes);
-      if (corruptSources) {
-        sourceFiles.set(manifest[0], Buffer.from("changed"));
-      }
-      return createReleaseDependencyResponse(url, {
-        sourceFiles,
-        homeSource: corruptEntry ? "" : legacyEntry,
-        indexSource: legacyEntry,
-        workerBuildVersion: RELEASE_BUILD_VERSION,
-        workerAcceptedBuildVersions: [RELEASE_BUILD_VERSION, legacyBuild],
-      });
-    },
-  };
-  const result = await checkGameStatsWorkerTransition(options);
-  assert.equal(result.sourceBuildVersion, legacyBuild);
-  await assert.rejects(checkGameStatsRelease(options), /deployed browser/);
-  // Final parity still requires today's full manifest even when the live build
-  // already equals the checked-in one.
-  await assert.rejects(checkGameStatsWorkerTransition({
-    ...options,
-    readFileImpl: async () => createConfig({ buildVersion: legacyBuild }),
-    fetchImpl: async (url) => url.includes("/health")
-      ? createHealthResponse({ ok: true, buildVersion: legacyBuild })
-      : options.fetchImpl(url),
-  }), /status 404/);
-  // Reproducing a published hash never substitutes for the Worker's
-  // acceptance window.
-  await assert.rejects(checkGameStatsWorkerTransition({
-    ...options,
-    fetchImpl: async (url) => url.includes("/health")
-      ? createHealthResponse({
-          ok: true,
-          buildVersion: RELEASE_BUILD_VERSION,
-          acceptedBuildVersions: [RELEASE_BUILD_VERSION],
-        })
-      : options.fetchImpl(url),
-  }), /is not accepted by the Worker/);
-  corruptEntry = true;
-  await assert.rejects(checkGameStatsWorkerTransition(options), /missing cache reference/);
-  corruptEntry = false;
-  corruptSources = true;
-  await assert.rejects(checkGameStatsWorkerTransition(options), /status 404/);
-});
+  test(`transition verifies published ${label} bytes and cache references without weakening final parity`, async () => {
+    const liveBytes = new Map(
+      [...manifest, ...alsoServed].map((path) => [path, Buffer.from(`// published ${path}\n`)]),
+    );
+    // Today's manifest names sources this release never published, so falling
+    // through to it surfaces a missing asset rather than a silent pass.
+    const unpublished = GAME_COMPLETION_SOURCE_FILES.filter((path) => !liveBytes.has(path));
+    assert.ok(unpublished.length > 0);
+    const digest = createHash("sha256");
+    for (const path of manifest) {
+      digest.update(path).update("\0").update(liveBytes.get(path)).update("\0");
+    }
+    const legacyBuild = `sha256-${digest.digest("hex")}`;
+    const legacyEntry = ["scripts/home/game-stats-backend.js", ...manifest]
+      .map((path) => `<script src="${path}?v=game-build-${legacyBuild.slice(7)}"></script>`)
+      .join("\n");
+    let corruptSources = false;
+    let corruptEntry = false;
+    const options = {
+      readFileImpl: async () => createConfig({ buildVersion: RELEASE_BUILD_VERSION }),
+      liveConfigUrl: "https://site.example.test/game-stats-backend.js",
+      convergenceTimeoutMs: 1,
+      pollIntervalMs: 1,
+      nowImpl: () => 0,
+      sleepImpl: async () => {},
+      fetchImpl: async (url) => {
+        if (url.includes("game-stats-backend.js")) {
+          return createConfigResponse(createConfig({ buildVersion: legacyBuild }));
+        }
+        const pathname = new URL(url).pathname;
+        const path = pathname.replace(/^\//, "");
+        if (
+          !pathname.endsWith("/health") &&
+          !INTEGRITY_ENTRY_FILES.includes(path) &&
+          !liveBytes.has(path)
+        ) {
+          return createAssetResponse("Not found", { ok: false, status: 404 });
+        }
+        const sourceFiles = new Map(liveBytes);
+        if (corruptSources) {
+          sourceFiles.set(manifest[0], Buffer.from("changed"));
+        }
+        return createReleaseDependencyResponse(url, {
+          sourceFiles,
+          homeSource: corruptEntry ? "" : legacyEntry,
+          indexSource: legacyEntry,
+          workerBuildVersion: RELEASE_BUILD_VERSION,
+          workerAcceptedBuildVersions: [RELEASE_BUILD_VERSION, legacyBuild],
+        });
+      },
+    };
+    const result = await checkGameStatsWorkerTransition(options);
+    assert.equal(result.sourceBuildVersion, legacyBuild);
+    await assert.rejects(checkGameStatsRelease(options), /deployed browser/);
+    // Final parity still requires today's full manifest even when the live build
+    // already equals the checked-in one.
+    await assert.rejects(
+      checkGameStatsWorkerTransition({
+        ...options,
+        readFileImpl: async () => createConfig({ buildVersion: legacyBuild }),
+        fetchImpl: async (url) =>
+          url.includes("/health")
+            ? createHealthResponse({ ok: true, buildVersion: legacyBuild })
+            : options.fetchImpl(url),
+      }),
+      /status 404/,
+    );
+    // Reproducing a published hash never substitutes for the Worker's
+    // acceptance window.
+    await assert.rejects(
+      checkGameStatsWorkerTransition({
+        ...options,
+        fetchImpl: async (url) =>
+          url.includes("/health")
+            ? createHealthResponse({
+                ok: true,
+                buildVersion: RELEASE_BUILD_VERSION,
+                acceptedBuildVersions: [RELEASE_BUILD_VERSION],
+              })
+            : options.fetchImpl(url),
+      }),
+      /is not accepted by the Worker/,
+    );
+    corruptEntry = true;
+    await assert.rejects(checkGameStatsWorkerTransition(options), /missing cache reference/);
+    corruptEntry = false;
+    corruptSources = true;
+    await assert.rejects(checkGameStatsWorkerTransition(options), /status 404/);
+  });
 }

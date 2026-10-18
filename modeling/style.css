@@ -169,8 +169,8 @@ summary:focus-visible {
 /* The selected unit stays pressed in, with the classic dithered face of a latched button. */
 .unit-toggle__button[aria-pressed="true"] {
   padding: 1px 9px 0 11px;
-  background: repeating-conic-gradient(var(--button-highlight) 0 25%, var(--surface) 0 50%) 0 0 /
-    2px 2px;
+  background:
+    repeating-conic-gradient(var(--button-highlight) 0 25%, var(--surface) 0 50%) 0 0 / 2px 2px;
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
 }
 

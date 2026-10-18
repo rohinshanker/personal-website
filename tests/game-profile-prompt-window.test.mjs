@@ -17,11 +17,11 @@ test("Leaderboard profile prompt opens as a draggable window with a shared skip 
 
   assert.match(
     home,
-    /id="game-profile-prompt"[\s\S]*?<div[\s\S]*?class="window game-profile-dialog"[\s\S]*?id="game-profile-dialog"/
+    /id="game-profile-prompt"[\s\S]*?<div[\s\S]*?class="window game-profile-dialog"[\s\S]*?id="game-profile-dialog"/,
   );
   assert.match(
     home,
-    /id="game-profile-title">Leaderboard Profile<[\s\S]*?<div class="title-bar-controls">[\s\S]*?id="game-profile-close"[\s\S]*?type="button"[\s\S]*?aria-label="Close leaderboard profile"/
+    /id="game-profile-title">Leaderboard Profile<[\s\S]*?<div class="title-bar-controls">[\s\S]*?id="game-profile-close"[\s\S]*?type="button"[\s\S]*?aria-label="Close leaderboard profile"/,
   );
   assert.match(home, /id="game-profile-cancel">Skip Leaderboard</);
   assert.doesNotMatch(home, /id="game-profile-dialog"[^>]*data-no-drag/);
@@ -34,40 +34,31 @@ test("Leaderboard profile prompt opens as a draggable window with a shared skip 
   assert.match(dom, /const gameProfileClose = byId\("game-profile-close"\);/);
   assert.match(
     styles,
-    /\.game-profile-dialog \{[\s\S]*?left: 50%;[\s\S]*?position: absolute;[\s\S]*?top: 50%;[\s\S]*?translate: -50% -50%;/
+    /\.game-profile-dialog \{[\s\S]*?left: 50%;[\s\S]*?position: absolute;[\s\S]*?top: 50%;[\s\S]*?translate: -50% -50%;/,
   );
   assert.match(
     styles,
-    /\.game-profile-dialog\.is-opening \{[\s\S]*?animation: retro-window-open 260ms steps\(7, end\) both;/
+    /\.game-profile-dialog\.is-opening \{[\s\S]*?animation: retro-window-open 260ms steps\(7, end\) both;/,
   );
   assert.match(
     styles,
-    /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.game-profile-dialog\.is-opening \{[\s\S]*?animation-duration: 1ms;/
+    /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.game-profile-dialog\.is-opening \{[\s\S]*?animation-duration: 1ms;/,
   );
 
   assert.match(
     main,
-    /const setGameProfilePromptVisible = \(visible\) => \{[\s\S]*?classList\.toggle\("is-hidden", !visible\)[\s\S]*?if \(visible\) \{[\s\S]*?gameProfileDialog\?\.classList\.add\("app-window--center"\);[\s\S]*?gameProfileDialog\?\.style\.removeProperty\("left"\);[\s\S]*?gameProfileDialog\?\.style\.removeProperty\("top"\);[\s\S]*?gameProfileDialog\?\.style\.removeProperty\("translate"\);[\s\S]*?restartWindowAnimation\(gameProfileDialog, "is-opening"\);/
+    /const setGameProfilePromptVisible = \(visible\) => \{[\s\S]*?classList\.toggle\("is-hidden", !visible\)[\s\S]*?if \(visible\) \{[\s\S]*?gameProfileDialog\?\.classList\.add\("app-window--center"\);[\s\S]*?gameProfileDialog\?\.style\.removeProperty\("left"\);[\s\S]*?gameProfileDialog\?\.style\.removeProperty\("top"\);[\s\S]*?gameProfileDialog\?\.style\.removeProperty\("translate"\);[\s\S]*?restartWindowAnimation\(gameProfileDialog, "is-opening"\);/,
   );
   assert.match(
     main,
-    /const skipGameStatsProfilePrompt = \(\) => \{\s*resolveGameStatsProfilePrompt\(null\);\s*\};/
+    /const skipGameStatsProfilePrompt = \(\) => \{\s*resolveGameStatsProfilePrompt\(null\);\s*\};/,
   );
+  assert.match(main, /if \(gameProfileCancel\) \{[\s\S]*?skipGameStatsProfilePrompt\(\);/);
+  assert.match(main, /if \(gameProfileClose\) \{[\s\S]*?skipGameStatsProfilePrompt\(\);/);
+  assert.match(main, /event\.key !== "Escape"[\s\S]*?skipGameStatsProfilePrompt\(\);/);
   assert.match(
     main,
-    /if \(gameProfileCancel\) \{[\s\S]*?skipGameStatsProfilePrompt\(\);/
-  );
-  assert.match(
-    main,
-    /if \(gameProfileClose\) \{[\s\S]*?skipGameStatsProfilePrompt\(\);/
-  );
-  assert.match(
-    main,
-    /event\.key !== "Escape"[\s\S]*?skipGameStatsProfilePrompt\(\);/
-  );
-  assert.match(
-    main,
-    /gameProfileDialog\.addEventListener\("animationend", \(event\) => \{[\s\S]*?event\.animationName === "retro-window-open"[\s\S]*?classList\.remove\("is-opening"\)/
+    /gameProfileDialog\.addEventListener\("animationend", \(event\) => \{[\s\S]*?event\.animationName === "retro-window-open"[\s\S]*?classList\.remove\("is-opening"\)/,
   );
 });
 
@@ -79,17 +70,17 @@ test("Centered leaderboard profile drag retains its rendered position before cle
 
   assert.match(
     styles,
-    /\.game-profile-dialog \{[\s\S]*?left: 50%;[\s\S]*?top: 50%;[\s\S]*?translate: -50% -50%;/
+    /\.game-profile-dialog \{[\s\S]*?left: 50%;[\s\S]*?top: 50%;[\s\S]*?translate: -50% -50%;/,
   );
 
   const draggableWindowsStart = main.indexOf("draggableWindows.forEach((win) => {");
   const dragListenerStart = main.indexOf(
     'titleBar.addEventListener("pointerdown", (event) => {',
-    draggableWindowsStart
+    draggableWindowsStart,
   );
   const dragListenerEnd = main.indexOf(
     'titleBar.addEventListener("pointermove", moveHandler);',
-    dragListenerStart
+    dragListenerStart,
   );
   assert.notEqual(draggableWindowsStart, -1, "Missing shared draggable-window initializer");
   assert.notEqual(dragListenerStart, -1, "Missing shared title-bar pointer handler");
@@ -99,16 +90,16 @@ test("Centered leaderboard profile drag retains its rendered position before cle
   assert.match(
     dragHandler,
     /const rect = win\.getBoundingClientRect\(\);[\s\S]*?if \(win\.classList\.contains\("app-window--center"\)\) \{[\s\S]*?win\.style\.left = `\$\{rect\.left\}px`;[\s\S]*?win\.style\.top = `\$\{rect\.top\}px`;[\s\S]*?\}[\s\S]*?win\.classList\.remove\("app-window--center"\);[\s\S]*?win\.style\.translate = "0 0";/,
-    "The profile dialog's rendered geometry must be pinned before its centering translate is removed."
+    "The profile dialog's rendered geometry must be pinned before its centering translate is removed.",
   );
   assert.match(
     dragHandler,
     /const offsetX = event\.clientX - rect\.left;[\s\S]*?const offsetY = event\.clientY - rect\.top;[\s\S]*?titleBar\.setPointerCapture\(event\.pointerId\);/,
-    "Pointer offsets must use the stable rendered geometry retained for the drag."
+    "Pointer offsets must use the stable rendered geometry retained for the drag.",
   );
   assert.match(
     dragHandler,
     /const dragTitleBarGeometry = readWindowTitleBarClampGeometry\(win, rect\);[\s\S]*?titleBar\.setPointerCapture\(event\.pointerId\);[\s\S]*?const nextLeft = moveEvent\.clientX - offsetX;[\s\S]*?const nextTop = moveEvent\.clientY - offsetY;[\s\S]*?setWindowTitleBarClampedPosition\(win, nextLeft, nextTop, dragTitleBarGeometry\);/,
-    "The shared pointer-capture, pointer-offset, and clamping behavior must remain intact."
+    "The shared pointer-capture, pointer-offset, and clamping behavior must remain intact.",
   );
 });

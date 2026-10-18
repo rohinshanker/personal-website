@@ -32,10 +32,13 @@ const installLazyBoardBridge = async (page) => {
   await routeHomeScript(page, "gameStats", (source) => {
     const marker = "const startGameStatsSession = (game, rawConfig) => {";
     if (!source.includes(marker)) throw new Error("Unable to count game sessions.");
-    return source.replace(marker, `${marker}
+    return source.replace(
+      marker,
+      `${marker}
   if (game === "solitaire") {
     window.__solStatsSessionsStarted = (window.__solStatsSessionsStarted || 0) + 1;
-  }`);
+  }`,
+    );
   });
   await routeHomeScript(page, "solitaire", (originalSource) => {
     let source = originalSource;
@@ -43,11 +46,11 @@ const installLazyBoardBridge = async (page) => {
       "const solBuildWinnableDeal = (random = Math.random) => {",
       `let solDealsGenerated = 0;
 const solBuildWinnableDeal = (random = Math.random) => {
-  solDealsGenerated += 1;`
+  solDealsGenerated += 1;`,
     );
     source = source.replace(
       "const solRender = () => {\n  if (!solBoard",
-      "let solRendersRun = 0;\nconst solRender = () => {\n  solRendersRun += 1;\n  if (!solBoard"
+      "let solRendersRun = 0;\nconst solRender = () => {\n  solRendersRun += 1;\n  if (!solBoard",
     );
     const instrumented = source.replace(
       /\n\}\)\(\);\s*$/,
@@ -70,7 +73,7 @@ window.__solitaireLazyBoardTest = Object.freeze({
   stagePresentation: (options) => solStagePresentationWin(options),
 });
 })();
-`
+`,
     );
     if (instrumented === source) throw new Error("Unable to attach the lazy-board bridge.");
     return instrumented;
@@ -118,9 +121,7 @@ const inspectBoardNodes = (mode) => {
     });
     return nodes.length;
   }
-  return Object.fromEntries(
-    nodes.map(([key, element]) => [key, element.dataset.solStamp ?? null])
-  );
+  return Object.fromEntries(nodes.map(([key, element]) => [key, element.dataset.solStamp ?? null]));
 };
 
 const stampBoard = (page) => page.evaluate(inspectBoardNodes, "stamp");
@@ -148,7 +149,7 @@ const expectDealtBoard = async (page) => {
     await expect(columns.nth(index).locator(".sol-card")).toHaveCount(index + 1);
     await expect(columns.nth(index).locator(".sol-card").last()).toHaveAttribute(
       "aria-label",
-      DEALT_FACE_UP_LABELS[index]
+      DEALT_FACE_UP_LABELS[index],
     );
   }
   await expect(page.locator("#sol-tableau .sol-card.is-face-down")).toHaveCount(21);
@@ -179,9 +180,7 @@ test("Home starts without dealing a board, opening a session or renting a toolti
   expect(await columnListenerTypes(page)).toEqual([]);
 });
 
-test("the first open deals once and a reopen hands back the same board nodes", async ({
-  page,
-}) => {
+test("the first open deals once and a reopen hands back the same board nodes", async ({ page }) => {
   await installLazyBoardBridge(page);
   await openHomeDesktop(page, DESKTOP);
   await openApp(page, "solitaire");
@@ -201,7 +200,7 @@ test("the first open deals once and a reopen hands back the same board nodes", a
   // Seven columns, each with its own tooltip and its own three pointer handlers.
   expect(await bodyTooltipCount(page)).toBe(7);
   expect(await columnListenerTypes(page)).toEqual(
-    Array.from({ length: 7 }, () => ["pointerenter", "pointermove", "pointerleave"]).flat()
+    Array.from({ length: 7 }, () => ["pointerenter", "pointermove", "pointerleave"]).flat(),
   );
 
   await stampBoard(page);
@@ -227,7 +226,7 @@ test("a presentation staged before the first open survives that open unpublished
   await openHomeDesktop(page, DESKTOP);
 
   await page.evaluate(() =>
-    window.__solitaireLazyBoardTest.stagePresentation({ visualEffects: false })
+    window.__solitaireLazyBoardTest.stagePresentation({ visualEffects: false }),
   );
   const staged = await snapshot(page);
   expect(staged.deals).toBe(0, "Staging a board never generates a deal.");
@@ -279,7 +278,7 @@ test("Reset deals a new board, keeps the columns, and clears the old selection",
   expect(afterReset.foundations).toEqual([0, 0, 0, 0]);
   expect(afterReset.statsSession).toMatch(
     /^solitaire-issued-/,
-    "Reset is a new board, so it owns a new issued session of its own."
+    "Reset is a new board, so it owns a new issued session of its own.",
   );
   expect(afterReset.statsSession).not.toBe(afterOpenSession);
   expect(afterReset.sessions).toBe(0, "No legacy session is started for a reset.");
@@ -289,16 +288,14 @@ test("Reset deals a new board, keeps the columns, and clears the old selection",
   expect(
     await page.evaluate(() =>
       [...document.querySelectorAll("#sol-tableau .sol-tableau-col")].map(
-        (column) => column.dataset.solStamp ?? null
-      )
-    )
+        (column) => column.dataset.solStamp ?? null,
+      ),
+    ),
   ).toEqual(Array.from({ length: 7 }, (_, index) => `column-${index}`));
   expect(await bodyTooltipCount(page)).toBe(7);
 });
 
-test("selecting, moving and undoing keep every unchanged card node in place", async ({
-  page,
-}) => {
+test("selecting, moving and undoing keep every unchanged card node in place", async ({ page }) => {
   await installLazyBoardBridge(page);
   await openHomeDesktop(page, DESKTOP);
   await openApp(page, "solitaire");
@@ -311,7 +308,7 @@ test("selecting, moving and undoing keep every unchanged card node in place", as
   let stamps = await readStamps(page);
   expect(stamps["col:0:spades-1"]).toBe(
     "col:0:spades-1",
-    "A selection repaints the card; it does not replace it."
+    "A selection repaints the card; it does not replace it.",
   );
   expect(Object.values(stamps).every((stamp) => stamp !== null)).toBe(true);
 
@@ -320,7 +317,7 @@ test("selecting, moving and undoing keep every unchanged card node in place", as
   await ace.click();
   await expect(page.locator('[data-sol-foundation="spades"]')).toHaveAttribute(
     "aria-label",
-    "Spades foundation, Ace of Spades"
+    "Spades foundation, Ace of Spades",
   );
   stamps = await readStamps(page);
   // Each pile keys its own nodes, so a card that changes pile arrives there as
@@ -386,9 +383,9 @@ test("emptying and redealing the stock never grows the board's node or listener 
   expect(stamps["stock:back"]).toBe("stock:back", "The restored stock reuses its back node.");
   expect(await bodyTooltipCount(page)).toBe(7);
   expect(await columnListenerTypes(page)).toHaveLength(listenersAtStart);
-  expect(
-    await page.evaluate(() => document.querySelectorAll(".sol-tableau-tooltip").length)
-  ).toBe(7);
+  expect(await page.evaluate(() => document.querySelectorAll(".sol-tableau-tooltip").length)).toBe(
+    7,
+  );
 });
 
 test("an auto-solve landing updates only the card it moved and the pile it filled", async ({

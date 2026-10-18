@@ -66,7 +66,8 @@
 
 .cr-player-panel {
   border: 2px solid;
-  border-color: var(--button-shadow) var(--button-highlight) var(--button-highlight) var(--button-shadow);
+  border-color: var(--button-shadow) var(--button-highlight) var(--button-highlight)
+    var(--button-shadow);
 }
 
 .cr-title-row {
@@ -197,7 +198,10 @@
 .cr-battle-item {
   background: #fff;
   border-inline-start: 4px solid #808080;
-  box-shadow: inset -1px -1px #dfdfdf, inset 1px 1px #fff, 1px 1px #808080;
+  box-shadow:
+    inset -1px -1px #dfdfdf,
+    inset 1px 1px #fff,
+    1px 1px #808080;
   flex: none;
   min-width: 0;
 }
@@ -470,7 +474,9 @@
 
 .cr-deck-card.is-image-unavailable .cr-deck-card-media {
   background: repeating-linear-gradient(135deg, #efefef, #efefef 3px, #dfdfdf 3px, #dfdfdf 6px);
-  box-shadow: inset 1px 1px #808080, inset -1px -1px #fff;
+  box-shadow:
+    inset 1px 1px #808080,
+    inset -1px -1px #fff;
 }
 
 .cr-deck-card-image {

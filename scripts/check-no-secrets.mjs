@@ -9,8 +9,10 @@ const scriptPath = fileURLToPath(import.meta.url);
 export const REPOSITORY_ROOT = path.resolve(path.dirname(scriptPath), "..");
 
 const APPROVED_TEMPLATE_FILE_NAMES = new Set([".env.example", ".dev.vars.example"]);
-const SENSITIVE_FILE_NAME = /^(?:\.env(?:\..+)?|\.dev\.vars(?:\..+)?|id_(?:rsa|ecdsa|ed25519)|(?:credentials|service-account|secrets).*\.json|.*\.(?:pem|key|p12|pfx|jks|keystore))$/i;
-const SAFE_PLACEHOLDER_VALUE = /^(?:(?:[a-z]+-)?test[-_]|replace[-_]|example[-_]|your[-_]|change[-_]|<|\$\{|process\.env\.|env\.)/i;
+const SENSITIVE_FILE_NAME =
+  /^(?:\.env(?:\..+)?|\.dev\.vars(?:\..+)?|id_(?:rsa|ecdsa|ed25519)|(?:credentials|service-account|secrets).*\.json|.*\.(?:pem|key|p12|pfx|jks|keystore))$/i;
+const SAFE_PLACEHOLDER_VALUE =
+  /^(?:(?:[a-z]+-)?test[-_]|replace[-_]|example[-_]|your[-_]|change[-_]|<|\$\{|process\.env\.|env\.)/i;
 
 const VALUE_RULES = Object.freeze([
   ["private-key-block", /-----BEGIN(?: [A-Z0-9]+)* PRIVATE KEY(?: BLOCK)?-----/i],
@@ -27,15 +29,16 @@ const VALUE_RULES = Object.freeze([
   ],
 ]);
 
-const PROTECTED_SECRET_ASSIGNMENT = /(?:^|[,{;\s])(?:[A-Z][A-Z0-9_]*_(?:API_KEY|API_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|SECRET_KEY|PRIVATE_KEY)|API_KEY|API_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|SECRET_KEY|PRIVATE_KEY|PASSWORD|DATABASE_URL|EVENT_SIGNING_SECRET|IP_HASH_SECRET|TURNSTILE_SECRET_KEY|ADMIN_SESSION_SIGNING_SECRET|CLOUDFLARE_API_TOKEN|CF_API_TOKEN|CLASH_API_TOKEN)\s*[:=]\s*["'`]([^"'`\r\n]{12,})["'`]/gm;
+const PROTECTED_SECRET_ASSIGNMENT =
+  /(?:^|[,{;\s])(?:[A-Z][A-Z0-9_]*_(?:API_KEY|API_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|SECRET_KEY|PRIVATE_KEY)|API_KEY|API_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|SECRET_KEY|PRIVATE_KEY|PASSWORD|DATABASE_URL|EVENT_SIGNING_SECRET|IP_HASH_SECRET|TURNSTILE_SECRET_KEY|ADMIN_SESSION_SIGNING_SECRET|CLOUDFLARE_API_TOKEN|CF_API_TOKEN|CLASH_API_TOKEN)\s*[:=]\s*["'`]([^"'`\r\n]{12,})["'`]/gm;
 const ADMIN_CREDENTIAL_NAME = String.raw`(?:ADMIN_(?:USERNAME|PASSWORD)(?:_HASH)?|ADMINISTRATOR_(?:USERNAME|PASSWORD)(?:_HASH)?|admin(?:istrator)?(?:Username|Password)(?:Hash)?)`;
 const QUOTED_ADMIN_CREDENTIAL_ASSIGNMENT = new RegExp(
   String.raw`\b${ADMIN_CREDENTIAL_NAME}\b["'\x60]?\s*[:=]\s*["'\x60]([^"'\x60\r\n]+)["'\x60]`,
-  "gm"
+  "gm",
 );
 const ENV_ADMIN_CREDENTIAL_ASSIGNMENT = new RegExp(
   String.raw`^\s*(?:export\s+)?${ADMIN_CREDENTIAL_NAME}\s*=\s*([^\s#;'"\x60]+)\s*;?\s*(?:#.*)?$`,
-  "gm"
+  "gm",
 );
 
 const isApprovedTemplateFile = (relativePath) =>
@@ -54,10 +57,7 @@ const findProtectedSecretAssignments = (source) => {
 };
 
 const findAdministratorCredentialAssignments = (source) => {
-  for (const expression of [
-    QUOTED_ADMIN_CREDENTIAL_ASSIGNMENT,
-    ENV_ADMIN_CREDENTIAL_ASSIGNMENT,
-  ]) {
+  for (const expression of [QUOTED_ADMIN_CREDENTIAL_ASSIGNMENT, ENV_ADMIN_CREDENTIAL_ASSIGNMENT]) {
     expression.lastIndex = 0;
     let match;
     while ((match = expression.exec(source)) !== null) {
@@ -78,7 +78,10 @@ const findAdministratorCredentialAssignments = (source) => {
  */
 export const findSecretFindings = (relativePath, source) => {
   const findings = new Set();
-  if (SENSITIVE_FILE_NAME.test(path.basename(relativePath)) && !isApprovedTemplateFile(relativePath)) {
+  if (
+    SENSITIVE_FILE_NAME.test(path.basename(relativePath)) &&
+    !isApprovedTemplateFile(relativePath)
+  ) {
     findings.add("sensitive-file-name");
   }
   for (const [rule, expression] of VALUE_RULES) {
@@ -93,7 +96,7 @@ export const getRepositoryCandidatePaths = async (repositoryRoot = REPOSITORY_RO
   const { stdout } = await execFileAsync(
     "git",
     ["ls-files", "--cached", "--others", "--exclude-standard", "--deduplicate", "-z"],
-    { cwd: repositoryRoot, encoding: "buffer", maxBuffer: 16 * 1024 * 1024 }
+    { cwd: repositoryRoot, encoding: "buffer", maxBuffer: 16 * 1024 * 1024 },
   );
   return stdout
     .toString("utf8")
@@ -146,7 +149,9 @@ const formatFindings = (findings) =>
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
   const findings = await scanRepositoryForSecrets();
   if (findings.length) {
-    console.error("Secret guard failed. Remove the credential and rotate it if it was ever shared:");
+    console.error(
+      "Secret guard failed. Remove the credential and rotate it if it was ever shared:",
+    );
     console.error(formatFindings(findings));
     process.exitCode = 1;
   } else {

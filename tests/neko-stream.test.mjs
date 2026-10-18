@@ -3,10 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-import {
-  readHomeScript,
-  readHomeScriptText,
-} from "./helpers/home-scripts.mjs";
+import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
 
@@ -32,20 +29,12 @@ const extractBetween = (source, startMarker, endMarker) => {
 
 const loadPlanner = async () => {
   const { main } = await readSources();
-  const constants = extractBetween(
-    main,
-    "const NEKO_STREAM_COUNT",
-    "const nekoStreamCats"
-  );
-  const planner = extractBetween(
-    main,
-    "const sampleNekoStreamRoll",
-    "const syncNekoStreamLane"
-  );
+  const constants = extractBetween(main, "const NEKO_STREAM_COUNT", "const nekoStreamCats");
+  const planner = extractBetween(main, "const sampleNekoStreamRoll", "const syncNekoStreamLane");
   const actionSpriteResolver = extractBetween(
     main,
     "const getNekoStreamActionSpriteName",
-    "const startNekoStreamCatAction"
+    "const startNekoStreamCatAction",
   );
   const context = vm.createContext({});
   const script = new vm.Script(`
@@ -103,11 +92,7 @@ const sequenceRandom = (rolls, fallback = 0) => {
 };
 
 const createActionPlan = (planner, actionTypeRoll, options = {}) => {
-  const {
-    actionGateRoll = 0.249999,
-    actionDurationRoll = 0.5,
-    actionProgressRoll = 0.5,
-  } = options;
+  const { actionGateRoll = 0.249999, actionDurationRoll = 0.5, actionProgressRoll = 0.5 } = options;
   const rolls = [0, 0, 0, actionGateRoll, actionTypeRoll, actionProgressRoll];
   const actionIndex = Math.min(4, Math.floor(Math.max(0, actionTypeRoll) * 5));
   if (actionIndex <= 2) rolls.push(actionDurationRoll);
@@ -126,7 +111,7 @@ test("Neko launchers expose one accessible context command above a non-interacti
   });
   assert.match(
     home,
-    /id="neko-context-menu"[\s\S]*?role="menu"[\s\S]*?id="neko-stream-command"[\s\S]*?role="menuitem"[\s\S]*?\/nekostream/
+    /id="neko-context-menu"[\s\S]*?role="menu"[\s\S]*?id="neko-stream-command"[\s\S]*?role="menuitem"[\s\S]*?\/nekostream/,
   );
   assert.match(home, /class="neko-stream-layer" id="neko-stream-layer" aria-hidden="true"/);
   assert.match(dom, /const nekoLaunchers = all\('\[data-app="neko"\]'\)/);
@@ -136,21 +121,15 @@ test("Neko launchers expose one accessible context command above a non-interacti
 
   assert.match(
     styles,
-    /\.neko-stream-layer \{[\s\S]*?z-index: 10001;[\s\S]*?overflow: hidden;[\s\S]*?pointer-events: none;/
+    /\.neko-stream-layer \{[\s\S]*?z-index: 10001;[\s\S]*?overflow: hidden;[\s\S]*?pointer-events: none;/,
   );
   assert.match(
     styles,
-    /\.neko-stream-cat \{[\s\S]*?width: 42px;[\s\S]*?height: 42px;[\s\S]*?image-rendering: pixelated;[\s\S]*?pointer-events: none;/
+    /\.neko-stream-cat \{[\s\S]*?width: 42px;[\s\S]*?height: 42px;[\s\S]*?image-rendering: pixelated;[\s\S]*?pointer-events: none;/,
   );
   assert.match(styles, /--neko-stream-pose-offset-y: 0px;/);
-  assert.match(
-    styles,
-    /top: var\(--neko-stream-lane-y, calc\(100vh - 91\.375px\)\);/
-  );
-  assert.match(
-    styles,
-    /transform: translate\(-50%, var\(--neko-stream-pose-offset-y\)\);/
-  );
+  assert.match(styles, /top: var\(--neko-stream-lane-y, calc\(100vh - 91\.375px\)\);/);
+  assert.match(styles, /transform: translate\(-50%, var\(--neko-stream-pose-offset-y\)\);/);
   assert.doesNotMatch(styles, /\.neko-stream-cat\[data-mode=/);
   assert.match(styles, /\.neko-context-menu \{[\s\S]*?z-index: 10002;/);
   assert.match(styles, /\.neko-context-menu\[hidden\] \{\s*display: none;/);
@@ -164,16 +143,16 @@ test("the forced-Start registry exposes one guarded animated Neko stream alert",
   const registration = extractBetween(
     main,
     'registerRandomEvent({\n  id: "neko-stream-system-alert"',
-    '\n\nregisterRandomEvent({\n  id: "annoying-system-alert"'
+    '\n\nregisterRandomEvent({\n  id: "annoying-system-alert"',
   );
 
   assert.match(
     home,
-    /id="neko-stream-alert-window"[\s\S]*?role="alertdialog"[\s\S]*?aria-modal="false"[\s\S]*?aria-labelledby="neko-stream-alert-title"[\s\S]*?aria-describedby="neko-stream-alert-message"/
+    /id="neko-stream-alert-window"[\s\S]*?role="alertdialog"[\s\S]*?aria-modal="false"[\s\S]*?aria-labelledby="neko-stream-alert-title"[\s\S]*?aria-describedby="neko-stream-alert-message"/,
   );
   assert.match(
     home,
-    /id="neko-stream-alert-icon"[\s\S]*?src="assets\/neko-assets\/sprites\/sleep1\.png"[\s\S]*?alt=""/
+    /id="neko-stream-alert-icon"[\s\S]*?src="assets\/neko-assets\/sprites\/sleep1\.png"[\s\S]*?alt=""/,
   );
   assert.match(home, /<p id="neko-stream-alert-message">Trigger \/nekostream\?<\/p>/);
   assert.match(home, /<button type="button" id="neko-stream-alert-yes">Yes<\/button>/);
@@ -190,16 +169,13 @@ test("the forced-Start registry exposes one guarded animated Neko stream alert",
 
   assert.match(
     randomEventStyles,
-    /\.neko-stream-alert-message img \{\n  image-rendering: pixelated;\n  object-fit: contain;/
+    /\.neko-stream-alert-message img \{\n  image-rendering: pixelated;\n  object-fit: contain;/,
   );
   assert.match(
     randomEventStyles,
-    /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.neko-stream-alert-window\.is-opening,[\s\S]*?\.neko-stream-alert-window\.is-closing \{\n    animation: none;/
+    /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.neko-stream-alert-window\.is-opening,[\s\S]*?\.neko-stream-alert-window\.is-closing \{\n    animation: none;/,
   );
-  assert.match(
-    resources,
-    /styles\/home\/random-events\.css\?v=[^"]+/
-  );
+  assert.match(resources, /styles\/home\/random-events\.css\?v=[^"]+/);
   assert.doesNotMatch(home, /styles\/home\/random-events\.css\?v=/);
   assert.doesNotMatch(index, /styles\/home\/random-events\.css\?v=/);
   await Promise.all([
@@ -216,37 +192,43 @@ test("the forced-Start registry exposes one guarded animated Neko stream alert",
   assert.match(registration, /isVisible: isNekoStreamAlertVisible/);
   assert.match(
     registration,
-    /canTrigger: \(\{ triggerName, forceOnStart \} = \{\}\) =>\n    !isNekoStreamAlertVisible\(\) &&\n    \(!forceOnStart \|\| triggerName === "startButton"\)/
+    /canTrigger: \(\{ triggerName, forceOnStart \} = \{\}\) =>\s*!isNekoStreamAlertVisible\(\) &&\s*\(!forceOnStart \|\| triggerName === "startButton"\)/,
   );
   assert.match(
     registration,
-    /preloadTargets: \(\) => \[[\s\S]*?nekoStreamAlertWindow,[\s\S]*?NEKO_SPRITES\.sleep1,[\s\S]*?NEKO_SPRITES\.sleep2,/
+    /preloadTargets: \(\) => \[[\s\S]*?nekoStreamAlertWindow,[\s\S]*?NEKO_SPRITES\.sleep1,[\s\S]*?NEKO_SPRITES\.sleep2,?\s*\]/,
   );
   assert.match(registration, /run: \(\) => \{\n    showNekoStreamAlert\(\);/);
   assert.match(
     main,
     /registerRandomEventWindows\(\(\) => \[[\s\S]*?nekoStreamAlertWindow,/,
-    "the alert window is registered for viewport clamping"
+    "the alert window is registered for viewport clamping",
   );
   assert.match(main, /}, NEKO_SLEEP_FRAME_INTERVAL_MS\);/);
   assert.match(
     main,
-    /nekoStreamAlertReducedMotionQuery\.addEventListener\(\s*"change",\s*handleNekoStreamAlertMotionPreferenceChange\s*\);[\s\S]*?nekoStreamAlertReducedMotionQuery\?\.addListener\?\.\(/
+    /nekoStreamAlertReducedMotionQuery\.addEventListener\(\s*"change",\s*handleNekoStreamAlertMotionPreferenceChange,?\s*\);[\s\S]*?nekoStreamAlertReducedMotionQuery\?\.addListener\?\.\(/,
   );
   assert.match(
     main,
-    /const wasClosing = nekoStreamAlertWindow\.classList\.contains\("is-closing"\);[\s\S]*?classList\.remove\("is-opening"\);[\s\S]*?if \(!wasClosing\) return;[\s\S]*?classList\.remove\("is-closing"\);[\s\S]*?classList\.add\("is-hidden"\);[\s\S]*?resetNekoStreamAlert\(\);/
+    /const wasClosing = nekoStreamAlertWindow\.classList\.contains\("is-closing"\);[\s\S]*?classList\.remove\("is-opening"\);[\s\S]*?if \(!wasClosing\) return;[\s\S]*?classList\.remove\("is-closing"\);[\s\S]*?classList\.add\("is-hidden"\);[\s\S]*?resetNekoStreamAlert\(\);/,
   );
   assert.match(
     main,
-    /if \(prefersReducedNekoStreamAlertMotion\(\)\) \{\n    nekoStreamAlertWindow\.classList\.remove\("is-opening", "is-closing"\);\n    nekoStreamAlertWindow\.classList\.add\("is-hidden"\);\n    resetNekoStreamAlert\(\);/
+    /if \(prefersReducedNekoStreamAlertMotion\(\)\) \{\n    nekoStreamAlertWindow\.classList\.remove\("is-opening", "is-closing"\);\n    nekoStreamAlertWindow\.classList\.add\("is-hidden"\);\n    resetNekoStreamAlert\(\);/,
   );
   assert.match(
     main,
-    /if \(!nekoStreamAlertResponsePending \|\| !isNekoStreamAlertVisible\(\)\) return false;[\s\S]*?nekoStreamAlertResponsePending = false;[\s\S]*?closeManagedRandomEventWindow\(nekoStreamAlertWindow\);[\s\S]*?if \(shouldStartStream\) startNekoStream\(\);/
+    /if \(!nekoStreamAlertResponsePending \|\| !isNekoStreamAlertVisible\(\)\) return false;[\s\S]*?nekoStreamAlertResponsePending = false;[\s\S]*?closeManagedRandomEventWindow\(nekoStreamAlertWindow\);[\s\S]*?if \(shouldStartStream\) startNekoStream\(\);/,
   );
-  assert.match(main, /bindRandomEventButton\(nekoStreamAlertYes, \(\) => respondToNekoStreamAlert\(true\)\)/);
-  assert.match(main, /bindRandomEventButton\(nekoStreamAlertNo, \(\) => respondToNekoStreamAlert\(false\)\)/);
+  assert.match(
+    main,
+    /bindRandomEventButton\(nekoStreamAlertYes, \(\) => respondToNekoStreamAlert\(true\)\)/,
+  );
+  assert.match(
+    main,
+    /bindRandomEventButton\(nekoStreamAlertNo, \(\) => respondToNekoStreamAlert\(false\)\)/,
+  );
 });
 
 test("Neko stream plans exactly forty bounded, chronologically scheduled cats", async () => {
@@ -337,7 +319,7 @@ test("Neko stream plans exactly forty bounded, chronologically scheduled cats", 
   });
   assert.notDeepEqual(
     plan.map(({ spawnDelayMs }) => spawnDelayMs),
-    secondPlan.map(({ spawnDelayMs }) => spawnDelayMs)
+    secondPlan.map(({ spawnDelayMs }) => spawnDelayMs),
   );
 });
 
@@ -374,14 +356,12 @@ test("the action gate, five actions, visible trigger, and action durations are d
 
   for (const actionTypeRoll of [0, 0.2, 0.4]) {
     assert.equal(
-      createActionPlan(planner, actionTypeRoll, { actionDurationRoll: 0 })
-        .actionDurationMs,
-      5_000
+      createActionPlan(planner, actionTypeRoll, { actionDurationRoll: 0 }).actionDurationMs,
+      5_000,
     );
     assert.equal(
-      createActionPlan(planner, actionTypeRoll, { actionDurationRoll: 1 })
-        .actionDurationMs,
-      10_000
+      createActionPlan(planner, actionTypeRoll, { actionDurationRoll: 1 }).actionDurationMs,
+      10_000,
     );
   }
 
@@ -399,41 +379,35 @@ test("stream actions and movement reuse canonical Neko timing and cleanup contra
   assert.match(main, /name: "scratch",\s*frames: NEKO_SCRATCH_SELF_ACTION\.frames/);
   assert.match(
     main,
-    /name: "clean",\s*frames: Object\.freeze\(\[NEKO_AWAKE_ACTION\.frames\[0\], NEKO_WASH_ACTION\.frames\[0\]\]\)/
+    /name: "clean",\s*frames: Object\.freeze\(\[NEKO_AWAKE_ACTION\.frames\[0\], NEKO_WASH_ACTION\.frames\[0\]\]\)/,
   );
   assert.match(
     main,
-    /name: "yawn",\s*frames: NEKO_YAWN_ACTION\.frames,\s*fixedDurationMs: NEKO_STREAM_YAWN_ACTION_DURATION_MS/
+    /name: "yawn",\s*frames: NEKO_YAWN_ACTION\.frames,\s*fixedDurationMs: NEKO_STREAM_YAWN_ACTION_DURATION_MS/,
   );
   assert.match(
     main,
-    /action\.name === "sleep"\s*\? NEKO_NAP_FRAME_SWITCH_FRAMES \* NEKO_FRAME_INTERVAL_MS/
+    /action\.name === "sleep"\s*\? NEKO_NAP_FRAME_SWITCH_FRAMES \* NEKO_FRAME_INTERVAL_MS/,
   );
   assert.match(main, /elapsedMs >= cat\.actionDurationMs/);
-  assert.match(
-    main,
-    /Math\.floor\(safeElapsedMs \/ frameIntervalMs\) % action\.frames\.length/
-  );
+  assert.match(main, /Math\.floor\(safeElapsedMs \/ frameIntervalMs\) % action\.frames\.length/);
   assert.doesNotMatch(main, /sleepDurationMs/);
   assert.match(
     main,
-    /cat\.direction \*\s*NEKO_SPEED \*\s*cat\.speedMultiplier \*\s*\(deltaMs \/ NEKO_FRAME_INTERVAL_MS\)/
+    /cat\.direction \*\s*NEKO_SPEED \*\s*cat\.speedMultiplier \*\s*\(deltaMs \/ NEKO_FRAME_INTERVAL_MS\)/,
   );
   assert.match(main, /!cat\.actionCompleted &&\s*cat\.actionStartedAt === null/);
   assert.match(main, /cat\.actionCount \+= 1/);
+  assert.match(main, /cat\.postActionDirection \?\? \(sampleNekoStreamRoll\(\) < 0\.5 \? -1 : 1\)/);
   assert.match(
     main,
-    /cat\.postActionDirection \?\? \(sampleNekoStreamRoll\(\) < 0\.5 \? -1 : 1\)/
-  );
-  assert.match(
-    main,
-    /cat\.postActionSpeedMultiplier \?\?[\s\S]*?sampleNekoStreamRange\([\s\S]*?NEKO_STREAM_MIN_SPEED_MULTIPLIER,[\s\S]*?NEKO_STREAM_MAX_SPEED_MULTIPLIER/
+    /cat\.postActionSpeedMultiplier \?\?[\s\S]*?sampleNekoStreamRange\([\s\S]*?NEKO_STREAM_MIN_SPEED_MULTIPLIER,[\s\S]*?NEKO_STREAM_MAX_SPEED_MULTIPLIER/,
   );
   assert.match(main, /const nekoStreamCats = new Map\(\)/);
   assert.match(main, /const nekoStreamSpawnTimerIds = new Set\(\)/);
   assert.match(
     main,
-    /nekoStreamCats\.forEach\(\(cat\) => \{\s*if \(isNekoStreamOutsideViewport\(cat\.x, viewportWidth\)\) \{\s*removeNekoStreamCat\(cat\);\s*return;\s*\}\s*if \(cat\.mode === "running"\)/
+    /nekoStreamCats\.forEach\(\(cat\) => \{\s*if \(isNekoStreamOutsideViewport\(cat\.x, viewportWidth\)\) \{\s*removeNekoStreamCat\(cat\);\s*return;\s*\}\s*if \(cat\.mode === "running"\)/,
   );
   assert.match(main, /window\.addEventListener\("pagehide", stopNekoStream\)/);
 
@@ -462,21 +436,14 @@ test("stream actions and movement reuse canonical Neko timing and cleanup contra
   assert.equal(planner.poseOffset("right1"), 3.9375);
   assert.equal(planner.poseOffset("left2"), 5.25);
   assert.equal(planner.poseOffset("right2"), 5.25);
-  for (const sprite of [
-    "awake",
-    "scratch1",
-    "scratch2",
-    "wash1",
-    "yawn1",
-    "yawn2",
-  ]) {
+  for (const sprite of ["awake", "scratch1", "scratch2", "wash1", "yawn1", "yawn2"]) {
     assert.equal(planner.poseOffset(sprite), 1.3125, sprite);
   }
   assert.equal(planner.poseOffset("sleep1"), 1);
   assert.equal(planner.poseOffset("sleep2"), 1);
   assert.match(
     main,
-    /cat\.element\.style\.setProperty\(\n    "--neko-stream-pose-offset-y",\n    `\$\{getNekoStreamPoseOffsetY\(resolvedSpriteName\)\}px`\n  \);/
+    /cat\.element\.style\.setProperty\(\n    "--neko-stream-pose-offset-y",\n    `\$\{getNekoStreamPoseOffsetY\(resolvedSpriteName\)\}px`,?\n  \);/,
   );
 
   assert.equal(planner.isOutside(-84, 1280), false);

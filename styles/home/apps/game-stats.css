@@ -682,10 +682,7 @@
 .game-stats-global-counter-value .game-stats-digit-strip img {
   flex: 0 0 auto;
   height: 18px;
-  width: min(
-    11px,
-    calc(100% / var(--game-stats-digit-count, 1))
-  );
+  width: min(11px, calc(100% / var(--game-stats-digit-count, 1)));
 }
 
 .game-stats-game-progress-handoff {
@@ -751,8 +748,8 @@
 }
 
 .game-stats-player-name.is-overflowing .game-stats-player-name-text {
-  animation: game-stats-player-name-marquee var(--game-stats-name-scroll-duration, 4s)
-    ease-in-out 700ms infinite alternate;
+  animation: game-stats-player-name-marquee var(--game-stats-name-scroll-duration, 4s) ease-in-out
+    700ms infinite alternate;
   padding-right: 14px;
 }
 
@@ -783,7 +780,9 @@
 .game-stats-digit-strip {
   align-items: center;
   background: #000;
-  box-shadow: inset 1px 1px 0 #222, inset -1px -1px 0 #555;
+  box-shadow:
+    inset 1px 1px 0 #222,
+    inset -1px -1px 0 #555;
   display: inline-flex;
   flex: 0 0 auto;
   height: 24px;

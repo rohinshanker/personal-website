@@ -14,7 +14,8 @@ const createHarness = () => {
   return {
     context,
     rules: context.homeMinesweeperRules,
-    inRealm: (value) => vm.runInContext(`JSON.parse(${JSON.stringify(JSON.stringify(value))})`, context),
+    inRealm: (value) =>
+      vm.runInContext(`JSON.parse(${JSON.stringify(JSON.stringify(value))})`, context),
   };
 };
 
@@ -27,21 +28,29 @@ test("Minesweeper publishes a frozen deterministic generator with first-cell saf
   const first = rules.generate(inRealm({ difficulty: "beginner" }), options);
   const second = rules.generate(
     inRealm({ difficulty: "beginner" }),
-    inRealm({ seed: 0x12345678, firstCell: 40 })
+    inRealm({ seed: 0x12345678, firstCell: 40 }),
   );
   assert.deepEqual(plain(first), plain(second));
   assert.equal(first.mineCells.length, 10);
   assert.equal(new Set(first.mineCells).size, 10);
   const protectedCells = new Set([40, ...rules.neighborsFor(40, 9, 9)]);
-  assert.equal(first.mineCells.some((index) => protectedCells.has(index)), false);
+  assert.equal(
+    first.mineCells.some((index) => protectedCells.has(index)),
+    false,
+  );
   assert.notDeepEqual(
     plain(first.mineCells),
-    plain(rules.generate(
-      inRealm({ difficulty: "beginner" }),
-      inRealm({ seed: 0x12345679, firstCell: 40 })
-    ).mineCells)
+    plain(
+      rules.generate(
+        inRealm({ difficulty: "beginner" }),
+        inRealm({ seed: 0x12345679, firstCell: 40 }),
+      ).mineCells,
+    ),
   );
-  assert.doesNotMatch(minesweeperSource, /\b(?:document|localStorage|fetch|setTimeout)\b|Math\.random/);
+  assert.doesNotMatch(
+    minesweeperSource,
+    /\b(?:document|localStorage|fetch|setTimeout)\b|Math\.random/,
+  );
   const browser = vm.createContext({ window: {} });
   vm.runInContext(`${commonSource}\n${minesweeperSource}`, browser);
   assert.equal(Object.isFrozen(browser.window.homeMinesweeperRules), true);
@@ -51,7 +60,7 @@ test("Minesweeper validates issued layouts and clones independent logical state"
   const { rules, inRealm } = createHarness();
   const raw = rules.generate(
     inRealm({ difficulty: "intermediate" }),
-    inRealm({ seed: 7, firstCell: 0 })
+    inRealm({ seed: 7, firstCell: 0 }),
   );
   const state = rules.initial(raw);
   state.cells[0].revealed = true;
@@ -63,7 +72,9 @@ test("Minesweeper validates issued layouts and clones independent logical state"
   const unsafe = plain(raw);
   unsafe.mineCells[0] = 0;
   assert.throws(() => rules.initial(inRealm(unsafe)), /not protected/);
-  assert.throws(() => rules.generate(inRealm({ difficulty: "custom" }), inRealm({ seed: 1, firstCell: 0 })));
+  assert.throws(() =>
+    rules.generate(inRealm({ difficulty: "custom" }), inRealm({ seed: 1, firstCell: 0 })),
+  );
   assert.throws(() => rules.initial(inRealm({ ...plain(raw), extra: true })));
 });
 
@@ -73,7 +84,7 @@ test("Minesweeper replays marks, first reveal, flood fill, and a complete win", 
     rules.transition(state, inRealm({ seq: state.nextSeq, ...action }));
   const raw = rules.generate(
     inRealm({ difficulty: "beginner" }),
-    inRealm({ seed: 99, firstCell: 0 })
+    inRealm({ seed: 99, firstCell: 0 }),
   );
   const state = rules.initial(raw);
   const markedCell = raw.mineCells[0];
@@ -107,12 +118,12 @@ test("Minesweeper rejects altered actions and stops permanently at a loss", () =
     rules.transition(state, inRealm({ seq: state.nextSeq, ...action }));
   const raw = rules.generate(
     inRealm({ difficulty: "beginner" }),
-    inRealm({ seed: 123, firstCell: 0 })
+    inRealm({ seed: 123, firstCell: 0 }),
   );
   const wrongFirst = rules.initial(raw);
   assert.throws(
     () => rules.transition(wrongFirst, inRealm({ seq: 1, op: "reveal", cell: 1 })),
-    (error) => error.code === "first-cell-mismatch"
+    (error) => error.code === "first-cell-mismatch",
   );
   const state = rules.initial(raw);
   apply(state, { op: "reveal", cell: 0 });
@@ -124,11 +135,13 @@ test("Minesweeper rejects altered actions and stops permanently at a loss", () =
   assert.equal(state.cells.filter((cell) => cell.mine && cell.revealed).length, 10);
   assert.throws(
     () => apply(state, { op: "mark", cell: 1, mark: "flag" }),
-    (error) => error.code === "terminal"
+    (error) => error.code === "terminal",
   );
   const fresh = rules.initial(raw);
   assert.throws(() => rules.transition(fresh, inRealm({ seq: 2, op: "reveal", cell: 0 })));
-  assert.throws(() => rules.transition(fresh, inRealm({ seq: 1, op: "reveal", cell: 0, extra: 1 })));
+  assert.throws(() =>
+    rules.transition(fresh, inRealm({ seq: 1, op: "reveal", cell: 0, extra: 1 })),
+  );
 });
 
 test("Minesweeper chords legal neighbors and halts the chord on its first mine", () => {
@@ -139,7 +152,7 @@ test("Minesweeper chords legal neighbors and halts the chord on its first mine",
   for (let seed = 1; seed < 200 && !scenario; seed += 1) {
     const raw = rules.generate(
       inRealm({ difficulty: "beginner" }),
-      inRealm({ seed, firstCell: 0 })
+      inRealm({ seed, firstCell: 0 }),
     );
     const state = rules.initial(raw);
     apply(state, { op: "reveal", cell: 0 });
@@ -149,7 +162,7 @@ test("Minesweeper chords legal neighbors and halts the chord on its first mine",
       const neighbors = rules.neighborsFor(index, 9, 9);
       const mines = neighbors.filter((neighbor) => state.cells[neighbor].mine);
       const safeCovered = neighbors.filter(
-        (neighbor) => !state.cells[neighbor].mine && !state.cells[neighbor].revealed
+        (neighbor) => !state.cells[neighbor].mine && !state.cells[neighbor].revealed,
       );
       if (mines.length === cell.adjacent && safeCovered.length) {
         scenario = { raw, index, mines, safeCovered };
@@ -162,17 +175,22 @@ test("Minesweeper chords legal neighbors and halts the chord on its first mine",
   apply(legal, { op: "reveal", cell: 0 });
   scenario.mines.forEach((cell) => apply(legal, { op: "mark", cell, mark: "flag" }));
   apply(legal, { op: "chord", cell: scenario.index });
-  assert.equal(scenario.safeCovered.some((cell) => legal.cells[cell].revealed), true);
+  assert.equal(
+    scenario.safeCovered.some((cell) => legal.cells[cell].revealed),
+    true,
+  );
 
   const losing = rules.initial(scenario.raw);
-  losing.cells.forEach((cell) => Object.assign(cell, {
-    mine: false,
-    adjacent: 0,
-    revealed: false,
-    mark: "none",
-    blown: false,
-    misflagged: false,
-  }));
+  losing.cells.forEach((cell) =>
+    Object.assign(cell, {
+      mine: false,
+      adjacent: 0,
+      revealed: false,
+      mark: "none",
+      blown: false,
+      misflagged: false,
+    }),
+  );
   losing.started = true;
   losing.firstCell = 10;
   losing.cells[10].revealed = true;
@@ -193,31 +211,40 @@ test("Minesweeper charges generation and transition work budgets", () => {
   const { context, rules, inRealm } = createHarness();
   const tinyBudget = context.homeGameRules.createBudget(1);
   assert.throws(
-    () => rules.generate(inRealm({ difficulty: "beginner" }), {
-      seed: 1,
-      firstCell: 0,
-      budget: tinyBudget,
-    }),
-    (error) => error.code === "replay-limit"
+    () =>
+      rules.generate(inRealm({ difficulty: "beginner" }), {
+        seed: 1,
+        firstCell: 0,
+        budget: tinyBudget,
+      }),
+    (error) => error.code === "replay-limit",
   );
-  const raw = rules.generate(inRealm({ difficulty: "beginner" }), inRealm({ seed: 1, firstCell: 0 }));
+  const raw = rules.generate(
+    inRealm({ difficulty: "beginner" }),
+    inRealm({ seed: 1, firstCell: 0 }),
+  );
   const state = rules.initial(raw);
   assert.throws(
-    () => rules.transition(
-      state,
-      inRealm({ seq: 1, op: "reveal", cell: 0 }),
-      context.homeGameRules.createBudget(0)
-    ),
-    (error) => error.code === "replay-limit"
+    () =>
+      rules.transition(
+        state,
+        inRealm({ seq: 1, op: "reveal", cell: 0 }),
+        context.homeGameRules.createBudget(0),
+      ),
+    (error) => error.code === "replay-limit",
   );
   const limited = rules.initial(raw);
   limited.nextSeq = context.homeGameRules.GAME_RULE_LIMITS.minesweeper.inputs + 1;
   assert.throws(
-    () => rules.transition(limited, inRealm({
-      seq: limited.nextSeq,
-      op: "reveal",
-      cell: 0,
-    })),
-    (error) => error.code === "replay-limit"
+    () =>
+      rules.transition(
+        limited,
+        inRealm({
+          seq: limited.nextSeq,
+          op: "reveal",
+          cell: 0,
+        }),
+      ),
+    (error) => error.code === "replay-limit",
   );
 });

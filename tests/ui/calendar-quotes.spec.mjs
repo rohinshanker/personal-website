@@ -84,8 +84,7 @@ const measureCalendarQuote = (page) =>
     return {
       bodyOverflowsHorizontally: body.scrollWidth > body.clientWidth + 1,
       clockSectionClips: clockSection.scrollHeight > clockSection.clientHeight + 1,
-      documentOverflowsHorizontally:
-        document.documentElement.scrollWidth > window.innerWidth + 1,
+      documentOverflowsHorizontally: document.documentElement.scrollWidth > window.innerWidth + 1,
       popoutContained:
         popout.left >= 0 &&
         popout.top >= 0 &&
@@ -102,9 +101,7 @@ const measureCalendarQuote = (page) =>
   });
 
 for (const viewport of VIEWPORTS) {
-  test("September and October quotes remain readable at " + viewport.name, async ({
-    page,
-  }) => {
+  test("September and October quotes remain readable at " + viewport.name, async ({ page }) => {
     await preparePage(page, viewport);
     const calendar = page.locator("#calendar-popout");
     const quote = page.locator("#clock-quote");
@@ -138,7 +135,6 @@ for (const viewport of VIEWPORTS) {
       expect(metrics.quoteContained).toBe(true);
       expect(metrics.quoteFontSize).toBeCloseTo(11, 1);
       expect(metrics.quoteOverflowsHorizontally).toBe(false);
-
     }
 
     await close.focus();
@@ -146,6 +142,5 @@ for (const viewport of VIEWPORTS) {
     await page.keyboard.press("Enter");
     await expect(calendar).toHaveAttribute("aria-hidden", "true");
     await expect(calendar).toBeHidden();
-
   });
 }

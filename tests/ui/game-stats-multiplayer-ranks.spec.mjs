@@ -13,11 +13,7 @@ const STATS_STORAGE_KEY = "personalSiteGameStatsV1";
 const SYNC_QUEUE_STORAGE_KEY = "personalSiteGameStatsSyncQueueV1";
 const PROFILE_ICON = "assets/app-icons/ico/user_card.ico";
 
-const MINESWEEPER_DIFFICULTIES = Object.freeze([
-  "beginner",
-  "intermediate",
-  "expert",
-]);
+const MINESWEEPER_DIFFICULTIES = Object.freeze(["beginner", "intermediate", "expert"]);
 const SNAKE_BOARD_SIZES = Object.freeze(["10", "16", "20", "24"]);
 const SUDOKU_DIFFICULTIES = Object.freeze([
   "easy",
@@ -36,8 +32,8 @@ const PLAYERS = Object.freeze(
       name: `Ranked Player ${String(index + 1).padStart(2, "0")}`,
       icon: PROFILE_ICON,
       rerollCount: 0,
-    })
-  )
+    }),
+  ),
 );
 const RANKED_PROFILE = PLAYERS[7];
 const UNPLAYED_PROFILE = Object.freeze({
@@ -164,8 +160,7 @@ const categoryPlayerOrder = (rankedPlayerRank) => {
   const leaders = PLAYERS.slice(0, 3);
   const remaining = PLAYERS.filter(
     (player) =>
-      player.id !== RANKED_PROFILE.id &&
-      !leaders.some((leader) => leader.id === player.id)
+      player.id !== RANKED_PROFILE.id && !leaders.some((leader) => leader.id === player.id),
   );
   const playersBeforeRanked = rankedPlayerRank - 4;
   return [
@@ -200,41 +195,31 @@ const FULL_CATEGORY_ENTRIES = Object.freeze({
       MINESWEEPER_DIFFICULTIES.map((difficulty) => [
         difficulty,
         Object.freeze(
-          categoryEntries(
-            `minesweeper-${difficulty}`,
-            CATEGORY_MODELS.minesweeper[difficulty]
-          )
+          categoryEntries(`minesweeper-${difficulty}`, CATEGORY_MODELS.minesweeper[difficulty]),
         ),
-      ])
-    )
+      ]),
+    ),
   ),
-  solitaire: Object.freeze(
-    categoryEntries("solitaire", CATEGORY_MODELS.solitaire)
-  ),
+  solitaire: Object.freeze(categoryEntries("solitaire", CATEGORY_MODELS.solitaire)),
   snake: Object.freeze(
     Object.fromEntries(
       SNAKE_BOARD_SIZES.map((size) => [
         size,
-        Object.freeze(
-          categoryEntries(`snake-${size}`, CATEGORY_MODELS.snake[size])
-        ),
-      ])
-    )
+        Object.freeze(categoryEntries(`snake-${size}`, CATEGORY_MODELS.snake[size])),
+      ]),
+    ),
   ),
   sudoku: Object.freeze(
     Object.fromEntries(
       SUDOKU_DIFFICULTIES.map((difficulty) => [
         difficulty,
-        Object.freeze(
-          categoryEntries(`sudoku-${difficulty}`, CATEGORY_MODELS.sudoku[difficulty])
-        ),
-      ])
-    )
+        Object.freeze(categoryEntries(`sudoku-${difficulty}`, CATEGORY_MODELS.sudoku[difficulty])),
+      ]),
+    ),
   ),
 });
 
-const rankedEntry = (entries) =>
-  entries.find((entry) => entry.playerId === RANKED_PROFILE.id);
+const rankedEntry = (entries) => entries.find((entry) => entry.playerId === RANKED_PROFILE.id);
 
 const rankPayload = (model, includeRankedPlayer) => ({
   rank: includeRankedPlayer ? model.rank : null,
@@ -253,17 +238,14 @@ const createMultiplayerPayload = (requestedPlayerId) => {
           MINESWEEPER_DIFFICULTIES.map((difficulty) => [
             difficulty,
             FULL_CATEGORY_ENTRIES.minesweeper[difficulty].length,
-          ])
+          ]),
         ),
       },
       solitaire: { wins: 720 },
       snake: {
         totalGamesPlayed: PLAYERS.length * SNAKE_BOARD_SIZES.length,
         gamesPlayed: Object.fromEntries(
-          SNAKE_BOARD_SIZES.map((size) => [
-            size,
-            FULL_CATEGORY_ENTRIES.snake[size].length,
-          ])
+          SNAKE_BOARD_SIZES.map((size) => [size, FULL_CATEGORY_ENTRIES.snake[size].length]),
         ),
       },
       sudoku: {
@@ -274,13 +256,13 @@ const createMultiplayerPayload = (requestedPlayerId) => {
               noHints: FULL_CATEGORY_ENTRIES.sudoku[difficulty].length,
               withHints: 3,
             },
-          ])
+          ]),
         ),
         bestTimes: Object.fromEntries(
           SUDOKU_DIFFICULTIES.map((difficulty) => [
             difficulty,
             FULL_CATEGORY_ENTRIES.sudoku[difficulty][0].metric,
-          ])
+          ]),
         ),
       },
     },
@@ -289,20 +271,17 @@ const createMultiplayerPayload = (requestedPlayerId) => {
         MINESWEEPER_DIFFICULTIES.map((difficulty) => [
           difficulty,
           FULL_CATEGORY_ENTRIES.minesweeper[difficulty].slice(0, 3),
-        ])
+        ]),
       ),
       solitaire: FULL_CATEGORY_ENTRIES.solitaire.slice(0, 3),
       snake: Object.fromEntries(
-        SNAKE_BOARD_SIZES.map((size) => [
-          size,
-          FULL_CATEGORY_ENTRIES.snake[size].slice(0, 3),
-        ])
+        SNAKE_BOARD_SIZES.map((size) => [size, FULL_CATEGORY_ENTRIES.snake[size].slice(0, 3)]),
       ),
       sudoku: Object.fromEntries(
         SUDOKU_DIFFICULTIES.map((difficulty) => [
           difficulty,
           FULL_CATEGORY_ENTRIES.sudoku[difficulty].slice(0, 3),
-        ])
+        ]),
       ),
     },
     playerRanks: {
@@ -310,47 +289,41 @@ const createMultiplayerPayload = (requestedPlayerId) => {
         MINESWEEPER_DIFFICULTIES.map((difficulty) => [
           difficulty,
           rankPayload(CATEGORY_MODELS.minesweeper[difficulty], includeRankedPlayer),
-        ])
+        ]),
       ),
       solitaire: rankPayload(CATEGORY_MODELS.solitaire, includeRankedPlayer),
       snake: Object.fromEntries(
         SNAKE_BOARD_SIZES.map((size) => [
           size,
           rankPayload(CATEGORY_MODELS.snake[size], includeRankedPlayer),
-        ])
+        ]),
       ),
       sudoku: Object.fromEntries(
         SUDOKU_DIFFICULTIES.map((difficulty) => [
           difficulty,
           rankPayload(CATEGORY_MODELS.sudoku[difficulty], includeRankedPlayer),
-        ])
+        ]),
       ),
     },
     playerRecords: {
       minesweeper: Object.fromEntries(
         MINESWEEPER_DIFFICULTIES.map((difficulty) => [
           difficulty,
-          includeRankedPlayer
-            ? rankedEntry(FULL_CATEGORY_ENTRIES.minesweeper[difficulty])
-            : null,
-        ])
+          includeRankedPlayer ? rankedEntry(FULL_CATEGORY_ENTRIES.minesweeper[difficulty]) : null,
+        ]),
       ),
-      solitaire: includeRankedPlayer
-        ? rankedEntry(FULL_CATEGORY_ENTRIES.solitaire)
-        : null,
+      solitaire: includeRankedPlayer ? rankedEntry(FULL_CATEGORY_ENTRIES.solitaire) : null,
       snake: Object.fromEntries(
         SNAKE_BOARD_SIZES.map((size) => [
           size,
           includeRankedPlayer ? rankedEntry(FULL_CATEGORY_ENTRIES.snake[size]) : null,
-        ])
+        ]),
       ),
       sudoku: Object.fromEntries(
         SUDOKU_DIFFICULTIES.map((difficulty) => [
           difficulty,
-          includeRankedPlayer
-            ? rankedEntry(FULL_CATEGORY_ENTRIES.sudoku[difficulty])
-            : null,
-        ])
+          includeRankedPlayer ? rankedEntry(FULL_CATEGORY_ENTRIES.sudoku[difficulty]) : null,
+        ]),
       ),
     },
   };
@@ -362,9 +335,7 @@ const createEmptyPayload = () => ({
   eventIds: [],
   totals: {
     minesweeper: {
-      wins: Object.fromEntries(
-        MINESWEEPER_DIFFICULTIES.map((difficulty) => [difficulty, 0])
-      ),
+      wins: Object.fromEntries(MINESWEEPER_DIFFICULTIES.map((difficulty) => [difficulty, 0])),
     },
     solitaire: { wins: 0 },
     snake: {
@@ -373,62 +344,41 @@ const createEmptyPayload = () => ({
     },
     sudoku: {
       wins: Object.fromEntries(
-        SUDOKU_DIFFICULTIES.map((difficulty) => [
-          difficulty,
-          { noHints: 0, withHints: 0 },
-        ])
+        SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, { noHints: 0, withHints: 0 }]),
       ),
-      bestTimes: Object.fromEntries(
-        SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, null])
-      ),
+      bestTimes: Object.fromEntries(SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, null])),
     },
   },
   leaderboards: {
-    minesweeper: Object.fromEntries(
-      MINESWEEPER_DIFFICULTIES.map((difficulty) => [difficulty, []])
-    ),
+    minesweeper: Object.fromEntries(MINESWEEPER_DIFFICULTIES.map((difficulty) => [difficulty, []])),
     solitaire: [],
     snake: Object.fromEntries(SNAKE_BOARD_SIZES.map((size) => [size, []])),
-    sudoku: Object.fromEntries(
-      SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, []])
-    ),
+    sudoku: Object.fromEntries(SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, []])),
   },
   playerRanks: {
     minesweeper: Object.fromEntries(
-      MINESWEEPER_DIFFICULTIES.map((difficulty) => [
-        difficulty,
-        { rank: null, totalPlayers: 0 },
-      ])
+      MINESWEEPER_DIFFICULTIES.map((difficulty) => [difficulty, { rank: null, totalPlayers: 0 }]),
     ),
     solitaire: { rank: null, totalPlayers: 0 },
     snake: Object.fromEntries(
-      SNAKE_BOARD_SIZES.map((size) => [size, { rank: null, totalPlayers: 0 }])
+      SNAKE_BOARD_SIZES.map((size) => [size, { rank: null, totalPlayers: 0 }]),
     ),
     sudoku: Object.fromEntries(
-      SUDOKU_DIFFICULTIES.map((difficulty) => [
-        difficulty,
-        { rank: null, totalPlayers: 0 },
-      ])
+      SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, { rank: null, totalPlayers: 0 }]),
     ),
   },
   playerRecords: {
     minesweeper: Object.fromEntries(
-      MINESWEEPER_DIFFICULTIES.map((difficulty) => [difficulty, null])
+      MINESWEEPER_DIFFICULTIES.map((difficulty) => [difficulty, null]),
     ),
     solitaire: null,
     snake: Object.fromEntries(SNAKE_BOARD_SIZES.map((size) => [size, null])),
-    sudoku: Object.fromEntries(
-      SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, null])
-    ),
+    sudoku: Object.fromEntries(SUDOKU_DIFFICULTIES.map((difficulty) => [difficulty, null])),
   },
 });
 
-const installMockBackend = async (
-  page,
-  { profile, emptyPayload = false } = {}
-) => {
+const installMockBackend = async (page, { profile, emptyPayload = false } = {}) => {
   const requestedPlayerIds = [];
-
 
   await installGameStatsBackend(page, {
     apiBaseUrl: API_BASE_URL,
@@ -460,9 +410,7 @@ const installMockBackend = async (
     return route.fulfill({
       status: 200,
       body: JSON.stringify(
-        emptyPayload
-          ? createEmptyPayload()
-          : createMultiplayerPayload(requestedPlayerId)
+        emptyPayload ? createEmptyPayload() : createMultiplayerPayload(requestedPlayerId),
       ),
       contentType: "application/json",
       headers: corsHeaders,
@@ -488,7 +436,7 @@ const installMockBackend = async (
       queueKey: SYNC_QUEUE_STORAGE_KEY,
       savedProfile: profile,
       statsKey: STATS_STORAGE_KEY,
-    }
+    },
   );
 
   return { requestedPlayerIds };
@@ -508,7 +456,7 @@ const openStatsWindow = async (page, game) => {
   const stats = page.locator(`#game-stats-window-${game}`);
   await expect(stats).toBeVisible();
   await expect(stats.locator("[data-game-stats-sync-status]")).toHaveText(
-    "Global stats are up to date."
+    "Global stats are up to date.",
   );
   return { app, stats };
 };
@@ -529,7 +477,7 @@ const assertNoHorizontalOverflow = async (page, stats) => {
           const rect = windowElement.getBoundingClientRect();
           return rect.left >= 0 && rect.right <= window.innerWidth;
         }),
-      { message: "stats window should finish clamping inside the viewport" }
+      { message: "stats window should finish clamping inside the viewport" },
     )
     .toBe(true);
 
@@ -551,7 +499,7 @@ const assertNoHorizontalOverflow = async (page, stats) => {
   expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth);
   expect(layout.bodyScrollWidth).toBeLessThanOrEqual(layout.bodyClientWidth);
   expect(await page.evaluate(() => document.body.scrollWidth)).toBeLessThanOrEqual(
-    layout.viewportWidth
+    layout.viewportWidth,
   );
 };
 
@@ -562,14 +510,14 @@ const assertLeaderboardRankSpacing = async (stats) => {
         stats.evaluate((windowElement) =>
           Array.from(
             windowElement.querySelectorAll(
-              ".game-stats-leaderboard-template-row, .game-stats-minesweeper-row"
-            )
+              ".game-stats-leaderboard-template-row, .game-stats-minesweeper-row",
+            ),
           ).every((row) => {
             const rank = row.querySelector(
-              ".game-stats-leaderboard-template-medal, .game-stats-minesweeper-medal, .game-stats-leaderboard-template-rank, .game-stats-minesweeper-rank"
+              ".game-stats-leaderboard-template-medal, .game-stats-minesweeper-medal, .game-stats-leaderboard-template-rank, .game-stats-minesweeper-rank",
             );
             const icon = row.querySelector(
-              ".game-stats-leaderboard-template-player-icon, .game-stats-minesweeper-player-icon"
+              ".game-stats-leaderboard-template-player-icon, .game-stats-minesweeper-player-icon",
             );
             const name = row.querySelector(".game-stats-player-name");
             if (!rank || !icon || !name) return false;
@@ -581,48 +529,44 @@ const assertLeaderboardRankSpacing = async (stats) => {
             const iconToNameGap = nameBounds.left - iconBounds.right;
 
             return (
-              Math.abs(rankToIconGap - iconToNameGap) <= 0.5 &&
-              Math.abs(rankToIconGap - 2) <= 0.5
+              Math.abs(rankToIconGap - iconToNameGap) <= 0.5 && Math.abs(rankToIconGap - 2) <= 0.5
             );
-          })
+          }),
         ),
-      { message: "leaderboard rank and player-name gaps should both be 2px" }
+      { message: "leaderboard rank and player-name gaps should both be 2px" },
     )
     .toBe(true);
 };
 
 const expectDigitMetric = async (row, metric) => {
-  const digitImages = await row
-    .locator(".game-stats-metric img")
-    .evaluateAll((images) =>
-      images.map((image) => ({
-        alt: image.alt,
-        source: new URL(image.src).pathname,
-      }))
-    );
+  const digitImages = await row.locator(".game-stats-metric img").evaluateAll((images) =>
+    images.map((image) => ({
+      alt: image.alt,
+      source: new URL(image.src).pathname,
+    })),
+  );
   const expectedDigits = String(metric).padStart(3, " ");
   expect(digitImages.map(({ alt }) => alt)).toEqual(
-    expectedDigits.split("").map((digit) => digit.trim())
+    expectedDigits.split("").map((digit) => digit.trim()),
   );
   expect(digitImages.map(({ source }, index) => source)).toEqual(
-    expectedDigits.split("").map((digit) =>
-      `/assets/minesweeper_assets/digital_digits/digital_${
-        digit === " " ? "unlit" : digit
-      }.png`
-    )
+    expectedDigits
+      .split("")
+      .map(
+        (digit) =>
+          `/assets/minesweeper_assets/digital_digits/digital_${
+            digit === " " ? "unlit" : digit
+          }.png`,
+      ),
   );
 };
 
 const formatSudokuTime = (seconds) =>
-  `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
-    seconds % 60
-  ).padStart(2, "0")}`;
+  `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 const expectedGlobalLabels = (game, category) => {
   const entries =
-    game === "solitaire"
-      ? FULL_CATEGORY_ENTRIES.solitaire
-      : FULL_CATEGORY_ENTRIES[game][category];
+    game === "solitaire" ? FULL_CATEGORY_ENTRIES.solitaire : FULL_CATEGORY_ENTRIES[game][category];
   return entries.slice(0, 3).map((entry, index) => {
     if (game === "minesweeper") {
       return `Rank ${index + 1}: ${entry.name}, ${entry.metric} seconds`;
@@ -639,54 +583,48 @@ const expectedGlobalLabels = (game, category) => {
 
 const expectGlobalRows = async (panel, game, category) => {
   const rows = panel.locator(
-    ".game-stats-leaderboard-template-list > .game-stats-leaderboard-template-row"
+    ".game-stats-leaderboard-template-list > .game-stats-leaderboard-template-row",
   );
   const labels = expectedGlobalLabels(game, category);
   await expect(rows).toHaveCount(3);
   for (const [index, label] of labels.entries()) {
     await expect(rows.nth(index)).toHaveAttribute("aria-label", label);
-    await expect(
-      rows.nth(index).locator(".game-stats-player-name-text")
-    ).toHaveText(PLAYERS[index].name);
+    await expect(rows.nth(index).locator(".game-stats-player-name-text")).toHaveText(
+      PLAYERS[index].name,
+    );
   }
   return labels;
 };
 
 const expectRankedMinesweeper = async (stats) => {
   for (const difficulty of MINESWEEPER_DIFFICULTIES) {
-    const panel = stats.locator(
-      `[aria-labelledby="game-stats-minesweeper-${difficulty}"]`
-    );
+    const panel = stats.locator(`[aria-labelledby="game-stats-minesweeper-${difficulty}"]`);
     await expectGlobalRows(panel, "minesweeper", difficulty);
     const model = CATEGORY_MODELS.minesweeper[difficulty];
     const entry = rankedEntry(FULL_CATEGORY_ENTRIES.minesweeper[difficulty]);
     const row = panel.locator(".game-stats-minesweeper-record-row");
     await expect(panel.getByText("Your Record", { exact: true })).toBeVisible();
-    await expect(row.locator(".game-stats-minesweeper-rank")).toHaveText(
-      `#${model.rank}`
-    );
+    await expect(row.locator(".game-stats-minesweeper-rank")).toHaveText(`#${model.rank}`);
     await expect(row).toHaveAttribute(
       "aria-label",
-      `Your record: #${model.rank}, ${RANKED_PROFILE.name}, ${entry.metric} seconds`
+      `Your record: #${model.rank}, ${RANKED_PROFILE.name}, ${entry.metric} seconds`,
     );
     await expectDigitMetric(row, entry.metric);
   }
 };
 
 const expectRankedSolitaire = async (stats) => {
-  const panel = stats.locator(
-    '[aria-labelledby="game-stats-solitaire-most-wins"]'
-  );
+  const panel = stats.locator('[aria-labelledby="game-stats-solitaire-most-wins"]');
   await expectGlobalRows(panel, "solitaire");
   const entry = rankedEntry(FULL_CATEGORY_ENTRIES.solitaire);
   const row = panel.locator(".game-stats-solitaire-local-wins-row");
   await expect(panel.getByText("Your Record", { exact: true })).toBeVisible();
   await expect(row.locator(".game-stats-leaderboard-template-rank")).toHaveText(
-    `#${CATEGORY_MODELS.solitaire.rank}`
+    `#${CATEGORY_MODELS.solitaire.rank}`,
   );
   await expect(row).toHaveAttribute(
     "aria-label",
-    `Your Solitaire record: #${CATEGORY_MODELS.solitaire.rank}, ${RANKED_PROFILE.name}, ${entry.metric} wins`
+    `Your Solitaire record: #${CATEGORY_MODELS.solitaire.rank}, ${RANKED_PROFILE.name}, ${entry.metric} wins`,
   );
   await expectDigitMetric(row, entry.metric);
 };
@@ -699,12 +637,10 @@ const expectRankedSnake = async (stats) => {
     const entry = rankedEntry(FULL_CATEGORY_ENTRIES.snake[size]);
     const row = panel.locator(".game-stats-snake-local-best-row");
     await expect(panel.getByText("Your Record", { exact: true })).toBeVisible();
-    await expect(row.locator(".game-stats-leaderboard-template-rank")).toHaveText(
-      `#${model.rank}`
-    );
+    await expect(row.locator(".game-stats-leaderboard-template-rank")).toHaveText(`#${model.rank}`);
     await expect(row).toHaveAttribute(
       "aria-label",
-      `Your record: #${model.rank}, ${RANKED_PROFILE.name}, ${entry.metric} points`
+      `Your record: #${model.rank}, ${RANKED_PROFILE.name}, ${entry.metric} points`,
     );
     await expectDigitMetric(row, entry.metric);
   }
@@ -712,23 +648,19 @@ const expectRankedSnake = async (stats) => {
 
 const expectRankedSudoku = async (stats) => {
   for (const difficulty of SUDOKU_DIFFICULTIES) {
-    const panel = stats.locator(
-      `[aria-labelledby="game-stats-sudoku-${difficulty}"]`
-    );
+    const panel = stats.locator(`[aria-labelledby="game-stats-sudoku-${difficulty}"]`);
     await expectGlobalRows(panel, "sudoku", difficulty);
     const model = CATEGORY_MODELS.sudoku[difficulty];
     const entry = rankedEntry(FULL_CATEGORY_ENTRIES.sudoku[difficulty]);
     const row = panel.locator(".game-stats-sudoku-local-best-row");
     await expect(panel.getByText("Your Record", { exact: true })).toBeVisible();
-    await expect(row.locator(".game-stats-leaderboard-template-rank")).toHaveText(
-      `#${model.rank}`
-    );
+    await expect(row.locator(".game-stats-leaderboard-template-rank")).toHaveText(`#${model.rank}`);
     await expect(row).toHaveAttribute(
       "aria-label",
-      `Your no-hints record: #${model.rank}, ${RANKED_PROFILE.name}, ${entry.metric} seconds`
+      `Your no-hints record: #${model.rank}, ${RANKED_PROFILE.name}, ${entry.metric} seconds`,
     );
     await expect(row.locator(".game-stats-metric--text")).toHaveText(
-      formatSudokuTime(entry.metric)
+      formatSudokuTime(entry.metric),
     );
   }
 };
@@ -758,14 +690,14 @@ const expectUnplayedRanks = async (stats, game) => {
       .locator(
         game === "minesweeper"
           ? ".game-stats-minesweeper-rank"
-          : ".game-stats-leaderboard-template-rank"
+          : ".game-stats-leaderboard-template-rank",
       );
     await expect(rank).toHaveText("#—");
     await expect(rank).toHaveAttribute("aria-label", "No global rank");
   }
   if (game === "sudoku") {
     await expect(rows.locator(".game-stats-metric--text")).toHaveText(
-      SUDOKU_DIFFICULTIES.map(() => "99:99")
+      SUDOKU_DIFFICULTIES.map(() => "99:99"),
     );
   }
 };
@@ -774,11 +706,9 @@ const expectEveryGlobalTopThree = async (stats, game) => {
   if (game === "minesweeper") {
     for (const difficulty of MINESWEEPER_DIFFICULTIES) {
       await expectGlobalRows(
-        stats.locator(
-          `[aria-labelledby="game-stats-minesweeper-${difficulty}"]`
-        ),
+        stats.locator(`[aria-labelledby="game-stats-minesweeper-${difficulty}"]`),
         game,
-        difficulty
+        difficulty,
       );
     }
     return;
@@ -786,7 +716,7 @@ const expectEveryGlobalTopThree = async (stats, game) => {
   if (game === "solitaire") {
     await expectGlobalRows(
       stats.locator('[aria-labelledby="game-stats-solitaire-most-wins"]'),
-      game
+      game,
     );
     return;
   }
@@ -795,7 +725,7 @@ const expectEveryGlobalTopThree = async (stats, game) => {
       await expectGlobalRows(
         stats.locator(`[aria-labelledby="game-stats-snake-${size}"]`),
         game,
-        size
+        size,
       );
     }
     return;
@@ -804,7 +734,7 @@ const expectEveryGlobalTopThree = async (stats, game) => {
     await expectGlobalRows(
       stats.locator(`[aria-labelledby="game-stats-sudoku-${difficulty}"]`),
       game,
-      difficulty
+      difficulty,
     );
   }
 };
@@ -830,17 +760,16 @@ for (const viewport of VIEWPORTS) {
       if (game === "sudoku") {
         await expectRankedSudoku(stats);
       }
-      expect(await scanForViolations(page, testInfo, `ranked-stats-${game}`))
-        .toEqual(game === "solitaire" ? SOLITAIRE_NESTED_INTERACTIVE : []);
+      expect(await scanForViolations(page, testInfo, `ranked-stats-${game}`)).toEqual(
+        game === "solitaire" ? SOLITAIRE_NESTED_INTERACTIVE : [],
+      );
       await assertNoHorizontalOverflow(page, stats);
       await assertLeaderboardRankSpacing(stats);
       await closeStatsWindow(page, game, app, stats);
     }
 
     expect(diagnostics.requestedPlayerIds.length).toBeGreaterThanOrEqual(4);
-    expect(new Set(diagnostics.requestedPlayerIds)).toEqual(
-      new Set([RANKED_PROFILE.id])
-    );
+    expect(new Set(diagnostics.requestedPlayerIds)).toEqual(new Set([RANKED_PROFILE.id]));
   });
 
   test(`unplayed player stays unranked without changing Top 3 at ${viewport.name}`, async ({
@@ -863,14 +792,10 @@ for (const viewport of VIEWPORTS) {
     }
 
     expect(diagnostics.requestedPlayerIds.length).toBeGreaterThanOrEqual(4);
-    expect(new Set(diagnostics.requestedPlayerIds)).toEqual(
-      new Set([UNPLAYED_PROFILE.id])
-    );
+    expect(new Set(diagnostics.requestedPlayerIds)).toEqual(new Set([UNPLAYED_PROFILE.id]));
   });
 
-  test(`empty Sudoku slots use 99:99 at ${viewport.name}`, async ({
-    page,
-  }) => {
+  test(`empty Sudoku slots use 99:99 at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     const diagnostics = await installMockBackend(page, {
       profile: EMPTY_WORLD_PROFILE,
@@ -881,21 +806,19 @@ for (const viewport of VIEWPORTS) {
 
     const { app, stats } = await openStatsWindow(page, "sudoku");
     const globalRows = stats.locator(
-      ".game-stats-sudoku-leaderboard .game-stats-leaderboard-template-list > .game-stats-sudoku-row"
+      ".game-stats-sudoku-leaderboard .game-stats-leaderboard-template-list > .game-stats-sudoku-row",
     );
     const personalRows = stats.locator(".game-stats-sudoku-local-best-row");
     await expect(globalRows).toHaveCount(SUDOKU_DIFFICULTIES.length * 3);
     await expect(personalRows).toHaveCount(SUDOKU_DIFFICULTIES.length);
     await expect(globalRows.locator(".game-stats-metric--text")).toHaveText(
-      Array.from({ length: SUDOKU_DIFFICULTIES.length * 3 }, () => "99:99")
+      Array.from({ length: SUDOKU_DIFFICULTIES.length * 3 }, () => "99:99"),
     );
     await expect(personalRows.locator(".game-stats-metric--text")).toHaveText(
-      SUDOKU_DIFFICULTIES.map(() => "99:99")
+      SUDOKU_DIFFICULTIES.map(() => "99:99"),
     );
-    await expect(
-      stats.locator(".game-stats-sudoku-row .game-stats-metric--text")
-    ).toHaveText(
-      Array.from({ length: SUDOKU_DIFFICULTIES.length * 4 }, () => "99:99")
+    await expect(stats.locator(".game-stats-sudoku-row .game-stats-metric--text")).toHaveText(
+      Array.from({ length: SUDOKU_DIFFICULTIES.length * 4 }, () => "99:99"),
     );
     await assertNoHorizontalOverflow(page, stats);
     await closeStatsWindow(page, "sudoku", app, stats);

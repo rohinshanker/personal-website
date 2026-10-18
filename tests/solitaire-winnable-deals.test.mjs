@@ -44,7 +44,10 @@ test("exhausted Solitaire generation returns a bounded standard fallback", () =>
 });
 
 test("New Game installs only the generated stock and tableau", () => {
-  const newGameSource = sourceSection("const solNewGame = () => {", "const solAutoMoveCardToFoundation =");
+  const newGameSource = sourceSection(
+    "const solNewGame = () => {",
+    "const solAutoMoveCardToFoundation =",
+  );
   assert.match(newGameSource, /const deal = solBuildWinnableDeal\(\);/);
   assert.match(newGameSource, /solState\.stock = deal\.stock;/);
   assert.match(newGameSource, /solState\.tableau = deal\.tableau;/);
@@ -52,6 +55,9 @@ test("New Game installs only the generated stock and tableau", () => {
 });
 
 test("Solitaire rules state the solver check and unlimited redeals", () => {
-  assert.match(homeSource, /Every new deal is a random shuffle that a built-in solver has checked for at least one winning path with draw-one stock and unlimited redeals\./);
+  assert.match(
+    homeSource,
+    /Every new deal is a random shuffle that a built-in solver has checked for at least one winning path with draw-one stock and unlimited redeals\./,
+  );
   assert.match(homeSource, /You can redeal as often as needed\./);
 });

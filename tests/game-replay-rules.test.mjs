@@ -15,8 +15,12 @@ test("rule helpers publish a frozen portable contract with bounded game limits",
   assert.equal(rules.RESULT_PROTOCOL, 2);
   assert.equal(rules.RULES_VERSION, 1);
   assert.equal(rules.REPLAY_VERSION, 1);
-  assert.equal(rules.GAME_RULE_LIMITS.snake.ticks * rules.SNAKE_TICK_MS <= rules.SESSION_LIFETIME_MS, true);
-  for (const value of Object.values(rules.GAME_RULE_LIMITS)) assert.equal(Object.isFrozen(value), true);
+  assert.equal(
+    rules.GAME_RULE_LIMITS.snake.ticks * rules.SNAKE_TICK_MS <= rules.SESSION_LIFETIME_MS,
+    true,
+  );
+  for (const value of Object.values(rules.GAME_RULE_LIMITS))
+    assert.equal(Object.isFrozen(value), true);
   const browser = vm.createContext({ window: {} });
   vm.runInContext(source, browser);
   assert.equal(browser.window.homeGameRules.RESULT_PROTOCOL, 2);
@@ -31,16 +35,27 @@ test("integer and object validation reject malformed values and unknown keys", (
   assert.equal(rules.assertObject(value, ["op"]), value);
   const noPrototype = vm.runInContext("Object.create(null)", context);
   assert.equal(rules.assertObject(noPrototype, []), noPrototype);
-  for (const invalid of [null, [], "x", inRealm({ unknown: 1 }), vm.runInContext("new Date()", context)]) {
+  for (const invalid of [
+    null,
+    [],
+    "x",
+    inRealm({ unknown: 1 }),
+    vm.runInContext("new Date()", context),
+  ]) {
     assert.throws(() => rules.assertObject(invalid, ["op"]), /Invalid/);
   }
 });
 
 test("work budgets charge exactly, reject invalid charges, and never overspend", () => {
   const budget = rules.createBudget(3);
-  budget.spend(); budget.spend(2); budget.spend(0);
+  budget.spend();
+  budget.spend(2);
+  budget.spend(0);
   assert.equal(budget.remaining, 0);
-  assert.throws(() => budget.spend(), (error) => error.code === "replay-limit");
+  assert.throws(
+    () => budget.spend(),
+    (error) => error.code === "replay-limit",
+  );
   assert.equal(budget.remaining, 0);
   for (const invalid of [-1, 1.5, "1", Infinity, NaN]) {
     assert.throws(() => rules.createBudget(invalid));
@@ -54,13 +69,20 @@ test("work budgets charge exactly, reject invalid charges, and never overspend",
 
 test("seeded randomness and shuffles are reproducible without changing source arrays", () => {
   for (const seed of [0, 1, 0xffffffff]) {
-    const first = { rngState: seed }; const second = { rngState: seed };
+    const first = { rngState: seed };
+    const second = { rngState: seed };
     const values = Array.from({ length: 52 }, (_, index) => index);
     const budget = rules.createBudget(51);
     const shuffled = rules.shuffle(values, first, budget);
     assert.deepEqual(plain(shuffled), plain(rules.shuffle(values, second)));
-    assert.deepEqual(values, Array.from({ length: 52 }, (_, index) => index));
-    assert.deepEqual(plain(shuffled).sort((left, right) => left - right), values);
+    assert.deepEqual(
+      values,
+      Array.from({ length: 52 }, (_, index) => index),
+    );
+    assert.deepEqual(
+      plain(shuffled).sort((left, right) => left - right),
+      values,
+    );
     assert.equal(budget.remaining, 0);
     for (let index = 0; index < 100; index += 1) {
       const next = rules.nextRandom(first);
@@ -86,16 +108,34 @@ test("canonical JSON sorts keys, clones independently, and rejects unsupported d
   }
   assert.throws(() => rules.canonicalJson(vm.runInContext("new Date()", context)));
   assert.throws(() => rules.canonicalJson(vm.runInContext("({a:undefined})", context)));
-  const nested = inRealm(Array(18).fill(0).reduce((value) => [value], 0));
+  const nested = inRealm(
+    Array(18)
+      .fill(0)
+      .reduce((value) => [value], 0),
+  );
   assert.throws(() => rules.canonicalJson(nested), /deeply nested/);
   assert.throws(() => rules.canonicalJson(inRealm(Array(500_001).fill(0))), /work limit/);
 });
 
 test("replay ordering rejects gaps, duplicates, missing operations and excessive input", () => {
-  const inputs = [{ seq: 1, op: "move" }, { seq: 2, op: "undo" }];
+  const inputs = [
+    { seq: 1, op: "move" },
+    { seq: 2, op: "undo" },
+  ];
   assert.equal(rules.assertReplay(inputs), inputs);
   assert.equal(rules.assertReplay([]).length, 0);
-  for (const invalid of [null, {}, [{seq: 2, op: "move"}], [{seq: 1}], [null], [[]], [{seq: 1, op: "x"}, {seq: 1, op: "x"}]]) {
+  for (const invalid of [
+    null,
+    {},
+    [{ seq: 2, op: "move" }],
+    [{ seq: 1 }],
+    [null],
+    [[]],
+    [
+      { seq: 1, op: "x" },
+      { seq: 1, op: "x" },
+    ],
+  ]) {
     assert.throws(() => rules.assertReplay(invalid));
   }
   assert.throws(() => rules.assertReplay(inputs, 1), /input limit/);

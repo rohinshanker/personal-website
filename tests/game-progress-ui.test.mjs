@@ -11,11 +11,11 @@ test("Game Progress is available from the desktop and taskbar with the joystick 
 
   assert.match(
     home,
-    /<button class="desktop-icon" data-app="game-progress" aria-label="Game Progress">[\s\S]*?joystick_alt\.ico[\s\S]*?Game Progress/
+    /<button class="desktop-icon" data-app="game-progress" aria-label="Game Progress">[\s\S]*?joystick_alt\.ico[\s\S]*?Game Progress/,
   );
   assert.match(
     home,
-    /<button class="taskbar-icon" data-app="game-progress" aria-label="Game Progress">[\s\S]*?joystick_alt\.ico/
+    /<button class="taskbar-icon" data-app="game-progress" aria-label="Game Progress">[\s\S]*?joystick_alt\.ico/,
   );
 });
 
@@ -32,7 +32,7 @@ test("Game Progress provides a profile and one local-progress panel per game", a
   assert.match(home, /Published results remain on global stats and leaderboards\./);
   assert.match(
     home,
-    /data-view="game-progress-snake">[\s\S]*?assets\/snake-assets\/snake-logo\.png/
+    /data-view="game-progress-snake">[\s\S]*?assets\/snake-assets\/snake-logo\.png/,
   );
 });
 
@@ -46,15 +46,30 @@ test("Game Progress uses compact, top-aligned profile and game layouts", async (
   assert.match(source, /game-progress-profile-name/);
   assert.match(source, /game-progress-profile-saved", "Saved"/);
   assert.doesNotMatch(source, /Saved and locked/);
-  assert.match(styles, /\.game-progress-window\.game-progress-window \.window-body \{[\s\S]*?height: auto;/);
-  assert.match(styles, /\.game-progress-content \{[\s\S]*?align-content: start;[\s\S]*?align-items: start;/);
-  assert.match(styles, /\.game-progress-profile-content,[\s\S]*?\.game-progress-game-content \{[\s\S]*?min-height: 0;/);
   assert.match(
     styles,
-    /\.game-stats-row\.game-progress-profile-row \{[\s\S]*?"icon name saved"[\s\S]*?grid-template-columns: 24px minmax\(0, 1fr\) auto;/
+    /\.game-progress-window\.game-progress-window \.window-body \{[\s\S]*?height: auto;/,
   );
-  assert.match(styles, /\.game-progress-profile-name \{[\s\S]*?font-size: 14px;[\s\S]*?overflow-wrap: break-word;/);
-  assert.match(styles, /\.game-progress-profile-saved \{[\s\S]*?align-self: center;[\s\S]*?color: #008000;[\s\S]*?font-weight: bold;[\s\S]*?justify-self: end;/);
+  assert.match(
+    styles,
+    /\.game-progress-content \{[\s\S]*?align-content: start;[\s\S]*?align-items: start;/,
+  );
+  assert.match(
+    styles,
+    /\.game-progress-profile-content,[\s\S]*?\.game-progress-game-content \{[\s\S]*?min-height: 0;/,
+  );
+  assert.match(
+    styles,
+    /\.game-stats-row\.game-progress-profile-row \{[\s\S]*?"icon name saved"[\s\S]*?grid-template-columns: 24px minmax\(0, 1fr\) auto;/,
+  );
+  assert.match(
+    styles,
+    /\.game-progress-profile-name \{[\s\S]*?font-size: 14px;[\s\S]*?overflow-wrap: break-word;/,
+  );
+  assert.match(
+    styles,
+    /\.game-progress-profile-saved \{[\s\S]*?align-self: center;[\s\S]*?color: #008000;[\s\S]*?font-weight: bold;[\s\S]*?justify-self: end;/,
+  );
   assert.match(styles, /\.game-progress-actions \{[\s\S]*?align-items: center;/);
 });
 
@@ -65,11 +80,11 @@ test("Game Progress profile launches every global leaderboard from a white icon 
     readHomeScript("gameStats"),
   ]);
   const profileStart = home.indexOf(
-    '<section class="viewer-content game-progress-content" data-view="game-progress-profile">'
+    '<section class="viewer-content game-progress-content" data-view="game-progress-profile">',
   );
   const profileEnd = home.indexOf(
     '<section class="viewer-content game-progress-content is-hidden" data-view="game-progress-minesweeper">',
-    profileStart
+    profileStart,
   );
   const profile = home.slice(profileStart, profileEnd);
   const launchers = [
@@ -86,23 +101,25 @@ test("Game Progress profile launches every global leaderboard from a white icon 
     assert.match(
       profile,
       new RegExp(
-        `<button[\\s\\S]*?type="button"[\\s\\S]*?data-game-stats-open="${game}"[\\s\\S]*?aria-label="Open ${label} global leaderboard"`
-      )
+        `<button[\\s\\S]*?type="button"[\\s\\S]*?data-game-stats-open="${game}"[\\s\\S]*?aria-label="Open ${label} global leaderboard"`,
+      ),
     );
     assert.match(profile, new RegExp(`aria-label="Open ${label} global leaderboard"`));
     assert.match(profile, new RegExp(`aria-controls="game-stats-window-${game}"`));
     assert.match(
       profile,
-      new RegExp(`src="${icon.replaceAll("/", "\\/")}"[\\s\\S]*?alt=""[\\s\\S]*?aria-hidden="true"`)
+      new RegExp(
+        `src="${icon.replaceAll("/", "\\/")}"[\\s\\S]*?alt=""[\\s\\S]*?aria-hidden="true"`,
+      ),
     );
   }
   assert.match(
     styles,
-    /\.game-progress-global-leaderboard-list \{[\s\S]*?background: #fff;[\s\S]*?grid-template-columns: repeat\(4, minmax\(36px, 1fr\)\);/
+    /\.game-progress-global-leaderboard-list \{[\s\S]*?background: #fff;[\s\S]*?grid-template-columns: repeat\(4, minmax\(36px, 1fr\)\);/,
   );
   assert.match(
     source,
-    /gameStatsOpenButtons\.forEach\(\(button\) => \{[\s\S]*?openGameStatsWindow\(button\.getAttribute\("data-game-stats-open"\)\);/
+    /gameStatsOpenButtons\.forEach\(\(button\) => \{[\s\S]*?openGameStatsWindow\(button\.getAttribute\("data-game-stats-open"\)\);/,
   );
 });
 
@@ -110,10 +127,13 @@ test("Snake Game Progress separates its total and keeps board pairs on one row",
   const styles = await readFile(new URL("styles/home/apps/game-stats.css", root), "utf8");
 
   assert.match(styles, /\.game-progress-snake-content \{[\s\S]*?display: grid;[\s\S]*?gap: 6px;/);
-  assert.match(styles, /\.game-progress-snake-total \.game-stats-inlay \{[\s\S]*?background: #fff;/);
   assert.match(
     styles,
-    /\.game-progress-snake-board-stats \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/
+    /\.game-progress-snake-total \.game-stats-inlay \{[\s\S]*?background: #fff;/,
+  );
+  assert.match(
+    styles,
+    /\.game-progress-snake-board-stats \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
   );
 });
 
@@ -122,6 +142,6 @@ test("Sudoku Game Progress uses three compact columns at every supported viewpor
 
   assert.match(
     styles,
-    /\.game-progress-sudoku-stats \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/
+    /\.game-progress-sudoku-stats \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/,
   );
 });

@@ -88,10 +88,7 @@
   }
   100% {
     opacity: 0;
-    transform: translate(
-        calc(-50% + var(--sol-firework-dx)),
-        calc(-50% + var(--sol-firework-dy))
-      )
+    transform: translate(calc(-50% + var(--sol-firework-dx)), calc(-50% + var(--sol-firework-dy)))
       scale(0.25);
   }
 }

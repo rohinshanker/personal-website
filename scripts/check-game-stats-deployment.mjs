@@ -9,16 +9,9 @@ import {
   createIntegrityCacheToken,
   digestGameCompletionSources,
 } from "./lib/game-build.mjs";
-import {
-  assertFetchDependencies,
-  assertPositiveInteger,
-  fetchGuardedBody,
-} from "./lib/http.mjs";
+import { assertFetchDependencies, assertPositiveInteger, fetchGuardedBody } from "./lib/http.mjs";
 
-export const GAME_STATS_BACKEND_CONFIG_URL = new URL(
-  "home/game-stats-backend.js",
-  import.meta.url
-);
+export const GAME_STATS_BACKEND_CONFIG_URL = new URL("home/game-stats-backend.js", import.meta.url);
 /** The published site. */
 export const DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL =
   "https://rohin.shanker.me/scripts/home/game-stats-backend.js";
@@ -27,12 +20,10 @@ export const DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL =
  * another origin without editing this script. */
 export const resolveLiveGameStatsBackendConfigUrl = (environment = process.env) =>
   new URL(
-    environment.GAME_STATS_LIVE_CONFIG_URL?.trim() ||
-      DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL
+    environment.GAME_STATS_LIVE_CONFIG_URL?.trim() || DEFAULT_LIVE_GAME_STATS_BACKEND_CONFIG_URL,
   );
 
-export const LIVE_GAME_STATS_BACKEND_CONFIG_URL =
-  resolveLiveGameStatsBackendConfigUrl();
+export const LIVE_GAME_STATS_BACKEND_CONFIG_URL = resolveLiveGameStatsBackendConfigUrl();
 export const GAME_STATS_DEPLOYMENT_TIMEOUT_MS = 10_000;
 export const GAME_STATS_RELEASE_CONVERGENCE_TIMEOUT_MS = 120_000;
 export const GAME_STATS_RELEASE_POLL_INTERVAL_MS = 5_000;
@@ -40,22 +31,15 @@ export const GAME_STATS_RELEASE_POLL_INTERVAL_MS = 5_000;
 const GENERATED_STRING_PATTERN = '"(?:\\\\.|[^"\\\\])*"';
 let liveConfigRequestSequence = 0;
 
-const defaultCreateCacheBust = () =>
-  `${Date.now()}-${process.pid}-${++liveConfigRequestSequence}`;
+const defaultCreateCacheBust = () => `${Date.now()}-${process.pid}-${++liveConfigRequestSequence}`;
 
-const defaultSleep = (milliseconds) =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds));
+const defaultSleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const readGeneratedString = (source, propertyName) => {
-  const pattern = new RegExp(
-    `\\b${propertyName}\\s*:\\s*(${GENERATED_STRING_PATTERN})`,
-    "g"
-  );
+  const pattern = new RegExp(`\\b${propertyName}\\s*:\\s*(${GENERATED_STRING_PATTERN})`, "g");
   const matches = Array.from(source.matchAll(pattern));
   if (matches.length !== 1) {
-    throw new Error(
-      `Generated game stats backend config must contain exactly one ${propertyName}`
-    );
+    throw new Error(`Generated game stats backend config must contain exactly one ${propertyName}`);
   }
 
   try {
@@ -83,7 +67,7 @@ const normalizeApiBaseUrl = (value) => {
   if (url.username || url.password || url.search || url.hash) {
     throw new Error(
       "Generated game stats backend config apiBaseUrl cannot contain " +
-        "credentials, a query, or a fragment"
+        "credentials, a query, or a fragment",
     );
   }
 
@@ -100,7 +84,7 @@ export const parseGameStatsBackendConfig = (source) => {
   const buildVersion = String(readGeneratedString(source, "buildVersion")).trim();
   if (!GAME_BUILD_VERSION_PATTERN.test(buildVersion)) {
     throw new Error(
-      "Generated game stats backend config buildVersion must be a lowercase SHA-256 value"
+      "Generated game stats backend config buildVersion must be a lowercase SHA-256 value",
     );
   }
   return { apiBaseUrl, buildVersion };
@@ -112,7 +96,7 @@ export const fetchGameStatsHealth = async (
     fetchImpl = globalThis.fetch,
     timeoutMs = GAME_STATS_DEPLOYMENT_TIMEOUT_MS,
     createTimeoutSignal = (milliseconds) => AbortSignal.timeout(milliseconds),
-  } = {}
+  } = {},
 ) => {
   assertFetchDependencies({
     fetchImpl,
@@ -137,8 +121,7 @@ export const fetchGameStatsHealth = async (
     messages: {
       requestFailed: `Unable to fetch game stats Worker health at ${healthUrl}`,
       invalidResponse: "Game stats Worker health returned an invalid response",
-      statusFailed: (status) =>
-        `Game stats Worker health failed with status ${status}`,
+      statusFailed: (status) => `Game stats Worker health failed with status ${status}`,
       bodyUnreadable: "Game stats Worker health did not return valid JSON",
     },
   });
@@ -156,14 +139,11 @@ export const fetchGameStatsHealth = async (
     acceptedBuildVersions.length === 0 ||
     acceptedBuildVersions[0] !== buildVersion ||
     acceptedBuildVersions.some(
-      (value) =>
-        typeof value !== "string" || !GAME_BUILD_VERSION_PATTERN.test(value)
+      (value) => typeof value !== "string" || !GAME_BUILD_VERSION_PATTERN.test(value),
     ) ||
     new Set(acceptedBuildVersions).size !== acceptedBuildVersions.length
   ) {
-    throw new Error(
-      "Game stats Worker health returned invalid acceptedBuildVersions"
-    );
+    throw new Error("Game stats Worker health returned invalid acceptedBuildVersions");
   }
   return {
     healthUrl,
@@ -200,9 +180,7 @@ export const fetchLiveGameStatsBackendConfig = async ({
     throw new Error("Live game stats backend config URL must use HTTP or HTTPS");
   }
   if (stableUrl.username || stableUrl.password || stableUrl.hash) {
-    throw new Error(
-      "Live game stats backend config URL cannot contain credentials or a fragment"
-    );
+    throw new Error("Live game stats backend config URL cannot contain credentials or a fragment");
   }
 
   const requestUrl = new URL(stableUrl);
@@ -223,10 +201,8 @@ export const fetchLiveGameStatsBackendConfig = async ({
     },
     messages: {
       requestFailed: `Unable to fetch the live game stats backend config at ${stableUrl}`,
-      invalidResponse:
-        "Live game stats backend config returned an invalid response",
-      statusFailed: (status) =>
-        `Live game stats backend config failed with status ${status}`,
+      invalidResponse: "Live game stats backend config returned an invalid response",
+      statusFailed: (status) => `Live game stats backend config failed with status ${status}`,
       bodyUnreadable: "Unable to read the live game stats backend config",
     },
   });
@@ -246,12 +222,7 @@ export const fetchLiveGameStatsBackendConfig = async ({
 
 const fetchLiveAsset = async (
   assetUrl,
-  {
-    fetchImpl,
-    timeoutMs,
-    createTimeoutSignal,
-    createCacheBust,
-  }
+  { fetchImpl, timeoutMs, createTimeoutSignal, createCacheBust },
 ) => {
   const stableUrl = new URL(assetUrl);
   const requestUrl = new URL(stableUrl);
@@ -279,7 +250,7 @@ const fetchLiveAsset = async (
           `Live integrity asset failed with status ${status} at ${stableUrl}`,
         bodyUnreadable: `Unable to read live integrity asset at ${stableUrl}`,
       },
-    })
+    }),
   );
 };
 
@@ -328,25 +299,26 @@ const HISTORICAL_COMPLETION_SOURCE_MANIFESTS = Object.freeze([
 
 const fetchLiveIntegritySnapshot = async (
   liveConfig,
-  {
-    fetchImpl,
-    timeoutMs,
-    createTimeoutSignal,
-    createCacheBust,
-    allowLegacyManifest = false,
-  }
+  { fetchImpl, timeoutMs, createTimeoutSignal, createCacheBust, allowLegacyManifest = false },
 ) => {
   const siteRootUrl = new URL("/", liveConfig.configUrl);
   const assets = new Map();
   const loadAssets = async (paths) => {
-    await Promise.all(paths.filter((path) => !assets.has(path)).map(async (path) => {
-      assets.set(path, await fetchLiveAsset(new URL(path, siteRootUrl), {
-        fetchImpl,
-        timeoutMs,
-        createTimeoutSignal,
-        createCacheBust,
-      }));
-    }));
+    await Promise.all(
+      paths
+        .filter((path) => !assets.has(path))
+        .map(async (path) => {
+          assets.set(
+            path,
+            await fetchLiveAsset(new URL(path, siteRootUrl), {
+              fetchImpl,
+              timeoutMs,
+              createTimeoutSignal,
+              createCacheBust,
+            }),
+          );
+        }),
+    );
   };
   let sourceBuildVersion;
   let cacheAssetPaths = INTEGRITY_CACHE_ASSET_PATHS;
@@ -356,7 +328,8 @@ const fetchLiveIntegritySnapshot = async (
       try {
         await loadAssets([...sourceFiles, ...INTEGRITY_ENTRY_FILES]);
         sourceBuildVersion = await digestGameCompletionSources(
-          (path) => assets.get(path), sourceFiles
+          (path) => assets.get(path),
+          sourceFiles,
         );
       } catch {
         // A source the live site no longer serves rules this manifest out.
@@ -377,7 +350,7 @@ const fetchLiveIntegritySnapshot = async (
   if (sourceBuildVersion !== liveConfig.buildVersion) {
     mismatches.push(
       `deployed browser config ${liveConfig.buildVersion}, ` +
-        `deployed completion sources ${sourceBuildVersion}`
+        `deployed completion sources ${sourceBuildVersion}`,
     );
   }
 
@@ -423,7 +396,7 @@ export const checkGameStatsDeployment = async ({
   if (workerHealth.buildVersion !== localConfig.buildVersion) {
     throw new Error(
       `Game stats deployment hash mismatch: browser ${localConfig.buildVersion}, ` +
-        `Worker ${workerHealth.buildVersion}`
+        `Worker ${workerHealth.buildVersion}`,
     );
   }
   return Object.freeze({
@@ -457,7 +430,7 @@ export const checkLiveGameStatsDeployment = async ({
   if (workerHealth.buildVersion !== liveConfig.buildVersion) {
     throw new Error(
       `Live game stats deployment hash mismatch: browser ${liveConfig.buildVersion}, ` +
-        `Worker ${workerHealth.buildVersion}`
+        `Worker ${workerHealth.buildVersion}`,
     );
   }
   return Object.freeze({
@@ -472,18 +445,18 @@ const describeReleaseMismatch = (localConfig, liveConfig, workerHealth) => {
   const mismatches = [];
   if (liveConfig.apiBaseUrl !== localConfig.apiBaseUrl) {
     mismatches.push(
-      `checked-in API ${localConfig.apiBaseUrl}, deployed browser API ${liveConfig.apiBaseUrl}`
+      `checked-in API ${localConfig.apiBaseUrl}, deployed browser API ${liveConfig.apiBaseUrl}`,
     );
   }
   if (liveConfig.buildVersion !== localConfig.buildVersion) {
     mismatches.push(
       `checked-in browser ${localConfig.buildVersion}, ` +
-        `deployed browser ${liveConfig.buildVersion}`
+        `deployed browser ${liveConfig.buildVersion}`,
     );
   }
   if (workerHealth && workerHealth.buildVersion !== localConfig.buildVersion) {
     mismatches.push(
-      `checked-in browser ${localConfig.buildVersion}, Worker ${workerHealth.buildVersion}`
+      `checked-in browser ${localConfig.buildVersion}, Worker ${workerHealth.buildVersion}`,
     );
   }
   return mismatches;
@@ -491,26 +464,20 @@ const describeReleaseMismatch = (localConfig, liveConfig, workerHealth) => {
 
 /** The Worker-transition gate always verifies Worker health, so `workerHealth`
  * is present here; only `describeReleaseMismatch` sees a skipped health check. */
-const describeWorkerTransitionMismatch = (
-  localConfig,
-  liveConfig,
-  workerHealth
-) => {
+const describeWorkerTransitionMismatch = (localConfig, liveConfig, workerHealth) => {
   const mismatches = [];
   if (liveConfig.apiBaseUrl !== localConfig.apiBaseUrl) {
     mismatches.push(
-      `checked-in API ${localConfig.apiBaseUrl}, deployed browser API ${liveConfig.apiBaseUrl}`
+      `checked-in API ${localConfig.apiBaseUrl}, deployed browser API ${liveConfig.apiBaseUrl}`,
     );
   }
   if (workerHealth.buildVersion !== localConfig.buildVersion) {
     mismatches.push(
-      `checked-in browser ${localConfig.buildVersion}, Worker ${workerHealth.buildVersion}`
+      `checked-in browser ${localConfig.buildVersion}, Worker ${workerHealth.buildVersion}`,
     );
   }
   if (!workerHealth.acceptedBuildVersions.includes(liveConfig.buildVersion)) {
-    mismatches.push(
-      `deployed browser ${liveConfig.buildVersion} is not accepted by the Worker`
-    );
+    mismatches.push(`deployed browser ${liveConfig.buildVersion} is not accepted by the Worker`);
   }
   return mismatches;
 };
@@ -570,10 +537,7 @@ const checkGameStatsReleaseParity = async ({
       break;
     }
     attempts += 1;
-    const requestTimeoutMs = Math.max(
-      1,
-      Math.min(timeoutMs, Math.max(1, deadline - currentTime))
-    );
+    const requestTimeoutMs = Math.max(1, Math.min(timeoutMs, Math.max(1, deadline - currentTime)));
 
     try {
       const liveConfigPromise = fetchLiveGameStatsBackendConfig({
@@ -600,7 +564,8 @@ const checkGameStatsReleaseParity = async ({
       let sourceBuildVersion;
       if (mismatches.length === 0) {
         const integritySnapshot = await fetchLiveIntegritySnapshot(liveConfig, {
-          allowLegacyManifest: allowCompatibleLiveBuild && liveConfig.buildVersion !== localConfig.buildVersion,
+          allowLegacyManifest:
+            allowCompatibleLiveBuild && liveConfig.buildVersion !== localConfig.buildVersion,
           fetchImpl,
           timeoutMs: requestTimeoutMs,
           createTimeoutSignal:
@@ -641,7 +606,7 @@ const checkGameStatsReleaseParity = async ({
 
   throw new Error(
     `Game stats release parity did not converge within ${convergenceTimeoutMs}ms ` +
-      `after ${attempts} attempt${attempts === 1 ? "" : "s"}: ${lastObservation}`
+      `after ${attempts} attempt${attempts === 1 ? "" : "s"}: ${lastObservation}`,
   );
 };
 
@@ -730,7 +695,7 @@ export const runGameStatsDeploymentCli = async ({
   }
   writeError(
     "Usage: node scripts/check-game-stats-deployment.mjs " +
-      "[--live|--static-release|--worker-transition|--release]"
+      "[--live|--static-release|--worker-transition|--release]",
   );
   return 1;
 };

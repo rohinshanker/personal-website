@@ -69,12 +69,10 @@ class MockD1Statement {
         puzzleKey &&
         playerId &&
         [...this.database.events.values()].some(
-          (row) => row.puzzle_key === puzzleKey && row.player_id === playerId
+          (row) => row.puzzle_key === puzzleKey && row.player_id === playerId,
         )
       ) {
-        throw new Error(
-          "UNIQUE constraint failed: game_events.player_id, game_events.puzzle_key"
-        );
+        throw new Error("UNIQUE constraint failed: game_events.player_id, game_events.puzzle_key");
       }
       if (this.sql.includes("FROM game_stat_sessions")) {
         const sessionId = this.params[13];
@@ -198,8 +196,7 @@ class MockD1Statement {
     if (/FROM\s+game_events\s+WHERE\s+player_id\s*=\s*\?\s+AND\s+puzzle_key/i.test(this.sql)) {
       const [playerId, puzzleKey] = this.params;
       const row = [...this.database.events.values()].find(
-        (candidate) =>
-          candidate.player_id === playerId && candidate.puzzle_key === puzzleKey
+        (candidate) => candidate.player_id === playerId && candidate.puzzle_key === puzzleKey,
       );
       return row ? projectEventRow(this.sql, row) : null;
     }
@@ -263,11 +260,11 @@ class MockD1Database {
             row.player_name,
             row.player_icon,
             row.occurred_at,
-            row.puzzle_key
+            row.puzzle_key,
           );
         }
         return await sqliteDatabase.batch(
-          statements.map(({ sql, params }) => sqliteDatabase.prepare(sql).bind(...params))
+          statements.map(({ sql, params }) => sqliteDatabase.prepare(sql).bind(...params)),
         );
       } finally {
         sqliteDatabase.close();
@@ -279,8 +276,7 @@ class MockD1Database {
       releaseBatch = resolve;
     });
     await previousBatch;
-    const copyRows = (rows) =>
-      new Map(Array.from(rows, ([key, value]) => [key, { ...value }]));
+    const copyRows = (rows) => new Map(Array.from(rows, ([key, value]) => [key, { ...value }]));
     const snapshot = {
       events: copyRows(this.events),
       sessions: copyRows(this.sessions),
@@ -342,19 +338,13 @@ const event = (overrides = {}) => {
   if (rawEvent.game === "minesweeper" && !Object.hasOwn(overrides, "difficulty")) {
     rawEvent.difficulty = "beginner";
   }
-  return Object.fromEntries(
-    Object.entries(rawEvent).filter(([, value]) => value !== undefined)
-  );
+  return Object.fromEntries(Object.entries(rawEvent).filter(([, value]) => value !== undefined));
 };
 
 const jsonRequest = (
   path,
   body,
-  {
-    origin = "https://rohin.shanker.me",
-    ip = "203.0.113.7",
-    authorization = "",
-  } = {}
+  { origin = "https://rohin.shanker.me", ip = "203.0.113.7", authorization = "" } = {},
 ) =>
   new Request(`https://stats.example.test${path}`, {
     method: "POST",
@@ -374,9 +364,9 @@ const createSession = async (env, game, config, options = {}) => {
     jsonRequest(
       "/sessions",
       { game, config, buildVersion: env.GAME_BUILD_VERSION, ...options },
-      options
+      options,
     ),
-    env
+    env,
   );
   assert.equal(response.status, 201);
   return readJson(response);
@@ -401,12 +391,12 @@ const ageSessionForCompletion = async (env, sessionProof, elapsedMs = 15_000) =>
     new TextEncoder().encode(env.EVENT_SIGNING_SECRET),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
   const signature = await crypto.subtle.sign(
     "HMAC",
     key,
-    new TextEncoder().encode(nextEncodedPayload)
+    new TextEncoder().encode(nextEncodedPayload),
   );
 
   storedSession.issued_at = issuedAt;
@@ -452,9 +442,9 @@ const postEvent = (env, rawEvent, session, options = {}) =>
     jsonRequest(
       "/events",
       { event: rawEvent, session: { id: session.id, token: session.token } },
-      options
+      options,
     ),
-    env
+    env,
   );
 
 const storeTrustedEvent = (env, rawEvent) => {
@@ -473,13 +463,12 @@ const storeTrustedEvent = (env, rawEvent) => {
     player_icon: rawEvent.profile?.icon || null,
     occurred_at: rawEvent.occurredAt,
     puzzle_key:
-      rawEvent.puzzleId && rawEvent.puzzle
-        ? `${rawEvent.puzzleId}:${rawEvent.puzzle}`
-        : null,
+      rawEvent.puzzleId && rawEvent.puzzle ? `${rawEvent.puzzleId}:${rawEvent.puzzle}` : null,
   });
 };
 
-const SUDOKU_PUZZLE = "402030000795020003001705400100004005609000000248507310900108500800050071017043092";
+const SUDOKU_PUZZLE =
+  "402030000795020003001705400100004005609000000248507310900108500800050071017043092";
 
 /**
  * Two tabs finishing the same puzzle is the race the browser's claim list
@@ -514,7 +503,7 @@ test("records one Sudoku win per puzzle and player however many tabs report it",
   });
   assert.equal(
     env.personal_site_game_stats.events.get(firstEvent.id).puzzle_key,
-    `${identity.puzzleId}:${identity.puzzle}`
+    `${identity.puzzleId}:${identity.puzzle}`,
   );
 
   // A second tab, its own event id and its own session, same puzzle.
@@ -540,7 +529,7 @@ test("records one Sudoku win per puzzle and player however many tabs report it",
       id: "event-sudoku-identity-reuse",
       puzzleId: "generated-easy-reuse",
     },
-    secondSession
+    secondSession,
   );
   assert.equal(reuseResponse.status, 409);
   assert.match((await readJson(reuseResponse)).error, /session was already used/);
@@ -556,7 +545,7 @@ test("records one Sudoku win per puzzle and player however many tabs report it",
       id: "event-sudoku-identity-c",
       profile: profile("player-sudoku-other", "Other"),
     },
-    otherSession
+    otherSession,
   );
 
   assert.equal(otherResponse.status, 201);
@@ -595,10 +584,7 @@ test("rejects a simultaneous second win for one puzzle at the unique index", asy
   const bodies = await Promise.all(responses.map(readJson));
 
   assert.deepEqual(statuses, [200, 201]);
-  assert.deepEqual(
-    bodies.map((body) => body.applied).sort(),
-    [false, true]
-  );
+  assert.deepEqual(bodies.map((body) => body.applied).sort(), [false, true]);
   assert.equal(env.personal_site_game_stats.events.size, 1);
   // Both answers name the row that actually stands. The loser's own id was
   // never stored, so returning it would send the client looking in `/stats`
@@ -606,12 +592,10 @@ test("rejects a simultaneous second win for one puzzle at the unique index", asy
   const [storedId] = [...env.personal_site_game_stats.events.keys()];
   assert.deepEqual(
     bodies.map((body) => body.eventId),
-    [storedId, storedId]
+    [storedId, storedId],
   );
   // Replaying the loser gets the same standing result rather than a conflict.
-  const loserId = ["event-sudoku-race-a", "event-sudoku-race-b"].find(
-    (id) => id !== storedId
-  );
+  const loserId = ["event-sudoku-race-a", "event-sudoku-race-b"].find((id) => id !== storedId);
   const replaySession = await createSession(env, "sudoku", { difficulty: "hard" });
   await ageSessionForCompletion(env, replaySession);
   const replayResponse = await postEvent(env, { ...base, id: loserId }, replaySession);
@@ -624,9 +608,7 @@ test("rejects a simultaneous second win for one puzzle at the unique index", asy
   // Both sessions are spent: the loser's was consumed on its own after the
   // batch rolled back, so it cannot be replayed with a different result.
   assert.ok(
-    sessions.every(
-      (session) => env.personal_site_game_stats.sessions.get(session.id).consumed_at
-    )
+    sessions.every((session) => env.personal_site_game_stats.sessions.get(session.id).consumed_at),
   );
 });
 
@@ -652,10 +634,7 @@ test("a duplicate Sudoku win is still validated like any other submission", asyn
 
   const firstSession = await createSession(env, "sudoku", { difficulty: "medium" });
   await ageSessionForCompletion(env, firstSession);
-  assert.equal(
-    (await postEvent(env, { ...base, id: "event-guard-a" }, firstSession)).status,
-    201
-  );
+  assert.equal((await postEvent(env, { ...base, id: "event-guard-a" }, firstSession)).status, 201);
 
   // A session for another game cannot buy a duplicate acknowledgement.
   const wrongGameSession = await createSession(env, "minesweeper", { difficulty: "beginner" });
@@ -663,7 +642,7 @@ test("a duplicate Sudoku win is still validated like any other submission", asyn
   const wrongGameResponse = await postEvent(
     env,
     { ...base, id: "event-guard-wrong-game" },
-    wrongGameSession
+    wrongGameSession,
   );
   assert.equal(wrongGameResponse.status, 403);
 
@@ -673,19 +652,16 @@ test("a duplicate Sudoku win is still validated like any other submission", asyn
   const wrongConfigResponse = await postEvent(
     env,
     { ...base, id: "event-guard-wrong-config" },
-    wrongConfigSession
+    wrongConfigSession,
   );
   assert.equal(wrongConfigResponse.status, 400);
-  assert.match(
-    (await readJson(wrongConfigResponse)).error,
-    /does not match the started game/
-  );
+  assert.match((await readJson(wrongConfigResponse)).error, /does not match the started game/);
 
   // An unsigned session proof is refused before the duplicate is looked up.
   const forgedResponse = await postEvent(
     env,
     { ...base, id: "event-guard-forged" },
-    { id: firstSession.id, token: `${firstSession.token}x` }
+    { id: firstSession.id, token: `${firstSession.token}x` },
   );
   assert.ok(forgedResponse.status >= 400);
 
@@ -703,11 +679,11 @@ test("a duplicate Sudoku win is still validated like any other submission", asyn
 
   assert.deepEqual(
     sharedResponses.map((response) => response.status),
-    [200, 200]
+    [200, 200],
   );
   assert.deepEqual(
     sharedBodies.map((body) => body.eventId),
-    ["event-guard-a", "event-guard-a"]
+    ["event-guard-a", "event-guard-a"],
   );
   assert.equal(env.personal_site_game_stats.events.size, 1);
 });
@@ -739,15 +715,12 @@ test("accepts a Sudoku win with no puzzle identity and rejects a half one", asyn
   const halfResponse = await postEvent(
     env,
     { ...legacyEvent, id: "event-sudoku-half-identity", puzzleId: "generated-medium-1" },
-    halfSession
+    halfSession,
   );
 
   assert.equal(halfResponse.status, 400);
   assert.match((await readJson(halfResponse)).error, /Sudoku puzzle/);
-  assert.equal(
-    env.personal_site_game_stats.sessions.get(halfSession.id).consumed_at,
-    null
-  );
+  assert.equal(env.personal_site_game_stats.sessions.get(halfSession.id).consumed_at, null);
 
   // So is a puzzle string that is not a board.
   const shapeSession = await createSession(env, "sudoku", { difficulty: "medium" });
@@ -760,7 +733,7 @@ test("accepts a Sudoku win with no puzzle identity and rejects a half one", asyn
       puzzleId: "generated-medium-1",
       puzzle: "not-a-board",
     },
-    shapeSession
+    shapeSession,
   );
 
   assert.equal(shapeResponse.status, 400);
@@ -806,14 +779,11 @@ test("replays an identified event id against a row stored without an identity", 
       id: "event-sudoku-rollout-keyed",
       puzzleId: "generated-easy-other",
     },
-    session
+    session,
   );
 
   assert.equal(conflictResponse.status, 409);
-  assert.match(
-    (await readJson(conflictResponse)).error,
-    /already exists with a different result/
-  );
+  assert.match((await readJson(conflictResponse)).error, /already exists with a different result/);
 });
 
 test("normalizes all supported game shapes and rejects malformed data", () => {
@@ -825,9 +795,9 @@ test("normalizes all supported game shapes and rejects malformed data", () => {
         game: "solitaire",
         metric: 78,
         metricKind: "moves",
-      })
+      }),
     ).metricKind,
-    "moves"
+    "moves",
   );
   assert.equal(
     normalizeGameStatsEvent(
@@ -838,9 +808,9 @@ test("normalizes all supported game shapes and rejects malformed data", () => {
         boardSize: "16",
         metric: 9,
         metricKind: "score",
-      })
+      }),
     ).boardSize,
-    "16"
+    "16",
   );
   assert.equal(
     normalizeGameStatsEvent(
@@ -853,20 +823,18 @@ test("normalizes all supported game shapes and rejects malformed data", () => {
         metric: 321,
         metricKind: "seconds",
         profile: null,
-      })
+      }),
     ).metricKind,
-    "seconds"
+    "seconds",
   );
   assert.throws(
     () => normalizeGameStatsEvent(event({ id: "event-0005", extra: "nope" })),
-    /Unknown event field/
+    /Unknown event field/,
   );
   assert.throws(
     () =>
-      normalizeGameStatsEvent(
-        event({ id: "event-0006", occurredAt: "2000-01-01T00:00:00.000Z" })
-      ),
-    /outside the accepted window/
+      normalizeGameStatsEvent(event({ id: "event-0006", occurredAt: "2000-01-01T00:00:00.000Z" })),
+    /outside the accepted window/,
   );
 });
 
@@ -988,7 +956,7 @@ test("returns complete lifetime totals only for the requested player", () => {
         profile: { ...requestedProfile, id: [requestedProfile.id] },
       },
     ],
-    requestedProfile.id
+    requestedProfile.id,
   );
 
   assert.deepEqual(stats.playerTotals.minesweeper.wins, {
@@ -999,7 +967,7 @@ test("returns complete lifetime totals only for the requested player", () => {
   assert.equal(stats.playerTotals.solitaire.wins, 2);
   assert.deepEqual(stats.playerTotals.snake, {
     totalGamesPlayed: 2,
-    gamesPlayed: { "10": 1, "16": 1, "20": 0, "24": 0 },
+    gamesPlayed: { 10: 1, 16: 1, 20: 0, 24: 0 },
   });
   assert.deepEqual(stats.playerTotals.sudoku.wins.easy, {
     noHints: 1,
@@ -1007,7 +975,7 @@ test("returns complete lifetime totals only for the requested player", () => {
   });
   assert.deepEqual(
     createGameStatsDataFromEvents(events).playerTotals,
-    createGameStatsDataFromEvents(events, "player-missing-totals").playerTotals
+    createGameStatsDataFromEvents(events, "player-missing-totals").playerTotals,
   );
   assert.equal(createGameStatsDataFromEvents(events).playerTotals.solitaire.wins, 0);
 });
@@ -1061,11 +1029,11 @@ test("requires scalar event strings and exact per-game event fields", () => {
   });
   assert.throws(
     () => normalizeGameStatsEvent({ ...sudokuEvent, game: "__proto__" }),
-    /Unsupported game/
+    /Unsupported game/,
   );
   assert.throws(
     () => normalizeGameStatsEvent({ ...sudokuEvent, metric: undefined }),
-    /Sudoku result requires a completion time/
+    /Sudoku result requires a completion time/,
   );
 
   const crossGameFields = [
@@ -1087,7 +1055,7 @@ test("requires scalar event strings and exact per-game event fields", () => {
 
   const historicalStats = createGameStatsDataFromEvents(
     [{ ...sudokuEvent, boardSize: "24" }],
-    sudokuEvent.profile.id
+    sudokuEvent.profile.id,
   );
   assert.deepEqual(historicalStats.totals.sudoku.wins.easy, {
     noHints: 1,
@@ -1109,9 +1077,7 @@ test("requires scalar event strings and exact per-game event fields", () => {
     withHints: 0,
   });
   assert.deepEqual(incompleteHistoricalStats.leaderboards.sudoku.easy, []);
-  assert.deepEqual(incompleteHistoricalStats.eventIds, [
-    "event-sudoku-historical-no-time",
-  ]);
+  assert.deepEqual(incompleteHistoricalStats.eventIds, ["event-sudoku-historical-no-time"]);
 });
 
 test("requires safe integer metrics with game-specific minimums and bounds", () => {
@@ -1263,9 +1229,9 @@ test("requires safe integer metrics with game-specific minimums and bounds", () 
         difficulty: undefined,
         metric: 99_999,
         metricKind: "moves",
-      })
+      }),
     ).metric,
-    99_999
+    99_999,
   );
   assert.equal(
     normalizeGameStatsEvent(
@@ -1276,9 +1242,9 @@ test("requires safe integer metrics with game-specific minimums and bounds", () 
         boardSize: "10",
         metric: 0,
         metricKind: "score",
-      })
+      }),
     ).metric,
-    0
+    0,
   );
   assert.equal(
     normalizeGameStatsEvent(
@@ -1289,9 +1255,9 @@ test("requires safe integer metrics with game-specific minimums and bounds", () 
         boardSize: "10",
         metric: 97,
         metricKind: "score",
-      })
+      }),
     ).metric,
-    97
+    97,
   );
   assert.equal(
     normalizeGameStatsEvent(
@@ -1303,9 +1269,9 @@ test("requires safe integer metrics with game-specific minimums and bounds", () 
         hintBucket: "noHints",
         metric: 1,
         metricKind: "seconds",
-      })
+      }),
     ).metric,
-    1
+    1,
   );
 });
 
@@ -1326,7 +1292,11 @@ test("does not consume a session for strict metric failures and accepts a correc
     assert.equal(env.personal_site_game_stats.events.size, 0);
   }
 
-  const accepted = await postEvent(env, event({ id: "event-metric-corrected", metric: 1 }), session);
+  const accepted = await postEvent(
+    env,
+    event({ id: "event-metric-corrected", metric: 1 }),
+    session,
+  );
   assert.equal(accepted.status, 201);
   assert.equal((await readJson(accepted)).applied, true);
 });
@@ -1343,14 +1313,14 @@ test("quarantines an invalid legacy metric without taking global stats offline",
       boardSize: "10",
       metric: 0,
       metricKind: "score",
-    })
+    }),
   );
 
   const response = await worker.fetch(
     new Request("https://stats.example.test/stats", {
       headers: { Origin: "https://rohin.shanker.me" },
     }),
-    env
+    env,
   );
   const stats = await readJson(response);
 
@@ -1369,7 +1339,7 @@ test("accepts only the bundled Rohin Neko yawn avatar outside the ICO icon manif
         name: "Rohin",
         icon: "assets/neko-assets/sprites/yawn1.png",
       },
-    })
+    }),
   );
 
   assert.equal(yawnAvatar.profile.icon, "assets/neko-assets/sprites/yawn1.png");
@@ -1383,9 +1353,9 @@ test("accepts only the bundled Rohin Neko yawn avatar outside the ICO icon manif
             name: "Unapproved",
             icon: "assets/neko-assets/sprites/yawn2.png",
           },
-        })
+        }),
       ),
-    /Invalid event profile/
+    /Invalid event profile/,
   );
 });
 
@@ -1399,9 +1369,9 @@ test("rejects client-only fields in an event profile", () => {
             ...profile("player-strict-profile", "Strict"),
             rerollCount: 1,
           },
-        })
+        }),
       ),
-    /Unknown profile field: rerollCount/
+    /Unknown profile field: rerollCount/,
   );
 });
 
@@ -1453,7 +1423,7 @@ test("records one verified completion for every tracked game and returns global 
     new Request("https://stats.example.test/stats", {
       headers: { Origin: "https://rohin.shanker.me" },
     }),
-    env
+    env,
   );
   const stats = await readJson(statsResponse);
   assert.equal(statsResponse.status, 200);
@@ -1477,10 +1447,10 @@ test("rejects an immediate Solitaire win without side effects and accepts the sa
     metric: 80,
     metricKind: "moves",
   });
-  const rateLimitsBefore = Array.from(
-    env.personal_site_game_stats.rateLimits,
-    ([key, value]) => [key, { ...value }]
-  );
+  const rateLimitsBefore = Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [
+    key,
+    { ...value },
+  ]);
 
   const immediateResponse = await postEvent(env, solitaireEvent, session);
 
@@ -1489,15 +1459,12 @@ test("rejects an immediate Solitaire win without side effects and accepts the sa
   assert.equal(storedSession.consumed_at, null);
   assert.equal(env.personal_site_game_stats.events.size, 0);
   assert.deepEqual(
-    Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [
-      key,
-      { ...value },
-    ]),
-    rateLimitsBefore
+    Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [key, { ...value }]),
+    rateLimitsBefore,
   );
 
   const acceptedResponse = await withMockedNow(issuedAt + 8_000, () =>
-    postEvent(env, solitaireEvent, session)
+    postEvent(env, solitaireEvent, session),
   );
 
   assert.equal(session.token, originalToken);
@@ -1511,9 +1478,9 @@ test("rejects an immediate Solitaire win without side effects and accepts the sa
   assert.equal(env.personal_site_game_stats.events.get(solitaireEvent.id).metric, 80);
   assert.equal(
     Array.from(env.personal_site_game_stats.rateLimits.keys()).some((key) =>
-      key.startsWith("events:")
+      key.startsWith("events:"),
     ),
-    true
+    true,
   );
 });
 
@@ -1534,10 +1501,10 @@ test("publishes a verified no-hints Sudoku win after the minimum session time", 
     metricKind: "seconds",
     profile: sudokuProfile,
   });
-  const rateLimitsBefore = Array.from(
-    env.personal_site_game_stats.rateLimits,
-    ([key, value]) => [key, { ...value }]
-  );
+  const rateLimitsBefore = Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [
+    key,
+    { ...value },
+  ]);
 
   const immediateResponse = await postEvent(env, sudokuEvent, session);
 
@@ -1546,15 +1513,12 @@ test("publishes a verified no-hints Sudoku win after the minimum session time", 
   assert.equal(storedSession.consumed_at, null);
   assert.equal(env.personal_site_game_stats.events.size, 0);
   assert.deepEqual(
-    Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [
-      key,
-      { ...value },
-    ]),
-    rateLimitsBefore
+    Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [key, { ...value }]),
+    rateLimitsBefore,
   );
 
   const acceptedResponse = await withMockedNow(issuedAt + 10_000, () =>
-    postEvent(env, sudokuEvent, session)
+    postEvent(env, sudokuEvent, session),
   );
 
   assert.equal(session.token, originalToken);
@@ -1571,7 +1535,7 @@ test("publishes a verified no-hints Sudoku win after the minimum session time", 
     new Request(`https://stats.example.test/stats?playerId=${sudokuProfile.id}`, {
       headers: { Origin: "https://rohin.shanker.me" },
     }),
-    env
+    env,
   );
   const stats = await readJson(statsResponse);
 
@@ -1599,26 +1563,23 @@ test("rejects malformed Sudoku fields without consuming the reusable session", a
     metricKind: "seconds",
     profile: profile("player-sudoku-strict-http", "Strict HTTP Sudoku"),
   });
-  const rateLimitsBefore = Array.from(
-    env.personal_site_game_stats.rateLimits,
-    ([key, value]) => [key, { ...value }]
-  );
+  const rateLimitsBefore = Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [
+    key,
+    { ...value },
+  ]);
 
   const nonScalarResponse = await postEvent(
     env,
     { ...sudokuEvent, hintBucket: [sudokuEvent.hintBucket] },
-    session
+    session,
   );
   assert.equal(nonScalarResponse.status, 400);
   assert.match((await readJson(nonScalarResponse)).error, /must be a string/);
   assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
   assert.equal(env.personal_site_game_stats.events.size, 0);
   assert.deepEqual(
-    Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [
-      key,
-      { ...value },
-    ]),
-    rateLimitsBefore
+    Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [key, { ...value }]),
+    rateLimitsBefore,
   );
 
   for (const [id, invalidProfile, errorPattern] of [
@@ -1639,26 +1600,19 @@ test("rejects malformed Sudoku fields without consuming the reusable session", a
     const invalidProfileResponse = await postEvent(
       env,
       { ...sudokuEvent, id, profile: invalidProfile },
-      session
+      session,
     );
     assert.equal(invalidProfileResponse.status, 400);
     assert.match((await readJson(invalidProfileResponse)).error, errorPattern);
     assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
     assert.equal(env.personal_site_game_stats.events.size, 0);
     assert.deepEqual(
-      Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [
-        key,
-        { ...value },
-      ]),
-      rateLimitsBefore
+      Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [key, { ...value }]),
+      rateLimitsBefore,
     );
   }
 
-  const crossGameResponse = await postEvent(
-    env,
-    { ...sudokuEvent, boardSize: "24" },
-    session
-  );
+  const crossGameResponse = await postEvent(env, { ...sudokuEvent, boardSize: "24" }, session);
   assert.equal(crossGameResponse.status, 400);
   assert.match((await readJson(crossGameResponse)).error, /Unknown event field: boardSize/);
   assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
@@ -1684,7 +1638,7 @@ test("rejects malformed Sudoku fields without consuming the reusable session", a
       hintBucket: "noHints",
       metric: 98,
       metricKind: "seconds",
-    }
+    },
   );
 });
 
@@ -1736,7 +1690,7 @@ test("keeps a difficulty-mismatched Sudoku session reusable and hinted wins unra
     new Request(`https://stats.example.test/stats?playerId=${sudokuProfile.id}`, {
       headers: { Origin: "https://rohin.shanker.me" },
     }),
-    env
+    env,
   );
   const stats = await readJson(statsResponse);
 
@@ -1772,9 +1726,9 @@ test("waits inline for a quick zero-score Snake game before counting and ranking
             metricKind: "score",
             profile: snakeProfile,
           }),
-          session
-        )
-    )
+          session,
+        ),
+    ),
   );
 
   assert.equal(response.status, 201);
@@ -1790,7 +1744,7 @@ test("waits inline for a quick zero-score Snake game before counting and ranking
     new Request(`https://stats.example.test/stats?playerId=${snakeProfile.id}`, {
       headers: { Origin: "https://rohin.shanker.me" },
     }),
-    env
+    env,
   );
   const stats = await readJson(statsResponse);
   assert.equal(statsResponse.status, 200);
@@ -1819,9 +1773,9 @@ test("does not trust a Snake scheduler that resolves before eligibility", async 
             metric: 0,
             metricKind: "score",
           }),
-          session
-        )
-    )
+          session,
+        ),
+    ),
   );
   const body = await readJson(response);
 
@@ -1856,8 +1810,8 @@ test("uses a bounded Node timer fallback for an inline Snake eligibility wait", 
           metric: 0,
           metricKind: "score",
         }),
-        session
-      )
+        session,
+      ),
     );
 
     assert.deepEqual(scheduledDelays, [100]);
@@ -1886,16 +1840,16 @@ test("returns a bounded 425 for an implausibly early Snake score and accepts a l
   assert.ok(earlyBody.retryAfterMs > 5_000 && earlyBody.retryAfterMs <= 12_700);
   assert.equal(
     earlyResponse.headers.get("Retry-After"),
-    String(Math.ceil(earlyBody.retryAfterMs / 1_000))
+    String(Math.ceil(earlyBody.retryAfterMs / 1_000)),
   );
   assert.equal(earlyResponse.headers.get("Access-Control-Expose-Headers"), "Retry-After");
   assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
   assert.equal(env.personal_site_game_stats.events.size, 0);
   assert.equal(
     Array.from(env.personal_site_game_stats.rateLimits.keys()).some((key) =>
-      key.startsWith("events:")
+      key.startsWith("events:"),
     ),
-    false
+    false,
   );
 
   await ageSessionForCompletion(env, session, 12_800);
@@ -1916,7 +1870,7 @@ test("returns a bounded 425 for an implausibly early Snake score and accepts a l
       metric: 573,
       metricKind: "score",
     }),
-    cappedSession
+    cappedSession,
   );
   const cappedBody = await readJson(cappedResponse);
   assert.equal(cappedResponse.status, 425);
@@ -1935,7 +1889,7 @@ test("rejects stale event submissions before consuming their sessions", async ()
       id: "event-stale-submission",
       occurredAt: "2020-01-01T00:00:00.000Z",
     }),
-    session
+    session,
   );
 
   assert.equal(response.status, 400);
@@ -1958,7 +1912,7 @@ test("reports an invalid session event window separately from completion eligibi
       metricKind: "score",
       occurredAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
     }),
-    session
+    session,
   );
 
   assert.equal(response.status, 400);
@@ -1986,7 +1940,7 @@ test("accepts an unexpired session issued before a game build deployment", async
       metric: 77,
       metricKind: "moves",
     }),
-    session
+    session,
   );
 
   assert.equal(response.status, 201);
@@ -2015,7 +1969,7 @@ test("rejects a persisted session build that disagrees with its signed token", a
       metric: 79,
       metricKind: "moves",
     }),
-    session
+    session,
   );
 
   assert.equal(response.status, 403);
@@ -2027,7 +1981,7 @@ test("rejects a persisted session build that disagrees with its signed token", a
     new Request("https://stats.example.test/stats", {
       headers: { Origin: "https://rohin.shanker.me" },
     }),
-    env
+    env,
   );
   const stats = await readJson(statsResponse);
   assert.equal(statsResponse.status, 200);
@@ -2052,7 +2006,7 @@ test("rejects a persisted session issue time that disagrees with its signed toke
       metric: 0,
       metricKind: "score",
     }),
-    session
+    session,
   );
 
   assert.equal(response.status, 403);
@@ -2085,7 +2039,7 @@ test("makes an accepted Solitaire win idempotent without allowing a second sessi
       metric: 89,
       metricKind: "moves",
     }),
-    session
+    session,
   );
 
   assert.equal(first.status, 201);
@@ -2161,7 +2115,7 @@ test("rejects a stale game build before creating a session", async () => {
       config: {},
       buildVersion: `sha256-${"b".repeat(64)}`,
     }),
-    env
+    env,
   );
 
   assert.equal(response.status, 409);
@@ -2184,14 +2138,14 @@ test("accepts an explicitly compatible browser build during a rollout", async ()
       config: {},
       buildVersion: previousBuildVersion,
     }),
-    env
+    env,
   );
 
   assert.equal(response.status, 201);
   const session = await readJson(response);
   assert.equal(
     env.personal_site_game_stats.sessions.get(session.id).build_version,
-    previousBuildVersion
+    previousBuildVersion,
   );
 });
 
@@ -2200,16 +2154,12 @@ test("fails closed on malformed or duplicate build compatibility configuration",
     "invalid",
     buildVersion,
     `sha256-${"b".repeat(64)},sha256-${"b".repeat(64)}`,
-    Array.from(
-      { length: 33 },
-      (_, index) => `sha256-${index.toString(16).padStart(64, "0")}`
-    ).join(","),
+    Array.from({ length: 33 }, (_, index) => `sha256-${index.toString(16).padStart(64, "0")}`).join(
+      ",",
+    ),
   ]) {
     const env = createEnv({ GAME_BUILD_COMPATIBILITY_VERSIONS });
-    const response = await worker.fetch(
-      new Request("https://stats.example.test/health"),
-      env
-    );
+    const response = await worker.fetch(new Request("https://stats.example.test/health"), env);
     assert.equal(response.status, 500);
     assert.deepEqual(await readJson(response), {
       ok: false,
@@ -2226,11 +2176,7 @@ test("rejects conflicting reuse of an existing event id", async () => {
 
   const secondSession = await createSession(env, "minesweeper", { difficulty: "beginner" });
   await ageSessionForCompletion(env, secondSession);
-  const conflict = await postEvent(
-    env,
-    event({ id: "event-conflict", metric: 99 }),
-    secondSession
-  );
+  const conflict = await postEvent(env, event({ id: "event-conflict", metric: 99 }), secondSession);
 
   assert.equal(first.status, 201);
   assert.equal(conflict.status, 409);
@@ -2292,10 +2238,7 @@ test("accepts exactly one of two concurrent results for a single session", async
     postEvent(env, event({ id: "event-concurrent-b" }), session),
   ]);
 
-  assert.deepEqual(
-    responses.map(({ status }) => status).sort(),
-    [201, 409]
-  );
+  assert.deepEqual(responses.map(({ status }) => status).sort(), [201, 409]);
   assert.equal(env.personal_site_game_stats.events.size, 1);
   assert.ok(env.personal_site_game_stats.sessions.get(session.id).consumed_at);
 });
@@ -2312,14 +2255,8 @@ test("treats simultaneous identical submissions as one accepted idempotent event
   ]);
   const bodies = await Promise.all(responses.map((response) => readJson(response)));
 
-  assert.deepEqual(
-    responses.map(({ status }) => status).sort(),
-    [200, 201]
-  );
-  assert.deepEqual(
-    bodies.map(({ applied }) => applied).sort(),
-    [false, true]
-  );
+  assert.deepEqual(responses.map(({ status }) => status).sort(), [200, 201]);
+  assert.deepEqual(bodies.map(({ applied }) => applied).sort(), [false, true]);
   assert.equal(env.personal_site_game_stats.events.size, 1);
 });
 
@@ -2345,10 +2282,7 @@ test("health reports all accepted builds and fails when D1 is unavailable", asyn
 
   env.personal_site_game_stats.failHealthCheck = false;
   env.personal_site_game_stats.healthTableCount = 2;
-  const missingSchema = await worker.fetch(
-    new Request("https://stats.example.test/health"),
-    env
-  );
+  const missingSchema = await worker.fetch(new Request("https://stats.example.test/health"), env);
 
   assert.equal(missingSchema.status, 500);
   assert.match((await readJson(missingSchema)).error, /D1 health check failed/);
@@ -2373,12 +2307,12 @@ test("issues an opaque, one-hour administrator proof only after valid credential
   assert.ok(Date.parse(body.expiresAt) > Date.now());
   const [encodedProofPayload] = body.proof.split(".");
   const signedProofPayload = JSON.parse(
-    Buffer.from(encodedProofPayload, "base64url").toString("utf8")
+    Buffer.from(encodedProofPayload, "base64url").toString("utf8"),
   );
   assert.equal(body.expiresAt, signedProofPayload.expiresAt);
   assert.equal(
     Date.parse(signedProofPayload.expiresAt) - Date.parse(signedProofPayload.issuedAt),
-    60 * 60 * 1000
+    60 * 60 * 1000,
   );
   assert.equal(response.headers.get("Access-Control-Allow-Headers"), "Authorization, Content-Type");
   assert.doesNotMatch(JSON.stringify(body), /test-administrator/);
@@ -2394,13 +2328,13 @@ test("issues an opaque, one-hour administrator proof only after valid credential
   const missingOrigin = await signInAsAdministrator(
     env,
     { username: env.ADMIN_USERNAME, password: env.ADMIN_PASSWORD },
-    { origin: "" }
+    { origin: "" },
   );
   const unsupportedMethod = await worker.fetch(
     new Request("https://stats.example.test/administrator/sign-in", {
       headers: { Origin: "https://rohin.shanker.me" },
     }),
-    env
+    env,
   );
 
   for (const failedResponse of [wrongUsername, wrongPassword]) {
@@ -2475,13 +2409,11 @@ test("publishes a protected win when the client IP changes between sign-in, sess
   });
   const signIn = await readJson(signInResponse);
   const [, encodedProofPayload] = /^([A-Za-z0-9_-]+)\./.exec(signIn.proof) || [];
-  const proofPayload = JSON.parse(
-    Buffer.from(encodedProofPayload, "base64url").toString("utf8")
-  );
+  const proofPayload = JSON.parse(Buffer.from(encodedProofPayload, "base64url").toString("utf8"));
   assert.match(
     proofPayload.ipHash,
     /^[A-Za-z0-9_-]+$/,
-    "The proof keeps a keyed hash for rollback compatibility, never a raw address."
+    "The proof keeps a keyed hash for rollback compatibility, never a raw address.",
   );
   assert.doesNotMatch(proofPayload.ipHash, /203\.0\.113\.7/);
   assert.equal(proofPayload.scope, "administrator");
@@ -2495,9 +2427,9 @@ test("publishes a protected win when the client IP changes between sign-in, sess
         config: { difficulty: "beginner" },
         buildVersion: env.GAME_BUILD_VERSION,
       },
-      { ip: sessionIp }
+      { ip: sessionIp },
     ),
-    env
+    env,
   );
   assert.equal(sessionResponse.status, 201);
   const session = await readJson(sessionResponse);
@@ -2520,10 +2452,14 @@ test("publishes a protected win when the client IP changes between sign-in, sess
   assert.equal((await readJson(accepted)).applied, true);
   assert.equal(env.personal_site_game_stats.events.has(protectedEvent.id), true);
   assert.notEqual(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
-  const eventBucket = Array.from(env.personal_site_game_stats.rateLimits.keys()).filter(
-    (bucket) => bucket.startsWith("events:")
+  const eventBucket = Array.from(env.personal_site_game_stats.rateLimits.keys()).filter((bucket) =>
+    bucket.startsWith("events:"),
   );
-  assert.equal(eventBucket.length, 1, "The publishing client IP still receives its own rate bucket.");
+  assert.equal(
+    eventBucket.length,
+    1,
+    "The publishing client IP still receives its own rate bucket.",
+  );
 });
 
 test("reports a rejected game session for the protected profile without the authorization code", async () => {
@@ -2548,7 +2484,7 @@ test("reports a rejected game session for the protected profile without the auth
     env,
     protectedEvent,
     { ...session, token: `${session.token}x` },
-    { authorization: `Bearer ${signIn.proof}` }
+    { authorization: `Bearer ${signIn.proof}` },
   );
 
   assert.equal(rejected.status, 403);
@@ -2587,7 +2523,7 @@ test("counts a protected administrator win in global and player totals", async (
     new Request("https://stats.example.test/stats?playerId=player-rohin-neko", {
       headers: { Origin: "https://rohin.shanker.me" },
     }),
-    env
+    env,
   );
   const stats = await readJson(statsResponse);
 
@@ -2650,7 +2586,7 @@ test("rate-limits administrator sign-in attempts and protects the administrator 
     eventEnv,
     event({ ...administratorEvent, id: "event-administrator-0002" }),
     secondSession,
-    { authorization: `Bearer ${signIn.proof}x` }
+    { authorization: `Bearer ${signIn.proof}x` },
   );
   assert.equal(tamperedProof.status, 403);
   assert.equal((await readJson(tamperedProof)).code, "administrator-authorization");
@@ -2667,7 +2603,7 @@ test("rejects tampered, mismatched, too-fast, and cross-origin completion attemp
   const mismatch = await postEvent(
     env,
     event({ id: "event-mismatch", difficulty: "expert", metric: 100 }),
-    mismatchSession
+    mismatchSession,
   );
 
   const tamperedSession = await createSession(env, "solitaire", {});
@@ -2675,16 +2611,16 @@ test("rejects tampered, mismatched, too-fast, and cross-origin completion attemp
   const tampered = await postEvent(
     env,
     event({ id: "event-token", game: "solitaire", metric: 90, metricKind: "moves" }),
-    { ...tamperedSession, token: `${tamperedSession.token}x` }
+    { ...tamperedSession, token: `${tamperedSession.token}x` },
   );
 
   const crossOrigin = await worker.fetch(
     jsonRequest(
       "/sessions",
       { game: "snake", config: { boardSize: "10" }, buildVersion: env.GAME_BUILD_VERSION },
-      { origin: "https://untrusted.example" }
+      { origin: "https://untrusted.example" },
     ),
-    env
+    env,
   );
   const sudokuSession = await createSession(env, "sudoku", { difficulty: "easy" });
   await ageSessionForCompletion(env, sudokuSession);
@@ -2699,7 +2635,7 @@ test("rejects tampered, mismatched, too-fast, and cross-origin completion attemp
       metric: undefined,
       metricKind: undefined,
     }),
-    sudokuSession
+    sudokuSession,
   );
 
   assert.equal(tooFast.status, 400);
@@ -2718,9 +2654,9 @@ test("requires a present allowed Origin for session and event writes", async () 
     jsonRequest(
       "/sessions",
       { game: "snake", config: { boardSize: "16" }, buildVersion: env.GAME_BUILD_VERSION },
-      { origin: "" }
+      { origin: "" },
     ),
-    env
+    env,
   );
 
   assert.equal(missingSessionOrigin.status, 403);
@@ -2744,7 +2680,7 @@ test("requires a present allowed Origin for session and event writes", async () 
       metricKind: "score",
     }),
     session,
-    { origin: "" }
+    { origin: "" },
   );
 
   assert.equal(missingEventOrigin.status, 403);
@@ -2788,7 +2724,7 @@ test("publishes a Snake result whose client IP changed after its session was iss
   assert.equal(
     storedSession.ip_hash,
     tokenPayload.ipHash,
-    "The issuing IP hash stays recorded on the session and inside its token."
+    "The issuing IP hash stays recorded on the session and inside its token.",
   );
 });
 
@@ -2804,7 +2740,7 @@ test("rate-limits session creation with an HMAC-derived bucket", async () => {
         config: {},
         buildVersion: env.GAME_BUILD_VERSION,
       }),
-      env
+      env,
     );
     assert.equal(response.status, 201);
   }
@@ -2814,7 +2750,7 @@ test("rate-limits session creation with an HMAC-derived bucket", async () => {
       config: {},
       buildVersion: env.GAME_BUILD_VERSION,
     }),
-    env
+    env,
   );
   assert.equal(blocked.status, 429);
   const [bucket] = env.personal_site_game_stats.rateLimits.keys();
@@ -2834,7 +2770,7 @@ test("requires strict Turnstile validation when configured", async () => {
       config: {},
       buildVersion: env.GAME_BUILD_VERSION,
     }),
-    env
+    env,
   );
   assert.equal(missingToken.status, 400);
 
@@ -2845,7 +2781,7 @@ test("requires strict Turnstile validation when configured", async () => {
     assert.equal(form.get("remoteip"), "203.0.113.7");
     assert.ok(form.get("idempotency_key"));
     return new Response(
-      JSON.stringify({ success: true, hostname: "rohin.shanker.me", action: "game-session" })
+      JSON.stringify({ success: true, hostname: "rohin.shanker.me", action: "game-session" }),
     );
   };
   try {
@@ -2856,7 +2792,7 @@ test("requires strict Turnstile validation when configured", async () => {
         buildVersion: env.GAME_BUILD_VERSION,
         turnstileToken: "valid-turnstile-token",
       }),
-      env
+      env,
     );
     assert.equal(verified.status, 201);
   } finally {
@@ -2871,7 +2807,7 @@ test("builds leaderboards from validated stored events", () => {
   ]);
   assert.deepEqual(
     stats.leaderboards.minesweeper.beginner.map((entry) => entry.metric),
-    [35, 60]
+    [35, 60],
   );
 });
 
@@ -2937,7 +2873,7 @@ test("builds the Solitaire leaderboard from each player's total validated wins",
       { metric: 3, metricKind: "wins", name: "Ari" },
       { metric: 2, metricKind: "wins", name: "Kai" },
       { metric: 1, metricKind: "wins", name: "Nia" },
-    ]
+    ],
   );
 });
 
@@ -2997,7 +2933,7 @@ test("builds each Sudoku leaderboard from fastest no-hints completions", () => {
 
   assert.deepEqual(
     stats.leaderboards.sudoku.easy.map((entry) => entry.metric),
-    [30, 45, 80]
+    [30, 45, 80],
   );
   assert.deepEqual(stats.totals.sudoku.wins.easy, { noHints: 4, withHints: 1 });
 });
@@ -3012,17 +2948,17 @@ test("returns a requested player's best Minesweeper rank beyond the public top t
       event({ id: "event-rank-0005", metric: 48, profile: profile("player-delta", "Delta") }),
       event({ id: "event-rank-0006", metric: 60, profile: null }),
     ],
-    "player-delta"
+    "player-delta",
   );
 
   assert.deepEqual(
     stats.leaderboards.minesweeper.beginner.map((entry) => entry.metric),
-    [12, 24, 36]
+    [12, 24, 36],
   );
   assert.deepEqual(stats.playerRanks.minesweeper.beginner, { rank: 4, totalPlayers: 4 });
   assert.deepEqual(
     createGameStatsDataFromEvents([], "player-missing").playerRanks.minesweeper.beginner,
-    { rank: null, totalPlayers: 0 }
+    { rank: null, totalPlayers: 0 },
   );
 });
 
@@ -3057,7 +2993,7 @@ test("breaks equal metrics by earliest completion and then event id for every ga
         metricKind: "moves",
         occurredAt,
         profile: player,
-      })
+      }),
     );
   });
   [
@@ -3075,7 +3011,7 @@ test("breaks equal metrics by earliest completion and then event id for every ga
         metricKind: "score",
         occurredAt,
         profile: player,
-      })
+      }),
     );
   });
   [
@@ -3094,7 +3030,7 @@ test("breaks equal metrics by earliest completion and then event id for every ga
         metricKind: "seconds",
         occurredAt,
         profile: player,
-      })
+      }),
     );
   });
 
@@ -3102,19 +3038,19 @@ test("breaks equal metrics by earliest completion and then event id for every ga
   const expectedPlayerOrder = tiedPlayers.map(({ id }) => id);
   assert.deepEqual(
     stats.leaderboards.minesweeper.beginner.map(({ playerId }) => playerId),
-    expectedPlayerOrder
+    expectedPlayerOrder,
   );
   assert.deepEqual(
     stats.leaderboards.solitaire.map(({ playerId }) => playerId),
-    expectedPlayerOrder
+    expectedPlayerOrder,
   );
   assert.deepEqual(
     stats.leaderboards.snake["10"].map(({ playerId }) => playerId),
-    expectedPlayerOrder
+    expectedPlayerOrder,
   );
   assert.deepEqual(
     stats.leaderboards.sudoku.easy.map(({ playerId }) => playerId),
-    expectedPlayerOrder
+    expectedPlayerOrder,
   );
   assert.deepEqual(stats.playerRanks.minesweeper.beginner, {
     rank: 2,
@@ -3131,7 +3067,7 @@ test("ranks every multiplayer category across trusted historical stored events",
   const snakeBoardSizes = ["10", "16", "20", "24"];
   const sudokuDifficulties = ["easy", "medium", "hard", "expert", "master", "extreme"];
   const players = Array.from({ length: 12 }, (_, index) =>
-    profile(`stress-player-${String(index).padStart(2, "0")}`, `Player ${index}`)
+    profile(`stress-player-${String(index).padStart(2, "0")}`, `Player ${index}`),
   );
   let timestampOffset = 0;
   const recentTimestamp = () =>
@@ -3150,7 +3086,7 @@ test("ranks every multiplayer category across trusted historical stored events",
               ? "2020-01-01T00:00:00.000Z"
               : recentTimestamp(),
           profile: player,
-        })
+        }),
       );
     });
 
@@ -3165,7 +3101,7 @@ test("ranks every multiplayer category across trusted historical stored events",
           metricKind: "moves",
           occurredAt: recentTimestamp(),
           profile: player,
-        })
+        }),
       );
     }
 
@@ -3181,7 +3117,7 @@ test("ranks every multiplayer category across trusted historical stored events",
           metricKind: "score",
           occurredAt: recentTimestamp(),
           profile: player,
-        })
+        }),
       );
     });
 
@@ -3198,7 +3134,7 @@ test("ranks every multiplayer category across trusted historical stored events",
           metricKind: "seconds",
           occurredAt: recentTimestamp(),
           profile: player,
-        })
+        }),
       );
       storeTrustedEvent(
         env,
@@ -3212,7 +3148,7 @@ test("ranks every multiplayer category across trusted historical stored events",
           metricKind: "seconds",
           occurredAt: recentTimestamp(),
           profile: player,
-        })
+        }),
       );
     });
   });
@@ -3226,7 +3162,7 @@ test("ranks every multiplayer category across trusted historical stored events",
       metric: 900,
       occurredAt: recentTimestamp(),
       profile: partialPlayer,
-    })
+    }),
   );
 
   const fetchStats = async (playerId) => {
@@ -3234,7 +3170,7 @@ test("ranks every multiplayer category across trusted historical stored events",
       new Request(`https://stats.example.test/stats?playerId=${playerId}`, {
         headers: { Origin: "https://rohin.shanker.me" },
       }),
-      env
+      env,
     );
     assert.equal(response.status, 200);
     return readJson(response);
@@ -3249,7 +3185,7 @@ test("ranks every multiplayer category across trusted historical stored events",
       assert.equal(stats.playerRecords.minesweeper[difficulty].playerId, expectedPlayerId);
       assert.equal(
         stats.playerRecords.minesweeper[difficulty].metric,
-        10 + playerIndex + difficultyIndex
+        10 + playerIndex + difficultyIndex,
       );
     });
     assert.deepEqual(stats.playerRanks.solitaire, { rank: expectedRank, totalPlayers: 12 });
@@ -3271,7 +3207,7 @@ test("ranks every multiplayer category across trusted historical stored events",
       assert.equal(stats.playerRecords.sudoku[difficulty].playerId, expectedPlayerId);
       assert.equal(
         stats.playerRecords.sudoku[difficulty].metric,
-        100 + playerIndex + difficultyIndex
+        100 + playerIndex + difficultyIndex,
       );
     });
   };
@@ -3280,23 +3216,23 @@ test("ranks every multiplayer category across trusted historical stored events",
     minesweeperDifficulties.forEach((difficulty) => {
       assert.deepEqual(
         stats.leaderboards.minesweeper[difficulty].map((entry) => entry.playerId),
-        topPlayerIds
+        topPlayerIds,
       );
     });
     assert.deepEqual(
       stats.leaderboards.solitaire.map((entry) => entry.playerId),
-      topPlayerIds
+      topPlayerIds,
     );
     snakeBoardSizes.forEach((boardSize) => {
       assert.deepEqual(
         stats.leaderboards.snake[boardSize].map((entry) => entry.playerId),
-        topPlayerIds
+        topPlayerIds,
       );
     });
     sudokuDifficulties.forEach((difficulty) => {
       assert.deepEqual(
         stats.leaderboards.sudoku[difficulty].map((entry) => entry.playerId),
-        topPlayerIds
+        topPlayerIds,
       );
     });
   };
@@ -3313,9 +3249,9 @@ test("ranks every multiplayer category across trusted historical stored events",
       Array.isArray(leaderboardGroup)
         ? leaderboardGroup.every((entry) => entry.playerId !== players[10].id)
         : Object.values(leaderboardGroup).every((entries) =>
-            entries.every((entry) => entry.playerId !== players[10].id)
-          )
-    )
+            entries.every((entry) => entry.playerId !== players[10].id),
+          ),
+    ),
   );
 
   const partialStats = await fetchStats(partialPlayer.id);
@@ -3351,7 +3287,7 @@ test("ranks every multiplayer category across trusted historical stored events",
   assert.equal(topThreeStats.totals.sudoku.wins.easy.withHints, 12);
   assert.equal(
     topThreeStats.leaderboards.minesweeper.beginner[0].occurredAt,
-    "2020-01-01T00:00:00.000Z"
+    "2020-01-01T00:00:00.000Z",
   );
 });
 
@@ -3361,7 +3297,7 @@ test("stats query rejects invalid player ids", async () => {
     new Request("https://stats.example.test/stats?playerId=invalid", {
       headers: { Origin: "https://rohin.shanker.me" },
     }),
-    env
+    env,
   );
   assert.equal(invalidResponse.status, 400);
 });
@@ -3451,15 +3387,12 @@ test("the cron entry point purges through the Worker export and logs its summary
   assert.equal(env.personal_site_game_stats.sessions.size, 0);
   assert.match(
     log.mock.calls.at(-1).arguments[0],
-    /Purged 1 expired game sessions and 0 unpublished completions and 0 rate-limit buckets at /
+    /Purged 1 expired game sessions and 0 unpublished completions and 0 rate-limit buckets at /,
   );
 });
 
 test("the scheduled purge fails loudly without a database binding or on a D1 error", async () => {
-  await assert.rejects(
-    purgeExpiredGameStatsRows({}),
-    /D1 database binding is not configured/
-  );
+  await assert.rejects(purgeExpiredGameStatsRows({}), /D1 database binding is not configured/);
 
   const batchError = new Error("Simulated D1 purge failure");
   await assert.rejects(
@@ -3471,7 +3404,7 @@ test("the scheduled purge fails loudly without a database binding or on a D1 err
         },
       },
     }),
-    batchError
+    batchError,
   );
 });
 
@@ -3508,7 +3441,7 @@ test("the request body limit counts bytes, so a short non-ASCII body is rejected
       buildVersion: env.GAME_BUILD_VERSION,
       turnstileToken: multiByteName,
     }),
-    env
+    env,
   );
   assert.equal(oversized.status, 413);
   assert.equal((await readJson(oversized)).error, "Request body is too large");
@@ -3523,7 +3456,7 @@ test("a chunked body within the byte limit is decoded and accepted", async () =>
       config: { difficulty: "beginner" },
       buildVersion: env.GAME_BUILD_VERSION,
     }),
-    env
+    env,
   );
 
   assert.equal(accepted.status, 201);
@@ -3539,7 +3472,7 @@ test("a chunked body within the byte limit is decoded and accepted", async () =>
       },
       body: "{ not json",
     }),
-    env
+    env,
   );
   assert.equal(malformed.status, 400);
   assert.equal((await readJson(malformed)).error, "Request body must be valid JSON");
@@ -3559,7 +3492,7 @@ test("Turnstile verification is time bounded and treats an unreadable reply as a
         buildVersion: env.GAME_BUILD_VERSION,
         turnstileToken: "valid-turnstile-token",
       }),
-      env
+      env,
     );
 
   const originalFetch = globalThis.fetch;
@@ -3607,7 +3540,7 @@ test("a Turnstile timeout or transport failure is rejected, not reported as a se
         buildVersion: env.GAME_BUILD_VERSION,
         turnstileToken: "valid-turnstile-token",
       }),
-      env
+      env,
     );
   const expectRejected = async (response) => {
     assert.equal(response.status, 403);
@@ -3641,7 +3574,7 @@ test("a Turnstile timeout or transport failure is rejected, not reported as a se
     globalThis.fetch = (url, options) =>
       new Promise((_resolve, reject) => {
         options.signal.addEventListener("abort", () =>
-          reject(options.signal.reason ?? new DOMException("Aborted", "AbortError"))
+          reject(options.signal.reason ?? new DOMException("Aborted", "AbortError")),
         );
       });
     await expectRejected(await requestSession());
@@ -3673,12 +3606,11 @@ test("a session that was never stored is reported apart from a consumed one", as
 
   const replayed = await createSession(env, "solitaire", {});
   await ageSessionForCompletion(env, replayed);
-  env.personal_site_game_stats.sessions.get(replayed.id).consumed_at =
-    new Date().toISOString();
+  env.personal_site_game_stats.sessions.get(replayed.id).consumed_at = new Date().toISOString();
   const consumed = await postEvent(
     env,
     { ...solitaireWin, id: "event-consumed-session" },
-    replayed
+    replayed,
   );
   assert.equal(consumed.status, 409);
   assert.equal((await readJson(consumed)).error, "Game session was already used");
@@ -3712,7 +3644,7 @@ test("a consumed session's duplicate is validated exactly like a fresh one", asy
   const secondTab = await postEvent(
     env,
     { ...base, id: "event-spent-second-tab", metric: 75 },
-    session
+    session,
   );
   assert.equal(secondTab.status, 200);
   assert.deepEqual(await readJson(secondTab), {
@@ -3726,7 +3658,7 @@ test("a consumed session's duplicate is validated exactly like a fresh one", asy
   const wrongDifficulty = await postEvent(
     env,
     { ...base, id: "event-spent-wrong-difficulty", difficulty: "hard" },
-    session
+    session,
   );
   assert.equal(wrongDifficulty.status, 400);
   assert.match((await readJson(wrongDifficulty)).error, /does not match the started game/);
@@ -3739,7 +3671,7 @@ test("a consumed session's duplicate is validated exactly like a fresh one", asy
       id: "event-spent-early",
       occurredAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
     },
-    session
+    session,
   );
   assert.equal(early.status, 400);
   assert.match((await readJson(early)).error, /outside its session window/);
@@ -3748,7 +3680,7 @@ test("a consumed session's duplicate is validated exactly like a fresh one", asy
   const reuse = await postEvent(
     env,
     { ...base, id: "event-spent-reuse", puzzleId: "generated-easy-spent-next" },
-    session
+    session,
   );
   assert.equal(reuse.status, 409);
   assert.match((await readJson(reuse)).error, /already used/);

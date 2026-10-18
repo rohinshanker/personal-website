@@ -17,7 +17,7 @@ const inRealm = (value) =>
 const minesweeperConfig = inRealm({ difficulty: "beginner" });
 const minesweeperInitial = context.homeMinesweeperRules.generate(
   minesweeperConfig,
-  inRealm({ seed: 0x24724724, firstCell: 0 })
+  inRealm({ seed: 0x24724724, firstCell: 0 }),
 );
 const minesweeperState = context.homeMinesweeperRules.initial(minesweeperInitial);
 const minesweeperReplay = [];
@@ -54,11 +54,13 @@ export const verifiedMinesweeperFixtures = Object.freeze({
       ...context.homeMinesweeperRules.result(minesweeperState),
       won: false,
     }),
-    revealMineFirst: plain([{
-      seq: 1,
-      op: "reveal",
-      cell: minesweeperInitial.mineCells[0],
-    }]),
+    revealMineFirst: plain([
+      {
+        seq: 1,
+        op: "reveal",
+        cell: minesweeperInitial.mineCells[0],
+      },
+    ]),
   }),
 });
 
@@ -78,12 +80,14 @@ export const verifiedSnakeFixtures = Object.freeze({
     result: plain(context.homeSnakeRules.result(scoringSnakeState)),
   }),
   invalid: Object.freeze({
-    oppositeDirection: plain([{
-      seq: 1,
-      op: "direction",
-      tick: 0,
-      direction: "left",
-    }]),
+    oppositeDirection: plain([
+      {
+        seq: 1,
+        op: "direction",
+        tick: 0,
+        direction: "left",
+      },
+    ]),
     reorderedReplay: plain([
       { seq: 2, op: "direction", tick: 0, direction: "up" },
       { seq: 1, op: "direction", tick: 0, direction: "left" },

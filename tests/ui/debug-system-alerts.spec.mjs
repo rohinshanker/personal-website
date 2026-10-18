@@ -42,13 +42,13 @@ window.__debugSystemAlertsPromptTest = Object.freeze({
     return showDebugSystemAlert(alert);
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
   await routeHomeScript(page, "eventRuntime", (source) => {
     const zeroDelaySource = source.replace(
       "const RANDOM_EVENT_DELAY_MAX_MS = 2000;",
-      "const RANDOM_EVENT_DELAY_MAX_MS = 0;"
+      "const RANDOM_EVENT_DELAY_MAX_MS = 0;",
     );
     return zeroDelaySource.replace(
       /\n\}\)\(\);\s*$/,
@@ -77,7 +77,7 @@ window.__debugSystemAlertsRuntimeTest = Object.freeze({
   },
   cooldownUntil: () => randomEventTriggerCooldownUntil,
 });
-})();`
+})();`,
     );
   });
 };
@@ -89,15 +89,10 @@ const dispatchAnimationEnd = async (locator, animationName) => {
 const systemAlertButtons = (page) =>
   page.locator("#debug-system-alert-actions [data-system-alert-action]");
 
-const closeAlert = async (
-  page,
-  { buttonId = null, key = "Enter", useEscape = false } = {}
-) => {
+const closeAlert = async (page, { buttonId = null, key = "Enter", useEscape = false } = {}) => {
   const win = page.locator("#debug-system-alert-window");
   const button = buttonId
-    ? page.locator(
-        `#debug-system-alert-actions [data-system-alert-button-id="${buttonId}"]`
-      )
+    ? page.locator(`#debug-system-alert-actions [data-system-alert-button-id="${buttonId}"]`)
     : systemAlertButtons(page).first();
   if (useEscape) {
     await button.press("Escape");
@@ -106,7 +101,7 @@ const closeAlert = async (
   }
   await expect(win).toHaveAttribute("aria-hidden", "true");
   const reducedMotion = await page.evaluate(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   if (reducedMotion) {
     await expect(win).toBeHidden();
@@ -119,13 +114,15 @@ const closeAlert = async (
 
 const waitForSystemAlertIcon = async (page) => {
   const icon = page.locator("#debug-system-alert-icon");
-  await expect.poll(
-    () =>
-      icon.evaluate(
-        (image) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0
-      ),
-    { message: "system-alert icon should finish decoding" }
-  ).toBe(true);
+  await expect
+    .poll(
+      () =>
+        icon.evaluate(
+          (image) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
+        ),
+      { message: "system-alert icon should finish decoding" },
+    )
+    .toBe(true);
 };
 
 const measureAlert = (page) =>
@@ -145,9 +142,7 @@ const measureAlert = (page) =>
     };
     const image = document.querySelector("#debug-system-alert-icon");
     const actions = document.querySelector("#debug-system-alert-actions");
-    const actionButtons = Array.from(
-      actions.querySelectorAll("[data-system-alert-action]")
-    );
+    const actionButtons = Array.from(actions.querySelectorAll("[data-system-alert-action]"));
     return {
       win: bounds("#debug-system-alert-window"),
       body: bounds("#debug-system-alert-window .window-body"),
@@ -163,11 +158,9 @@ const measureAlert = (page) =>
         };
       }),
       actionsJustifyContent: getComputedStyle(actions).justifyContent,
-      imageLoaded:
-        image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
-      messageWhiteSpace: getComputedStyle(
-        document.querySelector("#debug-system-alert-message")
-      ).whiteSpace,
+      imageLoaded: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
+      messageWhiteSpace: getComputedStyle(document.querySelector("#debug-system-alert-message"))
+        .whiteSpace,
       documentOverflow:
         document.documentElement.scrollWidth > window.innerWidth ||
         document.documentElement.scrollHeight > window.innerHeight,
@@ -213,18 +206,13 @@ test("all production system alerts schedule and render through the shared shell"
   await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() =>
-    Boolean(
-      window.__debugSystemAlertsPromptTest &&
-      window.__debugSystemAlertsRuntimeTest
-    )
+    Boolean(window.__debugSystemAlertsPromptTest && window.__debugSystemAlertsRuntimeTest),
   );
   await page.evaluate(() => window.homeResources.loadRandomEventStyles());
 
   const alerts = await page.evaluate(() => window.__debugSystemAlertsPromptTest.alerts);
   expect(alerts).toHaveLength(30);
-  expect(alerts.filter(({ buttonAlignment }) => buttonAlignment === "right")).toHaveLength(
-    30
-  );
+  expect(alerts.filter(({ buttonAlignment }) => buttonAlignment === "right")).toHaveLength(30);
   expect(alerts.every(({ buttons }) => buttons.length === 1)).toBe(true);
   expect(alerts.map(({ id }) => id)).toContain("substack-reminder");
   expect(alerts.map(({ id }) => id)).toContain("photos");
@@ -235,26 +223,21 @@ test("all production system alerts schedule and render through the shared shell"
   await sentinel.focus();
   expect(
     await page.evaluate(() =>
-      window.__debugSystemAlertsRuntimeTest.triggerAlert("ram-prices", "startButton")
-    )
+      window.__debugSystemAlertsRuntimeTest.triggerAlert("ram-prices", "startButton"),
+    ),
   ).toBe(false);
   await expect(win).toBeHidden();
 
   const normallyScheduled = await page.evaluate(() => {
     Math.random = () => 0;
-    return window.__debugSystemAlertsRuntimeTest.triggerAlert(
-      "ram-prices",
-      "startButton"
-    );
+    return window.__debugSystemAlertsRuntimeTest.triggerAlert("ram-prices", "startButton");
   });
   expect(normallyScheduled).toBe(true);
   await expect(win).toBeVisible();
   await expect(win).toHaveAttribute("data-alert-id", "ram-prices");
   await expect(systemAlertButtons(page).first()).toBeFocused();
   await expect(win).not.toHaveClass(/is-opening/);
-  expect(await win.evaluate((element) => getComputedStyle(element).animationName)).toBe(
-    "none"
-  );
+  expect(await win.evaluate((element) => getComputedStyle(element).animationName)).toBe("none");
   await dispatchAnimationEnd(win, "retro-window-open");
   await closeAlert(page);
   await page.evaluate(() => {
@@ -272,10 +255,7 @@ test("all production system alerts schedule and render through the shared shell"
       for (const alert of alerts) {
         await sentinel.focus();
         expect(
-          await page.evaluate(
-            (id) => window.__debugSystemAlertsPromptTest.open(id),
-            alert.id
-          )
+          await page.evaluate((id) => window.__debugSystemAlertsPromptTest.open(id), alert.id),
         ).toBe(true);
         await expect(win).toBeVisible();
         await dispatchAnimationEnd(win, "retro-window-open");
@@ -285,19 +265,14 @@ test("all production system alerts schedule and render through the shared shell"
         await expect(win).toHaveAccessibleName(alert.title);
         await expect(win).toHaveAccessibleDescription(alert.body);
         await expect(page.locator("#debug-system-alert-title")).toHaveText(alert.title);
-        await expect(page.locator("#debug-system-alert-message")).toHaveText(
-          alert.body
-        );
-        await expect(page.locator("#debug-system-alert-icon")).toHaveAttribute(
-          "src",
-          alert.icon
-        );
+        await expect(page.locator("#debug-system-alert-message")).toHaveText(alert.body);
+        await expect(page.locator("#debug-system-alert-icon")).toHaveAttribute("src", alert.icon);
         const buttons = systemAlertButtons(page);
         await expect(buttons).toHaveCount(alert.buttons.length);
         await expect(buttons.first()).toBeFocused();
         await expect(buttons.first()).toHaveAttribute(
           "data-system-alert-button-id",
-          alert.buttons[0].id
+          alert.buttons[0].id,
         );
         await expect(buttons.first()).toHaveText(alert.buttons[0].label);
         await waitForSystemAlertIcon(page);
@@ -321,16 +296,13 @@ test("all production system alerts schedule and render through the shared shell"
               right: box.x + box.width,
               bottom: box.y + box.height,
             },
-            metrics.body
+            metrics.body,
           );
         }
         expect(Math.abs(metrics.icon.centerY - metrics.message.centerY)).toBeLessThan(1);
         await expectAlertActionAlignment(page, metrics, alert.buttonAlignment);
         if (alert.id === "seneca-announcement") {
-          expect(metrics.win.width).toBeCloseTo(
-            Math.min(340, viewport.width - 32),
-            1
-          );
+          expect(metrics.win.width).toBeCloseTo(Math.min(340, viewport.width - 32), 1);
           expect(metrics.icon.width).toBeCloseTo(48, 1);
           expect(metrics.icon.height).toBeCloseTo(48, 1);
           expect(metrics.messageWhiteSpace).toBe("pre-line");
@@ -352,7 +324,6 @@ test("all production system alerts schedule and render through the shared shell"
       }
     });
   }
-
 });
 
 test("normalized alert configurations render every alignment and content stress case", async ({
@@ -367,10 +338,7 @@ test("normalized alert configurations render every alignment and content stress 
   await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() =>
-    Boolean(
-      window.__debugSystemAlertsPromptTest &&
-      window.__debugSystemAlertsRuntimeTest
-    )
+    Boolean(window.__debugSystemAlertsPromptTest && window.__debugSystemAlertsRuntimeTest),
   );
 
   const rawCases = [
@@ -412,8 +380,9 @@ test("normalized alert configurations render every alignment and content stress 
       buttonAlignment: "right",
     },
   ];
-  const cases = await page.evaluate((inputs) =>
-    inputs.map((input) => window.__debugSystemAlertsPromptTest.normalize(input)), rawCases
+  const cases = await page.evaluate(
+    (inputs) => inputs.map((input) => window.__debugSystemAlertsPromptTest.normalize(input)),
+    rawCases,
   );
   expect(cases[0]).toMatchObject({
     title: "System Alert",
@@ -431,8 +400,8 @@ test("normalized alert configurations render every alignment and content stress 
         expect(
           await page.evaluate(
             (input) => window.__debugSystemAlertsPromptTest.openSynthetic(input),
-            rawCases[caseIndex]
-          )
+            rawCases[caseIndex],
+          ),
         ).toBe(true);
         await expect(win).toBeVisible();
         await dispatchAnimationEnd(win, "retro-window-open");
@@ -441,10 +410,7 @@ test("normalized alert configurations render every alignment and content stress 
         await expect(page.locator("#debug-system-alert-title")).toHaveText(alert.title);
         await expect(page.locator("#debug-system-alert-message")).toHaveText(alert.body);
         await expect(page.locator("#debug-system-alert-message strong")).toHaveCount(0);
-        await expect(page.locator("#debug-system-alert-icon")).toHaveAttribute(
-          "src",
-          alert.icon
-        );
+        await expect(page.locator("#debug-system-alert-icon")).toHaveAttribute("src", alert.icon);
         await waitForSystemAlertIcon(page);
 
         const buttons = systemAlertButtons(page);
@@ -453,8 +419,8 @@ test("normalized alert configurations render every alignment and content stress 
         await expect(buttons.first()).toBeFocused();
         expect(
           await buttons.evaluateAll((elements) =>
-            elements.map((button) => button.dataset.systemAlertButtonId)
-          )
+            elements.map((button) => button.dataset.systemAlertButtonId),
+          ),
         ).toEqual(alert.buttons.map(({ id }) => id));
 
         const metrics = await measureAlert(page);
@@ -485,11 +451,11 @@ test("normalized alert configurations render every alignment and content stress 
 
   await sentinel.focus();
   expect(await page.evaluate(() => window.__debugSystemAlertsPromptTest.open("ram-prices"))).toBe(
-    true
+    true,
   );
   await expect(systemAlertButtons(page).first()).toBeFocused();
   expect(await page.evaluate(() => window.__debugSystemAlertsPromptTest.open("photos"))).toBe(
-    false
+    false,
   );
   await expect(win).toHaveAttribute("data-alert-id", "ram-prices");
   await dispatchAnimationEnd(win, "retro-window-open");
@@ -497,18 +463,15 @@ test("normalized alert configurations render every alignment and content stress 
   await expect(sentinel).toBeFocused();
 
   expect(await page.evaluate(() => window.__debugSystemAlertsPromptTest.open("ram-prices"))).toBe(
-    true
+    true,
   );
   await expect(systemAlertButtons(page).first()).toBeFocused();
   await dispatchAnimationEnd(win, "retro-window-open");
   await closeAlert(page);
   await expect(sentinel).toBeFocused();
-
 });
 
-test("reminder alerts respect cooldown and remain directly Admin-triggerable", async ({
-  page,
-}) => {
+test("reminder alerts respect cooldown and remain directly Admin-triggerable", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.clock.setFixedTime(new Date("2026-07-30T12:00:00Z"));
@@ -519,10 +482,7 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
   await installDebugAlertTestBridge(page);
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() =>
-    Boolean(
-      window.__debugSystemAlertsPromptTest &&
-      window.__debugSystemAlertsRuntimeTest
-    )
+    Boolean(window.__debugSystemAlertsPromptTest && window.__debugSystemAlertsRuntimeTest),
   );
   await page.evaluate(() => window.homeResources.loadAdminResources());
 
@@ -539,12 +499,12 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
 
   await sentinel.focus();
   expect(
-    await page.evaluate(() => window.__debugSystemAlertsRuntimeTest.trigger("pageReload"))
+    await page.evaluate(() => window.__debugSystemAlertsRuntimeTest.trigger("pageReload")),
   ).toBe(false);
   await expect(win).toBeHidden();
-  expect(
-    await page.evaluate(() => window.__debugSystemAlertsRuntimeTest.cooldownUntil())
-  ).toBe(seededCooldown.until);
+  expect(await page.evaluate(() => window.__debugSystemAlertsRuntimeTest.cooldownUntil())).toBe(
+    seededCooldown.until,
+  );
 
   const reminders = [
     {
@@ -578,30 +538,24 @@ test("reminder alerts respect cooldown and remain directly Admin-triggerable", a
             window.rohinAdminOrchestrator.runEvent(eventId, {
               source: `${alertId}-debug-off-ui-test`,
             }),
-          reminder
-        )
+          reminder,
+        ),
       ).toEqual({ ok: true, message: reminder.resultMessage });
       await expect(win).toBeVisible();
       await expect(win).toHaveAttribute("data-alert-id", reminder.alertId);
       await expect(page.locator("#debug-system-alert-title")).toHaveText("System Alert");
-      await expect(page.locator("#debug-system-alert-message")).toHaveText(
-        reminder.message
-      );
-      await expect(page.locator("#debug-system-alert-icon")).toHaveAttribute(
-        "src",
-        reminder.icon
-      );
+      await expect(page.locator("#debug-system-alert-message")).toHaveText(reminder.message);
+      await expect(page.locator("#debug-system-alert-icon")).toHaveAttribute("src", reminder.icon);
       await waitForSystemAlertIcon(page);
       await expect(systemAlertButtons(page).first()).toBeFocused();
       const metrics = await measureAlert(page);
       await expectAlertActionAlignment(page, metrics, reminder.buttonAlignment);
-      expect(
-        await page.evaluate(() => window.__debugSystemAlertsRuntimeTest.cooldownUntil())
-      ).toBe(seededCooldown.until);
+      expect(await page.evaluate(() => window.__debugSystemAlertsRuntimeTest.cooldownUntil())).toBe(
+        seededCooldown.until,
+      );
       await dispatchAnimationEnd(win, "retro-window-open");
       await closeAlert(page, { useEscape: reminder.useEscape });
       await expect(sentinel).toBeFocused();
     });
   }
-
 });

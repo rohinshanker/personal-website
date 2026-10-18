@@ -8,47 +8,29 @@
   cursorRuntime.start();
 
   const videoEditorIsBusy = () =>
-    document.querySelector("#video-editor-auth-form")?.getAttribute("aria-busy") ===
-      "true" ||
-    document.querySelector("#video-editor-app")?.getAttribute("aria-busy") ===
-      "true" ||
-    document
-      .querySelector("[data-audio-sync-status]")
-      ?.getAttribute("data-state") === "analyzing";
+    document.querySelector("#video-editor-auth-form")?.getAttribute("aria-busy") === "true" ||
+    document.querySelector("#video-editor-app")?.getAttribute("aria-busy") === "true" ||
+    document.querySelector("[data-audio-sync-status]")?.getAttribute("data-state") === "analyzing";
 
   let loadingController = null;
 
   const clearPointerOperationCursor = () => {
-    document.body?.classList.remove(
-      "is-holding-pointer-item",
-      RESIZE_EW_CLASS,
-      RESIZE_NS_CLASS
-    );
+    document.body?.classList.remove("is-holding-pointer-item", RESIZE_EW_CLASS, RESIZE_NS_CLASS);
   };
 
   const handlePointerOperationStart = (event) => {
     if (event.button !== 0 || !(event.target instanceof Element)) return;
     document.body.classList.remove(RESIZE_EW_CLASS, RESIZE_NS_CLASS);
     const target = event.target;
-    const previewTimelineSeparator = target.closest(
-      "#video-editor-preview-timeline-separator"
-    );
+    const previewTimelineSeparator = target.closest("#video-editor-preview-timeline-separator");
     if (previewTimelineSeparator) {
       const isSideBySide = Boolean(
-        previewTimelineSeparator.closest(
-          '[data-video-editor-workspace-layout="side-by-side"]'
-        )
+        previewTimelineSeparator.closest('[data-video-editor-workspace-layout="side-by-side"]'),
       );
-      document.body.classList.add(
-        isSideBySide ? RESIZE_EW_CLASS : RESIZE_NS_CLASS
-      );
+      document.body.classList.add(isSideBySide ? RESIZE_EW_CLASS : RESIZE_NS_CLASS);
       return;
     }
-    if (
-      target.closest(
-        "[data-video-editor-side-separator], [data-trim], [data-resize-effect]"
-      )
-    ) {
+    if (target.closest("[data-video-editor-side-separator], [data-trim], [data-resize-effect]")) {
       document.body.classList.add(RESIZE_EW_CLASS);
     }
   };

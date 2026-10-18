@@ -46,20 +46,9 @@ test("opening Minesweeper finishes every number asset before grid input", async 
   await expect
     .poll(() => [...new Set(finishedNumbers)].sort())
     .toEqual(["1", "2", "3", "4", "5", "6", "7", "8"]);
-  expect([...new Set(requestedNumbers)].sort()).toEqual([
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-  ]);
+  expect([...new Set(requestedNumbers)].sort()).toEqual(["1", "2", "3", "4", "5", "6", "7", "8"]);
   expect(
-    consoleWarnings.filter(
-      (message) => !message.includes("Unrecognized feature: 'web-share'.")
-    )
+    consoleWarnings.filter((message) => !message.includes("Unrecognized feature: 'web-share'.")),
   ).toEqual([]);
 
   await app.getByRole("button", { name: "Close" }).click();
@@ -77,10 +66,7 @@ test("opening Minesweeper finishes every number asset before grid input", async 
   expect(requestedNumbers).toHaveLength(requestCountBeforeInput);
 });
 
-test("reopening Minesweeper retries a failed number preload", async ({
-  diagnostics,
-  page,
-}) => {
+test("reopening Minesweeper retries a failed number preload", async ({ diagnostics, page }) => {
   let cellEightAttempts = 0;
 
   await page.route("**/assets/minesweeper_assets/cell_numbers/cell_8.png", (route) => {
@@ -100,10 +86,7 @@ test("reopening Minesweeper retries a failed number preload", async ({
     const originalAppend = document.head.append.bind(document.head);
     document.head.append = (...nodes) => {
       nodes.forEach((node) => {
-        if (
-          node instanceof HTMLLinkElement &&
-          node.href.endsWith("/cell_numbers/cell_8.png")
-        ) {
+        if (node instanceof HTMLLinkElement && node.href.endsWith("/cell_numbers/cell_8.png")) {
           window.__cellEightPreloadInsertions += 1;
         }
       });
@@ -113,19 +96,13 @@ test("reopening Minesweeper retries a failed number preload", async ({
 
   const app = await openMinesweeper(page);
   await expect.poll(() => cellEightAttempts).toBe(1);
-  await expect
-    .poll(() => page.evaluate(() => window.__cellEightPreloadInsertions))
-    .toBe(1);
-  await expect
-    .poll(() => page.locator('link[href$="/cell_numbers/cell_8.png"]').count())
-    .toBe(0);
+  await expect.poll(() => page.evaluate(() => window.__cellEightPreloadInsertions)).toBe(1);
+  await expect.poll(() => page.locator('link[href$="/cell_numbers/cell_8.png"]').count()).toBe(0);
 
   await app.getByRole("button", { name: "Close" }).click();
   await expect(app).toBeHidden();
   await openMinesweeper(page);
-  await expect
-    .poll(() => page.evaluate(() => window.__cellEightPreloadInsertions))
-    .toBe(2);
+  await expect.poll(() => page.evaluate(() => window.__cellEightPreloadInsertions)).toBe(2);
 
   // The aborted first preload is the behaviour under test; the fixture still
   // fails on anything the page reported beyond this exact pair.

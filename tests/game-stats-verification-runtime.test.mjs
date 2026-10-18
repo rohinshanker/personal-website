@@ -6,13 +6,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const workerPackageUrl = new URL("../workers/game-stats/package.json", import.meta.url);
 const workerRequire = createRequire(workerPackageUrl);
-const { Miniflare, NoOpLog } = await import(
-  pathToFileURL(workerRequire.resolve("miniflare")).href
-);
+const { Miniflare, NoOpLog } = await import(pathToFileURL(workerRequire.resolve("miniflare")).href);
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const fixtureEntrypoint = fileURLToPath(
-  new URL("./fixtures/game-stats-verification-worker.mjs", import.meta.url)
+  new URL("./fixtures/game-stats-verification-worker.mjs", import.meta.url),
 );
 const migrations = [
   "0001_create_game_stats.sql",
@@ -30,24 +28,24 @@ const versions = {
   generatorVersion: 1,
 };
 
-const createRuntime = () => new Miniflare({
-  modules: true,
-  modulesRoot: repositoryRoot,
-  scriptPath: fixtureEntrypoint,
-  compatibilityDate: "2026-07-21",
-  d1Databases: { personal_site_game_stats: "verified-results-runtime" },
-  bindings: {
-    ALLOWED_ORIGIN: origin,
-    EVENT_SIGNING_SECRET: "test-runtime-verification-signing-secret",
-    IP_HASH_SECRET: "test-runtime-verification-ip-secret",
-    GAME_BUILD_VERSION: buildVersion,
-  },
-  log: new NoOpLog(),
-});
+const createRuntime = () =>
+  new Miniflare({
+    modules: true,
+    modulesRoot: repositoryRoot,
+    scriptPath: fixtureEntrypoint,
+    compatibilityDate: "2026-07-21",
+    d1Databases: { personal_site_game_stats: "verified-results-runtime" },
+    bindings: {
+      ALLOWED_ORIGIN: origin,
+      EVENT_SIGNING_SECRET: "test-runtime-verification-signing-secret",
+      IP_HASH_SECRET: "test-runtime-verification-ip-secret",
+      GAME_BUILD_VERSION: buildVersion,
+    },
+    log: new NoOpLog(),
+  });
 
-const post = (runtime, path, body) => runtime.dispatchFetch(
-  `https://stats.example.test${path}`,
-  {
+const post = (runtime, path, body) =>
+  runtime.dispatchFetch(`https://stats.example.test${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -55,8 +53,7 @@ const post = (runtime, path, body) => runtime.dispatchFetch(
       "CF-Connecting-IP": "203.0.113.92",
     },
     body: JSON.stringify(body),
-  }
-);
+  });
 
 test("workerd bounds and completes a near-limit replay with real D1", async (t) => {
   const runtime = createRuntime();
@@ -66,7 +63,7 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
     const sql = readFileSync(migration, "utf8").replace(/^\s*--.*$/gm, "");
     const triggers = Array.from(
       sql.matchAll(/CREATE TRIGGER[\s\S]*?\nEND;/gi),
-      (match) => match[0]
+      (match) => match[0],
     );
     const statements = sql
       .replace(/CREATE TRIGGER[\s\S]*?\nEND;/gi, "")
@@ -89,13 +86,9 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
   const issued = await issuedResponse.json();
   assert.equal(issued.limits.continuations, 8192);
   assert.equal(issued.limits.timingRevisions, 900);
-  const emptyHash = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode("[]")
-  );
-  const inputHash = Array.from(
-    new Uint8Array(emptyHash),
-    (byte) => byte.toString(16).padStart(2, "0")
+  const emptyHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("[]"));
+  const inputHash = Array.from(new Uint8Array(emptyHash), (byte) =>
+    byte.toString(16).padStart(2, "0"),
   ).join("");
   const started = await post(runtime, `/sessions/${issued.id}/timing`, {
     session: { id: issued.id, token: issued.token },
@@ -173,7 +166,7 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
   const maximumSynchronousWallMs = Math.max(...synchronousWallTimes);
   assert.ok(
     maximumSynchronousWallMs < 10,
-    `bounded synchronous replay stages took ${maximumSynchronousWallMs.toFixed(1)} ms`
+    `bounded synchronous replay stages took ${maximumSynchronousWallMs.toFixed(1)} ms`,
   );
   t.diagnostic(
     `verified ${inputs.length} inputs / 1,600,000 charged engine work / ` +
@@ -187,30 +180,35 @@ test("workerd bounds and completes a near-limit replay with real D1", async (t) 
       `transition ${Math.max(...transitionWallTimes).toFixed(1)} ms / ` +
       `input canonical ${Math.max(...inputCanonicalWallTimes).toFixed(1)} ms / ` +
       `serialize ${Math.max(...serializationWallTimes).toFixed(1)} ms / ` +
-      `combined ${maximumSynchronousWallMs.toFixed(1)} ms`
+      `combined ${maximumSynchronousWallMs.toFixed(1)} ms`,
   );
 
-  const completionCount = await database.prepare(
-    "SELECT COUNT(*) AS count FROM verified_game_completions"
-  ).first("count");
+  const completionCount = await database
+    .prepare("SELECT COUNT(*) AS count FROM verified_game_completions")
+    .first("count");
   assert.equal(Number(completionCount), 1);
-  const progressRows = await database.prepare(`
+  const progressRows = await database
+    .prepare(`
     SELECT revision, input_cursor
     FROM verified_completion_progress
     ORDER BY revision
-  `).all();
+  `)
+    .all();
   assert.ok(progressRows.results.length <= 8193);
   for (let index = 1; index < progressRows.results.length; index += 1) {
     assert.ok(
       Number(progressRows.results[index].input_cursor) -
-        Number(progressRows.results[index - 1].input_cursor) <= 32,
-      "a continuation advanced no more than the production action bound"
+        Number(progressRows.results[index - 1].input_cursor) <=
+        32,
+      "a continuation advanced no more than the production action bound",
     );
   }
-  const replayChunkBounds = await database.prepare(`
+  const replayChunkBounds = await database
+    .prepare(`
     SELECT COUNT(*) AS count, MAX(LENGTH(canonical_inputs)) AS maximum_bytes
     FROM verified_completion_replay_chunks
-  `).first();
+  `)
+    .first();
   assert.equal(Number(replayChunkBounds.count), 250);
   assert.ok(Number(replayChunkBounds.maximum_bytes) < 64 * 1024);
 

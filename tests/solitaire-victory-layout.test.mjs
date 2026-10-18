@@ -12,7 +12,7 @@ test("Solitaire keeps the victory media wired to an accessible overlay", async (
   const home = await readFile(new URL("home.html", root), "utf8");
   assert.match(
     home,
-    /id="sol-victory-video-overlay" aria-hidden="true">[\s\S]*?id="sol-victory-video"[\s\S]*?data-src="assets\/solitaire-cards\/victory-royale\.webm"[\s\S]*?id="sol-victory-canvas" aria-hidden="true"/
+    /id="sol-victory-video-overlay" aria-hidden="true">[\s\S]*?id="sol-victory-video"[\s\S]*?data-src="assets\/solitaire-cards\/victory-royale\.webm"[\s\S]*?id="sol-victory-canvas" aria-hidden="true"/,
   );
   assert.match(home, /href="styles\/home\/apps\/solitaire\.css\?v=[^"]+"/);
   assert.match(home, /src="scripts\/home\/features\/solitaire\.js\?v=[^"]+"/);
@@ -46,14 +46,18 @@ const createVictoryHarness = async ({
       "const formatSevenSegmentCounter = (value) => String(value);",
       "const setSevenSegmentCounter = (element, text) => { element.text = text; };",
       "const solProjectEngineGame = () => { solState.moves = solGame.moves; };",
-      sourceBetween(source, "/**\n * The server derives the move count", "\n\nconst solCreateSlotMark"),
+      sourceBetween(
+        source,
+        "/**\n * The server derives the move count",
+        "\n\nconst solCreateSlotMark",
+      ),
       sourceBetween(source, "const solCheckWin =", "\n\nconst solPrefersReducedMotion"),
       "globalThis.checkWin = solCheckWin;",
       "globalThis.read = () => ({ calls, won: solState.won });",
       "globalThis.official = (metric) => { recorded.at(-1).onCanonicalMetric({ metric }); return { counter: solMoves.text, moves: solState.moves }; };",
       "globalThis.replaceBoard = () => { solGame = { moves: 99 }; };",
     ].join("\n"),
-    context
+    context,
   );
   return context;
 };
@@ -76,12 +80,12 @@ const createPresentationStageHarness = async () => {
       sourceBetween(
         source,
         "const solStagePresentationWin =",
-        "\n\n/** Deals once before first open"
+        "\n\n/** Deals once before first open",
       ),
       "globalThis.stage = solStagePresentationWin;",
       "globalThis.read = () => ({ boardReady: solBoardReady, calls, lastCardClick: solLastCardClick, state: solState });",
     ].join("\n"),
-    context
+    context,
   );
   return context;
 };
@@ -101,11 +105,7 @@ test("the production win transition records and presents a victory exactly once"
       "fireworks",
       "achievement",
       "video",
-      [
-        "record",
-        { game: "solitaire", type: "win", metric: 17 },
-        "session-1",
-      ],
+      ["record", { game: "solitaire", type: "win", metric: 17 }, "session-1"],
       ["activity", "gameWin", { game: "solitaire" }],
     ],
     won: true,

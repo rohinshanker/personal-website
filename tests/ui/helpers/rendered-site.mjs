@@ -61,7 +61,7 @@ export const readDeterministicSudokuWorkerSource = async () => {
 export const installDeterministicSudokuWorker = async (target) => {
   const source = await readDeterministicSudokuWorkerSource();
   await target.route(servedFile(SUDOKU_WORKER_PATH), (route) =>
-    route.fulfill({ contentType: "application/javascript", body: source })
+    route.fulfill({ contentType: "application/javascript", body: source }),
   );
 };
 
@@ -82,7 +82,7 @@ export const installDelayedSudokuGeneratorReplies = async (page, delayMs) => {
         "const deferredPost = self.postMessage.bind(self);\n" +
         `self.postMessage = (data) => setTimeout(() => deferredPost(data), ${delayMs});\n` +
         source,
-    })
+    }),
   );
 };
 
@@ -96,7 +96,7 @@ export const REVIEW_VIEWPORTS = Object.freeze([
 
 /** The four review sizes by name, for a spec that needs only one of them. */
 export const REVIEW_VIEWPORT = Object.freeze(
-  Object.fromEntries(REVIEW_VIEWPORTS.map((viewport) => [viewport.name, viewport]))
+  Object.fromEntries(REVIEW_VIEWPORTS.map((viewport) => [viewport.name, viewport])),
 );
 
 /**
@@ -120,7 +120,7 @@ const GAME_STATS_BACKEND_PATH = "scripts/home/game-stats-backend.js";
 
 const generatedBackendSource = await readFile(
   new URL(`../../../${GAME_STATS_BACKEND_PATH}`, import.meta.url),
-  "utf8"
+  "utf8",
 );
 
 /** The build version the generated config carries. */
@@ -143,23 +143,26 @@ export const PRODUCTION_BUILD_VERSION =
  */
 export const installGameStatsBackend = async (
   target,
-  { apiBaseUrl = "", buildVersion = PRODUCTION_BUILD_VERSION } = {}
+  { apiBaseUrl = "", buildVersion = PRODUCTION_BUILD_VERSION } = {},
 ) => {
   const source = generatedBackendSource
     .replace(/apiBaseUrl:\s*"[^"]*"/, `apiBaseUrl: ${JSON.stringify(apiBaseUrl)}`)
     .replace(/buildVersion:\s*"[^"]*"/, `buildVersion: ${JSON.stringify(buildVersion)}`);
   await target.route(servedFile(GAME_STATS_BACKEND_PATH), (route) =>
-    route.fulfill({ contentType: "application/javascript", body: source })
+    route.fulfill({ contentType: "application/javascript", body: source }),
   );
 };
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR42mNk+M/wHwAF/gL+q0g9QAAAAABJRU5ErkJggg==",
-  "base64"
+  "base64",
 );
 
 const stubVideo = await readFile(
-  new URL("../../../assets/modeling/fast-reverie-rnwy-apr2024/01-runway-video.mp4", import.meta.url)
+  new URL(
+    "../../../assets/modeling/fast-reverie-rnwy-apr2024/01-runway-video.mp4",
+    import.meta.url,
+  ),
 );
 
 /**
@@ -281,7 +284,7 @@ consonants
 
 /** The one download Home makes for profile names: the Sky generator's lists. */
 const SKY_NAME_GENERATOR_URL = new URL(
-  "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true"
+  "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true",
 );
 
 const sortedQuery = (url) => {
@@ -311,7 +314,7 @@ export const isSkyNameGeneratorRequest = (url) =>
  */
 export const installSkyNameGenerator = (target, definition = SKY_NAME_GENERATOR_DEFINITION) =>
   target.route(isSkyNameGeneratorRequest, (route) =>
-    route.fulfill({ body: definition, contentType: "text/plain" })
+    route.fulfill({ body: definition, contentType: "text/plain" }),
   );
 
 /**
@@ -333,7 +336,7 @@ export const installHermeticNetwork = (context) =>
     (route, request) => {
       const stub = remoteEmbedStub(request.url(), request.resourceType());
       return stub ? route.fulfill(stub) : route.abort("blockedbyclient");
-    }
+    },
   );
 
 /**
@@ -345,10 +348,10 @@ export const installHermeticNetwork = (context) =>
  */
 export const installStubbedModelingMedia = async (target) => {
   await target.route(servedPath(/^\/assets\/modeling\/.*\.(?:mp4|mov|webm)$/i), (route) =>
-    route.fulfill({ body: stubVideo, contentType: "video/mp4" })
+    route.fulfill({ body: stubVideo, contentType: "video/mp4" }),
   );
   await target.route(servedPath(/^\/assets\/modeling\/.*\.(?:jpe?g|png)$/i), (route) =>
-    route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" })
+    route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" }),
   );
 };
 
@@ -384,9 +387,7 @@ export const collectRuntimeDiagnostics = (context) => {
   context.on("requestfailed", (request) => {
     const errorText = request.failure()?.errorText ?? "unknown";
     if (errorText === PAGE_CANCELLED) return;
-    diagnostics.requestFailures.push(
-      `${request.method()} ${request.url()} (${errorText})`
-    );
+    diagnostics.requestFailures.push(`${request.method()} ${request.url()} (${errorText})`);
   });
   context.on("response", (response) => {
     if (response.status() < 400) return;
@@ -411,7 +412,7 @@ export const assertNoRuntimeDiagnostics = (diagnostics) => {
   ];
   if (reported.length) {
     throw new Error(
-      `The page reported ${reported.length} runtime problem(s):\n${reported.join("\n")}`
+      `The page reported ${reported.length} runtime problem(s):\n${reported.join("\n")}`,
     );
   }
 };
@@ -437,7 +438,7 @@ export const consumeDiagnostics = (diagnostics, expected) => {
       if (index < 0) {
         throw new Error(
           `Expected a ${channel} entry matching ${matcher}; the page reported ` +
-            `${entries.length ? entries.join(", ") : "none"}.`
+            `${entries.length ? entries.join(", ") : "none"}.`,
         );
       }
       entries.splice(index, 1);
@@ -467,7 +468,7 @@ export const settleFrames = (page, frames = 2) =>
           remaining > 0 ? requestAnimationFrame(() => step(remaining - 1)) : resolve();
         step(count);
       }),
-    frames
+    frames,
   );
 
 /**
@@ -489,12 +490,12 @@ export const settleRender = async (page) => {
           new Promise((resolve) => {
             image.addEventListener("load", resolve, { once: true });
             image.addEventListener("error", resolve, { once: true });
-          })
-      )
+          }),
+      ),
     );
   });
   await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
 };
 
@@ -569,12 +570,12 @@ export const openSudokuBoard = async (page) => {
   await page.waitForFunction(
     () => document.getElementById("sudoku-play")?.disabled === false,
     undefined,
-    { timeout: 20_000 }
+    { timeout: 20_000 },
   );
   await play.click();
   await win.locator(".sudoku-game-content").waitFor({ state: "visible" });
   await page.waitForFunction(
-    () => document.querySelectorAll("#sudoku-grid .sudoku-cell").length === 81
+    () => document.querySelectorAll("#sudoku-grid .sudoku-cell").length === 81,
   );
   await settleRender(page);
   return win;

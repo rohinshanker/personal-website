@@ -75,7 +75,7 @@ test("opening Modeling shows the new-tab prompt above the window at every review
       await expect(prompt(page)).toHaveAccessibleDescription(MESSAGE);
       await expect(prompt(page).locator(".random-alert-message img")).toHaveAttribute(
         "src",
-        "assets/app-icons/ico/accessibility_window_objs.ico"
+        "assets/app-icons/ico/accessibility_window_objs.ico",
       );
       await expect(yes(page)).toHaveAccessibleName("Yes");
       await expect(no(page)).toHaveAccessibleName("No");
@@ -104,7 +104,7 @@ test("Yes opens /modeling/ in a secure new tab and closes only the prompt", asyn
   expect(new URL(popup.url()).pathname).toBe("/modeling/");
   expect(await popup.evaluate(() => window.opener)).toBeNull();
   await expect(popup.getByRole("heading", { level: 1 })).toHaveText(
-    "Rohin Shanker Modeling Portfolio"
+    "Rohin Shanker Modeling Portfolio",
   );
   await popup.close();
 

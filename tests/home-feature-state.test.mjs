@@ -15,18 +15,24 @@ const declaration = (source, name) => {
 test("completion dismissal consumes the current deferred authentication once", async () => {
   const source = await readHomeScript("gameStats");
   const context = vm.createContext({ calls: 0 });
-  vm.runInContext(`
+  vm.runInContext(
+    `
     let gameStatsAuthenticationDeferredForCompletion = false;
     const requestGameStatsAdministratorAuthentication = () => calls += 1;
     ${declaration(source, "resumeGameStatsAuthenticationAfterCompletion")}
-  `, context);
+  `,
+    context,
+  );
   vm.runInContext("resumeGameStatsAuthenticationAfterCompletion();", context);
   assert.equal(context.calls, 0);
-  vm.runInContext(`
+  vm.runInContext(
+    `
     gameStatsAuthenticationDeferredForCompletion = true;
     resumeGameStatsAuthenticationAfterCompletion();
     resumeGameStatsAuthenticationAfterCompletion();
-  `, context);
+  `,
+    context,
+  );
   assert.equal(context.calls, 1);
   assert.equal(vm.runInContext("gameStatsAuthenticationDeferredForCompletion", context), false);
 });
@@ -44,13 +50,16 @@ test("event media watchers attach after feature windows have registered", async 
     clamped: [],
     clampRandomEventWindowToViewport: (target) => context.clamped.push(target),
   });
-  vm.runInContext(`
+  vm.runInContext(
+    `
     ${declaration(source, "watchRandomEventViewportMedia")}
     ${declaration(source, "bindRegisteredRandomEvents")}
-  `, context);
+  `,
+    context,
+  );
   context.windows.push(win);
   let bindingCalls = 0;
-  context.randomEventBindings.push(() => bindingCalls += 1);
+  context.randomEventBindings.push(() => (bindingCalls += 1));
   vm.runInContext("bindRegisteredRandomEvents();", context);
   assert.equal(bindingCalls, 1);
   assert.equal(context.randomEventBindings.length, 0);

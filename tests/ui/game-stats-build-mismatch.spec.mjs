@@ -1,6 +1,10 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { REVIEW_VIEWPORTS, consumeDiagnostics, installGameStatsBackend } from "./helpers/rendered-site.mjs";
+import {
+  REVIEW_VIEWPORTS,
+  consumeDiagnostics,
+  installGameStatsBackend,
+} from "./helpers/rendered-site.mjs";
 import {
   createIssuedGameResponder,
   issuedDescriptor,
@@ -28,11 +32,11 @@ const installGameStatsBridge = async (page) => {
     const configuredSource = source
       .replace(
         "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 60;",
-        "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 3;"
+        "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 3;",
       )
       .replace(
         "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 2000;",
-        "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 100;"
+        "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 100;",
       );
     const instrumentedSource = configuredSource.replace(
       /\n\}\)\(\);\s*$/,
@@ -47,7 +51,7 @@ window.__gameStatsBuildMismatchTest = Object.freeze({
     );
   },
 });
-})();`
+})();`,
     );
     return instrumentedSource;
   });
@@ -97,7 +101,7 @@ const installApi = async (page) => {
             id: "session-build-rollout-issued",
             initial: nearWinSolitaireInitial(),
           }),
-          "solitaire"
+          "solitaire",
         );
         await route.fulfill({
           status: 201,
@@ -148,7 +152,6 @@ const installApi = async (page) => {
     });
   });
 
-
   // Registered after the catch-all above, so it answers first for the timing
   // and finish paths that follow a successfully issued board.
   await page.route(`${API_BASE_URL}/**`, async (route) => {
@@ -174,11 +177,11 @@ const preparePage = async (page) => {
         sessionStorage.setItem("gameStatsBuildMismatchTestReady", "true");
       }
     },
-    { profileKey: PROFILE_STORAGE_KEY, savedProfile: profile }
+    { profileKey: PROFILE_STORAGE_KEY, savedProfile: profile },
   );
   await page.goto("/home.html");
   const sessionKey = await page.evaluate(() =>
-    window.__gameStatsBuildMismatchTest.startSolitaireSession()
+    window.__gameStatsBuildMismatchTest.startSolitaireSession(),
   );
 
   const aboutClose = page.locator('#about-window [data-close="about"]');
@@ -215,7 +218,7 @@ for (const viewport of viewports) {
             bounds.right <= window.innerWidth &&
             bounds.bottom <= window.innerHeight
           );
-        })
+        }),
       )
       .toBe(true);
     await expect(status).toHaveText(releaseWaitingMessage);
@@ -245,14 +248,14 @@ for (const viewport of viewports) {
       }),
       {
         queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
-      }
+      },
     );
     expect(storedBeforeWin.queue).toEqual([]);
     expect(storedBeforeWin.wins).toBe(0);
 
     await page.evaluate(
       (key) => window.__gameStatsBuildMismatchTest.recordSolitaireWin(key),
-      sessionKey
+      sessionKey,
     );
     await expect(status).toHaveText("Global stats are up to date.");
     await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
@@ -262,11 +265,9 @@ for (const viewport of viewports) {
     // the board itself asks for. The first attempt of each was refused for an
     // incompatible build and retried once the rollout released.
     const legacySessions = api.sessionRequests.filter(
-      ({ resultProtocol }) => resultProtocol === undefined
+      ({ resultProtocol }) => resultProtocol === undefined,
     );
-    const issuedSessions = api.sessionRequests.filter(
-      ({ resultProtocol }) => resultProtocol === 2
-    );
+    const issuedSessions = api.sessionRequests.filter(({ resultProtocol }) => resultProtocol === 2);
     expect(legacySessions).toEqual([
       { game: "solitaire", config: {}, buildVersion: BUILD_VERSION },
       { game: "solitaire", config: {}, buildVersion: BUILD_VERSION },
@@ -299,7 +300,7 @@ for (const viewport of viewports) {
       {
         queueKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
         statsKey: GAME_STATS_STORAGE_KEY,
-      }
+      },
     );
     expect(stored.queue).toEqual([]);
     expect(stored.stats.totals.solitaire.wins).toBe(1);
@@ -307,8 +308,8 @@ for (const viewport of viewports) {
     await expect
       .poll(() =>
         statsWindow.evaluate(
-          (element) => element.getBoundingClientRect().right <= window.innerWidth
-        )
+          (element) => element.getBoundingClientRect().right <= window.innerWidth,
+        ),
       )
       .toBe(true);
     const layout = await statsWindow.evaluate((element) => ({
@@ -338,6 +339,5 @@ for (const viewport of viewports) {
       ],
       errorResponses: [`409 ${API_BASE_URL}/sessions`],
     });
-
   });
 }

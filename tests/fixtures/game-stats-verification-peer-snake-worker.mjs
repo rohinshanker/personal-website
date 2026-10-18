@@ -19,25 +19,25 @@ export default {
     if (replayStages) {
       response.headers.set(
         "X-Test-Replay-Preparation-Wall-Ms",
-        String(replayStages.preparationWallMs)
+        String(replayStages.preparationWallMs),
       );
       response.headers.set("X-Test-Replay-Wall-Ms", String(replayStages.replayWallMs));
       response.headers.set("X-Test-Replay-Clone-Wall-Ms", String(replayStages.cloneWallMs));
       response.headers.set(
         "X-Test-Replay-Transition-Wall-Ms",
-        String(replayStages.transitionWallMs)
+        String(replayStages.transitionWallMs),
       );
       response.headers.set(
         "X-Test-Replay-Input-Canonical-Wall-Ms",
-        String(replayStages.inputCanonicalWallMs)
+        String(replayStages.inputCanonicalWallMs),
       );
       response.headers.set(
         "X-Test-Replay-Serialization-Wall-Ms",
-        String(replayStages.serializationWallMs)
+        String(replayStages.serializationWallMs),
       );
       response.headers.set(
         "X-Test-Replay-Synchronous-Wall-Ms",
-        String(replayStages.synchronousWallMs)
+        String(replayStages.synchronousWallMs),
       );
     }
     return response;

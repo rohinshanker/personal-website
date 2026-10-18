@@ -2,17 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import {
-  readHomeScript,
-  readHomeScriptText,
-} from "./helpers/home-scripts.mjs";
+import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
 
 const readResetFunction = async () => {
   const source = await readHomeScriptText("gameStats", "windows", "snake", "sudoku");
   const match = source.match(
-    /const resetGameProgressLocalData = \(\) => \{([\s\S]*?)\n\};\n\nconst renderGameStatsWindow/
+    /const resetGameProgressLocalData = \(\) => \{([\s\S]*?)\n\};\n\nconst renderGameStatsWindow/,
   );
   assert.ok(match, "resetGameProgressLocalData should remain a focused function");
   return { source, resetSource: match[1] };
@@ -28,12 +25,12 @@ test("Game Progress keeps a saved profile immutable and gives new profiles ten r
   assert.match(home, /id="game-profile-reroll-count" aria-live="polite">10 left</);
   assert.match(
     source,
-    /const saveGameStatsProfile = \(profile\) => \{\n  if \(gameStatsProfile\) return gameStatsProfile;/
+    /const saveGameStatsProfile = \(profile\) => \{\n  if \(gameStatsProfile\) return gameStatsProfile;/,
   );
   assert.match(source, /const createGameProgressProfile = async \(\) => \{/);
   assert.match(
     source,
-    /let profile = gameStatsProfile;\n  if \(\n    !profile &&\n    \(event\.type === "win" \|\|[\s\S]*?gameStatsEventQualifiesForLeaderboard\(event\)\)/
+    /let profile = gameStatsProfile;\n  if \(\n    !profile &&\n    \(event\.type === "win" \|\|[\s\S]*?gameStatsEventQualifiesForLeaderboard\(event\)\)/,
   );
   assert.match(source, /event\.profile = normalizeGameStatsEventProfile\(profile\);/);
 });
@@ -51,22 +48,19 @@ test("Game Progress changes only the icon of a saved profile", async () => {
   assert.match(dom, /const gameProfileNameCredit = byId\("game-profile-name-credit"\);/);
   assert.match(
     source,
-    /const saveGameStatsProfileIcon = \(icon\) => \{[\s\S]*?\{ \.\.\.gameStatsProfile, icon \}/
+    /const saveGameStatsProfileIcon = \(icon\) => \{[\s\S]*?\{ \.\.\.gameStatsProfile, icon \}/,
   );
   assert.match(
     source,
-    /const openGameProgressProfileIconPicker = \(\) => \{[\s\S]*?gameStatsDraftProfile = \{ \.\.\.gameStatsProfile \};[\s\S]*?setGameStatsProfileEditorMode\(GAME_STATS_PROFILE_EDITOR_MODES\.icon\);/
+    /const openGameProgressProfileIconPicker = \(\) => \{[\s\S]*?gameStatsDraftProfile = \{ \.\.\.gameStatsProfile \};[\s\S]*?setGameStatsProfileEditorMode\(GAME_STATS_PROFILE_EDITOR_MODES\.icon\);/,
   );
   assert.match(source, /gameProfileNameControls\.hidden = iconOnly;/);
   assert.match(source, /gameProfileNameCredit\.hidden = iconOnly;/);
   assert.match(source, /createButton\.textContent = "Change Icon";/);
+  assert.match(source, /if \(gameStatsProfile\) \{[\s\S]*?openGameProgressProfileIconPicker\(\);/);
   assert.match(
     source,
-    /if \(gameStatsProfile\) \{[\s\S]*?openGameProgressProfileIconPicker\(\);/
-  );
-  assert.match(
-    source,
-    /!isGameStatsProfileIconEditor\(\) &&[\s\S]*?gameStatsDraftProfile\.name === GAME_STATS_API_ERROR_NAME/
+    /!isGameStatsProfileIconEditor\(\) &&[\s\S]*?gameStatsDraftProfile\.name === GAME_STATS_API_ERROR_NAME/,
   );
 });
 
@@ -79,12 +73,12 @@ test("Game Progress reset clears only local aggregate, profile, and Snake record
   // Each game wipes its own records; the reset only asks them to.
   assert.match(
     resetSource,
-    /gameStatsLocalSources\.forEach\(\(source\) => source\.resetLocalData\?\.\(\)\);/
+    /gameStatsLocalSources\.forEach\(\(source\) => source\.resetLocalData\?\.\(\)\);/,
   );
   const snake = await readHomeScript("snake");
   assert.match(
     snake,
-    /registerGameStatsLocalSource\("snake", \{[\s\S]*?snakeState\.highScores = \{\};/
+    /registerGameStatsLocalSource\("snake", \{[\s\S]*?snakeState\.highScores = \{\};/,
   );
   assert.match(snake, /removeStorage\(\(\) => localStorage, SNAKE_HIGH_SCORE_KEY\);/);
   assert.match(resetSource, /Published and queued leaderboard results remain available/);
@@ -110,35 +104,33 @@ test("Game Progress renders lifetime totals for its profile and every supported 
   assert.match(source, /const gameProgressResetLocal = document\.getElementById\(/);
   assert.match(
     source,
-    /const getGameProgressPlayerTotals = \(\) =>\s*gameStatsGlobalPlayerTotalsAvailable\s*\? gameStatsGlobalState\.playerTotals\s*: gameStatsLocalState\.totals;/
+    /const getGameProgressPlayerTotals = \(\) =>\s*gameStatsGlobalPlayerTotalsAvailable\s*\? gameStatsGlobalState\.playerTotals\s*: gameStatsLocalState\.totals;/,
   );
   for (const renderFunction of ["Minesweeper", "Solitaire", "Snake", "Sudoku"]) {
     const match = source.match(
-      new RegExp(
-        `const renderGameProgress${renderFunction} = \\(\\) => \\{([\\s\\S]*?)\\n\\};`
-      )
+      new RegExp(`const renderGameProgress${renderFunction} = \\(\\) => \\{([\\s\\S]*?)\\n\\};`),
     );
     assert.ok(match, `renderGameProgress${renderFunction} should remain focused`);
     assert.match(match[1], /const playerTotals = getGameProgressPlayerTotals\(\);/);
   }
   assert.match(
     source,
-    /registerWindowLifecycle\("game-progress", \{[\s\S]*?onOpen: \(\) => \{\s*renderGameProgressWindow\(\);\s*void syncQueuedGameStats\(\);/
+    /registerWindowLifecycle\("game-progress", \{[\s\S]*?onOpen: \(\) => \{\s*renderGameProgressWindow\(\);\s*void syncQueuedGameStats\(\);/,
   );
   assert.match(
     source,
-    /restartWindowAnimation\(win, "is-opening"\);\s*windowLifecycle\(appId\)\.onOpened\?\.\(win\);/
+    /restartWindowAnimation\(win, "is-opening"\);\s*windowLifecycle\(appId\)\.onOpened\?\.\(win\);/,
   );
   assert.match(
     source,
-    /onOpened: \(win\) => scheduleGameStatsWindowViewportClamp\(win\),\s*onTabChange: \(win\) => scheduleGameStatsWindowViewportClamp\(win\),/
+    /onOpened: \(win\) => scheduleGameStatsWindowViewportClamp\(win\),\s*onTabChange: \(win\) => scheduleGameStatsWindowViewportClamp\(win\),/,
   );
 });
 
 test("Snake Game Progress keeps each board size's games and high score together", async () => {
   const source = await readHomeScriptText("gameStats", "windows", "snake", "sudoku");
   const match = source.match(
-    /const renderGameProgressSnake = \(\) => \{([\s\S]*?)\n\};\n\nconst renderGameProgressSudoku/
+    /const renderGameProgressSnake = \(\) => \{([\s\S]*?)\n\};\n\nconst renderGameProgressSudoku/,
   );
 
   assert.ok(match, "renderGameProgressSnake should remain a focused function");
@@ -149,7 +141,7 @@ test("Snake Game Progress keeps each board size's games and high score together"
   assert.match(snakeProgressSource, /readGameStatsLocalRecord\("snake", size\)/);
   assert.match(
     await readHomeScript("snake"),
-    /readLocalRecord: \(size\) => snakeState\.highScores\[size\]/
+    /readLocalRecord: \(size\) => snakeState\.highScores\[size\]/,
   );
   assert.match(snakeProgressSource, /content\.replaceChildren\(totalGames, boardStats\);/);
 });
@@ -157,7 +149,7 @@ test("Snake Game Progress keeps each board size's games and high score together"
 test("Sudoku Game Progress keeps compact win columns and a local no-hints best time", async () => {
   const source = await readHomeScriptText("gameStats", "windows", "snake", "sudoku");
   const match = source.match(
-    /const renderGameProgressSudoku = \(\) => \{([\s\S]*?)\n\};\n\nconst renderGameProgressWindow/
+    /const renderGameProgressSudoku = \(\) => \{([\s\S]*?)\n\};\n\nconst renderGameProgressWindow/,
   );
 
   assert.ok(match, "renderGameProgressSudoku should remain a focused function");
@@ -172,6 +164,9 @@ test("Sudoku Game Progress keeps compact win columns and a local no-hints best t
   assert.match(source, /const createGameStatsEmptySudokuBestTimes/);
   assert.match(source, /totals\.sudoku\?\.bestTimes\?\.\[difficulty\]/);
   assert.match(source, /value === null \|\| value === undefined \|\| value === ""/);
-  assert.match(source, /currentBestTime === null \? nextBestTime : Math\.min\(currentBestTime, nextBestTime\)/);
+  assert.match(
+    source,
+    /currentBestTime === null \? nextBestTime : Math\.min\(currentBestTime, nextBestTime\)/,
+  );
   assert.match(source, /sudokuNoHintsSeconds:\s+hintBucket === "noHints"/);
 });

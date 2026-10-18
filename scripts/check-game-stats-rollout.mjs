@@ -25,14 +25,8 @@ import { parseJsonc, stripJsoncComments } from "./lib/jsonc.mjs";
  * here renews them.
  */
 
-export const WRANGLER_CONFIG_URL = new URL(
-  "../workers/game-stats/wrangler.jsonc",
-  import.meta.url
-);
-export const LOCAL_BACKEND_CONFIG_URL = new URL(
-  "home/game-stats-backend.js",
-  import.meta.url
-);
+export const WRANGLER_CONFIG_URL = new URL("../workers/game-stats/wrangler.jsonc", import.meta.url);
+export const LOCAL_BACKEND_CONFIG_URL = new URL("home/game-stats-backend.js", import.meta.url);
 export const LEGACY_CUTOFF_VAR_NAME = "LEGACY_RESULT_ISSUANCE_CUTOFF";
 
 /** A published client that omits the generated field predates verified results. */
@@ -45,8 +39,7 @@ export const EXAMPLE_LEGACY_CUTOFF = "2026-11-01T00:00:00Z";
  * An explicit UTC instant, so a deadline a deployer writes by hand cannot be
  * read as a local time. The Worker compares the same value against `Date.now()`.
  */
-const UTC_DEADLINE_PATTERN =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?Z$/;
+const UTC_DEADLINE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?Z$/;
 
 /**
  * `Date.parse` rolls an out-of-range field forward, so `2026-02-31T00:00:00Z`
@@ -59,8 +52,7 @@ const parseUtcDeadline = (deadline) => {
   const [, year, month, day, hour, minute, second, millisecond = ""] = match;
   const deadlineMs = Date.parse(deadline);
   const canonical =
-    `${year}-${month}-${day}T${hour}:${minute}:${second}.` +
-    `${millisecond.padEnd(3, "0")}Z`;
+    `${year}-${month}-${day}T${hour}:${minute}:${second}.` + `${millisecond.padEnd(3, "0")}Z`;
   if (!Number.isFinite(deadlineMs) || new Date(deadlineMs).toISOString() !== canonical) {
     return null;
   }
@@ -87,11 +79,7 @@ const GENERATED_OBJECT_PATTERN =
 const GENERATED_MEMBER_PATTERN =
   /^\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*:\s*("(?:[^"\\]|\\.)*"|\d+)\s*(?:,|(?=$))/;
 
-const GENERATED_MEMBER_NAMES = Object.freeze([
-  "apiBaseUrl",
-  "buildVersion",
-  "resultProtocol",
-]);
+const GENERATED_MEMBER_NAMES = Object.freeze(["apiBaseUrl", "buildVersion", "resultProtocol"]);
 
 /**
  * Parses the generated object into its declared members. Anything outside the
@@ -100,17 +88,13 @@ const GENERATED_MEMBER_NAMES = Object.freeze([
  */
 export const parseGeneratedBackendMembers = (source) => {
   if (typeof source !== "string") {
-    throw new TypeError(
-      "Generated game stats backend config source must be a string"
-    );
+    throw new TypeError("Generated game stats backend config source must be a string");
   }
-  const body = GENERATED_OBJECT_PATTERN.exec(
-    stripJsoncComments(source).trim()
-  )?.[1];
+  const body = GENERATED_OBJECT_PATTERN.exec(stripJsoncComments(source).trim())?.[1];
   if (body === undefined) {
     throw new Error(
       "Generated game stats backend config must be one frozen " +
-        "window.rohinGameStatsBackend object literal"
+        "window.rohinGameStatsBackend object literal",
     );
   }
 
@@ -121,19 +105,15 @@ export const parseGeneratedBackendMembers = (source) => {
     if (!member) {
       throw new Error(
         "Generated game stats backend config has a member that is not a " +
-          "plain string or integer field"
+          "plain string or integer field",
       );
     }
     const [matched, name, value] = member;
     if (!GENERATED_MEMBER_NAMES.includes(name)) {
-      throw new Error(
-        `Generated game stats backend config declares unknown member ${name}`
-      );
+      throw new Error(`Generated game stats backend config declares unknown member ${name}`);
     }
     if (members.has(name)) {
-      throw new Error(
-        `Generated game stats backend config declares ${name} more than once`
-      );
+      throw new Error(`Generated game stats backend config declares ${name} more than once`);
     }
     members.set(name, value);
     remaining = remaining.slice(matched.length);
@@ -143,8 +123,7 @@ export const parseGeneratedBackendMembers = (source) => {
 
 let rolloutRequestSequence = 0;
 
-const defaultCreateCacheBust = () =>
-  `${Date.now()}-${process.pid}-${++rolloutRequestSequence}`;
+const defaultCreateCacheBust = () => `${Date.now()}-${process.pid}-${++rolloutRequestSequence}`;
 
 /**
  * Returns the declared protocol, or `undefined` when the field is absent.
@@ -156,14 +135,12 @@ export const readGeneratedResultProtocol = (source) => {
   const declared = parseGeneratedBackendMembers(source).get("resultProtocol");
   if (declared === undefined) return undefined;
   if (!/^\d+$/.test(declared)) {
-    throw new Error(
-      "Generated game stats backend config resultProtocol must be a plain integer"
-    );
+    throw new Error("Generated game stats backend config resultProtocol must be a plain integer");
   }
   const resultProtocol = Number(declared);
   if (!SUPPORTED_RESULT_PROTOCOLS.includes(resultProtocol)) {
     throw new Error(
-      `Generated game stats backend config declares unsupported resultProtocol ${resultProtocol}`
+      `Generated game stats backend config declares unsupported resultProtocol ${resultProtocol}`,
     );
   }
   return resultProtocol;
@@ -203,14 +180,12 @@ export const readLegacyIssuanceCutoff = async ({
   ) {
     throw new Error(
       `Wrangler configuration must declare vars.${LEGACY_CUTOFF_VAR_NAME}, ` +
-        `empty for the closed default or a UTC deadline in the form ${EXAMPLE_LEGACY_CUTOFF}`
+        `empty for the closed default or a UTC deadline in the form ${EXAMPLE_LEGACY_CUTOFF}`,
     );
   }
   const declared = vars[LEGACY_CUTOFF_VAR_NAME];
   if (typeof declared !== "string") {
-    throw new Error(
-      `Wrangler configuration ${LEGACY_CUTOFF_VAR_NAME} must be a string`
-    );
+    throw new Error(`Wrangler configuration ${LEGACY_CUTOFF_VAR_NAME} must be a string`);
   }
 
   // Blank reads as the closed default because the Worker's own
@@ -225,7 +200,7 @@ export const readLegacyIssuanceCutoff = async ({
     throw new Error(
       `Wrangler configuration ${LEGACY_CUTOFF_VAR_NAME} must be empty or a real UTC ` +
         `calendar instant in the form ${EXAMPLE_LEGACY_CUTOFF}, written exactly as ` +
-        `the Worker parses it, with no surrounding whitespace`
+        `the Worker parses it, with no surrounding whitespace`,
     );
   }
   return Object.freeze({ deadline: declared, deadlineMs });
@@ -272,9 +247,7 @@ export const fetchLiveGameStatsClientProtocol = async ({
     timeoutLabel: "Rollout preflight timeout",
   });
   if (typeof createCacheBust !== "function") {
-    throw new TypeError(
-      "A cache-bust factory is required for the rollout preflight"
-    );
+    throw new TypeError("A cache-bust factory is required for the rollout preflight");
   }
 
   let stableUrl;
@@ -289,9 +262,7 @@ export const fetchLiveGameStatsClientProtocol = async ({
     throw new Error("Live game stats backend config URL must use HTTP or HTTPS");
   }
   if (stableUrl.username || stableUrl.password || stableUrl.hash) {
-    throw new Error(
-      "Live game stats backend config URL cannot contain credentials or a fragment"
-    );
+    throw new Error("Live game stats backend config URL cannot contain credentials or a fragment");
   }
 
   const requestUrl = new URL(stableUrl);
@@ -313,8 +284,7 @@ export const fetchLiveGameStatsClientProtocol = async ({
     messages: {
       requestFailed: `Unable to fetch the live game stats backend config at ${stableUrl}`,
       invalidResponse: "Live game stats backend config returned an invalid response",
-      statusFailed: (status) =>
-        `Live game stats backend config failed with status ${status}`,
+      statusFailed: (status) => `Live game stats backend config failed with status ${status}`,
       bodyUnreadable: "Unable to read the live game stats backend config",
     },
   });
@@ -365,13 +335,13 @@ export const checkGameStatsRollout = async ({
   if (localResultProtocol === undefined) {
     throw new Error(
       "Generated game stats backend config does not declare resultProtocol. " +
-        "Run: node scripts/update-game-integrity.mjs"
+        "Run: node scripts/update-game-integrity.mjs",
     );
   }
 
   const legacyIssuance = resolveLegacyIssuancePhase(
     await readLegacyIssuanceCutoff({ configUrl: wranglerConfigUrl, readFileImpl }),
-    Number(nowImpl())
+    Number(nowImpl()),
   );
   const live = await fetchLiveProtocolImpl({
     ...(liveConfigUrl ? { configUrl: liveConfigUrl } : {}),
@@ -392,7 +362,7 @@ export const checkGameStatsRollout = async ({
         `for the compatibility window. New legacy issuance is ` +
         `${describeLegacyIssuance(legacyIssuance)}. Set vars.${LEGACY_CUTOFF_VAR_NAME} ` +
         `in workers/game-stats/wrangler.jsonc to a future UTC deadline, in the form ` +
-        `${EXAMPLE_LEGACY_CUTOFF}, then deploy again.`
+        `${EXAMPLE_LEGACY_CUTOFF}, then deploy again.`,
     );
   }
   return Object.freeze({
@@ -412,7 +382,7 @@ export const runGameStatsRolloutCheck = async ({
     writeOutput(
       `Verified game stats rollout preflight: published client resultProtocol ` +
         `${result.liveResultProtocol}, this build ${result.localResultProtocol}, ` +
-        `new legacy issuance ${describeLegacyIssuance(result.legacyIssuance)}.`
+        `new legacy issuance ${describeLegacyIssuance(result.legacyIssuance)}.`,
     );
     return 0;
   } catch (error) {

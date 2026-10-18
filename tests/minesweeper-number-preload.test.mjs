@@ -12,7 +12,7 @@ test("the production preload function requests all eight number assets with rete
   const source = await readHomeScript("minesweeper");
   assert.match(
     source,
-    /registerWindowLifecycle\("minesweeper", \{\s*beforeOpen: \(\) => \{\s*void preloadMinesweeperNumberAssets\(\);/
+    /registerWindowLifecycle\("minesweeper", \{\s*beforeOpen: \(\) => \{\s*void preloadMinesweeperNumberAssets\(\);/,
   );
   const context = vm.createContext({});
   vm.runInContext(
@@ -24,18 +24,18 @@ test("the production preload function requests all eight number assets with rete
       "globalThis.preload = preloadMinesweeperNumberAssets;",
       "globalThis.readCalls = () => calls;",
     ].join("\n"),
-    context
+    context,
   );
 
   const loaded = await context.preload();
   const expected = Array.from(
     { length: 8 },
-    (_, index) => `assets/minesweeper_assets/cell_numbers/cell_${index + 1}.png`
+    (_, index) => `assets/minesweeper_assets/cell_numbers/cell_${index + 1}.png`,
   );
   assert.deepEqual(plain(loaded), expected);
   assert.deepEqual(
     plain(context.readCalls()),
-    expected.map((src) => ({ src, options: { retainImagePreload: true } }))
+    expected.map((src) => ({ src, options: { retainImagePreload: true } })),
   );
   await Promise.all(expected.map((path) => access(new URL(path, root))));
 });

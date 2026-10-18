@@ -132,13 +132,16 @@ const isSkyGrammarName = (name) => {
   if (!/^[A-Z][a-z]{3,7}$/.test(name)) return false;
   const isVowel = (character) => "aeiou".includes(character);
   return [...name.toLowerCase()].every(
-    (character, index, letters) => index === 0 || isVowel(character) !== isVowel(letters[index - 1])
+    (character, index, letters) =>
+      index === 0 || isVowel(character) !== isVowel(letters[index - 1]),
   );
 };
 
 test("the profile name generator uses the live Sky COTL grammar and caches it per page", async () => {
   const source = await readHomeScript("gameStats");
-  const { calls, runtime } = createNameGeneratorRuntime(source, [textResponse(skyGeneratorDefinition)]);
+  const { calls, runtime } = createNameGeneratorRuntime(source, [
+    textResponse(skyGeneratorDefinition),
+  ]);
 
   assert.equal(isSkyGrammarName(await runtime.fetchGeneratedName()), true);
   assert.equal(isSkyGrammarName(await runtime.fetchGeneratedName()), true);
@@ -146,9 +149,10 @@ test("the profile name generator uses the live Sky COTL grammar and caches it pe
   assert.equal(suggestions.length, 5);
   assert.equal(new Set(suggestions).size, 5);
   suggestions.forEach((name) => assert.equal(isSkyGrammarName(name), true));
-  assert.deepEqual(calls.map(({ url }) => url), [
-    "https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true",
-  ]);
+  assert.deepEqual(
+    calls.map(({ url }) => url),
+    ["https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true"],
+  );
   for (const { options } of calls) {
     assert.equal(options.cache, "no-store");
     assert.equal(options.credentials, "omit");
@@ -187,7 +191,7 @@ test("a failed roll keeps API Error inside the name field and allows saving", as
     "const GAME_STATS_MAX_NAME_REROLLS = 10;",
     "const GAME_STATS_NAME_ROLL_COOLDOWN_MS = 3000;",
     "const GAME_STATS_NAME_SUGGESTION_COUNT = 5;",
-    "let gameStatsDraftProfile = { name: \"\", rerollCount: 0 };",
+    'let gameStatsDraftProfile = { name: "", rerollCount: 0 };',
     "let gameStatsNameRollInFlight = false;",
     "let gameStatsNameRollId = 0;",
     "let gameStatsNameRollCooldownEndsAt = 0;",
@@ -196,14 +200,14 @@ test("a failed roll keeps API Error inside the name field and allows saving", as
     "let gameStatsNameSuggestionsOpen = false;",
     "let gameStatsNameSuggestionActiveIndex = -1;",
     "const isGameStatsProfileIconEditor = () => false;",
-    "const gameProfileName = { value: \"\", removeAttribute: () => {}, setAttribute: () => {}, focus: () => {} };",
+    'const gameProfileName = { value: "", removeAttribute: () => {}, setAttribute: () => {}, focus: () => {} };',
     "const gameProfileNameToggle = { disabled: false, setAttribute: () => {} };",
     "const gameProfileNameOptions = { classList: { toggle: () => {} }, setAttribute: () => {}, querySelectorAll: () => [], replaceChildren: () => {}, append: () => {} };",
     "const gameProfileReroll = { disabled: false, setAttribute: () => {} };",
-    "const gameProfileRerollLabel = { textContent: \"\" };",
+    'const gameProfileRerollLabel = { textContent: "" };',
     "const gameProfileSave = { disabled: true };",
-    "const gameProfileRerollCount = { textContent: \"\" };",
-    "const fetchGameStatsNameSuggestions = async () => { throw new Error(\"network unavailable\"); };",
+    'const gameProfileRerollCount = { textContent: "" };',
+    'const fetchGameStatsNameSuggestions = async () => { throw new Error("network unavailable"); };',
     getProfileRollStateSource(source),
     "globalThis.rollName = rollGameStatsDraftName;",
     "globalThis.profileState = () => ({ name: gameStatsDraftProfile.name, output: gameProfileName.value, saveDisabled: gameProfileSave.disabled, rerollCount: gameProfileRerollCount.textContent });",
@@ -251,11 +255,11 @@ test("icon selection replaces API Error only and keeps successful names unchange
   };
   const declarations = [
     'const GAME_STATS_API_ERROR_NAME = "API Error";',
-    "const GAME_STATS_ICON_MANIFEST = [{ filename: \"address_book_user.ico\", src: \"assets/app-icons/ico/address_book_user.ico\" }, { filename: \"Roland_GS.ico\", src: \"assets/app-icons/ico/Roland_GS.ico\" }];",
-    "let gameStatsDraftProfile = { name: \"API Error\", icon: \"\" };",
+    'const GAME_STATS_ICON_MANIFEST = [{ filename: "address_book_user.ico", src: "assets/app-icons/ico/address_book_user.ico" }, { filename: "Roland_GS.ico", src: "assets/app-icons/ico/Roland_GS.ico" }];',
+    'let gameStatsDraftProfile = { name: "API Error", icon: "" };',
     "let iconEditorOpen = false;",
     "const isGameStatsProfileIconEditor = () => iconEditorOpen;",
-    "const gameProfileIconSearch = { value: \"\" };",
+    'const gameProfileIconSearch = { value: "" };',
     "const gameProfileIconGallery = { children: [], replaceCount: 0, scrollTop: 0, replaceChildren() { this.children = []; this.replaceCount += 1; this.scrollTop = 0; }, append(child) { this.children.push(child); }, querySelectorAll() { return this.children; } };",
     "let profileStateUpdates = 0;",
     "const updateGameProfileRerollState = () => { profileStateUpdates += 1; };",
@@ -333,13 +337,13 @@ test("a user reroll has a fixed three-second cooldown and blocks duplicate fetch
     },
   };
   const declarations = [
-    "const GAME_STATS_API_ERROR_NAME = \"API Error\";",
+    'const GAME_STATS_API_ERROR_NAME = "API Error";',
     "const GAME_STATS_MAX_NAME_REROLLS = 10;",
     "const GAME_STATS_NAME_ROLL_COOLDOWN_MS = 3000;",
     "const GAME_STATS_NAME_SUGGESTION_COUNT = 5;",
     "let gameStatsNameRollCooldownEndsAt = 0;",
     "let gameStatsNameRollCooldownTimer = null;",
-    "let gameStatsDraftProfile = { name: \"\", rerollCount: 0 };",
+    'let gameStatsDraftProfile = { name: "", rerollCount: 0 };',
     "let gameStatsNameRollInFlight = false;",
     "let gameStatsNameRollId = 0;",
     "let gameStatsDraftNameSuggestions = [];",
@@ -347,14 +351,14 @@ test("a user reroll has a fixed three-second cooldown and blocks duplicate fetch
     "let gameStatsNameSuggestionActiveIndex = -1;",
     "const isGameStatsProfileIconEditor = () => false;",
     "let fetchCount = 0;",
-    "const gameProfileName = { value: \"\", removeAttribute: () => {}, setAttribute: () => {}, focus: () => {} };",
+    'const gameProfileName = { value: "", removeAttribute: () => {}, setAttribute: () => {}, focus: () => {} };',
     "const gameProfileNameToggle = { disabled: false, setAttribute: () => {} };",
     "const gameProfileNameOptions = { classList: { toggle: () => {} }, setAttribute: () => {}, querySelectorAll: () => [], replaceChildren: () => {}, append: () => {} };",
     "const gameProfileReroll = { disabled: false, setAttribute: () => {} };",
-    "const gameProfileRerollLabel = { textContent: \"\" };",
+    'const gameProfileRerollLabel = { textContent: "" };',
     "const gameProfileSave = { disabled: false };",
-    "const gameProfileRerollCount = { textContent: \"\" };",
-    "const fetchGameStatsNameSuggestions = async () => { fetchCount += 1; return [\"Rolan\", \"Sera\", \"Tovin\", \"Ayla\", \"Nemi\"]; };",
+    'const gameProfileRerollCount = { textContent: "" };',
+    'const fetchGameStatsNameSuggestions = async () => { fetchCount += 1; return ["Rolan", "Sera", "Tovin", "Ayla", "Nemi"]; };',
     getProfileRollStateSource(source),
     "globalThis.getCooldownSeconds = getGameStatsNameRollCooldownSeconds;",
     "globalThis.rollName = rollGameStatsDraftName;",
@@ -397,28 +401,28 @@ test("name suggestions preserve the selected favorite while replacing the five-c
     },
   };
   const declarations = [
-    "const GAME_STATS_API_ERROR_NAME = \"API Error\";",
+    'const GAME_STATS_API_ERROR_NAME = "API Error";',
     "const GAME_STATS_MAX_NAME_REROLLS = 10;",
     "const GAME_STATS_NAME_ROLL_COOLDOWN_MS = 3000;",
     "const GAME_STATS_NAME_SUGGESTION_COUNT = 5;",
     "let gameStatsNameRollCooldownEndsAt = 0;",
     "let gameStatsNameRollCooldownTimer = null;",
-    "let gameStatsDraftProfile = { name: \"\", rerollCount: 0 };",
+    'let gameStatsDraftProfile = { name: "", rerollCount: 0 };',
     "let gameStatsNameRollInFlight = false;",
     "let gameStatsNameRollId = 0;",
     "let gameStatsDraftNameSuggestions = [];",
     "let gameStatsNameSuggestionsOpen = false;",
     "let gameStatsNameSuggestionActiveIndex = -1;",
     "const isGameStatsProfileIconEditor = () => false;",
-    "const gameProfileName = { value: \"\", removeAttribute: () => {}, setAttribute: () => {}, focus: () => {} };",
+    'const gameProfileName = { value: "", removeAttribute: () => {}, setAttribute: () => {}, focus: () => {} };',
     "const gameProfileNameToggle = { disabled: false, setAttribute: () => {} };",
     "const gameProfileNameOptions = { children: [], classList: { toggle: () => {} }, setAttribute: () => {}, querySelectorAll() { return this.children; }, replaceChildren() { this.children = []; }, append(child) { this.children.push(child); } };",
     "const gameProfileReroll = { disabled: false, setAttribute: () => {} };",
-    "const gameProfileRerollLabel = { textContent: \"\" };",
+    'const gameProfileRerollLabel = { textContent: "" };',
     "const gameProfileSave = { disabled: false };",
-    "const gameProfileRerollCount = { textContent: \"\" };",
-    "const batches = [[\"Ayla\", \"Bryn\", \"Cora\", \"Dara\", \"Eryn\"], [\"Fawn\", \"Galen\", \"Hali\", \"Iven\", \"Jora\"], null];",
-    "const fetchGameStatsNameSuggestions = async () => { const batch = batches.shift(); if (!batch) throw new Error(\"offline\"); return batch; };",
+    'const gameProfileRerollCount = { textContent: "" };',
+    'const batches = [["Ayla", "Bryn", "Cora", "Dara", "Eryn"], ["Fawn", "Galen", "Hali", "Iven", "Jora"], null];',
+    'const fetchGameStatsNameSuggestions = async () => { const batch = batches.shift(); if (!batch) throw new Error("offline"); return batch; };',
     getProfileRollStateSource(source),
     "globalThis.rollName = rollGameStatsDraftName;",
     "globalThis.clickSuggestion = (index) => gameProfileNameOptions.children[index].listeners.click();",
@@ -479,7 +483,10 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   assert.match(source, /rollGameStatsDraftName\(\{ isReroll: true \}\)/);
   assert.match(source, /rollId !== gameStatsNameRollId/);
   assert.match(source, /const rolled = await rollGameStatsDraftName\(\{ isReroll: true \}\);/);
-  assert.match(source, /if \(rolled && gameStatsDraftProfile\) gameStatsDraftProfile\.rerollCount \+= 1;/);
+  assert.match(
+    source,
+    /if \(rolled && gameStatsDraftProfile\) gameStatsDraftProfile\.rerollCount \+= 1;/,
+  );
   assert.match(source, /gameProfileName\.value = gameStatsDraftProfile\.name;/);
   assert.match(source, /gameProfileName\.placeholder = gameStatsNameRollInFlight/);
   assert.match(source, /const setGameProfileNameSuggestionsVisible = \(visible\) =>/);
@@ -488,11 +495,23 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   assert.match(source, /gameStatsDraftProfile\.name = GAME_STATS_API_ERROR_NAME;/);
   assert.match(source, /gameProfileRerollCount\.textContent = `\$\{remaining\} left`;/);
   assert.doesNotMatch(source, /gameStatsNameRollError|Could not generate a name\. Try Reroll\./);
-  assert.match(source, /if \(gameStatsDraftProfile\.name === GAME_STATS_API_ERROR_NAME\) \{[\s\S]*?getGameStatsProfileNameFromIcon\(icon\.filename\);/);
-  assert.match(source, /updateGameProfileRerollState\(\);[\s\S]*?updateGameProfileIconOptionSelection\(button\);/);
+  assert.match(
+    source,
+    /if \(gameStatsDraftProfile\.name === GAME_STATS_API_ERROR_NAME\) \{[\s\S]*?getGameStatsProfileNameFromIcon\(icon\.filename\);/,
+  );
+  assert.match(
+    source,
+    /updateGameProfileRerollState\(\);[\s\S]*?updateGameProfileIconOptionSelection\(button\);/,
+  );
   assert.doesNotMatch(source, /name: gameProfileName\?\.value/);
-  assert.match(home, /<input[\s\S]*class="game-profile-generated-name"[\s\S]*id="game-profile-name"[\s\S]*readonly[\s\S]*role="combobox"/);
-  assert.match(home, /id="game-profile-name-toggle"[\s\S]*aria-controls="game-profile-name-options"/);
+  assert.match(
+    home,
+    /<input[\s\S]*class="game-profile-generated-name"[\s\S]*id="game-profile-name"[\s\S]*readonly[\s\S]*role="combobox"/,
+  );
+  assert.match(
+    home,
+    /id="game-profile-name-toggle"[\s\S]*aria-controls="game-profile-name-options"/,
+  );
   assert.match(home, /id="game-profile-name-options"[\s\S]*role="listbox"/);
   assert.match(home, /id="game-profile-reroll-label">Reroll</);
   assert.match(home, /src="assets\/app-icons\/ico\/charmap_w2k\.ico" alt=""/);
@@ -501,7 +520,7 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   assert.match(home, /href="https:\/\/perchance\.org\/"[^>]*>Perchance<\//);
   assert.match(
     home,
-    /<p class="game-profile-name-credit"(?:\s+[^>]*)?>\s*via\s*<a href="https:\/\/perchance\.org\/sky-cotl-namegen"/
+    /<p class="game-profile-name-credit"(?:\s+[^>]*)?>\s*via\s*<a href="https:\/\/perchance\.org\/sky-cotl-namegen"/,
   );
   assert.doesNotMatch(home, /Names via/);
   assert.doesNotMatch(home, /Sky-style names|fantasynamegenerators\.com|lukewh\.com/);
@@ -516,7 +535,7 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   assert.match(css, /\.game-profile-name-toggle[\s\S]*position: absolute;/);
   assert.match(
     css,
-    /\.game-profile-name-toggle[\s\S]*height: 17px;[\s\S]*min-height: 17px;[\s\S]*min-width: 17px;[\s\S]*right: 2px;[\s\S]*top: 2px;[\s\S]*width: 17px;/
+    /\.game-profile-name-toggle[\s\S]*height: 17px;[\s\S]*min-height: 17px;[\s\S]*min-width: 17px;[\s\S]*right: 2px;[\s\S]*top: 2px;[\s\S]*width: 17px;/,
   );
   assert.match(css, /\.game-profile-reroll \{/);
   assert.match(css, /inline-size: 86px;/);
@@ -524,7 +543,10 @@ test("profile rolling uses five Sky API choices in a persistent Windows-style pi
   assert.match(css, /\.game-profile-name-credit/);
   assert.match(css, /\.game-profile-name-options \{/);
   assert.match(css, /\.game-profile-name-option[\s\S]*box-shadow: none;/);
-  assert.match(css, /\.game-profile-name-option:hover,[\s\S]*?background: var\(--dialog-blue\);[\s\S]*?color: #fff;/);
+  assert.match(
+    css,
+    /\.game-profile-name-option:hover,[\s\S]*?background: var\(--dialog-blue\);[\s\S]*?color: #fff;/,
+  );
 });
 
 test("the profile icon gallery does not truncate the manifest", async () => {
@@ -533,6 +555,6 @@ test("the profile icon gallery does not truncate the manifest", async () => {
   assert.doesNotMatch(source, /GAME_STATS_ICON_MANIFEST[\s\S]{0,220}\.slice\(0, 180\)/);
   assert.match(
     source,
-    /const icons = GAME_STATS_ICON_MANIFEST\.filter\([\s\S]*?\n  \);\n  gameProfileIconGallery\.replaceChildren\(\);/
+    /const icons = GAME_STATS_ICON_MANIFEST\.filter\([\s\S]*?\n  \);\n  gameProfileIconGallery\.replaceChildren\(\);/,
   );
 });

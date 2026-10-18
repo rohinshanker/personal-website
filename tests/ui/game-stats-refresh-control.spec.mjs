@@ -1,6 +1,10 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { consumeDiagnostics, installGameStatsBackend, settleFrames } from "./helpers/rendered-site.mjs";
+import {
+  consumeDiagnostics,
+  installGameStatsBackend,
+  settleFrames,
+} from "./helpers/rendered-site.mjs";
 import { installIssuedGameIssuance } from "./helpers/verified-game-session.mjs";
 
 const API_BASE_URL = "https://game-stats-refresh.test";
@@ -72,10 +76,7 @@ const installBackendConfig = (page, { configured = true } = {}) =>
     buildVersion: configured ? `sha256-${"c".repeat(64)}` : "",
   });
 
-const installApiHarness = async (
-  page,
-  { requireAdministratorProof = false } = {}
-) => {
+const installApiHarness = async (page, { requireAdministratorProof = false } = {}) => {
   const statsRequests = [];
   const eventRequests = [];
   const signInRequests = [];
@@ -266,7 +267,7 @@ const preparePage = async (
     profile = null,
     queue = null,
     snakeHighScores = null,
-  } = {}
+  } = {},
 ) => {
   await page.addInitScript(
     ({
@@ -304,11 +305,7 @@ const preparePage = async (
       if (acceleratedApiTimeoutMs) {
         const nativeSetTimeout = window.setTimeout.bind(window);
         window.setTimeout = (handler, delay = 0, ...args) =>
-          nativeSetTimeout(
-            handler,
-            delay === 8000 ? acceleratedApiTimeoutMs : delay,
-            ...args
-          );
+          nativeSetTimeout(handler, delay === 8000 ? acceleratedApiTimeoutMs : delay, ...args);
       }
     },
     {
@@ -321,7 +318,7 @@ const preparePage = async (
       savedQueue: queue,
       savedSnakeHighScores: snakeHighScores,
       snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
-    }
+    },
   );
   await page.goto("/home.html");
   const aboutClose = page.locator('#about-window [data-close="about"]');
@@ -355,10 +352,7 @@ const openStatsWindow = async (page, game, { programmatic = false } = {}) => {
   };
 };
 
-const expectSyncState = async (
-  parts,
-  { busy, buttonLabel, buttonDisabled, message }
-) => {
+const expectSyncState = async (parts, { busy, buttonLabel, buttonDisabled, message }) => {
   await expect(parts.status).toHaveText(message);
   await expect(parts.status).toHaveAttribute("aria-busy", String(busy));
   await expect(parts.button).toHaveAttribute("aria-busy", String(busy));
@@ -390,7 +384,7 @@ const expectNoHorizontalOverflow = async (parts) => {
           buttonIsCompact: buttonBounds.width <= 24.5,
           buttonDoesNotExpandRow: buttonBounds.height <= statusBounds.height + 1,
         };
-      })
+      }),
     )
     .toEqual({
       documentOverflows: false,
@@ -462,9 +456,7 @@ for (const viewport of viewports) {
   });
 }
 
-test("queued results publish before fetching and clear from local storage", async ({
-  page,
-}) => {
+test("queued results publish before fetching and clear from local storage", async ({ page }) => {
   await page.setViewportSize(viewports[1]);
   await installBackendConfig(page);
   const api = await installApiHarness(page);
@@ -480,10 +472,7 @@ test("queued results publish before fetching and clear from local storage", asyn
     buttonLabel: "Game stats refresh unavailable for Minesweeper",
     message: "Publishing saved results...",
   });
-  await expect(stats.status).toHaveAttribute(
-    "aria-label",
-    "Publishing saved results..."
-  );
+  await expect(stats.status).toHaveAttribute("aria-label", "Publishing saved results...");
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   await expectNoHorizontalOverflow(stats);
 
@@ -497,14 +486,15 @@ test("queued results publish before fetching and clear from local storage", asyn
   expect(api.eventRequests).toHaveLength(1);
   await expect
     .poll(() =>
-      page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), GAME_STATS_SYNC_QUEUE_STORAGE_KEY)
+      page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key) || "[]"),
+        GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+      ),
     )
     .toEqual([]);
 });
 
-test("visible game windows share one coalesced manual refresh", async ({
-  page,
-}) => {
+test("visible game windows share one coalesced manual refresh", async ({ page }) => {
   await page.setViewportSize(viewports[1]);
   await installBackendConfig(page);
   const api = await installApiHarness(page);
@@ -514,18 +504,16 @@ test("visible game windows share one coalesced manual refresh", async ({
   const solitaire = await openStatsWindow(page, "solitaire", { programmatic: true });
   await expect(solitaire.status).toHaveText("Global stats are up to date.");
   const visibleLiveRegions = page.locator(
-    '[data-game-stats-window]:visible [data-game-stats-sync-status]'
+    "[data-game-stats-window]:visible [data-game-stats-sync-status]",
   );
   await expect(visibleLiveRegions).toHaveCount(2);
   await expect(
     page.locator(
-      '[data-game-stats-window]:visible [data-game-stats-sync-status][aria-live="polite"]'
-    )
+      '[data-game-stats-window]:visible [data-game-stats-sync-status][aria-live="polite"]',
+    ),
   ).toHaveCount(1);
   await expect(
-    page.locator(
-      '[data-game-stats-window]:visible [data-game-stats-sync-status][aria-live="off"]'
-    )
+    page.locator('[data-game-stats-window]:visible [data-game-stats-sync-status][aria-live="off"]'),
   ).toHaveCount(1);
 
   const baselineRequestCount = api.statsRequests.length;
@@ -559,9 +547,7 @@ test("visible game windows share one coalesced manual refresh", async ({
   await expectNoHorizontalOverflow(solitaire);
 });
 
-test("manual request timeout restores retry with exact failure copy", async ({
-  page,
-}) => {
+test("manual request timeout restores retry with exact failure copy", async ({ page }) => {
   await page.setViewportSize(viewports[1]);
   await installBackendConfig(page);
   const api = await installApiHarness(page);
@@ -593,9 +579,7 @@ test("manual request timeout restores retry with exact failure copy", async ({
 });
 
 for (const viewport of viewports) {
-  test(`unconfigured backend disables refresh at ${viewport.name}`, async ({
-    page,
-  }) => {
+  test(`unconfigured backend disables refresh at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await installBackendConfig(page, { configured: false });
     await preparePage(page);
@@ -605,8 +589,7 @@ for (const viewport of viewports) {
       busy: false,
       buttonDisabled: true,
       buttonLabel: "Game stats refresh unavailable for Minesweeper",
-      message:
-        "Automatic global tracking is not configured yet; local stats stay on this device.",
+      message: "Automatic global tracking is not configured yet; local stats stay on this device.",
     });
     await expectNoHorizontalOverflow(stats);
   });
@@ -640,8 +623,8 @@ test("required authentication opens automatically, cancel restores focus, and si
     .poll(() =>
       page.evaluate(
         (queueKey) => JSON.parse(localStorage.getItem(queueKey) || "[]").length,
-        GAME_STATS_SYNC_QUEUE_STORAGE_KEY
-      )
+        GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+      ),
     )
     .toBe(1);
 
@@ -654,10 +637,7 @@ test("required authentication opens automatically, cancel restores focus, and si
     buttonLabel: "Game stats refresh unavailable for Minesweeper",
     message: "Waiting for authentication...",
   });
-  await expect(stats.status).toHaveAttribute(
-    "aria-label",
-    "Waiting for authentication..."
-  );
+  await expect(stats.status).toHaveAttribute("aria-label", "Waiting for authentication...");
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
 
   await administratorWindow.getByRole("button", { name: "Close" }).click();
@@ -683,8 +663,8 @@ test("required authentication opens automatically, cancel restores focus, and si
     .poll(
       () =>
         api.eventRequests.filter(
-          (request) => request.authorization === `Bearer ${ADMINISTRATOR_PROOF}`
-        ).length
+          (request) => request.authorization === `Bearer ${ADMINISTRATOR_PROOF}`,
+        ).length,
     )
     .toBe(1);
   await expectSyncState(stats, {
@@ -743,14 +723,8 @@ test("Administrator request failure stays retryable and restores refresh focus",
     buttonLabel: "Sign in as Administrator to sync Minesweeper stats",
     message: "Request failed. Try again later.",
   });
-  await expect(stats.status).toHaveAttribute(
-    "data-game-stats-sync-state",
-    "auth-request-failed"
-  );
-  await expect(stats.button).toHaveAttribute(
-    "data-game-stats-action",
-    "authenticate"
-  );
+  await expect(stats.status).toHaveAttribute("data-game-stats-sync-state", "auth-request-failed");
+  await expect(stats.button).toHaveAttribute("data-game-stats-action", "authenticate");
   await expect(stats.button).toBeFocused();
   await expect(submit).toBeEnabled();
   await expect(password).toHaveValue("");
@@ -772,14 +746,8 @@ test("Administrator request failure stays retryable and restores refresh focus",
     { username: "test-only-administrator", password: "test-only-password" },
   ]);
   consumeDiagnostics(diagnostics, {
-    consoleErrors: [
-      ...REJECTED_EVENT.consoleErrors,
-      "status of 503 (Service Unavailable)",
-    ],
-    errorResponses: [
-      ...REJECTED_EVENT.errorResponses,
-      `503 ${API_BASE_URL}/administrator/sign-in`,
-    ],
+    consoleErrors: [...REJECTED_EVENT.consoleErrors, "status of 503 (Service Unavailable)"],
+    errorResponses: [...REJECTED_EVENT.errorResponses, `503 ${API_BASE_URL}/administrator/sign-in`],
   });
 });
 
@@ -824,7 +792,7 @@ const readPersistedState = (page) =>
       profileStorageKey: PROFILE_STORAGE_KEY,
       queueStorageKey: GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
       snakeHighScoreKey: SNAKE_HIGH_SCORE_KEY,
-    }
+    },
   );
 
 /**
@@ -1062,7 +1030,10 @@ const readDroppedResultStorage = (page) =>
   page.evaluate(() => localStorage.getItem("personalSiteGameStatsDroppedResultsV1"));
 
 const readQueueStorage = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), GAME_STATS_SYNC_QUEUE_STORAGE_KEY);
+  page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key) || "[]"),
+    GAME_STATS_SYNC_QUEUE_STORAGE_KEY,
+  );
 
 /**
  * Boots with one queued result whose publication keeps failing, with the
@@ -1226,7 +1197,7 @@ for (const viewport of fourViewports) {
     if (await aboutClose.isVisible()) await aboutClose.click();
     const reopened = await openStatsWindow(page, "minesweeper");
     await expect(reopened.status).toHaveText(
-      "Global stats are up to date. 6 unpublished results were dropped because the publishing queue was full."
+      "Global stats are up to date. 6 unpublished results were dropped because the publishing queue was full.",
     );
     expect(await readDroppedResultStorage(page)).toBe("6");
     expect(api.eventRequests).toHaveLength(200);

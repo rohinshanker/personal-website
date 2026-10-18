@@ -55,22 +55,10 @@ const expectSharedInsetGeometry = (metrics, { loading = false } = {}) => {
   expect(metrics.scrollPaddingRight).toBeCloseTo(2, 1);
   expect(metrics.scrollPaddingBottom).toBeCloseTo(2, 1);
   expect(metrics.scrollPaddingLeft).toBeCloseTo(2, 1);
-  expect(metrics.media.left).toBeCloseTo(
-    metrics.scroll.left + metrics.scrollPaddingLeft,
-    1
-  );
-  expect(metrics.media.right).toBeCloseTo(
-    metrics.scroll.right - metrics.scrollPaddingRight,
-    1
-  );
-  expect(metrics.media.top).toBeCloseTo(
-    metrics.scroll.top + metrics.scrollPaddingTop,
-    1
-  );
-  expect(metrics.media.bottom).toBeCloseTo(
-    metrics.scroll.bottom - metrics.scrollPaddingBottom,
-    1
-  );
+  expect(metrics.media.left).toBeCloseTo(metrics.scroll.left + metrics.scrollPaddingLeft, 1);
+  expect(metrics.media.right).toBeCloseTo(metrics.scroll.right - metrics.scrollPaddingRight, 1);
+  expect(metrics.media.top).toBeCloseTo(metrics.scroll.top + metrics.scrollPaddingTop, 1);
+  expect(metrics.media.bottom).toBeCloseTo(metrics.scroll.bottom - metrics.scrollPaddingBottom, 1);
   expect(metrics.scroll.left - metrics.frame.left).toBeCloseTo(metrics.framePadding, 1);
   expect(metrics.frame.right - metrics.scroll.right).toBeCloseTo(metrics.framePadding, 1);
   expect(metrics.scroll.top - metrics.frame.top).toBeCloseTo(metrics.framePadding, 1);
@@ -105,7 +93,7 @@ test("shared carousel inset keeps Modeling media and loaders clear of the frame"
       firstImageRequests += 1;
       await firstImageGate;
       await route.continue();
-    }
+    },
   );
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -115,12 +103,10 @@ test("shared carousel inset keeps Modeling media and loaders clear of the frame"
   });
   await page.goto("/home.html", { waitUntil: "domcontentloaded" });
   await openApp(page, "modeling");
-  await page
-    .locator('.selector-item[data-view="modeling-fast-sonder-lookbook-shoot-2"]')
-    .click();
+  await page.locator('.selector-item[data-view="modeling-fast-sonder-lookbook-shoot-2"]').click();
 
   const gallery = page.locator(
-    '[data-modeling-gallery="modeling-fast-sonder-lookbook-shoot-2"] .gallery-frame'
+    '[data-modeling-gallery="modeling-fast-sonder-lookbook-shoot-2"] .gallery-frame',
   );
   const scroll = gallery.locator(".gallery-scroll");
   const image = scroll.locator(":scope > img");
@@ -168,5 +154,4 @@ test("shared carousel inset keeps Modeling media and loaders clear of the frame"
       await expect(counter).toHaveText("1 of 12");
     });
   }
-
 });

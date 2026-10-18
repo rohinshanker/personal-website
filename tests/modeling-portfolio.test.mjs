@@ -24,26 +24,27 @@ const DATA_PATH = "scripts/home/modeling-portfolio.js";
 const loadPortfolio = async () => loadModelingPortfolio(await read(DATA_PATH));
 
 const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" };
-const decodeEntities = (value) => value.replace(/&(amp|lt|gt|quot|#39);/g, (_, name) => ENTITIES[name]);
+const decodeEntities = (value) =>
+  value.replace(/&(amp|lt|gt|quot|#39);/g, (_, name) => ENTITIES[name]);
 
 /** The Home Modeling window's selector rows, in document order. */
 const homeSelectorRows = (home) =>
   Array.from(
     home.matchAll(
-      /data-view="(modeling-[^"]+)">\s*<img class="selector-thumb" data-src="([^"]+)" alt="" \/>\s*<span>\s*<span class="selector-title">([^<]+)<\/span>\s*<span class="selector-desc">([^<]+)<\/span>/g
+      /data-view="(modeling-[^"]+)">\s*<img class="selector-thumb" data-src="([^"]+)" alt="" \/>\s*<span>\s*<span class="selector-title">([^<]+)<\/span>\s*<span class="selector-desc">([^<]+)<\/span>/g,
     ),
-    ([, id, icon, title, date]) => ({ id, icon, title: decodeEntities(title), date })
+    ([, id, icon, title, date]) => ({ id, icon, title: decodeEntities(title), date }),
   );
 
 /** The Home Modeling viewer panels keyed by view id. */
 const homeViewerPanels = (home) => {
   const modelingWindow = home.slice(
     home.indexOf('data-app-window="modeling"'),
-    home.indexOf('data-app-window="mec-pdf"')
+    home.indexOf('data-app-window="mec-pdf"'),
   );
   const panels = {};
   for (const [, id, body] of modelingWindow.matchAll(
-    /<div class="viewer-content(?: is-hidden)?" data-view="(modeling-[^"]+)">([\s\S]*?)<\/div>\s*(?=<div class="viewer-content|<\/div>)/g
+    /<div class="viewer-content(?: is-hidden)?" data-view="(modeling-[^"]+)">([\s\S]*?)<\/div>\s*(?=<div class="viewer-content|<\/div>)/g,
   )) {
     panels[id] = {
       heading: decodeEntities(body.match(/<h3>([^<]+)<\/h3>/)?.[1] ?? ""),
@@ -65,14 +66,20 @@ const assertShootsComplete = async (portfolio) => {
     assert.ok(await isFile(shoot.icon), `${shoot.id} icon ${shoot.icon} must exist`);
     assert.ok(
       (await stat(new URL(`${shoot.folder}/`, root))).isDirectory(),
-      `${shoot.id} folder ${shoot.folder} must exist even before its photos are listed`
+      `${shoot.id} folder ${shoot.folder} must exist even before its photos are listed`,
     );
     for (const filename of shoot.files) {
-      assert.ok(await isFile(`${shoot.folder}/${filename}`), `${shoot.folder}/${filename} must exist`);
+      assert.ok(
+        await isFile(`${shoot.folder}/${filename}`),
+        `${shoot.folder}/${filename} must exist`,
+      );
     }
     assert.equal(new Set(shoot.files).size, shoot.files.length, `${shoot.id} files are unique`);
     for (const field of ["links", "credits"]) {
-      assert.ok(shoot[field] === undefined || Array.isArray(shoot[field]), `${shoot.id} ${field} is an optional list`);
+      assert.ok(
+        shoot[field] === undefined || Array.isArray(shoot[field]),
+        `${shoot.id} ${field} is an optional list`,
+      );
     }
     for (const link of shoot.links ?? []) {
       assert.match(link.href, /^https:\/\//, `${shoot.id} link ${link.label} uses https`);
@@ -94,7 +101,7 @@ const assertHomeMatchesPortfolio = (portfolio, home) => {
   assert.deepEqual(
     rows.map((row) => row.id),
     published.map((shoot) => shoot.id),
-    "selector order matches the published shared order"
+    "selector order matches the published shared order",
   );
   for (const shoot of portfolio.shoots) {
     if (!shoot.files.length) {
@@ -166,7 +173,18 @@ test("the shared modeling data is complete and every referenced file exists", as
       date: "September 2026",
       icon: "assets/app-icons/ico/camera.ico",
       folder: "assets/modeling/digitals-kehinde-sep2026",
-      files: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg", "9.jpg", "10.jpg"],
+      files: [
+        "1.jpg",
+        "2.jpg",
+        "3.jpg",
+        "4.jpg",
+        "5.jpg",
+        "6.jpg",
+        "7.jpg",
+        "8.jpg",
+        "9.jpg",
+        "10.jpg",
+      ],
       links: [
         {
           type: "camera",
@@ -192,9 +210,14 @@ test("a shoot that omits its optional links and credits passes generation, the c
   const copy = await mkdtemp(path.join(tmpdir(), "modeling-optional-"));
   t.after(() => rm(copy, { recursive: true, force: true }));
   await mkdir(path.join(copy, "scripts/home"), { recursive: true });
-  await copyFile(new URL("scripts/build-modeling-markup.mjs", root), path.join(copy, "scripts/build-modeling-markup.mjs"));
+  await copyFile(
+    new URL("scripts/build-modeling-markup.mjs", root),
+    path.join(copy, "scripts/build-modeling-markup.mjs"),
+  );
   const run = (...args) =>
-    promisify(execFile)(process.execPath, ["scripts/build-modeling-markup.mjs", ...args], { cwd: copy });
+    promisify(execFile)(process.execPath, ["scripts/build-modeling-markup.mjs", ...args], {
+      cwd: copy,
+    });
 
   const [source, home] = await Promise.all([read(DATA_PATH), read("home.html")]);
   const entry = source.indexOf('id: "modeling-garb-garbage-runway",');
@@ -205,40 +228,50 @@ test("a shoot that omits its optional links and credits passes generation, the c
       .replace("    links: brandLinks.garb,\n", "")
       .replace('    credits: ["Talent: Rohin Shanker", "Designer: Nora"],\n', "");
   const portfolio = loadModelingPortfolio(edited);
-  const shoot = portfolio.shoots.find((candidate) => candidate.id === "modeling-garb-garbage-runway");
+  const shoot = portfolio.shoots.find(
+    (candidate) => candidate.id === "modeling-garb-garbage-runway",
+  );
   assert.ok(!("links" in shoot) && !("credits" in shoot), "the probe omits both optional lists");
   await writeFile(path.join(copy, DATA_PATH), edited);
   await writeFile(path.join(copy, "home.html"), home);
 
   await assertShootsComplete(portfolio);
-  assert.throws(() => assertHomeMatchesPortfolio(portfolio, home), /modeling-garb-garbage-runway viewer credits/);
+  assert.throws(
+    () => assertHomeMatchesPortfolio(portfolio, home),
+    /modeling-garb-garbage-runway viewer credits/,
+  );
   await assert.rejects(run("--check"), (error) => error.code === 1);
 
   await run();
   assert.equal((await run("--check")).stdout, "Home modeling markup is current.\n");
   const generated = await readFile(path.join(copy, "home.html"), "utf8");
-  const removed = "              <p>Talent: Rohin Shanker</p>\n              <p>Designer: Nora</p>\n";
+  const removed =
+    "              <p>Talent: Rohin Shanker</p>\n              <p>Designer: Nora</p>\n";
   assert.equal(home.split(removed).length, 2);
   assert.equal(generated, home.replace(removed, ""), "only the omitted credit lines leave Home");
   assertHomeMatchesPortfolio(portfolio, generated);
 });
 
 test("Home derives its modeling galleries from the shared data instead of duplicating it", async () => {
-  const [home, main] = await Promise.all([
-    read("home.html"),
-    readHomeScript("gallery"),
-  ]);
+  const [home, main] = await Promise.all([read("home.html"), readHomeScript("gallery")]);
 
   const dataTag = "scripts/home/modeling-portfolio.js?v=";
-  assert.match(home, /<script src="scripts\/home\/modeling-portfolio\.js\?v=[^"]+" defer><\/script>/, "Home loads the shared data");
+  assert.match(
+    home,
+    /<script src="scripts\/home\/modeling-portfolio\.js\?v=[^"]+" defer><\/script>/,
+    "Home loads the shared data",
+  );
   assert.ok(
     home.indexOf(dataTag) < home.indexOf("scripts/home/features/gallery.js?v="),
-    "the shared data loads before the gallery that reads it"
+    "the shared data loads before the gallery that reads it",
   );
   assert.match(main, /const modelingPortfolio = window\.rohinModelingPortfolio/);
   assert.match(main, /const modelingLinkIconPaths = modelingPortfolio\.linkIcons/);
   assert.match(main, /modelingPortfolio\.shoots\.map\(\(shoot\) => \[shoot\.id, shoot\.links\]\)/);
-  assert.match(main, /media: shoot\.files\.map\(\(filename\) => `\$\{shoot\.folder\}\/\$\{filename\}`\)/);
+  assert.match(
+    main,
+    /media: shoot\.files\.map\(\(filename\) => `\$\{shoot\.folder\}\/\$\{filename\}`\)/,
+  );
   assert.doesNotMatch(main, /const modelingBrandLinks/);
   assert.doesNotMatch(main, /assets\/modeling\/[a-z0-9-]+"\s*,\s*\[/);
 });
@@ -263,21 +296,24 @@ test("Home shows the Modeling launch prompt every time the Modeling window opens
   assert.match(section, /id="modeling-launch-title">Modeling<\/div>/);
   assert.match(
     section,
-    /data-src="assets\/app-icons\/ico\/accessibility_window_objs\.ico" width="48" height="48" alt=""/
+    /data-src="assets\/app-icons\/ico\/accessibility_window_objs\.ico" width="48" height="48" alt=""/,
   );
   assert.match(
     section,
-    /id="modeling-launch-message">Open in separate tab \(rohin\.shanker\.me\/modeling\)\?<\/p>/
+    /id="modeling-launch-message">Open in separate tab \(rohin\.shanker\.me\/modeling\)\?<\/p>/,
   );
   assert.match(
     section,
-    /id="modeling-launch-error"[\s\S]*?data-launch-prompt-error[\s\S]*?role="alert"[\s\S]*?aria-live="assertive"[\s\S]*?hidden/
+    /id="modeling-launch-error"[\s\S]*?data-launch-prompt-error[\s\S]*?role="alert"[\s\S]*?aria-live="assertive"[\s\S]*?hidden/,
   );
   assert.match(
     section,
-    /id="modeling-launch-yes"[\s\S]*?data-launch-prompt-open[\s\S]*?data-dialog-initial-focus[\s\S]*?>Yes<\/button>/
+    /id="modeling-launch-yes"[\s\S]*?data-launch-prompt-open[\s\S]*?data-dialog-initial-focus[\s\S]*?>Yes<\/button>/,
   );
-  assert.match(section, /id="modeling-launch-no"[\s\S]*?data-close="modeling-launch"[\s\S]*?>No<\/button>/);
+  assert.match(
+    section,
+    /id="modeling-launch-no"[\s\S]*?data-close="modeling-launch"[\s\S]*?>No<\/button>/,
+  );
   assert.equal(section.match(/data-close="modeling-launch"/g).length, 2);
   assert.match(home, /class="desktop-icon" data-app="modeling"/);
   assert.match(home, /class="taskbar-icon" data-app="modeling"/);
@@ -286,12 +322,15 @@ test("Home shows the Modeling launch prompt every time the Modeling window opens
   assert.match(main, /const MODELING_LAUNCH_APP_ID = "modeling-launch"/);
   assert.match(
     main,
-    /\[MODELING_LAUNCH_APP_ID\]: Object\.freeze\(\{\s*path: MODELING_PORTFOLIO_PATH,\s*source: "modeling-launcher",\s*\}\)/
+    /\[MODELING_LAUNCH_APP_ID\]: Object\.freeze\(\{\s*path: MODELING_PORTFOLIO_PATH,\s*source: "modeling-launcher",\s*\}\)/,
   );
-  assert.match(main, /const openModelingLaunchPrompt = \(\) => \{[\s\S]*?setWindowOpen\(MODELING_LAUNCH_APP_ID, true\)/);
   assert.match(
     main,
-    /restartWindowAnimation\(win, "is-opening"\);[\s\S]*?if \(appId === "modeling"\) openModelingLaunchPrompt\(\);[\s\S]*?return;/
+    /const openModelingLaunchPrompt = \(\) => \{[\s\S]*?setWindowOpen\(MODELING_LAUNCH_APP_ID, true\)/,
+  );
+  assert.match(
+    main,
+    /restartWindowAnimation\(win, "is-opening"\);[\s\S]*?if \(appId === "modeling"\) openModelingLaunchPrompt\(\);[\s\S]*?return;/,
   );
 });
 
@@ -303,83 +342,119 @@ test("the /modeling/ route publishes its metadata, shared assets, and blank Drop
   ]);
 
   assert.match(html, /<html\b[^>]*\blang="en"/);
-  assert.match(html, /<meta\b[^>]*\bname="viewport"[^>]*content="width=device-width, initial-scale=1, viewport-fit=cover"/);
+  assert.match(
+    html,
+    /<meta\b[^>]*\bname="viewport"[^>]*content="width=device-width, initial-scale=1, viewport-fit=cover"/,
+  );
   assert.doesNotMatch(html, /user-scalable=no|maximum-scale/);
   assert.match(html, /<title>Modeling Portfolio \| Rohin Shanker<\/title>/);
-  assert.match(html, /<meta\b[^>]*\bname="description"[^>]*content="[^"]*modeling portfolio[^"]*"/i);
+  assert.match(
+    html,
+    /<meta\b[^>]*\bname="description"[^>]*content="[^"]*modeling portfolio[^"]*"/i,
+  );
   assert.match(html, /<link rel="canonical" href="https:\/\/rohin\.shanker\.me\/modeling\/" \/>/);
-  assert.match(html, /<meta property="og:url" content="https:\/\/rohin\.shanker\.me\/modeling\/" \/>/);
+  assert.match(
+    html,
+    /<meta property="og:url" content="https:\/\/rohin\.shanker\.me\/modeling\/" \/>/,
+  );
   assert.match(html, /<meta property="og:title" content="Rohin Shanker Modeling Portfolio" \/>/);
-  assert.match(html, /<meta name="twitter:image" content="https:\/\/rohin\.shanker\.me\/assets\/optimized\/bio-pic-720\.jpg" \/>/);
+  assert.match(
+    html,
+    /<meta name="twitter:image" content="https:\/\/rohin\.shanker\.me\/assets\/optimized\/bio-pic-720\.jpg" \/>/,
+  );
   assert.match(html, /<meta name="theme-color" content="#c0c0c0" \/>/);
-  assert.match(html, /<link rel="icon" href="\/assets\/favicon-96\.png" type="image\/png" sizes="96x96" \/>/);
-  assert.match(html, /<link rel="apple-touch-icon" href="\/assets\/apple-touch-icon-180\.png" sizes="180x180" \/>/);
+  assert.match(
+    html,
+    /<link rel="icon" href="\/assets\/favicon-96\.png" type="image\/png" sizes="96x96" \/>/,
+  );
+  assert.match(
+    html,
+    /<link rel="apple-touch-icon" href="\/assets\/apple-touch-icon-180\.png" sizes="180x180" \/>/,
+  );
   assert.match(html, /href="\.\.\/style\.css\?v=[^"]+"/);
   assert.match(html, /href="style\.css\?v=[^"]+"/);
   assert.match(html, /src="\.\.\/scripts\/home\/modeling-portfolio\.js\?v=[^"]+"/);
   assert.match(html, /<script src="script\.js\?v=[^"]+" defer><\/script>/);
   assert.ok(
     html.indexOf("modeling-portfolio.js") < html.indexOf("script.js?v="),
-    "the shared data loads before the route script"
+    "the shared data loads before the route script",
   );
   assert.match(
     html,
-    /Tap or click any photo to view it fullscreen\. Press the download button to download the\s+current image from the carousel\./
+    /Tap or click any photo to view it fullscreen\. Press the download button to download the\s+current image from the carousel\./,
   );
   assert.doesNotMatch(html, /newest first/);
 
-  assert.match(html, /<h1 class="portfolio-title" id="portfolio-title">Rohin Shanker Modeling Portfolio<\/h1>/);
+  assert.match(
+    html,
+    /<h1 class="portfolio-title" id="portfolio-title">Rohin Shanker Modeling Portfolio<\/h1>/,
+  );
   const titleEnd = html.indexOf("</h1>");
   const measurementsStart = html.indexOf("data-portfolio-measurements");
   const summaryStart = html.indexOf('class="portfolio-summary"');
   assert.ok(
     titleEnd < measurementsStart && measurementsStart < summaryStart,
-    "the measurements block sits between the title and the summary"
+    "the measurements block sits between the title and the summary",
   );
   assert.match(
     html,
-    /aria-label="Measurement units"[\s\S]*?data-unit="us" aria-pressed="true">\s*US\s*<\/button>[\s\S]*?data-unit="eu" aria-pressed="false">\s*EU\s*<\/button>/
+    /aria-label="Measurement units"[\s\S]*?data-unit="us" aria-pressed="true">\s*US\s*<\/button>[\s\S]*?data-unit="eu" aria-pressed="false">\s*EU\s*<\/button>/,
   );
   assert.doesNotMatch(html, /data-unit="(?:in|cm)"/);
-  assert.match(html, /<dl class="portfolio-measurements__list" data-portfolio-measurements-list><\/dl>/);
+  assert.match(
+    html,
+    /<dl class="portfolio-measurements__list" data-portfolio-measurements-list><\/dl>/,
+  );
   assert.match(script, /const INCH_IN_CM = 2\.54;/);
   assert.match(script, /const POUND_IN_KG = 0\.45359237;/);
   assert.match(script, /apply\("us"\);/);
   assert.match(script, /renderMeasurements\(\);/);
   assert.match(css, /\.unit-toggle__button\[aria-pressed="true"\] \{[\s\S]*?border-sunken-outer/);
-  assert.match(html, /data-portfolio-instagram[\s\S]*?href="https:\/\/www\.instagram\.com\/rrohinss\/"[\s\S]*?target="_blank"[\s\S]*?rel="noreferrer"/);
+  assert.match(
+    html,
+    /data-portfolio-instagram[\s\S]*?href="https:\/\/www\.instagram\.com\/rrohinss\/"[\s\S]*?target="_blank"[\s\S]*?rel="noreferrer"/,
+  );
   assert.match(html, /data-portfolio-instagram-handle>@rrohinss</);
   for (const slot of ["highlights", "digitals"]) {
     assert.match(
       html,
       new RegExp(
-        `data-portfolio-dropbox="${slot}"[\\s\\S]*?<button[\\s\\S]*?aria-describedby="portfolio-${slot}-note"[\\s\\S]*?disabled[\\s\\S]*?id="portfolio-${slot}-note">Link coming soon</small>`
+        `data-portfolio-dropbox="${slot}"[\\s\\S]*?<button[\\s\\S]*?aria-describedby="portfolio-${slot}-note"[\\s\\S]*?disabled[\\s\\S]*?id="portfolio-${slot}-note">Link coming soon</small>`,
       ),
-      `${slot} renders as a disabled button with a note`
+      `${slot} renders as a disabled button with a note`,
     );
   }
   assert.match(html, />Highlights<\/strong>/);
   assert.match(html, />Digitals<\/strong>/);
   assert.match(html, /<nav class="portfolio-nav" aria-label="Shoots">/);
-  assert.match(html, /<main class="portfolio-shoots" id="shoots" data-portfolio-shoots aria-label="Shoots">/);
+  assert.match(
+    html,
+    /<main class="portfolio-shoots" id="shoots" data-portfolio-shoots aria-label="Shoots">/,
+  );
   assert.match(html, /<noscript>/);
   assert.match(html, /href="\/">Back to Rohin OS<\/a>/);
   assert.doesNotMatch(html, /\bdesktop-icon\b|\btaskbar\b/);
 
-  assert.match(css, /--portfolio-wallpaper: url\("\.\.\/assets\/optimized\/background-2200\.jpg"\)/);
+  assert.match(
+    css,
+    /--portfolio-wallpaper: url\("\.\.\/assets\/optimized\/background-2200\.jpg"\)/,
+  );
   assert.match(css, /html\.is-lightbox-open body\.modeling-page \{[\s\S]*?position: fixed/);
   assert.match(css, /\.carousel__strip \{[\s\S]*?scroll-snap-type: x mandatory/);
   assert.match(css, /@media \(min-width: 900px\)[\s\S]*?"gallery date"/);
   assert.doesNotMatch(css, /!important/);
 
   assert.match(script, /assets\/app-icons\/ico\/download\.ico/);
-  assert.match(script, /link\.setAttribute\("download", downloadName\(shoot, item, index, media\.length\)\)/);
+  assert.match(
+    script,
+    /link\.setAttribute\("download", downloadName\(shoot, item, index, media\.length\)\)/,
+  );
   assert.match(script, /fullscreen\.textContent = "Expand"/);
   assert.match(css, /\.carousel__download,\s*\.lightbox__download \{/);
   assert.match(css, /button\[aria-label\]\.close \{[\s\S]*?background-size: contain/);
   assert.match(script, /createLoadingIndicator, isVideoSource, setLoading: setMediaLoading/);
   assert.match(html, /core\/media\.js\?v=[^"]+" defer/);
-  assert.ok(html.indexOf("core/media.js") < html.indexOf("src=\"script.js"));
+  assert.ok(html.indexOf("core/media.js") < html.indexOf('src="script.js'));
   assert.match(script, /new IntersectionObserver\(/);
   assert.match(script, /rootMargin: "0px 50% 0px 50%"/);
   assert.match(script, /classList\.add\("is-lightbox-open"\)/);
@@ -395,6 +470,9 @@ test("the release packages the /modeling/ route and the sitemap lists it once", 
     read("sitemap.xml"),
   ]);
 
-  assert.match(workflow, /cp -R assets styles video-editor modeling "\$RUNNER_TEMP\/personal-site\/"/);
+  assert.match(
+    workflow,
+    /cp -R assets styles video-editor modeling "\$RUNNER_TEMP\/personal-site\/"/,
+  );
   assert.equal(sitemap.match(/<loc>https:\/\/rohin\.shanker\.me\/modeling\/<\/loc>/g)?.length, 1);
 });

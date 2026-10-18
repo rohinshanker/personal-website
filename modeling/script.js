@@ -56,7 +56,7 @@
         link.setAttribute("download", downloadName(shoot, item, index, media.length));
         link.setAttribute(
           "aria-label",
-          `Download ${item.video ? "clip" : "photo"} ${counterText(index, media.length)}`
+          `Download ${item.video ? "clip" : "photo"} ${counterText(index, media.length)}`,
         );
         counter.textContent = counterText(index, media.length);
       },
@@ -144,13 +144,13 @@
           const link = element("a", "portfolio-nav__link", { href: `#${anchorId(shoot.id)}` });
           link.append(
             element("span", "portfolio-nav__title"),
-            element("span", "portfolio-nav__date")
+            element("span", "portfolio-nav__date"),
           );
           link.firstChild.textContent = shoot.title;
           link.lastChild.textContent = shoot.date;
           item.appendChild(link);
           return item;
-        })
+        }),
       );
     }
   };
@@ -231,7 +231,7 @@
         else controller.deactivate();
       });
     },
-    { rootMargin: "50% 0px 50% 0px" }
+    { rootMargin: "50% 0px 50% 0px" },
   );
 
   const createCarousel = (shoot, media, { onOpen }) => {
@@ -269,7 +269,7 @@
             "data-src": item.source,
             decoding: "async",
             draggable: "false",
-          })
+          }),
         );
         slide.appendChild(button);
       }
@@ -286,7 +286,10 @@
     previous.textContent = "Previous";
     const download = createDownloadControl("carousel", { "aria-live": "polite" });
     download.update(shoot, media, 0);
-    const next = element("button", "carousel__control", { type: "button", "aria-label": "Next photo" });
+    const next = element("button", "carousel__control", {
+      type: "button",
+      "aria-label": "Next photo",
+    });
     next.textContent = "Next";
     controls.append(previous, download.link, next);
     root.append(strip, controls);
@@ -379,7 +382,7 @@
           setIndex(Math.round(position));
         });
       },
-      { passive: true }
+      { passive: true },
     );
     ["pointerdown", "wheel"].forEach((eventName) => {
       strip.addEventListener(eventName, settlePending, { passive: true });
@@ -414,7 +417,7 @@
                 if (entry.isIntersecting) loadSlide(entry.target);
               });
             },
-            { root: strip, rootMargin: "0px 50% 0px 50%", threshold: 0 }
+            { root: strip, rootMargin: "0px 50% 0px 50%", threshold: 0 },
           );
           slides.forEach((slide) => loader.observe(slide));
         }
@@ -429,7 +432,8 @@
       currentIndex: () => index,
       goTo,
       realign() {
-        if (strip.clientWidth) strip.scrollTo({ left: index * strip.clientWidth, behavior: "auto" });
+        if (strip.clientWidth)
+          strip.scrollTo({ left: index * strip.clientWidth, behavior: "auto" });
       },
     };
     controllers.set(root, controller);
@@ -580,7 +584,7 @@
 
     const trapFocus = (event) => {
       const focusable = Array.from(windowElement.querySelectorAll(FOCUSABLE_SELECTOR)).filter(
-        (candidate) => candidate.offsetParent !== null || candidate === close
+        (candidate) => candidate.offsetParent !== null || candidate === close,
       );
       if (!focusable.length) return;
       const first = focusable[0];
@@ -669,7 +673,7 @@
       onOpen: (index, opener) => lightbox.open({ shoot, media, carousel, index, opener }),
     });
     fullscreen.addEventListener("click", () =>
-      lightbox.open({ shoot, media, carousel, index: carousel.currentIndex(), opener: fullscreen })
+      lightbox.open({ shoot, media, carousel, index: carousel.currentIndex(), opener: fullscreen }),
     );
 
     const links = element("div", "shoot__links", {
@@ -684,7 +688,8 @@
         title: link.title || null,
       });
       const icon = portfolio.linkIcons?.[link.type] || portfolio.linkIcons?.website;
-      if (icon) anchor.appendChild(element("img", "shoot__link-icon", { src: assetUrl(icon), alt: "" }));
+      if (icon)
+        anchor.appendChild(element("img", "shoot__link-icon", { src: assetUrl(icon), alt: "" }));
       const label = element("span");
       label.textContent = link.label;
       anchor.appendChild(label);
@@ -726,7 +731,7 @@
       () => {
         if (!frame) frame = window.requestAnimationFrame(update);
       },
-      { passive: true }
+      { passive: true },
     );
     update();
   };

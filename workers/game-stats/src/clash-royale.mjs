@@ -21,16 +21,9 @@ const CARD_ASSET_PATH = "/cards/300/";
 const EVOLUTION_ASSET_PATH = "/cardevolutions/300/";
 const HERO_ASSET_PATH = "/cardheroes/300/";
 const VARIABLE_ELIXIR_CARD_IDS = new Set([28000006]);
-const CARD_RARITIES = new Set([
-  "common",
-  "rare",
-  "epic",
-  "legendary",
-  "champion",
-]);
+const CARD_RARITIES = new Set(["common", "rare", "epic", "legendary", "champion"]);
 
-const isRecord = (value) =>
-  value !== null && typeof value === "object" && !Array.isArray(value);
+const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 
 const upstreamDataError = () =>
   new HttpError(502, "Clash Royale returned invalid data", {
@@ -38,20 +31,14 @@ const upstreamDataError = () =>
   });
 
 const requiredText = (value) => {
-  if (
-    typeof value !== "string" ||
-    !value.trim() ||
-    value.length > MAX_TEXT_LENGTH
-  ) {
+  if (typeof value !== "string" || !value.trim() || value.length > MAX_TEXT_LENGTH) {
     throw upstreamDataError();
   }
   return value;
 };
 
 const optionalText = (value) =>
-  typeof value === "string" && value.trim() && value.length <= MAX_TEXT_LENGTH
-    ? value
-    : undefined;
+  typeof value === "string" && value.trim() && value.length <= MAX_TEXT_LENGTH ? value : undefined;
 
 const optionalInteger = (value, { allowNegative = false } = {}) =>
   Number.isSafeInteger(value) && (allowNegative || value >= 0) ? value : undefined;
@@ -86,8 +73,7 @@ const optionalAssetUrl = (value, pathPrefix) => {
   }
 };
 
-const compact = (entries) =>
-  Object.fromEntries(entries.filter(([, value]) => value !== undefined));
+const compact = (entries) => Object.fromEntries(entries.filter(([, value]) => value !== undefined));
 
 const normalizeClan = (value) => {
   if (!isRecord(value)) return undefined;
@@ -111,16 +97,14 @@ const normalizeCard = (value) => {
   const id = optionalInteger(value.id);
   if (id === undefined) throw upstreamDataError();
   const iconUrl = optionalAssetUrl(value.iconUrls?.medium, CARD_ASSET_PATH);
-  const variant = value.evolutionLevel === 1
-    ? "evo"
-    : value.evolutionLevel === 2
-      ? "hero"
-      : undefined;
-  const variantIconUrl = variant === "evo"
-    ? optionalAssetUrl(value.iconUrls?.evolutionMedium, EVOLUTION_ASSET_PATH)
-    : variant === "hero"
-      ? optionalAssetUrl(value.iconUrls?.heroMedium, HERO_ASSET_PATH)
-      : undefined;
+  const variant =
+    value.evolutionLevel === 1 ? "evo" : value.evolutionLevel === 2 ? "hero" : undefined;
+  const variantIconUrl =
+    variant === "evo"
+      ? optionalAssetUrl(value.iconUrls?.evolutionMedium, EVOLUTION_ASSET_PATH)
+      : variant === "hero"
+        ? optionalAssetUrl(value.iconUrls?.heroMedium, HERO_ASSET_PATH)
+        : undefined;
   return compact([
     ["id", id],
     ["name", requiredText(value.name)],
@@ -128,9 +112,10 @@ const normalizeCard = (value) => {
     ["maxLevel", optionalInteger(value.maxLevel)],
     ["starLevel", optionalInteger(value.starLevel)],
     ["evolutionLevel", optionalInteger(value.evolutionLevel)],
-    ["elixirCost", VARIABLE_ELIXIR_CARD_IDS.has(id)
-      ? undefined
-      : optionalInteger(value.elixirCost)],
+    [
+      "elixirCost",
+      VARIABLE_ELIXIR_CARD_IDS.has(id) ? undefined : optionalInteger(value.elixirCost),
+    ],
     ["rarity", optionalRarity(value.rarity)],
     ["variant", variant],
     ["iconUrl", iconUrl],
@@ -372,11 +357,7 @@ export const handleClashRoyaleRequest = async (
   request,
   env,
   context,
-  {
-    fetchImpl = globalThis.fetch,
-    cache = cacheStorage(),
-    now = Date.now,
-  } = {}
+  { fetchImpl = globalThis.fetch, cache = cacheStorage(), now = Date.now } = {},
 ) => {
   const requestUrl = new URL(request.url);
   if (requestUrl.search) {
@@ -401,10 +382,7 @@ export const handleClashRoyaleRequest = async (
     assertUpstreamSuccess(profileResponse, fetchedAt);
     assertUpstreamSuccess(battlelogResponse, fetchedAt);
   } catch (error) {
-    await Promise.all([
-      cancelResponseBody(profileResponse),
-      cancelResponseBody(battlelogResponse),
-    ]);
+    await Promise.all([cancelResponseBody(profileResponse), cancelResponseBody(battlelogResponse)]);
     throw error;
   }
   const [profile, battlelog] = await Promise.all([

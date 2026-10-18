@@ -8,10 +8,7 @@ import test from "node:test";
 
 import { parse } from "yaml";
 
-import {
-  buildDockerArguments,
-  resolvePinnedImage,
-} from "../scripts/run-visual-tests.mjs";
+import { buildDockerArguments, resolvePinnedImage } from "../scripts/run-visual-tests.mjs";
 import {
   DEFAULT_UI_TEST_OUTPUT_DIR,
   DEFAULT_UI_TEST_PORT,
@@ -61,7 +58,7 @@ test("the UI test port is selectable and rejects values outside the usable range
     assert.throws(
       () => resolveUiTestPort({ UI_TEST_PORT: value }),
       /UI_TEST_PORT must be an integer/,
-      `${value} must be rejected`
+      `${value} must be rejected`,
     );
   }
 });
@@ -70,31 +67,36 @@ test("artifact paths cannot escape the ignored results tree or target source", (
   assert.equal(resolveUiTestOutputDir({}), DEFAULT_UI_TEST_OUTPUT_DIR);
   assert.equal(
     resolveUiTestOutputDir({ UI_TEST_OUTPUT_DIR: " ./test-results/dem-9/../final " }),
-    "test-results/final"
+    "test-results/final",
   );
 
   assert.equal(resolveUiTestOutputDir({ UI_TEST_OUTPUT_DIR: "test-results" }), "test-results");
-  for (const value of ["/tmp/results", "../outside", "nested/../../outside", ".", "test-results/..", "assets", "tests", "test-results-other"]) {
+  for (const value of [
+    "/tmp/results",
+    "../outside",
+    "nested/../../outside",
+    ".",
+    "test-results/..",
+    "assets",
+    "tests",
+    "test-results-other",
+  ]) {
     assert.throws(
       () => resolveUiTestOutputDir({ UI_TEST_OUTPUT_DIR: value }),
       /must be test-results or a directory beneath it/,
-      `${value} must be rejected before Playwright can clear that directory`
+      `${value} must be rejected before Playwright can clear that directory`,
     );
   }
 });
 
 test("the container image is pinned to the locked Playwright version", async () => {
   const lockfileText = await readLockfile();
-  const version =
-    JSON.parse(lockfileText).packages["node_modules/playwright-core"].version;
+  const version = JSON.parse(lockfileText).packages["node_modules/playwright-core"].version;
 
-  assert.equal(
-    resolvePinnedImage(lockfileText),
-    `mcr.microsoft.com/playwright:v${version}-noble`
-  );
+  assert.equal(resolvePinnedImage(lockfileText), `mcr.microsoft.com/playwright:v${version}-noble`);
   assert.throws(
     () => resolvePinnedImage(JSON.stringify({ packages: {} })),
-    /does not pin node_modules\/playwright-core/
+    /does not pin node_modules\/playwright-core/,
   );
 });
 
@@ -111,21 +113,23 @@ test("the container runs the visual project with isolated modules and safe argum
   assert.deepEqual(
     args.slice(args.indexOf("--platform"), args.indexOf("--platform") + 2),
     ["--platform", "linux/arm64"],
-    "baselines are committed for the default platform"
+    "baselines are committed for the default platform",
   );
 
   const mounts = args.filter((value, index) => args[index - 1] === "--volume");
   assert.equal(mounts.length, 2, "the checkout and an isolated node_modules");
   assert.ok(mounts.some((mount) => mount.endsWith(":/repo")));
-  assert.ok(mounts.includes("/repo/node_modules"),
-    "an anonymous per-run volume avoids host dependencies and shared install races");
+  assert.ok(
+    mounts.includes("/repo/node_modules"),
+    "an anonymous per-run volume avoids host dependencies and shared install races",
+  );
 
   assert.ok(args.includes(resolvePinnedImage(lockfileText)));
   assert.ok(args.includes("--env"));
   assert.ok(args.includes("UI_TEST_PORT=4241"));
   assert.ok(
     !args.some((value) => value.startsWith("CI=")),
-    "unset variables must not be forwarded"
+    "unset variables must not be forwarded",
   );
 
   const script = args[args.indexOf("-c") + 1];
@@ -134,7 +138,7 @@ test("the container runs the visual project with isolated modules and safe argum
   assert.deepEqual(
     args.slice(-2),
     ["sh", "--update-snapshots"],
-    "arguments follow the $0 placeholder instead of being interpolated"
+    "arguments follow the $0 placeholder instead of being interpolated",
   );
 });
 
@@ -159,14 +163,12 @@ test("an artifact directory the host cannot read back is rejected before Docker 
         env: { UI_TEST_OUTPUT_DIR: "/tmp/results" },
         args: [],
       }),
-    /must be test-results or a directory beneath it/
+    /must be test-results or a directory beneath it/,
   );
 });
 
 test("CI runs both the browser project and the visual baselines", async () => {
-  const workflow = parse(
-    await readFile(new URL(".github/workflows/ui-layout.yml", root), "utf8")
-  );
+  const workflow = parse(await readFile(new URL(".github/workflows/ui-layout.yml", root), "utf8"));
   const jobs = workflow.jobs;
 
   assert.deepEqual(Object.keys(jobs).sort(), ["ui", "visual"]);
@@ -181,20 +183,24 @@ test("CI runs both the browser project and the visual baselines", async () => {
   assert.deepEqual(workflow.on, { workflow_call: null });
   assert.equal(jobs.ui.strategy["fail-fast"], false);
   assert.deepEqual(jobs.ui.strategy.matrix.shard, [1, 2, 3]);
-  assert.ok(runsOf(jobs.ui).includes("npm run test:ui -- --shard=${{ matrix.shard }}/3 --workers=2"));
+  assert.ok(
+    runsOf(jobs.ui).includes("npm run test:ui -- --shard=${{ matrix.shard }}/3 --workers=2"),
+  );
   const artifact = jobs.ui.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
   assert.equal(artifact.with.name, "ui-artifacts-${{ matrix.shard }}");
   assert.match(artifact.with.path, /playwright-report/);
-  const visualArtifact = jobs.visual.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+  const visualArtifact = jobs.visual.steps.find((step) =>
+    step.uses?.startsWith("actions/upload-artifact@"),
+  );
   assert.match(visualArtifact.with.path, /playwright-report/);
   assert.ok(
     runsOf(jobs.visual).includes("npm run test:visual"),
-    "the visual baselines must be an actual CI gate"
+    "the visual baselines must be an actual CI gate",
   );
   assert.equal(
     jobs.visual["runs-on"],
     "ubuntu-24.04-arm",
-    "the runner architecture must match the committed baselines"
+    "the runner architecture must match the committed baselines",
   );
 });
 
@@ -205,11 +211,9 @@ test("the committed baselines match the platform the runner renders on", async (
   assert.deepEqual(
     platforms,
     ["linux-arm64"],
-    "CI must never be left depending on a baseline set that was not committed"
+    "CI must never be left depending on a baseline set that was not committed",
   );
-  const baselines = await readdir(
-    new URL("tests/ui/__screenshots__/linux-arm64/visual/", root)
-  );
+  const baselines = await readdir(new URL("tests/ui/__screenshots__/linux-arm64/visual/", root));
   assert.ok(baselines.length >= 8, "the curated reference set must stay present");
   assert.ok(baselines.every((name) => name.endsWith(".png")));
 });

@@ -38,7 +38,7 @@ for (const [name, query] of invalidQueries) {
       new Request(`https://stats.test/stats?${query}`, {
         headers: { Origin: ORIGIN },
       }),
-      { personal_site_game_stats: database, ALLOWED_ORIGIN: ORIGIN }
+      { personal_site_game_stats: database, ALLOWED_ORIGIN: ORIGIN },
     );
     assert.equal(response.status, 400);
     assert.equal(response.headers.get("Cache-Control"), "no-store");

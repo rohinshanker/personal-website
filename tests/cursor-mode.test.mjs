@@ -5,7 +5,7 @@ import vm from "node:vm";
 
 const source = await readFile(
   new URL("../scripts/home/core/cursor-mode.js", import.meta.url),
-  "utf8"
+  "utf8",
 );
 
 class FakeClassList {
@@ -133,7 +133,7 @@ const createRuntime = ({ mode = "light", reducedMotion = false } = {}) => {
       document,
       localStorage,
       window,
-    })
+    }),
   );
 
   return {
@@ -168,8 +168,8 @@ test("the shared runtime applies, persists, and preloads only the active cursor 
   assert.ok(environment.requests.length > 20);
   assert.ok(
     environment.requests.every(
-      ({ url }) => url.includes("-dark.png") || url.includes("/Jeelh-Cursor-Dark/")
-    )
+      ({ url }) => url.includes("-dark.png") || url.includes("/Jeelh-Cursor-Dark/"),
+    ),
   );
 
   const darkRequestCount = environment.requests.length;
@@ -182,9 +182,7 @@ test("the shared runtime applies, persists, and preloads only the active cursor 
   assert.ok(
     environment.requests
       .slice(darkRequestCount)
-      .every(
-        ({ url }) => url.includes("-light.png") || url.includes("/Jeelh-Cursor-Light/")
-      )
+      .every(({ url }) => url.includes("-light.png") || url.includes("/Jeelh-Cursor-Light/")),
   );
 
   environment.dispatchWindow("storage", {
@@ -224,13 +222,10 @@ test("one loading observer combines sources and honors reduced motion", () => {
   assert.equal(environment.mutationObservers.length, 1);
   assert.deepEqual(
     environment.mutationObservers[0].observations.map(({ target }) => target),
-    [primaryTarget, secondaryTarget]
+    [primaryTarget, secondaryTarget],
   );
   assert.equal(environment.body.classList.contains("is-custom-cursor-loading"), true);
-  assert.equal(
-    environment.body.classList.contains("is-custom-cursor-loading-frame-1"),
-    true
-  );
+  assert.equal(environment.body.classList.contains("is-custom-cursor-loading-frame-1"), true);
   assert.equal(environment.intervals.size, 0);
 
   const receivedMutationBatches = [];
@@ -238,10 +233,7 @@ test("one loading observer combines sources and honors reduced motion", () => {
     receivedMutationBatches.push(records);
   });
   assert.equal(environment.mutationObservers.length, 1);
-  assert.equal(
-    environment.mutationObservers[0].observations.at(-1).target,
-    environment.body
-  );
+  assert.equal(environment.mutationObservers[0].observations.at(-1).target, environment.body);
   environment.mutationObservers[0].callback([{ type: "childList" }]);
   assert.deepEqual(receivedMutationBatches, [[{ type: "childList" }]]);
   unsubscribe();
@@ -255,10 +247,7 @@ test("one loading observer combines sources and honors reduced motion", () => {
   const [{ callback, delay }] = environment.intervals.values();
   assert.equal(delay, 100);
   callback();
-  assert.equal(
-    environment.body.classList.contains("is-custom-cursor-loading-frame-2"),
-    true
-  );
+  assert.equal(environment.body.classList.contains("is-custom-cursor-loading-frame-2"), true);
 
   primaryBusy = false;
   controller.sync();
@@ -266,9 +255,9 @@ test("one loading observer combines sources and honors reduced motion", () => {
   assert.equal(environment.body.classList.contains("is-custom-cursor-loading"), false);
   assert.equal(
     [...environment.body.classList.values].some((name) =>
-      name.startsWith("is-custom-cursor-loading-frame-")
+      name.startsWith("is-custom-cursor-loading-frame-"),
     ),
-    false
+    false,
   );
   assert.equal(environment.intervals.size, 0);
 });

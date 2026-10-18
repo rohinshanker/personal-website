@@ -11,8 +11,7 @@ import { expect, test } from "./deterministic.mjs";
 
 const API_BASE_URL = "https://clash-royale-ui.test";
 const API_URL = `${API_BASE_URL}/clash-royale`;
-const BUILD_VERSION =
-  "sha256-781e9e3fe27f372dd47374c6a25a1012956d78dbfebd7c55067d2d06b6e9e1c6";
+const BUILD_VERSION = "sha256-781e9e3fe27f372dd47374c6a25a1012956d78dbfebd7c55067d2d06b6e9e1c6";
 const REQUIRED_VIEWPORTS = Object.freeze([
   REVIEW_VIEWPORT.mobile,
   ...breakpointPair("the Clash Royale layout breakpoint", { below: 639, above: 641, height: 900 }),
@@ -22,7 +21,7 @@ const REQUIRED_VIEWPORTS = Object.freeze([
 ]);
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-  "base64"
+  "base64",
 );
 
 const card = (id, name, metadata = {}) => ({
@@ -43,9 +42,10 @@ const createBattles = (count = 20) =>
     return {
       battleTime: new Date(Date.UTC(2026, 9, 1, 12, 15) - index * 60 * 60 * 1000).toISOString(),
       type: index === 1 ? "unknown" : "pathOfLegend",
-      gameMode: index === 1
-        ? { id: 72000529, name: "RR_FourCard_Friendly" }
-        : { id: 72000464, name: "Ranked1v1_NewArena2" },
+      gameMode:
+        index === 1
+          ? { id: 72000529, name: "RR_FourCard_Friendly" }
+          : { id: 72000464, name: "Ranked1v1_NewArena2" },
       team: [
         {
           tag: "#28CYYU08P",
@@ -87,63 +87,59 @@ const createPayload = ({
     threeCrownWins: 401,
     clan: { tag: "#CLAN", name: "Royal Friends", badgeId: 16000000 },
     arena: { id: 54000024, name: "Legendary Arena" },
-    currentDeck:
-      currentDeck ??
-      [
-        card(1, "Lumberjack", {
-          elixirCost: 4,
-          rarity: "legendary",
-          variant: "evo",
-          variantIconUrl: "https://api-assets.clashroyale.com/cardevolutions/300/lumberjack.png",
-        }),
-        card(2, "Tombstone", {
-          elixirCost: 3,
-          rarity: "rare",
-          variant: "hero",
-          variantIconUrl: "https://api-assets.clashroyale.com/cardheroes/300/tombstone.png",
-        }),
-        card(3, "Baby Dragon", { elixirCost: 4, rarity: "epic" }),
-        card(4, "Minions", { elixirCost: 3, rarity: "common" }),
-        card(5, "Lava Hound", { elixirCost: 7, rarity: "legendary" }),
-        card(6, "Barbarian Barrel", { elixirCost: 2, rarity: "epic" }),
-        card(7, "Poison", { elixirCost: 4, rarity: "epic" }),
-        card(8, "Inferno Dragon", { elixirCost: 4, rarity: "legendary" }),
-      ],
+    currentDeck: currentDeck ?? [
+      card(1, "Lumberjack", {
+        elixirCost: 4,
+        rarity: "legendary",
+        variant: "evo",
+        variantIconUrl: "https://api-assets.clashroyale.com/cardevolutions/300/lumberjack.png",
+      }),
+      card(2, "Tombstone", {
+        elixirCost: 3,
+        rarity: "rare",
+        variant: "hero",
+        variantIconUrl: "https://api-assets.clashroyale.com/cardheroes/300/tombstone.png",
+      }),
+      card(3, "Baby Dragon", { elixirCost: 4, rarity: "epic" }),
+      card(4, "Minions", { elixirCost: 3, rarity: "common" }),
+      card(5, "Lava Hound", { elixirCost: 7, rarity: "legendary" }),
+      card(6, "Barbarian Barrel", { elixirCost: 2, rarity: "epic" }),
+      card(7, "Poison", { elixirCost: 4, rarity: "epic" }),
+      card(8, "Inferno Dragon", { elixirCost: 4, rarity: "legendary" }),
+    ],
     ...player,
   },
-  battles:
-    battles ??
-    [
-      {
-        battleTime: "20261001T121500.000Z",
-        type: "PvP",
-        gameMode: { id: 72000006, name: "Ladder" },
-        team: [
-          {
-            tag: "#OTHER",
-            name: "Other side",
-            crowns: 1,
-            trophyChange: -30,
-            cards: [card(9, "Giant")],
-          },
-        ],
-        opponent: [
-          {
-            tag: "#28CYYU08P",
-            name: "Rohin",
-            crowns: 2,
-            trophyChange: 30,
-            cards: [card(1, "Knight")],
-          },
-        ],
-      },
-      {
-        battleTime: "2026-10-01T11:15:00.000Z",
-        type: "challenge",
-        team: [{ tag: "#28CYYU08P", name: "Rohin", cards: [card(1, "Knight")] }],
-        opponent: [{ tag: "#RIVAL", name: "Rival without a reported crown total" }],
-      },
-    ],
+  battles: battles ?? [
+    {
+      battleTime: "20261001T121500.000Z",
+      type: "PvP",
+      gameMode: { id: 72000006, name: "Ladder" },
+      team: [
+        {
+          tag: "#OTHER",
+          name: "Other side",
+          crowns: 1,
+          trophyChange: -30,
+          cards: [card(9, "Giant")],
+        },
+      ],
+      opponent: [
+        {
+          tag: "#28CYYU08P",
+          name: "Rohin",
+          crowns: 2,
+          trophyChange: 30,
+          cards: [card(1, "Knight")],
+        },
+      ],
+    },
+    {
+      battleTime: "2026-10-01T11:15:00.000Z",
+      type: "challenge",
+      team: [{ tag: "#28CYYU08P", name: "Rohin", cards: [card(1, "Knight")] }],
+      opponent: [{ tag: "#RIVAL", name: "Rival without a reported crown total" }],
+    },
+  ],
 });
 
 const installBackendConfig = (page) =>
@@ -166,7 +162,9 @@ const openClashRoyale = async (page, viewport) => {
   await page.locator('.taskbar-icon[data-app="clash-royale"]').click();
   const clashWindow = page.locator("#clash-royale-window");
   await expect(clashWindow).toBeVisible();
-  await expect.poll(() => clashWindow.evaluate((element) => element.getAnimations().length)).toBe(0);
+  await expect
+    .poll(() => clashWindow.evaluate((element) => element.getAnimations().length))
+    .toBe(0);
   return clashWindow;
 };
 
@@ -183,7 +181,7 @@ const consumeExpectedHttpFailure = (diagnostics, status) => {
   expect(diagnostics.requestFailures).toEqual([]);
   expect(diagnostics.consoleErrors).toHaveLength(1);
   expect(diagnostics.consoleErrors[0]).toMatch(
-    new RegExp(`^Failed to load resource: the server responded with a status of ${status}`)
+    new RegExp(`^Failed to load resource: the server responded with a status of ${status}`),
   );
   expect(diagnostics.errorResponses).toEqual([`${status} ${API_URL}`]);
   diagnostics.consoleErrors.pop();
@@ -212,7 +210,7 @@ const hoverOtherModeHint = async (page, row) => {
 
 test.beforeEach(async ({ page }) => {
   await page.route(/^https:\/\/api-assets\.clashroyale\.com\/.*\.png(?:\?.*)?$/, (route) =>
-    route.fulfill({ status: 200, contentType: "image/png", body: ONE_PIXEL_PNG })
+    route.fulfill({ status: 200, contentType: "image/png", body: ONE_PIXEL_PNG }),
   );
   await page.route(new RegExp(`^${API_BASE_URL}/stats(?:\\?.*)?$`), (route) =>
     route.fulfill({
@@ -220,7 +218,7 @@ test.beforeEach(async ({ page }) => {
       contentType: "application/json",
       headers: { "access-control-allow-origin": "*" },
       json: {},
-    })
+    }),
   );
   await installBackendConfig(page);
 });
@@ -243,17 +241,17 @@ for (const viewport of REQUIRED_VIEWPORTS) {
               name: "A clan name long enough to wrap without clipping adjacent statistics",
             },
           },
-        })
-      )
+        }),
+      ),
     );
 
     const clashWindow = await openClashRoyale(page, viewport);
     await expect(clashWindow).toHaveAccessibleName("Clash Royale Stats");
     await expect(page.locator('.desktop-icon[data-app="clash-royale"]')).toHaveAccessibleName(
-      "Clash Royale Stats"
+      "Clash Royale Stats",
     );
     await expect(page.locator('.taskbar-icon[data-app="clash-royale"]')).toHaveAccessibleName(
-      "Clash Royale Stats"
+      "Clash Royale Stats",
     );
     await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
     await expect(page.locator("#cr-status")).toBeHidden();
@@ -262,10 +260,13 @@ for (const viewport of REQUIRED_VIEWPORTS) {
     await expect(page.locator("#cr-battle-log .cr-battle-item")).toHaveCount(20);
     await expect(page.locator("#cr-battle-log")).toHaveJSProperty("tagName", "OL");
     await expect(page.locator("#cr-battle-scroll")).toHaveAccessibleName("Recent Battles");
-    await expect(page.locator("#cr-battle-log time").first()).toHaveAttribute("datetime", "2026-10-01T12:15:00.000Z");
+    await expect(page.locator("#cr-battle-log time").first()).toHaveAttribute(
+      "datetime",
+      "2026-10-01T12:15:00.000Z",
+    );
     await expect(page.locator("#cr-sample-summary")).toHaveText("6W–14L–0D · -2 crowns");
     await expect(page.locator("#cr-history-footer")).toHaveText(
-      "Most recent 20 battles loaded. View Royale API for full list."
+      "Most recent 20 battles loaded. View Royale API for full list.",
     );
     await expect(page.locator("#cr-deck-average")).toHaveText("Average Elixir: 3.9");
     await expect(page.locator(".cr-player-footer #cr-refresh")).toBeVisible();
@@ -274,14 +275,14 @@ for (const viewport of REQUIRED_VIEWPORTS) {
     await expect(page.locator("#cr-current-deck .cr-card-elixir")).toHaveCount(8);
     await expect(page.locator("#cr-current-deck .cr-card-rarity")).toHaveCount(8);
     await expect(page.locator("#cr-current-deck .cr-card-rarity").first()).toHaveClass(
-      /visually-hidden/
+      /visually-hidden/,
     );
     await expect(page.locator("#cr-battle-log .cr-battle-mode").first()).toHaveText("Ranked");
     await expect(page.locator("#cr-battle-log .cr-battle-opponent").first()).toHaveText(
-      "Rohin vs. Recent opponent 1"
+      "Rohin vs. Recent opponent 1",
     );
     await expect(page.locator("#clash-royale-window")).not.toContainText(
-      "Updates at most every 5 minutes"
+      "Updates at most every 5 minutes",
     );
     await settleRender(page);
 
@@ -302,7 +303,9 @@ for (const viewport of REQUIRED_VIEWPORTS) {
     await expect(otherTitle).toHaveText("Rohin vs. Recent opponent 2");
     await page.mouse.move(0, 0);
     await expect(otherHint).toBeHidden();
-    await page.locator("#cr-battle-scroll").evaluate((element) => { element.scrollTop = 0; });
+    await page.locator("#cr-battle-scroll").evaluate((element) => {
+      element.scrollTop = 0;
+    });
 
     if (viewport.width <= 640) {
       const mobileTextStats = await clashWindow.evaluate((windowElement) => {
@@ -344,16 +347,17 @@ for (const viewport of REQUIRED_VIEWPORTS) {
           });
         });
         const mediaTops = cards.map((card) =>
-          Math.round(card.querySelector(".cr-deck-card-media").getBoundingClientRect().top * 10)
+          Math.round(card.querySelector(".cr-deck-card-media").getBoundingClientRect().top * 10),
         );
         return {
           allWordsStayOnOneLine: wordLineCounts.every((lineCount) => lineCount === 1),
           artworkAligned:
-            new Set(mediaTops.slice(0, 4)).size === 1 &&
-            new Set(mediaTops.slice(4, 8)).size === 1,
+            new Set(mediaTops.slice(0, 4)).size === 1 && new Set(mediaTops.slice(4, 8)).size === 1,
           titlesFit: cards.every((card) => {
             const title = card.querySelector(".cr-deck-card-title");
-            return title.scrollWidth <= title.clientWidth && title.scrollHeight <= title.clientHeight;
+            return (
+              title.scrollWidth <= title.clientWidth && title.scrollHeight <= title.clientHeight
+            );
           }),
         };
       });
@@ -375,11 +379,13 @@ for (const viewport of REQUIRED_VIEWPORTS) {
         deckColumns: getComputedStyle(deck).gridTemplateColumns.split(" ").length,
         bodyOverflowX: body.scrollWidth > body.clientWidth,
         bodyOverflowY: body.scrollHeight > body.clientHeight,
-        documentOverflowX: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-        documentOverflowY: document.documentElement.scrollHeight > document.documentElement.clientHeight,
+        documentOverflowX:
+          document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        documentOverflowY:
+          document.documentElement.scrollHeight > document.documentElement.clientHeight,
         footerInsideScroll: footer.parentElement === battleScroll,
-        footerStartsBelowScroll: footer.getBoundingClientRect().top >=
-          battleScroll.getBoundingClientRect().bottom,
+        footerStartsBelowScroll:
+          footer.getBoundingClientRect().top >= battleScroll.getBoundingClientRect().bottom,
         insideViewport:
           bounds.left >= 0 &&
           bounds.right <= window.innerWidth &&
@@ -407,13 +413,15 @@ for (const viewport of REQUIRED_VIEWPORTS) {
     expect(footerAtBottom, viewport.name).toBe(true);
     await expect(page.locator("#cr-history-footer a")).toHaveAttribute(
       "href",
-      "https://royaleapi.com/player/28CYYU08P"
+      "https://royaleapi.com/player/28CYYU08P",
     );
   });
 }
 
 for (const viewport of REQUIRED_VIEWPORTS) {
-  test(`first title-bar press preserves the window position at ${viewport.name}`, async ({ page }) => {
+  test(`first title-bar press preserves the window position at ${viewport.name}`, async ({
+    page,
+  }) => {
     await page.route(API_URL, (route) => successResponse(route));
     const win = await openClashRoyale(page, viewport);
     const titleBar = win.locator(".title-bar");
@@ -426,8 +434,10 @@ for (const viewport of REQUIRED_VIEWPORTS) {
           // Freeze the real opening animation while the title bar is visible.
           await page.evaluate(() => {
             document.querySelector('.taskbar-icon[data-app="clash-royale"]').click();
-            const animation = document.querySelector("#clash-royale-window")
-              .getAnimations().find((entry) => entry.animationName === "retro-window-open");
+            const animation = document
+              .querySelector("#clash-royale-window")
+              .getAnimations()
+              .find((entry) => entry.animationName === "retro-window-open");
             animation.pause();
             animation.currentTime = 210;
           });
@@ -444,7 +454,9 @@ for (const viewport of REQUIRED_VIEWPORTS) {
       await page.mouse.down();
       expect(await win.boundingBox()).toEqual(before);
       // Holding the bar without moving must preserve the original position too.
-      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      );
       expect(await win.boundingBox()).toEqual(before);
       await page.mouse.move(pointer.x + 8, pointer.y + 20);
       await expect.poll(async () => (await win.boundingBox()).x).toBeCloseTo(before.x + 8, 0);
@@ -459,14 +471,18 @@ for (const viewport of REQUIRED_VIEWPORTS) {
   });
 }
 
-test("keeps window and named battle scrolling independent and keyboard accessible", async ({ page }) => {
+test("keeps window and named battle scrolling independent and keyboard accessible", async ({
+  page,
+}) => {
   await page.route(API_URL, (route) =>
-    successResponse(route, createPayload({ battles: createBattles() }))
+    successResponse(route, createPayload({ battles: createBattles() })),
   );
   const clashWindow = await openClashRoyale(page, { width: 375, height: 812 });
   await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
   await settleRender(page);
-  await expect.poll(() => clashWindow.evaluate((element) => element.getAnimations().length)).toBe(0);
+  await expect
+    .poll(() => clashWindow.evaluate((element) => element.getAnimations().length))
+    .toBe(0);
 
   const battleLog = page.locator("#cr-battle-log");
   const battleScroll = page.locator("#cr-battle-scroll");
@@ -492,12 +508,16 @@ test("keeps window and named battle scrolling independent and keyboard accessibl
   await battleScroll.hover();
   await page.mouse.wheel(0, 260);
   await expect.poll(() => battleScroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  await battleScroll.evaluate((element) => { element.scrollTop = 0; });
+  await battleScroll.evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await battleScroll.focus();
   await page.keyboard.press("PageDown");
   await expect.poll(() => battleScroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 
-  await battleScroll.evaluate((element) => { element.scrollTop = 0; });
+  await battleScroll.evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await battleLog.locator("summary").last().focus();
   await page.keyboard.press("Tab");
   await expect(page.locator("#cr-history-footer a")).toBeFocused();
@@ -514,7 +534,9 @@ test("keeps window and named battle scrolling independent and keyboard accessibl
     profileTop: windowElement.querySelector("#cr-player-card").getBoundingClientRect().top,
   }));
   expect(fixedAfter).toEqual(fixedBefore);
-  await windowBody.evaluate((element) => { element.scrollTop = 0; });
+  await windowBody.evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await expect(page.locator("#cr-refresh")).toBeInViewport();
   await expect(clashWindow.locator('[data-close="clash-royale"]')).toBeInViewport();
 });
@@ -529,27 +551,33 @@ test("uses shared seven-segment sprites with accessible numeric values", async (
   await expect(trophies.locator(".cr-digit-image")).toHaveCount(4);
   await expect(trophies.locator(".visually-hidden")).toHaveText("8,123");
   await expect(trophies.locator(".cr-digit-strip")).toHaveAttribute("aria-hidden", "true");
-  const digitSources = await trophies.locator(".cr-digit-image").evaluateAll((images) =>
-    images.map((image) => ({ alt: image.alt, path: new URL(image.src).pathname }))
-  );
+  const digitSources = await trophies
+    .locator(".cr-digit-image")
+    .evaluateAll((images) =>
+      images.map((image) => ({ alt: image.alt, path: new URL(image.src).pathname })),
+    );
   expect(digitSources).toEqual([
     { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_8.png" },
     { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_1.png" },
     { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_2.png" },
     { alt: "", path: "/assets/minesweeper_assets/digital_digits/digital_3.png" },
   ]);
-  const statIconPaths = await page.locator("#cr-player-card .cr-stat-icon").evaluateAll((images) =>
-    images.map((image) => ({ alt: image.alt, path: new URL(image.src).pathname }))
+  const statIconPaths = await page
+    .locator("#cr-player-card .cr-stat-icon")
+    .evaluateAll((images) =>
+      images.map((image) => ({ alt: image.alt, path: new URL(image.src).pathname })),
+    );
+  expect(statIconPaths).toEqual(
+    expect.arrayContaining([
+      { alt: "", path: "/assets/app-icons/ico/users.ico" },
+      { alt: "", path: "/assets/app-icons/ico/certificate_multiple.ico" },
+      { alt: "", path: "/assets/app-icons/ico/calculator.ico" },
+      { alt: "", path: "/assets/pixelarticons/sword.svg" },
+    ]),
   );
-  expect(statIconPaths).toEqual(expect.arrayContaining([
-    { alt: "", path: "/assets/app-icons/ico/users.ico" },
-    { alt: "", path: "/assets/app-icons/ico/certificate_multiple.ico" },
-    { alt: "", path: "/assets/app-icons/ico/calculator.ico" },
-    { alt: "", path: "/assets/pixelarticons/sword.svg" },
-  ]));
-  await expect(page.locator("#cr-battle-log .cr-battle-metric .visually-hidden").first()).toHaveText(
-    "2 to 1 crowns"
-  );
+  await expect(
+    page.locator("#cr-battle-log .cr-battle-metric .visually-hidden").first(),
+  ).toHaveText("2 to 1 crowns");
   const partialDeckDisclosure = page.locator("#cr-battle-log details").nth(1);
   await partialDeckDisclosure.locator("summary").click();
   await expect(partialDeckDisclosure.locator(".cr-battle-side-title")).toHaveText(["Your team"]);
@@ -557,25 +585,39 @@ test("uses shared seven-segment sprites with accessible numeric values", async (
 
 const MATCH_MODES = [
   { type: "PvP", gameMode: { id: 72000006, name: "Ladder" }, label: "Ladder" },
-  { type: "pathOfLegend", gameMode: { id: 72000464, name: "Ranked1v1_NewArena2" }, label: "Ranked" },
+  {
+    type: "pathOfLegend",
+    gameMode: { id: 72000464, name: "Ranked1v1_NewArena2" },
+    label: "Ranked",
+  },
   { type: "riverRacePvP", gameMode: { id: 72000268, name: "CW_Battle_1v1" }, label: "Clan War" },
-  { type: "riverRaceDuelColosseum", gameMode: { id: 72000267, name: "CW_Duel_1v1" }, label: "Clan War" },
+  {
+    type: "riverRaceDuelColosseum",
+    gameMode: { id: 72000267, name: "CW_Duel_1v1" },
+    label: "Clan War",
+  },
   { type: "challenge", label: "Challenge" },
   { type: "friendly", gameMode: { id: 72000007, name: "Friendly" }, label: "Friendly" },
   { type: "casual2v2", gameMode: { id: 72000014, name: "2v2" }, label: "2v2" },
   { type: "unknown", gameMode: { id: 72000529, name: "RR_FourCard_Friendly" }, label: "Other" },
 ];
 
-const createModeBattles = () => MATCH_MODES.map((mode, index) => ({
-  ...createBattles(1)[0], ...mode,
-  gameMode: mode.gameMode,
-  team: [{ tag: "#28CYYU08P", name: "Rohin", crowns: index % 3, cards: [] }],
-  opponent: [{ tag: `#RIVAL${index}`, name: "Opponent", crowns: 1, cards: [] }],
-}));
+const createModeBattles = () =>
+  MATCH_MODES.map((mode, index) => ({
+    ...createBattles(1)[0],
+    ...mode,
+    gameMode: mode.gameMode,
+    team: [{ tag: "#28CYYU08P", name: "Rohin", crowns: index % 3, cards: [] }],
+    opponent: [{ tag: `#RIVAL${index}`, name: "Opponent", crowns: 1, cards: [] }],
+  }));
 
 for (const viewport of REQUIRED_VIEWPORTS) {
-  test(`centers equal-height badges and floats every raw match hint at ${viewport.name}`, async ({ page }, testInfo) => {
-    await page.route(API_URL, (route) => successResponse(route, createPayload({ battles: createModeBattles() })));
+  test(`centers equal-height badges and floats every raw match hint at ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.route(API_URL, (route) =>
+      successResponse(route, createPayload({ battles: createModeBattles() })),
+    );
     await openClashRoyale(page, viewport);
     await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
     const rows = page.locator("#cr-battle-log .cr-battle-item");
@@ -597,8 +639,11 @@ for (const viewport of REQUIRED_VIEWPORTS) {
           const range = document.createRange();
           range.selectNodeContents(badge);
           const text = range.getBoundingClientRect();
-          return { height: box.height, dx: text.x + text.width / 2 - box.x - box.width / 2,
-            dy: text.y + text.height / 2 - box.y - box.height / 2 };
+          return {
+            height: box.height,
+            dx: text.x + text.width / 2 - box.x - box.width / 2,
+            dy: text.y + text.height / 2 - box.y - box.height / 2,
+          };
         }),
       }));
       const gaps = await row.evaluate((element) => {
@@ -630,8 +675,12 @@ for (const viewport of REQUIRED_VIEWPORTS) {
         scrollHeight: element.closest("#cr-battle-scroll").scrollHeight,
         titleWidth: element.querySelector(".cr-battle-opponent").getBoundingClientRect().width,
       }));
-      expect(after).toEqual({ height: before.height, listHeight: before.listHeight,
-        scrollHeight: before.scrollHeight, titleWidth: before.titleWidth });
+      expect(after).toEqual({
+        height: before.height,
+        listHeight: before.listHeight,
+        scrollHeight: before.scrollHeight,
+        titleWidth: before.titleWidth,
+      });
       expect(secondHint.x).toBeGreaterThanOrEqual(4);
       expect(secondHint.x + secondHint.width).toBeLessThanOrEqual(viewport.width - 4);
       expect(secondHint.y + secondHint.height).toBeLessThanOrEqual(viewport.height - 4);
@@ -650,12 +699,20 @@ for (const viewport of REQUIRED_VIEWPORTS) {
     }
     const warBadge = rows.nth(2).locator(".cr-battle-mode");
     await warBadge.hover();
-    expect(await scanForViolations(page, testInfo, `clash-match-hints-${viewport.name}`)).toEqual([]);
-    expect(await page.locator("#cr-battle-scroll").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    expect(await scanForViolations(page, testInfo, `clash-match-hints-${viewport.name}`)).toEqual(
+      [],
+    );
+    expect(
+      await page
+        .locator("#cr-battle-scroll")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
   });
 }
 
-test("bounds long match hints and clears them on scroll, refresh, blur, resize and close", async ({ page }) => {
+test("bounds long match hints and clears them on scroll, refresh, blur, resize and close", async ({
+  page,
+}) => {
   const battles = createModeBattles();
   battles[0].gameMode.name = "Raw_<script>_" + "LongUnbrokenModeName".repeat(30);
   await page.route(API_URL, (route) => successResponse(route, createPayload({ battles })));
@@ -669,7 +726,9 @@ test("bounds long match hints and clears them on scroll, refresh, blur, resize a
   expect(bounds.x).toBeGreaterThanOrEqual(4);
   expect(bounds.x + bounds.width).toBeLessThanOrEqual(371);
   expect(bounds.y + bounds.height).toBeLessThanOrEqual(808);
-  await page.locator("#cr-battle-scroll").evaluate((element) => { element.scrollTop += 20; });
+  await page.locator("#cr-battle-scroll").evaluate((element) => {
+    element.scrollTop += 20;
+  });
   await expect(hint).toBeHidden();
   await badge().focus();
   await expect(hint).toBeVisible();
@@ -704,7 +763,9 @@ test("bounds long match hints and clears them on scroll, refresh, blur, resize a
   await expect(hint).toBeHidden();
 });
 
-test("renders factual card metadata, safe variant artwork, and resilient image fallbacks", async ({ page }) => {
+test("renders factual card metadata, safe variant artwork, and resilient image fallbacks", async ({
+  page,
+}) => {
   const requestedCardImages = [];
   const trackedImages = [
     "https://api-assets.clashroyale.com/cards/broken.png",
@@ -717,10 +778,13 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
     requestedCardImages.push(route.request().url());
     return route.fulfill({ status: 200, contentType: "image/png", body: "not an image" });
   });
-  await page.route("https://api-assets.clashroyale.com/cardevolutions/300/evo-broken.png", (route) => {
-    requestedCardImages.push(route.request().url());
-    return route.fulfill({ status: 200, contentType: "image/png", body: "not an image" });
-  });
+  await page.route(
+    "https://api-assets.clashroyale.com/cardevolutions/300/evo-broken.png",
+    (route) => {
+      requestedCardImages.push(route.request().url());
+      return route.fulfill({ status: 200, contentType: "image/png", body: "not an image" });
+    },
+  );
   for (const url of [trackedImages[1], trackedImages[2], trackedImages[4]]) {
     await page.route(url, (route) => {
       requestedCardImages.push(route.request().url());
@@ -732,10 +796,27 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
       route,
       createPayload({
         currentDeck: [
-          { id: 1, name: "Safe card", iconUrl: "https://api-assets.clashroyale.com/cards/safe.png", elixirCost: 2, rarity: "common" },
-          { id: 2, name: "Broken card", iconUrl: "https://api-assets.clashroyale.com/cards/broken.png", elixirCost: 3, rarity: "epic" },
+          {
+            id: 1,
+            name: "Safe card",
+            iconUrl: "https://api-assets.clashroyale.com/cards/safe.png",
+            elixirCost: 2,
+            rarity: "common",
+          },
+          {
+            id: 2,
+            name: "Broken card",
+            iconUrl: "https://api-assets.clashroyale.com/cards/broken.png",
+            elixirCost: 3,
+            rarity: "epic",
+          },
           { id: 3, name: "Unsafe card", iconUrl: "https://example.com/card.png" },
-          { id: 4, name: "Insecure card", iconUrl: "http://api-assets.clashroyale.com/cards/insecure.png", variant: "hero" },
+          {
+            id: 4,
+            name: "Insecure card",
+            iconUrl: "http://api-assets.clashroyale.com/cards/insecure.png",
+            variant: "hero",
+          },
           {
             id: 5,
             name: "Evolution fallback",
@@ -753,8 +834,8 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
           { id: 28000006, name: "Mirror", elixirCost: 1, rarity: "epic" },
           { id: 8, name: "Fractional", elixirCost: 3.5, rarity: "unknown", variant: "both" },
         ],
-      })
-    )
+      }),
+    ),
   );
   await openClashRoyale(page, { width: 768, height: 1024 });
   await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
@@ -777,9 +858,11 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
   await expect(cards.nth(0)).toHaveClass(/is-rarity-common/);
   await expect(cards.nth(1)).toHaveClass(/is-rarity-epic/);
   expect(
-    await cards.locator(".cr-card-rarity").evaluateAll((elements) =>
-      elements.every((element) => element.classList.contains("visually-hidden"))
-    )
+    await cards
+      .locator(".cr-card-rarity")
+      .evaluateAll((elements) =>
+        elements.every((element) => element.classList.contains("visually-hidden")),
+      ),
   ).toBe(true);
   await expect(page.locator("#cr-deck-average")).toHaveText("Average Elixir: unavailable");
   await expect(cards.locator(".cr-deck-card-name")).toHaveText([
@@ -793,34 +876,36 @@ test("renders factual card metadata, safe variant artwork, and resilient image f
     "Fractional",
   ]);
   expect(requestedCardImages.sort()).toEqual(trackedImages.sort());
-  const mediaSizes = await cards.locator(".cr-deck-card-media").evaluateAll((elements) =>
-    elements.map((element) => ({ height: element.offsetHeight, width: element.offsetWidth }))
-  );
+  const mediaSizes = await cards
+    .locator(".cr-deck-card-media")
+    .evaluateAll((elements) =>
+      elements.map((element) => ({ height: element.offsetHeight, width: element.offsetWidth })),
+    );
   expect(new Set(mediaSizes.map(({ height }) => height)).size).toBe(1);
   expect(mediaSizes.every(({ width }) => width > 0)).toBe(true);
-  const cardOrder = await cards.first().evaluate((cardElement) =>
-    [...cardElement.children].map((child) => child.className)
-  );
-  expect(cardOrder).toEqual([
-    "cr-deck-card-title",
-    "cr-deck-card-media",
-    "cr-card-metadata",
-  ]);
+  const cardOrder = await cards
+    .first()
+    .evaluate((cardElement) => [...cardElement.children].map((child) => child.className));
+  expect(cardOrder).toEqual(["cr-deck-card-title", "cr-deck-card-media", "cr-card-metadata"]);
 
   await expect(cards.nth(6).locator(".cr-elixir-icon")).toHaveAccessibleName("elixir");
   await expect(cards.nth(7).locator(".cr-elixir-icon")).toHaveAccessibleName("Elixir unavailable");
   await expect(cards.first().locator(".cr-card-elixir")).toHaveText("2");
   await expect(cards.first().locator(".cr-elixir-icon")).toHaveAttribute(
-    "src", "assets/pixelarticons/potion.svg"
+    "src",
+    "assets/pixelarticons/potion.svg",
   );
   await expect(page.locator("#cr-deck-average .cr-elixir-icon")).toHaveAttribute("alt", "");
-  expect(await cards.locator(".cr-elixir-icon").evaluateAll((icons) =>
-    icons.every((icon) => icon.complete && icon.naturalWidth > 0)
-  )).toBe(true);
-
+  expect(
+    await cards
+      .locator(".cr-elixir-icon")
+      .evaluateAll((icons) => icons.every((icon) => icon.complete && icon.naturalWidth > 0)),
+  ).toBe(true);
 });
 
-test("uses raised cards with stable pressed hover and nested player counter inlays", async ({ page }) => {
+test("uses raised cards with stable pressed hover and nested player counter inlays", async ({
+  page,
+}) => {
   await page.route(API_URL, (route) => successResponse(route));
   for (const viewport of [REQUIRED_VIEWPORTS[0], REQUIRED_VIEWPORTS[4]]) {
     await openClashRoyale(page, viewport);
@@ -830,19 +915,23 @@ test("uses raised cards with stable pressed hover and nested player counter inla
     await expect(page.locator("#cr-deck-average")).toHaveText("Average Elixir: 3.9");
     await cards.first().scrollIntoViewIfNeeded();
     await page.mouse.move(0, 0);
-    const geometry = () => cards.evaluateAll((items) => items.map((item) => {
-      const bounds = item.getBoundingClientRect();
-      return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
-    }));
+    const geometry = () =>
+      cards.evaluateAll((items) =>
+        items.map((item) => {
+          const bounds = item.getBoundingClientRect();
+          return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+        }),
+      );
     const restGeometry = await geometry();
     const restShadow = await cards.first().evaluate((item) => getComputedStyle(item).boxShadow);
-    const restGlow = await cards.first().locator(".cr-deck-card-media").evaluate(
-      (item) => getComputedStyle(item).filter
-    );
+    const restGlow = await cards
+      .first()
+      .locator(".cr-deck-card-media")
+      .evaluate((item) => getComputedStyle(item).filter);
     await expect(cards.first()).toHaveCSS("background-color", "rgb(192, 192, 192)");
-    const sunkenShadow = await page.locator(".cr-player-panel").evaluate(
-      (item) => getComputedStyle(item).boxShadow
-    );
+    const sunkenShadow = await page
+      .locator(".cr-player-panel")
+      .evaluate((item) => getComputedStyle(item).boxShadow);
     await cards.first().hover();
     await expect(cards.first()).toHaveCSS("box-shadow", sunkenShadow);
     expect(sunkenShadow).not.toBe(restShadow);
@@ -859,25 +948,36 @@ test("uses raised cards with stable pressed hover and nested player counter inla
     await expect(counterFrames).toHaveCount(4);
     for (const frame of await counterFrames.all()) {
       await expect(frame).toHaveCSS("box-shadow", sunkenShadow);
-      expect(await frame.evaluate((element) => {
-        const frameBounds = element.getBoundingClientRect();
-        const strip = element.querySelector(".cr-digit-strip").getBoundingClientRect();
-        const value = element.closest("dd");
-        return strip.left >= frameBounds.left + 3 && strip.top >= frameBounds.top + 3 &&
-          strip.right <= frameBounds.right - 3 && strip.bottom <= frameBounds.bottom - 3 &&
-          value.scrollWidth <= value.clientWidth;
-      })).toBe(true);
+      expect(
+        await frame.evaluate((element) => {
+          const frameBounds = element.getBoundingClientRect();
+          const strip = element.querySelector(".cr-digit-strip").getBoundingClientRect();
+          const value = element.closest("dd");
+          return (
+            strip.left >= frameBounds.left + 3 &&
+            strip.top >= frameBounds.top + 3 &&
+            strip.right <= frameBounds.right - 3 &&
+            strip.bottom <= frameBounds.bottom - 3 &&
+            value.scrollWidth <= value.clientWidth
+          );
+        }),
+      ).toBe(true);
     }
     await expect(page.locator(".cr-stat").first()).toHaveCSS("box-shadow", sunkenShadow);
   }
 });
 
-test("renders team context and loads participant deck images only after disclosure", async ({ page }) => {
+test("renders team context and loads participant deck images only after disclosure", async ({
+  page,
+}) => {
   const participantImageRequests = [];
-  await page.route(/^https:\/\/api-assets\.clashroyale\.com\/cards\/participant-.*\.png$/, (route) => {
-    participantImageRequests.push(route.request().url());
-    return route.fulfill({ status: 200, contentType: "image/png", body: ONE_PIXEL_PNG });
-  });
+  await page.route(
+    /^https:\/\/api-assets\.clashroyale\.com\/cards\/participant-.*\.png$/,
+    (route) => {
+      participantImageRequests.push(route.request().url());
+      return route.fulfill({ status: 200, contentType: "image/png", body: ONE_PIXEL_PNG });
+    },
+  );
   const participantCard = (id, name, metadata = {}) => ({
     id,
     name,
@@ -900,8 +1000,8 @@ test("renders team context and loads participant deck images only after disclosu
           participantCard(
             101 + index,
             `Player card ${index + 1}`,
-            index === 0 ? { variant: "hero" } : {}
-          )
+            index === 0 ? { variant: "hero" } : {},
+          ),
         ),
       },
       {
@@ -927,7 +1027,7 @@ test("renders team context and loads participant deck images only after disclosu
     ],
   };
   await page.route(API_URL, (route) =>
-    successResponse(route, createPayload({ battles: [teamBattle] }))
+    successResponse(route, createPayload({ battles: [teamBattle] })),
   );
   await openClashRoyale(page, { width: 375, height: 812 });
   await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
@@ -936,12 +1036,12 @@ test("renders team context and loads participant deck images only after disclosu
   await expect(row.locator(".cr-battle-mode")).toHaveText("2v2");
   await expect(row.locator(".cr-battle-mode")).toHaveClass(/is-two-v-two/);
   await expect(row.locator(".cr-battle-opponent")).toHaveText(
-    "Rohin & Trusted teammate vs. First rival & Second rival"
+    "Rohin & Trusted teammate vs. First rival & Second rival",
   );
   await expect(row.locator(".cr-battle-date")).toBeVisible();
   await expect(row.locator(".cr-battle-clock")).toBeVisible();
   await expect(page.locator("#cr-history-footer")).toHaveText(
-    "Most recent 1 battle loaded. View Royale API for full list."
+    "Most recent 1 battle loaded. View Royale API for full list.",
   );
   await expect(row.locator("details")).not.toHaveAttribute("open", "");
   expect(participantImageRequests).toEqual([]);
@@ -962,21 +1062,28 @@ test("renders team context and loads participant deck images only after disclosu
     "Second rival",
   ]);
   await expect.poll(() => participantImageRequests.length).toBe(18);
-  await expect(row.locator(".cr-participant-deck").first().locator(".cr-deck-card")).toHaveCount(12);
+  await expect(row.locator(".cr-participant-deck").first().locator(".cr-deck-card")).toHaveCount(
+    12,
+  );
   await expect(row.locator(".cr-participant-deck .cr-deck-card-image")).toHaveCount(18);
-  await expect(row.locator(".cr-participant-deck .cr-deck-card-image").first()).not.toHaveAttribute("data-cr-card-src");
-  const compactCardGeometry = await row.locator(".cr-deck-card--compact").first().evaluate((cardElement) => {
-    const media = cardElement.querySelector(".cr-deck-card-media").getBoundingClientRect();
-    const name = cardElement.querySelector(".cr-deck-card-name").getBoundingClientRect();
-    return {
-      background: getComputedStyle(cardElement).backgroundColor,
-      boxShadow: getComputedStyle(cardElement).boxShadow,
-      fontSize: getComputedStyle(cardElement).fontSize,
-      mediaGridRow: getComputedStyle(cardElement).gridTemplateRows.split(" ")[1],
-      nameToImageGap: Math.round(media.top - name.bottom),
-      variantParentClass: cardElement.querySelector(".cr-card-variant").parentElement.className,
-    };
-  });
+  await expect(row.locator(".cr-participant-deck .cr-deck-card-image").first()).not.toHaveAttribute(
+    "data-cr-card-src",
+  );
+  const compactCardGeometry = await row
+    .locator(".cr-deck-card--compact")
+    .first()
+    .evaluate((cardElement) => {
+      const media = cardElement.querySelector(".cr-deck-card-media").getBoundingClientRect();
+      const name = cardElement.querySelector(".cr-deck-card-name").getBoundingClientRect();
+      return {
+        background: getComputedStyle(cardElement).backgroundColor,
+        boxShadow: getComputedStyle(cardElement).boxShadow,
+        fontSize: getComputedStyle(cardElement).fontSize,
+        mediaGridRow: getComputedStyle(cardElement).gridTemplateRows.split(" ")[1],
+        nameToImageGap: Math.round(media.top - name.bottom),
+        variantParentClass: cardElement.querySelector(".cr-card-variant").parentElement.className,
+      };
+    });
   expect(compactCardGeometry).toEqual({
     background: "rgb(192, 192, 192)",
     boxShadow: expect.not.stringMatching(/^none$/),
@@ -1033,9 +1140,13 @@ test("suppresses duplicate refreshes and reuses the snapshot after reopening", a
   expect(requestCount).toBe(2);
 });
 
-test("an app opened during eager boot initializes when its module finishes downloading", async ({ page }) => {
+test("an app opened during eager boot initializes when its module finishes downloading", async ({
+  page,
+}) => {
   let releaseModule;
-  const moduleReady = new Promise((resolve) => { releaseModule = resolve; });
+  const moduleReady = new Promise((resolve) => {
+    releaseModule = resolve;
+  });
   await page.route(/\/scripts\/home\/clash-royale\.js(?:\?.*)?$/, async (route) => {
     await moduleReady;
     await route.continue();
@@ -1054,7 +1165,7 @@ test("an app opened during eager boot initializes when its module finishes downl
     await expect(page.locator("#cr-history-footer a")).toHaveText("Royale API");
     await expect(page.locator("#cr-history-footer").locator("..")).toHaveAttribute(
       "id",
-      "cr-battle-scroll"
+      "cr-battle-scroll",
     );
     await expect(page.locator("#cr-status")).toHaveAttribute("data-state", "success");
   } finally {
@@ -1094,7 +1205,7 @@ test("retains a snapshot after an error and clears stale fields on an empty succ
           trophies: undefined,
           wins: undefined,
         },
-      })
+      }),
     );
   });
 
@@ -1102,7 +1213,7 @@ test("retains a snapshot after an error and clears stale fields on an empty succ
   await expect(page.locator("#cr-player-name")).toHaveText("Rohin");
   await page.locator("#cr-refresh").click();
   await expect(page.locator("#cr-status")).toHaveText(
-    "Too many refreshes. Try again in 3 seconds."
+    "Too many refreshes. Try again in 3 seconds.",
   );
   await expect(page.locator("#cr-player-name")).toHaveText("Rohin");
   await expect(page.locator("#cr-current-deck .cr-deck-card")).toHaveCount(8);
@@ -1113,15 +1224,15 @@ test("retains a snapshot after an error and clears stale fields on an empty succ
   await expect(page.locator("#cr-trophies")).toHaveText("—");
   await expect(page.locator("#cr-arena")).toHaveText("Unavailable");
   await expect(page.locator("#cr-current-deck .cr-empty")).toHaveText(
-    "No current deck was returned."
+    "No current deck was returned.",
   );
   await expect(page.locator("#cr-deck-average")).toHaveText("Average Elixir: unavailable");
   await expect(page.locator("#cr-battle-log .cr-empty")).toHaveText(
-    "No recent battles were returned."
+    "No recent battles were returned.",
   );
   await expect(page.locator("#cr-sample-summary")).toHaveText("No usable battles");
   await expect(page.locator("#cr-history-footer")).toHaveText(
-    "No recent battles loaded. View Royale API for full list."
+    "No recent battles loaded. View Royale API for full list.",
   );
 });
 
@@ -1130,14 +1241,17 @@ for (const { status, message } of [
   { status: 503, message: "Player data is temporarily unavailable. Try again later." },
   { status: 504, message: "The player data request timed out. Try again." },
 ]) {
-  test(`shows a safe retry message for endpoint status ${status}`, async ({ diagnostics, page }) => {
+  test(`shows a safe retry message for endpoint status ${status}`, async ({
+    diagnostics,
+    page,
+  }) => {
     await page.route(API_URL, (route) =>
       route.fulfill({
         status,
         contentType: "application/json",
         headers: { "access-control-allow-origin": "*" },
         json: { ok: false, error: "Upstream implementation detail" },
-      })
+      }),
     );
     await openClashRoyale(page, { width: 375, height: 812 });
     await expect(page.locator("#cr-status")).toHaveText(message);

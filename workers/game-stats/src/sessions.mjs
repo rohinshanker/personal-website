@@ -109,7 +109,7 @@ const minimumSessionDurationMs = (event) => {
   if (event.game === "snake") {
     return Math.max(
       MIN_SNAKE_SESSION_DURATION_MS,
-      SNAKE_RESUME_COUNTDOWN_MS + event.metric * SNAKE_TICK_MS
+      SNAKE_RESUME_COUNTDOWN_MS + event.metric * SNAKE_TICK_MS,
     );
   }
   return 10 * 1000;
@@ -156,10 +156,17 @@ export const createSession = async (request, env, rawPayload, dependencies = {})
   assertAllowedKeys(
     rawPayload,
     [
-      "game", "config", "buildVersion", "turnstileToken", "resultProtocol",
-      "rulesVersion", "replayVersion", "generatorVersion", "firstCell",
+      "game",
+      "config",
+      "buildVersion",
+      "turnstileToken",
+      "resultProtocol",
+      "rulesVersion",
+      "replayVersion",
+      "generatorVersion",
+      "firstCell",
     ],
-    "session request"
+    "session request",
   );
   const security = requireSecurityConfig(env);
   if (typeof rawPayload.game !== "string") {
@@ -174,16 +181,16 @@ export const createSession = async (request, env, rawPayload, dependencies = {})
     throw new HttpError(409, "Game build version is not compatible");
   }
   const config = normalizeSessionConfig(game, rawPayload.config);
-  const resultProtocol = rawPayload.resultProtocol === undefined
-    ? 1
-    : rawPayload.resultProtocol;
+  const resultProtocol = rawPayload.resultProtocol === undefined ? 1 : rawPayload.resultProtocol;
   if (resultProtocol === 2) {
     return createVerifiedSession(request, env, rawPayload, config, dependencies);
   }
   if (resultProtocol !== 1) throw new HttpError(409, "Unsupported result protocol");
-  if (["rulesVersion", "replayVersion", "generatorVersion", "firstCell"].some(
-    (field) => rawPayload[field] !== undefined
-  )) {
+  if (
+    ["rulesVersion", "replayVersion", "generatorVersion", "firstCell"].some(
+      (field) => rawPayload[field] !== undefined,
+    )
+  ) {
     throw new HttpError(400, "Verified game fields require resultProtocol 2");
   }
   const legacyCutoff = Date.parse(String(env.LEGACY_RESULT_ISSUANCE_CUTOFF || ""));
@@ -213,7 +220,7 @@ export const createSession = async (request, env, rawPayload, dependencies = {})
       session.buildVersion,
       session.ipHash,
       session.issuedAt,
-      session.expiresAt
+      session.expiresAt,
     )
     .run();
   return {
@@ -241,7 +248,10 @@ export const validateSession = async (request, env, event, rawSession) => {
   ) {
     throw new HttpError(403, "Session proof does not match this result");
   }
-  const session = await getGameStatsDatabase(env).prepare(SELECT_SESSION_SQL).bind(sessionId).first();
+  const session = await getGameStatsDatabase(env)
+    .prepare(SELECT_SESSION_SQL)
+    .bind(sessionId)
+    .first();
   if (!session) throw new HttpError(409, "Game session is no longer on record");
   if (
     Number(session.result_protocol || 1) !== 1 ||

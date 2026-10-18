@@ -10,7 +10,7 @@ const main = await readHomeScriptText(
   "activation",
   "windows",
   "gallery",
-  ...RANDOM_EVENT_SCRIPT_KEYS
+  ...RANDOM_EVENT_SCRIPT_KEYS,
 );
 
 const appWindows = new Map([
@@ -83,14 +83,13 @@ const assertDeferredImages = (label, fragment, expectedDeferred, eagerDigits = 0
 
   assert.ok(
     deferred.length >= expectedDeferred,
-    `${label} has at least the newly deferred image count`
+    `${label} has at least the newly deferred image count`,
   );
   assert.equal(eager.length, eagerDigits, `${label} eager image count`);
   assert.ok(
-    deferred.filter(
-      (tag) => attributeValue(tag, "width") && attributeValue(tag, "height")
-    ).length >= expectedDeferred,
-    `${label} fixes the intrinsic size of every newly deferred image`
+    deferred.filter((tag) => attributeValue(tag, "width") && attributeValue(tag, "height"))
+      .length >= expectedDeferred,
+    `${label} fixes the intrinsic size of every newly deferred image`,
   );
   eager.forEach((tag) => {
     assert.match(tag, /class="ms-digit"/);
@@ -129,14 +128,10 @@ test("hidden app and event window images defer fixed-size media", () => {
       appId,
       divFragment(`data-app-window="${appId}"`),
       expected.deferred,
-      expected.eagerDigits
+      expected.eagerDigits,
     );
   }
   for (const [windowId, expectedDeferred] of eventWindows) {
-    assertDeferredImages(
-      windowId,
-      divFragment(`id="${windowId}"`),
-      expectedDeferred
-    );
+    assertDeferredImages(windowId, divFragment(`id="${windowId}"`), expectedDeferred);
   }
 });

@@ -32,7 +32,7 @@ for (const [index, viewport] of viewports.entries()) {
     const result = await page.evaluate(() =>
       window.rohinAdminOrchestrator.runEvent("nataraja", {
         source: "nataraja-layout-test",
-      })
+      }),
     );
     expect(result).toEqual({ ok: true, message: "Triggered Nataraja." });
 
@@ -51,7 +51,9 @@ for (const [index, viewport] of viewports.entries()) {
     await expect(prompt).toBeVisible();
     await expect(yes).toBeVisible();
     await expect(no).toBeVisible();
-    await expect.poll(() => video.evaluate((element) => element.readyState)).toBeGreaterThanOrEqual(1);
+    await expect
+      .poll(() => video.evaluate((element) => element.readyState))
+      .toBeGreaterThanOrEqual(1);
     await expect.poll(() => video.evaluate((element) => element.paused)).toBe(false);
 
     const metrics = await page.evaluate(() => {
@@ -104,7 +106,7 @@ for (const [index, viewport] of viewports.entries()) {
     const previousVideoHeight = Math.min(
       previousVideoWidth * (metrics.videoNaturalHeight / metrics.videoNaturalWidth),
       viewport.height * 0.62,
-      520
+      520,
     );
     const expectedVideoHeight = previousVideoHeight * 0.75;
 
@@ -127,7 +129,6 @@ for (const [index, viewport] of viewports.entries()) {
     expect(metrics.videoLoop).toBe(true);
     expect(metrics.videoMuted).toBe(true);
 
-
     const closeButton = index % 2 === 0 ? yes : no;
     await closeButton.focus();
     await expect(closeButton).toBeFocused();
@@ -136,6 +137,5 @@ for (const [index, viewport] of viewports.entries()) {
     await expect(win).toBeHidden();
     await expect.poll(() => video.evaluate((element) => element.paused)).toBe(true);
     await expect.poll(() => video.evaluate((element) => element.currentTime)).toBe(0);
-
   });
 }

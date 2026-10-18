@@ -82,7 +82,7 @@ export function homeScriptPath(key) {
   const path = HOME_SCRIPTS[key];
   if (!path) {
     throw new Error(
-      `unknown Home script "${key}"; add it to HOME_SCRIPTS in tests/helpers/home-scripts.mjs`
+      `unknown Home script "${key}"; add it to HOME_SCRIPTS in tests/helpers/home-scripts.mjs`,
     );
   }
   return path;
@@ -93,9 +93,36 @@ export function homeScriptUrl(key) {
   return new URL(homeScriptPath(key), root);
 }
 
-/** Source text of one Home script. */
-export function readHomeScript(key) {
-  return readFile(homeScriptUrl(key), "utf8");
+const IIFE_OPENER = /^\((?:\(\) =>|async \(\) =>|function(?: \w+)?\s*\(\)) \{$/;
+
+/**
+ * Returns a script's text with the body of a file-level IIFE moved back to
+ * column 0. Biome indents the wrapper's body by one level, while the tests
+ * locate declarations by their column-0 text; stripping that one level keeps
+ * the markers stable and leaves the code itself untouched. The wrapper may
+ * follow a leading comment. A script that is not one IIFE, or whose body is
+ * already at column 0, comes back unchanged, so the call is idempotent.
+ */
+export function dedentScriptBody(source) {
+  const lines = source.split("\n");
+  const opener = lines.findIndex((line) => IIFE_OPENER.test(line));
+  if (opener === -1) return source;
+  const firstBodyLine = lines.slice(opener + 1).find((line) => line.trim() !== "");
+  if (!firstBodyLine?.startsWith("  ")) return source;
+  return [
+    ...lines.slice(0, opener + 1),
+    ...lines.slice(opener + 1).map((line) => (line.startsWith("  ") ? line.slice(2) : line)),
+  ].join("\n");
+}
+
+/** Source text of one Home script, dedented per `dedentScriptBody`. */
+export async function readHomeScript(key) {
+  return dedentScriptBody(await readFile(homeScriptUrl(key), "utf8"));
+}
+
+/** Source text of any production script by URL, dedented per `dedentScriptBody`. */
+export async function readProductionScript(url) {
+  return dedentScriptBody(await readFile(url, "utf8"));
 }
 
 /** Source text of several Home scripts, keyed the same way. */
@@ -113,16 +140,12 @@ export async function readHomeScripts(...keys) {
  */
 export async function readHomeScriptText(...keys) {
   const sources = await Promise.all(keys.map((key) => readHomeScript(key)));
-  return keys
-    .map((key, index) => `/* ${homeScriptPath(key)} */\n${sources[index]}`)
-    .join("\n");
+  return keys.map((key, index) => `/* ${homeScriptPath(key)} */\n${sources[index]}`).join("\n");
 }
 
 /** Keys of the random-event scripts, in load order. */
 export const RANDOM_EVENT_SCRIPT_KEYS = Object.freeze(
-  Object.keys(HOME_SCRIPTS).filter((key) =>
-    HOME_SCRIPTS[key].startsWith("scripts/home/events/")
-  )
+  Object.keys(HOME_SCRIPTS).filter((key) => HOME_SCRIPTS[key].startsWith("scripts/home/events/")),
 );
 
 /**

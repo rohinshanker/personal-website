@@ -1,6 +1,13 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import { FROZEN_INSTANT, REVIEW_VIEWPORTS, installGameStatsBackend, openApp, openHomeDesktop, settleFrames } from "./helpers/rendered-site.mjs";
+import {
+  FROZEN_INSTANT,
+  REVIEW_VIEWPORTS,
+  installGameStatsBackend,
+  openApp,
+  openHomeDesktop,
+  settleFrames,
+} from "./helpers/rendered-site.mjs";
 import {
   createIssuedGameResponder,
   revealedSolitaireInitial,
@@ -67,7 +74,7 @@ window.__solitaireAutoSolveTest = Object.freeze({
   }),
 });
 })();
-`
+`,
     );
     return instrumented;
   });
@@ -79,7 +86,7 @@ const stagePresentation = async (page, options = {}) => {
   await page.evaluate(() => window.homeResources.loadAdminResources());
   const result = await page.evaluate(
     (presetOptions) => window.rohinAdminOrchestrator.runPreset("game-win", presetOptions),
-    { intensity: "medium", visualEffects: true, ...options }
+    { intensity: "medium", visualEffects: true, ...options },
   );
   expect(result).toEqual({
     ok: true,
@@ -105,7 +112,7 @@ const watchImpacts = (page) =>
       () => {
         window.__solitaireAutoSolveClickedAt = performance.now();
       },
-      { capture: true, once: true }
+      { capture: true, once: true },
     );
     const originalPlay = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function recordedPlay(...args) {
@@ -168,11 +175,11 @@ const expectStagedBoard = async (page) => {
     await expect(columns.nth(index).locator(".sol-card")).toHaveCount(13);
     await expect(columns.nth(index).locator(".sol-card").first()).toHaveAttribute(
       "aria-label",
-      /^King of /
+      /^King of /,
     );
     await expect(columns.nth(index).locator(".sol-card").last()).toHaveAttribute(
       "aria-label",
-      /^Ace of /
+      /^Ace of /,
     );
   }
   for (let index = 4; index < 7; index += 1) {
@@ -218,15 +225,13 @@ const expectCheckIconCentered = async (page) => {
 };
 
 const expectFinishedWin = async (page, { moves }) => {
-  await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute(
-    "aria-hidden",
-    "false",
-    { timeout: 25_000 }
-  );
+  await expect(page.locator("#sol-victory-video-overlay")).toHaveAttribute("aria-hidden", "false", {
+    timeout: 25_000,
+  });
   for (const suit of suits) {
     await expect(page.locator(`[data-sol-foundation="${suit}"]`)).toHaveAttribute(
       "aria-label",
-      new RegExp(`foundation, King of `)
+      new RegExp(`foundation, King of `),
     );
   }
   await expect(page.locator("#sol-tableau .sol-card")).toHaveCount(0);
@@ -244,7 +249,7 @@ const expectFinishedWin = async (page, { moves }) => {
     .locator("#sol-moves .ms-digit")
     .evaluateAll((images) => images.map((image) => image.getAttribute("src")));
   expect(digits.map((src) => src.match(/digital_(\d)\.png$/)[1]).join("")).toBe(
-    String(moves).padStart(3, "0")
+    String(moves).padStart(3, "0"),
   );
 };
 
@@ -285,7 +290,7 @@ test("the check appears only while a visible card fits a foundation and undoes a
   await expect(page.locator("#sol-auto-solve")).toBeHidden();
   await expect(page.locator('[data-sol-foundation="spades"]')).toHaveAttribute(
     "aria-label",
-    "Spades foundation, Two of Spades"
+    "Spades foundation, Two of Spades",
   );
   await expect(page.locator("#sol-waste")).toHaveAttribute("aria-label", "Waste");
   let state = await snapshot(page);
@@ -349,7 +354,9 @@ test("the Admin game-win preset stages a solvable board and the check plays the 
   await expect(page.locator("#sol-fireworks")).toHaveClass(/is-showing/);
 });
 
-test("the preset honours the visual-effects switch without skipping the video", async ({ page }) => {
+test("the preset honours the visual-effects switch without skipping the video", async ({
+  page,
+}) => {
   await installSolitaireBridge(page);
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await stagePresentation(page, { visualEffects: false });
@@ -358,9 +365,7 @@ test("the preset honours the visual-effects switch without skipping the video", 
   await expect(page.locator("#sol-fireworks")).not.toHaveClass(/is-showing/);
 });
 
-test("a regular deal records one win and stays terminal until Reset", async ({
-  page,
-}) => {
+test("a regular deal records one win and stays terminal until Reset", async ({ page }) => {
   await installSolitaireBridge(page);
   const apiBaseUrl = "https://solitaire-terminal.test";
   const events = [];
@@ -381,7 +386,11 @@ test("a regular deal records one win and stays terminal until Reset", async ({
       events.push(JSON.parse(route.request().postData()));
       body = { ok: true, applied: true };
     }
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
   });
   await openHomeDesktop(page, { width: 1280, height: 800 });
   await openApp(page, "solitaire");
@@ -422,9 +431,15 @@ test("a regular deal records one win and stays terminal until Reset", async ({
   await clickCompletedBoard();
   expect(events).toEqual([]);
   await page.locator("#game-profile-cancel").click();
-  await expect.poll(() => page.evaluate(() =>
-    JSON.parse(localStorage.getItem("personalSiteGameStatsV1") || "null")?.totals.solitaire.wins
-  )).toBe(1);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("personalSiteGameStatsV1") || "null")?.totals.solitaire
+            .wins,
+      ),
+    )
+    .toBe(1);
   await expect.poll(() => events.length).toBe(1);
   await clickCompletedBoard();
   expect(events).toHaveLength(1);
@@ -445,7 +460,7 @@ test("a staged board with buried waste cards auto-solves through the waste", asy
   await page.evaluate(() =>
     window.__solitaireAutoSolveTest.stageRevealedGame({
       presentation: { visualEffects: true },
-    })
+    }),
   );
   await expect(page.locator("#sol-auto-solve")).toBeVisible();
   await expect(page.locator("#sol-reset")).toBeHidden();

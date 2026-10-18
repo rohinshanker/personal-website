@@ -21,12 +21,7 @@ const viewports = [
 ];
 
 const expectedLinks = [
-  [
-    "LinkedIn",
-    "@rohin-shanker",
-    "https://www.linkedin.com/in/rohin-shanker/",
-    "users_green.ico",
-  ],
+  ["LinkedIn", "@rohin-shanker", "https://www.linkedin.com/in/rohin-shanker/", "users_green.ico"],
   ["Instagram", "@rrohinss", "https://www.instagram.com/rohin.personal", "camera.ico"],
   [
     "Substack",
@@ -113,12 +108,10 @@ const aboutMetrics = (page) =>
     const closeBounds = closeButton.getBoundingClientRect();
     const closeHitTarget = document.elementFromPoint(
       closeBounds.left + closeBounds.width / 2,
-      closeBounds.top + closeBounds.height / 2
+      closeBounds.top + closeBounds.height / 2,
     );
     const visualViewport = window.visualViewport;
-    const contentBounds = document
-      .querySelector(".about-page-header")
-      .getBoundingClientRect();
+    const contentBounds = document.querySelector(".about-page-header").getBoundingClientRect();
     const degrees = document.querySelector(".about-degrees-list");
     const degreeCards = [...document.querySelectorAll(".about-degree-card")];
     const degreeIcons = [...document.querySelectorAll(".about-degree-card img")];
@@ -152,11 +145,10 @@ const aboutMetrics = (page) =>
       bodyScrollHeight: body.scrollHeight,
       carousel: rect(".about-carousel"),
       carouselMedia: rect(".about-carousel-media"),
-      carouselMediaOverflow: getComputedStyle(
-        document.querySelector(".about-carousel-media")
-      ).overflow,
+      carouselMediaOverflow: getComputedStyle(document.querySelector(".about-carousel-media"))
+        .overflow,
       carouselMediaPadding: Number.parseFloat(
-        getComputedStyle(document.querySelector(".about-carousel-media")).padding
+        getComputedStyle(document.querySelector(".about-carousel-media")).padding,
       ),
       carouselObjectFit: getComputedStyle(image).objectFit,
       close: rect('#about-window [data-close="about"]'),
@@ -210,16 +202,13 @@ const aboutMetrics = (page) =>
         return Number.parseFloat(style.lineHeight) / Number.parseFloat(style.fontSize);
       }),
       degreeTextFitsVertically: degreeCopies.every((copy) =>
-        [...copy.children].every(
-          (line) => line.scrollHeight <= line.clientHeight + 1
-        )
+        [...copy.children].every((line) => line.scrollHeight <= line.clientHeight + 1),
       ),
       degreeFieldContained: degreeFields.every((field) => {
         const fieldBounds = field.getBoundingClientRect();
         const cardBounds = field.closest(".about-degree-card").getBoundingClientRect();
         return (
-          fieldBounds.left >= cardBounds.left - 0.6 &&
-          fieldBounds.right <= cardBounds.right + 0.6
+          fieldBounds.left >= cardBounds.left - 0.6 && fieldBounds.right <= cardBounds.right + 0.6
         );
       }),
       degreeFieldTracksFullyVisible: degreeFields.every((field) => {
@@ -228,58 +217,52 @@ const aboutMetrics = (page) =>
           .querySelector(".about-degree-field-track")
           .getBoundingClientRect();
         return (
-          trackBounds.left >= fieldBounds.left - 0.6 &&
-          trackBounds.right <= fieldBounds.right + 0.6
+          trackBounds.left >= fieldBounds.left - 0.6 && trackBounds.right <= fieldBounds.right + 0.6
         );
       }),
       degreeFieldFontWeights: degreeFields.map((field) =>
-        Number.parseInt(getComputedStyle(field).fontWeight, 10)
+        Number.parseInt(getComputedStyle(field).fontWeight, 10),
       ),
       degreeFieldOverflowCount: degreeFields.filter(
-        (field) => field.scrollWidth > field.clientWidth + 1
+        (field) => field.scrollWidth > field.clientWidth + 1,
       ).length,
       degreeFieldOverflowContract: degreeFields.every(
         (field) =>
-          field.classList.contains("is-overflowing") ===
-          (field.scrollWidth > field.clientWidth + 1)
+          field.classList.contains("is-overflowing") === field.scrollWidth > field.clientWidth + 1,
       ),
       degreeFieldsManageOverflow: degreeFields.every(
         (field) =>
           field.scrollWidth <= field.clientWidth + 1 ||
-          getComputedStyle(field).overflowX === "auto"
+          getComputedStyle(field).overflowX === "auto",
       ),
       degreeFieldAnimationCount: degreeFields.reduce(
         (count, field) =>
           count + field.querySelector(".about-degree-field-track").getAnimations().length,
-        0
+        0,
       ),
       degreeTypeAnimationCount: degreeTypes.reduce(
         (count, type) => count + type.getAnimations().length,
-        0
+        0,
       ),
       degreeTypeFontWeights: degreeTypes.map((type) =>
-        Number.parseInt(getComputedStyle(type).fontWeight, 10)
+        Number.parseInt(getComputedStyle(type).fontWeight, 10),
       ),
       degreeTypesFit: degreeTypes.every((type) => type.scrollWidth <= type.clientWidth + 1),
       degreeVerticalOverflow: degrees.scrollHeight > degrees.clientHeight,
       documentOverflow:
         document.documentElement.scrollWidth > window.innerWidth ||
         document.documentElement.scrollHeight > window.innerHeight,
-      introColumns: getComputedStyle(
-        document.querySelector(".about-intro-grid")
-      ).gridTemplateColumns,
+      introColumns: getComputedStyle(document.querySelector(".about-intro-grid"))
+        .gridTemplateColumns,
       image: rect("#about-carousel-image"),
       imageNaturalHeight: image.naturalHeight,
       imageNaturalWidth: image.naturalWidth,
       linkTopSpread:
-        Math.max(...linkRects.map(({ top }) => top)) -
-        Math.min(...linkRects.map(({ top }) => top)),
+        Math.max(...linkRects.map(({ top }) => top)) - Math.min(...linkRects.map(({ top }) => top)),
       overview: rect(".about-overview-panel"),
       quote: rect(".about-article-quote"),
       quoteBorderInlineStart: Number.parseFloat(quoteStyle.borderInlineStartWidth),
-      quoteChildLefts: [...quote.children].map(
-        (child) => child.getBoundingClientRect().left
-      ),
+      quoteChildLefts: [...quote.children].map((child) => child.getBoundingClientRect().left),
       quoteHorizontalOverflow: quote.scrollWidth > quote.clientWidth + 1,
       quotePaddingInlineStart: Number.parseFloat(quoteStyle.paddingInlineStart),
       quoteTextLeft: Math.min(...quoteTextRects.map(({ left }) => left)),
@@ -309,8 +292,7 @@ const aboutMetrics = (page) =>
       socialCardHeightSpread:
         Math.max(...linkRects.map(({ height }) => height)) -
         Math.min(...linkRects.map(({ height }) => height)),
-      socialHorizontalOverflow:
-        socialLinksContainer.scrollWidth > socialLinksContainer.clientWidth,
+      socialHorizontalOverflow: socialLinksContainer.scrollWidth > socialLinksContainer.clientWidth,
       socialColumnCount: new Set(linkRects.map(({ left }) => Math.round(left))).size,
       socialRowCount: new Set(linkRects.map(({ top }) => Math.round(top))).size,
       taskbar: rect(".taskbar"),
@@ -319,16 +301,11 @@ const aboutMetrics = (page) =>
         Number.parseFloat(bodyStyle.marginLeft) +
         contentBounds.left -
         (bodyBounds.left + body.clientLeft),
-      visibleRightInset:
-        bodyBounds.left + body.clientLeft + body.clientWidth - contentBounds.right,
+      visibleRightInset: bodyBounds.left + body.clientLeft + body.clientWidth - contentBounds.right,
       visualViewport: {
-        bottom:
-          (visualViewport?.offsetTop || 0) +
-          (visualViewport?.height || window.innerHeight),
+        bottom: (visualViewport?.offsetTop || 0) + (visualViewport?.height || window.innerHeight),
         left: visualViewport?.offsetLeft || 0,
-        right:
-          (visualViewport?.offsetLeft || 0) +
-          (visualViewport?.width || window.innerWidth),
+        right: (visualViewport?.offsetLeft || 0) + (visualViewport?.width || window.innerWidth),
         top: visualViewport?.offsetTop || 0,
       },
       window: rect("#about-window"),
@@ -345,38 +322,29 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
   await expect(aboutWindow).toHaveRole("dialog");
   await expect(aboutWindow).toHaveAccessibleName("About Me");
   await expect(page.locator(".about-title")).toHaveText("Welcome to my Website!");
-  await expect(page.locator("#about-current-date")).toHaveText(
-    "Monday the 27th, July 2026"
-  );
-  await expect(page.locator("#about-current-date")).toHaveAttribute(
-    "datetime",
-    "2026-07-27"
-  );
+  await expect(page.locator("#about-current-date")).toHaveText("Monday the 27th, July 2026");
+  await expect(page.locator("#about-current-date")).toHaveAttribute("datetime", "2026-07-27");
   await expect(page.locator("#about-degrees-heading")).toHaveText("Education");
-  const websiteDescription = await page.locator(".about-website-section p").evaluate(
-    (paragraph) => ({
+  const websiteDescription = await page
+    .locator(".about-website-section p")
+    .evaluate((paragraph) => ({
       breakCount: paragraph.querySelectorAll("br").length,
       text: paragraph.innerText,
-    })
-  );
+    }));
   expect(websiteDescription).toEqual({
     breakCount: 1,
-    text:
-      "Welcome to my personal website! I wanted to make something unique & playful that would give me a reason to come back to often (and hopefully you too!) while also keeping record of a few things I’m proud of in one place. Be sure to check out the games, all of them have leaderboards and save your progress! Enjoy your stay :)\n—Rohin",
+    text: "Welcome to my personal website! I wanted to make something unique & playful that would give me a reason to come back to often (and hopefully you too!) while also keeping record of a few things I’m proud of in one place. Be sure to check out the games, all of them have leaderboards and save your progress! Enjoy your stay :)\n—Rohin",
   });
 
   const image = page.locator("#about-carousel-image");
   await expect(image).toHaveAttribute(
     "alt",
-    "Portrait of Rohin Shanker in front of red rock formations"
+    "Portrait of Rohin Shanker in front of red rock formations",
   );
   await expect
     .poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0))
     .toBe(true);
-  await expect(page.locator(".about-carousel-media")).not.toHaveAttribute(
-    "aria-busy",
-    "true"
-  );
+  await expect(page.locator(".about-carousel-media")).not.toHaveAttribute("aria-busy", "true");
   await expect(page.locator("#about-carousel-counter")).toHaveText("1 of 9");
   await expect(page.locator("#about-carousel-prev")).toBeEnabled();
   await expect(page.locator("#about-carousel-next")).toBeEnabled();
@@ -417,13 +385,10 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
     await expect
       .poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0))
       .toBe(true);
-    await expect(page.locator(".about-carousel-media")).not.toHaveAttribute(
-      "aria-busy",
-      "true"
-    );
+    await expect(page.locator(".about-carousel-media")).not.toHaveAttribute("aria-busy", "true");
     await expect(page.locator(".about-carousel .gallery-loading-indicator")).toBeHidden();
     await expect(page.locator("#about-carousel-counter")).toHaveText(
-      `${index + 1} of ${expectedCarouselImages.length}`
+      `${index + 1} of ${expectedCarouselImages.length}`,
     );
 
     const geometry = await readCarouselGeometry();
@@ -431,22 +396,10 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
     expect(geometry.carousel.height).toBeCloseTo(baselineCarousel.carousel.height, 1);
     expect(geometry.media.width).toBeCloseTo(baselineCarousel.media.width, 1);
     expect(geometry.media.height).toBeCloseTo(baselineCarousel.media.height, 1);
-    expect(geometry.image.left).toBeCloseTo(
-      geometry.media.left + geometry.mediaPadding,
-      1
-    );
-    expect(geometry.image.right).toBeCloseTo(
-      geometry.media.right - geometry.mediaPadding,
-      1
-    );
-    expect(geometry.image.top).toBeCloseTo(
-      geometry.media.top + geometry.mediaPadding,
-      1
-    );
-    expect(geometry.image.bottom).toBeCloseTo(
-      geometry.media.bottom - geometry.mediaPadding,
-      1
-    );
+    expect(geometry.image.left).toBeCloseTo(geometry.media.left + geometry.mediaPadding, 1);
+    expect(geometry.image.right).toBeCloseTo(geometry.media.right - geometry.mediaPadding, 1);
+    expect(geometry.image.top).toBeCloseTo(geometry.media.top + geometry.mediaPadding, 1);
+    expect(geometry.image.bottom).toBeCloseTo(geometry.media.bottom - geometry.mediaPadding, 1);
     expect(geometry.mediaOverflow).toBe("hidden");
     expect(geometry.objectFit).toBe("contain");
     expect(geometry.naturalWidth).toBeGreaterThan(0);
@@ -463,11 +416,9 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
   await expect(image).toHaveAttribute("src", expectedCarouselImages[0].src);
 
   await expect(page.locator(".about-degree-card")).toHaveCount(4);
-  await expect(page.locator("#about-institution-one")).toHaveText(
-    "Yale University (2026-2027)"
-  );
+  await expect(page.locator("#about-institution-one")).toHaveText("Yale University (2026-2027)");
   await expect(page.locator("#about-institution-two")).toHaveText(
-    "University of California, Berkeley (2022-2026)"
+    "University of California, Berkeley (2022-2026)",
   );
   await expect(page.getByRole("region", { name: "Academic degrees" })).toBeVisible();
   await expect(page.locator(".about-degree-type")).toHaveText([
@@ -477,9 +428,9 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
     "Certificate",
   ]);
   expect(
-    await page.locator(".about-degree-field").evaluateAll((fields) =>
-      fields.every((field) => Boolean(field.getAttribute("title")))
-    )
+    await page
+      .locator(".about-degree-field")
+      .evaluateAll((fields) => fields.every((field) => Boolean(field.getAttribute("title")))),
   ).toBe(true);
   await expect(page.locator(".about-degree-field-track")).toHaveText([
     "Biomedical Engineering",
@@ -502,17 +453,13 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
   await expect(longestDegree).toHaveAttribute("tabindex", "-1");
   await expect(longestDegree).toHaveCSS("overflow-x", "hidden");
   await expect
-    .poll(() =>
-      longestDegree.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)
-    )
+    .poll(() => longestDegree.evaluate((element) => element.scrollWidth <= element.clientWidth + 1))
     .toBe(true);
   const degreeList = page.locator(".about-degrees-list");
   await degreeList.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
-  await expect
-    .poll(() => degreeList.evaluate((element) => element.scrollTop))
-    .toBeGreaterThan(0);
+  await expect.poll(() => degreeList.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await degreeList.evaluate((element) => {
     element.scrollTop = 0;
   });
@@ -521,7 +468,7 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
   await expect(page.locator("#about-article-copy > p")).toHaveCount(7);
   await expect(page.locator(".about-article-quote")).toHaveCount(1);
   await expect(page.locator(".about-article-quote strong")).toContainText(
-    "When a tree is growing, it’s tender and pliant."
+    "When a tree is growing, it’s tender and pliant.",
   );
   await expect(page.locator(".about-article-quote-source")).toHaveText("—Andrei Tarkovsky");
   const signature = page.locator(".about-signature");
@@ -571,13 +518,13 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
     await expect(link.locator(".socials-username")).toHaveText(username);
     await expect(link.locator(".socials-logo")).toHaveAttribute(
       "src",
-      new RegExp(`${icon.replace(".", "\\.")}$`)
+      new RegExp(`${icon.replace(".", "\\.")}$`),
     );
   }
 
   const linkedIn = links.first();
   const restingBackground = await linkedIn.evaluate(
-    (element) => getComputedStyle(element).backgroundColor
+    (element) => getComputedStyle(element).backgroundColor,
   );
   await linkedIn.hover();
   await expect
@@ -595,7 +542,7 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
   await expect(socialsLauncher).toHaveAttribute("aria-haspopup", "dialog");
   await expect(socialsLauncher.locator(".socials-logo")).toHaveAttribute(
     "src",
-    "assets/app-icons/ico/connected_world.ico"
+    "assets/app-icons/ico/connected_world.ico",
   );
   await expect(socialsWindow).toBeHidden();
 
@@ -607,7 +554,7 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
   await expect(socialsWindow).toContainText("Find me here:");
   await expect(socialsWindow.locator(".socials-list .socials-logo").first()).toHaveAttribute(
     "src",
-    "assets/app-icons/ico/users_green.ico"
+    "assets/app-icons/ico/users_green.ico",
   );
   const settledSocialsBounds = await socialsWindow.evaluate((element) => {
     const bounds = element.getBoundingClientRect();
@@ -623,9 +570,7 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
   expect(settledSocialsBounds.left).toBeGreaterThanOrEqual(0);
   expect(settledSocialsBounds.right).toBeLessThanOrEqual(1280);
   expect(settledSocialsBounds.top).toBeGreaterThanOrEqual(0);
-  expect(settledSocialsBounds.bottom).toBeLessThanOrEqual(
-    settledSocialsBounds.taskbarTop
-  );
+  expect(settledSocialsBounds.bottom).toBeLessThanOrEqual(settledSocialsBounds.taskbarTop);
   await socialsWindow.getByRole("button", { name: "Close" }).click();
   await expect(socialsWindow).toBeHidden();
 
@@ -647,12 +592,12 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
         event.preventDefault();
         window.__aboutLinkClicks.push(link.getAttribute("href"));
       },
-      { capture: true }
+      { capture: true },
     );
   });
   for (const link of await links.all()) await link.click();
   expect(await page.evaluate(() => window.__aboutLinkClicks)).toEqual(
-    expectedLinks.map(([, , href]) => href)
+    expectedLinks.map(([, , href]) => href),
   );
   await page.mouse.move(0, 0);
   await aboutBody.focus();
@@ -666,13 +611,15 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
       });
       await expect
         .poll(() =>
-          page.locator(".about-degree-field").evaluateAll((fields) =>
-            fields.every(
-              (field) =>
-                field.classList.contains("is-overflowing") ===
-                (field.scrollWidth > field.clientWidth + 1)
-            )
-          )
+          page
+            .locator(".about-degree-field")
+            .evaluateAll((fields) =>
+              fields.every(
+                (field) =>
+                  field.classList.contains("is-overflowing") ===
+                  field.scrollWidth > field.clientWidth + 1,
+              ),
+            ),
         )
         .toBe(true);
       await aboutBody.evaluate((element) => {
@@ -684,7 +631,7 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
       const expectedBodyHeight = compactViewport
         ? Math.max(
             Math.min(220, viewport.height - 140),
-            Math.min(viewport.height * 0.65, 640, viewport.height - 140)
+            Math.min(viewport.height * 0.65, 640, viewport.height - 140),
           )
         : Math.min(viewport.height * 0.79, 750, viewport.height - 116);
       expect(metrics.documentOverflow).toBe(false);
@@ -711,11 +658,11 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
       const expectedArticleRatio = viewport.width <= 744 ? 1 : 0.75;
       expect(metrics.article.width / metrics.articleSection.width).toBeCloseTo(
         expectedArticleRatio,
-        2
+        2,
       );
       expect(metrics.article.left - metrics.articleSection.left).toBeCloseTo(
         metrics.articleSection.right - metrics.article.right,
-        1
+        1,
       );
       const quoteBorderEdge = metrics.quote.left + metrics.quoteBorderInlineStart;
       expect(metrics.quotePaddingInlineStart).toBeCloseTo(20, 1);
@@ -753,9 +700,7 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
       }
       expect(metrics.degreeTextFitsVertically).toBe(true);
       expect(metrics.degreeFieldContained).toBe(true);
-      expect(metrics.degreeFieldTracksFullyVisible).toBe(
-        metrics.degreeFieldOverflowCount === 0
-      );
+      expect(metrics.degreeFieldTracksFullyVisible).toBe(metrics.degreeFieldOverflowCount === 0);
       expect(metrics.degreeFieldOverflowContract).toBe(true);
       expect(metrics.degreeFieldsManageOverflow).toBe(true);
       expect(metrics.degreeTypeAnimationCount).toBe(0);
@@ -781,16 +726,16 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
       expect(metrics.carouselMediaPadding).toBeCloseTo(2, 1);
       expect(metrics.carouselObjectFit).toBe("contain");
       expect(metrics.image.left).toBeGreaterThanOrEqual(
-        metrics.carouselMedia.left + metrics.carouselMediaPadding - 0.5
+        metrics.carouselMedia.left + metrics.carouselMediaPadding - 0.5,
       );
       expect(metrics.image.right).toBeLessThanOrEqual(
-        metrics.carouselMedia.right - metrics.carouselMediaPadding + 0.5
+        metrics.carouselMedia.right - metrics.carouselMediaPadding + 0.5,
       );
       expect(metrics.image.top).toBeGreaterThanOrEqual(
-        metrics.carouselMedia.top + metrics.carouselMediaPadding - 0.5
+        metrics.carouselMedia.top + metrics.carouselMediaPadding - 0.5,
       );
       expect(metrics.image.bottom).toBeLessThanOrEqual(
-        metrics.carouselMedia.bottom - metrics.carouselMediaPadding + 0.5
+        metrics.carouselMedia.bottom - metrics.carouselMediaPadding + 0.5,
       );
 
       expect(metrics.linkTopSpread).toBeGreaterThan(1);
@@ -822,7 +767,9 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
 
       await aboutBody.focus();
       await aboutBody.press("End");
-      await expect.poll(() => aboutBody.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+      await expect
+        .poll(() => aboutBody.evaluate((element) => element.scrollTop))
+        .toBeGreaterThan(0);
       await expect(page.locator(".about-signoff")).toBeInViewport();
 
       await page.evaluate(() => {
@@ -831,12 +778,9 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
       });
     });
   }
-
 });
 
-test("About Me keeps its Close button reachable in compact phone viewports", async ({
-  page,
-}) => {
+test("About Me keeps its Close button reachable in compact phone viewports", async ({ page }) => {
   const compactViewports = [
     { width: 320, height: 568, name: "small-mobile" },
     { width: 375, height: 500, name: "short-mobile" },
@@ -871,9 +815,7 @@ test("About Me keeps its Close button reachable in compact phone viewports", asy
       expect(topMetrics.bodyOverflowY).toBe("auto");
       expect(topMetrics.bodyScrollHeight).toBeGreaterThan(topMetrics.bodyClientHeight);
       expect(topMetrics.documentOverflow).toBe(false);
-      expect(topMetrics.titleBar.top).toBeGreaterThanOrEqual(
-        topMetrics.visualViewport.top
-      );
+      expect(topMetrics.titleBar.top).toBeGreaterThanOrEqual(topMetrics.visualViewport.top);
       expect(topMetrics.close.top).toBeGreaterThanOrEqual(topMetrics.titleBar.top);
       expect(topMetrics.close.bottom).toBeLessThanOrEqual(topMetrics.titleBar.bottom);
       expect(topMetrics.close.right).toBeLessThanOrEqual(topMetrics.visualViewport.right);
@@ -882,12 +824,9 @@ test("About Me keeps its Close button reachable in compact phone viewports", asy
       if (viewport.height > viewport.width) {
         const previousBodyHeight = Math.max(
           220,
-          Math.min(viewport.height * 0.79, 750, viewport.height - 116)
+          Math.min(viewport.height * 0.79, 750, viewport.height - 116),
         );
-        const previousWindowHeight = Math.min(
-          viewport.height - 76,
-          previousBodyHeight + 42
-        );
+        const previousWindowHeight = Math.min(viewport.height - 76, previousBodyHeight + 42);
         expect(topMetrics.window.height / previousWindowHeight).toBeLessThanOrEqual(0.88);
       }
 
@@ -896,7 +835,9 @@ test("About Me keeps its Close button reachable in compact phone viewports", asy
 
       await aboutBody.focus();
       await aboutBody.press("End");
-      await expect.poll(() => aboutBody.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+      await expect
+        .poll(() => aboutBody.evaluate((element) => element.scrollTop))
+        .toBeGreaterThan(0);
       await expect(page.locator(".about-signoff")).toBeInViewport();
       const bottomMetrics = await aboutMetrics(page);
       expect(bottomMetrics.titleBar.top).toBeCloseTo(topMetrics.titleBar.top, 1);
@@ -917,7 +858,6 @@ test("About Me keeps its Close button reachable in compact phone viewports", asy
       expect(reopenedMetrics.closeHitTarget).toBe(true);
     });
   }
-
 });
 
 test("About degree marquee moves only overflowing field lines with one-second endpoint dwells", async ({
@@ -942,9 +882,9 @@ test("About degree marquee moves only overflowing field lines with one-second en
     .poll(() => bioengineeringTrack.evaluate((track) => track.getAnimations().length))
     .toBe(0);
   expect(
-    await page.locator(".about-degree-type").evaluateAll((types) =>
-      types.every((type) => type.getAnimations().length === 0)
-    )
+    await page
+      .locator(".about-degree-type")
+      .evaluateAll((types) => types.every((type) => type.getAnimations().length === 0)),
   ).toBe(true);
 
   const overflowingFields = page.locator(".about-degree-field.is-overflowing");
@@ -960,14 +900,14 @@ test("About degree marquee moves only overflowing field lines with one-second en
     await expect
       .poll(() => track.evaluate((element) => element.getAnimations()[0]?.playState))
       .toBe("paused");
-    const pausedTime = await track.evaluate(
-      (element) => Number(element.getAnimations()[0].currentTime)
+    const pausedTime = await track.evaluate((element) =>
+      Number(element.getAnimations()[0].currentTime),
     );
     // A running animation advances every frame, so several frames is the
     // window in which a pause that did not hold would show itself.
     await settleFrames(page, 10);
-    const stillPausedTime = await track.evaluate(
-      (element) => Number(element.getAnimations()[0].currentTime)
+    const stillPausedTime = await track.evaluate((element) =>
+      Number(element.getAnimations()[0].currentTime),
     );
     expect(Math.abs(stillPausedTime - pausedTime)).toBeLessThan(8);
     await page.mouse.move(0, 0);
@@ -975,13 +915,11 @@ test("About degree marquee moves only overflowing field lines with one-second en
       .poll(() => track.evaluate((element) => element.getAnimations()[0]?.playState))
       .toBe("running");
     await expect
-      .poll(
-        () =>
-          track.evaluate(
-            (element, startTime) =>
-              Number(element.getAnimations()[0]?.currentTime) > startTime + 16,
-            pausedTime
-          )
+      .poll(() =>
+        track.evaluate(
+          (element, startTime) => Number(element.getAnimations()[0]?.currentTime) > startTime + 16,
+          pausedTime,
+        ),
       )
       .toBe(true);
   }
@@ -992,9 +930,7 @@ test("About degree marquee moves only overflowing field lines with one-second en
     const effect = animation.effect;
     const duration = Number(effect.getTiming().duration);
     const keyframes = effect.getKeyframes();
-    const translations = keyframes.map((keyframe) =>
-      new DOMMatrixReadOnly(keyframe.transform).m41
-    );
+    const translations = keyframes.map((keyframe) => new DOMMatrixReadOnly(keyframe.transform).m41);
     const viewport = track.closest(".about-degree-field");
     animation.currentTime = duration * ((keyframes[2].offset + keyframes[3].offset) / 2);
     return {
@@ -1037,16 +973,11 @@ test("About degree marquee moves only overflowing field lines with one-second en
       copy.style.width = "36px";
     });
   });
-  await expect(page.locator(".about-degree-type")).toHaveText([
-    "M.S.",
-    "B.S.",
-    "B.S.",
-    "Cert.",
-  ]);
+  await expect(page.locator(".about-degree-type")).toHaveText(["M.S.", "B.S.", "B.S.", "Cert."]);
   expect(
-    await page.locator(".about-degree-type").evaluateAll((types) =>
-      types.every((type) => type.scrollWidth <= type.clientWidth + 1)
-    )
+    await page
+      .locator(".about-degree-type")
+      .evaluateAll((types) => types.every((type) => type.scrollWidth <= type.clientWidth + 1)),
   ).toBe(true);
   await page.locator(".about-degree-copy").evaluateAll((copies) => {
     copies.forEach((copy) => {
@@ -1059,7 +990,6 @@ test("About degree marquee moves only overflowing field lines with one-second en
     "Bachelor of Science",
     "Certificate",
   ]);
-
 });
 
 test("About Education list keeps a stable gutter and a whole heading at every rest", async ({
@@ -1117,7 +1047,7 @@ test("About Education list keeps a stable gutter and a whole heading at every re
           pinnedText: pinned ? pinned.node.textContent.trim() : null,
           sliced: headings
             .filter(
-              ({ bounds }) => bounds.top < port.top - 0.5 || bounds.bottom > port.bottom + 0.5
+              ({ bounds }) => bounds.top < port.top - 0.5 || bounds.bottom > port.bottom + 0.5,
             )
             .map(({ node }) => node.textContent.trim()),
           // A snapped card must stop below the pinned heading, not under it.
@@ -1128,17 +1058,21 @@ test("About Education list keeps a stable gutter and a whole heading at every re
                   ({ bounds }) =>
                     onScreen(bounds) &&
                     bounds.top < pinned.bounds.bottom - 0.5 &&
-                    bounds.bottom > pinned.bounds.top + 0.5
+                    bounds.bottom > pinned.bounds.top + 0.5,
                 )
                 .map(({ node }) => node.closest(".about-degree-card").textContent.trim())
             : [],
         };
       };
 
-      const requested = [...new Set([...Array(Math.floor(max / 2) + 1).keys()]
-        .map((step) => step * 2)
-        .concat([56, max])
-        .filter((offset) => offset >= 0 && offset <= max))].sort((a, b) => a - b);
+      const requested = [
+        ...new Set(
+          [...Array(Math.floor(max / 2) + 1).keys()]
+            .map((step) => step * 2)
+            .concat([56, max])
+            .filter((offset) => offset >= 0 && offset <= max),
+        ),
+      ].sort((a, b) => a - b);
       const positions = [];
       for (const offset of requested) {
         element.scrollTop = offset;
@@ -1158,13 +1092,12 @@ test("About Education list keeps a stable gutter and a whole heading at every re
     const rests = new Set(sweep.positions.map((position) => position.rest));
     expect(rests.size).toBeLessThan(sweep.positions.length);
     expect(rests.has(sweep.max)).toBe(true);
-    expect(
-      sweep.positions.find((position) => position.rest === sweep.max).pinnedText
-    ).toBe("University of California, Berkeley (2022-2026)");
+    expect(sweep.positions.find((position) => position.rest === sweep.max).pinnedText).toBe(
+      "University of California, Berkeley (2022-2026)",
+    );
     expect(sweep.positions[0].rest).toBe(0);
     expect(sweep.positions[0].pinnedText).toBe("Yale University (2026-2027)");
   }
-
 });
 
 test("About degree cards scroll without growing past the photo", async ({ page }) => {
@@ -1179,8 +1112,7 @@ test("About degree cards scroll without growing past the photo", async ({ page }
       const card = template.cloneNode(true);
       const field = card.querySelector(".about-degree-field");
       const track = card.querySelector(".about-degree-field-track");
-      const label =
-        `Long placeholder degree ${index + 1} with an additional concentration and certificate`;
+      const label = `Long placeholder degree ${index + 1} with an additional concentration and certificate`;
       field.setAttribute("aria-label", label);
       field.setAttribute("title", label);
       track.textContent = label;

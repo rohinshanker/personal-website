@@ -38,7 +38,7 @@ export const assertFetchDependencies = ({
  */
 export const fetchGuardedBody = async (
   url,
-  { fetchImpl, timeoutMs, createTimeoutSignal, init = {}, readAs, messages }
+  { fetchImpl, timeoutMs, createTimeoutSignal, init = {}, readAs, messages },
 ) => {
   let response;
   try {
@@ -50,11 +50,7 @@ export const fetchGuardedBody = async (
     throw new Error(messages.requestFailed, { cause: error });
   }
 
-  if (
-    !response ||
-    typeof response !== "object" ||
-    typeof response[readAs] !== "function"
-  ) {
+  if (!response || typeof response !== "object" || typeof response[readAs] !== "function") {
     throw new Error(messages.invalidResponse);
   }
   if (!response.ok) {

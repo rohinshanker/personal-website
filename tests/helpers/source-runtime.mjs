@@ -10,5 +10,4 @@ export const sourceBetween = (source, startMarker, endMarker) => {
 };
 
 /** Converts values created in a VM realm without dropping undefined-valued keys. */
-export const plain = (value) =>
-  value == null ? value : structuredClone(value);
+export const plain = (value) => (value == null ? value : structuredClone(value));

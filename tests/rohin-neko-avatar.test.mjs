@@ -33,13 +33,12 @@ test("Rohin Neko profile avatars use the roaming Neko's sprite cadence and indep
   assert.match(
     avatarSource,
     /NEKO_NAP_FRAME_SWITCH_FRAMES \* NEKO_FRAME_INTERVAL_MS/,
-    "Sleeping profile icons must use the roaming Neko nap cadence."
+    "Sleeping profile icons must use the roaming Neko nap cadence.",
   );
   assert.match(
     avatarSource,
     /ROHIN_NEKO_AVATAR_CLAW_DIRECTIONS = Object\.freeze\(\["left", "right"\]\)/,
-    "Profile claws are intentionally limited to left and right."
+    "Profile claws are intentionally limited to left and right.",
   );
   assert.doesNotMatch(avatarSource, /ROHIN_NEKO_AVATAR_(?:FRAME_INTERVAL|ACTION_DURATION)_MS/);
 });
-

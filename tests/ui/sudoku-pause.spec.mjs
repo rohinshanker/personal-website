@@ -29,9 +29,11 @@ const advanceClock = (page, seconds) =>
  * element carries the same attribute, so the button is named explicitly.
  */
 const waitForAdoptedDifficulty = (win, difficulty) =>
-  expect(
-    win.locator(`button[data-sudoku-difficulty="${difficulty}"]`)
-  ).toHaveAttribute("aria-pressed", "true", { timeout: 30_000 });
+  expect(win.locator(`button[data-sudoku-difficulty="${difficulty}"]`)).toHaveAttribute(
+    "aria-pressed",
+    "true",
+    { timeout: 30_000 },
+  );
 
 const firstEditableIndex = (win) =>
   win.locator(".sudoku-cell:not(.is-given)").first().getAttribute("data-sudoku-index");
@@ -47,15 +49,11 @@ const readPausedLook = (page) =>
       panelOpacity: opacityOf(".sudoku-control-panel"),
       frameInert: document.querySelector(".sudoku-grid-frame").inert,
       panelInert: document.querySelector(".sudoku-control-panel").inert,
-      visibleValues: cells.filter(
-        (cell) => !isHidden(cell.querySelector(".sudoku-cell-value"))
-      ).length,
-      visibleNotes: cells.filter(
-        (cell) => !isHidden(cell.querySelector(".sudoku-cell-notes"))
-      ).length,
-      resumeButtons: document.querySelectorAll(
-        ".sudoku-pause-overlay .sudoku-play-button"
-      ).length,
+      visibleValues: cells.filter((cell) => !isHidden(cell.querySelector(".sudoku-cell-value")))
+        .length,
+      visibleNotes: cells.filter((cell) => !isHidden(cell.querySelector(".sudoku-cell-notes")))
+        .length,
+      resumeButtons: document.querySelectorAll(".sudoku-pause-overlay .sudoku-play-button").length,
     };
   });
 
@@ -130,7 +128,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await expect(win.locator("#sudoku-aquarium-layer")).toBeVisible();
 
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
     ).toBe(false);
 
     await win.locator("#sudoku-resume").click();
@@ -149,9 +147,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
   });
 }
 
-test("pause stops the clock and resume starts it from where it stopped", async ({
-  page,
-}) => {
+test("pause stops the clock and resume starts it from where it stopped", async ({ page }) => {
   await openHomeDesktop(page, DESKTOP);
   const win = await openSudokuBoard(page);
   const time = win.locator("#sudoku-time");
@@ -200,9 +196,7 @@ test("a paused board ignores clicks, digits, and undo", async ({ page }) => {
   await expect(seeded).toHaveAttribute("data-sudoku-value", "3");
 });
 
-test("hiding the tab pauses the game and returning to it does not resume", async ({
-  page,
-}) => {
+test("hiding the tab pauses the game and returning to it does not resume", async ({ page }) => {
   await openHomeDesktop(page, DESKTOP);
   const win = await openSudokuBoard(page);
   const app = win.locator(".sudoku-app");
@@ -224,9 +218,7 @@ test("hiding the tab pauses the game and returning to it does not resume", async
   await expect(app).not.toHaveClass(/is-sudoku-paused/);
 });
 
-test("closing Sudoku while paused reopens on the loader, not the pause", async ({
-  page,
-}) => {
+test("closing Sudoku while paused reopens on the loader, not the pause", async ({ page }) => {
   await openHomeDesktop(page, DESKTOP);
   const win = await openSudokuBoard(page);
   await win.locator("#sudoku-pause").click();
@@ -237,16 +229,11 @@ test("closing Sudoku while paused reopens on the loader, not the pause", async (
 
   const reopened = await openSudokuBoard(page);
   await expect(reopened.locator(".sudoku-app")).not.toHaveClass(/is-sudoku-paused/);
-  await expect(reopened.locator("#sudoku-pause")).toHaveAttribute(
-    "aria-pressed",
-    "false"
-  );
+  await expect(reopened.locator("#sudoku-pause")).toHaveAttribute("aria-pressed", "false");
   await expect(reopened.locator("#sudoku-status")).toHaveText("Ready");
 });
 
-test("a puzzle adopted while paused leaves the clock and the pause alone", async ({
-  page,
-}) => {
+test("a puzzle adopted while paused leaves the clock and the pause alone", async ({ page }) => {
   await installDelayedSudokuGeneratorReplies(page, 600);
   await openHomeDesktop(page, DESKTOP);
   const win = await openSudokuBoard(page);

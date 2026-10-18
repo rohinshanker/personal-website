@@ -16,7 +16,7 @@ const OTHER_COMMIT_SHA = "b".repeat(40);
 
 const createGitHubResponse = (
   commitSha = WORKFLOW_COMMIT_SHA,
-  { ok = true, status = 200 } = {}
+  { ok = true, status = 200 } = {},
 ) => ({
   ok,
   status,
@@ -37,7 +37,7 @@ test("production credential check accepts only non-empty secret values", () => {
       CLOUDFLARE_API_TOKEN: "  ",
       CLOUDFLARE_ACCOUNT_ID: null,
     }),
-    ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"]
+    ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"],
   );
 });
 
@@ -48,11 +48,9 @@ test("production credential check reports each missing secret without values", (
       environment: { CLOUDFLARE_API_TOKEN: "test-api-token" },
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
-  assert.deepEqual(errors, [
-    "::error::Missing CLOUDFLARE_ACCOUNT_ID repository secret.",
-  ]);
+  assert.deepEqual(errors, ["::error::Missing CLOUDFLARE_ACCOUNT_ID repository secret."]);
 
   errors.length = 0;
   assert.equal(
@@ -60,7 +58,7 @@ test("production credential check reports each missing secret without values", (
       environment: {},
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
   assert.deepEqual(errors, [
     "::error::Missing CLOUDFLARE_API_TOKEN repository secret.",
@@ -107,12 +105,12 @@ test("rejects invalid GitHub release-context inputs", async () => {
   for (const repository of [undefined, "owner", "/repository", "owner/repo/name"]) {
     await assert.rejects(
       fetchCurrentMainCommitSha({ repository, token: "test-token" }),
-      /owner\/name format/
+      /owner\/name format/,
     );
   }
   await assert.rejects(
     fetchCurrentMainCommitSha({ repository: "owner/repository", token: " " }),
-    /GITHUB_TOKEN is required/
+    /GITHUB_TOKEN is required/,
   );
   await assert.rejects(
     fetchCurrentMainCommitSha({
@@ -120,7 +118,7 @@ test("rejects invalid GitHub release-context inputs", async () => {
       token: "test-token",
       fetchImpl: null,
     }),
-    /fetch implementation is required/
+    /fetch implementation is required/,
   );
   for (const timeoutMs of [0, -1, 1.5, Number.NaN]) {
     await assert.rejects(
@@ -129,7 +127,7 @@ test("rejects invalid GitHub release-context inputs", async () => {
         token: "test-token",
         timeoutMs,
       }),
-      /timeout must be a positive integer/
+      /timeout must be a positive integer/,
     );
   }
   await assert.rejects(
@@ -138,7 +136,7 @@ test("rejects invalid GitHub release-context inputs", async () => {
       token: "test-token",
       createTimeoutSignal: null,
     }),
-    /timeout signal factory is required/
+    /timeout signal factory is required/,
   );
 });
 
@@ -159,7 +157,7 @@ test("reports GitHub network, response, status, JSON, and payload failures", asy
       assert.match(error.message, /Unable to read refs\/heads\/main/);
       assert.equal(error.cause, networkError);
       return true;
-    }
+    },
   );
 
   for (const response of [null, {}, { ok: true, json: "not-a-function" }]) {
@@ -168,7 +166,7 @@ test("reports GitHub network, response, status, JSON, and payload failures", asy
         ...requestOptions,
         fetchImpl: async () => response,
       }),
-      /invalid refs\/heads\/main response/
+      /invalid refs\/heads\/main response/,
     );
   }
   await assert.rejects(
@@ -176,14 +174,14 @@ test("reports GitHub network, response, status, JSON, and payload failures", asy
       ...requestOptions,
       fetchImpl: async () => createGitHubResponse(undefined, { ok: false, status: 503 }),
     }),
-    /status 503/
+    /status 503/,
   );
   await assert.rejects(
     fetchCurrentMainCommitSha({
       ...requestOptions,
       fetchImpl: async () => ({ ok: false, json: async () => ({}) }),
     }),
-    /status unknown/
+    /status unknown/,
   );
 
   const jsonError = new Error("invalid JSON");
@@ -201,7 +199,7 @@ test("reports GitHub network, response, status, JSON, and payload failures", asy
       assert.match(error.message, /not valid JSON/);
       assert.equal(error.cause, jsonError);
       return true;
-    }
+    },
   );
   for (const payload of [null, {}, { object: {} }, { object: { sha: "A".repeat(40) } }]) {
     await assert.rejects(
@@ -209,7 +207,7 @@ test("reports GitHub network, response, status, JSON, and payload failures", asy
         ...requestOptions,
         fetchImpl: async () => ({ ok: true, json: async () => payload }),
       }),
-      /lowercase 40-character Git commit SHA/
+      /lowercase 40-character Git commit SHA/,
     );
   }
 });
@@ -226,7 +224,7 @@ test("current-main check accepts the active revision and rejects stale runs", as
         return WORKFLOW_COMMIT_SHA;
       },
     }),
-    { commitSha: WORKFLOW_COMMIT_SHA }
+    { commitSha: WORKFLOW_COMMIT_SHA },
   );
   assert.deepEqual(calls, [
     {
@@ -242,14 +240,14 @@ test("current-main check accepts the active revision and rejects stale runs", as
       token: "test-token",
       fetchCurrentMainCommitShaImpl: async () => OTHER_COMMIT_SHA,
     }),
-    /Workflow revision is stale/
+    /Workflow revision is stale/,
   );
   await assert.rejects(
     checkCurrentMainRevision({
       workflowCommitSha: "A".repeat(40),
       fetchCurrentMainCommitShaImpl: async () => WORKFLOW_COMMIT_SHA,
     }),
-    /Workflow revision must be a lowercase 40-character Git commit SHA/
+    /Workflow revision must be a lowercase 40-character Git commit SHA/,
   );
 });
 
@@ -262,11 +260,9 @@ test("current-main runner emits safe annotations and exit codes", async () => {
       writeOutput: (message) => output.push(message),
       writeError: (message) => errors.push(message),
     }),
-    0
+    0,
   );
-  assert.deepEqual(output, [
-    "Verified workflow revision is current on refs/heads/main.",
-  ]);
+  assert.deepEqual(output, ["Verified workflow revision is current on refs/heads/main."]);
   assert.deepEqual(errors, []);
 
   assert.equal(
@@ -277,7 +273,7 @@ test("current-main runner emits safe annotations and exit codes", async () => {
       writeOutput: (message) => output.push(message),
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
   assert.equal(
     await runCurrentMainRevisionCheck({
@@ -287,12 +283,9 @@ test("current-main runner emits safe annotations and exit codes", async () => {
       writeOutput: (message) => output.push(message),
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
-  assert.deepEqual(errors, [
-    "::error::Workflow revision is stale",
-    "::error::fixed failure",
-  ]);
+  assert.deepEqual(errors, ["::error::Workflow revision is stale", "::error::fixed failure"]);
 });
 
 test("release-context checks retain safe default console reporters", async (context) => {
@@ -302,29 +295,23 @@ test("release-context checks retain safe default console reporters", async (cont
   context.mock.method(console, "error", (message) => errors.push(message));
 
   assert.equal(runProductionCredentialCheck({ environment: {} }), 1);
-  assert.equal(
-    await runCurrentMainRevisionCheck({ checkImpl: async () => ({}) }),
-    0
-  );
+  assert.equal(await runCurrentMainRevisionCheck({ checkImpl: async () => ({}) }), 0);
   assert.equal(
     await runCurrentMainRevisionCheck({
       checkImpl: async () => {
         throw new Error("fixed failure");
       },
     }),
-    1
+    1,
   );
   assert.equal(await runGameStatsReleaseContextCli({ args: [] }), 1);
 
-  assert.deepEqual(output, [
-    "Verified workflow revision is current on refs/heads/main.",
-  ]);
+  assert.deepEqual(output, ["Verified workflow revision is current on refs/heads/main."]);
   assert.deepEqual(errors, [
     "::error::Missing CLOUDFLARE_API_TOKEN repository secret.",
     "::error::Missing CLOUDFLARE_ACCOUNT_ID repository secret.",
     "::error::fixed failure",
-    "Usage: node scripts/check-game-stats-release-context.mjs " +
-      "[--credentials|--current-main]",
+    "Usage: node scripts/check-game-stats-release-context.mjs " + "[--credentials|--current-main]",
   ]);
 });
 
@@ -340,14 +327,8 @@ test("release-context CLI dispatches its two checks and rejects invalid usage", 
       return 20;
     },
   };
-  assert.equal(
-    await runGameStatsReleaseContextCli({ args: ["--credentials"], ...runners }),
-    10
-  );
-  assert.equal(
-    await runGameStatsReleaseContextCli({ args: ["--current-main"], ...runners }),
-    20
-  );
+  assert.equal(await runGameStatsReleaseContextCli({ args: ["--credentials"], ...runners }), 10);
+  assert.equal(await runGameStatsReleaseContextCli({ args: ["--current-main"], ...runners }), 20);
 
   const errors = [];
   assert.equal(
@@ -356,11 +337,10 @@ test("release-context CLI dispatches its two checks and rejects invalid usage", 
       ...runners,
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
   assert.deepEqual(calls, ["credentials", "current-main"]);
   assert.deepEqual(errors, [
-    "Usage: node scripts/check-game-stats-release-context.mjs " +
-      "[--credentials|--current-main]",
+    "Usage: node scripts/check-game-stats-release-context.mjs " + "[--credentials|--current-main]",
   ]);
 });

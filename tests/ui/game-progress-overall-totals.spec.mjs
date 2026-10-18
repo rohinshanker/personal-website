@@ -26,16 +26,16 @@ const isPlayerStatsRequest = (request, playerId) => {
 
 const generatedBackendSource = await readFile(
   new URL("../../scripts/home/game-stats-backend.js", import.meta.url),
-  "utf8"
+  "utf8",
 );
 
 const installBackend = async (page) => {
   const source = generatedBackendSource.replace(
     /apiBaseUrl:\s*"[^"]*"/,
-    `apiBaseUrl: ${JSON.stringify(API_BASE_URL)}`
+    `apiBaseUrl: ${JSON.stringify(API_BASE_URL)}`,
   );
   await page.route("**/scripts/home/game-stats-backend.js*", (route) =>
-    route.fulfill({ contentType: "application/javascript", body: source })
+    route.fulfill({ contentType: "application/javascript", body: source }),
   );
 };
 
@@ -58,7 +58,7 @@ const installStatsApi = async (page) => {
             solitaire: { wins: 11 },
             snake: {
               totalGamesPlayed: 15,
-              gamesPlayed: { "10": 4, "16": 5, "20": 3, "24": 3 },
+              gamesPlayed: { 10: 4, 16: 5, 20: 3, 24: 3 },
             },
             sudoku: {
               wins: {
@@ -102,7 +102,7 @@ const createStatsPayload = (solitaireWins) => ({
     solitaire: { wins: solitaireWins },
     snake: {
       totalGamesPlayed: 0,
-      gamesPlayed: { "10": 0, "16": 0, "20": 0, "24": 0 },
+      gamesPlayed: { 10: 0, 16: 0, 20: 0, 24: 0 },
     },
     sudoku: { wins: {} },
   },
@@ -123,7 +123,7 @@ for (const viewport of VIEWPORTS) {
         localStorage.setItem(profileKey, JSON.stringify(profile));
         localStorage.removeItem(statsKey);
       },
-      { profile: PROFILE, profileKey: PROFILE_STORAGE_KEY, statsKey: GAME_STATS_STORAGE_KEY }
+      { profile: PROFILE, profileKey: PROFILE_STORAGE_KEY, statsKey: GAME_STATS_STORAGE_KEY },
     );
     await installBackend(page);
     const requests = await installStatsApi(page);
@@ -191,7 +191,6 @@ for (const viewport of VIEWPORTS) {
       expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth);
       expect(layout.bottom).toBeLessThanOrEqual(layout.viewportHeight);
     }
-
   });
 }
 
@@ -206,7 +205,7 @@ test("Game Progress retains confirmed totals through a failed refresh and later 
       localStorage.setItem(profileKey, JSON.stringify(profile));
       localStorage.removeItem(statsKey);
     },
-    { profile: PROFILE, profileKey: PROFILE_STORAGE_KEY, statsKey: GAME_STATS_STORAGE_KEY }
+    { profile: PROFILE, profileKey: PROFILE_STORAGE_KEY, statsKey: GAME_STATS_STORAGE_KEY },
   );
   await installBackend(page);
 

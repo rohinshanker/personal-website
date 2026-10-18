@@ -4,17 +4,17 @@ import { REVIEW_VIEWPORTS } from "./helpers/rendered-site.mjs";
 const viewports = REVIEW_VIEWPORTS;
 
 const digitSources = async (total) =>
-  total.locator("img").evaluateAll((images) =>
-    images.map((image) => new URL(image.src).pathname)
-  );
+  total.locator("img").evaluateAll((images) => images.map((image) => new URL(image.src).pathname));
 
 const expectedSources = (digits) =>
-  digits.split("").map(
-    (digit) =>
-      `/assets/minesweeper_assets/digital_digits/digital_${
-        digit === " " ? "unlit" : digit === "-" ? "minus" : digit
-      }.png`
-  );
+  digits
+    .split("")
+    .map(
+      (digit) =>
+        `/assets/minesweeper_assets/digital_digits/digital_${
+          digit === " " ? "unlit" : digit === "-" ? "minus" : digit
+        }.png`,
+    );
 
 for (const viewport of viewports) {
   test(`Counter uses unlit leading digits at ${viewport.name}`, async ({ page }) => {

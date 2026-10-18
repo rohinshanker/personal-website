@@ -8,8 +8,7 @@
   const MAX_ANALYSIS_SAMPLE_RATE = 22050;
   const MIN_FREQUENCY = 20;
 
-  const clamp = (value, minimum, maximum) =>
-    Math.min(Math.max(value, minimum), maximum);
+  const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), maximum);
 
   const percentile = (values, ratio) => {
     if (!values.length) return 0;
@@ -87,18 +86,14 @@
         for (let index = 0; index < half; index += 1) {
           const even = block + index;
           const odd = even + half;
-          const oddReal =
-            real[odd] * weightReal - imaginary[odd] * weightImaginary;
-          const oddImaginary =
-            real[odd] * weightImaginary + imaginary[odd] * weightReal;
+          const oddReal = real[odd] * weightReal - imaginary[odd] * weightImaginary;
+          const oddImaginary = real[odd] * weightImaginary + imaginary[odd] * weightReal;
           real[odd] = real[even] - oddReal;
           imaginary[odd] = imaginary[even] - oddImaginary;
           real[even] += oddReal;
           imaginary[even] += oddImaginary;
-          const nextWeightReal =
-            weightReal * stepReal - weightImaginary * stepImaginary;
-          weightImaginary =
-            weightReal * stepImaginary + weightImaginary * stepReal;
+          const nextWeightReal = weightReal * stepReal - weightImaginary * stepImaginary;
+          weightImaginary = weightReal * stepImaginary + weightImaginary * stepReal;
           weightReal = nextWeightReal;
         }
       }
@@ -108,8 +103,7 @@
     for (let index = 0; index < magnitudes.length; index += 1) {
       const realPart = real[index];
       const imaginaryPart = imaginary[index];
-      magnitudes[index] =
-        Math.sqrt(realPart * realPart + imaginaryPart * imaginaryPart) * scale;
+      magnitudes[index] = Math.sqrt(realPart * realPart + imaginaryPart * imaginaryPart) * scale;
     }
     return magnitudes;
   };
@@ -130,10 +124,7 @@
     let bandIndex = 0;
     for (let bin = 1; bin < magnitudes.length; bin += 1) {
       const frequency = (bin * sampleRate) / fftSize;
-      while (
-        bandIndex < bands.length - 1 &&
-        frequency >= bandEdges[bandIndex + 1]
-      ) {
+      while (bandIndex < bands.length - 1 && frequency >= bandEdges[bandIndex + 1]) {
         bandIndex += 1;
       }
       if (frequency < bandEdges[bandIndex] || frequency > bandEdges.at(-1)) continue;
@@ -177,18 +168,12 @@
     if (fftSize < 256 || (fftSize & (fftSize - 1)) !== 0) {
       throw new RangeError("FFT size must be a power of two of at least 256.");
     }
-    const { samples, sampleRate } = resampleForAnalysis(
-      inputSamples,
-      inputSampleRate
-    );
+    const { samples, sampleRate } = resampleForAnalysis(inputSamples, inputSampleRate);
     const bandCount = options.bandCount || DEFAULT_BAND_COUNT;
     const maximumFrames = options.maxFrames || DEFAULT_MAX_FRAMES;
     const waveformBinCount = options.waveformBins || DEFAULT_WAVEFORM_BINS;
     const availableFrames = Math.max(1, samples.length - fftSize + 1);
-    const hopSize = Math.max(
-      fftSize / 2,
-      Math.ceil(availableFrames / maximumFrames)
-    );
+    const hopSize = Math.max(fftSize / 2, Math.ceil(availableFrames / maximumFrames));
     const frameCount = Math.max(1, Math.ceil(availableFrames / hopSize));
     const plan = createFftPlan(fftSize);
     const bandEdges = createBandEdges(sampleRate, bandCount);
@@ -202,7 +187,7 @@
       spectra.set(bands, frame * bandCount);
       frameTimes[frame] = Math.min(
         inputSamples.length / inputSampleRate,
-        (offset + fftSize / 2) / sampleRate
+        (offset + fftSize / 2) / sampleRate,
       );
       for (let band = 0; band < bandCount; band += 1) {
         averageSpectrum[band] += bands[band];
@@ -287,13 +272,7 @@
     return normalizeSeries(values);
   };
 
-  const findDirectionalCrossings = (
-    times,
-    series,
-    threshold,
-    direction,
-    options = {}
-  ) => {
+  const findDirectionalCrossings = (times, series, threshold, direction, options = {}) => {
     const hysteresis = options.hysteresis ?? 0.05;
     const minimumSpacing = options.minimumSpacing ?? 0.18;
     const crossings = [];
@@ -327,34 +306,21 @@
     return crossings;
   };
 
-  const findThresholdCrossings = (
-    times,
-    series,
-    threshold,
-    direction,
-    options = {}
-  ) => {
+  const findThresholdCrossings = (times, series, threshold, direction, options = {}) => {
     const normalizedThreshold = clamp(threshold, 0, 1);
     const directions = direction === "both" ? ["rising", "falling"] : [direction];
     const combined = directions.flatMap((candidate) =>
-      findDirectionalCrossings(
-        times,
-        series,
-        normalizedThreshold,
-        candidate,
-        options
-      )
+      findDirectionalCrossings(times, series, normalizedThreshold, candidate, options),
     );
     combined.sort((left, right) => left.time - right.time);
     const minimumSpacing = options.minimumSpacing ?? 0.18;
     return combined.filter(
       (crossing, index) =>
-        index === 0 || crossing.time - combined[index - 1].time >= minimumSpacing
+        index === 0 || crossing.time - combined[index - 1].time >= minimumSpacing,
     );
   };
 
-  const recommendThreshold = (series, ratio = 0.75) =>
-    clamp(percentile(series, ratio), 0.35, 0.88);
+  const recommendThreshold = (series, ratio = 0.75) => clamp(percentile(series, ratio), 0.35, 0.88);
 
   self.VideoEditorAudioAnalysis = Object.freeze({
     analyze,

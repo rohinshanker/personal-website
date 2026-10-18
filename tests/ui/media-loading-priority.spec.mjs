@@ -3,7 +3,7 @@ import { settleFrames } from "./helpers/rendered-site.mjs";
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR42mNk+M/wHwAF/gL+q0g9QAAAAABJRU5ErkJggg==",
-  "base64"
+  "base64",
 );
 
 const pathfinderSources = [
@@ -78,7 +78,9 @@ test("Pathfinder warms every later carousel image in display order while the fir
   expect(requests).toEqual(pathfinderSources);
 });
 
-test("hidden Creative Work media waits until the selected carousel has warmed", async ({ page }) => {
+test("hidden Creative Work media waits until the selected carousel has warmed", async ({
+  page,
+}) => {
   const pathfinderRequests = [];
   const pathfinderGates = new Map();
   let berserkRequest = null;
@@ -93,11 +95,14 @@ test("hidden Creative Work media waits until the selected carousel has warmed", 
     await gate.promise;
     await route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" });
   });
-  await page.route("**/assets/creative-work/berserk-poster-redesign/magazine-cover.webp", async (route) => {
-    berserkRequest = new URL(route.request().url()).pathname;
-    await berserkGate.promise;
-    await route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" });
-  });
+  await page.route(
+    "**/assets/creative-work/berserk-poster-redesign/magazine-cover.webp",
+    async (route) => {
+      berserkRequest = new URL(route.request().url()).pathname;
+      await berserkGate.promise;
+      await route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" });
+    },
+  );
 
   await page.goto("/home.html");
   await openPathfinder(page);
@@ -110,9 +115,9 @@ test("hidden Creative Work media waits until the selected carousel has warmed", 
   }
 
   pathfinderGates.get(pathfinderSources.at(-1)).resolve();
-  await expect.poll(() => berserkRequest).toBe(
-    "/assets/creative-work/berserk-poster-redesign/magazine-cover.webp"
-  );
+  await expect
+    .poll(() => berserkRequest)
+    .toBe("/assets/creative-work/berserk-poster-redesign/magazine-cover.webp");
   berserkGate.resolve();
 });
 
@@ -155,8 +160,8 @@ test("Modeling warms mixed video and image carousel media in display order", asy
     }
   }
 
-  await expect(
-    page.locator('[data-view="modeling-stand-still-drop"] .gallery-counter')
-  ).toHaveText("1 of 6");
+  await expect(page.locator('[data-view="modeling-stand-still-drop"] .gallery-counter')).toHaveText(
+    "1 of 6",
+  );
   expect(distinct()).toEqual(standStillSources);
 });

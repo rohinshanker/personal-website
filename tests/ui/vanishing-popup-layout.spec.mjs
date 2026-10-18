@@ -104,7 +104,7 @@ const readGeometry = (page) =>
     };
     return {
       buttons: Object.fromEntries(
-        buttonIds.map((id) => [id, measure(document.getElementById(id))])
+        buttonIds.map((id) => [id, measure(document.getElementById(id))]),
       ),
       popup: measure(document.getElementById("vanishing-popup-window")),
     };
@@ -118,9 +118,7 @@ const finishAnimation = (element, animationName) =>
 const enterHome = async (page, entry) => {
   await page.goto(entry, { waitUntil: "domcontentloaded" });
   if (entry === "/index.html") {
-    await page
-      .locator('.loader-window .title-bar-controls button[aria-label="Minimize"]')
-      .click();
+    await page.locator('.loader-window .title-bar-controls button[aria-label="Minimize"]').click();
     await page.waitForURL(/\/home\.html$/);
   }
   await page.waitForFunction(() => window.homeEventRuntime?.randomEventDefinitions?.length);
@@ -135,7 +133,7 @@ const openVanishingPopup = async (page) => {
   const popup = page.locator("#vanishing-popup-window");
   await page.evaluate(() => {
     const definition = window.homeEventRuntime.randomEventDefinitions.find(
-      ({ id }) => id === "vanishing-popup-alert"
+      ({ id }) => id === "vanishing-popup-alert",
     );
     definition.run();
   });
@@ -196,10 +194,12 @@ for (const scenario of cases) {
       }
       await button.click();
       await expect(button).toBeHidden();
-      expect(await button.evaluate((element) => {
-        element.focus();
-        return document.activeElement === element;
-      })).toBe(false);
+      expect(
+        await button.evaluate((element) => {
+          element.focus();
+          return document.activeElement === element;
+        }),
+      ).toBe(false);
 
       const geometry = await readGeometry(page);
       expect(layoutBox(geometry.popup)).toEqual(layoutBox(baseline.popup));
@@ -207,17 +207,15 @@ for (const scenario of cases) {
       expect(geometry.buttons[buttonId].visibility).toBe("hidden");
       BUTTON_IDS.forEach((id) => {
         expect(layoutBox(geometry.buttons[id]), `${id} stays in place`).toEqual(
-          layoutBox(baseline.buttons[id])
+          layoutBox(baseline.buttons[id]),
         );
       });
 
       await page.mouse.click(
         clickPoint.x + clickPoint.width / 2,
-        clickPoint.y + clickPoint.height / 2
+        clickPoint.y + clickPoint.height / 2,
       );
-      expect(
-        await page.locator("[data-vanishing-popup-button][hidden]").count()
-      ).toBe(index + 1);
+      expect(await page.locator("[data-vanishing-popup-button][hidden]").count()).toBe(index + 1);
     }
 
     await expect(popup).toHaveClass(/is-exploding/);
@@ -228,17 +226,17 @@ for (const scenario of cases) {
     const overlay = await explosion.boundingBox();
     const explodingPopup = await popup.boundingBox();
     expect(overlay.height).toBeGreaterThan(explodingPopup.height);
-    expect(Math.abs(overlay.x + overlay.width / 2 - (explodingPopup.x + explodingPopup.width / 2)))
-      .toBeLessThan(1);
-    expect(Math.abs(overlay.y + overlay.height / 2 - (explodingPopup.y + explodingPopup.height / 2)))
-      .toBeLessThan(1);
     expect(
-      await explosion.evaluate((element) => Number(getComputedStyle(element).zIndex))
-    ).toBeGreaterThan(
-      await popup.evaluate((element) => Number(getComputedStyle(element).zIndex))
-    );
+      Math.abs(overlay.x + overlay.width / 2 - (explodingPopup.x + explodingPopup.width / 2)),
+    ).toBeLessThan(1);
+    expect(
+      Math.abs(overlay.y + overlay.height / 2 - (explodingPopup.y + explodingPopup.height / 2)),
+    ).toBeLessThan(1);
+    expect(
+      await explosion.evaluate((element) => Number(getComputedStyle(element).zIndex)),
+    ).toBeGreaterThan(await popup.evaluate((element) => Number(getComputedStyle(element).zIndex)));
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      scenario.width
+      scenario.width,
     );
 
     await page.clock.fastForward(1799);

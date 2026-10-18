@@ -77,8 +77,8 @@ window.__relicRecoveryTest = Object.freeze({
     }));
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
@@ -100,8 +100,8 @@ const setupPage = async (page, viewport) => {
   await expect(page.locator("#relic-recovery-window")).toBeVisible();
   await page.waitForFunction(() =>
     Array.from(document.querySelectorAll("#relic-recovery-window img[src]")).every(
-      (image) => image.complete && image.naturalWidth > 0
-    )
+      (image) => image.complete && image.naturalWidth > 0,
+    ),
   );
 };
 
@@ -121,7 +121,7 @@ const measurePrompt = (page) =>
     const win = document.querySelector("#relic-recovery-window");
     const slots = Array.from(document.querySelectorAll(".relic-recovery-slot"));
     const titleTextNode = document.querySelector(
-      "#relic-recovery-window .title-bar-text"
+      "#relic-recovery-window .title-bar-text",
     ).firstChild;
     const titleRange = document.createRange();
     titleRange.selectNodeContents(titleTextNode);
@@ -131,9 +131,7 @@ const measurePrompt = (page) =>
     dialogRange.selectNodeContents(dialogTextNode);
     const dialogTextBounds = dialogRange.getBoundingClientRect();
     return {
-      scale: Number.parseFloat(
-        win.style.getPropertyValue("--relic-recovery-fit-scale")
-      ),
+      scale: Number.parseFloat(win.style.getPropertyValue("--relic-recovery-fit-scale")),
       offsetWidth: win.offsetWidth,
       offsetHeight: win.offsetHeight,
       window: rect("#relic-recovery-window"),
@@ -150,8 +148,7 @@ const measurePrompt = (page) =>
       },
       hotbar: rect("#relic-recovery-hotbar"),
       slot: rect(".relic-recovery-slot"),
-      slotRows: new Set(slots.map((slot) => Math.round(slot.getBoundingClientRect().top)))
-        .size,
+      slotRows: new Set(slots.map((slot) => Math.round(slot.getBoundingClientRect().top))).size,
       documentOverflow:
         document.documentElement.scrollWidth > window.innerWidth ||
         document.documentElement.scrollHeight > window.innerHeight,
@@ -160,7 +157,7 @@ const measurePrompt = (page) =>
 
 const expectClose = (actual, expected, tolerance = 0.015) => {
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(
-    Math.max(1, Math.abs(expected) * tolerance)
+    Math.max(1, Math.abs(expected) * tolerance),
   );
 };
 
@@ -185,7 +182,7 @@ const finishDetailAndFreezeFlyer = async (page) => {
   const centers = await page.evaluate(() => {
     const flyerElement = document.querySelector(".relic-recovery-flyer");
     const target = document.querySelector(
-      `[data-relic-recovery-slot="${flyerElement.getAttribute("src").split("/").at(-1).replace(".webp", "")}"]`
+      `[data-relic-recovery-slot="${flyerElement.getAttribute("src").split("/").at(-1).replace(".webp", "")}"]`,
     );
     const endX = flyerElement.style.getPropertyValue("--fly-end-x");
     const endY = flyerElement.style.getPropertyValue("--fly-end-y");
@@ -205,9 +202,7 @@ const finishDetailAndFreezeFlyer = async (page) => {
   await dispatchAnimationEnd(flyer, "relic-recovery-fly-to-hotbar");
 };
 
-test("Relic Recovery remains proportional and functional across viewports", async ({
-  page,
-}) => {
+test("Relic Recovery remains proportional and functional across viewports", async ({ page }) => {
   await setupPage(page, { width: 1440, height: 900 });
   const baseline = await measurePrompt(page);
   expect(baseline.scale).toBe(1);
@@ -221,23 +216,15 @@ test("Relic Recovery remains proportional and functional across viewports", asyn
       const expectedScale = Math.min(
         1,
         (viewport.width - 24) / baseline.offsetWidth,
-        (viewport.height - 88) / baseline.offsetHeight
+        (viewport.height - 88) / baseline.offsetHeight,
       );
 
       expectClose(metrics.scale, expectedScale, 0.002);
       expectWindowContained(metrics, viewport);
       expect(metrics.slotRows).toBe(1);
       for (const key of rectKeys) {
-        expectClose(
-          metrics[key].width / baseline[key].width,
-          expectedScale,
-          0.02
-        );
-        expectClose(
-          metrics[key].height / baseline[key].height,
-          expectedScale,
-          0.025
-        );
+        expectClose(metrics[key].width / baseline[key].width, expectedScale, 0.02);
+        expectClose(metrics[key].height / baseline[key].height, expectedScale, 0.025);
       }
     });
   }
@@ -256,20 +243,16 @@ test("Relic Recovery remains proportional and functional across viewports", asyn
       await expect(page.locator(".relic-recovery-item")).toHaveCount(8);
       await expect(page.locator(".relic-recovery-slot")).toHaveCount(8);
 
-      const longRelic = page.locator(
-        '[data-relic-recovery-item="spiraling-heat-stone"]'
-      );
+      const longRelic = page.locator('[data-relic-recovery-item="spiraling-heat-stone"]');
       await longRelic.focus();
       await longRelic.press("Enter");
       const detail = page.locator("#relic-recovery-detail");
       await expect(detail).toBeFocused();
       await expect(detail).toContainText(
-        "Squeezing it will cause the rock in the middle to emit heat."
+        "Squeezing it will cause the rock in the middle to emit heat.",
       );
       const detailGeometry = await page.evaluate(() => {
-        const scene = document
-          .querySelector("#relic-recovery-scene")
-          .getBoundingClientRect();
+        const scene = document.querySelector("#relic-recovery-scene").getBoundingClientRect();
         const panel = document
           .querySelector(".relic-recovery-detail-panel")
           .getBoundingClientRect();
@@ -278,46 +261,26 @@ test("Relic Recovery remains proportional and functional across viewports", asyn
           .getBoundingClientRect();
         return { scene, panel, image };
       });
-      expect(detailGeometry.panel.left).toBeGreaterThanOrEqual(
-        detailGeometry.scene.left
-      );
-      expect(detailGeometry.panel.right).toBeLessThanOrEqual(
-        detailGeometry.scene.right
-      );
+      expect(detailGeometry.panel.left).toBeGreaterThanOrEqual(detailGeometry.scene.left);
+      expect(detailGeometry.panel.right).toBeLessThanOrEqual(detailGeometry.scene.right);
       expect(detailGeometry.image.width).toBeGreaterThan(0);
 
-      const collectedSlot = page.locator(
-        '[data-relic-recovery-slot="spiraling-heat-stone"]'
-      );
+      const collectedSlot = page.locator('[data-relic-recovery-slot="spiraling-heat-stone"]');
       await finishDetailAndFreezeFlyer(page);
       await expect(collectedSlot).toHaveClass(/is-collected/);
       await collectedSlot.focus();
-      await expect(collectedSlot.locator(".relic-recovery-tooltip")).toHaveCSS(
-        "opacity",
-        "1"
-      );
+      await expect(collectedSlot.locator(".relic-recovery-tooltip")).toHaveCSS("opacity", "1");
 
-      await page.evaluate(
-        ({ ids }) => window.__relicRecoveryTest.seedCollected(ids),
-        {
-          ids: items
-            .map((item) => item.id)
-            .filter((id) => id !== finalRelicId),
-        }
-      );
-      const finalRelic = page.locator(
-        `[data-relic-recovery-item="${finalRelicId}"]`
-      );
+      await page.evaluate(({ ids }) => window.__relicRecoveryTest.seedCollected(ids), {
+        ids: items.map((item) => item.id).filter((id) => id !== finalRelicId),
+      });
+      const finalRelic = page.locator(`[data-relic-recovery-item="${finalRelicId}"]`);
       await finalRelic.focus();
       await finalRelic.press("Enter");
       await finishDetailAndFreezeFlyer(page);
-      await expect(page.locator(".relic-recovery-slot.is-collected")).toHaveCount(
-        8
-      );
+      await expect(page.locator(".relic-recovery-slot.is-collected")).toHaveCount(8);
       await expect(page.locator("#relic-recovery-dialog")).toBeVisible();
-      await expect(page.locator("#relic-recovery-dialog-text")).toContainText(
-        "Layer 2"
-      );
+      await expect(page.locator("#relic-recovery-dialog-text")).toContainText("Layer 2");
       await expect(page.locator("#relic-recovery-continue")).toBeFocused();
 
       const metrics = await measurePrompt(page);

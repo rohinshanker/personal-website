@@ -88,7 +88,7 @@ const createToolbarHarness = () => {
          signature: () => solAutoSolveSignature(solState),
        };`,
     ].join("\n"),
-    context
+    context,
   );
   return {
     ...context.harness,
@@ -106,7 +106,12 @@ const createToolbarHarness = () => {
  */
 const createOpenHarness = () => {
   const context = vm.createContext({
-    deals: 0, renders: 0, calls: [], hooks: null, issued: [], issueCalls: [],
+    deals: 0,
+    renders: 0,
+    calls: [],
+    hooks: null,
+    issued: [],
+    issueCalls: [],
   });
   vm.runInContext(
     [
@@ -155,11 +160,15 @@ const createOpenHarness = () => {
       "const solRender = () => { renders += 1; };",
       "const registerWindowLifecycle = (appId, lifecycle) => { hooks = { appId, lifecycle }; };",
       sourceBetween(source, "const solAutoSolveSignature =", "\n\nconst solPresentationRunSuits"),
-      sourceBetween(source, "/** Invalidated by every new board", "\n\n/**\n * The double-click shortcut"),
+      sourceBetween(
+        source,
+        "/** Invalidated by every new board",
+        "\n\n/**\n * The double-click shortcut",
+      ),
       sourceBetween(
         source,
         'registerWindowLifecycle("solitaire", {',
-        "\n\nwindow.homeSolitaire = Object.freeze({"
+        "\n\nwindow.homeSolitaire = Object.freeze({",
       ),
       `globalThis.harness = {
          state: solState,
@@ -172,7 +181,7 @@ const createOpenHarness = () => {
          play: () => { solGame.moves += 1; },
        };`,
     ].join("\n"),
-    context
+    context,
   );
   return {
     ...context.harness,
@@ -189,17 +198,17 @@ test("nothing deals the board while Home starts up", () => {
   assert.doesNotMatch(
     source,
     /^solNewGame\(\);$/m,
-    "A top-level New Game would generate a solver-checked deal for every visitor."
+    "A top-level New Game would generate a solver-checked deal for every visitor.",
   );
   assert.doesNotMatch(
     source,
     /^solBuildWinnableDeal\(\);$/m,
-    "Deal generation belongs to New Game, which only the first open may call."
+    "Deal generation belongs to New Game, which only the first open may call.",
   );
   assert.doesNotMatch(
     source,
     /^startGameStatsSession\(/m,
-    "A Game Stats session must wait for a real move."
+    "A Game Stats session must wait for a real move.",
   );
 });
 
@@ -224,7 +233,7 @@ test("the window lifecycle deals before the open and tears a run down on close",
   assert.deepEqual(
     harness.calls().slice(beforeClose),
     ["cancel", "hide-video"],
-    "Closing cancels a run in flight and takes the victory video down with it."
+    "Closing cancels a run in flight and takes the victory video down with it.",
   );
 
   lifecycle.beforeOpen();
@@ -283,7 +292,7 @@ test("a new board asks for verified issuance and adopts it while untouched", asy
   assert.deepEqual(
     plain(harness.issued()),
     [{ stock: ["issued"], tableau: [] }],
-    "The descriptor's initial state goes through the engine, not around it."
+    "The descriptor's initial state goes through the engine, not around it.",
   );
   assert.deepEqual(plain(harness.state.stock), ["issued"], "The issued board takes over.");
   assert.equal(harness.state.selected, null, "Adopting a board drops the old selection.");
@@ -407,31 +416,59 @@ test("every change a move can make to the board invalidates the cached plan", ()
   // Each case stages a board, lets the cache settle, then applies the one
   // change a real move would make and asserts the plan is recomputed.
   const changes = [
-    ["a card drawn to the waste", () => {}, (state) => {
-      state.waste.push(card("hearts", 5));
-    }],
-    ["the waste reordered by a redeal", (state) => {
-      state.waste.push(card("hearts", 5));
-    }, (state) => {
-      state.waste.reverse();
-    }],
-    ["the stock refilled", () => {}, (state) => {
-      state.stock.push(card("clubs", 7, false));
-    }],
-    ["a card landing on a foundation", () => {}, (state) => {
-      state.foundations.spades.push(card("spades", 1));
-    }],
-    ["a card moving between columns", () => {}, (state) => {
-      state.tableau[3].push(card("clubs", 9));
-    }],
-    ["a face-down card flipping", (state) => {
-      state.tableau[2].push(card("diamonds", 4, false));
-    }, (state) => {
-      state.tableau[2][0].faceUp = true;
-    }],
-    ["the game being won", () => {}, (state) => {
-      state.won = true;
-    }],
+    [
+      "a card drawn to the waste",
+      () => {},
+      (state) => {
+        state.waste.push(card("hearts", 5));
+      },
+    ],
+    [
+      "the waste reordered by a redeal",
+      (state) => {
+        state.waste.push(card("hearts", 5));
+      },
+      (state) => {
+        state.waste.reverse();
+      },
+    ],
+    [
+      "the stock refilled",
+      () => {},
+      (state) => {
+        state.stock.push(card("clubs", 7, false));
+      },
+    ],
+    [
+      "a card landing on a foundation",
+      () => {},
+      (state) => {
+        state.foundations.spades.push(card("spades", 1));
+      },
+    ],
+    [
+      "a card moving between columns",
+      () => {},
+      (state) => {
+        state.tableau[3].push(card("clubs", 9));
+      },
+    ],
+    [
+      "a face-down card flipping",
+      (state) => {
+        state.tableau[2].push(card("diamonds", 4, false));
+      },
+      (state) => {
+        state.tableau[2][0].faceUp = true;
+      },
+    ],
+    [
+      "the game being won",
+      () => {},
+      (state) => {
+        state.won = true;
+      },
+    ],
   ];
 
   changes.forEach(([label, stage, change]) => {
@@ -485,7 +522,6 @@ test("a bridge that replaces the board wholesale still gets a fresh plan", () =>
   assert.equal(harness.plans(), 2);
 });
 
-
 test("completed boards ignore stock input until Reset, as do active auto-solves", async () => {
   const source = await readHomeScript("solitaire");
   let click;
@@ -495,17 +531,24 @@ test("completed boards ignore stock input until Reset, as do active auto-solves"
     solState: state,
     solAutoSolveRun: null,
     solLastCardClick: null,
-    solDraw: () => { draws += 1; },
+    solDraw: () => {
+      draws += 1;
+    },
     solBoard: {
       contains: () => true,
-      addEventListener: (type, handler) => { click = handler; },
+      addEventListener: (type, handler) => {
+        click = handler;
+      },
     },
   });
-  vm.runInContext(sourceBetween(
-    source,
-    '  solBoard.addEventListener("click", (event) => {',
-    '  solBoard.addEventListener("keydown", (event) => {'
-  ), context);
+  vm.runInContext(
+    sourceBetween(
+      source,
+      '  solBoard.addEventListener("click", (event) => {',
+      '  solBoard.addEventListener("keydown", (event) => {',
+    ),
+    context,
+  );
   const event = { target: { closest: () => ({}) } };
   click(event);
   assert.equal(draws, 0);

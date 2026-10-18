@@ -80,7 +80,7 @@ const textDecoder = new TextDecoder();
 export const readJsonBodyWithMetadata = async (
   request,
   maximumBytes = MAX_EVENT_BODY_BYTES,
-  bodyReceivedAt = Date.now
+  bodyReceivedAt = Date.now,
 ) => {
   const contentLength = Number(request.headers.get("Content-Length") || 0);
   if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1) {
@@ -244,6 +244,6 @@ export const errorResponse = (request, env, error) => {
           "Access-Control-Expose-Headers": "Retry-After",
           "Retry-After": String(Math.max(1, Math.ceil(retryAfterMs / 1000))),
         }
-      : {}
+      : {},
   );
 };

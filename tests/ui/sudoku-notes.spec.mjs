@@ -1,10 +1,6 @@
 import { expect, test } from "./deterministic.mjs";
 import { routeHomeScript } from "./helpers/home-script-routes.mjs";
-import {
-  REVIEW_VIEWPORTS,
-  openHomeDesktop,
-  openSudokuBoard,
-} from "./helpers/rendered-site.mjs";
+import { REVIEW_VIEWPORTS, openHomeDesktop, openSudokuBoard } from "./helpers/rendered-site.mjs";
 
 /**
  * Rendered contract for the note assistance: pencil marks naming the selected
@@ -77,16 +73,13 @@ window.__sudokuNotesTest = Object.freeze({
       (cell, index) => isSudokuCellReadOnly(cell) && sudokuState.puzzle[index] === digit
     ),
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
 const bridge = (page, method, ...args) =>
-  page.evaluate(
-    ([name, params]) => window.__sudokuNotesTest[name](...params),
-    [method, args]
-  );
+  page.evaluate(([name, params]) => window.__sudokuNotesTest[name](...params), [method, args]);
 
 const cellAt = (win, index) => win.locator(`.sudoku-cell[data-sudoku-index="${index}"]`);
 
@@ -107,15 +100,13 @@ const openSeededBoard = async (page, viewport) => {
 };
 
 for (const viewport of REVIEW_VIEWPORTS) {
-  test(`notes naming the selected value light up at ${viewport.name}`, async ({
-    page,
-  }) => {
+  test(`notes naming the selected value light up at ${viewport.name}`, async ({ page }) => {
     const { scenario, seeded, win } = await openSeededBoard(page, viewport);
 
     // Nothing is selected yet, so no pencil mark is singled out.
     await expect(win.locator("#sudoku-grid")).not.toHaveAttribute(
       "data-sudoku-note-highlight",
-      /./
+      /./,
     );
 
     // Selecting a given that holds the digit lights its pencil marks. A
@@ -124,10 +115,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
     const given = await bridge(page, "givenIndexFor", PLACED);
     expect(given).toBeGreaterThanOrEqual(0);
     await cellAt(win, given).click();
-    await expect(win.locator("#sudoku-grid")).toHaveAttribute(
-      "data-sudoku-note-highlight",
-      PLACED
-    );
+    await expect(win.locator("#sudoku-grid")).toHaveAttribute("data-sudoku-note-highlight", PLACED);
 
     const painted = await page.evaluate(
       ({ highlight, indexes, placed }) => {
@@ -135,12 +123,10 @@ for (const viewport of REVIEW_VIEWPORTS) {
         const read = (index, digit) =>
           getComputedStyle(
             document.querySelector(
-              `.sudoku-cell[data-sudoku-index="${index}"] .sudoku-note-digit[data-sudoku-note="${digit}"]`
-            )
+              `.sudoku-cell[data-sudoku-index="${index}"] .sudoku-note-digit[data-sudoku-note="${digit}"]`,
+            ),
           ).backgroundColor;
-        const lit = slots.filter(
-          (slot) => getComputedStyle(slot).backgroundColor === highlight
-        );
+        const lit = slots.filter((slot) => getComputedStyle(slot).backgroundColor === highlight);
         return {
           matching: indexes.map((index) => read(index, placed)),
           other: indexes.map((index) => read(index, "5")),
@@ -148,7 +134,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
           litAreWritten: lit.every((slot) => slot.textContent === placed),
         };
       },
-      { highlight: NOTE_HIGHLIGHT, indexes: seeded, placed: PLACED }
+      { highlight: NOTE_HIGHLIGHT, indexes: seeded, placed: PLACED },
     );
     expect(painted.matching.every((color) => color === NOTE_HIGHLIGHT)).toBe(true);
     expect(painted.other.some((color) => color === NOTE_HIGHLIGHT)).toBe(false);
@@ -157,20 +143,19 @@ for (const viewport of REVIEW_VIEWPORTS) {
     expect(painted.litCount).toBe(seeded.length);
     expect(painted.litAreWritten).toBe(true);
 
-
     // Selecting a cell with no value puts every pencil mark back on the level.
     await cellAt(win, scenario.target).click();
     await expect(win.locator("#sudoku-grid")).not.toHaveAttribute(
       "data-sudoku-note-highlight",
-      /./
+      /./,
     );
     expect(
       await noteAt(win, scenario.inRow, PLACED).evaluate(
-        (element) => getComputedStyle(element).backgroundColor
-      )
+        (element) => getComputedStyle(element).backgroundColor,
+      ),
     ).not.toBe(NOTE_HIGHLIGHT);
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
     ).toBe(false);
   });
 }
@@ -215,9 +200,7 @@ test("placing a digit retires that note from its row, column, and box", async ({
   expect(await bridge(page, "readNotes", peers)).toEqual(["5", "5", "5"]);
 });
 
-test("a note entered in notes mode clears its peers when it becomes a value", async ({
-  page,
-}) => {
+test("a note entered in notes mode clears its peers when it becomes a value", async ({ page }) => {
   const { scenario, win } = await openSeededBoard(page, DESKTOP);
 
   // Notes mode writes a pencil mark and retires nothing: it is not a placement.

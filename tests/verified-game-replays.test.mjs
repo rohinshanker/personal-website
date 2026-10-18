@@ -8,6 +8,7 @@ import {
   replayGame,
   sequence,
 } from "./helpers/verified-sol-sudoku-fixtures.mjs";
+import { readProductionScript } from "./helpers/home-scripts.mjs";
 
 /**
  * Verifying a result means replaying ordered inputs against the board the server
@@ -51,7 +52,7 @@ for (const game of ["solitaire", "sudoku"]) {
       assert.throws(
         () => replayGame(engines, game, fixture.initial, fixture.replay),
         isRuleError,
-        fixture.name
+        fixture.name,
       );
     }
   });
@@ -59,11 +60,7 @@ for (const game of ["solitaire", "sudoku"]) {
   test(`${game}: an initial state the rules do not allow is refused`, () => {
     const engine = game === "solitaire" ? engines.solitaire : engines.sudoku;
     for (const fixture of fixtures[game].alteredInitials) {
-      assert.throws(
-        () => engine.initial(engines.into(fixture.initial)),
-        isRuleError,
-        fixture.name
-      );
+      assert.throws(() => engine.initial(engines.into(fixture.initial)), isRuleError, fixture.name);
     }
   });
 
@@ -76,7 +73,7 @@ for (const game of ["solitaire", "sudoku"]) {
       assert.equal(
         replayGame(browser, game, fixture.initial, fixture.replay).canonical,
         replayGame(engines, game, fixture.initial, fixture.replay).canonical,
-        fixture.name
+        fixture.name,
       );
     }
   });
@@ -89,7 +86,7 @@ for (const game of ["solitaire", "sudoku"]) {
     assert.throws(
       () => replayGame(engines, game, fixture.initial, fixture.replay, { work: needed - 1 }),
       (error) => error.code === "replay-limit",
-      "A replay that outruns its budget stops instead of finishing"
+      "A replay that outruns its budget stops instead of finishing",
     );
   });
 }
@@ -100,7 +97,9 @@ test("solitaire: the eight suit relabellings of a proved deal are all winnable",
   const seen = new Set();
 
   for (let variant = 0; variant < 8; variant += 1) {
-    const relabelled = plainValue(solitaire.transformDeal(into(winning.initial), { seed: variant }));
+    const relabelled = plainValue(
+      solitaire.transformDeal(into(winning.initial), { seed: variant }),
+    );
     seen.add(rules.canonicalJson(into(relabelled)));
     // Suit relabelling keeps every rank, colour and position, and Klondike reads
     // only those, so the very same line of play has to win here too.
@@ -171,12 +170,14 @@ test("sudoku: the three check allowances are spent only on revealed mistakes", (
 test("sudoku: undo and redo restore the board and never the assistance", () => {
   const { sudoku, rules, into } = engines;
   const budget = rules.createBudget(2_000_000);
-  const state = sudoku.initial(into({
-    ...fixtures.sudoku.valid[0].initial,
-    errorsConfirmed: true,
-    hintMode: "errors",
-    checksUsed: 2,
-  }));
+  const state = sudoku.initial(
+    into({
+      ...fixtures.sudoku.valid[0].initial,
+      errorsConfirmed: true,
+      hintMode: "errors",
+      checksUsed: 2,
+    }),
+  );
   const wrong = String((Number(state.solution[1]) % 9) + 1);
   let seq = 0;
   const play = (action) => sudoku.transition(state, into({ ...action, seq: (seq += 1) }), budget);
@@ -196,9 +197,14 @@ test("sudoku: undo and redo restore the board and never the assistance", () => {
   assert.equal(sudoku.MAX_UNDO_STATES, 80);
   for (let step = 0; step < 100; step += 1) {
     const index = 1 + (step % 2) * 2;
-    play({ op: "setValue", index, value: String((step % 9) + 1) === state.values[index]
-      ? String(((step + 1) % 9) + 1)
-      : String((step % 9) + 1) });
+    play({
+      op: "setValue",
+      index,
+      value:
+        String((step % 9) + 1) === state.values[index]
+          ? String(((step + 1) % 9) + 1)
+          : String((step % 9) + 1),
+    });
   }
   assert.equal(state.undo.length, 80);
 });
@@ -218,13 +224,13 @@ test("sudoku: placing a digit retires the pencil marks it rules out, as one move
   play({ op: "setValue", index: 1, value: digit });
   assert.ok(
     peers.slice(0, 4).every((index) => state.notes[index] === ""),
-    "A placed digit cannot stay pencilled into its own row, column or box."
+    "A placed digit cannot stay pencilled into its own row, column or box.",
   );
 
   play({ op: "undo" });
   assert.ok(
     peers.slice(0, 4).every((index) => state.notes[index] === digit),
-    "One undo puts the value and every mark it cleared back together."
+    "One undo puts the value and every mark it cleared back together.",
   );
 });
 
@@ -239,8 +245,9 @@ test("a played digit is exactly one digit, and the board stays eighty-one cells"
   // cell beyond the board was never scored — so a board that read as complete
   // and correct could be assembled out of one extra character.
   // DEM-258 review finding 1, reproduced here as the thing that must not work.
-  const blanks = Array.from({ length: sudoku.CELL_COUNT }, (unused, index) => index)
-    .filter((index) => issued.puzzle[index] === "0");
+  const blanks = Array.from({ length: sudoku.CELL_COUNT }, (unused, index) => index).filter(
+    (index) => issued.puzzle[index] === "0",
+  );
   const lastBlank = blanks.at(-1);
   const forged = sudoku.initial(into(issued));
   let seq = 0;
@@ -252,13 +259,14 @@ test("a played digit is exactly one digit, and the board stays eighty-one cells"
   });
   assert.equal(forged.values.length, sudoku.CELL_COUNT);
   assert.throws(
-    () => play(forged, {
-      op: "setValue",
-      index: lastBlank,
-      value: issued.solution.slice(lastBlank - 1, lastBlank + 1),
-    }),
+    () =>
+      play(forged, {
+        op: "setValue",
+        index: lastBlank,
+        value: issued.solution.slice(lastBlank - 1, lastBlank + 1),
+      }),
     (error) => error.code === "invalid-input",
-    "Two characters into the final cell must be refused"
+    "Two characters into the final cell must be refused",
   );
   assert.equal(forged.values.length, sudoku.CELL_COUNT, "A refused move changes nothing");
   assert.equal(plainValue(sudoku.evaluate(forged)).complete, false);
@@ -274,14 +282,24 @@ test("a played digit is exactly one digit, and the board stays eighty-one cells"
   const firstBlank = blanks[0];
   for (const value of ["", "89", "123456789", "0", " 1", "1 ", "\u0661", 1, null, true]) {
     assert.throws(
-      () => sudoku.transition(fresh, into({ seq: 1, op: "setValue", index: firstBlank, value }), budget()),
+      () =>
+        sudoku.transition(
+          fresh,
+          into({ seq: 1, op: "setValue", index: firstBlank, value }),
+          budget(),
+        ),
       (error) => error.code === "invalid-input",
-      `setValue ${JSON.stringify(value) ?? String(value)}`
+      `setValue ${JSON.stringify(value) ?? String(value)}`,
     );
     assert.throws(
-      () => sudoku.transition(fresh, into({ seq: 1, op: "toggleNote", index: firstBlank, digit: value }), budget()),
+      () =>
+        sudoku.transition(
+          fresh,
+          into({ seq: 1, op: "toggleNote", index: firstBlank, digit: value }),
+          budget(),
+        ),
       (error) => error.code === "invalid-input",
-      `toggleNote ${JSON.stringify(value) ?? String(value)}`
+      `toggleNote ${JSON.stringify(value) ?? String(value)}`,
     );
   }
   assert.equal(sudoku.assertDigit("7", "digit"), "7");
@@ -300,7 +318,10 @@ test("a played digit is exactly one digit, and the board stays eighty-one cells"
 });
 
 test("both engines publish one frozen portable contract in either runtime", async () => {
-  for (const [game, contract] of [["solitaire", "homeSolitaireRules"], ["sudoku", "homeSudokuRules"]]) {
+  for (const [game, contract] of [
+    ["solitaire", "homeSolitaireRules"],
+    ["sudoku", "homeSudokuRules"],
+  ]) {
     const engine = game === "solitaire" ? engines.solitaire : engines.sudoku;
     assert.equal(Object.isFrozen(engine), true, game);
     for (const name of ["initial", "transition", "result", "canApply"]) {
@@ -311,18 +332,20 @@ test("both engines publish one frozen portable contract in either runtime", asyn
 
   // No DOM, clock, storage or network may appear in a portable engine, and the
   // only randomness is the seeded generator the rule helpers own.
-  const { readFile } = await import("node:fs/promises");
   for (const file of ["solitaire", "sudoku"]) {
-    const source = await readFile(
+    const source = await readProductionScript(
       new URL(`../scripts/home/games/${file}.js`, import.meta.url),
-      "utf8"
     );
-    assert.match(source, /^\(\(\) => \{\nconst window = globalThis\.window \|\| globalThis;/m, file);
+    assert.match(
+      source,
+      /^\(\(\) => \{\nconst window = globalThis\.window \|\| globalThis;/m,
+      file,
+    );
     assert.match(source, new RegExp(`window\\.home\\w+Rules = Object\\.freeze\\(\\{`), file);
     assert.doesNotMatch(
       source,
       /document|localStorage|sessionStorage|fetch\(|XMLHttpRequest|setTimeout|setInterval|requestAnimationFrame|Date\.now|new Date|Math\.random|performance\./,
-      `${file} must stay a pure rule engine`
+      `${file} must stay a pure rule engine`,
     );
   }
 });
@@ -337,10 +360,11 @@ test("replay ordering is checked before any engine sees an action", () => {
     assert.throws(
       () => engines.rules.assertReplay(engines.into(fixture.replay)),
       isRuleError,
-      fixture.name
+      fixture.name,
     );
   }
-  assert.deepEqual(plainValue(engines.rules.assertReplay(engines.into(sequence([{ op: "draw" }])))), [
-    { op: "draw", seq: 1 },
-  ]);
+  assert.deepEqual(
+    plainValue(engines.rules.assertReplay(engines.into(sequence([{ op: "draw" }])))),
+    [{ op: "draw", seq: 1 }],
+  );
 });

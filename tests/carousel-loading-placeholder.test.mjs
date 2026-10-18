@@ -78,7 +78,7 @@ test("gallery image loads use a local hourglass overlay instead of stale or empt
   assert.match(media, /LOADING_RAW_ASSET = "assets\/loading\/windows98-hourglass-2x\.gif"/);
   assert.match(
     media,
-    /LOADING_PADDED_ASSET =\s+"assets\/loading\/windows98-hourglass-padded-2x\.gif"/
+    /LOADING_PADDED_ASSET =\s+"assets\/loading\/windows98-hourglass-padded-2x\.gif"/,
   );
   assert.match(main, /const setGalleryImageLoading = \(image, isLoading\) =>/);
   assert.match(main, /image\.addEventListener\("load", finish, \{ once: true \}\)/);
@@ -88,36 +88,39 @@ test("gallery image loads use a local hourglass overlay instead of stale or empt
   assert.match(main, /const setGalleryImageSource[\s\S]*?loadGalleryImage\(image, src\)/);
   assert.match(
     main,
-    /const updateBerserkPosterImage[\s\S]*?setGalleryImageSource\(berserkPosterImage/
+    /const updateBerserkPosterImage[\s\S]*?setGalleryImageSource\(berserkPosterImage/,
   );
   assert.match(
     main,
-    /scroll\.replaceChildren\(currentMedia\);[\s\S]{0,180}loadGalleryImage\(currentMedia, source\)/
+    /scroll\.replaceChildren\(currentMedia\);[\s\S]{0,180}loadGalleryImage\(currentMedia, source\)/,
   );
   assert.match(
     media,
-    /galleryScroll && window\.homeGallery\?\.loadImage[\s\S]{0,120}window\.homeGallery\.loadImage\(element, element\.dataset\.src\)/
+    /galleryScroll && window\.homeGallery\?\.loadImage[\s\S]{0,120}window\.homeGallery\.loadImage\(element, element\.dataset\.src\)/,
   );
 
   assert.match(
     styles,
-    /\.gallery-scroll \{[\s\S]*?--gallery-content-inset: 2px;[\s\S]*?padding: var\(--gallery-content-inset\);[\s\S]*?position: relative;/
+    /\.gallery-scroll \{[\s\S]*?--gallery-content-inset: 2px;[\s\S]*?padding: var\(--gallery-content-inset\);[\s\S]*?position: relative;/,
   );
   assert.match(
     styles,
-    /\.gallery-loading-indicator \{[\s\S]*?background: #fff;[\s\S]*?inset: var\(--gallery-content-inset\);[\s\S]*?position: absolute;/
+    /\.gallery-loading-indicator \{[\s\S]*?background: #fff;[\s\S]*?inset: var\(--gallery-content-inset\);[\s\S]*?position: absolute;/,
   );
-  assert.match(styles, /\.gallery-loading-indicator__image \{[\s\S]*?object-fit: cover !important;/);
   assert.match(
     styles,
-    /\.gallery-loading-indicator--compact \.gallery-loading-indicator__image \{[\s\S]*?object-fit: contain !important;/
+    /\.gallery-loading-indicator__image \{[\s\S]*?object-fit: cover !important;/,
+  );
+  assert.match(
+    styles,
+    /\.gallery-loading-indicator--compact \.gallery-loading-indicator__image \{[\s\S]*?object-fit: contain !important;/,
   );
 
   for (const source of [home, index]) {
     assert.match(
       source,
       /scripts\/home\/core\/media\.js\?v=game-build-[a-f0-9]{64}/,
-      "the shared media script carries the generated build token"
+      "the shared media script carries the generated build token",
     );
   }
 

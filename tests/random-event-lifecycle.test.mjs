@@ -24,8 +24,7 @@ const names = [
 const events = [];
 const context = vm.createContext({
   // Records whether dialog semantics land before the window is exposed.
-  applyWindowDialogSemantics: (win) =>
-    events.push(`semantics:${win.attrs["aria-hidden"]}`),
+  applyWindowDialogSemantics: (win) => events.push(`semantics:${win.attrs["aria-hidden"]}`),
   loadDeferredMedia: (win) => {
     events.push("load");
     win.image.src = "loaded";
@@ -38,8 +37,10 @@ vm.runInContext(
     "const randomEventStyleOpenRequests = new Map();\n" +
     "const resourceState = () => 'loaded';\n" +
     names.map(extract).join("\n") +
-    "\nthis.api = {" + names.join(",") + "};",
-  context
+    "\nthis.api = {" +
+    names.join(",") +
+    "};",
+  context,
 );
 const {
   showManagedRandomEventWindow: show,
@@ -53,22 +54,32 @@ const make = ({ hidden = true, aria = "true" } = {}) => {
   const listeners = {};
   const image = {
     src: "loaded",
-    removeAttribute(name) { delete this[name]; },
+    removeAttribute(name) {
+      delete this[name];
+    },
   };
   const win = {
-    classes, attrs, listeners, image, style: {}, offsetWidth: 50,
+    classes,
+    attrs,
+    listeners,
+    image,
+    style: {},
+    offsetWidth: 50,
     classList: {
       contains: (value) => classes.has(value),
       add: (...values) => values.forEach((value) => classes.add(value)),
       remove: (...values) => values.forEach((value) => classes.delete(value)),
     },
     getAttribute: (key) => attrs[key],
-    setAttribute: (key, value) => { attrs[key] = value; },
+    setAttribute: (key, value) => {
+      attrs[key] = value;
+    },
     querySelectorAll: () => [image],
-    addEventListener: (name, callback) => { listeners[name] = callback; },
+    addEventListener: (name, callback) => {
+      listeners[name] = callback;
+    },
   };
-  win.end = (animationName, target = win) =>
-    listeners.animationend({ target, animationName });
+  win.end = (animationName, target = win) => listeners.animationend({ target, animationName });
   return win;
 };
 
@@ -82,12 +93,15 @@ test("opening preserves reset, media, placement and post-show order", () => {
   events.length = 0;
   const win = make();
   win.classes.add("extra");
-  assert.equal(show(win, {
-    beforeShow: () => events.push("before"),
-    afterShow: () => events.push("after"),
-    clearClasses: ["extra"],
-    clampAfterMediaLoad: true,
-  }), true);
+  assert.equal(
+    show(win, {
+      beforeShow: () => events.push("before"),
+      afterShow: () => events.push("after"),
+      clearClasses: ["extra"],
+      clampAfterMediaLoad: true,
+    }),
+    true,
+  );
   assert.deepEqual(events, ["before", "load", "semantics:true", "position", "clamp", "after"]);
   assert.equal(visible(win), true);
   assert.equal(win.classes.has("extra"), false);
@@ -96,10 +110,15 @@ test("opening preserves reset, media, placement and post-show order", () => {
 test("already-visible fronting changes only z-order and onFront", () => {
   const win = make({ hidden: false, aria: "false" });
   let fronted = false;
-  assert.equal(show(win, {
-    onFront: () => { fronted = true; },
-    beforeShow: () => assert.fail(),
-  }), false);
+  assert.equal(
+    show(win, {
+      onFront: () => {
+        fronted = true;
+      },
+      beforeShow: () => assert.fail(),
+    }),
+    false,
+  );
   assert.ok(Number(win.style.zIndex) >= 100);
   assert.ok(fronted);
   assert.equal(win.classes.has("is-opening"), false);
@@ -107,30 +126,39 @@ test("already-visible fronting changes only z-order and onFront", () => {
 test("visibility, placement and animation overrides preserve event behavior", () => {
   const win = make({ hidden: false, aria: "true" });
   win.classes.add("is-closing");
-  assert.equal(show(win, {
-    isVisible: () => !win.classes.has("is-hidden"),
-    beforeShow: () => assert.fail(),
-  }), false);
+  assert.equal(
+    show(win, {
+      isVisible: () => !win.classes.has("is-hidden"),
+      beforeShow: () => assert.fail(),
+    }),
+    false,
+  );
   assert.equal(win.attrs["aria-hidden"], "true");
   let positioned = false;
-  assert.equal(show(win, {
-    isVisible: () => false,
-    animate: false,
-    position: (target) => {
-      assert.equal(target, win);
-      positioned = true;
-    },
-  }), true);
+  assert.equal(
+    show(win, {
+      isVisible: () => false,
+      animate: false,
+      position: (target) => {
+        assert.equal(target, win);
+        positioned = true;
+      },
+    }),
+    true,
+  );
   assert.ok(positioned);
   assert.equal(win.classes.has("is-opening"), false);
   assert.equal(win.classes.has("is-closing"), false);
 });
 test("forced close bypasses the hidden guard and tears down before aria", () => {
   const win = make({ aria: "false" });
-  assert.equal(close(win, {
-    force: true,
-    beforeClose: () => assert.equal(win.attrs["aria-hidden"], "false"),
-  }), true);
+  assert.equal(
+    close(win, {
+      force: true,
+      beforeClose: () => assert.equal(win.attrs["aria-hidden"], "false"),
+    }),
+    true,
+  );
   assert.equal(win.attrs["aria-hidden"], "true");
   assert.ok(win.classes.has("is-closing"));
 });
@@ -172,7 +200,6 @@ test("custom removal and retained media bypass default cleanup", () => {
   assert.equal(kept.image.src, "loaded");
 });
 
-
 test("default visibility requires a window, its visible class and aria state", () => {
   assert.equal(visible(null), false);
   assert.equal(visible(make()), false);
@@ -188,7 +215,11 @@ test("default lifecycle finishes opening, swallows desktop clicks and closes", (
   win.end("retro-window-open");
   assert.equal(win.classes.has("is-opening"), false);
   let stopped = false;
-  win.listeners.click({ stopPropagation: () => { stopped = true; } });
+  win.listeners.click({
+    stopPropagation: () => {
+      stopped = true;
+    },
+  });
   assert.equal(stopped, true);
   assert.equal(close(win), true);
   assert.equal(visible(win), false);
@@ -218,7 +249,8 @@ test("null animation and media targets are safe no-ops", () => {
 
 test("registrations defer bindings, preserve order and drain exactly once", () => {
   const registry = vm.createContext({});
-  vm.runInContext(`
+  vm.runInContext(
+    `
     const STANDARD_RANDOM_EVENT_PROBABILITY = 0.1;
     const STANDARD_RANDOM_EVENT_PROBABILITIES = { default: 0.1 };
     const randomEventDefinitions = [];
@@ -227,12 +259,11 @@ test("registrations defer bindings, preserve order and drain exactly once", () =
     ${extract("registerRandomEvent")}
     ${extract("bindRegisteredRandomEvents")}
     this.api = { registerRandomEvent, bindRegisteredRandomEvents, randomEventDefinitions };
-  `, registry);
+  `,
+    registry,
+  );
   const calls = [];
-  const {
-    registerRandomEvent: register,
-    bindRegisteredRandomEvents: bindAll,
-  } = registry.api;
+  const { registerRandomEvent: register, bindRegisteredRandomEvents: bindAll } = registry.api;
   const first = register({ id: "first", bind: () => calls.push("first") });
   register({ id: "shared-shell-event" });
   register({ id: "second", bind: () => calls.push("second") });

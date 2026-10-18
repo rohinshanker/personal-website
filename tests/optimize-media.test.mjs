@@ -85,7 +85,7 @@ test("the manifest covers every oversized source in the repository", () => {
   assert.ok(sources.length >= 19, `expected the full sweep, found ${sources.length}`);
   assert.deepEqual(
     sources.filter((source) => !manifestSources.has(source)),
-    []
+    [],
   );
 });
 
@@ -97,11 +97,23 @@ test("encoder commands are reproducible argument vectors", () => {
   });
   assert.deepEqual(encoderCommand(mp4, { input: "in.gif", output: "out.mp4" }), {
     binary: "ffmpeg",
-    args: ["-y", "-nostdin", "-loglevel", "error", "-i", "in.gif", "-c:v", "libx264", "-crf", "28", "out.mp4"],
+    args: [
+      "-y",
+      "-nostdin",
+      "-loglevel",
+      "error",
+      "-i",
+      "in.gif",
+      "-c:v",
+      "libx264",
+      "-crf",
+      "28",
+      "out.mp4",
+    ],
   });
   assert.throws(
     () => encoderCommand({ format: "avif", flags: [] }, { input: "a", output: "b" }),
-    /Unknown derivative format/
+    /Unknown derivative format/,
   );
 });
 
@@ -122,7 +134,7 @@ test("planning encodes every derivative that has never been built", (t) => {
     [
       ["assets/optimized/random-events/sample.webp", "encode", "derivative is missing"],
       ["assets/optimized/random-events/sample.mp4", "encode", "derivative is missing"],
-    ]
+    ],
   );
 });
 
@@ -139,7 +151,7 @@ test("planning reports a source the manifest names but the repository lacks", (t
         ...createEncoderStub(),
         resolveBinary: resolveEverything,
       }),
-    /cannot read: assets\/random events\/sample\.gif/
+    /cannot read: assets\/random events\/sample\.gif/,
   );
 });
 
@@ -173,7 +185,7 @@ test("a second run skips every derivative and re-runs nothing", (t) => {
   assert.deepEqual(
     second.calls.filter((call) => !call.binary.endsWith("ffprobe")),
     [],
-    "an idempotent rerun invokes no encoder"
+    "an idempotent rerun invokes no encoder",
   );
   assert.equal(renderRecord(secondRun.record), renderRecord(firstRun.record));
 });
@@ -191,7 +203,10 @@ test("changed encoder flags re-encode the affected derivative only", (t) => {
     {
       ...fixtureManifest[0],
       derivatives: [
-        { ...fixtureManifest[0].derivatives[0], flags: ["-lossy", "-q", "90", "-m", "6", "-mixed"] },
+        {
+          ...fixtureManifest[0].derivatives[0],
+          flags: ["-lossy", "-q", "90", "-m", "6", "-mixed"],
+        },
         fixtureManifest[0].derivatives[1],
       ],
     },
@@ -202,7 +217,7 @@ test("changed encoder flags re-encode the affected derivative only", (t) => {
     [
       ["encode", "encoder flags changed"],
       ["skip", "derivative is current"],
-    ]
+    ],
   );
 });
 
@@ -218,9 +233,10 @@ test("a source newer than its derivative re-encodes", (t) => {
   const future = new Date(Date.now() + 60_000);
   fs.utimesSync(path.join(root, "assets/random events/sample.gif"), future, future);
   const plan = planMediaConversions({ root, manifest: fixtureManifest });
-  assert.deepEqual(new Set(plan.map((step) => step.reason)), new Set([
-    "source is newer than the derivative",
-  ]));
+  assert.deepEqual(
+    new Set(plan.map((step) => step.reason)),
+    new Set(["source is newer than the derivative"]),
+  );
 });
 
 test("a missing encoder fails with an actionable message and encodes nothing", (t) => {
@@ -234,7 +250,7 @@ test("a missing encoder fails with an actionable message and encodes nothing", (
         runCommand: stub.runCommand,
         resolveBinary: (binary) => (binary === "gif2webp" ? null : `/stub/bin/${binary}`),
       }),
-    /optimize-media needs "gif2webp" on PATH/
+    /optimize-media needs "gif2webp" on PATH/,
   );
   assert.deepEqual(stub.calls, []);
   assert.equal(fs.existsSync(path.join(root, RECORD_PATH)), false);
@@ -269,19 +285,19 @@ test("a mid-run failure keeps the sources that already finished", (t) => {
             : stub.runCommand(binary, args),
         resolveBinary: resolveEverything,
       }),
-    /gif2webp failed for assets\/optimized\/random-events\/second\.webp/
+    /gif2webp failed for assets\/optimized\/random-events\/second\.webp/,
   );
 
   const record = readRecord(root);
   assert.deepEqual(
     record.entries.map((entry) => entry.source),
     ["assets/random events/sample.gif"],
-    "the finished source stays recorded"
+    "the finished source stays recorded",
   );
   assert.deepEqual(
     planMediaConversions({ root, manifest: twoSources }).map((step) => step.action),
     ["skip", "skip", "encode"],
-    "a rerun resumes at the source that failed"
+    "a rerun resumes at the source that failed",
   );
 });
 
@@ -295,7 +311,7 @@ test("a failing encoder surfaces its exit code and stderr", (t) => {
         runCommand: () => ({ status: 3, stdout: "", stderr: "bad palette\n" }),
         resolveBinary: resolveEverything,
       }),
-    /gif2webp failed for assets\/optimized\/random-events\/sample\.webp \(exit 3\): bad palette/
+    /gif2webp failed for assets\/optimized\/random-events\/sample\.webp \(exit 3\): bad palette/,
   );
 });
 
@@ -339,8 +355,8 @@ test("--check fails when an oversized source has no manifest entry", (t) => {
   assert.equal(ok, false);
   assert.ok(
     problems.includes(
-      "assets/random events/unconverted.gif is over the derivative threshold with no manifest entry"
-    )
+      "assets/random events/unconverted.gif is over the derivative threshold with no manifest entry",
+    ),
   );
 });
 
@@ -369,8 +385,8 @@ test("--check fails when a recorded derivative was deleted", (t) => {
   assert.equal(ok, false);
   assert.ok(
     problems.some((problem) =>
-      problem.startsWith("assets/optimized/random-events/sample.mp4 is missing")
-    )
+      problem.startsWith("assets/optimized/random-events/sample.mp4 is missing"),
+    ),
   );
 });
 
@@ -394,22 +410,22 @@ test("--check fails when the record is stale against the manifest or the files",
   ];
   assert.ok(
     checkOptimizedMedia({ root, manifest: retuned }).problems.some((problem) =>
-      problem.includes("was recorded from different encoder flags")
-    )
+      problem.includes("was recorded from different encoder flags"),
+    ),
   );
 
   writeFixtureFile(root, "assets/random events/sample.gif", SIZE_THRESHOLD_BYTES + 1024);
   assert.ok(
     checkOptimizedMedia({ root, manifest: fixtureManifest }).problems.some((problem) =>
-      problem.includes("changed since its derivatives were recorded")
-    )
+      problem.includes("changed since its derivatives were recorded"),
+    ),
   );
 
   writeFixtureFile(root, "assets/optimized/random-events/sample.webp", 4096);
   assert.ok(
     checkOptimizedMedia({ root, manifest: fixtureManifest }).problems.some((problem) =>
-      problem.includes("but was recorded as")
-    )
+      problem.includes("but was recorded as"),
+    ),
   );
 });
 
@@ -424,7 +440,7 @@ test("--check fails when the record still lists a dropped manifest entry", (t) =
   const { ok, problems } = checkOptimizedMedia({ root, manifest: [] });
   assert.equal(ok, false);
   assert.ok(
-    problems.includes("assets/random events/sample.gif is recorded but no longer in the manifest")
+    problems.includes("assets/random events/sample.gif is recorded but no longer in the manifest"),
   );
 });
 
@@ -478,7 +494,7 @@ test("planning re-encodes a derivative that exists but was never recorded", (t) 
   // they came from, so they are encoded again rather than trusted.
   fs.writeFileSync(
     path.join(root, RECORD_PATH),
-    renderRecord({ ...readRecord(root), entries: [] })
+    renderRecord({ ...readRecord(root), entries: [] }),
   );
 
   assert.deepEqual(
@@ -489,7 +505,7 @@ test("planning re-encodes a derivative that exists but was never recorded", (t) 
     [
       ["encode", "derivative is unrecorded"],
       ["encode", "derivative is unrecorded"],
-    ]
+    ],
   );
 });
 
@@ -525,7 +541,7 @@ test("the source sweep skips a directory that is not there and surfaces one that
   assert.deepEqual(
     oversizedSources({ root, directories: ["assets/never-created"] }),
     [],
-    "an absent covered directory contributes nothing"
+    "an absent covered directory contributes nothing",
   );
 
   // A covered directory that is really a file is a configuration mistake, not an
@@ -541,7 +557,7 @@ test("the sweep walks nested directories and ignores entries that are not files"
   writeFixtureFile(root, "assets/random events/nested/deep.gif", SIZE_THRESHOLD_BYTES + 1);
   fs.symlinkSync(
     path.join(root, "assets/random events/sample.gif"),
-    path.join(root, "assets/random events/dangling.gif")
+    path.join(root, "assets/random events/dangling.gif"),
   );
   fs.rmSync(path.join(root, "assets/random events/sample.gif"));
 
@@ -562,8 +578,8 @@ test("--check fails when a manifest source disappeared after it was recorded", (
   assert.equal(ok, false);
   assert.ok(
     problems.includes(
-      "assets/random events/sample.gif is listed in the manifest but missing from the repository"
-    )
+      "assets/random events/sample.gif is listed in the manifest but missing from the repository",
+    ),
   );
 });
 
@@ -581,9 +597,9 @@ test("--check fails when the record lost a source entry or one of its derivative
   fs.writeFileSync(recordPath, renderRecord({ ...record, entries: [] }));
   assert.ok(
     checkOptimizedMedia({ root, manifest: fixtureManifest }).problems.includes(
-      "assets/random events/sample.gif has no record entry; run: node scripts/optimize-media.mjs"
+      "assets/random events/sample.gif has no record entry; run: node scripts/optimize-media.mjs",
     ),
-    "a record with no entry for the source"
+    "a record with no entry for the source",
   );
 
   fs.writeFileSync(
@@ -591,13 +607,13 @@ test("--check fails when the record lost a source entry or one of its derivative
     renderRecord({
       ...record,
       entries: [{ ...record.entries[0], derivatives: record.entries[0].derivatives.slice(0, 1) }],
-    })
+    }),
   );
   assert.ok(
     checkOptimizedMedia({ root, manifest: fixtureManifest }).problems.includes(
-      "assets/optimized/random-events/sample.mp4 has no record entry; run: node scripts/optimize-media.mjs"
+      "assets/optimized/random-events/sample.mp4 has no record entry; run: node scripts/optimize-media.mjs",
     ),
-    "a record that kept the source but dropped a derivative"
+    "a record that kept the source but dropped a derivative",
   );
 });
 
@@ -618,7 +634,7 @@ test("a probe that fails, or answers nothing usable, stops the run", (t) => {
         }),
         resolveBinary: resolveEverything,
       }),
-    /ffprobe could not read the dimensions of assets\/random events\/sample\.gif/
+    /ffprobe could not read the dimensions of assets\/random events\/sample\.gif/,
   );
 
   const unusable = createFixtureRoot(t);
@@ -634,7 +650,7 @@ test("a probe that fails, or answers nothing usable, stops the run", (t) => {
         }),
         resolveBinary: resolveEverything,
       }),
-    /ffprobe could not read the dimensions of/
+    /ffprobe could not read the dimensions of/,
   );
 });
 
@@ -644,7 +660,7 @@ test("spawnCommand reports a real process and throws when the binary cannot star
       "-e",
       "process.stdout.write('320,240'); process.stderr.write('note')",
     ]),
-    { status: 0, stdout: "320,240", stderr: "note" }
+    { status: 0, stdout: "320,240", stderr: "note" },
   );
   assert.throws(() => spawnCommand(path.join(repositoryRoot, "scripts/absent-encoder"), []), {
     code: "ENOENT",
@@ -680,7 +696,7 @@ test("the CLI encodes, then skips, then verifies the same scratch repository", (
 
   const derivativeCount = MEDIA_MANIFEST.reduce(
     (total, entry) => total + entry.derivatives.length,
-    0
+    0,
   );
   const summary = (encoded, skipped) =>
     new RegExp(`Encoded ${encoded} derivative\\(s\\), skipped ${skipped} already current\\.`);
@@ -690,7 +706,7 @@ test("the CLI encodes, then skips, then verifies the same scratch repository", (
   assert.match(encoded.stdout, summary(derivativeCount, 0));
   assert.match(
     encoded.stdout,
-    /^encode assets\/optimized\/random-events\/servalpizza\.webp \(derivative is missing\)$/m
+    /^encode assets\/optimized\/random-events\/servalpizza\.webp \(derivative is missing\)$/m,
   );
   assert.equal(readRecord(root).entries.length, MEDIA_MANIFEST.length);
 
@@ -699,7 +715,7 @@ test("the CLI encodes, then skips, then verifies the same scratch repository", (
   assert.match(skipped.stdout, summary(0, derivativeCount));
   assert.match(
     skipped.stdout,
-    /^skip {3}assets\/optimized\/random-events\/servalpizza\.webp \(derivative is current\)$/m
+    /^skip {3}assets\/optimized\/random-events\/servalpizza\.webp \(derivative is current\)$/m,
   );
 
   const verified = runCli({ argv: ["--check"], root });
@@ -707,7 +723,7 @@ test("the CLI encodes, then skips, then verifies the same scratch repository", (
   assert.equal(verified.stderr, "");
   assert.match(
     verified.stdout,
-    new RegExp(`Optimized media is current for ${MEDIA_MANIFEST.length} sources\\.`)
+    new RegExp(`Optimized media is current for ${MEDIA_MANIFEST.length} sources\\.`),
   );
 
   fs.rmSync(path.join(root, MEDIA_MANIFEST[0].derivatives[0].path));
@@ -731,7 +747,11 @@ test("the CLI reports problems on the process's own error stream by default", (t
   });
 
   const stdout = [];
-  const code = runOptimizeMediaCli({ argv: ["--check"], root, stdout: (text) => stdout.push(text) });
+  const code = runOptimizeMediaCli({
+    argv: ["--check"],
+    root,
+    stdout: (text) => stdout.push(text),
+  });
   process.stderr.write = realWrite;
 
   assert.equal(code, 1);
@@ -754,7 +774,7 @@ test("the shipped --check exits non-zero and names what is wrong", async (t) => 
       assert.match(error.stderr, /derivatives\.json is missing/);
       assert.equal(error.stdout, "");
       return true;
-    }
+    },
   );
 });
 

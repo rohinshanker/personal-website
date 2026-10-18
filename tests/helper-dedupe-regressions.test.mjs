@@ -2,19 +2,18 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import {
-  readHomeScriptText,
-} from "./helpers/home-scripts.mjs";
+import { readHomeScriptText } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
-const readMain = () => readHomeScriptText(
+const readMain = () =>
+  readHomeScriptText(
     "windows",
     "neko",
     "sudoku",
     "calendar",
     "gallery",
     "lifeCounter",
-    "eventDistressSignal"
+    "eventDistressSignal",
   );
 
 const extractBetween = (source, startMarker, endMarker) => {
@@ -30,29 +29,29 @@ test("small-window expansion and loading progress preserve their upper bounds", 
   const sudokuLoading = extractBetween(
     main,
     "const sudokuProgressLoader",
-    "const startSudokuBootSequence"
+    "const startSudokuBootSequence",
   );
   const distressLoading = extractBetween(
     main,
     "const startDistressPowerSequence",
-    "const resetDistressSignal"
+    "const resetDistressSignal",
   );
 
   assert.match(
     expansion,
-    /clampNumber\(Math\.max\(rect\.width \* 2, rect\.width \+ 240\), 0, maxWidth\)/
+    /clampNumber\(Math\.max\(rect\.width \* 2, rect\.width \+ 240\), 0, maxWidth\)/,
   );
   assert.match(
     expansion,
-    /clampNumber\(Math\.max\(rect\.height \* 2, rect\.height \+ 180\), 0, maxHeight\)/
+    /clampNumber\(Math\.max\(rect\.height \* 2, rect\.height \+ 180\), 0, maxHeight\)/,
   );
   assert.match(
     sudokuLoading,
-    /progressCap: 98,[\s\S]*?return Math\.max\(progress \+ 1, progress \+ jump \+ catchup\);/
+    /progressCap: 98,[\s\S]*?return Math\.max\(progress \+ 1, progress \+ jump \+ catchup\);/,
   );
   assert.match(
     distressLoading,
-    /Math\.min\(\s*1,\s*Math\.max\(\s*distressPowerVisibleProgress,\s*Math\.min\(targetProgress \+ Math\.random\(\) \* 0\.035, distressPowerVisibleProgress \+ jumpSize\)/
+    /Math\.min\(\s*1,\s*Math\.max\(\s*distressPowerVisibleProgress,\s*Math\.min\(\s*targetProgress \+ Math\.random\(\) \* 0\.035,\s*distressPowerVisibleProgress \+ jumpSize,?\s*\)/,
   );
 });
 
@@ -73,19 +72,19 @@ test("resize dispatch keeps NodeList conversion and clamps title bars after muta
   const titleBarRead = extractBetween(
     main,
     "const readVisibleWindowTitleBarClamps",
-    "const clampVisibleWindowTitleBars"
+    "const clampVisibleWindowTitleBars",
   );
   const dispatcher = extractBetween(
     main,
     "const dispatchWindowResize",
-    'window.addEventListener("resize", dispatchWindowResize)'
+    'window.addEventListener("resize", dispatchWindowResize)',
   );
 
   assert.match(titleBarRead, /\[\.\.\.draggableWindows\]\.flatMap/);
   assert.ok(
     dispatcher.indexOf("clampVisibleWindowTitleBars(readVisibleWindowTitleBarClamps())") >
       dispatcher.indexOf("updateLifeCounterWidthControls()"),
-    "Title bars must be measured and clamped after resize handlers that mutate window geometry."
+    "Title bars must be measured and clamped after resize handlers that mutate window geometry.",
   );
 });
 
@@ -94,18 +93,21 @@ test("Credits drag geometry is cached without rounding the portfolio divider wid
   const portfolioDivider = extractBetween(
     main,
     'document.querySelectorAll(".portfolio-window")',
-    "const pathfinderImages"
+    "const pathfinderImages",
   );
   const draggableWindows = extractBetween(
     main,
     "draggableWindows.forEach((win) => {",
-    "const scheduleCalendarRefresh"
+    "const scheduleCalendarRefresh",
   );
 
-  assert.match(portfolioDivider, /const startWidth = selectorPanel\.getBoundingClientRect\(\)\.width;/);
+  assert.match(
+    portfolioDivider,
+    /const startWidth = selectorPanel\.getBoundingClientRect\(\)\.width;/,
+  );
   assert.doesNotMatch(portfolioDivider, /const startWidth = selectorPanel\.offsetWidth;/);
   assert.match(
     draggableWindows,
-    /const dragTitleBarGeometry = readWindowTitleBarClampGeometry\(win, rect\);[\s\S]*?setWindowTitleBarClampedPosition\(win, nextLeft, nextTop, dragTitleBarGeometry\);/
+    /const dragTitleBarGeometry = readWindowTitleBarClampGeometry\(win, rect\);[\s\S]*?setWindowTitleBarClampedPosition\(win, nextLeft, nextTop, dragTitleBarGeometry\);/,
   );
 });

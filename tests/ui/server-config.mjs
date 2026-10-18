@@ -24,7 +24,7 @@ export const resolveUiTestPort = (env = process.env) => {
   const port = Number(raw);
   if (!Number.isInteger(port) || port < MIN_PORT || port > MAX_PORT) {
     throw new Error(
-      `UI_TEST_PORT must be an integer between ${MIN_PORT} and ${MAX_PORT}; received ${JSON.stringify(raw)}.`
+      `UI_TEST_PORT must be an integer between ${MIN_PORT} and ${MAX_PORT}; received ${JSON.stringify(raw)}.`,
     );
   }
   return port;
@@ -49,10 +49,12 @@ export const resolveUiTestOutputDir = (env = process.env) => {
   const raw = env.UI_TEST_OUTPUT_DIR?.trim();
   if (!raw) return DEFAULT_UI_TEST_OUTPUT_DIR;
   const normalized = posix.normalize(raw);
-  if (normalized !== DEFAULT_UI_TEST_OUTPUT_DIR &&
-      !normalized.startsWith(`${DEFAULT_UI_TEST_OUTPUT_DIR}/`)) {
+  if (
+    normalized !== DEFAULT_UI_TEST_OUTPUT_DIR &&
+    !normalized.startsWith(`${DEFAULT_UI_TEST_OUTPUT_DIR}/`)
+  ) {
     throw new Error(
-      `UI_TEST_OUTPUT_DIR must be test-results or a directory beneath it; received ${JSON.stringify(raw)}.`
+      `UI_TEST_OUTPUT_DIR must be test-results or a directory beneath it; received ${JSON.stringify(raw)}.`,
     );
   }
   return normalized;

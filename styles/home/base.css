@@ -309,10 +309,7 @@ body {
   position: fixed;
   top: 50%;
   translate: -50% -50%;
-  width: min(
-    var(--event-window-width, 360px),
-    var(--event-window-max-width, calc(100vw - 32px))
-  );
+  width: min(var(--event-window-width, 360px), var(--event-window-max-width, calc(100vw - 32px)));
   z-index: var(--event-window-z, 120);
 }
 
@@ -321,13 +318,11 @@ body {
 }
 
 .random-event-window.is-opening {
-  animation: retro-window-open var(--event-window-open-duration, 260ms)
-    steps(7, end) both;
+  animation: retro-window-open var(--event-window-open-duration, 260ms) steps(7, end) both;
 }
 
 .random-event-window.is-closing {
-  animation: retro-window-close var(--event-window-close-duration, 180ms)
-    steps(7, end) both;
+  animation: retro-window-close var(--event-window-close-duration, 180ms) steps(7, end) both;
   pointer-events: none;
 }
 
@@ -544,7 +539,8 @@ body {
   gap: 8px;
   padding: 6px 12px;
   background: rgb(192, 192, 192);
-  box-shadow: inset 0 1px var(--button-highlight),
+  box-shadow:
+    inset 0 1px var(--button-highlight),
     inset 0 -1px var(--button-shadow);
   color: #000;
 }
@@ -809,8 +805,7 @@ body {
 .clock-display {
   background: #000;
   color: #00ff66;
-  font-family: "Digital-7", "DS-Digital", "Share Tech Mono", "Courier New",
-    monospace;
+  font-family: "Digital-7", "DS-Digital", "Share Tech Mono", "Courier New", monospace;
   font-size: 22px;
   text-align: center;
   box-sizing: border-box;

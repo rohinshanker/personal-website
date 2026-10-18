@@ -52,7 +52,7 @@ const triggerEvent = async (page, eventId) => {
       window.rohinAdminOrchestrator.runEvent(id, {
         source: "loop-video-lifecycle-test",
       }),
-    eventId
+    eventId,
   );
   expect(result.ok, `${eventId} triggered`).toBe(true);
 };
@@ -151,9 +151,7 @@ test("pagehide pauses a playing loop video synchronously", async ({ page }) => {
   expect(await video.evaluate((element) => element.currentTime)).toBe(stopped);
 });
 
-test("the advertisement draws its two stacked layers as one animated image", async ({
-  page,
-}) => {
+test("the advertisement draws its two stacked layers as one animated image", async ({ page }) => {
   await openEventHome(page);
   await triggerEvent(page, "evil-wizards-advertisement");
   await expect(page.locator("#advertisement-window")).toBeVisible();
@@ -163,7 +161,7 @@ test("the advertisement draws its two stacked layers as one animated image", asy
   // how the GIF layers this replaced stayed in step.
   const layers = page.locator(
     "#advertisement-window #advertisement-image, " +
-      "#advertisement-window .advertisement-text-pixel-overlay"
+      "#advertisement-window .advertisement-text-pixel-overlay",
   );
   await expect(layers).toHaveCount(2);
 
@@ -179,10 +177,13 @@ test("the advertisement draws its two stacked layers as one animated image", asy
   expect(drawn.map((layer) => layer.tag)).toEqual(["IMG", "IMG"]);
   expect(
     new Set(drawn.map((layer) => layer.source)).size,
-    `layer sources: ${drawn.map((layer) => layer.source).join(", ")}`
+    `layer sources: ${drawn.map((layer) => layer.source).join(", ")}`,
   ).toBe(1);
   expect(drawn[0].source).toMatch(/\/assets\/optimized\/random-events\/evil-wizards-radar\.webp$/);
-  expect(drawn.every((layer) => layer.width > 0), "both layers decoded").toBe(true);
+  expect(
+    drawn.every((layer) => layer.width > 0),
+    "both layers decoded",
+  ).toBe(true);
 
   // The radar overlay is the one layer with a source of its own, so it stays a
   // loop video and keeps the whole lifecycle contract.
@@ -210,7 +211,7 @@ test("a window cloned after boot pauses its loop video when it is hidden", async
   await expect.poll(() => cloned.evaluate((element) => element.paused)).toBe(false);
 
   await page.evaluate(() =>
-    document.querySelector("#loop-video-lifecycle-clone").classList.add("is-hidden")
+    document.querySelector("#loop-video-lifecycle-clone").classList.add("is-hidden"),
   );
   await expect.poll(() => cloned.evaluate((element) => element.paused)).toBe(true);
 
@@ -250,7 +251,7 @@ test("every Admin Controls event preview that clones a loop video stays inert", 
       elements.map((element) => ({
         paused: element.paused,
         playedRanges: element.played.length,
-      }))
+      })),
     );
   expect(states.length).toBeGreaterThan(0);
   expect(states.filter((state) => !state.paused || state.playedRanges > 0)).toEqual([]);
@@ -318,7 +319,7 @@ test("a clone whose sources already resolved is registered and pauses when hidde
   await expect.poll(() => cloned.evaluate((element) => element.paused)).toBe(false);
 
   await page.evaluate(() =>
-    document.querySelector("#loop-video-lifecycle-resolved-clone").classList.add("is-hidden")
+    document.querySelector("#loop-video-lifecycle-resolved-clone").classList.add("is-hidden"),
   );
   await expect.poll(() => cloned.evaluate((element) => element.paused)).toBe(true);
 
@@ -351,9 +352,7 @@ test("a loop video whose sources never arrive falls back to its animated WebP", 
   await revealWindow(page, "#dst-survive-window");
 
   const video = loopVideo(page, "campfire");
-  await expect
-    .poll(() => video.evaluate((element) => element.readyState))
-    .toBe(0);
+  await expect.poll(() => video.evaluate((element) => element.readyState)).toBe(0);
   await expect(loopFallbackImage(page, "campfire")).toHaveCount(0);
 
   await page.clock.fastForward(FALLBACK_BOUND_MS);
@@ -361,9 +360,7 @@ test("a loop video whose sources never arrive falls back to its animated WebP", 
   const fallback = loopFallbackImage(page, "campfire");
   await expect(fallback).toHaveCount(1);
   await expect(fallback).toHaveJSProperty("naturalWidth", 858);
-  expect(await fallback.getAttribute("src")).toBe(
-    "assets/optimized/random-events/campfire.webp"
-  );
+  expect(await fallback.getAttribute("src")).toBe("assets/optimized/random-events/campfire.webp");
   expect(await video.evaluate((element) => element.hidden)).toBe(true);
 
   releaseSources();
@@ -381,7 +378,7 @@ test("a loop video that never reaches HAVE_FUTURE_DATA falls back to its animate
     Object.defineProperty(
       document.querySelector('video[data-loop-video="campfire"]'),
       "readyState",
-      { configurable: true, get: () => 1 }
+      { configurable: true, get: () => 1 },
     );
   });
 
@@ -407,10 +404,10 @@ const pinReadyState = (page, name, readyState) =>
       Object.defineProperty(
         document.querySelector(`video[data-loop-video="${loopName}"]`),
         "readyState",
-        { configurable: true, get: () => value }
+        { configurable: true, get: () => value },
       );
     },
-    [name, readyState]
+    [name, readyState],
   );
 
 const hideWindow = (page, windowId) =>
@@ -487,7 +484,7 @@ test("a loop video that was playable once keeps its video when it buffers later"
 
   await pinReadyState(page, "campfire", 4);
   await loopVideo(page, "campfire").evaluate((element) =>
-    element.dispatchEvent(new Event("canplay"))
+    element.dispatchEvent(new Event("canplay")),
   );
   // Readiness drops again before any scheduled sync could observe the 4.
   await pinReadyState(page, "campfire", 2);
@@ -518,7 +515,9 @@ test("a loop video removed from the document before its wait ends is left alone"
   await page.clock.runFor(FALLBACK_BOUND_MS * 2);
 
   expect(
-    await detached.evaluate((owner) => owner.querySelectorAll("img[data-loop-fallback-for]").length)
+    await detached.evaluate(
+      (owner) => owner.querySelectorAll("img[data-loop-fallback-for]").length,
+    ),
   ).toBe(0);
   expect(await detached.evaluate((owner) => owner.querySelector("video").hidden)).toBe(false);
 });
@@ -532,7 +531,7 @@ test("a loop video whose sources cannot be decoded falls back to its animated We
   // `HAVE_NOTHING` with `NETWORK_NO_SOURCE`, and its pending `play()` never
   // settles, so the bounded wait is the only thing that clears the poster.
   await page.route(/\/campfire\.(?:webm|mp4)(?:\?.*)?$/, (route) =>
-    route.fulfill({ contentType: "video/webm", body: Buffer.from("not a video at all") })
+    route.fulfill({ contentType: "video/webm", body: Buffer.from("not a video at all") }),
   );
 
   await openEventHome(page);
@@ -549,9 +548,7 @@ test("a loop video whose sources cannot be decoded falls back to its animated We
   const fallback = loopFallbackImage(page, "campfire");
   await expect(fallback).toHaveCount(1);
   await expect(fallback).toHaveJSProperty("naturalWidth", 858);
-  expect(await fallback.getAttribute("src")).toBe(
-    "assets/optimized/random-events/campfire.webp"
-  );
+  expect(await fallback.getAttribute("src")).toBe("assets/optimized/random-events/campfire.webp");
   expect(await video.evaluate((element) => element.hidden)).toBe(true);
 
   // Undecodable media is what this case serves on purpose.

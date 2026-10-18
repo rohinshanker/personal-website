@@ -26,13 +26,7 @@ const EVENT_KEYS = Object.freeze({
   minesweeper: Object.freeze([...COMMON_EVENT_KEYS, "difficulty"]),
   solitaire: COMMON_EVENT_KEYS,
   snake: Object.freeze([...COMMON_EVENT_KEYS, "boardSize"]),
-  sudoku: Object.freeze([
-    ...COMMON_EVENT_KEYS,
-    "difficulty",
-    "hintBucket",
-    "puzzleId",
-    "puzzle",
-  ]),
+  sudoku: Object.freeze([...COMMON_EVENT_KEYS, "difficulty", "hintBucket", "puzzleId", "puzzle"]),
 });
 const HISTORICAL_EVENT_KEYS = Object.freeze([
   ...COMMON_EVENT_KEYS,
@@ -74,7 +68,11 @@ const normalizeIsoDate = (value, { allowHistorical = false } = {}) => {
   return date.toISOString();
 };
 
-const normalizeMetric = (value, label, { minValue = 0, maxValue = Number.MAX_SAFE_INTEGER } = {}) => {
+const normalizeMetric = (
+  value,
+  label,
+  { minValue = 0, maxValue = Number.MAX_SAFE_INTEGER } = {},
+) => {
   if (!Number.isSafeInteger(value) || value < minValue) {
     throw new HttpError(400, `Invalid ${label}`);
   }
@@ -93,9 +91,7 @@ const normalizeProfile = (profile, { allowHistorical = false } = {}) => {
     if (allowHistorical && error instanceof HttpError) return null;
     throw error;
   }
-  const nonStringField = ["id", "name", "icon"].find(
-    (field) => typeof profile[field] !== "string"
-  );
+  const nonStringField = ["id", "name", "icon"].find((field) => typeof profile[field] !== "string");
   if (nonStringField) {
     if (allowHistorical) return null;
     throw new HttpError(400, `Event profile ${nonStringField} must be a string`);
@@ -320,7 +316,9 @@ const rowToEvent = (row) => ({
 export const storedEventMatches = (storedEvent, event) => {
   const storedKey = puzzleKeyOf(storedEvent);
   if (storedKey && storedKey !== puzzleKeyOf(event)) return false;
-  return JSON.stringify(eventToResultParams(storedEvent)) === JSON.stringify(eventToResultParams(event));
+  return (
+    JSON.stringify(eventToResultParams(storedEvent)) === JSON.stringify(eventToResultParams(event))
+  );
 };
 
 export const assertStoredEventMatches = (storedEvent, event) => {

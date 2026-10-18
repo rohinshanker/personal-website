@@ -40,13 +40,16 @@ window.__selectedGameBehavior = Object.freeze({
     return { won: solState.won };
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
   await routeHomeScript(page, "minesweeper", (source) =>
-    source.replace(/\n\}\)\(\);\s*$/, `
+    source.replace(
+      /\n\}\)\(\);\s*$/,
+      `
 window.__selectedMinesweeperFace = (face) => msSetFace(face);
-})();`)
+})();`,
+    ),
   );
 };
 
@@ -68,10 +71,12 @@ for (const viewport of REVIEW_VIEWPORTS) {
     for (const face of ["smile", "ooh", "pressed", "lose", "win"]) {
       await page.evaluate((value) => window.__selectedMinesweeperFace(value), face);
       await expect(reset).toHaveAttribute("data-face", face);
-      expect(await reset.evaluate((button) => {
-        const styles = getComputedStyle(button, "::before");
-        return { x: styles.backgroundPositionX, y: styles.backgroundPositionY };
-      })).toEqual({ x: face === "smile" ? "calc(50% - 1px)" : "50%", y: "50%" });
+      expect(
+        await reset.evaluate((button) => {
+          const styles = getComputedStyle(button, "::before");
+          return { x: styles.backgroundPositionX, y: styles.backgroundPositionY };
+        }),
+      ).toEqual({ x: face === "smile" ? "calc(50% - 1px)" : "50%", y: "50%" });
     }
     await page.evaluate(() => window.__selectedMinesweeperFace("smile"));
     const topPanel = minesweeper.locator(".ms-top-panel");
@@ -86,16 +91,20 @@ for (const viewport of REVIEW_VIEWPORTS) {
         (selector) => {
           const bounds = panel.querySelector(selector).getBoundingClientRect();
           return { left: bounds.left, right: bounds.right, width: bounds.width };
-        }
-      )
+        },
+      ),
     );
     positions.forEach((position) => expect(position.width).toBeGreaterThan(0));
-    positions.slice(1).forEach((position, index) =>
-      expect(positions[index].right).toBeLessThanOrEqual(position.left)
-    );
+    positions
+      .slice(1)
+      .forEach((position, index) =>
+        expect(positions[index].right).toBeLessThanOrEqual(position.left),
+      );
     await minesweeper.getByRole("button", { name: "Close" }).click();
     const solitaire = await openApp(page, "solitaire");
-    expect(await page.evaluate(() => window.__selectedGameBehavior.presentSolitaireVictory())).toEqual({
+    expect(
+      await page.evaluate(() => window.__selectedGameBehavior.presentSolitaireVictory()),
+    ).toEqual({
       won: true,
     });
     const overlay = solitaire.locator("#sol-victory-video-overlay");
@@ -103,11 +112,15 @@ for (const viewport of REVIEW_VIEWPORTS) {
     const canvas = overlay.locator("#sol-victory-canvas");
     await expect(overlay).toHaveClass(/is-showing/);
     await expect(overlay).toHaveAttribute("aria-hidden", "false");
-    await expect.poll(() => fallbackVideo.evaluate((video) => video.readyState)).toBeGreaterThanOrEqual(2);
+    await expect
+      .poll(() => fallbackVideo.evaluate((video) => video.readyState))
+      .toBeGreaterThanOrEqual(2);
     await expect(canvas).toBeVisible();
-    await expect.poll(() => canvas.evaluate(canvasHasPixels), {
-      message: "Production victory drawing must render decoded pixels during playback",
-    }).toBe(true);
+    await expect
+      .poll(() => canvas.evaluate(canvasHasPixels), {
+        message: "Production victory drawing must render decoded pixels during playback",
+      })
+      .toBe(true);
     // The static test server does not support range seeking. Wait for an
     // actually presented frame while playing, then pause that decoded frame.
     await fallbackVideo.evaluate(async (video) => {
@@ -123,10 +136,11 @@ for (const viewport of REVIEW_VIEWPORTS) {
       video.requestVideoFrameCallback(observe);
       await video.play();
     });
-    await expect.poll(
-      () => fallbackVideo.evaluate((video) => Number(video.dataset.presentedTime ?? -1)),
-      { message: "Victory clip must present and pause a decoded frame after two seconds" }
-    ).toBeGreaterThanOrEqual(2);
+    await expect
+      .poll(() => fallbackVideo.evaluate((video) => Number(video.dataset.presentedTime ?? -1)), {
+        message: "Victory clip must present and pause a decoded frame after two seconds",
+      })
+      .toBeGreaterThanOrEqual(2);
     await expect(canvas).toBeVisible();
     await expect.poll(() => canvas.evaluate(canvasHasPixels)).toBe(true);
     // Exercise the explicit video fallback's geometry as well as the real
@@ -158,10 +172,10 @@ for (const viewport of REVIEW_VIEWPORTS) {
     expect(victoryGeometry.mediaCenter).toBeCloseTo(victoryGeometry.overlayCenter, 0);
     expect(victoryGeometry.mediaWidth).toBeCloseTo(
       Math.min(234, victoryGeometry.viewportWidth * 0.288),
-      0
+      0,
     );
     expect(victoryGeometry.mediaHeight).toBeLessThanOrEqual(
-      victoryGeometry.viewportHeight * 0.27 + 1
+      victoryGeometry.viewportHeight * 0.27 + 1,
     );
 
     await canvas.evaluate((element) => element.classList.remove("is-hidden"));
@@ -170,7 +184,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
     await settleRender(page);
 
     const screenshotPath = testInfo.outputPath(
-      `selected-game-behavior-${viewport.width}x${viewport.height}.png`
+      `selected-game-behavior-${viewport.width}x${viewport.height}.png`,
     );
     await page.screenshot({ fullPage: true, path: screenshotPath });
     await testInfo.attach(`selected-game-behavior-${viewport.name}`, {
@@ -178,7 +192,7 @@ for (const viewport of REVIEW_VIEWPORTS) {
       path: screenshotPath,
     });
     const semanticSnapshotPath = testInfo.outputPath(
-      `selected-game-semantics-${viewport.width}x${viewport.height}.yml`
+      `selected-game-semantics-${viewport.width}x${viewport.height}.yml`,
     );
     await writeFile(semanticSnapshotPath, await page.locator("body").ariaSnapshot());
     await testInfo.attach(`selected-game-semantics-${viewport.name}`, {

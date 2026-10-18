@@ -32,7 +32,7 @@ const createHarness = async () => {
       "globalThis.setGameOver = (value) => { msState.gameOver = value; };",
       "globalThis.read = () => ({ cells: msState.cells, controlsMode: msControlsMode.value, counterUpdates, flag: msFlagMode.read(), flagCount: msState.flagCount, gridShortcut: msGrid.getAttribute('aria-keyshortcuts'), markMode: msState.markMode, question: msQuestionMode.read(), renders });",
     ].join("\n"),
-    context
+    context,
   );
   return context;
 };
@@ -40,7 +40,10 @@ const createHarness = async () => {
 test("Minesweeper keeps accessible mark-control wiring and assets", async () => {
   const home = await readFile(new URL("home.html", root), "utf8");
   assert.match(home, /id="ms-flag-mode"[^>]*data-ms-mark-mode="flag"[^>]*aria-pressed="false"/);
-  assert.match(home, /id="ms-question-mode"[^>]*data-ms-mark-mode="question"[^>]*aria-pressed="false"/);
+  assert.match(
+    home,
+    /id="ms-question-mode"[^>]*data-ms-mark-mode="question"[^>]*aria-pressed="false"/,
+  );
   assert.match(home, /id="ms-controls-mode"[^>]*aria-label="Control mode"/);
   assert.match(home, /id="ms-grid"[^>]*aria-keyshortcuts="S D F"/);
   assert.match(home, /Press <kbd>S<\/kbd> to click the current square\./);

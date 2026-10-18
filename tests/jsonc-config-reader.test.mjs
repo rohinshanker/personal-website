@@ -42,14 +42,11 @@ test("comment stripping keeps string contents, offsets, and line numbers", () =>
   assert.match(stripped, /"https:\/\/example\.test\/a\/\/b"/);
   assert.doesNotMatch(stripped, /tail/);
   assert.deepEqual(parseJsonc(source), { url: "https://example.test/a//b", n: 1 });
-  assert.equal(
-    stripJsoncComments('{\n// first\n"a": 1\n}').split("\n").length,
-    4
-  );
+  assert.equal(stripJsoncComments('{\n// first\n"a": 1\n}').split("\n").length, 4);
   const unterminatedBlock = '{"a": 1} /* unterminated';
   assert.equal(
     stripJsoncComments(unterminatedBlock),
-    `{"a": 1}${" ".repeat(unterminatedBlock.length - 8)}`
+    `{"a": 1}${" ".repeat(unterminatedBlock.length - 8)}`,
   );
   assert.equal(stripJsoncComments('{"a": "\\"//\\""}'), '{"a": "\\"//\\""}');
   assert.equal(stripJsoncComments('{"a": "unterminated'), '{"a": "unterminated');
@@ -70,7 +67,7 @@ test("rewriting a build member preserves every comment around it", () => {
   const updated = replaceJsoncStringMember(
     COMMENTED_CONFIG,
     "GAME_BUILD_VERSION",
-    nextBuildVersion
+    nextBuildVersion,
   );
 
   assert.equal(parseJsonc(updated).vars.GAME_BUILD_VERSION, nextBuildVersion);
@@ -79,23 +76,18 @@ test("rewriting a build member preserves every comment around it", () => {
   assert.match(updated, /\/\/ Production origin only\./);
   assert.equal(
     updated.replace(nextBuildVersion, "a".repeat(64).replace(/^/, "sha256-")),
-    COMMENTED_CONFIG
+    COMMENTED_CONFIG,
   );
 });
 
 test("rewriting rejects a member that is absent or ambiguous", () => {
   assert.throws(
     () => replaceJsoncStringMember(COMMENTED_CONFIG, "MISSING_MEMBER", "value"),
-    /exactly one string member named MISSING_MEMBER/
+    /exactly one string member named MISSING_MEMBER/,
   );
   assert.throws(
-    () =>
-      replaceJsoncStringMember(
-        '{"a": {"same": "1"}, "b": {"same": "2"}}',
-        "same",
-        "3"
-      ),
-    /exactly one string member named same/
+    () => replaceJsoncStringMember('{"a": {"same": "1"}, "b": {"same": "2"}}', "same", "3"),
+    /exactly one string member named same/,
   );
 });
 
@@ -104,9 +96,7 @@ test("the checked-in Wrangler configurations parse through the shared reader", a
     "../workers/game-stats/wrangler.jsonc",
     "../workers/game-stats/wrangler.jsonc.example",
   ]) {
-    const config = parseJsonc(
-      await readFile(new URL(relativePath, import.meta.url), "utf8")
-    );
+    const config = parseJsonc(await readFile(new URL(relativePath, import.meta.url), "utf8"));
     assert.equal(config.name, "personal-site-game-stats");
     assert.match(config.vars.GAME_BUILD_VERSION, /^sha256-[a-f0-9]{64}$/);
   }

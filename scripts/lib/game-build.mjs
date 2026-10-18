@@ -87,7 +87,7 @@ export const createIntegrityCacheToken = (buildVersion) =>
  */
 export const digestGameCompletionSources = async (
   readSource,
-  sourceFiles = GAME_COMPLETION_SOURCE_FILES
+  sourceFiles = GAME_COMPLETION_SOURCE_FILES,
 ) => {
   const digest = createHash("sha256");
   for (const relativePath of sourceFiles) {

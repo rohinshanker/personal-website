@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-import { homeScriptUrl } from "./helpers/home-scripts.mjs";
+import { readHomeScript } from "./helpers/home-scripts.mjs";
 
-const mainSource = await readFile(homeScriptUrl("calendar"), "utf8");
+const mainSource = await readHomeScript("calendar");
 const quotesStart = mainSource.indexOf("const calendarQuotes = {");
 const quotesEnd = mainSource.indexOf("\n\nconst calendarEvents = {", quotesStart);
 
@@ -16,7 +15,7 @@ const quotesDeclaration = mainSource.slice(quotesStart, quotesEnd);
 const context = {};
 vm.runInNewContext(
   quotesDeclaration + "; globalThis.calendarQuotesForTest = calendarQuotes;",
-  context
+  context,
 );
 
 const septemberQuoteParts = [

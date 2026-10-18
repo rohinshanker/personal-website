@@ -90,21 +90,12 @@ export const parseJsonc = (source) => {
  * leaving every other byte — comments included — untouched.
  */
 export const replaceJsoncStringMember = (source, key, value) => {
-  const pattern = new RegExp(
-    `("${key}"\\s*:\\s*)("(?:\\\\.|[^"\\\\])*")`,
-    "g"
-  );
+  const pattern = new RegExp(`("${key}"\\s*:\\s*)("(?:\\\\.|[^"\\\\])*")`, "g");
   const matches = [...stripJsoncComments(source).matchAll(pattern)];
   if (matches.length !== 1) {
-    throw new Error(
-      `JSONC source must contain exactly one string member named ${key}`
-    );
+    throw new Error(`JSONC source must contain exactly one string member named ${key}`);
   }
   const [, prefix, currentValue] = matches[0];
   const start = matches[0].index + prefix.length;
-  return (
-    source.slice(0, start) +
-    JSON.stringify(value) +
-    source.slice(start + currentValue.length)
-  );
+  return source.slice(0, start) + JSON.stringify(value) + source.slice(start + currentValue.length);
 };

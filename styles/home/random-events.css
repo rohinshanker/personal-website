@@ -375,7 +375,8 @@
 }
 
 .possum-springs-window .title-bar::before {
-  background: center / contain no-repeat url("../../assets/random%20events/pushpin.png?v=updated-20260617");
+  background:
+    center / contain no-repeat url("../../assets/random%20events/pushpin.png?v=updated-20260617");
   content: "";
   height: 30px;
   left: 50%;
@@ -439,7 +440,10 @@
 .winged-light-window {
   --event-window-width: 390px;
   --event-window-z: 150;
-  box-shadow: 0 0 16px 6px rgba(255, 255, 255, 0.74), 0 0 38px 16px rgba(255, 255, 255, 0.5), 0 0 64px 26px rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 0 16px 6px rgba(255, 255, 255, 0.74),
+    0 0 38px 16px rgba(255, 255, 255, 0.5),
+    0 0 64px 26px rgba(255, 255, 255, 0.28);
   color: #000;
   isolation: isolate;
   overflow: visible;
@@ -509,9 +513,14 @@
 
 .winged-light-collect-overlay {
   align-items: center;
-  animation: winged-light-flash 3800ms cubic-bezier(.2, .8, .2, 1) forwards;
-  background:
-    radial-gradient(circle at 50% 52%, rgba(255, 253, 220, 1), rgba(255, 238, 158, 0.92) 28%, rgba(236, 171, 76, 0.5) 54%, transparent 76%);
+  animation: winged-light-flash 3800ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  background: radial-gradient(
+    circle at 50% 52%,
+    rgba(255, 253, 220, 1),
+    rgba(255, 238, 158, 0.92) 28%,
+    rgba(236, 171, 76, 0.5) 54%,
+    transparent 76%
+  );
   display: flex;
   inset: 0;
   justify-content: center;
@@ -521,14 +530,10 @@
 }
 
 .wing-charge-star {
-  animation: wing-charge-star-burst 3200ms cubic-bezier(.15, .88, .2, 1) forwards;
+  animation: wing-charge-star-burst 3200ms cubic-bezier(0.15, 0.88, 0.2, 1) forwards;
   animation-delay: var(--star-delay, 0ms);
-  filter:
-    sepia(0.34)
-    saturate(1.14)
-    hue-rotate(350deg)
-    drop-shadow(0 0 7px rgba(255, 235, 150, 0.84))
-    drop-shadow(0 0 15px rgba(229, 150, 54, 0.52));
+  filter: sepia(0.34) saturate(1.14) hue-rotate(350deg)
+    drop-shadow(0 0 7px rgba(255, 235, 150, 0.84)) drop-shadow(0 0 15px rgba(229, 150, 54, 0.52));
   height: 70px;
   left: 50%;
   opacity: 0;
@@ -553,7 +558,16 @@
 .wing-charge-star-tier,
 .wing-charge-star-tier::before,
 .wing-charge-star-tier::after {
-  --winged-light-star-shape: polygon(50% 0, 61% 37%, 100% 50%, 61% 63%, 50% 100%, 39% 63%, 0 50%, 39% 37%);
+  --winged-light-star-shape: polygon(
+    50% 0,
+    61% 37%,
+    100% 50%,
+    61% 63%,
+    50% 100%,
+    39% 63%,
+    0 50%,
+    39% 37%
+  );
 }
 
 .wing-charge-star-tier::before,
@@ -569,8 +583,7 @@
 .wing-charge-star-tier--1::before {
   background: #fff8d2;
   clip-path: var(--winged-light-star-shape);
-  filter:
-    drop-shadow(0 0 3px rgba(255, 255, 245, 0.9))
+  filter: drop-shadow(0 0 3px rgba(255, 255, 245, 0.9))
     drop-shadow(0 0 9px rgba(255, 215, 107, 0.82));
   inset: 16px 18px;
 }
@@ -585,9 +598,10 @@
 }
 
 .wing-charge-star-tier--2::before {
-  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 60' fill='none'%3E%3Cpath d='M32 3L41 23L61 30L41 37L32 57L23 37L3 30L23 23Z' stroke='%23f3d990' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M32 14L37 26L49 30L37 34L32 46L27 34L15 30L27 26Z' stroke='%23fff0bd' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E");
-  filter:
-    drop-shadow(0 0 3px rgba(255, 236, 179, 0.74))
+  background:
+    center / contain no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 60' fill='none'%3E%3Cpath d='M32 3L41 23L61 30L41 37L32 57L23 37L3 30L23 23Z' stroke='%23f3d990' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M32 14L37 26L49 30L37 34L32 46L27 34L15 30L27 26Z' stroke='%23fff0bd' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 0 3px rgba(255, 236, 179, 0.74))
     drop-shadow(0 0 8px rgba(226, 149, 62, 0.54));
   inset: 5px 7px;
 }
@@ -601,17 +615,19 @@
 }
 
 .wing-charge-star-tier--3::before {
-  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 76 70' fill='none'%3E%3Cpath d='M38 8L47 27L68 35L47 43L38 62L29 43L8 35L29 27Z' stroke='%23f3d990' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M38 18L43 31L56 35L43 39L38 52L33 39L20 35L33 31Z' stroke='%23fff1bf' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E");
-  filter:
-    drop-shadow(0 0 4px rgba(255, 241, 190, 0.86))
+  background:
+    center / contain no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 76 70' fill='none'%3E%3Cpath d='M38 8L47 27L68 35L47 43L38 62L29 43L8 35L29 27Z' stroke='%23f3d990' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M38 18L43 31L56 35L43 39L38 52L33 39L20 35L33 31Z' stroke='%23fff1bf' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 0 4px rgba(255, 241, 190, 0.86))
     drop-shadow(0 0 12px rgba(226, 149, 62, 0.66));
   inset: 4px 6px;
 }
 
 .wing-charge-star-tier--3::after {
-  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 76 70' fill='%23fff0bd'%3E%3Cpath d='M15 9L25 12L18 22Z'/%3E%3Cpath d='M61 9L58 22L51 12Z'/%3E%3Cpath d='M15 61L18 48L25 58Z'/%3E%3Cpath d='M61 61L51 58L58 48Z'/%3E%3C/svg%3E");
-  filter:
-    drop-shadow(0 0 3px rgba(255, 241, 190, 0.78))
+  background:
+    center / contain no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 76 70' fill='%23fff0bd'%3E%3Cpath d='M15 9L25 12L18 22Z'/%3E%3Cpath d='M61 9L58 22L51 12Z'/%3E%3Cpath d='M15 61L18 48L25 58Z'/%3E%3Cpath d='M61 61L51 58L58 48Z'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 0 3px rgba(255, 241, 190, 0.78))
     drop-shadow(0 0 8px rgba(226, 149, 62, 0.5));
   inset: 1px 2px;
 }
@@ -645,31 +661,38 @@
   }
   16% {
     opacity: 1;
-    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(1) rotate(0deg);
+    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(1)
+      rotate(0deg);
   }
   42% {
     opacity: 1;
-    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(1.04) rotate(0deg);
+    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(1.04)
+      rotate(0deg);
   }
   44% {
     opacity: 0.82;
-    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(1.03) rotate(0deg);
+    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(1.03)
+      rotate(0deg);
   }
   52% {
     opacity: 0.5;
-    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(1) rotate(0deg);
+    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(1)
+      rotate(0deg);
   }
   62% {
     opacity: 0.18;
-    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(0.98) rotate(0deg);
+    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(0.98)
+      rotate(0deg);
   }
   72% {
     opacity: 0;
-    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(0.9) rotate(0deg);
+    transform: translate(calc(-50% + var(--star-x)), calc(-50% + var(--star-y))) scale(0.9)
+      rotate(0deg);
   }
   100% {
     opacity: 0;
-    transform: translate(calc(-50% + var(--star-x-end)), calc(-50% + var(--star-y-end))) scale(0.72) rotate(0deg);
+    transform: translate(calc(-50% + var(--star-x-end)), calc(-50% + var(--star-y-end))) scale(0.72)
+      rotate(0deg);
   }
 }
 
@@ -996,8 +1019,7 @@
   aspect-ratio: 1;
   background:
     linear-gradient(rgba(98, 255, 120, 0.11) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(98, 255, 120, 0.11) 1px, transparent 1px),
-    #020403;
+    linear-gradient(90deg, rgba(98, 255, 120, 0.11) 1px, transparent 1px), #020403;
   background-size: 14px 14px;
   border: 1px solid #1d3a24;
   box-sizing: border-box;
@@ -2001,10 +2023,11 @@ body.is-midnight-gospel-locked * {
 .gears-nest-weapon,
 .gears-nest-health-panel {
   align-items: center;
-  background:
-    linear-gradient(180deg, rgba(74, 72, 62, 0.82), rgba(16, 16, 14, 0.92));
+  background: linear-gradient(180deg, rgba(74, 72, 62, 0.82), rgba(16, 16, 14, 0.92));
   border: 1px solid #5d5a4d;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 0 #000;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 1px 0 #000;
   display: grid;
   gap: 8px;
   min-height: 50px;
@@ -2048,8 +2071,7 @@ body.is-midnight-gospel-locked * {
 }
 
 .gears-nest-healthbar span {
-  background:
-    linear-gradient(90deg, #9f1d18, #e1b34b 58%, #7fb857);
+  background: linear-gradient(90deg, #9f1d18, #e1b34b 58%, #7fb857);
   display: block;
   height: 100%;
   transition: width 150ms ease-out;
@@ -2084,11 +2106,7 @@ body.is-midnight-gospel-locked * {
 .gears-nest-battlefield::before {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.78)),
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.04) 0 1px,
-      transparent 1px 4px
-    );
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 4px);
   content: "";
   inset: 0;
   pointer-events: none;
@@ -2235,7 +2253,8 @@ body.is-midnight-gospel-locked * {
 
 button.gears-nest-enemy:not(:disabled) {
   cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='25' height='25' viewBox='0 0 25 25'%3E%3Cpath d='M12 1h1v7h-1zM12 17h1v7h-1zM1 12h7v1H1zM17 12h7v1h-7z' fill='%23fff6c6'/%3E%3Cpath d='M12 9h1v7h-1zM9 12h7v1H9z' fill='%236e160f'/%3E%3C/svg%3E") 12 12,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='25' height='25' viewBox='0 0 25 25'%3E%3Cpath d='M12 1h1v7h-1zM12 17h1v7h-1zM1 12h7v1H1zM17 12h7v1h-7z' fill='%23fff6c6'/%3E%3Cpath d='M12 9h1v7h-1zM9 12h7v1H9z' fill='%236e160f'/%3E%3C/svg%3E")
+    12 12,
     crosshair !important;
 }
 
@@ -2302,8 +2321,7 @@ button.gears-nest-enemy:not(:disabled) {
 
 .gears-nest-projectile--grenade .gears-nest-projectile-body {
   animation: gears-nest-grenade-arc var(--flight-ms) linear both;
-  background:
-    radial-gradient(circle at 36% 32%, #b9b29c 0 10%, #4a493e 35%, #15140f 70%);
+  background: radial-gradient(circle at 36% 32%, #b9b29c 0 10%, #4a493e 35%, #15140f 70%);
   border: 1px solid #0a0907;
   border-radius: 50%;
   height: 13px;
@@ -2393,7 +2411,9 @@ button.gears-nest-enemy:not(:disabled) {
   pointer-events: none;
   position: absolute;
   transform: translateX(-50%);
-  transition: left 260ms ease, bottom 260ms ease;
+  transition:
+    left 260ms ease,
+    bottom 260ms ease;
   width: clamp(76px, 13vw, 112px);
   z-index: 6;
 }
@@ -2418,7 +2438,9 @@ button.gears-nest-enemy:not(:disabled) {
   filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.86));
   position: relative;
   transform: translateY(22px) rotate(-3deg);
-  transition: transform 130ms ease-out, filter 130ms ease-out;
+  transition:
+    transform 130ms ease-out,
+    filter 130ms ease-out;
   width: 100%;
   z-index: 1;
 }
@@ -3054,8 +3076,7 @@ button.gears-nest-enemy:not(:disabled) {
 .death-note-inside-cover {
   background:
     radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.08), transparent 24%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 18%),
-    #1a1712;
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 18%), #1a1712;
   border-right: 1px solid rgba(255, 235, 150, 0.28);
   color: #eadc9c;
 }
@@ -3087,11 +3108,7 @@ button.gears-nest-enemy:not(:disabled) {
 .death-note-lined-page {
   background:
     linear-gradient(90deg, rgba(117, 84, 35, 0.28) 0 1px, transparent 1px 100%),
-    repeating-linear-gradient(
-      180deg,
-      #efe1a6 0 24px,
-      #b6a063 25px 26px
-  );
+    repeating-linear-gradient(180deg, #efe1a6 0 24px, #b6a063 25px 26px);
   color: #2d2518;
   cursor: var(--cursor-text, text) !important;
   padding-left: 40px;
@@ -3238,9 +3255,7 @@ html.is-wall-breach-shaking body {
 
 .spell-stack-window.is-spell-hit {
   animation: spell-stack-window-shake 96ms steps(2, end) infinite;
-  filter:
-    drop-shadow(0 0 7px rgba(255, 0, 0, 0.9))
-    drop-shadow(0 0 16px rgba(190, 0, 0, 0.56));
+  filter: drop-shadow(0 0 7px rgba(255, 0, 0, 0.9)) drop-shadow(0 0 16px rgba(190, 0, 0, 0.56));
 }
 
 .spell-stack-lightning-field {
@@ -3554,29 +3569,35 @@ html.is-wall-breach-shaking body {
   }
 
   20% {
-    transform: translate3d(var(--candy-x-fall-25), var(--candy-y-fall-25), 0) rotate(var(--candy-spin-25)) scale(0.76);
+    transform: translate3d(var(--candy-x-fall-25), var(--candy-y-fall-25), 0)
+      rotate(var(--candy-spin-25)) scale(0.76);
   }
 
   40% {
-    transform: translate3d(var(--candy-x-fall-50), var(--candy-y-fall-50), 0) rotate(var(--candy-spin-50)) scale(0.9);
+    transform: translate3d(var(--candy-x-fall-50), var(--candy-y-fall-50), 0)
+      rotate(var(--candy-spin-50)) scale(0.9);
   }
 
   60% {
-    transform: translate3d(var(--candy-x-fall-75), var(--candy-y-fall-75), 0) rotate(var(--candy-spin-75)) scale(0.98);
+    transform: translate3d(var(--candy-x-fall-75), var(--candy-y-fall-75), 0)
+      rotate(var(--candy-spin-75)) scale(0.98);
   }
 
   72% {
-    transform: translate3d(var(--candy-x-land), var(--candy-y-land), 0) rotate(var(--candy-spin)) scale(1);
+    transform: translate3d(var(--candy-x-land), var(--candy-y-land), 0) rotate(var(--candy-spin))
+      scale(1);
   }
 
   82% {
     opacity: 1;
-    transform: translate3d(var(--candy-x-land), var(--candy-y-land), 0) rotate(var(--candy-spin)) scale(1);
+    transform: translate3d(var(--candy-x-land), var(--candy-y-land), 0) rotate(var(--candy-spin))
+      scale(1);
   }
 
   100% {
     opacity: 1;
-    transform: translate3d(var(--candy-x-land), var(--candy-y-land), 0) rotate(var(--candy-spin)) scale(1);
+    transform: translate3d(var(--candy-x-land), var(--candy-y-land), 0) rotate(var(--candy-spin))
+      scale(1);
   }
 }
 
@@ -3909,11 +3930,7 @@ html.is-wall-breach-shaking body {
 .lancer-battle-media-frame::after {
   background:
     linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.24)),
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.04) 0 1px,
-      transparent 1px 4px
-    );
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 4px);
   content: "";
   inset: 0;
   pointer-events: none;
@@ -4551,13 +4568,12 @@ html.is-wall-breach-shaking body {
 }
 
 .john-pork-phone::before {
-  background:
-    linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.7),
-      rgba(0, 0, 0, 0.15) 42%,
-      rgba(0, 0, 0, 0.78)
-    );
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.15) 42%,
+    rgba(0, 0, 0, 0.78)
+  );
   content: "";
   inset: 0;
   pointer-events: none;
@@ -4927,12 +4943,7 @@ html.is-wall-breach-shaking body {
 }
 
 .pokemon-starter-hp-track {
-  background:
-    repeating-linear-gradient(
-      90deg,
-      #2b2b2b 0 6px,
-      #1a1a1a 6px 7px
-    );
+  background: repeating-linear-gradient(90deg, #2b2b2b 0 6px, #1a1a1a 6px 7px);
   border: 2px solid #101010;
   box-shadow:
     inset 1px 1px 0 #f8f8f8,
@@ -4943,11 +4954,7 @@ html.is-wall-breach-shaking body {
 
 .pokemon-starter-hp-track span {
   background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.24) 0 5px,
-      rgba(0, 0, 0, 0.16) 5px 6px
-    ),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.24) 0 5px, rgba(0, 0, 0, 0.16) 5px 6px),
     linear-gradient(#8ef57f 0 35%, #35c84e 35% 65%, #168f2f 65%);
   box-shadow:
     inset 1px 1px 0 rgba(255, 255, 255, 0.5),
@@ -5000,10 +5007,8 @@ html.is-wall-breach-shaking body {
 .pokemon-starter-choice:hover img,
 .pokemon-starter-choice:focus-visible img,
 .pokemon-starter-choice.is-selected img {
-  filter:
-    drop-shadow(0 0 3px rgba(255, 255, 255, 0.95))
-    drop-shadow(0 0 10px rgba(255, 242, 105, 0.9))
-    drop-shadow(0 0 18px rgba(255, 176, 58, 0.7));
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 10px rgba(255, 242, 105, 0.9)) drop-shadow(0 0 18px rgba(255, 176, 58, 0.7));
   transform: translateY(-5px) scale(1.06);
 }
 
@@ -5060,10 +5065,8 @@ html.is-wall-breach-shaking body {
 
 .pokemon-starter-pokeball-stage:hover img,
 .pokemon-starter-pokeball-stage:focus-visible img {
-  filter:
-    drop-shadow(0 0 3px rgba(255, 255, 255, 0.95))
-    drop-shadow(0 0 10px rgba(255, 242, 105, 0.9))
-    drop-shadow(0 0 18px rgba(255, 176, 58, 0.7));
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 10px rgba(255, 242, 105, 0.9)) drop-shadow(0 0 18px rgba(255, 176, 58, 0.7));
   transform: translateY(-3px) scale(1.04);
 }
 
@@ -5333,9 +5336,7 @@ html.is-wall-breach-shaking body {
 .relic-recovery-item:hover,
 .relic-recovery-item:focus-visible {
   cursor: var(--cursor-select, pointer) !important;
-  filter:
-    grayscale(1)
-    drop-shadow(0 0 3px rgba(230, 230, 230, 0.95))
+  filter: grayscale(1) drop-shadow(0 0 3px rgba(230, 230, 230, 0.95))
     drop-shadow(0 0 12px rgba(160, 160, 160, 0.85));
   transform: translate(-50%, -50%) scale(var(--relic-scale));
 }
@@ -5443,8 +5444,7 @@ html.is-wall-breach-shaking body {
   pointer-events: none;
   position: absolute;
   top: 0;
-  transform: translate(var(--fly-start-x), var(--fly-start-y))
-    translate(-50%, -50%) scale(1);
+  transform: translate(var(--fly-start-x), var(--fly-start-y)) translate(-50%, -50%) scale(1);
   width: 96px;
   z-index: 9;
 }
@@ -5452,20 +5452,17 @@ html.is-wall-breach-shaking body {
 @keyframes relic-recovery-fly-to-hotbar {
   0% {
     opacity: 1;
-    transform: translate(var(--fly-start-x), var(--fly-start-y))
-      translate(-50%, -50%) scale(1);
+    transform: translate(var(--fly-start-x), var(--fly-start-y)) translate(-50%, -50%) scale(1);
   }
 
   62% {
     opacity: 1;
-    transform: translate(var(--fly-mid-x), var(--fly-mid-y))
-      translate(-50%, -50%) scale(0.82);
+    transform: translate(var(--fly-mid-x), var(--fly-mid-y)) translate(-50%, -50%) scale(0.82);
   }
 
   100% {
     opacity: 0.92;
-    transform: translate(var(--fly-end-x), var(--fly-end-y))
-      translate(-50%, -50%) scale(0.42);
+    transform: translate(var(--fly-end-x), var(--fly-end-y)) translate(-50%, -50%) scale(0.42);
   }
 }
 
@@ -5612,11 +5609,9 @@ html.is-wall-breach-shaking body {
 }
 
 .relic-recovery-slot.is-collected:first-child:hover .relic-recovery-tooltip,
-.relic-recovery-slot.is-collected:first-child:focus-visible
-  .relic-recovery-tooltip,
+.relic-recovery-slot.is-collected:first-child:focus-visible .relic-recovery-tooltip,
 .relic-recovery-slot.is-collected:last-child:hover .relic-recovery-tooltip,
-.relic-recovery-slot.is-collected:last-child:focus-visible
-  .relic-recovery-tooltip {
+.relic-recovery-slot.is-collected:last-child:focus-visible .relic-recovery-tooltip {
   transform: translate(0, 0);
 }
 
@@ -5693,7 +5688,12 @@ html.is-wall-breach-shaking body {
 .toxic-jungle-spore-core {
   background:
     radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.7) 0 10%, transparent 12%),
-    radial-gradient(circle at 50% 54%, var(--spore-color) 0 38%, color-mix(in srgb, var(--spore-color) 72%, transparent) 52%, transparent 72%);
+    radial-gradient(
+      circle at 50% 54%,
+      var(--spore-color) 0 38%,
+      color-mix(in srgb, var(--spore-color) 72%, transparent) 52%,
+      transparent 72%
+    );
   border-radius: 50%;
   box-shadow:
     0 0 8px color-mix(in srgb, var(--spore-color) 72%, transparent),
@@ -5716,18 +5716,42 @@ html.is-wall-breach-shaking body {
 
 .toxic-jungle-spore-core::before {
   background:
-    radial-gradient(circle at 26% 52%, color-mix(in srgb, var(--spore-color) 44%, transparent) 0 6%, transparent 7%),
-    radial-gradient(circle at 70% 34%, color-mix(in srgb, var(--spore-color) 42%, transparent) 0 7%, transparent 8%),
-    radial-gradient(circle at 62% 78%, color-mix(in srgb, var(--spore-color) 38%, transparent) 0 5%, transparent 6%);
+    radial-gradient(
+      circle at 26% 52%,
+      color-mix(in srgb, var(--spore-color) 44%, transparent) 0 6%,
+      transparent 7%
+    ),
+    radial-gradient(
+      circle at 70% 34%,
+      color-mix(in srgb, var(--spore-color) 42%, transparent) 0 7%,
+      transparent 8%
+    ),
+    radial-gradient(
+      circle at 62% 78%,
+      color-mix(in srgb, var(--spore-color) 38%, transparent) 0 5%,
+      transparent 6%
+    );
   filter: blur(1.4px);
   opacity: 0.9;
 }
 
 .toxic-jungle-spore-core::after {
   background:
-    radial-gradient(circle at 18% 30%, color-mix(in srgb, var(--spore-color) 64%, transparent) 0 3%, transparent 4%),
-    radial-gradient(circle at 36% 82%, color-mix(in srgb, var(--spore-color) 56%, transparent) 0 3%, transparent 4%),
-    radial-gradient(circle at 84% 58%, color-mix(in srgb, var(--spore-color) 52%, transparent) 0 3%, transparent 4%);
+    radial-gradient(
+      circle at 18% 30%,
+      color-mix(in srgb, var(--spore-color) 64%, transparent) 0 3%,
+      transparent 4%
+    ),
+    radial-gradient(
+      circle at 36% 82%,
+      color-mix(in srgb, var(--spore-color) 56%, transparent) 0 3%,
+      transparent 4%
+    ),
+    radial-gradient(
+      circle at 84% 58%,
+      color-mix(in srgb, var(--spore-color) 52%, transparent) 0 3%,
+      transparent 4%
+    );
   filter: blur(0.9px);
   opacity: 0.72;
 }
@@ -5808,11 +5832,14 @@ html.is-wall-breach-shaking body {
 .toxic-jungle-counter-symbol {
   background:
     radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.68) 0 10%, transparent 12%),
-    radial-gradient(circle at 50% 50%, var(--spore-color) 0 46%, color-mix(in srgb, var(--spore-color) 62%, transparent) 62%, transparent 74%);
+    radial-gradient(
+      circle at 50% 50%,
+      var(--spore-color) 0 46%,
+      color-mix(in srgb, var(--spore-color) 62%, transparent) 62%,
+      transparent 74%
+    );
   border-radius: 50%;
-  filter:
-    blur(0.1px)
-    drop-shadow(0 0 3px color-mix(in srgb, var(--spore-color) 62%, transparent));
+  filter: blur(0.1px) drop-shadow(0 0 3px color-mix(in srgb, var(--spore-color) 62%, transparent));
   height: 14px;
   justify-self: center;
   position: relative;
@@ -5820,8 +5847,11 @@ html.is-wall-breach-shaking body {
 }
 
 .toxic-jungle-counter-symbol::before {
-  background:
-    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--spore-color) 34%, transparent) 0 56%, transparent 72%);
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--spore-color) 34%, transparent) 0 56%,
+    transparent 72%
+  );
   border-radius: 50%;
   content: "";
   filter: blur(2px);
@@ -6006,10 +6036,15 @@ html.is-wall-breach-shaking body {
   background: #4a3522;
   border: 2px solid #1a120c;
   box-sizing: border-box;
-  box-shadow: inset 1px 1px 0 #8b6b42, inset -1px -1px 0 #160f0a;
+  box-shadow:
+    inset 1px 1px 0 #8b6b42,
+    inset -1px -1px 0 #160f0a;
   color: #f9e4b8;
   display: flex;
-  font: bold 14px Georgia, "Times New Roman", serif;
+  font:
+    bold 14px Georgia,
+    "Times New Roman",
+    serif;
   gap: 6px;
   height: var(--dst-craft-row-size);
   justify-content: start;
@@ -6071,7 +6106,9 @@ html.is-wall-breach-shaking body {
   background: #1e150e;
   border: 2px solid #110b07;
   box-sizing: border-box;
-  box-shadow: inset 1px 1px 0 #080503, 1px 1px 0 #8b6b42;
+  box-shadow:
+    inset 1px 1px 0 #080503,
+    1px 1px 0 #8b6b42;
   display: flex;
   height: var(--dst-craft-slot-size);
   justify-content: center;
@@ -6139,7 +6176,9 @@ html.is-wall-breach-shaking body {
 .dst-night-progress-shell {
   background: #17100b;
   border: 2px solid #110b07;
-  box-shadow: inset 1px 1px 0 #080503, 1px 1px 0 #8b6b42;
+  box-shadow:
+    inset 1px 1px 0 #080503,
+    1px 1px 0 #8b6b42;
   height: 18px;
   overflow: hidden;
   width: 100%;
@@ -6304,8 +6343,7 @@ html.is-wall-breach-shaking body {
 
 .virus-window.is-virus-struck {
   animation: virus-window-strike-shake 82ms steps(2, end) infinite;
-  filter:
-    drop-shadow(0 0 7px rgba(72, 184, 255, 0.9))
+  filter: drop-shadow(0 0 7px rgba(72, 184, 255, 0.9))
     drop-shadow(0 0 16px rgba(37, 132, 255, 0.56));
   overflow: visible;
 }
@@ -6462,9 +6500,7 @@ html.is-wall-breach-shaking body {
 
 .infinity-armory-loadout,
 .infinity-armory-inventory {
-  background:
-    linear-gradient(rgba(255, 225, 144, 0.08), transparent 40%),
-    rgba(11, 10, 9, 0.78);
+  background: linear-gradient(rgba(255, 225, 144, 0.08), transparent 40%), rgba(11, 10, 9, 0.78);
   border: 1px solid rgba(220, 174, 89, 0.34);
   box-shadow:
     inset 0 0 12px rgba(0, 0, 0, 0.55),
@@ -6502,8 +6538,7 @@ html.is-wall-breach-shaking body {
 .infinity-armory-blade-frame {
   align-items: center;
   background:
-    radial-gradient(ellipse at 50% 50%, rgba(255, 230, 158, 0.16), transparent 54%),
-    #090807;
+    radial-gradient(ellipse at 50% 50%, rgba(255, 230, 158, 0.16), transparent 54%), #090807;
   border: 1px solid rgba(220, 174, 89, 0.28);
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.62);
   display: flex;
@@ -6514,9 +6549,7 @@ html.is-wall-breach-shaking body {
 
 .infinity-armory-blade {
   display: block;
-  filter:
-    drop-shadow(0 0 6px rgba(255, 224, 137, 0.36))
-    drop-shadow(0 8px 8px rgba(0, 0, 0, 0.7));
+  filter: drop-shadow(0 0 6px rgba(255, 224, 137, 0.36)) drop-shadow(0 8px 8px rgba(0, 0, 0, 0.7));
   image-rendering: auto;
   max-width: 100%;
   object-fit: contain;
@@ -6542,8 +6575,7 @@ html.is-wall-breach-shaking body {
 .infinity-armory-slot {
   align-items: center;
   background:
-    radial-gradient(circle at 50% 45%, rgba(255, 225, 144, 0.1), transparent 52%),
-    #080706;
+    radial-gradient(circle at 50% 45%, rgba(255, 225, 144, 0.1), transparent 52%), #080706;
   border: 1px solid rgba(220, 174, 89, 0.36);
   box-shadow:
     inset 0 0 10px rgba(0, 0, 0, 0.7),
@@ -6575,7 +6607,8 @@ html.is-wall-breach-shaking body {
 .infinity-armory-slot img {
   display: none;
   height: 34px;
-  filter: var(--armory-gem-filter, none) drop-shadow(0 0 8px var(--armory-gem-glow, rgba(255, 229, 137, 0.5)));
+  filter: var(--armory-gem-filter, none)
+    drop-shadow(0 0 8px var(--armory-gem-glow, rgba(255, 229, 137, 0.5)));
   object-fit: contain;
   width: 34px;
 }
@@ -6757,9 +6790,7 @@ html.is-wall-breach-shaking body {
 }
 
 .infinity-armory-xp-fill {
-  background:
-    linear-gradient(90deg, #5b2c86, #9b5bd6 56%, #d2a8ff),
-    #8d56c5;
+  background: linear-gradient(90deg, #5b2c86, #9b5bd6 56%, #d2a8ff), #8d56c5;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
     0 0 8px rgba(179, 102, 255, 0.38);
@@ -6794,8 +6825,7 @@ html.is-wall-breach-shaking body {
   align-items: center;
   appearance: none;
   background:
-    radial-gradient(circle at 48% 42%, rgba(255, 236, 148, 0.18), transparent 58%),
-    #17130d;
+    radial-gradient(circle at 48% 42%, rgba(255, 236, 148, 0.18), transparent 58%), #17130d;
   border: 1px solid rgba(220, 174, 89, 0.32);
   border-radius: 0;
   box-sizing: border-box;
@@ -6851,9 +6881,7 @@ html.is-wall-breach-shaking body {
 }
 
 .infinity-armory-gem.is-empty {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent 48%),
-    #080706;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent 48%), #080706;
   border-color: rgba(220, 174, 89, 0.18);
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.52);
   opacity: 1;
@@ -6861,7 +6889,8 @@ html.is-wall-breach-shaking body {
 
 .infinity-armory-gem img {
   display: block;
-  filter: var(--armory-gem-filter, none) drop-shadow(0 0 8px var(--armory-gem-glow, rgba(255, 229, 137, 0.5)));
+  filter: var(--armory-gem-filter, none)
+    drop-shadow(0 0 8px var(--armory-gem-glow, rgba(255, 229, 137, 0.5)));
   height: 72%;
   object-fit: contain;
   width: 72%;
@@ -6871,8 +6900,7 @@ html.is-wall-breach-shaking body {
   align-items: center;
   appearance: none;
   background:
-    radial-gradient(circle at 48% 42%, rgba(255, 236, 148, 0.14), transparent 58%),
-    #17130d;
+    radial-gradient(circle at 48% 42%, rgba(255, 236, 148, 0.14), transparent 58%), #17130d;
   border: 1px solid rgba(220, 174, 89, 0.32);
   border-radius: 0;
   box-sizing: border-box;
@@ -6922,18 +6950,14 @@ html.is-wall-breach-shaking body {
 }
 
 .infinity-armory-map.is-empty {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent 48%),
-    #080706;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent 48%), #080706;
   border-color: rgba(220, 174, 89, 0.18);
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.52);
   opacity: 1;
 }
 
 .infinity-armory-map-hint {
-  background:
-    linear-gradient(rgba(255, 225, 144, 0.08), transparent 42%),
-    rgba(11, 10, 9, 0.96);
+  background: linear-gradient(rgba(255, 225, 144, 0.08), transparent 42%), rgba(11, 10, 9, 0.96);
   border: 1px solid rgba(220, 174, 89, 0.5);
   box-shadow:
     inset 0 0 12px rgba(0, 0, 0, 0.58),
@@ -7092,7 +7116,8 @@ html.is-wall-breach-shaking body {
 
 .infinity-armory-cursor-gem img {
   display: block;
-  filter: var(--armory-gem-filter, none) drop-shadow(0 0 9px var(--armory-gem-glow, rgba(255, 229, 137, 0.5)));
+  filter: var(--armory-gem-filter, none)
+    drop-shadow(0 0 9px var(--armory-gem-glow, rgba(255, 229, 137, 0.5)));
   height: 34px;
   object-fit: contain;
   width: 34px;

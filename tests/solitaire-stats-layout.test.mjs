@@ -12,16 +12,16 @@ test("Solitaire uses the shared leaderboard template for global most wins", asyn
     readFile(new URL("styles/home/apps/game-stats.css", root), "utf8"),
   ]);
   const globalRows = main.match(
-    /const appendSolitaireGlobalLeaderboardRows = \(list, entries\) => \{([\s\S]*?)\n\};\n\nconst appendSolitairePersonalRecord/
+    /const appendSolitaireGlobalLeaderboardRows = \(list, entries\) => \{([\s\S]*?)\n\};\n\nconst appendSolitairePersonalRecord/,
   );
   const personalRecord = main.match(
-    /const appendSolitairePersonalRecord = \(panel\) => \{([\s\S]*?)\n\};\n\nconst appendSolitaireGlobalWins/
+    /const appendSolitairePersonalRecord = \(panel\) => \{([\s\S]*?)\n\};\n\nconst appendSolitaireGlobalWins/,
   );
   const globalWins = main.match(
-    /const appendSolitaireGlobalWins = \(panel\) => \{([\s\S]*?)\n\};\n\nconst appendSnakeGlobalLeaderboardRows/
+    /const appendSolitaireGlobalWins = \(panel\) => \{([\s\S]*?)\n\};\n\nconst appendSnakeGlobalLeaderboardRows/,
   );
   const renderSolitaire = main.match(
-    /const renderGameStatsSolitaire = \(root\) => \{([\s\S]*?)\n\};\n\nconst renderGameStatsSnake/
+    /const renderGameStatsSolitaire = \(root\) => \{([\s\S]*?)\n\};\n\nconst renderGameStatsSnake/,
   );
 
   assert.ok(globalRows, "Solitaire should render fixed global leaderboard slots");
@@ -39,15 +39,15 @@ test("Solitaire uses the shared leaderboard template for global most wins", asyn
   assert.match(globalRows[1], /currentPlayer: isCurrentPlayer/);
   assert.match(
     personalRecord[1],
-    /getGameStatsVerifiedPlayerRecord\([\s\S]*?gameStatsGlobalState\.playerRecords\.solitaire/
+    /getGameStatsVerifiedPlayerRecord\([\s\S]*?gameStatsGlobalState\.playerRecords\.solitaire/,
   );
   assert.match(
     personalRecord[1],
-    /const wins = gameStatsGlobalPlayerTotalsAvailable[\s\S]*?gameStatsGlobalState\.playerTotals\.solitaire\.wins[\s\S]*?verifiedEntry\?\.metric \?\? gameStatsLocalState\.totals\.solitaire\.wins/
+    /const wins = gameStatsGlobalPlayerTotalsAvailable[\s\S]*?gameStatsGlobalState\.playerTotals\.solitaire\.wins[\s\S]*?verifiedEntry\?\.metric \?\? gameStatsLocalState\.totals\.solitaire\.wins/,
   );
   assert.match(
     personalRecord[1],
-    /const playerRank = verifiedEntry[\s\S]*?gameStatsGlobalState\.playerRanks\.solitaire[\s\S]*?createGameStatsEmptyPlayerRank/
+    /const playerRank = verifiedEntry[\s\S]*?gameStatsGlobalState\.playerRanks\.solitaire[\s\S]*?createGameStatsEmptyPlayerRank/,
   );
   assert.match(personalRecord[1], /const rankText = `#\$\{playerRank\.rank \?\? "—"\}`;/);
   assert.match(personalRecord[1], /label: "Your Record"/);
@@ -63,10 +63,7 @@ test("Solitaire uses the shared leaderboard template for global most wins", asyn
   assert.match(renderSolitaire[1], /appendSolitairePersonalRecord\(leaderboard\.panel\)/);
   assert.match(renderSolitaire[1], /appendSolitaireGlobalWins\(leaderboard\.panel\)/);
   assert.doesNotMatch(renderSolitaire[1], /appendGameStatsSummary|appendGameStatsLeaderboard/);
-  assert.match(
-    styles,
-    /#game-stats-window-solitaire \{[\s\S]*?width: min\(94vw, 421\.47px\);/
-  );
+  assert.match(styles, /#game-stats-window-solitaire \{[\s\S]*?width: min\(94vw, 421\.47px\);/);
   assert.match(styles, /\.game-stats-leaderboard-template-medal,/);
   assert.match(styles, /\.game-stats-leaderboard-template-player \{/);
   assert.match(styles, /\.game-stats-leaderboard-template-rank \{/);

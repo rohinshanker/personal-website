@@ -149,7 +149,7 @@
             clientX >= rect.left &&
             clientX <= rect.right &&
             clientY >= rect.top &&
-            clientY <= rect.bottom
+            clientY <= rect.bottom,
         );
       });
     };
@@ -168,14 +168,7 @@
 
       const host = caret.textNode.parentElement;
       if (!host || !isVisibleSelectableTextHost(host)) return null;
-      if (
-        !isPointInsideNonWhitespaceGlyph(
-          caret.textNode,
-          caret.offset,
-          clientX,
-          clientY
-        )
-      ) {
+      if (!isPointInsideNonWhitespaceGlyph(caret.textNode, caret.offset, clientX, clientY)) {
         return null;
       }
 
@@ -185,9 +178,7 @@
     const runPointerHitTest = () => {
       hitTestFrameId = null;
       setHoveredTextHost(
-        hasPointerPosition
-          ? findSelectableTextHostAtPoint(pointerClientX, pointerClientY)
-          : null
+        hasPointerPosition ? findSelectableTextHostAtPoint(pointerClientX, pointerClientY) : null,
       );
     };
 
@@ -231,10 +222,7 @@
       primaryMousePointerId = event.pointerId;
       isPrimaryMouseDown = true;
       rememberMousePointer(event);
-      primaryMouseTextHost = findSelectableTextHostAtPoint(
-        pointerClientX,
-        pointerClientY
-      );
+      primaryMouseTextHost = findSelectableTextHostAtPoint(pointerClientX, pointerClientY);
       setHoveredTextHost(primaryMouseTextHost);
     };
 

@@ -50,7 +50,7 @@ const loadSyncHarness = async ({ submissions, eventResponses, proof }) => {
   const syncSource = extractSource(
     source,
     "const refreshGameStatsGlobalState =",
-    "\n\nconst recordGameStatsEvent"
+    "\n\nconst recordGameStatsEvent",
   );
   const context = vm.createContext({ URLSearchParams });
   vm.runInContext(
@@ -107,7 +107,7 @@ const loadSyncHarness = async ({ submissions, eventResponses, proof }) => {
       "globalThis.syncForTest = syncQueuedGameStats;",
       "globalThis.readForTest = () => ({ administratorProof, authenticationRequests, confirmedEvents, eventRequests, gameStatsSubmissionQueue, gameStatsSyncMessage, gameStatsSyncState, proofClears });",
     ].join("\n"),
-    context
+    context,
   );
   return context;
 };
@@ -167,16 +167,17 @@ test("an expired queued result is reported separately while valid queued work pu
   const valid = createSubmission("event-valid");
   const context = await loadSyncHarness({
     submissions: [expired, valid],
-    eventResponses: [
-      { status: 201, body: { ok: true, applied: true, eventId: "event-valid" } },
-    ],
+    eventResponses: [{ status: 201, body: { ok: true, applied: true, eventId: "event-valid" } }],
     proof: "valid.proof",
   });
 
   await context.syncForTest();
   const state = jsonClone(context.readForTest());
 
-  assert.deepEqual(state.eventRequests.map(({ body }) => body.event.id), ["event-valid"]);
+  assert.deepEqual(
+    state.eventRequests.map(({ body }) => body.event.id),
+    ["event-valid"],
+  );
   assert.deepEqual(state.confirmedEvents, ["event-valid"]);
   assert.deepEqual(state.gameStatsSubmissionQueue, []);
   assert.equal(state.gameStatsSyncState, "session-expired");
@@ -231,8 +232,7 @@ test("an expired session clears a rejected Administrator proof without asking to
   assert.notEqual(state.gameStatsSyncMessage, REJECTED_MESSAGE);
 });
 
-const REJECTED_MESSAGE =
-  "Local stats are saved, but a result could not pass server verification.";
+const REJECTED_MESSAGE = "Local stats are saved, but a result could not pass server verification.";
 
 test("a rejected game session keeps the Administrator proof and does not reopen sign-in", async () => {
   const context = await loadSyncHarness({
@@ -371,11 +371,11 @@ test("stored proof rejection counts survive queue normalization", async () => {
       extractSource(
         source,
         "const normalizeGameStatsSubmission =",
-        "\n\nconst loadGameStatsSubmissionQueue"
+        "\n\nconst loadGameStatsSubmissionQueue",
       ),
       "globalThis.normalizeForTest = normalizeGameStatsSubmission;",
     ].join("\n"),
-    context
+    context,
   );
 
   const normalize = (rawSubmission) => jsonClone(context.normalizeForTest(rawSubmission));
@@ -394,7 +394,7 @@ test("stored proof rejection counts survive queue normalization", async () => {
   for (const invalid of [-1, 1.5, "3", Number.NaN, Number.POSITIVE_INFINITY, {}]) {
     assert.equal(
       normalize({ event: { id: "a" }, session: null, proofRejections: invalid }).proofRejections,
-      0
+      0,
     );
   }
 });

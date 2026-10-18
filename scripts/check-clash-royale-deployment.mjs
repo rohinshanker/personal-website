@@ -21,13 +21,10 @@ const CARD_ASSET_PATH = "/cards/300/";
 const EVOLUTION_ASSET_PATH = "/cardevolutions/300/";
 const HERO_ASSET_PATH = "/cardheroes/300/";
 const MIRROR_CARD_ID = 28000006;
-const CARD_RARITIES = new Set([
-  "common", "rare", "epic", "legendary", "champion",
-]);
+const CARD_RARITIES = new Set(["common", "rare", "epic", "legendary", "champion"]);
 const CARD_VARIANTS = new Set(["evo", "hero"]);
 
-const sleep = (milliseconds) =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds));
+const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const assertPositiveInteger = (value, label) => {
   if (!Number.isSafeInteger(value) || value <= 0) {
@@ -37,8 +34,7 @@ const assertPositiveInteger = (value, label) => {
 
 class DeploymentTransitionError extends Error {}
 
-const isRecord = (value) =>
-  value !== null && typeof value === "object" && !Array.isArray(value);
+const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 
 const isOptionalNonNegativeInteger = (value) =>
   value === undefined || (Number.isSafeInteger(value) && value >= 0);
@@ -48,11 +44,13 @@ const isAssetUrl = (value, pathPrefix) => {
   if (typeof value !== "string" || value.length > 2_048) return false;
   try {
     const url = new URL(value);
-    return url.origin === ASSET_ORIGIN &&
+    return (
+      url.origin === ASSET_ORIGIN &&
       !url.username &&
       !url.password &&
       url.pathname.startsWith(pathPrefix) &&
-      url.pathname.endsWith(".png");
+      url.pathname.endsWith(".png")
+    );
   } catch {
     return false;
   }
@@ -70,7 +68,8 @@ const isCard = (card, { allowLegacyVariant = false } = {}) => {
     !isOptionalNonNegativeInteger(card.starLevel) ||
     !isOptionalNonNegativeInteger(card.evolutionLevel) ||
     (card.elixirCost !== undefined &&
-      (!Number.isSafeInteger(card.elixirCost) || card.elixirCost < 0 ||
+      (!Number.isSafeInteger(card.elixirCost) ||
+        card.elixirCost < 0 ||
         card.id === MIRROR_CARD_ID)) ||
     (card.rarity !== undefined && !CARD_RARITIES.has(card.rarity)) ||
     (card.variant !== undefined && !CARD_VARIANTS.has(card.variant)) ||
@@ -78,36 +77,36 @@ const isCard = (card, { allowLegacyVariant = false } = {}) => {
   ) {
     return false;
   }
-  const expectedVariant = card.evolutionLevel === 1
-    ? "evo"
-    : card.evolutionLevel === 2
-      ? "hero"
-      : undefined;
-  const isLegacyVariant = allowLegacyVariant &&
+  const expectedVariant =
+    card.evolutionLevel === 1 ? "evo" : card.evolutionLevel === 2 ? "hero" : undefined;
+  const isLegacyVariant =
+    allowLegacyVariant &&
     expectedVariant !== undefined &&
     card.variant === undefined &&
     card.variantIconUrl === undefined;
   if (card.variant !== expectedVariant && !isLegacyVariant) return false;
-  const variantPath = card.variant === "evo"
-    ? EVOLUTION_ASSET_PATH
-    : card.variant === "hero"
-      ? HERO_ASSET_PATH
-      : undefined;
-  return card.variantIconUrl === undefined ||
-    (variantPath !== undefined && isAssetUrl(card.variantIconUrl, variantPath));
+  const variantPath =
+    card.variant === "evo"
+      ? EVOLUTION_ASSET_PATH
+      : card.variant === "hero"
+        ? HERO_ASSET_PATH
+        : undefined;
+  return (
+    card.variantIconUrl === undefined ||
+    (variantPath !== undefined && isAssetUrl(card.variantIconUrl, variantPath))
+  );
 };
 
 const isCardArray = (value, limit, options) =>
-  Array.isArray(value) && value.length <= limit &&
-  value.every((card) => isCard(card, options));
+  Array.isArray(value) && value.length <= limit && value.every((card) => isCard(card, options));
 
 const isParticipant = (value, options) =>
   isRecord(value) &&
-  (value.cards === undefined ||
-    isCardArray(value.cards, MAX_PARTICIPANT_CARDS, options));
+  (value.cards === undefined || isCardArray(value.cards, MAX_PARTICIPANT_CARDS, options));
 
 const isParticipantArray = (value, options) =>
-  Array.isArray(value) && value.length > 0 &&
+  Array.isArray(value) &&
+  value.length > 0 &&
   value.length <= MAX_PARTICIPANTS &&
   value.every((participant) => isParticipant(participant, options));
 
@@ -134,9 +133,9 @@ const hasLegacyVariantMetadata = (payload) => {
       if (participant.cards) cards.push(...participant.cards);
     }
   }
-  return cards.some((card) =>
-    (card.evolutionLevel === 1 || card.evolutionLevel === 2) &&
-    card.variant === undefined
+  return cards.some(
+    (card) =>
+      (card.evolutionLevel === 1 || card.evolutionLevel === 2) && card.variant === undefined,
   );
 };
 
@@ -144,10 +143,7 @@ const fetchSnapshot = async ({ endpoint, fetchImpl, now }) => {
   const payload = await fetchGuardedBody(endpoint, {
     fetchImpl: async (url, options) => {
       const response = await fetchImpl(url, options);
-      if (
-        response?.ok &&
-        response.headers?.get("Access-Control-Allow-Origin") !== SITE_ORIGIN
-      ) {
+      if (response?.ok && response.headers?.get("Access-Control-Allow-Origin") !== SITE_ORIGIN) {
         throw new Error("Clash Royale response does not allow the production origin");
       }
       return response;
@@ -175,14 +171,12 @@ const fetchSnapshot = async ({ endpoint, fetchImpl, now }) => {
       hasLegacyVariantMetadata(payload)
     ) {
       throw new DeploymentTransitionError(
-        "deployed Worker still returns legacy card variant metadata"
+        "deployed Worker still returns legacy card variant metadata",
       );
     }
     throw new Error("Clash Royale endpoint returned an invalid player snapshot");
   }
-  const fetchedAt = typeof payload.fetchedAt === "string"
-    ? Date.parse(payload.fetchedAt)
-    : NaN;
+  const fetchedAt = typeof payload.fetchedAt === "string" ? Date.parse(payload.fetchedAt) : NaN;
   const age = now() - fetchedAt;
   if (!Number.isFinite(age) || age < -30_000 || age > 330_000) {
     throw new Error("Clash Royale snapshot timestamp is invalid or stale");
@@ -206,13 +200,10 @@ export const checkClashRoyaleDeployment = async ({
     throw new TypeError("Polling dependencies must be functions");
   }
   const config = parseGameStatsBackendConfig(
-    await readFileImpl(GAME_STATS_BACKEND_CONFIG_URL, "utf8")
+    await readFileImpl(GAME_STATS_BACKEND_CONFIG_URL, "utf8"),
   );
   const endpoint = `${config.apiBaseUrl}/clash-royale`;
-  const maxAttempts = Math.max(
-    1,
-    Math.ceil(convergenceTimeoutMs / pollIntervalMs)
-  );
+  const maxAttempts = Math.max(1, Math.ceil(convergenceTimeoutMs / pollIntervalMs));
   const startedAt = Number(pollNow());
   if (!Number.isFinite(startedAt)) {
     throw new Error("Clash Royale deployment clock returned an invalid time");
@@ -243,8 +234,8 @@ export const checkClashRoyaleDeployment = async ({
   }
   throw new Error(
     `Clash Royale deployment did not converge within ${convergenceTimeoutMs}ms ` +
-    `after ${attempts} attempt${attempts === 1 ? "" : "s"}: ` +
-    lastTransitionError.message
+      `after ${attempts} attempt${attempts === 1 ? "" : "s"}: ` +
+      lastTransitionError.message,
   );
 };
 
@@ -257,7 +248,7 @@ export const runClashRoyaleDeploymentCheck = async ({
     const result = await checkImpl();
     writeOutput(
       `Verified live Clash Royale player ${result.playerTag}, ` +
-      `${result.battleCount} recent battles, fresh snapshot, and production CORS.`
+        `${result.battleCount} recent battles, fresh snapshot, and production CORS.`,
     );
     return 0;
   } catch (error) {

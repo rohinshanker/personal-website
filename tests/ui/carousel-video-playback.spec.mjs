@@ -4,14 +4,11 @@ import { expect, test } from "./deterministic.mjs";
 import { settleFrames } from "./helpers/rendered-site.mjs";
 
 const TEST_VIDEO = await readFile(
-  new URL(
-    "../../assets/modeling/fast-reverie-rnwy-apr2024/01-runway-video.mp4",
-    import.meta.url
-  )
+  new URL("../../assets/modeling/fast-reverie-rnwy-apr2024/01-runway-video.mp4", import.meta.url),
 );
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR42mNk+M/wHwAF/gL+q0g9QAAAAABJRU5ErkJggg==",
-  "base64"
+  "base64",
 );
 
 const disableRandomEvents = () => {
@@ -20,10 +17,10 @@ const disableRandomEvents = () => {
 
 const stubCarouselMedia = async (page) => {
   await page.route(/\.(?:mov|mp4)(?:[?#].*)?$/i, (route) =>
-    route.fulfill({ body: TEST_VIDEO, contentType: "video/mp4" })
+    route.fulfill({ body: TEST_VIDEO, contentType: "video/mp4" }),
   );
   await page.route(/\/assets\/modeling\/.*\.(?:jpe?g|png)(?:\?.*)?$/i, (route) =>
-    route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" })
+    route.fulfill({ body: ONE_PIXEL_PNG, contentType: "image/png" }),
   );
 };
 
@@ -72,12 +69,12 @@ const expectNoHiddenCarouselPlayback = async (page) => {
           .filter((element) => {
             const hiddenViewer = element.closest(".viewer-content.is-hidden");
             const hiddenWindow = element.closest(
-              '.app-window.is-hidden, .home-window.is-hidden, .window[data-media-closing="true"]'
+              '.app-window.is-hidden, .home-window.is-hidden, .window[data-media-closing="true"]',
             );
             return (element.hidden || hiddenViewer || hiddenWindow) && !element.paused;
           })
-          .map((element) => element.getAttribute("aria-label") || element.id || element.tagName)
-      )
+          .map((element) => element.getAttribute("aria-label") || element.id || element.tagName),
+      ),
     )
     .toEqual([]);
 };
@@ -101,9 +98,7 @@ test("Stand Still only autoplays while its carousel tab and video slide are visi
 }) => {
   const app = await openApp(page, "modeling");
   await app.locator('.selector-item[data-view="modeling-stand-still-drop"]').click();
-  const standStillPanel = app.locator(
-    '.viewer-content[data-view="modeling-stand-still-drop"]'
-  );
+  const standStillPanel = app.locator('.viewer-content[data-view="modeling-stand-still-drop"]');
   const video = standStillPanel.locator("video");
 
   await expect(video).toHaveCount(1);
@@ -113,23 +108,21 @@ test("Stand Still only autoplays while its carousel tab and video slide are visi
   await standStillPanel.getByRole("button", { name: "Next item" }).click();
   await expect(standStillPanel.locator("video")).toHaveCount(0);
   await expect(
-    standStillPanel.locator(".gallery-scroll > img:not(.gallery-loading-indicator__image)")
+    standStillPanel.locator(".gallery-scroll > img:not(.gallery-loading-indicator__image)"),
   ).toBeVisible();
   expect(
     await firstVideo.evaluate((element) => ({
       connected: element.isConnected,
       paused: element.paused,
       src: element.getAttribute("src"),
-    }))
+    })),
   ).toEqual({ connected: false, paused: true, src: null });
 
   await standStillPanel.getByRole("button", { name: "Previous item" }).click();
   const returnedVideo = standStillPanel.locator("video");
   await expect.poll(() => returnedVideo.evaluate((element) => element.paused)).toBe(false);
 
-  await app
-    .locator('.selector-item[data-view="modeling-garb-merch-promo-shoot"]')
-    .click();
+  await app.locator('.selector-item[data-view="modeling-garb-merch-promo-shoot"]').click();
   await expect(standStillPanel).toHaveClass(/is-hidden/);
   await expectHiddenPrewarmToStayPaused(returnedVideo);
   await expectNoHiddenCarouselPlayback(page);
@@ -141,28 +134,20 @@ test("Stand Still only autoplays while its carousel tab and video slide are visi
 
 test("manual Modeling videos remain paused when hidden and when revisited", async ({ page }) => {
   const app = await openApp(page, "modeling");
-  const runwayPanel = app.locator(
-    '.viewer-content[data-view="modeling-fast-reverie-runway-show"]'
-  );
+  const runwayPanel = app.locator('.viewer-content[data-view="modeling-fast-reverie-runway-show"]');
 
-  await app
-    .locator('.selector-item[data-view="modeling-fast-reverie-runway-show"]')
-    .click();
+  await app.locator('.selector-item[data-view="modeling-fast-reverie-runway-show"]').click();
   const video = runwayPanel.locator("video");
   await expect(video).toHaveCount(1);
   await expectPausedFor(video, 4);
   await manuallyPlay(video);
 
-  await app
-    .locator('.selector-item[data-view="modeling-fast-reverie-lookbook-shoot"]')
-    .click();
+  await app.locator('.selector-item[data-view="modeling-fast-reverie-lookbook-shoot"]').click();
   await expect(runwayPanel).toHaveClass(/is-hidden/);
   await expectHiddenPrewarmToStayPaused(video);
   await expectNoHiddenCarouselPlayback(page);
 
-  await app
-    .locator('.selector-item[data-view="modeling-fast-reverie-runway-show"]')
-    .click();
+  await app.locator('.selector-item[data-view="modeling-fast-reverie-runway-show"]').click();
   await expect(runwayPanel).not.toHaveClass(/is-hidden/);
   await expectPausedFor(video);
 
@@ -196,9 +181,7 @@ test("Projects video carousels pause on slide, tab, and window changes", async (
   await app.locator('.selector-item[data-view="projects-ekg"]').click();
   await expectPausedFor(ekgVideo);
 
-  const dronePanel = app.locator(
-    '.viewer-content[data-view="projects-drone-navigation"]'
-  );
+  const dronePanel = app.locator('.viewer-content[data-view="projects-drone-navigation"]');
   await app.locator('.selector-item[data-view="projects-drone-navigation"]').click();
   const droneVideo = dronePanel.locator("#drone-project-video");
   await expect(droneVideo).toBeVisible();

@@ -17,8 +17,8 @@ const CLASH_DIGIT_SOURCES = Object.freeze(
     [..."0123456789-"].map((digit) => [
       digit,
       `assets/minesweeper_assets/digital_digits/digital_${digit === "-" ? "minus" : digit}.png`,
-    ])
-  )
+    ]),
+  ),
 );
 
 const elements =
@@ -75,12 +75,16 @@ export const normalizeClashCardIconUrl = (value) => {
 };
 
 export const normalizeClashCardRarity = (value) => {
-  const rarity = String(value ?? "").trim().toLowerCase();
+  const rarity = String(value ?? "")
+    .trim()
+    .toLowerCase();
   return CLASH_CARD_RARITIES.includes(rarity) ? rarity : "";
 };
 
 export const normalizeClashCardVariant = (value) => {
-  const variant = String(value ?? "").trim().toLowerCase();
+  const variant = String(value ?? "")
+    .trim()
+    .toLowerCase();
   return CLASH_CARD_VARIANTS.includes(variant) ? variant : "";
 };
 
@@ -107,7 +111,7 @@ const findParticipant = (participants, playerTag) =>
   Array.isArray(participants)
     ? participants.find(
         (participant) =>
-          isParticipant(participant) && normalizeClashTag(participant.tag) === playerTag
+          isParticipant(participant) && normalizeClashTag(participant.tag) === playerTag,
       )
     : undefined;
 
@@ -117,9 +121,7 @@ export const resolveClashBattle = (battle, rawPlayerTag) => {
   if (!playerTag) return null;
 
   const team = Array.isArray(battle.team) ? battle.team.filter(isParticipant) : [];
-  const opponentTeam = Array.isArray(battle.opponent)
-    ? battle.opponent.filter(isParticipant)
-    : [];
+  const opponentTeam = Array.isArray(battle.opponent) ? battle.opponent.filter(isParticipant) : [];
   const teamPlayer = findParticipant(team, playerTag);
   const opponentPlayer = findParticipant(opponentTeam, playerTag);
   const player = teamPlayer ?? opponentPlayer;
@@ -128,11 +130,10 @@ export const resolveClashBattle = (battle, rawPlayerTag) => {
   const opponent = opponents[0];
   if (!player || !opponent) return null;
   const allies = playerSide.filter(
-    (participant) => normalizeClashTag(participant.tag) !== playerTag
+    (participant) => normalizeClashTag(participant.tag) !== playerTag,
   );
 
-  const hasCrowns =
-    isFiniteNonnegative(player.crowns) && isFiniteNonnegative(opponent.crowns);
+  const hasCrowns = isFiniteNonnegative(player.crowns) && isFiniteNonnegative(opponent.crowns);
   const outcome = !hasCrowns
     ? "unknown"
     : player.crowns > opponent.crowns
@@ -153,7 +154,7 @@ export const prepareClashSnapshot = (payload) => {
   if (
     typeof payload.fetchedAt !== "string" ||
     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(
-      payload.fetchedAt.trim()
+      payload.fetchedAt.trim(),
     )
   ) {
     throw new TypeError("Invalid Clash Royale fetch timestamp");
@@ -173,9 +174,9 @@ export const prepareClashSnapshot = (payload) => {
     .map((battle) => resolveClashBattle(battle, playerTag))
     .filter(Boolean)
     .slice(0, CLASH_MAX_BATTLES);
-  const currentDeck = payload.player.currentDeck.filter(
-    (card) => card && typeof card === "object" && String(card.name ?? "").trim()
-  ).slice(0, CLASH_MAX_CURRENT_DECK_CARDS);
+  const currentDeck = payload.player.currentDeck
+    .filter((card) => card && typeof card === "object" && String(card.name ?? "").trim())
+    .slice(0, CLASH_MAX_CURRENT_DECK_CARDS);
 
   return {
     battles,
@@ -194,7 +195,7 @@ export const summarizeClashBattles = (battles) => {
   const draws = known.filter((battle) => battle.outcome === "draw").length;
   const crownDifference = known.reduce(
     (total, battle) => total + battle.player.crowns - battle.opponent.crowns,
-    0
+    0,
   );
   return { crownDifference, draws, known: known.length, losses, total: resolved.length, wins };
 };
@@ -234,8 +235,7 @@ export const parseClashBattleTime = (value) => {
 };
 
 export const formatClashBattleMode = (battle) =>
-  String(battle?.gameMode?.name ?? "").trim() ||
-  String(battle?.type ?? "").trim() || "Battle";
+  String(battle?.gameMode?.name ?? "").trim() || String(battle?.type ?? "").trim() || "Battle";
 
 const CLASH_MODE_BY_ID = new Map([
   [72000007, Object.freeze({ key: "friendly", label: "Friendly" })],
@@ -382,7 +382,7 @@ const renderDigitValue = (container, value, minimumLength) => {
   }
   const integer = Math.trunc(value);
   container.replaceChildren(
-    createDigitValue(String(integer), integer.toLocaleString(), minimumLength)
+    createDigitValue(String(integer), integer.toLocaleString(), minimumLength),
   );
 };
 
@@ -416,9 +416,7 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
   const rarity = normalizeClashCardRarity(card?.rarity);
   const variant = normalizeClashCardVariant(card?.variant);
   const regularIconUrl = normalizeClashCardIconUrl(card?.iconUrl);
-  const variantIconUrl = variant
-    ? normalizeClashCardIconUrl(card?.variantIconUrl)
-    : "";
+  const variantIconUrl = variant ? normalizeClashCardIconUrl(card?.variantIconUrl) : "";
   const item = createElement(
     "li",
     [
@@ -428,7 +426,7 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
       variant ? `is-variant-${variant}` : "",
     ]
       .filter(Boolean)
-      .join(" ")
+      .join(" "),
   );
   const media = createElement("span", "cr-deck-card-media");
   const imageUrl = variantIconUrl || regularIconUrl;
@@ -455,11 +453,7 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
 
   if (variant && compact) {
     media.appendChild(
-      createElement(
-        "span",
-        `cr-card-variant cr-card-variant--${variant}`,
-        variant.toUpperCase()
-      )
+      createElement("span", `cr-card-variant cr-card-variant--${variant}`, variant.toUpperCase()),
     );
   }
   const name = createElement("span", "cr-deck-card-name", cardName);
@@ -471,8 +465,8 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
       createElement(
         "span",
         `cr-card-variant cr-card-variant--inline cr-card-variant--${variant}`,
-        variant.toUpperCase()
-      )
+        variant.toUpperCase(),
+      ),
     );
   }
   const metadata = createElement("span", "cr-card-metadata");
@@ -481,7 +475,7 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
   const elixir = createElement(
     "span",
     "cr-card-elixir",
-    isVariableElixir ? "+1 variable" : hasElixir ? String(card.elixirCost) : "—"
+    isVariableElixir ? "+1 variable" : hasElixir ? String(card.elixirCost) : "—",
   );
   const elixirIcon = createDecorativeIcon("assets/pixelarticons/potion.svg", "cr-elixir-icon");
   elixirIcon.alt = isVariableElixir || hasElixir ? "elixir" : "Elixir unavailable";
@@ -491,8 +485,8 @@ const createCardItem = (card, { compact = false, deferImage = false } = {}) => {
     createElement(
       "span",
       "visually-hidden cr-card-rarity",
-      rarity ? capitalize(rarity) : "Rarity unavailable"
-    )
+      rarity ? capitalize(rarity) : "Rarity unavailable",
+    ),
   );
   item.append(title, media, metadata);
   return item;
@@ -515,7 +509,7 @@ const renderDeck = (cards) => {
   if (elements.deckAverage) {
     elements.deckAverage.replaceChildren(
       `Average Elixir: ${averageElixir === null ? "unavailable" : averageElixir.toFixed(1)}`,
-      createDecorativeIcon("assets/pixelarticons/potion.svg", "cr-elixir-icon")
+      createDecorativeIcon("assets/pixelarticons/potion.svg", "cr-elixir-icon"),
     );
   }
   if (!cards.length) {
@@ -539,14 +533,16 @@ const createParticipantDecks = ({ opponents, playerSide }) => {
       participants: group.participants.filter(
         (participant) =>
           Array.isArray(participant.cards) &&
-          participant.cards.some((card) => String(card?.name ?? "").trim())
+          participant.cards.some((card) => String(card?.name ?? "").trim()),
       ),
     }))
     .filter((group) => group.participants.length);
   if (!groups.length) return null;
 
   const disclosure = createElement("details", "cr-battle-disclosure");
-  disclosure.appendChild(createElement("summary", "cr-battle-disclosure-summary", "View participant decks"));
+  disclosure.appendChild(
+    createElement("summary", "cr-battle-disclosure-summary", "View participant decks"),
+  );
   const content = createElement("div", "cr-battle-decks");
   groups.forEach((group) => {
     const side = createElement("section", "cr-battle-side");
@@ -554,14 +550,14 @@ const createParticipantDecks = ({ opponents, playerSide }) => {
     group.participants.forEach((participant) => {
       const participantDeck = createElement("div", "cr-participant-deck-group");
       participantDeck.appendChild(
-        createElement("h4", "cr-participant-name", participantName(participant))
+        createElement("h4", "cr-participant-name", participantName(participant)),
       );
       const cards = createElement("ul", "cr-participant-deck");
       cards.append(
         ...participant.cards
           .filter((card) => String(card?.name ?? "").trim())
           .slice(0, CLASH_MAX_PARTICIPANT_DECK_CARDS)
-          .map((card) => createCardItem(card, { compact: true, deferImage: true }))
+          .map((card) => createCardItem(card, { compact: true, deferImage: true })),
       );
       participantDeck.appendChild(cards);
       side.appendChild(participantDeck);
@@ -588,8 +584,8 @@ const createBattleTime = (value) => {
     createElement(
       "span",
       "cr-battle-clock",
-      parsedTime.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-    )
+      parsedTime.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+    ),
   );
   return time;
 };
@@ -613,11 +609,7 @@ const renderBattles = (battles) => {
     const info = createElement("span", "cr-battle-info");
     const details = createElement("span", "cr-battle-details");
     const mode = classifyClashBattleMode(battle);
-    const modeBadge = createElement(
-      "span",
-      `cr-battle-mode is-${mode.key}`,
-      mode.label
-    );
+    const modeBadge = createElement("span", `cr-battle-mode is-${mode.key}`, mode.label);
     const rawModeName = formatClashBattleMode(battle);
     modeBadge.setAttribute("aria-label", `${mode.label} mode: ${rawModeName}`);
     attachModeHint(modeBadge, rawModeName);
@@ -626,8 +618,8 @@ const renderBattles = (battles) => {
       createElement(
         "strong",
         "cr-battle-opponent",
-        `${playerSide.map(participantName).join(" & ")} vs. ${opponents.map(participantName).join(" & ")}`
-      )
+        `${playerSide.map(participantName).join(" & ")} vs. ${opponents.map(participantName).join(" & ")}`,
+      ),
     );
     details.appendChild(createBattleTime(battle.battleTime));
     info.appendChild(details);
@@ -643,15 +635,11 @@ const renderBattles = (battles) => {
           icon: CLASH_CROWN_ICON,
           value: `${playerCrowns}-${opponentCrowns}`,
           minimumLength: 3,
-        })
+        }),
       );
     } else {
       metrics.appendChild(
-        createElement(
-          "span",
-          "cr-battle-metric cr-battle-metric--unknown",
-          "Crowns unavailable"
-        )
+        createElement("span", "cr-battle-metric cr-battle-metric--unknown", "Crowns unavailable"),
       );
     }
 
@@ -664,7 +652,7 @@ const renderBattles = (battles) => {
           sign: trophyChange > 0 ? "+" : "",
           value: String(trophyChange),
           minimumLength: 2,
-        })
+        }),
       );
     }
     summary.appendChild(metrics);
@@ -679,7 +667,8 @@ const renderBattles = (battles) => {
 
 const renderPlayer = (snapshot) => {
   const { player } = snapshot;
-  elements.playerName.textContent = String(player.name ?? "Unnamed player").trim() || "Unnamed player";
+  elements.playerName.textContent =
+    String(player.name ?? "Unnamed player").trim() || "Unnamed player";
   elements.playerTag.textContent = `#${snapshot.playerTag}`;
   renderDigitValue(elements.trophies, player.trophies, 4);
   renderDigitValue(elements.bestTrophies, player.bestTrophies, 4);
@@ -690,17 +679,13 @@ const renderPlayer = (snapshot) => {
   const hasLosses = isFiniteNonnegative(player.losses);
   if (hasWins && hasLosses) {
     elements.careerRecord.replaceChildren(
-      createElement(
-        "span",
-        "cr-career-wins",
-        `${Math.trunc(player.wins).toLocaleString()} wins`
-      ),
+      createElement("span", "cr-career-wins", `${Math.trunc(player.wins).toLocaleString()} wins`),
       createElement("span", "cr-career-separator", " · "),
       createElement(
         "span",
         "cr-career-losses",
-        `${Math.trunc(player.losses).toLocaleString()} losses`
-      )
+        `${Math.trunc(player.losses).toLocaleString()} losses`,
+      ),
     );
   } else {
     elements.careerRecord.textContent = EMPTY_VALUE;
@@ -716,11 +701,12 @@ const renderPlayer = (snapshot) => {
 
 const renderHistoryFooter = (battleCount) => {
   if (!elements.historyFooter) return;
-  const prefix = battleCount === CLASH_MAX_BATTLES
-    ? `Most recent ${CLASH_MAX_BATTLES} battles loaded. View `
-    : battleCount > 0
-      ? `Most recent ${battleCount} battle${battleCount === 1 ? "" : "s"} loaded. View `
-      : "No recent battles loaded. View ";
+  const prefix =
+    battleCount === CLASH_MAX_BATTLES
+      ? `Most recent ${CLASH_MAX_BATTLES} battles loaded. View `
+      : battleCount > 0
+        ? `Most recent ${battleCount} battle${battleCount === 1 ? "" : "s"} loaded. View `
+        : "No recent battles loaded. View ";
   const link = createElement("a", "", "Royale API");
   link.href = "https://royaleapi.com/player/28CYYU08P";
   link.target = "_blank";
@@ -767,9 +753,10 @@ const setLoading = (loading) => {
 const errorMessageFor = (status, payload) => {
   if (status === 429) {
     const retryAfterMs = Number(payload?.retryAfterMs);
-    const retryText = Number.isFinite(retryAfterMs) && retryAfterMs > 0
-      ? ` Try again in ${Math.max(1, Math.ceil(retryAfterMs / 1000))} seconds.`
-      : " Try again shortly.";
+    const retryText =
+      Number.isFinite(retryAfterMs) && retryAfterMs > 0
+        ? ` Try again in ${Math.max(1, Math.ceil(retryAfterMs / 1000))} seconds.`
+        : " Try again shortly.";
     return `Too many refreshes.${retryText}`;
   }
   if (status === 503) return "Player data is temporarily unavailable. Try again later.";
@@ -838,7 +825,7 @@ const load = (force = false) => {
         battleCount
           ? `Player data loaded with ${battleCount} recent battle${battleCount === 1 ? "" : "s"}.`
           : "Player data loaded. No recent battles were returned.",
-        "success"
+        "success",
       );
     })
     .catch((error) => {
@@ -869,12 +856,16 @@ if (elements.refresh) {
 }
 
 if (typeof window !== "undefined") {
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !activeModeBadge) return;
-    dismissedModeBadge = activeModeBadge;
-    hideModeHint();
-    event.stopPropagation();
-  }, true);
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key !== "Escape" || !activeModeBadge) return;
+      dismissedModeBadge = activeModeBadge;
+      hideModeHint();
+      event.stopPropagation();
+    },
+    true,
+  );
   window.addEventListener("resize", hideModeHint);
   window.addEventListener("blur", hideModeHint);
   document.addEventListener("scroll", hideModeHint, true);

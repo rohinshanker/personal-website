@@ -38,7 +38,9 @@ const textDecoder = new TextDecoder();
 const toBase64Url = (value) => {
   const bytes = value instanceof Uint8Array ? value : textEncoder.encode(value);
   let binary = "";
-  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 };
 
@@ -58,7 +60,7 @@ const importHmacKey = (secret) =>
     textEncoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign", "verify"]
+    ["sign", "verify"],
   );
 
 const signHmac = async (secret, value) => {
@@ -96,7 +98,7 @@ export const requireSecurityConfig = (env) => {
     !GAME_BUILD_VERSION_PATTERN.test(buildVersion) ||
     compatibilityVersions.length > MAX_GAME_BUILD_COMPATIBILITY_VERSIONS ||
     compatibilityVersions.some(
-      (value) => !GAME_BUILD_VERSION_PATTERN.test(value) || value === buildVersion
+      (value) => !GAME_BUILD_VERSION_PATTERN.test(value) || value === buildVersion,
     ) ||
     acceptedBuildVersions.length !== compatibilityVersions.length + 1
   ) {
@@ -124,7 +126,7 @@ export const enforceRateLimit = async (
   ipHash,
   operation,
   limit,
-  windowMs = RATE_LIMIT_WINDOW_MS
+  windowMs = RATE_LIMIT_WINDOW_MS,
 ) => {
   const now = new Date();
   const windowStartedAt = now.toISOString();
@@ -132,13 +134,7 @@ export const enforceRateLimit = async (
   const expiresAt = new Date(now.getTime() + windowMs).toISOString();
   const row = await getGameStatsDatabase(env)
     .prepare(UPSERT_RATE_LIMIT_SQL)
-    .bind(
-      `${operation}:${ipHash}`,
-      windowStartedAt,
-      expiresAt,
-      resetThreshold,
-      resetThreshold
-    )
+    .bind(`${operation}:${ipHash}`, windowStartedAt, expiresAt, resetThreshold, resetThreshold)
     .first();
   if (!row || Number(row.request_count) > limit) {
     throw new HttpError(429, "Too many game stats requests");
@@ -160,7 +156,7 @@ export const verifySessionToken = async (signingSecret, token) => {
     "HMAC",
     key,
     fromBase64Url(encodedSignature),
-    textEncoder.encode(encodedPayload)
+    textEncoder.encode(encodedPayload),
   );
   if (!valid) throw new HttpError(403, "Invalid session token");
   try {
@@ -215,7 +211,12 @@ const readAdministratorCredentials = (payload) => {
   if (typeof payload.username !== "string" || typeof payload.password !== "string") {
     throw new HttpError(400, "Administrator sign-in credentials must be text");
   }
-  if (!payload.username || !payload.password || payload.username.length > 128 || payload.password.length > 1024) {
+  if (
+    !payload.username ||
+    !payload.password ||
+    payload.username.length > 128 ||
+    payload.password.length > 1024
+  ) {
     throw new HttpError(401, "Invalid administrator credentials");
   }
   return { username: payload.username, password: payload.password };
@@ -230,11 +231,19 @@ export const createAdministratorSignIn = async (request, env, payload) => {
     ipHash,
     "administrator-sign-in",
     MAX_ADMINISTRATOR_SIGN_INS_PER_WINDOW,
-    ADMINISTRATOR_RATE_LIMIT_WINDOW_MS
+    ADMINISTRATOR_RATE_LIMIT_WINDOW_MS,
   );
   const [usernameMatches, passwordMatches] = await Promise.all([
-    constantTimeSecretEquals(security.sessionSigningSecret, security.username, credentials.username),
-    constantTimeSecretEquals(security.sessionSigningSecret, security.password, credentials.password),
+    constantTimeSecretEquals(
+      security.sessionSigningSecret,
+      security.username,
+      credentials.username,
+    ),
+    constantTimeSecretEquals(
+      security.sessionSigningSecret,
+      security.password,
+      credentials.password,
+    ),
   ]);
   if (!usernameMatches || !passwordMatches) {
     throw new HttpError(401, "Invalid administrator credentials");

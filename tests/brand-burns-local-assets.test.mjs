@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { access, readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
-import {
-  readHomeScript,
-  readHomeScriptText,
-} from "./helpers/home-scripts.mjs";
+import { readHomeScript, readHomeScriptText } from "./helpers/home-scripts.mjs";
 
 const root = new URL("../", import.meta.url);
 const apostleIds = Object.freeze([
@@ -42,6 +39,6 @@ test("Brand Burns bundles every Apostle image for localhost rendering", async ()
 
   assert.match(
     source,
-    /const brandBurnsPreloadTargets = \(\) => \[[\s\S]*?BRAND_BURNS_FEMTO\.image,[\s\S]*?BRAND_BURNS_APOSTLES\.map\(\(apostle\) => apostle\.image\)/
+    /const brandBurnsPreloadTargets = \(\) => \[[\s\S]*?BRAND_BURNS_FEMTO\.image,[\s\S]*?BRAND_BURNS_APOSTLES\.map\(\(apostle\) => apostle\.image\)/,
   );
 });

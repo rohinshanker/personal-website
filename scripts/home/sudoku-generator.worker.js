@@ -31,8 +31,7 @@ const shuffle = (items, random = Math.random) => {
   return shuffled;
 };
 
-const sudokuBoxIndex = (row, column) =>
-  Math.floor(row / 3) * 3 + Math.floor(column / 3);
+const sudokuBoxIndex = (row, column) => Math.floor(row / 3) * 3 + Math.floor(column / 3);
 
 const countSudokuMaskBits = (mask) => {
   let count = 0;
@@ -48,17 +47,15 @@ const countSudokuMaskBits = (mask) => {
 const createSudokuFullSolution = (random = Math.random) => {
   const groups = [0, 1, 2];
   const rows = shuffle(groups, random).flatMap((band) =>
-    shuffle(groups, random).map((row) => band * 3 + row)
+    shuffle(groups, random).map((row) => band * 3 + row),
   );
   const columns = shuffle(groups, random).flatMap((stack) =>
-    shuffle(groups, random).map((column) => stack * 3 + column)
+    shuffle(groups, random).map((column) => stack * 3 + column),
   );
   const digits = shuffle(SUDOKU_DIGITS.split(""), random);
   const pattern = (row, column) => (row * 3 + Math.floor(row / 3) + column) % 9;
 
-  return rows
-    .flatMap((row) => columns.map((column) => digits[pattern(row, column)]))
-    .join("");
+  return rows.flatMap((row) => columns.map((column) => digits[pattern(row, column)])).join("");
 };
 
 /**
@@ -77,11 +74,7 @@ const countSudokuSolutions = (board, limit = 2) => {
     const column = index % 9;
     const box = sudokuBoxIndex(row, column);
     const digitMask = 1 << value;
-    if (
-      rowMasks[row] & digitMask ||
-      columnMasks[column] & digitMask ||
-      boxMasks[box] & digitMask
-    ) {
+    if (rowMasks[row] & digitMask || columnMasks[column] & digitMask || boxMasks[box] & digitMask) {
       return 0;
     }
     rowMasks[row] |= digitMask;
@@ -155,19 +148,20 @@ const createGeneratedSudokuPuzzle = (targetClues, maxAttempts, random = Math.ran
     const puzzleValues = solution.split("");
     let clueCount = SUDOKU_CELL_COUNT;
 
-    shuffle(Array.from({ length: SUDOKU_CELL_COUNT }, (unusedCell, index) => index), random).forEach(
-      (index) => {
-        if (clueCount <= targetClues) return;
-        const removedValue = puzzleValues[index];
-        puzzleValues[index] = "0";
-        const board = puzzleValues.map((value) => Number(value));
-        if (countSudokuSolutions(board, 2) === 1) {
-          clueCount -= 1;
-          return;
-        }
-        puzzleValues[index] = removedValue;
+    shuffle(
+      Array.from({ length: SUDOKU_CELL_COUNT }, (unusedCell, index) => index),
+      random,
+    ).forEach((index) => {
+      if (clueCount <= targetClues) return;
+      const removedValue = puzzleValues[index];
+      puzzleValues[index] = "0";
+      const board = puzzleValues.map((value) => Number(value));
+      if (countSudokuSolutions(board, 2) === 1) {
+        clueCount -= 1;
+        return;
       }
-    );
+      puzzleValues[index] = removedValue;
+    });
 
     const generatedPuzzle = { clues: clueCount, puzzle: puzzleValues.join(""), solution };
     if (!bestPuzzle || clueCount < bestPuzzle.clues) bestPuzzle = generatedPuzzle;

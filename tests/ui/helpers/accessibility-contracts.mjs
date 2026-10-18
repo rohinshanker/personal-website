@@ -51,4 +51,3 @@ export const scanForViolations = async (page, testInfo, label) => {
     nodes: violation.nodes.map((node) => node.target.join(" ")),
   }));
 };
-

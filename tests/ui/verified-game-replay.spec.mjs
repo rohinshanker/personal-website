@@ -57,7 +57,7 @@ const revealedBoard = () => {
     Array.from({ length: 13 }, (unused, offset) => {
       const rank = 13 - offset;
       return `${rank % 2 ? odd : even}-${rank}`;
-    })
+    }),
   );
   return issuedDescriptor("solitaire", SOLITAIRE_CONFIG, 1, {
     id: "session-solitaire-revealed",
@@ -112,7 +112,7 @@ const openVerifiedPage = async (page, viewport, options) => {
       marker: INITIALIZED_MARKER,
       profileKey: PROFILE_STORAGE_KEY,
       savedProfile: "profile" in options ? options.profile : profile,
-    }
+    },
   );
   await page.goto("/home.html", { waitUntil: "load" });
   await settleRender(page);
@@ -132,7 +132,7 @@ const readSolitaireBoard = (page) =>
       waste: solState.waste.map((card) => card.id),
       tableau: solState.tableau.map((column) => column.map((card) => card.id)),
       foundations: Object.fromEntries(
-        Object.entries(solState.foundations).map(([suit, cards]) => [suit, cards.length])
+        Object.entries(solState.foundations).map(([suit, cards]) => [suit, cards.length]),
       ),
       moves: solState.moves,
       won: solState.won,
@@ -163,9 +163,7 @@ test("an issued Solitaire deal replaces the local one and every move reaches the
 
   const shown = await readSolitaireBoard(page);
   expect(shown.stock).toEqual(board.initial.stock);
-  expect(shown.tableau).toEqual(
-    board.initial.tableau.map((pile) => [...pile.down, ...pile.up])
-  );
+  expect(shown.tableau).toEqual(board.initial.tableau.map((pile) => [...pile.down, ...pile.up]));
   expect(shown.moves).toBe(0);
   expect(shown.session).toBe("solitaire-issued-1");
   expect(api.issued[0]).toMatchObject({
@@ -249,9 +247,7 @@ test("a Solitaire win submits the replay it played and takes the server's move c
   expect(await readMoveCounter(page)).toBe("000");
 });
 
-test("a deal played before issuance answers keeps itself and drops the proof", async ({
-  page,
-}) => {
+test("a deal played before issuance answers keeps itself and drops the proof", async ({ page }) => {
   const board = solitaireBoard();
   let release = null;
   const api = await openVerifiedPage(page, viewports[2], { boards: { solitaire: board } });
@@ -296,7 +292,7 @@ test("an issued Sudoku puzzle records its entries, its acknowledged pauses and i
   const grid = await page.evaluate(() =>
     Array.from(document.querySelectorAll("#sudoku-grid .sudoku-cell"))
       .map((cell) => (cell.classList.contains("is-given") ? cell.dataset.sudokuValue : "0"))
-      .join("")
+      .join(""),
   );
   expect(grid).toBe(board.initial.puzzle);
 
@@ -309,9 +305,7 @@ test("an issued Sudoku puzzle records its entries, its acknowledged pauses and i
   await expect.poll(() => api.timing.map(({ operation }) => operation)).toContain("resume");
 
   const entries = sudokuEntries(board);
-  await win
-    .locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`)
-    .click();
+  await win.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`).click();
   // Entering a digit advances to the next editable cell, so the answers go in as
   // one pass over the blanks in grid order.
   await page.keyboard.type(entries.map((entry) => entry.digit).join(""));
@@ -351,9 +345,7 @@ test("a Sudoku completion finishes before the profile prompt and binds the issue
   await expect.poll(() => api.issued.length).toBe(1);
 
   const entries = sudokuEntries(board);
-  await win
-    .locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`)
-    .click();
+  await win.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`).click();
   await page.keyboard.type(entries.map((entry) => entry.digit).join(""));
   await win.locator("#sudoku-check").click();
 
@@ -392,9 +384,7 @@ test("a new Sudoku puzzle cannot abort or retarget the finish the last one claim
   await expect.poll(() => api.issued.length).toBe(1);
 
   const entries = sudokuEntries(board);
-  await win
-    .locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`)
-    .click();
+  await win.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`).click();
   await page.keyboard.type(entries.map((entry) => entry.digit).join(""));
   await win.locator("#sudoku-check").click();
   await expect.poll(() => api.finishes.length, { timeout: 20_000 }).toBe(1);
@@ -423,16 +413,17 @@ test("a malformed digit from the keypad reaches neither the board nor the replay
 
   const entries = sudokuEntries(board);
   const last = entries.at(-1);
-  await win
-    .locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`)
-    .click();
-  await page.keyboard.type(entries.slice(0, -1).map((entry) => entry.digit).join(""));
+  await win.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`).click();
+  await page.keyboard.type(
+    entries
+      .slice(0, -1)
+      .map((entry) => entry.digit)
+      .join(""),
+  );
   await settleRender(page);
 
   const recordedBefore = api.replayFor("sudoku").length;
-  const lastCell = win.locator(
-    `#sudoku-grid .sudoku-cell[data-sudoku-index="${last.index}"]`
-  );
+  const lastCell = win.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${last.index}"]`);
   await lastCell.click();
 
   // A control asking for two digits at once. The keypad reads its value at click
@@ -453,7 +444,7 @@ test("a malformed digit from the keypad reaches neither the board nor the replay
 
   await expect(lastCell).toHaveAttribute("data-sudoku-value", "");
   expect(
-    await page.evaluate(() => document.querySelectorAll("#sudoku-grid .sudoku-cell").length)
+    await page.evaluate(() => document.querySelectorAll("#sudoku-grid .sudoku-cell").length),
   ).toBe(81);
   expect(api.replayFor("sudoku")).toHaveLength(recordedBefore);
   await win.locator("#sudoku-check").click();
@@ -477,18 +468,14 @@ test("a malformed digit from the keypad reaches neither the board nor the replay
   await expect.poll(() => api.published.length, { timeout: 20_000 }).toBe(1);
 });
 
-test("a Sudoku puzzle reloaded after an acknowledged pause keeps its replay", async ({
-  page,
-}) => {
+test("a Sudoku puzzle reloaded after an acknowledged pause keeps its replay", async ({ page }) => {
   const board = sudokuBoard();
   const api = await openVerifiedPage(page, viewports[2], { boards: { sudoku: board } });
   const win = await openSudokuBoard(page);
   await expect.poll(() => api.issued.length).toBe(1);
 
   const entries = sudokuEntries(board);
-  await win
-    .locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`)
-    .click();
+  await win.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`).click();
   await page.keyboard.type(entries[0].digit);
   await win.locator("#sudoku-pause").click();
   await expect.poll(() => api.timing.some(({ operation }) => operation === "pause")).toBe(true);
@@ -500,7 +487,7 @@ test("a Sudoku puzzle reloaded after an acknowledged pause keeps its replay", as
         return saved?.verified
           ? { id: saved.verified.descriptor.id, inputs: saved.verified.inputs.length }
           : null;
-      }, SUDOKU_STORAGE_KEY)
+      }, SUDOKU_STORAGE_KEY),
     )
     .toEqual({ id: board.id, inputs: 2 });
 
@@ -512,7 +499,7 @@ test("a Sudoku puzzle reloaded after an acknowledged pause keeps its replay", as
 
   // The restored board is the issued one with its replay applied, not the save.
   await expect(
-    reopened.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`)
+    reopened.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`),
   ).toHaveAttribute("data-sudoku-value", entries[0].digit);
   await expect
     .poll(() => page.evaluate(() => document.getElementById("sudoku-grid")?.dataset.sudokuIndex))
@@ -533,13 +520,14 @@ test("a Sudoku puzzle reloaded without an acknowledged pause stays local-only", 
   await expect.poll(() => api.issued.length).toBe(1);
 
   const entries = sudokuEntries(board);
-  await win
-    .locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`)
-    .click();
+  await win.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`).click();
   await page.keyboard.type(entries[0].digit);
   await expect
     .poll(() =>
-      page.evaluate((key) => Boolean(JSON.parse(localStorage.getItem(key) || "null")?.verified), SUDOKU_STORAGE_KEY)
+      page.evaluate(
+        (key) => Boolean(JSON.parse(localStorage.getItem(key) || "null")?.verified),
+        SUDOKU_STORAGE_KEY,
+      ),
     )
     .toBe(true);
 
@@ -550,7 +538,7 @@ test("a Sudoku puzzle reloaded without an acknowledged pause stays local-only", 
   // A running autosave cannot be backdated into verified timing. The puzzle is
   // still entirely playable; it simply carries no session any more.
   await expect(
-    reopened.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`)
+    reopened.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[0].index}"]`),
   ).toHaveAttribute("data-sudoku-value", entries[0].digit);
   await expect
     .poll(() => page.evaluate(() => document.querySelector(".sudoku-app") !== null))
@@ -564,7 +552,7 @@ test("a Sudoku puzzle reloaded without an acknowledged pause stays local-only", 
     .click();
   await page.keyboard.type(entries[1].digit);
   await expect(
-    reopened.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[1].index}"]`)
+    reopened.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${entries[1].index}"]`),
   ).toHaveAttribute("data-sudoku-value", entries[1].digit);
 
   // Refusing the restoration is the behaviour under test; nothing else may have
@@ -630,7 +618,7 @@ for (const viewport of viewports) {
     await page.keyboard.type(blank.digit);
     await settleRender(page);
     await expect(
-      sudokuWindow.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${blank.index}"]`)
+      sudokuWindow.locator(`#sudoku-grid .sudoku-cell[data-sudoku-index="${blank.index}"]`),
     ).toHaveAttribute("data-sudoku-value", blank.digit);
 
     expect(api.issued.map(({ game }) => game)).toEqual(["solitaire", "sudoku"]);

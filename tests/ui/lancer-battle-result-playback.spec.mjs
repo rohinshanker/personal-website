@@ -24,8 +24,8 @@ window.__lancerBattleResultPlaybackTest = Object.freeze({
     window.homeWindows.bringWindowToFront(lancerBattleWindow);
   },
 });
-})();`
-    )
+})();`,
+    ),
   );
 };
 
@@ -126,8 +126,8 @@ for (const viewport of viewports) {
             (element) =>
               element.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
               !element.paused &&
-              element.currentTime > 0.03
-          )
+              element.currentTime > 0.03,
+          ),
         )
         .toBe(true);
       await video.evaluate((element) => {
@@ -148,7 +148,7 @@ for (const viewport of viewports) {
         const windowRect = windowElement.getBoundingClientRect();
         const hitTarget = document.elementFromPoint(
           videoRect.left + videoRect.width / 2,
-          videoRect.top + videoRect.height / 2
+          videoRect.top + videoRect.height / 2,
         );
         return {
           documentOverflows: document.documentElement.scrollWidth > window.innerWidth,
@@ -179,8 +179,8 @@ for (const viewport of viewports) {
       await expectPlaybackContinuesAfter(video, outcome.state, () =>
         page.mouse.click(
           videoBounds.x + videoBounds.width / 2,
-          videoBounds.y + videoBounds.height / 2
-        )
+          videoBounds.y + videoBounds.height / 2,
+        ),
       );
 
       const titleBounds = await page.locator("#lancer-battle-title").boundingBox();
@@ -188,19 +188,18 @@ for (const viewport of viewports) {
       await expectPlaybackContinuesAfter(video, outcome.state, () =>
         page.mouse.click(
           titleBounds.x + titleBounds.width / 2,
-          titleBounds.y + titleBounds.height / 2
-        )
+          titleBounds.y + titleBounds.height / 2,
+        ),
       );
 
       await expectPlaybackContinuesAfter(video, outcome.state, () =>
-        page.mouse.click(4, Math.round(viewport.height / 2))
+        page.mouse.click(4, Math.round(viewport.height / 2)),
       );
       expect(
         await page.evaluate(
-          () => window.__lancerBattleResultPlaybackTest.getState().activeWindowId
-        )
+          () => window.__lancerBattleResultPlaybackTest.getState().activeWindowId,
+        ),
       ).toBe("");
-
 
       if (viewport.name === "desktop") {
         const clipDurationMs = outcome.success ? 7_000 : 3_500;
@@ -214,9 +213,7 @@ for (const viewport of viewports) {
           await page.clock.runFor(17);
           await expect(win).toBeVisible();
           await expect(page.locator("#lancer-battle-final-stage")).toBeVisible();
-          await expect(page.locator("#lancer-battle-final-text")).toHaveText(
-            "Good job, Gear."
-          );
+          await expect(page.locator("#lancer-battle-final-text")).toHaveText("Good job, Gear.");
           await expect(page.locator("#lancer-battle-close")).toBeFocused();
           await page.locator("#lancer-battle-close").click();
           await dispatchWindowAnimationEnd(win, "retro-window-close");
@@ -229,17 +226,16 @@ for (const viewport of viewports) {
           await video.evaluate((element) => ({
             hasSource: element.hasAttribute("src"),
             paused: element.paused,
-          }))
+          })),
         ).toEqual({ hasSource: false, paused: true });
         expect(
           await page.evaluate(
-            () => window.__lancerBattleResultPlaybackTest.getState().resultTimerActive
-          )
+            () => window.__lancerBattleResultPlaybackTest.getState().resultTimerActive,
+          ),
         ).toBe(false);
         await dispatchWindowAnimationEnd(win, "retro-window-close");
       }
       await expect(win).toBeHidden();
-
     });
   }
 }

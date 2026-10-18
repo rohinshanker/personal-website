@@ -16,6 +16,12 @@ test("Death Note input rejects content beyond its visible ruled lines", async ()
   assert.match(home, /<textarea[\s\S]*?class="death-note-entry"[\s\S]*?id="death-note-entry"/);
   assert.match(css, /\.death-note-entry \{[\s\S]*?line-height: 26px;[\s\S]*?overflow: hidden;/);
   assert.match(source, /const limitDeathNoteEntryToVisibleLines = \(\) => \{/);
-  assert.match(source, /while \(deathNoteEntry\.scrollHeight > deathNoteEntry\.clientHeight && value\) \{/);
-  assert.match(source, /deathNoteEntry\?\.addEventListener\("input", limitDeathNoteEntryToVisibleLines\);/);
+  assert.match(
+    source,
+    /while \(deathNoteEntry\.scrollHeight > deathNoteEntry\.clientHeight && value\) \{/,
+  );
+  assert.match(
+    source,
+    /deathNoteEntry\?\.addEventListener\("input", limitDeathNoteEntryToVisibleLines\);/,
+  );
 });

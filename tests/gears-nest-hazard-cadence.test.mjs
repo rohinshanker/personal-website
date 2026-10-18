@@ -14,7 +14,7 @@ const createAttackRuntime = (source) => {
   const attackEnd = source.indexOf("\nconst startGearsNestEnemyAttacks", attackStart);
   assert.ok(
     helperStart >= 0 && helperEnd > helperStart && attackStart >= 0 && attackEnd > attackStart,
-    "Missing Gears Nest attack runtime"
+    "Missing Gears Nest attack runtime",
   );
 
   const runtime = {
@@ -62,10 +62,10 @@ test("Gears Nest hazards are slightly more frequent and lone Boomers halve rocke
           enemies: [boomer, drone],
           nowValue: 5000,
           randoms: [0.45],
-        })
-      )
+        }),
+      ),
     ).launches,
-    [{ type: "rocket", enemyId: "boomer" }]
+    [{ type: "rocket", enemyId: "boomer" }],
   );
   assert.deepEqual(
     JSON.parse(
@@ -74,10 +74,10 @@ test("Gears Nest hazards are slightly more frequent and lone Boomers halve rocke
           enemies: [boomer, drone],
           nowValue: 5000,
           randoms: [0.99, 0.39, 0],
-        })
-      )
+        }),
+      ),
     ).launches,
-    [{ type: "grenade", enemyId: "drone" }]
+    [{ type: "grenade", enemyId: "drone" }],
   );
   assert.deepEqual(
     JSON.parse(
@@ -86,10 +86,10 @@ test("Gears Nest hazards are slightly more frequent and lone Boomers halve rocke
           enemies: [boomer],
           nowValue: 2200,
           randoms: [0.45],
-        })
-      )
+        }),
+      ),
     ).launches,
-    [{ type: "rocket", enemyId: "boomer" }]
+    [{ type: "rocket", enemyId: "boomer" }],
   );
   assert.match(source, /const GEARS_NEST_GRENADE_CHANCE = 0\.4;/);
   assert.match(source, /const GEARS_NEST_ROCKET_CHANCE = 0\.46;/);

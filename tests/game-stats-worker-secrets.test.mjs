@@ -22,10 +22,7 @@ const secretListOutput = (names) =>
   JSON.stringify(names.map((name) => ({ name, type: "secret_text" })));
 
 test("the checked-in Wrangler configuration lists the six required secrets", async () => {
-  assert.deepEqual(
-    Array.from(await readRequiredSecretNames()),
-    REQUIRED_SECRET_NAMES
-  );
+  assert.deepEqual(Array.from(await readRequiredSecretNames()), REQUIRED_SECRET_NAMES);
 });
 
 test("required secret names must be unique uppercase strings", async () => {
@@ -41,37 +38,28 @@ test("required secret names must be unique uppercase strings", async () => {
     { required: ["lowercase_secret"] },
     { required: ["EVENT_SIGNING_SECRET", "EVENT_SIGNING_SECRET"] },
   ]) {
-    await assert.rejects(
-      withConfig({ secrets }),
-      /unique uppercase secrets\.required names/
-    );
+    await assert.rejects(withConfig({ secrets }), /unique uppercase secrets\.required names/);
   }
   assert.deepEqual(
     Array.from(
       await withConfig({
         // A comment must not break the gate that reads this file.
         secrets: { required: ["EVENT_SIGNING_SECRET"] },
-      })
+      }),
     ),
-    ["EVENT_SIGNING_SECRET"]
+    ["EVENT_SIGNING_SECRET"],
   );
 });
 
 test("a Wrangler secret list parses into names and rejects other payloads", () => {
   assert.deepEqual(
     Array.from(parseDeployedSecretNames(secretListOutput(REQUIRED_SECRET_NAMES))),
-    REQUIRED_SECRET_NAMES
+    REQUIRED_SECRET_NAMES,
   );
   assert.deepEqual(Array.from(parseDeployedSecretNames("[]")), []);
-  assert.throws(
-    () => parseDeployedSecretNames("not json"),
-    /did not return valid JSON/
-  );
+  assert.throws(() => parseDeployedSecretNames("not json"), /did not return valid JSON/);
   for (const payload of ['{"name":"A"}', '[{"type":"secret_text"}]', "null"]) {
-    assert.throws(
-      () => parseDeployedSecretNames(payload),
-      /did not return named secrets/
-    );
+    assert.throws(() => parseDeployedSecretNames(payload), /did not return named secrets/);
   }
 });
 
@@ -83,15 +71,14 @@ test("the gate accepts a complete secret set and names what is missing", async (
           secretListOutput([...REQUIRED_SECRET_NAMES, "TURNSTILE_SECRET_KEY"]),
       })
     ).requiredNames,
-    REQUIRED_SECRET_NAMES
+    REQUIRED_SECRET_NAMES,
   );
 
   await assert.rejects(
     checkGameStatsWorkerSecrets({
-      listDeployedSecretsImpl: () =>
-        secretListOutput(["EVENT_SIGNING_SECRET", "IP_HASH_SECRET"]),
+      listDeployedSecretsImpl: () => secretListOutput(["EVENT_SIGNING_SECRET", "IP_HASH_SECRET"]),
     }),
-    /missing required secrets: ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_SESSION_SIGNING_SECRET, CLASH_ROYALE_API_KEY/
+    /missing required secrets: ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_SESSION_SIGNING_SECRET, CLASH_ROYALE_API_KEY/,
   );
 });
 
@@ -109,23 +96,12 @@ test("the Wrangler invocation is bounded to the Worker configuration", () => {
   assert.deepEqual(calls, [
     {
       command: "npx",
-      args: [
-        "wrangler",
-        "secret",
-        "list",
-        "--config",
-        "wrangler.jsonc",
-        "--format",
-        "json",
-      ],
+      args: ["wrangler", "secret", "list", "--config", "wrangler.jsonc", "--format", "json"],
       options: { cwd: "/repo/workers/game-stats/", encoding: "utf8" },
     },
   ]);
   assert.equal(listDeployedSecrets({ spawnImpl: () => ({ status: 0 }) }), "");
-  assert.throws(
-    () => parseDeployedSecretNames(""),
-    /did not return valid JSON/
-  );
+  assert.throws(() => parseDeployedSecretNames(""), /did not return valid JSON/);
 });
 
 test("a failed Wrangler invocation is reported, not treated as an empty list", () => {
@@ -136,18 +112,18 @@ test("a failed Wrangler invocation is reported, not treated as an empty list", (
       assert.match(error.message, /Unable to run wrangler secret list/);
       assert.equal(error.cause, spawnError);
       return true;
-    }
+    },
   );
   assert.throws(
     () =>
       listDeployedSecrets({
         spawnImpl: () => ({ status: 1, stderr: " Authentication error \n" }),
       }),
-    /exited with status 1: Authentication error/
+    /exited with status 1: Authentication error/,
   );
   assert.throws(
     () => listDeployedSecrets({ spawnImpl: () => ({ status: 1 }) }),
-    /exited with status 1: $/
+    /exited with status 1: $/,
   );
 });
 
@@ -161,11 +137,9 @@ test("the secrets runner annotates failures and returns shell exit codes", async
       writeOutput: (message) => output.push(message),
       writeError: (message) => errors.push(message),
     }),
-    0
+    0,
   );
-  assert.deepEqual(output, [
-    "Verified 6 required Worker secrets are configured.",
-  ]);
+  assert.deepEqual(output, ["Verified 6 required Worker secrets are configured."]);
   assert.deepEqual(errors, []);
 
   assert.equal(
@@ -176,7 +150,7 @@ test("the secrets runner annotates failures and returns shell exit codes", async
       writeOutput: (message) => output.push(message),
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
   assert.deepEqual(errors, ["::error::IP_HASH_SECRET is missing"]);
 
@@ -188,7 +162,7 @@ test("the secrets runner annotates failures and returns shell exit codes", async
       writeOutput: (message) => output.push(message),
       writeError: (message) => errors.push(message),
     }),
-    1
+    1,
   );
   assert.deepEqual(errors.at(-1), "::error::wrangler crashed");
 });
@@ -201,7 +175,7 @@ test("the secrets runner keeps safe default console reporters", async (context) 
     await runGameStatsWorkerSecretsCheck({
       checkImpl: async () => ({ requiredNames: [] }),
     }),
-    0
+    0,
   );
   assert.equal(
     await runGameStatsWorkerSecretsCheck({
@@ -209,7 +183,7 @@ test("the secrets runner keeps safe default console reporters", async (context) 
         throw new Error("no credentials");
       },
     }),
-    1
+    1,
   );
   assert.deepEqual(log.mock.calls[0].arguments, [
     "Verified 0 required Worker secrets are configured.",

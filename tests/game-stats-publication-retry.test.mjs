@@ -1,11 +1,8 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
 import { readHomeScript } from "./helpers/home-scripts.mjs";
-
-const root = new URL("../", import.meta.url);
 
 const RETRY_DELAY_MS = 5000;
 const RETRY_MAX_DELAY_MS = 60_000;
@@ -35,7 +32,10 @@ const expiredSession = (id) => ({
   expiresAt: new Date(Date.now() - 60_000).toISOString(),
 });
 
-const createSubmission = (id, { profile = PLAYER_PROFILE, session = futureSession(`${id}-session`) } = {}) => ({
+const createSubmission = (
+  id,
+  { profile = PLAYER_PROFILE, session = futureSession(`${id}-session`) } = {},
+) => ({
   event: {
     id,
     game: "minesweeper",
@@ -63,12 +63,16 @@ const apiError = (status, extra = {}) => {
  * timer so every retry decision is observable: the state copy, the queue,
  * which timers were created or cleared, and how many requests went out.
  */
-const loadSyncHarness = async ({ queue = [], profile = PLAYER_PROFILE, withProof = false } = {}) => {
+const loadSyncHarness = async ({
+  queue = [],
+  profile = PLAYER_PROFILE,
+  withProof = false,
+} = {}) => {
   const source = await readHomeScript("gameStats");
   const syncSource = extractSource(
     source,
     "const refreshGameStatsGlobalState =",
-    "\n\nconst recordGameStatsEvent"
+    "\n\nconst recordGameStatsEvent",
   );
   const timers = [];
   const window = {
@@ -166,7 +170,7 @@ const loadSyncHarness = async ({ queue = [], profile = PLAYER_PROFILE, withProof
       "globalThis.restoreForTest = restoreGameStatsPublicationRetryBudget;",
       "globalThis.syncPromiseForTest = () => gameStatsSyncPromise;",
     ].join("\n"),
-    context
+    context,
   );
 
   return {
@@ -289,7 +293,7 @@ test("permanent rejections, missing credentials and expired proofs never schedul
   assert.equal(state.gameStatsSyncState, "ready");
   assert.equal(
     state.gameStatsSyncMessage,
-    "Local stats are saved, but a result could not pass server verification."
+    "Local stats are saved, but a result could not pass server verification.",
   );
   assert.deepEqual(state.gameStatsSubmissionQueue, []);
   assert.equal(rejected.timers.length, 0);
@@ -364,14 +368,20 @@ test("a published result restores the retry for the results that still fail", as
   const harness = await loadSyncHarness({
     queue: [createSubmission("event-published"), createSubmission("event-stuck")],
   });
-  harness.answerEvents({ status: 201 }, { status: 503 }, { status: 503 }, { status: 201 }, { status: 503 });
+  harness.answerEvents(
+    { status: 201 },
+    { status: 503 },
+    { status: 503 },
+    { status: 201 },
+    { status: 503 },
+  );
 
   await harness.sync();
   let state = harness.read();
   assert.equal(state.gameStatsSyncState, "retry-scheduled");
   assert.deepEqual(
     state.gameStatsSubmissionQueue.map(({ event }) => event.id),
-    ["event-stuck"]
+    ["event-stuck"],
   );
 
   await harness.fireTimer(harness.pendingTimers()[0]);
@@ -436,7 +446,7 @@ test("a higher-priority notice keeps the status row while the retry still runs u
   assert.equal(state.gameStatsSyncState, "session-expired");
   assert.deepEqual(
     state.gameStatsSubmissionQueue.map(({ event }) => event.id),
-    ["event-transient"]
+    ["event-transient"],
   );
   assert.equal(harness.pendingTimers().length, 1);
 
@@ -459,16 +469,16 @@ test("a higher-priority notice keeps the status row while the retry still runs u
 /** The dropped-result accounting region with the real storage helpers and a scripted localStorage. */
 const loadDroppedHarness = async ({ stored = {}, failWrites = false, storedCount } = {}) => {
   const source = await readHomeScript("gameStats");
-  const utilSource = await readFile(new URL("scripts/home/core/util.js", root), "utf8");
+  const utilSource = await readHomeScript("util");
   const storageSource = extractSource(
     utilSource,
     "const resolveStorage =",
-    "\n\nconst bannerAnimationCleanups"
+    "\n\nconst bannerAnimationCleanups",
   );
   const queueSource = extractSource(
     source,
     "const loadGameStatsSubmissionQueue =",
-    "\n\nconst isGameStatsBackendConfigured"
+    "\n\nconst isGameStatsBackendConfigured",
   );
   const entries = new Map(Object.entries(stored));
   const writes = [];
@@ -502,7 +512,7 @@ const loadDroppedHarness = async ({ stored = {}, failWrites = false, storedCount
       "globalThis.describeForTest = describeGameStatsDroppedResults;",
       "globalThis.readForTest = () => gameStatsDroppedResultCount;",
     ].join("\n"),
-    context
+    context,
   );
   return { context, entries, writes, removals };
 };
@@ -532,7 +542,7 @@ test("the dropped count accumulates, survives a failed storage write, and clears
   assert.equal(harness.context.readForTest(), 2);
   assert.equal(
     harness.context.describeForTest(),
-    "2 unpublished results were dropped because the publishing queue was full."
+    "2 unpublished results were dropped because the publishing queue was full.",
   );
 
   harness.context.recordForTest(0);
@@ -557,7 +567,7 @@ test("the dropped count accumulates, survives a failed storage write, and clears
   harness.context.recordForTest(1);
   assert.equal(
     harness.context.describeForTest(),
-    "1 unpublished result was dropped because the publishing queue was full."
+    "1 unpublished result was dropped because the publishing queue was full.",
   );
 
   const blocked = await loadDroppedHarness({ failWrites: true, storedCount: 0 });
@@ -566,7 +576,7 @@ test("the dropped count accumulates, survives a failed storage write, and clears
   assert.equal(blocked.entries.has("dropped"), false);
   assert.equal(
     blocked.context.describeForTest(),
-    "3 unpublished results were dropped because the publishing queue was full."
+    "3 unpublished results were dropped because the publishing queue was full.",
   );
 
   for (const stored of ["-2", '"7"', "1.5", "null", "{", "0"]) {
@@ -580,28 +590,28 @@ test("the status row, refresh, reset and page exit wire the retry and dropped-re
 
   assert.match(
     source,
-    /"retry-scheduled": Object\.freeze\(\{\s*message: "Publishing failed\. Retrying once in a moment\.",\s*action: "refresh",\s*busy: false,\s*disabled: false,/
+    /"retry-scheduled": Object\.freeze\(\{\s*message: "Publishing failed\. Retrying once in a moment\.",\s*action: "refresh",\s*busy: false,\s*disabled: false,/,
   );
   assert.match(source, /window\.addEventListener\("pagehide", cancelGameStatsPublicationRetry\);/);
   assert.match(
     source,
-    /if \(manual\) \{\s*gameStatsManualRefreshInProgress = true;[\s\S]*?clearGameStatsDroppedResults\(\);\s*restoreGameStatsPublicationRetryBudget\(\);\s*\}/
+    /if \(manual\) \{\s*gameStatsManualRefreshInProgress = true;[\s\S]*?clearGameStatsDroppedResults\(\);\s*restoreGameStatsPublicationRetryBudget\(\);\s*\}/,
   );
   assert.match(
     source,
-    /const resetGameProgressLocalData = \(\) => \{[\s\S]*?clearGameStatsDroppedResults\(\);/
+    /const resetGameProgressLocalData = \(\) => \{[\s\S]*?clearGameStatsDroppedResults\(\);/,
   );
   assert.match(
     source,
-    /const droppedNotice =\s*backendConfigured && !syncState\.busy \? describeGameStatsDroppedResults\(\) : "";\s*const syncMessage = droppedNotice \? `\$\{stateMessage\} \$\{droppedNotice\}` : stateMessage;/
+    /const droppedNotice =\s*backendConfigured && !syncState\.busy \? describeGameStatsDroppedResults\(\) : "";\s*const syncMessage = droppedNotice \? `\$\{stateMessage\} \$\{droppedNotice\}` : stateMessage;/,
   );
   assert.match(source, /"data-game-stats-dropped-results",/);
   assert.match(
     source,
-    /let gameStatsDroppedResultCount = loadGameStatsDroppedResultCount\(\);\s*let gameStatsSubmissionQueue = loadGameStatsSubmissionQueue\(\);/
+    /let gameStatsDroppedResultCount = loadGameStatsDroppedResultCount\(\);\s*let gameStatsSubmissionQueue = loadGameStatsSubmissionQueue\(\);/,
   );
   assert.match(
     source,
-    /error\.retryAfterMs = Number\.isFinite\(retryAfterMs\) && retryAfterMs > 0 \? retryAfterMs : 0;/
+    /error\.retryAfterMs = Number\.isFinite\(retryAfterMs\) && retryAfterMs > 0 \? retryAfterMs : 0;/,
   );
 });

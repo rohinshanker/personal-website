@@ -5,10 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { parseJsonc } from "./lib/jsonc.mjs";
 
-export const WRANGLER_CONFIG_URL = new URL(
-  "../workers/game-stats/wrangler.jsonc",
-  import.meta.url
-);
+export const WRANGLER_CONFIG_URL = new URL("../workers/game-stats/wrangler.jsonc", import.meta.url);
 const WORKER_DIRECTORY = fileURLToPath(new URL("../workers/game-stats/", import.meta.url));
 const SECRET_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 
@@ -25,14 +22,10 @@ export const readRequiredSecretNames = async ({
   if (
     !Array.isArray(requiredNames) ||
     requiredNames.length === 0 ||
-    requiredNames.some(
-      (name) => typeof name !== "string" || !SECRET_NAME_PATTERN.test(name)
-    ) ||
+    requiredNames.some((name) => typeof name !== "string" || !SECRET_NAME_PATTERN.test(name)) ||
     new Set(requiredNames).size !== requiredNames.length
   ) {
-    throw new Error(
-      "Wrangler configuration must list unique uppercase secrets.required names"
-    );
+    throw new Error("Wrangler configuration must list unique uppercase secrets.required names");
   }
   return Object.freeze([...requiredNames]);
 };
@@ -47,10 +40,7 @@ export const parseDeployedSecretNames = (output) => {
       cause: error,
     });
   }
-  if (
-    !Array.isArray(payload) ||
-    payload.some((entry) => typeof entry?.name !== "string")
-  ) {
+  if (!Array.isArray(payload) || payload.some((entry) => typeof entry?.name !== "string")) {
     throw new Error("Wrangler secret list did not return named secrets");
   }
   return Object.freeze(payload.map((entry) => entry.name));
@@ -63,7 +53,7 @@ export const listDeployedSecrets = ({
   const result = spawnImpl(
     "npx",
     ["wrangler", "secret", "list", "--config", "wrangler.jsonc", "--format", "json"],
-    { cwd: workerDirectory, encoding: "utf8" }
+    { cwd: workerDirectory, encoding: "utf8" },
   );
   if (result.error) {
     throw new Error("Unable to run wrangler secret list", { cause: result.error });
@@ -71,8 +61,8 @@ export const listDeployedSecrets = ({
   if (result.status !== 0) {
     throw new Error(
       `wrangler secret list exited with status ${result.status}: ${String(
-        result.stderr || ""
-      ).trim()}`
+        result.stderr || "",
+      ).trim()}`,
     );
   }
   return String(result.stdout || "");
@@ -84,13 +74,9 @@ export const checkGameStatsWorkerSecrets = async ({
 } = {}) => {
   const requiredNames = await readRequiredSecretNames(options);
   const deployedNames = parseDeployedSecretNames(listDeployedSecretsImpl());
-  const missingNames = requiredNames.filter(
-    (name) => !deployedNames.includes(name)
-  );
+  const missingNames = requiredNames.filter((name) => !deployedNames.includes(name));
   if (missingNames.length > 0) {
-    throw new Error(
-      `The deployed Worker is missing required secrets: ${missingNames.join(", ")}`
-    );
+    throw new Error(`The deployed Worker is missing required secrets: ${missingNames.join(", ")}`);
   }
   return Object.freeze({ requiredNames, deployedNames });
 };
@@ -102,9 +88,7 @@ export const runGameStatsWorkerSecretsCheck = async ({
 } = {}) => {
   try {
     const { requiredNames } = await checkImpl();
-    writeOutput(
-      `Verified ${requiredNames.length} required Worker secrets are configured.`
-    );
+    writeOutput(`Verified ${requiredNames.length} required Worker secrets are configured.`);
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

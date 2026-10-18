@@ -24,13 +24,13 @@ import {
 test("only the known production events force-run from Start", async () => {
   const everyEvent = await readHomeScriptText(...RANDOM_EVENT_SCRIPT_KEYS);
   const forcedIds = [...everyEvent.matchAll(/id: "([^"]+)",\n  forceOnStart: true,/g)].map(
-    (match) => match[1]
+    (match) => match[1],
   );
 
   assert.deepEqual(
     forcedIds,
     [...PRODUCTION_FORCED_START_EVENT_IDS],
-    "PRODUCTION_FORCED_START_EVENT_IDS must list every forced-Start event"
+    "PRODUCTION_FORCED_START_EVENT_IDS must list every forced-Start event",
   );
   assert.doesNotMatch(everyEvent, /id: "[^"]+",\n  debug: true,/);
 });
@@ -52,24 +52,21 @@ test("the browser fixture isolates every forced-Start policy unless explicitly r
   for (const unknownId of ["red-tool", "lain-system-alert"]) {
     assert.throws(
       () => isolateProductionRandomEventPolicies(source, { except: [unknownId] }),
-      new RegExp(`Unknown production forced-Start event exception: ${unknownId}`)
+      new RegExp(`Unknown production forced-Start event exception: ${unknownId}`),
     );
   }
 });
 
 test("the browser fixture rejects armed policies in the data-driven alert family", async () => {
   const source = await readHomeScript(PRODUCTION_RANDOM_EVENT_POLICY_SCRIPT_KEY);
-  const familyMarker = 'id: `debug-system-alert-${alert.id}`,';
+  const familyMarker = "id: `debug-system-alert-${alert.id}`,";
 
   for (const armedPolicy of ["debug: true,", "forceOnStart: true,"]) {
-    const armedSource = source.replace(
-      familyMarker,
-      `${familyMarker}\n      ${armedPolicy}`
-    );
+    const armedSource = source.replace(familyMarker, `${familyMarker}\n      ${armedPolicy}`);
     assert.notEqual(armedSource, source, "The data-driven family marker must exist");
     assert.throws(
       () => isolateProductionRandomEventPolicies(armedSource),
-      /Unable to isolate the data-driven random-event policy family/
+      /Unable to isolate the data-driven random-event policy family/,
     );
   }
 });
@@ -89,7 +86,7 @@ test("the browser fixture routes the owning event script and rejects stale trans
   assert.ok(!routesUrl(`${TEST_SERVER_ORIGIN}/scripts/home/main.js?v=test`));
   assert.ok(
     !routesUrl("https://assets.example.invalid/scripts/home/events/prompts.js?v=test"),
-    "The fixture must not answer for the script's path on another host"
+    "The fixture must not answer for the script's path on another host",
   );
 
   let fulfillment;
@@ -103,7 +100,7 @@ test("the browser fixture routes the owning event script and rejects stale trans
 
   await assert.rejects(
     routeHomeScript(page, PRODUCTION_RANDOM_EVENT_POLICY_SCRIPT_KEY, (source) => source),
-    /browser fixture did not transform scripts\/home\/events\/prompts\.js/
+    /browser fixture did not transform scripts\/home\/events\/prompts\.js/,
   );
 });
 
