@@ -31,6 +31,11 @@ const stateContract = Object.freeze({
     "Local stats are saved. This result started without a verified game session.",
   "ready-local-reset":
     "Local progress was reset. Published and queued leaderboard results remain available.",
+  "retry-scheduled": "Publishing failed. Retrying once in a moment.",
+  "ready-dropped-results":
+    "Global stats are up to date. 3 unpublished results were dropped because the publishing queue was full.",
+  "request-failed-dropped-result":
+    "Request failed. Try again later. 1 unpublished result was dropped because the publishing queue was full.",
 });
 
 test("review artifact contains every refresh and informational state once", () => {

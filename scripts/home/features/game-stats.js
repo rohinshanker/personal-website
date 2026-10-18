@@ -88,6 +88,16 @@ const GAME_STATS_ADMINISTRATOR_SIGN_IN_Z_INDEX = 999_999;
 
 const GAME_STATS_MAX_SYNC_QUEUE_LENGTH = 100;
 
+const GAME_STATS_DROPPED_RESULTS_STORAGE_KEY = "personalSiteGameStatsDroppedResultsV1";
+
+// A transiently failed publication (network, timeout, 5xx, 408/425/429) gets
+// one automatic retry after this delay, stretched to a longer Worker
+// Retry-After up to the cap. A published result, a manual Refresh or a newly
+// queued result restores the single retry, so it can never loop.
+const GAME_STATS_PUBLICATION_RETRY_DELAY_MS = 5000;
+
+const GAME_STATS_PUBLICATION_RETRY_MAX_DELAY_MS = 60_000;
+
 const GAME_STATS_API_PROTOCOL = "2";
 
 const GAME_STATS_MAX_PENDING_ACKNOWLEDGMENTS = 32;
@@ -204,6 +214,12 @@ const GAME_STATS_SYNC_STATES = Object.freeze({
   }),
   "request-failed": Object.freeze({
     message: "Request failed. Try again later.",
+    action: "refresh",
+    busy: false,
+    disabled: false,
+  }),
+  "retry-scheduled": Object.freeze({
+    message: "Publishing failed. Retrying once in a moment.",
     action: "refresh",
     busy: false,
     disabled: false,
@@ -759,14 +775,55 @@ const normalizeGameStatsSubmission = (rawSubmission) => {
 const loadGameStatsSubmissionQueue = () => {
   const stored = readJsonStorage(() => localStorage, GAME_STATS_SYNC_QUEUE_STORAGE_KEY, []);
   if (!Array.isArray(stored)) return [];
-  return stored
-    .map(normalizeGameStatsSubmission)
-    .filter(Boolean)
-    .slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
+  const submissions = stored.map(normalizeGameStatsSubmission).filter(Boolean);
+  recordGameStatsDroppedResults(submissions.length - GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
+  return submissions.slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
 };
 
 const saveGameStatsSubmissionQueue = () => {
   writeJsonStorage(() => localStorage, GAME_STATS_SYNC_QUEUE_STORAGE_KEY, gameStatsSubmissionQueue);
+};
+
+const loadGameStatsDroppedResultCount = () => {
+  const stored = readJsonStorage(() => localStorage, GAME_STATS_DROPPED_RESULTS_STORAGE_KEY, 0);
+  return Number.isSafeInteger(stored) && stored > 0 ? stored : 0;
+};
+
+const saveGameStatsDroppedResultCount = () => {
+  if (gameStatsDroppedResultCount > 0) {
+    writeJsonStorage(
+      () => localStorage,
+      GAME_STATS_DROPPED_RESULTS_STORAGE_KEY,
+      gameStatsDroppedResultCount
+    );
+  } else {
+    removeStorage(() => localStorage, GAME_STATS_DROPPED_RESULTS_STORAGE_KEY);
+  }
+};
+
+/**
+ * Counts results the bounded queue could not keep. The count survives a
+ * failed storage write in memory and a reload through storage, and only an
+ * explicit manual Refresh or local reset clears it.
+ */
+const recordGameStatsDroppedResults = (count) => {
+  if (!Number.isSafeInteger(count) || count <= 0) return;
+  gameStatsDroppedResultCount += count;
+  saveGameStatsDroppedResultCount();
+};
+
+const clearGameStatsDroppedResults = () => {
+  if (!gameStatsDroppedResultCount) return;
+  gameStatsDroppedResultCount = 0;
+  saveGameStatsDroppedResultCount();
+};
+
+const describeGameStatsDroppedResults = () => {
+  const count = gameStatsDroppedResultCount;
+  if (!count) return "";
+  return count === 1
+    ? "1 unpublished result was dropped because the publishing queue was full."
+    : `${count} unpublished results were dropped because the publishing queue was full.`;
 };
 
 const isGameStatsBackendConfigured = () =>
@@ -822,6 +879,8 @@ const readGameStatsApiJson = async (response) => {
     const error = new Error(message);
     error.status = response.status;
     error.code = typeof payload?.code === "string" ? payload.code : "";
+    const retryAfterMs = Number(payload?.retryAfterMs);
+    error.retryAfterMs = Number.isFinite(retryAfterMs) && retryAfterMs > 0 ? retryAfterMs : 0;
     throw error;
   }
   return payload;
@@ -1869,10 +1928,15 @@ const queueGameStatsSubmission = (event, session, completion = null) => {
   gameStatsSubmissionQueue.push({
     event, session, ...(completion ? { completion } : {}), proofRejections: 0,
   });
+  recordGameStatsDroppedResults(
+    gameStatsSubmissionQueue.length - GAME_STATS_MAX_SYNC_QUEUE_LENGTH
+  );
   if (gameStatsSubmissionQueue.length > GAME_STATS_MAX_SYNC_QUEUE_LENGTH) {
     gameStatsSubmissionQueue = gameStatsSubmissionQueue.slice(-GAME_STATS_MAX_SYNC_QUEUE_LENGTH);
   }
   saveGameStatsSubmissionQueue();
+  // A new result is a new publication attempt, so it earns a fresh retry.
+  restoreGameStatsPublicationRetryBudget();
   return true;
 };
 
@@ -2083,15 +2147,56 @@ const refreshGameStatsGlobalState = async ({ announce = true, fresh = false } = 
   }
 };
 
+let gameStatsPublicationRetryTimer = null;
+
+let gameStatsPublicationRetryUsed = false;
+
+const cancelGameStatsPublicationRetry = () => {
+  if (gameStatsPublicationRetryTimer === null) return;
+  window.clearTimeout(gameStatsPublicationRetryTimer);
+  gameStatsPublicationRetryTimer = null;
+};
+
+/** A published result, a manual Refresh or a new queued result earns one more automatic retry. */
+const restoreGameStatsPublicationRetryBudget = () => {
+  cancelGameStatsPublicationRetry();
+  gameStatsPublicationRetryUsed = false;
+};
+
+/**
+ * Schedules the single automatic retry of a transiently failed publication.
+ * Returns false once that retry is spent, so a persistent failure ends in the
+ * plain failed state instead of a loop. Every sync pass cancels a pending
+ * timer first, so a manual, online, open or new-result trigger never runs a
+ * second publication beside it.
+ */
+const scheduleGameStatsPublicationRetry = (retryAfterMs = 0) => {
+  if (gameStatsPublicationRetryUsed) return false;
+  gameStatsPublicationRetryUsed = true;
+  cancelGameStatsPublicationRetry();
+  const delayMs = Math.min(
+    Math.max(GAME_STATS_PUBLICATION_RETRY_DELAY_MS, Number(retryAfterMs) || 0),
+    GAME_STATS_PUBLICATION_RETRY_MAX_DELAY_MS
+  );
+  gameStatsPublicationRetryTimer = window.setTimeout(() => {
+    gameStatsPublicationRetryTimer = null;
+    void syncQueuedGameStats();
+  }, delayMs);
+  return true;
+};
+
 const runGameStatsSyncPass = async () => {
   let expiredCount = 0;
   let rejectedCount = 0;
+  let transientFailureCount = 0;
+  let retryAfterMs = 0;
   let waitingForAdministratorAuthorizationCount = 0;
   let waitingForSessionCount = 0;
   const remainingSubmissions = [];
   const hasQueuedSubmissions = gameStatsSubmissionQueue.length > 0;
   let publishedSubmission = false;
 
+  cancelGameStatsPublicationRetry();
   setGameStatsSyncState(hasQueuedSubmissions ? "publishing" : "fetching");
 
   for (const submission of gameStatsSubmissionQueue) {
@@ -2179,6 +2284,8 @@ const runGameStatsSyncPass = async () => {
       ) {
         rejectedCount += 1;
       } else {
+        transientFailureCount += 1;
+        retryAfterMs = Math.max(retryAfterMs, Number(error?.retryAfterMs) || 0);
         remainingSubmissions.push(submission);
       }
     }
@@ -2186,6 +2293,9 @@ const runGameStatsSyncPass = async () => {
 
   gameStatsSubmissionQueue = remainingSubmissions;
   saveGameStatsSubmissionQueue();
+  if (publishedSubmission || !transientFailureCount) {
+    gameStatsPublicationRetryUsed = false;
+  }
   setGameStatsSyncState("fetching");
   const globalStatsAvailable = await refreshGameStatsGlobalState({
     announce: false,
@@ -2195,11 +2305,17 @@ const runGameStatsSyncPass = async () => {
   if (globalStatsAvailable === null) {
     return;
   }
+  // Sign-in owns the next attempt when the Worker wants credentials; every
+  // other transient failure gets its one delayed retry even when a
+  // higher-priority notice is what the status row shows.
+  const retryScheduled =
+    transientFailureCount > 0 &&
+    !waitingForAdministratorAuthorizationCount &&
+    scheduleGameStatsPublicationRetry(retryAfterMs);
+  const failedState = retryScheduled ? "retry-scheduled" : "request-failed";
   if (!globalStatsAvailable) {
     setGameStatsSyncState(
-      waitingForAdministratorAuthorizationCount
-        ? "auth-request-failed"
-        : "request-failed"
+      waitingForAdministratorAuthorizationCount ? "auth-request-failed" : failedState
     );
   } else if (waitingForSessionCount) {
     setGameStatsSyncState("ready", {
@@ -2216,7 +2332,7 @@ const runGameStatsSyncPass = async () => {
       localResult: true,
     });
   } else if (gameStatsSubmissionQueue.length) {
-    setGameStatsSyncState("request-failed");
+    setGameStatsSyncState(failedState);
   } else {
     setGameStatsSyncState("ready");
   }
@@ -2235,7 +2351,13 @@ const syncQueuedGameStats = ({ manual = false } = {}) => {
     setGameStatsSyncState("unconfigured");
     return Promise.resolve(false);
   }
-  if (manual) gameStatsManualRefreshInProgress = true;
+  if (manual) {
+    gameStatsManualRefreshInProgress = true;
+    // Refresh is the explicit acknowledgment of dropped results and the
+    // visitor's own retry, so it also restores the automatic one.
+    clearGameStatsDroppedResults();
+    restoreGameStatsPublicationRetryBudget();
+  }
   if (gameStatsSyncPromise) {
     gameStatsSyncRequested = true;
     return gameStatsSyncPromise;
@@ -3539,6 +3661,7 @@ const resetGameProgressLocalData = () => {
   gameStatsLocalResetGeneration += 1;
   gameStatsExpiredResultNoticePending = false;
   gameStatsLocalResultNotice = null;
+  clearGameStatsDroppedResults();
   if (gameStatsDraftProfile) resolveGameStatsProfilePrompt(null);
 
   gameStatsLocalState = createEmptyGameStatsData();
@@ -3609,9 +3732,18 @@ const renderGameStatsWindow = (game) => {
   const syncState = backendConfigured
     ? getGameStatsSyncStateDefinition()
     : GAME_STATS_SYNC_STATES.unconfigured;
-  const syncMessage =
+  const stateMessage =
     (backendConfigured && gameStatsSyncMessage) || syncState.message;
+  // Busy copy keeps its animated ellipsis; every settled state carries the
+  // dropped-result count until Refresh or a local reset acknowledges it.
+  const droppedNotice =
+    backendConfigured && !syncState.busy ? describeGameStatsDroppedResults() : "";
+  const syncMessage = droppedNotice ? `${stateMessage} ${droppedNotice}` : stateMessage;
   renderGameStatsSyncStatus(syncStatus, syncMessage, syncState.busy, syncStateKey);
+  syncStatus?.setAttribute(
+    "data-game-stats-dropped-results",
+    String(backendConfigured ? gameStatsDroppedResultCount : 0)
+  );
 
   if (refreshButton) {
     const gameLabel = `${game[0].toUpperCase()}${game.slice(1)}`;
@@ -3798,6 +3930,8 @@ let gameStatsGlobalState = createEmptyGameStatsData();
 let gameStatsGlobalPlayerTotalsAvailable = false;
 
 let gameStatsLocalState = loadGameStatsLocalState();
+
+let gameStatsDroppedResultCount = loadGameStatsDroppedResultCount();
 
 let gameStatsSubmissionQueue = loadGameStatsSubmissionQueue();
 
@@ -4192,6 +4326,9 @@ void syncQueuedGameStats();
 window.addEventListener("online", () => {
   void syncQueuedGameStats();
 });
+
+// A retry must not outlive the page that queued it.
+window.addEventListener("pagehide", cancelGameStatsPublicationRetry);
 
 
 registerViewportObserver({

@@ -13,6 +13,7 @@
     "test:visual": "node scripts/run-visual-tests.mjs",
     "test:visual:update": "node scripts/run-visual-tests.mjs --update-snapshots",
     "syntax:check": "{ find scripts -type f \\( -name '*.js' -o -name '*.mjs' \\) -print0; find video-editor modeling -maxdepth 1 -type f \\( -name '*.js' -o -name '*.mjs' \\) -print0; } | xargs -0 -n1 node --check",
+    "lint:biome": "biome ci .",
     "app-icons:check": "node scripts/build-app-icon-manifest.mjs --check",
     "study-resources:check": "node scripts/build-study-resources-manifest.mjs --check",
     "modeling:check": "node scripts/build-modeling-markup.mjs --check",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@biomejs/biome": "2.5.15",
     "@playwright/test": "^1.55.0",
     "yaml": "^2.9.0"
   }

@@ -81,6 +81,8 @@ const installApiHarness = async (
   const signInRequests = [];
   const statsBehaviors = [];
   const eventGates = [];
+  const eventFailureStatuses = [];
+  const eventFailureRules = new Map();
   const signInGates = [];
   const signInFailureStatuses = [];
 
@@ -124,6 +126,19 @@ const installApiHarness = async (
       gate?.started.resolve();
       if (gate) await gate.release.promise;
 
+      const eventFailureRule = eventFailureRules.get(eventRequest.body.event?.id);
+      const eventFailureStatus =
+        eventFailureRule?.times > 0
+          ? ((eventFailureRule.times -= 1), eventFailureRule.status)
+          : eventFailureStatuses.shift();
+      if (eventFailureStatus) {
+        await route.fulfill({
+          status: eventFailureStatus,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "Publication temporarily unavailable" }),
+        });
+        return;
+      }
       if (
         requireAdministratorProof &&
         eventRequest.body.event?.profile?.id === ADMINISTRATOR_PROFILE.id &&
@@ -193,6 +208,13 @@ const installApiHarness = async (
 
   return {
     eventRequests,
+    failNextEvent(status = 503) {
+      eventFailureStatuses.push(status);
+    },
+    /** Fails every publication of one event id, `times` times, whichever pass sends it. */
+    failEvent(eventId, { status = 503, times = 1 } = {}) {
+      eventFailureRules.set(eventId, { status, times });
+    },
     failNextSignIn(status = 503) {
       signInFailureStatuses.push(status);
     },
@@ -1009,4 +1031,245 @@ test("without the stale-attempt guard the same late answer is adopted", async ({
   expect(adopted.profile).toMatchObject({ id: ADMINISTRATOR_PROFILE.id });
   expect(adopted.queue).toEqual([]);
   consumeDiagnostics(diagnostics, REJECTED_EVENT);
+});
+
+const RETRY_DELAY_MS = 5_000;
+const RETRY_SCHEDULED_MESSAGE = "Publishing failed. Retrying once in a moment.";
+const REQUEST_FAILED_MESSAGE = "Request failed. Try again later.";
+const TRANSIENT_EVENT_CONSOLE = "status of 503 (Service Unavailable)";
+const TRANSIENT_EVENT_RESPONSE = `503 ${API_BASE_URL}/events`;
+const fourViewports = Object.freeze([
+  { name: "mobile", width: 375, height: 812 },
+  { name: "tablet", width: 768, height: 1024 },
+  { name: "desktop", width: 1280, height: 800 },
+  { name: "wide", width: 1440, height: 900 },
+]);
+
+const transientEvents = (count) => ({
+  consoleErrors: Array(count).fill(TRANSIENT_EVENT_CONSOLE),
+  errorResponses: Array(count).fill(TRANSIENT_EVENT_RESPONSE),
+});
+
+const createQueuedSubmissions = (count) =>
+  Array.from({ length: count }, (_, index) => {
+    const submission = createQueuedSubmission();
+    submission.event.id = `overflow-event-${index}`;
+    submission.session.id = `overflow-session-${index}`;
+    return submission;
+  });
+
+const readDroppedResultStorage = (page) =>
+  page.evaluate(() => localStorage.getItem("personalSiteGameStatsDroppedResultsV1"));
+
+const readQueueStorage = (page) =>
+  page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]"), GAME_STATS_SYNC_QUEUE_STORAGE_KEY);
+
+/**
+ * Boots with one queued result whose publication keeps failing, with the
+ * stats window open and idle in the plain failed state. Opening a stats window
+ * is itself a sync trigger, and every trigger cancels and spends the pending
+ * retry, so the boot pass and the open-window pass both fail here (two
+ * requests) and only a later Refresh can book the automatic retry.
+ */
+const openWindowWithFailedQueue = async (page, api, viewport) => {
+  await page.setViewportSize(viewport);
+  await page.clock.install();
+  api.failNextEvent(503);
+  api.failNextEvent(503);
+  const bootEvent = api.holdNextEvent();
+  await preparePage(page, { queue: [createQueuedSubmission()] });
+  const stats = await openStatsWindow(page, "minesweeper");
+  await bootEvent.started.promise;
+  bootEvent.release.resolve();
+  await expect(stats.status).toHaveText(REQUEST_FAILED_MESSAGE);
+  await expect.poll(() => api.eventRequests.length).toBe(2);
+  return stats;
+};
+
+test("a transient publication failure retries once automatically and then publishes", async ({
+  diagnostics,
+  page,
+}, testInfo) => {
+  await installBackendConfig(page);
+  const api = await installApiHarness(page);
+  const stats = await openWindowWithFailedQueue(page, api, viewports[1]);
+  api.failNextEvent(503);
+
+  await stats.button.click();
+  await expectSyncState(stats, {
+    busy: false,
+    buttonDisabled: false,
+    buttonLabel: "Refresh Minesweeper stats",
+    message: RETRY_SCHEDULED_MESSAGE,
+  });
+  await expect(stats.status).toHaveAttribute("data-game-stats-sync-state", "retry-scheduled");
+  await expect(stats.button).toHaveAttribute("data-game-stats-action", "refresh");
+  await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
+  await expectNoHorizontalOverflow(stats);
+  await page.screenshot({ path: testInfo.outputPath("retry-scheduled-desktop.png") });
+  expect(api.eventRequests).toHaveLength(3);
+  expect(await readQueueStorage(page)).toHaveLength(1);
+
+  // Nothing else is clicked: the delayed retry is what publishes.
+  await page.clock.fastForward(RETRY_DELAY_MS);
+  await expect.poll(() => api.eventRequests.length).toBe(4);
+  await expectSyncState(stats, {
+    busy: false,
+    buttonDisabled: false,
+    buttonLabel: "Refresh Minesweeper stats",
+    message: "Global stats are up to date.",
+  });
+  await expect.poll(() => readQueueStorage(page)).toEqual([]);
+  expect(api.eventRequests[3].body.event.id).toBe(api.eventRequests[0].body.event.id);
+  await expectNoHorizontalOverflow(stats);
+  consumeDiagnostics(diagnostics, transientEvents(3));
+});
+
+test("a second transient failure stays failed until Refresh earns a fresh retry", async ({
+  diagnostics,
+  page,
+}, testInfo) => {
+  await installBackendConfig(page);
+  const api = await installApiHarness(page);
+  const stats = await openWindowWithFailedQueue(page, api, viewports[0]);
+  api.failNextEvent(503);
+  api.failNextEvent(503);
+  api.failNextEvent(503);
+
+  await stats.button.click();
+  await expect(stats.status).toHaveText(RETRY_SCHEDULED_MESSAGE);
+  await expectNoHorizontalOverflow(stats);
+  await page.screenshot({ path: testInfo.outputPath("retry-scheduled-mobile.png") });
+
+  await page.clock.fastForward(RETRY_DELAY_MS);
+  await expect.poll(() => api.eventRequests.length).toBe(4);
+  await expectSyncState(stats, {
+    busy: false,
+    buttonDisabled: false,
+    buttonLabel: "Refresh Minesweeper stats",
+    message: REQUEST_FAILED_MESSAGE,
+  });
+  await expect(stats.status).toHaveAttribute("data-game-stats-sync-state", "request-failed");
+  await page.screenshot({ path: testInfo.outputPath("retry-spent-mobile.png") });
+
+  // Many retry delays later the browser has still sent nothing more.
+  await page.clock.fastForward(RETRY_DELAY_MS * 20);
+  await settleFrames(page);
+  expect(api.eventRequests).toHaveLength(4);
+  await expect(stats.status).toHaveText(REQUEST_FAILED_MESSAGE);
+
+  // Refresh is the visitor's own retry and restores the single automatic one.
+  await stats.button.click();
+  await expect(stats.status).toHaveText(RETRY_SCHEDULED_MESSAGE);
+  expect(api.eventRequests).toHaveLength(5);
+  await page.clock.fastForward(RETRY_DELAY_MS);
+  await expect.poll(() => api.eventRequests.length).toBe(6);
+  await expect(stats.status).toHaveText("Global stats are up to date.");
+  await expectNoHorizontalOverflow(stats);
+  consumeDiagnostics(diagnostics, transientEvents(5));
+});
+
+test("Refresh during the retry wait cancels the timer so only one publication runs", async ({
+  diagnostics,
+  page,
+}) => {
+  await installBackendConfig(page);
+  const api = await installApiHarness(page);
+  const stats = await openWindowWithFailedQueue(page, api, viewports[1]);
+  api.failNextEvent(503);
+
+  await stats.button.click();
+  await expect(stats.status).toHaveText(RETRY_SCHEDULED_MESSAGE);
+  expect(api.eventRequests).toHaveLength(3);
+
+  await stats.button.click();
+  await expect(stats.status).toHaveText("Global stats are up to date.");
+  expect(api.eventRequests).toHaveLength(4);
+  // The cancelled timer never fires a fifth request.
+  await page.clock.fastForward(RETRY_DELAY_MS * 20);
+  await settleFrames(page);
+  expect(api.eventRequests).toHaveLength(4);
+  await expect(stats.status).toHaveText("Global stats are up to date.");
+  consumeDiagnostics(diagnostics, transientEvents(3));
+});
+
+for (const viewport of fourViewports) {
+  test(`an overlong stored queue reports its dropped results until Refresh acknowledges them at ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await installBackendConfig(page);
+    const api = await installApiHarness(page);
+
+    await preparePage(page, { queue: createQueuedSubmissions(103) });
+    const stats = await openStatsWindow(page, "minesweeper");
+
+    await expectSyncState(stats, {
+      busy: false,
+      buttonDisabled: false,
+      buttonLabel: "Refresh Minesweeper stats",
+      message:
+        "Global stats are up to date. 3 unpublished results were dropped because the publishing queue was full.",
+    });
+    await expect(stats.status).toHaveAttribute("data-game-stats-dropped-results", "3");
+    await expect(stats.status).toHaveAttribute("data-game-stats-sync-state", "ready");
+    expect(api.eventRequests).toHaveLength(100);
+    expect(api.eventRequests[0].body.event.id).toBe("overflow-event-3");
+    expect(await readDroppedResultStorage(page)).toBe("3");
+    await expectNoHorizontalOverflow(stats);
+    await page.screenshot({ path: testInfo.outputPath(`dropped-results-${viewport.name}.png`) });
+
+    // The count survives the reload and keeps accumulating: the init script
+    // seeds the same 103 results again, so three more are dropped on top.
+    await page.reload();
+    const aboutClose = page.locator('#about-window [data-close="about"]');
+    if (await aboutClose.isVisible()) await aboutClose.click();
+    const reopened = await openStatsWindow(page, "minesweeper");
+    await expect(reopened.status).toHaveText(
+      "Global stats are up to date. 6 unpublished results were dropped because the publishing queue was full."
+    );
+    expect(await readDroppedResultStorage(page)).toBe("6");
+    expect(api.eventRequests).toHaveLength(200);
+
+    // The explicit Refresh acknowledges the count.
+    await reopened.button.click();
+    await expect(reopened.status).toHaveText("Global stats are up to date.");
+    await expect(reopened.status).toHaveAttribute("data-game-stats-dropped-results", "0");
+    expect(await readDroppedResultStorage(page)).toBeNull();
+    await expectNoHorizontalOverflow(reopened);
+  });
+}
+
+test("a queue overflow after a failure keeps both the failure copy and the singular dropped count", async ({
+  diagnostics,
+  page,
+}) => {
+  await page.setViewportSize(viewports[0]);
+  await installBackendConfig(page);
+  const api = await installApiHarness(page);
+  // The oldest result is dropped on overflow; the two oldest survivors fail
+  // in both the boot pass and the coalesced open-window pass, so the single
+  // retry is spent and the row settles on failure.
+  api.failEvent("overflow-event-1", { times: 2 });
+  api.failEvent("overflow-event-2", { times: 2 });
+  const bootEvent = api.holdNextEvent();
+
+  await preparePage(page, {
+    queue: [...createQueuedSubmissions(100), createQueuedSubmission()],
+  });
+  const stats = await openStatsWindow(page, "minesweeper");
+  await bootEvent.started.promise;
+  bootEvent.release.resolve();
+  await expectSyncState(stats, {
+    busy: false,
+    buttonDisabled: false,
+    buttonLabel: "Refresh Minesweeper stats",
+    message:
+      "Request failed. Try again later. 1 unpublished result was dropped because the publishing queue was full.",
+  });
+  await expect.poll(() => api.eventRequests.length).toBe(102);
+  await expect(stats.status).toHaveAttribute("data-game-stats-dropped-results", "1");
+  expect(await readQueueStorage(page)).toHaveLength(2);
+  await expectNoHorizontalOverflow(stats);
+  consumeDiagnostics(diagnostics, transientEvents(4));
 });

@@ -421,16 +421,25 @@ test("submission queue rejects null sessions and persists valid sessions", async
       "const GAME_STATS_MAX_SYNC_QUEUE_LENGTH = 2;",
       "let gameStatsSubmissionQueue = [];",
       "let saveCalls = 0;",
+      "let restoreCalls = 0;",
+      "const droppedCounts = [];",
       "const saveGameStatsSubmissionQueue = () => { saveCalls += 1; };",
+      "const recordGameStatsDroppedResults = (count) => { droppedCounts.push(count); };",
+      "const restoreGameStatsPublicationRetryBudget = () => { restoreCalls += 1; };",
       queueSource,
       "globalThis.queueForTest = queueGameStatsSubmission;",
-      "globalThis.readForTest = () => ({ queue: gameStatsSubmissionQueue, saveCalls });",
+      "globalThis.readForTest = () => ({ queue: gameStatsSubmissionQueue, saveCalls, restoreCalls, droppedCounts });",
     ].join("\n"),
     context
   );
 
   assert.equal(context.queueForTest({ id: "event-null" }, null), false);
-  assert.deepEqual(plainObject(context.readForTest()), { queue: [], saveCalls: 0 });
+  assert.deepEqual(plainObject(context.readForTest()), {
+    queue: [],
+    saveCalls: 0,
+    restoreCalls: 0,
+    droppedCounts: [],
+  });
 
   for (const index of [1, 2, 3]) {
     assert.equal(
@@ -444,6 +453,9 @@ test("submission queue rejects null sessions and persists valid sessions", async
       { event: { id: "event-3" }, session: { id: "session-3" }, proofRejections: 0 },
     ],
     saveCalls: 3,
+    restoreCalls: 3,
+    // Only the third push overflows the two-slot queue, and by exactly one.
+    droppedCounts: [-1, 0, 1],
   });
 });
 
@@ -623,14 +635,17 @@ test("local reset clears the expiry notice without disturbing busy or build-mism
       "const saveGameStatsLocalState = () => {};",
       "const clearGameStatsProfile = () => {};",
       "const renderGameStatsWindows = () => {};",
+      "let droppedClearCalls = 0;",
+      "const clearGameStatsDroppedResults = () => { droppedClearCalls += 1; };",
       stateSource,
       resetSource,
       "globalThis.resetForTest = resetGameProgressLocalData;",
       "globalThis.readyForTest = () => setGameStatsSyncState('ready');",
-      "globalThis.readForTest = () => ({ gameStatsSyncState, gameStatsSyncMessage, gameStatsExpiredResultNoticePending, gameStatsLocalState, gameStatsLocalResetGeneration });",
+      "globalThis.readForTest = () => ({ gameStatsSyncState, gameStatsSyncMessage, gameStatsExpiredResultNoticePending, gameStatsLocalState, gameStatsLocalResetGeneration, droppedClearCalls });",
     ].join("\n"), context);
     context.resetForTest();
     const reset = plainObject(context.readForTest());
+    assert.equal(reset.droppedClearCalls, 1);
     assert.equal(reset.gameStatsExpiredResultNoticePending, false);
     assert.deepEqual(reset.gameStatsLocalState, { wins: 0 });
     assert.equal(reset.gameStatsLocalResetGeneration, 1);

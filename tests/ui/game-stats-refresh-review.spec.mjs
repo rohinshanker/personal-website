@@ -133,6 +133,35 @@ const reviewStates = Object.freeze([
     label: "Refresh Minesweeper stats",
     disabled: false,
   },
+  {
+    id: "retry-scheduled",
+    message: "Publishing failed. Retrying once in a moment.",
+    action: "refresh",
+    busy: false,
+    cursor: "off",
+    label: "Refresh Minesweeper stats",
+    disabled: false,
+  },
+  {
+    id: "ready-dropped-results",
+    message:
+      "Global stats are up to date. 3 unpublished results were dropped because the publishing queue was full.",
+    action: "refresh",
+    busy: false,
+    cursor: "off",
+    label: "Refresh Minesweeper stats",
+    disabled: false,
+  },
+  {
+    id: "request-failed-dropped-result",
+    message:
+      "Request failed. Try again later. 1 unpublished result was dropped because the publishing queue was full.",
+    action: "refresh",
+    busy: false,
+    cursor: "off",
+    label: "Refresh Minesweeper stats",
+    disabled: false,
+  },
 ]);
 
 test("review page contains the complete exact status/action matrix", async ({
@@ -245,13 +274,13 @@ for (const viewport of [
 ]) {
   test(`review page has no horizontal overflow at ${viewport.name}`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.setViewportSize(viewport);
     await page.goto(
       "/docs/validation/assets/game-stats-refresh-review.html"
     );
     await expect(page.locator("h1")).toBeVisible();
-    await expect(page.locator("[data-review-state]")).toHaveCount(17);
+    await expect(page.locator("[data-review-state]")).toHaveCount(20);
     await expect
       .poll(() =>
         page.evaluate(() => ({
@@ -265,6 +294,10 @@ for (const viewport of [
         }))
       )
       .toEqual({ body: true, cards: true, document: true });
+    await page.screenshot({
+      path: testInfo.outputPath(`review-page-${viewport.name}.png`),
+      fullPage: true,
+    });
   });
 }
 
