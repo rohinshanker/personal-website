@@ -505,11 +505,15 @@
     sudokuGeneratorWorker = null;
     const pending = [...sudokuGeneratorRequests.values()];
     sudokuGeneratorRequests.clear();
-    pending.forEach(({ difficulty, resolve }) => resolve(staticSudokuPuzzle(difficulty)));
+    pending.forEach(({ difficulty, resolve }) => {
+      resolve(staticSudokuPuzzle(difficulty));
+    });
     const waiting = [...sudokuPuzzleWaiters.entries()];
     sudokuPuzzleWaiters.clear();
     waiting.forEach(([difficulty, resolvers]) => {
-      resolvers.forEach((resolve) => resolve(staticSudokuPuzzle(difficulty)));
+      resolvers.forEach((resolve) => {
+        resolve(staticSudokuPuzzle(difficulty));
+      });
     });
   };
 
@@ -551,7 +555,8 @@
       resolve(staticSudokuPuzzle(difficulty));
       return;
     }
-    const requestId = (sudokuGeneratorNextRequestId += 1);
+    sudokuGeneratorNextRequestId += 1;
+    const requestId = sudokuGeneratorNextRequestId;
     sudokuGeneratorRequests.set(requestId, { difficulty, resolve });
     worker.postMessage({
       requestId,
@@ -949,7 +954,9 @@
       restored = sudokuRules.initial(descriptor.initial);
       const budget = createBudget(SUDOKU_RESTORE_WORK);
       const replay = [...(descriptor.inputs || []), ...(savedReplay || [])];
-      replay.forEach((input) => sudokuRules.transition(restored, input, budget));
+      replay.forEach((input) => {
+        sudokuRules.transition(restored, input, budget);
+      });
     } catch (error) {
       return false;
     }
@@ -1067,7 +1074,9 @@
   };
 
   const clearSudokuBubbleBursts = () => {
-    document.querySelectorAll(".sudoku-burst-effect").forEach((element) => element.remove());
+    document.querySelectorAll(".sudoku-burst-effect").forEach((element) => {
+      element.remove();
+    });
   };
 
   const clearSudokuPlayBurst = () => {
@@ -1079,7 +1088,9 @@
   const triggerSudokuBubbleBurst = (target, variant) => {
     if (!target) return;
     const className = `sudoku-burst-effect--${variant}`;
-    target.querySelectorAll(`.${className}`).forEach((element) => element.remove());
+    target.querySelectorAll(`.${className}`).forEach((element) => {
+      element.remove();
+    });
     const effect = document.createElement("span");
     effect.className = `sudoku-burst-effect ${className}`;
     effect.setAttribute("aria-hidden", "true");
@@ -1124,7 +1135,9 @@
     if (!sudokuAquariumLayer) return;
     sudokuAquariumLayer
       .querySelectorAll(".sudoku-fish, .sudoku-bubble-cluster")
-      .forEach((element) => element.remove());
+      .forEach((element) => {
+        element.remove();
+      });
   };
 
   const createSudokuFishElement = ({
@@ -1691,7 +1704,9 @@
   };
 
   const clearSudokuHighlights = () => {
-    sudokuCells().forEach((cell) => cell.classList.remove("is-invalid"));
+    sudokuCells().forEach((cell) => {
+      cell.classList.remove("is-invalid");
+    });
   };
 
   const clearSudokuSolvedWave = () => {
@@ -2448,7 +2463,8 @@
    */
   const requestIssuedSudokuPuzzle = () => {
     if (sudokuStats.hasIssuedGame()) return;
-    const token = (sudokuIssueToken += 1);
+    sudokuIssueToken += 1;
+    const token = sudokuIssueToken;
     const carriedNoteMode = sudokuState.noteMode;
     const pending = sudokuStats.issueGame({ difficulty: sudokuState.difficulty });
     if (!pending) return;
@@ -2565,7 +2581,8 @@
    */
   const loadSudokuDifficulty = (difficulty) => {
     const normalizedDifficulty = normalizeSudokuDifficulty(difficulty);
-    const token = (sudokuPuzzleRequestToken += 1);
+    sudokuPuzzleRequestToken += 1;
+    const token = sudokuPuzzleRequestToken;
     if (sudokuPendingAdoption) {
       cancelSudokuPuzzleWaiter(sudokuPendingAdoption.difficulty, sudokuPendingAdoption.adopt);
       sudokuPendingAdoption = null;

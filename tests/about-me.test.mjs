@@ -336,9 +336,9 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
     /@media \(max-width: 640px\), \(max-height: 500px\) \{[\s\S]*?#about-window \.about-body \{[\s\S]*?height: min\(65vh, 640px\);[\s\S]*?height: min\(65dvh, 640px\);[\s\S]*?max-height: calc\(100dvh - 140px\);[\s\S]*?min-height: min\(220px, calc\(100dvh - 140px\)\);/,
   );
   for (const fallbackPair of [
-    /max-height: calc\(100vh - 76px\);\n    max-height: calc\(100dvh - 76px\);/,
-    /top: calc\(50vh - 28px\);\n    top: calc\(50dvh - 28px\);/,
-    /height: min\(65vh, 640px\);\n    height: min\(65dvh, 640px\);/,
+    /max-height: calc\(100vh - 76px\);\n(?:\s*\/\*[^*]*\*\/\n)?\s*max-height: calc\(100dvh - 76px\);/,
+    /top: calc\(50vh - 28px\);\n(?:\s*\/\*[^*]*\*\/\n)?\s*top: calc\(50dvh - 28px\);/,
+    /height: min\(65vh, 640px\);\n(?:\s*\/\*[^*]*\*\/\n)?\s*height: min\(65dvh, 640px\);/,
     /max-height: calc\(100vh - 140px\);\n    max-height: calc\(100dvh - 140px\);/,
     /min-height: min\(220px, calc\(100vh - 140px\)\);\n    min-height: min\(220px, calc\(100dvh - 140px\)\);/,
   ]) {

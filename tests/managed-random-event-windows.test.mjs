@@ -119,7 +119,7 @@ test("registerRandomEvent queues bind() for one wiring pass", () => {
   );
   assert.match(
     eventSources,
-    /const bindRegisteredRandomEvents = \(\) => \{\s*randomEventBindings\.forEach\(\(bind\) => bind\(\)\);\s*watchRandomEventViewportMedia\(\);\s*randomEventBindings\.length = 0;\s*\};/,
+    /const bindRegisteredRandomEvents = \(\) => \{\s*randomEventBindings\.forEach\(\(bind\) => \{\s*bind\(\);\s*\}\);\s*watchRandomEventViewportMedia\(\);\s*randomEventBindings\.length = 0;\s*\};/,
   );
   assert.equal(
     [...eventSources.matchAll(/^bindRegisteredRandomEvents\(\);$/gm)].length,

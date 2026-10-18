@@ -366,7 +366,9 @@
   };
 
   const clearBrandBurnsEnemyTimers = () => {
-    brandBurnsEnemyTimers.forEach((timer) => clearTimeout(timer));
+    brandBurnsEnemyTimers.forEach((timer) => {
+      clearTimeout(timer);
+    });
     brandBurnsEnemyTimers = [];
   };
 
@@ -1368,7 +1370,9 @@
     clearBrandBurnsEnemyTimers();
     stopBrandBurnsStaminaRecovery();
     stopBrandBurnsEnemyAttacks();
-    brandBurnsEnemyWindows.forEach((win) => win.remove());
+    brandBurnsEnemyWindows.forEach((win) => {
+      win.remove();
+    });
     brandBurnsEnemyWindows = [];
     removeBrandBurnsPuckWindow();
     brandBurnsPreserveEnemyWindowsOnMainClose = false;

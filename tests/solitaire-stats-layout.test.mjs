@@ -28,7 +28,7 @@ test("Solitaire uses the shared leaderboard template for global most wins", asyn
   assert.ok(personalRecord, "Solitaire should render the signed-in player's record");
   assert.ok(globalWins, "Solitaire should render global wins");
   assert.ok(renderSolitaire, "Solitaire should have a dedicated stats renderer");
-  assert.match(globalRows[1], /Array\.from\(\{ length: 3 \}/);
+  assert.match(globalRows[1], /for \(let index = 0; index < 3; index \+= 1\)/);
   assert.match(globalRows[1], /GAME_STATS_MEDAL_SOURCES\[index\]/);
   assert.match(globalRows[1], /game-stats-leaderboard-template-medal/);
   assert.match(globalRows[1], /entry\?\.name \|\| "N\/A"/);

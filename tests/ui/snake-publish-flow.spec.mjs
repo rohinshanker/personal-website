@@ -606,7 +606,9 @@ test("a 425 Snake result remains queued and publishes without a manual retry", a
   await expect.poll(() => api.eventRequests.length, { timeout: 15_000 }).toBe(2);
   await expect(status).toHaveText("Global stats are up to date.");
   await expect(status).toHaveAttribute("data-game-stats-sync-state", "ready");
-  api.eventRequests.slice(1).forEach((request) => expect(request).toEqual(api.eventRequests[0]));
+  api.eventRequests.slice(1).forEach((request) => {
+    expect(request).toEqual(api.eventRequests[0]);
+  });
   expectLocalSnakeResult(await readStoredStats(page));
   expect(api.statsRequests.some(({ refreshed }) => refreshed)).toBe(true);
   // The 425 that forces the retry is the behaviour under test; the fixture

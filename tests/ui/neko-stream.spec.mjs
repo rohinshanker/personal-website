@@ -778,9 +778,9 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
     expect(x).toBeLessThanOrEqual(354);
   });
   const actionLaneMetrics = await readNekoPoseMetrics(page);
-  actionLaneMetrics.poses.forEach((pose) =>
-    expectNekoPoseAligned(pose, actionLaneMetrics.taskbarTop),
-  );
+  actionLaneMetrics.poses.forEach((pose) => {
+    expectNekoPoseAligned(pose, actionLaneMetrics.taskbarTop);
+  });
   const sleepingLaneMetrics = actionLaneMetrics.poses.find(
     ({ actionName }) => actionName === "sleep",
   );
@@ -790,7 +790,9 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
 
   await page.clock.runFor(200);
   snapshot = await readSnapshot(page);
-  snapshot.cats.forEach(({ id, x }) => expect(x).toBeCloseTo(stoppedPositions.get(id), 5));
+  snapshot.cats.forEach(({ id, x }) => {
+    expect(x).toBeCloseTo(stoppedPositions.get(id), 5);
+  });
   expect(snapshot.cats.find(({ actionName }) => actionName === "sleep").sprite).toMatch(
     /sleep1\.png$/,
   );
@@ -837,7 +839,9 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
   ]);
   snapshot.cats
     .filter(({ actionName }) => actionName !== "yawn")
-    .forEach(({ id, x }) => expect(x).toBeCloseTo(stoppedPositions.get(id), 5));
+    .forEach(({ id, x }) => {
+      expect(x).toBeCloseTo(stoppedPositions.get(id), 5);
+    });
 
   const delayedWave = Array.from({ length: 20 }, (_, index) => ({
     id: index,
@@ -1108,9 +1112,9 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
       for (const spriteName of ["left1", "left2", "right1", "right2"]) {
         expect(runningSpriteNames.has(spriteName)).toBe(true);
       }
-      runningPoseMetrics.poses.forEach((pose) =>
-        expectNekoPoseAligned(pose, runningPoseMetrics.taskbarTop),
-      );
+      runningPoseMetrics.poses.forEach((pose) => {
+        expectNekoPoseAligned(pose, runningPoseMetrics.taskbarTop);
+      });
       const streamScreenshotPath = testInfo.outputPath(
         `neko-stream-forty-cats-${viewport.name}.png`,
       );
@@ -1191,21 +1195,21 @@ test("the taskbar stream and menu remain layered, contained, and usable at every
         };
       });
       expect(actionMetrics.overflow).toBe(false);
-      actionMetrics.catBottoms.forEach((bottom) =>
-        expect(bottom).toBeLessThanOrEqual(actionMetrics.taskbarTop + 5),
-      );
+      actionMetrics.catBottoms.forEach((bottom) => {
+        expect(bottom).toBeLessThanOrEqual(actionMetrics.taskbarTop + 5);
+      });
       const actionPoseMetrics = await readNekoPoseMetrics(page);
-      actionPoseMetrics.poses.forEach((pose) =>
-        expectNekoPoseAligned(pose, actionPoseMetrics.taskbarTop),
-      );
+      actionPoseMetrics.poses.forEach((pose) => {
+        expectNekoPoseAligned(pose, actionPoseMetrics.taskbarTop);
+      });
       const stripTop = Math.max(0, actionMetrics.taskbarTop - 64);
 
       if (viewport.name === "mobile") {
         await page.setViewportSize({ width: 844, height: 390 });
         const resizedLaneMetrics = await readNekoPoseMetrics(page);
-        resizedLaneMetrics.poses.forEach((pose) =>
-          expectNekoPoseAligned(pose, resizedLaneMetrics.taskbarTop),
-        );
+        resizedLaneMetrics.poses.forEach((pose) => {
+          expectNekoPoseAligned(pose, resizedLaneMetrics.taskbarTop);
+        });
       }
       await stopStream(page);
     });

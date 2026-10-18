@@ -183,5 +183,7 @@ test("the Image Tools future-work ticket remains open", async () => {
     );
   });
 
-  tickets.forEach((ticket) => assert.doesNotMatch(ticket, /^## /m));
+  tickets.forEach((ticket) => {
+    assert.doesNotMatch(ticket, /^## /m);
+  });
 });

@@ -47,8 +47,11 @@ const isApprovedTemplateFile = (relativePath) =>
 const findProtectedSecretAssignments = (source) => {
   const findings = [];
   PROTECTED_SECRET_ASSIGNMENT.lastIndex = 0;
-  let match;
-  while ((match = PROTECTED_SECRET_ASSIGNMENT.exec(source)) !== null) {
+  for (
+    let match = PROTECTED_SECRET_ASSIGNMENT.exec(source);
+    match !== null;
+    match = PROTECTED_SECRET_ASSIGNMENT.exec(source)
+  ) {
     if (!SAFE_PLACEHOLDER_VALUE.test(match[1].trim())) {
       findings.push("hard-coded-secret-assignment");
     }
@@ -59,8 +62,7 @@ const findProtectedSecretAssignments = (source) => {
 const findAdministratorCredentialAssignments = (source) => {
   for (const expression of [QUOTED_ADMIN_CREDENTIAL_ASSIGNMENT, ENV_ADMIN_CREDENTIAL_ASSIGNMENT]) {
     expression.lastIndex = 0;
-    let match;
-    while ((match = expression.exec(source)) !== null) {
+    for (let match = expression.exec(source); match !== null; match = expression.exec(source)) {
       if (!SAFE_PLACEHOLDER_VALUE.test(match[1].trim())) {
         return ["hard-coded-admin-credential"];
       }

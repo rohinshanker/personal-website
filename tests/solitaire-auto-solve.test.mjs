@@ -230,7 +230,9 @@ test("a staged presentation board is solvable in 52 non-decreasing moves", () =>
     if (index) assert.ok(move.rank >= plan.moves[index - 1].rank);
   });
   const finished = replayPlan(state, plan.moves);
-  suits.forEach((suit) => assert.equal(finished.foundations[suit].length, 13));
+  suits.forEach((suit) => {
+    assert.equal(finished.foundations[suit].length, 13);
+  });
   assert.deepEqual(solNextAutoSolveMove(finished), null);
 });
 

@@ -512,9 +512,9 @@
         });
       }
 
-      [distressSignalWindow, distressUploadWindow].forEach((win) =>
-        bindManagedRandomEventWindowAnimation(win),
-      );
+      [distressSignalWindow, distressUploadWindow].forEach((win) => {
+        bindManagedRandomEventWindowAnimation(win);
+      });
     },
   });
 

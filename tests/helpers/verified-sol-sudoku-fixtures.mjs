@@ -65,7 +65,9 @@ export const replayGame = (engines, game, initial, actions, { work } = {}) => {
   const budget = engines.rules.createBudget(work ?? limits.work);
   const state = engine.initial(engines.into(initial));
   engines.rules.assertReplay(engines.into(actions), limits.inputs);
-  actions.forEach((action) => engine.transition(state, engines.into(action), budget));
+  actions.forEach((action) => {
+    engine.transition(state, engines.into(action), budget);
+  });
   return {
     state,
     result: plainValue(engine.result(state)),

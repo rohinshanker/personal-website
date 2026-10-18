@@ -5055,6 +5055,7 @@ html.is-wall-breach-shaking body {
   display: block;
   height: 106px;
   image-rendering: crisp-edges;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: crisp-edges above is the fallback for browsers without pixelated */
   image-rendering: pixelated;
   object-fit: contain;
   transition:

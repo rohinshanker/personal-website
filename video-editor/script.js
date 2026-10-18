@@ -855,9 +855,9 @@ const getDragData = (event) => {
 const clearDragStyles = () => {
   document
     .querySelectorAll(".is-drop-target, .is-drop-invalid, .is-drag-target")
-    .forEach((item) =>
-      item.classList.remove("is-drop-target", "is-drop-invalid", "is-drag-target"),
-    );
+    .forEach((item) => {
+      item.classList.remove("is-drop-target", "is-drop-invalid", "is-drag-target");
+    });
 };
 
 const administratorSession = createAdministratorSession({
@@ -991,7 +991,8 @@ const submitAuthentication = async (event) => {
     return;
   }
 
-  const attempt = (authenticationAttempt += 1);
+  authenticationAttempt += 1;
+  const attempt = authenticationAttempt;
   authenticationController?.abort();
   authenticationController = new AbortController();
   const requestTimeout = window.setTimeout(
@@ -1204,7 +1205,9 @@ const importFiles = async (fileList) => {
 
 const renderMediaBin = () => {
   if (!elements.mediaBin || !elements.mediaTemplate) return;
-  elements.mediaBin.querySelectorAll("[data-media-id]").forEach((item) => item.remove());
+  elements.mediaBin.querySelectorAll("[data-media-id]").forEach((item) => {
+    item.remove();
+  });
   if (elements.mediaEmpty) elements.mediaEmpty.hidden = state.media.length > 0;
   if (elements.mediaCount) {
     elements.mediaCount.textContent = `${state.media.length} ${state.media.length === 1 ? "item" : "items"}`;
@@ -1740,7 +1743,9 @@ const deleteEffect = (effectId) => {
 
 const renderEffects = () => {
   if (!elements.effectsTrack || !elements.effectTemplate) return;
-  elements.effectsTrack.querySelectorAll("[data-effect-item-id]").forEach((item) => item.remove());
+  elements.effectsTrack.querySelectorAll("[data-effect-item-id]").forEach((item) => {
+    item.remove();
+  });
   for (const effect of state.effects.slice().sort((left, right) => left.start - right.start)) {
     const definition = EFFECTS[effect.type];
     const fragment = elements.effectTemplate.content.cloneNode(true);
@@ -1982,7 +1987,8 @@ const analyzeSelectedAudioClip = async () => {
     setAudioSyncStatus("Choose an Audio timeline clip to begin.", "idle");
     return;
   }
-  const generation = (audioAnalysisGeneration += 1);
+  audioAnalysisGeneration += 1;
+  const generation = audioAnalysisGeneration;
   setAudioSyncStatus(`Analyzing ${media.name}…`, "analyzing");
   renderAudioToolSources();
   try {
@@ -2298,7 +2304,9 @@ const addEffectsAtGuideposts = (rule, type) => {
   const definition = EFFECTS[type];
   if (!definition?.timelineInsertable) return;
   const guideposts = mappedGuideposts(rule);
-  guideposts.forEach((guidepost) => insertEffect(type, guidepost.timelineTime));
+  guideposts.forEach((guidepost) => {
+    insertEffect(type, guidepost.timelineTime);
+  });
   renderTimeline();
   announce(`${definition.label} added at ${guideposts.length} ${rule.label} guideposts.`);
 };
@@ -2326,9 +2334,9 @@ const scheduleAudioSyncGraphs = () => {
 
 const renderAudioSyncRules = () => {
   if (!elements.audioSyncRules || !elements.audioSyncRuleTemplate) return;
-  elements.audioSyncRules
-    .querySelectorAll("[data-audio-sync-rule-id]")
-    .forEach((item) => item.remove());
+  elements.audioSyncRules.querySelectorAll("[data-audio-sync-rule-id]").forEach((item) => {
+    item.remove();
+  });
   if (elements.audioSyncRulesEmpty)
     elements.audioSyncRulesEmpty.hidden = state.audioSync.rules.length > 0;
   if (elements.audioSyncRuleTotal) {
@@ -2913,7 +2921,9 @@ const pausePlayback = () => {
     elements.audioSyncFlash.hidden = true;
   }
   elements.previewVideo?.pause();
-  audioPlayers.forEach((player) => player.pause());
+  audioPlayers.forEach((player) => {
+    player.pause();
+  });
   setPlaybackButtonState(false);
 };
 
@@ -3342,19 +3352,15 @@ const bindStaticControls = () => {
     importFiles(event.dataTransfer?.files);
   });
 
-  document
-    .querySelectorAll("[data-add-tier]")
-    .forEach((button) => button.addEventListener("click", () => addTier(button.dataset.addTier)));
-  document
-    .querySelectorAll("[data-effect-tab-target]")
-    .forEach((button) =>
-      button.addEventListener("click", () => openEffectTab(button.dataset.effect)),
-    );
-  document
-    .querySelectorAll("[data-add-effect]")
-    .forEach((button) =>
-      button.addEventListener("click", () => addEffect(button.dataset.addEffect)),
-    );
+  document.querySelectorAll("[data-add-tier]").forEach((button) => {
+    button.addEventListener("click", () => addTier(button.dataset.addTier));
+  });
+  document.querySelectorAll("[data-effect-tab-target]").forEach((button) => {
+    button.addEventListener("click", () => openEffectTab(button.dataset.effect));
+  });
+  document.querySelectorAll("[data-add-effect]").forEach((button) => {
+    button.addEventListener("click", () => addEffect(button.dataset.addEffect));
+  });
   elements.playButton?.addEventListener("click", togglePlayback);
   elements.scrubber?.addEventListener("input", (event) => {
     pausePlayback();

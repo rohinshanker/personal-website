@@ -1626,9 +1626,9 @@
         });
       }
 
-      [instrumentalityWindow, instrumentalityCongratsWindow].forEach((win) =>
-        bindManagedRandomEventWindowAnimation(win),
-      );
+      [instrumentalityWindow, instrumentalityCongratsWindow].forEach((win) => {
+        bindManagedRandomEventWindowAnimation(win);
+      });
     },
   });
 

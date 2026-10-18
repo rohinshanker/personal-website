@@ -128,10 +128,13 @@ const installApiHarness = async (page, { requireAdministratorProof = false } = {
       if (gate) await gate.release.promise;
 
       const eventFailureRule = eventFailureRules.get(eventRequest.body.event?.id);
-      const eventFailureStatus =
-        eventFailureRule?.times > 0
-          ? ((eventFailureRule.times -= 1), eventFailureRule.status)
-          : eventFailureStatuses.shift();
+      let eventFailureStatus;
+      if (eventFailureRule?.times > 0) {
+        eventFailureRule.times -= 1;
+        eventFailureStatus = eventFailureRule.status;
+      } else {
+        eventFailureStatus = eventFailureStatuses.shift();
+      }
       if (eventFailureStatus) {
         await route.fulfill({
           status: eventFailureStatus,

@@ -315,7 +315,9 @@ test("confirmed events keep every total current until the server acknowledges th
     },
   ];
   assert.equal(context.markConfirmed(null), false);
-  events.forEach((event) => assert.equal(context.markConfirmed(event), true));
+  events.forEach((event) => {
+    assert.equal(context.markConfirmed(event), true);
+  });
   assert.equal(context.markConfirmed(events[1]), false);
 
   let state = jsonClone(context.readState());
@@ -409,7 +411,9 @@ test("confirmed events keep every total current until the server acknowledges th
     ...events[0],
     id: `event-confirmed-bound-${index}`,
   }));
-  overflowEvents.forEach((event) => context.markConfirmed(event));
+  overflowEvents.forEach((event) => {
+    context.markConfirmed(event);
+  });
   assert.deepEqual(
     jsonClone(context.readState()).confirmedIds,
     overflowEvents.slice(-32).map(({ id }) => id),

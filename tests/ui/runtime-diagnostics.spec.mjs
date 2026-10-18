@@ -54,9 +54,9 @@ const requestEmbed = (page, kind, url) =>
           embedKind
         ];
         const element = document.createElement(tag);
-        ["load", "loadeddata", "error"].forEach((type) =>
-          element.addEventListener(type, () => resolve(type), { once: true }),
-        );
+        ["load", "loadeddata", "error"].forEach((type) => {
+          element.addEventListener(type, () => resolve(type), { once: true });
+        });
         element.src = src;
         document.body.append(element);
       }),

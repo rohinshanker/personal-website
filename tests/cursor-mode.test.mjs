@@ -14,11 +14,15 @@ class FakeClassList {
   }
 
   add(...names) {
-    names.forEach((name) => this.values.add(name));
+    names.forEach((name) => {
+      this.values.add(name);
+    });
   }
 
   remove(...names) {
-    names.forEach((name) => this.values.delete(name));
+    names.forEach((name) => {
+      this.values.delete(name);
+    });
   }
 
   contains(name) {
@@ -42,7 +46,9 @@ const createEventTarget = () => {
       listeners.set(type, typeListeners);
     },
     dispatch(type, event = {}) {
-      (listeners.get(type) || []).forEach((listener) => listener(event));
+      (listeners.get(type) || []).forEach((listener) => {
+        listener(event);
+      });
     },
   };
 };
@@ -142,7 +148,9 @@ const createRuntime = ({ mode = "light", reducedMotion = false } = {}) => {
     flushAnimationFrames() {
       const pending = [...animationFrames.values()];
       animationFrames.clear();
-      pending.forEach((callback) => callback());
+      pending.forEach((callback) => {
+        callback();
+      });
     },
     intervals,
     motionQuery,

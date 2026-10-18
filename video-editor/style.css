@@ -27,6 +27,7 @@ body {
 
 body.video-editor-page {
   min-height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh declaration above is the fallback for browsers without dynamic viewport units */
   min-height: 100dvh;
   background: #006b6b var(--editor-wallpaper) center / cover no-repeat fixed;
 }
@@ -213,6 +214,7 @@ textarea:focus-visible,
   gap: 2px;
   width: 100vw;
   height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh declaration above is the fallback for browsers without dynamic viewport units */
   height: 100dvh;
   padding: 8px;
 }

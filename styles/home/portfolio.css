@@ -1,5 +1,6 @@
 .clash-royale-window {
   max-height: calc(100vh - 76px);
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh declaration above is the fallback for browsers without dynamic viewport units */
   max-height: calc(100dvh - 76px);
   width: min(calc(100vw - 24px), 760px);
 }
@@ -11,6 +12,7 @@
 .clash-royale-window-body {
   box-sizing: border-box;
   height: min(720px, calc(100vh - 116px));
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh declaration above is the fallback for browsers without dynamic viewport units */
   height: min(720px, calc(100dvh - 116px));
   overflow-x: hidden;
   overflow-y: auto;
@@ -1256,16 +1258,19 @@
 @media (max-width: 640px), (max-height: 500px) {
   #about-window {
     max-height: calc(100vh - 76px);
+    /* biome-ignore lint/suspicious/noDuplicateProperties: the vh declaration above is the fallback for browsers without dynamic viewport units */
     max-height: calc(100dvh - 76px);
   }
 
   #about-window.app-window--center {
     top: calc(50vh - 28px);
+    /* biome-ignore lint/suspicious/noDuplicateProperties: the vh declaration above is the fallback for browsers without dynamic viewport units */
     top: calc(50dvh - 28px);
   }
 
   #about-window .about-body {
     height: min(65vh, 640px);
+    /* biome-ignore lint/suspicious/noDuplicateProperties: the vh declaration above is the fallback for browsers without dynamic viewport units */
     height: min(65dvh, 640px);
     max-height: calc(100vh - 140px);
     max-height: calc(100dvh - 140px);

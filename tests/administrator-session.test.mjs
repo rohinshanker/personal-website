@@ -73,10 +73,14 @@ const createTimers = () => {
     runTimeouts() {
       const due = [...timeouts.values()];
       timeouts.clear();
-      due.forEach(({ callback }) => callback());
+      due.forEach(({ callback }) => {
+        callback();
+      });
     },
     tickIntervals() {
-      [...intervals.values()].forEach(({ callback }) => callback());
+      [...intervals.values()].forEach(({ callback }) => {
+        callback();
+      });
     },
   };
 };

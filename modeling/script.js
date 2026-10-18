@@ -318,7 +318,9 @@
     const loadAround = (center) => {
       [center - 1, center, center + 1]
         .filter((candidate) => candidate >= 0 && candidate < slides.length)
-        .forEach((candidate) => loadSlide(slides[candidate]));
+        .forEach((candidate) => {
+          loadSlide(slides[candidate]);
+        });
     };
 
     const syncVideos = () => {
@@ -419,7 +421,9 @@
             },
             { root: strip, rootMargin: "0px 50% 0px 50%", threshold: 0 },
           );
-          slides.forEach((slide) => loader.observe(slide));
+          slides.forEach((slide) => {
+            loader.observe(slide);
+          });
         }
         loadAround(index);
         syncVideos();
@@ -742,7 +746,9 @@
       if (frame) return;
       frame = window.requestAnimationFrame(() => {
         frame = 0;
-        controllers.forEach((controller) => controller.realign());
+        controllers.forEach((controller) => {
+          controller.realign();
+        });
       });
     });
   };

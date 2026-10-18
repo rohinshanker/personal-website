@@ -294,7 +294,9 @@
   };
 
   const clampVisibleRandomEventWindows = () => {
-    randomEventViewportWindows().forEach((win) => clampRandomEventWindowToViewport(win));
+    randomEventViewportWindows().forEach((win) => {
+      clampRandomEventWindowToViewport(win);
+    });
   };
 
   const randomEventWatchedImages = new WeakSet();
@@ -572,7 +574,9 @@
   // the page is observable, so the queued `bind()` callbacks run from the one call
   // site below instead of during registration.
   const bindRegisteredRandomEvents = () => {
-    randomEventBindings.forEach((bind) => bind());
+    randomEventBindings.forEach((bind) => {
+      bind();
+    });
     watchRandomEventViewportMedia();
     randomEventBindings.length = 0;
   };

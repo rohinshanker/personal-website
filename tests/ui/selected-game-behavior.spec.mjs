@@ -94,12 +94,12 @@ for (const viewport of REVIEW_VIEWPORTS) {
         },
       ),
     );
-    positions.forEach((position) => expect(position.width).toBeGreaterThan(0));
-    positions
-      .slice(1)
-      .forEach((position, index) =>
-        expect(positions[index].right).toBeLessThanOrEqual(position.left),
-      );
+    positions.forEach((position) => {
+      expect(position.width).toBeGreaterThan(0);
+    });
+    positions.slice(1).forEach((position, index) => {
+      expect(positions[index].right).toBeLessThanOrEqual(position.left);
+    });
     await minesweeper.getByRole("button", { name: "Close" }).click();
     const solitaire = await openApp(page, "solitaire");
     expect(

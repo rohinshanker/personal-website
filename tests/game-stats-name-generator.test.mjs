@@ -148,7 +148,9 @@ test("the profile name generator uses the live Sky COTL grammar and caches it pe
   const suggestions = await runtime.fetchGeneratedNames();
   assert.equal(suggestions.length, 5);
   assert.equal(new Set(suggestions).size, 5);
-  suggestions.forEach((name) => assert.equal(isSkyGrammarName(name), true));
+  suggestions.forEach((name) => {
+    assert.equal(isSkyGrammarName(name), true);
+  });
   assert.deepEqual(
     calls.map(({ url }) => url),
     ["https://perchance.org/api/downloadGenerator?generatorName=sky-cotl-namegen&listsOnly=true"],

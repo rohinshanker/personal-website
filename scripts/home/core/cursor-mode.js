@@ -117,7 +117,9 @@
   };
 
   const notifyModeListeners = () => {
-    modeListeners.forEach((listener) => listener(currentMode));
+    modeListeners.forEach((listener) => {
+      listener(currentMode);
+    });
   };
 
   const applyMode = (mode) => {
@@ -188,7 +190,9 @@
       } else {
         scheduleLoadingSync();
       }
-      bodyMutationListeners.forEach((listener) => listener(records));
+      bodyMutationListeners.forEach((listener) => {
+        listener(records);
+      });
     });
     let isBodyObserved = false;
     let loadingFrame = 0;
@@ -297,9 +301,9 @@
     loadingRuntime ||= createLoadingRuntime();
     loadingRuntime.addSource(isLoading);
     if (observeBody) loadingRuntime.observeBody();
-    observations.forEach(({ target, options, immediate }) =>
-      loadingRuntime.observe(target, options, immediate),
-    );
+    observations.forEach(({ target, options, immediate }) => {
+      loadingRuntime.observe(target, options, immediate);
+    });
     return loadingRuntime;
   };
 

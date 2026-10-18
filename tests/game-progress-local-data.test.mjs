@@ -73,7 +73,7 @@ test("Game Progress reset clears only local aggregate, profile, and Snake record
   // Each game wipes its own records; the reset only asks them to.
   assert.match(
     resetSource,
-    /gameStatsLocalSources\.forEach\(\(source\) => source\.resetLocalData\?\.\(\)\);/,
+    /gameStatsLocalSources\.forEach\(\(source\) => \{\s*source\.resetLocalData\?\.\(\);\s*\}\);/,
   );
   const snake = await readHomeScript("snake");
   assert.match(

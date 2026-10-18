@@ -28,7 +28,7 @@ test("Snake uses four shared leaderboard panels in two fixed columns", async () 
   assert.ok(personalRecord, "Snake should render one player record per board size");
   assert.ok(totalGames, "Snake should render a global game total per board size");
   assert.ok(renderSnake, "Snake should have a dedicated stats renderer");
-  assert.match(globalRows[1], /Array\.from\(\{ length: 3 \}/);
+  assert.match(globalRows[1], /for \(let index = 0; index < 3; index \+= 1\)/);
   assert.match(globalRows[1], /GAME_STATS_MEDAL_SOURCES\[index\]/);
   assert.match(globalRows[1], /game-stats-leaderboard-template-medal/);
   assert.match(globalRows[1], /entry\?\.name \|\| "N\/A"/);

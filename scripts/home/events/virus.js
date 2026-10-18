@@ -274,7 +274,9 @@
     ctx.shadowColor = "rgba(65, 180, 255, 0.95)";
     ctx.beginPath();
     ctx.moveTo(startX, startY);
-    path.forEach(([x, y]) => ctx.lineTo(x, y));
+    path.forEach(([x, y]) => {
+      ctx.lineTo(x, y);
+    });
     ctx.stroke();
 
     ctx.strokeStyle = `rgba(126, 219, 255, ${opacity})`;
@@ -282,7 +284,9 @@
     ctx.shadowBlur = 6;
     ctx.beginPath();
     ctx.moveTo(startX, startY);
-    path.forEach(([x, y]) => ctx.lineTo(x, y));
+    path.forEach(([x, y]) => {
+      ctx.lineTo(x, y);
+    });
     ctx.stroke();
 
     ctx.strokeStyle = `rgba(245, 252, 255, ${Math.min(1, opacity + 0.22)})`;
@@ -290,7 +294,9 @@
     ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.moveTo(startX, startY);
-    path.forEach(([x, y]) => ctx.lineTo(x, y));
+    path.forEach(([x, y]) => {
+      ctx.lineTo(x, y);
+    });
     ctx.stroke();
     ctx.restore();
   };

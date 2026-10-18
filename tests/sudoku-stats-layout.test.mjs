@@ -28,7 +28,7 @@ test("Sudoku uses six shared leaderboard panels in three columns and two rows", 
   assert.ok(personalRecord, "Sudoku should render one player record per difficulty");
   assert.ok(totalGames, "Sudoku should render one global completion total per difficulty");
   assert.ok(renderer, "Sudoku should have a dedicated leaderboard renderer");
-  assert.match(globalRows[1], /Array\.from\(\{ length: 3 \}/);
+  assert.match(globalRows[1], /for \(let index = 0; index < 3; index \+= 1\)/);
   assert.match(globalRows[1], /GAME_STATS_MEDAL_SOURCES\[index\]/);
   assert.match(globalRows[1], /GAME_STATS_EMPTY_LEADERBOARD_ICON/);
   assert.match(globalRows[1], /Number\.isFinite\(entry\?\.metric\) \? entry\.metric : null/);

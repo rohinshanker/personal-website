@@ -67,8 +67,14 @@ const make = ({ hidden = true, aria = "true" } = {}) => {
     offsetWidth: 50,
     classList: {
       contains: (value) => classes.has(value),
-      add: (...values) => values.forEach((value) => classes.add(value)),
-      remove: (...values) => values.forEach((value) => classes.delete(value)),
+      add: (...values) =>
+        values.forEach((value) => {
+          classes.add(value);
+        }),
+      remove: (...values) =>
+        values.forEach((value) => {
+          classes.delete(value);
+        }),
     },
     getAttribute: (key) => attrs[key],
     setAttribute: (key, value) => {

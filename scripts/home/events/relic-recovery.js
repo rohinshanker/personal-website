@@ -190,9 +190,9 @@
   const clearRelicRecoveryFlyers = () => {
     clearRelicRecoveryFlyTimer();
     relicRecoveryFlyingId = "";
-    relicRecoveryScene
-      ?.querySelectorAll(".relic-recovery-flyer")
-      .forEach((flyer) => flyer.remove());
+    relicRecoveryScene?.querySelectorAll(".relic-recovery-flyer").forEach((flyer) => {
+      flyer.remove();
+    });
   };
 
   const clearRelicRecoveryTyping = () => {
@@ -560,7 +560,9 @@
   const configureRelicRecoveryPreview = (preview) => {
     if (!preview) return;
     preview.classList.remove("is-detail-open", "is-complete");
-    preview.querySelectorAll(".relic-recovery-flyer").forEach((flyer) => flyer.remove());
+    preview.querySelectorAll(".relic-recovery-flyer").forEach((flyer) => {
+      flyer.remove();
+    });
 
     const detail = preview.querySelector("#relic-recovery-detail");
     detail?.classList.add("is-hidden");

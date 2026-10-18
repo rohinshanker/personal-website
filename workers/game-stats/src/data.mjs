@@ -5,7 +5,7 @@ import {
   GAME_STATS_SUDOKU_DIFFICULTIES,
 } from "./constants.mjs";
 
-const keyed = (keys, valueOf) => Object.fromEntries(keys.map((key) => [key, valueOf(key)]));
+const keyed = (keys, valueFor) => Object.fromEntries(keys.map((key) => [key, valueFor(key)]));
 
 export const createEmptyPlayerTotals = () => ({
   minesweeper: { wins: keyed(GAME_STATS_DIFFICULTIES, () => 0) },

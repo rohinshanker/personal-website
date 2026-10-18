@@ -683,7 +683,9 @@ const runCli = ({ argv, root }) => {
 test("the CLI encodes, then skips, then verifies the same scratch repository", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "optimize-media-cli-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  MEDIA_MANIFEST.forEach((entry) => writeFixtureFile(root, entry.source, 512));
+  MEDIA_MANIFEST.forEach((entry) => {
+    writeFixtureFile(root, entry.source, 512);
+  });
 
   // The CLI owns the real manifest and resolves encoders from PATH, so the stubs
   // go on PATH. That runs every branch in-process, where the coverage report can

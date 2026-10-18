@@ -300,7 +300,9 @@ test("Neko stream plans exactly forty bounded, chronologically scheduled cats", 
 
   const earliestPlan = planner.createPlan({ count: 40, random: () => 0 });
   const latestPlan = planner.createPlan({ count: 40, random: () => 1 });
-  earliestPlan.forEach((cat, index) => assert.equal(cat.spawnDelayMs, index * 250));
+  earliestPlan.forEach((cat, index) => {
+    assert.equal(cat.spawnDelayMs, index * 250);
+  });
   latestPlan.forEach((cat, index) => {
     assert.ok(cat.spawnDelayMs >= index * 250);
     assert.ok(cat.spawnDelayMs < (index + 1) * 250);

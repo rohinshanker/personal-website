@@ -105,9 +105,9 @@ const inspectBoardNodes = (mode) => {
       add(`col:${index}:${card.dataset.solCardId}`, card);
     });
   });
-  document
-    .querySelectorAll("#sol-waste .sol-card")
-    .forEach((card) => add(`waste:${card.dataset.solCardId}`, card));
+  document.querySelectorAll("#sol-waste .sol-card").forEach((card) => {
+    add(`waste:${card.dataset.solCardId}`, card);
+  });
   document.querySelectorAll("[data-sol-foundation]").forEach((slot) => {
     slot.querySelectorAll(".sol-card").forEach((card) => {
       add(`foundation:${slot.dataset.solFoundation}:${card.dataset.solCardId}`, card);

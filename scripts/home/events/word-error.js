@@ -20,8 +20,12 @@
   let wordErrorStackClosing = false;
 
   const clearWordErrorTimers = () => {
-    wordErrorOpenTimers.forEach((timer) => clearTimeout(timer));
-    wordErrorCloseTimers.forEach((timer) => clearTimeout(timer));
+    wordErrorOpenTimers.forEach((timer) => {
+      clearTimeout(timer);
+    });
+    wordErrorCloseTimers.forEach((timer) => {
+      clearTimeout(timer);
+    });
     wordErrorOpenTimers = [];
     wordErrorCloseTimers = [];
   };
@@ -72,7 +76,9 @@
   const closeWordErrorStack = (selectedWindow) => {
     if (wordErrorStackClosing) return;
     wordErrorStackClosing = true;
-    wordErrorOpenTimers.forEach((timer) => clearTimeout(timer));
+    wordErrorOpenTimers.forEach((timer) => {
+      clearTimeout(timer);
+    });
     wordErrorOpenTimers = [];
 
     const visibleWindows = wordErrorWindows.filter((win) => !win.classList.contains("is-hidden"));
@@ -188,7 +194,9 @@
       createWordErrorWindow(index, layout),
     );
 
-    wordErrorWindows.forEach((win) => document.body.appendChild(win));
+    wordErrorWindows.forEach((win) => {
+      document.body.appendChild(win);
+    });
     wordErrorWindows.forEach((win, index) => {
       const timer = setTimeout(() => {
         if (wordErrorStackClosing || !wordErrorWindows.includes(win)) return;

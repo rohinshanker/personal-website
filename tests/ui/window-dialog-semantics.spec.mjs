@@ -222,7 +222,9 @@ test("the shared helper covers every naming and exclusion branch", async ({ page
   expect(results.collision[1]).toMatch(/^window-title-\d+$/);
   const anonymousIds = results.anonymous.map(([, id]) => id);
   expect(results.anonymous.map(([applied]) => applied)).toEqual([true, true]);
-  anonymousIds.forEach((id) => expect(id).toMatch(/^window-title-\d+$/));
+  anonymousIds.forEach((id) => {
+    expect(id).toMatch(/^window-title-\d+$/);
+  });
   expect(new Set([results.collision[1], ...anonymousIds]).size).toBe(3);
 
   expect(results.labelled).toEqual([

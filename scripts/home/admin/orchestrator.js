@@ -112,9 +112,9 @@
     preview.removeAttribute("aria-modal");
     preview.removeAttribute("role");
     preview.setAttribute("data-admin-event-preview-window", eventId);
-    ["left", "right", "top", "bottom", "translate", "transform", "z-index"].forEach((property) =>
-      preview.style.removeProperty(property),
-    );
+    ["left", "right", "top", "bottom", "translate", "transform", "z-index"].forEach((property) => {
+      preview.style.removeProperty(property);
+    });
     preview.querySelectorAll("audio, video").forEach((media) => {
       media.autoplay = false;
       media.controls = false;
@@ -423,8 +423,10 @@
     }
 
     if (presetId === "desktop-activity") {
-      ADMIN_DESKTOP_ACTIVITY_APPS.slice(0, adminPresetIntensityCount(intensity)).forEach((appId) =>
-        setWindowOpen(appId, true),
+      ADMIN_DESKTOP_ACTIVITY_APPS.slice(0, adminPresetIntensityCount(intensity)).forEach(
+        (appId) => {
+          setWindowOpen(appId, true);
+        },
       );
       return adminRandomEventResult(true, "Opened a desktop activity scene.");
     }

@@ -261,7 +261,9 @@
   const stopRohinNekoAvatarAnimation = () => {
     rohinNekoAvatarObserver?.disconnect();
     rohinNekoAvatarObserver = null;
-    rohinNekoAvatarInstances.forEach((instance) => clearRohinNekoAvatarInstanceTimers(instance));
+    rohinNekoAvatarInstances.forEach((instance) => {
+      clearRohinNekoAvatarInstanceTimers(instance);
+    });
     rohinNekoAvatarInstances.clear();
     document.querySelectorAll("img[data-rohin-neko-avatar]").forEach((image) => {
       if (image.getAttribute("src") !== NEKO_SPRITES.yawn1) image.src = NEKO_SPRITES.yawn1;
@@ -902,7 +904,9 @@
 
   const stopNekoStream = () => {
     nekoStreamGeneration += 1;
-    nekoStreamSpawnTimerIds.forEach((timerId) => window.clearTimeout(timerId));
+    nekoStreamSpawnTimerIds.forEach((timerId) => {
+      window.clearTimeout(timerId);
+    });
     nekoStreamSpawnTimerIds.clear();
     if (nekoStreamAnimationFrameId !== null) {
       window.cancelAnimationFrame(nekoStreamAnimationFrameId);
@@ -949,7 +953,9 @@
     nekoContextMenu.style.removeProperty("left");
     nekoContextMenu.style.removeProperty("top");
     nekoContextMenu.style.removeProperty("visibility");
-    nekoLaunchers.forEach((launcher) => launcher.setAttribute("aria-expanded", "false"));
+    nekoLaunchers.forEach((launcher) => {
+      launcher.setAttribute("aria-expanded", "false");
+    });
     nekoContextMenuOrigin = null;
     if (restoreFocus && origin?.isConnected) origin.focus({ preventScroll: true });
   };

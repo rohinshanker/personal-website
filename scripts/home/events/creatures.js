@@ -297,9 +297,9 @@
         });
       }
 
-      [stalkerWindow, stalkerResultWindow].forEach((win) =>
-        bindManagedRandomEventWindowAnimation(win),
-      );
+      [stalkerWindow, stalkerResultWindow].forEach((win) => {
+        bindManagedRandomEventWindowAnimation(win);
+      });
     },
   });
 
@@ -337,9 +337,9 @@
         });
       }
 
-      [nanaEncounterWindow, nanaAcceptWindow].forEach((win) =>
-        bindManagedRandomEventWindowAnimation(win),
-      );
+      [nanaEncounterWindow, nanaAcceptWindow].forEach((win) => {
+        bindManagedRandomEventWindowAnimation(win);
+      });
     },
   });
 
@@ -377,9 +377,9 @@
         });
       }
 
-      [servalEncounterWindow, servalPizzaWindow].forEach((win) =>
-        bindManagedRandomEventWindowAnimation(win),
-      );
+      [servalEncounterWindow, servalPizzaWindow].forEach((win) => {
+        bindManagedRandomEventWindowAnimation(win);
+      });
     },
   });
 
@@ -421,9 +421,9 @@
         });
       }
 
-      [caracalEncounterWindow, caracalResultWindow].forEach((win) =>
-        bindManagedRandomEventWindowAnimation(win),
-      );
+      [caracalEncounterWindow, caracalResultWindow].forEach((win) => {
+        bindManagedRandomEventWindowAnimation(win);
+      });
     },
   });
 
@@ -461,9 +461,9 @@
         });
       }
 
-      [shoebillEncounterWindow, shoebillBowWindow].forEach((win) =>
-        bindManagedRandomEventWindowAnimation(win),
-      );
+      [shoebillEncounterWindow, shoebillBowWindow].forEach((win) => {
+        bindManagedRandomEventWindowAnimation(win);
+      });
     },
   });
 

@@ -401,7 +401,9 @@ export const createGameStatsDataFromSqlRows = ({
   const legacy = protocol !== STATS_API_PROTOCOL;
   const stats = createEmptyGameStatsData({ legacy });
   stats.generatedAt = new Date().toISOString();
-  totalsRows.forEach((row) => applyTotalRow(stats, row));
+  totalsRows.forEach((row) => {
+    applyTotalRow(stats, row);
+  });
   rankingRows.forEach((row) => {
     const targets = categoryTargets(stats, row);
     if (!targets) return;

@@ -337,7 +337,9 @@
       loadDeferredMedia(root, true);
       return;
     }
-    contentActivators.forEach((activate) => activate(root));
+    contentActivators.forEach((activate) => {
+      activate(root);
+    });
   };
 
   const isWindowVisible = (win) =>
@@ -463,7 +465,9 @@
     suspendedActiveWindow = null;
     win.style.zIndex = String(nextWindowZIndex());
     playActiveAutoplayVideos(win);
-    activeWindowObservers.forEach((observer) => observer.onActivate?.(win));
+    activeWindowObservers.forEach((observer) => {
+      observer.onActivate?.(win);
+    });
   };
 
   const isSmallResizableWindow = (win) => {
@@ -942,7 +946,9 @@
 
     if (activeWindow === win) activeWindow = null;
     if (suspendedActiveWindow === win) suspendedActiveWindow = null;
-    activeWindowObservers.forEach((observer) => observer.onWindowClosed?.(win));
+    activeWindowObservers.forEach((observer) => {
+      observer.onWindowClosed?.(win);
+    });
 
     windowLifecycle(appId).onClose?.(win);
 
@@ -979,7 +985,9 @@
     appWindows.forEach((win) => {
       closeAppWindow(win.getAttribute("data-app-window"));
     });
-    closeAllHooks.forEach((hook) => hook());
+    closeAllHooks.forEach((hook) => {
+      hook();
+    });
   };
 
   const focusAdminControls = () => {
@@ -1027,7 +1035,8 @@
       return;
     }
 
-    const generation = (adminControlsLaunchGeneration += 1);
+    adminControlsLaunchGeneration += 1;
+    const generation = adminControlsLaunchGeneration;
     adminControlsLaunchFocusReturn = focusReturn;
     setAdminControlsResourceBusy(true);
     configureAdminControlsStandIn("loading");
@@ -1232,7 +1241,9 @@
       if (!shouldKeepActiveWindowMediaPlaying(activeWindow)) {
         pauseMediaPlayback(activeWindow);
       }
-      activeWindowObservers.forEach((observer) => observer.onDeactivate?.());
+      activeWindowObservers.forEach((observer) => {
+        observer.onDeactivate?.();
+      });
       activeWindow = null;
       suspendedActiveWindow = null;
     },
@@ -1243,7 +1254,9 @@
     if (!activeWindow) return;
     suspendedActiveWindow = activeWindow;
     pauseMediaPlayback(activeWindow);
-    activeWindowObservers.forEach((observer) => observer.onDeactivate?.());
+    activeWindowObservers.forEach((observer) => {
+      observer.onDeactivate?.();
+    });
     activeWindow = null;
   };
 
@@ -1257,7 +1270,9 @@
     }
     activeWindow = suspendedActiveWindow;
     suspendedActiveWindow = null;
-    activeWindowObservers.forEach((observer) => observer.onActivate?.(activeWindow));
+    activeWindowObservers.forEach((observer) => {
+      observer.onActivate?.(activeWindow);
+    });
   };
 
   window.addEventListener("blur", pauseActiveWindowMedia);
@@ -1296,7 +1311,9 @@
   let windowResizeFrameId = 0;
 
   const dispatchWindowResize = () => {
-    viewportObservers.forEach((observer) => observer.onResize?.());
+    viewportObservers.forEach((observer) => {
+      observer.onResize?.();
+    });
     if (windowResizeFrameId) return;
     windowResizeFrameId = requestAnimationFrame(() => {
       windowResizeFrameId = 0;
@@ -1307,7 +1324,9 @@
       portfolioWindowSizes.forEach(({ win, width, height }) => {
         setPortfolioResponsiveState(win, width, height);
       });
-      viewportObservers.forEach((observer) => observer.onFrame?.());
+      viewportObservers.forEach((observer) => {
+        observer.onFrame?.();
+      });
       clampVisibleWindowTitleBars(readVisibleWindowTitleBarClamps());
     });
   };

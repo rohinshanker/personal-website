@@ -7,7 +7,9 @@ const viewports = REVIEW_VIEWPORTS;
 
 const appendOverflowingConversation = (page) =>
   page.locator("#red-tool-chat-log").evaluate((log) => {
-    log.querySelectorAll(".red-tool-message").forEach((message) => message.remove());
+    log.querySelectorAll(".red-tool-message").forEach((message) => {
+      message.remove();
+    });
     for (let index = 1; index <= 16; index += 1) {
       const row = document.createElement("div");
       row.className = "red-tool-message";

@@ -146,7 +146,11 @@ test("sudoku: the three check allowances are spent only on revealed mistakes", (
   const state = sudoku.initial(into(fixtures.sudoku.valid[0].initial));
   const wrong = String((Number(state.solution[1]) % 9) + 1);
   let seq = 0;
-  const play = (action) => sudoku.transition(state, into({ ...action, seq: (seq += 1) }), budget);
+  const nextSeq = () => {
+    seq += 1;
+    return seq;
+  };
+  const play = (action) => sudoku.transition(state, into({ ...action, seq: nextSeq() }), budget);
 
   // A clean board is free, however many allowances are left.
   play({ op: "check" });
@@ -179,7 +183,11 @@ test("sudoku: undo and redo restore the board and never the assistance", () => {
   );
   const wrong = String((Number(state.solution[1]) % 9) + 1);
   let seq = 0;
-  const play = (action) => sudoku.transition(state, into({ ...action, seq: (seq += 1) }), budget);
+  const nextSeq = () => {
+    seq += 1;
+    return seq;
+  };
+  const play = (action) => sudoku.transition(state, into({ ...action, seq: nextSeq() }), budget);
 
   play({ op: "setValue", index: 1, value: wrong });
   assert.equal(state.usedHint, true, "A marked wrong value latches the puzzle.");
@@ -215,9 +223,15 @@ test("sudoku: placing a digit retires the pencil marks it rules out, as one move
   const digit = state.solution[1];
   const peers = plainValue(sudoku.PEERS[1]).filter((index) => state.puzzle[index] === "0");
   let seq = 0;
-  const play = (action) => sudoku.transition(state, into({ ...action, seq: (seq += 1) }), budget);
+  const nextSeq = () => {
+    seq += 1;
+    return seq;
+  };
+  const play = (action) => sudoku.transition(state, into({ ...action, seq: nextSeq() }), budget);
 
-  peers.slice(0, 4).forEach((index) => play({ op: "toggleNote", index, digit }));
+  peers.slice(0, 4).forEach((index) => {
+    play({ op: "toggleNote", index, digit });
+  });
   assert.ok(peers.slice(0, 4).every((index) => state.notes[index] === digit));
 
   play({ op: "setValue", index: 1, value: digit });
@@ -250,8 +264,12 @@ test("a played digit is exactly one digit, and the board stays eighty-one cells"
   const lastBlank = blanks.at(-1);
   const forged = sudoku.initial(into(issued));
   let seq = 0;
+  const nextSeq = () => {
+    seq += 1;
+    return seq;
+  };
   const play = (state, action) =>
-    sudoku.transition(state, into({ ...action, seq: (seq += 1) }), budget());
+    sudoku.transition(state, into({ ...action, seq: nextSeq() }), budget());
 
   blanks.slice(0, -1).forEach((index) => {
     play(forged, { op: "setValue", index, value: issued.solution[index] });

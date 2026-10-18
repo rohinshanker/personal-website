@@ -952,7 +952,8 @@
     }
 
     existingEntry?.controller?.abort();
-    const sessionKey = `${game}-${Date.now().toString(36)}-${(gameStatsSessionSequence += 1)}`;
+    gameStatsSessionSequence += 1;
+    const sessionKey = `${game}-${Date.now().toString(36)}-${gameStatsSessionSequence}`;
     const controller = typeof AbortController === "function" ? new AbortController() : null;
     const entry = {
       configKey,
@@ -1717,12 +1718,15 @@
       }
       return false;
     } finally {
-      if (rollId !== gameStatsNameRollId) return;
-      gameStatsNameRollInFlight = false;
-      updateGameProfileRerollState();
-      setGameProfileNameSuggestionsVisible(Boolean(gameStatsDraftNameSuggestions.length));
-      if (gameStatsNameSuggestionsOpen) {
-        setGameProfileNameSuggestionActive(gameStatsNameSuggestionActiveIndex);
+      // Only the newest roll owns the shared UI state; the try and catch above
+      // already return for a superseded roll, so nothing else runs here for it.
+      if (rollId === gameStatsNameRollId) {
+        gameStatsNameRollInFlight = false;
+        updateGameProfileRerollState();
+        setGameProfileNameSuggestionsVisible(Boolean(gameStatsDraftNameSuggestions.length));
+        if (gameStatsNameSuggestionsOpen) {
+          setGameProfileNameSuggestionActive(gameStatsNameSuggestionActiveIndex);
+        }
       }
     }
   };
@@ -2061,7 +2065,9 @@
       );
       const statsQuery = new URLSearchParams({ protocol: GAME_STATS_API_PROTOCOL });
       if (requestedPlayerId) statsQuery.set("playerId", requestedPlayerId);
-      requestedAcknowledgmentIds.forEach((eventId) => statsQuery.append("pendingEventId", eventId));
+      requestedAcknowledgmentIds.forEach((eventId) => {
+        statsQuery.append("pendingEventId", eventId);
+      });
       if (fresh) statsQuery.set("fresh", "1");
       const response = await fetchGameStatsApi(`/stats?${statsQuery}`, {
         method: "GET",
@@ -2877,7 +2883,7 @@
   };
 
   const appendMinesweeperLeaderboardRows = (list, entries) => {
-    Array.from({ length: 3 }, (_, index) => {
+    for (let index = 0; index < 3; index += 1) {
       const entry = entries[index] || null;
       const metricValue = entry?.metric ?? 999;
       const medal = document.createElement("img");
@@ -2907,7 +2913,7 @@
         }`,
       });
       list.append(row);
-    });
+    }
   };
 
   const appendGameStatsLeaderboardMetric = (
@@ -2950,7 +2956,7 @@
   };
 
   const appendSudokuGlobalLeaderboardRows = (list, entries, appendMetric) => {
-    Array.from({ length: 3 }, (_, index) => {
+    for (let index = 0; index < 3; index += 1) {
       const entry = entries[index] || null;
       const seconds = Number.isFinite(entry?.metric) ? entry.metric : null;
       const timeLabel = seconds === null ? "no recorded time" : `${seconds} seconds`;
@@ -2982,7 +2988,7 @@
           }`,
         }),
       );
-    });
+    }
   };
 
   const appendSudokuPersonalRecord = (panel, difficulty, appendMetric) => {
@@ -3050,7 +3056,7 @@
   };
 
   const appendSolitaireGlobalLeaderboardRows = (list, entries) => {
-    Array.from({ length: 3 }, (_, index) => {
+    for (let index = 0; index < 3; index += 1) {
       const entry = entries[index] || null;
       const wins = entry?.metric ?? 0;
       const medal = document.createElement("img");
@@ -3081,7 +3087,7 @@
           }${isCurrentPlayer ? ", your entry" : ""}`,
         }),
       );
-    });
+    }
   };
 
   const appendSolitairePersonalRecord = (panel) => {
@@ -3149,7 +3155,7 @@
   };
 
   const appendSnakeGlobalLeaderboardRows = (list, entries) => {
-    Array.from({ length: 3 }, (_, index) => {
+    for (let index = 0; index < 3; index += 1) {
       const entry = entries[index] || null;
       const score = entry?.metric ?? 0;
       const medal = document.createElement("img");
@@ -3180,7 +3186,7 @@
           }`,
         }),
       );
-    });
+    }
   };
 
   const appendSnakePersonalRecord = (panel, size) => {
@@ -3596,7 +3602,9 @@
     saveGameStatsLocalState();
     clearGameStatsProfile();
 
-    gameStatsLocalSources.forEach((source) => source.resetLocalData?.());
+    gameStatsLocalSources.forEach((source) => {
+      source.resetLocalData?.();
+    });
 
     // Keep the sync queue and global state intact: reset is local-only and must
     // never retract verified or already queued leaderboard results.
@@ -3622,9 +3630,9 @@
 
     const ellipsis = createGameStatsNode("span", "game-stats-sync-ellipsis");
     ellipsis.setAttribute("aria-hidden", "true");
-    Array.from({ length: 3 }, () => {
+    for (let dot = 0; dot < 3; dot += 1) {
       ellipsis.append(createGameStatsNode("span", "", "."));
-    });
+    }
     status.setAttribute("aria-label", message);
     status.replaceChildren(document.createTextNode(message.slice(0, -3)), ellipsis);
   };
@@ -3802,7 +3810,9 @@
         !windowParts.windowElement.classList.contains("is-closing"),
     );
     if (visibleWindows.length < 2) {
-      visibleWindows.forEach(({ windowElement }) => clampWindowFullyIntoViewport(windowElement));
+      visibleWindows.forEach(({ windowElement }) => {
+        clampWindowFullyIntoViewport(windowElement);
+      });
       return;
     }
 
@@ -3967,7 +3977,8 @@
       }
 
       if (administratorSignIn) administratorSignIn.disabled = true;
-      const signInAttemptId = (administratorSignInAttemptId += 1);
+      administratorSignInAttemptId += 1;
+      const signInAttemptId = administratorSignInAttemptId;
       const signInController = typeof AbortController === "function" ? new AbortController() : null;
       administratorSignInAbortController = signInController;
       let administratorProof = null;

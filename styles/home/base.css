@@ -692,6 +692,7 @@ body {
   display: flex;
   gap: 12px;
   max-height: calc(100vh - 92px);
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh declaration above is the fallback for browsers without dynamic viewport units */
   max-height: calc(100dvh - 92px);
   overflow: auto;
 }
@@ -881,6 +882,7 @@ body {
     flex-direction: column;
     gap: 8px;
     max-height: calc(100vh - 84px);
+    /* biome-ignore lint/suspicious/noDuplicateProperties: the vh declaration above is the fallback for browsers without dynamic viewport units */
     max-height: calc(100dvh - 84px);
   }
 

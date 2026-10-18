@@ -273,7 +273,9 @@
     }
     const pendingInputs = msState.pendingInputs;
     msState.pendingInputs = [];
-    pendingInputs.forEach((input) => msApplyEngineInput(input));
+    pendingInputs.forEach((input) => {
+      msApplyEngineInput(input);
+    });
     if (typeof msStats.resumeGame === "function") {
       try {
         await msStats.resumeGame();
@@ -511,7 +513,9 @@
   };
 
   const msRenderAll = () => {
-    msState.cells.forEach((_, index) => msRenderCell(index));
+    msState.cells.forEach((_, index) => {
+      msRenderCell(index);
+    });
     msUpdateCounters();
   };
 

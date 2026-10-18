@@ -23,13 +23,15 @@ test("exported Minesweeper fixtures reproduce a win and expose rejected variants
   const fixture = verifiedMinesweeperFixtures.validWin;
   const replay = context.homeGameRules.assertReplay(inRealm(fixture.replay));
   const state = context.homeMinesweeperRules.initial(inRealm(fixture.initial));
-  replay.forEach((input) => context.homeMinesweeperRules.transition(state, input));
+  replay.forEach((input) => {
+    context.homeMinesweeperRules.transition(state, input);
+  });
   assert.deepEqual(plain(context.homeMinesweeperRules.result(state)), fixture.result);
 
   const truncatedState = context.homeMinesweeperRules.initial(inRealm(fixture.initial));
-  verifiedMinesweeperFixtures.invalid.truncatedReplay.forEach((input) =>
-    context.homeMinesweeperRules.transition(truncatedState, inRealm(input)),
-  );
+  verifiedMinesweeperFixtures.invalid.truncatedReplay.forEach((input) => {
+    context.homeMinesweeperRules.transition(truncatedState, inRealm(input));
+  });
   assert.equal(context.homeMinesweeperRules.result(truncatedState).terminal, false);
   assert.throws(() =>
     context.homeGameRules.assertReplay(
@@ -45,7 +47,9 @@ test("exported Snake fixtures reproduce a terminal tick and reject replay assert
   while (state.tick < fixture.terminalTick) {
     replay
       .filter((input) => input.tick === state.tick)
-      .forEach((input) => context.homeSnakeRules.transition(state, input));
+      .forEach((input) => {
+        context.homeSnakeRules.transition(state, input);
+      });
     context.homeSnakeRules.step(state);
   }
   assert.deepEqual(plain(context.homeSnakeRules.result(state)), fixture.result);

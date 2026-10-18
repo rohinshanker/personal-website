@@ -294,7 +294,9 @@
       return body;
     });
     const image = `url("${sheet.toDataURL("image/png")}")`;
-    bodies.forEach((body) => body.style.setProperty("--soot-candidate-image", image));
+    bodies.forEach((body) => {
+      body.style.setProperty("--soot-candidate-image", image);
+    });
     return bodies;
   };
 

@@ -410,7 +410,9 @@ const fillBoardAndHoldPrompt = (page) =>
 
 const resumeCheckPrompt = (checkButton) =>
   checkButton.evaluate((element) => {
-    element.getAnimations().forEach((animation) => animation.play());
+    element.getAnimations().forEach((animation) => {
+      animation.play();
+    });
   });
 
 const settleCheckPrompt = (checkButton) =>

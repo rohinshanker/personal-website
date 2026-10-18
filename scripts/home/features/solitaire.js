@@ -910,7 +910,9 @@
 
   const solStartFireworks = () => {
     if (!solFireworks) return;
-    solFireworkTimers.forEach((timer) => clearTimeout(timer));
+    solFireworkTimers.forEach((timer) => {
+      clearTimeout(timer);
+    });
     solFireworkTimers = [];
     if (solFireworkTimeout) clearTimeout(solFireworkTimeout);
 
@@ -1516,9 +1518,9 @@
     window.clearTimeout(run.timer);
     solEndAutoRun();
     run.flyer?.remove();
-    solBoard
-      ?.querySelectorAll(".sol-flying-card, .sol-foundation-flash")
-      .forEach((element) => element.remove());
+    solBoard?.querySelectorAll(".sol-flying-card, .sol-foundation-flash").forEach((element) => {
+      element.remove();
+    });
     solBoard?.classList.remove("is-auto-solving");
     solCancelWindowImpact();
     solRender();
@@ -1665,7 +1667,8 @@
    */
   const solRequestIssuedBoard = () => {
     if (solState.presentation || solStats.hasIssuedGame()) return;
-    const token = (solIssueToken += 1);
+    solIssueToken += 1;
+    const token = solIssueToken;
     const pending = solStats.issueGame({});
     if (!pending) return;
     Promise.resolve(pending).then(

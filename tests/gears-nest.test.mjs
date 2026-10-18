@@ -156,7 +156,7 @@ test("blade lock result clips keep playing through inside and outside clicks", (
   );
   assert.match(
     clickAwayHandler,
-    /activeWindowObservers\.forEach\(\(observer\) => observer\.onDeactivate\?\.\(\)\);\s*activeWindow = null;/,
+    /activeWindowObservers\.forEach\(\(observer\) => \{\s*observer\.onDeactivate\?\.\(\);\s*\}\);\s*activeWindow = null;/,
   );
   assert.match(
     eventSources,

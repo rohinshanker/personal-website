@@ -173,7 +173,9 @@ test("Minesweeper chords legal neighbors and halts the chord on its first mine",
   assert.ok(scenario, "expected a deterministic chord scenario");
   const legal = rules.initial(scenario.raw);
   apply(legal, { op: "reveal", cell: 0 });
-  scenario.mines.forEach((cell) => apply(legal, { op: "mark", cell, mark: "flag" }));
+  scenario.mines.forEach((cell) => {
+    apply(legal, { op: "mark", cell, mark: "flag" });
+  });
   apply(legal, { op: "chord", cell: scenario.index });
   assert.equal(
     scenario.safeCovered.some((cell) => legal.cells[cell].revealed),
@@ -181,7 +183,7 @@ test("Minesweeper chords legal neighbors and halts the chord on its first mine",
   );
 
   const losing = rules.initial(scenario.raw);
-  losing.cells.forEach((cell) =>
+  losing.cells.forEach((cell) => {
     Object.assign(cell, {
       mine: false,
       adjacent: 0,
@@ -189,8 +191,8 @@ test("Minesweeper chords legal neighbors and halts the chord on its first mine",
       mark: "none",
       blown: false,
       misflagged: false,
-    }),
-  );
+    });
+  });
   losing.started = true;
   losing.firstCell = 10;
   losing.cells[10].revealed = true;

@@ -200,7 +200,9 @@ test("the closed Home desktop hides static event overlays without requesting eve
   await expect(vanishingWindow).toBeVisible();
   await expect(explosion).toBeHidden();
   await vanishingWindow.locator("[data-vanishing-popup-button]").evaluateAll((buttons) => {
-    buttons.forEach((button) => button.click());
+    buttons.forEach((button) => {
+      button.click();
+    });
   });
   await expect(vanishingWindow).toHaveClass(/is-exploding/);
   await expect(explosion).toBeVisible();

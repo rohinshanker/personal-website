@@ -181,7 +181,9 @@
     };
     const release = new MutationObserver(() => {
       if (overlay.classList.contains("is-staged")) return;
-      animations.forEach((animation) => animation.play());
+      animations.forEach((animation) => {
+        animation.play();
+      });
       release.disconnect();
       setStatus(
         `Candidate ${variant.toUpperCase()} swarm released: ${sprites.length} sprites${effectsNote}${reducedMotion() ? ", reduced motion" : ""}.`,

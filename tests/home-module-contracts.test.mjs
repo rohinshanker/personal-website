@@ -78,7 +78,9 @@ test("Home classic scripts defer in dependency order and Admin stays ordered on 
     .map((match) => match.slice(1).join(" "))
     .filter((attributes) => !/\btype="module"/.test(attributes));
   assert.ok(classicTags.length > 40);
-  classicTags.forEach((attributes) => assert.match(attributes, /\bdefer\b/));
+  classicTags.forEach((attributes) => {
+    assert.match(attributes, /\bdefer\b/);
+  });
 
   const resources = await readHomeScript("resources");
   assert.ok(

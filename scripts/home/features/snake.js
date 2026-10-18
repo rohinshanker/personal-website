@@ -966,7 +966,9 @@
     }
     const pendingDirections = snakeState.bufferedDirections;
     snakeState.bufferedDirections = [];
-    pendingDirections.forEach((direction) => snakeRecordDirection(direction));
+    pendingDirections.forEach((direction) => {
+      snakeRecordDirection(direction);
+    });
     snakeState.issuePending = false;
     snakeState.countdownStartedAt = performance.now();
     snakeState.countdownDuration = SNAKE_RESUME_COUNTDOWN_MS;

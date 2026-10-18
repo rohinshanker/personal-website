@@ -581,7 +581,9 @@
     const finish = (status) => {
       if (settled) return;
       settled = true;
-      events.forEach((eventName) => element.removeEventListener(eventName, onEvent));
+      events.forEach((eventName) => {
+        element.removeEventListener(eventName, onEvent);
+      });
       if (!retain) record.element = null;
       if (status === "error" && mediaSourcePreloadRequests.get(key) === record) {
         mediaSourcePreloadRequests.delete(key);
@@ -591,7 +593,9 @@
     };
     const onEvent = (event) => finish(event.type === "error" ? "error" : "loaded");
 
-    events.forEach((eventName) => element.addEventListener(eventName, onEvent, { once: true }));
+    events.forEach((eventName) => {
+      element.addEventListener(eventName, onEvent, { once: true });
+    });
     if (element.matches("link")) {
       element.href = source;
       document.head.append(element);
