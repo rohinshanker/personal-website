@@ -8,3 +8,6 @@
 | O | 2026-10-06 | [O_google-search-console-refresh__20260827.md](O_google-search-console-refresh__20260827.md) | Owner confirmed Search Console steps are not done; remain pending. |
 | O | 2026-10-18 | [O_admin-seeded-control-counts__20261018.md](O_admin-seeded-control-counts__20261018.md) | Owner request from the Admin Controls acceptance: spent one-shot seeds grey out instead of vanishing, a Reset re-arms them, and seeds take an every-N-clicks interval and a fire limit. Design questions pending. |
 | O | 2026-10-06 | [O_image-tools__20260731.md](O_image-tools__20260731.md) | Parked at the owner's request; no feature scope or implementation scheduled. |
+| O | 2026-10-18 | [O_projects-cyano-gene-visualizer__20261018.md](O_projects-cyano-gene-visualizer__20261018.md) | Owner requested the Isaacs Lab Cyano gene visualizer as the newest Projects item; content and constraints recorded, not started. |
+| O | 2026-10-18 | [O_projects-win98-site-kit__20261018.md](O_projects-win98-site-kit__20261018.md) | Owner requested a Projects item for the published win98-site-kit; content and constraints recorded, not started. |
+| O | 2026-10-18 | [O_writing-substack-pinned__20261018.md](O_writing-substack-pinned__20261018.md) | Owner requested a pinned Substack item in Writing with Open Substack and Subscribe buttons; content recorded, not started. |
