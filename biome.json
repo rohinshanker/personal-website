@@ -15,7 +15,7 @@
       "**/*.jsonc",
       "**/*.css",
       "!**/package-lock.json",
-      "!assets/**",
+      "!assets",
       "!style.css",
       "!scripts/home/game-stats-backend.js",
       "!workers/game-stats/src/issued-game-catalog.mjs"

@@ -2,7 +2,7 @@
 
 - Purpose: Define test coverage, isolation, timing, and release acceptance contracts.
 - Scope: Node behavior and source contracts, browser UI, Game Stats and Clash Royale Workers, generated artifacts, security, and CI.
-- Last verified: 2026-10-07
+- Last verified: 2026-10-18
 
 ## Test tiers
 
@@ -22,7 +22,12 @@ thresholds; moving a corpus must not reduce it or silently skip it.
 ## Source and behavior coverage
 
 Home tests locate the owning scripts through `tests/helpers/home-scripts.mjs`.
-The boot entry is not a concatenated runtime. Contract tests verify ordered
+Its readers (`readHomeScript`, `readHomeScriptText`, `readProductionScript`)
+return each file-level IIFE with its body dedented to column 0, so a test that
+slices a declaration by its text (`"\n\nconst name"`) is unaffected by the
+formatter's one-level indent; read production scripts through them, not with
+`readFile`, and write regexes against the formatted source (trailing commas,
+wrapped arguments). The boot entry is not a concatenated runtime. Contract tests verify ordered
 script membership, exports, dependencies, game-build inputs, and generated
 references. Behavior tests execute the actual production implementation through
 a focused VM/function seam; browser tests drive the real UI.

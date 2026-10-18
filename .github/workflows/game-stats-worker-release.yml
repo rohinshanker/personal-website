@@ -64,6 +64,8 @@ jobs:
         run: npm ci --prefix workers/game-stats
       - name: Check script and Video Editor syntax
         run: npm run syntax:check
+      - name: Check formatting, import order and lint with Biome
+        run: npm run lint:biome
       - name: Run source tests
         run: npm test
       - name: Verify generated integrity metadata

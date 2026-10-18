@@ -2,7 +2,7 @@
 
 - Purpose: Repeatable repository quality gates and rendered UI validation.
 - Scope: Site JavaScript, generated artifacts, browser UI, and repository secrets.
-- Last verified: 2026-10-12
+- Last verified: 2026-10-18
 
 Use the smallest relevant set while developing, then run the full suite before
 shipping changes that affect site behavior.
@@ -49,6 +49,35 @@ After changing repository context, run:
 ```bash
 node --test tests/context-system.test.mjs
 ```
+
+## Biome formatting and lint
+
+`npm run lint:biome` runs the pinned `@biomejs/biome` in check-only mode
+(`biome ci .`) over the authored JavaScript, MJS, CJS, JSON, JSONC and CSS that
+`biome.json` includes; the release workflow's `verify` job runs it after the
+syntax check. It fails on an unformatted file, an unsorted import block, or a
+lint error, and never rewrites source. Warnings do not fail the gate.
+
+Scope: everything in the repository except lockfiles, the generated manifests
+under `assets/`, the vendored 98.css at `style.css` (its custom-property
+arithmetic does not parse), the generated `scripts/home/game-stats-backend.js`
+and `workers/game-stats/src/issued-game-catalog.mjs`. HTML stays with the axe
+suite. Style: two-space indent, double quotes, line width 100, the recommended
+lint preset and the import organizer.
+
+To fix locally, run `npx biome check --write .` (formatting and import order,
+safe lint fixes) and repair the rest by hand. Keep these rules when repairing:
+
+- A `vh`/`dvh` or `crisp-edges`/`pixelated` pair is a deliberate fallback, not
+  a duplicate. Keep both declarations and put
+  `/* biome-ignore lint/suspicious/noDuplicateProperties: <why> */` on the line
+  before the second one.
+- A `forEach` callback gets a block body; a loop that discards `Array.from`'s
+  array becomes a `for` loop. Neither may change evaluation order.
+- A counter used as a token increments on its own statement before it is read.
+- Source-slicing tests read production scripts through
+  `tests/helpers/home-scripts.mjs`, which moves a file-level IIFE body back to
+  column 0 so declaration markers stay stable under the formatter's indentation.
 
 ## Generated artifacts
 

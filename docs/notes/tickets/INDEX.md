@@ -3,7 +3,7 @@
 | Status | Updated | Ticket | Current state |
 | --- | --- | --- | --- |
 | O | 2026-10-06 | [O_long-descriptive-asset-paths__20261006.md](O_long-descriptive-asset-paths__20261006.md) | Owner requested informative asset path names for AI efficiency; migrate references, manifests and source paths together after preservation. |
-| A | 2026-10-18 | [A_biome-quality-checks__20261007.md](A_biome-quality-checks__20261007.md) | Owner authorized the full normalization and CI wiring on 2026-10-18 with no behaviour change; runs in the main checkout once the seeded-control ticket lands. |
+| A | 2026-10-18 | [A_biome-quality-checks__20261007.md](A_biome-quality-checks__20261007.md) | Normalization and CI gate landed on main 2026-10-18 (formatting, imports, lint repairs, verify job); the four Admin Controls files format after the seeded-control branch merges, then browser and visual gates close it. |
 | A | 2026-10-18 | [A_soot-sprite-redesign__20260929.md](A_soot-sprite-redesign__20260929.md) | Owner chose a mix of F, G and H with boil and blink plus pixel smoke and candy (2026-10-18); built as candidate I on the review page under docs/validation/assets/ for final approval before Stage 2. |
 | O | 2026-10-06 | [O_google-search-console-refresh__20260827.md](O_google-search-console-refresh__20260827.md) | Owner confirmed Search Console steps are not done; remain pending. |
 | A | 2026-10-18 | [A_admin-seeded-control-counts__20261018.md](A_admin-seeded-control-counts__20261018.md) | Design answered 2026-10-18 (Reset re-arms all seeds, fire on every Nth click, limit counts fires); active in session pw-fable-ticket-closing-2 on a worktree branch. |
