@@ -32,6 +32,27 @@
   width: var(--soot-candidate-frame);
 }
 
+/*
+ * Pixel-art smoke and candy. The overlay carries the sheets as custom properties and each
+ * element picks its slot; the production animations keep running on transform and opacity.
+ */
+.is-pixel-effects .soot-star-candy {
+  background: var(--soot-candy-sheet) no-repeat;
+  background-position: calc(var(--candy-size) * -1 * var(--soot-candy-slot, 0)) 0;
+  background-size: calc(var(--candy-size) * var(--soot-candy-slots)) var(--candy-size);
+  clip-path: none;
+  filter: none;
+  image-rendering: pixelated;
+}
+
+.is-pixel-effects .soot-puff {
+  background: var(--soot-puff-sheet) no-repeat;
+  background-position: calc(var(--puff-size) * -2 * var(--soot-puff-shape, 0)) 0;
+  background-size: calc(var(--puff-size) * 2 * var(--soot-puff-shapes)) var(--puff-size);
+  filter: none;
+  image-rendering: pixelated;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .soot-candidate {
     animation: none;

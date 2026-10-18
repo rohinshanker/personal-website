@@ -3,8 +3,8 @@
 - Scope: Add pinned Biome checks for authored code to local validation and CI, reporting formatting/import-order issues and code diagnostics.
 - Status: active
 - Opened: 2026-10-07
-- Updated: 2026-10-17
-- Current State: Baseline assessed 2026-10-17 on branch `claude/retry-feedback-biome-20261017`. `@biomejs/biome` 2.5.15 is pinned, `biome.json` scopes authored JS/CSS/JSON in the existing two-space double-quote style, and `npm run lint:biome` runs the check-only `biome ci .`. The gate is not wired into CI and the tree is not normalized: a Biome-clean tree needs a ~48,000-line formatting diff (see Baseline Assessment), so this stopped per the coordinator's instruction and needs a dedicated pass when no other work is in flight.
+- Updated: 2026-10-18
+- Current State: Baseline assessed 2026-10-17 on branch `claude/retry-feedback-biome-20261017`. `@biomejs/biome` 2.5.15 is pinned, `biome.json` scopes authored JS/CSS/JSON in the existing two-space double-quote style, and `npm run lint:biome` runs the check-only `biome ci .`. The gate is not wired into CI and the tree is not normalized: a Biome-clean tree needs a ~48,000-line formatting diff (see Baseline Assessment), so this stopped per the coordinator's instruction. The owner authorized the full pass on 2026-10-18 (formatting, import order, lint repairs, CI gate) on the condition that no code functionality is altered or lost; it runs in the main checkout as soon as the seeded-control ticket's branch is merged, before any other implementation starts.
 - Verification: Retrieve current official configuration/CLI guidance, pin the development dependency, inspect the baseline, configure the existing code style and explicit vendor/generated exclusions, and resolve actual failures. Verify the real local/CI commands fail on a representative violation and pass on the final authored tree; run affected syntax/behavior/browser/visual/integrity/context gates for any code normalization and review the exact patch.
 - Cleanup: Preserve only the reusable authored/generated/vendor scope and invocation contract in indexed quality-gate guidance, then resolve and delete this ticket/index row after acceptance.
 

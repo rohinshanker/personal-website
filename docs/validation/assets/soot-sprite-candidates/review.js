@@ -6,12 +6,16 @@ const {
   VARIANT_DETAILS,
   applySootSpriteTimeline,
   createSeededRandom,
+  dressSootEffects,
+  renderSootEffectSheets,
   renderSootSprite,
   renderSootSprites,
 } = window.sootSpriteCandidates;
 const registration = window.sootSpriteReviewRuntime.getRegistration("soot-sprites");
 const status = document.getElementById("status");
 const reducedMotionToggle = document.getElementById("reduced-motion");
+const pixelEffectsToggle = document.getElementById("pixel-effects");
+const effectSheets = renderSootEffectSheets({ random: createSeededRandom(20261018) });
 const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const STILL_SCALE = 8;
 const SAMPLE_SIZES = [24, 40];
@@ -123,8 +127,11 @@ const readTimeline = (sprite) => {
 
 const dressSwarm = (overlay) => {
   const variant = selectedVariant();
+  const effects = pixelEffectsToggle.checked;
+  if (effects) dressSootEffects(overlay, effectSheets);
+  const effectsNote = effects ? " with pixel-art smoke and candy" : "";
   if (variant === "current") {
-    setStatus(`Current sprite swarm: ${overlay.querySelectorAll(".soot-sprite").length} sprites.`);
+    setStatus(`Current sprite swarm: ${overlay.querySelectorAll(".soot-sprite").length} sprites${effectsNote}.`);
     return;
   }
   const animations = [];
@@ -150,7 +157,7 @@ const dressSwarm = (overlay) => {
     if (overlay.classList.contains("is-staged")) return;
     animations.forEach((animation) => animation.play());
     release.disconnect();
-    setStatus(`Candidate ${variant.toUpperCase()} swarm released: ${sprites.length} sprites${reducedMotion() ? ", reduced motion" : ""}.`);
+    setStatus(`Candidate ${variant.toUpperCase()} swarm released: ${sprites.length} sprites${effectsNote}${reducedMotion() ? ", reduced motion" : ""}.`);
   });
   release.observe(overlay, { attributes: true, attributeFilter: ["class"] });
   const dressMs = Math.round(performance.now() - started);
@@ -186,5 +193,10 @@ document.getElementById("trigger-alert").addEventListener("click", () => {
   setStatus(`Alert open for candidate ${selectedVariant().toUpperCase()}. Press Yes to release the swarm.`);
 });
 
-window.sootSpriteReview = Object.freeze({ readTimeline, selectedVariant, getLastTimings: () => lastTimings });
+window.sootSpriteReview = Object.freeze({
+  effectSheets,
+  readTimeline,
+  selectedVariant,
+  getLastTimings: () => lastTimings,
+});
 })();

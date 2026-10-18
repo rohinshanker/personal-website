@@ -12,7 +12,7 @@
  * No limbs. One span per sprite, no SVG, no per-frame JavaScript.
  */
 (() => {
-const VARIANTS = Object.freeze(["e", "f", "g", "h"]);
+const VARIANTS = Object.freeze(["e", "f", "g", "h", "i"]);
 
 /*
  * unit: CSS pixels per cell at production size. fur: hair length range in body diameters,
@@ -57,10 +57,46 @@ const VARIANT_DETAILS = Object.freeze({
     eye: 0.36,
     eyeGap: 0.38,
     eyeLift: 0.05,
-    technique: "F's cells and coat drawn twice; three stacked frames",
+    technique: "F's cells and coat drawn twice plus a blink frame",
     behaviour: "The coat flickers between two drawings every 160 ms while moving and the eyes blink every few seconds.",
   }),
+  i: Object.freeze({
+    name: "Mix",
+    mix: Object.freeze(["f", "g", "h"]),
+    technique: "Each sprite draws F's, G's or H's cells and coat at random (H's coat is F's)",
+    behaviour: "Every sprite boils and blinks like H; pixel-art smoke and candy replace the blurred puffs and vector stars.",
+  }),
 });
+
+/* Production candy colours (scripts/home/events/soot-sprites.js) in sheet order. */
+const CANDY_COLORS = Object.freeze(["#c9f7c2", "#ffc6dc", "#fff2a6", "#fffaf0", "#bde7ff"]);
+const CANDY_CELLS = 9;
+const CANDY_SHAPES = Object.freeze([
+  Object.freeze([
+    "....X....",
+    ".X..X..X.",
+    "..XXXXX..",
+    ".XXXXXXX.",
+    "XXXXXXXXX",
+    ".XXXXXXX.",
+    "..XXXXX..",
+    ".X..X..X.",
+    "....X....",
+  ]),
+  Object.freeze([
+    "X...X...X",
+    ".X.XXX.X.",
+    "..XXXXX..",
+    ".XXXXXXX.",
+    "X.XXXXX.X",
+    ".XXXXXXX.",
+    "..XXXXX..",
+    ".X.XXX.X.",
+    "X...X...X",
+  ]),
+]);
+const PUFF_CELLS = Object.freeze({ width: 96, height: 48 });
+const PUFF_SHAPES = 6;
 
 const NOMINAL_SIZE = 32;
 const MIN_BODY_CELLS = 8;
@@ -172,7 +208,16 @@ const randomGaze = (random) => {
   return { x: Math.cos(angle) * reach, y: Math.sin(angle) * reach };
 };
 
-const frameCount = (variant) => (variant === "h" ? 3 : 1);
+const animatedCoat = (variant) => variant === "h" || variant === "i";
+
+const frameCount = (variant) => (animatedCoat(variant) ? 3 : 1);
+
+/** The look one sprite draws: the candidate itself, or a random member of a mixed candidate. */
+const lookFor = (variant, random) => {
+  const details = VARIANT_DETAILS[variant];
+  if (!details.mix) return details;
+  return VARIANT_DETAILS[details.mix[Math.floor(random() * details.mix.length)]];
+};
 
 /**
  * Renders a batch of candidate bodies that share one sprite sheet. `sprites` is a list of
@@ -184,13 +229,11 @@ const frameCount = (variant) => (variant === "h" ? 3 : 1);
  */
 const renderSootSprites = (variant, sprites, { random = Math.random } = {}) => {
   if (!VARIANTS.includes(variant)) throw new Error(`Unknown soot sprite variant: ${variant}`);
-  const details = VARIANT_DETAILS[variant];
   const frames = frameCount(variant);
-  const plans = sprites.map(({ size, nominalSize = size }) => ({
-    size,
-    geometry: geometryFor(details, nominalSize),
-    gaze: randomGaze(random),
-  }));
+  const plans = sprites.map(({ size, nominalSize = size }) => {
+    const details = lookFor(variant, random);
+    return { size, details, geometry: geometryFor(details, nominalSize), gaze: randomGaze(random) };
+  });
   const sheetWidth = plans.reduce((total, plan) => total + plan.geometry.cells * frames, 0);
   const sheetHeight = Math.max(...plans.map((plan) => plan.geometry.cells));
   const sheet = document.createElement("canvas");
@@ -199,7 +242,7 @@ const renderSootSprites = (variant, sprites, { random = Math.random } = {}) => {
   const context = sheet.getContext("2d");
   let originX = 0;
   const bodies = plans.map((plan) => {
-    const { size, geometry, gaze } = plan;
+    const { size, details, geometry, gaze } = plan;
     const cellPx = size / geometry.bodyCells;
     const body = document.createElement("span");
     body.className = `soot-candidate soot-candidate--${variant}`;
@@ -232,14 +275,14 @@ const renderSootSprite = (variant, size, { random = Math.random, nominalSize = s
 /**
  * Attaches the behaviour animations for one body to a trajectory timeline:
  * `{ duration, delay, landingOffset, fallDirection, runs }` with offsets as fractions of
- * `duration`. Only H animates: one stepped `background-position` animation alternates its two
+ * `duration`. Only H and I animate: one stepped `background-position` animation alternates the two
  * coat frames while the sprite moves and shows the blink frame for one step every few seconds.
  * Returns the paused Animation objects so the caller can play them in step with the sprite's
  * motion. Reduced motion attaches no animation.
  */
 const applySootSpriteTimeline = (body, timeline, { reducedMotion = false, random = Math.random } = {}) => {
   const parts = body.sootCandidate;
-  if (!parts || reducedMotion || parts.variant !== "h") return [];
+  if (!parts || reducedMotion || !animatedCoat(parts.variant)) return [];
   const { duration, delay = 0 } = timeline;
   const steps = Math.max(2, Math.floor(duration / BOIL_STEP_MS));
   const blinkEvery = Math.round(between(random, BLINK_MIN_MS, BLINK_MAX_MS) / BOIL_STEP_MS);
@@ -258,12 +301,126 @@ const applySootSpriteTimeline = (body, timeline, { reducedMotion = false, random
   return [animation];
 };
 
+/** Darkens or lightens a hex colour by `amount` (−1…1). */
+const shade = (hex, amount) => {
+  const channels = [1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16));
+  return `rgb(${channels
+    .map((value) => Math.round(amount < 0 ? value * (1 + amount) : value + (255 - value) * amount))
+    .join(", ")})`;
+};
+
+/**
+ * Draws every candy colour in every shape on one 9-cell-high sheet: a filled star with a white
+ * highlight cell and a darker lower-right edge. Returns the data URL and the slot index for a
+ * production `--candy-color`.
+ */
+const renderCandySheet = () => {
+  const sheet = document.createElement("canvas");
+  sheet.width = CANDY_CELLS * CANDY_COLORS.length * CANDY_SHAPES.length;
+  sheet.height = CANDY_CELLS;
+  const context = sheet.getContext("2d");
+  CANDY_SHAPES.forEach((shape, shapeIndex) => {
+    CANDY_COLORS.forEach((color, colorIndex) => {
+      const originX = (shapeIndex * CANDY_COLORS.length + colorIndex) * CANDY_CELLS;
+      shape.forEach((row, y) => {
+        [...row].forEach((cell, x) => {
+          if (cell !== "X") return;
+          const onEdge = y >= 5 && x >= 4 && (shape[y + 1]?.[x] !== "X" || shape[y]?.[x + 1] !== "X");
+          context.fillStyle = onEdge ? shade(color, -0.28) : color;
+          context.fillRect(originX + x, y, 1, 1);
+        });
+      });
+      context.fillStyle = "#fff";
+      context.fillRect(originX + 3, 3, 1, 1);
+    });
+  });
+  return {
+    image: `url("${sheet.toDataURL("image/png")}")`,
+    slots: CANDY_COLORS.length * CANDY_SHAPES.length,
+    slotFor: (color, shapeIndex) =>
+      shapeIndex * CANDY_COLORS.length + Math.max(0, CANDY_COLORS.indexOf(String(color).trim().toLowerCase())),
+  };
+};
+
+/**
+ * Draws `PUFF_SHAPES` smoke blobs side by side, each a union of soft discs on a 96×48 cell grid
+ * with three translucent shades of black and a dithered rim, so a scaled puff reads as pixel
+ * smoke about as dark as the blurred production gradients.
+ */
+const renderPuffSheet = (random) => {
+  const { width, height } = PUFF_CELLS;
+  const sheet = document.createElement("canvas");
+  sheet.width = width * PUFF_SHAPES;
+  sheet.height = height;
+  const context = sheet.getContext("2d");
+  for (let shape = 0; shape < PUFF_SHAPES; shape += 1) {
+    const discs = [];
+    const discCount = Math.round(between(random, 6, 9));
+    for (let index = 0; index < discCount; index += 1) {
+      discs.push({
+        x: between(random, width * 0.22, width * 0.78),
+        y: between(random, height * 0.3, height * 0.7),
+        r: between(random, height * 0.2, height * 0.34),
+      });
+    }
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        let nearest = Infinity;
+        discs.forEach((disc) => {
+          const distance = Math.hypot(x + 0.5 - disc.x, y + 0.5 - disc.y) / disc.r;
+          if (distance < nearest) nearest = distance;
+        });
+        let alpha = 0;
+        if (nearest < 0.7) alpha = 0.5;
+        else if (nearest < 1) alpha = random() < 0.85 ? 0.32 : 0;
+        else if (nearest < 1.18) alpha = random() < 0.4 ? 0.16 : 0;
+        if (!alpha) continue;
+        context.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+        context.fillRect(shape * width + x, y, 1, 1);
+      }
+    }
+  }
+  return { image: `url("${sheet.toDataURL("image/png")}")`, shapes: PUFF_SHAPES };
+};
+
+/** Builds both effect sheets once; the result feeds `dressSootEffects`. */
+const renderSootEffectSheets = ({ random = Math.random } = {}) => ({
+  candy: renderCandySheet(),
+  puff: renderPuffSheet(random),
+});
+
+/**
+ * Points every production candy and puff inside `overlay` at its pixel-art slot. The
+ * `is-pixel-effects` class on the overlay switches the stylesheet from the vector star and the
+ * blurred gradients to the sheets; the production fall, spin, drift and fade animations are
+ * untouched because they only animate `transform` and `opacity`.
+ */
+const dressSootEffects = (overlay, sheets, { random = Math.random } = {}) => {
+  overlay.classList.add("is-pixel-effects");
+  overlay.style.setProperty("--soot-candy-sheet", sheets.candy.image);
+  overlay.style.setProperty("--soot-candy-slots", String(sheets.candy.slots));
+  overlay.style.setProperty("--soot-puff-sheet", sheets.puff.image);
+  overlay.style.setProperty("--soot-puff-shapes", String(sheets.puff.shapes));
+  overlay.querySelectorAll(".soot-star-candy").forEach((candy) => {
+    const slot = sheets.candy.slotFor(
+      candy.style.getPropertyValue("--candy-color"),
+      Math.floor(random() * CANDY_SHAPES.length)
+    );
+    candy.style.setProperty("--soot-candy-slot", String(slot));
+  });
+  overlay.querySelectorAll(".soot-puff").forEach((puff) => {
+    puff.style.setProperty("--soot-puff-shape", String(Math.floor(random() * sheets.puff.shapes)));
+  });
+};
+
 window.sootSpriteCandidates = Object.freeze({
   NOMINAL_SIZE,
   VARIANTS,
   VARIANT_DETAILS,
   applySootSpriteTimeline,
   createSeededRandom,
+  dressSootEffects,
+  renderSootEffectSheets,
   renderSootSprite,
   renderSootSprites,
 });

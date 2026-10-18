@@ -50,8 +50,10 @@
             background. The swarm below runs the real event code from
             <code>scripts/home/events/soot-sprites.js</code>: trigger the alert, press Yes, and the 32
             sprites fall, land on the taskbar edge and scatter exactly as they do on Home, with the
-            selected candidate drawn in place of the current body. Choose “Current sprite” to run
-            today's design for comparison.
+            selected candidate drawn in place of the current body. Candidate I is the owner's requested
+            mixture of F, G and H with H's boil and blink on every sprite. “Pixel-art smoke and candy”
+            swaps the blurred puffs and vector stars for pixel drawings and applies to every candidate.
+            Choose “Current sprite” to run today's design for comparison.
           </p>
           <table>
             <thead>
@@ -62,13 +64,15 @@
           <div class="controls">
             <fieldset>
               <legend>Swarm candidate</legend>
-              <div><input type="radio" id="swarm-e" name="swarm-variant" value="e" checked /><label for="swarm-e">E</label></div>
+              <div><input type="radio" id="swarm-e" name="swarm-variant" value="e" /><label for="swarm-e">E</label></div>
               <div><input type="radio" id="swarm-f" name="swarm-variant" value="f" /><label for="swarm-f">F</label></div>
               <div><input type="radio" id="swarm-g" name="swarm-variant" value="g" /><label for="swarm-g">G</label></div>
               <div><input type="radio" id="swarm-h" name="swarm-variant" value="h" /><label for="swarm-h">H</label></div>
+              <div><input type="radio" id="swarm-i" name="swarm-variant" value="i" checked /><label for="swarm-i">I</label></div>
               <div><input type="radio" id="swarm-current" name="swarm-variant" value="current" /><label for="swarm-current">Current sprite</label></div>
             </fieldset>
             <button type="button" id="trigger-alert">Trigger the GPU alert</button>
+            <label><input type="checkbox" id="pixel-effects" checked /> Pixel-art smoke and candy</label>
             <label><input type="checkbox" id="reduced-motion" /> Reduced motion</label>
           </div>
           <p class="status" id="status" role="status">No swarm yet. Trigger the alert and answer Yes.</p>
