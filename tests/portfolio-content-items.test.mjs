@@ -95,8 +95,8 @@ test("Writing pins Substack first with Open Substack and Subscribe links", async
 
   const substack = panel(writing, "writing-substack");
   assert.match(substack, /<h3>Substack<\/h3>/);
-  assert.match(substack, /Read my latest publications on Substack\./);
-  assert.match(substack, /data-src="assets\/writing\/substack-logo\.svg"/);
+  assert.match(substack, /Read my latest publications on Substack!/);
+  assert.match(substack, /data-src="assets\/app-icons\/ico\/newspaper\.ico"/);
   const links = [...substack.matchAll(/<a\b([^>]*)>\s*([^<]+?)\s*<\/a>/g)].map((match) => ({
     attributes: match[1],
     text: match[2],
@@ -112,9 +112,11 @@ test("Writing pins Substack first with Open Substack and Subscribe links", async
     assert.match(link.attributes, /target="_blank"/);
     assert.match(link.attributes, /rel="noopener noreferrer"/);
   }
-  assert.ok(await exists("assets/writing/substack-logo.svg"));
-  const logo = await read("assets/writing/substack-logo.svg");
-  assert.doesNotMatch(logo, /<script|on[a-z]+=/i, "The logo is inert SVG.");
+  assert.match(
+    writing,
+    /data-view="writing-substack">\s*<img class="selector-thumb" data-src="assets\/app-icons\/ico\/newspaper\.ico"/,
+    "The Substack item uses the same newspaper icon as the Socials entry.",
+  );
 });
 
 test("the new carousels list figures that exist, and their markup shows the first figure", async () => {

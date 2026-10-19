@@ -1941,6 +1941,7 @@ body.is-resizing-window * {
 .writing-substack-logo {
   display: block;
   height: 64px;
+  image-rendering: pixelated;
   margin: 0 0 10px;
   width: 64px;
 }

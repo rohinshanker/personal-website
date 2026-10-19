@@ -7,6 +7,3 @@
 | A | 2026-10-18 | [A_soot-sprite-redesign__20260929.md](A_soot-sprite-redesign__20260929.md) | Owner chose a mix of F, G and H with boil and blink plus pixel smoke and candy (2026-10-18); built as candidate I on the review page under docs/validation/assets/ for final approval before Stage 2. |
 | O | 2026-10-06 | [O_google-search-console-refresh__20260827.md](O_google-search-console-refresh__20260827.md) | Owner confirmed Search Console steps are not done; remain pending. |
 | O | 2026-10-06 | [O_image-tools__20260731.md](O_image-tools__20260731.md) | Parked at the owner's request; no feature scope or implementation scheduled. |
-| A | 2026-10-18 | [A_projects-cyano-gene-visualizer__20261018.md](A_projects-cyano-gene-visualizer__20261018.md) | Cyano Gene Visualizer is the newest Projects item on branch claude/content-items-20261018; screenshots await owner review. |
-| A | 2026-10-18 | [A_projects-win98-site-kit__20261018.md](A_projects-win98-site-kit__20261018.md) | win98-site-kit Projects item done on branch claude/content-items-20261018; screenshots await owner review. |
-| A | 2026-10-18 | [A_writing-substack-pinned__20261018.md](A_writing-substack-pinned__20261018.md) | Pinned Substack Writing item done on branch claude/content-items-20261018; screenshots await owner review. |
