@@ -47,7 +47,7 @@ test("Lain is a single-message Wired chat with a permanently disabled reply comp
     markup,
     /class="red-tool-image lain-alert-image-frame">[\s\S]*?<video\n\s+class="lain-alert-image"[\s\S]*?data-loop-fallback="assets\/optimized\/random-events\/lain\.webp"[\s\S]*?<source data-src="assets\/optimized\/random-events\/lain\.webm" type="video\/webm" \/>\s*<source data-src="assets\/optimized\/random-events\/lain\.mp4" type="video\/mp4" \/>/,
   );
-  assert.doesNotMatch(markup, /assets\/random%20events\/lain\.gif/);
+  assert.doesNotMatch(markup, /assets\/random-events\/lain\.gif/);
   assert.match(
     markup,
     /class="red-tool-chat-log lain-alert-chat-log"[\s\S]*?role="log"[\s\S]*?aria-label="Message history"/,

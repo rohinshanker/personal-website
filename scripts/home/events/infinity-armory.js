@@ -55,9 +55,9 @@
   const INFINITY_ARMORY_CURSOR_GEM_MIN_Z_INDEX = 10000;
 
   const INFINITY_ARMORY_GEM_ICON_BY_SHAPE = Object.freeze({
-    square: "assets/random%20events/ib-assets/ib-gem-square.webp",
-    circle: "assets/random%20events/ib-assets/ib-gem-circle.webp",
-    triangle: "assets/random%20events/ib-assets/ib-gem-triangle.webp",
+    square: "assets/random-events/ib-assets/ib-gem-square.webp",
+    circle: "assets/random-events/ib-assets/ib-gem-circle.webp",
+    triangle: "assets/random-events/ib-assets/ib-gem-triangle.webp",
   });
 
   const INFINITY_ARMORY_GEM_COLORS = Object.freeze([

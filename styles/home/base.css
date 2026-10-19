@@ -510,7 +510,7 @@ body {
 .credits-solitaire-icon::before {
   width: 23px;
   height: 28px;
-  background-image: url("../../assets/solitaire-cards/poker nano.png");
+  background-image: url("../../assets/solitaire-cards/poker-nano.png");
   background-position: 0 0;
   background-repeat: no-repeat;
   background-size: 1300% auto;

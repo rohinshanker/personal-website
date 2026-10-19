@@ -37,16 +37,16 @@
   const relicRecoveryDetailDescription = byId("relic-recovery-detail-description");
 
   const RELIC_RECOVERY_ASSETS = Object.freeze({
-    background: "assets/random%20events/made-in-abyss-background.webp",
-    nanachi: "assets/random%20events/nanachi-icon.webp",
-    offering: "assets/random%20events/relic-recovery/offering.webp",
-    uglySpinner: "assets/random%20events/relic-recovery/ugly-spinner.webp",
-    ivyBadge: "assets/random%20events/relic-recovery/ivy-badge.webp",
-    pulledTeeth: "assets/random%20events/relic-recovery/pulled-teeth.webp",
-    doubleBellBall: "assets/random%20events/relic-recovery/double-bell-ball.webp",
-    spiralingHeatStone: "assets/random%20events/relic-recovery/spiraling-heat-stone.webp",
-    shatterPot: "assets/random%20events/relic-recovery/shatter-pot.webp",
-    tangledFluid: "assets/random%20events/relic-recovery/tangled-fluid.webp",
+    background: "assets/random-events/made-in-abyss-background.webp",
+    nanachi: "assets/random-events/nanachi-icon.webp",
+    offering: "assets/random-events/relic-recovery/offering.webp",
+    uglySpinner: "assets/random-events/relic-recovery/ugly-spinner.webp",
+    ivyBadge: "assets/random-events/relic-recovery/ivy-badge.webp",
+    pulledTeeth: "assets/random-events/relic-recovery/pulled-teeth.webp",
+    doubleBellBall: "assets/random-events/relic-recovery/double-bell-ball.webp",
+    spiralingHeatStone: "assets/random-events/relic-recovery/spiraling-heat-stone.webp",
+    shatterPot: "assets/random-events/relic-recovery/shatter-pot.webp",
+    tangledFluid: "assets/random-events/relic-recovery/tangled-fluid.webp",
   });
 
   const RELIC_RECOVERY_ITEMS = Object.freeze([

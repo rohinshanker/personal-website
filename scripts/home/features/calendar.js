@@ -78,7 +78,7 @@
     8: "assets/modeling/garb-means-business-jan2025/1.jpg",
     9: "assets/modeling/vampire-shoot-jan2025/01-vampire-photo.jpg",
     10: "assets/modeling/saturn-LA-oct2023/IMG_9696.jpg",
-    11: "assets/modeling/garb-garbage-rnwy-apr2025/1.JPEG",
+    11: "assets/modeling/garb-garbage-rnwy-apr2025/1.jpeg",
   };
 
   const calendarImagePositions = {
@@ -128,11 +128,11 @@
   const calendarEvents = {
     "0-1": {
       title: "New Year's Day",
-      image: "assets/random%20events/newyear.gif",
+      image: "assets/random-events/new-year.gif",
     },
     "1-4": {
       title: "Cancer Awareness Day",
-      image: "assets/random%20events/fcancer.gif",
+      image: "assets/random-events/cancer-awareness-day.gif",
     },
     "1-11": {
       title: "February 11",
@@ -144,11 +144,11 @@
     },
     "2-4": {
       title: "Where did she go?",
-      image: "assets/random%20events/nana.gif",
+      image: "assets/random-events/nana.gif",
     },
     "2-8": {
       title: "International Women's Day",
-      image: "assets/random%20events/iwd.gif",
+      image: "assets/random-events/international-womens-day.gif",
     },
     "2-31": {
       title: "Transgender Day of Visibility",
@@ -156,31 +156,31 @@
     },
     "3-20": {
       title: "April 20",
-      image: "assets/random%20events/swed.gif",
+      image: "assets/random-events/april-20.gif",
     },
     "4-5": {
       title: "Cinco de Mayo",
-      image: "assets/random%20events/cincodemayo.gif",
+      image: "assets/random-events/cinco-de-mayo.gif",
     },
     "5-1": {
       title: "Pride Month",
-      image: "assets/random%20events/pridemonth.gif",
+      image: "assets/random-events/pride-month.gif",
     },
     "5-19": {
       title: "Juneteenth",
-      image: "assets/random%20events/juneteenth.gif",
+      image: "assets/random-events/juneteenth.gif",
     },
     "6-4": {
       title: "Fourth of July",
-      image: "assets/optimized/random-events/4thofjuly.webp",
+      image: "assets/optimized/random-events/fourth-of-july.webp",
     },
     "6-5": {
       title: "July 5th",
-      image: "assets/random%20events/jul5.png",
+      image: "assets/random-events/july-5.png",
     },
     "8-11": {
       title: "September 11",
-      image: "assets/random%20events/remembering911.gif",
+      image: "assets/random-events/remembering-911.gif",
     },
     "8-23": {
       title: "Bisexual Visibility Day",
@@ -193,22 +193,22 @@
     },
     "10-2": {
       title: "Dia de los Muertos",
-      image: "assets/random%20events/diadelosmuertos.gif",
+      image: "assets/random-events/dia-de-los-muertos.gif",
     },
     "11-25": {
       title: "Christmas Day",
-      image: "assets/random%20events/christmas.gif",
+      image: "assets/random-events/christmas.gif",
     },
   };
 
   const eidAlFitrEvent = {
     title: "Eid Mubarak",
-    image: "assets/random%20events/eidmubarak.gif",
+    image: "assets/random-events/eid-mubarak.gif",
   };
 
   const chineseNewYearEvent = {
     title: "Chinese New Year",
-    image: "assets/random%20events/chinesenewyear.gif",
+    image: "assets/random-events/chinese-new-year.gif",
   };
 
   const easterEvent = {
@@ -218,7 +218,7 @@
 
   const diwaliEvent = {
     title: "Diwali",
-    image: "assets/random%20events/diwali.gif",
+    image: "assets/random-events/diwali.gif",
   };
 
   const ramadanEvent = {
@@ -233,7 +233,7 @@
 
   const hanukkahEvent = {
     title: "Hanukkah",
-    image: "assets/random%20events/hanukkah.gif",
+    image: "assets/random-events/hanukkah.gif",
   };
 
   const vesakEvent = {
@@ -243,22 +243,22 @@
 
   const thanksgivingEvent = {
     title: "Thanksgiving Day",
-    image: "assets/random%20events/thanksgiving.gif",
+    image: "assets/random-events/thanksgiving.gif",
   };
 
   const laborDayEvent = {
     title: "Labor Day",
-    image: "assets/random%20events/laborday.gif",
+    image: "assets/random-events/labor-day.gif",
   };
 
   const mothersDayEvent = {
     title: "Mother's Day",
-    image: "assets/optimized/random-events/mothersday.webp",
+    image: "assets/optimized/random-events/mothers-day.webp",
   };
 
   const fathersDayEvent = {
     title: "Father's Day",
-    image: "assets/optimized/random-events/fathersday.webp",
+    image: "assets/optimized/random-events/fathers-day.webp",
   };
 
   const onamEvent = {

@@ -33,7 +33,7 @@ const MP4_FLAGS = Object.freeze(["-c:v", "libx264", "-crf", "28"]);
 /** A two-derivative manifest that exercises both encoders without touching the repository. */
 const fixtureManifest = Object.freeze([
   Object.freeze({
-    source: "assets/random events/sample.gif",
+    source: "assets/random-events/sample.gif",
     derivatives: Object.freeze([
       Object.freeze({
         format: "webp",
@@ -59,7 +59,7 @@ const writeFixtureFile = (root, relativePath, bytes) => {
 const createFixtureRoot = (t, { sourceBytes = SIZE_THRESHOLD_BYTES + 512 } = {}) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "optimize-media-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeFixtureFile(root, "assets/random events/sample.gif", sourceBytes);
+  writeFixtureFile(root, "assets/random-events/sample.gif", sourceBytes);
   return root;
 };
 
@@ -140,7 +140,7 @@ test("planning encodes every derivative that has never been built", (t) => {
 
 test("planning reports a source the manifest names but the repository lacks", (t) => {
   const root = createFixtureRoot(t);
-  fs.rmSync(path.join(root, "assets/random events/sample.gif"));
+  fs.rmSync(path.join(root, "assets/random-events/sample.gif"));
   const plan = planMediaConversions({ root, manifest: fixtureManifest });
   assert.deepEqual(new Set(plan.map((step) => step.action)), new Set(["missing-source"]));
   assert.throws(
@@ -151,7 +151,7 @@ test("planning reports a source the manifest names but the repository lacks", (t
         ...createEncoderStub(),
         resolveBinary: resolveEverything,
       }),
-    /cannot read: assets\/random events\/sample\.gif/,
+    /cannot read: assets\/random-events\/sample\.gif/,
   );
 });
 
@@ -231,7 +231,7 @@ test("a source newer than its derivative re-encodes", (t) => {
   });
 
   const future = new Date(Date.now() + 60_000);
-  fs.utimesSync(path.join(root, "assets/random events/sample.gif"), future, future);
+  fs.utimesSync(path.join(root, "assets/random-events/sample.gif"), future, future);
   const plan = planMediaConversions({ root, manifest: fixtureManifest });
   assert.deepEqual(
     new Set(plan.map((step) => step.reason)),
@@ -258,11 +258,11 @@ test("a missing encoder fails with an actionable message and encodes nothing", (
 
 test("a mid-run failure keeps the sources that already finished", (t) => {
   const root = createFixtureRoot(t);
-  writeFixtureFile(root, "assets/random events/second.gif", SIZE_THRESHOLD_BYTES + 256);
+  writeFixtureFile(root, "assets/random-events/second.gif", SIZE_THRESHOLD_BYTES + 256);
   const twoSources = [
     fixtureManifest[0],
     {
-      source: "assets/random events/second.gif",
+      source: "assets/random-events/second.gif",
       derivatives: [
         {
           format: "webp",
@@ -291,7 +291,7 @@ test("a mid-run failure keeps the sources that already finished", (t) => {
   const record = readRecord(root);
   assert.deepEqual(
     record.entries.map((entry) => entry.source),
-    ["assets/random events/sample.gif"],
+    ["assets/random-events/sample.gif"],
     "the finished source stays recorded",
   );
   assert.deepEqual(
@@ -350,12 +350,12 @@ test("--check fails when the record is missing entirely", (t) => {
 
 test("--check fails when an oversized source has no manifest entry", (t) => {
   const root = createFixtureRoot(t);
-  writeFixtureFile(root, "assets/random events/unconverted.gif", SIZE_THRESHOLD_BYTES + 1);
+  writeFixtureFile(root, "assets/random-events/unconverted.gif", SIZE_THRESHOLD_BYTES + 1);
   const { ok, problems } = checkOptimizedMedia({ root, manifest: fixtureManifest });
   assert.equal(ok, false);
   assert.ok(
     problems.includes(
-      "assets/random events/unconverted.gif is over the derivative threshold with no manifest entry",
+      "assets/random-events/unconverted.gif is over the derivative threshold with no manifest entry",
     ),
   );
 });
@@ -368,7 +368,7 @@ test("--check ignores a source under the threshold", (t) => {
     ...createEncoderStub(),
     resolveBinary: resolveEverything,
   });
-  writeFixtureFile(root, "assets/random events/tiny.gif", SIZE_THRESHOLD_BYTES - 1);
+  writeFixtureFile(root, "assets/random-events/tiny.gif", SIZE_THRESHOLD_BYTES - 1);
   assert.deepEqual(checkOptimizedMedia({ root, manifest: fixtureManifest }).problems, []);
 });
 
@@ -414,7 +414,7 @@ test("--check fails when the record is stale against the manifest or the files",
     ),
   );
 
-  writeFixtureFile(root, "assets/random events/sample.gif", SIZE_THRESHOLD_BYTES + 1024);
+  writeFixtureFile(root, "assets/random-events/sample.gif", SIZE_THRESHOLD_BYTES + 1024);
   assert.ok(
     checkOptimizedMedia({ root, manifest: fixtureManifest }).problems.some((problem) =>
       problem.includes("changed since its derivatives were recorded"),
@@ -440,7 +440,7 @@ test("--check fails when the record still lists a dropped manifest entry", (t) =
   const { ok, problems } = checkOptimizedMedia({ root, manifest: [] });
   assert.equal(ok, false);
   assert.ok(
-    problems.includes("assets/random events/sample.gif is recorded but no longer in the manifest"),
+    problems.includes("assets/random-events/sample.gif is recorded but no longer in the manifest"),
   );
 });
 
@@ -523,7 +523,7 @@ test("a manifest entry that declares no derivatives is still measured and record
   assert.deepEqual({ encoded, skipped }, { encoded: [], skipped: [] });
   assert.deepEqual(record.entries, [
     {
-      source: "assets/random events/sample.gif",
+      source: "assets/random-events/sample.gif",
       sourceBytes: SIZE_THRESHOLD_BYTES + 512,
       width: 858,
       height: 824,
@@ -554,14 +554,14 @@ test("the source sweep skips a directory that is not there and surfaces one that
 
 test("the sweep walks nested directories and ignores entries that are not files", (t) => {
   const root = createFixtureRoot(t);
-  writeFixtureFile(root, "assets/random events/nested/deep.gif", SIZE_THRESHOLD_BYTES + 1);
+  writeFixtureFile(root, "assets/random-events/nested/deep.gif", SIZE_THRESHOLD_BYTES + 1);
   fs.symlinkSync(
-    path.join(root, "assets/random events/sample.gif"),
-    path.join(root, "assets/random events/dangling.gif"),
+    path.join(root, "assets/random-events/sample.gif"),
+    path.join(root, "assets/random-events/dangling.gif"),
   );
-  fs.rmSync(path.join(root, "assets/random events/sample.gif"));
+  fs.rmSync(path.join(root, "assets/random-events/sample.gif"));
 
-  assert.deepEqual(oversizedSources({ root }), ["assets/random events/nested/deep.gif"]);
+  assert.deepEqual(oversizedSources({ root }), ["assets/random-events/nested/deep.gif"]);
 });
 
 test("--check fails when a manifest source disappeared after it was recorded", (t) => {
@@ -572,13 +572,13 @@ test("--check fails when a manifest source disappeared after it was recorded", (
     ...createEncoderStub(),
     resolveBinary: resolveEverything,
   });
-  fs.rmSync(path.join(root, "assets/random events/sample.gif"));
+  fs.rmSync(path.join(root, "assets/random-events/sample.gif"));
 
   const { ok, problems } = checkOptimizedMedia({ root, manifest: fixtureManifest });
   assert.equal(ok, false);
   assert.ok(
     problems.includes(
-      "assets/random events/sample.gif is listed in the manifest but missing from the repository",
+      "assets/random-events/sample.gif is listed in the manifest but missing from the repository",
     ),
   );
 });
@@ -597,7 +597,7 @@ test("--check fails when the record lost a source entry or one of its derivative
   fs.writeFileSync(recordPath, renderRecord({ ...record, entries: [] }));
   assert.ok(
     checkOptimizedMedia({ root, manifest: fixtureManifest }).problems.includes(
-      "assets/random events/sample.gif has no record entry; run: node scripts/optimize-media.mjs",
+      "assets/random-events/sample.gif has no record entry; run: node scripts/optimize-media.mjs",
     ),
     "a record with no entry for the source",
   );
@@ -634,7 +634,7 @@ test("a probe that fails, or answers nothing usable, stops the run", (t) => {
         }),
         resolveBinary: resolveEverything,
       }),
-    /ffprobe could not read the dimensions of assets\/random events\/sample\.gif/,
+    /ffprobe could not read the dimensions of assets\/random-events\/sample\.gif/,
   );
 
   const unusable = createFixtureRoot(t);
@@ -708,7 +708,7 @@ test("the CLI encodes, then skips, then verifies the same scratch repository", (
   assert.match(encoded.stdout, summary(derivativeCount, 0));
   assert.match(
     encoded.stdout,
-    /^encode assets\/optimized\/random-events\/servalpizza\.webp \(derivative is missing\)$/m,
+    /^encode assets\/optimized\/random-events\/serval-pizza\.webp \(derivative is missing\)$/m,
   );
   assert.equal(readRecord(root).entries.length, MEDIA_MANIFEST.length);
 
@@ -717,7 +717,7 @@ test("the CLI encodes, then skips, then verifies the same scratch repository", (
   assert.match(skipped.stdout, summary(0, derivativeCount));
   assert.match(
     skipped.stdout,
-    /^skip {3}assets\/optimized\/random-events\/servalpizza\.webp \(derivative is current\)$/m,
+    /^skip {3}assets\/optimized\/random-events\/serval-pizza\.webp \(derivative is current\)$/m,
   );
 
   const verified = runCli({ argv: ["--check"], root });

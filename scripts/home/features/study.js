@@ -28,13 +28,13 @@
     document: "assets/app-icons/ico/document.ico",
   };
 
-  const STUDY_MANIFEST_URL = "assets/study%20resources/manifest.json";
+  const STUDY_MANIFEST_URL = "assets/study-resources/manifest.json";
 
   const studyResourcesRoot = {
     id: "study-resources",
     type: "folder",
     name: "Study Resources",
-    // Future PDFs should live under assets/study resources/{school}/{type}/{course}/{resource}.pdf.
+    // Future PDFs should live under assets/study-resources/{school}/{type}/{course}/{resource}.pdf.
     children: [
       {
         id: "uc-berkeley",

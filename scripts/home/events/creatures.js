@@ -42,11 +42,11 @@
 
   const CARACAL_RESULT_CONTENT = {
     pet: {
-      image: "assets/random%20events/caracalpet.gif",
+      image: "assets/random-events/caracal-pet.gif",
       message: "You pet the caracal. It is very fluffy!",
     },
     ignore: {
-      image: "assets/random%20events/caracalbite.gif",
+      image: "assets/random-events/caracal-bite.gif",
       message: "In a fit of rage, the caracal bites you. How horrible!",
     },
   };

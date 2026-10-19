@@ -7,7 +7,7 @@ import {
   renderStudyResourcesManifest,
 } from "../scripts/build-study-resources-manifest.mjs";
 
-const MANIFEST_URL = new URL("../assets/study resources/manifest.json", import.meta.url);
+const MANIFEST_URL = new URL("../assets/study-resources/manifest.json", import.meta.url);
 
 test("the tracked study resources manifest matches its PDF inventory", async () => {
   const manifest = buildStudyResourcesManifest();
@@ -21,11 +21,11 @@ test("the study resources manifest declares its public base path", () => {
   const manifest = buildStudyResourcesManifest();
 
   assert.equal(manifest.root, "Study Resources");
-  assert.equal(manifest.basePath, "assets/study%20resources");
+  assert.equal(manifest.basePath, "assets/study-resources");
   assert.ok(Array.isArray(manifest.files));
   for (const file of manifest.files) {
     assert.match(file.name, /\.pdf$/i);
-    assert.ok(file.path.startsWith("assets/study%20resources/"));
+    assert.ok(file.path.startsWith("assets/study-resources/"));
     assert.doesNotMatch(file.path, / /);
     assert.ok(file.sizeBytes > 0);
     assert.deepEqual(file.thumbnailPages, [1, 2, 3]);

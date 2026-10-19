@@ -33,12 +33,12 @@
   const gearsNestReloadCursor = byId("gears-nest-reload-cursor");
 
   const GEARS_NEST_ASSETS = Object.freeze({
-    nest: "assets/random%20events/scourge-nest-background.webp",
-    cogGear: "assets/random%20events/gears-nest/cog-gear.webp",
-    drone: "assets/random%20events/gears-nest/locust-drone.webp",
-    boomer: "assets/random%20events/gears-nest/boomer.webp",
-    lancer: "assets/random%20events/gears-nest/lancer.webp",
-    explosion: "assets/random%20events/pixel-explosion.gif",
+    nest: "assets/random-events/scourge-nest-background.webp",
+    cogGear: "assets/random-events/gears-nest/cog-gear.webp",
+    drone: "assets/random-events/gears-nest/locust-drone.webp",
+    boomer: "assets/random-events/gears-nest/boomer.webp",
+    lancer: "assets/random-events/gears-nest/lancer.webp",
+    explosion: "assets/random-events/pixel-explosion.gif",
   });
 
   const GEARS_NEST_STAGE_PROMPT = "prompt";

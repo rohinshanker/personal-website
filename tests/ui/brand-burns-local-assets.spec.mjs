@@ -5,16 +5,16 @@ const viewports = Object.freeze([
   { name: "desktop", width: 1280, height: 800 },
 ]);
 const apostleSources = Object.freeze([
-  "assets/random%20events/brand-burns/femto.webp",
-  "assets/random%20events/brand-burns/zodd.webp",
-  "assets/random%20events/brand-burns/grunbeld.webp",
-  "assets/random%20events/brand-burns/borkoff.webp",
-  "assets/random%20events/brand-burns/locus.webp",
-  "assets/random%20events/brand-burns/irvine.webp",
-  "assets/random%20events/brand-burns/ganishka.webp",
-  "assets/random%20events/brand-burns/wyald.webp",
-  "assets/random%20events/brand-burns/snake-lord.webp",
-  "assets/random%20events/brand-burns/rakshas.webp",
+  "assets/random-events/brand-burns/femto.webp",
+  "assets/random-events/brand-burns/zodd.webp",
+  "assets/random-events/brand-burns/grunbeld.webp",
+  "assets/random-events/brand-burns/borkoff.webp",
+  "assets/random-events/brand-burns/locus.webp",
+  "assets/random-events/brand-burns/irvine.webp",
+  "assets/random-events/brand-burns/ganishka.webp",
+  "assets/random-events/brand-burns/wyald.webp",
+  "assets/random-events/brand-burns/snake-lord.webp",
+  "assets/random-events/brand-burns/rakshas.webp",
 ]);
 
 for (const viewport of viewports) {

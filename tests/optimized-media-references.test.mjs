@@ -191,7 +191,7 @@ test("the four video sources are exactly the ones with WebM, MP4 and a poster", 
     "campfire",
     "lain",
     "radar",
-    "servalpizza",
+    "serval-pizza",
   ]);
   for (const entry of withVideo) {
     assert.deepEqual(

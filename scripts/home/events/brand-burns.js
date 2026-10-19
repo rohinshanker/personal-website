@@ -37,15 +37,15 @@
 
   const BRAND_BURNS_RANDOM_EVENT_BUTTON_CLICK_RATIO = 3;
 
-  const BRAND_BURNS_BRAND_ICON = "assets/random%20events/guts-glowing-brand.png";
+  const BRAND_BURNS_BRAND_ICON = "assets/random-events/guts-glowing-brand.png";
 
-  const BRAND_BURNS_GUTS_ICON = "assets/random%20events/guts-icon.jpg";
+  const BRAND_BURNS_GUTS_ICON = "assets/random-events/guts-icon.jpg";
 
-  const BRAND_BURNS_PUCK_IMAGE = "assets/random%20events/puck-healer.jpeg";
+  const BRAND_BURNS_PUCK_IMAGE = "assets/random-events/puck-healer.jpeg";
 
-  const BRAND_BURNS_PUCK_WIN_IMAGE = "assets/random%20events/puck-win.jpeg";
+  const BRAND_BURNS_PUCK_WIN_IMAGE = "assets/random-events/puck-win.jpeg";
 
-  const BRAND_BURNS_DRAGON_SLAYER_ICON = "assets/random%20events/dragon-slayer.jpeg";
+  const BRAND_BURNS_DRAGON_SLAYER_ICON = "assets/random-events/dragon-slayer.jpeg";
 
   const BRAND_BURNS_ENCOUNTER_COUNT = 5;
 
@@ -110,7 +110,7 @@
   const BRAND_BURNS_FEMTO = Object.freeze({
     id: "femto",
     name: "Femto",
-    image: "assets/random%20events/brand-burns/femto.webp",
+    image: "assets/random-events/brand-burns/femto.webp",
     minHealth: 3500,
     maxHealth: 4000,
   });
@@ -119,63 +119,63 @@
     {
       id: "zodd",
       name: "Zodd",
-      image: "assets/random%20events/brand-burns/zodd.webp",
+      image: "assets/random-events/brand-burns/zodd.webp",
       minHealth: 2400,
       maxHealth: 3500,
     },
     {
       id: "grunbeld",
       name: "Grunbeld",
-      image: "assets/random%20events/brand-burns/grunbeld.webp",
+      image: "assets/random-events/brand-burns/grunbeld.webp",
       minHealth: 2600,
       maxHealth: 3500,
     },
     {
       id: "borkoff",
       name: "Borkoff",
-      image: "assets/random%20events/brand-burns/borkoff.webp",
+      image: "assets/random-events/brand-burns/borkoff.webp",
       minHealth: 900,
       maxHealth: 1900,
     },
     {
       id: "locus",
       name: "Locus",
-      image: "assets/random%20events/brand-burns/locus.webp",
+      image: "assets/random-events/brand-burns/locus.webp",
       minHealth: 1800,
       maxHealth: 3100,
     },
     {
       id: "irvine",
       name: "Irvine",
-      image: "assets/random%20events/brand-burns/irvine.webp",
+      image: "assets/random-events/brand-burns/irvine.webp",
       minHealth: 1400,
       maxHealth: 2600,
     },
     {
       id: "ganishka",
       name: "Ganishka",
-      image: "assets/random%20events/brand-burns/ganishka.webp",
+      image: "assets/random-events/brand-burns/ganishka.webp",
       minHealth: 2600,
       maxHealth: 3500,
     },
     {
       id: "wyald",
       name: "Wyald",
-      image: "assets/random%20events/brand-burns/wyald.webp",
+      image: "assets/random-events/brand-burns/wyald.webp",
       minHealth: 1500,
       maxHealth: 3100,
     },
     {
       id: "snake-lord",
       name: "Snake Lord",
-      image: "assets/random%20events/brand-burns/snake-lord.webp",
+      image: "assets/random-events/brand-burns/snake-lord.webp",
       minHealth: 700,
       maxHealth: 1700,
     },
     {
       id: "rakshas",
       name: "Rakshas",
-      image: "assets/random%20events/brand-burns/rakshas.webp",
+      image: "assets/random-events/brand-burns/rakshas.webp",
       minHealth: 1600,
       maxHealth: 2900,
     },

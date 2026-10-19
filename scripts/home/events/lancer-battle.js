@@ -79,14 +79,14 @@
 
   const LANCER_BATTLE_WIN_VIDEO_END_SECONDS = 36.5;
 
-  const LANCER_BATTLE_WIN_VIDEO_SRC = "assets/random%20events/lancer-battle/lancer-battle-win.mp4";
+  const LANCER_BATTLE_WIN_VIDEO_SRC = "assets/random-events/lancer-battle/lancer-battle-win.mp4";
 
   const LANCER_BATTLE_LOSS_VIDEO_START_SECONDS = 21.5;
 
   const LANCER_BATTLE_LOSS_VIDEO_END_SECONDS = 25;
 
   const LANCER_BATTLE_LOSS_VIDEO_SRC =
-    "assets/random%20events/lancer-battle/lancer-battle-loss.mp4";
+    "assets/random-events/lancer-battle/lancer-battle-loss.mp4";
 
   const LANCER_BATTLE_START_PROGRESS = FATE_START_PROGRESS;
 

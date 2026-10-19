@@ -190,8 +190,8 @@
     if (fateResultStage) fateResultStage.classList.remove("is-hidden");
     if (fateResultImage) {
       fateResultImage.src = success
-        ? "assets/random%20events/zodd_defeated_by_shld0n_hcks.jpg"
-        : "assets/random%20events/guts-lost.jpeg";
+        ? "assets/random-events/zodd-defeated-by-shld0n-hcks.jpg"
+        : "assets/random-events/guts-lost.jpeg";
       fateResultImage.alt = "";
     }
     if (fateResultCredit) {
@@ -314,8 +314,8 @@
     isGameplayLocked: () => isFateVisible() && fateState === "active",
     preloadTargets: () => [
       fateWindow,
-      "assets/random%20events/zodd_defeated_by_shld0n_hcks.jpg",
-      "assets/random%20events/guts-lost.jpeg",
+      "assets/random-events/zodd-defeated-by-shld0n-hcks.jpg",
+      "assets/random-events/guts-lost.jpeg",
     ],
     kind: RANDOM_EVENT_KIND_INTERACTIVE,
     isVisible: isFateVisible,

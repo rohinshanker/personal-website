@@ -28,8 +28,8 @@
   const toxicJungleDecline = byId("toxic-jungle-decline");
 
   const TOXIC_JUNGLE_ASSETS = Object.freeze({
-    background: "assets/random%20events/toxic-jungle.webp",
-    nausicaa: "assets/random%20events/nausicaa.jpg",
+    background: "assets/random-events/toxic-jungle.webp",
+    nausicaa: "assets/random-events/nausicaa.jpg",
   });
 
   const TOXIC_JUNGLE_STAGE_PROMPT = "prompt";

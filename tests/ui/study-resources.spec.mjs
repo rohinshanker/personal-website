@@ -17,12 +17,12 @@ const WHITE = "rgb(255, 255, 255)";
 const SAMPLE_PDF_PATH = "assets/writing/MEC-Comment.pdf";
 
 const installStudyResource = async (page) => {
-  await page.route(/\/assets\/study(?:%20| )resources\/manifest\.json$/, (route) =>
+  await page.route(/\/assets\/study-resources\/manifest\.json$/, (route) =>
     route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
         root: "Study Resources",
-        basePath: "assets/study%20resources",
+        basePath: "assets/study-resources",
         files: [
           {
             folderPath: ["Yale"],

@@ -10,6 +10,31 @@
 
 Keep full-quality modeling media deployed. The live calendar uses `jan.jpg`, `mar-standstill.jpg` and `apr-sonder-lb2.jpg` under `assets/calendar-pics/`; the unused originals were deleted with the owner's per-file approval on 2026-10-18, so no calendar archive exists under `docs/assets-src/`.
 
+## Runtime asset naming
+
+New and renamed files under `assets/` use lowercase kebab-case directory and
+file names with lowercase extensions: no spaces, underscores or case-only
+differences. Folders and files that predate the 2026-10-18 rename and contain no
+spaces keep their names until someone has a reason to touch them, for example
+the Windows icon library under `assets/app-icons/ico/`, `assets/minesweeper_assets/`,
+the MS Sans Serif web fonts, and the `saturn-LA-*` modeling shoots.
+Split run-together words when the meaning is certain from the code that uses the
+file (`chinese-new-year.gif`, `fourth-of-july.gif`), and name holiday art after
+its occasion rather than an abbreviation (`international-womens-day.gif`).
+Modeling photos keep their shoot folder and ordered number (`7.jpg`,
+`IMG_0330.jpg`) because the sequence is the useful identity. Proper-noun
+folders that the Study Resources explorer shows as names (`Yale/`) keep their
+display casing.
+
+A rename moves the file with `git mv` (a case-only change goes through a
+temporary name on macOS), keeps its blob hash, and updates every reference
+form together: raw and `%20`-encoded paths, relative CSS `url()`s, regex-escaped
+paths in tests, names that code assembles (the cursor runtime's
+`LEGACY_CURSOR_NAMES`, the media optimizer's `SOURCES`, `data-loop-video` keys),
+and the cache token of every changed served file (bump `scripts/home/core/resources.js`
+and regenerate the game-build token when it changes). The archive under
+`docs/assets-src/` keeps its original names.
+
 ## Regeneration inputs
 
 | Preserved source | Deployed output |

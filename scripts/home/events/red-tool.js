@@ -43,7 +43,7 @@
     const icon = document.createElement("img");
     icon.src = local
       ? "assets/app-icons/ico/address_book_user.ico"
-      : "assets/random%20events/red-tool-icon.png";
+      : "assets/random-events/red-tool-icon.png";
     if (!local) icon.className = "red-tool-avatar";
     icon.alt = "";
 
@@ -101,7 +101,7 @@
     row.className = "red-tool-message red-tool-typing";
 
     const icon = document.createElement("img");
-    icon.src = "assets/random%20events/red-tool-icon.png";
+    icon.src = "assets/random-events/red-tool-icon.png";
     icon.className = "red-tool-avatar";
     icon.alt = "";
 
