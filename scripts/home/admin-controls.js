@@ -49,7 +49,7 @@
   const EVENT_PREVIEW_STYLESHEETS = Object.freeze([
     "style.css?v=html-semantics-20260927",
     "styles/home/base.css?v=home-loading-ghost-repair-20261007",
-    "styles/home/random-events.css?v=vanishing-popup-layout-20261009",
+    "styles/home/random-events.css?v=soot-pixel-sprites-20261018",
   ]);
   const EVENT_PREVIEW_STAGE_STYLES = `
   :host {

@@ -3369,130 +3369,37 @@ html.is-wall-breach-shaking body {
 
 .soot-sprite-body {
   animation: soot-sprite-stare 720ms ease-in-out var(--soot-wobble-delay) infinite alternate;
-  background:
-    radial-gradient(circle at 42% 36%, rgba(67, 67, 61, 0.94), transparent 22%),
-    radial-gradient(circle at 54% 56%, #050505 0 54%, #000 78%, rgba(0, 0, 0, 0.92) 100%);
-  border-radius: var(--soot-body-radius);
-  box-shadow:
-    -9px -6px 0 -5px #020202,
-    8px -9px 0 -5px #050505,
-    -10px 3px 0 -5px #000,
-    10px 5px 0 -5px #070707,
-    -5px 10px 0 -6px #030303,
-    6px 9px 0 -6px #000,
-    0 0 7px rgba(0, 0, 0, 0.72),
-    0 0 14px rgba(0, 0, 0, 0.48);
   display: block;
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.82));
   height: 100%;
-  isolation: isolate;
   position: relative;
   width: 100%;
 }
 
-.soot-sprite-body::before,
-.soot-sprite-body::after {
-  background: #020202;
-  clip-path: polygon(
-    50% 0%,
-    56% 17%,
-    68% 5%,
-    68% 21%,
-    84% 14%,
-    78% 30%,
-    97% 30%,
-    82% 43%,
-    100% 52%,
-    82% 59%,
-    94% 75%,
-    75% 72%,
-    77% 93%,
-    62% 80%,
-    52% 100%,
-    43% 81%,
-    28% 95%,
-    31% 73%,
-    10% 80%,
-    22% 61%,
-    0% 54%,
-    20% 45%,
-    4% 31%,
-    24% 32%,
-    15% 13%,
-    33% 22%,
-    35% 3%,
-    45% 18%
-  );
-  content: "";
-  filter: blur(0.4px);
-  inset: -18%;
-  opacity: 0.82;
-  position: absolute;
-  transform: rotate(18deg);
-  z-index: -1;
-}
-
-.soot-sprite-body::after {
-  background: #080808;
-  filter: blur(1.6px);
-  inset: -24%;
-  opacity: 0.64;
-  transform: rotate(-31deg) scale(0.98);
-}
-
-.soot-sprite-eye {
-  background:
-    radial-gradient(circle at 56% 52%, #111 0 22%, transparent 24%),
-    radial-gradient(circle at 50% 48%, #fff 0 65%, #f4f4ee 68% 100%);
-  box-shadow: 0 0 0 1px rgba(12, 12, 12, 0.72);
+/* One slice of the swarm's shared pixel-art sheet, centred so the coat overflows the body box. */
+.soot-sprite-frame {
+  background-image: var(--soot-sheet);
+  background-position: var(--soot-frame-position);
+  background-repeat: no-repeat;
+  background-size: var(--soot-sheet-size);
   display: block;
-  left: 50%;
+  height: var(--soot-frame-size);
+  image-rendering: pixelated;
+  left: var(--soot-frame-inset);
   position: absolute;
-  top: 49%;
-  z-index: 2;
-}
-
-.soot-sprite-eye--left {
-  border-radius: 58% 42% 53% 47% / 50% 58% 42% 50%;
-  height: var(--soot-left-eye-height);
-  transform: translate(-105%, -50%) rotate(var(--soot-left-eye-rotate));
-  width: var(--soot-left-eye-width);
-}
-
-.soot-sprite-eye--right {
-  border-radius: 45% 55% 44% 56% / 56% 46% 54% 44%;
-  height: var(--soot-right-eye-height);
-  transform: translate(10%, -48%) rotate(var(--soot-right-eye-rotate));
-  width: var(--soot-right-eye-width);
+  top: var(--soot-frame-inset);
+  width: var(--soot-frame-size);
 }
 
 .soot-star-candy {
   animation:
     soot-candy-fall var(--candy-fall-duration) linear var(--candy-delay) both,
     soot-candy-fade var(--candy-fade-duration) ease-out var(--candy-fade-delay) forwards;
-  background:
-    radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.85), transparent 28%),
-    var(--candy-color);
-  clip-path: polygon(
-    50% 0%,
-    60% 26%,
-    88% 14%,
-    74% 40%,
-    100% 50%,
-    74% 60%,
-    88% 86%,
-    60% 74%,
-    50% 100%,
-    40% 74%,
-    12% 86%,
-    26% 60%,
-    0% 50%,
-    26% 40%,
-    12% 14%,
-    40% 26%
-  );
-  filter: drop-shadow(0 1px 0 rgba(94, 76, 62, 0.28));
+  background-image: var(--soot-candy-sheet);
+  background-position: calc(var(--candy-size) * -1 * var(--soot-candy-slot, 0)) 0;
+  background-repeat: no-repeat;
+  background-size: calc(var(--candy-size) * var(--soot-candy-slots, 10)) var(--candy-size);
   height: var(--candy-size);
+  image-rendering: pixelated;
   opacity: 0;
   transform: translate3d(var(--candy-x0), var(--candy-y0), 0);
   width: var(--candy-size);
@@ -3500,24 +3407,25 @@ html.is-wall-breach-shaking body {
 
 .soot-puff {
   animation: soot-puff-drift var(--puff-duration) ease-out var(--puff-delay) both;
-  background:
-    radial-gradient(circle at 35% 45%, rgba(0, 0, 0, 0.72), transparent 42%),
-    radial-gradient(circle at 62% 36%, rgba(0, 0, 0, 0.62), transparent 38%),
-    radial-gradient(circle at 53% 64%, rgba(5, 5, 4, 0.58), transparent 48%),
-    radial-gradient(circle at 46% 50%, rgba(0, 0, 0, 0.36), transparent 64%);
-  filter: blur(4.5px);
+  background-image: var(--soot-puff-sheet);
+  background-position: calc(var(--puff-size) * -2 * var(--soot-puff-shape, 0)) 0;
+  background-repeat: no-repeat;
+  background-size: calc(var(--puff-size) * 2 * var(--soot-puff-shapes, 6)) var(--puff-size);
   height: var(--puff-size);
+  image-rendering: pixelated;
   opacity: 0;
   transform: translate3d(var(--puff-x0), var(--puff-y0), 0) scale(0.48);
   width: calc(var(--puff-size) * 2);
 }
 
-.soot-puff--large {
-  filter: blur(9px);
-}
-
 .soot-puff--trail {
   mix-blend-mode: multiply;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .soot-sprite-body {
+    animation: none;
+  }
 }
 
 @keyframes soot-sprite-stare {

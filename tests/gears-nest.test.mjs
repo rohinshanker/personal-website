@@ -366,7 +366,7 @@ test("relic recovery hotbar uses silhouettes and collected tooltips", () => {
   assert.match(eventSources, /image\.setAttribute\("aria-hidden", String\(!collected\)\);/);
   assert.match(eventSources, /tooltip\.className = "relic-recovery-tooltip";/);
   assert.match(eventSources, /tooltipName\.style\.color = item\.color;/);
-  assert.equal([...eventSources.matchAll(/\n    color: "#[0-9a-f]{6}",/g)].length, 8);
+  assert.equal([...eventSources.matchAll(/\n {4}color: "#[0-9a-f]{6}",/g)].length, 8);
   assert.match(
     getCssBlock(".relic-recovery-item"),
     /cursor: var\(--cursor-select, pointer\) !important;/,
@@ -392,9 +392,9 @@ test("relic recovery positions relics with depth scaling", () => {
   assert.notEqual(itemBlockStart, -1, "Missing relic recovery items");
   const itemBlock = eventSources.slice(itemBlockStart, itemBlockEnd);
 
-  const xs = [...itemBlock.matchAll(/\n    x: (\d+),/g)].map((match) => Number(match[1]));
-  const ys = [...itemBlock.matchAll(/\n    y: (\d+),/g)].map((match) => Number(match[1]));
-  const scales = [...itemBlock.matchAll(/\n    scale: ([\d.]+),/g)].map((match) =>
+  const xs = [...itemBlock.matchAll(/\n {4}x: (\d+),/g)].map((match) => Number(match[1]));
+  const ys = [...itemBlock.matchAll(/\n {4}y: (\d+),/g)].map((match) => Number(match[1]));
+  const scales = [...itemBlock.matchAll(/\n {4}scale: ([\d.]+),/g)].map((match) =>
     Number(match[1]),
   );
   assert.equal(xs.length, 8);
@@ -506,7 +506,7 @@ test("latest event cursor affordances use custom cursor variables", async () => 
   );
   assert.match(
     cursorStyles,
-    /:where\(html, body, body \*\) \{\s*\n  cursor: var\(--cursor-normal\) !important;/,
+    /:where\(html, body, body \*\) \{\s*\n {2}cursor: var\(--cursor-normal\) !important;/,
   );
   assert.match(
     getCssBlock(".death-note-lined-page"),
@@ -713,7 +713,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(eventSources, /"#fff2a6"/);
   assert.match(eventSources, /"#fffaf0"/);
   assert.match(eventSources, /"#bde7ff"/);
-  assert.match(eventSources, /const randomSootCandyColor = \(\) =>/);
+  assert.match(eventSources, /const setSootCandyLook = \(candy\) =>/);
   assert.match(eventSources, /const getSootSpriteParabolaPoint = \(trajectory, progress\) =>/);
   assert.match(eventSources, /const createSootSpriteFallSamples = \(trajectory\) =>/);
   assert.match(
@@ -808,7 +808,10 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(eventSources, /fallLength \* 0\.25/);
   assert.match(eventSources, /fallLength \* 0\.5/);
   assert.match(eventSources, /fallLength \* 0\.75/);
-  assert.match(eventSources, /createSootSpriteElement\(index, trajectory, \{ paused: true \}\)/);
+  assert.match(
+    eventSources,
+    /createSootSpriteElement\(index, trajectories\[index\], plans\[index\], \{\s*paused: true,?\s*\}\)/,
+  );
   assert.match(eventSources, /createSootCandyElement\(launchRect\)/);
   assert.match(eventSources, /const size = Math\.round\(randomSootSpriteValue\(8, 14\)\);/);
   assert.match(eventSources, /const size = Math\.round\(randomSootSpriteValue\(6, 11\)\);/);
@@ -932,24 +935,53 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
     eventStyles,
     /\.soot-sprites-swarm\.is-staged,[\s\S]*?\.soot-sprites-swarm\.is-staged \* \{[\s\S]*?animation-play-state: paused;/,
   );
-  assert.match(getCssBlock(".soot-sprite-body"), /border-radius: var\(--soot-body-radius\);/);
-  assert.match(getCssBlock(".soot-sprite-body"), /filter: drop-shadow/);
-  assert.match(getCssBlock(".soot-sprite-body"), /isolation: isolate;/);
-  assert.match(
-    eventStyles,
-    /\.soot-sprite-body::before,[\s\S]*?\.soot-sprite-body::after \{[\s\S]*?clip-path: polygon\([\s\S]*?filter: blur\(0\.4px\);/,
+  // Candidate I of the redesign: one pixel-art sheet per swarm, no CSS-drawn body or eyes.
+  assert.match(getCssBlock(".soot-sprite-body"), /animation: soot-sprite-stare 720ms/);
+  assert.doesNotMatch(
+    getCssBlock(".soot-sprite-body"),
+    /background|box-shadow|filter|border-radius/,
   );
-  assert.match(eventStyles, /\.soot-sprite-body::after \{[\s\S]*?filter: blur\(1\.6px\);/);
-  assert.match(getCssBlock(".soot-sprite-eye"), /radial-gradient\(circle at 56% 52%, #111/);
-  assert.match(getCssBlock(".soot-star-candy"), /clip-path: polygon\(/);
+  assert.doesNotMatch(
+    eventStyles,
+    /\.soot-sprite-body::before|\.soot-sprite-body::after|\.soot-sprite-eye/,
+  );
+  assert.match(getCssBlock(".soot-sprite-frame"), /background-image: var\(--soot-sheet\);/);
+  assert.match(
+    getCssBlock(".soot-sprite-frame"),
+    /background-position: var\(--soot-frame-position\);/,
+  );
+  assert.match(getCssBlock(".soot-sprite-frame"), /background-size: var\(--soot-sheet-size\);/);
+  assert.match(getCssBlock(".soot-sprite-frame"), /image-rendering: pixelated;/);
+  assert.match(getCssBlock(".soot-star-candy"), /background-image: var\(--soot-candy-sheet\);/);
+  assert.match(getCssBlock(".soot-star-candy"), /image-rendering: pixelated;/);
+  assert.doesNotMatch(getCssBlock(".soot-star-candy"), /clip-path|radial-gradient|filter/);
   assert.match(
     getCssBlock(".soot-star-candy"),
     /soot-candy-fall var\(--candy-fall-duration\) linear var\(--candy-delay\) both,[\s\S]*soot-candy-fade var\(--candy-fade-duration\) ease-out var\(--candy-fade-delay\) forwards;/,
   );
-  assert.match(eventStyles, /\.soot-puff \{[\s\S]*?rgba\(0, 0, 0, 0\.72\)/);
-  assert.match(eventStyles, /\.soot-puff \{[\s\S]*?filter: blur\(4\.5px\);/);
-  assert.match(eventStyles, /\.soot-puff \{[\s\S]*?height: var\(--puff-size\);/);
-  assert.match(eventStyles, /\.soot-puff \{[\s\S]*?width: calc\(var\(--puff-size\) \* 2\);/);
+  const puffBlock = eventStyles.match(
+    /\.soot-puff \{\n {2}animation: soot-puff-drift[\s\S]*?\n\}/,
+  )?.[0];
+  assert.ok(puffBlock, "Missing animated .soot-puff block");
+  assert.match(puffBlock, /background-image: var\(--soot-puff-sheet\);/);
+  assert.match(puffBlock, /image-rendering: pixelated;/);
+  assert.doesNotMatch(puffBlock, /filter|radial-gradient/);
+  assert.match(puffBlock, /height: var\(--puff-size\);/);
+  assert.match(puffBlock, /width: calc\(var\(--puff-size\) \* 2\);/);
+  assert.doesNotMatch(eventStyles, /\.soot-puff--large \{/);
+  assert.match(
+    eventStyles,
+    /@media \(prefers-reduced-motion: reduce\) \{\s*\.soot-sprite-body \{\s*animation: none;/,
+  );
+  assert.match(eventSources, /const SOOT_SWARM_SPRITE_BATCH = 8;/);
+  assert.match(eventSources, /const SOOT_FRAMES_PER_SPRITE = 3;/);
+  assert.match(eventSources, /overlay\.sootSpritesReady = runSootSwarmSteps\(overlay, steps\);/);
+  assert.match(eventSources, /overlay\.sootSpritesReady\.then\(\(\) => \{/);
+  assert.match(
+    eventSources,
+    /sootSpriteMotionAnimations\.get\(sprite\)\?\.play\(\);\s*sootSpriteBehaviourAnimations\.get\(sprite\)\?\.forEach/,
+  );
+  assert.match(eventSources, /composite: "add"/);
   assert.match(getCssBlock(".soot-puff--trail"), /mix-blend-mode: multiply;/);
   assert.doesNotMatch(getCssBlock(".soot-sprite"), /animation: soot-sprite-scatter/);
   assert.match(
