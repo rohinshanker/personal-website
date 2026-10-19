@@ -140,7 +140,10 @@
     };
   };
 
-  const dressSwarm = (overlay) => {
+  const dressSwarm = async (overlay) => {
+    // The shipped event now builds its swarm across frames; dress it once it is complete.
+    await overlay.sootSpritesReady;
+    if (overlay !== document.querySelector(".soot-sprites-swarm")) return;
     const variant = selectedVariant();
     const effects = pixelEffectsToggle.checked;
     if (effects) dressSootEffects(overlay, effectSheets);
@@ -202,7 +205,7 @@
       records.forEach((record) => {
         record.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("soot-sprites-swarm"))
-            dressSwarm(node);
+            void dressSwarm(node);
         });
       });
     }).observe(document.body, { childList: true });

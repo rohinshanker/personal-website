@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-29
 - Updated: 2026-10-18
-- Current State: Owner chose candidate I on 2026-10-18 and asked for the film's irregular shaking; the tremble is added to I on the review page `docs/validation/assets/soot-sprite-candidates.html`. Stage 2 (porting I, the tremble, and the pixel smoke and candy into the shipped event) is in progress in the main checkout; the ticket stays open for the owner's final review of the real event afterwards.
+- Current State: Stage 2 implemented on 2026-10-18: candidate I with the tremble, the pixel smoke and candy, and the chunked swarm build ship in `scripts/home/events/soot-sprites.js` and `styles/home/random-events.css`, with the look contract in `docs/validation/system-alert-random-events.md`, unit coverage in `tests/soot-sprite-pixels.test.mjs` and a browser spec in `tests/ui/soot-sprites.spec.mjs`. Review artifacts stay under `docs/validation/assets/` until the owner approves the real event; the review page's "Current sprite" option now runs the shipped sprite.
 - Verification: Stage 1: the review page renders every candidate at 375×812 and 1440×900 with no console errors, and a contact sheet PNG is saved beside it. Stage 2: `node scripts/update-game-integrity.mjs` then `--check`; `npm test` with `tests/gears-nest.test.mjs` updated; `npm run test:ui` (`deferred-window-media.spec.mjs` opens this event); trigger the event through Admin Controls at 375×812, 768×1024, 1280×800, and 1440×900 plus reduced motion; a 32-sprite swarm under 4× CPU throttling shows no long task over 50 ms; `npm run test:visual`.
 - Owner Approval: Required both for candidate selection and final visual acceptance. Keep the ticket open and retain review artifacts after implementation until the owner reviews the completed event and explicitly approves closure.
 - Cleanup: After the chosen design ships and the owner approves final review, delete the review page, contact sheet and the unchosen candidates; record the sprite's look contract in `docs/validation/system-alert-random-events.md`; delete this ticket and its index row.
@@ -72,5 +72,10 @@ Measured in body diameters (D) on a cell grid of `round(size / unit)` cells per 
 2. Stage 1: round 1 declined; round 2 done, see the record above.
 3. Review page: done; the contact sheet is `docs/validation/assets/soot-sprite-candidates.png`.
 4. Owner approves I or asks for tweaks. Record it under "Decision".
-5. Stage 2: move the I renderer, the effect sheets and the dressing into `scripts/home/events/soot-sprites.js` and `random-events.css` (draw the sheets during the 1 s hold), update the tests, regenerate/check the game-build metadata, bump the stylesheet token, and run the Stage 2 verification. Runs after the Biome normalization pass so the new code lands in the normalized style. Preserve review artifacts and keep the ticket open for the owner's final visual approval after implementation.
+5. Stage 2: done 2026-10-18 (see Current State and the Stage 2 record below). Preserve review artifacts and keep the ticket open for the owner's final visual approval after implementation.
 6. Cleanup as above.
+
+## Stage 2 record (2026-10-18)
+
+- Shipped files: `scripts/home/events/soot-sprites.js` (pixel renderer, sheets, boil, tremble, chunked build), `styles/home/random-events.css` (`.soot-sprite-frame`, sheet-driven candy and puff, reduced-motion rule), cache tokens in `home.html`, `index.html`, `scripts/home/core/resources.js` and `scripts/home/admin-controls.js`, regenerated game-build token.
+- Tests: `tests/gears-nest.test.mjs` soot assertions moved to the new contract; `tests/soot-sprite-pixels.test.mjs` (geometry, coat, pupils, frames, boil, tremble, sheets); `tests/ui/soot-sprites.spec.mjs` (20 and 32 sprites, sheets on every frame, candies and puffs dressed, three animations per sprite, reduced motion).

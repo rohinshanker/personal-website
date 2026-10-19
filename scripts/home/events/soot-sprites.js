@@ -67,14 +67,138 @@
     "#bde7ff",
   ]);
 
+  /*
+   * Pixel-art sprites (docs/notes/tickets/A_soot-sprite-redesign__20260929.md, candidate I).
+   * Each sprite draws one of three looks on a cell grid of `round(size / unit)` cells per body:
+   * a black disc, a radial coat of single-cell hairs, white eyes with a baked gaze. The whole
+   * swarm shares one canvas sheet encoded once; every sprite shows its frames through
+   * `background-position` scaled with `image-rendering: pixelated`.
+   */
+  const SOOT_LOOKS = Object.freeze([
+    Object.freeze({
+      unit: 2,
+      fur: Object.freeze({ min: 0.1, max: 0.22, density: 1.3, curl: 0.16 }),
+    }),
+    Object.freeze({
+      unit: 1.5,
+      fur: Object.freeze({ min: 0.14, max: 0.3, density: 0.9, curl: 0.3 }),
+    }),
+    Object.freeze({
+      unit: 2,
+      fur: Object.freeze({ min: 0.1, max: 0.22, density: 1.3, curl: 0.16 }),
+    }),
+  ]);
+
+  const SOOT_MIN_BODY_CELLS = 8;
+
+  const SOOT_EYE_WIDTH = 0.36;
+
+  const SOOT_EYE_GAP = 0.38;
+
+  const SOOT_EYE_LIFT = 0.05;
+
+  const SOOT_PUPIL = 0.07;
+
+  const SOOT_FRAMES_PER_SPRITE = 3;
+
+  const SOOT_INK = "#000";
+
+  const SOOT_EYE_WHITE = "#fff";
+
+  /* The coat flickers between two drawings every step; a blink frame shows for one step. */
+  const SOOT_BOIL_STEP_MS = 160;
+
+  const SOOT_BLINK_MIN_MS = 2400;
+
+  const SOOT_BLINK_MAX_MS = 4800;
+
+  /* Irregular tremble: a whole-cell offset every 55–115 ms, larger on the ground, with twitches and hops. */
+  const SOOT_JITTER_MIN_MS = 55;
+
+  const SOOT_JITTER_MAX_MS = 115;
+
+  const SOOT_JITTER_FALL_REACH = 0.03;
+
+  const SOOT_JITTER_RUN_REACH = 0.06;
+
+  const SOOT_JITTER_TWITCH_CHANCE = 0.18;
+
+  const SOOT_JITTER_HOP_CHANCE = 0.06;
+
+  const SOOT_JITTER_HOP_RISE = 0.22;
+
+  /* Pixel candy: the five colours in two 9-cell star shapes on one sheet. */
+  const SOOT_CANDY_CELLS = 9;
+
+  const SOOT_CANDY_SHAPES = Object.freeze([
+    Object.freeze([
+      "....X....",
+      ".X..X..X.",
+      "..XXXXX..",
+      ".XXXXXXX.",
+      "XXXXXXXXX",
+      ".XXXXXXX.",
+      "..XXXXX..",
+      ".X..X..X.",
+      "....X....",
+    ]),
+    Object.freeze([
+      "X...X...X",
+      ".X.XXX.X.",
+      "..XXXXX..",
+      ".XXXXXXX.",
+      "X.XXXXX.X",
+      ".XXXXXXX.",
+      "..XXXXX..",
+      ".X.XXX.X.",
+      "X...X...X",
+    ]),
+  ]);
+
+  /* Pixel smoke: six 96×48-cell blobs in three translucent shades of black with a dithered rim. */
+  const SOOT_PUFF_CELLS = Object.freeze({ width: 96, height: 48 });
+
+  const SOOT_PUFF_SHAPES = 6;
+
+  /* The swarm is built across animation frames during the alert's hold so no task runs long. */
+  const SOOT_SWARM_SPRITE_BATCH = 8;
+
+  const SOOT_SWARM_EFFECT_BATCH = 60;
+
+  const sootSpriteBehaviourAnimations = new WeakMap();
+
+  const sootReducedMotionQuery =
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)")
+      : null;
+
+  const prefersSootReducedMotion = () => Boolean(sootReducedMotionQuery?.matches);
+
+  let sootEffectSheets = null;
+
   const isSootSpritesVisible = () =>
     isManagedRandomEventWindowVisible(sootSpritesWindow) ||
     Boolean(sootSpritesOverlay || sootSpritesRevealTimer || sootSpritesWindowHoldTimer);
 
   const randomSootSpriteValue = (min, max) => min + Math.random() * (max - min);
 
-  const randomSootCandyColor = () =>
-    SOOT_SPRITES_CANDY_COLORS[Math.floor(Math.random() * SOOT_SPRITES_CANDY_COLORS.length)];
+  /** A random colour and star shape, as a slot on the shared candy sheet. */
+  const setSootCandyLook = (candy) => {
+    const color = Math.floor(Math.random() * SOOT_SPRITES_CANDY_COLORS.length);
+    const shape = Math.floor(Math.random() * SOOT_CANDY_SHAPES.length);
+    candy.style.setProperty("--candy-color", SOOT_SPRITES_CANDY_COLORS[color]);
+    candy.style.setProperty(
+      "--soot-candy-slot",
+      String(shape * SOOT_SPRITES_CANDY_COLORS.length + color),
+    );
+  };
+
+  const setSootPuffLook = (puff) => {
+    puff.style.setProperty(
+      "--soot-puff-shape",
+      String(Math.floor(Math.random() * SOOT_PUFF_SHAPES)),
+    );
+  };
 
   const setSootSpritePx = (element, property, value) => {
     element.style.setProperty(property, `${Math.round(value)}px`);
@@ -589,7 +713,254 @@
     return randomSootSpriteValue(start, 0.96);
   };
 
-  const createSootSpriteElement = (index, trajectory, { paused = false } = {}) => {
+  /** Cell geometry for one sprite: body diameter in cells and the frame size that fits the coat. */
+  const getSootSpriteGeometry = (look, size) => {
+    const bodyCells = Math.max(SOOT_MIN_BODY_CELLS, Math.round(size / look.unit));
+    const furCells = Math.ceil(bodyCells * look.fur.max) + 1;
+    const cells = bodyCells + furCells * 2;
+    return { bodyCells, cells, centre: cells / 2, cellPx: size / bodyCells };
+  };
+
+  const fillSootCell = (context, x, y) => {
+    context.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+  };
+
+  /** Fills the cells whose centres fall inside the ellipse; `reach` below 1 trims the corner cells. */
+  const fillSootEllipse = (context, cx, cy, rx, ry, reach = 1) => {
+    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y += 1) {
+      for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x += 1) {
+        const dx = (x + 0.5 - cx) / rx;
+        const dy = (y + 0.5 - cy) / ry;
+        if (dx * dx + dy * dy <= reach) fillSootCell(context, x, y);
+      }
+    }
+  };
+
+  /** Single-cell hairs rooted one cell inside the body edge, each with its own length and bend. */
+  const drawSootCoat = (context, geometry, fur) => {
+    const { bodyCells, centre } = geometry;
+    const radius = bodyCells / 2;
+    const count = Math.round(Math.PI * bodyCells * fur.density);
+    const step = (Math.PI * 2) / count;
+    for (let index = 0; index < count; index += 1) {
+      const angle = step * index + randomSootSpriteValue(-step * 0.4, step * 0.4);
+      const length = randomSootSpriteValue(fur.min, fur.max) * bodyCells;
+      const bend = randomSootSpriteValue(-fur.curl, fur.curl);
+      for (let distance = radius - 1; distance <= radius + length; distance += 0.5) {
+        const along = Math.max(0, distance - radius) / Math.max(length, 0.5);
+        const hairAngle = angle + bend * along;
+        fillSootCell(
+          context,
+          centre + distance * Math.cos(hairAngle),
+          centre + distance * Math.sin(hairAngle),
+        );
+      }
+    }
+  };
+
+  /** White ovals with trimmed corners and a square pupil of whole cells kept inside the white. */
+  const drawSootEyes = (context, geometry, gaze, { closed = false } = {}) => {
+    const { bodyCells, centre } = geometry;
+    const rx = (SOOT_EYE_WIDTH * bodyCells) / 2;
+    const ry = rx * 1.15;
+    const eyeY = centre - SOOT_EYE_LIFT * bodyCells;
+    const pupil = Math.max(1, Math.round(bodyCells * SOOT_PUPIL));
+    const reachX = Math.max(0, Math.floor(rx - pupil / 2 - 1));
+    const reachY = Math.max(0, Math.floor(ry - pupil / 2 - 1));
+    [-1, 1].forEach((side) => {
+      const eyeX = centre + (side * SOOT_EYE_GAP * bodyCells) / 2;
+      context.fillStyle = SOOT_EYE_WHITE;
+      if (closed) {
+        for (let x = Math.floor(eyeX - rx * 0.8); x < Math.ceil(eyeX + rx * 0.8); x += 1) {
+          fillSootCell(context, x, eyeY);
+        }
+        return;
+      }
+      fillSootEllipse(context, eyeX, eyeY, rx, ry, 0.85);
+      context.fillStyle = SOOT_INK;
+      context.fillRect(
+        Math.round(eyeX + gaze.x * reachX - pupil / 2),
+        Math.round(eyeY + gaze.y * reachY - pupil / 2),
+        pupil,
+        pupil,
+      );
+    });
+  };
+
+  /** A random direction scaled so pupils stay inside the whites; most sprites look mostly ahead. */
+  const randomSootGaze = () => {
+    const angle = randomSootSpriteValue(0, Math.PI * 2);
+    const reach = randomSootSpriteValue(0.2, 1);
+    return { x: Math.cos(angle) * reach, y: Math.sin(angle) * reach };
+  };
+
+  /** Plans one sprite's look, grid and gaze; its frames are drawn later at `originX` on the sheet. */
+  const planSootSprite = (size, originX) => {
+    const look = SOOT_LOOKS[Math.floor(Math.random() * SOOT_LOOKS.length)];
+    const geometry = getSootSpriteGeometry(look, size);
+    return { size, look, geometry, gaze: randomSootGaze(), originX };
+  };
+
+  /** Draws a sprite's three frames (two coats, one blink) side by side on the sheet. */
+  const drawSootSpritePlan = (context, plan) => {
+    const { geometry, look, gaze } = plan;
+    for (let frame = 0; frame < SOOT_FRAMES_PER_SPRITE; frame += 1) {
+      context.save();
+      context.translate(plan.originX + frame * geometry.cells, 0);
+      context.fillStyle = SOOT_INK;
+      drawSootCoat(context, geometry, look.fur);
+      fillSootEllipse(
+        context,
+        geometry.centre,
+        geometry.centre,
+        geometry.bodyCells / 2,
+        geometry.bodyCells / 2,
+      );
+      drawSootEyes(context, geometry, gaze, { closed: frame === 2 });
+      context.restore();
+    }
+  };
+
+  /** One canvas wide enough for every planned sprite's frames. */
+  const createSootSpriteSheet = (plans) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = plans.reduce(
+      (total, plan) => total + plan.geometry.cells * SOOT_FRAMES_PER_SPRITE,
+      0,
+    );
+    canvas.height = Math.max(1, ...plans.map((plan) => plan.geometry.cells));
+    return { canvas, context: canvas.getContext("2d") };
+  };
+
+  /** Keyframes alternating the two coat frames with a blink frame every few seconds. */
+  const createSootBoilKeyframes = (framePositions, duration) => {
+    const steps = Math.max(2, Math.floor(duration / SOOT_BOIL_STEP_MS));
+    const blinkEvery = Math.round(
+      randomSootSpriteValue(SOOT_BLINK_MIN_MS, SOOT_BLINK_MAX_MS) / SOOT_BOIL_STEP_MS,
+    );
+    const blinkPhase = Math.floor(randomSootSpriteValue(0, blinkEvery));
+    const keyframes = [];
+    for (let step = 0; step <= steps; step += 1) {
+      const frame = (step + blinkPhase) % blinkEvery === 0 ? 2 : step % 2;
+      keyframes.push({
+        offset: Math.min(1, step / steps),
+        backgroundPosition: framePositions[frame],
+        easing: "step-end",
+      });
+    }
+    return keyframes;
+  };
+
+  /**
+   * Frame-stepped tremble added on top of the slow wobble: a whole-cell shift in a random
+   * direction every 55–115 ms, within 0.03 D while falling and 0.06 D on the ground, doubled for
+   * an occasional twitch, with a rare hop of 0.22 D upward once landed.
+   */
+  const createSootJitterKeyframes = ({ size, cellPx }, { duration, landingProgress }) => {
+    const snap = (value) => Math.round(value / cellPx) * cellPx;
+    const keyframes = [{ offset: 0, transform: "translate(0px, 0px)", easing: "step-end" }];
+    let at = 0;
+    while (at < duration) {
+      at += randomSootSpriteValue(SOOT_JITTER_MIN_MS, SOOT_JITTER_MAX_MS);
+      const offset = Math.min(1, at / duration);
+      const grounded = offset >= landingProgress;
+      let reach = (grounded ? SOOT_JITTER_RUN_REACH : SOOT_JITTER_FALL_REACH) * size;
+      if (Math.random() < SOOT_JITTER_TWITCH_CHANCE) reach *= 2;
+      const dx = snap(randomSootSpriteValue(-reach, reach));
+      let dy = snap(randomSootSpriteValue(-reach, reach));
+      if (grounded && Math.random() < SOOT_JITTER_HOP_CHANCE)
+        dy = -snap(SOOT_JITTER_HOP_RISE * size);
+      keyframes.push({ offset, transform: `translate(${dx}px, ${dy}px)`, easing: "step-end" });
+    }
+    keyframes[keyframes.length - 1].offset = 1;
+    return keyframes;
+  };
+
+  /** Darkens or lightens a hex colour by `amount` (−1…1). */
+  const shadeSootColor = (hex, amount) => {
+    const channels = [1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16));
+    return `rgb(${channels
+      .map((value) =>
+        Math.round(amount < 0 ? value * (1 + amount) : value + (255 - value) * amount),
+      )
+      .join(", ")})`;
+  };
+
+  /** Every candy colour in every shape: a filled star, a white highlight cell, a darker lower-right edge. */
+  const renderSootCandySheet = () => {
+    const sheet = document.createElement("canvas");
+    sheet.width = SOOT_CANDY_CELLS * SOOT_SPRITES_CANDY_COLORS.length * SOOT_CANDY_SHAPES.length;
+    sheet.height = SOOT_CANDY_CELLS;
+    const context = sheet.getContext("2d");
+    SOOT_CANDY_SHAPES.forEach((shape, shapeIndex) => {
+      SOOT_SPRITES_CANDY_COLORS.forEach((color, colorIndex) => {
+        const originX =
+          (shapeIndex * SOOT_SPRITES_CANDY_COLORS.length + colorIndex) * SOOT_CANDY_CELLS;
+        shape.forEach((row, y) => {
+          [...row].forEach((cell, x) => {
+            if (cell !== "X") return;
+            const onEdge =
+              y >= 5 && x >= 4 && (shape[y + 1]?.[x] !== "X" || shape[y]?.[x + 1] !== "X");
+            context.fillStyle = onEdge ? shadeSootColor(color, -0.28) : color;
+            context.fillRect(originX + x, y, 1, 1);
+          });
+        });
+        context.fillStyle = SOOT_EYE_WHITE;
+        context.fillRect(originX + 3, 3, 1, 1);
+      });
+    });
+    return {
+      image: `url("${sheet.toDataURL("image/png")}")`,
+      slots: SOOT_SPRITES_CANDY_COLORS.length * SOOT_CANDY_SHAPES.length,
+    };
+  };
+
+  /** Six smoke blobs, each a union of soft discs in three shades of black with a dithered rim. */
+  const renderSootPuffSheet = () => {
+    const { width, height } = SOOT_PUFF_CELLS;
+    const sheet = document.createElement("canvas");
+    sheet.width = width * SOOT_PUFF_SHAPES;
+    sheet.height = height;
+    const context = sheet.getContext("2d");
+    for (let shape = 0; shape < SOOT_PUFF_SHAPES; shape += 1) {
+      const discs = [];
+      const discCount = Math.round(randomSootSpriteValue(6, 9));
+      for (let index = 0; index < discCount; index += 1) {
+        discs.push({
+          x: randomSootSpriteValue(width * 0.22, width * 0.78),
+          y: randomSootSpriteValue(height * 0.3, height * 0.7),
+          r: randomSootSpriteValue(height * 0.2, height * 0.34),
+        });
+      }
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          let nearest = Number.POSITIVE_INFINITY;
+          discs.forEach((disc) => {
+            const distance = Math.hypot(x + 0.5 - disc.x, y + 0.5 - disc.y) / disc.r;
+            if (distance < nearest) nearest = distance;
+          });
+          let alpha = 0;
+          if (nearest < 0.7) alpha = 0.5;
+          else if (nearest < 1) alpha = Math.random() < 0.85 ? 0.32 : 0;
+          else if (nearest < 1.18) alpha = Math.random() < 0.4 ? 0.16 : 0;
+          if (!alpha) continue;
+          context.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+          context.fillRect(shape * width + x, y, 1, 1);
+        }
+      }
+    }
+    return { image: `url("${sheet.toDataURL("image/png")}")`, shapes: SOOT_PUFF_SHAPES };
+  };
+
+  /** The candy and smoke sheets are drawn once per page and shared by every swarm. */
+  const getSootEffectSheets = () => {
+    if (!sootEffectSheets) {
+      sootEffectSheets = { candy: renderSootCandySheet(), puff: renderSootPuffSheet() };
+    }
+    return sootEffectSheets;
+  };
+
+  const createSootSpriteElement = (index, trajectory, plan, { paused = false } = {}) => {
     const sprite = document.createElement("span");
     sprite.className = "soot-sprite";
     sprite.setAttribute("aria-hidden", "true");
@@ -610,57 +981,50 @@
     sprite.style.setProperty("--soot-delay", `${trajectory.delay}ms`);
     sprite.style.setProperty("--soot-duration", `${trajectory.duration}ms`);
     sprite.style.setProperty("--soot-run-scale", String(trajectory.runScale));
-    sprite.style.setProperty(
-      "--soot-body-radius",
-      `${Math.round(randomSootSpriteValue(42, 58))}% ${Math.round(
-        randomSootSpriteValue(42, 58),
-      )}% ${Math.round(randomSootSpriteValue(42, 58))}% ${Math.round(
-        randomSootSpriteValue(42, 58),
-      )}% / ${Math.round(randomSootSpriteValue(42, 58))}% ${Math.round(
-        randomSootSpriteValue(42, 58),
-      )}% ${Math.round(randomSootSpriteValue(42, 58))}% ${Math.round(
-        randomSootSpriteValue(42, 58),
-      )}%`,
-    );
     sprite.style.setProperty("--soot-wobble-delay", `${index * -83}ms`);
+    const { geometry } = plan;
+    const framePx = geometry.cells * geometry.cellPx;
+    sprite.style.setProperty("--soot-frame-size", `${framePx}px`);
+    sprite.style.setProperty("--soot-frame-inset", `${(trajectory.size - framePx) / 2}px`);
     sprite.style.setProperty(
-      "--soot-left-eye-width",
-      `${randomSootSpriteValue(7, 10).toFixed(1)}px`,
+      "--soot-sheet-size",
+      `${plan.sheetWidth * geometry.cellPx}px ${plan.sheetHeight * geometry.cellPx}px`,
     );
-    sprite.style.setProperty(
-      "--soot-left-eye-height",
-      `${randomSootSpriteValue(8, 12).toFixed(1)}px`,
-    );
-    sprite.style.setProperty(
-      "--soot-right-eye-width",
-      `${randomSootSpriteValue(7, 10).toFixed(1)}px`,
-    );
-    sprite.style.setProperty(
-      "--soot-right-eye-height",
-      `${randomSootSpriteValue(8, 12).toFixed(1)}px`,
-    );
-    sprite.style.setProperty(
-      "--soot-left-eye-rotate",
-      `${randomSootSpriteValue(-10, 9).toFixed(1)}deg`,
-    );
-    sprite.style.setProperty(
-      "--soot-right-eye-rotate",
-      `${randomSootSpriteValue(-9, 10).toFixed(1)}deg`,
-    );
+    const framePositions = [];
+    for (let frame = 0; frame < SOOT_FRAMES_PER_SPRITE; frame += 1) {
+      framePositions.push(`${-(plan.originX + frame * geometry.cells) * geometry.cellPx}px 0px`);
+    }
+    sprite.style.setProperty("--soot-frame-position", framePositions[0]);
 
     const body = document.createElement("span");
     body.className = "soot-sprite-body";
-    const leftEye = document.createElement("span");
-    leftEye.className = "soot-sprite-eye soot-sprite-eye--left";
-    const rightEye = document.createElement("span");
-    rightEye.className = "soot-sprite-eye soot-sprite-eye--right";
-    body.append(leftEye, rightEye);
+    const frame = document.createElement("span");
+    frame.className = "soot-sprite-frame";
+    body.append(frame);
     sprite.append(body);
+    const behaviours = [];
+    if (!prefersSootReducedMotion() && typeof frame.animate === "function") {
+      const timing = { delay: trajectory.delay, duration: trajectory.duration, fill: "both" };
+      behaviours.push(
+        frame.animate(createSootBoilKeyframes(framePositions, trajectory.duration), timing),
+      );
+      behaviours.push(
+        body.animate(
+          createSootJitterKeyframes({ size: trajectory.size, cellPx: geometry.cellPx }, trajectory),
+          { ...timing, composite: "add" },
+        ),
+      );
+    }
     const motion = animateSootSpriteElement(sprite, trajectory);
     if (paused && motion) {
       motion.pause();
       sootSpriteMotionAnimations.set(sprite, motion);
     }
+    if (paused)
+      behaviours.forEach((animation) => {
+        animation.pause();
+      });
+    sootSpriteBehaviourAnimations.set(sprite, behaviours);
     return sprite;
   };
 
@@ -681,7 +1045,7 @@
     const spin = randomSootSpriteValue(-820, 820);
     setSootCandyTrajectoryProperties(candy, trajectory);
     setSootSpritePx(candy, "--candy-size", size);
-    candy.style.setProperty("--candy-color", randomSootCandyColor());
+    setSootCandyLook(candy);
     setSootCandyTimingProperties(candy, {
       delay: randomSootSpriteValue(140, 520),
       fallDuration: randomSootSpriteValue(3600, 4800),
@@ -708,7 +1072,7 @@
     const spin = randomSootSpriteValue(-620, 620);
     setSootCandyTrajectoryProperties(candy, candyTrajectory);
     setSootSpritePx(candy, "--candy-size", size);
-    candy.style.setProperty("--candy-color", randomSootCandyColor());
+    setSootCandyLook(candy);
     setSootCandyTimingProperties(candy, {
       delay: trajectory.delay + trajectory.duration * progress + randomSootSpriteValue(-90, 140),
       fallDuration: randomSootSpriteValue(3200, 4300),
@@ -735,6 +1099,7 @@
     setSootSpritePx(puff, "--puff-size", size);
     puff.style.setProperty("--puff-delay", `${randomSootSpriteValue(40, 360)}ms`);
     puff.style.setProperty("--puff-duration", `${randomSootSpriteValue(5400, 7600)}ms`);
+    setSootPuffLook(puff);
     return puff;
   };
 
@@ -760,7 +1125,32 @@
       `${trajectory.delay + trajectory.duration * progress + randomSootSpriteValue(-120, 180)}ms`,
     );
     puff.style.setProperty("--puff-duration", `${randomSootSpriteValue(5300, 7300)}ms`);
+    setSootPuffLook(puff);
     return puff;
+  };
+
+  /** Runs `steps` one per animation frame while `overlay` is still the live swarm. */
+  const runSootSwarmSteps = (overlay, steps) =>
+    new Promise((resolve) => {
+      const next = () => {
+        if (overlay !== sootSpritesOverlay) return;
+        const step = steps.shift();
+        if (!step) {
+          resolve();
+          return;
+        }
+        step();
+        window.requestAnimationFrame(next);
+      };
+      next();
+    });
+
+  /** Plays everything a sprite created after the swarm's release would otherwise hold paused. */
+  const playSootSprite = (sprite) => {
+    sootSpriteMotionAnimations.get(sprite)?.play();
+    sootSpriteBehaviourAnimations.get(sprite)?.forEach((animation) => {
+      animation.play();
+    });
   };
 
   const showSootSpritesSwarm = (launchRect = getSootSpritesLaunchRect()) => {
@@ -776,14 +1166,50 @@
     const trajectories = spawnGrid.map((startPoint) =>
       createSootSpriteTrajectory(launchRect, { startPoint }),
     );
-    trajectories.forEach((trajectory, index) => {
-      overlay.append(createSootSpriteElement(index, trajectory, { paused: true }));
+    let originX = 0;
+    const plans = trajectories.map((trajectory) => {
+      const plan = planSootSprite(trajectory.size, originX);
+      originX += plan.geometry.cells * SOOT_FRAMES_PER_SPRITE;
+      return plan;
+    });
+    const sheet = createSootSpriteSheet(plans);
+    plans.forEach((plan) => {
+      plan.sheetWidth = sheet.canvas.width;
+      plan.sheetHeight = sheet.canvas.height;
     });
 
+    const staged = () => overlay.classList.contains("is-staged");
+    const steps = [];
+    for (let start = 0; start < trajectories.length; start += SOOT_SWARM_SPRITE_BATCH) {
+      steps.push(() => {
+        for (
+          let index = start;
+          index < Math.min(trajectories.length, start + SOOT_SWARM_SPRITE_BATCH);
+          index += 1
+        ) {
+          drawSootSpritePlan(sheet.context, plans[index]);
+          const sprite = createSootSpriteElement(index, trajectories[index], plans[index], {
+            paused: true,
+          });
+          overlay.append(sprite);
+          if (!staged()) playSootSprite(sprite);
+        }
+      });
+    }
+    steps.push(() => {
+      overlay.style.setProperty("--soot-sheet", `url("${sheet.canvas.toDataURL("image/png")}")`);
+      const sheets = getSootEffectSheets();
+      overlay.style.setProperty("--soot-candy-sheet", sheets.candy.image);
+      overlay.style.setProperty("--soot-candy-slots", String(sheets.candy.slots));
+      overlay.style.setProperty("--soot-puff-sheet", sheets.puff.image);
+      overlay.style.setProperty("--soot-puff-shapes", String(sheets.puff.shapes));
+    });
+
+    const effects = [];
     const airTrailCandyCount = Math.round(spriteCount * SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE);
     for (let index = 0; index < airTrailCandyCount; index += 1) {
       const trajectory = trajectories[index % trajectories.length];
-      overlay.append(
+      effects.push(() =>
         createSootTrailCandyElement(trajectory, getSootSpriteAirTrailProgress(trajectory)),
       );
     }
@@ -796,7 +1222,7 @@
     );
     for (let index = 0; index < groundRunCandyCount; index += 1) {
       const trajectory = trajectories[index % trajectories.length];
-      overlay.append(
+      effects.push(() =>
         createSootTrailCandyElement(trajectory, getSootSpriteGroundRunProgress(trajectory)),
       );
     }
@@ -804,25 +1230,34 @@
     const trailPuffCount = Math.round(spriteCount * 1.4);
     for (let index = 0; index < trailPuffCount; index += 1) {
       const progress = 0.04 + ((index * 0.13) % 0.92);
-      overlay.append(
+      effects.push(() =>
         createSootTrailPuffElement(trajectories[index % trajectories.length], index, progress),
       );
     }
 
     const candyCount = Math.round(spriteCount * 1.28);
     for (let index = 0; index < candyCount; index += 1) {
-      overlay.append(createSootCandyElement(launchRect));
+      effects.push(() => createSootCandyElement(launchRect));
     }
 
     const puffCount = Math.round(spriteCount * 0.48);
     for (let index = 0; index < puffCount; index += 1) {
-      overlay.append(createSootPuffElement(launchRect, index % 5 === 0));
+      effects.push(() => createSootPuffElement(launchRect, index % 5 === 0));
+    }
+
+    for (let start = 0; start < effects.length; start += SOOT_SWARM_EFFECT_BATCH) {
+      steps.push(() => {
+        effects.slice(start, start + SOOT_SWARM_EFFECT_BATCH).forEach((create) => {
+          overlay.append(create());
+        });
+      });
     }
 
     document.body.append(overlay);
     document.body.classList.add("is-soot-sprites-active");
     sootSpritesOverlay = overlay;
     sootSpritesCleanupTimer = window.setTimeout(cleanupSootSpritesOverlay, SOOT_SPRITES_CLEANUP_MS);
+    overlay.sootSpritesReady = runSootSwarmSteps(overlay, steps);
     return overlay;
   };
 
@@ -833,6 +1268,9 @@
     overlay.style.removeProperty("z-index");
     overlay.querySelectorAll(".soot-sprite").forEach((sprite) => {
       sootSpriteMotionAnimations.get(sprite)?.play();
+      sootSpriteBehaviourAnimations.get(sprite)?.forEach((animation) => {
+        animation.play();
+      });
     });
   };
 
@@ -857,14 +1295,18 @@
     sootSpritesRevealTimer = window.setTimeout(() => {
       sootSpritesRevealTimer = null;
       const overlay = showSootSpritesSwarm(launchRect);
-      // The procedural sprites are ready after their nodes have been committed to a frame.
-      window.requestAnimationFrame(() => {
+      // The swarm is built across frames during the hold; it is ready once the last
+      // batch has been committed to a frame.
+      overlay.sootSpritesReady.then(() => {
         if (overlay !== sootSpritesOverlay) return;
-        sootSpritesWindowHoldTimer = window.setTimeout(() => {
-          sootSpritesWindowHoldTimer = null;
-          setSootSpritesWindowLoading(false);
-          closeManagedRandomEventWindow(sootSpritesWindow);
-        }, SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS);
+        window.requestAnimationFrame(() => {
+          if (overlay !== sootSpritesOverlay) return;
+          sootSpritesWindowHoldTimer = window.setTimeout(() => {
+            sootSpritesWindowHoldTimer = null;
+            setSootSpritesWindowLoading(false);
+            closeManagedRandomEventWindow(sootSpritesWindow);
+          }, SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS);
+        });
       });
     }, SOOT_SPRITES_REVEAL_DELAY_MS);
   };
