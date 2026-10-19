@@ -85,8 +85,7 @@
 
   const LANCER_BATTLE_LOSS_VIDEO_END_SECONDS = 25;
 
-  const LANCER_BATTLE_LOSS_VIDEO_SRC =
-    "assets/random-events/lancer-battle/lancer-battle-loss.mp4";
+  const LANCER_BATTLE_LOSS_VIDEO_SRC = "assets/random-events/lancer-battle/lancer-battle-loss.mp4";
 
   const LANCER_BATTLE_START_PROGRESS = FATE_START_PROGRESS;
 

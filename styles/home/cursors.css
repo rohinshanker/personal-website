@@ -39,12 +39,10 @@
     url("../../assets/cursor-assets/jeelh-cursor-light/vertical-resize-light.cur"), ns-resize;
   --cursor-resize-nwse:
     url("../../assets/cursor-assets/generated-png/resize-nwse-light.png") 15 15,
-    url("../../assets/cursor-assets/jeelh-cursor-light/diagonal-resize-1-light.cur"),
-    nwse-resize;
+    url("../../assets/cursor-assets/jeelh-cursor-light/diagonal-resize-1-light.cur"), nwse-resize;
   --cursor-resize-nesw:
     url("../../assets/cursor-assets/generated-png/resize-nesw-light.png") 15 15,
-    url("../../assets/cursor-assets/jeelh-cursor-light/diagonal-resize-2-light.cur"),
-    nesw-resize;
+    url("../../assets/cursor-assets/jeelh-cursor-light/diagonal-resize-2-light.cur"), nesw-resize;
 }
 
 html.is-cursor-dark-mode,
