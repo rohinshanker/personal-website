@@ -34,6 +34,8 @@ const releaseSwarm = async (page) => {
   const overlay = page.locator(".soot-sprites-swarm");
   await expect(overlay).toHaveCount(1);
   await expect(overlay).not.toHaveClass(/is-staged/, { timeout: 10_000 });
+  // Candies and smoke keep arriving in batches after the release.
+  await page.evaluate(() => document.querySelector(".soot-sprites-swarm").sootEffectsReady);
   return overlay;
 };
 
@@ -46,7 +48,7 @@ const readSwarm = (page) =>
     );
     const candies = [...overlay.querySelectorAll(".soot-star-candy")];
     const puffs = [...overlay.querySelectorAll(".soot-puff")];
-    const sheet = overlay.style.getPropertyValue("--soot-sheet");
+    const sheet = frames[0]?.style.backgroundImage ?? "";
     return {
       sprites: sprites.length,
       framesWithSheet: frames.filter(

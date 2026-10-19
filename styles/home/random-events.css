@@ -3375,9 +3375,11 @@ html.is-wall-breach-shaking body {
   width: 100%;
 }
 
-/* One slice of the swarm's shared pixel-art sheet, centred so the coat overflows the body box. */
+/*
+ * One slice of the swarm's shared pixel-art sheet, centred so the coat overflows the body box.
+ * The sheet itself is set inline per frame once it is encoded.
+ */
 .soot-sprite-frame {
-  background-image: var(--soot-sheet);
   background-position: var(--soot-frame-position);
   background-repeat: no-repeat;
   background-size: var(--soot-sheet-size);
@@ -3394,7 +3396,6 @@ html.is-wall-breach-shaking body {
   animation:
     soot-candy-fall var(--candy-fall-duration) linear var(--candy-delay) both,
     soot-candy-fade var(--candy-fade-duration) ease-out var(--candy-fade-delay) forwards;
-  background-image: var(--soot-candy-sheet);
   background-position: calc(var(--candy-size) * -1 * var(--soot-candy-slot, 0)) 0;
   background-repeat: no-repeat;
   background-size: calc(var(--candy-size) * var(--soot-candy-slots, 10)) var(--candy-size);
@@ -3407,7 +3408,6 @@ html.is-wall-breach-shaking body {
 
 .soot-puff {
   animation: soot-puff-drift var(--puff-duration) ease-out var(--puff-delay) both;
-  background-image: var(--soot-puff-sheet);
   background-position: calc(var(--puff-size) * -2 * var(--soot-puff-shape, 0)) 0;
   background-repeat: no-repeat;
   background-size: calc(var(--puff-size) * 2 * var(--soot-puff-shapes, 6)) var(--puff-size);

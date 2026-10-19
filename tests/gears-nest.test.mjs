@@ -810,12 +810,12 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(eventSources, /fallLength \* 0\.75/);
   assert.match(
     eventSources,
-    /createSootSpriteElement\(index, trajectories\[index\], plans\[index\], \{\s*paused: true,?\s*\}\)/,
+    /createSootSpriteElement\(index, trajectory, plan, \{\s*paused: true,?\s*\}\)/,
   );
-  assert.match(eventSources, /createSootCandyElement\(launchRect\)/);
+  assert.match(eventSources, /createSootCandyElement\(launchRect, lag\)/);
   assert.match(eventSources, /const size = Math\.round\(randomSootSpriteValue\(8, 14\)\);/);
   assert.match(eventSources, /const size = Math\.round\(randomSootSpriteValue\(6, 11\)\);/);
-  assert.match(eventSources, /createSootPuffElement\(launchRect, index % 5 === 0\)/);
+  assert.match(eventSources, /createSootPuffElement\(launchRect, index % 5 === 0, lag\)/);
   assert.match(
     eventSources,
     /const size = randomSootSpriteValue\(large \? 192 : 84, large \? 380 : 208\);/,
@@ -825,7 +825,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(eventSources, /"--puff-duration", `\$\{randomSootSpriteValue\(5300, 7300\)\}ms`/);
   assert.match(
     eventSources,
-    /createSootTrailPuffElement\(trajectories\[index % trajectories\.length\], index, progress\)/,
+    /createSootTrailPuffElement\(trajectories\[index % trajectories\.length\], index, progress, lag\)/,
   );
   assert.match(eventSources, /const getSootSpriteAirTrailProgress = \(trajectory\) =>/);
   assert.match(eventSources, /const getSootSpriteGroundRunProgress = \(trajectory\) =>/);
@@ -839,7 +839,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   );
   assert.match(
     eventSources,
-    /createSootTrailCandyElement\(trajectory, getSootSpriteGroundRunProgress\(trajectory\)\)/,
+    /createSootTrailCandyElement\(\s*trajectory,\s*getSootSpriteGroundRunProgress\(trajectory\),\s*lag,?\s*\)/,
   );
   assert.match(eventSources, /const trailPuffCount = Math\.round\(spriteCount \* 1\.4\);/);
   assert.match(eventSources, /const candyCount = Math\.round\(spriteCount \* 1\.28\);/);
@@ -945,14 +945,14 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
     eventStyles,
     /\.soot-sprite-body::before|\.soot-sprite-body::after|\.soot-sprite-eye/,
   );
-  assert.match(getCssBlock(".soot-sprite-frame"), /background-image: var\(--soot-sheet\);/);
+  assert.doesNotMatch(getCssBlock(".soot-sprite-frame"), /background-image/);
   assert.match(
     getCssBlock(".soot-sprite-frame"),
     /background-position: var\(--soot-frame-position\);/,
   );
   assert.match(getCssBlock(".soot-sprite-frame"), /background-size: var\(--soot-sheet-size\);/);
   assert.match(getCssBlock(".soot-sprite-frame"), /image-rendering: pixelated;/);
-  assert.match(getCssBlock(".soot-star-candy"), /background-image: var\(--soot-candy-sheet\);/);
+  assert.doesNotMatch(getCssBlock(".soot-star-candy"), /background-image/);
   assert.match(getCssBlock(".soot-star-candy"), /image-rendering: pixelated;/);
   assert.doesNotMatch(getCssBlock(".soot-star-candy"), /clip-path|radial-gradient|filter/);
   assert.match(
@@ -963,7 +963,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
     /\.soot-puff \{\n {2}animation: soot-puff-drift[\s\S]*?\n\}/,
   )?.[0];
   assert.ok(puffBlock, "Missing animated .soot-puff block");
-  assert.match(puffBlock, /background-image: var\(--soot-puff-sheet\);/);
+  assert.doesNotMatch(puffBlock, /background-image/);
   assert.match(puffBlock, /image-rendering: pixelated;/);
   assert.doesNotMatch(puffBlock, /filter|radial-gradient/);
   assert.match(puffBlock, /height: var\(--puff-size\);/);
@@ -973,9 +973,16 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
     eventStyles,
     /@media \(prefers-reduced-motion: reduce\) \{\s*\.soot-sprite-body \{\s*animation: none;/,
   );
-  assert.match(eventSources, /const SOOT_SWARM_SPRITE_BATCH = 8;/);
+  assert.match(eventSources, /const SOOT_SWARM_SPRITE_BATCH = 2;/);
+  assert.match(eventSources, /const SOOT_SWARM_EFFECT_BATCH = 5;/);
+  assert.match(eventSources, /overlay\.sootReleasedAt = performance\.now\(\);/);
+  assert.match(eventSources, /overlay\.sootEffectsReady = overlay\.sootSpritesReady\.then/);
+  assert.match(eventSources, /frame\.style\.backgroundImage = sheetImage;/);
   assert.match(eventSources, /const SOOT_FRAMES_PER_SPRITE = 3;/);
-  assert.match(eventSources, /overlay\.sootSpritesReady = runSootSwarmSteps\(overlay, steps\);/);
+  assert.match(
+    eventSources,
+    /overlay\.sootSpritesReady = runSootSwarmSteps\(overlay, spriteSteps\);/,
+  );
   assert.match(eventSources, /overlay\.sootSpritesReady\.then\(\(\) => \{/);
   assert.match(
     eventSources,

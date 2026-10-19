@@ -101,6 +101,9 @@
 
   const SOOT_FRAMES_PER_SPRITE = 3;
 
+  /* Sprites are 24–40 px; the sheet is sized for the widest grid so it can be allocated first. */
+  const SOOT_SPRITE_MAX_SIZE = 40;
+
   const SOOT_INK = "#000";
 
   const SOOT_EYE_WHITE = "#fff";
@@ -160,10 +163,13 @@
 
   const SOOT_PUFF_SHAPES = 6;
 
-  /* The swarm is built across animation frames during the alert's hold so no task runs long. */
-  const SOOT_SWARM_SPRITE_BATCH = 8;
+  /*
+   * The swarm is built across animation frames while the alert holds, so no task runs long:
+   * the cost of each step is the style resolution of the elements it appends, not the drawing.
+   */
+  const SOOT_SWARM_SPRITE_BATCH = 2;
 
-  const SOOT_SWARM_EFFECT_BATCH = 60;
+  const SOOT_SWARM_EFFECT_BATCH = 5;
 
   const sootSpriteBehaviourAnimations = new WeakMap();
 
@@ -191,6 +197,9 @@
       "--soot-candy-slot",
       String(shape * SOOT_SPRITES_CANDY_COLORS.length + color),
     );
+    // Inline, not inherited through a custom property: a data URL in var() would be re-parsed
+    // on every style resolution of the element.
+    candy.style.backgroundImage = getSootEffectSheets().candy.image;
   };
 
   const setSootPuffLook = (puff) => {
@@ -198,6 +207,7 @@
       "--soot-puff-shape",
       String(Math.floor(Math.random() * SOOT_PUFF_SHAPES)),
     );
+    puff.style.backgroundImage = getSootEffectSheets().puff.image;
   };
 
   const setSootSpritePx = (element, property, value) => {
@@ -795,10 +805,18 @@
   };
 
   /** Plans one sprite's look, grid and gaze; its frames are drawn later at `originX` on the sheet. */
-  const planSootSprite = (size, originX) => {
+  const planSootSprite = (size, originX, sheet) => {
     const look = SOOT_LOOKS[Math.floor(Math.random() * SOOT_LOOKS.length)];
     const geometry = getSootSpriteGeometry(look, size);
-    return { size, look, geometry, gaze: randomSootGaze(), originX };
+    return {
+      size,
+      look,
+      geometry,
+      gaze: randomSootGaze(),
+      originX,
+      sheetWidth: sheet.canvas.width,
+      sheetHeight: sheet.canvas.height,
+    };
   };
 
   /** Draws a sprite's three frames (two coats, one blink) side by side on the sheet. */
@@ -822,13 +840,16 @@
   };
 
   /** One canvas wide enough for every planned sprite's frames. */
-  const createSootSpriteSheet = (plans) => {
+  /** The widest grid any look draws at the largest sprite size. */
+  const getSootSpriteMaxCells = () =>
+    Math.max(...SOOT_LOOKS.map((look) => getSootSpriteGeometry(look, SOOT_SPRITE_MAX_SIZE).cells));
+
+  /** One canvas with room for every sprite's frames at the widest grid, allocated before planning. */
+  const createSootSpriteSheet = (spriteCount) => {
     const canvas = document.createElement("canvas");
-    canvas.width = plans.reduce(
-      (total, plan) => total + plan.geometry.cells * SOOT_FRAMES_PER_SPRITE,
-      0,
-    );
-    canvas.height = Math.max(1, ...plans.map((plan) => plan.geometry.cells));
+    const cells = getSootSpriteMaxCells();
+    canvas.width = Math.max(1, spriteCount * cells * SOOT_FRAMES_PER_SPRITE);
+    canvas.height = cells;
     return { canvas, context: canvas.getContext("2d") };
   };
 
@@ -1028,7 +1049,7 @@
     return sprite;
   };
 
-  const createSootCandyElement = (launchRect) => {
+  const createSootCandyElement = (launchRect, lag = 0) => {
     const candy = document.createElement("span");
     candy.className = "soot-star-candy";
     candy.setAttribute("aria-hidden", "true");
@@ -1047,14 +1068,14 @@
     setSootSpritePx(candy, "--candy-size", size);
     setSootCandyLook(candy);
     setSootCandyTimingProperties(candy, {
-      delay: randomSootSpriteValue(140, 520),
+      delay: randomSootSpriteValue(140, 520) - lag,
       fallDuration: randomSootSpriteValue(3600, 4800),
     });
     setSootCandySpinProperties(candy, spin);
     return candy;
   };
 
-  const createSootTrailCandyElement = (trajectory, progress) => {
+  const createSootTrailCandyElement = (trajectory, progress, lag = 0) => {
     const candy = document.createElement("span");
     candy.className = "soot-star-candy soot-star-candy--trail";
     candy.setAttribute("aria-hidden", "true");
@@ -1074,14 +1095,15 @@
     setSootSpritePx(candy, "--candy-size", size);
     setSootCandyLook(candy);
     setSootCandyTimingProperties(candy, {
-      delay: trajectory.delay + trajectory.duration * progress + randomSootSpriteValue(-90, 140),
+      delay:
+        trajectory.delay + trajectory.duration * progress + randomSootSpriteValue(-90, 140) - lag,
       fallDuration: randomSootSpriteValue(3200, 4300),
     });
     setSootCandySpinProperties(candy, spin);
     return candy;
   };
 
-  const createSootPuffElement = (launchRect, large = false) => {
+  const createSootPuffElement = (launchRect, large = false, lag = 0) => {
     const puff = document.createElement("span");
     puff.className = large ? "soot-puff soot-puff--large" : "soot-puff";
     puff.setAttribute("aria-hidden", "true");
@@ -1097,13 +1119,13 @@
       y0 + randomSootSpriteValue(large ? -140 : -210, large ? 230 : 150),
     );
     setSootSpritePx(puff, "--puff-size", size);
-    puff.style.setProperty("--puff-delay", `${randomSootSpriteValue(40, 360)}ms`);
+    puff.style.setProperty("--puff-delay", `${randomSootSpriteValue(40, 360) - lag}ms`);
     puff.style.setProperty("--puff-duration", `${randomSootSpriteValue(5400, 7600)}ms`);
     setSootPuffLook(puff);
     return puff;
   };
 
-  const createSootTrailPuffElement = (trajectory, index, progress) => {
+  const createSootTrailPuffElement = (trajectory, index, progress, lag = 0) => {
     const puff = document.createElement("span");
     puff.className =
       index % 5 === 0
@@ -1122,7 +1144,7 @@
     setSootSpritePx(puff, "--puff-size", size);
     puff.style.setProperty(
       "--puff-delay",
-      `${trajectory.delay + trajectory.duration * progress + randomSootSpriteValue(-120, 180)}ms`,
+      `${trajectory.delay + trajectory.duration * progress + randomSootSpriteValue(-120, 180) - lag}ms`,
     );
     puff.style.setProperty("--puff-duration", `${randomSootSpriteValue(5300, 7300)}ms`);
     setSootPuffLook(puff);
@@ -1153,6 +1175,13 @@
     });
   };
 
+  /**
+   * Milliseconds since the swarm was released, so an effect appended afterwards starts its
+   * animation where it would have been had it existed at release.
+   */
+  const getSootSwarmLag = (overlay) =>
+    overlay.sootReleasedAt === undefined ? 0 : performance.now() - overlay.sootReleasedAt;
+
   const showSootSpritesSwarm = (launchRect = getSootSpritesLaunchRect()) => {
     cleanupSootSpritesOverlay();
     const overlay = document.createElement("div");
@@ -1163,92 +1192,97 @@
     const spriteCount =
       window.innerWidth < 560 ? SOOT_SPRITES_MOBILE_COUNT : SOOT_SPRITES_DESKTOP_COUNT;
     const spawnGrid = createSootSpriteSpawnGrid(launchRect, spriteCount);
-    const trajectories = spawnGrid.map((startPoint) =>
-      createSootSpriteTrajectory(launchRect, { startPoint }),
-    );
+    const sheet = createSootSpriteSheet(spriteCount);
+    const trajectories = [];
     let originX = 0;
-    const plans = trajectories.map((trajectory) => {
-      const plan = planSootSprite(trajectory.size, originX);
-      originX += plan.geometry.cells * SOOT_FRAMES_PER_SPRITE;
-      return plan;
-    });
-    const sheet = createSootSpriteSheet(plans);
-    plans.forEach((plan) => {
-      plan.sheetWidth = sheet.canvas.width;
-      plan.sheetHeight = sheet.canvas.height;
-    });
 
     const staged = () => overlay.classList.contains("is-staged");
-    const steps = [];
-    for (let start = 0; start < trajectories.length; start += SOOT_SWARM_SPRITE_BATCH) {
-      steps.push(() => {
+    // Sprites first: each step plans, draws and appends a few, then the sheet is encoded.
+    const spriteSteps = [];
+    for (let start = 0; start < spriteCount; start += SOOT_SWARM_SPRITE_BATCH) {
+      spriteSteps.push(() => {
         for (
           let index = start;
-          index < Math.min(trajectories.length, start + SOOT_SWARM_SPRITE_BATCH);
+          index < Math.min(spriteCount, start + SOOT_SWARM_SPRITE_BATCH);
           index += 1
         ) {
-          drawSootSpritePlan(sheet.context, plans[index]);
-          const sprite = createSootSpriteElement(index, trajectories[index], plans[index], {
-            paused: true,
+          const trajectory = createSootSpriteTrajectory(launchRect, {
+            startPoint: spawnGrid[index],
           });
+          const plan = planSootSprite(trajectory.size, originX, sheet);
+          originX += plan.geometry.cells * SOOT_FRAMES_PER_SPRITE;
+          trajectories.push(trajectory);
+          drawSootSpritePlan(sheet.context, plan);
+          const sprite = createSootSpriteElement(index, trajectory, plan, { paused: true });
           overlay.append(sprite);
           if (!staged()) playSootSprite(sprite);
         }
       });
     }
-    steps.push(() => {
-      overlay.style.setProperty("--soot-sheet", `url("${sheet.canvas.toDataURL("image/png")}")`);
+    spriteSteps.push(() => {
+      const sheetImage = `url("${sheet.canvas.toDataURL("image/png")}")`;
+      overlay.querySelectorAll(".soot-sprite-frame").forEach((frame) => {
+        frame.style.backgroundImage = sheetImage;
+      });
+    });
+    // The candy and smoke sheets are drawn once per page; their first draw gets its own frame.
+    spriteSteps.push(() => {
       const sheets = getSootEffectSheets();
-      overlay.style.setProperty("--soot-candy-sheet", sheets.candy.image);
       overlay.style.setProperty("--soot-candy-slots", String(sheets.candy.slots));
-      overlay.style.setProperty("--soot-puff-sheet", sheets.puff.image);
       overlay.style.setProperty("--soot-puff-shapes", String(sheets.puff.shapes));
     });
 
-    const effects = [];
+    // Candies and smoke follow in small batches; they may land after the release, so each
+    // one starts its animation offset by the time it missed.
     const airTrailCandyCount = Math.round(spriteCount * SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE);
-    for (let index = 0; index < airTrailCandyCount; index += 1) {
-      const trajectory = trajectories[index % trajectories.length];
-      effects.push(() =>
-        createSootTrailCandyElement(trajectory, getSootSpriteAirTrailProgress(trajectory)),
-      );
-    }
-
     // Ground-run candy is intentionally twice as dense as the airborne trail.
     const groundRunCandyCount = Math.round(
       spriteCount *
         SOOT_SPRITES_AIR_TRAIL_CANDIES_PER_SPRITE *
         SOOT_SPRITES_GROUND_RUN_CANDY_MULTIPLIER,
     );
-    for (let index = 0; index < groundRunCandyCount; index += 1) {
-      const trajectory = trajectories[index % trajectories.length];
-      effects.push(() =>
-        createSootTrailCandyElement(trajectory, getSootSpriteGroundRunProgress(trajectory)),
-      );
-    }
-
     const trailPuffCount = Math.round(spriteCount * 1.4);
+    const candyCount = Math.round(spriteCount * 1.28);
+    const puffCount = Math.round(spriteCount * 0.48);
+    const effects = [];
+    for (let index = 0; index < airTrailCandyCount; index += 1) {
+      effects.push((lag) => {
+        const trajectory = trajectories[index % trajectories.length];
+        return createSootTrailCandyElement(
+          trajectory,
+          getSootSpriteAirTrailProgress(trajectory),
+          lag,
+        );
+      });
+    }
+    for (let index = 0; index < groundRunCandyCount; index += 1) {
+      effects.push((lag) => {
+        const trajectory = trajectories[index % trajectories.length];
+        return createSootTrailCandyElement(
+          trajectory,
+          getSootSpriteGroundRunProgress(trajectory),
+          lag,
+        );
+      });
+    }
     for (let index = 0; index < trailPuffCount; index += 1) {
       const progress = 0.04 + ((index * 0.13) % 0.92);
-      effects.push(() =>
-        createSootTrailPuffElement(trajectories[index % trajectories.length], index, progress),
+      effects.push((lag) =>
+        createSootTrailPuffElement(trajectories[index % trajectories.length], index, progress, lag),
       );
     }
-
-    const candyCount = Math.round(spriteCount * 1.28);
     for (let index = 0; index < candyCount; index += 1) {
-      effects.push(() => createSootCandyElement(launchRect));
+      effects.push((lag) => createSootCandyElement(launchRect, lag));
     }
-
-    const puffCount = Math.round(spriteCount * 0.48);
     for (let index = 0; index < puffCount; index += 1) {
-      effects.push(() => createSootPuffElement(launchRect, index % 5 === 0));
+      effects.push((lag) => createSootPuffElement(launchRect, index % 5 === 0, lag));
     }
-
+    const effectSteps = [];
     for (let start = 0; start < effects.length; start += SOOT_SWARM_EFFECT_BATCH) {
-      steps.push(() => {
+      effectSteps.push(() => {
+        const lag = getSootSwarmLag(overlay);
         effects.slice(start, start + SOOT_SWARM_EFFECT_BATCH).forEach((create) => {
-          overlay.append(create());
+          overlay.append(create(lag));
         });
       });
     }
@@ -1257,7 +1291,10 @@
     document.body.classList.add("is-soot-sprites-active");
     sootSpritesOverlay = overlay;
     sootSpritesCleanupTimer = window.setTimeout(cleanupSootSpritesOverlay, SOOT_SPRITES_CLEANUP_MS);
-    overlay.sootSpritesReady = runSootSwarmSteps(overlay, steps);
+    overlay.sootSpritesReady = runSootSwarmSteps(overlay, spriteSteps);
+    overlay.sootEffectsReady = overlay.sootSpritesReady.then(() =>
+      runSootSwarmSteps(overlay, effectSteps),
+    );
     return overlay;
   };
 
@@ -1266,6 +1303,7 @@
     if (!overlay?.classList.contains("is-staged")) return;
     overlay.classList.remove("is-staged");
     overlay.style.removeProperty("z-index");
+    overlay.sootReleasedAt = performance.now();
     overlay.querySelectorAll(".soot-sprite").forEach((sprite) => {
       sootSpriteMotionAnimations.get(sprite)?.play();
       sootSpriteBehaviourAnimations.get(sprite)?.forEach((animation) => {
@@ -1295,18 +1333,18 @@
     sootSpritesRevealTimer = window.setTimeout(() => {
       sootSpritesRevealTimer = null;
       const overlay = showSootSpritesSwarm(launchRect);
-      // The swarm is built across frames during the hold; it is ready once the last
-      // batch has been committed to a frame.
-      overlay.sootSpritesReady.then(() => {
+      // The swarm is built across frames while the alert holds; the hold runs from the
+      // first committed frame and the alert closes once both it and the build are done.
+      window.requestAnimationFrame(() => {
         if (overlay !== sootSpritesOverlay) return;
-        window.requestAnimationFrame(() => {
-          if (overlay !== sootSpritesOverlay) return;
-          sootSpritesWindowHoldTimer = window.setTimeout(() => {
-            sootSpritesWindowHoldTimer = null;
+        sootSpritesWindowHoldTimer = window.setTimeout(() => {
+          sootSpritesWindowHoldTimer = null;
+          overlay.sootSpritesReady.then(() => {
+            if (overlay !== sootSpritesOverlay) return;
             setSootSpritesWindowLoading(false);
             closeManagedRandomEventWindow(sootSpritesWindow);
-          }, SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS);
-        });
+          });
+        }, SOOT_SPRITES_WINDOW_HOLD_AFTER_LOAD_MS);
       });
     }, SOOT_SPRITES_REVEAL_DELAY_MS);
   };

@@ -166,10 +166,15 @@ test("pupils are whole-cell squares that never leave the white of the eye", () =
 
 test("a sprite plan draws two coat frames and one blink frame side by side", () => {
   const { helpers } = loadPixelHelpers();
-  const plan = helpers.planSootSprite(32, 40);
-  const sheet = helpers.createSootSpriteSheet([plan]);
-  assert.equal(sheet.canvas.width, plan.geometry.cells * 3);
-  assert.equal(sheet.canvas.height, plan.geometry.cells);
+  const sheet = helpers.createSootSpriteSheet(1);
+  const plan = helpers.planSootSprite(32, 40, sheet);
+  const widest = Math.max(
+    ...helpers.SOOT_LOOKS.map((look) => helpers.getSootSpriteGeometry(look, 40).cells),
+  );
+  assert.equal(sheet.canvas.width, widest * 3);
+  assert.equal(sheet.canvas.height, widest);
+  assert.deepEqual([plan.sheetWidth, plan.sheetHeight], [sheet.canvas.width, sheet.canvas.height]);
+  assert.ok(plan.geometry.cells <= widest);
   helpers.drawSootSpritePlan(sheet.context, plan);
   const { cells } = plan.geometry;
   const frameOf = (fill) => Math.floor((fill.x - 40) / cells);
