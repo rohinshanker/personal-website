@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { replaceOnce, routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { isolateProductionForcedStart } from "./helpers/random-event-debug.mjs";
 
 test.setTimeout(300_000);
@@ -46,7 +46,8 @@ window.__debugSystemAlertsPromptTest = Object.freeze({
     ),
   );
   await routeHomeScript(page, "eventRuntime", (source) => {
-    const zeroDelaySource = source.replace(
+    const zeroDelaySource = replaceOnce(
+      source,
       "const RANDOM_EVENT_DELAY_MAX_MS = 2000;",
       "const RANDOM_EVENT_DELAY_MAX_MS = 0;",
     );

@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { replaceOnce, routeHomeScript } from "./helpers/home-script-routes.mjs";
 import {
   consumeDiagnostics,
   installGameStatsBackend,
@@ -29,15 +29,15 @@ const viewports = REVIEW_VIEWPORTS;
 
 const installGameStatsBridge = async (page) => {
   await routeHomeScript(page, "gameStats", (source) => {
-    const configuredSource = source
-      .replace(
+    const configuredSource = replaceOnce(
+      replaceOnce(
+        source,
         "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 60;",
         "const GAME_STATS_SESSION_BUILD_RETRY_ATTEMPTS = 3;",
-      )
-      .replace(
-        "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 2000;",
-        "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 100;",
-      );
+      ),
+      "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 2000;",
+      "const GAME_STATS_SESSION_BUILD_RETRY_INTERVAL_MS = 100;",
+    );
     const instrumentedSource = configuredSource.replace(
       /\n\}\)\(\);\s*$/,
       `
