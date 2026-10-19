@@ -1937,3 +1937,10 @@ body.is-resizing-window * {
   user-select: none;
   -webkit-user-select: none;
 }
+
+.writing-substack-logo {
+  display: block;
+  height: 64px;
+  margin: 0 0 10px;
+  width: 64px;
+}
