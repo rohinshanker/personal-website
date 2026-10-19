@@ -390,14 +390,15 @@ test("video slides keep native controls and only enter the viewer through the ti
 
 test("an empty Dropbox slot keeps its disabled placeholder and note", async ({ page }) => {
   expect(portfolio.dropbox.highlights).not.toBe("");
+  // The formatter may wrap the value onto its own line; a replacement that misses would
+  // serve the real link and test nothing, so it is checked.
+  const emptied = portfolioSource.replace(
+    new RegExp(`highlights:\\s*"${portfolio.dropbox.highlights.replaceAll("?", "\\?")}"`),
+    'highlights: ""',
+  );
+  expect(emptied).not.toBe(portfolioSource);
   await page.route(/\/scripts\/home\/modeling-portfolio\.js(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      contentType: "application/javascript",
-      body: portfolioSource.replace(
-        `highlights: "${portfolio.dropbox.highlights}"`,
-        'highlights: ""',
-      ),
-    }),
+    route.fulfill({ contentType: "application/javascript", body: emptied }),
   );
   await openPortfolio(page, DESKTOP);
 
