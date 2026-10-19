@@ -23,6 +23,18 @@
   const openBioe190Proposal = byId("open-bioe190-proposal");
   const pulsePresentationIframe = byId("pulse-presentation-iframe");
   const dronePresentationIframe = byId("drone-presentation-iframe");
+  const cyanoProjectImage = byId("cyano-project-image");
+  const cyanoProjectCaption = byId("cyano-project-caption");
+  const cyanoProjectDescription = byId("cyano-project-description");
+  const cyanoProjectPrev = byId("cyano-project-prev");
+  const cyanoProjectCounter = byId("cyano-project-counter");
+  const cyanoProjectNext = byId("cyano-project-next");
+  const kitProjectImage = byId("kit-project-image");
+  const kitProjectCaption = byId("kit-project-caption");
+  const kitProjectDescription = byId("kit-project-description");
+  const kitProjectPrev = byId("kit-project-prev");
+  const kitProjectCounter = byId("kit-project-counter");
+  const kitProjectNext = byId("kit-project-next");
   const pulseProjectImage = byId("pulse-project-image");
   const pulseProjectCaption = byId("pulse-project-caption");
   const pulseProjectDescription = byId("pulse-project-description");
@@ -73,6 +85,48 @@
    * @property {string} description
    * @property {string} [alt]
    */
+
+  /** @type {ReadonlyArray<ImageGalleryItem>} */
+  const cyanoProjectFigures = Object.freeze([
+    {
+      src: "assets/projects/cyano-gene-visualizer/codon-space-map.webp",
+      alt: "Scatter map of every protein-coding gene placed by codon usage and coloured by function category.",
+      title: "Native codon space",
+      description:
+        "Each dot is a gene, placed by how it uses synonymous codons and coloured by function category.",
+    },
+    {
+      src: "assets/projects/cyano-gene-visualizer/gene-search-amber-scheme.webp",
+      alt: "The amber-only recoding scheme beside a search for rubisco that lists matching genes with Pin and Shortlist buttons.",
+      title: "Recoding scheme and gene search",
+      description:
+        "A recoding scheme reports its burden on every gene, and search finds genes by name, product or function.",
+    },
+    {
+      src: "assets/projects/cyano-gene-visualizer/chromosome-tracks.webp",
+      alt: "Linear tracks of the chromosome and both plasmids with every coding sequence drawn at its position.",
+      title: "Chromosome and plasmid tracks",
+      description:
+        "Every coding sequence at its position on the chromosome and both plasmids; selecting one opens it in the gene visualizer.",
+    },
+  ]);
+
+  /** @type {ReadonlyArray<ImageGalleryItem>} */
+  const kitProjectFigures = Object.freeze([
+    {
+      src: "assets/projects/win98-site-kit/showcase-desktop.webp",
+      alt: "The win98-site-kit showcase desktop with the Projects, Minesweeper and Date and Time windows open.",
+      title: "Showcase desktop",
+      description: "Draggable windows, the dock, a game and the calendar, all built from the kit.",
+    },
+    {
+      src: "assets/projects/win98-site-kit/components-icon-browser.webp",
+      alt: "The Components demo window open on its searchable browser of 626 Windows icons.",
+      title: "Components demo",
+      description:
+        "Every reusable widget with copyable markup, and a searchable browser of the 626 bundled icons.",
+    },
+  ]);
 
   /** @type {ReadonlyArray<ImageGalleryItem>} */
   const pulseProjectFigures = Object.freeze([
@@ -177,6 +231,10 @@
       title: "Live drone demo",
     },
   ]);
+
+  let cyanoProjectIndex = 0;
+
+  let kitProjectIndex = 0;
 
   let pulseProjectIndex = 0;
 
@@ -703,6 +761,36 @@
     return queueGallerySuccessors(frontiersSlideImage, frontiersPdfSlides, frontiersSlideIndex);
   };
 
+  const updateCyanoProjectFigure = () => {
+    setProjectFigureContent(
+      {
+        image: cyanoProjectImage,
+        caption: cyanoProjectCaption,
+        description: cyanoProjectDescription,
+        counter: cyanoProjectCounter,
+      },
+      cyanoProjectFigures[cyanoProjectIndex],
+      cyanoProjectIndex,
+      cyanoProjectFigures.length,
+    );
+    return queueGallerySuccessors(cyanoProjectImage, cyanoProjectFigures, cyanoProjectIndex);
+  };
+
+  const updateKitProjectFigure = () => {
+    setProjectFigureContent(
+      {
+        image: kitProjectImage,
+        caption: kitProjectCaption,
+        description: kitProjectDescription,
+        counter: kitProjectCounter,
+      },
+      kitProjectFigures[kitProjectIndex],
+      kitProjectIndex,
+      kitProjectFigures.length,
+    );
+    return queueGallerySuccessors(kitProjectImage, kitProjectFigures, kitProjectIndex);
+  };
+
   const updatePulseProjectFigure = () => {
     const activeFigure = pulseProjectFigures[pulseProjectIndex];
     setProjectFigureContent(
@@ -807,6 +895,16 @@
       element: frontiersSlideImage,
       index: () => frontiersSlideIndex,
       items: frontiersPdfSlides,
+    },
+    {
+      element: cyanoProjectImage,
+      index: () => cyanoProjectIndex,
+      items: cyanoProjectFigures,
+    },
+    {
+      element: kitProjectImage,
+      index: () => kitProjectIndex,
+      items: kitProjectFigures,
     },
     {
       element: pulseProjectImage,
@@ -981,6 +1079,28 @@
       frontiersSlideIndex = index;
     },
     updateFrontiersSlide,
+  );
+
+  bindGalleryNavigation(
+    cyanoProjectPrev,
+    cyanoProjectNext,
+    cyanoProjectFigures.length,
+    () => cyanoProjectIndex,
+    (index) => {
+      cyanoProjectIndex = index;
+    },
+    updateCyanoProjectFigure,
+  );
+
+  bindGalleryNavigation(
+    kitProjectPrev,
+    kitProjectNext,
+    kitProjectFigures.length,
+    () => kitProjectIndex,
+    (index) => {
+      kitProjectIndex = index;
+    },
+    updateKitProjectFigure,
   );
 
   bindGalleryNavigation(

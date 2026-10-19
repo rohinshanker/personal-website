@@ -116,7 +116,7 @@
     <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-3050f54f30a0b3d87b37372fa08eece061896582d8cc35fb3f4b4dce851a8a0e" as="worker" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=html-semantics-20260927" />
-    <link rel="stylesheet" href="styles/home/portfolio.css?v=clash-badge-spacing-20261002" />
+    <link rel="stylesheet" href="styles/home/portfolio.css?v=content-items-20261018" />
     <link rel="stylesheet" href="styles/home/study-resources.css?v=study-row-hover-20261001" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=cache-token-parity-20260927" />
     <script
@@ -613,7 +613,33 @@
           <div class="selector-panel">
             <ul class="selector-list">
               <li>
-                <button class="selector-item is-active" type="button" data-view="projects-pulse-oximeter">
+                <button class="selector-item is-active" type="button" data-view="projects-cyano-gene-visualizer">
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/graphedit.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Cyano Gene Visualizer</span>
+                    <span class="selector-desc">
+                      Interactive cyanobacteria gene selection and visualization for the Isaacs Lab.
+                      <br />
+                      Fall 2026
+                    </span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="projects-win98-site-kit">
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/windows.ico" alt="" />
+                  <span>
+                    <span class="selector-title">win98-site-kit</span>
+                    <span class="selector-desc">
+                      Windows 98 desktop starter kit and CLI.
+                      <br />
+                      Fall 2026
+                    </span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="projects-pulse-oximeter">
                   <img class="selector-thumb" data-src="assets/app-icons/ico/expansion_board_modem.ico" alt="" />
                   <span>
                     <span class="selector-title">Pulse Oximeter</span>
@@ -668,7 +694,109 @@
           </div>
           <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
           <div class="viewer-panel">
-            <div class="viewer-content" data-view="projects-pulse-oximeter">
+            <div class="viewer-content" data-view="projects-cyano-gene-visualizer">
+              <div class="project-view-header">
+                <h3>Cyano Gene Visualizer</h3>
+                <p class="project-view-subtitle">Isaacs Lab · Fall 2026</p>
+              </div>
+              <div class="pdf-actions">
+                <a
+                  class="button-link button-link--gold-glow"
+                  href="https://rohinshanker.github.io/isaacs-cyano-gene-selection/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open the visualizer
+                </a>
+                <a
+                  class="button-link"
+                  href="https://github.com/rohinshanker/isaacs-cyano-gene-selection"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open repository
+                </a>
+              </div>
+              <p>
+                An interactive map of every protein-coding gene in <i>Synechococcus elongatus</i>
+                UTEX 2973, built for the Isaacs Lab to help choose which genes to target for genome
+                recoding. Define a recoding scheme and see its cost on each gene, find genes by name
+                or function, compare a shortlist, and design a reproducible gene panel whose export
+                records the data and scheme behind it.
+              </p>
+              <div class="gallery-frame" id="cyano-project-gallery">
+                <div class="gallery-scroll gallery-scroll--pdf">
+                  <img
+                    id="cyano-project-image"
+                    data-src="assets/projects/cyano-gene-visualizer/codon-space-map.webp"
+                    alt="Scatter map of every protein-coding gene placed by codon usage and coloured by function category."
+                  />
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="cyano-project-prev">Previous</button>
+                  <span class="gallery-counter" id="cyano-project-counter" aria-live="polite">1 of 3</span>
+                  <button type="button" id="cyano-project-next">Next</button>
+                </div>
+              </div>
+              <p class="project-view-subtitle" id="cyano-project-caption" aria-live="polite">
+                Native codon space
+              </p>
+              <p class="project-figure-description" id="cyano-project-description" aria-live="polite">
+                Each dot is a gene, placed by how it uses synonymous codons and coloured by function
+                category.
+              </p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="projects-win98-site-kit">
+              <div class="project-view-header">
+                <h3>win98-site-kit</h3>
+                <p class="project-view-subtitle">Fall 2026</p>
+              </div>
+              <div class="pdf-actions">
+                <a
+                  class="button-link button-link--gold-glow"
+                  href="https://rohinshanker.github.io/win98-site-kit/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open showcase
+                </a>
+                <a
+                  class="button-link"
+                  href="https://github.com/rohinshanker/win98-site-kit"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open repository
+                </a>
+              </div>
+              <p>
+                The reusable core of this website, published as a starter kit: the window manager,
+                dock, calendar, carousels, 98.css and the Windows icon library, plus games and apps
+                that an npx CLI adds from a registry. It has no build step and no backend, and every
+                package ships with its own tests.
+              </p>
+              <div class="gallery-frame" id="kit-project-gallery">
+                <div class="gallery-scroll gallery-scroll--pdf">
+                  <img
+                    id="kit-project-image"
+                    data-src="assets/projects/win98-site-kit/showcase-desktop.webp"
+                    alt="The win98-site-kit showcase desktop with the Projects, Minesweeper and Date and Time windows open."
+                  />
+                </div>
+                <div class="gallery-controls">
+                  <button type="button" id="kit-project-prev">Previous</button>
+                  <span class="gallery-counter" id="kit-project-counter" aria-live="polite">1 of 2</span>
+                  <button type="button" id="kit-project-next">Next</button>
+                </div>
+              </div>
+              <p class="project-view-subtitle" id="kit-project-caption" aria-live="polite">
+                Showcase desktop
+              </p>
+              <p class="project-figure-description" id="kit-project-description" aria-live="polite">
+                Draggable windows, the dock, a game and the calendar, all built from the kit.
+              </p>
+            </div>
+            <div class="viewer-content is-hidden" data-view="projects-pulse-oximeter">
               <div class="project-view-header">
                 <h3>Pulse Oximeter</h3>
                 <p class="project-view-subtitle">Spring 2026</p>
@@ -1145,7 +1273,16 @@
           <div class="selector-panel">
             <ul class="selector-list">
               <li>
-                <button class="selector-item is-active" type="button" data-view="writing-structural-bioinformatics">
+                <button class="selector-item is-active" type="button" data-view="writing-substack">
+                  <img class="selector-thumb" data-src="assets/writing/substack-logo.svg" alt="" />
+                  <span>
+                    <span class="selector-title">Substack</span>
+                    <span class="selector-desc">Latest publications.</span>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button class="selector-item" type="button" data-view="writing-structural-bioinformatics">
                   <img class="selector-thumb" data-src="assets/app-icons/ico/document.ico" alt="" />
                   <span>
                     <span class="selector-title">Structural Bioinformatics</span>
@@ -1203,7 +1340,36 @@
           </div>
           <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
           <div class="viewer-panel">
-            <div class="viewer-content" data-view="writing-structural-bioinformatics">
+            <div class="viewer-content" data-view="writing-substack">
+              <img
+                class="writing-substack-logo"
+                data-src="assets/writing/substack-logo.svg"
+                width="64"
+                height="64"
+                alt="Substack"
+              />
+              <h3>Substack</h3>
+              <p>Read my latest publications on Substack.</p>
+              <div class="pdf-actions">
+                <a
+                  class="button-link button-link--gold-glow"
+                  href="https://rohins.substack.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Open Substack
+                </a>
+                <a
+                  class="button-link"
+                  href="https://rohins.substack.com/subscribe"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Subscribe
+                </a>
+              </div>
+            </div>
+            <div class="viewer-content is-hidden" data-view="writing-structural-bioinformatics">
               <h3>Structural Bioinformatics</h3>
               <p class="project-view-subtitle">Spring 2026</p>
               <p>
@@ -7035,7 +7201,7 @@
     <script src="scripts/home/modeling-portfolio.js?v=modeling-measurements-us-eu-20261017" defer></script>
     <script src="scripts/home/features/about.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/desktop.js?v=home-feature-modules-20261003" defer></script>
-    <script src="scripts/home/features/gallery.js?v=home-feature-modules-20261003" defer></script>
+    <script src="scripts/home/features/gallery.js?v=content-items-20261018" defer></script>
     <script src="scripts/home/features/study.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/games/rules.js?v=game-build-3050f54f30a0b3d87b37372fa08eece061896582d8cc35fb3f4b4dce851a8a0e" defer></script>
     <script src="scripts/home/games/minesweeper.js?v=game-build-3050f54f30a0b3d87b37372fa08eece061896582d8cc35fb3f4b4dce851a8a0e" defer></script>

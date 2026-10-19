@@ -327,12 +327,14 @@ test("permanent rejections, missing credentials and expired proofs never schedul
       createSubmission("event-expiring", {
         session: {
           ...futureSession("expiring-session"),
-          expiresAt: new Date(Date.now() + 15).toISOString(),
+          // Far enough out that loading the harness on a busy machine cannot
+          // expire it first, and well inside the delayed 503 below.
+          expiresAt: new Date(Date.now() + 400).toISOString(),
         },
       }),
     ],
   });
-  expiring.answerEvents({ status: 503, delayMs: 40 });
+  expiring.answerEvents({ status: 503, delayMs: 1200 });
   await expiring.sync();
   state = expiring.read();
   assert.equal(expiring.eventRequests.length, 1);
