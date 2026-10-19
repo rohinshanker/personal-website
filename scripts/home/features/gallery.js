@@ -89,25 +89,26 @@
   /** @type {ReadonlyArray<ImageGalleryItem>} */
   const cyanoProjectFigures = Object.freeze([
     {
+      src: "assets/projects/cyano-gene-visualizer/chromosome-tracks.webp",
+      alt: "Linear tracks of the chromosome and both plasmids with every coding sequence drawn at its position.",
+      title: "Chromosome and plasmid tracks",
+      description:
+        "Every coding sequence at its position on the chromosome and both plasmids; selecting one opens it in the gene visualizer.",
+    },
+    {
       src: "assets/projects/cyano-gene-visualizer/codon-space-map.webp",
       alt: "Scatter map of every protein-coding gene placed by codon usage and coloured by function category.",
       title: "Native codon space",
       description:
         "Each dot is a gene, placed by how it uses synonymous codons and coloured by function category.",
     },
+
     {
       src: "assets/projects/cyano-gene-visualizer/gene-search-amber-scheme.webp",
       alt: "The amber-only recoding scheme beside a search for rubisco that lists matching genes with Pin and Shortlist buttons.",
       title: "Recoding scheme and gene search",
       description:
         "A recoding scheme reports its burden on every gene, and search finds genes by name, product or function.",
-    },
-    {
-      src: "assets/projects/cyano-gene-visualizer/chromosome-tracks.webp",
-      alt: "Linear tracks of the chromosome and both plasmids with every coding sequence drawn at its position.",
-      title: "Chromosome and plasmid tracks",
-      description:
-        "Every coding sequence at its position on the chromosome and both plasmids; selecting one opens it in the gene visualizer.",
     },
   ]);
 

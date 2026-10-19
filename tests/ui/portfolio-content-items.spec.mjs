@@ -69,9 +69,9 @@ for (const viewport of viewports) {
       "https://rohinshanker.github.io/isaacs-cyano-gene-selection/",
     );
     await stepCarousel(cyano, [
+      "Chromosome and plasmid tracks",
       "Native codon space",
       "Recoding scheme and gene search",
-      "Chromosome and plasmid tracks",
     ]);
     await expectContained(projects, "projects-cyano-gene-visualizer");
 
@@ -93,7 +93,7 @@ for (const viewport of viewports) {
     );
     const substack = writing.locator('.viewer-content[data-view="writing-substack"]');
     await expect(substack.getByRole("heading", { name: "Substack" })).toBeVisible();
-    await expect(substack).toContainText("Read my latest publications on Substack.");
+    await expect(substack).toContainText("Read my latest publications on Substack!");
     await expect(substack.getByRole("link", { name: "Open Substack" })).toHaveAttribute(
       "href",
       "https://rohins.substack.com/",
