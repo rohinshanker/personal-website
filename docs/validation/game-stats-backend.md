@@ -2,7 +2,7 @@
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 - Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-10-17
+- Last verified: 2026-10-19
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -428,7 +428,13 @@ verification from production mutation jobs. Every pull request and `main` push
 runs source tests, the integrity check, and a lockfile-installed strict
 Wrangler dry-run; pull requests cannot reach Cloudflare or Pages deployment.
 After a trusted `main` push or `main` workflow dispatch passes verification,
-the workflow requires both repository secrets, rejects superseded revisions,
+the `approve-release` job waits on the `production` environment, whose only
+required reviewer is the repository owner; nothing deploys until the owner
+approves that job in the run's Actions page (GitHub fails the wait after 30
+days). Every deploy job chains off that approval, so one approval releases the
+Worker and the Pages site together. The environment is restricted to `main`
+and keeps `prevent_self_review` off because the owner pushes `main` directly.
+Once approved, the workflow requires both repository secrets, rejects superseded revisions,
 deploys the rolling-compatible Worker with Wrangler's `--strict` configuration
 guard, and runs the transition gate. Only then does it package the public
 static allowlist, upload a Pages artifact, deploy that exact artifact, and run

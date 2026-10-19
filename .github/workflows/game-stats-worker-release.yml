@@ -83,9 +83,22 @@ jobs:
       - name: Verify Worker deployment bundle
         run: npm --prefix workers/game-stats run deploy:check
 
+  approve-release:
+    name: Wait for the owner's release approval
+    needs: [verify, slow, browser]
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - name: Record the approved release revision
+        run: echo "Release of $GITHUB_SHA approved for production"
+
   deploy-worker:
     name: Deploy compatible Worker transition
-    needs: [verify, slow, browser]
+    needs: [verify, slow, browser, approve-release]
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')

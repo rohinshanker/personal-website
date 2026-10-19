@@ -2,7 +2,7 @@
 
 - Purpose: Define test coverage, isolation, timing, and release acceptance contracts.
 - Scope: Node behavior and source contracts, browser UI, Game Stats and Clash Royale Workers, generated artifacts, security, and CI.
-- Last verified: 2026-10-18
+- Last verified: 2026-10-19
 
 ## Test tiers
 
@@ -121,6 +121,10 @@ production player profile across concurrent cases.
 `game-stats-worker-release.yml` owns PR, main-push, and manual release runs.
 Its `browser` job calls `ui-layout.yml` at the same commit. The latter has only
 `workflow_call`, so a push or PR does not launch duplicate browser suites.
+On `main`, the deploy jobs wait behind `approve-release`, a `production`
+environment gate the owner approves by hand; pushing to `main` runs every check
+but publishes nothing until then. A newer push still cancels a run that is
+waiting for approval.
 
 The UI job runs three shards, two workers per shard, with `fail-fast: false` and
 `retries: 0`. Tests are individually parallelizable. Each shard uploads a

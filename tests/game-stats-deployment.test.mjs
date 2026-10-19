@@ -1511,6 +1511,7 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
     "cancel-in-progress": true,
   });
   assert.deepEqual(Object.keys(workflowDefinition.jobs).sort(), [
+    "approve-release",
     "browser",
     "deploy-pages",
     "deploy-worker",
@@ -1521,6 +1522,7 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
 
   const {
     verify,
+    "approve-release": approveRelease,
     "deploy-worker": deployWorker,
     "package-pages": packagePages,
     "deploy-pages": deployPages,
@@ -1538,7 +1540,12 @@ test("npm scripts, release workflow, and validation guide expose the parity guar
   assert.match(verifySource, /npm --prefix workers\/game-stats run deploy:check/);
   assert.doesNotMatch(verifySource, /run deploy --/);
 
-  assert.deepEqual(deployWorker.needs, ["verify", "slow", "browser"]);
+  assert.deepEqual(approveRelease.needs, ["verify", "slow", "browser"]);
+  assert.equal(approveRelease.environment, "production");
+  assert.equal(approveRelease.if, deployWorker.if);
+  assert.equal(approveRelease.permissions, undefined);
+  assert.doesNotMatch(JSON.stringify(approveRelease), /secrets\.|CLOUDFLARE_|actions\/checkout/);
+  assert.deepEqual(deployWorker.needs, ["verify", "slow", "browser", "approve-release"]);
   assert.equal(workflowDefinition.jobs.browser.uses, "./.github/workflows/ui-layout.yml");
   assert.deepEqual(
     workflowDefinition.jobs.slow.steps.filter((step) => step.run).map((step) => step.run),
