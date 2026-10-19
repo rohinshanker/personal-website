@@ -4,7 +4,7 @@
 - Status: active
 - Opened: 2026-09-29
 - Updated: 2026-10-18
-- Current State: After declining round 1, the owner reviewed E–H on 2026-10-18 and asked for candidate I: a random mixture of F, G and H with H's boil and blink on every sprite, plus pixel-art smoke and candy. I is on the review page `docs/validation/assets/soot-sprite-candidates.html` (default selection, with a "Pixel-art smoke and candy" toggle) and the contact sheet `docs/validation/assets/soot-sprite-candidates.png`; no shipped file changed. Waiting for the owner's approval of I (or tweaks) under "Decision" before Stage 2. Owner explicitly said on 2026-10-06 to keep this ticket open after implementation for their own final review.
+- Current State: Owner chose candidate I on 2026-10-18 and asked for the film's irregular shaking; the tremble is added to I on the review page `docs/validation/assets/soot-sprite-candidates.html`. Stage 2 (porting I, the tremble, and the pixel smoke and candy into the shipped event) is in progress in the main checkout; the ticket stays open for the owner's final review of the real event afterwards.
 - Verification: Stage 1: the review page renders every candidate at 375×812 and 1440×900 with no console errors, and a contact sheet PNG is saved beside it. Stage 2: `node scripts/update-game-integrity.mjs` then `--check`; `npm test` with `tests/gears-nest.test.mjs` updated; `npm run test:ui` (`deferred-window-media.spec.mjs` opens this event); trigger the event through Admin Controls at 375×812, 768×1024, 1280×800, and 1440×900 plus reduced motion; a 32-sprite swarm under 4× CPU throttling shows no long task over 50 ms; `npm run test:visual`.
 - Owner Approval: Required both for candidate selection and final visual acceptance. Keep the ticket open and retain review artifacts after implementation until the owner reviews the completed event and explicitly approves closure.
 - Cleanup: After the chosen design ships and the owner approves final review, delete the review page, contact sheet and the unchosen candidates; record the sprite's look contract in `docs/validation/system-alert-random-events.md`; delete this ticket and its index row.
@@ -31,7 +31,7 @@ All four are limbless pixel art drawn cell by cell on a shared canvas sheet. The
 | F | Reference | 2 px cells; medium coat (0.10–0.22 D); eyes 0.36 D | Static coat with the reference's proportions; fixed random gaze. |
 | G | Urchin | 1.5 px cells; long bent hairs (0.14–0.30 D), sparser; eyes 0.36 D | Static coat with the sea-urchin silhouette; fixed random gaze. |
 | H | Boil | F's cells and coat drawn twice plus a blink frame | Coat flickers between two drawings every 160 ms while moving; eyes blink every few seconds. |
-| I | Mix | Each sprite draws F's, G's or H's cells and coat at random (H's coat is F's) | Every sprite boils and blinks like H; pixel-art smoke and candy replace the blurred puffs and vector stars. |
+| I | Mix | Each sprite draws F's, G's or H's cells and coat at random (H's coat is F's) | Every sprite boils, blinks and trembles; pixel-art smoke and candy replace the blurred puffs and vector stars. |
 
 ## Constraints
 
@@ -48,6 +48,7 @@ Measured in body diameters (D) on a cell grid of `round(size / unit)` cells per 
 - Eyes: two white ovals 0.36 D wide and 1.15× as tall, centres 0.38 D apart and 0.05 D above the body centre, corner cells trimmed. Pupils are black squares of `max(1, round(0.07 × cells))` cells, kept at least one cell inside the white, offset in a random direction per sprite (the baked gaze).
 - Coat: `π × cells × density` single-cell hairs rooted one cell inside the body edge, evenly spaced with ±40% jitter, each with its own length in the candidate's range and a bend of up to the candidate's curl. Drawn before the disc so the body covers the roots.
 - Sheet: every frame of every sprite in a swarm is drawn side by side on one canvas with one 2D context and encoded once to a PNG data URL; each sprite's span shows its slice through `background-position`, scaled with `image-rendering: pixelated` so one cell is `size / cells` CSS px.
+- Tremble (I): a `composite: "add"` transform animation on the body shifts it by whole cells every 55–115 ms (`step-end`), within 0.03 D while falling and 0.06 D on the ground, doubled for an 18% twitch, with a 6% chance per step of a 0.22 D hop after landing. It adds to the slow wobble rather than replacing it.
 - Boil and blink (H, I): three frames per sprite (two coats with the same gaze, one with closed-eye slits); one stepped `background-position` animation per sprite alternates the coats every 160 ms over the whole fall and run and shows the blink frame for one step every 2.4–4.8 s.
 - Pixel smoke: six 96×48-cell blobs on one sheet, each a union of six to nine discs in three translucent shades of black (0.5 core, 0.32 body with 15% dropout, 0.16 rim with 60% dropout). A puff keeps its production drift, scale and fade animations and shows one blob through `background-position` with `image-rendering: pixelated`; the blur filter is removed.
 - Pixel candy: the five production candy colours in two 9×9-cell star shapes on one sheet, with a white highlight cell and a darker lower-right edge; a candy keeps its fall, spin and fade animations, drops the clip-path star, and shows the slot matching its `--candy-color`.
@@ -63,7 +64,7 @@ Measured in body diameters (D) on a cell grid of `round(size / unit)` cells per 
 
 - Decision (2026-10-18): candidates A–D declined. Direction: match the film still, "just more black", no arms or legs, slightly pixelated to fit the site. Round 2 (E–H) built in response.
 - Decision (2026-10-18): from E–H, ship a randomized mixture of F, G and H with H's blink and boil on every sprite, pixelated smoke if possible, and pixelated candy. Built as candidate I for a final look before Stage 2.
-- Owner approval of I pending. Record `Decision (date): I` with any requested tweaks here.
+- Decision (2026-10-18): I. The owner also asked for irregular movement like the film's sprites; a frame-stepped tremble (whole-cell offsets every 55–115 ms, stronger on the ground, with twitches and small hops, added on top of the slow wobble) is on the review page for I and ships with it in Stage 2.
 
 ## Plan
 

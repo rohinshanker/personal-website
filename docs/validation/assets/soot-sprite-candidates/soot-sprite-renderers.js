@@ -67,7 +67,7 @@
       mix: Object.freeze(["f", "g", "h"]),
       technique: "Each sprite draws F's, G's or H's cells and coat at random (H's coat is F's)",
       behaviour:
-        "Every sprite boils and blinks like H; pixel-art smoke and candy replace the blurred puffs and vector stars.",
+        "Every sprite boils and blinks like H and trembles in whole-cell steps (stronger on the ground, with twitches and small hops); pixel-art smoke and candy replace the blurred puffs and vector stars.",
     }),
   });
 
@@ -104,6 +104,14 @@
   const NOMINAL_SIZE = 32;
   const MIN_BODY_CELLS = 8;
   const BOIL_STEP_MS = 160;
+  /* Irregular tremble: a new whole-cell offset every 55–115 ms, larger on the ground, with twitches and hops. */
+  const JITTER_MIN_MS = 55;
+  const JITTER_MAX_MS = 115;
+  const JITTER_FALL_REACH = 0.03;
+  const JITTER_RUN_REACH = 0.06;
+  const JITTER_TWITCH_CHANCE = 0.18;
+  const JITTER_HOP_CHANCE = 0.06;
+  const JITTER_HOP_RISE = 0.22;
   const BLINK_MIN_MS = 2400;
   const BLINK_MAX_MS = 4800;
   const INK = "#000";
@@ -334,7 +342,42 @@
     }
     const animation = parts.layer.animate(keyframes, { delay, duration, fill: "both" });
     animation.pause();
-    return [animation];
+    if (parts.variant !== "i") return [animation];
+    const jitter = parts.body.animate(jitterKeyframes(parts, timeline, random), {
+      delay,
+      duration,
+      fill: "both",
+      composite: "add",
+    });
+    jitter.pause();
+    return [animation, jitter];
+  };
+
+  /**
+   * Frame-stepped tremble added on top of the body's slow wobble: every 55–115 ms the sprite
+   * shifts by a whole number of cells in a random direction, within 0.03 D while falling and
+   * 0.06 D on the ground, doubled for an occasional twitch, with a rare hop of 0.22 D upward
+   * once it has landed. Offsets snap to the cell grid so the pixels never land between pixels.
+   */
+  const jitterKeyframes = (parts, { duration, landingOffset }, random) => {
+    const size = Number.parseFloat(parts.body.style.getPropertyValue("--soot-candidate-size"));
+    const cellPx = size / parts.geometry.bodyCells;
+    const snap = (value) => Math.round(value / cellPx) * cellPx;
+    const frames = [{ offset: 0, transform: "translate(0px, 0px)", easing: "step-end" }];
+    let at = 0;
+    while (at < duration) {
+      at += between(random, JITTER_MIN_MS, JITTER_MAX_MS);
+      const offset = Math.min(1, at / duration);
+      const grounded = offset >= landingOffset;
+      let reach = (grounded ? JITTER_RUN_REACH : JITTER_FALL_REACH) * size;
+      if (random() < JITTER_TWITCH_CHANCE) reach *= 2;
+      const dx = snap(between(random, -reach, reach));
+      let dy = snap(between(random, -reach, reach));
+      if (grounded && random() < JITTER_HOP_CHANCE) dy = -snap(JITTER_HOP_RISE * size);
+      frames.push({ offset, transform: `translate(${dx}px, ${dy}px)`, easing: "step-end" });
+    }
+    frames[frames.length - 1].offset = 1;
+    return frames;
   };
 
   /** Darkens or lightens a hex colour by `amount` (−1…1). */
