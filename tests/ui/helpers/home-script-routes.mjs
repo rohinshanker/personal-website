@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { homeScriptPath, homeScriptUrl } from "../../helpers/home-scripts.mjs";
+import { dedentScriptBody, homeScriptPath, homeScriptUrl } from "../../helpers/home-scripts.mjs";
 import { servedFile } from "./rendered-site.mjs";
 
 /**
@@ -8,10 +8,12 @@ import { servedFile } from "./rendered-site.mjs";
  * install a bridge or neutralise a production debug event without touching the
  * repository. Each fixture names the script that owns what it instruments, so
  * moving a feature changes the key here rather than silently serving a script
- * that no longer contains the code the fixture was written for.
+ * that no longer contains the code the fixture was written for. The script is
+ * served with its file-level IIFE body dedented to column 0, the same text the
+ * unit readers see, so a fixture's markers survive the formatter's indentation.
  */
 export async function routeHomeScript(page, key, transform) {
-  const source = await readFile(homeScriptUrl(key), "utf8");
+  const source = dedentScriptBody(await readFile(homeScriptUrl(key), "utf8"));
   const routed = transform(source);
   if (routed === source) {
     throw new Error(
