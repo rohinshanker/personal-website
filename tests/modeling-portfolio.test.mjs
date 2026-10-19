@@ -156,7 +156,7 @@ test("the shared modeling data is complete and every referenced file exists", as
       date: "September 2026",
       icon: "assets/app-icons/ico/camera.ico",
       folder: "assets/modeling/digitals-miffy-sep2026",
-      files: ["1.JPG", "2.JPG", "3.JPG", "4.JPG", "5.JPG", "6.JPG", "7.JPG"],
+      files: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg"],
       links: [
         {
           type: "camera",

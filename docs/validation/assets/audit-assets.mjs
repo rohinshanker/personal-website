@@ -119,19 +119,19 @@ const DYNAMIC_DIRS = [
     why: "video-editor/cursor.js template ${name}-${mode}.png",
   },
   {
-    prefix: "assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/",
+    prefix: "assets/cursor-assets/jeelh-cursor-light/working-in-background-frames/",
     test: (b) => /^working-in-background-light-\d+\.png$/.test(b),
     why: "video-editor/cursor.js frames template",
   },
   {
-    prefix: "assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/",
+    prefix: "assets/cursor-assets/jeelh-cursor-dark/working-in-background-frames/",
     test: (b) => /^working-in-background-\d+\.png$/.test(b),
     why: "video-editor/cursor.js frames template",
   },
 ];
 // study resources manifest
 const study = JSON.parse(
-  fs.readFileSync(path.join(ROOT, "assets/study resources/manifest.json"), "utf8"),
+  fs.readFileSync(path.join(ROOT, "assets/study-resources/manifest.json"), "utf8"),
 );
 for (const f of study.files || [])
   addStructured(safeDecode(f.path), "study resources manifest.json");

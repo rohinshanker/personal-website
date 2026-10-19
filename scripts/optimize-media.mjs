@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 export const REPOSITORY_ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 
 /** Directories whose oversized sources must own a derivative. */
-export const COVERED_DIRECTORIES = Object.freeze(["assets/random events"]);
+export const COVERED_DIRECTORIES = Object.freeze(["assets/random-events"]);
 
 /** Source extensions the pipeline knows how to convert. */
 export const COVERED_EXTENSIONS = Object.freeze([".gif"]);
@@ -21,7 +21,7 @@ export const SIZE_THRESHOLD_BYTES = 1_000_000;
 /** Generated ledger of what was encoded, from which flags, at which size. */
 export const RECORD_PATH = "assets/optimized/random-events/derivatives.json";
 
-const SOURCE_DIRECTORY = "assets/random events";
+const SOURCE_DIRECTORY = "assets/random-events";
 const DERIVATIVE_DIRECTORY = "assets/optimized/random-events";
 
 /**
@@ -93,7 +93,7 @@ const POSTER_FLAGS = Object.freeze([
  * lossy WebP encoded larger than the GIF.
  */
 const SOURCES = Object.freeze([
-  { name: "servalpizza", webp: { quality: 75 }, video: true },
+  { name: "serval-pizza", webp: { quality: 75 }, video: true },
   { name: "campfire", webp: { quality: 75 }, video: true },
   // Two stacked layers of one animation, so it ships as WebP: two `<video>`
   // decoders cannot share an animation clock, two `<img>` of one file do.
@@ -101,12 +101,12 @@ const SOURCES = Object.freeze([
   { name: "birthday", webp: { quality: 75 }, video: false },
   { name: "ramadan", webp: { quality: 75 }, video: false },
   { name: "buddha", webp: { quality: 75 }, video: false },
-  { name: "mothersday", webp: { quality: 75 }, video: false },
+  { name: "mothers-day", webp: { quality: 75 }, video: false },
   { name: "trans", webp: { quality: 75 }, video: false },
   { name: "feliz-jueves", webp: { quality: 75 }, video: false },
   { name: "radar", webp: { lossless: true }, video: true },
-  { name: "fathersday", webp: { quality: 75 }, video: false },
-  { name: "4thofjuly", webp: { quality: 75 }, video: false },
+  { name: "fathers-day", webp: { quality: 75 }, video: false },
+  { name: "fourth-of-july", webp: { quality: 75 }, video: false },
   { name: "lain", webp: { quality: 75 }, video: true },
   { name: "holi", webp: { quality: 75 }, video: false },
   { name: "halloween", webp: { quality: 75 }, video: false },

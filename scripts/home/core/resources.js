@@ -1,9 +1,9 @@
 (() => {
   const HOME_RESOURCE_URLS = Object.freeze({
-    randomEventStyles: "styles/home/random-events.css?v=soot-pixel-sprites-20261018",
+    randomEventStyles: "styles/home/random-events.css?v=asset-paths-20261018",
     adminStyles: "styles/home/admin-controls.css?v=admin-seed-counts-20261018",
     adminOrchestrator: "scripts/home/admin/orchestrator.js?v=dialog-semantics-20261012",
-    adminControls: "scripts/home/admin-controls.js?v=admin-seed-counts-20261018",
+    adminControls: "scripts/home/admin-controls.js?v=asset-paths-20261018",
   });
 
   const resourceStates = new Map();

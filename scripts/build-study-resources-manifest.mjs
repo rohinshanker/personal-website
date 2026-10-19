@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPOSITORY_ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
-const STUDY_ROOT = path.join(REPOSITORY_ROOT, "assets", "study resources");
+const STUDY_ROOT = path.join(REPOSITORY_ROOT, "assets", "study-resources");
 const MANIFEST_PATH = path.join(STUDY_ROOT, "manifest.json");
 
 const toUrlPath = (filePath) =>
@@ -45,7 +45,7 @@ const walk = (dir) => {
 
 export const buildStudyResourcesManifest = () => ({
   root: "Study Resources",
-  basePath: "assets/study%20resources",
+  basePath: "assets/study-resources",
   files: walk(STUDY_ROOT),
 });
 

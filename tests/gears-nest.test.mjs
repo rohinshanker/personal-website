@@ -56,10 +56,10 @@ test("enemy health is reduced by ten percent from the prior scaling", () => {
 
 test("nest character assets are local for localhost reliability", async () => {
   const expectedAssets = [
-    "assets/random%20events/gears-nest/cog-gear.webp",
-    "assets/random%20events/gears-nest/locust-drone.webp",
-    "assets/random%20events/gears-nest/boomer.webp",
-    "assets/random%20events/gears-nest/lancer.webp",
+    "assets/random-events/gears-nest/cog-gear.webp",
+    "assets/random-events/gears-nest/locust-drone.webp",
+    "assets/random-events/gears-nest/boomer.webp",
+    "assets/random-events/gears-nest/lancer.webp",
   ];
 
   for (const asset of expectedAssets) {
@@ -76,8 +76,8 @@ test("nest character assets are local for localhost reliability", async () => {
     homeSource,
     /static\.wikia\.nocookie\.net\/gearsofwar\/images\/(?:5\/50|b\/b6)/,
   );
-  assert.match(homeSource, /data-src="assets\/random%20events\/gears-nest\/lancer\.webp"/);
-  assert.match(homeSource, /data-src="assets\/random%20events\/gears-nest\/cog-gear\.webp"/);
+  assert.match(homeSource, /data-src="assets\/random-events\/gears-nest\/lancer\.webp"/);
+  assert.match(homeSource, /data-src="assets\/random-events\/gears-nest\/cog-gear\.webp"/);
 });
 
 test("nest event is not registered in debug mode", () => {
@@ -105,7 +105,7 @@ test("castle gate event and its exclusive God King asset are fully retired", asy
     assert.doesNotMatch(source, /castle-gate|godking|god king/i);
   }
 
-  await assert.rejects(access(new URL("assets/random events/godking.webp", root)), {
+  await assert.rejects(access(new URL("assets/random-events/godking.webp", root)), {
     code: "ENOENT",
   });
 });
@@ -195,7 +195,7 @@ test("relic recovery event defines local relic assets and wiki descriptions", as
   for (const [name, description, filename] of expectedRelics) {
     assert.match(eventSources, new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(eventSources, new RegExp(description.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    const asset = `assets/random events/relic-recovery/${filename}`;
+    const asset = `assets/random-events/relic-recovery/${filename}`;
     assert.match(
       eventSources,
       new RegExp(asset.replaceAll(" ", "%20").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
@@ -481,7 +481,7 @@ test("current publicly available information event uses local AOT assets outside
   );
 
   for (const filename of expectedAssets) {
-    const asset = `assets/random events/current-publicly-available-information/${filename}`;
+    const asset = `assets/random-events/current-publicly-available-information/${filename}`;
     assert.match(
       eventSources,
       new RegExp(asset.replaceAll(" ", "%20").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
@@ -535,7 +535,7 @@ test("latest event cursor affordances use custom cursor variables", async () => 
   assert.match(cursorModeSource, /"normal"/);
   assert.match(cursorModeSource, /generatedSuffix: "light"/);
   assert.match(cursorModeSource, /generatedSuffix: "dark"/);
-  assert.match(cursorModeSource, /legacySuffix: " Light"/);
+  assert.match(cursorModeSource, /legacySuffix: "-light"/);
   assert.match(cursorModeSource, /window\.fetch\(new URL\(path, cursorAssetRoot\)/);
   assert.match(cursorModeSource, /const markReady = \(\) => \{/);
   assert.match(cursorModeSource, /window\.addEventListener\("pageshow", syncStoredMode\);/);
@@ -580,7 +580,7 @@ test("spare a trna event is a probability-gated alert with a local ribosome icon
     windowMarkup,
     /A poor ribosome passes by and asks if you have an extra tRNA it could borrow\./,
   );
-  assert.match(windowMarkup, /data-src="assets\/random%20events\/ribosome-icon\.svg"/);
+  assert.match(windowMarkup, /data-src="assets\/random-events\/ribosome-icon\.svg"/);
   assert.match(windowMarkup, /alt="Clip art ribosome"/);
   assert.match(windowMarkup, /id="trna-request-yes">Yes<\/button>/);
   assert.match(windowMarkup, /id="trna-request-no">No<\/button>/);
@@ -588,7 +588,7 @@ test("spare a trna event is a probability-gated alert with a local ribosome icon
   assert.match(eventSources, /bindRandomEventButton\(trnaRequestYes, closeTrnaRequestWindow\);/);
   assert.match(eventSources, /bindRandomEventButton\(trnaRequestNo, closeTrnaRequestWindow\);/);
   assert.match(getCssBlock(".trna-request-icon"), /image-rendering: auto;/);
-  await access(new URL("assets/random events/ribosome-icon.svg", root));
+  await access(new URL("assets/random-events/ribosome-icon.svg", root));
 });
 
 test("spell on the stack event is probability-gated with counter and damage effects", async () => {
@@ -618,7 +618,7 @@ test("spell on the stack event is probability-gated with counter and damage effe
   assert.match(windowMarkup, /class="spell-stack-image-frame"/);
   assert.match(windowMarkup, /class="spell-stack-image"/);
   assert.doesNotMatch(windowMarkup, /class="random-alert-message spell-stack-message"/);
-  assert.match(windowMarkup, /data-src="assets\/random%20events\/lightning-bolt\.webp"/);
+  assert.match(windowMarkup, /data-src="assets\/random-events\/lightning-bolt\.webp"/);
   assert.match(windowMarkup, /alt="Lightning Bolt"/);
   assert.match(
     windowMarkup,
@@ -653,7 +653,7 @@ test("spell on the stack event is probability-gated with counter and damage effe
   assert.match(getCssBlock(".spell-stack-counter-flash"), /background: #1f6fff;/);
   assert.match(getCssBlock(".spell-stack-window.is-spell-hit"), /spell-stack-window-shake/);
   assert.match(eventStyles, /@keyframes spell-stack-window-shake/);
-  await access(new URL("assets/random events/lightning-bolt.webp", root));
+  await access(new URL("assets/random-events/lightning-bolt.webp", root));
 });
 
 test("soot sprites event is probability-gated GPU alert with animated swarm", async () => {
@@ -904,7 +904,7 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   assert.match(cursorModeSource, /prefers-reduced-motion:\s*reduce/);
   assert.match(
     cursorStyles,
-    /--cursor-working:\s*url\("\.\.\/\.\.\/assets\/cursor-assets\/Jeelh-Cursor-Light\/working-in-background-frames\/working-in-background-light-1\.png"\)\s*2 1,[\s\S]*?working-in-background-light-1\.cur"\),[\s\S]*?progress;/,
+    /--cursor-working:\s*url\("\.\.\/\.\.\/assets\/cursor-assets\/jeelh-cursor-light\/working-in-background-frames\/working-in-background-light-1\.png"\)\s*2 1,[\s\S]*?working-in-background-light-1\.cur"\),[\s\S]*?progress;/,
   );
   assert.match(
     cursorStyles,
@@ -912,11 +912,11 @@ test("soot sprites event is probability-gated GPU alert with animated swarm", as
   );
   for (const variant of [
     {
-      directory: "Jeelh-Cursor-Light/working-in-background-frames",
+      directory: "jeelh-cursor-light/working-in-background-frames",
       prefix: "working-in-background-light-",
     },
     {
-      directory: "Jeelh-Cursor-Dark/working-in-background-frames",
+      directory: "jeelh-cursor-dark/working-in-background-frames",
       prefix: "working-in-background-",
     },
   ]) {
@@ -1034,7 +1034,7 @@ test("nataraja event is probability-gated and loops local video with offer butto
   assert.match(registration, /showNatarajaWindow\(\);/);
   assert.match(windowMarkup, /<div class="title-bar-text">Nataraja<\/div>/);
   assert.match(windowMarkup, /id="nataraja-video"/);
-  assert.match(windowMarkup, /data-src="assets\/random%20events\/nataraja\.mp4"/);
+  assert.match(windowMarkup, /data-src="assets\/random-events\/nataraja\.mp4"/);
   assert.match(windowMarkup, /\sautoplay\s/);
   assert.match(windowMarkup, /\smuted\s/);
   assert.match(windowMarkup, /\sloop\s/);
@@ -1045,7 +1045,7 @@ test("nataraja event is probability-gated and loops local video with offer butto
   assert.match(windowMarkup, /id="nataraja-no">No<\/button>/);
   assert.match(
     eventSources,
-    /preloadTargets: \(\) => \[natarajaWindow, "assets\/random%20events\/nataraja\.mp4"\]/,
+    /preloadTargets: \(\) => \[natarajaWindow, "assets\/random-events\/nataraja\.mp4"\]/,
   );
   assert.match(eventSources, /natarajaVideo\.play\(\)\.catch\(\(\) => undefined\);/);
   assert.match(eventSources, /bindRandomEventButton\(natarajaYes, closeNatarajaWindow\);/);
@@ -1061,7 +1061,7 @@ test("nataraja event is probability-gated and loops local video with offer butto
   );
   assert.match(getCssBlock(".nataraja-video"), /max-height: min\(46\.5vh, 390px\);/);
   assert.match(getCssBlock(".nataraja-credit"), /font-size: 11px;/);
-  await access(new URL("assets/random events/nataraja.mp4", root));
+  await access(new URL("assets/random-events/nataraja.mp4", root));
 });
 
 test("noble steed event delays then shows a same-place result alert", async () => {
@@ -1087,14 +1087,14 @@ test("noble steed event delays then shows a same-place result alert", async () =
   assert.match(registration, /showNobleSteedWindow\(\);/);
   assert.match(
     eventSources,
-    /preloadTargets: \(\) => \[[\s\S]*?nobleSteedWindow,[\s\S]*?nobleSteedResultWindow,[\s\S]*?"assets\/random%20events\/horse\.jpeg"/,
+    /preloadTargets: \(\) => \[[\s\S]*?nobleSteedWindow,[\s\S]*?nobleSteedResultWindow,[\s\S]*?"assets\/random-events\/horse\.jpeg"/,
   );
   assert.match(
     homeSource,
     /class="window random-event-window random-alert-window noble-steed-window is-hidden"[\s\S]*?id="noble-steed-window"/,
   );
   assert.match(windowMarkup, /<div class="title-bar-text">Noble Steed<\/div>/);
-  assert.match(windowMarkup, /data-src="assets\/random%20events\/horse\.jpeg"/);
+  assert.match(windowMarkup, /data-src="assets\/random-events\/horse\.jpeg"/);
   assert.match(windowMarkup, /alt="Horse"/);
   assert.match(windowMarkup, /Bring your horse to water\?/);
   assert.match(windowMarkup, /id="noble-steed-yes">Yes<\/button>/);
@@ -1129,7 +1129,7 @@ test("noble steed event delays then shows a same-place result alert", async () =
     eventSources,
     /const closeNobleSteedWindow = \(\) => \{[\s\S]*?closeManagedRandomEventWindow\(nobleSteedWindow\);[\s\S]*?\};/,
   );
-  await access(new URL("assets/random events/horse.jpeg", root));
+  await access(new URL("assets/random-events/horse.jpeg", root));
   await access(new URL("assets/app-icons/ico/globe_map.ico", root));
 });
 
@@ -1158,8 +1158,8 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
     eventSources,
     /preloadTargets: \(\) => \[[\s\S]*?toxicJungleWindow,[\s\S]*?Object\.values\(TOXIC_JUNGLE_ASSETS\)/,
   );
-  assert.match(eventSources, /background: "assets\/random%20events\/toxic-jungle\.webp"/);
-  assert.match(eventSources, /nausicaa: "assets\/random%20events\/nausicaa\.jpg"/);
+  assert.match(eventSources, /background: "assets\/random-events\/toxic-jungle\.webp"/);
+  assert.match(eventSources, /nausicaa: "assets\/random-events\/nausicaa\.jpg"/);
   assert.match(
     homeSource,
     /class="window random-event-window toxic-jungle-window is-hidden"[\s\S]*?id="toxic-jungle-window"/,
@@ -1167,7 +1167,7 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
   assert.match(windowMarkup, /<div class="title-bar-text">Toxic Jungle<\/div>/);
   assert.match(windowMarkup, /class="toxic-jungle-dialog pokemon-dialogue"/);
   assert.match(windowMarkup, /class="toxic-jungle-nausicaa pokemon-dialogue-portrait"/);
-  assert.match(windowMarkup, /data-src="assets\/random%20events\/nausicaa\.jpg"/);
+  assert.match(windowMarkup, /data-src="assets\/random-events\/nausicaa\.jpg"/);
   assert.match(windowMarkup, /alt="Nausicaa"/);
   assert.match(windowMarkup, /Hey! Can you help me collect some spores\?/);
   assert.match(windowMarkup, /id="toxic-jungle-start">Of course!<\/button>/);
@@ -1235,8 +1235,8 @@ test("toxic jungle event is probability-gated spore collection with pokemon dial
   assert.match(getCssBlock(".toxic-jungle-dialog"), /bottom: 14px;/);
   assert.match(eventStyles, /@keyframes toxic-jungle-spore-drift/);
   assert.match(eventStyles, /@keyframes toxic-jungle-spore-bob/);
-  await access(new URL("assets/random events/nausicaa.jpg", root));
-  await access(new URL("assets/random events/toxic-jungle.webp", root));
+  await access(new URL("assets/random-events/nausicaa.jpg", root));
+  await access(new URL("assets/random-events/toxic-jungle.webp", root));
 });
 
 test("resist causality window has title close and mobile-visible imagery", async () => {
@@ -1268,7 +1268,7 @@ test("resist causality window has title close and mobile-visible imagery", async
     eventStyles,
     /@media \(max-width: 520px\), \(max-height: 620px\) \{[\s\S]*?\.fate-window \.window-body \{[\s\S]*?max-height: calc\(100vh - 74px\);[\s\S]*?\.fate-photo-slot \{[\s\S]*?height: clamp\(104px, 30vh, 240px\);/,
   );
-  await access(new URL("assets/random events/guts-v-zodd.png", root));
+  await access(new URL("assets/random-events/guts-v-zodd.png", root));
 });
 
 test("wall breach event shakes, flashes, and opens a probability-gated popup", async () => {
@@ -1294,11 +1294,11 @@ test("wall breach event shakes, flashes, and opens a probability-gated popup", a
   assert.match(homeSource, /class="random-alert-actions wall-breach-actions"/);
   assert.match(homeSource, /Wall Maria has been breached\. All scouts to their posts!/);
   assert.match(homeSource, /id="wall-breach-suit-up">Copy that!<\/button>/);
-  assert.match(homeSource, /data-src="assets\/random%20events\/wall-maria-logo\.png"/);
+  assert.match(homeSource, /data-src="assets\/random-events\/wall-maria-logo\.png"/);
   assert.match(getCssBlock(".wall-breach-flash"), /background: #fff;/);
   assert.match(getBaseCssBlock(".random-alert-message img"), /height: 48px;/);
   assert.match(eventStyles, /@keyframes wall-breach-screen-shake/);
-  await access(new URL("assets/random events/wall-maria-logo.png", root));
+  await access(new URL("assets/random-events/wall-maria-logo.png", root));
 });
 
 test("July 5 calendar event opens the standard random event image window", async () => {
@@ -1308,7 +1308,7 @@ test("July 5 calendar event opens the standard random event image window", async
   const calendarEvent = eventSources.slice(eventStart, eventEnd);
 
   assert.match(calendarEvent, /title: "July 5th"/);
-  assert.match(calendarEvent, /image: "assets\/random%20events\/jul5\.png"/);
+  assert.match(calendarEvent, /image: "assets\/random-events\/july-5\.png"/);
   assert.match(
     eventSources,
     /`calendar-day\$\{isToday \? " is-today" : ""\}\$\{calendarEvent \? " is-event-day" : ""\}`/,
@@ -1320,7 +1320,7 @@ test("July 5 calendar event opens the standard random event image window", async
   );
   assert.match(homeSource, /id="random-event-window"/);
   assert.match(getBaseCssBlock(".calendar-day.is-event-day"), /position: relative;/);
-  await access(new URL("assets/random events/jul5.png", root));
+  await access(new URL("assets/random-events/july-5.png", root));
 });
 
 test("player attack damage is increased by ten percent and stays readable", () => {
@@ -1383,7 +1383,7 @@ test("grenade projectile travels in one continuous arc", () => {
 });
 
 test("every projectile resolution creates and cleans up a pixel explosion", () => {
-  assert.match(eventSources, /explosion: "assets\/random%20events\/pixel-explosion\.gif"/);
+  assert.match(eventSources, /explosion: "assets\/random-events\/pixel-explosion\.gif"/);
   assert.match(eventSources, /y: target\.y - 6,/);
   assert.match(eventSources, /gearsNestState\.explosions\.push\(explosion\);/);
   assert.match(

@@ -30,7 +30,7 @@ test("Brand Burns bundles every Apostle image for localhost rendering", async ()
   assert.doesNotMatch(definitions, /static\.wikia\.nocookie\.net/i);
 
   for (const id of apostleIds) {
-    const asset = `assets/random%20events/brand-burns/${id}.webp`;
+    const asset = `assets/random-events/brand-burns/${id}.webp`;
     assert.match(definitions, new RegExp(asset.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     const localAsset = new URL(asset.replaceAll("%20", " "), root);
     await access(localAsset);

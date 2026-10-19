@@ -117,8 +117,8 @@
   };
 
   const getDstResourceImage = (resource) => {
-    if (resource === "wood") return "assets/random%20events/dst-log.webp";
-    if (resource === "grass") return "assets/random%20events/dst-grass.webp";
+    if (resource === "wood") return "assets/random-events/dst-log.webp";
+    if (resource === "grass") return "assets/random-events/dst-grass.webp";
     return "";
   };
 

@@ -1655,7 +1655,7 @@
     preloadTargets: () => [
       nobleSteedWindow,
       nobleSteedResultWindow,
-      "assets/random%20events/horse.jpeg",
+      "assets/random-events/horse.jpeg",
     ],
     kind: RANDOM_EVENT_KIND_INTERACTIVE,
     isVisible: isNobleSteedVisible,

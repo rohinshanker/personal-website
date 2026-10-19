@@ -16,7 +16,7 @@ const appendOverflowingConversation = (page) =>
 
       const avatar = document.createElement("img");
       avatar.className = "red-tool-avatar";
-      avatar.src = "assets/random%20events/red-tool-icon.png";
+      avatar.src = "assets/random-events/red-tool-icon.png";
       avatar.alt = "";
 
       const message = document.createElement("p");

@@ -176,7 +176,7 @@ test("the shared runtime applies, persists, and preloads only the active cursor 
   assert.ok(environment.requests.length > 20);
   assert.ok(
     environment.requests.every(
-      ({ url }) => url.includes("-dark.png") || url.includes("/Jeelh-Cursor-Dark/"),
+      ({ url }) => url.includes("-dark.png") || url.includes("/jeelh-cursor-dark/"),
     ),
   );
 
@@ -190,7 +190,7 @@ test("the shared runtime applies, persists, and preloads only the active cursor 
   assert.ok(
     environment.requests
       .slice(darkRequestCount)
-      .every(({ url }) => url.includes("-light.png") || url.includes("/Jeelh-Cursor-Light/")),
+      .every(({ url }) => url.includes("-light.png") || url.includes("/jeelh-cursor-light/")),
   );
 
   environment.dispatchWindow("storage", {

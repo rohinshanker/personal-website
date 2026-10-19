@@ -13,8 +13,8 @@ and under 1 MiB, and it belongs to this pipeline.
 
 - **Animated WebP is the default.** It keeps `<img>`, `data-src`, the deferred
   loader, and reduced-motion behaviour exactly as they were.
-- **A looping `<video>` replaces the largest loops**: `assets/random events/`
-  `servalpizza.gif`, `campfire.gif`, `radar.gif`, and `lain.gif`. Video is worth
+- **A looping `<video>` replaces the largest loops**: `assets/random-events/`
+  `serval-pizza.gif`, `campfire.gif`, `radar.gif`, and `lain.gif`. Video is worth
   its extra markup only where the WebP is still hundreds of kilobytes; below that
   the image path is simpler and equally fast.
 - **Artwork drawn as stacked layers ships as WebP**, whatever it weighs. Two
@@ -45,7 +45,7 @@ record stays truthful.
 Quality was chosen by comparing each derivative with its source frame by frame
 and at rendered size. Lossy WebP smooths the GIF's dithering, which reads as an
 improvement rather than a loss, so structural similarity against the dithered
-source understates quality: raising `servalpizza` from `-q 75` to `-q 85`
+source understates quality: raising `serval-pizza` from `-q 75` to `-q 85`
 doubled the file for +0.03 mean SSIM and no visible difference. Two cases do
 need a different setting:
 
@@ -75,18 +75,18 @@ only one of WebM/MP4 is ever chosen.
 
 | Source | Ships as | GIF bytes | Derivative bytes | Downloaded bytes | Saved |
 | --- | --- | ---: | --- | ---: | ---: |
-| `servalpizza` | video | 9,716,372 | webm 658,603 · mp4 445,011 · poster 36,087 · webp fallback 1,922,078 | 694,690 | 93% |
+| `serval-pizza` | video | 9,716,372 | webm 658,603 · mp4 445,011 · poster 36,087 · webp fallback 1,922,078 | 694,690 | 93% |
 | `campfire` | video | 6,087,120 | webm 176,756 · mp4 122,087 · poster 51,746 · webp fallback 748,214 | 228,502 | 96% |
 | `evil-wizards-radar` | WebP | 3,987,487 | webp 681,520 | 681,520 | 83% |
 | `birthday` | WebP | 3,264,097 | webp 1,075,952 | 1,075,952 | 67% |
 | `ramadan` | WebP | 2,960,726 | webp 940,504 | 940,504 | 68% |
 | `buddha` | WebP | 2,926,083 | webp 965,846 | 965,846 | 67% |
-| `mothersday` | WebP | 2,781,317 | webp 776,736 | 776,736 | 72% |
+| `mothers-day` | WebP | 2,781,317 | webp 776,736 | 776,736 | 72% |
 | `trans` | WebP | 2,588,030 | webp 813,534 | 813,534 | 69% |
 | `feliz-jueves` | WebP | 2,193,316 | webp 737,614 | 737,614 | 66% |
 | `radar` | video | 2,140,195 | webm 306,415 · mp4 256,956 · poster 30,769 · webp fallback 1,887,922 | 337,184 | 84% |
-| `fathersday` | WebP | 1,922,308 | webp 475,536 | 475,536 | 75% |
-| `4thofjuly` | WebP | 1,884,834 | webp 993,550 | 993,550 | 47% |
+| `fathers-day` | WebP | 1,922,308 | webp 475,536 | 475,536 | 75% |
+| `fourth-of-july` | WebP | 1,884,834 | webp 993,550 | 993,550 | 47% |
 | `lain` | video | 1,814,442 | webm 410,553 · mp4 228,387 · poster 51,296 · webp fallback 604,334 | 461,849 | 75% |
 | `holi` | WebP | 1,612,380 | webp 763,544 | 763,544 | 53% |
 | `halloween` | WebP | 1,473,960 | webp 626,256 | 626,256 | 58% |
@@ -98,7 +98,7 @@ only one of WebM/MP4 is ever chosen.
 
 `shoebill` saves the least because its 220x220 source renders in a 64x64 icon
 box; resizing sources is a separate decision and is not part of this pipeline.
-`4thofjuly` and `holi` are heavily dithered, which limits what lossy WebP can do
+`fourth-of-july` and `holi` are heavily dithered, which limits what lossy WebP can do
 without visible banding.
 
 ## Looping-video contract
@@ -108,14 +108,14 @@ Markup, in `home.html` only:
 ```html
 <video
   class="serval-pizza-art"
-  data-loop-video="servalpizza"
-  data-loop-fallback="assets/optimized/random-events/servalpizza.webp"
-  data-poster="assets/optimized/random-events/servalpizza-poster.jpg"
+  data-loop-video="serval-pizza"
+  data-loop-fallback="assets/optimized/random-events/serval-pizza.webp"
+  data-poster="assets/optimized/random-events/serval-pizza-poster.jpg"
   width="628" height="640"
   loop muted playsinline preload="auto"
 >
-  <source data-src="assets/optimized/random-events/servalpizza.webm" type="video/webm" />
-  <source data-src="assets/optimized/random-events/servalpizza.mp4" type="video/mp4" />
+  <source data-src="assets/optimized/random-events/serval-pizza.webm" type="video/webm" />
+  <source data-src="assets/optimized/random-events/serval-pizza.mp4" type="video/mp4" />
 </video>
 ```
 

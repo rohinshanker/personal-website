@@ -322,7 +322,7 @@
 
 .sol-card {
   background-color: transparent;
-  background-image: url("../../../assets/solitaire-cards/poker nano.png");
+  background-image: url("../../../assets/solitaire-cards/poker-nano.png");
   background-position: var(--sol-sprite-x, 0%) var(--sol-sprite-y, 0%);
   background-repeat: no-repeat;
   background-size: 1300% auto;

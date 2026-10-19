@@ -3,13 +3,13 @@
   "thresholdBytes": 1000000,
   "entries": [
     {
-      "source": "assets/random events/servalpizza.gif",
+      "source": "assets/random-events/serval-pizza.gif",
       "sourceBytes": 9716372,
       "width": 628,
       "height": 640,
       "derivatives": [
         {
-          "path": "assets/optimized/random-events/servalpizza.webp",
+          "path": "assets/optimized/random-events/serval-pizza.webp",
           "format": "webp",
           "flags": [
             "-lossy",
@@ -24,7 +24,7 @@
           "height": 640
         },
         {
-          "path": "assets/optimized/random-events/servalpizza.webm",
+          "path": "assets/optimized/random-events/serval-pizza.webm",
           "format": "webm",
           "flags": [
             "-c:v",
@@ -46,7 +46,7 @@
           "height": 640
         },
         {
-          "path": "assets/optimized/random-events/servalpizza.mp4",
+          "path": "assets/optimized/random-events/serval-pizza.mp4",
           "format": "mp4",
           "flags": [
             "-c:v",
@@ -70,7 +70,7 @@
           "height": 640
         },
         {
-          "path": "assets/optimized/random-events/servalpizza-poster.jpg",
+          "path": "assets/optimized/random-events/serval-pizza-poster.jpg",
           "format": "poster",
           "flags": [
             "-frames:v",
@@ -91,7 +91,7 @@
       ]
     },
     {
-      "source": "assets/random events/campfire.gif",
+      "source": "assets/random-events/campfire.gif",
       "sourceBytes": 6087120,
       "width": 858,
       "height": 825,
@@ -179,7 +179,7 @@
       ]
     },
     {
-      "source": "assets/random events/evil-wizards-radar.gif",
+      "source": "assets/random-events/evil-wizards-radar.gif",
       "sourceBytes": 3987487,
       "width": 1280,
       "height": 640,
@@ -202,7 +202,7 @@
       ]
     },
     {
-      "source": "assets/random events/birthday.gif",
+      "source": "assets/random-events/birthday.gif",
       "sourceBytes": 3264097,
       "width": 500,
       "height": 500,
@@ -225,7 +225,7 @@
       ]
     },
     {
-      "source": "assets/random events/ramadan.gif",
+      "source": "assets/random-events/ramadan.gif",
       "sourceBytes": 2960726,
       "width": 500,
       "height": 500,
@@ -248,7 +248,7 @@
       ]
     },
     {
-      "source": "assets/random events/buddha.gif",
+      "source": "assets/random-events/buddha.gif",
       "sourceBytes": 2926083,
       "width": 500,
       "height": 500,
@@ -271,13 +271,13 @@
       ]
     },
     {
-      "source": "assets/random events/mothersday.gif",
+      "source": "assets/random-events/mothers-day.gif",
       "sourceBytes": 2781317,
       "width": 500,
       "height": 500,
       "derivatives": [
         {
-          "path": "assets/optimized/random-events/mothersday.webp",
+          "path": "assets/optimized/random-events/mothers-day.webp",
           "format": "webp",
           "flags": [
             "-lossy",
@@ -294,7 +294,7 @@
       ]
     },
     {
-      "source": "assets/random events/trans.gif",
+      "source": "assets/random-events/trans.gif",
       "sourceBytes": 2588030,
       "width": 500,
       "height": 500,
@@ -317,7 +317,7 @@
       ]
     },
     {
-      "source": "assets/random events/feliz-jueves.gif",
+      "source": "assets/random-events/feliz-jueves.gif",
       "sourceBytes": 2193316,
       "width": 498,
       "height": 498,
@@ -340,7 +340,7 @@
       ]
     },
     {
-      "source": "assets/random events/radar.gif",
+      "source": "assets/random-events/radar.gif",
       "sourceBytes": 2140195,
       "width": 640,
       "height": 640,
@@ -426,13 +426,13 @@
       ]
     },
     {
-      "source": "assets/random events/fathersday.gif",
+      "source": "assets/random-events/fathers-day.gif",
       "sourceBytes": 1922308,
       "width": 500,
       "height": 416,
       "derivatives": [
         {
-          "path": "assets/optimized/random-events/fathersday.webp",
+          "path": "assets/optimized/random-events/fathers-day.webp",
           "format": "webp",
           "flags": [
             "-lossy",
@@ -449,13 +449,13 @@
       ]
     },
     {
-      "source": "assets/random events/4thofjuly.gif",
+      "source": "assets/random-events/fourth-of-july.gif",
       "sourceBytes": 1884834,
       "width": 500,
       "height": 500,
       "derivatives": [
         {
-          "path": "assets/optimized/random-events/4thofjuly.webp",
+          "path": "assets/optimized/random-events/fourth-of-july.webp",
           "format": "webp",
           "flags": [
             "-lossy",
@@ -472,7 +472,7 @@
       ]
     },
     {
-      "source": "assets/random events/lain.gif",
+      "source": "assets/random-events/lain.gif",
       "sourceBytes": 1814442,
       "width": 500,
       "height": 352,
@@ -560,7 +560,7 @@
       ]
     },
     {
-      "source": "assets/random events/holi.gif",
+      "source": "assets/random-events/holi.gif",
       "sourceBytes": 1612380,
       "width": 500,
       "height": 500,
@@ -583,7 +583,7 @@
       ]
     },
     {
-      "source": "assets/random events/halloween.gif",
+      "source": "assets/random-events/halloween.gif",
       "sourceBytes": 1473960,
       "width": 500,
       "height": 500,
@@ -606,7 +606,7 @@
       ]
     },
     {
-      "source": "assets/random events/easter.gif",
+      "source": "assets/random-events/easter.gif",
       "sourceBytes": 1464000,
       "width": 500,
       "height": 500,
@@ -629,7 +629,7 @@
       ]
     },
     {
-      "source": "assets/random events/valentine.gif",
+      "source": "assets/random-events/valentine.gif",
       "sourceBytes": 1236348,
       "width": 500,
       "height": 500,
@@ -652,7 +652,7 @@
       ]
     },
     {
-      "source": "assets/random events/shoebill.gif",
+      "source": "assets/random-events/shoebill.gif",
       "sourceBytes": 1101796,
       "width": 220,
       "height": 220,
@@ -675,7 +675,7 @@
       ]
     },
     {
-      "source": "assets/random events/nana-accept.gif",
+      "source": "assets/random-events/nana-accept.gif",
       "sourceBytes": 1029362,
       "width": 500,
       "height": 274,

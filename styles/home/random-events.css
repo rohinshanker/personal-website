@@ -376,7 +376,7 @@
 
 .possum-springs-window .title-bar::before {
   background:
-    center / contain no-repeat url("../../assets/random%20events/pushpin.png?v=updated-20260617");
+    center / contain no-repeat url("../../assets/random-events/pushpin.png?v=updated-20260617");
   content: "";
   height: 30px;
   left: 50%;
@@ -4745,7 +4745,7 @@ html.is-wall-breach-shaking body {
 .pokemon-starter-scene {
   background:
     linear-gradient(rgba(255, 255, 255, 0.08), rgba(28, 42, 56, 0.12)),
-    center / cover no-repeat url("../../assets/random%20events/pokemon-bg.png");
+    center / cover no-repeat url("../../assets/random-events/pokemon-bg.png");
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   box-sizing: border-box;
   height: min(370px, calc(100vh - 116px));
@@ -5202,7 +5202,7 @@ html.is-wall-breach-shaking body {
 .relic-recovery-scene {
   background:
     linear-gradient(rgba(255, 255, 255, 0.04), rgba(21, 28, 20, 0.16)),
-    center / cover no-repeat url("../../assets/random%20events/made-in-abyss-background.webp");
+    center / cover no-repeat url("../../assets/random-events/made-in-abyss-background.webp");
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   box-sizing: border-box;
   height: 480px;
@@ -5544,7 +5544,7 @@ html.is-wall-breach-shaking body {
 .toxic-jungle-scene {
   background:
     linear-gradient(rgba(240, 248, 232, 0.06), rgba(34, 45, 34, 0.15)),
-    center / cover no-repeat url("../../assets/random%20events/toxic-jungle.webp");
+    center / cover no-repeat url("../../assets/random-events/toxic-jungle.webp");
   box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
   box-sizing: border-box;
   height: min(480px, calc(100vh - 116px));
@@ -6045,7 +6045,7 @@ html.is-wall-breach-shaking body {
 }
 
 .dst-craft-slot[data-dst-slot="wood"]::before {
-  background-image: url("../../assets/random%20events/dst-log.webp");
+  background-image: url("../../assets/random-events/dst-log.webp");
 }
 
 .dst-craft-slot[data-dst-slot="grass"] {
@@ -6053,7 +6053,7 @@ html.is-wall-breach-shaking body {
 }
 
 .dst-craft-slot[data-dst-slot="grass"]::before {
-  background-image: url("../../assets/random%20events/dst-grass.webp");
+  background-image: url("../../assets/random-events/dst-grass.webp");
 }
 
 .dst-craft-slot.is-compatible {
@@ -6547,15 +6547,15 @@ html.is-wall-breach-shaking body {
 }
 
 .infinity-armory-slot-shape--square {
-  background-image: url("../../assets/random%20events/ib-assets/ib-gem-slot-square.webp");
+  background-image: url("../../assets/random-events/ib-assets/ib-gem-slot-square.webp");
 }
 
 .infinity-armory-slot-shape--circle {
-  background-image: url("../../assets/random%20events/ib-assets/ib-gem-slot-circle.webp");
+  background-image: url("../../assets/random-events/ib-assets/ib-gem-slot-circle.webp");
 }
 
 .infinity-armory-slot-shape--triangle {
-  background-image: url("../../assets/random%20events/ib-assets/ib-gem-slot-triangle.webp");
+  background-image: url("../../assets/random-events/ib-assets/ib-gem-slot-triangle.webp");
 }
 
 .infinity-armory-inventory-title {

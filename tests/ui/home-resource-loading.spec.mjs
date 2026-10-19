@@ -170,7 +170,7 @@ test("the closed Home desktop hides static event overlays without requesting eve
   ).toEqual({
     display: "none",
     height: 0,
-    imageSource: "assets/random%20events/pixel-explosion.gif",
+    imageSource: "assets/random-events/pixel-explosion.gif",
     width: 0,
   });
   consumeDiagnostics(diagnostics, {

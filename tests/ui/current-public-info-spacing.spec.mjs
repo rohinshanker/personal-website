@@ -120,7 +120,7 @@ test("Current Public Information uses the Saul advertisement image inset and kee
       await expect(titleClose).toHaveAccessibleName("Close");
       await expect(image).toHaveAttribute(
         "src",
-        "assets/random%20events/current-publicly-available-information/season-1.webp",
+        "assets/random-events/current-publicly-available-information/season-1.webp",
       );
       await expect
         .poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0))

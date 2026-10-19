@@ -657,8 +657,8 @@ test("loads the shared cursor resources and synchronizes saved light and dark mo
         "resize-ns",
       ].map((name) => `/assets/cursor-assets/generated-png/${name}-${mode}.png`),
     ),
-    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-1.png",
-    "/assets/cursor-assets/Jeelh-Cursor-Dark/working-in-background-frames/working-in-background-1.png",
+    "/assets/cursor-assets/jeelh-cursor-light/working-in-background-frames/working-in-background-light-1.png",
+    "/assets/cursor-assets/jeelh-cursor-dark/working-in-background-frames/working-in-background-1.png",
   ];
   for (const resource of cursorResources) {
     const response = await page.request.get(new URL(resource, page.url()).href);
@@ -716,11 +716,11 @@ test("uses working cursors while authentication keeps the editor inert", async (
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading-frame-[2-9]/);
   await expectCursorImage(
     form,
-    "Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-",
+    "jeelh-cursor-light/working-in-background-frames/working-in-background-light-",
   );
   await expectCursorImage(
     page.locator("body"),
-    "Jeelh-Cursor-Light/working-in-background-frames/working-in-background-light-",
+    "jeelh-cursor-light/working-in-background-frames/working-in-background-light-",
   );
   await expect(editor).toHaveAttribute("inert", "");
 
@@ -865,7 +865,7 @@ test("keeps semantic cursors through text selection, resizing, and native draggi
   const importCursorStates = await page.evaluate(() => window.__videoEditorImportCursorStates);
   expect(importCursorStates[0].bodyLoading).toBe(true);
   expect(importCursorStates[0].cursor).toContain(
-    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/",
+    "/assets/cursor-assets/jeelh-cursor-light/working-in-background-frames/",
   );
   await expect(page.getByTestId("video-editor")).toHaveAttribute("aria-busy", "false");
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
@@ -2762,7 +2762,7 @@ test("analyzes a local Audio timeline clip and keeps accessible guideposts mappe
   const analyzingCursor = audioAnalysisCursorStates.find(({ state }) => state === "analyzing");
   expect(analyzingCursor?.bodyLoading).toBe(true);
   expect(analyzingCursor?.cursor).toContain(
-    "/assets/cursor-assets/Jeelh-Cursor-Light/working-in-background-frames/",
+    "/assets/cursor-assets/jeelh-cursor-light/working-in-background-frames/",
   );
   await expect(page.locator("body")).not.toHaveClass(/is-custom-cursor-loading/);
   await expect(page.getByLabel("Graph view", { exact: true })).toHaveValue("combined");

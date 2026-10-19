@@ -110,7 +110,7 @@
 
   let lostGraceOverlayTimer = null;
 
-  const SAUL_AD_IMAGES = ["assets/random%20events/saul1.jpg", "assets/random%20events/saul2.jpg"];
+  const SAUL_AD_IMAGES = ["assets/random-events/saul-1.jpg", "assets/random-events/saul-2.jpg"];
 
   const FELIZ_JUEVES_SHOWN_KEY = "personalSiteFelizJuevesShownDate";
 
@@ -485,11 +485,11 @@
   };
 
   const CURRENT_PUBLIC_INFO_ASSETS = Object.freeze([
-    "assets/random%20events/current-publicly-available-information/season-1.webp",
-    "assets/random%20events/current-publicly-available-information/season-2.webp",
-    "assets/random%20events/current-publicly-available-information/season-3.webp",
-    "assets/random%20events/current-publicly-available-information/final-season.webp",
-    "assets/random%20events/current-publicly-available-information/ova.webp",
+    "assets/random-events/current-publicly-available-information/season-1.webp",
+    "assets/random-events/current-publicly-available-information/season-2.webp",
+    "assets/random-events/current-publicly-available-information/season-3.webp",
+    "assets/random-events/current-publicly-available-information/final-season.webp",
+    "assets/random-events/current-publicly-available-information/ova.webp",
   ]);
 
   const isCurrentPublicInfoVisible = () =>
@@ -1080,7 +1080,7 @@
 
   registerRandomEvent({
     id: "nataraja",
-    preloadTargets: () => [natarajaWindow, "assets/random%20events/nataraja.mp4"],
+    preloadTargets: () => [natarajaWindow, "assets/random-events/nataraja.mp4"],
     kind: RANDOM_EVENT_KIND_INTERACTIVE,
     isVisible: isNatarajaVisible,
     canTrigger: () => !isNatarajaVisible(),

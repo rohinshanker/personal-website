@@ -78,7 +78,7 @@ test("a preloaded result window that never opened keeps its loop video at the fi
   await expect(page.locator("#serval-encounter-window")).toBeVisible();
   await expect(page.locator("#serval-pizza-window")).toBeHidden();
 
-  const video = loopVideo(page, "servalpizza");
+  const video = loopVideo(page, "serval-pizza");
   await expect
     .poll(() => video.evaluate((element) => element.readyState))
     .toBeGreaterThanOrEqual(2);
