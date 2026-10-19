@@ -26,6 +26,21 @@ export async function routeHomeScript(page, key, transform) {
   return routed;
 }
 
+/**
+ * Replaces exactly one occurrence of `marker` in `source`, failing loudly when the marker is
+ * missing or ambiguous. A fixture that composes several replacements must use this for each
+ * one: a plain `String.replace` with a stale marker changes nothing and is only noticed when
+ * the test later reaches for the hook it never installed.
+ */
+export function replaceOnce(source, marker, replacement) {
+  const first = source.indexOf(marker);
+  if (first === -1) throw new Error(`Fixture marker not found: ${JSON.stringify(marker)}`);
+  if (source.indexOf(marker, first + marker.length) !== -1) {
+    throw new Error(`Fixture marker is not unique: ${JSON.stringify(marker)}`);
+  }
+  return source.slice(0, first) + replacement + source.slice(first + marker.length);
+}
+
 /** Source text of one Home script, for a fixture that needs it unmodified. */
 export function readHomeScriptSource(key) {
   return readFile(homeScriptUrl(key), "utf8");

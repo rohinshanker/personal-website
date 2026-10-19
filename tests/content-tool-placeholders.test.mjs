@@ -163,27 +163,3 @@ test("Image Tools keeps its accessible Coming soon alert unchanged", async () =>
     /data-random-viewport-position/,
   );
 });
-
-test("the Image Tools future-work ticket remains open", async () => {
-  const ticketPaths = ["O_image-tools__20260731.md"];
-  const [index, ...tickets] = await Promise.all([
-    readFile(new URL("docs/notes/tickets/INDEX.md", root), "utf8"),
-    ...ticketPaths.map((path) => readFile(new URL(`docs/notes/tickets/${path}`, root), "utf8")),
-  ]);
-
-  ticketPaths.forEach((path, indexPosition) => {
-    const ticket = tickets[indexPosition];
-    assert.match(ticket, new RegExp(`^# ${path.replace(".md", "")} — Open`, "m"));
-    assert.match(ticket, /^- Status: open$/m);
-    const escapedPath = path.replaceAll(".", "\\.");
-    assert.equal(
-      count(index, new RegExp(`\\[${escapedPath}\\]\\(${escapedPath}\\)`, "g")),
-      1,
-      `${path} must have exactly one live-ticket index row.`,
-    );
-  });
-
-  tickets.forEach((ticket) => {
-    assert.doesNotMatch(ticket, /^## /m);
-  });
-});

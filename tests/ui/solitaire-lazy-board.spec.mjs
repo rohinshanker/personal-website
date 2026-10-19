@@ -1,5 +1,5 @@
 import { expect, test } from "./deterministic.mjs";
-import { routeHomeScript } from "./helpers/home-script-routes.mjs";
+import { replaceOnce, routeHomeScript } from "./helpers/home-script-routes.mjs";
 import { openApp, openHomeDesktop, REVIEW_VIEWPORT } from "./helpers/rendered-site.mjs";
 
 /**
@@ -31,8 +31,8 @@ const installLazyBoardBridge = async (page) => {
   });
   await routeHomeScript(page, "gameStats", (source) => {
     const marker = "const startGameStatsSession = (game, rawConfig) => {";
-    if (!source.includes(marker)) throw new Error("Unable to count game sessions.");
-    return source.replace(
+    return replaceOnce(
+      source,
       marker,
       `${marker}
   if (game === "solitaire") {
@@ -42,13 +42,15 @@ const installLazyBoardBridge = async (page) => {
   });
   await routeHomeScript(page, "solitaire", (originalSource) => {
     let source = originalSource;
-    source = source.replace(
+    source = replaceOnce(
+      source,
       "const solBuildWinnableDeal = (random = Math.random) => {",
       `let solDealsGenerated = 0;
 const solBuildWinnableDeal = (random = Math.random) => {
   solDealsGenerated += 1;`,
     );
-    source = source.replace(
+    source = replaceOnce(
+      source,
       "const solRender = () => {\n  if (!solBoard",
       "let solRendersRun = 0;\nconst solRender = () => {\n  solRendersRun += 1;\n  if (!solBoard",
     );

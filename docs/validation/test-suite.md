@@ -27,7 +27,10 @@ return each file-level IIFE with its body dedented to column 0, so a test that
 slices a declaration by its text (`"\n\nconst name"`) is unaffected by the
 formatter's one-level indent; read production scripts through them, not with
 `readFile`, and write regexes against the formatted source (trailing commas,
-wrapped arguments). The boot entry is not a concatenated runtime. Contract tests verify ordered
+wrapped arguments). A browser fixture that patches a served script composes
+its edits with `replaceOnce` from `tests/ui/helpers/home-script-routes.mjs`,
+which throws on a missing or ambiguous marker; a bare `String.replace` with a
+stale marker installs nothing and only fails later, if at all. The boot entry is not a concatenated runtime. Contract tests verify ordered
 script membership, exports, dependencies, game-build inputs, and generated
 references. Behavior tests execute the actual production implementation through
 a focused VM/function seam; browser tests drive the real UI.
