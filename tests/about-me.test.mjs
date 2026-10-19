@@ -69,7 +69,7 @@ test("About Me provides the requested page structure and dated article", async (
   );
   assert.match(
     websiteSection,
-    /Welcome to my personal website! I wanted to make something unique &amp; playful[\s\S]*?that would give me a reason to come back to often \(and hopefully you too!\) while[\s\S]*?also keeping record of a few things I’m proud of in one place\. Be sure to check[\s\S]*?out the games, all of them have leaderboards and save your progress! Enjoy your[\s\S]*?stay :\)[\s\S]*?<br \/>[\s\S]*?—Rohin/,
+    /Welcome to my website! I wanted to make something to keep all of my work\s+organized in a playful &amp; interactive format\. Feel free to reach out to me if\s+you would like to work together or if you have any questions on my projects\.\s+Enjoy your stay :\)[\s\S]*?<br \/>[\s\S]*?—Rohin/,
   );
   assert.equal(
     about.match(/class="about-degree-card"/g)?.length,
@@ -290,7 +290,7 @@ test("About Me date, degree marquee, and carousel stay data driven", async () =>
   assert.match(source, /const navigationDisabled = ABOUT_CAROUSEL_ITEMS\.length < 2;/);
   assert.match(
     source,
-    /bindGalleryNavigation\(\n  aboutCarouselPrev,[\s\S]*?updateAboutCarousel,?\n\);/,
+    /bindGalleryNavigation\(\n {2}aboutCarouselPrev,[\s\S]*?updateAboutCarousel,?\n\);/,
   );
   assert.doesNotMatch(html, /id="about-carousel-prev" disabled/);
   assert.doesNotMatch(html, /id="about-carousel-next" disabled/);
@@ -319,7 +319,7 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   const warmupPortfolioToken = indexHtml.match(
     /\["styles\/home\/portfolio\.css\?v=([^"]+)", "style"\]/,
   )?.[1];
-  assert.equal(homePortfolioToken, "content-items-20261018");
+  assert.equal(homePortfolioToken, "about-copy-20261019");
   assert.equal(warmupPortfolioToken, homePortfolioToken);
 
   assert.match(
@@ -339,8 +339,8 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
     /max-height: calc\(100vh - 76px\);\n(?:\s*\/\*[^*]*\*\/\n)?\s*max-height: calc\(100dvh - 76px\);/,
     /top: calc\(50vh - 28px\);\n(?:\s*\/\*[^*]*\*\/\n)?\s*top: calc\(50dvh - 28px\);/,
     /height: min\(65vh, 640px\);\n(?:\s*\/\*[^*]*\*\/\n)?\s*height: min\(65dvh, 640px\);/,
-    /max-height: calc\(100vh - 140px\);\n    max-height: calc\(100dvh - 140px\);/,
-    /min-height: min\(220px, calc\(100vh - 140px\)\);\n    min-height: min\(220px, calc\(100dvh - 140px\)\);/,
+    /max-height: calc\(100vh - 140px\);\n {4}max-height: calc\(100dvh - 140px\);/,
+    /min-height: min\(220px, calc\(100vh - 140px\)\);\n {4}min-height: min\(220px, calc\(100dvh - 140px\)\);/,
   ]) {
     assert.match(css, fallbackPair);
   }
@@ -356,7 +356,7 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
     css,
     /\.about-carousel-section \{[\s\S]*?align-self: start;[\s\S]*?width: min\(100%, 350px\);/,
   );
-  assert.match(css, /#about-window \.about-carousel \{\n  margin: 0;\n\}/);
+  assert.match(css, /#about-window \.about-carousel \{\n {2}margin: 0;\n\}/);
   assert.match(
     css,
     /#about-window \.about-carousel-media \{[\s\S]*?aspect-ratio: 720 \/ 669;[\s\S]*?height: auto;[\s\S]*?max-height: none;[\s\S]*?overflow: hidden;/,
@@ -424,7 +424,7 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   assert.match(css, /\.about-social-copy \{[\s\S]*?min-width: 0;/);
   assert.match(
     css,
-    /\.about-social-link:hover,\n\.about-social-link:focus-visible \{\n  background: var\(--dialog-blue\);\n  color: #fff;/,
+    /\.about-social-link:hover,\n\.about-social-link:focus-visible \{\n {2}background: var\(--dialog-blue\);\n {2}color: #fff;/,
   );
   assert.match(
     css,
@@ -445,6 +445,6 @@ test("About Me layout is bounded, responsive, and visibly interactive", async ()
   );
   assert.match(
     css,
-    /@media \(max-width: 744px\) \{[\s\S]*?\.about-article-copy \{[\s\S]*?width: 100%;[\s\S]*?\.about-intro-grid \{\n    grid-template-columns: minmax\(0, 1fr\);/,
+    /@media \(max-width: 744px\) \{[\s\S]*?\.about-article-copy \{[\s\S]*?width: 100%;[\s\S]*?\.about-intro-grid \{\n {4}grid-template-columns: minmax\(0, 1fr\);/,
   );
 });

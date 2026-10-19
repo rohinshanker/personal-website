@@ -333,7 +333,7 @@ test("About Me is complete, scrollable, and responsive", async ({ page }) => {
     }));
   expect(websiteDescription).toEqual({
     breakCount: 1,
-    text: "Welcome to my personal website! I wanted to make something unique & playful that would give me a reason to come back to often (and hopefully you too!) while also keeping record of a few things I’m proud of in one place. Be sure to check out the games, all of them have leaderboards and save your progress! Enjoy your stay :)\n—Rohin",
+    text: "Welcome to my website! I wanted to make something to keep all of my work organized in a playful & interactive format. Feel free to reach out to me if you would like to work together or if you have any questions on my projects. Enjoy your stay :)\n—Rohin",
   });
 
   const image = page.locator("#about-carousel-image");

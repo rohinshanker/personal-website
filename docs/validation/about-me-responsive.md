@@ -2,7 +2,7 @@
 
 - Purpose: Preserve a reachable About Me title bar and internally scrollable content across compact phone, tablet, and desktop viewports.
 - Scope: `#about-window`, `.about-body`, the About content grid, the Education list scroll region, and compact social-card layout on `home.html`.
-- Last verified: 2026-09-23
+- Last verified: 2026-10-19
 
 ## Sizing contract
 
@@ -19,6 +19,7 @@
 - Durable fix (`styles/home/portfolio.css`): `scrollbar-gutter: stable` on the list; each `.about-institution > h4` sticky at the scrollport top; `scroll-snap-type: y mandatory` with headings and cards as `start` snap targets; `scroll-margin-block-start` on cards so a snapped card clears the pinned heading; `scroll-padding-block-start` equal to the list's top padding so the top of the list stays a rest position. Neither mechanism suffices alone: sticky alone slices the departing heading mid-range, snapping alone slices the last heading at the clamped end of the range.
 - Guarantee: at every rest position the heading above the visible cards is whole. Frames during an in-flight scroll may still cross the edge. The bottom edge may cut a card, and the end of the range stays reachable.
 - Constraint: the list must keep scrolling. Growing it to fit content breaks the overview-panel/carousel bottom alignment and the maximum-content contracts in `tests/ui/about-me.spec.mjs`.
+- Constraint: the list's scrollport is what the "About this Website" section leaves it, so `.about-website-section` reserves `min-height: 116px` in the scrolling layout. A shorter paragraph without that reservation moved the end of the scroll range to 67px, inside the band where the departing first heading is half visible; the reservation keeps the end at 82px, past it.
 - Regression check: the walked-range test "About Education list keeps a stable gutter and a whole heading at every rest" settles the list at each offset and asserts no sliced heading, no card behind the pinned heading, a reachable end, and fewer rest offsets than requested. Below 745px the list does not scroll and the heading returns to `position: static`.
 - Render headed as well as headless before concluding a scrolling region has (or lacks) an affordance. Firefox and Safari rendering has not been checked.
 
