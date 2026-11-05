@@ -213,6 +213,17 @@ const preparePage = async (
 
 const readSnapshot = (page) => page.evaluate(() => window.__nekoStreamFeatureTest.snapshot());
 
+// Playwright's fake clock fires requestAnimationFrame on an absolute 16 ms grid
+// whose phase is set by real time elapsing between clock.install and
+// clock.pauseAt. Advancing to the next grid boundary makes every later
+// `runFor` step deliver the same frame count on every run.
+const alignClockToAnimationFrameGrid = async (page) => {
+  const phaseMs = await page.evaluate(() => performance.now() % 16);
+  if (phaseMs !== 0) {
+    await page.clock.runFor(16 - phaseMs);
+  }
+};
+
 const startStream = async (page, specs) => {
   const initialSnapshot = await page.evaluate(
     (streamSpecs) => window.__nekoStreamFeatureTest.start(streamSpecs),
@@ -751,6 +762,7 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
   expect(snapshot.pendingSpawnCount).toBe(0);
   expect(snapshot.animationFrameActive).toBe(false);
 
+  await alignClockToAnimationFrameGrid(page);
   await page.setViewportSize({ width: 375, height: 812 });
   const actionWave = ["sit", "scratch", "clean", "yawn", "sleep"].map((actionName, index) => ({
     actionName,
@@ -799,11 +811,13 @@ test("one shared runtime spawns forty cats, preserves canonical speed, completes
   expect(snapshot.cats.find(({ actionName }) => actionName === "clean").spriteName).toBe("awake");
   expect(snapshot.cats.find(({ actionName }) => actionName === "yawn").spriteName).toBe("yawn1");
 
-  const scratchSprite = snapshot.cats.find(({ actionName }) => actionName === "scratch").sprite;
+  expect(snapshot.cats.find(({ actionName }) => actionName === "scratch").sprite).toMatch(
+    /scratch1\.png$/,
+  );
   await page.clock.runFor(100);
   snapshot = await readSnapshot(page);
-  expect(snapshot.cats.find(({ actionName }) => actionName === "scratch").sprite).not.toBe(
-    scratchSprite,
+  expect(snapshot.cats.find(({ actionName }) => actionName === "scratch").sprite).toMatch(
+    /scratch2\.png$/,
   );
 
   await page.clock.runFor(800);
