@@ -500,16 +500,31 @@ test("lists measurements under the title and switches between US and EU values",
   const us = section.getByRole("button", { name: "US", exact: true });
   const eu = section.getByRole("button", { name: "EU", exact: true });
   const values = section.locator("dd");
-  const usValues = ["6'2\"", "135 lbs", "US 11", '33.5"', '26.6"', '28.5"', '34"', '32"'];
+  const usValues = [
+    "6'2\"",
+    "135 lbs",
+    "US 11",
+    '33.5"',
+    '26.6"',
+    '28.2"',
+    '34"',
+    '32"',
+    "US 38R",
+    '15.5"',
+    '32/33"',
+  ];
   const euValues = [
     "188 cm",
     "61.2 kg",
     "EU 45",
     "85.1 cm",
     "67.6 cm",
-    "72.4 cm",
+    "71.6 cm",
     "86.4 cm",
     "81.3 cm",
+    "EU 48",
+    "39.4 cm",
+    "81/84 cm",
   ];
 
   const title = await box(page.getByRole("heading", { level: 1 }));
@@ -531,6 +546,9 @@ test("lists measurements under the title and switches between US and EU values",
     "Pant Waist",
     "Hips",
     "Inseam",
+    "Suit",
+    "Collar",
+    "Sleeve",
   ]);
   await expect(values).toHaveText(usValues);
   await expect(us).toHaveAttribute("aria-pressed", "true");

@@ -136,9 +136,12 @@ test("the shared modeling data is complete and every referenced file exists", as
     { label: "Shoe", regional: { us: "US 11", eu: "EU 45" } },
     { label: "Chest/Bust", inches: 33.5 },
     { label: "Waist", inches: 26.6 },
-    { label: "Pant Waist", inches: 28.5 },
+    { label: "Pant Waist", inches: 28.2 },
     { label: "Hips", inches: 34 },
     { label: "Inseam", inches: 32 },
+    { label: "Suit", regional: { us: "US 38R", eu: "EU 48" } },
+    { label: "Collar", inches: 15.5 },
+    { label: "Sleeve", regional: { us: '32/33"', eu: "81/84 cm" } },
   ]);
   for (const item of portfolio.measurements) {
     const sources = ["inches", "pounds", "regional"].filter((key) => key in item);

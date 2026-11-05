@@ -688,9 +688,12 @@
       Object.freeze({ label: "Shoe", regional: Object.freeze({ us: "US 11", eu: "EU 45" }) }),
       Object.freeze({ label: "Chest/Bust", inches: 33.5 }),
       Object.freeze({ label: "Waist", inches: 26.6 }),
-      Object.freeze({ label: "Pant Waist", inches: 28.5 }),
+      Object.freeze({ label: "Pant Waist", inches: 28.2 }),
       Object.freeze({ label: "Hips", inches: 34 }),
       Object.freeze({ label: "Inseam", inches: 32 }),
+      Object.freeze({ label: "Suit", regional: Object.freeze({ us: "US 38R", eu: "EU 48" }) }),
+      Object.freeze({ label: "Collar", inches: 15.5 }),
+      Object.freeze({ label: "Sleeve", regional: Object.freeze({ us: '32/33"', eu: "81/84 cm" }) }),
     ]),
     linkIcons: Object.freeze({
       website: "assets/app-icons/ico/msie1.ico",
