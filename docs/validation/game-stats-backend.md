@@ -2,7 +2,7 @@
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 - Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-10-19
+- Last verified: 2026-11-08
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -472,7 +472,19 @@ that can deploy a Worker or inspect its secrets may still lack direct D1 access;
 error `7403` during migration requires checking D1 permission and account scope,
 not bypassing the migration step. Confirm
 those runtime secrets remain configured, and disable any Cloudflare Workers
-Builds/Git integration that could deploy the same Worker in parallel.
+Builds/Git integration that could deploy the same Worker in parallel. On
+2026-11-05 such an integration, connected on 2026-10-18 and failing until then,
+began succeeding and deployed the repository root as a static-assets Worker over
+`personal-site-game-stats` on every push, dropping the handlers, the D1 binding,
+the vars and all six secrets; the owner disconnected it the same day. Recovery
+order when that happens: `wrangler rollback <last good version>` restores
+service immediately, but Cloudflare bases new versions and `wrangler secret list`
+on the latest *uploaded* version, not the deployed one, so the release gate stays
+red until a fresh `wrangler versions upload --secrets-file <private .env>` plus
+`wrangler versions deploy` re-establishes a latest version that carries every
+secret. Secret values cannot be read back; keep them in the password manager.
+Never use plain `wrangler secret put` in that state: it builds on the broken
+latest version and deploys it.
 
 Pushing alone is not enough for the first automated release. Complete the
 one-time Pages-source selection and add both repository secrets, then rerun the
