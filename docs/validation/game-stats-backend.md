@@ -859,6 +859,8 @@ The Lois Griffin social-post random events show global like/dislike counts.
 `social_post_reactions` table; `tests/social-post-reactions.test.mjs` pins the
 contract against real SQLite.
 
+First deployed with registered profiles, generator-grammar validation and the moderation route as Worker version `4be22a34-988f-40ff-a40a-f9514d953aea` (release run 42554591590, 2026-11-09), which also applied migrations 0006 and 0007 to production D1.
+
 - Post ids are the allowlist `SOCIAL_POST_IDS` in `constants.mjs`
   (`lois-post-happened`, `lois-post-five-oclock`). Any other id is `404 Unknown
   post`; a malformed path segment is `404 Route not found`; a query string is
