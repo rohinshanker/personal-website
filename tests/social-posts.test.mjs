@@ -12,10 +12,17 @@ import { HOME_SCRIPTS, readProductionScript, repositoryRoot } from "./helpers/ho
  */
 
 const SCRIPT_PATH = "scripts/home/events/social-posts.js";
-const SCRIPT_VERSION = "social-posts-20261109b";
+const SCRIPT_VERSION = "social-posts-20261109c";
 const STORAGE_KEY = "personalSiteSocialPostLikesV1";
+const PROFILE_RECORD_STORAGE_KEY = "personalSiteSocialProfileV1";
+const PROFILES_PATH = "/social-profiles";
 const EVENT_IDS = ["lois-post-happened", "lois-post-five-oclock"];
 const OFFLINE_MESSAGE = "Couldn't reach the server. Your reaction is saved on this device.";
+const PROFILE_REGISTERED_MESSAGE =
+  "This profile is already registered from another device, so it can't react here.";
+const PROFILE_NAME_REJECTED_MESSAGE =
+  "Your profile name isn't a generated name, so it can't be used on posts.";
+const PROFILE_BLOCKED_MESSAGE = "This profile can't react on posts.";
 
 const source = await readProductionScript(new URL(SCRIPT_PATH, repositoryRoot));
 const home = await readFile(new URL("home.html", repositoryRoot), "utf8");
@@ -98,6 +105,46 @@ test("reactions go through the Game Stats Worker with a per-device fallback", ()
     source,
     /console\.(?:log|warn|error|info|debug)\(/,
     "the script logs nothing",
+  );
+});
+
+test("a visitor registers once per device and reacts under the token, never a name", () => {
+  assert.match(
+    source,
+    /SOCIAL_PROFILES_PATH = "\/social-profiles"/,
+    `the registration route ${PROFILES_PATH}`,
+  );
+  assert.match(
+    source,
+    /SOCIAL_PROFILE_STORAGE_KEY = "personalSiteSocialProfileV1"/,
+    `the registration record key ${PROFILE_RECORD_STORAGE_KEY}`,
+  );
+  assert.ok(
+    source.includes("body = { id: profile.id, name: profile.name, icon: profile.icon }"),
+    "registration sends the profile's id, name and icon",
+  );
+  const reactionBodies = [
+    ...source.matchAll(/postSocialPostReaction\(\s*postId,\s*(\{[^}]*\})/g),
+  ].map((match) => match[1].replace(/\s+/g, " "));
+  assert.deepEqual(
+    reactionBodies.sort(),
+    ["{ administrator: true, reaction }", "{ profileId, token, reaction }"],
+    "a visitor reacts under the id and token, the Administrator under the proof; neither sends a name",
+  );
+  for (const message of [
+    PROFILE_REGISTERED_MESSAGE,
+    PROFILE_NAME_REJECTED_MESSAGE,
+    PROFILE_BLOCKED_MESSAGE,
+  ]) {
+    assert.ok(source.includes(`"${message}"`), `the system row text ${message}`);
+  }
+  assert.match(source, /code === "profile-token-invalid"/, "a stale token is recognised");
+  assert.match(source, /code === "profile-unknown"/, "a forgotten profile is recognised");
+  assert.match(source, /clearSocialProfileRecord\(\)/, "a refused token drops the record");
+  assert.match(
+    source,
+    /window\.homeEventSocialPosts = Object\.freeze\(\{[\s\S]*?SOCIAL_PROFILE_STORAGE_KEY[\s\S]*?SOCIAL_PROFILES_PATH[\s\S]*?\}\)/,
+    "the registration key and route are exported",
   );
 });
 

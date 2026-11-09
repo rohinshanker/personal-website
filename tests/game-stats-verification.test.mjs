@@ -29,6 +29,7 @@ const migrationPaths = [
   "0004_optimize_stats_aggregation.sql",
   "0005_add_verified_game_results.sql",
   "0006_add_social_post_reactions.sql",
+  "0007_add_social_profiles.sql",
 ].map((name) => new URL(`../workers/game-stats/migrations/${name}`, import.meta.url).pathname);
 
 const origin = "https://rohin.shanker.me";
@@ -230,7 +231,7 @@ const finishGame = async (harness, session, body, maximumRequests = 1_100) => {
 
 const profile = {
   id: "player-verified-0001",
-  name: "Verified Player",
+  name: "Tesori",
   icon: "assets/app-icons/ico/user_card.ico",
 };
 

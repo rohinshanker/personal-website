@@ -157,16 +157,20 @@ workers/game-stats/
   src/sessions.mjs                   # Session creation, validation, and atomic writes
   src/http.mjs                       # HTTP parsing, CORS, responses, five-second cache
   src/router.mjs                     # Routes and scheduled expiry purge
-  src/social-reactions.mjs           # Lois social-post like/dislike routes
+  src/social-reactions.mjs           # Lois social-post like/dislike and moderation routes
+  src/social-profiles.mjs            # Registered social identities and token checks
+  src/social-profile-names.mjs       # Sky generator name grammar and blocklist
   src/constants.mjs, data.mjs        # Shared constants and response shapes
   migrations/                        # D1 schema and rollback-compatible migrations
   migrations/0006_add_social_post_reactions.sql  # Permanent social_post_reactions table
+  migrations/0007_add_social_profiles.sql        # Permanent social_profiles table
   wrangler.jsonc                     # Deploy config; public vars only
   wrangler.jsonc.example             # Sanitized config template
   .dev.vars.example                  # Local secret names only
 tests/
   game-stats-worker.test.mjs
   social-post-reactions.test.mjs
+  social-profiles.test.mjs
   game-stats-sql.test.mjs
   game-stats-http-request.test.mjs
   game-stats-integrity.test.mjs
@@ -530,8 +534,17 @@ Migration `0006_add_social_post_reactions.sql` adds the permanent
 `social_post_reactions` table (one row per post and profile, keyed address hash,
 `like`/`dislike` CHECK) and its `(post_id, reaction, created_at)` index for the
 [social post reactions](#social-post-reactions) routes. It is additive and
-rollback-safe: the previous Worker never reads the table. `/health` counts it,
-so the Worker that ships this migration reports nine tables.
+rollback-safe: the previous Worker never reads the table. `/health` counts it.
+
+Migration `0007_add_social_profiles.sql` adds the permanent `social_profiles`
+table (`profile_id` primary key, server-held `player_name` and `player_icon`,
+`token_hash` as the SHA-256 digest of the registration token, keyed `ip_hash`,
+`created_at`, nullable `blocked_at`) for the registration and moderation routes
+in [social post reactions](#social-post-reactions). It is additive and
+rollback-safe for the same reason. `/health` counts it, so the Worker that
+ships this migration reports ten tables. Apply it before deploying the Worker
+that registers profiles; a Worker reading a missing table fails every reaction
+write.
 
 From the repository root, validate locally and then inspect remote state:
 
@@ -676,7 +689,9 @@ shared by both protocols.
 | `POST /events` | Accepts the normalized result envelope and consumes its valid session exactly once. | Inserts one idempotent event and consumes its session in one transactional D1 batch, or rejects both changes. |
 | `POST /administrator/sign-in` | Validates the Administrator username and password. | Creates no D1 profile data; returns a one-hour proof only after an exact-origin, rate-limited successful check. |
 | `GET /social-posts/:postId/reactions` | Reads the public like/dislike totals and reactor lists for one Lois social post. | None; no Origin required, `no-store`. |
-| `POST /social-posts/:postId/reactions` | Records, changes, or clears one profile's reaction to a Lois social post and returns the new summary. | Upserts or deletes exactly one `social_post_reactions` row after origin, validation, rate-limit, Administrator-proof, and cap checks. |
+| `POST /social-profiles` | Registers one `{ id, name, icon }` social identity whose name passed the generator grammar and returns its token once. | Inserts one permanent `social_profiles` row holding the SHA-256 digest of the token, after origin, validation, Administrator-identity, and rate-limit checks. |
+| `POST /social-posts/:postId/reactions` | Records, changes, or clears one registered profile's (or the proven Administrator's) reaction to a Lois social post and returns the new summary. | Upserts or deletes exactly one `social_post_reactions` row, copying the server-held name and icon, after origin, validation, rate-limit, token-or-proof, block, and cap checks. |
+| `POST /administrator/social-posts/moderate` | Removes one profile's reactions from every post, or removes them and blocks the profile. | Deletes that profile's `social_post_reactions` rows and, for `block`, sets `social_profiles.blocked_at` in one D1 batch; requires a valid Administrator proof. |
 
 The browser must ask for a session before a result can be submitted. A session
 request contains `game`, the allowed game `config`, the generated
@@ -684,6 +699,20 @@ request contains `game`, the allowed game `config`, the generated
 Worker rejects unknown games/configurations, a build version outside its
 explicit rolling compatibility window, expired timestamps, or a disallowed
 browser Origin.
+
+Every public player name, on the leaderboards and in the social-post reaction
+lists, must match the Sky generator grammar enforced by
+`isSkyGeneratedName` in `src/social-profile-names.mjs`: four to eight ASCII
+letters, strictly alternating vowel (`aeiou`) and consonant
+(`bcdfghjklmnpqrstvwxyz`) starting with either class, title-case, and not on
+`SOCIAL_PROFILE_NAME_BLOCKLIST` (compared lowercase against the whole name).
+`normalizeProfile` in `events.mjs` applies it to every new `event.profile` on
+`POST /events` (`400 Event profile name must be a generated name`) and
+registration applies it on `POST /social-profiles`. The exact
+`ADMINISTRATOR_PROFILE` (id, name, and icon all equal) is the only exception
+and is accepted only with a valid Administrator proof; the Administrator id
+with any other name or icon is still `403 Administrator profile is invalid`.
+Rows stored before the rule are read back as stored.
 
 The result post uses the Worker’s normalized event envelope and server-issued
 session proof. Do not add a frontend shortcut that sends a raw `win` directly
@@ -838,29 +867,56 @@ contract against real SQLite.
   Each list holds `{ id, name, icon }` profiles ordered by `created_at`
   ascending and is capped at the 100 most recent reactions; the counts are
   totals. The read is public, needs no Origin, and is never cached.
-- `POST` takes `{ profile: { id, name, icon }, reaction: "like" | "dislike" |
-  null }` and answers with the same summary. The profile uses the stored-event
-  normalization (`normalizeProfile` in `events.mjs`); unknown keys, a missing
-  `reaction`, or a value other than the three above are `400`. `like` and
-  `dislike` upsert the one row per `(post_id, profile_id)`, keeping the
-  original `created_at` and refreshing `updated_at`, name, and icon; `null`
-  deletes the row and is idempotent.
+- Identities are server-validated and server-held. `POST /social-profiles`
+  (`src/social-profiles.mjs`) takes `{ id, name, icon }`: `id` matches
+  `/^[a-z0-9-]{8,80}$/`, `icon` passes the stored-event icon allowlist, and
+  `name` passes `isSkyGeneratedName` (grammar plus blocklist; see the hardened
+  contract above), else `400 { code: "profile-name-invalid" }`. The
+  Administrator id or display name is `403 administrator-authorization`. The
+  `social-profiles:<ipHash>` bucket allows
+  `MAX_SOCIAL_PROFILE_REGISTRATIONS_PER_WINDOW` (10) registrations per hour per
+  keyed address hash. A duplicate id is `409 { code: "profile-registered" }`
+  and changes nothing, so the first registration of an id fixes its name and
+  icon. Success is `201 { ok, profile: { id, name, icon }, token }` where
+  `token` is 32 random bytes as base64url, returned exactly once; D1 stores
+  only `token_hash = sha256(token)` (`sha256Digest` in `security.mjs`,
+  base64url) beside the keyed `ip_hash`.
+- `POST /social-posts/:postId/reactions` takes `{ profileId, token, reaction:
+  "like" | "dislike" | null }` and answers with the summary. The request
+  carries no name or icon: the Worker looks the profile up, answers `404 {
+  code: "profile-unknown" }`, `403 { code: "profile-token-invalid" }` when
+  `sha256(token)` differs from `token_hash`, or `403 { code: "profile-blocked"
+  }` when `blocked_at` is set, and writes the server-held `player_name` and
+  `player_icon`. Unknown keys (including the retired `profile` object), a
+  missing `reaction`, a non-string `profileId` or `token`, or a value other
+  than the three above are `400`. `like` and `dislike` upsert the one row per
+  `(post_id, profile_id)`, keeping the original `created_at` and refreshing
+  `updated_at`; `null` deletes the row and is idempotent.
+- The Administrator never registers. `{ administrator: true, reaction }` with
+  a valid Bearer proof from `/administrator/sign-in`
+  (`validateAdministratorProof`) reacts as `ADMINISTRATOR_PROFILE`; without
+  one it is `403 administrator-authorization`. A body mixing `administrator`
+  with `profileId` or `token` is `400`.
 - Abuse controls: `assertBrowserOriginAllowed` runs first, then the
   `reactions:<ipHash>` bucket allows `MAX_REACTIONS_PER_WINDOW` (60) writes per
-  hour per keyed address hash. Each row stores that keyed hash, never a raw
-  address. A post that already holds `MAX_SOCIAL_POST_REACTIONS` (1000) rows
-  refuses a new profile with `409 { code: "post-full" }` inside the same
-  statement that would insert it; existing profiles may still change or clear
-  their reaction.
-- Identity is cooperative. Any client may send any allowed profile id, so the
-  lists are public and spoofable by profile id; treat them as decoration, not
-  attribution. The one exception is the Administrator: a profile whose id or
-  display name matches `ADMINISTRATOR_PROFILE` must be the exact profile and
-  carry a valid Bearer proof from `/administrator/sign-in`
-  (`validateAdministratorProfileProof`), else `403
-  administrator-authorization`.
-- Rows are permanent. The scheduled purge does not touch them and nothing
-  expires them; clear a post only by a reviewed manual D1 statement.
+  hour per keyed address hash, then the token or proof check. Each row stores
+  that keyed hash, never a raw address. A post that already holds
+  `MAX_SOCIAL_POST_REACTIONS` (1000) rows refuses a new profile with `409 {
+  code: "post-full" }` inside the same statement that would insert it;
+  existing profiles may still change or clear their reaction.
+- Moderation: `POST /administrator/social-posts/moderate` with a valid proof
+  takes `{ profileId, action: "remove" | "block" }`. `remove` deletes that
+  profile's reactions on every post (including rows written before
+  registration existed); `block` also sets `social_profiles.blocked_at`
+  (first block wins) and is `404 profile-unknown` for an unregistered id. It
+  answers `{ ok, profileId, action, removedReactions, blocked }`; without a
+  proof it is `403 administrator-authorization`. A blocked profile can neither
+  react nor clear.
+- Names shown publicly are only ever server-held values that passed the
+  generator grammar at registration, or the proof-gated Administrator name.
+  Rows in both tables are permanent. The scheduled purge does not touch them
+  and nothing expires them; clear a post only through moderation or a reviewed
+  manual D1 statement.
 
 ## Repair Guide: Administrator Sign-In Loop After A Protected Result
 

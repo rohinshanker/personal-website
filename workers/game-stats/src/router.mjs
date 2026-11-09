@@ -35,9 +35,12 @@ import {
   getChanges,
   validateSession,
 } from "./sessions.mjs";
+import { handlePostSocialProfileRegistration, SOCIAL_PROFILES_PATH } from "./social-profiles.mjs";
 import {
   handleGetSocialPostReactions,
+  handlePostSocialPostModeration,
   handlePostSocialPostReaction,
+  SOCIAL_POST_MODERATION_PATH,
   SOCIAL_POST_REACTIONS_PATH_PATTERN,
 } from "./social-reactions.mjs";
 import {
@@ -56,9 +59,10 @@ WHERE type = 'table'
     'game_events', 'game_stat_sessions', 'game_stats_rate_limits',
     'verified_timing_transitions', 'verified_game_completions',
     'verified_completion_jobs', 'verified_completion_progress',
-    'verified_completion_replay_chunks', 'social_post_reactions'
+    'verified_completion_replay_chunks', 'social_post_reactions', 'social_profiles'
   )
 `;
+const HEALTH_CHECK_TABLE_COUNT = 10;
 const DELETE_EXPIRED_SESSIONS_SQL = `
 DELETE FROM game_stat_sessions
 WHERE expires_at <= ?
@@ -121,7 +125,7 @@ const handleGetStats = async (request, env, context) => {
 
 const handleGetHealth = async (request, env) => {
   const health = await getGameStatsDatabase(env).prepare(HEALTH_CHECK_SQL).first();
-  if (Number(health?.table_count) !== 9) {
+  if (Number(health?.table_count) !== HEALTH_CHECK_TABLE_COUNT) {
     throw new HttpError(500, "D1 health check failed");
   }
   const { buildVersion, acceptedBuildVersions } = requireSecurityConfig(env);
@@ -297,8 +301,21 @@ export const handleRequest = async (request, env, context, dependencies = {}) =>
     if (reactionsMatch && request.method === "POST") {
       return await handlePostSocialPostReaction(request, env, reactionsMatch[1]);
     }
+    if (url.pathname === SOCIAL_PROFILES_PATH && request.method === "POST") {
+      return await handlePostSocialProfileRegistration(request, env);
+    }
+    if (url.pathname === SOCIAL_POST_MODERATION_PATH && request.method === "POST") {
+      return await handlePostSocialPostModeration(request, env);
+    }
     if (
-      ["/stats", "/sessions", "/events", "/administrator/sign-in"].includes(url.pathname) ||
+      [
+        "/stats",
+        "/sessions",
+        "/events",
+        "/administrator/sign-in",
+        SOCIAL_PROFILES_PATH,
+        SOCIAL_POST_MODERATION_PATH,
+      ].includes(url.pathname) ||
       timingMatch ||
       finishMatch ||
       finishContinueMatch ||

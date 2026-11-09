@@ -19,6 +19,7 @@ const migrations = [
   "0004_optimize_stats_aggregation.sql",
   "0005_add_verified_game_results.sql",
   "0006_add_social_post_reactions.sql",
+  "0007_add_social_profiles.sql",
 ].map((name) => new URL(`../workers/game-stats/migrations/${name}`, import.meta.url));
 const origin = "https://rohin.shanker.me";
 const buildVersion = `sha256-${"b".repeat(64)}`;

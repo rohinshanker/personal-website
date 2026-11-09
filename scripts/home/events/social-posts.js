@@ -15,8 +15,12 @@
 
   const SOCIAL_POST_LIKES_STORAGE_KEY = "personalSiteSocialPostLikesV1";
   const SOCIAL_POST_DISLIKES_STORAGE_KEY = "personalSiteSocialPostDislikesV1";
+  /** This device's registration with the Worker: `{ profileId, token, name, icon }`. */
+  const SOCIAL_PROFILE_STORAGE_KEY = "personalSiteSocialProfileV1";
   /** Worker route for one post's reactions; `{postId}` is the event id. */
   const SOCIAL_POST_REACTIONS_PATH = "/social-posts/{postId}/reactions";
+  /** Worker route that registers a profile and returns its token once. */
+  const SOCIAL_PROFILES_PATH = "/social-profiles";
   const SOCIAL_POST_REQUEST_TIMEOUT_MS = 8000;
   const SOCIAL_POST_DEFAULT_ICON = "assets/app-icons/ico/user_card.ico";
   const SOCIAL_POST_SYSTEM_ICON = "assets/app-icons/ico/msg_information.ico";
@@ -25,9 +29,28 @@
     "Create a profile in Game Progress to dislike this post.";
   const SOCIAL_POST_OFFLINE_MESSAGE =
     "Couldn't reach the server. Your reaction is saved on this device.";
+  const SOCIAL_POST_PROFILE_REGISTERED_MESSAGE =
+    "This profile is already registered from another device, so it can't react here.";
+  const SOCIAL_POST_PROFILE_NAME_REJECTED_MESSAGE =
+    "Your profile name isn't a generated name, so it can't be used on posts.";
+  const SOCIAL_POST_PROFILE_BLOCKED_MESSAGE = "This profile can't react on posts.";
   const SOCIAL_POST_EMPTY_LIKERS_MESSAGE = "No one has liked this yet.";
   const REACTION_LIKE = "like";
   const REACTION_DISLIKE = "dislike";
+
+  /** Why a press did not land on the Worker. Only `offline` keeps the press shown. */
+  const FAILURE_OFFLINE = "offline";
+  const FAILURE_PROFILE_REGISTERED = "profile-registered";
+  const FAILURE_PROFILE_NAME_REJECTED = "profile-name-rejected";
+  const FAILURE_PROFILE_BLOCKED = "profile-blocked";
+  /** The stored token no longer works; the client registers once more. */
+  const FAILURE_PROFILE_TOKEN = "profile-token";
+
+  const SOCIAL_POST_FAILURE_MESSAGES = Object.freeze({
+    [FAILURE_PROFILE_REGISTERED]: SOCIAL_POST_PROFILE_REGISTERED_MESSAGE,
+    [FAILURE_PROFILE_NAME_REJECTED]: SOCIAL_POST_PROFILE_NAME_REJECTED_MESSAGE,
+    [FAILURE_PROFILE_BLOCKED]: SOCIAL_POST_PROFILE_BLOCKED_MESSAGE,
+  });
 
   const isLiker = (value) => Boolean(value) && typeof value.id === "string";
 
@@ -64,6 +87,38 @@
   const readSocialPostLikes = () => readSocialPostReactions(SOCIAL_POST_LIKES_STORAGE_KEY);
   const readSocialPostDislikes = () => readSocialPostReactions(SOCIAL_POST_DISLIKES_STORAGE_KEY);
 
+  const isSocialProfileRecord = (value) =>
+    Boolean(value) &&
+    typeof value.profileId === "string" &&
+    typeof value.token === "string" &&
+    value.token !== "";
+
+  /** This device's registration record, or null when absent or unreadable. */
+  const readSocialProfileRecord = () => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(SOCIAL_PROFILE_STORAGE_KEY) || "null");
+      return isSocialProfileRecord(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const writeSocialProfileRecord = (record) => {
+    try {
+      localStorage.setItem(SOCIAL_PROFILE_STORAGE_KEY, JSON.stringify(record));
+    } catch {
+      // Storage may be full or blocked; the next press registers again.
+    }
+  };
+
+  const clearSocialProfileRecord = () => {
+    try {
+      localStorage.removeItem(SOCIAL_PROFILE_STORAGE_KEY);
+    } catch {
+      // Nothing to clear when storage is blocked.
+    }
+  };
+
   const withoutProfile = (reactors, profile) =>
     reactors.filter((reactor) => reactor.id !== profile.id);
 
@@ -96,12 +151,16 @@
     }
   };
 
-  /** The reactions URL for one post, or "" when no backend is configured. */
-  const socialPostReactionsUrl = (postId) => {
+  /** One Worker route's URL, or "" when no backend is configured. */
+  const backendUrl = (path) => {
     const baseUrl = normalizeBackendBaseUrl(window.rohinGameStatsBackend);
-    if (!baseUrl) return "";
-    return `${baseUrl}${SOCIAL_POST_REACTIONS_PATH.replace("{postId}", encodeURIComponent(postId))}`;
+    return baseUrl ? `${baseUrl}${path}` : "";
   };
+
+  const socialPostReactionsUrl = (postId) =>
+    backendUrl(SOCIAL_POST_REACTIONS_PATH.replace("{postId}", encodeURIComponent(postId)));
+
+  const socialProfilesUrl = () => backendUrl(SOCIAL_PROFILES_PATH);
 
   /** The Administrator's stored proof as a Bearer header; empty for everyone else. */
   const administratorAuthorizationHeaders = (profile) => {
@@ -142,13 +201,11 @@
   };
 
   /**
-   * One request to the reactions route. Resolves to the normalized server
-   * state, or null for any failure: no backend, network error, timeout, a
-   * non-2xx status, or a body that is not an `ok` reaction state.
+   * One JSON request to the Worker. Resolves to `{ status, payload }`: the
+   * status is 0 for a network error or timeout, the payload null when the
+   * body is not JSON.
    */
-  const requestSocialPostReactions = async (postId, { method = "GET", body, headers } = {}) => {
-    const url = socialPostReactionsUrl(postId);
-    if (!url) return null;
+  const requestWorkerJson = async (url, { method = "GET", body, headers } = {}) => {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), SOCIAL_POST_REQUEST_TIMEOUT_MS);
     try {
@@ -162,15 +219,123 @@
         },
         signal: controller.signal,
       });
-      const payload = await readResponseJson(response);
-      if (!response.ok || payload?.ok !== true) return null;
-      return normalizeServerReactions(payload);
+      return { status: response.status, payload: await readResponseJson(response) };
     } catch {
-      return null;
+      return { status: 0, payload: null };
     } finally {
       window.clearTimeout(timeout);
     }
   };
+
+  const isOkAnswer = ({ status, payload }) => status >= 200 && status < 300 && payload?.ok === true;
+
+  /** The Worker's state for one post, or null for any failure. */
+  const fetchSocialPostReactions = async (postId) => {
+    const url = socialPostReactionsUrl(postId);
+    if (!url) return null;
+    const answer = await requestWorkerJson(url);
+    return isOkAnswer(answer) ? normalizeServerReactions(answer.payload) : null;
+  };
+
+  /** Why a registration answer is not a success, from the Worker's status and error code. */
+  const registrationFailure = ({ status, payload }) => {
+    if (status === 409) return FAILURE_PROFILE_REGISTERED;
+    if (status === 400) return FAILURE_PROFILE_NAME_REJECTED;
+    if (status === 403 && payload?.code === FAILURE_PROFILE_BLOCKED) return FAILURE_PROFILE_BLOCKED;
+    return FAILURE_OFFLINE;
+  };
+
+  const isRegistrationAnswer = (answer) =>
+    isOkAnswer(answer) && typeof answer.payload.token === "string" && answer.payload.token !== "";
+
+  /**
+   * Registers `profile` for this device and stores the token the Worker
+   * returns exactly once. Resolves to `{ record }` or `{ failure }`.
+   */
+  const registerSocialProfile = async (profile) => {
+    const url = socialProfilesUrl();
+    if (!url) return { failure: FAILURE_OFFLINE };
+    const body = { id: profile.id, name: profile.name, icon: profile.icon };
+    const answer = await requestWorkerJson(url, { method: "POST", body });
+    if (!isRegistrationAnswer(answer)) return { failure: registrationFailure(answer) };
+    const registered = isLiker(answer.payload.profile)
+      ? toReactor(answer.payload.profile)
+      : profile;
+    const record = {
+      profileId: profile.id,
+      token: answer.payload.token,
+      name: registered.name,
+      icon: registered.icon,
+    };
+    writeSocialProfileRecord(record);
+    return { record };
+  };
+
+  /** The registration in flight, so two quick presses share one request. */
+  let pendingRegistration = null;
+
+  const registerSocialProfileOnce = (profile) => {
+    if (pendingRegistration?.profileId !== profile.id) {
+      const promise = registerSocialProfile(profile).finally(() => {
+        if (pendingRegistration?.promise === promise) pendingRegistration = null;
+      });
+      pendingRegistration = { profileId: profile.id, promise };
+    }
+    return pendingRegistration.promise;
+  };
+
+  /** This device's record for `profile`, registering when there is none for it. */
+  const ensureSocialProfileRecord = (profile) => {
+    const record = readSocialProfileRecord();
+    if (record?.profileId === profile.id) return Promise.resolve({ record });
+    return registerSocialProfileOnce(profile);
+  };
+
+  /** Why a reaction answer is not a success, from the Worker's status and error code. */
+  const reactionFailure = ({ status, payload }) => {
+    const code = payload?.code;
+    if (status === 404 && code === "profile-unknown") return FAILURE_PROFILE_TOKEN;
+    if (status === 403 && code === "profile-token-invalid") return FAILURE_PROFILE_TOKEN;
+    if (status === 403 && code === FAILURE_PROFILE_BLOCKED) return FAILURE_PROFILE_BLOCKED;
+    return FAILURE_OFFLINE;
+  };
+
+  /** Sends one reaction body; resolves to `{ state }` or `{ failure }`. */
+  const postSocialPostReaction = async (postId, body, headers) => {
+    const url = socialPostReactionsUrl(postId);
+    if (!url) return { failure: FAILURE_OFFLINE };
+    const answer = await requestWorkerJson(url, { method: "POST", body, headers });
+    if (isOkAnswer(answer)) return { state: normalizeServerReactions(answer.payload) };
+    return { failure: reactionFailure(answer) };
+  };
+
+  /** The Administrator reacts under the stored proof and never registers. */
+  const publishAdministratorReaction = (postId, profile, reaction) =>
+    postSocialPostReaction(
+      postId,
+      { administrator: true, reaction },
+      administratorAuthorizationHeaders(profile),
+    );
+
+  /**
+   * A visitor reacts under this device's registration. A token the Worker no
+   * longer knows is dropped and registration tried once more before giving up.
+   */
+  const publishVisitorReaction = async (postId, profile, reaction, { retry = true } = {}) => {
+    const registration = await ensureSocialProfileRecord(profile);
+    if (registration.failure) return registration;
+    const { profileId, token } = registration.record;
+    const outcome = await postSocialPostReaction(postId, { profileId, token, reaction });
+    if (outcome.failure !== FAILURE_PROFILE_TOKEN) return outcome;
+    clearSocialProfileRecord();
+    if (!retry) return { failure: FAILURE_OFFLINE };
+    return publishVisitorReaction(postId, profile, reaction, { retry: false });
+  };
+
+  const publishSocialPostReaction = (postId, profile, reaction) =>
+    window.homeAdministratorSession.isAdministratorProfile(profile)
+      ? publishAdministratorReaction(postId, profile, reaction)
+      : publishVisitorReaction(postId, profile, reaction);
 
   const formatSocialPostLikeCount = (count) => `${count} ${count === 1 ? "like" : "likes"}`;
   const formatSocialPostDislikeCount = (count) =>
@@ -254,14 +419,21 @@
       return null;
     };
 
+    /** The visitor as the Worker lists them when it does, else the local profile. */
+    const serverReactorOf = (profile) =>
+      [...serverState.likes, ...serverState.dislikes].find(
+        (reactor) => reactor.id === profile.id,
+      ) || profile;
+
     /** Server lists with the visitor's unconfirmed reaction applied exactly once. */
     const mergeOptimistic = ({ profile, reaction }) => {
+      const reactor = serverReactorOf(profile);
       const likes = withoutProfile(serverState.likes, profile);
       const dislikes = withoutProfile(serverState.dislikes, profile);
       const removed = serverReactionOf(profile) ? 1 : 0;
       return {
-        likes: reaction === REACTION_LIKE ? [...likes, profile] : likes,
-        dislikes: reaction === REACTION_DISLIKE ? [...dislikes, profile] : dislikes,
+        likes: reaction === REACTION_LIKE ? [...likes, reactor] : likes,
+        dislikes: reaction === REACTION_DISLIKE ? [...dislikes, reactor] : dislikes,
         likeCount: serverState.likeCount - removed + (reaction === REACTION_LIKE ? 1 : 0),
         dislikeCount: serverState.dislikeCount - removed + (reaction === REACTION_DISLIKE ? 1 : 0),
         reaction,
@@ -371,23 +543,32 @@
       render();
     };
 
+    /** Takes back a press the Worker refused for good, in the view and in this device's cache. */
+    const revertReaction = (profile, previousReaction) => {
+      optimistic = null;
+      writeLocalReaction(profile, serverState ? serverReactionOf(profile) : previousReaction);
+      render();
+    };
+
     const refreshFromServer = async () => {
       const request = ++latestRequest;
-      const state = await requestSocialPostReactions(eventId);
+      const state = await fetchSocialPostReactions(eventId);
       if (request !== latestRequest || !state) return;
       adoptServerState(state);
     };
 
-    const publishReaction = async (profile, reaction) => {
+    const publishReaction = async (profile, reaction, previousReaction) => {
       const request = ++latestRequest;
-      const state = await requestSocialPostReactions(eventId, {
-        method: "POST",
-        body: { profile, reaction },
-        headers: administratorAuthorizationHeaders(profile),
-      });
+      const outcome = await publishSocialPostReaction(eventId, profile, reaction);
       if (request !== latestRequest) return;
-      if (state) adoptServerState(state);
-      else appendOfflineRow();
+      if (outcome.state) {
+        adoptServerState(outcome.state);
+      } else if (outcome.failure === FAILURE_OFFLINE) {
+        appendOfflineRow();
+      } else {
+        revertReaction(profile, previousReaction);
+        appendSystemRow(SOCIAL_POST_FAILURE_MESSAGES[outcome.failure]);
+      }
     };
 
     /** Toggles one reaction for the visitor: shown at once, then sent to the Worker. */
@@ -397,11 +578,12 @@
         appendSystemRow(noProfileMessage);
         return;
       }
-      const next = currentView(profile).reaction === reaction ? null : reaction;
+      const previous = currentView(profile).reaction;
+      const next = previous === reaction ? null : reaction;
       writeLocalReaction(profile, next);
       optimistic = { profile, reaction: next };
       render();
-      void publishReaction(profile, next);
+      void publishReaction(profile, next, previous);
     };
 
     const toggleLike = () => toggleReaction(REACTION_LIKE, SOCIAL_POST_NO_PROFILE_MESSAGE);
@@ -509,6 +691,8 @@
     readSocialPostDislikes,
     SOCIAL_POST_LIKES_STORAGE_KEY,
     SOCIAL_POST_DISLIKES_STORAGE_KEY,
+    SOCIAL_PROFILE_STORAGE_KEY,
     SOCIAL_POST_REACTIONS_PATH,
+    SOCIAL_PROFILES_PATH,
   });
 })();

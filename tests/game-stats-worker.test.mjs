@@ -19,6 +19,7 @@ const gameStatsMigrationPaths = [
   "0004_optimize_stats_aggregation.sql",
   "0005_add_verified_game_results.sql",
   "0006_add_social_post_reactions.sql",
+  "0007_add_social_profiles.sql",
 ].map((name) => new URL(`../workers/game-stats/migrations/${name}`, import.meta.url).pathname);
 
 const projectEventRow = (sql, row) => {
@@ -215,7 +216,7 @@ class MockD1Database {
     this.failNextEventInsert = false;
     this.failNextSessionConsume = false;
     this.failHealthCheck = false;
-    this.healthTableCount = 9;
+    this.healthTableCount = 10;
     this.batchTail = Promise.resolve();
   }
 
@@ -477,7 +478,7 @@ const SUDOKU_PUZZLE =
  */
 test("records one Sudoku win per puzzle and player however many tabs report it", async () => {
   const env = createEnv();
-  const player = profile("player-sudoku-identity", "Identity");
+  const player = profile("player-sudoku-identity", "Idena");
   const identity = { puzzleId: "generated-easy-abc123", puzzle: SUDOKU_PUZZLE };
 
   const firstSession = await createSession(env, "sudoku", { difficulty: "easy" });
@@ -543,7 +544,7 @@ test("records one Sudoku win per puzzle and player however many tabs report it",
     {
       ...firstEvent,
       id: "event-sudoku-identity-c",
-      profile: profile("player-sudoku-other", "Other"),
+      profile: profile("player-sudoku-other", "Otema"),
     },
     otherSession,
   );
@@ -558,7 +559,7 @@ test("records one Sudoku win per puzzle and player however many tabs report it",
  */
 test("rejects a simultaneous second win for one puzzle at the unique index", async () => {
   const env = createEnv();
-  const player = profile("player-sudoku-race", "Racer");
+  const player = profile("player-sudoku-race", "Rozimeka");
   const sessions = await Promise.all([
     createSession(env, "sudoku", { difficulty: "hard" }),
     createSession(env, "sudoku", { difficulty: "hard" }),
@@ -619,7 +620,7 @@ test("rejects a simultaneous second win for one puzzle at the unique index", asy
  */
 test("a duplicate Sudoku win is still validated like any other submission", async () => {
   const env = createEnv();
-  const player = profile("player-sudoku-guard", "Guard");
+  const player = profile("player-sudoku-guard", "Gudoma");
   const identity = { puzzleId: "generated-medium-guard", puzzle: SUDOKU_PUZZLE };
   const base = event({
     game: "sudoku",
@@ -701,7 +702,7 @@ test("accepts a Sudoku win with no puzzle identity and rejects a half one", asyn
     hintBucket: "noHints",
     metric: 64,
     metricKind: "seconds",
-    profile: profile("player-sudoku-legacy", "Legacy"),
+    profile: profile("player-sudoku-legacy", "Legora"),
   });
 
   const response = await postEvent(env, legacyEvent, session);
@@ -753,7 +754,7 @@ test("replays an identified event id against a row stored without an identity", 
     puzzle: SUDOKU_PUZZLE,
     metric: 55,
     metricKind: "seconds",
-    profile: profile("player-sudoku-rollout", "Rollout"),
+    profile: profile("player-sudoku-rollout", "Rolune"),
   });
   const { puzzleId, puzzle, ...storedEvent } = identifiedEvent;
   storeTrustedEvent(env, storedEvent);
@@ -839,8 +840,8 @@ test("normalizes all supported game shapes and rejects malformed data", () => {
 });
 
 test("returns complete lifetime totals only for the requested player", () => {
-  const requestedProfile = profile("player-overall-totals", "Overall Totals");
-  const otherProfile = profile("player-other-totals", "Other Totals");
+  const requestedProfile = profile("player-overall-totals", "Ovalune");
+  const otherProfile = profile("player-other-totals", "Oribane");
   const occurredAt = new Date().toISOString();
   const events = [
     event({ id: "overall-ms-beginner-1", profile: requestedProfile, occurredAt }),
@@ -989,7 +990,7 @@ test("requires scalar event strings and exact per-game event fields", () => {
     hintBucket: "noHints",
     metric: 75,
     metricKind: "seconds",
-    profile: profile("player-sudoku-strict", "Strict Sudoku"),
+    profile: profile("player-sudoku-strict", "Sotuke"),
   });
   const snakeEvent = event({
     id: "event-snake-strict-shape",
@@ -1350,7 +1351,7 @@ test("accepts only the bundled Rohin Neko yawn avatar outside the ICO icon manif
           id: "event-unapproved-png-avatar",
           profile: {
             id: "player-unapproved",
-            name: "Unapproved",
+            name: "Unapo",
             icon: "assets/neko-assets/sprites/yawn2.png",
           },
         }),
@@ -1366,7 +1367,7 @@ test("rejects client-only fields in an event profile", () => {
         event({
           id: "event-profile-field-0001",
           profile: {
-            ...profile("player-strict-profile", "Strict"),
+            ...profile("player-strict-profile", "Sutira"),
             rerollCount: 1,
           },
         }),
@@ -1486,7 +1487,7 @@ test("rejects an immediate Solitaire win without side effects and accepts the sa
 
 test("publishes a verified no-hints Sudoku win after the minimum session time", async () => {
   const env = createEnv();
-  const sudokuProfile = profile("player-sudoku-publish", "Sudoku Publisher");
+  const sudokuProfile = profile("player-sudoku-publish", "Supabi");
   const session = await createSession(env, "sudoku", { difficulty: "easy" });
   const storedSession = env.personal_site_game_stats.sessions.get(session.id);
   const issuedAt = Date.parse(storedSession.issued_at);
@@ -1561,7 +1562,7 @@ test("rejects malformed Sudoku fields without consuming the reusable session", a
     hintBucket: "noHints",
     metric: 98,
     metricKind: "seconds",
-    profile: profile("player-sudoku-strict-http", "Strict HTTP Sudoku"),
+    profile: profile("player-sudoku-strict-http", "Sahitu"),
   });
   const rateLimitsBefore = Array.from(env.personal_site_game_stats.rateLimits, ([key, value]) => [
     key,
@@ -1644,7 +1645,7 @@ test("rejects malformed Sudoku fields without consuming the reusable session", a
 
 test("keeps a difficulty-mismatched Sudoku session reusable and hinted wins unranked", async () => {
   const env = createEnv();
-  const sudokuProfile = profile("player-sudoku-hinted", "Hinted Sudoku");
+  const sudokuProfile = profile("player-sudoku-hinted", "Hinetu");
   const session = await createSession(env, "sudoku", { difficulty: "easy" });
   await ageSessionForCompletion(env, session);
   const mismatchedEvent = event({
@@ -1707,7 +1708,7 @@ test("waits inline for a quick zero-score Snake game before counting and ranking
   const session = await createSession(env, "snake", { boardSize: "16" });
   const issuedAt = Date.parse(env.personal_site_game_stats.sessions.get(session.id).issued_at);
   const waitCalls = [];
-  const snakeProfile = profile("player-snake-quick", "Quick Snake");
+  const snakeProfile = profile("player-snake-quick", "Qisane");
   const response = await withMockedNow(issuedAt + 1_500, ({ advance }) =>
     withScheduler(
       async (delayMs) => {
@@ -2825,8 +2826,8 @@ test("requires strict Turnstile validation when configured", async () => {
 
 test("builds leaderboards from validated stored events", () => {
   const stats = createGameStatsDataFromEvents([
-    event({ id: "event-board-0001", metric: 60, profile: profile("player-a", "Ari") }),
-    event({ id: "event-board-0002", metric: 35, profile: profile("player-b", "Kai") }),
+    event({ id: "event-board-0001", metric: 60, profile: profile("player-a", "Arelo") }),
+    event({ id: "event-board-0002", metric: 35, profile: profile("player-b", "Kanori") }),
   ]);
   assert.deepEqual(
     stats.leaderboards.minesweeper.beginner.map((entry) => entry.metric),
@@ -2849,37 +2850,37 @@ test("builds the Solitaire leaderboard from each player's total validated wins",
   const stats = createGameStatsDataFromEvents([
     solitaireWin({
       id: "solitaire-ari-0001",
-      player: profile("solitaire-ari", "Ari"),
+      player: profile("solitaire-ari", "Arelo"),
       moves: 91,
       second: 1,
     }),
     solitaireWin({
       id: "solitaire-kai-0001",
-      player: profile("solitaire-kai", "Kai"),
+      player: profile("solitaire-kai", "Kanori"),
       moves: 62,
       second: 2,
     }),
     solitaireWin({
       id: "solitaire-ari-0002",
-      player: profile("solitaire-ari", "Ari"),
+      player: profile("solitaire-ari", "Arelo"),
       moves: 180,
       second: 3,
     }),
     solitaireWin({
       id: "solitaire-nia-0001",
-      player: profile("solitaire-nia", "Nia"),
+      player: profile("solitaire-nia", "Nirova"),
       moves: 50,
       second: 4,
     }),
     solitaireWin({
       id: "solitaire-kai-0002",
-      player: profile("solitaire-kai", "Kai"),
+      player: profile("solitaire-kai", "Kanori"),
       moves: 240,
       second: 5,
     }),
     solitaireWin({
       id: "solitaire-ari-0003",
-      player: profile("solitaire-ari", "Ari"),
+      player: profile("solitaire-ari", "Arelo"),
       moves: 99,
       second: 6,
     }),
@@ -2893,9 +2894,9 @@ test("builds the Solitaire leaderboard from each player's total validated wins",
       name,
     })),
     [
-      { metric: 3, metricKind: "wins", name: "Ari" },
-      { metric: 2, metricKind: "wins", name: "Kai" },
-      { metric: 1, metricKind: "wins", name: "Nia" },
+      { metric: 3, metricKind: "wins", name: "Arelo" },
+      { metric: 2, metricKind: "wins", name: "Kanori" },
+      { metric: 1, metricKind: "wins", name: "Nirova" },
     ],
   );
 });
@@ -2910,7 +2911,7 @@ test("builds each Sudoku leaderboard from fastest no-hints completions", () => {
       hintBucket: "noHints",
       metric: 90,
       metricKind: "seconds",
-      profile: profile("sudoku-a", "Ari"),
+      profile: profile("sudoku-a", "Arelo"),
     }),
     event({
       id: "event-sudoku-board-0002",
@@ -2920,7 +2921,7 @@ test("builds each Sudoku leaderboard from fastest no-hints completions", () => {
       hintBucket: "noHints",
       metric: 45,
       metricKind: "seconds",
-      profile: profile("sudoku-b", "Kai"),
+      profile: profile("sudoku-b", "Kanori"),
     }),
     event({
       id: "event-sudoku-board-0003",
@@ -2930,7 +2931,7 @@ test("builds each Sudoku leaderboard from fastest no-hints completions", () => {
       hintBucket: "noHints",
       metric: 30,
       metricKind: "seconds",
-      profile: profile("sudoku-a", "Ari"),
+      profile: profile("sudoku-a", "Arelo"),
     }),
     event({
       id: "event-sudoku-board-0004",
@@ -2940,7 +2941,7 @@ test("builds each Sudoku leaderboard from fastest no-hints completions", () => {
       hintBucket: "noHints",
       metric: 80,
       metricKind: "seconds",
-      profile: profile("sudoku-d", "Nia"),
+      profile: profile("sudoku-d", "Nirova"),
     }),
     event({
       id: "event-sudoku-board-0005",
@@ -2964,11 +2965,11 @@ test("builds each Sudoku leaderboard from fastest no-hints completions", () => {
 test("returns a requested player's best Minesweeper rank beyond the public top three", () => {
   const stats = createGameStatsDataFromEvents(
     [
-      event({ id: "event-rank-0001", metric: 12, profile: profile("player-alpha", "Alpha") }),
-      event({ id: "event-rank-0002", metric: 24, profile: profile("player-bravo", "Bravo") }),
-      event({ id: "event-rank-0003", metric: 36, profile: profile("player-charlie", "Charlie") }),
-      event({ id: "event-rank-0004", metric: 80, profile: profile("player-delta", "Delta") }),
-      event({ id: "event-rank-0005", metric: 48, profile: profile("player-delta", "Delta") }),
+      event({ id: "event-rank-0001", metric: 12, profile: profile("player-alpha", "Alumo") }),
+      event({ id: "event-rank-0002", metric: 24, profile: profile("player-bravo", "Bomira") }),
+      event({ id: "event-rank-0003", metric: 36, profile: profile("player-charlie", "Calune") }),
+      event({ id: "event-rank-0004", metric: 80, profile: profile("player-delta", "Dasori") }),
+      event({ id: "event-rank-0005", metric: 48, profile: profile("player-delta", "Dasori") }),
       event({ id: "event-rank-0006", metric: 60, profile: null }),
     ],
     "player-delta",
@@ -2987,9 +2988,9 @@ test("returns a requested player's best Minesweeper rank beyond the public top t
 
 test("breaks equal metrics by earliest completion and then event id for every game", () => {
   const tiedPlayers = [
-    profile("tie-player-alpha", "Alpha"),
-    profile("tie-player-bravo", "Bravo"),
-    profile("tie-player-charlie", "Charlie"),
+    profile("tie-player-alpha", "Alumo"),
+    profile("tie-player-bravo", "Bomira"),
+    profile("tie-player-charlie", "Calune"),
   ];
   const early = "2024-01-01T00:00:00.000Z";
   const late = "2024-01-02T00:00:00.000Z";
@@ -3176,7 +3177,7 @@ test("ranks every multiplayer category across trusted historical stored events",
     });
   });
 
-  const partialPlayer = profile("stress-player-partial", "Partial");
+  const partialPlayer = profile("stress-player-partial", "Paruna");
   storeTrustedEvent(
     env,
     event({
@@ -3641,7 +3642,7 @@ test("a session that was never stored is reported apart from a consumed one", as
 
 test("a consumed session's duplicate is validated exactly like a fresh one", async () => {
   const env = createEnv();
-  const player = profile("player-sudoku-spent", "Spent");
+  const player = profile("player-sudoku-spent", "Sepuna");
   const identity = { puzzleId: "generated-easy-spent", puzzle: SUDOKU_PUZZLE };
   const base = event({
     game: "sudoku",
@@ -3711,4 +3712,82 @@ test("a consumed session's duplicate is validated exactly like a fresh one", asy
   // The first result is the only row, unchanged.
   assert.equal(env.personal_site_game_stats.events.size, 1);
   assert.equal(env.personal_site_game_stats.events.get("event-spent-first").metric, 90);
+});
+
+test("requires generator-grammar names for event profiles, except the proven Administrator", async () => {
+  assert.throws(
+    () => normalizeGameStatsEvent(event({ profile: profile("player-tester", "Tester") })),
+    /Event profile name must be a generated name/,
+  );
+  for (const name of ["Bob", "KANORI", "Kannori", "Penis", "Rohin ^.^", "rohin ^.^"]) {
+    assert.throws(
+      () => normalizeGameStatsEvent(event({ profile: profile("player-0002", name) })),
+      /Event profile name must be a generated name/,
+      name,
+    );
+  }
+  assert.equal(
+    normalizeGameStatsEvent(event({ profile: profile("player-0002", "Kanori") })).profile.name,
+    "Kanori",
+  );
+
+  const env = createEnv();
+  const session = await createSession(env, "minesweeper", { difficulty: "beginner" });
+  await ageSessionForCompletion(env, session);
+  const rejected = await postEvent(
+    env,
+    event({ id: "event-tester-name", profile: profile("player-tester", "Tester") }),
+    session,
+  );
+  assert.equal(rejected.status, 400);
+  assert.deepEqual(await readJson(rejected), {
+    ok: false,
+    error: "Event profile name must be a generated name",
+  });
+  const borrowedName = await postEvent(
+    env,
+    event({ id: "event-borrowed-admin-name", profile: profile("player-0002", "rohin ^.^") }),
+    session,
+  );
+  assert.equal(borrowedName.status, 400);
+  assert.equal(env.personal_site_game_stats.events.size, 0);
+  assert.equal(env.personal_site_game_stats.sessions.get(session.id).consumed_at, null);
+
+  const administratorProfile = {
+    id: "player-rohin-neko",
+    name: "rohin ^.^",
+    icon: "assets/neko-assets/sprites/yawn1.png",
+  };
+  const unproved = await postEvent(
+    env,
+    event({ id: "event-admin-unproved", profile: administratorProfile }),
+    session,
+  );
+  assert.equal(unproved.status, 403, "The grammar exemption does not replace the proof.");
+  assert.equal((await readJson(unproved)).code, "administrator-authorization");
+  const grammarNameOnAdminId = await postEvent(
+    env,
+    event({ id: "event-admin-id-other-name", profile: { ...administratorProfile, name: "Rohin" } }),
+    session,
+  );
+  assert.equal(grammarNameOnAdminId.status, 403);
+  assert.equal((await readJson(grammarNameOnAdminId)).error, "Administrator profile is invalid");
+
+  const signIn = await readJson(
+    await signInAsAdministrator(env, {
+      username: env.ADMIN_USERNAME,
+      password: env.ADMIN_PASSWORD,
+    }),
+  );
+  const accepted = await postEvent(
+    env,
+    event({ id: "event-admin-proved", profile: administratorProfile }),
+    session,
+    { authorization: `Bearer ${signIn.proof}` },
+  );
+  assert.equal(accepted.status, 201);
+  assert.equal(
+    env.personal_site_game_stats.events.get("event-admin-proved").player_name,
+    "rohin ^.^",
+  );
 });

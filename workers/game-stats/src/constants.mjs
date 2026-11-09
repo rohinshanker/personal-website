@@ -50,9 +50,30 @@ export const ADMINISTRATOR_SESSION_TTL_MS = 60 * 60 * 1000;
 export const ADMINISTRATOR_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 export const MAX_ADMINISTRATOR_SIGN_INS_PER_WINDOW = 5;
 export const MAX_REACTIONS_PER_WINDOW = 60;
+export const MAX_SOCIAL_PROFILE_REGISTRATIONS_PER_WINDOW = 10;
 export const MAX_SOCIAL_POST_REACTIONS = 1000;
 export const MAX_SOCIAL_POST_REACTION_LIST = 100;
 export const SOCIAL_POST_IDS = Object.freeze(["lois-post-happened", "lois-post-five-oclock"]);
+export const SOCIAL_PROFILE_TOKEN_BYTES = 32;
+// Crude words the generator grammar can spell; compared lowercase against the whole name.
+export const SOCIAL_PROFILE_NAME_BLOCKLIST = Object.freeze([
+  "anus",
+  "boner",
+  "dago",
+  "homo",
+  "kike",
+  "nazi",
+  "paki",
+  "pedo",
+  "penis",
+  "pube",
+  "pubes",
+  "rape",
+  "rapes",
+  "semen",
+  "sodomy",
+  "vagina",
+]);
 
 export const ADMINISTRATOR_PROFILE_ID = "player-rohin-neko";
 export const ADMINISTRATOR_PROFILE_NAME = "rohin ^.^";

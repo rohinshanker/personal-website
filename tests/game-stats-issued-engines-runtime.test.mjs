@@ -21,6 +21,7 @@ const migrations = [
   "0004_optimize_stats_aggregation.sql",
   "0005_add_verified_game_results.sql",
   "0006_add_social_post_reactions.sql",
+  "0007_add_social_profiles.sql",
 ];
 
 test("workerd verifies actual Minesweeper Solitaire and Sudoku replays with bounded stages", async (context) => {

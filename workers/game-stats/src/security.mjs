@@ -70,6 +70,14 @@ const signHmac = async (secret, value) => {
 
 export const hmacDigest = async (secret, value) => toBase64Url(await signHmac(secret, value));
 
+/** Unkeyed SHA-256 of `value` as base64url; used to store tokens without keeping them. */
+export const sha256Digest = async (value) =>
+  toBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", textEncoder.encode(value))));
+
+/** `byteLength` random bytes as base64url. */
+export const createRandomToken = (byteLength) =>
+  toBase64Url(crypto.getRandomValues(new Uint8Array(byteLength)));
+
 const constantTimeSecretEquals = async (comparisonSecret, expected, provided) => {
   const [expectedDigest, providedDigest] = await Promise.all([
     crypto.subtle.digest("SHA-256", textEncoder.encode(expected)),
@@ -303,17 +311,5 @@ export const validateAdministratorProof = async (request, env) => {
 export const validateAdministratorEventProof = async (request, env, event) => {
   if (event.profile?.id !== ADMINISTRATOR_PROFILE_ID) return;
   assertAdministratorProfileShape(event.profile);
-  await validateAdministratorProof(request, env);
-};
-
-/**
- * A profile that claims the Administrator id or display name must be the
- * exact Administrator profile and carry a valid proof.
- */
-export const validateAdministratorProfileProof = async (request, env, profile) => {
-  if (profile.id !== ADMINISTRATOR_PROFILE_ID && profile.name !== ADMINISTRATOR_PROFILE.name) {
-    return;
-  }
-  assertAdministratorProfileShape(profile);
   await validateAdministratorProof(request, env);
 };

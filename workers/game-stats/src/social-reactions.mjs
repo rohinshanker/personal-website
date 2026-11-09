@@ -1,21 +1,36 @@
 import {
+  ADMINISTRATOR_PROFILE,
   getGameStatsDatabase,
   MAX_REACTIONS_PER_WINDOW,
   MAX_SOCIAL_POST_REACTION_LIST,
   MAX_SOCIAL_POST_REACTIONS,
   SOCIAL_POST_IDS,
 } from "./constants.mjs";
-import { assertAllowedKeys, normalizeProfile } from "./events.mjs";
-import { assertBrowserOriginAllowed, HttpError, jsonResponse, readJsonBody } from "./http.mjs";
+import { assertAllowedKeys } from "./events.mjs";
+import {
+  assertBrowserOriginAllowed,
+  assertNoQueryString,
+  HttpError,
+  jsonResponse,
+  readJsonBody,
+} from "./http.mjs";
 import {
   enforceRateLimit,
   getClientIp,
   hmacDigest,
   requireSecurityConfig,
-  validateAdministratorProfileProof,
+  validateAdministratorProof,
 } from "./security.mjs";
+import {
+  authenticateSocialProfile,
+  blockSocialProfileStatement,
+  requireProfileId,
+  requireProfileToken,
+  selectSocialProfile,
+} from "./social-profiles.mjs";
 
 const REACTIONS = Object.freeze(["like", "dislike"]);
+const MODERATION_ACTIONS = Object.freeze(["remove", "block"]);
 
 const COUNT_REACTIONS_SQL = `
 SELECT reaction, COUNT(*) AS reaction_count
@@ -58,14 +73,13 @@ const DELETE_REACTION_SQL = `
 DELETE FROM social_post_reactions
 WHERE post_id = ? AND profile_id = ?
 `;
+const DELETE_PROFILE_REACTIONS_SQL = `
+DELETE FROM social_post_reactions
+WHERE profile_id = ?
+`;
 
 export const SOCIAL_POST_REACTIONS_PATH_PATTERN = /^\/social-posts\/([a-z0-9-]{1,80})\/reactions$/;
-
-const assertNoQueryString = (request) => {
-  if (new URL(request.url).search) {
-    throw new HttpError(400, "Query parameters are not supported");
-  }
-};
+export const SOCIAL_POST_MODERATION_PATH = "/administrator/social-posts/moderate";
 
 const requireKnownPostId = (postId) => {
   if (!SOCIAL_POST_IDS.includes(postId)) throw new HttpError(404, "Unknown post");
@@ -80,14 +94,44 @@ const normalizeReaction = (value) => {
   return value;
 };
 
+const readAdministratorReactionRequest = (payload, reaction) => {
+  if (Object.hasOwn(payload, "profileId") || Object.hasOwn(payload, "token")) {
+    throw new HttpError(400, "Administrator reactions do not carry a profile");
+  }
+  if (payload.administrator !== true) {
+    throw new HttpError(400, "Reaction request administrator flag must be true");
+  }
+  return { administrator: true, reaction };
+};
+
 const readReactionRequest = (payload) => {
-  assertAllowedKeys(payload, ["profile", "reaction"], "reaction request");
+  assertAllowedKeys(
+    payload,
+    ["profileId", "token", "administrator", "reaction"],
+    "reaction request",
+  );
   if (!Object.hasOwn(payload, "reaction")) {
     throw new HttpError(400, "Reaction request requires a reaction");
   }
-  const profile = normalizeProfile(payload.profile, { label: "Reaction profile" });
-  if (!profile) throw new HttpError(400, "Reaction request requires a profile");
-  return { profile, reaction: normalizeReaction(payload.reaction) };
+  const reaction = normalizeReaction(payload.reaction);
+  if (Object.hasOwn(payload, "administrator")) {
+    return readAdministratorReactionRequest(payload, reaction);
+  }
+  return {
+    administrator: false,
+    profileId: requireProfileId(payload.profileId, "reaction request profileId"),
+    token: requireProfileToken(payload.token, "reaction request token"),
+    reaction,
+  };
+};
+
+const readModerationRequest = (payload) => {
+  assertAllowedKeys(payload, ["profileId", "action"], "moderation request");
+  const profileId = requireProfileId(payload.profileId, "moderation request profileId");
+  if (!MODERATION_ACTIONS.includes(payload.action)) {
+    throw new HttpError(400, 'Moderation action must be "remove" or "block"');
+  }
+  return { profileId, action: payload.action };
 };
 
 const rowToProfile = (row) => ({
@@ -148,6 +192,18 @@ const writeReaction = async (env, postId, profile, reaction, ipHash) => {
   }
 };
 
+/** The reacting identity: the proven Administrator, or a registered profile's server-held row. */
+const resolveReactor = async (request, env, reactionRequest) => {
+  if (reactionRequest.administrator) {
+    await validateAdministratorProof(request, env);
+    return ADMINISTRATOR_PROFILE;
+  }
+  return authenticateSocialProfile(env, reactionRequest.profileId, reactionRequest.token);
+};
+
+const clientIpHash = async (request, env) =>
+  hmacDigest(requireSecurityConfig(env).ipHashSecret, getClientIp(request));
+
 export const handleGetSocialPostReactions = async (request, env, postId) => {
   assertNoQueryString(request);
   requireKnownPostId(postId);
@@ -158,10 +214,36 @@ export const handlePostSocialPostReaction = async (request, env, postId) => {
   assertBrowserOriginAllowed(request, env);
   assertNoQueryString(request);
   requireKnownPostId(postId);
-  const { profile, reaction } = readReactionRequest(await readJsonBody(request));
-  const ipHash = await hmacDigest(requireSecurityConfig(env).ipHashSecret, getClientIp(request));
+  const reactionRequest = readReactionRequest(await readJsonBody(request));
+  const ipHash = await clientIpHash(request, env);
   await enforceRateLimit(env, ipHash, "reactions", MAX_REACTIONS_PER_WINDOW);
-  await validateAdministratorProfileProof(request, env, profile);
-  await writeReaction(env, postId, profile, reaction, ipHash);
+  const profile = await resolveReactor(request, env, reactionRequest);
+  await writeReaction(env, postId, profile, reactionRequest.reaction, ipHash);
   return jsonResponse(request, env, await selectReactionSummary(env, postId));
+};
+
+const moderateProfile = async (env, profileId, action) => {
+  const database = getGameStatsDatabase(env);
+  const profileRow = await selectSocialProfile(env, profileId);
+  if (action === "block" && !profileRow) {
+    throw new HttpError(404, "Unknown profile", { code: "profile-unknown" });
+  }
+  const statements = [database.prepare(DELETE_PROFILE_REACTIONS_SQL).bind(profileId)];
+  if (action === "block") {
+    statements.push(blockSocialProfileStatement(env, profileId, new Date().toISOString()));
+  }
+  const [removed] = await database.batch(statements);
+  return {
+    removedReactions: Number(removed?.meta?.changes) || 0,
+    blocked: action === "block" || Boolean(profileRow?.blocked_at),
+  };
+};
+
+export const handlePostSocialPostModeration = async (request, env) => {
+  assertBrowserOriginAllowed(request, env);
+  assertNoQueryString(request);
+  await validateAdministratorProof(request, env);
+  const { profileId, action } = readModerationRequest(await readJsonBody(request));
+  const outcome = await moderateProfile(env, profileId, action);
+  return jsonResponse(request, env, { ok: true, profileId, action, ...outcome });
 };

@@ -1,4 +1,5 @@
 import {
+  ADMINISTRATOR_PROFILE,
   GAME_STATS_DIFFICULTIES,
   GAME_STATS_HINT_BUCKETS,
   GAME_STATS_SNAKE_BOARD_SIZES,
@@ -12,6 +13,7 @@ import {
   ROHIN_NEKO_AVATAR_ICON,
 } from "./constants.mjs";
 import { HttpError } from "./http.mjs";
+import { isSkyGeneratedName } from "./social-profile-names.mjs";
 
 const COMMON_EVENT_KEYS = Object.freeze([
   "id",
@@ -80,12 +82,20 @@ const normalizeMetric = (
   return value;
 };
 
-const isAllowedProfileIcon = (icon) =>
+export const isAllowedProfileIcon = (icon) =>
   /^assets\/app-icons\/ico\/[^/]+\.ico$/.test(icon) || icon === ROHIN_NEKO_AVATAR_ICON;
+
+export const isAdministratorProfile = ({ id, name, icon }) =>
+  id === ADMINISTRATOR_PROFILE.id &&
+  name === ADMINISTRATOR_PROFILE.name &&
+  icon === ADMINISTRATOR_PROFILE.icon;
 
 /**
  * Validates a `{ id, name, icon }` player profile. `label` names the owning
- * request in error messages ("Event profile", "Reaction profile").
+ * request in error messages ("Event profile"). New profiles must carry a
+ * generator-grammar name; the exact Administrator profile is the one
+ * exception, and its proof is checked separately. Historical rows predate the
+ * grammar and are read back as stored.
  */
 export const normalizeProfile = (
   profile,
@@ -110,7 +120,11 @@ export const normalizeProfile = (
     if (allowHistorical) return null;
     throw new HttpError(400, `Invalid ${label.charAt(0).toLowerCase()}${label.slice(1)}`);
   }
-  return { id, name, icon };
+  const normalized = { id, name, icon };
+  if (!allowHistorical && !isAdministratorProfile(normalized) && !isSkyGeneratedName(name)) {
+    throw new HttpError(400, `${label} name must be a generated name`);
+  }
+  return normalized;
 };
 
 const requireMetricKind = (rawEvent, expectedKind, options) => {

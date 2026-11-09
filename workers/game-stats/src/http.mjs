@@ -64,6 +64,12 @@ export const assertBrowserOriginAllowed = (request, env) => {
   if (!allowedCorsOrigin(request, env)) throw new HttpError(403, "Origin is not allowed");
 };
 
+export const assertNoQueryString = (request) => {
+  if (new URL(request.url).search) {
+    throw new HttpError(400, "Query parameters are not supported");
+  }
+};
+
 export const jsonResponse = (request, env, body, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(body), {
     status,
