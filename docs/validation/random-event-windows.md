@@ -132,7 +132,7 @@ Complement those checks with the existing event suites:
 | Cold show callbacks, loaded media and chained result windows | `deferred-window-media.spec.mjs` |
 | Media playback and teardown | `loop-video-lifecycle.spec.mjs` |
 | Event-specific interaction and layout | `neko-stream.spec.mjs`, `lain-wired-chat.spec.mjs`, `red-tool-scrollbar.spec.mjs`, `nataraja-layout.spec.mjs` |
-| Lois Griffin post windows: profile-gated Like and Dislike toggles (one reaction per profile), reactions persisted per event in `personalSiteSocialPostLikesV1` and `personalSiteSocialPostDislikesV1`, likers list and activity log | `social-posts.spec.mjs` |
+| Lois Griffin post windows: profile-gated Like and Dislike toggles (one reaction per profile), reactions shared globally through the Game Stats Worker (`GET`/`POST {apiBaseUrl}/social-posts/{eventId}/reactions`; the window renders the device cache at once, then the server state), the visitor's own reaction cached per device in `personalSiteSocialPostLikesV1` and `personalSiteSocialPostDislikesV1` so a press stays shown when the Worker is unreachable (one system row says so), likers list and activity log | `social-posts.spec.mjs` |
 
 For a broad migration, compare resolved styles of every root and descendant
 against the baseline at 375×812, 768×1024, 1280×800 and 1440×900. Include hidden,

@@ -36,6 +36,11 @@ import {
   validateSession,
 } from "./sessions.mjs";
 import {
+  handleGetSocialPostReactions,
+  handlePostSocialPostReaction,
+  SOCIAL_POST_REACTIONS_PATH_PATTERN,
+} from "./social-reactions.mjs";
+import {
   continueVerifiedSession,
   finishVerifiedSession,
   publishVerifiedCompletion,
@@ -51,7 +56,7 @@ WHERE type = 'table'
     'game_events', 'game_stat_sessions', 'game_stats_rate_limits',
     'verified_timing_transitions', 'verified_game_completions',
     'verified_completion_jobs', 'verified_completion_progress',
-    'verified_completion_replay_chunks'
+    'verified_completion_replay_chunks', 'social_post_reactions'
   )
 `;
 const DELETE_EXPIRED_SESSIONS_SQL = `
@@ -116,7 +121,7 @@ const handleGetStats = async (request, env, context) => {
 
 const handleGetHealth = async (request, env) => {
   const health = await getGameStatsDatabase(env).prepare(HEALTH_CHECK_SQL).first();
-  if (Number(health?.table_count) !== 8) {
+  if (Number(health?.table_count) !== 9) {
     throw new HttpError(500, "D1 health check failed");
   }
   const { buildVersion, acceptedBuildVersions } = requireSecurityConfig(env);
@@ -285,12 +290,20 @@ export const handleRequest = async (request, env, context, dependencies = {}) =>
     if (url.pathname === "/events" && request.method === "POST") {
       return await handlePostEvent(request, env);
     }
+    const reactionsMatch = SOCIAL_POST_REACTIONS_PATH_PATTERN.exec(url.pathname);
+    if (reactionsMatch && request.method === "GET") {
+      return await handleGetSocialPostReactions(request, env, reactionsMatch[1]);
+    }
+    if (reactionsMatch && request.method === "POST") {
+      return await handlePostSocialPostReaction(request, env, reactionsMatch[1]);
+    }
     if (
       ["/stats", "/sessions", "/events", "/administrator/sign-in"].includes(url.pathname) ||
       timingMatch ||
       finishMatch ||
       finishContinueMatch ||
-      restoreMatch
+      restoreMatch ||
+      reactionsMatch
     ) {
       throw new HttpError(405, "Method is not allowed");
     }

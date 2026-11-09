@@ -28,6 +28,7 @@ const migrationPaths = [
   "0003_add_sudoku_puzzle_identity.sql",
   "0004_optimize_stats_aggregation.sql",
   "0005_add_verified_game_results.sql",
+  "0006_add_social_post_reactions.sql",
 ].map((name) => new URL(`../workers/game-stats/migrations/${name}`, import.meta.url).pathname);
 
 const origin = "https://rohin.shanker.me";

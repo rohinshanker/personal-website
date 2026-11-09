@@ -49,6 +49,10 @@ export const MAX_VERIFICATION_CHECKPOINT_BYTES = 256 * 1024;
 export const ADMINISTRATOR_SESSION_TTL_MS = 60 * 60 * 1000;
 export const ADMINISTRATOR_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 export const MAX_ADMINISTRATOR_SIGN_INS_PER_WINDOW = 5;
+export const MAX_REACTIONS_PER_WINDOW = 60;
+export const MAX_SOCIAL_POST_REACTIONS = 1000;
+export const MAX_SOCIAL_POST_REACTION_LIST = 100;
+export const SOCIAL_POST_IDS = Object.freeze(["lois-post-happened", "lois-post-five-oclock"]);
 
 export const ADMINISTRATOR_PROFILE_ID = "player-rohin-neko";
 export const ADMINISTRATOR_PROFILE_NAME = "rohin ^.^";

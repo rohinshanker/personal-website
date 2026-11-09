@@ -83,7 +83,14 @@ const normalizeMetric = (
 const isAllowedProfileIcon = (icon) =>
   /^assets\/app-icons\/ico\/[^/]+\.ico$/.test(icon) || icon === ROHIN_NEKO_AVATAR_ICON;
 
-const normalizeProfile = (profile, { allowHistorical = false } = {}) => {
+/**
+ * Validates a `{ id, name, icon }` player profile. `label` names the owning
+ * request in error messages ("Event profile", "Reaction profile").
+ */
+export const normalizeProfile = (
+  profile,
+  { allowHistorical = false, label = "Event profile" } = {},
+) => {
   if (profile === null || profile === undefined) return null;
   try {
     assertAllowedKeys(profile, ["id", "name", "icon"], "profile");
@@ -94,14 +101,14 @@ const normalizeProfile = (profile, { allowHistorical = false } = {}) => {
   const nonStringField = ["id", "name", "icon"].find((field) => typeof profile[field] !== "string");
   if (nonStringField) {
     if (allowHistorical) return null;
-    throw new HttpError(400, `Event profile ${nonStringField} must be a string`);
+    throw new HttpError(400, `${label} ${nonStringField} must be a string`);
   }
   const id = profile.id.trim();
   const name = profile.name.trim().slice(0, 32);
   const icon = profile.icon.trim();
   if (!/^[a-z0-9-]{8,80}$/.test(id) || !name || !isAllowedProfileIcon(icon)) {
     if (allowHistorical) return null;
-    throw new HttpError(400, "Invalid event profile");
+    throw new HttpError(400, `Invalid ${label.charAt(0).toLowerCase()}${label.slice(1)}`);
   }
   return { id, name, icon };
 };

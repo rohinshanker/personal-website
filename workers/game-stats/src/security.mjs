@@ -266,14 +266,18 @@ export const createAdministratorSignIn = async (request, env, payload) => {
   };
 };
 
-export const validateAdministratorEventProof = async (request, env, event) => {
-  if (event.profile?.id !== ADMINISTRATOR_PROFILE_ID) return;
+const assertAdministratorProfileShape = (profile) => {
   if (
-    event.profile.name !== ADMINISTRATOR_PROFILE.name ||
-    event.profile.icon !== ADMINISTRATOR_PROFILE.icon
+    profile.id !== ADMINISTRATOR_PROFILE_ID ||
+    profile.name !== ADMINISTRATOR_PROFILE.name ||
+    profile.icon !== ADMINISTRATOR_PROFILE.icon
   ) {
     throw authorizationError("Administrator profile is invalid");
   }
+};
+
+/** Requires a valid, unexpired Bearer administrator proof on the request. */
+export const validateAdministratorProof = async (request, env) => {
   const authorization = String(request.headers.get("Authorization") || "");
   const match = /^Bearer ([A-Za-z0-9_.-]+)$/.exec(authorization);
   if (!match) throw authorizationError();
@@ -294,4 +298,22 @@ export const validateAdministratorEventProof = async (request, env, event) => {
   ) {
     throw authorizationError();
   }
+};
+
+export const validateAdministratorEventProof = async (request, env, event) => {
+  if (event.profile?.id !== ADMINISTRATOR_PROFILE_ID) return;
+  assertAdministratorProfileShape(event.profile);
+  await validateAdministratorProof(request, env);
+};
+
+/**
+ * A profile that claims the Administrator id or display name must be the
+ * exact Administrator profile and carry a valid proof.
+ */
+export const validateAdministratorProfileProof = async (request, env, profile) => {
+  if (profile.id !== ADMINISTRATOR_PROFILE_ID && profile.name !== ADMINISTRATOR_PROFILE.name) {
+    return;
+  }
+  assertAdministratorProfileShape(profile);
+  await validateAdministratorProof(request, env);
 };

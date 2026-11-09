@@ -18,6 +18,7 @@ const gameStatsMigrationPaths = [
   "0003_add_sudoku_puzzle_identity.sql",
   "0004_optimize_stats_aggregation.sql",
   "0005_add_verified_game_results.sql",
+  "0006_add_social_post_reactions.sql",
 ].map((name) => new URL(`../workers/game-stats/migrations/${name}`, import.meta.url).pathname);
 
 const projectEventRow = (sql, row) => {
@@ -214,7 +215,7 @@ class MockD1Database {
     this.failNextEventInsert = false;
     this.failNextSessionConsume = false;
     this.failHealthCheck = false;
-    this.healthTableCount = 8;
+    this.healthTableCount = 9;
     this.batchTail = Promise.resolve();
   }
 
@@ -2285,6 +2286,29 @@ test("health reports all accepted builds and fails when D1 is unavailable", asyn
 
   assert.equal(missingSchema.status, 500);
   assert.match((await readJson(missingSchema)).error, /D1 health check failed/);
+});
+
+test("routes social post reactions and refuses unsupported methods there", async () => {
+  const env = createEnv();
+  const unsupportedMethod = await worker.fetch(
+    new Request("https://stats.example.test/social-posts/lois-post-happened/reactions", {
+      method: "PUT",
+      headers: { Origin: "https://rohin.shanker.me" },
+    }),
+    env,
+  );
+  assert.equal(unsupportedMethod.status, 405);
+  assert.deepEqual(await readJson(unsupportedMethod), {
+    ok: false,
+    error: "Method is not allowed",
+  });
+
+  const unknownPost = await worker.fetch(
+    new Request("https://stats.example.test/social-posts/lois-post-unknown/reactions"),
+    env,
+  );
+  assert.equal(unknownPost.status, 404);
+  assert.deepEqual(await readJson(unknownPost), { ok: false, error: "Unknown post" });
 });
 
 test("issues an opaque, one-hour administrator proof only after valid credentials", async () => {

@@ -7,13 +7,15 @@ import { HOME_SCRIPTS, readProductionScript, repositoryRoot } from "./helpers/ho
 /**
  * Source contract for the Lois Griffin social-post events. Both posts live in
  * one script that registers two interactive, disarmed events on the shared
- * random-event runtime and keeps likes in one localStorage key.
+ * random-event runtime, keeps the visitor's own reaction in localStorage and
+ * shares every reaction through the Game Stats Worker.
  */
 
 const SCRIPT_PATH = "scripts/home/events/social-posts.js";
-const SCRIPT_VERSION = "social-posts-20261109";
+const SCRIPT_VERSION = "social-posts-20261109b";
 const STORAGE_KEY = "personalSiteSocialPostLikesV1";
 const EVENT_IDS = ["lois-post-happened", "lois-post-five-oclock"];
+const OFFLINE_MESSAGE = "Couldn't reach the server. Your reaction is saved on this device.";
 
 const source = await readProductionScript(new URL(SCRIPT_PATH, repositoryRoot));
 const home = await readFile(new URL("home.html", repositoryRoot), "utf8");
@@ -69,6 +71,33 @@ test("likes persist under one storage key that the script exports", () => {
   assert.match(
     source,
     /window\.homeEventSocialPosts = Object\.freeze\(\{[\s\S]*?readSocialPostDislikes[\s\S]*?SOCIAL_POST_DISLIKES_STORAGE_KEY[\s\S]*?\}\)/,
+  );
+});
+
+test("reactions go through the Game Stats Worker with a per-device fallback", () => {
+  assert.match(
+    source,
+    /SOCIAL_POST_REACTIONS_PATH = "\/social-posts\/\{postId\}\/reactions"/,
+    "the reactions route template",
+  );
+  assert.match(
+    source,
+    /normalizeBackendBaseUrl\(window\.rohinGameStatsBackend\)/,
+    "the script reads the generated backend config for its base URL",
+  );
+  assert.ok(source.includes(`"${OFFLINE_MESSAGE}"`), "the offline system row text");
+  assert.match(source, /Accept: "application\/json"/);
+  assert.match(source, /"Content-Type": "application\/json"/);
+  assert.match(source, /Authorization: `Bearer \$\{proof\.proof\}`/);
+  assert.match(
+    source,
+    /window\.homeEventSocialPosts = Object\.freeze\(\{[\s\S]*?SOCIAL_POST_REACTIONS_PATH[\s\S]*?\}\)/,
+    "the path template is exported so tests can route it",
+  );
+  assert.doesNotMatch(
+    source,
+    /console\.(?:log|warn|error|info|debug)\(/,
+    "the script logs nothing",
   );
 });
 

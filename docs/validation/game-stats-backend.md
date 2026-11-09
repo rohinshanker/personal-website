@@ -2,7 +2,7 @@
 
 - Purpose: Controlled Cloudflare Worker and D1 release, security, production verification, and scoped data reset.
 - Scope: Game Stats browser client, Worker, D1, secrets, Turnstile, Sudoku puzzle identity, the scheduled expiry purge, release synchronization, and server-data reset.
-- Last verified: 2026-11-08
+- Last verified: 2026-11-09
 
 This guide deploys the automatic global game-stat backend: Cloudflare Worker +
 D1 + browser integration. It covers the four tracked games: Minesweeper wins,
@@ -157,13 +157,16 @@ workers/game-stats/
   src/sessions.mjs                   # Session creation, validation, and atomic writes
   src/http.mjs                       # HTTP parsing, CORS, responses, five-second cache
   src/router.mjs                     # Routes and scheduled expiry purge
+  src/social-reactions.mjs           # Lois social-post like/dislike routes
   src/constants.mjs, data.mjs        # Shared constants and response shapes
   migrations/                        # D1 schema and rollback-compatible migrations
+  migrations/0006_add_social_post_reactions.sql  # Permanent social_post_reactions table
   wrangler.jsonc                     # Deploy config; public vars only
   wrangler.jsonc.example             # Sanitized config template
   .dev.vars.example                  # Local secret names only
 tests/
   game-stats-worker.test.mjs
+  social-post-reactions.test.mjs
   game-stats-sql.test.mjs
   game-stats-http-request.test.mjs
   game-stats-integrity.test.mjs
@@ -523,6 +526,13 @@ be amended, but any applied migration is immutable and needs a new numbered
 follow-up. `/health` table-count success does not validate every column. Never
 reset historical events to repair schema or configuration drift.
 
+Migration `0006_add_social_post_reactions.sql` adds the permanent
+`social_post_reactions` table (one row per post and profile, keyed address hash,
+`like`/`dislike` CHECK) and its `(post_id, reaction, created_at)` index for the
+[social post reactions](#social-post-reactions) routes. It is additive and
+rollback-safe: the previous Worker never reads the table. `/health` counts it,
+so the Worker that ships this migration reports nine tables.
+
 From the repository root, validate locally and then inspect remote state:
 
 ```bash
@@ -665,6 +675,8 @@ shared by both protocols.
 | `POST /sessions` | Validates the requested game/config/build and creates a short-lived server-signed session. | Creates one expiring session only after all checks pass. |
 | `POST /events` | Accepts the normalized result envelope and consumes its valid session exactly once. | Inserts one idempotent event and consumes its session in one transactional D1 batch, or rejects both changes. |
 | `POST /administrator/sign-in` | Validates the Administrator username and password. | Creates no D1 profile data; returns a one-hour proof only after an exact-origin, rate-limited successful check. |
+| `GET /social-posts/:postId/reactions` | Reads the public like/dislike totals and reactor lists for one Lois social post. | None; no Origin required, `no-store`. |
+| `POST /social-posts/:postId/reactions` | Records, changes, or clears one profile's reaction to a Lois social post and returns the new summary. | Upserts or deletes exactly one `social_post_reactions` row after origin, validation, rate-limit, Administrator-proof, and cap checks. |
 
 The browser must ask for a session before a result can be submitted. A session
 request contains `game`, the allowed game `config`, the generated
@@ -810,6 +822,45 @@ The one-hour lifetime applies only to proofs issued after the updated Worker is
 deployed. Previously issued proofs retain the expiry embedded in their signed
 payload, including the former ten-minute lifetime; neither a browser refresh
 nor the deployment extends them.
+
+### Social post reactions
+
+The Lois Griffin social-post random events show global like/dislike counts.
+`workers/game-stats/src/social-reactions.mjs` serves them from the permanent
+`social_post_reactions` table; `tests/social-post-reactions.test.mjs` pins the
+contract against real SQLite.
+
+- Post ids are the allowlist `SOCIAL_POST_IDS` in `constants.mjs`
+  (`lois-post-happened`, `lois-post-five-oclock`). Any other id is `404 Unknown
+  post`; a malformed path segment is `404 Route not found`; a query string is
+  `400`, as on `/clash-royale`.
+- `GET` returns `{ ok, postId, likeCount, dislikeCount, likes, dislikes }`.
+  Each list holds `{ id, name, icon }` profiles ordered by `created_at`
+  ascending and is capped at the 100 most recent reactions; the counts are
+  totals. The read is public, needs no Origin, and is never cached.
+- `POST` takes `{ profile: { id, name, icon }, reaction: "like" | "dislike" |
+  null }` and answers with the same summary. The profile uses the stored-event
+  normalization (`normalizeProfile` in `events.mjs`); unknown keys, a missing
+  `reaction`, or a value other than the three above are `400`. `like` and
+  `dislike` upsert the one row per `(post_id, profile_id)`, keeping the
+  original `created_at` and refreshing `updated_at`, name, and icon; `null`
+  deletes the row and is idempotent.
+- Abuse controls: `assertBrowserOriginAllowed` runs first, then the
+  `reactions:<ipHash>` bucket allows `MAX_REACTIONS_PER_WINDOW` (60) writes per
+  hour per keyed address hash. Each row stores that keyed hash, never a raw
+  address. A post that already holds `MAX_SOCIAL_POST_REACTIONS` (1000) rows
+  refuses a new profile with `409 { code: "post-full" }` inside the same
+  statement that would insert it; existing profiles may still change or clear
+  their reaction.
+- Identity is cooperative. Any client may send any allowed profile id, so the
+  lists are public and spoofable by profile id; treat them as decoration, not
+  attribution. The one exception is the Administrator: a profile whose id or
+  display name matches `ADMINISTRATOR_PROFILE` must be the exact profile and
+  carry a valid Bearer proof from `/administrator/sign-in`
+  (`validateAdministratorProfileProof`), else `403
+  administrator-authorization`.
+- Rows are permanent. The scheduled purge does not touch them and nothing
+  expires them; clear a post only by a reviewed manual D1 statement.
 
 ## Repair Guide: Administrator Sign-In Loop After A Protected Result
 
