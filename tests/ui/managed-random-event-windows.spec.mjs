@@ -77,6 +77,18 @@ const EVENTS = [
     focus: "#red-tool-input",
   },
   {
+    id: "lois-post-happened",
+    windowId: "lois-post-happened-window",
+    close: "#lois-post-happened-close",
+    focus: "[data-social-post-like]",
+  },
+  {
+    id: "lois-post-five-oclock",
+    windowId: "lois-post-five-oclock-window",
+    close: "#lois-post-five-oclock-close",
+    focus: "[data-social-post-like]",
+  },
+  {
     id: "resist-your-fate",
     windowId: "fate-window",
     close: "#fate-title-close",

@@ -2,7 +2,7 @@
 
 - Purpose: Keep random-event window lifecycle and event-local wiring consistent.
 - Scope: Home event visibility, animation, deferred media, focus, geometry, dynamic windows, binding order, and regression checks.
-- Last verified: 2026-10-12
+- Last verified: 2026-11-09
 
 ## Lifecycle contract
 
@@ -132,6 +132,7 @@ Complement those checks with the existing event suites:
 | Cold show callbacks, loaded media and chained result windows | `deferred-window-media.spec.mjs` |
 | Media playback and teardown | `loop-video-lifecycle.spec.mjs` |
 | Event-specific interaction and layout | `neko-stream.spec.mjs`, `lain-wired-chat.spec.mjs`, `red-tool-scrollbar.spec.mjs`, `nataraja-layout.spec.mjs` |
+| Lois Griffin post windows: profile-gated Like and Dislike toggles (one reaction per profile), reactions persisted per event in `personalSiteSocialPostLikesV1` and `personalSiteSocialPostDislikesV1`, likers list and activity log | `social-posts.spec.mjs` |
 
 For a broad migration, compare resolved styles of every root and descendant
 against the baseline at 375×812, 768×1024, 1280×800 and 1440×900. Include hidden,

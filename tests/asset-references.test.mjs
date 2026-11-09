@@ -37,6 +37,7 @@ const SHIPPED_SOURCES = [
   "scripts/home/sudoku-generator.worker.js",
   "scripts/home/core/dom.js",
   "scripts/home/core/media.js",
+  "scripts/home/events/social-posts.js",
   "scripts/home/system-alerts.js",
   "scripts/home/modeling-portfolio.js",
   "scripts/home/admin-controls.js",

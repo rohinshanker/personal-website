@@ -51,6 +51,7 @@ export const HOME_SCRIPTS = Object.freeze({
   eventSkillCheck: "scripts/home/events/skill-check.js",
   eventGradescopeCurve: "scripts/home/events/gradescope-curve.js",
   eventRedTool: "scripts/home/events/red-tool.js",
+  eventSocialPosts: "scripts/home/events/social-posts.js",
   eventDistressSignal: "scripts/home/events/distress-signal.js",
   eventGearsNest: "scripts/home/events/gears-nest.js",
   eventFate: "scripts/home/events/fate.js",

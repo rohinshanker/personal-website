@@ -49,7 +49,7 @@
   const EVENT_PREVIEW_STYLESHEETS = Object.freeze([
     "style.css?v=html-semantics-20260927",
     "styles/home/base.css?v=asset-paths-20261018",
-    "styles/home/random-events.css?v=asset-paths-20261018",
+    "styles/home/random-events.css?v=social-posts-20261109",
   ]);
   const EVENT_PREVIEW_STAGE_STYLES = `
   :host {

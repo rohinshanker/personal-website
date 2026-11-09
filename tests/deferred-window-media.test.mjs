@@ -54,6 +54,9 @@ const eventWindows = new Map([
   ["gears-nest-window", 1],
   ["instrumentality-window", 1],
   ["red-tool-window", 3],
+  // Each post defers its avatar and its photo; the log rows are created on demand.
+  ["lois-post-happened-window", 2],
+  ["lois-post-five-oclock-window", 2],
   ["soot-sprites-window", 1],
   ["noble-steed-result-window", 1],
   ["lancer-battle-window", 1],

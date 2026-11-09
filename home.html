@@ -113,7 +113,7 @@
     <link rel="stylesheet" href="styles/home/apps/snake.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-mobile-actions-20260928" />
     <!-- The Sudoku generator runs in a worker; main.js reads its versioned URL from here. -->
-    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" as="worker" />
+    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" as="worker" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/portfolio.css?v=about-copy-20261019" />
@@ -124,7 +124,7 @@
       defer
     ></script>
     <script
-      src="scripts/home/core/resources.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c"
+      src="scripts/home/core/resources.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c"
       defer
     ></script>
   </head>
@@ -6632,6 +6632,192 @@
       </div>
     </div>
 
+    <div
+      class="window random-event-window event-chat-window social-post-window is-hidden"
+      id="lois-post-happened-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Facebook</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="lois-post-happened-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="social-post-card">
+          <div class="social-post-header">
+            <img
+              class="social-post-avatar"
+              data-src="assets/random-events/lois-avatar.png"
+              width="40"
+              height="40"
+              alt=""
+            />
+            <div class="social-post-author">
+              <strong>Lois Griffin</strong>
+              <span>Just now · Public</span>
+            </div>
+          </div>
+          <p class="social-post-text">so THIS happened</p>
+          <img
+            class="social-post-image"
+            data-src="assets/random-events/lois-post-happened.png"
+            width="416"
+            height="206"
+            decoding="async"
+            alt="A chocolate-frosted cupcake with sprinkles on a white plate"
+          />
+          <div class="social-post-stats">
+            <span data-social-post-like-count>0 likes</span>
+            <span aria-hidden="true"> · </span>
+            <span data-social-post-dislike-count>0 dislikes</span>
+          </div>
+          <div class="social-post-actions">
+            <button
+              type="button"
+              class="social-post-reaction social-post-like"
+              data-social-post-like
+              aria-pressed="false"
+            >
+              <svg
+                class="social-post-reaction-icon"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M1 7h3v7H1zM5 14V7l3-5.5c.5-1 2.2-.6 2.1.6L9.6 6H14c1 0 1.6.9 1.3 1.8l-1.7 5.2c-.2.6-.8 1-1.4 1z"
+                />
+              </svg>
+              Like
+            </button>
+            <button
+              type="button"
+              class="social-post-reaction social-post-dislike"
+              data-social-post-dislike
+              aria-pressed="false"
+            >
+              <svg
+                class="social-post-reaction-icon"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M1 7h3v7H1zM5 14V7l3-5.5c.5-1 2.2-.6 2.1.6L9.6 6H14c1 0 1.6.9 1.3 1.8l-1.7 5.2c-.2.6-.8 1-1.4 1z"
+                />
+              </svg>
+              Dislike
+            </button>
+            <button type="button" disabled>Share</button>
+          </div>
+          <ul class="social-post-likers" data-social-post-likers aria-label="Liked by">
+            <li class="social-post-likers-empty">No one has liked this yet.</li>
+          </ul>
+        </div>
+        <div
+          role="log"
+          aria-live="polite"
+          aria-label="Post activity"
+          data-social-post-log
+          class="social-post-log"
+        ></div>
+      </div>
+    </div>
+
+    <div
+      class="window random-event-window event-chat-window social-post-window is-hidden"
+      id="lois-post-five-oclock-window"
+      aria-hidden="true"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">Facebook</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="lois-post-five-oclock-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="social-post-card">
+          <div class="social-post-header">
+            <img
+              class="social-post-avatar"
+              data-src="assets/random-events/lois-avatar.png"
+              width="40"
+              height="40"
+              alt=""
+            />
+            <div class="social-post-author">
+              <strong>Lois Griffin</strong>
+              <span>Just now · Public</span>
+            </div>
+          </div>
+          <p class="social-post-text">It's got to be 5:00 somewhere, right?</p>
+          <img
+            class="social-post-image"
+            data-src="assets/random-events/lois-post-five-oclock.png"
+            width="416"
+            height="228"
+            decoding="async"
+            alt="A glass of red wine on a wooden table"
+          />
+          <div class="social-post-stats">
+            <span data-social-post-like-count>0 likes</span>
+            <span aria-hidden="true"> · </span>
+            <span data-social-post-dislike-count>0 dislikes</span>
+          </div>
+          <div class="social-post-actions">
+            <button
+              type="button"
+              class="social-post-reaction social-post-like"
+              data-social-post-like
+              aria-pressed="false"
+            >
+              <svg
+                class="social-post-reaction-icon"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M1 7h3v7H1zM5 14V7l3-5.5c.5-1 2.2-.6 2.1.6L9.6 6H14c1 0 1.6.9 1.3 1.8l-1.7 5.2c-.2.6-.8 1-1.4 1z"
+                />
+              </svg>
+              Like
+            </button>
+            <button
+              type="button"
+              class="social-post-reaction social-post-dislike"
+              data-social-post-dislike
+              aria-pressed="false"
+            >
+              <svg
+                class="social-post-reaction-icon"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M1 7h3v7H1zM5 14V7l3-5.5c.5-1 2.2-.6 2.1.6L9.6 6H14c1 0 1.6.9 1.3 1.8l-1.7 5.2c-.2.6-.8 1-1.4 1z"
+                />
+              </svg>
+              Dislike
+            </button>
+            <button type="button" disabled>Share</button>
+          </div>
+          <ul class="social-post-likers" data-social-post-likers aria-label="Liked by">
+            <li class="social-post-likers-empty">No one has liked this yet.</li>
+          </ul>
+        </div>
+        <div
+          role="log"
+          aria-live="polite"
+          aria-label="Post activity"
+          data-social-post-log
+          class="social-post-log"
+        ></div>
+      </div>
+    </div>
+
     <div class="window random-event-window death-note-window is-hidden" id="death-note-window" aria-hidden="true">
       <div class="title-bar">
         <div class="title-bar-text">Death Note</div>
@@ -7184,35 +7370,35 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721" defer></script>
     <script src="scripts/home/system-alerts.js?v=repo-hygiene-20260927" defer></script>
-    <script src="scripts/home/core/dom.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/core/media.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/core/administrator-session.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
+    <script src="scripts/home/core/dom.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/core/media.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/core/administrator-session.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
     <script src="scripts/home/core/cursor-mode.js?v=asset-paths-20261018" defer></script>
-    <script src="scripts/home/core/util.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/core/pointer-cursor.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/core/static-noise.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/core/activity.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/core/activation.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/core/windows.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
+    <script src="scripts/home/core/util.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/core/pointer-cursor.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/core/static-noise.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/core/activity.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/core/activation.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/core/windows.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
     <script src="scripts/home/modeling-portfolio.js?v=asset-paths-20261018" defer></script>
     <script src="scripts/home/features/about.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/desktop.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/gallery.js?v=content-items-20261018" defer></script>
     <script src="scripts/home/features/study.js?v=asset-paths-20261018" defer></script>
-    <script src="scripts/home/games/rules.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/games/minesweeper.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/games/snake.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/games/solitaire.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/games/sudoku.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/games/session.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/features/game-stats.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/features/snake.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/features/minesweeper.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/features/solitaire.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
-    <script src="scripts/home/features/sudoku.js?v=game-build-0e9fbd5f0e09d2c433e6f20ca0f36ead0eb2f6b134d0c5fb8acec72a3cda9a0c" defer></script>
+    <script src="scripts/home/games/rules.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/games/minesweeper.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/games/snake.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/games/solitaire.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/games/sudoku.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/games/session.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/features/game-stats.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/features/snake.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/features/minesweeper.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/features/solitaire.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/features/sudoku.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
     <script src="scripts/home/features/life-counter.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/neko.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/lightning.js?v=home-feature-modules-20261003" defer></script>
@@ -7224,6 +7410,7 @@
     <script src="scripts/home/events/word-error.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/gradescope-curve.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/red-tool.js?v=asset-paths-20261018" defer></script>
+    <script src="scripts/home/events/social-posts.js?v=social-posts-20261109" defer></script>
     <script src="scripts/home/events/distress-signal.js?v=distress-semantics-20261012" defer></script>
     <script src="scripts/home/events/gears-nest.js?v=asset-paths-20261018" defer></script>
     <script src="scripts/home/events/fate.js?v=asset-paths-20261018" defer></script>

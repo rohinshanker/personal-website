@@ -44,6 +44,8 @@
     "dont-starve-campfire": "Don't Starve Campfire",
     "feliz-jueves": "Feliz Jueves",
     "gears-nest-clear": "Gears Nest",
+    "lois-post-five-oclock": "Lois Post: 5:00 Somewhere",
+    "lois-post-happened": "Lois Post: So THIS Happened",
     "neko-stream-system-alert": "Neko Stream Alert",
     "resist-your-fate": "Resist Your Fate",
     "rohin-os-note": "Rohin OS Note",

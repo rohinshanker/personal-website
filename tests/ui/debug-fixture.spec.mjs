@@ -20,6 +20,8 @@ test("the shared UI fixture isolates the production forced-Start event", async (
 
   await expect(page.locator("#lain-alert-window")).toBeHidden();
   await expect(page.locator("#red-tool-window")).toBeHidden();
+  await expect(page.locator("#lois-post-happened-window")).toBeHidden();
+  await expect(page.locator("#lois-post-five-oclock-window")).toBeHidden();
   await expect(page.locator("#neko-stream-alert-window")).toBeHidden();
   await expect(page.locator("#debug-system-alert-window")).toBeHidden();
 });

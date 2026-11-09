@@ -117,6 +117,8 @@ test("events that must never ship armed stay disarmed", async () => {
   const cases = [
     ["eventNotes", "lain-system-alert"],
     ["eventRedTool", "red-tool"],
+    ["eventSocialPosts", "lois-post-happened"],
+    ["eventSocialPosts", "lois-post-five-oclock"],
   ];
 
   for (const [key, eventId] of cases) {
