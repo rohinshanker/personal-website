@@ -182,9 +182,9 @@ test("CI runs both the browser project and the visual baselines", async () => {
   const runsOf = (job) => job.steps.map((step) => step.run).filter(Boolean);
   assert.deepEqual(workflow.on, { workflow_call: null });
   assert.equal(jobs.ui.strategy["fail-fast"], false);
-  assert.deepEqual(jobs.ui.strategy.matrix.shard, [1, 2, 3]);
+  assert.deepEqual(jobs.ui.strategy.matrix.shard, [1, 2, 3, 4, 5]);
   assert.ok(
-    runsOf(jobs.ui).includes("npm run test:ui -- --shard=${{ matrix.shard }}/3 --workers=2"),
+    runsOf(jobs.ui).includes("npm run test:ui -- --shard=${{ matrix.shard }}/5 --workers=2"),
   );
   const artifact = jobs.ui.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
   assert.equal(artifact.with.name, "ui-artifacts-${{ matrix.shard }}");

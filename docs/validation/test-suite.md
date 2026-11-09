@@ -2,7 +2,7 @@
 
 - Purpose: Define test coverage, isolation, timing, and release acceptance contracts.
 - Scope: Node behavior and source contracts, browser UI, Game Stats and Clash Royale Workers, generated artifacts, security, and CI.
-- Last verified: 2026-10-19
+- Last verified: 2026-11-08
 
 ## Test tiers
 
@@ -126,7 +126,7 @@ environment gate the owner approves by hand; pushing to `main` runs every check
 but publishes nothing until then. A newer push still cancels a run that is
 waiting for approval.
 
-The UI job runs three shards, two workers per shard, with `fail-fast: false` and
+The UI job runs five shards, two workers per shard, with `fail-fast: false` and
 `retries: 0`. Tests are individually parallelizable. Each shard uploads a
 separate trace/failure-media/HTML-report artifact; the visual job runs in the
 pinned ARM container. A failed shard remains a failure instead of being hidden
@@ -172,10 +172,10 @@ To reproduce an individual CI shard locally, assign a unique port/output path:
 ```bash
 CI=1 UI_TEST_PORT=4281 UI_TEST_OUTPUT_DIR=test-results/shard-1 \
   PLAYWRIGHT_HTML_REPORT=test-results/shard-1/report \
-  npm run test:ui -- --shard=1/3 --workers=2
+  npm run test:ui -- --shard=1/5 --workers=2
 ```
 
-Run shards 2/3 and 3/3 with their own ports, output paths, and HTML report directories when running concurrently.
+Run shards 2/5 through 5/5 with their own ports, output paths, and HTML report directories when running concurrently.
 
 Run the pinned visual container after the local UI shards finish. Concurrent
 host browser shards can slow the container's local asset delivery enough to hit

@@ -12,13 +12,13 @@ concurrency:
 
 jobs:
   ui:
-    name: Layout, behaviour, and accessibility (${{ matrix.shard }}/3)
+    name: Layout, behaviour, and accessibility (${{ matrix.shard }}/5)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5]
     steps:
       - name: Check out source
         # actions/checkout v6.0.2
@@ -50,7 +50,7 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
       - name: Run browser UI tests
-        run: npm run test:ui -- --shard=${{ matrix.shard }}/3 --workers=2
+        run: npm run test:ui -- --shard=${{ matrix.shard }}/5 --workers=2
       - name: Upload browser UI artifacts
         if: always()
         # actions/upload-artifact v4.6.2
