@@ -116,6 +116,9 @@
     <style>
       :root {
         --loader-image: url("assets/mountain-and-sky.png");
+        /* The 2304x1024 wallpaper fits screens up to 2.25:1 by height; anchoring it left keeps
+           the rays above the dialog, and bottom keeps the mountains on wider screens. */
+        --loader-image-position: left bottom;
       }
 
       * {
@@ -125,7 +128,7 @@
       body {
         margin: 0;
         min-height: 100vh;
-        background: var(--loader-image) center / cover no-repeat fixed;
+        background: var(--loader-image) var(--loader-image-position) / cover no-repeat fixed;
         display: grid;
         place-items: center;
         overflow: hidden;
@@ -149,7 +152,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--loader-image) center / cover no-repeat;
+        background: var(--loader-image) var(--loader-image-position) / cover no-repeat;
         z-index: 10;
       }
 

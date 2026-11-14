@@ -41,6 +41,7 @@ and regenerate the game-build token when it changes). The archive under
 | --- | --- |
 | `docs/assets-src/bio-pic.jpeg` | `assets/optimized/bio-pic-720.jpg` |
 | `docs/assets-src/background.jpg` | `assets/optimized/background-2200.jpg`. The owner compared a 1600 px / 49 KB WebP against this 352 KB JPEG on real Home renders and chose to keep the JPEG (2026-10-18); do not re-propose a smaller or lossier background without a new owner request. |
+| `docs/assets-src/mountain-and-sky.png` (1536×1024 Red Star OS wallpaper) | `assets/mountain-and-sky.png` (2304×1024), built by `docs/assets-src/widen-mountain-and-sky.py` (`--check` verifies the deployed pixels). Sky and rays stay pixel-identical, the flat sky is mirror-tiled to the right and only the mountain band is stretched sideways with nearest-neighbour, so 6 px blocks become 9 px. The owner chose this width over a taller band and an added foreground ridge, which looked sharper than the original (2026-11-14). The loader frames it `left bottom / cover`. |
 | `docs/assets-src/creative-work/lp-photo.png` | `assets/optimized/lp-photo-1600.jpg` |
 | `docs/assets-src/minesweeper_assets/YOU-LOSE.png` | `assets/optimized/minesweeper-you-lose-640.png` |
 | `docs/assets-src/modeling-icons/saturn-icon.png` and `saturn-icon-clear.png` | `assets/optimized/saturn-icon-96.png`; preserve its deployed transparency/crop when selecting a source variant. |
