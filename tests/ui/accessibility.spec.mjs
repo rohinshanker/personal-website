@@ -176,17 +176,30 @@ test.describe("modeling portfolio route accessibility", () => {
     });
   }
 
-  test("the Home Modeling window and its new-tab prompt are free of WCAG A/AA violations", async ({
+  test("the Home Modeling window and the Modeling portfolio alert are free of WCAG A/AA violations", async ({
     page,
   }, testInfo) => {
     await installStubbedModelingMedia(page);
     await openHomeDesktop(page, DESKTOP);
     await page.locator('.taskbar-icon[data-app="modeling"]').click();
-    const prompt = page.locator("#modeling-launch-window");
-    await expect(prompt).toBeVisible();
-    await expect(prompt).not.toHaveClass(/is-opening/);
+    const modeling = page.locator('[data-app-window="modeling"]');
+    await expect(modeling).toBeVisible();
+    await expect(modeling).not.toHaveClass(/is-opening/);
+    await expect(modeling.locator(".selector-item--link")).toBeVisible();
     await settleRender(page);
+    expect(await scanForViolations(page, testInfo, "home-modeling")).toEqual([]);
 
-    expect(await scanForViolations(page, testInfo, "home-modeling-launch")).toEqual([]);
+    const result = await page.evaluate(async () => {
+      await window.homeResources.loadAdminResources();
+      return window.rohinAdminOrchestrator.runEvent("modeling-portfolio-alert", { source: "dev" });
+    });
+    expect(result.ok, result.message).toBe(true);
+    const alert = page.locator(
+      "#modeling-portfolio-alert-window:not([data-admin-event-preview-window])",
+    );
+    await expect(alert).toBeVisible();
+    await expect(alert).not.toHaveClass(/is-opening/);
+    await settleRender(page);
+    expect(await scanForViolations(page, testInfo, "home-modeling-portfolio-alert")).toEqual([]);
   });
 });

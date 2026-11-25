@@ -1,6 +1,7 @@
-// The newest Projects items and the pinned Substack Writing item render as the
-// default views, their carousels step through every figure with real images,
-// and nothing overflows at the four review viewports.
+// The newest Projects items render as the default views and their carousels
+// step through every figure with real images; Writing opens on Structural
+// Bioinformatics under a pinned Substack row that opens a new tab; nothing
+// overflows at the four review viewports.
 
 import { expect, test } from "./deterministic.mjs";
 import { openApp } from "./helpers/rendered-site.mjs";
@@ -55,6 +56,11 @@ for (const viewport of viewports) {
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
     });
+    await page
+      .context()
+      .route("https://rohins.substack.com/**", (route) =>
+        route.fulfill({ contentType: "text/html", body: "<title>Substack stub</title>" }),
+      );
     await page.goto("/home.html", { waitUntil: "domcontentloaded" });
 
     const projects = await openApp(page, "windows");
@@ -88,26 +94,31 @@ for (const viewport of viewports) {
     await projects.getByRole("button", { name: "Close" }).click();
 
     const writing = await openApp(page, "taskmgr");
-    await expect(writing.locator('.selector-item[data-view="writing-substack"]')).toHaveClass(
-      /is-active/,
-    );
-    const substack = writing.locator('.viewer-content[data-view="writing-substack"]');
-    await expect(substack.getByRole("heading", { name: "Substack" })).toBeVisible();
-    await expect(substack).toContainText("Read my latest publications on Substack!");
-    await expect(substack.getByRole("link", { name: "Open Substack" })).toHaveAttribute(
-      "href",
-      "https://rohins.substack.com/",
-    );
-    await expect(substack.getByRole("link", { name: "Subscribe" })).toHaveAttribute(
-      "href",
-      "https://rohins.substack.com/subscribe",
-    );
-    const logo = substack.locator(".writing-substack-logo");
+    const bioinformatics = '[data-view="writing-structural-bioinformatics"]';
+    await expect(writing.locator(`.selector-item${bioinformatics}`)).toHaveClass(/is-active/);
+    await expect(writing.locator(`.viewer-content${bioinformatics}`)).toBeVisible();
+    await expect(writing.locator(".selector-item.is-active")).toHaveCount(1);
+
+    const substack = writing.locator(".selector-list > li").first().getByRole("link", {
+      name: "Substack Latest publications.",
+    });
+    await expect(substack).toHaveAttribute("href", "https://rohins.substack.com/");
+    await expect(substack).toHaveAttribute("target", "_blank");
+    await expect(substack).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(substack).not.toHaveClass(/is-active/);
+    const icon = substack.locator(".selector-thumb");
     await expect
-      .poll(() => logo.evaluate((img) => img.complete && img.naturalWidth))
+      .poll(() => icon.evaluate((img) => img.complete && img.naturalWidth))
       .toBeGreaterThan(0);
-    const box = await logo.boundingBox();
-    expect(Math.round(box.width)).toBe(64);
-    await expectContained(writing, "writing-substack");
+
+    const popupPromise = page.waitForEvent("popup");
+    await substack.click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState("domcontentloaded");
+    expect(popup.url()).toBe("https://rohins.substack.com/");
+    expect(await popup.evaluate(() => window.opener)).toBeNull();
+    await popup.close();
+    await expect(writing.locator(`.selector-item${bioinformatics}`)).toHaveClass(/is-active/);
+    await expectContained(writing, "writing-structural-bioinformatics");
   });
 }

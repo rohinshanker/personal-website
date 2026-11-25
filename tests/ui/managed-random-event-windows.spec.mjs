@@ -71,6 +71,11 @@ const EVENTS = [
     close: "#self-love-alert-yes",
   },
   {
+    id: "modeling-portfolio-alert",
+    windowId: "modeling-portfolio-alert-window",
+    close: "#modeling-portfolio-alert-close",
+  },
+  {
     id: "red-tool",
     windowId: "red-tool-window",
     close: "#red-tool-close",

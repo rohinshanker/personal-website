@@ -24,6 +24,7 @@ const affectedEventIds = Object.freeze([
   "vanishing-popup-alert",
   "dodging-popup-alert",
   "self-love-system-alert",
+  "modeling-portfolio-alert",
   "rohin-os-update",
   "rohin-os-note",
   "earth-proverb-note",
@@ -55,6 +56,7 @@ const realTriggerEventIds = Object.freeze([
   "vanishing-popup-alert",
   "dodging-popup-alert",
   "self-love-system-alert",
+  "modeling-portfolio-alert",
   "rohin-os-update",
   "rohin-os-note",
   "earth-proverb-note",
@@ -227,10 +229,12 @@ for (const viewport of viewports) {
     await minesweeper.locator('[data-close="minesweeper"]').click();
 
     await page.locator('.desktop-icon[data-app="modeling"]').evaluate((button) => button.click());
-    const modelingPrompt = page.locator('[data-app-window="modeling-launch"]');
-    await expectDecodedImages(modelingPrompt, "modeling-launch");
-    await modelingPrompt.getByRole("button", { name: "No", exact: true }).click();
-    await page.locator('[data-app-window="modeling"] [data-close="modeling"]').click();
+    const modelingWindow = page.locator('[data-app-window="modeling"]');
+    await expectDecodedImages(
+      modelingWindow.locator(".selector-item--link"),
+      "modeling pinned row",
+    );
+    await modelingWindow.locator('[data-close="modeling"]').click();
 
     await page.locator('.desktop-icon[data-app="cursor"]').evaluate((button) => button.click());
     const cursorWindow = page.locator('[data-app-window="cursor"]');

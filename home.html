@@ -113,10 +113,10 @@
     <link rel="stylesheet" href="styles/home/apps/snake.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/sudoku.css?v=sudoku-mobile-actions-20260928" />
     <!-- The Sudoku generator runs in a worker; main.js reads its versioned URL from here. -->
-    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" as="worker" />
+    <link rel="prefetch" id="sudoku-generator-source" href="scripts/home/sudoku-generator.worker.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" as="worker" />
     <link rel="stylesheet" href="styles/home/apps/game-stats.css?v=html-semantics-20260927" />
     <link rel="stylesheet" href="styles/home/apps/life-counter.css?v=html-semantics-20260927" />
-    <link rel="stylesheet" href="styles/home/portfolio.css?v=about-copy-20261019" />
+    <link rel="stylesheet" href="styles/home/portfolio.css?v=pinned-links-20261114" />
     <link rel="stylesheet" href="styles/home/study-resources.css?v=study-row-hover-20261001" />
     <link rel="stylesheet" href="styles/home/cursors.css?v=asset-paths-20261018" />
     <script
@@ -124,7 +124,7 @@
       defer
     ></script>
     <script
-      src="scripts/home/core/resources.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c"
+      src="scripts/home/core/resources.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf"
       defer
     ></script>
   </head>
@@ -1272,16 +1272,21 @@
           <div class="selector-panel">
             <ul class="selector-list">
               <li>
-                <button class="selector-item is-active" type="button" data-view="writing-substack">
+                <a
+                  class="selector-item selector-item--link"
+                  href="https://rohins.substack.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <img class="selector-thumb" data-src="assets/app-icons/ico/newspaper.ico" alt="" />
                   <span>
                     <span class="selector-title">Substack</span>
                     <span class="selector-desc">Latest publications.</span>
                   </span>
-                </button>
+                </a>
               </li>
               <li>
-                <button class="selector-item" type="button" data-view="writing-structural-bioinformatics">
+                <button class="selector-item is-active" type="button" data-view="writing-structural-bioinformatics">
                   <img class="selector-thumb" data-src="assets/app-icons/ico/document.ico" alt="" />
                   <span>
                     <span class="selector-title">Structural Bioinformatics</span>
@@ -1339,36 +1344,7 @@
           </div>
           <div class="panel-divider" role="separator" aria-orientation="vertical"></div>
           <div class="viewer-panel">
-            <div class="viewer-content" data-view="writing-substack">
-              <img
-                class="writing-substack-logo"
-                data-src="assets/app-icons/ico/newspaper.ico"
-                width="64"
-                height="64"
-                alt=""
-              />
-              <h3>Substack</h3>
-              <p>Read my latest publications on Substack!</p>
-              <div class="pdf-actions">
-                <a
-                  class="button-link button-link--gold-glow"
-                  href="https://rohins.substack.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Open Substack
-                </a>
-                <a
-                  class="button-link"
-                  href="https://rohins.substack.com/subscribe"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Subscribe
-                </a>
-              </div>
-            </div>
-            <div class="viewer-content is-hidden" data-view="writing-structural-bioinformatics">
+            <div class="viewer-content" data-view="writing-structural-bioinformatics">
               <h3>Structural Bioinformatics</h3>
               <p class="project-view-subtitle">Spring 2026</p>
               <p>
@@ -1494,6 +1470,19 @@
         <div class="window-body">
           <div class="selector-panel">
             <ul class="selector-list">
+              <li>
+                <a
+                  class="selector-item selector-item--link"
+                  href="/modeling/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img class="selector-thumb" data-src="assets/app-icons/ico/accessibility_window_objs.ico" alt="" />
+                  <span>
+                    <span class="selector-title">Modeling Portfolio Site</span>
+                  </span>
+                </a>
+              </li>
               <!-- BEGIN generated modeling selector rows: node scripts/build-modeling-markup.mjs -->
               <li>
                 <button class="selector-item is-active" type="button" data-view="modeling-digitals-miffy-sep2026">
@@ -3189,52 +3178,6 @@
               type="button"
               id="video-editor-launch-no"
               data-close="video-editor"
-            >No</button>
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="window home-window app-window app-window--center random-event-window random-alert-window launch-prompt-window is-hidden"
-        data-app-window="modeling-launch"
-        data-launch-prompt-window
-        id="modeling-launch-window"
-        role="alertdialog"
-        aria-modal="false"
-        aria-hidden="true"
-        aria-labelledby="modeling-launch-title"
-        aria-describedby="modeling-launch-message"
-      >
-        <div class="title-bar">
-          <div class="title-bar-text" id="modeling-launch-title">Modeling</div>
-          <div class="title-bar-controls">
-            <button type="button" aria-label="Close" data-close="modeling-launch"></button>
-          </div>
-        </div>
-        <div class="window-body">
-          <div class="random-alert-message">
-            <img data-src="assets/app-icons/ico/accessibility_window_objs.ico" width="48" height="48" alt="" />
-            <p id="modeling-launch-message">Open in separate tab (rohin.shanker.me/modeling)?</p>
-          </div>
-          <p
-            class="video-editor-launch-error"
-            id="modeling-launch-error"
-            data-launch-prompt-error
-            role="alert"
-            aria-live="assertive"
-            hidden
-          ></p>
-          <div class="random-alert-actions">
-            <button
-              type="button"
-              id="modeling-launch-yes"
-              data-launch-prompt-open
-              data-dialog-initial-focus
-            >Yes</button>
-            <button
-              type="button"
-              id="modeling-launch-no"
-              data-close="modeling-launch"
             >No</button>
           </div>
         </div>
@@ -6332,6 +6275,40 @@
     </div>
 
     <div
+      class="window random-event-window random-alert-window modeling-portfolio-alert-window is-hidden"
+      id="modeling-portfolio-alert-window"
+      aria-hidden="true"
+      aria-describedby="modeling-portfolio-alert-message"
+    >
+      <div class="title-bar">
+        <div class="title-bar-text">System Alert</div>
+        <div class="title-bar-controls">
+          <button type="button" aria-label="Close" id="modeling-portfolio-alert-close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="random-alert-message">
+          <img
+            data-src="assets/app-icons/ico/accessibility_window_objs.ico"
+            width="48"
+            height="48"
+            alt=""
+          />
+          <p id="modeling-portfolio-alert-message">Check out my modeling portfolio!</p>
+        </div>
+        <div class="random-alert-actions">
+          <a
+            class="button-link"
+            id="modeling-portfolio-alert-sure"
+            href="/modeling/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Sure!</a>
+        </div>
+      </div>
+    </div>
+
+    <div
       class="window random-event-window gradescope-curve-window is-hidden"
       id="gradescope-curve-window"
       aria-hidden="true"
@@ -7370,35 +7347,35 @@
         </div>
       </div>
     </div>
-    <script src="scripts/home/game-stats-backend.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/game-stats-backend.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
     <script src="scripts/home/app-icon-manifest.js?v=game-stats-cloudflare-20260721" defer></script>
     <script src="scripts/home/system-alerts.js?v=repo-hygiene-20260927" defer></script>
-    <script src="scripts/home/core/dom.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/core/media.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/core/administrator-session.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/core/dom.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/core/media.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/core/administrator-session.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
     <script src="scripts/home/core/cursor-mode.js?v=asset-paths-20261018" defer></script>
-    <script src="scripts/home/core/util.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/core/pointer-cursor.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/core/static-noise.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/core/activity.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/core/activation.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/core/windows.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/core/util.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/core/pointer-cursor.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/core/static-noise.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/core/activity.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/core/activation.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/core/windows.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
     <script src="scripts/home/modeling-portfolio.js?v=asset-paths-20261018" defer></script>
     <script src="scripts/home/features/about.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/desktop.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/gallery.js?v=content-items-20261018" defer></script>
     <script src="scripts/home/features/study.js?v=asset-paths-20261018" defer></script>
-    <script src="scripts/home/games/rules.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/games/minesweeper.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/games/snake.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/games/solitaire.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/games/sudoku.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/games/session.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/features/game-stats.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/features/snake.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/features/minesweeper.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/features/solitaire.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
-    <script src="scripts/home/features/sudoku.js?v=game-build-e637c48097e9f2c0c0e682a945b78fd62c04920f79b5bd21717327bd5f03536c" defer></script>
+    <script src="scripts/home/games/rules.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/games/minesweeper.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/games/snake.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/games/solitaire.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/games/sudoku.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/games/session.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/features/game-stats.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/features/snake.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/features/minesweeper.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/features/solitaire.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
+    <script src="scripts/home/features/sudoku.js?v=game-build-96a013fc4d97b16255047ee5663718ccecf588005afbf9f616a9fffef9b007bf" defer></script>
     <script src="scripts/home/features/life-counter.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/neko.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/events/lightning.js?v=home-feature-modules-20261003" defer></script>
@@ -7424,7 +7401,7 @@
     <script src="scripts/home/events/infinity-armory.js?v=asset-paths-20261018" defer></script>
     <script src="scripts/home/events/virus.js?v=home-feature-modules-20261003" defer></script>
     <script src="scripts/home/features/calendar.js?v=asset-paths-20261018" defer></script>
-    <script src="scripts/home/events/prompts.js?v=asset-paths-20261018" defer></script>
+    <script src="scripts/home/events/prompts.js?v=pinned-links-20261114" defer></script>
     <script src="scripts/home/features/cursor.js?v=on-demand-home-loading-20261007" defer></script>
     <script src="scripts/home/main.js?v=home-loading-repair-20261007" defer></script>
     <script type="module" src="scripts/home/clash-royale.js?v=clash-match-hints-20261002"></script>

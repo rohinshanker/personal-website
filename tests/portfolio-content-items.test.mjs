@@ -1,6 +1,6 @@
 // Content contract for the newest Projects items (Cyano Gene Visualizer,
-// win98-site-kit) and the pinned Substack item in Writing: order, default
-// selection, links and the figures each carousel lists.
+// win98-site-kit) and the pinned new-tab Substack row in Writing: order,
+// default selection, links and the figures each carousel lists.
 
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
@@ -78,44 +78,40 @@ test("Projects opens on the Cyano visualizer with the kit second and older items
   }
 });
 
-test("Writing pins Substack first with Open Substack and Subscribe links", async () => {
+test("Writing pins a new-tab Substack row first and opens on Structural Bioinformatics", async () => {
   const writing = windowMarkup(await read("home.html"), "taskmgr");
+  const list = writing.slice(
+    writing.indexOf('<ul class="selector-list">'),
+    writing.indexOf("</ul>"),
+  );
+  const pinned = list.match(/<li>([\s\S]*?)<\/li>/)[1];
+
+  assert.match(pinned, /^\s*<a\b/, "the pinned row is a link, not a view button");
+  assert.match(pinned, /class="selector-item selector-item--link"/);
+  assert.match(pinned, /href="https:\/\/rohins\.substack\.com\/"/);
+  assert.match(pinned, /target="_blank"/);
+  assert.match(pinned, /rel="noopener noreferrer"/);
+  assert.doesNotMatch(pinned, /data-view=/);
+  assert.match(
+    pinned,
+    /<img class="selector-thumb" data-src="assets\/app-icons\/ico\/newspaper\.ico" alt="" \/>/,
+    "the Substack row uses the same newspaper icon as the Socials entry",
+  );
+  assert.match(pinned, /<span class="selector-title">Substack<\/span>/);
+  assert.equal((list.match(/selector-item--link/g) || []).length, 1, "only one pinned row");
+
   const views = selectorViews(writing);
-  assert.equal(views[0], "writing-substack");
-  assert.equal(views[1], "writing-structural-bioinformatics");
+  assert.equal(views[0], "writing-structural-bioinformatics");
+  assert.ok(!views.includes("writing-substack"), "Substack no longer has a view");
+  assert.doesNotMatch(writing, /data-view="writing-substack"/);
   assert.match(
     writing,
-    /class="selector-item is-active" type="button" data-view="writing-substack"/,
+    /class="selector-item is-active" type="button" data-view="writing-structural-bioinformatics"/,
   );
   assert.equal((writing.match(/class="selector-item is-active"/g) || []).length, 1);
   assert.match(
     writing,
-    /<div class="viewer-content is-hidden" data-view="writing-structural-bioinformatics">/,
-  );
-
-  const substack = panel(writing, "writing-substack");
-  assert.match(substack, /<h3>Substack<\/h3>/);
-  assert.match(substack, /Read my latest publications on Substack!/);
-  assert.match(substack, /data-src="assets\/app-icons\/ico\/newspaper\.ico"/);
-  const links = [...substack.matchAll(/<a\b([^>]*)>\s*([^<]+?)\s*<\/a>/g)].map((match) => ({
-    attributes: match[1],
-    text: match[2],
-  }));
-  assert.deepEqual(
-    links.map((link) => [link.text, link.attributes.match(/href="([^"]+)"/)[1]]),
-    [
-      ["Open Substack", "https://rohins.substack.com/"],
-      ["Subscribe", "https://rohins.substack.com/subscribe"],
-    ],
-  );
-  for (const link of links) {
-    assert.match(link.attributes, /target="_blank"/);
-    assert.match(link.attributes, /rel="noopener noreferrer"/);
-  }
-  assert.match(
-    writing,
-    /data-view="writing-substack">\s*<img class="selector-thumb" data-src="assets\/app-icons\/ico\/newspaper\.ico"/,
-    "The Substack item uses the same newspaper icon as the Socials entry.",
+    /<div class="viewer-content" data-view="writing-structural-bioinformatics">/,
   );
 });
 

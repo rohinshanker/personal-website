@@ -20,7 +20,6 @@ const EXPLICIT_ALERT_DIALOGS = Object.freeze([
   "admin-controls-stand-in-window",
   "debug-system-alert-window",
   "image-tools-coming-soon-window",
-  "modeling-launch-window",
   "neko-stream-alert-window",
   "video-editor-launch-window",
 ]);

@@ -1391,6 +1391,18 @@ body.is-resizing-window * {
   outline-offset: -2px;
 }
 
+/* A pinned row that opens an external site in a new tab instead of a view. */
+.selector-item--link {
+  box-sizing: border-box;
+  color: inherit;
+  text-decoration: none;
+}
+
+.selector-item--link:focus {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
 .selector-thumb {
   width: 36px;
   height: 36px;
@@ -1948,12 +1960,4 @@ body.is-resizing-window * {
 .title-bar-controls {
   user-select: none;
   -webkit-user-select: none;
-}
-
-.writing-substack-logo {
-  display: block;
-  height: 64px;
-  image-rendering: pixelated;
-  margin: 0 0 10px;
-  width: 64px;
 }

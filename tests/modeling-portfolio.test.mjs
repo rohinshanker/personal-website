@@ -279,61 +279,118 @@ test("Home derives its modeling galleries from the shared data instead of duplic
   assert.doesNotMatch(main, /assets\/modeling\/[a-z0-9-]+"\s*,\s*\[/);
 });
 
-test("Home shows the Modeling launch prompt every time the Modeling window opens", async () => {
-  const [home, main] = await Promise.all([
-    read("home.html"),
-    readHomeScriptText("windows", "gallery"),
-  ]);
-  const start = home.indexOf('data-app-window="modeling-launch"');
-  assert.notEqual(start, -1, "the prompt window exists");
-  const section = home.slice(start, home.indexOf('data-app-window="', start + 1));
+/** The Home Modeling window's markup, from its root to the next window. */
+const homeModelingWindow = (home) =>
+  home.slice(home.indexOf('data-app-window="modeling"'), home.indexOf('data-app-window="mec-pdf"'));
 
-  assert.match(section, /data-launch-prompt-window/);
-  assert.doesNotMatch(section, /data-random-viewport-position/);
-  assert.match(section, /id="modeling-launch-window"/);
-  assert.match(section, /role="alertdialog"/);
-  assert.match(section, /aria-modal="false"/);
-  assert.match(section, /aria-hidden="true"/);
-  assert.match(section, /aria-labelledby="modeling-launch-title"/);
-  assert.match(section, /aria-describedby="modeling-launch-message"/);
-  assert.match(section, /id="modeling-launch-title">Modeling<\/div>/);
-  assert.match(
-    section,
-    /data-src="assets\/app-icons\/ico\/accessibility_window_objs\.ico" width="48" height="48" alt=""/,
+test("Home pins a new-tab Modeling Portfolio Site row above the shoots and opens on the newest shoot", async () => {
+  const [home, portfolio] = await Promise.all([read("home.html"), loadPortfolio()]);
+  const modelingWindow = homeModelingWindow(home);
+  const list = modelingWindow.slice(
+    modelingWindow.indexOf('<ul class="selector-list">'),
+    modelingWindow.indexOf("</ul>"),
   );
-  assert.match(
-    section,
-    /id="modeling-launch-message">Open in separate tab \(rohin\.shanker\.me\/modeling\)\?<\/p>/,
+  const rows = Array.from(list.matchAll(/<li>([\s\S]*?)<\/li>/g), ([, row]) => row);
+  const pinned = rows[0];
+
+  assert.ok(
+    list.indexOf(pinned) < list.indexOf("<!-- BEGIN generated modeling selector rows"),
+    "the pinned row sits outside the generated block, so regeneration keeps it first",
   );
+  assert.match(pinned, /^\s*<a\b/, "the pinned row is a link, not a view button");
+  assert.match(pinned, /class="selector-item selector-item--link"/);
+  assert.match(pinned, /href="\/modeling\/"/);
+  assert.match(pinned, /target="_blank"/);
+  assert.match(pinned, /rel="noopener noreferrer"/);
+  assert.doesNotMatch(pinned, /data-view=/);
   assert.match(
-    section,
-    /id="modeling-launch-error"[\s\S]*?data-launch-prompt-error[\s\S]*?role="alert"[\s\S]*?aria-live="assertive"[\s\S]*?hidden/,
+    pinned,
+    /<img class="selector-thumb" data-src="assets\/app-icons\/ico\/accessibility_window_objs\.ico" alt="" \/>/,
   );
+  assert.match(pinned, /<span class="selector-title">Modeling Portfolio Site<\/span>/);
+  assert.doesNotMatch(pinned, /selector-desc/, "the pinned row carries no date");
+
+  assert.equal(
+    rows.filter((row) => row.includes("selector-item--link")).length,
+    1,
+    "only one pinned row",
+  );
+  const firstShoot = portfolio.shoots.find((shoot) => shoot.files.length).id;
   assert.match(
-    section,
-    /id="modeling-launch-yes"[\s\S]*?data-launch-prompt-open[\s\S]*?data-dialog-initial-focus[\s\S]*?>Yes<\/button>/,
+    rows[1],
+    new RegExp(`class="selector-item is-active" type="button" data-view="${firstShoot}"`),
   );
-  assert.match(
-    section,
-    /id="modeling-launch-no"[\s\S]*?data-close="modeling-launch"[\s\S]*?>No<\/button>/,
-  );
-  assert.equal(section.match(/data-close="modeling-launch"/g).length, 2);
+  assert.equal((modelingWindow.match(/selector-item[^"]*is-active/g) || []).length, 1);
+});
+
+test("Opening Modeling shows no prompt; the first tab skips pinned link rows", async () => {
+  const [home, windows] = await Promise.all([read("home.html"), readHomeScriptText("windows")]);
+  assert.doesNotMatch(home, /modeling-launch/);
   assert.match(home, /class="desktop-icon" data-app="modeling"/);
   assert.match(home, /class="taskbar-icon" data-app="modeling"/);
+  assert.doesNotMatch(windows, /modeling-launch|openModelingLaunchPrompt|MODELING_LAUNCH/);
+  assert.match(
+    windows,
+    /const resetWindowToFirstTab = \(win\) => \{[\s\S]*?win\.querySelector\("\.selector-item\[data-view\]"\)/,
+  );
+});
 
-  assert.match(main, /const MODELING_PORTFOLIO_PATH = "\/modeling\/"/);
-  assert.match(main, /const MODELING_LAUNCH_APP_ID = "modeling-launch"/);
+test("the Modeling portfolio random event offers a Sure! new-tab link and a Close control", async () => {
+  const [home, prompts] = await Promise.all([
+    read("home.html"),
+    readHomeScriptText("eventPrompts"),
+  ]);
+  const start = home.indexOf('id="modeling-portfolio-alert-window"');
+  assert.notEqual(start, -1, "the event window exists");
+  const section = home.slice(home.lastIndexOf("<div", start), home.indexOf("\n    <div", start));
+
   assert.match(
-    main,
-    /\[MODELING_LAUNCH_APP_ID\]: Object\.freeze\(\{\s*path: MODELING_PORTFOLIO_PATH,\s*source: "modeling-launcher",\s*\}\)/,
+    section,
+    /class="window random-event-window random-alert-window modeling-portfolio-alert-window is-hidden"/,
+  );
+  assert.doesNotMatch(section, /data-app-window/, "a random event, not an app window");
+  assert.match(section, /aria-hidden="true"/);
+  assert.match(section, /aria-describedby="modeling-portfolio-alert-message"/);
+  assert.match(
+    section,
+    /<button type="button" aria-label="Close" id="modeling-portfolio-alert-close"><\/button>/,
   );
   assert.match(
-    main,
-    /const openModelingLaunchPrompt = \(\) => \{[\s\S]*?setWindowOpen\(MODELING_LAUNCH_APP_ID, true\)/,
+    section,
+    /data-src="assets\/app-icons\/ico\/accessibility_window_objs\.ico"\s+width="48"\s+height="48"\s+alt=""/,
   );
   assert.match(
-    main,
-    /restartWindowAnimation\(win, "is-opening"\);[\s\S]*?if \(appId === "modeling"\) openModelingLaunchPrompt\(\);[\s\S]*?return;/,
+    section,
+    /id="modeling-portfolio-alert-message">Check out my modeling portfolio!<\/p>/,
+  );
+  const sure = section.match(/<a\b[^>]*id="modeling-portfolio-alert-sure"[^>]*>([^<]*)<\/a>/);
+  assert.ok(sure, "Sure! is a link");
+  assert.equal(sure[1], "Sure!");
+  assert.match(sure[0], /href="\/modeling\/"/);
+  assert.match(sure[0], /target="_blank"/);
+  assert.match(sure[0], /rel="noopener noreferrer"/);
+  assert.equal((section.match(/<(?:button|a)\b/g) || []).length, 2, "only Close and Sure!");
+
+  const registration = prompts.slice(prompts.indexOf('id: "modeling-portfolio-alert"'));
+  assert.match(
+    registration,
+    /^id: "modeling-portfolio-alert",\s*preloadTargets: \(\) => \[modelingPortfolioAlertWindow\],\s*kind: RANDOM_EVENT_KIND_INTERACTIVE,/,
+  );
+  assert.match(
+    registration,
+    /bindRandomEventButton\(modelingPortfolioAlertClose, closeModelingPortfolioAlert\)/,
+  );
+  assert.match(
+    registration,
+    /modelingPortfolioAlertSure\?\.addEventListener\("click", closeModelingPortfolioAlert\)/,
+  );
+  assert.match(
+    registration,
+    /bindManagedRandomEventWindowAnimation\(modelingPortfolioAlertWindow\)/,
+  );
+  assert.match(
+    prompts,
+    /registerRandomEventWindows\(\(\) => \[[\s\S]*?modelingPortfolioAlertWindow,[\s\S]*?\]\)/,
   );
 });
 

@@ -73,6 +73,9 @@
   const calendarReminderWindow = byId("calendar-reminder-window");
   const calendarReminderShow = byId("calendar-reminder-show");
   const calendarReminderLater = byId("calendar-reminder-later");
+  const modelingPortfolioAlertWindow = byId("modeling-portfolio-alert-window");
+  const modelingPortfolioAlertClose = byId("modeling-portfolio-alert-close");
+  const modelingPortfolioAlertSure = byId("modeling-portfolio-alert-sure");
   const instrumentalityWindow = byId("instrumentality-window");
   const instrumentalityYes = byId("instrumentality-yes");
   const instrumentalityNo = byId("instrumentality-no");
@@ -920,6 +923,13 @@
     closeCalendarReminder();
   };
 
+  const isModelingPortfolioAlertVisible = () =>
+    isManagedRandomEventWindowVisible(modelingPortfolioAlertWindow);
+
+  const closeModelingPortfolioAlert = () => {
+    closeManagedRandomEventWindow(modelingPortfolioAlertWindow);
+  };
+
   const isInstrumentalityWindowVisible = (win) => isManagedRandomEventWindowVisible(win);
 
   const isInstrumentalityVisible = () =>
@@ -1593,6 +1603,23 @@
   });
 
   registerRandomEvent({
+    id: "modeling-portfolio-alert",
+    preloadTargets: () => [modelingPortfolioAlertWindow],
+    kind: RANDOM_EVENT_KIND_INTERACTIVE,
+    isVisible: isModelingPortfolioAlertVisible,
+    canTrigger: () => !isModelingPortfolioAlertVisible(),
+    run: () => {
+      showManagedRandomEventWindow(modelingPortfolioAlertWindow);
+    },
+    bind: () => {
+      bindRandomEventButton(modelingPortfolioAlertClose, closeModelingPortfolioAlert);
+      // Sure! is a real new-tab link: let the browser follow it, then dismiss.
+      modelingPortfolioAlertSure?.addEventListener("click", closeModelingPortfolioAlert);
+      bindManagedRandomEventWindowAnimation(modelingPortfolioAlertWindow);
+    },
+  });
+
+  registerRandomEvent({
     id: "human-instrumentality-project",
     preloadTargets: () => [instrumentalityWindow, instrumentalityCongratsWindow],
     kind: RANDOM_EVENT_KIND_INTERACTIVE,
@@ -1751,6 +1778,7 @@
     midnightGospelInviteWindow,
     midnightGospelMeditationWindow,
     calendarReminderWindow,
+    modelingPortfolioAlertWindow,
     instrumentalityWindow,
     instrumentalityCongratsWindow,
     wallBreachWindow,

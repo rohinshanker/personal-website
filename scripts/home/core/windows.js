@@ -285,20 +285,12 @@
 
   const VIDEO_EDITOR_PATH = "/video-editor/";
 
-  const MODELING_PORTFOLIO_PATH = "/modeling/";
-
-  const MODELING_LAUNCH_APP_ID = "modeling-launch";
-
   const LAUNCH_PROMPT_POPUP_ERROR =
     "The new tab was blocked. Allow pop-ups for this site, then choose Yes again.";
 
   /** Yes/No prompts that open a sibling route in a new tab, keyed by their app window id. */
   const NEW_TAB_LAUNCH_PROMPTS = Object.freeze({
     "video-editor": Object.freeze({ path: VIDEO_EDITOR_PATH, source: "video-editor-launcher" }),
-    [MODELING_LAUNCH_APP_ID]: Object.freeze({
-      path: MODELING_PORTFOLIO_PATH,
-      source: "modeling-launcher",
-    }),
   });
 
   const lockMobileViewportZoom = () => {
@@ -445,9 +437,10 @@
     });
   };
 
+  /** Selects the first row that owns a view; pinned new-tab link rows are skipped. */
   const resetWindowToFirstTab = (win) => {
     if (!win) return;
-    const firstButton = win.querySelector(".selector-item");
+    const firstButton = win.querySelector(".selector-item[data-view]");
     if (firstButton) selectWindowTab(win, firstButton.getAttribute("data-view"));
   };
 
@@ -818,24 +811,6 @@
     closeAppWindow(appId);
   };
 
-  /**
-   * The Modeling window always arrives with a prompt offering the standalone
-   * /modeling/ route. The prompt returns focus to whatever launched Modeling.
-   */
-  const openModelingLaunchPrompt = () => {
-    const promptWindow = getAppWindow(MODELING_LAUNCH_APP_ID);
-    if (!promptWindow) return;
-    const focusReturn =
-      document.activeElement instanceof HTMLElement && document.activeElement !== document.body
-        ? document.activeElement
-        : document.querySelector('.taskbar-icon[data-app="modeling"]');
-    if (focusReturn) comingSoonFocusReturns.set(promptWindow, focusReturn);
-    setWindowOpen(MODELING_LAUNCH_APP_ID, true);
-    requestAnimationFrame(() => {
-      promptWindow.querySelector(DIALOG_INITIAL_FOCUS_SELECTOR)?.focus({ preventScroll: true });
-    });
-  };
-
   const setWindowOpen = (appId, open) => {
     const win = getAppWindow(appId);
     if (!win) return;
@@ -921,7 +896,6 @@
       if (!isAdminControlsAppId(appId)) {
         notifyActivity("windowOpen", { appId });
       }
-      if (appId === "modeling") openModelingLaunchPrompt();
       if (appId === "clash-royale") window.ClashRoyaleApp?.load(false);
       return;
     }
