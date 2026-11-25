@@ -66,7 +66,7 @@ for (const viewport of viewports) {
     await expect(cyano).toBeVisible();
     await expect(cyano.getByRole("link", { name: "Open the visualizer" })).toHaveAttribute(
       "href",
-      "https://rohinshanker.github.io/isaacs-cyano-gene-selection/",
+      "https://cyanovisualizer.rohinshankerme.workers.dev/",
     );
     await stepCarousel(cyano, [
       "Chromosome and plasmid tracks",

@@ -61,7 +61,7 @@ test("Projects opens on the Cyano visualizer with the kit second and older items
   );
 
   const cyano = panel(projects, "projects-cyano-gene-visualizer");
-  assert.match(cyano, /href="https:\/\/rohinshanker\.github\.io\/isaacs-cyano-gene-selection\/"/);
+  assert.match(cyano, /href="https:\/\/cyanovisualizer\.rohinshankerme\.workers\.dev\/"/);
   assert.match(cyano, /href="https:\/\/github\.com\/rohinshanker\/isaacs-cyano-gene-selection"/);
   assert.match(cyano, /button-link--gold-glow[\s\S]*?Open the visualizer/);
   assert.match(cyano, /Isaacs Lab/);
