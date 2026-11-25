@@ -463,6 +463,12 @@
     });
   };
 
+  const activatePointerWindow = (event) => bringWindowToFront(event.currentTarget);
+
+  // A stable listener lets the shell and the event lifecycle bind the same window once.
+  const bindWindowActivation = (win) =>
+    win.addEventListener("pointerdown", activatePointerWindow, true);
+
   const isSmallResizableWindow = (win) => {
     if (!win) return false;
     if (
@@ -1308,13 +1314,7 @@
   window.addEventListener("resize", dispatchWindowResize);
 
   draggableWindows.forEach((win) => {
-    win.addEventListener(
-      "pointerdown",
-      () => {
-        bringWindowToFront(win);
-      },
-      { capture: true },
-    );
+    bindWindowActivation(win);
 
     const titleBar = win.querySelector(".title-bar");
     if (!titleBar) return;
@@ -1417,6 +1417,7 @@
   });
 
   window.homeWindows = Object.freeze({
+    bindWindowActivation,
     bringWindowToFront,
     ADMIN_CONTROLS_APP_ID,
     ADMIN_CONTROLS_STAND_IN_APP_ID,

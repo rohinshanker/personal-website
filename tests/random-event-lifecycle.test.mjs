@@ -23,6 +23,12 @@ const names = [
 ];
 const events = [];
 const context = vm.createContext({
+  windowStack: {
+    append: (win) => {
+      win.parentElement = context.windowStack;
+    },
+  },
+  bindWindowActivation: () => {},
   // Records whether dialog semantics land before the window is exposed.
   applyWindowDialogSemantics: (win) => events.push(`semantics:${win.attrs["aria-hidden"]}`),
   loadDeferredMedia: (win) => {
@@ -110,6 +116,7 @@ test("opening preserves reset, media, placement and post-show order", () => {
   );
   assert.deepEqual(events, ["before", "load", "semantics:true", "position", "clamp", "after"]);
   assert.equal(visible(win), true);
+  assert.equal(win.parentElement, context.windowStack);
   assert.equal(win.classes.has("extra"), false);
   assert.equal(win.classes.has("is-opening"), true);
 });

@@ -215,6 +215,52 @@ const settleAnimation = (win, label) =>
     .toBe("none");
 
 for (const viewport of VIEWPORTS) {
+  test(`clicking an exposed window raises it above an overlapping event at ${viewport.name}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await preparePage(page);
+    const app = page.locator("#about-window");
+    await page.locator("#about-app-taskbar").click();
+    await expect(app).toBeVisible();
+    await settleAnimation(app, "About");
+
+    // Stage an overlap independent of the placement algorithm, which avoids other windows.
+    const place = (win, left, top) =>
+      win.evaluate((element, position) => Object.assign(element.style, position), {
+        left: `${left}px`,
+        top: `${top}px`,
+        translate: "0 0",
+      });
+    await place(app, 12, 120);
+    const ownsOverlap = (win) =>
+      win.evaluate((element) => element.contains(document.elementFromPoint(90, 132)));
+
+    for (const [id, selector] of [
+      ["rohin-os-note", "#rohin-note-window"],
+      ["microsoft-word-license-stack", ".word-error-stack-window"],
+    ]) {
+      await page.evaluate((id) => {
+        window.homeEventRuntime.randomEventDefinitions.find((event) => event.id === id).run();
+      }, id);
+      const event = page.locator(selector).last();
+      await expect(event).toBeVisible();
+      await settleAnimation(event, id);
+      await place(event, 30, 96);
+      expect(await ownsOverlap(event), `${id} opens in front`).toBe(true);
+      await page.mouse.click(20, 132);
+      expect(await ownsOverlap(app), "clicking About covers the event").toBe(true);
+      await page.mouse.click(90, 108);
+      expect(await ownsOverlap(event), "clicking the event raises it again").toBe(true);
+      await event
+        .getByRole("button", { name: id === "rohin-os-note" ? "OK" : "Close", exact: true })
+        .click();
+      await expect(page.locator(selector).first()).toBeHidden();
+    }
+  });
+}
+
+for (const viewport of VIEWPORTS) {
   test(`managed event windows open, stack, clamp and close at ${viewport.name}`, async ({
     page,
   }) => {
@@ -380,7 +426,7 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
     await openAdminEvents(page);
     await page.locator("#admin-event-list").selectOption("microsoft-word-license-stack");
     await page.locator("#admin-trigger-now").click();
-    const windows = page.locator("body > .word-error-stack-window");
+    const windows = page.locator(".window-stack > .word-error-stack-window");
     await expect(windows).toHaveCount(10);
     await expect(windows.last()).toBeVisible();
     await expect(windows.last()).not.toHaveClass(/is-opening/);
@@ -443,13 +489,13 @@ for (const viewport of [VIEWPORTS[0], VIEWPORTS[3]]) {
     const action = main.locator("#brand-burns-fight");
     await expect(action).toBeFocused();
     await action.press("Enter");
-    const enemies = page.locator("body > .brand-apostle-window");
+    const enemies = page.locator(".window-stack > .brand-apostle-window");
     await expect(enemies.first()).toBeVisible();
     await action.press("Enter");
-    const block = page.locator("body > .brand-block-window");
+    const block = page.locator(".window-stack > .brand-block-window");
     await expect(block).toBeVisible();
     await page.evaluate(() => window.__managedWindowProbe.showPuck());
-    const puck = page.locator("body > .brand-puck-window");
+    const puck = page.locator(".window-stack > .brand-puck-window");
     await expect(puck).toBeVisible();
     for (const win of [enemies.first(), block, puck]) {
       await expect(win).toHaveClass(/random-event-window/);

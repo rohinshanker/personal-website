@@ -2,12 +2,18 @@
 
 - Purpose: Keep random-event window lifecycle and event-local wiring consistent.
 - Scope: Home event visibility, animation, deferred media, focus, geometry, dynamic windows, binding order, and regression checks.
-- Last verified: 2026-11-09
+- Last verified: 2026-11-24
 
 ## Lifecycle contract
 
-Use the helpers in `scripts/home/main.js` rather than copying their class,
-ARIA, media, animation, or stacking operations into a new event:
+Use the helpers in `scripts/home/events/runtime.js` for event visibility,
+ARIA, media, animation and stacking.
+
+Show managed windows inside the same `.window-stack` as apps. Bind static and
+dynamically created windows to pointer activation so an exposed part of either
+window can bring it forward. Test overlapping windows with real pointer clicks
+and `document.elementFromPoint()`. A larger numeric z-index alone cannot prove
+which window receives a click across CSS stacking contexts.
 
 | Helper | Contract |
 | --- | --- |

@@ -462,6 +462,7 @@
 
   const positionVanishingPopupExplosion = () => {
     if (!vanishingPopupWindow || !vanishingPopupExplosion) return;
+    vanishingPopupWindow.after(vanishingPopupExplosion);
     const rect = vanishingPopupWindow.getBoundingClientRect();
     const windowZIndex = Number.parseInt(vanishingPopupWindow.style.zIndex, 10);
     vanishingPopupExplosion.style.left = `${rect.left + rect.width / 2}px`;

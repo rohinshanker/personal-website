@@ -3,6 +3,7 @@
   const { chooseWeightedRandomEvent, clampNumber, debounceTimer } = window.homeUtil;
   const {
     applyWindowDialogSemantics,
+    bindWindowActivation,
     isAdminControlsAppId,
     isWindowVisible,
     nextWindowZIndex,
@@ -25,6 +26,7 @@
   const { observeActivity } = window.homeActivity;
   const { loadRandomEventStyles, resourceState } = window.homeResources;
 
+  const windowStack = document.querySelector(".window-stack");
   const randomEventWindow = byId("random-event-window");
   const randomEventTitle = byId("random-event-title");
   const randomEventImage = byId("random-event-image");
@@ -337,6 +339,8 @@
       return false;
     }
 
+    // App and event z-indices are comparable only within the same stacking context.
+    if (win.parentElement !== windowStack) windowStack.append(win);
     if (beforeShow) beforeShow();
     loadDeferredMedia(win);
     win.classList.remove("is-hidden", "is-closing", ...(clearClasses || []));
@@ -427,6 +431,7 @@
   ) => {
     if (!win) return;
 
+    bindWindowActivation(win);
     win.addEventListener("click", (event) => {
       event.stopPropagation();
     });
